@@ -19,7 +19,7 @@ use crate::mastodon_api::{
     statuses::helpers::build_status_list,
     statuses::types::Tag,
 };
-use super::helpers::search;
+use super::helpers::{search, search_posts_only, search_profiles_only};
 use super::types::{SearchQueryParams, SearchResults};
 
 #[get("")]
@@ -37,13 +37,37 @@ async fn search_view(
         let results = SearchResults::default();
         return Ok(HttpResponse::Ok().json(results));
     };
-    let (profiles, posts, tags) = search(
-        &config,
-        &current_user,
-        db_client,
-        query_params.q.trim(),
-        query_params.limit.inner(),
-    ).await?;
+    let search_query = query_params.q.trim();
+    let (profiles, posts, tags) = match query_params.search_type.as_deref() {
+        Some("accounts") => {
+            let profiles = search_profiles_only(
+                &config,
+                db_client,
+                search_query,
+                false,
+                query_params.limit.inner(),
+            ).await?;
+            (profiles, vec![], vec![])
+        },
+        Some("statuses") => {
+            let posts = search_posts_only(
+                &current_user,
+                db_client,
+                search_query,
+                query_params.limit.inner(),
+            ).await?;
+            (vec![], posts, vec![])
+        },
+        _ => {
+            search(
+                &config,
+                &current_user,
+                db_client,
+                search_query,
+                query_params.limit.inner(),
+            ).await?
+        },
+    };
     let base_url = get_request_base_url(connection_info);
     let instance_url = config.instance().url();
     let accounts: Vec<Account> = profiles.into_iter()

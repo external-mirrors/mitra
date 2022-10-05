@@ -348,6 +348,20 @@ pub async fn search_profiles_only(
     Ok(profiles)
 }
 
+pub async fn search_posts_only(
+    current_user: &User,
+    db_client: &impl DatabaseClient,
+    search_query: &str,
+    limit: u16,
+) -> Result<Vec<Post>, DatabaseError> {
+    search_posts(
+        db_client,
+        search_query,
+        current_user.id,
+        limit,
+    ).await
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

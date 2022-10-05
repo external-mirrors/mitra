@@ -13,6 +13,9 @@ fn default_page_size() -> PageSize { PageSize::new(20) }
 pub struct SearchQueryParams {
     pub q: String,
 
+    #[serde(rename = "type")]
+    pub search_type: Option<String>,
+
     #[serde(default)]
     pub offset: usize,
 
