@@ -115,10 +115,12 @@ impl PublicKeys {
 json_from_sql!(PublicKeys);
 json_to_sql!(PublicKeys);
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum IdentityProofType {
     LegacyEip191IdentityProof,
     LegacyMinisignIdentityProof,
+    FepC390JcsBlake2Ed25519Proof, // MitraJcsEd25519Signature2022
+    FepC390JcsEip191Proof, // MitraJcsEip191Signature2022
 }
 
 impl From<&IdentityProofType> for i16 {
@@ -126,6 +128,8 @@ impl From<&IdentityProofType> for i16 {
         match proof_type {
             IdentityProofType::LegacyEip191IdentityProof => 1,
             IdentityProofType::LegacyMinisignIdentityProof => 2,
+            IdentityProofType::FepC390JcsBlake2Ed25519Proof => 3,
+            IdentityProofType::FepC390JcsEip191Proof => 4,
         }
     }
 }
@@ -137,6 +141,8 @@ impl TryFrom<i16> for IdentityProofType {
         let proof_type = match value {
             1 => Self::LegacyEip191IdentityProof,
             2 => Self::LegacyMinisignIdentityProof,
+            3 => Self::FepC390JcsBlake2Ed25519Proof,
+            4 => Self::FepC390JcsEip191Proof,
             _ => return Err(DatabaseTypeError),
         };
         Ok(proof_type)

@@ -44,3 +44,4 @@ pub const IDENTITY_PROOF: &str = "IdentityProof";
 pub const LINK: &str = "Link";
 pub const MULTIKEY: &str = "Multikey";
 pub const PROPERTY_VALUE: &str = "PropertyValue";
+pub const VERIFIABLE_IDENTITY_STATEMENT: &str = "VerifiableIdentityStatement";

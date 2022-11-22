@@ -27,7 +27,6 @@ use mitra_models::{
         update_profile,
     },
     profiles::types::{
-        IdentityProof,
         IdentityProofType,
         ProfileUpdateData,
     },
@@ -64,7 +63,6 @@ use mitra_utils::{
     minisign::{
         minisign_key_to_did,
         parse_minisign_signature,
-        verify_minisign_signature,
     },
     passwords::hash_password,
 };
@@ -79,14 +77,16 @@ use crate::activitypub::{
         },
     },
     identifiers::local_actor_id,
-    identity::create_identity_claim,
+    identity::{
+        create_identity_claim_fep_c390,
+        create_identity_proof_fep_c390,
+    },
 };
 use crate::errors::ValidationError;
 use crate::ethereum::{
     contracts::ContractSet,
     eip4361::verify_eip4361_signature,
     gate::is_allowed_user,
-    identity::verify_eip191_signature,
 };
 use crate::http::{get_request_base_url, FormOrJson};
 use crate::json_signatures::{
@@ -426,7 +426,7 @@ async fn get_identity_claim(
         &config.instance_url(),
         &current_user.profile.username,
     );
-    let claim = create_identity_claim(&actor_id, &did)
+    let claim = create_identity_claim_fep_c390(&actor_id, &did)
         .map_err(|_| MastodonError::InternalError)?;
     let response = IdentityClaim { did, claim };
     Ok(HttpResponse::Ok().json(response))
@@ -459,20 +459,21 @@ async fn create_identity_proof(
         &config.instance_url(),
         &current_user.profile.username,
     );
-    let message = create_identity_claim(&actor_id, &did)
-        .map_err(|_| ValidationError("invalid claim"))?;
+    let message = create_identity_claim_fep_c390(&actor_id, &did)
+        .map_err(|_| MastodonError::InternalError)?;
 
     // Verify proof
-    let proof_type = match did {
+    let (proof_type, signature_bin) = match did {
         Did::Key(ref did_key) => {
             let signature_bin = parse_minisign_signature(&proof_data.signature)
-                .map_err(|_| ValidationError("invalid signature encoding"))?;
-            verify_minisign_signature(
+                .map_err(|_| ValidationError("invalid signature encoding"))?
+                .to_vec();
+            verify_blake2_ed25519_json_signature(
                 did_key,
                 &message,
                 &signature_bin,
             ).map_err(|_| ValidationError("invalid signature"))?;
-            IdentityProofType::LegacyMinisignIdentityProof
+            (IdentityProofType::FepC390JcsBlake2Ed25519Proof, signature_bin)
         },
         Did::Pkh(ref did_pkh) => {
             if did_pkh.chain_id() != ChainId::ethereum_mainnet() {
@@ -488,22 +489,23 @@ async fn create_identity_proof(
                     return Err(ValidationError("DID doesn't match current identity").into());
                 };
             };
-            verify_eip191_signature(
+            let signature_bin = hex::decode(&proof_data.signature)
+                .map_err(|_| ValidationError("invalid signature encoding"))?;
+            verify_eip191_json_signature(
                 did_pkh,
                 &message,
-                &proof_data.signature,
+                &signature_bin,
             ).map_err(|_| ValidationError("invalid signature"))?;
-            IdentityProofType::LegacyEip191IdentityProof
+            (IdentityProofType::FepC390JcsEip191Proof, signature_bin)
         },
     };
-    let proof_value = serde_json::to_value(&proof_data.signature)
-        .expect("signature string should be serializable");
 
-    let proof = IdentityProof {
-        issuer: did,
-        proof_type: proof_type,
-        value: proof_value,
-    };
+    let proof = create_identity_proof_fep_c390(
+        &actor_id,
+        &did,
+        &proof_type,
+        &signature_bin,
+    );
     let mut profile_data = ProfileUpdateData::from(&current_user.profile);
     profile_data.add_identity_proof(proof);
     current_user.profile = update_profile(

@@ -16,6 +16,7 @@ use mitra_models::{
         DbActorPublicKey,
         ExtraField,
         IdentityProof,
+        IdentityProofType,
         PaymentOption,
     },
     users::types::User,
@@ -53,6 +54,7 @@ use crate::activitypub::{
         PERSON,
         PROPERTY_VALUE,
         SERVICE,
+        VERIFIABLE_IDENTITY_STATEMENT,
     },
 };
 use crate::errors::ValidationError;
@@ -64,6 +66,7 @@ use super::attachments::{
     attach_identity_proof,
     attach_payment_option,
     parse_identity_proof,
+    parse_identity_proof_fep_c390,
     parse_metadata_field,
     parse_payment_option,
     parse_property_value,
@@ -288,6 +291,12 @@ impl Actor {
                         Err(error) => log_error(attachment_type, error),
                     };
                 },
+                VERIFIABLE_IDENTITY_STATEMENT => {
+                    match parse_identity_proof_fep_c390(&self.id, attachment_value) {
+                        Ok(proof) => identity_proofs.push(proof),
+                        Err(error) => log_error(attachment_type, error),
+                    };
+                },
                 LINK => {
                     match parse_payment_option(attachment_value) {
                         Ok(option) => payment_options.push(option),
@@ -348,6 +357,8 @@ fn build_actor_context() -> (
             ("IdentityProof", "toot:IdentityProof"),
             ("mitra", MITRA_CONTEXT),
             ("subscribers", "mitra:subscribers"),
+            ("subject", "mitra:subject"),
+            ("VerifiableIdentityStatement", "mitra:VerifiableIdentityStatement"),
         ]),
     )
 }
@@ -398,9 +409,16 @@ pub fn build_local_actor(
     };
     let mut attachments = vec![];
     for proof in user.profile.identity_proofs.clone().into_inner() {
-        let attachment = attach_identity_proof(proof)?;
-        let attachment_value = serde_json::to_value(attachment)
-            .expect("attachment should be serializable");
+        let attachment_value = match proof.proof_type {
+            IdentityProofType::LegacyEip191IdentityProof |
+                IdentityProofType::LegacyMinisignIdentityProof =>
+            {
+                let attachment = attach_identity_proof(proof)?;
+                serde_json::to_value(attachment)
+                    .expect("attachment should be serializable")
+            },
+            _ => proof.value,
+        };
         attachments.push(attachment_value);
     };
     for payment_option in user.profile.payment_options.clone().into_inner() {

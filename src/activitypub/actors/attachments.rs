@@ -21,18 +21,31 @@ use mitra_utils::{
 
 use crate::activitypub::{
     deserialization::deserialize_string_array,
-    identity::create_identity_claim,
+    identity::{
+        create_identity_claim,
+        VerifiableIdentityStatement,
+    },
     vocabulary::{
         IDENTITY_PROOF,
         LINK,
         PROPERTY_VALUE,
+        VERIFIABLE_IDENTITY_STATEMENT,
     },
 };
 use crate::errors::ValidationError;
 use crate::ethereum::identity::verify_eip191_signature;
-use crate::json_signatures::proofs::{
-    PROOF_TYPE_ID_EIP191,
-    PROOF_TYPE_ID_MINISIGN,
+use crate::json_signatures::{
+    proofs::{
+        ProofType,
+        PROOF_TYPE_ID_EIP191,
+        PROOF_TYPE_ID_MINISIGN,
+    },
+    verify::{
+        get_json_signature,
+        verify_blake2_ed25519_json_signature,
+        verify_eip191_json_signature,
+        JsonSigner,
+    },
 };
 use crate::web_client::urls::get_subscription_page_url;
 
@@ -44,6 +57,7 @@ pub fn attach_identity_proof(
     let proof_type_str = match proof.proof_type {
         IdentityProofType::LegacyEip191IdentityProof => PROOF_TYPE_ID_EIP191,
         IdentityProofType::LegacyMinisignIdentityProof => PROOF_TYPE_ID_MINISIGN,
+        _ => unimplemented!("expected legacy identity proof"),
     };
     let proof_value = proof.value.as_str()
         .ok_or(DatabaseTypeError)?
@@ -109,6 +123,62 @@ pub fn parse_identity_proof(
         issuer: did,
         proof_type: proof_type,
         value: proof_value,
+    };
+    Ok(proof)
+}
+
+pub fn parse_identity_proof_fep_c390(
+    actor_id: &str,
+    attachment: &JsonValue,
+) -> Result<IdentityProof, ValidationError> {
+    let statement: VerifiableIdentityStatement = serde_json::from_value(attachment.clone())
+        .map_err(|_| ValidationError("invalid FEP-c390 attachment"))?;
+    if statement.object_type != VERIFIABLE_IDENTITY_STATEMENT {
+        return Err(ValidationError("invalid attachment type"));
+    };
+    if statement.also_known_as != actor_id {
+        return Err(ValidationError("actor ID mismatch"));
+    };
+    let signature_data = get_json_signature(attachment)
+        .map_err(|_| ValidationError("invalid proof"))?;
+    let signer = match signature_data.signer {
+        JsonSigner::ActorKeyId(_) => return Err(ValidationError("unsupported verification method")),
+        JsonSigner::Did(did) => did,
+    };
+    if signer != statement.subject {
+        return Err(ValidationError("subject mismatch"));
+    };
+    let identity_proof_type = match signature_data.proof_type {
+        ProofType::JcsBlake2Ed25519Signature => {
+            let did_key = match signer {
+                Did::Key(ref did_key) => did_key,
+                _ => return Err(ValidationError("invalid signature type")),
+            };
+            verify_blake2_ed25519_json_signature(
+                did_key,
+                &signature_data.canonical_object,
+                &signature_data.signature,
+            ).map_err(|_| ValidationError("invalid identity proof"))?;
+            IdentityProofType::FepC390JcsBlake2Ed25519Proof
+        },
+        ProofType::JcsEip191Signature => {
+            let did_pkh = match signer {
+                Did::Pkh(ref did_pkh) => did_pkh,
+                _ => return Err(ValidationError("invalid signature type")),
+            };
+            verify_eip191_json_signature(
+                did_pkh,
+                &signature_data.canonical_object,
+                &signature_data.signature,
+            ).map_err(|_| ValidationError("invalid identity proof"))?;
+            IdentityProofType::FepC390JcsEip191Proof
+        },
+        _ => return Err(ValidationError("unsupported signature type")),
+    };
+    let proof = IdentityProof {
+        issuer: signer,
+        proof_type: identity_proof_type,
+        value: attachment.clone(),
     };
     Ok(proof)
 }
@@ -237,10 +307,49 @@ pub fn parse_metadata_field(
 mod tests {
     use mitra_utils::{
         caip2::ChainId,
+        currencies::Currency,
+        did::Did,
+        did_pkh::DidPkh,
+    };
+    use crate::activitypub::identity::{
+        create_identity_claim_fep_c390,
+        create_identity_proof_fep_c390,
+    };
+    use crate::ethereum::{
+        signatures::{generate_ecdsa_key, sign_message},
+        utils::{address_to_string, key_to_ethereum_address},
     };
     use super::*;
 
     const INSTANCE_URL: &str = "https://example.com";
+
+    #[test]
+    fn test_identity_proof_fep_c390() {
+        let actor_id = "https://server.example/users/test";
+        let private_key = generate_ecdsa_key();
+        let address = address_to_string(key_to_ethereum_address(&private_key));
+        let did_pkh = DidPkh::from_address(&Currency::Ethereum, &address);
+        let did = Did::Pkh(did_pkh);
+        let claim = create_identity_claim_fep_c390(actor_id, &did).unwrap();
+        let signature = sign_message(
+            &private_key.display_secret().to_string(),
+            claim.as_bytes(),
+        ).unwrap();
+        let signature_bin = hex::decode(signature.to_string()).unwrap();
+        let identity_proof = create_identity_proof_fep_c390(
+            actor_id,
+            &did,
+            &IdentityProofType::FepC390JcsEip191Proof,
+            &signature_bin,
+        );
+        let parsed = parse_identity_proof_fep_c390(
+            actor_id,
+            &identity_proof.value,
+        ).unwrap();
+        assert_eq!(parsed.issuer, identity_proof.issuer);
+        assert_eq!(parsed.proof_type, identity_proof.proof_type);
+        assert_eq!(parsed.value, identity_proof.value);
+    }
 
     #[test]
     fn test_extra_field() {
