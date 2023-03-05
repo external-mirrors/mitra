@@ -18,7 +18,10 @@ use mitra_models::{
         DatabaseTypeError,
         DbPool,
     },
-    profiles::queries::set_reachability_status,
+    profiles::queries::{
+        get_profile_by_remote_actor_id,
+        set_reachability_status,
+    },
     users::queries::get_user_by_id,
 };
 
@@ -164,6 +167,7 @@ impl OutgoingActivityJobData {
 
 const OUTGOING_QUEUE_BATCH_SIZE: u32 = 1;
 const OUTGOING_QUEUE_RETRIES_MAX: u32 = 3;
+const OUTGOING_QUEUE_UNREACHABLE_NORETRY: i64 = 3600 * 24 * 90; // 90 days
 
 // 5 mins, 50 mins, 8 hours
 pub fn outgoing_queue_backoff(failure_count: u32) -> u32 {
@@ -194,7 +198,7 @@ pub async fn process_queued_outgoing_activities(
             recipients: job_data.recipients,
         };
 
-        let recipients = match outgoing_activity.deliver().await {
+        let mut recipients = match outgoing_activity.deliver().await {
             Ok(recipients) => recipients,
             Err(error) => {
                 // Unexpected error
@@ -204,12 +208,36 @@ pub async fn process_queued_outgoing_activities(
             },
         };
         log::info!(
-            "delivery job: {} delivered, {} errors (attempt #{})",
+            "delivery job: {} delivered, {} errors, {} unreachable (attempt #{})",
             recipients.iter().filter(|item| item.is_delivered).count(),
-            recipients.iter().filter(|item| !item.is_delivered).count(),
+            recipients.iter()
+                .filter(|item| !item.is_delivered && !item.is_unreachable)
+                .count(),
+            recipients.iter()
+                .filter(|item| !item.is_delivered && item.is_unreachable)
+                .count(),
             job_data.failure_count + 1,
         );
-        if recipients.iter().any(|recipient| !recipient.is_delivered) &&
+        if job_data.failure_count == 0 {
+            // Mark unreachable recipients after first attempt
+            // TODO: O(1)
+            for recipient in recipients.iter_mut() {
+                if !recipient.is_delivered {
+                    let profile = get_profile_by_remote_actor_id(
+                        db_client,
+                        &recipient.id,
+                    ).await?;
+                    if let Some(unreachable_since) = profile.unreachable_since {
+                        let noretry_after = unreachable_since +
+                            Duration::seconds(OUTGOING_QUEUE_UNREACHABLE_NORETRY);
+                        if noretry_after < Utc::now() {
+                            recipient.is_unreachable = true;
+                        };
+                    };
+                };
+            };
+        };
+        if recipients.iter().any(|recipient| !recipient.is_finished()) &&
             job_data.failure_count < OUTGOING_QUEUE_RETRIES_MAX
         {
             job_data.failure_count += 1;
@@ -222,6 +250,7 @@ pub async fn process_queued_outgoing_activities(
             // Update inbox status if all deliveries are successful
             // or if retry limit is reached
             for recipient in recipients {
+                // TODO: O(1)
                 set_reachability_status(
                     db_client,
                     &recipient.id,

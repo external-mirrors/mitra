@@ -121,8 +121,22 @@ async fn send_activity(
 pub struct Recipient {
     pub id: String,
     inbox: String,
+
+    // Default to false if serialized data contains no value.
     #[serde(default)]
-    pub is_delivered: bool, // default to false if serialized data contains no value
+    pub is_delivered: bool,
+
+    // This flag is set after first failed delivery attempt
+    // if the recipient had prior unreachable status.
+    // Default to false if serialized data contains no value.
+    #[serde(default)]
+    pub is_unreachable: bool,
+}
+
+impl Recipient {
+    pub fn is_finished(&self) -> bool {
+        self.is_delivered || self.is_unreachable
+    }
 }
 
 async fn deliver_activity_worker(
@@ -163,7 +177,7 @@ async fn deliver_activity_worker(
     let activity_json = serde_json::to_string(&activity_signed)?;
 
     for recipient in recipients.iter_mut() {
-        if recipient.is_delivered {
+        if recipient.is_finished() {
             continue;
         };
         if let Err(error) = send_activity(
@@ -207,6 +221,7 @@ impl OutgoingActivity {
                     id: actor.id.clone(),
                     inbox: actor.inbox,
                     is_delivered: false,
+                    is_unreachable: false,
                 };
                 recipient_map.insert(actor.id, recipient);
             };
