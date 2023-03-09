@@ -114,6 +114,7 @@ CREATE TABLE post (
     id UUID PRIMARY KEY,
     author_id UUID NOT NULL REFERENCES actor_profile (id) ON DELETE CASCADE,
     content TEXT NOT NULL,
+    content_source TEXT,
     in_reply_to_id UUID REFERENCES post (id) ON DELETE CASCADE,
     repost_of_id UUID REFERENCES post (id) ON DELETE CASCADE,
     visibility SMALLINT NOT NULL,

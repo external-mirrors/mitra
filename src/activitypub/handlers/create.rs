@@ -643,6 +643,7 @@ pub async fn handle_note(
     let created_at = object.published.unwrap_or(Utc::now());
     let post_data = PostCreateData {
         content: content,
+        content_source: None,
         in_reply_to_id,
         repost_of_id: None,
         visibility,

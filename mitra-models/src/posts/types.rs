@@ -59,6 +59,7 @@ pub struct DbPost {
     pub id: Uuid,
     pub author_id: Uuid,
     pub content: String,
+    pub content_source: Option<String>,
     pub in_reply_to_id: Option<Uuid>,
     pub repost_of_id: Option<Uuid>,
     pub visibility: Visibility,
@@ -86,6 +87,7 @@ pub struct Post {
     pub id: Uuid,
     pub author: DbActorProfile,
     pub content: String,
+    pub content_source: Option<String>,
     pub in_reply_to_id: Option<Uuid>,
     pub repost_of_id: Option<Uuid>,
     pub visibility: Visibility,
@@ -132,6 +134,7 @@ impl Post {
         };
         if db_post.repost_of_id.is_some() && (
             db_post.content.len() != 0 ||
+            db_post.content_source.is_some() ||
             db_post.is_sensitive ||
             db_post.in_reply_to_id.is_some() ||
             db_post.ipfs_cid.is_some() ||
@@ -149,6 +152,7 @@ impl Post {
             id: db_post.id,
             author: db_author,
             content: db_post.content,
+            content_source: db_post.content_source,
             in_reply_to_id: db_post.in_reply_to_id,
             repost_of_id: db_post.repost_of_id,
             visibility: db_post.visibility,
@@ -191,6 +195,7 @@ impl Default for Post {
             id: Uuid::new_v4(),
             author: Default::default(),
             content: "".to_string(),
+            content_source: None,
             in_reply_to_id: None,
             repost_of_id: None,
             visibility: Visibility::Public,
@@ -245,6 +250,7 @@ impl TryFrom<&Row> for Post {
 #[derive(Default)]
 pub struct PostCreateData {
     pub content: String,
+    pub content_source: Option<String>,
     pub in_reply_to_id: Option<Uuid>,
     pub repost_of_id: Option<Uuid>,
     pub visibility: Visibility,
@@ -275,6 +281,7 @@ impl PostCreateData {
 #[cfg_attr(test, derive(Default))]
 pub struct PostUpdateData {
     pub content: String,
+    pub content_source: Option<String>,
     pub is_sensitive: bool,
     pub attachments: Vec<Uuid>,
     pub mentions: Vec<Uuid>,

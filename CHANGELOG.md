@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Add `federation.fep_e232_enabled` configuration parameter.
 - Make authentication methods configurable.
+- Save post source if it is authored in markdown.
 
 ### Changed
 

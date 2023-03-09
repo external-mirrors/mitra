@@ -179,7 +179,10 @@ pub async fn create_post(
     let insert_statement = format!(
         "
         INSERT INTO post (
-            id, author_id, content,
+            id,
+            author_id,
+            content,
+            content_source,
             in_reply_to_id,
             repost_of_id,
             visibility,
@@ -187,15 +190,15 @@ pub async fn create_post(
             object_id,
             created_at
         )
-        SELECT $1, $2, $3, $4, $5, $6, $7, $8, $9
+        SELECT $1, $2, $3, $4, $5, $6, $7, $8, $9, $10
         WHERE
         NOT EXISTS (
             SELECT 1 FROM post
-            WHERE post.id = $4 AND post.repost_of_id IS NOT NULL
+            WHERE post.id = $5 AND post.repost_of_id IS NOT NULL
         )
         AND NOT EXISTS (
             SELECT 1 FROM post
-            WHERE post.id = $5 AND (
+            WHERE post.id = $6 AND (
                 post.repost_of_id IS NOT NULL
                 OR post.visibility != {visibility_public}
             )
@@ -210,6 +213,7 @@ pub async fn create_post(
             &post_id,
             &author_id,
             &post_data.content,
+            &post_data.content_source,
             &post_data.in_reply_to_id,
             &post_data.repost_of_id,
             &post_data.visibility,
@@ -326,15 +330,17 @@ pub async fn update_post(
         UPDATE post
         SET
             content = $1,
-            is_sensitive = $2,
-            updated_at = $3
-        WHERE id = $4
+            content_source = $2,
+            is_sensitive = $3,
+            updated_at = $4
+        WHERE id = $5
             AND repost_of_id IS NULL
             AND ipfs_cid IS NULL
         RETURNING post
         ",
         &[
             &post_data.content,
+            &post_data.content_source,
             &post_data.is_sensitive,
             &post_data.updated_at,
             &post_id,

@@ -99,11 +99,12 @@ async fn create_status(
         Some(_) => return Err(ValidationError("invalid visibility parameter").into()),
         None => Visibility::Public,
     };
-    let content = match status_data.content_type.as_str() {
-        "text/html" => status_data.status,
+    let (content, maybe_content_source) = match status_data.content_type.as_str() {
+        "text/html" => (status_data.status, None),
         "text/markdown" => {
-            markdown_lite_to_html(&status_data.status)
-                .map_err(|_| ValidationError("invalid markdown"))?
+            let content = markdown_lite_to_html(&status_data.status)
+                .map_err(|_| ValidationError("invalid markdown"))?;
+            (content, Some(status_data.status))
         },
         _ => return Err(ValidationError("unsupported content type").into()),
     };
@@ -186,6 +187,7 @@ async fn create_status(
     // Create post
     let post_data = PostCreateData {
         content: content,
+        content_source: maybe_content_source,
         in_reply_to_id: status_data.in_reply_to_id,
         repost_of_id: None,
         visibility: visibility,

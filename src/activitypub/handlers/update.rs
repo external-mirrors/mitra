@@ -94,6 +94,7 @@ async fn handle_update_note(
     let updated_at = object.updated.unwrap_or(Utc::now());
     let post_data = PostUpdateData {
         content,
+        content_source: None,
         is_sensitive,
         attachments,
         mentions,
