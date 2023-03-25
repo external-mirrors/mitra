@@ -18,8 +18,8 @@ use mitra::http::{
     create_default_headers_middleware,
     json_error_handler,
 };
+use mitra::init::initialize_app;
 use mitra::job_queue::scheduler;
-use mitra::logger::configure_logger;
 use mitra::mastodon_api::accounts::views::account_api_scope;
 use mitra::mastodon_api::apps::views::application_api_scope;
 use mitra::mastodon_api::custom_emojis::views::custom_emoji_api_scope;
@@ -37,18 +37,16 @@ use mitra::mastodon_api::timelines::views::timeline_api_scope;
 use mitra::nodeinfo::views as nodeinfo;
 use mitra::webfinger::views as webfinger;
 use mitra::web_client::views as web_client;
-use mitra_config::{parse_config, Environment, MITRA_VERSION};
-use mitra_models::database::{get_database_client, create_pool};
-use mitra_models::database::migrate::apply_migrations;
+use mitra_config::{Environment, MITRA_VERSION};
+use mitra_models::database::{
+    create_pool,
+    get_database_client,
+    migrate::apply_migrations,
+};
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    let (config, config_warnings) = parse_config();
-    configure_logger(config.log_level);
-    log::info!("config loaded from {}", config.config_path);
-    for warning in config_warnings {
-        log::warn!("{}", warning);
-    };
+    let config = initialize_app();
 
     // https://wiki.postgresql.org/wiki/Number_Of_Database_Connections
     let db_pool_size = num_cpus::get() * 2;
