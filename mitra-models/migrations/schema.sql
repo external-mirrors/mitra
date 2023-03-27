@@ -55,6 +55,7 @@ CREATE TABLE user_account (
     id UUID PRIMARY KEY REFERENCES actor_profile (id) ON DELETE CASCADE,
     password_hash VARCHAR(200),
     login_address_ethereum VARCHAR(500) UNIQUE,
+    login_address_monero VARCHAR(500) UNIQUE,
     private_key TEXT NOT NULL,
     invite_code VARCHAR(100) UNIQUE REFERENCES user_invite_code (code) ON DELETE SET NULL,
     user_role SMALLINT NOT NULL,

@@ -35,6 +35,7 @@ registration:
 #authentication_methods:
 #  - password
 #  - eip4361
+#  - caip122_monero
 
 # EIP-4361 login message
 #login_message: 'Do not sign this message on other sites!'

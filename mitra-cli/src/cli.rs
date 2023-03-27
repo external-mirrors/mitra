@@ -205,6 +205,7 @@ impl CreateUser {
             username: self.username.clone(),
             password_hash: Some(password_hash),
             login_address_ethereum: None,
+            login_address_monero: None,
             private_key_pem,
             invite_code: None,
             role,

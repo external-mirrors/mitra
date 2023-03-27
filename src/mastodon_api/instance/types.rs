@@ -13,6 +13,7 @@ use mitra_utils::markdown::markdown_to_html;
 use crate::ethereum::contracts::ContractSet;
 use crate::mastodon_api::{
     accounts::types::{
+        AUTHENTICATION_METHOD_CAIP122_MONERO,
         AUTHENTICATION_METHOD_PASSWORD,
         AUTHENTICATION_METHOD_EIP4361,
     },
@@ -174,6 +175,7 @@ impl InstanceInfo {
                     let value = match method {
                         AuthenticationMethod::Password => AUTHENTICATION_METHOD_PASSWORD,
                         AuthenticationMethod::Eip4361 => AUTHENTICATION_METHOD_EIP4361,
+                        AuthenticationMethod::Caip122Monero => AUTHENTICATION_METHOD_CAIP122_MONERO,
                     };
                     value.to_string()
                 })

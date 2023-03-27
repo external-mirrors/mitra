@@ -8,6 +8,7 @@ use serde::{
 pub enum AuthenticationMethod {
     Password,
     Eip4361,
+    Caip122Monero,
 }
 
 impl<'de> Deserialize<'de> for AuthenticationMethod {
@@ -18,6 +19,7 @@ impl<'de> Deserialize<'de> for AuthenticationMethod {
         let method = match method_str.as_str() {
             "password" => Self::Password,
             "eip4361" => Self::Eip4361,
+            "caip122_monero" => Self::Caip122Monero,
             _ => return Err(DeserializerError::custom("unknown authentication method")),
         };
         Ok(method)

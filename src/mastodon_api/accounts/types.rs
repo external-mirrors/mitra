@@ -40,6 +40,7 @@ use crate::media::get_file_url;
 
 pub const AUTHENTICATION_METHOD_PASSWORD: &str = "password";
 pub const AUTHENTICATION_METHOD_EIP4361: &str = "eip4361";
+pub const AUTHENTICATION_METHOD_CAIP122_MONERO: &str = "caip122_monero";
 
 /// https://docs.joinmastodon.org/entities/field/
 #[derive(Serialize)]
@@ -251,6 +252,9 @@ impl Account {
         };
         if user.login_address_ethereum.is_some() {
             authentication_methods.push(AUTHENTICATION_METHOD_EIP4361.to_string());
+        };
+        if user.login_address_monero.is_some() {
+            authentication_methods.push(AUTHENTICATION_METHOD_CAIP122_MONERO.to_string());
         };
         let mut account = Self::from_profile(
             base_url,

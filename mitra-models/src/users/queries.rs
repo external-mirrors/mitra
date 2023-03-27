@@ -2,6 +2,7 @@ use serde_json::{Value as JsonValue};
 use uuid::Uuid;
 
 use mitra_utils::{
+    caip10::{AccountId as ChainAccountId},
     currencies::Currency,
     did::Did,
     did_pkh::DidPkh,
@@ -79,7 +80,8 @@ pub async fn create_user(
     user_data: UserCreateData,
 ) -> Result<User, DatabaseError> {
     assert!(user_data.password_hash.is_some() ||
-            user_data.login_address_ethereum.is_some());
+            user_data.login_address_ethereum.is_some() ||
+            user_data.login_address_monero.is_some());
     let mut transaction = db_client.transaction().await?;
     // Prevent changes to actor_profile table
     transaction.execute(
@@ -137,17 +139,19 @@ pub async fn create_user(
             id,
             password_hash,
             login_address_ethereum,
+            login_address_monero,
             private_key,
             invite_code,
             user_role
         )
-        VALUES ($1, $2, $3, $4, $5, $6)
+        VALUES ($1, $2, $3, $4, $5, $6, $7)
         RETURNING user_account
         ",
         &[
             &profile.id,
             &user_data.password_hash,
             &user_data.login_address_ethereum,
+            &user_data.login_address_monero,
             &user_data.private_key_pem,
             &user_data.invite_code,
             &user_data.role,
@@ -269,15 +273,24 @@ pub async fn is_registered_user(
 
 pub async fn get_user_by_login_address(
     db_client: &impl DatabaseClient,
-    wallet_address: &str,
+    account_id: &ChainAccountId,
 ) -> Result<User, DatabaseError> {
-    let maybe_row = db_client.query_opt(
+    let column_name = match account_id.chain_id.currency() {
+        Some(Currency::Ethereum) => "login_address_ethereum",
+        Some(Currency::Monero) => "login_address_monero",
+        _ => unimplemented!(),
+    };
+    let statement = format!(
         "
         SELECT user_account, actor_profile
         FROM user_account JOIN actor_profile USING (id)
-        WHERE login_address_ethereum = $1
+        WHERE {column_name} = $1
         ",
-        &[&wallet_address],
+        column_name=column_name,
+    );
+    let maybe_row = db_client.query_opt(
+        &statement,
+        &[&account_id.address],
     ).await?;
     let row = maybe_row.ok_or(DatabaseError::NotFound("user"))?;
     let db_user: DbUser = row.try_get("user_account")?;

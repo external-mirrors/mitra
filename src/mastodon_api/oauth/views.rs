@@ -31,6 +31,7 @@ use crate::errors::ValidationError;
 use crate::ethereum::eip4361::verify_eip4361_signature;
 use crate::http::FormOrJson;
 use crate::mastodon_api::errors::MastodonError;
+use crate::monero::caip122::verify_monero_caip122_signature;
 
 use super::auth::get_current_user;
 use super::types::{
@@ -156,7 +157,33 @@ async fn token_view(
             };
             get_user_by_login_address(
                 db_client,
-                &session_data.account_id.address,
+                &session_data.account_id,
+            ).await?
+        },
+        "caip122_monero" => {
+            let message = request_data.message.as_ref()
+                .ok_or(ValidationError("message is required"))?;
+            let signature = request_data.signature.as_ref()
+                .ok_or(ValidationError("signature is required"))?;
+            let monero_config = config.monero_config()
+                .ok_or(MastodonError::NotSupported)?;
+            let session_data = verify_monero_caip122_signature(
+                monero_config,
+                &config.instance().hostname(),
+                &config.login_message,
+                message,
+                signature,
+            ).await.map_err(|_| ValidationError("invalid signature"))?;
+            if !is_valid_caip122_nonce(
+                db_client,
+                &session_data.account_id,
+                &session_data.nonce,
+            ).await? {
+                return Err(ValidationError("nonce can't be reused").into());
+            };
+            get_user_by_login_address(
+                db_client,
+                &session_data.account_id,
             ).await?
         },
         _ => {

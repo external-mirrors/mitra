@@ -105,6 +105,7 @@ use crate::mastodon_api::{
     statuses::helpers::build_status_list,
     statuses::types::Status,
 };
+use crate::monero::caip122::verify_monero_caip122_signature;
 use crate::validators::{
     profiles::clean_profile_update_data,
     users::validate_local_username,
@@ -119,6 +120,7 @@ use super::types::{
     AccountUpdateData,
     ActivityParams,
     ApiSubscription,
+    AUTHENTICATION_METHOD_CAIP122_MONERO,
     AUTHENTICATION_METHOD_EIP4361,
     AUTHENTICATION_METHOD_PASSWORD,
     FollowData,
@@ -158,6 +160,7 @@ pub async fn create_account(
     let authentication_method = match account_data.authentication_method.as_str() {
         AUTHENTICATION_METHOD_PASSWORD => AuthenticationMethod::Password,
         AUTHENTICATION_METHOD_EIP4361 => AuthenticationMethod::Eip4361,
+        AUTHENTICATION_METHOD_CAIP122_MONERO => AuthenticationMethod::Caip122Monero,
         _ => {
             return Err(ValidationError("unsupported authentication method").into());
         },
@@ -174,7 +177,7 @@ pub async fn create_account(
     } else {
         None
     };
-    let maybe_wallet_address = if authentication_method == AuthenticationMethod::Eip4361 {
+    let maybe_ethereum_address = if authentication_method == AuthenticationMethod::Eip4361 {
         let message = account_data.message.as_ref()
             .ok_or(ValidationError("message is required"))?;
         let signature = account_data.signature.as_ref()
@@ -191,15 +194,31 @@ pub async fn create_account(
     } else {
         None
     };
-    // Either password or EIP-4361 auth must be used (but not both)
-    assert_ne!(maybe_password_hash.is_some(), maybe_wallet_address.is_some());
+    let maybe_monero_address = if authentication_method == AuthenticationMethod::Caip122Monero {
+        let message = account_data.message.as_ref()
+            .ok_or(ValidationError("message is required"))?;
+        let signature = account_data.signature.as_ref()
+            .ok_or(ValidationError("signature is required"))?;
+        let monero_config = config.monero_config()
+            .ok_or(MastodonError::NotSupported)?;
+        let session_data = verify_monero_caip122_signature(
+            monero_config,
+            &config.instance().hostname(),
+            &config.login_message,
+            message,
+            signature,
+        ).await.map_err(|_| ValidationError("invalid signature"))?;
+        Some(session_data.account_id.address)
+    } else {
+        None
+    };
 
     if let Some(contract_set) = maybe_ethereum_contracts.as_ref() {
         if let Some(ref gate) = contract_set.gate {
             // Wallet address is required if token gate is present
-            let wallet_address = maybe_wallet_address.as_ref()
+            let ethereum_address = maybe_ethereum_address.as_ref()
                 .ok_or(ValidationError("wallet address is required"))?;
-            let is_allowed = is_allowed_user(gate, wallet_address).await
+            let is_allowed = is_allowed_user(gate, ethereum_address).await
                 .map_err(|_| MastodonError::InternalError)?;
             if !is_allowed {
                 return Err(ValidationError("not allowed to sign up").into());
@@ -224,7 +243,8 @@ pub async fn create_account(
     let user_data = UserCreateData {
         username,
         password_hash: maybe_password_hash,
-        login_address_ethereum: maybe_wallet_address,
+        login_address_ethereum: maybe_ethereum_address,
+        login_address_monero: maybe_monero_address,
         private_key_pem,
         invite_code,
         role,
