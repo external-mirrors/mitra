@@ -2,6 +2,7 @@ use serde::Serialize;
 use serde_json::{to_value, Value};
 
 use mitra_config::{
+    AuthenticationMethod,
     BlockchainConfig,
     Config,
     RegistrationType,
@@ -10,7 +11,13 @@ use mitra_config::{
 use mitra_utils::markdown::markdown_to_html;
 
 use crate::ethereum::contracts::ContractSet;
-use crate::mastodon_api::MASTODON_API_VERSION;
+use crate::mastodon_api::{
+    accounts::types::{
+        AUTHENTICATION_METHOD_PASSWORD,
+        AUTHENTICATION_METHOD_EIP4361,
+    },
+    MASTODON_API_VERSION,
+};
 use crate::media::SUPPORTED_MEDIA_TYPES;
 use crate::validators::posts::ATTACHMENT_LIMIT;
 
@@ -69,6 +76,7 @@ pub struct InstanceInfo {
     stats: InstanceStats,
     configuration: InstanceConfiguration,
 
+    authentication_methods: Vec<String>,
     login_message: String,
     post_character_limit: usize, // deprecated
     blockchains: Vec<BlockchainInfo>,
@@ -161,6 +169,15 @@ impl InstanceInfo {
                     image_size_limit: config.limits.media.file_size_limit,
                 },
             },
+            authentication_methods: config.authentication_methods.iter()
+                .map(|method| {
+                    let value = match method {
+                        AuthenticationMethod::Password => AUTHENTICATION_METHOD_PASSWORD,
+                        AuthenticationMethod::Eip4361 => AUTHENTICATION_METHOD_EIP4361,
+                    };
+                    value.to_string()
+                })
+                .collect(),
             login_message: config.login_message.clone(),
             post_character_limit: config.limits.posts.character_limit,
             blockchains: blockchains,

@@ -1,3 +1,4 @@
+mod authentication;
 mod blockchain;
 mod config;
 mod environment;
@@ -7,6 +8,7 @@ mod loader;
 mod registration;
 mod retention;
 
+pub use authentication::AuthenticationMethod;
 pub use blockchain::{
     BlockchainConfig,
     EthereumConfig,

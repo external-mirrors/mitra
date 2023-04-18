@@ -8,6 +8,11 @@ use url::Url;
 
 use mitra_utils::urls::normalize_url;
 
+use super::authentication::{
+    default_authentication_methods,
+    default_login_message,
+    AuthenticationMethod,
+};
 use super::blockchain::{
     BlockchainConfig,
     EthereumConfig,
@@ -21,8 +26,6 @@ use super::retention::RetentionConfig;
 use super::MITRA_VERSION;
 
 fn default_log_level() -> LogLevel { LogLevel::Info }
-
-fn default_login_message() -> String { "Do not sign this message on other sites!".to_string() }
 
 #[derive(Clone, Deserialize)]
 pub struct Config {
@@ -62,6 +65,9 @@ pub struct Config {
 
     #[serde(default)]
     pub registration: RegistrationConfig,
+
+    #[serde(default = "default_authentication_methods")]
+    pub authentication_methods: Vec<AuthenticationMethod>,
 
     // EIP-4361 login message
     #[serde(default = "default_login_message")]

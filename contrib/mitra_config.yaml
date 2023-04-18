@@ -30,6 +30,11 @@ registration:
   # Possible values: user, read_only_user
   default_role: user
 
+# Possible values: password, eip4361. Default: all enabled.
+#authentication_methods:
+#  - password
+#  - eip4361
+
 # EIP-4361 login message
 #login_message: 'Do not sign this message on other sites!'
 

@@ -11,7 +11,12 @@ use actix_web::{
 use actix_web_httpauth::extractors::bearer::BearerAuth;
 use uuid::Uuid;
 
-use mitra_config::{Config, DefaultRole, RegistrationType};
+use mitra_config::{
+    AuthenticationMethod,
+    Config,
+    DefaultRole,
+    RegistrationType,
+};
 use mitra_models::{
     database::{get_database_client, DatabaseError, DbPool},
     posts::queries::get_posts_by_author,
@@ -151,15 +156,16 @@ pub async fn create_account(
     validate_local_username(&account_data.username)?;
 
     let authentication_method = match account_data.authentication_method.as_str() {
-        method @ (
-            AUTHENTICATION_METHOD_PASSWORD |
-            AUTHENTICATION_METHOD_EIP4361
-        ) => method,
+        AUTHENTICATION_METHOD_PASSWORD => AuthenticationMethod::Password,
+        AUTHENTICATION_METHOD_EIP4361 => AuthenticationMethod::Eip4361,
         _ => {
             return Err(ValidationError("unsupported authentication method").into());
         },
     };
-    let maybe_password_hash = if authentication_method == AUTHENTICATION_METHOD_PASSWORD {
+    if !config.authentication_methods.contains(&authentication_method) {
+        return Err(MastodonError::NotSupported);
+    };
+    let maybe_password_hash = if authentication_method == AuthenticationMethod::Password {
         let password = account_data.password.as_ref()
             .ok_or(ValidationError("password is required"))?;
         let password_hash = hash_password(password)
@@ -168,7 +174,7 @@ pub async fn create_account(
     } else {
         None
     };
-    let maybe_wallet_address = if authentication_method == AUTHENTICATION_METHOD_EIP4361 {
+    let maybe_wallet_address = if authentication_method == AuthenticationMethod::Eip4361 {
         let message = account_data.message.as_ref()
             .ok_or(ValidationError("message is required"))?;
         let signature = account_data.signature.as_ref()
