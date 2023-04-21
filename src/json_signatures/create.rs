@@ -2,12 +2,14 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value as JsonValue};
+use sha2::{Digest, Sha256};
 
 use mitra_utils::{
     canonicalization::{
         canonicalize_object,
         CanonicalizationError,
     },
+    crypto_eddsa::{create_eddsa_signature, EddsaError},
     crypto_rsa::{
         create_rsa_sha256_signature,
         RsaError,
@@ -19,6 +21,8 @@ use mitra_utils::{
 };
 
 use super::proofs::{
+    CRYPTOSUITE_JCS_EDDSA,
+    DATA_INTEGRITY_PROOF,
     PROOF_TYPE_JCS_BLAKE2_ED25519,
     PROOF_TYPE_JCS_EIP191,
     PROOF_TYPE_JCS_RSA,
@@ -45,6 +49,21 @@ pub struct IntegrityProof {
     #[serde(flatten)]
     pub proof_config: IntegrityProofConfig,
     pub proof_value: String,
+}
+
+impl IntegrityProofConfig {
+    fn jcs_eddsa(
+        verification_method: &str,
+        created_at: DateTime<Utc>,
+    ) -> Self {
+        Self {
+            proof_type: DATA_INTEGRITY_PROOF.to_string(),
+            cryptosuite: Some(CRYPTOSUITE_JCS_EDDSA.to_string()),
+            proof_purpose: PROOF_PURPOSE.to_string(),
+            verification_method: verification_method.to_string(),
+            created: created_at,
+        }
+    }
 }
 
 impl IntegrityProof {
@@ -113,6 +132,9 @@ pub enum JsonSignatureError {
     #[error("signing error")]
     RsaError(#[from] RsaError),
 
+    #[error("signing error")]
+    EddsaError(#[from] EddsaError),
+
     #[error("invalid object")]
     InvalidObject,
 
@@ -159,6 +181,31 @@ pub fn sign_object_rsa(
     Ok(signed_object)
 }
 
+/// https://codeberg.org/fediverse/fep/src/branch/main/feps/fep-8b32.md
+#[allow(dead_code)]
+pub fn sign_object_eddsa(
+    signer_key: [u8; 32],
+    signer_key_id: &str,
+    object: &JsonValue,
+    current_time: Option<DateTime<Utc>>,
+) -> Result<JsonValue, JsonSignatureError> {
+    let signature_created_at = current_time.unwrap_or(Utc::now());
+    let proof_config = IntegrityProofConfig::jcs_eddsa(
+        signer_key_id,
+        signature_created_at,
+    );
+    let canonical_object = canonicalize_object(object)?;
+    let object_hash = Sha256::digest(canonical_object.as_bytes());
+    let canonical_proof_config = canonicalize_object(&proof_config)?;
+    let proof_config_hash = Sha256::digest(canonical_proof_config.as_bytes());
+    let hash_data = [proof_config_hash, object_hash].concat();
+    let signature = create_eddsa_signature(signer_key, &hash_data)?;
+    let proof = IntegrityProof::new(proof_config, &signature);
+    let mut signed_object = object.clone();
+    add_integrity_proof(&mut signed_object, proof)?;
+    Ok(signed_object)
+}
+
 pub fn is_object_signed(object: &JsonValue) -> bool {
     object.get(PROOF_KEY).is_some()
 }
@@ -166,7 +213,10 @@ pub fn is_object_signed(object: &JsonValue) -> bool {
 #[cfg(test)]
 mod tests {
     use serde_json::json;
-    use mitra_utils::crypto_rsa::generate_weak_rsa_key;
+    use mitra_utils::{
+        crypto_eddsa::generate_weak_eddsa_keypair,
+        crypto_rsa::generate_weak_rsa_key,
+    };
     use super::*;
 
     #[test]
@@ -215,6 +265,55 @@ mod tests {
                 "verificationMethod": "https://example.org/users/test#main-key",
                 "proofPurpose": "assertionMethod",
                 "proofValue": "z4vYn27QHCnW8Lj3o6R9GCRp85BuM3SP2JoMCysBMhvEKu3mnR3FNEDWNtPaJCo27mWqmB68FxR2bppnAr4Qrvxu5",
+            },
+        });
+        assert_eq!(result, expected_result);
+    }
+
+    #[test]
+    fn test_sign_object_eddsa() {
+        let signer_keypair = generate_weak_eddsa_keypair();
+        let signer_key_id = "https://example.org/users/test#main-key";
+        let object = json!({
+            "type": "Create",
+            "actor": "https://example.org/users/test",
+            "id": "https://example.org/objects/1",
+            "to": [
+                "https://example.org/users/yyy",
+                "https://example.org/users/xxx",
+            ],
+            "object": {
+                "type": "Note",
+                "content": "test",
+            },
+        });
+        let created_at = DateTime::parse_from_rfc3339("2023-02-24T23:36:38Z").unwrap().with_timezone(&Utc);
+        let result = sign_object_eddsa(
+            signer_keypair.secret.to_bytes(),
+            signer_key_id,
+            &object,
+            Some(created_at),
+        ).unwrap();
+
+        let expected_result = json!({
+            "type": "Create",
+            "actor": "https://example.org/users/test",
+            "id": "https://example.org/objects/1",
+            "to": [
+                "https://example.org/users/yyy",
+                "https://example.org/users/xxx",
+            ],
+            "object": {
+                "type": "Note",
+                "content": "test",
+            },
+            "proof": {
+                "type": "DataIntegrityProof",
+                "cryptosuite": "jcs-eddsa-2022",
+                "created": "2023-02-24T23:36:38Z",
+                "verificationMethod": "https://example.org/users/test#main-key",
+                "proofPurpose": "assertionMethod",
+                "proofValue": "z3hgSB34zmYZgwcx7J3LiXvHrj6JakhnhTdTEFYZXVQTqtramotiDhRoXsCwwWjRTrfL5YhDLGowHAzEujYuevDLw",
             },
         });
         assert_eq!(result, expected_result);

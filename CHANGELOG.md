@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Added full list of declared aliases to `/api/v1/accounts/{account_id}/aliases/all` response.
 - Created API endpoint for removing aliases.
 - Display authorization code if OAuth `redirect_uri` equals `urn:ietf:wg:oauth:2.0:oob`.
+- Implement `jcs-eddsa-2022` cryptosuite.
 
 ### Changed
 

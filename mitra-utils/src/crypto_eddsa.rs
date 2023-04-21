@@ -15,6 +15,13 @@ pub fn generate_eddsa_keypair() -> Keypair {
     Keypair::generate(&mut rng)
 }
 
+#[cfg(feature = "test-utils")]
+pub fn generate_weak_eddsa_keypair() -> Keypair {
+    use rand_0_7::SeedableRng;
+    let mut rng = rand_0_7::rngs::StdRng::seed_from_u64(0);
+    Keypair::generate(&mut rng)
+}
+
 pub fn create_eddsa_signature(
     private_key: [u8; 32],
     message: &[u8],

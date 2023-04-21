@@ -1,6 +1,7 @@
 use std::str::FromStr;
 
 use serde_json::{Value as JsonValue};
+use sha2::{Digest, Sha256};
 use url::Url;
 
 use mitra_utils::{
@@ -8,6 +9,7 @@ use mitra_utils::{
         canonicalize_object,
         CanonicalizationError,
     },
+    crypto_eddsa::verify_eddsa_signature,
     crypto_rsa::{verify_rsa_sha256_signature, RsaPublicKey},
     did::Did,
     did_key::DidKey,
@@ -36,6 +38,7 @@ pub struct JsonSignatureData {
     pub proof_type: ProofType,
     pub signer: JsonSigner,
     pub canonical_object: String,
+    pub canonical_config: String,
     pub signature: Vec<u8>,
 }
 
@@ -90,16 +93,18 @@ pub fn get_json_signature(
     let signer = if let Ok(did) = Did::from_str(&proof_config.verification_method) {
         JsonSigner::Did(did)
     } else if Url::parse(&proof_config.verification_method).is_ok() {
-        JsonSigner::ActorKeyId(proof_config.verification_method)
+        JsonSigner::ActorKeyId(proof_config.verification_method.clone())
     } else {
         return Err(VerificationError::InvalidProof("unsupported verification method"));
     };
     let canonical_object = canonicalize_object(&object)?;
+    let canonical_config = canonicalize_object(&proof_config)?;
     let signature = decode_multibase_base58btc(&proof_value)?;
     let signature_data = JsonSignatureData {
         proof_type,
         signer,
         canonical_object,
+        canonical_config,
         signature,
     };
     Ok(signature_data)
@@ -118,6 +123,26 @@ pub fn verify_rsa_json_signature(
     if !is_valid_signature {
         return Err(VerificationError::InvalidSignature);
     };
+    Ok(())
+}
+
+#[allow(dead_code)]
+pub fn verify_eddsa_json_signature(
+    signer_key: [u8; 32],
+    canonical_object: &str,
+    canonical_config: &str,
+    signature: &[u8],
+) -> Result<(), VerificationError> {
+    let object_hash = Sha256::digest(canonical_object.as_bytes());
+    let config_hash = Sha256::digest(canonical_config.as_bytes());
+    let hash_data = [config_hash, object_hash].concat();
+    let signature: [u8; 64] = signature.try_into()
+        .map_err(|_| VerificationError::InvalidSignature)?;
+    verify_eddsa_signature(
+        signer_key,
+        &hash_data,
+        signature,
+    ).map_err(|_| VerificationError::InvalidSignature)?;
     Ok(())
 }
 
@@ -144,10 +169,14 @@ pub fn verify_blake2_ed25519_json_signature(
 mod tests {
     use serde_json::json;
     use mitra_utils::{
+        crypto_eddsa::generate_eddsa_keypair,
         crypto_rsa::generate_weak_rsa_key,
         currencies::Currency,
     };
-    use crate::json_signatures::create::sign_object_rsa;
+    use crate::json_signatures::create::{
+        sign_object_eddsa,
+        sign_object_rsa,
+    };
     use super::*;
 
     #[test]
@@ -212,6 +241,48 @@ mod tests {
         let result = verify_rsa_json_signature(
             &signer_public_key,
             &signature_data.canonical_object,
+            &signature_data.signature,
+        );
+        assert_eq!(result.is_ok(), true);
+    }
+
+    #[test]
+    fn test_create_and_verify_eddsa_signature() {
+        let signer_keypair = generate_eddsa_keypair();
+        let signer_key_id = "https://example.org/users/test#main-key";
+        let object = json!({
+            "type": "Create",
+            "actor": "https://example.org/users/test",
+            "id": "https://example.org/objects/1",
+            "to": [
+                "https://example.org/users/yyy",
+                "https://example.org/users/xxx",
+            ],
+            "object": {
+                "type": "Note",
+                "content": "test",
+            },
+        });
+        let signed_object = sign_object_eddsa(
+            signer_keypair.secret.to_bytes(),
+            signer_key_id,
+            &object,
+            None,
+        ).unwrap();
+
+        let signature_data = get_json_signature(&signed_object).unwrap();
+        assert_eq!(
+            signature_data.proof_type,
+            ProofType::JcsEddsaSignature,
+        );
+        let expected_signer = JsonSigner::ActorKeyId(signer_key_id.to_string());
+        assert_eq!(signature_data.signer, expected_signer);
+
+        let signer_public_key = signer_keypair.public.to_bytes();
+        let result = verify_eddsa_json_signature(
+            signer_public_key,
+            &signature_data.canonical_object,
+            &signature_data.canonical_config,
             &signature_data.signature,
         );
         assert_eq!(result.is_ok(), true);
