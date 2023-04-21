@@ -1,10 +1,10 @@
 use ed25519_dalek::{
+    ExpandedSecretKey,
     Keypair,
     PublicKey,
     SecretKey,
     Signature,
     SignatureError,
-    Signer,
     Verifier,
 };
 
@@ -41,22 +41,20 @@ pub fn ed25519_public_key_from_bytes(
 }
 
 pub fn create_eddsa_signature(
-    private_key: [u8; 32],
+    private_key: &SecretKey,
     message: &[u8],
-) -> Result<[u8; 64], SignatureError> {
-    let secret_key = SecretKey::from_bytes(&private_key)?;
-    let public_key = PublicKey::from(&secret_key);
-    let keypair = Keypair { secret: secret_key, public: public_key };
-    let signature = keypair.sign(message);
-    Ok(signature.to_bytes())
+) -> [u8; 64] {
+    let public_key = PublicKey::from(private_key);
+    let expanded_private_key = ExpandedSecretKey::from(private_key);
+    let signature = expanded_private_key.sign(message, &public_key);
+    signature.to_bytes()
 }
 
 pub fn verify_eddsa_signature(
-    public_key: [u8; 32],
+    public_key: &PublicKey,
     message: &[u8],
     signature: [u8; 64],
 ) -> Result<(), SignatureError> {
-    let public_key = PublicKey::from_bytes(&public_key)?;
     let signature = Signature::from_bytes(&signature)?;
     public_key.verify(message, &signature)?;
     Ok(())
@@ -71,12 +69,12 @@ mod tests {
         let private_key = generate_ed25519_key();
         let message = "test";
         let signature = create_eddsa_signature(
-            private_key.to_bytes(),
+            &private_key,
             message.as_bytes(),
-        ).unwrap();
+        );
         let public_key = PublicKey::from(&private_key);
         let result = verify_eddsa_signature(
-            public_key.to_bytes(),
+            &public_key,
             message.as_bytes(),
             signature,
         );

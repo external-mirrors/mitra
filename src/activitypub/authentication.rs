@@ -11,6 +11,11 @@ use mitra_models::{
     },
 };
 use mitra_utils::{
+    crypto_eddsa::{
+        ed25519_public_key_from_bytes,
+        Ed25519PublicKey,
+        EddsaError,
+    },
     crypto_rsa::{
         deserialize_rsa_public_key,
         rsa_public_key_from_pkcs1_der,
@@ -30,6 +35,7 @@ use crate::json_signatures::{
     verify::{
         get_json_signature,
         verify_blake2_ed25519_json_signature,
+        verify_eddsa_json_signature,
         verify_eip191_json_signature,
         verify_rsa_json_signature,
         JsonSignatureVerificationError as JsonSignatureError,
@@ -73,8 +79,11 @@ pub enum AuthenticationError {
     #[error("{0}")]
     ActorError(&'static str),
 
-    #[error("invalid public key")]
-    InvalidPublicKey(#[from] RsaSerializationError),
+    #[error("invalid RSA public key")]
+    InvalidRsaPublicKey(#[from] RsaSerializationError),
+
+    #[error("invalid Ed25519 public key")]
+    InvalidEd25519PublicKey(#[from] EddsaError),
 
     #[error("actor and request signer do not match")]
     UnexpectedSigner,
@@ -115,6 +124,21 @@ async fn get_signer(
         }
     };
     Ok(signer)
+}
+
+fn get_signer_ed25519_key(
+    profile: &DbActorProfile,
+    key_id: &str,
+) -> Result<Ed25519PublicKey, AuthenticationError> {
+    let actor_key = profile.public_keys
+        .inner().iter()
+        .find(|key| key.id == key_id)
+        .ok_or(AuthenticationError::ActorError("key not found"))?;
+    if actor_key.key_type != PublicKeyType::Ed25519 {
+        return Err(AuthenticationError::ActorError("unexpected key type"));
+    };
+    let ed25519_public_key = ed25519_public_key_from_bytes(&actor_key.key_data)?;
+    Ok(ed25519_public_key)
 }
 
 fn get_signer_rsa_key(
@@ -206,6 +230,18 @@ pub async fn verify_signed_activity(
                     verify_rsa_json_signature(
                         &signer_key,
                         &signature_data.canonical_object,
+                        &signature_data.signature,
+                    )?;
+                },
+                ProofType::JcsEddsaSignature => {
+                    let signer_key = get_signer_ed25519_key(
+                        &actor_profile,
+                        key_id,
+                    )?;
+                    verify_eddsa_json_signature(
+                        &signer_key,
+                        &signature_data.canonical_object,
+                        &signature_data.canonical_config,
                         &signature_data.signature,
                     )?;
                 },

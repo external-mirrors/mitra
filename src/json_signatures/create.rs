@@ -9,7 +9,11 @@ use mitra_utils::{
         canonicalize_object,
         CanonicalizationError,
     },
-    crypto_eddsa::{create_eddsa_signature, EddsaError},
+    crypto_eddsa::{
+        create_eddsa_signature,
+        Ed25519PrivateKey,
+        EddsaError,
+    },
     crypto_rsa::{
         create_rsa_sha256_signature,
         RsaError,
@@ -182,9 +186,8 @@ pub fn sign_object_rsa(
 }
 
 /// https://codeberg.org/fediverse/fep/src/branch/main/feps/fep-8b32.md
-#[allow(dead_code)]
 pub fn sign_object_eddsa(
-    signer_key: [u8; 32],
+    signer_key: &Ed25519PrivateKey,
     signer_key_id: &str,
     object: &JsonValue,
     current_time: Option<DateTime<Utc>>,
@@ -199,7 +202,7 @@ pub fn sign_object_eddsa(
     let canonical_proof_config = canonicalize_object(&proof_config)?;
     let proof_config_hash = Sha256::digest(canonical_proof_config.as_bytes());
     let hash_data = [proof_config_hash, object_hash].concat();
-    let signature = create_eddsa_signature(signer_key, &hash_data)?;
+    let signature = create_eddsa_signature(signer_key, &hash_data);
     let proof = IntegrityProof::new(proof_config, &signature);
     let mut signed_object = object.clone();
     add_integrity_proof(&mut signed_object, proof)?;
@@ -289,7 +292,7 @@ mod tests {
         });
         let created_at = DateTime::parse_from_rfc3339("2023-02-24T23:36:38Z").unwrap().with_timezone(&Utc);
         let result = sign_object_eddsa(
-            signer_key.to_bytes(),
+            &signer_key,
             signer_key_id,
             &object,
             Some(created_at),

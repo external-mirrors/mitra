@@ -2,7 +2,11 @@
 use blake2::{Blake2b512, Digest};
 
 use mitra_utils::{
-    crypto_eddsa::{verify_eddsa_signature, EddsaError},
+    crypto_eddsa::{
+        ed25519_public_key_from_bytes,
+        verify_eddsa_signature,
+        EddsaError,
+    },
     did_key::DidKey,
     multicodec::MulticodecError,
 };
@@ -85,7 +89,8 @@ fn verify_eddsa_blake2_signature(
     let mut hasher = Blake2b512::new();
     hasher.update(message);
     let hash = hasher.finalize();
-    verify_eddsa_signature(signer, &hash, signature)?;
+    let public_key = ed25519_public_key_from_bytes(&signer)?;
+    verify_eddsa_signature(&public_key, &hash, signature)?;
     Ok(())
 }
 

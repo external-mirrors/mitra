@@ -9,7 +9,7 @@ use mitra_utils::{
         canonicalize_object,
         CanonicalizationError,
     },
-    crypto_eddsa::verify_eddsa_signature,
+    crypto_eddsa::{verify_eddsa_signature, Ed25519PublicKey},
     crypto_rsa::{verify_rsa_sha256_signature, RsaPublicKey},
     did::Did,
     did_key::DidKey,
@@ -126,9 +126,8 @@ pub fn verify_rsa_json_signature(
     Ok(())
 }
 
-#[allow(dead_code)]
 pub fn verify_eddsa_json_signature(
-    signer_key: [u8; 32],
+    signer_key: &Ed25519PublicKey,
     canonical_object: &str,
     canonical_config: &str,
     signature: &[u8],
@@ -264,7 +263,7 @@ mod tests {
             },
         });
         let signed_object = sign_object_eddsa(
-            signer_key.to_bytes(),
+            &signer_key,
             signer_key_id,
             &object,
             None,
@@ -280,7 +279,7 @@ mod tests {
 
         let signer_public_key = Ed25519PublicKey::from(&signer_key);
         let result = verify_eddsa_json_signature(
-            signer_public_key.to_bytes(),
+            &signer_public_key,
             &signature_data.canonical_object,
             &signature_data.canonical_config,
             &signature_data.signature,

@@ -12,6 +12,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Create representation of actor's RSA public key in multikey format.
 - Use multikeys for actor authentication.
 - Support Ed25519 actor keys.
+- Implement FEP-8b32 with `jcs-eddsa-2022` cryptosuite.
 
 ### Changed
 

@@ -123,6 +123,7 @@ impl Config {
                 matches!(self.environment, Environment::Development),
             fetcher_timeout: self.federation.fetcher_timeout,
             deliverer_timeout: self.federation.deliverer_timeout,
+            fep_8b32_eddsa_enabled: self.federation.fep_8b32_eddsa_enabled,
         }
     }
 
@@ -188,6 +189,8 @@ pub struct Instance {
     pub is_private: bool,
     pub fetcher_timeout: u64,
     pub deliverer_timeout: u64,
+
+    pub fep_8b32_eddsa_enabled: bool,
 }
 
 impl Instance {
@@ -221,6 +224,7 @@ impl Instance {
             is_private: true,
             fetcher_timeout: 0,
             deliverer_timeout: 0,
+            fep_8b32_eddsa_enabled: false,
         }
     }
 }
@@ -243,6 +247,7 @@ mod tests {
             is_private: true,
             fetcher_timeout: 0,
             deliverer_timeout: 0,
+            fep_8b32_eddsa_enabled: false,
         };
 
         assert_eq!(instance.url(), "https://example.com");
@@ -266,6 +271,7 @@ mod tests {
             is_private: true,
             fetcher_timeout: 0,
             deliverer_timeout: 0,
+            fep_8b32_eddsa_enabled: false,
         };
 
         assert_eq!(instance.url(), "http://1.2.3.4:3777");
