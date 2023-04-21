@@ -166,11 +166,22 @@ pub fn verify_blake2_ed25519_json_signature(
 
 #[cfg(test)]
 mod tests {
+    use chrono::{DateTime, Utc};
     use serde_json::json;
     use mitra_utils::{
-        crypto_eddsa::{generate_ed25519_key, Ed25519PublicKey},
+        crypto_eddsa::{
+            generate_ed25519_key,
+            ed25519_private_key_from_bytes,
+            ed25519_public_key_from_bytes,
+            Ed25519PublicKey,
+        },
         crypto_rsa::generate_weak_rsa_key,
         currencies::Currency,
+        multibase::decode_multibase_base58btc,
+        multicodec::{
+            decode_ed25519_private_key,
+            decode_ed25519_public_key,
+        },
     };
     use crate::json_signatures::create::{
         sign_object_eddsa,
@@ -280,6 +291,74 @@ mod tests {
         let signer_public_key = Ed25519PublicKey::from(&signer_key);
         let result = verify_eddsa_json_signature(
             &signer_public_key,
+            &signature_data.canonical_object,
+            &signature_data.canonical_config,
+            &signature_data.signature,
+        );
+        assert_eq!(result.is_ok(), true);
+    }
+
+    #[test]
+    fn test_create_and_verify_eddsa_signature_test_vector() {
+        let signer_key_multibase = "z3u2en7t5LR2WtQH5PfFqMqwVHBeXouLzo6haApm8XHqvjxq";
+        let signer_key_multicode = decode_multibase_base58btc(signer_key_multibase).unwrap();
+        let signer_key_bytes = decode_ed25519_private_key(&signer_key_multicode).unwrap();
+        let signer_key = ed25519_private_key_from_bytes(&signer_key_bytes).unwrap();
+        let signer_key_id = "https://server.example/users/alice#ed25519-key";
+        let created_at = DateTime::parse_from_rfc3339("2023-02-24T23:36:38Z")
+            .unwrap().with_timezone(&Utc);
+        let object = json!({
+            "@context": [
+                "https://www.w3.org/ns/activitystreams",
+                "https://w3id.org/security/data-integrity/v1"
+            ],
+            "type": "Create",
+            "actor": "https://server.example/users/alice",
+            "object": {
+                "type": "Note",
+                "content": "Hello world"
+            }
+        });
+        let signed_object = sign_object_eddsa(
+            &signer_key,
+            signer_key_id,
+            &object,
+            Some(created_at),
+        ).unwrap();
+
+        let expected_result = json!({
+            "@context": [
+                "https://www.w3.org/ns/activitystreams",
+                "https://w3id.org/security/data-integrity/v1"
+            ],
+            "type": "Create",
+            "actor": "https://server.example/users/alice",
+            "object": {
+                "type": "Note",
+                "content": "Hello world"
+            },
+            "proof": {
+                "type": "DataIntegrityProof",
+                "cryptosuite": "jcs-eddsa-2022",
+                "verificationMethod": "https://server.example/users/alice#ed25519-key",
+                "proofPurpose": "assertionMethod",
+                "proofValue": "z2nnHsFrkVJcmfprDuquc5bjjSZSUoFXbYZkyZFyptXVhwUwEBnhYftu9Jh25b9oZAn4WcPNY6mjhv2g3EuVc7fjC",
+                "created": "2023-02-24T23:36:38Z"
+            }
+        });
+        assert_eq!(signed_object, expected_result);
+
+        let signature_data = get_json_signature(&signed_object).unwrap();
+        assert_eq!(
+            signature_data.proof_type,
+            ProofType::JcsEddsaSignature,
+        );
+        let public_key_multibase = "z6MkrJVnaZkeFzdQyMZu1cgjg7k1pZZ6pvBQ7XJPt4swbTQ2";
+        let public_key_multicode = decode_multibase_base58btc(public_key_multibase).unwrap();
+        let public_key_bytes = decode_ed25519_public_key(&public_key_multicode).unwrap();
+        let public_key = ed25519_public_key_from_bytes(&public_key_bytes).unwrap();
+        let result = verify_eddsa_json_signature(
+            &public_key,
             &signature_data.canonical_object,
             &signature_data.canonical_config,
             &signature_data.signature,

@@ -290,7 +290,8 @@ mod tests {
                 "content": "test",
             },
         });
-        let created_at = DateTime::parse_from_rfc3339("2023-02-24T23:36:38Z").unwrap().with_timezone(&Utc);
+        let created_at = DateTime::parse_from_rfc3339("2023-02-24T23:36:38Z")
+            .unwrap().with_timezone(&Utc);
         let result = sign_object_eddsa(
             &signer_key,
             signer_key_id,

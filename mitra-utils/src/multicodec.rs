@@ -8,6 +8,8 @@ pub struct MulticodecError;
 
 // Ed25519 public key (ed25519-pub)
 const MULTICODEC_ED25519_PUB: u128 = 0xed;
+// Ed25519 private key (ed25519-priv)
+const MULTICODEC_ED25519_PRIV: u128 = 0x1300;
 // RSA public key. DER-encoded ASN.1 type RSAPublicKey according to IETF RFC 8017 (PKCS #1)
 // (rsa-pub)
 const MULTICODEC_RSA_PUB: u128 = 0x1205;
@@ -41,6 +43,18 @@ pub fn decode_ed25519_public_key(value: &[u8])
     Ok(key)
 }
 
+pub fn encode_ed25519_private_key(key: [u8; 32]) -> Vec<u8> {
+    encode(MULTICODEC_ED25519_PRIV, &key)
+}
+
+pub fn decode_ed25519_private_key(value: &[u8])
+    -> Result<[u8; 32], MulticodecError>
+{
+    let data = decode(MULTICODEC_ED25519_PRIV, value)?;
+    let key: [u8; 32] = data.try_into().map_err(|_| MulticodecError)?;
+    Ok(key)
+}
+
 pub fn encode_rsa_public_key(key_der: &[u8]) -> Vec<u8> {
     encode(MULTICODEC_RSA_PUB, key_der)
 }
@@ -59,6 +73,14 @@ mod tests {
         let encoded = encode_ed25519_public_key(value);
         assert_eq!(encoded.len(), 34);
         let decoded = decode_ed25519_public_key(&encoded).unwrap();
+        assert_eq!(decoded, value);
+    }
+
+    #[test]
+    fn test_ed25519_priv_encode_decode() {
+        let value = [2; 32];
+        let encoded = encode_ed25519_private_key(value);
+        let decoded = decode_ed25519_private_key(&encoded).unwrap();
         assert_eq!(decoded, value);
     }
 
