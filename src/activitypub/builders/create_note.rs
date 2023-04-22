@@ -100,6 +100,7 @@ pub fn build_note(
     instance_hostname: &str,
     instance_url: &str,
     post: &Post,
+    fep_e232_enabled: bool,
 ) -> Note {
     let object_id = local_object_id(instance_url, &post.id);
     let actor_id = local_actor_id(instance_url, &post.author.username);
@@ -173,7 +174,7 @@ pub fn build_note(
             href: link_href,
             media_type: AP_MEDIA_TYPE.to_string(),
         };
-        if cfg!(feature = "fep-e232") {
+        if fep_e232_enabled {
             tags.push(Tag::LinkTag(tag));
         };
     };
@@ -238,8 +239,14 @@ pub fn build_create_note(
     instance_hostname: &str,
     instance_url: &str,
     post: &Post,
+    fep_e232_enabled: bool,
 ) -> CreateNote {
-    let object = build_note(instance_hostname, instance_url, post);
+    let object = build_note(
+        instance_hostname,
+        instance_url,
+        post,
+        fep_e232_enabled,
+    );
     let primary_audience = object.to.clone();
     let secondary_audience = object.cc.clone();
     let activity_id = format!("{}/create", object.id);
@@ -292,12 +299,14 @@ pub async fn prepare_create_note(
     instance: &Instance,
     author: &User,
     post: &Post,
+    fep_e232_enabled: bool,
 ) -> Result<OutgoingActivity, DatabaseError> {
     assert_eq!(author.id, post.author.id);
     let activity = build_create_note(
         &instance.hostname(),
         &instance.url(),
         post,
+        fep_e232_enabled,
     );
     let recipients = get_note_recipients(db_client, author, post).await?;
     Ok(OutgoingActivity::new(
@@ -355,7 +364,7 @@ mod tests {
             tags: vec!["test".to_string()],
             ..Default::default()
         };
-        let note = build_note(INSTANCE_HOSTNAME, INSTANCE_URL, &post);
+        let note = build_note(INSTANCE_HOSTNAME, INSTANCE_URL, &post, false);
 
         assert_eq!(
             note.id,
@@ -387,7 +396,7 @@ mod tests {
             visibility: Visibility::Followers,
             ..Default::default()
         };
-        let note = build_note(INSTANCE_HOSTNAME, INSTANCE_URL, &post);
+        let note = build_note(INSTANCE_HOSTNAME, INSTANCE_URL, &post, false);
 
         assert_eq!(note.to, vec![
             local_actor_followers(INSTANCE_URL, &post.author.username),
@@ -413,7 +422,7 @@ mod tests {
             mentions: vec![subscriber],
             ..Default::default()
         };
-        let note = build_note(INSTANCE_HOSTNAME, INSTANCE_URL, &post);
+        let note = build_note(INSTANCE_HOSTNAME, INSTANCE_URL, &post, false);
 
         assert_eq!(note.to, vec![
             local_actor_subscribers(INSTANCE_URL, &post.author.username),
@@ -440,7 +449,7 @@ mod tests {
             mentions: vec![mentioned],
             ..Default::default()
         };
-        let note = build_note(INSTANCE_HOSTNAME, INSTANCE_URL, &post);
+        let note = build_note(INSTANCE_HOSTNAME, INSTANCE_URL, &post, false);
 
         assert_eq!(note.to, vec![mentioned_id]);
         assert_eq!(note.cc.is_empty(), true);
@@ -454,7 +463,7 @@ mod tests {
             in_reply_to: Some(Box::new(parent.clone())),
             ..Default::default()
         };
-        let note = build_note(INSTANCE_HOSTNAME, INSTANCE_URL, &post);
+        let note = build_note(INSTANCE_HOSTNAME, INSTANCE_URL, &post, false);
 
         assert_eq!(
             note.in_reply_to.unwrap(),
@@ -494,7 +503,7 @@ mod tests {
             mentions: vec![parent_author],
             ..Default::default()
         };
-        let note = build_note(INSTANCE_HOSTNAME, INSTANCE_URL, &post);
+        let note = build_note(INSTANCE_HOSTNAME, INSTANCE_URL, &post, false);
 
         assert_eq!(
             note.in_reply_to.unwrap(),
@@ -523,6 +532,7 @@ mod tests {
             INSTANCE_HOSTNAME,
             INSTANCE_URL,
             &post,
+            false,
         );
 
         assert_eq!(

@@ -194,6 +194,7 @@ async fn outbox(
                 &instance.hostname(),
                 &instance.url(),
                 post,
+                config.federation.fep_e232_enabled,
             );
             serde_json::to_value(activity)
                 .expect("activity should be serializable")
@@ -369,6 +370,7 @@ pub async fn object_view(
         &config.instance().hostname(),
         &config.instance().url(),
         &post,
+        config.federation.fep_e232_enabled,
     );
     let response = HttpResponse::Ok()
         .content_type(AP_MEDIA_TYPE)

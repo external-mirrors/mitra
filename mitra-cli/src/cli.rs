@@ -355,6 +355,7 @@ impl DeletePost {
                 &config.instance(),
                 &author,
                 &post,
+                config.federation.fep_e232_enabled,
             ).await?;
             maybe_delete_note = Some(activity);
         };

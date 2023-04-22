@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+
+- Add `federation.fep_e232_enabled` configuration parameter.
+
+### Removed
+
+- Remove `fep-e232` cargo feature.
+
 ## [1.22.0] - 2023-04-22
 
 ### Added

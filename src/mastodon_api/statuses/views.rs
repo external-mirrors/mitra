@@ -205,8 +205,13 @@ async fn create_status(
     });
     post.linked = linked;
     // Federate
-    prepare_create_note(db_client, &instance, &current_user, &post)
-        .await?.enqueue(db_client).await?;
+    prepare_create_note(
+        db_client,
+        &instance,
+        &current_user,
+        &post,
+        config.federation.fep_e232_enabled,
+    ).await?.enqueue(db_client).await?;
 
     let status = Status::from_post(
         &get_request_base_url(connection_info),
@@ -296,6 +301,7 @@ async fn delete_status(
         &config.instance(),
         &current_user,
         &post,
+        config.federation.fep_e232_enabled,
     ).await?;
     let deletion_queue = delete_post(db_client, &status_id).await?;
     tokio::spawn(async move {

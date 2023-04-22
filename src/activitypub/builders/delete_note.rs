@@ -52,6 +52,7 @@ fn build_delete_note(
     instance_hostname: &str,
     instance_url: &str,
     post: &Post,
+    fep_e232_enabled: bool,
 ) -> DeleteNote {
     assert!(post.is_local());
     let object_id = local_object_id(instance_url, &post.id);
@@ -61,6 +62,7 @@ fn build_delete_note(
         instance_hostname,
         instance_url,
         post,
+        fep_e232_enabled,
     );
     DeleteNote {
         context: build_default_context(),
@@ -82,6 +84,7 @@ pub async fn prepare_delete_note(
     instance: &Instance,
     author: &User,
     post: &Post,
+    fep_e232_enabled: bool,
 ) -> Result<OutgoingActivity, DatabaseError> {
     assert_eq!(author.id, post.author.id);
     let mut post = post.clone();
@@ -90,6 +93,7 @@ pub async fn prepare_delete_note(
         &instance.hostname(),
         &instance.url(),
         &post,
+        fep_e232_enabled,
     );
     let recipients = get_note_recipients(db_client, author, &post).await?;
     Ok(OutgoingActivity::new(
@@ -123,6 +127,7 @@ mod tests {
             INSTANCE_HOSTNAME,
             INSTANCE_URL,
             &post,
+            false,
         );
 
         assert_eq!(
