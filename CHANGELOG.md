@@ -10,6 +10,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Add `federation.fep_e232_enabled` configuration parameter.
 
+### Changed
+
+- Set default `authentication_method` to `password` for `/api/v1/accounts` endpoint.
+
 ### Removed
 
 - Remove `fep-e232` cargo feature.

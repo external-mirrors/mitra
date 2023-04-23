@@ -150,24 +150,27 @@ pub async fn create_account(
 
     validate_local_username(&account_data.username)?;
 
-    if let Some(ref authentication_method) = account_data.authentication_method {
-        if authentication_method != AUTHENTICATION_METHOD_PASSWORD &&
-            authentication_method != AUTHENTICATION_METHOD_EIP4361
-        {
+    let authentication_method = match account_data.authentication_method.as_str() {
+        method @ (
+            AUTHENTICATION_METHOD_PASSWORD |
+            AUTHENTICATION_METHOD_EIP4361
+        ) => method,
+        _ => {
             return Err(ValidationError("unsupported authentication method").into());
-        };
+        },
     };
-    if account_data.password.is_none() && account_data.message.is_none() {
-        return Err(ValidationError("password or EIP-4361 message is required").into());
-    };
-    let maybe_password_hash = if let Some(password) = account_data.password.as_ref() {
+    let maybe_password_hash = if authentication_method == AUTHENTICATION_METHOD_PASSWORD {
+        let password = account_data.password.as_ref()
+            .ok_or(ValidationError("password is required"))?;
         let password_hash = hash_password(password)
             .map_err(|_| MastodonError::InternalError)?;
         Some(password_hash)
     } else {
         None
     };
-    let maybe_wallet_address = if let Some(message) = account_data.message.as_ref() {
+    let maybe_wallet_address = if authentication_method == AUTHENTICATION_METHOD_EIP4361 {
+        let message = account_data.message.as_ref()
+            .ok_or(ValidationError("message is required"))?;
         let signature = account_data.signature.as_ref()
             .ok_or(ValidationError("signature is required"))?;
         let wallet_address = verify_eip4361_signature(
@@ -180,10 +183,8 @@ pub async fn create_account(
     } else {
         None
     };
-    if maybe_wallet_address.is_some() == maybe_password_hash.is_some() {
-        // Either password or EIP-4361 auth must be used (but not both)
-        return Err(ValidationError("invalid login data").into());
-    };
+    // Either password or EIP-4361 auth must be used (but not both)
+    assert_ne!(maybe_password_hash.is_some(), maybe_wallet_address.is_some());
 
     if let Some(contract_set) = maybe_ethereum_contracts.as_ref() {
         if let Some(ref gate) = contract_set.gate {

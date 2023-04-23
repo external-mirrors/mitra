@@ -97,6 +97,7 @@ paths:
                   allOf:
                     - $ref: '#/components/schemas/AuthenticationMethod'
                     - nullable: true
+                    - default: password
                 username:
                   description: The desired username for the account.
                   type: string

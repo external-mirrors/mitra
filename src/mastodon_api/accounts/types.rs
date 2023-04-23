@@ -265,10 +265,13 @@ impl Account {
     }
 }
 
+fn default_authentication_method() -> String { AUTHENTICATION_METHOD_PASSWORD.to_string() }
+
 /// https://docs.joinmastodon.org/methods/accounts/
 #[derive(Deserialize)]
 pub struct AccountCreateData {
-    pub authentication_method: Option<String>,
+    #[serde(default = "default_authentication_method")]
+    pub authentication_method: String,
 
     pub username: String,
     pub password: Option<String>,
