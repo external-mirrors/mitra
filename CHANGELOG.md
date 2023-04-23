@@ -14,6 +14,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Remove `fep-e232` cargo feature.
 
+### Fixed
+
+- Fix JSON-LD context of `Note` objects.
+
 ## [1.22.0] - 2023-04-22
 
 ### Added
