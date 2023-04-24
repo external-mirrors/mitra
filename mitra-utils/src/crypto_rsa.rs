@@ -1,4 +1,4 @@
-use rsa::{Hash, PaddingScheme, PublicKey};
+use rsa::{PaddingScheme, PublicKey};
 use rsa::pkcs8::{
     DecodePrivateKey,
     DecodePublicKey,
@@ -76,7 +76,7 @@ pub fn create_rsa_sha256_signature(
     message: &str,
 ) -> Result<Vec<u8>, RsaError> {
     let digest = Sha256::digest(message.as_bytes());
-    let padding = PaddingScheme::new_pkcs1v15_sign(Some(Hash::SHA2_256));
+    let padding = PaddingScheme::new_pkcs1v15_sign::<Sha256>();
     let signature = private_key.sign(padding, &digest)?;
     Ok(signature)
 }
@@ -93,7 +93,7 @@ pub fn verify_rsa_sha256_signature(
     signature: &[u8],
 ) -> bool {
     let digest = Sha256::digest(message.as_bytes());
-    let padding = PaddingScheme::new_pkcs1v15_sign(Some(Hash::SHA2_256));
+    let padding = PaddingScheme::new_pkcs1v15_sign::<Sha256>();
     let is_valid = public_key.verify(
         padding,
         &digest,

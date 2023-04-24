@@ -24,7 +24,7 @@ rand = "0.8.4"
 # Used for working with regular expressions
 regex = "1.6.0"
 # Used for working with RSA keys
-rsa = "0.6.1"
+rsa = "0.7.2"
 pem = "1.1.1"
 # Used for hashing passwords
 rust-argon2 = "1.0.0"
@@ -34,7 +34,7 @@ serde_json = "1.0.89"
 # Used to create JCS representations
 serde_jcs = "0.1.0"
 # Used to calculate SHA2 hashes
-sha2 = "0.10.6"
+sha2 = { version = "0.10.6", features = ["oid"] }
 # Used for creating error types
 thiserror = "1.0.37"
 # Used to generate lexicographically sortable IDs
