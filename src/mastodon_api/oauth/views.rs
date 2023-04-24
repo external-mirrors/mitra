@@ -98,11 +98,14 @@ async fn authorize_view(
         &expires_at,
     ).await?;
 
-    let redirect_uri = format!(
+    let mut redirect_uri = format!(
         "{}?code={}",
         oauth_app.redirect_uri,
         authorization_code,
     );
+    if let Some(ref state) = query_params.state {
+        redirect_uri += &format!("&state={}", state);
+    };
     let response = HttpResponse::Found()
         .append_header((http_header::LOCATION, redirect_uri))
         .finish();

@@ -13,6 +13,7 @@ pub struct AuthorizationQueryParams {
     pub client_id: Uuid,
     pub redirect_uri: String,
     pub scope: String,
+    pub state: Option<String>,
 }
 
 #[derive(Deserialize)]
