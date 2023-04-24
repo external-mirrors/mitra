@@ -14,6 +14,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Changed
 
 - Set default `authentication_method` to `password` for `/api/v1/accounts` endpoint.
+- Allow EIP-4361 messages to have expiration time.
 
 ### Removed
 

@@ -28,9 +28,6 @@ pub fn verify_eip4361_signature(
     if !message.valid_now() {
         return Err(ValidationError("message is not currently valid"));
     };
-    if message.not_before.is_some() || message.expiration_time.is_some() {
-        return Err(ValidationError("message shouldn't have expiration time"));
-    };
     message.verify_eip191(&signature_bytes)
         .map_err(|_| ValidationError("invalid signature"))?;
     // Return wallet address in lower case
