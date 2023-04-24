@@ -2,7 +2,6 @@ use std::collections::BTreeMap;
 
 use actix_web::http::Method;
 use reqwest::Client;
-use rsa::RsaPrivateKey;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
@@ -15,7 +14,11 @@ use mitra_models::{
     profiles::types::DbActor,
     users::types::User,
 };
-use mitra_utils::crypto_rsa::deserialize_private_key;
+use mitra_utils::crypto_rsa::{
+    deserialize_private_key,
+    RsaPrivateKey,
+    RsaSerializationError,
+};
 
 use crate::http_signatures::create::{
     create_http_signature,
@@ -37,7 +40,7 @@ use super::{
 #[derive(thiserror::Error, Debug)]
 pub enum DelivererError {
     #[error("key error")]
-    KeyDeserializationError(#[from] rsa::pkcs8::Error),
+    KeyDeserializationError(#[from] RsaSerializationError),
 
     #[error(transparent)]
     HttpSignatureError(#[from] HttpSignatureError),

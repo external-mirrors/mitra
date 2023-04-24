@@ -1,10 +1,11 @@
 use actix_web::http::Method;
 use chrono::Utc;
-use rsa::RsaPrivateKey;
 
 use mitra_utils::crypto_rsa::{
     create_rsa_sha256_signature,
     get_message_digest,
+    RsaError,
+    RsaPrivateKey,
 };
 
 const HTTP_SIGNATURE_ALGORITHM: &str = "rsa-sha256";
@@ -23,7 +24,7 @@ pub enum HttpSignatureError {
     UrlError(#[from] url::ParseError),
 
     #[error("signing error")]
-    SigningError(#[from] rsa::errors::Error),
+    SigningError(#[from] RsaError),
 }
 
 /// Creates HTTP signature according to the old HTTP Signatures Spec:

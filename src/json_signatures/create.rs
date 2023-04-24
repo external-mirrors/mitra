@@ -1,5 +1,4 @@
 use chrono::{DateTime, Utc};
-use rsa::RsaPrivateKey;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
@@ -8,7 +7,11 @@ use mitra_utils::{
         canonicalize_object,
         CanonicalizationError,
     },
-    crypto_rsa::create_rsa_sha256_signature,
+    crypto_rsa::{
+        create_rsa_sha256_signature,
+        RsaError,
+        RsaPrivateKey,
+    },
     did_key::DidKey,
     did_pkh::DidPkh,
     multibase::encode_multibase_base58btc,
@@ -91,7 +94,7 @@ pub enum JsonSignatureError {
     CanonicalizationError(#[from] CanonicalizationError),
 
     #[error("signing error")]
-    SigningError(#[from] rsa::errors::Error),
+    SigningError(#[from] RsaError),
 
     #[error("invalid object")]
     InvalidObject,

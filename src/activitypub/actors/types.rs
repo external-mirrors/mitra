@@ -20,7 +20,11 @@ use mitra_models::{
     users::types::User,
 };
 use mitra_utils::{
-    crypto_rsa::{deserialize_private_key, get_public_key_pem},
+    crypto_rsa::{
+        deserialize_private_key,
+        get_public_key_pem,
+        RsaSerializationError,
+    },
     urls::get_hostname,
 };
 
@@ -272,7 +276,7 @@ impl Actor {
     }
 }
 
-pub type ActorKeyError = rsa::pkcs8::Error;
+pub type ActorKeyError = RsaSerializationError;
 
 fn build_actor_context() -> (
     &'static str,

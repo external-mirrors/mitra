@@ -3,9 +3,11 @@ use std::collections::HashMap;
 use actix_web::http::{Method, Uri, header::HeaderMap};
 use chrono::{DateTime, Duration, TimeZone, Utc};
 use regex::Regex;
-use rsa::RsaPublicKey;
 
-use mitra_utils::crypto_rsa::verify_rsa_sha256_signature;
+use mitra_utils::crypto_rsa::{
+    verify_rsa_sha256_signature,
+    RsaPublicKey,
+};
 
 const SIGNATURE_PARAMETER_RE: &str = r#"^(?P<key>[a-zA-Z]+)="(?P<value>.+)"$"#;
 

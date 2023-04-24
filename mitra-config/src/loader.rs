@@ -2,13 +2,12 @@ use std::os::unix::fs::MetadataExt;
 use std::path::Path;
 use std::str::FromStr;
 
-use rsa::RsaPrivateKey;
-
 use mitra_utils::{
     crypto_rsa::{
         deserialize_private_key,
         generate_rsa_key,
         serialize_private_key,
+        RsaPrivateKey,
     },
     files::{set_file_permissions, write_file},
 };

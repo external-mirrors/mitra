@@ -8,7 +8,7 @@ use mitra_models::{
     profiles::types::DbActorProfile,
 };
 use mitra_utils::{
-    crypto_rsa::deserialize_public_key,
+    crypto_rsa::{deserialize_public_key, RsaSerializationError},
     did::Did,
 };
 
@@ -63,7 +63,7 @@ pub enum AuthenticationError {
     ActorError(&'static str),
 
     #[error("invalid public key")]
-    InvalidPublicKey(#[from] rsa::pkcs8::Error),
+    InvalidPublicKey(#[from] RsaSerializationError),
 
     #[error("actor and request signer do not match")]
     UnexpectedSigner,

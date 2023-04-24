@@ -1,6 +1,5 @@
 use std::str::FromStr;
 
-use rsa::RsaPublicKey;
 use serde_json::Value;
 use url::Url;
 
@@ -9,7 +8,7 @@ use mitra_utils::{
         canonicalize_object,
         CanonicalizationError,
     },
-    crypto_rsa::verify_rsa_sha256_signature,
+    crypto_rsa::{verify_rsa_sha256_signature, RsaPublicKey},
     did::Did,
     did_key::DidKey,
     did_pkh::DidPkh,

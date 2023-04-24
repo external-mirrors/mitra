@@ -2,11 +2,13 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 
 use log::{Level as LogLevel};
-use rsa::RsaPrivateKey;
 use serde::Deserialize;
 use url::Url;
 
-use mitra_utils::urls::normalize_url;
+use mitra_utils::{
+    crypto_rsa::RsaPrivateKey,
+    urls::normalize_url,
+};
 
 use super::authentication::{
     default_authentication_methods,
