@@ -170,7 +170,7 @@ mod tests {
         assert_eq!(result["object"], object["object"]);
         let signature_date = result["proof"]["created"].as_str().unwrap();
         // Put * in place of date to avoid escaping all curly brackets
-        let expected_result = r#"{"actor":"https://example.org/users/test","id":"https://example.org/objects/1","object":{"content":"test","type":"Note"},"proof":{"created":"*","proofPurpose":"assertionMethod","proofValue":"z2Gh9LYrXjSqFrkia6gMg7xp2wftn1hqmYeEXxrsH9Eh6agB2VYraSYrDoSufbXEHnnyHMCoDSAriLpVacj6E4LFK","type":"MitraJcsRsaSignature2022","verificationMethod":"https://example.org/users/test#main-key"},"to":["https://example.org/users/yyy","https://example.org/users/xxx"],"type":"Create"}"#;
+        let expected_result = r#"{"actor":"https://example.org/users/test","id":"https://example.org/objects/1","object":{"content":"test","type":"Note"},"proof":{"created":"*","proofPurpose":"assertionMethod","proofValue":"z4vYn27QHCnW8Lj3o6R9GCRp85BuM3SP2JoMCysBMhvEKu3mnR3FNEDWNtPaJCo27mWqmB68FxR2bppnAr4Qrvxu5","type":"MitraJcsRsaSignature2022","verificationMethod":"https://example.org/users/test#main-key"},"to":["https://example.org/users/yyy","https://example.org/users/xxx"],"type":"Create"}"#;
         assert_eq!(
             serde_json::to_string(&result).unwrap(),
             expected_result.replace('*', signature_date),

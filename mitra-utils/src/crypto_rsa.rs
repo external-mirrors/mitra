@@ -1,10 +1,15 @@
 use rsa::{Hash, PaddingScheme, PublicKey};
-use rsa::pkcs8::{FromPrivateKey, FromPublicKey, ToPrivateKey, ToPublicKey};
+use rsa::pkcs8::{
+    DecodePrivateKey,
+    DecodePublicKey,
+    EncodePrivateKey,
+    EncodePublicKey,
+    LineEnding,
+};
 use sha2::{Digest, Sha256};
 
 pub use rsa::{RsaPrivateKey, RsaPublicKey};
 pub type RsaError = rsa::errors::Error;
-pub type RsaSerializationError = rsa::pkcs8::Error;
 
 pub fn generate_rsa_key() -> Result<RsaPrivateKey, RsaError> {
     let mut rng = rand::rngs::OsRng;
@@ -15,28 +20,42 @@ pub fn generate_rsa_key() -> Result<RsaPrivateKey, RsaError> {
 #[cfg(feature = "test-utils")]
 pub fn generate_weak_rsa_key() -> Result<RsaPrivateKey, RsaError> {
     use rand::SeedableRng;
-    let mut rng = rand::rngs::SmallRng::seed_from_u64(0);
+    let mut rng = rand::rngs::StdRng::seed_from_u64(0);
     let bits = 512;
     RsaPrivateKey::new(&mut rng, bits)
+}
+
+#[derive(thiserror::Error, Debug)]
+pub enum RsaSerializationError {
+    #[error(transparent)]
+    Pkcs8Error(#[from] rsa::pkcs8::Error),
+
+    #[error(transparent)]
+    PemError(#[from] pem::PemError),
 }
 
 pub fn serialize_private_key(
     private_key: &RsaPrivateKey,
 ) -> Result<String, RsaSerializationError> {
-    private_key.to_pkcs8_pem().map(|val| val.to_string())
+    let private_key_pem = private_key.to_pkcs8_pem(LineEnding::LF)
+        .map(|val| val.to_string())?;
+    Ok(private_key_pem)
 }
 
 pub fn deserialize_private_key(
     private_key_pem: &str,
 ) -> Result<RsaPrivateKey, RsaSerializationError> {
-    RsaPrivateKey::from_pkcs8_pem(private_key_pem)
+    let private_key = RsaPrivateKey::from_pkcs8_pem(private_key_pem)?;
+    Ok(private_key)
 }
 
 pub fn get_public_key_pem(
     private_key: &RsaPrivateKey,
 ) -> Result<String, RsaSerializationError> {
     let public_key = RsaPublicKey::from(private_key);
-    public_key.to_public_key_pem()
+    let public_key_pem = public_key.to_public_key_pem(LineEnding::LF)
+        .map_err(|error| rsa::pkcs8::Error::from(error))?;
+    Ok(public_key_pem)
 }
 
 pub fn deserialize_public_key(
@@ -44,10 +63,11 @@ pub fn deserialize_public_key(
 ) -> Result<RsaPublicKey, RsaSerializationError> {
     // rsa package can't decode PEM string with non-standard wrap width,
     // so the input should be normalized first
-    let parsed_pem = pem::parse(public_key_pem.trim().as_bytes())
-        .map_err(|_| RsaSerializationError::Pem)?;
+    let parsed_pem = pem::parse(public_key_pem.trim().as_bytes())?;
     let normalized_pem = pem::encode(&parsed_pem);
-    RsaPublicKey::from_public_key_pem(&normalized_pem)
+    let public_key = RsaPublicKey::from_public_key_pem(&normalized_pem)
+        .map_err(|error| rsa::pkcs8::Error::from(error))?;
+    Ok(public_key)
 }
 
 /// RSASSA-PKCS1-v1_5 signature
