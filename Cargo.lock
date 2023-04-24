@@ -400,7 +400,7 @@ version = "0.10.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b12e5fd123190ce1c2e559308a94c9bacad77907d4c6005d9e58fe1a0689e55e"
 dependencies = [
- "digest 0.10.3",
+ "digest 0.10.6",
 ]
 
 [[package]]
@@ -852,9 +852,9 @@ dependencies = [
 
 [[package]]
 name = "digest"
-version = "0.10.3"
+version = "0.10.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f2fb860ca6fafa5552fb6d0e816a69c8e49f0908bf524e30a90d97c85892d506"
+checksum = "8168378f4e5023e7218c89c891c0fd8ecdb5e5e4f18cb78f38cf245dd021e76f"
 dependencies = [
  "block-buffer 0.10.2",
  "crypto-common",
@@ -1391,7 +1391,7 @@ version = "0.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6c49c37c09c17a53d937dfbb742eb3a961d65a994e6bcdcf37e7399d0cc8ab5e"
 dependencies = [
- "digest 0.10.3",
+ "digest 0.10.6",
 ]
 
 [[package]]
@@ -1804,7 +1804,7 @@ version = "0.10.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "658646b21e0b72f7866c7038ab086d3d5e1cd6271f060fd37defb241949d0582"
 dependencies = [
- "digest 0.10.3",
+ "digest 0.10.6",
 ]
 
 [[package]]
@@ -1895,7 +1895,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serial_test",
- "sha2 0.9.9",
+ "sha2 0.10.6",
  "siwe",
  "thiserror",
  "tokio",
@@ -1976,7 +1976,7 @@ dependencies = [
  "serde",
  "serde_jcs",
  "serde_json",
- "sha2 0.9.9",
+ "sha2 0.10.6",
  "thiserror",
  "ulid",
  "url 2.2.2",
@@ -2413,7 +2413,7 @@ dependencies = [
  "md-5 0.10.1",
  "memchr",
  "rand 0.8.5",
- "sha2 0.10.5",
+ "sha2 0.10.6",
  "stringprep",
 ]
 
@@ -2871,7 +2871,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4cf22754c49613d2b3b119f0e5d46e34a2c628a937e3024b8762de4e7d8c710b"
 dependencies = [
  "byteorder",
- "digest 0.10.3",
+ "digest 0.10.6",
  "num-bigint-dig",
  "num-integer",
  "num-iter",
@@ -3141,7 +3141,7 @@ checksum = "006769ba83e921b3085caa8334186b00cf92b4cb1a6cf4632fbccc8eff5c7549"
 dependencies = [
  "cfg-if",
  "cpufeatures",
- "digest 0.10.3",
+ "digest 0.10.6",
 ]
 
 [[package]]
@@ -3159,13 +3159,13 @@ dependencies = [
 
 [[package]]
 name = "sha2"
-version = "0.10.5"
+version = "0.10.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cf9db03534dff993187064c4e0c05a5708d2a9728ace9a8959b77bedf415dac5"
+checksum = "82e6b795fe2e3b1e845bafcb27aa35405c4d47cdfc92af5fc8d3002f76cebdc0"
 dependencies = [
  "cfg-if",
  "cpufeatures",
- "digest 0.10.3",
+ "digest 0.10.6",
 ]
 
 [[package]]
