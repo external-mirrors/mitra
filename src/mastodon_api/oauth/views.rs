@@ -11,6 +11,7 @@ use chrono::{Duration, Utc};
 
 use mitra_config::Config;
 use mitra_models::{
+    caip122::queries::is_valid_caip122_nonce,
     database::{get_database_client, DatabaseError, DbPool},
     oauth::queries::{
         create_oauth_authorization,
@@ -140,15 +141,22 @@ async fn token_view(
                 .ok_or(ValidationError("message is required"))?;
             let signature = request_data.signature.as_ref()
                 .ok_or(ValidationError("signature is required"))?;
-            let ethereum_account_id = verify_eip4361_signature(
+            let session_data = verify_eip4361_signature(
                 message,
                 signature,
                 &config.instance().hostname(),
                 &config.login_message,
             )?;
+            if !is_valid_caip122_nonce(
+                db_client,
+                &session_data.account_id,
+                &session_data.nonce,
+            ).await? {
+                return Err(ValidationError("nonce can't be reused").into());
+            };
             get_user_by_login_address(
                 db_client,
-                &ethereum_account_id.address,
+                &session_data.account_id.address,
             ).await?
         },
         _ => {

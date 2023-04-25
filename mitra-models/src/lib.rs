@@ -1,7 +1,8 @@
 pub mod attachments;
 pub mod background_jobs;
-pub mod database;
+pub mod caip122;
 pub mod cleanup;
+pub mod database;
 pub mod emojis;
 pub mod instances;
 pub mod invoices;

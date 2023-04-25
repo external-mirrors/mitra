@@ -179,13 +179,15 @@ pub async fn create_account(
             .ok_or(ValidationError("message is required"))?;
         let signature = account_data.signature.as_ref()
             .ok_or(ValidationError("signature is required"))?;
-        let ethereum_account_id = verify_eip4361_signature(
+        let session_data = verify_eip4361_signature(
             message,
             signature,
             &config.instance().hostname(),
             &config.login_message,
         )?;
-        Some(ethereum_account_id.address)
+        // Don't remember nonce to avoid extra signature requests
+        // during registration
+        Some(session_data.account_id.address)
     } else {
         None
     };

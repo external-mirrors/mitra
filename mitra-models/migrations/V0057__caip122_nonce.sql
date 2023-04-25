@@ -1,0 +1,6 @@
+CREATE TABLE caip122_nonce (
+    account_id VARCHAR(500) NOT NULL,
+    nonce VARCHAR(100) NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (account_id, nonce)
+);

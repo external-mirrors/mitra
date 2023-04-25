@@ -11,13 +11,18 @@ use mitra_utils::{
 use crate::errors::ValidationError;
 use super::utils::address_to_string;
 
+pub struct Eip4361SessionData {
+    pub account_id: AccountId,
+    pub nonce: String,
+}
+
 /// Verifies EIP-4361 signature and returns wallet address
 pub fn verify_eip4361_signature(
     message: &str,
     signature: &str,
     instance_hostname: &str,
     login_message: &str,
-) -> Result<AccountId, ValidationError> {
+) -> Result<Eip4361SessionData, ValidationError> {
     let message: Message = message.parse()
         .map_err(|_| ValidationError("invalid EIP-4361 message"))?;
     let signature_bytes = <[u8; 65]>::from_hex(signature.trim_start_matches("0x"))
@@ -40,7 +45,11 @@ pub fn verify_eip4361_signature(
     // Return wallet address in lower case
     let wallet_address = address_to_string(H160(message.address));
     let account_id = AccountId { chain_id, address: wallet_address };
-    Ok(account_id)
+    let session_data = Eip4361SessionData {
+        account_id,
+        nonce: message.nonce,
+    };
+    Ok(session_data)
 }
 
 #[cfg(test)]
@@ -63,13 +72,14 @@ Chain ID: 1
 Nonce: 3cb7760eac2f
 Issued At: 2022-02-14T22:27:35.500Z";
         let signature = "0x9059c9a69c31e87d887262a574abcc33f320d5b778bea8a35c6fbdea94a17e9652b99f7cdd146ed67fa8e4bb02462774b958a129c421fe8d743a43bf67dcbcd61c";
-        let account_id = verify_eip4361_signature(
+        let session_data = verify_eip4361_signature(
             message, signature,
             INSTANCE_HOSTNAME,
             LOGIN_MESSAGE,
         ).unwrap();
-        assert_eq!(account_id.chain_id, ChainId::ethereum_mainnet());
-        assert_eq!(account_id.address, "0x70997970c51812dc3a010c7d01b50e0d17dc79c8");
+        assert_eq!(session_data.account_id.chain_id, ChainId::ethereum_mainnet());
+        assert_eq!(session_data.account_id.address, "0x70997970c51812dc3a010c7d01b50e0d17dc79c8");
+        assert_eq!(session_data.nonce, "3cb7760eac2f");
     }
 
     #[test]
@@ -80,7 +90,7 @@ Issued At: 2022-02-14T22:27:35.500Z";
             message, signature,
             INSTANCE_HOSTNAME,
             LOGIN_MESSAGE,
-        ).unwrap_err();
+        ).err().unwrap();
         assert_eq!(error.to_string(), "invalid EIP-4361 message");
     }
 }
