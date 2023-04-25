@@ -283,7 +283,7 @@ impl RefetchActor {
 #[derive(Parser)]
 pub struct ReadOutbox {
     actor_id: String,
-    #[clap(long, default_value_t = 5)]
+    #[clap(long, default_value_t = 20)]
     limit: usize,
 }
 
