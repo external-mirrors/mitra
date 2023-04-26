@@ -1,3 +1,4 @@
+pub mod caip10;
 pub mod caip2;
 pub mod canonicalization;
 pub mod crypto_rsa;

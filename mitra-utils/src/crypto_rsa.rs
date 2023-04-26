@@ -54,7 +54,7 @@ pub fn get_public_key_pem(
 ) -> Result<String, RsaSerializationError> {
     let public_key = RsaPublicKey::from(private_key);
     let public_key_pem = public_key.to_public_key_pem(LineEnding::LF)
-        .map_err(|error| rsa::pkcs8::Error::from(error))?;
+        .map_err(rsa::pkcs8::Error::from)?;
     Ok(public_key_pem)
 }
 
@@ -66,7 +66,7 @@ pub fn deserialize_public_key(
     let parsed_pem = pem::parse(public_key_pem.trim().as_bytes())?;
     let normalized_pem = pem::encode(&parsed_pem);
     let public_key = RsaPublicKey::from_public_key_pem(&normalized_pem)
-        .map_err(|error| rsa::pkcs8::Error::from(error))?;
+        .map_err(rsa::pkcs8::Error::from)?;
     Ok(public_key)
 }
 

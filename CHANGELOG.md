@@ -19,6 +19,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Keep `state` parameter when redirecting from OAuth authorization page.
 - Change default limit of `read-outbox` command to 20 activities.
 - Change maximum length of local usernames to 30.
+- Update CAIP-10 account address regexp.
 
 ### Removed
 

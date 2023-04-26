@@ -13,7 +13,7 @@ use serde::{
 
 use super::currencies::Currency;
 
-const CAIP2_RE: &str = r"(?P<namespace>[-a-z0-9]{3,8}):(?P<reference>[-a-zA-Z0-9]{1,32})";
+pub(super) const CAIP2_RE: &str = r"(?P<namespace>[-a-z0-9]{3,8}):(?P<reference>[-a-zA-Z0-9]{1,32})";
 const CAIP2_ETHEREUM_NAMESPACE: &str = "eip155";
 const CAIP2_MONERO_NAMESPACE: &str = "monero"; // unregistered namespace
 const ETHEREUM_MAINNET_ID: i32 = 1;
@@ -24,6 +24,10 @@ pub struct ChainId {
     pub namespace: String,
     pub reference: String,
 }
+
+#[derive(thiserror::Error, Debug)]
+#[error("{0}")]
+pub struct ChainIdError(&'static str);
 
 impl ChainId {
     pub fn ethereum_mainnet() -> Self {
@@ -66,10 +70,6 @@ impl ChainId {
         Some(currency)
     }
 }
-
-#[derive(thiserror::Error, Debug)]
-#[error("{0}")]
-pub struct ChainIdError(&'static str);
 
 impl FromStr for ChainId {
     type Err = ChainIdError;

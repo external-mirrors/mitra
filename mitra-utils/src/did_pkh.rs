@@ -2,26 +2,21 @@
 use std::fmt;
 use std::str::FromStr;
 
-use regex::Regex;
-
 use super::{
+    caip10::AccountId,
     caip2::ChainId,
     currencies::Currency,
     did::DidParseError,
 };
 
-// https://github.com/ChainAgnostic/CAIPs/blob/master/CAIPs/caip-10.md#syntax
-const DID_PKH_RE: &str = r"did:pkh:(?P<network>[-a-z0-9]{3,8}):(?P<chain>[-a-zA-Z0-9]{1,32}):(?P<address>[a-zA-Z0-9]{1,64})";
-
 #[derive(Clone, Debug, PartialEq)]
 pub struct DidPkh {
-    chain_id: ChainId,
-    address: String,
+    account_id: AccountId,
 }
 
 impl DidPkh {
     pub fn address(&self) -> String {
-        self.address.clone()
+        self.account_id.address.clone()
     }
 
     pub fn from_address(currency: &Currency, address: &str) -> Self {
@@ -30,27 +25,22 @@ impl DidPkh {
             Currency::Monero => unimplemented!(),
         };
         let address = currency.normalize_address(address);
-        Self { chain_id, address }
+        let account_id = AccountId { chain_id, address };
+        Self { account_id }
     }
 
     pub fn chain_id(&self) -> ChainId {
-        self.chain_id.clone()
+        self.account_id.chain_id.clone()
     }
 
     pub fn currency(&self) -> Option<Currency> {
-        self.chain_id.currency()
+        self.account_id.chain_id.currency()
     }
 }
 
 impl fmt::Display for DidPkh {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let did_str = format!(
-            "did:pkh:{}:{}:{}",
-            self.chain_id.namespace,
-            self.chain_id.reference,
-            self.address,
-        );
-        write!(formatter, "{}", did_str)
+        write!(formatter, "did:pkh:{}", self.account_id)
     }
 }
 
@@ -58,16 +48,11 @@ impl FromStr for DidPkh {
     type Err = DidParseError;
 
     fn from_str(value: &str) -> Result<Self, Self::Err> {
-        let did_pkh_re = Regex::new(DID_PKH_RE).unwrap();
-        let caps = did_pkh_re.captures(value).ok_or(DidParseError)?;
-        let did_pkh = Self {
-            chain_id: ChainId {
-                namespace: caps["network"].to_string(),
-                reference: caps["chain"].to_string(),
-            },
-            address: caps["address"].to_string(),
-        };
-        Ok(did_pkh)
+        let account_id_str = value.strip_prefix("did:pkh:")
+            .ok_or(DidParseError)?;
+        let account_id: AccountId = account_id_str.parse()
+            .map_err(|_| DidParseError)?;
+        Ok(Self { account_id })
     }
 }
 
@@ -92,5 +77,12 @@ mod tests {
 
         let did: DidPkh = did_str.parse().unwrap();
         assert_eq!(did.address(), address.to_lowercase());
+    }
+
+    #[test]
+    fn test_parse_invalid_did_pkh() {
+        let did_str = "eip155:1:0xb9c5714089478a327f09197987f16f9e5d936e8a";
+        let error = did_str.parse::<DidPkh>().err().unwrap();
+        assert_eq!(error.to_string(), "DID parse error");
     }
 }
