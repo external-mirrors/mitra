@@ -17,6 +17,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Allow EIP-4361 messages to have expiration time.
 - Keep `state` parameter when redirecting from OAuth authorization page.
 - Change default limit of `read-outbox` command to 20 activities.
+- Change maximum length of local usernames to 30.
 
 ### Removed
 

@@ -12,6 +12,7 @@ use crate::errors::ValidationError;
 use super::posts::EMOJI_LIMIT;
 
 const USERNAME_RE: &str = r"^[a-zA-Z0-9_\.-]+$";
+const USERNAME_LENGTH_MAX: usize = 100;
 const DISPLAY_NAME_MAX_LENGTH: usize = 200;
 const BIO_MAX_LENGTH: usize = 10000;
 const BIO_ALLOWED_TAGS: [&str; 2] = ["a", "br"];
@@ -22,7 +23,7 @@ pub fn validate_username(username: &str) -> Result<(), ValidationError> {
     if username.is_empty() {
         return Err(ValidationError("username is empty"));
     };
-    if username.len() > 100 {
+    if username.len() > USERNAME_LENGTH_MAX {
         return Err(ValidationError("username is too long"));
     };
     let username_regexp = Regex::new(USERNAME_RE).unwrap();
