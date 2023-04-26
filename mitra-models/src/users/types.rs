@@ -174,7 +174,7 @@ impl User {
             // one proof per currency is allowed.
             if let Some(ref address_currency) = did_pkh.currency() {
                 if address_currency == currency {
-                    return Some(did_pkh.address);
+                    return Some(did_pkh.address());
                 };
             };
         };

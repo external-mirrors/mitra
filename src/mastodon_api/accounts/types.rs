@@ -152,7 +152,7 @@ impl Account {
                     let field_name = did_pkh.currency()
                         .map(|currency| currency.field_name())
                         .unwrap_or("$".to_string());
-                    (field_name, did_pkh.address)
+                    (field_name, did_pkh.address())
                 }
             };
             let field = AccountField {

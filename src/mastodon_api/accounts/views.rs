@@ -453,7 +453,7 @@ async fn create_identity_proof(
             IdentityProofType::LegacyMinisignIdentityProof
         },
         Did::Pkh(ref did_pkh) => {
-            if did_pkh.chain_id != ChainId::ethereum_mainnet() {
+            if did_pkh.chain_id() != ChainId::ethereum_mainnet() {
                 // DID must point to Ethereum Mainnet because it is a valid
                 // identifier on any Ethereum chain
                 return Err(ValidationError("unsupported chain ID").into());
@@ -462,7 +462,7 @@ async fn create_identity_proof(
                 current_user.public_wallet_address(&Currency::Ethereum);
             if let Some(address) = maybe_public_address {
                 // Do not allow to add more than one address proof
-                if did_pkh.address != address {
+                if did_pkh.address() != address {
                     return Err(ValidationError("DID doesn't match current identity").into());
                 };
             };

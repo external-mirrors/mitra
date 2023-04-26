@@ -15,11 +15,15 @@ const DID_PKH_RE: &str = r"did:pkh:(?P<network>[-a-z0-9]{3,8}):(?P<chain>[-a-zA-
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct DidPkh {
-    pub chain_id: ChainId,
-    pub address: String,
+    chain_id: ChainId,
+    address: String,
 }
 
 impl DidPkh {
+    pub fn address(&self) -> String {
+        self.address.clone()
+    }
+
     pub fn from_address(currency: &Currency, address: &str) -> Self {
         let chain_id = match currency {
             Currency::Ethereum => ChainId::ethereum_mainnet(),
@@ -27,6 +31,10 @@ impl DidPkh {
         };
         let address = currency.normalize_address(address);
         Self { chain_id, address }
+    }
+
+    pub fn chain_id(&self) -> ChainId {
+        self.chain_id.clone()
     }
 
     pub fn currency(&self) -> Option<Currency> {
@@ -72,8 +80,9 @@ mod tests {
         let address = "0xB9C5714089478a327F09197987f16f9E5d936E8a";
         let ethereum = Currency::Ethereum;
         let did = DidPkh::from_address(&ethereum, address);
+        assert_eq!(did.chain_id(), ChainId::ethereum_mainnet());
         assert_eq!(did.currency().unwrap(), ethereum);
-        assert_eq!(did.address, address.to_lowercase());
+        assert_eq!(did.address(), address.to_lowercase());
 
         let did_str = did.to_string();
         assert_eq!(
@@ -82,6 +91,6 @@ mod tests {
         );
 
         let did: DidPkh = did_str.parse().unwrap();
-        assert_eq!(did.address, address.to_lowercase());
+        assert_eq!(did.address(), address.to_lowercase());
     }
 }

@@ -571,7 +571,7 @@ pub async fn search_profiles_by_did(
     let maybe_currency_address = match did {
         Did::Pkh(did_pkh) => {
             did_pkh.currency()
-                .map(|currency| (currency, did_pkh.address.clone()))
+                .map(|currency| (currency, did_pkh.address()))
         },
         _ => None,
     };

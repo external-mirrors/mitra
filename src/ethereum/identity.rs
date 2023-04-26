@@ -19,7 +19,7 @@ pub fn verify_eip191_signature(
 ) -> Result<(), Eip191VerificationError> {
     let signature_data = signature_hex.parse()?;
     let signer = recover_address(message.as_bytes(), &signature_data)?;
-    if address_to_string(signer) != did.address.to_lowercase() {
+    if address_to_string(signer) != did.address().to_lowercase() {
         return Err(Eip191VerificationError::InvalidSigner);
     };
     Ok(())

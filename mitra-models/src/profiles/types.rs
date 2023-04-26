@@ -539,7 +539,10 @@ mod tests {
             Did::Pkh(ref did_pkh) => did_pkh,
             _ => panic!("unexpected did method"),
         };
-        assert_eq!(did_pkh.address, "0xb9c5714089478a327f09197987f16f9e5d936e8a");
+        assert_eq!(
+            did_pkh.address(),
+            "0xb9c5714089478a327f09197987f16f9e5d936e8a",
+        );
         let serialized = serde_json::to_string(&proof).unwrap();
         assert_eq!(serialized, json_data);
     }
