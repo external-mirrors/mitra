@@ -16,8 +16,8 @@ use super::currencies::Currency;
 pub(super) const CAIP2_RE: &str = r"(?P<namespace>[-a-z0-9]{3,8}):(?P<reference>[-a-zA-Z0-9]{1,32})";
 const CAIP2_ETHEREUM_NAMESPACE: &str = "eip155";
 const CAIP2_MONERO_NAMESPACE: &str = "monero"; // unregistered namespace
-const ETHEREUM_MAINNET_ID: i32 = 1;
-const ETHEREUM_DEVNET_ID: i32 = 31337;
+const ETHEREUM_MAINNET_ID: u64 = 1;
+const ETHEREUM_DEVNET_ID: u64 = 31337;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct ChainId {
@@ -30,26 +30,23 @@ pub struct ChainId {
 pub struct ChainIdError(&'static str);
 
 impl ChainId {
-    pub fn ethereum_mainnet() -> Self {
+    pub fn from_ethereum_chain_id(chain_id: u64) -> Self {
         Self {
             namespace: CAIP2_ETHEREUM_NAMESPACE.to_string(),
-            reference: ETHEREUM_MAINNET_ID.to_string(),
+            reference: chain_id.to_string(),
         }
     }
 
+    pub fn ethereum_mainnet() -> Self {
+        Self::from_ethereum_chain_id(ETHEREUM_MAINNET_ID)
+    }
+
     pub fn ethereum_devnet() -> Self {
-        Self {
-            namespace: CAIP2_ETHEREUM_NAMESPACE.to_string(),
-            reference: ETHEREUM_DEVNET_ID.to_string(),
-        }
+        Self::from_ethereum_chain_id(ETHEREUM_DEVNET_ID)
     }
 
     pub fn is_ethereum(&self) -> bool {
         self.namespace == CAIP2_ETHEREUM_NAMESPACE
-    }
-
-    pub fn is_monero(&self) -> bool {
-        self.namespace == CAIP2_MONERO_NAMESPACE
     }
 
     pub fn ethereum_chain_id(&self) -> Result<u32, ChainIdError> {
@@ -59,6 +56,10 @@ impl ChainId {
         let chain_id: u32 = self.reference.parse()
             .map_err(|_| ChainIdError("invalid EIP-155 chain ID"))?;
         Ok(chain_id)
+    }
+
+    pub fn is_monero(&self) -> bool {
+        self.namespace == CAIP2_MONERO_NAMESPACE
     }
 
     pub fn currency(&self) -> Option<Currency> {

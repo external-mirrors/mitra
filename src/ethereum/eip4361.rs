@@ -3,6 +3,11 @@ use hex::FromHex;
 use siwe::Message;
 use web3::types::H160;
 
+use mitra_utils::{
+    caip10::AccountId,
+    caip2::ChainId,
+};
+
 use crate::errors::ValidationError;
 use super::utils::address_to_string;
 
@@ -12,7 +17,7 @@ pub fn verify_eip4361_signature(
     signature: &str,
     instance_hostname: &str,
     login_message: &str,
-) -> Result<String, ValidationError> {
+) -> Result<AccountId, ValidationError> {
     let message: Message = message.parse()
         .map_err(|_| ValidationError("invalid EIP-4361 message"))?;
     let signature_bytes = <[u8; 65]>::from_hex(signature.trim_start_matches("0x"))
@@ -30,9 +35,12 @@ pub fn verify_eip4361_signature(
     };
     message.verify_eip191(&signature_bytes)
         .map_err(|_| ValidationError("invalid signature"))?;
+
+    let chain_id = ChainId::from_ethereum_chain_id(message.chain_id);
     // Return wallet address in lower case
     let wallet_address = address_to_string(H160(message.address));
-    Ok(wallet_address)
+    let account_id = AccountId { chain_id, address: wallet_address };
+    Ok(account_id)
 }
 
 #[cfg(test)]
@@ -55,12 +63,13 @@ Chain ID: 1
 Nonce: 3cb7760eac2f
 Issued At: 2022-02-14T22:27:35.500Z";
         let signature = "0x9059c9a69c31e87d887262a574abcc33f320d5b778bea8a35c6fbdea94a17e9652b99f7cdd146ed67fa8e4bb02462774b958a129c421fe8d743a43bf67dcbcd61c";
-        let wallet_address = verify_eip4361_signature(
+        let account_id = verify_eip4361_signature(
             message, signature,
             INSTANCE_HOSTNAME,
             LOGIN_MESSAGE,
         ).unwrap();
-        assert_eq!(wallet_address, "0x70997970c51812dc3a010c7d01b50e0d17dc79c8");
+        assert_eq!(account_id.chain_id, ChainId::ethereum_mainnet());
+        assert_eq!(account_id.address, "0x70997970c51812dc3a010c7d01b50e0d17dc79c8");
     }
 
     #[test]

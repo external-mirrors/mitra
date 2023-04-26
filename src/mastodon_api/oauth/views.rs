@@ -150,13 +150,16 @@ async fn token_view(
                 .ok_or(ValidationError("message is required"))?;
             let signature = request_data.signature.as_ref()
                 .ok_or(ValidationError("signature is required"))?;
-            let wallet_address = verify_eip4361_signature(
+            let ethereum_account_id = verify_eip4361_signature(
                 message,
                 signature,
                 &config.instance().hostname(),
                 &config.login_message,
             )?;
-            get_user_by_login_address(db_client, &wallet_address).await?
+            get_user_by_login_address(
+                db_client,
+                &ethereum_account_id.address,
+            ).await?
         },
         _ => {
             return Err(ValidationError("unsupported grant type").into());
