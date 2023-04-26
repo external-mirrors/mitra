@@ -1,3 +1,7 @@
+use std::path::Path;
+
+use openssl::ssl::{SslConnector, SslMethod};
+use postgres_openssl::MakeTlsConnector;
 use tokio_postgres::config::{Config as DatabaseConfig};
 use tokio_postgres::error::{Error as PgError, SqlState};
 
@@ -37,25 +41,57 @@ pub enum DatabaseError {
     AlreadyExists(&'static str), // object type
 }
 
-pub async fn create_database_client(db_config: &DatabaseConfig)
-    -> tokio_postgres::Client
-{
-    let (client, connection) = db_config.connect(tokio_postgres::NoTls)
-        .await.unwrap();
-    tokio::spawn(async move {
-        if let Err(err) = connection.await {
-            log::error!("connection error: {}", err);
-        };
-    });
-    client
+pub async fn create_database_client(
+    db_config: &DatabaseConfig,
+    ca_file_path: Option<&Path>,
+) -> tokio_postgres::Client {
+    if let Some(ca_file_path) = ca_file_path {
+        let mut builder = SslConnector::builder(SslMethod::tls()).unwrap();
+
+        log::debug!("Using TLS CA file: {}", ca_file_path.display());
+        builder.set_ca_file(ca_file_path).unwrap();
+
+        let connector = MakeTlsConnector::new(builder.build());
+
+        let (client, connection) = db_config.connect(connector).await.unwrap();
+        tokio::spawn(async move {
+            if let Err(err) = connection.await {
+                log::error!("connection with tls error: {}", err);
+            };
+        });
+
+        client
+    } else {
+        let (client, connection) = db_config.connect(tokio_postgres::NoTls).await.unwrap();
+        tokio::spawn(async move {
+            if let Err(err) = connection.await {
+                log::error!("connection error: {}", err);
+            };
+        });
+
+        client
+    }
 }
 
-pub fn create_pool(database_url: &str, pool_size: usize) -> DbPool {
-    let manager = deadpool_postgres::Manager::new(
-        database_url.parse().expect("invalid database URL"),
-        tokio_postgres::NoTls,
-    );
-    DbPool::builder(manager).max_size(pool_size).build().unwrap()
+
+pub fn create_pool(database_url: &str, ca_file_path: Option<&Path>, pool_size: usize) -> DbPool {
+    let manager = if let Some(ca_file_path) = ca_file_path {
+        let mut builder = SslConnector::builder(SslMethod::tls()).unwrap();
+        log::info!("Using TLS CA file: {}", ca_file_path.display());
+        builder.set_ca_file(ca_file_path).unwrap();
+        let connector = MakeTlsConnector::new(builder.build());
+        deadpool_postgres::Manager::new(
+            database_url.parse().expect("invalid database URL"),
+            connector,
+        )
+    } else {
+        deadpool_postgres::Manager::new(database_url.parse().expect("invalid database URL"), tokio_postgres::NoTls)
+    };
+
+    DbPool::builder(manager)
+        .max_size(pool_size)
+        .build()
+        .unwrap()
 }
 
 pub async fn get_database_client(db_pool: &DbPool)
