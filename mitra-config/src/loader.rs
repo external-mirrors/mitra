@@ -12,6 +12,7 @@ use mitra_utils::{
     files::{set_file_permissions, write_file},
 };
 
+use super::blockchain::BlockchainConfig;
 use super::config::Config;
 use super::environment::Environment;
 use super::registration::{DefaultRole, RegistrationType};
@@ -107,10 +108,17 @@ pub fn parse_config() -> (Config, Vec<&'static str>) {
     if config.blockchains().len() > 1 {
         warnings.push("multichain deployments are not recommended");
     };
-    if let Some(ethereum_config) = config.ethereum_config() {
-        ethereum_config.try_ethereum_chain_id().unwrap();
-        if !ethereum_config.contract_dir.exists() {
-            panic!("contract directory does not exist");
+    for blockchain_config in config.blockchains() {
+        match blockchain_config {
+            BlockchainConfig::Ethereum(ethereum_config) => {
+                ethereum_config.try_ethereum_chain_id().unwrap();
+                if !ethereum_config.contract_dir.exists() {
+                    panic!("contract directory does not exist");
+                };
+            },
+            BlockchainConfig::Monero(monero_config) => {
+                monero_config.chain_id.monero_network().unwrap();
+            },
         };
     };
     if config.ipfs_api_url.is_some() != config.ipfs_gateway_url.is_some() {

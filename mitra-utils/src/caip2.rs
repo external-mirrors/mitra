@@ -14,10 +14,20 @@ use serde::{
 use super::currencies::Currency;
 
 pub(super) const CAIP2_RE: &str = r"(?P<namespace>[-a-z0-9]{3,8}):(?P<reference>[-a-zA-Z0-9]{1,32})";
+
 const CAIP2_ETHEREUM_NAMESPACE: &str = "eip155";
 const CAIP2_MONERO_NAMESPACE: &str = "monero"; // unregistered namespace
+
 const ETHEREUM_MAINNET_ID: u64 = 1;
 const ETHEREUM_DEVNET_ID: u64 = 31337;
+
+#[derive(Debug, PartialEq)]
+pub enum MoneroNetwork {
+    Mainnet,
+    Stagenet,
+    Testnet,
+    Private,
+}
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct ChainId {
@@ -60,6 +70,22 @@ impl ChainId {
 
     pub fn is_monero(&self) -> bool {
         self.namespace == CAIP2_MONERO_NAMESPACE
+    }
+
+    pub fn monero_network(&self) -> Result<MoneroNetwork, ChainIdError> {
+        if !self.is_monero() {
+            return Err(ChainIdError("namespace is not monero"));
+        };
+        // https://www.getmonero.org/resources/developer-guides/daemon-rpc.html#get_info
+        // nettype: string, one of mainnet, stagenet or testnet.
+        let network = match self.reference.as_str() {
+            "mainnet" => MoneroNetwork::Mainnet,
+            "stagenet" => MoneroNetwork::Stagenet,
+            "testnet" => MoneroNetwork::Testnet,
+            "fakechain" | "regtest" => MoneroNetwork::Private,
+            _ => return Err(ChainIdError("invalid monero chain ID")),
+        };
+        Ok(network)
     }
 
     pub fn currency(&self) -> Option<Currency> {
@@ -150,6 +176,13 @@ mod tests {
         let chain_id: ChainId = "bip122:000000000019d6689c085ae165831e93".parse().unwrap();
         let error = chain_id.ethereum_chain_id().err().unwrap();
         assert!(matches!(error, ChainIdError("namespace is not eip155")));
+    }
+
+    #[test]
+    fn test_monero_network() {
+        let chain_id: ChainId = "monero:regtest".parse().unwrap();
+        let network = chain_id.monero_network().unwrap();
+        assert_eq!(network, MoneroNetwork::Private);
     }
 
     #[test]
