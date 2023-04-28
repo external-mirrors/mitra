@@ -28,7 +28,7 @@ async fn main() {
 
             let db_client = &mut create_database_client(
                 &db_config,
-                config.tls_ca_file.as_ref().map(|s| s.as_path()),
+                config.tls_ca_file.as_deref(),
             ).await;
             apply_migrations(db_client).await;
 
