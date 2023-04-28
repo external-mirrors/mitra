@@ -40,6 +40,9 @@ pub struct Config {
 
     // Core settings
     pub database_url: String,
+    /// TLS certificate authority file path for validating the database secure connection
+    pub database_tls_ca_file: Option<PathBuf>,
+
     pub storage_dir: PathBuf,
     pub web_client_dir: Option<PathBuf>,
 
