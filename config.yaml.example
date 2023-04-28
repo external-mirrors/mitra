@@ -1,5 +1,4 @@
 database_url: postgres://mitra:mitra@127.0.0.1:55432/mitra
-database_tls_ca_file: null
 storage_dir: files
 web_client_dir: null
 

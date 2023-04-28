@@ -12,6 +12,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Make authentication methods configurable.
 - Save post source if it is authored in markdown.
 - Validate monero chain ID when reading configuration file.
+- Support managed database connections with TLS ([#34](https://codeberg.org/silverpill/mitra/pulls/34)).
 
 ### Changed
 
