@@ -146,10 +146,7 @@ mod tests {
             ..Default::default()
         };
         let recipient = create_user(db_client, recipient_data).await.unwrap();
-        let chain_id = ChainId {
-            namespace: "monero".to_string(),
-            reference: "mainnet".to_string(),
-        };
+        let chain_id = ChainId::monero_mainnet();
         let payment_address = "8MxABajuo71BZya9";
         let amount = 100000000000109212;
         let invoice = create_invoice(

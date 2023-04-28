@@ -31,8 +31,8 @@ pub enum MoneroNetwork {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct ChainId {
-    pub namespace: String,
-    pub reference: String,
+    pub(super) namespace: String,
+    pub(super) reference: String,
 }
 
 #[derive(thiserror::Error, Debug)]
@@ -66,6 +66,24 @@ impl ChainId {
         let chain_id: u32 = self.reference.parse()
             .map_err(|_| ChainIdError("invalid EIP-155 chain ID"))?;
         Ok(chain_id)
+    }
+
+    pub fn from_monero_network(network: MoneroNetwork) -> Self {
+        // TODO: update to match Monero namespace spec
+        let reference = match network {
+            MoneroNetwork::Mainnet => "mainnet",
+            MoneroNetwork::Stagenet => "stagenet",
+            MoneroNetwork::Testnet => "testnet",
+            MoneroNetwork::Private => "regtest",
+        };
+        Self {
+            namespace: CAIP2_MONERO_NAMESPACE.to_string(),
+            reference: reference.to_string(),
+        }
+    }
+
+    pub fn monero_mainnet() -> Self {
+        Self::from_monero_network(MoneroNetwork::Mainnet)
     }
 
     pub fn is_monero(&self) -> bool {
