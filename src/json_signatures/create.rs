@@ -18,7 +18,7 @@ use mitra_utils::{
 };
 
 use super::proofs::{
-    PROOF_TYPE_JCS_ED25519,
+    PROOF_TYPE_JCS_BLAKE2_ED25519,
     PROOF_TYPE_JCS_EIP191,
     PROOF_TYPE_JCS_RSA,
 };
@@ -70,12 +70,12 @@ impl IntegrityProof {
         }
     }
 
-    pub fn jcs_ed25519(
+    pub fn jcs_blake2_ed25519(
         signer: &DidKey,
         signature: &[u8],
     ) -> Self {
         Self {
-            proof_type: PROOF_TYPE_JCS_ED25519.to_string(),
+            proof_type: PROOF_TYPE_JCS_BLAKE2_ED25519.to_string(),
             cryptosuite: None,
             proof_purpose: PROOF_PURPOSE.to_string(),
             verification_method: signer.to_string(),

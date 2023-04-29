@@ -21,7 +21,7 @@ use crate::json_signatures::{
     proofs::ProofType,
     verify::{
         get_json_signature,
-        verify_ed25519_json_signature,
+        verify_blake2_ed25519_json_signature,
         verify_eip191_json_signature,
         verify_rsa_json_signature,
         JsonSignatureVerificationError as JsonSignatureError,
@@ -176,12 +176,12 @@ pub async fn verify_signed_activity(
                 return Err(AuthenticationError::UnexpectedSigner);
             };
             match signature_data.signature_type {
-                ProofType::JcsEd25519Signature => {
+                ProofType::JcsBlake2Ed25519Signature => {
                     let did_key = match did {
                         Did::Key(did_key) => did_key,
                         _ => return Err(AuthenticationError::InvalidJsonSignatureType),
                     };
-                    verify_ed25519_json_signature(
+                    verify_blake2_ed25519_json_signature(
                         &did_key,
                         &signature_data.message,
                         &signature_data.signature,

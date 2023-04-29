@@ -127,7 +127,7 @@ pub fn verify_eip191_json_signature(
         .map_err(|_| VerificationError::InvalidSignature)
 }
 
-pub fn verify_ed25519_json_signature(
+pub fn verify_blake2_ed25519_json_signature(
     signer: &DidKey,
     message: &str,
     signature: &[u8],

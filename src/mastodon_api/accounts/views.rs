@@ -93,7 +93,7 @@ use crate::identity::{
 use crate::json_signatures::{
     create::{add_integrity_proof, IntegrityProof},
     verify::{
-        verify_ed25519_json_signature,
+        verify_blake2_ed25519_json_signature,
         verify_eip191_json_signature,
     },
 };
@@ -351,9 +351,9 @@ async fn send_signed_activity(
         Did::Key(signer) => {
             let signature_bin = parse_minisign_signature(&data.signature)
                 .map_err(|_| ValidationError("invalid encoding"))?;
-            verify_ed25519_json_signature(&signer, &canonical_json, &signature_bin)
+            verify_blake2_ed25519_json_signature(&signer, &canonical_json, &signature_bin)
                 .map_err(|_| ValidationError("invalid signature"))?;
-            IntegrityProof::jcs_ed25519(&signer, &signature_bin)
+            IntegrityProof::jcs_blake2_ed25519(&signer, &signature_bin)
         },
         Did::Pkh(signer) => {
             let signature_bin = hex::decode(&data.signature)

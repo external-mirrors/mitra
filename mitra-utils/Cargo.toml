@@ -16,6 +16,10 @@ bs58 = "0.4.0"
 chrono = { version = "0.4.23", default-features = false, features = ["std"] }
 # Used for parsing markdown
 comrak = { version = "0.18.0", default-features = false }
+# Used for working with EdDSA signatures
+rand_0_7 = { package = "rand", version = "0.7.3" }
+ed25519 = "1.5.3"
+ed25519-dalek = "1.0.1"
 # Used to guess media type of a file
 mime_guess = "2.0.3"
 mime-sniffer = "0.1.2"
