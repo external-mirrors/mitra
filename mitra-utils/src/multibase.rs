@@ -1,3 +1,4 @@
+/// https://datatracker.ietf.org/doc/draft-multiformats-multibase/07/
 #[derive(thiserror::Error, Debug)]
 pub enum MultibaseError {
     #[error("invalid base string")]
@@ -39,6 +40,22 @@ pub fn encode_multibase_base58btc(value: &[u8]) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn multibase_test_vectors() {
+        // https://github.com/multiformats/multibase/tree/master/tests
+        let result = encode_multibase_base58btc("yes mani !".as_bytes());
+        assert_eq!(result, "z7paNL19xttacUY");
+        let value = decode_multibase_base58btc("z7paNL19xttacUY").unwrap();
+        assert_eq!(value, "yes mani !".as_bytes());
+
+        let result = encode_multibase_base58btc("\x00yes mani !".as_bytes());
+        assert_eq!(result, "z17paNL19xttacUY");
+        let result = encode_multibase_base58btc("\x00\x00yes mani !".as_bytes());
+        assert_eq!(result, "z117paNL19xttacUY");
+        let result = encode_multibase_base58btc("yes mani !".as_bytes());
+        assert_eq!(result, "z7paNL19xttacUY");
+    }
 
     #[test]
     fn test_base58btc_encode_decode() {
