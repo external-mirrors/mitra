@@ -10,23 +10,19 @@ use super::{
         decode_multibase_base58btc,
         encode_multibase_base58btc,
     },
+    multicodec::{
+        decode_ed25519_public_key,
+        encode_ed25519_public_key,
+        MulticodecError,
+    },
 };
 
 const DID_KEY_RE: &str = r"did:key:(?P<key>z[a-km-zA-HJ-NP-Z1-9]+)";
-
-// https://github.com/multiformats/multicodec
-// 0xed: Ed25519 public key
-// 0x01: integer encoding
-const MULTICODEC_ED25519_PREFIX: [u8; 2] = [0xed, 0x01];
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct DidKey {
     pub key: Vec<u8>,
 }
-
-#[derive(thiserror::Error, Debug)]
-#[error("multicodec error")]
-pub struct MulticodecError;
 
 impl DidKey {
     pub fn key_multibase(&self) -> String {
@@ -34,25 +30,12 @@ impl DidKey {
     }
 
     pub fn from_ed25519_key(key: [u8; 32]) -> Self {
-        let prefixed_key = [
-            MULTICODEC_ED25519_PREFIX.to_vec(),
-            key.to_vec(),
-        ].concat();
+        let prefixed_key = encode_ed25519_public_key(key);
         Self { key: prefixed_key }
     }
 
     pub fn try_ed25519_key(&self) -> Result<[u8; 32], MulticodecError> {
-        if self.key.len() != 34 {
-            return Err(MulticodecError);
-        };
-        let mut prefix = [0; 2];
-        let mut key = [0; 32];
-        prefix.copy_from_slice(&self.key[0..2]);
-        key.copy_from_slice(&self.key[2..34]);
-        if prefix.as_ref() != MULTICODEC_ED25519_PREFIX {
-            return Err(MulticodecError);
-        };
-        Ok(key)
+        decode_ed25519_public_key(&self.key)
     }
 }
 

@@ -1958,6 +1958,7 @@ dependencies = [
  "sha2 0.10.6",
  "thiserror",
  "ulid",
+ "unsigned-varint",
  "url 2.2.2",
  "uuid",
 ]
@@ -3711,6 +3712,12 @@ name = "unicode_categories"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "39ec24b3121d976906ece63c9daad25b85969647682eee313cb5779fdd69e14e"
+
+[[package]]
+name = "unsigned-varint"
+version = "0.7.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d86a8dc7f45e4c1b0d30e43038c38f274e77af056aa5f74b93c2cf9eb3c1c836"
 
 [[package]]
 name = "url"

@@ -13,6 +13,7 @@ pub mod html;
 pub mod id;
 pub mod markdown;
 pub mod multibase;
+pub mod multicodec;
 pub mod passwords;
 pub mod random;
 pub mod urls;

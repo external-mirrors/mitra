@@ -3,7 +3,8 @@ use blake2::{Blake2b512, Digest};
 
 use mitra_utils::{
     crypto_eddsa::{verify_eddsa_signature, EddsaError},
-    did_key::{DidKey, MulticodecError},
+    did_key::DidKey,
+    multicodec::MulticodecError,
 };
 
 const MINISIGN_SIGNATURE_CODE: [u8; 2] = *b"Ed";
