@@ -103,13 +103,14 @@ pub fn get_json_signature(
 }
 
 pub fn verify_rsa_json_signature(
-    signature_data: &SignatureData,
     signer_key: &RsaPublicKey,
+    message: &str,
+    signature: &[u8],
 ) -> Result<(), VerificationError> {
     let is_valid_signature = verify_rsa_sha256_signature(
         signer_key,
-        &signature_data.message,
-        &signature_data.signature,
+        message,
+        signature,
     );
     if !is_valid_signature {
         return Err(VerificationError::InvalidSignature);
@@ -205,8 +206,9 @@ mod tests {
 
         let signer_public_key = RsaPublicKey::from(signer_key);
         let result = verify_rsa_json_signature(
-            &signature_data,
             &signer_public_key,
+            &signature_data.message,
+            &signature_data.signature,
         );
         assert_eq!(result.is_ok(), true);
     }

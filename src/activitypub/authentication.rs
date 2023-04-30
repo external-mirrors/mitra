@@ -158,18 +158,24 @@ pub async fn verify_signed_activity(
 
     match signature_data.signer {
         JsonSigner::ActorKeyId(ref key_id) => {
-            if signature_data.signature_type != ProofType::JcsRsaSignature {
-                return Err(AuthenticationError::InvalidJsonSignatureType);
-            };
             let signer_id = key_id_to_actor_id(key_id)?;
             if signer_id != actor_id {
                 return Err(AuthenticationError::UnexpectedSigner);
             };
             let signer_actor = actor_profile.actor_json.as_ref()
                 .expect("activity should be signed by remote actor");
-            let signer_key =
-                deserialize_public_key(&signer_actor.public_key.public_key_pem)?;
-            verify_rsa_json_signature(&signature_data, &signer_key)?;
+            match signature_data.signature_type {
+                ProofType::JcsRsaSignature => {
+                    let signer_key =
+                        deserialize_public_key(&signer_actor.public_key.public_key_pem)?;
+                    verify_rsa_json_signature(
+                        &signer_key,
+                        &signature_data.message,
+                        &signature_data.signature,
+                    )?;
+                },
+                _ => return Err(AuthenticationError::InvalidJsonSignatureType),
+            };
         },
         JsonSigner::Did(did) => {
             if !actor_profile.identity_proofs.any(&did) {
