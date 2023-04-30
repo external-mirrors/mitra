@@ -70,29 +70,32 @@ pub fn get_json_signature(
         .ok_or(VerificationError::InvalidObject)?;
     let proof_value = object_map.remove(PROOF_KEY)
         .ok_or(VerificationError::NoProof)?;
-    let proof: IntegrityProof = serde_json::from_value(proof_value)
+    let IntegrityProof {
+        proof_config,
+        proof_value,
+    } = serde_json::from_value(proof_value)
         .map_err(|_| VerificationError::InvalidProof("invalid proof"))?;
-    if proof.proof_purpose != PROOF_PURPOSE {
+    if proof_config.proof_purpose != PROOF_PURPOSE {
         return Err(VerificationError::InvalidProof("invalid proof purpose"));
     };
-    let proof_type = if proof.proof_type == DATA_INTEGRITY_PROOF {
-        let cryptosuite = proof.cryptosuite.as_ref()
+    let proof_type = if proof_config.proof_type == DATA_INTEGRITY_PROOF {
+        let cryptosuite = proof_config.cryptosuite.as_ref()
             .ok_or(VerificationError::InvalidProof("cryptosuite is not specified"))?;
         ProofType::from_cryptosuite(cryptosuite)
             .map_err(|_| VerificationError::InvalidProof("unsupported proof type"))?
     } else {
-        proof.proof_type.parse()
+        proof_config.proof_type.parse()
             .map_err(|_| VerificationError::InvalidProof("unsupported proof type"))?
     };
-    let signer = if let Ok(did) = Did::from_str(&proof.verification_method) {
+    let signer = if let Ok(did) = Did::from_str(&proof_config.verification_method) {
         JsonSigner::Did(did)
-    } else if Url::parse(&proof.verification_method).is_ok() {
-        JsonSigner::ActorKeyId(proof.verification_method)
+    } else if Url::parse(&proof_config.verification_method).is_ok() {
+        JsonSigner::ActorKeyId(proof_config.verification_method)
     } else {
         return Err(VerificationError::InvalidProof("unsupported verification method"));
     };
     let canonical_object = canonicalize_object(&object)?;
-    let signature = decode_multibase_base58btc(&proof.proof_value)?;
+    let signature = decode_multibase_base58btc(&proof_value)?;
     let signature_data = JsonSignatureData {
         proof_type,
         signer,

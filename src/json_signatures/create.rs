@@ -1,3 +1,4 @@
+/// https://w3c.github.io/vc-data-integrity/
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -26,11 +27,9 @@ use super::proofs::{
 pub(super) const PROOF_KEY: &str = "proof";
 pub(super) const PROOF_PURPOSE: &str = "assertionMethod";
 
-/// Data Integrity Proof
-/// https://w3c.github.io/vc-data-integrity/
 #[derive(Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct IntegrityProof {
+pub struct IntegrityProofConfig {
     #[serde(rename = "type")]
     pub proof_type: String,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -38,50 +37,67 @@ pub struct IntegrityProof {
     pub proof_purpose: String,
     pub verification_method: String,
     pub created: DateTime<Utc>,
+}
+
+#[derive(Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct IntegrityProof {
+    #[serde(flatten)]
+    pub proof_config: IntegrityProofConfig,
     pub proof_value: String,
 }
 
 impl IntegrityProof {
+    pub fn new(
+        proof_config: IntegrityProofConfig,
+        signature: &[u8],
+    ) -> Self {
+        Self {
+            proof_config,
+            proof_value: encode_multibase_base58btc(signature),
+        }
+    }
+
     fn jcs_rsa(
         signer_key_id: &str,
         signature: &[u8],
     ) -> Self {
-        Self {
+        let proof_config = IntegrityProofConfig {
             proof_type: PROOF_TYPE_JCS_RSA.to_string(),
             cryptosuite: None,
             proof_purpose: PROOF_PURPOSE.to_string(),
             verification_method: signer_key_id.to_string(),
             created: Utc::now(),
-            proof_value: encode_multibase_base58btc(signature),
-        }
+        };
+        Self::new(proof_config, signature)
     }
 
     pub fn jcs_eip191(
         signer: &DidPkh,
         signature: &[u8],
     ) -> Self {
-        Self {
+        let proof_config = IntegrityProofConfig {
             proof_type: PROOF_TYPE_JCS_EIP191.to_string(),
             cryptosuite: None,
             proof_purpose: PROOF_PURPOSE.to_string(),
             verification_method: signer.to_string(),
             created: Utc::now(),
-            proof_value: encode_multibase_base58btc(signature),
-        }
+        };
+        Self::new(proof_config, signature)
     }
 
     pub fn jcs_blake2_ed25519(
         signer: &DidKey,
         signature: &[u8],
     ) -> Self {
-        Self {
+        let proof_config = IntegrityProofConfig {
             proof_type: PROOF_TYPE_JCS_BLAKE2_ED25519.to_string(),
             cryptosuite: None,
             proof_purpose: PROOF_PURPOSE.to_string(),
             verification_method: signer.to_string(),
             created: Utc::now(),
-            proof_value: encode_multibase_base58btc(signature),
-        }
+        };
+        Self::new(proof_config, signature)
     }
 }
 
@@ -94,7 +110,7 @@ pub enum JsonSignatureError {
     CanonicalizationError(#[from] CanonicalizationError),
 
     #[error("signing error")]
-    SigningError(#[from] RsaError),
+    RsaError(#[from] RsaError),
 
     #[error("invalid object")]
     InvalidObject,
