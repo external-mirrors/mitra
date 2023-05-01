@@ -222,8 +222,8 @@ pub async fn create_account(
     let user_data = UserCreateData {
         username,
         password_hash: maybe_password_hash,
+        login_address_ethereum: maybe_wallet_address,
         private_key_pem,
-        wallet_address: maybe_wallet_address,
         invite_code,
         role,
     };

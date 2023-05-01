@@ -79,7 +79,7 @@ pub async fn create_user(
     user_data: UserCreateData,
 ) -> Result<User, DatabaseError> {
     assert!(user_data.password_hash.is_some() ||
-            user_data.wallet_address.is_some());
+            user_data.login_address_ethereum.is_some());
     let mut transaction = db_client.transaction().await?;
     // Prevent changes to actor_profile table
     transaction.execute(
@@ -135,8 +135,8 @@ pub async fn create_user(
         "
         INSERT INTO user_account (
             id,
-            wallet_address,
             password_hash,
+            login_address_ethereum,
             private_key,
             invite_code,
             user_role
@@ -146,8 +146,8 @@ pub async fn create_user(
         ",
         &[
             &profile.id,
-            &user_data.wallet_address,
             &user_data.password_hash,
+            &user_data.login_address_ethereum,
             &user_data.private_key_pem,
             &user_data.invite_code,
             &user_data.role,
@@ -275,7 +275,7 @@ pub async fn get_user_by_login_address(
         "
         SELECT user_account, actor_profile
         FROM user_account JOIN actor_profile USING (id)
-        WHERE wallet_address = $1
+        WHERE login_address_ethereum = $1
         ",
         &[&wallet_address],
     ).await?;

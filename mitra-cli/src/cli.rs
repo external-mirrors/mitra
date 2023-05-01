@@ -198,8 +198,8 @@ impl CreateUser {
         let user_data = UserCreateData {
             username: self.username.clone(),
             password_hash: Some(password_hash),
+            login_address_ethereum: None,
             private_key_pem,
-            wallet_address: None,
             invite_code: None,
             role,
         };

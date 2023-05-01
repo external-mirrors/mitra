@@ -124,8 +124,8 @@ json_from_sql!(DbClientConfig);
 #[postgres(name = "user_account")]
 pub struct DbUser {
     id: Uuid,
-    wallet_address: Option<String>,
     password_hash: Option<String>,
+    login_address_ethereum: Option<String>,
     private_key: String,
     invite_code: Option<String>,
     user_role: Role,
@@ -138,8 +138,8 @@ pub struct DbUser {
 #[cfg_attr(feature = "test-utils", derive(Default))]
 pub struct User {
     pub id: Uuid,
-    pub wallet_address: Option<String>, // login address
     pub password_hash: Option<String>,
+    pub login_address_ethereum: Option<String>,
     pub private_key: String,
     pub role: Role,
     pub client_config: ClientConfig,
@@ -154,8 +154,8 @@ impl User {
         assert_eq!(db_user.id, db_profile.id);
         Self {
             id: db_user.id,
-            wallet_address: db_user.wallet_address,
             password_hash: db_user.password_hash,
+            login_address_ethereum: db_user.login_address_ethereum,
             private_key: db_user.private_key,
             role: db_user.user_role,
             client_config: db_user.client_config.into_inner(),
@@ -186,8 +186,8 @@ impl User {
 pub struct UserCreateData {
     pub username: String,
     pub password_hash: Option<String>,
+    pub login_address_ethereum: Option<String>,
     pub private_key_pem: String,
-    pub wallet_address: Option<String>,
     pub invite_code: Option<String>,
     pub role: Role,
 }
@@ -199,7 +199,7 @@ mod tests {
     #[test]
     fn test_public_wallet_address_login_address_not_exposed() {
         let user = User {
-            wallet_address: Some("0x1234".to_string()),
+            login_address_ethereum: Some("0x1234".to_string()),
             ..Default::default()
         };
         let ethereum = Currency::Ethereum;

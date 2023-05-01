@@ -976,12 +976,16 @@ mod tests {
         let db_client = &mut create_test_database().await;
         let wallet_address = "0x1234abcd";
         let user_data = UserCreateData {
-            wallet_address: Some(wallet_address.to_string()),
+            login_address_ethereum: Some(wallet_address.to_string()),
             ..Default::default()
         };
         let _user = create_user(db_client, user_data).await.unwrap();
         let profiles = search_profiles_by_wallet_address(
-            db_client, &ETHEREUM, wallet_address, false).await.unwrap();
+            db_client,
+            &ETHEREUM,
+            wallet_address,
+            false,
+        ).await.unwrap();
 
         // Login address must not be exposed
         assert_eq!(profiles.len(), 0);

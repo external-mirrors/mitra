@@ -53,8 +53,8 @@ CREATE TABLE user_invite_code (
 
 CREATE TABLE user_account (
     id UUID PRIMARY KEY REFERENCES actor_profile (id) ON DELETE CASCADE,
-    wallet_address VARCHAR(100) UNIQUE,
     password_hash VARCHAR(200),
+    login_address_ethereum VARCHAR(500) UNIQUE,
     private_key TEXT NOT NULL,
     invite_code VARCHAR(100) UNIQUE REFERENCES user_invite_code (code) ON DELETE SET NULL,
     user_role SMALLINT NOT NULL,
@@ -221,7 +221,7 @@ CREATE TABLE invoice (
     sender_id UUID NOT NULL REFERENCES actor_profile (id) ON DELETE CASCADE,
     recipient_id UUID NOT NULL REFERENCES user_account (id) ON DELETE CASCADE,
     chain_id VARCHAR(50) NOT NULL,
-    payment_address VARCHAR(200) NOT NULL,
+    payment_address VARCHAR(500) NOT NULL,
     amount BIGINT NOT NULL CHECK (amount >= 0),
     invoice_status SMALLINT NOT NULL DEFAULT 1,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -232,7 +232,7 @@ CREATE TABLE invoice (
 CREATE TABLE subscription (
     id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     sender_id UUID NOT NULL REFERENCES actor_profile (id) ON DELETE CASCADE,
-    sender_address VARCHAR(100),
+    sender_address VARCHAR(500),
     recipient_id UUID NOT NULL REFERENCES user_account (id) ON DELETE CASCADE,
     chain_id VARCHAR(50) NOT NULL,
     expires_at TIMESTAMP WITH TIME ZONE NOT NULL,

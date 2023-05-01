@@ -249,7 +249,7 @@ impl Account {
         if user.password_hash.is_some() {
             authentication_methods.push(AUTHENTICATION_METHOD_PASSWORD.to_string());
         };
-        if user.wallet_address.is_some() {
+        if user.login_address_ethereum.is_some() {
             authentication_methods.push(AUTHENTICATION_METHOD_EIP4361.to_string());
         };
         let mut account = Self::from_profile(
@@ -587,13 +587,13 @@ mod tests {
     #[test]
     fn test_create_account_from_user() {
         let bio_source = "test";
-        let wallet_address = "0x1234";
+        let login_address = "0x1234";
         let profile = DbActorProfile {
             bio_source: Some(bio_source.to_string()),
             ..Default::default()
         };
         let user = User {
-            wallet_address: Some(wallet_address.to_string()),
+            login_address_ethereum: Some(login_address.to_string()),
             profile,
             ..Default::default()
         };
