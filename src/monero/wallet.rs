@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use monero_rpc::{
     HashString,
     RpcAuthentication,
@@ -187,4 +189,39 @@ pub async fn send_monero(
     // Save wallet
     wallet_client.close_wallet().await?;
     Ok(amount)
+}
+
+/// https://monerodocs.org/interacting/monero-wallet-rpc-reference/#sign
+pub async fn create_monero_signature(
+    config: &MoneroConfig,
+    message: &str,
+) -> Result<(Address, String), MoneroError> {
+    let wallet_client = open_monero_wallet(config).await?;
+    let address_data = wallet_client.get_address(
+        config.account_index,
+        Some(vec![0]),
+    ).await?;
+    let address = address_data.address;
+    let signature = wallet_client.sign(message.to_string()).await?;
+    Ok((address, signature))
+}
+
+/// https://monerodocs.org/interacting/monero-wallet-rpc-reference/#verify
+pub async fn verify_monero_signature(
+    config: &MoneroConfig,
+    address: &str,
+    message: &str,
+    signature: &str,
+) -> Result<(), MoneroError> {
+    let address = Address::from_str(address)?;
+    let wallet_client = open_monero_wallet(config).await?;
+    let is_valid = wallet_client.verify(
+        message.to_string(),
+        address,
+        signature.to_string(),
+    ).await?;
+    if !is_valid {
+        return Err(MoneroError::OtherError("invalid signature"));
+    };
+    Ok(())
 }

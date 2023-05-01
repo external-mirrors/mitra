@@ -22,7 +22,11 @@ use mitra::media::{
 };
 use mitra::monero::{
     helpers::check_expired_invoice,
-    wallet::create_monero_wallet,
+    wallet::{
+        create_monero_wallet,
+        create_monero_signature,
+        verify_monero_signature,
+    },
 };
 use mitra::validators::{
     emojis::EMOJI_LOCAL_MAX_SIZE,
@@ -101,6 +105,8 @@ pub enum SubCommand {
     UpdateCurrentBlock(UpdateCurrentBlock),
     ResetSubscriptions(ResetSubscriptions),
     CreateMoneroWallet(CreateMoneroWallet),
+    CreateMoneroSignature(CreateMoneroSignature),
+    VerifyMoneroSignature(VerifyMoneroSignature),
     CheckExpiredInvoice(CheckExpiredInvoice),
 }
 
@@ -637,6 +643,53 @@ impl CreateMoneroWallet {
             self.password.clone(),
         ).await?;
         println!("wallet created");
+        Ok(())
+    }
+}
+
+/// Create Monero signature
+#[derive(Parser)]
+pub struct CreateMoneroSignature {
+    message: String,
+}
+
+impl CreateMoneroSignature {
+    pub async fn execute(
+        &self,
+        config: &Config,
+    ) -> Result<(), Error> {
+        let monero_config = config.monero_config()
+            .ok_or(anyhow!("monero configuration not found"))?;
+        let (address, signature) =
+            create_monero_signature(monero_config, &self.message).await?;
+        println!("address: {}", address);
+        println!("signature: {}", signature);
+        Ok(())
+    }
+}
+
+/// Verify Monero signature
+#[derive(Parser)]
+pub struct VerifyMoneroSignature {
+    address: String,
+    message: String,
+    signature: String,
+}
+
+impl VerifyMoneroSignature {
+    pub async fn execute(
+        &self,
+        config: &Config,
+    ) -> Result<(), Error> {
+        let monero_config = config.monero_config()
+            .ok_or(anyhow!("monero configuration not found"))?;
+        verify_monero_signature(
+            monero_config,
+            &self.address,
+            &self.message,
+            &self.signature,
+        ).await?;
+        println!("signature verified");
         Ok(())
     }
 }

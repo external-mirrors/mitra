@@ -49,7 +49,7 @@ env_logger = { version = "0.9.0", default-features = false }
 # Used to verify minisign signatures
 blake2 = "0.10.5"
 # Used to query Monero node
-monero-rpc = { version = "0.3.2", features = ["rpc_authentication"] }
+monero-rpc = { git = "https://github.com/silverpill/monero-rpc-rs.git", rev = "94b0d58b538fe386004210660c063f03cca26553", features = ["rpc_authentication"] }
 # Used to determine the number of CPUs on the system
 num_cpus = "1.13.0"
 # Used for working with regular expressions
