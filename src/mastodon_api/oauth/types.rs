@@ -25,9 +25,10 @@ pub struct TokenRequest {
 
     // Required if grant type is "password" or "eip4361"
     pub username: Option<String>,
-    pub wallet_address: Option<String>,
-    // Required only with "password" and "ethereum" grant types
+
+    // Required only with "password" grant type
     pub password: Option<String>,
+
     // EIP4361 message and signature
     pub message: Option<String>,
     pub signature: Option<String>,

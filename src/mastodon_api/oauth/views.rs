@@ -27,10 +27,7 @@ use mitra_models::{
 use mitra_utils::passwords::verify_password;
 
 use crate::errors::ValidationError;
-use crate::ethereum::{
-    eip4361::verify_eip4361_signature,
-    utils::validate_ethereum_address,
-};
+use crate::ethereum::eip4361::verify_eip4361_signature;
 use crate::http::FormOrJson;
 use crate::mastodon_api::errors::MastodonError;
 
@@ -137,13 +134,6 @@ async fn token_view(
             let username = request_data.username.as_ref()
                 .ok_or(ValidationError("username is required"))?;
             get_user_by_name(db_client, username).await?
-        },
-        "ethereum" => {
-            // DEPRECATED
-            let wallet_address = request_data.wallet_address.as_ref()
-                .ok_or(ValidationError("wallet address is required"))?;
-            validate_ethereum_address(wallet_address)?;
-            get_user_by_login_address(db_client, wallet_address).await?
         },
         "eip4361" => {
             let message = request_data.message.as_ref()
