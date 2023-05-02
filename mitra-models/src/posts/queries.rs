@@ -28,7 +28,10 @@ use crate::profiles::{
     queries::update_post_count,
     types::DbActorProfile,
 };
-use crate::relationships::types::RelationshipType;
+use crate::relationships::{
+    queries::has_relationship,
+    types::RelationshipType,
+};
 
 use super::types::{
     DbPost,
@@ -261,7 +264,14 @@ pub async fn create_post(
         update_reply_count(&transaction, in_reply_to_id, 1).await?;
         let in_reply_to_author = get_post_author(&transaction, in_reply_to_id).await?;
         if in_reply_to_author.is_local() &&
-            in_reply_to_author.id != db_post.author_id
+            in_reply_to_author.id != db_post.author_id &&
+            // Only notify if author is not muted
+            !has_relationship(
+                &transaction,
+                &in_reply_to_author.id,
+                &db_post.author_id,
+                RelationshipType::Mute,
+            ).await?
         {
             create_reply_notification(
                 &transaction,
@@ -272,19 +282,29 @@ pub async fn create_post(
             notified_users.push(in_reply_to_author.id);
         };
     };
+    // Notify reposted
     if let Some(repost_of_id) = &db_post.repost_of_id {
         update_repost_count(&transaction, repost_of_id, 1).await?;
         let repost_of_author = get_post_author(&transaction, repost_of_id).await?;
         if repost_of_author.is_local() &&
+            // Don't notify themselves that they reported their post
             repost_of_author.id != db_post.author_id &&
             !notified_users.contains(&repost_of_author.id)
         {
-            create_repost_notification(
+            if !has_relationship(
                 &transaction,
-                &db_post.author_id,
                 &repost_of_author.id,
-                repost_of_id,
-            ).await?;
+                &db_post.author_id,
+                RelationshipType::Mute
+            ).await?
+            {
+                create_repost_notification(
+                    &transaction,
+                    &db_post.author_id,
+                    &repost_of_author.id,
+                    repost_of_id,
+                ).await?;
+            }
             notified_users.push(repost_of_author.id);
         };
     };
@@ -294,7 +314,14 @@ pub async fn create_post(
             profile.id != db_post.author_id &&
             // Don't send mention notification to the author of parent post
             // or to the author of reposted post
-            !notified_users.contains(&profile.id)
+            !notified_users.contains(&profile.id) &&
+            // Don't create mention notification if the author is muted
+            !has_relationship(
+                &transaction,
+                &profile.id,
+                &db_post.author_id,
+                RelationshipType::Mute
+            ).await?
         {
             create_mention_notification(
                 &transaction,
@@ -461,6 +488,21 @@ fn build_visibility_filter() -> String {
     )
 }
 
+fn build_mute_filter() -> String {
+    format!(
+        "(
+            NOT EXISTS (
+                SELECT 1 FROM relationship
+                WHERE
+                    source_id = $current_user_id
+                    AND target_id = post.author_id
+                    AND relationship_type = {relationship_mute}
+            )
+        )",
+        relationship_mute=i16::from(&RelationshipType::Mute),
+    )
+}
+
 pub async fn get_home_timeline(
     db_client: &impl DatabaseClient,
     current_user_id: &Uuid,
@@ -485,6 +527,7 @@ pub async fn get_home_timeline(
             (
                 post.author_id = $current_user_id
                 OR (
+                    -- is following or subscribed the post author
                     EXISTS (
                         SELECT 1 FROM relationship
                         WHERE
@@ -535,6 +578,8 @@ pub async fn get_home_timeline(
                     WHERE post_id = post.id AND profile_id = $current_user_id
                 )
             )
+            -- author is not muted
+            AND {mute_filter}
             AND {visibility_filter}
             AND ($max_post_id::uuid IS NULL OR post.id < $max_post_id)
         ORDER BY post.id DESC
@@ -549,6 +594,7 @@ pub async fn get_home_timeline(
         relationship_subscription=i16::from(&RelationshipType::Subscription),
         relationship_hide_reposts=i16::from(&RelationshipType::HideReposts),
         relationship_hide_replies=i16::from(&RelationshipType::HideReplies),
+        mute_filter=build_mute_filter(),
         visibility_filter=build_visibility_filter(),
     );
     let limit: i64 = limit.into();
@@ -586,6 +632,7 @@ pub async fn get_local_timeline(
             actor_profile.actor_json IS NULL
             AND post.visibility = {visibility_public}
             AND ($max_post_id::uuid IS NULL OR post.id < $max_post_id)
+            AND {mute_filter}
         ORDER BY post.id DESC
         LIMIT $limit
         ",
@@ -595,6 +642,7 @@ pub async fn get_local_timeline(
         related_links=RELATED_LINKS,
         related_emojis=RELATED_EMOJIS,
         visibility_public=i16::from(&Visibility::Public),
+        mute_filter=build_mute_filter(),
     );
     let limit: i64 = limit.into();
     let query = query!(
@@ -740,6 +788,7 @@ pub async fn get_posts_by_tag(
             )
             AND {visibility_filter}
             AND ($max_post_id::uuid IS NULL OR post.id < $max_post_id)
+            AND {mute_filter}
         ORDER BY post.id DESC
         LIMIT $limit
         ",
@@ -749,6 +798,7 @@ pub async fn get_posts_by_tag(
         related_links=RELATED_LINKS,
         related_emojis=RELATED_EMOJIS,
         visibility_filter=build_visibility_filter(),
+        mute_filter=build_mute_filter(),
     );
     let limit: i64 = limit.into();
     let query = query!(
@@ -836,7 +886,9 @@ pub async fn get_thread(
         FROM post
         JOIN thread ON post.id = thread.id
         JOIN actor_profile ON post.author_id = actor_profile.id
-        WHERE {visibility_filter}
+        WHERE
+            {visibility_filter}
+            AND {mute_filter}
         ORDER BY thread.path
         ",
         related_attachments=RELATED_ATTACHMENTS,
@@ -845,6 +897,7 @@ pub async fn get_thread(
         related_links=RELATED_LINKS,
         related_emojis=RELATED_EMOJIS,
         visibility_filter=build_visibility_filter(),
+        mute_filter=build_mute_filter(),
     );
     let query = query!(
         &statement,
@@ -1330,6 +1383,7 @@ mod tests {
         follow,
         hide_reposts,
         subscribe,
+        mute,
     };
     use crate::users::{
         queries::create_user,
@@ -1552,6 +1606,20 @@ mod tests {
             ..Default::default()
         };
         let post_13 = create_post(db_client, &user_4.id, post_data_13).await.unwrap();
+        // Post from followed user if muted
+        let user_data_5 = UserCreateData {
+            username: "muted".to_string(),
+            password_hash: Some("test".to_string()),
+            ..Default::default()
+        };
+        let user_5 = create_user(db_client, user_data_5).await.unwrap();
+        follow(db_client, &current_user.id, &user_5.id).await.unwrap();
+        mute(db_client, &current_user.id, &user_5.id).await.unwrap();
+        let post_data_14 = PostCreateData {
+            content: "test post".to_string(),
+            ..Default::default()
+        };
+        let post_14 = create_post(db_client, &user_5.id, post_data_14).await.unwrap();
 
         let timeline = get_home_timeline(db_client, &current_user.id, None, 20).await.unwrap();
         assert_eq!(timeline.len(), 7);
@@ -1568,6 +1636,7 @@ mod tests {
         assert_eq!(timeline.iter().any(|post| post.id == post_11.id), false);
         assert_eq!(timeline.iter().any(|post| post.id == post_12.id), true);
         assert_eq!(timeline.iter().any(|post| post.id == post_13.id), false);
+        assert_eq!(timeline.iter().any(|post| post.id == post_14.id), false);
     }
 
     #[tokio::test]

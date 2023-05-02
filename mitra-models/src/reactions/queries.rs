@@ -12,6 +12,10 @@ use crate::posts::queries::{
     update_reaction_count,
     get_post_author,
 };
+use crate::relationships::{
+    queries::has_relationship,
+    types::RelationshipType,
+};
 
 use super::types::DbReaction;
 
@@ -40,7 +44,16 @@ pub async fn create_reaction(
     let reaction: DbReaction = row.try_get("post_reaction")?;
     update_reaction_count(&transaction, post_id, 1).await?;
     let post_author = get_post_author(&transaction, post_id).await?;
-    if post_author.is_local() && post_author.id != *author_id {
+    if post_author.is_local() &&
+        post_author.id != *author_id &&
+        // Only notify if not muted by the author of the post
+        !has_relationship(
+            &transaction,
+            &post_author.id,
+            author_id,
+            RelationshipType::Mute
+        ).await?
+    {
         create_reaction_notification(
             &transaction,
             author_id,

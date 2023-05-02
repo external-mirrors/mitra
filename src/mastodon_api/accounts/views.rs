@@ -40,6 +40,8 @@ use mitra_models::{
         show_replies,
         show_reposts,
         unfollow,
+        mute,
+        unmute,
     },
     subscriptions::queries::get_incoming_subscriptions,
     users::queries::{
@@ -709,6 +711,38 @@ async fn unfollow_account(
     Ok(HttpResponse::Ok().json(relationship))
 }
 
+#[post("/{account_id}/mute")]
+async fn mute_account(
+    auth: BearerAuth,
+    db_pool: web::Data<DbPool>,
+    account_id: web::Path<Uuid>,
+) -> Result<HttpResponse, MastodonError> {
+    let db_client = &mut **get_database_client(&db_pool).await?;
+    let current_user = get_current_user(db_client, auth.token()).await?;
+    let target = get_profile_by_id(db_client, &account_id).await?;
+
+    mute(db_client, &current_user.id, &target.id).await?;
+
+    let relationship = get_relationship(db_client, &current_user.id, &target.id).await?;
+    Ok(HttpResponse::Ok().json(relationship))
+}
+
+#[post("/{account_id}/unmute")]
+async fn unmute_account(
+    auth: BearerAuth,
+    db_pool: web::Data<DbPool>,
+    account_id: web::Path<Uuid>,
+) -> Result<HttpResponse, MastodonError> {
+    let db_client = &mut **get_database_client(&db_pool).await?;
+    let current_user = get_current_user(db_client, auth.token()).await?;
+    let target = get_profile_by_id(db_client, &account_id).await?;
+
+    unmute(db_client, &current_user.id, &target.id).await?;
+
+    let relationship = get_relationship(db_client, &current_user.id, &target.id).await?;
+    Ok(HttpResponse::Ok().json(relationship))
+}
+
 #[get("/{account_id}/statuses")]
 async fn get_account_statuses(
     auth: Option<BearerAuth>,
@@ -933,6 +967,8 @@ pub fn account_api_scope() -> Scope {
         .service(get_account)
         .service(follow_account)
         .service(unfollow_account)
+        .service(mute_account)
+        .service(unmute_account)
         .service(get_account_statuses)
         .service(get_account_followers)
         .service(get_account_following)

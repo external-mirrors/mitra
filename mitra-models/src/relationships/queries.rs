@@ -96,7 +96,15 @@ pub async fn follow(
     ).await.map_err(catch_unique_violation("relationship"))?;
     let target_profile = update_follower_count(&transaction, target_id, 1).await?;
     update_following_count(&transaction, source_id, 1).await?;
-    if target_profile.is_local() {
+    if target_profile.is_local() &&
+        // Only notify the followed (target) if the follower (source) is not muted
+        !has_relationship(
+            &transaction,
+            target_id,
+            source_id,
+            RelationshipType::Mute
+        ).await?
+    {
         create_follow_notification(&transaction, source_id, target_id).await?;
     };
     transaction.commit().await?;
@@ -574,6 +582,49 @@ pub async fn show_replies(
     Ok(())
 }
 
+pub async fn mute(
+    db_client: &impl DatabaseClient,
+    source_id: &Uuid,
+    target_id: &Uuid,
+) -> Result<(), DatabaseError> {
+    db_client
+        .execute(
+            "
+            INSERT INTO relationship (source_id, target_id, relationship_type)
+            VALUES ($1, $2, $3)
+            ",
+            &[&source_id, &target_id, &RelationshipType::Mute],
+        )
+        .await
+        .map_err(
+            catch_unique_violation("mute"),
+        )?;
+    Ok(())
+}
+
+pub async fn unmute(
+    db_client: &impl DatabaseClient,
+    source_id: &Uuid,
+    target_id: &Uuid,
+) -> Result<(), DatabaseError> {
+    db_client
+        .query_opt(
+            "
+            DELETE FROM relationship
+            WHERE
+                source_id = $1 AND target_id = $2
+                AND relationship_type = $3
+            RETURNING relationship.id
+            ",
+            &[&source_id, &target_id, &RelationshipType::Mute],
+        )
+        .await?
+        .ok_or(
+            DatabaseError::NotFound("mute"),
+        )?;
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use serial_test::serial;
@@ -681,5 +732,43 @@ mod tests {
         let follow_request = get_follow_request_by_id(db_client, &follow_request.id)
             .await.unwrap();
         assert_eq!(follow_request.request_status, FollowRequestStatus::Accepted);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_mute_and_unmute_account() {
+        let db_client = &mut create_test_database().await;
+        let source_data = UserCreateData {
+            username: "test".to_string(),
+            password_hash: Some("test".to_string()),
+            ..Default::default()
+        };
+        let source = create_user(db_client, source_data).await.unwrap();
+        let target_data = UserCreateData {
+            username: "muted".to_string(),
+            password_hash: Some("test".to_string()),
+            ..Default::default()
+        };
+        let target = create_user(db_client, target_data).await.unwrap();
+        // Mute
+        mute(db_client, &source.id, &target.id).await.unwrap();
+        assert!(
+            has_relationship(
+                db_client,
+                &source.id,
+                &target.id,
+                RelationshipType::Mute
+            ).await.unwrap()
+        );
+        // Unmute
+        unmute(db_client, &source.id, &target.id).await.unwrap();
+        assert!(
+            !has_relationship(
+                db_client,
+                &source.id,
+                &target.id,
+                RelationshipType::Mute
+            ).await.unwrap()
+        );
     }
 }
