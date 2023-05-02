@@ -39,7 +39,8 @@ use crate::activitypub::{
 use crate::media::get_file_url;
 use crate::webfinger::types::ActorAddress;
 
-#[allow(dead_code)]
+const LINK_REL_MISSKEY_QUOTE: &str = "https://misskey-hub.net/ns#_misskey_quote";
+
 #[derive(Serialize)]
 #[serde(untagged)]
 enum Tag {
@@ -147,8 +148,8 @@ pub fn build_note(
             primary_audience.push(actor_id.clone());
         };
         let tag = SimpleTag {
-            name: tag_name,
             tag_type: MENTION.to_string(),
+            name: tag_name,
             href: actor_id,
         };
         tags.push(Tag::SimpleTag(tag));
@@ -156,28 +157,36 @@ pub fn build_note(
     for tag_name in &post.tags {
         let tag_href = local_tag_collection(instance_url, tag_name);
         let tag = SimpleTag {
-            name: format!("#{}", tag_name),
             tag_type: HASHTAG.to_string(),
+            name: format!("#{}", tag_name),
             href: tag_href,
         };
         tags.push(Tag::SimpleTag(tag));
     };
 
     assert_eq!(post.links.len(), post.linked.len());
-    for linked in &post.linked {
+    for (index, linked) in post.linked.iter().enumerate() {
         // Build FEP-e232 object link
         // https://codeberg.org/fediverse/fep/src/branch/main/feps/fep-e232.md
         let link_href = post_object_id(instance_url, linked);
+        let link_rel = if index == 0 {
+            // Present first link as a quote
+            vec![LINK_REL_MISSKEY_QUOTE.to_string()]
+        } else {
+            vec![]
+        };
         let tag = LinkTag {
-            name: None,  // no microsyntax
             tag_type: LINK.to_string(),
+            name: None,  // no microsyntax
             href: link_href,
             media_type: AP_MEDIA_TYPE.to_string(),
+            rel: link_rel,
         };
         if fep_e232_enabled {
             tags.push(Tag::LinkTag(tag));
         };
     };
+    // Present first link as a quote
     let maybe_quote_url = post.linked.get(0)
         .map(|linked| post_object_id(instance_url, linked));
 

@@ -15,6 +15,7 @@ use super::constants::{
     W3ID_DATA_INTEGRITY_CONTEXT,
     W3ID_SECURITY_CONTEXT,
 };
+use super::deserialization::deserialize_string_array;
 use super::receiver::parse_property_value;
 use super::vocabulary::HASHTAG;
 
@@ -40,11 +41,10 @@ fn default_tag_type() -> String { HASHTAG.to_string() }
 #[derive(Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Tag {
-    pub name: Option<String>,
-
     #[serde(rename = "type", default = "default_tag_type")]
     pub tag_type: String,
 
+    pub name: Option<String>,
     pub href: Option<String>,
 }
 
@@ -63,9 +63,15 @@ pub struct SimpleTag {
 pub struct LinkTag {
     #[serde(rename = "type")]
     pub tag_type: String,
+    pub name: Option<String>,
     pub href: String,
     pub media_type: String,
-    pub name: Option<String>,
+    #[serde(
+        default,
+        deserialize_with = "deserialize_string_array",
+        skip_serializing_if = "Vec::is_empty",
+    )]
+    pub rel: Vec<String>,
 }
 
 #[derive(Deserialize, Serialize)]

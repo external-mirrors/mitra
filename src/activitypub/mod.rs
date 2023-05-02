@@ -4,6 +4,7 @@ pub mod builders;
 mod collections;
 pub mod constants;
 mod deliverer;
+mod deserialization;
 pub mod fetcher;
 mod handlers;
 mod http_client;
