@@ -721,9 +721,17 @@ async fn mute_account(
     let current_user = get_current_user(db_client, auth.token()).await?;
     let target = get_profile_by_id(db_client, &account_id).await?;
 
-    mute(db_client, &current_user.id, &target.id).await?;
+    match mute(db_client, &current_user.id, &target.id).await {
+        Ok(_) => (),
+        Err(DatabaseError::AlreadyExists(_)) => (),
+        Err(other_error) => return Err(other_error.into()),
+    };
 
-    let relationship = get_relationship(db_client, &current_user.id, &target.id).await?;
+    let relationship = get_relationship(
+        db_client,
+        &current_user.id,
+        &target.id,
+    ).await?;
     Ok(HttpResponse::Ok().json(relationship))
 }
 
@@ -737,9 +745,17 @@ async fn unmute_account(
     let current_user = get_current_user(db_client, auth.token()).await?;
     let target = get_profile_by_id(db_client, &account_id).await?;
 
-    unmute(db_client, &current_user.id, &target.id).await?;
+    match unmute(db_client, &current_user.id, &target.id).await {
+        Ok(_) => (),
+        Err(DatabaseError::NotFound(_)) => (),
+        Err(other_error) => return Err(other_error.into()),
+    };
 
-    let relationship = get_relationship(db_client, &current_user.id, &target.id).await?;
+    let relationship = get_relationship(
+        db_client,
+        &current_user.id,
+        &target.id,
+    ).await?;
     Ok(HttpResponse::Ok().json(relationship))
 }
 

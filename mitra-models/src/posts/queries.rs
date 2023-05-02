@@ -287,24 +287,22 @@ pub async fn create_post(
         update_repost_count(&transaction, repost_of_id, 1).await?;
         let repost_of_author = get_post_author(&transaction, repost_of_id).await?;
         if repost_of_author.is_local() &&
-            // Don't notify themselves that they reported their post
+            // Don't notify themselves that they reposted their post
             repost_of_author.id != db_post.author_id &&
-            !notified_users.contains(&repost_of_author.id)
-        {
-            if !has_relationship(
+            !notified_users.contains(&repost_of_author.id) &&
+            !has_relationship(
                 &transaction,
                 &repost_of_author.id,
                 &db_post.author_id,
                 RelationshipType::Mute
             ).await?
-            {
-                create_repost_notification(
-                    &transaction,
-                    &db_post.author_id,
-                    &repost_of_author.id,
-                    repost_of_id,
-                ).await?;
-            }
+        {
+            create_repost_notification(
+                &transaction,
+                &db_post.author_id,
+                &repost_of_author.id,
+                repost_of_id,
+            ).await?;
             notified_users.push(repost_of_author.id);
         };
     };

@@ -16,6 +16,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Prevent re-use of EIP-4361 nonces.
 - Added `create-monero-signature` and `verify-monero-signature` commands.
 - Support "Sign In With Monero" (CAIP-122).
+- Allow muting and unmuting users ([#35](https://codeberg.org/silverpill/mitra/pulls/35)).
 
 ### Changed
 
