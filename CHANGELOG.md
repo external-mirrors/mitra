@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.23.0] - 2023-05-03
+
 ### Added
 
 - Add `federation.fep_e232_enabled` configuration parameter.

@@ -10,7 +10,7 @@ Features:
 - Mastodon API.
 - Content subscription service. Subscriptions provide a way to receive monthly payments from subscribers and to publish private content made exclusively for them.
   - Supported payment methods: [Monero](https://www.getmonero.org/get-started/what-is-monero/) and [ERC-20](https://ethereum.org/en/developers/docs/standards/tokens/erc-20/) tokens (on Ethereum and other EVM-compatible blockchains).
-- [Sign-in with a wallet](https://eips.ethereum.org/EIPS/eip-4361).
+- [Sign-in with a wallet](https://github.com/ChainAgnostic/CAIPs/blob/master/CAIPs/caip-122.md).
 - Donation buttons.
 - Account migrations (from one server to another). Identity can be detached from the server.
 - Federation over Tor.
