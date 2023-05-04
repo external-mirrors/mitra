@@ -34,6 +34,7 @@ Supported FEPs:
 - [FEP-f1d5: NodeInfo in Fediverse Software](https://codeberg.org/fediverse/fep/src/branch/main/feps/fep-f1d5.md)
 - [FEP-e232: Object Links](https://codeberg.org/fediverse/fep/src/branch/main/feps/fep-e232.md)
 - [FEP-8b32: Object Integrity Proofs](https://codeberg.org/fediverse/fep/src/branch/main/feps/fep-8b32.md)
+- [FEP-0ea0: Payment Links](https://codeberg.org/fediverse/fep/src/branch/main/feps/fep-0ea0.md)
 
 ## Object integrity proofs
 

@@ -1,4 +1,5 @@
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
+use serde_json::{Value as JsonValue};
 
 use mitra_models::profiles::types::{
     ExtraField,
@@ -9,10 +10,13 @@ use mitra_models::profiles::types::{
 };
 use mitra_utils::did::Did;
 
-use crate::activitypub::vocabulary::{
-    IDENTITY_PROOF,
-    LINK,
-    PROPERTY_VALUE,
+use crate::activitypub::{
+    deserialization::deserialize_string_array,
+    vocabulary::{
+        IDENTITY_PROOF,
+        LINK,
+        PROPERTY_VALUE,
+    },
 };
 use crate::errors::ValidationError;
 use crate::ethereum::identity::verify_eip191_signature;
@@ -111,22 +115,25 @@ pub struct PaymentLink {
     pub rel: Vec<String>,
 }
 
+const PAYMENT_LINK_NAME_ETHEREUM: &str = "EthereumSubscription";
+const PAYMENT_LINK_NAME_MONERO: &str = "MoneroSubscription";
+const PAYMENT_LINK_RELATION_TYPE: &str = "payment";
+
 pub fn attach_payment_option(
     instance_url: &str,
     username: &str,
     payment_option: PaymentOption,
 ) -> PaymentLink {
-    const RELATION_TYPE: &str = "payment";
     let (name, href) = match payment_option {
         // Local actors can't have payment links
         PaymentOption::Link(_) => unimplemented!(),
         PaymentOption::EthereumSubscription(_) => {
-            let name = "EthereumSubscription".to_string();
+            let name = PAYMENT_LINK_NAME_ETHEREUM.to_string();
             let href = get_subscription_page_url(instance_url, username);
             (name, href)
         },
         PaymentOption::MoneroSubscription(_) => {
-            let name = "MoneroSubscription".to_string();
+            let name = PAYMENT_LINK_NAME_MONERO.to_string();
             let href = get_subscription_page_url(instance_url, username);
             (name, href)
         },
@@ -135,22 +142,35 @@ pub fn attach_payment_option(
         object_type: LINK.to_string(),
         name: name,
         href: href,
-        rel: vec![RELATION_TYPE.to_string()],
+        rel: vec![PAYMENT_LINK_RELATION_TYPE.to_string()],
     }
 }
 
 pub fn parse_payment_option(
-    attachment: &ActorAttachment,
+    attachment: &JsonValue,
 ) -> Result<PaymentOption, ValidationError> {
-    if attachment.object_type != LINK {
-        return Err(ValidationError("invalid attachment type"));
+    #[derive(Deserialize)]
+    struct PaymentLink {
+        name: String,
+        href: String,
+        #[serde(
+            default,
+            deserialize_with = "deserialize_string_array",
+        )]
+        rel: Vec<String>,
+    }
+
+    let payment_link: PaymentLink = serde_json::from_value(attachment.clone())
+        .map_err(|_| ValidationError("invalid link attachment"))?;
+    if payment_link.name != PAYMENT_LINK_NAME_ETHEREUM &&
+        payment_link.name != PAYMENT_LINK_NAME_MONERO &&
+        !payment_link.rel.contains(&PAYMENT_LINK_RELATION_TYPE.to_string())
+    {
+        return Err(ValidationError("attachment is not a payment link"));
     };
-    let href = attachment.href.as_ref()
-        .ok_or(ValidationError("href attribute is required"))?
-        .to_string();
     let payment_option = PaymentOption::Link(DbPaymentLink {
-        name: attachment.name.clone(),
-        href: href,
+        name: payment_link.name,
+        href: payment_link.href,
     });
     Ok(payment_option)
 }
@@ -226,9 +246,7 @@ mod tests {
         assert_eq!(attachment.rel[0], "payment");
 
         let attachment_value = serde_json::to_value(attachment).unwrap();
-        let attachment: ActorAttachment =
-            serde_json::from_value(attachment_value).unwrap();
-        let parsed_option = parse_payment_option(&attachment).unwrap();
+        let parsed_option = parse_payment_option(&attachment_value).unwrap();
         let link = match parsed_option {
             PaymentOption::Link(link) => link,
             _ => panic!("wrong option"),

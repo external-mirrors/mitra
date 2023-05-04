@@ -253,7 +253,7 @@ impl Actor {
                     };
                 },
                 LINK => {
-                    match parse_payment_option(&attachment) {
+                    match parse_payment_option(attachment_value) {
                         Ok(option) => payment_options.push(option),
                         Err(error) => log_error(attachment_type, error),
                     };
