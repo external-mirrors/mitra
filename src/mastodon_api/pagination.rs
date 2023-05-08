@@ -1,31 +1,41 @@
-use actix_web::HttpResponse;
+use actix_web::{http::Uri, HttpResponse};
 use serde::{Deserialize, Serialize};
+use url::Url;
 
 fn get_pagination_header(
-    instance_url: &str,
-    path: &str,
+    base_url: &str,
+    request_uri: &Uri,
     last_id: &str,
 ) -> String {
-    let next_page_url = format!(
-        "{}{}?max_id={}",
-        instance_url,
-        path,
-        last_id
-    );
+    let mut next_page_url: Url = base_url.parse()
+        .expect("should be valid URL");
+    next_page_url.set_path(request_uri.path());
+    next_page_url.set_query(request_uri.query());
+    // Remove max_id from query pairs and append new value
+    let query_pairs: Vec<_> = next_page_url
+        .query_pairs()
+        .into_owned()
+        .filter(|(key, _value)| key != "max_id")
+        .collect();
+    next_page_url
+        .query_pairs_mut()
+        .clear()
+        .extend_pairs(query_pairs)
+        .append_pair("max_id", last_id);
     // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Link
     format!(r#"<{}>; rel="next""#, next_page_url)
 }
 
 pub fn get_paginated_response(
-    instance_url: &str,
-    path: &str,
+    base_url: &str,
+    request_uri: &Uri,
     items: Vec<impl Serialize>,
     maybe_last_item_id: Option<impl ToString>,
 ) -> HttpResponse {
     if let Some(last_item_id) = maybe_last_item_id {
         let pagination_header = get_pagination_header(
-            instance_url,
-            path,
+            base_url,
+            request_uri,
             &last_item_id.to_string(),
         );
         HttpResponse::Ok()
@@ -60,6 +70,14 @@ impl TryFrom<u16> for PageSize {
     }
 }
 
+pub fn get_last_item<'item, T>(
+    items: &'item [T],
+    limit: &PageSize,
+) -> Option<&'item T> {
+    let max_index = usize::from(limit.inner().saturating_sub(1));
+    items.get(max_index)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -68,9 +86,11 @@ mod tests {
 
     #[test]
     fn test_get_next_page_link() {
+        let request_url =
+            Uri::from_static("/api/v1/notifications?max_id=103");
         let result = get_pagination_header(
             INSTANCE_URL,
-            "/api/v1/notifications",
+            &request_url,
             "123",
         );
         assert_eq!(

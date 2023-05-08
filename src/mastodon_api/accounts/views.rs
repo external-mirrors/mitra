@@ -1,10 +1,10 @@
 use actix_web::{
     dev::ConnectionInfo,
     get,
+    http::Uri,
     patch,
     post,
     web,
-    HttpRequest,
     HttpResponse,
     Scope,
 };
@@ -102,7 +102,7 @@ use crate::json_signatures::{
 use crate::mastodon_api::{
     errors::MastodonError,
     oauth::auth::get_current_user,
-    pagination::get_paginated_response,
+    pagination::{get_last_item, get_paginated_response},
     search::helpers::search_profiles_only,
     statuses::helpers::build_status_list,
     statuses::types::Status,
@@ -805,9 +805,9 @@ async fn get_account_followers(
     connection_info: ConnectionInfo,
     config: web::Data<Config>,
     db_pool: web::Data<DbPool>,
+    request_uri: Uri,
     account_id: web::Path<Uuid>,
     query_params: web::Query<FollowListQueryParams>,
-    request: HttpRequest,
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &**get_database_client(&db_pool).await?;
     let current_user = get_current_user(db_client, auth.token()).await?;
@@ -823,8 +823,8 @@ async fn get_account_followers(
         query_params.max_id,
         query_params.limit.inner(),
     ).await?;
-    let max_index = usize::from(query_params.limit.inner().saturating_sub(1));
-    let maybe_last_id = followers.get(max_index).map(|item| item.relationship_id);
+    let maybe_last_id = get_last_item(&followers, &query_params.limit)
+        .map(|item| item.relationship_id);
     let base_url = get_request_base_url(connection_info);
     let instance_url = config.instance().url();
     let accounts: Vec<Account> = followers.into_iter()
@@ -835,8 +835,8 @@ async fn get_account_followers(
         ))
         .collect();
     let response = get_paginated_response(
-        &instance_url,
-        request.uri().path(),
+        &base_url,
+        &request_uri,
         accounts,
         maybe_last_id,
     );
@@ -849,9 +849,9 @@ async fn get_account_following(
     connection_info: ConnectionInfo,
     config: web::Data<Config>,
     db_pool: web::Data<DbPool>,
+    request_uri: Uri,
     account_id: web::Path<Uuid>,
     query_params: web::Query<FollowListQueryParams>,
-    request: HttpRequest,
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &**get_database_client(&db_pool).await?;
     let current_user = get_current_user(db_client, auth.token()).await?;
@@ -867,8 +867,8 @@ async fn get_account_following(
         query_params.max_id,
         query_params.limit.inner(),
     ).await?;
-    let max_index = usize::from(query_params.limit.inner().saturating_sub(1));
-    let maybe_last_id = following.get(max_index).map(|item| item.relationship_id);
+    let maybe_last_id = get_last_item(&following, &query_params.limit)
+        .map(|item| item.relationship_id);
     let base_url = get_request_base_url(connection_info);
     let instance_url = config.instance().url();
     let accounts: Vec<Account> = following.into_iter()
@@ -879,8 +879,8 @@ async fn get_account_following(
         ))
         .collect();
     let response = get_paginated_response(
-        &instance_url,
-        request.uri().path(),
+        &base_url,
+        &request_uri,
         accounts,
         maybe_last_id,
     );

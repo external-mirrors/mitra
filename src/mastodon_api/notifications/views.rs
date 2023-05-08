@@ -2,8 +2,9 @@
 use actix_web::{
     dev::ConnectionInfo,
     get,
+    http::Uri,
     web,
-    HttpRequest, HttpResponse,
+    HttpResponse,
     Scope as ActixScope,
 };
 use actix_web_httpauth::extractors::bearer::BearerAuth;
@@ -18,7 +19,7 @@ use crate::http::get_request_base_url;
 use crate::mastodon_api::{
     errors::MastodonError,
     oauth::auth::get_current_user,
-    pagination::get_paginated_response,
+    pagination::{get_last_item, get_paginated_response},
 };
 use super::types::{ApiNotification, NotificationQueryParams};
 
@@ -28,8 +29,8 @@ async fn get_notifications_view(
     connection_info: ConnectionInfo,
     config: web::Data<Config>,
     db_pool: web::Data<DbPool>,
+    request_uri: Uri,
     query_params: web::Query<NotificationQueryParams>,
-    request: HttpRequest,
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &**get_database_client(&db_pool).await?;
     let current_user = get_current_user(db_client, auth.token()).await?;
@@ -48,12 +49,11 @@ async fn get_notifications_view(
             item,
         ))
         .collect();
-    let max_index = usize::from(query_params.limit.inner().saturating_sub(1));
-    let maybe_last_id = notifications.get(max_index)
+    let maybe_last_id = get_last_item(&notifications, &query_params.limit)
         .map(|item| item.id.clone());
     let response = get_paginated_response(
-        &instance.url(),
-        request.uri().path(),
+        &base_url,
+        &request_uri,
         notifications,
         maybe_last_id,
     );

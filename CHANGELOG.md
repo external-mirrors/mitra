@@ -10,6 +10,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Improve validation of FEP-0ea0 payment links.
 
+### Fixed
+
+- Fix wrong hostname in pagination header.
+- Preserve query parameters when creating pagination header.
+
 ## [1.23.0] - 2023-05-03
 
 ### Added
