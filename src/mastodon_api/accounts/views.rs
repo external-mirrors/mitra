@@ -104,7 +104,7 @@ use crate::mastodon_api::{
     oauth::auth::get_current_user,
     pagination::{get_last_item, get_paginated_response},
     search::helpers::search_profiles_only,
-    statuses::helpers::build_status_list,
+    statuses::helpers::get_paginated_status_list,
     statuses::types::Status,
 };
 use crate::monero::caip122::verify_monero_caip122_signature;
@@ -765,6 +765,7 @@ async fn get_account_statuses(
     connection_info: ConnectionInfo,
     config: web::Data<Config>,
     db_pool: web::Data<DbPool>,
+    request_uri: Uri,
     account_id: web::Path<Uuid>,
     query_params: web::Query<StatusListQueryParams>,
 ) -> Result<HttpResponse, MastodonError> {
@@ -789,14 +790,18 @@ async fn get_account_statuses(
         query_params.max_id,
         query_params.limit.inner(),
     ).await?;
-    let statuses = build_status_list(
+    let base_url = get_request_base_url(connection_info);
+    let instance_url = config.instance().url();
+    let response = get_paginated_status_list(
         db_client,
-        &get_request_base_url(connection_info),
-        &config.instance_url(),
+        &base_url,
+        &instance_url,
+        &request_uri,
         maybe_current_user.as_ref(),
         posts,
+        &query_params.limit,
     ).await?;
-    Ok(HttpResponse::Ok().json(statuses))
+    Ok(response)
 }
 
 #[get("/{account_id}/followers")]

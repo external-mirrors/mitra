@@ -1,3 +1,4 @@
+use actix_web::{http::Uri, HttpResponse};
 use uuid::Uuid;
 
 use mitra_config::Instance;
@@ -9,6 +10,12 @@ use mitra_models::{
         types::Post,
     },
     users::types::User,
+};
+
+use crate::mastodon_api::pagination::{
+    get_last_item,
+    get_paginated_response,
+    PageSize,
 };
 
 use super::microsyntax::{
@@ -106,4 +113,30 @@ pub async fn build_status_list(
         .map(|post| Status::from_post(base_url, instance_url, post))
         .collect();
     Ok(statuses)
+}
+
+pub async fn get_paginated_status_list(
+    db_client: &impl DatabaseClient,
+    base_url: &str,
+    instance_url: &str,
+    request_uri: &Uri,
+    maybe_current_user: Option<&User>,
+    posts: Vec<Post>,
+    limit: &PageSize,
+) -> Result<HttpResponse, DatabaseError> {
+    let maybe_last_id = get_last_item(&posts, limit).map(|post| post.id);
+    let statuses = build_status_list(
+        db_client,
+        base_url,
+        instance_url,
+        maybe_current_user,
+        posts,
+    ).await?;
+    let response = get_paginated_response(
+        base_url,
+        request_uri,
+        statuses,
+        maybe_last_id,
+    );
+    Ok(response)
 }

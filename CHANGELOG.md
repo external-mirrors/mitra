@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+
+- Added pagination header to Timeline API responses.
+
 ### Changed
 
 - Improve validation of FEP-0ea0 payment links.

@@ -2,6 +2,7 @@
 use actix_web::{
     dev::ConnectionInfo,
     get,
+    http::Uri,
     web,
     HttpResponse,
     Scope,
@@ -22,7 +23,7 @@ use crate::http::get_request_base_url;
 use crate::mastodon_api::{
     errors::MastodonError,
     oauth::auth::get_current_user,
-    statuses::helpers::build_status_list,
+    statuses::helpers::get_paginated_status_list,
 };
 use super::types::TimelineQueryParams;
 
@@ -32,6 +33,7 @@ async fn home_timeline(
     connection_info: ConnectionInfo,
     config: web::Data<Config>,
     db_pool: web::Data<DbPool>,
+    request_uri: Uri,
     query_params: web::Query<TimelineQueryParams>,
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &**get_database_client(&db_pool).await?;
@@ -42,14 +44,18 @@ async fn home_timeline(
         query_params.max_id,
         query_params.limit.inner(),
     ).await?;
-    let statuses = build_status_list(
+    let base_url = get_request_base_url(connection_info);
+    let instance_url = config.instance().url();
+    let response = get_paginated_status_list(
         db_client,
-        &get_request_base_url(connection_info),
-        &config.instance_url(),
+        &base_url,
+        &instance_url,
+        &request_uri,
         Some(&current_user),
         posts,
+        &query_params.limit,
     ).await?;
-    Ok(HttpResponse::Ok().json(statuses))
+    Ok(response)
 }
 
 /// Local timeline ("local" parameter is ignored)
@@ -59,6 +65,7 @@ async fn public_timeline(
     connection_info: ConnectionInfo,
     config: web::Data<Config>,
     db_pool: web::Data<DbPool>,
+    request_uri: Uri,
     query_params: web::Query<TimelineQueryParams>,
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &**get_database_client(&db_pool).await?;
@@ -69,14 +76,18 @@ async fn public_timeline(
         query_params.max_id,
         query_params.limit.inner(),
     ).await?;
-    let statuses = build_status_list(
+    let base_url = get_request_base_url(connection_info);
+    let instance_url = config.instance().url();
+    let response = get_paginated_status_list(
         db_client,
-        &get_request_base_url(connection_info),
-        &config.instance_url(),
+        &base_url,
+        &instance_url,
+        &request_uri,
         Some(&current_user),
         posts,
+        &query_params.limit,
     ).await?;
-    Ok(HttpResponse::Ok().json(statuses))
+    Ok(response)
 }
 
 #[get("/tag/{hashtag}")]
@@ -85,6 +96,7 @@ async fn hashtag_timeline(
     connection_info: ConnectionInfo,
     config: web::Data<Config>,
     db_pool: web::Data<DbPool>,
+    request_uri: Uri,
     hashtag: web::Path<String>,
     query_params: web::Query<TimelineQueryParams>,
 ) -> Result<HttpResponse, MastodonError> {
@@ -100,14 +112,18 @@ async fn hashtag_timeline(
         query_params.max_id,
         query_params.limit.inner(),
     ).await?;
-    let statuses = build_status_list(
+    let base_url = get_request_base_url(connection_info);
+    let instance_url = config.instance().url();
+    let response = get_paginated_status_list(
         db_client,
-        &get_request_base_url(connection_info),
-        &config.instance_url(),
+        &base_url,
+        &instance_url,
+        &request_uri,
         maybe_current_user.as_ref(),
         posts,
+        &query_params.limit,
     ).await?;
-    Ok(HttpResponse::Ok().json(statuses))
+    Ok(response)
 }
 
 pub fn timeline_api_scope() -> Scope {
