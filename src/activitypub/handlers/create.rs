@@ -90,7 +90,13 @@ pub fn get_object_url(object: &Object) -> Result<String, ValidationError> {
     Ok(object_url)
 }
 
+/// Get post content by concatenating name/summary and content
 pub fn get_object_content(object: &Object) -> Result<String, ValidationError> {
+    let title = object.name.as_ref()
+        .or(object.summary.as_ref())
+        .filter(|title| !title.trim().is_empty())
+        .map(|title| format!("<h1>{}</h1>", title))
+        .unwrap_or("".to_string());
     let content = if let Some(ref content) = object.content {
         if object.media_type == Some("text/markdown".to_string()) {
             format!("<p>{}</p>", content)
@@ -99,9 +105,9 @@ pub fn get_object_content(object: &Object) -> Result<String, ValidationError> {
             content.to_string()
         }
     } else {
-        // Lemmy pages and PeerTube videos have "name" property
-        object.name.as_deref().unwrap_or("").to_string()
+        "".to_string()
     };
+    let content = format!("{}{}", title, content);
     if content.len() > CONTENT_MAX_SIZE {
         return Err(ValidationError("content is too long"));
     };
@@ -771,7 +777,7 @@ mod tests {
         content += &create_content_link(object_url);
         assert_eq!(
             content,
-            r#"test-content<p><a href="https://example.org/xyz" rel="noopener">https://example.org/xyz</a></p>"#,
+            r#"<h1>test-name</h1>test-content<p><a href="https://example.org/xyz" rel="noopener">https://example.org/xyz</a></p>"#,
         );
     }
 

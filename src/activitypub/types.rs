@@ -129,6 +129,7 @@ pub struct Object {
     pub content: Option<String>,
     pub quote_url: Option<String>,
     pub sensitive: Option<bool>,
+    pub summary: Option<String>,
 
     #[serde(
         default,
