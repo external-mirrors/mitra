@@ -24,6 +24,7 @@ pub struct Attachment {
     pub attachment_type: String,
 
     pub url: String,
+    pub preview_url: String,
 }
 
 impl Attachment {
@@ -43,7 +44,8 @@ impl Attachment {
         Self {
             id: db_attachment.id,
             attachment_type: attachment_type_mastodon.to_string(),
-            url: attachment_url,
+            url: attachment_url.clone(),
+            preview_url: attachment_url,
         }
     }
 }

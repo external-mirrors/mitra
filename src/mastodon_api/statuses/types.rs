@@ -62,7 +62,6 @@ pub struct Status {
     pub id: Uuid,
     pub uri: String,
     pub created_at: DateTime<Utc>,
-    // Undocumented https://github.com/mastodon/mastodon/blob/v3.5.2/app/serializers/rest/status_serializer.rb
     edited_at: Option<DateTime<Utc>>,
     pub account: Account,
     pub content: String,

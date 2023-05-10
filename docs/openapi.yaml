@@ -1688,6 +1688,9 @@ components:
         url:
           description: The location of the original full-size attachment.
           type: string
+        preview_url:
+          description: The location of a scaled-down preview of the attachment.
+          type: string
     AuthenticationMethod:
       type: string
       enum:
