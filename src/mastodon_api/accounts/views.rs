@@ -652,6 +652,10 @@ async fn follow_account(
     let db_client = &mut **get_database_client(&db_pool).await?;
     let current_user = get_current_user(db_client, auth.token()).await?;
     let target = get_profile_by_id(db_client, &account_id).await?;
+    if target.id == current_user.id {
+        return Err(ValidationError("target is current user").into());
+    };
+
     follow_or_create_request(
         db_client,
         &config.instance(),
@@ -720,6 +724,9 @@ async fn mute_account(
     let db_client = &mut **get_database_client(&db_pool).await?;
     let current_user = get_current_user(db_client, auth.token()).await?;
     let target = get_profile_by_id(db_client, &account_id).await?;
+    if target.id == current_user.id {
+        return Err(ValidationError("target is current user").into());
+    };
 
     match mute(db_client, &current_user.id, &target.id).await {
         Ok(_) => (),

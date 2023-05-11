@@ -20,6 +20,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Fix wrong hostname in pagination header.
 - Preserve query parameters when creating pagination header.
+- Return validation error if follow or mute target is current user.
 
 ## [1.23.0] - 2023-05-03
 
