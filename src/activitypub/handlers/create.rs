@@ -92,11 +92,15 @@ pub fn get_object_url(object: &Object) -> Result<String, ValidationError> {
 
 /// Get post content by concatenating name/summary and content
 pub fn get_object_content(object: &Object) -> Result<String, ValidationError> {
-    let title = object.name.as_ref()
-        .or(object.summary.as_ref())
-        .filter(|title| !title.trim().is_empty())
-        .map(|title| format!("<h1>{}</h1>", title))
-        .unwrap_or("".to_string());
+    let title = if object.in_reply_to.is_none() {
+        object.name.as_ref()
+            .or(object.summary.as_ref())
+            .filter(|title| !title.trim().is_empty())
+            .map(|title| format!("<h1>{}</h1>", title))
+            .unwrap_or("".to_string())
+    } else {
+        "".to_string()
+    };
     let content = if let Some(ref content) = object.content {
         if object.media_type == Some("text/markdown".to_string()) {
             format!("<p>{}</p>", content)
