@@ -63,7 +63,10 @@ pub struct SubscriptionAuthorizationQueryParams {
 #[serde(tag = "type", rename_all = "kebab-case")]
 pub enum SubscriptionOption {
     Ethereum,
-    Monero { price: u64, payout_address: String },
+    Monero {
+        price: u64,
+        payout_address: String,
+    },
 }
 
 impl SubscriptionOption {

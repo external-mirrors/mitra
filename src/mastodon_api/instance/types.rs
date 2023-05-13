@@ -1,5 +1,5 @@
 use serde::Serialize;
-use serde_json::{to_value, Value};
+use serde_json::{json, to_value, Value};
 
 use mitra_config::{
     AuthenticationMethod,
@@ -132,9 +132,14 @@ impl InstanceInfo {
                     minter: false,
                     subscriptions: true,
                 };
+                let maybe_chain_metadata = monero_config
+                    .chain_metadata.as_ref()
+                    .and_then(|metadata| metadata.description.as_ref())
+                    .map(|text| markdown_to_html(text))
+                    .map(|html| json!({"description": html}));
                 BlockchainInfo {
                     chain_id: monero_config.chain_id.to_string(),
-                    chain_metadata: None,
+                    chain_metadata: maybe_chain_metadata,
                     contract_address: None,
                     features: features,
                 }

@@ -51,9 +51,16 @@ impl EthereumConfig {
 
 fn default_wallet_account_index() -> u32 { 0 }
 
+#[derive(Clone, Deserialize, Serialize)]
+pub struct MoneroChainMetadata {
+    pub description: Option<String>,
+}
+
 #[derive(Clone, Deserialize)]
 pub struct MoneroConfig {
     pub chain_id: ChainId,
+    // Additional information for clients
+    pub chain_metadata: Option<MoneroChainMetadata>,
     #[serde(alias = "daemon_url")]
     pub node_url: String,
     #[serde(alias = "wallet_url")]
