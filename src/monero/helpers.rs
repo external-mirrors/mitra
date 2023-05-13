@@ -36,10 +36,13 @@ pub async fn check_expired_invoice(
 ) -> Result<(), MoneroError> {
     let wallet_client = open_monero_wallet(config).await?;
     let invoice = get_invoice_by_id(db_client, invoice_id).await?;
-    if invoice.chain_id != config.chain_id ||
-        invoice.invoice_status != InvoiceStatus::Timeout
-    {
+    if invoice.chain_id != config.chain_id {
         return Err(MoneroError::OtherError("can't process invoice"));
+    };
+    if invoice.invoice_status != InvoiceStatus::Timeout &&
+        invoice.invoice_status != InvoiceStatus::Cancelled
+    {
+        return Err(MoneroError::OtherError("invoice has not expired"));
     };
     let address = Address::from_str(&invoice.payment_address)?;
     let address_index = wallet_client.get_address_index(address).await?;

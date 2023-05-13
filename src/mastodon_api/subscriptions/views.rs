@@ -1,4 +1,5 @@
 use actix_web::{
+    delete,
     dev::ConnectionInfo,
     get,
     post,
@@ -12,7 +13,12 @@ use uuid::Uuid;
 use mitra_config::Config;
 use mitra_models::{
     database::{get_database_client, DbPool},
-    invoices::queries::{create_invoice, get_invoice_by_id},
+    invoices::queries::{
+        create_invoice,
+        get_invoice_by_id,
+        set_invoice_status,
+    },
+    invoices::types::InvoiceStatus,
     profiles::queries::{
         get_profile_by_id,
         update_profile,
@@ -235,12 +241,27 @@ async fn create_invoice_view(
 }
 
 #[get("/invoices/{invoice_id}")]
-async fn get_invoice(
+async fn get_invoice_view(
     db_pool: web::Data<DbPool>,
     invoice_id: web::Path<Uuid>,
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &**get_database_client(&db_pool).await?;
     let db_invoice = get_invoice_by_id(db_client, &invoice_id).await?;
+    let invoice = Invoice::from(db_invoice);
+    Ok(HttpResponse::Ok().json(invoice))
+}
+
+#[delete("/invoices/{invoice_id}")]
+async fn cancel_invoice_view(
+    db_pool: web::Data<DbPool>,
+    invoice_id: web::Path<Uuid>,
+) -> Result<HttpResponse, MastodonError> {
+    let db_client = &**get_database_client(&db_pool).await?;
+    let db_invoice = set_invoice_status(
+        db_client,
+        &invoice_id,
+        InvoiceStatus::Cancelled,
+    ).await?;
     let invoice = Invoice::from(db_invoice);
     Ok(HttpResponse::Ok().json(invoice))
 }
@@ -252,5 +273,6 @@ pub fn subscription_api_scope() -> Scope {
         .service(register_subscription_option)
         .service(find_subscription)
         .service(create_invoice_view)
-        .service(get_invoice)
+        .service(get_invoice_view)
+        .service(cancel_invoice_view)
 }

@@ -103,18 +103,18 @@ pub async fn set_invoice_status(
     db_client: &impl DatabaseClient,
     invoice_id: &Uuid,
     status: InvoiceStatus,
-) -> Result<(), DatabaseError> {
-    let updated_count = db_client.execute(
+) -> Result<DbInvoice, DatabaseError> {
+    let maybe_row = db_client.query_opt(
         "
         UPDATE invoice SET invoice_status = $2
         WHERE id = $1
+        RETURNING invoice
         ",
         &[&invoice_id, &status],
     ).await?;
-    if updated_count == 0 {
-        return Err(DatabaseError::NotFound("invoice"));
-    };
-    Ok(())
+    let row = maybe_row.ok_or(DatabaseError::NotFound("invoice"))?;
+    let invoice = row.try_get("invoice")?;
+    Ok(invoice)
 }
 
 #[cfg(test)]

@@ -1376,6 +1376,30 @@ paths:
                 $ref: '#/components/schemas/Invoice'
         404:
           description: Invoice not found
+    delete:
+      summary: Cancel invoice.
+      parameters:
+        - name: invoice_id
+          in: path
+          description: Invoice ID
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        200:
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Invoice'
+                  - type: object
+                    properties:
+                      status:
+                        example: cancelled
+        404:
+          description: Invoice not found
   /api/v1/timelines/home:
     get:
       summary: View posts from followed users.
@@ -1879,6 +1903,7 @@ components:
             - paid
             - forwarded
             - timeout
+            - cancelled
         expires_at:
           description: The date when invoice times out.
           type: string

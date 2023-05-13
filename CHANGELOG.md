@@ -11,6 +11,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Added pagination header to Timeline API responses.
 - Use `name` and `summary` attributes to create post title.
 - Added `preview_url` attribute to attachments in Mastodon API.
+- Added API endpoint for cancelling invoices.
 
 ### Changed
 
