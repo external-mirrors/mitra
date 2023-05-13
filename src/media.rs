@@ -10,7 +10,7 @@ use mitra_utils::files::{get_media_type_extension, write_file};
 
 use crate::ipfs::store as ipfs_store;
 
-pub const SUPPORTED_MEDIA_TYPES: [&str; 11] = [
+pub const SUPPORTED_MEDIA_TYPES: [&str; 12] = [
     "audio/mpeg",
     "audio/ogg",
     "audio/x-wav",
@@ -22,6 +22,7 @@ pub const SUPPORTED_MEDIA_TYPES: [&str; 11] = [
     "video/mp4",
     "video/ogg",
     "video/webm",
+    "video/x-m4v",
 ];
 
 /// Generates unique file name based on file contents

@@ -15,6 +15,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Changed
 
 - Improve validation of FEP-0ea0 payment links.
+- Added `video/x-m4v` to supported media types.
 
 ### Fixed
 
