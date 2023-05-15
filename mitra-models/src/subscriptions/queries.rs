@@ -130,21 +130,29 @@ pub async fn get_expired_subscriptions(
 pub async fn get_incoming_subscriptions(
     db_client: &impl DatabaseClient,
     recipient_id: &Uuid,
+    include_expired: bool,
     max_subscription_id: Option<i32>,
     limit: u16,
 ) -> Result<Vec<Subscription>, DatabaseError> {
-    let rows = db_client.query(
+    let mut condition = "subscription.recipient_id = $1
+        AND ($2::integer IS NULL OR subscription.id < $2)".to_owned();
+    if !include_expired {
+        condition.push_str(" AND subscription.expires_at > CURRENT_TIMESTAMP");
+    };
+    let statement = format!(
         "
         SELECT subscription, actor_profile AS sender
         FROM actor_profile
         JOIN subscription
         ON (actor_profile.id = subscription.sender_id)
-        WHERE
-            subscription.recipient_id = $1
-            AND ($2::integer IS NULL OR subscription.id < $2)
+        WHERE {condition}
         ORDER BY subscription.id DESC
         LIMIT $3
         ",
+        condition=condition,
+    );
+    let rows = db_client.query(
+        &statement,
         &[&recipient_id, &max_subscription_id, &i64::from(limit)],
     ).await?;
     let subscriptions = rows.iter()
@@ -248,5 +256,25 @@ mod tests {
             RelationshipType::Subscription,
         ).await.unwrap();
         assert_eq!(is_subscribed, true);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_get_incoming_subscriptions() {
+        let db_client = &mut create_test_database().await;
+        let recipient_data = ProfileCreateData {
+            username: "recipient".to_string(),
+            ..Default::default()
+        };
+        let recipient =
+            create_profile(db_client, recipient_data).await.unwrap();
+        let results = get_incoming_subscriptions(
+            db_client,
+            &recipient.id,
+            true,
+            None,
+            40,
+        ).await.unwrap();
+        assert_eq!(results.is_empty(), true);
     }
 }

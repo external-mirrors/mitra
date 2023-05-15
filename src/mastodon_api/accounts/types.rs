@@ -530,6 +530,17 @@ pub struct FollowListQueryParams {
     pub limit: PageSize,
 }
 
+#[derive(Deserialize)]
+pub struct SubscriptionListQueryParams {
+    #[serde(default)]
+    pub include_expired: bool,
+
+    pub max_id: Option<i32>,
+
+    #[serde(default = "default_follow_list_page_size")]
+    pub limit: PageSize,
+}
+
 #[derive(Serialize)]
 pub struct ApiSubscription {
     pub id: i32,

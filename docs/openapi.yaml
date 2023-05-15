@@ -537,6 +537,12 @@ paths:
       summary: Subscriptions to the given actor.
       parameters:
         - $ref: '#/components/parameters/account_id'
+        - name: include_expired
+          in: query
+          description: Include expired subscriptions.
+          required: false
+          schema:
+            type: boolean
         - name: max_id
           in: query
           description: Return results with subscription ID older than this value.

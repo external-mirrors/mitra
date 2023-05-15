@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+
+- Added `include_expired` parameter to `/api/v1/accounts/{account_id}/subscribers`.
+
 ## [1.24.0] - 2023-05-14
 
 ### Added

@@ -136,6 +136,7 @@ use super::types::{
     SearchDidQueryParams,
     SignedActivity,
     StatusListQueryParams,
+    SubscriptionListQueryParams,
     UnsignedActivity,
 };
 
@@ -906,7 +907,7 @@ async fn get_account_subscribers(
     config: web::Data<Config>,
     db_pool: web::Data<DbPool>,
     account_id: web::Path<Uuid>,
-    query_params: web::Query<FollowListQueryParams>,
+    query_params: web::Query<SubscriptionListQueryParams>,
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &**get_database_client(&db_pool).await?;
     let current_user = get_current_user(db_client, auth.token()).await?;
@@ -921,6 +922,7 @@ async fn get_account_subscribers(
     let subscriptions: Vec<ApiSubscription> = get_incoming_subscriptions(
         db_client,
         &profile.id,
+        query_params.include_expired,
         query_params.max_id,
         query_params.limit.inner(),
     )
