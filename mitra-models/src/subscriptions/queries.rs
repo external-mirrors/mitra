@@ -134,10 +134,9 @@ pub async fn get_incoming_subscriptions(
     max_subscription_id: Option<i32>,
     limit: u16,
 ) -> Result<Vec<Subscription>, DatabaseError> {
-    let mut condition = "subscription.recipient_id = $1
-        AND ($2::integer IS NULL OR subscription.id < $2)".to_owned();
+    let mut filter = "subscription.recipient_id = $1".to_owned();
     if !include_expired {
-        condition.push_str(" AND subscription.expires_at > CURRENT_TIMESTAMP");
+        filter += " AND subscription.expires_at > CURRENT_TIMESTAMP";
     };
     let statement = format!(
         "
@@ -145,11 +144,13 @@ pub async fn get_incoming_subscriptions(
         FROM actor_profile
         JOIN subscription
         ON (actor_profile.id = subscription.sender_id)
-        WHERE {condition}
+        WHERE
+            {filter}
+            AND ($2::integer IS NULL OR subscription.id < $2)
         ORDER BY subscription.id DESC
         LIMIT $3
         ",
-        condition=condition,
+        filter=filter,
     );
     let rows = db_client.query(
         &statement,

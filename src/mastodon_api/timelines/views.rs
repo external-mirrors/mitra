@@ -14,8 +14,8 @@ use mitra_models::{
     database::{get_database_client, DbPool},
     posts::queries::{
         get_home_timeline,
-        get_local_timeline,
         get_posts_by_tag,
+        get_public_timeline,
     },
 };
 
@@ -25,7 +25,10 @@ use crate::mastodon_api::{
     oauth::auth::get_current_user,
     statuses::helpers::get_paginated_status_list,
 };
-use super::types::TimelineQueryParams;
+use super::types::{
+    PublicTimelineQueryParams,
+    TimelineQueryParams,
+};
 
 #[get("/home")]
 async fn home_timeline(
@@ -58,7 +61,7 @@ async fn home_timeline(
     Ok(response)
 }
 
-/// Local timeline ("local" parameter is ignored)
+/// Public and local timelines
 #[get("/public")]
 async fn public_timeline(
     auth: BearerAuth,
@@ -66,13 +69,14 @@ async fn public_timeline(
     config: web::Data<Config>,
     db_pool: web::Data<DbPool>,
     request_uri: Uri,
-    query_params: web::Query<TimelineQueryParams>,
+    query_params: web::Query<PublicTimelineQueryParams>,
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &**get_database_client(&db_pool).await?;
     let current_user = get_current_user(db_client, auth.token()).await?;
-    let posts = get_local_timeline(
+    let posts = get_public_timeline(
         db_client,
         &current_user.id,
+        query_params.local,
         query_params.max_id,
         query_params.limit.inner(),
     ).await?;

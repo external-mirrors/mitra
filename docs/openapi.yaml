@@ -1409,6 +1409,8 @@ paths:
   /api/v1/timelines/home:
     get:
       summary: View posts from followed users.
+      security:
+        - tokenAuth: []
       parameters:
         - name: max_id
           in: query
@@ -1443,7 +1445,16 @@ paths:
   /api/v1/timelines/public:
     get:
       summary: View local public posts.
+      security:
+        - tokenAuth: []
       parameters:
+        - name: local
+          in: query
+          description: Return only local posts?
+          required: false
+          schema:
+            type: boolean
+            default: true
         - name: max_id
           in: query
           description: Return results older than this ID.

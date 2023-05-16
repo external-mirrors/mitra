@@ -12,3 +12,16 @@ pub struct TimelineQueryParams {
     #[serde(default = "default_page_size")]
     pub limit: PageSize,
 }
+
+fn default_timeline_local() -> bool { true }
+
+#[derive(Deserialize)]
+pub struct PublicTimelineQueryParams {
+    #[serde(default = "default_timeline_local")]
+    pub local: bool,
+
+    pub max_id: Option<Uuid>,
+
+    #[serde(default = "default_page_size")]
+    pub limit: PageSize,
+}

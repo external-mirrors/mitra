@@ -609,12 +609,17 @@ pub async fn get_home_timeline(
     Ok(posts)
 }
 
-pub async fn get_local_timeline(
+pub async fn get_public_timeline(
     db_client: &impl DatabaseClient,
     current_user_id: &Uuid,
+    only_local: bool,
     max_post_id: Option<Uuid>,
     limit: u16,
 ) -> Result<Vec<Post>, DatabaseError> {
+    let mut filter = "".to_owned();
+    if only_local {
+        filter += "actor_profile.actor_json IS NULL AND";
+    };
     let statement = format!(
         "
         SELECT
@@ -627,10 +632,10 @@ pub async fn get_local_timeline(
         FROM post
         JOIN actor_profile ON post.author_id = actor_profile.id
         WHERE
-            actor_profile.actor_json IS NULL
-            AND post.visibility = {visibility_public}
-            AND ($max_post_id::uuid IS NULL OR post.id < $max_post_id)
+            {filter}
+            post.visibility = {visibility_public}
             AND {mute_filter}
+            AND ($max_post_id::uuid IS NULL OR post.id < $max_post_id)
         ORDER BY post.id DESC
         LIMIT $limit
         ",
@@ -639,6 +644,7 @@ pub async fn get_local_timeline(
         related_tags=RELATED_TAGS,
         related_links=RELATED_LINKS,
         related_emojis=RELATED_EMOJIS,
+        filter=filter,
         visibility_public=i16::from(&Visibility::Public),
         mute_filter=build_mute_filter(),
     );
@@ -1375,7 +1381,7 @@ mod tests {
     use crate::database::test_utils::create_test_database;
     use crate::profiles::{
         queries::create_profile,
-        types::ProfileCreateData,
+        types::{DbActor, ProfileCreateData},
     };
     use crate::relationships::queries::{
         follow,
@@ -1635,6 +1641,57 @@ mod tests {
         assert_eq!(timeline.iter().any(|post| post.id == post_12.id), true);
         assert_eq!(timeline.iter().any(|post| post.id == post_13.id), false);
         assert_eq!(timeline.iter().any(|post| post.id == post_14.id), false);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_public_timeline() {
+        let db_client = &mut create_test_database().await;
+        let current_user_data = UserCreateData {
+            username: "test".to_string(),
+            password_hash: Some("test".to_string()),
+            ..Default::default()
+        };
+        let current_user = create_user(db_client, current_user_data)
+            .await.unwrap();
+        let remote_user_data = ProfileCreateData {
+            username: "test".to_string(),
+            hostname: Some("example.com".to_string()),
+            actor_json: Some(DbActor {
+                id: "https://example.com/users/1".to_string(),
+                ..Default::default()
+            }),
+            ..Default::default()
+        };
+        let remote_profile = create_profile(db_client, remote_user_data)
+            .await.unwrap();
+        let post_data_1 = PostCreateData {
+            content: "test post".to_string(),
+            object_id: Some("https://example.com/objects/1".to_string()),
+            ..Default::default()
+        };
+        let post_1 = create_post(db_client, &remote_profile.id, post_data_1)
+            .await.unwrap();
+        let post_data_2 = PostCreateData {
+            content: "test post".to_string(),
+            visibility: Visibility::Direct,
+            mentions: vec![current_user.id],
+            object_id: Some("https://example.com/objects/2".to_string()),
+            ..Default::default()
+        };
+        let post_2 = create_post(db_client, &remote_profile.id, post_data_2)
+            .await.unwrap();
+
+        let timeline = get_public_timeline(
+            db_client,
+            &current_user.id,
+            false,
+            None,
+            20,
+        ).await.unwrap();
+        assert_eq!(timeline.len(), 1);
+        assert_eq!(timeline.iter().any(|post| post.id == post_1.id), true);
+        assert_eq!(timeline.iter().any(|post| post.id == post_2.id), false);
     }
 
     #[tokio::test]
