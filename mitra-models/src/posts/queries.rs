@@ -662,6 +662,59 @@ pub async fn get_public_timeline(
     Ok(posts)
 }
 
+pub async fn get_direct_timeline(
+    db_client: &impl DatabaseClient,
+    current_user_id: &Uuid,
+    max_post_id: Option<Uuid>,
+    limit: u16,
+) -> Result<Vec<Post>, DatabaseError> {
+    let statement = format!(
+        "
+        SELECT
+            post, actor_profile,
+            {related_attachments},
+            {related_mentions},
+            {related_tags},
+            {related_links},
+            {related_emojis}
+        FROM post
+        JOIN actor_profile ON post.author_id = actor_profile.id
+        WHERE
+            (
+                post.author_id = $current_user_id
+                OR EXISTS (
+                    SELECT 1 FROM mention
+                    WHERE post_id = post.id AND profile_id = $current_user_id
+                )
+            )
+            AND post.visibility = {visibility_direct}
+            AND {mute_filter}
+            AND ($max_post_id::uuid IS NULL OR post.id < $max_post_id)
+        ORDER BY post.id DESC
+        LIMIT $limit
+        ",
+        related_attachments=RELATED_ATTACHMENTS,
+        related_mentions=RELATED_MENTIONS,
+        related_tags=RELATED_TAGS,
+        related_links=RELATED_LINKS,
+        related_emojis=RELATED_EMOJIS,
+        visibility_direct=i16::from(&Visibility::Direct),
+        mute_filter=build_mute_filter(),
+    );
+    let limit: i64 = limit.into();
+    let query = query!(
+        &statement,
+        current_user_id=current_user_id,
+        max_post_id=max_post_id,
+        limit=limit,
+    )?;
+    let rows = db_client.query(query.sql(), query.parameters()).await?;
+    let posts: Vec<Post> = rows.iter()
+        .map(Post::try_from)
+        .collect::<Result<_, _>>()?;
+    Ok(posts)
+}
+
 pub async fn get_related_posts(
     db_client: &impl DatabaseClient,
     posts_ids: Vec<Uuid>,
@@ -1692,6 +1745,71 @@ mod tests {
         assert_eq!(timeline.len(), 1);
         assert_eq!(timeline.iter().any(|post| post.id == post_1.id), true);
         assert_eq!(timeline.iter().any(|post| post.id == post_2.id), false);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_direct_timeline() {
+        let db_client = &mut create_test_database().await;
+        let current_user_data = UserCreateData {
+            username: "test".to_string(),
+            password_hash: Some("test".to_string()),
+            ..Default::default()
+        };
+        let current_user = create_user(db_client, current_user_data)
+            .await.unwrap();
+        let user_data_1 = UserCreateData {
+            username: "user1".to_string(),
+            password_hash: Some("test".to_string()),
+            ..Default::default()
+        };
+        let user_1 = create_user(db_client, user_data_1)
+            .await.unwrap();
+        let user_data_2 = UserCreateData {
+            username: "user2".to_string(),
+            password_hash: Some("test".to_string()),
+            ..Default::default()
+        };
+        let user_2 = create_user(db_client, user_data_2)
+            .await.unwrap();
+        // Incoming DM
+        let post_data_1 = PostCreateData {
+            content: "test dm".to_string(),
+            visibility: Visibility::Direct,
+            mentions: vec![current_user.id],
+            ..Default::default()
+        };
+        let post_1 = create_post(db_client, &user_1.id, post_data_1)
+            .await.unwrap();
+        // Public post with mention
+        let post_data_2 = PostCreateData {
+            content: "test public".to_string(),
+            visibility: Visibility::Public,
+            mentions: vec![current_user.id],
+            ..Default::default()
+        };
+        let post_2 = create_post(db_client, &user_1.id, post_data_2)
+            .await.unwrap();
+        // Message to other user
+        let post_data_3 = PostCreateData {
+            content: "test dm 2".to_string(),
+            visibility: Visibility::Direct,
+            mentions: vec![user_1.id],
+            ..Default::default()
+        };
+        let post_3 = create_post(db_client, &user_2.id, post_data_3)
+            .await.unwrap();
+
+        let timeline = get_direct_timeline(
+            db_client,
+            &current_user.id,
+            None,
+            20,
+        ).await.unwrap();
+        assert_eq!(timeline.len(), 1);
+        assert_eq!(timeline.iter().any(|post| post.id == post_1.id), true);
+        assert_eq!(timeline.iter().any(|post| post.id == post_2.id), false);
+        assert_eq!(timeline.iter().any(|post| post.id == post_3.id), false);
     }
 
     #[tokio::test]

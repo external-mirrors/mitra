@@ -13,6 +13,7 @@ use mitra_config::Config;
 use mitra_models::{
     database::{get_database_client, DbPool},
     posts::queries::{
+        get_direct_timeline,
         get_home_timeline,
         get_posts_by_tag,
         get_public_timeline,
@@ -94,6 +95,37 @@ async fn public_timeline(
     Ok(response)
 }
 
+#[get("/direct")]
+async fn direct_timeline(
+    auth: BearerAuth,
+    connection_info: ConnectionInfo,
+    config: web::Data<Config>,
+    db_pool: web::Data<DbPool>,
+    request_uri: Uri,
+    query_params: web::Query<TimelineQueryParams>,
+) -> Result<HttpResponse, MastodonError> {
+    let db_client = &**get_database_client(&db_pool).await?;
+    let current_user = get_current_user(db_client, auth.token()).await?;
+    let posts = get_direct_timeline(
+        db_client,
+        &current_user.id,
+        query_params.max_id,
+        query_params.limit.inner(),
+    ).await?;
+    let base_url = get_request_base_url(connection_info);
+    let instance_url = config.instance().url();
+    let response = get_paginated_status_list(
+        db_client,
+        &base_url,
+        &instance_url,
+        &request_uri,
+        Some(&current_user),
+        posts,
+        &query_params.limit,
+    ).await?;
+    Ok(response)
+}
+
 #[get("/tag/{hashtag}")]
 async fn hashtag_timeline(
     auth: Option<BearerAuth>,
@@ -134,5 +166,6 @@ pub fn timeline_api_scope() -> Scope {
     web::scope("/api/v1/timelines")
         .service(home_timeline)
         .service(public_timeline)
+        .service(direct_timeline)
         .service(hashtag_timeline)
 }

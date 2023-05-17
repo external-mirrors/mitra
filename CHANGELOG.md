@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Added
 
 - Make `/api/v1/timelines/public` return public timeline if `local` is set to `false`.
+- Add `/api/v1/timelines/direct` API endpoint.
 
 ### Deprecated
 
