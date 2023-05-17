@@ -60,7 +60,7 @@ retention:
 #  # Proxy for outgoing requests to .onion targets
 #  #onion_proxy_url: 'socks5h://127.0.0.1:9050'
 #  # Proxy for outgoing requests to .i2p targets
-#  #i2p_proxy_url: 'http://127.0.0.1:4444'
+#  #i2p_proxy_url: 'socks5h://127.0.0.1:4447'
 
 # List of blocked domains
 #blocked_instances: []
