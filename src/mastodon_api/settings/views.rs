@@ -120,6 +120,8 @@ async fn add_alias_view(
     let mut profile_data = ProfileUpdateData::from(&current_user.profile);
     if !profile_data.aliases.contains(&alias_id) {
         profile_data.aliases.push(alias_id);
+    } else {
+        return Err(ValidationError("alias already exists").into());
     };
     current_user.profile = update_profile(
         db_client,

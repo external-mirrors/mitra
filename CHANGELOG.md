@@ -12,6 +12,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Add `/api/v1/timelines/direct` API endpoint.
 - Added full list of declared aliases to `/api/v1/accounts/{account_id}/aliases/all` response.
 
+### Changed
+
+- Return validation error if trying to add alias that already exists.
+
 ### Deprecated
 
 - Loading local timeline without `local` parameter.
