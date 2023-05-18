@@ -15,6 +15,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Loading local timeline without `local` parameter.
 
+### Removed
+
+- Removed `/api/v1/accounts/aliases` API endpoint.
+
 ## [1.24.1] - 2023-05-15
 
 ### Added
