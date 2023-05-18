@@ -50,6 +50,7 @@ use super::types::{
     ImportFollowsRequest,
     MoveFollowersRequest,
     PasswordChangeRequest,
+    RemoveAliasRequest,
 };
 
 // Similar to Pleroma settings store
@@ -122,6 +123,43 @@ async fn add_alias_view(
         profile_data.aliases.push(alias_id);
     } else {
         return Err(ValidationError("alias already exists").into());
+    };
+    current_user.profile = update_profile(
+        db_client,
+        &current_user.id,
+        profile_data,
+    ).await?;
+    prepare_update_person(
+        db_client,
+        &instance,
+        &current_user,
+        None,
+    ).await?.enqueue(db_client).await?;
+    let aliases = get_aliases(
+        db_client,
+        &get_request_base_url(connection_info),
+        &instance.url(),
+        &current_user.profile,
+    ).await?;
+    Ok(HttpResponse::Ok().json(aliases))
+}
+
+#[post("/aliases/remove")]
+async fn remove_alias_view(
+    auth: BearerAuth,
+    config: web::Data<Config>,
+    connection_info: ConnectionInfo,
+    db_pool: web::Data<DbPool>,
+    request_data: web::Json<RemoveAliasRequest>,
+) -> Result<HttpResponse, MastodonError> {
+    let db_client = &mut **get_database_client(&db_pool).await?;
+    let mut current_user = get_current_user(db_client, auth.token()).await?;
+    let instance = config.instance();
+    let mut profile_data = ProfileUpdateData::from(&current_user.profile);
+    if profile_data.aliases.contains(&request_data.actor_id) {
+        profile_data.aliases.retain(|alias| alias != &request_data.actor_id);
+    } else {
+        return Err(MastodonError::NotFoundError("alias"));
     };
     current_user.profile = update_profile(
         db_client,
@@ -271,6 +309,7 @@ pub fn settings_api_scope() -> Scope {
         .service(client_config_view)
         .service(change_password_view)
         .service(add_alias_view)
+        .service(remove_alias_view)
         .service(export_followers_view)
         .service(export_follows_view)
         .service(import_follows_view)

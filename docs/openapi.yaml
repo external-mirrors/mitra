@@ -887,6 +887,28 @@ paths:
                 $ref: '#/components/schemas/Aliases'
         404:
           description: Profile not found.
+  /api/v1/settings/aliases/remove:
+    post:
+      summary: Remove alias.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                actor_id:
+                  description: Actor ID.
+                  type: string
+                  example: https://domain.example/users/1
+      responses:
+        200:
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Aliases'
+        404:
+          description: Alias not found.
   /api/v1/settings/export_followers:
     get:
       summary: Export followers to CSV file
