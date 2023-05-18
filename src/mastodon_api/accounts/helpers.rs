@@ -13,7 +13,7 @@ use mitra_models::{
     relationships::types::RelationshipType,
 };
 
-use super::types::{Account, Aliases, RelationshipMap};
+use super::types::{Account, Alias, Aliases, RelationshipMap};
 
 pub async fn get_relationship(
     db_client: &impl DatabaseClient,
@@ -70,13 +70,26 @@ pub async fn get_aliases(
     instance_url: &str,
     profile: &DbActorProfile,
 ) -> Result<Aliases, DatabaseError> {
-    let declared = find_declared_aliases(db_client, profile).await?
-        .into_iter()
-        .map(|profile| Account::from_profile(
-            base_url,
-            instance_url,
-            profile,
-        ))
+    let declared_db = find_declared_aliases(db_client, profile).await?;
+    let declared_all = declared_db.iter()
+        .map(|(actor_id, maybe_profile)| {
+            let maybe_account = maybe_profile.as_ref()
+                .map(|profile| Account::from_profile(
+                    base_url,
+                    instance_url,
+                    profile.clone(),
+                ));
+            Alias { id: actor_id.to_string(), account: maybe_account }
+        })
+        .collect();
+    let declared = declared_db.iter()
+        .filter_map(|(_, maybe_profile)| {
+            maybe_profile.as_ref().map(|profile| Account::from_profile(
+                base_url,
+                instance_url,
+                profile.clone(),
+            ))
+        })
         .collect();
     let verified = find_verified_aliases(db_client, profile).await?
         .into_iter()
@@ -86,7 +99,7 @@ pub async fn get_aliases(
             profile,
         ))
         .collect();
-    let aliases = Aliases { declared, verified };
+    let aliases = Aliases { declared, declared_all, verified };
     Ok(aliases)
 }
 

@@ -9,19 +9,18 @@ use super::types::DbActorProfile;
 pub async fn find_declared_aliases(
     db_client: &impl DatabaseClient,
     profile: &DbActorProfile,
-) -> Result<Vec<DbActorProfile>, DatabaseError> {
+) -> Result<Vec<(String, Option<DbActorProfile>)>, DatabaseError> {
     let mut results = vec![];
     for actor_id in profile.aliases.clone().into_actor_ids() {
-        let alias = match get_profile_by_remote_actor_id(
+        let maybe_profile = match get_profile_by_remote_actor_id(
             db_client,
             &actor_id,
         ).await {
-            Ok(profile) => profile,
-            // Ignore unknown profiles
-            Err(DatabaseError::NotFound(_)) => continue,
+            Ok(profile) => Some(profile),
+            Err(DatabaseError::NotFound(_)) => None,
             Err(other_error) => return Err(other_error),
         };
-        results.push(alias);
+        results.push((actor_id, maybe_profile));
     };
     Ok(results)
 }

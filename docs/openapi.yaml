@@ -1712,6 +1712,19 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Account'
+        declared_all:
+          description: Aliases declared by user (full list).
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                description: Actor ID.
+              account:
+                allOf:
+                  - $ref: '#/components/schemas/Account'
+                  - nullable: true
         verified:
           description: Cryptographically verified aliases.
           type: array

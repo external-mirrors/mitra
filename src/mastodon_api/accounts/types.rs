@@ -570,8 +570,15 @@ impl ApiSubscription {
 }
 
 #[derive(Serialize)]
+pub struct Alias {
+    pub id: String,
+    pub account: Option<Account>,
+}
+
+#[derive(Serialize)]
 pub struct Aliases {
     pub declared: Vec<Account>,
+    pub declared_all: Vec<Alias>,
     pub verified: Vec<Account>,
 }
 
