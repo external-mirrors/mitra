@@ -1,3 +1,4 @@
+use actix_multipart::form::{text::Text, MultipartForm};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -32,6 +33,25 @@ pub struct TokenRequest {
     // EIP4361 message and signature
     pub message: Option<String>,
     pub signature: Option<String>,
+}
+
+#[derive(MultipartForm)]
+pub struct TokenRequestMultipartForm {
+    grant_type: Text<String>,
+    code: Text<String>,
+}
+
+impl From<TokenRequestMultipartForm> for TokenRequest {
+    fn from(form: TokenRequestMultipartForm) -> Self {
+        Self {
+            grant_type: form.grant_type.into_inner(),
+            code: Some(form.code.into_inner()),
+            username: None,
+            password: None,
+            message: None,
+            signature: None,
+        }
+    }
 }
 
 /// https://docs.joinmastodon.org/entities/token/

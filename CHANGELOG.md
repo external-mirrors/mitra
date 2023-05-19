@@ -16,6 +16,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Changed
 
 - Return validation error if trying to add alias that already exists.
+- Make `/api/v1/apps` and `/oauth/token` endpoints accept `multipart/form-data`.
 
 ### Deprecated
 

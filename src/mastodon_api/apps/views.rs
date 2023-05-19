@@ -1,3 +1,4 @@
+use actix_multipart::form::MultipartForm;
 use actix_web::{
     post,
     web,
@@ -13,24 +14,26 @@ use mitra_models::{
     oauth::types::DbOauthAppData,
 };
 
+use crate::http::FormOrJson;
 use crate::mastodon_api::{
     errors::MastodonError,
     oauth::utils::generate_access_token,
 };
-use super::types::{OauthApp, CreateAppRequest};
+use super::types::{OauthApp, CreateAppData, CreateAppMultipartForm};
 
 /// https://docs.joinmastodon.org/methods/apps/
+/// Some clients use multipart/form-data
 #[post("")]
 async fn create_app_view(
     db_pool: web::Data<DbPool>,
     request_data: Either<
-        web::Json<CreateAppRequest>,
-        web::Form<CreateAppRequest>,
+        MultipartForm<CreateAppMultipartForm>,
+        FormOrJson<CreateAppData>,
     >,
 ) -> Result<HttpResponse, MastodonError> {
     let request_data = match request_data {
-        Either::Left(json) => json.into_inner(),
-        Either::Right(form) => form.into_inner(),
+        Either::Left(form) => form.into_inner().into(),
+        Either::Right(data) => data.into_inner(),
     };
     let db_client = &**get_database_client(&db_pool).await?;
     let db_app_data = DbOauthAppData {

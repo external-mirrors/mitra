@@ -1,8 +1,10 @@
+use actix_multipart::form::MultipartForm;
 use actix_web::{
     get,
     http::header as http_header,
     post,
     web,
+    Either,
     HttpResponse,
     Scope as ActixScope,
 };
@@ -39,6 +41,7 @@ use super::types::{
     AuthorizationQueryParams,
     RevocationRequest,
     TokenRequest,
+    TokenRequestMultipartForm,
     TokenResponse,
 };
 use super::utils::{
@@ -119,9 +122,15 @@ const ACCESS_TOKEN_EXPIRES_IN: i64 = 86400 * 7;
 async fn token_view(
     config: web::Data<Config>,
     db_pool: web::Data<DbPool>,
-    request_data: FormOrJson<TokenRequest>,
+    request_data: Either<
+        MultipartForm<TokenRequestMultipartForm>,
+        FormOrJson<TokenRequest>,
+    >,
 ) -> Result<HttpResponse, MastodonError> {
-    let request_data = request_data.into_inner();
+    let request_data = match request_data {
+        Either::Left(form) => form.into_inner().into(),
+        Either::Right(data) => data.into_inner(),
+    };
     let db_client = &**get_database_client(&db_pool).await?;
     let user = match request_data.grant_type.as_str() {
         "authorization_code" => {
