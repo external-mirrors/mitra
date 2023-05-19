@@ -47,6 +47,7 @@ use super::types::{
 use super::utils::{
     generate_access_token,
     render_authorization_page,
+    render_authorization_code_page,
 };
 
 #[get("/authorize")]
@@ -100,17 +101,24 @@ async fn authorize_view(
         &expires_at,
     ).await?;
 
-    let mut redirect_uri = format!(
-        "{}?code={}",
-        oauth_app.redirect_uri,
-        authorization_code,
-    );
-    if let Some(ref state) = query_params.state {
-        redirect_uri += &format!("&state={}", state);
+    let response = if oauth_app.redirect_uri == "urn:ietf:wg:oauth:2.0:oob" {
+        let page = render_authorization_code_page(authorization_code);
+        HttpResponse::Ok()
+            .content_type("text/html")
+            .body(page)
+    } else {
+        let mut redirect_uri = format!(
+            "{}?code={}",
+            oauth_app.redirect_uri,
+            authorization_code,
+        );
+        if let Some(ref state) = query_params.state {
+            redirect_uri += &format!("&state={}", state);
+        };
+        HttpResponse::Found()
+            .append_header((http_header::LOCATION, redirect_uri))
+            .finish()
     };
-    let response = HttpResponse::Found()
-        .append_header((http_header::LOCATION, redirect_uri))
-        .finish();
     Ok(response)
 }
 
