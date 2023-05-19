@@ -68,7 +68,7 @@ siwe = "0.4.2"
 # Used for creating error types
 thiserror = "1.0.37"
 # Async runtime
-tokio = { version = "=1.20.4", features = ["macros"] }
+tokio = { version = "1.25.0", features = ["macros"] }
 # Used to work with URLs
 url = "2.2.2"
 # Used to work with UUIDs
