@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use serde_json::Value;
+use serde_json::{Value as JsonValue};
 use url::Url;
 
 use mitra_utils::{
@@ -63,7 +63,7 @@ pub enum JsonSignatureVerificationError {
 type VerificationError = JsonSignatureVerificationError;
 
 pub fn get_json_signature(
-    object: &Value,
+    object: &JsonValue,
 ) -> Result<JsonSignatureData, VerificationError> {
     let mut object = object.clone();
     let object_map = object.as_object_mut()
@@ -147,7 +147,7 @@ mod tests {
         crypto_rsa::generate_weak_rsa_key,
         currencies::Currency,
     };
-    use crate::json_signatures::create::sign_object;
+    use crate::json_signatures::create::sign_object_rsa;
     use super::*;
 
     #[test]
@@ -177,7 +177,7 @@ mod tests {
     }
 
     #[test]
-    fn test_create_and_verify_signature() {
+    fn test_create_and_verify_rsa_signature() {
         let signer_key = generate_weak_rsa_key().unwrap();
         let signer_key_id = "https://example.org/users/test#main-key";
         let object = json!({
@@ -193,10 +193,11 @@ mod tests {
                 "content": "test",
             },
         });
-        let signed_object = sign_object(
-            &object,
+        let signed_object = sign_object_rsa(
             &signer_key,
             signer_key_id,
+            &object,
+            None,
         ).unwrap();
 
         let signature_data = get_json_signature(&signed_object).unwrap();

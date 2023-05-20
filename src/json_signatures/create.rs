@@ -1,7 +1,7 @@
 /// https://w3c.github.io/vc-data-integrity/
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
+use serde_json::{Value as JsonValue};
 
 use mitra_utils::{
     canonicalization::{
@@ -61,13 +61,14 @@ impl IntegrityProof {
     fn jcs_rsa(
         signer_key_id: &str,
         signature: &[u8],
+        created_at: DateTime<Utc>,
     ) -> Self {
         let proof_config = IntegrityProofConfig {
             proof_type: PROOF_TYPE_JCS_RSA.to_string(),
             cryptosuite: None,
             proof_purpose: PROOF_PURPOSE.to_string(),
             verification_method: signer_key_id.to_string(),
-            created: Utc::now(),
+            created: created_at,
         };
         Self::new(proof_config, signature)
     }
@@ -120,7 +121,7 @@ pub enum JsonSignatureError {
 }
 
 pub fn add_integrity_proof(
-    object_value: &mut Value,
+    object_value: &mut JsonValue,
     proof: IntegrityProof,
 ) -> Result<(), JsonSignatureError> {
     let object_map = object_value.as_object_mut()
@@ -133,11 +134,12 @@ pub fn add_integrity_proof(
     Ok(())
 }
 
-pub fn sign_object(
-    object: &Value,
+pub fn sign_object_rsa(
     signer_key: &RsaPrivateKey,
     signer_key_id: &str,
-) -> Result<Value, JsonSignatureError> {
+    object: &JsonValue,
+    current_time: Option<DateTime<Utc>>,
+) -> Result<JsonValue, JsonSignatureError> {
     // Canonicalize
     let canonical_object = canonicalize_object(object)?;
     // Sign
@@ -145,14 +147,19 @@ pub fn sign_object(
         signer_key,
         &canonical_object,
     )?;
+    let signature_created_at = current_time.unwrap_or(Utc::now());
     // Insert proof
-    let proof = IntegrityProof::jcs_rsa(signer_key_id, &signature);
+    let proof = IntegrityProof::jcs_rsa(
+        signer_key_id,
+        &signature,
+        signature_created_at,
+    );
     let mut signed_object = object.clone();
     add_integrity_proof(&mut signed_object, proof)?;
     Ok(signed_object)
 }
 
-pub fn is_object_signed(object: &Value) -> bool {
+pub fn is_object_signed(object: &JsonValue) -> bool {
     object.get(PROOF_KEY).is_some()
 }
 
@@ -163,7 +170,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_sign_object() {
+    fn test_sign_object_rsa() {
         let signer_key = generate_weak_rsa_key().unwrap();
         let signer_key_id = "https://example.org/users/test#main-key";
         let object = json!({
@@ -179,17 +186,37 @@ mod tests {
                 "content": "test",
             },
         });
-        let result = sign_object(&object, &signer_key, signer_key_id).unwrap();
+        let current_time = DateTime::parse_from_rfc3339("2023-02-24T23:36:38Z")
+            .unwrap().with_timezone(&Utc);
+        let result = sign_object_rsa(
+            &signer_key,
+            signer_key_id,
+            &object,
+            Some(current_time),
+        ).unwrap();
 
         assert!(is_object_signed(&result));
-        assert_eq!(result["actor"], object["actor"]);
-        assert_eq!(result["object"], object["object"]);
-        let signature_date = result["proof"]["created"].as_str().unwrap();
-        // Put * in place of date to avoid escaping all curly brackets
-        let expected_result = r#"{"actor":"https://example.org/users/test","id":"https://example.org/objects/1","object":{"content":"test","type":"Note"},"proof":{"created":"*","proofPurpose":"assertionMethod","proofValue":"z4vYn27QHCnW8Lj3o6R9GCRp85BuM3SP2JoMCysBMhvEKu3mnR3FNEDWNtPaJCo27mWqmB68FxR2bppnAr4Qrvxu5","type":"MitraJcsRsaSignature2022","verificationMethod":"https://example.org/users/test#main-key"},"to":["https://example.org/users/yyy","https://example.org/users/xxx"],"type":"Create"}"#;
-        assert_eq!(
-            serde_json::to_string(&result).unwrap(),
-            expected_result.replace('*', signature_date),
-        );
+
+        let expected_result = json!({
+            "type": "Create",
+            "actor": "https://example.org/users/test",
+            "id": "https://example.org/objects/1",
+            "to": [
+                "https://example.org/users/yyy",
+                "https://example.org/users/xxx",
+            ],
+            "object": {
+                "type": "Note",
+                "content": "test",
+            },
+            "proof": {
+                "type": "MitraJcsRsaSignature2022",
+                "created": "2023-02-24T23:36:38Z",
+                "verificationMethod": "https://example.org/users/test#main-key",
+                "proofPurpose": "assertionMethod",
+                "proofValue": "z4vYn27QHCnW8Lj3o6R9GCRp85BuM3SP2JoMCysBMhvEKu3mnR3FNEDWNtPaJCo27mWqmB68FxR2bppnAr4Qrvxu5",
+            },
+        });
+        assert_eq!(result, expected_result);
     }
 }

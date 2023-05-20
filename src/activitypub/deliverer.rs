@@ -26,7 +26,7 @@ use crate::http_signatures::create::{
 };
 use crate::json_signatures::create::{
     is_object_signed,
-    sign_object,
+    sign_object_rsa,
     JsonSignatureError,
 };
 
@@ -147,7 +147,7 @@ async fn deliver_activity_worker(
         log::warn!("activity is already signed");
         activity
     } else {
-        sign_object(&activity, &actor_key, &actor_key_id)?
+        sign_object_rsa(&actor_key, &actor_key_id, &activity, None)?
     };
     let activity_json = serde_json::to_string(&activity_signed)?;
 
