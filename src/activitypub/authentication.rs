@@ -164,13 +164,13 @@ pub async fn verify_signed_activity(
             };
             let signer_actor = actor_profile.actor_json.as_ref()
                 .expect("activity should be signed by remote actor");
-            match signature_data.signature_type {
+            match signature_data.proof_type {
                 ProofType::JcsRsaSignature => {
                     let signer_key =
                         deserialize_public_key(&signer_actor.public_key.public_key_pem)?;
                     verify_rsa_json_signature(
                         &signer_key,
-                        &signature_data.message,
+                        &signature_data.canonical_object,
                         &signature_data.signature,
                     )?;
                 },
@@ -181,7 +181,7 @@ pub async fn verify_signed_activity(
             if !actor_profile.identity_proofs.any(&did) {
                 return Err(AuthenticationError::UnexpectedSigner);
             };
-            match signature_data.signature_type {
+            match signature_data.proof_type {
                 ProofType::JcsBlake2Ed25519Signature => {
                     let did_key = match did {
                         Did::Key(did_key) => did_key,
@@ -189,7 +189,7 @@ pub async fn verify_signed_activity(
                     };
                     verify_blake2_ed25519_json_signature(
                         &did_key,
-                        &signature_data.message,
+                        &signature_data.canonical_object,
                         &signature_data.signature,
                     )?;
                 },
@@ -200,7 +200,7 @@ pub async fn verify_signed_activity(
                     };
                     verify_eip191_json_signature(
                         &did_pkh,
-                        &signature_data.message,
+                        &signature_data.canonical_object,
                         &signature_data.signature,
                     )?;
                 },

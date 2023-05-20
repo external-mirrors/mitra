@@ -32,10 +32,10 @@ pub enum JsonSigner {
     Did(Did),
 }
 
-pub struct SignatureData {
-    pub signature_type: ProofType,
+pub struct JsonSignatureData {
+    pub proof_type: ProofType,
     pub signer: JsonSigner,
-    pub message: String,
+    pub canonical_object: String,
     pub signature: Vec<u8>,
 }
 
@@ -64,7 +64,7 @@ type VerificationError = JsonSignatureVerificationError;
 
 pub fn get_json_signature(
     object: &Value,
-) -> Result<SignatureData, VerificationError> {
+) -> Result<JsonSignatureData, VerificationError> {
     let mut object = object.clone();
     let object_map = object.as_object_mut()
         .ok_or(VerificationError::InvalidObject)?;
@@ -91,12 +91,12 @@ pub fn get_json_signature(
     } else {
         return Err(VerificationError::InvalidProof("unsupported verification method"));
     };
-    let transformed_object = canonicalize_object(&object)?;
+    let canonical_object = canonicalize_object(&object)?;
     let signature = decode_multibase_base58btc(&proof.proof_value)?;
-    let signature_data = SignatureData {
-        signature_type: proof_type,
+    let signature_data = JsonSignatureData {
+        proof_type,
         signer,
-        message: transformed_object,
+        canonical_object,
         signature,
     };
     Ok(signature_data)
@@ -104,12 +104,12 @@ pub fn get_json_signature(
 
 pub fn verify_rsa_json_signature(
     signer_key: &RsaPublicKey,
-    message: &str,
+    canonical_object: &str,
     signature: &[u8],
 ) -> Result<(), VerificationError> {
     let is_valid_signature = verify_rsa_sha256_signature(
         signer_key,
-        message,
+        canonical_object,
         signature,
     );
     if !is_valid_signature {
@@ -120,20 +120,20 @@ pub fn verify_rsa_json_signature(
 
 pub fn verify_eip191_json_signature(
     signer: &DidPkh,
-    message: &str,
+    canonical_object: &str,
     signature: &[u8],
 ) -> Result<(), VerificationError> {
     let signature_hex = hex::encode(signature);
-    verify_eip191_signature(signer, message, &signature_hex)
+    verify_eip191_signature(signer, canonical_object, &signature_hex)
         .map_err(|_| VerificationError::InvalidSignature)
 }
 
 pub fn verify_blake2_ed25519_json_signature(
     signer: &DidKey,
-    message: &str,
+    canonical_object: &str,
     signature: &[u8],
 ) -> Result<(), VerificationError> {
-    verify_minisign_signature(signer, message, signature)
+    verify_minisign_signature(signer, canonical_object, signature)
         .map_err(|_| VerificationError::InvalidSignature)
 }
 
@@ -162,7 +162,7 @@ mod tests {
         });
         let signature_data = get_json_signature(&signed_object).unwrap();
         assert_eq!(
-            signature_data.signature_type,
+            signature_data.proof_type,
             ProofType::JcsEip191Signature,
         );
         let expected_signer = JsonSigner::Did(Did::Pkh(DidPkh::from_address(
@@ -198,7 +198,7 @@ mod tests {
 
         let signature_data = get_json_signature(&signed_object).unwrap();
         assert_eq!(
-            signature_data.signature_type,
+            signature_data.proof_type,
             ProofType::JcsRsaSignature,
         );
         let expected_signer = JsonSigner::ActorKeyId(signer_key_id.to_string());
@@ -207,7 +207,7 @@ mod tests {
         let signer_public_key = RsaPublicKey::from(signer_key);
         let result = verify_rsa_json_signature(
             &signer_public_key,
-            &signature_data.message,
+            &signature_data.canonical_object,
             &signature_data.signature,
         );
         assert_eq!(result.is_ok(), true);

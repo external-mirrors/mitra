@@ -123,11 +123,11 @@ pub fn sign_object(
     signer_key_id: &str,
 ) -> Result<Value, JsonSignatureError> {
     // Canonicalize
-    let transformed_object = canonicalize_object(object)?;
+    let canonical_object = canonicalize_object(object)?;
     // Sign
     let signature = create_rsa_sha256_signature(
         signer_key,
-        &transformed_object,
+        &canonical_object,
     )?;
     // Insert proof
     let proof = IntegrityProof::jcs_rsa(signer_key_id, &signature);
