@@ -15,6 +15,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Display authorization code if OAuth `redirect_uri` equals `urn:ietf:wg:oauth:2.0:oob`.
 - Implement `jcs-eddsa-2022` cryptosuite.
 - Enabled parsing of FEP-fb2a actor metadata fields.
+- Allow to specify chain ID for invoice.
 
 ### Changed
 
@@ -25,6 +26,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Deprecated
 
 - Loading local timeline without `local` parameter.
+- Creating invoice without specifying `chain_id` parameter.
 
 ### Removed
 

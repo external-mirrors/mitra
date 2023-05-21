@@ -6,6 +6,7 @@ use mitra_models::{
     invoices::types::{DbInvoice, InvoiceStatus},
     profiles::types::PaymentOption,
 };
+use mitra_utils::caip2::ChainId;
 
 use crate::monero::subscriptions::MONERO_INVOICE_TIMEOUT;
 
@@ -13,6 +14,7 @@ use crate::monero::subscriptions::MONERO_INVOICE_TIMEOUT;
 pub struct InvoiceData {
     pub sender_id: Uuid,
     pub recipient_id: Uuid,
+    pub chain_id: Option<ChainId>,
     pub amount: i64,
 }
 
@@ -21,6 +23,7 @@ pub struct Invoice {
     pub id: Uuid,
     pub sender_id: Uuid,
     pub recipient_id: Uuid,
+    pub chain_id: ChainId,
     pub payment_address: String,
     pub amount: i64,
     pub status: String,
@@ -46,6 +49,7 @@ impl From<DbInvoice> for Invoice {
             id: value.id,
             sender_id: value.sender_id,
             recipient_id: value.recipient_id,
+            chain_id: value.chain_id.into_inner(),
             payment_address: value.payment_address,
             amount: value.amount,
             status: status.to_string(),

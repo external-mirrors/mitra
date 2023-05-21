@@ -141,6 +141,7 @@ pub async fn check_monero_subscriptions(
             continue;
         };
         let payout_address = Address::from_str(&payment_info.payout_address)?;
+        // Send all available balance to payout address
         let payout_amount = send_monero(
             &wallet_client,
             config.account_index,

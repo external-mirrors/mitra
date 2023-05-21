@@ -214,6 +214,11 @@ async fn create_invoice_view(
     if invoice_data.sender_id == invoice_data.recipient_id {
         return Err(ValidationError("sender must be different from recipient").into());
     };
+    if let Some(ref chain_id) = invoice_data.chain_id {
+        if *chain_id != monero_config.chain_id {
+            return Err(ValidationError("unexpected chain ID").into());
+        };
+    };
     if invoice_data.amount <= 0 {
         return Err(ValidationError("amount must be positive").into());
     };

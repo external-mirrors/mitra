@@ -1350,6 +1350,9 @@ paths:
                   description: Recipient ID.
                   type: string
                   format: uuid
+                chain_id:
+                  description: CAIP-2 chain ID.
+                  type: string
                 amount:
                   description: Requested payment amount (in atomic units).
                   type: integer
@@ -1959,6 +1962,9 @@ components:
           description: The profile ID of the recipient.
           type: string
           format: uuid
+        chain_id:
+          description: CAIP-2 chain ID.
+          type: string
         payment_address:
           description: Payment address.
           type: string
