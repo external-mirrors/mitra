@@ -120,7 +120,10 @@ pub async fn process_queued_incoming_activities(
             );
             if job_data.failure_count <= INCOMING_QUEUE_RETRIES_MAX &&
                 // Don't retry after fetcher recursion error
-                !matches!(error, HandlerError::FetchError(FetchError::RecursionError))
+                !matches!(error, HandlerError::FetchError(
+                    FetchError::RecursionError |
+                    FetchError::NotFound(_)
+                ))
             {
                 // Re-queue
                 let retry_after = incoming_queue_backoff(job_data.failure_count);

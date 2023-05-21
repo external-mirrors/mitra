@@ -251,11 +251,7 @@ pub async fn import_post(
                     // TODO: create tombstone
                     return Err(FetchError::RecursionError.into());
                 };
-                let object = fetch_object(instance, &object_id).await
-                    .map_err(|err| {
-                        log::warn!("{}", err);
-                        ValidationError("failed to fetch object")
-                    })?;
+                let object = fetch_object(instance, &object_id).await?;
                 log::info!("fetched object {}", object.id);
                 fetch_count +=  1;
                 object

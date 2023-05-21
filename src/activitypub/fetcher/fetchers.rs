@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use reqwest::{Client, Method, RequestBuilder};
+use reqwest::{Client, Method, RequestBuilder, StatusCode};
 use serde::Deserialize;
 use serde_json::{Value as JsonValue};
 
@@ -35,6 +35,9 @@ pub enum FetchError {
 
     #[error(transparent)]
     RequestError(#[from] reqwest::Error),
+
+    #[error("resource not found: {0}")]
+    NotFound(String),
 
     #[error("json parse error: {0}")]
     JsonParseError(#[from] serde_json::Error),
@@ -80,6 +83,15 @@ fn build_request(
     request_builder
 }
 
+fn fetcher_error_for_status(error: reqwest::Error) -> FetchError {
+    match (error.url(), error.status()) {
+        (Some(url), Some(StatusCode::NOT_FOUND)) => {
+            FetchError::NotFound(url.to_string())
+        },
+        _ => error.into(),
+    }
+}
+
 /// Sends GET request to fetch AP object
 async fn send_request(
     instance: &Instance,
@@ -108,7 +120,8 @@ async fn send_request(
 
     let data = request_builder
         .send().await?
-        .error_for_status()?
+        .error_for_status()
+        .map_err(fetcher_error_for_status)?
         .text().await?;
     Ok(data)
 }
