@@ -8,6 +8,7 @@ use mitra_config::MoneroConfig;
 use mitra_models::{
     database::DatabaseClient,
     invoices::queries::{
+        get_invoice_by_address,
         get_invoice_by_id,
         set_invoice_status,
     },
@@ -32,10 +33,18 @@ pub fn validate_monero_address(address: &str)
 pub async fn reopen_invoice(
     config: &MoneroConfig,
     db_client: &impl DatabaseClient,
-    invoice_id: &Uuid,
+    invoice_id_or_address: &str,
 ) -> Result<(), MoneroError> {
     let wallet_client = open_monero_wallet(config).await?;
-    let invoice = get_invoice_by_id(db_client, invoice_id).await?;
+    let invoice = if let Ok(invoice_id) = Uuid::from_str(invoice_id_or_address) {
+        get_invoice_by_id(db_client, &invoice_id).await?
+    } else {
+        get_invoice_by_address(
+            db_client,
+            &config.chain_id,
+            invoice_id_or_address,
+        ).await?
+    };
     if invoice.chain_id != config.chain_id {
         return Err(MoneroError::OtherError("can't process invoice"));
     };

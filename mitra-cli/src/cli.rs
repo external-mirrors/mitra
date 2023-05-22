@@ -699,7 +699,7 @@ impl VerifyMoneroSignature {
 /// Re-open closed invoice (already processed, timed out or cancelled)
 #[derive(Parser)]
 pub struct ReopenInvoice {
-    id: Uuid,
+    id_or_address: String,
 }
 
 impl ReopenInvoice {
@@ -713,7 +713,7 @@ impl ReopenInvoice {
         reopen_invoice(
             monero_config,
             db_client,
-            &self.id,
+            &self.id_or_address,
         ).await?;
         Ok(())
     }
