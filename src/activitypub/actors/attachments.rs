@@ -188,7 +188,7 @@ pub fn attach_extra_field(
     }
 }
 
-pub fn parse_extra_field(
+pub fn parse_property_value(
     attachment: &ActorAttachment,
 ) -> Result<ExtraField, ValidationError> {
     if attachment.object_type != PROPERTY_VALUE {
@@ -199,6 +199,26 @@ pub fn parse_extra_field(
     let field = ExtraField {
         name: attachment.name.clone(),
         value: property_value.to_string(),
+        value_source: None,
+    };
+    Ok(field)
+}
+
+/// https://codeberg.org/fediverse/fep/src/commit/391099a97cd1ad9388e83ffff8ed1f7be5203b7b/feps/fep-fb2a.md
+pub fn parse_metadata_field(
+    attachment: &JsonValue,
+) -> Result<ExtraField, ValidationError> {
+    #[derive(Deserialize)]
+    struct Note {
+        name: String,
+        content: String,
+    }
+
+    let note: Note = serde_json::from_value(attachment.clone())
+        .map_err(|_| ValidationError("invalid metadata field"))?;
+    let field = ExtraField {
+        name: note.name,
+        value: note.content,
         value_source: None,
     };
     Ok(field)
@@ -223,7 +243,7 @@ mod tests {
         let attachment = attach_extra_field(field.clone());
         assert_eq!(attachment.object_type, PROPERTY_VALUE);
 
-        let parsed_field = parse_extra_field(&attachment).unwrap();
+        let parsed_field = parse_property_value(&attachment).unwrap();
         assert_eq!(parsed_field.name, field.name);
         assert_eq!(parsed_field.value, field.value);
     }

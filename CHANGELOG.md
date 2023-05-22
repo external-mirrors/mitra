@@ -14,6 +14,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Created API endpoint for removing aliases.
 - Display authorization code if OAuth `redirect_uri` equals `urn:ietf:wg:oauth:2.0:oob`.
 - Implement `jcs-eddsa-2022` cryptosuite.
+- Enabled parsing of FEP-fb2a actor metadata fields.
 
 ### Changed
 

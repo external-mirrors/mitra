@@ -43,7 +43,15 @@ use crate::activitypub::{
         LocalActorCollection,
     },
     types::deserialize_value_array,
-    vocabulary::{IDENTITY_PROOF, IMAGE, LINK, PERSON, PROPERTY_VALUE, SERVICE},
+    vocabulary::{
+        IDENTITY_PROOF,
+        IMAGE,
+        LINK,
+        NOTE,
+        PERSON,
+        PROPERTY_VALUE,
+        SERVICE,
+    },
 };
 use crate::errors::ValidationError;
 use crate::media::get_file_url;
@@ -53,9 +61,10 @@ use super::attachments::{
     attach_extra_field,
     attach_identity_proof,
     attach_payment_option,
-    parse_extra_field,
     parse_identity_proof,
+    parse_metadata_field,
     parse_payment_option,
+    parse_property_value,
 };
 
 #[derive(Deserialize, Serialize)]
@@ -225,6 +234,7 @@ impl Actor {
         let mut identity_proofs = vec![];
         let mut payment_options = vec![];
         let mut extra_fields = vec![];
+        let mut property_values = vec![];
         let log_error = |attachment_type: &str, error| {
             log::warn!(
                 "ignoring actor attachment of type {}: {}",
@@ -259,7 +269,13 @@ impl Actor {
                     };
                 },
                 PROPERTY_VALUE => {
-                    match parse_extra_field(&attachment) {
+                    match parse_property_value(&attachment) {
+                        Ok(field) => property_values.push(field),
+                        Err(error) => log_error(attachment_type, error),
+                    };
+                },
+                NOTE => {
+                    match parse_metadata_field(attachment_value) {
                         Ok(field) => extra_fields.push(field),
                         Err(error) => log_error(attachment_type, error),
                     };
@@ -271,6 +287,15 @@ impl Actor {
                     );
                 },
             };
+        };
+        // Remove duplicate metadata fields
+        // FEP-8b2a fields have higher priority
+        for field in property_values {
+            if extra_fields.iter().any(|item| item.name == field.name) {
+                continue;
+            } else {
+                extra_fields.push(field);
+            }
         };
         (identity_proofs, payment_options, extra_fields)
     }
