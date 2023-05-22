@@ -17,6 +17,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Enabled parsing of FEP-fb2a actor metadata fields.
 - Allow to specify chain ID for invoice.
 - Added `activeHalfyear` and `activeMonth` metrics to NodeInfo.
+- Added `list-active-addresses` command.
 
 ### Changed
 

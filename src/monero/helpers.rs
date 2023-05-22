@@ -1,7 +1,8 @@
+use std::collections::HashMap;
 use std::str::FromStr;
 
 use monero_rpc::TransferType;
-use monero_rpc::monero::Address;
+use monero_rpc::monero::{Address, Amount};
 use uuid::Uuid;
 
 use mitra_config::MoneroConfig;
@@ -83,4 +84,21 @@ pub async fn reopen_invoice(
         set_invoice_status(db_client, &invoice.id, InvoiceStatus::Paid).await?;
     };
     Ok(())
+}
+
+pub async fn get_active_addresses(
+    config: &MoneroConfig,
+) -> Result<HashMap<Address, Amount>, MoneroError> {
+    let wallet_client = open_monero_wallet(config).await?;
+    let balance_data = wallet_client.get_balance(
+        config.account_index,
+        None, // all subaddresses
+    ).await?;
+    let mut addresses = HashMap::new();
+    for subaddress_data in balance_data.per_subaddress {
+        if !addresses.contains_key(&subaddress_data.address) {
+            addresses.insert(subaddress_data.address, subaddress_data.balance);
+        };
+    };
+    Ok(addresses)
 }

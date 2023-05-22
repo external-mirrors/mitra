@@ -21,7 +21,7 @@ use mitra::media::{
     MediaStorage,
 };
 use mitra::monero::{
-    helpers::reopen_invoice,
+    helpers::{get_active_addresses, reopen_invoice},
     wallet::{
         create_monero_wallet,
         create_monero_signature,
@@ -109,6 +109,7 @@ pub enum SubCommand {
     VerifyMoneroSignature(VerifyMoneroSignature),
     #[clap(alias = "check-expired-invoice")]
     ReopenInvoice(ReopenInvoice),
+    ListActiveAddresses(ListActiveAddresses),
 }
 
 /// Generate RSA private key
@@ -715,6 +716,24 @@ impl ReopenInvoice {
             db_client,
             &self.id_or_address,
         ).await?;
+        Ok(())
+    }
+}
+
+#[derive(Parser)]
+pub struct ListActiveAddresses;
+
+impl ListActiveAddresses {
+    pub async fn execute(
+        &self,
+        config: &Config,
+    ) -> Result<(), Error> {
+        let monero_config = config.monero_config()
+            .ok_or(anyhow!("monero configuration not found"))?;
+        let addresses = get_active_addresses(monero_config).await?;
+        for (address, amount) in addresses {
+            println!("{}: {}", address, amount);
+        };
         Ok(())
     }
 }

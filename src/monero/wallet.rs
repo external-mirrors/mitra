@@ -120,6 +120,7 @@ pub fn get_single_item<T: Clone>(items: Vec<T>) -> Result<T, MoneroError> {
     }
 }
 
+/// https://www.getmonero.org/resources/developer-guides/wallet-rpc.html#get_balance
 pub async fn get_subaddress_balance(
     wallet_client: &WalletClient,
     subaddress_index: &Index,
