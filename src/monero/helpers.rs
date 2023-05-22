@@ -56,9 +56,12 @@ pub async fn reopen_invoice(
     };
     let address = Address::from_str(&invoice.payment_address)?;
     let address_index = wallet_client.get_address_index(address).await?;
+    if address_index.major != config.account_index {
+        return Err(MoneroError::WalletRpcError("unexpected account index"));
+    };
     let transfers = wallet_client.incoming_transfers(
         TransferType::Available,
-        Some(config.account_index),
+        Some(address_index.major),
         Some(vec![address_index.minor]),
     ).await?
         .transfers

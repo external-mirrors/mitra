@@ -77,8 +77,11 @@ pub async fn check_monero_subscriptions(
     };
     if let Some(transfers) = maybe_incoming_transfers {
         for transfer in transfers {
+            if transfer.subaddr_index.major != config.account_index {
+                return Err(MoneroError::WalletRpcError("unexpected account index"));
+            };
             let address_data = wallet_client.get_address(
-                config.account_index,
+                transfer.subaddr_index.major,
                 Some(vec![transfer.subaddr_index.minor]),
             ).await?;
             let subaddress_data = get_single_item(address_data.addresses)?;
@@ -110,6 +113,9 @@ pub async fn check_monero_subscriptions(
     for invoice in paid_invoices {
         let address = Address::from_str(&invoice.payment_address)?;
         let address_index = wallet_client.get_address_index(address).await?;
+        if address_index.major != config.account_index {
+            return Err(MoneroError::WalletRpcError("unexpected account index"));
+        };
         let balance_data = get_subaddress_balance(
             &wallet_client,
             &address_index,
@@ -144,7 +150,7 @@ pub async fn check_monero_subscriptions(
         // Send all available balance to payout address
         let payout_amount = send_monero(
             &wallet_client,
-            config.account_index,
+            address_index.major,
             address_index.minor,
             payout_address,
         ).await?;
