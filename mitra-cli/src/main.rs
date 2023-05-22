@@ -55,7 +55,7 @@ async fn main() {
                 SubCommand::CreateMoneroWallet(cmd) => cmd.execute(&config).await.unwrap(),
                 SubCommand::CreateMoneroSignature(cmd) => cmd.execute(&config).await.unwrap(),
                 SubCommand::VerifyMoneroSignature(cmd) => cmd.execute(&config).await.unwrap(),
-                SubCommand::CheckExpiredInvoice(cmd) => cmd.execute(&config, db_client).await.unwrap(),
+                SubCommand::ReopenInvoice(cmd) => cmd.execute(&config, db_client).await.unwrap(),
                 _ => unreachable!(),
             };
         },

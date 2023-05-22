@@ -22,6 +22,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Return validation error if trying to add alias that already exists.
 - Make `/api/v1/apps` and `/oauth/token` endpoints accept `multipart/form-data`.
 - Don't retry incoming activity if fetcher encounters `404 Not Found` error.
+- Rename `check-expired-invoice` command to `reopen-invoice` and allow to reopen invoices with "forwarded" status.
 
 ### Deprecated
 

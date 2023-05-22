@@ -29,7 +29,7 @@ pub fn validate_monero_address(address: &str)
     Ok(())
 }
 
-pub async fn check_expired_invoice(
+pub async fn reopen_invoice(
     config: &MoneroConfig,
     db_client: &impl DatabaseClient,
     invoice_id: &Uuid,
@@ -39,10 +39,11 @@ pub async fn check_expired_invoice(
     if invoice.chain_id != config.chain_id {
         return Err(MoneroError::OtherError("can't process invoice"));
     };
-    if invoice.invoice_status != InvoiceStatus::Timeout &&
+    if invoice.invoice_status != InvoiceStatus::Forwarded &&
+        invoice.invoice_status != InvoiceStatus::Timeout &&
         invoice.invoice_status != InvoiceStatus::Cancelled
     {
-        return Err(MoneroError::OtherError("invoice has not expired"));
+        return Err(MoneroError::OtherError("invoice is already open"));
     };
     let address = Address::from_str(&invoice.payment_address)?;
     let address_index = wallet_client.get_address_index(address).await?;
@@ -61,8 +62,9 @@ pub async fn check_expired_invoice(
                 return Err(MoneroError::WalletRpcError("unexpected transfer"));
             };
             log::info!(
-                "received payment for invoice {}: {}",
+                "received payment for invoice {} ({:?}): {}",
                 invoice.id,
+                invoice.invoice_status,
                 transfer.amount,
             );
         };
