@@ -16,6 +16,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Implement `jcs-eddsa-2022` cryptosuite.
 - Enabled parsing of FEP-fb2a actor metadata fields.
 - Allow to specify chain ID for invoice.
+- Added `activeHalfyear` and `activeMonth` metrics to NodeInfo.
 
 ### Changed
 

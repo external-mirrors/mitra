@@ -1,3 +1,4 @@
+use chrono::{DateTime, Utc};
 use serde_json::{Value as JsonValue};
 use uuid::Uuid;
 
@@ -340,6 +341,23 @@ pub async fn get_user_count(
     let row = db_client.query_one(
         "SELECT count(user_account) FROM user_account",
         &[],
+    ).await?;
+    let count = row.try_get("count")?;
+    Ok(count)
+}
+
+pub async fn get_active_user_count(
+    db_client: &impl DatabaseClient,
+    not_before: DateTime<Utc>,
+) -> Result<i64, DatabaseError> {
+    let row = db_client.query_one(
+        "
+        SELECT count(DISTINCT user_account)
+        FROM user_account
+        JOIN oauth_token ON (oauth_token.owner_id = user_account.id)
+        WHERE oauth_token.created_at > $1
+        ",
+        &[&not_before],
     ).await?;
     let count = row.try_get("count")?;
     Ok(count)

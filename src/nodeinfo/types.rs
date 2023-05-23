@@ -57,8 +57,11 @@ impl Default for Services {
 }
 
 #[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Users {
     pub total: i64,
+    pub active_halfyear: i64,
+    pub active_month: i64,
 }
 
 #[derive(Serialize)]
