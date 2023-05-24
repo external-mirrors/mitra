@@ -28,6 +28,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Allow to call `reopen-invoice` command with payment address as an argument.
 - Verify that account index returned by monero-wallet-rpc matches configuration.
 - Change invoice status to "underpaid" if amount is too small to be forwarded.
+- Append attachment URL to post if attachment can't be downloaded.
 
 ### Deprecated
 

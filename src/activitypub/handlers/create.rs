@@ -30,7 +30,7 @@ use mitra_utils::{
 
 use crate::activitypub::{
     constants::{AP_MEDIA_TYPE, AP_PUBLIC, AS_MEDIA_TYPE},
-    fetcher::fetchers::{fetch_file, FetchError},
+    fetcher::fetchers::fetch_file,
     fetcher::helpers::{
         get_or_import_profile_by_actor_address,
         get_or_import_profile_by_actor_id,
@@ -181,14 +181,14 @@ pub async fn get_object_attachments(
                 &storage.media_dir,
             ).await {
                 Ok(file) => file,
-                Err(FetchError::FileTooLarge) => {
-                    log::warn!("attachment is too large: {}", attachment_url);
+                Err(error) => {
+                    log::warn!(
+                        "failed to fetch attachment ({}): {}",
+                        attachment_url,
+                        error,
+                    );
                     unprocessed.push(attachment_url);
                     continue;
-                },
-                Err(other_error) => {
-                    log::warn!("{}", other_error);
-                    return Err(ValidationError("failed to fetch attachment").into());
                 },
             };
             log::info!("downloaded attachment {}", attachment_url);
