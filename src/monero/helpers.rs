@@ -51,7 +51,8 @@ pub async fn reopen_invoice(
     };
     if invoice.invoice_status != InvoiceStatus::Forwarded &&
         invoice.invoice_status != InvoiceStatus::Timeout &&
-        invoice.invoice_status != InvoiceStatus::Cancelled
+        invoice.invoice_status != InvoiceStatus::Cancelled &&
+        invoice.invoice_status != InvoiceStatus::Underpaid
     {
         return Err(MoneroError::OtherError("invoice is already open"));
     };

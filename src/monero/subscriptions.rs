@@ -148,12 +148,24 @@ pub async fn check_monero_subscriptions(
         };
         let payout_address = Address::from_str(&payment_info.payout_address)?;
         // Send all available balance to payout address
-        let payout_amount = send_monero(
+        let payout_amount = match send_monero(
             &wallet_client,
             address_index.major,
             address_index.minor,
             payout_address,
-        ).await?;
+        ).await {
+            Ok(payout_amount) => payout_amount,
+            Err(error @ MoneroError::Dust) => {
+                log::warn!("invoice {}: {}", invoice.id, error);
+                set_invoice_status(
+                    db_client,
+                    &invoice.id,
+                    InvoiceStatus::Underpaid,
+                ).await?;
+                continue;
+            },
+            Err(other_error) => return Err(other_error),
+        };
         let duration_secs = (payout_amount.as_pico() / payment_info.price)
             .try_into()
             .map_err(|_| MoneroError::OtherError("invalid duration"))?;

@@ -33,6 +33,9 @@ pub enum MoneroError {
     #[error(transparent)]
     DatabaseError(#[from] DatabaseError),
 
+    #[error("not enough unlocked balance")]
+    Dust,
+
     #[error("other error")]
     OtherError(&'static str),
 }
@@ -154,7 +157,16 @@ pub async fn send_monero(
         get_tx_hex: None,
         get_tx_metadata: None,
     };
-    let sweep_data = wallet_client.sweep_all(sweep_args).await?;
+    let sweep_data = wallet_client.sweep_all(sweep_args).await
+        .map_err(|error| {
+            if error.to_string() == "Server error: No unlocked balance in the specified subaddress(es)" ||
+                error.to_string() == "Server error: not enough unlocked money"
+            {
+                MoneroError::Dust
+            } else {
+                error.into()
+            }
+        })?;
     let HashString(tx_hash) = get_single_item(sweep_data.tx_hash_list)?;
     let amount = get_single_item(sweep_data.amount_list)?;
     let fee = get_single_item(sweep_data.fee_list)?;

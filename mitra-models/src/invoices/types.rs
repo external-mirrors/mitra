@@ -78,6 +78,7 @@ pub enum InvoiceStatus {
     Forwarded,
     Timeout,
     Cancelled,
+    Underpaid,
 }
 
 impl From<&InvoiceStatus> for i16 {
@@ -88,6 +89,7 @@ impl From<&InvoiceStatus> for i16 {
             InvoiceStatus::Forwarded => 3,
             InvoiceStatus::Timeout => 4,
             InvoiceStatus::Cancelled => 5,
+            InvoiceStatus::Underpaid => 6,
         }
     }
 }
@@ -102,6 +104,7 @@ impl TryFrom<i16> for InvoiceStatus {
             3 => Self::Forwarded,
             4 => Self::Timeout,
             5 => Self::Cancelled,
+            6 => Self::Underpaid,
             _ => return Err(DatabaseTypeError),
         };
         Ok(invoice_status)
