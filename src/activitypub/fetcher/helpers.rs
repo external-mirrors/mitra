@@ -194,10 +194,6 @@ pub async fn import_post(
     object_id: String,
     object_received: Option<Object>,
 ) -> Result<Post, HandlerError> {
-    if parse_local_object_id(&instance.url(), &object_id).is_ok() {
-        return Err(HandlerError::LocalObject);
-    };
-
     let mut queue = vec![object_id]; // LIFO queue
     let mut fetch_count = 0;
     let mut maybe_object = object_received;
@@ -217,6 +213,10 @@ pub async fn import_post(
                     continue;
                 };
                 if let Ok(post_id) = parse_local_object_id(&instance.url(), &object_id) {
+                    if objects.is_empty() {
+                        // Initial object must not be local
+                        return Err(HandlerError::LocalObject);
+                    };
                     // Object is a local post
                     // Verify post exists, return error if it doesn't
                     get_local_post_by_id(db_client, &post_id).await?;
