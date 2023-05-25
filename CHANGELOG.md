@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.25.0] - 2023-05-25
+
 ### Added
 
 - Make `/api/v1/timelines/public` return public timeline if `local` is set to `false`.
