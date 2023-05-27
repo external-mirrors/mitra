@@ -23,8 +23,8 @@ use mitra_models::{
 };
 
 use crate::activitypub::{
+    deserialization::{deserialize_into_object_id, find_object_id},
     identifiers::parse_local_actor_id,
-    receiver::{deserialize_into_object_id, find_object_id},
     vocabulary::{ANNOUNCE, FOLLOW, LIKE},
 };
 use crate::errors::ValidationError;

@@ -12,9 +12,9 @@ use mitra_models::{
 };
 
 use crate::activitypub::{
+    deserialization::deserialize_into_object_id,
     fetcher::helpers::{get_or_import_profile_by_actor_id, import_post},
     identifiers::parse_local_object_id,
-    receiver::deserialize_into_object_id,
     vocabulary::{CREATE, DELETE, DISLIKE, LIKE, NOTE, UNDO, UPDATE},
 };
 use crate::errors::ValidationError;

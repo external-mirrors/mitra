@@ -13,8 +13,8 @@ use mitra_models::{
 };
 
 use crate::activitypub::{
+    deserialization::deserialize_into_object_id,
     identifiers::parse_local_object_id,
-    receiver::deserialize_into_object_id,
     vocabulary::FOLLOW,
 };
 use crate::errors::ValidationError;

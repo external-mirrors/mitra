@@ -15,7 +15,7 @@ use mitra_models::{
 };
 
 use crate::activitypub::{
-    receiver::deserialize_into_object_id,
+    deserialization::deserialize_into_object_id,
     vocabulary::{NOTE, PERSON},
 };
 use crate::errors::ValidationError;

@@ -30,6 +30,7 @@ use mitra_utils::{
 
 use crate::activitypub::{
     constants::{AP_MEDIA_TYPE, AP_PUBLIC, AS_MEDIA_TYPE},
+    deserialization::{parse_into_array, parse_into_id_array},
     fetcher::fetchers::fetch_file,
     fetcher::helpers::{
         get_or_import_profile_by_actor_address,
@@ -38,7 +39,7 @@ use crate::activitypub::{
         import_post,
     },
     identifiers::{parse_local_actor_id, profile_actor_id},
-    receiver::{parse_array, parse_property_value, HandlerError},
+    receiver::HandlerError,
     types::{Attachment, EmojiTag, Link, LinkTag, Object, Tag},
     vocabulary::*,
 };
@@ -68,7 +69,7 @@ fn get_object_attributed_to(object: &Object)
 {
     let attributed_to = object.attributed_to.as_ref()
         .ok_or(ValidationError("unattributed note"))?;
-    let author_id = parse_array(attributed_to)
+    let author_id = parse_into_id_array(attributed_to)
         .map_err(|_| ValidationError("invalid attributedTo property"))?
         .get(0)
         .ok_or(ValidationError("invalid attributedTo property"))?
@@ -80,7 +81,7 @@ pub fn get_object_url(object: &Object) -> Result<String, ValidationError> {
     let maybe_object_url = match &object.url {
         Some(JsonValue::String(string)) => Some(string.to_owned()),
         Some(other_value) => {
-            let links: Vec<Link> = parse_property_value(other_value)
+            let links: Vec<Link> = parse_into_array(other_value)
                 .map_err(|_| ValidationError("invalid object URL"))?;
             links.get(0).map(|link| link.href.clone())
         },
@@ -150,7 +151,7 @@ pub async fn get_object_attachments(
     let mut attachments = vec![];
     let mut unprocessed = vec![];
     if let Some(ref value) = object.attachment {
-        let list: Vec<Attachment> = parse_property_value(value)
+        let list: Vec<Attachment> = parse_into_array(value)
             .map_err(|_| ValidationError("invalid attachment property"))?;
         let mut downloaded = vec![];
         for attachment in list {
@@ -520,14 +521,14 @@ pub async fn get_object_tags(
 fn get_audience(object: &Object) -> Result<Vec<String>, ValidationError> {
     let primary_audience = match object.to {
         Some(ref value) => {
-            parse_array(value)
+            parse_into_id_array(value)
                 .map_err(|_| ValidationError("invalid 'to' property value"))?
         },
         None => vec![],
     };
     let secondary_audience = match object.cc {
         Some(ref value) => {
-            parse_array(value)
+            parse_into_id_array(value)
                 .map_err(|_| ValidationError("invalid 'cc' property value"))?
         },
         None => vec![],

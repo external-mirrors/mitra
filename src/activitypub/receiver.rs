@@ -1,17 +1,10 @@
 use actix_web::HttpRequest;
-use serde::{
-    Deserialize,
-    Deserializer,
-    de::DeserializeOwned,
-    de::Error as DeserializerError,
-};
 use serde_json::Value;
 
 use mitra_config::Config;
 use mitra_models::database::{DatabaseClient, DatabaseError};
 
 use crate::errors::{
-    ConversionError,
     HttpError,
     ValidationError,
 };
@@ -20,6 +13,7 @@ use super::authentication::{
     verify_signed_request,
     AuthenticationError,
 };
+use super::deserialization::find_object_id;
 use super::fetcher::fetchers::FetchError;
 use super::handlers::{
     accept::handle_accept,
@@ -75,77 +69,6 @@ impl From<HandlerError> for HttpError {
             },
         }
     }
-}
-
-/// Transforms arbitrary property value into array of strings
-pub fn parse_array(value: &Value) -> Result<Vec<String>, ConversionError> {
-    let result = match value {
-        Value::String(string) => vec![string.to_string()],
-        Value::Array(array) => {
-            let mut results = vec![];
-            for value in array {
-                match value {
-                    Value::String(string) => results.push(string.to_string()),
-                    Value::Object(object) => {
-                        if let Some(string) = object["id"].as_str() {
-                            results.push(string.to_string());
-                        } else {
-                            // id property is missing
-                            return Err(ConversionError);
-                        };
-                    },
-                    // Unexpected array item type
-                    _ => return Err(ConversionError),
-                };
-            };
-            results
-        },
-        // Unexpected value type
-        _ => return Err(ConversionError),
-    };
-    Ok(result)
-}
-
-/// Transforms arbitrary property value into array of structs
-pub fn parse_property_value<T: DeserializeOwned>(value: &Value) -> Result<Vec<T>, ConversionError> {
-    let objects = match value {
-        Value::Array(array) => array.to_vec(),
-        Value::Object(_) => vec![value.clone()],
-        // Unexpected value type
-        _ => return Err(ConversionError),
-    };
-    let mut items = vec![];
-    for object in objects {
-        let item: T = serde_json::from_value(object)
-            .map_err(|_| ConversionError)?;
-        items.push(item);
-    };
-    Ok(items)
-}
-
-/// Parses object json value and returns its ID as string
-pub fn find_object_id(object: &Value) -> Result<String, ValidationError> {
-    let object_id = match object.as_str() {
-        Some(object_id) => object_id.to_owned(),
-        None => {
-            let object_id = object["id"].as_str()
-                .ok_or(ValidationError("missing object ID"))?
-                .to_string();
-            object_id
-        },
-    };
-    Ok(object_id)
-}
-
-pub fn deserialize_into_object_id<'de, D>(
-    deserializer: D,
-) -> Result<String, D::Error>
-    where D: Deserializer<'de>
-{
-    let value = Value::deserialize(deserializer)?;
-    let object_id = find_object_id(&value)
-        .map_err(DeserializerError::custom)?;
-    Ok(object_id)
 }
 
 pub async fn handle_activity(
@@ -347,56 +270,4 @@ pub async fn receive_activity(
         activity,
         is_authenticated,
     ).await
-}
-
-#[cfg(test)]
-mod tests {
-    use serde_json::json;
-    use super::*;
-
-    #[test]
-    fn test_parse_array_with_string() {
-        let value = json!("test");
-        assert_eq!(
-            parse_array(&value).unwrap(),
-            vec!["test".to_string()],
-        );
-    }
-
-    #[test]
-    fn test_parse_array_with_array() {
-        let value = json!(["test1", "test2"]);
-        assert_eq!(
-            parse_array(&value).unwrap(),
-            vec!["test1".to_string(), "test2".to_string()],
-        );
-    }
-
-    #[test]
-    fn test_parse_array_with_array_of_objects() {
-        let value = json!([{"id": "test1"}, {"id": "test2"}]);
-        assert_eq!(
-            parse_array(&value).unwrap(),
-            vec!["test1".to_string(), "test2".to_string()],
-        );
-    }
-
-    #[test]
-    fn test_parse_property_value_tag_list() {
-        let value = json!({"type": "Mention"});
-        let value_list: Vec<Value> = parse_property_value(&value).unwrap();
-        assert_eq!(value_list, vec![value]);
-    }
-
-    #[test]
-    fn test_find_object_id_from_string() {
-        let value = json!("test_id");
-        assert_eq!(find_object_id(&value).unwrap(), "test_id");
-    }
-
-    #[test]
-    fn test_find_object_id_from_object() {
-        let value = json!({"id": "test_id", "type": "Note"});
-        assert_eq!(find_object_id(&value).unwrap(), "test_id");
-    }
 }

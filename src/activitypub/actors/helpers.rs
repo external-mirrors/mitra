@@ -16,10 +16,11 @@ use mitra_models::{
 
 use crate::activitypub::{
     actors::types::Actor,
+    deserialization::parse_into_id_array,
     fetcher::fetchers::fetch_file,
     handlers::create::handle_emoji,
     identifiers::validate_object_id,
-    receiver::{parse_array, HandlerError},
+    receiver::HandlerError,
     vocabulary::{EMOJI, HASHTAG},
 };
 use crate::media::MediaStorage;
@@ -92,7 +93,7 @@ fn parse_aliases(actor: &Actor) -> Vec<String> {
     // Aliases reported by server (not signed)
     actor.also_known_as.as_ref()
         .and_then(|value| {
-            match parse_array(value) {
+            match parse_into_id_array(value) {
                 Ok(array) => {
                     let mut aliases = vec![];
                     for actor_id in array {

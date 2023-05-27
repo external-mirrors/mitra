@@ -15,8 +15,10 @@ use super::constants::{
     W3ID_DATA_INTEGRITY_CONTEXT,
     W3ID_SECURITY_CONTEXT,
 };
-use super::deserialization::deserialize_string_array;
-use super::receiver::parse_property_value;
+use super::deserialization::{
+    deserialize_string_array,
+    parse_into_array,
+};
 use super::vocabulary::HASHTAG;
 
 #[derive(Deserialize, Serialize)]
@@ -101,7 +103,7 @@ pub fn deserialize_value_array<'de, D>(
 {
     let maybe_value: Option<Value> = Option::deserialize(deserializer)?;
     let values = if let Some(value) = maybe_value {
-        parse_property_value(&value).map_err(DeserializerError::custom)?
+        parse_into_array(&value).map_err(DeserializerError::custom)?
     } else {
         vec![]
     };
