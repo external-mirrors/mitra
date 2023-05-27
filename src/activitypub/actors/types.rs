@@ -36,6 +36,7 @@ use crate::activitypub::{
         SCHEMA_ORG_CONTEXT,
         W3ID_SECURITY_CONTEXT,
     },
+    deserialization::parse_into_array,
     identifiers::{
         local_actor_id,
         local_actor_key_id,
@@ -106,7 +107,6 @@ pub struct ActorAttachment {
     pub signature_value: Option<String>,
 }
 
-// Some implementations use empty object instead of null
 fn deserialize_image_opt<'de, D>(
     deserializer: D,
 ) -> Result<Option<ActorImage>, D::Error>
@@ -114,15 +114,17 @@ fn deserialize_image_opt<'de, D>(
 {
     let maybe_value: Option<Value> = Option::deserialize(deserializer)?;
     let maybe_image = if let Some(value) = maybe_value {
+        // Some implementations use empty object instead of null
         let is_empty_object = value.as_object()
             .map(|map| map.is_empty())
             .unwrap_or(false);
         if is_empty_object {
             None
         } else {
-            let image = ActorImage::deserialize(value)
+            let images: Vec<ActorImage> = parse_into_array(&value)
                 .map_err(DeserializerError::custom)?;
-            Some(image)
+            // Take first image
+            images.into_iter().next()
         }
     } else {
         None
@@ -166,7 +168,11 @@ pub struct Actor {
     )]
     pub icon: Option<ActorImage>,
 
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        deserialize_with = "deserialize_image_opt",
+        skip_serializing_if = "Option::is_none",
+    )]
     pub image: Option<ActorImage>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
