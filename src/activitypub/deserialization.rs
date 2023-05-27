@@ -66,30 +66,22 @@ pub fn deserialize_string_array<'de, D>(
 /// Transforms arbitrary property value into array of object IDs
 pub fn parse_into_id_array(
     value: &Value,
-) -> Result<Vec<String>, ConversionError> {
+) -> Result<Vec<String>, ValidationError> {
     let result = match value {
-        Value::String(string) => vec![string.to_string()],
+        Value::String(_) | Value::Object(_) => {
+            let object_id = find_object_id(value)?;
+            vec![object_id]
+        },
         Value::Array(array) => {
             let mut results = vec![];
             for value in array {
-                match value {
-                    Value::String(string) => results.push(string.to_string()),
-                    Value::Object(object) => {
-                        if let Some(string) = object["id"].as_str() {
-                            results.push(string.to_string());
-                        } else {
-                            // id property is missing
-                            return Err(ConversionError);
-                        };
-                    },
-                    // Unexpected array item type
-                    _ => return Err(ConversionError),
-                };
+                let object_id = find_object_id(value)?;
+                results.push(object_id);
             };
             results
         },
         // Unexpected value type
-        _ => return Err(ConversionError),
+        _ => return Err(ValidationError("unexpected value type")),
     };
     Ok(result)
 }
