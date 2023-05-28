@@ -33,10 +33,10 @@ pub async fn remove(
     let client = Client::new();
     let remove_pin_url = format!("{}/api/v0/pin/rm", ipfs_api_url);
     let mut remove_pin_args = vec![];
-    for cid in cids {
+    for cid in &cids {
         log::info!("removing {} from IPFS node", cid);
         remove_pin_args.push(("arg", cid));
-    }
+    };
     let remove_pin_response = client.post(&remove_pin_url)
         .query(&remove_pin_args)
         .query(&[("recursive", true)])
@@ -48,5 +48,6 @@ pub async fn remove(
     let gc_response = client.post(&gc_url)
         .send().await?;
     gc_response.error_for_status()?;
+    log::info!("removed IPFS objects ({})", cids.len());
     Ok(())
 }

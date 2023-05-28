@@ -36,7 +36,7 @@ use mitra_utils::markdown::markdown_lite_to_html;
 use crate::activitypub::{
     builders::{
         announce::prepare_announce,
-        create_note::prepare_create_note,
+        create_note::{build_note, prepare_create_note},
         delete_note::prepare_delete_note,
         like::prepare_like,
         undo_announce::prepare_undo_announce,
@@ -586,19 +586,31 @@ async fn make_permanent(
         attachments.push((attachment.id, image_cid));
     };
     assert!(post.is_local());
-    let post_url = local_object_id(&config.instance_url(), &post.id);
-    let maybe_post_image_cid = post.attachments.first()
-        .and_then(|attachment| attachment.ipfs_cid.as_deref());
-    let post_metadata = PostMetadata::new(
-        &post.id,
-        &post_url,
-        &post.content,
-        &post.created_at,
-        maybe_post_image_cid,
-    );
-    let post_metadata_json = serde_json::to_string(&post_metadata)
-        .map_err(|_| MastodonError::InternalError)?
-        .as_bytes().to_vec();
+    let instance = config.instance();
+    let post_metadata = if cfg!(feature = "ethereum-extras") {
+        let post_url = local_object_id(&instance.url(), &post.id);
+        let maybe_post_image_cid = post.attachments.first()
+            .and_then(|attachment| attachment.ipfs_cid.as_deref());
+        let post_metadata = PostMetadata::new(
+            &post.id,
+            &post_url,
+            &post.content,
+            &post.created_at,
+            maybe_post_image_cid,
+        );
+        serde_json::to_value(post_metadata)
+            .map_err(|_| MastodonError::InternalError)?
+    } else {
+        let note = build_note(
+            &instance.hostname(),
+            &instance.url(),
+            &post,
+            config.federation.fep_e232_enabled,
+        );
+        serde_json::to_value(note)
+            .map_err(|_| MastodonError::InternalError)?
+    };
+    let post_metadata_json = post_metadata.to_string().as_bytes().to_vec();
     let post_metadata_cid = ipfs_store::add(ipfs_api_url, post_metadata_json).await
         .map_err(|_| MastodonError::InternalError)?;
 
