@@ -60,18 +60,26 @@ pub fn is_activitypub_request(headers: &HeaderMap) -> bool {
             return true;
         };
     };
-    const CONTENT_TYPES: [&str; 4] = [
+    const MEDIA_TYPES: [&str; 4] = [
         AP_MEDIA_TYPE,
         AS_MEDIA_TYPE,
         "application/ld+json",
         "application/json",
     ];
-    if let Some(content_type) = headers.get(http_header::ACCEPT) {
-        let content_type_str = content_type.to_str().ok()
-            // Take first content type if there are many
+    if let Some(media_type) = headers.get(http_header::ACCEPT) {
+        let media_type_str = media_type.to_str().ok()
+            // Take first media type if there are many
             .and_then(|value| value.split(',').next())
-            .unwrap_or("");
-        return CONTENT_TYPES.contains(&content_type_str);
+            // Remove q parameter
+            .map(|value| {
+                value
+                    .split(';')
+                    .filter(|part| !part.contains("q="))
+                    .collect::<Vec<_>>()
+                    .join(";")
+            })
+            .unwrap_or("".to_string());
+        return MEDIA_TYPES.contains(&media_type_str.as_str());
     };
     false
 }
@@ -420,6 +428,17 @@ mod tests {
     use super::*;
 
     #[test]
+    fn test_is_activitypub_request_activitypub() {
+        let mut request_headers = HeaderMap::new();
+        request_headers.insert(
+            header::ACCEPT,
+            HeaderValue::from_static(AP_MEDIA_TYPE),
+        );
+        let result = is_activitypub_request(&request_headers);
+        assert_eq!(result, true);
+    }
+
+    #[test]
     fn test_is_activitypub_request_mastodon() {
         let mut request_headers = HeaderMap::new();
         request_headers.insert(
@@ -436,6 +455,17 @@ mod tests {
         request_headers.insert(
             header::ACCEPT,
             HeaderValue::from_static("application/activity+json"),
+        );
+        let result = is_activitypub_request(&request_headers);
+        assert_eq!(result, true);
+    }
+
+    #[test]
+    fn test_is_activitypub_request_bridgy_fed() {
+        let mut request_headers = HeaderMap::new();
+        request_headers.insert(
+            header::ACCEPT,
+            HeaderValue::from_static("application/activity+json; q=0.9, application/ld+json;profile=\x22https://www.w3.org/ns/activitystreams\x22; q=0.8, text/html; charset=utf-8; q=0.7"),
         );
         let result = is_activitypub_request(&request_headers);
         assert_eq!(result, true);
