@@ -12,6 +12,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Support federation with Mobilizon.
 - Store IDs of payout transactions in database.
 - Update subscription only when payout transaction is confirmed.
+- Re-open closed invoices when address receives new payment.
 
 ### Changed
 

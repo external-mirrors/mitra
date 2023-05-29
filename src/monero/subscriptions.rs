@@ -28,6 +28,7 @@ use mitra_models::{
 
 use crate::ethereum::subscriptions::send_subscription_notifications;
 
+use super::helpers::{get_active_addresses, reopen_invoice};
 use super::wallet::{
     get_single_item,
     get_subaddress_balance,
@@ -290,6 +291,41 @@ pub async fn check_monero_subscriptions(
             },
             Err(other_error) => return Err(other_error.into()),
         };
+    };
+    Ok(())
+}
+
+pub async fn check_closed_invoices(
+    config: &MoneroConfig,
+    db_pool: &DbPool,
+) -> Result<(), MoneroError> {
+    let addresses = get_active_addresses(config).await?;
+    let db_client = &mut **get_database_client(db_pool).await?;
+    for (address, amount) in addresses {
+        let invoice = match get_invoice_by_address(
+            db_client,
+            &config.chain_id,
+            &address.to_string(),
+        ).await {
+            Ok(invoice) => invoice,
+            Err(DatabaseError::NotFound(_)) => {
+                log::error!(
+                    "invoice with addresss {} doesn't exist",
+                    address,
+                );
+                continue;
+            },
+            Err(other_error) => return Err(other_error.into()),
+        };
+        if !invoice.invoice_status.is_final() {
+            continue;
+        };
+        log::info!(
+            "detected new payment to address {}: {}",
+            address,
+            amount,
+        );
+        reopen_invoice(config, db_client, invoice).await?;
     };
     Ok(())
 }

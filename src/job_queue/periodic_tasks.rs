@@ -28,7 +28,12 @@ use crate::ethereum::{
     },
 };
 use crate::media::remove_media;
-use crate::monero::subscriptions::check_monero_subscriptions;
+use crate::monero::{
+    subscriptions::{
+        check_closed_invoices,
+        check_monero_subscriptions,
+    },
+};
 
 #[cfg(feature = "ethereum-extras")]
 use crate::ethereum::nft::process_nft_events;
@@ -99,6 +104,21 @@ pub async fn monero_payment_monitor(
     };
     check_monero_subscriptions(
         &config.instance(),
+        monero_config,
+        db_pool,
+    ).await?;
+    Ok(())
+}
+
+pub async fn monero_recurrent_payment_monitor(
+    config: &Config,
+    db_pool: &DbPool,
+) -> Result<(), Error> {
+    let monero_config = match config.monero_config() {
+        Some(monero_config) => monero_config,
+        None => return Ok(()), // not configured
+    };
+    check_closed_invoices(
         monero_config,
         db_pool,
     ).await?;

@@ -95,6 +95,15 @@ impl InvoiceStatus {
         };
         allowed.contains(to)
     }
+
+    pub fn is_final(&self) -> bool {
+        matches!(
+            self,
+            Self::Timeout |
+            Self::Cancelled |
+            Self::Underpaid |
+            Self::Completed)
+    }
 }
 
 impl From<&InvoiceStatus> for i16 {

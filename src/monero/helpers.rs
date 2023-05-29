@@ -3,17 +3,12 @@ use std::str::FromStr;
 
 use monero_rpc::TransferType;
 use monero_rpc::monero::{Address, Amount};
-use uuid::Uuid;
 
 use mitra_config::MoneroConfig;
 use mitra_models::{
     database::DatabaseClient,
     invoices::helpers::invoice_reopened,
-    invoices::queries::{
-        get_invoice_by_address,
-        get_invoice_by_id,
-    },
-    invoices::types::InvoiceStatus,
+    invoices::types::DbInvoice,
 };
 
 use crate::errors::ValidationError;
@@ -34,25 +29,12 @@ pub fn validate_monero_address(address: &str)
 pub async fn reopen_invoice(
     config: &MoneroConfig,
     db_client: &mut impl DatabaseClient,
-    invoice_id_or_address: &str,
+    invoice: DbInvoice,
 ) -> Result<(), MoneroError> {
-    let invoice = if let Ok(invoice_id) = Uuid::from_str(invoice_id_or_address) {
-        get_invoice_by_id(db_client, &invoice_id).await?
-    } else {
-        get_invoice_by_address(
-            db_client,
-            &config.chain_id,
-            invoice_id_or_address,
-        ).await?
-    };
     if invoice.chain_id != config.chain_id {
         return Err(MoneroError::OtherError("can't process invoice"));
     };
-    if invoice.invoice_status != InvoiceStatus::Timeout &&
-        invoice.invoice_status != InvoiceStatus::Cancelled &&
-        invoice.invoice_status != InvoiceStatus::Underpaid &&
-        invoice.invoice_status != InvoiceStatus::Completed
-    {
+    if !invoice.invoice_status.is_final() {
         return Err(MoneroError::OtherError("invoice is already open"));
     };
     let wallet_client = open_monero_wallet(config).await?;

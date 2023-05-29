@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use anyhow::{anyhow, Error};
 use clap::Parser;
 use uuid::Uuid;
@@ -44,6 +46,7 @@ use mitra_models::{
         find_unused_remote_emojis,
         get_emoji_by_name_and_hostname,
     },
+    invoices::queries::{get_invoice_by_address, get_invoice_by_id},
     oauth::queries::delete_oauth_tokens,
     posts::queries::{delete_post, find_extraneous_posts, get_post_by_id},
     profiles::queries::{
@@ -711,10 +714,19 @@ impl ReopenInvoice {
     ) -> Result<(), Error> {
         let monero_config = config.monero_config()
             .ok_or(anyhow!("monero configuration not found"))?;
+        let invoice = if let Ok(invoice_id) = Uuid::from_str(&self.id_or_address) {
+            get_invoice_by_id(db_client, &invoice_id).await?
+        } else {
+            get_invoice_by_address(
+                db_client,
+                &monero_config.chain_id,
+                &self.id_or_address,
+            ).await?
+        };
         reopen_invoice(
             monero_config,
             db_client,
-            &self.id_or_address,
+            invoice,
         ).await?;
         Ok(())
     }

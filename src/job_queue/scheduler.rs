@@ -19,6 +19,7 @@ enum PeriodicTask {
     SubscriptionExpirationMonitor,
     EthereumSubscriptionMonitor,
     MoneroPaymentMonitor,
+    MoneroRecurrentPaymentMonitor,
 
     #[cfg(feature = "ethereum-extras")]
     NftMonitor,
@@ -36,6 +37,7 @@ impl PeriodicTask {
             Self::SubscriptionExpirationMonitor => 300,
             Self::EthereumSubscriptionMonitor => 300,
             Self::MoneroPaymentMonitor => 30,
+            Self::MoneroRecurrentPaymentMonitor => 600,
 
             #[cfg(feature = "ethereum-extras")]
             Self::NftMonitor => 30,
@@ -78,6 +80,7 @@ pub fn run(
         };
         if config.monero_config().is_some() {
             scheduler_state.insert(PeriodicTask::MoneroPaymentMonitor, None);
+            scheduler_state.insert(PeriodicTask::MoneroRecurrentPaymentMonitor, None);
         };
 
         let mut interval = tokio::time::interval(Duration::from_secs(5));
@@ -123,6 +126,9 @@ pub fn run(
                     },
                     PeriodicTask::MoneroPaymentMonitor => {
                         monero_payment_monitor(&config, &db_pool).await
+                    },
+                    PeriodicTask::MoneroRecurrentPaymentMonitor => {
+                        monero_recurrent_payment_monitor(&config, &db_pool).await
                     },
                 };
                 task_result.unwrap_or_else(|err| {
