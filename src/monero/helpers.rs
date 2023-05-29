@@ -97,6 +97,10 @@ pub async fn get_active_addresses(
     ).await?;
     let mut addresses = HashMap::new();
     for subaddress_data in balance_data.per_subaddress {
+        if subaddress_data.address_index == 0 {
+            // Ignore account address
+            continue;
+        };
         if !addresses.contains_key(&subaddress_data.address) {
             addresses.insert(subaddress_data.address, subaddress_data.balance);
         };
