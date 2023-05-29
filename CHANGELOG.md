@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+
+- Support federation with Bridgy Fed.
+- Support federation with Mobilizon.
+
 ### Changed
 
 - Use ActivityPub format when saving posts to IPFS.
@@ -17,7 +22,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Fixed
 
 - Fixed panic in `import_post` when trying to import local object.
-- Fixed Bridgy Fed compatibility issues.
 
 ## [1.25.0] - 2023-05-25
 

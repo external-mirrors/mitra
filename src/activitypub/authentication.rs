@@ -8,7 +8,7 @@ use mitra_models::{
     profiles::types::DbActorProfile,
 };
 use mitra_utils::{
-    crypto_rsa::{deserialize_public_key, RsaSerializationError},
+    crypto_rsa::{deserialize_rsa_public_key, RsaSerializationError},
     did::Did,
 };
 
@@ -127,8 +127,8 @@ pub async fn verify_signed_request(
     let signer = get_signer(config, db_client, &signer_id, no_fetch).await?;
     let signer_actor = signer.actor_json.as_ref()
         .expect("request should be signed by remote actor");
-    let signer_key =
-        deserialize_public_key(&signer_actor.public_key.public_key_pem)?;
+    let signer_key = deserialize_rsa_public_key(
+        &signer_actor.public_key.public_key_pem)?;
 
     verify_http_signature(&signature_data, &signer_key)?;
 
@@ -166,8 +166,8 @@ pub async fn verify_signed_activity(
                 .expect("activity should be signed by remote actor");
             match signature_data.proof_type {
                 ProofType::JcsRsaSignature => {
-                    let signer_key =
-                        deserialize_public_key(&signer_actor.public_key.public_key_pem)?;
+                    let signer_key = deserialize_rsa_public_key(
+                        &signer_actor.public_key.public_key_pem)?;
                     verify_rsa_json_signature(
                         &signer_key,
                         &signature_data.canonical_object,
