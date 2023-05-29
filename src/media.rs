@@ -10,7 +10,7 @@ use mitra_utils::files::{get_media_type_extension, write_file};
 
 use crate::ipfs::store as ipfs_store;
 
-pub const SUPPORTED_MEDIA_TYPES: [&str; 12] = [
+pub const SUPPORTED_MEDIA_TYPES: [&str; 13] = [
     "audio/mpeg",
     "audio/ogg",
     "audio/x-wav",
@@ -21,6 +21,7 @@ pub const SUPPORTED_MEDIA_TYPES: [&str; 12] = [
     "image/webp",
     "video/mp4",
     "video/ogg",
+    "video/quicktime",
     "video/webm",
     "video/x-m4v",
 ];
