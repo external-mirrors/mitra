@@ -13,7 +13,7 @@ pub struct TimelineQueryParams {
     pub limit: PageSize,
 }
 
-fn default_timeline_local() -> bool { true }
+fn default_timeline_local() -> bool { false }
 
 #[derive(Deserialize)]
 pub struct PublicTimelineQueryParams {
