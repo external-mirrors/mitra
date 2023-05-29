@@ -14,7 +14,7 @@ use crate::monero::subscriptions::MONERO_INVOICE_TIMEOUT;
 pub struct InvoiceData {
     pub sender_id: Uuid,
     pub recipient_id: Uuid,
-    pub chain_id: Option<ChainId>,
+    pub chain_id: ChainId,
     pub amount: i64,
 }
 
