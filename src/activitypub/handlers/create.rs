@@ -650,6 +650,9 @@ pub async fn handle_note(
             author.username,
         );
     };
+    if visibility == Visibility::Direct && mentions.is_empty() {
+        return Err(ValidationError("direct message without mentions").into());
+    };
     let is_sensitive = object.sensitive.unwrap_or(false);
     let created_at = object.published.unwrap_or(Utc::now());
     let post_data = PostCreateData {

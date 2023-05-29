@@ -18,6 +18,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Disallow media uploads without media type.
 - Make `chain_id` parameter required at `/api/v1/subscriptions/invoices`.
 - Change `/api/v1/timelines/public` to return federated timeline by default.
+- Reject direct messages without mentions.
 
 ### Fixed
 
