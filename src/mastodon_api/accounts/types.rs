@@ -316,9 +316,11 @@ fn process_b64_image_field_value(
                 None
             } else {
                 // Decode and save file
+                let media_type = form_media_type
+                    .ok_or(UploadError::NoMediaType)?;
                 let (file_name, file_size, media_type) = save_b64_file(
                     &b64_data,
-                    form_media_type,
+                    &media_type,
                     output_dir,
                     ACTOR_IMAGE_MAX_SIZE,
                     Some("image/"),

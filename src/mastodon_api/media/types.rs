@@ -12,7 +12,7 @@ use crate::media::get_file_url;
 pub struct AttachmentCreateData {
     // base64-encoded file (not comtaible with Mastodon)
     pub file: String,
-    pub media_type: Option<String>,
+    pub media_type: String,
 }
 
 /// https://docs.joinmastodon.org/entities/attachment/

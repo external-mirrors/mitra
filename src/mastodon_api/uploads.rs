@@ -1,7 +1,5 @@
 use std::path::Path;
 
-use mitra_utils::files::sniff_media_type;
-
 use crate::media::{save_file, SUPPORTED_MEDIA_TYPES};
 use super::errors::MastodonError;
 
@@ -15,6 +13,9 @@ pub enum UploadError {
 
     #[error("file is too large")]
     TooLarge,
+
+    #[error("no media type")]
+    NoMediaType,
 
     #[error("invalid media type")]
     InvalidMediaType,
@@ -33,7 +34,7 @@ impl From<UploadError> for MastodonError {
 
 pub fn save_b64_file(
     b64data: &str,
-    maybe_media_type: Option<String>,
+    media_type: &str,
     output_dir: &Path,
     file_size_limit: usize,
     maybe_expected_prefix: Option<&str>,
@@ -43,10 +44,7 @@ pub fn save_b64_file(
     if file_size > file_size_limit {
         return Err(UploadError::TooLarge);
     };
-    // Sniff media type if not provided
-    let media_type = maybe_media_type.or(sniff_media_type(&file_data))
-        .ok_or(UploadError::InvalidMediaType)?;
-    if !SUPPORTED_MEDIA_TYPES.contains(&media_type.as_str()) {
+    if !SUPPORTED_MEDIA_TYPES.contains(&media_type) {
         return Err(UploadError::InvalidMediaType);
     };
     if let Some(expected_prefix) = maybe_expected_prefix {
@@ -57,7 +55,7 @@ pub fn save_b64_file(
     let file_name = save_file(
         file_data,
         output_dir,
-        Some(&media_type),
+        Some(media_type),
     )?;
-    Ok((file_name, file_size, media_type))
+    Ok((file_name, file_size, media_type.to_string()))
 }

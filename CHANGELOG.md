@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Use ActivityPub format when saving posts to IPFS.
 - Added `video/quicktime` to the list of supported media types.
+- Disallow media uploads without media type.
 
 ### Fixed
 

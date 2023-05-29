@@ -777,7 +777,6 @@ paths:
                 media_type:
                   description: Media type.
                   type: string
-                  nullable: true
                   example: image/jpeg
       responses:
         200:

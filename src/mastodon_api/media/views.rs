@@ -26,7 +26,7 @@ async fn create_attachment_view(
     let current_user = get_current_user(db_client, auth.token()).await?;
     let (file_name, file_size, media_type) = save_b64_file(
         &attachment_data.file,
-        attachment_data.media_type.clone(),
+        &attachment_data.media_type,
         &config.media_dir(),
         config.limits.media.file_size_limit,
         None,
