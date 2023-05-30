@@ -14,7 +14,6 @@ use mitra_models::{
     },
     invoices::types::InvoiceStatus,
     profiles::queries::get_profile_by_id,
-    profiles::types::PaymentOption,
     subscriptions::queries::{
         create_subscription,
         get_subscription_by_participants,
@@ -130,18 +129,7 @@ pub async fn check_monero_subscriptions(
         };
         let sender = get_profile_by_id(db_client, &invoice.sender_id).await?;
         let recipient = get_user_by_id(db_client, &invoice.recipient_id).await?;
-        let maybe_payment_info = recipient.profile.payment_options.clone()
-            .into_inner().into_iter()
-            .find_map(|option| match option {
-                PaymentOption::MoneroSubscription(payment_info) => {
-                    if payment_info.chain_id == config.chain_id {
-                        Some(payment_info)
-                    } else {
-                        None
-                    }
-                },
-                _ => None,
-            });
+        let maybe_payment_info = recipient.profile.monero_subscription(&config.chain_id);
         let payment_info = if let Some(payment_info) = maybe_payment_info {
             payment_info
         } else {

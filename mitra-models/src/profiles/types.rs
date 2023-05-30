@@ -420,6 +420,24 @@ impl DbActorProfile {
             self.updated_at < Utc::now() - Duration::days(1)
         }
     }
+
+    pub fn monero_subscription(
+        &self,
+        chain_id: &ChainId,
+    ) -> Option<MoneroSubscription> {
+        assert!(chain_id.is_monero());
+        self.payment_options.inner().iter()
+            .find_map(|option| match option {
+                PaymentOption::MoneroSubscription(payment_info) => {
+                    if payment_info.chain_id == *chain_id {
+                        Some(payment_info.clone())
+                    } else {
+                        None
+                    }
+                },
+                _ => None,
+            })
+    }
 }
 
 #[cfg(feature = "test-utils")]
