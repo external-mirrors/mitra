@@ -1,8 +1,11 @@
 use std::str::FromStr;
 
 use chrono::{Duration, Utc};
-use monero_rpc::TransferType;
-use monero_rpc::monero::{Address, Amount};
+use monero_rpc::{
+    monero::{Address, Amount},
+    GetTransfersCategory,
+    TransferType,
+};
 
 use mitra_config::{Instance, MoneroConfig};
 use mitra_models::{
@@ -34,6 +37,7 @@ use super::wallet::{
 };
 
 pub const MONERO_INVOICE_TIMEOUT: i64 = 3 * 60 * 60; // 3 hours
+const MONERO_CONFIRMATIONS_SAFE: u64 = 3;
 
 pub async fn check_monero_subscriptions(
     instance: &Instance,
@@ -128,7 +132,6 @@ pub async fn check_monero_subscriptions(
             // Don't forward payment until all outputs are unlocked
             continue;
         };
-        let sender = get_profile_by_id(db_client, &invoice.sender_id).await?;
         let recipient = get_user_by_id(db_client, &invoice.recipient_id).await?;
         let maybe_payment_info = recipient.profile.monero_subscription(&config.chain_id);
         let payment_info = if let Some(payment_info) = maybe_payment_info {
@@ -139,7 +142,7 @@ pub async fn check_monero_subscriptions(
         };
         let payout_address = Address::from_str(&payment_info.payout_address)?;
         // Send all available balance to payout address
-        let (payout_tx_id, payout_amount) = match send_monero(
+        let (payout_tx_id, _) = match send_monero(
             &wallet_client,
             address_index.major,
             address_index.minor,
@@ -157,9 +160,6 @@ pub async fn check_monero_subscriptions(
             },
             Err(other_error) => return Err(other_error),
         };
-        let duration_secs = (payout_amount.as_pico() / payment_info.price)
-            .try_into()
-            .map_err(|_| MoneroError::OtherError("invalid duration"))?;
 
         invoice_forwarded(
             db_client,
@@ -167,6 +167,69 @@ pub async fn check_monero_subscriptions(
             &payout_tx_id,
         ).await?;
         log::info!("forwarded payment for invoice {}", invoice.id);
+    };
+
+    let forwarded_invoices = get_invoices_by_status(
+        db_client,
+        &config.chain_id,
+        InvoiceStatus::Forwarded,
+    ).await?;
+    for invoice in forwarded_invoices {
+        let payout_tx_hash = if let Some(payout_tx_id) = invoice.payout_tx_id {
+            payout_tx_id.parse()
+                .map_err(|_| MoneroError::OtherError("invalid transaction ID"))?
+        } else {
+            // Legacy invoices don't have payout_tx_id.
+            // Assume payment was fully processed and subscription was updated
+            log::warn!("invoice {}: no payout transaction ID", invoice.id);
+            set_invoice_status(db_client, &invoice.id, InvoiceStatus::Completed).await?;
+            continue;
+        };
+        let transfer = match wallet_client.get_transfer(payout_tx_hash, None).await {
+            Ok(maybe_transfer) => maybe_transfer
+                .ok_or(MoneroError::OtherError("payout transaction doesn't exist"))?,
+            Err(error) => {
+                if error.to_string() == "Server error: No wallet file" {
+                    // monero-wallet-rpc bug; retry later
+                    continue;
+                } else {
+                    return Err(error.into());
+                };
+            },
+        };
+        if transfer.subaddr_index.major != config.account_index {
+            log::error!("invoice {}: unexpected account index", invoice.id);
+            continue;
+        };
+        if transfer.transfer_type != GetTransfersCategory::Pending &&
+            transfer.transfer_type != GetTransfersCategory::Out
+        {
+            log::error!(
+                "invoice {}: unexpected payout transfer type ({:?})",
+                invoice.id,
+                transfer.transfer_type,
+            );
+            continue;
+        };
+        if transfer.confirmations.unwrap_or(0) < MONERO_CONFIRMATIONS_SAFE {
+            // Wait for more confirmations
+            continue;
+        };
+        let sender = get_profile_by_id(db_client, &invoice.sender_id).await?;
+        let recipient = get_user_by_id(db_client, &invoice.recipient_id).await?;
+        let maybe_payment_info = recipient.profile.monero_subscription(&config.chain_id);
+        let payment_info = if let Some(payment_info) = maybe_payment_info {
+            payment_info
+        } else {
+            log::error!("subscription is not configured for user {}", recipient.id);
+            continue;
+        };
+        let duration_secs = (transfer.amount.as_pico() / payment_info.price)
+            .try_into()
+            .map_err(|_| MoneroError::OtherError("invalid duration"))?;
+
+        set_invoice_status(db_client, &invoice.id, InvoiceStatus::Completed).await?;
+        log::info!("payout transaction confirmed for invoice {}", invoice.id);
 
         match get_subscription_by_participants(
             db_client,

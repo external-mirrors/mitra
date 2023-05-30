@@ -1981,6 +1981,7 @@ components:
             - timeout
             - cancelled
             - underpaid
+            - completed
         expires_at:
           description: The date when invoice times out.
           type: string

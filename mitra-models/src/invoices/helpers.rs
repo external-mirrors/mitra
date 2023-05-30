@@ -104,6 +104,12 @@ mod tests {
         assert_eq!(invoice.invoice_status, InvoiceStatus::Forwarded);
         assert_eq!(invoice.payout_tx_id.as_deref(), Some(payout_tx_id));
 
+        set_invoice_status(
+            db_client,
+            &invoice.id,
+            InvoiceStatus::Completed,
+        ).await.unwrap();
+
         let invoice = invoice_reopened(
             db_client,
             &invoice.id,

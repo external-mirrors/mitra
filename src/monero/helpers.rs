@@ -48,10 +48,10 @@ pub async fn reopen_invoice(
     if invoice.chain_id != config.chain_id {
         return Err(MoneroError::OtherError("can't process invoice"));
     };
-    if invoice.invoice_status != InvoiceStatus::Forwarded &&
-        invoice.invoice_status != InvoiceStatus::Timeout &&
+    if invoice.invoice_status != InvoiceStatus::Timeout &&
         invoice.invoice_status != InvoiceStatus::Cancelled &&
-        invoice.invoice_status != InvoiceStatus::Underpaid
+        invoice.invoice_status != InvoiceStatus::Underpaid &&
+        invoice.invoice_status != InvoiceStatus::Completed
     {
         return Err(MoneroError::OtherError("invoice is already open"));
     };

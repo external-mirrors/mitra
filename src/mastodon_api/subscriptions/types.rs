@@ -39,6 +39,7 @@ impl From<DbInvoice> for Invoice {
             InvoiceStatus::Timeout => "timeout",
             InvoiceStatus::Cancelled => "cancelled",
             InvoiceStatus::Underpaid => "underpaid",
+            InvoiceStatus::Completed => "completed",
         };
         let expires_at = if value.chain_id.inner().is_monero() {
             value.created_at + Duration::seconds(MONERO_INVOICE_TIMEOUT)
