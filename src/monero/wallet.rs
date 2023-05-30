@@ -36,7 +36,7 @@ pub enum MoneroError {
     #[error("not enough unlocked balance")]
     Dust,
 
-    #[error("other error")]
+    #[error("{0}")]
     OtherError(&'static str),
 }
 
@@ -142,7 +142,7 @@ pub async fn send_monero(
     from_account: u32,
     from_address: u32,
     to_address: Address,
-) -> Result<Amount, MoneroError> {
+) -> Result<(String, Amount), MoneroError> {
     let sweep_args = SweepAllArgs {
         address: to_address,
         account_index: from_account,
@@ -201,7 +201,7 @@ pub async fn send_monero(
     );
     // Save wallet
     wallet_client.close_wallet().await?;
-    Ok(amount)
+    Ok((format!("{:x}", tx_hash), amount))
 }
 
 /// https://monerodocs.org/interacting/monero-wallet-rpc-reference/#sign

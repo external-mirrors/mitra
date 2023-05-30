@@ -8,10 +8,10 @@ use uuid::Uuid;
 use mitra_config::MoneroConfig;
 use mitra_models::{
     database::DatabaseClient,
+    invoices::helpers::invoice_reopened,
     invoices::queries::{
         get_invoice_by_address,
         get_invoice_by_id,
-        set_invoice_status,
     },
     invoices::types::InvoiceStatus,
 };
@@ -84,7 +84,7 @@ pub async fn reopen_invoice(
                 transfer.amount,
             );
         };
-        set_invoice_status(db_client, &invoice.id, InvoiceStatus::Paid).await?;
+        invoice_reopened(db_client, &invoice.id).await?;
     };
     Ok(())
 }

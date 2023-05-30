@@ -121,7 +121,10 @@ pub async fn set_invoice_status(
     };
     let maybe_row = transaction.query_opt(
         "
-        UPDATE invoice SET invoice_status = $2
+        UPDATE invoice
+        SET
+            invoice_status = $2,
+            updated_at = CURRENT_TIMESTAMP
         WHERE id = $1
         RETURNING invoice
         ",
@@ -130,6 +133,24 @@ pub async fn set_invoice_status(
     let row = maybe_row.ok_or(DatabaseError::NotFound("invoice"))?;
     let invoice = row.try_get("invoice")?;
     transaction.commit().await?;
+    Ok(invoice)
+}
+
+pub async fn set_invoice_payout_tx_id(
+    db_client: &impl DatabaseClient,
+    invoice_id: &Uuid,
+    payout_tx_id: Option<&str>,
+) -> Result<DbInvoice, DatabaseError> {
+    let maybe_row = db_client.query_opt(
+        "
+        UPDATE invoice SET payout_tx_id = $2
+        WHERE id = $1
+        RETURNING invoice
+        ",
+        &[&invoice_id, &payout_tx_id],
+    ).await?;
+    let row = maybe_row.ok_or(DatabaseError::NotFound("invoice"))?;
+    let invoice = row.try_get("invoice")?;
     Ok(invoice)
 }
 
@@ -187,6 +208,8 @@ mod tests {
         assert_eq!(invoice.payment_address, payment_address);
         assert_eq!(invoice.amount, amount);
         assert_eq!(invoice.invoice_status, InvoiceStatus::Open);
+        assert_eq!(invoice.payout_tx_id, None);
+        assert_eq!(invoice.updated_at, invoice.created_at);
     }
 
     #[tokio::test]
@@ -210,12 +233,8 @@ mod tests {
             InvoiceStatus::Paid,
         ).await.unwrap();
         assert_eq!(invoice.invoice_status, InvoiceStatus::Paid);
+        assert_ne!(invoice.updated_at, invoice.created_at);
 
-        set_invoice_status(
-            db_client,
-            &invoice.id,
-            InvoiceStatus::Forwarded,
-        ).await.unwrap();
         let error = set_invoice_status(
             db_client,
             &invoice.id,

@@ -1,0 +1,3 @@
+ALTER TABLE invoice ADD COLUMN payout_tx_id VARCHAR(200);
+ALTER TABLE invoice ADD COLUMN updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP;
+UPDATE invoice SET updated_at = created_at;

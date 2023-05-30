@@ -7,6 +7,7 @@ use monero_rpc::monero::{Address, Amount};
 use mitra_config::{Instance, MoneroConfig};
 use mitra_models::{
     database::{get_database_client, DatabaseError, DbPool},
+    invoices::helpers::invoice_forwarded,
     invoices::queries::{
         get_invoice_by_address,
         get_invoices_by_status,
@@ -138,13 +139,13 @@ pub async fn check_monero_subscriptions(
         };
         let payout_address = Address::from_str(&payment_info.payout_address)?;
         // Send all available balance to payout address
-        let payout_amount = match send_monero(
+        let (payout_tx_id, payout_amount) = match send_monero(
             &wallet_client,
             address_index.major,
             address_index.minor,
             payout_address,
         ).await {
-            Ok(payout_amount) => payout_amount,
+            Ok(payout_info) => payout_info,
             Err(error @ MoneroError::Dust) => {
                 log::warn!("invoice {}: {}", invoice.id, error);
                 set_invoice_status(
@@ -160,10 +161,10 @@ pub async fn check_monero_subscriptions(
             .try_into()
             .map_err(|_| MoneroError::OtherError("invalid duration"))?;
 
-        set_invoice_status(
+        invoice_forwarded(
             db_client,
             &invoice.id,
-            InvoiceStatus::Forwarded,
+            &payout_tx_id,
         ).await?;
         log::info!("forwarded payment for invoice {}", invoice.id);
 

@@ -232,7 +232,9 @@ CREATE TABLE invoice (
     payment_address VARCHAR(500) NOT NULL,
     amount BIGINT NOT NULL CHECK (amount >= 0),
     invoice_status SMALLINT NOT NULL DEFAULT 1,
+    payout_tx_id VARCHAR(200),
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
     UNIQUE (chain_id, payment_address),
     CHECK (sender_id != recipient_id)
 );

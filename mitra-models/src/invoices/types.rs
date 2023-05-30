@@ -138,5 +138,7 @@ pub struct DbInvoice {
     pub payment_address: String,
     pub amount: i64, // requested payment amount
     pub invoice_status: InvoiceStatus,
+    pub payout_tx_id: Option<String>,
     pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
 }

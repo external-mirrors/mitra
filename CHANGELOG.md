@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Support federation with Bridgy Fed.
 - Support federation with Mobilizon.
+- Store IDs of payout transactions in database.
 
 ### Changed
 
