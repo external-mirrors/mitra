@@ -114,7 +114,9 @@ pub async fn check_monero_subscriptions(
         let address = Address::from_str(&invoice.payment_address)?;
         let address_index = wallet_client.get_address_index(address).await?;
         if address_index.major != config.account_index {
-            return Err(MoneroError::WalletRpcError("unexpected account index"));
+            // Re-opened after configuration change?
+            log::error!("invoice {}: unexpected account index", invoice.id);
+            continue;
         };
         let balance_data = get_subaddress_balance(
             &wallet_client,
@@ -175,7 +177,7 @@ pub async fn check_monero_subscriptions(
             &invoice.id,
             InvoiceStatus::Forwarded,
         ).await?;
-        log::info!("processed payment for invoice {}", invoice.id);
+        log::info!("forwarded payment for invoice {}", invoice.id);
 
         match get_subscription_by_participants(
             db_client,

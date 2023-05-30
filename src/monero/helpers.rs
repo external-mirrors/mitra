@@ -36,7 +36,6 @@ pub async fn reopen_invoice(
     db_client: &impl DatabaseClient,
     invoice_id_or_address: &str,
 ) -> Result<(), MoneroError> {
-    let wallet_client = open_monero_wallet(config).await?;
     let invoice = if let Ok(invoice_id) = Uuid::from_str(invoice_id_or_address) {
         get_invoice_by_id(db_client, &invoice_id).await?
     } else {
@@ -56,11 +55,14 @@ pub async fn reopen_invoice(
     {
         return Err(MoneroError::OtherError("invoice is already open"));
     };
+    let wallet_client = open_monero_wallet(config).await?;
     let address = Address::from_str(&invoice.payment_address)?;
     let address_index = wallet_client.get_address_index(address).await?;
     if address_index.major != config.account_index {
-        return Err(MoneroError::WalletRpcError("unexpected account index"));
+        // Configuration has changed
+        return Err(MoneroError::OtherError("can't process invoice"));
     };
+
     let transfers = wallet_client.incoming_transfers(
         TransferType::Available,
         Some(address_index.major),
