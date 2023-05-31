@@ -81,6 +81,20 @@ pub enum InvoiceStatus {
     Underpaid,
 }
 
+impl InvoiceStatus {
+    pub fn can_change(&self, to: &Self) -> bool {
+        let allowed = match self {
+            Self::Open => vec![Self::Paid, Self::Timeout, Self::Cancelled],
+            Self::Paid => vec![Self::Forwarded, Self::Underpaid],
+            Self::Forwarded => vec![Self::Paid],
+            Self::Timeout => vec![Self::Paid],
+            Self::Cancelled => vec![Self::Paid],
+            Self::Underpaid => vec![Self::Paid],
+        };
+        allowed.contains(to)
+    }
+}
+
 impl From<&InvoiceStatus> for i16 {
     fn from(value: &InvoiceStatus) -> i16 {
         match value {

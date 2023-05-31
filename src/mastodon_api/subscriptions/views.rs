@@ -259,7 +259,7 @@ async fn cancel_invoice_view(
     db_pool: web::Data<DbPool>,
     invoice_id: web::Path<Uuid>,
 ) -> Result<HttpResponse, MastodonError> {
-    let db_client = &**get_database_client(&db_pool).await?;
+    let db_client = &mut **get_database_client(&db_pool).await?;
     let db_invoice = set_invoice_status(
         db_client,
         &invoice_id,

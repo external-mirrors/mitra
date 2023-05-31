@@ -33,7 +33,7 @@ pub fn validate_monero_address(address: &str)
 
 pub async fn reopen_invoice(
     config: &MoneroConfig,
-    db_client: &impl DatabaseClient,
+    db_client: &mut impl DatabaseClient,
     invoice_id_or_address: &str,
 ) -> Result<(), MoneroError> {
     let invoice = if let Ok(invoice_id) = Uuid::from_str(invoice_id_or_address) {

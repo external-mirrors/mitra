@@ -9,6 +9,7 @@ use crate::database::{
     catch_unique_violation,
     DatabaseClient,
     DatabaseError,
+    DatabaseTypeError,
 };
 
 use super::types::{DbChainId, DbInvoice, InvoiceStatus};
@@ -100,20 +101,35 @@ pub async fn get_invoices_by_status(
 }
 
 pub async fn set_invoice_status(
-    db_client: &impl DatabaseClient,
+    db_client: &mut impl DatabaseClient,
     invoice_id: &Uuid,
-    status: InvoiceStatus,
+    new_status: InvoiceStatus,
 ) -> Result<DbInvoice, DatabaseError> {
-    let maybe_row = db_client.query_opt(
+    let transaction = db_client.transaction().await?;
+    let maybe_row = transaction.query_opt(
+        "
+        SELECT invoice_status
+        FROM invoice WHERE id = $1
+        FOR UPDATE
+        ",
+        &[&invoice_id],
+    ).await?;
+    let row = maybe_row.ok_or(DatabaseError::NotFound("invoice"))?;
+    let old_status: InvoiceStatus = row.try_get("invoice_status")?;
+    if !old_status.can_change(&new_status) {
+        return Err(DatabaseTypeError.into());
+    };
+    let maybe_row = transaction.query_opt(
         "
         UPDATE invoice SET invoice_status = $2
         WHERE id = $1
         RETURNING invoice
         ",
-        &[&invoice_id, &status],
+        &[&invoice_id, &new_status],
     ).await?;
     let row = maybe_row.ok_or(DatabaseError::NotFound("invoice"))?;
     let invoice = row.try_get("invoice")?;
+    transaction.commit().await?;
     Ok(invoice)
 }
 
@@ -131,10 +147,9 @@ mod tests {
     };
     use super::*;
 
-    #[tokio::test]
-    #[serial]
-    async fn test_create_invoice() {
-        let db_client = &mut create_test_database().await;
+    async fn create_sender_and_recipient(
+        db_client: &mut impl DatabaseClient,
+    ) -> (Uuid, Uuid) {
         let sender_data = ProfileCreateData {
             username: "sender".to_string(),
             ..Default::default()
@@ -146,22 +161,66 @@ mod tests {
             ..Default::default()
         };
         let recipient = create_user(db_client, recipient_data).await.unwrap();
+        (sender.id, recipient.id)
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_create_invoice() {
+        let db_client = &mut create_test_database().await;
+        let (sender_id, recipient_id) =
+            create_sender_and_recipient(db_client).await;
         let chain_id = ChainId::monero_mainnet();
         let payment_address = "8MxABajuo71BZya9";
         let amount = 100000000000109212;
         let invoice = create_invoice(
             db_client,
-            &sender.id,
-            &recipient.id,
+            &sender_id,
+            &recipient_id,
             &chain_id,
             payment_address,
             amount,
         ).await.unwrap();
-        assert_eq!(invoice.sender_id, sender.id);
-        assert_eq!(invoice.recipient_id, recipient.id);
+        assert_eq!(invoice.sender_id, sender_id);
+        assert_eq!(invoice.recipient_id, recipient_id);
         assert_eq!(invoice.chain_id.into_inner(), chain_id);
         assert_eq!(invoice.payment_address, payment_address);
         assert_eq!(invoice.amount, amount);
         assert_eq!(invoice.invoice_status, InvoiceStatus::Open);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_set_invoice_status() {
+        let db_client = &mut create_test_database().await;
+        let (sender_id, recipient_id) =
+            create_sender_and_recipient(db_client).await;
+        let invoice = create_invoice(
+            db_client,
+            &sender_id,
+            &recipient_id,
+            &ChainId::monero_mainnet(),
+            "8MxABajuo71BZya9",
+            100000000000000,
+        ).await.unwrap();
+
+        let invoice = set_invoice_status(
+            db_client,
+            &invoice.id,
+            InvoiceStatus::Paid,
+        ).await.unwrap();
+        assert_eq!(invoice.invoice_status, InvoiceStatus::Paid);
+
+        set_invoice_status(
+            db_client,
+            &invoice.id,
+            InvoiceStatus::Forwarded,
+        ).await.unwrap();
+        let error = set_invoice_status(
+            db_client,
+            &invoice.id,
+            InvoiceStatus::Cancelled,
+        ).await.err().unwrap();
+        assert!(matches!(error, DatabaseError::DatabaseTypeError(_)));
     }
 }

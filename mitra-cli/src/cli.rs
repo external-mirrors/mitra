@@ -707,7 +707,7 @@ impl ReopenInvoice {
     pub async fn execute(
         &self,
         config: &Config,
-        db_client: &impl DatabaseClient,
+        db_client: &mut impl DatabaseClient,
     ) -> Result<(), Error> {
         let monero_config = config.monero_config()
             .ok_or(anyhow!("monero configuration not found"))?;
