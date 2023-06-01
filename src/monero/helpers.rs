@@ -3,17 +3,25 @@ use std::str::FromStr;
 
 use monero_rpc::TransferType;
 use monero_rpc::monero::{Address, Amount};
+use uuid::Uuid;
 
 use mitra_config::MoneroConfig;
 use mitra_models::{
-    database::DatabaseClient,
+    database::{DatabaseClient, DatabaseError},
     invoices::helpers::invoice_reopened,
+    invoices::queries::{
+        create_invoice,
+        get_invoice_by_participants,
+    },
     invoices::types::DbInvoice,
+    profiles::types::PaymentType,
+    users::queries::get_user_by_id,
 };
 
 use crate::errors::ValidationError;
 
 use super::wallet::{
+    create_monero_address,
     open_monero_wallet,
     MoneroError,
 };
@@ -90,4 +98,37 @@ pub async fn get_active_addresses(
         };
     };
     Ok(addresses)
+}
+
+pub async fn get_payment_address(
+    config: &MoneroConfig,
+    db_client: &mut impl DatabaseClient,
+    sender_id: &Uuid,
+    recipient_id: &Uuid,
+) -> Result<String, MoneroError> {
+    let recipient = get_user_by_id(db_client, recipient_id).await?;
+    if !recipient.profile.payment_options.any(PaymentType::MoneroSubscription) {
+        return Err(MoneroError::OtherError("recipient can't accept payments"));
+    };
+    let invoice = match get_invoice_by_participants(
+        db_client,
+        sender_id,
+        recipient_id,
+        &config.chain_id,
+    ).await {
+        Ok(invoice) => invoice, // invoice will be re-opened automatically on incoming payment
+        Err(DatabaseError::NotFound(_)) => {
+            let payment_address = create_monero_address(config).await?;
+            create_invoice(
+                db_client,
+                sender_id,
+                recipient_id,
+                &config.chain_id,
+                &payment_address.to_string(),
+                0, // any amount
+            ).await?
+        },
+        Err(other_error) => return Err(other_error.into()),
+    };
+    Ok(invoice.payment_address)
 }

@@ -82,6 +82,35 @@ pub async fn get_invoice_by_address(
     Ok(invoice)
 }
 
+pub async fn get_invoice_by_participants(
+    db_client: &impl DatabaseClient,
+    sender_id: &Uuid,
+    recipient_id: &Uuid,
+    chain_id: &ChainId,
+) -> Result<DbInvoice, DatabaseError> {
+    // Always return oldest invoice
+    let maybe_row = db_client.query_opt(
+        "
+        SELECT invoice
+        FROM invoice
+        WHERE
+            sender_id = $1
+            AND recipient_id = $2
+            AND chain_id = $3
+        ORDER BY created_at DESC
+        LIMIT 1
+        ",
+        &[
+            &sender_id,
+            &recipient_id,
+            &DbChainId::new(chain_id),
+        ],
+    ).await?;
+    let row = maybe_row.ok_or(DatabaseError::NotFound("invoice"))?;
+    let invoice = row.try_get("invoice")?;
+    Ok(invoice)
+}
+
 pub async fn get_invoices_by_status(
     db_client: &impl DatabaseClient,
     chain_id: &ChainId,
