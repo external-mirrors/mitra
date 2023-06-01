@@ -80,6 +80,7 @@ pub enum InvoiceStatus {
     Cancelled,
     Underpaid,
     Completed,
+    Failed,
 }
 
 impl InvoiceStatus {
@@ -87,11 +88,12 @@ impl InvoiceStatus {
         let allowed = match self {
             Self::Open => vec![Self::Paid, Self::Timeout, Self::Cancelled],
             Self::Paid => vec![Self::Forwarded, Self::Underpaid],
-            Self::Forwarded => vec![Self::Completed],
+            Self::Forwarded => vec![Self::Completed, Self::Failed],
             Self::Timeout => vec![Self::Paid],
             Self::Cancelled => vec![Self::Paid],
             Self::Underpaid => vec![Self::Paid],
             Self::Completed => vec![Self::Paid],
+            Self::Failed => vec![Self::Paid],
         };
         allowed.contains(to)
     }
@@ -102,7 +104,8 @@ impl InvoiceStatus {
             Self::Timeout |
             Self::Cancelled |
             Self::Underpaid |
-            Self::Completed)
+            Self::Completed |
+            Self::Failed)
     }
 }
 
@@ -116,6 +119,7 @@ impl From<&InvoiceStatus> for i16 {
             InvoiceStatus::Cancelled => 5,
             InvoiceStatus::Underpaid => 6,
             InvoiceStatus::Completed => 7,
+            InvoiceStatus::Failed => 8,
         }
     }
 }
@@ -132,6 +136,7 @@ impl TryFrom<i16> for InvoiceStatus {
             5 => Self::Cancelled,
             6 => Self::Underpaid,
             7 => Self::Completed,
+            8 => Self::Failed,
             _ => return Err(DatabaseTypeError),
         };
         Ok(invoice_status)

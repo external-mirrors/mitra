@@ -202,15 +202,21 @@ pub async fn check_monero_subscriptions(
             log::error!("invoice {}: unexpected account index", invoice.id);
             continue;
         };
-        if transfer.transfer_type != GetTransfersCategory::Pending &&
-            transfer.transfer_type != GetTransfersCategory::Out
-        {
-            log::error!(
-                "invoice {}: unexpected payout transfer type ({:?})",
-                invoice.id,
-                transfer.transfer_type,
-            );
-            continue;
+        match transfer.transfer_type {
+            GetTransfersCategory::Pending | GetTransfersCategory::Out => (),
+            GetTransfersCategory::Failed => {
+                log::error!("invoice {}: payout transaction failed", invoice.id);
+                set_invoice_status(db_client, &invoice.id, InvoiceStatus::Failed).await?;
+                continue;
+            },
+            _ => {
+                log::error!(
+                    "invoice {}: unexpected payout transfer type ({:?})",
+                    invoice.id,
+                    transfer.transfer_type,
+                );
+                continue;
+            },
         };
         if transfer.confirmations.unwrap_or(0) < MONERO_CONFIRMATIONS_SAFE {
             // Wait for more confirmations

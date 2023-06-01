@@ -170,27 +170,6 @@ pub async fn send_monero(
     let HashString(tx_hash) = get_single_item(sweep_data.tx_hash_list)?;
     let amount = get_single_item(sweep_data.amount_list)?;
     let fee = get_single_item(sweep_data.fee_list)?;
-
-    // TODO: transaction can fail
-    // https://github.com/monero-project/monero/issues/8372
-    let maybe_transfer = wallet_client.get_transfer(
-        tx_hash,
-        Some(from_account),
-    ).await?;
-    let transfer_status = maybe_transfer
-        .map(|data| data.transfer_type.into())
-        .unwrap_or("dropped");
-    if transfer_status == "dropped" || transfer_status == "failed" {
-        log::error!(
-            "sent transaction {:x} from {}/{}, {}",
-            tx_hash,
-            from_account,
-            from_address,
-            transfer_status,
-        );
-        return Err(MoneroError::WalletRpcError("transaction failed"));
-    };
-
     log::info!(
         "sent transaction {:x} from {}/{}, amount {}, fee {}",
         tx_hash,
