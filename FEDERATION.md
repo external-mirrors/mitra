@@ -2,24 +2,16 @@
 
 Mitra largely follows the [ActivityPub](https://www.w3.org/TR/activitypub/) server-to-server specification but it makes uses of some non-standard extensions, some of which are required for interacting with it.
 
-The following activities are supported:
+The following activities and object types are supported:
 
-- Accept(Follow)
-- Reject(Follow)
-- Undo(Follow)
-- Create(Note)
-- Delete(Note)
-- Like(Note)
-- Undo(Like)
-- Announce(Note)
-- Undo(Announce)
-- Update(Note)
-- Follow(Person)
-- Update(Person)
-- Move(Person)
-- Delete(Person)
-- Add(Person)
-- Remove(Person)
+- `Follow(Actor)`, `Accept(Follow)`, `Reject(Follow)`, `Undo(Follow)`.
+- `Create(Note)`, `Update(Note)`, `Delete(Note)`.
+- `Like()`, `Undo(Like)`.
+- `Announce(Note)`, `Undo(Announce)`.
+- `Update(Actor)`, `Move(Actor)`, `Delete(Actor)`.
+- `Add(Actor)`, `Remove(Actor)`.
+
+`Article`, `Event`, `Question`, `Page` and `Video` object types are partially supported.
 
 And these additional standards:
 

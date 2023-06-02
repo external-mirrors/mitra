@@ -29,7 +29,7 @@ use crate::activitypub::{
     },
     identifiers::profile_actor_id,
     types::Object,
-    vocabulary::{NOTE, PERSON},
+    vocabulary::{ARTICLE, NOTE, PERSON},
 };
 use crate::errors::ValidationError;
 use crate::media::MediaStorage;
@@ -145,7 +145,7 @@ pub async fn handle_update(
     let object_type = activity["object"]["type"].as_str()
         .ok_or(ValidationError("unknown object type"))?;
     match object_type {
-        NOTE => {
+        ARTICLE | NOTE => {
             handle_update_note(config, db_client, activity).await
         },
         PERSON => {
