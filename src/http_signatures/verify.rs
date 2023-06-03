@@ -9,7 +9,7 @@ use mitra_utils::crypto_rsa::{
     RsaPublicKey,
 };
 
-const SIGNATURE_PARAMETER_RE: &str = r#"^(?P<key>[a-zA-Z]+)="(?P<value>.+)"$"#;
+const SIGNATURE_PARAMETER_RE: &str = r#"^(?P<key>[a-zA-Z]+)=(?P<value>.+)$"#;
 
 const SIGNATURE_EXPIRES_IN: i64 = 12; // 12 hours
 
@@ -40,6 +40,14 @@ pub struct HttpSignatureData {
     pub expires_at: DateTime<Utc>,
 }
 
+fn remove_quotes(value: &str) -> String {
+    value
+        .strip_prefix('"')
+        .and_then(|val| val.strip_suffix('"'))
+        .unwrap_or(value)
+        .to_string()
+}
+
 pub fn parse_http_signature(
     request_method: &Method,
     request_uri: &Uri,
@@ -56,7 +64,7 @@ pub fn parse_http_signature(
         let caps = signature_parameter_re.captures(item)
             .ok_or(VerificationError::HeaderError("invalid signature header"))?;
         let key = caps["key"].to_string();
-        let value = caps["value"].to_string();
+        let value = remove_quotes(&caps["value"]);
         signature_parameters.insert(key, value);
     };
 
@@ -159,6 +167,14 @@ mod tests {
     use super::*;
 
     #[test]
+    fn test_remove_quotes() {
+        assert_eq!(remove_quotes(r#""test""#), "test");
+        assert_eq!(remove_quotes(r#"test"#), "test");
+        assert_eq!(remove_quotes(r#""test"#), r#""test"#);
+        assert_eq!(remove_quotes(r#"""test"""#), r#""test""#);
+    }
+
+    #[test]
     fn test_parse_signature() {
         let request_method = Method::POST;
         let request_uri = "/user/123/inbox".parse::<Uri>().unwrap();
@@ -174,6 +190,7 @@ mod tests {
         );
         let signature_header = concat!(
             r#"keyId="https://myserver.org/actor#main-key","#,
+            r#"algorithm=hs2019,"#,
             r#"headers="(request-target) host date","#,
             r#"signature="test""#,
         );

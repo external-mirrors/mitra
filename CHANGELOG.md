@@ -30,6 +30,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Fixed panic in `import_post` when trying to import local object.
 - Ignore address with index 0 when looking for missed payments.
 - Tolerate account index mismatch when it is caused by configuration change.
+- Allow unquoted HTTP signature parameters.
 
 ## [1.25.0] - 2023-05-25
 
