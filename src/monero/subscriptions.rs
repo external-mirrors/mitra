@@ -186,9 +186,22 @@ pub async fn check_monero_subscriptions(
             set_invoice_status(db_client, &invoice.id, InvoiceStatus::Completed).await?;
             continue;
         };
-        let transfer = match wallet_client.get_transfer(payout_tx_hash, None).await {
-            Ok(maybe_transfer) => maybe_transfer
-                .ok_or(MoneroError::OtherError("payout transaction doesn't exist"))?,
+        let transfer = match wallet_client.get_transfer(
+            payout_tx_hash,
+            Some(config.account_index),
+        ).await {
+            Ok(maybe_transfer) => {
+                if let Some(transfer) = maybe_transfer {
+                    transfer
+                } else {
+                    // Re-opened after configuration change?
+                    log::error!(
+                        "invoice {}: payout transaction doesn't exist",
+                        invoice.id,
+                    );
+                    continue;
+                }
+            },
             Err(error) => {
                 if error.to_string() == "Server error: No wallet file" {
                     // monero-wallet-rpc bug; retry later
