@@ -30,12 +30,12 @@ impl ProfileImage {
     pub fn new(
         file_name: String,
         file_size: usize,
-        media_type: Option<String>,
+        media_type: String,
     ) -> Self {
         Self {
             file_name,
             file_size: Some(file_size),
-            media_type,
+            media_type: Some(media_type),
         }
     }
 }

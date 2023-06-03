@@ -24,6 +24,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Reject direct messages without mentions.
 - Improved recovery of failed payout transactions.
 - Accept Update(Article) activities.
+- Don't save remote file if media type is not supported.
 
 ### Fixed
 

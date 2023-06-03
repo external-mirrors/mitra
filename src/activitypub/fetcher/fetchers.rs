@@ -48,6 +48,9 @@ pub enum FetchError {
     #[error("file size exceeds limit")]
     FileTooLarge,
 
+    #[error("unsupported media type: {0}")]
+    UnsupportedMediaType(String),
+
     #[error("too many objects")]
     RecursionError,
 
@@ -132,7 +135,7 @@ pub async fn fetch_file(
     maybe_media_type: Option<&str>,
     file_max_size: usize,
     output_dir: &Path,
-) -> Result<(String, usize, Option<String>), FetchError> {
+) -> Result<(String, usize, String), FetchError> {
     let client = build_client(instance, url)?;
     let request_builder =
         build_request(instance, client, Method::GET, url);
@@ -149,29 +152,20 @@ pub async fn fetch_file(
     if file_size > file_max_size {
         return Err(FetchError::FileTooLarge);
     };
-    let maybe_media_type = maybe_media_type
+    let media_type = maybe_media_type
         .map(|media_type| media_type.to_string())
         // Sniff media type if not provided
         .or(sniff_media_type(&file_data))
-        // Remove media type if it is not supported to prevent XSS
-        .filter(|media_type| {
-            if SUPPORTED_MEDIA_TYPES.contains(&media_type.as_str()) {
-                true
-            } else {
-                log::info!(
-                    "unsupported media type {}: {}",
-                    media_type,
-                    url,
-                );
-                false
-            }
-        });
+        .unwrap_or("application/octet-stream".to_string());
+    if !SUPPORTED_MEDIA_TYPES.contains(&media_type.as_str()) {
+        return Err(FetchError::UnsupportedMediaType(media_type));
+    };
     let file_name = save_file(
         file_data.to_vec(),
         output_dir,
-        maybe_media_type.as_deref(),
+        Some(&media_type),
     )?;
-    Ok((file_name, file_size, maybe_media_type))
+    Ok((file_name, file_size, media_type))
 }
 
 pub async fn perform_webfinger_query(

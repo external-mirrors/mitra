@@ -17,7 +17,7 @@ pub async fn create_attachment(
     owner_id: &Uuid,
     file_name: String,
     file_size: usize,
-    media_type: Option<String>,
+    media_type: String,
 ) -> Result<DbMediaAttachment, DatabaseError> {
     let attachment_id = generate_ulid();
     let file_size: i32 = file_size.try_into()
@@ -121,7 +121,7 @@ mod tests {
             &profile.id,
             file_name.to_string(),
             file_size,
-            Some(media_type.to_string()),
+            media_type.to_string(),
         ).await.unwrap();
         assert_eq!(attachment.owner_id, profile.id);
         assert_eq!(attachment.file_name, file_name);

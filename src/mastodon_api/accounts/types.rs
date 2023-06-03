@@ -328,7 +328,7 @@ fn process_b64_image_field_value(
                 let image = ProfileImage::new(
                     file_name,
                     file_size,
-                    Some(media_type),
+                    media_type,
                 );
                 Some(image)
             }
@@ -594,7 +594,11 @@ mod tests {
     #[test]
     fn test_create_account_from_profile() {
         let profile = DbActorProfile {
-            avatar: Some(ProfileImage::new("test".to_string(), 1000, None)),
+            avatar: Some(ProfileImage::new(
+                "test".to_string(),
+                1000,
+                "image/png".to_string(),
+            )),
             ..Default::default()
         };
         let account = Account::from_profile(

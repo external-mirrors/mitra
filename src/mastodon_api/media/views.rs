@@ -36,7 +36,7 @@ async fn create_attachment_view(
         &current_user.id,
         file_name,
         file_size,
-        Some(media_type),
+        media_type,
     ).await?;
     let attachment = Attachment::from_db(
         &config.instance_url(),

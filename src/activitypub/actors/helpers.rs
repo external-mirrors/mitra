@@ -46,11 +46,11 @@ async fn fetch_actor_images(
             ACTOR_IMAGE_MAX_SIZE,
             media_dir,
         ).await {
-            Ok((file_name, file_size, maybe_media_type)) => {
+            Ok((file_name, file_size, media_type)) => {
                 let image = ProfileImage::new(
                     file_name,
                     file_size,
-                    maybe_media_type,
+                    media_type,
                 );
                 Some(image)
             },
@@ -70,11 +70,11 @@ async fn fetch_actor_images(
             ACTOR_IMAGE_MAX_SIZE,
             media_dir,
         ).await {
-            Ok((file_name, file_size, maybe_media_type)) => {
+            Ok((file_name, file_size, media_type)) => {
                 let image = ProfileImage::new(
                     file_name,
                     file_size,
-                    maybe_media_type,
+                    media_type,
                 );
                 Some(image)
             },
