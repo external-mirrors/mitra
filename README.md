@@ -1,4 +1,8 @@
-# Mitra
+<div align="center">
+  <img src="./logo/logo-black-text.svg" width="150">
+</div>
+
+## About
 
 Federated micro-blogging platform.
 
