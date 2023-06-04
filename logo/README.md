@@ -1,8 +1,20 @@
-# Mitra logo
+<div align="center">
+  <img src="./logo-black-text.svg" alt="Mitra logo" width="150">
+</div>
+
+## Icons
+
+<a href="./logo.svg">
+  <img src="./logo.svg" width="50">
+</a>
+
+<a href="./logo-line.svg">
+  <img src="./logo-line.svg" width="50">
+</a>
 
 ## Font
 
-Jost*
+Name: Jost*
 
 Website: https://indestructibletype.com/Jost
 
