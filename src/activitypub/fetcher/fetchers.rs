@@ -147,6 +147,10 @@ pub async fn fetch_file(
             return Err(FetchError::FileTooLarge);
         };
     };
+    let maybe_content_type_header = response.headers()
+        .get("content-type")
+        .and_then(|value| value.to_str().ok())
+        .map(|value| value.to_string());
     let file_data = response.bytes().await?;
     let file_size = file_data.len();
     if file_size > file_max_size {
@@ -154,6 +158,7 @@ pub async fn fetch_file(
     };
     let media_type = maybe_media_type
         .map(|media_type| media_type.to_string())
+        .or(maybe_content_type_header)
         // Sniff media type if not provided
         .or(sniff_media_type(&file_data))
         .unwrap_or("application/octet-stream".to_string());

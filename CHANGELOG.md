@@ -26,6 +26,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Improved recovery of failed payout transactions.
 - Accept Update(Article) activities.
 - Don't save remote file if media type is not supported.
+- Use `Content-Type` header to assign media type to file.
 
 ### Fixed
 
