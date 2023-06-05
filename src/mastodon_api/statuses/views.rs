@@ -54,7 +54,7 @@ use crate::mastodon_api::{
     errors::MastodonError,
     oauth::auth::get_current_user,
 };
-use crate::media::remove_media;
+use crate::media::{read_file, remove_media};
 use crate::validators::posts::{
     clean_content,
     ATTACHMENT_LIMIT,
@@ -577,8 +577,7 @@ async fn make_permanent(
     let mut attachments = vec![];
     for attachment in post.attachments.iter_mut() {
         // Add attachment to IPFS
-        let image_path = config.media_dir().join(&attachment.file_name);
-        let image_data = std::fs::read(image_path)
+        let image_data = read_file(&config.media_dir(), &attachment.file_name)
             .map_err(|_| MastodonError::InternalError)?;
         let image_cid = ipfs_store::add(ipfs_api_url, image_data).await
             .map_err(|_| MastodonError::InternalError)?;

@@ -1,3 +1,4 @@
+use std::path::PathBuf;
 use std::str::FromStr;
 
 use anyhow::{anyhow, Error};
@@ -20,6 +21,7 @@ use mitra::ethereum::{
 use mitra::media::{
     remove_files,
     remove_media,
+    save_file,
     MediaStorage,
 };
 use mitra::monero::{
@@ -35,7 +37,11 @@ use mitra::monero::{
     },
 };
 use mitra::validators::{
-    emojis::EMOJI_LOCAL_MAX_SIZE,
+    emojis::{
+        validate_emoji_name,
+        EMOJI_LOCAL_MAX_SIZE,
+        EMOJI_MEDIA_TYPES,
+    },
     users::validate_local_username,
 };
 use mitra_config::Config;
@@ -50,6 +56,7 @@ use mitra_models::{
         find_unused_remote_emojis,
         get_emoji_by_name_and_hostname,
     },
+    emojis::types::EmojiImage,
     invoices::queries::{get_invoice_by_address, get_invoice_by_id},
     oauth::queries::delete_oauth_tokens,
     posts::queries::{delete_post, find_extraneous_posts, get_post_by_id},
@@ -77,6 +84,7 @@ use mitra_utils::{
         serialize_private_key,
     },
     datetime::days_before_now,
+    files::sniff_media_type,
     passwords::hash_password,
 };
 
@@ -108,6 +116,7 @@ pub enum SubCommand {
     DeleteEmptyProfiles(DeleteEmptyProfiles),
     PruneRemoteEmojis(PruneRemoteEmojis),
     ListUnreachableActors(ListUnreachableActors),
+    AddEmoji(AddEmoji),
     ImportEmoji(ImportEmoji),
     UpdateCurrentBlock(UpdateCurrentBlock),
     ResetSubscriptions(ResetSubscriptions),
@@ -555,6 +564,51 @@ impl ListUnreachableActors {
                 profile.updated_at.to_string(),
             );
         };
+        Ok(())
+    }
+}
+
+/// Add custom emoji to local collection
+#[derive(Parser)]
+pub struct AddEmoji {
+    name: String,
+    path: PathBuf,
+}
+
+impl AddEmoji {
+    pub async fn execute(
+        &self,
+        config: &Config,
+        db_client: &impl DatabaseClient,
+    ) -> Result<(), Error> {
+        if validate_emoji_name(&self.name).is_err() {
+            println!("invalid emoji name");
+            return Ok(());
+        };
+        let file = std::fs::read(&self.path)?;
+        let media_type = sniff_media_type(&file)
+            .ok_or(anyhow!("unknown media type"))?;
+        if !EMOJI_MEDIA_TYPES.contains(&media_type.as_str()) {
+            println!("media type {} is not supported", media_type);
+            return Ok(());
+        };
+        let file_size = file.len();
+        if file_size > EMOJI_LOCAL_MAX_SIZE {
+            println!("emoji is too big");
+            return Ok(());
+        };
+        let file_name = save_file(
+            file,
+            &config.media_dir(),
+            Some(&media_type),
+        )?;
+        let image = EmojiImage { file_name, file_size, media_type };
+        create_or_update_local_emoji(
+            db_client,
+            &self.name,
+            image,
+        ).await?;
+        println!("added emoji to local collection");
         Ok(())
     }
 }

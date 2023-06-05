@@ -55,6 +55,15 @@ pub fn get_file_url(instance_url: &str, file_name: &str) -> String {
     format!("{}/media/{}", instance_url, file_name)
 }
 
+pub fn read_file(
+    media_dir: &Path,
+    file_name: &str,
+) -> Result<Vec<u8>, Error> {
+    let file_path = media_dir.join(file_name);
+    let data = std::fs::read(file_path)?;
+    Ok(data)
+}
+
 pub fn remove_files(files: Vec<String>, from_dir: &Path) -> () {
     for file_name in files {
         let file_path = from_dir.join(file_name);

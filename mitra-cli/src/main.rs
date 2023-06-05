@@ -49,6 +49,7 @@ async fn main() {
                 SubCommand::DeleteEmptyProfiles(cmd) => cmd.execute(&config, db_client).await.unwrap(),
                 SubCommand::PruneRemoteEmojis(cmd) => cmd.execute(&config, db_client).await.unwrap(),
                 SubCommand::ListUnreachableActors(cmd) => cmd.execute(&config, db_client).await.unwrap(),
+                SubCommand::AddEmoji(cmd) => cmd.execute(&config, db_client).await.unwrap(),
                 SubCommand::ImportEmoji(cmd) => cmd.execute(&config, db_client).await.unwrap(),
                 SubCommand::UpdateCurrentBlock(cmd) => cmd.execute(&config, db_client).await.unwrap(),
                 SubCommand::ResetSubscriptions(cmd) => cmd.execute(&config, db_client).await.unwrap(),
