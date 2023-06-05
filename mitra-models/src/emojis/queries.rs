@@ -78,6 +78,34 @@ pub async fn update_emoji(
     Ok(emoji)
 }
 
+pub async fn create_or_update_local_emoji(
+    db_client: &impl DatabaseClient,
+    emoji_name: &str,
+    image: EmojiImage,
+) -> Result<DbEmoji, DatabaseError> {
+    let emoji_id = generate_ulid();
+    // Partial index on emoji_name is used
+    // UNIQUE NULLS NOT DISTINCT requires Postgresql 15+
+    let row = db_client.query_one(
+        "
+        INSERT INTO emoji (
+            id,
+            emoji_name,
+            image,
+            updated_at
+        )
+        VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
+        ON CONFLICT (emoji_name) WHERE hostname IS NULL
+        DO UPDATE SET image = $3, updated_at = CURRENT_TIMESTAMP
+        RETURNING emoji
+        ",
+        &[&emoji_id, &emoji_name, &image],
+    ).await?;
+    let emoji: DbEmoji = row.try_get("emoji")?;
+    update_emoji_caches(db_client, &emoji.id).await?;
+    Ok(emoji)
+}
+
 pub async fn get_local_emoji_by_name(
     db_client: &impl DatabaseClient,
     emoji_name: &str,
@@ -270,6 +298,26 @@ mod tests {
             image,
             &Utc::now(),
         ).await.unwrap();
+        assert_ne!(updated_emoji.updated_at, emoji.updated_at);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_create_or_update_local_emoji() {
+        let db_client = &create_test_database().await;
+        let image = EmojiImage::default();
+        let emoji = create_or_update_local_emoji(
+            db_client,
+            "local",
+            image.clone(),
+        ).await.unwrap();
+        let updated_emoji = create_or_update_local_emoji(
+            db_client,
+            "local",
+            image,
+        ).await.unwrap();
+        assert_eq!(updated_emoji.id, emoji.id);
+        assert_eq!(updated_emoji.hostname.is_none(), true);
         assert_ne!(updated_emoji.updated_at, emoji.updated_at);
     }
 

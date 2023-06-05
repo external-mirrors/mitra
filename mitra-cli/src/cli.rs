@@ -45,7 +45,7 @@ use mitra_models::{
     database::DatabaseClient,
     emojis::helpers::get_emoji_by_name,
     emojis::queries::{
-        create_emoji,
+        create_or_update_local_emoji,
         delete_emoji,
         find_unused_remote_emojis,
         get_emoji_by_name_and_hostname,
@@ -76,7 +76,7 @@ use mitra_utils::{
         generate_rsa_key,
         serialize_private_key,
     },
-    datetime::{days_before_now, get_min_datetime},
+    datetime::days_before_now,
     passwords::hash_password,
 };
 
@@ -581,13 +581,10 @@ impl ImportEmoji {
             println!("emoji is too big");
             return Ok(());
         };
-        create_emoji(
+        create_or_update_local_emoji(
             db_client,
             &emoji.emoji_name,
-            None,
             emoji.image,
-            None,
-            &get_min_datetime(),
         ).await?;
         println!("added emoji to local collection");
         Ok(())

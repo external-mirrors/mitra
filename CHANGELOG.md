@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- Allow to replace imported custom emojis.
+
 ### Fixed
 
 - Allow "url" property to contain list of strings.

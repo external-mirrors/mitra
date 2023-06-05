@@ -194,6 +194,8 @@ CREATE TABLE emoji (
     CHECK ((hostname IS NULL) = (object_id IS NULL))
 );
 
+CREATE UNIQUE INDEX emoji_name_hostname_null_idx ON emoji (emoji_name) WHERE hostname IS NULL;
+
 CREATE TABLE post_emoji (
     post_id UUID NOT NULL REFERENCES post (id) ON DELETE CASCADE,
     emoji_id UUID NOT NULL REFERENCES emoji (id) ON DELETE CASCADE,
