@@ -36,7 +36,10 @@ use crate::activitypub::{
         SCHEMA_ORG_CONTEXT,
         W3ID_SECURITY_CONTEXT,
     },
-    deserialization::parse_into_array,
+    deserialization::{
+        parse_into_array,
+        parse_into_href_array,
+    },
     identifiers::{
         local_actor_id,
         local_actor_key_id,
@@ -132,6 +135,23 @@ fn deserialize_image_opt<'de, D>(
     Ok(maybe_image)
 }
 
+fn deserialize_url_opt<'de, D>(
+    deserializer: D,
+) -> Result<Option<String>, D::Error>
+    where D: Deserializer<'de>
+{
+    let maybe_value: Option<Value> = Option::deserialize(deserializer)?;
+    let maybe_url = if let Some(value) = maybe_value {
+        let urls = parse_into_href_array(&value)
+            .map_err(DeserializerError::custom)?;
+        // Take first url
+        urls.into_iter().next()
+    } else {
+        None
+    };
+    Ok(maybe_url)
+}
+
 #[derive(Deserialize, Serialize)]
 #[cfg_attr(test, derive(Default))]
 #[serde(rename_all = "camelCase")]
@@ -198,7 +218,11 @@ pub struct Actor {
     )]
     pub tag: Vec<Value>,
 
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        deserialize_with = "deserialize_url_opt",
+        skip_serializing_if = "Option::is_none",
+    )]
     pub url: Option<String>,
 }
 
