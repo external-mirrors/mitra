@@ -30,7 +30,11 @@ use mitra_utils::{
 
 use crate::activitypub::{
     constants::{AP_MEDIA_TYPE, AP_PUBLIC, AS_MEDIA_TYPE},
-    deserialization::{parse_into_array, parse_into_id_array},
+    deserialization::{
+        parse_into_array,
+        parse_into_href_array,
+        parse_into_id_array,
+    },
     fetcher::fetchers::fetch_file,
     fetcher::helpers::{
         get_or_import_profile_by_actor_address,
@@ -40,7 +44,7 @@ use crate::activitypub::{
     },
     identifiers::{parse_local_actor_id, profile_actor_id},
     receiver::HandlerError,
-    types::{Attachment, EmojiTag, Link, LinkTag, Object, Tag},
+    types::{Attachment, EmojiTag, LinkTag, Object, Tag},
     vocabulary::*,
 };
 use crate::errors::ValidationError;
@@ -79,11 +83,10 @@ fn get_object_attributed_to(object: &Object)
 
 pub fn get_object_url(object: &Object) -> Result<String, ValidationError> {
     let maybe_object_url = match &object.url {
-        Some(JsonValue::String(string)) => Some(string.to_owned()),
-        Some(other_value) => {
-            let links: Vec<Link> = parse_into_array(other_value)
+        Some(value) => {
+            let links = parse_into_href_array(value)
                 .map_err(|_| ValidationError("invalid object URL"))?;
-            links.get(0).map(|link| link.href.clone())
+            links.into_iter().next()
         },
         None => None,
     };

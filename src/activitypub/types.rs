@@ -32,12 +32,6 @@ pub struct Attachment {
     pub url: Option<String>,
 }
 
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct Link {
-    pub href: String,
-}
-
 fn default_tag_type() -> String { HASHTAG.to_string() }
 
 #[derive(Deserialize, Serialize)]

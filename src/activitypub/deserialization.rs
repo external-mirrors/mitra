@@ -86,6 +86,43 @@ pub fn parse_into_id_array(
     Ok(result)
 }
 
+/// Parses link object and returns its "href"
+fn get_link_href(link: &Value) -> Result<String, ValidationError> {
+    let href = match link {
+        Value::String(string) => string.to_owned(),
+        Value::Object(_) => {
+            link["href"].as_str()
+                .ok_or(ValidationError("missing href property"))?
+                .to_string()
+        },
+        _ => return Err(ValidationError("unexpected value type")),
+    };
+    Ok(href)
+}
+
+/// Transforms arbitrary property value into array of links
+pub fn parse_into_href_array(
+    value: &Value,
+) -> Result<Vec<String>, ValidationError> {
+    let result = match value {
+        Value::String(_) | Value::Object(_) => {
+            let object_id = get_link_href(value)?;
+            vec![object_id]
+        },
+        Value::Array(array) => {
+            let mut results = vec![];
+            for value in array {
+                let object_id = get_link_href(value)?;
+                results.push(object_id);
+            };
+            results
+        },
+        // Unexpected value type
+        _ => return Err(ValidationError("unexpected value type")),
+    };
+    Ok(result)
+}
+
 /// Transforms arbitrary property value into array of structs
 pub fn parse_into_array<T: DeserializeOwned>(
     value: &Value,
@@ -159,6 +196,30 @@ mod tests {
         assert_eq!(
             parse_into_id_array(&value).unwrap(),
             vec!["test1".to_string(), "test2".to_string()],
+        );
+    }
+
+    #[test]
+    fn test_get_link_href() {
+        let link = json!({"name": "test", "href": "https://test.example"});
+        assert_eq!(
+            get_link_href(&link).unwrap(),
+            "https://test.example",
+        );
+    }
+
+    #[test]
+    fn test_parse_into_href_array() {
+        let value = json!([
+            "https://test1.example",
+            "https://test2.example",
+        ]);
+        assert_eq!(
+            parse_into_href_array(&value).unwrap(),
+            vec![
+                "https://test1.example".to_string(),
+                "https://test2.example".to_string(),
+            ],
         );
     }
 
