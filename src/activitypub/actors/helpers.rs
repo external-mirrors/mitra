@@ -7,6 +7,7 @@ use mitra_models::{
     database::DatabaseClient,
     profiles::queries::{create_profile, update_profile},
     profiles::types::{
+        DbActorKey,
         DbActorProfile,
         ProfileImage,
         ProfileCreateData,
@@ -23,6 +24,7 @@ use crate::activitypub::{
     receiver::HandlerError,
     vocabulary::{EMOJI, HASHTAG},
 };
+use crate::errors::ValidationError;
 use crate::media::MediaStorage;
 use crate::validators::{
     posts::EMOJI_LIMIT,
@@ -87,6 +89,28 @@ async fn fetch_actor_images(
         None
     };
     (maybe_avatar, maybe_banner)
+}
+
+fn parse_public_keys(
+    actor: &Actor,
+) -> Result<Vec<DbActorKey>, ValidationError> {
+    let mut keys = vec![];
+    if actor.public_key.owner == actor.id {
+        let db_key = actor.public_key.to_db_key()?;
+        keys.push(db_key);
+    };
+    for authentication_key in actor.authentication.iter() {
+        if authentication_key.controller == actor.id {
+            let db_key = authentication_key.to_db_key()?;
+            keys.push(db_key);
+        };
+    };
+    keys.sort_by_key(|item| item.id.clone());
+    keys.dedup_by_key(|item| item.id.clone());
+    if keys.is_empty() {
+        return Err(ValidationError("public keys not found"));
+    };
+    Ok(keys)
 }
 
 fn parse_aliases(actor: &Actor) -> Vec<String> {
@@ -165,6 +189,7 @@ pub async fn create_remote_profile(
         None,
         None,
     ).await;
+    let public_keys = parse_public_keys(&actor)?;
     let (identity_proofs, payment_options, extra_fields) =
         actor.parse_attachments();
     let aliases = parse_aliases(&actor);
@@ -182,6 +207,7 @@ pub async fn create_remote_profile(
         avatar: maybe_avatar,
         banner: maybe_banner,
         manually_approves_followers: actor.manually_approves_followers,
+        public_keys,
         identity_proofs,
         payment_options,
         extra_fields,
@@ -224,6 +250,7 @@ pub async fn update_remote_profile(
         profile.avatar,
         profile.banner,
     ).await;
+    let public_keys = parse_public_keys(&actor)?;
     let (identity_proofs, payment_options, extra_fields) =
         actor.parse_attachments();
     let aliases = parse_aliases(&actor);
@@ -240,6 +267,7 @@ pub async fn update_remote_profile(
         avatar: maybe_avatar,
         banner: maybe_banner,
         manually_approves_followers: actor.manually_approves_followers,
+        public_keys,
         identity_proofs,
         payment_options,
         extra_fields,
@@ -250,4 +278,35 @@ pub async fn update_remote_profile(
     clean_profile_update_data(&mut profile_data)?;
     let profile = update_profile(db_client, &profile.id, profile_data).await?;
     Ok(profile)
+}
+
+#[cfg(test)]
+mod tests {
+    use mitra_utils::crypto_rsa::{
+        generate_weak_rsa_key,
+        rsa_public_key_to_pkcs1_der,
+    };
+    use crate::activitypub::actors::keys::{Multikey, PublicKey};
+    use super::*;
+
+    #[test]
+    fn test_parse_public_keys() {
+        let actor_id = "https://test.example/users/1";
+        let private_key = generate_weak_rsa_key().unwrap();
+        let actor_public_key =
+            PublicKey::build(actor_id, &private_key).unwrap();
+        let actor_auth_key =
+            Multikey::build(actor_id, &private_key).unwrap();
+        let public_key_der =
+            rsa_public_key_to_pkcs1_der(&private_key.into()).unwrap();
+        let actor = Actor {
+            id: actor_id.to_string(),
+            public_key: actor_public_key,
+            authentication: vec![actor_auth_key],
+            ..Default::default()
+        };
+        let public_keys = parse_public_keys(&actor).unwrap();
+        assert_eq!(public_keys.len(), 1);
+        assert_eq!(public_keys[0].key_data, public_key_der);
+    }
 }

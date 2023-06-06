@@ -384,6 +384,7 @@ impl AccountUpdateData {
             avatar,
             banner,
             manually_approves_followers: false,
+            public_keys: vec![], // empty for local profiles
             identity_proofs,
             payment_options,
             extra_fields,

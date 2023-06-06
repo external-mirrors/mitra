@@ -125,6 +125,7 @@ pub async fn create_user(
         avatar: None,
         banner: None,
         manually_approves_followers: false,
+        public_keys: vec![],
         identity_proofs: vec![],
         payment_options: vec![],
         extra_fields: vec![],

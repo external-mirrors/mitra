@@ -43,6 +43,74 @@ impl ProfileImage {
 json_from_sql!(ProfileImage);
 json_to_sql!(ProfileImage);
 
+#[derive(Clone, Debug, PartialEq)]
+pub enum PublicKeyType {
+    RsaPkcs1,
+}
+
+impl From<&PublicKeyType> for i16 {
+    fn from(key_type: &PublicKeyType) -> i16 {
+        match key_type {
+            PublicKeyType::RsaPkcs1 => 1,
+        }
+    }
+}
+
+impl TryFrom<i16> for PublicKeyType {
+    type Error = DatabaseTypeError;
+
+    fn try_from(value: i16) -> Result<Self, Self::Error> {
+        let key_type = match value {
+            1 => Self::RsaPkcs1,
+            _ => return Err(DatabaseTypeError),
+        };
+        Ok(key_type)
+    }
+}
+
+impl<'de> Deserialize<'de> for PublicKeyType {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where D: Deserializer<'de>
+    {
+        i16::deserialize(deserializer)?
+            .try_into().map_err(DeserializerError::custom)
+    }
+}
+
+impl Serialize for PublicKeyType {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where S: Serializer
+    {
+        serializer.serialize_i16(self.into())
+    }
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct DbActorKey {
+    pub id: String,
+    pub key_type: PublicKeyType,
+    #[serde(with = "hex::serde")]
+    pub key_data: Vec<u8>,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct PublicKeys(pub Vec<DbActorKey>);
+
+impl PublicKeys {
+    pub fn inner(&self) -> &[DbActorKey] {
+        let Self(public_keys) = self;
+        public_keys
+    }
+
+    pub fn into_inner(self) -> Vec<DbActorKey> {
+        let Self(public_keys) = self;
+        public_keys
+    }
+}
+
+json_from_sql!(PublicKeys);
+json_to_sql!(PublicKeys);
+
 #[derive(Clone, Debug)]
 pub enum IdentityProofType {
     LegacyEip191IdentityProof,
@@ -374,6 +442,7 @@ pub struct DbActorProfile {
     pub avatar: Option<ProfileImage>,
     pub banner: Option<ProfileImage>,
     pub manually_approves_followers: bool,
+    pub public_keys: PublicKeys,
     pub identity_proofs: IdentityProofs,
     pub payment_options: PaymentOptions,
     pub extra_fields: ExtraFields,
@@ -455,6 +524,7 @@ impl Default for DbActorProfile {
             avatar: None,
             banner: None,
             manually_approves_followers: false,
+            public_keys: PublicKeys(vec![]),
             identity_proofs: IdentityProofs(vec![]),
             payment_options: PaymentOptions(vec![]),
             extra_fields: ExtraFields(vec![]),
@@ -482,6 +552,7 @@ pub struct ProfileCreateData {
     pub avatar: Option<ProfileImage>,
     pub banner: Option<ProfileImage>,
     pub manually_approves_followers: bool,
+    pub public_keys: Vec<DbActorKey>,
     pub identity_proofs: Vec<IdentityProof>,
     pub payment_options: Vec<PaymentOption>,
     pub extra_fields: Vec<ExtraField>,
@@ -497,6 +568,7 @@ pub struct ProfileUpdateData {
     pub avatar: Option<ProfileImage>,
     pub banner: Option<ProfileImage>,
     pub manually_approves_followers: bool,
+    pub public_keys: Vec<DbActorKey>,
     pub identity_proofs: Vec<IdentityProof>,
     pub payment_options: Vec<PaymentOption>,
     pub extra_fields: Vec<ExtraField>,
@@ -533,6 +605,7 @@ impl From<&DbActorProfile> for ProfileUpdateData {
             avatar: profile.avatar,
             banner: profile.banner,
             manually_approves_followers: profile.manually_approves_followers,
+            public_keys: profile.public_keys.into_inner(),
             identity_proofs: profile.identity_proofs.into_inner(),
             payment_options: profile.payment_options.into_inner(),
             extra_fields: profile.extra_fields.into_inner(),
@@ -548,6 +621,17 @@ impl From<&DbActorProfile> for ProfileUpdateData {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_actor_key_serialization() {
+        let json_data = r#"{"id":"https://test.example/keys/1","key_type":1,"key_data":"010203"}"#;
+        let actor_key: DbActorKey = serde_json::from_str(json_data).unwrap();
+        assert_eq!(actor_key.id, "https://test.example/keys/1");
+        assert_eq!(actor_key.key_type, PublicKeyType::RsaPkcs1);
+        assert_eq!(actor_key.key_data, vec![1, 2, 3]);
+        let serialized = serde_json::to_string(&actor_key).unwrap();
+        assert_eq!(serialized, json_data);
+    }
 
     #[test]
     fn test_identity_proof_serialization() {

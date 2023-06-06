@@ -5,10 +5,18 @@ use mitra_config::Config;
 use mitra_models::{
     database::{DatabaseClient, DatabaseError},
     profiles::queries::get_profile_by_remote_actor_id,
-    profiles::types::DbActorProfile,
+    profiles::types::{
+        DbActorProfile,
+        PublicKeyType,
+    },
 };
 use mitra_utils::{
-    crypto_rsa::{deserialize_rsa_public_key, RsaSerializationError},
+    crypto_rsa::{
+        deserialize_rsa_public_key,
+        rsa_public_key_from_pkcs1_der,
+        RsaPublicKey,
+        RsaSerializationError,
+    },
     did::Did,
 };
 
@@ -105,6 +113,28 @@ async fn get_signer(
     Ok(signer)
 }
 
+fn get_signer_rsa_key(
+    profile: &DbActorProfile,
+    key_id: &str,
+) -> Result<RsaPublicKey, AuthenticationError> {
+    let maybe_actor_key = profile.public_keys
+        .inner().iter()
+        .find(|key| key.id == key_id);
+    let rsa_public_key = if let Some(actor_key) = maybe_actor_key {
+        if actor_key.key_type != PublicKeyType::RsaPkcs1 {
+            return Err(AuthenticationError::ActorError("unexpected key type"));
+        };
+        rsa_public_key_from_pkcs1_der(&actor_key.key_data)?
+    } else {
+        let public_key_pem = &profile.actor_json.as_ref()
+            .expect("should be signed by remote actor")
+            .public_key
+            .public_key_pem;
+        deserialize_rsa_public_key(public_key_pem)?
+    };
+    Ok(rsa_public_key)
+}
+
 /// Verifies HTTP signature and returns signer
 pub async fn verify_signed_request(
     config: &Config,
@@ -126,10 +156,10 @@ pub async fn verify_signed_request(
 
     let signer_id = key_id_to_actor_id(&signature_data.key_id)?;
     let signer = get_signer(config, db_client, &signer_id, no_fetch).await?;
-    let signer_actor = signer.actor_json.as_ref()
-        .expect("request should be signed by remote actor");
-    let signer_key = deserialize_rsa_public_key(
-        &signer_actor.public_key.public_key_pem)?;
+    let signer_key = get_signer_rsa_key(
+        &signer,
+        &signature_data.key_id,
+    )?;
 
     verify_http_signature(&signature_data, &signer_key)?;
 
@@ -163,12 +193,12 @@ pub async fn verify_signed_activity(
             if signer_id != actor_id {
                 return Err(AuthenticationError::UnexpectedSigner);
             };
-            let signer_actor = actor_profile.actor_json.as_ref()
-                .expect("activity should be signed by remote actor");
             match signature_data.proof_type {
                 ProofType::JcsRsaSignature => {
-                    let signer_key = deserialize_rsa_public_key(
-                        &signer_actor.public_key.public_key_pem)?;
+                    let signer_key = get_signer_rsa_key(
+                        &actor_profile,
+                        key_id,
+                    )?;
                     verify_rsa_json_signature(
                         &signer_key,
                         &signature_data.canonical_object,

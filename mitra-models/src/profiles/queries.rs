@@ -31,6 +31,7 @@ use super::types::{
     PaymentOptions,
     ProfileCreateData,
     ProfileUpdateData,
+    PublicKeys,
 };
 
 async fn create_profile_emojis(
@@ -142,13 +143,14 @@ pub async fn create_profile(
             avatar,
             banner,
             manually_approves_followers,
+            public_keys,
             identity_proofs,
             payment_options,
             extra_fields,
             aliases,
             actor_json
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
         RETURNING actor_profile
         ",
         &[
@@ -161,6 +163,7 @@ pub async fn create_profile(
             &profile_data.avatar,
             &profile_data.banner,
             &profile_data.manually_approves_followers,
+            &PublicKeys(profile_data.public_keys),
             &IdentityProofs(profile_data.identity_proofs),
             &PaymentOptions(profile_data.payment_options),
             &ExtraFields(profile_data.extra_fields),
@@ -197,13 +200,14 @@ pub async fn update_profile(
             avatar = $4,
             banner = $5,
             manually_approves_followers = $6,
-            identity_proofs = $7,
-            payment_options = $8,
-            extra_fields = $9,
-            aliases = $10,
-            actor_json = $11,
+            public_keys = $7,
+            identity_proofs = $8,
+            payment_options = $9,
+            extra_fields = $10,
+            aliases = $11,
+            actor_json = $12,
             updated_at = CURRENT_TIMESTAMP
-        WHERE id = $12
+        WHERE id = $13
         RETURNING actor_profile
         ",
         &[
@@ -213,6 +217,7 @@ pub async fn update_profile(
             &profile_data.avatar,
             &profile_data.banner,
             &profile_data.manually_approves_followers,
+            &PublicKeys(profile_data.public_keys),
             &IdentityProofs(profile_data.identity_proofs),
             &PaymentOptions(profile_data.payment_options),
             &ExtraFields(profile_data.extra_fields),
