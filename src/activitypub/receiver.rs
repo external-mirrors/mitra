@@ -80,9 +80,8 @@ pub async fn handle_activity(
     let activity_type = activity["type"].as_str()
         .ok_or(ValidationError("type property is missing"))?
         .to_owned();
-    let activity_actor = activity["actor"].as_str()
-        .ok_or(ValidationError("actor property is missing"))?
-        .to_owned();
+    let activity_actor = find_object_id(&activity["actor"])
+        .map_err(|_| ValidationError("invalid actor property"))?;
     let activity = activity.clone();
     let maybe_object_type = match activity_type.as_str() {
         ACCEPT => {
@@ -145,10 +144,10 @@ pub async fn receive_activity(
 ) -> Result<(), HandlerError> {
     let activity_type = activity["type"].as_str()
         .ok_or(ValidationError("type property is missing"))?;
-    let activity_actor = activity["actor"].as_str()
-        .ok_or(ValidationError("actor property is missing"))?;
+    let activity_actor = find_object_id(&activity["actor"])
+        .map_err(|_| ValidationError("invalid actor property"))?;
 
-    let actor_hostname = url::Url::parse(activity_actor)
+    let actor_hostname = url::Url::parse(&activity_actor)
         .map_err(|_| ValidationError("invalid actor ID"))?
         .host_str()
         .ok_or(ValidationError("invalid actor ID"))?

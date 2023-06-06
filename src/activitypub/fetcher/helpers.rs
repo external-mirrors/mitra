@@ -15,6 +15,7 @@ use mitra_models::{
 
 use crate::activitypub::{
     actors::helpers::{create_remote_profile, update_remote_profile},
+    deserialization::find_object_id,
     handlers::create::{get_object_links, handle_note},
     identifiers::parse_local_object_id,
     receiver::{handle_activity, HandlerError},
@@ -310,8 +311,8 @@ pub async fn import_from_outbox(
     let activities = fetch_outbox(&instance, &actor.outbox, limit).await?;
     log::info!("fetched {} activities", activities.len());
     for activity in activities {
-        let activity_actor = activity["actor"].as_str()
-            .ok_or(ValidationError("actor property is missing"))?;
+        let activity_actor = find_object_id(&activity["actor"])
+            .map_err(|_| ValidationError("invalid actor property"))?;
         if activity_actor != actor.id {
             log::warn!("activity doesn't belong to outbox owner");
             continue;

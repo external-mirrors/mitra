@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Changed
 
 - Allow to replace imported custom emojis.
+- Handle activities where "actor" property contains an object.
 
 ### Fixed
 

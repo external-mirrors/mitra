@@ -30,6 +30,7 @@ use crate::json_signatures::{
 };
 use crate::media::MediaStorage;
 
+use super::deserialization::find_object_id;
 use super::fetcher::helpers::get_or_import_profile_by_actor_id;
 use super::receiver::HandlerError;
 
@@ -152,9 +153,9 @@ pub async fn verify_signed_activity(
     // Signed activities must have `actor` property, to avoid situations
     // where signer is identified by DID but there is no matching
     // identity proof in the local database.
-    let actor_id = activity["actor"].as_str()
-        .ok_or(AuthenticationError::ActorError("unknown actor"))?;
-    let actor_profile = get_signer(config, db_client, actor_id, no_fetch).await?;
+    let actor_id = find_object_id(&activity["actor"])
+        .map_err(|_| AuthenticationError::ActorError("unknown actor"))?;
+    let actor_profile = get_signer(config, db_client, &actor_id, no_fetch).await?;
 
     match signature_data.signer {
         JsonSigner::ActorKeyId(ref key_id) => {
