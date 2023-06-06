@@ -12,6 +12,12 @@
   <img src="./logo-line.svg" width="50">
 </a>
 
+## Custom emoji
+
+<a href="./logo-line-emoji.png">
+  <img src="./logo-line-emoji.png" width="24">
+</a>
+
 ## Font
 
 Name: Jost*
