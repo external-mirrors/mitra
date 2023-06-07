@@ -61,6 +61,9 @@ impl fmt::Display for DidKey {
 
 #[cfg(test)]
 mod tests {
+    use rsa::PublicKeyParts;
+    use crate::crypto_rsa::rsa_public_key_from_pkcs1_der;
+    use crate::multicodec::decode_rsa_public_key;
     use super::*;
 
     #[test]
@@ -71,5 +74,15 @@ mod tests {
         let decoded_key = did_key.try_ed25519_key().unwrap();
         let did_key = DidKey::from_ed25519_key(decoded_key);
         assert_eq!(did_key.to_string(), did_str);
+    }
+
+    #[test]
+    fn test_parse_did_key_rsa() {
+        // did:key test vector, RSA 2048-bit
+        let did_str = "did:key:z4MXj1wBzi9jUstyPMS4jQqB6KdJaiatPkAtVtGc6bQEQEEsKTic4G7Rou3iBf9vPmT5dbkm9qsZsuVNjq8HCuW1w24nhBFGkRE4cd2Uf2tfrB3N7h4mnyPp1BF3ZttHTYv3DLUPi1zMdkULiow3M1GfXkoC6DoxDUm1jmN6GBj22SjVsr6dxezRVQc7aj9TxE7JLbMH1wh5X3kA58H3DFW8rnYMakFGbca5CB2Jf6CnGQZmL7o5uJAdTwXfy2iiiyPxXEGerMhHwhjTA1mKYobyk2CpeEcmvynADfNZ5MBvcCS7m3XkFCMNUYBS9NQ3fze6vMSUPsNa6GVYmKx2x6JrdEjCk3qRMMmyjnjCMfR4pXbRMZa3i";
+        let did_key: DidKey = did_str.parse().unwrap();
+        let key_der = decode_rsa_public_key(&did_key.key).unwrap();
+        let key = rsa_public_key_from_pkcs1_der(&key_der).unwrap();
+        assert_eq!(key.size() * 8, 2048);
     }
 }

@@ -1,5 +1,5 @@
 use rsa::{
-    pkcs1::DecodeRsaPublicKey,
+    pkcs1::{DecodeRsaPublicKey, EncodeRsaPublicKey},
     pkcs8::{
         DecodePrivateKey,
         DecodePublicKey,
@@ -39,6 +39,20 @@ pub enum RsaSerializationError {
 
     #[error(transparent)]
     PemError(#[from] pem::PemError),
+}
+
+pub fn rsa_public_key_to_pkcs1_der(
+    public_key: &RsaPublicKey,
+) -> Result<Vec<u8>, RsaSerializationError> {
+    let bytes = public_key.to_pkcs1_der()?.to_vec();
+    Ok(bytes)
+}
+
+pub fn rsa_public_key_from_pkcs1_der(
+    bytes: &[u8],
+) -> Result<RsaPublicKey, RsaSerializationError> {
+    let public_key = RsaPublicKey::from_pkcs1_der(bytes)?;
+    Ok(public_key)
 }
 
 pub fn serialize_private_key(
@@ -116,6 +130,15 @@ pub fn verify_rsa_sha256_signature(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_pkcs1_der_encode_decode() {
+        let private_key = generate_weak_rsa_key().unwrap();
+        let public_key = RsaPublicKey::from(private_key);
+        let encoded = rsa_public_key_to_pkcs1_der(&public_key).unwrap();
+        let decoded = rsa_public_key_from_pkcs1_der(&encoded).unwrap();
+        assert_eq!(decoded, public_key);
+    }
 
     #[test]
     fn test_deserialize_rsa_public_key_nowrap() {
