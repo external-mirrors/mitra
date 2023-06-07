@@ -42,4 +42,5 @@ pub const EMOJI: &str = "Emoji";
 pub const HASHTAG: &str = "Hashtag";
 pub const IDENTITY_PROOF: &str = "IdentityProof";
 pub const LINK: &str = "Link";
+pub const MULTIKEY: &str = "Multikey";
 pub const PROPERTY_VALUE: &str = "PropertyValue";

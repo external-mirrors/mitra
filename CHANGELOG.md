@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Added
 
 - Added `add-emoji` command.
+- Create representation of actor's RSA public key in multikey format.
 
 ### Changed
 

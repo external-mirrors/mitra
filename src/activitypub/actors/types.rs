@@ -34,6 +34,8 @@ use crate::activitypub::{
         MASTODON_CONTEXT,
         MITRA_CONTEXT,
         SCHEMA_ORG_CONTEXT,
+        W3ID_DATA_INTEGRITY_CONTEXT,
+        W3ID_MULTIKEY_CONTEXT,
         W3ID_SECURITY_CONTEXT,
     },
     deserialization::{
@@ -70,6 +72,7 @@ use super::attachments::{
     parse_payment_option,
     parse_property_value,
 };
+use super::keys::Multikey;
 
 #[derive(Deserialize, Serialize)]
 #[cfg_attr(test, derive(Default))]
@@ -178,6 +181,12 @@ pub struct Actor {
 
     #[serde(skip_serializing_if = "Option::is_none")]
     pub subscribers: Option<String>,
+
+    #[serde(
+        default,
+        skip_serializing_if = "Vec::is_empty",
+    )]
+    pub authentication: Vec<Multikey>,
 
     pub public_key: PublicKey,
 
@@ -336,11 +345,15 @@ pub type ActorKeyError = RsaSerializationError;
 fn build_actor_context() -> (
     &'static str,
     &'static str,
+    &'static str,
+    &'static str,
     HashMap<&'static str, &'static str>,
 ) {
     (
         AP_CONTEXT,
         W3ID_SECURITY_CONTEXT,
+        W3ID_DATA_INTEGRITY_CONTEXT,
+        W3ID_MULTIKEY_CONTEXT,
         HashMap::from([
             ("manuallyApprovesFollowers", "as:manuallyApprovesFollowers"),
             ("schema", SCHEMA_ORG_CONTEXT),
@@ -373,6 +386,9 @@ pub fn get_local_actor(
         owner: actor_id.clone(),
         public_key_pem: public_key_pem,
     };
+    let authentication_keys = vec![
+        Multikey::new(&actor_id, &private_key)?,
+    ];
     let avatar = match &user.profile.avatar {
         Some(image) => {
             let actor_image = ActorImage {
@@ -430,6 +446,7 @@ pub fn get_local_actor(
         followers: Some(followers),
         following: Some(following),
         subscribers: Some(subscribers),
+        authentication: authentication_keys,
         public_key,
         icon: avatar,
         image: banner,
@@ -455,6 +472,9 @@ pub fn get_instance_actor(
         owner: actor_id.clone(),
         public_key_pem: public_key_pem,
     };
+    let authentication_keys = vec![
+        Multikey::new(&actor_id, &instance.actor_key)?,
+    ];
     let actor = Actor {
         context: Some(json!(build_actor_context())),
         id: actor_id,
@@ -466,6 +486,7 @@ pub fn get_instance_actor(
         followers: None,
         following: None,
         subscribers: None,
+        authentication: authentication_keys,
         public_key,
         icon: None,
         image: None,
