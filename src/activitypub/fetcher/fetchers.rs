@@ -159,6 +159,8 @@ pub async fn fetch_file(
     let media_type = maybe_media_type
         .map(|media_type| media_type.to_string())
         .or(maybe_content_type_header)
+        // Ignore if reported media type is application/octet-stream
+        .filter(|media_type| media_type != "application/octet-stream")
         // Sniff media type if not provided
         .or(sniff_media_type(&file_data))
         .unwrap_or("application/octet-stream".to_string());
