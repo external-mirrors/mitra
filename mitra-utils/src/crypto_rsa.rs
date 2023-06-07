@@ -70,10 +70,9 @@ pub fn deserialize_private_key(
     Ok(private_key)
 }
 
-pub fn get_public_key_pem(
-    private_key: &RsaPrivateKey,
+pub fn rsa_public_key_to_pkcs8_pem(
+    public_key: &RsaPublicKey,
 ) -> Result<String, RsaSerializationError> {
-    let public_key = RsaPublicKey::from(private_key);
     let public_key_pem = public_key.to_public_key_pem(LineEnding::LF)
         .map_err(rsa::pkcs8::Error::from)?;
     Ok(public_key_pem)
@@ -158,7 +157,8 @@ YsFtrgWDQ/s8k86sNBU+Ce2GOL7seh46kyAWgJeohh4Rcrr23rftHbvxOcRM8VzYuCeb1DgVhPGtA0xU
     #[test]
     fn test_public_key_serialization_deserialization() {
         let private_key = generate_weak_rsa_key().unwrap();
-        let public_key_pem = get_public_key_pem(&private_key).unwrap();
+        let public_key = RsaPublicKey::from(&private_key);
+        let public_key_pem = rsa_public_key_to_pkcs8_pem(&public_key).unwrap();
         let public_key = deserialize_rsa_public_key(&public_key_pem).unwrap();
         assert_eq!(public_key, RsaPublicKey::from(&private_key));
     }

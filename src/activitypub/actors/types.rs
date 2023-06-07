@@ -22,7 +22,6 @@ use mitra_models::{
 use mitra_utils::{
     crypto_rsa::{
         deserialize_private_key,
-        get_public_key_pem,
         RsaSerializationError,
     },
     urls::get_hostname,
@@ -44,7 +43,6 @@ use crate::activitypub::{
     },
     identifiers::{
         local_actor_id,
-        local_actor_key_id,
         local_instance_actor_id,
         LocalActorCollection,
     },
@@ -72,16 +70,7 @@ use super::attachments::{
     parse_payment_option,
     parse_property_value,
 };
-use super::keys::Multikey;
-
-#[derive(Deserialize, Serialize)]
-#[cfg_attr(test, derive(Default))]
-#[serde(rename_all = "camelCase")]
-pub struct PublicKey {
-    id: String,
-    owner: String,
-    pub public_key_pem: String,
-}
+use super::keys::{Multikey, PublicKey};
 
 #[derive(Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -380,12 +369,7 @@ pub fn get_local_actor(
     let subscribers = LocalActorCollection::Subscribers.of(&actor_id);
 
     let private_key = deserialize_private_key(&user.private_key)?;
-    let public_key_pem = get_public_key_pem(&private_key)?;
-    let public_key = PublicKey {
-        id: local_actor_key_id(&actor_id),
-        owner: actor_id.clone(),
-        public_key_pem: public_key_pem,
-    };
+    let public_key = PublicKey::new(&actor_id, &private_key)?;
     let authentication_keys = vec![
         Multikey::new(&actor_id, &private_key)?,
     ];
@@ -466,12 +450,7 @@ pub fn get_instance_actor(
     let actor_id = local_instance_actor_id(&instance.url());
     let actor_inbox = LocalActorCollection::Inbox.of(&actor_id);
     let actor_outbox = LocalActorCollection::Outbox.of(&actor_id);
-    let public_key_pem = get_public_key_pem(&instance.actor_key)?;
-    let public_key = PublicKey {
-        id: local_actor_key_id(&actor_id),
-        owner: actor_id.clone(),
-        public_key_pem: public_key_pem,
-    };
+    let public_key = PublicKey::new(&actor_id, &instance.actor_key)?;
     let authentication_keys = vec![
         Multikey::new(&actor_id, &instance.actor_key)?,
     ];
