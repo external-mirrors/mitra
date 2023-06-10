@@ -116,6 +116,7 @@ async fn inbox(
     config: web::Data<Config>,
     db_pool: web::Data<DbPool>,
     inbox_mutex: web::Data<Mutex<()>>,
+    username: web::Path<String>,
     request: HttpRequest,
     activity: web::Json<serde_json::Value>,
 ) -> Result<HttpResponse, HttpError> {
@@ -125,6 +126,7 @@ async fn inbox(
     log::debug!("received activity: {}", activity);
     let activity_type = activity["type"].as_str().unwrap_or("Unknown");
     log::info!("received in {}: {}", request.uri().path(), activity_type);
+
     let now = Instant::now();
     // Store mutex guard in a variable to prevent it from being dropped immediately
     let _guard = inbox_mutex.lock().await;
@@ -133,7 +135,9 @@ async fn inbox(
         now.elapsed(),
         activity["id"].as_str().unwrap_or_default(),
     );
+
     let db_client = &mut **get_database_client(&db_pool).await?;
+    let _user = get_user_by_name(db_client, &username).await?;
     receive_activity(&config, db_client, &request, &activity).await
         .map_err(|error| {
             // TODO: preserve original error text in DatabaseError
@@ -164,6 +168,8 @@ async fn outbox(
     username: web::Path<String>,
     query_params: web::Query<CollectionQueryParams>,
 ) -> Result<HttpResponse, HttpError> {
+    let db_client = &**get_database_client(&db_pool).await?;
+    let user = get_user_by_name(db_client, &username).await?;
     let instance = config.instance();
     let collection_id = local_actor_outbox(&instance.url(), &username);
     let first_page_id = format!("{}?page=true", collection_id);
@@ -178,8 +184,6 @@ async fn outbox(
             .json(collection);
         return Ok(response);
     };
-    let db_client = &**get_database_client(&db_pool).await?;
-    let user = get_user_by_name(db_client, &username).await?;
     // Posts are ordered by creation date
     const COLLECTION_PAGE_SIZE: u16 = 20;
     let mut posts = get_posts_by_author(
@@ -230,12 +234,12 @@ async fn followers_collection(
     username: web::Path<String>,
     query_params: web::Query<CollectionQueryParams>,
 ) -> Result<HttpResponse, HttpError> {
+    let db_client = &**get_database_client(&db_pool).await?;
+    let user = get_user_by_name(db_client, &username).await?;
     if query_params.page.is_some() {
         // Social graph is not available
         return Err(HttpError::PermissionError);
     };
-    let db_client = &**get_database_client(&db_pool).await?;
-    let user = get_user_by_name(db_client, &username).await?;
     let collection_id = local_actor_followers(
         &config.instance_url(),
         &username,
@@ -258,12 +262,12 @@ async fn following_collection(
     username: web::Path<String>,
     query_params: web::Query<CollectionQueryParams>,
 ) -> Result<HttpResponse, HttpError> {
+    let db_client = &**get_database_client(&db_pool).await?;
+    let user = get_user_by_name(db_client, &username).await?;
     if query_params.page.is_some() {
         // Social graph is not available
         return Err(HttpError::PermissionError);
     };
-    let db_client = &**get_database_client(&db_pool).await?;
-    let user = get_user_by_name(db_client, &username).await?;
     let collection_id = local_actor_following(
         &config.instance_url(),
         &username,
@@ -286,12 +290,12 @@ async fn subscribers_collection(
     username: web::Path<String>,
     query_params: web::Query<CollectionQueryParams>,
 ) -> Result<HttpResponse, HttpError> {
+    let db_client = &**get_database_client(&db_pool).await?;
+    let user = get_user_by_name(db_client, &username).await?;
     if query_params.page.is_some() {
         // Subscriber list is hidden
         return Err(HttpError::PermissionError);
     };
-    let db_client = &**get_database_client(&db_pool).await?;
-    let user = get_user_by_name(db_client, &username).await?;
     let collection_id = local_actor_subscribers(
         &config.instance_url(),
         &username,
