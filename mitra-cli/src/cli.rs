@@ -73,12 +73,14 @@ use mitra_models::{
         create_user,
         get_invite_codes,
         get_user_by_id,
+        set_user_ed25519_private_key,
         set_user_password,
         set_user_role,
     },
     users::types::UserCreateData,
 };
 use mitra_utils::{
+    crypto_eddsa::generate_ed25519_key,
     crypto_rsa::{
         generate_rsa_key,
         rsa_private_key_to_pkcs8_pem,
@@ -103,6 +105,7 @@ pub enum SubCommand {
     GenerateInviteCode(GenerateInviteCode),
     ListInviteCodes(ListInviteCodes),
     CreateUser(CreateUser),
+    AddEd25519Key(AddEd25519Key),
     SetPassword(SetPassword),
     SetRole(SetRole),
     RefetchActor(RefetchActor),
@@ -233,6 +236,28 @@ impl CreateUser {
         };
         create_user(db_client, user_data).await?;
         println!("user created");
+        Ok(())
+    }
+}
+
+/// Add Ed25519 key to user's profile
+#[derive(Parser)]
+pub struct AddEd25519Key {
+    id: Uuid,
+}
+
+impl AddEd25519Key {
+    pub async fn execute(
+        &self,
+        db_client: &impl DatabaseClient,
+    ) -> Result<(), Error> {
+        let ed25519_private_key = generate_ed25519_key();
+        set_user_ed25519_private_key(
+            db_client,
+            &self.id,
+            ed25519_private_key.to_bytes(),
+        ).await?;
+        println!("ed25519 key generated");
         Ok(())
     }
 }

@@ -282,9 +282,16 @@ pub async fn update_remote_profile(
 
 #[cfg(test)]
 mod tests {
-    use mitra_utils::crypto_rsa::{
-        generate_weak_rsa_key,
-        rsa_public_key_to_pkcs1_der,
+    use mitra_models::profiles::types::PublicKeyType;
+    use mitra_utils::{
+        crypto_eddsa::{
+            generate_ed25519_key,
+            Ed25519PublicKey,
+        },
+        crypto_rsa::{
+            generate_weak_rsa_key,
+            rsa_public_key_to_pkcs1_der,
+        },
     };
     use crate::activitypub::actors::keys::{Multikey, PublicKey};
     use super::*;
@@ -292,21 +299,29 @@ mod tests {
     #[test]
     fn test_parse_public_keys() {
         let actor_id = "https://test.example/users/1";
-        let private_key = generate_weak_rsa_key().unwrap();
+        let rsa_private_key = generate_weak_rsa_key().unwrap();
+        let ed25519_private_key = generate_ed25519_key();
         let actor_public_key =
-            PublicKey::build(actor_id, &private_key).unwrap();
-        let actor_auth_key =
-            Multikey::build(actor_id, &private_key).unwrap();
-        let public_key_der =
-            rsa_public_key_to_pkcs1_der(&private_key.into()).unwrap();
+            PublicKey::build(actor_id, &rsa_private_key).unwrap();
+        let actor_auth_key_1 =
+            Multikey::build_rsa(actor_id, &rsa_private_key).unwrap();
+        let actor_auth_key_2 =
+            Multikey::build_ed25519(actor_id, &ed25519_private_key);
         let actor = Actor {
             id: actor_id.to_string(),
             public_key: actor_public_key,
-            authentication: vec![actor_auth_key],
+            authentication: vec![actor_auth_key_1, actor_auth_key_2],
             ..Default::default()
         };
         let public_keys = parse_public_keys(&actor).unwrap();
-        assert_eq!(public_keys.len(), 1);
-        assert_eq!(public_keys[0].key_data, public_key_der);
+        assert_eq!(public_keys.len(), 2);
+        let ed25519_public_key_bytes =
+            Ed25519PublicKey::from(&ed25519_private_key).to_bytes();
+        assert_eq!(public_keys[0].key_type, PublicKeyType::Ed25519);
+        assert_eq!(public_keys[0].key_data, ed25519_public_key_bytes);
+        let rsa_public_key_der =
+            rsa_public_key_to_pkcs1_der(&rsa_private_key.into()).unwrap();
+        assert_eq!(public_keys[1].key_type, PublicKeyType::RsaPkcs1);
+        assert_eq!(public_keys[1].key_data, rsa_public_key_der);
     }
 }

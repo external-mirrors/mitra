@@ -36,6 +36,7 @@ async fn main() {
                 SubCommand::GenerateInviteCode(cmd) => cmd.execute(db_client).await.unwrap(),
                 SubCommand::ListInviteCodes(cmd) => cmd.execute(db_client).await.unwrap(),
                 SubCommand::CreateUser(cmd) => cmd.execute(db_client).await.unwrap(),
+                SubCommand::AddEd25519Key(cmd) => cmd.execute(db_client).await.unwrap(),
                 SubCommand::SetPassword(cmd) => cmd.execute(db_client).await.unwrap(),
                 SubCommand::SetRole(cmd) => cmd.execute(db_client).await.unwrap(),
                 SubCommand::RefetchActor(cmd) => cmd.execute(&config, db_client).await.unwrap(),

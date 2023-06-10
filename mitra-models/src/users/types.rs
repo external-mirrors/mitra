@@ -7,6 +7,10 @@ use serde_json::{Value as JsonValue};
 use uuid::Uuid;
 
 use mitra_utils::{
+    crypto_eddsa::{
+        ed25519_private_key_from_bytes,
+        Ed25519PrivateKey,
+    },
     crypto_rsa::{
         rsa_private_key_from_pkcs8_pem,
         RsaPrivateKey,
@@ -131,11 +135,31 @@ pub struct DbUser {
     password_hash: Option<String>,
     login_address_ethereum: Option<String>,
     login_address_monero: Option<String>,
-    private_key: String,
+    rsa_private_key: String,
+    ed25519_private_key: Option<Vec<u8>>,
     invite_code: Option<String>,
     user_role: Role,
     client_config: DbClientConfig,
     created_at: DateTime<Utc>,
+}
+
+// Use wrapper because Ed25519PrivateKey doesn't implement Clone
+pub struct DbEd25519PrivateKey(Ed25519PrivateKey);
+
+impl DbEd25519PrivateKey {
+    pub fn inner(&self) -> &Ed25519PrivateKey {
+        let Self(private_key) = self;
+        private_key
+    }
+}
+
+impl Clone for DbEd25519PrivateKey {
+    fn clone(&self) -> Self {
+        let bytes = self.inner().as_bytes();
+        let private_key = Ed25519PrivateKey::from_bytes(bytes)
+            .expect("should be valid private key");
+        Self(private_key)
+    }
 }
 
 // Represents local user
@@ -146,6 +170,7 @@ pub struct User {
     pub login_address_ethereum: Option<String>,
     pub login_address_monero: Option<String>,
     pub rsa_private_key: RsaPrivateKey,
+    pub ed25519_private_key: Option<DbEd25519PrivateKey>,
     pub role: Role,
     pub client_config: ClientConfig,
     pub profile: DbActorProfile,
@@ -161,6 +186,7 @@ impl Default for User {
             login_address_ethereum: None,
             login_address_monero: None,
             rsa_private_key: generate_weak_rsa_key().unwrap(),
+            ed25519_private_key: None,
             role: Role::default(),
             client_config: ClientConfig::default(),
             profile: DbActorProfile::default(),
@@ -176,14 +202,24 @@ impl User {
         if db_user.id != db_profile.id {
             return Err(DatabaseTypeError);
         };
-        let rsa_private_key = rsa_private_key_from_pkcs8_pem(&db_user.private_key)
-            .map_err(|_| DatabaseTypeError)?;
+        let rsa_private_key =
+            rsa_private_key_from_pkcs8_pem(&db_user.rsa_private_key)
+                .map_err(|_| DatabaseTypeError)?;
+        let maybe_ed25519_private_key = match db_user.ed25519_private_key {
+            Some(ref bytes) => {
+                let private_key = ed25519_private_key_from_bytes(bytes)
+                    .map_err(|_| DatabaseTypeError)?;
+                Some(DbEd25519PrivateKey(private_key))
+            },
+            None => None,
+        };
         let user = Self {
             id: db_user.id,
             password_hash: db_user.password_hash,
             login_address_ethereum: db_user.login_address_ethereum,
             login_address_monero: db_user.login_address_monero,
             rsa_private_key: rsa_private_key,
+            ed25519_private_key: maybe_ed25519_private_key,
             role: db_user.user_role,
             client_config: db_user.client_config.into_inner(),
             profile: db_profile,

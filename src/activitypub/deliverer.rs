@@ -11,7 +11,7 @@ use mitra_models::{
         DatabaseClient,
         DatabaseError,
     },
-    profiles::types::DbActor,
+    profiles::types::{DbActor, PublicKeyType},
     users::types::User,
 };
 use mitra_utils::crypto_rsa::RsaPrivateKey;
@@ -135,7 +135,7 @@ async fn deliver_activity_worker(
         &instance.url(),
         &sender.profile.username,
     );
-    let actor_key_id = local_actor_key_id(&actor_id);
+    let actor_key_id = local_actor_key_id(&actor_id, PublicKeyType::RsaPkcs1);
     let activity_signed = if is_object_signed(&activity) {
         log::warn!("activity is already signed");
         activity

@@ -366,9 +366,13 @@ pub fn build_local_actor(
     let subscribers = LocalActorCollection::Subscribers.of(&actor_id);
 
     let public_key = PublicKey::build(&actor_id, &user.rsa_private_key)?;
-    let authentication_keys = vec![
-        Multikey::build(&actor_id, &user.rsa_private_key)?,
+    let mut authentication_keys = vec![
+        Multikey::build_rsa(&actor_id, &user.rsa_private_key)?,
     ];
+    if let Some(ref private_key) = user.ed25519_private_key {
+        let multikey = Multikey::build_ed25519(&actor_id, private_key.inner());
+        authentication_keys.push(multikey);
+    };
     let avatar = match &user.profile.avatar {
         Some(image) => {
             let actor_image = ActorImage {
@@ -448,7 +452,7 @@ pub fn build_instance_actor(
     let actor_outbox = LocalActorCollection::Outbox.of(&actor_id);
     let public_key = PublicKey::build(&actor_id, &instance.actor_key)?;
     let authentication_keys = vec![
-        Multikey::build(&actor_id, &instance.actor_key)?,
+        Multikey::build_rsa(&actor_id, &instance.actor_key)?,
     ];
     let actor = Actor {
         context: Some(json!(build_actor_context())),

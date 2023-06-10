@@ -8,6 +8,7 @@ use ed25519_dalek::{
     Verifier,
 };
 
+pub type Ed25519PrivateKey = SecretKey;
 pub type Ed25519PublicKey = PublicKey;
 pub type EddsaError = SignatureError;
 
@@ -23,6 +24,20 @@ pub fn generate_weak_ed25519_key() -> SecretKey {
     let mut rng = rand_0_7::rngs::StdRng::seed_from_u64(0);
     let keypair = Keypair::generate(&mut rng);
     keypair.secret
+}
+
+pub fn ed25519_private_key_from_bytes(
+    bytes: &[u8],
+) -> Result<SecretKey, SignatureError> {
+    let private_key = SecretKey::from_bytes(bytes)?;
+    Ok(private_key)
+}
+
+pub fn ed25519_public_key_from_bytes(
+    bytes: &[u8],
+) -> Result<PublicKey, SignatureError> {
+    let public_key = PublicKey::from_bytes(bytes)?;
+    Ok(public_key)
 }
 
 pub fn create_eddsa_signature(

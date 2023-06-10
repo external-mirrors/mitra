@@ -46,12 +46,14 @@ json_to_sql!(ProfileImage);
 #[derive(Clone, Debug, PartialEq)]
 pub enum PublicKeyType {
     RsaPkcs1,
+    Ed25519,
 }
 
 impl From<&PublicKeyType> for i16 {
     fn from(key_type: &PublicKeyType) -> i16 {
         match key_type {
             PublicKeyType::RsaPkcs1 => 1,
+            PublicKeyType::Ed25519 => 2,
         }
     }
 }
@@ -62,6 +64,7 @@ impl TryFrom<i16> for PublicKeyType {
     fn try_from(value: i16) -> Result<Self, Self::Error> {
         let key_type = match value {
             1 => Self::RsaPkcs1,
+            2 => Self::Ed25519,
             _ => return Err(DatabaseTypeError),
         };
         Ok(key_type)

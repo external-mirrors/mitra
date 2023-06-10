@@ -3,13 +3,14 @@ use uuid::Uuid;
 
 use mitra_models::{
     posts::types::Post,
-    profiles::types::DbActorProfile,
+    profiles::types::{
+        DbActorProfile,
+        PublicKeyType,
+    },
 };
 use mitra_utils::urls::get_hostname;
 
 use crate::errors::ValidationError;
-
-const ACTOR_KEY_SUFFIX: &str = "#main-key";
 
 pub enum LocalActorCollection {
     Inbox,
@@ -66,8 +67,15 @@ pub fn local_instance_actor_id(instance_url: &str) -> String {
     format!("{}/actor", instance_url)
 }
 
-pub fn local_actor_key_id(actor_id: &str) -> String {
-    format!("{}{}", actor_id, ACTOR_KEY_SUFFIX)
+pub fn local_actor_key_id(
+    actor_id: &str,
+    key_type: PublicKeyType,
+) -> String {
+    let fragment = match key_type {
+        PublicKeyType::RsaPkcs1 => "#main-key",
+        PublicKeyType::Ed25519 => "#ed25519-key",
+    };
+    format!("{}{}", actor_id, fragment)
 }
 
 pub fn local_object_id(instance_url: &str, internal_object_id: &Uuid) -> String {

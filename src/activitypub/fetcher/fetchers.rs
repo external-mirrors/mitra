@@ -5,6 +5,7 @@ use serde::Deserialize;
 use serde_json::{Value as JsonValue};
 
 use mitra_config::Instance;
+use mitra_models::profiles::types::PublicKeyType;
 use mitra_utils::{
     files::sniff_media_type,
     urls::guess_protocol,
@@ -107,7 +108,10 @@ async fn send_request(
     if !instance.is_private {
         // Only public instances can send signed requests
         let instance_actor_id = local_instance_actor_id(&instance.url());
-        let instance_actor_key_id = local_actor_key_id(&instance_actor_id);
+        let instance_actor_key_id = local_actor_key_id(
+            &instance_actor_id,
+            PublicKeyType::RsaPkcs1,
+        );
         let headers = create_http_signature(
             Method::GET,
             url,
