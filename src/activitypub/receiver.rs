@@ -21,8 +21,7 @@ use super::handlers::{
     announce::handle_announce,
     create::{
         handle_create,
-        is_unsolicited_message,
-        CreateNote,
+        validate_create,
     },
     delete::handle_delete,
     follow::handle_follow,
@@ -247,12 +246,8 @@ pub async fn receive_activity(
     };
 
     if activity_type == CREATE {
-        let CreateNote { object, .. } = serde_json::from_value(activity.clone())
-            .map_err(|_| ValidationError("invalid object"))?;
-        if is_unsolicited_message(db_client, &config.instance_url(), &object).await? {
-            log::warn!("unsolicited message rejected: {}", object.id);
-            return Ok(());
-        };
+        // Validate before putting into the queue
+        validate_create(config, db_client, activity).await?;
     };
 
     if let ANNOUNCE | CREATE | DELETE | MOVE | UNDO | UPDATE = activity_type {

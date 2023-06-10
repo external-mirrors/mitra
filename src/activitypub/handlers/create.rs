@@ -700,6 +700,19 @@ pub struct CreateNote {
     pub object: Object,
 }
 
+pub async fn validate_create(
+    config: &Config,
+    db_client: &impl DatabaseClient,
+    activity: &JsonValue,
+) -> Result<(), HandlerError> {
+    let CreateNote { object, .. } = serde_json::from_value(activity.clone())
+        .map_err(|_| ValidationError("invalid object"))?;
+    if is_unsolicited_message(db_client, &config.instance_url(), &object).await? {
+        return Err(ValidationError("unsolicited message").into());
+    };
+    Ok(())
+}
+
 pub async fn handle_create(
     config: &Config,
     db_client: &mut impl DatabaseClient,
