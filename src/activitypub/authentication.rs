@@ -42,6 +42,8 @@ use super::deserialization::find_object_id;
 use super::fetcher::helpers::get_or_import_profile_by_actor_id;
 use super::receiver::HandlerError;
 
+const AUTHENTICATION_FETCHER_TIMEOUT: u64 = 10;
+
 #[derive(thiserror::Error, Debug)]
 pub enum AuthenticationError {
     #[error(transparent)]
@@ -97,6 +99,8 @@ async fn get_signer(
         // Avoid fetching (e.g. if signer was deleted)
         get_profile_by_remote_actor_id(db_client, signer_id).await?
     } else {
+        let mut instance = config.instance();
+        instance.fetcher_timeout = AUTHENTICATION_FETCHER_TIMEOUT;
         match get_or_import_profile_by_actor_id(
             db_client,
             &config.instance(),

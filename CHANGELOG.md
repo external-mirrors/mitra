@@ -19,6 +19,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Sniff media type if declared type of downloaded file is application/octet-stream.
 - Return `404 Not Found` if inbox owner doesn't exist.
 - Refresh outdated actor profiles when doing actor address lookups.
+- Set signature verification fetcher timeout to 10 seconds.
 
 ### Fixed
 
