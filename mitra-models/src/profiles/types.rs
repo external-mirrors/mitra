@@ -1,4 +1,4 @@
-use chrono::{DateTime, Duration, Utc};
+use chrono::{DateTime, Utc};
 use postgres_types::FromSql;
 use serde::{
     Deserialize, Deserializer, Serialize, Serializer,
@@ -480,14 +480,6 @@ impl DbActorProfile {
 
     pub fn is_local(&self) -> bool {
         self.actor_json.is_none()
-    }
-
-    pub fn possibly_outdated(&self) -> bool {
-        if self.is_local() {
-            false
-        } else {
-            self.updated_at < Utc::now() - Duration::days(1)
-        }
     }
 
     pub fn monero_subscription(

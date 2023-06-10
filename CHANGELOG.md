@@ -18,6 +18,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Handle activities where "actor" property contains an object.
 - Sniff media type if declared type of downloaded file is application/octet-stream.
 - Return `404 Not Found` if inbox owner doesn't exist.
+- Refresh outdated actor profiles when doing actor address lookups.
 
 ### Fixed
 

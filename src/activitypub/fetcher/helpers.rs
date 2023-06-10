@@ -1,5 +1,7 @@
 use std::collections::HashMap;
 
+use chrono::{Duration, Utc};
+
 use mitra_config::{Config, Instance};
 use mitra_models::{
     database::{DatabaseClient, DatabaseError},
@@ -70,6 +72,44 @@ async fn import_profile(
     Ok(profile)
 }
 
+async fn refresh_remote_profile(
+    db_client: &mut impl DatabaseClient,
+    instance: &Instance,
+    storage: &MediaStorage,
+    profile: DbActorProfile,
+) -> Result<DbActorProfile, HandlerError> {
+    let actor_id = &profile.actor_json.as_ref()
+        .expect("actor data should be present")
+        .id;
+    let profile = if profile.updated_at < Utc::now() - Duration::days(1) {
+        // Try to re-fetch actor profile
+        match fetch_actor(instance, actor_id).await {
+            Ok(actor) => {
+                log::info!("re-fetched profile {}", profile.acct);
+                let profile_updated = update_remote_profile(
+                    db_client,
+                    instance,
+                    storage,
+                    profile,
+                    actor,
+                ).await?;
+                profile_updated
+            },
+            Err(err) => {
+                // Ignore error and return stored profile
+                log::warn!(
+                    "failed to re-fetch {} ({})", profile.acct, err,
+                );
+                profile
+            },
+        }
+    } else {
+        // Refresh is not needed
+        profile
+    };
+    Ok(profile)
+}
+
 pub async fn get_or_import_profile_by_actor_id(
     db_client: &mut impl DatabaseClient,
     instance: &Instance,
@@ -84,31 +124,12 @@ pub async fn get_or_import_profile_by_actor_id(
         actor_id,
     ).await {
         Ok(profile) => {
-            if profile.possibly_outdated() {
-                // Try to re-fetch actor profile
-                match fetch_actor(instance, actor_id).await {
-                    Ok(actor) => {
-                        log::info!("re-fetched profile {}", profile.acct);
-                        let profile_updated = update_remote_profile(
-                            db_client,
-                            instance,
-                            storage,
-                            profile,
-                            actor,
-                        ).await?;
-                        profile_updated
-                    },
-                    Err(err) => {
-                        // Ignore error and return stored profile
-                        log::warn!(
-                            "failed to re-fetch {} ({})", profile.acct, err,
-                        );
-                        profile
-                    },
-                }
-            } else {
-                profile
-            }
+            refresh_remote_profile(
+                db_client,
+                instance,
+                storage,
+                profile,
+            ).await?
         },
         Err(DatabaseError::NotFound(_)) => {
             import_profile(db_client, instance, storage, actor_id).await?
@@ -143,7 +164,18 @@ pub async fn get_or_import_profile_by_actor_address(
         db_client,
         &acct,
     ).await {
-        Ok(profile) => profile, // TODO: re-fetch
+        Ok(profile) => {
+            if actor_address.hostname == instance.hostname() {
+                profile
+            } else {
+                refresh_remote_profile(
+                    db_client,
+                    instance,
+                    storage,
+                    profile,
+                ).await?
+            }
+        },
         Err(db_error @ DatabaseError::NotFound(_)) => {
             if actor_address.hostname == instance.hostname() {
                 return Err(db_error.into());
