@@ -20,6 +20,7 @@ use crate::activitypub::{
         helpers::update_remote_profile,
         types::Actor,
     },
+    deserialization::deserialize_into_object_id,
     handlers::create::{
         create_content_link,
         get_object_attachments,
@@ -38,6 +39,7 @@ use super::HandlerResult;
 
 #[derive(Deserialize)]
 struct UpdateNote {
+    #[serde(deserialize_with = "deserialize_into_object_id")]
     actor: String,
     object: Object,
 }
