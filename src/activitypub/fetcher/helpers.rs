@@ -32,6 +32,44 @@ use super::fetchers::{
     FetchError,
 };
 
+async fn import_profile(
+    db_client: &mut impl DatabaseClient,
+    instance: &Instance,
+    storage: &MediaStorage,
+    actor_id: &str,
+) -> Result<DbActorProfile, HandlerError> {
+    let actor = fetch_actor(instance, actor_id).await?;
+    let actor_address = actor.address()?;
+    let acct = actor_address.acct(&instance.hostname());
+    // 'acct' is the primary identifier
+    let profile = match get_profile_by_acct(db_client, &acct).await {
+        Ok(profile) => {
+            // WARNING: Possible actor ID change
+            log::info!("re-fetched profile {}", profile.acct);
+            let profile_updated = update_remote_profile(
+                db_client,
+                instance,
+                storage,
+                profile,
+                actor,
+            ).await?;
+            profile_updated
+        },
+        Err(DatabaseError::NotFound(_)) => {
+            log::info!("fetched profile {}", acct);
+            let profile = create_remote_profile(
+                db_client,
+                instance,
+                storage,
+                actor,
+            ).await?;
+            profile
+        },
+        Err(other_error) => return Err(other_error.into()),
+    };
+    Ok(profile)
+}
+
 pub async fn get_or_import_profile_by_actor_id(
     db_client: &mut impl DatabaseClient,
     instance: &Instance,
@@ -73,41 +111,13 @@ pub async fn get_or_import_profile_by_actor_id(
             }
         },
         Err(DatabaseError::NotFound(_)) => {
-            let actor = fetch_actor(instance, actor_id).await?;
-            let actor_address = actor.address()?;
-            let acct = actor_address.acct(&instance.hostname());
-            match get_profile_by_acct(db_client, &acct).await {
-                Ok(profile) => {
-                    // WARNING: Possible actor ID change
-                    log::info!("re-fetched profile {}", profile.acct);
-                    let profile_updated = update_remote_profile(
-                        db_client,
-                        instance,
-                        storage,
-                        profile,
-                        actor,
-                    ).await?;
-                    profile_updated
-                },
-                Err(DatabaseError::NotFound(_)) => {
-                    log::info!("fetched profile {}", acct);
-                    let profile = create_remote_profile(
-                        db_client,
-                        instance,
-                        storage,
-                        actor,
-                    ).await?;
-                    profile
-                },
-                Err(other_error) => return Err(other_error.into()),
-            }
+            import_profile(db_client, instance, storage, actor_id).await?
         },
         Err(other_error) => return Err(other_error.into()),
     };
     Ok(profile)
 }
 
-/// Fetches actor profile and saves it into database
 pub async fn import_profile_by_actor_address(
     db_client: &mut impl DatabaseClient,
     instance: &Instance,
@@ -118,24 +128,7 @@ pub async fn import_profile_by_actor_address(
         return Err(HandlerError::LocalObject);
     };
     let actor_id = perform_webfinger_query(instance, actor_address).await?;
-    let actor = fetch_actor(instance, &actor_id).await?;
-    let profile_acct = actor.address()?.acct(&instance.hostname());
-    if profile_acct != actor_address.acct(&instance.hostname()) {
-        // Redirected to different server
-        match get_profile_by_acct(db_client, &profile_acct).await {
-            Ok(profile) => return Ok(profile),
-            Err(DatabaseError::NotFound(_)) => (),
-            Err(other_error) => return Err(other_error.into()),
-        };
-    };
-    log::info!("fetched profile {}", profile_acct);
-    let profile = create_remote_profile(
-        db_client,
-        instance,
-        storage,
-        actor,
-    ).await?;
-    Ok(profile)
+    import_profile(db_client, instance, storage, &actor_id).await
 }
 
 // Works with local profiles
@@ -150,7 +143,7 @@ pub async fn get_or_import_profile_by_actor_address(
         db_client,
         &acct,
     ).await {
-        Ok(profile) => profile,
+        Ok(profile) => profile, // TODO: re-fetch
         Err(db_error @ DatabaseError::NotFound(_)) => {
             if actor_address.hostname == instance.hostname() {
                 return Err(db_error.into());
