@@ -521,8 +521,8 @@ pub async fn search_profiles(
 ) -> Result<Vec<DbActorProfile>, DatabaseError> {
     let db_search_query = match maybe_hostname {
         Some(hostname) => {
-            // Search for exact actor address
-            format!("{}@{}", username, hostname)
+            // Search for actor address
+            format!("{}@{}%", username, hostname)
         },
         None => {
             // Fuzzy search for username

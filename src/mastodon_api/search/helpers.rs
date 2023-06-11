@@ -57,14 +57,15 @@ fn parse_profile_query(query: &str) ->
 {
     // See also: ACTOR_ADDRESS_RE in webfinger::types
     let acct_query_re =
-        Regex::new(r"^(@|!)?(?P<username>[\w\.-]+)(@(?P<hostname>[\w\.-]+))?$").unwrap();
+        Regex::new(r"^(@|!)?(?P<username>[\w\.-]+)(@(?P<hostname>[\w\.-]*))?$").unwrap();
     let acct_query_caps = acct_query_re.captures(query)
         .ok_or(ValidationError("invalid profile query"))?;
     let username = acct_query_caps.name("username")
         .ok_or(ValidationError("invalid profile query"))?
         .as_str().to_string();
     let maybe_hostname = acct_query_caps.name("hostname")
-        .map(|val| val.as_str().to_string());
+        .map(|val| val.as_str().to_string())
+        .filter(|val| !val.is_empty());
     Ok((username, maybe_hostname))
 }
 
@@ -317,6 +318,14 @@ mod tests {
     #[test]
     fn test_parse_profile_query() {
         let query = "@user";
+        let (username, maybe_hostname) = parse_profile_query(query).unwrap();
+        assert_eq!(username, "user");
+        assert_eq!(maybe_hostname, None);
+    }
+
+    #[test]
+    fn test_parse_profile_query_domain_incomplete() {
+        let query = "@user@";
         let (username, maybe_hostname) = parse_profile_query(query).unwrap();
         assert_eq!(username, "user");
         assert_eq!(maybe_hostname, None);
