@@ -29,7 +29,7 @@ use crate::web_client::urls::{
     get_profile_page_url,
     get_tag_page_url,
 };
-use super::actors::types::{get_local_actor, get_instance_actor};
+use super::actors::types::{build_instance_actor, build_local_actor};
 use super::builders::{
     announce::build_announce,
     create_note::{
@@ -103,7 +103,7 @@ async fn actor_view(
             .finish();
         return Ok(response);
     };
-    let actor = get_local_actor(&user, &config.instance_url())
+    let actor = build_local_actor(&user, &config.instance_url())
         .map_err(|_| HttpError::InternalError)?;
     let response = HttpResponse::Ok()
         .content_type(AP_MEDIA_TYPE)
@@ -326,7 +326,7 @@ pub fn actor_scope() -> Scope {
 async fn instance_actor_view(
     config: web::Data<Config>,
 ) -> Result<HttpResponse, HttpError> {
-    let actor = get_instance_actor(&config.instance())
+    let actor = build_instance_actor(&config.instance())
         .map_err(|_| HttpError::InternalError)?;
     let response = HttpResponse::Ok()
         .content_type(AP_MEDIA_TYPE)

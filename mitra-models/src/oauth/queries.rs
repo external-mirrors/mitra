@@ -110,7 +110,7 @@ pub async fn get_user_by_authorization_code(
     let row = maybe_row.ok_or(DatabaseError::NotFound("authorization"))?;
     let db_user: DbUser = row.try_get("user_account")?;
     let db_profile: DbActorProfile = row.try_get("actor_profile")?;
-    let user = User::new(db_user, db_profile);
+    let user = User::new(db_user, db_profile)?;
     Ok(user)
 }
 
@@ -191,7 +191,7 @@ pub async fn get_user_by_oauth_token(
     let row = maybe_row.ok_or(DatabaseError::NotFound("user"))?;
     let db_user: DbUser = row.try_get("user_account")?;
     let db_profile: DbActorProfile = row.try_get("actor_profile")?;
-    let user = User::new(db_user, db_profile);
+    let user = User::new(db_user, db_profile)?;
     Ok(user)
 }
 

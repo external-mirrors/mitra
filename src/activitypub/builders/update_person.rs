@@ -11,7 +11,7 @@ use mitra_models::{
 use mitra_utils::id::generate_ulid;
 
 use crate::activitypub::{
-    actors::types::{get_local_actor, Actor, ActorKeyError},
+    actors::types::{build_local_actor, Actor, ActorKeyError},
     constants::AP_PUBLIC,
     deliverer::OutgoingActivity,
     identifiers::{local_actor_followers, local_object_id},
@@ -39,7 +39,7 @@ pub fn build_update_person(
     user: &User,
     maybe_internal_activity_id: Option<Uuid>,
 ) -> Result<UpdatePerson, ActorKeyError> {
-    let actor = get_local_actor(user, instance_url)?;
+    let actor = build_local_actor(user, instance_url)?;
     // Update(Person) is idempotent so its ID can be random
     let internal_activity_id =
         maybe_internal_activity_id.unwrap_or(generate_ulid());
@@ -95,21 +95,13 @@ pub async fn prepare_update_person(
 #[cfg(test)]
 mod tests {
     use mitra_models::profiles::types::DbActorProfile;
-    use mitra_utils::crypto_rsa::{
-        generate_weak_rsa_key,
-        rsa_private_key_to_pkcs8_pem,
-    };
     use super::*;
 
     const INSTANCE_URL: &str = "https://example.com";
 
     #[test]
     fn test_build_update_person() {
-        let rsa_private_key = generate_weak_rsa_key().unwrap();
-        let rsa_private_key_pem =
-            rsa_private_key_to_pkcs8_pem(&rsa_private_key).unwrap();
         let user = User {
-            private_key: rsa_private_key_pem,
             profile: DbActorProfile {
                 username: "testuser".to_string(),
                 ..Default::default()

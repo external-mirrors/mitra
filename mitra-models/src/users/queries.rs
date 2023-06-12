@@ -160,7 +160,7 @@ pub async fn create_user(
         ],
     ).await.map_err(catch_unique_violation("user"))?;
     let db_user: DbUser = row.try_get("user_account")?;
-    let user = User::new(db_user, profile);
+    let user = User::new(db_user, profile)?;
     transaction.commit().await?;
     Ok(user)
 }
@@ -236,7 +236,7 @@ pub async fn get_user_by_id(
     let row = maybe_row.ok_or(DatabaseError::NotFound("user"))?;
     let db_user: DbUser = row.try_get("user_account")?;
     let db_profile: DbActorProfile = row.try_get("actor_profile")?;
-    let user = User::new(db_user, db_profile);
+    let user = User::new(db_user, db_profile)?;
     Ok(user)
 }
 
@@ -255,7 +255,7 @@ pub async fn get_user_by_name(
     let row = maybe_row.ok_or(DatabaseError::NotFound("user"))?;
     let db_user: DbUser = row.try_get("user_account")?;
     let db_profile: DbActorProfile = row.try_get("actor_profile")?;
-    let user = User::new(db_user, db_profile);
+    let user = User::new(db_user, db_profile)?;
     Ok(user)
 }
 
@@ -297,7 +297,7 @@ pub async fn get_user_by_login_address(
     let row = maybe_row.ok_or(DatabaseError::NotFound("user"))?;
     let db_user: DbUser = row.try_get("user_account")?;
     let db_profile: DbActorProfile = row.try_get("actor_profile")?;
-    let user = User::new(db_user, db_profile);
+    let user = User::new(db_user, db_profile)?;
     Ok(user)
 }
 
@@ -322,7 +322,7 @@ pub async fn get_user_by_did(
     let row = maybe_row.ok_or(DatabaseError::NotFound("user"))?;
     let db_user: DbUser = row.try_get("user_account")?;
     let db_profile: DbActorProfile = row.try_get("actor_profile")?;
-    let user = User::new(db_user, db_profile);
+    let user = User::new(db_user, db_profile)?;
     Ok(user)
 }
 

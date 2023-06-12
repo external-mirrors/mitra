@@ -20,10 +20,7 @@ use mitra_models::{
     users::types::User,
 };
 use mitra_utils::{
-    crypto_rsa::{
-        rsa_private_key_from_pkcs8_pem,
-        RsaSerializationError,
-    },
+    crypto_rsa::RsaSerializationError,
     urls::get_hostname,
 };
 
@@ -356,7 +353,7 @@ fn build_actor_context() -> (
     )
 }
 
-pub fn get_local_actor(
+pub fn build_local_actor(
     user: &User,
     instance_url: &str,
 ) -> Result<Actor, ActorKeyError> {
@@ -368,10 +365,9 @@ pub fn get_local_actor(
     let following = LocalActorCollection::Following.of(&actor_id);
     let subscribers = LocalActorCollection::Subscribers.of(&actor_id);
 
-    let rsa_private_key = rsa_private_key_from_pkcs8_pem(&user.private_key)?;
-    let public_key = PublicKey::build(&actor_id, &rsa_private_key)?;
+    let public_key = PublicKey::build(&actor_id, &user.rsa_private_key)?;
     let authentication_keys = vec![
-        Multikey::build(&actor_id, &rsa_private_key)?,
+        Multikey::build(&actor_id, &user.rsa_private_key)?,
     ];
     let avatar = match &user.profile.avatar {
         Some(image) => {
@@ -444,7 +440,7 @@ pub fn get_local_actor(
     Ok(actor)
 }
 
-pub fn get_instance_actor(
+pub fn build_instance_actor(
     instance: &Instance,
 ) -> Result<Actor, ActorKeyError> {
     let actor_id = local_instance_actor_id(&instance.url());
@@ -482,10 +478,6 @@ pub fn get_instance_actor(
 #[cfg(test)]
 mod tests {
     use mitra_models::profiles::types::DbActorProfile;
-    use mitra_utils::crypto_rsa::{
-        generate_weak_rsa_key,
-        rsa_private_key_to_pkcs8_pem,
-    };
     use super::*;
 
     const INSTANCE_HOSTNAME: &str = "example.com";
@@ -503,21 +495,14 @@ mod tests {
     }
 
     #[test]
-    fn test_local_actor() {
-        let rsa_private_key = generate_weak_rsa_key().unwrap();
-        let rsa_private_key_pem =
-            rsa_private_key_to_pkcs8_pem(&rsa_private_key).unwrap();
+    fn test_build_local_actor() {
         let profile = DbActorProfile {
             username: "testuser".to_string(),
             bio: Some("testbio".to_string()),
             ..Default::default()
         };
-        let user = User {
-            private_key: rsa_private_key_pem,
-            profile,
-            ..Default::default()
-        };
-        let actor = get_local_actor(&user, INSTANCE_URL).unwrap();
+        let user = User { profile, ..Default::default() };
+        let actor = build_local_actor(&user, INSTANCE_URL).unwrap();
         assert_eq!(actor.id, "https://example.com/users/testuser");
         assert_eq!(actor.preferred_username, user.profile.username);
         assert_eq!(actor.inbox, "https://example.com/users/testuser/inbox");
@@ -543,10 +528,10 @@ mod tests {
     }
 
     #[test]
-    fn test_instance_actor() {
+    fn test_build_instance_actor() {
         let instance_url = "https://example.com/";
         let instance = Instance::for_test(instance_url);
-        let actor = get_instance_actor(&instance).unwrap();
+        let actor = build_instance_actor(&instance).unwrap();
         assert_eq!(actor.id, "https://example.com/actor");
         assert_eq!(actor.object_type, "Service");
         assert_eq!(actor.preferred_username, "example.com");

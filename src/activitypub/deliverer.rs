@@ -14,11 +14,7 @@ use mitra_models::{
     profiles::types::DbActor,
     users::types::User,
 };
-use mitra_utils::crypto_rsa::{
-    rsa_private_key_from_pkcs8_pem,
-    RsaPrivateKey,
-    RsaSerializationError,
-};
+use mitra_utils::crypto_rsa::RsaPrivateKey;
 
 use crate::http_signatures::create::{
     create_http_signature,
@@ -39,9 +35,6 @@ use super::{
 
 #[derive(thiserror::Error, Debug)]
 pub enum DelivererError {
-    #[error("key error")]
-    KeyDeserializationError(#[from] RsaSerializationError),
-
     #[error(transparent)]
     HttpSignatureError(#[from] HttpSignatureError),
 
@@ -137,7 +130,7 @@ async fn deliver_activity_worker(
     activity: Value,
     recipients: &mut [Recipient],
 ) -> Result<(), DelivererError> {
-    let actor_key = rsa_private_key_from_pkcs8_pem(&sender.private_key)?;
+    let actor_key = sender.rsa_private_key;
     let actor_id = local_actor_id(
         &instance.url(),
         &sender.profile.username,
