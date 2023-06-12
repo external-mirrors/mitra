@@ -81,7 +81,7 @@ use mitra_models::{
 use mitra_utils::{
     crypto_rsa::{
         generate_rsa_key,
-        serialize_private_key,
+        rsa_private_key_to_pkcs8_pem,
     },
     datetime::days_before_now,
     files::sniff_media_type,
@@ -134,10 +134,11 @@ pub enum SubCommand {
 pub struct GenerateRsaKey;
 
 impl GenerateRsaKey {
-    pub fn execute(&self) -> () {
-        let private_key = generate_rsa_key().unwrap();
-        let private_key_str = serialize_private_key(&private_key).unwrap();
-        println!("{}", private_key_str);
+    pub fn execute(&self) -> Result<(), Error> {
+        let private_key = generate_rsa_key()?;
+        let private_key_pem = rsa_private_key_to_pkcs8_pem(&private_key)?;
+        println!("{}", private_key_pem);
+        Ok(())
     }
 }
 
@@ -217,15 +218,16 @@ impl CreateUser {
     ) -> Result<(), Error> {
         validate_local_username(&self.username)?;
         let password_hash = hash_password(&self.password)?;
-        let private_key = generate_rsa_key()?;
-        let private_key_pem = serialize_private_key(&private_key)?;
+        let rsa_private_key = generate_rsa_key()?;
+        let rsa_private_key_pem =
+            rsa_private_key_to_pkcs8_pem(&rsa_private_key)?;
         let role = role_from_str(&self.role)?;
         let user_data = UserCreateData {
             username: self.username.clone(),
             password_hash: Some(password_hash),
             login_address_ethereum: None,
             login_address_monero: None,
-            private_key_pem,
+            rsa_private_key: rsa_private_key_pem,
             invite_code: None,
             role,
         };

@@ -154,7 +154,7 @@ pub async fn create_user(
             &user_data.password_hash,
             &user_data.login_address_ethereum,
             &user_data.login_address_monero,
-            &user_data.private_key_pem,
+            &user_data.rsa_private_key,
             &user_data.invite_code,
             &user_data.role,
         ],

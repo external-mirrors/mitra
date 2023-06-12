@@ -97,7 +97,7 @@ mod tests {
     use mitra_models::profiles::types::DbActorProfile;
     use mitra_utils::crypto_rsa::{
         generate_weak_rsa_key,
-        serialize_private_key,
+        rsa_private_key_to_pkcs8_pem,
     };
     use super::*;
 
@@ -105,10 +105,11 @@ mod tests {
 
     #[test]
     fn test_build_update_person() {
-        let private_key = generate_weak_rsa_key().unwrap();
-        let private_key_pem = serialize_private_key(&private_key).unwrap();
+        let rsa_private_key = generate_weak_rsa_key().unwrap();
+        let rsa_private_key_pem =
+            rsa_private_key_to_pkcs8_pem(&rsa_private_key).unwrap();
         let user = User {
-            private_key: private_key_pem,
+            private_key: rsa_private_key_pem,
             profile: DbActorProfile {
                 username: "testuser".to_string(),
                 ..Default::default()

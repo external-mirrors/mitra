@@ -55,7 +55,7 @@ pub fn rsa_public_key_from_pkcs1_der(
     Ok(public_key)
 }
 
-pub fn serialize_private_key(
+pub fn rsa_private_key_to_pkcs8_pem(
     private_key: &RsaPrivateKey,
 ) -> Result<String, RsaSerializationError> {
     let private_key_pem = private_key.to_pkcs8_pem(LineEnding::LF)
@@ -63,7 +63,7 @@ pub fn serialize_private_key(
     Ok(private_key_pem)
 }
 
-pub fn deserialize_private_key(
+pub fn rsa_private_key_from_pkcs8_pem(
     private_key_pem: &str,
 ) -> Result<RsaPrivateKey, RsaSerializationError> {
     let private_key = RsaPrivateKey::from_pkcs8_pem(private_key_pem)?;
@@ -103,12 +103,6 @@ pub fn create_rsa_sha256_signature(
     let padding = PaddingScheme::new_pkcs1v15_sign::<Sha256>();
     let signature = private_key.sign(padding, &digest)?;
     Ok(signature)
-}
-
-pub fn get_message_digest(message: &str) -> String {
-    let digest = Sha256::digest(message.as_bytes());
-    let digest_b64 = base64::encode(digest);
-    digest_b64
 }
 
 pub fn verify_rsa_sha256_signature(

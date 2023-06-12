@@ -55,7 +55,7 @@ use mitra_utils::{
     canonicalization::canonicalize_object,
     crypto_rsa::{
         generate_rsa_key,
-        serialize_private_key,
+        rsa_private_key_to_pkcs8_pem,
     },
     currencies::Currency,
     did::Did,
@@ -229,11 +229,11 @@ pub async fn create_account(
     };
 
     // Generate RSA private key for actor
-    let private_key = match web::block(generate_rsa_key).await {
+    let rsa_private_key = match web::block(generate_rsa_key).await {
         Ok(Ok(private_key)) => private_key,
         _ => return Err(MastodonError::InternalError),
     };
-    let private_key_pem = serialize_private_key(&private_key)
+    let rsa_private_key_pem = rsa_private_key_to_pkcs8_pem(&rsa_private_key)
         .map_err(|_| MastodonError::InternalError)?;
 
     let AccountCreateData { username, invite_code, .. } =
@@ -247,7 +247,7 @@ pub async fn create_account(
         password_hash: maybe_password_hash,
         login_address_ethereum: maybe_ethereum_address,
         login_address_monero: maybe_monero_address,
-        private_key_pem,
+        rsa_private_key: rsa_private_key_pem,
         invite_code,
         role,
     };

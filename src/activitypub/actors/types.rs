@@ -21,7 +21,7 @@ use mitra_models::{
 };
 use mitra_utils::{
     crypto_rsa::{
-        deserialize_private_key,
+        rsa_private_key_from_pkcs8_pem,
         RsaSerializationError,
     },
     urls::get_hostname,
@@ -368,10 +368,10 @@ pub fn get_local_actor(
     let following = LocalActorCollection::Following.of(&actor_id);
     let subscribers = LocalActorCollection::Subscribers.of(&actor_id);
 
-    let private_key = deserialize_private_key(&user.private_key)?;
-    let public_key = PublicKey::build(&actor_id, &private_key)?;
+    let rsa_private_key = rsa_private_key_from_pkcs8_pem(&user.private_key)?;
+    let public_key = PublicKey::build(&actor_id, &rsa_private_key)?;
     let authentication_keys = vec![
-        Multikey::build(&actor_id, &private_key)?,
+        Multikey::build(&actor_id, &rsa_private_key)?,
     ];
     let avatar = match &user.profile.avatar {
         Some(image) => {
@@ -484,7 +484,7 @@ mod tests {
     use mitra_models::profiles::types::DbActorProfile;
     use mitra_utils::crypto_rsa::{
         generate_weak_rsa_key,
-        serialize_private_key,
+        rsa_private_key_to_pkcs8_pem,
     };
     use super::*;
 
@@ -504,15 +504,16 @@ mod tests {
 
     #[test]
     fn test_local_actor() {
-        let private_key = generate_weak_rsa_key().unwrap();
-        let private_key_pem = serialize_private_key(&private_key).unwrap();
+        let rsa_private_key = generate_weak_rsa_key().unwrap();
+        let rsa_private_key_pem =
+            rsa_private_key_to_pkcs8_pem(&rsa_private_key).unwrap();
         let profile = DbActorProfile {
             username: "testuser".to_string(),
             bio: Some("testbio".to_string()),
             ..Default::default()
         };
         let user = User {
-            private_key: private_key_pem,
+            private_key: rsa_private_key_pem,
             profile,
             ..Default::default()
         };

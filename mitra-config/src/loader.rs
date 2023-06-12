@@ -4,9 +4,9 @@ use std::str::FromStr;
 
 use mitra_utils::{
     crypto_rsa::{
-        deserialize_private_key,
         generate_rsa_key,
-        serialize_private_key,
+        rsa_private_key_from_pkcs8_pem,
+        rsa_private_key_to_pkcs8_pem,
         RsaPrivateKey,
     },
     files::{set_file_permissions, write_file},
@@ -65,13 +65,13 @@ fn read_instance_rsa_key(storage_dir: &Path) -> RsaPrivateKey {
     if private_key_path.exists() {
         let private_key_str = std::fs::read_to_string(&private_key_path)
             .expect("failed to read instance RSA key");
-        let private_key = deserialize_private_key(&private_key_str)
+        let private_key = rsa_private_key_from_pkcs8_pem(&private_key_str)
             .expect("failed to read instance RSA key");
         private_key
     } else {
         let private_key = generate_rsa_key()
             .expect("failed to generate RSA key");
-        let private_key_str = serialize_private_key(&private_key)
+        let private_key_str = rsa_private_key_to_pkcs8_pem(&private_key)
             .expect("failed to serialize RSA key");
         write_file(private_key_str.as_bytes(), &private_key_path)
             .expect("failed to write instance RSA key");

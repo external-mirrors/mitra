@@ -15,7 +15,7 @@ use mitra_models::{
     users::types::User,
 };
 use mitra_utils::crypto_rsa::{
-    deserialize_private_key,
+    rsa_private_key_from_pkcs8_pem,
     RsaPrivateKey,
     RsaSerializationError,
 };
@@ -137,7 +137,7 @@ async fn deliver_activity_worker(
     activity: Value,
     recipients: &mut [Recipient],
 ) -> Result<(), DelivererError> {
-    let actor_key = deserialize_private_key(&sender.private_key)?;
+    let actor_key = rsa_private_key_from_pkcs8_pem(&sender.private_key)?;
     let actor_id = local_actor_id(
         &instance.url(),
         &sender.profile.username,

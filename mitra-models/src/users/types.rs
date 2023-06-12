@@ -191,7 +191,7 @@ pub struct UserCreateData {
     pub password_hash: Option<String>,
     pub login_address_ethereum: Option<String>,
     pub login_address_monero: Option<String>,
-    pub private_key_pem: String,
+    pub rsa_private_key: String,
     pub invite_code: Option<String>,
     pub role: Role,
 }

@@ -13,7 +13,7 @@ async fn main() {
     let opts: Opts = Opts::parse();
 
     match opts.subcmd {
-        SubCommand::GenerateRsaKey(cmd) => cmd.execute(),
+        SubCommand::GenerateRsaKey(cmd) => cmd.execute().unwrap(),
         SubCommand::GenerateEthereumAddress(cmd) => cmd.execute(),
         subcmd => {
             // Other commands require initialized app
