@@ -8,18 +8,21 @@ use ed25519_dalek::{
     Verifier,
 };
 
+pub type Ed25519PublicKey = PublicKey;
 pub type EddsaError = SignatureError;
 
-pub fn generate_eddsa_keypair() -> Keypair {
+pub fn generate_ed25519_key() -> SecretKey {
     let mut rng = rand_0_7::rngs::OsRng;
-    Keypair::generate(&mut rng)
+    let keypair = Keypair::generate(&mut rng);
+    keypair.secret
 }
 
 #[cfg(feature = "test-utils")]
-pub fn generate_weak_eddsa_keypair() -> Keypair {
+pub fn generate_weak_ed25519_key() -> SecretKey {
     use rand_0_7::SeedableRng;
     let mut rng = rand_0_7::rngs::StdRng::seed_from_u64(0);
-    Keypair::generate(&mut rng)
+    let keypair = Keypair::generate(&mut rng);
+    keypair.secret
 }
 
 pub fn create_eddsa_signature(
@@ -50,14 +53,15 @@ mod tests {
 
     #[test]
     fn test_verify_eddsa_signature() {
-        let keypair = generate_eddsa_keypair();
+        let private_key = generate_ed25519_key();
         let message = "test";
         let signature = create_eddsa_signature(
-            keypair.secret.to_bytes(),
+            private_key.to_bytes(),
             message.as_bytes(),
         ).unwrap();
+        let public_key = PublicKey::from(&private_key);
         let result = verify_eddsa_signature(
-            keypair.public.to_bytes(),
+            public_key.to_bytes(),
             message.as_bytes(),
             signature,
         );

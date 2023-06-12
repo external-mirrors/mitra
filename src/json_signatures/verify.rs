@@ -169,7 +169,7 @@ pub fn verify_blake2_ed25519_json_signature(
 mod tests {
     use serde_json::json;
     use mitra_utils::{
-        crypto_eddsa::generate_eddsa_keypair,
+        crypto_eddsa::{generate_ed25519_key, Ed25519PublicKey},
         crypto_rsa::generate_weak_rsa_key,
         currencies::Currency,
     };
@@ -248,7 +248,7 @@ mod tests {
 
     #[test]
     fn test_create_and_verify_eddsa_signature() {
-        let signer_keypair = generate_eddsa_keypair();
+        let signer_key = generate_ed25519_key();
         let signer_key_id = "https://example.org/users/test#main-key";
         let object = json!({
             "type": "Create",
@@ -264,7 +264,7 @@ mod tests {
             },
         });
         let signed_object = sign_object_eddsa(
-            signer_keypair.secret.to_bytes(),
+            signer_key.to_bytes(),
             signer_key_id,
             &object,
             None,
@@ -278,9 +278,9 @@ mod tests {
         let expected_signer = JsonSigner::ActorKeyId(signer_key_id.to_string());
         assert_eq!(signature_data.signer, expected_signer);
 
-        let signer_public_key = signer_keypair.public.to_bytes();
+        let signer_public_key = Ed25519PublicKey::from(&signer_key);
         let result = verify_eddsa_json_signature(
-            signer_public_key,
+            signer_public_key.to_bytes(),
             &signature_data.canonical_object,
             &signature_data.canonical_config,
             &signature_data.signature,

@@ -214,7 +214,7 @@ pub fn is_object_signed(object: &JsonValue) -> bool {
 mod tests {
     use serde_json::json;
     use mitra_utils::{
-        crypto_eddsa::generate_weak_eddsa_keypair,
+        crypto_eddsa::generate_weak_ed25519_key,
         crypto_rsa::generate_weak_rsa_key,
     };
     use super::*;
@@ -272,7 +272,7 @@ mod tests {
 
     #[test]
     fn test_sign_object_eddsa() {
-        let signer_keypair = generate_weak_eddsa_keypair();
+        let signer_key = generate_weak_ed25519_key();
         let signer_key_id = "https://example.org/users/test#main-key";
         let object = json!({
             "type": "Create",
@@ -289,7 +289,7 @@ mod tests {
         });
         let created_at = DateTime::parse_from_rfc3339("2023-02-24T23:36:38Z").unwrap().with_timezone(&Utc);
         let result = sign_object_eddsa(
-            signer_keypair.secret.to_bytes(),
+            signer_key.to_bytes(),
             signer_key_id,
             &object,
             Some(created_at),
