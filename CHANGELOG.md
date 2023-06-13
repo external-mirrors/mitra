@@ -21,6 +21,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Refresh outdated actor profiles when doing actor address lookups.
 - Set signature verification fetcher timeout to 10 seconds.
 - Make account search work when instance name is incomplete.
+- Added `manifest-src` directive to CSP header.
 
 ### Fixed
 

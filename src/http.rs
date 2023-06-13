@@ -52,6 +52,7 @@ pub fn create_default_headers_middleware() -> DefaultHeaders {
                 media-src 'self'; \
                 script-src 'self' 'unsafe-inline'; \
                 style-src 'self' 'nonce-oauth-authorization'; \
+                manifest-src 'self'; \
                 frame-ancestors 'none'; \
                 base-uri 'self'; \
                 form-action 'self'",
