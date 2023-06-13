@@ -14,7 +14,7 @@ use mitra_utils::{
     crypto_eddsa::{
         ed25519_public_key_from_bytes,
         Ed25519PublicKey,
-        EddsaError,
+        Ed25519SerializationError,
     },
     crypto_rsa::{
         deserialize_rsa_public_key,
@@ -83,7 +83,7 @@ pub enum AuthenticationError {
     InvalidRsaPublicKey(#[from] RsaSerializationError),
 
     #[error("invalid Ed25519 public key")]
-    InvalidEd25519PublicKey(#[from] EddsaError),
+    InvalidEd25519PublicKey(#[from] Ed25519SerializationError),
 
     #[error("actor and request signer do not match")]
     UnexpectedSigner,

@@ -1,3 +1,7 @@
+use ed25519::pkcs8::{
+    DecodePublicKey,
+    PublicKeyBytes,
+};
 use ed25519_dalek::{
     ExpandedSecretKey,
     Keypair,
@@ -26,17 +30,35 @@ pub fn generate_weak_ed25519_key() -> SecretKey {
     keypair.secret
 }
 
+#[derive(thiserror::Error, Debug)]
+pub enum Ed25519SerializationError {
+    #[error(transparent)]
+    KeyError(#[from] SignatureError),
+
+    #[error("pkcs8 decoding error")]
+    Pkcs8Error,
+}
+
 pub fn ed25519_private_key_from_bytes(
     bytes: &[u8],
-) -> Result<SecretKey, SignatureError> {
+) -> Result<SecretKey, Ed25519SerializationError> {
     let private_key = SecretKey::from_bytes(bytes)?;
     Ok(private_key)
 }
 
 pub fn ed25519_public_key_from_bytes(
     bytes: &[u8],
-) -> Result<PublicKey, SignatureError> {
+) -> Result<PublicKey, Ed25519SerializationError> {
     let public_key = PublicKey::from_bytes(bytes)?;
+    Ok(public_key)
+}
+
+pub fn ed25519_public_key_from_pkcs8_pem(
+    public_key_pem: &str,
+) -> Result<PublicKey, Ed25519SerializationError> {
+    let public_key_bytes = PublicKeyBytes::from_public_key_pem(public_key_pem)
+        .map_err(|_| Ed25519SerializationError::Pkcs8Error)?;
+    let public_key = PublicKey::from_bytes(public_key_bytes.as_ref())?;
     Ok(public_key)
 }
 

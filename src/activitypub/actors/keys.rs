@@ -4,6 +4,7 @@ use mitra_models::profiles::types::{DbActorKey, PublicKeyType};
 use mitra_utils::{
     crypto_eddsa::{
         ed25519_public_key_from_bytes,
+        ed25519_public_key_from_pkcs8_pem,
         Ed25519PrivateKey,
         Ed25519PublicKey,
     },
@@ -56,14 +57,22 @@ impl PublicKey {
     }
 
     pub fn to_db_key(&self) -> Result<DbActorKey, ValidationError> {
-        let public_key = deserialize_rsa_public_key(&self.public_key_pem)
-            .map_err(|_| ValidationError("invalid key encoding"))?;
-        let public_key_der = rsa_public_key_to_pkcs1_der(&public_key)
-            .map_err(|_| ValidationError("invalid public key"))?;
+        let (key_type, key_data) = match deserialize_rsa_public_key(&self.public_key_pem) {
+            Ok(public_key) => {
+                let public_key_der = rsa_public_key_to_pkcs1_der(&public_key)
+                    .map_err(|_| ValidationError("invalid public key"))?;
+                (PublicKeyType::RsaPkcs1, public_key_der)
+            },
+            Err(_) => {
+                let public_key = ed25519_public_key_from_pkcs8_pem(&self.public_key_pem)
+                    .map_err(|_| ValidationError("unexpected key type"))?;
+                (PublicKeyType::Ed25519, public_key.to_bytes().to_vec())
+            },
+        };
         let db_key = DbActorKey {
             id: self.id.clone(),
-            key_type: PublicKeyType::RsaPkcs1,
-            key_data: public_key_der,
+            key_type,
+            key_data,
         };
         Ok(db_key)
     }

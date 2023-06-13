@@ -5,6 +5,7 @@ use mitra_utils::{
     crypto_eddsa::{
         ed25519_public_key_from_bytes,
         verify_eddsa_signature,
+        Ed25519SerializationError,
         EddsaError,
     },
     did_key::DidKey,
@@ -85,7 +86,7 @@ fn verify_eddsa_blake2_signature(
     message: &str,
     signer: [u8; 32],
     signature: [u8; 64],
-) -> Result<(), EddsaError> {
+) -> Result<(), VerificationError> {
     let mut hasher = Blake2b512::new();
     hasher.update(message);
     let hash = hasher.finalize();
@@ -97,10 +98,13 @@ fn verify_eddsa_blake2_signature(
 #[derive(thiserror::Error, Debug)]
 pub enum VerificationError {
     #[error(transparent)]
-    InvalidKey(#[from] MulticodecError),
+    MulticodecError(#[from] MulticodecError),
 
     #[error(transparent)]
     ParseError(#[from] ParseError),
+
+    #[error(transparent)]
+    KeyError(#[from] Ed25519SerializationError),
 
     #[error(transparent)]
     SignatureError(#[from] EddsaError),
