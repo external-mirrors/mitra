@@ -168,8 +168,6 @@ async fn parse_tags(
                 },
                 None => continue,
             };
-        } else {
-            log::warn!("skipping actor tag of type {}", tag_type);
         };
     };
     Ok(emojis)
