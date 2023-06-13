@@ -70,8 +70,10 @@ pub fn parse_address_list(csv: &str)
     -> Result<Vec<ActorAddress>, ValidationError>
 {
     let mut addresses: Vec<_> = csv.lines()
+        .filter_map(|line| line.split(',').next())
         .map(|line| line.trim().to_string())
-        .filter(|line| !line.is_empty())
+        // Skip header and empty lines
+        .filter(|line| line != "Account address" && !line.is_empty())
         .map(|line| ActorAddress::from_mention(&line))
         .collect::<Result<_, _>>()?;
     addresses.sort();
@@ -236,6 +238,24 @@ mod tests {
         assert_eq!(addresses, vec![
             "user1@example.net",
             "user2@example.com",
+        ]);
+    }
+
+    #[test]
+    fn test_parse_address_list_mastodon() {
+        let csv = concat!(
+            "Account address,Show boosts,Notify on new posts,Languages\n",
+            "user1@one.test,false,false,\n",
+            "user2@two.test,true,false,\n",
+        );
+        let addresses = parse_address_list(csv).unwrap();
+        assert_eq!(addresses.len(), 2);
+        let addresses: Vec<_> = addresses.into_iter()
+            .map(|address| address.to_string())
+            .collect();
+        assert_eq!(addresses, vec![
+            "user1@one.test",
+            "user2@two.test",
         ]);
     }
 }
