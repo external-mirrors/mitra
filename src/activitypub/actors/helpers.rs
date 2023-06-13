@@ -95,14 +95,17 @@ fn parse_public_keys(
     actor: &Actor,
 ) -> Result<Vec<DbActorKey>, ValidationError> {
     let mut keys = vec![];
-    if actor.public_key.owner == actor.id {
-        let db_key = actor.public_key.to_db_key()?;
-        keys.push(db_key);
+    if actor.public_key.owner != actor.id {
+        log::warn!("public key does not belong to actor");
     };
+    let db_key = actor.public_key.to_db_key()?;
+    keys.push(db_key);
     for authentication_key in actor.authentication.iter() {
         if authentication_key.controller == actor.id {
             let db_key = authentication_key.to_db_key()?;
             keys.push(db_key);
+        } else {
+            log::warn!("authentication key does not belong to actor");
         };
     };
     keys.sort_by_key(|item| item.id.clone());
