@@ -40,12 +40,17 @@ Ethereum contracts: https://codeberg.org/silverpill/mitra-contracts
 
 ## Requirements
 
-- Rust 1.57+ (when building from source)
 - PostgreSQL 12+
+- Rust 1.57+ (when building from source)
 
-Optional:
+Mininum system requirements:
 
-- Monero node and Monero wallet service
+- 256 MB RAM (1 GB for building from source)
+- 10 GB storage for average single user instance with default configuration
+
+Optional integrations:
+
+- Monero wallet service and Monero node
 - Ethereum node
 - IPFS node (see [guide](./docs/ipfs.md))
 
