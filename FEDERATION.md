@@ -41,19 +41,19 @@ Example:
     "https://www.w3.org/ns/activitystreams",
     "https://w3id.org/security/data-integrity/v1"
   ],
-  "actor": "https://example.com/users/alice",
+  "actor": "https://server1.example/users/alice",
   "cc": [],
-  "id": "https://example.com/objects/0185f5f8-10b5-1b69-f45e-25f06792f411",
-  "object": "https://example.net/users/bob/posts/141892712081205472",
+  "id": "https://server1.example/objects/0185f5f8-10b5-1b69-f45e-25f06792f411",
+  "object": "https://server2.example/users/bob/posts/141892712081205472",
   "proof": {
     "created": "2023-01-28T01:22:40.183273595Z",
     "proofPurpose": "assertionMethod",
     "proofValue": "z5djAdMSrV...",
     "type": "MitraJcsRsaSignature2022",
-    "verificationMethod": "https://example.com/users/alice#main-key"
+    "verificationMethod": "https://server1.example/users/alice#main-key"
   },
   "to": [
-    "https://example.net/users/bob",
+    "https://server2.example/users/bob",
     "https://www.w3.org/ns/activitystreams#Public"
   ],
   "type":"Like"
@@ -138,12 +138,12 @@ After registering an account its owner can upload the list of followers and star
   "@context": [
     "https://www.w3.org/ns/activitystreams"
   ],
-  "actor": "https://server2.com/users/alice",
-  "id": "https://server2.com/activities/00000000-0000-0000-0000-000000000001",
-  "object": "https://server1.com/users/alice",
-  "target": "https://server2.com/users/alice",
+  "actor": "https://server2.example/users/alice",
+  "id": "https://server2.example/activities/00000000-0000-0000-0000-000000000001",
+  "object": "https://server1.example/users/alice",
+  "target": "https://server2.example/users/alice",
   "to": [
-    "https://example.com/users/bob"
+    "https://server.example/users/bob"
   ],
   "type": "Move"
 }
@@ -162,12 +162,12 @@ The `Add` activity is used to notify the subscriber about successful subscriptio
   "@context": [
     "https://www.w3.org/ns/activitystreams"
   ],
-  "actor": "https://example.com/users/alice",
-  "id": "https://example.com/activities/00000000-0000-0000-0000-000000000001",
-  "object": "https://example.com/users/bob",
-  "target": "https://example.com/users/alice/collections/subscribers",
+  "actor": "https://server.example/users/alice",
+  "id": "https://server.example/activities/00000000-0000-0000-0000-000000000001",
+  "object": "https://server.example/users/bob",
+  "target": "https://server.example/users/alice/collections/subscribers",
   "to": [
-    "https://example.com/users/bob"
+    "https://server.example/users/bob"
   ],
   "type": "Add"
 }
@@ -180,12 +180,12 @@ The `Remove` activity is used to notify the subscriber about expired subscriptio
   "@context": [
     "https://www.w3.org/ns/activitystreams"
   ],
-  "actor": "https://example.com/users/alice",
-  "id": "https://example.com/activities/00000000-0000-0000-0000-000000000002",
-  "object": "https://example.com/users/bob",
-  "target": "https://example.com/users/alice/collections/subscribers",
+  "actor": "https://server.example/users/alice",
+  "id": "https://server.example/activities/00000000-0000-0000-0000-000000000002",
+  "object": "https://server.example/users/bob",
+  "target": "https://server.example/users/alice/collections/subscribers",
   "to": [
-    "https://example.com/users/bob"
+    "https://server.example/users/bob"
   ],
   "type": "Remove"
 }
