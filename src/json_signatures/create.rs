@@ -185,7 +185,7 @@ pub fn sign_object_rsa(
     Ok(signed_object)
 }
 
-/// https://codeberg.org/fediverse/fep/src/branch/main/feps/fep-8b32.md
+/// https://codeberg.org/silverpill/feps/src/branch/main/8b32/fep-8b32.md
 pub fn sign_object_eddsa(
     signer_key: &Ed25519PrivateKey,
     signer_key_id: &str,

@@ -23,14 +23,15 @@ Activities are implemented in way that is compatible with Pleroma, Mastodon and 
 
 Supported FEPs:
 
-- [FEP-f1d5: NodeInfo in Fediverse Software](https://codeberg.org/fediverse/fep/src/branch/main/feps/fep-f1d5.md)
-- [FEP-e232: Object Links](https://codeberg.org/fediverse/fep/src/branch/main/feps/fep-e232.md)
-- [FEP-8b32: Object Integrity Proofs](https://codeberg.org/fediverse/fep/src/branch/main/feps/fep-8b32.md)
-- [FEP-0ea0: Payment Links](https://codeberg.org/fediverse/fep/src/branch/main/feps/fep-0ea0.md)
+- [FEP-f1d5: NodeInfo in Fediverse Software](https://codeberg.org/fediverse/fep/src/branch/main/fep/f1d5/fep-f1d5.md)
+- [FEP-e232: Object Links](https://codeberg.org/silverpill/feps/src/branch/main/e232/fep-e232.md)
+- [FEP-8b32: Object Integrity Proofs](https://codeberg.org/silverpill/feps/src/branch/main/8b32/fep-8b32.md)
+- [FEP-0ea0: Payment Links](https://codeberg.org/silverpill/feps/src/branch/main/0ea0/fep-0ea0.md)
+- [FEP-521a: Representing actor's public keys](https://codeberg.org/silverpill/feps/src/branch/main/521a/fep-521a.md)
 
 ## Object integrity proofs
 
-All outgoing activities are signed with actor's key in accordance with [FEP-8b32](https://codeberg.org/fediverse/fep/src/branch/main/feps/fep-8b32.md) document.
+All outgoing activities are signed with actor's key in accordance with [FEP-8b32](https://codeberg.org/silverpill/feps/src/branch/main/8b32/fep-8b32.md) document.
 
 Example:
 
@@ -60,6 +61,10 @@ Example:
 ```
 
 ### Supported proof suites
+
+#### jcs-eddsa-2022
+
+https://w3c.github.io/vc-di-eddsa/#jcs-eddsa-2022
 
 #### MitraJcsRsaSignature2022
 
@@ -122,7 +127,7 @@ Supported proof types:
 - EIP-191 (Ethereum personal signatures)
 - [Minisign](https://jedisct1.github.io/minisign/)
 
-[FEP-c390](https://codeberg.org/fediverse/fep/src/branch/main/feps/fep-c390.md) identity proofs are not supported yet.
+[FEP-c390](https://codeberg.org/silverpill/feps/src/branch/main/c390/fep-c390.md) identity proofs are not supported yet.
 
 ## Account migrations
 

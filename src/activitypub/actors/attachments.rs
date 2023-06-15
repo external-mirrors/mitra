@@ -104,7 +104,7 @@ pub fn parse_identity_proof(
     Ok(proof)
 }
 
-/// https://codeberg.org/fediverse/fep/src/branch/main/feps/fep-0ea0.md
+/// https://codeberg.org/silverpill/feps/src/branch/main/0ea0/fep-0ea0.md
 #[derive(Serialize)]
 pub struct PaymentLink {
     #[serde(rename = "type")]

@@ -38,7 +38,7 @@ pub async fn handle_announce(
         activity["object"]["type"].as_str()
     {
         // Ignore wrapped activities from Lemmy
-        // https://codeberg.org/fediverse/fep/src/branch/main/feps/fep-1b12.md
+        // https://codeberg.org/fediverse/fep/src/branch/main/fep/1b12/fep-1b12.md
         return Ok(None);
     };
     let activity: Announce = serde_json::from_value(activity)

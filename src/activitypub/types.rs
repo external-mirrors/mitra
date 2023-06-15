@@ -53,7 +53,7 @@ pub struct SimpleTag {
     pub name: String,
 }
 
-/// https://codeberg.org/fediverse/fep/src/branch/main/feps/fep-e232.md
+/// https://codeberg.org/silverpill/feps/src/branch/main/e232/fep-e232.md
 #[derive(Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct LinkTag {

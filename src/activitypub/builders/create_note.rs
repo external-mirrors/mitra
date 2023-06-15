@@ -167,7 +167,7 @@ pub fn build_note(
     assert_eq!(post.links.len(), post.linked.len());
     for (index, linked) in post.linked.iter().enumerate() {
         // Build FEP-e232 object link
-        // https://codeberg.org/fediverse/fep/src/branch/main/feps/fep-e232.md
+        // https://codeberg.org/silverpill/feps/src/branch/main/e232/fep-e232.md
         let link_href = post_object_id(instance_url, linked);
         let link_rel = if index == 0 {
             // Present first link as a quote
