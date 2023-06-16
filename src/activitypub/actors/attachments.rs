@@ -18,6 +18,7 @@ use mitra_utils::{
 
 use crate::activitypub::{
     deserialization::deserialize_string_array,
+    identity::create_identity_claim,
     vocabulary::{
         IDENTITY_PROOF,
         LINK,
@@ -26,9 +27,6 @@ use crate::activitypub::{
 };
 use crate::errors::ValidationError;
 use crate::ethereum::identity::verify_eip191_signature;
-use crate::identity::{
-    claims::create_identity_claim,
-};
 use crate::json_signatures::proofs::{
     PROOF_TYPE_ID_EIP191,
     PROOF_TYPE_ID_MINISIGN,

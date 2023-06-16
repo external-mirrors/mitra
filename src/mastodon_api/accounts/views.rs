@@ -79,6 +79,7 @@ use crate::activitypub::{
         },
     },
     identifiers::local_actor_id,
+    identity::create_identity_claim,
 };
 use crate::errors::ValidationError;
 use crate::ethereum::{
@@ -88,9 +89,6 @@ use crate::ethereum::{
     identity::verify_eip191_signature,
 };
 use crate::http::{get_request_base_url, FormOrJson};
-use crate::identity::{
-    claims::create_identity_claim,
-};
 use crate::json_signatures::{
     create::{add_integrity_proof, IntegrityProof},
     verify::{

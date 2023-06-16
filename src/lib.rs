@@ -5,7 +5,6 @@ mod errors;
 pub mod ethereum;
 pub mod http;
 mod http_signatures;
-mod identity;
 mod ipfs;
 pub mod job_queue;
 mod json_signatures;

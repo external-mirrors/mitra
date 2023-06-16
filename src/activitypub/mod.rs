@@ -9,6 +9,7 @@ pub mod fetcher;
 mod handlers;
 mod http_client;
 pub mod identifiers;
+pub mod identity;
 pub mod queues;
 mod receiver;
 mod types;
