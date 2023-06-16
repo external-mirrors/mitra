@@ -8,7 +8,13 @@ use mitra_models::profiles::types::{
     PaymentLink as DbPaymentLink,
     PaymentOption,
 };
-use mitra_utils::did::Did;
+use mitra_utils::{
+    did::Did,
+    minisign::{
+        parse_minisign_signature,
+        verify_minisign_signature,
+    },
+};
 
 use crate::activitypub::{
     deserialization::deserialize_string_array,
@@ -22,10 +28,6 @@ use crate::errors::ValidationError;
 use crate::ethereum::identity::verify_eip191_signature;
 use crate::identity::{
     claims::create_identity_claim,
-    minisign::{
-        parse_minisign_signature,
-        verify_minisign_signature,
-    },
 };
 use crate::json_signatures::proofs::{
     PROOF_TYPE_ID_EIP191,

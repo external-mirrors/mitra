@@ -12,6 +12,7 @@ pub mod files;
 pub mod html;
 pub mod id;
 pub mod markdown;
+pub mod minisign;
 pub mod multibase;
 pub mod multicodec;
 pub mod passwords;

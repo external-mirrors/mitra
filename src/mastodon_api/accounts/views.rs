@@ -61,6 +61,11 @@ use mitra_utils::{
     did::Did,
     did_pkh::DidPkh,
     id::generate_ulid,
+    minisign::{
+        minisign_key_to_did,
+        parse_minisign_signature,
+        verify_minisign_signature,
+    },
     passwords::hash_password,
 };
 
@@ -85,11 +90,6 @@ use crate::ethereum::{
 use crate::http::{get_request_base_url, FormOrJson};
 use crate::identity::{
     claims::create_identity_claim,
-    minisign::{
-        minisign_key_to_did,
-        parse_minisign_signature,
-        verify_minisign_signature,
-    },
 };
 use crate::json_signatures::{
     create::{add_integrity_proof, IntegrityProof},

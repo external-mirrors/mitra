@@ -14,13 +14,11 @@ use mitra_utils::{
     did::Did,
     did_key::DidKey,
     did_pkh::DidPkh,
+    minisign::verify_minisign_signature,
     multibase::{decode_multibase_base58btc, MultibaseError},
 };
 
 use crate::ethereum::identity::verify_eip191_signature;
-use crate::identity::{
-    minisign::verify_minisign_signature,
-};
 use super::create::{
     IntegrityProof,
     PROOF_KEY,

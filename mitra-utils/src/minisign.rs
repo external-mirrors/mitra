@@ -1,7 +1,7 @@
 /// https://jedisct1.github.io/minisign/
 use blake2::{Blake2b512, Digest};
 
-use mitra_utils::{
+use crate::{
     crypto_eddsa::{
         ed25519_public_key_from_bytes,
         verify_eddsa_signature,
@@ -82,19 +82,6 @@ pub fn parse_minisign_signature(signature_b64: &str)
     Ok(signature)
 }
 
-fn verify_eddsa_blake2_signature(
-    message: &str,
-    signer: [u8; 32],
-    signature: [u8; 64],
-) -> Result<(), VerificationError> {
-    let mut hasher = Blake2b512::new();
-    hasher.update(message);
-    let hash = hasher.finalize();
-    let public_key = ed25519_public_key_from_bytes(&signer)?;
-    verify_eddsa_signature(&public_key, &hash, signature)?;
-    Ok(())
-}
-
 #[derive(thiserror::Error, Debug)]
 pub enum VerificationError {
     #[error(transparent)]
@@ -110,6 +97,19 @@ pub enum VerificationError {
     SignatureError(#[from] EddsaError),
 }
 
+fn verify_eddsa_blake2_signature(
+    message: &str,
+    signer: [u8; 32],
+    signature: [u8; 64],
+) -> Result<(), VerificationError> {
+    let mut hasher = Blake2b512::new();
+    hasher.update(message);
+    let hash = hasher.finalize();
+    let public_key = ed25519_public_key_from_bytes(&signer)?;
+    verify_eddsa_signature(&public_key, &hash, signature)?;
+    Ok(())
+}
+
 pub fn verify_minisign_signature(
     signer: &DidKey,
     message: &str,
@@ -118,6 +118,7 @@ pub fn verify_minisign_signature(
     let ed25519_key = signer.try_ed25519_key()?;
     let ed25519_signature = signature.try_into()
         .map_err(|_| ParseError::InvalidSignatureLength)?;
+    // TODO: don't add newline
     let message = format!("{}\n", message);
     verify_eddsa_blake2_signature(
         &message,
