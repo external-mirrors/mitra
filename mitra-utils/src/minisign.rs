@@ -17,6 +17,9 @@ const MINISIGN_SIGNATURE_HASHED_CODE: [u8; 2] = *b"ED";
 
 #[derive(thiserror::Error, Debug)]
 pub enum ParseError {
+    #[error("invalid format")]
+    InvalidFormat,
+
     #[error("invalid encoding")]
     InvalidEncoding(#[from] base64::DecodeError),
 
@@ -32,9 +35,9 @@ pub enum ParseError {
 
 // Public key format:
 // base64(<signature_algorithm> || <key_id> || <public_key>)
-fn parse_minisign_public_key(key_b64: &str)
-    -> Result<[u8; 32], ParseError>
-{
+fn parse_minisign_public_key(
+    key_b64: &str,
+) -> Result<[u8; 32], ParseError> {
     let key_bin = base64::decode(key_b64)?;
     if key_bin.len() != 42 {
         return Err(ParseError::InvalidKeyLength);
@@ -53,17 +56,27 @@ fn parse_minisign_public_key(key_b64: &str)
     Ok(key)
 }
 
-pub fn minisign_key_to_did(key_b64: &str) -> Result<DidKey, ParseError> {
-    let key = parse_minisign_public_key(key_b64)?;
+fn parse_minisign_public_key_file(
+    key_file: &str,
+) -> Result<[u8; 32], ParseError> {
+    let key_b64 = key_file.lines()
+        .filter(|line| !line.starts_with("untrusted comment"))
+        .next()
+        .ok_or(ParseError::InvalidFormat)?;
+    parse_minisign_public_key(key_b64)
+}
+
+pub fn minisign_key_to_did(key_file: &str) -> Result<DidKey, ParseError> {
+    let key = parse_minisign_public_key_file(key_file)?;
     let did_key = DidKey::from_ed25519_key(key);
     Ok(did_key)
 }
 
 // Signature format:
 // base64(<signature_algorithm> || <key_id> || <signature>)
-pub fn parse_minisign_signature(signature_b64: &str)
-    -> Result<[u8; 64], ParseError>
-{
+pub fn parse_minisign_signature(
+    signature_b64: &str,
+) -> Result<[u8; 64], ParseError> {
     let signature_bin = base64::decode(signature_b64)?;
     if signature_bin.len() != 74 {
         return Err(ParseError::InvalidSignatureLength);
@@ -80,6 +93,16 @@ pub fn parse_minisign_signature(signature_b64: &str)
         return Err(ParseError::InvalidSignatureType);
     };
     Ok(signature)
+}
+
+pub fn parse_minisign_signature_file(
+    signature_file: &str,
+) -> Result<[u8; 64], ParseError> {
+    let signature_b64 = signature_file.lines()
+        .filter(|line| !line.starts_with("untrusted comment"))
+        .next()
+        .ok_or(ParseError::InvalidFormat)?;
+    parse_minisign_signature(signature_b64)
 }
 
 #[derive(thiserror::Error, Debug)]
@@ -133,13 +156,42 @@ mod tests {
     use super::*;
 
     #[test]
+    fn test_parse_minisign_public_key_file() {
+        let key_b64 =
+            "RWS/wRxk57oX+FE4a1zQEPgx3OemUuLKbDMLOd2q6/panRBLaftX3Kpl";
+        let key_file = concat!(
+            "untrusted comment: minisign public key F817BAE7641CC1BF\n",
+            "RWS/wRxk57oX+FE4a1zQEPgx3OemUuLKbDMLOd2q6/panRBLaftX3Kpl\n",
+        );
+        let result_1 = parse_minisign_public_key_file(key_b64).unwrap();
+        let result_2 = parse_minisign_public_key_file(key_file).unwrap();
+        assert_eq!(result_1, result_2);
+    }
+
+    #[test]
+    fn test_parse_minisign_signature_file() {
+        let signature_b64 =
+            "RUS/wRxk57oX+P9JzukdVNh3WYisLQIW4aiyOvl4plV384/ZmmNSlihXBb/mJoDsTW5HYYseRIVAiidr+1+OQCxVxPlDeAN9dAs=";
+        let signature_file = concat!(
+            "untrusted comment: signature from minisign secret key\n",
+            "RUS/wRxk57oX+P9JzukdVNh3WYisLQIW4aiyOvl4plV384/ZmmNSlihXBb/mJoDsTW5HYYseRIVAiidr+1+OQCxVxPlDeAN9dAs=\n",
+            "trusted comment: timestamp:1687113267	file:input	hashed\n",
+            "lMlFzwgrnUd6O/e6fERRwTIBfX+v1Wn9p5ZEZeGPV/bh1/WLXbh+ZHjAbEWAlaUV5RR90RvWxb9G2bF9LjXbDw==\n",
+        );
+        let result_1 = parse_minisign_signature_file(signature_b64).unwrap();
+        let result_2 = parse_minisign_signature_file(signature_file).unwrap();
+        assert_eq!(result_1, result_2);
+    }
+
+    #[test]
     fn test_verify_minisign_signature() {
         let minisign_key =
-            "RWSA58rRENpGFYwAjRjbdST7VHFoIuH9JBHfO2u6i5JgANPIoQhABAF/";
+            "RWS/wRxk57oX+FE4a1zQEPgx3OemUuLKbDMLOd2q6/panRBLaftX3Kpl";
         let message = "test";
         let minisign_signature =
-            "RUSA58rRENpGFVKxdZGMG1WdIJ+dlyP83qOqw6GP0H/Li6Brug2A3mFKLtleIRLi6IIG0smzOlX5CEsisNnc897OUHIOSNLsQQs=";
-        let signer = minisign_key_to_did(minisign_key).unwrap();
+            "RUS/wRxk57oX+P9JzukdVNh3WYisLQIW4aiyOvl4plV384/ZmmNSlihXBb/mJoDsTW5HYYseRIVAiidr+1+OQCxVxPlDeAN9dAs=";
+        let signer_key = parse_minisign_public_key(minisign_key).unwrap();
+        let signer = DidKey::from_ed25519_key(signer_key);
         let signature_bin = parse_minisign_signature(minisign_signature).unwrap();
         let result = verify_minisign_signature(&signer, message, &signature_bin);
         assert_eq!(result.is_ok(), true);

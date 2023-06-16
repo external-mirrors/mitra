@@ -10,6 +10,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Support FEP-c390 identity proofs.
 
+### Changed
+
+- Accept minisign public key and signature files for identity proof generation.
+
 ## [1.27.0] - 2023-06-14
 
 ### Added

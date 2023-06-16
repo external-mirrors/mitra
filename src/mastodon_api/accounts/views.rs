@@ -62,7 +62,7 @@ use mitra_utils::{
     id::generate_ulid,
     minisign::{
         minisign_key_to_did,
-        parse_minisign_signature,
+        parse_minisign_signature_file,
     },
     passwords::hash_password,
 };
@@ -371,7 +371,7 @@ async fn send_signed_activity(
         .map_err(|_| MastodonError::InternalError)?;
     let proof = match signer {
         Did::Key(signer) => {
-            let signature_bin = parse_minisign_signature(&data.signature)
+            let signature_bin = parse_minisign_signature_file(&data.signature)
                 .map_err(|_| ValidationError("invalid encoding"))?;
             verify_blake2_ed25519_json_signature(&signer, &canonical_json, &signature_bin)
                 .map_err(|_| ValidationError("invalid signature"))?;
@@ -465,7 +465,7 @@ async fn create_identity_proof(
     // Verify proof
     let (proof_type, signature_bin) = match did {
         Did::Key(ref did_key) => {
-            let signature_bin = parse_minisign_signature(&proof_data.signature)
+            let signature_bin = parse_minisign_signature_file(&proof_data.signature)
                 .map_err(|_| ValidationError("invalid signature encoding"))?
                 .to_vec();
             verify_blake2_ed25519_json_signature(
