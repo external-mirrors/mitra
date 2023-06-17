@@ -3,7 +3,7 @@ use uuid::Uuid;
 
 use mitra_config::Instance;
 use mitra_models::{
-    database::{DatabaseClient, DatabaseError, DatabaseTypeError},
+    database::{DatabaseClient, DatabaseError},
     profiles::types::DbActor,
     relationships::queries::get_followers,
     users::types::User,
@@ -11,7 +11,7 @@ use mitra_models::{
 use mitra_utils::id::generate_ulid;
 
 use crate::activitypub::{
-    actors::types::{build_local_actor, Actor, ActorKeyError},
+    actors::types::{build_local_actor, Actor},
     constants::AP_PUBLIC,
     deliverer::OutgoingActivity,
     identifiers::{local_actor_followers, local_object_id},
@@ -38,7 +38,7 @@ pub fn build_update_person(
     instance_url: &str,
     user: &User,
     maybe_internal_activity_id: Option<Uuid>,
-) -> Result<UpdatePerson, ActorKeyError> {
+) -> Result<UpdatePerson, DatabaseError> {
     let actor = build_local_actor(user, instance_url)?;
     // Update(Person) is idempotent so its ID can be random
     let internal_activity_id =
@@ -82,7 +82,7 @@ pub async fn prepare_update_person(
         &instance.url(),
         user,
         maybe_internal_activity_id,
-    ).map_err(|_| DatabaseTypeError)?;
+    )?;
     let recipients = get_update_person_recipients(db_client, &user.id).await?;
     Ok(OutgoingActivity::new(
         instance,

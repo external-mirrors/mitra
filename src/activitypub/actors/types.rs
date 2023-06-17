@@ -10,6 +10,7 @@ use serde_json::{json, Value};
 
 use mitra_config::Instance;
 use mitra_models::{
+    database::{DatabaseError, DatabaseTypeError},
     profiles::types::{
         DbActor,
         DbActorPublicKey,
@@ -326,8 +327,6 @@ impl Actor {
     }
 }
 
-pub type ActorKeyError = RsaSerializationError;
-
 fn build_actor_context() -> (
     &'static str,
     &'static str,
@@ -356,7 +355,7 @@ fn build_actor_context() -> (
 pub fn build_local_actor(
     user: &User,
     instance_url: &str,
-) -> Result<Actor, ActorKeyError> {
+) -> Result<Actor, DatabaseError> {
     let username = &user.profile.username;
     let actor_id = local_actor_id(instance_url, username);
     let inbox = LocalActorCollection::Inbox.of(&actor_id);
@@ -365,9 +364,11 @@ pub fn build_local_actor(
     let following = LocalActorCollection::Following.of(&actor_id);
     let subscribers = LocalActorCollection::Subscribers.of(&actor_id);
 
-    let public_key = PublicKey::build(&actor_id, &user.rsa_private_key)?;
+    let public_key = PublicKey::build(&actor_id, &user.rsa_private_key)
+        .map_err(|_| DatabaseTypeError)?;
     let mut authentication_keys = vec![
-        Multikey::build_rsa(&actor_id, &user.rsa_private_key)?,
+        Multikey::build_rsa(&actor_id, &user.rsa_private_key)
+            .map_err(|_| DatabaseTypeError)?,
     ];
     if let Some(ref private_key) = user.ed25519_private_key {
         let multikey = Multikey::build_ed25519(&actor_id, private_key.inner());
@@ -446,7 +447,7 @@ pub fn build_local_actor(
 
 pub fn build_instance_actor(
     instance: &Instance,
-) -> Result<Actor, ActorKeyError> {
+) -> Result<Actor, RsaSerializationError> {
     let actor_id = local_instance_actor_id(&instance.url());
     let actor_inbox = LocalActorCollection::Inbox.of(&actor_id);
     let actor_outbox = LocalActorCollection::Outbox.of(&actor_id);

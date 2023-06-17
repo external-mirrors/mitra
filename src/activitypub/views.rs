@@ -103,8 +103,7 @@ async fn actor_view(
             .finish();
         return Ok(response);
     };
-    let actor = build_local_actor(&user, &config.instance_url())
-        .map_err(|_| HttpError::InternalError)?;
+    let actor = build_local_actor(&user, &config.instance_url())?;
     let response = HttpResponse::Ok()
         .content_type(AP_MEDIA_TYPE)
         .json(actor);
