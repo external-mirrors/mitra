@@ -398,7 +398,7 @@ pub fn build_local_actor(
     };
     let mut attachments = vec![];
     for proof in user.profile.identity_proofs.clone().into_inner() {
-        let attachment = attach_identity_proof(proof);
+        let attachment = attach_identity_proof(proof)?;
         let attachment_value = serde_json::to_value(attachment)
             .expect("attachment should be serializable");
         attachments.push(attachment_value);

@@ -831,6 +831,7 @@ pub async fn find_empty_profiles(
 
 #[cfg(test)]
 mod tests {
+    use serde_json::json;
     use serial_test::serial;
     use crate::database::test_utils::create_test_database;
     use crate::emojis::{
@@ -1024,7 +1025,7 @@ mod tests {
         let identity_proof = IdentityProof {
             issuer: Did::Pkh(DidPkh::from_address(&ETHEREUM, "0x1234abcd")),
             proof_type: IdentityProofType::LegacyEip191IdentityProof,
-            value: "13590013185bdea963".to_string(),
+            value: json!("13590013185bdea963"),
         };
         let profile_data = ProfileCreateData {
             identity_proofs: vec![identity_proof],

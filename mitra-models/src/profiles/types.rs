@@ -6,6 +6,7 @@ use serde::{
     ser::SerializeMap,
     __private::ser::FlatMapSerializer,
 };
+use serde_json::{Value as JsonValue};
 use uuid::Uuid;
 
 use mitra_utils::{
@@ -163,7 +164,7 @@ impl Serialize for IdentityProofType {
 pub struct IdentityProof {
     pub issuer: Did,
     pub proof_type: IdentityProofType,
-    pub value: String,
+    pub value: JsonValue,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -267,9 +268,9 @@ impl<'de> Deserialize<'de> for PaymentOption {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
         where D: Deserializer<'de>
     {
-        let value = serde_json::Value::deserialize(deserializer)?;
+        let value = JsonValue::deserialize(deserializer)?;
         let payment_type = value.get("payment_type")
-            .and_then(serde_json::Value::as_u64)
+            .and_then(JsonValue::as_u64)
             .and_then(|val| i16::try_from(val).ok())
             .and_then(|val| PaymentType::try_from(val).ok())
             .ok_or(DeserializerError::custom("invalid payment type"))?;

@@ -496,11 +496,13 @@ async fn create_identity_proof(
             IdentityProofType::LegacyEip191IdentityProof
         },
     };
+    let proof_value = serde_json::to_value(&proof_data.signature)
+        .expect("signature string should be serializable");
 
     let proof = IdentityProof {
         issuer: did,
         proof_type: proof_type,
-        value: proof_data.signature.clone(),
+        value: proof_value,
     };
     let mut profile_data = ProfileUpdateData::from(&current_user.profile);
     profile_data.add_identity_proof(proof);

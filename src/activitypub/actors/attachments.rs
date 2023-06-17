@@ -1,12 +1,15 @@
 use serde::{Deserialize, Serialize};
 use serde_json::{Value as JsonValue};
 
-use mitra_models::profiles::types::{
-    ExtraField,
-    IdentityProof,
-    IdentityProofType,
-    PaymentLink as DbPaymentLink,
-    PaymentOption,
+use mitra_models::{
+    database::DatabaseTypeError,
+    profiles::types::{
+        ExtraField,
+        IdentityProof,
+        IdentityProofType,
+        PaymentLink as DbPaymentLink,
+        PaymentOption,
+    },
 };
 use mitra_utils::{
     did::Did,
@@ -37,19 +40,23 @@ use super::types::ActorAttachment;
 
 pub fn attach_identity_proof(
     proof: IdentityProof,
-) -> ActorAttachment {
+) -> Result<ActorAttachment, DatabaseTypeError> {
     let proof_type_str = match proof.proof_type {
         IdentityProofType::LegacyEip191IdentityProof => PROOF_TYPE_ID_EIP191,
         IdentityProofType::LegacyMinisignIdentityProof => PROOF_TYPE_ID_MINISIGN,
     };
-    ActorAttachment {
+    let proof_value = proof.value.as_str()
+        .ok_or(DatabaseTypeError)?
+        .to_string();
+    let attachment = ActorAttachment {
         object_type: IDENTITY_PROOF.to_string(),
         name: proof.issuer.to_string(),
         value: None,
         href: None,
         signature_algorithm: Some(proof_type_str.to_string()),
-        signature_value: Some(proof.value),
-    }
+        signature_value: Some(proof_value),
+    };
+    Ok(attachment)
 }
 
 pub fn parse_identity_proof(
@@ -96,10 +103,12 @@ pub fn parse_identity_proof(
             ).map_err(|_| ValidationError("invalid identity proof"))?;
         },
     };
+    let proof_value = serde_json::to_value(signature)
+        .expect("signature string should be serializable");
     let proof = IdentityProof {
         issuer: did,
         proof_type: proof_type,
-        value: signature.to_string(),
+        value: proof_value,
     };
     Ok(proof)
 }
