@@ -4,23 +4,13 @@
 
 ## Icons
 
-<a href="./logo.svg">
-  <img src="./logo.svg" width="50">
-</a>
-
-<a href="./logo-line.svg">
-  <img src="./logo-line.svg" width="50">
-</a>
-
-<a href="./logo-color.svg">
-  <img src="./logo-color.svg" width="50">
-</a>
+[<img src="./logo.svg" width="50">](./logo.svg)
+[<img src="./logo-line.svg" width="50">](./logo-line.svg)
+[<img src="./logo-color.svg" width="50">](./logo-color.svg)
 
 ## Custom emoji
 
-<a href="./logo-line-emoji.png">
-  <img src="./logo-line-emoji.png" width="24">
-</a>
+[<img src="./logo-line-emoji.png" width="50">](./logo-line-emoji.png)
 
 ## Font
 
