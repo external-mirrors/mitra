@@ -10,7 +10,7 @@
 
 ## Custom emoji
 
-[<img src="./logo-line-emoji.png" width="50">](./logo-line-emoji.png)
+[<img src="./logo-line-emoji.png" width="24">](./logo-line-emoji.png)
 
 ## Font
 
