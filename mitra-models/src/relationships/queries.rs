@@ -634,7 +634,7 @@ mod tests {
     };
     use crate::profiles::{
         queries::create_profile,
-        types::{DbActor, ProfileCreateData},
+        types::{DbActor, DbActorKey, ProfileCreateData},
     };
     use crate::users::{
         queries::create_user,
@@ -656,6 +656,7 @@ mod tests {
         let target_data = ProfileCreateData {
             username: "followed".to_string(),
             hostname: Some("example.org".to_string()),
+            public_keys: vec![DbActorKey::default()],
             actor_json: Some(DbActor {
                 id: target_actor_id.to_string(),
                 ..Default::default()
@@ -704,6 +705,7 @@ mod tests {
         let source_data = ProfileCreateData {
             username: "follower".to_string(),
             hostname: Some("example.org".to_string()),
+            public_keys: vec![DbActorKey::default()],
             actor_json: Some(DbActor::default()),
             ..Default::default()
         };

@@ -60,8 +60,7 @@ fn parse_minisign_public_key_file(
     key_file: &str,
 ) -> Result<[u8; 32], ParseError> {
     let key_b64 = key_file.lines()
-        .filter(|line| !line.starts_with("untrusted comment"))
-        .next()
+        .find(|line| !line.starts_with("untrusted comment"))
         .ok_or(ParseError::InvalidFormat)?;
     parse_minisign_public_key(key_b64)
 }
@@ -99,8 +98,7 @@ pub fn parse_minisign_signature_file(
     signature_file: &str,
 ) -> Result<[u8; 64], ParseError> {
     let signature_b64 = signature_file.lines()
-        .filter(|line| !line.starts_with("untrusted comment"))
-        .next()
+        .find(|line| !line.starts_with("untrusted comment"))
         .ok_or(ParseError::InvalidFormat)?;
     parse_minisign_signature(signature_b64)
 }

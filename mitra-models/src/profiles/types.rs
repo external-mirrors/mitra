@@ -20,6 +20,8 @@ use crate::database::{
 };
 use crate::emojis::types::DbEmoji;
 
+use super::checks::check_public_keys;
+
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct ProfileImage {
     pub file_name: String,
@@ -95,6 +97,17 @@ pub struct DbActorKey {
     pub key_type: PublicKeyType,
     #[serde(with = "hex::serde")]
     pub key_data: Vec<u8>,
+}
+
+#[cfg(feature = "test-utils")]
+impl Default for DbActorKey {
+    fn default() -> Self {
+        Self {
+            id: Default::default(),
+            key_type: PublicKeyType::RsaPkcs1,
+            key_data: vec![],
+        }
+    }
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -563,6 +576,14 @@ pub struct ProfileCreateData {
     pub actor_json: Option<DbActor>,
 }
 
+impl ProfileCreateData {
+    pub(super) fn check_consistency(&self) -> Result<(), DatabaseTypeError> {
+        let is_remote = self.actor_json.is_some();
+        check_public_keys(&self.public_keys, is_remote)?;
+        Ok(())
+    }
+}
+
 pub struct ProfileUpdateData {
     pub display_name: Option<String>,
     pub bio: Option<String>,
@@ -580,6 +601,12 @@ pub struct ProfileUpdateData {
 }
 
 impl ProfileUpdateData {
+    pub(super) fn check_consistency(&self) -> Result<(), DatabaseTypeError> {
+        let is_remote = self.actor_json.is_some();
+        check_public_keys(&self.public_keys, is_remote)?;
+        Ok(())
+    }
+
     /// Adds new identity proof
     /// or replaces the existing one if it has the same issuer.
     pub fn add_identity_proof(&mut self, proof: IdentityProof) -> () {

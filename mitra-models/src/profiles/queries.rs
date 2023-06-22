@@ -126,6 +126,7 @@ pub async fn create_profile(
     db_client: &mut impl DatabaseClient,
     profile_data: ProfileCreateData,
 ) -> Result<DbActorProfile, DatabaseError> {
+    profile_data.check_consistency()?;
     let transaction = db_client.transaction().await?;
     let profile_id = generate_ulid();
     if let Some(ref hostname) = profile_data.hostname {
@@ -189,6 +190,7 @@ pub async fn update_profile(
     profile_id: &Uuid,
     profile_data: ProfileUpdateData,
 ) -> Result<DbActorProfile, DatabaseError> {
+    profile_data.check_consistency()?;
     let transaction = db_client.transaction().await?;
     transaction.execute(
         "
@@ -842,10 +844,10 @@ mod tests {
         queries::create_profile,
         types::{
             DbActor,
+            DbActorKey,
             ExtraField,
             IdentityProof,
             IdentityProofType,
-            ProfileCreateData,
         },
     };
     use crate::users::{
@@ -881,6 +883,7 @@ mod tests {
         let profile_data = ProfileCreateData {
             username: "test".to_string(),
             hostname: Some("example.com".to_string()),
+            public_keys: vec![DbActorKey::default()],
             actor_json: Some(create_test_actor("https://example.com/users/test")),
             ..Default::default()
         };
@@ -927,6 +930,7 @@ mod tests {
         let profile_data_1 = ProfileCreateData {
             username: "test-1".to_string(),
             hostname: Some("example.com".to_string()),
+            public_keys: vec![DbActorKey::default()],
             actor_json: Some(create_test_actor(actor_id)),
             ..Default::default()
         };
@@ -934,6 +938,7 @@ mod tests {
         let profile_data_2 = ProfileCreateData {
             username: "test-2".to_string(),
             hostname: Some("example.com".to_string()),
+            public_keys: vec![DbActorKey::default()],
             actor_json: Some(create_test_actor(actor_id)),
             ..Default::default()
         };
@@ -1047,6 +1052,7 @@ mod tests {
         let profile_data = ProfileCreateData {
             username: "test".to_string(),
             hostname: Some("example.com".to_string()),
+            public_keys: vec![DbActorKey::default()],
             actor_json: Some(create_test_actor(actor_id)),
             ..Default::default()
         };

@@ -1434,7 +1434,7 @@ mod tests {
     use crate::database::test_utils::create_test_database;
     use crate::profiles::{
         queries::create_profile,
-        types::{DbActor, ProfileCreateData},
+        types::{DbActor, DbActorKey, ProfileCreateData},
     };
     use crate::relationships::queries::{
         follow,
@@ -1710,6 +1710,7 @@ mod tests {
         let remote_user_data = ProfileCreateData {
             username: "test".to_string(),
             hostname: Some("example.com".to_string()),
+            public_keys: vec![DbActorKey::default()],
             actor_json: Some(DbActor {
                 id: "https://example.com/users/1".to_string(),
                 ..Default::default()

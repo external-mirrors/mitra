@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Changed
 
 - Accept minisign public key and signature files for identity proof generation.
+- Verify actor doesn't have duplicate public keys.
 
 ## [1.27.0] - 2023-06-14
 
