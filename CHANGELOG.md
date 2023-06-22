@@ -14,6 +14,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Accept minisign public key and signature files for identity proof generation.
 - Verify actor doesn't have duplicate public keys.
+- Reject disconnected replies if author doesn't have local followers.
 
 ## [1.27.0] - 2023-06-14
 

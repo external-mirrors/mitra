@@ -685,8 +685,21 @@ pub async fn is_unsolicited_message(
     let has_local_recipients = audience.iter().any(|actor_id| {
         parse_local_actor_id(instance_url, actor_id).is_ok()
     });
+    let is_disconnected = if let Some(ref in_reply_to_id) = object.in_reply_to {
+        match get_post_by_object_id(
+            db_client,
+            instance_url,
+            in_reply_to_id,
+        ).await {
+            Ok(_) => false,
+            Err(DatabaseError::NotFound(_)) => true,
+            Err(other_error) => return Err(other_error.into()),
+        }
+    } else {
+        true
+    };
     let result =
-        object.in_reply_to.is_none() &&
+        is_disconnected &&
         is_public_object(&audience) &&
         !has_local_recipients &&
         !author_has_followers;
