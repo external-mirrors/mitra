@@ -256,6 +256,19 @@ pub struct UserCreateData {
     pub role: Role,
 }
 
+impl UserCreateData {
+    pub(super) fn check_consistency(&self) -> Result<(), DatabaseTypeError> {
+        if self.password_hash.is_none() &&
+            self.login_address_ethereum.is_none() &&
+            self.login_address_monero.is_none()
+        {
+            // At least one login method must be specified
+            return Err(DatabaseTypeError);
+        };
+        Ok(())
+    }
+}
+
 #[cfg(feature = "test-utils")]
 impl Default for UserCreateData {
     fn default() -> Self {

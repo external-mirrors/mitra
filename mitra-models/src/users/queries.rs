@@ -80,9 +80,7 @@ pub async fn create_user(
     db_client: &mut impl DatabaseClient,
     user_data: UserCreateData,
 ) -> Result<User, DatabaseError> {
-    assert!(user_data.password_hash.is_some() ||
-            user_data.login_address_ethereum.is_some() ||
-            user_data.login_address_monero.is_some());
+    user_data.check_consistency()?;
     let mut transaction = db_client.transaction().await?;
     // Prevent changes to actor_profile table
     transaction.execute(
