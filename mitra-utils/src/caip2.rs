@@ -35,6 +35,23 @@ pub enum MoneroNetwork {
     Private,
 }
 
+impl FromStr for MoneroNetwork {
+    type Err = ChainIdError;
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        // https://www.getmonero.org/resources/developer-guides/daemon-rpc.html#get_info
+        // nettype: string, one of mainnet, stagenet or testnet.
+        let network = match value {
+            "mainnet" => Self::Mainnet,
+            "stagenet" => Self::Stagenet,
+            "testnet" => Self::Testnet,
+            "fakechain" | "regtest" => Self::Private,
+            _ => return Err(ChainIdError("invalid monero network name")),
+        };
+        Ok(network)
+    }
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct ChainId {
     namespace: String,
@@ -56,6 +73,7 @@ impl ChainId {
                 reference
             },
             CAIP2_MONERO_NAMESPACE => {
+                MoneroNetwork::from_str(reference)?; // validation
                 reference
             },
             _ => return Err(ChainIdError("unsupported CAIP-2 namespace")),
@@ -119,15 +137,7 @@ impl ChainId {
         if !self.is_monero() {
             return Err(ChainIdError("namespace is not monero"));
         };
-        // https://www.getmonero.org/resources/developer-guides/daemon-rpc.html#get_info
-        // nettype: string, one of mainnet, stagenet or testnet.
-        let network = match self.reference.as_str() {
-            "mainnet" => MoneroNetwork::Mainnet,
-            "stagenet" => MoneroNetwork::Stagenet,
-            "testnet" => MoneroNetwork::Testnet,
-            "fakechain" | "regtest" => MoneroNetwork::Private,
-            _ => return Err(ChainIdError("invalid monero chain ID")),
-        };
+        let network = self.reference.parse()?;
         Ok(network)
     }
 
@@ -197,6 +207,22 @@ mod tests {
         assert_eq!(chain_id.namespace, "eip155");
         assert_eq!(chain_id.reference, "1");
         assert_eq!(chain_id.to_string(), value);
+    }
+
+    #[test]
+    fn test_parse_monero_chain_id() {
+        let value = "monero:mainnet";
+        let chain_id = value.parse::<ChainId>().unwrap();
+        assert_eq!(chain_id.namespace, "monero");
+        assert_eq!(chain_id.reference, "mainnet");
+        assert_eq!(chain_id.to_string(), value);
+    }
+
+    #[test]
+    fn test_parse_monero_chain_id_invalid() {
+        let value = "monero:test";
+        let error = value.parse::<ChainId>().err().unwrap();
+        assert!(matches!(error, ChainIdError("invalid monero network name")));
     }
 
     #[test]

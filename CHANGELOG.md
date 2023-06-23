@@ -16,6 +16,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Verify actor doesn't have duplicate public keys.
 - Reject disconnected replies if author doesn't have local followers.
 - Return error if CAIP-2 namespace is not `eip155` or `monero`.
+- Improve validation of Monero chain IDs.
 
 ## [1.27.0] - 2023-06-14
 
