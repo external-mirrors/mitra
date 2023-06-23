@@ -32,11 +32,10 @@ impl FromStr for AccountId {
         let caip10_re = Regex::new(&caip10_re_str)
             .expect("regexp should be valid");
         let caps = caip10_re.captures(value).ok_or(AccountIdError)?;
+        let chain_id = ChainId::new(&caps["namespace"], &caps["reference"])
+            .map_err(|_| AccountIdError)?;
         let account_id = Self {
-            chain_id: ChainId {
-                namespace: caps["namespace"].to_string(),
-                reference: caps["reference"].to_string(),
-            },
+            chain_id: chain_id,
             address: caps["address"].to_string(),
         };
         Ok(account_id)
