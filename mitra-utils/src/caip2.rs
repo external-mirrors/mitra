@@ -27,6 +27,13 @@ fn parse_ethereum_chain_id(reference: &str) -> Result<u32, ChainIdError> {
     Ok(chain_id)
 }
 
+// https://github.com/ChainAgnostic/namespaces/blob/main/monero/caip2.md
+const MONERO_CHAIN_ID_RE: &str = r"[0-9a-f]{32}";
+const MONERO_MAINNET_ID: &str = "418015bb9ae982a1975da7d79277c270";
+const MONERO_STAGENET_ID: &str = "76ee3cc98646292206cd3e86f74d88b4";
+const MONERO_TESTNET_ID: &str = "48ca7cd3c8de5b6a4d53d2861fbdaedc";
+const MONERO_PRIVATE_ID: &str = "00000000000000000000000000000000";
+
 #[derive(Debug, PartialEq)]
 pub enum MoneroNetwork {
     Mainnet,
@@ -73,8 +80,20 @@ impl ChainId {
                 reference
             },
             CAIP2_MONERO_NAMESPACE => {
-                MoneroNetwork::from_str(reference)?; // validation
-                reference
+                // Allow CAIP-2 IDs and network names,
+                // but always use IDs internally.
+                let maybe_network = MoneroNetwork::from_str(reference);
+                match maybe_network {
+                    Ok(network) => return Ok(Self::from_monero_network(network)),
+                    Err(_) => {
+                        // CAIP-2 chain ID?
+                        let chain_id_re = Regex::new(MONERO_CHAIN_ID_RE).unwrap();
+                        if !chain_id_re.is_match(reference) {
+                            return Err(ChainIdError("invalid monero chain ID"));
+                        };
+                        reference
+                    },
+                }
             },
             _ => return Err(ChainIdError("unsupported CAIP-2 namespace")),
         };
@@ -112,12 +131,11 @@ impl ChainId {
     }
 
     pub fn from_monero_network(network: MoneroNetwork) -> Self {
-        // TODO: update to match Monero namespace spec
         let reference = match network {
-            MoneroNetwork::Mainnet => "mainnet",
-            MoneroNetwork::Stagenet => "stagenet",
-            MoneroNetwork::Testnet => "testnet",
-            MoneroNetwork::Private => "regtest",
+            MoneroNetwork::Mainnet => MONERO_MAINNET_ID,
+            MoneroNetwork::Stagenet => MONERO_STAGENET_ID,
+            MoneroNetwork::Testnet => MONERO_TESTNET_ID,
+            MoneroNetwork::Private => MONERO_PRIVATE_ID,
         };
         Self {
             namespace: CAIP2_MONERO_NAMESPACE.to_string(),
@@ -137,7 +155,13 @@ impl ChainId {
         if !self.is_monero() {
             return Err(ChainIdError("namespace is not monero"));
         };
-        let network = self.reference.parse()?;
+        let network = match self.reference.as_str() {
+            MONERO_MAINNET_ID => MoneroNetwork::Mainnet,
+            MONERO_STAGENET_ID => MoneroNetwork::Stagenet,
+            MONERO_TESTNET_ID => MoneroNetwork::Testnet,
+            MONERO_PRIVATE_ID => MoneroNetwork::Private,
+            _ => return Err(ChainIdError("unknown monero network")),
+        };
         Ok(network)
     }
 
@@ -211,18 +235,26 @@ mod tests {
 
     #[test]
     fn test_parse_monero_chain_id() {
-        let value = "monero:mainnet";
+        let value = "monero:418015bb9ae982a1975da7d79277c270";
         let chain_id = value.parse::<ChainId>().unwrap();
         assert_eq!(chain_id.namespace, "monero");
-        assert_eq!(chain_id.reference, "mainnet");
+        assert_eq!(chain_id.reference, "418015bb9ae982a1975da7d79277c270");
         assert_eq!(chain_id.to_string(), value);
     }
 
     #[test]
+    fn test_parse_monero_chain_id_alias() {
+        let value = "monero:mainnet";
+        let chain_id = value.parse::<ChainId>().unwrap();
+        assert_eq!(chain_id.namespace, "monero");
+        assert_eq!(chain_id.reference, "418015bb9ae982a1975da7d79277c270");
+    }
+
+    #[test]
     fn test_parse_monero_chain_id_invalid() {
-        let value = "monero:test";
+        let value = "monero:0x418015bb9ae982a1975da7d79277c270";
         let error = value.parse::<ChainId>().err().unwrap();
-        assert!(matches!(error, ChainIdError("invalid monero network name")));
+        assert!(matches!(error, ChainIdError("invalid monero chain ID")));
     }
 
     #[test]

@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+
+- Use standardized CAIP-2 Monero chain identifiers.
+
 ### Changed
 
 - Require `chain_id` parameter for registering subscription option.

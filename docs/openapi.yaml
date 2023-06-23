@@ -1402,6 +1402,7 @@ paths:
                 chain_id:
                   description: CAIP-2 chain ID.
                   type: string
+                  example: monero:418015bb9ae982a1975da7d79277c270
                 amount:
                   description: Requested payment amount (in atomic units).
                   type: integer
@@ -2014,6 +2015,7 @@ components:
         chain_id:
           description: CAIP-2 chain ID.
           type: string
+          example: monero:418015bb9ae982a1975da7d79277c270
         payment_address:
           description: Payment address.
           type: string
