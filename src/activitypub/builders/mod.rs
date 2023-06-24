@@ -1,4 +1,5 @@
 pub mod accept_follow;
+pub mod add_note;
 pub mod add_person;
 pub mod announce;
 pub mod create_note;
@@ -7,6 +8,7 @@ pub mod delete_person;
 pub mod follow;
 pub mod like;
 pub mod move_person;
+pub mod remove_note;
 pub mod remove_person;
 pub mod undo_announce;
 pub mod undo_follow;

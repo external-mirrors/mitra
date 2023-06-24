@@ -18,6 +18,7 @@ pub enum LocalActorCollection {
     Followers,
     Following,
     Subscribers,
+    Featured,
 }
 
 impl LocalActorCollection {
@@ -27,7 +28,9 @@ impl LocalActorCollection {
             Self::Outbox => "outbox",
             Self::Followers => "followers",
             Self::Following => "following",
+            // TODO: collections/subscribers
             Self::Subscribers => "subscribers",
+            Self::Featured => "collections/featured",
         };
         format!("{}/{}", actor_id, name)
     }
@@ -61,6 +64,11 @@ pub fn local_actor_following(instance_url: &str, username: &str) -> String {
 pub fn local_actor_subscribers(instance_url: &str, username: &str) -> String {
     let actor_id = local_actor_id(instance_url, username);
     LocalActorCollection::Subscribers.of(&actor_id)
+}
+
+pub fn local_actor_featured(instance_url: &str, username: &str) -> String {
+    let actor_id = local_actor_id(instance_url, username);
+    LocalActorCollection::Featured.of(&actor_id)
 }
 
 pub fn local_instance_actor_id(instance_url: &str) -> String {

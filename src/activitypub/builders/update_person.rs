@@ -32,6 +32,7 @@ pub struct UpdatePerson {
     object: Actor,
 
     to: Vec<String>,
+    cc: Vec<String>,
 }
 
 pub fn build_update_person(
@@ -50,15 +51,13 @@ pub fn build_update_person(
         id: activity_id,
         actor: actor.id.clone(),
         object: actor,
-        to: vec![
-            AP_PUBLIC.to_string(),
-            local_actor_followers(instance_url, &user.profile.username),
-        ],
+        to: vec![AP_PUBLIC.to_string()],
+        cc: vec![local_actor_followers(instance_url, &user.profile.username)],
     };
     Ok(activity)
 }
 
-async fn get_update_person_recipients(
+pub(super) async fn get_update_person_recipients(
     db_client: &impl DatabaseClient,
     user_id: &Uuid,
 ) -> Result<Vec<DbActor>, DatabaseError> {
@@ -122,9 +121,10 @@ mod tests {
             activity.object.id,
             format!("{}/users/testuser", INSTANCE_URL),
         );
-        assert_eq!(activity.to, vec![
-            AP_PUBLIC.to_string(),
-            format!("{}/users/testuser/followers", INSTANCE_URL),
-        ]);
+        assert_eq!(activity.to, vec![AP_PUBLIC.to_string()]);
+        assert_eq!(
+            activity.cc,
+            vec![format!("{}/users/testuser/followers", INSTANCE_URL)],
+        );
     }
 }

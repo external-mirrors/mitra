@@ -102,7 +102,6 @@ use crate::mastodon_api::{
     pagination::{get_last_item, get_paginated_response},
     search::helpers::search_profiles_only,
     statuses::helpers::get_paginated_status_list,
-    statuses::types::Status,
 };
 use crate::monero::caip122::verify_monero_caip122_signature;
 use crate::validators::{
@@ -783,11 +782,6 @@ async fn get_account_statuses(
         Some(auth) => Some(get_current_user(db_client, auth.token()).await?),
         None => None,
     };
-    if query_params.pinned {
-        // Pinned posts are not supported
-        let statuses: Vec<Status> = vec![];
-        return Ok(HttpResponse::Ok().json(statuses));
-    };
     let profile = get_profile_by_id(db_client, &account_id).await?;
     // Include reposts but not replies
     let posts = get_posts_by_author(
@@ -796,6 +790,7 @@ async fn get_account_statuses(
         maybe_current_user.as_ref().map(|user| &user.id),
         !query_params.exclude_replies,
         true,
+        query_params.pinned,
         query_params.max_id,
         query_params.limit.inner(),
     ).await?;

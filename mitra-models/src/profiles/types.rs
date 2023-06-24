@@ -445,6 +445,7 @@ pub struct DbActor {
     pub outbox: String,
     pub followers: Option<String>,
     pub subscribers: Option<String>,
+    pub featured: Option<String>,
     pub url: Option<String>,
 
     pub public_key: DbActorPublicKey,

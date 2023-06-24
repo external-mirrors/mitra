@@ -64,6 +64,7 @@ pub struct DbPost {
     pub repost_of_id: Option<Uuid>,
     pub visibility: Visibility,
     pub is_sensitive: bool,
+    pub is_pinned: bool,
     pub reply_count: i32,
     pub reaction_count: i32,
     pub repost_count: i32,
@@ -92,6 +93,7 @@ pub struct Post {
     pub repost_of_id: Option<Uuid>,
     pub visibility: Visibility,
     pub is_sensitive: bool,
+    pub is_pinned: bool,
     pub reply_count: i32,
     pub reaction_count: i32,
     pub repost_count: i32,
@@ -136,6 +138,7 @@ impl Post {
             db_post.content.len() != 0 ||
             db_post.content_source.is_some() ||
             db_post.is_sensitive ||
+            db_post.is_pinned ||
             db_post.in_reply_to_id.is_some() ||
             db_post.ipfs_cid.is_some() ||
             db_post.token_id.is_some() ||
@@ -157,6 +160,7 @@ impl Post {
             repost_of_id: db_post.repost_of_id,
             visibility: db_post.visibility,
             is_sensitive: db_post.is_sensitive,
+            is_pinned: db_post.is_pinned,
             reply_count: db_post.reply_count,
             reaction_count: db_post.reaction_count,
             repost_count: db_post.repost_count,
@@ -200,6 +204,7 @@ impl Default for Post {
             repost_of_id: None,
             visibility: Visibility::Public,
             is_sensitive: false,
+            is_pinned: false,
             reply_count: 0,
             reaction_count: 0,
             repost_count: 0,

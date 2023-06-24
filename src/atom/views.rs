@@ -26,6 +26,7 @@ async fn get_atom_feed(
         None, // include only public posts
         false, // exclude replies
         false, // exclude reposts
+        false, // not only pinned
         None,
         FEED_SIZE,
     ).await?;

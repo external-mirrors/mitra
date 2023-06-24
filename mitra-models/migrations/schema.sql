@@ -129,6 +129,7 @@ CREATE TABLE post (
     repost_of_id UUID REFERENCES post (id) ON DELETE CASCADE,
     visibility SMALLINT NOT NULL,
     is_sensitive BOOLEAN NOT NULL,
+    is_pinned BOOLEAN NOT NULL DEFAULT FALSE,
     reply_count INTEGER NOT NULL CHECK (reply_count >= 0) DEFAULT 0,
     reaction_count INTEGER NOT NULL CHECK (reaction_count >= 0) DEFAULT 0,
     repost_count INTEGER NOT NULL CHECK (repost_count >= 0) DEFAULT 0,

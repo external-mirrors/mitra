@@ -18,11 +18,12 @@ use mitra_models::{
     posts::helpers::{can_create_post, can_view_post},
     posts::queries::{
         create_post,
+        delete_post,
         get_post_by_id,
         get_thread,
         find_reposts_by_user,
+        set_pinned_flag,
         set_post_ipfs_cid,
-        delete_post,
     },
     posts::types::{PostCreateData, Visibility},
     reactions::queries::{
@@ -36,9 +37,11 @@ use mitra_utils::markdown::markdown_lite_to_html;
 use crate::activitypub::{
     builders::{
         announce::prepare_announce,
+        add_note::prepare_add_note,
         create_note::{build_note, prepare_create_note},
         delete_note::prepare_delete_note,
         like::prepare_like,
+        remove_note::prepare_remove_note,
         undo_announce::prepare_undo_announce,
         undo_like::prepare_undo_like,
     },
@@ -553,6 +556,76 @@ async fn unreblog(
     Ok(HttpResponse::Ok().json(status))
 }
 
+/// https://docs.joinmastodon.org/methods/statuses/#pin
+#[post("/{status_id}/pin")]
+async fn pin(
+    auth: BearerAuth,
+    config: web::Data<Config>,
+    connection_info: ConnectionInfo,
+    db_pool: web::Data<DbPool>,
+    status_id: web::Path<Uuid>,
+) -> Result<HttpResponse, MastodonError> {
+    let db_client = &**get_database_client(&db_pool).await?;
+    let current_user = get_current_user(db_client, auth.token()).await?;
+    let mut post = get_post_by_id(db_client, &status_id).await?;
+    if post.author.id != current_user.id || !post.is_public() || post.repost_of_id.is_some() {
+        return Err(MastodonError::OperationError("can't pin post"));
+    };
+    set_pinned_flag(db_client, &post.id, true).await?;
+    post.is_pinned = true;
+
+    prepare_add_note(
+        db_client,
+        &config.instance(),
+        &current_user,
+        &post.id,
+    ).await?.enqueue(db_client).await?;
+
+    let status = build_status(
+        db_client,
+        &get_request_base_url(connection_info),
+        &config.instance_url(),
+        Some(&current_user),
+        post,
+    ).await?;
+    Ok(HttpResponse::Ok().json(status))
+}
+
+/// https://docs.joinmastodon.org/methods/statuses/#unpin
+#[post("/{status_id}/unpin")]
+async fn unpin(
+    auth: BearerAuth,
+    config: web::Data<Config>,
+    connection_info: ConnectionInfo,
+    db_pool: web::Data<DbPool>,
+    status_id: web::Path<Uuid>,
+) -> Result<HttpResponse, MastodonError> {
+    let db_client = &**get_database_client(&db_pool).await?;
+    let current_user = get_current_user(db_client, auth.token()).await?;
+    let mut post = get_post_by_id(db_client, &status_id).await?;
+    if post.author.id != current_user.id || !post.is_public() || post.repost_of_id.is_some() {
+        return Err(MastodonError::OperationError("can't unpin post"));
+    };
+    set_pinned_flag(db_client, &post.id, false).await?;
+    post.is_pinned = false;
+
+    prepare_remove_note(
+        db_client,
+        &config.instance(),
+        &current_user,
+        &post.id,
+    ).await?.enqueue(db_client).await?;
+
+    let status = build_status(
+        db_client,
+        &get_request_base_url(connection_info),
+        &config.instance_url(),
+        Some(&current_user),
+        post,
+    ).await?;
+    Ok(HttpResponse::Ok().json(status))
+}
+
 #[post("/{status_id}/make_permanent")]
 async fn make_permanent(
     auth: BearerAuth,
@@ -726,6 +799,8 @@ pub fn status_api_scope() -> Scope {
         .service(unfavourite)
         .service(reblog)
         .service(unreblog)
+        .service(pin)
+        .service(unpin)
         .service(make_permanent);
     with_ethereum_extras(scope)
 }

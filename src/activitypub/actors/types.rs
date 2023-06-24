@@ -172,6 +172,9 @@ pub struct Actor {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub subscribers: Option<String>,
 
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub featured: Option<String>,
+
     #[serde(
         default,
         skip_serializing_if = "Vec::is_empty",
@@ -246,6 +249,7 @@ impl Actor {
             outbox: self.outbox,
             followers: self.followers,
             subscribers: self.subscribers,
+            featured: self.featured,
             url: self.url,
             public_key: DbActorPublicKey {
                 id: self.public_key.id,
@@ -355,6 +359,7 @@ fn build_actor_context() -> (
             ("value", "schema:value"),
             ("toot", MASTODON_CONTEXT),
             ("IdentityProof", "toot:IdentityProof"),
+            ("featured", "toot:featured"),
             ("mitra", MITRA_CONTEXT),
             ("subscribers", "mitra:subscribers"),
             ("subject", "mitra:subject"),
@@ -374,6 +379,7 @@ pub fn build_local_actor(
     let followers = LocalActorCollection::Followers.of(&actor_id);
     let following = LocalActorCollection::Following.of(&actor_id);
     let subscribers = LocalActorCollection::Subscribers.of(&actor_id);
+    let featured = LocalActorCollection::Featured.of(&actor_id);
 
     let public_key = PublicKey::build(&actor_id, &user.rsa_private_key)
         .map_err(|_| DatabaseTypeError)?;
@@ -449,6 +455,7 @@ pub fn build_local_actor(
         followers: Some(followers),
         following: Some(following),
         subscribers: Some(subscribers),
+        featured: Some(featured),
         authentication: authentication_keys,
         public_key,
         icon: avatar,
@@ -484,6 +491,7 @@ pub fn build_instance_actor(
         followers: None,
         following: None,
         subscribers: None,
+        featured: None,
         authentication: authentication_keys,
         public_key,
         icon: None,

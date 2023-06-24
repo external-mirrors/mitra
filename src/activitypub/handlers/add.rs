@@ -3,7 +3,11 @@ use serde_json::Value;
 
 use mitra_config::Config;
 use mitra_models::{
-    database::DatabaseClient,
+    database::{DatabaseClient, DatabaseError},
+    posts::queries::{
+        get_post_by_remote_object_id,
+        set_pinned_flag,
+    },
     profiles::queries::get_profile_by_remote_actor_id,
     relationships::queries::subscribe_opt,
     users::queries::get_user_by_name,
@@ -11,7 +15,7 @@ use mitra_models::{
 
 use crate::activitypub::{
     identifiers::parse_local_actor_id,
-    vocabulary::PERSON,
+    vocabulary::{NOTE, PERSON},
 };
 use crate::errors::ValidationError;
 use super::{HandlerError, HandlerResult};
@@ -35,7 +39,7 @@ pub async fn handle_add(
         &activity.actor,
     ).await?;
     let actor = actor_profile.actor_json.ok_or(HandlerError::LocalObject)?;
-    if Some(activity.target) == actor.subscribers {
+    if Some(activity.target.clone()) == actor.subscribers {
         // Adding to subscribers
         let username = parse_local_actor_id(
             &config.instance_url(),
@@ -44,6 +48,19 @@ pub async fn handle_add(
         let user = get_user_by_name(db_client, &username).await?;
         subscribe_opt(db_client, &user.id, &actor_profile.id).await?;
         return Ok(Some(PERSON));
+    };
+    if Some(activity.target) == actor.featured {
+        // Add to featured
+        let post = match get_post_by_remote_object_id(
+            db_client,
+            &activity.object,
+        ).await {
+            Ok(post) => post,
+            Err(DatabaseError::NotFound(_)) => return Ok(None),
+            Err(other_error) => return Err(other_error.into()),
+        };
+        set_pinned_flag(db_client, &post.id, true).await?;
+        return Ok(Some(NOTE));
     };
     Ok(None)
 }

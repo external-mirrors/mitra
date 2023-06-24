@@ -761,12 +761,14 @@ pub async fn get_related_posts(
     Ok(posts)
 }
 
+#[allow(clippy::too_many_arguments)]
 pub async fn get_posts_by_author(
     db_client: &impl DatabaseClient,
     profile_id: &Uuid,
     current_user_id: Option<&Uuid>,
     include_replies: bool,
     include_reposts: bool,
+    only_pinned: bool,
     max_post_id: Option<Uuid>,
     limit: u16,
 ) -> Result<Vec<Post>, DatabaseError> {
@@ -781,6 +783,9 @@ pub async fn get_posts_by_author(
     };
     if !include_reposts {
         condition.push_str(" AND post.repost_of_id IS NULL");
+    };
+    if only_pinned {
+        condition.push_str(" AND post.is_pinned IS TRUE");
     };
     let statement = format!(
         "
@@ -1035,6 +1040,25 @@ pub async fn get_post_by_ipfs_cid(
         None => return Err(DatabaseError::NotFound("post")),
     };
     Ok(post)
+}
+
+pub async fn set_pinned_flag(
+    db_client: &impl DatabaseClient,
+    post_id: &Uuid,
+    is_pinned: bool,
+) -> Result<(), DatabaseError> {
+    let updated_count = db_client.execute(
+        "
+        UPDATE post
+        SET is_pinned = $1
+        WHERE id = $2 AND repost_of_id IS NULL
+        ",
+        &[&is_pinned, &post_id],
+    ).await?;
+    if updated_count == 0 {
+        return Err(DatabaseError::NotFound("post"));
+    };
+    Ok(())
 }
 
 pub async fn update_reply_count(
@@ -1866,7 +1890,7 @@ mod tests {
 
         // Anonymous viewer
         let timeline = get_posts_by_author(
-            db_client, &user.id, None, false, true, None, 10
+            db_client, &user.id, None, false, true, false, None, 10,
         ).await.unwrap();
         assert_eq!(timeline.len(), 2);
         assert_eq!(timeline.iter().any(|post| post.id == post_1.id), true);

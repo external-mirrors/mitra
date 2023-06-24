@@ -7,6 +7,10 @@ use mitra_models::{
     notifications::queries::{
         create_subscription_expiration_notification,
     },
+    posts::queries::{
+        get_post_by_remote_object_id,
+        set_pinned_flag,
+    },
     profiles::queries::get_profile_by_remote_actor_id,
     relationships::queries::unsubscribe,
     users::queries::get_user_by_name,
@@ -14,7 +18,7 @@ use mitra_models::{
 
 use crate::activitypub::{
     identifiers::parse_local_actor_id,
-    vocabulary::PERSON,
+    vocabulary::{NOTE, PERSON},
 };
 use crate::errors::ValidationError;
 
@@ -39,7 +43,7 @@ pub async fn handle_remove(
         &activity.actor,
     ).await?;
     let actor = actor_profile.actor_json.ok_or(HandlerError::LocalObject)?;
-    if Some(activity.target) == actor.subscribers {
+    if Some(activity.target.clone()) == actor.subscribers {
         // Removing from subscribers
         let username = parse_local_actor_id(
             &config.instance_url(),
@@ -60,6 +64,19 @@ pub async fn handle_remove(
             Err(DatabaseError::NotFound(_)) => return Ok(None),
             Err(other_error) => return Err(other_error.into()),
         };
+    };
+    if Some(activity.target) == actor.featured {
+        // Remove from featured
+        let post = match get_post_by_remote_object_id(
+            db_client,
+            &activity.object,
+        ).await {
+            Ok(post) => post,
+            Err(DatabaseError::NotFound(_)) => return Ok(None),
+            Err(other_error) => return Err(other_error.into()),
+        };
+        set_pinned_flag(db_client, &post.id, false).await?;
+        return Ok(Some(NOTE));
     };
     Ok(None)
 }

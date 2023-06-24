@@ -191,6 +191,7 @@ async fn outbox(
         None, // include only public posts
         true, // include replies
         true, // include reposts
+        false, // not only pinned
         None,
         COLLECTION_PAGE_SIZE,
     ).await?;
