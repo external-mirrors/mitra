@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Support FEP-c390 identity proofs.
 - Allow to pin posts to profile.
+- Added `instance-report` command.
 
 ### Changed
 

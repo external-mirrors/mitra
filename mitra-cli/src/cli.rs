@@ -67,11 +67,16 @@ use mitra_models::{
         get_profile_by_id,
         get_profile_by_remote_actor_id,
     },
-    subscriptions::queries::reset_subscriptions,
+    subscriptions::queries::{
+        reset_subscriptions,
+        get_active_subscription_count,
+        get_expired_subscription_count,
+    },
     users::queries::{
         create_invite_code,
         create_user,
         get_invite_codes,
+        get_user_count,
         get_user_by_id,
         set_user_ed25519_private_key,
         set_user_password,
@@ -130,6 +135,7 @@ pub enum SubCommand {
     ReopenInvoice(ReopenInvoice),
     ListActiveAddresses(ListActiveAddresses),
     GetPaymentAddress(GetPaymentAddress),
+    InstanceReport(InstanceReport),
 }
 
 /// Generate RSA private key
@@ -855,6 +861,27 @@ impl GetPaymentAddress {
             &self.recipient_id,
         ).await?;
         print!("payment address: {}", payment_address);
+        Ok(())
+    }
+}
+
+#[derive(Parser)]
+pub struct InstanceReport;
+
+impl InstanceReport {
+    pub async fn execute(
+        &self,
+        _config: &Config,
+        db_client: &impl DatabaseClient,
+    ) -> Result<(), Error> {
+        let users = get_user_count(db_client).await?;
+        let active_subscriptions =
+            get_active_subscription_count(db_client).await?;
+        let expired_subscriptions =
+            get_expired_subscription_count(db_client).await?;
+        println!("users: {}", users);
+        println!("active subscriptions: {}", active_subscriptions);
+        println!("expired subscriptions: {}", expired_subscriptions);
         Ok(())
     }
 }

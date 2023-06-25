@@ -60,6 +60,7 @@ async fn main() {
                 SubCommand::ReopenInvoice(cmd) => cmd.execute(&config, db_client).await.unwrap(),
                 SubCommand::ListActiveAddresses(cmd) => cmd.execute(&config).await.unwrap(),
                 SubCommand::GetPaymentAddress(cmd) => cmd.execute(&config, db_client).await.unwrap(),
+                SubCommand::InstanceReport(cmd) => cmd.execute(&config, db_client).await.unwrap(),
                 _ => unreachable!(),
             };
         },

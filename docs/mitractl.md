@@ -127,3 +127,9 @@ Check expired invoice:
 ```shell
 mitractl check-expired-invoice 0184b062-d8d5-cbf1-a71b-6d1aafbae2ab
 ```
+
+Generate instance report:
+
+```shell
+mitractl instance-report
+```

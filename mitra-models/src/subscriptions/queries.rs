@@ -203,6 +203,34 @@ pub async fn reset_subscriptions(
     Ok(())
 }
 
+pub async fn get_active_subscription_count(
+    db_client: &impl DatabaseClient,
+) -> Result<i64, DatabaseError> {
+    let row = db_client.query_one(
+        "
+        SELECT count(subscription)
+        FROM subscription WHERE expires_at > CURRENT_TIMESTAMP
+        ",
+        &[],
+    ).await?;
+    let count = row.try_get("count")?;
+    Ok(count)
+}
+
+pub async fn get_expired_subscription_count(
+    db_client: &impl DatabaseClient,
+) -> Result<i64, DatabaseError> {
+    let row = db_client.query_one(
+        "
+        SELECT count(subscription)
+        FROM subscription WHERE expires_at <= CURRENT_TIMESTAMP
+        ",
+        &[],
+    ).await?;
+    let count = row.try_get("count")?;
+    Ok(count)
+}
+
 #[cfg(test)]
 mod tests {
     use serial_test::serial;
