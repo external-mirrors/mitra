@@ -44,6 +44,7 @@ use super::collections::{
 };
 use super::constants::{AP_MEDIA_TYPE, AS_MEDIA_TYPE};
 use super::identifiers::{
+    local_actor_featured,
     local_actor_followers,
     local_actor_following,
     local_actor_subscribers,
@@ -311,6 +312,61 @@ async fn subscribers_collection(
     Ok(response)
 }
 
+#[get("/collections/featured")]
+async fn featured_collection(
+    config: web::Data<Config>,
+    db_pool: web::Data<DbPool>,
+    username: web::Path<String>,
+    query_params: web::Query<CollectionQueryParams>,
+) -> Result<HttpResponse, HttpError> {
+    let db_client = &**get_database_client(&db_pool).await?;
+    let user = get_user_by_name(db_client, &username).await?;
+    let instance = config.instance();
+    let collection_id = local_actor_featured(&instance.url(), &username);
+    let first_page_id = format!("{}?page=true", collection_id);
+    if query_params.page.is_none() {
+        let collection = OrderedCollection::new(
+            collection_id,
+            Some(first_page_id),
+            None,
+        );
+        let response = HttpResponse::Ok()
+            .content_type(AP_MEDIA_TYPE)
+            .json(collection);
+        return Ok(response);
+    };
+    const COLLECTION_PAGE_SIZE: u16 = 20;
+    let mut posts = get_posts_by_author(
+        db_client,
+        &user.id,
+        None, // include only public posts
+        true, // include replies
+        false, // exclude reposts
+        true, // only pinned
+        None,
+        COLLECTION_PAGE_SIZE,
+    ).await?;
+    add_related_posts(db_client, posts.iter_mut().collect()).await?;
+    let objects = posts.iter().map(|post| {
+        let note = build_note(
+            &instance.hostname(),
+            &instance.url(),
+            post,
+            config.federation.fep_e232_enabled,
+        );
+        serde_json::to_value(note)
+            .expect("note should be serializable")
+    }).collect();
+    let collection_page = OrderedCollectionPage::new(
+        first_page_id,
+        objects,
+    );
+    let response = HttpResponse::Ok()
+        .content_type(AP_MEDIA_TYPE)
+        .json(collection_page);
+    Ok(response)
+}
+
 pub fn actor_scope() -> Scope {
     web::scope("/users/{username}")
         .service(actor_view)
@@ -320,6 +376,7 @@ pub fn actor_scope() -> Scope {
         .service(followers_collection)
         .service(following_collection)
         .service(subscribers_collection)
+        .service(featured_collection)
 }
 
 #[get("")]
