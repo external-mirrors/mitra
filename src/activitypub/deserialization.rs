@@ -8,7 +8,7 @@ use serde::{
 };
 use serde_json::Value;
 
-use crate::errors::{ConversionError, ValidationError};
+use crate::errors::ValidationError;
 
 /// Parses object json value and returns its ID as string
 pub fn find_object_id(object: &Value) -> Result<String, ValidationError> {
@@ -38,13 +38,12 @@ pub fn deserialize_into_object_id<'de, D>(
 /// Transforms single string or an array value into array of strings
 fn parse_string_array(
     value: &Value,
-) -> Result<Vec<String>, ConversionError> {
+) -> Result<Vec<String>, ValidationError> {
     let result = match value {
         Value::String(string) => vec![string.to_string()],
         Value::Array(array) => array.iter()
             .map(|item| item.to_string()).collect(),
-        // Unexpected value type
-        _ => return Err(ConversionError),
+        _ => return Err(ValidationError("unexpected value type")),
     };
     Ok(result)
 }
@@ -126,17 +125,17 @@ pub fn parse_into_href_array(
 /// Transforms arbitrary property value into array of structs
 pub fn parse_into_array<T: DeserializeOwned>(
     value: &Value,
-) -> Result<Vec<T>, ConversionError> {
+) -> Result<Vec<T>, ValidationError> {
     let objects = match value {
         Value::Array(array) => array.to_vec(),
         Value::Object(_) => vec![value.clone()],
         // Unexpected value type
-        _ => return Err(ConversionError),
+        _ => return Err(ValidationError("unexpected value type")),
     };
     let mut items = vec![];
     for object in objects {
         let item: T = serde_json::from_value(object)
-            .map_err(|_| ConversionError)?;
+            .map_err(|_| ValidationError("invalid array item"))?;
         items.push(item);
     };
     Ok(items)
