@@ -305,6 +305,7 @@ pub fn parse_metadata_field(
 
 #[cfg(test)]
 mod tests {
+    use serde_json::json;
     use mitra_utils::{
         caip2::ChainId,
         currencies::Currency,
@@ -391,5 +392,18 @@ mod tests {
         };
         assert_eq!(link.name, "EthereumSubscription");
         assert_eq!(link.href, subscription_page_url);
+    }
+
+    #[test]
+    fn test_parse_link_attachment_not_payment() {
+        let attachment_value = json!({
+            "name": "Test",
+            "href": "https://test.example",
+        });
+        let error = parse_payment_option(&attachment_value).err().unwrap();
+        assert!(matches!(
+            error,
+            ValidationError("attachment is not a payment link"),
+        ));
     }
 }
