@@ -48,7 +48,6 @@ use crate::activitypub::{
     },
     identifiers::LocalActorCollection,
 };
-use crate::errors::ConversionError;
 
 use super::contracts::ContractSet;
 use super::errors::EthereumError;
@@ -63,11 +62,12 @@ use super::utils::{address_to_string, parse_address};
 
 const ETHEREUM: Currency = Currency::Ethereum;
 
-fn u256_to_date(value: U256) -> Result<DateTime<Utc>, ConversionError> {
-    let timestamp: i64 = value.try_into().map_err(|_| ConversionError)?;
+fn u256_to_date(value: U256) -> Result<DateTime<Utc>, EthereumError> {
+    let timestamp: i64 = value.try_into()
+        .map_err(|_| EthereumError::ConversionError)?;
     let datetime = Utc.timestamp_opt(timestamp, 0)
         .single()
-        .ok_or(ConversionError)?;
+        .ok_or(EthereumError::ConversionError)?;
     Ok(datetime)
 }
 

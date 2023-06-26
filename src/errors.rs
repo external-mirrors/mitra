@@ -9,10 +9,6 @@ use serde::Serialize;
 use mitra_models::database::DatabaseError;
 
 #[derive(thiserror::Error, Debug)]
-#[error("conversion error")]
-pub struct ConversionError;
-
-#[derive(thiserror::Error, Debug)]
 #[error("{0}")]
 pub struct ValidationError(pub &'static str);
 

@@ -1,8 +1,6 @@
 /// Proof types
 use std::str::FromStr;
 
-use crate::errors::ConversionError;
-
 // Identity proof, version 00
 pub const PROOF_TYPE_ID_EIP191: &str = "ethereum-eip191-00";
 
@@ -42,8 +40,12 @@ pub enum ProofType {
     JcsEddsaSignature,
 }
 
+#[derive(thiserror::Error, Debug)]
+#[error("unsupported proof type")]
+pub struct UnsupportedProofType;
+
 impl FromStr for ProofType {
-    type Err = ConversionError;
+    type Err = UnsupportedProofType;
 
     fn from_str(value: &str) -> Result<Self, Self::Err> {
         let proof_type = match value {
@@ -52,18 +54,18 @@ impl FromStr for ProofType {
             PROOF_TYPE_JCS_BLAKE2_ED25519 => Self::JcsBlake2Ed25519Signature,
             PROOF_TYPE_JCS_RSA => Self::JcsRsaSignature,
             PROOF_TYPE_JCS_RSA_LEGACY => Self::JcsRsaSignature,
-            _ => return Err(ConversionError),
+            _ => return Err(UnsupportedProofType),
         };
         Ok(proof_type)
     }
 }
 
 impl ProofType {
-    pub fn from_cryptosuite(value: &str) -> Result<Self, ConversionError> {
+    pub fn from_cryptosuite(value: &str) -> Result<Self, UnsupportedProofType> {
         let proof_type = match value {
             CRYPTOSUITE_JCS_RSA => Self::JcsRsaSignature,
             CRYPTOSUITE_JCS_EDDSA => Self::JcsEddsaSignature,
-            _ => return Err(ConversionError),
+            _ => return Err(UnsupportedProofType),
         };
         Ok(proof_type)
     }
