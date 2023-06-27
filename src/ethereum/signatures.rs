@@ -16,7 +16,7 @@ use web3::types::{Address, H256, Recovery};
 
 /// Generates signing key
 pub fn generate_ecdsa_key() -> SecretKey {
-    let mut rng = OsRng::new().expect("failed to initialize RNG");
+    let mut rng = OsRng;
     SecretKey::new(&mut rng)
 }
 
