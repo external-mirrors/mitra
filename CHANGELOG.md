@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Fixed
+
+- Added workaround for Pleroma collection parsing bug.
+
 ## [1.28.0] - 2023-06-26
 
 ### Added

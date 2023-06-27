@@ -20,6 +20,10 @@ pub struct OrderedCollection {
 
     #[serde(skip_serializing_if = "Option::is_none")]
     total_items: Option<i32>,
+
+    // Workaround for Pleroma collection parsing bug
+    #[serde(skip_serializing_if = "Option::is_none")]
+    ordered_items: Option<Vec<JsonValue>>,
 }
 
 impl OrderedCollection {
@@ -27,6 +31,7 @@ impl OrderedCollection {
         collection_id: String,
         first_page_id: Option<String>,
         total_items: Option<i32>,
+        with_ordered_items: bool,
     ) -> Self {
         Self {
             context: build_default_context(),
@@ -34,6 +39,7 @@ impl OrderedCollection {
             object_type: ORDERED_COLLECTION.to_string(),
             first: first_page_id,
             total_items,
+            ordered_items: if with_ordered_items { Some(vec![]) } else { None },
         }
     }
 }
