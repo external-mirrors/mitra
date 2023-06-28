@@ -14,8 +14,8 @@ pub fn clean_html(
         builder.add_allowed_classes(tag, classes);
     };
     let safe_html = builder
-        // Remove src from external images to prevent tracking
-        .set_tag_attribute_value("img", "src", "")
+        // Remove external images to prevent tracking
+        .rm_tags(&["img"])
         // Always add rel="noopener"
         .link_rel(Some("noopener"))
         .clean(unsafe_html)
@@ -65,7 +65,7 @@ mod tests {
         );
         let expected_safe_html = concat!(
             r#"<p><span class="h-card"><a href="https://example.com/user" class="u-url mention" rel="noopener">@<span>user</span></a></span> test</p>"#,
-            r#"<p><img src=""></p>"#,
+            r#"<p></p>"#,
         );
         let safe_html = clean_html(
             unsafe_html,
