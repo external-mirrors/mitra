@@ -429,6 +429,7 @@ pub struct IdentityClaim {
 
 #[derive(Deserialize)]
 pub struct IdentityProofData {
+    pub proof_type: String,
     pub did: String,
     pub signature: String,
 }

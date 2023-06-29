@@ -406,18 +406,18 @@ async fn get_identity_claim(
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &**get_database_client(&db_pool).await?;
     let current_user = get_current_user(db_client, auth.token()).await?;
-    let did = match query_params.proof_type.as_str() {
+    let (did, proof_type) = match query_params.proof_type.as_str() {
         "ethereum" => {
             let did_pkh = DidPkh::from_address(
                 &Currency::Ethereum,
                 &query_params.signer,
             );
-            Did::Pkh(did_pkh)
+            (Did::Pkh(did_pkh), IdentityProofType::FepC390JcsEip191Proof)
         },
         "minisign" => {
             let did_key = minisign_key_to_did(&query_params.signer)
                 .map_err(|_| ValidationError("invalid key"))?;
-            Did::Key(did_key)
+            (Did::Key(did_key), IdentityProofType::FepC390JcsBlake2Ed25519Proof)
         },
         _ => return Err(ValidationError("unknown proof type").into()),
     };
@@ -425,8 +425,11 @@ async fn get_identity_claim(
         &config.instance_url(),
         &current_user.profile.username,
     );
-    let claim = create_identity_claim_fep_c390(&actor_id, &did)
-        .map_err(|_| MastodonError::InternalError)?;
+    let claim = create_identity_claim_fep_c390(
+        &actor_id,
+        &did,
+        &proof_type,
+    ).map_err(|_| MastodonError::InternalError)?;
     let response = IdentityClaim { did, claim };
     Ok(HttpResponse::Ok().json(response))
 }
@@ -441,6 +444,11 @@ async fn create_identity_proof(
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &mut **get_database_client(&db_pool).await?;
     let mut current_user = get_current_user(db_client, auth.token()).await?;
+    let proof_type = match proof_data.proof_type.as_str() {
+        "ethereum" => IdentityProofType::FepC390JcsEip191Proof,
+        "minisign" => IdentityProofType::FepC390JcsBlake2Ed25519Proof,
+        _ => return Err(ValidationError("unknown proof type").into()),
+    };
     let did = proof_data.did.parse::<Did>()
         .map_err(|_| ValidationError("invalid DID"))?;
     // Reject proof if there's another local user with the same DID.
@@ -458,12 +466,19 @@ async fn create_identity_proof(
         &config.instance_url(),
         &current_user.profile.username,
     );
-    let message = create_identity_claim_fep_c390(&actor_id, &did)
-        .map_err(|_| MastodonError::InternalError)?;
+    let message = create_identity_claim_fep_c390(
+        &actor_id,
+        &did,
+        &proof_type,
+    ).map_err(|_| MastodonError::InternalError)?;
 
     // Verify proof
-    let (proof_type, signature_bin) = match did {
-        Did::Key(ref did_key) => {
+    let signature_bin = match proof_type {
+        IdentityProofType::FepC390JcsBlake2Ed25519Proof => {
+            let did_key = match did {
+                Did::Key(ref did_key) => did_key,
+                _ => return Err(ValidationError("unexpected DID type").into()),
+            };
             let signature_bin = parse_minisign_signature_file(&proof_data.signature)
                 .map_err(|_| ValidationError("invalid signature encoding"))?
                 .to_vec();
@@ -472,9 +487,13 @@ async fn create_identity_proof(
                 &message,
                 &signature_bin,
             ).map_err(|_| ValidationError("invalid signature"))?;
-            (IdentityProofType::FepC390JcsBlake2Ed25519Proof, signature_bin)
+            signature_bin
         },
-        Did::Pkh(ref did_pkh) => {
+        IdentityProofType::FepC390JcsEip191Proof=> {
+            let did_pkh = match did {
+                Did::Pkh(ref did_pkh) => did_pkh,
+                _ => return Err(ValidationError("unexpected DID type").into()),
+            };
             if did_pkh.chain_id() != ChainId::ethereum_mainnet() {
                 // DID must point to Ethereum Mainnet because it is a valid
                 // identifier on any Ethereum chain
@@ -495,8 +514,9 @@ async fn create_identity_proof(
                 &message,
                 &signature_bin,
             ).map_err(|_| ValidationError("invalid signature"))?;
-            (IdentityProofType::FepC390JcsEip191Proof, signature_bin)
+            signature_bin
         },
+        _ => unimplemented!("expected FEP-c390 compatible proof type"),
     };
 
     let proof = create_identity_proof_fep_c390(

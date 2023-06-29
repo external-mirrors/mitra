@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- Update identity proof validation API to use `proof_type` parameter.
+
 ### Fixed
 
 - Remove `<img>` tags instead of clearing `src` attribute.

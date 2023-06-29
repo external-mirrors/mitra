@@ -331,7 +331,12 @@ mod tests {
         let address = address_to_string(key_to_ethereum_address(&private_key));
         let did_pkh = DidPkh::from_address(&Currency::Ethereum, &address);
         let did = Did::Pkh(did_pkh);
-        let claim = create_identity_claim_fep_c390(actor_id, &did).unwrap();
+        let proof_type = IdentityProofType::FepC390JcsEip191Proof;
+        let claim = create_identity_claim_fep_c390(
+            actor_id,
+            &did,
+            &proof_type,
+        ).unwrap();
         let signature = sign_message(
             &private_key.display_secret().to_string(),
             claim.as_bytes(),
@@ -340,7 +345,7 @@ mod tests {
         let identity_proof = create_identity_proof_fep_c390(
             actor_id,
             &did,
-            &IdentityProofType::FepC390JcsEip191Proof,
+            &proof_type,
             &signature_bin,
         );
         let parsed = parse_identity_proof_fep_c390(

@@ -60,9 +60,28 @@ impl VerifiableIdentityStatement {
 pub fn create_identity_claim_fep_c390(
     actor_id: &str,
     subject: &Did,
+    proof_type: &IdentityProofType,
 ) -> Result<String, CanonicalizationError> {
     let claim = VerifiableIdentityStatement::new(subject, actor_id);
-    let message = canonicalize_object(&claim)?;
+    let message = match proof_type {
+        IdentityProofType::LegacyEip191IdentityProof
+            | IdentityProofType::LegacyMinisignIdentityProof
+            => unimplemented!("expected FEP-c390 compatible proof type"),
+        IdentityProofType::FepC390JcsBlake2Ed25519Proof => {
+            match subject {
+                Did::Key(ref did_key) => did_key,
+                _ => panic!("invalid did type"),
+            };
+            canonicalize_object(&claim)?
+        },
+        IdentityProofType::FepC390JcsEip191Proof => {
+            match subject {
+                Did::Pkh(ref did_pkh) => did_pkh,
+                _ => panic!("invalid did type"),
+            };
+            canonicalize_object(&claim)?
+        },
+    };
     Ok(message)
 }
 
@@ -145,7 +164,11 @@ mod tests {
         let ed25519_public_key = Ed25519PublicKey::from(&ed25519_private_key);
         let did = Did::Key(
             DidKey::from_ed25519_key(ed25519_public_key.to_bytes()));
-        let claim = create_identity_claim_fep_c390(actor_id, &did).unwrap();
+        let claim = create_identity_claim_fep_c390(
+            actor_id,
+            &did,
+            &IdentityProofType::FepC390JcsBlake2Ed25519Proof,
+        ).unwrap();
         assert_eq!(
             claim,
             r#"{"alsoKnownAs":"https://server.example/users/test","subject":"did:key:z6MkvTbUjUVTwwMEsqxipAsL9YUvRaAC22rFzQCHf7RnbTbx","type":"VerifiableIdentityStatement"}"#,
