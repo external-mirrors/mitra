@@ -15,7 +15,7 @@ use crate::activitypub::{
     deserialization::deserialize_into_object_id,
     fetcher::helpers::{get_or_import_profile_by_actor_id, import_post},
     identifiers::parse_local_object_id,
-    vocabulary::{CREATE, DELETE, DISLIKE, LIKE, NOTE, UNDO, UPDATE},
+    vocabulary::{ADD, CREATE, DELETE, DISLIKE, LIKE, NOTE, REMOVE, UNDO, UPDATE},
 };
 use crate::errors::ValidationError;
 use crate::media::MediaStorage;
@@ -34,7 +34,7 @@ pub async fn handle_announce(
     db_client: &mut impl DatabaseClient,
     activity: Value,
 ) -> HandlerResult {
-    if let Some(CREATE | DELETE | DISLIKE | LIKE | UNDO | UPDATE) =
+    if let Some(ADD | CREATE | DELETE | DISLIKE | LIKE | REMOVE | UNDO | UPDATE) =
         activity["object"]["type"].as_str()
     {
         // Ignore wrapped activities from Lemmy
