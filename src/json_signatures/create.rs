@@ -57,7 +57,7 @@ pub struct IntegrityProof {
 }
 
 impl IntegrityProofConfig {
-    fn jcs_eddsa(
+    pub fn jcs_eddsa(
         verification_method: &str,
         created_at: DateTime<Utc>,
     ) -> Self {

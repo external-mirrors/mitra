@@ -1,3 +1,4 @@
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 use mitra_models::profiles::types::{
@@ -12,7 +13,11 @@ use mitra_utils::{
     did::Did,
 };
 
-use crate::json_signatures::create::IntegrityProof;
+use crate::json_signatures::create::{
+    prepare_jcs_sha256_data,
+    IntegrityProof,
+    IntegrityProofConfig,
+};
 
 use super::vocabulary::VERIFIABLE_IDENTITY_STATEMENT;
 
@@ -61,6 +66,7 @@ pub fn create_identity_claim_fep_c390(
     actor_id: &str,
     subject: &Did,
     proof_type: &IdentityProofType,
+    proof_created_at: &DateTime<Utc>,
 ) -> Result<(VerifiableIdentityStatement, String), CanonicalizationError> {
     let claim = VerifiableIdentityStatement::new(subject, actor_id);
     let message = match proof_type {
@@ -74,6 +80,15 @@ pub fn create_identity_claim_fep_c390(
         IdentityProofType::FepC390JcsEip191Proof => {
             subject.as_did_pkh().expect("did:pkh should be used");
             canonicalize_object(&claim)?
+        },
+        IdentityProofType::FepC390JcsEddsaProof => {
+            subject.as_did_key().expect("did:key should be used");
+            let proof_config = IntegrityProofConfig::jcs_eddsa(
+                &subject.to_string(),
+                *proof_created_at,
+            );
+            let hash_data = prepare_jcs_sha256_data(&claim, &proof_config)?;
+            hex::encode(hash_data)
         },
     };
     Ok((claim, message))
@@ -91,6 +106,7 @@ pub fn create_identity_proof_fep_c390(
     actor_id: &str,
     subject: &Did,
     proof_type: &IdentityProofType,
+    proof_created_at: &DateTime<Utc>,
     signature_bin: &[u8],
 ) -> DbIdentityProof {
     let integrity_proof = match proof_type {
@@ -103,6 +119,15 @@ pub fn create_identity_proof_fep_c390(
             let did_pkh = subject.as_did_pkh()
                 .expect("did:pkh should be used");
             IntegrityProof::jcs_eip191(did_pkh, signature_bin)
+        },
+        IdentityProofType::FepC390JcsEddsaProof => {
+            let did_key = subject.as_did_key()
+                .expect("did:key should be used");
+            let proof_config = IntegrityProofConfig::jcs_eddsa(
+                &did_key.to_string(),
+                *proof_created_at,
+            );
+            IntegrityProof::new(proof_config, signature_bin)
         },
         _ => unimplemented!("expected FEP-c390 compatible proof type"),
     };
@@ -154,10 +179,12 @@ mod tests {
         let ed25519_public_key = Ed25519PublicKey::from(&ed25519_private_key);
         let did = Did::Key(
             DidKey::from_ed25519_key(ed25519_public_key.to_bytes()));
+        let created_at = Utc::now();
         let (_claim, message) = create_identity_claim_fep_c390(
             actor_id,
             &did,
             &IdentityProofType::FepC390JcsBlake2Ed25519Proof,
+            &created_at,
         ).unwrap();
         assert_eq!(
             message,

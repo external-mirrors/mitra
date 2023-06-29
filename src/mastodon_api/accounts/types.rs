@@ -431,6 +431,7 @@ pub struct IdentityProofData {
     pub proof_type: String,
     pub did: String,
     pub signature: String,
+    pub created_at: DateTime<Utc>,
 }
 
 // TODO: actix currently doesn't support parameter arrays

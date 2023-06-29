@@ -12,6 +12,7 @@ use mitra_models::{
     },
 };
 use mitra_utils::{
+    crypto_eddsa::ed25519_public_key_from_bytes,
     did::Did,
     eip191::verify_eip191_signature,
     minisign::{
@@ -46,6 +47,7 @@ use crate::json_signatures::{
     verify::{
         get_json_signature,
         verify_blake2_ed25519_json_signature,
+        verify_eddsa_json_signature,
         verify_eip191_json_signature,
         JsonSigner,
     },
@@ -103,12 +105,15 @@ pub fn parse_identity_proof(
             if !matches!(proof_type, IdentityProofType::LegacyMinisignIdentityProof) {
                 return Err(ValidationError("incorrect proof type"));
             };
-            let signature_bin = parse_minisign_signature(signature)
+            let signature = parse_minisign_signature(signature)
                 .map_err(|_| ValidationError("invalid signature encoding"))?;
+            if !signature.is_prehashed {
+                return Err(ValidationError("invalid signature type"));
+            };
             verify_minisign_signature(
                 did_key,
                 &message,
-                &signature_bin,
+                &signature.value,
             ).map_err(|_| ValidationError("invalid identity proof"))?;
         },
         Did::Pkh(ref did_pkh) => {
@@ -175,6 +180,21 @@ pub fn parse_identity_proof_fep_c390(
                 &signature_data.signature,
             ).map_err(|_| ValidationError("invalid identity proof"))?;
             IdentityProofType::FepC390JcsEip191Proof
+        },
+        ProofType::JcsEddsaSignature => {
+            let did_key = signer.as_did_key()
+                .ok_or(ValidationError("unexpected DID type"))?;
+            let ed25519_key_bytes = did_key.try_ed25519_key()
+                .map_err(|_| ValidationError("invalid public key"))?;
+            let ed25519_key = ed25519_public_key_from_bytes(&ed25519_key_bytes)
+                .map_err(|_| ValidationError("invalid public key"))?;
+            verify_eddsa_json_signature(
+                &ed25519_key,
+                &signature_data.object,
+                &signature_data.proof_config,
+                &signature_data.signature,
+            ).map_err(|_| ValidationError("invalid identity proof"))?;
+            IdentityProofType::FepC390JcsEddsaProof
         },
         _ => return Err(ValidationError("unsupported signature type")),
     };
@@ -317,6 +337,7 @@ pub fn parse_metadata_field(
 
 #[cfg(test)]
 mod tests {
+    use chrono::Utc;
     use serde_json::json;
     use mitra_utils::{
         caip2::ChainId,
@@ -344,10 +365,12 @@ mod tests {
         let did_pkh = DidPkh::from_address(&Currency::Ethereum, &address);
         let did = Did::Pkh(did_pkh);
         let proof_type = IdentityProofType::FepC390JcsEip191Proof;
+        let created_at = Utc::now();
         let (_claim, message) = create_identity_claim_fep_c390(
             actor_id,
             &did,
             &proof_type,
+            &created_at,
         ).unwrap();
         let signature = sign_message(
             &private_key.display_secret().to_string(),
@@ -358,6 +381,7 @@ mod tests {
             actor_id,
             &did,
             &proof_type,
+            &created_at,
             &signature_bin,
         );
         let parsed = parse_identity_proof_fep_c390(

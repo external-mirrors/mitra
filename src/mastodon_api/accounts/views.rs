@@ -53,6 +53,7 @@ use mitra_models::{
 use mitra_utils::{
     caip2::ChainId,
     canonicalization::canonicalize_object,
+    crypto_eddsa::ed25519_public_key_from_bytes,
     crypto_rsa::{
         generate_rsa_key,
         rsa_private_key_to_pkcs8_pem,
@@ -91,9 +92,14 @@ use crate::ethereum::{
 };
 use crate::http::{get_request_base_url, FormOrJson};
 use crate::json_signatures::{
-    create::{add_integrity_proof, IntegrityProof},
+    create::{
+        add_integrity_proof,
+        IntegrityProof,
+        IntegrityProofConfig,
+    },
     verify::{
         verify_blake2_ed25519_json_signature,
+        verify_eddsa_json_signature,
         verify_eip191_json_signature,
     },
 };
@@ -369,14 +375,17 @@ async fn send_signed_activity(
     };
     let proof = match signer {
         Did::Key(signer) => {
-            let signature_bin = parse_minisign_signature_file(&data.signature)
+            let signature = parse_minisign_signature_file(&data.signature)
                 .map_err(|_| ValidationError("invalid encoding"))?;
+            if !signature.is_prehashed {
+                return Err(ValidationError("invalid signature type").into());
+            };
             verify_blake2_ed25519_json_signature(
                 &signer,
                 &outgoing_activity.activity,
-                &signature_bin,
+                &signature.value,
             ).map_err(|_| ValidationError("invalid signature"))?;
-            IntegrityProof::jcs_blake2_ed25519(&signer, &signature_bin)
+            IntegrityProof::jcs_blake2_ed25519(&signer, &signature.value)
         },
         Did::Pkh(signer) => {
             let signature_bin = hex::decode(&data.signature)
@@ -424,6 +433,11 @@ async fn get_identity_claim(
                 .map_err(|_| ValidationError("invalid key"))?;
             (Did::Key(did_key), IdentityProofType::FepC390JcsBlake2Ed25519Proof)
         },
+        "minisign-unhashed" => {
+            let did_key = minisign_key_to_did(&query_params.signer)
+                .map_err(|_| ValidationError("invalid key"))?;
+            (Did::Key(did_key), IdentityProofType::FepC390JcsEddsaProof)
+        },
         _ => return Err(ValidationError("unknown proof type").into()),
     };
     let actor_id = local_actor_id(
@@ -435,6 +449,7 @@ async fn get_identity_claim(
         &actor_id,
         &did,
         &proof_type,
+        &created_at,
     ).map_err(|_| MastodonError::InternalError)?;
     let response = IdentityClaim { did, claim: message, created_at };
     Ok(HttpResponse::Ok().json(response))
@@ -453,6 +468,7 @@ async fn create_identity_proof(
     let proof_type = match proof_data.proof_type.as_str() {
         "ethereum" => IdentityProofType::FepC390JcsEip191Proof,
         "minisign" => IdentityProofType::FepC390JcsBlake2Ed25519Proof,
+        "minisign-unhashed" => IdentityProofType::FepC390JcsEddsaProof,
         _ => return Err(ValidationError("unknown proof type").into()),
     };
     let did = proof_data.did.parse::<Did>()
@@ -476,6 +492,7 @@ async fn create_identity_proof(
         &actor_id,
         &did,
         &proof_type,
+        &proof_data.created_at,
     ).map_err(|_| MastodonError::InternalError)?;
     let claim_value = serde_json::to_value(&claim)
         .expect("claim should be serializable");
@@ -485,15 +502,17 @@ async fn create_identity_proof(
         IdentityProofType::FepC390JcsBlake2Ed25519Proof => {
             let did_key = did.as_did_key()
                 .ok_or(ValidationError("unexpected DID type"))?;
-            let signature_bin = parse_minisign_signature_file(&proof_data.signature)
-                .map_err(|_| ValidationError("invalid signature encoding"))?
-                .to_vec();
+            let signature = parse_minisign_signature_file(&proof_data.signature)
+                .map_err(|_| ValidationError("invalid signature encoding"))?;
+            if !signature.is_prehashed {
+                return Err(ValidationError("invalid signature type").into());
+            };
             verify_blake2_ed25519_json_signature(
                 did_key,
                 &claim_value,
-                &signature_bin,
+                &signature.value,
             ).map_err(|_| ValidationError("invalid signature"))?;
-            signature_bin
+            signature.value.to_vec()
         },
         IdentityProofType::FepC390JcsEip191Proof => {
             let did_pkh = did.as_did_pkh()
@@ -520,6 +539,30 @@ async fn create_identity_proof(
             ).map_err(|_| ValidationError("invalid signature"))?;
             signature_bin
         },
+        IdentityProofType::FepC390JcsEddsaProof => {
+            let did_key = did.as_did_key()
+                .ok_or(ValidationError("unexpected DID type"))?;
+            let ed25519_key_bytes = did_key.try_ed25519_key()
+                .map_err(|_| ValidationError("invalid public key"))?;
+            let ed25519_key = ed25519_public_key_from_bytes(&ed25519_key_bytes)
+                .map_err(|_| ValidationError("invalid public key"))?;
+            let signature = parse_minisign_signature_file(&proof_data.signature)
+                .map_err(|_| ValidationError("invalid signature encoding"))?;
+            if signature.is_prehashed {
+                return Err(ValidationError("invalid signature type").into());
+            };
+            let proof_config = IntegrityProofConfig::jcs_eddsa(
+                &did_key.to_string(),
+                proof_data.created_at,
+            );
+            verify_eddsa_json_signature(
+                &ed25519_key,
+                &claim_value,
+                &proof_config,
+                &signature.value,
+            ).map_err(|_| ValidationError("invalid signature"))?;
+            signature.value.to_vec()
+        },
         _ => unimplemented!("expected FEP-c390 compatible proof type"),
     };
 
@@ -527,6 +570,7 @@ async fn create_identity_proof(
         &actor_id,
         &did,
         &proof_type,
+        &proof_data.created_at,
         &signature_bin,
     );
     let mut profile_data = ProfileUpdateData::from(&current_user.profile);

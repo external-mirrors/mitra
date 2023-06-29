@@ -13,7 +13,7 @@ use crate::{
 };
 
 const MINISIGN_SIGNATURE_CODE: [u8; 2] = *b"Ed";
-const MINISIGN_SIGNATURE_HASHED_CODE: [u8; 2] = *b"ED";
+const MINISIGN_SIGNATURE_PREHASHED_CODE: [u8; 2] = *b"ED";
 
 #[derive(thiserror::Error, Debug)]
 pub enum ParseError {
@@ -71,11 +71,17 @@ pub fn minisign_key_to_did(key_file: &str) -> Result<DidKey, ParseError> {
     Ok(did_key)
 }
 
+#[derive(Debug, PartialEq)]
+pub struct MinisignSignature {
+    pub value: [u8; 64],
+    pub is_prehashed: bool,
+}
+
 // Signature format:
 // base64(<signature_algorithm> || <key_id> || <signature>)
 pub fn parse_minisign_signature(
     signature_b64: &str,
-) -> Result<[u8; 64], ParseError> {
+) -> Result<MinisignSignature, ParseError> {
     let signature_bin = base64::decode(signature_b64)?;
     if signature_bin.len() != 74 {
         return Err(ParseError::InvalidSignatureLength);
@@ -88,15 +94,17 @@ pub fn parse_minisign_signature(
     _key_id.copy_from_slice(&signature_bin[2..10]);
     signature.copy_from_slice(&signature_bin[10..74]);
 
-    if signature_algorithm.as_ref() != MINISIGN_SIGNATURE_HASHED_CODE {
-        return Err(ParseError::InvalidSignatureType);
+    let is_prehashed = match signature_algorithm {
+        MINISIGN_SIGNATURE_CODE => false,
+        MINISIGN_SIGNATURE_PREHASHED_CODE => true,
+        _ => return Err(ParseError::InvalidSignatureType),
     };
-    Ok(signature)
+    Ok(MinisignSignature { value: signature, is_prehashed })
 }
 
 pub fn parse_minisign_signature_file(
     signature_file: &str,
-) -> Result<[u8; 64], ParseError> {
+) -> Result<MinisignSignature, ParseError> {
     let signature_b64 = signature_file.lines()
         .find(|line| !line.starts_with("untrusted comment"))
         .ok_or(ParseError::InvalidFormat)?;
@@ -190,8 +198,13 @@ mod tests {
             "RUS/wRxk57oX+P9JzukdVNh3WYisLQIW4aiyOvl4plV384/ZmmNSlihXBb/mJoDsTW5HYYseRIVAiidr+1+OQCxVxPlDeAN9dAs=";
         let signer_key = parse_minisign_public_key(minisign_key).unwrap();
         let signer = DidKey::from_ed25519_key(signer_key);
-        let signature_bin = parse_minisign_signature(minisign_signature).unwrap();
-        let result = verify_minisign_signature(&signer, message, &signature_bin);
+        let signature = parse_minisign_signature(minisign_signature).unwrap();
+        assert_eq!(signature.is_prehashed, true);
+        let result = verify_minisign_signature(
+            &signer,
+            message,
+            &signature.value,
+        );
         assert_eq!(result.is_ok(), true);
     }
 }

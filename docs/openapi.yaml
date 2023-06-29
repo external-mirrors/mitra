@@ -258,6 +258,7 @@ paths:
             enum:
               - ethereum
               - minisign
+              - minisign-unhashed
         - name: signer
           in: query
           description: Information about the signer.
@@ -302,6 +303,7 @@ paths:
                   enum:
                     - ethereum
                     - minisign
+                    - minisign-unhashed
                 did:
                   description: Signer (DID).
                   type: string
@@ -310,6 +312,11 @@ paths:
                   description: Signature value.
                   type: string
                   example: '3312dacd...'
+                created_at:
+                  description: Date and time when identity claim was created.
+                  type: string
+                  format: date-time
+                  example: 2023-07-07T23:52:12.370231609Z
       responses:
         200:
           description: Successful operation

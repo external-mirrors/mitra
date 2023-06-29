@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+
+- Support `jcs-eddsa-2022` identity proofs.
+
 ### Changed
 
 - Write total number of objects to log when fetching replies.
