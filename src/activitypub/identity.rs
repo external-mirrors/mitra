@@ -68,17 +68,11 @@ pub fn create_identity_claim_fep_c390(
             | IdentityProofType::LegacyMinisignIdentityProof
             => unimplemented!("expected FEP-c390 compatible proof type"),
         IdentityProofType::FepC390JcsBlake2Ed25519Proof => {
-            match subject {
-                Did::Key(ref did_key) => did_key,
-                _ => panic!("invalid did type"),
-            };
+            subject.as_did_key().expect("did:key should be used");
             canonicalize_object(&claim)?
         },
         IdentityProofType::FepC390JcsEip191Proof => {
-            match subject {
-                Did::Pkh(ref did_pkh) => did_pkh,
-                _ => panic!("invalid did type"),
-            };
+            subject.as_did_pkh().expect("did:pkh should be used");
             canonicalize_object(&claim)?
         },
     };
@@ -101,17 +95,13 @@ pub fn create_identity_proof_fep_c390(
 ) -> DbIdentityProof {
     let integrity_proof = match proof_type {
         IdentityProofType::FepC390JcsBlake2Ed25519Proof => {
-            let did_key = match subject {
-                Did::Key(ref did_key) => did_key,
-                _ => panic!("invalid did type"),
-            };
+            let did_key = subject.as_did_key()
+                .expect("did:key should be used");
             IntegrityProof::jcs_blake2_ed25519(did_key, signature_bin)
         },
         IdentityProofType::FepC390JcsEip191Proof => {
-            let did_pkh = match subject {
-                Did::Pkh(ref did_pkh) => did_pkh,
-                _ => panic!("invalid did type"),
-            };
+            let did_pkh = subject.as_did_pkh()
+                .expect("did:pkh should be used");
             IntegrityProof::jcs_eip191(did_pkh, signature_bin)
         },
         _ => unimplemented!("expected FEP-c390 compatible proof type"),

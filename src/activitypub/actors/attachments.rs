@@ -150,10 +150,8 @@ pub fn parse_identity_proof_fep_c390(
     };
     let identity_proof_type = match signature_data.proof_type {
         ProofType::JcsBlake2Ed25519Signature => {
-            let did_key = match signer {
-                Did::Key(ref did_key) => did_key,
-                _ => return Err(ValidationError("invalid signature type")),
-            };
+            let did_key = signer.as_did_key()
+                .ok_or(ValidationError("unexpected DID type"))?;
             verify_blake2_ed25519_json_signature(
                 did_key,
                 &signature_data.canonical_object,
@@ -162,10 +160,8 @@ pub fn parse_identity_proof_fep_c390(
             IdentityProofType::FepC390JcsBlake2Ed25519Proof
         },
         ProofType::JcsEip191Signature => {
-            let did_pkh = match signer {
-                Did::Pkh(ref did_pkh) => did_pkh,
-                _ => return Err(ValidationError("invalid signature type")),
-            };
+            let did_pkh = signer.as_did_pkh()
+                .ok_or(ValidationError("unexpected DID type"))?;
             verify_eip191_json_signature(
                 did_pkh,
                 &signature_data.canonical_object,

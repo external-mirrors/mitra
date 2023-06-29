@@ -475,10 +475,8 @@ async fn create_identity_proof(
     // Verify proof
     let signature_bin = match proof_type {
         IdentityProofType::FepC390JcsBlake2Ed25519Proof => {
-            let did_key = match did {
-                Did::Key(ref did_key) => did_key,
-                _ => return Err(ValidationError("unexpected DID type").into()),
-            };
+            let did_key = did.as_did_key()
+                .ok_or(ValidationError("unexpected DID type"))?;
             let signature_bin = parse_minisign_signature_file(&proof_data.signature)
                 .map_err(|_| ValidationError("invalid signature encoding"))?
                 .to_vec();
@@ -490,10 +488,8 @@ async fn create_identity_proof(
             signature_bin
         },
         IdentityProofType::FepC390JcsEip191Proof=> {
-            let did_pkh = match did {
-                Did::Pkh(ref did_pkh) => did_pkh,
-                _ => return Err(ValidationError("unexpected DID type").into()),
-            };
+            let did_pkh = did.as_did_pkh()
+                .ok_or(ValidationError("unexpected DID type"))?;
             if did_pkh.chain_id() != ChainId::ethereum_mainnet() {
                 // DID must point to Ethereum Mainnet because it is a valid
                 // identifier on any Ethereum chain

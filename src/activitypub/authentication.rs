@@ -22,7 +22,6 @@ use mitra_utils::{
         RsaPublicKey,
         RsaSerializationError,
     },
-    did::Did,
 };
 
 use crate::http_signatures::verify::{
@@ -254,23 +253,19 @@ pub async fn verify_signed_activity(
             };
             match signature_data.proof_type {
                 ProofType::JcsBlake2Ed25519Signature => {
-                    let did_key = match did {
-                        Did::Key(did_key) => did_key,
-                        _ => return Err(AuthenticationError::InvalidJsonSignatureType),
-                    };
+                    let did_key = did.as_did_key()
+                        .ok_or(AuthenticationError::InvalidJsonSignatureType)?;
                     verify_blake2_ed25519_json_signature(
-                        &did_key,
+                        did_key,
                         &signature_data.canonical_object,
                         &signature_data.signature,
                     )?;
                 },
                 ProofType::JcsEip191Signature => {
-                    let did_pkh = match did {
-                        Did::Pkh(did_pkh) => did_pkh,
-                        _ => return Err(AuthenticationError::InvalidJsonSignatureType),
-                    };
+                    let did_pkh = did.as_did_pkh()
+                        .ok_or(AuthenticationError::InvalidJsonSignatureType)?;
                     verify_eip191_json_signature(
-                        &did_pkh,
+                        did_pkh,
                         &signature_data.canonical_object,
                         &signature_data.signature,
                     )?;

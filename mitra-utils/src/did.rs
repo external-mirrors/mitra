@@ -23,6 +23,22 @@ pub enum Did {
 #[error("DID parse error")]
 pub struct DidParseError;
 
+impl Did {
+    pub fn as_did_key(&self) -> Option<&DidKey> {
+        match self {
+            Did::Key(did_key) => Some(did_key),
+            _ => None,
+        }
+    }
+
+    pub fn as_did_pkh(&self) -> Option<&DidPkh> {
+        match self {
+            Did::Pkh(did_pkh) => Some(did_pkh),
+            _ => None,
+        }
+    }
+}
+
 impl FromStr for Did {
     type Err = DidParseError;
 
