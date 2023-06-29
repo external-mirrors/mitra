@@ -22,6 +22,10 @@ comrak = { version = "0.18.0", default-features = false }
 rand_0_7 = { package = "rand", version = "0.7.3" }
 ed25519 = { version = "1.5.3", features = ["pkcs8"] }
 ed25519-dalek = "1.0.1"
+# Used to work with hexadecimal strings
+hex = "0.4.3"
+# Used for working with ECDSA signatures
+k256 = { version = "0.11.6", default-features = false, features = ["std", "ecdsa", "keccak256"] }
 # Used to guess media type of a file
 mime_guess = "2.0.3"
 mime-sniffer = "0.1.2"
@@ -41,6 +45,8 @@ serde_json = "1.0.89"
 serde_jcs = "0.1.0"
 # Used to calculate SHA2 hashes
 sha2 = { version = "0.10.6", features = ["oid"] }
+# Used to calculate keccak-256 hashes
+sha3 = "0.10.6"
 # Used for creating error types
 thiserror = "1.0.37"
 # Used to generate lexicographically sortable IDs

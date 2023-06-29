@@ -28,7 +28,10 @@ pub fn verify_eip191_signature(
 #[cfg(test)]
 mod tests {
     use web3::signing::{Key, SecretKeyRef};
-    use mitra_utils::currencies::Currency;
+    use mitra_utils::{
+        currencies::Currency,
+        eip191::{verify_eip191_signature as verify_eip191_signature_k256},
+    };
     use crate::ethereum::{
         signatures::{
             generate_ecdsa_key,
@@ -49,8 +52,20 @@ mod tests {
         let address = address_to_string(secret_key_ref.address());
         let did = DidPkh::from_address(&ETHEREUM, &address);
         let signature = sign_message(&secret_key_str, message.as_bytes())
-            .unwrap().to_string();
-        let result = verify_eip191_signature(&did, message, &signature);
+            .unwrap();
+        let result = verify_eip191_signature(
+            &did,
+            message,
+            &signature.to_string(),
+        );
         assert_eq!(result.is_ok(), true);
+
+        // Compare with k256 implementation
+        let result_k256 = verify_eip191_signature_k256(
+            &did,
+            message,
+            &signature.to_bytes(),
+        );
+        assert_eq!(result_k256.is_ok(), true);
     }
 }

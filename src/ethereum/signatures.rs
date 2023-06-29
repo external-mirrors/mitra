@@ -164,6 +164,7 @@ pub fn sign_contract_call(
 
 #[cfg(test)]
 mod tests {
+    use mitra_utils::eip191::recover_address_eip191;
     use super::*;
 
     #[test]
@@ -205,6 +206,14 @@ mod tests {
 
         let recovered = recover_address(message.as_bytes(), &result).unwrap();
         assert_eq!(recovered, SecretKeyRef::new(&signing_key).address());
+
+        // Compare with k256 implementation
+        let recovered_k256 = recover_address_eip191(
+            message.as_bytes(),
+            result.to_bytes(),
+        ).unwrap();
+        let recovered_web3 = <[u8; 20]>::from(recovered);
+        assert_eq!(recovered_k256, recovered_web3);
     }
 
     #[test]

@@ -1,6 +1,7 @@
 pub mod caip10;
 pub mod caip2;
 pub mod canonicalization;
+mod crypto_ecdsa;
 pub mod crypto_eddsa;
 pub mod crypto_rsa;
 pub mod currencies;
@@ -8,6 +9,7 @@ pub mod datetime;
 pub mod did;
 pub mod did_key;
 pub mod did_pkh;
+pub mod eip191;
 pub mod files;
 pub mod html;
 pub mod id;
