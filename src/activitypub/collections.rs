@@ -22,6 +22,7 @@ pub struct OrderedCollection {
     total_items: Option<i32>,
 
     // Workaround for Pleroma collection parsing bug
+    // https://git.pleroma.social/pleroma/pleroma/-/issues/3142
     #[serde(skip_serializing_if = "Option::is_none")]
     ordered_items: Option<Vec<JsonValue>>,
 }
