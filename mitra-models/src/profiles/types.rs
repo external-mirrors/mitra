@@ -20,7 +20,7 @@ use crate::database::{
 };
 use crate::emojis::types::DbEmoji;
 
-use super::checks::check_public_keys;
+use super::checks::{check_identity_proofs, check_public_keys};
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct ProfileImage {
@@ -581,6 +581,7 @@ impl ProfileCreateData {
     pub(super) fn check_consistency(&self) -> Result<(), DatabaseTypeError> {
         let is_remote = self.actor_json.is_some();
         check_public_keys(&self.public_keys, is_remote)?;
+        check_identity_proofs(&self.identity_proofs)?;
         Ok(())
     }
 }
@@ -605,6 +606,7 @@ impl ProfileUpdateData {
     pub(super) fn check_consistency(&self) -> Result<(), DatabaseTypeError> {
         let is_remote = self.actor_json.is_some();
         check_public_keys(&self.public_keys, is_remote)?;
+        check_identity_proofs(&self.identity_proofs)?;
         Ok(())
     }
 

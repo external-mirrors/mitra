@@ -327,6 +327,9 @@ impl Actor {
                 },
             };
         };
+        // Remove duplicate identity proofs
+        identity_proofs.sort_by_key(|item| item.issuer.to_string());
+        identity_proofs.dedup_by_key(|item| item.issuer.to_string());
         // Remove duplicate metadata fields
         // FEP-8b2a fields have higher priority
         for field in property_values {
