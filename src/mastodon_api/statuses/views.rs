@@ -701,10 +701,10 @@ async fn make_permanent(
 
 #[cfg(feature = "ethereum-extras")]
 use {
+    mitra_models::posts::queries::set_post_token_tx_id,
     mitra_utils::currencies::Currency,
     crate::ethereum::nft::create_mint_signature,
     crate::ipfs::utils::get_ipfs_url,
-    crate::models::posts::queries::set_post_token_tx_id,
     super::types::TransactionData,
 };
 

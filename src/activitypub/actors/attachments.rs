@@ -13,6 +13,7 @@ use mitra_models::{
 };
 use mitra_utils::{
     did::Did,
+    eip191::verify_eip191_signature,
     minisign::{
         parse_minisign_signature,
         verify_minisign_signature,
@@ -33,7 +34,6 @@ use crate::activitypub::{
     },
 };
 use crate::errors::ValidationError;
-use crate::ethereum::identity::verify_eip191_signature;
 use crate::json_signatures::{
     proofs::{
         ProofType,
@@ -110,10 +110,12 @@ pub fn parse_identity_proof(
             if !matches!(proof_type, IdentityProofType::LegacyEip191IdentityProof) {
                 return Err(ValidationError("incorrect proof type"));
             };
+            let signature_bin = hex::decode(signature)
+                .map_err(|_| ValidationError("invalid signature encoding"))?;
             verify_eip191_signature(
                 did_pkh,
                 &message,
-                signature,
+                &signature_bin,
             ).map_err(|_| ValidationError("invalid identity proof"))?;
         },
     };

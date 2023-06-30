@@ -14,11 +14,11 @@ use mitra_utils::{
     did::Did,
     did_key::DidKey,
     did_pkh::DidPkh,
+    eip191::verify_eip191_signature,
     minisign::verify_minisign_signature,
     multibase::{decode_multibase_base58btc, MultibaseError},
 };
 
-use crate::ethereum::identity::verify_eip191_signature;
 use super::create::{
     IntegrityProof,
     PROOF_KEY,
@@ -148,8 +148,7 @@ pub fn verify_eip191_json_signature(
     canonical_object: &str,
     signature: &[u8],
 ) -> Result<(), VerificationError> {
-    let signature_hex = hex::encode(signature);
-    verify_eip191_signature(signer, canonical_object, &signature_hex)
+    verify_eip191_signature(signer, canonical_object, signature)
         .map_err(|_| VerificationError::InvalidSignature)
 }
 
