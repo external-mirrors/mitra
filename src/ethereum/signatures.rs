@@ -47,15 +47,20 @@ pub enum SignatureError {
     RecoveryError(#[from] RecoveryError),
 }
 
+impl SignatureData {
+    pub fn to_bytes(&self) -> [u8; 65] {
+        let mut bytes = [0u8; 65];
+        bytes[..32].copy_from_slice(&self.r);
+        bytes[32..64].copy_from_slice(&self.s);
+        bytes[64] = self.v.try_into()
+            .expect("signature recovery in electrum notation always fits in a u8");
+        bytes
+    }
+}
+
 impl ToString for SignatureData {
     fn to_string(&self) -> String {
-        let mut bytes = Vec::with_capacity(65);
-        bytes.extend_from_slice(&self.r);
-        bytes.extend_from_slice(&self.s);
-        let v: u8 = self.v.try_into()
-            .expect("signature recovery in electrum notation always fits in a u8");
-        bytes.push(v);
-        hex::encode(bytes)
+        hex::encode(self.to_bytes())
     }
 }
 

@@ -337,7 +337,7 @@ mod tests {
             &private_key.display_secret().to_string(),
             claim.as_bytes(),
         ).unwrap();
-        let signature_bin = hex::decode(signature.to_string()).unwrap();
+        let signature_bin = signature.to_bytes();
         let identity_proof = create_identity_proof_fep_c390(
             actor_id,
             &did,
