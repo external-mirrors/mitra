@@ -2,7 +2,7 @@ use std::collections::HashSet;
 
 use crate::database::DatabaseTypeError;
 
-use super::types::{DbActorKey, IdentityProof};
+use super::types::{DbActorKey, IdentityProof, PaymentOption};
 
 pub fn check_public_keys(
     public_keys: &[DbActorKey],
@@ -36,6 +36,37 @@ pub fn check_identity_proofs(
         .all(|identity| identities.insert(identity));
     if !is_unique {
         // Identities must be unqiue
+        return Err(DatabaseTypeError);
+    };
+    Ok(())
+}
+
+pub fn check_payment_options(
+    payment_options: &[PaymentOption],
+) -> Result<(), DatabaseTypeError> {
+    let mut types = HashSet::new();
+    let is_unique = payment_options.iter()
+        .filter_map(|option| match option {
+            PaymentOption::Link(_) => None,
+            _ => Some(i16::from(&option.payment_type())),
+        })
+        .all(|payment_type| types.insert(payment_type));
+    if !is_unique {
+        // Payment types must be unique
+        return Err(DatabaseTypeError);
+    };
+    let mut chain_ids = HashSet::new();
+    let is_unique = payment_options.iter()
+        .filter_map(|option| match option {
+            PaymentOption::Link(_) => None,
+            PaymentOption::EthereumSubscription(info) =>
+                Some(info.chain_id.to_string()),
+            PaymentOption::MoneroSubscription(info) =>
+                Some(info.chain_id.to_string()),
+        })
+        .all(|chain_id| chain_ids.insert(chain_id));
+    if !is_unique {
+        // Chain IDs must be unique
         return Err(DatabaseTypeError);
     };
     Ok(())

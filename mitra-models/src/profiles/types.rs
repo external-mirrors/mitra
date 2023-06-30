@@ -20,7 +20,11 @@ use crate::database::{
 };
 use crate::emojis::types::DbEmoji;
 
-use super::checks::{check_identity_proofs, check_public_keys};
+use super::checks::{
+    check_identity_proofs,
+    check_payment_options,
+    check_public_keys,
+};
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct ProfileImage {
@@ -250,7 +254,7 @@ pub struct PaymentLink {
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct EthereumSubscription {
-    chain_id: ChainId,
+    pub chain_id: ChainId,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -272,7 +276,7 @@ impl PaymentOption {
         Self::EthereumSubscription(EthereumSubscription { chain_id })
     }
 
-    fn payment_type(&self) -> PaymentType {
+    pub(super) fn payment_type(&self) -> PaymentType {
         match self {
             Self::Link(_) => PaymentType::Link,
             Self::EthereumSubscription(_) => PaymentType::EthereumSubscription,
@@ -582,6 +586,7 @@ impl ProfileCreateData {
         let is_remote = self.actor_json.is_some();
         check_public_keys(&self.public_keys, is_remote)?;
         check_identity_proofs(&self.identity_proofs)?;
+        check_payment_options(&self.payment_options)?;
         Ok(())
     }
 }
@@ -607,6 +612,7 @@ impl ProfileUpdateData {
         let is_remote = self.actor_json.is_some();
         check_public_keys(&self.public_keys, is_remote)?;
         check_identity_proofs(&self.identity_proofs)?;
+        check_payment_options(&self.payment_options)?;
         Ok(())
     }
 
