@@ -118,9 +118,12 @@ pub async fn register_subscription_option(
     };
 
     let maybe_payment_option = match subscription_option.into_inner() {
-        SubscriptionOption::Ethereum => {
+        SubscriptionOption::Ethereum { chain_id } => {
             let ethereum_config = config.ethereum_config()
                 .ok_or(MastodonError::NotSupported)?;
+            if chain_id != ethereum_config.chain_id {
+                return Err(ValidationError("unexpected chain ID").into());
+            };
             let contract_set = maybe_ethereum_contracts.as_ref().as_ref()
                 .ok_or(MastodonError::NotSupported)?;
             let wallet_address = current_user
@@ -139,20 +142,21 @@ pub async fn register_subscription_option(
                 if !is_registered {
                     return Err(ValidationError("recipient is not registered").into());
                 };
-                Some(PaymentOption::ethereum_subscription(
-                    ethereum_config.chain_id.clone(),
-                ))
+                Some(PaymentOption::ethereum_subscription(chain_id))
             }
         },
-        SubscriptionOption::Monero { price, payout_address } => {
+        SubscriptionOption::Monero { chain_id, price, payout_address } => {
             let monero_config = config.monero_config()
                 .ok_or(MastodonError::NotSupported)?;
+            if chain_id != monero_config.chain_id {
+                return Err(ValidationError("unexpected chain ID").into());
+            };
             if price == 0 {
                 return Err(ValidationError("price must be greater than 0").into());
             };
             validate_monero_address(&payout_address)?;
             let payment_info = MoneroSubscription {
-                chain_id: monero_config.chain_id.clone(),
+                chain_id,
                 price,
                 payout_address,
             };

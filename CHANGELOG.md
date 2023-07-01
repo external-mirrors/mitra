@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- Require `chain_id` parameter for registering subscription option.
+
 ## [1.29.0] - 2023-07-05
 
 ### Added
