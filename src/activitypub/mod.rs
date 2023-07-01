@@ -11,6 +11,7 @@ mod http_client;
 pub mod identifiers;
 pub mod identity;
 pub mod queues;
+mod proposals;
 mod receiver;
 mod types;
 pub mod views;

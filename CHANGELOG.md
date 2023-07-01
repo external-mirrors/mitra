@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Added
 
 - Use standardized CAIP-2 Monero chain identifiers.
+- Generate ValueFlows `Proposal` objects for Monero subscriptions.
 
 ### Changed
 

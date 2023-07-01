@@ -86,6 +86,15 @@ pub fn local_actor_key_id(
     format!("{}{}", actor_id, fragment)
 }
 
+pub fn local_actor_proposal_id(
+    instance_url: &str,
+    username: &str,
+    chain_id: &str,
+) -> String {
+    let actor_id = local_actor_id(instance_url, username);
+    format!("{}/proposals/{}", actor_id, chain_id)
+}
+
 pub fn local_object_id(instance_url: &str, internal_object_id: &Uuid) -> String {
     format!("{}/objects/{}", instance_url, internal_object_id)
 }

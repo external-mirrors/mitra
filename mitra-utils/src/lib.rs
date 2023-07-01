@@ -1,4 +1,5 @@
 pub mod caip10;
+pub mod caip19;
 pub mod caip2;
 pub mod canonicalization;
 mod crypto_ecdsa;

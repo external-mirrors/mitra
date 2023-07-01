@@ -1,0 +1,224 @@
+use std::collections::HashMap;
+
+use serde::Serialize;
+
+use mitra_models::profiles::types::MoneroSubscription;
+use mitra_utils::caip19::AssetType;
+
+use super::constants::{
+    AP_CONTEXT,
+    UNITS_OF_MEASURE_CONTEXT,
+    W3ID_VALUEFLOWS_CONTEXT,
+};
+use super::identifiers::{
+    local_actor_id,
+    local_actor_proposal_id,
+};
+
+type Context = (
+    &'static str,
+    HashMap<&'static str, &'static str>,
+);
+
+fn build_proposal_context() -> Context {
+    (
+        AP_CONTEXT,
+        HashMap::from([
+            // https://www.valueflo.ws/specification/all_vf.html
+            ("vf", W3ID_VALUEFLOWS_CONTEXT),
+            ("om2", UNITS_OF_MEASURE_CONTEXT),
+            ("Proposal", "vf:Proposal"),
+            ("Intent", "vf:Intent"),
+            ("publishes", "vf:publishes"),
+            ("reciprocal", "vf:reciprocal"),
+            ("provider", "vf:provider"),
+            ("receiver", "vf:receiver"),
+            ("action", "vf:action"),
+            ("resourceClassifiedAs", "vf:resourceClassifiedAs"),
+            ("resourceConformsTo", "vf:resourceConformsTo"),
+            ("resourceQuantity", "vf:resourceQuantity"),
+            ("hasUnit", "om2:hasUnit"),
+            ("hasNumericalValue", "om2:hasNumericalValue"),
+        ]),
+    )
+}
+
+const INTENT: &str = "Intent";
+const PROPOSAL: &str = "Proposal";
+
+// https://www.valueflo.ws/concepts/actions/#action-definitions
+const ACTION_DELIVER_SERVICE: &str = "deliverService";
+const ACTION_TRANSFER: &str = "transfer";
+
+// http://www.ontology-of-units-of-measure.org/resource/om-2/one
+const UNIT_ONE: &str = "one";
+// http://www.ontology-of-units-of-measure.org/resource/om-2/second-Time
+const UNIT_SECOND: &str = "second";
+
+const CLASS_CONTENT: &str = "https://www.wikidata.org/wiki/Q1260632";
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct Quantity {
+    has_unit: String,
+    has_numerical_value: String,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct DeliverServiceIntent {
+    #[serde(rename = "type")]
+    object_type: String,
+    id: String,
+    action: String,
+    resource_classified_as: String,
+    resource_quantity: Quantity,
+    provider: String,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct TransferIntent {
+    #[serde(rename = "type")]
+    object_type: String,
+    id: String,
+    action: String,
+    resource_conforms_to: String,
+    resource_quantity: Quantity,
+    receiver: String,
+}
+
+#[derive(Serialize)]
+pub struct Proposal {
+    #[serde(rename = "@context")]
+    context: Context,
+
+    #[serde(rename = "type")]
+    object_type: String,
+    id: String,
+    name: String,
+    publishes: DeliverServiceIntent,
+    reciprocal: TransferIntent,
+}
+
+// https://www.valueflo.ws/concepts/proposals/
+pub fn build_proposal(
+    instance_url: &str,
+    username: &str,
+    payment_info: &MoneroSubscription,
+) -> Proposal {
+    let actor_id = local_actor_id(
+        instance_url,
+        username,
+    );
+    let proposal_id = local_actor_proposal_id(
+        instance_url,
+        username,
+        &payment_info.chain_id.to_string(),
+    );
+    let proposal_name = "Pay for subscription";
+    let asset_type = AssetType::monero(&payment_info.chain_id);
+    Proposal {
+        context: build_proposal_context(),
+        object_type: PROPOSAL.to_string(),
+        id: proposal_id.clone(),
+        name: proposal_name.to_string(),
+        publishes: DeliverServiceIntent {
+            object_type: INTENT.to_string(),
+            id: format!("{}#service", proposal_id),
+            action: ACTION_DELIVER_SERVICE.to_string(),
+            resource_classified_as: CLASS_CONTENT.to_string(),
+            resource_quantity: Quantity {
+                has_unit: UNIT_SECOND.to_string(),
+                has_numerical_value: "1".to_string(),
+            },
+            provider: actor_id.clone(),
+        },
+        reciprocal: TransferIntent {
+            object_type: INTENT.to_string(),
+            id: format!("{}#payment", proposal_id),
+            action: ACTION_TRANSFER.to_string(),
+            resource_conforms_to: asset_type.into_uri(),
+            resource_quantity: Quantity {
+                has_unit: UNIT_ONE.to_string(),
+                // piconeros per second
+                has_numerical_value: payment_info.price.to_string(),
+            },
+            receiver: actor_id,
+        },
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use serde_json::json;
+    use mitra_utils::caip2::ChainId;
+    use super::*;
+
+    #[test]
+    fn test_build_proposal() {
+        let instance_url = "https://test.example";
+        let username = "alice";
+        let payment_info = MoneroSubscription {
+            chain_id: ChainId::monero_mainnet(),
+            price: 20000,
+            payout_address: "test".to_string(),
+        };
+        let proposal = build_proposal(
+            instance_url,
+            username,
+            &payment_info,
+        );
+
+        let expected_value = json!({
+            "@context": [
+                "https://www.w3.org/ns/activitystreams",
+                {
+                    "vf": "https://w3id.org/valueflows/",
+                    "om2": "http://www.ontology-of-units-of-measure.org/resource/om-2/",
+                    "Proposal": "vf:Proposal",
+                    "Intent": "vf:Intent",
+                    "publishes": "vf:publishes",
+                    "reciprocal": "vf:reciprocal",
+                    "provider": "vf:provider",
+                    "receiver": "vf:receiver",
+                    "action": "vf:action",
+                    "resourceClassifiedAs": "vf:resourceClassifiedAs",
+                    "resourceConformsTo": "vf:resourceConformsTo",
+                    "resourceQuantity": "vf:resourceQuantity",
+                    "hasUnit": "om2:hasUnit",
+                    "hasNumericalValue": "om2:hasNumericalValue",
+                },
+            ],
+            "type": "Proposal",
+            "id": "https://test.example/users/alice/proposals/monero:418015bb9ae982a1975da7d79277c270",
+            "name": "Pay for subscription",
+            "publishes": {
+                "type": "Intent",
+                "id": "https://test.example/users/alice/proposals/monero:418015bb9ae982a1975da7d79277c270#service",
+                "action": "deliverService",
+                "resourceClassifiedAs": "https://www.wikidata.org/wiki/Q1260632",
+                "resourceQuantity": {
+                    "hasUnit": "second",
+                    "hasNumericalValue": "1",
+                },
+                "provider": "https://test.example/users/alice",
+            },
+            "reciprocal": {
+                "type": "Intent",
+                "id": "https://test.example/users/alice/proposals/monero:418015bb9ae982a1975da7d79277c270#payment",
+                "action": "transfer",
+                "resourceConformsTo": "caip:19:monero:418015bb9ae982a1975da7d79277c270/slip44:128",
+                "resourceQuantity": {
+                    "hasUnit": "one",
+                    "hasNumericalValue": "20000",
+                },
+                "receiver": "https://test.example/users/alice",
+            },
+        });
+        assert_eq!(
+            serde_json::to_value(proposal).unwrap(),
+            expected_value,
+        );
+    }
+}

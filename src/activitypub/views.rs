@@ -20,8 +20,10 @@ use mitra_models::{
     emojis::queries::get_local_emoji_by_name,
     posts::helpers::{add_related_posts, can_view_post},
     posts::queries::{get_post_by_id, get_posts_by_author},
+    profiles::types::PaymentOption,
     users::queries::get_user_by_name,
 };
+use mitra_utils::caip2::ChainId;
 
 use crate::errors::HttpError;
 use crate::web_client::urls::{
@@ -50,6 +52,7 @@ use super::identifiers::{
     local_actor_subscribers,
     local_actor_outbox,
 };
+use super::proposals::build_proposal;
 use super::receiver::{receive_activity, HandlerError};
 
 pub fn is_activitypub_request(headers: &HeaderMap) -> bool {
@@ -372,6 +375,39 @@ async fn featured_collection(
     Ok(response)
 }
 
+#[get("/proposals/{chain_id}")]
+async fn proposal_view(
+    config: web::Data<Config>,
+    db_pool: web::Data<DbPool>,
+    path: web::Path<(String, ChainId)>,
+) -> Result<HttpResponse, HttpError> {
+    let (username, chain_id) = path.into_inner();
+    let db_client = &**get_database_client(&db_pool).await?;
+    let user = get_user_by_name(db_client, &username).await?;
+    let payment_info = user.profile.payment_options.inner()
+        .iter()
+        .find_map(|option| match option {
+            PaymentOption::MoneroSubscription(payment_info) => {
+                if payment_info.chain_id == chain_id {
+                    Some(payment_info)
+                } else {
+                    None
+                }
+            },
+            _ => None
+        })
+        .ok_or(HttpError::NotFoundError("proposal"))?;
+    let proposal = build_proposal(
+        &config.instance_url(),
+        &user.profile.username,
+        payment_info,
+    );
+    let response = HttpResponse::Ok()
+        .content_type(AP_MEDIA_TYPE)
+        .json(proposal);
+    Ok(response)
+}
+
 pub fn actor_scope() -> Scope {
     web::scope("/users/{username}")
         .service(actor_view)
@@ -382,6 +418,7 @@ pub fn actor_scope() -> Scope {
         .service(following_collection)
         .service(subscribers_collection)
         .service(featured_collection)
+        .service(proposal_view)
 }
 
 #[get("")]
