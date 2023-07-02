@@ -33,7 +33,8 @@ use super::proofs::{
 };
 
 pub(super) const PROOF_KEY: &str = "proof";
-pub(super) const PROOF_PURPOSE: &str = "assertionMethod";
+pub(super) const PURPOSE_ASSERTION_METHOD: &str = "assertionMethod";
+pub(super) const PURPOSE_AUTHENTICATION: &str = "authentication";
 
 #[derive(Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -63,7 +64,7 @@ impl IntegrityProofConfig {
         Self {
             proof_type: DATA_INTEGRITY_PROOF.to_string(),
             cryptosuite: Some(CRYPTOSUITE_JCS_EDDSA.to_string()),
-            proof_purpose: PROOF_PURPOSE.to_string(),
+            proof_purpose: PURPOSE_ASSERTION_METHOD.to_string(),
             verification_method: verification_method.to_string(),
             created: created_at,
         }
@@ -89,7 +90,7 @@ impl IntegrityProof {
         let proof_config = IntegrityProofConfig {
             proof_type: PROOF_TYPE_JCS_RSA.to_string(),
             cryptosuite: None,
-            proof_purpose: PROOF_PURPOSE.to_string(),
+            proof_purpose: PURPOSE_ASSERTION_METHOD.to_string(),
             verification_method: signer_key_id.to_string(),
             created: created_at,
         };
@@ -103,7 +104,7 @@ impl IntegrityProof {
         let proof_config = IntegrityProofConfig {
             proof_type: PROOF_TYPE_JCS_EIP191.to_string(),
             cryptosuite: None,
-            proof_purpose: PROOF_PURPOSE.to_string(),
+            proof_purpose: PURPOSE_ASSERTION_METHOD.to_string(),
             verification_method: signer.to_string(),
             created: Utc::now(),
         };
@@ -117,7 +118,7 @@ impl IntegrityProof {
         let proof_config = IntegrityProofConfig {
             proof_type: PROOF_TYPE_JCS_BLAKE2_ED25519.to_string(),
             cryptosuite: None,
-            proof_purpose: PROOF_PURPOSE.to_string(),
+            proof_purpose: PURPOSE_ASSERTION_METHOD.to_string(),
             verification_method: signer.to_string(),
             created: Utc::now(),
         };

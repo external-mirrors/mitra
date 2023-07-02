@@ -22,7 +22,8 @@ use mitra_utils::{
 use super::create::{
     IntegrityProof,
     PROOF_KEY,
-    PROOF_PURPOSE,
+    PURPOSE_ASSERTION_METHOD,
+    PURPOSE_AUTHENTICATION,
 };
 use super::proofs::{ProofType, DATA_INTEGRITY_PROOF};
 
@@ -76,7 +77,9 @@ pub fn get_json_signature(
         proof_value,
     } = serde_json::from_value(proof_value)
         .map_err(|_| VerificationError::InvalidProof("invalid proof"))?;
-    if proof_config.proof_purpose != PROOF_PURPOSE {
+    if proof_config.proof_purpose != PURPOSE_ASSERTION_METHOD &&
+        proof_config.proof_purpose != PURPOSE_AUTHENTICATION
+    {
         return Err(VerificationError::InvalidProof("invalid proof purpose"));
     };
     let proof_type = if proof_config.proof_type == DATA_INTEGRITY_PROOF {

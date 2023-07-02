@@ -12,6 +12,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Ignore `Announce(Add)` and `Announce(Remove)` activities from Lemmy.
 - Check uniqueness of issuers when saving identity proofs.
 - Check uniqueness of chain IDs when saving payment options.
+- Accept integrity proofs with `authentication` purpose.
 
 ### Fixed
 
