@@ -264,6 +264,9 @@ pub async fn fetch_outbox(
     let page_json = send_request(instance, &collection.first).await?;
     let page: CollectionPage = serde_json::from_str(&page_json)?;
     let activities = page.ordered_items.into_iter()
-        .take(limit).collect();
+        .take(limit)
+        // Outbox has reverse chronological order
+        .rev()
+        .collect();
     Ok(activities)
 }
