@@ -77,6 +77,7 @@ use mitra_models::{
         create_invite_code,
         create_user,
         get_invite_codes,
+        get_users_admin,
         get_user_count,
         get_user_by_id,
         set_user_ed25519_private_key,
@@ -111,6 +112,7 @@ pub enum SubCommand {
     GenerateInviteCode(GenerateInviteCode),
     ListInviteCodes(ListInviteCodes),
     CreateUser(CreateUser),
+    ListUsers(ListUsers),
     AddEd25519Key(AddEd25519Key),
     SetPassword(SetPassword),
     SetRole(SetRole),
@@ -243,6 +245,33 @@ impl CreateUser {
         };
         create_user(db_client, user_data).await?;
         println!("user created");
+        Ok(())
+    }
+}
+
+/// List local users
+#[derive(Parser)]
+pub struct ListUsers;
+
+impl ListUsers {
+    pub async fn execute(
+        &self,
+        db_client: &impl DatabaseClient,
+    ) -> Result<(), Error> {
+        let users = get_users_admin(db_client).await?;
+        println!(
+            "{0: <40} | {1: <35} | {2: <35} | {3: <35}",
+            "ID", "username", "created", "last login",
+        );
+        for user in users {
+            println!(
+                "{0: <40} | {1: <35} | {2: <35} | {3: <35}",
+                user.profile.id.to_string(),
+                user.profile.username,
+                user.profile.created_at.to_string(),
+                user.last_login.to_string(),
+            );
+        };
         Ok(())
     }
 }

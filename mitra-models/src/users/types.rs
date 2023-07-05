@@ -4,6 +4,7 @@ use chrono::{DateTime, Utc};
 use postgres_types::FromSql;
 use serde::Deserialize;
 use serde_json::{Value as JsonValue};
+use tokio_postgres::Row;
 use uuid::Uuid;
 
 use mitra_utils::{
@@ -22,6 +23,7 @@ use mitra_utils::{
 use crate::database::{
     int_enum::{int_enum_from_sql, int_enum_to_sql},
     json_macro::json_from_sql,
+    DatabaseError,
     DatabaseTypeError,
 };
 use crate::profiles::types::DbActorProfile;
@@ -288,6 +290,22 @@ impl Default for UserCreateData {
             invite_code: None,
             role: Role::default(),
         }
+    }
+}
+
+pub struct AdminUser {
+    pub profile: DbActorProfile,
+    pub last_login: DateTime<Utc>,
+}
+
+impl TryFrom<&Row> for AdminUser {
+
+    type Error = DatabaseError;
+
+    fn try_from(row: &Row) -> Result<Self, Self::Error> {
+        let profile = row.try_get("actor_profile")?;
+        let last_login = row.try_get("last_login")?;
+        Ok(Self { profile, last_login })
     }
 }
 

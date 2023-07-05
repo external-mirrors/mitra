@@ -20,6 +20,7 @@ use crate::profiles::{
 };
 
 use super::types::{
+    AdminUser,
     ClientConfig,
     DbClientConfig,
     DbInviteCode,
@@ -378,6 +379,28 @@ pub async fn get_active_user_count(
     ).await?;
     let count = row.try_get("count")?;
     Ok(count)
+}
+
+pub async fn get_users_admin(
+    db_client: &impl DatabaseClient,
+) -> Result<Vec<AdminUser>, DatabaseError> {
+    let rows = db_client.query(
+        "
+        SELECT
+            actor_profile,
+            max(oauth_token.created_at) AS last_login
+        FROM user_account
+        JOIN actor_profile USING (id)
+        JOIN oauth_token ON (oauth_token.owner_id = user_account.id)
+        GROUP BY actor_profile.id
+        ORDER BY actor_profile.created_at DESC
+        ",
+        &[],
+    ).await?;
+    let users = rows.iter()
+        .map(AdminUser::try_from)
+        .collect::<Result<_, _>>()?;
+    Ok(users)
 }
 
 #[cfg(test)]
