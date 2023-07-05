@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Check uniqueness of issuers when saving identity proofs.
 - Check uniqueness of chain IDs when saving payment options.
 - Accept integrity proofs with `authentication` purpose.
+- Allow to call `set-password` and `set-role` commands with username as first argument.
 
 ### Fixed
 

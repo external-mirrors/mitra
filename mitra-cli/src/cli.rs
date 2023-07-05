@@ -60,6 +60,7 @@ use mitra_models::{
     invoices::queries::{get_invoice_by_address, get_invoice_by_id},
     oauth::queries::delete_oauth_tokens,
     posts::queries::{delete_post, find_extraneous_posts, get_post_by_id},
+    profiles::helpers::get_profile_by_id_or_acct,
     profiles::queries::{
         delete_profile,
         find_empty_profiles,
@@ -271,7 +272,7 @@ impl AddEd25519Key {
 /// Set password
 #[derive(Parser)]
 pub struct SetPassword {
-    id: Uuid,
+    id_or_name: String,
     password: String,
 }
 
@@ -280,10 +281,14 @@ impl SetPassword {
         &self,
         db_client: &impl DatabaseClient,
     ) -> Result<(), Error> {
+        let profile = get_profile_by_id_or_acct(
+            db_client,
+            &self.id_or_name,
+        ).await?;
         let password_hash = hash_password(&self.password)?;
-        set_user_password(db_client, &self.id, password_hash).await?;
+        set_user_password(db_client, &profile.id, password_hash).await?;
         // Revoke all sessions
-        delete_oauth_tokens(db_client, &self.id).await?;
+        delete_oauth_tokens(db_client, &profile.id).await?;
         println!("password updated");
         Ok(())
     }
@@ -292,7 +297,7 @@ impl SetPassword {
 /// Change user's role
 #[derive(Parser)]
 pub struct SetRole {
-    id: Uuid,
+    id_or_name: String,
     #[clap(value_parser = ALLOWED_ROLES)]
     role: String,
 }
@@ -302,8 +307,12 @@ impl SetRole {
         &self,
         db_client: &impl DatabaseClient,
     ) -> Result<(), Error> {
+        let profile = get_profile_by_id_or_acct(
+            db_client,
+            &self.id_or_name,
+        ).await?;
         let role = role_from_str(&self.role)?;
-        set_user_role(db_client, &self.id, role).await?;
+        set_user_role(db_client, &profile.id, role).await?;
         println!("role changed");
         Ok(())
     }

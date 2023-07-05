@@ -41,13 +41,13 @@ mitractl create-user <username> <password> <role-name>
 Set or change password:
 
 ```shell
-mitractl set-password <user-id> <password>
+mitractl set-password <user-id-or-name> <password>
 ```
 
 Change user's role (admin, user or read_only_user).
 
 ```shell
-mitractl set-role <user-id> <role-name>
+mitractl set-role <user-id-or-name> <role-name>
 ```
 
 Delete profile:
