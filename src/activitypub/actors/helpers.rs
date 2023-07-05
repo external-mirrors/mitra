@@ -277,6 +277,7 @@ pub async fn update_remote_profile(
         actor_json: Some(actor.into_db_actor()),
     };
     clean_profile_update_data(&mut profile_data)?;
+    // update_profile() clears unreachable_since
     let profile = update_profile(db_client, &profile.id, profile_data).await?;
     Ok(profile)
 }

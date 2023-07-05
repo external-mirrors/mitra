@@ -208,7 +208,8 @@ pub async fn update_profile(
             extra_fields = $10,
             aliases = $11,
             actor_json = $12,
-            updated_at = CURRENT_TIMESTAMP
+            updated_at = CURRENT_TIMESTAMP,
+            unreachable_since = NULL
         WHERE id = $13
         RETURNING actor_profile
         ",
