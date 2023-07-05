@@ -38,6 +38,12 @@ Create user:
 mitractl create-user <username> <password> <role-name>
 ```
 
+List local users:
+
+```shell
+mitractl list-users
+```
+
 Set or change password:
 
 ```shell
