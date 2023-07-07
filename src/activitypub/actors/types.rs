@@ -278,19 +278,9 @@ impl Actor {
         for attachment_value in self.attachment.iter() {
             let attachment_type =
                 attachment_value["type"].as_str().unwrap_or("Unknown");
-            let attachment = match serde_json::from_value(attachment_value.clone()) {
-                Ok(attachment) => attachment,
-                Err(_) => {
-                    log_error(
-                        attachment_type,
-                        ValidationError("invalid attachment"),
-                    );
-                    continue;
-                },
-            };
             match attachment_type {
                 IDENTITY_PROOF => {
-                    match parse_identity_proof(&self.id, &attachment) {
+                    match parse_identity_proof(&self.id, attachment_value) {
                         Ok(proof) => identity_proofs.push(proof),
                         Err(error) => log_error(attachment_type, error),
                     };
@@ -308,7 +298,7 @@ impl Actor {
                     };
                 },
                 PROPERTY_VALUE => {
-                    match parse_property_value(&attachment) {
+                    match parse_property_value(attachment_value) {
                         Ok(field) => property_values.push(field),
                         Err(error) => log_error(attachment_type, error),
                     };

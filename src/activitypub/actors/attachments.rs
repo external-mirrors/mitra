@@ -75,8 +75,10 @@ pub fn attach_identity_proof(
 
 pub fn parse_identity_proof(
     actor_id: &str,
-    attachment: &ActorAttachment,
+    attachment: &JsonValue,
 ) -> Result<IdentityProof, ValidationError> {
+    let attachment: ActorAttachment = serde_json::from_value(attachment.clone())
+        .map_err(|_| ValidationError("invalid attachment"))?;
     if attachment.object_type != IDENTITY_PROOF {
         return Err(ValidationError("invalid attachment type"));
     };
@@ -266,8 +268,10 @@ pub fn attach_extra_field(
 }
 
 pub fn parse_property_value(
-    attachment: &ActorAttachment,
+    attachment: &JsonValue,
 ) -> Result<ExtraField, ValidationError> {
+    let attachment: ActorAttachment = serde_json::from_value(attachment.clone())
+        .map_err(|_| ValidationError("invalid attachment"))?;
     if attachment.object_type != PROPERTY_VALUE {
         return Err(ValidationError("invalid attachment type"));
     };
@@ -365,7 +369,8 @@ mod tests {
         let attachment = attach_extra_field(field.clone());
         assert_eq!(attachment.object_type, PROPERTY_VALUE);
 
-        let parsed_field = parse_property_value(&attachment).unwrap();
+        let attachment_value = serde_json::to_value(attachment).unwrap();
+        let parsed_field = parse_property_value(&attachment_value).unwrap();
         assert_eq!(parsed_field.name, field.name);
         assert_eq!(parsed_field.value, field.value);
     }

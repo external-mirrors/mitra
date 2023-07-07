@@ -11,6 +11,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Require `chain_id` parameter for registering subscription option.
 - Import posts from outbox in chronological order.
 
+### Fixed
+
+- Fix parsing of FEP-c390 attachments.
+
 ## [1.29.0] - 2023-07-05
 
 ### Added
