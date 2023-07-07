@@ -281,6 +281,11 @@ paths:
                     description: Identity claim serialized as compact JSON.
                     type: string
                     example: '{"id":"https://example.com/users/1","ownerOf":"did:pkh:eip155:1:0xb9c5714089478a327f09197987f16f9e5d936e8a"}'
+                  created_at:
+                    description: Date and time when identity claim was created.
+                    type: string
+                    format: date-time
+                    example: 2023-07-07T23:52:12.370231609Z
         400:
           description: Invalid request parameters
     post:

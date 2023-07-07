@@ -425,6 +425,7 @@ pub struct IdentityClaimQueryParams {
 pub struct IdentityClaim {
     pub did: Did,
     pub claim: String,
+    pub created_at: DateTime<Utc>,
 }
 
 #[derive(Deserialize)]

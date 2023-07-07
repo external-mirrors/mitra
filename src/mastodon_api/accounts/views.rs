@@ -9,6 +9,7 @@ use actix_web::{
     Scope,
 };
 use actix_web_httpauth::extractors::bearer::BearerAuth;
+use chrono::Utc;
 use uuid::Uuid;
 
 use mitra_config::{
@@ -429,12 +430,13 @@ async fn get_identity_claim(
         &config.instance_url(),
         &current_user.profile.username,
     );
+    let created_at = Utc::now();
     let (_claim, message) = create_identity_claim_fep_c390(
         &actor_id,
         &did,
         &proof_type,
     ).map_err(|_| MastodonError::InternalError)?;
-    let response = IdentityClaim { did, claim: message };
+    let response = IdentityClaim { did, claim: message, created_at };
     Ok(HttpResponse::Ok().json(response))
 }
 
@@ -493,7 +495,7 @@ async fn create_identity_proof(
             ).map_err(|_| ValidationError("invalid signature"))?;
             signature_bin
         },
-        IdentityProofType::FepC390JcsEip191Proof=> {
+        IdentityProofType::FepC390JcsEip191Proof => {
             let did_pkh = did.as_did_pkh()
                 .ok_or(ValidationError("unexpected DID type"))?;
             if did_pkh.chain_id() != ChainId::ethereum_mainnet() {
