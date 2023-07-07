@@ -21,6 +21,7 @@ use mitra_utils::{
 
 use super::create::{
     IntegrityProof,
+    IntegrityProofConfig,
     PROOF_KEY,
     PURPOSE_ASSERTION_METHOD,
     PURPOSE_AUTHENTICATION,
@@ -36,8 +37,8 @@ pub enum JsonSigner {
 pub struct JsonSignatureData {
     pub proof_type: ProofType,
     pub signer: JsonSigner,
-    pub canonical_object: String,
-    pub canonical_config: String,
+    pub object: JsonValue,
+    pub proof_config: IntegrityProofConfig,
     pub signature: Vec<u8>,
 }
 
@@ -70,12 +71,12 @@ pub fn get_json_signature(
     let mut object = object.clone();
     let object_map = object.as_object_mut()
         .ok_or(VerificationError::InvalidObject)?;
-    let proof_value = object_map.remove(PROOF_KEY)
+    let proof = object_map.remove(PROOF_KEY)
         .ok_or(VerificationError::NoProof)?;
     let IntegrityProof {
         proof_config,
         proof_value,
-    } = serde_json::from_value(proof_value)
+    } = serde_json::from_value(proof)
         .map_err(|_| VerificationError::InvalidProof("invalid proof"))?;
     if proof_config.proof_purpose != PURPOSE_ASSERTION_METHOD &&
         proof_config.proof_purpose != PURPOSE_AUTHENTICATION
@@ -98,14 +99,12 @@ pub fn get_json_signature(
     } else {
         return Err(VerificationError::InvalidProof("unsupported verification method"));
     };
-    let canonical_object = canonicalize_object(&object)?;
-    let canonical_config = canonicalize_object(&proof_config)?;
     let signature = decode_multibase_base58btc(&proof_value)?;
     let signature_data = JsonSignatureData {
         proof_type,
         signer,
-        canonical_object,
-        canonical_config,
+        object,
+        proof_config,
         signature,
     };
     Ok(signature_data)
@@ -113,12 +112,13 @@ pub fn get_json_signature(
 
 pub fn verify_rsa_json_signature(
     signer_key: &RsaPublicKey,
-    canonical_object: &str,
+    object: &JsonValue,
     signature: &[u8],
 ) -> Result<(), VerificationError> {
+    let canonical_object = canonicalize_object(object)?;
     let is_valid_signature = verify_rsa_sha256_signature(
         signer_key,
-        canonical_object,
+        &canonical_object,
         signature,
     );
     if !is_valid_signature {
@@ -129,10 +129,12 @@ pub fn verify_rsa_json_signature(
 
 pub fn verify_eddsa_json_signature(
     signer_key: &Ed25519PublicKey,
-    canonical_object: &str,
-    canonical_config: &str,
+    object: &JsonValue,
+    proof_config: &IntegrityProofConfig,
     signature: &[u8],
 ) -> Result<(), VerificationError> {
+    let canonical_object = canonicalize_object(object)?;
+    let canonical_config = canonicalize_object(proof_config)?;
     let object_hash = Sha256::digest(canonical_object.as_bytes());
     let config_hash = Sha256::digest(canonical_config.as_bytes());
     let hash_data = [config_hash, object_hash].concat();
@@ -148,19 +150,21 @@ pub fn verify_eddsa_json_signature(
 
 pub fn verify_eip191_json_signature(
     signer: &DidPkh,
-    canonical_object: &str,
+    object: &JsonValue,
     signature: &[u8],
 ) -> Result<(), VerificationError> {
-    verify_eip191_signature(signer, canonical_object, signature)
+    let canonical_object = canonicalize_object(object)?;
+    verify_eip191_signature(signer, &canonical_object, signature)
         .map_err(|_| VerificationError::InvalidSignature)
 }
 
 pub fn verify_blake2_ed25519_json_signature(
     signer: &DidKey,
-    canonical_object: &str,
+    object: &JsonValue,
     signature: &[u8],
 ) -> Result<(), VerificationError> {
-    verify_minisign_signature(signer, canonical_object, signature)
+    let canonical_object = canonicalize_object(object)?;
+    verify_minisign_signature(signer, &canonical_object, signature)
         .map_err(|_| VerificationError::InvalidSignature)
 }
 
@@ -250,7 +254,7 @@ mod tests {
         let signer_public_key = RsaPublicKey::from(signer_key);
         let result = verify_rsa_json_signature(
             &signer_public_key,
-            &signature_data.canonical_object,
+            &signature_data.object,
             &signature_data.signature,
         );
         assert_eq!(result.is_ok(), true);
@@ -291,8 +295,8 @@ mod tests {
         let signer_public_key = Ed25519PublicKey::from(&signer_key);
         let result = verify_eddsa_json_signature(
             &signer_public_key,
-            &signature_data.canonical_object,
-            &signature_data.canonical_config,
+            &signature_data.object,
+            &signature_data.proof_config,
             &signature_data.signature,
         );
         assert_eq!(result.is_ok(), true);
@@ -359,8 +363,8 @@ mod tests {
         let public_key = ed25519_public_key_from_bytes(&public_key_bytes).unwrap();
         let result = verify_eddsa_json_signature(
             &public_key,
-            &signature_data.canonical_object,
-            &signature_data.canonical_config,
+            &signature_data.object,
+            &signature_data.proof_config,
             &signature_data.signature,
         );
         assert_eq!(result.is_ok(), true);

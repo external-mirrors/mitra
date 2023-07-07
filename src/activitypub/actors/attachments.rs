@@ -156,7 +156,7 @@ pub fn parse_identity_proof_fep_c390(
                 .ok_or(ValidationError("unexpected DID type"))?;
             verify_blake2_ed25519_json_signature(
                 did_key,
-                &signature_data.canonical_object,
+                &signature_data.object,
                 &signature_data.signature,
             ).map_err(|_| ValidationError("invalid identity proof"))?;
             IdentityProofType::FepC390JcsBlake2Ed25519Proof
@@ -166,7 +166,7 @@ pub fn parse_identity_proof_fep_c390(
                 .ok_or(ValidationError("unexpected DID type"))?;
             verify_eip191_json_signature(
                 did_pkh,
-                &signature_data.canonical_object,
+                &signature_data.object,
                 &signature_data.signature,
             ).map_err(|_| ValidationError("invalid identity proof"))?;
             IdentityProofType::FepC390JcsEip191Proof
@@ -330,14 +330,14 @@ mod tests {
         let did_pkh = DidPkh::from_address(&Currency::Ethereum, &address);
         let did = Did::Pkh(did_pkh);
         let proof_type = IdentityProofType::FepC390JcsEip191Proof;
-        let claim = create_identity_claim_fep_c390(
+        let (_claim, message) = create_identity_claim_fep_c390(
             actor_id,
             &did,
             &proof_type,
         ).unwrap();
         let signature = sign_message(
             &private_key.display_secret().to_string(),
-            claim.as_bytes(),
+            message.as_bytes(),
         ).unwrap();
         let signature_bin = signature.to_bytes();
         let identity_proof = create_identity_proof_fep_c390(

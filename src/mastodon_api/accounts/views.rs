@@ -366,21 +366,25 @@ async fn send_signed_activity(
             ).await.map_err(|_| MastodonError::InternalError)?
         },
     };
-    let canonical_json = canonicalize_object(&outgoing_activity.activity)
-        .map_err(|_| MastodonError::InternalError)?;
     let proof = match signer {
         Did::Key(signer) => {
             let signature_bin = parse_minisign_signature_file(&data.signature)
                 .map_err(|_| ValidationError("invalid encoding"))?;
-            verify_blake2_ed25519_json_signature(&signer, &canonical_json, &signature_bin)
-                .map_err(|_| ValidationError("invalid signature"))?;
+            verify_blake2_ed25519_json_signature(
+                &signer,
+                &outgoing_activity.activity,
+                &signature_bin,
+            ).map_err(|_| ValidationError("invalid signature"))?;
             IntegrityProof::jcs_blake2_ed25519(&signer, &signature_bin)
         },
         Did::Pkh(signer) => {
             let signature_bin = hex::decode(&data.signature)
                 .map_err(|_| ValidationError("invalid encoding"))?;
-            verify_eip191_json_signature(&signer, &canonical_json, &signature_bin)
-                .map_err(|_| ValidationError("invalid signature"))?;
+            verify_eip191_json_signature(
+                &signer,
+                &outgoing_activity.activity,
+                &signature_bin,
+            ).map_err(|_| ValidationError("invalid signature"))?;
             IntegrityProof::jcs_eip191(&signer, &signature_bin)
         },
     };
@@ -425,12 +429,12 @@ async fn get_identity_claim(
         &config.instance_url(),
         &current_user.profile.username,
     );
-    let claim = create_identity_claim_fep_c390(
+    let (_claim, message) = create_identity_claim_fep_c390(
         &actor_id,
         &did,
         &proof_type,
     ).map_err(|_| MastodonError::InternalError)?;
-    let response = IdentityClaim { did, claim };
+    let response = IdentityClaim { did, claim: message };
     Ok(HttpResponse::Ok().json(response))
 }
 
@@ -466,11 +470,13 @@ async fn create_identity_proof(
         &config.instance_url(),
         &current_user.profile.username,
     );
-    let message = create_identity_claim_fep_c390(
+    let (claim, _message) = create_identity_claim_fep_c390(
         &actor_id,
         &did,
         &proof_type,
     ).map_err(|_| MastodonError::InternalError)?;
+    let claim_value = serde_json::to_value(&claim)
+        .expect("claim should be serializable");
 
     // Verify proof
     let signature_bin = match proof_type {
@@ -482,7 +488,7 @@ async fn create_identity_proof(
                 .to_vec();
             verify_blake2_ed25519_json_signature(
                 did_key,
-                &message,
+                &claim_value,
                 &signature_bin,
             ).map_err(|_| ValidationError("invalid signature"))?;
             signature_bin
@@ -507,7 +513,7 @@ async fn create_identity_proof(
                 .map_err(|_| ValidationError("invalid signature encoding"))?;
             verify_eip191_json_signature(
                 did_pkh,
-                &message,
+                &claim_value,
                 &signature_bin,
             ).map_err(|_| ValidationError("invalid signature"))?;
             signature_bin

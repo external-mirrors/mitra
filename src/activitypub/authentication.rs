@@ -228,7 +228,7 @@ pub async fn verify_signed_activity(
                     )?;
                     verify_rsa_json_signature(
                         &signer_key,
-                        &signature_data.canonical_object,
+                        &signature_data.object,
                         &signature_data.signature,
                     )?;
                 },
@@ -239,8 +239,8 @@ pub async fn verify_signed_activity(
                     )?;
                     verify_eddsa_json_signature(
                         &signer_key,
-                        &signature_data.canonical_object,
-                        &signature_data.canonical_config,
+                        &signature_data.object,
+                        &signature_data.proof_config,
                         &signature_data.signature,
                     )?;
                 },
@@ -257,7 +257,7 @@ pub async fn verify_signed_activity(
                         .ok_or(AuthenticationError::InvalidJsonSignatureType)?;
                     verify_blake2_ed25519_json_signature(
                         did_key,
-                        &signature_data.canonical_object,
+                        &signature_data.object,
                         &signature_data.signature,
                     )?;
                 },
@@ -266,7 +266,7 @@ pub async fn verify_signed_activity(
                         .ok_or(AuthenticationError::InvalidJsonSignatureType)?;
                     verify_eip191_json_signature(
                         did_pkh,
-                        &signature_data.canonical_object,
+                        &signature_data.object,
                         &signature_data.signature,
                     )?;
                 },

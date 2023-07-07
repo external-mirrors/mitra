@@ -61,7 +61,7 @@ pub fn create_identity_claim_fep_c390(
     actor_id: &str,
     subject: &Did,
     proof_type: &IdentityProofType,
-) -> Result<String, CanonicalizationError> {
+) -> Result<(VerifiableIdentityStatement, String), CanonicalizationError> {
     let claim = VerifiableIdentityStatement::new(subject, actor_id);
     let message = match proof_type {
         IdentityProofType::LegacyEip191IdentityProof
@@ -76,7 +76,7 @@ pub fn create_identity_claim_fep_c390(
             canonicalize_object(&claim)?
         },
     };
-    Ok(message)
+    Ok((claim, message))
 }
 
 #[derive(Serialize)]
@@ -154,13 +154,13 @@ mod tests {
         let ed25519_public_key = Ed25519PublicKey::from(&ed25519_private_key);
         let did = Did::Key(
             DidKey::from_ed25519_key(ed25519_public_key.to_bytes()));
-        let claim = create_identity_claim_fep_c390(
+        let (_claim, message) = create_identity_claim_fep_c390(
             actor_id,
             &did,
             &IdentityProofType::FepC390JcsBlake2Ed25519Proof,
         ).unwrap();
         assert_eq!(
-            claim,
+            message,
             r#"{"alsoKnownAs":"https://server.example/users/test","subject":"did:key:z6MkvTbUjUVTwwMEsqxipAsL9YUvRaAC22rFzQCHf7RnbTbx","type":"VerifiableIdentityStatement"}"#,
         );
     }
