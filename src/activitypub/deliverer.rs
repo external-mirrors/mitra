@@ -6,6 +6,12 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use mitra_config::Instance;
+use mitra_json_signatures::create::{
+    is_object_signed,
+    sign_object_eddsa,
+    sign_object_rsa,
+    JsonSignatureError,
+};
 use mitra_models::{
     database::{
         DatabaseClient,
@@ -19,12 +25,6 @@ use mitra_utils::crypto_rsa::RsaPrivateKey;
 use crate::http_signatures::create::{
     create_http_signature,
     HttpSignatureError,
-};
-use crate::json_signatures::create::{
-    is_object_signed,
-    sign_object_eddsa,
-    sign_object_rsa,
-    JsonSignatureError,
 };
 
 use super::{

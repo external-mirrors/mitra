@@ -14,6 +14,7 @@ members = [
   ".",
   "mitra-cli",
   "mitra-config",
+  "mitra-json-signatures",
   "mitra-models",
   "mitra-utils",
 ]
@@ -21,12 +22,14 @@ default-members = [
   ".",
   "mitra-cli",
   "mitra-config",
+  "mitra-json-signatures",
   "mitra-models",
   "mitra-utils",
 ]
 
 [dependencies]
 mitra-config = { path = "mitra-config" }
+mitra-json-signatures = { path = "mitra-json-signatures" }
 mitra-models = { path = "mitra-models" }
 mitra-utils = { path = "mitra-utils" }
 

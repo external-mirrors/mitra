@@ -18,6 +18,18 @@ use mitra_config::{
     DefaultRole,
     RegistrationType,
 };
+use mitra_json_signatures::{
+    create::{
+        add_integrity_proof,
+        IntegrityProof,
+        IntegrityProofConfig,
+    },
+    verify::{
+        verify_blake2_ed25519_json_signature,
+        verify_eddsa_json_signature,
+        verify_eip191_json_signature,
+    },
+};
 use mitra_models::{
     database::{get_database_client, DatabaseError, DbPool},
     posts::queries::get_posts_by_author,
@@ -91,18 +103,6 @@ use crate::ethereum::{
     gate::is_allowed_user,
 };
 use crate::http::{get_request_base_url, FormOrJson};
-use crate::json_signatures::{
-    create::{
-        add_integrity_proof,
-        IntegrityProof,
-        IntegrityProofConfig,
-    },
-    verify::{
-        verify_blake2_ed25519_json_signature,
-        verify_eddsa_json_signature,
-        verify_eip191_json_signature,
-    },
-};
 use crate::mastodon_api::{
     errors::MastodonError,
     oauth::auth::get_current_user,

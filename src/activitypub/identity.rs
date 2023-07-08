@@ -1,6 +1,11 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
+use mitra_json_signatures::create::{
+    prepare_jcs_sha256_data,
+    IntegrityProof,
+    IntegrityProofConfig,
+};
 use mitra_models::profiles::types::{
     IdentityProof as DbIdentityProof,
     IdentityProofType,
@@ -11,12 +16,6 @@ use mitra_utils::{
         CanonicalizationError,
     },
     did::Did,
-};
-
-use crate::json_signatures::create::{
-    prepare_jcs_sha256_data,
-    IntegrityProof,
-    IntegrityProofConfig,
 };
 
 use super::vocabulary::VERIFIABLE_IDENTITY_STATEMENT;

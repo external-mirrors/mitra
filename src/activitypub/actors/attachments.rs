@@ -1,6 +1,20 @@
 use serde::{Deserialize, Serialize};
 use serde_json::{Value as JsonValue};
 
+use mitra_json_signatures::{
+    proofs::{
+        ProofType,
+        PROOF_TYPE_ID_EIP191,
+        PROOF_TYPE_ID_MINISIGN,
+    },
+    verify::{
+        get_json_signature,
+        verify_blake2_ed25519_json_signature,
+        verify_eddsa_json_signature,
+        verify_eip191_json_signature,
+        JsonSigner,
+    },
+};
 use mitra_models::{
     database::DatabaseTypeError,
     profiles::types::{
@@ -38,20 +52,6 @@ use crate::activitypub::{
     },
 };
 use crate::errors::ValidationError;
-use crate::json_signatures::{
-    proofs::{
-        ProofType,
-        PROOF_TYPE_ID_EIP191,
-        PROOF_TYPE_ID_MINISIGN,
-    },
-    verify::{
-        get_json_signature,
-        verify_blake2_ed25519_json_signature,
-        verify_eddsa_json_signature,
-        verify_eip191_json_signature,
-        JsonSigner,
-    },
-};
 use crate::web_client::urls::get_subscription_page_url;
 
 use super::types::ActorAttachment;

@@ -2,6 +2,18 @@ use actix_web::HttpRequest;
 use serde_json::Value;
 
 use mitra_config::Config;
+use mitra_json_signatures::{
+    proofs::ProofType,
+    verify::{
+        get_json_signature,
+        verify_blake2_ed25519_json_signature,
+        verify_eddsa_json_signature,
+        verify_eip191_json_signature,
+        verify_rsa_json_signature,
+        JsonSignatureVerificationError as JsonSignatureError,
+        JsonSigner,
+    },
+};
 use mitra_models::{
     database::{DatabaseClient, DatabaseError},
     profiles::queries::get_profile_by_remote_actor_id,
@@ -28,18 +40,6 @@ use crate::http_signatures::verify::{
     parse_http_signature,
     verify_http_signature,
     HttpSignatureVerificationError as HttpSignatureError,
-};
-use crate::json_signatures::{
-    proofs::ProofType,
-    verify::{
-        get_json_signature,
-        verify_blake2_ed25519_json_signature,
-        verify_eddsa_json_signature,
-        verify_eip191_json_signature,
-        verify_rsa_json_signature,
-        JsonSignatureVerificationError as JsonSignatureError,
-        JsonSigner,
-    },
 };
 use crate::media::MediaStorage;
 
