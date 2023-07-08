@@ -19,6 +19,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Fixed
 
 - Fix parsing of FEP-c390 attachments.
+- Fix ordering of profile timeline.
 
 ## [1.29.0] - 2023-07-05
 

@@ -799,7 +799,7 @@ pub async fn get_posts_by_author(
         FROM post
         JOIN actor_profile ON post.author_id = actor_profile.id
         WHERE {condition}
-        ORDER BY post.created_at DESC
+        ORDER BY post.id DESC
         LIMIT $limit
         ",
         related_attachments=RELATED_ATTACHMENTS,
