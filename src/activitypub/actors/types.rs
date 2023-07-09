@@ -14,10 +14,7 @@ use mitra_models::{
     profiles::types::{
         DbActor,
         DbActorPublicKey,
-        ExtraField,
-        IdentityProof,
         IdentityProofType,
-        PaymentOption,
     },
     users::types::User,
 };
@@ -46,16 +43,7 @@ use crate::activitypub::{
         LocalActorCollection,
     },
     types::deserialize_value_array,
-    vocabulary::{
-        IDENTITY_PROOF,
-        IMAGE,
-        LINK,
-        NOTE,
-        PERSON,
-        PROPERTY_VALUE,
-        SERVICE,
-        VERIFIABLE_IDENTITY_STATEMENT,
-    },
+    vocabulary::{IMAGE, PERSON, SERVICE},
 };
 use crate::errors::ValidationError;
 use crate::media::get_file_url;
@@ -65,11 +53,6 @@ use super::attachments::{
     attach_extra_field,
     attach_identity_proof,
     attach_payment_option,
-    parse_identity_proof,
-    parse_identity_proof_fep_c390,
-    parse_metadata_field,
-    parse_payment_option,
-    parse_property_value,
 };
 use super::keys::{Multikey, PublicKey};
 
@@ -257,79 +240,6 @@ impl Actor {
                 public_key_pem: self.public_key.public_key_pem,
             },
         }
-    }
-
-    pub fn parse_attachments(&self) -> (
-        Vec<IdentityProof>,
-        Vec<PaymentOption>,
-        Vec<ExtraField>,
-    ) {
-        let mut identity_proofs = vec![];
-        let mut payment_options = vec![];
-        let mut extra_fields = vec![];
-        let mut property_values = vec![];
-        let log_error = |attachment_type: &str, error| {
-            log::warn!(
-                "ignoring actor attachment of type {}: {}",
-                attachment_type,
-                error,
-            );
-        };
-        for attachment_value in self.attachment.iter() {
-            let attachment_type =
-                attachment_value["type"].as_str().unwrap_or("Unknown");
-            match attachment_type {
-                IDENTITY_PROOF => {
-                    match parse_identity_proof(&self.id, attachment_value) {
-                        Ok(proof) => identity_proofs.push(proof),
-                        Err(error) => log_error(attachment_type, error),
-                    };
-                },
-                VERIFIABLE_IDENTITY_STATEMENT => {
-                    match parse_identity_proof_fep_c390(&self.id, attachment_value) {
-                        Ok(proof) => identity_proofs.push(proof),
-                        Err(error) => log_error(attachment_type, error),
-                    };
-                },
-                LINK => {
-                    match parse_payment_option(attachment_value) {
-                        Ok(option) => payment_options.push(option),
-                        Err(error) => log_error(attachment_type, error),
-                    };
-                },
-                PROPERTY_VALUE => {
-                    match parse_property_value(attachment_value) {
-                        Ok(field) => property_values.push(field),
-                        Err(error) => log_error(attachment_type, error),
-                    };
-                },
-                NOTE => {
-                    match parse_metadata_field(attachment_value) {
-                        Ok(field) => extra_fields.push(field),
-                        Err(error) => log_error(attachment_type, error),
-                    };
-                },
-                _ => {
-                    log_error(
-                        attachment_type,
-                        ValidationError("unsupported attachment type"),
-                    );
-                },
-            };
-        };
-        // Remove duplicate identity proofs
-        identity_proofs.sort_by_key(|item| item.issuer.to_string());
-        identity_proofs.dedup_by_key(|item| item.issuer.to_string());
-        // Remove duplicate metadata fields
-        // FEP-8b2a fields have higher priority
-        for field in property_values {
-            if extra_fields.iter().any(|item| item.name == field.name) {
-                continue;
-            } else {
-                extra_fields.push(field);
-            }
-        };
-        (identity_proofs, payment_options, extra_fields)
     }
 }
 

@@ -9,6 +9,9 @@ use mitra_models::{
     profiles::types::{
         DbActorKey,
         DbActorProfile,
+        ExtraField,
+        IdentityProof,
+        PaymentOption,
         ProfileImage,
         ProfileCreateData,
         ProfileUpdateData,
@@ -22,7 +25,15 @@ use crate::activitypub::{
     handlers::create::handle_emoji,
     identifiers::validate_object_id,
     receiver::HandlerError,
-    vocabulary::{EMOJI, HASHTAG},
+    vocabulary::{
+        EMOJI,
+        HASHTAG,
+        IDENTITY_PROOF,
+        LINK,
+        NOTE,
+        PROPERTY_VALUE,
+        VERIFIABLE_IDENTITY_STATEMENT,
+    },
 };
 use crate::errors::ValidationError;
 use crate::media::MediaStorage;
@@ -33,6 +44,14 @@ use crate::validators::{
         clean_profile_update_data,
         PROFILE_IMAGE_SIZE_MAX,
     },
+};
+
+use super::attachments::{
+    parse_identity_proof,
+    parse_identity_proof_fep_c390,
+    parse_metadata_field,
+    parse_payment_option,
+    parse_property_value,
 };
 
 async fn fetch_actor_images(
@@ -118,6 +137,79 @@ fn parse_public_keys(
     Ok(keys)
 }
 
+fn parse_attachments(actor: &Actor) -> (
+    Vec<IdentityProof>,
+    Vec<PaymentOption>,
+    Vec<ExtraField>,
+) {
+    let mut identity_proofs = vec![];
+    let mut payment_options = vec![];
+    let mut extra_fields = vec![];
+    let mut property_values = vec![];
+    let log_error = |attachment_type: &str, error| {
+        log::warn!(
+            "ignoring actor attachment of type {}: {}",
+            attachment_type,
+            error,
+        );
+    };
+    for attachment_value in actor.attachment.iter() {
+        let attachment_type =
+            attachment_value["type"].as_str().unwrap_or("Unknown");
+        match attachment_type {
+            IDENTITY_PROOF => {
+                match parse_identity_proof(&actor.id, attachment_value) {
+                    Ok(proof) => identity_proofs.push(proof),
+                    Err(error) => log_error(attachment_type, error),
+                };
+            },
+            VERIFIABLE_IDENTITY_STATEMENT => {
+                match parse_identity_proof_fep_c390(&actor.id, attachment_value) {
+                    Ok(proof) => identity_proofs.push(proof),
+                    Err(error) => log_error(attachment_type, error),
+                };
+            },
+            LINK => {
+                match parse_payment_option(attachment_value) {
+                    Ok(option) => payment_options.push(option),
+                    Err(error) => log_error(attachment_type, error),
+                };
+            },
+            PROPERTY_VALUE => {
+                match parse_property_value(attachment_value) {
+                    Ok(field) => property_values.push(field),
+                    Err(error) => log_error(attachment_type, error),
+                };
+            },
+            NOTE => {
+                match parse_metadata_field(attachment_value) {
+                    Ok(field) => extra_fields.push(field),
+                    Err(error) => log_error(attachment_type, error),
+                };
+            },
+            _ => {
+                log_error(
+                    attachment_type,
+                    ValidationError("unsupported attachment type"),
+                );
+            },
+        };
+    };
+    // Remove duplicate identity proofs
+    identity_proofs.sort_by_key(|item| item.issuer.to_string());
+    identity_proofs.dedup_by_key(|item| item.issuer.to_string());
+    // Remove duplicate metadata fields
+    // FEP-8b2a fields have higher priority
+    for field in property_values {
+        if extra_fields.iter().any(|item| item.name == field.name) {
+            continue;
+        } else {
+            extra_fields.push(field);
+        }
+    };
+    (identity_proofs, payment_options, extra_fields)
+}
+
 fn parse_aliases(actor: &Actor) -> Vec<String> {
     // Aliases reported by server (not signed)
     actor.also_known_as.as_ref()
@@ -194,7 +286,7 @@ pub async fn create_remote_profile(
     ).await;
     let public_keys = parse_public_keys(&actor)?;
     let (identity_proofs, payment_options, extra_fields) =
-        actor.parse_attachments();
+        parse_attachments(&actor);
     let aliases = parse_aliases(&actor);
     let emojis = parse_tags(
         db_client,
@@ -255,7 +347,7 @@ pub async fn update_remote_profile(
     ).await;
     let public_keys = parse_public_keys(&actor)?;
     let (identity_proofs, payment_options, extra_fields) =
-        actor.parse_attachments();
+        parse_attachments(&actor);
     let aliases = parse_aliases(&actor);
     let emojis = parse_tags(
         db_client,
