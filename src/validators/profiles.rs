@@ -19,6 +19,8 @@ const BIO_ALLOWED_TAGS: [&str; 2] = ["a", "br"];
 const FIELD_NAME_MAX_SIZE: usize = 500;
 const FIELD_VALUE_MAX_SIZE: usize = 5000;
 
+pub const PROFILE_IMAGE_SIZE_MAX: usize = 5 * 1000 * 1000; // 5 MB
+
 pub fn validate_username(username: &str) -> Result<(), ValidationError> {
     if username.is_empty() {
         return Err(ValidationError("username is empty"));

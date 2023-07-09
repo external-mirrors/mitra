@@ -28,10 +28,12 @@ use crate::errors::ValidationError;
 use crate::media::MediaStorage;
 use crate::validators::{
     posts::EMOJI_LIMIT,
-    profiles::{clean_profile_create_data, clean_profile_update_data},
+    profiles::{
+        clean_profile_create_data,
+        clean_profile_update_data,
+        PROFILE_IMAGE_SIZE_MAX,
+    },
 };
-
-pub const ACTOR_IMAGE_MAX_SIZE: usize = 5 * 1000 * 1000; // 5 MB
 
 async fn fetch_actor_images(
     instance: &Instance,
@@ -45,7 +47,7 @@ async fn fetch_actor_images(
             instance,
             &icon.url,
             icon.media_type.as_deref(),
-            ACTOR_IMAGE_MAX_SIZE,
+            PROFILE_IMAGE_SIZE_MAX,
             media_dir,
         ).await {
             Ok((file_name, file_size, media_type)) => {
@@ -69,7 +71,7 @@ async fn fetch_actor_images(
             instance,
             &image.url,
             image.media_type.as_deref(),
-            ACTOR_IMAGE_MAX_SIZE,
+            PROFILE_IMAGE_SIZE_MAX,
             media_dir,
         ).await {
             Ok((file_name, file_size, media_type)) => {
