@@ -5,14 +5,16 @@ use serde::Serialize;
 use mitra_models::profiles::types::MoneroSubscription;
 use mitra_utils::caip19::AssetType;
 
-use super::constants::{
-    AP_CONTEXT,
-    UNITS_OF_MEASURE_CONTEXT,
-    W3ID_VALUEFLOWS_CONTEXT,
-};
-use super::identifiers::{
-    local_actor_id,
-    local_actor_proposal_id,
+use crate::activitypub::{
+    constants::{
+        AP_CONTEXT,
+        UNITS_OF_MEASURE_CONTEXT,
+        W3ID_VALUEFLOWS_CONTEXT,
+    },
+    identifiers::{
+        local_actor_id,
+        local_actor_proposal_id,
+    },
 };
 
 type Context = (

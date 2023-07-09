@@ -52,8 +52,8 @@ use super::identifiers::{
     local_actor_subscribers,
     local_actor_outbox,
 };
-use super::proposals::build_proposal;
 use super::receiver::{receive_activity, HandlerError};
+use super::valueflows::builders::build_proposal;
 
 pub fn is_activitypub_request(headers: &HeaderMap) -> bool {
     let maybe_user_agent = headers.get(http_header::USER_AGENT)
