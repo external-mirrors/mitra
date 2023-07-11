@@ -201,7 +201,7 @@ pub fn build_note(
         };
     };
     // Present first link as a quote
-    let maybe_quote_url = post.linked.get(0)
+    let maybe_quote_url = post.linked.first()
         .map(|linked| post_object_id(instance_url, linked));
 
     for emoji in &post.emojis {

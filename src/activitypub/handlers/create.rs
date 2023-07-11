@@ -80,7 +80,7 @@ fn get_object_attributed_to(object: &AttributedObject)
 {
     let author_id = parse_into_id_array(&object.attributed_to)
         .map_err(|_| ValidationError("invalid attributedTo property"))?
-        .get(0)
+        .first()
         .ok_or(ValidationError("invalid attributedTo property"))?
         .to_string();
     Ok(author_id)
@@ -376,6 +376,7 @@ pub async fn get_object_tags(
     let mut hashtags = vec![];
     let mut links = vec![];
     let mut emojis = vec![];
+
     for tag_value in object.tag.clone() {
         let tag_type = tag_value["type"].as_str().unwrap_or(HASHTAG);
         if tag_type == HASHTAG {
@@ -526,6 +527,33 @@ pub async fn get_object_tags(
             log::warn!("skipping tag of type {}", tag_type);
         };
     };
+
+    // Ensure mentions exist for all local actors in "to" and "cc" fields
+    let audience = get_audience(object)?;
+    for actor_id in audience {
+        if mentions.len() >= MENTION_LIMIT {
+            log::warn!("too many mentions");
+            break;
+        };
+        if let Ok(username) = parse_local_actor_id(&instance.url(), &actor_id) {
+            let user = match get_user_by_name(db_client, &username).await {
+                Ok(user) => user,
+                Err(DatabaseError::NotFound(_)) => {
+                    log::warn!(
+                        "failed to find local audience: {}",
+                        actor_id,
+                    );
+                    continue;
+                },
+                Err(other_error) => return Err(other_error.into()),
+            };
+            if !mentions.contains(&user.id) {
+                mentions.push(user.id);
+            };
+        };
+    };
+
+    // Parse quoteUrl as an object link
     if let Some(ref object_id) = object.quote_url {
         let object_id = redirects.get(object_id).unwrap_or(object_id);
         let linked = get_post_by_object_id(
