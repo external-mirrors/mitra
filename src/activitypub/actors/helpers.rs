@@ -121,12 +121,14 @@ fn parse_public_keys(
     };
     let db_key = actor.public_key.to_db_key()?;
     keys.push(db_key);
-    for authentication_key in actor.authentication.iter() {
-        if authentication_key.controller == actor.id {
-            let db_key = authentication_key.to_db_key()?;
+    let verification_methods = actor.authentication.iter()
+        .chain(actor.assertion_method.iter());
+    for multikey in verification_methods {
+        if multikey.controller == actor.id {
+            let db_key = multikey.to_db_key()?;
             keys.push(db_key);
         } else {
-            log::warn!("authentication key does not belong to actor");
+            log::warn!("verification method does not belong to actor");
         };
     };
     keys.sort_by_key(|item| item.id.clone());

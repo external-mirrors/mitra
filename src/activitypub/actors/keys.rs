@@ -78,7 +78,7 @@ impl PublicKey {
     }
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Multikey {
     id: String,

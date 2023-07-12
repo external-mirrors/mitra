@@ -162,6 +162,11 @@ pub struct Actor {
         default,
         skip_serializing_if = "Vec::is_empty",
     )]
+    pub assertion_method: Vec<Multikey>,
+    #[serde(
+        default,
+        skip_serializing_if = "Vec::is_empty",
+    )]
     pub authentication: Vec<Multikey>,
 
     pub public_key: PublicKey,
@@ -286,13 +291,13 @@ pub fn build_local_actor(
 
     let public_key = PublicKey::build(&actor_id, &user.rsa_private_key)
         .map_err(|_| DatabaseTypeError)?;
-    let mut authentication_keys = vec![
+    let mut verification_methods = vec![
         Multikey::build_rsa(&actor_id, &user.rsa_private_key)
             .map_err(|_| DatabaseTypeError)?,
     ];
     if let Some(ref private_key) = user.ed25519_private_key {
         let multikey = Multikey::build_ed25519(&actor_id, private_key.inner());
-        authentication_keys.push(multikey);
+        verification_methods.push(multikey);
     };
     let avatar = match &user.profile.avatar {
         Some(image) => {
@@ -359,7 +364,8 @@ pub fn build_local_actor(
         following: Some(following),
         subscribers: Some(subscribers),
         featured: Some(featured),
-        authentication: authentication_keys,
+        assertion_method: verification_methods.clone(),
+        authentication: verification_methods,
         public_key,
         icon: avatar,
         image: banner,
@@ -380,7 +386,7 @@ pub fn build_instance_actor(
     let actor_inbox = LocalActorCollection::Inbox.of(&actor_id);
     let actor_outbox = LocalActorCollection::Outbox.of(&actor_id);
     let public_key = PublicKey::build(&actor_id, &instance.actor_key)?;
-    let authentication_keys = vec![
+    let verification_methods = vec![
         Multikey::build_rsa(&actor_id, &instance.actor_key)?,
     ];
     let actor = Actor {
@@ -395,7 +401,8 @@ pub fn build_instance_actor(
         following: None,
         subscribers: None,
         featured: None,
-        authentication: authentication_keys,
+        authentication: verification_methods.clone(),
+        assertion_method: verification_methods,
         public_key,
         icon: None,
         image: None,
@@ -457,6 +464,7 @@ mod tests {
             actor.public_key.id,
             "https://example.com/users/testuser#main-key",
         );
+        assert_eq!(actor.assertion_method.len(), 1);
         assert_eq!(actor.attachment.len(), 0);
         assert_eq!(actor.summary, user.profile.bio);
     }
@@ -472,5 +480,6 @@ mod tests {
         assert_eq!(actor.inbox, "https://example.com/actor/inbox");
         assert_eq!(actor.outbox, "https://example.com/actor/outbox");
         assert_eq!(actor.public_key.id, "https://example.com/actor#main-key");
+        assert_eq!(actor.assertion_method.len(), 1);
     }
 }
