@@ -21,11 +21,14 @@ use mitra_utils::{
 };
 
 use crate::activitypub::{
+    constants::W3ID_VALUEFLOWS_CONTEXT,
     deserialization::deserialize_string_array,
+    identifiers::local_actor_proposal_id,
     identity::{
         create_identity_claim,
         VerifiableIdentityStatement,
     },
+    valueflows::builders::PROPOSAL,
     vocabulary::{
         IDENTITY_PROOF,
         LINK,
@@ -203,6 +206,7 @@ pub fn attach_payment_option(
     username: &str,
     payment_option: PaymentOption,
 ) -> PaymentLink {
+    let mut rel = vec![PAYMENT_LINK_RELATION_TYPE.to_string()];
     let (name, href) = match payment_option {
         // Local actors can't have payment links
         PaymentOption::Link(_) => unimplemented!(),
@@ -211,9 +215,15 @@ pub fn attach_payment_option(
             let href = get_subscription_page_url(instance_url, username);
             (name, href)
         },
-        PaymentOption::MoneroSubscription(_) => {
+        PaymentOption::MoneroSubscription(payment_info) => {
             let name = PAYMENT_LINK_NAME_MONERO.to_string();
-            let href = get_subscription_page_url(instance_url, username);
+            let href = local_actor_proposal_id(
+                instance_url,
+                username,
+                &payment_info.chain_id,
+            );
+            let proposal_rel = format!("{}{}", W3ID_VALUEFLOWS_CONTEXT, PROPOSAL);
+            rel.push(proposal_rel);
             (name, href)
         },
     };
@@ -221,7 +231,7 @@ pub fn attach_payment_option(
         object_type: LINK.to_string(),
         name: name,
         href: href,
-        rel: vec![PAYMENT_LINK_RELATION_TYPE.to_string()],
+        rel: rel,
     }
 }
 
@@ -378,19 +388,26 @@ mod tests {
     #[test]
     fn test_payment_option() {
         let username = "testuser";
-        let payment_option =
-            PaymentOption::ethereum_subscription(ChainId::ethereum_mainnet());
+        let price = 240000;
+        let payout_address = "test";
+        let payment_option = PaymentOption::monero_subscription(
+            ChainId::monero_mainnet(),
+            price,
+            payout_address.to_string(),
+        );
         let subscription_page_url =
-            "https://example.com/@testuser/subscription";
+            "https://example.com/users/testuser/proposals/monero:418015bb9ae982a1975da7d79277c270";
         let attachment = attach_payment_option(
             INSTANCE_URL,
             username,
             payment_option,
         );
         assert_eq!(attachment.object_type, LINK);
-        assert_eq!(attachment.name, "EthereumSubscription");
+        assert_eq!(attachment.name, "MoneroSubscription");
         assert_eq!(attachment.href, subscription_page_url);
+        assert_eq!(attachment.rel.len(), 2);
         assert_eq!(attachment.rel[0], "payment");
+        assert_eq!(attachment.rel[1], "https://w3id.org/valueflows/Proposal");
 
         let attachment_value = serde_json::to_value(attachment).unwrap();
         let parsed_option = parse_payment_option(&attachment_value).unwrap();
@@ -398,7 +415,7 @@ mod tests {
             PaymentOption::Link(link) => link,
             _ => panic!("wrong option"),
         };
-        assert_eq!(link.name, "EthereumSubscription");
+        assert_eq!(link.name, "MoneroSubscription");
         assert_eq!(link.href, subscription_page_url);
     }
 

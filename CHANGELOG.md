@@ -9,7 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Added
 
 - Use standardized CAIP-2 Monero chain identifiers.
-- Generate ValueFlows `Proposal` objects for Monero subscriptions.
+- Generate Valueflows `Proposal` objects for Monero subscriptions.
 - Allow actor's Ed25519 key to be used for assertions.
 
 ### Changed
@@ -17,6 +17,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Require `chain_id` parameter for registering subscription option.
 - Import posts from outbox in chronological order.
 - Add `created_at` parameter to identity claim API response.
+- Replace URL in subscription payment link with a corresponding proposal ID.
 
 ### Fixed
 

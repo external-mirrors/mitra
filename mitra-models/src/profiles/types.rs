@@ -276,6 +276,18 @@ impl PaymentOption {
         Self::EthereumSubscription(EthereumSubscription { chain_id })
     }
 
+    pub fn monero_subscription(
+        chain_id: ChainId,
+        price: u64,
+        payout_address: String,
+    ) -> Self {
+        Self::MoneroSubscription(MoneroSubscription {
+            chain_id,
+            price,
+            payout_address,
+        })
+    }
+
     pub(super) fn payment_type(&self) -> PaymentType {
         match self {
             Self::Link(_) => PaymentType::Link,

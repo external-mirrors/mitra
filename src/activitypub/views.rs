@@ -29,6 +29,7 @@ use crate::errors::HttpError;
 use crate::web_client::urls::{
     get_post_page_url,
     get_profile_page_url,
+    get_subscription_page_url,
     get_tag_page_url,
 };
 use super::actors::types::{build_instance_actor, build_local_actor};
@@ -379,6 +380,7 @@ async fn featured_collection(
 async fn proposal_view(
     config: web::Data<Config>,
     db_pool: web::Data<DbPool>,
+    request: HttpRequest,
     path: web::Path<(String, ChainId)>,
 ) -> Result<HttpResponse, HttpError> {
     let (username, chain_id) = path.into_inner();
@@ -397,6 +399,16 @@ async fn proposal_view(
             _ => None
         })
         .ok_or(HttpError::NotFoundError("proposal"))?;
+    if !is_activitypub_request(request.headers()) {
+        let page_url = get_subscription_page_url(
+            &config.instance_url(),
+            &user.profile.username,
+        );
+        let response = HttpResponse::Found()
+            .append_header((http_header::LOCATION, page_url))
+            .finish();
+        return Ok(response);
+    };
     let proposal = build_proposal(
         &config.instance_url(),
         &user.profile.username,

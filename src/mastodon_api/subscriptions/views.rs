@@ -24,7 +24,6 @@ use mitra_models::{
         update_profile,
     },
     profiles::types::{
-        MoneroSubscription,
         PaymentOption,
         PaymentType,
         ProfileUpdateData,
@@ -155,12 +154,12 @@ pub async fn register_subscription_option(
                 return Err(ValidationError("price must be greater than 0").into());
             };
             validate_monero_address(&payout_address)?;
-            let payment_info = MoneroSubscription {
+            let payment_option = PaymentOption::monero_subscription(
                 chain_id,
                 price,
                 payout_address,
-            };
-            Some(PaymentOption::MoneroSubscription(payment_info))
+            );
+            Some(payment_option)
         },
     };
     if let Some(payment_option) = maybe_payment_option {

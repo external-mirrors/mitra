@@ -47,7 +47,7 @@ fn build_proposal_context() -> Context {
 }
 
 const INTENT: &str = "Intent";
-const PROPOSAL: &str = "Proposal";
+pub const PROPOSAL: &str = "Proposal";
 
 // https://www.valueflo.ws/concepts/actions/#action-definitions
 const ACTION_DELIVER_SERVICE: &str = "deliverService";
@@ -119,7 +119,7 @@ pub fn build_proposal(
     let proposal_id = local_actor_proposal_id(
         instance_url,
         username,
-        &payment_info.chain_id.to_string(),
+        &payment_info.chain_id,
     );
     let proposal_name = "Pay for subscription";
     let asset_type = AssetType::monero(&payment_info.chain_id);

@@ -8,7 +8,10 @@ use mitra_models::{
         PublicKeyType,
     },
 };
-use mitra_utils::urls::get_hostname;
+use mitra_utils::{
+    caip2::ChainId,
+    urls::get_hostname,
+};
 
 use crate::errors::ValidationError;
 
@@ -89,7 +92,7 @@ pub fn local_actor_key_id(
 pub fn local_actor_proposal_id(
     instance_url: &str,
     username: &str,
-    chain_id: &str,
+    chain_id: &ChainId,
 ) -> String {
     let actor_id = local_actor_id(instance_url, username);
     format!("{}/proposals/{}", actor_id, chain_id)
