@@ -1,3 +1,4 @@
+/// https://codeberg.org/silverpill/feps/src/branch/main/0837/fep-0837.md
 use std::collections::HashMap;
 
 use serde::Serialize;
@@ -33,10 +34,10 @@ fn build_proposal_context() -> Context {
             ("Intent", "vf:Intent"),
             ("publishes", "vf:publishes"),
             ("reciprocal", "vf:reciprocal"),
+            ("unitBased", "vf:unitBased"),
             ("provider", "vf:provider"),
             ("receiver", "vf:receiver"),
             ("action", "vf:action"),
-            ("resourceClassifiedAs", "vf:resourceClassifiedAs"),
             ("resourceConformsTo", "vf:resourceConformsTo"),
             ("resourceQuantity", "vf:resourceQuantity"),
             ("hasUnit", "om2:hasUnit"),
@@ -73,7 +74,7 @@ struct DeliverServiceIntent {
     object_type: String,
     id: String,
     action: String,
-    resource_classified_as: String,
+    resource_conforms_to: String,
     resource_quantity: Quantity,
     provider: String,
 }
@@ -91,6 +92,7 @@ struct TransferIntent {
 }
 
 #[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Proposal {
     #[serde(rename = "@context")]
     context: Context,
@@ -101,6 +103,7 @@ pub struct Proposal {
     name: String,
     publishes: DeliverServiceIntent,
     reciprocal: TransferIntent,
+    unit_based: bool,
 }
 
 // https://www.valueflo.ws/concepts/proposals/
@@ -127,9 +130,9 @@ pub fn build_proposal(
         name: proposal_name.to_string(),
         publishes: DeliverServiceIntent {
             object_type: INTENT.to_string(),
-            id: format!("{}#service", proposal_id),
+            id: format!("{}#primary", proposal_id),
             action: ACTION_DELIVER_SERVICE.to_string(),
-            resource_classified_as: CLASS_CONTENT.to_string(),
+            resource_conforms_to: CLASS_CONTENT.to_string(),
             resource_quantity: Quantity {
                 has_unit: UNIT_SECOND.to_string(),
                 has_numerical_value: "1".to_string(),
@@ -138,7 +141,7 @@ pub fn build_proposal(
         },
         reciprocal: TransferIntent {
             object_type: INTENT.to_string(),
-            id: format!("{}#payment", proposal_id),
+            id: format!("{}#reciprocal", proposal_id),
             action: ACTION_TRANSFER.to_string(),
             resource_conforms_to: asset_type.into_uri(),
             resource_quantity: Quantity {
@@ -148,6 +151,7 @@ pub fn build_proposal(
             },
             receiver: actor_id,
         },
+        unit_based: true,
     }
 }
 
@@ -182,10 +186,10 @@ mod tests {
                     "Intent": "vf:Intent",
                     "publishes": "vf:publishes",
                     "reciprocal": "vf:reciprocal",
+                    "unitBased": "vf:unitBased",
                     "provider": "vf:provider",
                     "receiver": "vf:receiver",
                     "action": "vf:action",
-                    "resourceClassifiedAs": "vf:resourceClassifiedAs",
                     "resourceConformsTo": "vf:resourceConformsTo",
                     "resourceQuantity": "vf:resourceQuantity",
                     "hasUnit": "om2:hasUnit",
@@ -197,9 +201,9 @@ mod tests {
             "name": "Pay for subscription",
             "publishes": {
                 "type": "Intent",
-                "id": "https://test.example/users/alice/proposals/monero:418015bb9ae982a1975da7d79277c270#service",
+                "id": "https://test.example/users/alice/proposals/monero:418015bb9ae982a1975da7d79277c270#primary",
                 "action": "deliverService",
-                "resourceClassifiedAs": "https://www.wikidata.org/wiki/Q1260632",
+                "resourceConformsTo": "https://www.wikidata.org/wiki/Q1260632",
                 "resourceQuantity": {
                     "hasUnit": "second",
                     "hasNumericalValue": "1",
@@ -208,7 +212,7 @@ mod tests {
             },
             "reciprocal": {
                 "type": "Intent",
-                "id": "https://test.example/users/alice/proposals/monero:418015bb9ae982a1975da7d79277c270#payment",
+                "id": "https://test.example/users/alice/proposals/monero:418015bb9ae982a1975da7d79277c270#reciprocal",
                 "action": "transfer",
                 "resourceConformsTo": "caip:19:monero:418015bb9ae982a1975da7d79277c270/slip44:128",
                 "resourceQuantity": {
@@ -217,6 +221,7 @@ mod tests {
                 },
                 "receiver": "https://test.example/users/alice",
             },
+            "unitBased": true,
         });
         assert_eq!(
             serde_json::to_value(proposal).unwrap(),
