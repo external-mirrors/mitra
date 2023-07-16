@@ -17,8 +17,8 @@ pub enum UploadError {
     #[error("no media type")]
     NoMediaType,
 
-    #[error("invalid media type")]
-    InvalidMediaType,
+    #[error("invalid media type {0}")]
+    InvalidMediaType(String),
 }
 
 impl From<UploadError> for MastodonError {
@@ -44,18 +44,19 @@ pub fn save_b64_file(
     if file_size > file_size_limit {
         return Err(UploadError::TooLarge);
     };
-    if !SUPPORTED_MEDIA_TYPES.contains(&media_type) {
-        return Err(UploadError::InvalidMediaType);
+    let media_type = media_type.to_string();
+    if !SUPPORTED_MEDIA_TYPES.contains(&media_type.as_str()) {
+        return Err(UploadError::InvalidMediaType(media_type));
     };
     if let Some(expected_prefix) = maybe_expected_prefix {
         if !media_type.starts_with(expected_prefix) {
-            return Err(UploadError::InvalidMediaType);
+            return Err(UploadError::InvalidMediaType(media_type));
         };
     };
     let file_name = save_file(
         file_data,
         output_dir,
-        Some(media_type),
+        Some(&media_type),
     )?;
-    Ok((file_name, file_size, media_type.to_string()))
+    Ok((file_name, file_size, media_type))
 }
