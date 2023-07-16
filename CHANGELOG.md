@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+
+- Support media uploads in `multipart/form-data` format.
+
 ### Changed
 
 - Hide reposts from public timelines.

@@ -1,3 +1,8 @@
+use actix_multipart::form::{
+    bytes::Bytes,
+    text::Text,
+    MultipartForm,
+};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -6,13 +11,34 @@ use mitra_models::attachments::types::{
     DbMediaAttachment,
 };
 use mitra_services::media::get_file_url;
+use mitra_utils::base64;
 
 #[derive(Deserialize)]
-pub struct AttachmentCreateData {
+pub struct AttachmentData {
     // base64-encoded file (not compatible with Mastodon)
     pub file: String,
     pub media_type: String,
     pub description: Option<String>,
+}
+
+#[derive(MultipartForm)]
+pub struct AttachmentDataMultipartForm {
+    file: Bytes,
+    description: Option<Text<String>>,
+}
+
+impl From<AttachmentDataMultipartForm> for AttachmentData {
+    fn from(form: AttachmentDataMultipartForm) -> Self {
+        let media_type = form.file.content_type
+            .map(|mime| mime.essence_str().to_string())
+            // Assume octet-stream if type is not provided
+            .unwrap_or("application/octet-stream".to_string());
+        Self {
+            file: base64::encode(form.file.data),
+            media_type: media_type,
+            description: form.description.map(|text| text.into_inner()),
+        }
+    }
 }
 
 /// https://docs.joinmastodon.org/entities/attachment/
