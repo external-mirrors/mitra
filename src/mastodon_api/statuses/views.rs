@@ -107,7 +107,7 @@ async fn create_status(
         None
     };
     let visibility = match status_data.visibility.as_deref() {
-        Some("public") => Visibility::Public,
+        Some("public" | "unlisted") => Visibility::Public,
         Some("direct") => Visibility::Direct,
         Some("private") => Visibility::Followers,
         Some("subscribers") => Visibility::Subscribers,
