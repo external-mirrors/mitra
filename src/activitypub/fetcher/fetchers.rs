@@ -1,7 +1,7 @@
 use std::path::Path;
 
 use reqwest::{Client, Method, RequestBuilder, StatusCode};
-use serde::Deserialize;
+use serde::{de::DeserializeOwned, Deserialize};
 use serde_json::{Value as JsonValue};
 
 use mitra_config::Instance;
@@ -16,7 +16,6 @@ use crate::activitypub::{
     constants::{AP_CONTEXT, AP_MEDIA_TYPE},
     http_client::{build_federation_client, get_network_type},
     identifiers::{local_actor_key_id, local_instance_actor_id},
-    types::Object,
     vocabulary::GROUP,
 };
 use crate::http_signatures::create::{
@@ -133,6 +132,15 @@ async fn send_request(
     Ok(data)
 }
 
+pub async fn fetch_object<T: DeserializeOwned>(
+    instance: &Instance,
+    object_url: &str,
+) -> Result<T, FetchError> {
+    let object_json = send_request(instance, object_url).await?;
+    let object: T = serde_json::from_str(&object_json)?;
+    Ok(object)
+}
+
 pub async fn fetch_file(
     instance: &Instance,
     url: &str,
@@ -227,22 +235,11 @@ pub async fn fetch_actor(
     instance: &Instance,
     actor_url: &str,
 ) -> Result<Actor, FetchError> {
-    let actor_json = send_request(instance, actor_url).await?;
-    let actor: Actor = serde_json::from_str(&actor_json)?;
+    let actor: Actor = fetch_object(instance, actor_url).await?;
     if actor.id != actor_url {
         log::warn!("redirected from {} to {}", actor_url, actor.id);
     };
     Ok(actor)
-}
-
-pub async fn fetch_object(
-    instance: &Instance,
-    object_url: &str,
-) -> Result<Object, FetchError> {
-    let object_json = send_request(instance, object_url).await?;
-    let object_value: JsonValue = serde_json::from_str(&object_json)?;
-    let object: Object = serde_json::from_value(object_value)?;
-    Ok(object)
 }
 
 pub async fn fetch_outbox(
@@ -259,10 +256,10 @@ pub async fn fetch_outbox(
     struct CollectionPage {
         ordered_items: Vec<JsonValue>,
     }
-    let collection_json = send_request(instance, outbox_url).await?;
-    let collection: Collection = serde_json::from_str(&collection_json)?;
-    let page_json = send_request(instance, &collection.first).await?;
-    let page: CollectionPage = serde_json::from_str(&page_json)?;
+    let collection: Collection =
+        fetch_object(instance, outbox_url).await?;
+    let page: CollectionPage =
+        fetch_object(instance, &collection.first).await?;
     let activities = page.ordered_items.into_iter()
         .take(limit)
         // Outbox has reverse chronological order
