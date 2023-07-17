@@ -1035,8 +1035,11 @@ paths:
                   type: string
                   format: uuid
                 visibility:
-                  description: Visibility of the post.
-                  $ref: '#/components/schemas/Visibility'
+                  allOf:
+                    - $ref: '#/components/schemas/Visibility'
+                    - description: |
+                        Visibility of the post.
+                        Default: "direct" when parent post is not public, otherwise "public".
                 sensitiive:
                   description: Mark post and attached media as sensitive?
                   type: boolean

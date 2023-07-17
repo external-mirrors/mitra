@@ -94,13 +94,32 @@ async fn create_status(
     };
     let instance = config.instance();
     let status_data = status_data.into_inner();
+    let maybe_in_reply_to = if let Some(in_reply_to_id) = status_data.in_reply_to_id.as_ref() {
+        let in_reply_to = match get_post_by_id(db_client, in_reply_to_id).await {
+            Ok(post) => post,
+            Err(DatabaseError::NotFound(_)) => {
+                return Err(ValidationError("parent post does not exist").into());
+            },
+            Err(other_error) => return Err(other_error.into()),
+        };
+        Some(in_reply_to)
+    } else {
+        None
+    };
     let visibility = match status_data.visibility.as_deref() {
         Some("public") => Visibility::Public,
         Some("direct") => Visibility::Direct,
         Some("private") => Visibility::Followers,
         Some("subscribers") => Visibility::Subscribers,
         Some(_) => return Err(ValidationError("invalid visibility parameter").into()),
-        None => Visibility::Public,
+        None => {
+            maybe_in_reply_to.as_ref()
+                .map(|post| match post.visibility {
+                    Visibility::Public => Visibility::Public,
+                    _ => Visibility::Direct,
+                })
+                .unwrap_or(Visibility::Public)
+        },
     };
     let (content, maybe_content_source) = match status_data.content_type.as_str() {
         "text/html" => (status_data.status, None),
@@ -154,14 +173,7 @@ async fn create_status(
     };
 
     // Reply validation
-    let maybe_in_reply_to = if let Some(in_reply_to_id) = status_data.in_reply_to_id.as_ref() {
-        let in_reply_to = match get_post_by_id(db_client, in_reply_to_id).await {
-            Ok(post) => post,
-            Err(DatabaseError::NotFound(_)) => {
-                return Err(ValidationError("parent post does not exist").into());
-            },
-            Err(other_error) => return Err(other_error.into()),
-        };
+    if let Some(ref in_reply_to) = maybe_in_reply_to {
         if in_reply_to.repost_of_id.is_some() {
             return Err(ValidationError("can't reply to repost").into());
         };
@@ -177,9 +189,6 @@ async fn create_status(
                 return Err(ValidationError("audience can't be expanded").into());
             };
         };
-        Some(in_reply_to)
-    } else {
-        None
     };
     // Validate attachments
     let attachments = status_data.media_ids.unwrap_or(vec![]);

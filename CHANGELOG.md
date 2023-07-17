@@ -19,6 +19,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Add `created_at` parameter to identity claim API response.
 - Replace URL in subscription payment link with a corresponding proposal ID.
 - Add media type to upload type validation error message.
+- Set default visibility of a post to direct when parent post is not public.
 
 ### Fixed
 
