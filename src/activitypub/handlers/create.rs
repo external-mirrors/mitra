@@ -646,7 +646,7 @@ pub async fn handle_note(
         log::warn!(
             "processing note with visibility {:?} attributed to {}",
             visibility,
-            author.username,
+            author.acct,
         );
     };
     if visibility == Visibility::Direct && mentions.is_empty() {
