@@ -11,6 +11,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Use standardized CAIP-2 Monero chain identifiers.
 - Generate Valueflows `Proposal` objects for Monero subscriptions.
 - Allow actor's Ed25519 key to be used for assertions.
+- Add `fetch-replies` command.
 
 ### Changed
 

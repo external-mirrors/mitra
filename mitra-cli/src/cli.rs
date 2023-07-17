@@ -10,7 +10,7 @@ use mitra::activitypub::{
     builders::delete_note::prepare_delete_note,
     builders::delete_person::prepare_delete_person,
     fetcher::fetchers::fetch_actor,
-    fetcher::helpers::import_from_outbox,
+    fetcher::helpers::{import_from_outbox, import_replies},
 };
 use mitra::admin::roles::{role_from_str, ALLOWED_ROLES};
 use mitra::ethereum::{
@@ -118,6 +118,7 @@ pub enum SubCommand {
     SetRole(SetRole),
     RefetchActor(RefetchActor),
     ReadOutbox(ReadOutbox),
+    FetchReplies(FetchReplies),
     DeleteProfile(DeleteProfile),
     DeletePost(DeletePost),
     DeleteEmoji(DeleteEmoji),
@@ -394,6 +395,30 @@ impl ReadOutbox {
             config,
             db_client,
             &self.actor_id,
+            self.limit,
+        ).await?;
+        Ok(())
+    }
+}
+
+/// Fetch replies
+#[derive(Parser)]
+pub struct FetchReplies {
+    object_id: String,
+    #[clap(long, default_value_t = 20)]
+    limit: usize,
+}
+
+impl FetchReplies {
+    pub async fn execute(
+        &self,
+        config: &Config,
+        db_client: &mut impl DatabaseClient,
+    ) -> Result<(), Error> {
+        import_replies(
+            config,
+            db_client,
+            &self.object_id,
             self.limit,
         ).await?;
         Ok(())

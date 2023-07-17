@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use chrono::{Duration, Utc};
+use serde_json::{Value as JsonValue};
 
 use mitra_config::{Config, Instance};
 use mitra_models::{
@@ -17,7 +18,7 @@ use mitra_models::{
 
 use crate::activitypub::{
     actors::helpers::{create_remote_profile, update_remote_profile},
-    deserialization::find_object_id,
+    deserialization::{find_object_id, parse_into_id_array},
     handlers::create::{get_object_links, handle_note},
     identifiers::parse_local_object_id,
     receiver::{handle_activity, HandlerError},
@@ -354,6 +355,48 @@ pub async fn import_from_outbox(
                 activity,
             );
         });
+    };
+    Ok(())
+}
+
+pub async fn import_replies(
+    config: &Config,
+    db_client: &mut impl DatabaseClient,
+    object_id: &str,
+    limit: usize,
+) -> Result<(), HandlerError> {
+    let instance = config.instance();
+    let storage = MediaStorage::from(config);
+    let object: JsonValue = fetch_object(&instance, object_id).await?;
+    let self_replies = parse_into_id_array(&object["replies"]["first"]["items"])?;
+    let next_page_url = object["replies"]["first"]["next"].as_str()
+        .ok_or(ValidationError("next page doesn't exist"))?;
+    let next_page: JsonValue = fetch_object(&instance, next_page_url).await?;
+    let other_replies = parse_into_id_array(&next_page["items"])?;
+    let replies = self_replies.into_iter()
+        .chain(other_replies)
+        .take(limit);
+    for object_id in replies {
+        let object: Object = fetch_object(&instance, &object_id).await?;
+        log::info!("fetched object {}", object.id);
+        match get_post_by_object_id(
+            db_client,
+            &instance.url(),
+            &object.id,
+        ).await {
+            Ok(_) => continue,
+            Err(DatabaseError::NotFound(_)) => {
+                // Import post
+                handle_note(
+                    db_client,
+                    &instance,
+                    &storage,
+                    object,
+                    &HashMap::new(),
+                ).await?;
+            },
+            Err(other_error) => return Err(other_error.into()),
+        };
     };
     Ok(())
 }
