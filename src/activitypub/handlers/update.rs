@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use chrono::Utc;
 use serde::Deserialize;
-use serde_json::Value;
+use serde_json::{Value as JsonValue};
 
 use mitra_config::Config;
 use mitra_models::{
@@ -21,6 +21,7 @@ use crate::activitypub::{
         types::Actor,
     },
     deserialization::deserialize_into_object_id,
+    fetcher::fetchers::fetch_object,
     handlers::create::{
         create_content_link,
         get_object_attachments,
@@ -47,7 +48,7 @@ struct UpdateNote {
 async fn handle_update_note(
     config: &Config,
     db_client: &mut impl DatabaseClient,
-    activity: Value,
+    activity: JsonValue,
 ) -> HandlerResult {
     let activity: UpdateNote = serde_json::from_value(activity)
         .map_err(|_| ValidationError("invalid object"))?;
@@ -118,7 +119,7 @@ struct UpdatePerson {
 async fn handle_update_person(
     config: &Config,
     db_client: &mut impl DatabaseClient,
-    activity: Value,
+    activity: JsonValue,
 ) -> HandlerResult {
     let activity: UpdatePerson = serde_json::from_value(activity)
         .map_err(|_| ValidationError("invalid actor data"))?;
@@ -142,8 +143,15 @@ async fn handle_update_person(
 pub async fn handle_update(
     config: &Config,
     db_client: &mut impl DatabaseClient,
-    activity: Value,
+    mut activity: JsonValue,
 ) -> HandlerResult {
+    if let Some(object_id) = activity["object"].as_str() {
+        // Fetch object if it is not embedded
+        activity["object"] = fetch_object(
+            &config.instance(),
+            object_id,
+        ).await?;
+    };
     let object_type = activity["object"]["type"].as_str()
         .ok_or(ValidationError("unknown object type"))?;
     match object_type {

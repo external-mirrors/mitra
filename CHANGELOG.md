@@ -21,6 +21,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Add media type to upload type validation error message.
 - Set default visibility of a post to direct when parent post is not public.
 - Convert "unlisted" visibility parameter to "public".
+- Fetch object of `Update()` activity if it is not embedded.
 
 ### Fixed
 
