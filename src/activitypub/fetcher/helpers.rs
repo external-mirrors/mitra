@@ -373,9 +373,11 @@ pub async fn import_replies(
         .ok_or(ValidationError("next page doesn't exist"))?;
     let next_page: JsonValue = fetch_object(&instance, next_page_url).await?;
     let other_replies = parse_into_id_array(&next_page["items"])?;
-    let replies = self_replies.into_iter()
+    let replies: Vec<_> = self_replies.into_iter()
         .chain(other_replies)
-        .take(limit);
+        .take(limit)
+        .collect();
+    log::info!("fetched {} objects", replies.len());
     for object_id in replies {
         let object: Object = fetch_object(&instance, &object_id).await?;
         log::info!("fetched object {}", object.id);
