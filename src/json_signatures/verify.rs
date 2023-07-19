@@ -1,7 +1,6 @@
 use std::str::FromStr;
 
 use serde_json::{Value as JsonValue};
-use sha2::{Digest, Sha256};
 use url::Url;
 
 use mitra_utils::{
@@ -20,6 +19,7 @@ use mitra_utils::{
 };
 
 use super::create::{
+    prepare_jcs_sha256_data,
     IntegrityProof,
     IntegrityProofConfig,
     PROOF_KEY,
@@ -133,11 +133,7 @@ pub fn verify_eddsa_json_signature(
     proof_config: &IntegrityProofConfig,
     signature: &[u8],
 ) -> Result<(), VerificationError> {
-    let canonical_object = canonicalize_object(object)?;
-    let canonical_config = canonicalize_object(proof_config)?;
-    let object_hash = Sha256::digest(canonical_object.as_bytes());
-    let config_hash = Sha256::digest(canonical_config.as_bytes());
-    let hash_data = [config_hash, object_hash].concat();
+    let hash_data = prepare_jcs_sha256_data(object, proof_config)?;
     let signature: [u8; 64] = signature.try_into()
         .map_err(|_| VerificationError::InvalidSignature)?;
     verify_eddsa_signature(

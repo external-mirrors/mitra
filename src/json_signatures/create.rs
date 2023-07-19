@@ -186,6 +186,18 @@ pub fn sign_object_rsa(
     Ok(signed_object)
 }
 
+pub fn prepare_jcs_sha256_data(
+    object: &impl Serialize,
+    proof_config: &IntegrityProofConfig,
+) -> Result<Vec<u8>, CanonicalizationError> {
+    let canonical_object = canonicalize_object(object)?;
+    let object_hash = Sha256::digest(canonical_object.as_bytes());
+    let canonical_proof_config = canonicalize_object(&proof_config)?;
+    let proof_config_hash = Sha256::digest(canonical_proof_config.as_bytes());
+    let hash_data = [proof_config_hash, object_hash].concat();
+    Ok(hash_data)
+}
+
 /// https://codeberg.org/silverpill/feps/src/branch/main/8b32/fep-8b32.md
 pub fn sign_object_eddsa(
     signer_key: &Ed25519PrivateKey,
@@ -198,11 +210,7 @@ pub fn sign_object_eddsa(
         signer_key_id,
         signature_created_at,
     );
-    let canonical_object = canonicalize_object(object)?;
-    let object_hash = Sha256::digest(canonical_object.as_bytes());
-    let canonical_proof_config = canonicalize_object(&proof_config)?;
-    let proof_config_hash = Sha256::digest(canonical_proof_config.as_bytes());
-    let hash_data = [proof_config_hash, object_hash].concat();
+    let hash_data = prepare_jcs_sha256_data(object, &proof_config)?;
     let signature = create_eddsa_signature(signer_key, &hash_data);
     let proof = IntegrityProof::new(proof_config, &signature);
     let mut signed_object = object.clone();
