@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Added
 
 - Support `jcs-eddsa-2022` identity proofs.
+- Support fetching `replies` collection when it is not embedded.
 
 ### Changed
 

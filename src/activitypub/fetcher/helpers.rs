@@ -368,13 +368,23 @@ pub async fn import_replies(
     let instance = config.instance();
     let storage = MediaStorage::from(config);
     let object: JsonValue = fetch_object(&instance, object_id).await?;
-    let self_replies = parse_into_id_array(&object["replies"]["first"]["items"])?;
-    let next_page_url = object["replies"]["first"]["next"].as_str()
-        .ok_or(ValidationError("next page doesn't exist"))?;
-    let next_page: JsonValue = fetch_object(&instance, next_page_url).await?;
-    let other_replies = parse_into_id_array(&next_page["items"])?;
-    let replies: Vec<_> = self_replies.into_iter()
-        .chain(other_replies)
+    let mut replies = vec![];
+    if let Some(collection_id) = object["replies"].as_str() {
+        // Bovine
+        let collection: JsonValue = fetch_object(&instance, collection_id).await?;
+        let items = parse_into_id_array(&collection["orderedItems"])?;
+        replies.extend(items);
+    } else {
+        // Mastodon
+        let self_replies = parse_into_id_array(&object["replies"]["first"]["items"])?;
+        replies.extend(self_replies);
+        let next_page_url = object["replies"]["first"]["next"].as_str()
+            .ok_or(ValidationError("next page doesn't exist"))?;
+        let next_page: JsonValue = fetch_object(&instance, next_page_url).await?;
+        let other_replies = parse_into_id_array(&next_page["items"])?;
+        replies.extend(other_replies);
+    };
+    let replies: Vec<_> = replies.into_iter()
         .take(limit)
         .collect();
     log::info!("fetched {} objects", replies.len());
