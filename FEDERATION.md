@@ -28,6 +28,7 @@ Supported FEPs:
 - [FEP-8b32: Object Integrity Proofs](https://codeberg.org/silverpill/feps/src/branch/main/8b32/fep-8b32.md)
 - [FEP-0ea0: Payment Links](https://codeberg.org/silverpill/feps/src/branch/main/0ea0/fep-0ea0.md)
 - [FEP-521a: Representing actor's public keys](https://codeberg.org/silverpill/feps/src/branch/main/521a/fep-521a.md)
+- [FEP-c390: Identity Proofs](https://codeberg.org/silverpill/feps/src/branch/main/c390/fep-c390.md)
 
 ## Object integrity proofs
 
@@ -95,39 +96,13 @@ Supported representations:
 
 Custom emojis are implemented as described in Mastodon documentation: https://docs.joinmastodon.org/spec/activitypub/#emoji.
 
-## Profile extensions
-
-### Cryptocurrency addresses
-
-Cryptocurrency addresses are represented as `PropertyValue` attachments where `name` attribute is a currency symbol prefixed with `$`:
-
-```json
-{
-  "name": "$XMR",
-  "type": "PropertyValue",
-  "value": "8Ahza5RM4JQgtdqvpcF1U628NN5Q87eryXQad3Fy581YWTZU8o3EMbtScuioQZSkyNNEEE1Lkj2cSbG4VnVYCW5L1N4os5p"
-}
-```
-
-### Identity proofs
-
-Identity proofs are represented as attachments of `IdentityProof` type:
-
-```json
-{
-  "name": "<did>",
-  "type": "IdentityProof",
-  "signatureAlgorithm": "<proof-type>",
-  "signatureValue": "<proof>"
-}
-```
+## Identity proofs
 
 Supported proof types:
 
-- EIP-191 (Ethereum personal signatures)
-- [Minisign](https://jedisct1.github.io/minisign/)
-
-[FEP-c390](https://codeberg.org/silverpill/feps/src/branch/main/c390/fep-c390.md) identity proofs are not supported yet.
+- `jcs-eddsa-2022`
+- `MitraJcsEip191Signature2022`: EIP-191 (Ethereum personal signatures)
+- `MitraJcsEd25519Signature2022`: [Minisign](https://jedisct1.github.io/minisign/) (pre-hashed)
 
 ## Account migrations
 
@@ -149,7 +124,7 @@ After registering an account its owner can upload the list of followers and star
 }
 ```
 
-Where `object` is an ID of old account and `target` is an ID of new account. Actors identified by `object` and `target` properties must have at least one identity key in common to be considered aliases. Upon receipt of such activity, actors that follow `object` should un-follow it and follow `target` instead.
+Where `object` is an ID of old account and `target` is an ID of new account. Actors identified by `object` and `target` properties must have at least one FEP-c390 identity in common to be considered aliases. Upon receipt of such activity, actors that follow `object` should un-follow it and follow `target` instead.
 
 ## Subscription events
 
@@ -188,5 +163,17 @@ The `Remove` activity is used to notify the subscriber about expired subscriptio
     "https://server.example/users/bob"
   ],
   "type": "Remove"
+}
+```
+
+## Cryptocurrency addresses in profile
+
+Cryptocurrency addresses are represented as `PropertyValue` attachments where `name` attribute is a currency symbol prefixed with `$`:
+
+```json
+{
+  "name": "$XMR",
+  "type": "PropertyValue",
+  "value": "8Ahza5RM4JQgtdqvpcF1U628NN5Q87eryXQad3Fy581YWTZU8o3EMbtScuioQZSkyNNEEE1Lkj2cSbG4VnVYCW5L1N4os5p"
 }
 ```
