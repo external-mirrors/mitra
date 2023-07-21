@@ -449,7 +449,7 @@ async fn get_identity_claim(
         &actor_id,
         &did,
         &proof_type,
-        &created_at,
+        created_at,
     ).map_err(|_| MastodonError::InternalError)?;
     let response = IdentityClaim { did, claim: message, created_at };
     Ok(HttpResponse::Ok().json(response))
@@ -492,7 +492,7 @@ async fn create_identity_proof(
         &actor_id,
         &did,
         &proof_type,
-        &proof_data.created_at,
+        proof_data.created_at,
     ).map_err(|_| MastodonError::InternalError)?;
     let claim_value = serde_json::to_value(&claim)
         .expect("claim should be serializable");
@@ -570,7 +570,7 @@ async fn create_identity_proof(
         &actor_id,
         &did,
         &proof_type,
-        &proof_data.created_at,
+        proof_data.created_at,
         &signature_bin,
     );
     let mut profile_data = ProfileUpdateData::from(&current_user.profile);

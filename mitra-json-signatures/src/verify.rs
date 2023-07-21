@@ -300,11 +300,11 @@ mod tests {
 
     #[test]
     fn test_create_and_verify_eddsa_signature_test_vector() {
-        let signer_key_multibase = "z3u2en7t5LR2WtQH5PfFqMqwVHBeXouLzo6haApm8XHqvjxq";
-        let signer_key_multicode = decode_multibase_base58btc(signer_key_multibase).unwrap();
-        let signer_key_bytes = decode_ed25519_private_key(&signer_key_multicode).unwrap();
-        let signer_key = ed25519_private_key_from_bytes(&signer_key_bytes).unwrap();
-        let signer_key_id = "https://server.example/users/alice#ed25519-key";
+        let private_key_multibase = "z3u2en7t5LR2WtQH5PfFqMqwVHBeXouLzo6haApm8XHqvjxq";
+        let private_key_multicode = decode_multibase_base58btc(private_key_multibase).unwrap();
+        let private_key_bytes = decode_ed25519_private_key(&private_key_multicode).unwrap();
+        let private_key = ed25519_private_key_from_bytes(&private_key_bytes).unwrap();
+        let key_id = "https://server.example/users/alice#ed25519-key";
         let created_at = DateTime::parse_from_rfc3339("2023-02-24T23:36:38Z")
             .unwrap().with_timezone(&Utc);
         let object = json!({
@@ -320,8 +320,8 @@ mod tests {
             }
         });
         let signed_object = sign_object_eddsa(
-            &signer_key,
-            signer_key_id,
+            &private_key,
+            key_id,
             &object,
             Some(created_at),
         ).unwrap();

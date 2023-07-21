@@ -370,7 +370,7 @@ mod tests {
             actor_id,
             &did,
             &proof_type,
-            &created_at,
+            created_at,
         ).unwrap();
         let signature = sign_message(
             &private_key.display_secret().to_string(),
@@ -381,7 +381,7 @@ mod tests {
             actor_id,
             &did,
             &proof_type,
-            &created_at,
+            created_at,
             &signature_bin,
         );
         let parsed = parse_identity_proof_fep_c390(
