@@ -15,6 +15,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Write total number of objects to log when fetching replies.
 - Changed license ID to `AGPL-3.0-only`.
+- Add `attributedTo` property to proposals.
 
 ### Fixed
 

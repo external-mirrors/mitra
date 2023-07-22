@@ -100,6 +100,7 @@ pub struct Proposal {
     #[serde(rename = "type")]
     object_type: String,
     id: String,
+    attributed_to: String,
     name: String,
     publishes: DeliverServiceIntent,
     reciprocal: TransferIntent,
@@ -127,6 +128,7 @@ pub fn build_proposal(
         context: build_proposal_context(),
         object_type: PROPOSAL.to_string(),
         id: proposal_id.clone(),
+        attributed_to: actor_id.clone(),
         name: proposal_name.to_string(),
         publishes: DeliverServiceIntent {
             object_type: INTENT.to_string(),
@@ -198,6 +200,7 @@ mod tests {
             ],
             "type": "Proposal",
             "id": "https://test.example/users/alice/proposals/monero:418015bb9ae982a1975da7d79277c270",
+            "attributedTo": "https://test.example/users/alice",
             "name": "Pay for subscription",
             "publishes": {
                 "type": "Intent",
