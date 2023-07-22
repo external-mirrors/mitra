@@ -2,7 +2,7 @@
 name = "mitra"
 version = "1.30.0"
 description = "Federated micro-blogging platform and content subscription service"
-license = "AGPL-3.0"
+license = "AGPL-3.0-only"
 
 edition = "2021"
 rust-version = "1.57"
