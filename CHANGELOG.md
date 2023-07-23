@@ -22,6 +22,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Fix for compatibility with Alpine Linux.
 - Fix deserialization of `rel` arrays.
+- Use correct CAIP-19 asset type for Monero testnets and Wownero.
 
 ## [1.30.0] - 2023-07-18
 

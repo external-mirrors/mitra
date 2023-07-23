@@ -123,7 +123,8 @@ pub fn build_proposal(
         &payment_info.chain_id,
     );
     let proposal_name = "Pay for subscription";
-    let asset_type = AssetType::monero(&payment_info.chain_id);
+    let asset_type = AssetType::monero(&payment_info.chain_id)
+        .expect("chain should belong to monero namespace");
     Proposal {
         context: build_proposal_context(),
         object_type: PROPOSAL.to_string(),

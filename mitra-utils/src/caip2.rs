@@ -33,6 +33,7 @@ const MONERO_MAINNET_ID: &str = "418015bb9ae982a1975da7d79277c270";
 const MONERO_STAGENET_ID: &str = "76ee3cc98646292206cd3e86f74d88b4";
 const MONERO_TESTNET_ID: &str = "48ca7cd3c8de5b6a4d53d2861fbdaedc";
 const MONERO_PRIVATE_ID: &str = "00000000000000000000000000000000";
+const WOWNERO_MAINNET_ID: &str = "a3fd635dd5cb55700317783469ba749b";
 
 #[derive(Debug, PartialEq)]
 pub enum MoneroNetwork {
@@ -149,6 +150,10 @@ impl ChainId {
 
     pub fn is_monero(&self) -> bool {
         self.namespace == CAIP2_MONERO_NAMESPACE
+    }
+
+    pub fn is_wownero_mainnet(&self) -> bool {
+        self.is_monero() && self.reference == WOWNERO_MAINNET_ID
     }
 
     pub fn monero_network(&self) -> Result<MoneroNetwork, ChainIdError> {
