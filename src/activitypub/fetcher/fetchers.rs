@@ -247,20 +247,29 @@ pub async fn fetch_outbox(
     outbox_url: &str,
     limit: usize,
 ) -> Result<Vec<JsonValue>, FetchError> {
+    // https://www.w3.org/TR/activitystreams-core/#collections
     #[derive(Deserialize)]
+    #[serde(rename_all = "camelCase")]
     struct Collection {
-        first: String,
+        first: Option<String>,
+        #[serde(default)]
+        ordered_items: Vec<JsonValue>,
     }
     #[derive(Deserialize)]
     #[serde(rename_all = "camelCase")]
     struct CollectionPage {
         ordered_items: Vec<JsonValue>,
     }
+
     let collection: Collection =
         fetch_object(instance, outbox_url).await?;
-    let page: CollectionPage =
-        fetch_object(instance, &collection.first).await?;
-    let activities = page.ordered_items.into_iter()
+    let mut items = collection.ordered_items;
+    if let Some(first_page_url) = collection.first {
+        let page: CollectionPage =
+            fetch_object(instance, &first_page_url).await?;
+        items.extend(page.ordered_items);
+    };
+    let activities = items.into_iter()
         .take(limit)
         // Outbox has reverse chronological order
         .rev()
