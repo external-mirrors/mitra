@@ -41,8 +41,16 @@ fn parse_string_array(
 ) -> Result<Vec<String>, ValidationError> {
     let result = match value {
         Value::String(string) => vec![string.to_string()],
-        Value::Array(array) => array.iter()
-            .map(|item| item.to_string()).collect(),
+        Value::Array(array) => {
+            let mut items = vec![];
+            for value in array {
+                let string = value.as_str()
+                    .ok_or(ValidationError("unexpected array item type"))?
+                    .to_string();
+                items.push(string);
+            };
+            items
+        },
         _ => return Err(ValidationError("unexpected value type")),
     };
     Ok(result)
@@ -169,6 +177,13 @@ mod tests {
         let value = json!({"rel": "test"});
         let object: TestObject = serde_json::from_value(value).unwrap();
         assert_eq!(object.rel, vec!["test".to_string()]);
+
+        let value = json!({"rel": ["a", "b"]});
+        let object: TestObject = serde_json::from_value(value).unwrap();
+        assert_eq!(
+            object.rel,
+            vec!["a".to_string(), "b".to_string()],
+        );
     }
 
     #[test]
