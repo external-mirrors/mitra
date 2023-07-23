@@ -237,12 +237,13 @@ CREATE TABLE timeline_marker (
 CREATE TABLE invoice (
     id UUID PRIMARY KEY,
     sender_id UUID NOT NULL REFERENCES actor_profile (id) ON DELETE CASCADE,
-    recipient_id UUID NOT NULL REFERENCES user_account (id) ON DELETE CASCADE,
+    recipient_id UUID NOT NULL REFERENCES actor_profile (id) ON DELETE CASCADE,
     chain_id VARCHAR(50) NOT NULL,
-    payment_address VARCHAR(500) NOT NULL,
     amount BIGINT NOT NULL CHECK (amount >= 0),
     invoice_status SMALLINT NOT NULL DEFAULT 1,
+    payment_address VARCHAR(500),
     payout_tx_id VARCHAR(200),
+    object_id VARCHAR(2000) UNIQUE,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
     UNIQUE (chain_id, payment_address),

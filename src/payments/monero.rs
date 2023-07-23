@@ -47,6 +47,10 @@ use super::errors::PaymentError;
 pub const MONERO_INVOICE_TIMEOUT: i64 = 3 * 60 * 60; // 3 hours
 const MONERO_CONFIRMATIONS_SAFE: u64 = 3;
 
+fn invoice_payment_address(invoice: &DbInvoice) -> Result<String, DatabaseError> {
+    invoice.try_payment_address().map_err(Into::into)
+}
+
 pub async fn check_monero_subscriptions(
     instance: &Instance,
     config: &MoneroConfig,
@@ -72,10 +76,15 @@ pub async fn check_monero_subscriptions(
             ).await?;
             continue;
         };
+        if invoice.object_id.is_some() {
+            // Don't monitor remote invoices
+            continue;
+        };
+        let payment_address = invoice_payment_address(&invoice)?;
         let address_index = get_subaddress_index(
             &wallet_client,
             config.account_index,
-            &invoice.payment_address,
+            &payment_address,
         ).await?;
         address_waitlist.push(address_index.minor);
     };
@@ -117,10 +126,11 @@ pub async fn check_monero_subscriptions(
         InvoiceStatus::Paid,
     ).await?;
     for invoice in paid_invoices {
+        let payment_address = invoice_payment_address(&invoice)?;
         let address_index = match get_subaddress_index(
             &wallet_client,
             config.account_index,
-            &invoice.payment_address,
+            &payment_address,
         ).await {
             Ok(address_index) => address_index,
             Err(MoneroError::UnexpectedAccount) => {
@@ -365,10 +375,11 @@ pub async fn reopen_invoice(
         return Err(MoneroError::OtherError("invoice is already open").into());
     };
     let wallet_client = open_monero_wallet(config).await?;
+    let payment_address = invoice_payment_address(invoice)?;
     let address_index = get_subaddress_index(
         &wallet_client,
         config.account_index,
-        &invoice.payment_address,
+        &payment_address,
     ).await?;
 
     let transfers = get_incoming_transfers(
@@ -422,5 +433,6 @@ pub async fn get_payment_address(
         },
         Err(other_error) => return Err(other_error.into()),
     };
-    Ok(invoice.payment_address)
+    let payment_address = invoice_payment_address(&invoice)?;
+    Ok(payment_address)
 }

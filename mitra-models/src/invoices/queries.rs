@@ -35,7 +35,8 @@ pub async fn create_invoice(
             payment_address,
             amount
         )
-        VALUES ($1, $2, $3, $4, $5, $6)
+        SELECT $1, $2, $3, $4, $5, $6
+        WHERE EXISTS (SELECT 1 FROM user_account WHERE id = $3)
         RETURNING invoice
         ",
         &[
@@ -45,6 +46,45 @@ pub async fn create_invoice(
             &DbChainId::new(chain_id),
             &payment_address,
             &db_amount,
+        ],
+    ).await.map_err(catch_unique_violation("invoice"))?;
+    let invoice = row.try_get("invoice")?;
+    Ok(invoice)
+}
+
+pub async fn create_remote_invoice(
+    db_client: &impl DatabaseClient,
+    sender_id: &Uuid,
+    recipient_id: &Uuid,
+    chain_id: &ChainId,
+    amount: impl TryInto<i64>,
+) -> Result<DbInvoice, DatabaseError> {
+    let invoice_id = generate_ulid();
+    let db_amount: i64 = TryInto::try_into(amount)
+        .map_err(|_| DatabaseTypeError)?;
+    let row = db_client.query_one(
+        "
+        INSERT INTO invoice (
+            id,
+            sender_id,
+            recipient_id,
+            chain_id,
+            amount,
+            invoice_status
+        )
+        SELECT $1, $2, $3, $4, $5, $6
+        WHERE
+            EXISTS (SELECT 1 FROM user_account WHERE id = $2)
+            AND NOT EXISTS (SELECT 1 FROM user_account WHERE id = $3)
+        RETURNING invoice
+        ",
+        &[
+            &invoice_id,
+            &sender_id,
+            &recipient_id,
+            &DbChainId::new(chain_id),
+            &db_amount,
+            &InvoiceStatus::Requested,
         ],
     ).await.map_err(catch_unique_violation("invoice"))?;
     let invoice = row.try_get("invoice")?;
@@ -199,29 +239,29 @@ mod tests {
     };
     use super::*;
 
-    async fn create_sender_and_recipient(
+    async fn create_participants(
         db_client: &mut impl DatabaseClient,
     ) -> (Uuid, Uuid) {
-        let sender_data = ProfileCreateData {
-            username: "sender".to_string(),
-            ..Default::default()
-        };
-        let sender = create_profile(db_client, sender_data).await.unwrap();
-        let recipient_data = UserCreateData {
-            username: "recipient".to_string(),
+        let user_data = UserCreateData {
+            username: "local".to_string(),
             password_hash: Some("test".to_string()),
             ..Default::default()
         };
-        let recipient = create_user(db_client, recipient_data).await.unwrap();
-        (sender.id, recipient.id)
+        let user = create_user(db_client, user_data).await.unwrap();
+        let profile_data = ProfileCreateData {
+            username: "remote".to_string(),
+            ..Default::default()
+        };
+        let profile = create_profile(db_client, profile_data).await.unwrap();
+        (user.id, profile.id)
     }
 
     #[tokio::test]
     #[serial]
     async fn test_create_invoice() {
         let db_client = &mut create_test_database().await;
-        let (sender_id, recipient_id) =
-            create_sender_and_recipient(db_client).await;
+        let (recipient_id, sender_id) =
+            create_participants(db_client).await;
         let chain_id = ChainId::monero_mainnet();
         let payment_address = "8MxABajuo71BZya9";
         let amount = 100000000000109212;
@@ -236,19 +276,43 @@ mod tests {
         assert_eq!(invoice.sender_id, sender_id);
         assert_eq!(invoice.recipient_id, recipient_id);
         assert_eq!(invoice.chain_id.into_inner(), chain_id);
-        assert_eq!(invoice.payment_address, payment_address);
         assert_eq!(invoice.amount, amount);
         assert_eq!(invoice.invoice_status, InvoiceStatus::Open);
+        assert_eq!(invoice.payment_address.unwrap(), payment_address);
         assert_eq!(invoice.payout_tx_id, None);
         assert_eq!(invoice.updated_at, invoice.created_at);
     }
 
     #[tokio::test]
     #[serial]
-    async fn test_set_invoice_status() {
+    async fn test_create_remote_invoice() {
         let db_client = &mut create_test_database().await;
         let (sender_id, recipient_id) =
-            create_sender_and_recipient(db_client).await;
+            create_participants(db_client).await;
+        let chain_id = ChainId::monero_mainnet();
+        let amount = 100000000000109212;
+        let invoice = create_remote_invoice(
+            db_client,
+            &sender_id,
+            &recipient_id,
+            &chain_id,
+            amount,
+        ).await.unwrap();
+        assert_eq!(invoice.sender_id, sender_id);
+        assert_eq!(invoice.recipient_id, recipient_id);
+        assert_eq!(invoice.chain_id.into_inner(), chain_id);
+        assert_eq!(invoice.amount, amount);
+        assert_eq!(invoice.invoice_status, InvoiceStatus::Requested);
+        assert_eq!(invoice.payment_address, None);
+        assert_eq!(invoice.payout_tx_id, None);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_set_invoice_status() {
+        let db_client = &mut create_test_database().await;
+        let (recipient_id, sender_id) =
+            create_participants(db_client).await;
         let invoice = create_invoice(
             db_client,
             &sender_id,

@@ -252,7 +252,8 @@ fn build_agreement(
     };
     let account_id = AccountId {
         chain_id: invoice.chain_id.inner().clone(),
-        address: invoice.payment_address.clone(),
+        // Will panic if inoice status is Requested
+        address: invoice.try_payment_address()?,
     };
     let payment_link = PaymentLink {
         object_type: LINK.to_string(),
@@ -374,7 +375,7 @@ mod tests {
         let invoice = DbInvoice {
             id: invoice_id,
             chain_id: DbChainId::new(&chain_id),
-            payment_address: "8xyz".to_string(),
+            payment_address: Some("8xyz".to_string()),
             amount: 60000000,
             ..Default::default()
         };

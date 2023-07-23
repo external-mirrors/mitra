@@ -24,7 +24,7 @@ pub struct Invoice {
     pub sender_id: Uuid,
     pub recipient_id: Uuid,
     pub chain_id: ChainId,
-    pub payment_address: String,
+    pub payment_address: Option<String>,
     pub amount: i64,
     pub status: String,
     pub expires_at: DateTime<Utc>,
@@ -41,6 +41,7 @@ impl From<DbInvoice> for Invoice {
             InvoiceStatus::Underpaid => "underpaid",
             InvoiceStatus::Completed => "completed",
             InvoiceStatus::Failed => "failed",
+            InvoiceStatus::Requested => "requested",
         };
         let expires_at = if value.chain_id.inner().is_monero() {
             value.created_at + Duration::seconds(MONERO_INVOICE_TIMEOUT)

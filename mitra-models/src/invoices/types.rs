@@ -81,6 +81,7 @@ pub enum InvoiceStatus {
     Underpaid,
     Completed,
     Failed,
+    Requested,
 }
 
 impl InvoiceStatus {
@@ -106,6 +107,7 @@ impl From<&InvoiceStatus> for i16 {
             InvoiceStatus::Underpaid => 6,
             InvoiceStatus::Completed => 7,
             InvoiceStatus::Failed => 8,
+            InvoiceStatus::Requested => 9,
         }
     }
 }
@@ -123,6 +125,7 @@ impl TryFrom<i16> for InvoiceStatus {
             6 => Self::Underpaid,
             7 => Self::Completed,
             8 => Self::Failed,
+            9 => Self::Requested,
             _ => return Err(DatabaseTypeError),
         };
         Ok(invoice_status)
@@ -139,10 +142,11 @@ pub struct DbInvoice {
     pub sender_id: Uuid,
     pub recipient_id: Uuid,
     pub chain_id: DbChainId,
-    pub payment_address: String,
     pub amount: i64, // requested payment amount
     pub invoice_status: InvoiceStatus,
+    pub payment_address: Option<String>,
     pub payout_tx_id: Option<String>,
+    pub object_id: Option<String>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -155,7 +159,13 @@ impl DbInvoice {
     pub fn can_change_status(&self, to: &InvoiceStatus) -> bool {
         use InvoiceStatus::*;
         let allowed = match self.invoice_status {
-            Open => vec![Paid, Timeout, Cancelled],
+            Open => {
+                if self.object_id.is_some() {
+                    vec![Completed, Timeout, Cancelled]
+                } else {
+                    vec![Paid, Timeout, Cancelled]
+                }
+            },
             Paid => {
                 if self.payout_tx_id.is_some() {
                     vec![Forwarded, Underpaid]
@@ -164,13 +174,39 @@ impl DbInvoice {
                 }
             },
             Forwarded => vec![Completed, Failed],
-            Timeout => vec![Paid],
+            Timeout => {
+                if self.object_id.is_some() {
+                    vec![Completed]
+                } else {
+                    vec![Paid]
+                }
+            },
             Cancelled => vec![Paid],
             Underpaid => vec![Paid],
-            Completed => vec![Paid],
+            Completed => {
+                if self.object_id.is_some() {
+                    vec![]
+                } else {
+                    vec![Paid]
+                }
+            },
             Failed => vec![Paid],
+            Requested => {
+                if self.object_id.is_some() {
+                    vec![Open, Cancelled]
+                } else {
+                    vec![Cancelled]
+                }
+            }
         };
         allowed.contains(to)
+    }
+
+    pub fn try_payment_address(&self) -> Result<String, DatabaseTypeError> {
+        match self.invoice_status {
+            InvoiceStatus::Requested => panic!("payment address is not known"),
+            _ => self.payment_address.clone().ok_or(DatabaseTypeError),
+        }
     }
 }
 
@@ -182,10 +218,11 @@ impl Default for DbInvoice {
             sender_id: Default::default(),
             recipient_id: Default::default(),
             chain_id: DbChainId(ChainId::monero_mainnet()),
-            payment_address: Default::default(),
             amount: 1,
             invoice_status: InvoiceStatus::Open,
+            payment_address: Some("".to_string()),
             payout_tx_id: None,
+            object_id: None,
             created_at: Default::default(),
             updated_at: Default::default(),
         }

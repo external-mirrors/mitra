@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+
+- Allow creating invoices for remote recipients.
+
 ### Changed
 
 - Use `resourceConformsTo` property of proposal object to determine support for FEP-0837.
