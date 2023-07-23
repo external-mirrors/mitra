@@ -153,6 +153,23 @@ pub async fn get_invoice_by_participants(
     Ok(invoice)
 }
 
+pub async fn get_invoice_by_remote_object_id(
+    db_client: &impl DatabaseClient,
+    object_id: &str,
+) -> Result<DbInvoice, DatabaseError> {
+    let maybe_row = db_client.query_opt(
+        "
+        SELECT invoice
+        FROM invoice
+        WHERE object_id = $1
+        ",
+        &[&object_id],
+    ).await?;
+    let row = maybe_row.ok_or(DatabaseError::NotFound("invoice"))?;
+    let invoice = row.try_get("invoice")?;
+    Ok(invoice)
+}
+
 pub async fn get_invoices_by_status(
     db_client: &impl DatabaseClient,
     chain_id: &ChainId,

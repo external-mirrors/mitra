@@ -11,7 +11,7 @@ use crate::database::{
 use crate::invoices::types::DbChainId;
 use crate::profiles::types::PaymentType;
 use crate::relationships::{
-    queries::{subscribe, subscribe_opt},
+    queries::subscribe_opt,
     types::RelationshipType,
 };
 
@@ -49,7 +49,7 @@ pub async fn create_subscription(
             &updated_at,
         ],
     ).await.map_err(catch_unique_violation("subscription"))?;
-    subscribe(&mut transaction, sender_id, recipient_id).await?;
+    subscribe_opt(&mut transaction, sender_id, recipient_id).await?;
     transaction.commit().await?;
     Ok(())
 }
