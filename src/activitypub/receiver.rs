@@ -27,6 +27,7 @@ use super::handlers::{
     follow::handle_follow,
     like::handle_like,
     r#move::handle_move,
+    offer::handle_offer,
     reject::handle_reject,
     remove::handle_remove,
     undo::handle_undo,
@@ -40,6 +41,9 @@ use super::vocabulary::*;
 pub enum HandlerError {
     #[error("local object")]
     LocalObject,
+
+    #[error("internal error")]
+    InternalError,
 
     #[error(transparent)]
     FetchError(#[from] FetchError),
@@ -58,6 +62,7 @@ impl From<HandlerError> for HttpError {
     fn from(error: HandlerError) -> Self {
         match error {
             HandlerError::LocalObject => HttpError::InternalError,
+            HandlerError::InternalError => HttpError::InternalError,
             HandlerError::FetchError(error) => {
                 HttpError::ValidationError(error.to_string())
             },
@@ -106,6 +111,9 @@ pub async fn handle_activity(
         },
         MOVE => {
             handle_move(config, db_client, activity).await?
+        },
+        OFFER => {
+            handle_offer(config, db_client, activity).await?
         },
         REJECT => {
             handle_reject(config, db_client, activity).await?

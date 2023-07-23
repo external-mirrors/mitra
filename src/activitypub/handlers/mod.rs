@@ -11,6 +11,7 @@ pub mod delete;
 pub mod follow;
 pub mod like;
 pub mod r#move;
+pub mod offer;
 pub mod reject;
 pub mod remove;
 pub mod undo;
