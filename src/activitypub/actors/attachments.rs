@@ -43,11 +43,11 @@ use crate::activitypub::{
         create_identity_claim,
         VerifiableIdentityStatement,
     },
-    valueflows::builders::PROPOSAL,
     vocabulary::{
         IDENTITY_PROOF,
         LINK,
         PROPERTY_VALUE,
+        PROPOSAL,
         VERIFIABLE_IDENTITY_STATEMENT,
     },
 };
@@ -221,6 +221,10 @@ const PAYMENT_LINK_NAME_ETHEREUM: &str = "EthereumSubscription";
 const PAYMENT_LINK_NAME_MONERO: &str = "MoneroSubscription";
 const PAYMENT_LINK_RELATION_TYPE: &str = "payment";
 
+fn valueflows_proposal_rel() -> String {
+    format!("{}{}", W3ID_VALUEFLOWS_CONTEXT, PROPOSAL)
+}
+
 pub fn attach_payment_option(
     instance_url: &str,
     username: &str,
@@ -242,10 +246,10 @@ pub fn attach_payment_option(
                 username,
                 &payment_info.chain_id,
             );
-            let proposal_rel = format!("{}{}", W3ID_VALUEFLOWS_CONTEXT, PROPOSAL);
-            rel.push(proposal_rel);
+            rel.push(valueflows_proposal_rel());
             (name, href)
         },
+        PaymentOption::RemoteMoneroSubscription(_) => unimplemented!(),
     };
     PaymentLink {
         object_type: LINK.to_string(),
@@ -257,7 +261,7 @@ pub fn attach_payment_option(
 
 pub fn parse_payment_option(
     attachment: &JsonValue,
-) -> Result<PaymentOption, ValidationError> {
+) -> Result<(DbPaymentLink, bool), ValidationError> {
     #[derive(Deserialize)]
     struct PaymentLink {
         name: String,
@@ -277,11 +281,12 @@ pub fn parse_payment_option(
     {
         return Err(ValidationError("attachment is not a payment link"));
     };
-    let payment_option = PaymentOption::Link(DbPaymentLink {
+    let db_payment_link = DbPaymentLink {
         name: payment_link.name,
         href: payment_link.href,
-    });
-    Ok(payment_option)
+    };
+    let is_proposal = payment_link.rel.contains(&valueflows_proposal_rel());
+    Ok((db_payment_link, is_proposal))
 }
 
 pub fn attach_extra_field(
@@ -434,13 +439,10 @@ mod tests {
         assert_eq!(attachment.rel[1], "https://w3id.org/valueflows/Proposal");
 
         let attachment_value = serde_json::to_value(attachment).unwrap();
-        let parsed_option = parse_payment_option(&attachment_value).unwrap();
-        let link = match parsed_option {
-            PaymentOption::Link(link) => link,
-            _ => panic!("wrong option"),
-        };
-        assert_eq!(link.name, "MoneroSubscription");
-        assert_eq!(link.href, subscription_page_url);
+        let (payment_link, is_proposal) = parse_payment_option(&attachment_value).unwrap();
+        assert_eq!(payment_link.name, "MoneroSubscription");
+        assert_eq!(payment_link.href, subscription_page_url);
+        assert_eq!(is_proposal, true);
     }
 
     #[test]

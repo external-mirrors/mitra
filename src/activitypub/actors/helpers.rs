@@ -21,10 +21,11 @@ use mitra_models::{
 use crate::activitypub::{
     actors::types::Actor,
     deserialization::parse_into_id_array,
-    fetcher::fetchers::fetch_file,
+    fetcher::fetchers::{fetch_file, fetch_object},
     handlers::create::handle_emoji,
     identifiers::validate_object_id,
     receiver::HandlerError,
+    valueflows::parsers::{parse_proposal, Proposal},
     vocabulary::{
         EMOJI,
         HASHTAG,
@@ -142,10 +143,12 @@ fn parse_public_keys(
 fn parse_attachments(actor: &Actor) -> (
     Vec<IdentityProof>,
     Vec<PaymentOption>,
+    Vec<String>,
     Vec<ExtraField>,
 ) {
     let mut identity_proofs = vec![];
     let mut payment_options = vec![];
+    let mut proposals = vec![];
     let mut extra_fields = vec![];
     let mut property_values = vec![];
     let log_error = |attachment_type: &str, error| {
@@ -173,7 +176,16 @@ fn parse_attachments(actor: &Actor) -> (
             },
             LINK => {
                 match parse_payment_option(attachment_value) {
-                    Ok(option) => payment_options.push(option),
+                    Ok((payment_link, is_proposal)) => {
+                        // Only one proposal is allowed.
+                        // The remaining proposals are treated as payment links.
+                        if is_proposal && proposals.is_empty() {
+                            proposals.push(payment_link.href);
+                        } else {
+                            let option = PaymentOption::Link(payment_link);
+                            payment_options.push(option);
+                        };
+                    },
                     Err(error) => log_error(attachment_type, error),
                 };
             },
@@ -209,7 +221,33 @@ fn parse_attachments(actor: &Actor) -> (
             extra_fields.push(field);
         }
     };
-    (identity_proofs, payment_options, extra_fields)
+    (identity_proofs, payment_options, proposals, extra_fields)
+}
+
+async fn fetch_proposals(
+    instance: &Instance,
+    proposals: Vec<String>,
+) -> Vec<PaymentOption> {
+    let mut payment_options = vec![];
+    for proposal_id in proposals {
+        let proposal: Proposal = match fetch_object(instance, &proposal_id).await {
+            Ok(proposal) => proposal,
+            Err(error) => {
+                log::warn!("invalid proposal: {}", error);
+                continue;
+            },
+        };
+        log::info!("fetched proposal {}", proposal_id);
+        let payment_option = match parse_proposal(proposal) {
+            Ok(option) => option,
+            Err(error) => {
+                log::warn!("invalid proposal: {}", error);
+                continue;
+            },
+        };
+        payment_options.push(payment_option);
+    };
+    payment_options
 }
 
 fn parse_aliases(actor: &Actor) -> Vec<String> {
@@ -287,8 +325,13 @@ pub async fn create_remote_profile(
         None,
     ).await;
     let public_keys = parse_public_keys(&actor)?;
-    let (identity_proofs, payment_options, extra_fields) =
+    let (identity_proofs, mut payment_options, proposals, extra_fields) =
         parse_attachments(&actor);
+    let subscription_options = fetch_proposals(
+        instance,
+        proposals,
+    ).await;
+    payment_options.extend(subscription_options);
     let aliases = parse_aliases(&actor);
     let emojis = parse_tags(
         db_client,
@@ -348,8 +391,13 @@ pub async fn update_remote_profile(
         profile.banner,
     ).await;
     let public_keys = parse_public_keys(&actor)?;
-    let (identity_proofs, payment_options, extra_fields) =
+    let (identity_proofs, mut payment_options, proposals, extra_fields) =
         parse_attachments(&actor);
+    let subscription_options = fetch_proposals(
+        instance,
+        proposals,
+    ).await;
+    payment_options.extend(subscription_options);
     let aliases = parse_aliases(&actor);
     let emojis = parse_tags(
         db_client,

@@ -51,7 +51,10 @@ pub fn check_payment_options(
     is_remote: bool,
 ) -> Result<(), DatabaseTypeError> {
     if !is_remote && payment_options.iter()
-        .any(|option| option.payment_type() == PaymentType::Link)
+        .any(|option| matches!(
+            option.payment_type(),
+            PaymentType::Link | PaymentType::RemoteMoneroSubscription,
+        ))
     {
         return Err(DatabaseTypeError);
     };
@@ -82,6 +85,8 @@ pub fn check_payment_options(
             PaymentOption::EthereumSubscription(info) =>
                 Some(info.chain_id.to_string()),
             PaymentOption::MoneroSubscription(info) =>
+                Some(info.chain_id.to_string()),
+            PaymentOption::RemoteMoneroSubscription(info) =>
                 Some(info.chain_id.to_string()),
         })
         .all(|chain_id| chain_ids.insert(chain_id));

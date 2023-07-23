@@ -223,6 +223,7 @@ pub enum PaymentType {
     Link,
     EthereumSubscription,
     MoneroSubscription,
+    RemoteMoneroSubscription,
 }
 
 impl From<&PaymentType> for i16 {
@@ -231,6 +232,7 @@ impl From<&PaymentType> for i16 {
             PaymentType::Link => 1,
             PaymentType::EthereumSubscription => 2,
             PaymentType::MoneroSubscription => 3,
+            PaymentType::RemoteMoneroSubscription => 4,
         }
     }
 }
@@ -243,6 +245,7 @@ impl TryFrom<i16> for PaymentType {
             1 => Self::Link,
             2 => Self::EthereumSubscription,
             3 => Self::MoneroSubscription,
+            4 => Self::RemoteMoneroSubscription,
             _ => return Err(DatabaseTypeError),
         };
         Ok(payment_type)
@@ -267,11 +270,19 @@ pub struct MoneroSubscription {
     pub payout_address: String,
 }
 
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct RemoteMoneroSubscription {
+    pub chain_id: ChainId,
+    pub price: u64, // piconeros per second
+    pub object_id: String,
+}
+
 #[derive(Clone, Debug)]
 pub enum PaymentOption {
     Link(PaymentLink),
     EthereumSubscription(EthereumSubscription),
     MoneroSubscription(MoneroSubscription),
+    RemoteMoneroSubscription(RemoteMoneroSubscription),
 }
 
 impl PaymentOption {
@@ -291,11 +302,24 @@ impl PaymentOption {
         })
     }
 
+    pub fn remote_monero_subscription(
+        chain_id: ChainId,
+        price: u64,
+        object_id: String,
+    ) -> Self {
+        Self::RemoteMoneroSubscription(RemoteMoneroSubscription {
+            chain_id,
+            price,
+            object_id,
+        })
+    }
+
     pub(super) fn payment_type(&self) -> PaymentType {
         match self {
             Self::Link(_) => PaymentType::Link,
             Self::EthereumSubscription(_) => PaymentType::EthereumSubscription,
             Self::MoneroSubscription(_) => PaymentType::MoneroSubscription,
+            Self::RemoteMoneroSubscription(_) => PaymentType::RemoteMoneroSubscription,
         }
     }
 }
@@ -328,6 +352,11 @@ impl<'de> Deserialize<'de> for PaymentOption {
                     .map_err(DeserializerError::custom)?;
                 Self::MoneroSubscription(payment_info)
             },
+            PaymentType::RemoteMoneroSubscription => {
+                let payment_info = RemoteMoneroSubscription::deserialize(value)
+                    .map_err(DeserializerError::custom)?;
+                Self::RemoteMoneroSubscription(payment_info)
+            },
         };
         Ok(payment_option)
     }
@@ -347,6 +376,9 @@ impl Serialize for PaymentOption {
                 payment_info.serialize(FlatMapSerializer(&mut map))?
             },
             Self::MoneroSubscription(payment_info) => {
+                payment_info.serialize(FlatMapSerializer(&mut map))?
+            },
+            Self::RemoteMoneroSubscription(payment_info) => {
                 payment_info.serialize(FlatMapSerializer(&mut map))?
             },
         };

@@ -191,6 +191,13 @@ impl Account {
                             price: payment_info.price,
                         }
                     },
+                    PaymentOption::RemoteMoneroSubscription(payment_info) => {
+                        // TODO: use ::MoneroSubscription
+                        AccountPaymentOption::Link {
+                            name: "MoneroSubscription".to_string(),
+                            href: payment_info.object_id,
+                        }
+                    },
                 }
             })
             .collect();

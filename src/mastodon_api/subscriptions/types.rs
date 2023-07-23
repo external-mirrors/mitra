@@ -91,6 +91,7 @@ impl SubscriptionOption {
                 price: payment_info.price,
                 payout_address: payment_info.payout_address,
             },
+            PaymentOption::RemoteMoneroSubscription(_) => return None,
         };
         Some(settings)
     }

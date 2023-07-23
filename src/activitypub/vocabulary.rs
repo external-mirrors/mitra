@@ -37,6 +37,10 @@ pub const VIDEO: &str = "Video";
 pub const ORDERED_COLLECTION: &str = "OrderedCollection";
 pub const ORDERED_COLLECTION_PAGE: &str = "OrderedCollectionPage";
 
+// Valueflows
+pub const INTENT: &str = "Intent";
+pub const PROPOSAL: &str = "Proposal";
+
 // Misc
 pub const EMOJI: &str = "Emoji";
 pub const HASHTAG: &str = "Hashtag";

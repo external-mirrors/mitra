@@ -16,6 +16,15 @@ use crate::activitypub::{
         local_actor_id,
         local_actor_proposal_id,
     },
+    vocabulary::{INTENT, PROPOSAL},
+};
+
+use super::constants::{
+    ACTION_DELIVER_SERVICE,
+    ACTION_TRANSFER,
+    CLASS_CONTENT,
+    UNIT_ONE,
+    UNIT_SECOND,
 };
 
 type Context = (
@@ -45,20 +54,6 @@ fn build_proposal_context() -> Context {
         ]),
     )
 }
-
-const INTENT: &str = "Intent";
-pub const PROPOSAL: &str = "Proposal";
-
-// https://www.valueflo.ws/concepts/actions/#action-definitions
-const ACTION_DELIVER_SERVICE: &str = "deliverService";
-const ACTION_TRANSFER: &str = "transfer";
-
-// http://www.ontology-of-units-of-measure.org/resource/om-2/one
-const UNIT_ONE: &str = "one";
-// http://www.ontology-of-units-of-measure.org/resource/om-2/second-Time
-const UNIT_SECOND: &str = "second";
-
-const CLASS_CONTENT: &str = "https://www.wikidata.org/wiki/Q1260632";
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
