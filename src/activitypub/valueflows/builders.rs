@@ -146,7 +146,7 @@ pub fn build_proposal(
             object_type: INTENT.to_string(),
             id: format!("{}#reciprocal", proposal_id),
             action: ACTION_TRANSFER.to_string(),
-            resource_conforms_to: asset_type.into_uri(),
+            resource_conforms_to: asset_type.to_uri(),
             resource_quantity: Quantity {
                 has_unit: UNIT_ONE.to_string(),
                 // piconeros per second
