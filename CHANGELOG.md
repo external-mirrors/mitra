@@ -17,6 +17,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Changed license ID to `AGPL-3.0-only`.
 - Add `attributedTo` property to proposals.
 - Make `read-outbox` command work with non-paginated collections.
+- Return error when trying to save local profile with payment links.
 
 ### Fixed
 

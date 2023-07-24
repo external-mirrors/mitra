@@ -836,6 +836,7 @@ pub async fn find_empty_profiles(
 mod tests {
     use serde_json::json;
     use serial_test::serial;
+    use mitra_utils::caip2::ChainId;
     use crate::database::test_utils::create_test_database;
     use crate::emojis::{
         queries::create_emoji,
@@ -849,6 +850,7 @@ mod tests {
             ExtraField,
             IdentityProof,
             IdentityProofType,
+            PaymentOption,
         },
     };
     use crate::users::{
@@ -866,6 +868,11 @@ mod tests {
     async fn test_create_profile_local() {
         let profile_data = ProfileCreateData {
             username: "test".to_string(),
+            payment_options: vec![PaymentOption::monero_subscription(
+                ChainId::monero_mainnet(),
+                184000000,
+                "testAddress".to_string(),
+            )],
             ..Default::default()
         };
         let db_client = &mut create_test_database().await;
@@ -874,6 +881,7 @@ mod tests {
         assert_eq!(profile.hostname, None);
         assert_eq!(profile.acct, "test");
         assert_eq!(profile.identity_proofs.into_inner().len(), 0);
+        assert_eq!(profile.payment_options.inner().len(), 1);
         assert_eq!(profile.extra_fields.into_inner().len(), 0);
         assert_eq!(profile.actor_id, None);
     }

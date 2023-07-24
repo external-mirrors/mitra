@@ -601,7 +601,7 @@ impl ProfileCreateData {
         let is_remote = self.actor_json.is_some();
         check_public_keys(&self.public_keys, is_remote)?;
         check_identity_proofs(&self.identity_proofs)?;
-        check_payment_options(&self.payment_options)?;
+        check_payment_options(&self.payment_options, is_remote)?;
         Ok(())
     }
 }
@@ -627,7 +627,7 @@ impl ProfileUpdateData {
         let is_remote = self.actor_json.is_some();
         check_public_keys(&self.public_keys, is_remote)?;
         check_identity_proofs(&self.identity_proofs)?;
-        check_payment_options(&self.payment_options)?;
+        check_payment_options(&self.payment_options, is_remote)?;
         Ok(())
     }
 

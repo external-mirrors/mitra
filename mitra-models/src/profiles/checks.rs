@@ -2,7 +2,12 @@ use std::collections::HashSet;
 
 use crate::database::DatabaseTypeError;
 
-use super::types::{DbActorKey, IdentityProof, PaymentOption};
+use super::types::{
+    DbActorKey,
+    IdentityProof,
+    PaymentOption,
+    PaymentType,
+};
 
 pub fn check_public_keys(
     public_keys: &[DbActorKey],
@@ -43,7 +48,22 @@ pub fn check_identity_proofs(
 
 pub fn check_payment_options(
     payment_options: &[PaymentOption],
+    is_remote: bool,
 ) -> Result<(), DatabaseTypeError> {
+    if !is_remote && payment_options.iter()
+        .any(|option| option.payment_type() == PaymentType::Link)
+    {
+        return Err(DatabaseTypeError);
+    };
+    if is_remote && payment_options.iter()
+        .any(|option| matches!(
+            option.payment_type(),
+            PaymentType::EthereumSubscription | PaymentType::MoneroSubscription,
+        ))
+    {
+        return Err(DatabaseTypeError);
+    };
+    // Uniqueness checks
     let mut types = HashSet::new();
     let is_unique = payment_options.iter()
         .filter_map(|option| match option {
