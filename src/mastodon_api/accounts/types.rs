@@ -21,6 +21,7 @@ use mitra_models::{
     },
 };
 use mitra_utils::{
+    caip2::ChainId,
     did::Did,
     markdown::markdown_basic_to_html,
 };
@@ -53,8 +54,8 @@ pub struct AccountField {
 #[serde(tag = "type", rename_all = "kebab-case")]
 pub enum AccountPaymentOption {
     Link { name: String, href: String },
-    EthereumSubscription,
-    MoneroSubscription { price: u64 },
+    EthereumSubscription { chain_id: ChainId },
+    MoneroSubscription { chain_id: ChainId, price: u64 },
 }
 /// https://docs.joinmastodon.org/entities/source/
 #[derive(Serialize)]
@@ -183,11 +184,14 @@ impl Account {
                             href: link.href,
                         }
                     },
-                    PaymentOption::EthereumSubscription(_) => {
-                        AccountPaymentOption::EthereumSubscription
+                    PaymentOption::EthereumSubscription(payment_info) => {
+                        AccountPaymentOption::EthereumSubscription {
+                            chain_id: payment_info.chain_id,
+                        }
                     },
                     PaymentOption::MoneroSubscription(payment_info) => {
                         AccountPaymentOption::MoneroSubscription {
+                            chain_id: payment_info.chain_id,
                             price: payment_info.price,
                         }
                     },

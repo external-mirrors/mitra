@@ -19,6 +19,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Add `attributedTo` property to proposals.
 - Make `read-outbox` command work with non-paginated collections.
 - Return error when trying to save local profile with payment links.
+- Add `chain_id` parameter to payment options on `Account` object.
 
 ### Fixed
 

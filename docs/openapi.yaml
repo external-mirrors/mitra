@@ -1733,8 +1733,12 @@ components:
                 description: Link URL (only for link type).
                 type: string
                 nullable: true
+              chain_id:
+                description: CAIP-2 chain ID  (only for ethereum-subscription and monero-subscription types).
+                type: string
+                example: null
               price:
-                description: Subscription price (only for ethereum-subscription and monero-subscription types).
+                description: Subscription price (only for monero-subscription type).
                 type: number
                 nullable: true
                 example: null
