@@ -43,7 +43,7 @@ Ethereum contracts: https://codeberg.org/silverpill/mitra-contracts
 - PostgreSQL 12+
 - Rust 1.57+ (when building from source)
 
-Mininum system requirements:
+Minimum system requirements:
 
 - 256 MB RAM (1 GB for building from source)
 - 10 GB storage for average single user instance with default configuration
@@ -112,11 +112,23 @@ systemctl start mitra
 
 An HTTP server will be needed to handle HTTPS requests. See the example of [nginx configuration file](./contrib/mitra.nginx).
 
-### Docker image
+### Other installation methods
 
-This image is maintained by the community and has not been verified:
+These images and packages are maintained by the community.
+
+#### Docker image
 
 https://hub.docker.com/r/bleakfuture0/mitra
+
+#### Alpine Linux
+
+Install from testing repository:
+
+```shell
+echo '@testing https://dl-cdn.alpinelinux.org/alpine/edge/testing' >> /etc/apk/repositories
+apk update
+apk add -vi mitra@testing
+```
 
 ## Configuration
 
