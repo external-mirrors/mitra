@@ -9,14 +9,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Added
 
 - Support `jcs-eddsa-2022` identity proofs.
-- Support fetching `replies` collection when it is not embedded.
 - Fetch and parse proposals attached to remote actors.
+- Add activity queue stats to `instance-report` command output.
 
 ### Changed
 
 - Write total number of objects to log when fetching replies.
 - Changed license ID to `AGPL-3.0-only`.
 - Add `attributedTo` property to proposals.
+- Fetch `replies` collection when it is not embedded.
 - Make `read-outbox` command work with non-paginated collections.
 - Return error when trying to save local profile with payment links.
 - Add `chain_id` parameter to payment options on `Account` object.

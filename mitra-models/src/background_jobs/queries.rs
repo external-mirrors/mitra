@@ -93,6 +93,22 @@ pub async fn delete_job_from_queue(
     Ok(())
 }
 
+pub async fn get_job_count(
+    db_client: &impl DatabaseClient,
+    job_type: JobType,
+) -> Result<i64, DatabaseError> {
+    let row = db_client.query_one(
+        "
+        SELECT count(background_job)
+        FROM background_job
+        WHERE job_type = $1
+        ",
+        &[&job_type],
+    ).await?;
+    let count = row.try_get("count")?;
+    Ok(count)
+}
+
 #[cfg(test)]
 mod tests {
     use serde_json::json;

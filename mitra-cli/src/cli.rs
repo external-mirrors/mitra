@@ -47,6 +47,8 @@ use mitra::validators::{
 use mitra_config::Config;
 use mitra_models::{
     attachments::queries::delete_unused_attachments,
+    background_jobs::queries::get_job_count,
+    background_jobs::types::JobType,
     cleanup::find_orphaned_files,
     database::DatabaseClient,
     emojis::helpers::get_emoji_by_name,
@@ -942,9 +944,15 @@ impl InstanceReport {
             get_active_subscription_count(db_client).await?;
         let expired_subscriptions =
             get_expired_subscription_count(db_client).await?;
+        let incoming_activities =
+            get_job_count(db_client, JobType::IncomingActivity).await?;
+        let outgoing_activities =
+            get_job_count(db_client, JobType::OutgoingActivity).await?;
         println!("users: {}", users);
         println!("active subscriptions: {}", active_subscriptions);
         println!("expired subscriptions: {}", expired_subscriptions);
+        println!("incoming activities: {}", incoming_activities);
+        println!("outgoing activities: {}", outgoing_activities);
         Ok(())
     }
 }
