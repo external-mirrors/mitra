@@ -5,7 +5,7 @@ use super::links::is_inside_code_block;
 
 // See also: HASHTAG_NAME_RE in validators::tags
 const HASHTAG_RE: &str = r"(?m)(?P<before>^|\s|>|[\(])#(?P<tag>[^\s<]+)";
-const HASHTAG_SECONDARY_RE: &str = r"^(?P<tag>[0-9A-Za-z]+)(?P<after>[\.,:?!\)]?)$";
+const HASHTAG_SECONDARY_RE: &str = r"^(?P<tag>[\p{Alphabetic}\d]+)(?P<after>[\.,:?!\)]?)$";
 
 /// Finds anything that looks like a hashtag
 pub fn find_hashtags(text: &str) -> Vec<String> {
@@ -67,6 +67,8 @@ mod tests {
     const TEXT_WITH_TAGS: &str = concat!(
         "@user1@server1 some text #TestTag.\n",
         "#TAG1 #tag1 #test_underscore #test*special ",
+        "#test-tag # #123 ",
+        "#aβcδ ",
         "more text (#tag2) text #tag3, #tag4:<br>",
         "end with #tag5",
     );
@@ -78,6 +80,8 @@ mod tests {
         assert_eq!(tags, vec![
             "testtag",
             "tag1",
+            "123",
+            "aβcδ",
             "tag2",
             "tag3",
             "tag4",
@@ -95,6 +99,8 @@ mod tests {
             r#"<a class="hashtag" href="https://example.com/collections/tags/tag1">#TAG1</a> "#,
             r#"<a class="hashtag" href="https://example.com/collections/tags/tag1">#tag1</a> "#,
             r#"#test_underscore #test*special "#,
+            r#"#test-tag # <a class="hashtag" href="https://example.com/collections/tags/123">#123</a> "#,
+            r#"<a class="hashtag" href="https://example.com/collections/tags/a%CE%B2c%CE%B4">#aβcδ</a> "#,
             r#"more text (<a class="hashtag" href="https://example.com/collections/tags/tag2">#tag2</a>) text "#,
             r#"<a class="hashtag" href="https://example.com/collections/tags/tag3">#tag3</a>, "#,
             r#"<a class="hashtag" href="https://example.com/collections/tags/tag4">#tag4</a>:<br>"#,

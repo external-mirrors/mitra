@@ -10,7 +10,7 @@ use mitra_models::{
 };
 use mitra_utils::{
     caip2::ChainId,
-    urls::get_hostname,
+    urls::{get_hostname, url_encode},
 };
 
 use crate::errors::ValidationError;
@@ -107,7 +107,7 @@ pub fn local_emoji_id(instance_url: &str, emoji_name: &str) -> String {
 }
 
 pub fn local_tag_collection(instance_url: &str, tag_name: &str) -> String {
-    format!("{}/collections/tags/{}", instance_url, tag_name)
+    format!("{}/collections/tags/{}", instance_url, url_encode(tag_name))
 }
 
 pub fn validate_object_id(object_id: &str) -> Result<(), ValidationError> {

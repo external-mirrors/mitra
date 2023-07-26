@@ -55,6 +55,7 @@ ulid = { version = "1.0.0", features = ["uuid"] }
 unsigned-varint = "0.7.1"
 # Used to work with URLs
 url = "2.2.2"
+percent-encoding = "2.1.0"
 # Used to work with UUIDs
 uuid = "1.1.2"
 

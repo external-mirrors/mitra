@@ -1,5 +1,11 @@
 use std::net::{Ipv4Addr, Ipv6Addr};
+
+use percent_encoding::{utf8_percent_encode, NON_ALPHANUMERIC};
 use url::{Host, ParseError, Url};
+
+pub fn url_encode(input: &str) -> String {
+    utf8_percent_encode(input, NON_ALPHANUMERIC).to_string()
+}
 
 pub fn get_hostname(url: &str) -> Result<String, ParseError> {
     let hostname = match Url::parse(url)?
@@ -63,6 +69,13 @@ pub fn normalize_url(url: &str) -> Result<Url, url::ParseError> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_url_encode() {
+        let input = "El Niño";
+        let output = url_encode(input);
+        assert_eq!(output, "El%20Ni%C3%B1o");
+    }
 
     #[test]
     fn test_get_hostname() {

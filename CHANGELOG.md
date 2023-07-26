@@ -12,6 +12,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Fetch and parse proposals attached to remote actors.
 - Add activity queue stats to `instance-report` command output.
 - Allow to filter profile timeline with `only_media` parameter.
+- Support non-ascii hashtags.
 
 ### Changed
 
