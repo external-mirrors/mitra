@@ -11,3 +11,18 @@ pub fn validate_hashtag(tag_name: &str) -> Result<(), ValidationError> {
     };
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_validate_hashtag() {
+        assert!(validate_hashtag("testTag").is_ok());
+        assert!(validate_hashtag("test_tag").is_ok());
+        assert!(validate_hashtag("täg").is_ok());
+        assert!(validate_hashtag("012").is_ok());
+        assert!(validate_hashtag("#tag").is_err());
+        assert!(validate_hashtag("test-tag").is_err());
+    }
+}

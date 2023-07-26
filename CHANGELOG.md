@@ -23,6 +23,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Return error when trying to save local profile with payment links.
 - Add `chain_id` parameter to payment options on `Account` object.
 - Perform canonicalization on the client side when signing `Update()` activity.
+- Write message to log when encountering invalid hashtag.
 
 ### Fixed
 

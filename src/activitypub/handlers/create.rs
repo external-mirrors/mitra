@@ -371,6 +371,8 @@ pub async fn get_object_tags(
                     if !hashtags.contains(&tag_name) {
                         hashtags.push(tag_name);
                     };
+                } else {
+                    log::warn!("invalid hashtag: {}", tag_name);
                 };
             };
         } else if tag_type == MENTION {
