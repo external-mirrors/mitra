@@ -2,6 +2,7 @@ use std::path::Path;
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use serde_json::{Value as JsonValue};
 use uuid::Uuid;
 
 use mitra_models::{
@@ -408,18 +409,19 @@ impl AccountUpdateData {
 #[derive(Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "kebab-case")]
 pub enum ActivityParams {
-    Update { internal_activity_id: Uuid },
+    Update,
 }
 
 #[derive(Serialize)]
 pub struct UnsignedActivity {
     pub params: ActivityParams,
-    pub message: String, // canonical representation
+    pub value: JsonValue,
 }
 
 #[derive(Deserialize)]
 pub struct SignedActivity {
     pub params: ActivityParams,
+    pub value: JsonValue,
     pub signer: String,
     pub signature: String,
 }

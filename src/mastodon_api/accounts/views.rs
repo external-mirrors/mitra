@@ -64,7 +64,6 @@ use mitra_models::{
 };
 use mitra_utils::{
     caip2::ChainId,
-    canonicalization::canonicalize_object,
     crypto_eddsa::ed25519_public_key_from_bytes,
     crypto_rsa::{
         generate_rsa_key,
@@ -90,7 +89,7 @@ use crate::activitypub::{
             prepare_update_person,
         },
     },
-    identifiers::local_actor_id,
+    identifiers::{local_actor_id, parse_local_object_id},
     identity::{
         create_identity_claim_fep_c390,
         create_identity_proof_fep_c390,
@@ -339,11 +338,11 @@ async fn get_unsigned_update(
         &current_user,
         Some(internal_activity_id),
     ).map_err(|_| MastodonError::InternalError)?;
-    let canonical_json = canonicalize_object(&activity)
+    let activity_value = serde_json::to_value(activity)
         .map_err(|_| MastodonError::InternalError)?;
     let data = UnsignedActivity {
-        params: ActivityParams::Update { internal_activity_id },
-        message: canonical_json,
+        params: ActivityParams::Update,
+        value: activity_value,
     };
     Ok(HttpResponse::Ok().json(data))
 }
@@ -364,13 +363,19 @@ async fn send_signed_activity(
         return Err(ValidationError("unknown signer").into());
     };
     let mut outgoing_activity = match &data.params {
-        ActivityParams::Update { internal_activity_id } => {
+        ActivityParams::Update => {
+            let activity_id = data.value["id"].as_str()
+                .ok_or(ValidationError("invalid activity"))?;
+            let internal_activity_id = parse_local_object_id(
+                &config.instance_url(),
+                activity_id,
+            ).map_err(|_| ValidationError("invalid activity"))?;
             prepare_update_person(
                 db_client,
                 &config.instance(),
                 &current_user,
-                Some(*internal_activity_id),
-            ).await.map_err(|_| MastodonError::InternalError)?
+                Some(internal_activity_id),
+            ).await?
         },
     };
     let proof = match signer {
