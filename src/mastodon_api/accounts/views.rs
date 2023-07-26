@@ -859,6 +859,7 @@ async fn get_account_statuses(
         !query_params.exclude_replies,
         true,
         query_params.pinned,
+        query_params.only_media,
         query_params.max_id,
         query_params.limit.inner(),
     ).await?;

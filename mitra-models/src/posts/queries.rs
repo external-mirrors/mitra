@@ -769,6 +769,7 @@ pub async fn get_posts_by_author(
     include_replies: bool,
     include_reposts: bool,
     only_pinned: bool,
+    only_media: bool,
     max_post_id: Option<Uuid>,
     limit: u16,
 ) -> Result<Vec<Post>, DatabaseError> {
@@ -786,6 +787,12 @@ pub async fn get_posts_by_author(
     };
     if only_pinned {
         condition.push_str(" AND post.is_pinned IS TRUE");
+    };
+    if only_media {
+        condition.push_str(
+            " AND EXISTS(
+                SELECT 1 FROM media_attachment
+                WHERE post_id = post.id)");
     };
     let statement = format!(
         "
@@ -1890,7 +1897,15 @@ mod tests {
 
         // Anonymous viewer
         let timeline = get_posts_by_author(
-            db_client, &user.id, None, false, true, false, None, 10,
+            db_client,
+            &user.id,
+            None,
+            false,
+            true,
+            false,
+            false,
+            None,
+            10,
         ).await.unwrap();
         assert_eq!(timeline.len(), 2);
         assert_eq!(timeline.iter().any(|post| post.id == post_1.id), true);

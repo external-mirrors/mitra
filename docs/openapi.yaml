@@ -439,6 +439,13 @@ paths:
       summary: Posts created by the given actor.
       parameters:
         - $ref: '#/components/parameters/account_id'
+        - name: only_media
+          in: query
+          description: Filter out posts without attachments.
+          required: false
+          schema:
+            type: boolean
+            default: false
         - name: exclude_replies
           in: query
           description: Exclude replies from results.

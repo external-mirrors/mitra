@@ -198,6 +198,7 @@ async fn outbox(
         true, // include replies
         true, // include reposts
         false, // not only pinned
+        false, // not only media
         None,
         COLLECTION_PAGE_SIZE,
     ).await?;
@@ -352,6 +353,7 @@ async fn featured_collection(
         true, // include replies
         false, // exclude reposts
         true, // only pinned
+        false, // not only media
         None,
         COLLECTION_PAGE_SIZE,
     ).await?;

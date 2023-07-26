@@ -519,10 +519,15 @@ pub struct FollowData {
 
 fn default_status_page_size() -> PageSize { PageSize::new(20) }
 
-fn default_exclude_replies() -> bool { true }
+const fn default_only_media() -> bool { false }
+
+const fn default_exclude_replies() -> bool { true }
 
 #[derive(Deserialize)]
 pub struct StatusListQueryParams {
+    #[serde(default = "default_only_media")]
+    pub only_media: bool,
+
     #[serde(default = "default_exclude_replies")]
     pub exclude_replies: bool,
 

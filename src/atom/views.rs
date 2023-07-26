@@ -27,6 +27,7 @@ async fn get_atom_feed(
         false, // exclude replies
         false, // exclude reposts
         false, // not only pinned
+        false, // not only media
         None,
         FEED_SIZE,
     ).await?;
