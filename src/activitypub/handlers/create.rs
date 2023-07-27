@@ -579,7 +579,7 @@ pub async fn handle_note(
 ) -> Result<Post, HandlerError> {
     match object.object_type.as_str() {
         NOTE => (),
-        ARTICLE | EVENT | QUESTION | PAGE | VIDEO => {
+        ARTICLE | EVENT | QUESTION | PAGE | PROPOSAL | VIDEO => {
             log::info!("processing object of type {}", object.object_type);
         },
         other_type => {
