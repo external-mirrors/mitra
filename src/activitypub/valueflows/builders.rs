@@ -9,6 +9,7 @@ use mitra_utils::caip19::AssetType;
 use crate::activitypub::{
     constants::{
         AP_CONTEXT,
+        AP_PUBLIC,
         UNITS_OF_MEASURE_CONTEXT,
         W3ID_VALUEFLOWS_CONTEXT,
     },
@@ -100,6 +101,7 @@ pub struct Proposal {
     publishes: DeliverServiceIntent,
     reciprocal: TransferIntent,
     unit_based: bool,
+    to: String,
 }
 
 // https://www.valueflo.ws/concepts/proposals/
@@ -150,6 +152,7 @@ pub fn build_proposal(
             receiver: actor_id,
         },
         unit_based: true,
+        to: AP_PUBLIC.to_string(),
     }
 }
 
@@ -221,6 +224,7 @@ mod tests {
                 "receiver": "https://test.example/users/alice",
             },
             "unitBased": true,
+            "to": "https://www.w3.org/ns/activitystreams#Public",
         });
         assert_eq!(
             serde_json::to_value(proposal).unwrap(),

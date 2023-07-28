@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Changed
 
 - Allow to import objects with type `Proposal` as posts.
+- Add `to` property to proposals.
 
 ## [1.31.0] - 2023-07-26
 
