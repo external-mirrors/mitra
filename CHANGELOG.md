@@ -11,6 +11,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Allow to import objects with type `Proposal` as posts.
 - Add `to` property to proposals.
 
+### Fixed
+
+- Make `fetch-replies` command not panic if replies collection is not present.
+
 ## [1.31.0] - 2023-07-26
 
 ### Added
