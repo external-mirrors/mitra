@@ -39,6 +39,7 @@ use mitra_validators::errors::ValidationError;
 use crate::activitypub::{
     constants::{
         AP_MEDIA_TYPE,
+        CHAT_LINK_RELATION_TYPE,
         PAYMENT_LINK_RELATION_TYPE,
         W3ID_VALUEFLOWS_CONTEXT,
     },
@@ -274,6 +275,7 @@ pub fn attach_payment_option(
 pub enum LinkAttachment {
     PaymentLink(DbPaymentLink),
     Proposal(DbPaymentLink),
+    ChatLink(ExtraField),
 }
 
 /// https://codeberg.org/fediverse/fep/src/branch/main/fep/fb2a/fep-fb2a.md
@@ -293,20 +295,29 @@ pub fn parse_link(
 
     let link: Link = serde_json::from_value(attachment.clone())
         .map_err(|_| ValidationError("invalid link attachment"))?;
-    if link.name != PAYMENT_LINK_NAME_ETHEREUM &&
-        link.name != PAYMENT_LINK_NAME_MONERO &&
-        !link.rel.contains(&PAYMENT_LINK_RELATION_TYPE.to_string())
+    let result = if link.name == PAYMENT_LINK_NAME_ETHEREUM ||
+        link.name == PAYMENT_LINK_NAME_MONERO ||
+        link.rel.contains(&PAYMENT_LINK_RELATION_TYPE.to_string())
     {
-        return Err(ValidationError("attachment is not a payment link"));
-    };
-    let db_payment_link = DbPaymentLink {
-        name: link.name,
-        href: link.href,
-    };
-    let result = if link.rel.contains(&valueflows_proposal_rel()) {
-        LinkAttachment::Proposal(db_payment_link)
+        let db_payment_link = DbPaymentLink {
+            name: link.name,
+            href: link.href,
+        };
+        if link.rel.contains(&valueflows_proposal_rel()) {
+            LinkAttachment::Proposal(db_payment_link)
+        } else {
+            LinkAttachment::PaymentLink(db_payment_link)
+        }
+    } else if link.rel.contains(&CHAT_LINK_RELATION_TYPE.to_string()) {
+        // https://codeberg.org/fediverse/fep/src/branch/main/fep/1970/fep-1970.md
+        let field = ExtraField {
+            name: link.name,
+            value: link.href,
+            value_source: None,
+        };
+        LinkAttachment::ChatLink(field)
     } else {
-        LinkAttachment::PaymentLink(db_payment_link)
+        return Err(ValidationError("unknown link type"));
     };
     Ok(result)
 }
@@ -469,7 +480,7 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_link_attachment_not_payment() {
+    fn test_parse_link_attachment_unknown() {
         let attachment_value = json!({
             "name": "Test",
             "href": "https://test.example",
@@ -477,7 +488,7 @@ mod tests {
         let error = parse_link(&attachment_value).err().unwrap();
         assert!(matches!(
             error,
-            ValidationError("attachment is not a payment link"),
+            ValidationError("unknown link type"),
         ));
     }
 }

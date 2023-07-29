@@ -14,7 +14,9 @@ pub const MITRA_CONTEXT: &str = "http://jsonld.mitra.social#";
 pub const UNITS_OF_MEASURE_CONTEXT: &str = "http://www.ontology-of-units-of-measure.org/resource/om-2/";
 
 // Relation types
+pub const CHAT_LINK_RELATION_TYPE: &str = "discussion";
 pub const PAYMENT_LINK_RELATION_TYPE: &str = "payment";
 
 // Misc
+// https://www.w3.org/TR/activitypub/#public-addressing
 pub const AP_PUBLIC: &str = "https://www.w3.org/ns/activitystreams#Public";

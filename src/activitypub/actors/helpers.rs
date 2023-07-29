@@ -196,6 +196,9 @@ fn parse_attachments(actor: &Actor) -> (
                             payment_options.push(option);
                         };
                     },
+                    Ok(LinkAttachment::ChatLink(field)) => {
+                        extra_fields.push(field);
+                    },
                     Err(error) => log_error(attachment_type, error),
                 };
             },

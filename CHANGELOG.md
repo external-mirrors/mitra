@@ -11,6 +11,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Support allowlist federation.
 - Add `limits.media.extra_supported_types` configuration option.
 - Add `fetch_object_as` command.
+- Parse FEP-1970 chat links attached to actor objects.
 
 ### Changed
 
