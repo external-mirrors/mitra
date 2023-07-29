@@ -48,13 +48,13 @@ use crate::activitypub::{
     types::{Attachment, EmojiTag, LinkTag, Object, Tag},
     vocabulary::*,
 };
-use crate::errors::ValidationError;
 use crate::media::MediaStorage;
 use crate::validators::{
     emojis::{
         validate_emoji_name,
         EMOJI_MEDIA_TYPES,
     },
+    errors::ValidationError,
     posts::{
         content_allowed_classes,
         ATTACHMENT_LIMIT,

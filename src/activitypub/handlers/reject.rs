@@ -17,7 +17,7 @@ use crate::activitypub::{
     identifiers::parse_local_object_id,
     vocabulary::FOLLOW,
 };
-use crate::errors::ValidationError;
+use crate::validators::errors::ValidationError;
 
 use super::HandlerResult;
 

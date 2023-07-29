@@ -27,7 +27,7 @@ use crate::activitypub::{
     identifiers::parse_local_actor_id,
     vocabulary::{ANNOUNCE, FOLLOW, LIKE},
 };
-use crate::errors::ValidationError;
+use crate::validators::errors::ValidationError;
 
 use super::HandlerResult;
 

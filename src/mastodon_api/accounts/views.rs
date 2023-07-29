@@ -95,7 +95,6 @@ use crate::activitypub::{
         create_identity_proof_fep_c390,
     },
 };
-use crate::errors::ValidationError;
 use crate::ethereum::{
     contracts::ContractSet,
     eip4361::verify_eip4361_signature,
@@ -111,6 +110,7 @@ use crate::mastodon_api::{
 };
 use crate::monero::caip122::verify_monero_caip122_signature;
 use crate::validators::{
+    errors::ValidationError,
     profiles::clean_profile_update_data,
     users::validate_local_username,
 };

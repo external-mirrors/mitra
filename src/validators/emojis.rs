@@ -1,6 +1,6 @@
 use regex::Regex;
 
-use crate::errors::ValidationError;
+use super::errors::ValidationError;
 
 const EMOJI_NAME_RE: &str = r"^[a-zA-Z0-9._-]+$";
 const EMOJI_NAME_SIZE_MAX: usize = 100; // database column limit

@@ -27,8 +27,8 @@ use crate::activitypub::{
     fetcher::helpers::get_or_import_profile_by_actor_address,
     HandlerError,
 };
-use crate::errors::ValidationError;
 use crate::media::MediaStorage;
+use crate::validators::errors::ValidationError;
 use crate::webfinger::types::ActorAddress;
 
 fn export_profiles_to_csv(

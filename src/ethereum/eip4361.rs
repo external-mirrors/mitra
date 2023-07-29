@@ -8,7 +8,8 @@ use mitra_utils::{
     caip2::ChainId,
 };
 
-use crate::errors::ValidationError;
+use crate::validators::errors::ValidationError;
+
 use super::utils::address_to_string;
 
 pub struct Eip4361SessionData {

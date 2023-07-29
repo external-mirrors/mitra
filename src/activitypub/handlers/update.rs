@@ -33,8 +33,8 @@ use crate::activitypub::{
     types::Object,
     vocabulary::{ARTICLE, NOTE, PERSON},
 };
-use crate::errors::ValidationError;
 use crate::media::MediaStorage;
+use crate::validators::errors::ValidationError;
 
 use super::HandlerResult;
 

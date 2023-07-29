@@ -51,7 +51,7 @@ use crate::activitypub::{
         VERIFIABLE_IDENTITY_STATEMENT,
     },
 };
-use crate::errors::ValidationError;
+use crate::validators::errors::ValidationError;
 use crate::web_client::urls::get_subscription_page_url;
 
 use super::types::ActorAttachment;

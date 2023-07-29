@@ -7,8 +7,7 @@ use mitra_models::profiles::types::{
 };
 use mitra_utils::html::{clean_html, clean_html_strict};
 
-use crate::errors::ValidationError;
-
+use super::errors::ValidationError;
 use super::posts::EMOJI_LIMIT;
 
 const USERNAME_RE: &str = r"^[a-zA-Z0-9_\.-]+$";

@@ -5,7 +5,7 @@ use mitra_models::{
 };
 use mitra_utils::caip19::AssetType;
 
-use crate::errors::ValidationError;
+use crate::validators::errors::ValidationError;
 
 use super::constants::{
     ACTION_DELIVER_SERVICE,

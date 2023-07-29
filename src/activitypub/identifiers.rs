@@ -13,7 +13,7 @@ use mitra_utils::{
     urls::{get_hostname, url_encode},
 };
 
-use crate::errors::ValidationError;
+use crate::validators::errors::ValidationError;
 
 pub enum LocalActorCollection {
     Inbox,

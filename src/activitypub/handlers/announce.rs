@@ -17,8 +17,9 @@ use crate::activitypub::{
     identifiers::parse_local_object_id,
     vocabulary::{ADD, CREATE, DELETE, DISLIKE, LIKE, NOTE, REMOVE, UNDO, UPDATE},
 };
-use crate::errors::ValidationError;
 use crate::media::MediaStorage;
+use crate::validators::errors::ValidationError;
+
 use super::HandlerResult;
 
 #[derive(Deserialize)]

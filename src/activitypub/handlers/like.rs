@@ -15,8 +15,8 @@ use crate::activitypub::{
     },
     vocabulary::NOTE,
 };
-use crate::errors::ValidationError;
 use crate::media::MediaStorage;
+use crate::validators::errors::ValidationError;
 
 use super::HandlerResult;
 

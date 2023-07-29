@@ -45,8 +45,8 @@ use crate::activitypub::{
     types::deserialize_value_array,
     vocabulary::{IMAGE, PERSON, SERVICE},
 };
-use crate::errors::ValidationError;
 use crate::media::get_file_url;
+use crate::validators::errors::ValidationError;
 use crate::webfinger::types::ActorAddress;
 
 use super::attachments::{

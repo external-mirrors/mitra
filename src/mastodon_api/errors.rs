@@ -8,7 +8,7 @@ use serde::Serialize;
 
 use mitra_models::database::DatabaseError;
 
-use crate::errors::ValidationError;
+use crate::validators::errors::ValidationError;
 
 #[derive(thiserror::Error, Debug)]
 pub enum MastodonError {

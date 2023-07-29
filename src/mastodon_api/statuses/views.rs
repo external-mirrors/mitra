@@ -47,7 +47,6 @@ use crate::activitypub::{
     },
     identifiers::local_object_id,
 };
-use crate::errors::ValidationError;
 use crate::http::{get_request_base_url, FormOrJson};
 use crate::ipfs::{
     store as ipfs_store,
@@ -58,12 +57,15 @@ use crate::mastodon_api::{
     oauth::auth::get_current_user,
 };
 use crate::media::{read_file, remove_media};
-use crate::validators::posts::{
-    clean_content,
-    ATTACHMENT_LIMIT,
-    EMOJI_LIMIT,
-    MENTION_LIMIT,
-    LINK_LIMIT,
+use crate::validators::{
+    errors::ValidationError,
+    posts::{
+        clean_content,
+        ATTACHMENT_LIMIT,
+        EMOJI_LIMIT,
+        MENTION_LIMIT,
+        LINK_LIMIT,
+    },
 };
 use super::helpers::{
     build_status,

@@ -18,8 +18,9 @@ use crate::activitypub::{
     identifiers::parse_local_actor_id,
     vocabulary::PERSON,
 };
-use crate::errors::ValidationError;
 use crate::media::MediaStorage;
+use crate::validators::errors::ValidationError;
+
 use super::{HandlerError, HandlerResult};
 
 #[derive(Deserialize)]

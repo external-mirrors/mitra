@@ -1,6 +1,6 @@
 use mitra_utils::html::clean_html_strict;
 
-use crate::errors::ValidationError;
+use super::errors::ValidationError;
 
 pub const ATTACHMENT_LIMIT: usize = 15;
 pub const MENTION_LIMIT: usize = 50;

@@ -4,10 +4,9 @@ use serde_json::Value;
 use mitra_config::Config;
 use mitra_models::database::{DatabaseClient, DatabaseError};
 
-use crate::errors::{
-    HttpError,
-    ValidationError,
-};
+use crate::errors::HttpError;
+use crate::validators::errors::ValidationError;
+
 use super::authentication::{
     verify_signed_activity,
     verify_signed_request,

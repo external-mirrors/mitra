@@ -1,6 +1,6 @@
 use regex::Regex;
 
-use crate::errors::ValidationError;
+use super::errors::ValidationError;
 
 const HASHTAG_NAME_RE: &str = r"^\w+$";
 

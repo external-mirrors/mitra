@@ -18,7 +18,7 @@ use mitra_models::{
     users::queries::get_user_by_id,
 };
 
-use crate::errors::ValidationError;
+use crate::validators::errors::ValidationError;
 
 use super::wallet::{
     create_monero_address,

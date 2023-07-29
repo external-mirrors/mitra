@@ -24,9 +24,10 @@ use crate::activitypub::{
     receiver::{handle_activity, HandlerError},
     types::Object,
 };
-use crate::errors::ValidationError;
 use crate::media::MediaStorage;
+use crate::validators::errors::ValidationError;
 use crate::webfinger::types::ActorAddress;
+
 use super::fetchers::{
     fetch_actor,
     fetch_object,

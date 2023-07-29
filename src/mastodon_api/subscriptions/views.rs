@@ -35,7 +35,6 @@ use mitra_models::{
 use mitra_utils::currencies::Currency;
 
 use crate::activitypub::builders::update_person::prepare_update_person;
-use crate::errors::ValidationError;
 use crate::ethereum::{
     contracts::ContractSet,
     subscriptions::{
@@ -53,6 +52,7 @@ use crate::monero::{
     helpers::validate_monero_address,
     wallet::create_monero_address,
 };
+use crate::validators::errors::ValidationError;
 use super::types::{
     Invoice,
     InvoiceData,

@@ -8,9 +8,7 @@ use serde::Serialize;
 
 use mitra_models::database::DatabaseError;
 
-#[derive(thiserror::Error, Debug)]
-#[error("{0}")]
-pub struct ValidationError(pub &'static str);
+use crate::validators::errors::ValidationError;
 
 #[derive(thiserror::Error, Debug)]
 pub enum HttpError {

@@ -1,6 +1,6 @@
 use mitra_models::users::types::Role;
 
-use crate::errors::ValidationError;
+use crate::validators::errors::ValidationError;
 
 pub const ALLOWED_ROLES: [&str; 3] = ["admin", "user", "read_only_user"];
 

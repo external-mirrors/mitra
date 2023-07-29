@@ -18,8 +18,8 @@ use crate::activitypub::{
     deserialization::deserialize_into_object_id,
     vocabulary::{NOTE, PERSON},
 };
-use crate::errors::ValidationError;
 use crate::media::remove_media;
+use crate::validators::errors::ValidationError;
 
 use super::HandlerResult;
 

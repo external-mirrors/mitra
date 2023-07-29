@@ -1,7 +1,6 @@
 use regex::Regex;
 
-use crate::errors::ValidationError;
-
+use super::errors::ValidationError;
 use super::profiles::validate_username;
 
 const USERNAME_RE: &str = r"^[a-z0-9_]+$";

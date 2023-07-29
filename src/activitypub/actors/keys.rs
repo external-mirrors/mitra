@@ -30,7 +30,7 @@ use crate::activitypub::{
     identifiers::local_actor_key_id,
     vocabulary::MULTIKEY,
 };
-use crate::errors::ValidationError;
+use crate::validators::errors::ValidationError;
 
 #[derive(Deserialize, Serialize)]
 #[cfg_attr(test, derive(Default))]

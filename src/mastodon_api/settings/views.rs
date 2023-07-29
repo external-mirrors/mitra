@@ -30,7 +30,6 @@ use crate::activitypub::{
     builders::update_person::prepare_update_person,
     identifiers::profile_actor_id,
 };
-use crate::errors::ValidationError;
 use crate::http::get_request_base_url;
 use crate::mastodon_api::{
     accounts::helpers::get_aliases,
@@ -38,6 +37,7 @@ use crate::mastodon_api::{
     errors::MastodonError,
     oauth::auth::get_current_user,
 };
+use crate::validators::errors::ValidationError;
 use super::helpers::{
     export_followers,
     export_follows,

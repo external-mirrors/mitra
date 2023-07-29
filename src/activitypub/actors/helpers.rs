@@ -36,9 +36,9 @@ use crate::activitypub::{
         VERIFIABLE_IDENTITY_STATEMENT,
     },
 };
-use crate::errors::ValidationError;
 use crate::media::MediaStorage;
 use crate::validators::{
+    errors::ValidationError,
     posts::EMOJI_LIMIT,
     profiles::{
         clean_profile_create_data,

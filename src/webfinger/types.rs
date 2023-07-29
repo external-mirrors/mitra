@@ -10,7 +10,7 @@ use serde::{Serialize, Deserialize};
 
 use mitra_models::profiles::types::DbActorProfile;
 
-use crate::errors::ValidationError;
+use crate::validators::errors::ValidationError;
 
 // See also: USERNAME_RE in validators::profiles
 const ACTOR_ADDRESS_RE: &str = r"^(?P<username>[\w\.-]+)@(?P<hostname>[\w\.-]+)$";

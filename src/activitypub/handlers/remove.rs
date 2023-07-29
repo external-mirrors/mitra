@@ -20,7 +20,7 @@ use crate::activitypub::{
     identifiers::parse_local_actor_id,
     vocabulary::{NOTE, PERSON},
 };
-use crate::errors::ValidationError;
+use crate::validators::errors::ValidationError;
 
 use super::{HandlerError, HandlerResult};
 

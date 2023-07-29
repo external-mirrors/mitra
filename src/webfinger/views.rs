@@ -14,7 +14,8 @@ use crate::activitypub::{
         parse_local_actor_id,
     },
 };
-use crate::errors::{HttpError, ValidationError};
+use crate::errors::HttpError;
+use crate::validators::errors::ValidationError;
 
 use super::types::{
     ActorAddress,

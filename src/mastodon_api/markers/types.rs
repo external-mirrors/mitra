@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 
 use mitra_models::markers::types::{DbTimelineMarker, Timeline};
 
-use crate::errors::ValidationError;
+use crate::validators::errors::ValidationError;
 
 #[derive(Deserialize)]
 pub struct MarkerQueryParams {
