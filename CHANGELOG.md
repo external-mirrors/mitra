@@ -14,6 +14,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Fixed
 
 - Make `fetch-replies` command not panic if replies collection is not present.
+- Make `fetch-replies` command not panic if repiies collection doesn't contain items.
 
 ## [1.31.0] - 2023-07-26
 

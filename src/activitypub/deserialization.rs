@@ -75,6 +75,7 @@ pub fn parse_into_id_array(
     value: &Value,
 ) -> Result<Vec<String>, ValidationError> {
     let result = match value {
+        Value::Null => vec![],
         Value::String(_) | Value::Object(_) => {
             let object_id = find_object_id(value)?;
             vec![object_id]
@@ -210,6 +211,16 @@ mod tests {
         assert_eq!(
             parse_into_id_array(&value).unwrap(),
             vec!["test1".to_string(), "test2".to_string()],
+        );
+    }
+
+    #[test]
+    fn test_parse_into_id_array_with_empty() {
+        let object = json!({"key": 1});
+        let value = &object["test"];
+        assert_eq!(
+            parse_into_id_array(value).unwrap().is_empty(),
+            true,
         );
     }
 
