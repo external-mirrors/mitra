@@ -22,6 +22,17 @@ use crate::validators::errors::ValidationError;
 
 use super::HandlerResult;
 
+const FEP_1B12_ACTIVITIES: [&str; 8] = [
+    ADD,
+    CREATE,
+    DELETE,
+    DISLIKE,
+    LIKE,
+    REMOVE,
+    UNDO,
+    UPDATE,
+];
+
 #[derive(Deserialize)]
 struct Announce {
     id: String,
@@ -35,12 +46,19 @@ pub async fn handle_announce(
     db_client: &mut impl DatabaseClient,
     activity: Value,
 ) -> HandlerResult {
-    if let Some(ADD | CREATE | DELETE | DISLIKE | LIKE | REMOVE | UNDO | UPDATE) =
-        activity["object"]["type"].as_str()
-    {
-        // Ignore wrapped activities from Lemmy
-        // https://codeberg.org/fediverse/fep/src/branch/main/fep/1b12/fep-1b12.md
-        return Ok(None);
+    match activity["object"]["type"].as_str() {
+        Some(object_type) if FEP_1B12_ACTIVITIES.contains(&object_type) => {
+            // Ignore wrapped activities from Lemmy
+            // https://codeberg.org/fediverse/fep/src/branch/main/fep/1b12/fep-1b12.md
+            if object_type == DELETE {
+                log::info!(
+                    "ignoring announced Delete activity: {}",
+                    activity["object"],
+                );
+            };
+            return Ok(None);
+        },
+        _ => (),
     };
     let activity: Announce = serde_json::from_value(activity)
         .map_err(|_| ValidationError("unexpected activity structure"))?;
