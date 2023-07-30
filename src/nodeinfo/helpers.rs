@@ -1,6 +1,6 @@
 use mitra_models::{
     database::{DatabaseClient, DatabaseError},
-    posts::queries::get_local_post_count,
+    posts::queries::get_post_count,
     users::queries::{get_active_user_count, get_user_count},
 };
 use mitra_utils::datetime::days_before_now;
@@ -19,7 +19,7 @@ pub async fn get_usage(db_client: &impl DatabaseClient)
         db_client,
         days_before_now(30),
     ).await?;
-    let post_count = get_local_post_count(db_client).await?;
+    let post_count = get_post_count(db_client, true).await?;
     let usage = Usage {
         users: Users {
             total: user_count,

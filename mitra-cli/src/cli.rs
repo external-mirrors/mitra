@@ -61,7 +61,12 @@ use mitra_models::{
     emojis::types::EmojiImage,
     invoices::queries::{get_invoice_by_address, get_invoice_by_id},
     oauth::queries::delete_oauth_tokens,
-    posts::queries::{delete_post, find_extraneous_posts, get_post_by_id},
+    posts::queries::{
+        delete_post,
+        find_extraneous_posts,
+        get_post_by_id,
+        get_post_count,
+    },
     profiles::helpers::get_profile_by_id_or_acct,
     profiles::queries::{
         delete_profile,
@@ -948,11 +953,13 @@ impl InstanceReport {
             get_job_count(db_client, JobType::IncomingActivity).await?;
         let outgoing_activities =
             get_job_count(db_client, JobType::OutgoingActivity).await?;
-        println!("users: {}", users);
+        let posts = get_post_count(db_client, false).await?;
+        println!("local users: {}", users);
         println!("active subscriptions: {}", active_subscriptions);
         println!("expired subscriptions: {}", expired_subscriptions);
         println!("incoming activities: {}", incoming_activities);
         println!("outgoing activities: {}", outgoing_activities);
+        println!("total posts: {}", posts);
         Ok(())
     }
 }

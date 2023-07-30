@@ -4,7 +4,7 @@ use mitra_config::Config;
 use mitra_models::{
     database::{get_database_client, DbPool},
     instances::queries::{get_peers, get_peer_count},
-    posts::queries::get_local_post_count,
+    posts::queries::get_post_count,
     users::queries::get_user_count,
 };
 
@@ -22,7 +22,7 @@ async fn instance_view(
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &**get_database_client(&db_pool).await?;
     let user_count = get_user_count(db_client).await?;
-    let post_count = get_local_post_count(db_client).await?;
+    let post_count = get_post_count(db_client, true).await?;
     let peer_count = get_peer_count(db_client).await?;
     let instance = InstanceInfo::create(
         config.as_ref(),
