@@ -50,9 +50,10 @@ use crate::media::MediaStorage;
 use super::attachments::{
     parse_identity_proof,
     parse_identity_proof_fep_c390,
+    parse_link,
     parse_metadata_field,
-    parse_payment_option,
     parse_property_value,
+    LinkAttachment,
 };
 
 async fn fetch_actor_images(
@@ -175,13 +176,17 @@ fn parse_attachments(actor: &Actor) -> (
                 };
             },
             LINK => {
-                match parse_payment_option(attachment_value) {
-                    Ok((payment_link, is_proposal)) => {
+                match parse_link(attachment_value) {
+                    Ok(LinkAttachment::PaymentLink(payment_link)) => {
+                        let option = PaymentOption::Link(payment_link);
+                        payment_options.push(option);
+                    },
+                    Ok(LinkAttachment::Proposal(payment_link)) => {
                         // Only one proposal is allowed
                         // (uniqueness check on payment type is performed in
                         // profiles::checks::check_payment_options).
                         // The remaining proposals are treated as payment links.
-                        if is_proposal && proposals.is_empty() {
+                        if proposals.is_empty() {
                             proposals.push(payment_link.href);
                         } else {
                             let option = PaymentOption::Link(payment_link);
@@ -215,7 +220,7 @@ fn parse_attachments(actor: &Actor) -> (
     identity_proofs.sort_by_key(|item| item.issuer.to_string());
     identity_proofs.dedup_by_key(|item| item.issuer.to_string());
     // Remove duplicate metadata fields
-    // FEP-8b2a fields have higher priority
+    // FEP-fb2a fields have higher priority
     for field in property_values {
         if extra_fields.iter().any(|item| item.name == field.name) {
             continue;

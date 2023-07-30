@@ -271,11 +271,17 @@ pub fn attach_payment_option(
     }
 }
 
-pub fn parse_payment_option(
+pub enum LinkAttachment {
+    PaymentLink(DbPaymentLink),
+    Proposal(DbPaymentLink),
+}
+
+/// https://codeberg.org/fediverse/fep/src/branch/main/fep/fb2a/fep-fb2a.md
+pub fn parse_link(
     attachment: &JsonValue,
-) -> Result<(DbPaymentLink, bool), ValidationError> {
+) -> Result<LinkAttachment, ValidationError> {
     #[derive(Deserialize)]
-    struct PaymentLink {
+    struct Link {
         name: String,
         href: String,
         #[serde(
@@ -285,20 +291,24 @@ pub fn parse_payment_option(
         rel: Vec<String>,
     }
 
-    let payment_link: PaymentLink = serde_json::from_value(attachment.clone())
+    let link: Link = serde_json::from_value(attachment.clone())
         .map_err(|_| ValidationError("invalid link attachment"))?;
-    if payment_link.name != PAYMENT_LINK_NAME_ETHEREUM &&
-        payment_link.name != PAYMENT_LINK_NAME_MONERO &&
-        !payment_link.rel.contains(&PAYMENT_LINK_RELATION_TYPE.to_string())
+    if link.name != PAYMENT_LINK_NAME_ETHEREUM &&
+        link.name != PAYMENT_LINK_NAME_MONERO &&
+        !link.rel.contains(&PAYMENT_LINK_RELATION_TYPE.to_string())
     {
         return Err(ValidationError("attachment is not a payment link"));
     };
     let db_payment_link = DbPaymentLink {
-        name: payment_link.name,
-        href: payment_link.href,
+        name: link.name,
+        href: link.href,
     };
-    let is_proposal = payment_link.rel.contains(&valueflows_proposal_rel());
-    Ok((db_payment_link, is_proposal))
+    let result = if link.rel.contains(&valueflows_proposal_rel()) {
+        LinkAttachment::Proposal(db_payment_link)
+    } else {
+        LinkAttachment::PaymentLink(db_payment_link)
+    };
+    Ok(result)
 }
 
 pub fn attach_extra_field(
@@ -449,10 +459,13 @@ mod tests {
         assert_eq!(attachment.rel[1], "https://w3id.org/valueflows/Proposal");
 
         let attachment_value = serde_json::to_value(attachment).unwrap();
-        let (payment_link, is_proposal) = parse_payment_option(&attachment_value).unwrap();
+        let attachment = parse_link(&attachment_value).unwrap();
+        let payment_link = match attachment {
+            LinkAttachment::Proposal(payment_link) => payment_link,
+            _ => panic!("not a proposal"),
+        };
         assert_eq!(payment_link.name, "MoneroSubscription");
         assert_eq!(payment_link.href, subscription_page_url);
-        assert_eq!(is_proposal, true);
     }
 
     #[test]
@@ -461,7 +474,7 @@ mod tests {
             "name": "Test",
             "href": "https://test.example",
         });
-        let error = parse_payment_option(&attachment_value).err().unwrap();
+        let error = parse_link(&attachment_value).err().unwrap();
         assert!(matches!(
             error,
             ValidationError("attachment is not a payment link"),
