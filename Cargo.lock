@@ -1912,7 +1912,7 @@ dependencies = [
 
 [[package]]
 name = "mitra"
-version = "1.31.0"
+version = "1.31.1"
 dependencies = [
  "actix-cors",
  "actix-files",
@@ -1948,7 +1948,7 @@ dependencies = [
 
 [[package]]
 name = "mitra-cli"
-version = "1.31.0"
+version = "1.31.1"
 dependencies = [
  "anyhow",
  "clap",
@@ -1963,7 +1963,7 @@ dependencies = [
 
 [[package]]
 name = "mitra-config"
-version = "1.31.0"
+version = "1.31.1"
 dependencies = [
  "dotenv",
  "log",
@@ -1977,7 +1977,7 @@ dependencies = [
 
 [[package]]
 name = "mitra-json-signatures"
-version = "1.31.0"
+version = "1.31.1"
 dependencies = [
  "chrono",
  "mitra-utils",
@@ -1990,7 +1990,7 @@ dependencies = [
 
 [[package]]
 name = "mitra-models"
-version = "1.31.0"
+version = "1.31.1"
 dependencies = [
  "chrono",
  "deadpool",
@@ -2016,7 +2016,7 @@ dependencies = [
 
 [[package]]
 name = "mitra-utils"
-version = "1.31.0"
+version = "1.31.1"
 dependencies = [
  "ammonia",
  "base64 0.13.0",
