@@ -1,6 +1,7 @@
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
 
 use actix_web::http::Method;
+use futures::future::join_all;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -20,7 +21,10 @@ use mitra_models::{
     profiles::types::{DbActor, PublicKeyType},
     users::types::User,
 };
-use mitra_utils::crypto_rsa::RsaPrivateKey;
+use mitra_utils::{
+    crypto_rsa::RsaPrivateKey,
+    urls::get_hostname,
+};
 
 use crate::http_signatures::create::{
     create_http_signature,
@@ -139,6 +143,8 @@ impl Recipient {
     }
 }
 
+const DELIVERY_BATCH_SIZE: usize = 5;
+
 async fn deliver_activity_worker(
     instance: Instance,
     sender: User,
@@ -176,24 +182,58 @@ async fn deliver_activity_worker(
     };
     let activity_json = serde_json::to_string(&activity_signed)?;
 
-    for recipient in recipients.iter_mut() {
+    // Create batches
+    let mut batches: Vec<HashMap<String, usize>> = vec![];
+    'recp_loop: for (index, recipient) in recipients.iter().enumerate() {
         if recipient.is_finished() {
             continue;
         };
-        if let Err(error) = send_activity(
-            &instance,
-            &actor_key,
-            &actor_key_id,
-            &activity_json,
-            &recipient.inbox,
-        ).await {
-            log::warn!(
-                "failed to deliver activity to {}: {}",
-                recipient.inbox,
-                error,
-            );
-        } else {
-            recipient.is_delivered = true;
+        let instance = get_hostname(&recipient.inbox)?;
+        for batch in batches.iter_mut() {
+            if batch.len() == DELIVERY_BATCH_SIZE {
+                // Batch is full
+                continue;
+            };
+            if batch.contains_key(&instance) {
+                // Should contain deliveries for different instances
+                continue;
+            };
+            batch.insert(instance, index);
+            continue 'recp_loop;
+        };
+        let batch = HashMap::from([(instance, index)]);
+        batches.push(batch)
+    };
+
+    for batch in batches {
+        // Deliver activities concurrently
+        let mut futures = vec![];
+        for index in batch.values() {
+            let recipient = recipients.get(*index)
+                .expect("index should not be out of bounds");
+            futures.push(async {
+                let result = send_activity(
+                    &instance,
+                    &actor_key,
+                    &actor_key_id,
+                    &activity_json,
+                    &recipient.inbox,
+                ).await;
+                (*index, result)
+            });
+        };
+        for (index, result) in join_all(futures).await {
+            let recipient = recipients.get_mut(index)
+                .expect("index should not be out of bounds");
+            if let Err(error) = result {
+                log::warn!(
+                    "failed to deliver activity to {}: {}",
+                    recipient.inbox,
+                    error,
+                );
+            } else {
+                recipient.is_delivered = true;
+            };
         };
     };
     Ok(())

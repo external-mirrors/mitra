@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Added
 
 - Delete repost when receiving `Announce(Delete)` activity from a group.
+- Deliver activities to multiple inboxes in parallel.
 
 ### Changed
 

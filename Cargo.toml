@@ -50,6 +50,8 @@ hex = { version = "0.4.3", features = ["serde"] }
 # Used for logging
 log = "0.4.14"
 env_logger = { version = "0.9.0", default-features = false }
+# Used for working with futures
+futures = "0.3.13"
 # Used to query Monero node
 monero-rpc = { git = "https://github.com/monero-rs/monero-rpc-rs.git", rev = "37169b9b42bc2ca9c4a39229811c8f89624fc275", features = ["rpc_authentication"] }
 # Used to determine the number of CPUs on the system
