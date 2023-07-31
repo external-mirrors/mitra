@@ -151,6 +151,7 @@ pub fn build_default_context() -> Context {
         W3ID_SECURITY_CONTEXT,
         W3ID_DATA_INTEGRITY_CONTEXT,
         HashMap::from([
+            ("Hashtag", "as:Hashtag"),
             ("sensitive", "as:sensitive"),
             ("proofValue", "sec:proofValue"),
             ("proofPurpose", "sec:proofPurpose"),
