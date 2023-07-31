@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Changed
 
 - Don't retry delivery if recipient had prior unreachable status.
+- Don't re-create activity when processing user-signed `Update()` activity.
 
 ### Fixed
 
@@ -29,7 +30,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Fixed
 
 - Make `fetch-replies` command not panic if replies collection is not present.
-- Make `fetch-replies` command not panic if repiies collection doesn't contain items.
+- Make `fetch-replies` command not panic if replies collection doesn't contain items.
 - Optimize database query used in `DeleteExtraneousPosts` task.
 
 ## [1.31.0] - 2023-07-26

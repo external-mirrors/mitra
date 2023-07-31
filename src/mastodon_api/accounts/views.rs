@@ -72,7 +72,6 @@ use mitra_utils::{
     currencies::Currency,
     did::Did,
     did_pkh::DidPkh,
-    id::generate_ulid,
     minisign::{
         minisign_key_to_did,
         parse_minisign_signature_file,
@@ -86,10 +85,12 @@ use crate::activitypub::{
         undo_follow::prepare_undo_follow,
         update_person::{
             build_update_person,
+            forward_update_person,
             prepare_update_person,
+            validate_update_person_c2s,
         },
     },
-    identifiers::{local_actor_id, parse_local_object_id},
+    identifiers::local_actor_id,
     identity::{
         create_identity_claim_fep_c390,
         create_identity_proof_fep_c390,
@@ -332,11 +333,10 @@ async fn get_unsigned_update(
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &**get_database_client(&db_pool).await?;
     let current_user = get_current_user(db_client, auth.token()).await?;
-    let internal_activity_id = generate_ulid();
     let activity = build_update_person(
         &config.instance_url(),
         &current_user,
-        Some(internal_activity_id),
+        None,
     ).map_err(|_| MastodonError::InternalError)?;
     let activity_value = serde_json::to_value(activity)
         .map_err(|_| MastodonError::InternalError)?;
@@ -357,6 +357,7 @@ async fn send_signed_activity(
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &mut **get_database_client(&db_pool).await?;
     let current_user = get_current_user(db_client, auth.token()).await?;
+    let instance = config.instance();
     let signer = data.signer.parse::<Did>()
         .map_err(|_| ValidationError("invalid DID"))?;
     if !current_user.profile.identity_proofs.any(&signer) {
@@ -364,17 +365,19 @@ async fn send_signed_activity(
     };
     let mut outgoing_activity = match &data.params {
         ActivityParams::Update => {
-            let activity_id = data.value["id"].as_str()
-                .ok_or(ValidationError("invalid activity"))?;
-            let internal_activity_id = parse_local_object_id(
-                &config.instance_url(),
-                activity_id,
-            ).map_err(|_| ValidationError("invalid activity"))?;
-            prepare_update_person(
+            let user = validate_update_person_c2s(
                 db_client,
-                &config.instance(),
-                &current_user,
-                Some(internal_activity_id),
+                &instance,
+                &data.value,
+            ).await.map_err(|_| ValidationError("invalid activity"))?;
+            if !user.profile.identity_proofs.any(&signer) {
+                return Err(ValidationError("authentication error").into());
+            };
+            forward_update_person(
+                db_client,
+                &instance,
+                &user,
+                &data.value,
             ).await?
         },
     };
@@ -410,7 +413,7 @@ async fn send_signed_activity(
 
     let account = Account::from_user(
         &get_request_base_url(connection_info),
-        &config.instance_url(),
+        &instance.url(),
         current_user,
     );
     Ok(HttpResponse::Ok().json(account))
