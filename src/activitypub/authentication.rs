@@ -111,7 +111,7 @@ async fn get_signer(
         instance.fetcher_timeout = AUTHENTICATION_FETCHER_TIMEOUT;
         match get_or_import_profile_by_actor_id(
             db_client,
-            &config.instance(),
+            &instance,
             &MediaStorage::from(config),
             signer_id,
         ).await {
