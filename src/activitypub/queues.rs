@@ -1,3 +1,5 @@
+use std::time::Instant;
+
 use chrono::{Duration, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -198,6 +200,7 @@ pub async fn process_queued_outgoing_activities(
             recipients: job_data.recipients,
         };
 
+        let start_time = Instant::now();
         let mut recipients = match outgoing_activity.deliver().await {
             Ok(recipients) => recipients,
             Err(error) => {
@@ -208,7 +211,8 @@ pub async fn process_queued_outgoing_activities(
             },
         };
         log::info!(
-            "delivery job: {} delivered, {} errors, {} unreachable (attempt #{})",
+            "delivery job: {:.2?}, {} delivered, {} errors, {} skipped (attempt #{})",
+            start_time.elapsed(),
             recipients.iter().filter(|item| item.is_delivered).count(),
             recipients.iter()
                 .filter(|item| !item.is_delivered && !item.is_unreachable)
