@@ -1211,24 +1211,23 @@ pub async fn get_post_author(
     Ok(author)
 }
 
-/// Finds reposts of given posts and returns their IDs
-pub async fn find_reposts_by_user(
+/// Finds repost of a given post
+pub async fn get_repost_by_author(
     db_client: &impl DatabaseClient,
-    user_id: &Uuid,
-    posts_ids: &[Uuid],
-) -> Result<Vec<Uuid>, DatabaseError> {
-    let rows = db_client.query(
+    post_id: &Uuid,
+    profile_id: &Uuid,
+) -> Result<Uuid, DatabaseError> {
+    let maybe_row = db_client.query_opt(
         "
         SELECT post.id
         FROM post
-        WHERE post.author_id = $1 AND post.repost_of_id = ANY($2)
+        WHERE post.repost_of_id = $1 AND post.author_id = $2
         ",
-        &[&user_id, &posts_ids],
+        &[&post_id, &profile_id],
     ).await?;
-    let reposts: Vec<Uuid> = rows.iter()
-        .map(|row| row.try_get("id"))
-        .collect::<Result<_, _>>()?;
-    Ok(reposts)
+    let row = maybe_row.ok_or(DatabaseError::NotFound("post"))?;
+    let post_id = row.try_get("id")?;
+    Ok(post_id)
 }
 
 /// Finds items reposted by user among given posts

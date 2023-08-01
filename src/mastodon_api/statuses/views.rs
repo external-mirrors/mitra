@@ -20,8 +20,8 @@ use mitra_models::{
         create_post,
         delete_post,
         get_post_by_id,
+        get_repost_by_author,
         get_thread,
-        find_reposts_by_user,
         set_pinned_flag,
         set_post_ipfs_cid,
     },
@@ -538,14 +538,13 @@ async fn unreblog(
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &mut **get_database_client(&db_pool).await?;
     let current_user = get_current_user(db_client, auth.token()).await?;
-    let reposts = find_reposts_by_user(
+    let repost_id = get_repost_by_author(
         db_client,
+        &status_id,
         &current_user.id,
-        &[*status_id],
     ).await?;
-    let repost_id = reposts.first().ok_or(MastodonError::NotFoundError("post"))?;
     // Ignore returned data because reposts don't have attached files
-    delete_post(db_client, repost_id).await?;
+    delete_post(db_client, &repost_id).await?;
     let post = get_post_by_id(db_client, &status_id).await?;
 
     // Federate
@@ -554,7 +553,7 @@ async fn unreblog(
         &config.instance(),
         &current_user,
         &post,
-        repost_id,
+        &repost_id,
     ).await?.enqueue(db_client).await?;
 
     let status = build_status(
