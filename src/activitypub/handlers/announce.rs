@@ -15,19 +15,20 @@ use crate::activitypub::{
     deserialization::deserialize_into_object_id,
     fetcher::helpers::{get_or_import_profile_by_actor_id, import_post},
     identifiers::parse_local_object_id,
-    vocabulary::{ADD, CREATE, DELETE, DISLIKE, LIKE, NOTE, REMOVE, UNDO, UPDATE},
+    vocabulary::*,
 };
 use crate::media::MediaStorage;
 use crate::validators::errors::ValidationError;
 
 use super::HandlerResult;
 
-const FEP_1B12_ACTIVITIES: [&str; 8] = [
+const FEP_1B12_ACTIVITIES: [&str; 9] = [
     ADD,
     CREATE,
     DELETE,
     DISLIKE,
     LIKE,
+    LOCK,
     REMOVE,
     UNDO,
     UPDATE,

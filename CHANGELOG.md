@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Don't retry delivery if recipient had prior unreachable status.
 - Don't re-create activity when processing user-signed `Update()` activity.
+- Ignore `Announce(Lock)` activities from Lemmy.
 
 ### Fixed
 
