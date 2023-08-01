@@ -1,14 +1,17 @@
 use serde::Deserialize;
-use serde_json::Value;
+use serde_json::{Value as JsonValue};
 
 use mitra_config::Config;
 use mitra_models::{
     database::{DatabaseClient, DatabaseError},
     posts::queries::{
         create_post,
+        delete_post,
         get_post_by_remote_object_id,
+        get_repost_by_author,
     },
     posts::types::PostCreateData,
+    profiles::queries::get_profile_by_remote_actor_id,
 };
 
 use crate::activitypub::{
@@ -45,19 +48,11 @@ struct Announce {
 pub async fn handle_announce(
     config: &Config,
     db_client: &mut impl DatabaseClient,
-    activity: Value,
+    activity: JsonValue,
 ) -> HandlerResult {
     match activity["object"]["type"].as_str() {
         Some(object_type) if FEP_1B12_ACTIVITIES.contains(&object_type) => {
-            // Ignore wrapped activities from Lemmy
-            // https://codeberg.org/fediverse/fep/src/branch/main/fep/1b12/fep-1b12.md
-            if object_type == DELETE {
-                log::info!(
-                    "ignoring announced Delete activity: {}",
-                    activity["object"],
-                );
-            };
-            return Ok(None);
+            return handle_fep_1b12_announce(db_client, activity).await;
         },
         _ => (),
     };
@@ -111,6 +106,54 @@ pub async fn handle_announce(
         },
         // May return "post not found" error if post if not public
         Err(other_error) => Err(other_error.into()),
+    }
+}
+
+/// Wrapped activities from Lemmy
+/// https://codeberg.org/fediverse/fep/src/branch/main/fep/1b12/fep-1b12.md
+#[derive(Deserialize)]
+struct GroupAnnounce {
+    actor: String,
+    object: JsonValue,
+}
+
+async fn handle_fep_1b12_announce(
+    db_client: &mut impl DatabaseClient,
+    activity: JsonValue,
+) -> HandlerResult {
+    let GroupAnnounce { actor: group_id, object: activity } =
+        serde_json::from_value(activity)
+            .map_err(|_| ValidationError("unexpected activity structure"))?;
+    let activity_type = activity["type"].as_str()
+        .ok_or(ValidationError("unexpected activity structure"))?;
+    if activity_type == DELETE {
+        let group = get_profile_by_remote_actor_id(
+            db_client,
+            &group_id,
+        ).await?;
+        let object_id = activity["object"].as_str()
+            .ok_or(ValidationError("unexpected activity structure"))?;
+        let post_id = match get_post_by_remote_object_id(
+            db_client,
+            object_id,
+        ).await {
+            Ok(post) => post.id,
+            // Ignore Announce(Delete) if post is not found
+            Err(DatabaseError::NotFound(_)) => return Ok(None),
+            Err(other_error) => return Err(other_error.into()),
+        };
+        match get_repost_by_author(db_client, &post_id, &group.id).await {
+            Ok(repost_id) => {
+                delete_post(db_client, &repost_id).await?;
+            },
+            // Ignore Announce(Delete) if repost is not found
+            Err(DatabaseError::NotFound(_)) => return Ok(None),
+            Err(other_error) => return Err(other_error.into()),
+        };
+        Ok(Some(DELETE))
+    } else {
+        // Ignore other activities
+        Ok(None)
     }
 }
 

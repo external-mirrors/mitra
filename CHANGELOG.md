@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+
+- Delete repost when receiving `Announce(Delete)` activity from a group.
+
 ### Changed
 
 - Don't retry delivery if recipient had prior unreachable status.
