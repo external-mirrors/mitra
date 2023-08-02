@@ -1,5 +1,3 @@
-use std::str::FromStr;
-
 use monero_rpc::{
     HashString,
     RpcAuthentication,
@@ -18,6 +16,8 @@ use monero_rpc::monero::{
 
 use mitra_config::MoneroConfig;
 use mitra_models::database::DatabaseError;
+
+use super::utils::parse_monero_address;
 
 #[derive(thiserror::Error, Debug)]
 pub enum MoneroError {
@@ -205,7 +205,7 @@ pub async fn verify_monero_signature(
     message: &str,
     signature: &str,
 ) -> Result<(), MoneroError> {
-    let address = Address::from_str(address)?;
+    let address = parse_monero_address(address)?;
     let wallet_client = open_monero_wallet(config).await?;
     let is_valid = wallet_client.verify(
         message.to_string(),

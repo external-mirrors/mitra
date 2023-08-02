@@ -5,7 +5,6 @@ use chrono::{DateTime, Utc};
 use monero_rpc::monero::{
     network::Network,
     util::address::Error as AddressError,
-    Address,
 };
 
 use mitra_config::MoneroConfig;
@@ -14,6 +13,7 @@ use mitra_utils::{
     caip2::{ChainId, MoneroNetwork},
 };
 
+use super::utils::parse_monero_address;
 use super::wallet::{verify_monero_signature, MoneroError};
 
 const PREAMBLE: &str = " wants you to sign in with your Monero account:";
@@ -186,7 +186,7 @@ pub async fn verify_monero_caip122_signature(
         message_str,
         signature,
     ).await?;
-    let address = Address::from_str(&message.address)?;
+    let address = parse_monero_address(&message.address)?;
     let network = match address.network {
         Network::Mainnet => MoneroNetwork::Mainnet,
         Network::Stagenet => MoneroNetwork::Stagenet,

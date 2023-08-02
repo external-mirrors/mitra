@@ -49,7 +49,7 @@ use crate::mastodon_api::{
     oauth::auth::get_current_user,
 };
 use crate::monero::{
-    helpers::validate_monero_address,
+    utils::validate_monero_address,
     wallet::create_monero_address,
 };
 use crate::validators::errors::ValidationError;
@@ -153,7 +153,8 @@ pub async fn register_subscription_option(
             if price == 0 {
                 return Err(ValidationError("price must be greater than 0").into());
             };
-            validate_monero_address(&payout_address)?;
+            validate_monero_address(&payout_address)
+                .map_err(|_| ValidationError("invalid monero address"))?;
             let payment_option = PaymentOption::monero_subscription(
                 chain_id,
                 price,

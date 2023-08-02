@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use std::str::FromStr;
 
 use monero_rpc::TransferType;
 use monero_rpc::monero::{Address, Amount};
@@ -18,21 +17,12 @@ use mitra_models::{
     users::queries::get_user_by_id,
 };
 
-use crate::validators::errors::ValidationError;
-
+use super::utils::parse_monero_address;
 use super::wallet::{
     create_monero_address,
     open_monero_wallet,
     MoneroError,
 };
-
-pub fn validate_monero_address(address: &str)
-    -> Result<(), ValidationError>
-{
-    Address::from_str(address)
-        .map_err(|_| ValidationError("invalid monero address"))?;
-    Ok(())
-}
 
 pub async fn reopen_invoice(
     config: &MoneroConfig,
@@ -46,7 +36,7 @@ pub async fn reopen_invoice(
         return Err(MoneroError::OtherError("invoice is already open"));
     };
     let wallet_client = open_monero_wallet(config).await?;
-    let address = Address::from_str(&invoice.payment_address)?;
+    let address = parse_monero_address(&invoice.payment_address)?;
     let address_index = wallet_client.get_address_index(address).await?;
     if address_index.major != config.account_index {
         // Configuration has changed

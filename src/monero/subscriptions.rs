@@ -1,8 +1,5 @@
-use std::str::FromStr;
-
 use chrono::{Duration, Utc};
 use monero_rpc::{
-    monero::{Address, Amount},
     GetTransfersCategory,
     TransferType,
 };
@@ -29,6 +26,7 @@ use mitra_models::{
 use crate::ethereum::subscriptions::send_subscription_notifications;
 
 use super::helpers::{get_active_addresses, reopen_invoice};
+use super::utils::parse_monero_address;
 use super::wallet::{
     get_single_item,
     get_subaddress_balance,
@@ -65,7 +63,7 @@ pub async fn check_monero_subscriptions(
             ).await?;
             continue;
         };
-        let address = Address::from_str(&invoice.payment_address)?;
+        let address = parse_monero_address(&invoice.payment_address)?;
         let address_index = wallet_client.get_address_index(address).await?;
         address_waitlist.push(address_index.minor);
     };
@@ -116,7 +114,7 @@ pub async fn check_monero_subscriptions(
         InvoiceStatus::Paid,
     ).await?;
     for invoice in paid_invoices {
-        let address = Address::from_str(&invoice.payment_address)?;
+        let address = parse_monero_address(&invoice.payment_address)?;
         let address_index = wallet_client.get_address_index(address).await?;
         if address_index.major != config.account_index {
             // Re-opened after configuration change?
@@ -128,7 +126,7 @@ pub async fn check_monero_subscriptions(
             &address_index,
         ).await?;
         if balance_data.balance != balance_data.unlocked_balance ||
-            balance_data.balance == Amount::ZERO
+            balance_data.balance.as_pico() == 0
         {
             // Don't forward payment until all outputs are unlocked
             continue;
@@ -141,7 +139,7 @@ pub async fn check_monero_subscriptions(
             log::error!("subscription is not configured for user {}", recipient.id);
             continue;
         };
-        let payout_address = Address::from_str(&payment_info.payout_address)?;
+        let payout_address = parse_monero_address(&payment_info.payout_address)?;
         // Send all available balance to payout address
         let (payout_tx_id, _) = match send_monero(
             &wallet_client,
