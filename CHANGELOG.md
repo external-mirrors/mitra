@@ -16,6 +16,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Don't re-create activity when processing user-signed `Update()` activity.
 - Ignore `Announce(Lock)` activities from Lemmy.
 - Measure activity delivery time.
+- Make `fetch-replies` command work with Akkoma.
 
 ### Fixed
 

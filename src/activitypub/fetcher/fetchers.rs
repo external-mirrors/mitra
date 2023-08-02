@@ -258,6 +258,7 @@ pub async fn fetch_outbox(
     #[derive(Deserialize)]
     #[serde(rename_all = "camelCase")]
     struct CollectionPage {
+        #[serde(default)]
         ordered_items: Vec<JsonValue>,
     }
 

@@ -378,14 +378,17 @@ pub async fn import_replies(
             replies.extend(items);
         },
         value => {
-            // Mastodon
-            let self_replies = parse_into_id_array(&value["first"]["items"])?;
-            replies.extend(self_replies);
-            let next_page_url = value["first"]["next"].as_str()
-                .ok_or(ValidationError("next page doesn't exist"))?;
-            let next_page: JsonValue = fetch_object(&instance, next_page_url).await?;
-            let other_replies = parse_into_id_array(&next_page["items"])?;
-            replies.extend(other_replies);
+            // Embedded collection
+            let items = parse_into_id_array(&value["items"])?;
+            replies.extend(items);
+            // Embedded first page contains self-replies (Mastodon only)
+            let items = parse_into_id_array(&value["first"]["items"])?;
+            replies.extend(items);
+            if let Some(next_page_url) = value["first"]["next"].as_str() {
+                let next_page: JsonValue = fetch_object(&instance, next_page_url).await?;
+                let items = parse_into_id_array(&next_page["items"])?;
+                replies.extend(items);
+            };
         },
     };
     let replies: Vec<_> = replies.into_iter()
