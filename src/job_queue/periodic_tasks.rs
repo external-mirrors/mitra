@@ -22,10 +22,7 @@ use crate::activitypub::queues::{
 };
 use crate::ethereum::{
     contracts::EthereumBlockchain,
-    subscriptions::{
-        check_ethereum_subscriptions,
-        update_expired_subscriptions,
-    },
+    subscriptions::check_ethereum_subscriptions,
 };
 use crate::media::remove_media;
 use crate::monero::{
@@ -34,6 +31,7 @@ use crate::monero::{
         check_monero_subscriptions,
     },
 };
+use crate::payments::common::update_expired_subscriptions;
 
 #[cfg(feature = "ethereum-extras")]
 use crate::ethereum::nft::process_nft_events;

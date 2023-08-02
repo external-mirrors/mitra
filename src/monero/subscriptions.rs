@@ -19,7 +19,7 @@ use mitra_models::{
     users::queries::get_user_by_id,
 };
 
-use crate::ethereum::subscriptions::send_subscription_notifications;
+use crate::payments::common::send_subscription_notifications;
 
 use super::utils::parse_monero_address;
 use super::wallet::{
