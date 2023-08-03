@@ -26,13 +26,14 @@ use mitra::media::{
 };
 use mitra::monero::{
     helpers::{
-        get_active_addresses,
         get_payment_address,
         reopen_invoice,
     },
     wallet::{
-        create_monero_wallet,
         create_monero_signature,
+        create_monero_wallet,
+        get_active_addresses,
+        open_monero_wallet,
         verify_monero_signature,
     },
 };
@@ -900,7 +901,11 @@ impl ListActiveAddresses {
     ) -> Result<(), Error> {
         let monero_config = config.monero_config()
             .ok_or(anyhow!("monero configuration not found"))?;
-        let addresses = get_active_addresses(monero_config).await?;
+        let wallet_client = open_monero_wallet(monero_config).await?;
+        let addresses = get_active_addresses(
+            &wallet_client,
+            monero_config.account_index,
+        ).await?;
         for (address, amount) in addresses {
             println!("{}: {}", address, amount);
         };

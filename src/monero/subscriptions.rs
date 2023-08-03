@@ -21,9 +21,9 @@ use mitra_models::{
 
 use crate::ethereum::subscriptions::send_subscription_notifications;
 
-use super::helpers::get_active_addresses;
 use super::utils::parse_monero_address;
 use super::wallet::{
+    get_active_addresses,
     get_incoming_transfers,
     get_subaddress_balance,
     get_subaddress_by_index,
@@ -309,7 +309,11 @@ pub async fn check_closed_invoices(
     config: &MoneroConfig,
     db_pool: &DbPool,
 ) -> Result<(), MoneroError> {
-    let addresses = get_active_addresses(config).await?;
+    let wallet_client = open_monero_wallet(config).await?;
+    let addresses = get_active_addresses(
+        &wallet_client,
+        config.account_index,
+    ).await?;
     let db_client = &mut **get_database_client(db_pool).await?;
     for (address, _) in addresses {
         let invoice = match get_invoice_by_address(

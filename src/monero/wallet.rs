@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use monero_rpc::{
     GetTransfersCategory,
     GotTransfer,
@@ -174,6 +176,27 @@ pub async fn get_subaddress_balance(
     ).await?;
     let subaddress_data = get_single_item(balance_data.per_subaddress)?;
     Ok(subaddress_data)
+}
+
+pub async fn get_active_addresses(
+    wallet_client: &WalletClient,
+    account_index: u32,
+) -> Result<HashMap<Address, Amount>, MoneroError> {
+    let balance_data = wallet_client.get_balance(
+        account_index,
+        None, // all subaddresses
+    ).await?;
+    let mut addresses = HashMap::new();
+    for subaddress_data in balance_data.per_subaddress {
+        if subaddress_data.address_index == 0 {
+            // Ignore account address
+            continue;
+        };
+        if !addresses.contains_key(&subaddress_data.address) {
+            addresses.insert(subaddress_data.address, subaddress_data.balance);
+        };
+    };
+    Ok(addresses)
 }
 
 /// https://www.getmonero.org/resources/developer-guides/wallet-rpc.html#incoming_transfers

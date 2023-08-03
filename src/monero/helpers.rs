@@ -1,6 +1,3 @@
-use std::collections::HashMap;
-
-use monero_rpc::monero::{Address, Amount};
 use uuid::Uuid;
 
 use mitra_config::MoneroConfig;
@@ -61,27 +58,6 @@ pub async fn reopen_invoice(
         invoice_reopened(db_client, &invoice.id).await?;
     };
     Ok(())
-}
-
-pub async fn get_active_addresses(
-    config: &MoneroConfig,
-) -> Result<HashMap<Address, Amount>, MoneroError> {
-    let wallet_client = open_monero_wallet(config).await?;
-    let balance_data = wallet_client.get_balance(
-        config.account_index,
-        None, // all subaddresses
-    ).await?;
-    let mut addresses = HashMap::new();
-    for subaddress_data in balance_data.per_subaddress {
-        if subaddress_data.address_index == 0 {
-            // Ignore account address
-            continue;
-        };
-        if !addresses.contains_key(&subaddress_data.address) {
-            addresses.insert(subaddress_data.address, subaddress_data.balance);
-        };
-    };
-    Ok(addresses)
 }
 
 pub async fn get_payment_address(
