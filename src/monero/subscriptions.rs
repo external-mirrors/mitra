@@ -30,6 +30,7 @@ use super::utils::parse_monero_address;
 use super::wallet::{
     get_single_item,
     get_subaddress_balance,
+    get_subaddress_index,
     open_monero_wallet,
     send_monero,
     MoneroError,
@@ -63,8 +64,11 @@ pub async fn check_monero_subscriptions(
             ).await?;
             continue;
         };
-        let address = parse_monero_address(&invoice.payment_address)?;
-        let address_index = wallet_client.get_address_index(address).await?;
+        let address_index = get_subaddress_index(
+            &wallet_client,
+            config.account_index,
+            &invoice.payment_address,
+        ).await?;
         address_waitlist.push(address_index.minor);
     };
     let maybe_incoming_transfers = if !address_waitlist.is_empty() {
@@ -114,12 +118,18 @@ pub async fn check_monero_subscriptions(
         InvoiceStatus::Paid,
     ).await?;
     for invoice in paid_invoices {
-        let address = parse_monero_address(&invoice.payment_address)?;
-        let address_index = wallet_client.get_address_index(address).await?;
-        if address_index.major != config.account_index {
-            // Re-opened after configuration change?
-            log::error!("invoice {}: unexpected account index", invoice.id);
-            continue;
+        let address_index = match get_subaddress_index(
+            &wallet_client,
+            config.account_index,
+            &invoice.payment_address,
+        ).await {
+            Ok(address_index) => address_index,
+            Err(MoneroError::UnexpectedAccount) => {
+                // Re-opened after configuration change?
+                log::error!("invoice {}: unexpected account index", invoice.id);
+                continue;
+            },
+            Err(other_error) => return Err(other_error),
         };
         let balance_data = get_subaddress_balance(
             &wallet_client,

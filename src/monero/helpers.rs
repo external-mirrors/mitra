@@ -17,9 +17,9 @@ use mitra_models::{
     users::queries::get_user_by_id,
 };
 
-use super::utils::parse_monero_address;
 use super::wallet::{
     create_monero_address,
+    get_subaddress_index,
     open_monero_wallet,
     MoneroError,
 };
@@ -27,7 +27,7 @@ use super::wallet::{
 pub async fn reopen_invoice(
     config: &MoneroConfig,
     db_client: &mut impl DatabaseClient,
-    invoice: DbInvoice,
+    invoice: &DbInvoice,
 ) -> Result<(), MoneroError> {
     if invoice.chain_id != config.chain_id {
         return Err(MoneroError::OtherError("can't process invoice"));
@@ -36,12 +36,11 @@ pub async fn reopen_invoice(
         return Err(MoneroError::OtherError("invoice is already open"));
     };
     let wallet_client = open_monero_wallet(config).await?;
-    let address = parse_monero_address(&invoice.payment_address)?;
-    let address_index = wallet_client.get_address_index(address).await?;
-    if address_index.major != config.account_index {
-        // Configuration has changed
-        return Err(MoneroError::OtherError("can't process invoice"));
-    };
+    let address_index = get_subaddress_index(
+        &wallet_client,
+        config.account_index,
+        &invoice.payment_address,
+    ).await?;
 
     let transfers = wallet_client.incoming_transfers(
         TransferType::Available,

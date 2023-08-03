@@ -884,7 +884,7 @@ impl ReopenInvoice {
         reopen_invoice(
             monero_config,
             db_client,
-            invoice,
+            &invoice,
         ).await?;
         Ok(())
     }

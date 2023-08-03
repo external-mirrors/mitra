@@ -27,6 +27,9 @@ pub enum MoneroError {
     #[error("{0}")]
     WalletRpcError(&'static str),
 
+    #[error("unexpected account")]
+    UnexpectedAccount,
+
     #[error(transparent)]
     AddressError(#[from] AddressError),
 
@@ -113,6 +116,19 @@ pub async fn create_monero_address(
     // Save wallet
     wallet_client.close_wallet().await?;
     Ok(address)
+}
+
+pub async fn get_subaddress_index(
+    wallet_client: &WalletClient,
+    account_index: u32,
+    address: &str,
+) -> Result<Index, MoneroError> {
+    let address = parse_monero_address(address)?;
+    let address_index = wallet_client.get_address_index(address).await?;
+    if address_index.major != account_index {
+        return Err(MoneroError::UnexpectedAccount);
+    };
+    Ok(address_index)
 }
 
 pub fn get_single_item<T: Clone>(items: Vec<T>) -> Result<T, MoneroError> {
