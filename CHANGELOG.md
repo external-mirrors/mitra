@@ -18,6 +18,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Measure activity delivery time.
 - Make `fetch-replies` command work with Akkoma.
 
+### Removed
+
+- Remove `check-expired-invoice` alias of `reopen-invoice` command.
+
 ### Fixed
 
 - Added missing `Hashtag` type to object context.

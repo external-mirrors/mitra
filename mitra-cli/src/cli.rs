@@ -142,7 +142,6 @@ pub enum SubCommand {
     CreateMoneroWallet(CreateMoneroWallet),
     CreateMoneroSignature(CreateMoneroSignature),
     VerifyMoneroSignature(VerifyMoneroSignature),
-    #[clap(alias = "check-expired-invoice")]
     ReopenInvoice(ReopenInvoice),
     ListActiveAddresses(ListActiveAddresses),
     GetPaymentAddress(GetPaymentAddress),
