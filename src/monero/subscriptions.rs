@@ -28,8 +28,8 @@ use crate::ethereum::subscriptions::send_subscription_notifications;
 use super::helpers::get_active_addresses;
 use super::utils::parse_monero_address;
 use super::wallet::{
-    get_single_item,
     get_subaddress_balance,
+    get_subaddress_by_index,
     get_subaddress_index,
     open_monero_wallet,
     send_monero,
@@ -87,12 +87,10 @@ pub async fn check_monero_subscriptions(
             if transfer.subaddr_index.major != config.account_index {
                 return Err(MoneroError::WalletRpcError("unexpected account index"));
             };
-            let address_data = wallet_client.get_address(
-                transfer.subaddr_index.major,
-                Some(vec![transfer.subaddr_index.minor]),
+            let subaddress = get_subaddress_by_index(
+                &wallet_client,
+                &transfer.subaddr_index,
             ).await?;
-            let subaddress_data = get_single_item(address_data.addresses)?;
-            let subaddress = subaddress_data.address;
             let invoice = get_invoice_by_address(
                 db_client,
                 &config.chain_id,

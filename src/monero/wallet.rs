@@ -131,12 +131,24 @@ pub async fn get_subaddress_index(
     Ok(address_index)
 }
 
-pub fn get_single_item<T: Clone>(items: Vec<T>) -> Result<T, MoneroError> {
+fn get_single_item<T: Clone>(items: Vec<T>) -> Result<T, MoneroError> {
     if let [item] = &items[..] {
         Ok(item.clone())
     } else {
         Err(MoneroError::WalletRpcError("expected single item"))
     }
+}
+
+pub async fn get_subaddress_by_index(
+    wallet_client: &WalletClient,
+    subaddress_index: &Index,
+) -> Result<Address, MoneroError> {
+    let address_data = wallet_client.get_address(
+        subaddress_index.major,
+        Some(vec![subaddress_index.minor]),
+    ).await?;
+    let subaddress_data = get_single_item(address_data.addresses)?;
+    Ok(subaddress_data.address)
 }
 
 /// https://www.getmonero.org/resources/developer-guides/wallet-rpc.html#get_balance
