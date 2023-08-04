@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 
-use monero_rpc::TransferType;
 use monero_rpc::monero::{Address, Amount};
 use uuid::Uuid;
 
@@ -19,6 +18,7 @@ use mitra_models::{
 
 use super::wallet::{
     create_monero_address,
+    get_incoming_transfers,
     get_subaddress_index,
     open_monero_wallet,
     MoneroError,
@@ -42,20 +42,15 @@ pub async fn reopen_invoice(
         &invoice.payment_address,
     ).await?;
 
-    let transfers = wallet_client.incoming_transfers(
-        TransferType::Available,
-        Some(address_index.major),
-        Some(vec![address_index.minor]),
-    ).await?
-        .transfers
-        .unwrap_or_default();
+    let transfers = get_incoming_transfers(
+        &wallet_client,
+        address_index.major,
+        vec![address_index.minor],
+    ).await?;
     if transfers.is_empty() {
         log::info!("no incoming transfers");
     } else {
         for transfer in transfers {
-            if transfer.subaddr_index != address_index {
-                return Err(MoneroError::WalletRpcError("unexpected transfer"));
-            };
             log::info!(
                 "received payment for invoice {} ({:?}): {}",
                 invoice.id,

@@ -1,10 +1,14 @@
 use monero_rpc::{
+    GetTransfersCategory,
+    GotTransfer,
     HashString,
+    IncomingTransfer,
     RpcAuthentication,
     RpcClientBuilder,
     SubaddressBalanceData,
     SweepAllArgs,
     TransferPriority,
+    TransferType,
     WalletClient,
 };
 use monero_rpc::monero::{
@@ -19,6 +23,8 @@ use mitra_models::database::DatabaseError;
 
 use super::utils::parse_monero_address;
 
+pub type TransferCategory = GetTransfersCategory;
+
 #[derive(thiserror::Error, Debug)]
 pub enum MoneroError {
     #[error(transparent)]
@@ -30,8 +36,14 @@ pub enum MoneroError {
     #[error("unexpected account")]
     UnexpectedAccount,
 
+    #[error("too many requests")]
+    TooManyRequests,
+
     #[error(transparent)]
     AddressError(#[from] AddressError),
+
+    #[error("invalid transaction hash")]
+    InvalidTransactionHash,
 
     #[error(transparent)]
     DatabaseError(#[from] DatabaseError),
@@ -164,6 +176,30 @@ pub async fn get_subaddress_balance(
     Ok(subaddress_data)
 }
 
+/// https://www.getmonero.org/resources/developer-guides/wallet-rpc.html#incoming_transfers
+pub async fn get_incoming_transfers(
+    wallet_client: &WalletClient,
+    account_index: u32,
+    address_indices: Vec<u32>,
+) -> Result<Vec<IncomingTransfer>, MoneroError> {
+    let response = wallet_client.incoming_transfers(
+        TransferType::Available,
+        Some(account_index),
+        Some(address_indices.clone()),
+    ).await?;
+    let mut transfers = vec![];
+    for transfer in response.transfers.unwrap_or_default() {
+        let address_index = transfer.subaddr_index;
+        if address_index.major != account_index ||
+            !address_indices.contains(&address_index.minor)
+        {
+            return Err(MoneroError::WalletRpcError("unexpected transfer"));
+        };
+        transfers.push(transfer);
+    };
+    Ok(transfers)
+}
+
 /// https://monerodocs.org/interacting/monero-wallet-rpc-reference/#sweep_all
 pub async fn send_monero(
     wallet_client: &WalletClient,
@@ -209,6 +245,35 @@ pub async fn send_monero(
     // Save wallet
     wallet_client.close_wallet().await?;
     Ok((format!("{:x}", tx_hash), amount))
+}
+
+/// https://www.getmonero.org/resources/developer-guides/wallet-rpc.html#get_transfer_by_txid
+pub async fn get_transaction_by_id(
+    wallet_client: &WalletClient,
+    account_index: u32,
+    tx_id: &str,
+) -> Result<Option<GotTransfer>, MoneroError> {
+    let tx_hash = tx_id.parse()
+        .map_err(|_| MoneroError::InvalidTransactionHash)?;
+    let maybe_transfer = wallet_client.get_transfer(
+        tx_hash,
+        Some(account_index),
+    )
+        .await
+        .map_err(|error| {
+            if error.to_string() == "Server error: No wallet file" {
+                // monero-wallet-rpc bug
+                MoneroError::TooManyRequests
+            } else {
+                error.into()
+            }
+        })?;
+    if let Some(ref transfer) = maybe_transfer {
+        if transfer.subaddr_index.major != account_index {
+            return Err(MoneroError::WalletRpcError("unexpected transfer"));
+        };
+    };
+    Ok(maybe_transfer)
 }
 
 /// https://monerodocs.org/interacting/monero-wallet-rpc-reference/#sign

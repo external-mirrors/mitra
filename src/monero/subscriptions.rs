@@ -1,8 +1,4 @@
 use chrono::{Duration, Utc};
-use monero_rpc::{
-    GetTransfersCategory,
-    TransferType,
-};
 
 use mitra_config::{Instance, MoneroConfig};
 use mitra_models::{
@@ -28,12 +24,15 @@ use crate::ethereum::subscriptions::send_subscription_notifications;
 use super::helpers::get_active_addresses;
 use super::utils::parse_monero_address;
 use super::wallet::{
+    get_incoming_transfers,
     get_subaddress_balance,
     get_subaddress_by_index,
     get_subaddress_index,
+    get_transaction_by_id,
     open_monero_wallet,
     send_monero,
     MoneroError,
+    TransferCategory,
 };
 
 pub const MONERO_INVOICE_TIMEOUT: i64 = 3 * 60 * 60; // 3 hours
@@ -71,22 +70,15 @@ pub async fn check_monero_subscriptions(
         ).await?;
         address_waitlist.push(address_index.minor);
     };
-    let maybe_incoming_transfers = if !address_waitlist.is_empty() {
+
+    if !address_waitlist.is_empty() {
         log::info!("{} invoices are waiting for payment", address_waitlist.len());
-        let incoming_transfers = wallet_client.incoming_transfers(
-            TransferType::Available,
-            Some(config.account_index),
-            Some(address_waitlist),
+        let transfers = get_incoming_transfers(
+            &wallet_client,
+            config.account_index,
+            address_waitlist,
         ).await?;
-        incoming_transfers.transfers
-    } else {
-        None
-    };
-    if let Some(transfers) = maybe_incoming_transfers {
         for transfer in transfers {
-            if transfer.subaddr_index.major != config.account_index {
-                return Err(MoneroError::WalletRpcError("unexpected account index"));
-            };
             let subaddress = get_subaddress_by_index(
                 &wallet_client,
                 &transfer.subaddr_index,
@@ -182,9 +174,8 @@ pub async fn check_monero_subscriptions(
         InvoiceStatus::Forwarded,
     ).await?;
     for invoice in forwarded_invoices {
-        let payout_tx_hash = if let Some(payout_tx_id) = invoice.payout_tx_id {
-            payout_tx_id.parse()
-                .map_err(|_| MoneroError::OtherError("invalid transaction ID"))?
+        let payout_tx_id = if let Some(payout_tx_id) = invoice.payout_tx_id {
+            payout_tx_id
         } else {
             // Legacy invoices don't have payout_tx_id.
             // Assume payment was fully processed and subscription was updated
@@ -192,9 +183,10 @@ pub async fn check_monero_subscriptions(
             set_invoice_status(db_client, &invoice.id, InvoiceStatus::Completed).await?;
             continue;
         };
-        let transfer = match wallet_client.get_transfer(
-            payout_tx_hash,
-            Some(config.account_index),
+        let transfer = match get_transaction_by_id(
+            &wallet_client,
+            config.account_index,
+            &payout_tx_id,
         ).await {
             Ok(maybe_transfer) => {
                 if let Some(transfer) = maybe_transfer {
@@ -208,22 +200,15 @@ pub async fn check_monero_subscriptions(
                     continue;
                 }
             },
-            Err(error) => {
-                if error.to_string() == "Server error: No wallet file" {
-                    // monero-wallet-rpc bug; retry later
-                    continue;
-                } else {
-                    return Err(error.into());
-                };
+            Err(MoneroError::TooManyRequests) => {
+                // Retry later
+                continue;
             },
-        };
-        if transfer.subaddr_index.major != config.account_index {
-            log::error!("invoice {}: unexpected account index", invoice.id);
-            continue;
+            Err(other_error) => return Err(other_error),
         };
         match transfer.transfer_type {
-            GetTransfersCategory::Pending | GetTransfersCategory::Out => (),
-            GetTransfersCategory::Failed => {
+            TransferCategory::Pending | TransferCategory::Out => (),
+            TransferCategory::Failed => {
                 log::error!("invoice {}: payout transaction failed", invoice.id);
                 set_invoice_status(db_client, &invoice.id, InvoiceStatus::Failed).await?;
                 continue;
