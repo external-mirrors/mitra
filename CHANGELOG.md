@@ -17,6 +17,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Ignore `Announce(Lock)` activities from Lemmy.
 - Measure activity delivery time.
 - Make `fetch-replies` command work with Akkoma.
+- Improve logging of invoice processing.
 
 ### Removed
 

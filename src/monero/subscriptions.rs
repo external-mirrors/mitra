@@ -129,6 +129,7 @@ pub async fn check_monero_subscriptions(
             balance_data.balance.as_pico() == 0
         {
             // Don't forward payment until all outputs are unlocked
+            log::info!("invoice {}: waiting for unlock", invoice.id);
             continue;
         };
         let recipient = get_user_by_id(db_client, &invoice.recipient_id).await?;
@@ -202,6 +203,7 @@ pub async fn check_monero_subscriptions(
             },
             Err(MoneroError::TooManyRequests) => {
                 // Retry later
+                log::warn!("invoice {}: wallet is busy", invoice.id);
                 continue;
             },
             Err(other_error) => return Err(other_error),
@@ -224,6 +226,7 @@ pub async fn check_monero_subscriptions(
         };
         if transfer.confirmations.unwrap_or(0) < MONERO_CONFIRMATIONS_SAFE {
             // Wait for more confirmations
+            log::info!("invoice {}: waiting for payout confirmation", invoice.id);
             continue;
         };
         let sender = get_profile_by_id(db_client, &invoice.sender_id).await?;
