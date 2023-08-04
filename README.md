@@ -21,7 +21,7 @@ Features:
 
 Follow: [@mitra@mitra.social](https://mitra.social/@mitra)
 
-Matrix chat: [#mitra:halogen.city](https://matrix.to/#/#mitra:halogen.city)
+Matrix chat: [#mitra:hackliberty.org](https://matrix.to/#/#mitra:hackliberty.org)
 
 ## Instances
 
