@@ -25,10 +25,6 @@ use mitra::media::{
     MediaStorage,
 };
 use mitra::monero::{
-    helpers::{
-        get_payment_address,
-        reopen_invoice,
-    },
     wallet::{
         create_monero_signature,
         create_monero_wallet,
@@ -37,6 +33,7 @@ use mitra::monero::{
         verify_monero_signature,
     },
 };
+use mitra::payments::monero::{get_payment_address, reopen_invoice};
 use mitra::validators::{
     emojis::{
         validate_emoji_name,

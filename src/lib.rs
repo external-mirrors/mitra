@@ -12,7 +12,7 @@ pub mod mastodon_api;
 pub mod media;
 pub mod monero;
 pub mod nodeinfo;
-mod payments;
+pub mod payments;
 pub mod validators;
 pub mod webfinger;
 pub mod web_client;

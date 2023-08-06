@@ -8,7 +8,7 @@ use mitra_models::{
 };
 use mitra_utils::caip2::ChainId;
 
-use crate::monero::subscriptions::MONERO_INVOICE_TIMEOUT;
+use crate::payments::monero::MONERO_INVOICE_TIMEOUT;
 
 #[derive(Deserialize)]
 pub struct InvoiceData {

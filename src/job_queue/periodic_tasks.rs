@@ -25,13 +25,10 @@ use crate::ethereum::{
     subscriptions::check_ethereum_subscriptions,
 };
 use crate::media::remove_media;
-use crate::monero::{
-    subscriptions::{
-        check_closed_invoices,
-        check_monero_subscriptions,
-    },
+use crate::payments::{
+    common::update_expired_subscriptions,
+    monero::{check_closed_invoices, check_monero_subscriptions},
 };
-use crate::payments::common::update_expired_subscriptions;
 
 #[cfg(feature = "ethereum-extras")]
 use crate::ethereum::nft::process_nft_events;
