@@ -7,7 +7,7 @@ use monero_rpc::{
 use mitra_config::{Instance, MoneroConfig};
 use mitra_models::{
     database::{get_database_client, DatabaseError, DbPool},
-    invoices::helpers::invoice_forwarded,
+    invoices::helpers::{invoice_forwarded, invoice_reopened},
     invoices::queries::{
         get_invoice_by_address,
         get_invoices_by_status,
@@ -25,7 +25,7 @@ use mitra_models::{
 
 use crate::ethereum::subscriptions::send_subscription_notifications;
 
-use super::helpers::{get_active_addresses, reopen_invoice};
+use super::helpers::get_active_addresses;
 use super::utils::parse_monero_address;
 use super::wallet::{
     get_single_item,
@@ -318,7 +318,7 @@ pub async fn check_closed_invoices(
 ) -> Result<(), MoneroError> {
     let addresses = get_active_addresses(config).await?;
     let db_client = &mut **get_database_client(db_pool).await?;
-    for (address, amount) in addresses {
+    for (address, _) in addresses {
         let invoice = match get_invoice_by_address(
             db_client,
             &config.chain_id,
@@ -327,7 +327,7 @@ pub async fn check_closed_invoices(
             Ok(invoice) => invoice,
             Err(DatabaseError::NotFound(_)) => {
                 log::error!(
-                    "invoice with addresss {} doesn't exist",
+                    "invoice with address {} doesn't exist",
                     address,
                 );
                 continue;
@@ -338,11 +338,11 @@ pub async fn check_closed_invoices(
             continue;
         };
         log::info!(
-            "detected new payment to address {}: {}",
-            address,
-            amount,
+            "invoice {} ({:?}): new payment detected",
+            invoice.id,
+            invoice.invoice_status,
         );
-        reopen_invoice(config, db_client, invoice).await?;
+        invoice_reopened(db_client, &invoice.id).await?;
     };
     Ok(())
 }
