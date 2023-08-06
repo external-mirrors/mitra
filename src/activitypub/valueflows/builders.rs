@@ -158,6 +158,7 @@ pub fn build_proposal(
 
 #[cfg(test)]
 mod tests {
+    use std::num::NonZeroU64;
     use serde_json::json;
     use mitra_utils::caip2::ChainId;
     use super::*;
@@ -168,7 +169,7 @@ mod tests {
         let username = "alice";
         let payment_info = MoneroSubscription {
             chain_id: ChainId::monero_mainnet(),
-            price: 20000,
+            price: NonZeroU64::new(20000).unwrap(),
             payout_address: "test".to_string(),
         };
         let proposal = build_proposal(

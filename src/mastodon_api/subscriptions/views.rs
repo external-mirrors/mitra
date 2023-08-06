@@ -1,3 +1,5 @@
+use std::num::NonZeroU64;
+
 use actix_web::{
     delete,
     dev::ConnectionInfo,
@@ -150,9 +152,8 @@ pub async fn register_subscription_option(
             if chain_id != monero_config.chain_id {
                 return Err(ValidationError("unexpected chain ID").into());
             };
-            if price == 0 {
-                return Err(ValidationError("price must be greater than 0").into());
-            };
+            let price: NonZeroU64 = price.try_into()
+                .map_err(|_| ValidationError("price must be greater than 0"))?;
             validate_monero_address(&payout_address)
                 .map_err(|_| ValidationError("invalid monero address"))?;
             let payment_option = PaymentOption::monero_subscription(

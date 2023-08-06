@@ -1,3 +1,5 @@
+use std::num::NonZeroU64;
+
 use chrono::{DateTime, Utc};
 use postgres_types::FromSql;
 use serde::{
@@ -266,14 +268,14 @@ pub struct EthereumSubscription {
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct MoneroSubscription {
     pub chain_id: ChainId,
-    pub price: u64, // piconeros per second
+    pub price: NonZeroU64, // piconeros per second
     pub payout_address: String,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct RemoteMoneroSubscription {
     pub chain_id: ChainId,
-    pub price: u64, // piconeros per second
+    pub price: NonZeroU64, // piconeros per second
     pub object_id: String,
 }
 
@@ -292,7 +294,7 @@ impl PaymentOption {
 
     pub fn monero_subscription(
         chain_id: ChainId,
-        price: u64,
+        price: NonZeroU64,
         payout_address: String,
     ) -> Self {
         Self::MoneroSubscription(MoneroSubscription {
@@ -304,7 +306,7 @@ impl PaymentOption {
 
     pub fn remote_monero_subscription(
         chain_id: ChainId,
-        price: u64,
+        price: NonZeroU64,
         object_id: String,
     ) -> Self {
         Self::RemoteMoneroSubscription(RemoteMoneroSubscription {

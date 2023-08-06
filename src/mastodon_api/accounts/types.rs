@@ -195,7 +195,7 @@ impl Account {
                     PaymentOption::MoneroSubscription(payment_info) => {
                         AccountPaymentOption::MoneroSubscription {
                             chain_id: payment_info.chain_id,
-                            price: payment_info.price,
+                            price: payment_info.price.into(),
                         }
                     },
                     PaymentOption::RemoteMoneroSubscription(payment_info) => {

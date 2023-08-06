@@ -870,7 +870,7 @@ mod tests {
             username: "test".to_string(),
             payment_options: vec![PaymentOption::monero_subscription(
                 ChainId::monero_mainnet(),
-                184000000,
+                184000000.try_into().unwrap(),
                 "testAddress".to_string(),
             )],
             ..Default::default()

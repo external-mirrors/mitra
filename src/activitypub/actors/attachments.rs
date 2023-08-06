@@ -342,6 +342,7 @@ pub fn parse_metadata_field(
 
 #[cfg(test)]
 mod tests {
+    use std::num::NonZeroU64;
     use chrono::Utc;
     use serde_json::json;
     use mitra_utils::{
@@ -417,7 +418,7 @@ mod tests {
     #[test]
     fn test_payment_option() {
         let username = "testuser";
-        let price = 240000;
+        let price = NonZeroU64::new(240000).unwrap();
         let payout_address = "test";
         let payment_option = PaymentOption::monero_subscription(
             ChainId::monero_mainnet(),

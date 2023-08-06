@@ -18,6 +18,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Measure activity delivery time.
 - Make `fetch-replies` command work with Akkoma.
 - Improve logging of invoice processing.
+- Ensure subscription price is always non-zero.
 
 ### Removed
 

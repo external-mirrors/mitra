@@ -88,7 +88,7 @@ impl SubscriptionOption {
             },
             PaymentOption::MoneroSubscription(payment_info) => Self::Monero {
                 chain_id: payment_info.chain_id,
-                price: payment_info.price,
+                price: payment_info.price.into(),
                 payout_address: payment_info.payout_address,
             },
             PaymentOption::RemoteMoneroSubscription(_) => return None,

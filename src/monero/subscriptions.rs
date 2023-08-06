@@ -240,7 +240,7 @@ pub async fn check_monero_subscriptions(
         };
         let duration_secs = (transfer.amount.as_pico() / payment_info.price)
             .try_into()
-            .map_err(|_| MoneroError::OtherError("invalid duration"))?;
+            .map_err(|_| MoneroError::OtherError("amount is too big"))?;
 
         set_invoice_status(db_client, &invoice.id, InvoiceStatus::Completed).await?;
         log::info!("payout transaction confirmed for invoice {}", invoice.id);

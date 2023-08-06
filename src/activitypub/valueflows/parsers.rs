@@ -1,3 +1,5 @@
+use std::num::NonZeroU64;
+
 use serde::Deserialize;
 
 use mitra_models::{
@@ -80,7 +82,7 @@ pub fn parse_proposal(
     };
     let price = proposal
         .reciprocal.resource_quantity.has_numerical_value
-        .parse::<u64>()
+        .parse::<NonZeroU64>()
         .map_err(|_| ValidationError("invalid quantity"))?;
     // Create payment option
     let payment_option = PaymentOption::remote_monero_subscription(
@@ -154,7 +156,7 @@ mod tests {
             _ => panic!("unexpected option type"),
         };
         assert_eq!(payment_info.chain_id, ChainId::monero_mainnet());
-        assert_eq!(payment_info.price, 20000);
+        assert_eq!(payment_info.price.get(), 20000);
         assert_eq!(
             payment_info.object_id,
             "https://test.example/users/alice/proposals/monero:418015bb9ae982a1975da7d79277c270",
