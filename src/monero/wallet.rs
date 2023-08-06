@@ -21,7 +21,6 @@ use monero_rpc::monero::{
 };
 
 use mitra_config::MoneroConfig;
-use mitra_models::database::DatabaseError;
 
 use super::utils::parse_monero_address;
 
@@ -46,9 +45,6 @@ pub enum MoneroError {
 
     #[error("invalid transaction hash")]
     InvalidTransactionHash,
-
-    #[error(transparent)]
-    DatabaseError(#[from] DatabaseError),
 
     #[error("not enough unlocked balance")]
     Dust,
@@ -228,8 +224,9 @@ pub async fn send_monero(
     wallet_client: &WalletClient,
     from_account: u32,
     from_address: u32,
-    to_address: Address,
+    to_address: &str,
 ) -> Result<(String, Amount), MoneroError> {
+    let to_address = parse_monero_address(to_address)?;
     let sweep_args = SweepAllArgs {
         address: to_address,
         account_index: from_account,

@@ -20,8 +20,8 @@ use mitra_models::{
 };
 
 use crate::payments::common::send_subscription_notifications;
+use crate::payments::errors::PaymentError;
 
-use super::utils::parse_monero_address;
 use super::wallet::{
     get_active_addresses,
     get_incoming_transfers,
@@ -42,7 +42,7 @@ pub async fn check_monero_subscriptions(
     instance: &Instance,
     config: &MoneroConfig,
     db_pool: &DbPool,
-) -> Result<(), MoneroError> {
+) -> Result<(), PaymentError> {
     let db_client = &mut **get_database_client(db_pool).await?;
     let wallet_client = open_monero_wallet(config).await?;
 
@@ -119,7 +119,7 @@ pub async fn check_monero_subscriptions(
                 log::error!("invoice {}: unexpected account index", invoice.id);
                 continue;
             },
-            Err(other_error) => return Err(other_error),
+            Err(other_error) => return Err(other_error.into()),
         };
         let balance_data = get_subaddress_balance(
             &wallet_client,
@@ -140,13 +140,12 @@ pub async fn check_monero_subscriptions(
             log::error!("subscription is not configured for user {}", recipient.id);
             continue;
         };
-        let payout_address = parse_monero_address(&payment_info.payout_address)?;
         // Send all available balance to payout address
         let (payout_tx_id, _) = match send_monero(
             &wallet_client,
             address_index.major,
             address_index.minor,
-            payout_address,
+            &payment_info.payout_address,
         ).await {
             Ok(payout_info) => payout_info,
             Err(error @ MoneroError::Dust) => {
@@ -158,7 +157,7 @@ pub async fn check_monero_subscriptions(
                 ).await?;
                 continue;
             },
-            Err(other_error) => return Err(other_error),
+            Err(other_error) => return Err(other_error.into()),
         };
 
         invoice_forwarded(
@@ -206,7 +205,7 @@ pub async fn check_monero_subscriptions(
                 log::warn!("invoice {}: wallet is busy", invoice.id);
                 continue;
             },
-            Err(other_error) => return Err(other_error),
+            Err(other_error) => return Err(other_error.into()),
         };
         match transfer.transfer_type {
             TransferCategory::Pending | TransferCategory::Out => (),
@@ -311,7 +310,7 @@ pub async fn check_monero_subscriptions(
 pub async fn check_closed_invoices(
     config: &MoneroConfig,
     db_pool: &DbPool,
-) -> Result<(), MoneroError> {
+) -> Result<(), PaymentError> {
     let wallet_client = open_monero_wallet(config).await?;
     let addresses = get_active_addresses(
         &wallet_client,

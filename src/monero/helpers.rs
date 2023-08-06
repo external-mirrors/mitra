@@ -13,6 +13,8 @@ use mitra_models::{
     users::queries::get_user_by_id,
 };
 
+use crate::payments::errors::PaymentError;
+
 use super::wallet::{
     create_monero_address,
     get_incoming_transfers,
@@ -25,12 +27,12 @@ pub async fn reopen_invoice(
     config: &MoneroConfig,
     db_client: &mut impl DatabaseClient,
     invoice: &DbInvoice,
-) -> Result<(), MoneroError> {
+) -> Result<(), PaymentError> {
     if invoice.chain_id != config.chain_id {
-        return Err(MoneroError::OtherError("can't process invoice"));
+        return Err(MoneroError::OtherError("can't process invoice").into());
     };
     if !invoice.invoice_status.is_final() {
-        return Err(MoneroError::OtherError("invoice is already open"));
+        return Err(MoneroError::OtherError("invoice is already open").into());
     };
     let wallet_client = open_monero_wallet(config).await?;
     let address_index = get_subaddress_index(
@@ -65,10 +67,10 @@ pub async fn get_payment_address(
     db_client: &mut impl DatabaseClient,
     sender_id: &Uuid,
     recipient_id: &Uuid,
-) -> Result<String, MoneroError> {
+) -> Result<String, PaymentError> {
     let recipient = get_user_by_id(db_client, recipient_id).await?;
     if !recipient.profile.payment_options.any(PaymentType::MoneroSubscription) {
-        return Err(MoneroError::OtherError("recipient can't accept payments"));
+        return Err(MoneroError::OtherError("recipient can't accept payments").into());
     };
     let invoice = match get_invoice_by_participants(
         db_client,
