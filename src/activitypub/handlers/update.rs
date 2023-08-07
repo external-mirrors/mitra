@@ -31,7 +31,7 @@ use crate::activitypub::{
     },
     identifiers::profile_actor_id,
     types::Object,
-    vocabulary::{ARTICLE, NOTE, PERSON},
+    vocabulary::{ARTICLE, GROUP, NOTE, PERSON},
 };
 use crate::media::MediaStorage;
 use crate::validators::errors::ValidationError;
@@ -158,7 +158,7 @@ pub async fn handle_update(
         ARTICLE | NOTE => {
             handle_update_note(config, db_client, activity).await
         },
-        PERSON => {
+        GROUP | PERSON => {
             handle_update_person(config, db_client, activity).await
         },
         _ => {
