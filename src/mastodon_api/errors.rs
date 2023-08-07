@@ -58,7 +58,6 @@ impl From<DatabaseError> for MastodonError {
 /// https://docs.joinmastodon.org/entities/Error/
 #[derive(Serialize)]
 struct MastodonErrorData {
-    message: String, // deprecated
     error: String,
     error_description: Option<String>,
 }
@@ -66,7 +65,6 @@ struct MastodonErrorData {
 impl ResponseError for MastodonError {
     fn error_response(&self) -> HttpResponse {
         let error_data = MastodonErrorData {
-            message: self.to_string(),
             error: self.to_string(),
             error_description: Some(self.to_string()),
         };
