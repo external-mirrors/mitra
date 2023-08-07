@@ -79,7 +79,6 @@ pub struct InstanceInfo {
 
     authentication_methods: Vec<String>,
     login_message: String,
-    post_character_limit: usize, // deprecated
     blockchains: Vec<BlockchainInfo>,
     ipfs_gateway_url: Option<String>,
 }
@@ -186,7 +185,6 @@ impl InstanceInfo {
                 })
                 .collect(),
             login_message: config.login_message.clone(),
-            post_character_limit: config.limits.posts.character_limit,
             blockchains: blockchains,
             ipfs_gateway_url: config.ipfs_gateway_url.clone(),
         }

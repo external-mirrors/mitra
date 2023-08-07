@@ -25,6 +25,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Remove `check-expired-invoice` alias of `reopen-invoice` command.
 - Remove `message` field from Mastodon API error response.
+- Remove `post_character_limit` field from `/api/v1/instance` response.
 
 ### Fixed
 
