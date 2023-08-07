@@ -83,6 +83,11 @@ paths:
       responses:
         200:
           description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                example: {}
         403:
           description: Token doesn't belong to user.
   /api/v1/accounts:
