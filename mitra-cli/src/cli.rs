@@ -12,7 +12,11 @@ use mitra::activitypub::{
     fetcher::fetchers::fetch_actor,
     fetcher::helpers::{import_from_outbox, import_replies},
 };
-use mitra::admin::roles::{role_from_str, ALLOWED_ROLES};
+use mitra::admin::roles::{
+    role_from_str,
+    role_to_str,
+    ALLOWED_ROLES,
+};
 use mitra::ethereum::{
     signatures::generate_ecdsa_key,
     sync::save_current_block_number,
@@ -265,14 +269,15 @@ impl ListUsers {
     ) -> Result<(), Error> {
         let users = get_users_admin(db_client).await?;
         println!(
-            "{0: <40} | {1: <35} | {2: <35} | {3: <35}",
-            "ID", "username", "created", "last login",
+            "{0: <40} | {1: <35} | {2: <20} | {3: <35} | {4: <35}",
+            "ID", "username", "role", "created", "last login",
         );
         for user in users {
             println!(
-                "{0: <40} | {1: <35} | {2: <35} | {3: <35}",
+                "{0: <40} | {1: <35} | {2: <20} | {3: <35} | {4: <35}",
                 user.profile.id.to_string(),
                 user.profile.username,
+                role_to_str(&user.role),
                 user.profile.created_at.to_string(),
                 user.last_login.to_string(),
             );

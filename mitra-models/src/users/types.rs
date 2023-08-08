@@ -295,6 +295,7 @@ impl Default for UserCreateData {
 
 pub struct AdminUser {
     pub profile: DbActorProfile,
+    pub role: Role,
     pub last_login: DateTime<Utc>,
 }
 
@@ -304,8 +305,9 @@ impl TryFrom<&Row> for AdminUser {
 
     fn try_from(row: &Row) -> Result<Self, Self::Error> {
         let profile = row.try_get("actor_profile")?;
+        let role = row.try_get("role")?;
         let last_login = row.try_get("last_login")?;
-        Ok(Self { profile, last_login })
+        Ok(Self { profile, role, last_login })
     }
 }
 

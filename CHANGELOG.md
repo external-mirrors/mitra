@@ -11,6 +11,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Delete repost when receiving `Announce(Delete)` activity from a group.
 - Deliver activities to multiple inboxes in parallel.
 - Added admin account info to `/api/v1/instance` response.
+- Added "role" column to `list-users` command output.
 
 ### Changed
 
