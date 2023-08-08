@@ -24,6 +24,8 @@ instance_short_description: my instance
 instance_description: |
   # My instance
   Welcome!
+# Make list of instance admins public
+instance_staff_public: false
 
 registration:
   # Possible values: open, invite

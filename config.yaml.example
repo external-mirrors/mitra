@@ -10,6 +10,7 @@ instance_uri: http://127.0.0.1:8380
 instance_title: Mitra
 instance_short_description: My instance
 instance_description: My instance
+instance_staff_public: true
 
 registration:
   type: open

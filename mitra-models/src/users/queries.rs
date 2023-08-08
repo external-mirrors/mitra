@@ -353,6 +353,31 @@ pub async fn get_user_by_public_wallet_address(
     get_user_by_did(db_client, &did).await
 }
 
+pub async fn get_admin_user(
+    db_client: &impl DatabaseClient,
+) -> Result<Option<User>, DatabaseError> {
+    let maybe_row = db_client.query_opt(
+        "
+        SELECT user_account, actor_profile
+        FROM user_account JOIN actor_profile USING (id)
+        WHERE user_role = $1
+        ORDER BY actor_profile.created_at DESC
+        LIMIT 1
+        ",
+        &[&Role::Admin],
+    ).await?;
+    let maybe_user = match maybe_row {
+        Some(row) => {
+            let db_user: DbUser = row.try_get("user_account")?;
+            let db_profile: DbActorProfile = row.try_get("actor_profile")?;
+            let user = User::new(db_user, db_profile)?;
+            Some(user)
+        },
+        None => None,
+    };
+    Ok(maybe_user)
+}
+
 pub async fn get_user_count(
     db_client: &impl DatabaseClient,
 ) -> Result<i64, DatabaseError> {

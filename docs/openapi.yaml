@@ -1977,6 +1977,10 @@ components:
                   description: The maximum size of any uploaded image, in bytes.
                   type: integer
                   example: 5242880
+        contact_account:
+          allOf:
+            - description: A user who may be contacted for any inquiries.
+            - $ref: '#/components/schemas/Account'
         authentication_methods:
           description: List of supported authentication methods.
           type: array

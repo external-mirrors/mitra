@@ -8,11 +8,13 @@ use mitra_config::{
     RegistrationType,
     MITRA_VERSION,
 };
+use mitra_models::users::types::User;
 use mitra_utils::markdown::markdown_to_html;
 
 use crate::ethereum::contracts::ContractSet;
 use crate::mastodon_api::{
     accounts::types::{
+        Account,
         AUTHENTICATION_METHOD_CAIP122_MONERO,
         AUTHENTICATION_METHOD_PASSWORD,
         AUTHENTICATION_METHOD_EIP4361,
@@ -76,6 +78,7 @@ pub struct InstanceInfo {
     invites_enabled: bool,
     stats: InstanceStats,
     configuration: InstanceConfiguration,
+    contact_account: Option<Account>,
 
     authentication_methods: Vec<String>,
     login_message: String,
@@ -93,7 +96,9 @@ fn get_full_api_version(version: &str) -> String {
 
 impl InstanceInfo {
     pub fn create(
+        base_url: &str,
         config: &Config,
+        maybe_admin: Option<User>,
         maybe_ethereum_contracts: Option<&ContractSet>,
         user_count: i64,
         post_count: i64,
@@ -174,6 +179,11 @@ impl InstanceInfo {
                     image_size_limit: config.limits.media.file_size_limit,
                 },
             },
+            contact_account: maybe_admin.map(|user| Account::from_profile(
+                base_url,
+                &config.instance().url(),
+                user.profile,
+            )),
             authentication_methods: config.authentication_methods.iter()
                 .map(|method| {
                     let value = match method {
