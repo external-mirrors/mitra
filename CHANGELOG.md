@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.32.0] - 2023-08-10
+
 ### Added
 
 - Delete repost when receiving `Announce(Delete)` activity from a group.
