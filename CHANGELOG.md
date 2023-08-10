@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+
+- Enable previews of remote subscription options.
+
 ### Changed
 
 - Hide reposts of muted accounts.

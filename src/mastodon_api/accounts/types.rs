@@ -58,7 +58,11 @@ pub struct AccountField {
 pub enum AccountPaymentOption {
     Link { name: String, href: String },
     EthereumSubscription { chain_id: ChainId },
-    MoneroSubscription { chain_id: ChainId, price: u64 },
+    MoneroSubscription {
+        chain_id: ChainId,
+        price: u64,
+        object_id: Option<String>,
+    },
 }
 /// https://docs.joinmastodon.org/entities/source/
 #[derive(Serialize)]
@@ -196,13 +200,14 @@ impl Account {
                         AccountPaymentOption::MoneroSubscription {
                             chain_id: payment_info.chain_id,
                             price: payment_info.price.into(),
+                            object_id: None,
                         }
                     },
                     PaymentOption::RemoteMoneroSubscription(payment_info) => {
-                        // TODO: use ::MoneroSubscription
-                        AccountPaymentOption::Link {
-                            name: "MoneroSubscription".to_string(),
-                            href: payment_info.object_id,
+                        AccountPaymentOption::MoneroSubscription {
+                            chain_id: payment_info.chain_id,
+                            price: payment_info.price.into(),
+                            object_id: Some(payment_info.object_id),
                         }
                     },
                 }
