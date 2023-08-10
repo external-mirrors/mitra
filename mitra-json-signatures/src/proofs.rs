@@ -30,7 +30,8 @@ pub const PROOF_TYPE_JCS_EIP191_LEGACY: &str ="JcsEip191Signature2022";
 pub const PROOF_TYPE_JCS_BLAKE2_ED25519: &str = "MitraJcsEd25519Signature2022";
 
 // https://w3c.github.io/vc-di-eddsa/#jcs-eddsa-2022
-pub const CRYPTOSUITE_JCS_EDDSA: &str = "jcs-eddsa-2022";
+pub const CRYPTOSUITE_JCS_EDDSA_LEGACY: &str = "jcs-eddsa-2022";
+pub const CRYPTOSUITE_JCS_EDDSA: &str = "eddsa-jcs-2022";
 
 #[derive(Debug, PartialEq)]
 pub enum ProofType {
@@ -64,6 +65,7 @@ impl ProofType {
     pub fn from_cryptosuite(value: &str) -> Result<Self, UnsupportedProofType> {
         let proof_type = match value {
             CRYPTOSUITE_JCS_RSA => Self::JcsRsaSignature,
+            CRYPTOSUITE_JCS_EDDSA_LEGACY => Self::JcsEddsaSignature,
             CRYPTOSUITE_JCS_EDDSA => Self::JcsEddsaSignature,
             _ => return Err(UnsupportedProofType),
         };

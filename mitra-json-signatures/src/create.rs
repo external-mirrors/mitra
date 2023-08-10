@@ -25,7 +25,7 @@ use mitra_utils::{
 };
 
 use super::proofs::{
-    CRYPTOSUITE_JCS_EDDSA,
+    CRYPTOSUITE_JCS_EDDSA_LEGACY,
     DATA_INTEGRITY_PROOF,
     PROOF_TYPE_JCS_BLAKE2_ED25519,
     PROOF_TYPE_JCS_EIP191,
@@ -63,7 +63,7 @@ impl IntegrityProofConfig {
     ) -> Self {
         Self {
             proof_type: DATA_INTEGRITY_PROOF.to_string(),
-            cryptosuite: Some(CRYPTOSUITE_JCS_EDDSA.to_string()),
+            cryptosuite: Some(CRYPTOSUITE_JCS_EDDSA_LEGACY.to_string()),
             proof_purpose: PURPOSE_ASSERTION_METHOD.to_string(),
             verification_method: verification_method.to_string(),
             created: created_at,
