@@ -46,7 +46,7 @@ pub fn replace_hashtags(instance_url: &str, text: &str, tags: &[String]) -> Stri
             if tags.contains(&tag_name) {
                 let tag_url = local_tag_collection(instance_url, &tag_name);
                 return format!(
-                    r#"{}<a class="hashtag" href="{}">#{}</a>{}"#,
+                    r#"{}<a class="hashtag" href="{}" rel="tag">#{}</a>{}"#,
                     before,
                     tag_url,
                     tag,
@@ -95,16 +95,16 @@ mod tests {
         let output = replace_hashtags(INSTANCE_URL, TEXT_WITH_TAGS, &tags);
 
         let expected_output = concat!(
-            r#"@user1@server1 some text <a class="hashtag" href="https://example.com/collections/tags/testtag">#TestTag</a>."#, "\n",
-            r#"<a class="hashtag" href="https://example.com/collections/tags/tag1">#TAG1</a> "#,
-            r#"<a class="hashtag" href="https://example.com/collections/tags/tag1">#tag1</a> "#,
+            r#"@user1@server1 some text <a class="hashtag" href="https://example.com/collections/tags/testtag" rel="tag">#TestTag</a>."#, "\n",
+            r#"<a class="hashtag" href="https://example.com/collections/tags/tag1" rel="tag">#TAG1</a> "#,
+            r#"<a class="hashtag" href="https://example.com/collections/tags/tag1" rel="tag">#tag1</a> "#,
             r#"#test_underscore #test*special "#,
-            r#"#test-tag # <a class="hashtag" href="https://example.com/collections/tags/123">#123</a> "#,
-            r#"<a class="hashtag" href="https://example.com/collections/tags/a%CE%B2c%CE%B4">#aβcδ</a> "#,
-            r#"more text (<a class="hashtag" href="https://example.com/collections/tags/tag2">#tag2</a>) text "#,
-            r#"<a class="hashtag" href="https://example.com/collections/tags/tag3">#tag3</a>, "#,
-            r#"<a class="hashtag" href="https://example.com/collections/tags/tag4">#tag4</a>:<br>"#,
-            r#"end with <a class="hashtag" href="https://example.com/collections/tags/tag5">#tag5</a>"#,
+            r#"#test-tag # <a class="hashtag" href="https://example.com/collections/tags/123" rel="tag">#123</a> "#,
+            r#"<a class="hashtag" href="https://example.com/collections/tags/a%CE%B2c%CE%B4" rel="tag">#aβcδ</a> "#,
+            r#"more text (<a class="hashtag" href="https://example.com/collections/tags/tag2" rel="tag">#tag2</a>) text "#,
+            r#"<a class="hashtag" href="https://example.com/collections/tags/tag3" rel="tag">#tag3</a>, "#,
+            r#"<a class="hashtag" href="https://example.com/collections/tags/tag4" rel="tag">#tag4</a>:<br>"#,
+            r#"end with <a class="hashtag" href="https://example.com/collections/tags/tag5" rel="tag">#tag5</a>"#,
         );
         assert_eq!(output, expected_output);
     }

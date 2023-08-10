@@ -25,6 +25,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Ensure subscription price is always non-zero.
 - Accept `Update(Group)` activities.
 - Change `/oauth/revoke` API endpoint to return empty object.
+- Add `rel=tag` attribute to hashtags.
 
 ### Removed
 
