@@ -36,6 +36,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Added missing `Hashtag` type to object context.
 - Use correct request timeout during HTTP signature verification.
+- Fixed documentation of `authentication_methods` configuration parameter.
 
 ## [1.31.1] - 2023-07-30
 
