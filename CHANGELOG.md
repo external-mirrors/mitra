@@ -12,6 +12,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Deliver activities to multiple inboxes in parallel.
 - Added admin account info to `/api/v1/instance` response.
 - Added "role" column to `list-users` command output.
+- Added `mediaType` property to proposal FEP-0ea0 link.
 
 ### Changed
 

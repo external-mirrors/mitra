@@ -36,7 +36,7 @@ use mitra_utils::{
 };
 
 use crate::activitypub::{
-    constants::W3ID_VALUEFLOWS_CONTEXT,
+    constants::{AP_MEDIA_TYPE, W3ID_VALUEFLOWS_CONTEXT},
     deserialization::deserialize_string_array,
     identifiers::local_actor_proposal_id,
     identity::{
@@ -208,12 +208,17 @@ pub fn parse_identity_proof_fep_c390(
 
 /// https://codeberg.org/silverpill/feps/src/branch/main/0ea0/fep-0ea0.md
 #[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct PaymentLink {
     #[serde(rename = "type")]
     object_type: String,
 
     pub name: String,
     pub href: String,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub media_type: Option<String>,
+
     pub rel: Vec<String>,
 }
 
@@ -230,6 +235,7 @@ pub fn attach_payment_option(
     username: &str,
     payment_option: PaymentOption,
 ) -> PaymentLink {
+    let mut maybe_media_type = None;
     let mut rel = vec![PAYMENT_LINK_RELATION_TYPE.to_string()];
     let (name, href) = match payment_option {
         // Local actors can't have payment links
@@ -246,6 +252,7 @@ pub fn attach_payment_option(
                 username,
                 &payment_info.chain_id,
             );
+            maybe_media_type = Some(AP_MEDIA_TYPE.to_string());
             rel.push(valueflows_proposal_rel());
             (name, href)
         },
@@ -255,6 +262,7 @@ pub fn attach_payment_option(
         object_type: LINK.to_string(),
         name: name,
         href: href,
+        media_type: maybe_media_type,
         rel: rel,
     }
 }
