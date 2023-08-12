@@ -40,7 +40,23 @@ pub fn clean_html_strict(
     let safe_html = Builder::default()
         .tags(allowed_tags)
         .allowed_classes(allowed_classes_map)
-        .link_rel(Some("noopener"))
+        // Disable rel-insertion, allow rel attribute on <a>
+        .link_rel(None)
+        .add_tag_attributes("a", &["rel"])
+        .attribute_filter(|element, attribute, value| {
+            match (element, attribute) {
+                ("a", "rel") => {
+                    // Remove everything except 'tag'
+                    let mut rels: Vec<_> = value.split(' ')
+                        .filter(|rel| *rel == "tag")
+                        .collect();
+                    // Always add rel="noopener"
+                    rels.push("noopener");
+                    Some(rels.join(" ").into())
+                },
+                _ => Some(value.into())
+            }
+        })
         .clean(unsafe_html)
         .to_string();
     safe_html
@@ -79,7 +95,7 @@ mod tests {
 
     #[test]
     fn test_clean_html_strict() {
-        let unsafe_html = r#"<p><span class="h-card"><a href="https://example.com/user" class="u-url mention" rel="ugc">@<span>user</span></a></span> test <b>bold</b><script>dangerous</script> with <a href="https://example.com" target="_blank" rel="noopener">link</a> and <code>code</code></p>"#;
+        let unsafe_html = r#"<p><span class="h-card"><a href="https://example.com/user" class="u-url mention" rel="ugc">@<span>user</span></a></span> test <b>bold</b><script>dangerous</script> with a <a href="https://server.example/tag" rel="tag">tag</a>, <a href="https://example.com" target="_blank" rel="noopener">link</a> and <code>code</code></p>"#;
         let safe_html = clean_html_strict(
             unsafe_html,
             &["a", "br", "code", "p", "span"],
@@ -88,7 +104,7 @@ mod tests {
                 ("span", vec!["h-card"]),
             ],
         );
-        assert_eq!(safe_html, r#"<p><span class="h-card"><a href="https://example.com/user" class="u-url mention" rel="noopener">@<span>user</span></a></span> test bold with <a href="https://example.com" rel="noopener">link</a> and <code>code</code></p>"#);
+        assert_eq!(safe_html, r#"<p><span class="h-card"><a href="https://example.com/user" class="u-url mention" rel="noopener">@<span>user</span></a></span> test bold with a <a href="https://server.example/tag" rel="tag noopener">tag</a>, <a href="https://example.com" rel="noopener">link</a> and <code>code</code></p>"#);
     }
 
     #[test]
