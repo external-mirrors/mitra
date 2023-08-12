@@ -1,7 +1,10 @@
 use std::collections::{BTreeMap, HashMap};
 
 use actix_web::http::Method;
-use futures::future::join_all;
+use futures::{
+    stream::FuturesUnordered,
+    StreamExt,
+};
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -182,47 +185,55 @@ async fn deliver_activity_worker(
     };
     let activity_json = serde_json::to_string(&activity_signed)?;
 
-    // Create batches
-    let mut batches: Vec<HashMap<String, usize>> = vec![];
-    'recp_loop: for (index, recipient) in recipients.iter().enumerate() {
+    let mut deliveries = vec![];
+    let mut sent = vec![];
+
+    for (index, recipient) in recipients.iter().enumerate() {
         if recipient.is_finished() {
             continue;
         };
-        let instance = get_hostname(&recipient.inbox)?;
-        for batch in batches.iter_mut() {
-            if batch.len() == DELIVERY_BATCH_SIZE {
-                // Batch is full
-                continue;
-            };
-            if batch.contains_key(&instance) {
-                // Should contain deliveries for different instances
-                continue;
-            };
-            batch.insert(instance, index);
-            continue 'recp_loop;
-        };
-        let batch = HashMap::from([(instance, index)]);
-        batches.push(batch)
+        let hostname = get_hostname(&recipient.inbox)?;
+        deliveries.push((index, hostname, recipient.inbox.clone()));
     };
 
-    for batch in batches {
-        // Deliver activities concurrently
-        let mut futures = vec![];
-        for index in batch.values() {
-            let recipient = recipients.get(*index)
-                .expect("index should not be out of bounds");
-            futures.push(async {
+    let mut delivery_pool = FuturesUnordered::new();
+    let mut delivery_pool_state = HashMap::new();
+
+    loop {
+        for (index, hostname, ref inbox) in deliveries.iter() {
+            // Add deliveries to the pool until it is full
+            if delivery_pool_state.len() == DELIVERY_BATCH_SIZE {
+                break;
+            };
+            if sent.contains(index) {
+                // Already queued
+                continue;
+            };
+            if delivery_pool_state.values()
+                .any(|current_hostname| current_hostname == &hostname)
+            {
+                // Another delivery to instance is in progress
+                continue;
+            };
+            // Deliver activities concurrently
+            let future = async {
                 let result = send_activity(
                     &instance,
                     &actor_key,
                     &actor_key_id,
                     &activity_json,
-                    &recipient.inbox,
+                    inbox,
                 ).await;
                 (*index, result)
-            });
+            };
+            delivery_pool.push(future);
+            delivery_pool_state.insert(index, hostname);
+            sent.push(*index);
         };
-        for (index, result) in join_all(futures).await {
+        // Await one delivery at a time
+        if let Some((index, result)) = delivery_pool.next().await {
+            delivery_pool_state.remove(&index)
+                .expect("delivery should be tracked by pool state");
             let recipient = recipients.get_mut(index)
                 .expect("index should not be out of bounds");
             if let Err(error) = result {
@@ -234,6 +245,14 @@ async fn deliver_activity_worker(
             } else {
                 recipient.is_delivered = true;
             };
+        };
+        if delivery_pool_state.is_empty() &&
+            deliveries.iter().all(|(index, ..)| sent.contains(index))
+        {
+            // No deliveries left, exit
+            let closed_pool: Vec<_> = delivery_pool.collect().await;
+            assert!(closed_pool.is_empty());
+            break;
         };
     };
     Ok(())
