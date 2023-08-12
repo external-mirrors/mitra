@@ -496,6 +496,15 @@ fn build_mute_filter() -> String {
                     AND target_id = post.author_id
                     AND relationship_type = {relationship_mute}
             )
+            AND NOT EXISTS (
+                SELECT 1
+                FROM post AS repost_of, relationship
+                WHERE
+                    repost_of.id = post.repost_of_id
+                    AND source_id = $current_user_id
+                    AND target_id = repost_of.author_id
+                    AND relationship_type = {relationship_mute}
+            )
         )",
         relationship_mute=i16::from(&RelationshipType::Mute),
     )
@@ -525,7 +534,7 @@ pub async fn get_home_timeline(
             (
                 post.author_id = $current_user_id
                 OR (
-                    -- is following or subscribed the post author
+                    -- is following or subscribed to the post author
                     EXISTS (
                         SELECT 1 FROM relationship
                         WHERE
