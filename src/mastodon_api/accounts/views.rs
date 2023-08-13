@@ -383,31 +383,16 @@ async fn send_signed_activity(
         },
         false => return Err(ValidationError("unsupported activity type").into()),
     };
-    let proof = match signer {
-        Did::Key(signer) => {
-            let signature = parse_minisign_signature_file(&data.signature)
-                .map_err(|_| ValidationError("invalid encoding"))?;
-            if !signature.is_prehashed {
-                return Err(ValidationError("invalid signature type").into());
-            };
-            verify_blake2_ed25519_json_signature(
-                &signer,
-                &outgoing_activity.activity,
-                &signature.value,
-            ).map_err(|_| ValidationError("invalid signature"))?;
-            IntegrityProof::jcs_blake2_ed25519(&signer, &signature.value)
-        },
-        Did::Pkh(signer) => {
-            let signature_bin = hex::decode(&data.signature)
-                .map_err(|_| ValidationError("invalid encoding"))?;
-            verify_eip191_json_signature(
-                &signer,
-                &outgoing_activity.activity,
-                &signature_bin,
-            ).map_err(|_| ValidationError("invalid signature"))?;
-            IntegrityProof::jcs_eip191(&signer, &signature_bin)
-        },
-    };
+    let signer = signer.as_did_pkh()
+        .ok_or(ValidationError("unsupported signature type"))?;
+    let signature_bin = hex::decode(&data.signature)
+        .map_err(|_| ValidationError("invalid encoding"))?;
+    verify_eip191_json_signature(
+        signer,
+        &outgoing_activity.activity,
+        &signature_bin,
+    ).map_err(|_| ValidationError("invalid signature"))?;
+    let proof = IntegrityProof::jcs_eip191(signer, &signature_bin);
     add_integrity_proof(&mut outgoing_activity.activity, proof)
         .map_err(|_| MastodonError::InternalError)?;
 
