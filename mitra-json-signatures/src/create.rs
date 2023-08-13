@@ -25,7 +25,7 @@ use mitra_utils::{
 };
 
 use super::proofs::{
-    CRYPTOSUITE_JCS_EDDSA_LEGACY,
+    CRYPTOSUITE_JCS_EDDSA,
     DATA_INTEGRITY_PROOF,
     PROOF_TYPE_JCS_BLAKE2_ED25519,
     PROOF_TYPE_JCS_EIP191,
@@ -63,7 +63,7 @@ impl IntegrityProofConfig {
     ) -> Self {
         Self {
             proof_type: DATA_INTEGRITY_PROOF.to_string(),
-            cryptosuite: Some(CRYPTOSUITE_JCS_EDDSA_LEGACY.to_string()),
+            cryptosuite: Some(CRYPTOSUITE_JCS_EDDSA.to_string()),
             proof_purpose: PURPOSE_ASSERTION_METHOD.to_string(),
             verification_method: verification_method.to_string(),
             created: created_at,
@@ -322,11 +322,11 @@ mod tests {
             },
             "proof": {
                 "type": "DataIntegrityProof",
-                "cryptosuite": "jcs-eddsa-2022",
+                "cryptosuite": "eddsa-jcs-2022",
                 "created": "2023-02-24T23:36:38Z",
                 "verificationMethod": "https://example.org/users/test#main-key",
                 "proofPurpose": "assertionMethod",
-                "proofValue": "z3hgSB34zmYZgwcx7J3LiXvHrj6JakhnhTdTEFYZXVQTqtramotiDhRoXsCwwWjRTrfL5YhDLGowHAzEujYuevDLw",
+                "proofValue": "z4cjuCEAMV1muEXevo6CqU7LLvfcptZTbSgLtSxw99P9XhLD6y6JKxgZSEqXkryM28cWnJFat7u5Tr6SsASN1i1DD",
             },
         });
         assert_eq!(result, expected_result);

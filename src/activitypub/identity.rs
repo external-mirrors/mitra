@@ -231,10 +231,10 @@ mod tests {
             "alsoKnownAs": "https://server.example/users/alice",
             "proof": {
                 "type": "DataIntegrityProof",
-                "cryptosuite": "jcs-eddsa-2022",
+                "cryptosuite": "eddsa-jcs-2022",
                 "verificationMethod": "did:key:z6MkrJVnaZkeFzdQyMZu1cgjg7k1pZZ6pvBQ7XJPt4swbTQ2",
                 "proofPurpose": "assertionMethod",
-                "proofValue": "zYqr4eFzrnUWiBDaa7SmBhfaSBiv6BFRsDRGkmaCJpXArPBspFWNM6NXu77R7JakdzbUdjZihBa28LuWscZxSfRk",
+                "proofValue": "z26W7TfJYD9DrGqnem245zNbeCbTwjb8avpduzi1JPhFrwML99CpP6gGXSKSXAcQdpGFBXF4kx7VwtXKhu7VDZJ54",
                 "created": "2023-02-24T23:36:38Z",
             },
         });
