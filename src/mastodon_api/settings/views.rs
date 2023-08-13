@@ -133,7 +133,6 @@ async fn add_alias_view(
         db_client,
         &instance,
         &current_user,
-        None,
     ).await?.enqueue(db_client).await?;
     let aliases = get_aliases(
         db_client,
@@ -170,7 +169,6 @@ async fn remove_alias_view(
         db_client,
         &instance,
         &current_user,
-        None,
     ).await?.enqueue(db_client).await?;
     let aliases = get_aliases(
         db_client,

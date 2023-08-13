@@ -317,7 +317,6 @@ async fn update_credentials(
         db_client,
         &config.instance(),
         &current_user,
-        None,
     ).await?.enqueue(db_client).await?;
 
     let account = Account::from_user(
@@ -339,7 +338,6 @@ async fn get_unsigned_update(
     let activity = build_update_person(
         &config.instance_url(),
         &current_user,
-        None,
     ).map_err(|_| MastodonError::InternalError)?;
     let activity_value = serde_json::to_value(activity)
         .map_err(|_| MastodonError::InternalError)?;
@@ -589,7 +587,6 @@ async fn create_identity_proof(
         db_client,
         &config.instance(),
         &current_user,
-        None,
     ).await?.enqueue(db_client).await?;
 
     let account = Account::from_user(
