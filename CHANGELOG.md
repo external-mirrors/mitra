@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Added
 
 - Enable previews of remote subscription options.
+- Verify integrity proof on activities submitted using `/api/v1/accounts/send_activity` API endpoint.
 
 ### Changed
 

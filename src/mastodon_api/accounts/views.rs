@@ -21,6 +21,7 @@ use mitra_config::{
 use mitra_json_signatures::{
     create::{
         add_integrity_proof,
+        is_object_signed,
         IntegrityProof,
         IntegrityProofConfig,
     },
@@ -89,6 +90,7 @@ use crate::activitypub::{
             is_update_person_activity,
             prepare_update_person,
             validate_update_person_c2s,
+            verify_signed_c2s_activity,
         },
     },
     identifiers::local_actor_id,
@@ -374,11 +376,17 @@ async fn send_signed_activity(
             if !user.profile.identity_proofs.any(&signer) {
                 return Err(ValidationError("authentication error").into());
             };
+            let unsigned_activity = if is_object_signed(&data.value) {
+                verify_signed_c2s_activity(&user.profile, &data.value)
+                    .map_err(|_| ValidationError("invalid integrity proof"))?
+            } else {
+                data.value.clone()
+            };
             forward_update_person(
                 db_client,
                 &instance,
                 &user,
-                &data.value,
+                &unsigned_activity,
             ).await?
         },
         false => return Err(ValidationError("unsupported activity type").into()),

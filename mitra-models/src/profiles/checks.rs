@@ -26,7 +26,7 @@ pub fn check_public_keys(
         };
     };
     if !is_remote && !public_keys.is_empty() {
-        // Local actor must have no public keys"
+        // Local actor must have no public keys
         return Err(DatabaseTypeError);
     };
     Ok(())

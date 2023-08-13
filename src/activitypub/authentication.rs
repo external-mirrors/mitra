@@ -1,5 +1,5 @@
 use actix_web::HttpRequest;
-use serde_json::Value;
+use serde_json::{Value as JsonValue};
 
 use mitra_config::Config;
 use mitra_json_signatures::{
@@ -197,7 +197,7 @@ pub async fn verify_signed_request(
 pub async fn verify_signed_activity(
     config: &Config,
     db_client: &mut impl DatabaseClient,
-    activity: &Value,
+    activity: &JsonValue,
     no_fetch: bool,
 ) -> Result<DbActorProfile, AuthenticationError> {
     let signature_data = match get_json_signature(activity) {
@@ -276,6 +276,41 @@ pub async fn verify_signed_activity(
     };
     // Signer is actor
     Ok(actor_profile)
+}
+
+// Returns activity without integrity proof
+pub fn verify_signed_c2s_activity(
+    actor_profile: &DbActorProfile,
+    activity: &JsonValue,
+) -> Result<JsonValue, AuthenticationError> {
+    let signature_data = match get_json_signature(activity) {
+        Ok(signature_data) => signature_data,
+        Err(JsonSignatureError::NoProof) => {
+            return Err(AuthenticationError::NoJsonSignature);
+        },
+        Err(other_error) => return Err(other_error.into()),
+    };
+    match signature_data.signer {
+        JsonSigner::Did(did) => {
+            if !actor_profile.identity_proofs.any(&did) {
+                return Err(AuthenticationError::UnexpectedSigner);
+            };
+            match signature_data.proof_type {
+                ProofType::JcsEip191Signature => {
+                    let did_pkh = did.as_did_pkh()
+                        .ok_or(AuthenticationError::InvalidJsonSignatureType)?;
+                    verify_eip191_json_signature(
+                        did_pkh,
+                        &signature_data.object,
+                        &signature_data.signature,
+                    )?;
+                },
+                _ => return Err(AuthenticationError::InvalidJsonSignatureType),
+            };
+        },
+        _ => return Err(AuthenticationError::InvalidJsonSignatureType),
+    };
+    Ok(signature_data.object)
 }
 
 #[cfg(test)]
