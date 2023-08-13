@@ -86,6 +86,7 @@ use crate::activitypub::{
         update_person::{
             build_update_person,
             forward_update_person,
+            is_update_person_activity,
             prepare_update_person,
             validate_update_person_c2s,
         },
@@ -363,8 +364,8 @@ async fn send_signed_activity(
     if !current_user.profile.identity_proofs.any(&signer) {
         return Err(ValidationError("unknown signer").into());
     };
-    let mut outgoing_activity = match &data.params {
-        ActivityParams::Update => {
+    let mut outgoing_activity = match is_update_person_activity(&data.value) {
+        true => {
             let user = validate_update_person_c2s(
                 db_client,
                 &instance,
@@ -380,6 +381,7 @@ async fn send_signed_activity(
                 &data.value,
             ).await?
         },
+        false => return Err(ValidationError("unsupported activity type").into()),
     };
     let proof = match signer {
         Did::Key(signer) => {

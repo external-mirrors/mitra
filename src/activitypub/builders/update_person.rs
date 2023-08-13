@@ -24,7 +24,7 @@ use crate::activitypub::{
     },
     receiver::HandlerError,
     types::{build_default_context, Context},
-    vocabulary::UPDATE,
+    vocabulary::{PERSON, UPDATE},
 };
 use crate::validators::errors::ValidationError;
 
@@ -100,14 +100,24 @@ pub async fn prepare_update_person(
     ))
 }
 
+pub fn is_update_person_activity(activity: &JsonValue) -> bool {
+    let maybe_activity_type = activity["type"].as_str();
+    if maybe_activity_type != Some(UPDATE) {
+        return false;
+    };
+    let maybe_object_type = activity["object"]["type"].as_str();
+    if maybe_object_type != Some(PERSON) {
+        return false;
+    };
+    true
+}
+
 pub async fn validate_update_person_c2s(
     db_client: &impl DatabaseClient,
     instance: &Instance,
     activity: &JsonValue,
 ) -> Result<User, HandlerError> {
-    let activity_type = activity["type"].as_str()
-        .ok_or(ValidationError("invalid activity"))?;
-    if activity_type != UPDATE {
+    if !is_update_person_activity(activity) {
         return Err(ValidationError("invalid activity").into());
     };
     let activity_id = activity["id"].as_str()

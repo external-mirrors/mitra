@@ -427,7 +427,6 @@ pub struct UnsignedActivity {
 
 #[derive(Deserialize)]
 pub struct SignedActivity {
-    pub params: ActivityParams,
     pub value: JsonValue,
     pub signer: String,
     pub signature: String,
