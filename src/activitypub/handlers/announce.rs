@@ -15,7 +15,7 @@ use mitra_models::{
 };
 
 use crate::activitypub::{
-    deserialization::deserialize_into_object_id,
+    deserialization::{deserialize_into_object_id, find_object_id},
     fetcher::helpers::{get_or_import_profile_by_actor_id, import_post},
     identifiers::parse_local_object_id,
     vocabulary::*,
@@ -131,11 +131,10 @@ async fn handle_fep_1b12_announce(
             db_client,
             &group_id,
         ).await?;
-        let object_id = activity["object"].as_str()
-            .ok_or(ValidationError("unexpected activity structure"))?;
+        let object_id = find_object_id(&activity["object"])?;
         let post_id = match get_post_by_remote_object_id(
             db_client,
-            object_id,
+            &object_id,
         ).await {
             Ok(post) => post.id,
             // Ignore Announce(Delete) if post is not found
