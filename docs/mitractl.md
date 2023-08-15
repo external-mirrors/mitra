@@ -6,6 +6,8 @@ Commands must be run as the same user as the web service:
 su mitra -c "mitractl generate-invite-code"
 ```
 
+Default config file path is `/etc/mitra/config.yaml`, but it can be changed using `CONFIG_PATH` environment variable.
+
 ---
 
 Print help:
