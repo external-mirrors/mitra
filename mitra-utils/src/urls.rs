@@ -41,6 +41,31 @@ pub fn guess_protocol(hostname: &str) -> &'static str {
     }
 }
 
+/// Returns false if untrusted URL is not safe for fetching
+pub fn is_safe_url(url: &str) -> bool {
+    if let Ok(url) = Url::parse(url) {
+        match url.scheme() {
+            "http" | "https" => (),
+            _ => return false,
+        };
+        let host = match url.host() {
+            Some(host) => host,
+            None => return false,
+        };
+        match host {
+            // TODO: DNS resolution
+            Host::Domain("localhost") => false,
+            Host::Domain(domain) if domain.ends_with(".local") => false,
+            // TODO: allow only global
+            Host::Ipv4(addr) if addr.is_loopback() => false,
+            Host::Ipv6(addr) if addr.is_loopback() => false,
+            _ => true,
+        }
+    } else {
+        false
+    }
+}
+
 // Used to normalize instance URL
 pub fn normalize_url(url: &str) -> Result<Url, url::ParseError> {
     let normalized_url = if
@@ -138,6 +163,18 @@ mod tests {
             guess_protocol("127.0.0.1"),
             "http",
         );
+    }
+
+    #[test]
+    fn test_is_safe_url() {
+        assert_eq!(is_safe_url("https://server.example/test"), true);
+        assert_eq!(is_safe_url("http://bq373nez4.onion/test"), true);
+        assert_eq!(is_safe_url("ftp://user@server.example"), false);
+        assert_eq!(is_safe_url("file:///etc/passwd"), false);
+        assert_eq!(is_safe_url("http://127.0.0.1:5941/test"), false);
+        assert_eq!(is_safe_url("http://[::1]:5941/test"), false);
+        assert_eq!(is_safe_url("http://localhost:5941/test"), false);
+        assert_eq!(is_safe_url("https://server.local/test"), false);
     }
 
     #[test]

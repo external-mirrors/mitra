@@ -8,7 +8,7 @@ use mitra_config::Instance;
 use mitra_models::profiles::types::PublicKeyType;
 use mitra_utils::{
     files::sniff_media_type,
-    urls::guess_protocol,
+    urls::{guess_protocol, is_safe_url},
 };
 
 use crate::activitypub::{
@@ -32,6 +32,9 @@ pub enum FetchError {
 
     #[error("inavlid URL")]
     UrlError(#[from] url::ParseError),
+
+    #[error("invalid URL")]
+    UnsafeUrl,
 
     #[error(transparent)]
     RequestError(#[from] reqwest::Error),
@@ -148,6 +151,9 @@ pub async fn fetch_file(
     file_max_size: usize,
     output_dir: &Path,
 ) -> Result<(String, usize, String), FetchError> {
+    if !is_safe_url(url) {
+        return Err(FetchError::UnsafeUrl);
+    };
     let client = build_client(instance, url)?;
     let request_builder =
         build_request(instance, client, Method::GET, url);

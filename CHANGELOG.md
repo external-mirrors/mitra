@@ -27,6 +27,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Prevent HTML cleaner from removing `rel=tag`.
 
+### Security
+
+- Improve validation of remote media URLs.
+
 ## [1.32.0] - 2023-08-10
 
 ### Added
