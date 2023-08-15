@@ -7,6 +7,7 @@ pub fn url_encode(input: &str) -> String {
     utf8_percent_encode(input, NON_ALPHANUMERIC).to_string()
 }
 
+/// Returns URL host name (without port number)
 pub fn get_hostname(url: &str) -> Result<String, ParseError> {
     let hostname = match Url::parse(url)?
         .host()
@@ -40,6 +41,7 @@ pub fn guess_protocol(hostname: &str) -> &'static str {
     }
 }
 
+// Used to normalize instance URL
 pub fn normalize_url(url: &str) -> Result<Url, url::ParseError> {
     let normalized_url = if
         url.starts_with("http://") ||

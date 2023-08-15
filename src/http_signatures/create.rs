@@ -49,6 +49,7 @@ pub fn create_http_signature(
         request_method.as_str().to_lowercase(),
         request_url_object.path(),
     );
+    // TODO: Host header may contain port
     let host = request_url_object.host_str()
         .ok_or(url::ParseError::EmptyHost)?
         .to_string();

@@ -25,7 +25,7 @@ pub struct WebfingerQueryParams {
 #[derive(Eq, Ord, PartialEq, PartialOrd)]
 pub struct ActorAddress {
     pub username: String,
-    pub hostname: String,
+    pub hostname: String, // does not include port number
 }
 
 impl ActorAddress {

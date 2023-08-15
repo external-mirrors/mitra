@@ -200,8 +200,12 @@ impl Instance {
         self._url.origin().ascii_serialization()
     }
 
+    /// Returns instance host name (without port number)
     pub fn hostname(&self) -> String {
-        self._url.host_str().unwrap().to_string()
+        self._url.host_str()
+            // URL is being validated at instantiation
+            .expect("instance URL should have hostname")
+            .to_string()
     }
 
     pub fn agent(&self) -> String {
@@ -261,7 +265,7 @@ mod tests {
     }
 
     #[test]
-    fn test_instance_url_http_ipv4() {
+    fn test_instance_url_http_ipv4_with_port() {
         let instance_url = Url::parse("http://1.2.3.4:3777/").unwrap();
         let instance_rsa_key = generate_weak_rsa_key().unwrap();
         let instance = Instance {

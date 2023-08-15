@@ -3,6 +3,7 @@ use serde_json::Value;
 
 use mitra_config::Config;
 use mitra_models::database::{DatabaseClient, DatabaseError};
+use mitra_utils::urls::get_hostname;
 
 use crate::errors::HttpError;
 use crate::validators::errors::ValidationError;
@@ -145,11 +146,8 @@ pub async fn receive_activity(
     let activity_actor = find_object_id(&activity["actor"])
         .map_err(|_| ValidationError("invalid actor property"))?;
 
-    let actor_hostname = url::Url::parse(&activity_actor)
-        .map_err(|_| ValidationError("invalid actor ID"))?
-        .host_str()
-        .ok_or(ValidationError("invalid actor ID"))?
-        .to_string();
+    let actor_hostname = get_hostname(&activity_actor)
+        .map_err(|_| ValidationError("invalid actor ID"))?;
     if config.blocked_instances.iter()
         .any(|instance_hostname| &actor_hostname == instance_hostname)
     {
