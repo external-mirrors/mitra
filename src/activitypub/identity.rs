@@ -80,6 +80,15 @@ pub fn create_identity_claim_fep_c390(
             subject.as_did_pkh().expect("did:pkh should be used");
             canonicalize_object(&claim)?
         },
+        IdentityProofType::LegacyFepC390JcsEddsaProof => {
+            subject.as_did_key().expect("did:key should be used");
+            let proof_config = IntegrityProofConfig::jcs_eddsa_legacy(
+                &subject.to_string(),
+                proof_created_at,
+            );
+            let hash_data = prepare_jcs_sha256_data(&claim, &proof_config)?;
+            hex::encode(hash_data)
+        },
         IdentityProofType::FepC390JcsEddsaProof => {
             subject.as_did_key().expect("did:key should be used");
             let proof_config = IntegrityProofConfig::jcs_eddsa(
@@ -118,6 +127,15 @@ pub fn create_identity_proof_fep_c390(
             let did_pkh = subject.as_did_pkh()
                 .expect("did:pkh should be used");
             IntegrityProof::jcs_eip191(did_pkh, signature_bin)
+        },
+        IdentityProofType::LegacyFepC390JcsEddsaProof => {
+            let did_key = subject.as_did_key()
+                .expect("did:key should be used");
+            let proof_config = IntegrityProofConfig::jcs_eddsa_legacy(
+                &did_key.to_string(),
+                proof_created_at,
+            );
+            IntegrityProof::new(proof_config, signature_bin)
         },
         IdentityProofType::FepC390JcsEddsaProof => {
             let did_key = subject.as_did_key()

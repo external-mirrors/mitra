@@ -15,7 +15,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Hide reposts of muted accounts.
 - Make `params` optional for `/api/v1/accounts/send_activity` API endpoint.
-- Use `eddsa-jcs-2022` cryptosuite instead of `jcs-eddsa-2022` for FEP-8b32 and FEP-c390 proofs.
+- Use `eddsa-jcs-2022` cryptosuite instead of `jcs-eddsa-2022` for FEP-8b32 proofs.
 - Prevent activity deliveries from blocking each other.
 - Accept `Announce(Delete(Tombstone))` activities.
 
