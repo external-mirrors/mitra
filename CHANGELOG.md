@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.33.0] - 2023-08-17
+
 ### Added
 
 - Enable previews of remote subscription options.
