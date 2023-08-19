@@ -2,7 +2,10 @@ use actix_cors::Cors;
 use actix_web::{
     dev::Service,
     http::Method,
-    middleware::Logger as ActixLogger,
+    middleware::{
+        Logger as ActixLogger,
+        NormalizePath,
+    },
     web,
     App,
     HttpResponse,
@@ -119,6 +122,7 @@ async fn main() -> std::io::Result<()> {
         };
         let payload_size_limit = 2 * config.limits.media.file_size_limit;
         let mut app = App::new()
+            .wrap(NormalizePath::trim())
             .wrap(cors_config)
             .wrap(ActixLogger::new("%r : %s : %{r}a"))
             .wrap_fn(|req, srv| {
