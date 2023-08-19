@@ -10,6 +10,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Remove trailing slashes from requests' paths.
 
+### Fixed
+
+- Put empty string into `spoiler_text` attribute of `Status` object instead of null.
+
 ## [1.33.0] - 2023-08-17
 
 ### Added
