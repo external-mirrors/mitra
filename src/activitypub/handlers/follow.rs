@@ -7,13 +7,19 @@ use mitra_models::{
     relationships::queries::{
         create_remote_follow_request_opt,
         follow_request_accepted,
+        follow_request_rejected,
+        has_relationship,
     },
+    relationships::types::RelationshipType,
     users::queries::get_user_by_name,
 };
 use mitra_validators::errors::ValidationError;
 
 use crate::activitypub::{
-    builders::accept_follow::prepare_accept_follow,
+    builders::{
+        accept_follow::prepare_accept_follow,
+        reject_follow::prepare_reject_follow,
+    },
     deserialization::deserialize_into_object_id,
     fetcher::helpers::get_or_import_profile_by_actor_id,
     identifiers::parse_local_actor_id,
@@ -60,20 +66,36 @@ pub async fn handle_follow(
         &target_user.id,
         &activity.id,
     ).await?;
-    match follow_request_accepted(db_client, &follow_request.id).await {
-        Ok(_) => (),
-        // Proceed even if relationship already exists
-        Err(DatabaseError::AlreadyExists(_)) => (),
-        Err(other_error) => return Err(other_error.into()),
+    let is_following = has_relationship(
+        db_client,
+        &follow_request.source_id,
+        &follow_request.target_id,
+        RelationshipType::Follow,
+    ).await?;
+    if !is_following && target_user.profile.manually_approves_followers {
+        // TODO: implement approval process
+        log::info!("rejecting follow request");
+        follow_request_rejected(db_client, &follow_request.id).await?;
+        prepare_reject_follow(
+            &config.instance(),
+            &target_user,
+            &source_actor,
+            &activity.id,
+        ).enqueue(db_client).await?;
+    } else {
+        match follow_request_accepted(db_client, &follow_request.id).await {
+            Ok(_) => (),
+            // Proceed even if relationship already exists
+            Err(DatabaseError::AlreadyExists(_)) => (),
+            Err(other_error) => return Err(other_error.into()),
+        };
+        // Send Accept activity even if follow request has already been processed
+        prepare_accept_follow(
+            &config.instance(),
+            &target_user,
+            &source_actor,
+            &activity.id,
+        ).enqueue(db_client).await?;
     };
-
-    // Send Accept(Follow)
-    prepare_accept_follow(
-        &config.instance(),
-        &target_user,
-        &source_actor,
-        &activity.id,
-    ).enqueue(db_client).await?;
-
     Ok(Some(PERSON))
 }

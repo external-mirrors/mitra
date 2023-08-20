@@ -132,7 +132,7 @@ pub async fn unfollow(
         &[&source_id, &target_id, &RelationshipType::Follow],
     ).await?;
     let relationship_deleted = deleted_count > 0;
-    // Delete follow request (for remote follows)
+    // Delete follow request
     let follow_request_deleted = delete_follow_request_opt(
         &transaction,
         source_id,

@@ -7,7 +7,7 @@ use mitra_models::{
     profiles::types::{DbActor, DbActorProfile},
     relationships::{
         helpers::create_follow_request,
-        queries::follow,
+        queries::{follow, follow_request_rejected},
     },
     users::types::User,
 };
@@ -79,20 +79,29 @@ pub async fn follow_or_create_request(
     current_user: &User,
     target_profile: &DbActorProfile,
 ) -> Result<(), DatabaseError> {
-    if let Some(ref remote_actor) = target_profile.actor_json {
-        // Create follow request if target is remote
+    if target_profile.manually_approves_followers || !target_profile.is_local() {
+        // Create follow request if target requires approval or it is remote
         match create_follow_request(
             db_client,
             &current_user.id,
             &target_profile.id,
         ).await {
             Ok(follow_request) => {
-                prepare_follow(
-                    instance,
-                    current_user,
-                    remote_actor,
-                    &follow_request.id,
-                ).enqueue(db_client).await?;
+                if let Some(ref remote_actor) = target_profile.actor_json {
+                    prepare_follow(
+                        instance,
+                        current_user,
+                        remote_actor,
+                        &follow_request.id,
+                    ).enqueue(db_client).await?;
+                } else {
+                    // TODO: implement approval process
+                    log::info!("rejecting follow request");
+                    follow_request_rejected(
+                        db_client,
+                        &follow_request.id,
+                    ).await?;
+                };
             },
             Err(DatabaseError::AlreadyExists(_)) => (), // already sent request
             Err(other_error) => return Err(other_error),

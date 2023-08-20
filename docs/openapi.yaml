@@ -181,6 +181,10 @@ paths:
                   description: The media type of header image.
                   type: string
                   nullable: true
+                locked:
+                  description: Whether manual approval of follow requests is required.
+                  type: boolean
+                  nullable: true
                 fields_attributes:
                   description: The profile fields to be set.
                   type: array

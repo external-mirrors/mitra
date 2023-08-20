@@ -11,11 +11,11 @@ use crate::activitypub::{
     deliverer::OutgoingActivity,
     identifiers::{local_actor_id, local_object_id},
     types::{build_default_context, Context},
-    vocabulary::ACCEPT,
+    vocabulary::REJECT,
 };
 
 #[derive(Serialize)]
-struct AcceptFollow {
+struct RejectFollow {
     #[serde(rename = "@context")]
     context: Context,
 
@@ -29,18 +29,18 @@ struct AcceptFollow {
     to: Vec<String>,
 }
 
-fn build_accept_follow(
+fn build_reject_follow(
     instance_url: &str,
     actor_profile: &DbActorProfile,
     source_actor_id: &str,
     follow_activity_id: &str,
-) -> AcceptFollow {
-    // Accept(Follow) is idempotent so its ID can be random
+) -> RejectFollow {
+    // Reject(Follow) is idempotent so its ID can be random
     let activity_id = local_object_id(instance_url, &generate_ulid());
     let actor_id = local_actor_id(instance_url, &actor_profile.username);
-    AcceptFollow {
+    RejectFollow {
         context: build_default_context(),
-        activity_type: ACCEPT.to_string(),
+        activity_type: REJECT.to_string(),
         id: activity_id,
         actor: actor_id,
         object: follow_activity_id.to_string(),
@@ -48,13 +48,13 @@ fn build_accept_follow(
     }
 }
 
-pub fn prepare_accept_follow(
+pub fn prepare_reject_follow(
     instance: &Instance,
     sender: &User,
     source_actor: &DbActor,
     follow_activity_id: &str,
 ) -> OutgoingActivity {
-    let activity = build_accept_follow(
+    let activity = build_reject_follow(
         &instance.url(),
         &sender.profile,
         &source_actor.id,
@@ -76,14 +76,14 @@ mod tests {
     const INSTANCE_URL: &str = "https://social.example";
 
     #[test]
-    fn test_build_accept_follow() {
+    fn test_build_reject_follow() {
         let target = DbActorProfile {
             username: "user".to_string(),
             ..Default::default()
         };
         let follow_activity_id = "https://remote.example/objects/999";
         let follower_id = "https://remote.example/users/123";
-        let activity = build_accept_follow(
+        let activity = build_reject_follow(
             INSTANCE_URL,
             &target,
             follower_id,
@@ -91,7 +91,7 @@ mod tests {
         );
 
         assert_eq!(activity.id.starts_with(INSTANCE_URL), true);
-        assert_eq!(activity.activity_type, "Accept");
+        assert_eq!(activity.activity_type, "Reject");
         assert_eq!(activity.object, follow_activity_id);
         assert_eq!(activity.to, vec![follower_id]);
     }

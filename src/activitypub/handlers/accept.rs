@@ -52,6 +52,6 @@ pub async fn handle_accept(
         // Ignore Accept if follow request already accepted
         return Ok(None);
     };
-    follow_request_accepted(db_client, &follow_request_id).await?;
+    follow_request_accepted(db_client, &follow_request.id).await?;
     Ok(Some(FOLLOW))
 }

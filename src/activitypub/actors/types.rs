@@ -372,7 +372,7 @@ pub fn build_local_actor(
         summary: user.profile.bio.clone(),
         also_known_as: Some(json!(aliases)),
         attachment: attachments,
-        manually_approves_followers: false,
+        manually_approves_followers: user.profile.manually_approves_followers,
         tag: vec![],
         url: Some(actor_id),
     };

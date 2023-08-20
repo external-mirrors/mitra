@@ -761,18 +761,19 @@ async fn unfollow_account(
     let current_user = get_current_user(db_client, auth.token()).await?;
     let target = get_profile_by_id(db_client, &account_id).await?;
     match unfollow(db_client, &current_user.id, &target.id).await {
-        Ok(Some(follow_request_id)) => {
-            // Remote follow
-            let remote_actor = target.actor_json
-                .ok_or(MastodonError::InternalError)?;
-            prepare_undo_follow(
-                &config.instance(),
-                &current_user,
-                &remote_actor,
-                &follow_request_id,
-            ).enqueue(db_client).await?;
+        Ok(maybe_follow_request_id) => {
+            if let Some(remote_actor) = target.actor_json {
+                // Remote follow
+                let follow_request_id = maybe_follow_request_id
+                    .ok_or(MastodonError::InternalError)?;
+                prepare_undo_follow(
+                    &config.instance(),
+                    &current_user,
+                    &remote_actor,
+                    &follow_request_id,
+                ).enqueue(db_client).await?;
+            };
         },
-        Ok(None) => (), // local follow
         Err(DatabaseError::NotFound(_)) => (), // not following
         Err(other_error) => return Err(other_error.into()),
     };

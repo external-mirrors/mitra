@@ -8,6 +8,7 @@ pub mod delete_person;
 pub mod follow;
 pub mod like;
 pub mod move_person;
+pub mod reject_follow;
 pub mod remove_note;
 pub mod remove_person;
 pub mod undo_announce;

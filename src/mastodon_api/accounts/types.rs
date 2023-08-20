@@ -317,6 +317,8 @@ pub struct AccountUpdateData {
     avatar_media_type: Option<String>,
     header: Option<String>,
     header_media_type: Option<String>,
+    #[serde(default)]
+    locked: bool,
     fields_attributes: Option<Vec<AccountFieldSource>>,
 }
 
@@ -400,7 +402,7 @@ impl AccountUpdateData {
             bio_source: self.note,
             avatar,
             banner,
-            manually_approves_followers: false,
+            manually_approves_followers: self.locked,
             public_keys: vec![], // empty for local profiles
             identity_proofs,
             payment_options,
