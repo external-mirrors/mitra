@@ -34,7 +34,7 @@ paths:
                 message:
                   description: EIP-4361 message (required if grant type is "eip4361").
                   type: string
-                  example: "example.com wants you to sign in with your Ethereum account:"
+                  example: "social.example wants you to sign in with your Ethereum account:"
                 signature:
                   description: EIP-4361 signature (required if grant type is "eip4361").
                   type: string
@@ -114,7 +114,7 @@ paths:
                 message:
                   description: EIP-4361 message
                   type: string
-                  example: "example.com wants you to sign in with your Ethereum account:"
+                  example: "social.example wants you to sign in with your Ethereum account:"
                 signature:
                   description: EIP-4361 signature (required if message is present)
                   type: string
@@ -287,7 +287,7 @@ paths:
                   claim:
                     description: Identity claim serialized as compact JSON.
                     type: string
-                    example: '{"id":"https://example.com/users/1","ownerOf":"did:pkh:eip155:1:0xb9c5714089478a327f09197987f16f9e5d936e8a"}'
+                    example: '{"id":"https://social.example/users/1","ownerOf":"did:pkh:eip155:1:0xb9c5714089478a327f09197987f16f9e5d936e8a"}'
                   created_at:
                     description: Date and time when identity claim was created.
                     type: string
@@ -495,7 +495,7 @@ paths:
               description: Link to the next page
               schema:
                 type: string
-                example: '<https://example.org/api/v1/accounts/017e8206-376e-9133-4c9b-cdcca92ed20c/statuses?limit=20&max_id=0187871e-5a09-c6d6-6570-5158ffdcc845>; rel="next"'
+                example: '<https://social.example/api/v1/accounts/017e8206-376e-9133-4c9b-cdcca92ed20c/statuses?limit=20&max_id=0187871e-5a09-c6d6-6570-5158ffdcc845>; rel="next"'
         404:
           description: Profile not found
   /api/v1/accounts/{account_id}/followers:
@@ -531,7 +531,7 @@ paths:
               description: Link to the next page
               schema:
                 type: string
-                example: '<https://example.org/api/v1/accounts/1/followers?limit=40&max_id=7628164>; rel="next"'
+                example: '<https://social.example/api/v1/accounts/1/followers?limit=40&max_id=7628164>; rel="next"'
         404:
           description: Profile not found
   /api/v1/accounts/{account_id}/following:
@@ -567,7 +567,7 @@ paths:
               description: Link to the next page
               schema:
                 type: string
-                example: '<https://example.org/api/v1/accounts/1/following?limit=40&max_id=7628164>; rel="next"'
+                example: '<https://social.example/api/v1/accounts/1/following?limit=40&max_id=7628164>; rel="next"'
         404:
           description: Profile not found
   /api/v1/accounts/{account_id}/subscribers:
@@ -855,7 +855,7 @@ paths:
               description: Link to the next page
               schema:
                 type: string
-                example: '<https://example.org/api/v1/notification?limit=20&max_id=5339>; rel="next"'
+                example: '<https://social.example/api/v1/notification?limit=20&max_id=5339>; rel="next"'
   /api/v1/settings/client_config:
     post:
       summary: Update client configuration.
@@ -914,7 +914,7 @@ paths:
                 acct:
                   description: Actor address.
                   type: string
-                  example: user@example.com
+                  example: user@social.example
       responses:
         200:
           description: Successful operation
@@ -936,7 +936,7 @@ paths:
                 actor_id:
                   description: Actor ID.
                   type: string
-                  example: https://domain.example/users/1
+                  example: https://social.example/users/1
       responses:
         200:
           description: Successful operation
@@ -959,8 +959,8 @@ paths:
               schema:
                 type: string
               example: |
-                user1@example.org
-                user2@example.org
+                user1@server1.example
+                user2@server2.example
   /api/v1/settings/export_follows:
     get:
       summary: Export follows to CSV file
@@ -974,8 +974,8 @@ paths:
               schema:
                 type: string
               example: |
-                user1@example.org
-                user2@example.org
+                user1@server1.example
+                user2@server2.example
   /api/v1/settings/import_follows:
     post:
       summary: Import follows from CSV file.
@@ -1007,13 +1007,13 @@ paths:
                 from_actor_id:
                   description: The actor ID to move from.
                   type: string
-                  example: 'https://xyz.com/users/test'
+                  example: 'https://social.example/users/test'
                 followers_csv:
                   description: The list of followers in CSV format.
                   type: string
                   example: |
-                    user1@example.org
-                    user2@test.com
+                    user1@server1.example
+                    user2@server2.example
       responses:
         200:
           description: Successful operation
@@ -1522,7 +1522,7 @@ paths:
               description: Link to the next page
               schema:
                 type: string
-                example: '<https://example.org/api/v1/timelines/home?limit=20&max_id=0187871e-5a09-c6d6-6570-5158ffdcc845>; rel="next"'
+                example: '<https://social.example/api/v1/timelines/home?limit=20&max_id=0187871e-5a09-c6d6-6570-5158ffdcc845>; rel="next"'
   /api/v1/timelines/public:
     get:
       summary: View local public posts.
@@ -1565,7 +1565,7 @@ paths:
               description: Link to the next page
               schema:
                 type: string
-                example: '<https://example.org/api/v1/timelines/public?limit=20&max_id=0187871e-5a09-c6d6-6570-5158ffdcc845>; rel="next"'
+                example: '<https://social.example/api/v1/timelines/public?limit=20&max_id=0187871e-5a09-c6d6-6570-5158ffdcc845>; rel="next"'
   /api/v1/timelines/direct:
     get:
       summary: View statuses with a “direct” privacy.
@@ -1601,7 +1601,7 @@ paths:
               description: Link to the next page
               schema:
                 type: string
-                example: '<https://example.org/api/v1/timelines/direct?limit=20&max_id=0187871e-5a09-c6d6-6570-5158ffdcc845>; rel="next"'
+                example: '<https://social.example/api/v1/timelines/direct?limit=20&max_id=0187871e-5a09-c6d6-6570-5158ffdcc845>; rel="next"'
   /api/v1/timelines/tag/{hashtag}:
     get:
       summary: View public posts containing the given hashtag
@@ -1641,7 +1641,7 @@ paths:
               description: Link to the next page
               schema:
                 type: string
-                example: '<https://example.org/api/v1/timelines/tag/test?limit=20&max_id=0187871e-5a09-c6d6-6570-5158ffdcc845>; rel="next"'
+                example: '<https://social.example/api/v1/timelines/tag/test?limit=20&max_id=0187871e-5a09-c6d6-6570-5158ffdcc845>; rel="next"'
   /api/v2/search:
     get:
       summary: Search for profiles or posts
@@ -1711,11 +1711,11 @@ components:
         acct:
           description: The Webfinger account URI. Equal to username for local actors, or username@domain for remote actors.
           type: string
-          example: user@example.com
+          example: user@social.example
         url:
           description: The location of the user's profile page.
           type: string
-          example: https://example.com/@user
+          example: https://social.example/@user
         locked:
           description: Whether the actor manually approves follow requests.
           type: boolean
