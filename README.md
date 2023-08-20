@@ -30,6 +30,13 @@ Matrix chat: [#mitra:hackliberty.org](https://matrix.to/#/#mitra:hackliberty.org
 
 Demo instance: https://public.mitra.social/ ([invite-only](https://public.mitra.social/about))
 
+## Supported clients
+
+- [mitra-web](https://codeberg.org/silverpill/mitra-web) (default)
+- [Bloat](https://git.freesoftwareextremist.com/bloat/about/)
+- [Husky](https://codeberg.org/husky/husky)
+- [toot](https://github.com/ihabunek/toot)
+
 ## Code
 
 Server: https://codeberg.org/silverpill/mitra (this repo)
