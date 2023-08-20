@@ -904,7 +904,7 @@ async fn get_account_followers(
         query_params.limit.inner(),
     ).await?;
     let maybe_last_id = get_last_item(&followers, &query_params.limit)
-        .map(|item| item.relationship_id);
+        .map(|item| item.related_id);
     let base_url = get_request_base_url(connection_info);
     let instance_url = config.instance().url();
     let accounts: Vec<Account> = followers.into_iter()
@@ -948,7 +948,7 @@ async fn get_account_following(
         query_params.limit.inner(),
     ).await?;
     let maybe_last_id = get_last_item(&following, &query_params.limit)
-        .map(|item| item.relationship_id);
+        .map(|item| item.related_id);
     let base_url = get_request_base_url(connection_info);
     let instance_url = config.instance().url();
     let accounts: Vec<Account> = following.into_iter()

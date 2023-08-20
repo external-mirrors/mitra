@@ -2,6 +2,7 @@ pub mod accounts;
 pub mod apps;
 pub mod custom_emojis;
 pub mod directory;
+pub mod follow_requests;
 pub mod instance;
 pub mod markers;
 pub mod media;

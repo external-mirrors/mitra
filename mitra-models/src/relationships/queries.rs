@@ -344,7 +344,7 @@ pub async fn get_followers_paginated(
     profile_id: &Uuid,
     max_relationship_id: Option<i32>,
     limit: u16,
-) -> Result<Vec<RelatedActorProfile>, DatabaseError> {
+) -> Result<Vec<RelatedActorProfile<i32>>, DatabaseError> {
     let rows = db_client.query(
         "
         SELECT relationship.id, actor_profile
@@ -417,7 +417,7 @@ pub async fn get_following_paginated(
     profile_id: &Uuid,
     max_relationship_id: Option<i32>,
     limit: u16,
-) -> Result<Vec<RelatedActorProfile>, DatabaseError> {
+) -> Result<Vec<RelatedActorProfile<i32>>, DatabaseError> {
     let rows = db_client.query(
         "
         SELECT relationship.id, actor_profile
@@ -435,6 +435,39 @@ pub async fn get_following_paginated(
             &profile_id,
             &RelationshipType::Follow,
             &max_relationship_id,
+            &i64::from(limit),
+        ],
+    ).await?;
+    let related_profiles = rows.iter()
+        .map(RelatedActorProfile::try_from)
+        .collect::<Result<_, _>>()?;
+    Ok(related_profiles)
+}
+
+/// Returns incoming follow requests
+pub async fn get_follow_requests_paginated(
+    db_client: &impl DatabaseClient,
+    profile_id: &Uuid,
+    max_request_id: Option<Uuid>,
+    limit: u16,
+) -> Result<Vec<RelatedActorProfile<Uuid>>, DatabaseError> {
+    let rows = db_client.query(
+        "
+        SELECT follow_request.id, actor_profile
+        FROM actor_profile
+        JOIN follow_request
+        ON (actor_profile.id = follow_request.source_id)
+        WHERE
+            follow_request.target_id = $1
+            AND follow_request.request_status = $2
+            AND ($3::uuid IS NULL OR follow_request.id < $3)
+        ORDER BY follow_request.id DESC
+        LIMIT $4
+        ",
+        &[
+            &profile_id,
+            &FollowRequestStatus::Pending,
+            &max_request_id,
             &i64::from(limit),
         ],
     ).await?;
@@ -800,6 +833,38 @@ mod tests {
         let follow_request = get_follow_request_by_id(db_client, &follow_request.id)
             .await.unwrap();
         assert_eq!(follow_request.request_status, FollowRequestStatus::Accepted);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_get_follow_requests_paginated() {
+        let db_client = &mut create_test_database().await;
+        let source_data = UserCreateData {
+            username: "source".to_string(),
+            password_hash: Some("source".to_string()),
+            ..Default::default()
+        };
+        let source = create_user(db_client, source_data).await.unwrap();
+        let target_data = UserCreateData {
+            username: "target".to_string(),
+            password_hash: Some("target".to_string()),
+            ..Default::default()
+        };
+        let target = create_user(db_client, target_data).await.unwrap();
+        let follow_request = create_follow_request_unchecked(
+            db_client,
+            &source.id,
+            &target.id,
+        ).await.unwrap();
+        let results = get_follow_requests_paginated(
+            db_client,
+            &target.id,
+            None,
+            10,
+        ).await.unwrap();
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].related_id, follow_request.id);
+        assert_eq!(results[0].profile.id, source.id);
     }
 
     #[tokio::test]

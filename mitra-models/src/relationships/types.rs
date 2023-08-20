@@ -146,18 +146,19 @@ pub struct DbFollowRequest {
     created_at: DateTime<Utc>,
 }
 
-pub struct RelatedActorProfile {
-    pub relationship_id: i32,
+pub struct RelatedActorProfile<T> {
+    pub related_id: T,
     pub profile: DbActorProfile,
 }
 
-impl TryFrom<&Row> for RelatedActorProfile {
-
+impl<T> TryFrom<&Row> for RelatedActorProfile<T>
+    where for<'sql> T: FromSql<'sql>
+{
     type Error = DatabaseError;
 
     fn try_from(row: &Row) -> Result<Self, Self::Error> {
-        let relationship_id = row.try_get("id")?;
+        let related_id: T = row.try_get("id")?;
         let profile = row.try_get("actor_profile")?;
-        Ok(Self { relationship_id, profile })
+        Ok(Self { related_id, profile })
     }
 }
