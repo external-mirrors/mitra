@@ -4,10 +4,11 @@ use uuid::Uuid;
 use mitra_config::Instance;
 use mitra_models::{
     database::{DatabaseClient, DatabaseError},
+    notifications::helpers::create_follow_request_notification,
     profiles::types::{DbActor, DbActorProfile},
     relationships::{
         helpers::create_follow_request,
-        queries::{follow, follow_request_rejected},
+        queries::follow,
     },
     users::types::User,
 };
@@ -95,11 +96,10 @@ pub async fn follow_or_create_request(
                         &follow_request.id,
                     ).enqueue(db_client).await?;
                 } else {
-                    // TODO: implement approval process
-                    log::info!("rejecting follow request");
-                    follow_request_rejected(
+                    create_follow_request_notification(
                         db_client,
-                        &follow_request.id,
+                        &current_user.id,
+                        &target_profile.id,
                     ).await?;
                 };
             },

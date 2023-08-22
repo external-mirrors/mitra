@@ -43,7 +43,11 @@ pub async fn get_relationships(
         SELECT source_id, target_id, $4, created_at
         FROM follow_request
         WHERE
-            source_id = $1 AND target_id = $2
+            (
+                source_id = $1 AND target_id = $2
+                OR
+                source_id = $2 AND target_id = $1
+            )
             AND request_status = $3
         ",
         &[
@@ -311,6 +315,24 @@ pub async fn get_follow_request_by_activity_id(
         WHERE activity_id = $1
         ",
         &[&activity_id],
+    ).await?;
+    let row = maybe_row.ok_or(DatabaseError::NotFound("follow request"))?;
+    let request = row.try_get("follow_request")?;
+    Ok(request)
+}
+
+pub async fn get_follow_request_by_participants(
+    db_client: &impl DatabaseClient,
+    source_id: &Uuid,
+    target_id: &Uuid,
+) -> Result<DbFollowRequest, DatabaseError> {
+    let maybe_row = db_client.query_opt(
+        "
+        SELECT follow_request
+        FROM follow_request
+        WHERE source_id = $1 AND target_id = $2
+        ",
+        &[&source_id, &target_id],
     ).await?;
     let row = maybe_row.ok_or(DatabaseError::NotFound("follow request"))?;
     let request = row.try_get("follow_request")?;

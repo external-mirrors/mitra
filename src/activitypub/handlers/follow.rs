@@ -4,10 +4,10 @@ use serde_json::Value;
 use mitra_config::Config;
 use mitra_models::{
     database::{DatabaseClient, DatabaseError},
+    notifications::helpers::create_follow_request_notification,
     relationships::queries::{
         create_remote_follow_request_opt,
         follow_request_accepted,
-        follow_request_rejected,
         has_relationship,
     },
     relationships::types::RelationshipType,
@@ -16,10 +16,7 @@ use mitra_models::{
 use mitra_validators::errors::ValidationError;
 
 use crate::activitypub::{
-    builders::{
-        accept_follow::prepare_accept_follow,
-        reject_follow::prepare_reject_follow,
-    },
+    builders::accept_follow::prepare_accept_follow,
     deserialization::deserialize_into_object_id,
     fetcher::helpers::get_or_import_profile_by_actor_id,
     identifiers::parse_local_actor_id,
@@ -73,15 +70,11 @@ pub async fn handle_follow(
         RelationshipType::Follow,
     ).await?;
     if !is_following && target_user.profile.manually_approves_followers {
-        // TODO: implement approval process
-        log::info!("rejecting follow request");
-        follow_request_rejected(db_client, &follow_request.id).await?;
-        prepare_reject_follow(
-            &config.instance(),
-            &target_user,
-            &source_actor,
-            &activity.id,
-        ).enqueue(db_client).await?;
+        create_follow_request_notification(
+            db_client,
+            &follow_request.source_id,
+            &follow_request.target_id,
+        ).await?;
     } else {
         match follow_request_accepted(db_client, &follow_request.id).await {
             Ok(_) => (),

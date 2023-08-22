@@ -3,21 +3,38 @@ use actix_web::{
     dev::ConnectionInfo,
     http::Uri,
     get,
+    post,
     web,
     HttpResponse,
     Scope,
 };
 use actix_web_httpauth::extractors::bearer::BearerAuth;
+use uuid::Uuid;
 
 use mitra_config::Config;
 use mitra_models::{
     database::{get_database_client, DbPool},
-    relationships::queries::get_follow_requests_paginated,
+    profiles::queries::get_profile_by_id,
+    relationships::queries::{
+        follow_request_accepted,
+        follow_request_rejected,
+        get_follow_request_by_participants,
+        get_follow_requests_paginated,
+    },
 };
 
+use crate::activitypub::{
+    builders::{
+        accept_follow::prepare_accept_follow,
+        reject_follow::prepare_reject_follow,
+    },
+};
 use crate::http::get_request_base_url;
 use crate::mastodon_api::{
-    accounts::types::Account,
+    accounts::{
+        helpers::get_relationship,
+        types::Account,
+    },
     errors::MastodonError,
     oauth::auth::get_current_user,
     pagination::{get_last_item, get_paginated_response},
@@ -62,7 +79,78 @@ async fn follow_request_list(
     Ok(response)
 }
 
+#[post("/{account_id}/authorize")]
+async fn accept_follow_request_view(
+    auth: BearerAuth,
+    config: web::Data<Config>,
+    db_pool: web::Data<DbPool>,
+    account_id: web::Path<Uuid>,
+) -> Result<HttpResponse, MastodonError> {
+    let db_client = &mut **get_database_client(&db_pool).await?;
+    let current_user = get_current_user(db_client, auth.token()).await?;
+    let source_profile = get_profile_by_id(db_client, &account_id).await?;
+    let follow_request = get_follow_request_by_participants(
+        db_client,
+        &source_profile.id,
+        &current_user.id,
+    ).await?;
+    follow_request_accepted(db_client, &follow_request.id).await?;
+    if let Some(remote_actor) = source_profile.actor_json {
+        // Activity ID should be known
+        let activity_id = follow_request.activity_id
+            .ok_or(MastodonError::InternalError)?;
+        prepare_accept_follow(
+            &config.instance(),
+            &current_user,
+            &remote_actor,
+            &activity_id,
+        ).enqueue(db_client).await?;
+    };
+    let relationship = get_relationship(
+        db_client,
+        &current_user.id,
+        &source_profile.id,
+    ).await?;
+    Ok(HttpResponse::Ok().json(relationship))
+}
+
+#[post("/{account_id}/reject")]
+async fn reject_follow_request_view(
+    auth: BearerAuth,
+    config: web::Data<Config>,
+    db_pool: web::Data<DbPool>,
+    account_id: web::Path<Uuid>,
+) -> Result<HttpResponse, MastodonError> {
+    let db_client = &mut **get_database_client(&db_pool).await?;
+    let current_user = get_current_user(db_client, auth.token()).await?;
+    let source_profile = get_profile_by_id(db_client, &account_id).await?;
+    let follow_request = get_follow_request_by_participants(
+        db_client,
+        &source_profile.id,
+        &current_user.id,
+    ).await?;
+    follow_request_rejected(db_client, &follow_request.id).await?;
+    if let Some(remote_actor) = source_profile.actor_json {
+        let activity_id = follow_request.activity_id
+            .ok_or(MastodonError::InternalError)?;
+        prepare_reject_follow(
+            &config.instance(),
+            &current_user,
+            &remote_actor,
+            &activity_id,
+        ).enqueue(db_client).await?;
+    };
+    let relationship = get_relationship(
+        db_client,
+        &current_user.id,
+        &source_profile.id,
+    ).await?;
+    Ok(HttpResponse::Ok().json(relationship))
+}
+
 pub fn follow_request_api_scope() -> Scope {
     web::scope("/api/v1/follow_requests")
         .service(follow_request_list)
+        .service(accept_follow_request_view)
+        .service(reject_follow_request_view)
 }

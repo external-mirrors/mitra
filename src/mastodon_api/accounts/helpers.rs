@@ -35,6 +35,8 @@ pub async fn get_relationship(
             RelationshipType::FollowRequest => {
                 if relationship.is_direct(source_id, target_id)? {
                     relationship_map.requested = true;
+                } else {
+                    relationship_map.requested_by = true;
                 };
             },
             RelationshipType::Subscription => {
@@ -153,6 +155,7 @@ mod tests {
         assert_eq!(relationship.following, false);
         assert_eq!(relationship.followed_by, false);
         assert_eq!(relationship.requested, false);
+        assert_eq!(relationship.requested_by, false);
         assert_eq!(relationship.subscription_to, false);
         assert_eq!(relationship.subscription_from, false);
         assert_eq!(relationship.showing_reblogs, true);
@@ -163,6 +166,7 @@ mod tests {
         assert_eq!(relationship.following, false);
         assert_eq!(relationship.followed_by, false);
         assert_eq!(relationship.requested, true);
+        assert_eq!(relationship.requested_by, false);
         // Mutual follow
         follow_request_accepted(db_client, &follow_request.id).await.unwrap();
         follow(db_client, &user_2.id, &user_1.id).await.unwrap();

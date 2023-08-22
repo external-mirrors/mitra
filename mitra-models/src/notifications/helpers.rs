@@ -28,6 +28,25 @@ pub async fn create_follow_notification(
     ).await
 }
 
+pub async fn create_follow_request_notification(
+    db_client: &impl DatabaseClient,
+    sender_id: &Uuid,
+    recipient_id: &Uuid,
+) -> Result<(), DatabaseError> {
+    if has_relationship(
+        db_client,
+        recipient_id,
+        sender_id,
+        RelationshipType::Mute
+    ).await? {
+        return Ok(());
+    };
+    create_notification(
+        db_client, sender_id, recipient_id, None,
+        EventType::FollowRequest,
+    ).await
+}
+
 pub async fn create_reply_notification(
     db_client: &impl DatabaseClient,
     sender_id: &Uuid,

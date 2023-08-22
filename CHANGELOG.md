@@ -11,6 +11,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Add list of staff accounts to NodeInfo metadata object.
 - Add creation date to relationship and follow request database records.
 - Implement `/api/v1/follow_requests` API endpoint.
+- Implement `/api/v1/follow_requests/{account_id}/authorize` and `/api/v1/follow_requests/{account_id}/reject` API endpoints.
 - Support manual approval of followers.
 
 ### Changed

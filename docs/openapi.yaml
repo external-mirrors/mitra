@@ -829,6 +829,43 @@ paths:
                 example: '<https://social.example/api/v1/follow_requests?limit=40&max_id=b82c6e0b-36a6-4224-b5a3-f5d07c09574f>; rel="next"'
         400:
           description: Invalid query parameters.
+  /api/v1/follow_requests/{account_id}/authorize:
+    post:
+      summary: Accept follow request.
+      security:
+        - tokenAuth: []
+      parameters:
+        - $ref: '#/components/parameters/account_id'
+      responses:
+        200:
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Relationship'
+                  - type: object
+                    properties:
+                      followed_by:
+                        example: true
+        404:
+          description: Follow request not found
+  /api/v1/follow_requests/{account_id}/reject:
+    post:
+      summary: Reject follow request.
+      security:
+        - tokenAuth: []
+      parameters:
+        - $ref: '#/components/parameters/account_id'
+      responses:
+        200:
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Relationship'
+        404:
+          description: Follow request not found
   /api/v1/instance:
     get:
       summary: Information about the instance.
@@ -2168,6 +2205,10 @@ components:
           default: false
         requested:
           description: Do you have a pending follow request for this user?
+          type: boolean
+          default: false
+        requested_by:
+          description: Do you have a pending follow request from this user?
           type: boolean
           default: false
         subscription_to:
