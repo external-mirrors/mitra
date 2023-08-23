@@ -52,6 +52,8 @@ pub async fn handle_follow(
         &activity.object,
     )?;
     let target_user = get_user_by_name(db_client, &target_username).await?;
+    // Create new follow request or update activity ID on existing one,
+    // because latest activity ID might be needed to process Undo(Follow)
     let follow_request = create_remote_follow_request_opt(
         db_client,
         &source_profile.id,

@@ -3,13 +3,12 @@ use serde_json::Value;
 
 use mitra_config::Config;
 use mitra_models::{
-    database::DatabaseClient,
+    database::{DatabaseClient, DatabaseError},
     profiles::queries::get_profile_by_remote_actor_id,
     relationships::queries::{
         follow_request_rejected,
         get_follow_request_by_id,
     },
-    relationships::types::FollowRequestStatus,
 };
 use mitra_validators::errors::ValidationError;
 
@@ -44,13 +43,19 @@ pub async fn handle_reject(
         &config.instance_url(),
         &activity.object,
     )?;
-    let follow_request = get_follow_request_by_id(db_client, &follow_request_id).await?;
+    let follow_request = match get_follow_request_by_id(
+        db_client,
+        &follow_request_id,
+    ).await {
+        Ok(follow_request) => follow_request,
+        Err(DatabaseError::NotFound(_)) => {
+            // Ignore Reject if follow request has already been rejected
+            return Ok(None);
+        },
+        Err(other_error) => return Err(other_error.into()),
+    };
     if follow_request.target_id != actor_profile.id {
         return Err(ValidationError("actor is not a target").into());
-    };
-    if matches!(follow_request.request_status, FollowRequestStatus::Rejected) {
-        // Ignore Reject if follow request already rejected
-        return Ok(None);
     };
     follow_request_rejected(db_client, &follow_request_id).await?;
     Ok(Some(FOLLOW))

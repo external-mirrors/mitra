@@ -107,12 +107,14 @@ pub async fn follow(
     Ok(())
 }
 
+/// Deletes both a relationship and a corresponding follow request
 pub async fn unfollow(
     db_client: &mut impl DatabaseClient,
     source_id: &Uuid,
     target_id: &Uuid,
 ) -> Result<Option<Uuid>, DatabaseError> {
     let transaction = db_client.transaction().await?;
+    // Delete relationship
     let deleted_count = transaction.execute(
         "
         DELETE FROM relationship
@@ -229,17 +231,16 @@ pub async fn follow_request_rejected(
     db_client: &impl DatabaseClient,
     request_id: &Uuid,
 ) -> Result<(), DatabaseError> {
-    let updated_count = db_client.execute(
+    let deleted_count = db_client.execute(
         "
-        UPDATE follow_request
-        SET request_status = $1
-        WHERE id = $2
+        DELETE FROM follow_request
+        WHERE id = $1
         ",
-        &[&FollowRequestStatus::Rejected, &request_id],
+        &[&request_id],
     ).await?;
-    if updated_count == 0 {
+    if deleted_count == 0 {
         return Err(DatabaseError::NotFound("follow request"));
-    }
+    };
     Ok(())
 }
 
@@ -639,7 +640,7 @@ mod tests {
 
     #[tokio::test]
     #[serial]
-    async fn test_follow_remote_profile() {
+    async fn test_follow_remote_actor() {
         let db_client = &mut create_test_database().await;
         let source_data = UserCreateData {
             username: "test".to_string(),
@@ -698,7 +699,48 @@ mod tests {
 
     #[tokio::test]
     #[serial]
-    async fn test_followed_by_remote_profile() {
+    async fn test_follow_remote_actor_rejected() {
+        let db_client = &mut create_test_database().await;
+        let source_data = UserCreateData {
+            username: "test".to_string(),
+            password_hash: Some("test".to_string()),
+            ..Default::default()
+        };
+        let source = create_user(db_client, source_data).await.unwrap();
+        let target_actor_id = "https://social.example/users/1";
+        let target_data = ProfileCreateData {
+            username: "followed".to_string(),
+            hostname: Some("social.example".to_string()),
+            public_keys: vec![DbActorKey::default()],
+            actor_json: Some(DbActor {
+                id: target_actor_id.to_string(),
+                ..Default::default()
+            }),
+            ..Default::default()
+        };
+        let target = create_profile(db_client, target_data).await.unwrap();
+        // Create follow request
+        let follow_request = create_follow_request_unchecked(
+            db_client,
+            &source.id,
+            &target.id,
+        ).await.unwrap();
+        // Reject follow request
+        follow_request_rejected(db_client, &follow_request.id).await.unwrap();
+
+        let result = get_follow_request_by_id(
+            db_client,
+            &follow_request.id,
+        ).await;
+        assert!(matches!(
+            result,
+            Err(DatabaseError::NotFound("follow request")),
+        ));
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_followed_by_remote_actor() {
         let db_client = &mut create_test_database().await;
         let source_data = ProfileCreateData {
             username: "follower".to_string(),
@@ -736,7 +778,7 @@ mod tests {
 
     #[tokio::test]
     #[serial]
-    async fn test_mute_and_unmute_account() {
+    async fn test_mute_and_unmute_actor() {
         let db_client = &mut create_test_database().await;
         let source_data = UserCreateData {
             username: "test".to_string(),

@@ -98,6 +98,7 @@ impl TryFrom<&Row> for DbRelationship {
 pub enum FollowRequestStatus {
     Pending,
     Accepted,
+    #[deprecated]
     Rejected,
 }
 
@@ -106,6 +107,7 @@ impl From<&FollowRequestStatus> for i16 {
         match value {
             FollowRequestStatus::Pending  => 1,
             FollowRequestStatus::Accepted => 2,
+            #[allow(deprecated)]
             FollowRequestStatus::Rejected => 3,
         }
     }
@@ -118,6 +120,7 @@ impl TryFrom<i16> for FollowRequestStatus {
         let status = match value {
             1 => Self::Pending,
             2 => Self::Accepted,
+            #[allow(deprecated)]
             3 => Self::Rejected,
             _ => return Err(DatabaseTypeError),
         };
