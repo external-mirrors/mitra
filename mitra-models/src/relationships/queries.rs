@@ -6,6 +6,7 @@ use crate::database::{
     catch_unique_violation,
     DatabaseClient,
     DatabaseError,
+    DatabaseTypeError,
 };
 use crate::notifications::helpers::create_follow_notification;
 use crate::profiles::{
@@ -64,6 +65,9 @@ pub async fn has_relationship(
     target_id: &Uuid,
     relationship_type: RelationshipType,
 ) -> Result<bool, DatabaseError> {
+    if matches!(relationship_type, RelationshipType::FollowRequest) {
+        return Err(DatabaseTypeError.into());
+    };
     let maybe_row = db_client.query_opt(
         "
         SELECT 1
