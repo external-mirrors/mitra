@@ -15,6 +15,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Don't create follow request if follow relationship exists.
 - Create rejection relationship instead of setting "Rejected" status on follow request.
+- Unfollow actor if it sends `Reject(Follow)` activity.
 
 ### Fixed
 

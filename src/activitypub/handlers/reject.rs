@@ -8,6 +8,7 @@ use mitra_models::{
     relationships::queries::{
         follow_request_rejected,
         get_follow_request_by_id,
+        unfollow,
     },
 };
 use mitra_validators::errors::ValidationError;
@@ -58,5 +59,15 @@ pub async fn handle_reject(
         return Err(ValidationError("actor is not a target").into());
     };
     follow_request_rejected(db_client, &follow_request.id).await?;
+    // Delete follow request, and delete relationship too.
+    // Reject() activity might be used to remove followers.
+    match unfollow(
+        db_client,
+        &follow_request.source_id,
+        &follow_request.target_id,
+    ).await {
+        Ok(_) | Err(DatabaseError::NotFound(_)) => (),
+        Err(other_error) => return Err(other_error.into()),
+    };
     Ok(Some(FOLLOW))
 }
