@@ -5,7 +5,10 @@ use mitra_config::Instance;
 use mitra_models::{
     database::{DatabaseClient, DatabaseError},
     profiles::types::{DbActor, DbActorProfile},
-    relationships::queries::{create_follow_request, follow},
+    relationships::{
+        helpers::create_follow_request,
+        queries::follow,
+    },
     users::types::User,
 };
 
@@ -91,7 +94,7 @@ pub async fn follow_or_create_request(
                     &follow_request.id,
                 ).enqueue(db_client).await?;
             },
-            Err(DatabaseError::AlreadyExists(_)) => (), // already following
+            Err(DatabaseError::AlreadyExists(_)) => (), // already sent request
             Err(other_error) => return Err(other_error),
         };
     } else {

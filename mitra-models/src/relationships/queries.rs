@@ -144,8 +144,7 @@ pub async fn unfollow(
     Ok(follow_request_deleted)
 }
 
-// Follow remote actor
-pub async fn create_follow_request(
+pub(super) async fn create_follow_request_unchecked(
     db_client: &impl DatabaseClient,
     source_id: &Uuid,
     target_id: &Uuid,
@@ -661,8 +660,11 @@ mod tests {
         };
         let target = create_profile(db_client, target_data).await.unwrap();
         // Create follow request
-        let follow_request = create_follow_request(db_client, &source.id, &target.id)
-            .await.unwrap();
+        let follow_request = create_follow_request_unchecked(
+            db_client,
+            &source.id,
+            &target.id,
+        ).await.unwrap();
         assert_eq!(follow_request.source_id, source.id);
         assert_eq!(follow_request.target_id, target.id);
         assert_eq!(follow_request.activity_id, None);

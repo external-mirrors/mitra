@@ -108,8 +108,8 @@ mod tests {
     use serial_test::serial;
     use mitra_models::{
         database::test_utils::create_test_database,
+        relationships::helpers::create_follow_request,
         relationships::queries::{
-            create_follow_request,
             follow,
             follow_request_accepted,
             hide_reposts,

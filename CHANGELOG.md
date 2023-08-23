@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- Don't create follow request if follow relationship exists.
+
 ## [1.33.1] - 2023-08-20
 
 ### Changed
