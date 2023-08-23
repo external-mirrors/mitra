@@ -6,7 +6,7 @@ use mitra_models::{
         DatabaseError,
         DbPool,
     },
-    notifications::queries::{
+    notifications::helpers::{
         create_subscription_notification,
         create_subscription_expiration_notification,
     },

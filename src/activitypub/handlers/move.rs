@@ -4,7 +4,7 @@ use serde_json::Value;
 use mitra_config::Config;
 use mitra_models::{
     database::DatabaseClient,
-    notifications::queries::create_move_notification,
+    notifications::helpers::create_move_notification,
     profiles::helpers::find_verified_aliases,
     relationships::queries::{
         get_followers,

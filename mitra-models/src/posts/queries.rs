@@ -19,7 +19,7 @@ use crate::database::{
     DatabaseError,
 };
 use crate::emojis::types::DbEmoji;
-use crate::notifications::queries::{
+use crate::notifications::helpers::{
     create_mention_notification,
     create_reply_notification,
     create_repost_notification,

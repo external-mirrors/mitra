@@ -7,7 +7,7 @@ use crate::database::{
     DatabaseClient,
     DatabaseError,
 };
-use crate::notifications::queries::create_reaction_notification;
+use crate::notifications::helpers::create_reaction_notification;
 use crate::posts::queries::{
     update_reaction_count,
     get_post_author,

@@ -7,7 +7,7 @@ use crate::database::{
     DatabaseClient,
     DatabaseError,
 };
-use crate::notifications::queries::create_follow_notification;
+use crate::notifications::helpers::create_follow_notification;
 use crate::profiles::{
     queries::{
         update_follower_count,
