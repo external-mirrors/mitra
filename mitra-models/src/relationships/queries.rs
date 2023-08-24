@@ -96,15 +96,7 @@ pub async fn follow(
     ).await.map_err(catch_unique_violation("relationship"))?;
     let target_profile = update_follower_count(&transaction, target_id, 1).await?;
     update_following_count(&transaction, source_id, 1).await?;
-    if target_profile.is_local() &&
-        // Only notify the followed (target) if the follower (source) is not muted
-        !has_relationship(
-            &transaction,
-            target_id,
-            source_id,
-            RelationshipType::Mute
-        ).await?
-    {
+    if target_profile.is_local() {
         create_follow_notification(&transaction, source_id, target_id).await?;
     };
     transaction.commit().await?;

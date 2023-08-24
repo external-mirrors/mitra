@@ -28,10 +28,7 @@ use crate::profiles::{
     queries::update_post_count,
     types::DbActorProfile,
 };
-use crate::relationships::{
-    queries::has_relationship,
-    types::RelationshipType,
-};
+use crate::relationships::types::RelationshipType;
 
 use super::types::{
     DbPost,
@@ -264,14 +261,7 @@ pub async fn create_post(
         update_reply_count(&transaction, in_reply_to_id, 1).await?;
         let in_reply_to_author = get_post_author(&transaction, in_reply_to_id).await?;
         if in_reply_to_author.is_local() &&
-            in_reply_to_author.id != db_post.author_id &&
-            // Only notify if author is not muted
-            !has_relationship(
-                &transaction,
-                &in_reply_to_author.id,
-                &db_post.author_id,
-                RelationshipType::Mute,
-            ).await?
+            in_reply_to_author.id != db_post.author_id
         {
             create_reply_notification(
                 &transaction,
@@ -289,13 +279,7 @@ pub async fn create_post(
         if repost_of_author.is_local() &&
             // Don't notify themselves that they reposted their post
             repost_of_author.id != db_post.author_id &&
-            !notified_users.contains(&repost_of_author.id) &&
-            !has_relationship(
-                &transaction,
-                &repost_of_author.id,
-                &db_post.author_id,
-                RelationshipType::Mute
-            ).await?
+            !notified_users.contains(&repost_of_author.id)
         {
             create_repost_notification(
                 &transaction,
@@ -312,14 +296,7 @@ pub async fn create_post(
             profile.id != db_post.author_id &&
             // Don't send mention notification to the author of parent post
             // or to the author of reposted post
-            !notified_users.contains(&profile.id) &&
-            // Don't create mention notification if the author is muted
-            !has_relationship(
-                &transaction,
-                &profile.id,
-                &db_post.author_id,
-                RelationshipType::Mute
-            ).await?
+            !notified_users.contains(&profile.id)
         {
             create_mention_notification(
                 &transaction,

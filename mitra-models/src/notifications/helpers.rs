@@ -1,6 +1,10 @@
 use uuid::Uuid;
 
 use crate::database::{DatabaseClient, DatabaseError};
+use crate::relationships::{
+    queries::has_relationship,
+    types::RelationshipType,
+};
 
 use super::queries::create_notification;
 use super::types::EventType;
@@ -10,6 +14,14 @@ pub async fn create_follow_notification(
     sender_id: &Uuid,
     recipient_id: &Uuid,
 ) -> Result<(), DatabaseError> {
+    if has_relationship(
+        db_client,
+        recipient_id,
+        sender_id,
+        RelationshipType::Mute
+    ).await? {
+        return Ok(());
+    };
     create_notification(
         db_client, sender_id, recipient_id, None,
         EventType::Follow,
@@ -22,6 +34,14 @@ pub async fn create_reply_notification(
     recipient_id: &Uuid,
     post_id: &Uuid,
 ) -> Result<(), DatabaseError> {
+    if has_relationship(
+        db_client,
+        recipient_id,
+        sender_id,
+        RelationshipType::Mute
+    ).await? {
+        return Ok(());
+    };
     create_notification(
         db_client, sender_id, recipient_id, Some(post_id),
         EventType::Reply,
@@ -34,6 +54,14 @@ pub async fn create_reaction_notification(
     recipient_id: &Uuid,
     post_id: &Uuid,
 ) -> Result<(), DatabaseError> {
+    if has_relationship(
+        db_client,
+        recipient_id,
+        sender_id,
+        RelationshipType::Mute
+    ).await? {
+        return Ok(());
+    };
     create_notification(
         db_client, sender_id, recipient_id, Some(post_id),
         EventType::Reaction,
@@ -46,6 +74,14 @@ pub async fn create_mention_notification(
     recipient_id: &Uuid,
     post_id: &Uuid,
 ) -> Result<(), DatabaseError> {
+    if has_relationship(
+        db_client,
+        recipient_id,
+        sender_id,
+        RelationshipType::Mute
+    ).await? {
+        return Ok(());
+    };
     create_notification(
         db_client, sender_id, recipient_id, Some(post_id),
         EventType::Mention,
@@ -58,6 +94,14 @@ pub async fn create_repost_notification(
     recipient_id: &Uuid,
     post_id: &Uuid,
 ) -> Result<(), DatabaseError> {
+    if has_relationship(
+        db_client,
+        recipient_id,
+        sender_id,
+        RelationshipType::Mute
+    ).await? {
+        return Ok(());
+    };
     create_notification(
         db_client, sender_id, recipient_id, Some(post_id),
         EventType::Repost,
