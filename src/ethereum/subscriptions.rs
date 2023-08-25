@@ -36,7 +36,7 @@ use super::signatures::{
     CallArgs,
     SignatureData,
 };
-use super::sync::SyncState;
+use super::sync::{get_blockchain_tip, SyncState};
 use super::utils::{address_to_string, parse_address};
 
 const ETHEREUM: Currency = Currency::Ethereum;
@@ -63,7 +63,7 @@ pub async fn check_ethereum_subscriptions(
     let event_abi = contract.abi().event("UpdateSubscription")?;
     let (from_block, to_block) = sync_state.get_scan_range(
         &contract.address(),
-        web3.eth().block_number().await?.as_u64(),
+        get_blockchain_tip(web3).await?,
     );
     let filter = FilterBuilder::default()
         .address(vec![contract.address()])

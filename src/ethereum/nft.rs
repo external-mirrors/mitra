@@ -29,7 +29,7 @@ use crate::ipfs::utils::parse_ipfs_url;
 
 use super::errors::EthereumError;
 use super::signatures::{sign_contract_call, CallArgs, SignatureData};
-use super::sync::SyncState;
+use super::sync::{get_blockchain_tip, SyncState};
 use super::utils::parse_address;
 
 const TOKEN_WAITLIST_MAP_PROPERTY_NAME: &str = "token_waitlist_map";
@@ -82,7 +82,7 @@ pub async fn process_nft_events(
     let event_abi = contract.abi().event("Transfer")?;
     let (from_block, to_block) = sync_state.get_scan_range(
         &contract.address(),
-        web3.eth().block_number().await?.as_u64(),
+        get_blockchain_tip(web3).await?,
     );
     let filter = FilterBuilder::default()
         .address(vec![contract.address()])

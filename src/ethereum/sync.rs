@@ -53,6 +53,13 @@ async fn read_current_block_number(
     Ok(maybe_block_number)
 }
 
+pub async fn get_blockchain_tip(
+    web3: &Web3<Http>,
+) -> Result<u64, EthereumError> {
+    let block_number = web3.eth().block_number().await?.as_u64();
+    Ok(block_number)
+}
+
 pub async fn get_current_block_number(
     db_client: &impl DatabaseClient,
     web3: &Web3<Http>,
@@ -62,7 +69,7 @@ pub async fn get_current_block_number(
         Some(block_number) => block_number,
         None => {
             // Save block number when connecting to the node for the first time
-            let block_number = web3.eth().block_number().await?.as_u64();
+            let block_number = get_blockchain_tip(web3).await?;
             save_current_block_number(db_client, block_number).await?;
             block_number
         },
