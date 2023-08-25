@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+
+- Add list of staff accounts to NodeInfo metadata object.
+
 ### Changed
 
 - Don't create follow request if follow relationship exists.

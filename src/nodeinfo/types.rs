@@ -78,20 +78,22 @@ struct FederationMetadata {
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
-struct Metadata {
+pub struct Metadata {
     node_name: String,
     node_description: String,
     federation: FederationMetadata,
+    staff_accounts: Vec<String>,
 }
 
 impl Metadata {
-    fn new(config: &Config) -> Self {
+    pub fn new(config: &Config, instance_staff: Vec<String>) -> Self {
         Self {
             node_name: config.instance_title.clone(),
             node_description: config.instance_short_description.clone(),
             federation: FederationMetadata {
                 enabled: config.federation.enabled,
             },
+            staff_accounts: instance_staff,
         }
     }
 }
@@ -113,7 +115,7 @@ pub struct NodeInfo20 {
 }
 
 impl NodeInfo20 {
-    pub fn new(config: &Config, usage: Usage) -> Self {
+    pub fn new(config: &Config, usage: Usage, metadata: Metadata) -> Self {
         Self {
             version: "2.0",
             software: Software20::default(),
@@ -121,7 +123,7 @@ impl NodeInfo20 {
             services: Services::default(),
             open_registrations: has_open_registrations(config),
             usage,
-            metadata: Metadata::new(config),
+            metadata,
         }
     }
 }
@@ -139,7 +141,7 @@ pub struct NodeInfo21 {
 }
 
 impl NodeInfo21 {
-    pub fn new(config: &Config, usage: Usage) -> Self {
+    pub fn new(config: &Config, usage: Usage, metadata: Metadata) -> Self {
         Self {
             version: "2.1",
             software: Software21::default(),
@@ -147,7 +149,7 @@ impl NodeInfo21 {
             services: Services::default(),
             open_registrations: has_open_registrations(config),
             usage,
-            metadata: Metadata::new(config),
+            metadata,
         }
     }
 }

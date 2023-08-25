@@ -10,8 +10,8 @@ use crate::webfinger::types::{
     Link,
     JsonResourceDescriptor,
 };
-use super::helpers::get_usage;
-use super::types::{NodeInfo20, NodeInfo21};
+use super::helpers::{get_instance_staff, get_usage};
+use super::types::{Metadata, NodeInfo20, NodeInfo21};
 
 #[get("/.well-known/nodeinfo")]
 pub async fn get_nodeinfo_jrd(
@@ -46,7 +46,9 @@ pub async fn get_nodeinfo_2_0(
 ) -> Result<HttpResponse, HttpError> {
     let db_client = &**get_database_client(&db_pool).await?;
     let usage = get_usage(db_client).await?;
-    let nodeinfo = NodeInfo20::new(&config, usage);
+    let instance_staff = get_instance_staff(&config, db_client).await?;
+    let metadata = Metadata::new(&config, instance_staff);
+    let nodeinfo = NodeInfo20::new(&config, usage, metadata);
     let response = HttpResponse::Ok().json(nodeinfo);
     Ok(response)
 }
@@ -58,7 +60,9 @@ pub async fn get_nodeinfo_2_1(
 ) -> Result<HttpResponse, HttpError> {
     let db_client = &**get_database_client(&db_pool).await?;
     let usage = get_usage(db_client).await?;
-    let nodeinfo = NodeInfo21::new(&config, usage);
+    let instance_staff = get_instance_staff(&config, db_client).await?;
+    let metadata = Metadata::new(&config, instance_staff);
+    let nodeinfo = NodeInfo21::new(&config, usage, metadata);
     let response = HttpResponse::Ok().json(nodeinfo);
     Ok(response)
 }
