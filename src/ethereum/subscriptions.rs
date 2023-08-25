@@ -50,21 +50,20 @@ fn u256_to_date(value: U256) -> Result<DateTime<Utc>, EthereumError> {
     Ok(datetime)
 }
 
-/// Search for subscription update events
-pub async fn check_ethereum_subscriptions(
-    config: &EthereumConfig,
-    instance: &Instance,
+struct SubscriptionEvent {
+    sender_address: String,
+    recipient_address: String,
+    block_date: DateTime<Utc>,
+    expires_at: DateTime<Utc>,
+}
+
+async fn get_subscription_events(
     web3: &Web3<Http>,
     contract: &Contract<Http>,
-    sync_state: &mut SyncState,
-    db_pool: &DbPool,
-) -> Result<(), EthereumError> {
-    let db_client = &mut **get_database_client(db_pool).await?;
+    from_block: u64,
+    to_block: u64,
+) -> Result<Vec<SubscriptionEvent>, EthereumError> {
     let event_abi = contract.abi().event("UpdateSubscription")?;
-    let (from_block, to_block) = sync_state.get_scan_range(
-        &contract.address(),
-        get_blockchain_tip(web3).await?,
-    );
     let filter = FilterBuilder::default()
         .address(vec![contract.address()])
         .topics(Some(vec![event_abi.signature()]), None, None, None)
@@ -72,6 +71,7 @@ pub async fn check_ethereum_subscriptions(
         .to_block(BlockNumber::Number(to_block.into()))
         .build();
     let logs = web3.eth().logs(filter).await?;
+    let mut events = vec![];
     for log in logs {
         let block_number = if let Some(block_number) = log.block_number {
             block_number
@@ -100,7 +100,42 @@ pub async fn check_ethereum_subscriptions(
             .timestamp;
         let block_date = u256_to_date(block_timestamp)
             .map_err(|_| EthereumError::ConversionError)?;
+        events.push(SubscriptionEvent {
+            sender_address,
+            recipient_address,
+            block_date,
+            expires_at,
+        });
+    };
+    Ok(events)
+}
 
+/// Search for subscription update events
+pub async fn check_ethereum_subscriptions(
+    config: &EthereumConfig,
+    instance: &Instance,
+    web3: &Web3<Http>,
+    contract: &Contract<Http>,
+    sync_state: &mut SyncState,
+    db_pool: &DbPool,
+) -> Result<(), EthereumError> {
+    let db_client = &mut **get_database_client(db_pool).await?;
+    let (from_block, to_block) = sync_state.get_scan_range(
+        &contract.address(),
+        get_blockchain_tip(web3).await?,
+    );
+    let events = get_subscription_events(
+        web3,
+        contract,
+        from_block,
+        to_block,
+    ).await?;
+    for SubscriptionEvent {
+        sender_address,
+        recipient_address,
+        expires_at,
+        block_date,
+    } in events {
         let profiles = search_profiles_by_wallet_address(
             db_client,
             &ETHEREUM,
