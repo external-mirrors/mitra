@@ -1,11 +1,15 @@
 /// https://eips.ethereum.org/EIPS/eip-191
 use k256::{
-    ecdsa::VerifyingKey,
+    ecdsa::{SigningKey, VerifyingKey},
     elliptic_curve::sec1::ToEncodedPoint,
 };
 use sha3::{Digest, Keccak256};
 
-use super::crypto_ecdsa::{recover_ecdsa_public_key, EcdsaError};
+use super::crypto_ecdsa::{
+    create_ecdsa_signature,
+    recover_ecdsa_public_key,
+    EcdsaError,
+};
 use super::did_pkh::DidPkh;
 
 fn prepare_eip191_message(message: &[u8]) -> Vec<u8> {
@@ -26,6 +30,18 @@ fn ecdsa_public_key_to_address(public_key: &VerifyingKey) -> [u8; 20] {
 
 fn address_to_string(address: [u8; 20]) -> String {
     format!("0x{}", hex::encode(address))
+}
+
+pub fn ecdsa_public_key_to_address_hex(public_key: &VerifyingKey) -> String {
+    address_to_string(ecdsa_public_key_to_address(public_key))
+}
+
+pub fn create_eip191_signature(
+    private_key: &SigningKey,
+    message: &[u8],
+) -> Result<[u8; 65], EcdsaError> {
+    let eip191_message = prepare_eip191_message(message);
+    create_ecdsa_signature(private_key, &eip191_message)
 }
 
 pub fn recover_address_eip191(
@@ -73,7 +89,7 @@ pub fn verify_eip191_signature(
 
 #[cfg(test)]
 mod tests {
-    use crate::crypto_ecdsa::{generate_ecdsa_key, create_ecdsa_signature};
+    use crate::crypto_ecdsa::generate_ecdsa_key;
     use crate::currencies::Currency;
     use super::*;
 
@@ -81,13 +97,13 @@ mod tests {
     fn test_verify_eip191_signature() {
         let private_key = generate_ecdsa_key();
         let public_key = private_key.verifying_key();
-        let address_bytes = ecdsa_public_key_to_address(&public_key);
-        let address = address_to_string(address_bytes);
+        let address = ecdsa_public_key_to_address_hex(&public_key);
         let signer = DidPkh::from_address(&Currency::Ethereum, &address);
         let message = "test";
-        let eip191_message = prepare_eip191_message(message.as_bytes());
-        let signature =
-            create_ecdsa_signature(&private_key, &eip191_message).unwrap();
+        let signature = create_eip191_signature(
+            &private_key,
+            message.as_bytes(),
+        ).unwrap();
         let result = verify_eip191_signature(
             &signer,
             message,

@@ -14,14 +14,12 @@ use k256::{
 
 pub type EcdsaError = Error;
 
-#[allow(dead_code)]
 pub fn generate_ecdsa_key() -> SigningKey {
     let mut rng = rand::rngs::OsRng;
     let signing_key = SigningKey::random(&mut rng);
     signing_key
 }
 
-#[allow(dead_code)]
 pub fn create_ecdsa_signature(
     private_key: &SigningKey,
     message: &[u8],

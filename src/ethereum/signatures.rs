@@ -93,7 +93,7 @@ fn prepare_message(message: &[u8]) -> [u8; 32] {
 
 /// Create EIP-191 signature
 /// https://eips.ethereum.org/EIPS/eip-191
-pub fn sign_message(
+fn sign_message(
     signing_key: &str,
     message: &[u8],
 ) -> Result<SignatureData, SignatureError> {
@@ -111,7 +111,8 @@ pub fn sign_message(
 }
 
 /// Verify EIP-191 signature
-pub fn recover_address(
+#[allow(dead_code)]
+fn recover_address(
     message: &[u8],
     signature: &SignatureData,
 ) -> Result<Address, SignatureError> {

@@ -355,17 +355,15 @@ mod tests {
     use serde_json::json;
     use mitra_utils::{
         caip2::ChainId,
+        crypto_ecdsa::generate_ecdsa_key,
         currencies::Currency,
         did::Did,
         did_pkh::DidPkh,
+        eip191::{create_eip191_signature, ecdsa_public_key_to_address_hex},
     };
     use crate::activitypub::identity::{
         create_identity_claim_fep_c390,
         create_identity_proof_fep_c390,
-    };
-    use crate::ethereum::{
-        signatures::{generate_ecdsa_key, sign_message},
-        utils::{address_to_string, key_to_ethereum_address},
     };
     use super::*;
 
@@ -375,7 +373,7 @@ mod tests {
     fn test_identity_proof_fep_c390() {
         let actor_id = "https://server.example/users/test";
         let private_key = generate_ecdsa_key();
-        let address = address_to_string(key_to_ethereum_address(&private_key));
+        let address = ecdsa_public_key_to_address_hex(&private_key.verifying_key());
         let did_pkh = DidPkh::from_address(&Currency::Ethereum, &address);
         let did = Did::Pkh(did_pkh);
         let proof_type = IdentityProofType::FepC390JcsEip191Proof;
@@ -386,17 +384,16 @@ mod tests {
             &proof_type,
             created_at,
         ).unwrap();
-        let signature = sign_message(
-            &private_key.display_secret().to_string(),
+        let signature = create_eip191_signature(
+            &private_key,
             message.as_bytes(),
         ).unwrap();
-        let signature_bin = signature.to_bytes();
         let identity_proof = create_identity_proof_fep_c390(
             actor_id,
             &did,
             &proof_type,
             created_at,
-            &signature_bin,
+            &signature,
         );
         let parsed = parse_identity_proof_fep_c390(
             actor_id,
