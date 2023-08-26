@@ -1,3 +1,4 @@
+use chrono::{DateTime, Utc};
 use postgres_types::FromSql;
 use tokio_postgres::Row;
 use uuid::Uuid;
@@ -14,7 +15,7 @@ use crate::{
 #[derive(Debug)]
 pub enum RelationshipType {
     Follow,
-    FollowRequest,
+    FollowRequest, // follow_request table
     Subscription,
     HideReposts,
     HideReplies,
@@ -58,6 +59,8 @@ pub struct DbRelationship {
     pub source_id: Uuid,
     pub target_id: Uuid,
     pub relationship_type: RelationshipType,
+    #[allow(dead_code)]
+    created_at: DateTime<Utc>,
 }
 
 impl DbRelationship {
@@ -85,6 +88,7 @@ impl TryFrom<&Row> for DbRelationship {
             source_id: row.try_get("source_id")?,
             target_id: row.try_get("target_id")?,
             relationship_type: row.try_get("relationship_type")?,
+            created_at: row.try_get("created_at")?,
         };
         Ok(relationship)
     }
@@ -132,6 +136,8 @@ pub struct DbFollowRequest {
     pub target_id: Uuid,
     pub activity_id: Option<String>,
     pub request_status: FollowRequestStatus,
+    #[allow(dead_code)]
+    created_at: DateTime<Utc>,
 }
 
 pub struct RelatedActorProfile {

@@ -33,14 +33,14 @@ pub async fn get_relationships(
 ) -> Result<Vec<DbRelationship>, DatabaseError> {
     let rows = db_client.query(
         "
-        SELECT source_id, target_id, relationship_type
+        SELECT source_id, target_id, relationship_type, created_at
         FROM relationship
         WHERE
             source_id = $1 AND target_id = $2
             OR
             source_id = $2 AND target_id = $1
         UNION ALL
-        SELECT source_id, target_id, $4
+        SELECT source_id, target_id, $4, created_at
         FROM follow_request
         WHERE
             source_id = $1 AND target_id = $2

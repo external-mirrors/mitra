@@ -106,6 +106,7 @@ CREATE TABLE relationship (
     source_id UUID NOT NULL REFERENCES actor_profile (id) ON DELETE CASCADE,
     target_id UUID NOT NULL REFERENCES actor_profile (id) ON DELETE CASCADE,
     relationship_type SMALLINT NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UNIQUE (source_id, target_id, relationship_type),
     CHECK (source_id != target_id)
 );
@@ -116,6 +117,7 @@ CREATE TABLE follow_request (
     target_id UUID NOT NULL REFERENCES actor_profile (id) ON DELETE CASCADE,
     activity_id VARCHAR(2000) UNIQUE,
     request_status SMALLINT NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UNIQUE (source_id, target_id),
     CHECK (source_id != target_id)
 );
