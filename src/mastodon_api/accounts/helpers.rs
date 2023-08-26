@@ -61,7 +61,11 @@ pub async fn get_relationship(
                     relationship_map.muting = true;
                 };
             },
-            RelationshipType::Reject => (),
+            RelationshipType::Reject => {
+                if !relationship.is_direct(source_id, target_id)? {
+                    relationship_map.rejected_by = true;
+                };
+            },
         };
     };
     Ok(relationship_map)
@@ -156,6 +160,7 @@ mod tests {
         assert_eq!(relationship.followed_by, false);
         assert_eq!(relationship.requested, false);
         assert_eq!(relationship.requested_by, false);
+        assert_eq!(relationship.rejected_by, false);
         assert_eq!(relationship.subscription_to, false);
         assert_eq!(relationship.subscription_from, false);
         assert_eq!(relationship.showing_reblogs, true);

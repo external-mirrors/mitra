@@ -2211,6 +2211,10 @@ components:
           description: Do you have a pending follow request from this user?
           type: boolean
           default: false
+        rejected_by:
+          description: Has your follow request been rejected?
+          type: boolean
+          default: false
         subscription_to:
           description: Are you sending subscription payments to this user?
           type: boolean
