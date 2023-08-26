@@ -29,7 +29,7 @@ struct Reject {
 
 pub async fn handle_reject(
     config: &Config,
-    db_client: &impl DatabaseClient,
+    db_client: &mut impl DatabaseClient,
     activity: Value,
 ) -> HandlerResult {
     // Reject(Follow)
@@ -57,6 +57,6 @@ pub async fn handle_reject(
     if follow_request.target_id != actor_profile.id {
         return Err(ValidationError("actor is not a target").into());
     };
-    follow_request_rejected(db_client, &follow_request_id).await?;
+    follow_request_rejected(db_client, &follow_request.id).await?;
     Ok(Some(FOLLOW))
 }

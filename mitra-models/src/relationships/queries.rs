@@ -98,6 +98,13 @@ pub async fn follow(
         ",
         &[&source_id, &target_id, &RelationshipType::Follow],
     ).await.map_err(catch_unique_violation("relationship"))?;
+    transaction.execute(
+        "
+        DELETE FROM relationship
+        WHERE source_id = $1 AND target_id = $2 AND relationship_type = $3
+        ",
+        &[&target_id, &source_id, &RelationshipType::Reject],
+    ).await?;
     let target_profile = update_follower_count(&transaction, target_id, 1).await?;
     update_following_count(&transaction, source_id, 1).await?;
     if target_profile.is_local() {
@@ -228,19 +235,31 @@ pub async fn follow_request_accepted(
 }
 
 pub async fn follow_request_rejected(
-    db_client: &impl DatabaseClient,
+    db_client: &mut impl DatabaseClient,
     request_id: &Uuid,
 ) -> Result<(), DatabaseError> {
-    let deleted_count = db_client.execute(
+    let transaction = db_client.transaction().await?;
+    let maybe_row = transaction.query_opt(
         "
         DELETE FROM follow_request
         WHERE id = $1
+        RETURNING source_id, target_id
         ",
         &[&request_id],
     ).await?;
-    if deleted_count == 0 {
-        return Err(DatabaseError::NotFound("follow request"));
-    };
+    let row = maybe_row.ok_or(DatabaseError::NotFound("follow request"))?;
+    let source_id: Uuid = row.try_get("source_id")?;
+    let target_id: Uuid = row.try_get("target_id")?;
+    // Make rejection record
+    transaction.execute(
+        "
+        INSERT INTO relationship (source_id, target_id, relationship_type)
+        VALUES ($1, $2, $3)
+        ON CONFLICT (source_id, target_id, relationship_type) DO NOTHING
+        ",
+        &[&target_id, &source_id, &RelationshipType::Reject],
+    ).await?;
+    transaction.commit().await?;
     Ok(())
 }
 
@@ -736,6 +755,13 @@ mod tests {
             result,
             Err(DatabaseError::NotFound("follow request")),
         ));
+        let is_rejected = has_relationship(
+            db_client,
+            &target.id,
+            &source.id,
+            RelationshipType::Reject,
+        ).await.unwrap();
+        assert_eq!(is_rejected, true);
     }
 
     #[tokio::test]

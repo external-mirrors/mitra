@@ -20,6 +20,7 @@ pub enum RelationshipType {
     HideReposts,
     HideReplies,
     Mute,
+    Reject, // follow request rejected
 }
 
 impl From<&RelationshipType> for i16 {
@@ -31,6 +32,7 @@ impl From<&RelationshipType> for i16 {
             RelationshipType::HideReposts => 4,
             RelationshipType::HideReplies => 5,
             RelationshipType::Mute => 6,
+            RelationshipType::Reject => 7,
         }
     }
 }
@@ -46,6 +48,7 @@ impl TryFrom<i16> for RelationshipType {
             4 => Self::HideReposts,
             5 => Self::HideReplies,
             6 => Self::Mute,
+            7 => Self::Reject,
             _ => return Err(DatabaseTypeError),
         };
         Ok(relationship_type)

@@ -14,7 +14,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Changed
 
 - Don't create follow request if follow relationship exists.
-- Delete follow requests instead of setting "Rejected" status.
+- Create rejection relationship instead of setting "Rejected" status on follow request.
 
 ## [1.33.1] - 2023-08-20
 

@@ -59,6 +59,7 @@ pub async fn get_relationship(
                     relationship_map.muting = true;
                 };
             },
+            RelationshipType::Reject => (),
         };
     };
     Ok(relationship_map)
