@@ -9,6 +9,4 @@ pub mod sync;
 pub mod utils;
 
 #[cfg(feature = "ethereum-extras")]
-pub mod identity;
-#[cfg(feature = "ethereum-extras")]
 pub mod nft;
