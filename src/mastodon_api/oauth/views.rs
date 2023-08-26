@@ -28,12 +28,12 @@ use mitra_models::{
     },
 };
 use mitra_utils::passwords::verify_password;
+use mitra_validators::errors::ValidationError;
 
 use crate::ethereum::eip4361::verify_eip4361_signature;
 use crate::http::FormOrJson;
 use crate::mastodon_api::errors::MastodonError;
 use crate::monero::caip122::verify_monero_caip122_signature;
-use crate::validators::errors::ValidationError;
 
 use super::auth::get_current_user;
 use super::types::{

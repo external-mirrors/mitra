@@ -21,13 +21,13 @@ use mitra_models::{
         unfollow,
     },
 };
+use mitra_validators::errors::ValidationError;
 
 use crate::activitypub::{
     deserialization::{deserialize_into_object_id, find_object_id},
     identifiers::parse_local_actor_id,
     vocabulary::{ANNOUNCE, FOLLOW, LIKE},
 };
-use crate::validators::errors::ValidationError;
 
 use super::HandlerResult;
 

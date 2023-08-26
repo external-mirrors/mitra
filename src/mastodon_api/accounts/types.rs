@@ -26,6 +26,10 @@ use mitra_utils::{
     did::Did,
     markdown::markdown_basic_to_html,
 };
+use mitra_validators::{
+    errors::ValidationError,
+    profiles::PROFILE_IMAGE_SIZE_MAX,
+};
 
 use crate::activitypub::identifiers::profile_actor_url;
 use crate::mastodon_api::{
@@ -35,10 +39,6 @@ use crate::mastodon_api::{
     uploads::{save_b64_file, UploadError},
 };
 use crate::media::get_file_url;
-use crate::validators::{
-    errors::ValidationError,
-    profiles::PROFILE_IMAGE_SIZE_MAX,
-};
 
 pub const AUTHENTICATION_METHOD_PASSWORD: &str = "password";
 pub const AUTHENTICATION_METHOD_EIP4361: &str = "eip4361";

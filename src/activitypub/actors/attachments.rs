@@ -34,6 +34,7 @@ use mitra_utils::{
         verify_minisign_signature,
     },
 };
+use mitra_validators::errors::ValidationError;
 
 use crate::activitypub::{
     constants::{AP_MEDIA_TYPE, W3ID_VALUEFLOWS_CONTEXT},
@@ -51,7 +52,6 @@ use crate::activitypub::{
         VERIFIABLE_IDENTITY_STATEMENT,
     },
 };
-use crate::validators::errors::ValidationError;
 use crate::web_client::urls::get_subscription_page_url;
 
 use super::types::ActorAttachment;

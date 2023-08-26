@@ -27,6 +27,23 @@ use mitra_utils::{
     html::clean_html,
     urls::get_hostname,
 };
+use mitra_validators::{
+    emojis::{
+        validate_emoji_name,
+        EMOJI_MEDIA_TYPES,
+    },
+    errors::ValidationError,
+    posts::{
+        content_allowed_classes,
+        ATTACHMENT_LIMIT,
+        CONTENT_MAX_SIZE,
+        EMOJI_LIMIT,
+        LINK_LIMIT,
+        MENTION_LIMIT,
+        OBJECT_ID_SIZE_MAX,
+    },
+    tags::validate_hashtag,
+};
 
 use crate::activitypub::{
     constants::{AP_MEDIA_TYPE, AP_PUBLIC, AS_MEDIA_TYPE},
@@ -49,24 +66,8 @@ use crate::activitypub::{
     vocabulary::*,
 };
 use crate::media::MediaStorage;
-use crate::validators::{
-    emojis::{
-        validate_emoji_name,
-        EMOJI_MEDIA_TYPES,
-    },
-    errors::ValidationError,
-    posts::{
-        content_allowed_classes,
-        ATTACHMENT_LIMIT,
-        CONTENT_MAX_SIZE,
-        EMOJI_LIMIT,
-        LINK_LIMIT,
-        MENTION_LIMIT,
-        OBJECT_ID_SIZE_MAX,
-    },
-    tags::validate_hashtag,
-};
 use crate::webfinger::types::ActorAddress;
+
 use super::HandlerResult;
 
 fn get_object_attributed_to(object: &Object)

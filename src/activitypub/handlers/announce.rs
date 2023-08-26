@@ -13,6 +13,7 @@ use mitra_models::{
     posts::types::PostCreateData,
     profiles::queries::get_profile_by_remote_actor_id,
 };
+use mitra_validators::errors::ValidationError;
 
 use crate::activitypub::{
     deserialization::{deserialize_into_object_id, find_object_id},
@@ -21,7 +22,6 @@ use crate::activitypub::{
     vocabulary::*,
 };
 use crate::media::MediaStorage;
-use crate::validators::errors::ValidationError;
 
 use super::HandlerResult;
 

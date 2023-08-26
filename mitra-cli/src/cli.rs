@@ -38,14 +38,6 @@ use mitra::monero::{
     },
 };
 use mitra::payments::monero::{get_payment_address, reopen_invoice};
-use mitra::validators::{
-    emojis::{
-        validate_emoji_name,
-        EMOJI_LOCAL_MAX_SIZE,
-        EMOJI_MEDIA_TYPES,
-    },
-    users::validate_local_username,
-};
 use mitra_config::Config;
 use mitra_models::{
     attachments::queries::delete_unused_attachments,
@@ -104,6 +96,14 @@ use mitra_utils::{
     datetime::days_before_now,
     files::sniff_media_type,
     passwords::hash_password,
+};
+use mitra_validators::{
+    emojis::{
+        validate_emoji_name,
+        EMOJI_LOCAL_MAX_SIZE,
+        EMOJI_MEDIA_TYPES,
+    },
+    users::validate_local_username,
 };
 
 /// Admin CLI tool

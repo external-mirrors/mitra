@@ -7,8 +7,7 @@ use mitra_utils::{
     caip10::AccountId,
     caip2::ChainId,
 };
-
-use crate::validators::errors::ValidationError;
+use mitra_validators::errors::ValidationError;
 
 use super::utils::address_to_string;
 

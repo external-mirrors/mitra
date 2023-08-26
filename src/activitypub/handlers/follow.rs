@@ -10,6 +10,7 @@ use mitra_models::{
     },
     users::queries::get_user_by_name,
 };
+use mitra_validators::errors::ValidationError;
 
 use crate::activitypub::{
     builders::accept_follow::prepare_accept_follow,
@@ -19,7 +20,6 @@ use crate::activitypub::{
     vocabulary::PERSON,
 };
 use crate::media::MediaStorage;
-use crate::validators::errors::ValidationError;
 
 use super::{HandlerError, HandlerResult};
 

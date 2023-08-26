@@ -11,13 +11,13 @@ use mitra_models::{
     },
     relationships::types::FollowRequestStatus,
 };
+use mitra_validators::errors::ValidationError;
 
 use crate::activitypub::{
     deserialization::deserialize_into_object_id,
     identifiers::parse_local_object_id,
     vocabulary::FOLLOW,
 };
-use crate::validators::errors::ValidationError;
 
 use super::HandlerResult;
 

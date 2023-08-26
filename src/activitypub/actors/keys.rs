@@ -25,12 +25,12 @@ use mitra_utils::{
         encode_rsa_public_key,
     },
 };
+use mitra_validators::errors::ValidationError;
 
 use crate::activitypub::{
     identifiers::local_actor_key_id,
     vocabulary::MULTIKEY,
 };
-use crate::validators::errors::ValidationError;
 
 #[derive(Deserialize, Serialize)]
 #[cfg_attr(test, derive(Default))]

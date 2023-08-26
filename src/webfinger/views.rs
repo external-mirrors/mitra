@@ -5,6 +5,7 @@ use mitra_models::{
     database::{get_database_client, DatabaseClient, DbPool},
     users::queries::is_registered_user,
 };
+use mitra_validators::errors::ValidationError;
 
 use crate::activitypub::{
     constants::AP_MEDIA_TYPE,
@@ -15,7 +16,6 @@ use crate::activitypub::{
     },
 };
 use crate::errors::HttpError;
-use crate::validators::errors::ValidationError;
 
 use super::types::{
     ActorAddress,

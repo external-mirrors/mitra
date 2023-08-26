@@ -12,12 +12,12 @@ use mitra_models::{
     relationships::queries::subscribe_opt,
     users::queries::get_user_by_name,
 };
+use mitra_validators::errors::ValidationError;
 
 use crate::activitypub::{
     identifiers::parse_local_actor_id,
     vocabulary::{NOTE, PERSON},
 };
-use crate::validators::errors::ValidationError;
 
 use super::{HandlerError, HandlerResult};
 

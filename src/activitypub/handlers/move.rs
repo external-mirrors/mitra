@@ -12,6 +12,7 @@ use mitra_models::{
     },
     users::queries::{get_user_by_id, get_user_by_name},
 };
+use mitra_validators::errors::ValidationError;
 
 use crate::activitypub::{
     builders::{
@@ -23,7 +24,6 @@ use crate::activitypub::{
     vocabulary::PERSON,
 };
 use crate::media::MediaStorage;
-use crate::validators::errors::ValidationError;
 
 use super::HandlerResult;
 

@@ -15,6 +15,7 @@ use mitra_models::{
     },
     profiles::types::DbActorProfile,
 };
+use mitra_validators::errors::ValidationError;
 
 use crate::activitypub::{
     actors::helpers::{create_remote_profile, update_remote_profile},
@@ -25,7 +26,6 @@ use crate::activitypub::{
     types::Object,
 };
 use crate::media::MediaStorage;
-use crate::validators::errors::ValidationError;
 use crate::webfinger::types::ActorAddress;
 
 use super::fetchers::{

@@ -79,6 +79,11 @@ use mitra_utils::{
     },
     passwords::hash_password,
 };
+use mitra_validators::{
+    errors::ValidationError,
+    profiles::clean_profile_update_data,
+    users::validate_local_username,
+};
 
 use crate::activitypub::{
     builders::{
@@ -113,11 +118,7 @@ use crate::mastodon_api::{
     statuses::helpers::get_paginated_status_list,
 };
 use crate::monero::caip122::verify_monero_caip122_signature;
-use crate::validators::{
-    errors::ValidationError,
-    profiles::clean_profile_update_data,
-    users::validate_local_username,
-};
+
 use super::helpers::{
     get_aliases,
     get_relationship,

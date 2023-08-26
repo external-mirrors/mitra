@@ -6,6 +6,7 @@ use mitra_models::{
     database::{DatabaseClient, DatabaseError},
     reactions::queries::create_reaction,
 };
+use mitra_validators::errors::ValidationError;
 
 use crate::activitypub::{
     deserialization::deserialize_into_object_id,
@@ -16,7 +17,6 @@ use crate::activitypub::{
     vocabulary::NOTE,
 };
 use crate::media::MediaStorage;
-use crate::validators::errors::ValidationError;
 
 use super::HandlerResult;
 

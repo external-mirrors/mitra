@@ -26,6 +26,7 @@ use mitra_utils::{
     currencies::Currency,
     did::Did,
 };
+use mitra_validators::errors::ValidationError;
 
 use crate::activitypub::{
     fetcher::helpers::{
@@ -38,7 +39,6 @@ use crate::activitypub::{
 };
 use crate::ethereum::utils::validate_ethereum_address;
 use crate::media::MediaStorage;
-use crate::validators::errors::ValidationError;
 use crate::webfinger::types::ActorAddress;
 
 const SEARCH_FETCHER_TIMEOUT: u64 = 15;

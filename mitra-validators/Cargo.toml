@@ -1,0 +1,15 @@
+[package]
+name = "mitra-validators"
+version = "1.33.1"
+license = "AGPL-3.0-only"
+edition = "2021"
+rust-version = "1.57"
+
+[dependencies]
+# Used for working with regular expressions
+regex = "1.6.0"
+# Used for creating error types
+thiserror = "1.0.37"
+
+mitra-models = { path = "../mitra-models" }
+mitra-utils = { path = "../mitra-utils" }

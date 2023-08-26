@@ -1930,6 +1930,7 @@ dependencies = [
  "mitra-json-signatures",
  "mitra-models",
  "mitra-utils",
+ "mitra-validators",
  "monero-rpc",
  "num_cpus",
  "regex",
@@ -1958,6 +1959,7 @@ dependencies = [
  "mitra-config",
  "mitra-models",
  "mitra-utils",
+ "mitra-validators",
  "tokio",
  "uuid",
 ]
@@ -2048,6 +2050,16 @@ dependencies = [
  "unsigned-varint",
  "url 2.2.2",
  "uuid",
+]
+
+[[package]]
+name = "mitra-validators"
+version = "1.33.1"
+dependencies = [
+ "mitra-models",
+ "mitra-utils",
+ "regex",
+ "thiserror",
 ]
 
 [[package]]

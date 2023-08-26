@@ -17,6 +17,7 @@ use mitra_models::{
     },
     users::types::User,
 };
+use mitra_validators::errors::ValidationError;
 
 use crate::activitypub::{
     builders::{
@@ -28,7 +29,6 @@ use crate::activitypub::{
     HandlerError,
 };
 use crate::media::MediaStorage;
-use crate::validators::errors::ValidationError;
 use crate::webfinger::types::ActorAddress;
 
 fn export_profiles_to_csv(

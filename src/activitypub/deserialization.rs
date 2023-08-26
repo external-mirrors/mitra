@@ -8,7 +8,7 @@ use serde::{
 };
 use serde_json::Value;
 
-use crate::validators::errors::ValidationError;
+use mitra_validators::errors::ValidationError;
 
 /// Parses object json value and returns its ID as string
 pub fn find_object_id(object: &Value) -> Result<String, ValidationError> {

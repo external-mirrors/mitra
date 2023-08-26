@@ -13,13 +13,13 @@ use mitra_models::{
         get_profile_by_remote_actor_id,
     },
 };
+use mitra_validators::errors::ValidationError;
 
 use crate::activitypub::{
     deserialization::deserialize_into_object_id,
     vocabulary::{NOTE, PERSON},
 };
 use crate::media::remove_media;
-use crate::validators::errors::ValidationError;
 
 use super::HandlerResult;
 

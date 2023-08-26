@@ -12,8 +12,7 @@ use mitra_utils::{
     caip2::ChainId,
     urls::{get_hostname, url_encode},
 };
-
-use crate::validators::errors::ValidationError;
+use mitra_validators::errors::ValidationError;
 
 pub enum LocalActorCollection {
     Inbox,

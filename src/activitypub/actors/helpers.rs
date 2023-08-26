@@ -17,6 +17,15 @@ use mitra_models::{
         ProfileUpdateData,
     },
 };
+use mitra_validators::{
+    errors::ValidationError,
+    posts::EMOJI_LIMIT,
+    profiles::{
+        clean_profile_create_data,
+        clean_profile_update_data,
+        PROFILE_IMAGE_SIZE_MAX,
+    },
+};
 
 use crate::activitypub::{
     actors::types::Actor,
@@ -37,15 +46,6 @@ use crate::activitypub::{
     },
 };
 use crate::media::MediaStorage;
-use crate::validators::{
-    errors::ValidationError,
-    posts::EMOJI_LIMIT,
-    profiles::{
-        clean_profile_create_data,
-        clean_profile_update_data,
-        PROFILE_IMAGE_SIZE_MAX,
-    },
-};
 
 use super::attachments::{
     parse_identity_proof,

@@ -22,6 +22,7 @@ use mitra_utils::{
     crypto_rsa::RsaSerializationError,
     urls::get_hostname,
 };
+use mitra_validators::errors::ValidationError;
 
 use crate::activitypub::{
     constants::{
@@ -46,7 +47,6 @@ use crate::activitypub::{
     vocabulary::{IMAGE, PERSON, SERVICE},
 };
 use crate::media::get_file_url;
-use crate::validators::errors::ValidationError;
 use crate::webfinger::types::ActorAddress;
 
 use super::attachments::{

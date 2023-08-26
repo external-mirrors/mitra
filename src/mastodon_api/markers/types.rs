@@ -2,8 +2,7 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 use mitra_models::markers::types::{DbTimelineMarker, Timeline};
-
-use crate::validators::errors::ValidationError;
+use mitra_validators::errors::ValidationError;
 
 #[derive(Deserialize)]
 pub struct MarkerQueryParams {

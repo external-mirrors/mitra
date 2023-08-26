@@ -9,10 +9,9 @@ use regex::Regex;
 use serde::{Serialize, Deserialize};
 
 use mitra_models::profiles::types::DbActorProfile;
+use mitra_validators::errors::ValidationError;
 
-use crate::validators::errors::ValidationError;
-
-// See also: USERNAME_RE in validators::profiles
+// See also: USERNAME_RE in mitra_validators::profiles
 const ACTOR_ADDRESS_RE: &str = r"^(?P<username>[\w\.-]+)@(?P<hostname>[\w\.-]+)$";
 
 pub const JRD_CONTENT_TYPE: &str = "application/jrd+json";

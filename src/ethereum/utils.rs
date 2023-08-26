@@ -7,7 +7,7 @@ use web3::{
     types::Address,
 };
 
-use crate::validators::errors::ValidationError;
+use mitra_validators::errors::ValidationError;
 
 pub fn key_to_ethereum_address(private_key: &SecretKey) -> Address {
     private_key.address()

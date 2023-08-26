@@ -3,7 +3,7 @@ use regex::{Captures, Regex};
 use crate::activitypub::identifiers::local_tag_collection;
 use super::links::is_inside_code_block;
 
-// See also: HASHTAG_NAME_RE in validators::tags
+// See also: HASHTAG_NAME_RE in mitra_validators::tags
 const HASHTAG_RE: &str = r"(?m)(?P<before>^|\s|>|[\(])#(?P<tag>[^\s<]+)";
 const HASHTAG_SECONDARY_RE: &str = r"^(?P<tag>[\p{Alphabetic}\d]+)(?P<after>[\.,:?!\)]?)$";
 

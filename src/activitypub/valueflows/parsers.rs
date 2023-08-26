@@ -6,8 +6,7 @@ use mitra_models::{
     profiles::types::PaymentOption,
 };
 use mitra_utils::caip19::AssetType;
-
-use crate::validators::errors::ValidationError;
+use mitra_validators::errors::ValidationError;
 
 use super::constants::{
     ACTION_DELIVER_SERVICE,

@@ -11,6 +11,7 @@ use mitra_models::{
     users::types::User,
 };
 use mitra_utils::id::generate_ulid;
+use mitra_validators::errors::ValidationError;
 
 use crate::activitypub::{
     actors::types::{build_local_actor, Actor},
@@ -26,7 +27,6 @@ use crate::activitypub::{
     types::{build_default_context, Context},
     vocabulary::{PERSON, UPDATE},
 };
-use crate::validators::errors::ValidationError;
 
 #[derive(Serialize)]
 pub struct UpdatePerson {

@@ -25,6 +25,7 @@ use mitra_models::{
     users::types::ClientConfig,
 };
 use mitra_utils::passwords::hash_password;
+use mitra_validators::errors::ValidationError;
 
 use crate::activitypub::{
     builders::update_person::prepare_update_person,
@@ -37,7 +38,7 @@ use crate::mastodon_api::{
     errors::MastodonError,
     oauth::auth::get_current_user,
 };
-use crate::validators::errors::ValidationError;
+
 use super::helpers::{
     export_followers,
     export_follows,

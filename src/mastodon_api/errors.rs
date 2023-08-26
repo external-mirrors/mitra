@@ -7,8 +7,7 @@ use actix_web::{
 use serde::Serialize;
 
 use mitra_models::database::DatabaseError;
-
-use crate::validators::errors::ValidationError;
+use mitra_validators::errors::ValidationError;
 
 #[derive(thiserror::Error, Debug)]
 pub enum MastodonError {
