@@ -9,24 +9,7 @@ use web3::{
     types::{BlockId, BlockNumber, FilterBuilder, U256},
 };
 
-use mitra_config::{EthereumConfig, Instance};
-use mitra_models::{
-    database::{
-        get_database_client,
-        DatabaseError,
-        DbPool,
-    },
-    profiles::queries::search_profiles_by_wallet_address,
-    subscriptions::queries::{
-        create_subscription,
-        update_subscription,
-        get_subscription_by_participants,
-    },
-    users::queries::get_user_by_public_wallet_address,
-};
-use mitra_utils::currencies::Currency;
-
-use crate::payments::common::send_subscription_notifications;
+use mitra_config::EthereumConfig;
 
 use super::contracts::ContractSet;
 use super::errors::EthereumError;
@@ -36,10 +19,7 @@ use super::signatures::{
     CallArgs,
     SignatureData,
 };
-use super::sync::{get_blockchain_tip, SyncState};
 use super::utils::{address_to_string, parse_address};
-
-const ETHEREUM: Currency = Currency::Ethereum;
 
 fn u256_to_date(value: U256) -> Result<DateTime<Utc>, EthereumError> {
     let timestamp: i64 = value.try_into()
@@ -50,14 +30,15 @@ fn u256_to_date(value: U256) -> Result<DateTime<Utc>, EthereumError> {
     Ok(datetime)
 }
 
-struct SubscriptionEvent {
-    sender_address: String,
-    recipient_address: String,
-    block_date: DateTime<Utc>,
-    expires_at: DateTime<Utc>,
+pub struct SubscriptionEvent {
+    pub sender_address: String,
+    pub recipient_address: String,
+    pub block_date: DateTime<Utc>,
+    pub expires_at: DateTime<Utc>,
 }
 
-async fn get_subscription_events(
+/// Search for subscription update events
+pub async fn get_subscription_events(
     web3: &Web3<Http>,
     contract: &Contract<Http>,
     from_block: u64,
@@ -108,152 +89,6 @@ async fn get_subscription_events(
         });
     };
     Ok(events)
-}
-
-/// Search for subscription update events
-pub async fn check_ethereum_subscriptions(
-    config: &EthereumConfig,
-    instance: &Instance,
-    web3: &Web3<Http>,
-    contract: &Contract<Http>,
-    sync_state: &mut SyncState,
-    db_pool: &DbPool,
-) -> Result<(), EthereumError> {
-    let db_client = &mut **get_database_client(db_pool).await?;
-    let (from_block, to_block) = sync_state.get_scan_range(
-        &contract.address(),
-        get_blockchain_tip(web3).await?,
-    );
-    let events = get_subscription_events(
-        web3,
-        contract,
-        from_block,
-        to_block,
-    ).await?;
-    for SubscriptionEvent {
-        sender_address,
-        recipient_address,
-        expires_at,
-        block_date,
-    } in events {
-        let profiles = search_profiles_by_wallet_address(
-            db_client,
-            &ETHEREUM,
-            &sender_address,
-            true, // prefer verified addresses
-        ).await?;
-        let sender = match &profiles[..] {
-            [profile] => profile,
-            [] => {
-                // Profile not found, skip event
-                log::error!("unknown subscriber {}", sender_address);
-                continue;
-            },
-            _ => {
-                // Ambiguous results, skip event
-                log::error!(
-                    "search returned multiple results for address {}",
-                    sender_address,
-                );
-                continue;
-            },
-        };
-        let recipient = get_user_by_public_wallet_address(
-            db_client,
-            &ETHEREUM,
-            &recipient_address,
-        ).await?;
-
-        match get_subscription_by_participants(
-            db_client,
-            &sender.id,
-            &recipient.id,
-        ).await {
-            Ok(subscription) => {
-                if subscription.chain_id != config.chain_id {
-                    // Reset is required (mitractl reset-subscriptions).
-                    // Without this precaution, sender_address can be
-                    // lost during the switch, leading to a loss
-                    // of the ability to call withdrawReceived()
-                    // from a client.
-                    // See also: ApiSubscription type.
-                    log::error!("can't switch to another chain");
-                    continue;
-                };
-                let current_sender_address =
-                    subscription.sender_address.unwrap_or("''".to_string());
-                if current_sender_address != sender_address {
-                    // Trust only key/address that was linked to profile
-                    // when first subscription event occured.
-                    // Key rotation is not supported.
-                    log::error!(
-                        "subscriber address changed from {} to {}",
-                        current_sender_address,
-                        sender_address,
-                    );
-                    continue;
-                };
-                if subscription.updated_at >= block_date {
-                    // Event already processed
-                    continue;
-                };
-                // Update subscription expiration date
-                update_subscription(
-                    db_client,
-                    subscription.id,
-                    &expires_at,
-                    &block_date,
-                ).await?;
-                #[allow(clippy::comparison_chain)]
-                if expires_at > subscription.expires_at {
-                    log::info!(
-                        "subscription extended: {0} to {1}",
-                        subscription.sender_id,
-                        subscription.recipient_id,
-                    );
-                    send_subscription_notifications(
-                        db_client,
-                        instance,
-                        sender,
-                        &recipient,
-                    ).await?;
-                } else if expires_at < subscription.expires_at {
-                    log::info!(
-                        "subscription cancelled: {0} to {1}",
-                        subscription.sender_id,
-                        subscription.recipient_id,
-                    );
-                };
-            },
-            Err(DatabaseError::NotFound(_)) => {
-                // New subscription
-                create_subscription(
-                    db_client,
-                    &sender.id,
-                    Some(&sender_address),
-                    &recipient.id,
-                    &config.chain_id,
-                    &expires_at,
-                    &block_date,
-                ).await?;
-                log::info!(
-                    "subscription created: {0} to {1}",
-                    sender.id,
-                    recipient.id,
-                );
-                send_subscription_notifications(
-                    db_client,
-                    instance,
-                    sender,
-                    &recipient,
-                ).await?;
-            },
-            Err(other_error) => return Err(other_error.into()),
-        };
-    };
-
-    sync_state.update(db_client, &contract.address(), to_block).await?;
-    Ok(())
 }
 
 pub fn create_subscription_signature(

@@ -20,13 +20,11 @@ use crate::activitypub::queues::{
     process_queued_incoming_activities,
     process_queued_outgoing_activities,
 };
-use crate::ethereum::{
-    contracts::EthereumBlockchain,
-    subscriptions::check_ethereum_subscriptions,
-};
+use crate::ethereum::contracts::EthereumBlockchain;
 use crate::media::remove_media;
 use crate::payments::{
     common::update_expired_subscriptions,
+    ethereum::check_ethereum_subscriptions,
     monero::{check_closed_invoices, check_monero_subscriptions},
 };
 

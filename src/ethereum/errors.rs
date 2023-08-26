@@ -27,6 +27,7 @@ pub enum EthereumError {
     #[error("data conversion error")]
     ConversionError,
 
+    // TODO: remove DatabaseError
     #[error(transparent)]
     DatabaseError(#[from] DatabaseError),
 
