@@ -7,18 +7,16 @@ use web3::{
     types::Address,
 };
 
-use mitra_validators::errors::ValidationError;
-
 pub fn key_to_ethereum_address(private_key: &SecretKey) -> Address {
     private_key.address()
 }
 
 #[derive(thiserror::Error, Debug)]
-#[error("address error")]
-pub struct AddressError;
+#[error("{0}")]
+pub struct AddressError(&'static str);
 
 pub fn parse_address(address: &str) -> Result<Address, AddressError> {
-    Address::from_str(address).map_err(|_| AddressError)
+    Address::from_str(address).map_err(|_| AddressError("invalid address"))
 }
 
 /// Converts address object to lowercase hex string
@@ -28,14 +26,14 @@ pub fn address_to_string(address: Address) -> String {
 
 pub fn validate_ethereum_address(
     wallet_address: &str,
-) -> Result<(), ValidationError> {
+) -> Result<(), AddressError> {
     let address_regexp = Regex::new(r"^0x[a-fA-F0-9]{40}$").unwrap();
     if !address_regexp.is_match(wallet_address) {
-        return Err(ValidationError("invalid address"));
+        return Err(AddressError("invalid address"));
     };
     // Address should be lowercase
     if wallet_address.to_lowercase() != wallet_address {
-        return Err(ValidationError("address is not lowercase"));
+        return Err(AddressError("address is not lowercase"));
     };
     Ok(())
 }

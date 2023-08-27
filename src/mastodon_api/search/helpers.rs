@@ -89,9 +89,7 @@ fn parse_search_query(search_query: &str) -> SearchQuery {
         return SearchQuery::Url(search_query.to_string());
     };
     // TODO: support other currencies
-    if validate_ethereum_address(
-        &search_query.to_lowercase(),
-    ).is_ok() {
+    if validate_ethereum_address(&search_query.to_lowercase()).is_ok() {
         return SearchQuery::WalletAddress(search_query.to_string());
     };
     if let Ok(tag) = parse_tag_query(search_query) {
