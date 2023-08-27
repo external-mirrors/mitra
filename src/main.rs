@@ -15,7 +15,6 @@ use tokio::sync::Mutex;
 
 use mitra::activitypub::views as activitypub;
 use mitra::atom::views::atom_scope;
-use mitra::ethereum::contracts::get_contracts;
 use mitra::http::{
     create_auth_error_handler,
     create_default_headers_middleware,
@@ -47,6 +46,7 @@ use mitra_models::database::{
     get_database_client,
     migrate::apply_migrations,
 };
+use mitra_services::ethereum::contracts::get_contracts;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {

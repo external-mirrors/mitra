@@ -1,7 +1,8 @@
 use mitra_models::database::DatabaseError;
-
-use crate::ethereum::EthereumError;
-use crate::monero::wallet::MoneroError;
+use mitra_services::{
+    ethereum::EthereumError,
+    monero::wallet::MoneroError,
+};
 
 #[derive(thiserror::Error, Debug)]
 pub enum PaymentError {

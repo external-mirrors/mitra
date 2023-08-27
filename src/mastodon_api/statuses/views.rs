@@ -32,6 +32,7 @@ use mitra_models::{
     },
     relationships::queries::get_subscribers,
 };
+use mitra_services::ipfs::{store as ipfs_store};
 use mitra_utils::markdown::markdown_lite_to_html;
 use mitra_validators::{
     errors::ValidationError,
@@ -58,7 +59,6 @@ use crate::activitypub::{
     identifiers::local_object_id,
 };
 use crate::http::{get_request_base_url, FormOrJson};
-use crate::ipfs::{store as ipfs_store};
 use crate::mastodon_api::{
     errors::MastodonError,
     oauth::auth::get_current_user,
@@ -637,10 +637,14 @@ async fn unpin(
 #[cfg(feature = "ethereum-extras")]
 use {
     mitra_models::posts::queries::set_post_token_tx_id,
+    mitra_services::{
+        ethereum::{
+            erc721_metadata::PostMetadata,
+            nft::create_mint_signature,
+        },
+        ipfs::utils::get_ipfs_url,
+    },
     mitra_utils::currencies::Currency,
-    crate::ethereum::erc721_metadata::PostMetadata,
-    crate::ethereum::nft::create_mint_signature,
-    crate::ipfs::utils::get_ipfs_url,
     super::types::TransactionData,
 };
 

@@ -6,9 +6,8 @@ use sha2::{Digest, Sha256};
 
 use mitra_config::Config;
 use mitra_models::cleanup::DeletionQueue;
+use mitra_services::ipfs::{store as ipfs_store};
 use mitra_utils::files::{get_media_type_extension, write_file};
-
-use crate::ipfs::store as ipfs_store;
 
 pub const SUPPORTED_MEDIA_TYPES: [&str; 13] = [
     "audio/mpeg",

@@ -1,0 +1,42 @@
+[package]
+name = "mitra-services"
+version = "1.33.1"
+license = "AGPL-3.0-only"
+edition = "2021"
+rust-version = "1.57"
+
+[dependencies]
+# Used for catching errors
+anyhow = "1.0.58"
+# Used for working with dates
+chrono = { version = "0.4.23", default-features = false, features = ["std"] }
+# Used to work with hexadecimal strings
+hex = { version = "0.4.3", features = ["serde"] }
+# Used for logging
+log = "0.4.14"
+# Used to query Monero node
+monero-rpc = { git = "https://github.com/monero-rs/monero-rpc-rs.git", rev = "37169b9b42bc2ca9c4a39229811c8f89624fc275", features = ["rpc_authentication"] }
+# Used for working with regular expressions
+regex = "1.6.0"
+# Used for making async HTTP requests
+reqwest = { version = "0.11.13", features = ["json", "multipart"] }
+# Used for working with ethereum keys
+secp256k1 = { version = "0.27.0", features = ["rand", "rand-std"] }
+# Used for serialization/deserialization
+serde = { version = "1.0.136", features = ["derive"] }
+serde_json = "1.0.89"
+# Used to verify EIP-4361 signatures
+siwe = "0.4.2"
+# Used for creating error types
+thiserror = "1.0.37"
+# Used to work with UUIDs
+uuid = { version = "1.1.2", features = ["serde", "v4"] }
+# Used to query ethereum node
+web3 = { git = "https://github.com/tomusdrw/rust-web3", rev = "d49ad4f1d41adfb27d167573e0360b56d07d397b", default-features = false, features = ["http", "http-tls", "signing"] }
+
+mitra-config = { path = "../mitra-config" }
+mitra-models = { path = "../mitra-models" }
+mitra-utils = { path = "../mitra-utils" }
+
+[features]
+ethereum-extras = []

@@ -27,8 +27,7 @@ use mitra_models::{
     },
     users::queries::get_user_by_id,
 };
-
-use crate::monero::wallet::{
+use mitra_services::monero::wallet::{
     create_monero_address,
     get_active_addresses,
     get_incoming_transfers,

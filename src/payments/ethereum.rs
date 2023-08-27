@@ -13,14 +13,13 @@ use mitra_models::{
     },
     users::queries::get_user_by_public_wallet_address,
 };
-use mitra_utils::currencies::Currency;
-
-use crate::ethereum::{
+use mitra_services::ethereum::{
     subscriptions::{get_subscription_events, SubscriptionEvent},
     sync::{get_blockchain_tip, SyncState},
     EthereumApi,
     EthereumContract,
 };
+use mitra_utils::currencies::Currency;
 
 use super::common::send_subscription_notifications;
 use super::errors::PaymentError;

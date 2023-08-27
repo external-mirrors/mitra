@@ -9,10 +9,10 @@ use mitra_config::{
     MITRA_VERSION,
 };
 use mitra_models::users::types::User;
+use mitra_services::ethereum::contracts::ContractSet;
 use mitra_utils::markdown::markdown_to_html;
 use mitra_validators::posts::ATTACHMENT_LIMIT;
 
-use crate::ethereum::contracts::ContractSet;
 use crate::mastodon_api::{
     accounts::types::{
         Account,

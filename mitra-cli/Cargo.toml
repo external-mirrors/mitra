@@ -23,6 +23,7 @@ uuid = "1.1.2"
 
 mitra-config = { path = "../mitra-config" }
 mitra-models = { path = "../mitra-models" }
+mitra-services = { path = "../mitra-services" }
 mitra-utils = { path = "../mitra-utils" }
 mitra-validators = { path = "../mitra-validators" }
 mitra = { path = ".." }

@@ -17,25 +17,11 @@ use mitra::admin::roles::{
     role_to_str,
     ALLOWED_ROLES,
 };
-use mitra::ethereum::{
-    signatures::generate_ecdsa_key,
-    sync::save_current_block_number,
-    utils::key_to_ethereum_address,
-};
 use mitra::media::{
     remove_files,
     remove_media,
     save_file,
     MediaStorage,
-};
-use mitra::monero::{
-    wallet::{
-        create_monero_signature,
-        create_monero_wallet,
-        get_active_addresses,
-        open_monero_wallet,
-        verify_monero_signature,
-    },
 };
 use mitra::payments::monero::{get_payment_address, reopen_invoice};
 use mitra_config::Config;
@@ -86,6 +72,22 @@ use mitra_models::{
         set_user_role,
     },
     users::types::UserCreateData,
+};
+use mitra_services::{
+    ethereum::{
+        signatures::generate_ecdsa_key,
+        sync::save_current_block_number,
+        utils::key_to_ethereum_address,
+    },
+    monero::{
+        wallet::{
+            create_monero_signature,
+            create_monero_wallet,
+            get_active_addresses,
+            open_monero_wallet,
+            verify_monero_signature,
+        },
+    },
 };
 use mitra_utils::{
     crypto_eddsa::generate_ed25519_key,

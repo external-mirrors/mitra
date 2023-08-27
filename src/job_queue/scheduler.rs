@@ -5,8 +5,8 @@ use chrono::{DateTime, Utc};
 
 use mitra_config::Config;
 use mitra_models::database::DbPool;
+use mitra_services::ethereum::contracts::EthereumBlockchain;
 
-use crate::ethereum::contracts::EthereumBlockchain;
 use super::periodic_tasks::*;
 
 #[derive(Debug, Eq, Hash, PartialEq)]

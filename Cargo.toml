@@ -16,6 +16,7 @@ members = [
   "mitra-config",
   "mitra-json-signatures",
   "mitra-models",
+  "mitra-services",
   "mitra-utils",
   "mitra-validators",
 ]
@@ -25,6 +26,7 @@ default-members = [
   "mitra-config",
   "mitra-json-signatures",
   "mitra-models",
+  "mitra-services",
   "mitra-utils",
   "mitra-validators",
 ]
@@ -43,29 +45,23 @@ base64 = "0.13.0"
 # Used for working with dates
 chrono = { version = "0.4.23", default-features = false, features = ["std", "serde"] }
 # Used to work with hexadecimal strings
-hex = { version = "0.4.3", features = ["serde"] }
+hex = { version = "0.4.3" }
 # Used for logging
 log = "0.4.14"
 env_logger = { version = "0.9.0", default-features = false }
 # Used for working with futures
 futures = "0.3.13"
-# Used to query Monero node
-monero-rpc = { git = "https://github.com/monero-rs/monero-rpc-rs.git", rev = "37169b9b42bc2ca9c4a39229811c8f89624fc275", features = ["rpc_authentication"] }
 # Used to determine the number of CPUs on the system
 num_cpus = "1.13.0"
 # Used for working with regular expressions
 regex = "1.6.0"
 # Used for making async HTTP requests
-reqwest = { version = "0.11.13", features = ["json", "multipart", "socks"] }
-# Used for working with ethereum keys
-secp256k1 = { version = "0.27.0", features = ["rand", "rand-std"] }
+reqwest = { version = "0.11.13", features = ["json", "socks"] }
 # Used for serialization/deserialization
 serde = { version = "1.0.136", features = ["derive"] }
 serde_json = "1.0.89"
 # Used to calculate SHA2 hashes
 sha2 = "0.10.6"
-# Used to verify EIP-4361 signatures
-siwe = "0.4.2"
 # Used for creating error types
 thiserror = "1.0.37"
 # Async runtime
@@ -74,12 +70,11 @@ tokio = { version = "1.25.0", features = ["macros"] }
 url = "2.2.2"
 # Used to work with UUIDs
 uuid = { version = "1.1.2", features = ["serde", "v4"] }
-# Used to query ethereum node
-web3 = { git = "https://github.com/tomusdrw/rust-web3", rev = "d49ad4f1d41adfb27d167573e0360b56d07d397b", default-features = false, features = ["http", "http-tls", "signing"] }
 
 mitra-config = { path = "mitra-config" }
 mitra-json-signatures = { path = "mitra-json-signatures" }
 mitra-models = { path = "mitra-models" }
+mitra-services = { path = "mitra-services" }
 mitra-utils = { path = "mitra-utils" }
 mitra-validators = { path = "mitra-validators" }
 
@@ -91,6 +86,6 @@ mitra-models = { path = "mitra-models", features = ["test-utils"] }
 mitra-utils = { path = "mitra-utils", features = ["test-utils"] }
 
 [features]
-ethereum-extras = []
+ethereum-extras = ["mitra-services/ethereum-extras"]
 
 production = ["mitra-config/production"]

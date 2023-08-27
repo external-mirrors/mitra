@@ -13,8 +13,8 @@ use mitra_models::{
     posts::queries::get_post_count,
     users::queries::{get_admin_user, get_user_count},
 };
+use mitra_services::ethereum::contracts::ContractSet;
 
-use crate::ethereum::contracts::ContractSet;
 use crate::http::get_request_base_url;
 use crate::mastodon_api::errors::MastodonError;
 

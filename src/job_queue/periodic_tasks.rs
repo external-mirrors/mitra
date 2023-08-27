@@ -14,13 +14,13 @@ use mitra_models::{
         get_profile_by_id,
     },
 };
+use mitra_services::ethereum::contracts::EthereumBlockchain;
 use mitra_utils::datetime::days_before_now;
 
 use crate::activitypub::queues::{
     process_queued_incoming_activities,
     process_queued_outgoing_activities,
 };
-use crate::ethereum::contracts::EthereumBlockchain;
 use crate::media::remove_media;
 use crate::payments::{
     common::update_expired_subscriptions,
@@ -29,7 +29,7 @@ use crate::payments::{
 };
 
 #[cfg(feature = "ethereum-extras")]
-use crate::ethereum::nft::process_nft_events;
+use mitra_services::ethereum::nft::process_nft_events;
 
 #[cfg(feature = "ethereum-extras")]
 pub async fn nft_monitor(

@@ -63,6 +63,14 @@ use mitra_models::{
     },
     users::types::{Role, UserCreateData},
 };
+use mitra_services::{
+    ethereum::{
+        contracts::ContractSet,
+        eip4361::verify_eip4361_signature,
+        gate::is_allowed_user,
+    },
+    monero::caip122::verify_monero_caip122_signature,
+};
 use mitra_utils::{
     caip2::ChainId,
     crypto_eddsa::ed25519_public_key_from_bytes,
@@ -104,11 +112,6 @@ use crate::activitypub::{
         create_identity_proof_fep_c390,
     },
 };
-use crate::ethereum::{
-    contracts::ContractSet,
-    eip4361::verify_eip4361_signature,
-    gate::is_allowed_user,
-};
 use crate::http::{get_request_base_url, FormOrJson};
 use crate::mastodon_api::{
     errors::MastodonError,
@@ -117,7 +120,6 @@ use crate::mastodon_api::{
     search::helpers::search_profiles_only,
     statuses::helpers::get_paginated_status_list,
 };
-use crate::monero::caip122::verify_monero_caip122_signature;
 
 use super::helpers::{
     get_aliases,
