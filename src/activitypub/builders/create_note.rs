@@ -27,7 +27,6 @@ use crate::activitypub::{
     },
     types::{
         build_default_context,
-        Attachment,
         Context,
         EmojiTag,
         EmojiTagImage,
@@ -51,6 +50,15 @@ enum Tag {
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
+struct MediaAttachment {
+    #[serde(rename = "type")]
+    attachment_type: String,
+    media_type: Option<String>,
+    url: String,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Note {
     #[serde(rename = "@context")]
     context: Context,
@@ -61,7 +69,7 @@ pub struct Note {
     object_type: String,
 
     #[serde(skip_serializing_if = "Vec::is_empty")]
-    attachment: Vec<Attachment>,
+    attachment: Vec<MediaAttachment>,
 
     attributed_to: String,
 
@@ -105,14 +113,13 @@ pub fn build_note(
 ) -> Note {
     let object_id = local_object_id(instance_url, &post.id);
     let actor_id = local_actor_id(instance_url, &post.author.username);
-    let attachments: Vec<Attachment> = post.attachments.iter().map(|db_item| {
+    let attachments: Vec<MediaAttachment> = post.attachments.iter().map(|db_item| {
         let url = get_file_url(instance_url, &db_item.file_name);
         let media_type = db_item.media_type.clone();
-        Attachment {
-            name: None,
+        MediaAttachment {
             attachment_type: DOCUMENT.to_string(),
             media_type,
-            url: Some(url),
+            url,
         }
     }).collect();
 

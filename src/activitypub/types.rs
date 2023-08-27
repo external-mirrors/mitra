@@ -21,7 +21,7 @@ use super::deserialization::{
 };
 use super::vocabulary::HASHTAG;
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Attachment {
     #[serde(rename = "type")]
@@ -29,6 +29,7 @@ pub struct Attachment {
 
     pub name: Option<String>,
     pub media_type: Option<String>,
+    pub href: Option<String>,
     pub url: Option<String>,
 }
 

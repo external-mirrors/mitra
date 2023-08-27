@@ -162,6 +162,13 @@ pub async fn get_object_attachments(
         for attachment in list {
             match attachment.attachment_type.as_str() {
                 DOCUMENT | IMAGE | VIDEO => (),
+                LINK => {
+                    // Lemmy compatibility
+                    let link_href = attachment.href
+                        .ok_or(ValidationError("invalid link attachment"))?;
+                    unprocessed.push(link_href);
+                    continue;
+                },
                 _ => {
                     log::warn!(
                         "skipping attachment of type {}",
