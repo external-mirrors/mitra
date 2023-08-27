@@ -3,9 +3,7 @@ use serde::Serialize;
 use serde_json::{json, Value};
 use uuid::Uuid;
 
-use super::utils::get_ipfs_url;
-
-const IPFS_LOGO: &str = "bafybeihc4hti5ix4ds2tefhy35qd4c7n5as5cazdmksrxj7ipvcxm64h54";
+use crate::ipfs::utils::{get_ipfs_url, IPFS_LOGO};
 
 /// ERC-721 custom attribute as defined by OpenSea guidelines.
 #[derive(Serialize)]

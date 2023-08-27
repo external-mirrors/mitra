@@ -1,5 +1,7 @@
 use regex::Regex;
 
+pub const IPFS_LOGO: &str = "bafybeihc4hti5ix4ds2tefhy35qd4c7n5as5cazdmksrxj7ipvcxm64h54";
+
 pub fn get_ipfs_url(cid: &str) -> String {
     format!("ipfs://{}", cid)
 }
@@ -8,7 +10,6 @@ pub fn get_ipfs_url(cid: &str) -> String {
 #[error("parse error")]
 pub struct ParseError;
 
-#[allow(dead_code)]
 pub fn parse_ipfs_url(url: &str) -> Result<String, ParseError> {
     let regexp = Regex::new(r"ipfs://(?P<cid>\w+)").unwrap();
     let caps = regexp.captures(url).ok_or(ParseError)?;

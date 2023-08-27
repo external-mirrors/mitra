@@ -9,7 +9,7 @@ use actix_web::{
     Scope,
 };
 use actix_web_httpauth::extractors::bearer::BearerAuth;
-use chrono::Utc;
+use chrono::{DateTime, Utc};
 use uuid::Uuid;
 
 use mitra_config::Config;
@@ -58,10 +58,7 @@ use crate::activitypub::{
     identifiers::local_object_id,
 };
 use crate::http::{get_request_base_url, FormOrJson};
-use crate::ipfs::{
-    store as ipfs_store,
-    posts::PostMetadata,
-};
+use crate::ipfs::{store as ipfs_store};
 use crate::mastodon_api::{
     errors::MastodonError,
     oauth::auth::get_current_user,
@@ -637,6 +634,34 @@ async fn unpin(
     Ok(HttpResponse::Ok().json(status))
 }
 
+#[cfg(feature = "ethereum-extras")]
+use {
+    mitra_models::posts::queries::set_post_token_tx_id,
+    mitra_utils::currencies::Currency,
+    crate::ethereum::erc721_metadata::PostMetadata,
+    crate::ethereum::nft::create_mint_signature,
+    crate::ipfs::utils::get_ipfs_url,
+    super::types::TransactionData,
+};
+
+#[cfg(feature = "ethereum-extras")]
+fn create_post_metadata(
+    post_id: &Uuid,
+    post_url: &str,
+    content: &str,
+    created_at: &DateTime<Utc>,
+    image_cid: Option<&str>,
+) -> PostMetadata { PostMetadata::new(post_id, post_url, content, created_at, image_cid) }
+
+#[cfg(not(feature = "ethereum-extras"))]
+fn create_post_metadata(
+    _: &Uuid,
+    _: &str,
+    _: &str,
+    _: &DateTime<Utc>,
+    _: Option<&str>,
+) -> () { }
+
 #[post("/{status_id}/make_permanent")]
 async fn make_permanent(
     auth: BearerAuth,
@@ -674,7 +699,8 @@ async fn make_permanent(
         let post_url = local_object_id(&instance.url(), &post.id);
         let maybe_post_image_cid = post.attachments.first()
             .and_then(|attachment| attachment.ipfs_cid.as_deref());
-        let post_metadata = PostMetadata::new(
+        #[allow(clippy::let_unit_value)]
+        let post_metadata = create_post_metadata(
             &post.id,
             &post_url,
             &post.content,
@@ -709,15 +735,6 @@ async fn make_permanent(
     ).await?;
     Ok(HttpResponse::Ok().json(status))
 }
-
-#[cfg(feature = "ethereum-extras")]
-use {
-    mitra_models::posts::queries::set_post_token_tx_id,
-    mitra_utils::currencies::Currency,
-    crate::ethereum::nft::create_mint_signature,
-    crate::ipfs::utils::get_ipfs_url,
-    super::types::TransactionData,
-};
 
 #[cfg(feature = "ethereum-extras")]
 #[get("/{status_id}/signature")]
