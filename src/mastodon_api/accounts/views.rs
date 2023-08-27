@@ -197,7 +197,7 @@ pub async fn create_account(
             signature,
             &config.instance().hostname(),
             &config.login_message,
-        )?;
+        ).map_err(|err| MastodonError::ValidationError(err.to_string()))?;
         // Don't remember nonce to avoid extra signature requests
         // during registration
         Some(session_data.account_id.address)

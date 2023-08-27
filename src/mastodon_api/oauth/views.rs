@@ -164,7 +164,7 @@ async fn token_view(
                 signature,
                 &config.instance().hostname(),
                 &config.login_message,
-            )?;
+            ).map_err(|err| MastodonError::ValidationError(err.to_string()))?;
             if !is_valid_caip122_nonce(
                 db_client,
                 &session_data.account_id,

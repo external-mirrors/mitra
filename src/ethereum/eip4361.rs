@@ -7,9 +7,12 @@ use mitra_utils::{
     caip10::AccountId,
     caip2::ChainId,
 };
-use mitra_validators::errors::ValidationError;
 
 use super::utils::address_to_string;
+
+#[derive(thiserror::Error, Debug)]
+#[error("{0}")]
+pub struct Eip4361Error(pub &'static str);
 
 pub struct Eip4361SessionData {
     pub account_id: AccountId,
@@ -22,24 +25,24 @@ pub fn verify_eip4361_signature(
     signature: &str,
     instance_hostname: &str,
     login_message: &str,
-) -> Result<Eip4361SessionData, ValidationError> {
+) -> Result<Eip4361SessionData, Eip4361Error> {
     let message: Message = message.parse()
-        .map_err(|_| ValidationError("invalid EIP-4361 message"))?;
+        .map_err(|_| Eip4361Error("invalid EIP-4361 message"))?;
     let signature_bytes = <[u8; 65]>::from_hex(signature.trim_start_matches("0x"))
-        .map_err(|_| ValidationError("invalid signature string"))?;
+        .map_err(|_| Eip4361Error("invalid signature string"))?;
     if message.domain != instance_hostname {
-        return Err(ValidationError("domain doesn't match instance hostname"));
+        return Err(Eip4361Error("domain doesn't match instance hostname"));
     };
     let statement = message.statement.as_ref()
-        .ok_or(ValidationError("statement is missing"))?;
+        .ok_or(Eip4361Error("statement is missing"))?;
     if statement != login_message {
-        return Err(ValidationError("statement doesn't match login message"));
+        return Err(Eip4361Error("statement doesn't match login message"));
     };
     if !message.valid_now() {
-        return Err(ValidationError("message is not currently valid"));
+        return Err(Eip4361Error("message is not currently valid"));
     };
     message.verify_eip191(&signature_bytes)
-        .map_err(|_| ValidationError("invalid signature"))?;
+        .map_err(|_| Eip4361Error("invalid signature"))?;
 
     let chain_id = ChainId::from_ethereum_chain_id(message.chain_id);
     // Return wallet address in lower case
