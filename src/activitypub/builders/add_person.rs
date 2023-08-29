@@ -1,5 +1,6 @@
 use chrono::{DateTime, Utc};
 use serde::Serialize;
+use uuid::Uuid;
 
 use mitra_config::Instance;
 use mitra_models::{
@@ -10,7 +11,12 @@ use mitra_utils::id::generate_ulid;
 
 use crate::activitypub::{
     deliverer::OutgoingActivity,
-    identifiers::{local_actor_id, local_object_id, LocalActorCollection},
+    identifiers::{
+        local_actor_id,
+        local_agreement_id,
+        local_object_id,
+        LocalActorCollection,
+    },
     types::{build_default_context, Context},
     vocabulary::ADD,
 };
@@ -31,6 +37,7 @@ struct AddPerson {
 
     start_time: Option<DateTime<Utc>>,
     end_time: DateTime<Utc>,
+    context: Option<String>,
 
     to: Vec<String>,
 }
@@ -41,10 +48,13 @@ fn build_add_person(
     person_id: &str,
     collection: LocalActorCollection,
     end_time: DateTime<Utc>,
+    maybe_invoice_id: Option<&Uuid>,
 ) -> AddPerson {
     let actor_id = local_actor_id(instance_url, sender_username);
     let activity_id = local_object_id(instance_url, &generate_ulid());
     let collection_id = collection.of(&actor_id);
+    let maybe_context_id = maybe_invoice_id
+        .map(|id| local_agreement_id(instance_url, id));
     AddPerson {
         _context: build_default_context(),
         id: activity_id,
@@ -54,6 +64,7 @@ fn build_add_person(
         target: collection_id,
         start_time: None,
         end_time: end_time,
+        context: maybe_context_id,
         to: vec![person_id.to_string()],
     }
 }
@@ -64,6 +75,7 @@ pub fn prepare_add_person(
     person: &DbActor,
     collection: LocalActorCollection,
     end_time: DateTime<Utc>,
+    maybe_invoice_id: Option<&Uuid>,
 ) -> OutgoingActivity {
     let activity = build_add_person(
         &instance.url(),
@@ -71,6 +83,7 @@ pub fn prepare_add_person(
         &person.id,
         collection,
         end_time,
+        maybe_invoice_id,
     );
     let recipients = vec![person.clone()];
     OutgoingActivity::new(
@@ -92,6 +105,7 @@ mod tests {
         let sender_username = "local";
         let person_id = "https://remote.example/actor/test";
         let collection = LocalActorCollection::Subscribers;
+        let invoice_id = generate_ulid();
         let subscription_expires_at = Utc::now();
         let activity = build_add_person(
             INSTANCE_URL,
@@ -99,6 +113,7 @@ mod tests {
             person_id,
             collection,
             subscription_expires_at,
+            Some(&invoice_id),
         );
 
         assert_eq!(activity.activity_type, "Add");
@@ -110,6 +125,10 @@ mod tests {
         assert_eq!(
             activity.target,
             format!("{}/users/{}/subscribers", INSTANCE_URL, sender_username),
+        );
+        assert_eq!(
+            activity.context.as_ref().unwrap(),
+            &format!("{}/objects/agreements/{}", INSTANCE_URL, invoice_id),
         );
         assert_eq!(activity.start_time.is_none(), true);
         assert_eq!(activity.end_time, subscription_expires_at);

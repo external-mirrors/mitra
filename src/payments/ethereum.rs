@@ -165,6 +165,7 @@ pub async fn check_ethereum_subscriptions(
             sender,
             &recipient,
             expires_at,
+            None,
         ).await?;
     };
 

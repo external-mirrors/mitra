@@ -143,6 +143,7 @@ The `Add` activity is used to notify the subscriber about successful subscriptio
   "target": "https://server.example/users/alice/collections/subscribers",
   "startTime": null,
   "endTime": "2023-08-30T18:15:20.765206474Z",
+  "context": "https://server.example/objects/018a47a8-35bd-7bd2-b2d2-2f40b628d9b7",
   "to": [
     "https://server.example/users/bob"
   ],
@@ -151,6 +152,8 @@ The `Add` activity is used to notify the subscriber about successful subscriptio
 ```
 
 The `endTime` property specifies the subscription expiration time.
+
+The `context` property contains a reference to an `Agreement` object.
 
 The `Remove` activity is used to notify the subscriber about expired subscription. Upon receipt of this activity, the receiving server should remove specified `object` from actors's `subscribers` collection (specified in `target` property):
 

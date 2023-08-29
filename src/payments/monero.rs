@@ -308,6 +308,7 @@ pub async fn check_monero_subscriptions(
             &sender,
             &recipient,
             subscription_expires_at,
+            Some(&invoice.id),
         ).await?;
     };
     Ok(())

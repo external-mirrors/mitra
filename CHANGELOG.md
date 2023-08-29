@@ -11,6 +11,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Added outbox POST handler (FEP-ae97).
 - Added OpenGraph renderer for Synapse link preview generator.
 - Added `instance_timeline_public` configuration parameter for changing visibility of local timeline.
+- Add reference to agreement object to `Add(Person)` activity.
 
 ### Changed
 
