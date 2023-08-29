@@ -1,3 +1,4 @@
+use chrono::{DateTime, Utc};
 use serde::Serialize;
 
 use mitra_config::Instance;
@@ -15,9 +16,10 @@ use crate::activitypub::{
 };
 
 #[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
 struct AddPerson {
     #[serde(rename = "@context")]
-    context: Context,
+    _context: Context,
 
     #[serde(rename = "type")]
     activity_type: String,
@@ -27,6 +29,9 @@ struct AddPerson {
     object: String,
     target: String,
 
+    start_time: Option<DateTime<Utc>>,
+    end_time: DateTime<Utc>,
+
     to: Vec<String>,
 }
 
@@ -35,17 +40,20 @@ fn build_add_person(
     sender_username: &str,
     person_id: &str,
     collection: LocalActorCollection,
+    end_time: DateTime<Utc>,
 ) -> AddPerson {
     let actor_id = local_actor_id(instance_url, sender_username);
     let activity_id = local_object_id(instance_url, &generate_ulid());
     let collection_id = collection.of(&actor_id);
     AddPerson {
-        context: build_default_context(),
+        _context: build_default_context(),
         id: activity_id,
         activity_type: ADD.to_string(),
         actor: actor_id,
         object: person_id.to_string(),
         target: collection_id,
+        start_time: None,
+        end_time: end_time,
         to: vec![person_id.to_string()],
     }
 }
@@ -55,12 +63,14 @@ pub fn prepare_add_person(
     sender: &User,
     person: &DbActor,
     collection: LocalActorCollection,
+    end_time: DateTime<Utc>,
 ) -> OutgoingActivity {
     let activity = build_add_person(
         &instance.url(),
         &sender.profile.username,
         &person.id,
         collection,
+        end_time,
     );
     let recipients = vec![person.clone()];
     OutgoingActivity::new(
@@ -82,11 +92,13 @@ mod tests {
         let sender_username = "local";
         let person_id = "https://remote.example/actor/test";
         let collection = LocalActorCollection::Subscribers;
+        let subscription_expires_at = Utc::now();
         let activity = build_add_person(
             INSTANCE_URL,
             sender_username,
             person_id,
             collection,
+            subscription_expires_at,
         );
 
         assert_eq!(activity.activity_type, "Add");
@@ -99,6 +111,8 @@ mod tests {
             activity.target,
             format!("{}/users/{}/subscribers", INSTANCE_URL, sender_username),
         );
+        assert_eq!(activity.start_time.is_none(), true);
+        assert_eq!(activity.end_time, subscription_expires_at);
         assert_eq!(activity.to[0], person_id);
     }
 }

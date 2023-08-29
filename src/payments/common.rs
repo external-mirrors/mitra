@@ -1,3 +1,5 @@
+use chrono::{DateTime, Utc};
+
 use mitra_config::Instance;
 use mitra_models::{
     database::{
@@ -31,6 +33,7 @@ pub async fn send_subscription_notifications(
     instance: &Instance,
     sender: &DbActorProfile,
     recipient: &User,
+    subscription_expires_at: DateTime<Utc>,
 ) -> Result<(), DatabaseError> {
     create_subscription_notification(
         db_client,
@@ -43,6 +46,7 @@ pub async fn send_subscription_notifications(
             recipient,
             remote_sender,
             LocalActorCollection::Subscribers,
+            subscription_expires_at,
         ).enqueue(db_client).await?;
     };
     Ok(())

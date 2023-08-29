@@ -183,7 +183,7 @@ pub async fn check_monero_subscriptions(
         InvoiceStatus::Forwarded,
     ).await?;
     for invoice in forwarded_invoices {
-        let payout_tx_id = if let Some(payout_tx_id) = invoice.payout_tx_id {
+        let payout_tx_id = if let Some(ref payout_tx_id) = invoice.payout_tx_id {
             payout_tx_id
         } else {
             // Legacy invoices don't have payout_tx_id.
@@ -195,7 +195,7 @@ pub async fn check_monero_subscriptions(
         let transfer = match get_transaction_by_id(
             &wallet_client,
             config.account_index,
-            &payout_tx_id,
+            payout_tx_id,
         ).await {
             Ok(maybe_transfer) => {
                 if let Some(transfer) = maybe_transfer {
@@ -253,7 +253,7 @@ pub async fn check_monero_subscriptions(
         set_invoice_status(db_client, &invoice.id, InvoiceStatus::Completed).await?;
         log::info!("payout transaction confirmed for invoice {}", invoice.id);
 
-        match get_subscription_by_participants(
+        let subscription_expires_at = match get_subscription_by_participants(
             db_client,
             &sender.id,
             &recipient.id,
@@ -279,6 +279,7 @@ pub async fn check_monero_subscriptions(
                     subscription.sender_id,
                     subscription.recipient_id,
                 );
+                expires_at
             },
             Err(DatabaseError::NotFound(_)) => {
                 // New subscription
@@ -297,6 +298,7 @@ pub async fn check_monero_subscriptions(
                     sender.id,
                     recipient.id,
                 );
+                expires_at
             },
             Err(other_error) => return Err(other_error.into()),
         };
@@ -305,6 +307,7 @@ pub async fn check_monero_subscriptions(
             instance,
             &sender,
             &recipient,
+            subscription_expires_at,
         ).await?;
     };
     Ok(())

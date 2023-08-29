@@ -15,6 +15,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Support manual approval of followers.
 - Add `rejected_by` attribute to Mastodon API Relationship object.
 - Append links from `Link` attachments to post content.
+- Add subscription expiration time to `Add(Person)` activity.
 
 ### Changed
 
