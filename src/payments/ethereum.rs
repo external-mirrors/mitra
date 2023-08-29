@@ -1,3 +1,5 @@
+use std::cmp::Ordering;
+
 use mitra_config::{EthereumConfig, Instance};
 use mitra_models::{
     database::{
@@ -119,26 +121,30 @@ pub async fn check_ethereum_subscriptions(
                     &expires_at,
                     &block_date,
                 ).await?;
-                #[allow(clippy::comparison_chain)]
-                if expires_at > subscription.expires_at {
-                    log::info!(
-                        "subscription extended: {0} to {1}",
-                        subscription.sender_id,
-                        subscription.recipient_id,
-                    );
-                    send_subscription_notifications(
-                        db_client,
-                        instance,
-                        sender,
-                        &recipient,
-                    ).await?;
-                } else if expires_at < subscription.expires_at {
-                    log::info!(
-                        "subscription cancelled: {0} to {1}",
-                        subscription.sender_id,
-                        subscription.recipient_id,
-                    );
+                match expires_at.cmp(&subscription.expires_at) {
+                    Ordering::Greater => {
+                        log::info!(
+                            "subscription extended: {0} to {1}",
+                            subscription.sender_id,
+                            subscription.recipient_id,
+                        );
+                    },
+                    Ordering::Less => {
+                        log::info!(
+                            "subscription cancelled: {0} to {1}",
+                            subscription.sender_id,
+                            subscription.recipient_id,
+                        );
+                        continue;
+                    },
+                    Ordering::Equal => continue, // unchanged
                 };
+                send_subscription_notifications(
+                    db_client,
+                    instance,
+                    sender,
+                    &recipient,
+                ).await?;
             },
             Err(DatabaseError::NotFound(_)) => {
                 // New subscription
