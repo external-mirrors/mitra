@@ -279,12 +279,6 @@ pub async fn check_monero_subscriptions(
                     subscription.sender_id,
                     subscription.recipient_id,
                 );
-                send_subscription_notifications(
-                    db_client,
-                    instance,
-                    &sender,
-                    &recipient,
-                ).await?;
             },
             Err(DatabaseError::NotFound(_)) => {
                 // New subscription
@@ -303,15 +297,15 @@ pub async fn check_monero_subscriptions(
                     sender.id,
                     recipient.id,
                 );
-                send_subscription_notifications(
-                    db_client,
-                    instance,
-                    &sender,
-                    &recipient,
-                ).await?;
             },
             Err(other_error) => return Err(other_error.into()),
         };
+        send_subscription_notifications(
+            db_client,
+            instance,
+            &sender,
+            &recipient,
+        ).await?;
     };
     Ok(())
 }

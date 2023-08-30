@@ -139,12 +139,6 @@ pub async fn check_ethereum_subscriptions(
                     },
                     Ordering::Equal => continue, // unchanged
                 };
-                send_subscription_notifications(
-                    db_client,
-                    instance,
-                    sender,
-                    &recipient,
-                ).await?;
             },
             Err(DatabaseError::NotFound(_)) => {
                 // New subscription
@@ -162,15 +156,15 @@ pub async fn check_ethereum_subscriptions(
                     sender.id,
                     recipient.id,
                 );
-                send_subscription_notifications(
-                    db_client,
-                    instance,
-                    sender,
-                    &recipient,
-                ).await?;
             },
             Err(other_error) => return Err(other_error.into()),
         };
+        send_subscription_notifications(
+            db_client,
+            instance,
+            sender,
+            &recipient,
+        ).await?;
     };
 
     sync_state.update(db_client, &contract.address(), to_block).await?;
