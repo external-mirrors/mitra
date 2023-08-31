@@ -41,6 +41,8 @@ pub const ORDERED_COLLECTION: &str = "OrderedCollection";
 pub const ORDERED_COLLECTION_PAGE: &str = "OrderedCollectionPage";
 
 // Valueflows
+pub const AGREEMENT: &str = "Agreement";
+pub const COMMITMENT: &str = "Commitment";
 pub const INTENT: &str = "Intent";
 pub const PROPOSAL: &str = "Proposal";
 

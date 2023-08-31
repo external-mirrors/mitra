@@ -13,5 +13,8 @@ pub const MASTODON_CONTEXT: &str = "http://joinmastodon.org/ns#";
 pub const MITRA_CONTEXT: &str = "http://jsonld.mitra.social#";
 pub const UNITS_OF_MEASURE_CONTEXT: &str = "http://www.ontology-of-units-of-measure.org/resource/om-2/";
 
+// Relation types
+pub const PAYMENT_LINK_RELATION_TYPE: &str = "payment";
+
 // Misc
 pub const AP_PUBLIC: &str = "https://www.w3.org/ns/activitystreams#Public";

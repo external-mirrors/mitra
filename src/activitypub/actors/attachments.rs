@@ -37,7 +37,11 @@ use mitra_utils::{
 use mitra_validators::errors::ValidationError;
 
 use crate::activitypub::{
-    constants::{AP_MEDIA_TYPE, W3ID_VALUEFLOWS_CONTEXT},
+    constants::{
+        AP_MEDIA_TYPE,
+        PAYMENT_LINK_RELATION_TYPE,
+        W3ID_VALUEFLOWS_CONTEXT,
+    },
     deserialization::deserialize_string_array,
     identifiers::local_actor_proposal_id,
     identity::{
@@ -224,7 +228,6 @@ pub struct PaymentLink {
 
 const PAYMENT_LINK_NAME_ETHEREUM: &str = "EthereumSubscription";
 const PAYMENT_LINK_NAME_MONERO: &str = "MoneroSubscription";
-const PAYMENT_LINK_RELATION_TYPE: &str = "payment";
 
 fn valueflows_proposal_rel() -> String {
     format!("{}{}", W3ID_VALUEFLOWS_CONTEXT, PROPOSAL)

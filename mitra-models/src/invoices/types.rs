@@ -160,3 +160,9 @@ pub struct DbInvoice {
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
+
+impl DbInvoice {
+    pub fn amount_u64(&self) -> Result<u64, DatabaseTypeError> {
+        u64::try_from(self.amount).map_err(|_| DatabaseTypeError)
+    }
+}
