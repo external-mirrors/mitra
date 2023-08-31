@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.34.0] - 2023-08-31
+
 ### Added
 
 - Add list of staff accounts to NodeInfo metadata object.
