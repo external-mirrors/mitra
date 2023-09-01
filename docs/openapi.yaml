@@ -218,9 +218,6 @@ paths:
               schema:
                 type: object
                 properties:
-                  params:
-                    description: Activity parameters
-                    $ref: '#/components/schemas/ActivityParameters'
                   value:
                     description: Activity
                     type: object
@@ -1877,14 +1874,6 @@ components:
               description: Client configurations.
               type: object
               example: {"mitra-web":{"theme":"dark"}}
-    ActivityParameters:
-      type: object
-      properties:
-        type:
-          description: Activity type
-          type: string
-          enum:
-            - update
     Aliases:
       type: object
       properties:

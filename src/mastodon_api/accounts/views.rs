@@ -129,7 +129,6 @@ use super::types::{
     Account,
     AccountCreateData,
     AccountUpdateData,
-    ActivityParams,
     ApiSubscription,
     AUTHENTICATION_METHOD_CAIP122_MONERO,
     AUTHENTICATION_METHOD_EIP4361,
@@ -341,11 +340,10 @@ async fn get_unsigned_update(
     let activity = build_update_person(
         &config.instance_url(),
         &current_user,
-    ).map_err(|_| MastodonError::InternalError)?;
+    )?;
     let activity_value = serde_json::to_value(activity)
         .map_err(|_| MastodonError::InternalError)?;
     let data = UnsignedActivity {
-        params: ActivityParams::Update,
         value: activity_value,
     };
     Ok(HttpResponse::Ok().json(data))

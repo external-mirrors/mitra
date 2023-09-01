@@ -415,15 +415,8 @@ impl AccountUpdateData {
     }
 }
 
-#[derive(Serialize, Deserialize)]
-#[serde(tag = "type", rename_all = "kebab-case")]
-pub enum ActivityParams {
-    Update,
-}
-
 #[derive(Serialize)]
 pub struct UnsignedActivity {
-    pub params: ActivityParams,
     pub value: JsonValue,
 }
 

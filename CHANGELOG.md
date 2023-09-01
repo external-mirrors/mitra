@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Removed
+
+- Remove `params` field from `/api/v1/accounts/signed_update` response.
+
 ## [1.34.0] - 2023-08-31
 
 ### Added
