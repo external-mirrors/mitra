@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- Update `/api/v1/accounts/send_activity` to accept only signed activities.
+
 ### Removed
 
 - Remove `params` field from `/api/v1/accounts/signed_update` response.

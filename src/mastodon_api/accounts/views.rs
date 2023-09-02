@@ -19,12 +19,7 @@ use mitra_config::{
     RegistrationType,
 };
 use mitra_json_signatures::{
-    create::{
-        add_integrity_proof,
-        is_object_signed,
-        IntegrityProof,
-        IntegrityProofConfig,
-    },
+    create::IntegrityProofConfig,
     verify::{
         verify_blake2_ed25519_json_signature,
         verify_eddsa_json_signature,
@@ -351,66 +346,33 @@ async fn get_unsigned_update(
 
 #[post("/send_activity")]
 async fn send_signed_activity(
-    auth: BearerAuth,
-    connection_info: ConnectionInfo,
     config: web::Data<Config>,
     db_pool: web::Data<DbPool>,
     data: web::Json<SignedActivity>,
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &mut **get_database_client(&db_pool).await?;
-    let current_user = get_current_user(db_client, auth.token()).await?;
     let instance = config.instance();
-    let signer = data.signer.parse::<Did>()
-        .map_err(|_| ValidationError("invalid DID"))?;
-    if !current_user.profile.identity_proofs.any(&signer) {
-        return Err(ValidationError("unknown signer").into());
-    };
-    let mut outgoing_activity = match is_update_person_activity(&data.value) {
+    let outgoing_activity = match is_update_person_activity(&data.value) {
         true => {
             let user = validate_update_person_c2s(
                 db_client,
                 &instance,
                 &data.value,
             ).await.map_err(|_| ValidationError("invalid activity"))?;
-            if !user.profile.identity_proofs.any(&signer) {
-                return Err(ValidationError("authentication error").into());
-            };
-            let unsigned_activity = if is_object_signed(&data.value) {
-                verify_signed_c2s_activity(&user.profile, &data.value)
-                    .map_err(|_| ValidationError("invalid integrity proof"))?
-            } else {
-                data.value.clone()
-            };
+            verify_signed_c2s_activity(&user.profile, &data.value)
+                .map_err(|_| ValidationError("invalid integrity proof"))?;
             forward_update_person(
                 db_client,
                 &instance,
                 &user,
-                &unsigned_activity,
+                &data.value,
             ).await?
         },
         false => return Err(ValidationError("unsupported activity type").into()),
     };
-    let signer = signer.as_did_pkh()
-        .ok_or(ValidationError("unsupported signature type"))?;
-    let signature_bin = hex::decode(&data.signature)
-        .map_err(|_| ValidationError("invalid encoding"))?;
-    verify_eip191_json_signature(
-        signer,
-        &outgoing_activity.activity,
-        &signature_bin,
-    ).map_err(|_| ValidationError("invalid signature"))?;
-    let proof = IntegrityProof::jcs_eip191(signer, &signature_bin);
-    add_integrity_proof(&mut outgoing_activity.activity, proof)
-        .map_err(|_| MastodonError::InternalError)?;
-
     outgoing_activity.enqueue(db_client).await?;
-
-    let account = Account::from_user(
-        &get_request_base_url(connection_info),
-        &instance.url(),
-        current_user,
-    );
-    Ok(HttpResponse::Ok().json(account))
+    let response = serde_json::json!({});
+    Ok(HttpResponse::Ok().json(response))
 }
 
 #[get("/identity_proof")]

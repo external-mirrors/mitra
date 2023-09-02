@@ -278,11 +278,10 @@ pub async fn verify_signed_activity(
     Ok(actor_profile)
 }
 
-// Returns activity without integrity proof
 pub fn verify_signed_c2s_activity(
     actor_profile: &DbActorProfile,
     activity: &JsonValue,
-) -> Result<JsonValue, AuthenticationError> {
+) -> Result<(), AuthenticationError> {
     let signature_data = match get_json_signature(activity) {
         Ok(signature_data) => signature_data,
         Err(JsonSignatureError::NoProof) => {
@@ -310,7 +309,7 @@ pub fn verify_signed_c2s_activity(
         },
         _ => return Err(AuthenticationError::InvalidJsonSignatureType),
     };
-    Ok(signature_data.object)
+    Ok(())
 }
 
 #[cfg(test)]
