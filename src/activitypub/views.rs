@@ -11,6 +11,7 @@ use actix_web::{
     Scope,
 };
 use serde::Deserialize;
+use serde_json::{Value as JsonValue};
 use tokio::sync::Mutex;
 use uuid::Uuid;
 
@@ -24,6 +25,7 @@ use mitra_models::{
     users::queries::get_user_by_name,
 };
 use mitra_utils::caip2::ChainId;
+use mitra_validators::errors::ValidationError;
 
 use crate::errors::HttpError;
 use crate::web_client::urls::{
@@ -32,13 +34,20 @@ use crate::web_client::urls::{
     get_subscription_page_url,
     get_tag_page_url,
 };
+
 use super::actors::types::{build_instance_actor, build_local_actor};
+use super::authentication::verify_signed_c2s_activity;
 use super::builders::{
     announce::build_announce,
     create_note::{
         build_emoji_tag,
         build_note,
         build_create_note,
+    },
+    update_person::{
+        forward_update_person,
+        is_update_person_activity,
+        validate_update_person_c2s,
     },
 };
 use super::collections::{
@@ -122,7 +131,7 @@ async fn inbox(
     inbox_mutex: web::Data<Mutex<()>>,
     username: web::Path<String>,
     request: HttpRequest,
-    activity: web::Json<serde_json::Value>,
+    activity: web::Json<JsonValue>,
 ) -> Result<HttpResponse, HttpError> {
     if !config.federation.enabled {
         return Err(HttpError::PermissionError);
@@ -230,8 +239,33 @@ async fn outbox(
 }
 
 #[post("/outbox")]
-async fn outbox_client_to_server() -> HttpResponse {
-    HttpResponse::MethodNotAllowed().finish()
+async fn outbox_client_to_server(
+    config: web::Data<Config>,
+    db_pool: web::Data<DbPool>,
+    activity: web::Json<JsonValue>,
+) -> Result<HttpResponse, HttpError> {
+    let db_client = &mut **get_database_client(&db_pool).await?;
+    let instance = config.instance();
+    let outgoing_activity = match is_update_person_activity(&activity) {
+        true => {
+            let user = validate_update_person_c2s(
+                db_client,
+                &instance,
+                &activity,
+            ).await.map_err(|_| ValidationError("invalid activity"))?;
+            verify_signed_c2s_activity(&user.profile, &activity)
+                .map_err(|_| ValidationError("invalid integrity proof"))?;
+            forward_update_person(
+                db_client,
+                &instance,
+                &user,
+                &activity,
+            ).await?
+        },
+        false => return Err(ValidationError("unsupported activity type").into()),
+    };
+    outgoing_activity.enqueue(db_client).await?;
+    Ok(HttpResponse::Accepted().finish())
 }
 
 #[get("/followers")]
@@ -450,7 +484,7 @@ async fn instance_actor_view(
 #[post("/inbox")]
 async fn instance_actor_inbox(
     config: web::Data<Config>,
-    activity: web::Json<serde_json::Value>,
+    activity: web::Json<JsonValue>,
 ) -> Result<HttpResponse, HttpError> {
     if !config.federation.enabled {
         return Err(HttpError::PermissionError);
