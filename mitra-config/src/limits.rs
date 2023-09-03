@@ -6,7 +6,7 @@ use serde::{
 };
 use super::ConfigError;
 
-const FILE_SIZE_RE: &str = r#"^(?i)(?P<size>\d+)(?P<unit>[kmg]?)b?$"#;
+const FILE_SIZE_RE: &str = r"^(?i)(?P<size>\d+)(?P<unit>[kmg]?)b?$";
 
 fn parse_file_size(value: &str) -> Result<usize, ConfigError> {
     let file_size_re = Regex::new(FILE_SIZE_RE)
