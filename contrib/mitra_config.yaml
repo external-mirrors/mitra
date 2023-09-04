@@ -31,6 +31,8 @@ instance_description: |
   Welcome!
 # Make list of instance admins public
 instance_staff_public: false
+# Make instance (local) timeline public
+instance_timeline_public: false
 
 registration:
   # Possible values: open, invite

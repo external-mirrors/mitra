@@ -1596,7 +1596,7 @@ paths:
                 example: '<https://social.example/api/v1/timelines/home?limit=20&max_id=0187871e-5a09-c6d6-6570-5158ffdcc845>; rel="next"'
   /api/v1/timelines/public:
     get:
-      summary: View local public posts.
+      summary: View all public posts.
       security:
         - tokenAuth: []
       parameters:

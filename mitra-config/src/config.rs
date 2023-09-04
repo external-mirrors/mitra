@@ -64,6 +64,8 @@ pub struct Config {
     pub instance_description: String,
     #[serde(default)]
     pub instance_staff_public: bool,
+    #[serde(default)]
+    pub instance_timeline_public: bool,
 
     #[serde(skip)]
     pub(super) instance_rsa_key: Option<RsaPrivateKey>,

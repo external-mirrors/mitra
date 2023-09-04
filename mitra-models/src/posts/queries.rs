@@ -597,7 +597,7 @@ pub async fn get_home_timeline(
 
 pub async fn get_public_timeline(
     db_client: &impl DatabaseClient,
-    current_user_id: &Uuid,
+    current_user_id: Option<&Uuid>,
     only_local: bool,
     max_post_id: Option<Uuid>,
     limit: u16,
@@ -1759,9 +1759,22 @@ mod tests {
         let post_2 = create_post(db_client, &remote_profile.id, post_data_2)
             .await.unwrap();
 
+        // As local user
         let timeline = get_public_timeline(
             db_client,
-            &current_user.id,
+            Some(&current_user.id),
+            false,
+            None,
+            20,
+        ).await.unwrap();
+        assert_eq!(timeline.len(), 1);
+        assert_eq!(timeline.iter().any(|post| post.id == post_1.id), true);
+        assert_eq!(timeline.iter().any(|post| post.id == post_2.id), false);
+
+        // As guest
+        let timeline = get_public_timeline(
+            db_client,
+            None,
             false,
             None,
             20,
@@ -1838,7 +1851,7 @@ mod tests {
 
     #[tokio::test]
     #[serial]
-    async fn test_profile_timeline_public() {
+    async fn test_profile_timeline_guest() {
         let db_client = &mut create_test_database().await;
         let user_data = UserCreateData {
             username: "test".to_string(),

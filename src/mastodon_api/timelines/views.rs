@@ -62,10 +62,10 @@ async fn home_timeline(
     Ok(response)
 }
 
-/// Public and local timelines
+/// Public timelines (local and known network)
 #[get("/public")]
 async fn public_timeline(
-    auth: BearerAuth,
+    auth: Option<BearerAuth>,
     connection_info: ConnectionInfo,
     config: web::Data<Config>,
     db_pool: web::Data<DbPool>,
@@ -73,10 +73,20 @@ async fn public_timeline(
     query_params: web::Query<PublicTimelineQueryParams>,
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &**get_database_client(&db_pool).await?;
-    let current_user = get_current_user(db_client, auth.token()).await?;
+    let maybe_current_user = match auth {
+        Some(auth) => Some(get_current_user(db_client, auth.token()).await?),
+        None => {
+            // Show local timeline to guests only if enabled in config.
+            // Never show TWKN to guests.
+            if !config.instance_timeline_public || !query_params.local {
+                return Err(MastodonError::AuthError("authentication required"));
+            };
+            None
+        },
+    };
     let posts = get_public_timeline(
         db_client,
-        &current_user.id,
+        maybe_current_user.as_ref().map(|user| &user.id),
         query_params.local,
         query_params.max_id,
         query_params.limit.inner(),
@@ -88,7 +98,7 @@ async fn public_timeline(
         &base_url,
         &instance_url,
         &request_uri,
-        Some(&current_user),
+        maybe_current_user.as_ref(),
         posts,
         &query_params.limit,
     ).await?;
