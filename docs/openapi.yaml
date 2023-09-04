@@ -326,14 +326,18 @@ paths:
   /api/v1/accounts/relationships:
     get:
       summary: Find out whether a given actor is followed, blocked, muted, etc.
+      security:
+        - tokenAuth: []
       parameters:
         - name: 'id[]'
           in: query
-          description: Actor IDs to check
+          description: Check relationships for the provided profile IDs.
           required: true
           schema:
-            type: string
-            format: uuid
+            type: array
+            items:
+              type: string
+              format: uuid
       responses:
         200:
           description: Successful operation

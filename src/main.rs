@@ -19,6 +19,7 @@ use mitra::http::{
     create_auth_error_handler,
     create_default_headers_middleware,
     json_error_handler,
+    multiquery_config,
 };
 use mitra::init::initialize_app;
 use mitra::job_queue::scheduler;
@@ -151,6 +152,7 @@ async fn main() -> std::io::Result<()> {
                 .limit(payload_size_limit)
                 .error_handler(json_error_handler)
             )
+            .app_data(multiquery_config())
             .app_data(web::Data::new(config.clone()))
             .app_data(web::Data::new(db_pool.clone()))
             .app_data(web::Data::new(maybe_ethereum_contracts.clone()))

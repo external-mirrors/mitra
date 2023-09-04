@@ -107,7 +107,7 @@ use crate::activitypub::{
         create_identity_proof_fep_c390,
     },
 };
-use crate::http::{get_request_base_url, FormOrJson};
+use crate::http::{get_request_base_url, FormOrJson, MultiQuery};
 use crate::mastodon_api::{
     errors::MastodonError,
     oauth::auth::get_current_user,
@@ -119,6 +119,7 @@ use crate::mastodon_api::{
 use super::helpers::{
     get_aliases,
     get_relationship,
+    get_relationships,
 };
 use super::types::{
     Account,
@@ -564,16 +565,16 @@ async fn create_identity_proof(
 async fn get_relationships_view(
     auth: BearerAuth,
     db_pool: web::Data<DbPool>,
-    query_params: web::Query<RelationshipQueryParams>,
+    query_params: MultiQuery<RelationshipQueryParams>,
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &**get_database_client(&db_pool).await?;
     let current_user = get_current_user(db_client, auth.token()).await?;
-    let relationship = get_relationship(
+    let relationships = get_relationships(
         db_client,
         &current_user.id,
         &query_params.id,
     ).await?;
-    Ok(HttpResponse::Ok().json(vec![relationship]))
+    Ok(HttpResponse::Ok().json(relationships))
 }
 
 #[get("/lookup")]

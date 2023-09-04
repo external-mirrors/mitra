@@ -13,12 +13,26 @@ use actix_web::{
     HttpRequest,
 };
 use serde_json::json;
+use serde_qs::{
+    actix::{QsQuery, QsQueryConfig},
+    Config as QsConfig,
+};
 
 use mitra_utils::urls::guess_protocol;
 
 use crate::errors::HttpError;
 
 pub type FormOrJson<T> = Either<Form<T>, Json<T>>;
+
+// actix currently doesn't support parameter arrays
+// https://github.com/actix/actix-web/issues/2044
+pub type MultiQuery<T> = QsQuery<T>;
+
+pub fn multiquery_config() -> QsQueryConfig {
+    // Disable strict mode
+    let qs_config = QsConfig::new(2, false);
+    QsQueryConfig::default().qs_config(qs_config)
+}
 
 /// Error handler for 401 Unauthorized
 pub fn create_auth_error_handler<B: MessageBody + 'static>() -> ErrorHandlers<B> {

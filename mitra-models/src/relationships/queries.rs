@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use uuid::Uuid;
 
 use mitra_utils::id::generate_ulid;
@@ -57,10 +59,54 @@ pub async fn get_relationships(
             &RelationshipType::FollowRequest,
         ],
     ).await?;
-     let relationships = rows.iter()
+    let relationships = rows.iter()
         .map(DbRelationship::try_from)
         .collect::<Result<_, _>>()?;
     Ok(relationships)
+}
+
+pub async fn get_relationships_many(
+    db_client: &impl DatabaseClient,
+    source_id: &Uuid,
+    target_ids: &[Uuid],
+) -> Result<Vec<(Uuid, Vec<DbRelationship>)>, DatabaseError> {
+    let rows = db_client.query(
+        "
+        SELECT source_id, target_id, relationship_type, created_at
+        FROM relationship
+        WHERE
+            source_id = $1 AND target_id = ANY($2)
+            OR
+            source_id = ANY($2) AND target_id = $1
+        UNION ALL
+        SELECT source_id, target_id, $4, created_at
+        FROM follow_request
+        WHERE
+            (
+                source_id = $1 AND target_id = ANY($2)
+                OR
+                source_id = ANY($2) AND target_id = $1
+            )
+            AND request_status = $3
+        ",
+        &[
+            &source_id,
+            &target_ids,
+            &FollowRequestStatus::Pending,
+            &RelationshipType::FollowRequest,
+        ],
+    ).await?;
+    // No duplicate keys in buckets hashmap
+    let mut buckets: HashMap<Uuid, Vec<DbRelationship>> =
+        HashMap::from_iter(target_ids.iter().map(|id| (*id, vec![])));
+    for row in rows {
+        let relationship = DbRelationship::try_from(&row)?;
+        let target_id = relationship.with(source_id)?;
+        let target_relationships = buckets.get_mut(&target_id)
+            .ok_or(DatabaseTypeError)?;
+        target_relationships.push(relationship);
+    };
+    Ok(buckets.into_iter().collect())
 }
 
 pub async fn has_relationship(
@@ -925,5 +971,47 @@ mod tests {
                 RelationshipType::Mute
             ).await.unwrap()
         );
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_get_relationships() {
+        let db_client = &mut create_test_database().await;
+        let source_data = UserCreateData {
+            username: "source".to_string(),
+            password_hash: Some("source".to_string()),
+            ..Default::default()
+        };
+        let source = create_user(db_client, source_data).await.unwrap();
+        let target_data = UserCreateData {
+            username: "target".to_string(),
+            password_hash: Some("target".to_string()),
+            ..Default::default()
+        };
+        let target = create_user(db_client, target_data).await.unwrap();
+        follow(db_client, &source.id, &target.id).await.unwrap();
+
+        let relationships = get_relationships(
+            db_client,
+            &source.id,
+            &target.id,
+        ).await.unwrap();
+        assert_eq!(relationships.len(), 1);
+        let relationship = &relationships[0];
+        assert_eq!(relationship.source_id, source.id);
+        assert_eq!(relationship.target_id, target.id);
+
+        let relationships = get_relationships_many(
+            db_client,
+            &source.id,
+            &[target.id],
+        ).await.unwrap();
+        assert_eq!(relationships.len(), 1);
+        let (target_id, target_relationships) = &relationships[0];
+        assert_eq!(*target_id, target.id);
+        assert_eq!(target_relationships.len(), 1);
+        let relationship = &target_relationships[0];
+        assert_eq!(relationship.source_id, source.id);
+        assert_eq!(relationship.target_id, target.id);
     }
 }

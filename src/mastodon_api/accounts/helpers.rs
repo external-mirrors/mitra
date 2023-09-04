@@ -8,20 +8,19 @@ use mitra_models::{
     },
     profiles::types::DbActorProfile,
     relationships::queries::{
-        get_relationships,
+        get_relationships as get_relationships_one,
+        get_relationships_many,
     },
-    relationships::types::RelationshipType,
+    relationships::types::{DbRelationship, RelationshipType},
 };
 
 use super::types::{Account, Alias, Aliases, RelationshipMap};
 
-pub async fn get_relationship(
-    db_client: &impl DatabaseClient,
+fn create_relationship_map(
     source_id: &Uuid,
     target_id: &Uuid,
+    relationships: Vec<DbRelationship>,
 ) -> Result<RelationshipMap, DatabaseError> {
-    // NOTE: this method returns relationship map even if target does not exist
-    let relationships = get_relationships(db_client, source_id, target_id).await?;
     let mut relationship_map = RelationshipMap { id: *target_id, ..Default::default() };
     for relationship in relationships {
         match relationship.relationship_type {
@@ -69,6 +68,37 @@ pub async fn get_relationship(
         };
     };
     Ok(relationship_map)
+}
+
+pub async fn get_relationship(
+    db_client: &impl DatabaseClient,
+    source_id: &Uuid,
+    target_id: &Uuid,
+) -> Result<RelationshipMap, DatabaseError> {
+    // NOTE: this method returns relationship map even if target does not exist
+    let relationships =
+        get_relationships_one(db_client, source_id, target_id).await?;
+    create_relationship_map(source_id, target_id, relationships)
+}
+
+pub async fn get_relationships(
+    db_client: &impl DatabaseClient,
+    source_id: &Uuid,
+    target_ids: &[Uuid],
+) -> Result<Vec<RelationshipMap>, DatabaseError> {
+    // NOTE: this method returns relationship map even if target does not exist
+    let relationships =
+        get_relationships_many(db_client, source_id, target_ids).await?;
+    let mut results = vec![];
+    for (target_id, target_relationships) in relationships {
+        let relationship_map = create_relationship_map(
+            source_id,
+            &target_id,
+            target_relationships,
+        )?;
+        results.push(relationship_map);
+    };
+    Ok(results)
 }
 
 pub async fn get_aliases(

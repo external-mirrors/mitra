@@ -80,6 +80,21 @@ impl DbRelationship {
             Err(DatabaseTypeError)
         }
     }
+
+    pub(super) fn with(
+        &self,
+        profile_id: &Uuid,
+    ) -> Result<Uuid, DatabaseTypeError> {
+        if self.source_id == *profile_id {
+            // Direct relationship
+            Ok(self.target_id)
+        } else if self.target_id == *profile_id {
+            // Inverse relationship
+            Ok(self.source_id)
+        } else {
+            Err(DatabaseTypeError)
+        }
+    }
 }
 
 impl TryFrom<&Row> for DbRelationship {

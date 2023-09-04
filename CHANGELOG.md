@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Changed
 
 - Update `/api/v1/accounts/send_activity` to accept only signed activities.
+- Support calling `/api/v1/accounts/relationships` endpoint with multiple IDs.
 
 ### Removed
 

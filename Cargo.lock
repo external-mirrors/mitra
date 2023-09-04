@@ -1937,6 +1937,7 @@ dependencies = [
  "reqwest",
  "serde",
  "serde_json",
+ "serde_qs",
  "serial_test",
  "sha2 0.10.6",
  "thiserror",
@@ -3090,6 +3091,19 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d6018081315db179d0ce57b1fe4b62a12a0028c9cf9bbef868c9cf477b3c34ae"
 dependencies = [
  "serde",
+]
+
+[[package]]
+name = "serde_qs"
+version = "0.11.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c679fa27b429f2bb57fd4710257e643e86c966e716037259f8baa33de594a1b6"
+dependencies = [
+ "actix-web",
+ "futures",
+ "percent-encoding 2.1.0",
+ "serde",
+ "thiserror",
 ]
 
 [[package]]
