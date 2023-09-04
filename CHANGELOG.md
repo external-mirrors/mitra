@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Added
 
 - Added outbox POST handler (FEP-ae97).
+- Added OpenGraph renderer for Synapse link preview generator.
 
 ### Changed
 
