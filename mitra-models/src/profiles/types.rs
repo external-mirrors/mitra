@@ -329,6 +329,39 @@ impl PaymentOption {
     }
 }
 
+pub trait SubscriptionOption {
+    fn chain_id(&self) -> ChainId;
+
+    fn from_payment_option(option: &PaymentOption) -> Option<Self>
+        where Self: Sized;
+}
+
+impl SubscriptionOption for MoneroSubscription {
+    fn chain_id(&self) -> ChainId {
+        self.chain_id.clone()
+    }
+
+    fn from_payment_option(option: &PaymentOption) -> Option<Self> {
+        match option {
+            PaymentOption::MoneroSubscription(info) => Some(info.clone()),
+            _ => None,
+        }
+    }
+}
+
+impl SubscriptionOption for RemoteMoneroSubscription {
+    fn chain_id(&self) -> ChainId {
+        self.chain_id.clone()
+    }
+
+    fn from_payment_option(option: &PaymentOption) -> Option<Self> {
+        match option {
+            PaymentOption::RemoteMoneroSubscription(info) => Some(info.clone()),
+            _ => None,
+        }
+    }
+}
+
 // Integer tags are not supported https://github.com/serde-rs/serde/issues/745
 // Workaround: https://stackoverflow.com/a/65576570
 impl<'de> Deserialize<'de> for PaymentOption {
@@ -416,6 +449,15 @@ impl PaymentOptions {
         let Self(payment_options) = self;
         payment_options.iter()
             .any(|option| option.payment_type() == payment_type)
+    }
+
+    pub fn find_subscription_option<S: SubscriptionOption>(
+        &self,
+        chain_id: &ChainId,
+    ) -> Option<S> {
+        self.inner().iter()
+            .filter_map(S::from_payment_option)
+            .find(|payment_info| payment_info.chain_id() == *chain_id)
     }
 }
 
@@ -567,17 +609,7 @@ impl DbActorProfile {
         chain_id: &ChainId,
     ) -> Option<MoneroSubscription> {
         assert!(chain_id.is_monero());
-        self.payment_options.inner().iter()
-            .find_map(|option| match option {
-                PaymentOption::MoneroSubscription(payment_info) => {
-                    if payment_info.chain_id == *chain_id {
-                        Some(payment_info.clone())
-                    } else {
-                        None
-                    }
-                },
-                _ => None,
-            })
+        self.payment_options.find_subscription_option(chain_id)
     }
 }
 

@@ -177,7 +177,9 @@ fn parse_attachments(actor: &Actor) -> (
             LINK => {
                 match parse_payment_option(attachment_value) {
                     Ok((payment_link, is_proposal)) => {
-                        // Only one proposal is allowed.
+                        // Only one proposal is allowed
+                        // (uniqueness check on payment type is performed in
+                        // profiles::checks::check_payment_options).
                         // The remaining proposals are treated as payment links.
                         if is_proposal && proposals.is_empty() {
                             proposals.push(payment_link.href);

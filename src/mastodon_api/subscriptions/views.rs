@@ -26,6 +26,7 @@ use mitra_models::{
         update_profile,
     },
     profiles::types::{
+        MoneroSubscription,
         PaymentOption,
         PaymentType,
         ProfileUpdateData,
@@ -230,10 +231,10 @@ async fn create_invoice_view(
     let db_client = &**get_database_client(&db_pool).await?;
     let sender = get_profile_by_id(db_client, &invoice_data.sender_id).await?;
     let recipient = get_user_by_id(db_client, &invoice_data.recipient_id).await?;
-    if !recipient.profile.payment_options.any(PaymentType::MoneroSubscription) {
-        let error_message = "recipient can't accept subscription payments";
-        return Err(ValidationError(error_message).into());
-    };
+    let _subscription_option: MoneroSubscription = recipient.profile
+        .payment_options
+        .find_subscription_option(&invoice_data.chain_id)
+        .ok_or(ValidationError("recipient can't accept payment"))?;
 
     let payment_address = create_monero_address(monero_config).await
         .map_err(|_| MastodonError::InternalError)?
@@ -242,7 +243,7 @@ async fn create_invoice_view(
         db_client,
         &sender.id,
         &recipient.id,
-        &monero_config.chain_id,
+        &invoice_data.chain_id,
         &payment_address,
         invoice_data.amount,
     ).await?;
