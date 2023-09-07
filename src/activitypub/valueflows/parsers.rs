@@ -1,4 +1,4 @@
-use std::num::NonZeroU64;
+use std::str::FromStr;
 
 use serde::Deserialize;
 
@@ -21,6 +21,28 @@ use super::constants::{
 pub struct Quantity {
     has_unit: String,
     has_numerical_value: String,
+}
+
+impl Quantity {
+    pub fn parse_currency_amount<T: FromStr>(&self) -> Result<T, ValidationError> {
+        if self.has_unit != UNIT_ONE {
+            return Err(ValidationError("unexpected unit"));
+        };
+        let amount = self.has_numerical_value
+            .parse()
+            .map_err(|_| ValidationError("invalid quantity"))?;
+        Ok(amount)
+    }
+
+    pub fn parse_duration(&self) -> Result<u64, ValidationError> {
+        if self.has_unit != UNIT_SECOND {
+            return Err(ValidationError("unexpected time unit"));
+        };
+        let duration = self.has_numerical_value
+            .parse()
+            .map_err(|_| ValidationError("invalid quantity"))?;
+        Ok(duration)
+    }
 }
 
 #[derive(Deserialize)]
@@ -58,10 +80,9 @@ pub fn parse_proposal(
     if proposal.publishes.resource_conforms_to != CLASS_CONTENT {
         return Err(ValidationError("unexpected resource type"));
     };
-    if proposal.publishes.resource_quantity.has_unit != UNIT_SECOND {
-        return Err(ValidationError("unexpected time unit"));
-    };
-    if proposal.publishes.resource_quantity.has_numerical_value != "1" {
+    let duration = proposal.publishes.resource_quantity
+        .parse_duration()?;
+    if duration != 1 {
         return Err(ValidationError("unexpected time unit"));
     };
     if !proposal.unit_based {
@@ -76,13 +97,8 @@ pub fn parse_proposal(
     if !asset_type.is_monero() {
         return Err(ValidationError("unexpected asset type"));
     };
-    if proposal.reciprocal.resource_quantity.has_unit != UNIT_ONE {
-        return Err(ValidationError("unexpected unit"));
-    };
-    let price = proposal
-        .reciprocal.resource_quantity.has_numerical_value
-        .parse::<NonZeroU64>()
-        .map_err(|_| ValidationError("invalid quantity"))?;
+    let price = proposal.reciprocal.resource_quantity
+        .parse_currency_amount()?;
     // Create payment option
     let payment_option = PaymentOption::remote_monero_subscription(
         asset_type.chain_id,

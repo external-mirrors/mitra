@@ -63,6 +63,22 @@ struct Quantity {
     has_numerical_value: String,
 }
 
+impl Quantity {
+    fn currency_amount(value: u64) -> Self {
+        Self {
+            has_unit: UNIT_ONE.to_string(),
+            has_numerical_value: value.to_string(),
+        }
+    }
+
+    fn duration(value: u64) -> Self {
+        Self {
+            has_unit: UNIT_SECOND.to_string(),
+            has_numerical_value: value.to_string(),
+        }
+    }
+}
+
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 struct DeliverServiceIntent {
@@ -133,10 +149,7 @@ pub fn build_proposal(
             id: format!("{}#primary", proposal_id),
             action: ACTION_DELIVER_SERVICE.to_string(),
             resource_conforms_to: CLASS_CONTENT.to_string(),
-            resource_quantity: Quantity {
-                has_unit: UNIT_SECOND.to_string(),
-                has_numerical_value: "1".to_string(),
-            },
+            resource_quantity: Quantity::duration(1),
             provider: actor_id.clone(),
         },
         reciprocal: TransferIntent {
@@ -144,11 +157,9 @@ pub fn build_proposal(
             id: format!("{}#reciprocal", proposal_id),
             action: ACTION_TRANSFER.to_string(),
             resource_conforms_to: asset_type.to_uri(),
-            resource_quantity: Quantity {
-                has_unit: UNIT_ONE.to_string(),
+            resource_quantity:
                 // piconeros per second
-                has_numerical_value: payment_info.price.to_string(),
-            },
+                Quantity::currency_amount(payment_info.price.get()),
             receiver: actor_id,
         },
         unit_based: true,
