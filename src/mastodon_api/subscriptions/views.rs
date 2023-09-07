@@ -56,7 +56,12 @@ use mitra_validators::{
     errors::ValidationError,
 };
 
-use crate::activitypub::builders::update_person::prepare_update_person;
+use crate::activitypub::{
+    builders::{
+        offer_agreement::prepare_offer_agreement,
+        update_person::prepare_update_person,
+    },
+};
 use crate::http::get_request_base_url;
 use crate::mastodon_api::{
     accounts::types::Account,
@@ -255,6 +260,8 @@ async fn create_invoice_view(
     } else {
         // Remote recipient; the sender must be local
         let sender = get_user_by_id(db_client, &sender.id).await?;
+        let recipient_actor = recipient.actor_json.as_ref()
+            .expect("actor data should be present");
         let subscription_option: RemoteMoneroSubscription = recipient
             .payment_options
             .find_subscription_option(&invoice_data.chain_id)
@@ -262,13 +269,22 @@ async fn create_invoice_view(
         if !subscription_option.fep_0837_enabled {
             return Err(MastodonError::OperationError("recipient doesn't support FEP-0837"));
         };
-        create_remote_invoice(
+        let db_invoice = create_remote_invoice(
             db_client,
             &sender.id,
             &recipient.id,
             &invoice_data.chain_id,
             invoice_data.amount,
-        ).await?
+        ).await?;
+        prepare_offer_agreement(
+            &config.instance(),
+            &sender,
+            recipient_actor,
+            &subscription_option,
+            &db_invoice.id,
+            invoice_data.amount,
+        ).enqueue(db_client).await?;
+        db_invoice
     };
     let invoice = Invoice::from(db_invoice);
     Ok(HttpResponse::Ok().json(invoice))

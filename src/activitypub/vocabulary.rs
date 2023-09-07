@@ -11,6 +11,7 @@ pub const EMOJI_REACT: &str = "EmojiReact";
 pub const FOLLOW: &str = "Follow";
 pub const LIKE: &str = "Like";
 pub const MOVE: &str = "Move";
+pub const OFFER: &str = "Offer";
 pub const QUESTION: &str = "Question";
 pub const REJECT: &str = "Reject";
 pub const REMOVE: &str = "Remove";

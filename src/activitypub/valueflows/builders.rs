@@ -41,7 +41,7 @@ use super::constants::{
     UNIT_SECOND,
 };
 
-fn build_valueflows_context() -> Context {
+pub fn build_valueflows_context() -> Context {
     let mut context = build_default_context();
     let vf_map = [
         // https://www.valueflo.ws/specification/all_vf.html
@@ -78,20 +78,20 @@ pub fn fep_0837_reciprocal_fragment_id(url: &str) -> String {
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
-struct Quantity {
+pub struct Quantity {
     has_unit: String,
     has_numerical_value: String,
 }
 
 impl Quantity {
-    fn currency_amount(value: u64) -> Self {
+    pub fn currency_amount(value: u64) -> Self {
         Self {
             has_unit: UNIT_ONE.to_string(),
             has_numerical_value: value.to_string(),
         }
     }
 
-    fn duration(value: u64) -> Self {
+    pub fn duration(value: u64) -> Self {
         Self {
             has_unit: UNIT_SECOND.to_string(),
             has_numerical_value: value.to_string(),
