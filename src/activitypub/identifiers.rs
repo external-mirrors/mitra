@@ -1,4 +1,5 @@
 use regex::Regex;
+use url::Url;
 use uuid::Uuid;
 
 use mitra_models::{
@@ -119,13 +120,15 @@ pub fn parse_local_actor_id(
     instance_url: &str,
     actor_id: &str,
 ) -> Result<String, ValidationError> {
-    let url_regexp_str = format!(
-        "^{}/users/(?P<username>[0-9a-z_]+)$",
-        instance_url.replace('.', r"\."),
-    );
-    let url_regexp = Regex::new(&url_regexp_str)
-        .map_err(|_| ValidationError("error"))?;
-    let url_caps = url_regexp.captures(actor_id)
+    let url = Url::parse(actor_id)
+        .map_err(|_| ValidationError("invalid URL"))?;
+    if url.origin().unicode_serialization() != instance_url {
+        return Err(ValidationError("instance mismatch"));
+    };
+    // See also: mitra_validators::users::USERNAME_RE
+    let url_regexp = Regex::new("^/users/(?P<username>[0-9a-z_]+)$")
+        .expect("regexp should be valid");
+    let url_caps = url_regexp.captures(url.path())
         .ok_or(ValidationError("invalid actor ID"))?;
     let username = url_caps.name("username")
         .ok_or(ValidationError("invalid actor ID"))?
@@ -138,13 +141,14 @@ pub fn parse_local_object_id(
     instance_url: &str,
     object_id: &str,
 ) -> Result<Uuid, ValidationError> {
-    let url_regexp_str = format!(
-        "^{}/objects/(?P<uuid>[0-9a-f-]+)$",
-        instance_url.replace('.', r"\."),
-    );
-    let url_regexp = Regex::new(&url_regexp_str)
-        .map_err(|_| ValidationError("error"))?;
-    let url_caps = url_regexp.captures(object_id)
+    let url = Url::parse(object_id)
+        .map_err(|_| ValidationError("invalid URL"))?;
+    if url.origin().unicode_serialization() != instance_url {
+        return Err(ValidationError("instance mismatch"));
+    };
+    let url_regexp = Regex::new("^/objects/(?P<uuid>[0-9a-f-]+)$")
+        .expect("regexp should be valid");
+    let url_caps = url_regexp.captures(url.path())
         .ok_or(ValidationError("invalid object ID"))?;
     let internal_object_id: Uuid = url_caps.name("uuid")
         .ok_or(ValidationError("invalid object ID"))?
@@ -216,7 +220,7 @@ mod tests {
             INSTANCE_URL,
             "https://example.gov/users/test",
         ).unwrap_err();
-        assert_eq!(error.to_string(), "invalid actor ID");
+        assert_eq!(error.to_string(), "instance mismatch");
     }
 
     #[test]
