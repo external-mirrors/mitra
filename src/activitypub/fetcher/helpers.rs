@@ -394,7 +394,7 @@ pub async fn import_replies(
     let replies: Vec<_> = replies.into_iter()
         .take(limit)
         .collect();
-    log::info!("fetched {} objects", replies.len());
+    log::info!("found {} replies", replies.len());
     for object_id in replies {
         let object: Object = fetch_object(&instance, &object_id).await?;
         log::info!("fetched object {}", object.id);
