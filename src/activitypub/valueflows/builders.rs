@@ -211,9 +211,9 @@ struct PaymentLink {
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
-struct Agreement {
-    #[serde(rename = "@context")]
-    _context: Context,
+pub struct Agreement {
+    #[serde(rename = "@context", skip_serializing_if = "Option::is_none")]
+    _context: Option<Context>,
 
     #[serde(rename = "type")]
     object_type: String,
@@ -223,12 +223,12 @@ struct Agreement {
     url: PaymentLink,
 }
 
-#[allow(dead_code)]
-fn build_agreement(
+pub fn build_agreement(
     instance_url: &str,
     username: &str,
     payment_info: &MoneroSubscription,
     invoice: &DbInvoice,
+    with_context: bool,
 ) -> Result<Agreement, DatabaseTypeError> {
     let proposal_id = local_actor_proposal_id(
         instance_url,
@@ -261,7 +261,7 @@ fn build_agreement(
         rel: vec![PAYMENT_LINK_RELATION_TYPE.to_string()],
     };
     let agreement = Agreement {
-        _context: build_valueflows_context(),
+        _context: with_context.then(build_valueflows_context),
         object_type: AGREEMENT.to_string(),
         id: agreement_id,
         clauses: (primary_commitment, reciprocal_commitment),
@@ -384,6 +384,7 @@ mod tests {
             username,
             &payment_info,
             &invoice,
+            true,
         ).unwrap();
 
         let expected_value = json!({

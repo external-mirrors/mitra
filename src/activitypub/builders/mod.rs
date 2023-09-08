@@ -1,4 +1,5 @@
 pub mod accept_follow;
+pub mod accept_offer;
 pub mod add_note;
 pub mod add_person;
 pub mod announce;

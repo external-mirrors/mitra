@@ -13,6 +13,7 @@ use mitra_services::monero::wallet::create_monero_address;
 use mitra_validators::errors::ValidationError;
 
 use crate::activitypub::{
+    builders::accept_offer::prepare_accept_offer,
     identifiers::parse_local_proposal_id,
     valueflows::parsers::Quantity,
     vocabulary::AGREEMENT,
@@ -36,7 +37,6 @@ pub struct Agreement {
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct Offer {
-    #[allow(dead_code)]
     id: String,
     actor: String,
     object: Agreement,
@@ -78,7 +78,7 @@ pub async fn handle_offer(
     let payment_address = create_monero_address(monero_config).await
         .map_err(|_| HandlerError::InternalError)?
         .to_string();
-    let _db_invoice = create_invoice(
+    let db_invoice = create_invoice(
         db_client,
         &actor_profile.id,
         &proposer.id,
@@ -86,6 +86,15 @@ pub async fn handle_offer(
         &payment_address,
         amount,
     ).await?;
-    // TODO: build Accept(Offer)
+    let remote_actor = actor_profile.actor_json
+        .expect("actor data should be present");
+    prepare_accept_offer(
+        &config.instance(),
+        &proposer,
+        &subscription_option,
+        &db_invoice,
+        &remote_actor,
+        &activity.id,
+    )?.enqueue(db_client).await?;
     Ok(Some(AGREEMENT))
 }
