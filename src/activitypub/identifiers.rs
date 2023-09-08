@@ -161,6 +161,33 @@ pub fn parse_local_object_id(
     Ok(internal_object_id)
 }
 
+// Works with fragment-based intent IDs too
+pub fn parse_local_proposal_id(
+    instance_url: &str,
+    proposal_id: &str,
+) -> Result<(String, ChainId), ValidationError> {
+    let url = Url::parse(proposal_id)
+        .map_err(|_| ValidationError("invalid URL"))?;
+    if url.origin().unicode_serialization() != instance_url {
+        return Err(ValidationError("instance mismatch"));
+    };
+    // See also: mitra_validators::users::USERNAME_RE
+    let url_regexp = Regex::new("^/users/(?P<username>[0-9a-z_]+)/proposals/(?P<chain_id>.+)$")
+        .expect("regexp should be valid");
+    let url_caps = url_regexp.captures(url.path())
+        .ok_or(ValidationError("invalid proposal ID"))?;
+    let username = url_caps.name("username")
+        .ok_or(ValidationError("invalid proposal ID"))?
+        .as_str()
+        .to_owned();
+    let chain_id = url_caps.name("chain_id")
+        .ok_or(ValidationError("invalid proposal ID"))?
+        .as_str()
+        .parse()
+        .map_err(|_| ValidationError("invalid chain ID"))?;
+    Ok((username, chain_id))
+}
+
 pub fn post_object_id(instance_url: &str, post: &Post) -> String {
     match post.object_id {
         Some(ref object_id) => object_id.to_string(),
@@ -189,13 +216,13 @@ mod tests {
     use mitra_utils::id::generate_ulid;
     use super::*;
 
-    const INSTANCE_URL: &str = "https://example.org";
+    const INSTANCE_URL: &str = "https://social.example";
 
     #[test]
     fn test_parse_local_actor_id() {
         let username = parse_local_actor_id(
             INSTANCE_URL,
-            "https://example.org/users/test",
+            "https://social.example/users/test",
         ).unwrap();
         assert_eq!(username, "test".to_string());
     }
@@ -204,7 +231,7 @@ mod tests {
     fn test_parse_local_actor_id_wrong_path() {
         let error = parse_local_actor_id(
             INSTANCE_URL,
-            "https://example.org/user/test",
+            "https://social.example/user/test",
         ).unwrap_err();
         assert_eq!(error.to_string(), "invalid actor ID");
     }
@@ -213,7 +240,7 @@ mod tests {
     fn test_parse_local_actor_id_invalid_username() {
         let error = parse_local_actor_id(
             INSTANCE_URL,
-            "https://example.org/users/tes-t",
+            "https://social.example/users/tes-t",
         ).unwrap_err();
         assert_eq!(error.to_string(), "invalid actor ID");
     }
@@ -231,7 +258,7 @@ mod tests {
     fn test_parse_local_object_id() {
         let expected_uuid = generate_ulid();
         let object_id = format!(
-            "https://example.org/objects/{}",
+            "https://social.example/objects/{}",
             expected_uuid,
         );
         let internal_object_id = parse_local_object_id(
@@ -243,12 +270,23 @@ mod tests {
 
     #[test]
     fn test_parse_local_object_id_invalid_uuid() {
-        let object_id = "https://example.org/objects/1234";
+        let object_id = "https://social.example/objects/1234";
         let error = parse_local_object_id(
             INSTANCE_URL,
             object_id,
         ).unwrap_err();
         assert_eq!(error.to_string(), "invalid object ID");
+    }
+
+    #[test]
+    fn test_parse_local_proposal_id() {
+        let proposal_id = "https://social.example/users/test/proposals/monero:418015bb9ae982a1975da7d79277c270";
+        let (username, chain_id) = parse_local_proposal_id(
+            INSTANCE_URL,
+            proposal_id,
+        ).unwrap();
+        assert_eq!(username, "test");
+        assert_eq!(chain_id, ChainId::monero_mainnet());
     }
 
     #[test]
@@ -260,7 +298,7 @@ mod tests {
         let profile_url = profile_actor_url(INSTANCE_URL, &profile);
         assert_eq!(
             profile_url,
-            "https://example.org/users/test",
+            "https://social.example/users/test",
         );
     }
 }
