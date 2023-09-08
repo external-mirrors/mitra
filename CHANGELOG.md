@@ -16,6 +16,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Update `/api/v1/accounts/send_activity` to accept only signed activities.
 - Support calling `/api/v1/accounts/relationships` endpoint with multiple IDs.
 - Verify subscription option with correct chain ID exists before creating invoice.
+- Support fetching outboxes with embedded first page.
 
 ### Removed
 

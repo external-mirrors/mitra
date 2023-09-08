@@ -257,7 +257,7 @@ pub async fn fetch_outbox(
     #[derive(Deserialize)]
     #[serde(rename_all = "camelCase")]
     struct Collection {
-        first: Option<String>,
+        first: Option<JsonValue>, // page can be embedded
         #[serde(default)]
         ordered_items: Vec<JsonValue>,
     }
@@ -271,9 +271,13 @@ pub async fn fetch_outbox(
     let collection: Collection =
         fetch_object(instance, outbox_url).await?;
     let mut items = collection.ordered_items;
-    if let Some(first_page_url) = collection.first {
-        let page: CollectionPage =
-            fetch_object(instance, &first_page_url).await?;
+    if let Some(first_page_value) = collection.first {
+        let page: CollectionPage = match first_page_value {
+            JsonValue::String(first_page_url) => {
+                fetch_object(instance, &first_page_url).await?
+            },
+            _ => serde_json::from_value(first_page_value)?,
+        };
         items.extend(page.ordered_items);
     };
     let activities = items.into_iter()
