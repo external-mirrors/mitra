@@ -24,13 +24,11 @@ pub struct TokenRequest {
     // Required if grant type is "authorization_code"
     pub code: Option<String>,
 
-    // Required if grant type is "password" or "eip4361"
-    pub username: Option<String>,
-
     // Required only with "password" grant type
+    pub username: Option<String>,
     pub password: Option<String>,
 
-    // EIP4361 message and signature
+    // EIP-4361 / CAIP-122 message and signature
     pub message: Option<String>,
     pub signature: Option<String>,
 }

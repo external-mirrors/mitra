@@ -31,18 +31,19 @@ paths:
                 username:
                   description: User name (required if grant type is "password").
                   type: string
-                message:
-                  description: EIP-4361 message (required if grant type is "eip4361").
-                  type: string
-                  example: "social.example wants you to sign in with your Ethereum account:"
-                signature:
-                  description: EIP-4361 signature (required if grant type is "eip4361").
-                  type: string
-                  example: 0x905...
+                  example: null
                 password:
                   description: Password (required if grant type is "password").
                   type: string
                   example: null
+                message:
+                  description: Authentication message (required if grant type is "eip4361" or "caip122_monero").
+                  type: string
+                  example: "social.example wants you to sign in with your Ethereum account:"
+                signature:
+                  description: Signature (required if grant type is "eip4361" or "caip122_monero").
+                  type: string
+                  example: 0x905...
               required:
                 - grant_type
       responses:
