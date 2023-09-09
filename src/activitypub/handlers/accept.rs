@@ -1,9 +1,11 @@
 use serde::Deserialize;
-use serde_json::Value;
+use serde_json::{Value as JsonValue};
 
 use mitra_config::Config;
 use mitra_models::{
     database::DatabaseClient,
+    invoices::helpers::remote_invoice_opened,
+    invoices::queries::get_invoice_by_id,
     profiles::queries::get_profile_by_remote_actor_id,
     relationships::queries::{
         follow_request_accepted,
@@ -11,12 +13,14 @@ use mitra_models::{
     },
     relationships::types::FollowRequestStatus,
 };
+use mitra_utils::caip10::AccountId;
 use mitra_validators::errors::ValidationError;
 
 use crate::activitypub::{
     deserialization::deserialize_into_object_id,
     identifiers::parse_local_object_id,
-    vocabulary::FOLLOW,
+    valueflows::parsers::Quantity,
+    vocabulary::{FOLLOW, OFFER},
 };
 
 use super::HandlerResult;
@@ -26,16 +30,21 @@ struct Accept {
     actor: String,
     #[serde(deserialize_with = "deserialize_into_object_id")]
     object: String,
+    result: Option<JsonValue>,
 }
 
 pub async fn handle_accept(
     config: &Config,
     db_client: &mut impl DatabaseClient,
-    activity: Value,
+    activity: JsonValue,
 ) -> HandlerResult {
-    // Accept(Follow)
     let activity: Accept = serde_json::from_value(activity)
         .map_err(|_| ValidationError("unexpected activity structure"))?;
+    if activity.result.is_some() {
+        // Accept(Offer)
+        return handle_accept_offer(config, db_client, activity).await;
+    };
+    // Accept(Follow)
     let actor_profile = get_profile_by_remote_actor_id(
         db_client,
         &activity.actor,
@@ -54,4 +63,61 @@ pub async fn handle_accept(
     };
     follow_request_accepted(db_client, &follow_request.id).await?;
     Ok(Some(FOLLOW))
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct Commitment {
+    resource_quantity: Quantity,
+}
+
+#[derive(Deserialize)]
+struct PaymentLink {
+    href: String,
+}
+
+#[derive(Deserialize)]
+struct Agreement {
+    id: String,
+    clauses: (Commitment, Commitment),
+    url: PaymentLink,
+}
+
+async fn handle_accept_offer(
+    config: &Config,
+    db_client: &mut impl DatabaseClient,
+    activity: Accept,
+) -> HandlerResult {
+    let actor_profile = get_profile_by_remote_actor_id(
+        db_client,
+        &activity.actor,
+    ).await?;
+    let invoice_id = parse_local_object_id(
+        &config.instance_url(),
+        &activity.object,
+    )?;
+    let invoice = get_invoice_by_id(db_client, &invoice_id).await?;
+    if invoice.recipient_id != actor_profile.id {
+        return Err(ValidationError("actor is not a recipient").into());
+    };
+    let agreement_value = activity.result.expect("result should be present");
+    let agreement: Agreement = serde_json::from_value(agreement_value)
+        .map_err(|_| ValidationError("unexpected activity structure"))?;
+    let invoice_amount: i64 = agreement.clauses.1.resource_quantity
+        .parse_currency_amount()?;
+    if invoice_amount != invoice.amount {
+        return Err(ValidationError("unexpected amount").into());
+    };
+    let account_id = AccountId::from_uri(&agreement.url.href)
+        .map_err(|_| ValidationError("invalid account ID"))?;
+    if account_id.chain_id != *invoice.chain_id.inner() {
+        return Err(ValidationError("unexpected chain ID").into());
+    };
+    remote_invoice_opened(
+        db_client,
+        &invoice.id,
+        &account_id.address,
+        &agreement.id,
+    ).await?;
+    Ok(Some(OFFER))
 }

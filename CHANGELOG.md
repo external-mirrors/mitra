@@ -11,6 +11,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Allow creating invoices for remote recipients.
 - Send `Offer(Agreement)` activity to start payment process.
 - Implement handler for `Offer(Agreement)` activities.
+- Implement handler for `Accept(Offer)` activities.
 
 ### Changed
 

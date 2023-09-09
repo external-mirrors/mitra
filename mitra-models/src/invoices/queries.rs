@@ -207,7 +207,7 @@ pub async fn set_invoice_status(
     Ok(invoice)
 }
 
-pub async fn set_invoice_payout_tx_id(
+pub(super) async fn set_invoice_payout_tx_id(
     db_client: &impl DatabaseClient,
     invoice_id: &Uuid,
     payout_tx_id: Option<&str>,
@@ -223,6 +223,27 @@ pub async fn set_invoice_payout_tx_id(
     let row = maybe_row.ok_or(DatabaseError::NotFound("invoice"))?;
     let invoice = row.try_get("invoice")?;
     Ok(invoice)
+}
+
+pub(super) async fn set_remote_invoice_data(
+    db_client: &impl DatabaseClient,
+    invoice_id: &Uuid,
+    payment_address: &str,
+    object_id: &str,
+) -> Result<(), DatabaseError> {
+    let updated_count = db_client.execute(
+        "
+        UPDATE invoice
+        SET payment_address = $1, object_id = $2
+        WHERE id = $3
+        RETURNING invoice
+        ",
+        &[&payment_address, &object_id, &invoice_id],
+    ).await?;
+    if updated_count == 0 {
+        return Err(DatabaseError::NotFound("invoice"));
+    };
+    Ok(())
 }
 
 #[cfg(test)]
