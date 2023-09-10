@@ -192,7 +192,7 @@ pub async fn update_profile(
 ) -> Result<DbActorProfile, DatabaseError> {
     profile_data.check_consistency()?;
     let transaction = db_client.transaction().await?;
-    transaction.execute(
+    let updated_count = transaction.execute(
         "
         UPDATE actor_profile
         SET
@@ -211,7 +211,6 @@ pub async fn update_profile(
             updated_at = CURRENT_TIMESTAMP,
             unreachable_since = NULL
         WHERE id = $13
-        RETURNING actor_profile
         ",
         &[
             &profile_data.display_name,
@@ -229,6 +228,9 @@ pub async fn update_profile(
             &profile_id,
         ],
     ).await?;
+    if updated_count == 0 {
+        return Err(DatabaseError::NotFound("profile"));
+    };
 
     // Delete and re-create related objects
     transaction.execute(
