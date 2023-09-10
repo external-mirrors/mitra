@@ -181,11 +181,13 @@ pub async fn register_subscription_option(
     if let Some(payment_option) = maybe_payment_option {
         let mut profile_data = ProfileUpdateData::from(&current_user.profile);
         profile_data.add_payment_option(payment_option);
-        current_user.profile = update_profile(
+        // Media cleanup is not needed
+        let (updated_profile, _) = update_profile(
             db_client,
             &current_user.id,
             profile_data,
         ).await?;
+        current_user.profile = updated_profile;
 
         // Federate
         prepare_update_person(

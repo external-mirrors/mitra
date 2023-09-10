@@ -189,9 +189,28 @@ pub async fn update_profile(
     db_client: &mut impl DatabaseClient,
     profile_id: &Uuid,
     profile_data: ProfileUpdateData,
-) -> Result<DbActorProfile, DatabaseError> {
+) -> Result<(DbActorProfile, DeletionQueue), DatabaseError> {
     profile_data.check_consistency()?;
     let transaction = db_client.transaction().await?;
+    // Get currently used images
+    let maybe_images_row = transaction.query_opt(
+        "
+        SELECT array_remove(
+            ARRAY[
+                avatar ->> 'file_name',
+                banner ->> 'file_name'
+            ],
+            NULL
+        ) AS images
+        FROM actor_profile WHERE id = $1
+        FOR UPDATE
+        ",
+        &[&profile_id],
+    ).await?;
+    let images_row = maybe_images_row
+        .ok_or(DatabaseError::NotFound("profile"))?;
+    let images = images_row.try_get("images")?;
+
     let updated_count = transaction.execute(
         "
         UPDATE actor_profile
@@ -245,9 +264,14 @@ pub async fn update_profile(
         profile_data.emojis,
     ).await?;
     let profile = update_emoji_cache(&transaction, profile_id).await?;
-
     transaction.commit().await?;
-    Ok(profile)
+
+    // Orphaned images should be deleted after update
+    let deletion_queue = DeletionQueue {
+        files: images,
+        ipfs_objects: vec![],
+    };
+    Ok((profile, deletion_queue))
 }
 
 pub async fn get_profile_by_id(
@@ -971,7 +995,7 @@ mod tests {
         let mut profile_data = ProfileUpdateData::from(&profile);
         let bio = "test bio";
         profile_data.bio = Some(bio.to_string());
-        let profile_updated = update_profile(
+        let (profile_updated, deletion_queue) = update_profile(
             db_client,
             &profile.id,
             profile_data,
@@ -979,6 +1003,8 @@ mod tests {
         assert_eq!(profile_updated.username, profile.username);
         assert_eq!(profile_updated.bio.unwrap(), bio);
         assert!(profile_updated.updated_at != profile.updated_at);
+        assert_eq!(deletion_queue.files.len(), 0);
+        assert_eq!(deletion_queue.ipfs_objects.len(), 0);
     }
 
     #[tokio::test]

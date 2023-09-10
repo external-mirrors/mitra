@@ -451,7 +451,10 @@ pub async fn update_remote_profile(
     };
     clean_profile_update_data(&mut profile_data)?;
     // update_profile() clears unreachable_since
-    let profile = update_profile(db_client, &profile.id, profile_data).await?;
+    let (profile, deletion_queue) =
+        update_profile(db_client, &profile.id, profile_data).await?;
+    // Delete orphaned images after update
+    deletion_queue.into_job(db_client).await?;
     Ok(profile)
 }
 

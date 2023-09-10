@@ -129,11 +129,13 @@ async fn add_alias_view(
     } else {
         return Err(ValidationError("alias already exists").into());
     };
-    current_user.profile = update_profile(
+    // Media cleanup is not needed
+    let (updated_profile, _) = update_profile(
         db_client,
         &current_user.id,
         profile_data,
     ).await?;
+    current_user.profile = updated_profile;
     prepare_update_person(
         db_client,
         &instance,
@@ -165,11 +167,13 @@ async fn remove_alias_view(
     } else {
         return Err(MastodonError::NotFoundError("alias"));
     };
-    current_user.profile = update_profile(
+    // Media cleanup is not needed
+    let (updated_profile, _) = update_profile(
         db_client,
         &current_user.id,
         profile_data,
     ).await?;
+    current_user.profile = updated_profile;
     prepare_update_person(
         db_client,
         &instance,

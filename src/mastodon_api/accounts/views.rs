@@ -304,11 +304,14 @@ async fn update_credentials(
             &media_storage,
         )?;
     clean_profile_update_data(&mut profile_data)?;
-    current_user.profile = update_profile(
+    let (updated_profile, deletion_queue) = update_profile(
         db_client,
         &current_user.id,
         profile_data,
     ).await?;
+    current_user.profile = updated_profile;
+    // Delete orphaned images after update
+    deletion_queue.into_job(db_client).await?;
 
     // Federate
     prepare_update_person(
@@ -512,11 +515,13 @@ async fn create_identity_proof(
     );
     let mut profile_data = ProfileUpdateData::from(&current_user.profile);
     profile_data.add_identity_proof(proof);
-    current_user.profile = update_profile(
+    // Only identity proofs are updated, media cleanup is not needed
+    let (updated_profile, _) = update_profile(
         db_client,
         &current_user.id,
         profile_data,
     ).await?;
+    current_user.profile = updated_profile;
 
     // Federate
     prepare_update_person(
