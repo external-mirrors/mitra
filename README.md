@@ -90,7 +90,7 @@ Start Mitra:
 ./mitra
 ```
 
-An HTTP server will be needed to handle HTTPS requests. See the example of [nginx configuration file](./contrib/mitra.nginx).
+An HTTP server will be needed to handle HTTPS requests. See examples of [Nginx](./contrib/mitra.nginx) and [Caddy](./contrib/Caddyfile) configuration files.
 
 To run Mitra as a systemd service, check out the [systemd unit file example](./contrib/mitra.service).
 
@@ -117,7 +117,7 @@ Start Mitra:
 systemctl start mitra
 ```
 
-An HTTP server will be needed to handle HTTPS requests. See the example of [nginx configuration file](./contrib/mitra.nginx).
+An HTTP server will be needed to handle HTTPS requests. See examples of [Nginx](./contrib/mitra.nginx) and [Caddy](./contrib/Caddyfile) configuration files.
 
 ### Other installation methods
 
