@@ -19,6 +19,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Verify subscription option with correct chain ID exists before creating invoice.
 - Support fetching outboxes with embedded first page.
 - Updated Caddyfile example ([#48](https://codeberg.org/silverpill/mitra/pulls/48)).
+- Copy terms from default JSON-LD context into proposal context.
 
 ### Removed
 

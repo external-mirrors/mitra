@@ -1,6 +1,4 @@
 /// https://codeberg.org/silverpill/feps/src/branch/main/0837/fep-0837.md
-use std::collections::HashMap;
-
 use serde::Serialize;
 
 use mitra_models::profiles::types::MoneroSubscription;
@@ -8,7 +6,6 @@ use mitra_utils::caip19::AssetType;
 
 use crate::activitypub::{
     constants::{
-        AP_CONTEXT,
         AP_PUBLIC,
         UNITS_OF_MEASURE_CONTEXT,
         W3ID_VALUEFLOWS_CONTEXT,
@@ -17,6 +14,7 @@ use crate::activitypub::{
         local_actor_id,
         local_actor_proposal_id,
     },
+    types::{build_default_context, Context},
     vocabulary::{INTENT, PROPOSAL},
 };
 
@@ -28,32 +26,27 @@ use super::constants::{
     UNIT_SECOND,
 };
 
-type Context = (
-    &'static str,
-    HashMap<&'static str, &'static str>,
-);
-
-fn build_proposal_context() -> Context {
-    (
-        AP_CONTEXT,
-        HashMap::from([
-            // https://www.valueflo.ws/specification/all_vf.html
-            ("vf", W3ID_VALUEFLOWS_CONTEXT),
-            ("om2", UNITS_OF_MEASURE_CONTEXT),
-            ("Proposal", "vf:Proposal"),
-            ("Intent", "vf:Intent"),
-            ("publishes", "vf:publishes"),
-            ("reciprocal", "vf:reciprocal"),
-            ("unitBased", "vf:unitBased"),
-            ("provider", "vf:provider"),
-            ("receiver", "vf:receiver"),
-            ("action", "vf:action"),
-            ("resourceConformsTo", "vf:resourceConformsTo"),
-            ("resourceQuantity", "vf:resourceQuantity"),
-            ("hasUnit", "om2:hasUnit"),
-            ("hasNumericalValue", "om2:hasNumericalValue"),
-        ]),
-    )
+fn build_valueflows_context() -> Context {
+    let mut context = build_default_context();
+    let vf_map = [
+        // https://www.valueflo.ws/specification/all_vf.html
+        ("vf", W3ID_VALUEFLOWS_CONTEXT),
+        ("om2", UNITS_OF_MEASURE_CONTEXT),
+        ("Proposal", "vf:Proposal"),
+        ("Intent", "vf:Intent"),
+        ("publishes", "vf:publishes"),
+        ("reciprocal", "vf:reciprocal"),
+        ("unitBased", "vf:unitBased"),
+        ("provider", "vf:provider"),
+        ("receiver", "vf:receiver"),
+        ("action", "vf:action"),
+        ("resourceConformsTo", "vf:resourceConformsTo"),
+        ("resourceQuantity", "vf:resourceQuantity"),
+        ("hasUnit", "om2:hasUnit"),
+        ("hasNumericalValue", "om2:hasNumericalValue"),
+    ];
+    context.3.extend(vf_map);
+    context
 }
 
 #[derive(Serialize)]
@@ -139,7 +132,7 @@ pub fn build_proposal(
     let asset_type = AssetType::monero(&payment_info.chain_id)
         .expect("chain should belong to monero namespace");
     Proposal {
-        context: build_proposal_context(),
+        context: build_valueflows_context(),
         object_type: PROPOSAL.to_string(),
         id: proposal_id.clone(),
         attributed_to: actor_id.clone(),
@@ -192,7 +185,16 @@ mod tests {
         let expected_value = json!({
             "@context": [
                 "https://www.w3.org/ns/activitystreams",
+                "https://w3id.org/security/v1",
+                "https://w3id.org/security/data-integrity/v1",
                 {
+                    "Hashtag": "as:Hashtag",
+                    "sensitive": "as:sensitive",
+                    "proofValue": "sec:proofValue",
+                    "proofPurpose": "sec:proofPurpose",
+                    "verificationMethod": "sec:verificationMethod",
+                    "mitra": "http://jsonld.mitra.social#",
+                    "MitraJcsRsaSignature2022": "mitra:MitraJcsRsaSignature2022",
                     "vf": "https://w3id.org/valueflows/",
                     "om2": "http://www.ontology-of-units-of-measure.org/resource/om-2/",
                     "Proposal": "vf:Proposal",
