@@ -719,6 +719,7 @@ async fn make_permanent(
             &instance.url(),
             &post,
             config.federation.fep_e232_enabled,
+            true,
         );
         serde_json::to_value(note)
             .map_err(|_| MastodonError::InternalError)?

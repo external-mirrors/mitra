@@ -60,8 +60,8 @@ struct MediaAttachment {
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Note {
-    #[serde(rename = "@context")]
-    context: Context,
+    #[serde(rename = "@context", skip_serializing_if = "Option::is_none")]
+    _context: Option<Context>,
 
     id: String,
 
@@ -110,6 +110,7 @@ pub fn build_note(
     instance_url: &str,
     post: &Post,
     fep_e232_enabled: bool,
+    with_context: bool,
 ) -> Note {
     let object_id = local_object_id(instance_url, &post.id);
     let actor_id = local_actor_id(instance_url, &post.author.username);
@@ -219,7 +220,7 @@ pub fn build_note(
         None => None,
     };
     Note {
-        context: build_default_context(),
+        _context: with_context.then(build_default_context),
         id: object_id,
         object_type: NOTE.to_string(),
         attachment: attachments,
@@ -238,7 +239,7 @@ pub fn build_note(
 #[derive(Serialize)]
 pub struct CreateNote {
     #[serde(rename = "@context")]
-    context: Context,
+    _context: Context,
 
     #[serde(rename = "type")]
     activity_type: String,
@@ -262,12 +263,13 @@ pub fn build_create_note(
         instance_url,
         post,
         fep_e232_enabled,
+        false,
     );
     let primary_audience = object.to.clone();
     let secondary_audience = object.cc.clone();
     let activity_id = format!("{}/create", object.id);
     CreateNote {
-        context: build_default_context(),
+        _context: build_default_context(),
         activity_type: CREATE.to_string(),
         id: activity_id,
         actor: object.attributed_to.clone(),
@@ -380,8 +382,15 @@ mod tests {
             tags: vec!["test".to_string()],
             ..Default::default()
         };
-        let note = build_note(INSTANCE_HOSTNAME, INSTANCE_URL, &post, false);
+        let note = build_note(
+            INSTANCE_HOSTNAME,
+            INSTANCE_URL,
+            &post,
+            false,
+            true,
+        );
 
+        assert_eq!(note._context.is_some(), true);
         assert_eq!(
             note.id,
             format!("{}/objects/{}", INSTANCE_URL, post.id),
@@ -412,7 +421,13 @@ mod tests {
             visibility: Visibility::Followers,
             ..Default::default()
         };
-        let note = build_note(INSTANCE_HOSTNAME, INSTANCE_URL, &post, false);
+        let note = build_note(
+            INSTANCE_HOSTNAME,
+            INSTANCE_URL,
+            &post,
+            false,
+            true,
+        );
 
         assert_eq!(note.to, vec![
             local_actor_followers(INSTANCE_URL, &post.author.username),
@@ -438,7 +453,13 @@ mod tests {
             mentions: vec![subscriber],
             ..Default::default()
         };
-        let note = build_note(INSTANCE_HOSTNAME, INSTANCE_URL, &post, false);
+        let note = build_note(
+            INSTANCE_HOSTNAME,
+            INSTANCE_URL,
+            &post,
+            false,
+            true,
+        );
 
         assert_eq!(note.to, vec![
             local_actor_subscribers(INSTANCE_URL, &post.author.username),
@@ -465,7 +486,13 @@ mod tests {
             mentions: vec![mentioned],
             ..Default::default()
         };
-        let note = build_note(INSTANCE_HOSTNAME, INSTANCE_URL, &post, false);
+        let note = build_note(
+            INSTANCE_HOSTNAME,
+            INSTANCE_URL,
+            &post,
+            false,
+            true,
+        );
 
         assert_eq!(note.to, vec![mentioned_id]);
         assert_eq!(note.cc.is_empty(), true);
@@ -479,7 +506,13 @@ mod tests {
             in_reply_to: Some(Box::new(parent.clone())),
             ..Default::default()
         };
-        let note = build_note(INSTANCE_HOSTNAME, INSTANCE_URL, &post, false);
+        let note = build_note(
+            INSTANCE_HOSTNAME,
+            INSTANCE_URL,
+            &post,
+            false,
+            true,
+        );
 
         assert_eq!(
             note.in_reply_to.unwrap(),
@@ -519,7 +552,13 @@ mod tests {
             mentions: vec![parent_author],
             ..Default::default()
         };
-        let note = build_note(INSTANCE_HOSTNAME, INSTANCE_URL, &post, false);
+        let note = build_note(
+            INSTANCE_HOSTNAME,
+            INSTANCE_URL,
+            &post,
+            false,
+            true,
+        );
 
         assert_eq!(
             note.in_reply_to.unwrap(),
@@ -561,6 +600,7 @@ mod tests {
             format!("{}/users/{}", INSTANCE_URL, author_username),
         );
         assert_eq!(activity.to, vec![AP_PUBLIC]);
+        assert_eq!(activity.object._context, None);
         assert_eq!(activity.object.attributed_to, activity.actor);
         assert_eq!(activity.object.to, activity.to);
         assert_eq!(activity.object.cc, activity.cc);

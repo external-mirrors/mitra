@@ -63,6 +63,7 @@ fn build_delete_note(
         instance_url,
         post,
         fep_e232_enabled,
+        false,
     );
     DeleteNote {
         context: build_default_context(),

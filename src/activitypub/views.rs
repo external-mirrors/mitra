@@ -398,6 +398,7 @@ async fn featured_collection(
             &instance.url(),
             post,
             config.federation.fep_e232_enabled,
+            true,
         );
         serde_json::to_value(note)
             .expect("note should be serializable")
@@ -530,6 +531,7 @@ pub async fn object_view(
         &config.instance().url(),
         &post,
         config.federation.fep_e232_enabled,
+        true,
     );
     let response = HttpResponse::Ok()
         .content_type(AP_MEDIA_TYPE)

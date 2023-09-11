@@ -25,6 +25,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Remove `params` field from `/api/v1/accounts/signed_update` response.
 
+### Fixed
+
+- Remove context from object of `Create(Note)` activity.
+
 ## [1.34.0] - 2023-08-31
 
 ### Added
