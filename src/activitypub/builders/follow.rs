@@ -22,8 +22,8 @@ use crate::activitypub::{
 
 #[derive(Serialize)]
 pub(super) struct Follow {
-    #[serde(rename = "@context")]
-    pub context: Context,
+    #[serde(rename = "@context", skip_serializing_if = "Option::is_none")]
+    pub _context: Option<Context>,
 
     #[serde(rename = "type")]
     pub activity_type: String,
@@ -40,11 +40,12 @@ fn build_follow(
     actor_profile: &DbActorProfile,
     target_actor_id: &str,
     follow_request_id: &Uuid,
+    with_context: bool,
 ) -> Follow {
     let activity_id = local_object_id(instance_url, follow_request_id);
     let actor_id = local_actor_id(instance_url, &actor_profile.username);
     Follow {
-        context: build_default_context(),
+        _context: with_context.then(build_default_context),
         activity_type: FOLLOW.to_string(),
         id: activity_id,
         actor: actor_id,
@@ -64,6 +65,7 @@ pub fn prepare_follow(
         &sender.profile,
         &target_actor.id,
         follow_request_id,
+        true,
     );
     let recipients = vec![target_actor.clone()];
     OutgoingActivity::new(
@@ -136,8 +138,10 @@ mod tests {
             &follower,
             target_actor_id,
             &follow_request_id,
+            true,
         );
 
+        assert_eq!(activity._context.is_some(), true);
         assert_eq!(
             activity.id,
             format!("{}/objects/{}", INSTANCE_URL, follow_request_id),

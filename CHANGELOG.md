@@ -28,6 +28,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Fixed
 
 - Remove context from object of `Create(Note)` activity.
+- Remove context from object of `Undo(Follow)` activity.
 
 ## [1.34.0] - 2023-08-31
 

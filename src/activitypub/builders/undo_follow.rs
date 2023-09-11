@@ -19,7 +19,7 @@ use super::follow::Follow;
 #[derive(Serialize)]
 struct UndoFollow {
     #[serde(rename = "@context")]
-    context: Context,
+    _context: Context,
 
     #[serde(rename = "type")]
     activity_type: String,
@@ -46,7 +46,7 @@ fn build_undo_follow(
         &actor_profile.username,
     );
     let object = Follow {
-        context: build_default_context(),
+        _context: None,
         activity_type: FOLLOW.to_string(),
         id: follow_activity_id,
         actor: follow_actor_id,
@@ -56,7 +56,7 @@ fn build_undo_follow(
     let activity_id = format!("{}/undo", object.id);
     let actor_id = local_actor_id(instance_url, &actor_profile.username);
     UndoFollow {
-        context: build_default_context(),
+        _context: build_default_context(),
         activity_type: UNDO.to_string(),
         id: activity_id,
         actor: actor_id,
@@ -113,6 +113,7 @@ mod tests {
             format!("{}/objects/{}/undo", INSTANCE_URL, follow_request_id),
         );
         assert_eq!(activity.activity_type, "Undo");
+        assert_eq!(activity.object._context, None);
         assert_eq!(
             activity.object.id,
             format!("{}/objects/{}", INSTANCE_URL, follow_request_id),
