@@ -56,7 +56,8 @@ registration:
 #  posts:
 #    character_limit: 2000
 
-# Data retention parameters
+# Data retention parameters.
+# Objects will be deleted after the specified number of days.
 retention:
   extraneous_posts: 50
   empty_profiles: 150
