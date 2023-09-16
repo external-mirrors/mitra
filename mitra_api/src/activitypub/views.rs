@@ -211,10 +211,19 @@ async fn inbox(
     let activity_digest = ContentDigest::new(&request_body);
     drop(request_body);
 
-    let recipient = get_user_by_name(
+    let recipient = match get_user_by_name(
         db_client_await!(&db_pool),
         &username,
-    ).await?;
+    ).await {
+        Ok(recipient) => recipient,
+        Err(DatabaseError::NotFound(_)) => {
+            // Return 410 Gone if inbox doesn't exist
+            // Doesn't work with Mastodon:
+            // https://github.com/mastodon/mastodon/issues/22070
+            return Ok(HttpResponse::Gone().finish())
+        },
+        Err(other_error) => return Err(other_error.into()),
+    };
     let recipient_id = local_actor_id(
         config.instance().uri_str(),
         &recipient.profile.username,
@@ -867,12 +876,15 @@ async fn apgateway_inbox_push_view(
         request_uri,
     );
     let canonical_collection_id = canonicalize_id(&collection_id)?;
-    let recipient = {
-        let db_client = &**get_database_client(&db_pool).await?;
-        get_portable_user_by_inbox_id(
-            db_client,
-            &canonical_collection_id.to_string(),
-        ).await?
+    let recipient = match get_portable_user_by_inbox_id(
+        db_client_await!(&db_pool),
+        &canonical_collection_id.to_string(),
+    ).await {
+        Ok(recipient) => recipient,
+        Err(DatabaseError::NotFound(_)) => {
+            return Ok(HttpResponse::Gone().finish())
+        },
+        Err(other_error) => return Err(other_error.into()),
     };
     let recipient_id = recipient.profile.expect_remote_actor_id();
     receive_activity(

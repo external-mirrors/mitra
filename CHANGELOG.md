@@ -21,6 +21,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Rate-limit portable actor registrations.
 - Raise data integrity error if webfinger hostname is missing in remote profile data.
 - Made unsolicited message check more efficient.
+- Return `410 Gone` if inbox doesn't exist.
 
 ### Fixed
 
