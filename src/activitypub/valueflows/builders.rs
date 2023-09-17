@@ -56,7 +56,7 @@ fn build_valueflows_context() -> Context {
         ("receiver", "vf:receiver"),
         ("action", "vf:action"),
         ("Agreement", "vf:Agreement"),
-        ("commitments", "vf:commitments"),
+        ("clauses", "vf:clauses"),
         ("Commitment", "vf:Commitment"),
         ("satisfies", "vf:satisfies"),
         ("resourceConformsTo", "vf:resourceConformsTo"),
@@ -219,7 +219,7 @@ struct Agreement {
     object_type: String,
 
     id: String,
-    commitments: (Commitment, Commitment),
+    clauses: (Commitment, Commitment),
     url: PaymentLink,
 }
 
@@ -263,7 +263,7 @@ fn build_agreement(
         _context: build_valueflows_context(),
         object_type: AGREEMENT.to_string(),
         id: agreement_id,
-        commitments: (primary_commitment, reciprocal_commitment),
+        clauses: (primary_commitment, reciprocal_commitment),
         url: payment_link,
     };
     Ok(agreement)
@@ -316,7 +316,7 @@ mod tests {
                     "receiver": "vf:receiver",
                     "action": "vf:action",
                     "Agreement": "vf:Agreement",
-                    "commitments": "vf:commitments",
+                    "clauses": "vf:clauses",
                     "Commitment": "vf:Commitment",
                     "satisfies": "vf:satisfies",
                     "resourceConformsTo": "vf:resourceConformsTo",
@@ -414,7 +414,7 @@ mod tests {
                     "receiver": "vf:receiver",
                     "action": "vf:action",
                     "Agreement": "vf:Agreement",
-                    "commitments": "vf:commitments",
+                    "clauses": "vf:clauses",
                     "Commitment": "vf:Commitment",
                     "satisfies": "vf:satisfies",
                     "resourceConformsTo": "vf:resourceConformsTo",
@@ -425,7 +425,7 @@ mod tests {
             ],
             "type": "Agreement",
             "id": "https://test.example/objects/agreements/edc374aa-e580-4a58-9404-f3e8bf8556b2",
-            "commitments": [
+            "clauses": [
                 {
                     "id": "https://test.example/objects/agreements/edc374aa-e580-4a58-9404-f3e8bf8556b2#primary",
                     "type": "Commitment",
