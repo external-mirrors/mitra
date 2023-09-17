@@ -36,7 +36,7 @@ use crate::activitypub::{
 use super::constants::{
     ACTION_DELIVER_SERVICE,
     ACTION_TRANSFER,
-    CLASS_CONTENT,
+    CLASS_USER_GENERATED_CONTENT,
     UNIT_ONE,
     UNIT_SECOND,
 };
@@ -168,7 +168,7 @@ pub fn build_proposal(
             object_type: INTENT.to_string(),
             id: fep_0837_primary_fragment_id(&proposal_id),
             action: ACTION_DELIVER_SERVICE.to_string(),
-            resource_conforms_to: CLASS_CONTENT.to_string(),
+            resource_conforms_to: CLASS_USER_GENERATED_CONTENT.to_string(),
             resource_quantity: Quantity::duration(1),
             provider: actor_id.clone(),
         },
@@ -334,7 +334,7 @@ mod tests {
                 "type": "Intent",
                 "id": "https://test.example/users/alice/proposals/monero:418015bb9ae982a1975da7d79277c270#primary",
                 "action": "deliverService",
-                "resourceConformsTo": "https://www.wikidata.org/wiki/Q1260632",
+                "resourceConformsTo": "https://www.wikidata.org/wiki/Q579716",
                 "resourceQuantity": {
                     "hasUnit": "second",
                     "hasNumericalValue": "1",
