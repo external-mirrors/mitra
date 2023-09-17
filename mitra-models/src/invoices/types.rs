@@ -166,3 +166,21 @@ impl DbInvoice {
         u64::try_from(self.amount).map_err(|_| DatabaseTypeError)
     }
 }
+
+#[cfg(feature = "test-utils")]
+impl Default for DbInvoice {
+    fn default() -> Self {
+        Self {
+            id: Default::default(),
+            sender_id: Default::default(),
+            recipient_id: Default::default(),
+            chain_id: DbChainId(ChainId::monero_mainnet()),
+            payment_address: Default::default(),
+            amount: 1,
+            invoice_status: InvoiceStatus::Open,
+            payout_tx_id: None,
+            created_at: Default::default(),
+            updated_at: Default::default(),
+        }
+    }
+}

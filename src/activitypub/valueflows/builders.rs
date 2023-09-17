@@ -273,7 +273,7 @@ fn build_agreement(
 mod tests {
     use std::num::NonZeroU64;
     use serde_json::json;
-    use mitra_models::invoices::types::{DbChainId, InvoiceStatus};
+    use mitra_models::invoices::types::DbChainId;
     use mitra_utils::caip2::ChainId;
     use super::*;
 
@@ -373,15 +373,10 @@ mod tests {
         let invoice_id = "edc374aa-e580-4a58-9404-f3e8bf8556b2".parse().unwrap();
         let invoice = DbInvoice {
             id: invoice_id,
-            sender_id: Default::default(),
-            recipient_id: Default::default(),
             chain_id: DbChainId::new(&chain_id),
             payment_address: "8xyz".to_string(),
             amount: 60000000,
-            invoice_status: InvoiceStatus::Open,
-            payout_tx_id: None,
-            created_at: Default::default(),
-            updated_at: Default::default(),
+            ..Default::default()
         };
         let proposal = build_agreement(
             instance_url,
