@@ -1826,6 +1826,16 @@ components:
                 type: number
                 nullable: true
                 example: null
+              object_id:
+                description: Unique identifier of a proposal object.
+                type: string
+                nullable: true
+                example: null
+              fep_0837_enabled:
+                description: Whether recipient supports FEP-0837 or not.
+                type: boolean
+                nullable: true
+                example: false
         fields:
           description: Additional metadata attached to a profile as name-value pairs.
           type: array

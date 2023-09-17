@@ -280,6 +280,8 @@ pub struct RemoteMoneroSubscription {
     pub chain_id: ChainId,
     pub price: NonZeroU64, // piconeros per second
     pub object_id: String,
+    #[serde(default)]
+    pub fep_0837_enabled: bool,
 }
 
 #[derive(Clone, Debug)]
@@ -311,11 +313,13 @@ impl PaymentOption {
         chain_id: ChainId,
         price: NonZeroU64,
         object_id: String,
+        fep_0837_enabled: bool,
     ) -> Self {
         Self::RemoteMoneroSubscription(RemoteMoneroSubscription {
             chain_id,
             price,
             object_id,
+            fep_0837_enabled,
         })
     }
 

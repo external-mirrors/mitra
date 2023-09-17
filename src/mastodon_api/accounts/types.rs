@@ -62,6 +62,7 @@ pub enum AccountPaymentOption {
         chain_id: ChainId,
         price: u64,
         object_id: Option<String>,
+        fep_0837_enabled: bool,
     },
 }
 /// https://docs.joinmastodon.org/entities/source/
@@ -201,6 +202,7 @@ impl Account {
                             chain_id: payment_info.chain_id,
                             price: payment_info.price.into(),
                             object_id: None,
+                            fep_0837_enabled: false,
                         }
                     },
                     PaymentOption::RemoteMoneroSubscription(payment_info) => {
@@ -208,6 +210,7 @@ impl Account {
                             chain_id: payment_info.chain_id,
                             price: payment_info.price.into(),
                             object_id: Some(payment_info.object_id),
+                            fep_0837_enabled: payment_info.fep_0837_enabled,
                         }
                     },
                 }
