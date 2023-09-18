@@ -17,15 +17,15 @@ pub async fn invoice_forwarded(
     payout_tx_id: &str,
 ) -> Result<DbInvoice, DatabaseError> {
     let mut transaction = db_client.transaction().await?;
-    set_invoice_status(
-        &mut transaction,
-        invoice_id,
-        InvoiceStatus::Forwarded,
-    ).await?;
-    let invoice = set_invoice_payout_tx_id(
+    set_invoice_payout_tx_id(
         &transaction,
         invoice_id,
         Some(payout_tx_id),
+    ).await?;
+    let invoice = set_invoice_status(
+        &mut transaction,
+        invoice_id,
+        InvoiceStatus::Forwarded,
     ).await?;
     transaction.commit().await?;
     Ok(invoice)
@@ -36,15 +36,15 @@ pub async fn invoice_reopened(
     invoice_id: &Uuid,
 ) -> Result<DbInvoice, DatabaseError> {
     let mut transaction = db_client.transaction().await?;
-    set_invoice_status(
-        &mut transaction,
-        invoice_id,
-        InvoiceStatus::Paid,
-    ).await?;
-    let invoice = set_invoice_payout_tx_id(
+    set_invoice_payout_tx_id(
         &transaction,
         invoice_id,
         None, // reset
+    ).await?;
+    let invoice = set_invoice_status(
+        &mut transaction,
+        invoice_id,
+        InvoiceStatus::Paid,
     ).await?;
     transaction.commit().await?;
     Ok(invoice)

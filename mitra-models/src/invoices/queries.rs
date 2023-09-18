@@ -139,15 +139,15 @@ pub async fn set_invoice_status(
     let transaction = db_client.transaction().await?;
     let maybe_row = transaction.query_opt(
         "
-        SELECT invoice_status
+        SELECT invoice
         FROM invoice WHERE id = $1
         FOR UPDATE
         ",
         &[&invoice_id],
     ).await?;
     let row = maybe_row.ok_or(DatabaseError::NotFound("invoice"))?;
-    let old_status: InvoiceStatus = row.try_get("invoice_status")?;
-    if !old_status.can_change(&new_status) {
+    let invoice: DbInvoice = row.try_get("invoice")?;
+    if !invoice.can_change_status(&new_status) {
         return Err(DatabaseTypeError.into());
     };
     let maybe_row = transaction.query_opt(

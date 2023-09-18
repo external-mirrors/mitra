@@ -84,20 +84,6 @@ pub enum InvoiceStatus {
 }
 
 impl InvoiceStatus {
-    pub fn can_change(&self, to: &Self) -> bool {
-        let allowed = match self {
-            Self::Open => vec![Self::Paid, Self::Timeout, Self::Cancelled],
-            Self::Paid => vec![Self::Forwarded, Self::Underpaid],
-            Self::Forwarded => vec![Self::Completed, Self::Failed],
-            Self::Timeout => vec![Self::Paid],
-            Self::Cancelled => vec![Self::Paid],
-            Self::Underpaid => vec![Self::Paid],
-            Self::Completed => vec![Self::Paid],
-            Self::Failed => vec![Self::Paid],
-        };
-        allowed.contains(to)
-    }
-
     pub fn is_final(&self) -> bool {
         matches!(
             self,
@@ -164,6 +150,27 @@ pub struct DbInvoice {
 impl DbInvoice {
     pub fn amount_u64(&self) -> Result<u64, DatabaseTypeError> {
         u64::try_from(self.amount).map_err(|_| DatabaseTypeError)
+    }
+
+    pub fn can_change_status(&self, to: &InvoiceStatus) -> bool {
+        use InvoiceStatus::*;
+        let allowed = match self.invoice_status {
+            Open => vec![Paid, Timeout, Cancelled],
+            Paid => {
+                if self.payout_tx_id.is_some() {
+                    vec![Forwarded, Underpaid]
+                } else {
+                    vec![Underpaid]
+                }
+            },
+            Forwarded => vec![Completed, Failed],
+            Timeout => vec![Paid],
+            Cancelled => vec![Paid],
+            Underpaid => vec![Paid],
+            Completed => vec![Paid],
+            Failed => vec![Paid],
+        };
+        allowed.contains(to)
     }
 }
 

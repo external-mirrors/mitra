@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Changed
 
 - Use `resourceConformsTo` property of proposal object to determine support for FEP-0837.
+- Don't change invoice status to "Forwarded" if payout tx ID is not set.
 
 ## [1.35.0] - 2023-09-11
 
