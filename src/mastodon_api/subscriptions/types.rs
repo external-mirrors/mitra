@@ -15,7 +15,7 @@ pub struct InvoiceData {
     pub sender_id: Uuid,
     pub recipient_id: Uuid,
     pub chain_id: ChainId,
-    pub amount: i64,
+    pub amount: u64,
 }
 
 #[derive(Serialize)]

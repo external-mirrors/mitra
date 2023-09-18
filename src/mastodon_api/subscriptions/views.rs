@@ -49,7 +49,10 @@ use mitra_services::{
     },
 };
 use mitra_utils::currencies::Currency;
-use mitra_validators::errors::ValidationError;
+use mitra_validators::{
+    invoices::validate_amount,
+    errors::ValidationError,
+};
 
 use crate::activitypub::builders::update_person::prepare_update_person;
 use crate::http::get_request_base_url;
@@ -225,9 +228,7 @@ async fn create_invoice_view(
     if invoice_data.chain_id != monero_config.chain_id {
         return Err(ValidationError("unexpected chain ID").into());
     };
-    if invoice_data.amount <= 0 {
-        return Err(ValidationError("amount must be positive").into());
-    };
+    validate_amount(invoice_data.amount)?;
     let db_client = &**get_database_client(&db_pool).await?;
     let sender = get_profile_by_id(db_client, &invoice_data.sender_id).await?;
     let recipient = get_user_by_id(db_client, &invoice_data.recipient_id).await?;

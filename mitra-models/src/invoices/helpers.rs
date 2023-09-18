@@ -87,7 +87,7 @@ mod tests {
             &recipient.id,
             &ChainId::monero_mainnet(),
             "8MxABajuo71BZya9",
-            100000000000000,
+            100000000000000_u64,
         ).await.unwrap();
         set_invoice_status(
             db_client,

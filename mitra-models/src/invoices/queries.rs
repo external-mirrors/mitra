@@ -20,9 +20,11 @@ pub async fn create_invoice(
     recipient_id: &Uuid,
     chain_id: &ChainId,
     payment_address: &str,
-    amount: i64,
+    amount: impl TryInto<i64>,
 ) -> Result<DbInvoice, DatabaseError> {
     let invoice_id = generate_ulid();
+    let db_amount: i64 = TryInto::try_into(amount)
+        .map_err(|_| DatabaseTypeError)?;
     let row = db_client.query_one(
         "
         INSERT INTO invoice (
@@ -42,7 +44,7 @@ pub async fn create_invoice(
             &recipient_id,
             &DbChainId::new(chain_id),
             &payment_address,
-            &amount,
+            &db_amount,
         ],
     ).await.map_err(catch_unique_violation("invoice"))?;
     let invoice = row.try_get("invoice")?;
@@ -253,7 +255,7 @@ mod tests {
             &recipient_id,
             &ChainId::monero_mainnet(),
             "8MxABajuo71BZya9",
-            100000000000000,
+            100000000000000_u64,
         ).await.unwrap();
 
         let invoice = set_invoice_status(
