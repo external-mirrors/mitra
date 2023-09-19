@@ -9,6 +9,7 @@ The following activities and object types are supported:
 - `Like()`, `Undo(Like)`.
 - `Announce(Note)`, `Undo(Announce)`.
 - `Update(Actor)`, `Move(Actor)`, `Delete(Actor)`.
+- `Offer(Agreement)`, `Accept(Agreement)`.
 - `Add(Actor)`, `Remove(Actor)`.
 
 `Article`, `Event`, `Question`, `Page` and `Video` object types are partially supported.
@@ -29,6 +30,7 @@ Supported FEPs:
 - [FEP-0ea0: Payment Links](https://codeberg.org/silverpill/feps/src/branch/main/0ea0/fep-0ea0.md)
 - [FEP-521a: Representing actor's public keys](https://codeberg.org/silverpill/feps/src/branch/main/521a/fep-521a.md)
 - [FEP-c390: Identity Proofs](https://codeberg.org/silverpill/feps/src/branch/main/c390/fep-c390.md)
+- [FEP-0837: Federated Marketplace](https://codeberg.org/silverpill/feps/src/branch/main/0837/fep-0837.md)
 
 ## Object integrity proofs
 
@@ -126,7 +128,15 @@ After registering an account its owner can upload the list of followers and star
 
 Where `object` is an ID of old account and `target` is an ID of new account. Actors identified by `object` and `target` properties must have at least one FEP-c390 identity in common to be considered aliases. Upon receipt of such activity, actors that follow `object` should un-follow it and follow `target` instead.
 
-## Subscription events
+## Subscriptions
+
+Cross-instance payments are implemented according to [FEP-0837](https://codeberg.org/silverpill/feps/src/branch/main/0837/fep-0837.md) specification.
+
+Proposals are linked to actors using [FEP-0ea0](https://codeberg.org/silverpill/feps/src/branch/main/0ea0/fep-0ea0.md) payment links. [CAIP-19](https://chainagnostic.org/CAIPs/caip-19) asset IDs are used to specify currencies.
+
+Agreements contain a FEP-0ea0 payment link pointing to [CAIP-10](https://chainagnostic.org/CAIPs/caip-10) account ID.
+
+### Subscription events
 
 Local actor profiles have `subscribers` property which points to the collection of actor's paid subscribers.
 
