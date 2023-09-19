@@ -192,7 +192,7 @@ impl DbInvoice {
             },
             Failed => vec![Paid],
             Requested => {
-                if self.object_id.is_some() {
+                if self.payment_address.is_some() && self.object_id.is_some() {
                     vec![Open, Cancelled]
                 } else {
                     vec![Cancelled]
