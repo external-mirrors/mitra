@@ -53,5 +53,9 @@ mod tests {
             get_media_type_extension("image/jpeg"),
             Some("jpg"),
         );
+        assert_eq!(
+            get_media_type_extension("image/avif"),
+            Some("avif"),
+        );
     }
 }

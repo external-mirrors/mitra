@@ -9,11 +9,12 @@ use mitra_models::cleanup::DeletionQueue;
 use mitra_services::ipfs::{store as ipfs_store};
 use mitra_utils::files::{get_media_type_extension, write_file};
 
-pub const SUPPORTED_MEDIA_TYPES: [&str; 13] = [
+pub const SUPPORTED_MEDIA_TYPES: [&str; 14] = [
     "audio/mpeg",
     "audio/ogg",
     "audio/x-wav",
     "image/apng",
+    "image/avif",
     "image/gif",
     "image/jpeg",
     "image/png",

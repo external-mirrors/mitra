@@ -27,7 +27,7 @@ hex = "0.4.3"
 # Used for working with ECDSA signatures
 k256 = { version = "0.11.6", default-features = false, features = ["std", "ecdsa", "keccak256"] }
 # Used to guess media type of a file
-mime_guess = "2.0.3"
+mime_guess = "2.0.4"
 mime-sniffer = "0.1.2"
 # Used to generate random numbers
 rand = "0.8.4"
