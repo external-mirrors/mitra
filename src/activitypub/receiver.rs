@@ -125,7 +125,7 @@ pub async fn handle_activity(
             handle_undo(config, db_client, activity).await?
         },
         UPDATE => {
-            handle_update(config, db_client, activity).await?
+            handle_update(config, db_client, activity, is_authenticated).await?
         },
         _ => {
             log::warn!("activity type is not supported: {}", activity);
@@ -233,7 +233,7 @@ pub async fn receive_activity(
     let is_authenticated = activity_actor == signer_id;
     if !is_authenticated {
         match activity_type {
-            CREATE => (), // Accept forwarded Create() activities
+            CREATE | UPDATE => (), // Accept forwarded Create() and Update() activities
             DELETE | LIKE => {
                 // Ignore forwarded Delete and Like activities
                 return Ok(());

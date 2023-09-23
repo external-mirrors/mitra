@@ -21,7 +21,7 @@ use crate::activitypub::{
         helpers::update_remote_profile,
         types::Actor,
     },
-    deserialization::deserialize_into_object_id,
+    deserialization::{deserialize_into_object_id, find_object_id},
     fetcher::fetchers::fetch_object,
     handlers::create::{
         create_content_link,
@@ -144,13 +144,17 @@ pub async fn handle_update(
     config: &Config,
     db_client: &mut impl DatabaseClient,
     mut activity: JsonValue,
+    is_authenticated: bool,
 ) -> HandlerResult {
-    if let Some(object_id) = activity["object"].as_str() {
-        // Fetch object if it is not embedded
+    let is_not_embedded = activity["object"].as_str().is_some();
+    if is_not_embedded || !is_authenticated {
+        // Fetch object if it is not embedded or if activity is forwarded
+        let object_id = find_object_id(&activity["object"])?;
         activity["object"] = fetch_object(
             &config.instance(),
-            object_id,
+            &object_id,
         ).await?;
+        log::info!("fetched object {}", object_id);
     };
     let object_type = activity["object"]["type"].as_str()
         .ok_or(ValidationError("unknown object type"))?;
