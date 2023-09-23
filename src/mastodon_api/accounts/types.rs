@@ -424,11 +424,6 @@ pub struct UnsignedActivity {
 }
 
 #[derive(Deserialize)]
-pub struct SignedActivity {
-    pub value: JsonValue,
-}
-
-#[derive(Deserialize)]
 pub struct IdentityClaimQueryParams {
     pub proof_type: String,
     pub signer: String,

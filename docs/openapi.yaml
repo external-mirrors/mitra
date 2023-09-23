@@ -225,24 +225,6 @@ paths:
                     description: Activity
                     type: object
                     example: {"type": "Update"}
-  /api/v1/accounts/send_activity:
-    post:
-      summary: Send signed activity (experimental).
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                value:
-                  description: Activity
-                  type: object
-                  example: {"type": "Update"}
-      responses:
-        200:
-          description: Successful operation
-        400:
-          description: Invalid integrity proof or unsupported activity type.
   /api/v1/accounts/identity_proof:
     get:
       summary: Get unsigned data for identity proof.

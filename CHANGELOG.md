@@ -10,6 +10,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Accept forwarded `Update(Note)` activities.
 
+### Removed
+
+- Remove `/api/v1/accounts/send_activity` API endpoint (replaced by outbox).
+
 ## [1.36.0] - 2023-09-19
 
 ### Added

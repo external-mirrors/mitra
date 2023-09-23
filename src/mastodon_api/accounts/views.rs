@@ -94,11 +94,7 @@ use crate::activitypub::{
         undo_follow::prepare_undo_follow,
         update_person::{
             build_update_person,
-            forward_update_person,
-            is_update_person_activity,
             prepare_update_person,
-            validate_update_person_c2s,
-            verify_signed_c2s_activity,
         },
     },
     identifiers::local_actor_id,
@@ -138,7 +134,6 @@ use super::types::{
     RelationshipQueryParams,
     SearchAcctQueryParams,
     SearchDidQueryParams,
-    SignedActivity,
     StatusListQueryParams,
     SubscriptionListQueryParams,
     UnsignedActivity,
@@ -343,37 +338,6 @@ async fn get_unsigned_update(
         value: activity_value,
     };
     Ok(HttpResponse::Ok().json(data))
-}
-
-#[post("/send_activity")]
-async fn send_signed_activity(
-    config: web::Data<Config>,
-    db_pool: web::Data<DbPool>,
-    data: web::Json<SignedActivity>,
-) -> Result<HttpResponse, MastodonError> {
-    let db_client = &mut **get_database_client(&db_pool).await?;
-    let instance = config.instance();
-    let outgoing_activity = match is_update_person_activity(&data.value) {
-        true => {
-            let user = validate_update_person_c2s(
-                db_client,
-                &instance,
-                &data.value,
-            ).await.map_err(|_| ValidationError("invalid activity"))?;
-            verify_signed_c2s_activity(&user.profile, &data.value)
-                .map_err(|_| ValidationError("invalid integrity proof"))?;
-            forward_update_person(
-                db_client,
-                &instance,
-                &user,
-                &data.value,
-            ).await?
-        },
-        false => return Err(ValidationError("unsupported activity type").into()),
-    };
-    outgoing_activity.enqueue(db_client).await?;
-    let response = serde_json::json!({});
-    Ok(HttpResponse::Ok().json(response))
 }
 
 #[get("/identity_proof")]
@@ -994,7 +958,6 @@ pub fn account_api_scope() -> Scope {
         .service(verify_credentials)
         .service(update_credentials)
         .service(get_unsigned_update)
-        .service(send_signed_activity)
         .service(get_identity_claim)
         .service(create_identity_proof)
         .service(get_relationships_view)
