@@ -15,7 +15,7 @@ use mitra_utils::{
 use super::blockchain::BlockchainConfig;
 use super::config::Config;
 use super::environment::Environment;
-use super::registration::{DefaultRole, RegistrationType};
+use super::registration::DefaultRole;
 
 struct EnvConfig {
     config_path: String,
@@ -126,15 +126,6 @@ pub fn parse_config() -> (Config, Vec<&'static str>) {
     };
 
     // Migrations
-    if let Some(registrations_open) = config.registrations_open {
-        // Change type if 'registrations_open' parameter is used
-        warnings.push("'registrations_open' setting is deprecated, use 'registration.type' instead");
-        if registrations_open {
-            config.registration.registration_type = RegistrationType::Open;
-        } else {
-            config.registration.registration_type = RegistrationType::Invite;
-        };
-    };
     if let Some(read_only_user) = config.registration.default_role_read_only_user {
         warnings.push("'default_role_read_only_user' setting is deprecated, use 'registration.default_role' instead");
         if read_only_user {

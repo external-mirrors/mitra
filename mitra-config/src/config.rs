@@ -70,8 +70,6 @@ pub struct Config {
     #[serde(skip)]
     pub(super) instance_rsa_key: Option<RsaPrivateKey>,
 
-    pub(super) registrations_open: Option<bool>, // deprecated
-
     #[serde(default)]
     pub registration: RegistrationConfig,
 
