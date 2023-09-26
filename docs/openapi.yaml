@@ -2041,6 +2041,14 @@ components:
         login_message:
           description: Login message for signer.
           type: string
+        allow_unauthenticated:
+          description: Features available to unauthenticated users.
+          type: object
+          properties:
+            timeline_local:
+              description: Allow to view local timeline.
+              type: boolean
+              default: false
         blockchains:
           description: Information about blockchain integrations.
           type: array

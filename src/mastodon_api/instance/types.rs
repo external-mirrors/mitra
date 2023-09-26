@@ -50,6 +50,11 @@ struct InstanceConfiguration {
 }
 
 #[derive(Serialize)]
+struct AllowUnauthenticated {
+    timeline_local: bool,
+}
+
+#[derive(Serialize)]
 struct BlockchainFeatures {
     gate: bool,
     minter: bool,
@@ -82,6 +87,8 @@ pub struct InstanceInfo {
 
     authentication_methods: Vec<String>,
     login_message: String,
+    // Similar to pleroma.restrict_unauthenticated
+    allow_unauthenticated: AllowUnauthenticated,
     blockchains: Vec<BlockchainInfo>,
     ipfs_gateway_url: Option<String>,
 }
@@ -195,6 +202,9 @@ impl InstanceInfo {
                 })
                 .collect(),
             login_message: config.login_message.clone(),
+            allow_unauthenticated: AllowUnauthenticated {
+                timeline_local: config.instance_timeline_public,
+            },
             blockchains: blockchains,
             ipfs_gateway_url: config.ipfs_gateway_url.clone(),
         }
