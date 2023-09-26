@@ -47,8 +47,8 @@ Ethereum contracts: https://codeberg.org/silverpill/mitra-contracts
 
 ## Requirements
 
-- PostgreSQL 12+
-- Rust 1.57+ (when building from source)
+- PostgreSQL 13+
+- Rust 1.63+ (when building from source)
 
 Minimum system requirements:
 
