@@ -13,6 +13,7 @@
 - Removed `post_character_limit` configuration parameter. Use `limits.posts.character_limit` instead.
 - Removed `proxy_url` configuration parameter. Use `federation.proxy_url` instead.
 - Changed the default value of `authentication_methods` configuration parameter to `["password"]`. "Sign in with Ethereum" is now disabled by default.
+- Changed the default value of `instance_staff_public` configuration parameter to `true`.
 
 Prior to version 2.0, Mitra printed warnings when it encountered deprecated configuration parameters. In Mitra 2.0 these parameters are ignored.
 

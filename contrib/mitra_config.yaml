@@ -30,7 +30,7 @@ instance_description: |
   # My instance
   Welcome!
 # Make list of instance admins public
-instance_staff_public: false
+instance_staff_public: true
 # Make instance (local) timeline public
 instance_timeline_public: false
 

@@ -29,6 +29,8 @@ use super::MITRA_VERSION;
 
 fn default_log_level() -> LogLevel { LogLevel::Info }
 
+const fn default_instance_staff_public() -> bool { true }
+
 #[derive(Clone, Deserialize)]
 pub struct Config {
     // Properties auto-populated from the environment
@@ -62,7 +64,7 @@ pub struct Config {
     pub instance_title: String,
     pub instance_short_description: String,
     pub instance_description: String,
-    #[serde(default)]
+    #[serde(default = "default_instance_staff_public")]
     pub instance_staff_public: bool,
     #[serde(default)]
     pub instance_timeline_public: bool,
