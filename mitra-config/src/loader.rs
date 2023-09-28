@@ -124,12 +124,6 @@ pub fn parse_config() -> (Config, Vec<&'static str>) {
         panic!("both ipfs_api_url and ipfs_gateway_url must be set");
     };
 
-    // Migrations
-    if let Some(ref proxy_url) = config.proxy_url {
-        warnings.push("'proxy_url' setting is deprecated, use 'federation.proxy_url' instead");
-        config.federation.proxy_url = Some(proxy_url.to_string());
-    };
-
     // Insert instance RSA key
     config.instance_rsa_key = Some(read_instance_rsa_key(&config.storage_dir));
 

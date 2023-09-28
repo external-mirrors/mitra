@@ -86,8 +86,6 @@ pub struct Config {
     #[serde(default)]
     pub retention: RetentionConfig,
 
-    pub(super) proxy_url: Option<String>,
-
     #[serde(default)]
     pub federation: FederationConfig,
 

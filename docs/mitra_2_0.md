@@ -11,6 +11,7 @@
 - Removed `registrations_open` configuration parameter. Use `registration.type` instead.
 - Removed `registration.default_role_read_only_user` configuration parameter. Use `registration.default_role` with value `read_only_user` instead.
 - Removed `post_character_limit` configuration parameter. Use `limits.posts.character_limit` instead.
+- Removed `proxy_url` configuration parameter. Use `federation.proxy_url` instead.
 
 Prior to version 2.0, Mitra printed warnings when it encountered deprecated configuration parameters. In Mitra 2.0 these parameters are ignored.
 

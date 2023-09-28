@@ -11,6 +11,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Remove `registrations_open` configuration parameter.
 - Remove `registration.default_role_read_only_user` configuration parameter.
 - Remove `post_character_limit` configuration parameter.
+- Remove `proxy_url` configuration parameter.
 
 ## [1.36.2] - 2023-09-30
 
