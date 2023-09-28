@@ -9,6 +9,7 @@
 ## Configuration
 
 - Removed `registrations_open` configuration parameter. Use `registration.type` instead.
+- Removed `registration.default_role_read_only_user` configuration parameter. Use `registration.default_role` with value `read_only_user` instead.
 
 Prior to version 2.0, Mitra printed warnings when it encountered deprecated configuration parameters. In Mitra 2.0 these parameters are ignored.
 

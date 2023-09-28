@@ -57,8 +57,6 @@ pub struct RegistrationConfig {
     #[serde(rename = "type")]
     pub registration_type: RegistrationType,
 
-    pub(super) default_role_read_only_user: Option<bool>, // deprecated
-
     #[serde(default)]
     pub default_role: DefaultRole,
 }

@@ -15,7 +15,6 @@ use mitra_utils::{
 use super::blockchain::BlockchainConfig;
 use super::config::Config;
 use super::environment::Environment;
-use super::registration::DefaultRole;
 
 struct EnvConfig {
     config_path: String,
@@ -126,14 +125,6 @@ pub fn parse_config() -> (Config, Vec<&'static str>) {
     };
 
     // Migrations
-    if let Some(read_only_user) = config.registration.default_role_read_only_user {
-        warnings.push("'default_role_read_only_user' setting is deprecated, use 'registration.default_role' instead");
-        if read_only_user {
-            config.registration.default_role = DefaultRole::ReadOnlyUser;
-        } else {
-            config.registration.default_role = DefaultRole::NormalUser;
-        };
-    };
     if let Some(post_character_limit) = config.post_character_limit {
         warnings.push("'post_character_limit' setting is deprecated, use 'limits.posts.character_limit' instead");
         config.limits.posts.character_limit = post_character_limit;
