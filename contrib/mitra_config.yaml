@@ -54,7 +54,7 @@ registration:
 #  media:
 #    file_size_limit: 20M
 #  posts:
-#    character_limit: 2000
+#    character_limit: 5000
 
 # Data retention parameters.
 # Objects will be deleted after the specified number of days.

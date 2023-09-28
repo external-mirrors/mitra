@@ -64,7 +64,7 @@ impl Default for MediaLimits {
     }
 }
 
-const fn default_post_character_limit() -> usize { 2000 }
+const fn default_post_character_limit() -> usize { 5000 }
 
 #[derive(Clone, Deserialize)]
 pub struct PostLimits {
