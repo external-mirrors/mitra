@@ -125,10 +125,6 @@ pub fn parse_config() -> (Config, Vec<&'static str>) {
     };
 
     // Migrations
-    if let Some(post_character_limit) = config.post_character_limit {
-        warnings.push("'post_character_limit' setting is deprecated, use 'limits.posts.character_limit' instead");
-        config.limits.posts.character_limit = post_character_limit;
-    };
     if let Some(ref proxy_url) = config.proxy_url {
         warnings.push("'proxy_url' setting is deprecated, use 'federation.proxy_url' instead");
         config.federation.proxy_url = Some(proxy_url.to_string());

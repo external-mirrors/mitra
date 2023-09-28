@@ -80,8 +80,6 @@ pub struct Config {
     #[serde(default = "default_login_message")]
     pub login_message: String,
 
-    pub(super) post_character_limit: Option<usize>, // deprecated
-
     #[serde(default)]
     pub limits: Limits,
 
