@@ -27,10 +27,7 @@ impl<'de> Deserialize<'de> for AuthenticationMethod {
 }
 
 pub fn default_authentication_methods() -> Vec<AuthenticationMethod> {
-    vec![
-        AuthenticationMethod::Password,
-        AuthenticationMethod::Eip4361,
-    ]
+    vec![AuthenticationMethod::Password]
 }
 
 pub fn default_login_message() -> String { "Do not sign this message on other sites!".to_string() }

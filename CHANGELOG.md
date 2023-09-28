@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- Change default value of `authentication_methods` configuration parameter to `["password"]`.
+
 ### Removed
 
 - Remove `registrations_open` configuration parameter.
