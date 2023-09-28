@@ -19,3 +19,7 @@
 Prior to version 2.0, Mitra printed warnings when it encountered deprecated configuration parameters. In Mitra 2.0 these parameters are ignored.
 
 See [annotated example of config.yaml file](../contrib/mitra_config.yaml) for more information.
+
+## HTTP API
+
+- `X-Forwarded-Proto` header must be present when Mitra runs behind a reverse proxy. Instance operators who use Nginx should add `proxy_set_header X-Forwarded-Proto $scheme;` directive to a relevant `location` block. See [example of nginx config file](../contrib/mitra.nginx). Caddy sets `X-Forwarded-Proto` header by default, so no action is needed.

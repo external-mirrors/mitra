@@ -18,8 +18,6 @@ use serde_qs::{
     Config as QsConfig,
 };
 
-use mitra_utils::urls::guess_protocol;
-
 use crate::errors::HttpError;
 
 pub type FormOrJson<T> = Either<Form<T>, Json<T>>;
@@ -88,13 +86,7 @@ pub fn json_error_handler(
 }
 
 pub fn get_request_base_url(connection_info: ConnectionInfo) -> String {
-    // TODO: HTTP server should set X-Forwarded-Proto header
-    // let scheme = connection_info.scheme();
+    let scheme = connection_info.scheme();
     let host = connection_info.host();
-    let scheme = if let Some((hostname, _port)) = host.split_once(':') {
-        guess_protocol(hostname)
-    } else {
-        guess_protocol(host)
-    };
     format!("{}://{}", scheme, host)
 }
