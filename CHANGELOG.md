@@ -11,6 +11,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Change default value of `authentication_methods` configuration parameter to `["password"]`.
 - Change default value of `instance_staff_public` configuration parameter to `true`.
 - Change default value of `limits.posts.character_limit` to 5000.
+- Redirect from `/feeds/{username}` to `/feeds/users/{username}`.
 
 ### Removed
 

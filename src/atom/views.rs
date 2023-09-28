@@ -1,4 +1,4 @@
-use actix_web::{web, HttpResponse, Scope};
+use actix_web::{web, HttpResponse, Responder, Scope};
 
 use mitra_config::Config;
 use mitra_models::{
@@ -12,7 +12,7 @@ use super::feeds::make_feed;
 
 const FEED_SIZE: u16 = 10;
 
-async fn get_atom_feed(
+async fn user_feed_view(
     config: web::Data<Config>,
     db_pool: web::Data<DbPool>,
     username: web::Path<String>,
@@ -42,9 +42,15 @@ async fn get_atom_feed(
     Ok(response)
 }
 
+async fn user_feed_redirect(
+    username: web::Path<String>,
+) -> impl Responder {
+    let redirect_path = format!("/feeds/users/{}", username);
+    web::Redirect::to(redirect_path).permanent()
+}
 
 pub fn atom_scope() -> Scope {
     web::scope("/feeds")
-        .route("/users/{username}", web::get().to(get_atom_feed))
-        .route("/{username}", web::get().to(get_atom_feed))
+        .route("/users/{username}", web::get().to(user_feed_view))
+        .route("/{username}", web::get().to(user_feed_redirect))
 }
