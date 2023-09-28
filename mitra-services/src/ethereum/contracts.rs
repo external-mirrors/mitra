@@ -101,7 +101,6 @@ pub struct EthereumBlockchain {
 pub async fn get_contracts(
     db_client: &impl DatabaseClient,
     config: &EthereumConfig,
-    storage_dir: &Path,
 ) -> Result<EthereumBlockchain, EthereumError> {
     let web3 = connect(&config.api_url)?;
     let chain_id = web3.eth().chain_id().await?;
@@ -183,7 +182,7 @@ pub async fn get_contracts(
         maybe_subscription_adapter = Some(subscription_adapter);
     };
 
-    let current_block = get_current_block_number(db_client, &web3, storage_dir).await?;
+    let current_block = get_current_block_number(db_client, &web3).await?;
     let sync_state = SyncState::new(
         current_block,
         sync_targets,

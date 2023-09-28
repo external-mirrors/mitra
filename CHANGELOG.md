@@ -21,6 +21,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Remove `proxy_url` configuration parameter.
 - Disable protocol guessing when determining base URL.
 - Remove support for `JcsRsaSignature2022` and `JcsEip191Signature2022` proof types.
+- Don't read `current_block` file.
 
 ## [1.36.2] - 2023-09-30
 

@@ -70,7 +70,7 @@ async fn main() -> std::io::Result<()> {
 
     let maybe_ethereum_blockchain = if let Some(ethereum_config) = config.ethereum_config() {
         // Create blockchain interface
-        get_contracts(&**db_client, ethereum_config, &config.storage_dir).await
+        get_contracts(&**db_client, ethereum_config).await
             .map(Some).unwrap()
     } else {
         None

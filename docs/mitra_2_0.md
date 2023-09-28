@@ -28,3 +28,8 @@ See [annotated example of config.yaml file](../contrib/mitra_config.yaml) for mo
 ## Federation
 
 Mitra 2.0 is fully compatible with existing Mitra 1.x instances. However, upgrading to Mitra 2.0 is recommended, because future versions (2.x) will introduce breaking changes to the federation protocol.
+
+## Ethereum
+
+- Disabled reading sync state from `current_block` file. Instances where Ethereum integration is enabled should first update to Mitra v1.17.0 or higher before installing Mitra 2.0.
+- Ethereum blockchain integration is no longer actively developed and may be removed in Mitra 3.0. See [issue #27](https://codeberg.org/silverpill/mitra/issues/27) for details. This doesn't affect "Sign In With Ethereum" feature and identity proofs.
