@@ -15,7 +15,7 @@ thiserror = "1.0.37"
 # Used to work with UUIDs
 uuid = "1.1.2"
 
-mitra_models = { path = "../mitra_models" }
+mitra_models = { path = "../mitra_models", default-features = false }
 mitra_utils = { path = "../mitra_utils" }
 
 [dev-dependencies]

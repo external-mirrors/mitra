@@ -19,20 +19,27 @@ tokio = { version = "1.28.2", features = ["macros"] }
 uuid = "1.1.2"
 
 mitra_config = { path = "../mitra_config" }
-mitra_models = { path = "../mitra_models" }
-mitra_services = { path = "../mitra_services" }
+mitra_models = { path = "../mitra_models", default-features = false }
+mitra_services = { path = "../mitra_services", default-features = false }
 mitra_utils = { path = "../mitra_utils" }
 mitra_validators = { path = "../mitra_validators" }
 
 [dev-dependencies]
 serial_test = "0.7.0"
 
-mitra_models = { path = "../mitra_models", features = ["test-utils"] }
+mitra_config = { path = "../mitra_config", features = ["test-utils"] }
+mitra_models = { path = "../mitra_models", default-features = false, features = ["test-utils"] }
 mitra_utils = { path = "../mitra_utils", features = ["test-utils"] }
 
 [target.'cfg(target_env = "musl")'.dependencies]
-openssl = { version = "0.10.63", features = ["vendored"] }
-openssl-probe = "0.1.5"
+openssl = { version = "0.10.63", features = ["vendored"], optional = true }
+openssl-probe = { version = "0.1.5", optional = true }
+
+[features]
+default = ["native-tls"]
+
+native-tls = ["mitra_models/native-tls", "mitra_services/native-tls", "openssl", "openssl-probe"]
+rustls-tls = ["mitra_models/rustls-tls", "mitra_services/rustls-tls"]
 
 [lints]
 workspace = true

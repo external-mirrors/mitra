@@ -11,6 +11,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Add sizes of data import and fetcher queues to instance report.
 - Allow multiple emoji reactions on a single post.
 - Implement `/api/v1/pleroma/statuses/{status_id}/reactions` API endpoints.
+- Added rustls support.
 
 ### Changed
 

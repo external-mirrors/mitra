@@ -86,12 +86,12 @@ uuid = { version = "1.1.2", features = ["serde", "v4"] }
 # User for working with block/allow lists
 wildmatch = "2.1.1"
 
-mitra_activitypub = { path = "mitra_activitypub" }
-mitra_adapters = { path = "mitra_adapters" }
+mitra_activitypub = { path = "mitra_activitypub", default-features = false }
+mitra_adapters = { path = "mitra_adapters", default-features = false }
 mitra_config = { path = "mitra_config" }
-mitra_federation = { path = "mitra_federation" }
-mitra_models = { path = "mitra_models" }
-mitra_services = { path = "mitra_services" }
+mitra_federation = { path = "mitra_federation", default-features = false }
+mitra_models = { path = "mitra_models", default-features = false }
+mitra_services = { path = "mitra_services", default-features = false }
 mitra_utils = { path = "mitra_utils" }
 mitra_validators = { path = "mitra_validators" }
 
@@ -99,10 +99,27 @@ mitra_validators = { path = "mitra_validators" }
 serial_test = "0.7.0"
 
 mitra_config = { path = "mitra_config", features = ["test-utils"] }
-mitra_models = { path = "mitra_models", features = ["test-utils"] }
+mitra_models = { path = "mitra_models", default-features = false, features = ["test-utils"] }
 mitra_utils = { path = "mitra_utils", features = ["test-utils"] }
 
 [features]
+default = ["native-tls"]
+
+native-tls = [
+  "mitra_activitypub/native-tls",
+  "mitra_adapters/native-tls",
+  "mitra_federation/native-tls",
+  "mitra_models/native-tls",
+  "mitra_services/native-tls",
+]
+rustls-tls = [
+  "mitra_activitypub/rustls-tls",
+  "mitra_adapters/rustls-tls",
+  "mitra_federation/rustls-tls",
+  "mitra_models/rustls-tls",
+  "mitra_services/rustls-tls",
+]
+
 production = ["mitra_config/production"]
 
 [lints]

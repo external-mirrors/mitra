@@ -34,7 +34,7 @@ pub fn initialize_app() -> Config {
     for warning in config_warnings {
         log::warn!("{}", warning);
     };
-    #[cfg(target_env = "musl")]
+    #[cfg(all(feature = "native-tls", target_env = "musl"))]
     {
         let is_found = openssl_probe::try_init_ssl_cert_env_vars();
         if !is_found {

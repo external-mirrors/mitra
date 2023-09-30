@@ -1,20 +1,39 @@
 use std::path::Path;
 
 use deadpool_postgres::Pool;
-use openssl::{
-    error::{ErrorStack as SslError},
-    ssl::{SslConnector, SslMethod},
-};
-use postgres_openssl::MakeTlsConnector;
 use tokio_postgres::{
     config::{Config as DatabaseConfig},
     Client,
 };
 
+#[cfg(feature = "native-tls")]
+use {
+    openssl::{
+        error::{ErrorStack as OpenSslError},
+        ssl::{SslConnector, SslMethod},
+    },
+    postgres_openssl::MakeTlsConnector,
+};
+
+#[cfg(feature = "rustls-tls")]
+use {
+    rustls::{
+        client::ClientConfig as TlsClientConfig,
+        Certificate,
+        Error as RustlsError,
+        RootCertStore,
+    },
+    rustls_pemfile::certs,
+    tokio_postgres_rustls::MakeRustlsConnect,
+};
+
 #[derive(thiserror::Error, Debug)]
 pub enum DatabaseConnectionError {
     #[error(transparent)]
-    SslError(#[from] SslError),
+    CertificateError(#[from] std::io::Error),
+
+    #[error("{0}")]
+    TlsError(String),
 
     #[error(transparent)]
     PostgresError(#[from] tokio_postgres::Error),
@@ -23,13 +42,46 @@ pub enum DatabaseConnectionError {
     PoolError(#[from] deadpool::managed::BuildError<tokio_postgres::Error>),
 }
 
+#[cfg(feature = "native-tls")]
+impl From<OpenSslError> for DatabaseConnectionError {
+    fn from(error: OpenSslError) -> Self {
+        Self::TlsError(error.to_string())
+    }
+}
+
+#[cfg(feature = "rustls-tls")]
+impl From<RustlsError> for DatabaseConnectionError {
+    fn from(error: RustlsError) -> Self {
+        Self::TlsError(error.to_string())
+    }
+}
+
+#[cfg(feature = "native-tls")]
 fn create_tls_connector(
     ca_file_path: &Path,
-) -> Result<MakeTlsConnector, SslError> {
+) -> Result<MakeTlsConnector, DatabaseConnectionError> {
     let mut builder = SslConnector::builder(SslMethod::tls())?;
     log::info!("using TLS CA file: {}", ca_file_path.display());
     builder.set_ca_file(ca_file_path)?;
     let connector = MakeTlsConnector::new(builder.build());
+    Ok(connector)
+}
+
+#[cfg(feature = "rustls-tls")]
+fn create_tls_connector(
+    ca_file_path: &Path,
+) -> Result<MakeRustlsConnect, DatabaseConnectionError> {
+    let mut root_store = RootCertStore::empty();
+    let ca_file = std::fs::File::open(ca_file_path)?;
+    let mut ca_file_reader = std::io::BufReader::new(ca_file);
+    for item in certs(&mut ca_file_reader)? {
+        root_store.add(&Certificate(item))?;
+    };
+    let tls_config = TlsClientConfig::builder()
+        .with_safe_defaults()
+        .with_root_certificates(root_store)
+        .with_no_client_auth();
+    let connector = MakeRustlsConnect::new(tls_config);
     Ok(connector)
 }
 
