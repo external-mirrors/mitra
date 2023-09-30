@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+
+- Support `x86_64-unknown-linux-musl` build target.
+
 ## [1.36.1] - 2023-09-28
 
 ### Added

@@ -91,3 +91,7 @@ mitra-utils = { path = "mitra-utils", features = ["test-utils"] }
 ethereum-extras = ["mitra-services/ethereum-extras"]
 
 production = ["mitra-config/production"]
+
+[target.'cfg(target_env = "musl")'.dependencies]
+openssl = { version = "0.10.55", features = ["vendored"] }
+openssl-probe = "0.1.5"

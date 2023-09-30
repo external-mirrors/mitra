@@ -28,9 +28,14 @@ mkdir -p $PACKAGE_DIR/usr/share/mitra/examples
 cp contrib/mitra_config.yaml $PACKAGE_DIR/usr/share/mitra/examples/config.yaml
 
 # Binaries
+if [ -z "$TARGET" ]; then
+    TARGET_DIR=target/release
+else
+    TARGET_DIR=target/$TARGET/release
+fi
 mkdir -p $PACKAGE_DIR/usr/bin
-cp target/release/mitra $PACKAGE_DIR/usr/bin/mitra
-cp target/release/mitractl $PACKAGE_DIR/usr/bin/mitractl
+cp $TARGET_DIR/mitra $PACKAGE_DIR/usr/bin/mitra
+cp $TARGET_DIR/mitractl $PACKAGE_DIR/usr/bin/mitractl
 
 # Contracts
 mkdir -p $PACKAGE_DIR/usr/share/mitra

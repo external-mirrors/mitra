@@ -9,5 +9,9 @@ pub fn initialize_app() -> Config {
     for warning in config_warnings {
         log::warn!("{}", warning);
     };
+    #[cfg(target_env = "musl")]
+    {
+        openssl_probe::init_ssl_cert_env_vars();
+    };
     config
 }
