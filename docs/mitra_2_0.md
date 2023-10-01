@@ -33,3 +33,8 @@ Mitra 2.0 is fully compatible with existing Mitra 1.x instances. However, upgrad
 
 - Disabled reading sync state from `current_block` file. Instances where Ethereum integration is enabled should first update to Mitra v1.17.0 or higher before installing Mitra 2.0.
 - Ethereum blockchain integration is no longer actively developed and may be removed in Mitra 3.0. See [issue #27](https://codeberg.org/silverpill/mitra/issues/27) for details. This doesn't affect "Sign In With Ethereum" feature and identity proofs.
+
+## Web client
+
+- Environment variable `PORT` is no longer supported. Use `VITE_PORT` instead.
+- Environment variable `VUE_APP_BACKEND_URL` is no longer supported. Use `VITE_BACKEND_URL` instead.
