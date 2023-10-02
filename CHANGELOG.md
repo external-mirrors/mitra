@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Changed
 
 - Allow `gemini:` and `monero:` links in post content.
+- Update `monerod` and `monero-wallet-rpc` containers.
 
 ## [2.0.0] - 2023-10-02
 
