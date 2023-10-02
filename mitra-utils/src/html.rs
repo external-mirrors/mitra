@@ -5,6 +5,11 @@ use ammonia::Builder;
 
 pub use ammonia::{clean_text as escape_html};
 
+const EXTRA_URI_SCHEMES: [&str; 2] = [
+    "gemini",
+    "monero",
+];
+
 pub fn clean_html(
     unsafe_html: &str,
     allowed_classes: Vec<(&'static str, Vec<&'static str>)>,
@@ -16,6 +21,7 @@ pub fn clean_html(
     let safe_html = builder
         // Remove external images to prevent tracking
         .rm_tags(&["img"])
+        .add_url_schemes(&EXTRA_URI_SCHEMES)
         // Always add rel="noopener"
         .link_rel(Some("noopener"))
         .clean(unsafe_html)
@@ -40,6 +46,7 @@ pub fn clean_html_strict(
     let safe_html = Builder::default()
         .tags(allowed_tags)
         .allowed_classes(allowed_classes_map)
+        .add_url_schemes(&EXTRA_URI_SCHEMES)
         // Disable rel-insertion, allow rel attribute on <a>
         .link_rel(None)
         .add_tag_attributes("a", &["rel"])
