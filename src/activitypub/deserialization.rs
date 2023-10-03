@@ -150,6 +150,20 @@ pub fn parse_into_array<T: DeserializeOwned>(
     Ok(items)
 }
 
+pub fn deserialize_value_array<'de, D>(
+    deserializer: D,
+) -> Result<Vec<Value>, D::Error>
+    where D: Deserializer<'de>
+{
+    let maybe_value: Option<Value> = Option::deserialize(deserializer)?;
+    let values = if let Some(value) = maybe_value {
+        parse_into_array(&value).map_err(DeserializerError::custom)?
+    } else {
+        vec![]
+    };
+    Ok(values)
+}
+
 #[cfg(test)]
 mod tests {
     use serde_json::json;

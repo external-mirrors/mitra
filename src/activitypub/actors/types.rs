@@ -35,6 +35,7 @@ use crate::activitypub::{
         W3ID_SECURITY_CONTEXT,
     },
     deserialization::{
+        deserialize_value_array,
         parse_into_array,
         parse_into_href_array,
     },
@@ -43,7 +44,6 @@ use crate::activitypub::{
         local_instance_actor_id,
         LocalActorCollection,
     },
-    types::deserialize_value_array,
     vocabulary::{IMAGE, PERSON, SERVICE},
 };
 use crate::media::get_file_url;

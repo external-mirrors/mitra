@@ -1,12 +1,7 @@
 use std::collections::HashMap;
 
 use chrono::{DateTime, Utc};
-use serde::{
-    Deserialize,
-    Deserializer,
-    Serialize,
-    de::{Error as DeserializerError},
-};
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use super::constants::{
@@ -17,7 +12,7 @@ use super::constants::{
 };
 use super::deserialization::{
     deserialize_string_array,
-    parse_into_array,
+    deserialize_value_array,
 };
 use super::vocabulary::HASHTAG;
 
@@ -89,20 +84,6 @@ pub struct EmojiTag {
     pub id: String,
     pub name: String,
     pub updated: DateTime<Utc>,
-}
-
-pub fn deserialize_value_array<'de, D>(
-    deserializer: D,
-) -> Result<Vec<Value>, D::Error>
-    where D: Deserializer<'de>
-{
-    let maybe_value: Option<Value> = Option::deserialize(deserializer)?;
-    let values = if let Some(value) = maybe_value {
-        parse_into_array(&value).map_err(DeserializerError::custom)?
-    } else {
-        vec![]
-    };
-    Ok(values)
 }
 
 #[derive(Deserialize)]
