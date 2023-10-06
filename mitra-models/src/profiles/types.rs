@@ -365,6 +365,15 @@ impl PaymentOption {
         }
     }
 
+    pub(super) fn chain_id(&self) -> Option<&ChainId> {
+        match self {
+            Self::Link(_) => None,
+            Self::EthereumSubscription(info) => Some(&info.chain_id),
+            Self::MoneroSubscription(info) => Some(&info.chain_id),
+            Self::RemoteMoneroSubscription(info) => Some(&info.chain_id),
+        }
+    }
+
     pub(super) fn check_chain_id(&self) -> Result<(), DatabaseTypeError> {
         match self {
             Self::Link(_) => (),

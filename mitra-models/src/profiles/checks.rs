@@ -73,7 +73,7 @@ pub fn check_payment_options(
     let mut types = HashSet::new();
     let is_unique = payment_options.iter()
         .filter_map(|option| match option {
-            PaymentOption::Link(_) => None,
+            PaymentOption::Link(_) => None, // multiple links are allowed
             _ => Some(i16::from(&option.payment_type())),
         })
         .all(|payment_type| types.insert(payment_type));
@@ -83,15 +83,8 @@ pub fn check_payment_options(
     };
     let mut chain_ids = HashSet::new();
     let is_unique = payment_options.iter()
-        .filter_map(|option| match option {
-            PaymentOption::Link(_) => None,
-            PaymentOption::EthereumSubscription(info) =>
-                Some(info.chain_id.to_string()),
-            PaymentOption::MoneroSubscription(info) =>
-                Some(info.chain_id.to_string()),
-            PaymentOption::RemoteMoneroSubscription(info) =>
-                Some(info.chain_id.to_string()),
-        })
+        .filter_map(|option| option.chain_id())
+        .map(|chain_id| chain_id.to_string())
         .all(|chain_id| chain_ids.insert(chain_id));
     if !is_unique {
         // Chain IDs must be unique
