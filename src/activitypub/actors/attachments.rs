@@ -56,7 +56,6 @@ use crate::activitypub::{
         VERIFIABLE_IDENTITY_STATEMENT,
     },
 };
-use crate::web_client::urls::get_subscription_page_url;
 
 use super::types::ActorAttachment;
 
@@ -238,14 +237,17 @@ pub fn attach_payment_option(
     username: &str,
     payment_option: PaymentOption,
 ) -> PaymentLink {
-    let mut maybe_media_type = None;
     let mut rel = vec![PAYMENT_LINK_RELATION_TYPE.to_string()];
     let (name, href) = match payment_option {
         // Local actors can't have payment links
         PaymentOption::Link(_) => unimplemented!(),
-        PaymentOption::EthereumSubscription(_) => {
+        PaymentOption::EthereumSubscription(payment_info) => {
             let name = PAYMENT_LINK_NAME_ETHEREUM.to_string();
-            let href = get_subscription_page_url(instance_url, username);
+            let href = local_actor_proposal_id(
+                instance_url,
+                username,
+                &payment_info.chain_id,
+            );
             (name, href)
         },
         PaymentOption::MoneroSubscription(payment_info) => {
@@ -255,7 +257,6 @@ pub fn attach_payment_option(
                 username,
                 &payment_info.chain_id,
             );
-            maybe_media_type = Some(AP_MEDIA_TYPE.to_string());
             rel.push(valueflows_proposal_rel());
             (name, href)
         },
@@ -265,7 +266,7 @@ pub fn attach_payment_option(
         object_type: LINK.to_string(),
         name: name,
         href: href,
-        media_type: maybe_media_type,
+        media_type: Some(AP_MEDIA_TYPE.to_string()),
         rel: rel,
     }
 }

@@ -12,6 +12,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Update `monerod` and `monero-wallet-rpc` containers.
 - Check chain ID consistency when reading/writing payment options.
 - Redirect to client if proposal chain ID is in Ethereum namespace.
+- Use proposal ID as target in Ethereum subscription payment links.
 
 ## [2.0.0] - 2023-10-02
 
