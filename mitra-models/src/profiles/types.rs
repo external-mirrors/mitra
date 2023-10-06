@@ -292,6 +292,39 @@ pub enum PaymentOption {
     RemoteMoneroSubscription(RemoteMoneroSubscription),
 }
 
+pub trait SubscriptionOption {
+    fn chain_id(&self) -> ChainId;
+
+    fn from_payment_option(option: &PaymentOption) -> Option<Self>
+        where Self: Sized;
+}
+
+impl SubscriptionOption for MoneroSubscription {
+    fn chain_id(&self) -> ChainId {
+        self.chain_id.clone()
+    }
+
+    fn from_payment_option(option: &PaymentOption) -> Option<Self> {
+        match option {
+            PaymentOption::MoneroSubscription(info) => Some(info.clone()),
+            _ => None,
+        }
+    }
+}
+
+impl SubscriptionOption for RemoteMoneroSubscription {
+    fn chain_id(&self) -> ChainId {
+        self.chain_id.clone()
+    }
+
+    fn from_payment_option(option: &PaymentOption) -> Option<Self> {
+        match option {
+            PaymentOption::RemoteMoneroSubscription(info) => Some(info.clone()),
+            _ => None,
+        }
+    }
+}
+
 impl PaymentOption {
     pub fn ethereum_subscription(chain_id: ChainId) -> Self {
         Self::EthereumSubscription(EthereumSubscription { chain_id })
@@ -329,39 +362,6 @@ impl PaymentOption {
             Self::EthereumSubscription(_) => PaymentType::EthereumSubscription,
             Self::MoneroSubscription(_) => PaymentType::MoneroSubscription,
             Self::RemoteMoneroSubscription(_) => PaymentType::RemoteMoneroSubscription,
-        }
-    }
-}
-
-pub trait SubscriptionOption {
-    fn chain_id(&self) -> ChainId;
-
-    fn from_payment_option(option: &PaymentOption) -> Option<Self>
-        where Self: Sized;
-}
-
-impl SubscriptionOption for MoneroSubscription {
-    fn chain_id(&self) -> ChainId {
-        self.chain_id.clone()
-    }
-
-    fn from_payment_option(option: &PaymentOption) -> Option<Self> {
-        match option {
-            PaymentOption::MoneroSubscription(info) => Some(info.clone()),
-            _ => None,
-        }
-    }
-}
-
-impl SubscriptionOption for RemoteMoneroSubscription {
-    fn chain_id(&self) -> ChainId {
-        self.chain_id.clone()
-    }
-
-    fn from_payment_option(option: &PaymentOption) -> Option<Self> {
-        match option {
-            PaymentOption::RemoteMoneroSubscription(info) => Some(info.clone()),
-            _ => None,
         }
     }
 }
@@ -440,11 +440,6 @@ impl PaymentOptions {
     pub fn into_inner(self) -> Vec<PaymentOption> {
         let Self(payment_options) = self;
         payment_options
-    }
-
-    pub fn is_empty(&self) -> bool {
-        let Self(payment_options) = self;
-        payment_options.is_empty()
     }
 
     /// Returns true if payment option list contains at least one option
@@ -596,7 +591,7 @@ pub struct DbActorProfile {
 // identity proofs: TBD (likely will do "Trust on first use" (TOFU))
 
 impl DbActorProfile {
-    pub fn check_remote(&self) -> Result<(), DatabaseTypeError> {
+    pub(super) fn check_remote(&self) -> Result<(), DatabaseTypeError> {
         // Consistency checks
         if self.hostname.is_none() || self.actor_json.is_none() {
             return Err(DatabaseTypeError);
