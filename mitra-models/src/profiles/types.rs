@@ -364,6 +364,28 @@ impl PaymentOption {
             Self::RemoteMoneroSubscription(_) => PaymentType::RemoteMoneroSubscription,
         }
     }
+
+    pub(super) fn check_chain_id(&self) -> Result<(), DatabaseTypeError> {
+        match self {
+            Self::Link(_) => (),
+            Self::EthereumSubscription(payment_info) => {
+                if !payment_info.chain_id.is_ethereum() {
+                    return Err(DatabaseTypeError);
+                };
+            },
+            Self::MoneroSubscription(payment_info) => {
+                if !payment_info.chain_id.is_monero() {
+                    return Err(DatabaseTypeError);
+                };
+            },
+            Self::RemoteMoneroSubscription(payment_info) => {
+                if !payment_info.chain_id.is_monero() {
+                    return Err(DatabaseTypeError);
+                };
+            },
+        };
+        Ok(())
+    }
 }
 
 // Integer tags are not supported https://github.com/serde-rs/serde/issues/745
@@ -400,6 +422,7 @@ impl<'de> Deserialize<'de> for PaymentOption {
                 Self::RemoteMoneroSubscription(payment_info)
             },
         };
+        payment_option.check_chain_id().map_err(DeserializerError::custom)?;
         Ok(payment_option)
     }
 }

@@ -152,7 +152,7 @@ impl ChainId {
         self.namespace == CAIP2_MONERO_NAMESPACE
     }
 
-    pub fn is_wownero_mainnet(&self) -> bool {
+    pub(super) fn is_wownero_mainnet(&self) -> bool {
         self.is_monero() && self.reference == WOWNERO_MAINNET_ID
     }
 

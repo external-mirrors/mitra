@@ -50,6 +50,7 @@ pub fn check_payment_options(
     payment_options: &[PaymentOption],
     is_remote: bool,
 ) -> Result<(), DatabaseTypeError> {
+    // Option variant checks
     if !is_remote && payment_options.iter()
         .any(|option| matches!(
             option.payment_type(),
@@ -66,6 +67,8 @@ pub fn check_payment_options(
     {
         return Err(DatabaseTypeError);
     };
+    // Chain ID checks
+    payment_options.iter().try_for_each(|option| option.check_chain_id())?;
     // Uniqueness checks
     let mut types = HashSet::new();
     let is_unique = payment_options.iter()
