@@ -1,6 +1,6 @@
-use actix_web::http::Method;
 use base64;
 use chrono::Utc;
+use http::Method;
 use sha2::{Digest, Sha256};
 
 use mitra_utils::crypto_rsa::{

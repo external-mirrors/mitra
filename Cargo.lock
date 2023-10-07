@@ -1925,6 +1925,7 @@ dependencies = [
  "env_logger",
  "futures",
  "hex",
+ "http",
  "log",
  "mitra-config",
  "mitra-json-signatures",

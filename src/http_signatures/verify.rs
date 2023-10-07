@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
-use actix_web::http::{Method, Uri, header::HeaderMap};
 use chrono::{DateTime, Duration, TimeZone, Utc};
+use http::{HeaderMap, HeaderName, HeaderValue, Method, Uri};
 use regex::Regex;
 
 use mitra_utils::crypto_rsa::{
@@ -51,11 +51,16 @@ fn remove_quotes(value: &str) -> String {
         .to_string()
 }
 
-pub fn parse_http_signature(
+pub fn parse_http_signature<'m>(
     request_method: &Method,
     request_uri: &Uri,
-    request_headers: &HeaderMap,
+    request_headers: impl IntoIterator<Item = (&'m HeaderName, &'m HeaderValue)>,
 ) -> Result<HttpSignatureData, VerificationError> {
+    // Create header map
+    let request_headers = HeaderMap::from_iter(
+        request_headers.into_iter()
+            .map(|(name, val)| (name.clone(), val.clone())));
+
     let signature_header = request_headers.get("signature")
         .ok_or(VerificationError::NoSignature)?
         .to_str()
@@ -160,11 +165,6 @@ pub fn verify_http_signature(
 
 #[cfg(test)]
 mod tests {
-    use actix_web::http::{
-        header,
-        header::{HeaderMap, HeaderName, HeaderValue},
-        Uri,
-    };
     use mitra_utils::crypto_rsa::generate_weak_rsa_key;
     use crate::http_signatures::create::create_http_signature;
     use super::*;
@@ -182,9 +182,9 @@ mod tests {
         let request_method = Method::POST;
         let request_uri = "/user/123/inbox".parse::<Uri>().unwrap();
         let date = "20 Oct 2022 20:00:00 GMT";
-        let mut request_headers = HeaderMap::new();
+        let mut request_headers = HashMap::new();
         request_headers.insert(
-            header::HOST,
+            HeaderName::from_static("host"),
             HeaderValue::from_static("example.com"),
         );
         request_headers.insert(
@@ -232,20 +232,20 @@ mod tests {
         ).unwrap();
 
         let request_url = request_url.parse::<Uri>().unwrap();
-        let mut request_headers = HeaderMap::new();
-        request_headers.append(
+        let mut request_headers = HashMap::new();
+        request_headers.insert(
             HeaderName::from_static("host"),
             HeaderValue::from_str(&signed_headers.host).unwrap(),
         );
-        request_headers.append(
+        request_headers.insert(
             HeaderName::from_static("signature"),
             HeaderValue::from_str(&signed_headers.signature).unwrap(),
         );
-        request_headers.append(
+        request_headers.insert(
             HeaderName::from_static("date"),
             HeaderValue::from_str(&signed_headers.date).unwrap(),
         );
-        request_headers.append(
+        request_headers.insert(
             HeaderName::from_static("digest"),
             HeaderValue::from_str(&signed_headers.digest.unwrap()).unwrap(),
         );
