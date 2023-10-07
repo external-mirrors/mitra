@@ -29,6 +29,9 @@ pub enum HttpSignatureVerificationError {
 
     #[error("invalid signature")]
     InvalidSignature,
+
+    #[error("signature has expired")]
+    Expired,
 }
 
 type VerificationError = HttpSignatureVerificationError;
@@ -141,7 +144,7 @@ pub fn verify_http_signature(
     signer_key: &RsaPublicKey,
 ) -> Result<(), VerificationError> {
     if signature_data.expires_at < Utc::now() {
-        log::warn!("signature has expired");
+        return Err(VerificationError::Expired);
     };
     let signature = base64::decode(&signature_data.signature)?;
     let is_valid_signature = verify_rsa_sha256_signature(

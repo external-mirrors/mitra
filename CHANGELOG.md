@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Check chain ID consistency when reading/writing payment options.
 - Redirect to client if proposal chain ID is in Ethereum namespace.
 - Use proposal ID as target in Ethereum subscription payment links.
+- Replace HTTP signature expiration warning with error.
 
 ## [2.0.0] - 2023-10-02
 
