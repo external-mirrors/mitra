@@ -19,7 +19,6 @@ use mitra_models::{
     },
     invoices::types::{DbInvoice, InvoiceStatus},
     profiles::queries::get_profile_by_id,
-    profiles::types::PaymentType,
     subscriptions::queries::{
         create_subscription,
         get_subscription_by_participants,
@@ -410,7 +409,7 @@ pub async fn get_payment_address(
     recipient_id: &Uuid,
 ) -> Result<String, PaymentError> {
     let recipient = get_user_by_id(db_client, recipient_id).await?;
-    if !recipient.profile.payment_options.any(PaymentType::MoneroSubscription) {
+    if recipient.profile.monero_subscription(&config.chain_id).is_none() {
         return Err(MoneroError::OtherError("recipient can't accept payments").into());
     };
     let invoice = match get_invoice_by_participants(
