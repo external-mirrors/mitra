@@ -34,13 +34,13 @@ use mitra_utils::{
         RsaPublicKey,
         RsaSerializationError,
     },
+    http_signatures::verify::{
+        parse_http_signature,
+        verify_http_signature,
+        HttpSignatureVerificationError as HttpSignatureError,
+    },
 };
 
-use crate::http_signatures::verify::{
-    parse_http_signature,
-    verify_http_signature,
-    HttpSignatureVerificationError as HttpSignatureError,
-};
 use crate::media::MediaStorage;
 
 use super::deserialization::find_object_id;

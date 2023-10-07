@@ -8,6 +8,10 @@ use mitra_config::Instance;
 use mitra_models::profiles::types::PublicKeyType;
 use mitra_utils::{
     files::sniff_media_type,
+    http_signatures::create::{
+        create_http_signature,
+        HttpSignatureError,
+    },
     urls::{guess_protocol, is_safe_url},
 };
 
@@ -17,10 +21,6 @@ use crate::activitypub::{
     http_client::{build_federation_client, get_network_type},
     identifiers::{local_actor_key_id, local_instance_actor_id},
     vocabulary::GROUP,
-};
-use crate::http_signatures::create::{
-    create_http_signature,
-    HttpSignatureError,
 };
 use crate::media::{save_file, SUPPORTED_MEDIA_TYPES};
 use crate::webfinger::types::{ActorAddress, JsonResourceDescriptor};

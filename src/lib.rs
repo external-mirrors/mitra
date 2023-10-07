@@ -3,7 +3,6 @@ pub mod admin;
 pub mod atom;
 mod errors;
 pub mod http;
-mod http_signatures;
 pub mod init;
 pub mod job_queue;
 mod logger;

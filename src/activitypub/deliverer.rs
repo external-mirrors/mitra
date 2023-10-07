@@ -26,12 +26,11 @@ use mitra_models::{
 };
 use mitra_utils::{
     crypto_rsa::RsaPrivateKey,
+    http_signatures::create::{
+        create_http_signature,
+        HttpSignatureError,
+    },
     urls::get_hostname,
-};
-
-use crate::http_signatures::create::{
-    create_http_signature,
-    HttpSignatureError,
 };
 
 use super::{

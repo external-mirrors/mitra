@@ -13,6 +13,7 @@ pub mod did_pkh;
 pub mod eip191;
 pub mod files;
 pub mod html;
+pub mod http_signatures;
 pub mod id;
 pub mod markdown;
 pub mod minisign;

@@ -4,7 +4,7 @@ use chrono::{DateTime, Duration, TimeZone, Utc};
 use http::{HeaderMap, HeaderName, HeaderValue, Method, Uri};
 use regex::Regex;
 
-use mitra_utils::crypto_rsa::{
+use crate::crypto_rsa::{
     verify_rsa_sha256_signature,
     RsaPublicKey,
 };
@@ -165,7 +165,7 @@ pub fn verify_http_signature(
 
 #[cfg(test)]
 mod tests {
-    use mitra_utils::crypto_rsa::generate_weak_rsa_key;
+    use crate::crypto_rsa::generate_weak_rsa_key;
     use crate::http_signatures::create::create_http_signature;
     use super::*;
 

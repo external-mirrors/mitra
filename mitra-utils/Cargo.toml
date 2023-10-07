@@ -24,6 +24,8 @@ ed25519 = { version = "1.5.3", features = ["pkcs8"] }
 ed25519-dalek = "1.0.1"
 # Used to work with hexadecimal strings
 hex = "0.4.3"
+# Used for verifying HTTP signatures
+http = "0.2.9"
 # Used for working with ECDSA signatures
 k256 = { version = "0.11.6", default-features = false, features = ["std", "ecdsa", "keccak256"] }
 # Used to guess media type of a file

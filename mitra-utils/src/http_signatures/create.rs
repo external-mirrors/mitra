@@ -3,7 +3,7 @@ use chrono::Utc;
 use http::Method;
 use sha2::{Digest, Sha256};
 
-use mitra_utils::crypto_rsa::{
+use crate::crypto_rsa::{
     create_rsa_sha256_signature,
     RsaError,
     RsaPrivateKey,
@@ -101,7 +101,7 @@ pub fn create_http_signature(
 
 #[cfg(test)]
 mod tests {
-    use mitra_utils::crypto_rsa::generate_weak_rsa_key;
+    use crate::crypto_rsa::generate_weak_rsa_key;
     use super::*;
 
     #[test]
