@@ -423,28 +423,27 @@ async fn proposal_view(
     let (username, chain_id) = path.into_inner();
     let db_client = &**get_database_client(&db_pool).await?;
     let user = get_user_by_name(db_client, &username).await?;
-    let payment_info = user.profile.payment_options.inner()
-        .iter()
-        .find_map(|option| match option {
-            PaymentOption::MoneroSubscription(payment_info) => {
-                if payment_info.chain_id == chain_id {
-                    Some(payment_info)
-                } else {
-                    None
-                }
-            },
-            _ => None
-        })
+    let payment_option = user.profile.payment_options
+        .inner().iter()
+        .find(|option| option.chain_id() == Some(&chain_id))
         .ok_or(HttpError::NotFoundError("proposal"))?;
-    if !is_activitypub_request(request.headers()) {
-        let page_url = get_subscription_page_url(
-            &config.instance_url(),
-            &user.profile.username,
-        );
-        let response = HttpResponse::Found()
-            .append_header((http_header::LOCATION, page_url))
-            .finish();
-        return Ok(response);
+    let payment_info = match payment_option {
+        PaymentOption::MoneroSubscription(payment_info)
+            if is_activitypub_request(request.headers()) => payment_info,
+        PaymentOption::EthereumSubscription(_) |
+            PaymentOption::MoneroSubscription(_) =>
+        {
+            // Ethereum subscription proposals are not implemented, redirect
+            let page_url = get_subscription_page_url(
+                &config.instance_url(),
+                &user.profile.username,
+            );
+            let response = HttpResponse::Found()
+                .append_header((http_header::LOCATION, page_url))
+                .finish();
+            return Ok(response);
+        },
+        _ => return Err(HttpError::InternalError),
     };
     let proposal = build_proposal(
         &config.instance_url(),

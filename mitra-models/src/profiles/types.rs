@@ -365,7 +365,7 @@ impl PaymentOption {
         }
     }
 
-    pub(super) fn chain_id(&self) -> Option<&ChainId> {
+    pub fn chain_id(&self) -> Option<&ChainId> {
         match self {
             Self::Link(_) => None,
             Self::EthereumSubscription(info) => Some(&info.chain_id),
