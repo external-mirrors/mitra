@@ -14,7 +14,7 @@ use mitra_validators::errors::ValidationError;
 
 use crate::activitypub::{
     builders::accept_offer::prepare_accept_offer,
-    identifiers::parse_local_proposal_id,
+    identifiers::parse_local_primary_intent_id,
     valueflows::parsers::Quantity,
     vocabulary::AGREEMENT,
 };
@@ -53,7 +53,7 @@ pub async fn handle_offer(
         db_client,
         &activity.actor,
     ).await?;
-    let (username, chain_id) = parse_local_proposal_id(
+    let (username, chain_id) = parse_local_primary_intent_id(
         &config.instance_url(),
         &activity.object.clauses.0.satisfies,
     )?;

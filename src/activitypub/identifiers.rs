@@ -1,5 +1,5 @@
 use regex::Regex;
-use url::Url;
+use url::{Position, Url};
 use uuid::Uuid;
 
 use mitra_models::{
@@ -126,13 +126,14 @@ pub fn parse_local_actor_id(
 ) -> Result<String, ValidationError> {
     let url = Url::parse(actor_id)
         .map_err(|_| ValidationError("invalid URL"))?;
-    if url.origin().unicode_serialization() != instance_url {
+    if &url[..Position::BeforePath] != instance_url {
         return Err(ValidationError("instance mismatch"));
     };
+    let url_local = &url[Position::BeforePath..];
     // See also: mitra_validators::users::USERNAME_RE
     let url_regexp = Regex::new("^/users/(?P<username>[0-9a-z_]+)$")
         .expect("regexp should be valid");
-    let url_caps = url_regexp.captures(url.path())
+    let url_caps = url_regexp.captures(url_local)
         .ok_or(ValidationError("invalid actor ID"))?;
     let username = url_caps.name("username")
         .ok_or(ValidationError("invalid actor ID"))?
@@ -147,12 +148,13 @@ pub fn parse_local_object_id(
 ) -> Result<Uuid, ValidationError> {
     let url = Url::parse(object_id)
         .map_err(|_| ValidationError("invalid URL"))?;
-    if url.origin().unicode_serialization() != instance_url {
+    if &url[..Position::BeforePath] != instance_url {
         return Err(ValidationError("instance mismatch"));
     };
+    let url_local = &url[Position::BeforePath..];
     let url_regexp = Regex::new("^/objects/(?P<uuid>[0-9a-f-]+)$")
         .expect("regexp should be valid");
-    let url_caps = url_regexp.captures(url.path())
+    let url_caps = url_regexp.captures(url_local)
         .ok_or(ValidationError("invalid object ID"))?;
     let internal_object_id: Uuid = url_caps.name("uuid")
         .ok_or(ValidationError("invalid object ID"))?
@@ -161,20 +163,20 @@ pub fn parse_local_object_id(
     Ok(internal_object_id)
 }
 
-// Works with fragment-based intent IDs too
-pub fn parse_local_proposal_id(
+pub fn parse_local_primary_intent_id(
     instance_url: &str,
     proposal_id: &str,
 ) -> Result<(String, ChainId), ValidationError> {
     let url = Url::parse(proposal_id)
         .map_err(|_| ValidationError("invalid URL"))?;
-    if url.origin().unicode_serialization() != instance_url {
+    if &url[..Position::BeforePath] != instance_url {
         return Err(ValidationError("instance mismatch"));
     };
+    let url_local = &url[Position::BeforePath..];
     // See also: mitra_validators::users::USERNAME_RE
-    let url_regexp = Regex::new("^/users/(?P<username>[0-9a-z_]+)/proposals/(?P<chain_id>.+)$")
+    let url_regexp = Regex::new("^/users/(?P<username>[0-9a-z_]+)/proposals/(?P<chain_id>.+)#primary$")
         .expect("regexp should be valid");
-    let url_caps = url_regexp.captures(url.path())
+    let url_caps = url_regexp.captures(url_local)
         .ok_or(ValidationError("invalid proposal ID"))?;
     let username = url_caps.name("username")
         .ok_or(ValidationError("invalid proposal ID"))?
@@ -246,6 +248,15 @@ mod tests {
     }
 
     #[test]
+    fn test_parse_local_actor_id_with_fragment() {
+        let error = parse_local_actor_id(
+            INSTANCE_URL,
+            "https://social.example/users/test#main-key",
+        ).unwrap_err();
+        assert_eq!(error.to_string(), "invalid actor ID");
+    }
+
+    #[test]
     fn test_parse_local_actor_id_invalid_instance_url() {
         let error = parse_local_actor_id(
             INSTANCE_URL,
@@ -279,9 +290,9 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_local_proposal_id() {
-        let proposal_id = "https://social.example/users/test/proposals/monero:418015bb9ae982a1975da7d79277c270";
-        let (username, chain_id) = parse_local_proposal_id(
+    fn test_parse_local_primary_intent_id() {
+        let proposal_id = "https://social.example/users/test/proposals/monero:418015bb9ae982a1975da7d79277c270#primary";
+        let (username, chain_id) = parse_local_primary_intent_id(
             INSTANCE_URL,
             proposal_id,
         ).unwrap();

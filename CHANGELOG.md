@@ -19,6 +19,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Fix alias list overwrite during profile update.
 - Require alias to be different account.
+- Don't discard query and fragment when parsing local ActivityPub IDs.
 
 ## [2.0.0] - 2023-10-02
 
