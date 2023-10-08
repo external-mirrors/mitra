@@ -15,6 +15,7 @@ pub mod files;
 pub mod html;
 pub mod http_signatures;
 pub mod id;
+pub mod json_signatures;
 pub mod markdown;
 pub mod minisign;
 pub mod multibase;

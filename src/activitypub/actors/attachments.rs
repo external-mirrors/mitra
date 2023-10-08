@@ -1,20 +1,6 @@
 use serde::{Deserialize, Serialize};
 use serde_json::{Value as JsonValue};
 
-use mitra_json_signatures::{
-    proofs::{
-        ProofType,
-        PROOF_TYPE_ID_EIP191,
-        PROOF_TYPE_ID_MINISIGN,
-    },
-    verify::{
-        get_json_signature,
-        verify_blake2_ed25519_json_signature,
-        verify_eddsa_json_signature,
-        verify_eip191_json_signature,
-        JsonSigner,
-    },
-};
 use mitra_models::{
     database::DatabaseTypeError,
     profiles::types::{
@@ -29,6 +15,20 @@ use mitra_utils::{
     crypto_eddsa::ed25519_public_key_from_bytes,
     did::Did,
     eip191::verify_eip191_signature,
+    json_signatures::{
+        proofs::{
+            ProofType,
+            PROOF_TYPE_ID_EIP191,
+            PROOF_TYPE_ID_MINISIGN,
+        },
+        verify::{
+            get_json_signature,
+            verify_blake2_ed25519_json_signature,
+            verify_eddsa_json_signature,
+            verify_eip191_json_signature,
+            JsonSigner,
+        },
+    },
     minisign::{
         parse_minisign_signature,
         verify_minisign_signature,

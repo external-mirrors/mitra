@@ -18,14 +18,6 @@ use mitra_config::{
     DefaultRole,
     RegistrationType,
 };
-use mitra_json_signatures::{
-    create::IntegrityProofConfig,
-    verify::{
-        verify_blake2_ed25519_json_signature,
-        verify_eddsa_json_signature,
-        verify_eip191_json_signature,
-    },
-};
 use mitra_models::{
     database::{get_database_client, DatabaseError, DbPool},
     posts::queries::get_posts_by_author,
@@ -76,6 +68,14 @@ use mitra_utils::{
     currencies::Currency,
     did::Did,
     did_pkh::DidPkh,
+    json_signatures::{
+        create::IntegrityProofConfig,
+        verify::{
+            verify_blake2_ed25519_json_signature,
+            verify_eddsa_json_signature,
+            verify_eip191_json_signature,
+        },
+    },
     minisign::{
         minisign_key_to_did,
         parse_minisign_signature_file,

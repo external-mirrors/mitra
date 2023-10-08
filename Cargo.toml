@@ -14,7 +14,6 @@ members = [
   ".",
   "mitra-cli",
   "mitra-config",
-  "mitra-json-signatures",
   "mitra-models",
   "mitra-services",
   "mitra-utils",
@@ -24,7 +23,6 @@ default-members = [
   ".",
   "mitra-cli",
   "mitra-config",
-  "mitra-json-signatures",
   "mitra-models",
   "mitra-services",
   "mitra-utils",
@@ -74,7 +72,6 @@ url = "2.2.2"
 uuid = { version = "1.1.2", features = ["serde", "v4"] }
 
 mitra-config = { path = "mitra-config" }
-mitra-json-signatures = { path = "mitra-json-signatures" }
 mitra-models = { path = "mitra-models" }
 mitra-services = { path = "mitra-services" }
 mitra-utils = { path = "mitra-utils" }

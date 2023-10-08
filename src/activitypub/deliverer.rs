@@ -10,12 +10,6 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use mitra_config::Instance;
-use mitra_json_signatures::create::{
-    is_object_signed,
-    sign_object_eddsa,
-    sign_object_rsa,
-    JsonSignatureError,
-};
 use mitra_models::{
     database::{
         DatabaseClient,
@@ -29,6 +23,12 @@ use mitra_utils::{
     http_signatures::create::{
         create_http_signature,
         HttpSignatureError,
+    },
+    json_signatures::create::{
+        is_object_signed,
+        sign_object_eddsa,
+        sign_object_rsa,
+        JsonSignatureError,
     },
     urls::get_hostname,
 };

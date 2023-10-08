@@ -3,7 +3,7 @@ use std::str::FromStr;
 use serde_json::{Value as JsonValue};
 use url::Url;
 
-use mitra_utils::{
+use crate::{
     canonicalization::{
         canonicalize_object,
         CanonicalizationError,
@@ -168,7 +168,7 @@ pub fn verify_blake2_ed25519_json_signature(
 mod tests {
     use chrono::{DateTime, Utc};
     use serde_json::json;
-    use mitra_utils::{
+    use crate::{
         crypto_eddsa::{
             generate_ed25519_key,
             ed25519_private_key_from_bytes,
@@ -177,15 +177,15 @@ mod tests {
         },
         crypto_rsa::generate_weak_rsa_key,
         currencies::Currency,
+        json_signatures::create::{
+            sign_object_eddsa,
+            sign_object_rsa,
+        },
         multibase::decode_multibase_base58btc,
         multicodec::{
             decode_ed25519_private_key,
             decode_ed25519_public_key,
         },
-    };
-    use crate::create::{
-        sign_object_eddsa,
-        sign_object_rsa,
     };
     use super::*;
 

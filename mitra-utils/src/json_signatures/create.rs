@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Value as JsonValue};
 use sha2::{Digest, Sha256};
 
-use mitra_utils::{
+use crate::{
     canonicalization::{
         canonicalize_object,
         CanonicalizationError,
@@ -239,7 +239,7 @@ pub fn is_object_signed(object: &JsonValue) -> bool {
 #[cfg(test)]
 mod tests {
     use serde_json::json;
-    use mitra_utils::{
+    use crate::{
         crypto_eddsa::generate_weak_ed25519_key,
         crypto_rsa::generate_weak_rsa_key,
     };
