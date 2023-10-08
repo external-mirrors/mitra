@@ -10,4 +10,5 @@ rustflags = [
     "-Aclippy::unused_unit",
     "-Aclippy::enum_variant_names",
     "-Aclippy::format_push_string",
+    "-Aclippy::unwrap_or_default",
 ]
