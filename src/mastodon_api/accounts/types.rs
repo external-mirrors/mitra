@@ -367,27 +367,32 @@ impl AccountUpdateData {
         profile: &DbActorProfile,
         media_dir: &Path,
     ) -> Result<ProfileUpdateData, MastodonError> {
-        let maybe_bio = if let Some(ref bio_source) = self.note {
+        assert!(profile.is_local());
+        let mut profile_data = ProfileUpdateData::from(profile);
+
+        profile_data.display_name = self.display_name;
+        profile_data.bio = if let Some(ref bio_source) = self.note {
             let bio = markdown_basic_to_html(bio_source)
                 .map_err(|_| ValidationError("invalid markdown"))?;
             Some(bio)
         } else {
             None
         };
-        let avatar = process_b64_image_field_value(
+        profile_data.bio_source = self.note;
+        profile_data.avatar = process_b64_image_field_value(
             self.avatar,
             self.avatar_media_type,
             profile.avatar.clone(),
             media_dir,
         )?;
-        let banner = process_b64_image_field_value(
+        profile_data.banner = process_b64_image_field_value(
             self.header,
             self.header_media_type,
             profile.banner.clone(),
             media_dir,
         )?;
-        let identity_proofs = profile.identity_proofs.inner().to_vec();
-        let payment_options = profile.payment_options.inner().to_vec();
+        profile_data.manually_approves_followers = self.locked;
+
         let mut extra_fields = vec![];
         for field_source in self.fields_attributes.unwrap_or(vec![]) {
             let value = markdown_basic_to_html(&field_source.value)
@@ -399,21 +404,7 @@ impl AccountUpdateData {
             };
             extra_fields.push(extra_field);
         };
-        let profile_data = ProfileUpdateData {
-            display_name: self.display_name,
-            bio: maybe_bio,
-            bio_source: self.note,
-            avatar,
-            banner,
-            manually_approves_followers: self.locked,
-            public_keys: vec![], // empty for local profiles
-            identity_proofs,
-            payment_options,
-            extra_fields,
-            aliases: vec![],
-            emojis: vec![],
-            actor_json: None, // always None for local profiles
-        };
+        profile_data.extra_fields = extra_fields;
         Ok(profile_data)
     }
 }
