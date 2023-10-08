@@ -702,6 +702,8 @@ impl ProfileCreateData {
         check_public_keys(&self.public_keys, is_remote)?;
         check_identity_proofs(&self.identity_proofs)?;
         check_payment_options(&self.payment_options, is_remote)?;
+        // Aliases are not checked.
+        // The list may contain duplicates or self-references.
         Ok(())
     }
 }

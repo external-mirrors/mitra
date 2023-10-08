@@ -260,7 +260,9 @@ fn parse_aliases(actor: &Actor) -> Vec<String> {
                 Ok(array) => {
                     let mut aliases = vec![];
                     for actor_id in array {
-                        if validate_object_id(&actor_id).is_err() {
+                        if actor_id == actor.id ||
+                            validate_object_id(&actor_id).is_err()
+                        {
                             log::warn!("invalid alias: {}", actor_id);
                             continue;
                         };

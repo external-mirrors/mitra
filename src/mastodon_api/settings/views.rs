@@ -117,6 +117,9 @@ async fn add_alias_view(
     let db_client = &mut **get_database_client(&db_pool).await?;
     let mut current_user = get_current_user(db_client, auth.token()).await?;
     let alias = get_profile_by_acct(db_client, &request_data.acct).await?;
+    if alias.id == current_user.id {
+        return Err(ValidationError("alias must differ from current account").into());
+    };
     let instance = config.instance();
     let alias_id = profile_actor_id(&instance.url(), &alias);
     let mut profile_data = ProfileUpdateData::from(&current_user.profile);
