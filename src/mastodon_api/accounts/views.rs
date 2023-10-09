@@ -1,3 +1,4 @@
+use actix_governor::Governor;
 use actix_web::{
     dev::ConnectionInfo,
     get,
@@ -103,7 +104,12 @@ use crate::activitypub::{
         create_identity_proof_fep_c390,
     },
 };
-use crate::http::{get_request_base_url, FormOrJson, MultiQuery};
+use crate::http::{
+    get_request_base_url,
+    FormOrJson,
+    MultiQuery,
+    RatelimitConfig,
+};
 use crate::mastodon_api::{
     errors::MastodonError,
     oauth::auth::get_current_user,
@@ -597,6 +603,32 @@ async fn search_by_acct(
     Ok(HttpResponse::Ok().json(accounts))
 }
 
+async fn search_by_acct_public(
+    connection_info: ConnectionInfo,
+    config: web::Data<Config>,
+    db_pool: web::Data<DbPool>,
+    query_params: web::Query<SearchAcctQueryParams>,
+) -> Result<HttpResponse, MastodonError> {
+    let db_client = &mut **get_database_client(&db_pool).await?;
+    let profiles = search_profiles_only(
+        &config,
+        db_client,
+        &query_params.q,
+        query_params.resolve,
+        query_params.limit.inner(),
+    ).await?;
+    let base_url = get_request_base_url(connection_info);
+    let instance_url = config.instance().url();
+    let accounts: Vec<Account> = profiles.into_iter()
+        .map(|profile| Account::from_profile(
+            &base_url,
+            &instance_url,
+            profile,
+        ))
+        .collect();
+    Ok(HttpResponse::Ok().json(accounts))
+}
+
 #[get("/search_did")]
 async fn search_by_did(
     connection_info: ConnectionInfo,
@@ -951,7 +983,14 @@ async fn get_account_aliases(
     Ok(HttpResponse::Ok().json(aliases))
 }
 
-pub fn account_api_scope() -> Scope {
+pub fn account_api_scope(
+    acct_resolve_ratelimit_config: &RatelimitConfig,
+) -> Scope {
+    // TODO: use Resource::get() (requires actix-web 4.4.0)
+    let search_by_acct_public_limited = web::resource("/search_public").route(
+        web::get()
+            .to(search_by_acct_public)
+            .wrap(Governor::new(acct_resolve_ratelimit_config)));
     web::scope("/api/v1/accounts")
         // Routes without account ID
         .service(create_account)
@@ -963,6 +1002,7 @@ pub fn account_api_scope() -> Scope {
         .service(get_relationships_view)
         .service(lookup_acct)
         .service(search_by_acct)
+        .service(search_by_acct_public_limited)
         .service(search_by_did)
         // Routes with account ID
         .service(get_account)

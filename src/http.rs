@@ -1,3 +1,8 @@
+use actix_governor::{
+    GovernorConfig,
+    GovernorConfigBuilder,
+    PeerIpKeyExtractor,
+};
 use actix_web::{
     body::{BodySize, BoxBody, MessageBody},
     dev::{ConnectionInfo, ServiceResponse},
@@ -30,6 +35,16 @@ pub fn multiquery_config() -> QsQueryConfig {
     // Disable strict mode
     let qs_config = QsConfig::new(2, false);
     QsQueryConfig::default().qs_config(qs_config)
+}
+
+pub type RatelimitConfig = GovernorConfig<PeerIpKeyExtractor>;
+
+pub fn ratelimit_config(num_requests: u32, period: u64) -> RatelimitConfig {
+    GovernorConfigBuilder::default()
+        .per_second(period)
+        .burst_size(num_requests)
+        .finish()
+        .expect("governor parameters should be non-zero")
 }
 
 /// Error handler for 401 Unauthorized
