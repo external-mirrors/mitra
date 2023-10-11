@@ -65,7 +65,7 @@ sha2 = "0.10.6"
 # Used for creating error types
 thiserror = "1.0.37"
 # Async runtime
-tokio = { version = "1.25.0", features = ["macros"] }
+tokio = { version = "1.28.2", features = ["macros"] }
 # Used to work with URLs
 url = "2.2.2"
 # Used to work with UUIDs
