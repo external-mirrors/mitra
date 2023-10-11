@@ -19,9 +19,13 @@ pub fn render_authorization_code_page(code: String) -> String {
 
 const ACCESS_TOKEN_SIZE: usize = 20;
 
-pub fn generate_access_token() -> String {
-    let value: [u8; ACCESS_TOKEN_SIZE] = generate_random_sequence();
+fn encode_token(value: [u8; ACCESS_TOKEN_SIZE]) -> String {
     base64::encode_config(value, base64::URL_SAFE_NO_PAD)
+}
+
+pub fn generate_oauth_token() -> String {
+    let value: [u8; ACCESS_TOKEN_SIZE] = generate_random_sequence();
+    encode_token(value)
 }
 
 #[cfg(test)]
@@ -29,8 +33,9 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_generate_access_token() {
-        let token = generate_access_token();
-        assert!(token.len() > ACCESS_TOKEN_SIZE);
+    fn test_encode_token() {
+        let value = [87, 31, 60, 176, 41, 131, 140, 213, 30, 64, 78, 169, 144, 138, 61, 62, 127, 26, 140, 96];
+        let token = encode_token(value);
+        assert_eq!(token, "Vx88sCmDjNUeQE6pkIo9Pn8ajGA");
     }
 }

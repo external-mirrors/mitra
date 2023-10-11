@@ -17,7 +17,7 @@ use mitra_models::{
 use crate::http::FormOrJson;
 use crate::mastodon_api::{
     errors::MastodonError,
-    oauth::utils::generate_access_token,
+    oauth::utils::generate_oauth_token,
 };
 use super::types::{OauthApp, CreateAppData, CreateAppMultipartForm};
 
@@ -42,7 +42,7 @@ async fn create_app_view(
         scopes: request_data.scopes,
         redirect_uri: request_data.redirect_uris,
         client_id: Uuid::new_v4(),
-        client_secret: generate_access_token(),
+        client_secret: generate_oauth_token(),
     };
     let db_app = create_oauth_app(db_client, db_app_data).await?;
     let app = OauthApp {

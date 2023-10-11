@@ -47,7 +47,7 @@ use super::types::{
     TokenResponse,
 };
 use super::utils::{
-    generate_access_token,
+    generate_oauth_token,
     render_authorization_page,
     render_authorization_code_page,
 };
@@ -90,7 +90,7 @@ async fn authorize_view(
         return Err(ValidationError("invalid redirect_uri parameter").into());
     };
 
-    let authorization_code = generate_access_token();
+    let authorization_code = generate_oauth_token();
     let created_at = Utc::now();
     let expires_at = created_at + Duration::seconds(AUTHORIZATION_CODE_EXPIRES_IN);
     create_oauth_authorization(
@@ -222,7 +222,7 @@ async fn token_view(
             return Err(ValidationError("incorrect password").into());
         };
     };
-    let access_token = generate_access_token();
+    let access_token = generate_oauth_token();
     let created_at = Utc::now();
     let expires_at = created_at + Duration::seconds(ACCESS_TOKEN_EXPIRES_IN);
     save_oauth_token(
