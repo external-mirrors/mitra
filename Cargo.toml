@@ -40,8 +40,6 @@ actix-web = "4.3.1"
 actix-web-httpauth = "0.8.0"
 # Used for catching errors
 anyhow = "1.0.58"
-# Used for working with RSA keys, HTTP signatures and file uploads
-base64 = "0.13.0"
 # Used for working with dates
 chrono = { version = "0.4.23", default-features = false, features = ["std", "serde"] }
 # Used to work with hexadecimal strings

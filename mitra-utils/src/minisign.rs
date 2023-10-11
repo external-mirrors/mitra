@@ -2,6 +2,7 @@
 use blake2::{Blake2b512, Digest};
 
 use crate::{
+    base64,
     crypto_eddsa::{
         ed25519_public_key_from_bytes,
         verify_eddsa_signature,

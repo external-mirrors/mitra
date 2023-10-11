@@ -4,9 +4,12 @@ use chrono::{DateTime, Duration, TimeZone, Utc};
 use http::{HeaderMap, HeaderName, HeaderValue, Method, Uri};
 use regex::Regex;
 
-use crate::crypto_rsa::{
-    verify_rsa_sha256_signature,
-    RsaPublicKey,
+use crate::{
+    base64,
+    crypto_rsa::{
+        verify_rsa_sha256_signature,
+        RsaPublicKey,
+    },
 };
 
 const SIGNATURE_PARAMETER_RE: &str = r#"^(?P<key>[a-zA-Z]+)=(?P<value>.+)$"#;

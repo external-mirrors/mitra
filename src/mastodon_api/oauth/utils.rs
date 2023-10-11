@@ -1,6 +1,7 @@
-use base64;
-
-use mitra_utils::random::generate_random_sequence;
+use mitra_utils::{
+    base64,
+    random::generate_random_sequence,
+};
 
 pub fn render_authorization_page() -> String {
     format!(include_str!("template.html"), content=r#"
@@ -20,7 +21,7 @@ pub fn render_authorization_code_page(code: String) -> String {
 const ACCESS_TOKEN_SIZE: usize = 20;
 
 fn encode_token(value: [u8; ACCESS_TOKEN_SIZE]) -> String {
-    base64::encode_config(value, base64::URL_SAFE_NO_PAD)
+    base64::encode_urlsafe_no_pad(value)
 }
 
 pub fn generate_oauth_token() -> String {

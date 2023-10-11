@@ -80,7 +80,7 @@ dependencies = [
  "actix-service",
  "actix-utils",
  "ahash",
- "base64 0.21.0",
+ "base64 0.21.4",
  "bitflags",
  "brotli",
  "bytes",
@@ -412,9 +412,9 @@ checksum = "904dfeac50f3cdaba28fc6f57fdcddb75f49ed61346676a78c4ffe55877802fd"
 
 [[package]]
 name = "base64"
-version = "0.21.0"
+version = "0.21.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a4a4ddaa51a5bc52a6948f74c06d20aaaddb71924eab79b8c97a8c556e942d6a"
+checksum = "9ba43ea6f343b788c8764558649e08df62f86c6ef251fdaeb1ffd010a9ae50a2"
 
 [[package]]
 name = "base64ct"
@@ -1956,7 +1956,6 @@ dependencies = [
  "actix-web",
  "actix-web-httpauth",
  "anyhow",
- "base64 0.13.0",
  "chrono",
  "dashmap",
  "env_logger",
@@ -2069,7 +2068,7 @@ name = "mitra-utils"
 version = "2.1.0"
 dependencies = [
  "ammonia",
- "base64 0.13.0",
+ "base64 0.21.4",
  "blake2",
  "bs58",
  "chrono",
@@ -2868,7 +2867,7 @@ version = "0.11.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "13293b639a097af28fc8a90f22add145a9c954e49d77da06263d58cf44d5fb91"
 dependencies = [
- "base64 0.21.0",
+ "base64 0.21.4",
  "bytes",
  "encoding_rs",
  "futures-core",
@@ -3972,7 +3971,7 @@ version = "0.19.1"
 source = "git+https://github.com/tomusdrw/rust-web3?rev=d49ad4f1d41adfb27d167573e0360b56d07d397b#d49ad4f1d41adfb27d167573e0360b56d07d397b"
 dependencies = [
  "arrayvec",
- "base64 0.21.0",
+ "base64 0.21.4",
  "bytes",
  "derive_more",
  "ethabi",

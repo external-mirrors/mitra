@@ -1,3 +1,4 @@
+pub mod base64;
 pub mod caip10;
 pub mod caip19;
 pub mod caip2;

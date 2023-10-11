@@ -1,6 +1,9 @@
 use std::path::Path;
 
+use mitra_utils::base64;
+
 use crate::media::{save_file, SUPPORTED_MEDIA_TYPES};
+
 use super::errors::MastodonError;
 
 #[derive(thiserror::Error, Debug)]

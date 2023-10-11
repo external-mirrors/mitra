@@ -1,12 +1,14 @@
-use base64;
 use chrono::Utc;
 use http::Method;
 use sha2::{Digest, Sha256};
 
-use crate::crypto_rsa::{
-    create_rsa_sha256_signature,
-    RsaError,
-    RsaPrivateKey,
+use crate::{
+    base64,
+    crypto_rsa::{
+        create_rsa_sha256_signature,
+        RsaError,
+        RsaPrivateKey,
+    },
 };
 
 const HTTP_SIGNATURE_ALGORITHM: &str = "rsa-sha256";
