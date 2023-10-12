@@ -8,11 +8,11 @@ use std::io::prelude::*;
 use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
 
+use infer;
 use mime_guess::get_mime_extensions_str;
-use mime_sniffer::MimeTypeSniffer;
 
 pub fn sniff_media_type(data: &[u8]) -> Option<String> {
-    data.sniff_mime_type().map(|val| val.to_string())
+    infer::get(data).map(|val| val.mime_type().to_string())
 }
 
 pub fn get_media_type_extension(media_type: &str) -> Option<&'static str> {
@@ -42,6 +42,13 @@ pub fn set_file_permissions(file_path: &Path, mode: u32) -> Result<(), Error> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_sniff_media_type() {
+        let data = b"%PDF-1.5";
+        let media_type = sniff_media_type(data).unwrap();
+        assert_eq!(media_type, "application/pdf");
+    }
 
     #[test]
     fn test_get_media_type_extension() {

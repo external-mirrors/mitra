@@ -30,7 +30,7 @@ http = "0.2.9"
 k256 = { version = "0.11.6", default-features = false, features = ["std", "ecdsa", "keccak256"] }
 # Used to guess media type of a file
 mime_guess = "2.0.4"
-mime-sniffer = "0.1.2"
+infer = "=0.13.0"
 # Used to generate random numbers
 rand = "0.8.4"
 # Used for working with regular expressions
