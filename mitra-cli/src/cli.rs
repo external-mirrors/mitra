@@ -84,6 +84,7 @@ use mitra_services::{
             create_monero_signature,
             create_monero_wallet,
             get_active_addresses,
+            get_address_count,
             open_monero_wallet,
             verify_monero_signature,
         },
@@ -949,25 +950,35 @@ pub struct InstanceReport;
 impl InstanceReport {
     pub async fn execute(
         &self,
-        _config: &Config,
+        config: &Config,
         db_client: &impl DatabaseClient,
     ) -> Result<(), Error> {
+        // General info
         let users = get_user_count(db_client).await?;
-        let active_subscriptions =
-            get_active_subscription_count(db_client).await?;
-        let expired_subscriptions =
-            get_expired_subscription_count(db_client).await?;
         let incoming_activities =
             get_job_count(db_client, JobType::IncomingActivity).await?;
         let outgoing_activities =
             get_job_count(db_client, JobType::OutgoingActivity).await?;
         let posts = get_post_count(db_client, false).await?;
         println!("local users: {}", users);
-        println!("active subscriptions: {}", active_subscriptions);
-        println!("expired subscriptions: {}", expired_subscriptions);
         println!("incoming activities: {}", incoming_activities);
         println!("outgoing activities: {}", outgoing_activities);
         println!("total posts: {}", posts);
+        // Subscriptions
+        let active_subscriptions =
+            get_active_subscription_count(db_client).await?;
+        let expired_subscriptions =
+            get_expired_subscription_count(db_client).await?;
+        println!("active subscriptions: {}", active_subscriptions);
+        println!("expired subscriptions: {}", expired_subscriptions);
+        if let Some(monero_config) = config.monero_config() {
+            let wallet_client = open_monero_wallet(monero_config).await?;
+            let address_count = get_address_count(
+                &wallet_client,
+                monero_config.account_index,
+            ).await?;
+            println!("monero addresses: {}", address_count);
+        };
         Ok(())
     }
 }

@@ -296,6 +296,17 @@ pub async fn get_transaction_by_id(
     Ok(maybe_transfer)
 }
 
+pub async fn get_address_count(
+    wallet_client: &WalletClient,
+    account_index: u32,
+) -> Result<usize, MoneroError> {
+    let address_data = wallet_client.get_address(
+        account_index,
+        None,
+    ).await?;
+    Ok(address_data.addresses.len())
+}
+
 /// https://monerodocs.org/interacting/monero-wallet-rpc-reference/#sign
 pub async fn create_monero_signature(
     config: &MoneroConfig,
