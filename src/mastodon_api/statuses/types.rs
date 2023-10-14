@@ -225,6 +225,21 @@ impl StatusSource {
     }
 }
 
+/// https://docs.joinmastodon.org/methods/statuses/#edit
+#[derive(Deserialize)]
+pub struct StatusUpdateData {
+    pub status: String,
+
+    #[serde(rename = "media_ids[]")]
+    pub media_ids: Option<Vec<Uuid>>,
+
+    #[serde(default)]
+    pub sensitive: bool,
+
+    #[serde(default = "default_post_content_type")]
+    pub content_type: String,
+}
+
 #[derive(Serialize)]
 pub struct Context {
     pub ancestors: Vec<Status>,

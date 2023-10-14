@@ -16,4 +16,5 @@ pub mod remove_person;
 pub mod undo_announce;
 pub mod undo_follow;
 pub mod undo_like;
+pub mod update_note;
 pub mod update_person;

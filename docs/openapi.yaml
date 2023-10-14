@@ -1180,6 +1180,51 @@ paths:
                 $ref: '#/components/schemas/Status'
         404:
           description: Post does not exist or is not public.
+    put:
+      summary: Edit a given post to change its text, sensitivity or media attachments.
+      security:
+        - tokenAuth: []
+      parameters:
+        - $ref: '#/components/parameters/status_id'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  description: Text content of the post.
+                  type: string
+                content_type:
+                  description: Media type of the post content.
+                  type: string
+                  default: text/markdown
+                  enum:
+                    - text/html
+                    - text/markdown
+                'media_ids[]':
+                  description: Array of Attachment ids to be attached as media.
+                  type: array
+                  items:
+                    type: string
+                    format: uuid
+                sensitiive:
+                  description: Mark post and attached media as sensitive?
+                  type: boolean
+                  default: false
+              required:
+                - status
+      responses:
+        200:
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+        403:
+          description: Post does not belong to user.
+        404:
+          description: Post not found.
     delete:
       summary: Delete post
       security:

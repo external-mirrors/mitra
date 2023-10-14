@@ -4,6 +4,7 @@ use actix_web::{
     dev::ConnectionInfo,
     get,
     post,
+    put,
     web,
     HttpResponse,
     Scope,
@@ -15,7 +16,11 @@ use uuid::Uuid;
 use mitra_config::Config;
 use mitra_models::{
     database::{get_database_client, DatabaseError, DbPool},
-    posts::helpers::{can_create_post, can_view_post},
+    posts::helpers::{
+        add_user_actions,
+        can_create_post,
+        can_view_post,
+    },
     posts::queries::{
         create_post,
         delete_post,
@@ -24,8 +29,9 @@ use mitra_models::{
         get_thread,
         set_pinned_flag,
         set_post_ipfs_cid,
+        update_post,
     },
-    posts::types::{PostCreateData, Visibility},
+    posts::types::{PostCreateData, PostUpdateData, Visibility},
     reactions::queries::{
         create_reaction,
         delete_reaction,
@@ -42,6 +48,7 @@ use mitra_validators::{
         validate_local_reply,
         validate_post_create_data,
         validate_post_mentions,
+        validate_post_update_data,
     },
 };
 
@@ -55,6 +62,7 @@ use crate::activitypub::{
         remove_note::prepare_remove_note,
         undo_announce::prepare_undo_announce,
         undo_like::prepare_undo_like,
+        update_note::prepare_update_note,
     },
     identifiers::local_object_id,
 };
@@ -78,6 +86,7 @@ use super::types::{
     StatusPreview,
     StatusPreviewData,
     StatusSource,
+    StatusUpdateData,
 };
 
 #[post("")]
@@ -178,6 +187,7 @@ async fn create_status(
         validate_local_reply(in_reply_to, &post_data.mentions, &post_data.visibility)?;
     };
     let mut post = create_post(db_client, &current_user.id, post_data).await?;
+    // Same as add_related_posts
     post.in_reply_to = maybe_in_reply_to.map(|mut in_reply_to| {
         in_reply_to.reply_count += 1;
         Box::new(in_reply_to)
@@ -276,6 +286,103 @@ async fn get_status_source(
     };
     let status_source = StatusSource::from_post(post);
     Ok(HttpResponse::Ok().json(status_source))
+}
+
+#[put("/{status_id}")]
+async fn edit_status(
+    auth: BearerAuth,
+    connection_info: ConnectionInfo,
+    config: web::Data<Config>,
+    db_pool: web::Data<DbPool>,
+    status_id: web::Path<Uuid>,
+    status_data: web::Json<StatusUpdateData>,
+) -> Result<HttpResponse, MastodonError> {
+    let db_client = &mut **get_database_client(&db_pool).await?;
+    let current_user = get_current_user(db_client, auth.token()).await?;
+    let post = get_post_by_id(db_client, &status_id).await?;
+    if post.author.id != current_user.id {
+        return Err(MastodonError::PermissionError);
+    };
+    let maybe_in_reply_to = if let Some(ref in_reply_to_id) = post.in_reply_to_id {
+        let in_reply_to = get_post_by_id(db_client, in_reply_to_id).await?;
+        Some(in_reply_to)
+    } else {
+        None
+    };
+    let instance = config.instance();
+    let status_data = status_data.into_inner();
+    let (content, maybe_content_source) = match status_data.content_type.as_str() {
+        "text/html" => (status_data.status, None),
+        "text/markdown" => {
+            let content = markdown_lite_to_html(&status_data.status)
+                .map_err(|_| ValidationError("invalid markdown"))?;
+            (content, Some(status_data.status))
+        },
+        _ => return Err(ValidationError("unsupported content type").into()),
+    };
+    // Parse content
+    let PostContent { mut content, mut mentions, hashtags, links, linked, emojis } =
+        parse_microsyntaxes(
+            db_client,
+            &instance,
+            content,
+        ).await?;
+    // Clean content
+    content = clean_local_content(&content)?;
+
+    // Extend mentions
+    if post.visibility == Visibility::Subscribers {
+        // Mention all subscribers.
+        // This makes post accessible only to active subscribers
+        // and is required for sending activities to subscribers
+        // on other instances.
+        let subscribers = get_subscribers(db_client, &current_user.id).await?
+            .into_iter().map(|profile| profile.id);
+        mentions.extend(subscribers);
+    };
+    // Remove duplicate mentions
+    mentions.sort();
+    mentions.dedup();
+
+    // Update post
+    let post_data = PostUpdateData {
+        content: content,
+        content_source: maybe_content_source,
+        is_sensitive: status_data.sensitive,
+        attachments: status_data.media_ids.unwrap_or(vec![]),
+        mentions: mentions,
+        tags: hashtags,
+        links: links,
+        emojis: emojis.iter().map(|emoji| emoji.id).collect(),
+        updated_at: Utc::now(),
+    };
+    validate_post_update_data(&post_data)?;
+    validate_post_mentions(&post_data.mentions, &post.visibility)?;
+    validate_local_post_links(&post_data.links, &post.visibility)?;
+    if let Some(ref in_reply_to) = maybe_in_reply_to {
+        validate_local_reply(in_reply_to, &post_data.mentions, &post.visibility)?;
+    };
+    let mut post = update_post(db_client, &post.id, post_data).await?;
+    // Same as add_related_posts
+    post.in_reply_to = maybe_in_reply_to.map(Box::new);
+    post.linked = linked;
+    add_user_actions(db_client, &current_user.id, vec![&mut post]).await?;
+
+    // Federate
+    prepare_update_note(
+        db_client,
+        &instance,
+        &current_user,
+        &post,
+        config.federation.fep_e232_enabled,
+    ).await?.enqueue(db_client).await?;
+
+    let status = Status::from_post(
+        &get_request_base_url(connection_info),
+        &instance.url(),
+        post,
+    );
+    Ok(HttpResponse::Ok().json(status))
 }
 
 #[delete("/{status_id}")]
@@ -807,6 +914,7 @@ pub fn status_api_scope() -> Scope {
         // Routes with status ID
         .service(get_status)
         .service(get_status_source)
+        .service(edit_status)
         .service(delete_status)
         .service(get_context)
         .service(get_thread_view)

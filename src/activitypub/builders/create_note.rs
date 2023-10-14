@@ -61,7 +61,7 @@ struct MediaAttachment {
 #[serde(rename_all = "camelCase")]
 pub struct Note {
     #[serde(rename = "@context", skip_serializing_if = "Option::is_none")]
-    _context: Option<Context>,
+    pub(super) _context: Option<Context>,
 
     id: String,
 
@@ -71,7 +71,7 @@ pub struct Note {
     #[serde(skip_serializing_if = "Vec::is_empty")]
     attachment: Vec<MediaAttachment>,
 
-    attributed_to: String,
+    pub(super) attributed_to: String,
 
     #[serde(skip_serializing_if = "Option::is_none")]
     in_reply_to: Option<String>,
@@ -91,7 +91,7 @@ pub struct Note {
     published: DateTime<Utc>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
-    updated: Option<DateTime<Utc>>,
+    pub(super) updated: Option<DateTime<Utc>>,
 }
 
 pub fn build_emoji_tag(instance_url: &str, emoji: &DbEmoji) -> EmojiTag {
