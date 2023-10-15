@@ -206,10 +206,15 @@ pub async fn reset_subscriptions(
 pub async fn get_active_subscription_count(
     db_client: &impl DatabaseClient,
 ) -> Result<i64, DatabaseError> {
+    // Only local recipients
     let row = db_client.query_one(
         "
         SELECT count(subscription)
-        FROM subscription WHERE expires_at > CURRENT_TIMESTAMP
+        FROM subscription
+        JOIN actor_profile ON (subscription.recipient_id = actor_profile.id)
+        WHERE
+            actor_profile.actor_json IS NULL
+            AND expires_at > CURRENT_TIMESTAMP
         ",
         &[],
     ).await?;
@@ -223,7 +228,11 @@ pub async fn get_expired_subscription_count(
     let row = db_client.query_one(
         "
         SELECT count(subscription)
-        FROM subscription WHERE expires_at <= CURRENT_TIMESTAMP
+        FROM subscription
+        JOIN actor_profile ON (subscription.recipient_id = actor_profile.id)
+        WHERE
+            actor_profile.actor_json IS NULL
+            AND expires_at <= CURRENT_TIMESTAMP
         ",
         &[],
     ).await?;
