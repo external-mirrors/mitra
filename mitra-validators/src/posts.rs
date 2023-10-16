@@ -5,6 +5,7 @@ use super::errors::ValidationError;
 
 pub const ATTACHMENT_LIMIT: usize = 15;
 pub const MENTION_LIMIT: usize = 50;
+pub const HASHTAG_LIMIT: usize = 100;
 pub const LINK_LIMIT: usize = 10;
 pub const EMOJI_LIMIT: usize = 50;
 
@@ -61,6 +62,9 @@ pub fn validate_post_create_data(
     if post_data.mentions.len() > MENTION_LIMIT {
         return Err(ValidationError("too many mentions"));
     };
+    if post_data.tags.len() > HASHTAG_LIMIT {
+        return Err(ValidationError("too many hashtags"));
+    };
     if post_data.links.len() > LINK_LIMIT {
         return Err(ValidationError("too many links"));
     };
@@ -81,6 +85,9 @@ pub fn validate_post_update_data(
     };
     if post_data.mentions.len() > MENTION_LIMIT {
         return Err(ValidationError("too many mentions"));
+    };
+    if post_data.tags.len() > HASHTAG_LIMIT {
+        return Err(ValidationError("too many hashtags"));
     };
     if post_data.links.len() > LINK_LIMIT {
         return Err(ValidationError("too many links"));
