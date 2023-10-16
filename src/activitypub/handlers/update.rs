@@ -14,7 +14,10 @@ use mitra_models::{
     posts::types::PostUpdateData,
     profiles::queries::get_profile_by_remote_actor_id,
 };
-use mitra_validators::errors::ValidationError;
+use mitra_validators::{
+    errors::ValidationError,
+    posts::validate_post_update_data,
+};
 
 use crate::activitypub::{
     actors::{
@@ -72,7 +75,6 @@ async fn handle_update_note(
         let object_url = get_object_url(&object)?;
         content += &create_content_link(object_url);
     };
-    let is_sensitive = object.sensitive.unwrap_or(false);
     let storage = MediaStorage::from(config);
     let (attachments, unprocessed) = get_object_attachments(
         db_client,
@@ -84,9 +86,6 @@ async fn handle_update_note(
     for attachment_url in unprocessed {
         content += &create_content_link(attachment_url);
     };
-    if content.is_empty() && attachments.is_empty() {
-        return Err(ValidationError("post is empty").into());
-    };
     let (mentions, hashtags, links, emojis) = get_object_tags(
         db_client,
         &instance,
@@ -94,6 +93,7 @@ async fn handle_update_note(
         &object,
         &HashMap::new(),
     ).await?;
+    let is_sensitive = object.sensitive.unwrap_or(false);
     let updated_at = object.updated.unwrap_or(Utc::now());
     let post_data = PostUpdateData {
         content,
@@ -106,6 +106,7 @@ async fn handle_update_note(
         emojis,
         updated_at,
     };
+    validate_post_update_data(&post_data)?;
     update_post(db_client, &post.id, post_data).await?;
     Ok(Some(NOTE))
 }

@@ -1,3 +1,4 @@
+use mitra_models::posts::types::{PostCreateData, PostUpdateData};
 use mitra_utils::html::clean_html_strict;
 
 use super::errors::ValidationError;
@@ -46,6 +47,48 @@ pub fn clean_local_content(
         return Err(ValidationError("post can not be empty"));
     };
     Ok(content_trimmed.to_string())
+}
+
+pub fn validate_post_create_data(
+    post_data: &PostCreateData,
+) -> Result<(), ValidationError> {
+    if post_data.content.is_empty() && post_data.attachments.is_empty() {
+        return Err(ValidationError("post is empty"));
+    };
+    if post_data.attachments.len() > ATTACHMENT_LIMIT {
+        return Err(ValidationError("too many attachments"));
+    };
+    if post_data.mentions.len() > MENTION_LIMIT {
+        return Err(ValidationError("too many mentions"));
+    };
+    if post_data.links.len() > LINK_LIMIT {
+        return Err(ValidationError("too many links"));
+    };
+    if post_data.emojis.len() > EMOJI_LIMIT {
+        return Err(ValidationError("too many emojis"));
+    };
+    Ok(())
+}
+
+pub fn validate_post_update_data(
+    post_data: &PostUpdateData,
+) -> Result<(), ValidationError> {
+    if post_data.content.is_empty() && post_data.attachments.is_empty() {
+        return Err(ValidationError("post is empty"));
+    };
+    if post_data.attachments.len() > ATTACHMENT_LIMIT {
+        return Err(ValidationError("too many attachments"));
+    };
+    if post_data.mentions.len() > MENTION_LIMIT {
+        return Err(ValidationError("too many mentions"));
+    };
+    if post_data.links.len() > LINK_LIMIT {
+        return Err(ValidationError("too many links"));
+    };
+    if post_data.emojis.len() > EMOJI_LIMIT {
+        return Err(ValidationError("too many emojis"));
+    };
+    Ok(())
 }
 
 #[cfg(test)]

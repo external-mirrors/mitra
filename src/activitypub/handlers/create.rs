@@ -35,6 +35,7 @@ use mitra_validators::{
     errors::ValidationError,
     posts::{
         content_allowed_classes,
+        validate_post_create_data,
         ATTACHMENT_LIMIT,
         CONTENT_MAX_SIZE,
         EMOJI_LIMIT,
@@ -626,9 +627,6 @@ pub async fn handle_note(
     for attachment_url in unprocessed {
         content += &create_content_link(attachment_url);
     };
-    if content.is_empty() && attachments.is_empty() {
-        return Err(ValidationError("post is empty").into());
-    };
 
     let (mentions, hashtags, links, emojis) = get_object_tags(
         db_client,
@@ -679,6 +677,7 @@ pub async fn handle_note(
         object_id: Some(object.id),
         created_at,
     };
+    validate_post_create_data(&post_data)?;
     let post = create_post(db_client, &author.id, post_data).await?;
     Ok(post)
 }

@@ -38,10 +38,7 @@ use mitra_validators::{
     errors::ValidationError,
     posts::{
         clean_local_content,
-        ATTACHMENT_LIMIT,
-        EMOJI_LIMIT,
-        MENTION_LIMIT,
-        LINK_LIMIT,
+        validate_post_create_data,
     },
 };
 
@@ -154,22 +151,10 @@ async fn create_status(
     // Remove duplicate mentions
     mentions.sort();
     mentions.dedup();
-    if mentions.len() > MENTION_LIMIT {
-        return Err(ValidationError("too many mentions").into());
-    };
 
     // Links validation
     if links.len() > 0 && visibility != Visibility::Public {
         return Err(ValidationError("can't add links to non-public posts").into());
-    };
-    if links.len() > LINK_LIMIT {
-        return Err(ValidationError("too many links").into());
-    };
-
-    // Emoji validation
-    let emojis: Vec<_> = emojis.iter().map(|emoji| emoji.id).collect();
-    if emojis.len() > EMOJI_LIMIT {
-        return Err(ValidationError("too many emojis").into());
     };
 
     // Reply validation
@@ -190,11 +175,6 @@ async fn create_status(
             };
         };
     };
-    // Validate attachments
-    let attachments = status_data.media_ids.unwrap_or(vec![]);
-    if attachments.len() > ATTACHMENT_LIMIT {
-        return Err(ValidationError("too many attachments").into());
-    };
 
     // Create post
     let post_data = PostCreateData {
@@ -204,14 +184,15 @@ async fn create_status(
         repost_of_id: None,
         visibility: visibility,
         is_sensitive: status_data.sensitive,
-        attachments: attachments,
+        attachments: status_data.media_ids.unwrap_or(vec![]),
         mentions: mentions,
         tags: hashtags,
         links: links,
-        emojis: emojis,
+        emojis: emojis.iter().map(|emoji| emoji.id).collect(),
         object_id: None,
         created_at: Utc::now(),
     };
+    validate_post_create_data(&post_data)?;
     let mut post = create_post(db_client, &current_user.id, post_data).await?;
     post.in_reply_to = maybe_in_reply_to.map(|mut in_reply_to| {
         in_reply_to.reply_count += 1;
