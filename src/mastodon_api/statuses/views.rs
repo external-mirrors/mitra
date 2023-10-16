@@ -37,7 +37,7 @@ use mitra_utils::markdown::markdown_lite_to_html;
 use mitra_validators::{
     errors::ValidationError,
     posts::{
-        clean_content,
+        clean_local_content,
         ATTACHMENT_LIMIT,
         EMOJI_LIMIT,
         MENTION_LIMIT,
@@ -138,7 +138,7 @@ async fn create_status(
             content,
         ).await?;
     // Clean content
-    content = clean_content(&content)?;
+    content = clean_local_content(&content)?;
 
     // Extend mentions
     mentions.extend(status_data.mentions.unwrap_or(vec![]));
@@ -260,7 +260,7 @@ async fn preview_status(
         content,
     ).await?;
     // Clean content
-    content = clean_content(&content)?;
+    content = clean_local_content(&content)?;
     // Return preview
     let preview = StatusPreview::new(
         &instance.url(),

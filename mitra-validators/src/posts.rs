@@ -28,7 +28,7 @@ pub fn content_allowed_classes() -> Vec<(&'static str, Vec<&'static str>)> {
     ]
 }
 
-pub fn clean_content(
+pub fn clean_local_content(
     content: &str,
 ) -> Result<String, ValidationError> {
     // Check content size to not exceed the hard limit
@@ -53,16 +53,16 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_clean_content_empty() {
+    fn test_clean_local_content_empty() {
         let content = "  ";
-        let result = clean_content(content);
+        let result = clean_local_content(content);
         assert_eq!(result.is_ok(), false);
     }
 
     #[test]
-    fn test_clean_content_trimming() {
+    fn test_clean_local_content_trimming() {
         let content = "test ";
-        let cleaned = clean_content(content).unwrap();
+        let cleaned = clean_local_content(content).unwrap();
         assert_eq!(cleaned, "test");
     }
 }
