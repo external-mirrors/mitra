@@ -44,9 +44,6 @@ pub fn clean_local_content(
         content_allowed_classes(),
     );
     let content_trimmed = content_safe.trim();
-    if content_trimmed.is_empty() {
-        return Err(ValidationError("post can not be empty"));
-    };
     Ok(content_trimmed.to_string())
 }
 
@@ -78,7 +75,7 @@ pub fn validate_post_update_data(
     post_data: &PostUpdateData,
 ) -> Result<(), ValidationError> {
     if post_data.content.is_empty() && post_data.attachments.is_empty() {
-        return Err(ValidationError("post is empty"));
+        return Err(ValidationError("post can not be empty"));
     };
     if post_data.attachments.len() > ATTACHMENT_LIMIT {
         return Err(ValidationError("too many attachments"));
@@ -105,8 +102,8 @@ mod tests {
     #[test]
     fn test_clean_local_content_empty() {
         let content = "  ";
-        let result = clean_local_content(content);
-        assert_eq!(result.is_ok(), false);
+        let cleaned = clean_local_content(content).unwrap();
+        assert_eq!(cleaned, "");
     }
 
     #[test]

@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Added
 
 - Display number of generated Monero addresses in instance report.
+- Allow posts with attachment and no text.
 
 ### Changed
 
