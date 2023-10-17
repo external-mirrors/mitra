@@ -17,6 +17,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Set limit on a number of hashtags in a post.
 - Change default content type of a post to `text/markdown`.
 - Stop logging incoming followers-only posts.
+- Require local direct messages to have at least one mention.
 
 ### Removed
 

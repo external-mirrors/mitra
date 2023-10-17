@@ -2096,6 +2096,7 @@ dependencies = [
  "mitra-utils",
  "regex",
  "thiserror",
+ "uuid",
 ]
 
 [[package]]

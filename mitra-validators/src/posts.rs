@@ -1,4 +1,10 @@
-use mitra_models::posts::types::{PostCreateData, PostUpdateData};
+use uuid::Uuid;
+
+use mitra_models::posts::types::{
+    PostCreateData,
+    PostUpdateData,
+    Visibility,
+};
 use mitra_utils::html::clean_html_strict;
 
 use super::errors::ValidationError;
@@ -96,6 +102,16 @@ pub fn validate_post_update_data(
     };
     if post_data.emojis.len() > EMOJI_LIMIT {
         return Err(ValidationError("too many emojis"));
+    };
+    Ok(())
+}
+
+pub fn validate_post_mentions(
+    mentions: &[Uuid],
+    visibility: &Visibility,
+) -> Result<(), ValidationError> {
+    if mentions.is_empty() && *visibility == Visibility::Direct {
+        return Err(ValidationError("direct message should have at least one mention"));
     };
     Ok(())
 }

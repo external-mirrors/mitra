@@ -36,6 +36,7 @@ use mitra_validators::{
     posts::{
         content_allowed_classes,
         validate_post_create_data,
+        validate_post_mentions,
         ATTACHMENT_LIMIT,
         CONTENT_MAX_SIZE,
         EMOJI_LIMIT,
@@ -650,9 +651,6 @@ pub async fn handle_note(
     };
     let audience = get_audience(&object)?;
     let visibility = get_object_visibility(&author, &audience);
-    if visibility == Visibility::Direct && mentions.is_empty() {
-        return Err(ValidationError("direct message without mentions").into());
-    };
     let is_sensitive = object.sensitive.unwrap_or(false);
     let created_at = object.published.unwrap_or(Utc::now());
     let post_data = PostCreateData {
@@ -671,6 +669,7 @@ pub async fn handle_note(
         created_at,
     };
     validate_post_create_data(&post_data)?;
+    validate_post_mentions(&post_data.mentions, &post_data.visibility)?;
     let post = create_post(db_client, &author.id, post_data).await?;
     Ok(post)
 }

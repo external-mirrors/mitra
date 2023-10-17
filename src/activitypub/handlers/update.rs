@@ -16,7 +16,10 @@ use mitra_models::{
 };
 use mitra_validators::{
     errors::ValidationError,
-    posts::validate_post_update_data,
+    posts::{
+        validate_post_mentions,
+        validate_post_update_data,
+    },
 };
 
 use crate::activitypub::{
@@ -107,6 +110,7 @@ async fn handle_update_note(
         updated_at,
     };
     validate_post_update_data(&post_data)?;
+    validate_post_mentions(&post_data.mentions, &post.visibility)?;
     update_post(db_client, &post.id, post_data).await?;
     Ok(Some(NOTE))
 }

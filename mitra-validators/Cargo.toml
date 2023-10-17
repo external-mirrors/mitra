@@ -10,6 +10,8 @@ rust-version = "1.57"
 regex = "1.6.0"
 # Used for creating error types
 thiserror = "1.0.37"
+# Used to work with UUIDs
+uuid = { version = "1.1.2", features = ["serde", "v4"] }
 
 mitra-models = { path = "../mitra-models" }
 mitra-utils = { path = "../mitra-utils" }

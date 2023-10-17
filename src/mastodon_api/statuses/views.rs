@@ -39,6 +39,7 @@ use mitra_validators::{
     posts::{
         clean_local_content,
         validate_post_create_data,
+        validate_post_mentions,
     },
 };
 
@@ -192,6 +193,7 @@ async fn create_status(
         created_at: Utc::now(),
     };
     validate_post_create_data(&post_data)?;
+    validate_post_mentions(&post_data.mentions, &post_data.visibility)?;
     let mut post = create_post(db_client, &current_user.id, post_data).await?;
     post.in_reply_to = maybe_in_reply_to.map(|mut in_reply_to| {
         in_reply_to.reply_count += 1;
