@@ -175,9 +175,6 @@ pub struct StatusData {
     #[serde(default)]
     pub sensitive: bool,
 
-    // Not supported by Mastodon
-    pub mentions: Option<Vec<Uuid>>,
-
     #[serde(default = "default_post_content_type")]
     pub content_type: String,
 }

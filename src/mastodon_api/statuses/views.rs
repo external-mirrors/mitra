@@ -138,7 +138,6 @@ async fn create_status(
     content = clean_local_content(&content)?;
 
     // Extend mentions
-    mentions.extend(status_data.mentions.unwrap_or(vec![]));
     if visibility == Visibility::Subscribers {
         // Mention all subscribers.
         // This makes post accessible only to active subscribers

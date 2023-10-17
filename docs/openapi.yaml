@@ -1117,12 +1117,6 @@ paths:
                   description: Mark post and attached media as sensitive?
                   type: boolean
                   default: false
-                mentions:
-                  description: Array of profile IDs to be mentioned
-                  type: array
-                  items:
-                    type: string
-                    format: uuid
               required:
                 - status
       responses:

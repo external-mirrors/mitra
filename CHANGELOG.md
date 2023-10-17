@@ -16,6 +16,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Do not show outgoing subscriptions in instance report.
 - Set limit on a number of hashtags in a post.
 
+### Removed
+
+- Drop support for `mentions` parameter in `/api/v1/statuses` form data.
+
 ## [2.1.0] - 2023-10-10
 
 ### Added
