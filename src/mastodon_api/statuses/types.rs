@@ -159,7 +159,7 @@ impl Status {
     }
 }
 
-fn default_post_content_type() -> String { "text/html".to_string() }
+fn default_post_content_type() -> String { "text/markdown".to_string() }
 
 /// https://docs.joinmastodon.org/methods/statuses/
 #[derive(Deserialize)]

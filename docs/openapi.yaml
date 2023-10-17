@@ -1093,7 +1093,7 @@ paths:
                 content_type:
                   description: Media type of the post content.
                   type: string
-                  default: text/html
+                  default: text/markdown
                   enum:
                     - text/html
                     - text/markdown
@@ -1145,7 +1145,7 @@ paths:
                 content_type:
                   description: Media type of the post content.
                   type: string
-                  default: text/html
+                  default: text/markdown
                   enum:
                     - text/html
                     - text/markdown

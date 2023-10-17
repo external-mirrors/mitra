@@ -15,6 +15,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Do not show outgoing subscriptions in instance report.
 - Set limit on a number of hashtags in a post.
+- Change default content type of a post to `text/markdown`.
 
 ### Removed
 
