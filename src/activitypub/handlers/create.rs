@@ -575,6 +575,10 @@ fn get_object_visibility(
             return Visibility::Subscribers;
         };
     };
+    log::warn!(
+        "processing note with visibility 'direct' attributed to {}",
+        author.acct,
+    );
     Visibility::Direct
 }
 
@@ -646,13 +650,6 @@ pub async fn handle_note(
     };
     let audience = get_audience(&object)?;
     let visibility = get_object_visibility(&author, &audience);
-    if visibility != Visibility::Public {
-        log::warn!(
-            "processing note with visibility {:?} attributed to {}",
-            visibility,
-            author.acct,
-        );
-    };
     if visibility == Visibility::Direct && mentions.is_empty() {
         return Err(ValidationError("direct message without mentions").into());
     };
