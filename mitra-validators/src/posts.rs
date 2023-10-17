@@ -9,7 +9,7 @@ pub const HASHTAG_LIMIT: usize = 100;
 pub const LINK_LIMIT: usize = 10;
 pub const EMOJI_LIMIT: usize = 50;
 
-pub const OBJECT_ID_SIZE_MAX: usize = 2000;
+const OBJECT_ID_SIZE_MAX: usize = 2000;
 pub const CONTENT_MAX_SIZE: usize = 100000;
 const CONTENT_ALLOWED_TAGS: [&str; 8] = [
     "a",
@@ -67,6 +67,11 @@ pub fn validate_post_create_data(
     };
     if post_data.emojis.len() > EMOJI_LIMIT {
         return Err(ValidationError("too many emojis"));
+    };
+    if let Some(ref object_id) = post_data.object_id {
+        if object_id.len() > OBJECT_ID_SIZE_MAX {
+            return Err(ValidationError("object ID is too long"));
+        };
     };
     Ok(())
 }
