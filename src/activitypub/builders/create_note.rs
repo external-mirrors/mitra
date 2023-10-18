@@ -73,12 +73,10 @@ pub struct Note {
 
     attributed_to: String,
 
-    content: String,
-
     #[serde(skip_serializing_if = "Option::is_none")]
     in_reply_to: Option<String>,
 
-    published: DateTime<Utc>,
+    content: String,
     sensitive: bool,
 
     #[serde(skip_serializing_if = "Vec::is_empty")]
@@ -89,6 +87,11 @@ pub struct Note {
 
     #[serde(skip_serializing_if = "Option::is_none")]
     quote_url: Option<String>,
+
+    published: DateTime<Utc>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    updated: Option<DateTime<Utc>>,
 }
 
 pub fn build_emoji_tag(instance_url: &str, emoji: &DbEmoji) -> EmojiTag {
@@ -227,12 +230,13 @@ pub fn build_note(
         attributed_to: actor_id,
         in_reply_to: in_reply_to_object_id,
         content: post.content.clone(),
-        published: post.created_at,
         sensitive: post.is_sensitive,
         tag: tags,
         to: primary_audience,
         cc: secondary_audience,
         quote_url: maybe_quote_url,
+        published: post.created_at,
+        updated: post.updated_at,
     }
 }
 
@@ -413,6 +417,9 @@ mod tests {
         };
         assert_eq!(tag.name, "#test");
         assert_eq!(tag.href, "https://example.com/collections/tags/test");
+
+        assert_eq!(note.published, post.created_at);
+        assert_eq!(note.updated, None);
     }
 
     #[test]
