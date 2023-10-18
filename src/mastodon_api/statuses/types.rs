@@ -206,6 +206,25 @@ impl StatusPreview {
     }
 }
 
+/// https://docs.joinmastodon.org/entities/StatusSource/
+#[derive(Serialize)]
+pub struct StatusSource {
+    id: Uuid,
+    text: String,
+    spoiler_text: String,
+}
+
+impl StatusSource {
+    pub fn from_post(post: Post) -> Self {
+        Self {
+            id: post.id,
+            // Return empty string if source is not available
+            text: post.content_source.unwrap_or_default(),
+            spoiler_text: "".to_string(),
+        }
+    }
+}
+
 #[derive(Serialize)]
 pub struct Context {
     pub ancestors: Vec<Status>,

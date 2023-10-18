@@ -77,6 +77,7 @@ use super::types::{
     StatusData,
     StatusPreview,
     StatusPreviewData,
+    StatusSource,
 };
 
 #[post("")]
@@ -259,6 +260,22 @@ async fn get_status(
         post,
     ).await?;
     Ok(HttpResponse::Ok().json(status))
+}
+
+#[get("/{status_id}/source")]
+async fn get_status_source(
+    auth: BearerAuth,
+    db_pool: web::Data<DbPool>,
+    status_id: web::Path<Uuid>,
+) -> Result<HttpResponse, MastodonError> {
+    let db_client = &**get_database_client(&db_pool).await?;
+    let current_user = get_current_user(db_client, auth.token()).await?;
+    let post = get_post_by_id(db_client, &status_id).await?;
+    if post.author.id != current_user.id {
+        return Err(MastodonError::PermissionError);
+    };
+    let status_source = StatusSource::from_post(post);
+    Ok(HttpResponse::Ok().json(status_source))
 }
 
 #[delete("/{status_id}")]
@@ -789,6 +806,7 @@ pub fn status_api_scope() -> Scope {
         .service(preview_status)
         // Routes with status ID
         .service(get_status)
+        .service(get_status_source)
         .service(delete_status)
         .service(get_context)
         .service(get_thread_view)

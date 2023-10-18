@@ -1165,8 +1165,25 @@ paths:
         400:
           description: Invalid post data.
   /api/v1/statuses/{status_id}:
+    get:
+      summary: Obtain information about a post.
+      security:
+        - tokenAuth: []
+      parameters:
+        - $ref: '#/components/parameters/status_id'
+      responses:
+        200:
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+        404:
+          description: Post does not exist or is not public.
     delete:
       summary: Delete post
+      security:
+        - tokenAuth: []
       parameters:
         - $ref: '#/components/parameters/status_id'
       responses:
@@ -1177,6 +1194,35 @@ paths:
           description: Post does not belong to user
         404:
           description: Post not found
+  /api/v1/statuses/{status_id}/source:
+    get:
+      summary: Obtain the source properties for a post so that it can be edited.
+      security:
+        - tokenAuth: []
+      parameters:
+        - $ref: '#/components/parameters/status_id'
+      responses:
+        200:
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  text:
+                    description: The plain text used to compose the post.
+                    type: string
+                  spoiler_text:
+                    description: Subject or summary line, below which post content is collapsed until expanded.
+                    type: string
+                    example: ""
+        403:
+          description: Post does not belong to user
+        404:
+          description: Post does not exist.
   /api/v1/statuses/{status_id}/context:
     get:
       summary: View statuses above and below this status in the thread.
