@@ -116,6 +116,16 @@ pub fn validate_post_mentions(
     Ok(())
 }
 
+pub fn validate_local_post_links(
+    links: &[Uuid],
+    visibility: &Visibility,
+) -> Result<(), ValidationError> {
+    if links.len() > 0 && *visibility != Visibility::Public {
+        return Err(ValidationError("can't add links to non-public posts"));
+    };
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

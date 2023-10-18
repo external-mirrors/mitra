@@ -38,6 +38,7 @@ use mitra_validators::{
     errors::ValidationError,
     posts::{
         clean_local_content,
+        validate_local_post_links,
         validate_post_create_data,
         validate_post_mentions,
     },
@@ -152,11 +153,6 @@ async fn create_status(
     mentions.sort();
     mentions.dedup();
 
-    // Links validation
-    if links.len() > 0 && visibility != Visibility::Public {
-        return Err(ValidationError("can't add links to non-public posts").into());
-    };
-
     // Reply validation
     if let Some(ref in_reply_to) = maybe_in_reply_to {
         if in_reply_to.repost_of_id.is_some() {
@@ -194,6 +190,7 @@ async fn create_status(
     };
     validate_post_create_data(&post_data)?;
     validate_post_mentions(&post_data.mentions, &post_data.visibility)?;
+    validate_local_post_links(&post_data.links, &post_data.visibility)?;
     let mut post = create_post(db_client, &current_user.id, post_data).await?;
     post.in_reply_to = maybe_in_reply_to.map(|mut in_reply_to| {
         in_reply_to.reply_count += 1;
