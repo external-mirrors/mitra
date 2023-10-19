@@ -1,6 +1,7 @@
 use uuid::Uuid;
 
 use mitra_models::posts::types::{
+    Post,
     PostCreateData,
     PostUpdateData,
     Visibility,
@@ -122,6 +123,30 @@ pub fn validate_local_post_links(
 ) -> Result<(), ValidationError> {
     if links.len() > 0 && *visibility != Visibility::Public {
         return Err(ValidationError("can't add links to non-public posts"));
+    };
+    Ok(())
+}
+
+pub fn validate_local_reply(
+    in_reply_to: &Post,
+    mentions: &[Uuid],
+    visibility: &Visibility,
+) -> Result<(), ValidationError> {
+     if in_reply_to.repost_of_id.is_some() {
+        return Err(ValidationError("can't reply to repost"));
+    };
+    if in_reply_to.visibility != Visibility::Public &&
+        *visibility != Visibility::Direct
+    {
+        return Err(ValidationError("reply must have direct visibility"));
+    };
+    if *visibility != Visibility::Public {
+        let mut in_reply_to_audience: Vec<_> = in_reply_to.mentions.iter()
+            .map(|profile| profile.id).collect();
+        in_reply_to_audience.push(in_reply_to.author.id);
+        if !mentions.iter().all(|id| in_reply_to_audience.contains(id)) {
+            return Err(ValidationError("audience can't be expanded"));
+        };
     };
     Ok(())
 }

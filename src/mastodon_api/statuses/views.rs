@@ -39,6 +39,7 @@ use mitra_validators::{
     posts::{
         clean_local_content,
         validate_local_post_links,
+        validate_local_reply,
         validate_post_create_data,
         validate_post_mentions,
     },
@@ -153,25 +154,6 @@ async fn create_status(
     mentions.sort();
     mentions.dedup();
 
-    // Reply validation
-    if let Some(ref in_reply_to) = maybe_in_reply_to {
-        if in_reply_to.repost_of_id.is_some() {
-            return Err(ValidationError("can't reply to repost").into());
-        };
-        if in_reply_to.visibility != Visibility::Public &&
-                visibility != Visibility::Direct {
-            return Err(ValidationError("reply must have direct visibility").into());
-        };
-        if visibility != Visibility::Public {
-            let mut in_reply_to_audience: Vec<_> = in_reply_to.mentions.iter()
-                .map(|profile| profile.id).collect();
-            in_reply_to_audience.push(in_reply_to.author.id);
-            if !mentions.iter().all(|id| in_reply_to_audience.contains(id)) {
-                return Err(ValidationError("audience can't be expanded").into());
-            };
-        };
-    };
-
     // Create post
     let post_data = PostCreateData {
         content: content,
@@ -191,6 +173,9 @@ async fn create_status(
     validate_post_create_data(&post_data)?;
     validate_post_mentions(&post_data.mentions, &post_data.visibility)?;
     validate_local_post_links(&post_data.links, &post_data.visibility)?;
+    if let Some(ref in_reply_to) = maybe_in_reply_to {
+        validate_local_reply(in_reply_to, &post_data.mentions, &post_data.visibility)?;
+    };
     let mut post = create_post(db_client, &current_user.id, post_data).await?;
     post.in_reply_to = maybe_in_reply_to.map(|mut in_reply_to| {
         in_reply_to.reply_count += 1;
