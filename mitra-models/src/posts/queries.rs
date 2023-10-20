@@ -353,8 +353,11 @@ pub async fn update_post(
 
     // Delete and re-create related objects
     transaction.execute(
-        "DELETE FROM media_attachment WHERE post_id = $1",
-        &[&db_post.id],
+        "
+        DELETE FROM media_attachment
+        WHERE post_id = $1 AND id <> ALL($2)
+        ",
+        &[&db_post.id, &post_data.attachments],
     ).await?;
     transaction.execute(
         "DELETE FROM mention WHERE post_id = $1",
