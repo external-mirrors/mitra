@@ -27,6 +27,7 @@ pub struct Invoice {
     pub payment_address: Option<String>,
     pub amount: i64,
     pub status: String,
+    pub created_at: DateTime<Utc>,
     pub expires_at: DateTime<Utc>,
 }
 
@@ -57,6 +58,7 @@ impl From<DbInvoice> for Invoice {
             payment_address: value.payment_address,
             amount: value.amount,
             status: status.to_string(),
+            created_at: value.created_at,
             expires_at,
         }
     }

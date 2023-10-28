@@ -2210,6 +2210,10 @@ components:
             - underpaid
             - completed
             - failed
+        created_at:
+          description: The date when invoice was created.
+          type: string
+          format: date-time
         expires_at:
           description: The date when invoice times out.
           type: string
