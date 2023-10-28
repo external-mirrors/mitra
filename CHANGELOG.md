@@ -12,6 +12,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Improved descriptions of authentication errors.
 - Use same-actor policy when verifying inbox/outbox read permission.
 - Improved documentation of `create-post` command.
+- Disabled autolinking of email / webfinger addresses.
 
 ### Removed
 

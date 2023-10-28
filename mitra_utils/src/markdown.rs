@@ -78,6 +78,26 @@ fn node_to_markdown<'a>(
     Ok(markdown)
 }
 
+fn node_to_source<'a>(
+    node: &'a AstNode<'a>,
+    source: &str,
+) -> Option<String> {
+    let sourcepos = node.data.borrow().sourcepos;
+    if sourcepos.start.line != sourcepos.end.line {
+        // Ignore multi line elements
+        return None;
+    };
+    let start_line = sourcepos.start.line.checked_sub(1)?;
+    let line = source.lines().nth(start_line)?;
+    let start_column = sourcepos.start.column.checked_sub(1)?;
+    let length = sourcepos.end.column.checked_sub(sourcepos.start.column)?;
+    let text = line.chars()
+        .skip(start_column)
+        .take(length + 1)
+        .collect();
+    Some(text)
+}
+
 fn replace_node_value(node: &AstNode, value: NodeValue) -> () {
     let mut borrowed_node = node.data.borrow_mut();
     *borrowed_node = Ast::new(value, borrowed_node.sourcepos.start);
@@ -126,6 +146,22 @@ fn is_microsyntax<'a>(
 
 fn is_uri_scheme_allowed(uri: &str) -> bool {
     URI_SCHEMES.iter().any(|scheme| uri.starts_with(scheme))
+}
+
+fn is_email_autolink<'a>(
+    node: &'a AstNode<'a>,
+    text: &str,
+) -> bool {
+    let NodeValue::Link(ref link) = node.data.borrow().value else {
+        return false;
+    };
+    if !link.url.starts_with("mailto:") {
+        return false;
+    };
+    let Some(source) = node_to_source(node, text) else {
+        return false;
+    };
+    link.url == format!("mailto:{source}")
 }
 
 fn document_to_html<'a>(
@@ -243,10 +279,11 @@ pub fn markdown_lite_to_html(text: &str) -> Result<String, MarkdownError> {
                 replace_node_value(node, NodeValue::Paragraph);
             },
             NodeValue::Link(link) => {
-                if is_microsyntax(node)? {
-                    unlink(node);
-                };
-                if !is_uri_scheme_allowed(&link.url) {
+                if
+                    is_microsyntax(node)?
+                    || !is_uri_scheme_allowed(&link.url)
+                    || is_email_autolink(node, &text)
+                {
                     unlink(node);
                 };
             },
@@ -280,25 +317,12 @@ pub fn markdown_basic_to_html(text: &str) -> Result<String, MarkdownError> {
             NodeValue::LineBreak
                 => (),
             NodeValue::Link(link) => {
-                if is_microsyntax(node)? {
+                if
+                    is_microsyntax(node)?
+                    || !is_uri_scheme_allowed(&link.url)
+                    || is_email_autolink(node, text)
+                {
                     unlink(node);
-                };
-                if !is_uri_scheme_allowed(&link.url) {
-                    unlink(node);
-                };
-                if link.url.starts_with("mailto:") {
-                    // Disable email autolinking
-                    let markdown = node_to_markdown(node, &options)?;
-                    if markdown.starts_with('<') {
-                        let markdown = markdown
-                            .trim_start_matches('<')
-                            .trim_end_matches('>');
-                        for child in node.children() {
-                            child.detach();
-                        };
-                        let text = NodeValue::Text(markdown.to_string());
-                        replace_node_value(node, text);
-                    };
                 };
             },
             NodeValue::Paragraph => {
@@ -446,10 +470,9 @@ mod tests {
 
     #[test]
     fn test_markdown_lite_to_html_email_autolink() {
-        // TODO: disable autolinking
         let text = "test hello@gmail.com test";
         let html = markdown_lite_to_html(text).unwrap();
-        assert_eq!(html, r#"<p>test <a href="mailto:hello@gmail.com">hello@gmail.com</a> test</p>"#);
+        assert_eq!(html, r#"<p>test hello@gmail.com test</p>"#);
     }
 
     #[test]
