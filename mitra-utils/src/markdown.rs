@@ -277,10 +277,13 @@ mod tests {
 
     #[test]
     fn test_markdown_lite_to_html() {
-        let text = "# heading\n\ntest **bold** test *italic* test ~~strike~~ with `code`, <span>html</span> and https://example.com\nnew line\n\ntwo new lines and a list:\n- item 1\n- item 2\n\n>greentext\n\n---\n\nimage: ![logo](logo.png)\n\ncode block:\n```\nlet test\ntest = 1\n```";
+        let text = "# heading\n\ntest **bold** test *italic* test ~~strike~~ with `code`, <span>html</span> and https://example.com and admin@email.example\nnew line\n\ntwo new lines and a list:\n- item 1\n- item 2\n\n>greentext\n\n---\n\nimage: ![logo](logo.png)\n\ncode block:\n```\nlet test\ntest = 1\n```";
         let html = markdown_lite_to_html(text).unwrap();
         let expected_html = concat!(
-            r#"<p># heading</p><p>test <strong>bold</strong> test <em>italic</em> test ~~strike~~ with <code>code</code>, &lt;span&gt;html&lt;/span&gt; and <a href="https://example.com">https://example.com</a><br>new line</p><p>two new lines and a list:</p><p>- item 1<br>- item 2</p><p>&gt;greentext</p><p>-----</p><p>image: ![logo](logo.png)</p><p>code block:</p>"#,
+            r#"<p># heading</p><p>test <strong>bold</strong> test <em>italic</em> test ~~strike~~ with <code>code</code>, &lt;span&gt;html&lt;/span&gt;"#,
+            r#" and <a href="https://example.com">https://example.com</a>"#,
+            r#" and <a href="mailto:admin@email.example">admin@email.example</a>"#,
+            r#"<br>new line</p><p>two new lines and a list:</p><p>- item 1<br>- item 2</p><p>&gt;greentext</p><p>-----</p><p>image: ![logo](logo.png)</p><p>code block:</p>"#,
             "<pre><code>let test\ntest = 1\n</code></pre>",
         );
         assert_eq!(html, expected_html);
@@ -317,12 +320,13 @@ mod tests {
 
     #[test]
     fn test_markdown_basic_to_html() {
-        let text = "test **bold** test *italic* test ~~strike~~ with `code`, <span>html</span> and https://example.com\nnew line\n\nanother line";
+        let text = "test **bold** test *italic* test ~~strike~~ with `code`, <span>html</span> and https://example.com and admin@email.example\nnew line\n\nanother line";
         let html = markdown_basic_to_html(text).unwrap();
         let expected_html = concat!(
             "<p>",
             "test **bold** test *italic* test ~~strike~~ with `code`, &lt;span&gt;html&lt;/span&gt;",
             r#" and <a href="https://example.com">https://example.com</a>"#,
+            r#" and <a href="mailto:admin@email.example">admin@email.example</a>"#,
             "<br>new line<br></p>",
             "<p>another line</p>",
         );
