@@ -238,7 +238,23 @@ pub fn markdown_basic_to_html(text: &str) -> Result<String, MarkdownError> {
             NodeValue::SoftBreak |
             NodeValue::LineBreak
                 => (),
-            NodeValue::Link(_) => fix_microsyntaxes(node)?,
+            NodeValue::Link(link) => {
+                fix_microsyntaxes(node)?;
+                if link.url.starts_with("mailto:") {
+                    // Disable email autolinking
+                    let markdown = node_to_markdown(node, &options)?;
+                    if markdown.starts_with('<') {
+                        let markdown = markdown
+                            .trim_start_matches('<')
+                            .trim_end_matches('>');
+                        for child in node.children() {
+                            child.detach();
+                        };
+                        let text = NodeValue::Text(markdown.to_string());
+                        replace_node_value(node, text);
+                    };
+                };
+            },
             NodeValue::Paragraph => {
                 if node.next_sibling().is_some() {
                     // If this is not the last paragraph,
@@ -326,7 +342,7 @@ mod tests {
             "<p>",
             "test **bold** test *italic* test ~~strike~~ with `code`, &lt;span&gt;html&lt;/span&gt;",
             r#" and <a href="https://example.com">https://example.com</a>"#,
-            r#" and <a href="mailto:admin@email.example">admin@email.example</a>"#,
+            r#" and admin@email.example"#,
             "<br>new line<br></p>",
             "<p>another line</p>",
         );
@@ -338,6 +354,18 @@ mod tests {
         let text = "@user@example.org test";
         let html = markdown_basic_to_html(text).unwrap();
         assert_eq!(html, format!("<p>{}</p>", text));
+    }
+
+    #[test]
+    fn test_markdown_basic_to_html_email_link() {
+        // Regular link
+        let text = "[my email](mailto:user@email.example)";
+        let html = markdown_basic_to_html(text).unwrap();
+        assert_eq!(html, r#"<p><a href="mailto:user@email.example">my email</a></p>"#);
+        // Autolink
+        let text = "user@email.example";
+        let html = markdown_basic_to_html(text).unwrap();
+        assert_eq!(html, "<p>user@email.example</p>");
     }
 
     #[test]
