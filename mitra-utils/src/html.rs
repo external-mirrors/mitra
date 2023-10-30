@@ -1,7 +1,11 @@
 use std::collections::{HashMap, HashSet};
 use std::iter::FromIterator;
 
-use ammonia::Builder;
+use ammonia::{
+    rcdom::{Handle, NodeData, SerializableHandle},
+    Builder,
+};
+use html5ever::serialize::{serialize, SerializeOpts};
 
 pub use ammonia::{clean_text as escape_html};
 
@@ -29,6 +33,35 @@ pub fn clean_html(
     safe_html
 }
 
+fn node_to_string(node: Handle) -> String {
+    // Taken from ammonia
+    // https://github.com/rust-ammonia/ammonia/blob/98c2ebaca464ee9ee96acab43fc5a8ebb996106e/src/lib.rs#L2876
+    let mut ret_val = Vec::new();
+    let handle = SerializableHandle::from(node);
+    serialize(&mut ret_val, &handle, SerializeOpts::default())
+        .expect("writing to a string shouldn't fail");
+    String::from_utf8(ret_val).expect("html5ever only supports UTF8")
+}
+
+fn insert_rel_noopener(node: &Handle) -> () {
+    use html5ever::{local_name, ns, namespace_url, Attribute, QualName};
+    let mut stack = vec![node.clone()];
+    while let Some(node) = stack.pop() {
+        if let NodeData::Element { name, attrs, .. } = &node.data {
+            if &*name.local == "a" &&
+                !attrs.borrow().iter().any(|attr| &*attr.name.local == "rel")
+            {
+                // Push rel=noopener if not already present
+                attrs.borrow_mut().push(Attribute {
+                    name: QualName::new(None, ns!(), local_name!("rel")),
+                    value: "noopener".into(),
+                });
+            };
+        };
+        stack.extend(node.children.borrow_mut().clone().into_iter().rev());
+    };
+}
+
 pub fn clean_html_strict(
     unsafe_html: &str,
     allowed_tags: &[&str],
@@ -43,7 +76,7 @@ pub fn clean_html_strict(
             HashSet::from_iter(classes.into_iter()),
         );
     };
-    let safe_html = Builder::default()
+    let document = Builder::default()
         .tags(allowed_tags)
         .allowed_classes(allowed_classes_map)
         .add_url_schemes(&EXTRA_URI_SCHEMES)
@@ -64,8 +97,12 @@ pub fn clean_html_strict(
                 _ => Some(value.into())
             }
         })
-        .clean(unsafe_html)
-        .to_string();
+        .clean(unsafe_html);
+    // .to_dom_node() is unstable (requires ammonia_unstable flag)
+    // https://github.com/rust-ammonia/ammonia/issues/190
+    let document_node = document.to_dom_node();
+    insert_rel_noopener(&document_node);
+    let safe_html = node_to_string(document_node);
     safe_html
 }
 
@@ -127,7 +164,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore]
     fn test_clean_html_strict_noopener() {
         // TODO: fix cleaner
         let unsafe_html = r#"<a href="https://external.example">link</a>"#;

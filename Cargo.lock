@@ -2065,6 +2065,7 @@ dependencies = [
  "ed25519",
  "ed25519-dalek",
  "hex",
+ "html5ever",
  "http",
  "infer",
  "k256",

@@ -8,6 +8,7 @@ rust-version = "1.57"
 [dependencies]
 # Used for HTML sanitization
 ammonia = "3.2.0"
+html5ever = "0.26.0"
 # Used for working with RSA keys, HTTP signatures and file uploads
 base64_ext = { package = "base64", version = "0.21.4" }
 # Used to verify minisign signatures

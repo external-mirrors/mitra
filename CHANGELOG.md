@@ -14,6 +14,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Disable email autolinking in bio and key-value fields.
 
+### Fixed
+
+- Always add `rel=noopener` to links.
+
 ## [2.2.0] - 2023-10-22
 
 ### Added
