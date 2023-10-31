@@ -1,4 +1,4 @@
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use serde_json::{Value as JsonValue};
 
 use super::types::{build_default_context, Context};
@@ -8,12 +8,12 @@ use super::vocabulary::{ORDERED_COLLECTION, ORDERED_COLLECTION_PAGE};
 #[serde(rename_all = "camelCase")]
 pub struct OrderedCollection {
     #[serde(rename = "@context")]
-    pub context: Context,
+    _context: Context,
 
-    pub id: String,
+    id: String,
 
     #[serde(rename = "type")]
-    pub object_type: String,
+    object_type: String,
 
     #[serde(skip_serializing_if = "Option::is_none")]
     first: Option<String>,
@@ -35,7 +35,7 @@ impl OrderedCollection {
         with_ordered_items: bool,
     ) -> Self {
         Self {
-            context: build_default_context(),
+            _context: build_default_context(),
             id: collection_id,
             object_type: ORDERED_COLLECTION.to_string(),
             first: first_page_id,
@@ -49,26 +49,33 @@ impl OrderedCollection {
 #[serde(rename_all = "camelCase")]
 pub struct OrderedCollectionPage {
     #[serde(rename = "@context")]
-    pub context: Context,
+    _context: Context,
 
-    pub id: String,
+    id: String,
 
     #[serde(rename = "type")]
-    pub object_type: String,
+    object_type: String,
 
     ordered_items: Vec<JsonValue>,
 }
 
 impl OrderedCollectionPage {
+    pub const DEFAULT_SIZE: u16 = 20;
+
     pub fn new(
         collection_page_id: String,
         items: Vec<JsonValue>,
     ) -> Self {
         Self {
-            context: build_default_context(),
+            _context: build_default_context(),
             id: collection_page_id,
             object_type: ORDERED_COLLECTION_PAGE.to_string(),
             ordered_items: items,
         }
     }
+}
+
+#[derive(Deserialize)]
+pub struct CollectionQueryParams {
+    pub page: Option<bool>,
 }

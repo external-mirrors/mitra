@@ -102,6 +102,10 @@ pub fn local_object_id(instance_url: &str, internal_object_id: &Uuid) -> String 
     format!("{}/objects/{}", instance_url, internal_object_id)
 }
 
+pub fn local_replies_collection(instance_url: &str, post_id: &Uuid) -> String {
+    format!("{}/objects/{}/replies", instance_url, post_id)
+}
+
 pub fn local_emoji_id(instance_url: &str, emoji_name: &str) -> String {
     format!("{}/objects/emojis/{}", instance_url, emoji_name)
 }

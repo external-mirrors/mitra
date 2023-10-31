@@ -21,6 +21,7 @@ use crate::activitypub::{
         local_actor_subscribers,
         local_emoji_id,
         local_object_id,
+        local_replies_collection,
         local_tag_collection,
         post_object_id,
         profile_actor_id,
@@ -75,6 +76,8 @@ pub struct Note {
 
     #[serde(skip_serializing_if = "Option::is_none")]
     in_reply_to: Option<String>,
+
+    replies: String,
 
     content: String,
     sensitive: bool,
@@ -222,6 +225,8 @@ pub fn build_note(
         },
         None => None,
     };
+    let replies_collection_id =
+        local_replies_collection(instance_url, &post.id);
     Note {
         _context: with_context.then(build_default_context),
         id: object_id,
@@ -229,6 +234,7 @@ pub fn build_note(
         attachment: attachments,
         attributed_to: actor_id,
         in_reply_to: in_reply_to_object_id,
+        replies: replies_collection_id,
         content: post.content.clone(),
         sensitive: post.is_sensitive,
         tag: tags,

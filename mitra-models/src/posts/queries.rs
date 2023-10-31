@@ -979,7 +979,7 @@ pub async fn get_thread(
         .collect::<Result<_, _>>()?;
     if posts.is_empty() {
         return Err(DatabaseError::NotFound("post"));
-    }
+    };
     Ok(posts)
 }
 

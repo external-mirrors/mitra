@@ -10,7 +10,6 @@ use actix_web::{
     HttpResponse,
     Scope,
 };
-use serde::Deserialize;
 use serde_json::{Value as JsonValue};
 use tokio::sync::Mutex;
 use uuid::Uuid;
@@ -20,7 +19,7 @@ use mitra_models::{
     database::{get_database_client, DatabaseError, DbPool},
     emojis::queries::get_local_emoji_by_name,
     posts::helpers::{add_related_posts, can_view_post},
-    posts::queries::{get_post_by_id, get_posts_by_author},
+    posts::queries::{get_post_by_id, get_posts_by_author, get_thread},
     profiles::types::PaymentOption,
     users::queries::get_user_by_name,
 };
@@ -51,6 +50,7 @@ use super::builders::{
     },
 };
 use super::collections::{
+    CollectionQueryParams,
     OrderedCollection,
     OrderedCollectionPage,
 };
@@ -61,6 +61,8 @@ use super::identifiers::{
     local_actor_following,
     local_actor_subscribers,
     local_actor_outbox,
+    local_replies_collection,
+    post_object_id,
 };
 use super::receiver::{receive_activity, HandlerError};
 use super::valueflows::builders::build_proposal;
@@ -169,11 +171,6 @@ async fn inbox(
     Ok(HttpResponse::Accepted().finish())
 }
 
-#[derive(Deserialize)]
-struct CollectionQueryParams {
-    page: Option<bool>,
-}
-
 #[get("/outbox")]
 async fn outbox(
     config: web::Data<Config>,
@@ -199,7 +196,6 @@ async fn outbox(
         return Ok(response);
     };
     // Posts are ordered by creation date
-    const COLLECTION_PAGE_SIZE: u16 = 20;
     let mut posts = get_posts_by_author(
         db_client,
         &user.id,
@@ -209,7 +205,7 @@ async fn outbox(
         false, // not only pinned
         false, // not only media
         None,
-        COLLECTION_PAGE_SIZE,
+        OrderedCollectionPage::DEFAULT_SIZE,
     ).await?;
     add_related_posts(db_client, posts.iter_mut().collect()).await?;
     let activities = posts.iter().map(|post| {
@@ -379,7 +375,6 @@ async fn featured_collection(
             .json(collection);
         return Ok(response);
     };
-    const COLLECTION_PAGE_SIZE: u16 = 20;
     let mut posts = get_posts_by_author(
         db_client,
         &user.id,
@@ -389,7 +384,7 @@ async fn featured_collection(
         true, // only pinned
         false, // not only media
         None,
-        COLLECTION_PAGE_SIZE,
+        OrderedCollectionPage::DEFAULT_SIZE,
     ).await?;
     add_related_posts(db_client, posts.iter_mut().collect()).await?;
     let objects = posts.iter().map(|post| {
@@ -535,6 +530,59 @@ pub async fn object_view(
     let response = HttpResponse::Ok()
         .content_type(AP_MEDIA_TYPE)
         .json(object);
+    Ok(response)
+}
+
+#[get("/objects/{object_id}/replies")]
+pub async fn replies_collection(
+    config: web::Data<Config>,
+    db_pool: web::Data<DbPool>,
+    internal_object_id: web::Path<Uuid>,
+    query_params: web::Query<CollectionQueryParams>,
+) -> Result<HttpResponse, HttpError> {
+    let db_client = &**get_database_client(&db_pool).await?;
+    let internal_object_id = internal_object_id.into_inner();
+    let posts = get_thread(db_client, &internal_object_id, None).await?;
+    let post = posts.iter().find(|post| post.id == internal_object_id)
+        .expect("get_thread return value should contain target post");
+    if !post.is_local() || !can_view_post(db_client, None, post).await? {
+        return Err(HttpError::NotFoundError("post"));
+    };
+    let instance = config.instance();
+    let collection_id = local_replies_collection(
+        &instance.url(),
+        &internal_object_id,
+    );
+    let first_page_id = format!("{}?page=true", collection_id);
+    if query_params.page.is_none() {
+        let collection = OrderedCollection::new(
+            collection_id,
+            Some(first_page_id),
+            None,
+            false,
+        );
+        let response = HttpResponse::Ok()
+            .content_type(AP_MEDIA_TYPE)
+            .json(collection);
+        return Ok(response);
+    };
+    let mut replies: Vec<_> = posts.into_iter()
+        .filter(|post| post.in_reply_to_id == Some(internal_object_id))
+        .take(OrderedCollectionPage::DEFAULT_SIZE.into())
+        .collect();
+    add_related_posts(db_client, replies.iter_mut().collect()).await?;
+    let objects = replies.iter().map(|post| {
+        let object_id = post_object_id(&instance.url(), post);
+        serde_json::to_value(object_id)
+            .expect("string should be serializable")
+    }).collect();
+    let collection_page = OrderedCollectionPage::new(
+        first_page_id,
+        objects,
+    );
+    let response = HttpResponse::Ok()
+        .content_type(AP_MEDIA_TYPE)
+        .json(collection_page);
     Ok(response)
 }
 

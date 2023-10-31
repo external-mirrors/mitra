@@ -184,6 +184,7 @@ async fn main() -> std::io::Result<()> {
             .service(activitypub::actor_scope())
             .service(activitypub::instance_actor_scope())
             .service(activitypub::object_view)
+            .service(activitypub::replies_collection)
             .service(activitypub::emoji_view)
             .service(activitypub::tag_view)
             .service(atom_scope())

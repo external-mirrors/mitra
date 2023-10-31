@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Added
 
 - Add `created_at` field to response of `/api/v1/subscriptions/invoices` endpoint.
+- Add "replies" collection to `Note` objects.
 
 ### Changed
 
