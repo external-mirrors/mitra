@@ -248,9 +248,9 @@ pub async fn fetch_actor(
     Ok(actor)
 }
 
-pub async fn fetch_outbox(
+pub async fn fetch_collection(
     instance: &Instance,
-    outbox_url: &str,
+    collection_url: &str,
     limit: usize,
 ) -> Result<Vec<JsonValue>, FetchError> {
     // https://www.w3.org/TR/activitystreams-core/#collections
@@ -269,7 +269,7 @@ pub async fn fetch_outbox(
     }
 
     let collection: Collection =
-        fetch_object(instance, outbox_url).await?;
+        fetch_object(instance, collection_url).await?;
     let mut items = collection.ordered_items;
     if let Some(first_page_value) = collection.first {
         let page: CollectionPage = match first_page_value {
@@ -282,8 +282,6 @@ pub async fn fetch_outbox(
     };
     let activities = items.into_iter()
         .take(limit)
-        // Outbox has reverse chronological order
-        .rev()
         .collect();
     Ok(activities)
 }

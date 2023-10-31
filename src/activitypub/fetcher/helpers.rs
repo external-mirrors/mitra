@@ -30,8 +30,8 @@ use crate::webfinger::types::ActorAddress;
 
 use super::fetchers::{
     fetch_actor,
+    fetch_collection,
     fetch_object,
-    fetch_outbox,
     perform_webfinger_query,
     FetchError,
 };
@@ -335,8 +335,11 @@ pub async fn import_from_outbox(
 ) -> Result<(), HandlerError> {
     let instance = config.instance();
     let actor = fetch_actor(&instance, actor_id).await?;
-    let activities = fetch_outbox(&instance, &actor.outbox, limit).await?;
+    let activities =
+        fetch_collection(&instance, &actor.outbox, limit).await?;
     log::info!("fetched {} activities", activities.len());
+    // Outbox has reverse chronological order
+    let activities = activities.into_iter().rev();
     for activity in activities {
         let activity_actor = find_object_id(&activity["actor"])
             .map_err(|_| ValidationError("invalid actor property"))?;
@@ -373,9 +376,12 @@ pub async fn import_replies(
     match &object["replies"] {
         JsonValue::Null => (), // no replies
         JsonValue::String(collection_id) => {
-            let collection: JsonValue = fetch_object(&instance, collection_id).await?;
-            let items = parse_into_id_array(&collection["orderedItems"])?;
-            replies.extend(items);
+            let items =
+                fetch_collection(&instance, collection_id, limit).await?;
+            for item in items {
+                let object_id = find_object_id(&item)?;
+                replies.push(object_id);
+            };
         },
         value => {
             // Embedded collection
