@@ -398,7 +398,7 @@ async fn featured_collection(
             &instance.url(),
             post,
             config.federation.fep_e232_enabled,
-            true,
+            false,
         );
         serde_json::to_value(note)
             .expect("note should be serializable")

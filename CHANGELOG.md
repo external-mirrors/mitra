@@ -17,6 +17,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Fixed
 
 - Always add `rel=noopener` to links.
+- Remove context from `Note` objects in featured collection.
 
 ## [2.2.0] - 2023-10-22
 
