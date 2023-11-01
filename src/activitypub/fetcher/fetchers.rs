@@ -1,5 +1,6 @@
 use std::path::Path;
 
+use bytes::Bytes;
 use reqwest::{Client, Method, RequestBuilder, StatusCode};
 use serde::{de::DeserializeOwned, Deserialize};
 use serde_json::{Value as JsonValue};
@@ -102,7 +103,7 @@ fn fetcher_error_for_status(error: reqwest::Error) -> FetchError {
 async fn send_request(
     instance: &Instance,
     url: &str,
-) -> Result<String, FetchError> {
+) -> Result<Bytes, FetchError> {
     let client = build_client(instance, url)?;
     let mut request_builder = build_request(instance, client, Method::GET, url)
         .header(reqwest::header::ACCEPT, AP_MEDIA_TYPE);
@@ -131,7 +132,7 @@ async fn send_request(
         .send().await?
         .error_for_status()
         .map_err(fetcher_error_for_status)?
-        .text().await?;
+        .bytes().await?;
     Ok(data)
 }
 
@@ -140,7 +141,7 @@ pub async fn fetch_object<T: DeserializeOwned>(
     object_url: &str,
 ) -> Result<T, FetchError> {
     let object_json = send_request(instance, object_url).await?;
-    let object: T = serde_json::from_str(&object_json)?;
+    let object: T = serde_json::from_slice(&object_json)?;
     Ok(object)
 }
 
@@ -210,8 +211,9 @@ pub async fn perform_webfinger_query(
         .query(&[("resource", webfinger_account_uri)])
         .send().await?
         .error_for_status()?
-        .text().await?;
-    let jrd: JsonResourceDescriptor = serde_json::from_str(&webfinger_data)?;
+        .bytes().await?;
+    let jrd: JsonResourceDescriptor =
+        serde_json::from_slice(&webfinger_data)?;
     // Lemmy servers can have Group and Person actors with the same name
     // https://github.com/LemmyNet/lemmy/issues/2037
     let ap_type_property = format!("{}#type", AP_CONTEXT);
