@@ -1,12 +1,16 @@
 use std::cmp::max;
 use std::time::Duration;
 
-use reqwest::{Client, Proxy};
+use bytes::{BufMut, Bytes, BytesMut};
+use reqwest::{Client, Proxy, Response};
 
 use mitra_config::Instance;
 use mitra_utils::urls::get_hostname;
 
 const CONNECTION_TIMEOUT: u64 = 30;
+
+// See also: mitra_validators::posts::CONTENT_MAX_SIZE
+pub const RESPONSE_SIZE_LIMIT: usize = 1_000_000;
 
 pub enum Network {
     Default,
@@ -59,4 +63,20 @@ pub fn build_federation_client(
         .timeout(request_timeout)
         .connect_timeout(connect_timeout)
         .build()
+}
+
+// Workaround for https://github.com/seanmonstar/reqwest/issues/1234
+pub async fn limited_response(
+    mut response: Response,
+    limit: usize,
+) -> Result<Option<Bytes>, reqwest::Error> {
+    let mut bytes = BytesMut::new();
+    while let Some(chunk) = response.chunk().await? {
+        let len = bytes.len() + chunk.len();
+        if len > limit {
+            return Ok(None);
+        }
+        bytes.put(chunk);
+    };
+    Ok(Some(bytes.freeze()))
 }

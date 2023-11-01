@@ -26,6 +26,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Fix `list-users` command not displaying users who never logged in.
 - Return correct `authentication_methods` list after setting password with `/api/v1/settings/change_password`.
 
+### Security
+
+- Limit response size when making federation requests.
+
 ## [2.2.0] - 2023-10-22
 
 ### Added

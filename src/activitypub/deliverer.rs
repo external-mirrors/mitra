@@ -35,7 +35,12 @@ use mitra_utils::{
 
 use super::{
     constants::AP_MEDIA_TYPE,
-    http_client::{build_federation_client, get_network_type},
+    http_client::{
+        build_federation_client,
+        get_network_type,
+        limited_response,
+        RESPONSE_SIZE_LIMIT,
+    },
     identifiers::{local_actor_id, local_actor_key_id},
     queues::OutgoingActivityJobData,
 };
@@ -59,6 +64,9 @@ pub enum DelivererError {
 
     #[error("http error {0:?}")]
     HttpError(reqwest::StatusCode),
+
+    #[error("response size exceeds limit")]
+    ResponseTooLarge,
 }
 
 fn build_client(
@@ -107,7 +115,12 @@ async fn send_activity(
     } else {
         let response = request.send().await?;
         let response_status = response.status();
-        let response_text: String = response.text().await?
+        let response_data = limited_response(response, RESPONSE_SIZE_LIMIT)
+            .await?
+            .ok_or(DelivererError::ResponseTooLarge)?;
+        let response_text: String = String::from_utf8(response_data.to_vec())
+            // Replace non-UTF8 responses with empty string
+            .unwrap_or_default()
             .chars().filter(|chr| *chr != '\n' && *chr != '\r').take(75)
             .collect();
         log::info!(

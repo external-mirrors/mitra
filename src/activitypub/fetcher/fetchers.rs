@@ -19,7 +19,12 @@ use mitra_utils::{
 use crate::activitypub::{
     actors::types::Actor,
     constants::{AP_CONTEXT, AP_MEDIA_TYPE},
-    http_client::{build_federation_client, get_network_type},
+    http_client::{
+        build_federation_client,
+        get_network_type,
+        limited_response,
+        RESPONSE_SIZE_LIMIT,
+    },
     identifiers::{local_actor_key_id, local_instance_actor_id},
     vocabulary::GROUP,
 };
@@ -43,14 +48,14 @@ pub enum FetchError {
     #[error("resource not found: {0}")]
     NotFound(String),
 
+    #[error("response size exceeds limit")]
+    ResponseTooLarge,
+
     #[error("json parse error: {0}")]
     JsonParseError(#[from] serde_json::Error),
 
     #[error(transparent)]
     FileError(#[from] std::io::Error),
-
-    #[error("file size exceeds limit")]
-    FileTooLarge,
 
     #[error("unsupported media type: {0}")]
     UnsupportedMediaType(String),
@@ -128,11 +133,13 @@ async fn send_request(
             .header("Signature", headers.signature);
     };
 
-    let data = request_builder
+    let response = request_builder
         .send().await?
         .error_for_status()
-        .map_err(fetcher_error_for_status)?
-        .bytes().await?;
+        .map_err(fetcher_error_for_status)?;
+    let data = limited_response(response, RESPONSE_SIZE_LIMIT)
+        .await?
+        .ok_or(FetchError::ResponseTooLarge)?;
     Ok(data)
 }
 
@@ -161,20 +168,19 @@ pub async fn fetch_file(
     let response = request_builder.send().await?.error_for_status()?;
     if let Some(file_size) = response.content_length() {
         let file_size: usize = file_size.try_into()
-            .expect("value should be within bounds");
+            .map_err(|_| FetchError::ResponseTooLarge)?;
         if file_size > file_max_size {
-            return Err(FetchError::FileTooLarge);
+            return Err(FetchError::ResponseTooLarge);
         };
     };
     let maybe_content_type_header = response.headers()
         .get("content-type")
         .and_then(|value| value.to_str().ok())
         .map(|value| value.to_string());
-    let file_data = response.bytes().await?;
+    let file_data = limited_response(response, file_max_size)
+        .await?
+        .ok_or(FetchError::ResponseTooLarge)?;
     let file_size = file_data.len();
-    if file_size > file_max_size {
-        return Err(FetchError::FileTooLarge);
-    };
     let media_type = maybe_media_type
         .map(|media_type| media_type.to_string())
         .or(maybe_content_type_header)
@@ -207,11 +213,13 @@ pub async fn perform_webfinger_query(
     let client = build_client(instance, &webfinger_url)?;
     let request_builder =
         build_request(instance, client, Method::GET, &webfinger_url);
-    let webfinger_data = request_builder
+    let response = request_builder
         .query(&[("resource", webfinger_account_uri)])
         .send().await?
-        .error_for_status()?
-        .bytes().await?;
+        .error_for_status()?;
+    let webfinger_data = limited_response(response, RESPONSE_SIZE_LIMIT)
+        .await?
+        .ok_or(FetchError::ResponseTooLarge)?;
     let jrd: JsonResourceDescriptor =
         serde_json::from_slice(&webfinger_data)?;
     // Lemmy servers can have Group and Person actors with the same name
