@@ -16,6 +16,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Disable email autolinking in bio and key-value fields.
 - Don't convert fetched objects to strings before deserialization.
+- Make "role" argument optional for `create-user` command.
 
 ### Fixed
 

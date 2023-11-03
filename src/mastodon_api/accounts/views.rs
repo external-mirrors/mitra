@@ -16,7 +16,6 @@ use uuid::Uuid;
 use mitra_config::{
     AuthenticationMethod,
     Config,
-    DefaultRole,
     RegistrationType,
 };
 use mitra_models::{
@@ -49,7 +48,7 @@ use mitra_models::{
         get_user_by_did,
         is_valid_invite_code,
     },
-    users::types::{Role, UserCreateData},
+    users::types::UserCreateData,
 };
 use mitra_services::{
     ethereum::{
@@ -104,6 +103,7 @@ use crate::activitypub::{
         create_identity_proof_fep_c390,
     },
 };
+use crate::admin::roles::from_default_role;
 use crate::http::{
     get_request_base_url,
     FormOrJson,
@@ -244,10 +244,7 @@ pub async fn create_account(
 
     let AccountCreateData { username, invite_code, .. } =
         account_data.into_inner();
-    let role = match config.registration.default_role {
-        DefaultRole::NormalUser => Role::NormalUser,
-        DefaultRole::ReadOnlyUser => Role::ReadOnlyUser,
-    };
+    let role = from_default_role(&config.registration.default_role);
     let user_data = UserCreateData {
         username,
         password_hash: maybe_password_hash,

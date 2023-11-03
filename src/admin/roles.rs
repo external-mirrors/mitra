@@ -1,3 +1,4 @@
+use mitra_config::DefaultRole;
 use mitra_models::users::types::Role;
 use mitra_validators::errors::ValidationError;
 
@@ -19,5 +20,12 @@ pub fn role_to_str(role: &Role) -> &'static str {
         Role::NormalUser => "user",
         Role::Admin => "admin",
         Role::ReadOnlyUser => "read_only_user",
+    }
+}
+
+pub fn from_default_role(value: &DefaultRole) -> Role {
+    match value {
+        DefaultRole::NormalUser => Role::NormalUser,
+        DefaultRole::ReadOnlyUser => Role::ReadOnlyUser,
     }
 }

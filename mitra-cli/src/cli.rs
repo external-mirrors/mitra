@@ -13,6 +13,7 @@ use mitra::activitypub::{
     fetcher::helpers::{import_from_outbox, import_replies},
 };
 use mitra::admin::roles::{
+    from_default_role,
     role_from_str,
     role_to_str,
     ALLOWED_ROLES,
@@ -232,12 +233,13 @@ pub struct CreateUser {
     username: String,
     password: String,
     #[clap(value_parser = ALLOWED_ROLES)]
-    role: String,
+    role: Option<String>,
 }
 
 impl CreateUser {
     pub async fn execute(
         &self,
+        config: &Config,
         db_client: &mut impl DatabaseClient,
     ) -> Result<(), Error> {
         validate_local_username(&self.username)?;
@@ -245,7 +247,10 @@ impl CreateUser {
         let rsa_private_key = generate_rsa_key()?;
         let rsa_private_key_pem =
             rsa_private_key_to_pkcs8_pem(&rsa_private_key)?;
-        let role = role_from_str(&self.role)?;
+        let role = match &self.role {
+            Some(value) => role_from_str(value)?,
+            None => from_default_role(&config.registration.default_role),
+        };
         let user_data = UserCreateData {
             username: self.username.clone(),
             password_hash: Some(password_hash),
