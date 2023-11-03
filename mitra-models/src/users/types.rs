@@ -296,7 +296,7 @@ impl Default for UserCreateData {
 pub struct AdminUser {
     pub profile: DbActorProfile,
     pub role: Role,
-    pub last_login: DateTime<Utc>,
+    pub last_login: Option<DateTime<Utc>>,
 }
 
 impl TryFrom<&Row> for AdminUser {

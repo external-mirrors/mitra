@@ -282,7 +282,7 @@ impl ListUsers {
                 user.profile.username,
                 role_to_str(&user.role),
                 user.profile.created_at.to_string(),
-                user.last_login.to_string(),
+                user.last_login.map(|dt| dt.to_string()).unwrap_or_default(),
             );
         };
         Ok(())
