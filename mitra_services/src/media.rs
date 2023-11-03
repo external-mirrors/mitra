@@ -5,7 +5,10 @@ use std::path::{Path, PathBuf};
 use sha2::{Digest, Sha256};
 
 use mitra_config::Config;
-use mitra_utils::files::{get_media_type_extension, write_file};
+use mitra_utils::{
+    files::{get_media_type_extension, write_file},
+    sysinfo::get_available_disk_space,
+};
 
 const MEDIA_DIR: &str = "media";
 pub const MEDIA_ROOT_URL: &str = "/media";
@@ -81,6 +84,13 @@ impl MediaStorage {
     pub fn init(&self) -> Result<(), MediaStorageError> {
         if !self.media_dir.exists() {
             std::fs::create_dir(&self.media_dir)?;
+        };
+        match get_available_disk_space(&self.media_dir) {
+            Ok(amount) => {
+                let amount_mb = amount / u64::pow(10, 6);
+                log::info!("available space: {amount_mb}MB");
+            },
+            Err(error) => log::error!("{error}"),
         };
         Ok(())
     }
