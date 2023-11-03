@@ -333,7 +333,7 @@ impl SetPassword {
             &self.id_or_name,
         ).await?;
         let password_hash = hash_password(&self.password)?;
-        set_user_password(db_client, &profile.id, password_hash).await?;
+        set_user_password(db_client, &profile.id, &password_hash).await?;
         // Revoke all sessions
         delete_oauth_tokens(db_client, &profile.id).await?;
         println!("password updated");

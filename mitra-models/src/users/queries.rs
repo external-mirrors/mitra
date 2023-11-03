@@ -167,7 +167,7 @@ pub async fn create_user(
 pub async fn set_user_password(
     db_client: &impl DatabaseClient,
     user_id: &Uuid,
-    password_hash: String,
+    password_hash: &str,
 ) -> Result<(), DatabaseError> {
     let updated_count = db_client.execute(
         "

@@ -94,10 +94,11 @@ async fn change_password_view(
     request_data: web::Json<PasswordChangeRequest>,
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &**get_database_client(&db_pool).await?;
-    let current_user = get_current_user(db_client, auth.token()).await?;
+    let mut current_user = get_current_user(db_client, auth.token()).await?;
     let password_hash = hash_password(&request_data.new_password)
         .map_err(|_| MastodonError::InternalError)?;
-    set_user_password(db_client, &current_user.id, password_hash).await?;
+    set_user_password(db_client, &current_user.id, &password_hash).await?;
+    current_user.password_hash = Some(password_hash);
     let account = Account::from_user(
         &get_request_base_url(connection_info),
         &config.instance_url(),

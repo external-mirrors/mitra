@@ -23,6 +23,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Always add `rel=noopener` to links.
 - Remove context from `Note` objects in featured collection.
 - Fix `list-users` command not displaying users who never logged in.
+- Return correct `authentication_methods` list after setting password with `/api/v1/settings/change_password`.
 
 ## [2.2.0] - 2023-10-22
 
