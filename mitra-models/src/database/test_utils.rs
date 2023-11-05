@@ -32,6 +32,7 @@ pub async fn create_test_database() -> Client {
     // Create new connection to database
     db_config.dbname(&db_name);
     let mut db_client = create_database_client(&db_config, None).await;
-    apply_migrations(&mut db_client).await;
+    apply_migrations(&mut db_client).await
+        .expect("failed to apply migrations");
     db_client
 }

@@ -26,7 +26,8 @@ async fn main() {
                 &db_config,
                 config.database_tls_ca_file.as_deref(),
             ).await;
-            apply_migrations(db_client).await;
+            apply_migrations(db_client).await
+                .expect("failed to apply migrations");
 
             match subcmd {
                 SubCommand::GenerateInviteCode(cmd) => cmd.execute(db_client).await.unwrap(),

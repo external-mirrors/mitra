@@ -62,7 +62,8 @@ async fn main() -> std::io::Result<()> {
         db_pool_size,
     );
     let mut db_client = get_database_client(&db_pool).await.unwrap();
-    apply_migrations(&mut db_client).await;
+    apply_migrations(&mut db_client).await
+        .expect("failed to apply migrations");
 
     if !config.media_dir().exists() {
         std::fs::create_dir(config.media_dir())

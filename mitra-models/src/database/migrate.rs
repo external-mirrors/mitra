@@ -1,3 +1,4 @@
+use refinery::Error;
 use tokio_postgres::Client;
 
 mod embedded {
@@ -5,10 +6,10 @@ mod embedded {
     embed_migrations!("migrations");
 }
 
-pub async fn apply_migrations(db_client: &mut Client) {
+pub async fn apply_migrations(db_client: &mut Client) -> Result<(), Error> {
     let migration_report = embedded::migrations::runner()
         .run_async(db_client)
-        .await.unwrap();
+        .await?;
 
     for migration in migration_report.applied_migrations() {
         log::info!(
@@ -16,5 +17,6 @@ pub async fn apply_migrations(db_client: &mut Client) {
             migration.version(),
             migration.name(),
         );
-    }
+    };
+    Ok(())
 }
