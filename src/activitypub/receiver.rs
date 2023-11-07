@@ -146,11 +146,15 @@ pub async fn handle_activity(
 
 fn is_hostname_allowed(
     blocklist: &[String],
+    allowlist: &[String],
     hostname: &str,
 ) -> bool {
     if blocklist.iter()
-        .any(|blocked| WildMatch::new(blocked).matches(hostname)) {
-        false
+        .any(|blocked| WildMatch::new(blocked).matches(hostname))
+    {
+        // Blocked, checking allowlist
+        allowlist.iter()
+            .any(|allowed| WildMatch::new(allowed).matches(hostname))
     } else {
         true
     }
@@ -169,7 +173,11 @@ pub async fn receive_activity(
 
     let actor_hostname = get_hostname(&activity_actor)
         .map_err(|_| ValidationError("invalid actor ID"))?;
-    if !is_hostname_allowed(&config.blocked_instances, &actor_hostname) {
+    if !is_hostname_allowed(
+        &config.blocked_instances,
+        &config.allowed_instances,
+        &actor_hostname,
+    ) {
         log::warn!("ignoring activity from blocked instance: {}", activity);
         return Ok(());
     };
@@ -235,6 +243,7 @@ pub async fn receive_activity(
 
     if !is_hostname_allowed(
         &config.blocked_instances,
+        &config.allowed_instances,
         signer.hostname.as_ref().expect("signer should be remote"),
     ) {
         log::warn!("ignoring activity from blocked instance: {}", activity);
@@ -290,18 +299,30 @@ mod tests {
     #[test]
     fn test_is_hostname_allowed() {
         let blocklist = vec!["bad.example".to_string()];
-        let result = is_hostname_allowed(&blocklist, "social.example");
+        let allowlist = vec![];
+        let result = is_hostname_allowed(&blocklist, &allowlist, "social.example");
         assert_eq!(result, true);
-        let result = is_hostname_allowed(&blocklist, "bad.example");
+        let result = is_hostname_allowed(&blocklist, &allowlist, "bad.example");
         assert_eq!(result, false);
     }
 
-     #[test]
+    #[test]
     fn test_is_hostname_allowed_wildcard() {
         let blocklist = vec!["*.eu".to_string()];
-        let result = is_hostname_allowed(&blocklist, "social.example");
+        let allowlist = vec![];
+        let result = is_hostname_allowed(&blocklist, &allowlist, "social.example");
         assert_eq!(result, true);
-        let result = is_hostname_allowed(&blocklist, "social.eu");
+        let result = is_hostname_allowed(&blocklist, &allowlist, "social.eu");
+        assert_eq!(result, false);
+    }
+
+    #[test]
+    fn test_is_hostname_allowed_allowlist() {
+        let blocklist = vec!["*".to_string()];
+        let allowlist = vec!["social.example".to_string()];
+        let result = is_hostname_allowed(&blocklist, &allowlist, "social.example");
+        assert_eq!(result, true);
+        let result = is_hostname_allowed(&blocklist, &allowlist, "other.example");
         assert_eq!(result, false);
     }
 }

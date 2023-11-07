@@ -97,6 +97,8 @@ pub struct Config {
 
     #[serde(default)]
     pub blocked_instances: Vec<String>,
+    #[serde(default)]
+    pub allowed_instances: Vec<String>,
 
     // Blockchain integrations
     #[serde(rename = "blockchain")]
