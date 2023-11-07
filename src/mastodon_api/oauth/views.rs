@@ -124,8 +124,6 @@ async fn authorize_view(
     Ok(response)
 }
 
-const ACCESS_TOKEN_EXPIRES_IN: i64 = 86400 * 7;
-
 /// OAuth 2.0 Password Grant
 /// https://oauth.net/2/grant-types/password/
 #[post("/token")]
@@ -224,7 +222,8 @@ async fn token_view(
     };
     let access_token = generate_oauth_token();
     let created_at = Utc::now();
-    let expires_at = created_at + Duration::seconds(ACCESS_TOKEN_EXPIRES_IN);
+    let expires_at = created_at +
+        Duration::seconds(config.authentication_token_lifetime.into());
     save_oauth_token(
         db_client,
         &user.id,

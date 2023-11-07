@@ -12,6 +12,7 @@ use mitra_utils::{
 
 use super::authentication::{
     default_authentication_methods,
+    default_authentication_token_lifetime,
     default_login_message,
     AuthenticationMethod,
 };
@@ -77,6 +78,9 @@ pub struct Config {
 
     #[serde(default = "default_authentication_methods")]
     pub authentication_methods: Vec<AuthenticationMethod>,
+
+    #[serde(default = "default_authentication_token_lifetime")]
+    pub authentication_token_lifetime: u32,
 
     // EIP-4361 login message
     #[serde(default = "default_login_message")]
