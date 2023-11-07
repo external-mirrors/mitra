@@ -75,6 +75,7 @@ retention:
 #  #i2p_proxy_url: 'socks5h://127.0.0.1:4447'
 
 # List of blocked domains
+# Wildcard patterns are supported. Example: *.domain.example
 #blocked_instances: []
 
 # Blockchain integrations

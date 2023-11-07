@@ -1,5 +1,6 @@
 use actix_web::HttpRequest;
-use serde_json::Value;
+use serde_json::{Value as JsonValue};
+use wildmatch::WildMatch;
 
 use mitra_config::Config;
 use mitra_models::database::{DatabaseClient, DatabaseError};
@@ -78,7 +79,7 @@ impl From<HandlerError> for HttpError {
 pub async fn handle_activity(
     config: &Config,
     db_client: &mut impl DatabaseClient,
-    activity: &Value,
+    activity: &JsonValue,
     is_authenticated: bool,
 ) -> Result<(), HandlerError> {
     let activity_type = activity["type"].as_str()
@@ -143,11 +144,23 @@ pub async fn handle_activity(
     Ok(())
 }
 
+fn is_hostname_allowed(
+    blocklist: &[String],
+    hostname: &str,
+) -> bool {
+    if blocklist.iter()
+        .any(|blocked| WildMatch::new(blocked).matches(hostname)) {
+        false
+    } else {
+        true
+    }
+}
+
 pub async fn receive_activity(
     config: &Config,
     db_client: &mut impl DatabaseClient,
     request: &HttpRequest,
-    activity: &Value,
+    activity: &JsonValue,
 ) -> Result<(), HandlerError> {
     let activity_type = activity["type"].as_str()
         .ok_or(ValidationError("type property is missing"))?;
@@ -156,9 +169,7 @@ pub async fn receive_activity(
 
     let actor_hostname = get_hostname(&activity_actor)
         .map_err(|_| ValidationError("invalid actor ID"))?;
-    if config.blocked_instances.iter()
-        .any(|instance_hostname| &actor_hostname == instance_hostname)
-    {
+    if !is_hostname_allowed(&config.blocked_instances, &actor_hostname) {
         log::warn!("ignoring activity from blocked instance: {}", activity);
         return Ok(());
     };
@@ -222,9 +233,10 @@ pub async fn receive_activity(
         },
     };
 
-    if config.blocked_instances.iter()
-        .any(|instance| signer.hostname.as_ref() == Some(instance))
-    {
+    if !is_hostname_allowed(
+        &config.blocked_instances,
+        signer.hostname.as_ref().expect("signer should be remote"),
+    ) {
         log::warn!("ignoring activity from blocked instance: {}", activity);
         return Ok(());
     };
@@ -269,4 +281,27 @@ pub async fn receive_activity(
         activity,
         is_authenticated,
     ).await
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_is_hostname_allowed() {
+        let blocklist = vec!["bad.example".to_string()];
+        let result = is_hostname_allowed(&blocklist, "social.example");
+        assert_eq!(result, true);
+        let result = is_hostname_allowed(&blocklist, "bad.example");
+        assert_eq!(result, false);
+    }
+
+     #[test]
+    fn test_is_hostname_allowed_wildcard() {
+        let blocklist = vec!["*.eu".to_string()];
+        let result = is_hostname_allowed(&blocklist, "social.example");
+        assert_eq!(result, true);
+        let result = is_hostname_allowed(&blocklist, "social.eu");
+        assert_eq!(result, false);
+    }
 }

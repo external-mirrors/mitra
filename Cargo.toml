@@ -71,6 +71,8 @@ tokio = { version = "1.28.2", features = ["macros"] }
 url = "2.2.2"
 # Used to work with UUIDs
 uuid = { version = "1.1.2", features = ["serde", "v4"] }
+# User for working with block/allow lists
+wildmatch = "2.1.1"
 
 mitra-config = { path = "mitra-config" }
 mitra-models = { path = "mitra-models" }
