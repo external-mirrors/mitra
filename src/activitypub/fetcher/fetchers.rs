@@ -205,7 +205,7 @@ pub async fn fetch_file(
         return Err(FetchError::UnsupportedMediaType(media_type));
     };
     let file_name = save_file(
-        file_data.to_vec(),
+        file_data.into(),
         output_dir,
         Some(&media_type),
     )?;
