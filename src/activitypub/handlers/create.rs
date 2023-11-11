@@ -187,12 +187,11 @@ pub async fn get_object_attachments(
             };
             let attachment_url = attachment.url
                 .ok_or(ValidationError("attachment URL is missing"))?;
-            let (file_name, file_size, media_type) = match fetch_file(
+            let (file_data, file_size, media_type) = match fetch_file(
                 instance,
                 &attachment_url,
                 attachment.media_type.as_deref(),
                 storage.file_size_limit,
-                &storage.media_dir,
             ).await {
                 Ok(file) => file,
                 Err(error) => {
@@ -205,6 +204,7 @@ pub async fn get_object_attachments(
                     continue;
                 },
             };
+            let file_name = storage.save_file(file_data, &media_type)?;
             log::info!("downloaded attachment {}", attachment_url);
             downloaded.push((file_name, file_size, media_type));
             // Stop downloading if limit is reached
@@ -302,12 +302,11 @@ pub async fn handle_emoji(
         Err(DatabaseError::NotFound("emoji")) => None,
         Err(other_error) => return Err(other_error.into()),
     };
-    let (file_name, file_size, media_type) = match fetch_file(
+    let (file_data, file_size, media_type) = match fetch_file(
         instance,
         &tag.icon.url,
         tag.icon.media_type.as_deref(),
         storage.emoji_size_limit,
-        &storage.media_dir,
     ).await {
         Ok(file) => file,
         Err(error) => {
@@ -322,6 +321,7 @@ pub async fn handle_emoji(
         );
         return Ok(None);
     };
+    let file_name = storage.save_file(file_data, &media_type)?;
     log::info!("downloaded emoji {}", tag.icon.url);
     let image = EmojiImage { file_name, file_size, media_type };
     let emoji = if let Some(emoji_id) = maybe_emoji_id {

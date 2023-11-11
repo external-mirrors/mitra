@@ -1,5 +1,3 @@
-use std::path::Path;
-
 use bytes::Bytes;
 use reqwest::{Client, Method, RequestBuilder, StatusCode};
 use serde::{de::DeserializeOwned, Deserialize};
@@ -28,7 +26,7 @@ use crate::activitypub::{
     identifiers::{local_actor_key_id, local_instance_actor_id},
     vocabulary::GROUP,
 };
-use crate::media::{save_file, SUPPORTED_MEDIA_TYPES};
+use crate::media::SUPPORTED_MEDIA_TYPES;
 use crate::webfinger::types::{ActorAddress, JsonResourceDescriptor};
 
 #[derive(thiserror::Error, Debug)]
@@ -53,9 +51,6 @@ pub enum FetchError {
 
     #[error("json parse error: {0}")]
     JsonParseError(#[from] serde_json::Error),
-
-    #[error(transparent)]
-    FileError(#[from] std::io::Error),
 
     #[error("unsupported media type: {0}")]
     UnsupportedMediaType(String),
@@ -172,8 +167,7 @@ pub async fn fetch_file(
     url: &str,
     expected_media_type: Option<&str>,
     file_max_size: usize,
-    output_dir: &Path,
-) -> Result<(String, usize, String), FetchError> {
+) -> Result<(Vec<u8>, usize, String), FetchError> {
     if !is_safe_url(url) {
         return Err(FetchError::UnsafeUrl);
     };
@@ -204,12 +198,7 @@ pub async fn fetch_file(
     if !SUPPORTED_MEDIA_TYPES.contains(&media_type.as_str()) {
         return Err(FetchError::UnsupportedMediaType(media_type));
     };
-    let file_name = save_file(
-        file_data.into(),
-        output_dir,
-        Some(&media_type),
-    )?;
-    Ok((file_name, file_size, media_type))
+    Ok((file_data.into(), file_size, media_type))
 }
 
 pub async fn perform_webfinger_query(

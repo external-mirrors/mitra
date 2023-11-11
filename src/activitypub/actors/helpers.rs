@@ -1,5 +1,3 @@
-use std::path::Path;
-
 use uuid::Uuid;
 
 use mitra_config::Instance;
@@ -45,7 +43,7 @@ use crate::activitypub::{
         VERIFIABLE_IDENTITY_STATEMENT,
     },
 };
-use crate::media::MediaStorage;
+use crate::media::{MediaStorage, MediaStorageError};
 
 use super::attachments::{
     parse_identity_proof,
@@ -59,19 +57,19 @@ use super::attachments::{
 async fn fetch_actor_images(
     instance: &Instance,
     actor: &Actor,
-    media_dir: &Path,
+    storage: &MediaStorage,
     default_avatar: Option<ProfileImage>,
     default_banner: Option<ProfileImage>,
-) -> (Option<ProfileImage>, Option<ProfileImage>) {
+) -> Result<(Option<ProfileImage>, Option<ProfileImage>), MediaStorageError>  {
     let maybe_avatar = if let Some(icon) = &actor.icon {
         match fetch_file(
             instance,
             &icon.url,
             icon.media_type.as_deref(),
             PROFILE_IMAGE_SIZE_MAX,
-            media_dir,
         ).await {
-            Ok((file_name, file_size, media_type)) => {
+            Ok((file_data, file_size, media_type)) => {
+                let file_name = storage.save_file(file_data, &media_type)?;
                 let image = ProfileImage::new(
                     file_name,
                     file_size,
@@ -93,9 +91,9 @@ async fn fetch_actor_images(
             &image.url,
             image.media_type.as_deref(),
             PROFILE_IMAGE_SIZE_MAX,
-            media_dir,
         ).await {
-            Ok((file_name, file_size, media_type)) => {
+            Ok((file_data, file_size, media_type)) => {
+                let file_name = storage.save_file(file_data, &media_type)?;
                 let image = ProfileImage::new(
                     file_name,
                     file_size,
@@ -111,7 +109,7 @@ async fn fetch_actor_images(
     } else {
         None
     };
-    (maybe_avatar, maybe_banner)
+    Ok((maybe_avatar, maybe_banner))
 }
 
 fn parse_public_keys(
@@ -329,10 +327,10 @@ pub async fn create_remote_profile(
     let (maybe_avatar, maybe_banner) = fetch_actor_images(
         instance,
         &actor,
-        &storage.media_dir,
+        storage,
         None,
         None,
-    ).await;
+    ).await?;
     let public_keys = parse_public_keys(&actor)?;
     let (identity_proofs, mut payment_options, proposals, extra_fields) =
         parse_attachments(&actor);
@@ -395,10 +393,10 @@ pub async fn update_remote_profile(
     let (maybe_avatar, maybe_banner) = fetch_actor_images(
         instance,
         &actor,
-        &storage.media_dir,
+        storage,
         profile.avatar,
         profile.banner,
-    ).await;
+    ).await?;
     let public_keys = parse_public_keys(&actor)?;
     let (identity_proofs, mut payment_options, proposals, extra_fields) =
         parse_attachments(&actor);

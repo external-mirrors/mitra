@@ -104,6 +104,23 @@ pub struct MediaStorage {
     pub emoji_size_limit: usize,
 }
 
+pub type MediaStorageError = Error;
+
+impl MediaStorage {
+    pub fn save_file(
+        &self,
+        file_data: Vec<u8>,
+        media_type: &str,
+    ) -> Result<String, MediaStorageError> {
+        let file_name = save_file(
+            file_data,
+            &self.media_dir,
+            Some(media_type),
+        )?;
+        Ok(file_name)
+    }
+}
+
 impl From<&Config> for MediaStorage {
     fn from(config: &Config) -> Self {
         Self {

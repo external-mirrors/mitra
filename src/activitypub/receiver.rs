@@ -8,6 +8,7 @@ use mitra_utils::urls::get_hostname;
 use mitra_validators::errors::ValidationError;
 
 use crate::errors::HttpError;
+use crate::media::MediaStorageError;
 
 use super::authentication::{
     verify_signed_activity,
@@ -55,6 +56,9 @@ pub enum HandlerError {
     #[error(transparent)]
     DatabaseError(#[from] DatabaseError),
 
+    #[error("media storage error")]
+    StorageError(#[from] MediaStorageError),
+
     #[error(transparent)]
     AuthError(#[from] AuthenticationError),
 }
@@ -69,6 +73,7 @@ impl From<HandlerError> for HttpError {
             },
             HandlerError::ValidationError(error) => error.into(),
             HandlerError::DatabaseError(error) => error.into(),
+            HandlerError::StorageError(_) => HttpError::InternalError,
             HandlerError::AuthError(_) => {
                 HttpError::AuthError("invalid signature")
             },
