@@ -152,6 +152,21 @@ pub async fn fetch_object<T: DeserializeOwned>(
     Ok(object)
 }
 
+fn get_media_type(
+    file_data: &[u8],
+    maybe_media_type: Option<&str>,
+    default_media_type: Option<&str>,
+) -> String {
+    maybe_media_type
+        .or(default_media_type)
+        .map(|media_type| media_type.to_string())
+        // Ignore if reported media type is application/octet-stream
+        .filter(|media_type| media_type != "application/octet-stream")
+        // Sniff media type if not provided
+        .or(sniff_media_type(file_data))
+        .unwrap_or("application/octet-stream".to_string())
+}
+
 pub async fn fetch_file(
     instance: &Instance,
     url: &str,
@@ -181,13 +196,11 @@ pub async fn fetch_file(
         .await?
         .ok_or(FetchError::ResponseTooLarge)?;
     let file_size = file_data.len();
-    let media_type = maybe_content_type_header
-        .or(expected_media_type.map(|media_type| media_type.to_string()))
-        // Ignore if reported media type is application/octet-stream
-        .filter(|media_type| media_type != "application/octet-stream")
-        // Sniff media type if not provided
-        .or(sniff_media_type(&file_data))
-        .unwrap_or("application/octet-stream".to_string());
+    let media_type = get_media_type(
+        &file_data,
+        maybe_content_type_header.as_deref(),
+        expected_media_type,
+    );
     if !SUPPORTED_MEDIA_TYPES.contains(&media_type.as_str()) {
         return Err(FetchError::UnsupportedMediaType(media_type));
     };
