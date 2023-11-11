@@ -66,7 +66,7 @@ use crate::activitypub::{
     types::{Attachment, EmojiTag, LinkTag, Object, Tag},
     vocabulary::*,
 };
-use crate::media::MediaStorage;
+use crate::media::{MediaStorage, SUPPORTED_MEDIA_TYPES};
 use crate::webfinger::types::ActorAddress;
 
 use super::HandlerResult;
@@ -191,6 +191,7 @@ pub async fn get_object_attachments(
                 instance,
                 &attachment_url,
                 attachment.media_type.as_deref(),
+                &SUPPORTED_MEDIA_TYPES,
                 storage.file_size_limit,
             ).await {
                 Ok(file) => file,
@@ -306,6 +307,7 @@ pub async fn handle_emoji(
         instance,
         &tag.icon.url,
         tag.icon.media_type.as_deref(),
+        &EMOJI_MEDIA_TYPES,
         storage.emoji_size_limit,
     ).await {
         Ok(file) => file,
@@ -313,13 +315,6 @@ pub async fn handle_emoji(
             log::warn!("failed to fetch emoji: {}", error);
             return Ok(None);
         },
-    };
-    if !EMOJI_MEDIA_TYPES.contains(&media_type.as_str()) {
-        log::warn!(
-            "unexpected emoji media type: {}",
-            media_type,
-        );
-        return Ok(None);
     };
     let file_name = storage.save_file(file_data, &media_type)?;
     log::info!("downloaded emoji {}", tag.icon.url);

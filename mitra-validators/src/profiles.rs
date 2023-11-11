@@ -91,6 +91,16 @@ fn clean_extra_fields(
     Ok(cleaned_extra_fields)
 }
 
+pub fn allowed_profile_image_media_types(
+    allowed_types: &[impl AsRef<str>],
+) -> Vec<&str> {
+    allowed_types
+        .iter()
+        .map(|media_type| media_type.as_ref())
+        .filter(|media_type| media_type.starts_with("image/"))
+        .collect()
+}
+
 pub fn clean_profile_create_data(
     profile_data: &mut ProfileCreateData,
 ) -> Result<(), ValidationError> {

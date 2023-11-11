@@ -26,7 +26,6 @@ use crate::activitypub::{
     identifiers::{local_actor_key_id, local_instance_actor_id},
     vocabulary::GROUP,
 };
-use crate::media::SUPPORTED_MEDIA_TYPES;
 use crate::webfinger::types::{ActorAddress, JsonResourceDescriptor};
 
 #[derive(thiserror::Error, Debug)]
@@ -166,6 +165,7 @@ pub async fn fetch_file(
     instance: &Instance,
     url: &str,
     expected_media_type: Option<&str>,
+    allowed_media_types: &[&str],
     file_max_size: usize,
 ) -> Result<(Vec<u8>, usize, String), FetchError> {
     if !is_safe_url(url) {
@@ -195,7 +195,7 @@ pub async fn fetch_file(
         maybe_content_type_header.as_deref(),
         expected_media_type,
     );
-    if !SUPPORTED_MEDIA_TYPES.contains(&media_type.as_str()) {
+    if !allowed_media_types.contains(&media_type.as_str()) {
         return Err(FetchError::UnsupportedMediaType(media_type));
     };
     Ok((file_data.into(), file_size, media_type))

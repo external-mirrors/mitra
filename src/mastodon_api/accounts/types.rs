@@ -26,7 +26,7 @@ use mitra_utils::{
 };
 use mitra_validators::{
     errors::ValidationError,
-    profiles::PROFILE_IMAGE_SIZE_MAX,
+    profiles::{allowed_profile_image_media_types, PROFILE_IMAGE_SIZE_MAX},
 };
 
 use crate::activitypub::identifiers::profile_actor_url;
@@ -36,7 +36,7 @@ use crate::mastodon_api::{
     pagination::PageSize,
     uploads::{save_b64_file, UploadError},
 };
-use crate::media::{get_file_url, MediaStorage};
+use crate::media::{get_file_url, MediaStorage, SUPPORTED_MEDIA_TYPES};
 
 pub const AUTHENTICATION_METHOD_PASSWORD: &str = "password";
 pub const AUTHENTICATION_METHOD_EIP4361: &str = "eip4361";
@@ -343,7 +343,7 @@ fn process_b64_image_field_value(
                     &media_type,
                     storage,
                     PROFILE_IMAGE_SIZE_MAX,
-                    Some("image/"),
+                    &allowed_profile_image_media_types(&SUPPORTED_MEDIA_TYPES),
                 )?;
                 let image = ProfileImage::new(
                     file_name,
