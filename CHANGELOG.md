@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Changed
 
 - Allow to use wildcard pattern in `blocked_instances` list.
+- Prefer value of Content-Type header when determining media type of a fetched file.
 
 ## [2.3.0] - 2023-11-07
 

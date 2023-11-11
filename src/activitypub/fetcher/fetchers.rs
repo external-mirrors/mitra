@@ -155,7 +155,7 @@ pub async fn fetch_object<T: DeserializeOwned>(
 pub async fn fetch_file(
     instance: &Instance,
     url: &str,
-    maybe_media_type: Option<&str>,
+    expected_media_type: Option<&str>,
     file_max_size: usize,
     output_dir: &Path,
 ) -> Result<(String, usize, String), FetchError> {
@@ -181,9 +181,8 @@ pub async fn fetch_file(
         .await?
         .ok_or(FetchError::ResponseTooLarge)?;
     let file_size = file_data.len();
-    let media_type = maybe_media_type
-        .map(|media_type| media_type.to_string())
-        .or(maybe_content_type_header)
+    let media_type = maybe_content_type_header
+        .or(expected_media_type.map(|media_type| media_type.to_string()))
         // Ignore if reported media type is application/octet-stream
         .filter(|media_type| media_type != "application/octet-stream")
         // Sniff media type if not provided
