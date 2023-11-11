@@ -13,6 +13,8 @@ use crate::mastodon_api::{
     oauth::auth::get_current_user,
     uploads::save_b64_file,
 };
+use crate::media::MediaStorage;
+
 use super::types::{AttachmentCreateData, Attachment};
 
 #[post("")]
@@ -24,11 +26,12 @@ async fn create_attachment_view(
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &**get_database_client(&db_pool).await?;
     let current_user = get_current_user(db_client, auth.token()).await?;
+    let media_storage = MediaStorage::from(config.as_ref());
     let (file_name, file_size, media_type) = save_b64_file(
         &attachment_data.file,
         &attachment_data.media_type,
-        &config.media_dir(),
-        config.limits.media.file_size_limit,
+        &media_storage,
+        media_storage.file_size_limit,
         None,
     )?;
     let db_attachment = create_attachment(

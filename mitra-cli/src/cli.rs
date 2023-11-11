@@ -21,7 +21,6 @@ use mitra::admin::roles::{
 use mitra::media::{
     remove_files,
     remove_media,
-    save_file,
     MediaStorage,
 };
 use mitra::payments::monero::{get_payment_address, reopen_invoice};
@@ -710,11 +709,8 @@ impl AddEmoji {
             println!("emoji is too big");
             return Ok(());
         };
-        let file_name = save_file(
-            file,
-            &config.media_dir(),
-            Some(&media_type),
-        )?;
+        let file_name = MediaStorage::from(config)
+            .save_file(file, &media_type)?;
         let image = EmojiImage { file_name, file_size, media_type };
         create_or_update_local_emoji(
             db_client,

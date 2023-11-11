@@ -117,6 +117,7 @@ use crate::mastodon_api::{
     search::helpers::search_profiles_only,
     statuses::helpers::get_paginated_status_list,
 };
+use crate::media::MediaStorage;
 
 use super::helpers::{
     get_aliases,
@@ -296,10 +297,11 @@ async fn update_credentials(
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &mut **get_database_client(&db_pool).await?;
     let mut current_user = get_current_user(db_client, auth.token()).await?;
+    let media_storage = MediaStorage::from(config.as_ref());
     let mut profile_data = account_data.into_inner()
         .into_profile_data(
             &current_user.profile,
-            &config.media_dir(),
+            &media_storage,
         )?;
     clean_profile_update_data(&mut profile_data)?;
     current_user.profile = update_profile(

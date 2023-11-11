@@ -1,5 +1,3 @@
-use std::path::Path;
-
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value as JsonValue};
@@ -38,7 +36,7 @@ use crate::mastodon_api::{
     pagination::PageSize,
     uploads::{save_b64_file, UploadError},
 };
-use crate::media::get_file_url;
+use crate::media::{get_file_url, MediaStorage};
 
 pub const AUTHENTICATION_METHOD_PASSWORD: &str = "password";
 pub const AUTHENTICATION_METHOD_EIP4361: &str = "eip4361";
@@ -329,7 +327,7 @@ fn process_b64_image_field_value(
     form_value: Option<String>,
     form_media_type: Option<String>,
     db_value: Option<ProfileImage>,
-    output_dir: &Path,
+    storage: &MediaStorage,
 ) -> Result<Option<ProfileImage>, UploadError> {
     let maybe_file_name = match form_value {
         Some(b64_data) => {
@@ -343,7 +341,7 @@ fn process_b64_image_field_value(
                 let (file_name, file_size, media_type) = save_b64_file(
                     &b64_data,
                     &media_type,
-                    output_dir,
+                    storage,
                     PROFILE_IMAGE_SIZE_MAX,
                     Some("image/"),
                 )?;
@@ -365,7 +363,7 @@ impl AccountUpdateData {
     pub fn into_profile_data(
         self,
         profile: &DbActorProfile,
-        media_dir: &Path,
+        storage: &MediaStorage,
     ) -> Result<ProfileUpdateData, MastodonError> {
         assert!(profile.is_local());
         let mut profile_data = ProfileUpdateData::from(profile);
@@ -383,13 +381,13 @@ impl AccountUpdateData {
             self.avatar,
             self.avatar_media_type,
             profile.avatar.clone(),
-            media_dir,
+            storage,
         )?;
         profile_data.banner = process_b64_image_field_value(
             self.header,
             self.header_media_type,
             profile.banner.clone(),
-            media_dir,
+            storage,
         )?;
         profile_data.manually_approves_followers = self.locked;
 

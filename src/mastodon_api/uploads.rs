@@ -1,15 +1,17 @@
-use std::path::Path;
-
 use mitra_utils::base64;
 
-use crate::media::{save_file, SUPPORTED_MEDIA_TYPES};
+use crate::media::{
+    MediaStorage,
+    MediaStorageError,
+    SUPPORTED_MEDIA_TYPES,
+};
 
 use super::errors::MastodonError;
 
 #[derive(thiserror::Error, Debug)]
 pub enum UploadError {
     #[error(transparent)]
-    WriteError(#[from] std::io::Error),
+    WriteError(#[from] MediaStorageError),
 
     #[error("base64 decoding error")]
     Base64DecodingError(#[from] base64::DecodeError),
@@ -38,7 +40,7 @@ impl From<UploadError> for MastodonError {
 pub fn save_b64_file(
     b64data: &str,
     media_type: &str,
-    output_dir: &Path,
+    storage: &MediaStorage,
     file_size_limit: usize,
     maybe_expected_prefix: Option<&str>,
 ) -> Result<(String, usize, String), UploadError> {
@@ -56,10 +58,6 @@ pub fn save_b64_file(
             return Err(UploadError::InvalidMediaType(media_type));
         };
     };
-    let file_name = save_file(
-        file_data,
-        output_dir,
-        Some(&media_type),
-    )?;
+    let file_name = storage.save_file(file_data, &media_type)?;
     Ok((file_name, file_size, media_type))
 }

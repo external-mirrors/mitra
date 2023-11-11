@@ -40,7 +40,7 @@ fn get_file_name(data: &[u8], media_type: Option<&str>) -> String {
 }
 
 /// Save validated file to specified directory
-pub fn save_file(
+fn save_file(
     data: Vec<u8>,
     output_dir: &Path,
     media_type: Option<&str>,
