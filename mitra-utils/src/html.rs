@@ -4,6 +4,7 @@ use std::iter::FromIterator;
 use ammonia::{
     rcdom::{Handle, NodeData, SerializableHandle},
     Builder,
+    UrlRelative,
 };
 use html5ever::serialize::{serialize, SerializeOpts};
 
@@ -28,6 +29,7 @@ pub fn clean_html(
         .add_url_schemes(&EXTRA_URI_SCHEMES)
         // Always add rel="noopener"
         .link_rel(Some("noopener"))
+        .url_relative(UrlRelative::Deny)
         .clean(unsafe_html)
         .to_string();
     safe_html
@@ -82,6 +84,7 @@ pub fn clean_html_strict(
         .add_url_schemes(&EXTRA_URI_SCHEMES)
         // Disable rel-insertion, allow rel attribute on <a>
         .link_rel(None)
+        .url_relative(UrlRelative::Deny)
         .add_tag_attributes("a", &["rel"])
         .attribute_filter(|element, attribute, value| {
             match (element, attribute) {
@@ -145,6 +148,17 @@ mod tests {
     fn test_clean_html_noopener() {
         let unsafe_html = r#"<a href="https://external.example">link</a>"#;
         let expected_safe_html = r#"<a href="https://external.example" rel="noopener">link</a>"#;
+        let safe_html = clean_html(
+            unsafe_html,
+            allowed_classes(),
+        );
+        assert_eq!(safe_html, expected_safe_html);
+    }
+
+    #[test]
+    fn test_clean_html_relative() {
+        let unsafe_html = r#"<a href="/path">link</a>"#;
+        let expected_safe_html = r#"<a rel="noopener">link</a>"#;
         let safe_html = clean_html(
             unsafe_html,
             allowed_classes(),

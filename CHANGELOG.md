@@ -17,6 +17,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Prefer value of Content-Type header when determining media type of a fetched file.
 - Don't accept remote profile images with media type prefix other than `image/`.
 - Ignore `Announce(Block)` activities from Lemmy.
+- Disallow relative links in posts.
 
 ## [2.3.0] - 2023-11-07
 
