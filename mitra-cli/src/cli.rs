@@ -599,7 +599,8 @@ impl DeleteOrphanedFiles {
         println!("found {} files", files.len());
         let orphaned = find_orphaned_files(db_client, files).await?;
         if !orphaned.is_empty() {
-            remove_files(orphaned, &media_dir);
+            let storage = MediaStorage::from(config);
+            remove_files(&storage, orphaned);
             println!("orphaned files deleted");
         };
         Ok(())

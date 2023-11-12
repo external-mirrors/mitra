@@ -55,23 +55,15 @@ pub fn get_file_url(instance_url: &str, file_name: &str) -> String {
     format!("{}/media/{}", instance_url, file_name)
 }
 
-pub fn read_file(
-    media_dir: &Path,
-    file_name: &str,
-) -> Result<Vec<u8>, Error> {
-    let file_path = media_dir.join(file_name);
-    let data = std::fs::read(file_path)?;
-    Ok(data)
-}
-
-pub fn remove_files(files: Vec<String>, from_dir: &Path) -> () {
+pub fn remove_files(
+    storage: &MediaStorage,
+    files: Vec<String>,
+) -> () {
     for file_name in files {
-        let file_path = from_dir.join(file_name);
-        let file_path_str = file_path.to_string_lossy();
-        match remove_file(&file_path) {
-            Ok(_) => log::info!("removed file {}", file_path_str),
+        match storage.delete_file(&file_name) {
+            Ok(_) => log::info!("removed file {}", file_name),
             Err(err) => {
-                log::warn!("failed to remove file {} ({})", file_path_str, err);
+                log::warn!("failed to remove file {} ({})", file_name, err);
             },
         };
     };
@@ -81,7 +73,10 @@ pub async fn remove_media(
     config: &Config,
     queue: DeletionQueue,
 ) -> () {
-    remove_files(queue.files, &config.media_dir());
+    if !queue.files.is_empty() {
+        let storage = MediaStorage::from(config);
+        remove_files(&storage, queue.files);
+    };
     if !queue.ipfs_objects.is_empty() {
         match &config.ipfs_api_url {
             Some(ipfs_api_url) => {
@@ -126,6 +121,23 @@ impl MediaStorage {
             Some(media_type),
         )?;
         Ok(file_name)
+    }
+
+    pub fn read_file(
+        &self,
+        file_name: &str,
+    ) -> Result<Vec<u8>, MediaStorageError> {
+        let file_path = self.media_dir.join(file_name);
+        let data = std::fs::read(file_path)?;
+        Ok(data)
+    }
+
+    pub fn delete_file(
+        &self,
+        file_name: &str,
+    ) -> Result<(), MediaStorageError> {
+        let file_path = self.media_dir.join(file_name);
+        remove_file(file_path)
     }
 }
 
