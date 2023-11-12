@@ -137,10 +137,6 @@ impl Config {
         self.instance().url()
     }
 
-    pub fn media_dir(&self) -> PathBuf {
-        self.storage_dir.join("media")
-    }
-
     pub fn blockchains(&self) -> &[BlockchainConfig] {
         if let Some(ref _blockchain_config) = self._blockchain {
             panic!("'blockchain' setting is not supported anymore, use 'blockchains' instead");

@@ -9,6 +9,9 @@ use mitra_models::cleanup::DeletionQueue;
 use mitra_services::ipfs::{store as ipfs_store};
 use mitra_utils::files::{get_media_type_extension, write_file};
 
+const MEDIA_DIR: &str = "media";
+pub const MEDIA_ROOT_URL: &str = "/media";
+
 const SUPPORTED_MEDIA_TYPES: [&str; 14] = [
     "audio/mpeg",
     "audio/ogg",
@@ -52,7 +55,7 @@ fn save_file(
 }
 
 pub fn get_file_url(instance_url: &str, file_name: &str) -> String {
-    format!("{}/media/{}", instance_url, file_name)
+    format!("{}{}/{}", instance_url, MEDIA_ROOT_URL, file_name)
 }
 
 pub fn remove_files(
@@ -110,6 +113,13 @@ impl MediaStorage {
             .collect()
     }
 
+    pub fn init(&self) -> Result<(), MediaStorageError> {
+        if !self.media_dir.exists() {
+            std::fs::create_dir(&self.media_dir)?;
+        };
+        Ok(())
+    }
+
     pub fn save_file(
         &self,
         file_data: Vec<u8>,
@@ -144,7 +154,7 @@ impl MediaStorage {
 impl From<&Config> for MediaStorage {
     fn from(config: &Config) -> Self {
         Self {
-            media_dir: config.media_dir(),
+            media_dir: config.storage_dir.join(MEDIA_DIR),
             file_size_limit: config.limits.media.file_size_limit,
             emoji_size_limit: config.limits.media.emoji_size_limit,
             extra_supported_types: config.limits.media.extra_supported_types.clone(),
@@ -167,6 +177,17 @@ mod tests {
         assert_eq!(
             file_name,
             "4c4b6a3be1314ab86138bef4314dde022e600960d8689a2c8f8631802d20dab6.png",
+        );
+    }
+
+    #[test]
+    fn test_get_file_url() {
+        let instance_url = "https://social.example";
+        let file_name = "4c4b6a3be1314ab86138bef4314dde022e600960d8689a2c8f8631802d20dab6.png";
+        let url = get_file_url(instance_url, file_name);
+        assert_eq!(
+            url,
+            "https://social.example/media/4c4b6a3be1314ab86138bef4314dde022e600960d8689a2c8f8631802d20dab6.png",
         );
     }
 }

@@ -39,6 +39,7 @@ use mitra::mastodon_api::settings::views::settings_api_scope;
 use mitra::mastodon_api::statuses::views::status_api_scope;
 use mitra::mastodon_api::subscriptions::views::subscription_api_scope;
 use mitra::mastodon_api::timelines::views::timeline_api_scope;
+use mitra::media::{MediaStorage, MEDIA_ROOT_URL};
 use mitra::nodeinfo::views as nodeinfo;
 use mitra::webfinger::views as webfinger;
 use mitra::web_client::views as web_client;
@@ -65,10 +66,8 @@ async fn main() -> std::io::Result<()> {
     apply_migrations(&mut db_client).await
         .expect("failed to apply migrations");
 
-    if !config.media_dir().exists() {
-        std::fs::create_dir(config.media_dir())
-            .expect("failed to create media directory");
-    };
+    let media_storage = MediaStorage::from(&config);
+    media_storage.init().expect("failed to create media directory");
 
     let maybe_ethereum_blockchain = if let Some(ethereum_config) = config.ethereum_config() {
         // Create blockchain interface
@@ -163,8 +162,8 @@ async fn main() -> std::io::Result<()> {
             .app_data(web::Data::new(maybe_ethereum_contracts.clone()))
             .app_data(web::Data::clone(&inbox_mutex))
             .service(actix_files::Files::new(
-                "/media",
-                config.media_dir(),
+                MEDIA_ROOT_URL,
+                media_storage.media_dir.clone(),
             ))
             .service(oauth_api_scope())
             .service(account_api_scope(&acct_resolve_ratelimit_config))
