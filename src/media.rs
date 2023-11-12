@@ -5,8 +5,6 @@ use std::path::{Path, PathBuf};
 use sha2::{Digest, Sha256};
 
 use mitra_config::Config;
-use mitra_models::cleanup::DeletionQueue;
-use mitra_services::ipfs::{store as ipfs_store};
 use mitra_utils::files::{get_media_type_extension, write_file};
 
 const MEDIA_DIR: &str = "media";
@@ -56,44 +54,6 @@ fn save_file(
 
 pub fn get_file_url(instance_url: &str, file_name: &str) -> String {
     format!("{}{}/{}", instance_url, MEDIA_ROOT_URL, file_name)
-}
-
-pub fn remove_files(
-    storage: &MediaStorage,
-    files: Vec<String>,
-) -> () {
-    for file_name in files {
-        match storage.delete_file(&file_name) {
-            Ok(_) => log::info!("removed file {}", file_name),
-            Err(err) => {
-                log::warn!("failed to remove file {} ({})", file_name, err);
-            },
-        };
-    };
-}
-
-pub async fn remove_media(
-    config: &Config,
-    queue: DeletionQueue,
-) -> () {
-    if !queue.files.is_empty() {
-        let storage = MediaStorage::from(config);
-        remove_files(&storage, queue.files);
-    };
-    if !queue.ipfs_objects.is_empty() {
-        match &config.ipfs_api_url {
-            Some(ipfs_api_url) => {
-                ipfs_store::remove(ipfs_api_url, queue.ipfs_objects).await
-                    .unwrap_or_else(|err| log::error!("{}", err));
-            },
-            None => {
-                log::error!(
-                    "can not remove objects because IPFS API URL is not set: {:?}",
-                    queue.ipfs_objects,
-                );
-            },
-        }
-    }
 }
 
 pub struct MediaStorage {

@@ -66,12 +66,13 @@ use crate::activitypub::{
     },
     identifiers::local_object_id,
 };
+use crate::adapters::media::remove_media;
 use crate::http::{get_request_base_url, FormOrJson};
 use crate::mastodon_api::{
     errors::MastodonError,
     oauth::auth::get_current_user,
 };
-use crate::media::{remove_media, MediaStorage};
+use crate::media::MediaStorage;
 
 use super::helpers::{
     build_status,

@@ -21,7 +21,7 @@ use crate::activitypub::queues::{
     process_queued_incoming_activities,
     process_queued_outgoing_activities,
 };
-use crate::media::remove_media;
+use crate::adapters::media::remove_media;
 use crate::payments::{
     common::update_expired_subscriptions,
     ethereum::check_ethereum_subscriptions,

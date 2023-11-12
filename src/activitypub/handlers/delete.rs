@@ -19,7 +19,7 @@ use crate::activitypub::{
     deserialization::deserialize_into_object_id,
     vocabulary::{NOTE, PERSON},
 };
-use crate::media::remove_media;
+use crate::adapters::media::remove_media;
 
 use super::HandlerResult;
 

@@ -12,17 +12,14 @@ use mitra::activitypub::{
     fetcher::fetchers::fetch_actor,
     fetcher::helpers::{import_from_outbox, import_replies},
 };
+use mitra::adapters::media::{remove_files, remove_media};
 use mitra::admin::roles::{
     from_default_role,
     role_from_str,
     role_to_str,
     ALLOWED_ROLES,
 };
-use mitra::media::{
-    remove_files,
-    remove_media,
-    MediaStorage,
-};
+use mitra::media::MediaStorage;
 use mitra::payments::monero::{get_payment_address, reopen_invoice};
 use mitra_config::Config;
 use mitra_models::{
