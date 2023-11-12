@@ -25,8 +25,9 @@ use crate::media::MediaStorage;
 
 use super::HandlerResult;
 
-const FEP_1B12_ACTIVITIES: [&str; 9] = [
+const FEP_1B12_ACTIVITIES: [&str; 10] = [
     ADD,
+    BLOCK,
     CREATE,
     DELETE,
     DISLIKE,
