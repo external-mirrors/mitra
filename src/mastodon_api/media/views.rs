@@ -13,7 +13,7 @@ use crate::mastodon_api::{
     oauth::auth::get_current_user,
     uploads::save_b64_file,
 };
-use crate::media::{MediaStorage, SUPPORTED_MEDIA_TYPES};
+use crate::media::MediaStorage;
 
 use super::types::{AttachmentCreateData, Attachment};
 
@@ -32,7 +32,7 @@ async fn create_attachment_view(
         &attachment_data.media_type,
         &media_storage,
         media_storage.file_size_limit,
-        &SUPPORTED_MEDIA_TYPES,
+        &media_storage.supported_media_types(),
     )?;
     let db_attachment = create_attachment(
         db_client,

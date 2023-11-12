@@ -53,6 +53,10 @@ pub struct MediaLimits {
         deserialize_with = "deserialize_file_size",
     )]
     pub emoji_size_limit: usize,
+
+    // Add items to the list of supported media types
+    #[serde(default)]
+    pub extra_supported_types: Vec<String>,
 }
 
 impl Default for MediaLimits {
@@ -60,6 +64,7 @@ impl Default for MediaLimits {
         Self {
             file_size_limit: default_file_size_limit(),
             emoji_size_limit: default_emoji_size_limit(),
+            extra_supported_types: vec![],
         }
     }
 }

@@ -36,7 +36,7 @@ use crate::mastodon_api::{
     pagination::PageSize,
     uploads::{save_b64_file, UploadError},
 };
-use crate::media::{get_file_url, MediaStorage, SUPPORTED_MEDIA_TYPES};
+use crate::media::{get_file_url, MediaStorage};
 
 pub const AUTHENTICATION_METHOD_PASSWORD: &str = "password";
 pub const AUTHENTICATION_METHOD_EIP4361: &str = "eip4361";
@@ -343,7 +343,7 @@ fn process_b64_image_field_value(
                     &media_type,
                     storage,
                     PROFILE_IMAGE_SIZE_MAX,
-                    &allowed_profile_image_media_types(&SUPPORTED_MEDIA_TYPES),
+                    &allowed_profile_image_media_types(&storage.supported_media_types()),
                 )?;
                 let image = ProfileImage::new(
                     file_name,

@@ -44,11 +44,7 @@ use crate::activitypub::{
         VERIFIABLE_IDENTITY_STATEMENT,
     },
 };
-use crate::media::{
-    MediaStorage,
-    MediaStorageError,
-    SUPPORTED_MEDIA_TYPES,
-};
+use crate::media::{MediaStorage, MediaStorageError};
 
 use super::attachments::{
     parse_identity_proof,
@@ -71,7 +67,7 @@ async fn fetch_actor_images(
             instance,
             &icon.url,
             icon.media_type.as_deref(),
-            &allowed_profile_image_media_types(&SUPPORTED_MEDIA_TYPES),
+            &allowed_profile_image_media_types(&storage.supported_media_types()),
             PROFILE_IMAGE_SIZE_MAX,
         ).await {
             Ok((file_data, file_size, media_type)) => {
@@ -96,7 +92,7 @@ async fn fetch_actor_images(
             instance,
             &image.url,
             image.media_type.as_deref(),
-            &allowed_profile_image_media_types(&SUPPORTED_MEDIA_TYPES),
+            &allowed_profile_image_media_types(&storage.supported_media_types()),
             PROFILE_IMAGE_SIZE_MAX,
         ).await {
             Ok((file_data, file_size, media_type)) => {

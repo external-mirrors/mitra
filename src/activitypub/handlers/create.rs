@@ -66,7 +66,7 @@ use crate::activitypub::{
     types::{Attachment, EmojiTag, LinkTag, Object, Tag},
     vocabulary::*,
 };
-use crate::media::{MediaStorage, SUPPORTED_MEDIA_TYPES};
+use crate::media::MediaStorage;
 use crate::webfinger::types::ActorAddress;
 
 use super::HandlerResult;
@@ -191,7 +191,7 @@ pub async fn get_object_attachments(
                 instance,
                 &attachment_url,
                 attachment.media_type.as_deref(),
-                &SUPPORTED_MEDIA_TYPES,
+                &storage.supported_media_types(),
                 storage.file_size_limit,
             ).await {
                 Ok(file) => file,

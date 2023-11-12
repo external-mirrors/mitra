@@ -9,7 +9,7 @@ use mitra_models::cleanup::DeletionQueue;
 use mitra_services::ipfs::{store as ipfs_store};
 use mitra_utils::files::{get_media_type_extension, write_file};
 
-pub const SUPPORTED_MEDIA_TYPES: [&str; 14] = [
+const SUPPORTED_MEDIA_TYPES: [&str; 14] = [
     "audio/mpeg",
     "audio/ogg",
     "audio/x-wav",
@@ -102,11 +102,19 @@ pub struct MediaStorage {
     pub media_dir: PathBuf,
     pub file_size_limit: usize,
     pub emoji_size_limit: usize,
+    extra_supported_types: Vec<String>,
 }
 
 pub type MediaStorageError = Error;
 
 impl MediaStorage {
+    pub fn supported_media_types(&self) -> Vec<&str> {
+        SUPPORTED_MEDIA_TYPES.into_iter()
+            .chain(self.extra_supported_types.iter()
+                .map(|media_type| media_type.as_str()))
+            .collect()
+    }
+
     pub fn save_file(
         &self,
         file_data: Vec<u8>,
@@ -127,6 +135,7 @@ impl From<&Config> for MediaStorage {
             media_dir: config.media_dir(),
             file_size_limit: config.limits.media.file_size_limit,
             emoji_size_limit: config.limits.media.emoji_size_limit,
+            extra_supported_types: config.limits.media.extra_supported_types.clone(),
         }
     }
 }
