@@ -1987,6 +1987,7 @@ dependencies = [
  "mitra-services",
  "mitra-utils",
  "mitra-validators",
+ "serde_json",
  "tokio",
  "uuid",
 ]

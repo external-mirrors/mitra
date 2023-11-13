@@ -40,6 +40,7 @@ async fn main() {
                 SubCommand::RefetchActor(cmd) => cmd.execute(&config, db_client).await.unwrap(),
                 SubCommand::ReadOutbox(cmd) => cmd.execute(&config, db_client).await.unwrap(),
                 SubCommand::FetchReplies(cmd) => cmd.execute(&config, db_client).await.unwrap(),
+                SubCommand::FetchObjectAs(cmd) => cmd.execute(&config, db_client).await.unwrap(),
                 SubCommand::DeleteProfile(cmd) => cmd.execute(&config, db_client).await.unwrap(),
                 SubCommand::DeletePost(cmd) => cmd.execute(&config, db_client).await.unwrap(),
                 SubCommand::DeleteEmoji(cmd) => cmd.execute(&config, db_client).await.unwrap(),

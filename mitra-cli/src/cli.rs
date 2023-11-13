@@ -3,13 +3,14 @@ use std::str::FromStr;
 
 use anyhow::{anyhow, Error};
 use clap::Parser;
+use serde_json::{Value as JsonValue};
 use uuid::Uuid;
 
 use mitra::activitypub::{
     actors::helpers::update_remote_profile,
     builders::delete_note::prepare_delete_note,
     builders::delete_person::prepare_delete_person,
-    fetcher::fetchers::fetch_actor,
+    fetcher::fetchers::{fetch_actor, fetch_object, FederationAgent},
     fetcher::helpers::{import_from_outbox, import_replies},
 };
 use mitra::adapters::media::{remove_files, remove_media};
@@ -64,6 +65,7 @@ use mitra_models::{
         get_users_admin,
         get_user_count,
         get_user_by_id,
+        get_user_by_name,
         set_user_ed25519_private_key,
         set_user_password,
         set_user_role,
@@ -128,6 +130,7 @@ pub enum SubCommand {
     RefetchActor(RefetchActor),
     ReadOutbox(ReadOutbox),
     FetchReplies(FetchReplies),
+    FetchObjectAs(FetchObjectAs),
     DeleteProfile(DeleteProfile),
     DeletePost(DeletePost),
     DeleteEmoji(DeleteEmoji),
@@ -377,7 +380,8 @@ impl RefetchActor {
             db_client,
             &self.id,
         ).await?;
-        let actor = fetch_actor(&config.instance(), &self.id).await?;
+        let agent = FederationAgent::new(&config.instance());
+        let actor = fetch_actor(&agent, &self.id).await?;
         update_remote_profile(
             db_client,
             &config.instance(),
@@ -434,6 +438,27 @@ impl FetchReplies {
             &self.object_id,
             self.limit,
         ).await?;
+        Ok(())
+    }
+}
+
+/// Fetch object as a local user
+#[derive(Parser)]
+pub struct FetchObjectAs {
+    object_id: String,
+    username: String,
+}
+
+impl FetchObjectAs {
+    pub async fn execute(
+        &self,
+        config: &Config,
+        db_client: &impl DatabaseClient,
+    ) -> Result<(), Error> {
+        let user = get_user_by_name(db_client, &self.username).await?;
+        let agent = FederationAgent::as_user(&config.instance(), &user);
+        let object: JsonValue = fetch_object(&agent, &self.object_id).await?;
+        println!("{}", object);
         Ok(())
     }
 }

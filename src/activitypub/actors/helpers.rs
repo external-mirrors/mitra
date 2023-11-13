@@ -29,7 +29,7 @@ use mitra_validators::{
 use crate::activitypub::{
     actors::types::Actor,
     deserialization::parse_into_id_array,
-    fetcher::fetchers::{fetch_file, fetch_object},
+    fetcher::fetchers::{fetch_file, fetch_object, FederationAgent},
     handlers::create::handle_emoji,
     identifiers::validate_object_id,
     receiver::HandlerError,
@@ -62,9 +62,10 @@ async fn fetch_actor_images(
     default_avatar: Option<ProfileImage>,
     default_banner: Option<ProfileImage>,
 ) -> Result<(Option<ProfileImage>, Option<ProfileImage>), MediaStorageError>  {
+    let agent = FederationAgent::new(instance);
     let maybe_avatar = if let Some(icon) = &actor.icon {
         match fetch_file(
-            instance,
+            &agent,
             &icon.url,
             icon.media_type.as_deref(),
             &allowed_profile_image_media_types(&storage.supported_media_types()),
@@ -89,7 +90,7 @@ async fn fetch_actor_images(
     };
     let maybe_banner = if let Some(image) = &actor.image {
         match fetch_file(
-            instance,
+            &agent,
             &image.url,
             image.media_type.as_deref(),
             &allowed_profile_image_media_types(&storage.supported_media_types()),
@@ -236,9 +237,10 @@ async fn fetch_proposals(
     instance: &Instance,
     proposals: Vec<String>,
 ) -> Vec<PaymentOption> {
+    let agent = FederationAgent::new(instance);
     let mut payment_options = vec![];
     for proposal_id in proposals {
-        let proposal: Proposal = match fetch_object(instance, &proposal_id).await {
+        let proposal: Proposal = match fetch_object(&agent, &proposal_id).await {
             Ok(proposal) => proposal,
             Err(error) => {
                 log::warn!("invalid proposal: {}", error);

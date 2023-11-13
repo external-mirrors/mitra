@@ -4,7 +4,10 @@ use serde::{de::DeserializeOwned, Deserialize};
 use serde_json::{Value as JsonValue};
 
 use mitra_config::Instance;
-use mitra_models::profiles::types::PublicKeyType;
+use mitra_models::{
+    profiles::types::PublicKeyType,
+    users::types::User,
+};
 use mitra_utils::{
     crypto_rsa::RsaPrivateKey,
     files::sniff_media_type,
@@ -24,19 +27,23 @@ use crate::activitypub::{
         limited_response,
         RESPONSE_SIZE_LIMIT,
     },
-    identifiers::{local_actor_key_id, local_instance_actor_id},
+    identifiers::{
+        local_actor_id,
+        local_actor_key_id,
+        local_instance_actor_id,
+    },
     vocabulary::GROUP,
 };
 use crate::webfinger::types::{ActorAddress, JsonResourceDescriptor};
 
-struct FederationAgent {
+pub struct FederationAgent {
     instance: Instance,
     signer_key: RsaPrivateKey,
     signer_key_id: String,
 }
 
 impl FederationAgent {
-    fn new(instance: &Instance) -> Self {
+    pub fn new(instance: &Instance) -> Self {
         let instance_actor_id = local_instance_actor_id(&instance.url());
         let instance_actor_key_id = local_actor_key_id(
             &instance_actor_id,
@@ -46,6 +53,16 @@ impl FederationAgent {
             instance: instance.clone(),
             signer_key: instance.actor_key.clone(),
             signer_key_id: instance_actor_key_id,
+        }
+    }
+
+    pub fn as_user(instance: &Instance, user: &User) -> Self {
+        let actor_id = local_actor_id(&instance.url(), &user.profile.username);
+        let actor_key_id = local_actor_key_id(&actor_id, PublicKeyType::RsaPkcs1);
+        Self {
+            instance: instance.clone(),
+            signer_key: user.rsa_private_key.clone(),
+            signer_key_id: actor_key_id,
         }
     }
 }
@@ -156,11 +173,10 @@ async fn send_request(
 }
 
 pub async fn fetch_object<T: DeserializeOwned>(
-    instance: &Instance,
+    agent: &FederationAgent,
     object_url: &str,
 ) -> Result<T, FetchError> {
-    let agent = FederationAgent::new(instance);
-    let object_json = send_request(&agent, object_url).await?;
+    let object_json = send_request(agent, object_url).await?;
     let object: T = serde_json::from_slice(&object_json)?;
     Ok(object)
 }
@@ -181,7 +197,7 @@ fn get_media_type(
 }
 
 pub async fn fetch_file(
-    instance: &Instance,
+    agent: &FederationAgent,
     url: &str,
     expected_media_type: Option<&str>,
     allowed_media_types: &[&str],
@@ -190,9 +206,9 @@ pub async fn fetch_file(
     if !is_safe_url(url) {
         return Err(FetchError::UnsafeUrl);
     };
-    let http_client = build_fetcher_client(instance, url)?;
+    let http_client = build_fetcher_client(&agent.instance, url)?;
     let request_builder =
-        build_request(instance, http_client, Method::GET, url);
+        build_request(&agent.instance, http_client, Method::GET, url);
     let response = request_builder.send().await?.error_for_status()?;
     if let Some(file_size) = response.content_length() {
         let file_size: usize = file_size.try_into()
@@ -221,7 +237,7 @@ pub async fn fetch_file(
 }
 
 pub async fn perform_webfinger_query(
-    instance: &Instance,
+    agent: &FederationAgent,
     actor_address: &ActorAddress,
 ) -> Result<String, FetchError> {
     let webfinger_account_uri = format!("acct:{}", actor_address);
@@ -230,9 +246,9 @@ pub async fn perform_webfinger_query(
         guess_protocol(&actor_address.hostname),
         actor_address.hostname,
     );
-    let http_client = build_fetcher_client(instance, &webfinger_url)?;
+    let http_client = build_fetcher_client(&agent.instance, &webfinger_url)?;
     let request_builder =
-        build_request(instance, http_client, Method::GET, &webfinger_url);
+        build_request(&agent.instance, http_client, Method::GET, &webfinger_url);
     let response = request_builder
         .query(&[("resource", webfinger_account_uri)])
         .send().await?
@@ -268,10 +284,10 @@ pub async fn perform_webfinger_query(
 }
 
 pub async fn fetch_actor(
-    instance: &Instance,
+    agent: &FederationAgent,
     actor_url: &str,
 ) -> Result<Actor, FetchError> {
-    let actor: Actor = fetch_object(instance, actor_url).await?;
+    let actor: Actor = fetch_object(agent, actor_url).await?;
     if actor.id != actor_url {
         log::warn!("redirected from {} to {}", actor_url, actor.id);
     };
@@ -279,7 +295,7 @@ pub async fn fetch_actor(
 }
 
 pub async fn fetch_collection(
-    instance: &Instance,
+    agent: &FederationAgent,
     collection_url: &str,
     limit: usize,
 ) -> Result<Vec<JsonValue>, FetchError> {
@@ -299,12 +315,12 @@ pub async fn fetch_collection(
     }
 
     let collection: Collection =
-        fetch_object(instance, collection_url).await?;
+        fetch_object(agent, collection_url).await?;
     let mut items = collection.ordered_items;
     if let Some(first_page_value) = collection.first {
         let page: CollectionPage = match first_page_value {
             JsonValue::String(first_page_url) => {
-                fetch_object(instance, &first_page_url).await?
+                fetch_object(agent, &first_page_url).await?
             },
             _ => serde_json::from_value(first_page_value)?,
         };

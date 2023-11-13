@@ -54,7 +54,7 @@ use crate::activitypub::{
         parse_into_href_array,
         parse_into_id_array,
     },
-    fetcher::fetchers::fetch_file,
+    fetcher::fetchers::{fetch_file, FederationAgent},
     fetcher::helpers::{
         get_or_import_profile_by_actor_address,
         get_or_import_profile_by_actor_id,
@@ -154,6 +154,7 @@ pub async fn get_object_attachments(
     object: &Object,
     author: &DbActorProfile,
 ) -> Result<(Vec<Uuid>, Vec<String>), HandlerError> {
+    let agent = FederationAgent::new(instance);
     let mut attachments = vec![];
     let mut unprocessed = vec![];
     if let Some(ref value) = object.attachment {
@@ -188,7 +189,7 @@ pub async fn get_object_attachments(
             let attachment_url = attachment.url
                 .ok_or(ValidationError("attachment URL is missing"))?;
             let (file_data, file_size, media_type) = match fetch_file(
-                instance,
+                &agent,
                 &attachment_url,
                 attachment.media_type.as_deref(),
                 &storage.supported_media_types(),
@@ -273,6 +274,7 @@ pub async fn handle_emoji(
     storage: &MediaStorage,
     tag_value: JsonValue,
 ) -> Result<Option<DbEmoji>, HandlerError> {
+    let agent = FederationAgent::new(instance);
     let tag: EmojiTag = match serde_json::from_value(tag_value) {
         Ok(tag) => tag,
         Err(error) => {
@@ -304,7 +306,7 @@ pub async fn handle_emoji(
         Err(other_error) => return Err(other_error.into()),
     };
     let (file_data, file_size, media_type) = match fetch_file(
-        instance,
+        &agent,
         &tag.icon.url,
         tag.icon.media_type.as_deref(),
         &EMOJI_MEDIA_TYPES,

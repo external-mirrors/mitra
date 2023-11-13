@@ -33,6 +33,7 @@ use super::fetchers::{
     fetch_collection,
     fetch_object,
     perform_webfinger_query,
+    FederationAgent,
     FetchError,
 };
 
@@ -42,7 +43,8 @@ async fn import_profile(
     storage: &MediaStorage,
     actor_id: &str,
 ) -> Result<DbActorProfile, HandlerError> {
-    let actor = fetch_actor(instance, actor_id).await?;
+    let agent = FederationAgent::new(instance);
+    let actor = fetch_actor(&agent, actor_id).await?;
     let actor_address = actor.address()?;
     let acct = actor_address.acct(&instance.hostname());
     // 'acct' is the primary identifier
@@ -80,12 +82,13 @@ async fn refresh_remote_profile(
     storage: &MediaStorage,
     profile: DbActorProfile,
 ) -> Result<DbActorProfile, HandlerError> {
+    let agent = FederationAgent::new(instance);
     let actor_id = &profile.actor_json.as_ref()
         .expect("actor data should be present")
         .id;
     let profile = if profile.updated_at < Utc::now() - Duration::days(1) {
         // Try to re-fetch actor profile
-        match fetch_actor(instance, actor_id).await {
+        match fetch_actor(&agent, actor_id).await {
             Ok(actor) => {
                 log::info!("re-fetched profile {}", profile.acct);
                 let profile_updated = update_remote_profile(
@@ -150,7 +153,8 @@ pub async fn import_profile_by_actor_address(
     if actor_address.hostname == instance.hostname() {
         return Err(HandlerError::LocalObject);
     };
-    let actor_id = perform_webfinger_query(instance, actor_address).await?;
+    let agent = FederationAgent::new(instance);
+    let actor_id = perform_webfinger_query(&agent, actor_address).await?;
     import_profile(db_client, instance, storage, &actor_id).await
 }
 
@@ -222,6 +226,8 @@ pub async fn import_post(
     object_id: String,
     object_received: Option<Object>,
 ) -> Result<Post, HandlerError> {
+    let agent = FederationAgent::new(instance);
+
     let mut queue = vec![object_id]; // LIFO queue
     let mut fetch_count = 0;
     let mut maybe_object = object_received;
@@ -279,7 +285,7 @@ pub async fn import_post(
                     // TODO: create tombstone
                     return Err(FetchError::RecursionError.into());
                 };
-                let object: Object = fetch_object(instance, &object_id).await?;
+                let object: Object = fetch_object(&agent, &object_id).await?;
                 log::info!("fetched object {}", object.id);
                 fetch_count +=  1;
                 object
@@ -334,9 +340,10 @@ pub async fn import_from_outbox(
     limit: usize,
 ) -> Result<(), HandlerError> {
     let instance = config.instance();
-    let actor = fetch_actor(&instance, actor_id).await?;
+    let agent = FederationAgent::new(&instance);
+    let actor = fetch_actor(&agent, actor_id).await?;
     let activities =
-        fetch_collection(&instance, &actor.outbox, limit).await?;
+        fetch_collection(&agent, &actor.outbox, limit).await?;
     log::info!("fetched {} activities", activities.len());
     // Outbox has reverse chronological order
     let activities = activities.into_iter().rev();
@@ -370,14 +377,15 @@ pub async fn import_replies(
     limit: usize,
 ) -> Result<(), HandlerError> {
     let instance = config.instance();
+    let agent = FederationAgent::new(&instance);
     let storage = MediaStorage::from(config);
-    let object: JsonValue = fetch_object(&instance, object_id).await?;
+    let object: JsonValue = fetch_object(&agent, object_id).await?;
     let mut replies = vec![];
     match &object["replies"] {
         JsonValue::Null => (), // no replies
         JsonValue::String(collection_id) => {
             let items =
-                fetch_collection(&instance, collection_id, limit).await?;
+                fetch_collection(&agent, collection_id, limit).await?;
             for item in items {
                 let object_id = find_object_id(&item)?;
                 replies.push(object_id);
@@ -391,7 +399,7 @@ pub async fn import_replies(
             let items = parse_into_id_array(&value["first"]["items"])?;
             replies.extend(items);
             if let Some(next_page_url) = value["first"]["next"].as_str() {
-                let next_page: JsonValue = fetch_object(&instance, next_page_url).await?;
+                let next_page: JsonValue = fetch_object(&agent, next_page_url).await?;
                 let items = parse_into_id_array(&next_page["items"])?;
                 replies.extend(items);
             };
@@ -402,7 +410,7 @@ pub async fn import_replies(
         .collect();
     log::info!("found {} replies", replies.len());
     for object_id in replies {
-        let object: Object = fetch_object(&instance, &object_id).await?;
+        let object: Object = fetch_object(&agent, &object_id).await?;
         log::info!("fetched object {}", object.id);
         match get_post_by_object_id(
             db_client,

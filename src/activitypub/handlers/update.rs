@@ -28,7 +28,7 @@ use crate::activitypub::{
         types::Actor,
     },
     deserialization::{deserialize_into_object_id, find_object_id},
-    fetcher::fetchers::fetch_object,
+    fetcher::fetchers::{fetch_object, FederationAgent},
     handlers::create::{
         create_content_link,
         get_object_attachments,
@@ -155,10 +155,8 @@ pub async fn handle_update(
     if is_not_embedded || !is_authenticated {
         // Fetch object if it is not embedded or if activity is forwarded
         let object_id = find_object_id(&activity["object"])?;
-        activity["object"] = fetch_object(
-            &config.instance(),
-            &object_id,
-        ).await?;
+        let agent = FederationAgent::new(&config.instance());
+        activity["object"] = fetch_object(&agent, &object_id).await?;
         log::info!("fetched object {}", object_id);
     };
     let object_type = activity["object"]["type"].as_str()
