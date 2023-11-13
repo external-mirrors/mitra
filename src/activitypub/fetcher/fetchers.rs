@@ -6,6 +6,7 @@ use serde_json::{Value as JsonValue};
 use mitra_config::Instance;
 use mitra_models::profiles::types::PublicKeyType;
 use mitra_utils::{
+    crypto_rsa::RsaPrivateKey,
     files::sniff_media_type,
     http_signatures::create::{
         create_http_signature,
@@ -18,7 +19,7 @@ use crate::activitypub::{
     actors::types::Actor,
     constants::{AP_CONTEXT, AP_MEDIA_TYPE},
     http_client::{
-        build_federation_client,
+        build_http_client,
         get_network_type,
         limited_response,
         RESPONSE_SIZE_LIMIT,
@@ -27,6 +28,27 @@ use crate::activitypub::{
     vocabulary::GROUP,
 };
 use crate::webfinger::types::{ActorAddress, JsonResourceDescriptor};
+
+struct FederationAgent {
+    instance: Instance,
+    signer_key: RsaPrivateKey,
+    signer_key_id: String,
+}
+
+impl FederationAgent {
+    fn new(instance: &Instance) -> Self {
+        let instance_actor_id = local_instance_actor_id(&instance.url());
+        let instance_actor_key_id = local_actor_key_id(
+            &instance_actor_id,
+            PublicKeyType::RsaPkcs1,
+        );
+        Self {
+            instance: instance.clone(),
+            signer_key: instance.actor_key.clone(),
+            signer_key_id: instance_actor_key_id,
+        }
+    }
+}
 
 #[derive(thiserror::Error, Debug)]
 pub enum FetchError {
@@ -61,26 +83,26 @@ pub enum FetchError {
     OtherError(&'static str),
 }
 
-fn build_client(
+fn build_fetcher_client(
     instance: &Instance,
     request_url: &str,
 ) -> Result<Client, FetchError> {
     let network = get_network_type(request_url)?;
-    let client = build_federation_client(
+    let http_client = build_http_client(
         instance,
         network,
         instance.fetcher_timeout,
     )?;
-    Ok(client)
+    Ok(http_client)
 }
 
 fn build_request(
     instance: &Instance,
-    client: Client,
+    http_client: Client,
     method: Method,
     url: &str,
 ) -> RequestBuilder {
-    let mut request_builder = client.request(method, url);
+    let mut request_builder = http_client.request(method, url);
     if !instance.is_private {
         // Public instances should set User-Agent header
         request_builder = request_builder
@@ -100,26 +122,22 @@ fn fetcher_error_for_status(error: reqwest::Error) -> FetchError {
 
 /// Sends GET request to fetch AP object
 async fn send_request(
-    instance: &Instance,
+    agent: &FederationAgent,
     url: &str,
 ) -> Result<Bytes, FetchError> {
-    let client = build_client(instance, url)?;
-    let mut request_builder = build_request(instance, client, Method::GET, url)
-        .header(reqwest::header::ACCEPT, AP_MEDIA_TYPE);
+    let http_client = build_fetcher_client(&agent.instance, url)?;
+    let mut request_builder =
+        build_request(&agent.instance, http_client, Method::GET, url)
+            .header(reqwest::header::ACCEPT, AP_MEDIA_TYPE);
 
-    if !instance.is_private {
+    if !agent.instance.is_private {
         // Only public instances can send signed requests
-        let instance_actor_id = local_instance_actor_id(&instance.url());
-        let instance_actor_key_id = local_actor_key_id(
-            &instance_actor_id,
-            PublicKeyType::RsaPkcs1,
-        );
         let headers = create_http_signature(
             Method::GET,
             url,
             "",
-            &instance.actor_key,
-            &instance_actor_key_id,
+            &agent.signer_key,
+            &agent.signer_key_id,
         )?;
         request_builder = request_builder
             .header("Host", headers.host)
@@ -141,7 +159,8 @@ pub async fn fetch_object<T: DeserializeOwned>(
     instance: &Instance,
     object_url: &str,
 ) -> Result<T, FetchError> {
-    let object_json = send_request(instance, object_url).await?;
+    let agent = FederationAgent::new(instance);
+    let object_json = send_request(&agent, object_url).await?;
     let object: T = serde_json::from_slice(&object_json)?;
     Ok(object)
 }
@@ -171,9 +190,9 @@ pub async fn fetch_file(
     if !is_safe_url(url) {
         return Err(FetchError::UnsafeUrl);
     };
-    let client = build_client(instance, url)?;
+    let http_client = build_fetcher_client(instance, url)?;
     let request_builder =
-        build_request(instance, client, Method::GET, url);
+        build_request(instance, http_client, Method::GET, url);
     let response = request_builder.send().await?.error_for_status()?;
     if let Some(file_size) = response.content_length() {
         let file_size: usize = file_size.try_into()
@@ -211,9 +230,9 @@ pub async fn perform_webfinger_query(
         guess_protocol(&actor_address.hostname),
         actor_address.hostname,
     );
-    let client = build_client(instance, &webfinger_url)?;
+    let http_client = build_fetcher_client(instance, &webfinger_url)?;
     let request_builder =
-        build_request(instance, client, Method::GET, &webfinger_url);
+        build_request(instance, http_client, Method::GET, &webfinger_url);
     let response = request_builder
         .query(&[("resource", webfinger_account_uri)])
         .send().await?

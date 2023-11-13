@@ -32,7 +32,7 @@ pub fn get_network_type(request_url: &str) ->
     Ok(network)
 }
 
-pub fn build_federation_client(
+pub fn build_http_client(
     instance: &Instance,
     network: Network,
     timeout: u64,

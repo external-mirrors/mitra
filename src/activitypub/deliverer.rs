@@ -35,7 +35,7 @@ use mitra_utils::{
 use super::{
     constants::AP_MEDIA_TYPE,
     http_client::{
-        build_federation_client,
+        build_http_client,
         get_network_type,
         limited_response,
         RESPONSE_SIZE_LIMIT,
@@ -68,17 +68,17 @@ pub enum DelivererError {
     ResponseTooLarge,
 }
 
-fn build_client(
+fn build_deliverer_client(
     instance: &Instance,
     request_url: &str,
 ) -> Result<Client, DelivererError> {
     let network = get_network_type(request_url)?;
-    let client = build_federation_client(
+    let http_client = build_http_client(
         instance,
         network,
         instance.deliverer_timeout,
     )?;
-    Ok(client)
+    Ok(http_client)
 }
 
 async fn send_activity(
@@ -96,8 +96,8 @@ async fn send_activity(
         actor_key_id,
     )?;
 
-    let client = build_client(instance, inbox_url)?;
-    let request = client.post(inbox_url)
+    let http_client = build_deliverer_client(instance, inbox_url)?;
+    let request = http_client.post(inbox_url)
         .header("Host", headers.host)
         .header("Date", headers.date)
         .header("Digest", headers.digest.unwrap())
