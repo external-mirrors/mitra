@@ -27,8 +27,9 @@ use crate::activitypub::{
         helpers::update_remote_profile,
         types::Actor,
     },
+    agent::FederationAgent,
     deserialization::{deserialize_into_object_id, find_object_id},
-    fetcher::fetchers::{fetch_object, FederationAgent},
+    fetcher::fetchers::fetch_object,
     handlers::create::{
         create_content_link,
         get_object_attachments,

@@ -19,6 +19,7 @@ use mitra_validators::errors::ValidationError;
 
 use crate::activitypub::{
     actors::helpers::{create_remote_profile, update_remote_profile},
+    agent::FederationAgent,
     deserialization::{find_object_id, parse_into_id_array},
     handlers::create::{get_object_links, handle_note},
     identifiers::parse_local_object_id,
@@ -33,7 +34,6 @@ use super::fetchers::{
     fetch_collection,
     fetch_object,
     perform_webfinger_query,
-    FederationAgent,
     FetchError,
 };
 

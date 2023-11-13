@@ -4,8 +4,9 @@ use std::time::Duration;
 use bytes::{BufMut, Bytes, BytesMut};
 use reqwest::{Client, Proxy, Response};
 
-use mitra_config::Instance;
 use mitra_utils::urls::get_hostname;
+
+use super::agent::FederationAgent;
 
 const CONNECTION_TIMEOUT: u64 = 30;
 
@@ -33,20 +34,20 @@ pub fn get_network_type(request_url: &str) ->
 }
 
 pub fn build_http_client(
-    instance: &Instance,
+    agent: &FederationAgent,
     network: Network,
     timeout: u64,
 ) -> reqwest::Result<Client> {
     let mut client_builder = Client::builder();
-    let mut maybe_proxy_url = instance.proxy_url.as_ref();
+    let mut maybe_proxy_url = agent.proxy_url.as_ref();
     match network {
         Network::Default => (),
         Network::Tor => {
-            maybe_proxy_url = instance.onion_proxy_url.as_ref()
+            maybe_proxy_url = agent.onion_proxy_url.as_ref()
                 .or(maybe_proxy_url);
         },
         Network::I2p => {
-            maybe_proxy_url = instance.i2p_proxy_url.as_ref()
+            maybe_proxy_url = agent.i2p_proxy_url.as_ref()
                 .or(maybe_proxy_url);
         },
     };

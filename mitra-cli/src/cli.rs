@@ -8,9 +8,10 @@ use uuid::Uuid;
 
 use mitra::activitypub::{
     actors::helpers::update_remote_profile,
+    agent::FederationAgent,
     builders::delete_note::prepare_delete_note,
     builders::delete_person::prepare_delete_person,
-    fetcher::fetchers::{fetch_actor, fetch_object, FederationAgent},
+    fetcher::fetchers::{fetch_actor, fetch_object},
     fetcher::helpers::{import_from_outbox, import_replies},
 };
 use mitra::adapters::media::{remove_files, remove_media};

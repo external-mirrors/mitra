@@ -28,8 +28,9 @@ use mitra_validators::{
 
 use crate::activitypub::{
     actors::types::Actor,
+    agent::FederationAgent,
     deserialization::parse_into_id_array,
-    fetcher::fetchers::{fetch_file, fetch_object, FederationAgent},
+    fetcher::fetchers::{fetch_file, fetch_object},
     handlers::create::handle_emoji,
     identifiers::validate_object_id,
     receiver::HandlerError,

@@ -18,7 +18,6 @@ use mitra_models::{
     users::types::User,
 };
 use mitra_utils::{
-    crypto_rsa::RsaPrivateKey,
     http_signatures::create::{
         create_http_signature,
         HttpSignatureError,
@@ -33,6 +32,7 @@ use mitra_utils::{
 };
 
 use super::{
+    agent::FederationAgent,
     constants::AP_MEDIA_TYPE,
     http_client::{
         build_http_client,
@@ -69,22 +69,20 @@ pub enum DelivererError {
 }
 
 fn build_deliverer_client(
-    instance: &Instance,
+    agent: &FederationAgent,
     request_url: &str,
 ) -> Result<Client, DelivererError> {
     let network = get_network_type(request_url)?;
     let http_client = build_http_client(
-        instance,
+        agent,
         network,
-        instance.deliverer_timeout,
+        agent.deliverer_timeout,
     )?;
     Ok(http_client)
 }
 
 async fn send_activity(
-    instance: &Instance,
-    actor_key: &RsaPrivateKey,
-    actor_key_id: &str,
+    agent: &FederationAgent,
     activity_json: &str,
     inbox_url: &str,
 ) -> Result<(), DelivererError> {
@@ -92,21 +90,21 @@ async fn send_activity(
         Method::POST,
         inbox_url,
         activity_json,
-        actor_key,
-        actor_key_id,
+        &agent.signer_key,
+        &agent.signer_key_id,
     )?;
 
-    let http_client = build_deliverer_client(instance, inbox_url)?;
+    let http_client = build_deliverer_client(agent, inbox_url)?;
     let request = http_client.post(inbox_url)
         .header("Host", headers.host)
         .header("Date", headers.date)
         .header("Digest", headers.digest.unwrap())
         .header("Signature", headers.signature)
         .header(reqwest::header::CONTENT_TYPE, AP_MEDIA_TYPE)
-        .header(reqwest::header::USER_AGENT, instance.agent())
+        .header(reqwest::header::USER_AGENT, &agent.user_agent)
         .body(activity_json.to_owned());
 
-    if instance.is_private {
+    if agent.is_instance_private {
         log::info!(
             "private mode: not sending activity to {}",
             inbox_url,
@@ -165,7 +163,7 @@ async fn deliver_activity_worker(
     activity: Value,
     recipients: &mut [Recipient],
 ) -> Result<(), DelivererError> {
-    let actor_key = sender.rsa_private_key;
+    let actor_key = &sender.rsa_private_key;
     let actor_id = local_actor_id(
         &instance.url(),
         &sender.profile.username,
@@ -177,7 +175,7 @@ async fn deliver_activity_worker(
         activity
     } else {
         match sender.ed25519_private_key {
-            Some(ed25519_private_key) if instance.fep_8b32_eddsa_enabled => {
+            Some(ref ed25519_private_key) if instance.fep_8b32_eddsa_enabled => {
                 let ed25519_key_id = local_actor_key_id(
                     &actor_id,
                     PublicKeyType::Ed25519,
@@ -190,7 +188,7 @@ async fn deliver_activity_worker(
                 )?
             },
             _ => {
-                sign_object_rsa(&actor_key, &actor_key_id, &activity, None)?
+                sign_object_rsa(actor_key, &actor_key_id, &activity, None)?
             },
         }
     };
@@ -207,6 +205,7 @@ async fn deliver_activity_worker(
         deliveries.push((index, hostname, recipient.inbox.clone()));
     };
 
+    let agent = FederationAgent::as_user(&instance, &sender);
     let mut delivery_pool = FuturesUnordered::new();
     let mut delivery_pool_state = HashMap::new();
 
@@ -229,9 +228,7 @@ async fn deliver_activity_worker(
             // Deliver activities concurrently
             let future = async {
                 let result = send_activity(
-                    &instance,
-                    &actor_key,
-                    &actor_key_id,
+                    &agent,
                     &activity_json,
                     inbox,
                 ).await;

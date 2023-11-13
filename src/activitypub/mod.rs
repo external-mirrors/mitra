@@ -1,4 +1,5 @@
 pub mod actors;
+pub mod agent;
 mod authentication;
 pub mod builders;
 mod collections;

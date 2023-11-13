@@ -47,6 +47,7 @@ use mitra_validators::{
 };
 
 use crate::activitypub::{
+    agent::FederationAgent,
     constants::{AP_MEDIA_TYPE, AP_PUBLIC, AS_MEDIA_TYPE},
     deserialization::{
         deserialize_into_object_id,
@@ -54,7 +55,7 @@ use crate::activitypub::{
         parse_into_href_array,
         parse_into_id_array,
     },
-    fetcher::fetchers::{fetch_file, FederationAgent},
+    fetcher::fetchers::fetch_file,
     fetcher::helpers::{
         get_or_import_profile_by_actor_address,
         get_or_import_profile_by_actor_id,
