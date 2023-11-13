@@ -1,11 +1,10 @@
 use std::collections::{BTreeMap, HashMap};
 
-use actix_web::http::Method;
 use futures::{
     stream::FuturesUnordered,
     StreamExt,
 };
-use reqwest::Client;
+use reqwest::{Client, Method};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
