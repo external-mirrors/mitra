@@ -15,25 +15,28 @@ use mitra_models::{
     },
     profiles::types::DbActorProfile,
 };
+use mitra_utils::urls::guess_protocol;
 use mitra_validators::errors::ValidationError;
 
 use crate::activitypub::{
     actors::helpers::{create_remote_profile, update_remote_profile},
     agent::FederationAgent,
+    constants::AP_CONTEXT,
     deserialization::{find_object_id, parse_into_id_array},
     handlers::create::{get_object_links, handle_note},
     identifiers::parse_local_object_id,
     receiver::{handle_activity, HandlerError},
     types::Object,
+    vocabulary::GROUP,
 };
 use crate::media::MediaStorage;
-use crate::webfinger::types::ActorAddress;
+use crate::webfinger::types::{ActorAddress, JsonResourceDescriptor};
 
 use super::fetchers::{
     fetch_actor,
     fetch_collection,
+    fetch_json,
     fetch_object,
-    perform_webfinger_query,
     FetchError,
 };
 
@@ -142,6 +145,50 @@ pub async fn get_or_import_profile_by_actor_id(
         Err(other_error) => return Err(other_error.into()),
     };
     Ok(profile)
+}
+
+impl JsonResourceDescriptor {
+    fn find_actor_id(&self) -> Option<String> {
+        // Lemmy servers can have Group and Person actors with the same name
+        // https://github.com/LemmyNet/lemmy/issues/2037
+        let ap_type_property = format!("{}#type", AP_CONTEXT);
+        let group_link = self.links.iter()
+            .find(|link| {
+                link.rel == "self" &&
+                link.properties
+                    .get(&ap_type_property)
+                    .map(|val| val.as_str()) == Some(GROUP)
+            });
+        let link = if let Some(link) = group_link {
+            // Prefer Group if the actor type is provided
+            link
+        } else {
+            // Otherwise take first "self" link
+            self.links.iter().find(|link| link.rel == "self")?
+        };
+        let actor_id = link.href.as_ref()?.to_string();
+        Some(actor_id)
+    }
+}
+
+async fn perform_webfinger_query(
+    agent: &FederationAgent,
+    actor_address: &ActorAddress,
+) -> Result<String, FetchError> {
+    let webfinger_resource = actor_address.to_acct_uri();
+    let webfinger_url = format!(
+        "{}://{}/.well-known/webfinger",
+        guess_protocol(&actor_address.hostname),
+        actor_address.hostname,
+    );
+    let jrd: JsonResourceDescriptor = fetch_json(
+        agent,
+        &webfinger_url,
+        &[("resource", &webfinger_resource)],
+    ).await?;
+    let actor_id = jrd.find_actor_id()
+        .ok_or(FetchError::OtherError("actor ID not found"))?;
+    Ok(actor_id)
 }
 
 pub async fn import_profile_by_actor_address(
@@ -432,4 +479,27 @@ pub async fn import_replies(
         };
     };
     Ok(())
+}
+
+
+#[cfg(test)]
+mod tests {
+    use crate::webfinger::types::Link;
+    use super::*;
+
+    #[test]
+    fn test_jrd_find_actor_id() {
+        let actor_id = "https://social.example/users/test";
+        let link_actor = Link {
+            rel: "self".to_string(),
+            media_type: Some("application/activity+json".to_string()),
+            href: Some(actor_id.to_string()),
+            properties: Default::default(),
+        };
+        let jrd = JsonResourceDescriptor {
+            subject: "acct:test@social.example".to_string(),
+            links: vec![link_actor],
+        };
+        assert_eq!(jrd.find_actor_id().unwrap(), actor_id);
+    }
 }

@@ -9,22 +9,21 @@ use mitra_utils::{
         create_http_signature,
         HttpSignatureError,
     },
-    urls::{guess_protocol, is_safe_url},
+    urls::is_safe_url,
 };
 
 use crate::activitypub::{
     actors::types::Actor,
     agent::FederationAgent,
-    constants::{AP_CONTEXT, AP_MEDIA_TYPE},
+    constants::AP_MEDIA_TYPE,
     http_client::{
         build_http_client,
         get_network_type,
         limited_response,
         RESPONSE_SIZE_LIMIT,
     },
-    vocabulary::GROUP,
 };
-use crate::webfinger::types::{ActorAddress, JsonResourceDescriptor};
+
 
 #[derive(thiserror::Error, Debug)]
 pub enum FetchError {
@@ -195,55 +194,25 @@ pub async fn fetch_file(
     Ok((file_data.into(), file_size, media_type))
 }
 
-impl JsonResourceDescriptor {
-    fn find_actor_id(&self) -> Option<String> {
-        // Lemmy servers can have Group and Person actors with the same name
-        // https://github.com/LemmyNet/lemmy/issues/2037
-        let ap_type_property = format!("{}#type", AP_CONTEXT);
-        let group_link = self.links.iter()
-            .find(|link| {
-                link.rel == "self" &&
-                link.properties
-                    .get(&ap_type_property)
-                    .map(|val| val.as_str()) == Some(GROUP)
-            });
-        let link = if let Some(link) = group_link {
-            // Prefer Group if the actor type is provided
-            link
-        } else {
-            // Otherwise take first "self" link
-            self.links.iter().find(|link| link.rel == "self")?
-        };
-        let actor_id = link.href.as_ref()?.to_string();
-        Some(actor_id)
-    }
-}
-
-pub async fn perform_webfinger_query(
+/// Fetches arbitrary JSON data (unsigned request)
+pub async fn fetch_json<T: DeserializeOwned>(
     agent: &FederationAgent,
-    actor_address: &ActorAddress,
-) -> Result<String, FetchError> {
-    let webfinger_resource = actor_address.to_acct_uri();
-    let webfinger_url = format!(
-        "{}://{}/.well-known/webfinger",
-        guess_protocol(&actor_address.hostname),
-        actor_address.hostname,
-    );
-    let http_client = build_fetcher_client(agent, &webfinger_url)?;
+    url: &str,
+    query: &[(&str, &str)],
+) -> Result<T, FetchError> {
+    let http_client = build_fetcher_client(agent, url)?;
     let request_builder =
-        build_request(agent, http_client, Method::GET, &webfinger_url);
+        build_request(agent, http_client, Method::GET, url);
     let response = request_builder
-        .query(&[("resource", webfinger_resource)])
-        .send().await?
+        .query(query)
+        .send()
+        .await?
         .error_for_status()?;
-    let webfinger_data = limited_response(response, RESPONSE_SIZE_LIMIT)
+    let data = limited_response(response, RESPONSE_SIZE_LIMIT)
         .await?
         .ok_or(FetchError::ResponseTooLarge)?;
-    let jrd: JsonResourceDescriptor =
-        serde_json::from_slice(&webfinger_data)?;
-    let actor_id = jrd.find_actor_id()
-        .ok_or(FetchError::OtherError("actor ID not found"))?;
-    Ok(actor_id)
+    let object: T = serde_json::from_slice(&data)?;
+    Ok(object)
 }
 
 pub async fn fetch_actor(
@@ -293,26 +262,4 @@ pub async fn fetch_collection(
         .take(limit)
         .collect();
     Ok(activities)
-}
-
-#[cfg(test)]
-mod tests {
-    use crate::webfinger::types::Link;
-    use super::*;
-
-    #[test]
-    fn test_jrd_find_actor_id() {
-        let actor_id = "https://social.example/users/test";
-        let link_actor = Link {
-            rel: "self".to_string(),
-            media_type: Some("application/activity+json".to_string()),
-            href: Some(actor_id.to_string()),
-            properties: Default::default(),
-        };
-        let jrd = JsonResourceDescriptor {
-            subject: "acct:test@social.example".to_string(),
-            links: vec![link_actor],
-        };
-        assert_eq!(jrd.find_actor_id().unwrap(), actor_id);
-    }
 }
