@@ -19,6 +19,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Don't accept remote profile images with media type prefix other than `image/`.
 - Ignore `Announce(Block)` activities from Lemmy.
 - Disallow relative links in posts.
+- Don't log actor ID redirection events.
 
 ## [2.3.0] - 2023-11-07
 

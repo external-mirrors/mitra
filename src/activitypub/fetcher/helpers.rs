@@ -20,6 +20,7 @@ use mitra_validators::errors::ValidationError;
 
 use crate::activitypub::{
     actors::helpers::{create_remote_profile, update_remote_profile},
+    actors::types::Actor,
     agent::FederationAgent,
     constants::AP_CONTEXT,
     deserialization::{find_object_id, parse_into_id_array},
@@ -33,7 +34,6 @@ use crate::media::MediaStorage;
 use crate::webfinger::types::{ActorAddress, JsonResourceDescriptor};
 
 use super::fetchers::{
-    fetch_actor,
     fetch_collection,
     fetch_json,
     fetch_object,
@@ -47,7 +47,7 @@ async fn import_profile(
     actor_id: &str,
 ) -> Result<DbActorProfile, HandlerError> {
     let agent = FederationAgent::new(instance);
-    let actor = fetch_actor(&agent, actor_id).await?;
+    let actor: Actor = fetch_object(&agent, actor_id).await?;
     let actor_address = actor.address()?;
     let acct = actor_address.acct(&instance.hostname());
     // 'acct' is the primary identifier
@@ -94,7 +94,7 @@ pub async fn refresh_remote_profile(
         profile.updated_at < Utc::now() - Duration::days(1)
     {
         // Try to re-fetch actor profile
-        match fetch_actor(&agent, actor_id).await {
+        match fetch_object::<Actor>(&agent, actor_id).await {
             Ok(actor) => {
                 log::info!("re-fetched profile {}", profile.acct);
                 let profile_updated = update_remote_profile(
@@ -393,7 +393,7 @@ pub async fn import_from_outbox(
 ) -> Result<(), HandlerError> {
     let instance = config.instance();
     let agent = FederationAgent::new(&instance);
-    let actor = fetch_actor(&agent, actor_id).await?;
+    let actor: Actor = fetch_object(&agent, actor_id).await?;
     let activities =
         fetch_collection(&agent, &actor.outbox, limit).await?;
     log::info!("fetched {} activities", activities.len());

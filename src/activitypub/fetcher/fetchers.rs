@@ -13,7 +13,6 @@ use mitra_utils::{
 };
 
 use crate::activitypub::{
-    actors::types::Actor,
     agent::FederationAgent,
     constants::AP_MEDIA_TYPE,
     http_client::{
@@ -213,17 +212,6 @@ pub async fn fetch_json<T: DeserializeOwned>(
         .ok_or(FetchError::ResponseTooLarge)?;
     let object: T = serde_json::from_slice(&data)?;
     Ok(object)
-}
-
-pub async fn fetch_actor(
-    agent: &FederationAgent,
-    actor_url: &str,
-) -> Result<Actor, FetchError> {
-    let actor: Actor = fetch_object(agent, actor_url).await?;
-    if actor.id != actor_url {
-        log::warn!("redirected from {} to {}", actor_url, actor.id);
-    };
-    Ok(actor)
 }
 
 pub async fn fetch_collection(
