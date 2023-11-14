@@ -79,17 +79,20 @@ async fn import_profile(
     Ok(profile)
 }
 
-async fn refresh_remote_profile(
+pub async fn refresh_remote_profile(
     db_client: &mut impl DatabaseClient,
     instance: &Instance,
     storage: &MediaStorage,
     profile: DbActorProfile,
+    force: bool,
 ) -> Result<DbActorProfile, HandlerError> {
     let agent = FederationAgent::new(instance);
     let actor_id = &profile.actor_json.as_ref()
         .expect("actor data should be present")
         .id;
-    let profile = if profile.updated_at < Utc::now() - Duration::days(1) {
+    let profile = if force ||
+        profile.updated_at < Utc::now() - Duration::days(1)
+    {
         // Try to re-fetch actor profile
         match fetch_actor(&agent, actor_id).await {
             Ok(actor) => {
@@ -137,6 +140,7 @@ pub async fn get_or_import_profile_by_actor_id(
                 instance,
                 storage,
                 profile,
+                false,
             ).await?
         },
         Err(DatabaseError::NotFound(_)) => {
@@ -226,6 +230,7 @@ pub async fn get_or_import_profile_by_actor_address(
                     instance,
                     storage,
                     profile,
+                    false,
                 ).await?
             }
         },
