@@ -199,7 +199,7 @@ pub async fn perform_webfinger_query(
     agent: &FederationAgent,
     actor_address: &ActorAddress,
 ) -> Result<String, FetchError> {
-    let webfinger_account_uri = format!("acct:{}", actor_address);
+    let webfinger_resource = actor_address.to_acct_uri();
     let webfinger_url = format!(
         "{}://{}/.well-known/webfinger",
         guess_protocol(&actor_address.hostname),
@@ -209,7 +209,7 @@ pub async fn perform_webfinger_query(
     let request_builder =
         build_request(agent, http_client, Method::GET, &webfinger_url);
     let response = request_builder
-        .query(&[("resource", webfinger_account_uri)])
+        .query(&[("resource", webfinger_resource)])
         .send().await?
         .error_for_status()?;
     let webfinger_data = limited_response(response, RESPONSE_SIZE_LIMIT)

@@ -59,6 +59,18 @@ impl ActorAddress {
            self.to_string()
         }
     }
+
+    // https://datatracker.ietf.org/doc/html/rfc7565#section-7
+    pub fn to_acct_uri(&self) -> String {
+        format!("acct:{}", self)
+    }
+
+    pub(super) fn from_acct_uri(uri: &str) -> Result<Self, ValidationError> {
+        let actor_address = uri.strip_prefix("acct:")
+            .ok_or(ValidationError("invalid acct: URI"))?
+            .parse()?;
+        Ok(actor_address)
+    }
 }
 
 impl FromStr for ActorAddress {
@@ -190,5 +202,15 @@ mod tests {
         let short_mention = "@user";
         let result = ActorAddress::from_mention(short_mention);
         assert_eq!(result.is_err(), true);
+    }
+
+    #[test]
+    fn test_actor_address_acct_uri() {
+        let uri = "acct:user_1@example.com";
+        let actor_address = ActorAddress::from_acct_uri(uri).unwrap();
+        assert_eq!(actor_address.username, "user_1");
+        assert_eq!(actor_address.hostname, "example.com");
+
+        assert_eq!(actor_address.to_acct_uri(), uri);
     }
 }

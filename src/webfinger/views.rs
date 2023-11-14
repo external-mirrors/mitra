@@ -5,7 +5,6 @@ use mitra_models::{
     database::{get_database_client, DatabaseClient, DbPool},
     users::queries::is_registered_user,
 };
-use mitra_validators::errors::ValidationError;
 
 use crate::activitypub::{
     constants::AP_MEDIA_TYPE,
@@ -25,21 +24,13 @@ use super::types::{
     JRD_CONTENT_TYPE,
 };
 
-// https://datatracker.ietf.org/doc/html/rfc7565#section-7
-fn parse_acct_uri(uri: &str) -> Result<ActorAddress, ValidationError> {
-    let actor_address = uri.strip_prefix("acct:")
-        .ok_or(ValidationError("invalid query target"))?
-        .parse()?;
-    Ok(actor_address)
-}
-
 async fn get_jrd(
     db_client: &impl DatabaseClient,
     instance: Instance,
     resource: &str,
 ) -> Result<JsonResourceDescriptor, HttpError> {
     let actor_address = if resource.starts_with("acct:") {
-        parse_acct_uri(resource)?
+        ActorAddress::from_acct_uri(resource)?
     } else {
         // Actor ID? (reverse webfinger)
         let username = if resource == local_instance_actor_id(&instance.url()) {
@@ -75,7 +66,7 @@ async fn get_jrd(
         properties: Default::default(),
     };
     let jrd = JsonResourceDescriptor {
-        subject: format!("acct:{}", actor_address),
+        subject: actor_address.to_acct_uri(),
         links: vec![link_profile, link_actor],
     };
     Ok(jrd)
@@ -110,14 +101,6 @@ mod tests {
         },
     };
     use super::*;
-
-    #[test]
-    fn test_parse_acct_uri() {
-        let uri = "acct:user_1@example.com";
-        let actor_address = parse_acct_uri(uri).unwrap();
-        assert_eq!(actor_address.username, "user_1");
-        assert_eq!(actor_address.hostname, "example.com");
-    }
 
     #[tokio::test]
     #[serial]
