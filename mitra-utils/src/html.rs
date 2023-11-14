@@ -4,6 +4,7 @@ use std::iter::FromIterator;
 use ammonia::{
     rcdom::{Handle, NodeData, SerializableHandle},
     Builder,
+    Document,
     UrlRelative,
 };
 use html5ever::serialize::{serialize, SerializeOpts};
@@ -14,6 +15,32 @@ const EXTRA_URI_SCHEMES: [&str; 2] = [
     "gemini",
     "monero",
 ];
+
+fn document_to_node(document: &Document) -> Handle {
+    // .to_dom_node() is unstable (requires ammonia_unstable flag)
+    // https://github.com/rust-ammonia/ammonia/issues/190
+    document.to_dom_node()
+}
+
+fn node_to_string(node: Handle) -> String {
+    // Taken from ammonia
+    // https://github.com/rust-ammonia/ammonia/blob/98c2ebaca464ee9ee96acab43fc5a8ebb996106e/src/lib.rs#L2876
+    let mut ret_val = Vec::new();
+    let handle = SerializableHandle::from(node);
+    serialize(&mut ret_val, &handle, SerializeOpts::default())
+        .expect("writing to a string shouldn't fail");
+    String::from_utf8(ret_val).expect("html5ever only supports UTF8")
+}
+
+fn iter_nodes<F>(root: &Handle, func: F) -> ()
+    where F: Fn(&Handle) -> ()
+{
+    let mut stack = vec![root.clone()];
+    while let Some(node) = stack.pop() {
+        func(&node);
+        stack.extend(node.children.borrow_mut().clone().into_iter().rev());
+    };
+}
 
 pub fn clean_html(
     unsafe_html: &str,
@@ -35,20 +62,9 @@ pub fn clean_html(
     safe_html
 }
 
-fn node_to_string(node: Handle) -> String {
-    // Taken from ammonia
-    // https://github.com/rust-ammonia/ammonia/blob/98c2ebaca464ee9ee96acab43fc5a8ebb996106e/src/lib.rs#L2876
-    let mut ret_val = Vec::new();
-    let handle = SerializableHandle::from(node);
-    serialize(&mut ret_val, &handle, SerializeOpts::default())
-        .expect("writing to a string shouldn't fail");
-    String::from_utf8(ret_val).expect("html5ever only supports UTF8")
-}
-
-fn insert_rel_noopener(node: &Handle) -> () {
+fn insert_rel_noopener(root: &Handle) -> () {
     use html5ever::{local_name, ns, namespace_url, Attribute, QualName};
-    let mut stack = vec![node.clone()];
-    while let Some(node) = stack.pop() {
+    iter_nodes(root, |node| {
         if let NodeData::Element { name, attrs, .. } = &node.data {
             if &*name.local == "a" &&
                 !attrs.borrow().iter().any(|attr| &*attr.name.local == "rel")
@@ -60,8 +76,7 @@ fn insert_rel_noopener(node: &Handle) -> () {
                 });
             };
         };
-        stack.extend(node.children.borrow_mut().clone().into_iter().rev());
-    };
+    });
 }
 
 pub fn clean_html_strict(
@@ -84,7 +99,6 @@ pub fn clean_html_strict(
         .add_url_schemes(&EXTRA_URI_SCHEMES)
         // Disable rel-insertion, allow rel attribute on <a>
         .link_rel(None)
-        .url_relative(UrlRelative::Deny)
         .add_tag_attributes("a", &["rel"])
         .attribute_filter(|element, attribute, value| {
             match (element, attribute) {
@@ -100,10 +114,11 @@ pub fn clean_html_strict(
                 _ => Some(value.into())
             }
         })
+        .url_relative(UrlRelative::Deny)
         .clean(unsafe_html);
-    // .to_dom_node() is unstable (requires ammonia_unstable flag)
-    // https://github.com/rust-ammonia/ammonia/issues/190
-    let document_node = document.to_dom_node();
+    let document_node = document_to_node(&document);
+    // Insert rel=noopener if not present
+    // attribute_filter can only modify attribute value
     insert_rel_noopener(&document_node);
     let safe_html = node_to_string(document_node);
     safe_html
