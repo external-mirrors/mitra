@@ -195,6 +195,30 @@ pub async fn fetch_file(
     Ok((file_data.into(), file_size, media_type))
 }
 
+impl JsonResourceDescriptor {
+    fn find_actor_id(&self) -> Option<String> {
+        // Lemmy servers can have Group and Person actors with the same name
+        // https://github.com/LemmyNet/lemmy/issues/2037
+        let ap_type_property = format!("{}#type", AP_CONTEXT);
+        let group_link = self.links.iter()
+            .find(|link| {
+                link.rel == "self" &&
+                link.properties
+                    .get(&ap_type_property)
+                    .map(|val| val.as_str()) == Some(GROUP)
+            });
+        let link = if let Some(link) = group_link {
+            // Prefer Group if the actor type is provided
+            link
+        } else {
+            // Otherwise take first "self" link
+            self.links.iter().find(|link| link.rel == "self")?
+        };
+        let actor_id = link.href.as_ref()?.to_string();
+        Some(actor_id)
+    }
+}
+
 pub async fn perform_webfinger_query(
     agent: &FederationAgent,
     actor_address: &ActorAddress,
@@ -217,29 +241,9 @@ pub async fn perform_webfinger_query(
         .ok_or(FetchError::ResponseTooLarge)?;
     let jrd: JsonResourceDescriptor =
         serde_json::from_slice(&webfinger_data)?;
-    // Lemmy servers can have Group and Person actors with the same name
-    // https://github.com/LemmyNet/lemmy/issues/2037
-    let ap_type_property = format!("{}#type", AP_CONTEXT);
-    let group_link = jrd.links.iter()
-        .find(|link| {
-            link.rel == "self" &&
-            link.properties
-                .get(&ap_type_property)
-                .map(|val| val.as_str()) == Some(GROUP)
-        });
-    let link = if let Some(link) = group_link {
-        // Prefer Group if the actor type is provided
-        link
-    } else {
-        // Otherwise take first "self" link
-        jrd.links.iter()
-            .find(|link| link.rel == "self")
-            .ok_or(FetchError::OtherError("self link not found"))?
-    };
-    let actor_url = link.href.as_ref()
-        .ok_or(FetchError::OtherError("account href not found"))?
-        .to_string();
-    Ok(actor_url)
+    let actor_id = jrd.find_actor_id()
+        .ok_or(FetchError::OtherError("actor ID not found"))?;
+    Ok(actor_id)
 }
 
 pub async fn fetch_actor(
@@ -289,4 +293,26 @@ pub async fn fetch_collection(
         .take(limit)
         .collect();
     Ok(activities)
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::webfinger::types::Link;
+    use super::*;
+
+    #[test]
+    fn test_jrd_find_actor_id() {
+        let actor_id = "https://social.example/users/test";
+        let link_actor = Link {
+            rel: "self".to_string(),
+            media_type: Some("application/activity+json".to_string()),
+            href: Some(actor_id.to_string()),
+            properties: Default::default(),
+        };
+        let jrd = JsonResourceDescriptor {
+            subject: "acct:test@social.example".to_string(),
+            links: vec![link_actor],
+        };
+        assert_eq!(jrd.find_actor_id().unwrap(), actor_id);
+    }
 }
