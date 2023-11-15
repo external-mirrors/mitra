@@ -13,11 +13,11 @@ Features:
 - Micro-blogging service (includes support for quote posts, custom emojis and more).
 - Mastodon API.
 - Content subscription service. Subscriptions provide a way to receive monthly payments from subscribers and to publish private content made exclusively for them.
-  - Supported payment methods: [Monero](https://www.getmonero.org/get-started/what-is-monero/) and [ERC-20](https://ethereum.org/en/developers/docs/standards/tokens/erc-20/) tokens (on Ethereum and other EVM-compatible blockchains).
-- [Sign-in with a wallet](https://github.com/ChainAgnostic/CAIPs/blob/master/CAIPs/caip-122.md).
+  - Supported payment methods: [Monero](https://www.getmonero.org/get-started/what-is-monero/).
 - Donation buttons.
 - Account migrations (from one server to another). Identity can be detached from the server.
 - Federation over Tor and/or I2P.
+- [Sign-in with a wallet](https://github.com/ChainAgnostic/CAIPs/blob/master/CAIPs/caip-122.md).
 
 Follow: [@mitra@mitra.social](https://mitra.social/@mitra)
 
@@ -54,12 +54,6 @@ Minimum system requirements:
 
 - 256 MB RAM (1 GB for building from source)
 - 10 GB storage for average single user instance with default configuration
-
-Optional integrations:
-
-- Monero wallet service and Monero node
-- Ethereum node
-- IPFS node (see [guide](./docs/ipfs.md))
 
 ## Installation
 
@@ -139,14 +133,18 @@ apk add -vi mitra@testing
 
 ## Configuration
 
-### Tor federation
+### Tor/I2P federation
 
 See [guide](./docs/onion.md).
 
 ### Blockchain integrations
 
 - [Monero](./docs/monero.md)
-- [Ethereum](./docs/ethereum.md)
+- [Ethereum](./docs/ethereum.md) ([unmaintained](https://codeberg.org/silverpill/mitra/issues/27))
+
+### IPFS integration (experimental)
+
+See [guide](./docs/ipfs.md).
 
 ## Development
 
