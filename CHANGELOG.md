@@ -21,6 +21,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Disallow relative links in posts.
 - Don't log actor ID redirection events.
 - Replace inline images with "image" string instead of removing completely.
+- Change MSRV to 1.59.0.
 
 ## [2.3.0] - 2023-11-07
 

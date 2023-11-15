@@ -3,7 +3,7 @@ name = "mitra-cli"
 version = "2.3.0"
 license = "AGPL-3.0-only"
 edition = "2021"
-rust-version = "1.57"
+rust-version = "1.59"
 
 [[bin]]
 name = "mitractl"

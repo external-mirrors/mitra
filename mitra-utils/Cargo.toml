@@ -3,7 +3,7 @@ name = "mitra-utils"
 version = "2.3.0"
 license = "AGPL-3.0-only"
 edition = "2021"
-rust-version = "1.57"
+rust-version = "1.59"
 
 [dependencies]
 # Used for HTML sanitization
