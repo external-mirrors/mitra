@@ -14,6 +14,7 @@ use mitra_models::{
     posts::types::PostUpdateData,
     profiles::queries::get_profile_by_remote_actor_id,
 };
+use mitra_services::media::MediaStorage;
 use mitra_validators::{
     errors::ValidationError,
     posts::{
@@ -41,7 +42,6 @@ use crate::activitypub::{
     types::Object,
     vocabulary::{ARTICLE, GROUP, NOTE, PERSON},
 };
-use crate::media::MediaStorage;
 
 use super::HandlerResult;
 

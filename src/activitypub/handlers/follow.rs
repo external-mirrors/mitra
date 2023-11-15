@@ -13,6 +13,7 @@ use mitra_models::{
     relationships::types::RelationshipType,
     users::queries::get_user_by_name,
 };
+use mitra_services::media::MediaStorage;
 use mitra_validators::errors::ValidationError;
 
 use crate::activitypub::{
@@ -22,7 +23,6 @@ use crate::activitypub::{
     identifiers::parse_local_actor_id,
     vocabulary::PERSON,
 };
-use crate::media::MediaStorage;
 
 use super::{HandlerError, HandlerResult};
 

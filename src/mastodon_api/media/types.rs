@@ -5,8 +5,7 @@ use mitra_models::attachments::types::{
     AttachmentType,
     DbMediaAttachment,
 };
-
-use crate::media::get_file_url;
+use mitra_services::media::get_file_url;
 
 #[derive(Deserialize)]
 pub struct AttachmentCreateData {

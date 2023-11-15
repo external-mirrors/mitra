@@ -23,6 +23,7 @@ use mitra_models::{
     relationships::queries::has_local_followers,
     users::queries::get_user_by_name,
 };
+use mitra_services::media::MediaStorage;
 use mitra_utils::{
     html::clean_html,
     urls::get_hostname,
@@ -67,7 +68,6 @@ use crate::activitypub::{
     types::{Attachment, EmojiTag, LinkTag, Object, Tag},
     vocabulary::*,
 };
-use crate::media::MediaStorage;
 use crate::webfinger::types::ActorAddress;
 
 use super::HandlerResult;

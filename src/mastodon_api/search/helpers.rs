@@ -22,7 +22,10 @@ use mitra_models::{
         types::User,
     },
 };
-use mitra_services::ethereum::utils::validate_ethereum_address;
+use mitra_services::{
+    ethereum::utils::validate_ethereum_address,
+    media::MediaStorage,
+};
 use mitra_utils::{
     currencies::Currency,
     did::Did,
@@ -38,7 +41,6 @@ use crate::activitypub::{
     identifiers::{parse_local_actor_id, parse_local_object_id},
     HandlerError,
 };
-use crate::media::MediaStorage;
 use crate::webfinger::types::ActorAddress;
 
 const SEARCH_FETCHER_TIMEOUT: u64 = 15;

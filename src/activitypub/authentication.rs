@@ -10,6 +10,7 @@ use mitra_models::{
         PublicKeyType,
     },
 };
+use mitra_services::media::MediaStorage;
 use mitra_utils::{
     crypto_eddsa::{
         ed25519_public_key_from_bytes,
@@ -40,8 +41,6 @@ use mitra_utils::{
         },
     },
 };
-
-use crate::media::MediaStorage;
 
 use super::deserialization::find_object_id;
 use super::fetcher::helpers::get_or_import_profile_by_actor_id;

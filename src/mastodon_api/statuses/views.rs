@@ -38,7 +38,10 @@ use mitra_models::{
     },
     relationships::queries::get_subscribers,
 };
-use mitra_services::ipfs::{store as ipfs_store};
+use mitra_services::{
+    ipfs::{store as ipfs_store},
+    media::MediaStorage,
+};
 use mitra_utils::markdown::markdown_lite_to_html;
 use mitra_validators::{
     errors::ValidationError,
@@ -72,7 +75,6 @@ use crate::mastodon_api::{
     errors::MastodonError,
     oauth::auth::get_current_user,
 };
-use crate::media::MediaStorage;
 
 use super::helpers::{
     build_status,

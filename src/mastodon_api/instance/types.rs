@@ -9,7 +9,10 @@ use mitra_config::{
     MITRA_VERSION,
 };
 use mitra_models::users::types::User;
-use mitra_services::ethereum::contracts::ContractSet;
+use mitra_services::{
+    ethereum::contracts::ContractSet,
+    media::MediaStorage,
+};
 use mitra_utils::markdown::markdown_to_html;
 use mitra_validators::posts::ATTACHMENT_LIMIT;
 
@@ -22,7 +25,6 @@ use crate::mastodon_api::{
     },
     MASTODON_API_VERSION,
 };
-use crate::media::MediaStorage;
 
 #[derive(Serialize)]
 struct InstanceStats {

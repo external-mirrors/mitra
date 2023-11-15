@@ -6,6 +6,7 @@ use mitra_models::{
     database::{DatabaseClient, DatabaseError},
     reactions::queries::create_reaction,
 };
+use mitra_services::media::MediaStorage;
 use mitra_validators::errors::ValidationError;
 
 use crate::activitypub::{
@@ -16,7 +17,6 @@ use crate::activitypub::{
     },
     vocabulary::NOTE,
 };
-use crate::media::MediaStorage;
 
 use super::HandlerResult;
 

@@ -15,6 +15,7 @@ use mitra_models::{
     },
     profiles::types::DbActorProfile,
 };
+use mitra_services::media::MediaStorage;
 use mitra_utils::urls::guess_protocol;
 use mitra_validators::errors::ValidationError;
 
@@ -30,7 +31,6 @@ use crate::activitypub::{
     types::Object,
     vocabulary::GROUP,
 };
-use crate::media::MediaStorage;
 use crate::webfinger::types::{ActorAddress, JsonResourceDescriptor};
 
 use super::fetchers::{

@@ -15,6 +15,7 @@ use mitra_models::{
         ProfileUpdateData,
     },
 };
+use mitra_services::media::{MediaStorage, MediaStorageError};
 use mitra_validators::{
     errors::ValidationError,
     posts::EMOJI_LIMIT,
@@ -45,7 +46,6 @@ use crate::activitypub::{
         VERIFIABLE_IDENTITY_STATEMENT,
     },
 };
-use crate::media::{MediaStorage, MediaStorageError};
 
 use super::attachments::{
     parse_identity_proof,

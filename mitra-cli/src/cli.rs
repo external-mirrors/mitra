@@ -24,7 +24,6 @@ use mitra::admin::roles::{
     role_to_str,
     ALLOWED_ROLES,
 };
-use mitra::media::MediaStorage;
 use mitra::payments::monero::{get_payment_address, reopen_invoice};
 use mitra_config::Config;
 use mitra_models::{
@@ -82,6 +81,7 @@ use mitra_services::{
         sync::save_current_block_number,
         utils::key_to_ethereum_address,
     },
+    media::MediaStorage,
     monero::{
         wallet::{
             create_monero_signature,

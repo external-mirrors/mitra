@@ -18,6 +18,7 @@ use mitra_models::{
     },
     users::types::User,
 };
+use mitra_services::media::get_file_url;
 use mitra_utils::{
     crypto_rsa::RsaSerializationError,
     urls::get_hostname,
@@ -46,7 +47,6 @@ use crate::activitypub::{
     },
     vocabulary::{IMAGE, PERSON, SERVICE},
 };
-use crate::media::get_file_url;
 use crate::webfinger::types::ActorAddress;
 
 use super::attachments::{

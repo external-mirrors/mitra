@@ -39,7 +39,6 @@ use mitra::mastodon_api::settings::views::settings_api_scope;
 use mitra::mastodon_api::statuses::views::status_api_scope;
 use mitra::mastodon_api::subscriptions::views::subscription_api_scope;
 use mitra::mastodon_api::timelines::views::timeline_api_scope;
-use mitra::media::{MediaStorage, MEDIA_ROOT_URL};
 use mitra::nodeinfo::views as nodeinfo;
 use mitra::webfinger::views as webfinger;
 use mitra::web_client::views as web_client;
@@ -49,7 +48,10 @@ use mitra_models::database::{
     get_database_client,
     migrate::apply_migrations,
 };
-use mitra_services::ethereum::contracts::get_contracts;
+use mitra_services::{
+    ethereum::contracts::get_contracts,
+    media::{MediaStorage, MEDIA_ROOT_URL},
+};
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {

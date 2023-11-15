@@ -8,7 +8,6 @@ pub mod init;
 pub mod job_queue;
 mod logger;
 pub mod mastodon_api;
-pub mod media;
 pub mod nodeinfo;
 pub mod payments;
 pub mod webfinger;

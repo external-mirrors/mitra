@@ -4,11 +4,11 @@ use wildmatch::WildMatch;
 
 use mitra_config::Config;
 use mitra_models::database::{DatabaseClient, DatabaseError};
+use mitra_services::media::MediaStorageError;
 use mitra_utils::urls::get_hostname;
 use mitra_validators::errors::ValidationError;
 
 use crate::errors::HttpError;
-use crate::media::MediaStorageError;
 
 use super::authentication::{
     verify_signed_activity,

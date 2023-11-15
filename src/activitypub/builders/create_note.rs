@@ -11,6 +11,7 @@ use mitra_models::{
     relationships::queries::{get_followers, get_subscribers},
     users::types::User,
 };
+use mitra_services::media::get_file_url;
 
 use crate::activitypub::{
     constants::{AP_MEDIA_TYPE, AP_PUBLIC},
@@ -36,7 +37,6 @@ use crate::activitypub::{
     },
     vocabulary::*,
 };
-use crate::media::get_file_url;
 use crate::webfinger::types::ActorAddress;
 
 const LINK_REL_MISSKEY_QUOTE: &str = "https://misskey-hub.net/ns#_misskey_quote";

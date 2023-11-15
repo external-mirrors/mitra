@@ -19,6 +19,7 @@ use mitra_models::{
         User,
     },
 };
+use mitra_services::media::{get_file_url, MediaStorage};
 use mitra_utils::{
     caip2::ChainId,
     did::Did,
@@ -36,7 +37,6 @@ use crate::mastodon_api::{
     pagination::PageSize,
     uploads::{save_b64_file, UploadError},
 };
-use crate::media::{get_file_url, MediaStorage};
 
 pub const AUTHENTICATION_METHOD_PASSWORD: &str = "password";
 pub const AUTHENTICATION_METHOD_EIP4361: &str = "eip4361";

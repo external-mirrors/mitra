@@ -56,6 +56,7 @@ use mitra_services::{
         eip4361::verify_eip4361_signature,
         gate::is_allowed_user,
     },
+    media::MediaStorage,
     monero::caip122::verify_monero_caip122_signature,
 };
 use mitra_utils::{
@@ -117,7 +118,6 @@ use crate::mastodon_api::{
     search::helpers::search_profiles_only,
     statuses::helpers::get_paginated_status_list,
 };
-use crate::media::MediaStorage;
 
 use super::helpers::{
     get_aliases,

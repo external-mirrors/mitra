@@ -7,13 +7,13 @@ use mitra_models::{
     attachments::queries::create_attachment,
     database::{get_database_client, DbPool},
 };
+use mitra_services::media::MediaStorage;
 
 use crate::mastodon_api::{
     errors::MastodonError,
     oauth::auth::get_current_user,
     uploads::save_b64_file,
 };
-use crate::media::MediaStorage;
 
 use super::types::{AttachmentCreateData, Attachment};
 
