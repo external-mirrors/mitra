@@ -1,13 +1,17 @@
 use std::collections::{HashMap, HashSet};
 use std::iter::FromIterator;
+use std::rc::Rc;
 
 use ammonia::{
-    rcdom::{Handle, NodeData, SerializableHandle},
+    rcdom::{Handle, Node, NodeData, SerializableHandle},
     Builder,
     Document,
     UrlRelative,
 };
-use html5ever::serialize::{serialize, SerializeOpts};
+use html5ever::{
+    serialize::{serialize, SerializeOpts},
+    tendril::format_tendril,
+};
 
 pub use ammonia::{clean_text as escape_html};
 
@@ -42,6 +46,38 @@ fn iter_nodes<F>(root: &Handle, func: F) -> ()
     };
 }
 
+/// Replaces all <img> tags with string "image"
+fn replace_images(root: &Handle) -> () {
+    iter_nodes(root, |node| {
+        if let NodeData::Element { name, .. } = &node.data {
+            if &*name.local == "img" {
+                if let Some(weak) = node.parent.take() {
+                    if let Some(parent) = weak.upgrade() {
+                        // Get index of current element
+                        let maybe_index = parent
+                            .children
+                            .borrow()
+                            .iter()
+                            .enumerate()
+                            .find(|&(_, child)| Rc::ptr_eq(child, node))
+                            .map(|(index, _)| index);
+                        if let Some(index) = maybe_index {
+                            parent.children.borrow_mut().remove(index);
+                            node.parent.set(None);
+                            let text = NodeData::Text {
+                                contents: format_tendril!("image").into(),
+                            };
+                            let node_raw = Node::new(text);
+                            node_raw.parent.set(Some(Rc::downgrade(&parent)));
+                            parent.children.borrow_mut().insert(index, node_raw);
+                        };
+                    };
+                };
+            };
+        };
+    });
+}
+
 pub fn clean_html(
     unsafe_html: &str,
     allowed_classes: Vec<(&'static str, Vec<&'static str>)>,
@@ -50,15 +86,16 @@ pub fn clean_html(
     for (tag, classes) in allowed_classes.iter() {
         builder.add_allowed_classes(tag, classes);
     };
-    let safe_html = builder
-        // Remove external images to prevent tracking
-        .rm_tags(&["img"])
+    let document = builder
         .add_url_schemes(&EXTRA_URI_SCHEMES)
         // Always add rel="noopener"
         .link_rel(Some("noopener"))
         .url_relative(UrlRelative::Deny)
-        .clean(unsafe_html)
-        .to_string();
+        .clean(unsafe_html);
+    let document_node = document_to_node(&document);
+    // Replace external images to prevent tracking
+    replace_images(&document_node);
+    let safe_html = node_to_string(document_node);
     safe_html
 }
 
@@ -150,7 +187,7 @@ mod tests {
         );
         let expected_safe_html = concat!(
             r#"<p><span class="h-card"><a href="https://example.com/user" class="u-url mention" rel="noopener">@<span>user</span></a></span> test</p>"#,
-            r#"<p></p>"#,
+            r#"<p>image</p>"#,
         );
         let safe_html = clean_html(
             unsafe_html,
@@ -174,6 +211,17 @@ mod tests {
     fn test_clean_html_relative() {
         let unsafe_html = r#"<a href="/path">link</a>"#;
         let expected_safe_html = r#"<a rel="noopener">link</a>"#;
+        let safe_html = clean_html(
+            unsafe_html,
+            allowed_classes(),
+        );
+        assert_eq!(safe_html, expected_safe_html);
+    }
+
+    #[test]
+    fn test_clean_html_with_image() {
+        let unsafe_html = r#"<p><a href="https://external.example/page"><img src="https://external.example/image.png"></a></p>"#;
+        let expected_safe_html = r#"<p><a href="https://external.example/page" rel="noopener">image</a></p>"#;
         let safe_html = clean_html(
             unsafe_html,
             allowed_classes(),
