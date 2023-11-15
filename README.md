@@ -25,8 +25,8 @@ Matrix chat: [#mitra:hackliberty.org](https://matrix.to/#/#mitra:hackliberty.org
 
 ## Instances
 
-- [FediList](http://demo.fedilist.com/instance?software=mitra)
 - [Fediverse Observer](https://mitra.fediverse.observer/list)
+- [FediList](http://demo.fedilist.com/instance?software=mitra)
 
 Demo instance: https://public.mitra.social/ ([invite-only](https://public.mitra.social/about))
 
@@ -36,14 +36,6 @@ Demo instance: https://public.mitra.social/ ([invite-only](https://public.mitra.
 - [Bloat](https://git.freesoftwareextremist.com/bloat/about/)
 - [Husky](https://codeberg.org/husky/husky)
 - [toot](https://github.com/ihabunek/toot)
-
-## Code
-
-Server: https://codeberg.org/silverpill/mitra (this repo)
-
-Web client: https://codeberg.org/silverpill/mitra-web
-
-Ethereum contracts: https://codeberg.org/silverpill/mitra-contracts
 
 ## Requirements
 
@@ -146,6 +138,22 @@ See [guide](./docs/onion.md).
 
 See [guide](./docs/ipfs.md).
 
+## CLI
+
+`mitractl` is a command-line tool for performing instance maintenance.
+
+[Documentation](./docs/mitractl.md)
+
+## Client API
+
+Most methods are similar to Mastodon API, but Mitra is not fully compatible.
+
+[OpenAPI spec](./docs/openapi.yaml)
+
+## Federation
+
+See [FEDERATION.md](./FEDERATION.md)
+
 ## Development
 
 See [CONTRIBUTING.md](./CONTRIBUTING.md)
@@ -201,22 +209,6 @@ cargo clippy
 ```shell
 cargo test
 ```
-
-## Federation
-
-See [FEDERATION.md](./FEDERATION.md)
-
-## Client API
-
-Most methods are similar to Mastodon API, but Mitra is not fully compatible.
-
-[OpenAPI spec](./docs/openapi.yaml)
-
-## CLI
-
-`mitractl` is a command-line tool for performing instance maintenance.
-
-[Documentation](./docs/mitractl.md)
 
 ## License
 
