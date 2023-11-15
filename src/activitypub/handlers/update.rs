@@ -4,6 +4,7 @@ use chrono::Utc;
 use serde::Deserialize;
 use serde_json::{Value as JsonValue};
 
+use mitra_activitypub::fetch::fetch_object;
 use mitra_config::Config;
 use mitra_models::{
     database::{DatabaseClient, DatabaseError},
@@ -30,7 +31,6 @@ use crate::activitypub::{
     },
     agent::build_federation_agent,
     deserialization::{deserialize_into_object_id, find_object_id},
-    fetcher::fetchers::fetch_object,
     handlers::create::{
         create_content_link,
         get_object_attachments,

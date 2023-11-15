@@ -1,6 +1,4 @@
-// https://www.w3.org/TR/activitypub/#server-to-server-interactions
-pub const AP_MEDIA_TYPE: &str = r#"application/ld+json; profile="https://www.w3.org/ns/activitystreams""#;
-pub const AS_MEDIA_TYPE: &str = "application/activity+json";
+pub use mitra_activitypub::constants::{AP_MEDIA_TYPE, AS_MEDIA_TYPE};
 
 // Contexts
 pub const AP_CONTEXT: &str = "https://www.w3.org/ns/activitystreams";

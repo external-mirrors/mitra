@@ -2,6 +2,7 @@ use actix_web::HttpRequest;
 use serde_json::{Value as JsonValue};
 use wildmatch::WildMatch;
 
+use mitra_activitypub::fetch::FetchError;
 use mitra_config::Config;
 use mitra_models::database::{DatabaseClient, DatabaseError};
 use mitra_services::media::MediaStorageError;
@@ -16,7 +17,6 @@ use super::authentication::{
     AuthenticationError,
 };
 use super::deserialization::find_object_id;
-use super::fetcher::fetchers::FetchError;
 use super::handlers::{
     accept::handle_accept,
     add::handle_add,

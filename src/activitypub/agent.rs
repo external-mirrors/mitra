@@ -3,7 +3,6 @@ use mitra_models::{
     profiles::types::PublicKeyType,
     users::types::User,
 };
-use mitra_utils::crypto_rsa::RsaPrivateKey;
 
 use crate::activitypub::{
     identifiers::{
@@ -13,22 +12,7 @@ use crate::activitypub::{
     },
 };
 
-pub struct FederationAgent {
-    pub user_agent: String,
-    // Private instance won't send signed HTTP requests
-    pub is_instance_private: bool,
-
-    pub fetcher_timeout: u64,
-    pub deliverer_timeout: u64,
-
-    // Proxy for outgoing requests
-    pub proxy_url: Option<String>,
-    pub onion_proxy_url: Option<String>,
-    pub i2p_proxy_url: Option<String>,
-
-    pub signer_key: RsaPrivateKey,
-    pub signer_key_id: String,
-}
+pub use mitra_activitypub::agent::FederationAgent;
 
 pub fn build_federation_agent(
     instance: &Instance,

@@ -3,6 +3,12 @@ use std::collections::HashMap;
 use chrono::{Duration, Utc};
 use serde_json::{Value as JsonValue};
 
+use mitra_activitypub::fetch::{
+    fetch_collection,
+    fetch_json,
+    fetch_object,
+    FetchError,
+};
 use mitra_config::{Config, Instance};
 use mitra_models::{
     database::{DatabaseClient, DatabaseError},
@@ -32,13 +38,6 @@ use crate::activitypub::{
     vocabulary::GROUP,
 };
 use crate::webfinger::types::{ActorAddress, JsonResourceDescriptor};
-
-use super::fetchers::{
-    fetch_collection,
-    fetch_json,
-    fetch_object,
-    FetchError,
-};
 
 async fn import_profile(
     db_client: &mut impl DatabaseClient,

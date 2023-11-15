@@ -1947,13 +1947,13 @@ dependencies = [
  "actix-web",
  "actix-web-httpauth",
  "anyhow",
- "bytes",
  "chrono",
  "dashmap",
  "env_logger",
  "futures",
  "hex",
  "log",
+ "mitra-activitypub",
  "mitra-config",
  "mitra-models",
  "mitra-services",
@@ -1976,6 +1976,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "mitra-activitypub"
+version = "2.3.0"
+dependencies = [
+ "bytes",
+ "mitra-utils",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "url",
+]
+
+[[package]]
 name = "mitra-cli"
 version = "2.3.0"
 dependencies = [
@@ -1983,6 +1996,7 @@ dependencies = [
  "clap",
  "log",
  "mitra",
+ "mitra-activitypub",
  "mitra-config",
  "mitra-models",
  "mitra-services",

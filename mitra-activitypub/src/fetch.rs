@@ -12,7 +12,7 @@ use mitra_utils::{
     urls::is_safe_url,
 };
 
-use crate::activitypub::{
+use super::{
     agent::FederationAgent,
     constants::AP_MEDIA_TYPE,
     http_client::{
@@ -22,7 +22,6 @@ use crate::activitypub::{
         RESPONSE_SIZE_LIMIT,
     },
 };
-
 
 #[derive(thiserror::Error, Debug)]
 pub enum FetchError {

@@ -8,6 +8,14 @@ use reqwest::{Client, Method};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
+use mitra_activitypub::{
+    http_client::{
+        build_http_client,
+        get_network_type,
+        limited_response,
+        RESPONSE_SIZE_LIMIT,
+    },
+};
 use mitra_config::Instance;
 use mitra_models::{
     database::{
@@ -34,12 +42,6 @@ use mitra_utils::{
 use super::{
     agent::{build_federation_agent, FederationAgent},
     constants::AP_MEDIA_TYPE,
-    http_client::{
-        build_http_client,
-        get_network_type,
-        limited_response,
-        RESPONSE_SIZE_LIMIT,
-    },
     identifiers::{local_actor_id, local_actor_key_id},
     queues::OutgoingActivityJobData,
 };

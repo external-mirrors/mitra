@@ -1,5 +1,6 @@
 use actix_web::{get, web, HttpResponse};
 
+use mitra_activitypub::constants::AP_MEDIA_TYPE;
 use mitra_config::{Config, Instance};
 use mitra_models::{
     database::{get_database_client, DatabaseClient, DbPool},
@@ -7,7 +8,6 @@ use mitra_models::{
 };
 
 use crate::activitypub::{
-    constants::AP_MEDIA_TYPE,
     identifiers::{
         local_actor_id,
         local_instance_actor_id,

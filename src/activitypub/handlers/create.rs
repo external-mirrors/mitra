@@ -5,6 +5,7 @@ use serde::Deserialize;
 use serde_json::{Value as JsonValue};
 use uuid::Uuid;
 
+use mitra_activitypub::fetch::fetch_file;
 use mitra_config::{Config, Instance};
 use mitra_models::{
     attachments::queries::create_attachment,
@@ -56,7 +57,6 @@ use crate::activitypub::{
         parse_into_href_array,
         parse_into_id_array,
     },
-    fetcher::fetchers::fetch_file,
     fetcher::helpers::{
         get_or_import_profile_by_actor_address,
         get_or_import_profile_by_actor_id,

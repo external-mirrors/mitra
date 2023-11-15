@@ -1,0 +1,18 @@
+use mitra_utils::crypto_rsa::RsaPrivateKey;
+
+pub struct FederationAgent {
+    pub user_agent: String,
+    // Private instance won't send signed HTTP requests
+    pub is_instance_private: bool,
+
+    pub fetcher_timeout: u64,
+    pub deliverer_timeout: u64,
+
+    // Proxy for outgoing requests
+    pub proxy_url: Option<String>,
+    pub onion_proxy_url: Option<String>,
+    pub i2p_proxy_url: Option<String>,
+
+    pub signer_key: RsaPrivateKey,
+    pub signer_key_id: String,
+}

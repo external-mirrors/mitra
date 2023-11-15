@@ -10,7 +10,6 @@ use mitra::activitypub::{
     agent::build_federation_agent,
     builders::delete_note::prepare_delete_note,
     builders::delete_person::prepare_delete_person,
-    fetcher::fetchers::fetch_object,
     fetcher::helpers::{
         import_from_outbox,
         import_replies,
@@ -27,6 +26,7 @@ use mitra::adapters::{
     },
 };
 use mitra::payments::monero::{get_payment_address, reopen_invoice};
+use mitra_activitypub::fetch::fetch_object;
 use mitra_config::Config;
 use mitra_models::{
     attachments::queries::delete_unused_attachments,

@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use uuid::Uuid;
 
+use mitra_activitypub::fetch::FetchError;
 use mitra_config::Config;
 use mitra_models::{
     background_jobs::queries::{
@@ -28,7 +29,6 @@ use mitra_models::{
 };
 
 use super::deliverer::{OutgoingActivity, Recipient};
-use super::fetcher::fetchers::FetchError;
 use super::receiver::{handle_activity, HandlerError};
 
 const JOB_TIMEOUT: u32 = 3600; // 1 hour

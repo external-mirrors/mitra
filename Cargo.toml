@@ -12,6 +12,7 @@ default-run = "mitra"
 [workspace]
 members = [
   ".",
+  "mitra-activitypub",
   "mitra-cli",
   "mitra-config",
   "mitra-models",
@@ -21,6 +22,7 @@ members = [
 ]
 default-members = [
   ".",
+  "mitra-activitypub",
   "mitra-cli",
   "mitra-config",
   "mitra-models",
@@ -54,8 +56,7 @@ num_cpus = "1.13.0"
 # Used for working with regular expressions
 regex = "1.6.0"
 # Used for making async HTTP requests
-reqwest = { version = "0.11.13", features = ["json", "socks"] }
-bytes = "=1.2.0"
+reqwest = { version = "0.11.13", features = ["json" ] }
 # Used for serialization/deserialization
 serde = { version = "1.0.136", features = ["derive"] }
 serde_json = "1.0.89"
@@ -72,6 +73,7 @@ uuid = { version = "1.1.2", features = ["serde", "v4"] }
 # User for working with block/allow lists
 wildmatch = "2.1.1"
 
+mitra-activitypub = { path = "mitra-activitypub" }
 mitra-config = { path = "mitra-config" }
 mitra-models = { path = "mitra-models" }
 mitra-services = { path = "mitra-services" }
