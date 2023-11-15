@@ -17,12 +17,14 @@ use mitra::activitypub::{
         refresh_remote_profile,
     },
 };
-use mitra::adapters::media::{remove_files, remove_media};
-use mitra::admin::roles::{
-    from_default_role,
-    role_from_str,
-    role_to_str,
-    ALLOWED_ROLES,
+use mitra::adapters::{
+    media::{remove_files, remove_media},
+    roles::{
+        from_default_role,
+        role_from_str,
+        role_to_str,
+        ALLOWED_ROLES,
+    },
 };
 use mitra::payments::monero::{get_payment_address, reopen_invoice};
 use mitra_config::Config;

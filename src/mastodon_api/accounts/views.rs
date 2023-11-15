@@ -104,7 +104,7 @@ use crate::activitypub::{
         create_identity_proof_fep_c390,
     },
 };
-use crate::admin::roles::from_default_role;
+use crate::adapters::roles::from_default_role;
 use crate::http::{
     get_request_base_url,
     FormOrJson,
