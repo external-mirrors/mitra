@@ -16,7 +16,7 @@ blake2 = "0.10.5"
 # Used to decode base58btc
 bs58 = "0.4.0"
 # Used for working with dates
-chrono = { version = "0.4.23", default-features = false, features = ["std"] }
+chrono = { version = "0.4.23", default-features = false, features = ["std", "serde", "clock"] }
 # Used for parsing markdown
 comrak = { version = "0.18.0", default-features = false }
 # Used for working with EdDSA signatures

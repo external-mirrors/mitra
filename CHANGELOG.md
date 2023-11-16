@@ -24,6 +24,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Replace inline images with "image" string instead of removing completely.
 - Change MSRV to 1.59.0.
 
+### Fixed
+
+- Fix feature list for chrono crate in mitra-utils.
+
 ## [2.3.0] - 2023-11-07
 
 ### Added
