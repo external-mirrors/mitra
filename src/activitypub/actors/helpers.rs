@@ -29,7 +29,7 @@ use mitra_validators::{
 
 use crate::activitypub::{
     actors::types::Actor,
-    agent::FederationAgent,
+    agent::build_federation_agent,
     deserialization::parse_into_id_array,
     fetcher::fetchers::{fetch_file, fetch_object},
     handlers::create::handle_emoji,
@@ -63,7 +63,7 @@ async fn fetch_actor_images(
     default_avatar: Option<ProfileImage>,
     default_banner: Option<ProfileImage>,
 ) -> Result<(Option<ProfileImage>, Option<ProfileImage>), MediaStorageError>  {
-    let agent = FederationAgent::new(instance);
+    let agent = build_federation_agent(instance, None);
     let maybe_avatar = if let Some(icon) = &actor.icon {
         match fetch_file(
             &agent,
@@ -241,7 +241,7 @@ async fn fetch_proposals(
     instance: &Instance,
     proposals: Vec<String>,
 ) -> Vec<PaymentOption> {
-    let agent = FederationAgent::new(instance);
+    let agent = build_federation_agent(instance, None);
     let mut payment_options = vec![];
     for proposal_id in proposals {
         let proposal: Proposal = match fetch_object(&agent, &proposal_id).await {

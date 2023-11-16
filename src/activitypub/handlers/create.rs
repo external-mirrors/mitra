@@ -48,7 +48,7 @@ use mitra_validators::{
 };
 
 use crate::activitypub::{
-    agent::FederationAgent,
+    agent::build_federation_agent,
     constants::{AP_MEDIA_TYPE, AP_PUBLIC, AS_MEDIA_TYPE},
     deserialization::{
         deserialize_into_object_id,
@@ -155,7 +155,7 @@ pub async fn get_object_attachments(
     object: &Object,
     author: &DbActorProfile,
 ) -> Result<(Vec<Uuid>, Vec<String>), HandlerError> {
-    let agent = FederationAgent::new(instance);
+    let agent = build_federation_agent(instance, None);
     let mut attachments = vec![];
     let mut unprocessed = vec![];
     if let Some(ref value) = object.attachment {
@@ -275,7 +275,7 @@ pub async fn handle_emoji(
     storage: &MediaStorage,
     tag_value: JsonValue,
 ) -> Result<Option<DbEmoji>, HandlerError> {
-    let agent = FederationAgent::new(instance);
+    let agent = build_federation_agent(instance, None);
     let tag: EmojiTag = match serde_json::from_value(tag_value) {
         Ok(tag) => tag,
         Err(error) => {

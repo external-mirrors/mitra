@@ -32,7 +32,7 @@ use mitra_utils::{
 };
 
 use super::{
-    agent::FederationAgent,
+    agent::{build_federation_agent, FederationAgent},
     constants::AP_MEDIA_TYPE,
     http_client::{
         build_http_client,
@@ -205,7 +205,7 @@ async fn deliver_activity_worker(
         deliveries.push((index, hostname, recipient.inbox.clone()));
     };
 
-    let agent = FederationAgent::as_user(&instance, &sender);
+    let agent = build_federation_agent(&instance, Some(&sender));
     let mut delivery_pool = FuturesUnordered::new();
     let mut delivery_pool_state = HashMap::new();
 

@@ -7,7 +7,7 @@ use serde_json::{Value as JsonValue};
 use uuid::Uuid;
 
 use mitra::activitypub::{
-    agent::FederationAgent,
+    agent::build_federation_agent,
     builders::delete_note::prepare_delete_note,
     builders::delete_person::prepare_delete_person,
     fetcher::fetchers::fetch_object,
@@ -460,7 +460,7 @@ impl FetchObjectAs {
         db_client: &impl DatabaseClient,
     ) -> Result<(), Error> {
         let user = get_user_by_name(db_client, &self.username).await?;
-        let agent = FederationAgent::as_user(&config.instance(), &user);
+        let agent = build_federation_agent(&config.instance(), Some(&user));
         let object: JsonValue = fetch_object(&agent, &self.object_id).await?;
         println!("{}", object);
         Ok(())

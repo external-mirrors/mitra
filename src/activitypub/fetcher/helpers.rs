@@ -22,7 +22,7 @@ use mitra_validators::errors::ValidationError;
 use crate::activitypub::{
     actors::helpers::{create_remote_profile, update_remote_profile},
     actors::types::Actor,
-    agent::FederationAgent,
+    agent::{build_federation_agent, FederationAgent},
     constants::AP_CONTEXT,
     deserialization::{find_object_id, parse_into_id_array},
     handlers::create::{get_object_links, handle_note},
@@ -46,7 +46,7 @@ async fn import_profile(
     storage: &MediaStorage,
     actor_id: &str,
 ) -> Result<DbActorProfile, HandlerError> {
-    let agent = FederationAgent::new(instance);
+    let agent = build_federation_agent(instance, None);
     let actor: Actor = fetch_object(&agent, actor_id).await?;
     let actor_address = actor.address()?;
     let acct = actor_address.acct(&instance.hostname());
@@ -86,7 +86,7 @@ pub async fn refresh_remote_profile(
     profile: DbActorProfile,
     force: bool,
 ) -> Result<DbActorProfile, HandlerError> {
-    let agent = FederationAgent::new(instance);
+    let agent = build_federation_agent(instance, None);
     let actor_id = &profile.actor_json.as_ref()
         .expect("actor data should be present")
         .id;
@@ -204,7 +204,7 @@ pub async fn import_profile_by_actor_address(
     if actor_address.hostname == instance.hostname() {
         return Err(HandlerError::LocalObject);
     };
-    let agent = FederationAgent::new(instance);
+    let agent = build_federation_agent(instance, None);
     let actor_id = perform_webfinger_query(&agent, actor_address).await?;
     import_profile(db_client, instance, storage, &actor_id).await
 }
@@ -278,7 +278,7 @@ pub async fn import_post(
     object_id: String,
     object_received: Option<Object>,
 ) -> Result<Post, HandlerError> {
-    let agent = FederationAgent::new(instance);
+    let agent = build_federation_agent(instance, None);
 
     let mut queue = vec![object_id]; // LIFO queue
     let mut fetch_count = 0;
@@ -392,7 +392,7 @@ pub async fn import_from_outbox(
     limit: usize,
 ) -> Result<(), HandlerError> {
     let instance = config.instance();
-    let agent = FederationAgent::new(&instance);
+    let agent = build_federation_agent(&instance, None);
     let actor: Actor = fetch_object(&agent, actor_id).await?;
     let activities =
         fetch_collection(&agent, &actor.outbox, limit).await?;
@@ -429,7 +429,7 @@ pub async fn import_replies(
     limit: usize,
 ) -> Result<(), HandlerError> {
     let instance = config.instance();
-    let agent = FederationAgent::new(&instance);
+    let agent = build_federation_agent(&instance, None);
     let storage = MediaStorage::from(config);
     let object: JsonValue = fetch_object(&agent, object_id).await?;
     let mut replies = vec![];
