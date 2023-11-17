@@ -9,7 +9,7 @@ rust-version = "1.59"
 mitra-utils = { path = "../mitra-utils" }
 
 # Used to read .env files
-dotenv = "0.15.0"
+dotenvy = ">=0.15.0, <0.15.7"
 # Used for logging
 log = { version = "0.4.14", features = ["serde"] }
 # Used for working with regular expressions

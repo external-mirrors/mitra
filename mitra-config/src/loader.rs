@@ -27,8 +27,8 @@ const DEFAULT_CONFIG_PATH: &str = "/etc/mitra/config.yaml";
 const DEFAULT_CONFIG_PATH: &str = "config.yaml";
 
 fn parse_env() -> EnvConfig {
-    dotenv::from_filename(".env.local").ok();
-    dotenv::dotenv().ok();
+    dotenvy::from_filename(".env.local").ok();
+    dotenvy::dotenv().ok();
     let config_path = std::env::var("CONFIG_PATH")
         .unwrap_or(DEFAULT_CONFIG_PATH.to_string());
     let environment = std::env::var("ENVIRONMENT").ok()
