@@ -1,10 +1,19 @@
 use std::net::{Ipv4Addr, Ipv6Addr};
 
-use percent_encoding::{utf8_percent_encode, NON_ALPHANUMERIC};
+use percent_encoding::{
+    percent_decode_str,
+    utf8_percent_encode,
+    NON_ALPHANUMERIC,
+};
 use url::{Host, ParseError, Url};
 
 pub fn url_encode(input: &str) -> String {
     utf8_percent_encode(input, NON_ALPHANUMERIC).to_string()
+}
+
+pub fn url_decode(input: &str) -> String {
+    let bytes = percent_decode_str(input);
+    bytes.decode_utf8_lossy().to_string()
 }
 
 /// Returns URL host name (without port number)
@@ -98,10 +107,12 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_url_encode() {
+    fn test_url_encode_decode() {
         let input = "El Niño";
         let output = url_encode(input);
         assert_eq!(output, "El%20Ni%C3%B1o");
+        let decoded = url_decode(&output);
+        assert_eq!(decoded, input);
     }
 
     #[test]
