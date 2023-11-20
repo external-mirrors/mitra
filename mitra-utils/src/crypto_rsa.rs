@@ -1,5 +1,10 @@
 use rsa::{
-    pkcs1::{DecodeRsaPublicKey, EncodeRsaPublicKey},
+    pkcs1::{
+        DecodeRsaPrivateKey,
+        DecodeRsaPublicKey,
+        EncodeRsaPrivateKey,
+        EncodeRsaPublicKey,
+    },
     pkcs8::{
         DecodePrivateKey,
         DecodePublicKey,
@@ -39,6 +44,20 @@ pub enum RsaSerializationError {
 
     #[error(transparent)]
     PemError(#[from] pem::PemError),
+}
+
+pub fn rsa_private_key_to_pkcs1_der(
+    private_key: &RsaPrivateKey,
+) -> Result<Vec<u8>, RsaSerializationError> {
+    let bytes = private_key.to_pkcs1_der()?.as_bytes().to_vec();
+    Ok(bytes)
+}
+
+pub fn rsa_private_key_from_pkcs1_der(
+    bytes: &[u8],
+) -> Result<RsaPrivateKey, RsaSerializationError> {
+    let private_key = RsaPrivateKey::from_pkcs1_der(bytes)?;
+    Ok(private_key)
 }
 
 pub fn rsa_public_key_to_pkcs1_der(
@@ -123,6 +142,14 @@ pub fn verify_rsa_sha256_signature(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_private_key_pkcs1_der_encode_decode() {
+        let private_key = generate_weak_rsa_key().unwrap();
+        let encoded = rsa_private_key_to_pkcs1_der(&private_key).unwrap();
+        let decoded = rsa_private_key_from_pkcs1_der(&encoded).unwrap();
+        assert_eq!(decoded, private_key);
+    }
 
     #[test]
     fn test_public_key_pkcs1_der_encode_decode() {
