@@ -125,12 +125,20 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_pkcs1_der_encode_decode() {
+    fn test_public_key_pkcs1_der_encode_decode() {
         let private_key = generate_weak_rsa_key().unwrap();
         let public_key = RsaPublicKey::from(private_key);
         let encoded = rsa_public_key_to_pkcs1_der(&public_key).unwrap();
         let decoded = rsa_public_key_from_pkcs1_der(&encoded).unwrap();
         assert_eq!(decoded, public_key);
+    }
+
+    #[test]
+    fn test_private_key_pkcs8_pem_encode_decode() {
+        let private_key = generate_weak_rsa_key().unwrap();
+        let encoded = rsa_private_key_to_pkcs8_pem(&private_key).unwrap();
+        let decoded = rsa_private_key_from_pkcs8_pem(&encoded).unwrap();
+        assert_eq!(decoded, private_key);
     }
 
     #[test]
