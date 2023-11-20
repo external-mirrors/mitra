@@ -3,11 +3,10 @@ use std::path::PathBuf;
 
 use log::{Level as LogLevel};
 use serde::Deserialize;
-use url::Url;
 
 use mitra_utils::{
     crypto_rsa::RsaPrivateKey,
-    urls::normalize_url,
+    urls::{normalize_url, Url, UrlError},
 };
 
 use super::authentication::{
@@ -112,7 +111,7 @@ pub struct Config {
 }
 
 impl Config {
-    pub(super) fn try_instance_url(&self) -> Result<Url, url::ParseError> {
+    pub(super) fn try_instance_url(&self) -> Result<Url, UrlError> {
         normalize_url(&self.instance_uri)
     }
 

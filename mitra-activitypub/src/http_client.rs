@@ -4,7 +4,7 @@ use std::time::Duration;
 use bytes::{BufMut, Bytes, BytesMut};
 use reqwest::{Client, Proxy, Response};
 
-use mitra_utils::urls::get_hostname;
+use mitra_utils::urls::{get_hostname, UrlError};
 
 use super::agent::FederationAgent;
 
@@ -20,7 +20,7 @@ pub enum Network {
 }
 
 pub fn get_network_type(request_url: &str) ->
-    Result<Network, url::ParseError>
+    Result<Network, UrlError>
 {
     let hostname = get_hostname(request_url)?;
     let network = if hostname.ends_with(".onion") {

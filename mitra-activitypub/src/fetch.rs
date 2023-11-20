@@ -9,7 +9,7 @@ use mitra_utils::{
         create_http_signature,
         HttpSignatureError,
     },
-    urls::is_safe_url,
+    urls::{is_safe_url, UrlError},
 };
 
 use super::{
@@ -29,7 +29,7 @@ pub enum FetchError {
     SignatureError(#[from] HttpSignatureError),
 
     #[error("inavlid URL")]
-    UrlError(#[from] url::ParseError),
+    UrlError(#[from] UrlError),
 
     #[error("invalid URL")]
     UnsafeUrl,

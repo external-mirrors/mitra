@@ -1985,7 +1985,6 @@ dependencies = [
  "serde",
  "serde_json",
  "thiserror",
- "url",
 ]
 
 [[package]]
@@ -2018,7 +2017,6 @@ dependencies = [
  "serde",
  "serde_yaml",
  "thiserror",
- "url",
 ]
 
 [[package]]

@@ -14,7 +14,5 @@ serde = { version = "1.0.136", features = ["derive"] }
 serde_json = "1.0.89"
 # Used for creating error types
 thiserror = "1.0.37"
-# Used to work with URLs
-url = "2.2.2"
 
 mitra-utils = { path = "../mitra-utils" }

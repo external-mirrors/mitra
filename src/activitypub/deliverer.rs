@@ -36,7 +36,7 @@ use mitra_utils::{
         sign_object_rsa,
         JsonSignatureError,
     },
-    urls::get_hostname,
+    urls::{get_hostname, UrlError},
 };
 
 use super::{
@@ -58,7 +58,7 @@ pub enum DelivererError {
     SerializationError(#[from] serde_json::Error),
 
     #[error("inavlid URL")]
-    UrlError(#[from] url::ParseError),
+    UrlError(#[from] UrlError),
 
     #[error(transparent)]
     RequestError(#[from] reqwest::Error),

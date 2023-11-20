@@ -5,7 +5,9 @@ use percent_encoding::{
     utf8_percent_encode,
     NON_ALPHANUMERIC,
 };
-use url::{Host, ParseError, Url};
+use url::Host;
+
+pub use url::{Url, ParseError as UrlError};
 
 pub fn url_encode(input: &str) -> String {
     utf8_percent_encode(input, NON_ALPHANUMERIC).to_string()
@@ -17,10 +19,10 @@ pub fn url_decode(input: &str) -> String {
 }
 
 /// Returns URL host name (without port number)
-pub fn get_hostname(url: &str) -> Result<String, ParseError> {
+pub fn get_hostname(url: &str) -> Result<String, UrlError> {
     let hostname = match Url::parse(url)?
         .host()
-        .ok_or(ParseError::EmptyHost)?
+        .ok_or(UrlError::EmptyHost)?
     {
         Host::Domain(domain) => domain.to_string(),
         Host::Ipv4(addr) => addr.to_string(),
@@ -76,7 +78,7 @@ pub fn is_safe_url(url: &str) -> bool {
 }
 
 // Used to normalize instance URL
-pub fn normalize_url(url: &str) -> Result<Url, url::ParseError> {
+pub fn normalize_url(url: &str) -> Result<Url, UrlError> {
     let normalized_url = if
         url.starts_with("http://") ||
         url.starts_with("https://")
@@ -98,7 +100,7 @@ pub fn normalize_url(url: &str) -> Result<Url, url::ParseError> {
         )
     };
     let url = Url::parse(&normalized_url)?;
-    url.host().ok_or(ParseError::EmptyHost)?; // validates URL
+    url.host().ok_or(UrlError::EmptyHost)?; // validates URL
     Ok(url)
 }
 
