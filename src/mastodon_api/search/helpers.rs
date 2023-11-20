@@ -33,12 +33,12 @@ use mitra_utils::{
 use mitra_validators::errors::ValidationError;
 
 use crate::activitypub::{
-    fetcher::helpers::{
+    identifiers::{parse_local_actor_id, parse_local_object_id},
+    importers::{
         get_or_import_profile_by_actor_id,
         import_post,
         import_profile_by_actor_address,
     },
-    identifiers::{parse_local_actor_id, parse_local_object_id},
     HandlerError,
 };
 use crate::webfinger::types::ActorAddress;

@@ -10,7 +10,7 @@ use mitra::activitypub::{
     agent::build_federation_agent,
     builders::delete_note::prepare_delete_note,
     builders::delete_person::prepare_delete_person,
-    fetcher::helpers::{
+    importers::{
         import_from_outbox,
         import_replies,
         refresh_remote_profile,

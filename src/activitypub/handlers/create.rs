@@ -57,13 +57,13 @@ use crate::activitypub::{
         parse_into_href_array,
         parse_into_id_array,
     },
-    fetcher::helpers::{
+    identifiers::{parse_local_actor_id, profile_actor_id},
+    importers::{
         get_or_import_profile_by_actor_address,
         get_or_import_profile_by_actor_id,
         get_post_by_object_id,
         import_post,
     },
-    identifiers::{parse_local_actor_id, profile_actor_id},
     receiver::HandlerError,
     types::{Attachment, EmojiTag, LinkTag, Object, Tag},
     vocabulary::*,

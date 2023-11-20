@@ -20,8 +20,8 @@ use crate::activitypub::{
         follow::follow_or_create_request,
         undo_follow::prepare_undo_follow,
     },
-    fetcher::helpers::get_or_import_profile_by_actor_id,
     identifiers::{parse_local_actor_id, profile_actor_id},
+    importers::get_or_import_profile_by_actor_id,
     vocabulary::PERSON,
 };
 

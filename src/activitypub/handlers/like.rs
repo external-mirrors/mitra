@@ -11,7 +11,7 @@ use mitra_validators::errors::ValidationError;
 
 use crate::activitypub::{
     deserialization::deserialize_into_object_id,
-    fetcher::helpers::{
+    importers::{
         get_or_import_profile_by_actor_id,
         get_post_by_object_id,
     },

@@ -26,7 +26,7 @@ use crate::activitypub::{
         move_person::prepare_move_person,
         undo_follow::prepare_undo_follow,
     },
-    fetcher::helpers::get_or_import_profile_by_actor_address,
+    importers::get_or_import_profile_by_actor_address,
     HandlerError,
 };
 use crate::webfinger::types::ActorAddress;

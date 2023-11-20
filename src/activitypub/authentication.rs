@@ -43,7 +43,7 @@ use mitra_utils::{
 };
 
 use super::deserialization::find_object_id;
-use super::fetcher::helpers::get_or_import_profile_by_actor_id;
+use super::importers::get_or_import_profile_by_actor_id;
 use super::receiver::HandlerError;
 
 const AUTHENTICATION_FETCHER_TIMEOUT: u64 = 10;

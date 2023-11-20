@@ -19,8 +19,8 @@ use mitra_validators::errors::ValidationError;
 use crate::activitypub::{
     builders::accept_follow::prepare_accept_follow,
     deserialization::deserialize_into_object_id,
-    fetcher::helpers::get_or_import_profile_by_actor_id,
     identifiers::parse_local_actor_id,
+    importers::get_or_import_profile_by_actor_id,
     vocabulary::PERSON,
 };
 

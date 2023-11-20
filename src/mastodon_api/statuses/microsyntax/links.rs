@@ -8,7 +8,7 @@ use mitra_models::{
 };
 use mitra_validators::posts::LINK_LIMIT;
 
-use crate::activitypub::fetcher::helpers::get_post_by_object_id;
+use crate::activitypub::importers::get_post_by_object_id;
 
 // MediaWiki-like syntax: [[url|text]]
 const OBJECT_LINK_SEARCH_RE: &str = r"(?m)\[\[(?P<url>[^\s\|]+)(\|(?P<text>.+?))?\]\]";

@@ -18,8 +18,8 @@ use mitra_validators::errors::ValidationError;
 
 use crate::activitypub::{
     deserialization::{deserialize_into_object_id, find_object_id},
-    fetcher::helpers::{get_or_import_profile_by_actor_id, import_post},
     identifiers::parse_local_object_id,
+    importers::{get_or_import_profile_by_actor_id, import_post},
     vocabulary::*,
 };
 
