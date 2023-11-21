@@ -192,11 +192,15 @@ mod tests {
 
     #[test]
     fn test_normalize_url() {
-        let result = normalize_url("https://test.net").unwrap();
-        assert_eq!(result.to_string(), "https://test.net/");
-        let result = normalize_url("example.com").unwrap();
-        assert_eq!(result.to_string(), "https://example.com/");
+        let result = normalize_url("https://social.example").unwrap();
+        assert_eq!(result.to_string(), "https://social.example/");
+        let result = normalize_url("social.example").unwrap();
+        assert_eq!(result.to_string(), "https://social.example/");
         let result = normalize_url("127.0.0.1:8380").unwrap();
+        // IP address
         assert_eq!(result.to_string(), "http://127.0.0.1:8380/");
+        // Onion
+        let result = normalize_url("xyz.onion").unwrap();
+        assert_eq!(result.to_string(), "http://xyz.onion/");
     }
 }
