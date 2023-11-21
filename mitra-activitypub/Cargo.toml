@@ -3,7 +3,7 @@ name = "mitra-activitypub"
 version = "2.4.0"
 license = "AGPL-3.0-only"
 edition = "2021"
-rust-version = "1.59"
+rust-version = "1.60"
 
 [dependencies]
 # Used for making async HTTP requests
