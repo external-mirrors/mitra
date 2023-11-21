@@ -87,6 +87,7 @@ async fn main() -> std::io::Result<()> {
         MITRA_VERSION,
         config.environment,
     );
+    log::info!("instance URL {}", config.instance_url());
 
     scheduler::run(
         config.clone(),
