@@ -61,6 +61,7 @@ impl Tag {
 pub struct Status {
     pub id: Uuid,
     pub uri: String,
+    pub url: Option<String>,
     pub created_at: DateTime<Utc>,
     edited_at: Option<DateTime<Utc>>,
     pub account: Account,
@@ -132,6 +133,7 @@ impl Status {
         Self {
             id: post.id,
             uri: object_id,
+            url: None,
             created_at: post.created_at,
             edited_at: post.updated_at,
             account: account,

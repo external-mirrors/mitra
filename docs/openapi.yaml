@@ -2355,6 +2355,10 @@ components:
         uri:
           description: URI of the post used for federation.
           type: string
+        url:
+          description: A link to the HTML representation of the post.
+          type: string
+          nullable: true
         created_at:
           description: The date when this post was created.
           type: string
