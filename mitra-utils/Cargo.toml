@@ -20,9 +20,8 @@ chrono = { version = "0.4.23", default-features = false, features = ["std", "ser
 # Used for parsing markdown
 comrak = { version = "0.18.0", default-features = false }
 # Used for working with EdDSA signatures
-rand_0_7 = { package = "rand", version = "0.7.3" }
-ed25519 = { version = "1.5.3", features = ["pkcs8"] }
-ed25519-dalek = "1.0.1"
+ed25519_1 = { package = "ed25519", version = "1.5.3", features = ["pkcs8"] }
+ed25519-dalek = { version = "2.0.0", features = ["rand_core"] }
 # Used to work with hexadecimal strings
 hex = "0.4.3"
 # Used for verifying HTTP signatures

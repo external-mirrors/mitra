@@ -216,7 +216,7 @@ mod tests {
         ).unwrap();
         assert_eq!(
             message,
-            r#"{"alsoKnownAs":"https://server.example/users/test","subject":"did:key:z6MkvTbUjUVTwwMEsqxipAsL9YUvRaAC22rFzQCHf7RnbTbx","type":"VerifiableIdentityStatement"}"#,
+            r#"{"alsoKnownAs":"https://server.example/users/test","subject":"did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6","type":"VerifiableIdentityStatement"}"#,
         );
     }
 

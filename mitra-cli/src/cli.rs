@@ -314,7 +314,7 @@ impl AddEd25519Key {
         set_user_ed25519_private_key(
             db_client,
             &self.id,
-            ed25519_private_key.to_bytes(),
+            ed25519_private_key,
         ).await?;
         println!("ed25519 key generated");
         Ok(())

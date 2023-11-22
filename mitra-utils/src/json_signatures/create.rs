@@ -340,7 +340,7 @@ mod tests {
                 "created": "2023-02-24T23:36:38Z",
                 "verificationMethod": "https://example.org/users/test#main-key",
                 "proofPurpose": "assertionMethod",
-                "proofValue": "z4cjuCEAMV1muEXevo6CqU7LLvfcptZTbSgLtSxw99P9XhLD6y6JKxgZSEqXkryM28cWnJFat7u5Tr6SsASN1i1DD",
+                "proofValue": "z4XtzpP5qhBvkQsRsb49Kb8nGqqS3k2CsMiQkoTStHZy1gqEMR1FweKMXve82J6mf8w97WBW1T62ukFbCw7EaBsk4",
             },
         });
         assert_eq!(result, expected_result);

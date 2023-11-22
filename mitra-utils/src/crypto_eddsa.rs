@@ -1,37 +1,42 @@
-use ed25519::pkcs8::{
+// Using ed25519 v1.5
+// because ed25519 v2.2 requires Rust 1.65 (via pkcs8 dependency)
+use ed25519_1::pkcs8::{
     DecodePublicKey,
     PublicKeyBytes,
 };
 use ed25519_dalek::{
-    ExpandedSecretKey,
-    Keypair,
-    PublicKey,
     SecretKey,
+    SigningKey,
     Signature,
     SignatureError,
+    Signer,
     Verifier,
+    VerifyingKey,
 };
 
 pub type Ed25519PrivateKey = SecretKey;
-pub type Ed25519PublicKey = PublicKey;
+pub type Ed25519PublicKey = VerifyingKey;
 pub type EddsaError = SignatureError;
 
 pub fn generate_ed25519_key() -> SecretKey {
-    let mut rng = rand_0_7::rngs::OsRng;
-    let keypair = Keypair::generate(&mut rng);
-    keypair.secret
+    let mut rng = rand::rngs::OsRng;
+    let keypair = SigningKey::generate(&mut rng);
+    keypair.to_bytes()
 }
 
 #[cfg(feature = "test-utils")]
 pub fn generate_weak_ed25519_key() -> SecretKey {
-    use rand_0_7::SeedableRng;
-    let mut rng = rand_0_7::rngs::StdRng::seed_from_u64(0);
-    let keypair = Keypair::generate(&mut rng);
-    keypair.secret
+    use rand::SeedableRng;
+    let mut rng = rand::rngs::StdRng::seed_from_u64(0);
+    let keypair = SigningKey::generate(&mut rng);
+    keypair.to_bytes()
 }
 
 #[derive(thiserror::Error, Debug)]
 pub enum Ed25519SerializationError {
+    #[error("conversion error")]
+    ConversionError,
+
     #[error(transparent)]
     KeyError(#[from] SignatureError),
 
@@ -42,48 +47,50 @@ pub enum Ed25519SerializationError {
 pub fn ed25519_private_key_from_bytes(
     bytes: &[u8],
 ) -> Result<SecretKey, Ed25519SerializationError> {
-    let private_key = SecretKey::from_bytes(bytes)?;
+    let private_key: SecretKey = bytes.try_into()
+        .map_err(|_| Ed25519SerializationError::ConversionError)?;
     Ok(private_key)
 }
 
 pub fn ed25519_public_key_from_bytes(
     bytes: &[u8],
-) -> Result<PublicKey, Ed25519SerializationError> {
-    let public_key = PublicKey::from_bytes(bytes)?;
+) -> Result<VerifyingKey, Ed25519SerializationError> {
+    let bytes: [u8; 32] = bytes.try_into()
+        .map_err(|_| Ed25519SerializationError::ConversionError)?;
+    let public_key = VerifyingKey::from_bytes(&bytes)?;
     Ok(public_key)
 }
 
 pub fn ed25519_public_key_from_pkcs8_pem(
     public_key_pem: &str,
-) -> Result<PublicKey, Ed25519SerializationError> {
+) -> Result<VerifyingKey, Ed25519SerializationError> {
     let public_key_bytes = PublicKeyBytes::from_public_key_pem(public_key_pem)
         .map_err(|_| Ed25519SerializationError::Pkcs8Error)?;
-    let public_key = PublicKey::from_bytes(public_key_bytes.as_ref())?;
+    let public_key = VerifyingKey::from_bytes(public_key_bytes.as_ref())?;
     Ok(public_key)
 }
 
 pub fn ed25519_public_key_from_private_key(
     private_key: &SecretKey,
-) -> PublicKey {
-    PublicKey::from(private_key)
+) -> VerifyingKey {
+    SigningKey::from(private_key).verifying_key()
 }
 
 pub fn create_eddsa_signature(
     private_key: &SecretKey,
     message: &[u8],
 ) -> [u8; 64] {
-    let public_key = PublicKey::from(private_key);
-    let expanded_private_key = ExpandedSecretKey::from(private_key);
-    let signature = expanded_private_key.sign(message, &public_key);
+    let private_key = SigningKey::from_bytes(private_key);
+    let signature = private_key.sign(message);
     signature.to_bytes()
 }
 
 pub fn verify_eddsa_signature(
-    public_key: &PublicKey,
+    public_key: &VerifyingKey,
     message: &[u8],
     signature: [u8; 64],
 ) -> Result<(), SignatureError> {
-    let signature = Signature::from_bytes(&signature)?;
+    let signature = Signature::from_bytes(&signature);
     public_key.verify(message, &signature)?;
     Ok(())
 }
