@@ -12,10 +12,14 @@ use rsa::{
         EncodePublicKey,
         LineEnding,
     },
-    PaddingScheme,
-    PublicKey,
+    pkcs1v15::{Signature, SigningKey, VerifyingKey},
+    signature::{
+        SignatureEncoding,
+        Signer,
+        Verifier,
+    },
 };
-use sha2::{Digest, Sha256};
+use sha2::Sha256;
 
 pub use rsa::{RsaPrivateKey, RsaPublicKey};
 pub type RsaError = rsa::errors::Error;
@@ -118,10 +122,9 @@ pub fn create_rsa_sha256_signature(
     private_key: &RsaPrivateKey,
     message: &str,
 ) -> Result<Vec<u8>, RsaError> {
-    let digest = Sha256::digest(message.as_bytes());
-    let padding = PaddingScheme::new_pkcs1v15_sign::<Sha256>();
-    let signature = private_key.sign(padding, &digest)?;
-    Ok(signature)
+    let signing_key = SigningKey::<Sha256>::new_with_prefix(private_key.clone());
+    let signature = signing_key.sign(message.as_bytes());
+    Ok(signature.to_vec())
 }
 
 pub fn verify_rsa_sha256_signature(
@@ -129,12 +132,14 @@ pub fn verify_rsa_sha256_signature(
     message: &str,
     signature: &[u8],
 ) -> bool {
-    let digest = Sha256::digest(message.as_bytes());
-    let padding = PaddingScheme::new_pkcs1v15_sign::<Sha256>();
-    let is_valid = public_key.verify(
-        padding,
-        &digest,
-        signature,
+    let verifying_key = VerifyingKey::<Sha256>::new_with_prefix(public_key.clone());
+    let signature = match Signature::try_from(signature) {
+        Ok(signature) => signature,
+        Err(_) => return false,
+    };
+    let is_valid = verifying_key.verify(
+        message.as_bytes(),
+        &signature,
     ).is_ok();
     is_valid
 }

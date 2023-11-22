@@ -36,8 +36,8 @@ rand = "0.8.4"
 # Used for working with regular expressions
 regex = "1.6.0"
 # Used for working with RSA keys
-rsa = "0.7.2"
-pem = "1.1.1"
+rsa = "0.8.2"
+pem = "2.0.1"
 # Used for hashing passwords
 rust-argon2 = "1.0.0"
 # Used for serialization/deserialization
