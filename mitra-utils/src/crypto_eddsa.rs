@@ -62,6 +62,12 @@ pub fn ed25519_public_key_from_pkcs8_pem(
     Ok(public_key)
 }
 
+pub fn ed25519_public_key_from_private_key(
+    private_key: &SecretKey,
+) -> PublicKey {
+    PublicKey::from(private_key)
+}
+
 pub fn create_eddsa_signature(
     private_key: &SecretKey,
     message: &[u8],
@@ -94,7 +100,8 @@ mod tests {
             &private_key,
             message.as_bytes(),
         );
-        let public_key = PublicKey::from(&private_key);
+        let public_key =
+            ed25519_public_key_from_private_key(&private_key);
         let result = verify_eddsa_signature(
             &public_key,
             message.as_bytes(),

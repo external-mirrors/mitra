@@ -447,8 +447,8 @@ mod tests {
     use mitra_models::profiles::types::PublicKeyType;
     use mitra_utils::{
         crypto_eddsa::{
+            ed25519_public_key_from_private_key,
             generate_ed25519_key,
-            Ed25519PublicKey,
         },
         crypto_rsa::{
             generate_weak_rsa_key,
@@ -478,7 +478,7 @@ mod tests {
         let public_keys = parse_public_keys(&actor).unwrap();
         assert_eq!(public_keys.len(), 2);
         let ed25519_public_key_bytes =
-            Ed25519PublicKey::from(&ed25519_private_key).to_bytes();
+            ed25519_public_key_from_private_key(&ed25519_private_key).to_bytes();
         assert_eq!(public_keys[0].key_type, PublicKeyType::Ed25519);
         assert_eq!(public_keys[0].key_data, ed25519_public_key_bytes);
         let rsa_public_key_der =

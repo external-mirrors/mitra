@@ -158,7 +158,7 @@ impl DbEd25519PrivateKey {
 impl Clone for DbEd25519PrivateKey {
     fn clone(&self) -> Self {
         let bytes = self.inner().as_bytes();
-        let private_key = Ed25519PrivateKey::from_bytes(bytes)
+        let private_key = ed25519_private_key_from_bytes(bytes)
             .expect("should be valid private key");
         Self(private_key)
     }

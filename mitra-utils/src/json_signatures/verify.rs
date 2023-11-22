@@ -173,7 +173,7 @@ mod tests {
             generate_ed25519_key,
             ed25519_private_key_from_bytes,
             ed25519_public_key_from_bytes,
-            Ed25519PublicKey,
+            ed25519_public_key_from_private_key,
         },
         crypto_rsa::generate_weak_rsa_key,
         currencies::Currency,
@@ -288,7 +288,8 @@ mod tests {
         let expected_signer = JsonSigner::ActorKeyId(signer_key_id.to_string());
         assert_eq!(signature_data.signer, expected_signer);
 
-        let signer_public_key = Ed25519PublicKey::from(&signer_key);
+        let signer_public_key =
+            ed25519_public_key_from_private_key(&signer_key);
         let result = verify_eddsa_json_signature(
             &signer_public_key,
             &signature_data.object,

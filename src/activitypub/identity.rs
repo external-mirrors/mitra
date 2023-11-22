@@ -169,7 +169,7 @@ mod tests {
             generate_weak_ed25519_key,
             ed25519_private_key_from_bytes,
             ed25519_public_key_from_bytes,
-            Ed25519PublicKey,
+            ed25519_public_key_from_private_key,
         },
         currencies::Currency,
         did_key::DidKey,
@@ -203,7 +203,8 @@ mod tests {
     fn test_create_identity_claim_fep_c390() {
         let actor_id = "https://server.example/users/test";
         let ed25519_private_key = generate_weak_ed25519_key();
-        let ed25519_public_key = Ed25519PublicKey::from(&ed25519_private_key);
+        let ed25519_public_key =
+            ed25519_public_key_from_private_key(&ed25519_private_key);
         let did = Did::Key(
             DidKey::from_ed25519_key(ed25519_public_key.to_bytes()));
         let created_at = Utc::now();
