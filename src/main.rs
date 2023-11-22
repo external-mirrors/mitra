@@ -52,6 +52,7 @@ use mitra_services::{
     ethereum::contracts::get_contracts,
     media::{MediaStorage, MEDIA_ROOT_URL},
 };
+use mitra_utils::urls::get_hostname;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -121,8 +122,19 @@ async fn main() -> std::io::Result<()> {
                 cors_config
                     .allowed_origin(&config.instance_url())
                     .allowed_origin_fn(|origin, req_head| {
-                        req_head.method == Method::GET ||
-                        origin.as_bytes().starts_with(b"http://localhost:")
+                        if req_head.method == Method::GET {
+                            // Allow all GET requests
+                            return true;
+                        };
+                        let maybe_hostname = origin.to_str().ok()
+                            .and_then(|origin| get_hostname(origin).ok());
+                        match maybe_hostname {
+                            Some(hostname) => {
+                                hostname == "localhost" ||
+                                hostname == "127.0.0.1"
+                            },
+                            None => false,
+                        }
                     })
                     .allow_any_method()
                     .allow_any_header()
