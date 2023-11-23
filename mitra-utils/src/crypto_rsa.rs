@@ -141,6 +141,7 @@ pub fn verify_rsa_sha256_signature(
 
 #[cfg(test)]
 mod tests {
+    use crate::base64;
     use super::*;
 
     #[test]
@@ -194,6 +195,30 @@ YsFtrgWDQ/s8k86sNBU+Ce2GOL7seh46kyAWgJeohh4Rcrr23rftHbvxOcRM8VzYuCeb1DgVhPGtA0xU
 
     #[test]
     fn test_verify_rsa_signature() {
+        let public_key_pem = "-----BEGIN PUBLIC KEY-----
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA1wOPLWAp6nNT5CwttzFP
+kWKm+U+weptmldt+EC0JcSuc8sWwki4BU5k/4zunCCc0jxN4ZrfAv3LmYDAx4nbC
+Z+7ndKFrDjLtcHMsBBmb+/YYH4lXBXmauMLYGVMZg/8/xPh/euzu+u7wBtFLXU1D
+j9PKrqccKZ1I2ENQxTCPMdCI4BYR9niZcKjqG4lVKIbb4VCzIITlVJL7KNt2ZyYX
+IjxLKfnZVfCkQ9t5EWkoBME8Gf8hKltxcA5jvEbgHxwmFKgIeSZXg3gQncQL1/qZ
+8AVcpaMTTqahxPCFRExlRU0y8ppGcqymyMH/P6jHclRZDqxtwT/S3nFPbwuBAx4O
+NwIDAQAB
+-----END PUBLIC KEY-----";
+        let message = "test";
+        let signature = "NFiY1Vx+jZizdiLvS4JAoxcsCI2+SjwWPdWsj8ICqRuMcMg0Gu7/qPu2n/B8sUjXycZH0sUcATIbHaf7AtPTNEU/FDFP+1wR5K4fCEt6QpaV4uGR8KBYTJUV2vE6nnx2Hkr/bAhK8JM3f4OQATqxDc7Ozmosd48sx3alxOOGgZnQD3kCKVhaSJH/ZkYAcPmY7ksSbm9iFX09D2ytEp+FDAD3pzgiNq/MlmozAmSdX9/cS2IFbKAjiJ3wq1T4NqApTZ0Rd8HYuBveMnW3GVeyPalao7uIaYyJumqaf9cBg9l9EkwGwJZ5gsoAV5OHgMTU5bMGF1ShR5xWCnG8fq1ylg==";
+
+        let public_key = deserialize_rsa_public_key(public_key_pem).unwrap();
+        let signature_bytes = base64::decode(signature).unwrap();
+        let is_valid = verify_rsa_sha256_signature(
+            &public_key,
+            message,
+            &signature_bytes,
+        );
+        assert_eq!(is_valid, true);
+    }
+
+    #[test]
+    fn test_create_and_verify_rsa_signature() {
         let private_key = generate_weak_rsa_key().unwrap();
         let message = "test".to_string();
         let signature = create_rsa_sha256_signature(
