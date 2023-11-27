@@ -2,7 +2,7 @@ version: "3"
 
 services:
   database:
-    image: postgres:latest
+    image: postgres:13-bullseye
     restart: always
     environment:
       POSTGRES_PASSWORD: mitra
@@ -11,7 +11,7 @@ services:
     ports:
       - "55432:5432"
     volumes:
-      - mitra_postgres:/var/lib/postgresql/data
+      - postgres_database:/var/lib/postgresql/data
 
   # https://github.com/farcaster-project/containers
   monerod:
@@ -39,5 +39,5 @@ services:
       - monero_wallets:/wallets
 
 volumes:
-  mitra_postgres:
+  postgres_database:
   monero_wallets:
