@@ -63,7 +63,7 @@ Install PostgreSQL and create the database:
 
 ```sql
 CREATE USER mitra WITH PASSWORD 'mitra';
-CREATE DATABASE mitra OWNER mitra;
+CREATE DATABASE mitra OWNER mitra ENCODING 'UTF8';
 ```
 
 Create configuration file by copying `contrib/mitra_config.yaml` and configure the instance. Default config file path is `/etc/mitra/config.yaml`, but it can be changed using `CONFIG_PATH` environment variable.
@@ -92,7 +92,7 @@ Install PostgreSQL and create the database:
 
 ```sql
 CREATE USER mitra WITH PASSWORD 'mitra';
-CREATE DATABASE mitra OWNER mitra;
+CREATE DATABASE mitra OWNER mitra ENCODING 'UTF8';
 ```
 
 Open configuration file `/etc/mitra/config.yaml` and configure the instance.
