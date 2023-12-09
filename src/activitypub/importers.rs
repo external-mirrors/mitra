@@ -450,9 +450,15 @@ pub async fn import_replies(
             let items = parse_into_id_array(&value["first"]["items"])?;
             replies.extend(items);
             if let Some(next_page_url) = value["first"]["next"].as_str() {
+                // Mastodon: next page might be empty, additional step is needed
                 let next_page: JsonValue = fetch_object(&agent, next_page_url).await?;
                 let items = parse_into_id_array(&next_page["items"])?;
                 replies.extend(items);
+                if let Some(next_page_url) = next_page["next"].as_str() {
+                    let next_page: JsonValue = fetch_object(&agent, next_page_url).await?;
+                    let items = parse_into_id_array(&next_page["items"])?;
+                    replies.extend(items);
+                };
             };
         },
     };
