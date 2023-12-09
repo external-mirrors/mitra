@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Added
 
 - Support changing logger configuration with `RUST_LOG` environment variable.
+- Make length of logged delivery response configurable.
 
 ### Changed
 

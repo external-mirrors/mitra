@@ -120,7 +120,9 @@ async fn send_activity(
         let response_text: String = String::from_utf8(response_data.to_vec())
             // Replace non-UTF8 responses with empty string
             .unwrap_or_default()
-            .chars().filter(|chr| *chr != '\n' && *chr != '\r').take(75)
+            .chars()
+            .filter(|chr| *chr != '\n' && *chr != '\r')
+            .take(agent.deliverer_log_response_length)
             .collect();
         log::info!(
             "response from {}: [{}] {}",

@@ -7,6 +7,7 @@ pub struct FederationAgent {
 
     pub fetcher_timeout: u64,
     pub deliverer_timeout: u64,
+    pub deliverer_log_response_length: usize,
 
     // Proxy for outgoing requests
     pub proxy_url: Option<String>,
