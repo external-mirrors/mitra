@@ -161,7 +161,7 @@ impl Recipient {
 
 const DELIVERY_BATCH_SIZE: usize = 5;
 
-async fn deliver_activity_worker(
+pub(super) async fn deliver_activity_worker(
     instance: Instance,
     sender: User,
     activity: Value,
@@ -304,18 +304,6 @@ impl OutgoingActivity {
                 .expect("activity should be serializable"),
             recipients: recipient_map.into_values().collect(),
         }
-    }
-
-    pub(super) async fn deliver(
-        mut self,
-    ) -> Result<Vec<Recipient>, DelivererError> {
-        deliver_activity_worker(
-            self.instance,
-            self.sender,
-            self.activity,
-            &mut self.recipients,
-        ).await?;
-        Ok(self.recipients)
     }
 
     pub async fn enqueue(
