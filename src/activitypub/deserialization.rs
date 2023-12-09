@@ -150,18 +150,18 @@ pub fn parse_into_array<T: DeserializeOwned>(
     Ok(items)
 }
 
-pub fn deserialize_value_array<'de, D>(
+pub fn deserialize_object_array<'de, D, T>(
     deserializer: D,
-) -> Result<Vec<Value>, D::Error>
-    where D: Deserializer<'de>
+) -> Result<Vec<T>, D::Error>
+    where D: Deserializer<'de>, T: DeserializeOwned
 {
     let maybe_value: Option<Value> = Option::deserialize(deserializer)?;
-    let values = if let Some(value) = maybe_value {
+    let objects = if let Some(value) = maybe_value {
         parse_into_array(&value).map_err(DeserializerError::custom)?
     } else {
         vec![]
     };
-    Ok(values)
+    Ok(objects)
 }
 
 #[cfg(test)]

@@ -36,7 +36,7 @@ use crate::activitypub::{
         W3ID_SECURITY_CONTEXT,
     },
     deserialization::{
-        deserialize_value_array,
+        deserialize_object_array,
         parse_into_array,
         parse_into_href_array,
     },
@@ -160,6 +160,7 @@ pub struct Actor {
 
     #[serde(
         default,
+        deserialize_with = "deserialize_object_array",
         skip_serializing_if = "Vec::is_empty",
     )]
     pub assertion_method: Vec<Multikey>,
@@ -193,7 +194,7 @@ pub struct Actor {
 
     #[serde(
         default,
-        deserialize_with = "deserialize_value_array",
+        deserialize_with = "deserialize_object_array",
         skip_serializing_if = "Vec::is_empty",
     )]
     pub attachment: Vec<Value>,
@@ -203,7 +204,7 @@ pub struct Actor {
 
     #[serde(
         default,
-        deserialize_with = "deserialize_value_array",
+        deserialize_with = "deserialize_object_array",
         skip_serializing_if = "Vec::is_empty",
     )]
     pub tag: Vec<Value>,

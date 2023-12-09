@@ -12,7 +12,7 @@ use super::constants::{
 };
 use super::deserialization::{
     deserialize_string_array,
-    deserialize_value_array,
+    deserialize_object_array,
 };
 use super::vocabulary::HASHTAG;
 
@@ -111,7 +111,7 @@ pub struct Object {
 
     #[serde(
         default,
-        deserialize_with = "deserialize_value_array",
+        deserialize_with = "deserialize_object_array",
     )]
     pub tag: Vec<Value>,
 
