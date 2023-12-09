@@ -20,5 +20,6 @@ pub fn configure_logger(base_level: Level) -> () {
         })
         .filter_level(base_level.to_level_filter())
         .filter_module("actix_web::middleware::logger", actix_level.to_level_filter())
+        .parse_default_env()
         .init();
 }

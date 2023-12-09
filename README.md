@@ -125,6 +125,10 @@ apk add -vi mitra@testing
 
 ## Configuration
 
+### Environment variables
+
+See [defaults](./.env).
+
 ### Tor/I2P federation
 
 See [guide](./docs/onion.md).
