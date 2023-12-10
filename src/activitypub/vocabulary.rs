@@ -20,9 +20,9 @@ pub const UNDO: &str = "Undo";
 pub const UPDATE: &str = "Update";
 
 // Actor types
+pub const APPLICATION: &str = "Application";
 pub const GROUP: &str = "Group";
 pub const PERSON: &str = "Person";
-pub const SERVICE: &str = "Service";
 
 // Object types
 pub const ARTICLE: &str = "Article";

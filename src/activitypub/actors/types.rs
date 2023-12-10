@@ -45,7 +45,7 @@ use crate::activitypub::{
         local_instance_actor_id,
         LocalActorCollection,
     },
-    vocabulary::{IMAGE, PERSON, SERVICE},
+    vocabulary::{APPLICATION, IMAGE, PERSON},
 };
 use crate::webfinger::types::ActorAddress;
 
@@ -393,7 +393,7 @@ pub fn build_instance_actor(
     let actor = Actor {
         context: Some(json!(build_actor_context())),
         id: actor_id,
-        object_type: SERVICE.to_string(),
+        object_type: APPLICATION.to_string(),
         name: Some(instance.hostname()),
         preferred_username: instance.hostname(),
         inbox: actor_inbox,
@@ -476,7 +476,7 @@ mod tests {
         let instance = Instance::for_test(instance_url);
         let actor = build_instance_actor(&instance).unwrap();
         assert_eq!(actor.id, "https://example.com/actor");
-        assert_eq!(actor.object_type, "Service");
+        assert_eq!(actor.object_type, "Application");
         assert_eq!(actor.preferred_username, "example.com");
         assert_eq!(actor.inbox, "https://example.com/actor/inbox");
         assert_eq!(actor.outbox, "https://example.com/actor/outbox");
