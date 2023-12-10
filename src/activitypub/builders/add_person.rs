@@ -10,13 +10,13 @@ use mitra_models::{
 use mitra_utils::id::generate_ulid;
 
 use crate::activitypub::{
-    deliverer::OutgoingActivity,
     identifiers::{
         local_actor_id,
         local_agreement_id,
         local_object_id,
         LocalActorCollection,
     },
+    queues::OutgoingActivityJobData,
     types::{build_default_context, Context},
     vocabulary::ADD,
 };
@@ -76,7 +76,7 @@ pub fn prepare_add_person(
     collection: LocalActorCollection,
     end_time: DateTime<Utc>,
     maybe_invoice_id: Option<&Uuid>,
-) -> OutgoingActivity {
+) -> OutgoingActivityJobData {
     let activity = build_add_person(
         &instance.url(),
         &sender.profile.username,
@@ -86,7 +86,7 @@ pub fn prepare_add_person(
         maybe_invoice_id,
     );
     let recipients = vec![person.clone()];
-    OutgoingActivity::new(
+    OutgoingActivityJobData::new(
         sender,
         activity,
         recipients,

@@ -10,8 +10,8 @@ use mitra_models::{
 use mitra_utils::id::generate_ulid;
 
 use crate::activitypub::{
-    deliverer::OutgoingActivity,
     identifiers::{local_actor_id, local_object_id},
+    queues::OutgoingActivityJobData,
     types::Context,
     valueflows::builders::{
         build_agreement,
@@ -73,7 +73,7 @@ pub fn prepare_accept_offer(
     invoice: &DbInvoice,
     remote_actor: &DbActor,
     offer_activity_id: &str,
-) -> Result<OutgoingActivity, DatabaseError> {
+) -> Result<OutgoingActivityJobData, DatabaseError> {
     let activity = build_accept_offer(
         &instance.url(),
         &sender.profile.username,
@@ -83,7 +83,7 @@ pub fn prepare_accept_offer(
         offer_activity_id,
     )?;
     let recipients = vec![remote_actor.clone()];
-    Ok(OutgoingActivity::new(
+    Ok(OutgoingActivityJobData::new(
         sender,
         activity,
         recipients,

@@ -1,3 +1,4 @@
+use std::collections::BTreeMap;
 use std::time::Instant;
 
 use chrono::{Duration, Utc};
@@ -25,7 +26,9 @@ use mitra_models::{
         get_profile_by_remote_actor_id,
         set_reachability_status,
     },
+    profiles::types::DbActor,
     users::queries::get_user_by_id,
+    users::types::User,
 };
 
 use super::deliverer::{deliver_activity_worker, Recipient};
@@ -143,18 +146,49 @@ pub async fn process_queued_incoming_activities(
 
 #[derive(Deserialize, Serialize)]
 pub struct OutgoingActivityJobData {
-    pub activity: Value,
-    pub sender_id: Uuid,
-    pub recipients: Vec<Recipient>,
-    pub failure_count: u32,
+    activity: Value,
+    sender_id: Uuid,
+    recipients: Vec<Recipient>,
+    failure_count: u32,
 }
 
 impl OutgoingActivityJobData {
-    pub async fn into_job(
+    pub(super) fn new(
+        sender: &User,
+        activity: impl Serialize,
+        recipients: Vec<DbActor>,
+    ) -> Self {
+        // Sort and de-duplicate recipients
+        let mut recipient_map = BTreeMap::new();
+        for actor in recipients {
+            if !recipient_map.contains_key(&actor.id) {
+                let recipient = Recipient {
+                    id: actor.id.clone(),
+                    inbox: actor.inbox,
+                    is_delivered: false,
+                    is_unreachable: false,
+                };
+                recipient_map.insert(actor.id, recipient);
+            };
+        };
+        let activity = serde_json::to_value(activity)
+            .expect("activity should be serializable");
+        Self {
+            activity: activity,
+            sender_id: sender.id,
+            recipients: recipient_map.into_values().collect(),
+            failure_count: 0,
+        }
+    }
+
+    async fn into_job(
         self,
         db_client: &impl DatabaseClient,
         delay: u32,
     ) -> Result<(), DatabaseError> {
+        if self.recipients.is_empty() {
+            return Ok(());
+        };
         let job_data = serde_json::to_value(self)
             .expect("activity should be serializable");
         let scheduled_for = Utc::now() + Duration::seconds(delay.into());
@@ -164,6 +198,13 @@ impl OutgoingActivityJobData {
             &job_data,
             &scheduled_for,
         ).await
+    }
+
+    pub async fn enqueue(
+        self,
+        db_client: &impl DatabaseClient,
+    ) -> Result<(), DatabaseError> {
+        self.into_job(db_client, 0).await
     }
 }
 

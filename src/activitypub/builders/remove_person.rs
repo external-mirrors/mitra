@@ -8,8 +8,8 @@ use mitra_models::{
 use mitra_utils::id::generate_ulid;
 
 use crate::activitypub::{
-    deliverer::OutgoingActivity,
     identifiers::{local_actor_id, local_object_id, LocalActorCollection},
+    queues::OutgoingActivityJobData,
     types::{build_default_context, Context},
     vocabulary::REMOVE,
 };
@@ -55,7 +55,7 @@ pub fn prepare_remove_person(
     sender: &User,
     person: &DbActor,
     collection: LocalActorCollection,
-) -> OutgoingActivity {
+) -> OutgoingActivityJobData {
     let activity = build_remove_person(
         &instance.url(),
         &sender.profile.username,
@@ -63,7 +63,7 @@ pub fn prepare_remove_person(
         collection,
     );
     let recipients = vec![person.clone()];
-    OutgoingActivity::new(
+    OutgoingActivityJobData::new(
         sender,
         activity,
         recipients,

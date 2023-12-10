@@ -9,8 +9,8 @@ use mitra_models::{
 use mitra_utils::id::generate_ulid;
 
 use crate::activitypub::{
-    deliverer::OutgoingActivity,
     identifiers::{local_actor_id, local_object_id},
+    queues::OutgoingActivityJobData,
     types::{build_default_context, Context},
     vocabulary::MOVE,
 };
@@ -59,7 +59,7 @@ pub fn prepare_move_person(
     from_actor_id: &str,
     followers: Vec<DbActor>,
     maybe_internal_activity_id: Option<&Uuid>,
-) -> OutgoingActivity {
+) -> OutgoingActivityJobData {
     let followers_ids: Vec<String> = followers.iter()
         .map(|actor| actor.id.clone())
         .collect();
@@ -70,7 +70,7 @@ pub fn prepare_move_person(
         &followers_ids,
         maybe_internal_activity_id,
     );
-    OutgoingActivity::new(
+    OutgoingActivityJobData::new(
         sender,
         activity,
         followers,

@@ -9,8 +9,8 @@ use mitra_models::{
 };
 
 use crate::activitypub::{
-    deliverer::OutgoingActivity,
     identifiers::{local_actor_id, local_object_id},
+    queues::OutgoingActivityJobData,
     types::{build_default_context, Context},
     vocabulary::{DELETE, NOTE, TOMBSTONE},
 };
@@ -86,7 +86,7 @@ pub async fn prepare_delete_note(
     author: &User,
     post: &Post,
     fep_e232_enabled: bool,
-) -> Result<OutgoingActivity, DatabaseError> {
+) -> Result<OutgoingActivityJobData, DatabaseError> {
     assert_eq!(author.id, post.author.id);
     let mut post = post.clone();
     add_related_posts(db_client, vec![&mut post]).await?;
@@ -97,7 +97,7 @@ pub async fn prepare_delete_note(
         fep_e232_enabled,
     );
     let recipients = get_note_recipients(db_client, author, &post).await?;
-    Ok(OutgoingActivity::new(
+    Ok(OutgoingActivityJobData::new(
         author,
         activity,
         recipients,

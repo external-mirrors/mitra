@@ -1,4 +1,4 @@
-use std::collections::{BTreeMap, HashMap};
+use std::collections::HashMap;
 
 use futures::{
     stream::FuturesUnordered,
@@ -18,11 +18,7 @@ use mitra_activitypub::{
 };
 use mitra_config::Instance;
 use mitra_models::{
-    database::{
-        DatabaseClient,
-        DatabaseError,
-    },
-    profiles::types::{DbActor, PublicKeyType},
+    profiles::types::PublicKeyType,
     users::types::User,
 };
 use mitra_utils::{
@@ -43,7 +39,6 @@ use super::{
     agent::{build_federation_agent, FederationAgent},
     constants::AP_MEDIA_TYPE,
     identifiers::{local_actor_id, local_actor_key_id},
-    queues::OutgoingActivityJobData,
 };
 
 #[derive(thiserror::Error, Debug)]
@@ -140,7 +135,7 @@ async fn send_activity(
 #[derive(Deserialize, Serialize)]
 pub struct Recipient {
     pub id: String,
-    inbox: String,
+    pub(super) inbox: String,
 
     // Default to false if serialized data contains no value.
     #[serde(default)]
@@ -268,54 +263,4 @@ pub(super) async fn deliver_activity_worker(
         };
     };
     Ok(())
-}
-
-pub struct OutgoingActivity {
-    pub sender: User,
-    pub activity: Value,
-    pub recipients: Vec<Recipient>,
-}
-
-impl OutgoingActivity {
-    pub fn new(
-        sender: &User,
-        activity: impl Serialize,
-        recipients: Vec<DbActor>,
-    ) -> Self {
-        // Sort and de-duplicate recipients
-        let mut recipient_map = BTreeMap::new();
-        for actor in recipients {
-            if !recipient_map.contains_key(&actor.id) {
-                let recipient = Recipient {
-                    id: actor.id.clone(),
-                    inbox: actor.inbox,
-                    is_delivered: false,
-                    is_unreachable: false,
-                };
-                recipient_map.insert(actor.id, recipient);
-            };
-        };
-        Self {
-            sender: sender.clone(),
-            activity: serde_json::to_value(activity)
-                .expect("activity should be serializable"),
-            recipients: recipient_map.into_values().collect(),
-        }
-    }
-
-    pub async fn enqueue(
-        self,
-        db_client: &impl DatabaseClient,
-    ) -> Result<(), DatabaseError> {
-        if self.recipients.is_empty() {
-            return Ok(());
-        };
-        let job_data = OutgoingActivityJobData {
-            activity: self.activity,
-            sender_id: self.sender.id,
-            recipients: self.recipients,
-            failure_count: 0,
-        };
-        job_data.into_job(db_client, 0).await
-    }
 }

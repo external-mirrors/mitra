@@ -12,7 +12,6 @@ use mitra_models::{
 
 use crate::activitypub::{
     constants::AP_PUBLIC,
-    deliverer::OutgoingActivity,
     identifiers::{
         local_actor_followers,
         local_actor_id,
@@ -20,6 +19,7 @@ use crate::activitypub::{
         post_object_id,
         profile_actor_id,
     },
+    queues::OutgoingActivityJobData,
     types::{build_default_context, Context},
     vocabulary::ANNOUNCE,
 };
@@ -89,7 +89,7 @@ pub async fn prepare_announce(
     instance: &Instance,
     sender: &User,
     repost: &Post,
-) -> Result<OutgoingActivity, DatabaseError> {
+) -> Result<OutgoingActivityJobData, DatabaseError> {
     assert_eq!(sender.id, repost.author.id);
     let post = repost.repost_of.as_ref()
         .expect("repost_of field should be populated");
@@ -103,7 +103,7 @@ pub async fn prepare_announce(
         &instance.url(),
         repost,
     );
-    Ok(OutgoingActivity::new(
+    Ok(OutgoingActivityJobData::new(
         sender,
         activity,
         recipients,

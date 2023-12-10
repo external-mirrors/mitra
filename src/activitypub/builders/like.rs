@@ -11,13 +11,13 @@ use mitra_models::{
 
 use crate::activitypub::{
     constants::AP_PUBLIC,
-    deliverer::OutgoingActivity,
     identifiers::{
         local_actor_id,
         local_object_id,
         post_object_id,
         profile_actor_id,
     },
+    queues::OutgoingActivityJobData,
     types::{build_default_context, Context},
     vocabulary::LIKE,
 };
@@ -91,7 +91,7 @@ pub async fn prepare_like(
     sender: &User,
     post: &Post,
     reaction_id: &Uuid,
-) -> Result<OutgoingActivity, DatabaseError> {
+) -> Result<OutgoingActivityJobData, DatabaseError> {
     let recipients = get_like_recipients(
         db_client,
         &instance.url(),
@@ -107,7 +107,7 @@ pub async fn prepare_like(
         &post_author_id,
         &post.visibility,
     );
-    Ok(OutgoingActivity::new(
+    Ok(OutgoingActivityJobData::new(
         sender,
         activity,
         recipients,

@@ -11,8 +11,8 @@ use mitra_models::{
 
 use crate::activitypub::{
     constants::AP_PUBLIC,
-    deliverer::OutgoingActivity,
     identifiers::local_actor_id,
+    queues::OutgoingActivityJobData,
     types::{build_default_context, Context},
     vocabulary::DELETE,
 };
@@ -67,10 +67,10 @@ pub async fn prepare_delete_person(
     db_client: &impl DatabaseClient,
     instance: &Instance,
     user: &User,
-) -> Result<OutgoingActivity, DatabaseError> {
+) -> Result<OutgoingActivityJobData, DatabaseError> {
     let activity = build_delete_person(&instance.url(), user);
     let recipients = get_delete_person_recipients(db_client, &user.id).await?;
-    Ok(OutgoingActivity::new(
+    Ok(OutgoingActivityJobData::new(
         user,
         activity,
         recipients,

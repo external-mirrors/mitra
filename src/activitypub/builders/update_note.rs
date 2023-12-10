@@ -9,8 +9,8 @@ use mitra_models::{
 use mitra_utils::id::generate_ulid;
 
 use crate::activitypub::{
-    deliverer::OutgoingActivity,
     identifiers::local_object_id,
+    queues::OutgoingActivityJobData,
     types::{build_default_context, Context},
     vocabulary::UPDATE,
 };
@@ -68,7 +68,7 @@ pub async fn prepare_update_note(
     author: &User,
     post: &Post,
     fep_e232_enabled: bool,
-) -> Result<OutgoingActivity, DatabaseError> {
+) -> Result<OutgoingActivityJobData, DatabaseError> {
     assert_eq!(author.id, post.author.id);
     let activity = build_update_note(
         &instance.hostname(),
@@ -77,7 +77,7 @@ pub async fn prepare_update_note(
         fep_e232_enabled,
     );
     let recipients = get_note_recipients(db_client, author, post).await?;
-    Ok(OutgoingActivity::new(
+    Ok(OutgoingActivityJobData::new(
         author,
         activity,
         recipients,

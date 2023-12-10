@@ -10,8 +10,8 @@ use mitra_models::{
 };
 
 use crate::activitypub::{
-    deliverer::OutgoingActivity,
     identifiers::{local_actor_id, local_object_id, profile_actor_id},
+    queues::OutgoingActivityJobData,
     types::{build_default_context, Context},
     vocabulary::UNDO,
 };
@@ -66,7 +66,7 @@ pub async fn prepare_undo_like(
     sender: &User,
     post: &Post,
     reaction_id: &Uuid,
-) -> Result<OutgoingActivity, DatabaseError> {
+) -> Result<OutgoingActivityJobData, DatabaseError> {
     let recipients = get_like_recipients(
         db_client,
         &instance.url(),
@@ -80,7 +80,7 @@ pub async fn prepare_undo_like(
         &post_author_id,
         &post.visibility,
     );
-    Ok(OutgoingActivity::new(
+    Ok(OutgoingActivityJobData::new(
         sender,
         activity,
         recipients,

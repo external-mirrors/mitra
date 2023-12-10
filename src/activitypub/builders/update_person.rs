@@ -16,13 +16,13 @@ use mitra_validators::errors::ValidationError;
 use crate::activitypub::{
     actors::types::{build_local_actor, Actor},
     constants::AP_PUBLIC,
-    deliverer::OutgoingActivity,
     identifiers::{
         local_actor_followers,
         local_object_id,
         parse_local_actor_id,
         parse_local_object_id,
     },
+    queues::OutgoingActivityJobData,
     receiver::HandlerError,
     types::{build_default_context, Context},
     vocabulary::{PERSON, UPDATE},
@@ -82,13 +82,13 @@ pub async fn prepare_update_person(
     db_client: &impl DatabaseClient,
     instance: &Instance,
     user: &User,
-) -> Result<OutgoingActivity, DatabaseError> {
+) -> Result<OutgoingActivityJobData, DatabaseError> {
     let activity = build_update_person(
         &instance.url(),
         user,
     )?;
     let recipients = get_update_person_recipients(db_client, &user.id).await?;
-    Ok(OutgoingActivity::new(
+    Ok(OutgoingActivityJobData::new(
         user,
         activity,
         recipients,
@@ -139,10 +139,10 @@ pub async fn forward_update_person(
     db_client: &impl DatabaseClient,
     user: &User,
     activity: &JsonValue,
-) -> Result<OutgoingActivity, DatabaseError> {
+) -> Result<OutgoingActivityJobData, DatabaseError> {
     // TODO: parse to and cc fields
     let recipients = get_update_person_recipients(db_client, &user.id).await?;
-    Ok(OutgoingActivity::new(
+    Ok(OutgoingActivityJobData::new(
         user,
         activity,
         recipients,

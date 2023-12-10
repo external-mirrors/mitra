@@ -11,8 +11,8 @@ use mitra_models::{
 
 use crate::activitypub::{
     constants::AP_PUBLIC,
-    deliverer::OutgoingActivity,
     identifiers::{local_actor_id, local_actor_followers, local_object_id},
+    queues::OutgoingActivityJobData,
     types::{build_default_context, Context},
     vocabulary::UNDO,
 };
@@ -67,7 +67,7 @@ pub async fn prepare_undo_announce(
     sender: &User,
     post: &Post,
     repost_id: &Uuid,
-) -> Result<OutgoingActivity, DatabaseError> {
+) -> Result<OutgoingActivityJobData, DatabaseError> {
     assert_ne!(&post.id, repost_id);
     let (recipients, primary_recipient) = get_announce_recipients(
         db_client,
@@ -81,7 +81,7 @@ pub async fn prepare_undo_announce(
         repost_id,
         &primary_recipient,
     );
-    Ok(OutgoingActivity::new(
+    Ok(OutgoingActivityJobData::new(
         sender,
         activity,
         recipients,

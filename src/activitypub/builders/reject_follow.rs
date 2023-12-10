@@ -8,8 +8,8 @@ use mitra_models::{
 use mitra_utils::id::generate_ulid;
 
 use crate::activitypub::{
-    deliverer::OutgoingActivity,
     identifiers::{local_actor_id, local_object_id},
+    queues::OutgoingActivityJobData,
     types::{build_default_context, Context},
     vocabulary::REJECT,
 };
@@ -53,7 +53,7 @@ pub fn prepare_reject_follow(
     sender: &User,
     source_actor: &DbActor,
     follow_activity_id: &str,
-) -> OutgoingActivity {
+) -> OutgoingActivityJobData {
     let activity = build_reject_follow(
         &instance.url(),
         &sender.profile,
@@ -61,7 +61,7 @@ pub fn prepare_reject_follow(
         follow_activity_id,
     );
     let recipients = vec![source_actor.clone()];
-    OutgoingActivity::new(
+    OutgoingActivityJobData::new(
         sender,
         activity,
         recipients,

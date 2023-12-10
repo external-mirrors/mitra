@@ -15,7 +15,6 @@ use mitra_services::media::get_file_url;
 
 use crate::activitypub::{
     constants::{AP_MEDIA_TYPE, AP_PUBLIC},
-    deliverer::OutgoingActivity,
     identifiers::{
         local_actor_id,
         local_actor_followers,
@@ -27,6 +26,7 @@ use crate::activitypub::{
         post_object_id,
         profile_actor_id,
     },
+    queues::OutgoingActivityJobData,
     types::{
         build_default_context,
         Context,
@@ -328,7 +328,7 @@ pub async fn prepare_create_note(
     author: &User,
     post: &Post,
     fep_e232_enabled: bool,
-) -> Result<OutgoingActivity, DatabaseError> {
+) -> Result<OutgoingActivityJobData, DatabaseError> {
     assert_eq!(author.id, post.author.id);
     let activity = build_create_note(
         &instance.hostname(),
@@ -337,7 +337,7 @@ pub async fn prepare_create_note(
         fep_e232_enabled,
     );
     let recipients = get_note_recipients(db_client, author, post).await?;
-    Ok(OutgoingActivity::new(
+    Ok(OutgoingActivityJobData::new(
         author,
         activity,
         recipients,

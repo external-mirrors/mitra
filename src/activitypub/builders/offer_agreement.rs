@@ -11,8 +11,8 @@ use mitra_models::{
 };
 
 use crate::activitypub::{
-    deliverer::OutgoingActivity,
     identifiers::{local_actor_id, local_object_id},
+    queues::OutgoingActivityJobData,
     types::Context,
     valueflows::{
         builders::{
@@ -107,7 +107,7 @@ pub fn prepare_offer_agreement(
     subscription_option: &RemoteMoneroSubscription,
     invoice_id: &Uuid,
     invoice_amount: u64,
-) -> OutgoingActivity {
+) -> OutgoingActivityJobData {
     let activity = build_offer_agreement(
         &instance.url(),
         &sender.profile.username,
@@ -117,7 +117,7 @@ pub fn prepare_offer_agreement(
         invoice_amount,
     );
     let recipients = vec![proposer_actor.clone()];
-    OutgoingActivity::new(
+    OutgoingActivityJobData::new(
         sender,
         activity,
         recipients,

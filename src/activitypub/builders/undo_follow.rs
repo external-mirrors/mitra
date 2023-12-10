@@ -8,8 +8,8 @@ use mitra_models::{
 };
 
 use crate::activitypub::{
-    deliverer::OutgoingActivity,
     identifiers::{local_actor_id, local_object_id},
+    queues::OutgoingActivityJobData,
     types::{build_default_context, Context},
     vocabulary::{FOLLOW, UNDO},
 };
@@ -70,7 +70,7 @@ pub fn prepare_undo_follow(
     sender: &User,
     target_actor: &DbActor,
     follow_request_id: &Uuid,
-) -> OutgoingActivity {
+) -> OutgoingActivityJobData {
     let activity = build_undo_follow(
         &instance.url(),
         &sender.profile,
@@ -78,7 +78,7 @@ pub fn prepare_undo_follow(
         follow_request_id,
     );
     let recipients = vec![target_actor.clone()];
-    OutgoingActivity::new(
+    OutgoingActivityJobData::new(
         sender,
         activity,
         recipients,

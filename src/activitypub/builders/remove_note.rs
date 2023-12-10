@@ -10,13 +10,13 @@ use mitra_utils::id::generate_ulid;
 
 use crate::activitypub::{
     constants::AP_PUBLIC,
-    deliverer::OutgoingActivity,
     identifiers::{
         local_actor_id,
         local_actor_featured,
         local_actor_followers,
         local_object_id,
     },
+    queues::OutgoingActivityJobData,
     types::{build_default_context, Context},
     vocabulary::REMOVE,
 };
@@ -66,14 +66,14 @@ pub async fn prepare_remove_note(
     instance: &Instance,
     sender: &User,
     post_id: &Uuid,
-) -> Result<OutgoingActivity, DatabaseError> {
+) -> Result<OutgoingActivityJobData, DatabaseError> {
     let activity = build_remove_note(
         &instance.url(),
         &sender.profile.username,
         post_id,
     );
     let recipients = get_update_person_recipients(db_client, &sender.id).await?;
-    Ok(OutgoingActivity::new(
+    Ok(OutgoingActivityJobData::new(
         sender,
         activity,
         recipients,
