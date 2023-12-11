@@ -183,7 +183,7 @@ pub async fn receive_activity(
         &config.allowed_instances,
         &actor_hostname,
     ) {
-        log::warn!("ignoring activity from blocked instance: {}", activity);
+        log::info!("ignoring activity from blocked instance {actor_hostname}");
         return Ok(());
     };
 
