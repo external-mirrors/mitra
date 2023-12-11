@@ -81,7 +81,6 @@ pub async fn prepare_undo_like(
         &post.visibility,
     );
     Ok(OutgoingActivity::new(
-        instance,
         sender,
         activity,
         recipients,

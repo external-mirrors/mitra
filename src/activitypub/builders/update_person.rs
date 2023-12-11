@@ -89,7 +89,6 @@ pub async fn prepare_update_person(
     )?;
     let recipients = get_update_person_recipients(db_client, &user.id).await?;
     Ok(OutgoingActivity::new(
-        instance,
         user,
         activity,
         recipients,
@@ -138,14 +137,12 @@ pub use crate::activitypub::authentication::verify_signed_c2s_activity;
 
 pub async fn forward_update_person(
     db_client: &impl DatabaseClient,
-    instance: &Instance,
     user: &User,
     activity: &JsonValue,
 ) -> Result<OutgoingActivity, DatabaseError> {
     // TODO: parse to and cc fields
     let recipients = get_update_person_recipients(db_client, &user.id).await?;
     Ok(OutgoingActivity::new(
-        instance,
         user,
         activity,
         recipients,

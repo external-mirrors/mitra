@@ -104,7 +104,6 @@ pub async fn prepare_announce(
         repost,
     );
     Ok(OutgoingActivity::new(
-        instance,
         sender,
         activity,
         recipients,

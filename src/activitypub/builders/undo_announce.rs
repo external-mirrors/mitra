@@ -82,7 +82,6 @@ pub async fn prepare_undo_announce(
         &primary_recipient,
     );
     Ok(OutgoingActivity::new(
-        instance,
         sender,
         activity,
         recipients,

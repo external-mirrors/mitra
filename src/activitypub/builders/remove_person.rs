@@ -64,7 +64,6 @@ pub fn prepare_remove_person(
     );
     let recipients = vec![person.clone()];
     OutgoingActivity::new(
-        instance,
         sender,
         activity,
         recipients,

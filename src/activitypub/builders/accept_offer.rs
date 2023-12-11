@@ -84,7 +84,6 @@ pub fn prepare_accept_offer(
     )?;
     let recipients = vec![remote_actor.clone()];
     Ok(OutgoingActivity::new(
-        instance,
         sender,
         activity,
         recipients,

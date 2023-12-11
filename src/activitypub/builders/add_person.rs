@@ -87,7 +87,6 @@ pub fn prepare_add_person(
     );
     let recipients = vec![person.clone()];
     OutgoingActivity::new(
-        instance,
         sender,
         activity,
         recipients,

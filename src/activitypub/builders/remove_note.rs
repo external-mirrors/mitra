@@ -74,7 +74,6 @@ pub async fn prepare_remove_note(
     );
     let recipients = get_update_person_recipients(db_client, &sender.id).await?;
     Ok(OutgoingActivity::new(
-        instance,
         sender,
         activity,
         recipients,

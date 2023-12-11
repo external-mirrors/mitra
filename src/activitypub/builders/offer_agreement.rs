@@ -118,7 +118,6 @@ pub fn prepare_offer_agreement(
     );
     let recipients = vec![proposer_actor.clone()];
     OutgoingActivity::new(
-        instance,
         sender,
         activity,
         recipients,

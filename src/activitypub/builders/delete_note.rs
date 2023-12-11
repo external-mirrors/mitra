@@ -98,7 +98,6 @@ pub async fn prepare_delete_note(
     );
     let recipients = get_note_recipients(db_client, author, &post).await?;
     Ok(OutgoingActivity::new(
-        instance,
         author,
         activity,
         recipients,

@@ -271,7 +271,6 @@ pub(super) async fn deliver_activity_worker(
 }
 
 pub struct OutgoingActivity {
-    pub instance: Instance,
     pub sender: User,
     pub activity: Value,
     pub recipients: Vec<Recipient>,
@@ -279,7 +278,6 @@ pub struct OutgoingActivity {
 
 impl OutgoingActivity {
     pub fn new(
-        instance: &Instance,
         sender: &User,
         activity: impl Serialize,
         recipients: Vec<DbActor>,
@@ -298,7 +296,6 @@ impl OutgoingActivity {
             };
         };
         Self {
-            instance: instance.clone(),
             sender: sender.clone(),
             activity: serde_json::to_value(activity)
                 .expect("activity should be serializable"),

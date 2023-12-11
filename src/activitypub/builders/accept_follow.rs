@@ -62,7 +62,6 @@ pub fn prepare_accept_follow(
     );
     let recipients = vec![source_actor.clone()];
     OutgoingActivity::new(
-        instance,
         sender,
         activity,
         recipients,

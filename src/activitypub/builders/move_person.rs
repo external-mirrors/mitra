@@ -71,7 +71,6 @@ pub fn prepare_move_person(
         maybe_internal_activity_id,
     );
     OutgoingActivity::new(
-        instance,
         sender,
         activity,
         followers,
