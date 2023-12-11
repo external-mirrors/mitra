@@ -310,11 +310,6 @@ impl OutgoingActivity {
         if self.recipients.is_empty() {
             return Ok(());
         };
-        log::info!(
-            "delivering activity to {} inboxes: {}",
-            self.recipients.len(),
-            self.activity,
-        );
         let job_data = OutgoingActivityJobData {
             activity: self.activity,
             sender_id: self.sender.id,

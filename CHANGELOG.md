@@ -16,6 +16,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Allow `assertionMethod` property value to be object.
 - Attempt to load additional page when importing replies from Mastodon.
 - Change instance actor type from `Service` to `Application`.
+- Write delivery description to log on every attempt.
 
 ## [2.4.1] - 2023-11-23
 

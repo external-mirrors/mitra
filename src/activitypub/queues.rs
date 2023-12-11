@@ -195,6 +195,11 @@ pub async fn process_queued_outgoing_activities(
         let sender = get_user_by_id(db_client, &job_data.sender_id).await?;
         let mut recipients = job_data.recipients;
         let start_time = Instant::now();
+        log::info!(
+            "delivering activity to {} inboxes: {}",
+            recipients.len(),
+            job_data.activity,
+        );
         match deliver_activity_worker(
             config.instance(),
             sender,
