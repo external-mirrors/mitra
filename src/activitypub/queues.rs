@@ -31,7 +31,7 @@ use mitra_models::{
     users::types::User,
 };
 
-use super::deliverer::{deliver_activity_worker, Recipient};
+use super::deliverer::{deliver_activity_worker, Recipient, Sender};
 use super::receiver::{handle_activity, HandlerError};
 
 const JOB_TIMEOUT: u32 = 3600; // 1 hour
@@ -234,6 +234,7 @@ pub async fn process_queued_outgoing_activities(
             serde_json::from_value(job.job_data)
                 .map_err(|_| DatabaseTypeError)?;
         let sender = get_user_by_id(db_client, &job_data.sender_id).await?;
+        let sender = Sender::from(sender);
         let mut recipients = job_data.recipients;
         let start_time = Instant::now();
         log::info!(

@@ -3,6 +3,7 @@ use mitra_models::{
     profiles::types::PublicKeyType,
     users::types::User,
 };
+use mitra_utils::crypto_rsa::RsaPrivateKey;
 
 use crate::activitypub::{
     identifiers::{
@@ -13,6 +14,25 @@ use crate::activitypub::{
 };
 
 pub use mitra_activitypub::agent::FederationAgent;
+
+pub(super) fn build_federation_agent_with_key(
+    instance: &Instance,
+    signer_key: RsaPrivateKey,
+    signer_key_id: String,
+) -> FederationAgent {
+    FederationAgent {
+        user_agent: instance.agent(),
+        is_instance_private: instance.is_private,
+        fetcher_timeout: instance.fetcher_timeout,
+        deliverer_timeout: instance.deliverer_timeout,
+        deliverer_log_response_length: instance.deliverer_log_response_length,
+        proxy_url: instance.proxy_url.clone(),
+        onion_proxy_url: instance.onion_proxy_url.clone(),
+        i2p_proxy_url: instance.i2p_proxy_url.clone(),
+        signer_key: signer_key,
+        signer_key_id: signer_key_id,
+    }
+}
 
 pub fn build_federation_agent(
     instance: &Instance,
@@ -32,18 +52,7 @@ pub fn build_federation_agent(
         let instance_actor_key = instance.actor_key.clone();
         (instance_actor_key, instance_actor_key_id)
     };
-    FederationAgent {
-        user_agent: instance.agent(),
-        is_instance_private: instance.is_private,
-        fetcher_timeout: instance.fetcher_timeout,
-        deliverer_timeout: instance.deliverer_timeout,
-        deliverer_log_response_length: instance.deliverer_log_response_length,
-        proxy_url: instance.proxy_url.clone(),
-        onion_proxy_url: instance.onion_proxy_url.clone(),
-        i2p_proxy_url: instance.i2p_proxy_url.clone(),
-        signer_key: signer_key,
-        signer_key_id: signer_key_id,
-    }
+    build_federation_agent_with_key(instance, signer_key, signer_key_id)
 }
 
 #[cfg(test)]

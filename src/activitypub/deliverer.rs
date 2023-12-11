@@ -22,6 +22,8 @@ use mitra_models::{
     users::types::User,
 };
 use mitra_utils::{
+    crypto_eddsa::Ed25519PrivateKey,
+    crypto_rsa::RsaPrivateKey,
     http_signatures::create::{
         create_http_signature,
         HttpSignatureError,
@@ -36,7 +38,7 @@ use mitra_utils::{
 };
 
 use super::{
-    agent::{build_federation_agent, FederationAgent},
+    agent::{build_federation_agent_with_key, FederationAgent},
     constants::AP_MEDIA_TYPE,
     identifiers::{local_actor_id, local_actor_key_id},
 };
@@ -132,6 +134,22 @@ async fn send_activity(
     Ok(())
 }
 
+pub struct Sender {
+    pub(super) username: String,
+    pub(super) rsa_private_key: RsaPrivateKey,
+    pub(super) ed25519_private_key: Option<Ed25519PrivateKey>,
+}
+
+impl From<User> for Sender {
+    fn from(user: User) -> Self {
+        Self {
+            username: user.profile.username,
+            rsa_private_key: user.rsa_private_key,
+            ed25519_private_key: user.ed25519_private_key,
+        }
+    }
+}
+
 #[derive(Deserialize, Serialize)]
 pub struct Recipient {
     pub id: String,
@@ -158,16 +176,16 @@ const DELIVERY_BATCH_SIZE: usize = 5;
 
 pub(super) async fn deliver_activity_worker(
     instance: Instance,
-    sender: User,
+    sender: Sender,
     activity: Value,
     recipients: &mut [Recipient],
 ) -> Result<(), DelivererError> {
-    let actor_key = &sender.rsa_private_key;
+    let rsa_private_key = sender.rsa_private_key;
     let actor_id = local_actor_id(
         &instance.url(),
-        &sender.profile.username,
+        &sender.username,
     );
-    let actor_key_id = local_actor_key_id(&actor_id, PublicKeyType::RsaPkcs1);
+    let rsa_key_id = local_actor_key_id(&actor_id, PublicKeyType::RsaPkcs1);
 
     let activity_signed = if is_object_signed(&activity) {
         log::warn!("activity is already signed");
@@ -187,7 +205,12 @@ pub(super) async fn deliver_activity_worker(
                 )?
             },
             _ => {
-                sign_object_rsa(actor_key, &actor_key_id, &activity, None)?
+                sign_object_rsa(
+                    &rsa_private_key,
+                    &rsa_key_id,
+                    &activity,
+                    None,
+                )?
             },
         }
     };
@@ -204,7 +227,11 @@ pub(super) async fn deliver_activity_worker(
         deliveries.push((index, hostname, recipient.inbox.clone()));
     };
 
-    let agent = build_federation_agent(&instance, Some(&sender));
+    let agent = build_federation_agent_with_key(
+        &instance,
+        rsa_private_key,
+        rsa_key_id,
+    );
     let mut delivery_pool = FuturesUnordered::new();
     let mut delivery_pool_state = HashMap::new();
 
