@@ -5,8 +5,15 @@ use futures::{
     StreamExt,
 };
 use reqwest::{Client, Method};
-use serde::{Deserialize, Serialize};
-use serde_json::Value;
+use serde::{
+    Deserialize,
+    Deserializer,
+    Serialize,
+    Serializer,
+    de::{Error as DeserializerError},
+    ser::{Error as _},
+};
+use serde_json::{Value as JsonValue};
 
 use mitra_activitypub::{
     http_client::{
@@ -22,8 +29,15 @@ use mitra_models::{
     users::types::User,
 };
 use mitra_utils::{
-    crypto_eddsa::Ed25519PrivateKey,
-    crypto_rsa::RsaPrivateKey,
+    crypto_eddsa::{
+        ed25519_private_key_from_bytes,
+        Ed25519PrivateKey,
+    },
+    crypto_rsa::{
+        rsa_private_key_from_pkcs1_der,
+        rsa_private_key_to_pkcs1_der,
+        RsaPrivateKey,
+    },
     http_signatures::create::{
         create_http_signature,
         HttpSignatureError,
@@ -134,9 +148,66 @@ async fn send_activity(
     Ok(())
 }
 
+fn deserialize_rsa_private_key<'de, D>(
+    deserializer: D,
+) -> Result<RsaPrivateKey, D::Error>
+    where D: Deserializer<'de>
+{
+    let private_key_der = Vec::deserialize(deserializer)?;
+    let private_key = rsa_private_key_from_pkcs1_der(&private_key_der)
+        .map_err(DeserializerError::custom)?;
+    Ok(private_key)
+}
+
+fn serialize_rsa_private_key<S>(
+    private_key: &RsaPrivateKey,
+    serializer: S,
+) -> Result<S::Ok, S::Error>
+    where S: Serializer,
+{
+    let private_key_der = rsa_private_key_to_pkcs1_der(private_key)
+        .map_err(S::Error::custom)?;
+    Vec::serialize(&private_key_der, serializer)
+}
+
+fn deserialize_ed25519_private_key<'de, D>(
+    deserializer: D,
+) -> Result<Option<Ed25519PrivateKey>, D::Error>
+    where D: Deserializer<'de>
+{
+    let maybe_private_key_bytes: Option<Vec<u8>> =
+        Option::deserialize(deserializer)?;
+    let maybe_private_key = if let Some(private_key_bytes) = maybe_private_key_bytes {
+        let private_key = ed25519_private_key_from_bytes(&private_key_bytes)
+            .map_err(DeserializerError::custom)?;
+        Some(private_key)
+    } else {
+        None
+    };
+    Ok(maybe_private_key)
+}
+
+fn serialize_ed25519_private_key<S>(
+    maybe_private_key: &Option<Ed25519PrivateKey>,
+    serializer: S,
+) -> Result<S::Ok, S::Error>
+    where S: Serializer,
+{
+    Option::serialize(maybe_private_key, serializer)
+}
+
+#[derive(Clone, Deserialize, Serialize)]
 pub struct Sender {
     pub(super) username: String,
+    #[serde(
+        deserialize_with = "deserialize_rsa_private_key",
+        serialize_with = "serialize_rsa_private_key",
+    )]
     pub(super) rsa_private_key: RsaPrivateKey,
+    #[serde(
+        deserialize_with = "deserialize_ed25519_private_key",
+        serialize_with = "serialize_ed25519_private_key",
+    )]
     pub(super) ed25519_private_key: Option<Ed25519PrivateKey>,
 }
 
@@ -177,7 +248,7 @@ const DELIVERY_BATCH_SIZE: usize = 5;
 pub(super) async fn deliver_activity_worker(
     instance: Instance,
     sender: Sender,
-    activity: Value,
+    activity: JsonValue,
     recipients: &mut [Recipient],
 ) -> Result<(), DelivererError> {
     let rsa_private_key = sender.rsa_private_key;
@@ -290,4 +361,28 @@ pub(super) async fn deliver_activity_worker(
         };
     };
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use mitra_utils::{
+        crypto_eddsa::generate_weak_ed25519_key,
+        crypto_rsa::generate_weak_rsa_key,
+    };
+    use super::*;
+
+    #[test]
+    fn test_sender_serialization_deserialization() {
+        let rsa_private_key = generate_weak_rsa_key().unwrap();
+        let ed25519_private_key = generate_weak_ed25519_key();
+        let sender = Sender {
+            username: "test".to_string(),
+            rsa_private_key: rsa_private_key.clone(),
+            ed25519_private_key: Some(ed25519_private_key),
+        };
+        let value = serde_json::to_value(sender).unwrap();
+        let sender: Sender = serde_json::from_value(value).unwrap();
+        assert_eq!(sender.rsa_private_key, rsa_private_key);
+        assert_eq!(sender.ed25519_private_key, Some(ed25519_private_key));
+    }
 }

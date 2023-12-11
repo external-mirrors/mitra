@@ -148,6 +148,7 @@ pub async fn process_queued_incoming_activities(
 pub struct OutgoingActivityJobData {
     activity: Value,
     sender_id: Uuid,
+    sender: Option<Sender>,
     recipients: Vec<Recipient>,
     failure_count: u32,
 }
@@ -176,6 +177,7 @@ impl OutgoingActivityJobData {
         Self {
             activity: activity,
             sender_id: sender.id,
+            sender: Some(Sender::from(sender.clone())),
             recipients: recipient_map.into_values().collect(),
             failure_count: 0,
         }
@@ -230,11 +232,27 @@ pub async fn process_queued_outgoing_activities(
         JOB_TIMEOUT,
     ).await?;
     for job in batch {
+        // TODO: delete job from queue if job_data has old format
         let mut job_data: OutgoingActivityJobData =
             serde_json::from_value(job.job_data)
                 .map_err(|_| DatabaseTypeError)?;
-        let sender = get_user_by_id(db_client, &job_data.sender_id).await?;
-        let sender = Sender::from(sender);
+        let sender = match get_user_by_id(
+            db_client,
+            &job_data.sender_id,
+        ).await {
+            Ok(user) => Sender::from(user),
+            Err(DatabaseError::NotFound(_)) => {
+                // User has been deleted, use "sender" property
+                if let Some(ref sender) = job_data.sender {
+                    sender.clone()
+                } else {
+                    log::error!("signing keys can not be found");
+                    delete_job_from_queue(db_client, &job.id).await?;
+                    return Ok(());
+                }
+            },
+            Err(other_error) => return Err(other_error),
+        };
         let mut recipients = job_data.recipients;
         let start_time = Instant::now();
         log::info!(

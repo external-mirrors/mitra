@@ -19,6 +19,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Write delivery description to log on every attempt.
 - Don't log activities from blocked instances.
 
+### Fixed
+
+- Fix delivery of `Delete(Person)` activities.
+
 ## [2.4.1] - 2023-11-23
 
 ### Added
