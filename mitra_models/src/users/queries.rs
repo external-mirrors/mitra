@@ -184,7 +184,7 @@ pub async fn set_user_password(
     Ok(())
 }
 
-pub async fn set_user_ed25519_private_key(
+pub(super) async fn set_user_ed25519_private_key(
     db_client: &impl DatabaseClient,
     user_id: &Uuid,
     private_key: [u8; 32],

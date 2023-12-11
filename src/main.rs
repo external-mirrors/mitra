@@ -43,10 +43,13 @@ use mitra::nodeinfo::views as nodeinfo;
 use mitra::webfinger::views as webfinger;
 use mitra::web_client::views as web_client;
 use mitra_config::{Environment, MITRA_VERSION};
-use mitra_models::database::{
-    connect::create_pool,
-    get_database_client,
-    migrate::apply_migrations,
+use mitra_models::{
+    database::{
+        connect::create_pool,
+        get_database_client,
+        migrate::apply_migrations,
+    },
+    users::helpers::add_ed25519_keys,
 };
 use mitra_services::{
     ethereum::contracts::get_contracts,
@@ -69,6 +72,12 @@ async fn main() -> std::io::Result<()> {
         .expect("failed to connect to database");
     apply_migrations(&mut db_client).await
         .expect("failed to apply migrations");
+    // TODO: remove custom migration
+    let updated_count = add_ed25519_keys(&**db_client).await
+        .expect("failed to generate ed25519 keys");
+    if updated_count > 0 {
+        log::info!("generated ed25519 keys for {updated_count} users");
+    };
 
     let media_storage = MediaStorage::from(&config);
     media_storage.init().expect("failed to create media directory");

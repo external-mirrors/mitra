@@ -70,7 +70,6 @@ use mitra_models::{
         get_user_count,
         get_user_by_id,
         get_user_by_name,
-        set_user_ed25519_private_key,
         set_user_password,
         set_user_role,
     },
@@ -130,7 +129,6 @@ pub enum SubCommand {
     ListInviteCodes(ListInviteCodes),
     CreateUser(CreateUser),
     ListUsers(ListUsers),
-    AddEd25519Key(AddEd25519Key),
     SetPassword(SetPassword),
     SetRole(SetRole),
     FetchActor(FetchActor),
@@ -297,33 +295,6 @@ impl ListUsers {
                 user.last_login.map(|dt| dt.to_string()).unwrap_or_default(),
             );
         };
-        Ok(())
-    }
-}
-
-/// Add Ed25519 key to user's profile
-#[derive(Parser)]
-pub struct AddEd25519Key {
-    id: Uuid,
-}
-
-impl AddEd25519Key {
-    pub async fn execute(
-        &self,
-        db_client: &impl DatabaseClient,
-    ) -> Result<(), Error> {
-        let user = get_user_by_id(db_client, &self.id).await?;
-        if user.ed25519_private_key.is_some() {
-            println!("ed25519 key already exists");
-            return Ok(());
-        };
-        let ed25519_private_key = generate_ed25519_key();
-        set_user_ed25519_private_key(
-            db_client,
-            &self.id,
-            ed25519_private_key,
-        ).await?;
-        println!("ed25519 key generated");
         Ok(())
     }
 }
