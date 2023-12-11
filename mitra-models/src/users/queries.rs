@@ -496,8 +496,8 @@ mod tests {
         ).await.unwrap();
         let user = get_user_by_id(db_client, &user.id).await.unwrap();
         assert_eq!(
-            user.ed25519_private_key.unwrap().inner(),
-            &private_key,
+            user.ed25519_private_key.unwrap(),
+            private_key,
         );
     }
 

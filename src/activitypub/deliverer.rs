@@ -180,7 +180,7 @@ pub(super) async fn deliver_activity_worker(
                     PublicKeyType::Ed25519,
                 );
                 sign_object_eddsa(
-                    ed25519_private_key.inner(),
+                    ed25519_private_key,
                     &ed25519_key_id,
                     &activity,
                     None,

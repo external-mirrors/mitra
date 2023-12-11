@@ -145,25 +145,6 @@ pub struct DbUser {
     created_at: DateTime<Utc>,
 }
 
-// Use wrapper because Ed25519PrivateKey doesn't implement Clone
-pub struct DbEd25519PrivateKey(Ed25519PrivateKey);
-
-impl DbEd25519PrivateKey {
-    pub fn inner(&self) -> &Ed25519PrivateKey {
-        let Self(private_key) = self;
-        private_key
-    }
-}
-
-impl Clone for DbEd25519PrivateKey {
-    fn clone(&self) -> Self {
-        let bytes = self.inner();
-        let private_key = ed25519_private_key_from_bytes(bytes)
-            .expect("should be valid private key");
-        Self(private_key)
-    }
-}
-
 // Represents local user
 #[derive(Clone)]
 pub struct User {
@@ -172,7 +153,7 @@ pub struct User {
     pub login_address_ethereum: Option<String>,
     pub login_address_monero: Option<String>,
     pub rsa_private_key: RsaPrivateKey,
-    pub ed25519_private_key: Option<DbEd25519PrivateKey>,
+    pub ed25519_private_key: Option<Ed25519PrivateKey>,
     pub role: Role,
     pub client_config: ClientConfig,
     pub profile: DbActorProfile,
@@ -211,7 +192,7 @@ impl User {
             Some(ref bytes) => {
                 let private_key = ed25519_private_key_from_bytes(bytes)
                     .map_err(|_| DatabaseTypeError)?;
-                Some(DbEd25519PrivateKey(private_key))
+                Some(private_key)
             },
             None => None,
         };
@@ -320,13 +301,13 @@ mod tests {
     fn test_user_cloned() {
         let ed25519_private_key = generate_ed25519_key();
         let user = User {
-            ed25519_private_key: Some(DbEd25519PrivateKey(ed25519_private_key)),
+            ed25519_private_key: Some(ed25519_private_key),
             ..Default::default()
         };
         let user_cloned = user.clone();
         assert_eq!(
-            user_cloned.ed25519_private_key.unwrap().inner(),
-            &ed25519_private_key,
+            user_cloned.ed25519_private_key.unwrap(),
+            ed25519_private_key,
         );
     }
 
