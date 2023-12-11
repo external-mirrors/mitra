@@ -313,7 +313,22 @@ impl TryFrom<&Row> for AdminUser {
 
 #[cfg(test)]
 mod tests {
+    use mitra_utils::crypto_eddsa::generate_ed25519_key;
     use super::*;
+
+    #[test]
+    fn test_user_cloned() {
+        let ed25519_private_key = generate_ed25519_key();
+        let user = User {
+            ed25519_private_key: Some(DbEd25519PrivateKey(ed25519_private_key)),
+            ..Default::default()
+        };
+        let user_cloned = user.clone();
+        assert_eq!(
+            user_cloned.ed25519_private_key.unwrap().inner(),
+            &ed25519_private_key,
+        );
+    }
 
     #[test]
     fn test_public_wallet_address_login_address_not_exposed() {
