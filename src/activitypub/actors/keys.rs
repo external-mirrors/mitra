@@ -18,12 +18,7 @@ use mitra_utils::{
         RsaSerializationError,
     },
     multibase::{decode_multibase_base58btc, encode_multibase_base58btc},
-    multicodec::{
-        decode_ed25519_public_key,
-        decode_rsa_public_key,
-        encode_ed25519_public_key,
-        encode_rsa_public_key,
-    },
+    multicodec::Multicodec,
 };
 use mitra_validators::errors::ValidationError;
 
@@ -95,7 +90,7 @@ impl Multikey {
         private_key: &Ed25519PrivateKey,
     ) -> Self {
         let public_key = ed25519_public_key_from_private_key(private_key);
-        let public_key_multicode = encode_ed25519_public_key(public_key.to_bytes());
+        let public_key_multicode = Multicodec::Ed25519Pub.encode(public_key.as_bytes());
         let public_key_multibase = encode_multibase_base58btc(&public_key_multicode);
         Self {
             id: local_actor_key_id(actor_id, PublicKeyType::Ed25519),
@@ -111,7 +106,7 @@ impl Multikey {
     ) -> Result<Self, RsaSerializationError> {
         let public_key = RsaPublicKey::from(private_key);
         let public_key_der = rsa_public_key_to_pkcs1_der(&public_key)?;
-        let public_key_multicode = encode_rsa_public_key(&public_key_der);
+        let public_key_multicode = Multicodec::RsaPub.encode(&public_key_der);
         let public_key_multibase = encode_multibase_base58btc(&public_key_multicode);
         let multikey = Self {
             id: local_actor_key_id(actor_id, PublicKeyType::RsaPkcs1),
@@ -125,21 +120,22 @@ impl Multikey {
     pub fn to_db_key(&self) -> Result<DbActorKey, ValidationError> {
         let public_key_multicode = decode_multibase_base58btc(&self.public_key_multibase)
             .map_err(|_| ValidationError("invalid key encoding"))?;
-        let (key_type, key_data) = match decode_rsa_public_key(&public_key_multicode) {
-            Ok(public_key_der) => {
+        let public_key_decoded = Multicodec::decode(&public_key_multicode)
+            .map_err(|_| ValidationError("unexpected key type"))?;
+        let (key_type, key_data) = match public_key_decoded {
+            (Multicodec::RsaPub, public_key_der) => {
                 // Validate RSA key
                 rsa_public_key_from_pkcs1_der(&public_key_der)
                     .map_err(|_| ValidationError("invalid key encoding"))?;
                 (PublicKeyType::RsaPkcs1, public_key_der)
             },
-            Err(_) => {
-                let public_key_bytes = decode_ed25519_public_key(&public_key_multicode)
-                    .map_err(|_| ValidationError("unexpected key type"))?;
+            (Multicodec::Ed25519Pub, public_key_bytes) => {
                 // Validate Ed25519 key
                 ed25519_public_key_from_bytes(&public_key_bytes)
                     .map_err(|_| ValidationError("invalid key encoding"))?;
-                (PublicKeyType::Ed25519, public_key_bytes.to_vec())
+                (PublicKeyType::Ed25519, public_key_bytes)
             },
+            _ => return Err(ValidationError("unexpected key type")),
         };
         let db_key = DbActorKey {
             id: self.id.clone(),
