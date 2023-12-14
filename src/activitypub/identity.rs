@@ -206,7 +206,7 @@ mod tests {
         let ed25519_public_key =
             ed25519_public_key_from_private_key(&ed25519_private_key);
         let did = Did::Key(
-            DidKey::from_ed25519_key(ed25519_public_key.to_bytes()));
+            DidKey::from_ed25519_key(ed25519_public_key.as_bytes()));
         let created_at = Utc::now();
         let (_claim, message) = create_identity_claim_fep_c390(
             actor_id,

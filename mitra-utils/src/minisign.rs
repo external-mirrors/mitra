@@ -6,6 +6,7 @@ use crate::{
     crypto_eddsa::{
         ed25519_public_key_from_bytes,
         verify_eddsa_signature,
+        Ed25519PublicKey,
         Ed25519SerializationError,
         EddsaError,
     },
@@ -68,7 +69,7 @@ fn parse_minisign_public_key_file(
 
 pub fn minisign_key_to_did(key_file: &str) -> Result<DidKey, ParseError> {
     let key = parse_minisign_public_key_file(key_file)?;
-    let did_key = DidKey::from_ed25519_key(key);
+    let did_key = DidKey::from_ed25519_key(&key);
     Ok(did_key)
 }
 
@@ -129,14 +130,13 @@ pub enum VerificationError {
 
 fn verify_eddsa_blake2_signature(
     message: &str,
-    signer: [u8; 32],
+    signer: &Ed25519PublicKey,
     signature: [u8; 64],
 ) -> Result<(), VerificationError> {
     let mut hasher = Blake2b512::new();
     hasher.update(message);
     let hash = hasher.finalize();
-    let public_key = ed25519_public_key_from_bytes(&signer)?;
-    verify_eddsa_signature(&public_key, &hash, signature)?;
+    verify_eddsa_signature(signer, &hash, signature)?;
     Ok(())
 }
 
@@ -145,14 +145,15 @@ pub fn verify_minisign_signature(
     message: &str,
     signature: &[u8],
 ) -> Result<(), VerificationError> {
-    let ed25519_key = signer.try_ed25519_key()?;
+    let ed25519_key_bytes = signer.try_ed25519_key()?;
+    let ed25519_key = ed25519_public_key_from_bytes(&ed25519_key_bytes)?;
     let ed25519_signature = signature.try_into()
         .map_err(|_| ParseError::InvalidSignatureLength)?;
     // TODO: don't add newline
     let message = format!("{}\n", message);
     verify_eddsa_blake2_signature(
         &message,
-        ed25519_key,
+        &ed25519_key,
         ed25519_signature,
     )?;
     Ok(())
@@ -198,7 +199,7 @@ mod tests {
         let minisign_signature =
             "RUS/wRxk57oX+P9JzukdVNh3WYisLQIW4aiyOvl4plV384/ZmmNSlihXBb/mJoDsTW5HYYseRIVAiidr+1+OQCxVxPlDeAN9dAs=";
         let signer_key = parse_minisign_public_key(minisign_key).unwrap();
-        let signer = DidKey::from_ed25519_key(signer_key);
+        let signer = DidKey::from_ed25519_key(&signer_key);
         let signature = parse_minisign_signature(minisign_signature).unwrap();
         assert_eq!(signature.is_prehashed, true);
         let result = verify_minisign_signature(

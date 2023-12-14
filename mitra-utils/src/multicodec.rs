@@ -28,6 +28,7 @@ fn decode(value: &[u8]) -> Result<(u128, Vec<u8>), MulticodecError> {
     Ok((code, data.to_vec()))
 }
 
+#[derive(Clone, Debug, PartialEq)]
 pub enum Multicodec {
     Ed25519Pub,
     Ed25519Priv,
@@ -157,7 +158,7 @@ mod tests {
         let value = [1; 32];
         let encoded = encode_ed25519_public_key(value);
         let (codec, decoded) = Multicodec::decode(&encoded).unwrap();
-        assert!(matches!(codec, Multicodec::Ed25519Pub));
+        assert_eq!(codec, Multicodec::Ed25519Pub);
         assert_eq!(decoded, value);
     }
 }
