@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [2.5.0] - 2023-12-14
+
 ### Added
 
 - Support changing logger configuration with `RUST_LOG` environment variable.
