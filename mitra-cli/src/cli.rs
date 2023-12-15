@@ -374,6 +374,9 @@ impl SetRole {
 #[derive(Parser)]
 pub struct RefetchActor {
     id: String,
+
+    #[clap(long)]
+    update_username: bool,
 }
 
 impl RefetchActor {
@@ -391,7 +394,8 @@ impl RefetchActor {
             &config.instance(),
             &MediaStorage::from(config),
             profile,
-            true,
+            true, // force
+            self.update_username,
         ).await?;
         println!("profile updated");
         Ok(())

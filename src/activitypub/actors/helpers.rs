@@ -383,7 +383,19 @@ pub async fn update_remote_profile(
     storage: &MediaStorage,
     profile: DbActorProfile,
     actor: Actor,
+    update_username: bool,
 ) -> Result<DbActorProfile, HandlerError> {
+    let username = if update_username {
+        // WARNING: changing acct
+        // This will break some mentions in old posts and may cause
+        // integrity error upon saving if account with the same acct
+        // already exists in database
+        log::warn!("updating preferred username");
+        actor.preferred_username.clone()
+    } else {
+        // Keep using cached value
+        profile.username.clone()
+    };
     let actor_old = profile.actor_json.ok_or(HandlerError::LocalObject)?;
     if actor_old.id != actor.id {
         log::warn!(
@@ -422,6 +434,7 @@ pub async fn update_remote_profile(
         &actor,
     ).await?;
     let mut profile_data = ProfileUpdateData {
+        username: username,
         display_name: actor.name.clone(),
         bio: actor.summary.clone(),
         bio_source: actor.summary.clone(),

@@ -617,7 +617,8 @@ pub struct DbActorProfile {
 
 // Profile identifiers:
 // id (local profile UUID): never changes
-// acct (webfinger): must never change
+// acct (webfinger): should not be changed
+// - may change if actor ID remains the same; requires manual intervention
 // actor_id of remote actor: may change if acct remains the same
 // actor RSA key: can be updated at any time by the instance admin
 // identity proofs: TBD (likely will do "Trust on first use" (TOFU))
@@ -709,6 +710,7 @@ impl ProfileCreateData {
 }
 
 pub struct ProfileUpdateData {
+    pub username: String,
     pub display_name: Option<String>,
     pub bio: Option<String>,
     pub bio_source: Option<String>,
@@ -754,6 +756,7 @@ impl From<&DbActorProfile> for ProfileUpdateData {
     fn from(profile: &DbActorProfile) -> Self {
         let profile = profile.clone();
         Self {
+            username: profile.username,
             display_name: profile.display_name,
             bio: profile.bio,
             bio_source: profile.bio_source,

@@ -196,23 +196,25 @@ pub async fn update_profile(
         "
         UPDATE actor_profile
         SET
-            display_name = $1,
-            bio = $2,
-            bio_source = $3,
-            avatar = $4,
-            banner = $5,
-            manually_approves_followers = $6,
-            public_keys = $7,
-            identity_proofs = $8,
-            payment_options = $9,
-            extra_fields = $10,
-            aliases = $11,
-            actor_json = $12,
+            username = $1,
+            display_name = $2,
+            bio = $3,
+            bio_source = $4,
+            avatar = $5,
+            banner = $6,
+            manually_approves_followers = $7,
+            public_keys = $8,
+            identity_proofs = $9,
+            payment_options = $10,
+            extra_fields = $11,
+            aliases = $12,
+            actor_json = $13,
             updated_at = CURRENT_TIMESTAMP,
             unreachable_since = NULL
-        WHERE id = $13
+        WHERE id = $14
         ",
         &[
+            &profile_data.username,
             &profile_data.display_name,
             &profile_data.bio,
             &profile_data.bio_source,

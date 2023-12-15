@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+
+- Allow updating preferred username with `refetch-actor` command.
+
 ### Fixed
 
 - Ignore deleted recipients when processing outgoing activity queue.

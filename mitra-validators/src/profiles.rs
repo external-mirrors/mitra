@@ -129,6 +129,7 @@ pub fn clean_profile_create_data(
 pub fn clean_profile_update_data(
     profile_data: &mut ProfileUpdateData,
 ) -> Result<(), ValidationError> {
+    validate_username(&profile_data.username)?;
     if let Some(display_name) = &profile_data.display_name {
         validate_display_name(display_name)?;
     };

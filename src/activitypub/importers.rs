@@ -60,6 +60,7 @@ async fn import_profile(
                 storage,
                 profile,
                 actor,
+                false,
             ).await?;
             profile_updated
         },
@@ -84,6 +85,7 @@ pub async fn refresh_remote_profile(
     storage: &MediaStorage,
     profile: DbActorProfile,
     force: bool,
+    update_username: bool,
 ) -> Result<DbActorProfile, HandlerError> {
     let agent = build_federation_agent(instance, None);
     let actor_id = &profile.actor_json.as_ref()
@@ -102,6 +104,7 @@ pub async fn refresh_remote_profile(
                     storage,
                     profile,
                     actor,
+                    update_username,
                 ).await?;
                 profile_updated
             },
@@ -139,6 +142,7 @@ pub async fn get_or_import_profile_by_actor_id(
                 instance,
                 storage,
                 profile,
+                false,
                 false,
             ).await?
         },
@@ -229,6 +233,7 @@ pub async fn get_or_import_profile_by_actor_address(
                     instance,
                     storage,
                     profile,
+                    false,
                     false,
                 ).await?
             }
