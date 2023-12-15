@@ -291,10 +291,18 @@ pub async fn process_queued_outgoing_activities(
             // TODO: O(1)
             for recipient in recipients.iter_mut() {
                 if !recipient.is_delivered {
-                    let profile = get_profile_by_remote_actor_id(
+                    let profile = match get_profile_by_remote_actor_id(
                         db_client,
                         &recipient.id,
-                    ).await?;
+                    ).await {
+                        Ok(profile) => profile,
+                        Err(DatabaseError::NotFound(_)) => {
+                            // Recipient was deleted
+                            recipient.is_unreachable = true;
+                            continue;
+                        },
+                        Err(other_error) => return Err(other_error),
+                    };
                     if let Some(unreachable_since) = profile.unreachable_since {
                         let noretry_after = unreachable_since +
                             Duration::seconds(OUTGOING_QUEUE_UNREACHABLE_NORETRY);
