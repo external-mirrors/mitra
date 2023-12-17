@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Changed
 
 - Allow calling `/api/v1/accounts/{account_id}/follow` with an empty body.
+- Allow to call `delete-profile` command with username as first argument.
 
 ### Fixed
 

@@ -474,7 +474,7 @@ impl FetchObjectAs {
 /// Delete profile
 #[derive(Parser)]
 pub struct DeleteProfile {
-    id: Uuid,
+    id_or_name: String,
 }
 
 impl DeleteProfile {
@@ -483,7 +483,10 @@ impl DeleteProfile {
         config: &Config,
         db_client: &mut impl DatabaseClient,
     ) -> Result<(), Error> {
-        let profile = get_profile_by_id(db_client, &self.id).await?;
+        let profile = get_profile_by_id_or_acct(
+            db_client,
+            &self.id_or_name,
+        ).await?;
         let mut maybe_delete_person = None;
         if profile.is_local() {
             let user = get_user_by_id(db_client, &profile.id).await?;
