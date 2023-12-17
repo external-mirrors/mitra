@@ -10,6 +10,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Allow updating preferred username with `refetch-actor` command.
 
+### Changed
+
+- Allow calling `/api/v1/accounts/{account_id}/follow` with an empty body.
+
 ### Fixed
 
 - Ignore deleted recipients when processing outgoing activity queue.

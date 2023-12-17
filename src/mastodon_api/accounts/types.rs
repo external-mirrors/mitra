@@ -506,6 +506,15 @@ pub struct FollowData {
     pub replies: bool,
 }
 
+impl Default for FollowData {
+    fn default() -> Self {
+        Self {
+            reblogs: default_showing_reblogs(),
+            replies: default_showing_replies(),
+        }
+    }
+}
+
 fn default_status_page_size() -> PageSize { PageSize::new(20) }
 
 const fn default_only_media() -> bool { false }

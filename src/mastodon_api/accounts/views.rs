@@ -674,9 +674,12 @@ async fn follow_account(
     config: web::Data<Config>,
     db_pool: web::Data<DbPool>,
     account_id: web::Path<Uuid>,
-    follow_data: FormOrJson<FollowData>,
+    follow_data: Option<FormOrJson<FollowData>>,
 ) -> Result<HttpResponse, MastodonError> {
-    let follow_data = follow_data.into_inner();
+    // Some clients may send an empty body
+    let follow_data = follow_data
+        .map(|data| data.into_inner())
+        .unwrap_or_default();
     let db_client = &mut **get_database_client(&db_pool).await?;
     let current_user = get_current_user(db_client, auth.token()).await?;
     let target = get_profile_by_id(db_client, &account_id).await?;
