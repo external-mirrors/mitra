@@ -27,6 +27,10 @@ const SUPPORTED_MEDIA_TYPES: [&str; 14] = [
     "video/x-m4v",
 ];
 
+// Not included
+// https://developer.mozilla.org/en-US/docs/Web/Media/Formats/Image_types
+// - image/tiff only supported by Safari
+
 /// Generates unique file name based on file contents
 fn get_file_name(data: &[u8], media_type: Option<&str>) -> String {
     let digest = Sha256::digest(data);
