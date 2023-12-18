@@ -89,6 +89,9 @@ pub enum AuthenticationError {
 
 fn key_id_to_actor_id(key_id: &str) -> Result<String, AuthenticationError> {
     let key_url = url::Url::parse(key_id)?;
+    if key_url.query().is_some() {
+        log::warn!("key ID contains query string: {}", key_id);
+    };
     // Strip #main-key (works with most AP servers)
     let actor_id = &key_url[..url::Position::BeforeQuery];
     // GoToSocial compat
