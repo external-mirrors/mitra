@@ -10,7 +10,8 @@ use mitra_utils::files::{get_media_type_extension, write_file};
 const MEDIA_DIR: &str = "media";
 pub const MEDIA_ROOT_URL: &str = "/media";
 
-const SUPPORTED_MEDIA_TYPES: [&str; 14] = [
+const SUPPORTED_MEDIA_TYPES: [&str; 15] = [
+    "audio/flac",
     "audio/mpeg",
     "audio/ogg",
     "audio/x-wav",
