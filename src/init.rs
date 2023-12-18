@@ -11,7 +11,10 @@ pub fn initialize_app() -> Config {
     };
     #[cfg(target_env = "musl")]
     {
-        openssl_probe::init_ssl_cert_env_vars();
+        let is_found = openssl_probe::try_init_ssl_cert_env_vars();
+        if !is_found {
+            log::warn!("certificate store not found");
+        };
     };
     config
 }
