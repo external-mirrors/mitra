@@ -145,7 +145,8 @@ pub fn validate_local_reply(
             .map(|profile| profile.id).collect();
         in_reply_to_audience.push(in_reply_to.author.id);
         if !mentions.iter().all(|id| in_reply_to_audience.contains(id)) {
-            return Err(ValidationError("audience can't be expanded"));
+            // Audience can't be expanded
+            return Err(ValidationError("can't add more recipients"));
         };
     };
     Ok(())
