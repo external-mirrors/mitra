@@ -89,11 +89,8 @@ pub enum AuthenticationError {
 
 fn key_id_to_actor_id(key_id: &str) -> Result<String, AuthenticationError> {
     let key_url = url::Url::parse(key_id)?;
-    if key_url.query().is_some() {
-        log::warn!("key ID contains query string: {}", key_id);
-    };
-    // Strip #main-key (works with most AP servers)
-    let actor_id = &key_url[..url::Position::BeforeQuery];
+    // Strip fragment and query (works with most AP servers)
+    let actor_id = &key_url[..url::Position::AfterPath];
     // GoToSocial compat
     let actor_id = actor_id.trim_end_matches("/main-key");
     Ok(actor_id.to_string())
@@ -324,6 +321,12 @@ mod tests {
         let actor_id = key_id_to_actor_id(key_id).unwrap();
         assert_eq!(actor_id, "https://myserver.org/actor");
 
+        // Streams
+        let key_id = "https://fediversity.site/channel/mikedev?operation=rsakey";
+        let actor_id = key_id_to_actor_id(key_id).unwrap();
+        assert_eq!(actor_id, "https://fediversity.site/channel/mikedev");
+
+        // GoToSocial
         let key_id = "https://myserver.org/actor/main-key";
         let actor_id = key_id_to_actor_id(key_id).unwrap();
         assert_eq!(actor_id, "https://myserver.org/actor");

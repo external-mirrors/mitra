@@ -17,12 +17,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Allow to call `delete-profile` command with username as first argument.
 - Change audience expansion error message.
 - Write a message to log if SSL certificate probe was not successful.
-- Log key ID if it contains query string.
 - Allow `actor` property of `Follow` and `Accept` activities to contain object.
 
 ### Fixed
 
 - Ignore deleted recipients when processing outgoing activity queue.
+- Fixed key ID to actor ID translation when key ID contains query string.
 
 ## [2.5.0] - 2023-12-14
 
