@@ -89,7 +89,7 @@ pub fn create_identity_claim_fep_c390(
             let hash_data = prepare_jcs_sha256_data(&claim, &proof_config)?;
             hex::encode(hash_data)
         },
-        IdentityProofType::FepC390JcsEddsaProof => {
+        IdentityProofType::FepC390EddsaJcsNoCiProof => {
             subject.as_did_key().expect("did:key should be used");
             let proof_config = IntegrityProofConfig::jcs_eddsa(
                 &subject.to_string(),
@@ -140,7 +140,7 @@ pub fn create_identity_proof_fep_c390(
             );
             IntegrityProof::new(proof_config, signature_bin)
         },
-        IdentityProofType::FepC390JcsEddsaProof => {
+        IdentityProofType::FepC390EddsaJcsNoCiProof => {
             let did_key = subject.as_did_key()
                 .expect("did:key should be used");
             let proof_config = IntegrityProofConfig::jcs_eddsa(
@@ -264,7 +264,7 @@ mod tests {
         let signature_data = get_json_signature(&identity_proof).unwrap();
         assert_eq!(
             signature_data.proof_type,
-            ProofType::JcsEddsaSignature,
+            ProofType::EddsaJcsSignature,
         );
         let public_key_bytes = did.as_did_key().unwrap()
             .try_ed25519_key().unwrap();

@@ -283,7 +283,7 @@ mod tests {
         let signature_data = get_json_signature(&signed_object).unwrap();
         assert_eq!(
             signature_data.proof_type,
-            ProofType::JcsEddsaSignature,
+            ProofType::EddsaJcsSignature,
         );
         let expected_signer = JsonSigner::ActorKeyId(signer_key_id.to_string());
         assert_eq!(signature_data.signer, expected_signer);
@@ -352,7 +352,7 @@ mod tests {
         let signature_data = get_json_signature(&signed_object).unwrap();
         assert_eq!(
             signature_data.proof_type,
-            ProofType::JcsEddsaSignature,
+            ProofType::EddsaJcsSignature,
         );
         let public_key_multibase = "z6MkrJVnaZkeFzdQyMZu1cgjg7k1pZZ6pvBQ7XJPt4swbTQ2";
         let public_key_multicode = decode_multibase_base58btc(public_key_multibase).unwrap();

@@ -231,7 +231,9 @@ pub async fn verify_signed_activity(
                         &signature_data.signature,
                     )?;
                 },
-                ProofType::JcsEddsaSignature => {
+                ProofType::JcsEddsaSignature | ProofType::EddsaJcsSignature => {
+                    // Treat eddsa-jcs-2022 as a temporary alias
+                    // for jcs-eddsa-2022 (no context injection)
                     let signer_key = get_signer_ed25519_key(
                         &actor_profile,
                         key_id,

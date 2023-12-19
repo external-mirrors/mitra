@@ -27,8 +27,10 @@ pub const PROOF_TYPE_JCS_EIP191: &str = "MitraJcsEip191Signature2022";
 // - Signature algorithm: EdDSA
 pub const PROOF_TYPE_JCS_BLAKE2_ED25519: &str = "MitraJcsEd25519Signature2022";
 
-// https://w3c.github.io/vc-di-eddsa/#jcs-eddsa-2022
+// https://w3c.github.io/vc-di-eddsa/#eddsa-jcs-2022
+// (old name, and a variant without context injection)
 pub const CRYPTOSUITE_JCS_EDDSA_LEGACY: &str = "jcs-eddsa-2022";
+// (normal variant, unstable)
 pub const CRYPTOSUITE_JCS_EDDSA: &str = "eddsa-jcs-2022";
 
 #[derive(Debug, PartialEq)]
@@ -37,6 +39,7 @@ pub enum ProofType {
     JcsBlake2Ed25519Signature,
     JcsRsaSignature,
     JcsEddsaSignature,
+    EddsaJcsSignature,
 }
 
 #[derive(thiserror::Error, Debug)]
@@ -62,7 +65,7 @@ impl ProofType {
         let proof_type = match value {
             CRYPTOSUITE_JCS_RSA => Self::JcsRsaSignature,
             CRYPTOSUITE_JCS_EDDSA_LEGACY => Self::JcsEddsaSignature,
-            CRYPTOSUITE_JCS_EDDSA => Self::JcsEddsaSignature,
+            CRYPTOSUITE_JCS_EDDSA => Self::EddsaJcsSignature,
             _ => return Err(UnsupportedProofType),
         };
         Ok(proof_type)

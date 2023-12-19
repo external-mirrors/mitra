@@ -21,6 +21,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Write a message to log if SSL certificate probe was not successful.
 - Allow `actor` property of `Follow` and `Accept` activities to contain object.
 - Changed `mitractl` help message (provided by Rust `clap` library).
+- Treat `jcs-eddsa-2022` and `eddsa-jcs-2022` cryptosuites as different.
 
 ### Fixed
 

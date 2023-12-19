@@ -500,7 +500,7 @@ async fn create_identity_proof(
             ).map_err(|_| ValidationError("invalid signature"))?;
             signature.value.to_vec()
         },
-        IdentityProofType::FepC390JcsEddsaProof => unimplemented!(),
+        IdentityProofType::FepC390EddsaJcsNoCiProof => unimplemented!(),
     };
 
     let proof = create_identity_proof_fep_c390(
