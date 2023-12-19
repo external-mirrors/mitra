@@ -433,6 +433,9 @@ async fn create_identity_proof(
 
     // Verify proof
     let signature_bin = match proof_type {
+        IdentityProofType::LegacyEip191IdentityProof
+            | IdentityProofType::LegacyMinisignIdentityProof
+            => unimplemented!("expected FEP-c390 compatible proof type"),
         IdentityProofType::FepC390JcsBlake2Ed25519Proof => {
             let did_key = did.as_did_key()
                 .ok_or(ValidationError("unexpected DID type"))?;
@@ -497,7 +500,7 @@ async fn create_identity_proof(
             ).map_err(|_| ValidationError("invalid signature"))?;
             signature.value.to_vec()
         },
-        _ => unimplemented!("expected FEP-c390 compatible proof type"),
+        IdentityProofType::FepC390JcsEddsaProof => unimplemented!(),
     };
 
     let proof = create_identity_proof_fep_c390(

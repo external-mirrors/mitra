@@ -118,6 +118,9 @@ pub fn create_identity_proof_fep_c390(
     signature_bin: &[u8],
 ) -> DbIdentityProof {
     let integrity_proof = match proof_type {
+        IdentityProofType::LegacyEip191IdentityProof
+            | IdentityProofType::LegacyMinisignIdentityProof
+            => unimplemented!("expected FEP-c390 compatible proof type"),
         IdentityProofType::FepC390JcsBlake2Ed25519Proof => {
             let did_key = subject.as_did_key()
                 .expect("did:key should be used");
@@ -146,7 +149,6 @@ pub fn create_identity_proof_fep_c390(
             );
             IntegrityProof::new(proof_config, signature_bin)
         },
-        _ => unimplemented!("expected FEP-c390 compatible proof type"),
     };
     let identity_proof = IdentityProof {
         statement: VerifiableIdentityStatement::new(subject, actor_id),

@@ -185,6 +185,7 @@ pub fn parse_identity_proof_fep_c390(
             ).map_err(|_| ValidationError("invalid identity proof"))?;
             IdentityProofType::FepC390JcsEip191Proof
         },
+        // TODO: ProofType::EddsaJcsSignature
         ProofType::JcsEddsaSignature => {
             let did_key = signer.as_did_key()
                 .ok_or(ValidationError("unexpected DID type"))?;
