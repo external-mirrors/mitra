@@ -370,7 +370,7 @@ async fn get_identity_claim(
         "minisign-unhashed" => {
             let did_key = minisign_key_to_did(&query_params.signer)
                 .map_err(|_| ValidationError("invalid key"))?;
-            (Did::Key(did_key), IdentityProofType::LegacyFepC390JcsEddsaProof)
+            (Did::Key(did_key), IdentityProofType::FepC390LegacyJcsEddsaProof)
         },
         _ => return Err(ValidationError("unknown proof type").into()),
     };
@@ -402,7 +402,7 @@ async fn create_identity_proof(
     let proof_type = match proof_data.proof_type.as_str() {
         "ethereum" => IdentityProofType::FepC390JcsEip191Proof,
         "minisign" => IdentityProofType::FepC390JcsBlake2Ed25519Proof,
-        "minisign-unhashed" => IdentityProofType::LegacyFepC390JcsEddsaProof,
+        "minisign-unhashed" => IdentityProofType::FepC390LegacyJcsEddsaProof,
         _ => return Err(ValidationError("unknown proof type").into()),
     };
     let did = proof_data.did.parse::<Did>()
@@ -473,7 +473,7 @@ async fn create_identity_proof(
             ).map_err(|_| ValidationError("invalid signature"))?;
             signature_bin
         },
-        IdentityProofType::LegacyFepC390JcsEddsaProof => {
+        IdentityProofType::FepC390LegacyJcsEddsaProof => {
             let did_key = did.as_did_key()
                 .ok_or(ValidationError("unexpected DID type"))?;
             let ed25519_key_bytes = did_key.try_ed25519_key()

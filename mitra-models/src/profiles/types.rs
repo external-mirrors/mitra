@@ -140,7 +140,7 @@ pub enum IdentityProofType {
     LegacyMinisignIdentityProof,
     FepC390JcsBlake2Ed25519Proof, // MitraJcsEd25519Signature2022
     FepC390JcsEip191Proof, // MitraJcsEip191Signature2022
-    LegacyFepC390JcsEddsaProof, // jcs-eddsa-2022
+    FepC390LegacyJcsEddsaProof, // jcs-eddsa-2022
     FepC390JcsEddsaProof, // eddsa-jcs-2022
 }
 
@@ -151,7 +151,7 @@ impl From<&IdentityProofType> for i16 {
             IdentityProofType::LegacyMinisignIdentityProof => 2,
             IdentityProofType::FepC390JcsBlake2Ed25519Proof => 3,
             IdentityProofType::FepC390JcsEip191Proof => 4,
-            IdentityProofType::LegacyFepC390JcsEddsaProof => 5,
+            IdentityProofType::FepC390LegacyJcsEddsaProof => 5,
             IdentityProofType::FepC390JcsEddsaProof => 6,
         }
     }
@@ -166,7 +166,7 @@ impl TryFrom<i16> for IdentityProofType {
             2 => Self::LegacyMinisignIdentityProof,
             3 => Self::FepC390JcsBlake2Ed25519Proof,
             4 => Self::FepC390JcsEip191Proof,
-            5 => Self::LegacyFepC390JcsEddsaProof,
+            5 => Self::FepC390LegacyJcsEddsaProof,
             6 => Self::FepC390JcsEddsaProof,
             _ => return Err(DatabaseTypeError),
         };
