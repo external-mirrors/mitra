@@ -18,6 +18,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Change audience expansion error message.
 - Write a message to log if SSL certificate probe was not successful.
 - Log key ID if it contains query string.
+- Allow `actor` property of `Follow` and `Accept` activities to contain object.
 
 ### Fixed
 

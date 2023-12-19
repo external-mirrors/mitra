@@ -29,6 +29,7 @@ use super::{HandlerError, HandlerResult};
 #[derive(Deserialize)]
 struct Follow {
     id: String,
+    #[serde(deserialize_with = "deserialize_into_object_id")]
     actor: String,
     #[serde(deserialize_with = "deserialize_into_object_id")]
     object: String,

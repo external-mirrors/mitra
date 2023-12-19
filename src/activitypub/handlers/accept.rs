@@ -27,6 +27,7 @@ use super::HandlerResult;
 
 #[derive(Deserialize)]
 struct Accept {
+    #[serde(deserialize_with = "deserialize_into_object_id")]
     actor: String,
     #[serde(deserialize_with = "deserialize_into_object_id")]
     object: String,
