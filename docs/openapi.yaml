@@ -1850,6 +1850,9 @@ components:
           description: The Webfinger account URI. Equal to username for local actors, or username@domain for remote actors.
           type: string
           example: user@social.example
+        actor_id:
+          description: URI of the actor used for federation.
+          type: string
         url:
           description: The location of the user's profile page.
           type: string

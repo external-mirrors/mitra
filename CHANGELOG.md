@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Allow updating preferred username with `refetch-actor` command.
 - Add `audio/flac` to the list of supported media types.
+- Added `actor_id` property to Mastodon API `Account` object.
 
 ### Changed
 

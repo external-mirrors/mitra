@@ -30,7 +30,10 @@ use mitra_validators::{
     profiles::{allowed_profile_image_media_types, PROFILE_IMAGE_SIZE_MAX},
 };
 
-use crate::activitypub::identifiers::profile_actor_url;
+use crate::activitypub::identifiers::{
+    profile_actor_id,
+    profile_actor_url,
+};
 use crate::mastodon_api::{
     custom_emojis::types::CustomEmoji,
     errors::MastodonError,
@@ -113,6 +116,7 @@ pub struct Account {
     pub id: Uuid,
     pub username: String,
     pub acct: String,
+    actor_id: String, // not part of Mastodon API
     pub url: String,
     pub display_name: Option<String>,
     pub created_at: DateTime<Utc>,
@@ -142,6 +146,7 @@ impl Account {
         instance_url: &str,
         profile: DbActorProfile,
     ) -> Self {
+        let actor_id = profile_actor_id(instance_url, &profile);
         let profile_url = profile_actor_url(instance_url, &profile);
         let avatar_url = profile.avatar
             .map(|image| get_file_url(base_url, &image.file_name));
@@ -224,6 +229,7 @@ impl Account {
             id: profile.id,
             username: profile.username,
             acct: profile.acct,
+            actor_id: actor_id,
             url: profile_url,
             display_name: profile.display_name,
             created_at: profile.created_at,
