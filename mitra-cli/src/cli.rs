@@ -116,6 +116,7 @@ use mitra_validators::{
 
 /// Mitra admin CLI
 #[derive(Parser)]
+#[command(version)]
 pub struct Cli {
     #[clap(subcommand)]
     pub subcmd: SubCommand,
