@@ -245,6 +245,7 @@ mod tests {
             &did.to_string(),
             &claim_value,
             Some(created_at),
+            false,
         ).unwrap();
         let expected_result = json!({
             "type": "VerifiableIdentityStatement",

@@ -257,6 +257,50 @@ mod tests {
     }
 
     #[test]
+    fn test_create_and_verify_eddsa_signature_legacy() {
+        let signer_key = generate_ed25519_key();
+        let signer_key_id = "https://example.org/users/test#main-key";
+        let object = json!({
+            "type": "Create",
+            "actor": "https://example.org/users/test",
+            "id": "https://example.org/objects/1",
+            "to": [
+                "https://example.org/users/yyy",
+                "https://example.org/users/xxx",
+            ],
+            "object": {
+                "type": "Note",
+                "content": "test",
+            },
+        });
+        let signed_object = sign_object_eddsa(
+            &signer_key,
+            signer_key_id,
+            &object,
+            None,
+            true,
+        ).unwrap();
+
+        let signature_data = get_json_signature(&signed_object).unwrap();
+        assert_eq!(
+            signature_data.proof_type,
+            ProofType::JcsEddsaSignature,
+        );
+        let expected_signer = JsonSigner::ActorKeyId(signer_key_id.to_string());
+        assert_eq!(signature_data.signer, expected_signer);
+
+        let signer_public_key =
+            ed25519_public_key_from_private_key(&signer_key);
+        let result = verify_eddsa_json_signature(
+            &signer_public_key,
+            &signature_data.object,
+            &signature_data.proof_config,
+            &signature_data.signature,
+        );
+        assert_eq!(result.is_ok(), true);
+    }
+
+    #[test]
     fn test_create_and_verify_eddsa_signature() {
         let signer_key = generate_ed25519_key();
         let signer_key_id = "https://example.org/users/test#main-key";
@@ -278,6 +322,7 @@ mod tests {
             signer_key_id,
             &object,
             None,
+            false,
         ).unwrap();
 
         let signature_data = get_json_signature(&signed_object).unwrap();
@@ -325,6 +370,7 @@ mod tests {
             key_id,
             &object,
             Some(created_at),
+            false,
         ).unwrap();
 
         let expected_result = json!({

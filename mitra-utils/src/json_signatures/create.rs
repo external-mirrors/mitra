@@ -218,12 +218,20 @@ pub fn sign_object_eddsa(
     signer_key_id: &str,
     object: &JsonValue,
     current_time: Option<DateTime<Utc>>,
+    use_legacy_cryptosuite: bool,
 ) -> Result<JsonValue, JsonSignatureError> {
     let signature_created_at = current_time.unwrap_or(Utc::now());
-    let proof_config = IntegrityProofConfig::jcs_eddsa(
-        signer_key_id,
-        signature_created_at,
-    );
+    let proof_config = if use_legacy_cryptosuite {
+        IntegrityProofConfig::jcs_eddsa_legacy(
+            signer_key_id,
+            signature_created_at,
+        )
+    } else {
+        IntegrityProofConfig::jcs_eddsa(
+            signer_key_id,
+            signature_created_at,
+        )
+    };
     let hash_data = prepare_jcs_sha256_data(object, &proof_config)?;
     let signature = create_eddsa_signature(signer_key, &hash_data);
     let proof = IntegrityProof::new(proof_config, &signature);
@@ -320,6 +328,7 @@ mod tests {
             signer_key_id,
             &object,
             Some(created_at),
+            false,
         ).unwrap();
 
         let expected_result = json!({
