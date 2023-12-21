@@ -114,7 +114,7 @@ use mitra_validators::{
     users::validate_local_username,
 };
 
-/// Admin CLI tool
+/// Mitra admin CLI
 #[derive(Parser)]
 pub struct Opts {
     #[clap(subcommand)]
@@ -978,6 +978,7 @@ impl GetPaymentAddress {
     }
 }
 
+/// Display instance report
 #[derive(Parser)]
 pub struct InstanceReport;
 
