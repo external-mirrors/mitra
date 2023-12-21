@@ -7,11 +7,11 @@ use mitra_models::database::{
 use mitra::init::initialize_app;
 
 mod cli;
-use cli::{Opts, SubCommand};
+use cli::{Cli, SubCommand};
 
 #[tokio::main]
 async fn main() {
-    let opts: Opts = Opts::parse();
+    let opts: Cli = Cli::parse();
 
     match opts.subcmd {
         SubCommand::GenerateRsaKey(cmd) => cmd.execute().unwrap(),

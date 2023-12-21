@@ -116,7 +116,7 @@ use mitra_validators::{
 
 /// Mitra admin CLI
 #[derive(Parser)]
-pub struct Opts {
+pub struct Cli {
     #[clap(subcommand)]
     pub subcmd: SubCommand,
 }
@@ -1015,5 +1015,17 @@ impl InstanceReport {
             println!("monero addresses: {}", address_count);
         };
         Ok(())
+    }
+}
+
+
+#[cfg(test)]
+mod tests {
+    use clap::CommandFactory;
+    use super::*;
+
+    #[test]
+    fn test_cli() {
+        Cli::command().debug_assert()
     }
 }
