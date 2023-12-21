@@ -246,12 +246,14 @@ pub async fn receive_activity(
         },
     };
 
+    let signer_hostname = signer.hostname.as_ref()
+        .expect("signer should be remote");
     if !is_hostname_allowed(
         &config.blocked_instances,
         &config.allowed_instances,
-        signer.hostname.as_ref().expect("signer should be remote"),
+        signer_hostname,
     ) {
-        log::warn!("ignoring activity from blocked instance: {}", activity);
+        log::info!("ignoring activity from blocked instance {signer_hostname}");
         return Ok(());
     };
 
