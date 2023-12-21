@@ -588,15 +588,10 @@ pub async fn handle_note(
     object: Object,
     redirects: &HashMap<String, String>,
 ) -> Result<Post, HandlerError> {
-    match object.object_type.as_str() {
-        NOTE => (),
-        ARTICLE | EVENT | QUESTION | PAGE | PROPOSAL | VIDEO => {
-            log::info!("processing object of type {}", object.object_type);
-        },
-        other_type => {
-            log::warn!("discarding object of type {}", other_type);
-            return Err(ValidationError("unsupported object type").into());
-        },
+    if object.object_type != NOTE {
+        // Attempting to convert any object that has attributedTo property
+        // into post
+        log::info!("processing object of type {}", object.object_type);
     };
 
     let author_id = get_object_attributed_to(&object)?;

@@ -13,7 +13,6 @@ pub const FOLLOW: &str = "Follow";
 pub const LIKE: &str = "Like";
 pub const MOVE: &str = "Move";
 pub const OFFER: &str = "Offer";
-pub const QUESTION: &str = "Question";
 pub const REJECT: &str = "Reject";
 pub const REMOVE: &str = "Remove";
 pub const UNDO: &str = "Undo";
@@ -25,12 +24,9 @@ pub const GROUP: &str = "Group";
 pub const PERSON: &str = "Person";
 
 // Object types
-pub const ARTICLE: &str = "Article";
 pub const DOCUMENT: &str = "Document";
-pub const EVENT: &str = "Event";
 pub const IMAGE: &str = "Image";
 pub const NOTE: &str = "Note";
-pub const PAGE: &str = "Page";
 pub const TOMBSTONE: &str = "Tombstone";
 pub const VIDEO: &str = "Video";
 
