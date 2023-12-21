@@ -28,13 +28,13 @@ serde_json = "1.0.89"
 # Used to calculate SHA2 hashes
 sha2 = "0.10.6"
 # Used to verify EIP-4361 signatures
-siwe = "0.4.2"
+siwe = "0.5.2"
 # Used for creating error types
 thiserror = "1.0.37"
 # Used to work with UUIDs
 uuid = { version = "1.1.2", features = ["serde", "v4"] }
 # Used to query ethereum node
-web3 = { git = "https://github.com/tomusdrw/rust-web3", rev = "d49ad4f1d41adfb27d167573e0360b56d07d397b", default-features = false, features = ["http", "http-tls", "signing"] }
+web3 = { version = "0.19.0", default-features = false, features = ["http", "http-tls", "signing"] }
 
 mitra-config = { path = "../mitra-config" }
 mitra-models = { path = "../mitra-models" }
