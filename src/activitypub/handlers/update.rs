@@ -42,7 +42,7 @@ use crate::activitypub::{
         get_object_url,
     },
     identifiers::profile_actor_id,
-    types::Object,
+    types::AttributedObject,
     vocabulary::{NOTE, PERSON},
 };
 
@@ -52,7 +52,7 @@ use super::HandlerResult;
 struct UpdateNote {
     #[serde(deserialize_with = "deserialize_into_object_id")]
     actor: String,
-    object: Object,
+    object: AttributedObject,
 }
 
 async fn handle_update_note(

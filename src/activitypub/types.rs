@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
+use serde_json::{Value as JsonValue};
 
 use super::constants::{
     AP_CONTEXT,
@@ -89,7 +89,7 @@ pub struct EmojiTag {
 #[derive(Deserialize)]
 #[cfg_attr(test, derive(Default))]
 #[serde(rename_all = "camelCase")]
-pub struct Object {
+pub struct AttributedObject {
     // https://www.w3.org/TR/activitypub/#obj-id
     // "id" and "type" are required properties
     pub id: String,
@@ -97,12 +97,14 @@ pub struct Object {
     #[serde(rename = "type")]
     pub object_type: String,
 
+    // Required for conversion into "post" entity
+    pub attributed_to: JsonValue,
+
     pub name: Option<String>,
-    pub attachment: Option<Value>,
-    pub cc: Option<Value>,
+    pub attachment: Option<JsonValue>,
+    pub cc: Option<JsonValue>,
     pub media_type: Option<String>,
     pub published: Option<DateTime<Utc>>,
-    pub attributed_to: Option<Value>,
     pub in_reply_to: Option<String>,
     pub content: Option<String>,
     pub quote_url: Option<String>,
@@ -113,11 +115,11 @@ pub struct Object {
         default,
         deserialize_with = "deserialize_object_array",
     )]
-    pub tag: Vec<Value>,
+    pub tag: Vec<JsonValue>,
 
-    pub to: Option<Value>,
+    pub to: Option<JsonValue>,
     pub updated: Option<DateTime<Utc>>,
-    pub url: Option<Value>,
+    pub url: Option<JsonValue>,
 }
 
 pub type Context = (

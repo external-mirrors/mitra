@@ -34,7 +34,7 @@ use crate::activitypub::{
     handlers::create::{get_object_links, handle_note},
     identifiers::parse_local_object_id,
     receiver::{handle_activity, HandlerError},
-    types::Object,
+    types::AttributedObject,
     vocabulary::GROUP,
 };
 use crate::webfinger::types::{ActorAddress, JsonResourceDescriptor};
@@ -280,14 +280,14 @@ pub async fn import_post(
     instance: &Instance,
     storage: &MediaStorage,
     object_id: String,
-    object_received: Option<Object>,
+    object_received: Option<AttributedObject>,
 ) -> Result<Post, HandlerError> {
     let agent = build_federation_agent(instance, None);
 
     let mut queue = vec![object_id]; // LIFO queue
     let mut fetch_count = 0;
     let mut maybe_object = object_received;
-    let mut objects: Vec<Object> = vec![];
+    let mut objects: Vec<AttributedObject> = vec![];
     let mut redirects: HashMap<String, String> = HashMap::new();
     let mut posts = vec![];
 
@@ -341,7 +341,8 @@ pub async fn import_post(
                     // TODO: create tombstone
                     return Err(FetchError::RecursionError.into());
                 };
-                let object: Object = fetch_object(&agent, &object_id).await?;
+                let object: AttributedObject =
+                    fetch_object(&agent, &object_id).await?;
                 log::info!("fetched object {}", object.id);
                 fetch_count +=  1;
                 object
@@ -472,7 +473,8 @@ pub async fn import_replies(
         .collect();
     log::info!("found {} replies", replies.len());
     for object_id in replies {
-        let object: Object = fetch_object(&agent, &object_id).await?;
+        let object: AttributedObject =
+            fetch_object(&agent, &object_id).await?;
         log::info!("fetched object {}", object.id);
         match get_post_by_object_id(
             db_client,

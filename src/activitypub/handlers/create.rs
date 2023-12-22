@@ -65,19 +65,17 @@ use crate::activitypub::{
         import_post,
     },
     receiver::HandlerError,
-    types::{Attachment, EmojiTag, LinkTag, Object, Tag},
+    types::{AttributedObject, Attachment, EmojiTag, LinkTag, Tag},
     vocabulary::*,
 };
 use crate::webfinger::types::ActorAddress;
 
 use super::HandlerResult;
 
-fn get_object_attributed_to(object: &Object)
+fn get_object_attributed_to(object: &AttributedObject)
     -> Result<String, ValidationError>
 {
-    let attributed_to = object.attributed_to.as_ref()
-        .ok_or(ValidationError("unattributed note"))?;
-    let author_id = parse_into_id_array(attributed_to)
+    let author_id = parse_into_id_array(&object.attributed_to)
         .map_err(|_| ValidationError("invalid attributedTo property"))?
         .get(0)
         .ok_or(ValidationError("invalid attributedTo property"))?
@@ -85,7 +83,9 @@ fn get_object_attributed_to(object: &Object)
     Ok(author_id)
 }
 
-pub fn get_object_url(object: &Object) -> Result<String, ValidationError> {
+pub fn get_object_url(object: &AttributedObject)
+    -> Result<String, ValidationError>
+{
     let maybe_object_url = match &object.url {
         Some(value) => {
             let links = parse_into_href_array(value)
@@ -99,7 +99,9 @@ pub fn get_object_url(object: &Object) -> Result<String, ValidationError> {
 }
 
 /// Get post content by concatenating name/summary and content
-pub fn get_object_content(object: &Object) -> Result<String, ValidationError> {
+pub fn get_object_content(object: &AttributedObject) ->
+    Result<String, ValidationError>
+{
     let title = if object.in_reply_to.is_none() {
         object.name.as_ref()
             .or(object.summary.as_ref())
@@ -152,7 +154,7 @@ pub async fn get_object_attachments(
     db_client: &impl DatabaseClient,
     instance: &Instance,
     storage: &MediaStorage,
-    object: &Object,
+    object: &AttributedObject,
     author: &DbActorProfile,
 ) -> Result<(Vec<Uuid>, Vec<String>), HandlerError> {
     let agent = build_federation_agent(instance, None);
@@ -237,7 +239,7 @@ fn normalize_hashtag(tag: &str) -> Result<String, ValidationError> {
 }
 
 pub fn get_object_links(
-    object: &Object,
+    object: &AttributedObject,
 ) -> Vec<String> {
     let mut links = vec![];
     for tag_value in object.tag.clone() {
@@ -355,7 +357,7 @@ pub async fn get_object_tags(
     db_client: &mut impl DatabaseClient,
     instance: &Instance,
     storage: &MediaStorage,
-    object: &Object,
+    object: &AttributedObject,
     redirects: &HashMap<String, String>,
 ) -> Result<(Vec<Uuid>, Vec<String>, Vec<Uuid>, Vec<Uuid>), HandlerError> {
     let mut mentions = vec![];
@@ -526,7 +528,9 @@ pub async fn get_object_tags(
     Ok((mentions, hashtags, links, emojis))
 }
 
-fn get_audience(object: &Object) -> Result<Vec<String>, ValidationError> {
+fn get_audience(object: &AttributedObject) ->
+    Result<Vec<String>, ValidationError>
+{
     let primary_audience = match object.to {
         Some(ref value) => {
             parse_into_id_array(value)
@@ -585,7 +589,7 @@ pub async fn handle_note(
     db_client: &mut impl DatabaseClient,
     instance: &Instance,
     storage: &MediaStorage,
-    object: Object,
+    object: AttributedObject,
     redirects: &HashMap<String, String>,
 ) -> Result<Post, HandlerError> {
     if object.object_type != NOTE {
@@ -670,7 +674,7 @@ pub async fn handle_note(
 pub async fn is_unsolicited_message(
     db_client: &impl DatabaseClient,
     instance_url: &str,
-    object: &Object,
+    object: &AttributedObject,
 ) -> Result<bool, HandlerError> {
     let author_id = get_object_attributed_to(object)?;
     let author_has_followers =
@@ -704,7 +708,7 @@ pub async fn is_unsolicited_message(
 pub struct CreateNote {
     #[serde(deserialize_with = "deserialize_into_object_id")]
     pub actor: String,
-    pub object: Object,
+    pub object: AttributedObject,
 }
 
 pub async fn validate_create(
@@ -759,17 +763,13 @@ pub async fn handle_create(
 mod tests {
     use serde_json::json;
     use mitra_models::profiles::types::DbActor;
-    use crate::activitypub::{
-        types::Object,
-        vocabulary::NOTE,
-    };
     use super::*;
 
     #[test]
     fn test_get_object_attributed_to() {
-       let object = Object {
+       let object = AttributedObject {
             object_type: NOTE.to_string(),
-            attributed_to: Some(json!(["https://example.org/1"])),
+            attributed_to: json!(["https://example.org/1"]),
             ..Default::default()
         };
         let author_id = get_object_attributed_to(&object).unwrap();
@@ -778,7 +778,7 @@ mod tests {
 
     #[test]
     fn test_get_object_content() {
-        let object = Object {
+        let object = AttributedObject {
             content: Some("test".to_string()),
             object_type: NOTE.to_string(),
             ..Default::default()
@@ -789,7 +789,7 @@ mod tests {
 
     #[test]
     fn test_get_object_content_from_video() {
-        let object = Object {
+        let object = AttributedObject {
             name: Some("test-name".to_string()),
             content: Some("test-content".to_string()),
             object_type: "Video".to_string(),
