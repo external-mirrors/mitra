@@ -23,6 +23,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Changed `mitractl` help message (provided by Rust `clap` library).
 - Treat `jcs-eddsa-2022` and `eddsa-jcs-2022` cryptosuites as different.
 - Use `jcs-eddsa-2022` cryptosuite for signing activities.
+- Improved object type disambiguation in `Update()` activity handler.
 
 ### Fixed
 

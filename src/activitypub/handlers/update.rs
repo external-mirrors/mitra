@@ -4,7 +4,10 @@ use chrono::Utc;
 use serde::Deserialize;
 use serde_json::{Value as JsonValue};
 
-use mitra_activitypub::fetch::fetch_object;
+use mitra_activitypub::{
+    fetch::fetch_object,
+    utils::{is_actor, is_object},
+};
 use mitra_config::Config;
 use mitra_models::{
     database::{DatabaseClient, DatabaseError},
@@ -40,7 +43,7 @@ use crate::activitypub::{
     },
     identifiers::profile_actor_id,
     types::Object,
-    vocabulary::{ARTICLE, GROUP, NOTE, PERSON},
+    vocabulary::{NOTE, PERSON},
 };
 
 use super::HandlerResult;
@@ -167,18 +170,12 @@ pub async fn handle_update(
         activity["object"] = fetch_object(&agent, &object_id).await?;
         log::info!("fetched object {}", object_id);
     };
-    let object_type = activity["object"]["type"].as_str()
-        .ok_or(ValidationError("unknown object type"))?;
-    match object_type {
-        ARTICLE | NOTE => {
-            handle_update_note(config, db_client, activity).await
-        },
-        GROUP | PERSON => {
-            handle_update_person(config, db_client, activity).await
-        },
-        _ => {
-            log::warn!("unexpected object type {}", object_type);
-            Ok(None)
-        },
+    if is_actor(&activity["object"]) {
+        handle_update_person(config, db_client, activity).await
+    } else if is_object(&activity["object"]) {
+        handle_update_note(config, db_client, activity).await
+    } else {
+        log::warn!("unexpected object structure: {}", activity["object"]);
+        Ok(None)
     }
 }
