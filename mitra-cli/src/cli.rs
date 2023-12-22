@@ -238,7 +238,7 @@ impl ListInviteCodes {
 pub struct CreateUser {
     username: String,
     password: String,
-    #[clap(value_parser = ALLOWED_ROLES)]
+    #[arg(value_parser = ALLOWED_ROLES)]
     role: Option<String>,
 }
 
@@ -351,7 +351,7 @@ impl SetPassword {
 #[derive(Parser)]
 pub struct SetRole {
     id_or_name: String,
-    #[clap(value_parser = ALLOWED_ROLES)]
+    #[arg(value_parser = ALLOWED_ROLES)]
     role: String,
 }
 
@@ -376,7 +376,7 @@ impl SetRole {
 pub struct RefetchActor {
     id: String,
 
-    #[clap(long)]
+    #[arg(long)]
     update_username: bool,
 }
 
@@ -407,7 +407,7 @@ impl RefetchActor {
 #[derive(Parser)]
 pub struct ReadOutbox {
     actor_id: String,
-    #[clap(long, default_value_t = 20)]
+    #[arg(long, default_value_t = 20)]
     limit: usize,
 }
 
@@ -431,7 +431,7 @@ impl ReadOutbox {
 #[derive(Parser)]
 pub struct FetchReplies {
     object_id: String,
-    #[clap(long, default_value_t = 20)]
+    #[arg(long, default_value_t = 20)]
     limit: usize,
 }
 
@@ -811,7 +811,7 @@ impl UpdateCurrentBlock {
 #[derive(Parser)]
 pub struct ResetSubscriptions {
     // Subscription options are removed by default
-    #[clap(long)]
+    #[arg(long)]
     keep_subscription_options: bool,
 }
 
