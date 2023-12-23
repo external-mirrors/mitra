@@ -9,9 +9,14 @@ use mitra_utils::{
 };
 
 use crate::activitypub::identifiers::{local_actor_id, local_object_id};
-use crate::webfinger::types::ActorAddress;
 
 const ENTRY_TITLE_MAX_LENGTH: usize = 75;
+
+fn get_author_name(profile: &DbActorProfile) -> String {
+    profile.display_name.as_ref()
+        .unwrap_or(&profile.username)
+        .clone()
+}
 
 fn make_entry(
     instance_url: &str,
@@ -40,7 +45,7 @@ fn make_entry(
         url=object_id,
         title=title,
         updated_at=post.created_at.to_rfc3339(),
-        author=post.author.username,
+        author=get_author_name(&post.author),
         content=content_escaped,
     )
 }
@@ -55,14 +60,8 @@ pub fn make_feed(
     posts: Vec<Post>,
 ) -> String {
     let actor_id = local_actor_id(&instance.url(), &profile.username);
-    let actor_name = profile.display_name.as_ref()
-        .unwrap_or(&profile.username);
-    let actor_address = ActorAddress::from_profile(
-        &instance.hostname(),
-        profile,
-    );
     let feed_url = get_feed_url(&instance.url(), &profile.username);
-    let feed_title = format!("{} (@{})", actor_name, actor_address);
+    let feed_title = get_author_name(profile);
     let mut entries = vec![];
     let mut feed_updated_at = get_min_datetime();
     for post in posts {
@@ -97,9 +96,10 @@ mod tests {
 
     #[test]
     fn test_make_entry() {
-        let instance_url = "https://example.org";
+        let instance_url = "https://social.example";
         let author = DbActorProfile {
             username: "username".to_string(),
+            display_name: Some("User".to_string()),
             ..Default::default()
         };
         let post_id = uuid!("67e55044-10b1-426f-9247-bb680e5fe0c8");
@@ -114,12 +114,12 @@ mod tests {
         let entry = make_entry(instance_url, &post);
         let expected_entry = concat!(
             "<entry>\n",
-            "    <id>https://example.org/objects/67e55044-10b1-426f-9247-bb680e5fe0c8</id>\n",
+            "    <id>https://social.example/objects/67e55044-10b1-426f-9247-bb680e5fe0c8</id>\n",
             "    <title>titletext text text</title>\n",
             "    <updated>2020-03-03T03:03:03+00:00</updated>\n",
-            "    <author><name>username</name></author>\n",
+            "    <author><name>User</name></author>\n",
             r#"    <content type="html">&lt;p&gt;title&lt;&#47;p&gt;&lt;p&gt;text&#32;text&#32;text&lt;&#47;p&gt;</content>"#, "\n",
-            r#"    <link rel="alternate" href="https://example.org/objects/67e55044-10b1-426f-9247-bb680e5fe0c8"/>"#, "\n",
+            r#"    <link rel="alternate" href="https://social.example/objects/67e55044-10b1-426f-9247-bb680e5fe0c8"/>"#, "\n",
             "</entry>",
         );
         assert_eq!(entry, expected_entry);

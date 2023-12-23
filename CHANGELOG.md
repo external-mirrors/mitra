@@ -26,6 +26,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Use `jcs-eddsa-2022` cryptosuite for signing activities.
 - Improved object type disambiguation in `Update()` activity handler.
 - Process all objects with `attributedTo` property as notes.
+- Change title of Atom feed to profile's display name.
 
 ### Fixed
 
