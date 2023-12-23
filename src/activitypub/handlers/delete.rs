@@ -19,7 +19,6 @@ use crate::activitypub::{
     deserialization::deserialize_into_object_id,
     vocabulary::{NOTE, PERSON},
 };
-use crate::adapters::media::delete_media;
 
 use super::HandlerResult;
 
@@ -31,7 +30,7 @@ struct Delete {
 }
 
 pub async fn handle_delete(
-    config: &Config,
+    _config: &Config,
     db_client: &mut impl DatabaseClient,
     activity: Value,
 ) -> HandlerResult {
@@ -49,10 +48,7 @@ pub async fn handle_delete(
             Err(other_error) => return Err(other_error.into()),
         };
         let deletion_queue = delete_profile(db_client, &profile.id).await?;
-        let config = config.clone();
-        tokio::spawn(async move {
-            delete_media(&config, deletion_queue).await;
-        });
+        deletion_queue.into_job(db_client).await?;
         log::info!("deleted profile {}", profile.acct);
         return Ok(Some(PERSON));
     };
@@ -73,9 +69,6 @@ pub async fn handle_delete(
         return Err(ValidationError("actor is not an author").into());
     };
     let deletion_queue = delete_post(db_client, &post.id).await?;
-    let config = config.clone();
-    tokio::spawn(async move {
-        delete_media(&config, deletion_queue).await;
-    });
+    deletion_queue.into_job(db_client).await?;
     Ok(Some(NOTE))
 }

@@ -1,8 +1,49 @@
+use chrono::Utc;
+use serde::{Deserialize, Serialize};
+
+use crate::background_jobs::{
+    queries::enqueue_job,
+    types::JobType,
+};
 use crate::database::{DatabaseClient, DatabaseError};
 
+#[derive(Deserialize, Serialize)]
 pub struct DeletionQueue {
     pub files: Vec<String>,
     pub ipfs_objects: Vec<String>,
+}
+
+impl DeletionQueue {
+    pub async fn into_job(
+        self,
+        db_client: &impl DatabaseClient,
+    ) -> Result<(), DatabaseError> {
+        let job_data = serde_json::to_value(self)
+            .expect("cleanup data should be serializable");
+        let scheduled_for = Utc::now(); // run immediately
+        enqueue_job(
+            db_client,
+            &JobType::MediaCleanup,
+            &job_data,
+            &scheduled_for,
+        ).await
+    }
+
+    /// Find and remove non-orphaned objects
+    pub async fn filter_objects(
+        &mut self,
+        db_client: &impl DatabaseClient,
+    ) -> Result<(), DatabaseError> {
+        self.files = find_orphaned_files(
+            db_client,
+            self.files.clone(),
+        ).await?;
+        self.ipfs_objects = find_orphaned_ipfs_objects(
+            db_client,
+            self.ipfs_objects.clone(),
+        ).await?;
+        Ok(())
+    }
 }
 
 pub async fn find_orphaned_files(
@@ -35,7 +76,7 @@ pub async fn find_orphaned_files(
     Ok(orphaned_files)
 }
 
-pub async fn find_orphaned_ipfs_objects(
+pub(super) async fn find_orphaned_ipfs_objects(
     db_client: &impl DatabaseClient,
     ipfs_objects: Vec<String>,
 ) -> Result<Vec<String>, DatabaseError> {

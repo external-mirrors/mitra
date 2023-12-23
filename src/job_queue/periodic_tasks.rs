@@ -2,6 +2,12 @@ use anyhow::Error;
 
 use mitra_config::Config;
 use mitra_models::{
+    background_jobs::queries::{
+        delete_job_from_queue,
+        get_job_batch,
+    },
+    background_jobs::types::JobType,
+    cleanup::DeletionQueue,
     database::{get_database_client, DbPool},
     emojis::queries::{
         delete_emoji,
@@ -182,6 +188,29 @@ pub async fn prune_remote_emojis(
         let deletion_queue = delete_emoji(db_client, &emoji_id).await?;
         delete_media(config, deletion_queue).await;
         log::info!("deleted emoji {}", emoji_id);
+    };
+    Ok(())
+}
+
+pub async fn delete_orphaned_media(
+    config: &Config,
+    db_pool: &DbPool,
+) -> Result<(), Error> {
+    const BATCH_SIZE: u32 = 10;
+    const JOB_TIMEOUT: u32 = 600; // 10 minutes
+    let db_client = &**get_database_client(db_pool).await?;
+    let batch = get_job_batch(
+        db_client,
+        &JobType::MediaCleanup,
+        BATCH_SIZE,
+        JOB_TIMEOUT,
+    ).await?;
+    for job in batch {
+        let mut job_data: DeletionQueue =
+            serde_json::from_value(job.job_data)?;
+        job_data.filter_objects(db_client).await?;
+        delete_media(config, job_data).await;
+        delete_job_from_queue(db_client, &job.id).await?;
     };
     Ok(())
 }

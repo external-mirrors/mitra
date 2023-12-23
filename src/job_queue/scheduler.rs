@@ -16,6 +16,7 @@ enum PeriodicTask {
     DeleteExtraneousPosts,
     DeleteEmptyProfiles,
     PruneRemoteEmojis,
+    DeleteOrphanedMedia,
     SubscriptionExpirationMonitor,
     EthereumSubscriptionMonitor,
     MoneroPaymentMonitor,
@@ -34,6 +35,7 @@ impl PeriodicTask {
             Self::DeleteExtraneousPosts => 3600,
             Self::DeleteEmptyProfiles => 3600,
             Self::PruneRemoteEmojis => 3600,
+            Self::DeleteOrphanedMedia => 10,
             Self::SubscriptionExpirationMonitor => 300,
             Self::EthereumSubscriptionMonitor => 300,
             Self::MoneroPaymentMonitor => 30,
@@ -65,6 +67,7 @@ pub fn run(
             (PeriodicTask::IncomingActivityQueueExecutor, None),
             (PeriodicTask::OutgoingActivityQueueExecutor, None),
             (PeriodicTask::PruneRemoteEmojis, None),
+            (PeriodicTask::DeleteOrphanedMedia, None),
             (PeriodicTask::SubscriptionExpirationMonitor, None),
         ]);
         if config.retention.extraneous_posts.is_some() {
@@ -106,6 +109,9 @@ pub fn run(
                     },
                     PeriodicTask::PruneRemoteEmojis => {
                         prune_remote_emojis(&config, &db_pool).await
+                    },
+                    PeriodicTask::DeleteOrphanedMedia => {
+                        delete_orphaned_media(&config, &db_pool).await
                     },
                     PeriodicTask::SubscriptionExpirationMonitor => {
                         subscription_expiration_monitor(&config, &db_pool).await

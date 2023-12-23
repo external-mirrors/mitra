@@ -27,6 +27,7 @@ pub async fn enqueue_job(
     Ok(())
 }
 
+/// Returns queued jobs, as well as running jobs that have become stale
 pub async fn get_job_batch(
     db_client: &impl DatabaseClient,
     job_type: &JobType,
