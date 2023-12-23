@@ -2411,6 +2411,16 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/CustomEmoji'
+        in_reply_to_id:
+          description: ID of the post being replied to.
+          type: string
+          format: uuid
+          nullable: true
+        in_reply_to_account_id:
+          description: ID of the profile that authored the post being replied to.
+          type: string
+          format: uuid
+          nullable: true
         reblog:
           description: The post being reposted.
           type: object

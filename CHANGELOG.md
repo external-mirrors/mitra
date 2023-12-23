@@ -12,6 +12,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Add `audio/flac` to the list of supported media types.
 - Added `actor_id` property to Mastodon API `Account` object.
 - Added support for `--version` flag to `mitractl`.
+- Added `in_reply_to_account_id` property to Mastodon API `Status` object.
 
 ### Changed
 
