@@ -17,7 +17,7 @@ use mitra::activitypub::{
     },
 };
 use mitra::adapters::{
-    media::{remove_files, remove_media},
+    media::{delete_files, delete_media},
     roles::{
         from_default_role,
         role_from_str,
@@ -496,7 +496,7 @@ impl DeleteProfile {
             maybe_delete_person = Some(activity);
         };
         let deletion_queue = delete_profile(db_client, &profile.id).await?;
-        remove_media(config, deletion_queue).await;
+        delete_media(config, deletion_queue).await;
         // Send Delete(Person) activities
         if let Some(activity) = maybe_delete_person {
             activity.enqueue(db_client).await?;
@@ -532,7 +532,7 @@ impl DeletePost {
             maybe_delete_note = Some(activity);
         };
         let deletion_queue = delete_post(db_client, &post.id).await?;
-        remove_media(config, deletion_queue).await;
+        delete_media(config, deletion_queue).await;
         // Send Delete(Note) activity
         if let Some(activity) = maybe_delete_note {
             activity.enqueue(db_client).await?;
@@ -561,7 +561,7 @@ impl DeleteEmoji {
             self.hostname.as_deref(),
         ).await?;
         let deletion_queue = delete_emoji(db_client, &emoji.id).await?;
-        remove_media(config, deletion_queue).await;
+        delete_media(config, deletion_queue).await;
         println!("emoji deleted");
         Ok(())
     }
@@ -583,7 +583,7 @@ impl DeleteExtraneousPosts {
         let posts = find_extraneous_posts(db_client, &updated_before).await?;
         for post_id in posts {
             let deletion_queue = delete_post(db_client, &post_id).await?;
-            remove_media(config, deletion_queue).await;
+            delete_media(config, deletion_queue).await;
             println!("post {} deleted", post_id);
         };
         Ok(())
@@ -607,7 +607,7 @@ impl DeleteUnusedAttachments {
             db_client,
             &created_before,
         ).await?;
-        remove_media(config, deletion_queue).await;
+        delete_media(config, deletion_queue).await;
         println!("unused attachments deleted");
         Ok(())
     }
@@ -633,7 +633,7 @@ impl DeleteOrphanedFiles {
         println!("found {} files", files.len());
         let orphaned = find_orphaned_files(db_client, files).await?;
         if !orphaned.is_empty() {
-            remove_files(&media_storage, orphaned);
+            delete_files(&media_storage, orphaned);
             println!("orphaned files deleted");
         };
         Ok(())
@@ -657,7 +657,7 @@ impl DeleteEmptyProfiles {
         for profile_id in profiles {
             let profile = get_profile_by_id(db_client, &profile_id).await?;
             let deletion_queue = delete_profile(db_client, &profile.id).await?;
-            remove_media(config, deletion_queue).await;
+            delete_media(config, deletion_queue).await;
             println!("profile {} deleted", profile.acct);
         };
         Ok(())
@@ -677,7 +677,7 @@ impl PruneRemoteEmojis {
         let emojis = find_unused_remote_emojis(db_client).await?;
         for emoji_id in emojis {
             let deletion_queue = delete_emoji(db_client, &emoji_id).await?;
-            remove_media(config, deletion_queue).await;
+            delete_media(config, deletion_queue).await;
             println!("emoji {} deleted", emoji_id);
         };
         Ok(())

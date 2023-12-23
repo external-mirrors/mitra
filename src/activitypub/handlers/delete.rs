@@ -19,7 +19,7 @@ use crate::activitypub::{
     deserialization::deserialize_into_object_id,
     vocabulary::{NOTE, PERSON},
 };
-use crate::adapters::media::remove_media;
+use crate::adapters::media::delete_media;
 
 use super::HandlerResult;
 
@@ -51,7 +51,7 @@ pub async fn handle_delete(
         let deletion_queue = delete_profile(db_client, &profile.id).await?;
         let config = config.clone();
         tokio::spawn(async move {
-            remove_media(&config, deletion_queue).await;
+            delete_media(&config, deletion_queue).await;
         });
         log::info!("deleted profile {}", profile.acct);
         return Ok(Some(PERSON));
@@ -75,7 +75,7 @@ pub async fn handle_delete(
     let deletion_queue = delete_post(db_client, &post.id).await?;
     let config = config.clone();
     tokio::spawn(async move {
-        remove_media(&config, deletion_queue).await;
+        delete_media(&config, deletion_queue).await;
     });
     Ok(Some(NOTE))
 }

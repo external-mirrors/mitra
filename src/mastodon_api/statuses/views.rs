@@ -69,7 +69,7 @@ use crate::activitypub::{
     },
     identifiers::local_object_id,
 };
-use crate::adapters::media::remove_media;
+use crate::adapters::media::delete_media;
 use crate::http::{get_request_base_url, FormOrJson};
 use crate::mastodon_api::{
     errors::MastodonError,
@@ -410,7 +410,7 @@ async fn delete_status(
     ).await?;
     let deletion_queue = delete_post(db_client, &status_id).await?;
     tokio::spawn(async move {
-        remove_media(&config, deletion_queue).await;
+        delete_media(&config, deletion_queue).await;
     });
     delete_note.enqueue(db_client).await?;
 

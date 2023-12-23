@@ -21,7 +21,7 @@ use crate::activitypub::queues::{
     process_queued_incoming_activities,
     process_queued_outgoing_activities,
 };
-use crate::adapters::media::remove_media;
+use crate::adapters::media::delete_media;
 use crate::payments::{
     common::update_expired_subscriptions,
     ethereum::check_ethereum_subscriptions,
@@ -147,7 +147,7 @@ pub async fn delete_extraneous_posts(
     let posts = find_extraneous_posts(db_client, &updated_before).await?;
     for post_id in posts {
         let deletion_queue = delete_post(db_client, &post_id).await?;
-        remove_media(config, deletion_queue).await;
+        delete_media(config, deletion_queue).await;
         log::info!("deleted post {}", post_id);
     };
     Ok(())
@@ -166,7 +166,7 @@ pub async fn delete_empty_profiles(
     for profile_id in profiles {
         let profile = get_profile_by_id(db_client, &profile_id).await?;
         let deletion_queue = delete_profile(db_client, &profile.id).await?;
-        remove_media(config, deletion_queue).await;
+        delete_media(config, deletion_queue).await;
         log::info!("deleted profile {}", profile.acct);
     };
     Ok(())
@@ -180,7 +180,7 @@ pub async fn prune_remote_emojis(
     let emojis = find_unused_remote_emojis(db_client).await?;
     for emoji_id in emojis {
         let deletion_queue = delete_emoji(db_client, &emoji_id).await?;
-        remove_media(config, deletion_queue).await;
+        delete_media(config, deletion_queue).await;
         log::info!("deleted emoji {}", emoji_id);
     };
     Ok(())

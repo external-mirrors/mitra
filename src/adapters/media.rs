@@ -5,7 +5,7 @@ use mitra_services::{
     media::MediaStorage,
 };
 
-pub fn remove_files(
+pub fn delete_files(
     storage: &MediaStorage,
     files: Vec<String>,
 ) -> () {
@@ -19,13 +19,13 @@ pub fn remove_files(
     };
 }
 
-pub async fn remove_media(
+pub async fn delete_media(
     config: &Config,
     queue: DeletionQueue,
 ) -> () {
     if !queue.files.is_empty() {
         let storage = MediaStorage::from(config);
-        remove_files(&storage, queue.files);
+        delete_files(&storage, queue.files);
     };
     if !queue.ipfs_objects.is_empty() {
         match &config.ipfs_api_url {
