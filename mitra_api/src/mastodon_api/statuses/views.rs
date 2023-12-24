@@ -276,6 +276,7 @@ async fn create_status(
     let post_data = PostCreateData {
         id: None,
         context: context,
+        title: status_data.title.clone(),
         content: content,
         content_source: content_source,
         language: status_data.language()?,
@@ -509,6 +510,7 @@ async fn edit_status(
 
     // Update post
     let post_data = PostUpdateData {
+        title: status_data.title.clone(),
         content: content,
         content_source: content_source,
         language: status_data.language()?,

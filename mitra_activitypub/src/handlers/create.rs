@@ -168,14 +168,19 @@ pub async fn handle_create(
         // TODO: FEP-EF61: keyword filtering for portable messages
         if let Ok(http_uri) = HttpUri::parse(&author_id) {
             let author_hostname = http_uri.hostname();
-            let content = get_object_content(&object.inner)?;
+            let (maybe_title, content) = get_object_content(&object.inner)?;
+            let full_text = format!(
+                "{} {}",
+                maybe_title.unwrap_or_default(),
+                content,
+            );
             if ap_client.filter.is_action_required(
                 author_hostname.as_str(),
                 FilterAction::RejectKeywords,
             ) {
                 let dynamic_config = get_dynamic_config(db_client).await?;
                 for keyword in dynamic_config.filter_keywords {
-                    if !content.contains(&keyword) {
+                    if !full_text.contains(&keyword) {
                         continue;
                     };
                     let error_message = format!(r#"rejected keyword "{keyword}""#);

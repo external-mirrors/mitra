@@ -147,6 +147,7 @@ impl CreatePost {
                 object_id: None,
                 audience: Some(AP_PUBLIC.to_owned()),
             },
+            title: None,
             content: content,
             content_source: None,
             language: None,

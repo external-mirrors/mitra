@@ -53,16 +53,23 @@ fn content_allowed_classes() -> Vec<(&'static str, Vec<&'static str>)> {
     ]
 }
 
+// https://www.w3.org/TR/activitystreams-vocabulary/#dfn-name
 pub fn clean_title(title: &str) -> String {
     let title = clean_html_all(title).trim().to_owned();
+    if title.len() <= TITLE_LENGTH_MAX {
+        return title;
+    };
     let title_truncated: String = title.chars()
-        .take(TITLE_LENGTH_MAX)
+        .take(TITLE_LENGTH_MAX - 3)
         .collect();
-    if title_truncated.len() < title.len() {
-        format!("{title_truncated}...")
-    } else {
-        title_truncated
-    }
+    format!("{title_truncated}...")
+}
+
+fn validate_title(title: &str) -> Result<(), ValidationError> {
+    if title.len() > TITLE_LENGTH_MAX {
+        return Err(ValidationError("title is too long"));
+    };
+    Ok(())
 }
 
 pub fn clean_local_content(
@@ -128,6 +135,9 @@ pub fn validate_post_create_data(
         },
         _ => (),
     };
+    if let Some(ref title) = post_data.title {
+        validate_title(title)?;
+    };
     validate_content(&post_data.content, origin)?;
     if post_data.content.is_empty()
         && post_data.attachments.is_empty()
@@ -163,6 +173,9 @@ pub fn validate_post_update_data(
     post_data: &PostUpdateData,
     origin: Origin,
 ) -> Result<(), ValidationError> {
+    if let Some(ref title) = post_data.title {
+        validate_title(title)?;
+    };
     validate_content(&post_data.content, origin)?;
     if post_data.content.is_empty()
         && post_data.attachments.is_empty()
@@ -269,12 +282,20 @@ mod tests {
     }
 
     #[test]
+    fn test_clean_title_html_chars() {
+        let title = r#"test > "abc" <a>link</a>"#;
+        let cleaned = clean_title(title);
+        assert_eq!(cleaned, r#"test &gt; "abc" link"#);
+    }
+
+    #[test]
     fn test_clean_title_truncate() {
         let title = "x".repeat(400);
         let cleaned = clean_title(&title);
+        assert_eq!(cleaned.len(), TITLE_LENGTH_MAX);
         assert_eq!(
             cleaned,
-            format!("{}...", "x".repeat(300)),
+            format!("{}...", "x".repeat(297)),
         );
     }
 

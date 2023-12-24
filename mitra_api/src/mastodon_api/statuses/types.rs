@@ -20,7 +20,10 @@ use mitra_models::{
     profiles::types::DbActorProfile,
 };
 use mitra_utils::languages::Language;
-use mitra_validators::errors::ValidationError;
+use mitra_validators::{
+    errors::ValidationError,
+    posts::clean_remote_content,
+};
 
 use crate::mastodon_api::{
     accounts::types::Account,
@@ -104,7 +107,7 @@ fn tracking_status_to_str(tracking_mode: Option<TrackingStatus>) -> &'static str
     }
 }
 
-/// https://docs.joinmastodon.org/entities/status/
+// https://docs.joinmastodon.org/entities/Status/
 #[derive(Serialize)]
 pub struct Status {
     pub id: Uuid,
@@ -115,6 +118,7 @@ pub struct Status {
     #[serde(serialize_with = "serialize_datetime_opt")]
     edited_at: Option<DateTime<Utc>>,
     pub account: Account,
+    title: Option<String>, // custom field
     pub content: String,
     language: Option<String>,
     pub in_reply_to_id: Option<Uuid>,
@@ -159,6 +163,18 @@ pub fn visibility_to_str(visibility: Visibility) -> &'static str {
     }
 }
 
+fn get_full_content(post: &DbPostDetailed) -> String {
+    let content = if let Some(ref title) = post.title {
+        format!("<h1>{}</h1>{}", title, post.content)
+    } else {
+        post.content.clone()
+    };
+    // `title` is a plain-text field,
+    // but `content` is HTML; sanitization is required
+    let content_safe = clean_remote_content(&content);
+    content_safe
+}
+
 impl Status {
     pub fn from_post(
         authority: &Authority,
@@ -167,11 +183,12 @@ impl Status {
     ) -> Self {
         let instance_uri = authority.expect_server_uri().as_str();
         let object_id = post_object_id(authority, &post);
-        let object_url = if let Some(url) = post.url {
-            url
+        let object_url = if let Some(ref url) = post.url {
+            url.clone()
         } else {
             compatible_post_object_id(authority, &post)
         };
+        let content = get_full_content(&post);
         let maybe_poll = if let Some(ref db_poll) = post.poll {
             let maybe_voted_for = post.actions.as_ref()
                 .map(|actions| actions.voted_for.clone());
@@ -255,7 +272,8 @@ impl Status {
             created_at: post.created_at,
             edited_at: post.updated_at,
             account: account,
-            content: post.content,
+            title: post.title,
+            content: content,
             language: post.language
                 .and_then(|language| language.to_639_1())
                 .map(|code| code.to_owned()),
@@ -339,7 +357,7 @@ fn default_post_content_type() -> String { POST_CONTENT_TYPE_MARKDOWN.to_string(
 #[derive(Debug, Deserialize)]
 pub struct StatusData {
     pub status: Option<String>,
-
+    pub title: Option<String>, // custom field
     pub language: Option<String>,
 
     #[serde(default, alias = "media_ids[]")]
@@ -434,6 +452,7 @@ pub struct StatusSource {
     id: Uuid,
     content_type: String, // Pleroma addon
     text: String,
+    title: Option<String>,
     spoiler_text: String,
 }
 
@@ -447,6 +466,7 @@ impl StatusSource {
             id: post.id,
             content_type: content_type.to_string(),
             text: content_source,
+            title: post.title,
             spoiler_text: "".to_string(),
         }
     }
@@ -456,7 +476,7 @@ impl StatusSource {
 #[derive(Deserialize)]
 pub struct StatusUpdateData {
     pub status: String,
-
+    pub title: Option<String>,
     pub language: Option<String>,
 
     #[serde(default, alias = "media_ids[]")]
@@ -544,6 +564,17 @@ mod tests {
         assert_eq!(visibility_str, "private");
         let result = visibility_from_str(visibility_str);
         assert_eq!(result.unwrap(), visibility);
+    }
+
+    #[test]
+    fn test_get_full_content() {
+        let post = DbPostDetailed {
+            title: Some("title123".to_owned()),
+            content: "<p>content 321</p>".to_owned(),
+            ..Default::default()
+        };
+        let full_content = get_full_content(&post);
+        assert_eq!(full_content, "<h1>title123</h1><p>content 321</p>");
     }
 
     #[test]

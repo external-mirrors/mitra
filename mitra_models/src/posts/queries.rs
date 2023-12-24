@@ -240,6 +240,7 @@ pub async fn create_post(
         INSERT INTO post (
             id,
             author_id,
+            title,
             content,
             content_source,
             language,
@@ -253,17 +254,17 @@ pub async fn create_post(
             object_id,
             created_at
         )
-        SELECT $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14
+        SELECT $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15
         WHERE
         -- don't allow replies to reposts
         NOT EXISTS (
             SELECT 1 FROM post
-            WHERE post.id = $7 AND post.repost_of_id IS NOT NULL
+            WHERE post.id = $8 AND post.repost_of_id IS NOT NULL
         )
         -- don't allow reposts of non-public posts
         AND NOT EXISTS (
             SELECT 1 FROM post
-            WHERE post.id = $8 AND (
+            WHERE post.id = $9 AND (
                 post.repost_of_id IS NOT NULL
                 OR post.visibility != {visibility_public}
             )
@@ -277,6 +278,7 @@ pub async fn create_post(
         &[
             &post_id,
             &author_id,
+            &post_data.title,
             &post_data.content,
             &post_data.content_source,
             &post_data.language.map(DbLanguage::new),
@@ -416,18 +418,20 @@ pub async fn update_post(
         "
         UPDATE post
         SET
-            content = $1,
-            content_source = $2,
-            language = $3,
-            is_sensitive = $4,
-            url = $5,
-            updated_at = $6
-        WHERE id = $7
+            title = $1,
+            content = $2,
+            content_source = $3,
+            language = $4,
+            is_sensitive = $5,
+            url = $6,
+            updated_at = $7
+        WHERE id = $8
             AND repost_of_id IS NULL
             AND ipfs_cid IS NULL
         RETURNING post
         ",
         &[
+            &post_data.title,
             &post_data.content,
             &post_data.content_source,
             &post_data.language.map(DbLanguage::new),
@@ -1926,7 +1930,8 @@ pub async fn search_posts(
         JOIN actor_profile ON post.author_id = actor_profile.id
         WHERE
             -- can parse HTML documents
-            to_tsvector('simple', post.content) @@ plainto_tsquery('simple', $1)
+            to_tsvector('simple', COALESCE(post.title, '') || ' ' || post.content)
+                @@ plainto_tsquery('simple', $1)
             AND repost_of_id IS NULL
             AND (
                 -- posts published by the current user
