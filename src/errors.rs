@@ -21,9 +21,6 @@ pub enum HttpError {
     ValidationError(String),
 
     #[error("{0}")]
-    ValidationErrorAuto(#[from] ValidationError),
-
-    #[error("{0}")]
     AuthError(&'static str),
 
     #[error("permission error")]
@@ -48,6 +45,12 @@ impl From<DatabaseError> for HttpError {
     }
 }
 
+impl From<ValidationError> for HttpError {
+    fn from(error: ValidationError) -> Self {
+        Self::ValidationError(error.0.to_string())
+    }
+}
+
 #[derive(Serialize)]
 struct ErrorInfo {
     message: String,
@@ -63,7 +66,6 @@ impl ResponseError for HttpError {
         match self {
             HttpError::ActixError(err) => err.as_response_error().status_code(),
             HttpError::ValidationError(_) => StatusCode::BAD_REQUEST,
-            HttpError::ValidationErrorAuto(_) => StatusCode::BAD_REQUEST,
             HttpError::AuthError(_) => StatusCode::UNAUTHORIZED,
             HttpError::PermissionError => StatusCode::FORBIDDEN,
             HttpError::NotFoundError(_) => StatusCode::NOT_FOUND,

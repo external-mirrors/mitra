@@ -21,9 +21,6 @@ pub enum MastodonError {
     ValidationError(String),
 
     #[error("{0}")]
-    ValidationErrorAuto(#[from] ValidationError),
-
-    #[error("{0}")]
     AuthError(&'static str),
 
     #[error("permission error")]
@@ -54,6 +51,12 @@ impl From<DatabaseError> for MastodonError {
     }
 }
 
+impl From<ValidationError> for MastodonError {
+    fn from(error: ValidationError) -> Self {
+        Self::ValidationError(error.0.to_string())
+    }
+}
+
 /// https://docs.joinmastodon.org/entities/Error/
 #[derive(Serialize)]
 struct MastodonErrorData {
@@ -75,7 +78,6 @@ impl ResponseError for MastodonError {
             Self::ActixError(error) =>
                 error.as_response_error().status_code(),
             Self::ValidationError(_) => StatusCode::BAD_REQUEST,
-            Self::ValidationErrorAuto(_) => StatusCode::BAD_REQUEST,
             Self::AuthError(_) => StatusCode::UNAUTHORIZED,
             Self::PermissionError => StatusCode::FORBIDDEN,
             Self::NotFoundError(_) => StatusCode::NOT_FOUND,
