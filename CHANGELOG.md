@@ -29,6 +29,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Process all objects with `attributedTo` property as notes.
 - Change title of Atom feed to profile's display name.
 - Perform media cleanup in scheduled task instead of using `tokio::spawn`.
+- Check hashtag length before saving to database.
 
 ### Fixed
 
