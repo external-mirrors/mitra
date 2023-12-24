@@ -1,6 +1,7 @@
 use actix_web::HttpRequest;
 use serde_json::{Value as JsonValue};
 
+use mitra_activitypub::utils::key_id_to_actor_id;
 use mitra_config::Config;
 use mitra_models::{
     database::{DatabaseClient, DatabaseError},
@@ -40,6 +41,7 @@ use mitra_utils::{
             JsonSigner,
         },
     },
+    urls::UrlError,
 };
 
 use super::deserialization::find_object_id;
@@ -66,7 +68,7 @@ pub enum AuthenticationError {
     InvalidJsonSignatureType,
 
     #[error("invalid key ID")]
-    InvalidKeyId(#[from] url::ParseError),
+    InvalidKeyId(#[from] UrlError),
 
     #[error("database error")]
     DatabaseError(#[from] DatabaseError),
@@ -85,15 +87,6 @@ pub enum AuthenticationError {
 
     #[error("actor and request signer do not match")]
     UnexpectedSigner,
-}
-
-fn key_id_to_actor_id(key_id: &str) -> Result<String, AuthenticationError> {
-    let key_url = url::Url::parse(key_id)?;
-    // Strip fragment and query (works with most AP servers)
-    let actor_id = &key_url[..url::Position::AfterPath];
-    // GoToSocial compat
-    let actor_id = actor_id.trim_end_matches("/main-key");
-    Ok(actor_id.to_string())
 }
 
 async fn get_signer(
@@ -311,26 +304,4 @@ pub fn verify_signed_c2s_activity(
         _ => return Err(AuthenticationError::InvalidJsonSignatureType),
     };
     Ok(())
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_key_id_to_actor_id() {
-        let key_id = "https://myserver.org/actor#main-key";
-        let actor_id = key_id_to_actor_id(key_id).unwrap();
-        assert_eq!(actor_id, "https://myserver.org/actor");
-
-        // Streams
-        let key_id = "https://fediversity.site/channel/mikedev?operation=rsakey";
-        let actor_id = key_id_to_actor_id(key_id).unwrap();
-        assert_eq!(actor_id, "https://fediversity.site/channel/mikedev");
-
-        // GoToSocial
-        let key_id = "https://myserver.org/actor/main-key";
-        let actor_id = key_id_to_actor_id(key_id).unwrap();
-        assert_eq!(actor_id, "https://myserver.org/actor");
-    }
 }

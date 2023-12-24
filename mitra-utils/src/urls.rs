@@ -7,7 +7,11 @@ use percent_encoding::{
 };
 use url::Host;
 
-pub use url::{Url, ParseError as UrlError};
+pub use url::{
+    ParseError as UrlError,
+    Position,
+    Url,
+};
 
 pub fn url_encode(input: &str) -> String {
     utf8_percent_encode(input, NON_ALPHANUMERIC).to_string()
@@ -77,7 +81,7 @@ pub fn is_safe_url(url: &str) -> bool {
     }
 }
 
-// Used to normalize instance URL
+// Normalize URL: add a scheme if it's missing
 pub fn normalize_url(url: &str) -> Result<Url, UrlError> {
     let normalized_url = if
         url.starts_with("http://") ||

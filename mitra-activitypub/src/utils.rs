@@ -1,5 +1,7 @@
 use serde_json::{Value as JsonValue};
 
+use mitra_utils::urls::{Position, Url, UrlError};
+
 // AP requires actor to have inbox and outbox,
 // but `outbox` property is not always present.
 // https://www.w3.org/TR/activitypub/#actor-objects
@@ -17,6 +19,14 @@ pub fn is_object(value: &JsonValue) -> bool {
     !is_actor(value) && !is_activity(value)
 }
 
+pub fn key_id_to_actor_id(key_id: &str) -> Result<String, UrlError> {
+    let key_url = Url::parse(key_id)?;
+    // Strip fragment and query (works with most AP servers)
+    let actor_id = &key_url[..Position::AfterPath];
+    // GoToSocial compat
+    let actor_id = actor_id.trim_end_matches("/main-key");
+    Ok(actor_id.to_string())
+}
 
 #[cfg(test)]
 mod tests {
@@ -60,5 +70,22 @@ mod tests {
         assert_eq!(is_actor(&object), false);
         assert_eq!(is_activity(&object), false);
         assert_eq!(is_object(&object), true);
+    }
+
+    #[test]
+    fn test_key_id_to_actor_id() {
+        let key_id = "https://server.example/actor#main-key";
+        let actor_id = key_id_to_actor_id(key_id).unwrap();
+        assert_eq!(actor_id, "https://server.example/actor");
+
+        // Streams
+        let key_id = "https://fediversity.site/channel/mikedev?operation=rsakey";
+        let actor_id = key_id_to_actor_id(key_id).unwrap();
+        assert_eq!(actor_id, "https://fediversity.site/channel/mikedev");
+
+        // GoToSocial
+        let key_id = "https://myserver.org/actor/main-key";
+        let actor_id = key_id_to_actor_id(key_id).unwrap();
+        assert_eq!(actor_id, "https://myserver.org/actor");
     }
 }
