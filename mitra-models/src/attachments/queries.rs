@@ -18,6 +18,7 @@ pub async fn create_attachment(
     file_name: String,
     file_size: usize,
     media_type: String,
+    description: Option<&str>,
 ) -> Result<DbMediaAttachment, DatabaseError> {
     let attachment_id = generate_ulid();
     let file_size: i32 = file_size.try_into()
@@ -29,9 +30,10 @@ pub async fn create_attachment(
             owner_id,
             file_name,
             file_size,
-            media_type
+            media_type,
+            description
         )
-        VALUES ($1, $2, $3, $4, $5)
+        VALUES ($1, $2, $3, $4, $5, $6)
         RETURNING media_attachment
         ",
         &[
@@ -40,6 +42,7 @@ pub async fn create_attachment(
             &file_name,
             &file_size,
             &media_type,
+            &description,
         ],
     ).await?;
     let db_attachment: DbMediaAttachment = inserted_row.try_get("media_attachment")?;
@@ -116,17 +119,21 @@ mod tests {
         let file_name = "test.jpg";
         let file_size = 10000;
         let media_type = "image/png";
+        let description = "test";
         let attachment = create_attachment(
             db_client,
             &profile.id,
             file_name.to_string(),
             file_size,
             media_type.to_string(),
+            Some(description),
         ).await.unwrap();
         assert_eq!(attachment.owner_id, profile.id);
         assert_eq!(attachment.file_name, file_name);
         assert_eq!(attachment.file_size.unwrap(), file_size as i32);
         assert_eq!(attachment.media_type.unwrap(), media_type);
+        assert_eq!(attachment.description.unwrap(), description);
+        assert_eq!(attachment.ipfs_cid.is_none(), true);
         assert_eq!(attachment.post_id.is_none(), true);
     }
 }

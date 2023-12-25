@@ -40,6 +40,7 @@ async fn create_attachment_view(
         file_name,
         file_size,
         media_type,
+        attachment_data.description.as_deref(),
     ).await?;
     let attachment = Attachment::from_db(
         &config.instance_url(),

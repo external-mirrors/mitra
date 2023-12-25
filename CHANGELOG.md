@@ -14,6 +14,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Added support for `--version` flag to `mitractl`.
 - Added `in_reply_to_account_id` property to Mastodon API `Status` object.
 - Automatically delete unused images after profile updates.
+- Support media descriptions.
 
 ### Changed
 

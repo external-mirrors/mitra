@@ -211,20 +211,26 @@ pub async fn get_object_attachments(
             };
             let file_name = storage.save_file(file_data, &media_type)?;
             log::info!("downloaded attachment {}", attachment_url);
-            downloaded.push((file_name, file_size, media_type));
+            downloaded.push((
+                file_name,
+                file_size,
+                media_type,
+                attachment.name,
+            ));
             // Stop downloading if limit is reached
             if downloaded.len() >= ATTACHMENT_LIMIT {
                 log::warn!("too many attachments");
                 break;
             };
         };
-        for (file_name, file_size, media_type) in downloaded {
+        for (file_name, file_size, media_type, description) in downloaded {
             let db_attachment = create_attachment(
                 db_client,
                 &author.id,
                 file_name,
                 file_size,
                 media_type,
+                description.as_deref(),
             ).await?;
             attachments.push(db_attachment.id);
         };

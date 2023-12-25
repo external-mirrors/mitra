@@ -869,6 +869,11 @@ paths:
                   description: Media type.
                   type: string
                   example: image/jpeg
+                description:
+                  description: A plain-text description of the media, for accessibility purposes.
+                  type: string
+                  nullable: true
+                  example: null
       responses:
         200:
           description: Successful operation
@@ -2009,6 +2014,11 @@ components:
         preview_url:
           description: The location of a scaled-down preview of the attachment.
           type: string
+        description:
+          description: Alternate text that describes what is in the media attachment, to be used for the visually impaired or when media attachments do not load.
+          type: string
+          nullable: true
+          example: null
     AuthenticationMethod:
       type: string
       enum:
