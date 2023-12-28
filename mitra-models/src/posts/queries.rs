@@ -634,6 +634,7 @@ pub async fn get_public_timeline(
         WHERE
             {filter}
             post.visibility = {visibility_public}
+            AND post.repost_of_id IS NULL
             AND {mute_filter}
             AND ($max_post_id::uuid IS NULL OR post.id < $max_post_id)
         ORDER BY post.id DESC
