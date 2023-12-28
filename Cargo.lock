@@ -2013,6 +2013,7 @@ version = "2.6.0"
 dependencies = [
  "bytes",
  "mitra-utils",
+ "regex",
  "reqwest",
  "serde",
  "serde_json",
