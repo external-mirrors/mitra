@@ -35,6 +35,7 @@ use mitra_validators::{
         EMOJI_MEDIA_TYPES,
     },
     errors::ValidationError,
+    media::validate_media_description,
     posts::{
         content_allowed_classes,
         validate_post_create_data,
@@ -188,6 +189,9 @@ pub async fn get_object_attachments(
             ) {
                 // Don't fetch HTML pages attached by GNU Social
                 continue;
+            };
+            if let Some(ref description) = attachment.name {
+                validate_media_description(description)?;
             };
             let attachment_url = attachment.url
                 .ok_or(ValidationError("attachment URL is missing"))?;

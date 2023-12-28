@@ -9,7 +9,7 @@ use mitra_services::media::get_file_url;
 
 #[derive(Deserialize)]
 pub struct AttachmentCreateData {
-    // base64-encoded file (not comtaible with Mastodon)
+    // base64-encoded file (not compatible with Mastodon)
     pub file: String,
     pub media_type: String,
     pub description: Option<String>,

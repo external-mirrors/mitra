@@ -8,6 +8,7 @@ use mitra_models::{
     database::{get_database_client, DbPool},
 };
 use mitra_services::media::MediaStorage;
+use mitra_validators::media::validate_media_description;
 
 use crate::mastodon_api::{
     errors::MastodonError,
@@ -34,6 +35,9 @@ async fn create_attachment_view(
         media_storage.file_size_limit,
         &media_storage.supported_media_types(),
     )?;
+    if let Some(ref description) = attachment_data.description {
+        validate_media_description(description)?;
+    };
     let db_attachment = create_attachment(
         db_client,
         &current_user.id,
