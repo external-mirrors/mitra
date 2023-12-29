@@ -30,7 +30,7 @@ use crate::activitypub::{
     actors::types::Actor,
     agent::{build_federation_agent, FederationAgent},
     constants::AP_CONTEXT,
-    deserialization::find_object_id,
+    deserialization::get_object_id,
     handlers::create::{get_object_links, handle_note},
     identifiers::parse_local_object_id,
     receiver::{handle_activity, HandlerError},
@@ -452,7 +452,7 @@ pub async fn import_from_outbox(
     // Outbox has reverse chronological order
     let activities = activities.into_iter().rev();
     for activity in activities {
-        let activity_actor = find_object_id(&activity["actor"])
+        let activity_actor = get_object_id(&activity["actor"])
             .map_err(|_| ValidationError("invalid actor property"))?;
         if activity_actor != actor.id {
             log::warn!("activity doesn't belong to outbox owner");
@@ -487,13 +487,13 @@ pub async fn import_replies(
     let collection_items = match &object["replies"] {
         JsonValue::Null => vec![], // no replies
         value => {
-            let collection_id = find_object_id(value)?;
+            let collection_id = get_object_id(value)?;
             fetch_collection(&agent, &collection_id, limit).await?
         },
     };
     log::info!("found {} replies", collection_items.len());
     for item in collection_items {
-        let object_id = find_object_id(&item)?;
+        let object_id = get_object_id(&item)?;
         let object: AttributedObject =
             fetch_object(&agent, &object_id).await?;
         log::info!("fetched object {}", object.id);

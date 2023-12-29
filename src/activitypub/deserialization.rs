@@ -11,15 +11,17 @@ use serde_json::Value;
 use mitra_validators::errors::ValidationError;
 
 /// Parses object json value and returns its ID as string
-pub fn find_object_id(object: &Value) -> Result<String, ValidationError> {
-    let object_id = match object.as_str() {
-        Some(object_id) => object_id.to_owned(),
-        None => {
-            let object_id = object["id"].as_str()
-                .ok_or(ValidationError("missing object ID"))?
-                .to_string();
-            object_id
+pub fn get_object_id(
+    object: &Value,
+) -> Result<String, ValidationError> {
+    let object_id = match object {
+        Value::String(string) => string.to_owned(),
+        Value::Object(_) => {
+            object["id"].as_str()
+                .ok_or(ValidationError("missing 'id' property"))?
+                .to_owned()
         },
+        _ => return Err(ValidationError("unexpected value type")),
     };
     Ok(object_id)
 }
@@ -30,7 +32,7 @@ pub fn deserialize_into_object_id<'de, D>(
     where D: Deserializer<'de>
 {
     let value = Value::deserialize(deserializer)?;
-    let object_id = find_object_id(&value)
+    let object_id = get_object_id(&value)
         .map_err(DeserializerError::custom)?;
     Ok(object_id)
 }
@@ -77,13 +79,13 @@ pub fn parse_into_id_array(
     let result = match value {
         Value::Null => vec![],
         Value::String(_) | Value::Object(_) => {
-            let object_id = find_object_id(value)?;
+            let object_id = get_object_id(value)?;
             vec![object_id]
         },
         Value::Array(array) => {
             let mut results = vec![];
             for value in array {
-                let object_id = find_object_id(value)?;
+                let object_id = get_object_id(value)?;
                 results.push(object_id);
             };
             results
@@ -170,15 +172,24 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_find_object_id_from_string() {
+    fn test_get_object_id_from_string() {
         let value = json!("test_id");
-        assert_eq!(find_object_id(&value).unwrap(), "test_id");
+        assert_eq!(get_object_id(&value).unwrap(), "test_id");
     }
 
     #[test]
-    fn test_find_object_id_from_object() {
+    fn test_get_object_id_from_object() {
         let value = json!({"id": "test_id", "type": "Note"});
-        assert_eq!(find_object_id(&value).unwrap(), "test_id");
+        assert_eq!(get_object_id(&value).unwrap(), "test_id");
+    }
+
+    #[test]
+    fn test_get_object_id_from_array() {
+        let value = json!(["test_id"]);
+        assert_eq!(
+            get_object_id(&value).err().unwrap().to_string(),
+            "unexpected value type",
+        );
     }
 
     #[test]

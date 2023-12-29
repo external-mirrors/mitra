@@ -24,7 +24,7 @@ use mitra_models::{
 use mitra_validators::errors::ValidationError;
 
 use crate::activitypub::{
-    deserialization::{deserialize_into_object_id, find_object_id},
+    deserialization::{deserialize_into_object_id, get_object_id},
     identifiers::parse_local_actor_id,
     vocabulary::{ANNOUNCE, FOLLOW, LIKE},
 };
@@ -48,7 +48,7 @@ async fn handle_undo_follow(
         db_client,
         &activity.actor,
     ).await?;
-    let target_actor_id = find_object_id(&activity.object["object"])?;
+    let target_actor_id = get_object_id(&activity.object["object"])?;
     let target_username = parse_local_actor_id(
         &config.instance_url(),
         &target_actor_id,

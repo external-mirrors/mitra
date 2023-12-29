@@ -16,7 +16,7 @@ use super::authentication::{
     verify_signed_request,
     AuthenticationError,
 };
-use super::deserialization::find_object_id;
+use super::deserialization::get_object_id;
 use super::handlers::{
     accept::handle_accept,
     add::handle_add,
@@ -90,7 +90,7 @@ pub async fn handle_activity(
     let activity_type = activity["type"].as_str()
         .ok_or(ValidationError("type property is missing"))?
         .to_owned();
-    let activity_actor = find_object_id(&activity["actor"])
+    let activity_actor = get_object_id(&activity["actor"])
         .map_err(|_| ValidationError("invalid actor property"))?;
     let activity = activity.clone();
     let maybe_object_type = match activity_type.as_str() {
@@ -173,7 +173,7 @@ pub async fn receive_activity(
 ) -> Result<(), HandlerError> {
     let activity_type = activity["type"].as_str()
         .ok_or(ValidationError("type property is missing"))?;
-    let activity_actor = find_object_id(&activity["actor"])
+    let activity_actor = get_object_id(&activity["actor"])
         .map_err(|_| ValidationError("invalid actor property"))?;
 
     let actor_hostname = get_hostname(&activity_actor)
@@ -188,7 +188,7 @@ pub async fn receive_activity(
     };
 
     let is_self_delete = if activity_type == DELETE {
-        let object_id = find_object_id(&activity["object"])?;
+        let object_id = get_object_id(&activity["object"])?;
         object_id == activity_actor
     } else { false };
 

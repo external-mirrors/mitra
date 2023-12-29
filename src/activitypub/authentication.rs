@@ -44,7 +44,7 @@ use mitra_utils::{
     urls::UrlError,
 };
 
-use super::deserialization::find_object_id;
+use super::deserialization::get_object_id;
 use super::importers::get_or_import_profile_by_actor_id;
 use super::receiver::HandlerError;
 
@@ -202,7 +202,7 @@ pub async fn verify_signed_activity(
     // Signed activities must have `actor` property, to avoid situations
     // where signer is identified by DID but there is no matching
     // identity proof in the local database.
-    let actor_id = find_object_id(&activity["actor"])
+    let actor_id = get_object_id(&activity["actor"])
         .map_err(|_| AuthenticationError::ActorError("unknown actor"))?;
     let actor_profile = get_signer(config, db_client, &actor_id, no_fetch).await?;
 
