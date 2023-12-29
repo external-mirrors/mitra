@@ -48,7 +48,8 @@ async fn handle_undo_follow(
         db_client,
         &activity.actor,
     ).await?;
-    let target_actor_id = get_object_id(&activity.object["object"])?;
+    let target_actor_id = get_object_id(&activity.object["object"])
+        .map_err(|_| ValidationError("invalid follow activity object"))?;
     let target_username = parse_local_actor_id(
         &config.instance_url(),
         &target_actor_id,

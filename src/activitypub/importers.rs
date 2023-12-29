@@ -487,13 +487,15 @@ pub async fn import_replies(
     let collection_items = match &object["replies"] {
         JsonValue::Null => vec![], // no replies
         value => {
-            let collection_id = get_object_id(value)?;
+            let collection_id = get_object_id(value)
+                .map_err(|_| ValidationError("invalid 'replies' value"))?;
             fetch_collection(&agent, &collection_id, limit).await?
         },
     };
     log::info!("found {} replies", collection_items.len());
     for item in collection_items {
-        let object_id = get_object_id(&item)?;
+        let object_id = get_object_id(&item)
+            .map_err(|_| ValidationError("invalid reply"))?;
         let object: AttributedObject =
             fetch_object(&agent, &object_id).await?;
         log::info!("fetched object {}", object.id);

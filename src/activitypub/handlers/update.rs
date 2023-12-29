@@ -165,7 +165,8 @@ pub async fn handle_update(
     let is_not_embedded = activity["object"].as_str().is_some();
     if is_not_embedded || !is_authenticated {
         // Fetch object if it is not embedded or if activity is forwarded
-        let object_id = get_object_id(&activity["object"])?;
+        let object_id = get_object_id(&activity["object"])
+            .map_err(|_| ValidationError("invalid activity object"))?;
         let agent = build_federation_agent(&config.instance(), None);
         activity["object"] = fetch_object(&agent, &object_id).await?;
         log::info!("fetched object {}", object_id);

@@ -188,7 +188,8 @@ pub async fn receive_activity(
     };
 
     let is_self_delete = if activity_type == DELETE {
-        let object_id = get_object_id(&activity["object"])?;
+        let object_id = get_object_id(&activity["object"])
+            .map_err(|_| ValidationError("invalid activity object"))?;
         object_id == activity_actor
     } else { false };
 

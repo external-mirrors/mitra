@@ -7,21 +7,24 @@ use serde::{
     },
 };
 use serde_json::Value;
+use thiserror::Error;
 
-use mitra_validators::errors::ValidationError;
+#[derive(Debug, Error)]
+#[error("{0}")]
+pub struct DeserializationError(&'static str);
 
 /// Parses object json value and returns its ID as string
 pub fn get_object_id(
     object: &Value,
-) -> Result<String, ValidationError> {
+) -> Result<String, DeserializationError> {
     let object_id = match object {
         Value::String(string) => string.to_owned(),
         Value::Object(_) => {
             object["id"].as_str()
-                .ok_or(ValidationError("missing 'id' property"))?
+                .ok_or(DeserializationError("missing 'id' property"))?
                 .to_owned()
         },
-        _ => return Err(ValidationError("unexpected value type")),
+        _ => return Err(DeserializationError("unexpected value type")),
     };
     Ok(object_id)
 }
@@ -40,20 +43,20 @@ pub fn deserialize_into_object_id<'de, D>(
 /// Transforms single string or an array value into array of strings
 fn parse_string_array(
     value: &Value,
-) -> Result<Vec<String>, ValidationError> {
+) -> Result<Vec<String>, DeserializationError> {
     let result = match value {
         Value::String(string) => vec![string.to_string()],
         Value::Array(array) => {
             let mut items = vec![];
             for value in array {
                 let string = value.as_str()
-                    .ok_or(ValidationError("unexpected array item type"))?
+                    .ok_or(DeserializationError("unexpected array item type"))?
                     .to_string();
                 items.push(string);
             };
             items
         },
-        _ => return Err(ValidationError("unexpected value type")),
+        _ => return Err(DeserializationError("unexpected value type")),
     };
     Ok(result)
 }
@@ -75,7 +78,7 @@ pub fn deserialize_string_array<'de, D>(
 /// Transforms arbitrary property value into array of object IDs
 pub fn parse_into_id_array(
     value: &Value,
-) -> Result<Vec<String>, ValidationError> {
+) -> Result<Vec<String>, DeserializationError> {
     let result = match value {
         Value::Null => vec![],
         Value::String(_) | Value::Object(_) => {
@@ -90,22 +93,23 @@ pub fn parse_into_id_array(
             };
             results
         },
-        // Unexpected value type
-        _ => return Err(ValidationError("unexpected value type")),
+        _ => return Err(DeserializationError("unexpected value type")),
     };
     Ok(result)
 }
 
 /// Parses link object and returns its "href"
-fn get_link_href(link: &Value) -> Result<String, ValidationError> {
+fn get_link_href(
+    link: &Value,
+) -> Result<String, DeserializationError> {
     let href = match link {
         Value::String(string) => string.to_owned(),
         Value::Object(_) => {
             link["href"].as_str()
-                .ok_or(ValidationError("missing href property"))?
+                .ok_or(DeserializationError("missing href property"))?
                 .to_string()
         },
-        _ => return Err(ValidationError("unexpected value type")),
+        _ => return Err(DeserializationError("unexpected value type")),
     };
     Ok(href)
 }
@@ -113,7 +117,7 @@ fn get_link_href(link: &Value) -> Result<String, ValidationError> {
 /// Transforms arbitrary property value into array of links
 pub fn parse_into_href_array(
     value: &Value,
-) -> Result<Vec<String>, ValidationError> {
+) -> Result<Vec<String>, DeserializationError> {
     let result = match value {
         Value::String(_) | Value::Object(_) => {
             let object_id = get_link_href(value)?;
@@ -128,7 +132,7 @@ pub fn parse_into_href_array(
             results
         },
         // Unexpected value type
-        _ => return Err(ValidationError("unexpected value type")),
+        _ => return Err(DeserializationError("unexpected value type")),
     };
     Ok(result)
 }
@@ -136,17 +140,16 @@ pub fn parse_into_href_array(
 /// Transforms arbitrary property value into array of structs
 pub fn parse_into_array<T: DeserializeOwned>(
     value: &Value,
-) -> Result<Vec<T>, ValidationError> {
+) -> Result<Vec<T>, DeserializationError> {
     let objects = match value {
         Value::Array(array) => array.to_vec(),
         Value::Object(_) => vec![value.clone()],
-        // Unexpected value type
-        _ => return Err(ValidationError("unexpected value type")),
+        _ => return Err(DeserializationError("unexpected value type")),
     };
     let mut items = vec![];
     for object in objects {
         let item: T = serde_json::from_value(object)
-            .map_err(|_| ValidationError("invalid array item"))?;
+            .map_err(|_| DeserializationError("invalid array item"))?;
         items.push(item);
     };
     Ok(items)

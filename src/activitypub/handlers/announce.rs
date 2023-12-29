@@ -132,7 +132,8 @@ async fn handle_fep_1b12_announce(
             db_client,
             &group_id,
         ).await?;
-        let object_id = get_object_id(&activity["object"])?;
+        let object_id = get_object_id(&activity["object"])
+            .map_err(|_| ValidationError("invalid activity object"))?;
         let post_id = match get_post_by_remote_object_id(
             db_client,
             &object_id,
