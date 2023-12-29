@@ -236,6 +236,7 @@ async fn import_follows_view(
     let db_client = &**get_database_client(&db_pool).await?;
     let current_user = get_current_user(db_client, auth.token()).await?;
     let address_list = parse_address_list(&request_data.follows_csv)?;
+    // TODO: use job queue
     tokio::spawn(async move {
         import_follows_task(
             &config,
@@ -290,6 +291,7 @@ async fn move_followers(
     };
     let address_list = parse_address_list(&request_data.followers_csv)?;
     let current_user_clone = current_user.clone();
+    // TODO: use job queue
     tokio::spawn(async move {
         move_followers_task(
             &config,
