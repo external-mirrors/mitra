@@ -11,6 +11,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Hide reposts from public timelines.
 - Validate media descriptions before saving to database.
 
+### Removed
+
+- Removed redirects on `/profile/{profile_id}` routes.
+
 ## [2.6.0] - 2023-12-25
 
 ### Added

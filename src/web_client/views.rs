@@ -16,7 +16,7 @@ use mitra_config::Config;
 use mitra_models::{
     database::{get_database_client, DbPool},
     posts::queries::get_post_by_id,
-    profiles::queries::{get_profile_by_acct, get_profile_by_id},
+    profiles::queries::get_profile_by_acct,
 };
 
 use crate::activitypub::{
@@ -63,28 +63,7 @@ fn opengraph_guard() -> impl guard::Guard {
     })
 }
 
-// DEPRECATED
 async fn profile_page_redirect_view(
-    config: web::Data<Config>,
-    db_pool: web::Data<DbPool>,
-    profile_id: web::Path<Uuid>,
-) -> Result<HttpResponse, HttpError> {
-    let db_client = &**get_database_client(&db_pool).await?;
-    let profile = get_profile_by_id(db_client, &profile_id).await?;
-    let actor_id = profile_actor_id(&config.instance_url(), &profile);
-    let response = HttpResponse::Found()
-        .append_header(("Location", actor_id))
-        .finish();
-    Ok(response)
-}
-
-pub fn profile_page_redirect() -> Resource {
-    web::resource("/profile/{profile_id}")
-        .guard(activitypub_guard())
-        .route(web::get().to(profile_page_redirect_view))
-}
-
-async fn profile_acct_page_redirect_view(
     config: web::Data<Config>,
     db_pool: web::Data<DbPool>,
     acct: web::Path<String>,
@@ -98,10 +77,10 @@ async fn profile_acct_page_redirect_view(
     Ok(response)
 }
 
-pub fn profile_acct_page_redirect() -> Resource {
+pub fn profile_page_redirect() -> Resource {
     web::resource("/@{acct}")
         .guard(activitypub_guard())
-        .route(web::get().to(profile_acct_page_redirect_view))
+        .route(web::get().to(profile_page_redirect_view))
 }
 
 async fn post_page_redirect_view(
