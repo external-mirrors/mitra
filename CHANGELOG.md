@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Hide reposts from public timelines.
 - Validate media descriptions before saving to database.
+- Fetch replies collection even if it is embedded.
 
 ### Removed
 

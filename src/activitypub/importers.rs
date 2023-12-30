@@ -30,7 +30,7 @@ use crate::activitypub::{
     actors::types::Actor,
     agent::{build_federation_agent, FederationAgent},
     constants::AP_CONTEXT,
-    deserialization::{find_object_id, parse_into_id_array},
+    deserialization::find_object_id,
     handlers::create::{get_object_links, handle_note},
     identifiers::parse_local_object_id,
     receiver::{handle_activity, HandlerError},
@@ -465,6 +465,53 @@ pub async fn import_from_outbox(
     Ok(())
 }
 
+async fn fetch_mastodon_replies_collection(
+    agent: &FederationAgent,
+    collection_url: &str,
+    limit: usize,
+) -> Result<Vec<JsonValue>, FetchError> {
+    // https://www.w3.org/TR/activitystreams-core/#collections
+    #[derive(Deserialize)]
+    #[serde(rename_all = "camelCase")]
+    struct Collection {
+        first: Option<JsonValue>, // page can be embedded
+        #[serde(default)]
+        items: Vec<JsonValue>,
+    }
+    #[derive(Deserialize)]
+    #[serde(rename_all = "camelCase")]
+    struct CollectionPage {
+        #[serde(default)]
+        items: Vec<JsonValue>,
+
+        next: Option<String>,
+    }
+
+    let collection: Collection =
+        fetch_object(agent, collection_url).await?;
+    let mut items = collection.items;
+    if let Some(first_page_value) = collection.first {
+        // Mastodon: embedded first page contains self-replies
+        let page: CollectionPage = match first_page_value {
+            JsonValue::String(first_page_url) => {
+                fetch_object(agent, &first_page_url).await?
+            },
+            _ => serde_json::from_value(first_page_value)?,
+        };
+        items.extend(page.items);
+        if let Some(next_page_url) = page.next {
+            // Mastodon: next page contains replies from others
+            let next_page: CollectionPage =
+                fetch_object(agent, &next_page_url).await?;
+            items.extend(next_page.items);
+        };
+    };
+    let activities = items.into_iter()
+        .take(limit)
+        .collect();
+    Ok(activities)
+}
+
 pub async fn import_replies(
     config: &Config,
     db_client: &mut impl DatabaseClient,
@@ -487,22 +534,12 @@ pub async fn import_replies(
             };
         },
         value => {
-            // Embedded collection
-            let items = parse_into_id_array(&value["items"])?;
-            replies.extend(items);
-            // Embedded first page contains self-replies (Mastodon only)
-            let items = parse_into_id_array(&value["first"]["items"])?;
-            replies.extend(items);
-            if let Some(next_page_url) = value["first"]["next"].as_str() {
-                // Mastodon: next page might be empty, additional step is needed
-                let next_page: JsonValue = fetch_object(&agent, next_page_url).await?;
-                let items = parse_into_id_array(&next_page["items"])?;
-                replies.extend(items);
-                if let Some(next_page_url) = next_page["next"].as_str() {
-                    let next_page: JsonValue = fetch_object(&agent, next_page_url).await?;
-                    let items = parse_into_id_array(&next_page["items"])?;
-                    replies.extend(items);
-                };
+            let collection_id = find_object_id(value)?;
+            let items =
+                fetch_mastodon_replies_collection(&agent, &collection_id, limit).await?;
+            for item in items {
+                let object_id = find_object_id(&item)?;
+                replies.push(object_id);
             };
         },
     };
