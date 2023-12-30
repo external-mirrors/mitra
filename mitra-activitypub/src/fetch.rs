@@ -1,7 +1,6 @@
 use bytes::Bytes;
 use reqwest::{Client, Method, RequestBuilder, StatusCode};
-use serde::{de::DeserializeOwned, Deserialize};
-use serde_json::{Value as JsonValue};
+use serde::de::DeserializeOwned;
 
 use mitra_utils::{
     files::sniff_media_type,
@@ -211,42 +210,4 @@ pub async fn fetch_json<T: DeserializeOwned>(
         .ok_or(FetchError::ResponseTooLarge)?;
     let object: T = serde_json::from_slice(&data)?;
     Ok(object)
-}
-
-pub async fn fetch_collection(
-    agent: &FederationAgent,
-    collection_url: &str,
-    limit: usize,
-) -> Result<Vec<JsonValue>, FetchError> {
-    // https://www.w3.org/TR/activitystreams-core/#collections
-    #[derive(Deserialize)]
-    #[serde(rename_all = "camelCase")]
-    struct Collection {
-        first: Option<JsonValue>, // page can be embedded
-        #[serde(default)]
-        ordered_items: Vec<JsonValue>,
-    }
-    #[derive(Deserialize)]
-    #[serde(rename_all = "camelCase")]
-    struct CollectionPage {
-        #[serde(default)]
-        ordered_items: Vec<JsonValue>,
-    }
-
-    let collection: Collection =
-        fetch_object(agent, collection_url).await?;
-    let mut items = collection.ordered_items;
-    if let Some(first_page_value) = collection.first {
-        let page: CollectionPage = match first_page_value {
-            JsonValue::String(first_page_url) => {
-                fetch_object(agent, &first_page_url).await?
-            },
-            _ => serde_json::from_value(first_page_value)?,
-        };
-        items.extend(page.ordered_items);
-    };
-    let activities = items.into_iter()
-        .take(limit)
-        .collect();
-    Ok(activities)
 }

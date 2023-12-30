@@ -1,10 +1,10 @@
 use std::collections::HashMap;
 
 use chrono::{Duration, Utc};
+use serde::Deserialize;
 use serde_json::{Value as JsonValue};
 
 use mitra_activitypub::fetch::{
-    fetch_collection,
     fetch_json,
     fetch_object,
     FetchError,
@@ -388,6 +388,44 @@ pub async fn import_post(
         .find(|post| post.object_id.as_ref() == Some(&initial_object_id))
         .unwrap();
     Ok(initial_post)
+}
+
+async fn fetch_collection(
+    agent: &FederationAgent,
+    collection_url: &str,
+    limit: usize,
+) -> Result<Vec<JsonValue>, FetchError> {
+    // https://www.w3.org/TR/activitystreams-core/#collections
+    #[derive(Deserialize)]
+    #[serde(rename_all = "camelCase")]
+    struct Collection {
+        first: Option<JsonValue>, // page can be embedded
+        #[serde(default)]
+        ordered_items: Vec<JsonValue>,
+    }
+    #[derive(Deserialize)]
+    #[serde(rename_all = "camelCase")]
+    struct CollectionPage {
+        #[serde(default)]
+        ordered_items: Vec<JsonValue>,
+    }
+
+    let collection: Collection =
+        fetch_object(agent, collection_url).await?;
+    let mut items = collection.ordered_items;
+    if let Some(first_page_value) = collection.first {
+        let page: CollectionPage = match first_page_value {
+            JsonValue::String(first_page_url) => {
+                fetch_object(agent, &first_page_url).await?
+            },
+            _ => serde_json::from_value(first_page_value)?,
+        };
+        items.extend(page.ordered_items);
+    };
+    let activities = items.into_iter()
+        .take(limit)
+        .collect();
+    Ok(activities)
 }
 
 pub async fn import_from_outbox(
