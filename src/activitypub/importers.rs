@@ -400,32 +400,41 @@ async fn fetch_collection(
     #[serde(rename_all = "camelCase")]
     struct Collection {
         first: Option<JsonValue>, // page can be embedded
-        #[serde(default)]
-        ordered_items: Vec<JsonValue>,
+        #[serde(alias = "ordered_items", default)]
+        items: Vec<JsonValue>,
     }
     #[derive(Deserialize)]
     #[serde(rename_all = "camelCase")]
     struct CollectionPage {
-        #[serde(default)]
-        ordered_items: Vec<JsonValue>,
+        next: Option<String>,
+        #[serde(alias = "ordered_items", default)]
+        items: Vec<JsonValue>,
     }
 
     let collection: Collection =
         fetch_object(agent, collection_url).await?;
-    let mut items = collection.ordered_items;
+    let mut items = collection.items;
     if let Some(first_page_value) = collection.first {
-        let page: CollectionPage = match first_page_value {
+        // Mastodon replies collection:
+        // - First page contains self-replies
+        // - Next page contains replies from others
+        let first_page: CollectionPage = match first_page_value {
             JsonValue::String(first_page_url) => {
                 fetch_object(agent, &first_page_url).await?
             },
             _ => serde_json::from_value(first_page_value)?,
         };
-        items.extend(page.ordered_items);
+        items.extend(first_page.items);
+        if let Some(next_page_url) = first_page.next {
+            let next_page: CollectionPage =
+                fetch_object(agent, &next_page_url).await?;
+            items.extend(next_page.items);
+        };
     };
-    let activities = items.into_iter()
+    let items = items.into_iter()
         .take(limit)
         .collect();
-    Ok(activities)
+    Ok(items)
 }
 
 pub async fn import_from_outbox(
@@ -465,53 +474,6 @@ pub async fn import_from_outbox(
     Ok(())
 }
 
-async fn fetch_mastodon_replies_collection(
-    agent: &FederationAgent,
-    collection_url: &str,
-    limit: usize,
-) -> Result<Vec<JsonValue>, FetchError> {
-    // https://www.w3.org/TR/activitystreams-core/#collections
-    #[derive(Deserialize)]
-    #[serde(rename_all = "camelCase")]
-    struct Collection {
-        first: Option<JsonValue>, // page can be embedded
-        #[serde(default)]
-        items: Vec<JsonValue>,
-    }
-    #[derive(Deserialize)]
-    #[serde(rename_all = "camelCase")]
-    struct CollectionPage {
-        #[serde(default)]
-        items: Vec<JsonValue>,
-
-        next: Option<String>,
-    }
-
-    let collection: Collection =
-        fetch_object(agent, collection_url).await?;
-    let mut items = collection.items;
-    if let Some(first_page_value) = collection.first {
-        // Mastodon: embedded first page contains self-replies
-        let page: CollectionPage = match first_page_value {
-            JsonValue::String(first_page_url) => {
-                fetch_object(agent, &first_page_url).await?
-            },
-            _ => serde_json::from_value(first_page_value)?,
-        };
-        items.extend(page.items);
-        if let Some(next_page_url) = page.next {
-            // Mastodon: next page contains replies from others
-            let next_page: CollectionPage =
-                fetch_object(agent, &next_page_url).await?;
-            items.extend(next_page.items);
-        };
-    };
-    let activities = items.into_iter()
-        .take(limit)
-        .collect();
-    Ok(activities)
-}
-
 pub async fn import_replies(
     config: &Config,
     db_client: &mut impl DatabaseClient,
@@ -522,32 +484,16 @@ pub async fn import_replies(
     let agent = build_federation_agent(&instance, None);
     let storage = MediaStorage::from(config);
     let object: JsonValue = fetch_object(&agent, object_id).await?;
-    let mut replies = vec![];
-    match &object["replies"] {
-        JsonValue::Null => (), // no replies
-        JsonValue::String(collection_id) => {
-            let items =
-                fetch_collection(&agent, collection_id, limit).await?;
-            for item in items {
-                let object_id = find_object_id(&item)?;
-                replies.push(object_id);
-            };
-        },
+    let collection_items = match &object["replies"] {
+        JsonValue::Null => vec![], // no replies
         value => {
             let collection_id = find_object_id(value)?;
-            let items =
-                fetch_mastodon_replies_collection(&agent, &collection_id, limit).await?;
-            for item in items {
-                let object_id = find_object_id(&item)?;
-                replies.push(object_id);
-            };
+            fetch_collection(&agent, &collection_id, limit).await?
         },
     };
-    let replies: Vec<_> = replies.into_iter()
-        .take(limit)
-        .collect();
-    log::info!("found {} replies", replies.len());
-    for object_id in replies {
+    log::info!("found {} replies", collection_items.len());
+    for item in collection_items {
+        let object_id = find_object_id(&item)?;
         let object: AttributedObject =
             fetch_object(&agent, &object_id).await?;
         log::info!("fetched object {}", object.id);
