@@ -1,6 +1,9 @@
 use serde::Deserialize;
 use serde_json::{Value as JsonValue};
 
+use mitra_activitypub::{
+    deserialization::{deserialize_into_object_id, get_object_id},
+};
 use mitra_config::Config;
 use mitra_models::{
     database::{DatabaseClient, DatabaseError},
@@ -17,7 +20,6 @@ use mitra_services::media::MediaStorage;
 use mitra_validators::errors::ValidationError;
 
 use crate::activitypub::{
-    deserialization::{deserialize_into_object_id, get_object_id},
     identifiers::parse_local_object_id,
     importers::{get_or_import_profile_by_actor_id, import_post},
     vocabulary::*,

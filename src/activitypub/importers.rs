@@ -4,10 +4,13 @@ use chrono::{Duration, Utc};
 use serde::Deserialize;
 use serde_json::{Value as JsonValue};
 
-use mitra_activitypub::fetch::{
-    fetch_json,
-    fetch_object,
-    FetchError,
+use mitra_activitypub::{
+    deserialization::get_object_id,
+    fetch::{
+        fetch_json,
+        fetch_object,
+        FetchError,
+    },
 };
 use mitra_config::{Config, Instance};
 use mitra_models::{
@@ -30,7 +33,6 @@ use crate::activitypub::{
     actors::types::Actor,
     agent::{build_federation_agent, FederationAgent},
     constants::AP_CONTEXT,
-    deserialization::get_object_id,
     handlers::create::{get_object_links, handle_note},
     identifiers::parse_local_object_id,
     receiver::{handle_activity, HandlerError},

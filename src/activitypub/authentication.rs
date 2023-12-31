@@ -1,7 +1,10 @@
 use actix_web::HttpRequest;
 use serde_json::{Value as JsonValue};
 
-use mitra_activitypub::utils::key_id_to_actor_id;
+use mitra_activitypub::{
+    deserialization::get_object_id,
+    utils::key_id_to_actor_id,
+};
 use mitra_config::Config;
 use mitra_models::{
     database::{DatabaseClient, DatabaseError},
@@ -44,7 +47,6 @@ use mitra_utils::{
     urls::UrlError,
 };
 
-use super::deserialization::get_object_id;
 use super::importers::get_or_import_profile_by_actor_id;
 use super::receiver::HandlerError;
 

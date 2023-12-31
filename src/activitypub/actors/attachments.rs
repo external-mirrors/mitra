@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 use serde_json::{Value as JsonValue};
 
+use mitra_activitypub::deserialization::deserialize_string_array;
 use mitra_models::{
     database::DatabaseTypeError,
     profiles::types::{
@@ -43,7 +44,6 @@ use crate::activitypub::{
         PAYMENT_LINK_RELATION_TYPE,
         W3ID_VALUEFLOWS_CONTEXT,
     },
-    deserialization::deserialize_string_array,
     identifiers::local_actor_proposal_id,
     identity::{
         create_identity_claim,

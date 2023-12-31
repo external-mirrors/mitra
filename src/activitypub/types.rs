@@ -4,15 +4,16 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value as JsonValue};
 
+use mitra_activitypub::deserialization::{
+    deserialize_string_array,
+    deserialize_object_array,
+};
+
 use super::constants::{
     AP_CONTEXT,
     MITRA_CONTEXT,
     W3ID_DATA_INTEGRITY_CONTEXT,
     W3ID_SECURITY_CONTEXT,
-};
-use super::deserialization::{
-    deserialize_string_array,
-    deserialize_object_array,
 };
 use super::vocabulary::HASHTAG;
 

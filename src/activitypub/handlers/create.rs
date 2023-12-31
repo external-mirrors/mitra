@@ -5,7 +5,15 @@ use serde::Deserialize;
 use serde_json::{Value as JsonValue};
 use uuid::Uuid;
 
-use mitra_activitypub::fetch::fetch_file;
+use mitra_activitypub::{
+    deserialization::{
+        deserialize_into_object_id,
+        parse_into_array,
+        parse_into_href_array,
+        parse_into_id_array,
+    },
+    fetch::fetch_file,
+};
 use mitra_config::{Config, Instance};
 use mitra_models::{
     attachments::queries::create_attachment,
@@ -52,12 +60,6 @@ use mitra_validators::{
 use crate::activitypub::{
     agent::build_federation_agent,
     constants::{AP_MEDIA_TYPE, AP_PUBLIC, AS_MEDIA_TYPE},
-    deserialization::{
-        deserialize_into_object_id,
-        parse_into_array,
-        parse_into_href_array,
-        parse_into_id_array,
-    },
     identifiers::{parse_local_actor_id, profile_actor_id},
     importers::{
         get_or_import_profile_by_actor_address,

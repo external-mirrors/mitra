@@ -1,6 +1,9 @@
 use serde::Deserialize;
 use serde_json::Value;
 
+use mitra_activitypub::{
+    deserialization::{deserialize_into_object_id, get_object_id},
+};
 use mitra_config::Config;
 use mitra_models::{
     database::{DatabaseClient, DatabaseError},
@@ -24,7 +27,6 @@ use mitra_models::{
 use mitra_validators::errors::ValidationError;
 
 use crate::activitypub::{
-    deserialization::{deserialize_into_object_id, get_object_id},
     identifiers::parse_local_actor_id,
     vocabulary::{ANNOUNCE, FOLLOW, LIKE},
 };

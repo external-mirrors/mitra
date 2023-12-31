@@ -1,6 +1,7 @@
 use serde::Deserialize;
 use serde_json::{Value as JsonValue};
 
+use mitra_activitypub::deserialization::deserialize_into_object_id;
 use mitra_config::Config;
 use mitra_models::{
     database::DatabaseClient,
@@ -17,7 +18,6 @@ use mitra_utils::caip10::AccountId;
 use mitra_validators::errors::ValidationError;
 
 use crate::activitypub::{
-    deserialization::deserialize_into_object_id,
     identifiers::parse_local_object_id,
     valueflows::parsers::Quantity,
     vocabulary::{FOLLOW, OFFER},

@@ -8,6 +8,13 @@ use serde::{
 };
 use serde_json::{json, Value};
 
+use mitra_activitypub::{
+    deserialization::{
+        deserialize_object_array,
+        parse_into_array,
+        parse_into_href_array,
+    },
+};
 use mitra_config::Instance;
 use mitra_models::{
     database::{DatabaseError, DatabaseTypeError},
@@ -34,11 +41,6 @@ use crate::activitypub::{
         W3ID_DATA_INTEGRITY_CONTEXT,
         W3ID_MULTIKEY_CONTEXT,
         W3ID_SECURITY_CONTEXT,
-    },
-    deserialization::{
-        deserialize_object_array,
-        parse_into_array,
-        parse_into_href_array,
     },
     identifiers::{
         local_actor_id,

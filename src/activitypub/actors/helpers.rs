@@ -1,6 +1,9 @@
 use uuid::Uuid;
 
-use mitra_activitypub::fetch::{fetch_file, fetch_object};
+use mitra_activitypub::{
+    deserialization::parse_into_id_array,
+    fetch::{fetch_file, fetch_object},
+};
 use mitra_config::Instance;
 use mitra_models::{
     database::DatabaseClient,
@@ -31,7 +34,6 @@ use mitra_validators::{
 use crate::activitypub::{
     actors::types::Actor,
     agent::build_federation_agent,
-    deserialization::parse_into_id_array,
     handlers::create::handle_emoji,
     identifiers::validate_object_id,
     receiver::HandlerError,

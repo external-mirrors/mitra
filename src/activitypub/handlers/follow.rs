@@ -1,6 +1,7 @@
 use serde::Deserialize;
 use serde_json::Value;
 
+use mitra_activitypub::deserialization::deserialize_into_object_id;
 use mitra_config::Config;
 use mitra_models::{
     database::{DatabaseClient, DatabaseError},
@@ -18,7 +19,6 @@ use mitra_validators::errors::ValidationError;
 
 use crate::activitypub::{
     builders::accept_follow::prepare_accept_follow,
-    deserialization::deserialize_into_object_id,
     identifiers::parse_local_actor_id,
     importers::get_or_import_profile_by_actor_id,
     vocabulary::PERSON,

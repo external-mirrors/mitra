@@ -5,7 +5,6 @@ pub mod builders;
 mod collections;
 mod constants;
 mod deliverer;
-mod deserialization;
 mod handlers;
 pub mod identifiers;
 pub mod identity;
