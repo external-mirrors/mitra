@@ -2,11 +2,10 @@
 use actix_web::{get, web, HttpResponse};
 
 use mitra_activitypub::{
-    constants::AP_MEDIA_TYPE,
     jrd::{
         JsonResourceDescriptor,
         Link,
-        JRD_CONTENT_TYPE,
+        JRD_MEDIA_TYPE,
     },
 };
 use mitra_config::{Config, Instance};
@@ -64,12 +63,7 @@ async fn get_jrd(
         href: Some(actor_id.clone()),
         properties: Default::default(),
     };
-    let link_actor = Link {
-        rel: "self".to_string(),
-        media_type: Some(AP_MEDIA_TYPE.to_string()),
-        href: Some(actor_id),
-        properties: Default::default(),
-    };
+    let link_actor = Link::actor(&actor_id);
     let jrd = JsonResourceDescriptor {
         subject: actor_address.to_acct_uri(),
         links: vec![link_profile, link_actor],
@@ -90,7 +84,7 @@ pub async fn webfinger_view(
         &query_params.resource,
     ).await?;
     let response = HttpResponse::Ok()
-        .content_type(JRD_CONTENT_TYPE)
+        .content_type(JRD_MEDIA_TYPE)
         .json(jrd);
     Ok(response)
 }

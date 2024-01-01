@@ -2,11 +2,12 @@ use std::collections::HashMap;
 
 use serde::{Serialize, Deserialize};
 
-use super::constants::AP_CONTEXT;
+use super::constants::{AP_CONTEXT, AP_MEDIA_TYPE};
 
-pub const JRD_CONTENT_TYPE: &str = "application/jrd+json";
+const SELF_RELATION_TYPE: &str = "self";
+pub const JRD_MEDIA_TYPE: &str = "application/jrd+json";
 
-#[derive(Serialize, Deserialize)]
+#[derive(Deserialize, Serialize)]
 pub struct Link {
     pub rel: String,
 
@@ -19,8 +20,19 @@ pub struct Link {
     pub properties: HashMap<String, String>,
 }
 
+impl Link {
+    pub fn actor(actor_id: &str) -> Self {
+        Self {
+            rel: SELF_RELATION_TYPE.to_string(),
+            href: Some(actor_id.to_string()),
+            media_type: Some(AP_MEDIA_TYPE.to_string()),
+            properties: Default::default(),
+        }
+    }
+}
+
 // https://datatracker.ietf.org/doc/html/rfc7033#section-4.4
-#[derive(Serialize, Deserialize)]
+#[derive(Deserialize, Serialize)]
 pub struct JsonResourceDescriptor {
     pub subject: String,
     pub links: Vec<Link>,
@@ -32,7 +44,7 @@ impl JsonResourceDescriptor {
         // https://github.com/LemmyNet/lemmy/issues/2037
         let ap_type_property = format!("{}#type", AP_CONTEXT);
         let link = self.links.iter()
-            .filter(|link| link.rel == "self")
+            .filter(|link| link.rel == SELF_RELATION_TYPE)
             .find(|link| {
                 let ap_type = link.properties
                     .get(&ap_type_property)
