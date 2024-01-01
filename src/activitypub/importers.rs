@@ -11,6 +11,7 @@ use mitra_activitypub::{
         fetch_object,
         FetchError,
     },
+    jrd::JsonResourceDescriptor,
 };
 use mitra_config::{Config, Instance};
 use mitra_models::{
@@ -32,14 +33,13 @@ use crate::activitypub::{
     actors::helpers::{create_remote_profile, update_remote_profile},
     actors::types::Actor,
     agent::{build_federation_agent, FederationAgent},
-    constants::AP_CONTEXT,
     handlers::create::{get_object_links, handle_note},
     identifiers::parse_local_object_id,
     receiver::{handle_activity, HandlerError},
     types::AttributedObject,
     vocabulary::GROUP,
 };
-use crate::webfinger::types::{ActorAddress, JsonResourceDescriptor};
+use crate::webfinger::types::ActorAddress;
 
 async fn import_profile(
     db_client: &mut impl DatabaseClient,
@@ -154,26 +154,6 @@ pub async fn get_or_import_profile_by_actor_id(
         Err(other_error) => return Err(other_error.into()),
     };
     Ok(profile)
-}
-
-impl JsonResourceDescriptor {
-    fn find_actor_id(&self, preferred_type: &str) -> Option<String> {
-        // Lemmy servers can have Group and Person actors with the same name
-        // https://github.com/LemmyNet/lemmy/issues/2037
-        let ap_type_property = format!("{}#type", AP_CONTEXT);
-        let link = self.links.iter()
-            .filter(|link| link.rel == "self")
-            .find(|link| {
-                let ap_type = link.properties
-                    .get(&ap_type_property)
-                    .map(|val| val.as_str());
-                // Choose preferred type if actor type is provided.
-                // Otherwise take first "self" link
-                ap_type.is_none() || ap_type == Some(preferred_type)
-            })?;
-        let actor_id = link.href.as_ref()?.to_string();
-        Some(actor_id)
-    }
 }
 
 async fn perform_webfinger_query(
@@ -518,62 +498,4 @@ pub async fn import_replies(
         };
     };
     Ok(())
-}
-
-
-#[cfg(test)]
-mod tests {
-    use crate::webfinger::types::Link;
-    use super::*;
-
-    #[test]
-    fn test_jrd_find_actor_id() {
-        let actor_id = "https://social.example/users/test";
-        let profile_link = Link {
-            rel: "http://webfinger.net/rel/profile-page".to_string(),
-            media_type: Some("text/html".to_string()),
-            href: Some(actor_id.to_string()),
-            properties: Default::default(),
-        };
-        let actor_link = Link {
-            rel: "self".to_string(),
-            media_type: Some("application/activity+json".to_string()),
-            href: Some(actor_id.to_string()),
-            properties: Default::default(),
-        };
-        let jrd = JsonResourceDescriptor {
-            subject: "acct:test@social.example".to_string(),
-            links: vec![profile_link, actor_link],
-        };
-        assert_eq!(jrd.find_actor_id("Service").unwrap(), actor_id);
-    }
-
-    #[test]
-    fn test_jrd_find_actor_id_lemmy() {
-        let person_id = "https://lemmy.example/u/test";
-        let person_link = Link {
-            rel: "self".to_string(),
-            media_type: Some("application/activity+json".to_string()),
-            href: Some(person_id.to_string()),
-            properties: HashMap::from([(
-                "https://www.w3.org/ns/activitystreams#type".to_string(),
-                "Person".to_string(),
-            )]),
-        };
-        let group_id = "https://lemmy.example/c/test";
-        let group_link = Link {
-            rel: "self".to_string(),
-            media_type: Some("application/activity+json".to_string()),
-            href: Some(group_id.to_string()),
-            properties: HashMap::from([(
-                "https://www.w3.org/ns/activitystreams#type".to_string(),
-                "Group".to_string(),
-            )]),
-        };
-        let jrd = JsonResourceDescriptor {
-            subject: "acct:test@social.example".to_string(),
-            links: vec![person_link, group_link],
-        };
-        assert_eq!(jrd.find_actor_id("Group").unwrap(), group_id);
-    }
 }

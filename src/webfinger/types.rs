@@ -1,20 +1,13 @@
-/// https://webfinger.net/
-use std::{
-    collections::HashMap,
-    fmt,
-    str::FromStr,
-};
+use std::{fmt, str::FromStr};
 
 use regex::Regex;
-use serde::{Serialize, Deserialize};
+use serde::Deserialize;
 
 use mitra_models::profiles::types::DbActorProfile;
 use mitra_validators::errors::ValidationError;
 
 // See also: USERNAME_RE in mitra_validators::profiles
 const ACTOR_ADDRESS_RE: &str = r"^(?P<username>[\w\.-]+)@(?P<hostname>[\w\.-]+)$";
-
-pub const JRD_CONTENT_TYPE: &str = "application/jrd+json";
 
 #[derive(Deserialize)]
 pub struct WebfingerQueryParams {
@@ -92,26 +85,6 @@ impl fmt::Display for ActorAddress {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(formatter, "{}@{}", self.username, self.hostname)
     }
-}
-
-#[derive(Serialize, Deserialize)]
-pub struct Link {
-    pub rel: String,
-
-    #[serde(rename = "type", skip_serializing_if = "Option::is_none")]
-    pub media_type: Option<String>,
-
-    pub href: Option<String>,
-
-    #[serde(default, skip_serializing_if = "HashMap::is_empty")]
-    pub properties: HashMap<String, String>,
-}
-
-// https://datatracker.ietf.org/doc/html/rfc7033#section-4.4
-#[derive(Serialize, Deserialize)]
-pub struct JsonResourceDescriptor {
-    pub subject: String,
-    pub links: Vec<Link>,
 }
 
 #[cfg(test)]

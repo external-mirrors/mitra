@@ -2,14 +2,11 @@
 
 use actix_web::{get, web, HttpResponse};
 
+use mitra_activitypub::jrd::{JsonResourceDescriptor, Link};
 use mitra_config::Config;
 use mitra_models::database::{get_database_client, DbPool};
 
 use crate::errors::HttpError;
-use crate::webfinger::types::{
-    Link,
-    JsonResourceDescriptor,
-};
 use super::helpers::{get_instance_staff, get_usage};
 use super::types::{Metadata, NodeInfo20, NodeInfo21};
 

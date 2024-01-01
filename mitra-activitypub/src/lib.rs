@@ -4,4 +4,5 @@ pub mod deserialization;
 pub mod fetch;
 pub mod http_client;
 pub mod identifiers;
+pub mod jrd;
 pub mod utils;

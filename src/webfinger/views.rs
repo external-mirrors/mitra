@@ -1,6 +1,14 @@
+/// https://webfinger.net/
 use actix_web::{get, web, HttpResponse};
 
-use mitra_activitypub::constants::AP_MEDIA_TYPE;
+use mitra_activitypub::{
+    constants::AP_MEDIA_TYPE,
+    jrd::{
+        JsonResourceDescriptor,
+        Link,
+        JRD_CONTENT_TYPE,
+    },
+};
 use mitra_config::{Config, Instance};
 use mitra_models::{
     database::{get_database_client, DatabaseClient, DbPool},
@@ -18,10 +26,7 @@ use crate::errors::HttpError;
 
 use super::types::{
     ActorAddress,
-    Link,
-    JsonResourceDescriptor,
     WebfingerQueryParams,
-    JRD_CONTENT_TYPE,
 };
 
 async fn get_jrd(
