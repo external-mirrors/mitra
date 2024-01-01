@@ -532,7 +532,13 @@ mod tests {
     #[test]
     fn test_jrd_find_actor_id() {
         let actor_id = "https://social.example/users/test";
-        let link_actor = Link {
+        let profile_link = Link {
+            rel: "http://webfinger.net/rel/profile-page".to_string(),
+            media_type: Some("text/html".to_string()),
+            href: Some(actor_id.to_string()),
+            properties: Default::default(),
+        };
+        let actor_link = Link {
             rel: "self".to_string(),
             media_type: Some("application/activity+json".to_string()),
             href: Some(actor_id.to_string()),
@@ -540,8 +546,37 @@ mod tests {
         };
         let jrd = JsonResourceDescriptor {
             subject: "acct:test@social.example".to_string(),
-            links: vec![link_actor],
+            links: vec![profile_link, actor_link],
         };
         assert_eq!(jrd.find_actor_id().unwrap(), actor_id);
+    }
+
+    #[test]
+    fn test_jrd_find_actor_id_lemmy() {
+        let person_id = "https://lemmy.example/u/test";
+        let person_link = Link {
+            rel: "self".to_string(),
+            media_type: Some("application/activity+json".to_string()),
+            href: Some(person_id.to_string()),
+            properties: HashMap::from([(
+                "https://www.w3.org/ns/activitystreams#type".to_string(),
+                "Person".to_string(),
+            )]),
+        };
+        let group_id = "https://lemmy.example/c/test";
+        let group_link = Link {
+            rel: "self".to_string(),
+            media_type: Some("application/activity+json".to_string()),
+            href: Some(group_id.to_string()),
+            properties: HashMap::from([(
+                "https://www.w3.org/ns/activitystreams#type".to_string(),
+                "Group".to_string(),
+            )]),
+        };
+        let jrd = JsonResourceDescriptor {
+            subject: "acct:test@social.example".to_string(),
+            links: vec![person_link, group_link],
+        };
+        assert_eq!(jrd.find_actor_id().unwrap(), group_id);
     }
 }
