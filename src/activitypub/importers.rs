@@ -157,24 +157,20 @@ pub async fn get_or_import_profile_by_actor_id(
 }
 
 impl JsonResourceDescriptor {
-    fn find_actor_id(&self) -> Option<String> {
+    fn find_actor_id(&self, preferred_type: &str) -> Option<String> {
         // Lemmy servers can have Group and Person actors with the same name
         // https://github.com/LemmyNet/lemmy/issues/2037
         let ap_type_property = format!("{}#type", AP_CONTEXT);
-        let group_link = self.links.iter()
+        let link = self.links.iter()
+            .filter(|link| link.rel == "self")
             .find(|link| {
-                link.rel == "self" &&
-                link.properties
+                let ap_type = link.properties
                     .get(&ap_type_property)
-                    .map(|val| val.as_str()) == Some(GROUP)
-            });
-        let link = if let Some(link) = group_link {
-            // Prefer Group if the actor type is provided
-            link
-        } else {
-            // Otherwise take first "self" link
-            self.links.iter().find(|link| link.rel == "self")?
-        };
+                    .map(|val| val.as_str());
+                // Choose preferred type if actor type is provided.
+                // Otherwise take first "self" link
+                ap_type.is_none() || ap_type == Some(preferred_type)
+            })?;
         let actor_id = link.href.as_ref()?.to_string();
         Some(actor_id)
     }
@@ -195,7 +191,8 @@ async fn perform_webfinger_query(
         &webfinger_url,
         &[("resource", &webfinger_resource)],
     ).await?;
-    let actor_id = jrd.find_actor_id()
+    // Prefer Group actor if webfinger results are ambiguous
+    let actor_id = jrd.find_actor_id(GROUP)
         .ok_or(FetchError::OtherError("actor ID not found"))?;
     Ok(actor_id)
 }
@@ -548,7 +545,7 @@ mod tests {
             subject: "acct:test@social.example".to_string(),
             links: vec![profile_link, actor_link],
         };
-        assert_eq!(jrd.find_actor_id().unwrap(), actor_id);
+        assert_eq!(jrd.find_actor_id("Service").unwrap(), actor_id);
     }
 
     #[test]
@@ -577,6 +574,6 @@ mod tests {
             subject: "acct:test@social.example".to_string(),
             links: vec![person_link, group_link],
         };
-        assert_eq!(jrd.find_actor_id().unwrap(), group_id);
+        assert_eq!(jrd.find_actor_id("Group").unwrap(), group_id);
     }
 }
