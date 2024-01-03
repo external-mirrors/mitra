@@ -156,7 +156,7 @@ pub fn build_note(
             instance_hostname,
             profile,
         );
-        let tag_name = format!("@{}", actor_address);
+        let tag_name = actor_address.handle();
         let actor_id = profile_actor_id(instance_url, profile);
         if !primary_audience.contains(&actor_id) {
             primary_audience.push(actor_id.clone());

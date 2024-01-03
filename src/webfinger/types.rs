@@ -31,6 +31,10 @@ impl ActorAddress {
         Ok(actor_address)
     }
 
+    pub fn handle(&self) -> String {
+        format!("@{}", self)
+    }
+
     pub fn from_profile(
         local_hostname: &str,
         profile: &DbActorProfile,
@@ -49,7 +53,7 @@ impl ActorAddress {
         if self.hostname == local_hostname {
             self.username.clone()
         } else {
-           self.to_string()
+            self.to_string()
         }
     }
 
@@ -162,15 +166,17 @@ mod tests {
     #[test]
     fn test_actor_address_from_handle() {
         let handle = "@user@example.com";
-        let address_1 = ActorAddress::from_handle(handle).unwrap();
-        assert_eq!(address_1.acct("example.com"), "user");
+        let address = ActorAddress::from_handle(handle).unwrap();
+        assert_eq!(address.to_string(), "user@example.com");
 
-        let address_2 = ActorAddress::from_handle(handle).unwrap();
-        assert_eq!(address_2.acct("server.info"), "user@example.com");
+        // Prefix can be removed only once
+        let handle = "@@user@example.com";
+        let result = ActorAddress::from_handle(handle);
+        assert_eq!(result.is_err(), true);
 
         let handle_without_prefix = "user@test.com";
-        let address_3 = ActorAddress::from_handle(handle_without_prefix).unwrap();
-        assert_eq!(address_3.to_string(), handle_without_prefix);
+        let address = ActorAddress::from_handle(handle_without_prefix).unwrap();
+        assert_eq!(address.to_string(), handle_without_prefix);
 
         let short_handle = "@user";
         let result = ActorAddress::from_handle(short_handle);
