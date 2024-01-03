@@ -379,20 +379,24 @@ async fn fetch_collection(
     #[serde(rename_all = "camelCase")]
     struct Collection {
         first: Option<JsonValue>, // page can be embedded
-        #[serde(alias = "ordered_items", default)]
+        #[serde(default)]
         items: Vec<JsonValue>,
+        #[serde(default)]
+        ordered_items: Vec<JsonValue>,
     }
     #[derive(Deserialize)]
     #[serde(rename_all = "camelCase")]
     struct CollectionPage {
         next: Option<String>,
-        #[serde(alias = "ordered_items", default)]
+        #[serde(default)]
         items: Vec<JsonValue>,
+        #[serde(default)]
+        ordered_items: Vec<JsonValue>,
     }
 
     let collection: Collection =
         fetch_object(agent, collection_url).await?;
-    let mut items = collection.items;
+    let mut items = [collection.items, collection.ordered_items].concat();
     if let Some(first_page_value) = collection.first {
         // Mastodon replies collection:
         // - First page contains self-replies
@@ -404,10 +408,12 @@ async fn fetch_collection(
             _ => serde_json::from_value(first_page_value)?,
         };
         items.extend(first_page.items);
+        items.extend(first_page.ordered_items);
         if let Some(next_page_url) = first_page.next {
             let next_page: CollectionPage =
                 fetch_object(agent, &next_page_url).await?;
             items.extend(next_page.items);
+            items.extend(next_page.ordered_items);
         };
     };
     let items = items.into_iter()
