@@ -152,9 +152,9 @@ pub fn build_note(
 
     let mut tags = vec![];
     for profile in &post.mentions {
-        let actor_address = ActorAddress::from_profile(
-            instance_hostname,
-            profile,
+        let actor_address = ActorAddress::new(
+            &profile.username,
+            profile.hostname.as_deref().unwrap_or(instance_hostname),
         );
         let tag_name = actor_address.handle();
         let actor_id = profile_actor_id(instance_url, profile);

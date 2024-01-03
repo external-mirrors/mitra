@@ -3,7 +3,6 @@ use std::{fmt, str::FromStr};
 use regex::Regex;
 use serde::Deserialize;
 
-use mitra_models::profiles::types::DbActorProfile;
 use mitra_validators::errors::ValidationError;
 
 // See also: USERNAME_RE in mitra_validators::profiles
@@ -21,6 +20,13 @@ pub struct ActorAddress {
 }
 
 impl ActorAddress {
+    pub fn new(username: &str, hostname: &str) -> Self {
+        Self {
+            username: username.to_string(),
+            hostname: hostname.to_string(),
+        }
+    }
+
     pub fn from_handle(
         handle: &str,
     ) -> Result<Self, ValidationError> {
@@ -33,19 +39,6 @@ impl ActorAddress {
 
     pub fn handle(&self) -> String {
         format!("@{}", self)
-    }
-
-    pub fn from_profile(
-        local_hostname: &str,
-        profile: &DbActorProfile,
-    ) -> Self {
-        assert_eq!(profile.hostname.is_none(), profile.is_local());
-        Self {
-            username: profile.username.clone(),
-            hostname: profile.hostname.as_deref()
-                .unwrap_or(local_hostname)
-                .to_string(),
-        }
     }
 
     /// Returns acct string, as used in Mastodon
@@ -77,10 +70,10 @@ impl FromStr for ActorAddress {
         let actor_address_re = Regex::new(ACTOR_ADDRESS_RE).unwrap();
         let caps = actor_address_re.captures(value)
             .ok_or(ValidationError("invalid actor address"))?;
-        let actor_address = Self {
-            username: caps["username"].to_string(),
-            hostname: caps["hostname"].to_string(),
-        };
+        let actor_address = Self::new(
+            &caps["username"],
+            &caps["hostname"],
+        );
         Ok(actor_address)
     }
 }
@@ -93,57 +86,39 @@ impl fmt::Display for ActorAddress {
 
 #[cfg(test)]
 mod tests {
-    use mitra_models::profiles::types::DbActor;
     use super::*;
 
     #[test]
     fn test_local_actor_address() {
-        let local_hostname = "example.com";
-        let local_profile = DbActorProfile {
-            username: "user".to_string(),
-            hostname: None,
-            acct: "user".to_string(),
-            actor_json: None,
-            ..Default::default()
-        };
-        let actor_address = ActorAddress::from_profile(
+        let local_hostname = "local.example";
+        let actor_address = ActorAddress::new(
+            "user",
             local_hostname,
-            &local_profile,
         );
         assert_eq!(
             actor_address.to_string(),
-            "user@example.com",
+            "user@local.example",
         );
         assert_eq!(
             actor_address.acct(local_hostname),
-            local_profile.acct,
+            "user",
         );
     }
 
     #[test]
     fn test_remote_actor_address() {
-        let local_hostname = "example.com";
-        let remote_profile = DbActorProfile {
-            username: "test".to_string(),
-            hostname: Some("remote.com".to_string()),
-            acct: "test@remote.com".to_string(),
-            actor_json: Some(DbActor {
-                id: "https://test".to_string(),
-                ..Default::default()
-            }),
-            ..Default::default()
-        };
-        let actor_address = ActorAddress::from_profile(
-            local_hostname,
-            &remote_profile,
+        let local_hostname = "local.example";
+        let actor_address = ActorAddress::new(
+            "user",
+            "remote.example",
         );
         assert_eq!(
             actor_address.to_string(),
-            remote_profile.acct,
+            "user@remote.example",
         );
         assert_eq!(
             actor_address.acct(local_hostname),
-            remote_profile.acct,
+            "user@remote.example",
         );
     }
 
