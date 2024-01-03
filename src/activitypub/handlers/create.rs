@@ -448,7 +448,7 @@ pub async fn get_object_tags(
                     continue;
                 },
             };
-            if let Ok(actor_address) = ActorAddress::from_mention(&tag_name) {
+            if let Ok(actor_address) = ActorAddress::from_handle(&tag_name) {
                 let profile = match get_or_import_profile_by_actor_address(
                     db_client,
                     instance,

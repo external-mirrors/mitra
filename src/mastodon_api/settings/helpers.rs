@@ -74,7 +74,7 @@ pub fn parse_address_list(csv: &str)
         .map(|line| line.trim().to_string())
         // Skip header and empty lines
         .filter(|line| line != "Account address" && !line.is_empty())
-        .map(|line| ActorAddress::from_mention(&line))
+        .map(|line| ActorAddress::from_handle(&line))
         .collect::<Result<_, _>>()?;
     addresses.sort();
     addresses.dedup();
