@@ -1,7 +1,9 @@
 /// https://webfinger.net/
 use actix_web::{get, web, HttpResponse};
+use serde::Deserialize;
 
 use mitra_activitypub::{
+    addresses::ActorAddress,
     jrd::{
         JsonResourceDescriptor,
         Link,
@@ -22,11 +24,6 @@ use crate::activitypub::{
     },
 };
 use crate::errors::HttpError;
-
-use super::types::{
-    ActorAddress,
-    WebfingerQueryParams,
-};
 
 async fn get_jrd(
     db_client: &impl DatabaseClient,
@@ -70,6 +67,11 @@ async fn get_jrd(
         links: vec![link_profile, link_actor],
     };
     Ok(jrd)
+}
+
+#[derive(Deserialize)]
+pub struct WebfingerQueryParams {
+    pub resource: String,
 }
 
 #[get("/.well-known/webfinger")]

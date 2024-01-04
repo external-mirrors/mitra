@@ -6,6 +6,7 @@ use serde_json::{Value as JsonValue};
 use uuid::Uuid;
 
 use mitra_activitypub::{
+    addresses::ActorAddress,
     deserialization::{
         deserialize_into_object_id,
         parse_into_array,
@@ -71,7 +72,6 @@ use crate::activitypub::{
     types::{AttributedObject, Attachment, EmojiTag, LinkTag, Tag},
     vocabulary::*,
 };
-use crate::webfinger::types::ActorAddress;
 
 use super::HandlerResult;
 

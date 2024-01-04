@@ -1,6 +1,7 @@
 use chrono::{DateTime, Utc};
 use serde::Serialize;
 
+use mitra_activitypub::addresses::ActorAddress;
 use mitra_config::Instance;
 use mitra_models::{
     database::{DatabaseClient, DatabaseError},
@@ -37,7 +38,6 @@ use crate::activitypub::{
     },
     vocabulary::*,
 };
-use crate::webfinger::types::ActorAddress;
 
 const LINK_REL_MISSKEY_QUOTE: &str = "https://misskey-hub.net/ns#_misskey_quote";
 

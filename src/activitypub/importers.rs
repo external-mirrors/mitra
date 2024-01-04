@@ -5,6 +5,7 @@ use serde::Deserialize;
 use serde_json::{Value as JsonValue};
 
 use mitra_activitypub::{
+    addresses::ActorAddress,
     deserialization::get_object_id,
     fetch::{
         fetch_json,
@@ -39,7 +40,6 @@ use crate::activitypub::{
     types::AttributedObject,
     vocabulary::GROUP,
 };
-use crate::webfinger::types::ActorAddress;
 
 async fn import_profile(
     db_client: &mut impl DatabaseClient,

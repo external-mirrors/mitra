@@ -3,6 +3,7 @@ use std::str::FromStr;
 use regex::Regex;
 use url::Url;
 
+use mitra_activitypub::addresses::ActorAddress;
 use mitra_config::Config;
 use mitra_models::{
     database::{DatabaseClient, DatabaseError},
@@ -41,7 +42,6 @@ use crate::activitypub::{
     },
     HandlerError,
 };
-use crate::webfinger::types::ActorAddress;
 
 const SEARCH_FETCHER_TIMEOUT: u64 = 15;
 
@@ -57,7 +57,7 @@ enum SearchQuery {
 fn parse_profile_query(query: &str) ->
     Result<(String, Option<String>), ValidationError>
 {
-    // See also: ACTOR_ADDRESS_RE in webfinger::types
+    // See also: ACTOR_ADDRESS_RE in mitra_activitypub::addresses
     let acct_query_re =
         Regex::new(r"^(@|!)?(?P<username>[\w\.-]+)(@(?P<hostname>[\w\.-]*))?$").unwrap();
     let acct_query_caps = acct_query_re.captures(query)

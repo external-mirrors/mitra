@@ -1,5 +1,6 @@
 use uuid::Uuid;
 
+use mitra_activitypub::addresses::ActorAddress;
 use mitra_config::Config;
 use mitra_models::{
     database::{
@@ -29,7 +30,6 @@ use crate::activitypub::{
     importers::get_or_import_profile_by_actor_address,
     HandlerError,
 };
-use crate::webfinger::types::ActorAddress;
 
 fn export_profiles_to_csv(
     local_hostname: &str,

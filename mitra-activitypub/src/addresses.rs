@@ -1,16 +1,9 @@
 use std::{fmt, str::FromStr};
 
 use regex::Regex;
-use serde::Deserialize;
 use thiserror::Error;
 
-// See also: USERNAME_RE in mitra_validators::profiles
 const ACTOR_ADDRESS_RE: &str = r"^(?P<username>[\w\.-]+)@(?P<hostname>[\w\.-]+)$";
-
-#[derive(Deserialize)]
-pub struct WebfingerQueryParams {
-    pub resource: String,
-}
 
 #[derive(Debug, Error)]
 #[error("{0}")]

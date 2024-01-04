@@ -9,6 +9,7 @@ use serde::{
 use serde_json::{json, Value};
 
 use mitra_activitypub::{
+    addresses::ActorAddress,
     deserialization::{
         deserialize_object_array,
         parse_into_array,
@@ -49,7 +50,6 @@ use crate::activitypub::{
     },
     vocabulary::{APPLICATION, IMAGE, PERSON},
 };
-use crate::webfinger::types::ActorAddress;
 
 use super::attachments::{
     attach_extra_field,
