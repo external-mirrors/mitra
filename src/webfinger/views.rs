@@ -34,7 +34,8 @@ async fn get_jrd(
     resource: &str,
 ) -> Result<JsonResourceDescriptor, HttpError> {
     let actor_address = if resource.starts_with("acct:") {
-        ActorAddress::from_acct_uri(resource)?
+        ActorAddress::from_acct_uri(resource)
+            .map_err(|error| HttpError::ValidationError(error.to_string()))?
     } else {
         // Actor ID? (reverse webfinger)
         let username = if resource == local_instance_actor_id(&instance.url()) {

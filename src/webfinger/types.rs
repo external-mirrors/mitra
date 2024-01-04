@@ -2,8 +2,7 @@ use std::{fmt, str::FromStr};
 
 use regex::Regex;
 use serde::Deserialize;
-
-use mitra_validators::errors::ValidationError;
+use thiserror::Error;
 
 // See also: USERNAME_RE in mitra_validators::profiles
 const ACTOR_ADDRESS_RE: &str = r"^(?P<username>[\w\.-]+)@(?P<hostname>[\w\.-]+)$";
@@ -11,6 +10,14 @@ const ACTOR_ADDRESS_RE: &str = r"^(?P<username>[\w\.-]+)@(?P<hostname>[\w\.-]+)$
 #[derive(Deserialize)]
 pub struct WebfingerQueryParams {
     pub resource: String,
+}
+
+#[derive(Debug, Error)]
+#[error("{0}")]
+pub struct ActorAddressError(&'static str);
+
+impl ActorAddressError {
+    pub fn message(&self) -> &'static str { self.0 }
 }
 
 #[derive(Eq, Ord, PartialEq, PartialOrd)]
@@ -29,7 +36,7 @@ impl ActorAddress {
 
     pub fn from_handle(
         handle: &str,
-    ) -> Result<Self, ValidationError> {
+    ) -> Result<Self, ActorAddressError> {
         // @ prefix is optional
         let actor_address = handle.strip_prefix('@')
             .unwrap_or(handle)
@@ -55,21 +62,23 @@ impl ActorAddress {
         format!("acct:{}", self)
     }
 
-    pub(super) fn from_acct_uri(uri: &str) -> Result<Self, ValidationError> {
+    pub fn from_acct_uri(
+        uri: &str,
+    ) -> Result<Self, ActorAddressError> {
         let actor_address = uri.strip_prefix("acct:")
-            .ok_or(ValidationError("invalid acct: URI"))?
+            .ok_or(ActorAddressError("invalid acct: URI"))?
             .parse()?;
         Ok(actor_address)
     }
 }
 
 impl FromStr for ActorAddress {
-    type Err = ValidationError;
+    type Err = ActorAddressError;
 
     fn from_str(value: &str) -> Result<Self, Self::Err> {
         let actor_address_re = Regex::new(ACTOR_ADDRESS_RE).unwrap();
         let caps = actor_address_re.captures(value)
-            .ok_or(ValidationError("invalid actor address"))?;
+            .ok_or(ActorAddressError("invalid actor address"))?;
         let actor_address = Self::new(
             &caps["username"],
             &caps["hostname"],
