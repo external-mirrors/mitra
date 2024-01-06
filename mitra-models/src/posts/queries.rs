@@ -741,6 +741,10 @@ pub async fn get_related_posts(
             SELECT post_link.target_id
             FROM post_link WHERE post_link.source_id = ANY($1)
             UNION ALL
+            SELECT repost_of.in_reply_to_id
+            FROM post AS repost_of JOIN post ON (post.repost_of_id = repost_of.id)
+            WHERE post.id = ANY($1)
+            UNION ALL
             SELECT post_link.target_id
             FROM post_link JOIN post ON (post.repost_of_id = post_link.source_id)
             WHERE post.id = ANY($1)

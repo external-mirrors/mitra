@@ -33,17 +33,21 @@ pub async fn add_related_posts(
             let in_reply_to = get_post(in_reply_to_id)?;
             post.in_reply_to = Some(Box::new(in_reply_to));
         };
+        for linked_id in post.links.iter() {
+            let linked = get_post(linked_id)?;
+            post.linked.push(linked);
+        };
         if let Some(ref repost_of_id) = post.repost_of_id {
             let mut repost_of = get_post(repost_of_id)?;
+            if let Some(ref in_reply_to_id) = repost_of.in_reply_to_id {
+                let in_reply_to = get_post(in_reply_to_id)?;
+                repost_of.in_reply_to = Some(Box::new(in_reply_to));
+            };
             for linked_id in repost_of.links.iter() {
                 let linked = get_post(linked_id)?;
                 repost_of.linked.push(linked);
             };
             post.repost_of = Some(Box::new(repost_of));
-        };
-        for linked_id in post.links.iter() {
-            let linked = get_post(linked_id)?;
-            post.linked.push(linked);
         };
     };
     Ok(())
@@ -168,7 +172,7 @@ mod tests {
 
     #[tokio::test]
     #[serial]
-    async fn test_add_related_posts() {
+    async fn test_add_related_posts_reply() {
         let db_client = &mut create_test_database().await;
         let author = create_test_user(db_client, "test").await;
         let post_data = PostCreateData {
@@ -184,8 +188,39 @@ mod tests {
         let mut reply = create_post(db_client, &author.id, reply_data).await.unwrap();
         add_related_posts(db_client, vec![&mut reply]).await.unwrap();
         assert_eq!(reply.in_reply_to.unwrap().id, post.id);
-        assert_eq!(reply.repost_of.is_none(), true);
         assert_eq!(reply.linked.is_empty(), true);
+        assert_eq!(reply.repost_of.is_none(), true);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_add_related_posts_repost_of_reply() {
+        let db_client = &mut create_test_database().await;
+        let author = create_test_user(db_client, "test").await;
+        let post_data = PostCreateData {
+            content: "post".to_string(),
+            ..Default::default()
+        };
+        let post = create_post(db_client, &author.id, post_data).await.unwrap();
+        let reply_data = PostCreateData {
+            content: "reply".to_string(),
+            in_reply_to_id: Some(post.id.clone()),
+            ..Default::default()
+        };
+        let reply = create_post(db_client, &author.id, reply_data).await.unwrap();
+        let repost_data = PostCreateData::repost(reply.id, None);
+        let mut repost = create_post(db_client, &author.id, repost_data).await.unwrap();
+        add_related_posts(db_client, vec![&mut repost]).await.unwrap();
+        assert_eq!(repost.in_reply_to.is_none(), true);
+        assert_eq!(repost.linked.is_empty(), true);
+        assert_eq!(
+            repost.repost_of.as_ref().unwrap().id,
+            reply.id,
+        );
+        assert_eq!(
+            repost.repost_of.unwrap().in_reply_to.unwrap().id,
+            post.id,
+        );
     }
 
     #[tokio::test]

@@ -16,6 +16,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Removed redirects on `/profile/{profile_id}` routes.
 
+### Fixed
+
+- Fill `in_reply_to_account_id` value on `Status.reblog` object.
+
 ## [2.6.0] - 2023-12-25
 
 ### Added
