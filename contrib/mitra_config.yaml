@@ -62,7 +62,9 @@ registration:
 # Data retention parameters.
 # Objects will be deleted after the specified number of days.
 retention:
+  # Remote posts with which local accounts didn't interact
   extraneous_posts: 50
+  # Remote accounts without posts
   empty_profiles: 150
 
 # Federation parameters
