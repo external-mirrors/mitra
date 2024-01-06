@@ -42,6 +42,7 @@ Demo instance: https://public.mitra.social/ ([invite-only](https://public.mitra.
 
 - PostgreSQL 13+
 - Rust 1.63+ (when building from source)
+- SSL certificates (i.e. `ca-certificates` package).
 
 Minimum system requirements:
 
