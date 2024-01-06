@@ -44,6 +44,7 @@ pub struct HttpSignatureData {
     pub message: String, // reconstructed message
     pub signature: String, // base64-encoded signature
     pub expires_at: DateTime<Utc>,
+    pub digest: Option<String>,
 }
 
 fn remove_quotes(value: &str) -> String {
@@ -110,6 +111,13 @@ pub fn parse_http_signature<'m>(
     } else {
         created_at + Duration::hours(SIGNATURE_EXPIRES_IN)
     };
+    let maybe_digest = if let Some(digest_header) = request_headers.get("digest") {
+        // TODO: parse header
+        // https://www.rfc-editor.org/rfc/rfc3230
+        digest_header.to_str().map(|val| val.to_string()).ok()
+    } else {
+        None
+    };
 
     let mut message_parts = vec![];
     for header in headers_parameter.split(' ') {
@@ -143,6 +151,7 @@ pub fn parse_http_signature<'m>(
         message,
         signature,
         expires_at,
+        digest: maybe_digest,
     };
     Ok(signature_data)
 }

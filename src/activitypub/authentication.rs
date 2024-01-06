@@ -174,6 +174,9 @@ pub async fn verify_signed_request(
         },
         Err(other_error) => return Err(other_error.into()),
     };
+    if signature_data.digest.is_none() {
+        log::warn!("Digest header is missing");
+    };
 
     let signer_id = key_id_to_actor_id(&signature_data.key_id)?;
     let signer = get_signer(config, db_client, &signer_id, no_fetch).await?;
