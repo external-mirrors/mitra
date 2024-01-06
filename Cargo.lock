@@ -1995,7 +1995,6 @@ dependencies = [
  "openssl",
  "openssl-probe",
  "regex",
- "reqwest",
  "serde",
  "serde_json",
  "serde_qs",
@@ -2012,6 +2011,7 @@ name = "mitra-activitypub"
 version = "2.6.0"
 dependencies = [
  "bytes",
+ "log",
  "mitra-utils",
  "regex",
  "reqwest",

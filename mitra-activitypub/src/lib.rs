@@ -1,9 +1,10 @@
 pub mod addresses;
 pub mod agent;
 pub mod constants;
+pub mod deliver;
 pub mod deserialization;
 pub mod fetch;
-pub mod http_client;
+mod http_client;
 pub mod identifiers;
 pub mod jrd;
 pub mod utils;
