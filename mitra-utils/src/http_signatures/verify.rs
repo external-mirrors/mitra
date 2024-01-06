@@ -229,7 +229,7 @@ mod tests {
         let signed_headers = create_http_signature(
             request_method.clone(),
             request_url,
-            request_body,
+            request_body.as_bytes(),
             &signer_key,
             signer_key_id,
         ).unwrap();

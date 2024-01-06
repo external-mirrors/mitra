@@ -66,7 +66,7 @@ pub async fn send_activity(
     let headers = create_http_signature(
         Method::POST,
         inbox_url,
-        activity_json,
+        activity_json.as_bytes(),
         &agent.signer_key,
         &agent.signer_key_id,
     )?;

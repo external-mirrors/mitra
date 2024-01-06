@@ -30,8 +30,8 @@ pub enum HttpSignatureError {
     SigningError(#[from] RsaError),
 }
 
-fn get_message_digest(message: &str) -> String {
-    let digest = Sha256::digest(message.as_bytes());
+fn get_message_digest(message: &[u8]) -> String {
+    let digest = Sha256::digest(message);
     let digest_b64 = base64::encode(digest);
     digest_b64
 }
@@ -41,7 +41,7 @@ fn get_message_digest(message: &str) -> String {
 pub fn create_http_signature(
     request_method: Method,
     request_url: &str,
-    request_body: &str,
+    request_body: &[u8],
     signer_key: &RsaPrivateKey,
     signer_key_id: &str,
 ) -> Result<HttpSignatureHeaders, HttpSignatureError> {
@@ -115,7 +115,7 @@ mod tests {
         let headers = create_http_signature(
             Method::GET,
             request_url,
-            "",
+            b"",
             &signer_key,
             signer_key_id,
         ).unwrap();
@@ -144,7 +144,7 @@ mod tests {
         let result = create_http_signature(
             Method::POST,
             request_url,
-            request_body,
+            request_body.as_bytes(),
             &signer_key,
             signer_key_id,
         );

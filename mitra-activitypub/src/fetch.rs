@@ -107,7 +107,7 @@ async fn send_request(
         let headers = create_http_signature(
             Method::GET,
             url,
-            "",
+            b"",
             &agent.signer_key,
             &agent.signer_key_id,
         )?;
