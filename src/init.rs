@@ -13,7 +13,7 @@ pub fn initialize_app() -> Config {
     {
         let is_found = openssl_probe::try_init_ssl_cert_env_vars();
         if !is_found {
-            log::warn!("certificate store not found");
+            log::error!("certificate store not found");
         };
     };
     config

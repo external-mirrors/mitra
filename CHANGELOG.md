@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Fetch replies collection even if it is embedded.
 - Write warning to log when `Digest` header is not present on signed request.
 - Ensure mentions exist for all local actors in "to" and "cc" fields.
+- Change certificate store log message level from warning to error.
 
 ### Removed
 
