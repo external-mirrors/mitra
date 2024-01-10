@@ -40,9 +40,9 @@ use crate::activitypub::{
         get_object_content,
         get_object_tags,
         get_object_url,
+        AttributedObject,
     },
     identifiers::profile_actor_id,
-    types::AttributedObject,
     vocabulary::{NOTE, PERSON},
 };
 

@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use chrono::Utc;
+use chrono::{DateTime, Utc};
 use serde::Deserialize;
 use serde_json::{Value as JsonValue};
 use uuid::Uuid;
@@ -10,6 +10,7 @@ use mitra_federation::{
     addresses::ActorAddress,
     deserialization::{
         deserialize_into_object_id,
+        deserialize_object_array,
         parse_into_array,
         parse_into_href_array,
         parse_into_id_array,
@@ -69,11 +70,48 @@ use crate::activitypub::{
         import_post,
     },
     receiver::HandlerError,
-    types::{AttributedObject, Attachment, EmojiTag, LinkTag, Tag},
+    types::{Attachment, EmojiTag, LinkTag, Tag},
     vocabulary::*,
 };
 
 use super::HandlerResult;
+
+#[derive(Deserialize)]
+#[cfg_attr(test, derive(Default))]
+#[serde(rename_all = "camelCase")]
+pub struct AttributedObject {
+    // https://www.w3.org/TR/activitypub/#obj-id
+    // "id" and "type" are required properties
+    pub id: String,
+
+    #[serde(rename = "type")]
+    pub object_type: String,
+
+    // Required for conversion into "post" entity
+    pub attributed_to: JsonValue,
+
+    pub name: Option<String>,
+    pub content: Option<String>,
+    pub media_type: Option<String>,
+    pub sensitive: Option<bool>,
+    pub summary: Option<String>,
+
+    pub attachment: Option<JsonValue>,
+    #[serde(
+        default,
+        deserialize_with = "deserialize_object_array",
+    )]
+    pub tag: Vec<JsonValue>,
+
+    pub in_reply_to: Option<String>,
+    pub to: Option<JsonValue>,
+    pub cc: Option<JsonValue>,
+    pub published: Option<DateTime<Utc>>,
+    pub updated: Option<DateTime<Utc>>,
+    pub url: Option<JsonValue>,
+
+    pub quote_url: Option<String>,
+}
 
 fn get_object_attributed_to(object: &AttributedObject)
     -> Result<String, ValidationError>

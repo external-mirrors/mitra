@@ -34,10 +34,9 @@ use crate::activitypub::{
     actors::helpers::{create_remote_profile, update_remote_profile},
     actors::types::Actor,
     agent::{build_federation_agent, FederationAgent},
-    handlers::create::{get_object_links, handle_note},
+    handlers::create::{get_object_links, handle_note, AttributedObject},
     identifiers::parse_local_object_id,
     receiver::{handle_activity, HandlerError},
-    types::AttributedObject,
     vocabulary::GROUP,
 };
 
