@@ -14,10 +14,10 @@ use serde::{
 };
 use serde_json::{Value as JsonValue};
 
-use mitra_activitypub::{
+use mitra_config::Instance;
+use mitra_federation::{
     deliver::{send_activity, DelivererError},
 };
-use mitra_config::Instance;
 use mitra_models::{
     profiles::types::PublicKeyType,
     users::types::User,

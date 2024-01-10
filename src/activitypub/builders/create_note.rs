@@ -1,8 +1,8 @@
 use chrono::{DateTime, Utc};
 use serde::Serialize;
 
-use mitra_activitypub::addresses::ActorAddress;
 use mitra_config::Instance;
+use mitra_federation::addresses::ActorAddress;
 use mitra_models::{
     database::{DatabaseClient, DatabaseError},
     emojis::types::DbEmoji,

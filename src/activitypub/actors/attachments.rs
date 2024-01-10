@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use serde_json::{Value as JsonValue};
 
-use mitra_activitypub::deserialization::deserialize_string_array;
+use mitra_federation::deserialization::deserialize_string_array;
 use mitra_models::{
     database::DatabaseTypeError,
     profiles::types::{

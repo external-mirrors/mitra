@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use regex::{Captures, Regex};
 
-use mitra_activitypub::addresses::ActorAddress;
+use mitra_federation::addresses::ActorAddress;
 use mitra_models::{
     database::{DatabaseClient, DatabaseError},
     profiles::queries::get_profiles_by_accts,
@@ -13,7 +13,7 @@ use crate::activitypub::identifiers::profile_actor_url;
 
 use super::links::is_inside_code_block;
 
-// See also: ACTOR_ADDRESS_RE in mitra_activitypub::addresses
+// See also: ACTOR_ADDRESS_RE in mitra_federation::addresses
 const MENTION_SEARCH_RE: &str = r"(?m)(?P<before>^|\s|>|[\(])@(?P<mention>[^\s<]+)";
 const MENTION_SEARCH_SECONDARY_RE: &str = r"^(?P<username>[\w\.-]+)(@(?P<hostname>[\w\.-]+\w))?(?P<after>[\.,:?!\)]?)$";
 

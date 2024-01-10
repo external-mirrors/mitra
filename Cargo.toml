@@ -12,9 +12,9 @@ default-run = "mitra"
 [workspace]
 members = [
   ".",
-  "mitra-activitypub",
   "mitra-cli",
   "mitra-config",
+  "mitra_federation",
   "mitra-models",
   "mitra-services",
   "mitra-utils",
@@ -22,9 +22,9 @@ members = [
 ]
 default-members = [
   ".",
-  "mitra-activitypub",
   "mitra-cli",
   "mitra-config",
+  "mitra_federation",
   "mitra-models",
   "mitra-services",
   "mitra-utils",
@@ -71,8 +71,8 @@ uuid = { version = "1.1.2", features = ["serde", "v4"] }
 # User for working with block/allow lists
 wildmatch = "2.1.1"
 
-mitra-activitypub = { path = "mitra-activitypub" }
 mitra-config = { path = "mitra-config" }
+mitra_federation = { path = "mitra_federation" }
 mitra-models = { path = "mitra-models" }
 mitra-services = { path = "mitra-services" }
 mitra-utils = { path = "mitra-utils" }

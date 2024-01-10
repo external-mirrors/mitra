@@ -3,8 +3,8 @@ use std::str::FromStr;
 use regex::Regex;
 use url::Url;
 
-use mitra_activitypub::addresses::ActorAddress;
 use mitra_config::Config;
+use mitra_federation::addresses::ActorAddress;
 use mitra_models::{
     database::{DatabaseClient, DatabaseError},
     posts::{
@@ -57,7 +57,7 @@ enum SearchQuery {
 fn parse_profile_query(query: &str) ->
     Result<(String, Option<String>), ValidationError>
 {
-    // See also: ACTOR_ADDRESS_RE in mitra_activitypub::addresses
+    // See also: ACTOR_ADDRESS_RE in mitra_federation::addresses
     let acct_query_re =
         Regex::new(r"^(@|!)?(?P<username>[\w\.-]+)(@(?P<hostname>[\w\.-]*))?$").unwrap();
     let acct_query_caps = acct_query_re.captures(query)

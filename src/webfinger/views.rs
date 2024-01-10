@@ -2,7 +2,8 @@
 use actix_web::{get, web, HttpResponse};
 use serde::Deserialize;
 
-use mitra_activitypub::{
+use mitra_config::{Config, Instance};
+use mitra_federation::{
     addresses::ActorAddress,
     jrd::{
         JsonResourceDescriptor,
@@ -10,7 +11,6 @@ use mitra_activitypub::{
         JRD_MEDIA_TYPE,
     },
 };
-use mitra_config::{Config, Instance};
 use mitra_models::{
     database::{get_database_client, DatabaseClient, DbPool},
     users::queries::is_registered_user,

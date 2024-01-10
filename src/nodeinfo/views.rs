@@ -2,8 +2,8 @@
 
 use actix_web::{get, web, HttpResponse};
 
-use mitra_activitypub::jrd::{JsonResourceDescriptor, Link};
 use mitra_config::Config;
+use mitra_federation::jrd::{JsonResourceDescriptor, Link};
 use mitra_models::database::{get_database_client, DbPool};
 
 use crate::errors::HttpError;

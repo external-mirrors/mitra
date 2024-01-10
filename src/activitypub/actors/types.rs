@@ -8,7 +8,8 @@ use serde::{
 };
 use serde_json::{json, Value};
 
-use mitra_activitypub::{
+use mitra_config::Instance;
+use mitra_federation::{
     addresses::ActorAddress,
     deserialization::{
         deserialize_object_array,
@@ -16,7 +17,6 @@ use mitra_activitypub::{
         parse_into_href_array,
     },
 };
-use mitra_config::Instance;
 use mitra_models::{
     database::{DatabaseError, DatabaseTypeError},
     profiles::types::{

@@ -1,7 +1,7 @@
 use uuid::Uuid;
 
-use mitra_activitypub::addresses::ActorAddress;
 use mitra_config::Config;
+use mitra_federation::addresses::ActorAddress;
 use mitra_models::{
     database::{
         get_database_client,

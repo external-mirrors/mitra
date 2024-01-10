@@ -2,11 +2,11 @@ use actix_web::HttpRequest;
 use serde_json::{Value as JsonValue};
 use wildmatch::WildMatch;
 
-use mitra_activitypub::{
+use mitra_config::Config;
+use mitra_federation::{
     deserialization::get_object_id,
     fetch::FetchError,
 };
-use mitra_config::Config;
 use mitra_models::database::{DatabaseClient, DatabaseError};
 use mitra_services::media::MediaStorageError;
 use mitra_utils::urls::get_hostname;

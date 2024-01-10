@@ -1,4 +1,4 @@
-pub use mitra_activitypub::constants::{
+pub use mitra_federation::constants::{
     AP_CONTEXT,
     AP_MEDIA_TYPE,
     AP_PUBLIC,

@@ -1,8 +1,8 @@
 use serde::Deserialize;
 use serde_json::{Value as JsonValue};
 
-use mitra_activitypub::deserialization::deserialize_into_object_id;
 use mitra_config::Config;
+use mitra_federation::deserialization::deserialize_into_object_id;
 use mitra_models::{
     database::DatabaseClient,
     invoices::helpers::remote_invoice_opened,

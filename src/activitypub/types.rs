@@ -4,7 +4,7 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value as JsonValue};
 
-use mitra_activitypub::deserialization::{
+use mitra_federation::deserialization::{
     deserialize_string_array,
     deserialize_object_array,
 };

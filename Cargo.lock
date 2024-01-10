@@ -1985,12 +1985,12 @@ dependencies = [
  "futures",
  "hex",
  "log",
- "mitra-activitypub",
  "mitra-config",
  "mitra-models",
  "mitra-services",
  "mitra-utils",
  "mitra-validators",
+ "mitra_federation",
  "num_cpus",
  "openssl",
  "openssl-probe",
@@ -2007,20 +2007,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "mitra-activitypub"
-version = "2.6.0"
-dependencies = [
- "bytes",
- "log",
- "mitra-utils",
- "regex",
- "reqwest",
- "serde",
- "serde_json",
- "thiserror",
-]
-
-[[package]]
 name = "mitra-cli"
 version = "2.6.0"
 dependencies = [
@@ -2029,12 +2015,12 @@ dependencies = [
  "clap_lex",
  "log",
  "mitra",
- "mitra-activitypub",
  "mitra-config",
  "mitra-models",
  "mitra-services",
  "mitra-utils",
  "mitra-validators",
+ "mitra_federation",
  "serde_json",
  "tokio",
  "uuid",
@@ -2148,6 +2134,20 @@ dependencies = [
  "regex",
  "thiserror",
  "uuid",
+]
+
+[[package]]
+name = "mitra_federation"
+version = "2.6.0"
+dependencies = [
+ "bytes",
+ "log",
+ "mitra-utils",
+ "regex",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "thiserror",
 ]
 
 [[package]]

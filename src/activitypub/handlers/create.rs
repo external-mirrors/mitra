@@ -5,7 +5,8 @@ use serde::Deserialize;
 use serde_json::{Value as JsonValue};
 use uuid::Uuid;
 
-use mitra_activitypub::{
+use mitra_config::{Config, Instance};
+use mitra_federation::{
     addresses::ActorAddress,
     deserialization::{
         deserialize_into_object_id,
@@ -15,7 +16,6 @@ use mitra_activitypub::{
     },
     fetch::fetch_file,
 };
-use mitra_config::{Config, Instance};
 use mitra_models::{
     attachments::queries::create_attachment,
     database::{DatabaseClient, DatabaseError},

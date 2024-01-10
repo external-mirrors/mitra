@@ -26,8 +26,8 @@ use mitra::adapters::{
     },
 };
 use mitra::payments::monero::{get_payment_address, reopen_invoice};
-use mitra_activitypub::fetch::fetch_object;
 use mitra_config::Config;
+use mitra_federation::fetch::fetch_object;
 use mitra_models::{
     attachments::queries::delete_unused_attachments,
     background_jobs::queries::get_job_count,

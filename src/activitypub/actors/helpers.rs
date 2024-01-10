@@ -1,10 +1,10 @@
 use uuid::Uuid;
 
-use mitra_activitypub::{
+use mitra_config::Instance;
+use mitra_federation::{
     deserialization::parse_into_id_array,
     fetch::{fetch_file, fetch_object},
 };
-use mitra_config::Instance;
 use mitra_models::{
     database::DatabaseClient,
     profiles::queries::{create_profile, update_profile},

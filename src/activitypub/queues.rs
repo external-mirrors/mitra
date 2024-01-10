@@ -6,8 +6,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use uuid::Uuid;
 
-use mitra_activitypub::fetch::FetchError;
 use mitra_config::Config;
+use mitra_federation::fetch::FetchError;
 use mitra_models::{
     background_jobs::queries::{
         enqueue_job,

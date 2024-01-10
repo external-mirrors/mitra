@@ -13,7 +13,7 @@ use crate::activitypub::{
     },
 };
 
-pub use mitra_activitypub::agent::FederationAgent;
+pub use mitra_federation::agent::FederationAgent;
 
 pub(super) fn build_federation_agent_with_key(
     instance: &Instance,

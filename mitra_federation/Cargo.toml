@@ -1,5 +1,5 @@
 [package]
-name = "mitra-activitypub"
+name = "mitra_federation"
 version = "2.6.0"
 license = "AGPL-3.0-only"
 edition = "2021"

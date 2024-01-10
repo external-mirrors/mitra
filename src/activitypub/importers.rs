@@ -4,7 +4,8 @@ use chrono::{Duration, Utc};
 use serde::Deserialize;
 use serde_json::{Value as JsonValue};
 
-use mitra_activitypub::{
+use mitra_config::{Config, Instance};
+use mitra_federation::{
     addresses::ActorAddress,
     deserialization::get_object_id,
     fetch::{
@@ -14,7 +15,6 @@ use mitra_activitypub::{
     },
     jrd::JsonResourceDescriptor,
 };
-use mitra_config::{Config, Instance};
 use mitra_models::{
     database::{DatabaseClient, DatabaseError},
     posts::helpers::get_local_post_by_id,

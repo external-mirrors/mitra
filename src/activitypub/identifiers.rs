@@ -1,7 +1,7 @@
 use regex::Regex;
 use uuid::Uuid;
 
-use mitra_activitypub::identifiers::parse_object_id;
+use mitra_federation::identifiers::parse_object_id;
 use mitra_models::{
     posts::types::Post,
     profiles::types::{

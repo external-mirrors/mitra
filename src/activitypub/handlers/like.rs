@@ -1,8 +1,8 @@
 use serde::Deserialize;
 use serde_json::Value;
 
-use mitra_activitypub::deserialization::deserialize_into_object_id;
 use mitra_config::Config;
+use mitra_federation::deserialization::deserialize_into_object_id;
 use mitra_models::{
     database::{DatabaseClient, DatabaseError},
     reactions::queries::create_reaction,
