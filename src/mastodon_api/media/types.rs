@@ -11,7 +11,10 @@ use mitra_models::attachments::types::{
     DbMediaAttachment,
 };
 use mitra_services::media::get_file_url;
-use mitra_utils::base64;
+use mitra_utils::{
+    base64,
+    files::sniff_media_type,
+};
 
 #[derive(Deserialize)]
 pub struct AttachmentData {
@@ -30,8 +33,16 @@ pub struct AttachmentDataMultipartForm {
 impl From<AttachmentDataMultipartForm> for AttachmentData {
     fn from(form: AttachmentDataMultipartForm) -> Self {
         let media_type = form.file.content_type
-            .map(|mime| mime.essence_str().to_string())
-            // Assume octet-stream if type is not provided
+            .and_then(|mime| {
+                let media_type = mime.essence_str().to_string();
+                if media_type == "application/octet-stream" {
+                    // Workaround for Bloat-FE
+                    sniff_media_type(&form.file.data)
+                } else {
+                    Some(media_type)
+                }
+            })
+            // Use application/octet-stream as fallback type
             .unwrap_or("application/octet-stream".to_string());
         Self {
             file: base64::encode(form.file.data),
