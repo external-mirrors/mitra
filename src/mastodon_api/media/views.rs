@@ -1,11 +1,10 @@
 /// https://docs.joinmastodon.org/methods/media/#v1
 use actix_multipart::form::MultipartForm;
 use actix_web::{
-    post,
     web,
     Either,
     HttpResponse,
-    Scope,
+    Resource,
 };
 use actix_web_httpauth::extractors::bearer::BearerAuth;
 
@@ -29,7 +28,6 @@ use super::types::{
     AttachmentDataMultipartForm
 };
 
-#[post("")]
 async fn create_attachment_view(
     auth: BearerAuth,
     config: web::Data<Config>,
@@ -71,7 +69,12 @@ async fn create_attachment_view(
     Ok(HttpResponse::Ok().json(attachment))
 }
 
-pub fn media_api_scope() -> Scope {
-    web::scope("/api/v1/media")
-        .service(create_attachment_view)
+pub fn media_api_v1_view() -> Resource {
+    web::resource("/api/v1/media")
+        .route(web::post().to(create_attachment_view))
+}
+
+pub fn media_api_v2_view() -> Resource {
+    web::resource("/api/v2/media")
+        .route(web::post().to(create_attachment_view))
 }
