@@ -20,6 +20,7 @@ use mitra::http::{
     create_default_headers_middleware,
     json_error_handler,
     multiquery_config,
+    multiquery_form_config,
     ratelimit_config,
 };
 use mitra::init::initialize_app;
@@ -172,6 +173,7 @@ async fn main() -> std::io::Result<()> {
                 .error_handler(json_error_handler)
             )
             .app_data(multiquery_config())
+            .app_data(multiquery_form_config())
             .app_data(web::Data::new(config.clone()))
             .app_data(web::Data::new(db_pool.clone()))
             .app_data(web::Data::new(maybe_ethereum_contracts.clone()))

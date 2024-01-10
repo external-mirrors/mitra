@@ -59,7 +59,7 @@ regex = "1.8.4"
 serde = { version = "1.0.136", features = ["derive"] }
 serde_json = "1.0.89"
 # Used to parse querystrings
-serde_qs = { version = "0.11.0", features = ["actix4"] }
+serde_qs = { git = "https://github.com/silverpill/serde_qs", rev = "568c7007df8048ae3a05e469d9473e4e31ab7e5f", features = ["actix4"] }
 # Used for creating error types
 thiserror = "1.0.37"
 # Async runtime

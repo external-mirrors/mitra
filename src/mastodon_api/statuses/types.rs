@@ -166,12 +166,17 @@ impl Status {
 fn default_post_content_type() -> String { "text/markdown".to_string() }
 
 /// https://docs.joinmastodon.org/methods/statuses/
-#[derive(Deserialize)]
+#[derive(Debug, Deserialize)]
 pub struct StatusData {
     pub status: String,
 
-    #[serde(rename = "media_ids[]")]
-    pub media_ids: Option<Vec<Uuid>>,
+    // For application/json payloads
+    #[serde(default, rename = "media_ids[]")]
+    pub media_ids_json: Vec<Uuid>,
+
+    // For application/x-www-form-urlencoded payloads
+    #[serde(default)]
+    pub media_ids: Vec<Uuid>,
 
     pub in_reply_to_id: Option<Uuid>,
     pub visibility: Option<String>,
@@ -234,6 +239,7 @@ impl StatusSource {
 pub struct StatusUpdateData {
     pub status: String,
 
+    // For application/json payloads
     #[serde(rename = "media_ids[]")]
     pub media_ids: Option<Vec<Uuid>>,
 

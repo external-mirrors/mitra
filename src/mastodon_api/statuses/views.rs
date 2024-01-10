@@ -6,6 +6,7 @@ use actix_web::{
     post,
     put,
     web,
+    Either,
     HttpResponse,
     Scope,
 };
@@ -69,7 +70,7 @@ use crate::activitypub::{
     },
     identifiers::local_object_id,
 };
-use crate::http::{get_request_base_url, FormOrJson};
+use crate::http::{get_request_base_url, QsFormOrJson};
 use crate::mastodon_api::{
     errors::MastodonError,
     oauth::auth::get_current_user,
@@ -97,7 +98,7 @@ async fn create_status(
     connection_info: ConnectionInfo,
     config: web::Data<Config>,
     db_pool: web::Data<DbPool>,
-    status_data: FormOrJson<StatusData>,
+    status_data: QsFormOrJson<StatusData>,
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &mut **get_database_client(&db_pool).await?;
     let current_user = get_current_user(db_client, auth.token()).await?;
@@ -105,7 +106,10 @@ async fn create_status(
         return Err(MastodonError::PermissionError);
     };
     let instance = config.instance();
-    let status_data = status_data.into_inner();
+    let status_data = match status_data {
+        Either::Left(form) => form.into_inner(),
+        Either::Right(json) => json.into_inner(),
+    };
     let maybe_in_reply_to = if let Some(in_reply_to_id) = status_data.in_reply_to_id.as_ref() {
         let in_reply_to = match get_post_by_id(db_client, in_reply_to_id).await {
             Ok(post) => post,
@@ -174,7 +178,9 @@ async fn create_status(
         repost_of_id: None,
         visibility: visibility,
         is_sensitive: status_data.sensitive,
-        attachments: status_data.media_ids.unwrap_or(vec![]),
+        attachments: status_data.media_ids.iter().copied()
+            .chain(status_data.media_ids_json.iter().copied())
+            .collect(),
         mentions: mentions,
         tags: hashtags,
         links: links,

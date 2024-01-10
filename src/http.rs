@@ -19,13 +19,14 @@ use actix_web::{
 };
 use serde_json::json;
 use serde_qs::{
-    actix::{QsQuery, QsQueryConfig},
+    actix::{QsForm, QsFormConfig, QsQuery, QsQueryConfig},
     Config as QsConfig,
 };
 
 use crate::errors::HttpError;
 
 pub type FormOrJson<T> = Either<Form<T>, Json<T>>;
+pub type QsFormOrJson<T> = Either<QsForm<T>, Json<T>>;
 
 // actix currently doesn't support parameter arrays
 // https://github.com/actix/actix-web/issues/2044
@@ -35,6 +36,12 @@ pub fn multiquery_config() -> QsQueryConfig {
     // Disable strict mode
     let qs_config = QsConfig::new(2, false);
     QsQueryConfig::default().qs_config(qs_config)
+}
+
+pub fn multiquery_form_config() -> QsFormConfig {
+    // Disable strict mode
+    let qs_config = QsConfig::new(2, false);
+    QsFormConfig::default().qs_config(qs_config)
 }
 
 pub type RatelimitConfig = GovernorConfig<PeerIpKeyExtractor>;
