@@ -21,11 +21,11 @@ cp contrib/mitra.service $PACKAGE_DIR/debian/mitra.service
 
 # Config file
 mkdir -p $PACKAGE_DIR/etc/mitra
-cp contrib/mitra_config.yaml $PACKAGE_DIR/etc/mitra/config.yaml
+cp config.example.yaml $PACKAGE_DIR/etc/mitra/config.yaml
 
 # Config example
 mkdir -p $PACKAGE_DIR/usr/share/mitra/examples
-cp contrib/mitra_config.yaml $PACKAGE_DIR/usr/share/mitra/examples/config.yaml
+cp config.example.yaml $PACKAGE_DIR/usr/share/mitra/examples/config.yaml
 
 # Binaries
 if [ -z "$TARGET" ]; then

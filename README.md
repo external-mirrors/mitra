@@ -68,7 +68,7 @@ CREATE USER mitra WITH PASSWORD 'mitra';
 CREATE DATABASE mitra OWNER mitra ENCODING 'UTF8';
 ```
 
-Create configuration file by copying `contrib/mitra_config.yaml` and configure the instance. Default config file path is `/etc/mitra/config.yaml`, but it can be changed using `CONFIG_PATH` environment variable.
+Create configuration file by copying [`config.example.yaml`](./config.example.yaml) and configure the instance. Default config file path is `/etc/mitra/config.yaml`, but it can be changed using `CONFIG_PATH` environment variable.
 
 Put any static files into the directory specified in configuration file. Building instructions for `mitra-web` frontend can be found at https://codeberg.org/silverpill/mitra-web#project-setup.
 
@@ -189,7 +189,7 @@ docker-compose --profile monero up -d
 Create config file, adjust settings if needed:
 
 ```shell
-cp config.yaml.example config.yaml
+cp config_dev.example.yaml config.yaml
 ```
 
 Compile and run service:

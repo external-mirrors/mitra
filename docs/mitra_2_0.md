@@ -18,7 +18,7 @@
 
 Prior to version 2.0, Mitra printed warnings when it encountered deprecated configuration parameters. In Mitra 2.0 these parameters are ignored.
 
-See [annotated example of config.yaml file](../contrib/mitra_config.yaml) for more information.
+See [annotated example of config.yaml file](../config.example.yaml) for more information.
 
 ## HTTP API
 
