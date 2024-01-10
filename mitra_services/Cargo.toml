@@ -1,5 +1,5 @@
 [package]
-name = "mitra-services"
+name = "mitra_services"
 version = "2.6.0"
 license = "AGPL-3.0-only"
 edition = "2021"
@@ -36,9 +36,9 @@ uuid = { version = "1.1.2", features = ["serde", "v4"] }
 # Used to query ethereum node
 web3 = { version = "0.19.0", default-features = false, features = ["http", "http-tls", "signing"] }
 
-mitra-config = { path = "../mitra-config" }
-mitra-models = { path = "../mitra-models" }
-mitra-utils = { path = "../mitra-utils" }
+mitra_config = { path = "../mitra_config" }
+mitra_models = { path = "../mitra_models" }
+mitra_utils = { path = "../mitra_utils" }
 
 [features]
 ethereum-extras = []

@@ -1,5 +1,5 @@
 [package]
-name = "mitra-validators"
+name = "mitra_validators"
 version = "2.6.0"
 license = "AGPL-3.0-only"
 edition = "2021"
@@ -13,5 +13,5 @@ thiserror = "1.0.37"
 # Used to work with UUIDs
 uuid = "1.1.2"
 
-mitra-models = { path = "../mitra-models" }
-mitra-utils = { path = "../mitra-utils" }
+mitra_models = { path = "../mitra_models" }
+mitra_utils = { path = "../mitra_utils" }

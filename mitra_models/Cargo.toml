@@ -1,13 +1,11 @@
 [package]
-name = "mitra-models"
+name = "mitra_models"
 version = "2.6.0"
 license = "AGPL-3.0-only"
 edition = "2021"
 rust-version = "1.60"
 
 [dependencies]
-mitra-utils = { path = "../mitra-utils" }
-
 # Used for working with dates
 chrono = { version = "0.4.23", default-features = false, features = ["std", "serde"] }
 # Used for pooling database connections
@@ -38,10 +36,12 @@ postgres_query_macro = { git = "https://github.com/nolanderc/rust-postgres-query
 # Used to work with UUIDs
 uuid = { version = "1.1.2", features = ["serde", "v4"] }
 
-[dev-dependencies]
-mitra-utils = { path = "../mitra-utils", features = ["test-utils"] }
+mitra_utils = { path = "../mitra_utils" }
 
+[dev-dependencies]
 serial_test = "0.7.0"
+
+mitra_utils = { path = "../mitra_utils", features = ["test-utils"] }
 
 [features]
 test-utils = []

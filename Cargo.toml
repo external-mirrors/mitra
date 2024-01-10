@@ -12,23 +12,23 @@ default-run = "mitra"
 [workspace]
 members = [
   ".",
-  "mitra-cli",
-  "mitra-config",
+  "mitra_cli",
+  "mitra_config",
   "mitra_federation",
-  "mitra-models",
-  "mitra-services",
-  "mitra-utils",
-  "mitra-validators",
+  "mitra_models",
+  "mitra_services",
+  "mitra_utils",
+  "mitra_validators",
 ]
 default-members = [
   ".",
-  "mitra-cli",
-  "mitra-config",
+  "mitra_cli",
+  "mitra_config",
   "mitra_federation",
-  "mitra-models",
-  "mitra-services",
-  "mitra-utils",
-  "mitra-validators",
+  "mitra_models",
+  "mitra_services",
+  "mitra_utils",
+  "mitra_validators",
 ]
 
 [dependencies]
@@ -71,24 +71,24 @@ uuid = { version = "1.1.2", features = ["serde", "v4"] }
 # User for working with block/allow lists
 wildmatch = "2.1.1"
 
-mitra-config = { path = "mitra-config" }
+mitra_config = { path = "mitra_config" }
 mitra_federation = { path = "mitra_federation" }
-mitra-models = { path = "mitra-models" }
-mitra-services = { path = "mitra-services" }
-mitra-utils = { path = "mitra-utils" }
-mitra-validators = { path = "mitra-validators" }
+mitra_models = { path = "mitra_models" }
+mitra_services = { path = "mitra_services" }
+mitra_utils = { path = "mitra_utils" }
+mitra_validators = { path = "mitra_validators" }
 
 [dev-dependencies]
 serial_test = "0.7.0"
 
-mitra-config = { path = "mitra-config", features = ["test-utils"] }
-mitra-models = { path = "mitra-models", features = ["test-utils"] }
-mitra-utils = { path = "mitra-utils", features = ["test-utils"] }
+mitra_config = { path = "mitra_config", features = ["test-utils"] }
+mitra_models = { path = "mitra_models", features = ["test-utils"] }
+mitra_utils = { path = "mitra_utils", features = ["test-utils"] }
 
 [features]
-ethereum-extras = ["mitra-services/ethereum-extras"]
+ethereum-extras = ["mitra_services/ethereum-extras"]
 
-production = ["mitra-config/production"]
+production = ["mitra_config/production"]
 
 [target.'cfg(target_env = "musl")'.dependencies]
 openssl = { version = "0.10.55", features = ["vendored"] }

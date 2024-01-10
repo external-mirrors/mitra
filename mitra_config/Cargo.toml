@@ -1,13 +1,11 @@
 [package]
-name = "mitra-config"
+name = "mitra_config"
 version = "2.6.0"
 license = "AGPL-3.0-only"
 edition = "2021"
 rust-version = "1.60"
 
 [dependencies]
-mitra-utils = { path = "../mitra-utils" }
-
 # Used to read .env files
 dotenvy = ">=0.15.0, <0.15.7"
 # Used for logging
@@ -20,6 +18,8 @@ serde = { version = "1.0.136", features = ["derive"] }
 serde_yaml = "0.8.17"
 # Used for creating error types
 thiserror = "1.0.37"
+
+mitra_utils = { path = "../mitra_utils" }
 
 [features]
 production = []
