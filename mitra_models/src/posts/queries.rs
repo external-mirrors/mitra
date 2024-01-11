@@ -1284,15 +1284,16 @@ pub async fn find_extraneous_posts(
 ) -> Result<Vec<Uuid>, DatabaseError> {
     let rows = db_client.query(
         "
-        WITH RECURSIVE context_post (id, post_id, created_at) AS (
+        WITH RECURSIVE context_post (context_id, post_id, created_at) AS (
             SELECT post.id, post.id, post.created_at
             FROM post
             WHERE
+                -- top-level posts
                 post.in_reply_to_id IS NULL
                 AND post.repost_of_id IS NULL
                 AND post.created_at < $1
             UNION
-            SELECT context_post.id, post.id, post.created_at
+            SELECT context_post.context_id, post.id, post.created_at
             FROM post
             JOIN context_post ON (
                 post.in_reply_to_id = context_post.post_id
@@ -1302,14 +1303,15 @@ pub async fn find_extraneous_posts(
         SELECT context.id
         FROM (
             SELECT
-                context_post.id,
+                context_post.context_id AS id,
                 array_agg(context_post.post_id) AS posts,
                 max(context_post.created_at) AS updated_at
             FROM context_post
-            GROUP BY context_post.id
+            GROUP BY context_post.context_id
         ) AS context
         WHERE
             context.updated_at < $1
+            -- no local replies or reposts in context
             AND NOT EXISTS (
                 SELECT 1
                 FROM post
@@ -1318,6 +1320,7 @@ pub async fn find_extraneous_posts(
                     post.id = ANY(context.posts)
                     AND actor_profile.actor_json IS NULL
             )
+            -- no local mentions in any post from context
             AND NOT EXISTS (
                 SELECT 1
                 FROM mention
@@ -1326,6 +1329,7 @@ pub async fn find_extraneous_posts(
                     mention.post_id = ANY(context.posts)
                     AND actor_profile.actor_json IS NULL
             )
+            -- no local reactions on any post from context
             AND NOT EXISTS (
                 SELECT 1
                 FROM post_reaction
@@ -1334,6 +1338,7 @@ pub async fn find_extraneous_posts(
                     post_reaction.post_id = ANY(context.posts)
                     AND actor_profile.actor_json IS NULL
             )
+            -- no local links to any post in context
             AND NOT EXISTS (
                 SELECT 1
                 FROM post_link
@@ -1975,19 +1980,43 @@ mod tests {
         let db_client = &mut create_test_database().await;
         let author_data = ProfileCreateData {
             username: "test".to_string(),
+            hostname: Some("social.example".to_string()),
+            public_keys: vec![DbActorKey::default()],
+            actor_json: Some(DbActor {
+                id: "https://social.example/users/1".to_string(),
+                ..Default::default()
+            }),
             ..Default::default()
         };
         let author = create_profile(db_client, author_data).await.unwrap();
-        let post_data = PostCreateData {
+        let post_data_1 = PostCreateData {
             content: "test post".to_string(),
+            object_id: Some("https://social.example/objects/1".to_string()),
+            created_at: Utc::now(),
             ..Default::default()
         };
-        create_post(db_client, &author.id, post_data).await.unwrap();
+        let _post_1 = create_post(
+            db_client,
+            &author.id,
+            post_data_1,
+        ).await.unwrap();
+        let post_data_2 = PostCreateData {
+            content: "test post".to_string(),
+            object_id: Some("https://social.example/objects/2".to_string()),
+            created_at: Utc::now() - Duration::days(7),
+            ..Default::default()
+        };
+        let post_2 = create_post(
+            db_client,
+            &author.id,
+            post_data_2,
+        ).await.unwrap();
+
         let updated_before = Utc::now() - Duration::days(1);
         let result = find_extraneous_posts(
             db_client,
             &updated_before,
         ).await.unwrap();
-        assert!(result.is_empty());
+        assert_eq!(result, vec![post_2.id]);
     }
 }
