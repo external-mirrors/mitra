@@ -881,6 +881,28 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Attachment'
+  /api/v1/media/{attachment_id}:
+    get:
+      summary: Get a media attachment.
+      security:
+        - tokenAuth: []
+      parameters:
+        - name: attachment_id
+          in: path
+          description: Attachment ID
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        200:
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Attachment'
+        404:
+          description: Attachment is not owned by you or does not exist.
   /api/v2/media:
     post:
       summary: Create an attachment to be used with a new post.

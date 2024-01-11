@@ -49,6 +49,24 @@ pub async fn create_attachment(
     Ok(db_attachment)
 }
 
+pub async fn get_attachment(
+    db_client: &impl DatabaseClient,
+    owner_id: &Uuid,
+    attachment_id: &Uuid,
+) -> Result<DbMediaAttachment, DatabaseError> {
+    let maybe_row = db_client.query_opt(
+        "
+        SELECT media_attachment
+        FROM media_attachment
+        WHERE owner_id = $1 AND id = $2
+        ",
+        &[&owner_id, &attachment_id],
+    ).await?;
+    let row = maybe_row.ok_or(DatabaseError::NotFound("attachment"))?;
+    let db_attachment = row.try_get("media_attachment")?;
+    Ok(db_attachment)
+}
+
 pub async fn set_attachment_ipfs_cid(
     db_client: &impl DatabaseClient,
     attachment_id: &Uuid,
@@ -135,5 +153,48 @@ mod tests {
         assert_eq!(attachment.description.unwrap(), description);
         assert_eq!(attachment.ipfs_cid.is_none(), true);
         assert_eq!(attachment.post_id.is_none(), true);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_get_attachment() {
+        let db_client = &mut create_test_database().await;
+        let profile_data_1 = ProfileCreateData {
+            username: "test1".to_string(),
+            ..Default::default()
+        };
+        let profile_1 =
+            create_profile(db_client, profile_data_1).await.unwrap();
+        let profile_data_2 = ProfileCreateData {
+            username: "test2".to_string(),
+            ..Default::default()
+        };
+        let profile_2 =
+            create_profile(db_client, profile_data_2).await.unwrap();
+        let file_name = "test.jpg";
+        let file_size = 10000;
+        let media_type = "image/png";
+        let DbMediaAttachment { id: attachment_id, .. } = create_attachment(
+            db_client,
+            &profile_1.id,
+            file_name.to_string(),
+            file_size,
+            media_type.to_string(),
+            None,
+        ).await.unwrap();
+
+        let attachment = get_attachment(
+            db_client,
+            &profile_1.id,
+            &attachment_id,
+        ).await.unwrap();
+        assert_eq!(attachment.file_name, file_name);
+
+        let error = get_attachment(
+            db_client,
+            &profile_2.id,
+            &attachment_id,
+        ).await.err().unwrap();
+        assert!(matches!(error, DatabaseError::NotFound(_)));
     }
 }

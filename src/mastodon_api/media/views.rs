@@ -1,16 +1,17 @@
-/// https://docs.joinmastodon.org/methods/media/#v1
+/// https://docs.joinmastodon.org/methods/media/
 use actix_multipart::form::MultipartForm;
 use actix_web::{
     web,
     Either,
     HttpResponse,
-    Resource,
+    Scope,
 };
 use actix_web_httpauth::extractors::bearer::BearerAuth;
+use uuid::Uuid;
 
 use mitra_config::Config;
 use mitra_models::{
-    attachments::queries::create_attachment,
+    attachments::queries::{create_attachment, get_attachment},
     database::{get_database_client, DbPool},
 };
 use mitra_services::media::MediaStorage;
@@ -69,12 +70,33 @@ async fn create_attachment_view(
     Ok(HttpResponse::Ok().json(attachment))
 }
 
-pub fn media_api_v1_view() -> Resource {
-    web::resource("/api/v1/media")
-        .route(web::post().to(create_attachment_view))
+async fn get_attachment_view(
+    auth: BearerAuth,
+    config: web::Data<Config>,
+    db_pool: web::Data<DbPool>,
+    attachment_id: web::Path<Uuid>,
+) -> Result<HttpResponse, MastodonError> {
+    let db_client = &**get_database_client(&db_pool).await?;
+    let current_user = get_current_user(db_client, auth.token()).await?;
+    let db_attachment = get_attachment(
+        db_client,
+        &current_user.id,
+        &attachment_id,
+    ).await?;
+    let attachment = Attachment::from_db(
+        &config.instance_url(),
+        db_attachment,
+    );
+    Ok(HttpResponse::Ok().json(attachment))
 }
 
-pub fn media_api_v2_view() -> Resource {
-    web::resource("/api/v2/media")
-        .route(web::post().to(create_attachment_view))
+pub fn media_api_v1_scope() -> Scope {
+    web::scope("/api/v1/media")
+        .route("", web::post().to(create_attachment_view))
+        .route("/{attachment_id}", web::get().to(get_attachment_view))
+}
+
+pub fn media_api_v2_scope() -> Scope {
+    web::scope("/api/v2/media")
+        .route("", web::post().to(create_attachment_view))
 }
