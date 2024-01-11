@@ -29,6 +29,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Fill `in_reply_to_account_id` value on `Status.reblog` object.
 - Fixed extraction of media IDs from urlencoded form data.
+- Prevent pruning of quoted posts.
 
 ## [2.6.0] - 2023-12-25
 

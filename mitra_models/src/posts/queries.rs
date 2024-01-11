@@ -1348,6 +1348,15 @@ pub async fn find_extraneous_posts(
                     post_link.target_id = ANY(context.posts)
                     AND actor_profile.actor_json IS NULL
             )
+            -- no links to any post in context from other contexts
+            AND NOT EXISTS (
+                SELECT 1
+                FROM post_link
+                JOIN post ON post_link.source_id = post.id
+                WHERE
+                    post_link.target_id = ANY(context.posts)
+                    AND post_link.source_id <> ALL(context.posts)
+            )
         ",
         &[&updated_before],
     ).await?;
