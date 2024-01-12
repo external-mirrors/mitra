@@ -34,7 +34,7 @@ use mitra_services::{
 use mitra_utils::passwords::verify_password;
 use mitra_validators::errors::ValidationError;
 
-use crate::http::FormOrJson;
+use crate::http::{ContentSecurityPolicy, FormOrJson};
 use crate::mastodon_api::errors::MastodonError;
 
 use super::auth::get_current_user;
@@ -54,9 +54,12 @@ use super::utils::{
 
 #[get("/authorize")]
 async fn authorization_page_view() -> HttpResponse {
-    let page = render_authorization_page();
+    let (page, nonce) = render_authorization_page();
+    let mut csp = ContentSecurityPolicy::default();
+    csp.insert("style-src", &format!("'self' 'nonce-{nonce}'"));
     HttpResponse::Ok()
         .content_type("text/html")
+        .append_header((http_header::CONTENT_SECURITY_POLICY, csp.into_string()))
         .body(page)
 }
 
@@ -104,9 +107,12 @@ async fn authorize_view(
     ).await?;
 
     let response = if oauth_app.redirect_uri == "urn:ietf:wg:oauth:2.0:oob" {
-        let page = render_authorization_code_page(authorization_code);
+        let (page, nonce) = render_authorization_code_page(authorization_code);
+        let mut csp = ContentSecurityPolicy::default();
+        csp.insert("style-src", &format!("'self' 'nonce-{nonce}'"));
         HttpResponse::Ok()
             .content_type("text/html")
+            .append_header((http_header::CONTENT_SECURITY_POLICY, csp.into_string()))
             .body(page)
     } else {
         let mut redirect_uri = format!(

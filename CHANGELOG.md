@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Changed
 
 - Validate OAuth redirect URIs.
+- Generate random nonce for inline styles on authorization page.
 
 ## [2.7.0] - 2024-01-12
 

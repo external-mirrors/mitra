@@ -3,19 +3,31 @@ use mitra_utils::{
     random::generate_random_sequence,
 };
 
-pub fn render_authorization_page() -> String {
-    format!(include_str!("template.html"), content=r#"
-    <form method="post">
-        <input type="text" name="username" placeholder="Username">
-        <br>
-        <input type="password" name="password" placeholder="Password">
-        <br>
-        <button type="submit">Submit</button>
-    </form>"#)
+const NONCE_SIZE: usize = 10;
+
+fn generate_nonce() -> String {
+    let value: [u8; NONCE_SIZE] = generate_random_sequence();
+    hex::encode(value)
 }
 
-pub fn render_authorization_code_page(code: String) -> String {
-    format!(include_str!("template.html"), content=code)
+pub fn render_authorization_page() -> (String, String) {
+    let nonce = generate_nonce();
+    let html = format!(
+        include_str!("templates/base.html"),
+        nonce=nonce,
+        content=include_str!("templates/form.html"),
+    );
+    (html, nonce)
+}
+
+pub fn render_authorization_code_page(code: String) -> (String, String) {
+    let nonce = generate_nonce();
+    let html = format!(
+        include_str!("templates/base.html"),
+        nonce=nonce,
+        content=code,
+    );
+    (html, nonce)
 }
 
 const ACCESS_TOKEN_SIZE: usize = 20;

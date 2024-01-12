@@ -84,7 +84,11 @@ pub struct ContentSecurityPolicy {
 }
 
 impl ContentSecurityPolicy {
-    fn into_string(self) -> String {
+    pub fn insert(&mut self, directive: &str, value: &str) -> () {
+        self.directives.insert(directive.to_string(), value.to_string());
+    }
+
+    pub fn into_string(self) -> String {
         self.directives.iter()
             .map(|(key, val)| format!("{key} {val}"))
             .collect::<Vec<_>>()
@@ -103,8 +107,7 @@ impl Default for ContentSecurityPolicy {
             // script-src unsafe-inline required by MetaMask
             // https://github.com/MetaMask/metamask-extension/issues/3133
             ("script-src", "'self' 'unsafe-inline'"),
-            // style-src oauth-authorization required by OAuth authorization page
-            ("style-src", "'self' 'nonce-oauth-authorization'"),
+            ("style-src", "'self'"),
             ("manifest-src", "'self'"),
             ("frame-ancestors", "'none'"),
             ("base-uri", "'self'"),
@@ -154,7 +157,7 @@ mod tests {
         let csp = ContentSecurityPolicy::default();
         assert_eq!(
             csp.into_string(),
-            "base-uri 'self'; connect-src 'self'; default-src 'none'; form-action 'self'; frame-ancestors 'none'; img-src 'self' data:; manifest-src 'self'; media-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'nonce-oauth-authorization'",
+            "base-uri 'self'; connect-src 'self'; default-src 'none'; form-action 'self'; frame-ancestors 'none'; img-src 'self' data:; manifest-src 'self'; media-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self'",
         );
     }
 }
