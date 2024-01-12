@@ -1,3 +1,5 @@
+use std::collections::BTreeMap;
+
 use actix_governor::{
     GovernorConfig,
     GovernorConfigBuilder,
@@ -7,7 +9,10 @@ use actix_web::{
     body::{BodySize, BoxBody, MessageBody},
     dev::{ConnectionInfo, ServiceResponse},
     error::{Error, JsonPayloadError},
-    http::StatusCode,
+    http::{
+        header as http_header,
+        StatusCode,
+    },
     middleware::{
         DefaultHeaders,
         ErrorHandlerResponse,
@@ -74,24 +79,51 @@ pub fn create_auth_error_handler<B: MessageBody + 'static>() -> ErrorHandlers<B>
         })
 }
 
+pub struct ContentSecurityPolicy {
+    directives: BTreeMap<String, String>,
+}
+
+impl ContentSecurityPolicy {
+    fn into_string(self) -> String {
+        self.directives.iter()
+            .map(|(key, val)| format!("{key} {val}"))
+            .collect::<Vec<_>>()
+            .join("; ")
+    }
+
+}
+
+impl Default for ContentSecurityPolicy {
+    fn default() -> Self {
+        let defaults = [
+            ("default-src", "'none'"),
+            ("connect-src", "'self'"),
+            ("img-src", "'self' data:"),
+            ("media-src", "'self'"),
+            // script-src unsafe-inline required by MetaMask
+            // https://github.com/MetaMask/metamask-extension/issues/3133
+            ("script-src", "'self' 'unsafe-inline'"),
+            // style-src oauth-authorization required by OAuth authorization page
+            ("style-src", "'self' 'nonce-oauth-authorization'"),
+            ("manifest-src", "'self'"),
+            ("frame-ancestors", "'none'"),
+            ("base-uri", "'self'"),
+            ("form-action", "'self'"),
+        ];
+        let directives = defaults.iter()
+            .map(|(k, v)| (k.to_string(), v.to_string()))
+            .collect();
+        Self { directives }
+    }
+}
+
 pub fn create_default_headers_middleware() -> DefaultHeaders {
     DefaultHeaders::new()
         .add((
-            "Content-Security-Policy",
-            // script-src unsafe-inline required by MetaMask
-            // style-src oauth-authorization required by OAuth authorization page
-            "default-src 'none'; \
-                connect-src 'self'; \
-                img-src 'self' data:; \
-                media-src 'self'; \
-                script-src 'self' 'unsafe-inline'; \
-                style-src 'self' 'nonce-oauth-authorization'; \
-                manifest-src 'self'; \
-                frame-ancestors 'none'; \
-                base-uri 'self'; \
-                form-action 'self'",
+            http_header::CONTENT_SECURITY_POLICY,
+            ContentSecurityPolicy::default().into_string(),
         ))
-        .add(("X-Content-Type-Options", "nosniff"))
+        .add((http_header::X_CONTENT_TYPE_OPTIONS, "nosniff"))
 }
 
 /// Convert JSON payload deserialization errors into validation errors
@@ -111,4 +143,18 @@ pub fn get_request_base_url(connection_info: ConnectionInfo) -> String {
     let scheme = connection_info.scheme();
     let host = connection_info.host();
     format!("{}://{}", scheme, host)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_content_security_policy() {
+        let csp = ContentSecurityPolicy::default();
+        assert_eq!(
+            csp.into_string(),
+            "base-uri 'self'; connect-src 'self'; default-src 'none'; form-action 'self'; frame-ancestors 'none'; img-src 'self' data:; manifest-src 'self'; media-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'nonce-oauth-authorization'",
+        );
+    }
 }
