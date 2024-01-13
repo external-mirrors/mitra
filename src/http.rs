@@ -111,7 +111,9 @@ impl Default for ContentSecurityPolicy {
             ("manifest-src", "'self'"),
             ("frame-ancestors", "'none'"),
             ("base-uri", "'self'"),
-            ("form-action", "'self'"),
+            // form-action doesn't work properly in Chrome.
+            // Redirects are blocked even if scheme is whitelisted.
+            //("form-action", "'self'"),
         ];
         let directives = defaults.iter()
             .map(|(k, v)| (k.to_string(), v.to_string()))
@@ -157,7 +159,7 @@ mod tests {
         let csp = ContentSecurityPolicy::default();
         assert_eq!(
             csp.into_string(),
-            "base-uri 'self'; connect-src 'self'; default-src 'none'; form-action 'self'; frame-ancestors 'none'; img-src 'self' data:; manifest-src 'self'; media-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self'",
+            "base-uri 'self'; connect-src 'self'; default-src 'none'; frame-ancestors 'none'; img-src 'self' data:; manifest-src 'self'; media-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self'",
         );
     }
 }
