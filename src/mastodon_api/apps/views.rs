@@ -13,6 +13,7 @@ use mitra_models::{
     oauth::queries::create_oauth_app,
     oauth::types::DbOauthAppData,
 };
+use mitra_validators::oauth::validate_redirect_uri;
 
 use crate::http::FormOrJson;
 use crate::mastodon_api::{
@@ -44,6 +45,7 @@ async fn create_app_view(
         client_id: Uuid::new_v4(),
         client_secret: generate_oauth_token(),
     };
+    validate_redirect_uri(&db_app_data.redirect_uri)?;
     let db_app = create_oauth_app(db_client, db_app_data).await?;
     let app = OauthApp {
         name: db_app.app_name,
