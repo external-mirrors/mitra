@@ -8,11 +8,11 @@ rust-version = "1.60"
 [dependencies]
 # Used for logging
 log = "0.4.14"
-# Used for making async HTTP requests
-reqwest = { version = "0.11.13", default-features = false, features = ["json", "socks"] }
-bytes = "=1.2.0"
 # Used for working with regular expressions
 regex = "1.8.4"
+# Used for making async HTTP requests
+reqwest = { version = "0.11.18", default-features = false, features = ["json", "socks"] }
+bytes = "=1.2.0"
 # Used for serialization/deserialization
 serde = { version = "1.0.136", features = ["derive"] }
 serde_json = "1.0.89"
@@ -20,3 +20,9 @@ serde_json = "1.0.89"
 thiserror = "1.0.37"
 
 mitra_utils = { path = "../mitra_utils" }
+
+[features]
+default = ["native-tls"]
+
+native-tls = ["reqwest/native-tls"]
+rustls-tls = ["reqwest/rustls-tls-native-roots"]
