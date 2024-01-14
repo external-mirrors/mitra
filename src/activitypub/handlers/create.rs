@@ -749,11 +749,11 @@ pub async fn handle_note(
     Ok(post)
 }
 
-pub async fn is_unsolicited_message(
+async fn check_unsolicited_message(
     db_client: &impl DatabaseClient,
     instance_url: &str,
     object: &AttributedObject,
-) -> Result<bool, HandlerError> {
+) -> Result<(), HandlerError> {
     let author_id = get_object_attributed_to(object)?;
     let author_has_followers =
         has_local_followers(db_client, &author_id).await?;
@@ -774,12 +774,16 @@ pub async fn is_unsolicited_message(
     } else {
         true
     };
-    let result =
+    let is_unsolicited =
         is_disconnected &&
         is_public_object(&audience) &&
         !has_local_recipients &&
+        // Possible cause: a failure to process Undo(Follow)
         !author_has_followers;
-    Ok(result)
+    if is_unsolicited {
+        return Err(HandlerError::UnsolicitedMessage(author_id));
+    };
+    Ok(())
 }
 
 #[derive(Deserialize)]
@@ -796,9 +800,11 @@ pub async fn validate_create(
 ) -> Result<(), HandlerError> {
     let CreateNote { object, .. } = serde_json::from_value(activity.clone())
         .map_err(|_| ValidationError("invalid object"))?;
-    if is_unsolicited_message(db_client, &config.instance_url(), &object).await? {
-        return Err(ValidationError("unsolicited message").into());
-    };
+    check_unsolicited_message(
+        db_client,
+        &config.instance_url(),
+        &object,
+    ).await?;
     Ok(())
 }
 

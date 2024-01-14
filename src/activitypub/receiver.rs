@@ -63,6 +63,9 @@ pub enum HandlerError {
 
     #[error(transparent)]
     AuthError(#[from] AuthenticationError),
+
+    #[error("unsolicited message from {0}")]
+    UnsolicitedMessage(String),
 }
 
 impl From<HandlerError> for HttpError {
@@ -79,6 +82,8 @@ impl From<HandlerError> for HttpError {
             HandlerError::AuthError(_) => {
                 HttpError::AuthError("invalid signature")
             },
+            // Return 403 Forbidden
+            HandlerError::UnsolicitedMessage(_) => HttpError::PermissionError,
         }
     }
 }
