@@ -2058,6 +2058,7 @@ name = "mitra_federation"
 version = "2.7.1"
 dependencies = [
  "bytes",
+ "http",
  "log",
  "mitra_utils",
  "regex",

@@ -13,6 +13,7 @@ use actix_web::{
 use uuid::Uuid;
 
 use mitra_config::Config;
+use mitra_federation::http_server::is_activitypub_request;
 use mitra_models::{
     database::{get_database_client, DbPool},
     posts::queries::get_post_by_id,
@@ -21,7 +22,6 @@ use mitra_models::{
 
 use crate::activitypub::{
     identifiers::{post_object_id, profile_actor_id},
-    views::is_activitypub_request,
 };
 use crate::errors::HttpError;
 
