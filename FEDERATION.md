@@ -66,9 +66,9 @@ Example:
 
 ### Supported proof suites
 
-#### eddsa-jcs-2022
+#### jcs-eddsa-2022
 
-https://w3c.github.io/vc-di-eddsa/#eddsa-jcs-2022
+A variant of [eddsa-jcs-2022](https://w3c.github.io/vc-di-eddsa/#eddsa-jcs-2022) cryptosuite without context injection.
 
 #### MitraJcsRsaSignature2022
 
@@ -103,7 +103,7 @@ Custom emojis are implemented as described in Mastodon documentation: https://do
 
 Supported proof types:
 
-- `eddsa-jcs-2022`
+- `jcs-eddsa-2022`: A variant of [eddsa-jcs-2022](https://w3c.github.io/vc-di-eddsa/#eddsa-jcs-2022) cryptosuite without context injection.
 - `MitraJcsEip191Signature2022`: EIP-191 (Ethereum personal signatures)
 - `MitraJcsEd25519Signature2022`: [Minisign](https://jedisct1.github.io/minisign/) (pre-hashed)
 
