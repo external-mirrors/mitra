@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Changed
 
 - Add actor ID to unsolicited message report.
+- Don't strip query during key ID processing if `id` query parameter is present.
 
 ## [2.7.1] - 2024-01-13
 

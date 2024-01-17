@@ -21,8 +21,15 @@ pub fn is_object(value: &JsonValue) -> bool {
 
 pub fn key_id_to_actor_id(key_id: &str) -> Result<String, UrlError> {
     let key_url = Url::parse(key_id)?;
-    // Strip fragment and query (works with most AP servers)
-    let actor_id = &key_url[..Position::AfterPath];
+    let position = if key_url.query_pairs().any(|(name, _)| name == "id") {
+        // Podcast Index compat
+        // Strip fragment, keep query
+        Position::AfterQuery
+    } else {
+        // Strip fragment and query (works with most AP servers)
+        Position::AfterPath
+    };
+    let actor_id = &key_url[..position];
     // GoToSocial compat
     let actor_id = actor_id.trim_end_matches("/main-key");
     Ok(actor_id.to_string())
@@ -87,5 +94,10 @@ mod tests {
         let key_id = "https://myserver.org/actor/main-key";
         let actor_id = key_id_to_actor_id(key_id).unwrap();
         assert_eq!(actor_id, "https://myserver.org/actor");
+
+        // Podcast Index
+        let key_id = "https://ap.podcastindex.org/podcasts?id=920666#main-key";
+        let actor_id = key_id_to_actor_id(key_id).unwrap();
+        assert_eq!(actor_id, "https://ap.podcastindex.org/podcasts?id=920666");
     }
 }
