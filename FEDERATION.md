@@ -186,7 +186,7 @@ The `Remove` activity is used to notify the subscriber about expired subscriptio
 
 ## Cryptocurrency addresses in profile
 
-Cryptocurrency addresses are represented as `PropertyValue` attachments where `name` attribute is a currency symbol prefixed with `$`:
+`PropertyValue` attachments where `name` attribute is a currency symbol prefixed with `$` are recognized as cryptocurrency addresses:
 
 ```json
 {
@@ -195,3 +195,5 @@ Cryptocurrency addresses are represented as `PropertyValue` attachments where `n
   "value": "8Ahza5RM4JQgtdqvpcF1U628NN5Q87eryXQad3Fy581YWTZU8o3EMbtScuioQZSkyNNEEE1Lkj2cSbG4VnVYCW5L1N4os5p"
 }
 ```
+
+Some commonly used labels like `LUD16` are recognized as well.
