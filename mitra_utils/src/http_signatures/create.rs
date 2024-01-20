@@ -12,6 +12,7 @@ use crate::{
 };
 
 const HTTP_SIGNATURE_ALGORITHM: &str = "rsa-sha256";
+// https://www.rfc-editor.org/rfc/rfc9110#http.date
 const HTTP_SIGNATURE_DATE_FORMAT: &str = "%a, %d %b %Y %T GMT";
 
 pub struct HttpSignatureHeaders {
