@@ -1,7 +1,7 @@
 use uuid::Uuid;
 
-use mitra_config::Instance;
 use mitra_federation::{
+    agent::FederationAgent,
     deserialization::parse_into_id_array,
     fetch::{fetch_file, fetch_object},
 };
@@ -34,7 +34,6 @@ use mitra_validators::{
 
 use crate::activitypub::{
     actors::types::Actor,
-    agent::build_federation_agent,
     handlers::create::handle_emoji,
     identifiers::validate_object_id,
     receiver::HandlerError,
@@ -60,16 +59,15 @@ use super::attachments::{
 };
 
 async fn fetch_actor_images(
-    instance: &Instance,
-    actor: &Actor,
+    agent: &FederationAgent,
     storage: &MediaStorage,
+    actor: &Actor,
     default_avatar: Option<ProfileImage>,
     default_banner: Option<ProfileImage>,
 ) -> Result<(Option<ProfileImage>, Option<ProfileImage>), MediaStorageError>  {
-    let agent = build_federation_agent(instance, None);
     let maybe_avatar = if let Some(icon) = &actor.icon {
         match fetch_file(
-            &agent,
+            agent,
             &icon.url,
             icon.media_type.as_deref(),
             &allowed_profile_image_media_types(&storage.supported_media_types()),
@@ -94,7 +92,7 @@ async fn fetch_actor_images(
     };
     let maybe_banner = if let Some(image) = &actor.image {
         match fetch_file(
-            &agent,
+            agent,
             &image.url,
             image.media_type.as_deref(),
             &allowed_profile_image_media_types(&storage.supported_media_types()),
@@ -241,13 +239,12 @@ fn parse_attachments(actor: &Actor) -> (
 }
 
 async fn fetch_proposals(
-    instance: &Instance,
+    agent: &FederationAgent,
     proposals: Vec<String>,
 ) -> Vec<PaymentOption> {
-    let agent = build_federation_agent(instance, None);
     let mut payment_options = vec![];
     for proposal_id in proposals {
-        let proposal: Proposal = match fetch_object(&agent, &proposal_id).await {
+        let proposal: Proposal = match fetch_object(agent, &proposal_id).await {
             Ok(proposal) => proposal,
             Err(error) => {
                 log::warn!("invalid proposal: {}", error);
@@ -295,8 +292,8 @@ fn parse_aliases(actor: &Actor) -> Vec<String> {
 }
 
 async fn parse_tags(
+    agent: &FederationAgent,
     db_client: &impl DatabaseClient,
-    instance: &Instance,
     storage: &MediaStorage,
     actor: &Actor,
 ) -> Result<Vec<Uuid>, HandlerError> {
@@ -309,8 +306,8 @@ async fn parse_tags(
                 continue;
             };
             match handle_emoji(
+                agent,
                 db_client,
-                instance,
                 storage,
                 tag_value,
             ).await? {
@@ -327,16 +324,16 @@ async fn parse_tags(
 }
 
 pub async fn create_remote_profile(
+    agent: &FederationAgent,
     db_client: &mut impl DatabaseClient,
-    instance: &Instance,
     storage: &MediaStorage,
     actor: Actor,
 ) -> Result<DbActorProfile, HandlerError> {
     let actor_address = actor.address()?;
     let (maybe_avatar, maybe_banner) = fetch_actor_images(
-        instance,
-        &actor,
+        agent,
         storage,
+        &actor,
         None,
         None,
     ).await?;
@@ -344,14 +341,14 @@ pub async fn create_remote_profile(
     let (identity_proofs, mut payment_options, proposals, extra_fields) =
         parse_attachments(&actor);
     let subscription_options = fetch_proposals(
-        instance,
+        agent,
         proposals,
     ).await;
     payment_options.extend(subscription_options);
     let aliases = parse_aliases(&actor);
     let emojis = parse_tags(
+        agent,
         db_client,
-        instance,
         storage,
         &actor,
     ).await?;
@@ -378,8 +375,8 @@ pub async fn create_remote_profile(
 
 /// Updates remote actor's profile
 pub async fn update_remote_profile(
+    agent: &FederationAgent,
     db_client: &mut impl DatabaseClient,
-    instance: &Instance,
     storage: &MediaStorage,
     profile: DbActorProfile,
     actor: Actor,
@@ -414,9 +411,9 @@ pub async fn update_remote_profile(
         );
     };
     let (maybe_avatar, maybe_banner) = fetch_actor_images(
-        instance,
-        &actor,
+        agent,
         storage,
+        &actor,
         profile.avatar,
         profile.banner,
     ).await?;
@@ -424,14 +421,14 @@ pub async fn update_remote_profile(
     let (identity_proofs, mut payment_options, proposals, extra_fields) =
         parse_attachments(&actor);
     let subscription_options = fetch_proposals(
-        instance,
+        agent,
         proposals,
     ).await;
     payment_options.extend(subscription_options);
     let aliases = parse_aliases(&actor);
     let emojis = parse_tags(
+        agent,
         db_client,
-        instance,
         storage,
         &actor,
     ).await?;

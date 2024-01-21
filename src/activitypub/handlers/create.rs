@@ -8,6 +8,7 @@ use uuid::Uuid;
 use mitra_config::{Config, Instance};
 use mitra_federation::{
     addresses::ActorAddress,
+    agent::FederationAgent,
     deserialization::{
         deserialize_into_object_id,
         deserialize_object_array,
@@ -325,12 +326,11 @@ pub fn get_object_links(
 }
 
 pub async fn handle_emoji(
+    agent: &FederationAgent,
     db_client: &impl DatabaseClient,
-    instance: &Instance,
     storage: &MediaStorage,
     tag_value: JsonValue,
 ) -> Result<Option<DbEmoji>, HandlerError> {
-    let agent = build_federation_agent(instance, None);
     let tag: EmojiTag = match serde_json::from_value(tag_value) {
         Ok(tag) => tag,
         Err(error) => {
@@ -362,7 +362,7 @@ pub async fn handle_emoji(
         Err(other_error) => return Err(other_error.into()),
     };
     let (file_data, file_size, media_type) = match fetch_file(
-        &agent,
+        agent,
         &tag.icon.url,
         tag.icon.media_type.as_deref(),
         &EMOJI_MEDIA_TYPES,
@@ -413,6 +413,8 @@ pub async fn get_object_tags(
     object: &AttributedObject,
     redirects: &HashMap<String, String>,
 ) -> Result<(Vec<Uuid>, Vec<String>, Vec<Uuid>, Vec<Uuid>), HandlerError> {
+    let agent = build_federation_agent(instance, None);
+
     let mut mentions = vec![];
     let mut hashtags = vec![];
     let mut links = vec![];
@@ -552,8 +554,8 @@ pub async fn get_object_tags(
                 continue;
             };
             match handle_emoji(
+                &agent,
                 db_client,
-                instance,
                 storage,
                 tag_value,
             ).await? {

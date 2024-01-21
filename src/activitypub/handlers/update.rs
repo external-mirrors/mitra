@@ -145,9 +145,10 @@ async fn handle_update_person(
         db_client,
         &activity.object.id,
     ).await?;
+    let agent = build_federation_agent(&config.instance(), None);
     update_remote_profile(
+        &agent,
         db_client,
-        &config.instance(),
         &MediaStorage::from(config),
         profile,
         activity.object,

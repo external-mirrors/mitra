@@ -60,8 +60,8 @@ async fn import_profile(
             // WARNING: Possible actor ID change
             log::info!("re-fetched profile {}", profile.acct);
             let profile_updated = update_remote_profile(
+                &agent,
                 db_client,
-                instance,
                 storage,
                 profile,
                 actor,
@@ -72,8 +72,8 @@ async fn import_profile(
         Err(DatabaseError::NotFound(_)) => {
             log::info!("fetched profile {}", acct);
             let profile = create_remote_profile(
+                &agent,
                 db_client,
-                instance,
                 storage,
                 actor,
             ).await?;
@@ -104,8 +104,8 @@ pub async fn refresh_remote_profile(
             Ok(actor) => {
                 log::info!("re-fetched profile {}", profile.acct);
                 let profile_updated = update_remote_profile(
+                    &agent,
                     db_client,
-                    instance,
                     storage,
                     profile,
                     actor,
