@@ -22,13 +22,29 @@ pub struct Link {
 }
 
 impl Link {
-    pub fn actor(actor_id: &str) -> Self {
+    pub fn new(rel: &str) -> Self {
         Self {
-            rel: SELF_RELATION_TYPE.to_string(),
-            href: Some(actor_id.to_string()),
-            media_type: Some(AP_MEDIA_TYPE.to_string()),
+            rel: rel.to_string(),
+            media_type: None,
+            href: None,
             properties: Default::default(),
         }
+    }
+
+    pub fn with_media_type(mut self, media_type: &str) -> Self {
+        self.media_type = Some(media_type.to_string());
+        self
+    }
+
+    pub fn with_href(mut self, href: &str) -> Self {
+        self.href = Some(href.to_string());
+        self
+    }
+
+    pub fn actor(actor_id: &str) -> Self {
+        Self::new(SELF_RELATION_TYPE)
+            .with_media_type(AP_MEDIA_TYPE)
+            .with_href(actor_id)
     }
 }
 

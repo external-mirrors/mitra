@@ -7,27 +7,23 @@ use mitra_federation::jrd::{JsonResourceDescriptor, Link};
 use mitra_models::database::{get_database_client, DbPool};
 
 use crate::errors::HttpError;
+
 use super::helpers::{get_instance_staff, get_usage};
 use super::types::{Metadata, NodeInfo20, NodeInfo21};
+
+const NODEINFO_2_0_RELATION_TYPE: &str = "http://nodeinfo.diaspora.software/ns/schema/2.0";
+const NODEINFO_2_1_RELATION_TYPE: &str = "http://nodeinfo.diaspora.software/ns/schema/2.1";
 
 #[get("/.well-known/nodeinfo")]
 pub async fn get_nodeinfo_jrd(
     config: web::Data<Config>,
 ) -> Result<HttpResponse, HttpError> {
     let nodeinfo_2_0_url = format!("{}/nodeinfo/2.0", config.instance_url());
-    let nodeinfo_2_0_link = Link {
-        rel: "http://nodeinfo.diaspora.software/ns/schema/2.0".to_string(),
-        media_type: None,
-        href: Some(nodeinfo_2_0_url),
-        properties: Default::default(),
-    };
+    let nodeinfo_2_0_link = Link::new(NODEINFO_2_0_RELATION_TYPE)
+        .with_href(&nodeinfo_2_0_url);
     let nodeinfo_2_1_url = format!("{}/nodeinfo/2.1", config.instance_url());
-    let nodeinfo_2_1_link = Link {
-        rel: "http://nodeinfo.diaspora.software/ns/schema/2.1".to_string(),
-        media_type: None,
-        href: Some(nodeinfo_2_1_url),
-        properties: Default::default(),
-    };
+    let nodeinfo_2_1_link = Link::new(NODEINFO_2_1_RELATION_TYPE)
+        .with_href(&nodeinfo_2_1_url);
     let jrd = JsonResourceDescriptor {
         subject: config.instance_url(),
         links: vec![nodeinfo_2_0_link, nodeinfo_2_1_link],

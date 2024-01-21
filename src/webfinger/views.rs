@@ -55,12 +55,9 @@ async fn get_jrd(
         local_actor_id(&instance.url(), &actor_address.username)
     };
     // Required by GNU Social
-    let profile_link = Link {
-        rel: "http://webfinger.net/rel/profile-page".to_string(),
-        media_type: Some("text/html".to_string()),
-        href: Some(actor_id.clone()),
-        properties: Default::default(),
-    };
+    let profile_link = Link::new("http://webfinger.net/rel/profile-page")
+        .with_media_type("text/html")
+        .with_href(&actor_id);
     let actor_link = Link::actor(&actor_id);
     let jrd = JsonResourceDescriptor {
         subject: actor_address.to_acct_uri(),
