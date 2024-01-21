@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+
+- Add syndication feed link to user's Webfinger response.
+
 ### Changed
 
 - Ignore Webfinger links where `type` differs from AP/AS media types.

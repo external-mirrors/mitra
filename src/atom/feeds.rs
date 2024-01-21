@@ -10,6 +10,8 @@ use mitra_utils::{
 
 use crate::activitypub::identifiers::{local_actor_id, local_object_id};
 
+use super::urls::get_user_feed_url;
+
 const ENTRY_TITLE_MAX_LENGTH: usize = 75;
 
 fn get_author_name(profile: &DbActorProfile) -> String {
@@ -50,17 +52,13 @@ fn make_entry(
     )
 }
 
-fn get_feed_url(instance_url: &str, username: &str) -> String {
-    format!("{}/feeds/users/{}", instance_url, username)
-}
-
 pub fn make_feed(
     instance: &Instance,
     profile: &DbActorProfile,
     posts: Vec<Post>,
 ) -> String {
     let actor_id = local_actor_id(&instance.url(), &profile.username);
-    let feed_url = get_feed_url(&instance.url(), &profile.username);
+    let feed_url = get_user_feed_url(&instance.url(), &profile.username);
     let feed_title = get_author_name(profile);
     let mut entries = vec![];
     let mut feed_updated_at = get_min_datetime();

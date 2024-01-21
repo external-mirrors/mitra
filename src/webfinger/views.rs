@@ -23,7 +23,12 @@ use crate::activitypub::{
         parse_local_actor_id,
     },
 };
+use crate::atom::urls::get_user_feed_url;
 use crate::errors::HttpError;
+
+const WEBFINGER_PROFILE_RELATION_TYPE: &str = "http://webfinger.net/rel/profile-page";
+// Relation type used by Friendica
+const FEED_RELATION_TYPE: &str = "http://schemas.google.com/g/2010#updates-from";
 
 async fn get_jrd(
     db_client: &impl DatabaseClient,
@@ -55,13 +60,25 @@ async fn get_jrd(
         local_actor_id(&instance.url(), &actor_address.username)
     };
     // Required by GNU Social
-    let profile_link = Link::new("http://webfinger.net/rel/profile-page")
+    let profile_link = Link::new(WEBFINGER_PROFILE_RELATION_TYPE)
         .with_media_type("text/html")
         .with_href(&actor_id);
     let actor_link = Link::actor(&actor_id);
+    let mut links = vec![profile_link, actor_link];
+    if actor_address.username != instance.hostname() {
+        // Add feed link for users
+        let feed_url = get_user_feed_url(
+            &instance.url(),
+            &actor_address.username,
+        );
+        let feed_link = Link::new(FEED_RELATION_TYPE)
+            .with_media_type("application/atom+xml")
+            .with_href(&feed_url);
+        links.push(feed_link);
+    };
     let jrd = JsonResourceDescriptor {
         subject: actor_address.to_acct_uri(),
-        links: vec![profile_link, actor_link],
+        links: links,
     };
     Ok(jrd)
 }
