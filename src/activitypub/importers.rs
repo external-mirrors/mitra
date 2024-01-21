@@ -7,6 +7,7 @@ use serde_json::{Value as JsonValue};
 use mitra_config::{Config, Instance};
 use mitra_federation::{
     addresses::ActorAddress,
+    agent::FederationAgent,
     deserialization::get_object_id,
     fetch::{
         fetch_json,
@@ -33,7 +34,7 @@ use mitra_validators::errors::ValidationError;
 use crate::activitypub::{
     actors::helpers::{create_remote_profile, update_remote_profile},
     actors::types::Actor,
-    agent::{build_federation_agent, FederationAgent},
+    agent::build_federation_agent,
     handlers::create::{get_object_links, handle_note, AttributedObject},
     identifiers::parse_local_object_id,
     receiver::{handle_activity, HandlerError},

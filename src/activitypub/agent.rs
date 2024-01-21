@@ -1,4 +1,5 @@
 use mitra_config::Instance;
+use mitra_federation::agent::FederationAgent;
 use mitra_models::{
     profiles::types::PublicKeyType,
     users::types::User,
@@ -12,8 +13,6 @@ use crate::activitypub::{
         local_instance_actor_id,
     },
 };
-
-pub use mitra_federation::agent::FederationAgent;
 
 pub(super) fn build_federation_agent_with_key(
     instance: &Instance,
