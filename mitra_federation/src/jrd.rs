@@ -7,6 +7,7 @@ use super::constants::{AP_CONTEXT, AP_MEDIA_TYPE};
 const SELF_RELATION_TYPE: &str = "self";
 pub const JRD_MEDIA_TYPE: &str = "application/jrd+json";
 
+// https://datatracker.ietf.org/doc/html/rfc7033#section-4.4.4
 #[derive(Deserialize, Serialize)]
 pub struct Link {
     pub rel: String,
@@ -60,7 +61,23 @@ impl JsonResourceDescriptor {
 
 #[cfg(test)]
 mod tests {
+    use serde_json::json;
     use super::*;
+
+    #[test]
+    fn test_create_actor_link() {
+        let actor_id = "https://social.example/users/test";
+        let link = Link::actor(actor_id);
+        let link_value = serde_json::to_value(link).unwrap();
+        assert_eq!(
+            link_value,
+            json!({
+                "rel": "self",
+                "type": AP_MEDIA_TYPE,
+                "href": actor_id,
+            }),
+        );
+    }
 
     #[test]
     fn test_jrd_find_actor_id() {

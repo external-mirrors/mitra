@@ -55,16 +55,16 @@ async fn get_jrd(
         local_actor_id(&instance.url(), &actor_address.username)
     };
     // Required by GNU Social
-    let link_profile = Link {
+    let profile_link = Link {
         rel: "http://webfinger.net/rel/profile-page".to_string(),
         media_type: Some("text/html".to_string()),
         href: Some(actor_id.clone()),
         properties: Default::default(),
     };
-    let link_actor = Link::actor(&actor_id);
+    let actor_link = Link::actor(&actor_id);
     let jrd = JsonResourceDescriptor {
         subject: actor_address.to_acct_uri(),
-        links: vec![link_profile, link_actor],
+        links: vec![profile_link, actor_link],
     };
     Ok(jrd)
 }
@@ -118,8 +118,14 @@ mod tests {
         let resource = "acct:test@example.com";
         let jrd = get_jrd(db_client, instance, resource).await.unwrap();
         assert_eq!(jrd.subject, resource);
+        assert_eq!(jrd.links[0].rel, "http://webfinger.net/rel/profile-page");
         assert_eq!(
             jrd.links[0].href.as_ref().unwrap(),
+            "https://example.com/users/test",
+        );
+        assert_eq!(jrd.links[1].rel, "self");
+        assert_eq!(
+            jrd.links[1].href.as_ref().unwrap(),
             "https://example.com/users/test",
         );
     }
