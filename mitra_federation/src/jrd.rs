@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use serde::{Serialize, Deserialize};
 
-use super::constants::{AP_CONTEXT, AP_MEDIA_TYPE};
+use super::constants::{AP_CONTEXT, AP_MEDIA_TYPE, AS_MEDIA_TYPE};
 
 const SELF_RELATION_TYPE: &str = "self";
 pub const JRD_MEDIA_TYPE: &str = "application/jrd+json";
@@ -46,6 +46,9 @@ impl JsonResourceDescriptor {
         let ap_type_property = format!("{}#type", AP_CONTEXT);
         let link = self.links.iter()
             .filter(|link| link.rel == SELF_RELATION_TYPE)
+            .filter(|link| link.media_type.iter().any(|media_type| {
+                media_type == AP_MEDIA_TYPE || media_type == AS_MEDIA_TYPE
+            }))
             .find(|link| {
                 let ap_type = link.properties
                     .get(&ap_type_property)
