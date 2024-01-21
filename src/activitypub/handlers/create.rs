@@ -144,7 +144,10 @@ pub fn get_object_content(object: &AttributedObject) ->
     Result<String, ValidationError>
 {
     let title = if object.in_reply_to.is_none() {
+        // Only top level posts can have titles
         object.name.as_ref()
+            // NOTE: Mastodon uses 'summary' for content warnings
+            // NOTE: 'summary' may contain HTML
             .or(object.summary.as_ref())
             .filter(|title| !title.trim().is_empty())
             .map(|title| format!("<h1>{}</h1>", title))
