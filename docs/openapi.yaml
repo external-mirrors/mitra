@@ -1844,6 +1844,19 @@ paths:
           required: true
           schema:
             type: string
+        - name: offset
+          in: query
+          description: Skip the first n results.
+          required: false
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          description: Maximum number of results to return, per type.
+          required: false
+          schema:
+            type: integer
+            default: 20
       responses:
         200:
           description: Successful operation

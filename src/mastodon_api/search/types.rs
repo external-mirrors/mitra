@@ -13,11 +13,14 @@ fn default_page_size() -> PageSize { PageSize::new(20) }
 pub struct SearchQueryParams {
     pub q: String,
 
+    #[serde(default)]
+    pub offset: usize,
+
     #[serde(default = "default_page_size")]
     pub limit: PageSize,
 }
 
-#[derive(Serialize)]
+#[derive(Default, Serialize)]
 pub struct SearchResults {
     pub accounts: Vec<Account>,
     pub statuses: Vec<Status>,

@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Changed
 
 - Ignore Webfinger links where `type` differs from AP/AS media types.
+- Return empty search results if `offset` is not 0.
 
 ## [2.7.2] - 2024-01-18
 

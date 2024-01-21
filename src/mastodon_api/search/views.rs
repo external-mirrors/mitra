@@ -32,6 +32,11 @@ async fn search_view(
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &mut **get_database_client(&db_pool).await?;
     let current_user = get_current_user(db_client, auth.token()).await?;
+    if query_params.offset > 0 {
+        // Pagination is not supported; return empty results
+        let results = SearchResults::default();
+        return Ok(HttpResponse::Ok().json(results));
+    };
     let (profiles, posts, tags) = search(
         &config,
         &current_user,
