@@ -26,6 +26,7 @@ use mitra_models::{
         get_profile_by_remote_actor_id,
     },
     profiles::types::DbActorProfile,
+    users::queries::get_user_by_name,
 };
 use mitra_services::media::MediaStorage;
 use mitra_utils::urls::guess_protocol;
@@ -36,10 +37,28 @@ use crate::activitypub::{
     actors::types::Actor,
     agent::build_federation_agent,
     handlers::create::{get_object_links, handle_note, AttributedObject},
-    identifiers::parse_local_object_id,
+    identifiers::{parse_local_actor_id, parse_local_object_id},
     receiver::{handle_activity, HandlerError},
     vocabulary::GROUP,
 };
+
+pub async fn get_profile_by_actor_id(
+    db_client: &impl DatabaseClient,
+    instance_url: &str,
+    actor_id: &str,
+) -> Result<DbActorProfile, DatabaseError> {
+    match parse_local_actor_id(instance_url, actor_id) {
+        Ok(username) => {
+            // Local actor
+            let user = get_user_by_name(db_client, &username).await?;
+            Ok(user.profile)
+        },
+        Err(_) => {
+            // Remote actor
+            get_profile_by_remote_actor_id(db_client, actor_id).await
+        },
+    }
+}
 
 async fn import_profile(
     db_client: &mut impl DatabaseClient,

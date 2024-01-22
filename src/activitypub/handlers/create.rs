@@ -69,6 +69,7 @@ use crate::activitypub::{
         get_or_import_profile_by_actor_address,
         get_or_import_profile_by_actor_id,
         get_post_by_object_id,
+        get_profile_by_actor_id,
         import_post,
     },
     receiver::HandlerError,
@@ -572,28 +573,29 @@ pub async fn get_object_tags(
         };
     };
 
-    // Ensure mentions exist for all local actors in "to" and "cc" fields
+    // Create mentions for known actors in "to" and "cc" fields
     let audience = get_audience(object)?;
-    for actor_id in audience {
+    for target_id in audience {
+        if is_public(&target_id) {
+            continue;
+        };
         if mentions.len() >= MENTION_LIMIT {
             log::warn!("too many mentions");
             break;
         };
-        if let Ok(username) = parse_local_actor_id(&instance.url(), &actor_id) {
-            let user = match get_user_by_name(db_client, &username).await {
-                Ok(user) => user,
-                Err(DatabaseError::NotFound(_)) => {
-                    log::warn!(
-                        "failed to find local audience: {}",
-                        actor_id,
-                    );
-                    continue;
-                },
-                Err(other_error) => return Err(other_error.into()),
-            };
-            if !mentions.contains(&user.id) {
-                mentions.push(user.id);
-            };
+        match get_profile_by_actor_id(
+            db_client,
+            &instance.url(),
+            &target_id,
+        ).await {
+            Ok(profile) => {
+                if !mentions.contains(&profile.id) {
+                    mentions.push(profile.id);
+                };
+            },
+            // Ignore unknown targets
+            Err(DatabaseError::NotFound(_)) => continue,
+            Err(other_error) => return Err(other_error.into()),
         };
     };
 

@@ -227,6 +227,15 @@ mod tests {
     }
 
     #[test]
+    fn test_parse_local_actor_id_followers() {
+        let error = parse_local_actor_id(
+            INSTANCE_URL,
+            "https://social.example/users/test/followers",
+        ).unwrap_err();
+        assert_eq!(error.to_string(), "invalid actor ID");
+    }
+
+    #[test]
     fn test_parse_local_actor_id_with_fragment() {
         let error = parse_local_actor_id(
             INSTANCE_URL,
