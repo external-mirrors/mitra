@@ -50,6 +50,9 @@ async fn import_profile(
     let agent = build_federation_agent(instance, None);
     let actor: Actor = fetch_object(&agent, actor_id).await?;
     let actor_address = actor.address()?;
+    if actor_address.hostname == instance.hostname() {
+        return Err(HandlerError::LocalObject);
+    };
     let acct = actor_address.acct(&instance.hostname());
     // 'acct' is the primary identifier
     let profile = match get_profile_by_acct(db_client, &acct).await {
@@ -131,9 +134,6 @@ pub async fn get_or_import_profile_by_actor_id(
     storage: &MediaStorage,
     actor_id: &str,
 ) -> Result<DbActorProfile, HandlerError> {
-    if actor_id.starts_with(&instance.url()) {
-        return Err(HandlerError::LocalObject);
-    };
     let profile = match get_profile_by_remote_actor_id(
         db_client,
         actor_id,

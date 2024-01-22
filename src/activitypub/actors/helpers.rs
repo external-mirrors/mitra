@@ -333,9 +333,6 @@ pub async fn create_remote_profile(
     actor: Actor,
 ) -> Result<DbActorProfile, HandlerError> {
     let actor_address = actor.address()?;
-    if actor_address.hostname == instance.hostname() {
-        return Err(HandlerError::LocalObject);
-    };
     let (maybe_avatar, maybe_banner) = fetch_actor_images(
         instance,
         &actor,
@@ -399,7 +396,8 @@ pub async fn update_remote_profile(
         // Keep using cached value
         profile.username.clone()
     };
-    let actor_old = profile.actor_json.ok_or(HandlerError::LocalObject)?;
+    let actor_old = profile.actor_json
+        .expect("actor data should be present");
     if actor_old.id != actor.id {
         validate_updated_actor_id(&actor_old.id, &actor.id)?;
         log::warn!(
