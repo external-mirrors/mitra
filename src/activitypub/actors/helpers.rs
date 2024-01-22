@@ -27,6 +27,7 @@ use mitra_validators::{
         allowed_profile_image_media_types,
         clean_profile_create_data,
         clean_profile_update_data,
+        validate_updated_actor_id,
         PROFILE_IMAGE_SIZE_MAX,
     },
 };
@@ -400,6 +401,7 @@ pub async fn update_remote_profile(
     };
     let actor_old = profile.actor_json.ok_or(HandlerError::LocalObject)?;
     if actor_old.id != actor.id {
+        validate_updated_actor_id(&actor_old.id, &actor.id)?;
         log::warn!(
             "actor ID changed from {} to {}",
             actor_old.id,
