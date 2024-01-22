@@ -2,6 +2,8 @@ use serde_json::{Value as JsonValue};
 
 use mitra_utils::urls::{Position, Url, UrlError};
 
+use super::constants::AP_PUBLIC;
+
 // AP requires actor to have inbox and outbox,
 // but `outbox` property is not always present.
 // https://www.w3.org/TR/activitypub/#actor-objects
@@ -33,6 +35,16 @@ pub fn key_id_to_actor_id(key_id: &str) -> Result<String, UrlError> {
     // GoToSocial compat
     let actor_id = actor_id.trim_end_matches("/main-key");
     Ok(actor_id.to_string())
+}
+
+pub fn is_public(target_id: impl AsRef<str>) -> bool {
+    // Some servers (e.g. Takahe) use "as" namespace
+    const PUBLIC_VARIANTS: [&str; 3] = [
+        AP_PUBLIC,
+        "as:Public",
+        "Public",
+    ];
+    PUBLIC_VARIANTS.contains(&target_id.as_ref())
 }
 
 #[cfg(test)]

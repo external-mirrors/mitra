@@ -17,6 +17,7 @@ use mitra_federation::{
         parse_into_id_array,
     },
     fetch::fetch_file,
+    utils::is_public,
 };
 use mitra_models::{
     attachments::queries::create_attachment,
@@ -62,7 +63,7 @@ use mitra_validators::{
 
 use crate::activitypub::{
     agent::build_federation_agent,
-    constants::{AP_MEDIA_TYPE, AP_PUBLIC, AS_MEDIA_TYPE},
+    constants::{AP_MEDIA_TYPE, AS_MEDIA_TYPE},
     identifiers::{parse_local_actor_id, profile_actor_id},
     importers::{
         get_or_import_profile_by_actor_address,
@@ -632,22 +633,12 @@ fn get_audience(object: &AttributedObject) ->
     Ok(audience)
 }
 
-fn is_public_object(audience: &[String]) -> bool {
-    // Some servers (e.g. Takahe) use "as" namespace
-    const PUBLIC_VARIANTS: [&str; 3] = [
-        AP_PUBLIC,
-        "as:Public",
-        "Public",
-    ];
-    audience.iter().any(|item| PUBLIC_VARIANTS.contains(&item.as_str()))
-}
-
 fn get_object_visibility(
     author: &DbActorProfile,
     audience: &[String],
 ) -> Visibility {
-    if is_public_object(audience) {
-       return Visibility::Public;
+    if audience.iter().any(is_public) {
+        return Visibility::Public;
     };
     let actor = author.actor_json.as_ref()
         .expect("actor data should be present");
@@ -781,7 +772,7 @@ async fn check_unsolicited_message(
     };
     let is_unsolicited =
         is_disconnected &&
-        is_public_object(&audience) &&
+        audience.iter().any(is_public) &&
         !has_local_recipients &&
         // Possible cause: a failure to process Undo(Follow)
         !author_has_followers;
@@ -851,6 +842,7 @@ pub async fn handle_create(
 #[cfg(test)]
 mod tests {
     use serde_json::json;
+    use mitra_federation::constants::AP_PUBLIC;
     use mitra_models::profiles::types::DbActor;
     use super::*;
 
