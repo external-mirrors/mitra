@@ -103,7 +103,7 @@ async fn import_profile(
     Ok(profile)
 }
 
-pub async fn refresh_remote_profile(
+async fn refresh_remote_profile(
     db_client: &mut impl DatabaseClient,
     instance: &Instance,
     storage: &MediaStorage,
@@ -161,11 +161,27 @@ pub async fn get_or_import_profile_by_actor_id(
 #[derive(Default)]
 pub struct ActorIdResolver {
     only_remote: bool,
+    force_refetch: bool,
+    update_username: bool,
 }
 
 impl ActorIdResolver {
     pub fn only_remote(mut self) -> Self {
         self.only_remote = true;
+        self
+    }
+
+    pub fn force_refetch(mut self) -> Self {
+        self.force_refetch = true;
+        self
+    }
+
+    pub fn update_username(mut self) -> Self {
+        assert!(
+            self.force_refetch,
+            "'update_username' can only be used with 'force_refetch'",
+        );
+        self.update_username = true;
         self
     }
 
@@ -203,8 +219,8 @@ impl ActorIdResolver {
                     instance,
                     storage,
                     profile,
-                    false,
-                    false,
+                    self.force_refetch,
+                    self.update_username,
                 ).await?
             },
             Err(DatabaseError::NotFound(_)) => {
@@ -574,7 +590,16 @@ mod tests {
     fn test_actor_id_resolver_default() {
         let resolver = ActorIdResolver::default();
         assert_eq!(resolver.only_remote, false);
+        assert_eq!(resolver.force_refetch, false);
+        assert_eq!(resolver.update_username, false);
         let resolver = resolver.only_remote();
         assert_eq!(resolver.only_remote, true);
+        assert_eq!(resolver.update_username, false);
+    }
+
+    #[test]
+    #[should_panic(expected = "'update_username' can only be used with 'force_refetch'")]
+    fn test_actor_id_resolver_check_update_username() {
+        ActorIdResolver::default().update_username();
     }
 }

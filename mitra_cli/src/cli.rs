@@ -13,7 +13,7 @@ use mitra::activitypub::{
     importers::{
         import_from_outbox,
         import_replies,
-        refresh_remote_profile,
+        ActorIdResolver,
     },
 };
 use mitra::adapters::{
@@ -56,7 +56,6 @@ use mitra_models::{
         find_empty_profiles,
         find_unreachable,
         get_profile_by_id,
-        get_profile_by_remote_actor_id,
     },
     subscriptions::queries::{
         reset_subscriptions,
@@ -134,7 +133,7 @@ pub enum SubCommand {
     AddEd25519Key(AddEd25519Key),
     SetPassword(SetPassword),
     SetRole(SetRole),
-    RefetchActor(RefetchActor),
+    FetchActor(FetchActor),
     ReadOutbox(ReadOutbox),
     FetchReplies(FetchReplies),
     FetchObjectAs(FetchObjectAs),
@@ -371,34 +370,34 @@ impl SetRole {
     }
 }
 
-/// Re-fetch actor profile by actor ID
+/// (Re-)fetch actor profile by actor ID
 #[derive(Parser)]
-pub struct RefetchActor {
+pub struct FetchActor {
     id: String,
 
     #[arg(long)]
     update_username: bool,
 }
 
-impl RefetchActor {
+impl FetchActor {
     pub async fn execute(
         &self,
         config: &Config,
         db_client: &mut impl DatabaseClient,
     ) -> Result<(), Error> {
-        let profile = get_profile_by_remote_actor_id(
-            db_client,
-            &self.id,
-        ).await?;
-        refresh_remote_profile(
+        let mut resolver = ActorIdResolver::default()
+            .only_remote()
+            .force_refetch();
+        if self.update_username {
+            resolver = resolver.update_username();
+        };
+        resolver.resolve(
             db_client,
             &config.instance(),
             &MediaStorage::from(config),
-            profile,
-            true, // force
-            self.update_username,
+            &self.id,
         ).await?;
-        println!("profile updated");
+        println!("profile saved");
         Ok(())
     }
 }

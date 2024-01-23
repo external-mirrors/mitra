@@ -37,7 +37,7 @@ async fn main() {
                 SubCommand::AddEd25519Key(cmd) => cmd.execute(db_client).await.unwrap(),
                 SubCommand::SetPassword(cmd) => cmd.execute(db_client).await.unwrap(),
                 SubCommand::SetRole(cmd) => cmd.execute(db_client).await.unwrap(),
-                SubCommand::RefetchActor(cmd) => cmd.execute(&config, db_client).await.unwrap(),
+                SubCommand::FetchActor(cmd) => cmd.execute(&config, db_client).await.unwrap(),
                 SubCommand::ReadOutbox(cmd) => cmd.execute(&config, db_client).await.unwrap(),
                 SubCommand::FetchReplies(cmd) => cmd.execute(&config, db_client).await.unwrap(),
                 SubCommand::FetchObjectAs(cmd) => cmd.execute(&config, db_client).await.unwrap(),

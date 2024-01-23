@@ -18,6 +18,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Create mentions for known remote actors in "to" and "cc" fields.
 - Remove LD signature before verifying integrity proof.
 - Improve error handling in mention processor.
+- Rename `refetch-actor` command to `fetch-actor`.
 
 ## [2.7.2] - 2024-01-18
 
