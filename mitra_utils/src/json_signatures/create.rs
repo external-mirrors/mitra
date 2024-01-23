@@ -34,6 +34,7 @@ use super::proofs::{
 };
 
 pub(super) const PROOF_KEY: &str = "proof";
+pub(super) const LD_SIGNATURE_KEY: &str = "signature";
 pub(super) const PURPOSE_ASSERTION_METHOD: &str = "assertionMethod";
 pub(super) const PURPOSE_AUTHENTICATION: &str = "authentication";
 

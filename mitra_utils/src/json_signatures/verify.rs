@@ -22,6 +22,7 @@ use super::create::{
     prepare_jcs_sha256_data,
     IntegrityProof,
     IntegrityProofConfig,
+    LD_SIGNATURE_KEY,
     PROOF_KEY,
     PURPOSE_ASSERTION_METHOD,
     PURPOSE_AUTHENTICATION,
@@ -71,6 +72,9 @@ pub fn get_json_signature(
     let mut object = object.clone();
     let object_map = object.as_object_mut()
         .ok_or(VerificationError::InvalidObject)?;
+    // If linked data signature is present,
+    // it must be removed before verification (per FEP-8b32)
+    object_map.remove(LD_SIGNATURE_KEY);
     let proof = object_map.remove(PROOF_KEY)
         .ok_or(VerificationError::NoProof)?;
     let IntegrityProof {
