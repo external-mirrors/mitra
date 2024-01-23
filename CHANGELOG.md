@@ -17,6 +17,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Prevent actor ID base from changing during profile update.
 - Create mentions for known remote actors in "to" and "cc" fields.
 - Remove LD signature before verifying integrity proof.
+- Improve error handling in mention processor.
 
 ## [2.7.2] - 2024-01-18
 

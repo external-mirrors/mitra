@@ -175,6 +175,42 @@ pub async fn get_or_import_profile_by_actor_id(
     Ok(profile)
 }
 
+#[derive(Default)]
+pub struct ActorIdResolver {
+}
+
+impl ActorIdResolver {
+    // Possible errors:
+    // - LocalObject: local URL, but not an actor ID
+    // - FetchError: fetcher errors
+    // - ValidationError: invalid actor key
+    // - DatabaseError(DatabaseError::NotFound(_)): local actor not found
+    // - DatabaseError: other database errors
+    // - StorageError: filesystem errors
+    // N/A:
+    // - ServiceError, AuthError, UnsolicitedMessage
+    pub async fn resolve(
+        &self,
+        db_client: &mut impl DatabaseClient,
+        instance: &Instance,
+        storage: &MediaStorage,
+        actor_id: &str,
+    ) -> Result<DbActorProfile, HandlerError> {
+        if let Ok(username) = parse_local_actor_id(&instance.url(), actor_id) {
+            // Local ID
+            let user = get_user_by_name(db_client, &username).await?;
+            return Ok(user.profile);
+        };
+        // Remote ID
+        get_or_import_profile_by_actor_id(
+            db_client,
+            instance,
+            storage,
+            actor_id,
+        ).await
+    }
+}
+
 async fn perform_webfinger_query(
     agent: &FederationAgent,
     actor_address: &ActorAddress,

@@ -34,7 +34,6 @@ use mitra_models::{
     },
     profiles::types::DbActorProfile,
     relationships::queries::has_local_followers,
-    users::queries::get_user_by_name,
 };
 use mitra_services::media::MediaStorage;
 use mitra_utils::{
@@ -71,6 +70,7 @@ use crate::activitypub::{
         get_post_by_object_id,
         get_profile_by_actor_id,
         import_post,
+        ActorIdResolver,
     },
     receiver::HandlerError,
     types::{Attachment, EmojiTag, LinkTag, Tag},
@@ -327,6 +327,8 @@ pub fn get_object_links(
     links
 }
 
+// Returns None if emoji is not valid or when fetcher fails.
+// Returns HandlerError on database and filesystem errors.
 pub async fn handle_emoji(
     agent: &FederationAgent,
     db_client: &impl DatabaseClient,
@@ -456,16 +458,9 @@ pub async fn get_object_tags(
             };
             // Try to find profile by actor ID.
             if let Some(href) = tag.href {
-                if let Ok(username) = parse_local_actor_id(&instance.url(), &href) {
-                    let user = get_user_by_name(db_client, &username).await?;
-                    if !mentions.contains(&user.id) {
-                        mentions.push(user.id);
-                    };
-                    continue;
-                };
                 // NOTE: `href` attribute is usually actor ID
                 // but also can be actor URL (profile link).
-                match get_or_import_profile_by_actor_id(
+                match ActorIdResolver::default().resolve(
                     db_client,
                     instance,
                     storage,
@@ -477,13 +472,18 @@ pub async fn get_object_tags(
                         };
                         continue;
                     },
-                    Err(error) => {
+                    Err(error @ (
+                        HandlerError::FetchError(_) |
+                        HandlerError::ValidationError(_) |
+                        HandlerError::DatabaseError(DatabaseError::NotFound(_))
+                    )) => {
                         log::warn!(
                             "failed to find mentioned profile by ID {}: {}",
                             href,
                             error,
                         );
                     },
+                    Err(other_error) => return Err(other_error),
                 };
             };
             // Try to find profile by actor address
@@ -504,6 +504,7 @@ pub async fn get_object_tags(
                     Ok(profile) => profile,
                     Err(error @ (
                         HandlerError::FetchError(_) |
+                        HandlerError::ValidationError(_) |
                         HandlerError::DatabaseError(DatabaseError::NotFound(_))
                     )) => {
                         // Ignore mention if fetcher fails
