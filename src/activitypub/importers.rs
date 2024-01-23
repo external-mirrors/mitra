@@ -153,33 +153,22 @@ pub async fn get_or_import_profile_by_actor_id(
     storage: &MediaStorage,
     actor_id: &str,
 ) -> Result<DbActorProfile, HandlerError> {
-    let profile = match get_profile_by_remote_actor_id(
-        db_client,
-        actor_id,
-    ).await {
-        Ok(profile) => {
-            refresh_remote_profile(
-                db_client,
-                instance,
-                storage,
-                profile,
-                false,
-                false,
-            ).await?
-        },
-        Err(DatabaseError::NotFound(_)) => {
-            import_profile(db_client, instance, storage, actor_id).await?
-        },
-        Err(other_error) => return Err(other_error.into()),
-    };
-    Ok(profile)
+    ActorIdResolver::default()
+        .only_remote()
+        .resolve(db_client, instance, storage, actor_id).await
 }
 
 #[derive(Default)]
 pub struct ActorIdResolver {
+    only_remote: bool,
 }
 
 impl ActorIdResolver {
+    pub fn only_remote(mut self) -> Self {
+        self.only_remote = true;
+        self
+    }
+
     // Possible errors:
     // - LocalObject: local URL, but not an actor ID
     // - FetchError: fetcher errors
@@ -196,18 +185,34 @@ impl ActorIdResolver {
         storage: &MediaStorage,
         actor_id: &str,
     ) -> Result<DbActorProfile, HandlerError> {
-        if let Ok(username) = parse_local_actor_id(&instance.url(), actor_id) {
-            // Local ID
-            let user = get_user_by_name(db_client, &username).await?;
-            return Ok(user.profile);
+        if !self.only_remote {
+            if let Ok(username) = parse_local_actor_id(&instance.url(), actor_id) {
+                // Local ID
+                let user = get_user_by_name(db_client, &username).await?;
+                return Ok(user.profile);
+            };
         };
         // Remote ID
-        get_or_import_profile_by_actor_id(
+        let profile = match get_profile_by_remote_actor_id(
             db_client,
-            instance,
-            storage,
             actor_id,
-        ).await
+        ).await {
+            Ok(profile) => {
+                refresh_remote_profile(
+                    db_client,
+                    instance,
+                    storage,
+                    profile,
+                    false,
+                    false,
+                ).await?
+            },
+            Err(DatabaseError::NotFound(_)) => {
+                import_profile(db_client, instance, storage, actor_id).await?
+            },
+            Err(other_error) => return Err(other_error.into()),
+        };
+        Ok(profile)
     }
 }
 
@@ -559,4 +564,17 @@ pub async fn import_replies(
         };
     };
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_actor_id_resolver_default() {
+        let resolver = ActorIdResolver::default();
+        assert_eq!(resolver.only_remote, false);
+        let resolver = resolver.only_remote();
+        assert_eq!(resolver.only_remote, true);
+    }
 }
