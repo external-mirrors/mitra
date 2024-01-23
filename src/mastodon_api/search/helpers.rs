@@ -18,10 +18,7 @@ use mitra_models::{
     },
     profiles::types::DbActorProfile,
     tags::queries::search_tags,
-    users::{
-        queries::get_user_by_name,
-        types::User,
-    },
+    users::types::User,
 };
 use mitra_services::{
     ethereum::utils::validate_ethereum_address,
@@ -34,11 +31,11 @@ use mitra_utils::{
 use mitra_validators::errors::ValidationError;
 
 use crate::activitypub::{
-    identifiers::{parse_local_actor_id, parse_local_object_id},
+    identifiers::parse_local_object_id,
     importers::{
-        get_or_import_profile_by_actor_id,
         import_post,
         import_profile_by_actor_address,
+        ActorIdResolver,
     },
     HandlerError,
 };
@@ -197,28 +194,26 @@ async fn find_profile_by_url(
     url: &str,
 ) -> Result<Option<DbActorProfile>, DatabaseError> {
     let mut instance = config.instance();
-    let profile = match parse_local_actor_id(&instance.url(), url) {
-        Ok(username) => {
-            // Local URL
-            match get_user_by_name(db_client, &username).await {
-                Ok(user) => Some(user.profile),
-                Err(DatabaseError::NotFound(_)) => None,
-                Err(other_error) => return Err(other_error),
-            }
+    instance.fetcher_timeout = SEARCH_FETCHER_TIMEOUT;
+    let maybe_profile = match ActorIdResolver::default().resolve(
+        db_client,
+        &instance,
+        &MediaStorage::from(config),
+        url,
+    ).await {
+        Ok(profile) => Some(profile),
+        Err(HandlerError::DatabaseError(DatabaseError::NotFound(_))) => {
+            // Local profile not found
+            None
         },
-        Err(_) => {
-            instance.fetcher_timeout = SEARCH_FETCHER_TIMEOUT;
-            get_or_import_profile_by_actor_id(
-                db_client,
-                &instance,
-                &MediaStorage::from(config),
-                url,
-            ).await
-                .map_err(|err| log::warn!("{}", err))
-                .ok()
+        Err(HandlerError::DatabaseError(db_error)) => return Err(db_error),
+        Err(other_error) => {
+            // LocalObject, FetchError, ValidationError, StorageError
+            log::warn!("{}", other_error);
+            None
         },
     };
-    Ok(profile)
+    Ok(maybe_profile)
 }
 
 type SearchResults = (Vec<DbActorProfile>, Vec<Post>, Vec<String>);
