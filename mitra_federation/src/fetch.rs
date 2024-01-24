@@ -50,9 +50,6 @@ pub enum FetchError {
 
     #[error("too many objects")]
     RecursionError,
-
-    #[error("{0}")]
-    OtherError(&'static str),
 }
 
 fn build_fetcher_client(

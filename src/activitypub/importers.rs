@@ -178,7 +178,7 @@ pub async fn get_or_import_profile_by_actor_id(
 async fn perform_webfinger_query(
     agent: &FederationAgent,
     actor_address: &ActorAddress,
-) -> Result<String, FetchError> {
+) -> Result<String, HandlerError> {
     let webfinger_resource = actor_address.to_acct_uri();
     let webfinger_url = format!(
         "{}://{}/.well-known/webfinger",
@@ -192,7 +192,7 @@ async fn perform_webfinger_query(
     ).await?;
     // Prefer Group actor if webfinger results are ambiguous
     let actor_id = jrd.find_actor_id(GROUP)
-        .ok_or(FetchError::OtherError("actor ID not found"))?;
+        .ok_or(ValidationError("actor ID is not found in JRD"))?;
     Ok(actor_id)
 }
 
