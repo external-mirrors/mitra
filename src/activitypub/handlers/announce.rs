@@ -21,7 +21,7 @@ use mitra_validators::errors::ValidationError;
 
 use crate::activitypub::{
     identifiers::parse_local_object_id,
-    importers::{get_or_import_profile_by_actor_id, import_post},
+    importers::{import_post, ActorIdResolver},
     vocabulary::*,
 };
 
@@ -72,7 +72,7 @@ pub async fn handle_announce(
     };
     let instance = config.instance();
     let storage = MediaStorage::from(config);
-    let author = get_or_import_profile_by_actor_id(
+    let author = ActorIdResolver::default().only_remote().resolve(
         db_client,
         &instance,
         &storage,

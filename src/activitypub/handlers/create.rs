@@ -66,7 +66,6 @@ use crate::activitypub::{
     identifiers::{parse_local_actor_id, profile_actor_id},
     importers::{
         get_or_import_profile_by_actor_address,
-        get_or_import_profile_by_actor_id,
         get_post_by_object_id,
         get_profile_by_actor_id,
         import_post,
@@ -676,7 +675,7 @@ pub async fn handle_note(
     };
 
     let author_id = get_object_attributed_to(&object)?;
-    let author = get_or_import_profile_by_actor_id(
+    let author = ActorIdResolver::default().only_remote().resolve(
         db_client,
         instance,
         storage,

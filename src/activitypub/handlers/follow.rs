@@ -20,7 +20,7 @@ use mitra_validators::errors::ValidationError;
 use crate::activitypub::{
     builders::accept_follow::prepare_accept_follow,
     identifiers::parse_local_actor_id,
-    importers::get_or_import_profile_by_actor_id,
+    importers::ActorIdResolver,
     vocabulary::PERSON,
 };
 
@@ -43,7 +43,7 @@ pub async fn handle_follow(
     // Follow(Person)
     let activity: Follow = serde_json::from_value(activity)
         .map_err(|_| ValidationError("unexpected activity structure"))?;
-    let source_profile = get_or_import_profile_by_actor_id(
+    let source_profile = ActorIdResolver::default().only_remote().resolve(
         db_client,
         &config.instance(),
         &MediaStorage::from(config),

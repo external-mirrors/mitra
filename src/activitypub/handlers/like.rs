@@ -12,8 +12,8 @@ use mitra_validators::errors::ValidationError;
 
 use crate::activitypub::{
     importers::{
-        get_or_import_profile_by_actor_id,
         get_post_by_object_id,
+        ActorIdResolver,
     },
     vocabulary::NOTE,
 };
@@ -35,7 +35,7 @@ pub async fn handle_like(
 ) -> HandlerResult {
     let activity: Like = serde_json::from_value(activity)
         .map_err(|_| ValidationError("unexpected activity structure"))?;
-    let author = get_or_import_profile_by_actor_id(
+    let author = ActorIdResolver::default().only_remote().resolve(
         db_client,
         &config.instance(),
         &MediaStorage::from(config),

@@ -47,7 +47,7 @@ use mitra_utils::{
     urls::UrlError,
 };
 
-use super::importers::get_or_import_profile_by_actor_id;
+use super::importers::ActorIdResolver;
 use super::receiver::HandlerError;
 
 const AUTHENTICATION_FETCHER_TIMEOUT: u64 = 10;
@@ -103,7 +103,7 @@ async fn get_signer(
     } else {
         let mut instance = config.instance();
         instance.fetcher_timeout = AUTHENTICATION_FETCHER_TIMEOUT;
-        match get_or_import_profile_by_actor_id(
+        match ActorIdResolver::default().only_remote().resolve(
             db_client,
             &instance,
             &MediaStorage::from(config),

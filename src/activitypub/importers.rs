@@ -147,17 +147,6 @@ async fn refresh_remote_profile(
     Ok(profile)
 }
 
-pub async fn get_or_import_profile_by_actor_id(
-    db_client: &mut impl DatabaseClient,
-    instance: &Instance,
-    storage: &MediaStorage,
-    actor_id: &str,
-) -> Result<DbActorProfile, HandlerError> {
-    ActorIdResolver::default()
-        .only_remote()
-        .resolve(db_client, instance, storage, actor_id).await
-}
-
 #[derive(Default)]
 pub struct ActorIdResolver {
     only_remote: bool,
