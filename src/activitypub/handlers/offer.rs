@@ -76,7 +76,7 @@ pub async fn handle_offer(
         return Err(ValidationError("invalid duration").into());
     };
     let payment_address = create_monero_address(monero_config).await
-        .map_err(|_| HandlerError::InternalError)?
+        .map_err(|_| HandlerError::ServiceError("failed to create monero address"))?
         .to_string();
     let db_invoice = create_invoice(
         db_client,

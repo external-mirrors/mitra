@@ -46,9 +46,6 @@ pub enum HandlerError {
     #[error("local object")]
     LocalObject,
 
-    #[error("internal error")]
-    InternalError,
-
     #[error(transparent)]
     FetchError(#[from] FetchError),
 
@@ -61,6 +58,9 @@ pub enum HandlerError {
     #[error("media storage error")]
     StorageError(#[from] MediaStorageError),
 
+    #[error("{0}")]
+    ServiceError(&'static str),
+
     #[error(transparent)]
     AuthError(#[from] AuthenticationError),
 
@@ -72,13 +72,13 @@ impl From<HandlerError> for HttpError {
     fn from(error: HandlerError) -> Self {
         match error {
             HandlerError::LocalObject => HttpError::InternalError,
-            HandlerError::InternalError => HttpError::InternalError,
             HandlerError::FetchError(error) => {
                 HttpError::ValidationError(error.to_string())
             },
             HandlerError::ValidationError(error) => error.into(),
             HandlerError::DatabaseError(error) => error.into(),
             HandlerError::StorageError(_) => HttpError::InternalError,
+            HandlerError::ServiceError(_) => HttpError::InternalError,
             HandlerError::AuthError(_) => {
                 HttpError::AuthError("invalid signature")
             },
