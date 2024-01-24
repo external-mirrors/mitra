@@ -59,7 +59,7 @@ pub async fn handle_move(
     ).await?;
     let old_actor_id = profile_actor_id(&instance.url(), &old_profile);
 
-    let new_profile = ActorIdResolver::default().resolve(
+    let new_profile = ActorIdResolver::default().force_refetch().resolve(
         db_client,
         &instance,
         &storage,

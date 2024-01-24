@@ -19,6 +19,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Remove LD signature before verifying integrity proof.
 - Improve error handling in mention processor.
 - Rename `refetch-actor` command to `fetch-actor`.
+- Always refetch target actor when processing `Move` activity.
 
 ## [2.7.2] - 2024-01-18
 
