@@ -30,7 +30,7 @@ use crate::activitypub::{
     vocabulary::{NOTE, PERSON},
 };
 
-use super::{HandlerError, HandlerResult};
+use super::HandlerResult;
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -53,7 +53,8 @@ pub async fn handle_add(
         db_client,
         &activity.actor,
     ).await?;
-    let actor = actor_profile.actor_json.ok_or(HandlerError::LocalObject)?;
+    let actor = actor_profile.actor_json
+        .expect("actor data should be present");
     if Some(activity.target.clone()) == actor.subscribers {
         // Adding to subscribers
         let username = parse_local_actor_id(

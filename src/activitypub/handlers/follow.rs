@@ -24,7 +24,7 @@ use crate::activitypub::{
     vocabulary::PERSON,
 };
 
-use super::{HandlerError, HandlerResult};
+use super::HandlerResult;
 
 #[derive(Deserialize)]
 struct Follow {
@@ -50,7 +50,7 @@ pub async fn handle_follow(
         &activity.actor,
     ).await?;
     let source_actor = source_profile.actor_json
-        .ok_or(HandlerError::LocalObject)?;
+        .expect("actor data should be present");
     let target_username = parse_local_actor_id(
         &config.instance_url(),
         &activity.object,
