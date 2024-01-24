@@ -10,7 +10,7 @@ use mitra_models::{
         get_followers,
         unfollow,
     },
-    users::queries::{get_user_by_id, get_user_by_name},
+    users::queries::get_user_by_id,
 };
 use mitra_services::media::MediaStorage;
 use mitra_validators::errors::ValidationError;
@@ -20,8 +20,8 @@ use crate::activitypub::{
         follow::follow_or_create_request,
         undo_follow::prepare_undo_follow,
     },
-    identifiers::{parse_local_actor_id, profile_actor_id},
-    importers::get_or_import_profile_by_actor_id,
+    identifiers::profile_actor_id,
+    importers::ActorIdResolver,
     vocabulary::PERSON,
 };
 
@@ -50,36 +50,21 @@ pub async fn handle_move(
 
     let instance = config.instance();
     let storage = MediaStorage::from(config);
-    let old_profile = if let Ok(username) = parse_local_actor_id(
-        &instance.url(),
+
+    let old_profile = ActorIdResolver::default().resolve(
+        db_client,
+        &instance,
+        &storage,
         &activity.object,
-    ) {
-        let old_user = get_user_by_name(db_client, &username).await?;
-        old_user.profile
-    } else {
-        get_or_import_profile_by_actor_id(
-            db_client,
-            &instance,
-            &storage,
-            &activity.object,
-        ).await?
-    };
+    ).await?;
     let old_actor_id = profile_actor_id(&instance.url(), &old_profile);
 
-    let new_profile = if let Ok(username) = parse_local_actor_id(
-        &instance.url(),
+    let new_profile = ActorIdResolver::default().resolve(
+        db_client,
+        &instance,
+        &storage,
         &activity.target,
-    ) {
-        let new_user = get_user_by_name(db_client, &username).await?;
-        new_user.profile
-    } else {
-        get_or_import_profile_by_actor_id(
-            db_client,
-            &instance,
-            &storage,
-            &activity.target,
-        ).await?
-    };
+    ).await?;
 
     // Find aliases by DIDs (verified)
     let mut aliases = find_verified_aliases(db_client, &new_profile).await?
