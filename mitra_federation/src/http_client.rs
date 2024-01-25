@@ -55,6 +55,10 @@ pub fn build_http_client(
         let proxy = Proxy::all(proxy_url)?;
         client_builder = client_builder.proxy(proxy);
     };
+    if cfg!(feature = "rustls-tls") {
+        // https://github.com/hyperium/hyper/issues/3427
+        client_builder = client_builder.http1_only();
+    };
     let request_timeout = Duration::from_secs(timeout);
     let connect_timeout = Duration::from_secs(max(
         timeout,
