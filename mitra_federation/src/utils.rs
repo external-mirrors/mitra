@@ -1,6 +1,11 @@
 use serde_json::{Value as JsonValue};
 
-use mitra_utils::urls::{Position, Url, UrlError};
+use mitra_utils::urls::{
+    get_hostname,
+    Position,
+    Url,
+    UrlError,
+};
 
 use super::constants::AP_PUBLIC;
 
@@ -45,6 +50,12 @@ pub fn is_public(target_id: impl AsRef<str>) -> bool {
         "Public",
     ];
     PUBLIC_VARIANTS.contains(&target_id.as_ref())
+}
+
+pub fn is_same_hostname(id_1: &str, id_2: &str) -> Result<bool, UrlError> {
+    let hostname_1 = get_hostname(id_1)?;
+    let hostname_2 = get_hostname(id_2)?;
+    Ok(hostname_1 == hostname_2)
 }
 
 #[cfg(test)]
@@ -111,5 +122,17 @@ mod tests {
         let key_id = "https://ap.podcastindex.org/podcasts?id=920666#main-key";
         let actor_id = key_id_to_actor_id(key_id).unwrap();
         assert_eq!(actor_id, "https://ap.podcastindex.org/podcasts?id=920666");
+    }
+
+    #[test]
+    fn test_is_same_hostname() {
+        let id_1 = "https://server.example/objects/1";
+        let id_2 = "https://server.example/actors/test";
+        let ret = is_same_hostname(id_1, id_2).unwrap();
+        assert_eq!(ret, true);
+
+        let id_3 = "https://other.example/objects/1";
+        let ret = is_same_hostname(id_1, id_3).unwrap();
+        assert_eq!(ret, false);
     }
 }

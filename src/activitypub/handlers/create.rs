@@ -17,7 +17,7 @@ use mitra_federation::{
         parse_into_id_array,
     },
     fetch::fetch_file,
-    utils::is_public,
+    utils::{is_public, is_same_hostname},
 };
 use mitra_models::{
     attachments::queries::create_attachment,
@@ -675,6 +675,11 @@ pub async fn handle_note(
     };
 
     let author_id = get_object_attributed_to(&object)?;
+    if !is_same_hostname(&author_id, &object.id)
+        .map_err(|_| ValidationError("invalid object ID"))?
+    {
+        return Err(ValidationError("object attributed to actor from different server").into());
+    };
     let author = ActorIdResolver::default().only_remote().resolve(
         db_client,
         instance,

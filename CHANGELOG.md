@@ -20,6 +20,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Improve error handling in mention processor.
 - Rename `refetch-actor` command to `fetch-actor`.
 - Always refetch target actor when processing `Move` activity.
+- Verify that `id` and `attributedTo` have same hostname.
 
 ### Removed
 
