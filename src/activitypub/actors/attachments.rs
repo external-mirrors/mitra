@@ -299,10 +299,7 @@ pub fn parse_link(
 
     let link: Link = serde_json::from_value(attachment.clone())
         .map_err(|_| ValidationError("invalid link attachment"))?;
-    let result = if link.name == PAYMENT_LINK_NAME_ETHEREUM ||
-        link.name == PAYMENT_LINK_NAME_MONERO ||
-        link.rel.contains(&PAYMENT_LINK_RELATION_TYPE.to_string())
-    {
+    let result = if link.rel.contains(&PAYMENT_LINK_RELATION_TYPE.to_string()) {
         let db_payment_link = DbPaymentLink {
             name: link.name,
             href: link.href,
