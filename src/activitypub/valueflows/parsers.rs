@@ -65,7 +65,7 @@ pub struct TransferIntent {
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Proposal {
-    id: String,
+    pub id: String,
     publishes: DeliverServiceIntent,
     reciprocal: TransferIntent,
     unit_based: bool,

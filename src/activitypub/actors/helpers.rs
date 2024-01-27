@@ -251,7 +251,7 @@ async fn fetch_proposals(
                 continue;
             },
         };
-        log::info!("fetched proposal {}", proposal_id);
+        log::info!("fetched proposal {}", proposal.id);
         let payment_option = match parse_proposal(proposal) {
             Ok(option) => option,
             Err(error) => {
