@@ -17,8 +17,6 @@ use mitra_models::{
 };
 use mitra_utils::{
     crypto_eddsa::ed25519_public_key_from_bytes,
-    did::Did,
-    eip191::verify_eip191_signature,
     json_signatures::{
         proofs::{
             ProofType,
@@ -33,10 +31,6 @@ use mitra_utils::{
             JsonSigner,
         },
     },
-    minisign::{
-        parse_minisign_signature,
-        verify_minisign_signature,
-    },
 };
 use mitra_validators::errors::ValidationError;
 
@@ -47,10 +41,7 @@ use crate::activitypub::{
     },
     contexts::W3ID_VALUEFLOWS_CONTEXT,
     identifiers::local_actor_proposal_id,
-    identity::{
-        create_identity_claim,
-        VerifiableIdentityStatement,
-    },
+    identity::VerifiableIdentityStatement,
     vocabulary::{
         IDENTITY_PROOF,
         LINK,
@@ -82,67 +73,6 @@ pub fn attach_identity_proof(
         signature_value: Some(proof_value),
     };
     Ok(attachment)
-}
-
-pub fn parse_identity_proof(
-    actor_id: &str,
-    attachment: &JsonValue,
-) -> Result<IdentityProof, ValidationError> {
-    let attachment: ActorAttachment = serde_json::from_value(attachment.clone())
-        .map_err(|_| ValidationError("invalid attachment"))?;
-    if attachment.object_type != IDENTITY_PROOF {
-        return Err(ValidationError("invalid attachment type"));
-    };
-    let proof_type_str = attachment.signature_algorithm.as_ref()
-        .ok_or(ValidationError("missing proof type"))?;
-    let proof_type = match proof_type_str.as_str() {
-        PROOF_TYPE_ID_EIP191 => IdentityProofType::LegacyEip191IdentityProof,
-        PROOF_TYPE_ID_MINISIGN => IdentityProofType::LegacyMinisignIdentityProof,
-        _ => return Err(ValidationError("unsupported proof type")),
-    };
-    let did = attachment.name.parse::<Did>()
-        .map_err(|_| ValidationError("invalid DID"))?;
-    let message = create_identity_claim(actor_id, &did)
-        .map_err(|_| ValidationError("invalid claim"))?;
-    let signature = attachment.signature_value.as_ref()
-        .ok_or(ValidationError("missing signature"))?;
-    match did {
-        Did::Key(ref did_key) => {
-            if !matches!(proof_type, IdentityProofType::LegacyMinisignIdentityProof) {
-                return Err(ValidationError("incorrect proof type"));
-            };
-            let signature = parse_minisign_signature(signature)
-                .map_err(|_| ValidationError("invalid signature encoding"))?;
-            if !signature.is_prehashed {
-                return Err(ValidationError("invalid signature type"));
-            };
-            verify_minisign_signature(
-                did_key,
-                &message,
-                &signature.value,
-            ).map_err(|_| ValidationError("invalid identity proof"))?;
-        },
-        Did::Pkh(ref did_pkh) => {
-            if !matches!(proof_type, IdentityProofType::LegacyEip191IdentityProof) {
-                return Err(ValidationError("incorrect proof type"));
-            };
-            let signature_bin = hex::decode(signature)
-                .map_err(|_| ValidationError("invalid signature encoding"))?;
-            verify_eip191_signature(
-                did_pkh,
-                &message,
-                &signature_bin,
-            ).map_err(|_| ValidationError("invalid identity proof"))?;
-        },
-    };
-    let proof_value = serde_json::to_value(signature)
-        .expect("signature string should be serializable");
-    let proof = IdentityProof {
-        issuer: did,
-        proof_type: proof_type,
-        value: proof_value,
-    };
-    Ok(proof)
 }
 
 pub fn parse_identity_proof_fep_c390(

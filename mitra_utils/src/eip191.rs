@@ -58,7 +58,7 @@ pub fn recover_address_eip191(
 }
 
 #[derive(thiserror::Error, Debug)]
-pub enum Eip191VerificationError {
+pub(crate) enum Eip191VerificationError {
     #[error("invalid signature length")]
     InvalidSignatureLength,
 
@@ -69,7 +69,7 @@ pub enum Eip191VerificationError {
     InvalidSigner,
 }
 
-pub fn verify_eip191_signature(
+pub(crate) fn verify_eip191_signature(
     signer: &DidPkh,
     message: &str,
     signature: &[u8],

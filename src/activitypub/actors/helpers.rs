@@ -42,7 +42,6 @@ use crate::activitypub::{
     vocabulary::{
         EMOJI,
         HASHTAG,
-        IDENTITY_PROOF,
         LINK,
         NOTE,
         PROPERTY_VALUE,
@@ -51,7 +50,6 @@ use crate::activitypub::{
 };
 
 use super::attachments::{
-    parse_identity_proof,
     parse_identity_proof_fep_c390,
     parse_link,
     parse_metadata_field,
@@ -168,12 +166,6 @@ fn parse_attachments(actor: &Actor) -> (
         let attachment_type =
             attachment_value["type"].as_str().unwrap_or("Unknown");
         match attachment_type {
-            IDENTITY_PROOF => {
-                match parse_identity_proof(&actor.id, attachment_value) {
-                    Ok(proof) => identity_proofs.push(proof),
-                    Err(error) => log_error(attachment_type, error),
-                };
-            },
             VERIFIABLE_IDENTITY_STATEMENT => {
                 match parse_identity_proof_fep_c390(&actor.id, attachment_value) {
                     Ok(proof) => identity_proofs.push(proof),

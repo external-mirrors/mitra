@@ -81,7 +81,7 @@ pub struct MinisignSignature {
 
 // Signature format:
 // base64(<signature_algorithm> || <key_id> || <signature>)
-pub fn parse_minisign_signature(
+fn parse_minisign_signature(
     signature_b64: &str,
 ) -> Result<MinisignSignature, ParseError> {
     let signature_bin = base64::decode(signature_b64)?;
@@ -114,7 +114,7 @@ pub fn parse_minisign_signature_file(
 }
 
 #[derive(thiserror::Error, Debug)]
-pub enum VerificationError {
+pub(crate) enum VerificationError {
     #[error(transparent)]
     MulticodecError(#[from] MulticodecError),
 
@@ -140,7 +140,7 @@ fn verify_eddsa_blake2_signature(
     Ok(())
 }
 
-pub fn verify_minisign_signature(
+pub(crate) fn verify_minisign_signature(
     signer: &DidKey,
     message: &str,
     signature: &[u8],

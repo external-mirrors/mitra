@@ -20,27 +20,6 @@ use mitra_utils::{
 
 use super::vocabulary::VERIFIABLE_IDENTITY_STATEMENT;
 
-// https://www.w3.org/TR/vc-data-model/#credential-subject
-#[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
-struct Claim {
-    id: String, // actor ID
-    owner_of: Did,
-}
-
-/// Creates key ownership claim and prepares it for signing
-pub fn create_identity_claim(
-    actor_id: &str,
-    did: &Did,
-) -> Result<String, CanonicalizationError> {
-    let claim = Claim {
-        id: actor_id.to_string(),
-        owner_of: did.clone(),
-    };
-    let message = canonicalize_object(&claim)?;
-    Ok(message)
-}
-
 #[derive(Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct VerifiableIdentityStatement {
@@ -173,9 +152,7 @@ mod tests {
             ed25519_public_key_from_bytes,
             ed25519_public_key_from_private_key,
         },
-        currencies::Currency,
         did_key::DidKey,
-        did_pkh::DidPkh,
         json_signatures::{
             create::sign_object_eddsa,
             proofs::ProofType,
@@ -185,21 +162,6 @@ mod tests {
         multicodec::decode_ed25519_private_key,
     };
     use super::*;
-
-    #[test]
-    fn test_create_identity_claim() {
-        let actor_id = "https://server.example/users/test";
-        let ethereum_address = "0xB9C5714089478a327F09197987f16f9E5d936E8a";
-        let did = Did::Pkh(DidPkh::from_address(
-            &Currency::Ethereum,
-            ethereum_address,
-        ));
-        let claim = create_identity_claim(actor_id, &did).unwrap();
-        assert_eq!(
-            claim,
-            r#"{"id":"https://server.example/users/test","ownerOf":"did:pkh:eip155:1:0xb9c5714089478a327f09197987f16f9e5d936e8a"}"#,
-        );
-    }
 
     #[test]
     fn test_create_identity_claim_fep_c390() {
