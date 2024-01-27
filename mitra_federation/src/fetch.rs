@@ -8,7 +8,7 @@ use mitra_utils::{
         create_http_signature,
         HttpSignatureError,
     },
-    urls::{is_safe_url, Url, UrlError},
+    urls::{is_safe_url, UrlError},
 };
 
 use super::{
@@ -20,6 +20,7 @@ use super::{
         limited_response,
         RESPONSE_SIZE_LIMIT,
     },
+    utils::is_same_hostname,
 };
 
 #[derive(thiserror::Error, Debug)]
@@ -126,10 +127,9 @@ pub async fn fetch_object<T: DeserializeOwned>(
         .ok_or(FetchError::ResponseTooLarge)?;
 
     let object_json: JsonValue = serde_json::from_slice(&data)?;
-    let object_id: Url = object_json["id"].as_str()
-        .ok_or(FetchError::UnexpectedObjectId)?
-        .parse()?;
-    if object_id != *response.url() {
+    let object_id = object_json["id"].as_str()
+        .ok_or(FetchError::UnexpectedObjectId)?;
+    if !is_same_hostname(object_id, response.url().as_str())? {
         return Err(FetchError::UnexpectedObjectId);
     };
     let object: T = serde_json::from_value(object_json)?;
