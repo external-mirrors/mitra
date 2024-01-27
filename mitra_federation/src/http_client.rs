@@ -80,7 +80,7 @@ pub fn build_http_client(
 
 // Workaround for https://github.com/seanmonstar/reqwest/issues/1234
 pub async fn limited_response(
-    mut response: Response,
+    response: &mut Response,
     limit: usize,
 ) -> Result<Option<Bytes>, reqwest::Error> {
     let mut bytes = BytesMut::new();

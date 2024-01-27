@@ -87,9 +87,9 @@ pub async fn send_activity(
             inbox_url,
         );
     } else {
-        let response = request.send().await?;
+        let mut response = request.send().await?;
         let response_status = response.status();
-        let response_data = limited_response(response, RESPONSE_SIZE_LIMIT)
+        let response_data = limited_response(&mut response, RESPONSE_SIZE_LIMIT)
             .await?
             .ok_or(DelivererError::ResponseTooLarge)?;
         let response_text: String = String::from_utf8(response_data.to_vec())

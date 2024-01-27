@@ -20,12 +20,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Improve error handling in mention processor.
 - Rename `refetch-actor` command to `fetch-actor`.
 - Always refetch target actor when processing `Move` activity.
-- Verify that `id` and `attributedTo` have same hostname.
 - Change redirect limit for federation requests to 3.
 
 ### Removed
 
 - Removed support for payment links without `rel` attribute.
+
+### Security
+
+- Verify that `id` and `attributedTo` have same hostname.
+- Verify that `id` of fetched object matches its actual location.
 
 ## [2.7.2] - 2024-01-18
 

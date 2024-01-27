@@ -1,6 +1,6 @@
-use bytes::Bytes;
 use reqwest::{Client, Method, RequestBuilder, StatusCode};
 use serde::de::DeserializeOwned;
+use serde_json::{Value as JsonValue};
 
 use mitra_utils::{
     files::sniff_media_type,
@@ -8,7 +8,7 @@ use mitra_utils::{
         create_http_signature,
         HttpSignatureError,
     },
-    urls::{is_safe_url, UrlError},
+    urls::{is_safe_url, Url, UrlError},
 };
 
 use super::{
@@ -44,6 +44,9 @@ pub enum FetchError {
 
     #[error("json parse error: {0}")]
     JsonParseError(#[from] serde_json::Error),
+
+    #[error("unexpected object ID")]
+    UnexpectedObjectId,
 
     #[error("unsupported media type: {0}")]
     UnsupportedMediaType(String),
@@ -90,20 +93,20 @@ fn fetcher_error_for_status(error: reqwest::Error) -> FetchError {
 }
 
 /// Sends GET request to fetch AP object
-async fn send_request(
+pub async fn fetch_object<T: DeserializeOwned>(
     agent: &FederationAgent,
-    url: &str,
-) -> Result<Bytes, FetchError> {
-    let http_client = build_fetcher_client(agent, url)?;
+    object_url: &str,
+) -> Result<T, FetchError> {
+    let http_client = build_fetcher_client(agent, object_url)?;
     let mut request_builder =
-        build_request(agent, http_client, Method::GET, url)
+        build_request(agent, http_client, Method::GET, object_url)
             .header(reqwest::header::ACCEPT, AP_MEDIA_TYPE);
 
     if !agent.is_instance_private {
         // Only public instances can send signed requests
         let headers = create_http_signature(
             Method::GET,
-            url,
+            object_url,
             b"",
             &agent.signer_key,
             &agent.signer_key_id,
@@ -114,22 +117,22 @@ async fn send_request(
             .header("Signature", headers.signature);
     };
 
-    let response = request_builder
+    let mut response = request_builder
         .send().await?
         .error_for_status()
         .map_err(fetcher_error_for_status)?;
-    let data = limited_response(response, RESPONSE_SIZE_LIMIT)
+    let data = limited_response(&mut response, RESPONSE_SIZE_LIMIT)
         .await?
         .ok_or(FetchError::ResponseTooLarge)?;
-    Ok(data)
-}
 
-pub async fn fetch_object<T: DeserializeOwned>(
-    agent: &FederationAgent,
-    object_url: &str,
-) -> Result<T, FetchError> {
-    let object_json = send_request(agent, object_url).await?;
-    let object: T = serde_json::from_slice(&object_json)?;
+    let object_json: JsonValue = serde_json::from_slice(&data)?;
+    let object_id: Url = object_json["id"].as_str()
+        .ok_or(FetchError::UnexpectedObjectId)?
+        .parse()?;
+    if object_id != *response.url() {
+        return Err(FetchError::UnexpectedObjectId);
+    };
+    let object: T = serde_json::from_value(object_json)?;
     Ok(object)
 }
 
@@ -161,7 +164,7 @@ pub async fn fetch_file(
     let http_client = build_fetcher_client(agent, url)?;
     let request_builder =
         build_request(agent, http_client, Method::GET, url);
-    let response = request_builder.send().await?.error_for_status()?;
+    let mut response = request_builder.send().await?.error_for_status()?;
     if let Some(file_size) = response.content_length() {
         let file_size: usize = file_size.try_into()
             .map_err(|_| FetchError::ResponseTooLarge)?;
@@ -173,7 +176,7 @@ pub async fn fetch_file(
         .get("content-type")
         .and_then(|value| value.to_str().ok())
         .map(|value| value.to_string());
-    let file_data = limited_response(response, file_max_size)
+    let file_data = limited_response(&mut response, file_max_size)
         .await?
         .ok_or(FetchError::ResponseTooLarge)?;
     let file_size = file_data.len();
@@ -197,12 +200,12 @@ pub async fn fetch_json<T: DeserializeOwned>(
     let http_client = build_fetcher_client(agent, url)?;
     let request_builder =
         build_request(agent, http_client, Method::GET, url);
-    let response = request_builder
+    let mut response = request_builder
         .query(query)
         .send()
         .await?
         .error_for_status()?;
-    let data = limited_response(response, RESPONSE_SIZE_LIMIT)
+    let data = limited_response(&mut response, RESPONSE_SIZE_LIMIT)
         .await?
         .ok_or(FetchError::ResponseTooLarge)?;
     let object: T = serde_json::from_slice(&data)?;
