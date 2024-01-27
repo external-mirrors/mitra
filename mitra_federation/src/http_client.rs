@@ -2,13 +2,19 @@ use std::cmp::max;
 use std::time::Duration;
 
 use bytes::{BufMut, Bytes, BytesMut};
-use reqwest::{Client, Proxy, Response};
+use reqwest::{
+    redirect::{Policy as RedirectPolicy},
+    Client,
+    Proxy,
+    Response,
+};
 
 use mitra_utils::urls::{get_hostname, UrlError};
 
 use super::agent::FederationAgent;
 
 const CONNECTION_TIMEOUT: u64 = 30;
+const REDIRECT_LIMIT: usize = 3;
 
 // See also: mitra_validators::posts::CONTENT_MAX_SIZE
 pub const RESPONSE_SIZE_LIMIT: usize = 1_000_000;
@@ -59,6 +65,7 @@ pub fn build_http_client(
         // https://github.com/hyperium/hyper/issues/3427
         client_builder = client_builder.http1_only();
     };
+    let redirect_policy = RedirectPolicy::limited(REDIRECT_LIMIT);
     let request_timeout = Duration::from_secs(timeout);
     let connect_timeout = Duration::from_secs(max(
         timeout,
@@ -67,6 +74,7 @@ pub fn build_http_client(
     client_builder
         .timeout(request_timeout)
         .connect_timeout(connect_timeout)
+        .redirect(redirect_policy)
         .build()
 }
 
