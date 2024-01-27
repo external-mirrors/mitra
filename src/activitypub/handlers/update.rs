@@ -60,7 +60,6 @@ async fn handle_update_note(
     db_client: &mut impl DatabaseClient,
     activity: JsonValue,
 ) -> HandlerResult {
-    let activity_cloned = activity.clone();
     let activity: UpdateNote = serde_json::from_value(activity)
         .map_err(|_| ValidationError("invalid object"))?;
     let object = activity.object;
@@ -101,11 +100,6 @@ async fn handle_update_note(
         &object,
         &HashMap::new(),
     ).await?;
-    if post.links.len() > 0 {
-        // TODO: remove
-        log::info!("processing Update activity: {}", activity_cloned);
-        log::warn!("links: {}", links.len());
-    };
     let is_sensitive = object.sensitive.unwrap_or(false);
     let updated_at = object.updated.unwrap_or(Utc::now());
     let post_data = PostUpdateData {
