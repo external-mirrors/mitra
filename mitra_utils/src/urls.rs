@@ -47,7 +47,10 @@ pub fn guess_protocol(hostname: &str) -> &'static str {
     if let Ok(_ipv6_address) = maybe_ipv6_address {
         return "http";
     };
-    if hostname.ends_with(".onion") || hostname.ends_with(".i2p") {
+    if hostname.ends_with(".onion") ||
+        hostname.ends_with(".i2p") ||
+        hostname.ends_with(".loki")
+    {
         // Tor / I2P
         "http"
     } else {
