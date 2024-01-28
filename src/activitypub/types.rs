@@ -29,8 +29,7 @@ pub struct Attachment {
 
 fn default_tag_type() -> String { HASHTAG.to_string() }
 
-#[derive(Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Deserialize)]
 pub struct Tag {
     #[serde(rename = "type", default = "default_tag_type")]
     pub tag_type: String,
