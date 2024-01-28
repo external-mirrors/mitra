@@ -146,6 +146,9 @@ pub enum JsonSignatureError {
     #[error(transparent)]
     JsonError(#[from] serde_json::Error),
 
+    #[error("@context is required")]
+    ContextRequired,
+
     #[error(transparent)]
     CanonicalizationError(#[from] CanonicalizationError),
 
@@ -223,11 +226,14 @@ pub fn sign_object_eddsa(
 ) -> Result<JsonValue, JsonSignatureError> {
     let signature_created_at = current_time.unwrap_or(Utc::now());
     let proof_config = if use_legacy_cryptosuite {
+        // jcs-eddsa-2022
         IntegrityProofConfig::jcs_eddsa_legacy(
             signer_key_id,
             signature_created_at,
         )
     } else {
+        // eddsa-jcs-2022 (requires context injection)
+        object.get("@context").ok_or(JsonSignatureError::ContextRequired)?;
         IntegrityProofConfig::jcs_eddsa(
             signer_key_id,
             signature_created_at,
@@ -310,6 +316,7 @@ mod tests {
         let signer_key = generate_weak_ed25519_key();
         let signer_key_id = "https://example.org/users/test#main-key";
         let object = json!({
+            "@context": "https://www.w3.org/ns/activitystreams",
             "type": "Create",
             "actor": "https://example.org/users/test",
             "id": "https://example.org/objects/1",
@@ -333,6 +340,7 @@ mod tests {
         ).unwrap();
 
         let expected_result = json!({
+            "@context": "https://www.w3.org/ns/activitystreams",
             "type": "Create",
             "actor": "https://example.org/users/test",
             "id": "https://example.org/objects/1",
@@ -350,7 +358,7 @@ mod tests {
                 "created": "2023-02-24T23:36:38Z",
                 "verificationMethod": "https://example.org/users/test#main-key",
                 "proofPurpose": "assertionMethod",
-                "proofValue": "z4XtzpP5qhBvkQsRsb49Kb8nGqqS3k2CsMiQkoTStHZy1gqEMR1FweKMXve82J6mf8w97WBW1T62ukFbCw7EaBsk4",
+                "proofValue": "z4vVxpyT57PqoymsDZR9JmNvmkwhgFDY1gh2D54ayzQ5dnBJukvnXKdVcMiTgdsJn4PrivZguS7Ln68QvDknyyACZ",
             },
         });
         assert_eq!(result, expected_result);

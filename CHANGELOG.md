@@ -24,6 +24,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Always refetch target actor when processing `Move` activity.
 - Change redirect limit for federation requests to 3.
 - Ignore invalid attachments.
+- Return error when `eddsa-jcs-2022` is used on document without `@context`.
 
 ### Removed
 

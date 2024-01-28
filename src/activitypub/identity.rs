@@ -223,7 +223,8 @@ mod tests {
     }
 
     #[test]
-    fn test_create_and_verify_identity_proof_test_vector() {
+    fn test_create_and_verify_identity_proof() {
+        // jcs-eddsa-2022; no context injection
         let did_str = "did:key:z6MkrJVnaZkeFzdQyMZu1cgjg7k1pZZ6pvBQ7XJPt4swbTQ2";
         let did = did_str.parse().unwrap();
         let private_key_multibase = "z3u2en7t5LR2WtQH5PfFqMqwVHBeXouLzo6haApm8XHqvjxq";
@@ -245,7 +246,7 @@ mod tests {
             &did.to_string(),
             &claim_value,
             Some(created_at),
-            false,
+            true,
         ).unwrap();
         let expected_result = json!({
             "type": "VerifiableIdentityStatement",
@@ -253,10 +254,10 @@ mod tests {
             "alsoKnownAs": "https://server.example/users/alice",
             "proof": {
                 "type": "DataIntegrityProof",
-                "cryptosuite": "eddsa-jcs-2022",
+                "cryptosuite": "jcs-eddsa-2022",
                 "verificationMethod": "did:key:z6MkrJVnaZkeFzdQyMZu1cgjg7k1pZZ6pvBQ7XJPt4swbTQ2",
                 "proofPurpose": "assertionMethod",
-                "proofValue": "z26W7TfJYD9DrGqnem245zNbeCbTwjb8avpduzi1JPhFrwML99CpP6gGXSKSXAcQdpGFBXF4kx7VwtXKhu7VDZJ54",
+                "proofValue": "zYqr4eFzrnUWiBDaa7SmBhfaSBiv6BFRsDRGkmaCJpXArPBspFWNM6NXu77R7JakdzbUdjZihBa28LuWscZxSfRk",
                 "created": "2023-02-24T23:36:38Z",
             },
         });
@@ -265,7 +266,7 @@ mod tests {
         let signature_data = get_json_signature(&identity_proof).unwrap();
         assert_eq!(
             signature_data.proof_type,
-            ProofType::EddsaJcsSignature,
+            ProofType::JcsEddsaSignature,
         );
         let public_key_bytes = did.as_did_key().unwrap()
             .try_ed25519_key().unwrap();

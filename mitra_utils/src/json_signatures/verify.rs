@@ -309,6 +309,7 @@ mod tests {
         let signer_key = generate_ed25519_key();
         let signer_key_id = "https://example.org/users/test#main-key";
         let object = json!({
+            "@context": "https://www.w3.org/ns/activitystreams",
             "type": "Create",
             "actor": "https://example.org/users/test",
             "id": "https://example.org/objects/1",
