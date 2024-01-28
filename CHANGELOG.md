@@ -29,6 +29,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Removed support for payment links without `rel` attribute.
 
+### Fixed
+
+- Create notifications if new mentions are added to post.
+
 ### Security
 
 - Verify that `id` and `attributedTo` have same hostname.

@@ -359,10 +359,16 @@ pub async fn update_post(
         ",
         &[&db_post.id, &post_data.attachments],
     ).await?;
-    transaction.execute(
-        "DELETE FROM mention WHERE post_id = $1",
+    let old_mentions_rows = transaction.query(
+        "
+        DELETE FROM mention WHERE post_id = $1
+        RETURNING profile_id
+        ",
         &[&db_post.id],
     ).await?;
+    let old_mentions: Vec<Uuid> = old_mentions_rows.iter()
+        .map(|row| row.try_get("profile_id"))
+        .collect::<Result<_, _>>()?;
     transaction.execute(
         "DELETE FROM post_tag WHERE post_id = $1",
         &[&db_post.id],
@@ -401,6 +407,21 @@ pub async fn update_post(
         &db_post.id,
         post_data.emojis,
     ).await?;
+
+    // Create notifications
+    for profile in db_mentions.iter() {
+        if profile.is_local() &&
+            profile.id != db_post.author_id &&
+            !old_mentions.contains(&profile.id)
+        {
+            create_mention_notification(
+                &transaction,
+                &db_post.author_id,
+                &profile.id,
+                &db_post.id,
+            ).await?;
+        };
+    };
 
     // Construct post object
     let author = get_post_author(&transaction, &db_post.id).await?;
