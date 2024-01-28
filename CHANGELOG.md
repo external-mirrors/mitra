@@ -25,6 +25,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Change redirect limit for federation requests to 3.
 - Ignore invalid attachments.
 - Return error when `eddsa-jcs-2022` is used on document without `@context`.
+- Use `eddsa-jcs-2022` for signing activities.
 
 ### Removed
 

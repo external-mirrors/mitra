@@ -170,7 +170,7 @@ pub(super) async fn deliver_activity_worker(
                     &ed25519_key_id,
                     &activity,
                     None,
-                    true, // use jcs-eddsa-2022
+                    false, // use eddsa-jcs-2022
                 )?
             },
             _ => {
