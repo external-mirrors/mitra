@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Add syndication feed link to user's Webfinger response.
 - Support `.loki` domains in webfinger queries.
+- Add flag to profile fields representing legacy identity proofs.
 
 ### Changed
 

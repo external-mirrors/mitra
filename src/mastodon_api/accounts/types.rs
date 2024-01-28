@@ -51,6 +51,7 @@ pub struct AccountField {
     pub name: String,
     pub value: String,
     verified_at: Option<DateTime<Utc>>,
+    is_legacy_proof: bool,
 }
 
 /// Contains only public information
@@ -171,6 +172,7 @@ impl Account {
                 value: field_value,
                 // Use current time because DID proofs are always valid
                 verified_at: Some(Utc::now()),
+                is_legacy_proof: proof.proof_type.is_legacy(),
             };
             identity_proofs.push(field);
         };
@@ -181,6 +183,7 @@ impl Account {
                 name: extra_field.name,
                 value: extra_field.value,
                 verified_at: None,
+                is_legacy_proof: false,
             };
             extra_fields.push(field);
         };
@@ -263,6 +266,7 @@ impl Account {
                 name: field.name,
                 value: field.value_source.unwrap_or(field.value),
                 verified_at: None,
+                is_legacy_proof: false,
             })
             .collect();
         let source = Source {

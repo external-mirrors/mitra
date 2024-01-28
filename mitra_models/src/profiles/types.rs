@@ -144,6 +144,15 @@ pub enum IdentityProofType {
     FepC390EddsaJcsNoCiProof, // was used for incorrect eddsa-jcs-2022 proofs
 }
 
+impl IdentityProofType {
+    pub fn is_legacy(&self) -> bool {
+        matches!(
+            self,
+            Self::LegacyEip191IdentityProof | Self::LegacyMinisignIdentityProof,
+        )
+    }
+}
+
 impl From<&IdentityProofType> for i16 {
     fn from(proof_type: &IdentityProofType) -> i16 {
         match proof_type {
