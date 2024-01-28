@@ -23,6 +23,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Rename `refetch-actor` command to `fetch-actor`.
 - Always refetch target actor when processing `Move` activity.
 - Change redirect limit for federation requests to 3.
+- Ignore invalid attachments.
 
 ### Removed
 

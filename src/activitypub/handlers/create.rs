@@ -12,7 +12,6 @@ use mitra_federation::{
     deserialization::{
         deserialize_into_object_id,
         deserialize_object_array,
-        parse_into_array,
         parse_into_href_array,
         parse_into_id_array,
     },
@@ -98,7 +97,12 @@ pub struct AttributedObject {
     pub sensitive: Option<bool>,
     pub summary: Option<String>,
 
-    pub attachment: Option<JsonValue>,
+    #[serde(
+        default,
+        deserialize_with = "deserialize_object_array",
+    )]
+    pub attachment: Vec<JsonValue>,
+
     #[serde(
         default,
         deserialize_with = "deserialize_object_array",
@@ -206,14 +210,15 @@ pub async fn get_object_attachments(
     let agent = build_federation_agent(instance, None);
     let mut attachments = vec![];
     let mut unprocessed = vec![];
-    let list: Vec<Attachment> = if let Some(ref value) = object.attachment {
-        parse_into_array(value)
-            .map_err(|_| ValidationError("invalid attachment property"))?
-    } else {
-        vec![]
-    };
     let mut downloaded = vec![];
-    for attachment in list {
+    for attachment_value in object.attachment.clone() {
+        let attachment: Attachment = match serde_json::from_value(attachment_value) {
+            Ok(attachment) => attachment,
+            Err(_) => {
+                log::warn!("invalid attachment");
+                continue;
+            },
+        };
         match attachment.attachment_type.as_str() {
             DOCUMENT | IMAGE | VIDEO => (),
             LINK => {
