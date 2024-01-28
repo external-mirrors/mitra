@@ -206,83 +206,85 @@ pub async fn get_object_attachments(
     let agent = build_federation_agent(instance, None);
     let mut attachments = vec![];
     let mut unprocessed = vec![];
-    if let Some(ref value) = object.attachment {
-        let list: Vec<Attachment> = parse_into_array(value)
-            .map_err(|_| ValidationError("invalid attachment property"))?;
-        let mut downloaded = vec![];
-        for attachment in list {
-            match attachment.attachment_type.as_str() {
-                DOCUMENT | IMAGE | VIDEO => (),
-                LINK => {
-                    // Lemmy compatibility
-                    let link_href = attachment.href
-                        .ok_or(ValidationError("invalid link attachment"))?;
-                    unprocessed.push(link_href);
-                    continue;
-                },
-                _ => {
-                    log::warn!(
-                        "skipping attachment of type {}",
-                        attachment.attachment_type,
-                    );
-                    continue;
-                },
-            };
-            if is_gnu_social_link(
-                &profile_actor_id(&instance.url(), author),
-                &attachment,
-            ) {
-                // Don't fetch HTML pages attached by GNU Social
+    let list: Vec<Attachment> = if let Some(ref value) = object.attachment {
+        parse_into_array(value)
+            .map_err(|_| ValidationError("invalid attachment property"))?
+    } else {
+        vec![]
+    };
+    let mut downloaded = vec![];
+    for attachment in list {
+        match attachment.attachment_type.as_str() {
+            DOCUMENT | IMAGE | VIDEO => (),
+            LINK => {
+                // Lemmy compatibility
+                let link_href = attachment.href
+                    .ok_or(ValidationError("invalid link attachment"))?;
+                unprocessed.push(link_href);
                 continue;
-            };
-            if let Some(ref description) = attachment.name {
-                validate_media_description(description)?;
-            };
-            let attachment_url = attachment.url
-                .ok_or(ValidationError("attachment URL is missing"))?;
-            let (file_data, file_size, media_type) = match fetch_file(
-                &agent,
-                &attachment_url,
-                attachment.media_type.as_deref(),
-                &storage.supported_media_types(),
-                storage.file_size_limit,
-            ).await {
-                Ok(file) => file,
-                Err(error) => {
-                    log::warn!(
-                        "failed to fetch attachment ({}): {}",
-                        attachment_url,
-                        error,
-                    );
-                    unprocessed.push(attachment_url);
-                    continue;
-                },
-            };
-            let file_name = storage.save_file(file_data, &media_type)?;
-            log::info!("downloaded attachment {}", attachment_url);
-            downloaded.push((
-                file_name,
-                file_size,
-                media_type,
-                attachment.name,
-            ));
-            // Stop downloading if limit is reached
-            if downloaded.len() >= ATTACHMENT_LIMIT {
-                log::warn!("too many attachments");
-                break;
-            };
+            },
+            _ => {
+                log::warn!(
+                    "skipping attachment of type {}",
+                    attachment.attachment_type,
+                );
+                continue;
+            },
         };
-        for (file_name, file_size, media_type, description) in downloaded {
-            let db_attachment = create_attachment(
-                db_client,
-                &author.id,
-                file_name,
-                file_size,
-                media_type,
-                description.as_deref(),
-            ).await?;
-            attachments.push(db_attachment.id);
+        if is_gnu_social_link(
+            &profile_actor_id(&instance.url(), author),
+            &attachment,
+        ) {
+            // Don't fetch HTML pages attached by GNU Social
+            continue;
         };
+        if let Some(ref description) = attachment.name {
+            validate_media_description(description)?;
+        };
+        let attachment_url = attachment.url
+            .ok_or(ValidationError("attachment URL is missing"))?;
+        let (file_data, file_size, media_type) = match fetch_file(
+            &agent,
+            &attachment_url,
+            attachment.media_type.as_deref(),
+            &storage.supported_media_types(),
+            storage.file_size_limit,
+        ).await {
+            Ok(file) => file,
+            Err(error) => {
+                log::warn!(
+                    "failed to fetch attachment ({}): {}",
+                    attachment_url,
+                    error,
+                );
+                unprocessed.push(attachment_url);
+                continue;
+            },
+        };
+        let file_name = storage.save_file(file_data, &media_type)?;
+        log::info!("downloaded attachment {}", attachment_url);
+        downloaded.push((
+            file_name,
+            file_size,
+            media_type,
+            attachment.name,
+        ));
+        // Stop downloading if limit is reached
+        if downloaded.len() >= ATTACHMENT_LIMIT {
+            log::warn!("too many attachments");
+            break;
+        };
+    };
+    for (file_name, file_size, media_type, description) in downloaded {
+        let db_attachment = create_attachment(
+            db_client,
+            &author.id,
+            file_name,
+            file_size,
+            media_type,
+            description.as_deref(),
+        ).await?;
+        attachments.push(db_attachment.id);
     };
     Ok((attachments, unprocessed))
 }
