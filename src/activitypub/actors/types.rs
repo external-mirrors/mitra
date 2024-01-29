@@ -39,6 +39,7 @@ use crate::activitypub::{
         MASTODON_CONTEXT,
         MITRA_CONTEXT,
         SCHEMA_ORG_CONTEXT,
+        W3C_DID_CONTEXT,
         W3ID_DATA_INTEGRITY_CONTEXT,
         W3ID_MULTIKEY_CONTEXT,
         W3ID_SECURITY_CONTEXT,
@@ -256,10 +257,12 @@ fn build_actor_context() -> (
     &'static str,
     &'static str,
     &'static str,
+    &'static str,
     HashMap<&'static str, &'static str>,
 ) {
     (
         AP_CONTEXT,
+        W3C_DID_CONTEXT,
         W3ID_SECURITY_CONTEXT,
         W3ID_DATA_INTEGRITY_CONTEXT,
         W3ID_MULTIKEY_CONTEXT,
@@ -279,7 +282,9 @@ fn build_actor_context() -> (
             // (not required for DataIntegrityProof)
             ("proofValue", "sec:proofValue"),
             ("proofPurpose", "sec:proofPurpose"),
-            ("verificationMethod", "sec:verificationMethod"),
+            // With DID context:
+            // "Invalid JSON-LD syntax; tried to redefine a protected term."
+            //("verificationMethod", "sec:verificationMethod"),
         ]),
     )
 }

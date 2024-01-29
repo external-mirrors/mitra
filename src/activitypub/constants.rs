@@ -6,6 +6,7 @@ pub use mitra_federation::constants::{
 };
 
 // Contexts
+pub const W3C_DID_CONTEXT: &str = "https://www.w3.org/ns/did/v1";
 pub const W3ID_SECURITY_CONTEXT: &str = "https://w3id.org/security/v1";
 pub const W3ID_DATA_INTEGRITY_CONTEXT: &str = "https://w3id.org/security/data-integrity/v1";
 pub const W3ID_MULTIKEY_CONTEXT: &str = "https://w3id.org/security/multikey/v1";
