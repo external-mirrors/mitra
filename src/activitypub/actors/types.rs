@@ -274,6 +274,12 @@ fn build_actor_context() -> (
             ("mitra", MITRA_CONTEXT),
             ("subscribers", "mitra:subscribers"),
             ("VerifiableIdentityStatement", "mitra:VerifiableIdentityStatement"),
+            ("MitraJcsEip191Signature2022", "mitra:MitraJcsEip191Signature2022"),
+            // Workarounds for MitraJcsEip191Signature2022
+            // (not required for DataIntegrityProof)
+            ("proofValue", "sec:proofValue"),
+            ("proofPurpose", "sec:proofPurpose"),
+            ("verificationMethod", "sec:verificationMethod"),
         ]),
     )
 }
