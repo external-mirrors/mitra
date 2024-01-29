@@ -91,19 +91,23 @@ pub type Context = (
     HashMap<&'static str, &'static str>,
 );
 
+// Default context for activities and objects
 pub fn build_default_context() -> Context {
     (
         AP_CONTEXT,
         W3ID_SECURITY_CONTEXT,
         W3ID_DATA_INTEGRITY_CONTEXT,
         HashMap::from([
-            ("Hashtag", "as:Hashtag"),
-            ("sensitive", "as:sensitive"),
+            ("mitra", MITRA_CONTEXT),
+            ("MitraJcsRsaSignature2022", "mitra:MitraJcsRsaSignature2022"),
+            // Workarounds for MitraJcsRsaSignature2022
+            // (not required for DataIntegrityProof)
             ("proofValue", "sec:proofValue"),
             ("proofPurpose", "sec:proofPurpose"),
             ("verificationMethod", "sec:verificationMethod"),
-            ("mitra", MITRA_CONTEXT),
-            ("MitraJcsRsaSignature2022", "mitra:MitraJcsRsaSignature2022"),
+            // Copied from Mastodon
+            ("Hashtag", "as:Hashtag"),
+            ("sensitive", "as:sensitive"),
         ]),
     )
 }
