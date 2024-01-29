@@ -273,7 +273,6 @@ fn build_actor_context() -> (
             ("featured", "toot:featured"),
             ("mitra", MITRA_CONTEXT),
             ("subscribers", "mitra:subscribers"),
-            ("subject", "mitra:subject"),
             ("VerifiableIdentityStatement", "mitra:VerifiableIdentityStatement"),
         ]),
     )
