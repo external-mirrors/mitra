@@ -10,6 +10,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Replace `<img>` tags in posts with links.
 
+### Changed
+
+- Change MSRV to 1.61.
+
 ## [2.8.0] - 2024-01-29
 
 ### Added
