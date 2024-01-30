@@ -3,15 +3,12 @@ use std::iter::FromIterator;
 use std::rc::Rc;
 
 use ammonia::{
-    rcdom::{Handle, Node, NodeData, SerializableHandle},
+    rcdom::{Handle, NodeData, SerializableHandle},
     Builder,
     Document,
     UrlRelative,
 };
-use html5ever::{
-    serialize::{serialize, SerializeOpts},
-    tendril::format_tendril,
-};
+use html5ever::serialize::{serialize, SerializeOpts};
 
 pub use ammonia::{clean_text as escape_html};
 
@@ -46,31 +43,53 @@ fn iter_nodes<F>(root: &Handle, func: F) -> ()
     };
 }
 
+mod dom {
+    use ammonia::rcdom::{Handle, Node, NodeData};
+    use html5ever::{
+        namespace_url,
+        ns,
+        tendril::format_tendril,
+        Attribute,
+        QualName,
+    };
+
+    pub fn create_attribute(name: &str, value: &str) -> Attribute {
+        Attribute {
+            name: QualName::new(None, ns!(), name.into()),
+            value: value.into(),
+        }
+    }
+
+    pub fn create_text(text: &str) -> Handle {
+        let contents = format_tendril!("{text}").into();
+        let node_data = NodeData::Text { contents };
+        Node::new(node_data)
+    }
+}
+
 /// Replaces all <img> tags with string "image"
 fn replace_images(root: &Handle) -> () {
     iter_nodes(root, |node| {
         if let NodeData::Element { name, .. } = &node.data {
             if &*name.local == "img" {
-                if let Some(weak) = node.parent.take() {
-                    if let Some(parent) = weak.upgrade() {
-                        // Get index of current element
-                        let maybe_index = parent
-                            .children
-                            .borrow()
-                            .iter()
-                            .enumerate()
-                            .find(|&(_, child)| Rc::ptr_eq(child, node))
-                            .map(|(index, _)| index);
-                        if let Some(index) = maybe_index {
-                            parent.children.borrow_mut().remove(index);
-                            node.parent.set(None);
-                            let text = NodeData::Text {
-                                contents: format_tendril!("image").into(),
-                            };
-                            let node_raw = Node::new(text);
-                            node_raw.parent.set(Some(Rc::downgrade(&parent)));
-                            parent.children.borrow_mut().insert(index, node_raw);
-                        };
+                let maybe_parent = node.parent
+                    .take()
+                    .and_then(|weak| weak.upgrade());
+                if let Some(parent) = maybe_parent {
+                    // Get index of current element
+                    let maybe_index = parent
+                        .children
+                        .borrow()
+                        .iter()
+                        .enumerate()
+                        .find(|&(_, child)| Rc::ptr_eq(child, node))
+                        .map(|(index, _)| index);
+                    if let Some(index) = maybe_index {
+                        parent.children.borrow_mut().remove(index);
+                        node.parent.set(None);
+                        let text_node = dom::create_text("image");
+                        text_node.parent.set(Some(Rc::downgrade(&parent)));
+                        parent.children.borrow_mut().insert(index, text_node);
                     };
                 };
             };
@@ -100,17 +119,14 @@ pub fn clean_html(
 }
 
 fn insert_rel_noopener(root: &Handle) -> () {
-    use html5ever::{local_name, ns, namespace_url, Attribute, QualName};
     iter_nodes(root, |node| {
         if let NodeData::Element { name, attrs, .. } = &node.data {
             if &*name.local == "a" &&
                 !attrs.borrow().iter().any(|attr| &*attr.name.local == "rel")
             {
                 // Push rel=noopener if not already present
-                attrs.borrow_mut().push(Attribute {
-                    name: QualName::new(None, ns!(), local_name!("rel")),
-                    value: "noopener".into(),
-                });
+                let rel = dom::create_attribute("rel", "noopener");
+                attrs.borrow_mut().push(rel);
             };
         };
     });
