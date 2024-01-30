@@ -43,9 +43,11 @@ pub async fn handle_offer(
         db_client,
         &activity.actor,
     ).await?;
+    let primary_commitment = activity.object.primary_commitment()?;
+    let reciprocal_commitment = activity.object.reciprocal_commitment()?;
     let (username, chain_id) = parse_local_primary_intent_id(
         &config.instance_url(),
-        &activity.object.clauses.0.satisfies,
+        &primary_commitment.satisfies,
     )?;
     let proposer = get_user_by_name(db_client, &username).await?;
     let monero_config = config.monero_config()
@@ -57,9 +59,9 @@ pub async fn handle_offer(
         .payment_options
         .find_subscription_option(&chain_id)
         .ok_or(ValidationError("recipient can't accept payment"))?;
-    let duration = activity.object.clauses.0.resource_quantity
+    let duration = primary_commitment.resource_quantity
         .parse_duration()?;
-    let amount: u64 = activity.object.clauses.1.resource_quantity
+    let amount: u64 = reciprocal_commitment.resource_quantity
         .parse_currency_amount()?;
     let expected_duration = amount / subscription_option.price.get();
     if duration != expected_duration {

@@ -1,4 +1,6 @@
 // https://www.valueflo.ws/concepts/actions/#action-definitions
+pub const PURPOSE_OFFER: &str = "offer";
+
 pub const ACTION_DELIVER_SERVICE: &str = "deliverService";
 pub const ACTION_TRANSFER: &str = "transfer";
 

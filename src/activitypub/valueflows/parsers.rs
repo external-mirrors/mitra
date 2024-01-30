@@ -13,6 +13,7 @@ use super::constants::{
     ACTION_TRANSFER,
     CLASS_CONTENT,
     CLASS_USER_GENERATED_CONTENT,
+    PURPOSE_OFFER,
     UNIT_ONE,
     UNIT_SECOND,
 };
@@ -58,14 +59,24 @@ pub struct Intent {
 #[serde(rename_all = "camelCase")]
 pub struct Proposal {
     pub id: String,
+    // TODO: make required
+    purpose: Option<String>,
+
     publishes: Intent,
     reciprocal: Intent,
+
     unit_based: bool,
 }
 
 pub fn parse_proposal(
     proposal: Proposal,
 ) -> Result<PaymentOption, ValidationError> {
+    // Purpose
+    if let Some(purpose) = proposal.purpose {
+        if purpose != PURPOSE_OFFER {
+            return Err(ValidationError("proposal is not an offer"));
+        };
+    };
     // Primary intent
     if proposal.publishes.action != ACTION_DELIVER_SERVICE {
         return Err(ValidationError("unexpected action"));

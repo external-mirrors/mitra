@@ -88,9 +88,10 @@ async fn handle_accept_offer(
     let agreement_value = activity.result.expect("result should be present");
     let agreement: Agreement = serde_json::from_value(agreement_value)
         .map_err(|_| ValidationError("unexpected activity structure"))?;
-    let agreement_id = agreement.id
+    let agreement_id = agreement.id.as_ref()
         .ok_or(ValidationError("missing 'id' field"))?;
-    let invoice_amount: i64 = agreement.clauses.1.resource_quantity
+    let invoice_amount: i64 = agreement.reciprocal_commitment()?
+        .resource_quantity
         .parse_currency_amount()?;
     if invoice_amount != invoice.amount {
         return Err(ValidationError("unexpected amount").into());
@@ -106,7 +107,7 @@ async fn handle_accept_offer(
         db_client,
         &invoice.id,
         &account_id.address,
-        &agreement_id,
+        agreement_id,
     ).await?;
     Ok(Some(OFFER))
 }

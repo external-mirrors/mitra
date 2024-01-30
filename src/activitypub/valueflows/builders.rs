@@ -22,6 +22,7 @@ use super::constants::{
     ACTION_DELIVER_SERVICE,
     ACTION_TRANSFER,
     CLASS_USER_GENERATED_CONTENT,
+    PURPOSE_OFFER,
     UNIT_ONE,
     UNIT_SECOND,
 };
@@ -34,6 +35,7 @@ pub fn build_valueflows_context() -> Context {
         ("om2", UNITS_OF_MEASURE_CONTEXT),
         ("Proposal", "vf:Proposal"),
         ("Intent", "vf:Intent"),
+        ("purpose", "vf:purpose"),
         ("publishes", "vf:publishes"),
         ("reciprocal", "vf:reciprocal"),
         ("unitBased", "vf:unitBased"),
@@ -42,6 +44,8 @@ pub fn build_valueflows_context() -> Context {
         ("action", "vf:action"),
         ("Agreement", "vf:Agreement"),
         ("clauses", "vf:clauses"),
+        ("stipulates", "vf:stipulates"),
+        ("stipulatesReciprocal", "vf:stipulatesReciprocal"),
         ("Commitment", "vf:Commitment"),
         ("satisfies", "vf:satisfies"),
         ("resourceConformsTo", "vf:resourceConformsTo"),
@@ -61,7 +65,7 @@ pub fn fep_0837_reciprocal_fragment_id(url: &str) -> String {
     format!("{}#reciprocal", url)
 }
 
-#[derive(Serialize)]
+#[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Quantity {
     has_unit: String,
@@ -94,6 +98,7 @@ struct Intent {
     resource_conforms_to: String,
     resource_quantity: Quantity,
 
+    // TODO: remove
     #[serde(skip_serializing_if = "Option::is_none")]
     provider: Option<String>,
 
@@ -110,6 +115,7 @@ pub struct Proposal {
     #[serde(rename = "type")]
     object_type: String,
     id: String,
+    purpose: String,
     attributed_to: String,
     name: String,
     publishes: Intent,
@@ -140,6 +146,7 @@ pub fn build_proposal(
         _context: build_valueflows_context(),
         object_type: PROPOSAL.to_string(),
         id: proposal_id.clone(),
+        purpose: PURPOSE_OFFER.to_string(),
         attributed_to: actor_id.clone(),
         name: proposal_name.to_string(),
         publishes: Intent {
@@ -202,10 +209,11 @@ mod tests {
                     "verificationMethod": "sec:verificationMethod",
                     "mitra": "http://jsonld.mitra.social#",
                     "MitraJcsRsaSignature2022": "mitra:MitraJcsRsaSignature2022",
-                    "vf": "https://w3id.org/valueflows/",
+                    "vf": "https://w3id.org/valueflows/ont/vf#",
                     "om2": "http://www.ontology-of-units-of-measure.org/resource/om-2/",
                     "Proposal": "vf:Proposal",
                     "Intent": "vf:Intent",
+                    "purpose": "vf:purpose",
                     "publishes": "vf:publishes",
                     "reciprocal": "vf:reciprocal",
                     "unitBased": "vf:unitBased",
@@ -214,6 +222,8 @@ mod tests {
                     "action": "vf:action",
                     "Agreement": "vf:Agreement",
                     "clauses": "vf:clauses",
+                    "stipulates": "vf:stipulates",
+                    "stipulatesReciprocal": "vf:stipulatesReciprocal",
                     "Commitment": "vf:Commitment",
                     "satisfies": "vf:satisfies",
                     "resourceConformsTo": "vf:resourceConformsTo",
@@ -224,6 +234,7 @@ mod tests {
             ],
             "type": "Proposal",
             "id": "https://test.example/users/alice/proposals/monero:418015bb9ae982a1975da7d79277c270",
+            "purpose": "offer",
             "attributedTo": "https://test.example/users/alice",
             "name": "Pay for subscription",
             "publishes": {

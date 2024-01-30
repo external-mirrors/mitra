@@ -72,9 +72,11 @@ fn build_offer_agreement(
         id: None,
         object_type: AGREEMENT.to_string(),
         clauses: (
-            primary_commitment,
-            reciprocal_commitment,
+            primary_commitment.clone(),
+            reciprocal_commitment.clone(),
         ),
+        stipulates: primary_commitment,
+        stipulates_reciprocal: reciprocal_commitment,
         url: None, // pre-agreement shouldn't have payment link
     };
     let activity = OfferAgreement {
@@ -156,10 +158,11 @@ mod tests {
                     "verificationMethod": "sec:verificationMethod",
                     "mitra": "http://jsonld.mitra.social#",
                     "MitraJcsRsaSignature2022": "mitra:MitraJcsRsaSignature2022",
-                    "vf": "https://w3id.org/valueflows/",
+                    "vf": "https://w3id.org/valueflows/ont/vf#",
                     "om2": "http://www.ontology-of-units-of-measure.org/resource/om-2/",
                     "Proposal": "vf:Proposal",
                     "Intent": "vf:Intent",
+                    "purpose": "vf:purpose",
                     "publishes": "vf:publishes",
                     "reciprocal": "vf:reciprocal",
                     "unitBased": "vf:unitBased",
@@ -168,6 +171,8 @@ mod tests {
                     "action": "vf:action",
                     "Agreement": "vf:Agreement",
                     "clauses": "vf:clauses",
+                    "stipulates": "vf:stipulates",
+                    "stipulatesReciprocal": "vf:stipulatesReciprocal",
                     "Commitment": "vf:Commitment",
                     "satisfies": "vf:satisfies",
                     "resourceConformsTo": "vf:resourceConformsTo",
@@ -199,6 +204,22 @@ mod tests {
                         },
                     },
                 ],
+                "stipulates": {
+                    "type": "Commitment",
+                    "satisfies": "https://remote.example/proposals/1#primary",
+                    "resourceQuantity": {
+                        "hasUnit": "second",
+                        "hasNumericalValue": "10",
+                    },
+                },
+                "stipulatesReciprocal": {
+                    "type": "Commitment",
+                    "satisfies": "https://remote.example/proposals/1#reciprocal",
+                    "resourceQuantity": {
+                        "hasUnit": "one",
+                        "hasNumericalValue": "200000",
+                    },
+                },
             },
             "to": "https://remote.example/users/test",
         });
