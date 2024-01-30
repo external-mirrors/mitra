@@ -67,10 +67,10 @@ mod dom {
     }
 }
 
-/// Replaces all <img> tags with string "image"
+/// Replaces all <img> tags with links
 fn replace_images(root: &Handle) -> () {
     iter_nodes(root, |node| {
-        if let NodeData::Element { name, .. } = &node.data {
+        if let NodeData::Element { name, attrs, .. } = &node.data {
             if &*name.local == "img" {
                 let maybe_parent = node.parent
                     .take()
@@ -85,9 +85,17 @@ fn replace_images(root: &Handle) -> () {
                         .find(|&(_, child)| Rc::ptr_eq(child, node))
                         .map(|(index, _)| index);
                     if let Some(index) = maybe_index {
+                        // Remove <img> element
                         parent.children.borrow_mut().remove(index);
                         node.parent.set(None);
-                        let text_node = dom::create_text("image");
+                        let image_src = attrs.borrow().iter()
+                            .find(|attr| &*attr.name.local == "src")
+                            .map(|attr| attr.value.to_string())
+                            .unwrap_or("image".to_string());
+                        // Adding only a text node because with <a>
+                        // wrapper it gets lost and a warning is logged:
+                        // `node with weird namespace Atom('' type=static)`
+                        let text_node = dom::create_text(&image_src);
                         text_node.parent.set(Some(Rc::downgrade(&parent)));
                         parent.children.borrow_mut().insert(index, text_node);
                     };
@@ -203,7 +211,7 @@ mod tests {
         );
         let expected_safe_html = concat!(
             r#"<p><span class="h-card"><a href="https://example.com/user" class="u-url mention" rel="noopener">@<span>user</span></a></span> test</p>"#,
-            r#"<p>image</p>"#,
+            r#"<p>https://example.com/image.png</p>"#,
         );
         let safe_html = clean_html(
             unsafe_html,
@@ -235,9 +243,9 @@ mod tests {
     }
 
     #[test]
-    fn test_clean_html_with_image() {
+    fn test_clean_html_with_image_with_link() {
         let unsafe_html = r#"<p><a href="https://external.example/page"><img src="https://external.example/image.png"></a></p>"#;
-        let expected_safe_html = r#"<p><a href="https://external.example/page" rel="noopener">image</a></p>"#;
+        let expected_safe_html = r#"<p><a href="https://external.example/page" rel="noopener">https://external.example/image.png</a></p>"#;
         let safe_html = clean_html(
             unsafe_html,
             allowed_classes(),
