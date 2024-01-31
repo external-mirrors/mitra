@@ -13,9 +13,6 @@ use mitra_validators::errors::ValidationError;
 
 #[derive(thiserror::Error, Debug)]
 pub enum MastodonError {
-    #[error(transparent)]
-    ActixError(#[from] actix_web::Error),
-
     #[error("database error")]
     DatabaseError(#[source] DatabaseError),
 
@@ -80,8 +77,6 @@ impl ResponseError for MastodonError {
 
     fn status_code(&self) -> StatusCode {
         match self {
-            Self::ActixError(error) =>
-                error.as_response_error().status_code(),
             Self::ValidationError(_) => StatusCode::BAD_REQUEST,
             Self::AuthError(_) => StatusCode::UNAUTHORIZED,
             Self::PermissionError => StatusCode::FORBIDDEN,

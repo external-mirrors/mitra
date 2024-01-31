@@ -11,9 +11,6 @@ use mitra_validators::errors::ValidationError;
 
 #[derive(thiserror::Error, Debug)]
 pub enum HttpError {
-    #[error(transparent)]
-    ActixError(#[from] actix_web::Error),
-
     #[error("database error")]
     DatabaseError(#[source] DatabaseError),
 
@@ -64,7 +61,6 @@ impl ResponseError for HttpError {
 
     fn status_code(&self) -> StatusCode {
         match self {
-            HttpError::ActixError(err) => err.as_response_error().status_code(),
             HttpError::ValidationError(_) => StatusCode::BAD_REQUEST,
             HttpError::AuthError(_) => StatusCode::UNAUTHORIZED,
             HttpError::PermissionError => StatusCode::FORBIDDEN,
