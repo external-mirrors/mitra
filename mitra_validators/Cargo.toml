@@ -7,7 +7,7 @@ rust-version = "1.61"
 
 [dependencies]
 # Used for working with regular expressions
-regex = "1.8.4"
+regex = "1.9.6"
 # Used for creating error types
 thiserror = "1.0.37"
 # Used to work with UUIDs
