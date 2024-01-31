@@ -64,7 +64,7 @@ async fn main() -> std::io::Result<()> {
         &config.database_url,
         config.database_tls_ca_file.as_deref(),
         db_pool_size,
-    );
+    ).expect("failed to connect to database");
     let mut db_client = get_database_client(&db_pool).await.unwrap();
     apply_migrations(&mut db_client).await
         .expect("failed to apply migrations");

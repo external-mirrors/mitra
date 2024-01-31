@@ -25,7 +25,7 @@ async fn main() {
             let db_client = &mut create_database_client(
                 &db_config,
                 config.database_tls_ca_file.as_deref(),
-            ).await;
+            ).await.expect("failed to connect to database");
             apply_migrations(db_client).await
                 .expect("failed to apply migrations");
 
