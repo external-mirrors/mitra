@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use actix_web::{
     error::ResponseError,
     http::StatusCode,
@@ -34,6 +36,9 @@ pub enum MastodonError {
 
     #[error("{0}")]
     OperationError(&'static str),
+
+    #[error("retry in {0:.2?}")]
+    RateLimit(Duration),
 
     #[error("internal error")]
     InternalError,
@@ -83,6 +88,7 @@ impl ResponseError for MastodonError {
             Self::NotFoundError(_) => StatusCode::NOT_FOUND,
             Self::NotSupported => StatusCode::IM_A_TEAPOT,
             Self::OperationError(_) => StatusCode::UNPROCESSABLE_ENTITY,
+            Self::RateLimit(_) => StatusCode::TOO_MANY_REQUESTS,
             _ => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }

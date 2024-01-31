@@ -1,4 +1,6 @@
-use actix_governor::Governor;
+use std::time::Duration;
+
+use actix_governor::{Governor, GovernorExtractor};
 use actix_web::{
     dev::ConnectionInfo,
     get,
@@ -107,9 +109,9 @@ use crate::activitypub::{
 use crate::adapters::roles::from_default_role;
 use crate::http::{
     get_request_base_url,
+    ratelimit_config,
     FormOrJson,
     MultiQuery,
-    RatelimitConfig,
 };
 use crate::mastodon_api::{
     errors::MastodonError,
@@ -571,13 +573,13 @@ async fn lookup_acct(
     Ok(HttpResponse::Ok().json(account))
 }
 
-#[get("/search")]
 async fn search_by_acct(
     auth: Option<BearerAuth>,
     connection_info: ConnectionInfo,
     config: web::Data<Config>,
     db_pool: web::Data<DbPool>,
     query_params: web::Query<SearchAcctQueryParams>,
+    governor_result: GovernorExtractor,
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &mut **get_database_client(&db_pool).await?;
     match auth {
@@ -585,38 +587,18 @@ async fn search_by_acct(
             get_current_user(db_client, auth.token()).await?;
         },
         None => {
-            // Only authorized users can make webfinger queries
             if query_params.resolve {
-                return Err(MastodonError::PermissionError);
+                // Webfinger queries from unauthenticated users
+                // are rate-limited
+                if let Some(wait) = governor_result.0.check()
+                    .map_err(|_| MastodonError::InternalError)?
+                    .map(Duration::from_millis)
+                {
+                    return Err(MastodonError::RateLimit(wait));
+                };
             };
         },
     };
-    let profiles = search_profiles_only(
-        &config,
-        db_client,
-        &query_params.q,
-        query_params.resolve,
-        query_params.limit.inner(),
-    ).await?;
-    let base_url = get_request_base_url(connection_info);
-    let instance_url = config.instance().url();
-    let accounts: Vec<Account> = profiles.into_iter()
-        .map(|profile| Account::from_profile(
-            &base_url,
-            &instance_url,
-            profile,
-        ))
-        .collect();
-    Ok(HttpResponse::Ok().json(accounts))
-}
-
-async fn search_by_acct_public(
-    connection_info: ConnectionInfo,
-    config: web::Data<Config>,
-    db_pool: web::Data<DbPool>,
-    query_params: web::Query<SearchAcctQueryParams>,
-) -> Result<HttpResponse, MastodonError> {
-    let db_client = &mut **get_database_client(&db_pool).await?;
     let profiles = search_profiles_only(
         &config,
         db_client,
@@ -993,14 +975,19 @@ async fn get_account_aliases(
     Ok(HttpResponse::Ok().json(aliases))
 }
 
-pub fn account_api_scope(
-    acct_resolve_ratelimit_config: &RatelimitConfig,
-) -> Scope {
+pub fn account_api_scope() -> Scope {
+    // One request per 5 seconds
+    let ratelimit_config = ratelimit_config(2, 30);
     // TODO: use Resource::get() (requires actix-web 4.4.0)
+    let search_by_acct_limited = web::resource("/search").route(
+        web::get()
+            .to(search_by_acct)
+            .wrap(Governor::new(&ratelimit_config)));
+    // TODO: remove
     let search_by_acct_public_limited = web::resource("/search_public").route(
         web::get()
-            .to(search_by_acct_public)
-            .wrap(Governor::new(acct_resolve_ratelimit_config)));
+            .to(search_by_acct)
+            .wrap(Governor::new(&ratelimit_config)));
     web::scope("/api/v1/accounts")
         // Routes without account ID
         .service(create_account)
@@ -1011,7 +998,7 @@ pub fn account_api_scope(
         .service(create_identity_proof)
         .service(get_relationships_view)
         .service(lookup_acct)
-        .service(search_by_acct)
+        .service(search_by_acct_limited)
         .service(search_by_acct_public_limited)
         .service(search_by_did)
         // Routes with account ID

@@ -21,7 +21,6 @@ use mitra::http::{
     json_error_handler,
     multiquery_config,
     multiquery_form_config,
-    ratelimit_config,
 };
 use mitra::init::initialize_app;
 use mitra::job_queue::scheduler;
@@ -107,9 +106,6 @@ async fn main() -> std::io::Result<()> {
     // Mutex is used to make server process incoming activities sequentially
     let inbox_mutex = web::Data::new(Mutex::new(()));
 
-    // One request per 5 seconds
-    let acct_resolve_ratelimit_config = ratelimit_config(2, 30);
-
     let http_server = HttpServer::new(move || {
         let cors_config = match config.environment {
             Environment::Development => {
@@ -183,7 +179,7 @@ async fn main() -> std::io::Result<()> {
                 media_storage.media_dir.clone(),
             ))
             .service(oauth_api_scope())
-            .service(account_api_scope(&acct_resolve_ratelimit_config))
+            .service(account_api_scope())
             .service(application_api_scope())
             .service(custom_emoji_api_scope())
             .service(directory_api_scope())
