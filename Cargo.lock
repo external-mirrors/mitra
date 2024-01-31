@@ -59,9 +59,9 @@ dependencies = [
 
 [[package]]
 name = "actix-governor"
-version = "0.3.0"
+version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5c301a901d90b7a1ea575aacd21ac02d1210f546f00f2291cdfada51c76f92de"
+checksum = "46ff2d40f2bc627b8054c5e20fa6b0b0cf9428699b54bd41634e9ae3098ad555"
 dependencies = [
  "actix-http",
  "actix-web",
@@ -1374,10 +1374,11 @@ dependencies = [
 
 [[package]]
 name = "governor"
-version = "0.4.2"
+version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "19775995ee20209163239355bc3ad2f33f83da35d9ef72dea26e5af753552c87"
+checksum = "c390a940a5d157878dd057c78680a33ce3415bcd05b4799509ea44210914b4d5"
 dependencies = [
+ "cfg-if",
  "dashmap",
  "futures",
  "futures-timer",
@@ -1994,7 +1995,6 @@ dependencies = [
  "actix-web-httpauth",
  "anyhow",
  "chrono",
- "dashmap",
  "env_logger",
  "futures",
  "hex",

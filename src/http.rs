@@ -1,6 +1,7 @@
 use std::collections::BTreeMap;
 
 use actix_governor::{
+    governor::middleware::NoOpMiddleware,
     GovernorConfig,
     GovernorConfigBuilder,
     PeerIpKeyExtractor,
@@ -49,7 +50,7 @@ pub fn multiquery_form_config() -> QsFormConfig {
     QsFormConfig::default().qs_config(qs_config)
 }
 
-pub type RatelimitConfig = GovernorConfig<PeerIpKeyExtractor>;
+pub type RatelimitConfig = GovernorConfig<PeerIpKeyExtractor, NoOpMiddleware>;
 
 pub fn ratelimit_config(num_requests: u32, period: u64) -> RatelimitConfig {
     GovernorConfigBuilder::default()
