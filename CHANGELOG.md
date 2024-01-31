@@ -15,6 +15,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Change MSRV to 1.61.
 - Rate-limit requests to `/api/v1/accounts/search` when `resolve` parameter is used by unauthenticated user.
 
+### Fixed
+
+- Prevent `add-ed25591-key` command from overwriting existing key.
+
 ## [2.8.0] - 2024-01-29
 
 ### Added

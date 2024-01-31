@@ -310,6 +310,11 @@ impl AddEd25519Key {
         &self,
         db_client: &impl DatabaseClient,
     ) -> Result<(), Error> {
+        let user = get_user_by_id(db_client, &self.id).await?;
+        if user.ed25519_private_key.is_some() {
+            println!("ed25519 key already exists");
+            return Ok(());
+        };
         let ed25519_private_key = generate_ed25519_key();
         set_user_ed25519_private_key(
             db_client,
