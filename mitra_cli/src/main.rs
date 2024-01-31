@@ -1,7 +1,7 @@
 use clap::Parser;
 
 use mitra_models::database::{
-    create_database_client,
+    connect::create_database_client,
     migrate::apply_migrations,
 };
 use mitra::init::initialize_app;

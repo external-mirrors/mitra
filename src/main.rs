@@ -44,7 +44,7 @@ use mitra::webfinger::views as webfinger;
 use mitra::web_client::views as web_client;
 use mitra_config::{Environment, MITRA_VERSION};
 use mitra_models::database::{
-    create_pool,
+    connect::create_pool,
     get_database_client,
     migrate::apply_migrations,
 };
