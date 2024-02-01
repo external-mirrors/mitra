@@ -177,6 +177,7 @@ pub async fn receive_activity(
     db_client: &mut impl DatabaseClient,
     request: &HttpRequest,
     activity: &JsonValue,
+    activity_digest: [u8; 32],
 ) -> Result<(), HandlerError> {
     let activity_type = activity["type"].as_str()
         .ok_or(ValidationError("type property is missing"))?;
@@ -205,6 +206,7 @@ pub async fn receive_activity(
         config,
         db_client,
         request,
+        activity_digest,
         // Don't fetch signer if this is Delete(Person) activity
         is_self_delete,
     ).await {

@@ -161,6 +161,7 @@ pub async fn verify_signed_request(
     config: &Config,
     db_client: &mut impl DatabaseClient,
     request: &HttpRequest,
+    content_digest: [u8; 32],
     no_fetch: bool,
 ) -> Result<DbActorProfile, AuthenticationError> {
     let signature_data = match parse_http_signature(
@@ -174,10 +175,6 @@ pub async fn verify_signed_request(
         },
         Err(other_error) => return Err(other_error.into()),
     };
-    if signature_data.content_digest.is_none() {
-        log::warn!("Digest header is missing");
-    };
-
     let signer_id = key_id_to_actor_id(&signature_data.key_id)?;
     let signer = get_signer(config, db_client, &signer_id, no_fetch).await?;
     let signer_key = get_signer_rsa_key(
@@ -185,7 +182,11 @@ pub async fn verify_signed_request(
         &signature_data.key_id,
     )?;
 
-    verify_http_signature(&signature_data, &signer_key)?;
+    verify_http_signature(
+        &signature_data,
+        &signer_key,
+        Some(content_digest),
+    )?;
 
     Ok(signer)
 }

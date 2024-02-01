@@ -10,7 +10,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Replace `<img>` tags in posts with links.
 - Generate Ed25519 keys for all accounts.
-- Parse `Digest` header value.
 
 ### Changed
 
@@ -22,6 +21,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Fixed
 
 - Don't return error when replying to a public post with a direct message.
+
+### Security
+
+- Verify `Digest` header value against activity hash.
 
 ## [2.8.0] - 2024-01-29
 

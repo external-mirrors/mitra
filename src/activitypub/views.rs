@@ -24,7 +24,10 @@ use mitra_models::{
     profiles::types::PaymentOption,
     users::queries::get_user_by_name,
 };
-use mitra_utils::caip2::ChainId;
+use mitra_utils::{
+    caip2::ChainId,
+    http_digest::get_sha256_digest,
+};
 use mitra_validators::errors::ValidationError;
 
 use crate::errors::HttpError;
@@ -100,18 +103,29 @@ async fn inbox(
     db_pool: web::Data<DatabaseConnectionPool>,
     username: web::Path<String>,
     request: HttpRequest,
-    activity: web::Json<JsonValue>,
+    request_body: web::Bytes,
 ) -> Result<HttpResponse, HttpError> {
     if !config.federation.enabled {
         return Err(HttpError::PermissionError);
     };
+    let activity: JsonValue = serde_json::from_slice(&request_body)
+        .map_err(|_| ValidationError("invalid activity"))?;
+    let activity_digest = get_sha256_digest(&request_body);
+    drop(request_body);
+
     log::debug!("received activity: {}", activity);
     let activity_type = activity["type"].as_str().unwrap_or("Unknown");
     log::info!("received in {}: {}", request.uri().path(), activity_type);
 
     let db_client = &mut **get_database_client(&db_pool).await?;
     let _user = get_user_by_name(db_client, &username).await?;
-    receive_activity(&config, db_client, &request, &activity).await
+    receive_activity(
+        &config,
+        db_client,
+        &request,
+        &activity,
+        activity_digest,
+    ).await
         .map_err(|error| {
             // TODO: preserve original error text in DatabaseError
             if let HandlerError::DatabaseError(

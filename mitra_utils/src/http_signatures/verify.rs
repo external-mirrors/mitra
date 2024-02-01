@@ -31,11 +31,14 @@ pub enum HttpSignatureVerificationError {
     #[error("invalid encoding")]
     InvalidEncoding(#[from] base64::DecodeError),
 
-    #[error("invalid signature")]
-    InvalidSignature,
-
     #[error("signature has expired")]
     Expired,
+
+    #[error("digest mismatch")]
+    DigestMismatch,
+
+    #[error("invalid signature")]
+    InvalidSignature,
 }
 
 type VerificationError = HttpSignatureVerificationError;
@@ -114,6 +117,7 @@ pub fn parse_http_signature<'m>(
         created_at + Duration::hours(SIGNATURE_EXPIRES_IN)
     };
 
+    // Parse Digest header
     let maybe_digest = if let Some(digest_header) = request_headers.get("digest") {
         let digest_header = digest_header.to_str()
             .map_err(|_| VerificationError::HeaderError("invalid 'digest' header"))?;
@@ -164,9 +168,13 @@ pub fn parse_http_signature<'m>(
 pub fn verify_http_signature(
     signature_data: &HttpSignatureData,
     signer_key: &RsaPublicKey,
+    content_digest: Option<[u8; 32]>,
 ) -> Result<(), VerificationError> {
     if signature_data.expires_at < Utc::now() {
         return Err(VerificationError::Expired);
+    };
+    if signature_data.content_digest != content_digest {
+        return Err(VerificationError::DigestMismatch);
     };
     let signature = base64::decode(&signature_data.signature)?;
     let is_valid_signature = verify_rsa_sha256_signature(
@@ -183,6 +191,7 @@ pub fn verify_http_signature(
 #[cfg(test)]
 mod tests {
     use crate::crypto_rsa::generate_weak_rsa_key;
+    use crate::http_digest::get_sha256_digest;
     use crate::http_signatures::create::create_http_signature;
     use super::*;
 
@@ -274,9 +283,11 @@ mod tests {
         ).unwrap();
 
         let signer_public_key = RsaPublicKey::from(signer_key);
+        let content_digest = get_sha256_digest(request_body.as_bytes());
         let result = verify_http_signature(
             &signature_data,
             &signer_public_key,
+            Some(content_digest),
         );
         assert_eq!(result.is_ok(), true);
     }
