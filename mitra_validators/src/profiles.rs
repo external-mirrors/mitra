@@ -30,7 +30,8 @@ pub fn validate_username(username: &str) -> Result<(), ValidationError> {
     if username.len() > USERNAME_LENGTH_MAX {
         return Err(ValidationError("username is too long"));
     };
-    let username_regexp = Regex::new(USERNAME_RE).unwrap();
+    let username_regexp = Regex::new(USERNAME_RE)
+        .expect("regexp should be valid");
     if !username_regexp.is_match(username) {
         return Err(ValidationError("invalid username"));
     };

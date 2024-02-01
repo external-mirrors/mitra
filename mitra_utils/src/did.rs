@@ -43,7 +43,7 @@ impl FromStr for Did {
     type Err = DidParseError;
 
     fn from_str(value: &str) -> Result<Self, Self::Err> {
-        let did_re = Regex::new(DID_RE).unwrap();
+        let did_re = Regex::new(DID_RE).expect("regexp should be valid");
         let caps = did_re.captures(value).ok_or(DidParseError)?;
         let did = match &caps["method"] {
             "key" => {

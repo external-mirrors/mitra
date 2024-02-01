@@ -70,7 +70,8 @@ pub fn parse_http_signature<'m>(
         .to_str()
         .map_err(|_| VerificationError::HeaderError("invalid signature header"))?;
 
-    let signature_parameter_re = Regex::new(SIGNATURE_PARAMETER_RE).unwrap();
+    let signature_parameter_re = Regex::new(SIGNATURE_PARAMETER_RE)
+        .expect("regexp should be valid");
     let mut signature_parameters = HashMap::new();
     for item in signature_header.split(',') {
         let caps = signature_parameter_re.captures(item)

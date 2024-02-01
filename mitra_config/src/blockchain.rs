@@ -45,7 +45,8 @@ impl EthereumConfig {
     }
 
     pub fn ethereum_chain_id(&self) -> u32 {
-        self.try_ethereum_chain_id().unwrap()
+        self.try_ethereum_chain_id()
+            .expect("chain ID should be already validated")
     }
 }
 

@@ -27,7 +27,8 @@ pub fn address_to_string(address: Address) -> String {
 pub fn validate_ethereum_address(
     wallet_address: &str,
 ) -> Result<(), AddressError> {
-    let address_regexp = Regex::new(r"^0x[a-fA-F0-9]{40}$").unwrap();
+    let address_regexp = Regex::new(r"^0x[a-fA-F0-9]{40}$")
+        .expect("regexp should be valid");
     if !address_regexp.is_match(wallet_address) {
         return Err(AddressError("invalid address"));
     };

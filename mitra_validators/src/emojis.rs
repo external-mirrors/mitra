@@ -13,7 +13,8 @@ pub const EMOJI_MEDIA_TYPES: [&str; 4] = [
 ];
 
 pub fn validate_emoji_name(emoji_name: &str) -> Result<(), ValidationError> {
-    let name_re = Regex::new(EMOJI_NAME_RE).unwrap();
+    let name_re = Regex::new(EMOJI_NAME_RE)
+        .expect("regexp should be valid");
     if !name_re.is_match(emoji_name) {
         return Err(ValidationError("invalid emoji name"));
     };

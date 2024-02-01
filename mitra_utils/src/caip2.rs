@@ -88,7 +88,8 @@ impl ChainId {
                     Ok(network) => return Ok(Self::from_monero_network(network)),
                     Err(_) => {
                         // CAIP-2 chain ID?
-                        let chain_id_re = Regex::new(MONERO_CHAIN_ID_RE).unwrap();
+                        let chain_id_re = Regex::new(MONERO_CHAIN_ID_RE)
+                            .expect("regexp should be valid");
                         if !chain_id_re.is_match(reference) {
                             return Err(ChainIdError("invalid monero chain ID"));
                         };
@@ -184,7 +185,8 @@ impl FromStr for ChainId {
     type Err = ChainIdError;
 
     fn from_str(value: &str) -> Result<Self, Self::Err> {
-        let caip2_re = Regex::new(CAIP2_RE).unwrap();
+        let caip2_re = Regex::new(CAIP2_RE)
+            .expect("regexp should be valid");
         let caps = caip2_re.captures(value)
             .ok_or(ChainIdError("invalid chain ID"))?;
         let chain_id = Self::new(

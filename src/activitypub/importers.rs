@@ -430,7 +430,7 @@ pub async fn import_post(
 
     let initial_post = posts.into_iter()
         .find(|post| post.object_id.as_ref() == Some(&initial_object_id))
-        .unwrap();
+        .expect("requested post should be among fetched objects");
     Ok(initial_post)
 }
 

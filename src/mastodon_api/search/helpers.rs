@@ -56,7 +56,8 @@ fn parse_profile_query(query: &str) ->
 {
     // See also: ACTOR_ADDRESS_RE in mitra_federation::addresses
     let acct_query_re =
-        Regex::new(r"^(@|!)?(?P<username>[\w\.-]+)(@(?P<hostname>[\w\.-]*))?$").unwrap();
+        Regex::new(r"^(@|!)?(?P<username>[\w\.-]+)(@(?P<hostname>[\w\.-]*))?$")
+            .expect("regexp should be valid");
     let acct_query_caps = acct_query_re.captures(query)
         .ok_or(ValidationError("invalid profile query"))?;
     let username = acct_query_caps.name("username")
@@ -69,7 +70,8 @@ fn parse_profile_query(query: &str) ->
 }
 
 fn parse_tag_query(query: &str) -> Result<String, ValidationError> {
-    let tag_query_re = Regex::new(r"^#(?P<tag>\w+)$").unwrap();
+    let tag_query_re = Regex::new(r"^#(?P<tag>\w+)$")
+        .expect("regexp should be valid");
     let tag_query_caps = tag_query_re.captures(query)
         .ok_or(ValidationError("invalid tag query"))?;
     let tag = tag_query_caps.name("tag")

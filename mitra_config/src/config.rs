@@ -117,8 +117,10 @@ impl Config {
 
     pub fn instance(&self) -> Instance {
         Instance {
-            _url: self.try_instance_url().unwrap(),
-            actor_key: self.instance_rsa_key.clone().unwrap(),
+            _url: self.try_instance_url()
+                .expect("instance URL should be already validated"),
+            actor_key: self.instance_rsa_key.clone()
+                .expect("instance RSA key should be already generated"),
             proxy_url: self.federation.proxy_url.clone(),
             onion_proxy_url: self.federation.onion_proxy_url.clone(),
             i2p_proxy_url: self.federation.i2p_proxy_url.clone(),

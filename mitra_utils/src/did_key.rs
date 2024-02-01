@@ -43,7 +43,8 @@ impl FromStr for DidKey {
     type Err = DidParseError;
 
     fn from_str(value: &str) -> Result<Self, Self::Err> {
-        let did_key_re = Regex::new(DID_KEY_RE).unwrap();
+        let did_key_re = Regex::new(DID_KEY_RE)
+            .expect("regexp should be valid");
         let caps = did_key_re.captures(value).ok_or(DidParseError)?;
         let multidata = decode_multibase_base58btc(&caps["key"])
             .map_err(|_| DidParseError)?;

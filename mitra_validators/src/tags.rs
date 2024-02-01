@@ -9,7 +9,8 @@ pub fn validate_hashtag(tag_name: &str) -> Result<(), ValidationError> {
     if tag_name.len() > HASHTAG_LENGTH_MAX {
         return Err(ValidationError("tag name is too long"));
     };
-    let hashtag_name_re = Regex::new(HASHTAG_NAME_RE).unwrap();
+    let hashtag_name_re = Regex::new(HASHTAG_NAME_RE)
+        .expect("regexp should be valid");
     if !hashtag_name_re.is_match(tag_name) {
         return Err(ValidationError("invalid tag name"));
     };

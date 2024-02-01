@@ -22,8 +22,10 @@ fn find_mentions(
     instance_hostname: &str,
     text: &str,
 ) -> Vec<String> {
-    let mention_re = Regex::new(MENTION_SEARCH_RE).unwrap();
-    let mention_secondary_re = Regex::new(MENTION_SEARCH_SECONDARY_RE).unwrap();
+    let mention_re = Regex::new(MENTION_SEARCH_RE)
+        .expect("regexp should be valid");
+    let mention_secondary_re = Regex::new(MENTION_SEARCH_SECONDARY_RE)
+        .expect("regexp should be valid");
     let mut mentions = vec![];
     for caps in mention_re.captures_iter(text) {
         let mention_match = caps.name("mention").expect("should have mention group");
@@ -68,8 +70,10 @@ pub fn replace_mentions(
     instance_url: &str,
     text: &str,
 ) -> String {
-    let mention_re = Regex::new(MENTION_SEARCH_RE).unwrap();
-    let mention_secondary_re = Regex::new(MENTION_SEARCH_SECONDARY_RE).unwrap();
+    let mention_re = Regex::new(MENTION_SEARCH_RE)
+        .expect("regexp should be valid");
+    let mention_secondary_re = Regex::new(MENTION_SEARCH_SECONDARY_RE)
+        .expect("regexp should be valid");
     let result = mention_re.replace_all(text, |caps: &Captures| {
         let mention_match = caps.name("mention").expect("should have mention group");
         if is_inside_code_block(&mention_match, text) {

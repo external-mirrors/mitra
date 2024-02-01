@@ -24,7 +24,8 @@ pub fn is_inside_code_block(match_: &Match, text: &str) -> bool {
 
 /// Finds everything that looks like an object link
 fn find_object_links(text: &str) -> Vec<String> {
-    let link_re = Regex::new(OBJECT_LINK_SEARCH_RE).unwrap();
+    let link_re = Regex::new(OBJECT_LINK_SEARCH_RE)
+        .expect("regexp should be valid");
     let mut links = vec![];
     for caps in link_re.captures_iter(text) {
         let url_match = caps.name("url").expect("should have url group");
@@ -83,7 +84,8 @@ pub fn replace_object_links(
     link_map: &HashMap<String, Post>,
     text: &str,
 ) -> String {
-    let mention_re = Regex::new(OBJECT_LINK_SEARCH_RE).unwrap();
+    let mention_re = Regex::new(OBJECT_LINK_SEARCH_RE)
+        .expect("regexp should be valid");
     let result = mention_re.replace_all(text, |caps: &Captures| {
         let url_match = caps.name("url").expect("should have url group");
         if is_inside_code_block(&url_match, text) {

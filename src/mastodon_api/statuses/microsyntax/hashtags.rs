@@ -9,8 +9,10 @@ const HASHTAG_SECONDARY_RE: &str = r"^(?P<tag>[\p{Alphabetic}\d]+)(?P<after>[\.,
 
 /// Finds anything that looks like a hashtag
 pub fn find_hashtags(text: &str) -> Vec<String> {
-    let hashtag_re = Regex::new(HASHTAG_RE).unwrap();
-    let hashtag_secondary_re = Regex::new(HASHTAG_SECONDARY_RE).unwrap();
+    let hashtag_re = Regex::new(HASHTAG_RE)
+        .expect("regexp should be valid");
+    let hashtag_secondary_re = Regex::new(HASHTAG_SECONDARY_RE)
+        .expect("regexp should be valid");
     let mut tags = vec![];
     for caps in hashtag_re.captures_iter(text) {
         let tag_match = caps.name("tag").expect("should have tag group");
@@ -30,8 +32,10 @@ pub fn find_hashtags(text: &str) -> Vec<String> {
 
 /// Replaces hashtags with links
 pub fn replace_hashtags(instance_url: &str, text: &str, tags: &[String]) -> String {
-    let hashtag_re = Regex::new(HASHTAG_RE).unwrap();
-    let hashtag_secondary_re = Regex::new(HASHTAG_SECONDARY_RE).unwrap();
+    let hashtag_re = Regex::new(HASHTAG_RE)
+        .expect("regexp should be valid");
+    let hashtag_secondary_re = Regex::new(HASHTAG_SECONDARY_RE)
+        .expect("regexp should be valid");
     let result = hashtag_re.replace_all(text, |caps: &Captures| {
         let tag_match = caps.name("tag").expect("should have tag group");
         if is_inside_code_block(&tag_match, text) {

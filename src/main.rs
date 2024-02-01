@@ -65,7 +65,8 @@ async fn main() -> std::io::Result<()> {
         config.database_tls_ca_file.as_deref(),
         db_pool_size,
     ).expect("failed to connect to database");
-    let mut db_client = get_database_client(&db_pool).await.unwrap();
+    let mut db_client = get_database_client(&db_pool).await
+        .expect("failed to connect to database");
     apply_migrations(&mut db_client).await
         .expect("failed to apply migrations");
 
@@ -75,7 +76,7 @@ async fn main() -> std::io::Result<()> {
     let maybe_ethereum_blockchain = if let Some(ethereum_config) = config.ethereum_config() {
         // Create blockchain interface
         get_contracts(&**db_client, ethereum_config).await
-            .map(Some).unwrap()
+            .map(Some).expect("failed to verify contracts")
     } else {
         None
     };

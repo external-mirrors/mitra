@@ -709,8 +709,11 @@ impl ListUnreachableActors {
         for profile in profiles {
             println!(
                 "{0: <60} | {1: <35} | {2: <35}",
-                profile.actor_id.unwrap(),
-                profile.unreachable_since.unwrap().to_string(),
+                profile.actor_id
+                    .expect("actor ID should be present"),
+                profile.unreachable_since
+                    .expect("unreachable flag should be present")
+                    .to_string(),
                 profile.updated_at.to_string(),
             );
         };

@@ -69,7 +69,8 @@ impl FromStr for ActorAddress {
     type Err = ActorAddressError;
 
     fn from_str(value: &str) -> Result<Self, Self::Err> {
-        let actor_address_re = Regex::new(ACTOR_ADDRESS_RE).unwrap();
+        let actor_address_re = Regex::new(ACTOR_ADDRESS_RE)
+            .expect("regexp should be valid");
         let caps = actor_address_re.captures(value)
             .ok_or(ActorAddressError("invalid actor address"))?;
         let actor_address = Self::new(

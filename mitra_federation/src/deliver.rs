@@ -72,10 +72,12 @@ pub async fn send_activity(
     )?;
 
     let http_client = build_deliverer_client(agent, inbox_url)?;
+    let digest = headers.digest
+        .expect("digest header should be present if method is POST");
     let request = http_client.post(inbox_url)
         .header("Host", headers.host)
         .header("Date", headers.date)
-        .header("Digest", headers.digest.unwrap())
+        .header("Digest", digest)
         .header("Signature", headers.signature)
         .header(reqwest::header::CONTENT_TYPE, AP_MEDIA_TYPE)
         .header(reqwest::header::USER_AGENT, &agent.user_agent)

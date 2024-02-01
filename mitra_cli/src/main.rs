@@ -14,13 +14,15 @@ async fn main() {
     let opts: Cli = Cli::parse();
 
     match opts.subcmd {
+        #[allow(clippy::unwrap_used)]
         SubCommand::GenerateRsaKey(cmd) => cmd.execute().unwrap(),
         SubCommand::GenerateEthereumAddress(cmd) => cmd.execute(),
         subcmd => {
             // Other commands require initialized app
             let config = initialize_app();
 
-            let db_config = config.database_url.parse().unwrap();
+            let db_config = config.database_url.parse()
+                .expect("failed to parse database URL");
 
             let db_client = &mut create_database_client(
                 &db_config,
@@ -29,6 +31,7 @@ async fn main() {
             apply_migrations(db_client).await
                 .expect("failed to apply migrations");
 
+            #[allow(clippy::unwrap_used)]
             match subcmd {
                 SubCommand::GenerateInviteCode(cmd) => cmd.execute(db_client).await.unwrap(),
                 SubCommand::ListInviteCodes(cmd) => cmd.execute(db_client).await.unwrap(),

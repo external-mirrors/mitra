@@ -11,7 +11,8 @@ const USERNAME_LENGTH_MAX: usize = 30;
 pub fn validate_local_username(username: &str) -> Result<(), ValidationError> {
     validate_username(username)?;
     // The username regexp should not allow domain names and IP addresses
-    let username_regexp = Regex::new(USERNAME_RE).unwrap();
+    let username_regexp = Regex::new(USERNAME_RE)
+        .expect("regexp should be valid");
     if !username_regexp.is_match(username) {
         return Err(ValidationError("invalid username"));
     };

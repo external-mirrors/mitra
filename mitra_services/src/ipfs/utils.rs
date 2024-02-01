@@ -11,7 +11,8 @@ pub fn get_ipfs_url(cid: &str) -> String {
 pub struct ParseError;
 
 pub fn parse_ipfs_url(url: &str) -> Result<String, ParseError> {
-    let regexp = Regex::new(r"ipfs://(?P<cid>\w+)").unwrap();
+    let regexp = Regex::new(r"ipfs://(?P<cid>\w+)")
+        .expect("regexp should be valid");
     let caps = regexp.captures(url).ok_or(ParseError)?;
     let cid = caps.name("cid")
         .ok_or(ParseError)?

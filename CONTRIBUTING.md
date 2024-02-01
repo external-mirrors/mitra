@@ -31,7 +31,10 @@ Prefer libraries maintained by volunteers over those developed by for-profit com
 
 ### Code style
 
-Run `cargo clippy` to check code automatically. Try to follow the existing style when adding new features.
+Run `cargo clippy` to check code automatically.
+
+- Try to follow the existing style when adding new features.
+- Use `expect()` to check invariants. Other errors should be handled.
 
 ### Commits
 
