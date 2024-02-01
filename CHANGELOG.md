@@ -16,6 +16,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Change MSRV to 1.61.
 - Rate-limit requests to `/api/v1/accounts/search` when `resolve` parameter is used by unauthenticated user.
 - Process all incoming activities in background.
+- Remove inbox mutex.
 
 ### Fixed
 

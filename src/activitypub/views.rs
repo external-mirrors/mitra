@@ -1,5 +1,3 @@
-use std::time::Instant;
-
 use actix_web::{
     get,
     post,
@@ -10,7 +8,6 @@ use actix_web::{
     Scope,
 };
 use serde_json::{Value as JsonValue};
-use tokio::sync::Mutex;
 use uuid::Uuid;
 
 use mitra_config::Config;
@@ -101,7 +98,6 @@ async fn actor_view(
 async fn inbox(
     config: web::Data<Config>,
     db_pool: web::Data<DatabaseConnectionPool>,
-    inbox_mutex: web::Data<Mutex<()>>,
     username: web::Path<String>,
     request: HttpRequest,
     activity: web::Json<JsonValue>,
@@ -112,15 +108,6 @@ async fn inbox(
     log::debug!("received activity: {}", activity);
     let activity_type = activity["type"].as_str().unwrap_or("Unknown");
     log::info!("received in {}: {}", request.uri().path(), activity_type);
-
-    let now = Instant::now();
-    // Store mutex guard in a variable to prevent it from being dropped immediately
-    let _guard = inbox_mutex.lock().await;
-    log::debug!(
-        "acquired inbox lock after waiting for {:.2?}: {}",
-        now.elapsed(),
-        activity["id"].as_str().unwrap_or_default(),
-    );
 
     let db_client = &mut **get_database_client(&db_pool).await?;
     let _user = get_user_by_name(db_client, &username).await?;

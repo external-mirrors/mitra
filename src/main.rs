@@ -11,7 +11,6 @@ use actix_web::{
     HttpResponse,
     HttpServer,
 };
-use tokio::sync::Mutex;
 
 use mitra::activitypub::views as activitypub;
 use mitra::atom::views::atom_scope;
@@ -113,8 +112,6 @@ async fn main() -> std::io::Result<()> {
         config.http_host,
         config.http_port,
     );
-    // Mutex is used to make server process incoming activities sequentially
-    let inbox_mutex = web::Data::new(Mutex::new(()));
 
     let http_server = HttpServer::new(move || {
         let cors_config = match config.environment {
@@ -183,7 +180,6 @@ async fn main() -> std::io::Result<()> {
             .app_data(web::Data::new(config.clone()))
             .app_data(web::Data::new(db_pool.clone()))
             .app_data(web::Data::new(maybe_ethereum_contracts.clone()))
-            .app_data(web::Data::clone(&inbox_mutex))
             .service(actix_files::Files::new(
                 MEDIA_ROOT_URL,
                 media_storage.media_dir.clone(),
