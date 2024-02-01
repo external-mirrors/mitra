@@ -18,6 +18,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Fixed
 
 - Prevent `add-ed25591-key` command from overwriting existing key.
+- Don't return error when replying to a public post with a direct message.
 
 ## [2.8.0] - 2024-01-29
 

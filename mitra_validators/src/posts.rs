@@ -140,7 +140,9 @@ pub fn validate_local_reply(
     {
         return Err(ValidationError("reply must have direct visibility"));
     };
-    if *visibility != Visibility::Public {
+    if in_reply_to.visibility != Visibility::Public &&
+        *visibility != Visibility::Public
+    {
         let mut in_reply_to_audience: Vec<_> = in_reply_to.mentions.iter()
             .map(|profile| profile.id).collect();
         in_reply_to_audience.push(in_reply_to.author.id);
@@ -154,6 +156,8 @@ pub fn validate_local_reply(
 
 #[cfg(test)]
 mod tests {
+    use mitra_models::profiles::types::DbActorProfile;
+    use mitra_utils::id::generate_ulid;
     use super::*;
 
     #[test]
@@ -168,5 +172,26 @@ mod tests {
         let content = "test ";
         let cleaned = clean_local_content(content).unwrap();
         assert_eq!(cleaned, "test");
+    }
+
+    #[test]
+    fn test_validate_local_reply_adding_recipients() {
+        let profile_1 = generate_ulid();
+        let profile_2 = generate_ulid();
+        let profile_3 = generate_ulid();
+        let in_reply_to = Post {
+            author: DbActorProfile { id: profile_1, ..Default::default() },
+            visibility: Visibility::Direct,
+            mentions: vec![
+                DbActorProfile { id: profile_2, ..Default::default() },
+            ],
+            ..Default::default()
+        };
+        let error = validate_local_reply(
+            &in_reply_to,
+            &vec![profile_1, profile_3],
+            &Visibility::Direct,
+        ).err().unwrap();
+        assert_eq!(error.0, "can't add more recipients");
     }
 }
