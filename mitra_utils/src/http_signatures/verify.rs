@@ -97,11 +97,11 @@ pub fn parse_http_signature<'m>(
             .ok_or(VerificationError::ParseError("invalid timestamp"))?
     } else {
         let date_str = request_headers.get("date")
-            .ok_or(VerificationError::ParseError("missing date"))?
+            .ok_or(VerificationError::HeaderError("missing date"))?
             .to_str()
-            .map_err(|_| VerificationError::ParseError("invalid date header"))?;
+            .map_err(|_| VerificationError::HeaderError("invalid date header"))?;
         let date = DateTime::parse_from_rfc2822(date_str)
-            .map_err(|_| VerificationError::ParseError("invalid date"))?;
+            .map_err(|_| VerificationError::HeaderError("invalid date"))?;
         date.with_timezone(&Utc)
     };
     let expires_at = if let Some(expires_at) = signature_parameters.get("expires") {
