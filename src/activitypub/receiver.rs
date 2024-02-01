@@ -291,20 +291,12 @@ pub async fn receive_activity(
         validate_create(config, db_client, activity).await?;
     };
 
-    if let ANNOUNCE | CREATE | DELETE | MOVE | UNDO | UPDATE = activity_type {
-        // Add activity to job queue and release lock
-        IncomingActivityJobData::new(activity, is_authenticated)
-            .into_job(db_client, 0).await?;
-        log::debug!("activity added to the queue: {}", activity_type);
-        return Ok(());
-    };
-
-    handle_activity(
-        config,
-        db_client,
-        activity,
-        is_authenticated,
-    ).await
+    // Add activity to job queue and release lock
+    IncomingActivityJobData::new(activity, is_authenticated)
+        .into_job(db_client, 0)
+        .await?;
+    log::debug!("activity added to the queue: {}", activity_type);
+    Ok(())
 }
 
 #[cfg(test)]
