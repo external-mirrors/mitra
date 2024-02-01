@@ -14,7 +14,7 @@ use uuid::Uuid;
 
 use mitra_config::Config;
 use mitra_models::{
-    database::{get_database_client, DbPool},
+    database::{get_database_client, DatabaseConnectionPool},
     invoices::queries::{
         create_invoice,
         create_remote_invoice,
@@ -82,7 +82,7 @@ use super::types::{
 pub async fn authorize_subscription(
     auth: BearerAuth,
     config: web::Data<Config>,
-    db_pool: web::Data<DbPool>,
+    db_pool: web::Data<DatabaseConnectionPool>,
     query_params: web::Query<SubscriptionAuthorizationQueryParams>,
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &**get_database_client(&db_pool).await?;
@@ -106,7 +106,7 @@ pub async fn authorize_subscription(
 #[get("/options")]
 async fn get_subscription_options(
     auth: BearerAuth,
-    db_pool: web::Data<DbPool>,
+    db_pool: web::Data<DatabaseConnectionPool>,
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &**get_database_client(&db_pool).await?;
     let current_user = get_current_user(db_client, auth.token()).await?;
@@ -122,7 +122,7 @@ pub async fn register_subscription_option(
     auth: BearerAuth,
     connection_info: ConnectionInfo,
     config: web::Data<Config>,
-    db_pool: web::Data<DbPool>,
+    db_pool: web::Data<DatabaseConnectionPool>,
     maybe_ethereum_contracts: web::Data<Option<ContractSet>>,
     subscription_option: web::Json<SubscriptionOption>,
 ) -> Result<HttpResponse, MastodonError> {
@@ -207,7 +207,7 @@ pub async fn register_subscription_option(
 
 #[get("/find")]
 async fn find_subscription(
-    db_pool: web::Data<DbPool>,
+    db_pool: web::Data<DatabaseConnectionPool>,
     query_params: web::Query<SubscriptionQueryParams>,
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &**get_database_client(&db_pool).await?;
@@ -226,7 +226,7 @@ async fn find_subscription(
 #[post("/invoices")]
 async fn create_invoice_view(
     config: web::Data<Config>,
-    db_pool: web::Data<DbPool>,
+    db_pool: web::Data<DatabaseConnectionPool>,
     invoice_data: web::Json<InvoiceData>,
 ) -> Result<HttpResponse, MastodonError> {
     if invoice_data.sender_id == invoice_data.recipient_id {
@@ -294,7 +294,7 @@ async fn create_invoice_view(
 
 #[get("/invoices/{invoice_id}")]
 async fn get_invoice_view(
-    db_pool: web::Data<DbPool>,
+    db_pool: web::Data<DatabaseConnectionPool>,
     invoice_id: web::Path<Uuid>,
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &**get_database_client(&db_pool).await?;
@@ -305,7 +305,7 @@ async fn get_invoice_view(
 
 #[delete("/invoices/{invoice_id}")]
 async fn cancel_invoice_view(
-    db_pool: web::Data<DbPool>,
+    db_pool: web::Data<DatabaseConnectionPool>,
     invoice_id: web::Path<Uuid>,
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &mut **get_database_client(&db_pool).await?;

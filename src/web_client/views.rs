@@ -15,7 +15,7 @@ use uuid::Uuid;
 use mitra_config::Config;
 use mitra_federation::http_server::is_activitypub_request;
 use mitra_models::{
-    database::{get_database_client, DbPool},
+    database::{get_database_client, DatabaseConnectionPool},
     posts::queries::get_post_by_id,
     profiles::queries::get_profile_by_acct,
 };
@@ -65,7 +65,7 @@ fn opengraph_guard() -> impl guard::Guard {
 
 async fn profile_page_redirect_view(
     config: web::Data<Config>,
-    db_pool: web::Data<DbPool>,
+    db_pool: web::Data<DatabaseConnectionPool>,
     acct: web::Path<String>,
 ) -> Result<HttpResponse, HttpError> {
     let db_client = &**get_database_client(&db_pool).await?;
@@ -85,7 +85,7 @@ pub fn profile_page_redirect() -> Resource {
 
 async fn post_page_redirect_view(
     config: web::Data<Config>,
-    db_pool: web::Data<DbPool>,
+    db_pool: web::Data<DatabaseConnectionPool>,
     post_id: web::Path<Uuid>,
 ) -> Result<HttpResponse, HttpError> {
     let db_client = &**get_database_client(&db_pool).await?;
@@ -99,7 +99,7 @@ async fn post_page_redirect_view(
 
 async fn post_page_opengraph_view(
     config: web::Data<Config>,
-    db_pool: web::Data<DbPool>,
+    db_pool: web::Data<DatabaseConnectionPool>,
     post_id: web::Path<Uuid>,
 ) -> Result<HttpResponse, HttpError> {
     let db_client = &**get_database_client(&db_pool).await?;

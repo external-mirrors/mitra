@@ -18,9 +18,9 @@ use mitra_models::{
     database::{
         get_database_client,
         DatabaseClient,
+        DatabaseConnectionPool,
         DatabaseError,
         DatabaseTypeError,
-        DbPool,
     },
     profiles::queries::{
         get_profile_by_remote_actor_id,
@@ -222,7 +222,7 @@ pub fn outgoing_queue_backoff(failure_count: u32) -> u32 {
 
 pub async fn process_queued_outgoing_activities(
     config: &Config,
-    db_pool: &DbPool,
+    db_pool: &DatabaseConnectionPool,
 ) -> Result<(), DatabaseError> {
     let db_client = &**get_database_client(db_pool).await?;
     let batch = get_job_batch(

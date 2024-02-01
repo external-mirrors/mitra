@@ -2,7 +2,7 @@ use actix_web::{web, HttpResponse, Responder, Scope};
 
 use mitra_config::Config;
 use mitra_models::{
-    database::{get_database_client, DbPool},
+    database::{get_database_client, DatabaseConnectionPool},
     posts::queries::get_posts_by_author,
     users::queries::get_user_by_name,
 };
@@ -14,7 +14,7 @@ const FEED_SIZE: u16 = 10;
 
 async fn user_feed_view(
     config: web::Data<Config>,
-    db_pool: web::Data<DbPool>,
+    db_pool: web::Data<DatabaseConnectionPool>,
     username: web::Path<String>,
 ) -> Result<HttpResponse, HttpError> {
     let db_client = &**get_database_client(&db_pool).await?;

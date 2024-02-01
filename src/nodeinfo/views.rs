@@ -4,7 +4,7 @@ use actix_web::{get, web, HttpResponse};
 
 use mitra_config::Config;
 use mitra_federation::jrd::{JsonResourceDescriptor, Link};
-use mitra_models::database::{get_database_client, DbPool};
+use mitra_models::database::{get_database_client, DatabaseConnectionPool};
 
 use crate::errors::HttpError;
 
@@ -35,7 +35,7 @@ pub async fn get_nodeinfo_jrd(
 #[get("/nodeinfo/2.0")]
 pub async fn get_nodeinfo_2_0(
     config: web::Data<Config>,
-    db_pool: web::Data<DbPool>,
+    db_pool: web::Data<DatabaseConnectionPool>,
 ) -> Result<HttpResponse, HttpError> {
     let db_client = &**get_database_client(&db_pool).await?;
     let usage = get_usage(db_client).await?;
@@ -49,7 +49,7 @@ pub async fn get_nodeinfo_2_0(
 #[get("/nodeinfo/2.1")]
 pub async fn get_nodeinfo_2_1(
     config: web::Data<Config>,
-    db_pool: web::Data<DbPool>,
+    db_pool: web::Data<DatabaseConnectionPool>,
 ) -> Result<HttpResponse, HttpError> {
     let db_client = &**get_database_client(&db_pool).await?;
     let usage = get_usage(db_client).await?;

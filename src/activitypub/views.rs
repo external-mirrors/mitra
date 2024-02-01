@@ -16,7 +16,11 @@ use uuid::Uuid;
 use mitra_config::Config;
 use mitra_federation::http_server::is_activitypub_request;
 use mitra_models::{
-    database::{get_database_client, DatabaseError, DbPool},
+    database::{
+        get_database_client,
+        DatabaseConnectionPool,
+        DatabaseError,
+    },
     emojis::queries::get_local_emoji_by_name,
     posts::helpers::{add_related_posts, can_view_post},
     posts::queries::{get_post_by_id, get_posts_by_author, get_thread},
@@ -70,7 +74,7 @@ use super::valueflows::builders::build_proposal;
 #[get("")]
 async fn actor_view(
     config: web::Data<Config>,
-    db_pool: web::Data<DbPool>,
+    db_pool: web::Data<DatabaseConnectionPool>,
     request: HttpRequest,
     username: web::Path<String>,
 ) -> Result<HttpResponse, HttpError> {
@@ -96,7 +100,7 @@ async fn actor_view(
 #[post("/inbox")]
 async fn inbox(
     config: web::Data<Config>,
-    db_pool: web::Data<DbPool>,
+    db_pool: web::Data<DatabaseConnectionPool>,
     inbox_mutex: web::Data<Mutex<()>>,
     username: web::Path<String>,
     request: HttpRequest,
@@ -141,7 +145,7 @@ async fn inbox(
 #[get("/outbox")]
 async fn outbox(
     config: web::Data<Config>,
-    db_pool: web::Data<DbPool>,
+    db_pool: web::Data<DatabaseConnectionPool>,
     username: web::Path<String>,
     query_params: web::Query<CollectionQueryParams>,
 ) -> Result<HttpResponse, HttpError> {
@@ -204,7 +208,7 @@ async fn outbox(
 #[post("/outbox")]
 async fn outbox_client_to_server(
     config: web::Data<Config>,
-    db_pool: web::Data<DbPool>,
+    db_pool: web::Data<DatabaseConnectionPool>,
     activity: web::Json<JsonValue>,
 ) -> Result<HttpResponse, HttpError> {
     let db_client = &mut **get_database_client(&db_pool).await?;
@@ -233,7 +237,7 @@ async fn outbox_client_to_server(
 #[get("/followers")]
 async fn followers_collection(
     config: web::Data<Config>,
-    db_pool: web::Data<DbPool>,
+    db_pool: web::Data<DatabaseConnectionPool>,
     username: web::Path<String>,
     query_params: web::Query<CollectionQueryParams>,
 ) -> Result<HttpResponse, HttpError> {
@@ -262,7 +266,7 @@ async fn followers_collection(
 #[get("/following")]
 async fn following_collection(
     config: web::Data<Config>,
-    db_pool: web::Data<DbPool>,
+    db_pool: web::Data<DatabaseConnectionPool>,
     username: web::Path<String>,
     query_params: web::Query<CollectionQueryParams>,
 ) -> Result<HttpResponse, HttpError> {
@@ -291,7 +295,7 @@ async fn following_collection(
 #[get("/subscribers")]
 async fn subscribers_collection(
     config: web::Data<Config>,
-    db_pool: web::Data<DbPool>,
+    db_pool: web::Data<DatabaseConnectionPool>,
     username: web::Path<String>,
     query_params: web::Query<CollectionQueryParams>,
 ) -> Result<HttpResponse, HttpError> {
@@ -320,7 +324,7 @@ async fn subscribers_collection(
 #[get("/collections/featured")]
 async fn featured_collection(
     config: web::Data<Config>,
-    db_pool: web::Data<DbPool>,
+    db_pool: web::Data<DatabaseConnectionPool>,
     username: web::Path<String>,
     query_params: web::Query<CollectionQueryParams>,
 ) -> Result<HttpResponse, HttpError> {
@@ -377,7 +381,7 @@ async fn featured_collection(
 #[get("/proposals/{chain_id}")]
 async fn proposal_view(
     config: web::Data<Config>,
-    db_pool: web::Data<DbPool>,
+    db_pool: web::Data<DatabaseConnectionPool>,
     request: HttpRequest,
     path: web::Path<(String, ChainId)>,
 ) -> Result<HttpResponse, HttpError> {
@@ -466,7 +470,7 @@ pub fn instance_actor_scope() -> Scope {
 #[get("/objects/{object_id}")]
 pub async fn object_view(
     config: web::Data<Config>,
-    db_pool: web::Data<DbPool>,
+    db_pool: web::Data<DatabaseConnectionPool>,
     request: HttpRequest,
     internal_object_id: web::Path<Uuid>,
 ) -> Result<HttpResponse, HttpError> {
@@ -502,7 +506,7 @@ pub async fn object_view(
 #[get("/objects/{object_id}/replies")]
 pub async fn replies_collection(
     config: web::Data<Config>,
-    db_pool: web::Data<DbPool>,
+    db_pool: web::Data<DatabaseConnectionPool>,
     internal_object_id: web::Path<Uuid>,
     query_params: web::Query<CollectionQueryParams>,
 ) -> Result<HttpResponse, HttpError> {
@@ -555,7 +559,7 @@ pub async fn replies_collection(
 #[get("/objects/emojis/{emoji_name}")]
 pub async fn emoji_view(
     config: web::Data<Config>,
-    db_pool: web::Data<DbPool>,
+    db_pool: web::Data<DatabaseConnectionPool>,
     emoji_name: web::Path<String>,
 ) -> Result<HttpResponse, HttpError> {
     let db_client = &**get_database_client(&db_pool).await?;

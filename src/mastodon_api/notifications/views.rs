@@ -11,7 +11,7 @@ use actix_web_httpauth::extractors::bearer::BearerAuth;
 
 use mitra_config::Config;
 use mitra_models::{
-    database::{get_database_client, DbPool},
+    database::{get_database_client, DatabaseConnectionPool},
     notifications::queries::get_notifications,
 };
 
@@ -28,7 +28,7 @@ async fn get_notifications_view(
     auth: BearerAuth,
     connection_info: ConnectionInfo,
     config: web::Data<Config>,
-    db_pool: web::Data<DbPool>,
+    db_pool: web::Data<DatabaseConnectionPool>,
     request_uri: Uri,
     query_params: web::Query<NotificationQueryParams>,
 ) -> Result<HttpResponse, MastodonError> {

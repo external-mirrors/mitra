@@ -8,7 +8,7 @@ use actix_web::{
 
 use mitra_config::Config;
 use mitra_models::{
-    database::{get_database_client, DbPool},
+    database::{get_database_client, DatabaseConnectionPool},
     instances::queries::{get_peers, get_peer_count},
     posts::queries::get_post_count,
     users::queries::{get_admin_user, get_user_count},
@@ -25,7 +25,7 @@ use super::types::InstanceInfo;
 async fn instance_view(
     config: web::Data<Config>,
     connection_info: ConnectionInfo,
-    db_pool: web::Data<DbPool>,
+    db_pool: web::Data<DatabaseConnectionPool>,
     maybe_ethereum_contracts: web::Data<Option<ContractSet>>,
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &**get_database_client(&db_pool).await?;
@@ -51,7 +51,7 @@ async fn instance_view(
 
 #[get("/peers")]
 async fn instance_peers_view(
-    db_pool: web::Data<DbPool>,
+    db_pool: web::Data<DatabaseConnectionPool>,
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &**get_database_client(&db_pool).await?;
     let peers = get_peers(db_client).await?;

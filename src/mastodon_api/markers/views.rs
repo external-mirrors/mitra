@@ -2,7 +2,7 @@ use actix_web::{get, post, web, HttpResponse, Scope};
 use actix_web_httpauth::extractors::bearer::BearerAuth;
 
 use mitra_models::{
-    database::{get_database_client, DbPool},
+    database::{get_database_client, DatabaseConnectionPool},
     markers::queries::{
         create_or_update_marker,
         get_marker_opt,
@@ -21,7 +21,7 @@ use super::types::{MarkerQueryParams, MarkerCreateData, Markers};
 #[get("")]
 async fn get_marker_view(
     auth: BearerAuth,
-    db_pool: web::Data<DbPool>,
+    db_pool: web::Data<DatabaseConnectionPool>,
     query_params: web::Query<MarkerQueryParams>,
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &**get_database_client(&db_pool).await?;
@@ -37,7 +37,7 @@ async fn get_marker_view(
 #[post("")]
 async fn update_marker_view(
     auth: BearerAuth,
-    db_pool: web::Data<DbPool>,
+    db_pool: web::Data<DatabaseConnectionPool>,
     marker_data: web::Json<MarkerCreateData>,
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &**get_database_client(&db_pool).await?;

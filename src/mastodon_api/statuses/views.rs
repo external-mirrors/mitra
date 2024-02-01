@@ -16,7 +16,11 @@ use uuid::Uuid;
 
 use mitra_config::Config;
 use mitra_models::{
-    database::{get_database_client, DatabaseError, DbPool},
+    database::{
+        get_database_client,
+        DatabaseConnectionPool,
+        DatabaseError,
+    },
     posts::helpers::{
         add_user_actions,
         can_create_post,
@@ -97,7 +101,7 @@ async fn create_status(
     auth: BearerAuth,
     connection_info: ConnectionInfo,
     config: web::Data<Config>,
-    db_pool: web::Data<DbPool>,
+    db_pool: web::Data<DatabaseConnectionPool>,
     status_data: QsFormOrJson<StatusData>,
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &mut **get_database_client(&db_pool).await?;
@@ -222,7 +226,7 @@ async fn create_status(
 async fn preview_status(
     auth: BearerAuth,
     config: web::Data<Config>,
-    db_pool: web::Data<DbPool>,
+    db_pool: web::Data<DatabaseConnectionPool>,
     status_data: web::Json<StatusPreviewData>,
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &**get_database_client(&db_pool).await?;
@@ -258,7 +262,7 @@ async fn get_status(
     auth: Option<BearerAuth>,
     connection_info: ConnectionInfo,
     config: web::Data<Config>,
-    db_pool: web::Data<DbPool>,
+    db_pool: web::Data<DatabaseConnectionPool>,
     status_id: web::Path<Uuid>,
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &**get_database_client(&db_pool).await?;
@@ -283,7 +287,7 @@ async fn get_status(
 #[get("/{status_id}/source")]
 async fn get_status_source(
     auth: BearerAuth,
-    db_pool: web::Data<DbPool>,
+    db_pool: web::Data<DatabaseConnectionPool>,
     status_id: web::Path<Uuid>,
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &**get_database_client(&db_pool).await?;
@@ -301,7 +305,7 @@ async fn edit_status(
     auth: BearerAuth,
     connection_info: ConnectionInfo,
     config: web::Data<Config>,
-    db_pool: web::Data<DbPool>,
+    db_pool: web::Data<DatabaseConnectionPool>,
     status_id: web::Path<Uuid>,
     status_data: web::Json<StatusUpdateData>,
 ) -> Result<HttpResponse, MastodonError> {
@@ -397,7 +401,7 @@ async fn edit_status(
 async fn delete_status(
     auth: BearerAuth,
     config: web::Data<Config>,
-    db_pool: web::Data<DbPool>,
+    db_pool: web::Data<DatabaseConnectionPool>,
     status_id: web::Path<Uuid>,
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &mut **get_database_client(&db_pool).await?;
@@ -424,7 +428,7 @@ async fn get_context(
     auth: Option<BearerAuth>,
     connection_info: ConnectionInfo,
     config: web::Data<Config>,
-    db_pool: web::Data<DbPool>,
+    db_pool: web::Data<DatabaseConnectionPool>,
     status_id: web::Path<Uuid>,
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &**get_database_client(&db_pool).await?;
@@ -467,7 +471,7 @@ async fn get_thread_view(
     auth: Option<BearerAuth>,
     config: web::Data<Config>,
     connection_info: ConnectionInfo,
-    db_pool: web::Data<DbPool>,
+    db_pool: web::Data<DatabaseConnectionPool>,
     status_id: web::Path<Uuid>,
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &**get_database_client(&db_pool).await?;
@@ -495,7 +499,7 @@ async fn favourite(
     auth: BearerAuth,
     connection_info: ConnectionInfo,
     config: web::Data<Config>,
-    db_pool: web::Data<DbPool>,
+    db_pool: web::Data<DatabaseConnectionPool>,
     status_id: web::Path<Uuid>,
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &mut **get_database_client(&db_pool).await?;
@@ -541,7 +545,7 @@ async fn unfavourite(
     auth: BearerAuth,
     connection_info: ConnectionInfo,
     config: web::Data<Config>,
-    db_pool: web::Data<DbPool>,
+    db_pool: web::Data<DatabaseConnectionPool>,
     status_id: web::Path<Uuid>,
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &mut **get_database_client(&db_pool).await?;
@@ -584,7 +588,7 @@ async fn reblog(
     auth: BearerAuth,
     connection_info: ConnectionInfo,
     config: web::Data<Config>,
-    db_pool: web::Data<DbPool>,
+    db_pool: web::Data<DatabaseConnectionPool>,
     status_id: web::Path<Uuid>,
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &mut **get_database_client(&db_pool).await?;
@@ -624,7 +628,7 @@ async fn unreblog(
     auth: BearerAuth,
     connection_info: ConnectionInfo,
     config: web::Data<Config>,
-    db_pool: web::Data<DbPool>,
+    db_pool: web::Data<DatabaseConnectionPool>,
     status_id: web::Path<Uuid>,
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &mut **get_database_client(&db_pool).await?;
@@ -663,7 +667,7 @@ async fn pin(
     auth: BearerAuth,
     config: web::Data<Config>,
     connection_info: ConnectionInfo,
-    db_pool: web::Data<DbPool>,
+    db_pool: web::Data<DatabaseConnectionPool>,
     status_id: web::Path<Uuid>,
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &**get_database_client(&db_pool).await?;
@@ -698,7 +702,7 @@ async fn unpin(
     auth: BearerAuth,
     config: web::Data<Config>,
     connection_info: ConnectionInfo,
-    db_pool: web::Data<DbPool>,
+    db_pool: web::Data<DatabaseConnectionPool>,
     status_id: web::Path<Uuid>,
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &**get_database_client(&db_pool).await?;
@@ -764,7 +768,7 @@ async fn make_permanent(
     auth: BearerAuth,
     connection_info: ConnectionInfo,
     config: web::Data<Config>,
-    db_pool: web::Data<DbPool>,
+    db_pool: web::Data<DatabaseConnectionPool>,
     status_id: web::Path<Uuid>,
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &mut **get_database_client(&db_pool).await?;
@@ -840,7 +844,7 @@ async fn make_permanent(
 async fn get_signature(
     auth: BearerAuth,
     config: web::Data<Config>,
-    db_pool: web::Data<DbPool>,
+    db_pool: web::Data<DatabaseConnectionPool>,
     status_id: web::Path<Uuid>,
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &**get_database_client(&db_pool).await?;
@@ -874,7 +878,7 @@ async fn token_minted(
     auth: BearerAuth,
     connection_info: ConnectionInfo,
     config: web::Data<Config>,
-    db_pool: web::Data<DbPool>,
+    db_pool: web::Data<DatabaseConnectionPool>,
     status_id: web::Path<Uuid>,
     transaction_data: web::Json<TransactionData>,
 ) -> Result<HttpResponse, MastodonError> {

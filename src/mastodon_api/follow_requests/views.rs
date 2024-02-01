@@ -13,7 +13,7 @@ use uuid::Uuid;
 
 use mitra_config::Config;
 use mitra_models::{
-    database::{get_database_client, DbPool},
+    database::{get_database_client, DatabaseConnectionPool},
     profiles::queries::get_profile_by_id,
     relationships::queries::{
         follow_request_accepted,
@@ -47,7 +47,7 @@ async fn follow_request_list(
     auth: BearerAuth,
     config: web::Data<Config>,
     connection_info: ConnectionInfo,
-    db_pool: web::Data<DbPool>,
+    db_pool: web::Data<DatabaseConnectionPool>,
     request_uri: Uri,
     query_params: web::Query<RequestListQueryParams>,
 ) -> Result<HttpResponse, MastodonError> {
@@ -83,7 +83,7 @@ async fn follow_request_list(
 async fn accept_follow_request_view(
     auth: BearerAuth,
     config: web::Data<Config>,
-    db_pool: web::Data<DbPool>,
+    db_pool: web::Data<DatabaseConnectionPool>,
     account_id: web::Path<Uuid>,
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &mut **get_database_client(&db_pool).await?;
@@ -118,7 +118,7 @@ async fn accept_follow_request_view(
 async fn reject_follow_request_view(
     auth: BearerAuth,
     config: web::Data<Config>,
-    db_pool: web::Data<DbPool>,
+    db_pool: web::Data<DatabaseConnectionPool>,
     account_id: web::Path<Uuid>,
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &mut **get_database_client(&db_pool).await?;

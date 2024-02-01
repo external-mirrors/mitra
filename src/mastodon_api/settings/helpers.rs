@@ -6,8 +6,8 @@ use mitra_models::{
     database::{
         get_database_client,
         DatabaseClient,
+        DatabaseConnectionPool,
         DatabaseError,
-        DbPool,
     },
     profiles::types::DbActorProfile,
     relationships::queries::{
@@ -88,7 +88,7 @@ pub fn parse_address_list(csv: &str)
 pub async fn import_follows_task(
     config: &Config,
     current_user: User,
-    db_pool: &DbPool,
+    db_pool: &DatabaseConnectionPool,
     address_list: Vec<ActorAddress>,
 ) -> Result<(), anyhow::Error> {
     let db_client = &mut **get_database_client(db_pool).await?;
@@ -126,7 +126,7 @@ pub async fn import_follows_task(
 
 pub async fn move_followers_task(
     config: &Config,
-    db_pool: &DbPool,
+    db_pool: &DatabaseConnectionPool,
     current_user: User,
     from_actor_id: &str,
     maybe_from_profile: Option<DbActorProfile>,

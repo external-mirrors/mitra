@@ -12,7 +12,11 @@ use mitra_federation::{
     },
 };
 use mitra_models::{
-    database::{get_database_client, DatabaseClient, DbPool},
+    database::{
+        get_database_client,
+        DatabaseClient,
+        DatabaseConnectionPool,
+    },
     users::queries::is_registered_user,
 };
 
@@ -91,7 +95,7 @@ pub struct WebfingerQueryParams {
 #[get("/.well-known/webfinger")]
 pub async fn webfinger_view(
     config: web::Data<Config>,
-    db_pool: web::Data<DbPool>,
+    db_pool: web::Data<DatabaseConnectionPool>,
     query_params: web::Query<WebfingerQueryParams>,
 ) -> Result<HttpResponse, HttpError> {
     let db_client = &**get_database_client(&db_pool).await?;

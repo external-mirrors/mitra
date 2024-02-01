@@ -21,7 +21,11 @@ use mitra_config::{
     RegistrationType,
 };
 use mitra_models::{
-    database::{get_database_client, DatabaseError, DbPool},
+    database::{
+        get_database_client,
+        DatabaseConnectionPool,
+        DatabaseError,
+    },
     posts::queries::get_posts_by_author,
     profiles::queries::{
         get_profile_by_acct,
@@ -152,7 +156,7 @@ use super::types::{
 pub async fn create_account(
     connection_info: ConnectionInfo,
     config: web::Data<Config>,
-    db_pool: web::Data<DbPool>,
+    db_pool: web::Data<DatabaseConnectionPool>,
     maybe_ethereum_contracts: web::Data<Option<ContractSet>>,
     account_data: web::Json<AccountCreateData>,
 ) -> Result<HttpResponse, MastodonError> {
@@ -277,7 +281,7 @@ async fn verify_credentials(
     auth: BearerAuth,
     connection_info: ConnectionInfo,
     config: web::Data<Config>,
-    db_pool: web::Data<DbPool>,
+    db_pool: web::Data<DatabaseConnectionPool>,
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &**get_database_client(&db_pool).await?;
     let user = get_current_user(db_client, auth.token()).await?;
@@ -294,7 +298,7 @@ async fn update_credentials(
     auth: BearerAuth,
     connection_info: ConnectionInfo,
     config: web::Data<Config>,
-    db_pool: web::Data<DbPool>,
+    db_pool: web::Data<DatabaseConnectionPool>,
     account_data: web::Json<AccountUpdateData>,
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &mut **get_database_client(&db_pool).await?;
@@ -334,7 +338,7 @@ async fn update_credentials(
 async fn get_unsigned_update(
     auth: BearerAuth,
     config: web::Data<Config>,
-    db_pool: web::Data<DbPool>,
+    db_pool: web::Data<DatabaseConnectionPool>,
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &**get_database_client(&db_pool).await?;
     let current_user = get_current_user(db_client, auth.token()).await?;
@@ -354,7 +358,7 @@ async fn get_unsigned_update(
 async fn get_identity_claim(
     auth: BearerAuth,
     config: web::Data<Config>,
-    db_pool: web::Data<DbPool>,
+    db_pool: web::Data<DatabaseConnectionPool>,
     query_params: web::Query<IdentityClaimQueryParams>,
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &**get_database_client(&db_pool).await?;
@@ -399,7 +403,7 @@ async fn create_identity_proof(
     auth: BearerAuth,
     connection_info: ConnectionInfo,
     config: web::Data<Config>,
-    db_pool: web::Data<DbPool>,
+    db_pool: web::Data<DatabaseConnectionPool>,
     proof_data: web::Json<IdentityProofData>,
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &mut **get_database_client(&db_pool).await?;
@@ -543,7 +547,7 @@ async fn create_identity_proof(
 #[get("/relationships")]
 async fn get_relationships_view(
     auth: BearerAuth,
-    db_pool: web::Data<DbPool>,
+    db_pool: web::Data<DatabaseConnectionPool>,
     query_params: MultiQuery<RelationshipQueryParams>,
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &**get_database_client(&db_pool).await?;
@@ -560,7 +564,7 @@ async fn get_relationships_view(
 async fn lookup_acct(
     connection_info: ConnectionInfo,
     config: web::Data<Config>,
-    db_pool: web::Data<DbPool>,
+    db_pool: web::Data<DatabaseConnectionPool>,
     query_params: web::Query<LookupAcctQueryParams>,
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &**get_database_client(&db_pool).await?;
@@ -577,7 +581,7 @@ async fn search_by_acct(
     auth: Option<BearerAuth>,
     connection_info: ConnectionInfo,
     config: web::Data<Config>,
-    db_pool: web::Data<DbPool>,
+    db_pool: web::Data<DatabaseConnectionPool>,
     query_params: web::Query<SearchAcctQueryParams>,
     governor_result: GovernorExtractor,
 ) -> Result<HttpResponse, MastodonError> {
@@ -622,7 +626,7 @@ async fn search_by_acct(
 async fn search_by_did(
     connection_info: ConnectionInfo,
     config: web::Data<Config>,
-    db_pool: web::Data<DbPool>,
+    db_pool: web::Data<DatabaseConnectionPool>,
     query_params: web::Query<SearchDidQueryParams>,
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &**get_database_client(&db_pool).await?;
@@ -645,7 +649,7 @@ async fn search_by_did(
 async fn get_account(
     connection_info: ConnectionInfo,
     config: web::Data<Config>,
-    db_pool: web::Data<DbPool>,
+    db_pool: web::Data<DatabaseConnectionPool>,
     account_id: web::Path<Uuid>,
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &**get_database_client(&db_pool).await?;
@@ -662,7 +666,7 @@ async fn get_account(
 async fn follow_account(
     auth: BearerAuth,
     config: web::Data<Config>,
-    db_pool: web::Data<DbPool>,
+    db_pool: web::Data<DatabaseConnectionPool>,
     account_id: web::Path<Uuid>,
     follow_data: Option<FormOrJson<FollowData>>,
 ) -> Result<HttpResponse, MastodonError> {
@@ -705,7 +709,7 @@ async fn follow_account(
 async fn unfollow_account(
     auth: BearerAuth,
     config: web::Data<Config>,
-    db_pool: web::Data<DbPool>,
+    db_pool: web::Data<DatabaseConnectionPool>,
     account_id: web::Path<Uuid>,
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &mut **get_database_client(&db_pool).await?;
@@ -740,7 +744,7 @@ async fn unfollow_account(
 #[post("/{account_id}/mute")]
 async fn mute_account(
     auth: BearerAuth,
-    db_pool: web::Data<DbPool>,
+    db_pool: web::Data<DatabaseConnectionPool>,
     account_id: web::Path<Uuid>,
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &mut **get_database_client(&db_pool).await?;
@@ -767,7 +771,7 @@ async fn mute_account(
 #[post("/{account_id}/unmute")]
 async fn unmute_account(
     auth: BearerAuth,
-    db_pool: web::Data<DbPool>,
+    db_pool: web::Data<DatabaseConnectionPool>,
     account_id: web::Path<Uuid>,
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &mut **get_database_client(&db_pool).await?;
@@ -793,7 +797,7 @@ async fn get_account_statuses(
     auth: Option<BearerAuth>,
     connection_info: ConnectionInfo,
     config: web::Data<Config>,
-    db_pool: web::Data<DbPool>,
+    db_pool: web::Data<DatabaseConnectionPool>,
     request_uri: Uri,
     account_id: web::Path<Uuid>,
     query_params: web::Query<StatusListQueryParams>,
@@ -835,7 +839,7 @@ async fn get_account_followers(
     auth: BearerAuth,
     connection_info: ConnectionInfo,
     config: web::Data<Config>,
-    db_pool: web::Data<DbPool>,
+    db_pool: web::Data<DatabaseConnectionPool>,
     request_uri: Uri,
     account_id: web::Path<Uuid>,
     query_params: web::Query<FollowListQueryParams>,
@@ -879,7 +883,7 @@ async fn get_account_following(
     auth: BearerAuth,
     connection_info: ConnectionInfo,
     config: web::Data<Config>,
-    db_pool: web::Data<DbPool>,
+    db_pool: web::Data<DatabaseConnectionPool>,
     request_uri: Uri,
     account_id: web::Path<Uuid>,
     query_params: web::Query<FollowListQueryParams>,
@@ -923,7 +927,7 @@ async fn get_account_subscribers(
     auth: BearerAuth,
     connection_info: ConnectionInfo,
     config: web::Data<Config>,
-    db_pool: web::Data<DbPool>,
+    db_pool: web::Data<DatabaseConnectionPool>,
     account_id: web::Path<Uuid>,
     query_params: web::Query<SubscriptionListQueryParams>,
 ) -> Result<HttpResponse, MastodonError> {
@@ -959,7 +963,7 @@ async fn get_account_subscribers(
 async fn get_account_aliases(
     connection_info: ConnectionInfo,
     config: web::Data<Config>,
-    db_pool: web::Data<DbPool>,
+    db_pool: web::Data<DatabaseConnectionPool>,
     account_id: web::Path<Uuid>,
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &**get_database_client(&db_pool).await?;

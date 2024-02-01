@@ -9,7 +9,7 @@ use actix_web::{
 use uuid::Uuid;
 
 use mitra_models::{
-    database::{get_database_client, DbPool},
+    database::{get_database_client, DatabaseConnectionPool},
     oauth::queries::create_oauth_app,
     oauth::types::DbOauthAppData,
 };
@@ -26,7 +26,7 @@ use super::types::{OauthApp, CreateAppData, CreateAppMultipartForm};
 /// Some clients use multipart/form-data
 #[post("")]
 async fn create_app_view(
-    db_pool: web::Data<DbPool>,
+    db_pool: web::Data<DatabaseConnectionPool>,
     request_data: Either<
         MultipartForm<CreateAppMultipartForm>,
         FormOrJson<CreateAppData>,

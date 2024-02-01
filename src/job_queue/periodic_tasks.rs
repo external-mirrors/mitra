@@ -8,7 +8,7 @@ use mitra_models::{
     },
     background_jobs::types::JobType,
     cleanup::DeletionQueue,
-    database::{get_database_client, DbPool},
+    database::{get_database_client, DatabaseConnectionPool},
     emojis::queries::{
         delete_emoji,
         find_unused_remote_emojis,
@@ -40,7 +40,7 @@ use mitra_services::ethereum::nft::process_nft_events;
 #[cfg(feature = "ethereum-extras")]
 pub async fn nft_monitor(
     maybe_blockchain: Option<&mut EthereumBlockchain>,
-    db_pool: &DbPool,
+    db_pool: &DatabaseConnectionPool,
 ) -> Result<(), Error> {
     let blockchain = match maybe_blockchain {
         Some(blockchain) => blockchain,
@@ -62,7 +62,7 @@ pub async fn nft_monitor(
 pub async fn ethereum_subscription_monitor(
     config: &Config,
     maybe_blockchain: Option<&mut EthereumBlockchain>,
-    db_pool: &DbPool,
+    db_pool: &DatabaseConnectionPool,
 ) -> Result<(), Error> {
     let blockchain = match maybe_blockchain {
         Some(blockchain) => blockchain,
@@ -84,7 +84,7 @@ pub async fn ethereum_subscription_monitor(
 
 pub async fn subscription_expiration_monitor(
     config: &Config,
-    db_pool: &DbPool,
+    db_pool: &DatabaseConnectionPool,
 ) -> Result<(), Error> {
     update_expired_subscriptions(
         &config.instance(),
@@ -95,7 +95,7 @@ pub async fn subscription_expiration_monitor(
 
 pub async fn monero_payment_monitor(
     config: &Config,
-    db_pool: &DbPool,
+    db_pool: &DatabaseConnectionPool,
 ) -> Result<(), Error> {
     let monero_config = match config.monero_config() {
         Some(monero_config) => monero_config,
@@ -111,7 +111,7 @@ pub async fn monero_payment_monitor(
 
 pub async fn monero_recurrent_payment_monitor(
     config: &Config,
-    db_pool: &DbPool,
+    db_pool: &DatabaseConnectionPool,
 ) -> Result<(), Error> {
     let monero_config = match config.monero_config() {
         Some(monero_config) => monero_config,
@@ -126,7 +126,7 @@ pub async fn monero_recurrent_payment_monitor(
 
 pub async fn incoming_activity_queue_executor(
     config: &Config,
-    db_pool: &DbPool,
+    db_pool: &DatabaseConnectionPool,
 ) -> Result<(), Error> {
     let db_client = &mut **get_database_client(db_pool).await?;
     process_queued_incoming_activities(config, db_client).await?;
@@ -135,7 +135,7 @@ pub async fn incoming_activity_queue_executor(
 
 pub async fn outgoing_activity_queue_executor(
     config: &Config,
-    db_pool: &DbPool,
+    db_pool: &DatabaseConnectionPool,
 ) -> Result<(), Error> {
     process_queued_outgoing_activities(config, db_pool).await?;
     Ok(())
@@ -143,7 +143,7 @@ pub async fn outgoing_activity_queue_executor(
 
 pub async fn delete_extraneous_posts(
     config: &Config,
-    db_pool: &DbPool,
+    db_pool: &DatabaseConnectionPool,
 ) -> Result<(), Error> {
     let db_client = &mut **get_database_client(db_pool).await?;
     let updated_before = match config.retention.extraneous_posts {
@@ -161,7 +161,7 @@ pub async fn delete_extraneous_posts(
 
 pub async fn delete_empty_profiles(
     config: &Config,
-    db_pool: &DbPool,
+    db_pool: &DatabaseConnectionPool,
 ) -> Result<(), Error> {
     let db_client = &mut **get_database_client(db_pool).await?;
     let updated_before = match config.retention.empty_profiles {
@@ -180,7 +180,7 @@ pub async fn delete_empty_profiles(
 
 pub async fn prune_remote_emojis(
     config: &Config,
-    db_pool: &DbPool,
+    db_pool: &DatabaseConnectionPool,
 ) -> Result<(), Error> {
     let db_client = &mut **get_database_client(db_pool).await?;
     let emojis = find_unused_remote_emojis(db_client).await?;
@@ -194,7 +194,7 @@ pub async fn prune_remote_emojis(
 
 pub async fn delete_orphaned_media(
     config: &Config,
-    db_pool: &DbPool,
+    db_pool: &DatabaseConnectionPool,
 ) -> Result<(), Error> {
     const BATCH_SIZE: u32 = 10;
     const JOB_TIMEOUT: u32 = 600; // 10 minutes

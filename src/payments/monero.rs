@@ -6,8 +6,8 @@ use mitra_models::{
     database::{
         get_database_client,
         DatabaseClient,
+        DatabaseConnectionPool,
         DatabaseError,
-        DbPool,
     },
     invoices::helpers::{invoice_forwarded, invoice_reopened},
     invoices::queries::{
@@ -53,7 +53,7 @@ fn invoice_payment_address(invoice: &DbInvoice) -> Result<String, DatabaseError>
 pub async fn check_monero_subscriptions(
     instance: &Instance,
     config: &MoneroConfig,
-    db_pool: &DbPool,
+    db_pool: &DatabaseConnectionPool,
 ) -> Result<(), PaymentError> {
     let db_client = &mut **get_database_client(db_pool).await?;
     let wallet_client = open_monero_wallet(config).await?;
@@ -325,7 +325,7 @@ pub async fn check_monero_subscriptions(
 
 pub async fn check_closed_invoices(
     config: &MoneroConfig,
-    db_pool: &DbPool,
+    db_pool: &DatabaseConnectionPool,
 ) -> Result<(), PaymentError> {
     let wallet_client = open_monero_wallet(config).await?;
     let addresses = get_active_addresses(

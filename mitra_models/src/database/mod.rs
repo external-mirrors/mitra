@@ -9,7 +9,7 @@ pub mod query_macro;
 #[cfg(feature = "test-utils")]
 pub mod test_utils;
 
-pub type DbPool = deadpool_postgres::Pool;
+pub type DatabaseConnectionPool = deadpool_postgres::Pool;
 pub use tokio_postgres::{GenericClient as DatabaseClient};
 
 #[derive(thiserror::Error, Debug)]
@@ -37,9 +37,9 @@ pub enum DatabaseError {
     AlreadyExists(&'static str), // object type
 }
 
-pub async fn get_database_client(db_pool: &DbPool)
-    -> Result<deadpool_postgres::Client, DatabaseError>
-{
+pub async fn get_database_client(
+    db_pool: &DatabaseConnectionPool,
+) -> Result<deadpool_postgres::Client, DatabaseError> {
     // Returns wrapped client
     // https://github.com/bikeshedder/deadpool/issues/56
     let client = db_pool.get().await?;

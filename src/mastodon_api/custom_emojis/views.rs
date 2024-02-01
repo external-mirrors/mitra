@@ -7,7 +7,7 @@ use actix_web::{
 };
 
 use mitra_models::{
-    database::{get_database_client, DbPool},
+    database::{get_database_client, DatabaseConnectionPool},
     emojis::queries::get_local_emojis,
 };
 
@@ -19,7 +19,7 @@ use super::types::CustomEmoji;
 #[get("")]
 async fn custom_emoji_list(
     connection_info: ConnectionInfo,
-    db_pool: web::Data<DbPool>,
+    db_pool: web::Data<DatabaseConnectionPool>,
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &**get_database_client(&db_pool).await?;
     let base_url = get_request_base_url(connection_info);

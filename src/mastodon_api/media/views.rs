@@ -12,7 +12,7 @@ use uuid::Uuid;
 use mitra_config::Config;
 use mitra_models::{
     attachments::queries::{create_attachment, get_attachment},
-    database::{get_database_client, DbPool},
+    database::{get_database_client, DatabaseConnectionPool},
 };
 use mitra_services::media::MediaStorage;
 use mitra_validators::media::validate_media_description;
@@ -32,7 +32,7 @@ use super::types::{
 async fn create_attachment_view(
     auth: BearerAuth,
     config: web::Data<Config>,
-    db_pool: web::Data<DbPool>,
+    db_pool: web::Data<DatabaseConnectionPool>,
     attachment_data: Either<
         MultipartForm<AttachmentDataMultipartForm>,
         web::Json<AttachmentData>,
@@ -73,7 +73,7 @@ async fn create_attachment_view(
 async fn get_attachment_view(
     auth: BearerAuth,
     config: web::Data<Config>,
-    db_pool: web::Data<DbPool>,
+    db_pool: web::Data<DatabaseConnectionPool>,
     attachment_id: web::Path<Uuid>,
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &**get_database_client(&db_pool).await?;

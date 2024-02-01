@@ -4,8 +4,8 @@ use mitra_config::{EthereumConfig, Instance};
 use mitra_models::{
     database::{
         get_database_client,
+        DatabaseConnectionPool,
         DatabaseError,
-        DbPool,
     },
     profiles::queries::search_profiles_by_wallet_address,
     subscriptions::queries::{
@@ -34,7 +34,7 @@ pub async fn check_ethereum_subscriptions(
     web3: &EthereumApi,
     contract: &EthereumContract,
     sync_state: &mut SyncState,
-    db_pool: &DbPool,
+    db_pool: &DatabaseConnectionPool,
 ) -> Result<(), PaymentError> {
     let db_client = &mut **get_database_client(db_pool).await?;
     let (from_block, to_block) = sync_state.get_scan_range(

@@ -11,7 +11,7 @@ use actix_web_httpauth::extractors::bearer::BearerAuth;
 
 use mitra_config::Config;
 use mitra_models::{
-    database::{get_database_client, DbPool},
+    database::{get_database_client, DatabaseConnectionPool},
     posts::queries::{
         get_direct_timeline,
         get_home_timeline,
@@ -36,7 +36,7 @@ async fn home_timeline(
     auth: BearerAuth,
     connection_info: ConnectionInfo,
     config: web::Data<Config>,
-    db_pool: web::Data<DbPool>,
+    db_pool: web::Data<DatabaseConnectionPool>,
     request_uri: Uri,
     query_params: web::Query<TimelineQueryParams>,
 ) -> Result<HttpResponse, MastodonError> {
@@ -68,7 +68,7 @@ async fn public_timeline(
     auth: Option<BearerAuth>,
     connection_info: ConnectionInfo,
     config: web::Data<Config>,
-    db_pool: web::Data<DbPool>,
+    db_pool: web::Data<DatabaseConnectionPool>,
     request_uri: Uri,
     query_params: web::Query<PublicTimelineQueryParams>,
 ) -> Result<HttpResponse, MastodonError> {
@@ -110,7 +110,7 @@ async fn direct_timeline(
     auth: BearerAuth,
     connection_info: ConnectionInfo,
     config: web::Data<Config>,
-    db_pool: web::Data<DbPool>,
+    db_pool: web::Data<DatabaseConnectionPool>,
     request_uri: Uri,
     query_params: web::Query<TimelineQueryParams>,
 ) -> Result<HttpResponse, MastodonError> {
@@ -141,7 +141,7 @@ async fn hashtag_timeline(
     auth: Option<BearerAuth>,
     connection_info: ConnectionInfo,
     config: web::Data<Config>,
-    db_pool: web::Data<DbPool>,
+    db_pool: web::Data<DatabaseConnectionPool>,
     request_uri: Uri,
     hashtag: web::Path<String>,
     query_params: web::Query<TimelineQueryParams>,

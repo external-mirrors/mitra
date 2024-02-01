@@ -14,7 +14,11 @@ use chrono::{Duration, Utc};
 use mitra_config::Config;
 use mitra_models::{
     caip122::queries::is_valid_caip122_nonce,
-    database::{get_database_client, DatabaseError, DbPool},
+    database::{
+        get_database_client,
+        DatabaseConnectionPool,
+        DatabaseError,
+    },
     oauth::queries::{
         create_oauth_authorization,
         delete_oauth_token,
@@ -67,7 +71,7 @@ const AUTHORIZATION_CODE_EXPIRES_IN: i64 = 86400 * 30;
 
 #[post("/authorize")]
 async fn authorize_view(
-    db_pool: web::Data<DbPool>,
+    db_pool: web::Data<DatabaseConnectionPool>,
     form_data: web::Form<AuthorizationRequest>,
     query_params: web::Query<AuthorizationQueryParams>,
 ) -> Result<HttpResponse, MastodonError> {
@@ -135,7 +139,7 @@ async fn authorize_view(
 #[post("/token")]
 async fn token_view(
     config: web::Data<Config>,
-    db_pool: web::Data<DbPool>,
+    db_pool: web::Data<DatabaseConnectionPool>,
     request_data: Either<
         MultipartForm<TokenRequestMultipartForm>,
         FormOrJson<TokenRequest>,
@@ -248,7 +252,7 @@ async fn token_view(
 #[post("/revoke")]
 async fn revoke_token_view(
     auth: BearerAuth,
-    db_pool: web::Data<DbPool>,
+    db_pool: web::Data<DatabaseConnectionPool>,
     request_data: web::Json<RevocationRequest>,
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &mut **get_database_client(&db_pool).await?;

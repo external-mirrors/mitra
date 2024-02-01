@@ -6,8 +6,8 @@ use mitra_models::{
     database::{
         get_database_client,
         DatabaseClient,
+        DatabaseConnectionPool,
         DatabaseError,
-        DbPool,
     },
     notifications::helpers::{
         create_subscription_notification,
@@ -57,7 +57,7 @@ pub async fn send_subscription_notifications(
 
 pub async fn update_expired_subscriptions(
     instance: &Instance,
-    db_pool: &DbPool,
+    db_pool: &DatabaseConnectionPool,
 ) -> Result<(), DatabaseError> {
     let db_client = &mut **get_database_client(db_pool).await?;
     for subscription in get_expired_subscriptions(db_client).await? {
