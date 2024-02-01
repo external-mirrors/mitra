@@ -94,6 +94,7 @@ use mitra_validators::{
     profiles::clean_profile_update_data,
     users::validate_local_username,
 };
+use mitra_utils::crypto_eddsa::generate_ed25519_key;
 
 use crate::activitypub::{
     builders::{
@@ -248,6 +249,7 @@ pub async fn create_account(
     };
     let rsa_private_key_pem = rsa_private_key_to_pkcs8_pem(&rsa_private_key)
         .map_err(|_| MastodonError::InternalError)?;
+    let ed25519_private_key = generate_ed25519_key();
 
     let AccountCreateData { username, invite_code, .. } =
         account_data.into_inner();
@@ -258,6 +260,7 @@ pub async fn create_account(
         login_address_ethereum: maybe_ethereum_address,
         login_address_monero: maybe_monero_address,
         rsa_private_key: rsa_private_key_pem,
+        ed25519_private_key: ed25519_private_key,
         invite_code,
         role,
     };

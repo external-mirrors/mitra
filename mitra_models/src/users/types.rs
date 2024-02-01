@@ -162,14 +162,17 @@ pub struct User {
 #[cfg(feature = "test-utils")]
 impl Default for User {
     fn default() -> Self {
-        use mitra_utils::crypto_rsa::generate_weak_rsa_key;
+        use mitra_utils::{
+            crypto_eddsa::generate_weak_ed25519_key,
+            crypto_rsa::generate_weak_rsa_key,
+        };
         Self {
             id: Default::default(),
             password_hash: None,
             login_address_ethereum: None,
             login_address_monero: None,
             rsa_private_key: generate_weak_rsa_key().unwrap(),
-            ed25519_private_key: None,
+            ed25519_private_key: Some(generate_weak_ed25519_key()),
             role: Role::default(),
             client_config: ClientConfig::default(),
             profile: DbActorProfile::default(),
@@ -235,6 +238,7 @@ pub struct UserCreateData {
     pub login_address_ethereum: Option<String>,
     pub login_address_monero: Option<String>,
     pub rsa_private_key: String,
+    pub ed25519_private_key: Ed25519PrivateKey,
     pub invite_code: Option<String>,
     pub role: Role,
 }
@@ -255,19 +259,24 @@ impl UserCreateData {
 #[cfg(feature = "test-utils")]
 impl Default for UserCreateData {
     fn default() -> Self {
-        use mitra_utils::crypto_rsa::{
-            generate_weak_rsa_key,
-            rsa_private_key_to_pkcs8_pem,
+        use mitra_utils::{
+            crypto_eddsa::generate_weak_ed25519_key,
+            crypto_rsa::{
+                generate_weak_rsa_key,
+                rsa_private_key_to_pkcs8_pem,
+            },
         };
         let rsa_private_key = generate_weak_rsa_key().unwrap();
         let rsa_private_key_pem =
             rsa_private_key_to_pkcs8_pem(&rsa_private_key).unwrap();
+        let ed25519_private_key = generate_weak_ed25519_key();
         Self {
             username: Default::default(),
             password_hash: None,
             login_address_ethereum: None,
             login_address_monero: None,
             rsa_private_key: rsa_private_key_pem,
+            ed25519_private_key: ed25519_private_key,
             invite_code: None,
             role: Role::default(),
         }

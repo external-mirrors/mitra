@@ -252,6 +252,7 @@ impl CreateUser {
         let rsa_private_key = generate_rsa_key()?;
         let rsa_private_key_pem =
             rsa_private_key_to_pkcs8_pem(&rsa_private_key)?;
+        let ed25519_private_key = generate_ed25519_key();
         let role = match &self.role {
             Some(value) => role_from_str(value)?,
             None => from_default_role(&config.registration.default_role),
@@ -262,6 +263,7 @@ impl CreateUser {
             login_address_ethereum: None,
             login_address_monero: None,
             rsa_private_key: rsa_private_key_pem,
+            ed25519_private_key: ed25519_private_key,
             invite_code: None,
             role,
         };

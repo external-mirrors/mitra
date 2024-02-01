@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Added
 
 - Replace `<img>` tags in posts with links.
+- Generate Ed25519 keys for new accounts.
 
 ### Changed
 

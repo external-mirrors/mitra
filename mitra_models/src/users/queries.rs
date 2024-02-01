@@ -142,10 +142,11 @@ pub async fn create_user(
             login_address_ethereum,
             login_address_monero,
             rsa_private_key,
+            ed25519_private_key,
             invite_code,
             user_role
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
         RETURNING user_account
         ",
         &[
@@ -154,6 +155,7 @@ pub async fn create_user(
             &user_data.login_address_ethereum,
             &user_data.login_address_monero,
             &user_data.rsa_private_key,
+            &user_data.ed25519_private_key,
             &user_data.invite_code,
             &user_data.role,
         ],
@@ -457,6 +459,7 @@ mod tests {
         let user = create_user(db_client, user_data).await.unwrap();
         assert_eq!(user.profile.username, "myname");
         assert_eq!(user.role, Role::NormalUser);
+        assert_eq!(user.ed25519_private_key.is_some(), true);
     }
 
     #[tokio::test]

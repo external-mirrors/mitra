@@ -477,7 +477,7 @@ mod tests {
             actor.public_key.id,
             "https://example.com/users/testuser#main-key",
         );
-        assert_eq!(actor.assertion_method.len(), 1);
+        assert_eq!(actor.assertion_method.len(), 2);
         assert_eq!(actor.attachment.len(), 0);
         assert_eq!(actor.summary, user.profile.bio);
     }
