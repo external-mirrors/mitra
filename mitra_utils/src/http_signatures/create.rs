@@ -1,6 +1,5 @@
 use chrono::Utc;
 use http::Method;
-use sha2::{Digest, Sha256};
 
 use crate::{
     base64,
@@ -9,6 +8,7 @@ use crate::{
         RsaError,
         RsaPrivateKey,
     },
+    http_digest::get_digest_header,
 };
 
 const HTTP_SIGNATURE_ALGORITHM: &str = "rsa-sha256";
@@ -29,12 +29,6 @@ pub enum HttpSignatureError {
 
     #[error("signing error")]
     SigningError(#[from] RsaError),
-}
-
-fn get_message_digest(message: &[u8]) -> String {
-    let digest = Sha256::digest(message);
-    let digest_b64 = base64::encode(digest);
-    digest_b64
 }
 
 /// Creates HTTP signature according to the old HTTP Signatures Spec:
@@ -60,10 +54,7 @@ pub fn create_http_signature(
     let maybe_digest = if request_body.is_empty() {
         None
     } else {
-        let digest = format!(
-            "SHA-256={}",
-            get_message_digest(request_body),
-        );
+        let digest = get_digest_header(request_body);
         Some(digest)
     };
 
