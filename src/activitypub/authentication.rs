@@ -174,7 +174,7 @@ pub async fn verify_signed_request(
         },
         Err(other_error) => return Err(other_error.into()),
     };
-    if signature_data.digest.is_none() {
+    if signature_data.content_digest.is_none() {
         log::warn!("Digest header is missing");
     };
 

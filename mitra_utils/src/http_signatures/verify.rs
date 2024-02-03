@@ -10,6 +10,7 @@ use crate::{
         verify_rsa_sha256_signature,
         RsaPublicKey,
     },
+    http_digest::parse_digest_header,
 };
 
 const SIGNATURE_PARAMETER_RE: &str = r#"^(?P<key>[a-zA-Z]+)=(?P<value>.+)$"#;
@@ -44,7 +45,7 @@ pub struct HttpSignatureData {
     pub message: String, // reconstructed message
     pub signature: String, // base64-encoded signature
     pub expires_at: DateTime<Utc>,
-    pub digest: Option<String>,
+    pub content_digest: Option<[u8; 32]>,
 }
 
 fn remove_quotes(value: &str) -> String {
@@ -112,10 +113,13 @@ pub fn parse_http_signature<'m>(
     } else {
         created_at + Duration::hours(SIGNATURE_EXPIRES_IN)
     };
+
     let maybe_digest = if let Some(digest_header) = request_headers.get("digest") {
-        // TODO: parse header
-        // https://www.rfc-editor.org/rfc/rfc3230
-        digest_header.to_str().map(|val| val.to_string()).ok()
+        let digest_header = digest_header.to_str()
+            .map_err(|_| VerificationError::HeaderError("invalid 'digest' header"))?;
+        let digest = parse_digest_header(digest_header)
+            .map_err(VerificationError::HeaderError)?;
+        Some(digest)
     } else {
         None
     };
@@ -152,7 +156,7 @@ pub fn parse_http_signature<'m>(
         message,
         signature,
         expires_at,
-        digest: maybe_digest,
+        content_digest: maybe_digest,
     };
     Ok(signature_data)
 }
@@ -227,6 +231,7 @@ mod tests {
         );
         assert_eq!(signature_data.signature, "test");
         assert!(signature_data.expires_at < Utc::now());
+        assert!(signature_data.content_digest.is_none());
     }
 
     #[test]
