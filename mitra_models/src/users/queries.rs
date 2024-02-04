@@ -544,4 +544,22 @@ mod tests {
             &client_config_value,
         );
     }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_get_admin_user() {
+        let db_client = &mut create_test_database().await;
+        let maybe_admin = get_admin_user(db_client).await.unwrap();
+        assert_eq!(maybe_admin.is_none(), true);
+
+        let user_data = UserCreateData {
+            username: "test".to_string(),
+            password_hash: Some("test".to_string()),
+            role: Role::Admin,
+            ..Default::default()
+        };
+        let user = create_user(db_client, user_data).await.unwrap();
+        let maybe_admin = get_admin_user(db_client).await.unwrap();
+        assert_eq!(maybe_admin.unwrap().id, user.id);
+    }
 }

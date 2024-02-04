@@ -13,7 +13,7 @@ use crate::emojis::types::DbEmoji;
 use crate::posts::types::{DbPost, Post};
 use crate::profiles::types::DbActorProfile;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum EventType {
     Follow,
     FollowRequest,
