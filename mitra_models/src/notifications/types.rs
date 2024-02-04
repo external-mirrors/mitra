@@ -25,6 +25,7 @@ pub enum EventType {
     SubscriptionStart,
     SubscriptionExpiration,
     Move,
+    SignUp,
 }
 
 impl From<&EventType> for i16 {
@@ -40,6 +41,7 @@ impl From<&EventType> for i16 {
             EventType::SubscriptionStart => unimplemented!("not supported"),
             EventType::SubscriptionExpiration => 9,
             EventType::Move => 10,
+            EventType::SignUp => 11,
         }
     }
 }
@@ -59,6 +61,7 @@ impl TryFrom<i16> for EventType {
             8 => Self::SubscriptionStart,
             9 => Self::SubscriptionExpiration,
             10 => Self::Move,
+            11 => Self::SignUp,
             _ => return Err(DatabaseTypeError),
         };
         Ok(event_type)

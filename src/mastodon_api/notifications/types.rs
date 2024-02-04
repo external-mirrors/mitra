@@ -59,6 +59,7 @@ impl ApiNotification {
             EventType::SubscriptionStart => "", // not supported
             EventType::SubscriptionExpiration => "subscription_expiration",
             EventType::Move => "move",
+            EventType::SignUp => "admin.sign_up",
         };
         Self {
             id: notification.id.to_string(),

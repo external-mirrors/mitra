@@ -355,6 +355,25 @@ pub async fn get_user_by_public_wallet_address(
     get_user_by_did(db_client, &did).await
 }
 
+pub async fn get_users_by_role(
+    db_client: &impl DatabaseClient,
+    role: Role,
+) -> Result<Vec<Uuid>, DatabaseError> {
+    let rows = db_client.query(
+        "
+        SELECT actor_profile.id
+        FROM user_account
+        JOIN actor_profile USING (id)
+        WHERE user_account.user_role = $1
+        ",
+        &[&role],
+    ).await?;
+    let users = rows.iter()
+        .map(|row| row.try_get("id"))
+        .collect::<Result<_, _>>()?;
+    Ok(users)
+}
+
 pub async fn get_admin_user(
     db_client: &impl DatabaseClient,
 ) -> Result<Option<User>, DatabaseError> {

@@ -11,6 +11,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Replace `<img>` tags in posts with links.
 - Generate Ed25519 keys for all accounts.
 - Mark account as "bot" if remote actor has `Application` or `Service` type.
+- Send notification to admin when new user is registered.
 
 ### Changed
 

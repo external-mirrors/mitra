@@ -26,6 +26,7 @@ use mitra_models::{
         DatabaseConnectionPool,
         DatabaseError,
     },
+    notifications::helpers::create_signup_notifications,
     posts::queries::get_posts_by_author,
     profiles::queries::{
         get_profile_by_acct,
@@ -270,6 +271,7 @@ pub async fn create_account(
             return Err(ValidationError("user already exists").into()),
         Err(other_error) => return Err(other_error.into()),
     };
+    create_signup_notifications(db_client, &user.id).await?;
     log::warn!("created user {}", user.id);
     let account = Account::from_user(
         &get_request_base_url(connection_info),

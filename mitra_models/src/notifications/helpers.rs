@@ -5,6 +5,10 @@ use crate::relationships::{
     queries::has_relationship,
     types::RelationshipType,
 };
+use crate::users::{
+    queries::get_users_by_role,
+    types::Role,
+};
 
 use super::queries::create_notification;
 use super::types::EventType;
@@ -158,6 +162,20 @@ pub async fn create_move_notification(
         db_client, sender_id, recipient_id, None,
         EventType::Move,
     ).await
+}
+
+pub async fn create_signup_notifications(
+    db_client: &impl DatabaseClient,
+    sender_id: &Uuid,
+) -> Result<(), DatabaseError> {
+    let admins = get_users_by_role(db_client, Role::Admin).await?;
+    for recipient_id in admins {
+        create_notification(
+            db_client, sender_id, &recipient_id, None,
+            EventType::SignUp,
+        ).await?;
+    };
+    Ok(())
 }
 
 #[cfg(test)]

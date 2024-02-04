@@ -2331,6 +2331,7 @@ components:
             - subscription
             - subscription_expiration
             - move
+            - admin.sign_up
           example: reply
         created_at:
           description: The timestamp of the notification.
