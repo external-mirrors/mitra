@@ -1,6 +1,27 @@
 # ActivityPub federation in Mitra
 
+## Supported federation protocols and standards
+
 Mitra largely follows the [ActivityPub](https://www.w3.org/TR/activitypub/) server-to-server specification but it makes uses of some non-standard extensions, some of which are required for interacting with it.
+
+It also supports the following standards:
+
+- [Http Signatures](https://datatracker.ietf.org/doc/html/draft-cavage-http-signatures)
+- [NodeInfo](https://nodeinfo.diaspora.software/)
+- [WebFinger](https://webfinger.net/)
+
+## Supported FEPs
+
+- [FEP-67ff: FEDERATION.md](https://codeberg.org/silverpill/feps/src/branch/main/67ff/fep-67ff.md)
+- [FEP-f1d5: NodeInfo in Fediverse Software](https://codeberg.org/fediverse/fep/src/branch/main/fep/f1d5/fep-f1d5.md)
+- [FEP-e232: Object Links](https://codeberg.org/silverpill/feps/src/branch/main/e232/fep-e232.md)
+- [FEP-8b32: Object Integrity Proofs](https://codeberg.org/silverpill/feps/src/branch/main/8b32/fep-8b32.md)
+- [FEP-0ea0: Payment Links](https://codeberg.org/silverpill/feps/src/branch/main/0ea0/fep-0ea0.md)
+- [FEP-521a: Representing actor's public keys](https://codeberg.org/silverpill/feps/src/branch/main/521a/fep-521a.md)
+- [FEP-c390: Identity Proofs](https://codeberg.org/silverpill/feps/src/branch/main/c390/fep-c390.md)
+- [FEP-0837: Federated Marketplace](https://codeberg.org/silverpill/feps/src/branch/main/0837/fep-0837.md)
+
+## ActivityPub
 
 The following activities and object types are supported:
 
@@ -12,26 +33,15 @@ The following activities and object types are supported:
 - `Offer(Agreement)`, `Accept(Agreement)`.
 - `Add(Actor)`, `Remove(Actor)`.
 
-`Article`, `Event`, `Question`, `Page` and `Video` object types are partially supported.
-
-And these additional standards:
-
-- [Http Signatures](https://datatracker.ietf.org/doc/html/draft-cavage-http-signatures)
-- [NodeInfo](https://nodeinfo.diaspora.software/)
-- [WebFinger](https://webfinger.net/)
-
 Activities are implemented in way that is compatible with Pleroma, Mastodon and other popular ActivityPub servers.
 
-Supported FEPs:
+Objects with type other than `Note` are converted and stored in the same way as `Note` objects.
 
-- [FEP-67ff: FEDERATION.md](https://codeberg.org/silverpill/feps/src/branch/main/67ff/fep-67ff.md)
-- [FEP-f1d5: NodeInfo in Fediverse Software](https://codeberg.org/fediverse/fep/src/branch/main/fep/f1d5/fep-f1d5.md)
-- [FEP-e232: Object Links](https://codeberg.org/silverpill/feps/src/branch/main/e232/fep-e232.md)
-- [FEP-8b32: Object Integrity Proofs](https://codeberg.org/silverpill/feps/src/branch/main/8b32/fep-8b32.md)
-- [FEP-0ea0: Payment Links](https://codeberg.org/silverpill/feps/src/branch/main/0ea0/fep-0ea0.md)
-- [FEP-521a: Representing actor's public keys](https://codeberg.org/silverpill/feps/src/branch/main/521a/fep-521a.md)
-- [FEP-c390: Identity Proofs](https://codeberg.org/silverpill/feps/src/branch/main/c390/fep-c390.md)
-- [FEP-0837: Federated Marketplace](https://codeberg.org/silverpill/feps/src/branch/main/0837/fep-0837.md)
+### Notable differences
+
+- No shared inbox.
+- The value of `Accept` header in outgoing requests is set to `application/ld+json; profile="https://www.w3.org/ns/activitystreams"`, [as required by the ActivityPub specification](https://www.w3.org/TR/activitypub/#retrieving-objects).
+- The object of `Accept(Follow)` activity is ID of the `Follow` activity.
 
 ## Object integrity proofs
 
