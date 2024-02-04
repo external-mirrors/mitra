@@ -19,6 +19,9 @@ const SIGNATURE_EXPIRES_IN: i64 = 12; // 12 hours
 
 #[derive(thiserror::Error, Debug)]
 pub enum HttpSignatureVerificationError {
+    #[error("HTTP method not supported")]
+    MethodNotSupported,
+
     #[error("missing signature header")]
     NoSignature,
 
@@ -69,6 +72,22 @@ pub fn parse_http_signature<'m>(
         request_headers.into_iter()
             .map(|(name, val)| (name.clone(), val.clone())));
 
+    // Parse Digest header
+    let maybe_digest = match *request_method {
+        Method::GET => None,
+        Method::POST => {
+            let digest_header = request_headers.get("digest")
+                .ok_or(VerificationError::HeaderError("missing 'digest' header"))?
+                .to_str()
+                .map_err(|_| VerificationError::HeaderError("invalid 'digest' header"))?;
+            let digest = parse_digest_header(digest_header)
+                .map_err(VerificationError::HeaderError)?;
+            Some(digest)
+        },
+        _ => return Err(VerificationError::MethodNotSupported),
+    };
+
+    // Parse Signature header
     let signature_header = request_headers.get("signature")
         .ok_or(VerificationError::NoSignature)?
         .to_str()
@@ -115,17 +134,6 @@ pub fn parse_http_signature<'m>(
             .ok_or(VerificationError::ParseError("invalid timestamp"))?
     } else {
         created_at + Duration::hours(SIGNATURE_EXPIRES_IN)
-    };
-
-    // Parse Digest header
-    let maybe_digest = if let Some(digest_header) = request_headers.get("digest") {
-        let digest_header = digest_header.to_str()
-            .map_err(|_| VerificationError::HeaderError("invalid 'digest' header"))?;
-        let digest = parse_digest_header(digest_header)
-            .map_err(VerificationError::HeaderError)?;
-        Some(digest)
-    } else {
-        None
     };
 
     let mut message_parts = vec![];
@@ -204,8 +212,8 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_signature() {
-        let request_method = Method::POST;
+    fn test_parse_signature_get() {
+        let request_method = Method::GET;
         let request_uri = "/user/123/inbox".parse::<Uri>().unwrap();
         let date = "20 Oct 2022 20:00:00 GMT";
         let mut request_headers = HashMap::new();
@@ -236,7 +244,7 @@ mod tests {
         assert_eq!(signature_data.key_id, "https://myserver.org/actor#main-key");
         assert_eq!(
             signature_data.message,
-            "(request-target): post /user/123/inbox\nhost: example.com\ndate: 20 Oct 2022 20:00:00 GMT",
+            "(request-target): get /user/123/inbox\nhost: example.com\ndate: 20 Oct 2022 20:00:00 GMT",
         );
         assert_eq!(signature_data.signature, "test");
         assert!(signature_data.expires_at < Utc::now());
@@ -244,7 +252,50 @@ mod tests {
     }
 
     #[test]
-    fn test_create_and_verify_signature() {
+    fn test_create_and_verify_signature_get() {
+        let request_method = Method::GET;
+        let request_url = "https://example.org/inbox";
+        let signer_key = generate_weak_rsa_key().unwrap();
+        let signer_key_id = "https://myserver.org/actor#main-key";
+        let signed_headers = create_http_signature(
+            request_method.clone(),
+            request_url,
+            b"",
+            &signer_key,
+            signer_key_id,
+        ).unwrap();
+
+        let request_url = request_url.parse::<Uri>().unwrap();
+        let mut request_headers = HashMap::new();
+        request_headers.insert(
+            HeaderName::from_static("host"),
+            HeaderValue::from_str(&signed_headers.host).unwrap(),
+        );
+        request_headers.insert(
+            HeaderName::from_static("signature"),
+            HeaderValue::from_str(&signed_headers.signature).unwrap(),
+        );
+        request_headers.insert(
+            HeaderName::from_static("date"),
+            HeaderValue::from_str(&signed_headers.date).unwrap(),
+        );
+        let signature_data = parse_http_signature(
+            &request_method,
+            &request_url,
+            &request_headers,
+        ).unwrap();
+
+        let signer_public_key = RsaPublicKey::from(signer_key);
+        let result = verify_http_signature(
+            &signature_data,
+            &signer_public_key,
+            None,
+        );
+        assert_eq!(result.is_ok(), true);
+    }
+
+    #[test]
+    fn test_create_and_verify_signature_post() {
         let request_method = Method::POST;
         let request_url = "https://example.org/inbox";
         let request_body = "{}";
