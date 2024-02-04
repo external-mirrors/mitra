@@ -1928,6 +1928,10 @@ components:
           description: Whether the actor manually approves follow requests.
           type: boolean
           example: false
+        bot:
+          description: Indicates that the account may perform automated actions, may not be monitored, or identifies as a robot.
+          type: boolean
+          example: false
         identity_proofs:
           description: Identity proofs.
           type: array

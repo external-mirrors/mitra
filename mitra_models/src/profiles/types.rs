@@ -645,6 +645,16 @@ impl DbActorProfile {
         self.actor_json.is_none()
     }
 
+    pub fn is_automated(&self) -> bool {
+        match self.actor_json {
+            Some(ref db_actor) => {
+                ["Service", "Application"]
+                    .contains(&db_actor.object_type.as_str())
+            },
+            None => false,
+        }
+    }
+
     pub fn monero_subscription(
         &self,
         chain_id: &ChainId,

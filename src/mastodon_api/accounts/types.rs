@@ -125,6 +125,7 @@ pub struct Account {
     pub avatar: Option<String>,
     pub header: Option<String>,
     pub locked: bool,
+    pub bot: bool,
     pub identity_proofs: Vec<AccountField>,
     pub payment_options: Vec<AccountPaymentOption>,
     pub fields: Vec<AccountField>,
@@ -149,6 +150,8 @@ impl Account {
     ) -> Self {
         let actor_id = profile_actor_id(instance_url, &profile);
         let profile_url = profile_actor_url(instance_url, &profile);
+        let is_automated = profile.is_automated();
+
         let avatar_url = profile.avatar
             .map(|image| get_file_url(base_url, &image.file_name));
         let header_url = profile.banner
@@ -240,6 +243,7 @@ impl Account {
             avatar: avatar_url,
             header: header_url,
             locked: profile.manually_approves_followers,
+            bot: is_automated,
             identity_proofs,
             payment_options,
             fields: extra_fields,
