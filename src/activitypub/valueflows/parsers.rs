@@ -48,15 +48,7 @@ impl Quantity {
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct DeliverServiceIntent {
-    action: String,
-    resource_conforms_to: String,
-    resource_quantity: Quantity,
-}
-
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct TransferIntent {
+pub struct Intent {
     action: String,
     resource_conforms_to: String,
     resource_quantity: Quantity,
@@ -66,8 +58,8 @@ pub struct TransferIntent {
 #[serde(rename_all = "camelCase")]
 pub struct Proposal {
     pub id: String,
-    publishes: DeliverServiceIntent,
-    reciprocal: TransferIntent,
+    publishes: Intent,
+    reciprocal: Intent,
     unit_based: bool,
 }
 

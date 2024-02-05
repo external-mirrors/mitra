@@ -86,26 +86,19 @@ impl Quantity {
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
-struct DeliverServiceIntent {
+struct Intent {
     #[serde(rename = "type")]
     object_type: String,
     id: String,
     action: String,
     resource_conforms_to: String,
     resource_quantity: Quantity,
-    provider: String,
-}
 
-#[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
-struct TransferIntent {
-    #[serde(rename = "type")]
-    object_type: String,
-    id: String,
-    action: String,
-    resource_conforms_to: String,
-    resource_quantity: Quantity,
-    receiver: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    provider: Option<String>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    receiver: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -119,8 +112,8 @@ pub struct Proposal {
     id: String,
     attributed_to: String,
     name: String,
-    publishes: DeliverServiceIntent,
-    reciprocal: TransferIntent,
+    publishes: Intent,
+    reciprocal: Intent,
     unit_based: bool,
     to: String,
 }
@@ -149,15 +142,16 @@ pub fn build_proposal(
         id: proposal_id.clone(),
         attributed_to: actor_id.clone(),
         name: proposal_name.to_string(),
-        publishes: DeliverServiceIntent {
+        publishes: Intent {
             object_type: INTENT.to_string(),
             id: fep_0837_primary_fragment_id(&proposal_id),
             action: ACTION_DELIVER_SERVICE.to_string(),
             resource_conforms_to: CLASS_USER_GENERATED_CONTENT.to_string(),
             resource_quantity: Quantity::duration(1),
-            provider: actor_id.clone(),
+            provider: Some(actor_id.clone()),
+            receiver: None,
         },
-        reciprocal: TransferIntent {
+        reciprocal: Intent {
             object_type: INTENT.to_string(),
             id: fep_0837_reciprocal_fragment_id(&proposal_id),
             action: ACTION_TRANSFER.to_string(),
@@ -165,7 +159,8 @@ pub fn build_proposal(
             resource_quantity:
                 // piconeros per second
                 Quantity::currency_amount(payment_info.price.get()),
-            receiver: actor_id,
+            provider: None,
+            receiver: Some(actor_id),
         },
         unit_based: true,
         to: AP_PUBLIC.to_string(),
