@@ -13,13 +13,11 @@ use crate::activitypub::{
     identifiers::{local_actor_id, local_object_id},
     queues::OutgoingActivityJobData,
     types::Context,
-    valueflows::builders::{
-        build_agreement,
-        build_valueflows_context,
-        Agreement,
-    },
+    valueflows::builders::build_valueflows_context,
     vocabulary::ACCEPT,
 };
+
+use super::agreement::{build_agreement, Agreement};
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]

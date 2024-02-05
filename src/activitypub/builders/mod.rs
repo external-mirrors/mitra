@@ -2,6 +2,7 @@ pub mod accept_follow;
 pub mod accept_offer;
 pub mod add_note;
 pub mod add_person;
+mod agreement;
 pub mod announce;
 pub mod create_note;
 pub mod delete_note;
