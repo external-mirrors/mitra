@@ -34,7 +34,7 @@ use mitra_validators::{
 
 use crate::activitypub::{
     actors::types::Actor,
-    handlers::create::handle_emoji,
+    handlers::emoji::handle_emoji,
     identifiers::validate_object_id,
     receiver::HandlerError,
     valueflows::parsers::{parse_proposal, Proposal},

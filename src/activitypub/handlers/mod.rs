@@ -8,6 +8,7 @@ pub mod add;
 pub mod announce;
 pub mod create;
 pub mod delete;
+pub mod emoji;
 pub mod follow;
 pub mod like;
 pub mod r#move;
