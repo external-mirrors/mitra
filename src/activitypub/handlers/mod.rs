@@ -5,6 +5,7 @@ pub type HandlerResult = Result<Option<&'static str>, HandlerError>;
 
 pub mod accept;
 pub mod add;
+mod agreement;
 pub mod announce;
 pub mod create;
 pub mod delete;

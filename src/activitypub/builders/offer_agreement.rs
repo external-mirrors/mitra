@@ -56,7 +56,7 @@ fn build_offer_agreement(
     let duration = invoice_amount / subscription_option.price;
     let actor_id = local_actor_id(instance_url, sender_username);
     let activity_id = local_object_id(instance_url, invoice_id);
-    let primary_commitment =  Commitment {
+    let primary_commitment = Commitment {
         id: None,
         object_type: COMMITMENT.to_string(),
         satisfies: primary_intent_id,

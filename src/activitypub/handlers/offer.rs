@@ -15,24 +15,14 @@ use mitra_validators::errors::ValidationError;
 use crate::activitypub::{
     builders::accept_offer::prepare_accept_offer,
     identifiers::parse_local_primary_intent_id,
-    valueflows::parsers::Quantity,
     vocabulary::AGREEMENT,
 };
 
-use super::{HandlerError, HandlerResult};
-
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct Commitment {
-    satisfies: String,
-    resource_quantity: Quantity,
-}
-
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct Agreement {
-    clauses: (Commitment, Commitment),
-}
+use super::{
+    agreement::Agreement,
+    HandlerError,
+    HandlerResult,
+};
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]

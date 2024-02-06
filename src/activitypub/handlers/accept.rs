@@ -19,11 +19,13 @@ use mitra_validators::errors::ValidationError;
 
 use crate::activitypub::{
     identifiers::parse_local_object_id,
-    valueflows::parsers::Quantity,
     vocabulary::{FOLLOW, OFFER},
 };
 
-use super::HandlerResult;
+use super::{
+    agreement::Agreement,
+    HandlerResult,
+};
 
 #[derive(Deserialize)]
 struct Accept {
@@ -66,24 +68,6 @@ pub async fn handle_accept(
     Ok(Some(FOLLOW))
 }
 
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct Commitment {
-    resource_quantity: Quantity,
-}
-
-#[derive(Deserialize)]
-struct PaymentLink {
-    href: String,
-}
-
-#[derive(Deserialize)]
-struct Agreement {
-    id: String,
-    clauses: (Commitment, Commitment),
-    url: PaymentLink,
-}
-
 async fn handle_accept_offer(
     config: &Config,
     db_client: &mut impl DatabaseClient,
@@ -104,12 +88,16 @@ async fn handle_accept_offer(
     let agreement_value = activity.result.expect("result should be present");
     let agreement: Agreement = serde_json::from_value(agreement_value)
         .map_err(|_| ValidationError("unexpected activity structure"))?;
+    let agreement_id = agreement.id
+        .ok_or(ValidationError("missing 'id' field"))?;
     let invoice_amount: i64 = agreement.clauses.1.resource_quantity
         .parse_currency_amount()?;
     if invoice_amount != invoice.amount {
         return Err(ValidationError("unexpected amount").into());
     };
-    let account_id = AccountId::from_uri(&agreement.url.href)
+    let payment_uri = agreement.url.map(|link| link.href)
+        .ok_or(ValidationError("missing 'url' field"))?;
+    let account_id = AccountId::from_uri(&payment_uri)
         .map_err(|_| ValidationError("invalid account ID"))?;
     if account_id.chain_id != *invoice.chain_id.inner() {
         return Err(ValidationError("unexpected chain ID").into());
@@ -118,7 +106,7 @@ async fn handle_accept_offer(
         db_client,
         &invoice.id,
         &account_id.address,
-        &agreement.id,
+        &agreement_id,
     ).await?;
     Ok(Some(OFFER))
 }
