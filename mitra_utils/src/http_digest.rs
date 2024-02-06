@@ -4,7 +4,7 @@ use sha2::{Digest, Sha256};
 
 use crate::base64;
 
-const DIGEST_RE: &str = r"^SHA-256=(?P<digest>.+)$";
+const DIGEST_RE: &str = r"^(?P<algorithm>[\w-]+)=(?P<digest>.+)$";
 
 pub fn get_sha256_digest(request_body: &[u8]) -> [u8; 32] {
     Sha256::digest(request_body).into()
@@ -18,10 +18,15 @@ pub(crate) fn get_digest_header(request_body: &[u8]) -> String {
 
 pub(crate) fn parse_digest_header(
     header_value: &str,
-) -> Result<[u8; 32], &'static str>  {
+) -> Result<[u8; 32], &'static str> {
     let digest_re = Regex::new(DIGEST_RE).expect("regexp should be valid");
     let caps = digest_re.captures(header_value)
         .ok_or("invalid digest header value")?;
+    // RFC-3230: digest-algorithm values are case-insensitive
+    let algorithm = caps["algorithm"].to_uppercase();
+    if algorithm != "SHA-256" {
+        return Err("unexpected digest algorithm");
+    };
     let digest_b64 = &caps["digest"];
     let digest = base64::decode(digest_b64)
         .map_err(|_| "invalid digest encoding")?
