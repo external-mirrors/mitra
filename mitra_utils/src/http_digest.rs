@@ -4,7 +4,7 @@ use sha2::{Digest, Sha256};
 
 use crate::base64;
 
-const DIGEST_RE: &str = r"^(?P<algorithm>[\w-]+)=(?P<digest>.+)$";
+const DIGEST_RE: &str = r"^(?P<algorithm>[\w-]+)=(?P<digest>[^,]+)(,|$)";
 
 pub fn get_sha256_digest(request_body: &[u8]) -> [u8; 32] {
     Sha256::digest(request_body).into()
@@ -44,6 +44,16 @@ mod tests {
         let request_body = "test*123";
         let digest = get_sha256_digest(request_body.as_bytes());
         let header_value = get_digest_header(request_body.as_bytes());
+        let parsed = parse_digest_header(&header_value).unwrap();
+        assert_eq!(parsed, digest);
+    }
+
+    #[test]
+    fn test_parse_digest_header_multiple_digests() {
+        let request_body = "test*123";
+        let digest = get_sha256_digest(request_body.as_bytes());
+        let digest_b64 = base64::encode(digest);
+        let header_value = format!("sha-256={digest_b64},unixsum=30637");
         let parsed = parse_digest_header(&header_value).unwrap();
         assert_eq!(parsed, digest);
     }
