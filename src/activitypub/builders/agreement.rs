@@ -23,19 +23,21 @@ use crate::activitypub::{
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
-struct Commitment {
-    #[serde(rename = "type")]
-    object_type: String,
+pub struct Commitment {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub id: Option<String>,
 
-    id: String,
-    satisfies: String,
-    resource_quantity: Quantity,
+    #[serde(rename = "type")]
+    pub object_type: String,
+
+    pub satisfies: String,
+    pub resource_quantity: Quantity,
 }
 
 /// https://codeberg.org/silverpill/feps/src/branch/main/0ea0/fep-0ea0.md
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
-struct PaymentLink {
+pub struct PaymentLink {
     #[serde(rename = "type")]
     object_type: String,
 
@@ -46,14 +48,19 @@ struct PaymentLink {
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Agreement {
-    #[serde(rename = "type")]
-    object_type: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub id: Option<String>,
 
-    id: String,
-    clauses: (Commitment, Commitment),
-    url: PaymentLink,
+    #[serde(rename = "type")]
+    pub object_type: String,
+
+    pub clauses: (Commitment, Commitment),
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub url: Option<PaymentLink>,
 }
 
+/// Builds Agreement object from invoice
 pub fn build_agreement(
     instance_url: &str,
     username: &str,
@@ -69,14 +76,14 @@ pub fn build_agreement(
     let amount = invoice.amount_u64()?;
     let duration = amount / payment_info.price.get();
     let primary_commitment = Commitment {
+        id: Some(fep_0837_primary_fragment_id(&agreement_id)),
         object_type: COMMITMENT.to_string(),
-        id: fep_0837_primary_fragment_id(&agreement_id),
         satisfies: fep_0837_primary_fragment_id(&proposal_id),
         resource_quantity: Quantity::duration(duration),
     };
     let reciprocal_commitment = Commitment {
+        id: Some(fep_0837_reciprocal_fragment_id(&agreement_id)),
         object_type: COMMITMENT.to_string(),
-        id: fep_0837_reciprocal_fragment_id(&agreement_id),
         satisfies: fep_0837_reciprocal_fragment_id(&proposal_id),
         resource_quantity: Quantity::currency_amount(amount),
     };
@@ -91,10 +98,10 @@ pub fn build_agreement(
         rel: vec![PAYMENT_LINK_RELATION_TYPE.to_string()],
     };
     let agreement = Agreement {
+        id: Some(agreement_id),
         object_type: AGREEMENT.to_string(),
-        id: agreement_id,
         clauses: (primary_commitment, reciprocal_commitment),
-        url: payment_link,
+        url: Some(payment_link),
     };
     Ok(agreement)
 }

@@ -25,25 +25,7 @@ use crate::activitypub::{
     vocabulary::{AGREEMENT, COMMITMENT, OFFER},
 };
 
-#[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
-struct Commitment {
-    #[serde(rename = "type")]
-    object_type: String,
-
-    satisfies: String,
-    resource_quantity: Quantity,
-}
-
-// Agreement draft
-#[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
-struct Agreement {
-    #[serde(rename = "type")]
-    object_type: String,
-
-    clauses: (Commitment, Commitment),
-}
+use super::agreement::{Commitment, Agreement};
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -74,20 +56,26 @@ fn build_offer_agreement(
     let duration = invoice_amount / subscription_option.price;
     let actor_id = local_actor_id(instance_url, sender_username);
     let activity_id = local_object_id(instance_url, invoice_id);
+    let primary_commitment =  Commitment {
+        id: None,
+        object_type: COMMITMENT.to_string(),
+        satisfies: primary_intent_id,
+        resource_quantity: Quantity::duration(duration),
+    };
+    let reciprocal_commitment = Commitment {
+        id: None,
+        object_type: COMMITMENT.to_string(),
+        satisfies: reciprocal_intent_id,
+        resource_quantity: Quantity::currency_amount(invoice_amount),
+    };
     let agreement = Agreement {
+        id: None,
         object_type: AGREEMENT.to_string(),
         clauses: (
-            Commitment {
-                object_type: COMMITMENT.to_string(),
-                satisfies: primary_intent_id,
-                resource_quantity: Quantity::duration(duration),
-            },
-            Commitment {
-                object_type: COMMITMENT.to_string(),
-                satisfies: reciprocal_intent_id,
-                resource_quantity: Quantity::currency_amount(invoice_amount),
-            },
+            primary_commitment,
+            reciprocal_commitment,
         ),
+        url: None, // pre-agreement shouldn't have payment link
     };
     let activity = OfferAgreement {
         _context: build_valueflows_context(),
