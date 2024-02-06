@@ -20,6 +20,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Log `content` of `Like` and `EmojiReact` activities.
 - Set limit on client config size.
 
+### Removed
+
+- Stop accepting pre-FEP-0837 proposals.
+
 ### Fixed
 
 - Don't stop fetching replies if one item is not valid.

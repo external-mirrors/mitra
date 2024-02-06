@@ -11,7 +11,6 @@ use mitra_validators::errors::ValidationError;
 use super::constants::{
     ACTION_DELIVER_SERVICE,
     ACTION_TRANSFER,
-    CLASS_CONTENT,
     CLASS_USER_GENERATED_CONTENT,
     PURPOSE_OFFER,
     UNIT_ONE,
@@ -81,12 +80,8 @@ pub fn parse_proposal(
     if proposal.publishes.action != ACTION_DELIVER_SERVICE {
         return Err(ValidationError("unexpected action"));
     };
-    // Use resource class to determine support for FEP-0837
-    // TODO: ignore non-interactive proposals (pre FEP-0837)
-    let fep_0837_enabled = match proposal.publishes.resource_conforms_to.as_str() {
-        CLASS_CONTENT => false,
-        CLASS_USER_GENERATED_CONTENT => true,
-        _ => return Err(ValidationError("unexpected resource type")),
+    if proposal.publishes.resource_conforms_to.as_str() != CLASS_USER_GENERATED_CONTENT {
+        return Err(ValidationError("unexpected resource type"));
     };
     let duration = proposal.publishes.resource_quantity
         .parse_duration()?;
@@ -112,7 +107,7 @@ pub fn parse_proposal(
         asset_type.chain_id,
         price,
         proposal.id,
-        fep_0837_enabled,
+        true,
     );
     Ok(payment_option)
 }
@@ -153,7 +148,7 @@ mod tests {
                 "type": "Intent",
                 "id": "https://test.example/users/alice/proposals/monero:418015bb9ae982a1975da7d79277c270#primary",
                 "action": "deliverService",
-                "resourceConformsTo": "https://www.wikidata.org/wiki/Q1260632",
+                "resourceConformsTo": "https://www.wikidata.org/wiki/Q579716",
                 "resourceQuantity": {
                     "hasUnit": "second",
                     "hasNumericalValue": "1",
