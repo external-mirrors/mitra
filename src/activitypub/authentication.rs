@@ -1,4 +1,7 @@
-use actix_web::HttpRequest;
+use actix_web::{
+    http::Method,
+    HttpRequest,
+};
 use serde_json::{Value as JsonValue};
 
 use mitra_config::Config;
@@ -175,6 +178,18 @@ pub async fn verify_signed_request(
         },
         Err(other_error) => return Err(other_error.into()),
     };
+    let maybe_content_digest = if request.method() == Method::POST &&
+        signature_data.content_digest.is_none()
+    {
+        // Skip digest verification if Digest header can not be parsed
+        log::warn!(
+            "invalid digest header: {:?}",
+            request.headers().get("digest"),
+        );
+        None
+    } else {
+        Some(content_digest)
+    };
     let signer_id = key_id_to_actor_id(&signature_data.key_id)?;
     let signer = get_signer(config, db_client, &signer_id, no_fetch).await?;
     let signer_key = get_signer_rsa_key(
@@ -185,7 +200,7 @@ pub async fn verify_signed_request(
     verify_http_signature(
         &signature_data,
         &signer_key,
-        Some(content_digest),
+        maybe_content_digest,
     )?;
 
     Ok(signer)
