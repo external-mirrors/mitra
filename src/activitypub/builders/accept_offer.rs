@@ -48,7 +48,6 @@ fn build_accept_offer(
         sender_username,
         subscription_option,
         invoice,
-        false,
     )?;
     let actor_id = local_actor_id(instance_url, sender_username);
     let activity_id = local_object_id(instance_url, &generate_ulid());

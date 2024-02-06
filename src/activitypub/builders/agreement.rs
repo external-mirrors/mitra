@@ -13,9 +13,7 @@ use crate::activitypub::{
         local_actor_proposal_id,
         local_agreement_id,
     },
-    types::Context,
     valueflows::builders::{
-        build_valueflows_context,
         fep_0837_primary_fragment_id,
         fep_0837_reciprocal_fragment_id,
         Quantity,
@@ -48,9 +46,6 @@ struct PaymentLink {
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Agreement {
-    #[serde(rename = "@context", skip_serializing_if = "Option::is_none")]
-    _context: Option<Context>,
-
     #[serde(rename = "type")]
     object_type: String,
 
@@ -64,7 +59,6 @@ pub fn build_agreement(
     username: &str,
     payment_info: &MoneroSubscription,
     invoice: &DbInvoice,
-    with_context: bool,
 ) -> Result<Agreement, DatabaseTypeError> {
     let proposal_id = local_actor_proposal_id(
         instance_url,
@@ -97,7 +91,6 @@ pub fn build_agreement(
         rel: vec![PAYMENT_LINK_RELATION_TYPE.to_string()],
     };
     let agreement = Agreement {
-        _context: with_context.then(build_valueflows_context),
         object_type: AGREEMENT.to_string(),
         id: agreement_id,
         clauses: (primary_commitment, reciprocal_commitment),
@@ -137,42 +130,9 @@ mod tests {
             username,
             &payment_info,
             &invoice,
-            true,
         ).unwrap();
 
         let expected_value = json!({
-            "@context": [
-                "https://www.w3.org/ns/activitystreams",
-                "https://w3id.org/security/v1",
-                "https://w3id.org/security/data-integrity/v1",
-                {
-                    "Hashtag": "as:Hashtag",
-                    "sensitive": "as:sensitive",
-                    "proofValue": "sec:proofValue",
-                    "proofPurpose": "sec:proofPurpose",
-                    "verificationMethod": "sec:verificationMethod",
-                    "mitra": "http://jsonld.mitra.social#",
-                    "MitraJcsRsaSignature2022": "mitra:MitraJcsRsaSignature2022",
-                    "vf": "https://w3id.org/valueflows/",
-                    "om2": "http://www.ontology-of-units-of-measure.org/resource/om-2/",
-                    "Proposal": "vf:Proposal",
-                    "Intent": "vf:Intent",
-                    "publishes": "vf:publishes",
-                    "reciprocal": "vf:reciprocal",
-                    "unitBased": "vf:unitBased",
-                    "provider": "vf:provider",
-                    "receiver": "vf:receiver",
-                    "action": "vf:action",
-                    "Agreement": "vf:Agreement",
-                    "clauses": "vf:clauses",
-                    "Commitment": "vf:Commitment",
-                    "satisfies": "vf:satisfies",
-                    "resourceConformsTo": "vf:resourceConformsTo",
-                    "resourceQuantity": "vf:resourceQuantity",
-                    "hasUnit": "om2:hasUnit",
-                    "hasNumericalValue": "om2:hasNumericalValue",
-                },
-            ],
             "type": "Agreement",
             "id": "https://test.example/objects/agreements/edc374aa-e580-4a58-9404-f3e8bf8556b2",
             "clauses": [
