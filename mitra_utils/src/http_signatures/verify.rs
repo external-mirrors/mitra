@@ -80,8 +80,9 @@ pub fn parse_http_signature<'m>(
                 .ok_or(VerificationError::HeaderError("missing 'digest' header"))?
                 .to_str()
                 .map_err(|_| VerificationError::HeaderError("invalid 'digest' header"))?;
-            // TODO: return error
-            parse_digest_header(digest_header).ok()
+            let digest = parse_digest_header(digest_header)
+                .map_err(VerificationError::HeaderError)?;
+            Some(digest)
         },
         _ => return Err(VerificationError::MethodNotSupported),
     };
