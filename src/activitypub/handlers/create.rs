@@ -33,6 +33,7 @@ use mitra_validators::{
     errors::ValidationError,
     media::validate_media_description,
     posts::{
+        clean_title,
         content_allowed_classes,
         validate_post_create_data,
         validate_post_mentions,
@@ -144,7 +145,8 @@ pub fn get_object_content(object: &AttributedObject) ->
             // NOTE: Mastodon uses 'summary' for content warnings
             // NOTE: 'summary' may contain HTML
             .or(object.summary.as_ref())
-            .filter(|title| !title.trim().is_empty())
+            .map(|title| clean_title(title))
+            .filter(|title| !title.is_empty())
             .map(|title| format!("<h1>{}</h1>", title))
             .unwrap_or("".to_string())
     } else {

@@ -20,6 +20,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Process all incoming activities in background.
 - Remove inbox mutex.
 - Update FEP-0837 implementation.
+- Truncate titles longer than 300 characters.
 
 ### Fixed
 

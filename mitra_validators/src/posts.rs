@@ -17,6 +17,7 @@ pub const LINK_LIMIT: usize = 10;
 pub const EMOJI_LIMIT: usize = 50;
 
 const OBJECT_ID_SIZE_MAX: usize = 2000;
+const TITLE_LENGTH_MAX: usize = 300;
 pub const CONTENT_MAX_SIZE: usize = 100000;
 const CONTENT_ALLOWED_TAGS: [&str; 8] = [
     "a",
@@ -35,6 +36,18 @@ pub fn content_allowed_classes() -> Vec<(&'static str, Vec<&'static str>)> {
         ("span", vec!["h-card"]),
         ("p", vec!["inline-quote"]),
     ]
+}
+
+pub fn clean_title(title: &str) -> String {
+    let title = title.trim();
+    let title_truncated: String = title.chars()
+        .take(TITLE_LENGTH_MAX)
+        .collect();
+    if title_truncated.len() < title.len() {
+        format!("{title_truncated}...")
+    } else {
+        title_truncated
+    }
 }
 
 pub fn clean_local_content(
@@ -159,6 +172,23 @@ mod tests {
     use mitra_models::profiles::types::DbActorProfile;
     use mitra_utils::id::generate_ulid;
     use super::*;
+
+    #[test]
+    fn test_clean_title() {
+        let title = "test";
+        let cleaned = clean_title(title);
+        assert_eq!(cleaned, title);
+    }
+
+    #[test]
+    fn test_clean_title_truncate() {
+        let title = "x".repeat(400);
+        let cleaned = clean_title(&title);
+        assert_eq!(
+            cleaned,
+            format!("{}...", "x".repeat(300)),
+        );
+    }
 
     #[test]
     fn test_clean_local_content_empty() {
