@@ -7,10 +7,10 @@ use comrak::{
     nodes::{Ast, AstNode, ListType, NodeValue},
     parse_document,
     Arena,
-    ComrakOptions,
-    ComrakExtensionOptions,
-    ComrakParseOptions,
-    ComrakRenderOptions,
+    ExtensionOptionsBuilder,
+    Options,
+    ParseOptions,
+    RenderOptionsBuilder,
 };
 
 #[derive(thiserror::Error, Debug)]
@@ -22,18 +22,18 @@ pub enum MarkdownError {
     Utf8Error(#[from] std::string::FromUtf8Error),
 }
 
-fn build_comrak_options() -> ComrakOptions {
-    ComrakOptions {
-        extension: ComrakExtensionOptions {
-            autolink: true,
-            ..Default::default()
-        },
-        parse: ComrakParseOptions::default(),
-        render: ComrakRenderOptions {
-            hardbreaks: true,
-            escape: true,
-            ..Default::default()
-        },
+fn build_comrak_options() -> Options {
+    Options {
+        extension: ExtensionOptionsBuilder::default()
+            .autolink(true)
+            .build()
+            .expect("extension options should be correct"),
+        parse: ParseOptions::default(),
+        render: RenderOptionsBuilder::default()
+            .hardbreaks(true)
+            .escape(true)
+            .build()
+            .expect("render options should be correct"),
     }
 }
 
@@ -52,7 +52,7 @@ fn iter_nodes<'a, F>(
 
 fn node_to_markdown<'a>(
     node: &'a AstNode<'a>,
-    options: &ComrakOptions,
+    options: &Options,
 ) -> Result<String, MarkdownError> {
     let mut output = vec![];
     format_commonmark(node, options, &mut output)?;
@@ -74,7 +74,7 @@ fn create_node<'a>(value: NodeValue) -> AstNode<'a> {
 
 fn replace_with_markdown<'a>(
     node: &'a AstNode<'a>,
-    options: &ComrakOptions,
+    options: &Options,
 ) -> Result<(), MarkdownError> {
     // Replace node with text node containing markdown
     let markdown = node_to_markdown(node, options)?;
@@ -111,7 +111,7 @@ fn fix_microsyntaxes<'a>(
 
 fn document_to_html<'a>(
     document: &'a AstNode<'a>,
-    options: &ComrakOptions,
+    options: &Options,
 ) -> Result<String, MarkdownError> {
     let mut output = vec![];
     format_html(document, options, &mut output)?;
