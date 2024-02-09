@@ -41,7 +41,11 @@ use crate::web_client::urls::{
     get_tag_page_url,
 };
 
-use super::actors::builders::{build_instance_actor, build_local_actor};
+use super::actors::builders::{
+    build_instance_actor,
+    build_local_actor,
+    build_local_actor_fep_ef61,
+};
 use super::authentication::verify_signed_c2s_activity;
 use super::builders::{
     announce::build_announce,
@@ -90,7 +94,11 @@ async fn actor_view(
             .finish();
         return Ok(response);
     };
-    let actor = build_local_actor(&user, &config.instance_url())?;
+    let actor = build_local_actor(
+        &config.instance_url(),
+        &user,
+        false, // no FEP-ef61
+    )?;
     let response = HttpResponse::Ok()
         .content_type(AP_MEDIA_TYPE)
         .json(actor);
@@ -422,6 +430,25 @@ async fn proposal_view(
     Ok(response)
 }
 
+#[get("/fep_ef61")]
+async fn fep_ef61_actor_view(
+    config: web::Data<Config>,
+    db_pool: web::Data<DatabaseConnectionPool>,
+    username: web::Path<String>,
+) -> Result<HttpResponse, HttpError> {
+    let db_client = &**get_database_client(&db_pool).await?;
+    let user = get_user_by_name(db_client, &username).await?;
+    let actor = build_local_actor_fep_ef61(
+        &config.instance_url(),
+        &user,
+        None,
+    )?;
+    let response = HttpResponse::Ok()
+        .content_type(AP_MEDIA_TYPE)
+        .json(actor);
+    Ok(response)
+}
+
 pub fn actor_scope() -> Scope {
     web::scope("/users/{username}")
         .service(actor_view)
@@ -433,6 +460,7 @@ pub fn actor_scope() -> Scope {
         .service(subscribers_collection)
         .service(featured_collection)
         .service(proposal_view)
+        .service(fep_ef61_actor_view)
 }
 
 #[get("")]

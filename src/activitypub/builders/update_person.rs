@@ -48,7 +48,7 @@ pub fn build_update_person(
     instance_url: &str,
     user: &User,
 ) -> Result<UpdatePerson, DatabaseError> {
-    let actor = build_local_actor(user, instance_url)?;
+    let actor = build_local_actor(instance_url, user, false)?;
     // Update(Person) is idempotent so its ID can be random
     let internal_activity_id = generate_ulid();
     let activity_id = local_object_id(instance_url, &internal_activity_id);

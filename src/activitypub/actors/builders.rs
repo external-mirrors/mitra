@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use chrono::{DateTime, Utc};
 use serde::Serialize;
 use serde_json::{Value as JsonValue};
 
@@ -10,7 +11,15 @@ use mitra_models::{
     users::types::User,
 };
 use mitra_services::media::get_file_url;
-use mitra_utils::crypto_rsa::RsaSerializationError;
+use mitra_utils::{
+    crypto_eddsa::{
+        ed25519_public_key_from_private_key,
+        Ed25519PrivateKey,
+    },
+    crypto_rsa::RsaSerializationError,
+    did_key::DidKey,
+    json_signatures::create::sign_object_eddsa,
+};
 
 use crate::activitypub::{
     contexts::{
@@ -60,6 +69,7 @@ fn build_actor_context() -> Context {
             ("schema", SCHEMA_ORG_CONTEXT),
             ("PropertyValue", "schema:PropertyValue"),
             ("value", "schema:value"),
+            ("sameAs", "schema:sameAs"),
             ("toot", MASTODON_CONTEXT),
             ("IdentityProof", "toot:IdentityProof"),
             ("featured", "toot:featured"),
@@ -128,14 +138,43 @@ pub struct Actor {
 
     #[serde(skip_serializing_if = "Option::is_none")]
     url: Option<String>,
+
+    // Required for FEP-ef61
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    same_as: Vec<String>,
+}
+
+fn fep_ef61_identity(secret_key: Ed25519PrivateKey) -> String {
+    let public_key = ed25519_public_key_from_private_key(&secret_key);
+    let did_key = DidKey::from_ed25519_key(public_key.as_bytes());
+    format!(
+        "did:ap:key:{}",
+        did_key.key_multibase(),
+    )
+}
+
+/// Constructs canonical actor ID
+fn fep_ef61_actor_id(secret_key: Ed25519PrivateKey) -> String {
+    format!("{}/actor", fep_ef61_identity(secret_key))
+}
+
+// TODO: replace with regular local ID
+fn fep_ef61_actor_fallback_id(instance_url: &str, username: &str) -> String {
+    let actor_id =  local_actor_id(instance_url, username);
+    format!("{}/fep_ef61", actor_id)
 }
 
 pub fn build_local_actor(
-    user: &User,
     instance_url: &str,
+    user: &User,
+    fep_ef61_enabled: bool,
 ) -> Result<Actor, DatabaseError> {
     let username = &user.profile.username;
-    let actor_id = local_actor_id(instance_url, username);
+    let actor_id = if fep_ef61_enabled {
+        fep_ef61_actor_id(user.ed25519_private_key)
+    } else {
+        local_actor_id(instance_url, username)
+    };
     let inbox = LocalActorCollection::Inbox.of(&actor_id);
     let outbox = LocalActorCollection::Outbox.of(&actor_id);
     let followers = LocalActorCollection::Followers.of(&actor_id);
@@ -203,6 +242,15 @@ pub fn build_local_actor(
         attachments.push(attachment_value);
     };
     let aliases = user.profile.aliases.clone().into_actor_ids();
+    // HTML representation
+    let profile_url = local_actor_id(instance_url, username);
+
+    let same_as = if fep_ef61_enabled {
+        let url = fep_ef61_actor_fallback_id(instance_url, username);
+        vec![url]
+    } else {
+        vec![]
+    };
     let actor = Actor {
         _context: build_actor_context(),
         id: actor_id.clone(),
@@ -224,9 +272,31 @@ pub fn build_local_actor(
         also_known_as: aliases,
         attachment: attachments,
         manually_approves_followers: user.profile.manually_approves_followers,
-        url: Some(actor_id),
+        url: Some(profile_url),
+        same_as: same_as,
     };
     Ok(actor)
+}
+
+pub fn build_local_actor_fep_ef61(
+    instance_url: &str,
+    user: &User,
+    current_time: Option<DateTime<Utc>>,
+) -> Result<JsonValue, DatabaseError> {
+    let actor = build_local_actor(instance_url, user, true)?;
+    let actor_value = serde_json::to_value(actor)
+        .expect("actor should be serializable");
+    let ed25519_secret_key = user.ed25519_private_key;
+    // Key ID is DID
+    let ed25519_key_id = fep_ef61_identity(ed25519_secret_key);
+    let signed_actor = sign_object_eddsa(
+        &ed25519_secret_key,
+        &ed25519_key_id,
+        &actor_value,
+        current_time,
+        false, // use eddsa-jcs-2022
+    ).expect("actor object should be ready for signing");
+    Ok(signed_actor)
 }
 
 pub fn build_instance_actor(
@@ -262,6 +332,7 @@ pub fn build_instance_actor(
         attachment: vec![],
         manually_approves_followers: false,
         url: None,
+        same_as: vec![],
     };
     Ok(actor)
 }
@@ -282,7 +353,7 @@ mod tests {
             ..Default::default()
         };
         let user = User { profile, ..Default::default() };
-        let actor = build_local_actor(&user, INSTANCE_URL).unwrap();
+        let actor = build_local_actor(INSTANCE_URL, &user, false).unwrap();
         let value = serde_json::to_value(actor).unwrap();
         let expected_value = json!({
             "@context": [
@@ -296,6 +367,7 @@ mod tests {
                     "schema": "http://schema.org/",
                     "PropertyValue": "schema:PropertyValue",
                     "value": "schema:value",
+                    "sameAs": "schema:sameAs",
                     "toot": "http://joinmastodon.org/ns#",
                     "IdentityProof": "toot:IdentityProof",
                     "featured": "toot:featured",
@@ -358,6 +430,106 @@ mod tests {
     }
 
     #[test]
+    fn test_build_local_actor_fep_ef61() {
+        let profile = DbActorProfile {
+            username: "testuser".to_string(),
+            bio: Some("testbio".to_string()),
+            ..Default::default()
+        };
+        let user = User { profile, ..Default::default() };
+        let current_time = DateTime::parse_from_rfc3339("2023-02-24T23:36:38Z")
+            .unwrap().with_timezone(&Utc);
+        let actor = build_local_actor_fep_ef61(
+            INSTANCE_URL,
+            &user,
+            Some(current_time),
+        ).unwrap();
+        let expected_value = json!({
+            "@context": [
+                "https://www.w3.org/ns/activitystreams",
+                "https://www.w3.org/ns/did/v1",
+                "https://w3id.org/security/v1",
+                "https://w3id.org/security/data-integrity/v1",
+                "https://w3id.org/security/multikey/v1",
+                {
+                    "manuallyApprovesFollowers": "as:manuallyApprovesFollowers",
+                    "schema": "http://schema.org/",
+                    "PropertyValue": "schema:PropertyValue",
+                    "value": "schema:value",
+                    "sameAs": "schema:sameAs",
+                    "toot": "http://joinmastodon.org/ns#",
+                    "IdentityProof": "toot:IdentityProof",
+                    "featured": "toot:featured",
+                    "mitra": "http://jsonld.mitra.social#",
+                    "subscribers": "mitra:subscribers",
+                    "VerifiableIdentityStatement": "mitra:VerifiableIdentityStatement",
+                    "MitraJcsEip191Signature2022": "mitra:MitraJcsEip191Signature2022",
+                    "proofValue": "sec:proofValue",
+                    "proofPurpose": "sec:proofPurpose",
+                },
+            ],
+            "id": "did:ap:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor",
+            "type": "Person",
+            "name": null,
+            "preferredUsername": "testuser",
+            "inbox": "did:ap:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor/inbox",
+            "outbox": "did:ap:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor/outbox",
+            "followers": "did:ap:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor/followers",
+            "following": "did:ap:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor/following",
+            "subscribers": "did:ap:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor/subscribers",
+            "featured": "did:ap:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor/collections/featured",
+            "authentication": [
+                {
+                    "id": "did:ap:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor#main-key",
+                    "type": "Multikey",
+                    "controller": "did:ap:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor",
+                    "publicKeyMultibase": "zDrrewXm1cTFaEwruJq4sA7sPhxciancezhnoCxrdvSLs3gQSupJxKA719sQGmG71CkuQdnDxAUpecZ1b7fYQTTrhKA7KbdxWUPRXqs3e",
+                },
+                {
+                    "id": "did:ap:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor#ed25519-key",
+                    "type": "Multikey",
+                    "controller": "did:ap:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor",
+                    "publicKeyMultibase": "z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6",
+                },
+            ],
+            "assertionMethod": [
+                {
+                    "id": "did:ap:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor#main-key",
+                    "type": "Multikey",
+                    "controller": "did:ap:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor",
+                    "publicKeyMultibase": "zDrrewXm1cTFaEwruJq4sA7sPhxciancezhnoCxrdvSLs3gQSupJxKA719sQGmG71CkuQdnDxAUpecZ1b7fYQTTrhKA7KbdxWUPRXqs3e",
+                },
+                {
+                    "id": "did:ap:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor#ed25519-key",
+                    "type": "Multikey",
+                    "controller": "did:ap:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor",
+                    "publicKeyMultibase": "z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6",
+                },
+            ],
+            "publicKey": {
+                "id": "did:ap:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor#main-key",
+                "owner": "did:ap:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor",
+                "publicKeyPem": "-----BEGIN PUBLIC KEY-----\nMFwwDQYJKoZIhvcNAQEBBQADSwAwSAJBAOIh58ZQbo45MuZvv1nMWAzTzN9oghNC\nbxJkFEFD1Y49LEeNHMk6GrPByUz8kn4y8Hf6brb+DVm7ZW4cdhOx1TsCAwEAAQ==\n-----END PUBLIC KEY-----\n",
+            },
+            "summary": "testbio",
+            "manuallyApprovesFollowers": false,
+            "url": "https://server.example/users/testuser",
+            "sameAs": [
+                "https://server.example/users/testuser/fep_ef61",
+            ],
+            "proof": {
+                "created": "2023-02-24T23:36:38Z",
+                "cryptosuite": "eddsa-jcs-2022",
+                "proofPurpose": "assertionMethod",
+                "proofValue": "z2enf2NRLmErQtHvxWxzfLZULb4hSpnXi7yKf3BCbt2G5vZNbTB9AkicaDcHKjnbcD1JX96GSRR728FUoXdCF8Ypk",
+                "type": "DataIntegrityProof",
+                "verificationMethod": "did:ap:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6",
+            },
+        });
+        assert_eq!(actor, expected_value);
+    }
+
+    #[test]
     fn test_build_instance_actor() {
         let instance_url = "https://server.example/";
         let instance = Instance::for_test(instance_url);
@@ -375,6 +547,7 @@ mod tests {
                     "schema": "http://schema.org/",
                     "PropertyValue": "schema:PropertyValue",
                     "value": "schema:value",
+                    "sameAs": "schema:sameAs",
                     "toot": "http://joinmastodon.org/ns#",
                     "IdentityProof": "toot:IdentityProof",
                     "featured": "toot:featured",
