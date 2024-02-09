@@ -15,7 +15,7 @@ use crate::activitypub::{
     vocabulary::UPDATE,
 };
 
-use super::create_note::{build_note, get_note_recipients, Note};
+use super::note::{build_note, get_note_recipients, Note};
 
 #[derive(Serialize)]
 struct UpdateNote {

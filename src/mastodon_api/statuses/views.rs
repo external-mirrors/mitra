@@ -64,9 +64,10 @@ use crate::activitypub::{
     builders::{
         announce::prepare_announce,
         add_note::prepare_add_note,
-        create_note::{build_note, prepare_create_note},
+        create_note::prepare_create_note,
         delete_note::prepare_delete_note,
         like::prepare_like,
+        note::build_note,
         remove_note::prepare_remove_note,
         undo_announce::prepare_undo_announce,
         undo_like::prepare_undo_like,

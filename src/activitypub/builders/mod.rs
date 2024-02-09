@@ -11,6 +11,7 @@ pub mod emoji;
 pub mod follow;
 pub mod like;
 pub mod move_person;
+pub mod note;
 pub mod offer_agreement;
 pub mod reject_follow;
 pub mod remove_note;

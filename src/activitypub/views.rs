@@ -42,11 +42,9 @@ use super::actors::types::{build_instance_actor, build_local_actor};
 use super::authentication::verify_signed_c2s_activity;
 use super::builders::{
     announce::build_announce,
-    create_note::{
-        build_note,
-        build_create_note,
-    },
+    create_note::build_create_note,
     emoji::build_emoji,
+    note::build_note,
     update_person::{
         forward_update_person,
         is_update_person_activity,
