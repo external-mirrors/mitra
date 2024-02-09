@@ -11,9 +11,9 @@ use mitra_models::{
 };
 
 use crate::activitypub::{
+    contexts::Context,
     identifiers::{local_actor_id, local_object_id},
     queues::OutgoingActivityJobData,
-    types::Context,
     valueflows::{
         builders::{
             build_valueflows_context,

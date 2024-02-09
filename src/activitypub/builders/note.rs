@@ -17,6 +17,7 @@ use mitra_models::{
 use mitra_services::media::get_file_url;
 
 use crate::activitypub::{
+    contexts::{build_default_context, Context},
     identifiers::{
         local_actor_id,
         local_actor_followers,
@@ -27,7 +28,6 @@ use crate::activitypub::{
         post_object_id,
         profile_actor_id,
     },
-    types::{build_default_context, Context},
     vocabulary::{DOCUMENT, HASHTAG, LINK, MENTION, NOTE},
 };
 

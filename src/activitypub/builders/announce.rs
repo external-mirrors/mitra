@@ -12,6 +12,7 @@ use mitra_models::{
 
 use crate::activitypub::{
     constants::AP_PUBLIC,
+    contexts::{build_default_context, Context},
     identifiers::{
         local_actor_followers,
         local_actor_id,
@@ -20,7 +21,6 @@ use crate::activitypub::{
         profile_actor_id,
     },
     queues::OutgoingActivityJobData,
-    types::{build_default_context, Context},
     vocabulary::ANNOUNCE,
 };
 

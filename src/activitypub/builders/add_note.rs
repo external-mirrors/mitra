@@ -10,6 +10,7 @@ use mitra_utils::id::generate_ulid;
 
 use crate::activitypub::{
     constants::AP_PUBLIC,
+    contexts::{build_default_context, Context},
     identifiers::{
         local_actor_id,
         local_actor_featured,
@@ -17,7 +18,6 @@ use crate::activitypub::{
         local_object_id,
     },
     queues::OutgoingActivityJobData,
-    types::{build_default_context, Context},
     vocabulary::ADD,
 };
 use super::update_person::get_update_person_recipients;

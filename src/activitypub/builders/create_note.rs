@@ -8,8 +8,8 @@ use mitra_models::{
 };
 
 use crate::activitypub::{
+    contexts::{build_default_context, Context},
     queues::OutgoingActivityJobData,
-    types::{build_default_context, Context},
     vocabulary::CREATE,
 };
 

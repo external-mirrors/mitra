@@ -10,9 +10,9 @@ use mitra_models::{
 use mitra_utils::id::generate_ulid;
 
 use crate::activitypub::{
+    contexts::Context,
     identifiers::{local_actor_id, local_object_id},
     queues::OutgoingActivityJobData,
-    types::Context,
     valueflows::builders::build_valueflows_context,
     vocabulary::ACCEPT,
 };

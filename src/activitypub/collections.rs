@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use serde_json::{Value as JsonValue};
 
-use super::types::{build_default_context, Context};
+use super::contexts::{build_default_context, Context};
 use super::vocabulary::{ORDERED_COLLECTION, ORDERED_COLLECTION_PAGE};
 
 #[derive(Serialize)]

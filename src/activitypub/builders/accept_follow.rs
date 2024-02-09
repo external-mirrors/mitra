@@ -8,9 +8,9 @@ use mitra_models::{
 use mitra_utils::id::generate_ulid;
 
 use crate::activitypub::{
+    contexts::{build_default_context, Context},
     identifiers::{local_actor_id, local_object_id},
     queues::OutgoingActivityJobData,
-    types::{build_default_context, Context},
     vocabulary::ACCEPT,
 };
 

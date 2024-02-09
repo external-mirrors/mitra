@@ -10,11 +10,11 @@ use crate::activitypub::{
         UNITS_OF_MEASURE_CONTEXT,
         W3ID_VALUEFLOWS_CONTEXT,
     },
+    contexts::{build_default_context, Context},
     identifiers::{
         local_actor_id,
         local_actor_proposal_id,
     },
-    types::{build_default_context, Context},
     vocabulary::{INTENT, PROPOSAL},
 };
 

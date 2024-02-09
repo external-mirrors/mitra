@@ -10,6 +10,7 @@ use mitra_models::{
 use mitra_utils::id::generate_ulid;
 
 use crate::activitypub::{
+    contexts::{build_default_context, Context},
     identifiers::{
         local_actor_id,
         local_agreement_id,
@@ -17,7 +18,6 @@ use crate::activitypub::{
         LocalActorCollection,
     },
     queues::OutgoingActivityJobData,
-    types::{build_default_context, Context},
     vocabulary::ADD,
 };
 

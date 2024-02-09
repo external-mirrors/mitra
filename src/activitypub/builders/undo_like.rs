@@ -10,9 +10,9 @@ use mitra_models::{
 };
 
 use crate::activitypub::{
+    contexts::{build_default_context, Context},
     identifiers::{local_actor_id, local_object_id, profile_actor_id},
     queues::OutgoingActivityJobData,
-    types::{build_default_context, Context},
     vocabulary::UNDO,
 };
 

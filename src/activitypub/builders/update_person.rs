@@ -16,6 +16,7 @@ use mitra_validators::errors::ValidationError;
 use crate::activitypub::{
     actors::types::{build_local_actor, Actor},
     constants::AP_PUBLIC,
+    contexts::{build_default_context, Context},
     identifiers::{
         local_actor_followers,
         local_object_id,
@@ -24,7 +25,6 @@ use crate::activitypub::{
     },
     queues::OutgoingActivityJobData,
     receiver::HandlerError,
-    types::{build_default_context, Context},
     vocabulary::{PERSON, UPDATE},
 };
 
