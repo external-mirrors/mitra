@@ -7,6 +7,7 @@ pub mod announce;
 pub mod create_note;
 pub mod delete_note;
 pub mod delete_person;
+pub mod emoji;
 pub mod follow;
 pub mod like;
 pub mod move_person;

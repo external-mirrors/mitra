@@ -5,7 +5,6 @@ use mitra_config::Instance;
 use mitra_federation::addresses::ActorAddress;
 use mitra_models::{
     database::{DatabaseClient, DatabaseError},
-    emojis::types::DbEmoji,
     posts::queries::get_post_author,
     posts::types::{Post, Visibility},
     profiles::types::DbActor,
@@ -20,7 +19,6 @@ use crate::activitypub::{
         local_actor_id,
         local_actor_followers,
         local_actor_subscribers,
-        local_emoji_id,
         local_object_id,
         local_replies_collection,
         local_tag_collection,
@@ -31,13 +29,13 @@ use crate::activitypub::{
     types::{
         build_default_context,
         Context,
-        EmojiTag,
-        EmojiTagImage,
         LinkTag,
         SimpleTag,
     },
     vocabulary::*,
 };
+
+use super::emoji::{build_emoji, Emoji};
 
 const LINK_REL_MISSKEY_QUOTE: &str = "https://misskey-hub.net/ns#_misskey_quote";
 
@@ -46,7 +44,7 @@ const LINK_REL_MISSKEY_QUOTE: &str = "https://misskey-hub.net/ns#_misskey_quote"
 enum Tag {
     SimpleTag(SimpleTag),
     LinkTag(LinkTag),
-    EmojiTag(EmojiTag),
+    EmojiTag(Emoji),
 }
 
 #[derive(Serialize)]
@@ -95,20 +93,6 @@ pub struct Note {
 
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(super) updated: Option<DateTime<Utc>>,
-}
-
-pub fn build_emoji_tag(instance_url: &str, emoji: &DbEmoji) -> EmojiTag {
-    EmojiTag {
-        tag_type: EMOJI.to_string(),
-        icon: EmojiTagImage {
-            object_type: IMAGE.to_string(),
-            url: get_file_url(instance_url, &emoji.image.file_name),
-            media_type: Some(emoji.image.media_type.clone()),
-        },
-        id: local_emoji_id(instance_url, &emoji.emoji_name),
-        name: format!(":{}:", emoji.emoji_name),
-        updated: emoji.updated_at,
-    }
 }
 
 pub fn build_note(
@@ -205,7 +189,7 @@ pub fn build_note(
         .map(|linked| post_object_id(instance_url, linked));
 
     for emoji in &post.emojis {
-        let tag = build_emoji_tag(instance_url, emoji);
+        let tag = build_emoji(instance_url, emoji);
         tags.push(Tag::EmojiTag(tag));
     };
 
@@ -367,31 +351,6 @@ mod tests {
             "href": "https://example.org/tags/test",
             "name": "#test",
         }));
-    }
-
-    #[test]
-    fn test_build_emoji_tag() {
-        let updated_at = DateTime::parse_from_rfc3339("2023-02-24T23:36:38Z")
-            .unwrap().with_timezone(&Utc);
-        let emoji = DbEmoji {
-            emoji_name: "test".to_string(),
-            updated_at: updated_at,
-            ..Default::default()
-        };
-        let emoji_tag = build_emoji_tag(INSTANCE_URL, &emoji);
-        let emoji_value = serde_json::to_value(emoji_tag).unwrap();
-        let expected_value = json!({
-            "id": "https://example.com/objects/emojis/test",
-            "type": "Emoji",
-            "name": ":test:",
-            "icon": {
-                "type": "Image",
-                "url": "https://example.com/media/",
-                "mediaType": "",
-            },
-            "updated": "2023-02-24T23:36:38Z",
-        });
-        assert_eq!(emoji_value, expected_value);
     }
 
     #[test]

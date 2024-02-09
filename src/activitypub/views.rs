@@ -43,10 +43,10 @@ use super::authentication::verify_signed_c2s_activity;
 use super::builders::{
     announce::build_announce,
     create_note::{
-        build_emoji_tag,
         build_note,
         build_create_note,
     },
+    emoji::build_emoji,
     update_person::{
         forward_update_person,
         is_update_person_activity,
@@ -564,13 +564,13 @@ pub async fn emoji_view(
     emoji_name: web::Path<String>,
 ) -> Result<HttpResponse, HttpError> {
     let db_client = &**get_database_client(&db_pool).await?;
-    let emoji = get_local_emoji_by_name(
+    let db_emoji = get_local_emoji_by_name(
         db_client,
         &emoji_name,
     ).await?;
-    let object = build_emoji_tag(
+    let object = build_emoji(
         &config.instance().url(),
-        &emoji,
+        &db_emoji,
     );
     let response = HttpResponse::Ok()
         .content_type(AP_MEDIA_TYPE)

@@ -24,8 +24,8 @@ use mitra_validators::{
 };
 
 use crate::activitypub::{
+    builders::emoji::Emoji,
     receiver::HandlerError,
-    types::EmojiTag,
 };
 
 // Returns None if emoji is not valid or when fetcher fails.
@@ -36,7 +36,7 @@ pub async fn handle_emoji(
     storage: &MediaStorage,
     tag_value: JsonValue,
 ) -> Result<Option<DbEmoji>, HandlerError> {
-    let tag: EmojiTag = match serde_json::from_value(tag_value) {
+    let tag: Emoji = match serde_json::from_value(tag_value) {
         Ok(tag) => tag,
         Err(error) => {
             log::warn!("invalid emoji tag: {}", error);

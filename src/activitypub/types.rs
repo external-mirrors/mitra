@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 
-use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 use mitra_federation::deserialization::{
@@ -62,26 +61,6 @@ pub struct LinkTag {
         skip_serializing_if = "Vec::is_empty",
     )]
     pub rel: Vec<String>,
-}
-
-#[derive(Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct EmojiTagImage {
-    #[serde(rename = "type")]
-    pub object_type: String,
-    pub url: String,
-    pub media_type: Option<String>,
-}
-
-#[derive(Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct EmojiTag {
-    #[serde(rename = "type")]
-    pub tag_type: String,
-    pub icon: EmojiTagImage,
-    pub id: String,
-    pub name: String,
-    pub updated: DateTime<Utc>,
 }
 
 pub type Context = (
