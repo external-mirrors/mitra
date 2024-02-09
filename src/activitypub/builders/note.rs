@@ -1,9 +1,10 @@
 use chrono::{DateTime, Utc};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use mitra_federation::{
     addresses::ActorAddress,
     constants::{AP_MEDIA_TYPE, AP_PUBLIC},
+    deserialization::deserialize_string_array,
 };
 use mitra_models::{
     database::{DatabaseClient, DatabaseError},
@@ -26,18 +27,39 @@ use crate::activitypub::{
         post_object_id,
         profile_actor_id,
     },
-    types::{
-        build_default_context,
-        Context,
-        LinkTag,
-        SimpleTag,
-    },
+    types::{build_default_context, Context},
     vocabulary::{DOCUMENT, HASHTAG, LINK, MENTION, NOTE},
 };
 
 use super::emoji::{build_emoji, Emoji};
 
 const LINK_REL_MISSKEY_QUOTE: &str = "https://misskey-hub.net/ns#_misskey_quote";
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct SimpleTag {
+    #[serde(rename = "type")]
+    tag_type: String,
+    href: String,
+    name: String,
+}
+
+/// https://codeberg.org/silverpill/feps/src/branch/main/e232/fep-e232.md
+#[derive(Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LinkTag {
+    #[serde(rename = "type")]
+    pub tag_type: String,
+    pub name: Option<String>,
+    pub href: String,
+    pub media_type: String,
+    #[serde(
+        default,
+        deserialize_with = "deserialize_string_array",
+        skip_serializing_if = "Vec::is_empty",
+    )]
+    pub rel: Vec<String>,
+}
 
 #[derive(Serialize)]
 #[serde(untagged)]

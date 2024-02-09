@@ -48,6 +48,7 @@ use mitra_validators::{
 
 use crate::activitypub::{
     agent::build_federation_agent,
+    builders::note::LinkTag,
     constants::{AP_MEDIA_TYPE, AS_MEDIA_TYPE},
     identifiers::{parse_local_actor_id, profile_actor_id},
     importers::{
@@ -58,7 +59,6 @@ use crate::activitypub::{
         ActorIdResolver,
     },
     receiver::HandlerError,
-    types::{Attachment, LinkTag, Tag},
     vocabulary::*,
 };
 
@@ -191,6 +191,18 @@ fn is_gnu_social_link(author_id: &str, attachment: &Attachment) -> bool {
     }
 }
 
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct Attachment {
+    #[serde(rename = "type")]
+    attachment_type: String,
+
+    name: Option<String>,
+    media_type: Option<String>,
+    href: Option<String>,
+    url: Option<String>,
+}
+
 pub async fn get_object_attachments(
     db_client: &impl DatabaseClient,
     instance: &Instance,
@@ -283,6 +295,12 @@ pub async fn get_object_attachments(
         attachments.push(db_attachment.id);
     };
     Ok((attachments, unprocessed))
+}
+
+#[derive(Deserialize)]
+struct Tag {
+    name: Option<String>,
+    href: Option<String>,
 }
 
 fn normalize_hashtag(tag: &str) -> Result<String, ValidationError> {
