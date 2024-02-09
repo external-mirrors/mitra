@@ -371,13 +371,27 @@ mod tests {
 
     #[test]
     fn test_build_emoji_tag() {
+        let updated_at = DateTime::parse_from_rfc3339("2023-02-24T23:36:38Z")
+            .unwrap().with_timezone(&Utc);
         let emoji = DbEmoji {
             emoji_name: "test".to_string(),
+            updated_at: updated_at,
             ..Default::default()
         };
         let emoji_tag = build_emoji_tag(INSTANCE_URL, &emoji);
-        assert_eq!(emoji_tag.id, "https://example.com/objects/emojis/test");
-        assert_eq!(emoji_tag.name, ":test:");
+        let emoji_value = serde_json::to_value(emoji_tag).unwrap();
+        let expected_value = json!({
+            "id": "https://example.com/objects/emojis/test",
+            "type": "Emoji",
+            "name": ":test:",
+            "icon": {
+                "type": "Image",
+                "url": "https://example.com/media/",
+                "mediaType": "",
+            },
+            "updated": "2023-02-24T23:36:38Z",
+        });
+        assert_eq!(emoji_value, expected_value);
     }
 
     #[test]
