@@ -887,13 +887,32 @@ paths:
       security:
         - tokenAuth: []
       parameters:
-        - name: attachment_id
-          in: path
-          description: Attachment ID
-          required: true
-          schema:
-            type: string
-            format: uuid
+        - $ref: '#/components/parameters/attachment_id'
+      responses:
+        200:
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Attachment'
+        404:
+          description: Attachment is not owned by you or does not exist.
+    put:
+      summary: Update an attachment's parameters.
+      security:
+        - tokenAuth: []
+      parameters:
+        - $ref: '#/components/parameters/attachment_id'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                description:
+                  description: A plain-text description of the media, for accessibility purposes.
+                  type: string
+                  nullable: true
       responses:
         200:
           description: Successful operation
@@ -1889,6 +1908,14 @@ components:
       name: account_id
       in: path
       description: Profile ID
+      required: true
+      schema:
+        type: string
+        format: uuid
+    attachment_id:
+      name: attachment_id
+      in: path
+      description: Attachment ID
       required: true
       schema:
         type: string

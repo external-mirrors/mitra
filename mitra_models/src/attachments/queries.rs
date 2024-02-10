@@ -67,6 +67,26 @@ pub async fn get_attachment(
     Ok(db_attachment)
 }
 
+pub async fn update_attachment(
+    db_client: &impl DatabaseClient,
+    owner_id: &Uuid,
+    attachment_id: &Uuid,
+    description: Option<&str>,
+) -> Result<DbMediaAttachment, DatabaseError> {
+    let maybe_row = db_client.query_opt(
+        "
+        UPDATE media_attachment
+        SET description = $1
+        WHERE owner_id = $2 AND id = $3
+        RETURNING media_attachment
+        ",
+        &[&description, &owner_id, &attachment_id],
+    ).await?;
+    let row = maybe_row.ok_or(DatabaseError::NotFound("attachment"))?;
+    let db_attachment = row.try_get("media_attachment")?;
+    Ok(db_attachment)
+}
+
 pub async fn set_attachment_ipfs_cid(
     db_client: &impl DatabaseClient,
     attachment_id: &Uuid,
@@ -196,5 +216,38 @@ mod tests {
             &attachment_id,
         ).await.err().unwrap();
         assert!(matches!(error, DatabaseError::NotFound(_)));
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_update_attachment_remove_description() {
+        let db_client = &mut create_test_database().await;
+        let profile_data = ProfileCreateData {
+            username: "test1".to_string(),
+            ..Default::default()
+        };
+        let profile = create_profile(db_client, profile_data).await.unwrap();
+        let file_name = "test.jpg";
+        let file_size = 10000;
+        let media_type = "image/png";
+        let description = "test image";
+        let attachment = create_attachment(
+            db_client,
+            &profile.id,
+            file_name.to_string(),
+            file_size,
+            media_type.to_string(),
+            Some(description),
+        ).await.unwrap();
+        assert_eq!(attachment.description.unwrap(), description);
+
+        let attachment_updated = update_attachment(
+            db_client,
+            &profile.id,
+            &attachment.id,
+            None,
+        ).await.unwrap();
+        assert_eq!(attachment_updated.file_name, attachment.file_name);
+        assert_eq!(attachment_updated.description, None);
     }
 }

@@ -11,7 +11,11 @@ use uuid::Uuid;
 
 use mitra_config::Config;
 use mitra_models::{
-    attachments::queries::{create_attachment, get_attachment},
+    attachments::queries::{
+        create_attachment,
+        get_attachment,
+        update_attachment,
+    },
     database::{get_database_client, DatabaseConnectionPool},
 };
 use mitra_services::media::MediaStorage;
@@ -26,7 +30,8 @@ use crate::mastodon_api::{
 use super::types::{
     Attachment,
     AttachmentData,
-    AttachmentDataMultipartForm
+    AttachmentDataMultipartForm,
+    AttachmentUpdateData,
 };
 
 async fn create_attachment_view(
@@ -90,10 +95,33 @@ async fn get_attachment_view(
     Ok(HttpResponse::Ok().json(attachment))
 }
 
+async fn update_attachment_view(
+    auth: BearerAuth,
+    config: web::Data<Config>,
+    db_pool: web::Data<DatabaseConnectionPool>,
+    attachment_id: web::Path<Uuid>,
+    attachment_data: web::Json<AttachmentUpdateData>,
+) -> Result<HttpResponse, MastodonError> {
+    let db_client = &**get_database_client(&db_pool).await?;
+    let current_user = get_current_user(db_client, auth.token()).await?;
+    let db_attachment = update_attachment(
+        db_client,
+        &current_user.id,
+        &attachment_id,
+        attachment_data.description.as_deref(),
+    ).await?;
+    let attachment = Attachment::from_db(
+        &config.instance_url(),
+        db_attachment,
+    );
+    Ok(HttpResponse::Ok().json(attachment))
+}
+
 pub fn media_api_v1_scope() -> Scope {
     web::scope("/api/v1/media")
         .route("", web::post().to(create_attachment_view))
         .route("/{attachment_id}", web::get().to(get_attachment_view))
+        .route("/{attachment_id}", web::put().to(update_attachment_view))
 }
 
 pub fn media_api_v2_scope() -> Scope {

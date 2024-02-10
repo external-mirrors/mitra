@@ -52,6 +52,11 @@ impl From<AttachmentDataMultipartForm> for AttachmentData {
     }
 }
 
+#[derive(Deserialize)]
+pub struct AttachmentUpdateData {
+    pub description: Option<String>,
+}
+
 /// https://docs.joinmastodon.org/entities/attachment/
 #[derive(Serialize)]
 pub struct Attachment {
