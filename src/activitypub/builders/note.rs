@@ -74,6 +74,8 @@ enum Tag {
 struct MediaAttachment {
     #[serde(rename = "type")]
     attachment_type: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    name: Option<String>,
     media_type: Option<String>,
     url: String,
 }
@@ -126,12 +128,12 @@ pub fn build_note(
 ) -> Note {
     let object_id = local_object_id(instance_url, &post.id);
     let actor_id = local_actor_id(instance_url, &post.author.username);
-    let attachments: Vec<MediaAttachment> = post.attachments.iter().map(|db_item| {
+    let attachments: Vec<_> = post.attachments.iter().map(|db_item| {
         let url = get_file_url(instance_url, &db_item.file_name);
-        let media_type = db_item.media_type.clone();
         MediaAttachment {
             attachment_type: DOCUMENT.to_string(),
-            media_type,
+            name: db_item.description.clone(),
+            media_type: db_item.media_type.clone(),
             url,
         }
     }).collect();
