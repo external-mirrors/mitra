@@ -135,10 +135,15 @@ async fn handle_update_person(
     if activity.object.id != activity.actor {
         return Err(ValidationError("actor ID mismatch").into());
     };
-    let profile = get_profile_by_remote_actor_id(
+    let profile = match get_profile_by_remote_actor_id(
         db_client,
         &activity.object.id,
-    ).await?;
+    ).await {
+        Ok(profile) => profile,
+        // Ignore Update if profile is not found locally
+        Err(DatabaseError::NotFound(_)) => return Ok(None),
+        Err(other_error) => return Err(other_error.into()),
+    };
     let agent = build_federation_agent(&config.instance(), None);
     update_remote_profile(
         &agent,
