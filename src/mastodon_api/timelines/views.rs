@@ -18,8 +18,10 @@ use mitra_models::{
         get_posts_by_tag,
         get_public_timeline,
     },
+    users::types::Permission,
 };
 
+use crate::adapters::dynamic_config::get_dynamic_config;
 use crate::http::get_request_base_url;
 use crate::mastodon_api::{
     errors::MastodonError,
@@ -74,7 +76,17 @@ async fn public_timeline(
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &**get_database_client(&db_pool).await?;
     let maybe_current_user = match auth {
-        Some(auth) => Some(get_current_user(db_client, auth.token()).await?),
+        Some(auth) => {
+            let current_user = get_current_user(db_client, auth.token()).await?;
+            let dynamic_config = get_dynamic_config(db_client).await?;
+            if dynamic_config.federated_timeline_restricted &&
+                !query_params.local &&
+                !current_user.role.has_permission(Permission::DeleteAnyPost)
+            {
+                return Err(MastodonError::PermissionError);
+            };
+            Some(current_user)
+        },
         None => {
             // Show local timeline to guests only if enabled in config.
             // Never show TWKN to guests.

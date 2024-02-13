@@ -15,6 +15,7 @@ use mitra_models::{
 };
 use mitra_services::ethereum::contracts::ContractSet;
 
+use crate::adapters::dynamic_config::get_dynamic_config;
 use crate::http::get_request_base_url;
 use crate::mastodon_api::errors::MastodonError;
 
@@ -37,9 +38,11 @@ async fn instance_view(
     let user_count = get_user_count(db_client).await?;
     let post_count = get_post_count(db_client, true).await?;
     let peer_count = get_peer_count(db_client).await?;
+    let dynamic_config = get_dynamic_config(db_client).await?;
     let instance = InstanceInfo::create(
         &get_request_base_url(connection_info),
         config.as_ref(),
+        dynamic_config,
         maybe_admin,
         maybe_ethereum_contracts.as_ref().as_ref(),
         user_count,

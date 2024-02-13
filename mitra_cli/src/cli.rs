@@ -17,6 +17,7 @@ use mitra::activitypub::{
     },
 };
 use mitra::adapters::{
+    dynamic_config::{set_editable_property, EDITABLE_PROPERTIES},
     media::{delete_files, delete_media},
     roles::{
         from_default_role,
@@ -125,6 +126,7 @@ pub enum SubCommand {
     GenerateRsaKey(GenerateRsaKey),
     GenerateEthereumAddress(GenerateEthereumAddress),
 
+    UpdateConfig(UpdateConfig),
     GenerateInviteCode(GenerateInviteCode),
     ListInviteCodes(ListInviteCodes),
     CreateUser(CreateUser),
@@ -182,6 +184,25 @@ impl GenerateEthereumAddress {
             "address {:?}; private key {}",
             address, private_key.display_secret(),
         );
+    }
+}
+
+/// Change value of a dynamic configuration parameter
+#[derive(Parser)]
+pub struct UpdateConfig {
+    #[arg(value_parser = EDITABLE_PROPERTIES)]
+    name: String,
+    value: String,
+}
+
+impl UpdateConfig {
+    pub async fn execute(
+        &self,
+        db_client: &impl DatabaseClient,
+    ) -> Result<(), Error> {
+        set_editable_property(db_client, &self.name, &self.value).await?;
+        println!("configuration updated");
+        Ok(())
     }
 }
 

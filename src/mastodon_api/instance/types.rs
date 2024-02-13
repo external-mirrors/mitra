@@ -16,6 +16,7 @@ use mitra_services::{
 use mitra_utils::markdown::markdown_to_html;
 use mitra_validators::posts::ATTACHMENT_LIMIT;
 
+use crate::adapters::dynamic_config::DynamicConfig;
 use crate::mastodon_api::{
     accounts::types::{
         Account,
@@ -91,6 +92,8 @@ pub struct InstanceInfo {
     login_message: String,
     // Similar to pleroma.restrict_unauthenticated
     allow_unauthenticated: AllowUnauthenticated,
+    federated_timeline_restricted: bool, // from dynamic config
+
     blockchains: Vec<BlockchainInfo>,
     ipfs_gateway_url: Option<String>,
 }
@@ -104,9 +107,11 @@ fn get_full_api_version(version: &str) -> String {
 }
 
 impl InstanceInfo {
+    #[allow(clippy::too_many_arguments)]
     pub fn create(
         base_url: &str,
         config: &Config,
+        dynamic_config: DynamicConfig,
         maybe_admin: Option<User>,
         maybe_ethereum_contracts: Option<&ContractSet>,
         user_count: i64,
@@ -210,6 +215,7 @@ impl InstanceInfo {
             },
             blockchains: blockchains,
             ipfs_gateway_url: config.ipfs_gateway_url.clone(),
+            federated_timeline_restricted: dynamic_config.federated_timeline_restricted,
         }
     }
 }

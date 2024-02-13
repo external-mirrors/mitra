@@ -10,6 +10,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Added Mastodon API endpoint for updating media descriptions.
 - Add `name` attribute to media attachment if it has description.
+- Added `update-config` command.
+- Added `federated_timeline_restricted` parameter to Instance object.
 
 ### Changed
 

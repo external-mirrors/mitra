@@ -33,6 +33,7 @@ async fn main() {
 
             #[allow(clippy::unwrap_used)]
             match subcmd {
+                SubCommand::UpdateConfig(cmd) => cmd.execute(db_client).await.unwrap(),
                 SubCommand::GenerateInviteCode(cmd) => cmd.execute(db_client).await.unwrap(),
                 SubCommand::ListInviteCodes(cmd) => cmd.execute(db_client).await.unwrap(),
                 SubCommand::CreateUser(cmd) => cmd.execute(&config, db_client).await.unwrap(),

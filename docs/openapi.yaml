@@ -2240,6 +2240,10 @@ components:
               description: Allow to view local timeline.
               type: boolean
               default: false
+        federated_timeline_restricted:
+          description: Make federated timeline visible only to moderators.
+          type: boolean
+          default: false
         blockchains:
           description: Information about blockchain integrations.
           type: array

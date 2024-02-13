@@ -164,7 +164,9 @@ See [guide](./docs/ipfs.md).
 
 ## Client API
 
-Most methods are similar to Mastodon API, but Mitra is not fully compatible.
+The majority of endpoints imitate Mastodon API. A number of additional endpoints exist for features that are not supported by Mastodon.
+
+Client API is not stable and may change in minor releases.
 
 [OpenAPI spec](./docs/openapi.yaml)
 
