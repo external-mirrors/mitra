@@ -16,6 +16,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Change MSRV to 1.62.1.
 - Ignore `Update(Actor)` if profile is not found locally.
 - Log `content` of `Like` and `EmojiReact` activities.
+- Set limit on client config size.
 
 ## [2.9.0] - 2024-02-07
 

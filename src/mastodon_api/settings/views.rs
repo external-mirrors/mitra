@@ -29,7 +29,10 @@ use mitra_models::{
     users::types::ClientConfig,
 };
 use mitra_utils::passwords::hash_password;
-use mitra_validators::errors::ValidationError;
+use mitra_validators::{
+    errors::ValidationError,
+    users::validate_client_config_update,
+};
 
 use crate::activitypub::{
     builders::update_person::prepare_update_person,
@@ -70,9 +73,10 @@ async fn client_config_view(
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &**get_database_client(&db_pool).await?;
     let mut current_user = get_current_user(db_client, auth.token()).await?;
-    if request_data.len() != 1 {
-        return Err(ValidationError("can't update more than one config").into());
-    };
+    validate_client_config_update(
+        &current_user.client_config,
+        &request_data,
+    )?;
     let (client_name, client_config_value) =
         request_data.iter().next().expect("hashmap entry should exist");
     current_user.client_config = update_client_config(

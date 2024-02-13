@@ -2199,6 +2199,7 @@ dependencies = [
  "mitra_models",
  "mitra_utils",
  "regex",
+ "serde_json",
  "thiserror",
  "uuid",
 ]
