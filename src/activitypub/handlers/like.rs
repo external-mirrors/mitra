@@ -26,6 +26,7 @@ struct Like {
     actor: String,
     #[serde(deserialize_with = "deserialize_into_object_id")]
     object: String,
+    content: Option<String>,
 }
 
 pub async fn handle_like(
@@ -61,6 +62,9 @@ pub async fn handle_like(
         // Ignore activity if reaction is already saved
         Err(DatabaseError::AlreadyExists(_)) => return Ok(None),
         Err(other_error) => return Err(other_error.into()),
+    };
+    if let Some(content) = activity.content {
+        log::info!("reaction with content: {}", content);
     };
     Ok(Some(NOTE))
 }
