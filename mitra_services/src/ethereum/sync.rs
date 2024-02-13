@@ -4,6 +4,7 @@ use web3::{api::Web3, transports::Http, types::Address};
 
 use mitra_models::{
     database::DatabaseClient,
+    properties::constants::ETHEREUM_CURRENT_BLOCK,
     properties::queries::{
         get_internal_property,
         set_internal_property,
@@ -12,15 +13,13 @@ use mitra_models::{
 
 use super::errors::EthereumError;
 
-const CURRENT_BLOCK_PROPERTY_NAME: &str = "ethereum_current_block";
-
 pub async fn save_current_block_number(
     db_client: &impl DatabaseClient,
     block_number: u64,
 ) -> Result<(), EthereumError> {
     set_internal_property(
         db_client,
-        CURRENT_BLOCK_PROPERTY_NAME,
+        ETHEREUM_CURRENT_BLOCK,
         &block_number,
     ).await?;
     Ok(())
@@ -31,7 +30,7 @@ async fn read_current_block_number(
 ) -> Result<Option<u64>, EthereumError> {
     let maybe_block_number = get_internal_property(
         db_client,
-        CURRENT_BLOCK_PROPERTY_NAME,
+        ETHEREUM_CURRENT_BLOCK,
     ).await?;
     Ok(maybe_block_number)
 }

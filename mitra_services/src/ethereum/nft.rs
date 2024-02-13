@@ -19,6 +19,7 @@ use mitra_models::{
         set_post_token_id,
         set_post_token_tx_id,
     },
+    properties::constants::ETHEREUM_TOKEN_WAITLIST_MAP,
     properties::queries::{
         get_internal_property,
         set_internal_property,
@@ -31,8 +32,6 @@ use super::errors::EthereumError;
 use super::signatures::{sign_contract_call, CallArgs, SignatureData};
 use super::sync::{get_blockchain_tip, SyncState};
 use super::utils::parse_address;
-
-const TOKEN_WAITLIST_MAP_PROPERTY_NAME: &str = "token_waitlist_map";
 
 const TOKEN_WAIT_TIME: i64 = 10; // in minutes
 const TOKEN_WAIT_RESET_TIME: i64 = 12 * 60; // in minutes
@@ -49,8 +48,10 @@ pub async fn process_nft_events(
 
     // Create/update token waitlist map
     let mut token_waitlist_map: HashMap<Uuid, DateTime<Utc>> =
-        get_internal_property(db_client, TOKEN_WAITLIST_MAP_PROPERTY_NAME)
-            .await?.unwrap_or_default();
+        get_internal_property(
+            db_client,
+            ETHEREUM_TOKEN_WAITLIST_MAP,
+        ).await?.unwrap_or_default();
     token_waitlist_map.retain(|_, waiting_since| {
         // Re-add token to waitlist if waiting for too long
         let duration = Utc::now() - *waiting_since;
@@ -140,7 +141,7 @@ pub async fn process_nft_events(
 
     set_internal_property(
         db_client,
-        TOKEN_WAITLIST_MAP_PROPERTY_NAME,
+        ETHEREUM_TOKEN_WAITLIST_MAP,
         &token_waitlist_map,
     ).await?;
     sync_state.update(db_client, &contract.address(), to_block).await?;
