@@ -15,6 +15,7 @@ use actix_web_httpauth::extractors::bearer::BearerAuth;
 use chrono::Utc;
 use uuid::Uuid;
 
+use mitra_adapters::roles::from_default_role;
 use mitra_config::{
     AuthenticationMethod,
     Config,
@@ -112,7 +113,6 @@ use crate::activitypub::{
         create_identity_proof_fep_c390,
     },
 };
-use crate::adapters::roles::from_default_role;
 use crate::http::{
     get_request_base_url,
     ratelimit_config,

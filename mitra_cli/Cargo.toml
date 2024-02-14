@@ -24,6 +24,7 @@ tokio = { version = "1.28.2", features = ["macros"] }
 # Used to work with UUIDs
 uuid = "1.1.2"
 
+mitra_adapters = { path = "../mitra_adapters" }
 mitra_config = { path = "../mitra_config" }
 mitra_federation = { path = "../mitra_federation" }
 mitra_models = { path = "../mitra_models" }

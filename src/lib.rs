@@ -1,5 +1,4 @@
 pub mod activitypub;
-pub mod adapters;
 pub mod atom;
 mod errors;
 pub mod http;

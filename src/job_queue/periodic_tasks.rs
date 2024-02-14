@@ -1,5 +1,6 @@
 use anyhow::Error;
 
+use mitra_adapters::media::delete_media;
 use mitra_config::Config;
 use mitra_models::{
     background_jobs::queries::{
@@ -27,7 +28,6 @@ use crate::activitypub::queues::{
     process_queued_incoming_activities,
     process_queued_outgoing_activities,
 };
-use crate::adapters::media::delete_media;
 use crate::payments::{
     common::update_expired_subscriptions,
     ethereum::check_ethereum_subscriptions,

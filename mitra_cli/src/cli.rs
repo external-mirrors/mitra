@@ -16,7 +16,8 @@ use mitra::activitypub::{
         ActorIdResolver,
     },
 };
-use mitra::adapters::{
+use mitra::payments::monero::{get_payment_address, reopen_invoice};
+use mitra_adapters::{
     dynamic_config::{set_editable_property, EDITABLE_PROPERTIES},
     media::{delete_files, delete_media},
     roles::{
@@ -26,7 +27,6 @@ use mitra::adapters::{
         ALLOWED_ROLES,
     },
 };
-use mitra::payments::monero::{get_payment_address, reopen_invoice};
 use mitra_config::Config;
 use mitra_federation::fetch::fetch_object;
 use mitra_models::{

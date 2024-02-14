@@ -6,6 +6,7 @@ use actix_web::{
     Scope,
 };
 
+use mitra_adapters::dynamic_config::get_dynamic_config;
 use mitra_config::Config;
 use mitra_models::{
     database::{get_database_client, DatabaseConnectionPool},
@@ -15,7 +16,6 @@ use mitra_models::{
 };
 use mitra_services::ethereum::contracts::ContractSet;
 
-use crate::adapters::dynamic_config::get_dynamic_config;
 use crate::http::get_request_base_url;
 use crate::mastodon_api::errors::MastodonError;
 

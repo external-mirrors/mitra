@@ -2037,6 +2037,7 @@ dependencies = [
  "futures",
  "hex",
  "log",
+ "mitra_adapters",
  "mitra_config",
  "mitra_federation",
  "mitra_models",
@@ -2059,6 +2060,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "mitra_adapters"
+version = "2.9.0"
+dependencies = [
+ "log",
+ "mitra_config",
+ "mitra_models",
+ "mitra_services",
+ "mitra_validators",
+ "serde_json",
+]
+
+[[package]]
 name = "mitra_cli"
 version = "2.9.0"
 dependencies = [
@@ -2067,6 +2080,7 @@ dependencies = [
  "clap_lex",
  "log",
  "mitra",
+ "mitra_adapters",
  "mitra_config",
  "mitra_federation",
  "mitra_models",

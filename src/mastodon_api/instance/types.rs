@@ -1,6 +1,7 @@
 use serde::Serialize;
 use serde_json::{json, to_value, Value};
 
+use mitra_adapters::dynamic_config::DynamicConfig;
 use mitra_config::{
     AuthenticationMethod,
     BlockchainConfig,
@@ -16,7 +17,6 @@ use mitra_services::{
 use mitra_utils::markdown::markdown_to_html;
 use mitra_validators::posts::ATTACHMENT_LIMIT;
 
-use crate::adapters::dynamic_config::DynamicConfig;
 use crate::mastodon_api::{
     accounts::types::{
         Account,
