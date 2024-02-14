@@ -2078,7 +2078,6 @@ dependencies = [
  "anyhow",
  "clap",
  "clap_lex",
- "log",
  "mitra",
  "mitra_adapters",
  "mitra_config",
