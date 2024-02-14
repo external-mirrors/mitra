@@ -6,11 +6,12 @@ use mitra_models::profiles::types::MoneroSubscription;
 use mitra_utils::caip19::AssetType;
 
 use crate::activitypub::{
-    constants::{
+    contexts::{
+        build_default_context,
+        Context,
         UNITS_OF_MEASURE_CONTEXT,
         W3ID_VALUEFLOWS_CONTEXT,
     },
-    contexts::{build_default_context, Context},
     identifiers::{
         local_actor_id,
         local_actor_proposal_id,

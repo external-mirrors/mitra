@@ -44,8 +44,8 @@ use crate::activitypub::{
     constants::{
         CHAT_LINK_RELATION_TYPE,
         PAYMENT_LINK_RELATION_TYPE,
-        W3ID_VALUEFLOWS_CONTEXT,
     },
+    contexts::W3ID_VALUEFLOWS_CONTEXT,
     identifiers::local_actor_proposal_id,
     identity::{
         create_identity_claim,

@@ -34,7 +34,7 @@ use mitra_utils::{
 use mitra_validators::errors::ValidationError;
 
 use crate::activitypub::{
-    constants::{
+    contexts::{
         AP_CONTEXT,
         MASTODON_CONTEXT,
         MITRA_CONTEXT,
