@@ -97,92 +97,52 @@ fn deserialize_url_opt<'de, D>(
     Ok(maybe_url)
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize)]
 #[cfg_attr(test, derive(Default))]
 #[serde(rename_all = "camelCase")]
 pub struct Actor {
-    #[serde(rename = "@context")]
-    pub context: Option<JsonValue>,
-
     pub id: String,
 
     #[serde(rename = "type")]
     pub object_type: String,
 
     pub name: Option<String>,
-
     pub preferred_username: String,
+
     pub inbox: String,
     pub outbox: String,
-
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub followers: Option<String>,
-
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub following: Option<String>,
-
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub subscribers: Option<String>,
-
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub featured: Option<String>,
 
-    #[serde(
-        default,
-        deserialize_with = "deserialize_object_array",
-        skip_serializing_if = "Vec::is_empty",
-    )]
+    #[serde(default, deserialize_with = "deserialize_object_array")]
     pub assertion_method: Vec<Multikey>,
-    #[serde(
-        default,
-        skip_serializing_if = "Vec::is_empty",
-    )]
+    #[serde(default)]
     pub authentication: Vec<Multikey>,
 
     pub public_key: PublicKey,
 
-    #[serde(
-        default,
-        deserialize_with = "deserialize_image_opt",
-        skip_serializing_if = "Option::is_none",
-    )]
+    #[serde(default, deserialize_with = "deserialize_image_opt")]
     pub icon: Option<ActorImage>,
 
-    #[serde(
-        default,
-        deserialize_with = "deserialize_image_opt",
-        skip_serializing_if = "Option::is_none",
-    )]
+    #[serde(default, deserialize_with = "deserialize_image_opt")]
     pub image: Option<ActorImage>,
 
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub summary: Option<String>,
 
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub also_known_as: Option<JsonValue>,
 
-    #[serde(
-        default,
-        deserialize_with = "deserialize_object_array",
-        skip_serializing_if = "Vec::is_empty",
-    )]
+    #[serde(default, deserialize_with = "deserialize_object_array")]
     pub attachment: Vec<JsonValue>,
 
     #[serde(default)]
     pub manually_approves_followers: bool,
 
-    #[serde(
-        default,
-        deserialize_with = "deserialize_object_array",
-        skip_serializing_if = "Vec::is_empty",
-    )]
+    #[serde(default, deserialize_with = "deserialize_object_array")]
     pub tag: Vec<JsonValue>,
 
-    #[serde(
-        default,
-        deserialize_with = "deserialize_url_opt",
-        skip_serializing_if = "Option::is_none",
-    )]
+    #[serde(default, deserialize_with = "deserialize_url_opt")]
     pub url: Option<String>,
 }
 

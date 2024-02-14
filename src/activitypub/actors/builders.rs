@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
-use serde_json::json;
+use serde::Serialize;
+use serde_json::{Value as JsonValue};
 
 use mitra_config::Instance;
 use mitra_models::{
@@ -38,16 +39,16 @@ use super::attachments::{
 use super::keys::{Multikey, PublicKey};
 use super::types::ActorImage;
 
-pub use super::types::Actor;
-
-fn build_actor_context() -> (
+type Context = (
     &'static str,
     &'static str,
     &'static str,
     &'static str,
     &'static str,
     HashMap<&'static str, &'static str>,
-) {
+);
+
+fn build_actor_context() -> Context {
     (
         AP_CONTEXT,
         W3C_DID_CONTEXT,
@@ -75,6 +76,58 @@ fn build_actor_context() -> (
             //("verificationMethod", "sec:verificationMethod"),
         ]),
     )
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Actor {
+    #[serde(rename = "@context")]
+    _context: Context,
+
+    pub id: String,
+
+    #[serde(rename = "type")]
+    object_type: String,
+
+    name: Option<String>,
+    preferred_username: String,
+
+    inbox: String,
+    outbox: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    followers: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    following: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    subscribers: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    featured: Option<String>,
+
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    assertion_method: Vec<Multikey>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    authentication: Vec<Multikey>,
+
+    public_key: PublicKey,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    icon: Option<ActorImage>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    image: Option<ActorImage>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    summary: Option<String>,
+
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    also_known_as: Vec<String>,
+
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    attachment: Vec<JsonValue>,
+
+    manually_approves_followers: bool,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    url: Option<String>,
 }
 
 pub fn build_local_actor(
@@ -154,7 +207,7 @@ pub fn build_local_actor(
     };
     let aliases = user.profile.aliases.clone().into_actor_ids();
     let actor = Actor {
-        context: Some(json!(build_actor_context())),
+        _context: build_actor_context(),
         id: actor_id.clone(),
         object_type: PERSON.to_string(),
         name: user.profile.display_name.clone(),
@@ -171,10 +224,9 @@ pub fn build_local_actor(
         icon: avatar,
         image: banner,
         summary: user.profile.bio.clone(),
-        also_known_as: Some(json!(aliases)),
+        also_known_as: aliases,
         attachment: attachments,
         manually_approves_followers: user.profile.manually_approves_followers,
-        tag: vec![],
         url: Some(actor_id),
     };
     Ok(actor)
@@ -191,7 +243,7 @@ pub fn build_instance_actor(
         Multikey::build_rsa(&actor_id, &instance.actor_key)?,
     ];
     let actor = Actor {
-        context: Some(json!(build_actor_context())),
+        _context: build_actor_context(),
         id: actor_id,
         object_type: APPLICATION.to_string(),
         name: Some(instance.hostname()),
@@ -208,10 +260,9 @@ pub fn build_instance_actor(
         icon: None,
         image: None,
         summary: None,
-        also_known_as: None,
+        also_known_as: vec![],
         attachment: vec![],
         manually_approves_followers: false,
-        tag: vec![],
         url: None,
     };
     Ok(actor)
@@ -219,6 +270,7 @@ pub fn build_instance_actor(
 
 #[cfg(test)]
 mod tests {
+    use serde_json::json;
     use mitra_models::profiles::types::DbActorProfile;
     use super::*;
 
@@ -301,7 +353,6 @@ mod tests {
                 "publicKeyPem": "-----BEGIN PUBLIC KEY-----\nMFwwDQYJKoZIhvcNAQEBBQADSwAwSAJBAOIh58ZQbo45MuZvv1nMWAzTzN9oghNC\nbxJkFEFD1Y49LEeNHMk6GrPByUz8kn4y8Hf6brb+DVm7ZW4cdhOx1TsCAwEAAQ==\n-----END PUBLIC KEY-----\n",
             },
             "summary": "testbio",
-            "alsoKnownAs": [],
             "manuallyApprovesFollowers": false,
             "url": "https://server.example/users/testuser",
         });
