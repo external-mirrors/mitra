@@ -546,27 +546,19 @@ pub async fn import_replies(
     for item in collection_items {
         let object_id = get_object_id(&item)
             .map_err(|_| ValidationError("invalid reply"))?;
-        let object: AttributedObject =
-            fetch_object(&agent, &object_id).await?;
-        log::info!("fetched object {}", object.id);
-        match get_post_by_object_id(
+        import_post(
             db_client,
-            &instance.url(),
-            &object.id,
-        ).await {
-            Ok(_) => continue,
-            Err(DatabaseError::NotFound(_)) => {
-                // Import post
-                handle_note(
-                    db_client,
-                    &instance,
-                    &storage,
-                    object,
-                    &HashMap::new(),
-                ).await?;
-            },
-            Err(other_error) => return Err(other_error.into()),
-        };
+            &instance,
+            &storage,
+            object_id.clone(),
+            None,
+        ).await.map_err(|error| {
+            log::warn!(
+                "failed to import reply ({}): {}",
+                error,
+                object_id,
+            );
+        }).ok();
     };
     Ok(())
 }
