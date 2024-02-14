@@ -1,0 +1,274 @@
+use std::collections::HashMap;
+
+use serde_json::json;
+
+use mitra_config::Instance;
+use mitra_models::{
+    database::{DatabaseError, DatabaseTypeError},
+    profiles::types::IdentityProofType,
+    users::types::User,
+};
+use mitra_services::media::get_file_url;
+use mitra_utils::crypto_rsa::RsaSerializationError;
+
+use crate::activitypub::{
+    contexts::{
+        AP_CONTEXT,
+        MASTODON_CONTEXT,
+        MITRA_CONTEXT,
+        SCHEMA_ORG_CONTEXT,
+        W3C_DID_CONTEXT,
+        W3ID_DATA_INTEGRITY_CONTEXT,
+        W3ID_MULTIKEY_CONTEXT,
+        W3ID_SECURITY_CONTEXT,
+    },
+    identifiers::{
+        local_actor_id,
+        local_instance_actor_id,
+        LocalActorCollection,
+    },
+    vocabulary::{APPLICATION, IMAGE, PERSON},
+};
+
+use super::attachments::{
+    attach_extra_field,
+    attach_identity_proof,
+    attach_payment_option,
+};
+use super::keys::{Multikey, PublicKey};
+use super::types::ActorImage;
+
+pub use super::types::Actor;
+
+fn build_actor_context() -> (
+    &'static str,
+    &'static str,
+    &'static str,
+    &'static str,
+    &'static str,
+    HashMap<&'static str, &'static str>,
+) {
+    (
+        AP_CONTEXT,
+        W3C_DID_CONTEXT,
+        W3ID_SECURITY_CONTEXT,
+        W3ID_DATA_INTEGRITY_CONTEXT,
+        W3ID_MULTIKEY_CONTEXT,
+        HashMap::from([
+            ("manuallyApprovesFollowers", "as:manuallyApprovesFollowers"),
+            ("schema", SCHEMA_ORG_CONTEXT),
+            ("PropertyValue", "schema:PropertyValue"),
+            ("value", "schema:value"),
+            ("toot", MASTODON_CONTEXT),
+            ("IdentityProof", "toot:IdentityProof"),
+            ("featured", "toot:featured"),
+            ("mitra", MITRA_CONTEXT),
+            ("subscribers", "mitra:subscribers"),
+            ("VerifiableIdentityStatement", "mitra:VerifiableIdentityStatement"),
+            ("MitraJcsEip191Signature2022", "mitra:MitraJcsEip191Signature2022"),
+            // Workarounds for MitraJcsEip191Signature2022
+            // (not required for DataIntegrityProof)
+            ("proofValue", "sec:proofValue"),
+            ("proofPurpose", "sec:proofPurpose"),
+            // With DID context:
+            // "Invalid JSON-LD syntax; tried to redefine a protected term."
+            //("verificationMethod", "sec:verificationMethod"),
+        ]),
+    )
+}
+
+pub fn build_local_actor(
+    user: &User,
+    instance_url: &str,
+) -> Result<Actor, DatabaseError> {
+    let username = &user.profile.username;
+    let actor_id = local_actor_id(instance_url, username);
+    let inbox = LocalActorCollection::Inbox.of(&actor_id);
+    let outbox = LocalActorCollection::Outbox.of(&actor_id);
+    let followers = LocalActorCollection::Followers.of(&actor_id);
+    let following = LocalActorCollection::Following.of(&actor_id);
+    let subscribers = LocalActorCollection::Subscribers.of(&actor_id);
+    let featured = LocalActorCollection::Featured.of(&actor_id);
+
+    let public_key = PublicKey::build(&actor_id, &user.rsa_private_key)
+        .map_err(|_| DatabaseTypeError)?;
+    let mut verification_methods = vec![
+        Multikey::build_rsa(&actor_id, &user.rsa_private_key)
+            .map_err(|_| DatabaseTypeError)?,
+    ];
+    if let Some(ref private_key) = user.ed25519_private_key {
+        let multikey = Multikey::build_ed25519(&actor_id, private_key);
+        verification_methods.push(multikey);
+    };
+    let avatar = match &user.profile.avatar {
+        Some(image) => {
+            let actor_image = ActorImage {
+                object_type: IMAGE.to_string(),
+                url: get_file_url(instance_url, &image.file_name),
+                media_type: image.media_type.clone(),
+            };
+            Some(actor_image)
+        },
+        None => None,
+    };
+    let banner = match &user.profile.banner {
+        Some(image) => {
+            let actor_image = ActorImage {
+                object_type: IMAGE.to_string(),
+                url: get_file_url(instance_url, &image.file_name),
+                media_type: image.media_type.clone(),
+            };
+            Some(actor_image)
+        },
+        None => None,
+    };
+    let mut attachments = vec![];
+    for proof in user.profile.identity_proofs.clone().into_inner() {
+        let attachment_value = match proof.proof_type {
+            IdentityProofType::LegacyEip191IdentityProof |
+                IdentityProofType::LegacyMinisignIdentityProof =>
+            {
+                let attachment = attach_identity_proof(proof)?;
+                serde_json::to_value(attachment)
+                    .expect("attachment should be serializable")
+            },
+            _ => proof.value,
+        };
+        attachments.push(attachment_value);
+    };
+    for payment_option in user.profile.payment_options.clone().into_inner() {
+        let attachment = attach_payment_option(
+            instance_url,
+            &user.profile.username,
+            payment_option,
+        );
+        let attachment_value = serde_json::to_value(attachment)
+            .expect("attachment should be serializable");
+        attachments.push(attachment_value);
+    };
+    for field in user.profile.extra_fields.clone().into_inner() {
+        let attachment = attach_extra_field(field);
+        let attachment_value = serde_json::to_value(attachment)
+            .expect("attachment should be serializable");
+        attachments.push(attachment_value);
+    };
+    let aliases = user.profile.aliases.clone().into_actor_ids();
+    let actor = Actor {
+        context: Some(json!(build_actor_context())),
+        id: actor_id.clone(),
+        object_type: PERSON.to_string(),
+        name: user.profile.display_name.clone(),
+        preferred_username: username.to_string(),
+        inbox,
+        outbox,
+        followers: Some(followers),
+        following: Some(following),
+        subscribers: Some(subscribers),
+        featured: Some(featured),
+        assertion_method: verification_methods.clone(),
+        authentication: verification_methods,
+        public_key,
+        icon: avatar,
+        image: banner,
+        summary: user.profile.bio.clone(),
+        also_known_as: Some(json!(aliases)),
+        attachment: attachments,
+        manually_approves_followers: user.profile.manually_approves_followers,
+        tag: vec![],
+        url: Some(actor_id),
+    };
+    Ok(actor)
+}
+
+pub fn build_instance_actor(
+    instance: &Instance,
+) -> Result<Actor, RsaSerializationError> {
+    let actor_id = local_instance_actor_id(&instance.url());
+    let actor_inbox = LocalActorCollection::Inbox.of(&actor_id);
+    let actor_outbox = LocalActorCollection::Outbox.of(&actor_id);
+    let public_key = PublicKey::build(&actor_id, &instance.actor_key)?;
+    let verification_methods = vec![
+        Multikey::build_rsa(&actor_id, &instance.actor_key)?,
+    ];
+    let actor = Actor {
+        context: Some(json!(build_actor_context())),
+        id: actor_id,
+        object_type: APPLICATION.to_string(),
+        name: Some(instance.hostname()),
+        preferred_username: instance.hostname(),
+        inbox: actor_inbox,
+        outbox: actor_outbox,
+        followers: None,
+        following: None,
+        subscribers: None,
+        featured: None,
+        authentication: verification_methods.clone(),
+        assertion_method: verification_methods,
+        public_key,
+        icon: None,
+        image: None,
+        summary: None,
+        also_known_as: None,
+        attachment: vec![],
+        manually_approves_followers: false,
+        tag: vec![],
+        url: None,
+    };
+    Ok(actor)
+}
+
+#[cfg(test)]
+mod tests {
+    use mitra_models::profiles::types::DbActorProfile;
+    use super::*;
+
+    const INSTANCE_URL: &str = "https://example.com";
+
+    #[test]
+    fn test_build_local_actor() {
+        let profile = DbActorProfile {
+            username: "testuser".to_string(),
+            bio: Some("testbio".to_string()),
+            ..Default::default()
+        };
+        let user = User { profile, ..Default::default() };
+        let actor = build_local_actor(&user, INSTANCE_URL).unwrap();
+        assert_eq!(actor.id, "https://example.com/users/testuser");
+        assert_eq!(actor.preferred_username, user.profile.username);
+        assert_eq!(actor.inbox, "https://example.com/users/testuser/inbox");
+        assert_eq!(actor.outbox, "https://example.com/users/testuser/outbox");
+        assert_eq!(
+            actor.followers.unwrap(),
+            "https://example.com/users/testuser/followers",
+        );
+        assert_eq!(
+            actor.following.unwrap(),
+            "https://example.com/users/testuser/following",
+        );
+        assert_eq!(
+            actor.subscribers.unwrap(),
+            "https://example.com/users/testuser/subscribers",
+        );
+        assert_eq!(
+            actor.public_key.id,
+            "https://example.com/users/testuser#main-key",
+        );
+        assert_eq!(actor.assertion_method.len(), 2);
+        assert_eq!(actor.attachment.len(), 0);
+        assert_eq!(actor.summary, user.profile.bio);
+    }
+
+    #[test]
+    fn test_build_instance_actor() {
+        let instance_url = "https://example.com/";
+        let instance = Instance::for_test(instance_url);
+        let actor = build_instance_actor(&instance).unwrap();
+        assert_eq!(actor.id, "https://example.com/actor");
+        assert_eq!(actor.object_type, "Application");
+        assert_eq!(actor.preferred_username, "example.com");
+        assert_eq!(actor.inbox, "https://example.com/actor/inbox");
+        assert_eq!(actor.outbox, "https://example.com/actor/outbox");
+        assert_eq!(actor.public_key.id, "https://example.com/actor#main-key");
+        assert_eq!(actor.assertion_method.len(), 1);
+    }
+}

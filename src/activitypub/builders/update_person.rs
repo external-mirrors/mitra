@@ -15,7 +15,7 @@ use mitra_utils::id::generate_ulid;
 use mitra_validators::errors::ValidationError;
 
 use crate::activitypub::{
-    actors::types::{build_local_actor, Actor},
+    actors::builders::{build_local_actor, Actor},
     contexts::{build_default_context, Context},
     identifiers::{
         local_actor_followers,

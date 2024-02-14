@@ -41,7 +41,7 @@ use crate::web_client::urls::{
     get_tag_page_url,
 };
 
-use super::actors::types::{build_instance_actor, build_local_actor};
+use super::actors::builders::{build_instance_actor, build_local_actor};
 use super::authentication::verify_signed_c2s_activity;
 use super::builders::{
     announce::build_announce,
