@@ -222,7 +222,7 @@ mod tests {
     use mitra_models::profiles::types::DbActorProfile;
     use super::*;
 
-    const INSTANCE_URL: &str = "https://example.com";
+    const INSTANCE_URL: &str = "https://server.example";
 
     #[test]
     fn test_build_local_actor() {
@@ -233,42 +233,139 @@ mod tests {
         };
         let user = User { profile, ..Default::default() };
         let actor = build_local_actor(&user, INSTANCE_URL).unwrap();
-        assert_eq!(actor.id, "https://example.com/users/testuser");
-        assert_eq!(actor.preferred_username, user.profile.username);
-        assert_eq!(actor.inbox, "https://example.com/users/testuser/inbox");
-        assert_eq!(actor.outbox, "https://example.com/users/testuser/outbox");
-        assert_eq!(
-            actor.followers.unwrap(),
-            "https://example.com/users/testuser/followers",
-        );
-        assert_eq!(
-            actor.following.unwrap(),
-            "https://example.com/users/testuser/following",
-        );
-        assert_eq!(
-            actor.subscribers.unwrap(),
-            "https://example.com/users/testuser/subscribers",
-        );
-        assert_eq!(
-            actor.public_key.id,
-            "https://example.com/users/testuser#main-key",
-        );
-        assert_eq!(actor.assertion_method.len(), 2);
-        assert_eq!(actor.attachment.len(), 0);
-        assert_eq!(actor.summary, user.profile.bio);
+        let value = serde_json::to_value(actor).unwrap();
+        let expected_value = json!({
+            "@context": [
+                "https://www.w3.org/ns/activitystreams",
+                "https://www.w3.org/ns/did/v1",
+                "https://w3id.org/security/v1",
+                "https://w3id.org/security/data-integrity/v1",
+                "https://w3id.org/security/multikey/v1",
+                {
+                    "manuallyApprovesFollowers": "as:manuallyApprovesFollowers",
+                    "schema": "http://schema.org/",
+                    "PropertyValue": "schema:PropertyValue",
+                    "value": "schema:value",
+                    "toot": "http://joinmastodon.org/ns#",
+                    "IdentityProof": "toot:IdentityProof",
+                    "featured": "toot:featured",
+                    "mitra": "http://jsonld.mitra.social#",
+                    "subscribers": "mitra:subscribers",
+                    "VerifiableIdentityStatement": "mitra:VerifiableIdentityStatement",
+                    "MitraJcsEip191Signature2022": "mitra:MitraJcsEip191Signature2022",
+                    "proofValue": "sec:proofValue",
+                    "proofPurpose": "sec:proofPurpose",
+                },
+            ],
+            "id": "https://server.example/users/testuser",
+            "type": "Person",
+            "name": null,
+            "preferredUsername": "testuser",
+            "inbox": "https://server.example/users/testuser/inbox",
+            "outbox": "https://server.example/users/testuser/outbox",
+            "followers": "https://server.example/users/testuser/followers",
+            "following": "https://server.example/users/testuser/following",
+            "subscribers": "https://server.example/users/testuser/subscribers",
+            "featured": "https://server.example/users/testuser/collections/featured",
+            "authentication": [
+                {
+                    "id": "https://server.example/users/testuser#main-key",
+                    "type": "Multikey",
+                    "controller": "https://server.example/users/testuser",
+                    "publicKeyMultibase": "zDrrewXm1cTFaEwruJq4sA7sPhxciancezhnoCxrdvSLs3gQSupJxKA719sQGmG71CkuQdnDxAUpecZ1b7fYQTTrhKA7KbdxWUPRXqs3e",
+                },
+                {
+                    "id": "https://server.example/users/testuser#ed25519-key",
+                    "type": "Multikey",
+                    "controller": "https://server.example/users/testuser",
+                    "publicKeyMultibase": "z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6",
+                },
+            ],
+            "assertionMethod": [
+                {
+                    "id": "https://server.example/users/testuser#main-key",
+                    "type": "Multikey",
+                    "controller": "https://server.example/users/testuser",
+                    "publicKeyMultibase": "zDrrewXm1cTFaEwruJq4sA7sPhxciancezhnoCxrdvSLs3gQSupJxKA719sQGmG71CkuQdnDxAUpecZ1b7fYQTTrhKA7KbdxWUPRXqs3e",
+                },
+                {
+                    "id": "https://server.example/users/testuser#ed25519-key",
+                    "type": "Multikey",
+                    "controller": "https://server.example/users/testuser",
+                    "publicKeyMultibase": "z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6",
+                },
+            ],
+            "publicKey": {
+                "id": "https://server.example/users/testuser#main-key",
+                "owner": "https://server.example/users/testuser",
+                "publicKeyPem": "-----BEGIN PUBLIC KEY-----\nMFwwDQYJKoZIhvcNAQEBBQADSwAwSAJBAOIh58ZQbo45MuZvv1nMWAzTzN9oghNC\nbxJkFEFD1Y49LEeNHMk6GrPByUz8kn4y8Hf6brb+DVm7ZW4cdhOx1TsCAwEAAQ==\n-----END PUBLIC KEY-----\n",
+            },
+            "summary": "testbio",
+            "alsoKnownAs": [],
+            "manuallyApprovesFollowers": false,
+            "url": "https://server.example/users/testuser",
+        });
+        assert_eq!(value, expected_value);
     }
 
     #[test]
     fn test_build_instance_actor() {
-        let instance_url = "https://example.com/";
+        let instance_url = "https://server.example/";
         let instance = Instance::for_test(instance_url);
         let actor = build_instance_actor(&instance).unwrap();
-        assert_eq!(actor.id, "https://example.com/actor");
-        assert_eq!(actor.object_type, "Application");
-        assert_eq!(actor.preferred_username, "example.com");
-        assert_eq!(actor.inbox, "https://example.com/actor/inbox");
-        assert_eq!(actor.outbox, "https://example.com/actor/outbox");
-        assert_eq!(actor.public_key.id, "https://example.com/actor#main-key");
-        assert_eq!(actor.assertion_method.len(), 1);
+        let value = serde_json::to_value(actor).unwrap();
+        let expected_value = json!({
+            "@context": [
+                "https://www.w3.org/ns/activitystreams",
+                "https://www.w3.org/ns/did/v1",
+                "https://w3id.org/security/v1",
+                "https://w3id.org/security/data-integrity/v1",
+                "https://w3id.org/security/multikey/v1",
+                {
+                    "manuallyApprovesFollowers": "as:manuallyApprovesFollowers",
+                    "schema": "http://schema.org/",
+                    "PropertyValue": "schema:PropertyValue",
+                    "value": "schema:value",
+                    "toot": "http://joinmastodon.org/ns#",
+                    "IdentityProof": "toot:IdentityProof",
+                    "featured": "toot:featured",
+                    "mitra": "http://jsonld.mitra.social#",
+                    "subscribers": "mitra:subscribers",
+                    "VerifiableIdentityStatement": "mitra:VerifiableIdentityStatement",
+                    "MitraJcsEip191Signature2022": "mitra:MitraJcsEip191Signature2022",
+                    "proofValue": "sec:proofValue",
+                    "proofPurpose": "sec:proofPurpose",
+                },
+            ],
+            "id": "https://server.example/actor",
+            "type": "Application",
+            "name": "server.example",
+            "preferredUsername": "server.example",
+            "inbox": "https://server.example/actor/inbox",
+            "outbox": "https://server.example/actor/outbox",
+            "authentication": [
+                {
+                    "id": "https://server.example/actor#main-key",
+                    "type": "Multikey",
+                    "controller": "https://server.example/actor",
+                    "publicKeyMultibase": "zDrrewXm1cTFaEwruJq4sA7sPhxciancezhnoCxrdvSLs3gQSupJxKA719sQGmG71CkuQdnDxAUpecZ1b7fYQTTrhKA7KbdxWUPRXqs3e",
+                },
+            ],
+            "assertionMethod": [
+                {
+                    "id": "https://server.example/actor#main-key",
+                    "type": "Multikey",
+                    "controller": "https://server.example/actor",
+                    "publicKeyMultibase": "zDrrewXm1cTFaEwruJq4sA7sPhxciancezhnoCxrdvSLs3gQSupJxKA719sQGmG71CkuQdnDxAUpecZ1b7fYQTTrhKA7KbdxWUPRXqs3e",
+                },
+            ],
+            "publicKey": {
+                "id": "https://server.example/actor#main-key",
+                "owner": "https://server.example/actor",
+                "publicKeyPem": "-----BEGIN PUBLIC KEY-----\nMFwwDQYJKoZIhvcNAQEBBQADSwAwSAJBAOIh58ZQbo45MuZvv1nMWAzTzN9oghNC\nbxJkFEFD1Y49LEeNHMk6GrPByUz8kn4y8Hf6brb+DVm7ZW4cdhOx1TsCAwEAAQ==\n-----END PUBLIC KEY-----\n",
+            },
+            "manuallyApprovesFollowers": false,
+        });
+        assert_eq!(value, expected_value);
     }
 }
