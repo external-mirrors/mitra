@@ -11,7 +11,10 @@ use serde_json::{Value as JsonValue};
 use uuid::Uuid;
 
 use mitra_config::Config;
-use mitra_federation::http_server::is_activitypub_request;
+use mitra_federation::{
+    constants::AP_MEDIA_TYPE,
+    http_server::is_activitypub_request,
+};
 use mitra_models::{
     database::{
         get_database_client,
@@ -56,7 +59,6 @@ use super::collections::{
     OrderedCollection,
     OrderedCollectionPage,
 };
-use super::constants::AP_MEDIA_TYPE;
 use super::identifiers::{
     local_actor_featured,
     local_actor_followers,

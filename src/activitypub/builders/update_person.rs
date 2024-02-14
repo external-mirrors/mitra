@@ -3,6 +3,7 @@ use serde_json::{Value as JsonValue};
 use uuid::Uuid;
 
 use mitra_config::Instance;
+use mitra_federation::constants::AP_PUBLIC;
 use mitra_models::{
     database::{DatabaseClient, DatabaseError},
     profiles::types::DbActor,
@@ -15,7 +16,6 @@ use mitra_validators::errors::ValidationError;
 
 use crate::activitypub::{
     actors::types::{build_local_actor, Actor},
-    constants::AP_PUBLIC,
     contexts::{build_default_context, Context},
     identifiers::{
         local_actor_followers,

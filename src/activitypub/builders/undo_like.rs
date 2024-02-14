@@ -89,8 +89,8 @@ pub async fn prepare_undo_like(
 
 #[cfg(test)]
 mod tests {
+    use mitra_federation::constants::AP_PUBLIC;
     use mitra_utils::id::generate_ulid;
-    use crate::activitypub::constants::AP_PUBLIC;
     use super::*;
 
     const INSTANCE_URL: &str = "https://example.com";

@@ -1,7 +1,10 @@
 use serde::{Deserialize, Serialize};
 use serde_json::{Value as JsonValue};
 
-use mitra_federation::deserialization::deserialize_string_array;
+use mitra_federation::{
+    constants::AP_MEDIA_TYPE,
+    deserialization::deserialize_string_array,
+};
 use mitra_models::{
     database::DatabaseTypeError,
     profiles::types::{
@@ -39,7 +42,6 @@ use mitra_validators::errors::ValidationError;
 
 use crate::activitypub::{
     constants::{
-        AP_MEDIA_TYPE,
         CHAT_LINK_RELATION_TYPE,
         PAYMENT_LINK_RELATION_TYPE,
         W3ID_VALUEFLOWS_CONTEXT,

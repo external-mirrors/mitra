@@ -2,6 +2,7 @@ use serde::Serialize;
 use uuid::Uuid;
 
 use mitra_config::Instance;
+use mitra_federation::constants::AP_PUBLIC;
 use mitra_models::{
     database::{DatabaseClient, DatabaseError},
     users::types::User,
@@ -9,7 +10,6 @@ use mitra_models::{
 use mitra_utils::id::generate_ulid;
 
 use crate::activitypub::{
-    constants::AP_PUBLIC,
     contexts::{build_default_context, Context},
     identifiers::{
         local_actor_id,

@@ -8,6 +8,7 @@ use uuid::Uuid;
 use mitra_config::{Config, Instance};
 use mitra_federation::{
     addresses::ActorAddress,
+    constants::{AP_MEDIA_TYPE, AS_MEDIA_TYPE},
     deserialization::{
         deserialize_into_object_id,
         deserialize_object_array,
@@ -49,7 +50,6 @@ use mitra_validators::{
 use crate::activitypub::{
     agent::build_federation_agent,
     builders::note::LinkTag,
-    constants::{AP_MEDIA_TYPE, AS_MEDIA_TYPE},
     identifiers::{parse_local_actor_id, profile_actor_id},
     importers::{
         get_or_import_profile_by_actor_address,

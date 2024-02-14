@@ -87,8 +87,8 @@ pub async fn prepare_update_note(
 #[cfg(test)]
 mod tests {
     use chrono::Utc;
+    use mitra_federation::constants::AP_PUBLIC;
     use mitra_models::profiles::types::DbActorProfile;
-    use crate::activitypub::constants::AP_PUBLIC;
     use super::*;
 
     #[test]

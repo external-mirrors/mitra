@@ -2,6 +2,7 @@ use chrono::{DateTime, Utc};
 use serde::Serialize;
 
 use mitra_config::Instance;
+use mitra_federation::constants::AP_PUBLIC;
 use mitra_models::{
     database::{DatabaseClient, DatabaseError},
     posts::types::Post,
@@ -11,7 +12,6 @@ use mitra_models::{
 };
 
 use crate::activitypub::{
-    constants::AP_PUBLIC,
     contexts::{build_default_context, Context},
     identifiers::{
         local_actor_followers,

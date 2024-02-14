@@ -1,8 +1,5 @@
 pub use mitra_federation::constants::{
     AP_CONTEXT,
-    AP_MEDIA_TYPE,
-    AP_PUBLIC,
-    AS_MEDIA_TYPE,
 };
 
 // Contexts

@@ -1,12 +1,12 @@
 /// https://codeberg.org/silverpill/feps/src/branch/main/0837/fep-0837.md
 use serde::Serialize;
 
+use mitra_federation::constants::AP_PUBLIC;
 use mitra_models::profiles::types::MoneroSubscription;
 use mitra_utils::caip19::AssetType;
 
 use crate::activitypub::{
     constants::{
-        AP_PUBLIC,
         UNITS_OF_MEASURE_CONTEXT,
         W3ID_VALUEFLOWS_CONTEXT,
     },

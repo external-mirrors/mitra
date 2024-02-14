@@ -102,11 +102,9 @@ pub async fn prepare_delete_note(
 
 #[cfg(test)]
 mod tests {
+    use mitra_federation::constants::AP_PUBLIC;
     use mitra_models::profiles::types::DbActorProfile;
-    use crate::activitypub::{
-        constants::AP_PUBLIC,
-        identifiers::local_actor_followers,
-    };
+    use crate::activitypub::identifiers::local_actor_followers;
     use super::*;
 
     const INSTANCE_HOSTNAME: &str = "example.com";
