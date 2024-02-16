@@ -1,3 +1,4 @@
+use http::header;
 use reqwest::{Client, Method, RequestBuilder, StatusCode};
 use serde::de::DeserializeOwned;
 use serde_json::{Value as JsonValue};
@@ -13,14 +14,14 @@ use mitra_utils::{
 
 use super::{
     agent::FederationAgent,
-    constants::AP_MEDIA_TYPE,
+    constants::{AP_MEDIA_TYPE, AS_MEDIA_TYPE},
     http_client::{
         build_http_client,
         get_network_type,
         limited_response,
         RESPONSE_SIZE_LIMIT,
     },
-    utils::is_same_hostname,
+    utils::{extract_media_type, is_same_hostname},
 };
 
 #[derive(thiserror::Error, Debug)]
@@ -45,6 +46,9 @@ pub enum FetchError {
 
     #[error("json parse error: {0}")]
     JsonParseError(#[from] serde_json::Error),
+
+    #[error("unexpected content type: {0}")]
+    UnexpectedContentType(String),
 
     #[error("unexpected object ID")]
     UnexpectedObjectId,
@@ -127,11 +131,27 @@ pub async fn fetch_object<T: DeserializeOwned>(
         .ok_or(FetchError::ResponseTooLarge)?;
 
     let object_json: JsonValue = serde_json::from_slice(&data)?;
+    // Verify object is owned by server
     let object_id = object_json["id"].as_str()
         .ok_or(FetchError::UnexpectedObjectId)?;
     if !is_same_hostname(object_id, response.url().as_str())? {
         return Err(FetchError::UnexpectedObjectId);
     };
+    // Verify object is not a malicious upload
+    let content_type = response.headers()
+        .get(header::CONTENT_TYPE)
+        .and_then(extract_media_type)
+        .unwrap_or_default();
+    const ALLOWED_TYPES: [&str; 4] = [
+        AP_MEDIA_TYPE,
+        AS_MEDIA_TYPE,
+        "application/activity+json; charset=utf-8", // Pleroma
+        r#"application/ld+json; profile="https://www.w3.org/ns/activitystreams"; charset=utf-8"#, // Misskey?
+    ];
+    if !ALLOWED_TYPES.contains(&content_type.as_str()) {
+        return Err(FetchError::UnexpectedContentType(content_type));
+    };
+
     let object: T = serde_json::from_value(object_json)?;
     Ok(object)
 }
@@ -173,7 +193,7 @@ pub async fn fetch_file(
         };
     };
     let maybe_content_type_header = response.headers()
-        .get("content-type")
+        .get(header::CONTENT_TYPE)
         .and_then(|value| value.to_str().ok())
         .map(|value| value.to_string());
     let file_data = limited_response(&mut response, file_max_size)

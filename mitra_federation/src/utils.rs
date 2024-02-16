@@ -1,3 +1,4 @@
+use http::HeaderValue;
 use serde_json::{Value as JsonValue};
 
 use mitra_utils::urls::{
@@ -56,6 +57,21 @@ pub fn is_same_hostname(id_1: &str, id_2: &str) -> Result<bool, UrlError> {
     let hostname_1 = get_hostname(id_1)?;
     let hostname_2 = get_hostname(id_2)?;
     Ok(hostname_1 == hostname_2)
+}
+
+/// Extract media type from Content-Type or Accept header
+pub fn extract_media_type(header_value: &HeaderValue) -> Option<String> {
+    header_value.to_str().ok()
+        // Take first media type if there are many
+        .and_then(|value| value.split(',').next())
+        // Remove q parameter
+        .map(|value| {
+            value
+                .split(';')
+                .filter(|part| !part.contains("q="))
+                .collect::<Vec<_>>()
+                .join(";")
+        })
 }
 
 #[cfg(test)]

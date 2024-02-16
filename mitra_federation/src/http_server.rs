@@ -6,6 +6,7 @@ use http::{
 };
 
 use super::constants::{AP_MEDIA_TYPE, AS_MEDIA_TYPE};
+use super::utils::extract_media_type;
 
 // Compatible with:
 // - http::HeaderMap
@@ -32,22 +33,10 @@ pub fn is_activitypub_request<'m>(
         "application/ld+json",
         "application/json",
     ];
-    if let Some(media_type) = headers.get(header::ACCEPT) {
-        let media_type_str = media_type.to_str().ok()
-            // Take first media type if there are many
-            .and_then(|value| value.split(',').next())
-            // Remove q parameter
-            .map(|value| {
-                value
-                    .split(';')
-                    .filter(|part| !part.contains("q="))
-                    .collect::<Vec<_>>()
-                    .join(";")
-            })
-            .unwrap_or("".to_string());
-        return MEDIA_TYPES.contains(&media_type_str.as_str());
-    };
-    false
+    let media_type = headers.get(header::ACCEPT)
+        .and_then(extract_media_type)
+        .unwrap_or_default();
+    MEDIA_TYPES.contains(&media_type.as_str())
 }
 
 #[cfg(test)]

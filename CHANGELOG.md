@@ -28,6 +28,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Don't stop fetching replies if one item is not valid.
 
+### Security
+
+- Verify that fetched object has AP or AS2 content type.
+
 ## [2.9.0] - 2024-02-07
 
 ### Added
