@@ -29,6 +29,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Fixed
 
 - Don't stop fetching replies if one item is not valid.
+- Don't return "unexpected object ID" error if response in not a JSON document.
 
 ### Security
 

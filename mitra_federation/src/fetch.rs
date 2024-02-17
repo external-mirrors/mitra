@@ -1,6 +1,6 @@
 use http::header;
 use reqwest::{Client, Method, RequestBuilder, StatusCode};
-use serde::de::DeserializeOwned;
+use serde::de::{DeserializeOwned, Error as _};
 use serde_json::{Value as JsonValue};
 
 use mitra_utils::{
@@ -133,7 +133,7 @@ pub async fn fetch_object<T: DeserializeOwned>(
     let object_json: JsonValue = serde_json::from_slice(&data)?;
     // Verify object is owned by server
     let object_id = object_json["id"].as_str()
-        .ok_or(FetchError::UnexpectedObjectId)?;
+        .ok_or(serde_json::Error::missing_field("id"))?;
     if !is_same_hostname(object_id, response.url().as_str())? {
         return Err(FetchError::UnexpectedObjectId);
     };
