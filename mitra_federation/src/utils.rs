@@ -64,13 +64,14 @@ pub fn extract_media_type(header_value: &HeaderValue) -> Option<String> {
     header_value.to_str().ok()
         // Take first media type if there are many
         .and_then(|value| value.split(',').next())
-        // Remove q parameter
+        // Remove 'q' and 'charset' directives
         .map(|value| {
             value
                 .split(';')
-                .filter(|part| !part.contains("q="))
+                .map(|part| part.trim())
+                .filter(|part| !part.starts_with("q=") && !part.starts_with("charset="))
                 .collect::<Vec<_>>()
-                .join(";")
+                .join("; ")
         })
 }
 
@@ -150,5 +151,19 @@ mod tests {
         let id_3 = "https://other.example/objects/1";
         let ret = is_same_hostname(id_1, id_3).unwrap();
         assert_eq!(ret, false);
+    }
+
+    #[test]
+    fn test_extract_media_type_no_whitespace() {
+        let header_value = HeaderValue::from_static(r#"application/ld+json;profile="https://www.w3.org/ns/activitystreams""#);
+        let media_type = extract_media_type(&header_value).unwrap();
+        assert_eq!(media_type, r#"application/ld+json; profile="https://www.w3.org/ns/activitystreams""#);
+    }
+
+    #[test]
+    fn test_extract_media_type_with_charset() {
+        let header_value = HeaderValue::from_static(r#"application/ld+json; profile="https://www.w3.org/ns/activitystreams"; charset=utf-8"#);
+        let media_type = extract_media_type(&header_value).unwrap();
+        assert_eq!(media_type, r#"application/ld+json; profile="https://www.w3.org/ns/activitystreams""#);
     }
 }

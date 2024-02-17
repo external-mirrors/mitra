@@ -142,12 +142,7 @@ pub async fn fetch_object<T: DeserializeOwned>(
         .get(header::CONTENT_TYPE)
         .and_then(extract_media_type)
         .unwrap_or_default();
-    const ALLOWED_TYPES: [&str; 4] = [
-        AP_MEDIA_TYPE,
-        AS_MEDIA_TYPE,
-        "application/activity+json; charset=utf-8", // Pleroma
-        r#"application/ld+json; profile="https://www.w3.org/ns/activitystreams"; charset=utf-8"#, // Misskey?
-    ];
+    const ALLOWED_TYPES: [&str; 2] = [AP_MEDIA_TYPE, AS_MEDIA_TYPE];
     if !ALLOWED_TYPES.contains(&content_type.as_str()) {
         return Err(FetchError::UnexpectedContentType(content_type));
     };
