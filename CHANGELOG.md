@@ -20,6 +20,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Log `content` of `Like` and `EmojiReact` activities.
 - Set limit on client config size.
 - Remove `charset` directive when parsing `Accept` and `Content-Type` headers.
+- Accept media attachment if `Content-Type` header contains `charset` directive.
 
 ### Removed
 

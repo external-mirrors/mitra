@@ -189,12 +189,12 @@ pub async fn fetch_file(
     };
     let maybe_content_type_header = response.headers()
         .get(header::CONTENT_TYPE)
-        .and_then(|value| value.to_str().ok())
-        .map(|value| value.to_string());
+        .and_then(extract_media_type);
     let file_data = limited_response(&mut response, file_max_size)
         .await?
         .ok_or(FetchError::ResponseTooLarge)?;
     let file_size = file_data.len();
+    // Content-Type header has the highest priority
     let media_type = get_media_type(
         &file_data,
         maybe_content_type_header.as_deref(),
