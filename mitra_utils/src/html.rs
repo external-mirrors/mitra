@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::collections::{HashMap, HashSet};
 use std::iter::FromIterator;
 use std::rc::Rc;
@@ -105,6 +106,25 @@ fn replace_images(root: &Handle) -> () {
     });
 }
 
+fn rel_attribute_filter<'u>(
+    element: &str,
+    attribute: &str,
+    value: &'u str,
+) -> Option<Cow<'u, str>> {
+    match (element, attribute) {
+        ("a", "rel") => {
+            // Remove everything except 'tag'
+            let mut rels: Vec<_> = value.split(' ')
+                .filter(|rel| *rel == "tag")
+                .collect();
+            // Always add rel="noopener"
+            rels.push("noopener");
+            Some(rels.join(" ").into())
+        },
+        _ => Some(value.into())
+    }
+}
+
 pub fn clean_html(
     unsafe_html: &str,
     allowed_classes: Vec<(&'static str, Vec<&'static str>)>,
@@ -115,11 +135,16 @@ pub fn clean_html(
     };
     let document = builder
         .add_url_schemes(&EXTRA_URI_SCHEMES)
-        // Always add rel="noopener"
-        .link_rel(Some("noopener"))
+        // Disable rel-insertion, allow rel attribute on <a>
+        .link_rel(None)
+        .add_tag_attributes("a", &["rel"])
+        .attribute_filter(rel_attribute_filter)
         .url_relative(UrlRelative::Deny)
         .clean(unsafe_html);
     let document_node = document_to_node(&document);
+    // Insert rel=noopener if not present
+    // attribute_filter can only modify attribute value
+    insert_rel_noopener(&document_node);
     // Replace external images to prevent tracking
     replace_images(&document_node);
     let safe_html = node_to_string(document_node);
@@ -161,20 +186,7 @@ pub fn clean_html_strict(
         // Disable rel-insertion, allow rel attribute on <a>
         .link_rel(None)
         .add_tag_attributes("a", &["rel"])
-        .attribute_filter(|element, attribute, value| {
-            match (element, attribute) {
-                ("a", "rel") => {
-                    // Remove everything except 'tag'
-                    let mut rels: Vec<_> = value.split(' ')
-                        .filter(|rel| *rel == "tag")
-                        .collect();
-                    // Always add rel="noopener"
-                    rels.push("noopener");
-                    Some(rels.join(" ").into())
-                },
-                _ => Some(value.into())
-            }
-        })
+        .attribute_filter(rel_attribute_filter)
         .url_relative(UrlRelative::Deny)
         .clean(unsafe_html);
     let document_node = document_to_node(&document);
@@ -246,6 +258,17 @@ mod tests {
     fn test_clean_html_with_image_with_link() {
         let unsafe_html = r#"<p><a href="https://external.example/page"><img src="https://external.example/image.png"></a></p>"#;
         let expected_safe_html = r#"<p><a href="https://external.example/page" rel="noopener">https://external.example/image.png</a></p>"#;
+        let safe_html = clean_html(
+            unsafe_html,
+            allowed_classes(),
+        );
+        assert_eq!(safe_html, expected_safe_html);
+    }
+
+    #[test]
+    fn test_clean_html_with_hashtag() {
+        let unsafe_html = r#"<p>test <a href="https://server.example/tag" rel="tag">#tag</a></p>"#;
+        let expected_safe_html = r#"<p>test <a href="https://server.example/tag" rel="tag noopener">#tag</a></p>"#;
         let safe_html = clean_html(
             unsafe_html,
             allowed_classes(),
