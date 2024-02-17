@@ -215,6 +215,11 @@ pub async fn get_object_attachments(
     let mut unprocessed = vec![];
     let mut downloaded = vec![];
     for attachment_value in object.attachment.clone() {
+        // Stop downloading if limit is reached
+        if downloaded.len() >= ATTACHMENT_LIMIT {
+            log::warn!("too many attachments");
+            break;
+        };
         let attachment: Attachment = match serde_json::from_value(attachment_value) {
             Ok(attachment) => attachment,
             Err(_) => {
@@ -277,11 +282,6 @@ pub async fn get_object_attachments(
             media_type,
             attachment.name,
         ));
-        // Stop downloading if limit is reached
-        if downloaded.len() >= ATTACHMENT_LIMIT {
-            log::warn!("too many attachments");
-            break;
-        };
     };
     for (file_name, file_size, media_type, description) in downloaded {
         let db_attachment = create_attachment(

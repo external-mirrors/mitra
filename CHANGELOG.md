@@ -30,6 +30,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Don't stop fetching replies if one item is not valid.
 - Don't return "unexpected object ID" error if response in not a JSON document.
+- Don't write "too many attachments" warning to log if the number is within limit.
 
 ### Security
 
