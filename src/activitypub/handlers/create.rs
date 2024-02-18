@@ -5,6 +5,7 @@ use serde::Deserialize;
 use serde_json::{Value as JsonValue};
 use uuid::Uuid;
 
+use mitra_adapters::permissions::filter_mentions;
 use mitra_config::{Config, Instance};
 use mitra_federation::{
     addresses::ActorAddress,
@@ -648,7 +649,7 @@ pub async fn handle_note(
         redirects,
     ).await?;
 
-    let in_reply_to_id = match object.in_reply_to {
+    let maybe_in_reply_to = match object.in_reply_to {
         Some(ref object_id) => {
             let object_id = redirects.get(object_id).unwrap_or(object_id);
             let in_reply_to = get_post_by_object_id(
@@ -656,10 +657,19 @@ pub async fn handle_note(
                 &instance.url(),
                 object_id,
             ).await?;
-            Some(in_reply_to.id)
+            Some(in_reply_to)
         },
         None => None,
     };
+
+    // TODO: use on local posts too
+    let mentions = filter_mentions(
+        db_client,
+        mentions,
+        &author,
+        maybe_in_reply_to.as_ref().map(|post| &post.author),
+    ).await?;
+
     let audience = get_audience(&object)?;
     let visibility = get_object_visibility(&author, &audience);
     let is_sensitive = object.sensitive.unwrap_or(false);
@@ -667,12 +677,12 @@ pub async fn handle_note(
     let post_data = PostCreateData {
         content: content,
         content_source: None,
-        in_reply_to_id,
+        in_reply_to_id: maybe_in_reply_to.map(|post| post.id),
         repost_of_id: None,
         visibility,
         is_sensitive,
         attachments: attachments,
-        mentions: mentions,
+        mentions: mentions.iter().map(|profile| profile.id).collect(),
         tags: hashtags,
         links: links,
         emojis: emojis,

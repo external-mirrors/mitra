@@ -16,7 +16,7 @@ use crate::database::{
 };
 use crate::profiles::{
     queries::create_profile,
-    types::{DbActorProfile, ProfileCreateData},
+    types::{DbActorProfile, MentionPolicy, ProfileCreateData},
 };
 
 use super::types::{
@@ -124,6 +124,7 @@ pub async fn create_user(
         avatar: None,
         banner: None,
         manually_approves_followers: false,
+        mention_policy: MentionPolicy::None,
         public_keys: vec![],
         identity_proofs: vec![],
         payment_options: vec![],

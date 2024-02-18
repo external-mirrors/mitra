@@ -144,6 +144,7 @@ pub async fn create_profile(
             avatar,
             banner,
             manually_approves_followers,
+            mention_policy,
             public_keys,
             identity_proofs,
             payment_options,
@@ -151,7 +152,7 @@ pub async fn create_profile(
             aliases,
             actor_json
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
         RETURNING actor_profile
         ",
         &[
@@ -164,6 +165,7 @@ pub async fn create_profile(
             &profile_data.avatar,
             &profile_data.banner,
             &profile_data.manually_approves_followers,
+            &profile_data.mention_policy,
             &PublicKeys(profile_data.public_keys),
             &IdentityProofs(profile_data.identity_proofs),
             &PaymentOptions(profile_data.payment_options),
@@ -222,15 +224,16 @@ pub async fn update_profile(
             avatar = $5,
             banner = $6,
             manually_approves_followers = $7,
-            public_keys = $8,
-            identity_proofs = $9,
-            payment_options = $10,
-            extra_fields = $11,
-            aliases = $12,
-            actor_json = $13,
+            mention_policy = $8,
+            public_keys = $9,
+            identity_proofs = $10,
+            payment_options = $11,
+            extra_fields = $12,
+            aliases = $13,
+            actor_json = $14,
             updated_at = CURRENT_TIMESTAMP,
             unreachable_since = NULL
-        WHERE id = $14
+        WHERE id = $15
         ",
         &[
             &profile_data.username,
@@ -240,6 +243,7 @@ pub async fn update_profile(
             &profile_data.avatar,
             &profile_data.banner,
             &profile_data.manually_approves_followers,
+            &profile_data.mention_policy,
             &PublicKeys(profile_data.public_keys),
             &IdentityProofs(profile_data.identity_proofs),
             &PaymentOptions(profile_data.payment_options),
@@ -330,7 +334,7 @@ pub async fn get_profile_by_acct(
     Ok(profile)
 }
 
-pub async fn get_profiles(
+pub async fn get_profiles_paginated(
     db_client: &impl DatabaseClient,
     only_local: bool,
     offset: u16,
@@ -350,6 +354,24 @@ pub async fn get_profiles(
     let rows = db_client.query(
         &statement,
         &[&i64::from(limit), &i64::from(offset)],
+    ).await?;
+    let profiles = rows.iter()
+        .map(|row| row.try_get("actor_profile"))
+        .collect::<Result<_, _>>()?;
+    Ok(profiles)
+}
+
+pub async fn get_profiles_by_ids(
+    db_client: &impl DatabaseClient,
+    profiles_ids: Vec<Uuid>,
+) -> Result<Vec<DbActorProfile>, DatabaseError> {
+    let rows = db_client.query(
+        "
+        SELECT actor_profile
+        FROM actor_profile
+        WHERE id = ANY($1)
+        ",
+        &[&profiles_ids],
     ).await?;
     let profiles = rows.iter()
         .map(|row| row.try_get("actor_profile"))

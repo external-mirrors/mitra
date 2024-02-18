@@ -17,6 +17,7 @@ use mitra_utils::{
 };
 
 use crate::database::{
+    int_enum::{int_enum_from_sql, int_enum_to_sql},
     json_macro::{json_from_sql, json_to_sql},
     DatabaseTypeError,
 };
@@ -51,6 +52,38 @@ impl ProfileImage {
 
 json_from_sql!(ProfileImage);
 json_to_sql!(ProfileImage);
+
+#[derive(Clone, Debug, Default)]
+pub enum MentionPolicy {
+    #[default]
+    None,
+    OnlyKnown,
+}
+
+impl From<&MentionPolicy> for i16 {
+    fn from(value: &MentionPolicy) -> i16 {
+        match value {
+            MentionPolicy::None => 0,
+            MentionPolicy::OnlyKnown => 1,
+        }
+    }
+}
+
+impl TryFrom<i16> for MentionPolicy {
+    type Error = DatabaseTypeError;
+
+    fn try_from(value: i16) -> Result<Self, Self::Error> {
+        let policy = match value {
+            0 => Self::None,
+            1 => Self::OnlyKnown,
+            _ => return Err(DatabaseTypeError),
+        };
+        Ok(policy)
+    }
+}
+
+int_enum_from_sql!(MentionPolicy);
+int_enum_to_sql!(MentionPolicy);
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum PublicKeyType {
@@ -146,6 +179,7 @@ pub enum IdentityProofType {
 
 impl IdentityProofType {
     pub fn is_legacy(&self) -> bool {
+        // Mitra 1.x identity proofs
         matches!(
             self,
             Self::LegacyEip191IdentityProof | Self::LegacyMinisignIdentityProof,
@@ -604,6 +638,7 @@ pub struct DbActorProfile {
     pub avatar: Option<ProfileImage>,
     pub banner: Option<ProfileImage>,
     pub manually_approves_followers: bool,
+    pub mention_policy: MentionPolicy,
     pub public_keys: PublicKeys,
     pub identity_proofs: IdentityProofs,
     pub payment_options: PaymentOptions,
@@ -679,6 +714,7 @@ impl Default for DbActorProfile {
             avatar: None,
             banner: None,
             manually_approves_followers: false,
+            mention_policy: MentionPolicy::default(),
             public_keys: PublicKeys(vec![]),
             identity_proofs: IdentityProofs(vec![]),
             payment_options: PaymentOptions(vec![]),
@@ -707,6 +743,7 @@ pub struct ProfileCreateData {
     pub avatar: Option<ProfileImage>,
     pub banner: Option<ProfileImage>,
     pub manually_approves_followers: bool,
+    pub mention_policy: MentionPolicy,
     pub public_keys: Vec<DbActorKey>,
     pub identity_proofs: Vec<IdentityProof>,
     pub payment_options: Vec<PaymentOption>,
@@ -736,6 +773,7 @@ pub struct ProfileUpdateData {
     pub avatar: Option<ProfileImage>,
     pub banner: Option<ProfileImage>,
     pub manually_approves_followers: bool,
+    pub mention_policy: MentionPolicy,
     pub public_keys: Vec<DbActorKey>,
     pub identity_proofs: Vec<IdentityProof>,
     pub payment_options: Vec<PaymentOption>,
@@ -782,6 +820,7 @@ impl From<&DbActorProfile> for ProfileUpdateData {
             avatar: profile.avatar,
             banner: profile.banner,
             manually_approves_followers: profile.manually_approves_followers,
+            mention_policy: profile.mention_policy,
             public_keys: profile.public_keys.into_inner(),
             identity_proofs: profile.identity_proofs.into_inner(),
             payment_options: profile.payment_options.into_inner(),

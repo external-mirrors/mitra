@@ -199,6 +199,12 @@ paths:
                       value:
                         description: Value of the field (markdown).
                         type: string
+                mention_policy:
+                  description: Mention policy.
+                  type: string
+                  enum:
+                    - none
+                    - only_known
       responses:
         200:
           description: Successful operation.
@@ -1957,6 +1963,12 @@ components:
           description: Whether the actor manually approves follow requests.
           type: boolean
           example: false
+        mention_policy:
+          description: Mention policy.
+          type: string
+          enum:
+            - none
+            - only_known
         bot:
           description: Indicates that the account may perform automated actions, may not be monitored, or identifies as a robot.
           type: boolean

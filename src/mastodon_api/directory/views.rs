@@ -11,7 +11,7 @@ use actix_web_httpauth::extractors::bearer::BearerAuth;
 use mitra_config::Config;
 use mitra_models::{
     database::{get_database_client, DatabaseConnectionPool},
-    profiles::queries::get_profiles,
+    profiles::queries::get_profiles_paginated,
 };
 
 use crate::http::get_request_base_url;
@@ -32,7 +32,7 @@ async fn profile_directory(
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &**get_database_client(&db_pool).await?;
     get_current_user(db_client, auth.token()).await?;
-    let profiles = get_profiles(
+    let profiles = get_profiles_paginated(
         db_client,
         query_params.local,
         query_params.offset,

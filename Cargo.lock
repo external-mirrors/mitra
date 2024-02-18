@@ -1990,12 +1990,16 @@ dependencies = [
 name = "mitra_adapters"
 version = "2.10.0"
 dependencies = [
+ "chrono",
  "log",
  "mitra_config",
  "mitra_models",
  "mitra_services",
  "mitra_validators",
  "serde_json",
+ "serial_test",
+ "tokio",
+ "uuid",
 ]
 
 [[package]]

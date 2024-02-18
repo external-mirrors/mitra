@@ -7,6 +7,7 @@ use mitra_models::{
     profiles::types::{
         DbActorProfile,
         ExtraField,
+        MentionPolicy,
         PaymentOption,
         ProfileImage,
         ProfileUpdateData,
@@ -124,6 +125,7 @@ pub struct Account {
     pub avatar: Option<String>,
     pub header: Option<String>,
     pub locked: bool,
+    pub mention_policy: String,
     pub bot: bool,
     pub identity_proofs: Vec<AccountField>,
     pub payment_options: Vec<AccountPaymentOption>,
@@ -149,6 +151,10 @@ impl Account {
     ) -> Self {
         let actor_id = profile_actor_id(instance_url, &profile);
         let profile_url = profile_actor_url(instance_url, &profile);
+        let mention_policy = match profile.mention_policy {
+            MentionPolicy::None => "none",
+            MentionPolicy::OnlyKnown => "only_known",
+        };
         let is_automated = profile.is_automated();
 
         let avatar_url = profile.avatar
@@ -240,6 +246,7 @@ impl Account {
             avatar: avatar_url,
             header: header_url,
             locked: profile.manually_approves_followers,
+            mention_policy: mention_policy.to_string(),
             bot: is_automated,
             identity_proofs,
             payment_options,
@@ -332,6 +339,9 @@ pub struct AccountUpdateData {
     #[serde(default)]
     locked: bool,
     fields_attributes: Option<Vec<AccountFieldSource>>,
+
+    // Not supported by Mastodon API clients
+    mention_policy: Option<String>,
 }
 
 fn process_b64_image_field_value(
@@ -401,6 +411,14 @@ impl AccountUpdateData {
             storage,
         )?;
         profile_data.manually_approves_followers = self.locked;
+        if let Some(mention_policy) = self.mention_policy {
+            // Update only if value was provided by client
+            profile_data.mention_policy = match mention_policy.as_str() {
+                "none" => MentionPolicy::None,
+                "only_known" => MentionPolicy::OnlyKnown,
+                _ => return Err(ValidationError("invalid mention policy").into()),
+            };
+        };
 
         let mut extra_fields = vec![];
         for field_source in self.fields_attributes.unwrap_or(vec![]) {

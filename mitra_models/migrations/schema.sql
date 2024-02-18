@@ -27,6 +27,7 @@ CREATE TABLE actor_profile (
     avatar JSONB,
     banner JSONB,
     manually_approves_followers BOOLEAN NOT NULL,
+    mention_policy SMALLINT NOT NULL,
     public_keys JSONB NOT NULL DEFAULT '[]',
     identity_proofs JSONB NOT NULL DEFAULT '[]',
     payment_options JSONB NOT NULL DEFAULT '[]',
