@@ -9,7 +9,7 @@ rust-version = "1.63.0"
 # Used for working with HTTP headers
 http = "0.2.9"
 # Used for logging
-log = "0.4.14"
+log = "0.4.20"
 # Used for working with regular expressions
 regex = "1.9.6"
 # Used for making async HTTP requests

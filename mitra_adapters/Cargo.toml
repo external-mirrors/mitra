@@ -7,7 +7,7 @@ rust-version = "1.63.0"
 
 [dependencies]
 # Used for logging
-log = "0.4.14"
+log = "0.4.20"
 # Used for working with JSON
 serde_json = "1.0.89"
 

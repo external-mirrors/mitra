@@ -14,7 +14,7 @@ deadpool-postgres = { version = "0.10.2", default-features = false }
 # Used to work with hexadecimal strings
 hex = { version = "0.4.3", features = ["serde"] }
 # Used for logging
-log = "0.4.14"
+log = "0.4.20"
 # Used for managing database migrations
 refinery = { version = "0.8.4", features = ["tokio-postgres"] }
 # Used for serialization/deserialization

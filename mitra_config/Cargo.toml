@@ -9,7 +9,7 @@ rust-version = "1.63.0"
 # Used to read .env files
 dotenvy = ">=0.15.0, <0.15.7"
 # Used for logging
-log = { version = "0.4.14", features = ["serde"] }
+log = { version = "0.4.20", features = ["serde"] }
 # Used for working with regular expressions
 regex = "1.9.6"
 # Used for serialization/deserialization
