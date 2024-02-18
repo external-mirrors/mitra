@@ -19,7 +19,7 @@ monero-rpc = { git = "https://github.com/monero-rs/monero-rpc-rs.git", rev = "37
 # Used for working with regular expressions
 regex = "1.9.6"
 # Used for making async HTTP requests
-reqwest = { version = "0.11.18", features = ["json", "multipart"] }
+reqwest = { version = "0.11.20", features = ["json", "multipart"] }
 # Used for working with ethereum keys
 secp256k1 = { version = "0.27.0", features = ["rand", "rand-std"] }
 # Used for serialization/deserialization
