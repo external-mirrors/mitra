@@ -93,5 +93,5 @@ ethereum-extras = ["mitra_services/ethereum-extras"]
 production = ["mitra_config/production"]
 
 [target.'cfg(target_env = "musl")'.dependencies]
-openssl = { version = "0.10.55", features = ["vendored"] }
+openssl = { version = "0.10.63", features = ["vendored"] }
 openssl-probe = "0.1.5"
