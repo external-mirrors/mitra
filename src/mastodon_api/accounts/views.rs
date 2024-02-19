@@ -992,11 +992,6 @@ pub fn account_api_scope() -> Scope {
         web::get()
             .to(search_by_acct)
             .wrap(Governor::new(&ratelimit_config)));
-    // TODO: remove
-    let search_by_acct_public_limited = web::resource("/search_public").route(
-        web::get()
-            .to(search_by_acct)
-            .wrap(Governor::new(&ratelimit_config)));
     web::scope("/api/v1/accounts")
         // Routes without account ID
         .service(create_account)
@@ -1008,7 +1003,6 @@ pub fn account_api_scope() -> Scope {
         .service(get_relationships_view)
         .service(lookup_acct)
         .service(search_by_acct_limited)
-        .service(search_by_acct_public_limited)
         .service(search_by_did)
         // Routes with account ID
         .service(get_account)

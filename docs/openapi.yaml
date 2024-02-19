@@ -382,6 +382,8 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Account'
+        429:
+          description: Too many requests.
   /api/v1/accounts/search_did:
     get:
       summary: Search profile by DID

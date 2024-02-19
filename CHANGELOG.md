@@ -10,6 +10,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Changed MSRV to 1.63.0.
 
+### Removed
+
+- Removed `/api/v1/accounts/search_public` endpoint.
+
 ## [2.10.0] - 2024-02-17
 
 ### Added
