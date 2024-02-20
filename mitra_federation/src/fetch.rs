@@ -142,7 +142,11 @@ pub async fn fetch_object<T: DeserializeOwned>(
         .get(header::CONTENT_TYPE)
         .and_then(extract_media_type)
         .unwrap_or_default();
-    const ALLOWED_TYPES: [&str; 2] = [AP_MEDIA_TYPE, AS_MEDIA_TYPE];
+    const ALLOWED_TYPES: [&str; 3] = [
+        AP_MEDIA_TYPE,
+        AS_MEDIA_TYPE,
+        "application/ld+json",
+    ];
     if !ALLOWED_TYPES.contains(&content_type.as_str()) {
         return Err(FetchError::UnexpectedContentType(content_type));
     };
