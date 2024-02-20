@@ -104,6 +104,9 @@ async fn update_attachment_view(
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &**get_database_client(&db_pool).await?;
     let current_user = get_current_user(db_client, auth.token()).await?;
+    if let Some(ref description) = attachment_data.description {
+        validate_media_description(description)?;
+    };
     let db_attachment = update_attachment(
         db_client,
         &current_user.id,

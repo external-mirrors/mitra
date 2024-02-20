@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Changed MSRV to 1.63.0.
 - Added `application/ld+json` to the list of allowed object content types.
+- Validate description length when updating media attachment.
 
 ### Removed
 
