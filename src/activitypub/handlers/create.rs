@@ -588,7 +588,7 @@ fn get_object_visibility(
             return Visibility::Subscribers;
         };
     };
-    log::warn!(
+    log::info!(
         "processing note with visibility 'direct' attributed to {}",
         author.acct,
     );
@@ -674,6 +674,13 @@ pub async fn handle_note(
     let visibility = get_object_visibility(&author, &audience);
     let is_sensitive = object.sensitive.unwrap_or(false);
     let created_at = object.published.unwrap_or(Utc::now());
+
+    if visibility == Visibility::Direct &&
+        !mentions.iter().any(|profile| profile.is_local())
+    {
+        log::warn!("direct message has no local recipients");
+    };
+
     let post_data = PostCreateData {
         content: content,
         content_source: None,
