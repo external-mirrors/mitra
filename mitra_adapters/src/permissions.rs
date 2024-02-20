@@ -65,6 +65,9 @@ pub async fn filter_mentions(
                 is_connected(db_client, &author.id, &profile.id).await? ||
                     age >= Duration::minutes(ACTOR_PROFILE_AGE_MIN)
             },
+            MentionPolicy::OnlyConnected => {
+                is_connected(db_client, &author.id, &profile.id).await?
+            },
         };
         if !is_mention_allowed {
             log::warn!(
