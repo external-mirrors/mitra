@@ -13,7 +13,14 @@ RUN cargo build --release --features production
 # --------------
 FROM alpine:3.18
 
+RUN apk add --no-cache libressl-dev ca-certificates gcc
+
 WORKDIR /usr/bin
+
+RUN mkdir -p /var/lib/mitra && mkdir -p /etc/mitra
+
+COPY --from=builder /app/config.example.yaml /usr/share/mitra/examples/
+RUN cp -n /usr/share/mitra/examples/config.example.yaml /etc/mitra/config.yaml
 
 COPY ./dist /usr/share/mitra/www
 
