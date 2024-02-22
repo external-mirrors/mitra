@@ -80,7 +80,11 @@ pub async fn filter_mentions(
                 if !is_connected(db_client, &author.id, &profile.id).await? &&
                     age < Duration::minutes(ACTOR_PROFILE_AGE_MIN)
                 {
-                    log::warn!("mention removed from post");
+                    log::warn!(
+                        "removing mention of @{} made by @{}",
+                        profile.acct,
+                        author.acct,
+                    );
                     continue;
                 };
             },

@@ -10,6 +10,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Added documentation for `update-config` command.
 
+### Changed
+
+- Add details to mention filter log message.
+
 ## [2.11.0] - 2024-02-20
 
 ### Added
