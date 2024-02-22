@@ -13,3 +13,4 @@ And the following extensions and microsyntaxes:
 - Mentions: `@user@server.example`. For local users the server part can be omitted: `@user`.
 - References to other posts: `[[post-id]]` and `[[post-id|link-text]]` (where `post-id` is an ID of ActivityPub object).
 - Custom emoji shortcodes: `:emojiname:`.
+- Greentext: `>greentext` (only in mitra-web client).
