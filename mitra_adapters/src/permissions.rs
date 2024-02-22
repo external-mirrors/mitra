@@ -8,7 +8,7 @@ use mitra_models::{
         types::{MentionPolicy, DbActorProfile},
     },
     relationships::{
-        queries::has_relationship,
+        queries::get_relationships,
         types::RelationshipType,
     },
 };
@@ -20,31 +20,16 @@ async fn is_connected(
     source_id: &Uuid,
     target_id: &Uuid,
 ) -> Result<bool, DatabaseError> {
-    let is_follower = has_relationship(
-        db_client,
-        source_id,
-        target_id,
-        RelationshipType::Follow,
-    ).await?;
-    let is_followee = has_relationship(
-        db_client,
-        target_id,
-        source_id,
-        RelationshipType::Follow,
-    ).await?;
-    let is_subscriber = has_relationship(
-        db_client,
-        source_id,
-        target_id,
-        RelationshipType::Subscription,
-    ).await?;
-    let is_subscribee = has_relationship(
-        db_client,
-        target_id,
-        source_id,
-        RelationshipType::Subscription,
-    ).await?;
-    Ok(is_follower || is_followee || is_subscriber || is_subscribee)
+    let relationships =
+        get_relationships(db_client, source_id, target_id).await?;
+    for relationship in relationships {
+        match relationship.relationship_type {
+            RelationshipType::Follow => return Ok(true),
+            RelationshipType::Subscription => return Ok(true),
+            _ => (),
+        };
+    };
+    Ok(false)
 }
 
 pub async fn filter_mentions(
