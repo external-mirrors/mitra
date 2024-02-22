@@ -16,6 +16,13 @@ Print help:
 mitractl --help
 ```
 
+Update dynamic configuration:
+
+```shell
+mitractl update-config --help
+mitractl update-config <parameter> <value>
+```
+
 Generate RSA private key:
 
 ```shell

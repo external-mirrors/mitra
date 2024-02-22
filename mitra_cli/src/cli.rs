@@ -188,6 +188,8 @@ impl GenerateEthereumAddress {
 }
 
 /// Change value of a dynamic configuration parameter
+///
+/// - federated_timeline_restricted (true of false, default: false): make federated timeline visible only to moderators.
 #[derive(Parser)]
 pub struct UpdateConfig {
     #[arg(value_parser = EDITABLE_PROPERTIES)]

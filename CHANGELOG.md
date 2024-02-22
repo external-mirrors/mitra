@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+
+- Added documentation for `update-config` command.
+
 ## [2.11.0] - 2024-02-20
 
 ### Added
