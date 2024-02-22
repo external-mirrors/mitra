@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::time::Duration;
 
 use monero_rpc::{
     GetTransfersCategory,
@@ -25,6 +26,8 @@ use mitra_config::MoneroConfig;
 use super::utils::parse_monero_address;
 
 pub type TransferCategory = GetTransfersCategory;
+
+const MONERO_RPC_TIMEOUT: u64 = 10;
 
 #[derive(thiserror::Error, Debug)]
 pub enum MoneroError {
@@ -68,6 +71,7 @@ fn build_wallet_client(config: &MoneroConfig)
     };
     let wallet_client = RpcClientBuilder::new()
         .rpc_authentication(rpc_authentication)
+        .timeout(Duration::from_secs(MONERO_RPC_TIMEOUT))
         .build(config.wallet_rpc_url.clone())?
         .wallet();
     Ok(wallet_client)
