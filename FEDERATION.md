@@ -43,6 +43,15 @@ Objects with type other than `Note` are converted and stored in the same way as 
 - The value of `Accept` header in outgoing requests is set to `application/ld+json; profile="https://www.w3.org/ns/activitystreams"`, [as required by the ActivityPub specification](https://www.w3.org/TR/activitypub/#retrieving-objects).
 - The object of `Accept(Follow)` activity is ID of the `Follow` activity.
 
+## HTML
+
+Most ["safe"](https://docs.rs/ammonia/latest/ammonia/struct.Builder.html#defaults) HTML tags are allowed, one exception is `<img>` tags which are transformed into links.
+
+Microsyntaxes:
+
+- Hashtags should have `rel="tag"` attribute or `.hashtag` class.
+- Mentions should have `.mention` class.
+
 ## Object integrity proofs
 
 All outgoing activities are signed with actor's key in accordance with [FEP-8b32](https://codeberg.org/silverpill/feps/src/branch/main/8b32/fep-8b32.md) document.
@@ -194,7 +203,9 @@ The `Remove` activity is used to notify the subscriber about expired subscriptio
 }
 ```
 
-## Cryptocurrency addresses in profile
+## Mitra Web client
+
+### Cryptocurrency addresses in profile
 
 `PropertyValue` attachments where `name` attribute is a currency symbol prefixed with `$` are recognized as cryptocurrency addresses:
 
