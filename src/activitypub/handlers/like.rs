@@ -1,5 +1,5 @@
 use serde::Deserialize;
-use serde_json::Value;
+use serde_json::{Value as JsonValue};
 
 use mitra_config::Config;
 use mitra_federation::deserialization::deserialize_into_object_id;
@@ -32,9 +32,9 @@ struct Like {
 pub async fn handle_like(
     config: &Config,
     db_client: &mut impl DatabaseClient,
-    activity: Value,
+    activity_value: JsonValue,
 ) -> HandlerResult {
-    let activity: Like = serde_json::from_value(activity)
+    let activity: Like = serde_json::from_value(activity_value.clone())
         .map_err(|_| ValidationError("unexpected activity structure"))?;
     let author = ActorIdResolver::default().only_remote().resolve(
         db_client,
@@ -63,8 +63,9 @@ pub async fn handle_like(
         Err(DatabaseError::AlreadyExists(_)) => return Ok(None),
         Err(other_error) => return Err(other_error.into()),
     };
-    if let Some(content) = activity.content {
-        log::info!("reaction with content: {}", content);
+    // TODO: fetch custom emojis
+    if activity.content.is_some() {
+        log::info!("reaction with content: {}", activity_value);
     };
     Ok(Some(NOTE))
 }

@@ -14,6 +14,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Add details to mention filter log message.
 - Reduce number of database queries made during mention filtering.
+- Log `EmojiReact` and `Like` activities when `content` property is present.
 
 ## [2.11.0] - 2024-02-20
 
