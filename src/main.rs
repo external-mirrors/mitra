@@ -21,7 +21,7 @@ use mitra::http::{
     multiquery_config,
     multiquery_form_config,
 };
-use mitra::init::initialize_app;
+use mitra::init::{apply_custom_migrations, initialize_app};
 use mitra::job_queue::scheduler;
 use mitra::mastodon_api::accounts::views::account_api_scope;
 use mitra::mastodon_api::apps::views::application_api_scope;
@@ -48,7 +48,6 @@ use mitra_models::{
         get_database_client,
         migrate::apply_migrations,
     },
-    users::helpers::add_ed25519_keys,
 };
 use mitra_services::{
     ethereum::contracts::get_contracts,
@@ -71,12 +70,8 @@ async fn main() -> std::io::Result<()> {
         .expect("failed to connect to database");
     apply_migrations(&mut db_client).await
         .expect("failed to apply migrations");
-    // TODO: remove custom migration
-    let updated_count = add_ed25519_keys(&**db_client).await
-        .expect("failed to generate ed25519 keys");
-    if updated_count > 0 {
-        log::info!("generated ed25519 keys for {updated_count} users");
-    };
+    apply_custom_migrations(&**db_client).await
+        .expect("failed to apply custom migrations");
 
     let media_storage = MediaStorage::from(&config);
     media_storage.init().expect("failed to create media directory");

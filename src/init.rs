@@ -1,4 +1,8 @@
 use mitra_config::{parse_config, Config};
+use mitra_models::{
+    database::{DatabaseClient, DatabaseError},
+    users::helpers::add_ed25519_keys,
+};
 
 use crate::logger::configure_logger;
 
@@ -17,4 +21,15 @@ pub fn initialize_app() -> Config {
         };
     };
     config
+}
+
+pub async fn apply_custom_migrations(
+    db_client: &impl DatabaseClient,
+) -> Result<(), DatabaseError> {
+    // TODO: remove migration
+    let updated_count = add_ed25519_keys(db_client).await?;
+    if updated_count > 0 {
+        log::info!("generated ed25519 keys for {updated_count} users");
+    };
+    Ok(())
 }

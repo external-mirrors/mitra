@@ -4,7 +4,7 @@ use mitra_models::database::{
     connect::create_database_client,
     migrate::apply_migrations,
 };
-use mitra::init::initialize_app;
+use mitra::init::{apply_custom_migrations, initialize_app};
 
 mod cli;
 use cli::{Cli, SubCommand};
@@ -30,6 +30,8 @@ async fn main() {
             ).await.expect("failed to connect to database");
             apply_migrations(db_client).await
                 .expect("failed to apply migrations");
+            apply_custom_migrations(db_client).await
+                .expect("failed to apply custom migrations");
 
             #[allow(clippy::unwrap_used)]
             match subcmd {
