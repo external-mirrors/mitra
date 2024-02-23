@@ -138,7 +138,7 @@ pub struct DbUser {
     login_address_ethereum: Option<String>,
     login_address_monero: Option<String>,
     rsa_private_key: String,
-    ed25519_private_key: Option<Vec<u8>>,
+    ed25519_private_key: Vec<u8>,
     invite_code: Option<String>,
     user_role: Role,
     client_config: DbClientConfig,
@@ -153,7 +153,7 @@ pub struct User {
     pub login_address_ethereum: Option<String>,
     pub login_address_monero: Option<String>,
     pub rsa_private_key: RsaPrivateKey,
-    pub ed25519_private_key: Option<Ed25519PrivateKey>,
+    pub ed25519_private_key: Ed25519PrivateKey,
     pub role: Role,
     pub client_config: ClientConfig,
     pub profile: DbActorProfile,
@@ -172,7 +172,7 @@ impl Default for User {
             login_address_ethereum: None,
             login_address_monero: None,
             rsa_private_key: generate_weak_rsa_key().unwrap(),
-            ed25519_private_key: Some(generate_weak_ed25519_key()),
+            ed25519_private_key: generate_weak_ed25519_key(),
             role: Role::default(),
             client_config: ClientConfig::default(),
             profile: DbActorProfile::default(),
@@ -191,21 +191,16 @@ impl User {
         let rsa_private_key =
             rsa_private_key_from_pkcs8_pem(&db_user.rsa_private_key)
                 .map_err(|_| DatabaseTypeError)?;
-        let maybe_ed25519_private_key = match db_user.ed25519_private_key {
-            Some(ref bytes) => {
-                let private_key = ed25519_private_key_from_bytes(bytes)
-                    .map_err(|_| DatabaseTypeError)?;
-                Some(private_key)
-            },
-            None => None,
-        };
+        let ed25519_private_key =
+            ed25519_private_key_from_bytes(&db_user.ed25519_private_key)
+                .map_err(|_| DatabaseTypeError)?;
         let user = Self {
             id: db_user.id,
             password_hash: db_user.password_hash,
             login_address_ethereum: db_user.login_address_ethereum,
             login_address_monero: db_user.login_address_monero,
             rsa_private_key: rsa_private_key,
-            ed25519_private_key: maybe_ed25519_private_key,
+            ed25519_private_key: ed25519_private_key,
             role: db_user.user_role,
             client_config: db_user.client_config.into_inner(),
             profile: db_profile,
@@ -310,12 +305,12 @@ mod tests {
     fn test_user_cloned() {
         let ed25519_private_key = generate_ed25519_key();
         let user = User {
-            ed25519_private_key: Some(ed25519_private_key),
+            ed25519_private_key: ed25519_private_key,
             ..Default::default()
         };
         let user_cloned = user.clone();
         assert_eq!(
-            user_cloned.ed25519_private_key.unwrap(),
+            user_cloned.ed25519_private_key,
             ed25519_private_key,
         );
     }

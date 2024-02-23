@@ -113,7 +113,7 @@ impl From<User> for Sender {
         Self {
             username: user.profile.username,
             rsa_private_key: user.rsa_private_key,
-            ed25519_private_key: user.ed25519_private_key,
+            ed25519_private_key: Some(user.ed25519_private_key),
         }
     }
 }

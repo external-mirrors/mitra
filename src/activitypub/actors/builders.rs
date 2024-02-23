@@ -145,14 +145,11 @@ pub fn build_local_actor(
 
     let public_key = PublicKey::build(&actor_id, &user.rsa_private_key)
         .map_err(|_| DatabaseTypeError)?;
-    let mut verification_methods = vec![
+    let verification_methods = vec![
         Multikey::build_rsa(&actor_id, &user.rsa_private_key)
             .map_err(|_| DatabaseTypeError)?,
+        Multikey::build_ed25519(&actor_id, &user.ed25519_private_key),
     ];
-    if let Some(ref private_key) = user.ed25519_private_key {
-        let multikey = Multikey::build_ed25519(&actor_id, private_key);
-        verification_methods.push(multikey);
-    };
     let avatar = match &user.profile.avatar {
         Some(image) => {
             let actor_image = ActorImage {

@@ -5,7 +5,7 @@ const fn default_fetcher_timeout() -> u64 { 300 }
 const fn default_deliverer_timeout() -> u64 { 30 }
 const fn default_deliverer_log_response_length() -> usize { 75 }
 const fn default_fep_e232_enabled() -> bool { false }
-const fn default_fep_8b32_eddsa_enabled() -> bool { false }
+const fn default_fep_8b32_eddsa_enabled() -> bool { true }
 
 #[derive(Clone, Deserialize)]
 pub struct FederationConfig {

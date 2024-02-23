@@ -479,7 +479,6 @@ mod tests {
         let user = create_user(db_client, user_data).await.unwrap();
         assert_eq!(user.profile.username, "myname");
         assert_eq!(user.role, Role::NormalUser);
-        assert_eq!(user.ed25519_private_key.is_some(), true);
     }
 
     #[tokio::test]
@@ -518,10 +517,7 @@ mod tests {
             private_key,
         ).await.unwrap();
         let user = get_user_by_id(db_client, &user.id).await.unwrap();
-        assert_eq!(
-            user.ed25519_private_key.unwrap(),
-            private_key,
-        );
+        assert_eq!(user.ed25519_private_key, private_key);
     }
 
     #[tokio::test]
