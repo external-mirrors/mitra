@@ -48,7 +48,7 @@ pub fn build_federation_agent(
             &instance_actor_id,
             PublicKeyType::RsaPkcs1,
         );
-        let instance_actor_key = instance.actor_key.clone();
+        let instance_actor_key = instance.actor_rsa_key.clone();
         (instance_actor_key, instance_actor_key_id)
     };
     build_federation_agent_with_key(instance, signer_key, signer_key_id)
@@ -65,7 +65,7 @@ mod tests {
         let agent = build_federation_agent(&instance, None);
         assert_eq!(agent.user_agent.ends_with(instance_url), true);
         assert_eq!(agent.is_instance_private, true);
-        assert_eq!(agent.signer_key, instance.actor_key);
+        assert_eq!(agent.signer_key, instance.actor_rsa_key);
         assert_eq!(agent.signer_key_id, "https://social.example/actor#main-key");
     }
 }

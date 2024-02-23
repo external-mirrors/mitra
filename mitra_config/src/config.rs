@@ -5,6 +5,7 @@ use log::{Level as LogLevel};
 use serde::Deserialize;
 
 use mitra_utils::{
+    crypto_eddsa::Ed25519PrivateKey,
     crypto_rsa::RsaPrivateKey,
     urls::{normalize_url, Url, UrlError},
 };
@@ -70,6 +71,8 @@ pub struct Config {
     pub instance_timeline_public: bool,
 
     #[serde(skip)]
+    instance_ed25519_key: Option<Ed25519PrivateKey>,
+    #[serde(skip)]
     pub(super) instance_rsa_key: Option<RsaPrivateKey>,
 
     #[serde(default)]
@@ -111,6 +114,14 @@ pub struct Config {
 }
 
 impl Config {
+    pub fn set_instance_ed25519_key(&mut self, secret_key: Ed25519PrivateKey) -> () {
+        assert!(
+            self.instance_ed25519_key.is_none(),
+            "instance Ed25519 key can not be replaced",
+        );
+        self.instance_ed25519_key = Some(secret_key);
+    }
+
     pub fn get_instance_rsa_key(&self) -> Option<&RsaPrivateKey> {
         self.instance_rsa_key.as_ref()
     }
@@ -131,7 +142,9 @@ impl Config {
         Instance {
             _url: self.try_instance_url()
                 .expect("instance URL should be already validated"),
-            actor_key: self.instance_rsa_key.clone()
+            actor_ed25519_key: self.instance_ed25519_key
+                .expect("instance Ed25519 key should be already generated"),
+            actor_rsa_key: self.instance_rsa_key.clone()
                 .expect("instance RSA key should be already generated"),
             proxy_url: self.federation.proxy_url.clone(),
             onion_proxy_url: self.federation.onion_proxy_url.clone(),
@@ -195,8 +208,9 @@ impl Config {
 #[derive(Clone)]
 pub struct Instance {
     _url: Url,
-    // Instance actor
-    pub actor_key: RsaPrivateKey,
+    // Instance actor keys
+    pub actor_ed25519_key: Ed25519PrivateKey,
+    pub actor_rsa_key: RsaPrivateKey,
     // Proxy for outgoing requests
     pub proxy_url: Option<String>,
     pub onion_proxy_url: Option<String>,
@@ -235,10 +249,14 @@ impl Instance {
 #[cfg(feature = "test-utils")]
 impl Instance {
     pub fn for_test(url: &str) -> Self {
-        use mitra_utils::crypto_rsa::generate_weak_rsa_key;
+        use mitra_utils::{
+            crypto_eddsa::generate_weak_ed25519_key,
+            crypto_rsa::generate_weak_rsa_key,
+        };
         Self {
             _url: Url::parse(url).unwrap(),
-            actor_key: generate_weak_rsa_key().unwrap(),
+            actor_rsa_key: generate_weak_rsa_key().unwrap(),
+            actor_ed25519_key: generate_weak_ed25519_key(),
             proxy_url: None,
             onion_proxy_url: None,
             i2p_proxy_url: None,
@@ -253,16 +271,21 @@ impl Instance {
 
 #[cfg(test)]
 mod tests {
-    use mitra_utils::crypto_rsa::generate_weak_rsa_key;
+    use mitra_utils::{
+        crypto_eddsa::generate_weak_ed25519_key,
+        crypto_rsa::generate_weak_rsa_key,
+    };
     use super::*;
 
     #[test]
     fn test_instance_url_https_dns() {
         let instance_url = Url::parse("https://example.com/").unwrap();
+        let instance_ed25519_key = generate_weak_ed25519_key();
         let instance_rsa_key = generate_weak_rsa_key().unwrap();
         let instance = Instance {
             _url: instance_url,
-            actor_key: instance_rsa_key,
+            actor_ed25519_key: instance_ed25519_key,
+            actor_rsa_key: instance_rsa_key,
             proxy_url: None,
             onion_proxy_url: None,
             i2p_proxy_url: None,
@@ -284,10 +307,12 @@ mod tests {
     #[test]
     fn test_instance_url_http_ipv4_with_port() {
         let instance_url = Url::parse("http://1.2.3.4:3777/").unwrap();
+        let instance_ed25519_key = generate_weak_ed25519_key();
         let instance_rsa_key = generate_weak_rsa_key().unwrap();
         let instance = Instance {
             _url: instance_url,
-            actor_key: instance_rsa_key,
+            actor_ed25519_key: instance_ed25519_key,
+            actor_rsa_key: instance_rsa_key,
             proxy_url: None,
             onion_proxy_url: None,
             i2p_proxy_url: None,

@@ -2,6 +2,7 @@ use mitra_config::{parse_config, Config};
 use mitra_models::{
     database::{DatabaseClient, DatabaseError, DatabaseTypeError},
     properties::constants::{
+        INSTANCE_ED25519_SECRET_KEY,
         INSTANCE_RSA_SECRET_KEY,
     },
     properties::queries::{
@@ -11,6 +12,11 @@ use mitra_models::{
     users::helpers::add_ed25519_keys,
 };
 use mitra_utils::{
+    crypto_eddsa::{
+        ed25519_private_key_from_bytes,
+        generate_ed25519_key,
+        Ed25519PrivateKey,
+    },
     crypto_rsa::{
         generate_rsa_key,
         rsa_private_key_from_pkcs1_der,
@@ -82,6 +88,28 @@ async fn prepare_instance_rsa_key(
     Ok(secret_key)
 }
 
+async fn prepare_instance_ed25519_key(
+    db_client: &impl DatabaseClient,
+) -> Result<Ed25519PrivateKey, DatabaseError> {
+    let maybe_secret_key_bytes: Option<Vec<u8>> =
+        get_internal_property(db_client, INSTANCE_ED25519_SECRET_KEY)
+            .await?;
+    let secret_key = if let Some(secret_key_bytes) = maybe_secret_key_bytes {
+        ed25519_private_key_from_bytes(&secret_key_bytes)
+            .map_err(|_| DatabaseTypeError)?
+    } else {
+        let secret_key = generate_ed25519_key();
+        set_internal_property(
+            db_client,
+            INSTANCE_ED25519_SECRET_KEY,
+            &secret_key,
+        ).await?;
+        log::info!("instance Ed25519 key generated");
+        secret_key
+    };
+    Ok(secret_key)
+}
+
 pub async fn prepare_instance_keys(
     config: &mut Config,
     db_client: &impl DatabaseClient,
@@ -93,5 +121,23 @@ pub async fn prepare_instance_keys(
         let instance_rsa_key = prepare_instance_rsa_key(db_client).await?;
         config.set_instance_rsa_key(instance_rsa_key);
     };
+    let instance_ed25519_key = prepare_instance_ed25519_key(db_client).await?;
+    config.set_instance_ed25519_key(instance_ed25519_key);
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use serial_test::serial;
+    use mitra_models::database::test_utils::create_test_database;
+    use super::*;
+
+    #[tokio::test]
+    #[serial]
+    async fn test_prepare_instance_ed25519_key() {
+        let db_client = &create_test_database().await;
+        let key_1 = prepare_instance_ed25519_key(db_client).await.unwrap();
+        let key_2 = prepare_instance_ed25519_key(db_client).await.unwrap();
+        assert_eq!(key_1, key_2);
+    }
 }

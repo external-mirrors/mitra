@@ -238,9 +238,10 @@ pub fn build_instance_actor(
     let actor_id = local_instance_actor_id(&instance.url());
     let actor_inbox = LocalActorCollection::Inbox.of(&actor_id);
     let actor_outbox = LocalActorCollection::Outbox.of(&actor_id);
-    let public_key = PublicKey::build(&actor_id, &instance.actor_key)?;
+    let public_key = PublicKey::build(&actor_id, &instance.actor_rsa_key)?;
     let verification_methods = vec![
-        Multikey::build_rsa(&actor_id, &instance.actor_key)?,
+        Multikey::build_rsa(&actor_id, &instance.actor_rsa_key)?,
+        Multikey::build_ed25519(&actor_id, &instance.actor_ed25519_key),
     ];
     let actor = Actor {
         _context: build_actor_context(),
@@ -401,6 +402,12 @@ mod tests {
                     "controller": "https://server.example/actor",
                     "publicKeyMultibase": "zDrrewXm1cTFaEwruJq4sA7sPhxciancezhnoCxrdvSLs3gQSupJxKA719sQGmG71CkuQdnDxAUpecZ1b7fYQTTrhKA7KbdxWUPRXqs3e",
                 },
+                {
+                    "id": "https://server.example/actor#ed25519-key",
+                    "type": "Multikey",
+                    "controller": "https://server.example/actor",
+                    "publicKeyMultibase": "z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6",
+                },
             ],
             "assertionMethod": [
                 {
@@ -408,6 +415,12 @@ mod tests {
                     "type": "Multikey",
                     "controller": "https://server.example/actor",
                     "publicKeyMultibase": "zDrrewXm1cTFaEwruJq4sA7sPhxciancezhnoCxrdvSLs3gQSupJxKA719sQGmG71CkuQdnDxAUpecZ1b7fYQTTrhKA7KbdxWUPRXqs3e",
+                },
+                {
+                    "id": "https://server.example/actor#ed25519-key",
+                    "type": "Multikey",
+                    "controller": "https://server.example/actor",
+                    "publicKeyMultibase": "z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6",
                 },
             ],
             "publicKey": {
