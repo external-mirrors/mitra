@@ -111,6 +111,18 @@ pub struct Config {
 }
 
 impl Config {
+    pub fn get_instance_rsa_key(&self) -> Option<&RsaPrivateKey> {
+        self.instance_rsa_key.as_ref()
+    }
+
+    pub fn set_instance_rsa_key(&mut self, secret_key: RsaPrivateKey) -> () {
+        assert!(
+            self.instance_rsa_key.is_none(),
+            "instance RSA key can not be replaced",
+        );
+        self.instance_rsa_key = Some(secret_key);
+    }
+
     pub(super) fn try_instance_url(&self) -> Result<Url, UrlError> {
         normalize_url(&self.instance_uri)
     }

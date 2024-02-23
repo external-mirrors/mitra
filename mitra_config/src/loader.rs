@@ -4,12 +4,9 @@ use std::str::FromStr;
 
 use mitra_utils::{
     crypto_rsa::{
-        generate_rsa_key,
         rsa_private_key_from_pkcs8_pem,
-        rsa_private_key_to_pkcs8_pem,
         RsaPrivateKey,
     },
-    files::{set_file_permissions, write_file},
 };
 
 use super::blockchain::BlockchainConfig;
@@ -58,25 +55,17 @@ fn check_directory_owner(path: &Path) -> () {
     };
 }
 
-/// Generates new instance RSA key or returns existing key
-fn read_instance_rsa_key(storage_dir: &Path) -> RsaPrivateKey {
+/// Read secret key from instance_rsa_key file
+fn read_instance_rsa_key(storage_dir: &Path) -> Option<RsaPrivateKey> {
     let private_key_path = storage_dir.join("instance_rsa_key");
     if private_key_path.exists() {
         let private_key_str = std::fs::read_to_string(&private_key_path)
             .expect("failed to read instance RSA key");
         let private_key = rsa_private_key_from_pkcs8_pem(&private_key_str)
             .expect("failed to read instance RSA key");
-        private_key
+        Some(private_key)
     } else {
-        let private_key = generate_rsa_key()
-            .expect("failed to generate RSA key");
-        let private_key_str = rsa_private_key_to_pkcs8_pem(&private_key)
-            .expect("failed to serialize RSA key");
-        write_file(private_key_str.as_bytes(), &private_key_path)
-            .expect("failed to write instance RSA key");
-        set_file_permissions(&private_key_path, 0o600)
-            .expect("failed to set permissions on RSA key file");
-        private_key
+        None
     }
 }
 
@@ -127,7 +116,7 @@ pub fn parse_config() -> (Config, Vec<&'static str>) {
     };
 
     // Insert instance RSA key
-    config.instance_rsa_key = Some(read_instance_rsa_key(&config.storage_dir));
+    config.instance_rsa_key = read_instance_rsa_key(&config.storage_dir);
 
     (config, warnings)
 }

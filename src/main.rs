@@ -40,7 +40,11 @@ use mitra::mastodon_api::timelines::views::timeline_api_scope;
 use mitra::nodeinfo::views as nodeinfo;
 use mitra::webfinger::views as webfinger;
 use mitra::web_client::views as web_client;
-use mitra_adapters::init::{apply_custom_migrations, initialize_app};
+use mitra_adapters::init::{
+    apply_custom_migrations,
+    initialize_app,
+    prepare_instance_keys,
+};
 use mitra_config::{Environment, MITRA_VERSION};
 use mitra_models::{
     database::{
@@ -57,7 +61,7 @@ use mitra_utils::urls::get_hostname;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    let config = initialize_app();
+    let mut config = initialize_app();
 
     // https://wiki.postgresql.org/wiki/Number_Of_Database_Connections
     let db_pool_size = num_cpus::get() * 2;
@@ -72,6 +76,8 @@ async fn main() -> std::io::Result<()> {
         .expect("failed to apply migrations");
     apply_custom_migrations(&**db_client).await
         .expect("failed to apply custom migrations");
+    prepare_instance_keys(&mut config, &**db_client).await
+        .expect("failed to prepare instance keys");
 
     let media_storage = MediaStorage::from(&config);
     media_storage.init().expect("failed to create media directory");

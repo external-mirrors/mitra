@@ -1,6 +1,10 @@
 use clap::Parser;
 
-use mitra_adapters::init::{apply_custom_migrations, initialize_app};
+use mitra_adapters::init::{
+    apply_custom_migrations,
+    initialize_app,
+    prepare_instance_keys,
+};
 use mitra_models::database::{
     connect::create_database_client,
     migrate::apply_migrations,
@@ -19,7 +23,7 @@ async fn main() {
         SubCommand::GenerateEthereumAddress(cmd) => cmd.execute(),
         subcmd => {
             // Other commands require initialized app
-            let config = initialize_app();
+            let mut config = initialize_app();
 
             let db_config = config.database_url.parse()
                 .expect("failed to parse database URL");
@@ -32,6 +36,8 @@ async fn main() {
                 .expect("failed to apply migrations");
             apply_custom_migrations(db_client).await
                 .expect("failed to apply custom migrations");
+            prepare_instance_keys(&mut config, db_client).await
+                .expect("failed to prepare instance keys");
 
             #[allow(clippy::unwrap_used)]
             match subcmd {

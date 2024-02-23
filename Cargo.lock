@@ -1987,6 +1987,7 @@ dependencies = [
  "mitra_config",
  "mitra_models",
  "mitra_services",
+ "mitra_utils",
  "mitra_validators",
  "openssl",
  "openssl-probe",

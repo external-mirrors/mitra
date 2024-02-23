@@ -17,6 +17,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Log `EmojiReact` and `Like` activities when `content` property is present.
 - Set timeout on monero-wallet-rpc requests.
 - Apply custom migrations when `mitractl` is used.
+- Copy instance RSA key from `instance_rsa_key` file to database.
 
 ## [2.11.0] - 2024-02-20
 
