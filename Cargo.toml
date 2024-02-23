@@ -49,7 +49,6 @@ chrono = { version = "0.4.23", default-features = false, features = ["std", "ser
 hex = { version = "0.4.3" }
 # Used for logging
 log = "0.4.20"
-env_logger = { version = "0.9.0", default-features = false }
 # Used for working with futures
 futures = "0.3.13"
 # Used to determine the number of CPUs on the system
@@ -91,7 +90,3 @@ mitra_utils = { path = "mitra_utils", features = ["test-utils"] }
 ethereum-extras = ["mitra_services/ethereum-extras"]
 
 production = ["mitra_config/production"]
-
-[target.'cfg(target_env = "musl")'.dependencies]
-openssl = { version = "0.10.63", features = ["vendored"] }
-openssl-probe = "0.1.5"

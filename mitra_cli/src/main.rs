@@ -1,10 +1,10 @@
 use clap::Parser;
 
+use mitra_adapters::init::{apply_custom_migrations, initialize_app};
 use mitra_models::database::{
     connect::create_database_client,
     migrate::apply_migrations,
 };
-use mitra::init::{apply_custom_migrations, initialize_app};
 
 mod cli;
 use cli::{Cli, SubCommand};

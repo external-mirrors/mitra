@@ -21,7 +21,6 @@ use mitra::http::{
     multiquery_config,
     multiquery_form_config,
 };
-use mitra::init::{apply_custom_migrations, initialize_app};
 use mitra::job_queue::scheduler;
 use mitra::mastodon_api::accounts::views::account_api_scope;
 use mitra::mastodon_api::apps::views::application_api_scope;
@@ -41,6 +40,7 @@ use mitra::mastodon_api::timelines::views::timeline_api_scope;
 use mitra::nodeinfo::views as nodeinfo;
 use mitra::webfinger::views as webfinger;
 use mitra::web_client::views as web_client;
+use mitra_adapters::init::{apply_custom_migrations, initialize_app};
 use mitra_config::{Environment, MITRA_VERSION};
 use mitra_models::{
     database::{
