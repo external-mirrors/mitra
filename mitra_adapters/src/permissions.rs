@@ -57,22 +57,22 @@ pub async fn filter_mentions(
             filtered.push(profile);
             continue;
         };
-        match profile.mention_policy {
-            MentionPolicy::None => (),
+        let is_mention_allowed = match profile.mention_policy {
+            MentionPolicy::None => true,
             MentionPolicy::OnlyKnown => {
                 let age = Utc::now() - author.created_at;
                 // Mentions from connections are always accepted
-                if !is_connected(db_client, &author.id, &profile.id).await? &&
-                    age < Duration::minutes(ACTOR_PROFILE_AGE_MIN)
-                {
-                    log::warn!(
-                        "removing mention of @{} made by @{}",
-                        profile.acct,
-                        author.acct,
-                    );
-                    continue;
-                };
+                is_connected(db_client, &author.id, &profile.id).await? ||
+                    age >= Duration::minutes(ACTOR_PROFILE_AGE_MIN)
             },
+        };
+        if !is_mention_allowed {
+            log::warn!(
+                "removing mention of @{} made by @{}",
+                profile.acct,
+                author.acct,
+            );
+            continue;
         };
         filtered.push(profile);
     };
