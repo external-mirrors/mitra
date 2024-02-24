@@ -82,7 +82,7 @@ pub async fn handle_emoji(
     let file_name = storage.save_file(file_data, &media_type)?;
     log::info!("downloaded emoji {}", tag.icon.url);
     let image = EmojiImage { file_name, file_size, media_type };
-    let emoji = if let Some(emoji_id) = maybe_emoji_id {
+    let db_emoji = if let Some(emoji_id) = maybe_emoji_id {
         update_emoji(
             db_client,
             &emoji_id,
@@ -100,7 +100,7 @@ pub async fn handle_emoji(
             Some(&tag.id),
             &tag.updated,
         ).await {
-            Ok(emoji) => emoji,
+            Ok(db_emoji) => db_emoji,
             Err(DatabaseError::AlreadyExists(_)) => {
                 log::warn!("emoji name is not unique: {}", emoji_name);
                 return Ok(None);
@@ -108,5 +108,5 @@ pub async fn handle_emoji(
             Err(other_error) => return Err(other_error.into()),
         }
     };
-    Ok(Some(emoji))
+    Ok(Some(db_emoji))
 }

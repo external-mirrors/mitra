@@ -2,7 +2,10 @@ use serde::Deserialize;
 use serde_json::{Value as JsonValue};
 
 use mitra_config::Config;
-use mitra_federation::deserialization::deserialize_into_object_id;
+use mitra_federation::deserialization::{
+    deserialize_into_object_id,
+    deserialize_object_array,
+};
 use mitra_models::{
     database::{DatabaseClient, DatabaseError},
     reactions::queries::create_reaction,
@@ -11,6 +14,7 @@ use mitra_services::media::MediaStorage;
 use mitra_validators::errors::ValidationError;
 
 use crate::activitypub::{
+    agent::build_federation_agent,
     importers::{
         get_post_by_object_id,
         ActorIdResolver,
@@ -18,15 +22,23 @@ use crate::activitypub::{
     vocabulary::NOTE,
 };
 
-use super::HandlerResult;
+use super::{
+    emoji::handle_emoji,
+    HandlerResult,
+};
 
 #[derive(Deserialize)]
 struct Like {
     id: String,
     actor: String,
+
     #[serde(deserialize_with = "deserialize_into_object_id")]
     object: String,
+
     content: Option<String>,
+
+    #[serde(default, deserialize_with = "deserialize_object_array")]
+    tag: Vec<JsonValue>,
 }
 
 pub async fn handle_like(
@@ -34,23 +46,34 @@ pub async fn handle_like(
     db_client: &mut impl DatabaseClient,
     activity_value: JsonValue,
 ) -> HandlerResult {
-    let activity: Like = serde_json::from_value(activity_value.clone())
+    let activity: Like = serde_json::from_value(activity_value)
         .map_err(|_| ValidationError("unexpected activity structure"))?;
+    let instance = config.instance();
+    let agent = build_federation_agent(&instance, None);
+    let storage = MediaStorage::from(config);
     let author = ActorIdResolver::default().only_remote().resolve(
         db_client,
-        &config.instance(),
-        &MediaStorage::from(config),
+        &instance,
+        &storage,
         &activity.actor,
     ).await?;
     let post_id = match get_post_by_object_id(
         db_client,
-        &config.instance_url(),
+        &instance.url(),
         &activity.object,
     ).await {
         Ok(post) => post.id,
         // Ignore like if post is not found locally
         Err(DatabaseError::NotFound(_)) => return Ok(None),
         Err(other_error) => return Err(other_error.into()),
+    };
+    if let [emoji_value] = activity.tag.as_slice() {
+        handle_emoji(
+            &agent,
+            db_client,
+            &storage,
+            emoji_value.clone(),
+        ).await?;
     };
     match create_reaction(
         db_client,
@@ -63,9 +86,8 @@ pub async fn handle_like(
         Err(DatabaseError::AlreadyExists(_)) => return Ok(None),
         Err(other_error) => return Err(other_error.into()),
     };
-    // TODO: fetch custom emojis
-    if activity.content.is_some() {
-        log::info!("reaction with content: {}", activity_value);
+    if let Some(content) = activity.content {
+        log::info!("reaction with content: {}", content);
     };
     Ok(Some(NOTE))
 }
