@@ -21,6 +21,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Copy instance RSA key from `instance_rsa_key` file to database.
 - Enable integrity proofs with `eddsa-jcs-2022` cryptosuite by default.
 - Fetch custom emojis used in `Like` activities.
+- Allow underscores in hashtags.
 
 ## [2.11.0] - 2024-02-20
 
