@@ -438,14 +438,14 @@ pub async fn update_post(
     Ok(post)
 }
 
-pub const RELATED_ATTACHMENTS: &str =
+pub(crate) const RELATED_ATTACHMENTS: &str =
     "ARRAY(
         SELECT media_attachment
         FROM media_attachment WHERE post_id = post.id
         ORDER BY media_attachment.created_at
     ) AS attachments";
 
-pub const RELATED_MENTIONS: &str =
+pub(crate) const RELATED_MENTIONS: &str =
     "ARRAY(
         SELECT actor_profile
         FROM mention
@@ -453,20 +453,20 @@ pub const RELATED_MENTIONS: &str =
         WHERE post_id = post.id
     ) AS mentions";
 
-pub const RELATED_TAGS: &str =
+pub(crate) const RELATED_TAGS: &str =
     "ARRAY(
         SELECT tag.tag_name FROM tag
         JOIN post_tag ON post_tag.tag_id = tag.id
         WHERE post_tag.post_id = post.id
     ) AS tags";
 
-pub const RELATED_LINKS: &str =
+pub(crate) const RELATED_LINKS: &str =
     "ARRAY(
         SELECT post_link.target_id FROM post_link
         WHERE post_link.source_id = post.id
     ) AS links";
 
-pub const RELATED_EMOJIS: &str =
+pub(crate) const RELATED_EMOJIS: &str =
     "ARRAY(
         SELECT emoji
         FROM post_emoji

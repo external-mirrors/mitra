@@ -24,6 +24,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Fetch custom emojis used in `Like` activities.
 - Allow underscores in hashtags.
 
+### Fixed
+
+- Hide notifications from muted accounts.
+
 ## [2.11.0] - 2024-02-20
 
 ### Added

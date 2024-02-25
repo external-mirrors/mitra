@@ -11,6 +11,7 @@ use crate::posts::{
         RELATED_TAGS,
     },
 };
+use crate::relationships::types::RelationshipType;
 
 use super::types::{EventType, Notification};
 
@@ -60,6 +61,13 @@ pub async fn get_notifications(
         ON post.author_id = post_author.id
         WHERE
             recipient_id = $1
+            AND NOT EXISTS (
+                SELECT 1 FROM relationship
+                WHERE
+                    source_id = notification.recipient_id
+                    AND target_id = notification.sender_id
+                    AND relationship_type = {relationship_mute}
+            )
             AND ($2::integer IS NULL OR notification.id < $2)
         ORDER BY notification.id DESC
         LIMIT $3
@@ -69,6 +77,7 @@ pub async fn get_notifications(
         related_tags=RELATED_TAGS,
         related_links=RELATED_LINKS,
         related_emojis=RELATED_EMOJIS,
+        relationship_mute=i16::from(&RelationshipType::Mute),
     );
     let rows = db_client.query(
         &statement,
