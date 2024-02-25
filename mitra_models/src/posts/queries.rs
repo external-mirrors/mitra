@@ -1009,6 +1009,37 @@ pub async fn get_thread(
     Ok(posts)
 }
 
+/// Returns actors participating in a conversation (a chain of replies)
+pub async fn get_conversation_participants(
+    db_client: &impl DatabaseClient,
+    post_id: Uuid,
+) -> Result<Vec<DbActorProfile>, DatabaseError> {
+    let rows = db_client.query(
+        "
+        WITH RECURSIVE ancestors (author_id, in_reply_to_id) AS (
+            SELECT post.author_id, post.in_reply_to_id
+            FROM post
+            WHERE post.id = $1
+            UNION
+            SELECT post.author_id, post.in_reply_to_id
+            FROM post
+            JOIN ancestors ON post.id = ancestors.in_reply_to_id
+        )
+        SELECT actor_profile
+        FROM ancestors
+        JOIN actor_profile ON ancestors.author_id = actor_profile.id
+        ",
+        &[&post_id],
+    ).await?;
+    let profiles: Vec<DbActorProfile> = rows.iter()
+        .map(|row| row.try_get("actor_profile"))
+        .collect::<Result<_, _>>()?;
+    if profiles.is_empty() {
+        return Err(DatabaseError::NotFound("post"));
+    };
+    Ok(profiles)
+}
+
 pub async fn get_post_by_remote_object_id(
     db_client: &impl DatabaseClient,
     object_id: &str,

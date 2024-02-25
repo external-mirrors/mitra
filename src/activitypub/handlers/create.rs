@@ -667,7 +667,7 @@ pub async fn handle_note(
         db_client,
         mentions,
         &author,
-        maybe_in_reply_to.as_ref().map(|post| &post.author),
+        maybe_in_reply_to.as_ref().map(|post| post.id),
     ).await?;
 
     let audience = get_audience(&object)?;

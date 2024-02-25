@@ -23,6 +23,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Enable integrity proofs with `eddsa-jcs-2022` cryptosuite by default.
 - Fetch custom emojis used in `Like` activities.
 - Allow underscores in hashtags.
+- Don't remove conversation participants when filtering mentions.
 
 ### Fixed
 

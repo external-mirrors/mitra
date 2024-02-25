@@ -3,6 +3,7 @@ use uuid::Uuid;
 
 use mitra_models::{
     database::{DatabaseClient, DatabaseError},
+    posts::queries::get_conversation_participants,
     profiles::{
         queries::get_profiles_by_ids,
         types::{MentionPolicy, DbActorProfile},
@@ -36,19 +37,23 @@ pub async fn filter_mentions(
     db_client: &impl DatabaseClient,
     mentions: Vec<Uuid>,
     author: &DbActorProfile,
-    maybe_in_reply_to_author: Option<&DbActorProfile>,
+    maybe_in_reply_to_id: Option<Uuid>,
 ) -> Result<Vec<DbActorProfile>, DatabaseError> {
     let profiles = get_profiles_by_ids(db_client, mentions.clone()).await?;
     if profiles.len() != mentions.len() {
         return Err(DatabaseError::NotFound("profile"));
     };
 
-    if let Some(in_reply_to_author) = maybe_in_reply_to_author {
-        if in_reply_to_author.id != author.id {
-            // Don't filter mentions in reply, unless it's a self-reply
-            return Ok(profiles);
-        };
+    // Conversation participants should not be removed
+    let participants = if let Some(in_reply_to_id) = maybe_in_reply_to_id {
+        get_conversation_participants(db_client, in_reply_to_id).await?
+    } else {
+        vec![]
     };
+    let is_participant = |profile_id: Uuid| {
+        participants.iter().any(|participant| participant.id == profile_id)
+    };
+
     let mut filtered = vec![];
     // TODO: optimize database queries
     for profile in profiles {
@@ -61,11 +66,13 @@ pub async fn filter_mentions(
             MentionPolicy::None => true,
             MentionPolicy::OnlyKnown => {
                 let age = Utc::now() - author.created_at;
+                is_participant(profile.id) ||
                 // Mentions from connections are always accepted
                 is_connected(db_client, &author.id, &profile.id).await? ||
                     age >= Duration::minutes(ACTOR_PROFILE_AGE_MIN)
             },
             MentionPolicy::OnlyConnected => {
+                is_participant(profile.id) ||
                 is_connected(db_client, &author.id, &profile.id).await?
             },
         };
