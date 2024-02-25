@@ -205,7 +205,7 @@ paths:
                   enum:
                     - none
                     - only_known
-                    - only_connected
+                    - only_contacts
       responses:
         200:
           description: Successful operation.
@@ -1970,7 +1970,7 @@ components:
           enum:
             - none
             - only_known
-            - only_connected
+            - only_contacts
         bot:
           description: Indicates that the account may perform automated actions, may not be monitored, or identifies as a robot.
           type: boolean

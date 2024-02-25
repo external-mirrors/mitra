@@ -58,7 +58,7 @@ pub enum MentionPolicy {
     #[default]
     None,
     OnlyKnown,
-    OnlyConnected,
+    OnlyContacts,
 }
 
 impl From<&MentionPolicy> for i16 {
@@ -66,7 +66,7 @@ impl From<&MentionPolicy> for i16 {
         match value {
             MentionPolicy::None => 0,
             MentionPolicy::OnlyKnown => 1,
-            MentionPolicy::OnlyConnected => 2,
+            MentionPolicy::OnlyContacts => 2,
         }
     }
 }
@@ -78,7 +78,7 @@ impl TryFrom<i16> for MentionPolicy {
         let policy = match value {
             0 => Self::None,
             1 => Self::OnlyKnown,
-            2 => Self::OnlyConnected,
+            2 => Self::OnlyContacts,
             _ => return Err(DatabaseTypeError),
         };
         Ok(policy)

@@ -10,7 +10,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Added documentation for `update-config` command.
 - Generate Ed25519 key for instance actor.
-- Added "Only Connected" mention policy.
+- Added "Only Contacts" mention policy.
 - Publish FEP-ef61 variants of local actors.
 
 ### Changed

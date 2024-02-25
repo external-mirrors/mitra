@@ -154,7 +154,7 @@ impl Account {
         let mention_policy = match profile.mention_policy {
             MentionPolicy::None => "none",
             MentionPolicy::OnlyKnown => "only_known",
-            MentionPolicy::OnlyConnected => "only_connected",
+            MentionPolicy::OnlyContacts => "only_contacts",
         };
         let is_automated = profile.is_automated();
 
@@ -417,7 +417,7 @@ impl AccountUpdateData {
             profile_data.mention_policy = match mention_policy.as_str() {
                 "none" => MentionPolicy::None,
                 "only_known" => MentionPolicy::OnlyKnown,
-                "only_connected" => MentionPolicy::OnlyConnected,
+                "only_contacts" => MentionPolicy::OnlyContacts,
                 _ => return Err(ValidationError("invalid mention policy").into()),
             };
         };
