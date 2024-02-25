@@ -27,6 +27,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Fixed
 
 - Hide notifications from muted accounts.
+- Prevent multiple greentext lines from being merged into one.
 
 ## [2.11.0] - 2024-02-20
 

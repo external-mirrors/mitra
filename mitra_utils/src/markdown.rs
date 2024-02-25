@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::cell::RefCell;
 
 use comrak::{
@@ -12,6 +13,7 @@ use comrak::{
     ParseOptions,
     RenderOptionsBuilder,
 };
+use regex::Regex;
 
 #[derive(thiserror::Error, Debug)]
 pub enum MarkdownError {
@@ -35,6 +37,13 @@ fn build_comrak_options() -> Options {
             .build()
             .expect("render options should be correct"),
     }
+}
+
+/// Prevents greentext from being parsed as blockquotes
+fn protect_greentext(text: &str) -> Cow<str> {
+    let greentext_re = Regex::new("(?m)^(>)(.+)")
+        .expect("regexp should be valid");
+    greentext_re.replace_all(text, "&gt;$2")
 }
 
 fn iter_nodes<'a, F>(
@@ -138,9 +147,11 @@ fn fix_linebreaks(html: &str) -> String {
 pub fn markdown_lite_to_html(text: &str) -> Result<String, MarkdownError> {
     let options = build_comrak_options();
     let arena = Arena::new();
+
+    let text = protect_greentext(text);
     let root = parse_document(
         &arena,
-        text,
+        &text,
         &options,
     );
 
@@ -151,6 +162,7 @@ pub fn markdown_lite_to_html(text: &str) -> Result<String, MarkdownError> {
         let node_value = node.data.borrow().value.clone();
         match node_value {
             // Blocks
+            // TODO: don't re-render blockquotes?
             NodeValue::BlockQuote | NodeValue::Heading(_) | NodeValue::ThematicBreak => {
                 // Replace children with paragraph containing markdown
                 let mut markdown = node_to_markdown(node, &options)?;
@@ -310,6 +322,14 @@ mod tests {
         let text = "1. item 1\n2. item 2\n";
         let html = markdown_lite_to_html(text).unwrap();
         let expected_html = r#"<p>1.  item 1<br>2.  item 2</p>"#;
+        assert_eq!(html, expected_html);
+    }
+
+    #[test]
+    fn test_markdown_lite_to_html_with_greentext() {
+        let text = ">one\n>two\n>three\n\ntest";
+        let html = markdown_lite_to_html(text).unwrap();
+        let expected_html = r#"<p>&gt;one<br>&gt;two<br>&gt;three</p><p>test</p>"#;
         assert_eq!(html, expected_html);
     }
 
