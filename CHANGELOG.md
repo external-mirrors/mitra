@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- Ignore `Add` activities with embedded objects.
+
 ## [2.12.0] - 2024-02-26
 
 ### Added

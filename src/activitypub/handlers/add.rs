@@ -3,6 +3,7 @@ use serde::Deserialize;
 use serde_json::Value;
 
 use mitra_config::Config;
+use mitra_federation::deserialization::deserialize_into_object_id;
 use mitra_models::{
     database::{DatabaseClient, DatabaseError},
     invoices::queries::{
@@ -36,8 +37,12 @@ use super::HandlerResult;
 #[serde(rename_all = "camelCase")]
 struct Add {
     actor: String,
+
+    #[serde(deserialize_with = "deserialize_into_object_id")]
     object: String,
+    #[serde(deserialize_with = "deserialize_into_object_id")]
     target: String,
+
     end_time: Option<DateTime<Utc>>,
     context: Option<String>,
 }
@@ -130,7 +135,7 @@ pub async fn handle_add(
         };
         return Ok(Some(PERSON));
     };
-    if Some(activity.target) == actor.featured {
+    if Some(activity.target.clone()) == actor.featured {
         // Add to featured
         let post = match get_post_by_remote_object_id(
             db_client,
@@ -143,5 +148,6 @@ pub async fn handle_add(
         set_pinned_flag(db_client, &post.id, true).await?;
         return Ok(Some(NOTE));
     };
+    log::warn!("unknown target: {}", activity.target);
     Ok(None)
 }
