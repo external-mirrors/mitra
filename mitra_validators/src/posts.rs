@@ -191,6 +191,27 @@ mod tests {
     }
 
     #[test]
+    fn test_clean_local_content_safe() {
+        let content = concat!(
+            r#"<p><span class="h-card"><a href="https://social.example/user" class="u-url mention">@user</a></span> test "#,
+            r#"<a class="hashtag" href="https://social.example/collections/tags/tag1" rel="tag">#tag1</a> "#,
+            r#"<a href="https://external.example" class="test-class">link</a> "#,
+            r#"<strong class="hashtag">nottag</strong><br> "#,
+            r#"<img src="https://image.example/image.png"> "#,
+            r#"<script>dangerous</script></p>"#,
+        );
+        let cleaned_content = clean_local_content(content).unwrap();
+        let expected_content = concat!(
+            r#"<p><span class="h-card"><a href="https://social.example/user" class="u-url mention" rel="noopener">@user</a></span> test "#,
+            r#"<a class="hashtag" href="https://social.example/collections/tags/tag1" rel="tag noopener">#tag1</a> "#,
+            r#"<a href="https://external.example" class="" rel="noopener">link</a> "#,
+            r#"<strong>nottag</strong><br>  "#,
+            r#"</p>"#,
+        );
+        assert_eq!(cleaned_content, expected_content);
+    }
+
+    #[test]
     fn test_clean_local_content_empty() {
         let content = "  ";
         let cleaned = clean_local_content(content).unwrap();
