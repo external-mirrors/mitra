@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Changed
 
 - Ignore `Add` activities with embedded objects.
+- Add instance title to post previews generated for Matrix.
 
 ## [2.12.0] - 2024-02-26
 

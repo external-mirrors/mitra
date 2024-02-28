@@ -25,6 +25,8 @@ use crate::activitypub::{
 };
 use crate::errors::HttpError;
 
+use super::urls::get_opengraph_image_url;
+
 pub fn static_service(web_client_dir: &Path) -> Files {
     Files::new("/", web_client_dir)
         .index_file("index.html")
@@ -104,11 +106,12 @@ async fn post_page_opengraph_view(
 ) -> Result<HttpResponse, HttpError> {
     let db_client = &**get_database_client(&db_pool).await?;
     let post = get_post_by_id(db_client, &post_id).await?;
+    #[allow(clippy::format_in_format_args)]
     let page = format!(
         include_str!("opengraph.html"),
-        acct=post.author.acct,
-        instance_url=config.instance_url(),
-        image_path="/ogp-image.png",
+        title=config.instance_title,
+        subtitle=format!("Post by @{}", post.author.acct),
+        image_url=get_opengraph_image_url(&config.instance_url()),
     );
     let response = HttpResponse::Ok()
         .content_type("text/html")

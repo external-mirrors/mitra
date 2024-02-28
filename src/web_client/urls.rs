@@ -20,3 +20,7 @@ pub fn get_subscription_page_url(instance_url: &str, username: &str) -> String {
         get_profile_page_url(instance_url, username),
     )
 }
+
+pub fn get_opengraph_image_url(instance_url: &str) -> String {
+    format!("{instance_url}/ogp-image.png")
+}
