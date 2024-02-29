@@ -11,11 +11,19 @@ use mitra_models::{
     },
     users::types::User,
 };
+use mitra_utils::markdown::markdown_lite_to_html;
+use mitra_validators::{
+    errors::ValidationError,
+    posts::clean_local_content,
+};
 
-use crate::mastodon_api::pagination::{
-    get_last_item,
-    get_paginated_response,
-    PageSize,
+use crate::mastodon_api::{
+    errors::MastodonError,
+    pagination::{
+        get_last_item,
+        get_paginated_response,
+        PageSize,
+    },
 };
 
 use super::microsyntax::{
@@ -28,6 +36,7 @@ use super::types::Status;
 
 pub struct PostContent {
     pub content: String,
+    pub content_source: Option<String>,
     pub mentions: Vec<Uuid>,
     pub hashtags: Vec<String>,
     pub links: Vec<Uuid>,
@@ -35,7 +44,7 @@ pub struct PostContent {
     pub emojis: Vec<DbEmoji>,
 }
 
-pub async fn parse_microsyntaxes(
+async fn parse_microsyntaxes(
     db_client: &impl DatabaseClient,
     instance: &Instance,
     mut content: String,
@@ -78,7 +87,40 @@ pub async fn parse_microsyntaxes(
         &content,
     ).await?;
     let emojis = emoji_map.into_values().collect();
-    Ok(PostContent { content, mentions, hashtags, links, linked, emojis })
+    Ok(PostContent {
+        content,
+        content_source: None,
+        mentions,
+        hashtags,
+        links,
+        linked,
+        emojis,
+    })
+}
+
+pub async fn parse_content(
+    db_client: &impl DatabaseClient,
+    instance: &Instance,
+    content: &str,
+    content_type: &str,
+) -> Result<PostContent, MastodonError> {
+    let (content_html, maybe_content_source) = match content_type {
+        "text/html" => (content.to_owned(), None),
+        "text/markdown" => {
+            let content_html = markdown_lite_to_html(content)
+                .map_err(|_| ValidationError("invalid markdown"))?;
+            (content_html, Some(content.to_owned()))
+        },
+        _ => return Err(ValidationError("unsupported content type").into()),
+    };
+    let mut output = parse_microsyntaxes(
+        db_client,
+        instance,
+        content_html,
+    ).await?;
+    output.content_source = maybe_content_source;
+    output.content = clean_local_content(&output.content)?;
+    Ok(output)
 }
 
 /// Load related objects and build status for API response

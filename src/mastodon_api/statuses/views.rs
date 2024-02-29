@@ -47,11 +47,9 @@ use mitra_services::{
     ipfs::{store as ipfs_store},
     media::MediaStorage,
 };
-use mitra_utils::markdown::markdown_lite_to_html;
 use mitra_validators::{
     errors::ValidationError,
     posts::{
-        clean_local_content,
         validate_local_post_links,
         validate_local_reply,
         validate_post_create_data,
@@ -84,7 +82,7 @@ use crate::mastodon_api::{
 use super::helpers::{
     build_status,
     build_status_list,
-    parse_microsyntaxes,
+    parse_content,
     PostContent,
 };
 use super::types::{
@@ -142,24 +140,14 @@ async fn create_status(
                 .unwrap_or(Visibility::Public)
         },
     };
-    let (content, maybe_content_source) = match status_data.content_type.as_str() {
-        "text/html" => (status_data.status, None),
-        "text/markdown" => {
-            let content = markdown_lite_to_html(&status_data.status)
-                .map_err(|_| ValidationError("invalid markdown"))?;
-            (content, Some(status_data.status))
-        },
-        _ => return Err(ValidationError("unsupported content type").into()),
-    };
     // Parse content
-    let PostContent { mut content, mut mentions, hashtags, links, linked, emojis } =
-        parse_microsyntaxes(
+    let PostContent { content, content_source, mut mentions, hashtags, links, linked, emojis } =
+        parse_content(
             db_client,
             &instance,
-            content,
+            &status_data.status,
+            &status_data.content_type,
         ).await?;
-    // Clean content
-    content = clean_local_content(&content)?;
 
     // Extend mentions
     if visibility == Visibility::Subscribers {
@@ -178,7 +166,7 @@ async fn create_status(
     // Create post
     let post_data = PostCreateData {
         content: content,
-        content_source: maybe_content_source,
+        content_source: content_source,
         in_reply_to_id: status_data.in_reply_to_id,
         repost_of_id: None,
         visibility: visibility,
@@ -234,21 +222,13 @@ async fn preview_status(
     get_current_user(db_client, auth.token()).await?;
     let instance = config.instance();
     let status_data = status_data.into_inner();
-    let content = match status_data.content_type.as_str() {
-        "text/html" => status_data.status,
-        "text/markdown" => {
-            markdown_lite_to_html(&status_data.status)
-                .map_err(|_| ValidationError("invalid markdown"))?
-        },
-        _ => return Err(ValidationError("unsupported content type").into()),
-    };
-    let PostContent { mut content, emojis, .. } = parse_microsyntaxes(
-        db_client,
-        &instance,
-        content,
-    ).await?;
-    // Clean content
-    content = clean_local_content(&content)?;
+    let PostContent { content, emojis, .. } =
+        parse_content(
+            db_client,
+            &instance,
+            &status_data.status,
+            &status_data.content_type,
+        ).await?;
     // Return preview
     let preview = StatusPreview::new(
         &instance.url(),
@@ -324,24 +304,14 @@ async fn edit_status(
     };
     let instance = config.instance();
     let status_data = status_data.into_inner();
-    let (content, maybe_content_source) = match status_data.content_type.as_str() {
-        "text/html" => (status_data.status, None),
-        "text/markdown" => {
-            let content = markdown_lite_to_html(&status_data.status)
-                .map_err(|_| ValidationError("invalid markdown"))?;
-            (content, Some(status_data.status))
-        },
-        _ => return Err(ValidationError("unsupported content type").into()),
-    };
     // Parse content
-    let PostContent { mut content, mut mentions, hashtags, links, linked, emojis } =
-        parse_microsyntaxes(
+    let PostContent { content, content_source, mut mentions, hashtags, links, linked, emojis } =
+        parse_content(
             db_client,
             &instance,
-            content,
+            &status_data.status,
+            &status_data.content_type,
         ).await?;
-    // Clean content
-    content = clean_local_content(&content)?;
 
     // Extend mentions
     if post.visibility == Visibility::Subscribers {
@@ -360,7 +330,7 @@ async fn edit_status(
     // Update post
     let post_data = PostUpdateData {
         content: content,
-        content_source: maybe_content_source,
+        content_source: content_source,
         is_sensitive: status_data.sensitive,
         attachments: status_data.media_ids.unwrap_or(vec![]),
         mentions: mentions,
