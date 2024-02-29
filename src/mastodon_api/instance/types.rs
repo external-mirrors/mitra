@@ -79,7 +79,6 @@ pub struct InstanceInfo {
     title: String,
     short_description: String,
     description: String,
-    description_source: String,
     version: String,
     registrations: bool,
     approval_required: bool,
@@ -168,7 +167,6 @@ impl InstanceInfo {
             title: config.instance_title.clone(),
             short_description: config.instance_short_description.clone(),
             description: markdown_to_html(&config.instance_description),
-            description_source: config.instance_description.clone(),
             version: get_full_api_version(MITRA_VERSION),
             registrations:
                 config.registration.registration_type !=

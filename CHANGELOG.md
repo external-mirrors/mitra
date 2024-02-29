@@ -11,6 +11,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Ignore `Add` activities with embedded objects.
 - Add instance title to post previews generated for Matrix.
 
+### Removed
+
+- Removed deprecated `description_source` property from Mastodon API Instance.
+
 ## [2.12.0] - 2024-02-26
 
 ### Added
