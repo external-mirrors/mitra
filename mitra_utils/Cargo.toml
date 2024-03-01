@@ -53,6 +53,8 @@ sha3 = "0.10.6"
 thiserror = "1.0.37"
 # Used to generate lexicographically sortable IDs
 ulid = { version = "1.0.0", features = ["uuid"] }
+# Used to work with Unicode
+unicode-segmentation = "1.10.1"
 # Used for multicodec implementation
 unsigned-varint = "0.7.1"
 # Used to work with URLs

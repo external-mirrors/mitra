@@ -24,4 +24,5 @@ pub mod multibase;
 pub mod multicodec;
 pub mod passwords;
 pub mod random;
+pub mod unicode;
 pub mod urls;

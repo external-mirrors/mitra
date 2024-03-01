@@ -11,6 +11,7 @@ use mitra_models::{
     reactions::queries::create_reaction,
 };
 use mitra_services::media::MediaStorage;
+use mitra_utils::unicode::is_single_character;
 use mitra_validators::errors::ValidationError;
 
 use crate::activitypub::{
@@ -67,13 +68,31 @@ pub async fn handle_like(
         Err(DatabaseError::NotFound(_)) => return Ok(None),
         Err(other_error) => return Err(other_error.into()),
     };
-    if let [emoji_value] = activity.tag.as_slice() {
-        handle_emoji(
-            &agent,
-            db_client,
-            &storage,
-            emoji_value.clone(),
-        ).await?;
+    match activity.content {
+        Some(content) if is_single_character(&content) => {
+            log::info!("reaction with emoji: {content}");
+        },
+        Some(content) => {
+            log::info!("reaction with custom emoji: {content}");
+            let emoji_name = content.trim_matches(':');
+            let maybe_db_emoji = if let Some(emoji_value) = activity.tag.first() {
+                let maybe_db_emoji = handle_emoji(
+                    &agent,
+                    db_client,
+                    &storage,
+                    emoji_value.clone(),
+                ).await?;
+                maybe_db_emoji
+                    .filter(|emoji| emoji.emoji_name == emoji_name)
+            } else {
+                None
+            };
+            if maybe_db_emoji.is_none() {
+                log::warn!("invalid custom emoji reaction");
+                return Ok(None);
+            };
+        },
+        None => (),
     };
     match create_reaction(
         db_client,
@@ -85,9 +104,6 @@ pub async fn handle_like(
         // Ignore activity if reaction is already saved
         Err(DatabaseError::AlreadyExists(_)) => return Ok(None),
         Err(other_error) => return Err(other_error.into()),
-    };
-    if let Some(content) = activity.content {
-        log::info!("reaction with content: {}", content);
     };
     Ok(Some(NOTE))
 }
