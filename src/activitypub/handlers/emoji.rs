@@ -20,6 +20,7 @@ use mitra_validators::{
         validate_emoji_name,
         EMOJI_MEDIA_TYPES,
     },
+    profiles::validate_hostname,
     errors::ValidationError,
 };
 
@@ -90,8 +91,16 @@ pub async fn handle_emoji(
             &tag.updated,
         ).await?
     } else {
-        let hostname = get_hostname(&tag.id)
-            .map_err(|_| ValidationError("invalid emoji ID"))?;
+        let hostname = match get_hostname(&tag.id)
+            .map_err(|_| ValidationError("invalid emoji ID"))
+            .and_then(|value| validate_hostname(&value).map(|()| value))
+        {
+            Ok(hostname) => hostname,
+            Err(error) => {
+                log::warn!("skipping emoji: {error}");
+                return Ok(None);
+            },
+        };
         match create_emoji(
             db_client,
             emoji_name,

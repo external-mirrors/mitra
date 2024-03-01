@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Ignore `Add` activities with embedded objects.
 - Add instance title to post previews generated for Matrix.
+- Validate hostname length before saving profile or emoji to database.
 
 ### Removed
 

@@ -15,6 +15,7 @@ use super::posts::EMOJI_LIMIT;
 
 const USERNAME_RE: &str = r"^[a-zA-Z0-9_\.-]+$";
 const USERNAME_LENGTH_MAX: usize = 100;
+const HOSTNAME_LENGTH_MAX: usize = 100;
 const DISPLAY_NAME_MAX_LENGTH: usize = 200;
 const BIO_MAX_LENGTH: usize = 10000;
 const BIO_ALLOWED_TAGS: [&str; 2] = ["a", "br"];
@@ -34,6 +35,13 @@ pub fn validate_username(username: &str) -> Result<(), ValidationError> {
         .expect("regexp should be valid");
     if !username_regexp.is_match(username) {
         return Err(ValidationError("invalid username"));
+    };
+    Ok(())
+}
+
+pub fn validate_hostname(hostname: &str) -> Result<(), ValidationError> {
+    if hostname.len() > HOSTNAME_LENGTH_MAX {
+        return Err(ValidationError("hostname is too long"));
     };
     Ok(())
 }
@@ -111,6 +119,9 @@ pub fn clean_profile_create_data(
     validate_username(&profile_data.username)?;
     if profile_data.hostname.is_some() != profile_data.actor_json.is_some() {
         return Err(ValidationError("hostname and actor_json field mismatch"));
+    };
+    if let Some(hostname) = &profile_data.hostname {
+        validate_hostname(hostname)?;
     };
     if let Some(display_name) = &profile_data.display_name {
         validate_display_name(display_name)?;
