@@ -1,6 +1,7 @@
 use regex::Regex;
 use uuid::Uuid;
 
+use mitra_adapters::authority::Authority;
 use mitra_federation::identifiers::parse_object_id;
 use mitra_models::{
     posts::types::Post,
@@ -14,6 +15,18 @@ use mitra_utils::{
     urls::{get_hostname, url_encode},
 };
 use mitra_validators::errors::ValidationError;
+
+pub fn local_actor_id_fep_ef61_fallback(instance_url: &str, username: &str) -> String {
+    let actor_id =  local_actor_id(instance_url, username);
+    format!("{}/fep_ef61", actor_id)
+}
+
+pub fn local_actor_id_unified(authority: &Authority, username: &str) -> String {
+    match authority {
+        Authority::Server(_) => local_actor_id(&authority.to_string(), username),
+        Authority::ServerKey(_) => local_instance_actor_id(&authority.to_string()),
+    }
+}
 
 pub enum LocalActorCollection {
     Inbox,

@@ -1,3 +1,4 @@
+pub mod authority;
 pub mod dynamic_config;
 pub mod init;
 mod logger;

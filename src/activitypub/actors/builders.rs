@@ -4,6 +4,7 @@ use chrono::{DateTime, Utc};
 use serde::Serialize;
 use serde_json::{Value as JsonValue};
 
+use mitra_adapters::authority::Authority;
 use mitra_config::Instance;
 use mitra_models::{
     database::{DatabaseError, DatabaseTypeError},
@@ -12,12 +13,7 @@ use mitra_models::{
 };
 use mitra_services::media::get_file_url;
 use mitra_utils::{
-    crypto_eddsa::{
-        ed25519_public_key_from_private_key,
-        Ed25519PrivateKey,
-    },
     crypto_rsa::RsaSerializationError,
-    did_key::DidKey,
     json_signatures::create::sign_object_eddsa,
 };
 
@@ -34,6 +30,8 @@ use crate::activitypub::{
     },
     identifiers::{
         local_actor_id,
+        local_actor_id_fep_ef61_fallback,
+        local_actor_id_unified,
         local_instance_actor_id,
         LocalActorCollection,
     },
@@ -144,37 +142,18 @@ pub struct Actor {
     same_as: Vec<String>,
 }
 
-fn fep_ef61_identity(secret_key: Ed25519PrivateKey) -> String {
-    let public_key = ed25519_public_key_from_private_key(&secret_key);
-    let did_key = DidKey::from_ed25519_key(public_key.as_bytes());
-    format!(
-        "did:ap:key:{}",
-        did_key.key_multibase(),
-    )
-}
-
-/// Constructs canonical actor ID
-fn fep_ef61_actor_id(secret_key: Ed25519PrivateKey) -> String {
-    format!("{}/actor", fep_ef61_identity(secret_key))
-}
-
-// TODO: replace with regular local ID
-fn fep_ef61_actor_fallback_id(instance_url: &str, username: &str) -> String {
-    let actor_id =  local_actor_id(instance_url, username);
-    format!("{}/fep_ef61", actor_id)
-}
-
 pub fn build_local_actor(
     instance_url: &str,
     user: &User,
     fep_ef61_enabled: bool,
 ) -> Result<Actor, DatabaseError> {
+    let authority = Authority::from_user(
+        instance_url,
+        user,
+        fep_ef61_enabled,
+    );
     let username = &user.profile.username;
-    let actor_id = if fep_ef61_enabled {
-        fep_ef61_actor_id(user.ed25519_private_key)
-    } else {
-        local_actor_id(instance_url, username)
-    };
+    let actor_id = local_actor_id_unified(&authority, username);
     let inbox = LocalActorCollection::Inbox.of(&actor_id);
     let outbox = LocalActorCollection::Outbox.of(&actor_id);
     let followers = LocalActorCollection::Followers.of(&actor_id);
@@ -243,10 +222,12 @@ pub fn build_local_actor(
     };
     let aliases = user.profile.aliases.clone().into_actor_ids();
     // HTML representation
+    // TODO: portable actors should point to a primary server
     let profile_url = local_actor_id(instance_url, username);
 
-    let same_as = if fep_ef61_enabled {
-        let url = fep_ef61_actor_fallback_id(instance_url, username);
+    let same_as = if authority.is_fep_ef61() {
+        // TODO: list all known locations
+        let url = local_actor_id_fep_ef61_fallback(instance_url, username);
         vec![url]
     } else {
         vec![]
@@ -288,7 +269,11 @@ pub fn build_local_actor_fep_ef61(
         .expect("actor should be serializable");
     let ed25519_secret_key = user.ed25519_private_key;
     // Key ID is DID
-    let ed25519_key_id = fep_ef61_identity(ed25519_secret_key);
+    let authority = Authority::server_key(
+        instance_url,
+        &ed25519_secret_key,
+    );
+    let ed25519_key_id = authority.to_string();
     let signed_actor = sign_object_eddsa(
         &ed25519_secret_key,
         &ed25519_key_id,

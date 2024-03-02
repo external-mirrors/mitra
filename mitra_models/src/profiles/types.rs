@@ -708,9 +708,9 @@ impl Default for DbActorProfile {
         let now = Utc::now();
         Self {
             id: Uuid::new_v4(),
-            username: "".to_string(),
+            username: "test".to_string(),
             hostname: None,
-            acct: "".to_string(),
+            acct: "test".to_string(),
             display_name: None,
             bio: None,
             bio_source: None,
