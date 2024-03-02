@@ -16,6 +16,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Removed deprecated `description_source` property from Mastodon API Instance.
 - Stop accepting legacy identity proofs.
 
+### Fixed
+
+- Don't mark posts from remote actor as spam if pending follow request exists.
+
 ## [2.12.0] - 2024-02-26
 
 ### Added

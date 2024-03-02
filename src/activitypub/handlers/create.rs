@@ -714,6 +714,7 @@ async fn check_unsolicited_message(
     let has_local_recipients = audience.iter().any(|actor_id| {
         parse_local_actor_id(instance_url, actor_id).is_ok()
     });
+    // Is it a reply to a known post?
     let is_disconnected = if let Some(ref in_reply_to_id) = object.in_reply_to {
         match get_post_by_object_id(
             db_client,

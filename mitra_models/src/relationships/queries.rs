@@ -439,6 +439,7 @@ pub async fn get_followers_paginated(
     Ok(related_profiles)
 }
 
+/// Returns true if actor has local followers or follow requests
 pub async fn has_local_followers(
     db_client: &impl DatabaseClient,
     actor_id: &str,
@@ -446,11 +447,13 @@ pub async fn has_local_followers(
     let maybe_row = db_client.query_opt(
         "
         SELECT 1
-        FROM relationship
-        JOIN actor_profile ON (relationship.target_id = actor_profile.id)
-        WHERE
-            actor_profile.actor_id = $1
-            AND relationship_type = $2
+        FROM (
+            SELECT target_id FROM relationship WHERE relationship_type = $2
+            UNION ALL
+            SELECT target_id FROM follow_request
+        ) AS follow
+        JOIN actor_profile ON (follow.target_id = actor_profile.id)
+        WHERE actor_profile.actor_id = $1
         LIMIT 1
         ",
         &[&actor_id, &RelationshipType::Follow]
