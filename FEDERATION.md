@@ -41,6 +41,7 @@ Objects with type other than `Note` are converted and stored in the same way as 
 
 - No shared inbox.
 - The value of `Accept` header in outgoing requests is set to `application/ld+json; profile="https://www.w3.org/ns/activitystreams"`, [as required by the ActivityPub specification](https://www.w3.org/TR/activitypub/#retrieving-objects).
+- The `self` link in WebFinger JRD has `application/ld+json; profile="https://www.w3.org/ns/activitystreams"` type.
 - The object of `Accept(Follow)` activity is ID of the `Follow` activity.
 
 ## HTML
