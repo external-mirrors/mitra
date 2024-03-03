@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+
+- Support calling actor endpoint with `fep_ef61` query parameter.
+
 ### Changed
 
 - Ignore `Add` activities with embedded objects.
@@ -18,6 +22,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Removed deprecated `description_source` property from Mastodon API Instance.
 - Stop accepting legacy identity proofs.
+- Removed `/users/<username>/fep_ef61` endpoint.
 
 ### Fixed
 

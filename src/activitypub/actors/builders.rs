@@ -500,13 +500,13 @@ mod tests {
             "manuallyApprovesFollowers": false,
             "url": "https://server.example/users/testuser",
             "sameAs": [
-                "https://server.example/users/testuser/fep_ef61",
+                "https://server.example/users/testuser?fep_ef61=true",
             ],
             "proof": {
                 "created": "2023-02-24T23:36:38Z",
                 "cryptosuite": "eddsa-jcs-2022",
                 "proofPurpose": "assertionMethod",
-                "proofValue": "z2enf2NRLmErQtHvxWxzfLZULb4hSpnXi7yKf3BCbt2G5vZNbTB9AkicaDcHKjnbcD1JX96GSRR728FUoXdCF8Ypk",
+                "proofValue": "z3u9fEEsYdLAqXEAq466J2Ys4KzGynYiqgysiKonF5v6cpmSvyoTQexDGcFsAxANYYSexVK9zNsjUQGm2Uqoxsz3H",
                 "type": "DataIntegrityProof",
                 "verificationMethod": "did:ap:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6",
             },

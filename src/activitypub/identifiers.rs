@@ -18,7 +18,7 @@ use mitra_validators::errors::ValidationError;
 
 pub fn local_actor_id_fep_ef61_fallback(instance_url: &str, username: &str) -> String {
     let actor_id =  local_actor_id(instance_url, username);
-    format!("{}/fep_ef61", actor_id)
+    format!("{}?fep_ef61=true", actor_id)
 }
 
 pub fn local_actor_id_unified(authority: &Authority, username: &str) -> String {
