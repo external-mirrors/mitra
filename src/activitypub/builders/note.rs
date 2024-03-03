@@ -1,6 +1,7 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
+use mitra_adapters::authority::Authority;
 use mitra_federation::{
     addresses::ActorAddress,
     constants::{AP_MEDIA_TYPE, AP_PUBLIC},
@@ -19,8 +20,8 @@ use mitra_services::media::get_file_url;
 use crate::activitypub::{
     contexts::{build_default_context, Context},
     identifiers::{
-        local_actor_id,
-        local_object_id,
+        local_actor_id_unified,
+        local_object_id_unified,
         local_object_replies,
         local_tag_collection,
         post_object_id,
@@ -121,12 +122,14 @@ pub struct Note {
 pub fn build_note(
     instance_hostname: &str,
     instance_url: &str,
+    authority: &Authority,
     post: &Post,
     fep_e232_enabled: bool,
     with_context: bool,
 ) -> Note {
-    let object_id = local_object_id(instance_url, &post.id);
-    let actor_id = local_actor_id(instance_url, &post.author.username);
+    assert_eq!(authority.base_url(), instance_url);
+    let object_id = local_object_id_unified(authority, post.id);
+    let actor_id = local_actor_id_unified(authority, &post.author.username);
     let attachments: Vec<_> = post.attachments.iter().map(|db_item| {
         let url = get_file_url(instance_url, &db_item.file_name);
         MediaAttachment {
@@ -288,7 +291,11 @@ pub async fn get_note_recipients(
 #[cfg(test)]
 mod tests {
     use serde_json::json;
-    use mitra_models::profiles::types::DbActorProfile;
+    use uuid::uuid;
+    use mitra_models::{
+        profiles::types::DbActorProfile,
+        users::types::User,
+    };
     use super::*;
 
     const INSTANCE_HOSTNAME: &str = "example.com";
@@ -321,9 +328,11 @@ mod tests {
             tags: vec!["test".to_string()],
             ..Default::default()
         };
+        let authority = Authority::server(INSTANCE_URL);
         let note = build_note(
             INSTANCE_HOSTNAME,
             INSTANCE_URL,
+            &authority,
             &post,
             false,
             true,
@@ -367,9 +376,11 @@ mod tests {
             visibility: Visibility::Followers,
             ..Default::default()
         };
+        let authority = Authority::server(INSTANCE_URL);
         let note = build_note(
             INSTANCE_HOSTNAME,
             INSTANCE_URL,
+            &authority,
             &post,
             false,
             true,
@@ -399,9 +410,11 @@ mod tests {
             mentions: vec![subscriber],
             ..Default::default()
         };
+        let authority = Authority::server(INSTANCE_URL);
         let note = build_note(
             INSTANCE_HOSTNAME,
             INSTANCE_URL,
+            &authority,
             &post,
             false,
             true,
@@ -432,9 +445,11 @@ mod tests {
             mentions: vec![mentioned],
             ..Default::default()
         };
+        let authority = Authority::server(INSTANCE_URL);
         let note = build_note(
             INSTANCE_HOSTNAME,
             INSTANCE_URL,
+            &authority,
             &post,
             false,
             true,
@@ -452,9 +467,11 @@ mod tests {
             in_reply_to: Some(Box::new(parent.clone())),
             ..Default::default()
         };
+        let authority = Authority::server(INSTANCE_URL);
         let note = build_note(
             INSTANCE_HOSTNAME,
             INSTANCE_URL,
+            &authority,
             &post,
             false,
             true,
@@ -498,9 +515,11 @@ mod tests {
             mentions: vec![parent_author],
             ..Default::default()
         };
+        let authority = Authority::server(INSTANCE_URL);
         let note = build_note(
             INSTANCE_HOSTNAME,
             INSTANCE_URL,
+            &authority,
             &post,
             false,
             true,
@@ -519,5 +538,57 @@ mod tests {
         assert_eq!(tag.name, format!("@{}", parent_author_acct));
         assert_eq!(tag.href, parent_author_actor_id);
         assert_eq!(note.to, vec![AP_PUBLIC, parent_author_actor_id]);
+    }
+
+    #[test]
+    fn test_build_note_fep_ef61() {
+        let author = User::default();
+        let post = Post {
+            id: uuid!("11fa64ff-b5a3-47bf-b23d-22b360581c3f"),
+            author: author.profile.clone(),
+            created_at: DateTime::parse_from_rfc3339("2023-02-24T23:36:38Z")
+                .unwrap().with_timezone(&Utc),
+            ..Default::default()
+        };
+        let authority = Authority::from_user(INSTANCE_URL, &author, true);
+        let note = build_note(
+            INSTANCE_HOSTNAME,
+            INSTANCE_URL,
+            &authority,
+            &post,
+            true,
+            true,
+        );
+        let value = serde_json::to_value(note).unwrap();
+        let expected_value = json!({
+            "@context": [
+                "https://www.w3.org/ns/activitystreams",
+                "https://w3id.org/security/v1",
+                "https://w3id.org/security/data-integrity/v1",
+                {
+                    "Hashtag": "as:Hashtag",
+                    "sensitive": "as:sensitive",
+                    "mitra": "http://jsonld.mitra.social#",
+                    "MitraJcsRsaSignature2022": "mitra:MitraJcsRsaSignature2022",
+                    "proofValue": "sec:proofValue",
+                    "proofPurpose": "sec:proofPurpose",
+                    "verificationMethod": "sec:verificationMethod",
+                },
+            ],
+            "id": "did:ap:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/objects/11fa64ff-b5a3-47bf-b23d-22b360581c3f",
+            "type": "Note",
+            "attributedTo": "did:ap:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor",
+            "content": "",
+            "sensitive": false,
+            "replies": "did:ap:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/objects/11fa64ff-b5a3-47bf-b23d-22b360581c3f/replies",
+            "published": "2023-02-24T23:36:38Z",
+            "to": [
+                "https://www.w3.org/ns/activitystreams#Public",
+            ],
+            "cc": [
+                "did:ap:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor/followers",
+            ],
+        });
+        assert_eq!(value, expected_value);
     }
 }

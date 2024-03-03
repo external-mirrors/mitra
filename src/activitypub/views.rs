@@ -27,7 +27,7 @@ use mitra_models::{
     posts::helpers::{add_related_posts, can_view_post},
     posts::queries::{get_post_by_id, get_posts_by_author, get_thread},
     profiles::types::PaymentOption,
-    users::queries::get_user_by_name,
+    users::queries::{get_user_by_id, get_user_by_name},
 };
 use mitra_utils::{
     caip2::ChainId,
@@ -76,7 +76,7 @@ use super::receiver::{receive_activity, HandlerError};
 use super::valueflows::builders::build_proposal;
 
 #[derive(Deserialize)]
-struct ObjectQueryParams {
+pub struct ObjectQueryParams {
     #[serde(default)]
     fep_ef61: bool,
 }
@@ -385,10 +385,12 @@ async fn featured_collection(
         OrderedCollectionPage::DEFAULT_SIZE,
     ).await?;
     add_related_posts(db_client, posts.iter_mut().collect()).await?;
+    let authority = Authority::server(&instance.url());
     let objects = posts.iter().map(|post| {
         let note = build_note(
             &instance.hostname(),
             &instance.url(),
+            &authority,
             post,
             config.federation.fep_e232_enabled,
             false,
@@ -501,33 +503,52 @@ pub async fn object_view(
     db_pool: web::Data<DatabaseConnectionPool>,
     request: HttpRequest,
     internal_object_id: web::Path<Uuid>,
+    query_params: web::Query<ObjectQueryParams>,
 ) -> Result<HttpResponse, HttpError> {
     let db_client = &**get_database_client(&db_pool).await?;
     let internal_object_id = internal_object_id.into_inner();
+    let instance = config.instance();
     // Try to find local post by ID,
     // return 404 if not found, or not public, or it is a repost
     let mut post = get_post_by_id(db_client, &internal_object_id).await?;
     if !post.is_local() || !can_view_post(db_client, None, &post).await? {
         return Err(HttpError::NotFoundError("post"));
     };
-    if !is_activitypub_request(request.headers()) {
-        let page_url = get_post_page_url(&config.instance_url(), &post.id);
+    if !is_activitypub_request(request.headers()) && !query_params.fep_ef61 {
+        let page_url = get_post_page_url(&instance.url(), &post.id);
         let response = HttpResponse::Found()
             .append_header((http_header::LOCATION, page_url))
             .finish();
         return Ok(response);
     };
     add_related_posts(db_client, vec![&mut post]).await?;
+    let user = get_user_by_id(db_client, &post.author.id).await?;
+    let authority = Authority::from_user(
+        &instance.url(),
+        &user,
+        query_params.fep_ef61,
+    );
     let object = build_note(
-        &config.instance().hostname(),
-        &config.instance().url(),
+        &instance.hostname(),
+        &instance.url(),
+        &authority,
         &post,
         config.federation.fep_e232_enabled,
         true,
     );
+    let mut object_value = serde_json::to_value(object)
+        .expect("actor should be serializable");
+    if authority.is_fep_ef61() {
+        object_value = sign_object_fep_ef61(
+            &authority,
+            &user,
+            &object_value,
+            None,
+        );
+    };
     let response = HttpResponse::Ok()
         .content_type(AP_MEDIA_TYPE)
-        .json(object);
+        .json(object_value);
     Ok(response)
 }
 

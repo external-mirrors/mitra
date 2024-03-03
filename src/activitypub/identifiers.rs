@@ -83,6 +83,10 @@ pub fn local_object_id(instance_url: &str, internal_object_id: &Uuid) -> String 
     format!("{}/objects/{}", instance_url, internal_object_id)
 }
 
+pub fn local_object_id_unified(authority: &Authority, internal_object_id: Uuid) -> String {
+    format!("{}/objects/{}", authority, internal_object_id)
+}
+
 pub fn local_object_replies(object_id: &str) -> String {
     format!("{}/replies", object_id)
 }

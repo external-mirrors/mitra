@@ -14,6 +14,7 @@ use actix_web_httpauth::extractors::bearer::BearerAuth;
 use chrono::{DateTime, Utc};
 use uuid::Uuid;
 
+use mitra_adapters::authority::Authority;
 use mitra_config::Config;
 use mitra_models::{
     database::{
@@ -783,9 +784,11 @@ async fn make_permanent(
         serde_json::to_value(post_metadata)
             .map_err(|_| MastodonError::InternalError)?
     } else {
+        let authority = Authority::server(&instance.url());
         let note = build_note(
             &instance.hostname(),
             &instance.url(),
+            &authority,
             &post,
             config.federation.fep_e232_enabled,
             true,

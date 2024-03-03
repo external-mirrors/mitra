@@ -1,5 +1,6 @@
 use serde::Serialize;
 
+use mitra_adapters::authority::Authority;
 use mitra_config::Instance;
 use mitra_models::{
     database::{DatabaseClient, DatabaseError},
@@ -54,9 +55,11 @@ fn build_delete_note(
     let object_id = local_object_id(instance_url, &post.id);
     let activity_id = format!("{}/delete", object_id);
     let actor_id = local_actor_id(instance_url, &post.author.username);
+    let authority = Authority::server(instance_url);
     let Note { to, cc, .. } = build_note(
         instance_hostname,
         instance_url,
+        &authority,
         post,
         fep_e232_enabled,
         false,

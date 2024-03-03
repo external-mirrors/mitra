@@ -1,5 +1,6 @@
 use serde::Serialize;
 
+use mitra_adapters::authority::Authority;
 use mitra_config::Instance;
 use mitra_models::{
     database::{DatabaseClient, DatabaseError},
@@ -37,9 +38,11 @@ pub fn build_create_note(
     post: &Post,
     fep_e232_enabled: bool,
 ) -> CreateNote {
+    let authority = Authority::server(instance_url);
     let object = build_note(
         instance_hostname,
         instance_url,
+        &authority,
         post,
         fep_e232_enabled,
         false,
