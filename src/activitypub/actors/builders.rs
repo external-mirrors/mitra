@@ -206,7 +206,7 @@ pub fn build_local_actor(
     };
     for payment_option in user.profile.payment_options.clone().into_inner() {
         let attachment = attach_payment_option(
-            instance_url,
+            &authority,
             &user.profile.username,
             payment_option,
         );

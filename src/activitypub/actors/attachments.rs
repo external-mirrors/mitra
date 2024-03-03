@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 use serde_json::{Value as JsonValue};
 
+use mitra_adapters::authority::Authority;
 use mitra_federation::{
     constants::AP_MEDIA_TYPE,
     deserialization::deserialize_string_array,
@@ -40,7 +41,7 @@ use crate::activitypub::{
         PAYMENT_LINK_RELATION_TYPE,
     },
     contexts::W3ID_VALUEFLOWS_CONTEXT,
-    identifiers::{local_actor_id, local_actor_proposal_id},
+    identifiers::{local_actor_id_unified, local_actor_proposal_id},
     identity::VerifiableIdentityStatement,
     vocabulary::{
         IDENTITY_PROOF,
@@ -175,7 +176,7 @@ fn valueflows_proposal_rel() -> String {
 }
 
 pub fn attach_payment_option(
-    instance_url: &str,
+    authority: &Authority,
     username: &str,
     payment_option: PaymentOption,
 ) -> PaymentLink {
@@ -185,7 +186,7 @@ pub fn attach_payment_option(
         PaymentOption::Link(_) => unimplemented!(),
         PaymentOption::EthereumSubscription(payment_info) => {
             let name = PAYMENT_LINK_NAME_ETHEREUM.to_string();
-            let actor_id = local_actor_id(instance_url, username);
+            let actor_id = local_actor_id_unified(authority, username);
             let href = local_actor_proposal_id(
                 &actor_id,
                 &payment_info.chain_id,
@@ -194,7 +195,7 @@ pub fn attach_payment_option(
         },
         PaymentOption::MoneroSubscription(payment_info) => {
             let name = PAYMENT_LINK_NAME_MONERO.to_string();
-            let actor_id = local_actor_id(instance_url, username);
+            let actor_id = local_actor_id_unified(authority, username);
             let href = local_actor_proposal_id(
                 &actor_id,
                 &payment_info.chain_id,
@@ -387,6 +388,7 @@ mod tests {
 
     #[test]
     fn test_payment_option() {
+        let authority = Authority::server(INSTANCE_URL);
         let username = "testuser";
         let price = NonZeroU64::new(240000).unwrap();
         let payout_address = "test";
@@ -398,7 +400,7 @@ mod tests {
         let subscription_page_url =
             "https://example.com/users/testuser/proposals/monero:418015bb9ae982a1975da7d79277c270";
         let attachment = attach_payment_option(
-            INSTANCE_URL,
+            &authority,
             username,
             payment_option,
         );
