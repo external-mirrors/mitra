@@ -20,13 +20,12 @@ use crate::activitypub::{
     contexts::{build_default_context, Context},
     identifiers::{
         local_actor_id,
-        local_actor_followers,
-        local_actor_subscribers,
         local_object_id,
-        local_replies_collection,
+        local_object_replies,
         local_tag_collection,
         post_object_id,
         profile_actor_id,
+        LocalActorCollection,
     },
     vocabulary::{DOCUMENT, HASHTAG, LINK, MENTION, NOTE},
 };
@@ -141,9 +140,9 @@ pub fn build_note(
     let mut primary_audience = vec![];
     let mut secondary_audience = vec![];
     let followers_collection_id =
-        local_actor_followers(instance_url, &post.author.username);
+        LocalActorCollection::Followers.of(&actor_id);
     let subscribers_collection_id =
-        local_actor_subscribers(instance_url, &post.author.username);
+        LocalActorCollection::Subscribers.of(&actor_id);
     match post.visibility {
         Visibility::Public => {
             primary_audience.push(AP_PUBLIC.to_string());
@@ -233,8 +232,7 @@ pub fn build_note(
         },
         None => None,
     };
-    let replies_collection_id =
-        local_replies_collection(instance_url, &post.id);
+    let replies_collection_id = local_object_replies(&object_id);
     Note {
         _context: with_context.then(build_default_context),
         id: object_id,

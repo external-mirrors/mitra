@@ -136,8 +136,7 @@ pub fn build_proposal(
         username,
     );
     let proposal_id = local_actor_proposal_id(
-        instance_url,
-        username,
+        &actor_id,
         &payment_info.chain_id,
     );
     let proposal_name = "Pay for subscription";

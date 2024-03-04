@@ -40,7 +40,7 @@ use crate::activitypub::{
         PAYMENT_LINK_RELATION_TYPE,
     },
     contexts::W3ID_VALUEFLOWS_CONTEXT,
-    identifiers::local_actor_proposal_id,
+    identifiers::{local_actor_id, local_actor_proposal_id},
     identity::VerifiableIdentityStatement,
     vocabulary::{
         IDENTITY_PROOF,
@@ -185,18 +185,18 @@ pub fn attach_payment_option(
         PaymentOption::Link(_) => unimplemented!(),
         PaymentOption::EthereumSubscription(payment_info) => {
             let name = PAYMENT_LINK_NAME_ETHEREUM.to_string();
+            let actor_id = local_actor_id(instance_url, username);
             let href = local_actor_proposal_id(
-                instance_url,
-                username,
+                &actor_id,
                 &payment_info.chain_id,
             );
             (name, href)
         },
         PaymentOption::MoneroSubscription(payment_info) => {
             let name = PAYMENT_LINK_NAME_MONERO.to_string();
+            let actor_id = local_actor_id(instance_url, username);
             let href = local_actor_proposal_id(
-                instance_url,
-                username,
+                &actor_id,
                 &payment_info.chain_id,
             );
             rel.push(valueflows_proposal_rel_legacy());

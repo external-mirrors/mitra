@@ -64,13 +64,11 @@ use super::collections::{
     OrderedCollectionPage,
 };
 use super::identifiers::{
-    local_actor_featured,
-    local_actor_followers,
-    local_actor_following,
-    local_actor_subscribers,
-    local_actor_outbox,
-    local_replies_collection,
+    local_actor_id,
+    local_object_id,
+    local_object_replies,
     post_object_id,
+    LocalActorCollection,
 };
 use super::receiver::{receive_activity, HandlerError};
 use super::valueflows::builders::build_proposal;
@@ -161,7 +159,8 @@ async fn outbox(
     let db_client = &**get_database_client(&db_pool).await?;
     let user = get_user_by_name(db_client, &username).await?;
     let instance = config.instance();
-    let collection_id = local_actor_outbox(&instance.url(), &username);
+    let actor_id = local_actor_id(&instance.url(), &username);
+    let collection_id = LocalActorCollection::Outbox.of(&actor_id);
     let first_page_id = format!("{}?page=true", collection_id);
     if query_params.page.is_none() {
         let collection = OrderedCollection::new(
@@ -256,10 +255,8 @@ async fn followers_collection(
         // Social graph is not available
         return Err(HttpError::PermissionError);
     };
-    let collection_id = local_actor_followers(
-        &config.instance_url(),
-        &username,
-    );
+    let actor_id = local_actor_id(&config.instance_url(), &username);
+    let collection_id = LocalActorCollection::Followers.of(&actor_id);
     let collection = OrderedCollection::new(
         collection_id,
         None,
@@ -285,10 +282,8 @@ async fn following_collection(
         // Social graph is not available
         return Err(HttpError::PermissionError);
     };
-    let collection_id = local_actor_following(
-        &config.instance_url(),
-        &username,
-    );
+    let actor_id = local_actor_id(&config.instance_url(), &username);
+    let collection_id = LocalActorCollection::Following.of(&actor_id);
     let collection = OrderedCollection::new(
         collection_id,
         None,
@@ -314,10 +309,8 @@ async fn subscribers_collection(
         // Subscriber list is hidden
         return Err(HttpError::PermissionError);
     };
-    let collection_id = local_actor_subscribers(
-        &config.instance_url(),
-        &username,
-    );
+    let actor_id = local_actor_id(&config.instance_url(), &username);
+    let collection_id = LocalActorCollection::Subscribers.of(&actor_id);
     let collection = OrderedCollection::new(
         collection_id,
         None,
@@ -340,7 +333,8 @@ async fn featured_collection(
     let db_client = &**get_database_client(&db_pool).await?;
     let user = get_user_by_name(db_client, &username).await?;
     let instance = config.instance();
-    let collection_id = local_actor_featured(&instance.url(), &username);
+    let actor_id = local_actor_id(&instance.url(), &username);
+    let collection_id = LocalActorCollection::Featured.of(&actor_id);
     let first_page_id = format!("{}?page=true", collection_id);
     if query_params.page.is_none() {
         let collection = OrderedCollection::new(
@@ -548,10 +542,8 @@ pub async fn replies_collection(
         return Err(HttpError::NotFoundError("post"));
     };
     let instance = config.instance();
-    let collection_id = local_replies_collection(
-        &instance.url(),
-        &internal_object_id,
-    );
+    let object_id = local_object_id(&instance.url(), &internal_object_id);
+    let collection_id = local_object_replies(&object_id);
     let first_page_id = format!("{}?page=true", collection_id);
     if query_params.page.is_none() {
         let collection = OrderedCollection::new(

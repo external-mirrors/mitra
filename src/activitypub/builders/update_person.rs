@@ -18,10 +18,10 @@ use crate::activitypub::{
     actors::builders::{build_local_actor, Actor},
     contexts::{build_default_context, Context},
     identifiers::{
-        local_actor_followers,
         local_object_id,
         parse_local_actor_id,
         parse_local_object_id,
+        LocalActorCollection,
     },
     queues::OutgoingActivityJobData,
     receiver::HandlerError,
@@ -49,6 +49,7 @@ pub fn build_update_person(
     user: &User,
 ) -> Result<UpdatePerson, DatabaseError> {
     let actor = build_local_actor(instance_url, user, false)?;
+    let followers = LocalActorCollection::Followers.of(&actor.id);
     // Update(Person) is idempotent so its ID can be random
     let internal_activity_id = generate_ulid();
     let activity_id = local_object_id(instance_url, &internal_activity_id);
@@ -59,7 +60,7 @@ pub fn build_update_person(
         actor: actor.id.clone(),
         object: actor,
         to: vec![AP_PUBLIC.to_string()],
-        cc: vec![local_actor_followers(instance_url, &user.profile.username)],
+        cc: vec![followers],
     };
     Ok(activity)
 }

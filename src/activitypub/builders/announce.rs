@@ -14,11 +14,11 @@ use mitra_models::{
 use crate::activitypub::{
     contexts::{build_default_context, Context},
     identifiers::{
-        local_actor_followers,
         local_actor_id,
         local_object_id,
         post_object_id,
         profile_actor_id,
+        LocalActorCollection,
     },
     queues::OutgoingActivityJobData,
     vocabulary::ANNOUNCE,
@@ -51,7 +51,7 @@ pub fn build_announce(
     let object_id = post_object_id(instance_url, post);
     let activity_id = local_object_id(instance_url, &repost.id);
     let recipient_id = profile_actor_id(instance_url, &post.author);
-    let followers = local_actor_followers(instance_url, &repost.author.username);
+    let followers = LocalActorCollection::Followers.of(&actor_id);
     Announce {
         context: build_default_context(),
         activity_type: ANNOUNCE.to_string(),

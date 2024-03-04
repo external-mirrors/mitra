@@ -12,7 +12,11 @@ use mitra_models::{
 
 use crate::activitypub::{
     contexts::{build_default_context, Context},
-    identifiers::{local_actor_id, local_actor_followers, local_object_id},
+    identifiers::{
+        local_actor_id,
+        local_object_id,
+        LocalActorCollection,
+    },
     queues::OutgoingActivityJobData,
     vocabulary::UNDO,
 };
@@ -48,7 +52,7 @@ fn build_undo_announce(
         recipient_id.to_string(),
     ];
     let secondary_audience = vec![
-        local_actor_followers(instance_url, &actor_profile.username),
+        LocalActorCollection::Followers.of(&actor_id),
     ];
     UndoAnnounce {
         context: build_default_context(),

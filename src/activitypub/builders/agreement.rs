@@ -10,6 +10,7 @@ use mitra_utils::caip10::AccountId;
 use crate::activitypub::{
     constants::PAYMENT_LINK_RELATION_TYPE,
     identifiers::{
+        local_actor_id,
         local_actor_proposal_id,
         local_agreement_id,
     },
@@ -70,9 +71,9 @@ pub fn build_agreement(
     payment_info: &MoneroSubscription,
     invoice: &DbInvoice,
 ) -> Result<Agreement, DatabaseTypeError> {
+    let actor_id = local_actor_id(instance_url, username);
     let proposal_id = local_actor_proposal_id(
-        instance_url,
-        username,
+        &actor_id,
         &payment_info.chain_id,
     );
     let agreement_id = local_agreement_id(instance_url, &invoice.id);

@@ -13,9 +13,8 @@ use crate::activitypub::{
     contexts::{build_default_context, Context},
     identifiers::{
         local_actor_id,
-        local_actor_featured,
-        local_actor_followers,
         local_object_id,
+        LocalActorCollection,
     },
     queues::OutgoingActivityJobData,
     vocabulary::ADD,
@@ -47,8 +46,8 @@ fn build_add_note(
     let actor_id = local_actor_id(instance_url, sender_username);
     let activity_id = local_object_id(instance_url, &generate_ulid());
     let object_id = local_object_id(instance_url, post_id);
-    let target_id = local_actor_featured(instance_url, sender_username);
-    let followers = local_actor_followers(instance_url, sender_username);
+    let target_id = LocalActorCollection::Featured.of(&actor_id);
+    let followers = LocalActorCollection::Followers.of(&actor_id);
     AddNote {
         context: build_default_context(),
         activity_type: ADD.to_string(),
