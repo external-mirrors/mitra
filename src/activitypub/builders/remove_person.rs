@@ -98,6 +98,6 @@ mod tests {
             activity.target,
             format!("{}/users/{}/subscribers", INSTANCE_URL, sender_username),
         );
-        assert_eq!(activity.to[0], person_id);
+        assert_eq!(activity.to, vec![person_id]);
     }
 }

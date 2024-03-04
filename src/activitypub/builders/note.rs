@@ -342,10 +342,14 @@ mod tests {
             format!("{}/users/{}", INSTANCE_URL, post.author.username),
         );
         assert_eq!(note.in_reply_to.is_none(), true);
+        assert_eq!(
+            note.replies,
+            format!("{}/objects/{}/replies", INSTANCE_URL, post.id),
+        );
         assert_eq!(note.content, post.content);
         assert_eq!(note.to, vec![AP_PUBLIC]);
         assert_eq!(note.cc, vec![
-            local_actor_followers(INSTANCE_URL, "author"),
+            format!("{INSTANCE_URL}/users/author/followers"),
         ]);
         assert_eq!(note.tag.len(), 1);
         let tag = match note.tag[0] {
@@ -374,7 +378,7 @@ mod tests {
         );
 
         assert_eq!(note.to, vec![
-            local_actor_followers(INSTANCE_URL, &post.author.username),
+            format!("{}/users/{}/followers", INSTANCE_URL, post.author.username),
         ]);
         assert_eq!(note.cc.is_empty(), true);
     }
@@ -406,7 +410,7 @@ mod tests {
         );
 
         assert_eq!(note.to, vec![
-            local_actor_subscribers(INSTANCE_URL, &post.author.username),
+            format!("{}/users/{}/subscribers", INSTANCE_URL, post.author.username),
             subscriber_id.to_string(),
         ]);
         assert_eq!(note.cc.is_empty(), true);
@@ -464,7 +468,7 @@ mod tests {
         );
         assert_eq!(note.to, vec![
             AP_PUBLIC.to_string(),
-            local_actor_id(INSTANCE_URL, &parent.author.username),
+            format!("{}/users/{}", INSTANCE_URL, parent.author.username),
         ]);
     }
 

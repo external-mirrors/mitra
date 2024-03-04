@@ -106,7 +106,12 @@ mod tests {
         );
         assert_eq!(
             activity.target,
-            format!("{}/users/{}/collections/featured", INSTANCE_URL, sender_username),
+            format!("{INSTANCE_URL}/users/{sender_username}/collections/featured"),
+        );
+        assert_eq!(activity.to, vec![AP_PUBLIC]);
+        assert_eq!(
+            activity.cc[0],
+            format!("{INSTANCE_URL}/users/{sender_username}/followers"),
         );
     }
 }

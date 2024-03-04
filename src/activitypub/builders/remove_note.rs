@@ -108,5 +108,10 @@ mod tests {
             activity.target,
             format!("{}/users/{}/collections/featured", INSTANCE_URL, sender_username),
         );
+        assert_eq!(activity.to, vec![AP_PUBLIC]);
+        assert_eq!(
+            activity.cc,
+            vec![format!("{INSTANCE_URL}/users/{sender_username}/followers")],
+        );
     }
 }

@@ -115,5 +115,8 @@ mod tests {
             format!("{}/objects/{}", INSTANCE_URL, repost_id),
         );
         assert_eq!(activity.to, vec![AP_PUBLIC, post_author_id]);
+        assert_eq!(activity.cc, vec![
+            format!("{}/users/{}/followers", INSTANCE_URL, announcer.username),
+        ]);
     }
 }

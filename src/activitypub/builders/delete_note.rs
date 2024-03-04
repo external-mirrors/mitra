@@ -104,7 +104,6 @@ pub async fn prepare_delete_note(
 mod tests {
     use mitra_federation::constants::AP_PUBLIC;
     use mitra_models::profiles::types::DbActorProfile;
-    use crate::activitypub::identifiers::local_actor_followers;
     use super::*;
 
     const INSTANCE_HOSTNAME: &str = "example.com";
@@ -136,7 +135,7 @@ mod tests {
         assert_eq!(activity.to, vec![AP_PUBLIC]);
         assert_eq!(
             activity.cc,
-            vec![local_actor_followers(INSTANCE_URL, "author")],
+            vec![format!("{INSTANCE_URL}/users/author/followers")],
         );
     }
 }

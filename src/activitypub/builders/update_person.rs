@@ -169,6 +169,7 @@ mod tests {
             INSTANCE_URL,
             &user,
         ).unwrap();
+        assert_eq!(activity.actor, activity.object.id);
         assert_eq!(
             activity.object.id,
             format!("{}/users/testuser", INSTANCE_URL),

@@ -158,5 +158,9 @@ mod tests {
         );
         assert_eq!(activity.object, post_id);
         assert_eq!(activity.to, vec![AP_PUBLIC, post_author_id]);
+        assert_eq!(
+            activity.cc,
+            vec![format!("{INSTANCE_URL}/users/announcer/followers")],
+        );
     }
 }
