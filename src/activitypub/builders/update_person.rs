@@ -2,6 +2,7 @@ use serde::Serialize;
 use serde_json::{Value as JsonValue};
 use uuid::Uuid;
 
+use mitra_adapters::authority::Authority;
 use mitra_config::Instance;
 use mitra_federation::constants::AP_PUBLIC;
 use mitra_models::{
@@ -48,7 +49,8 @@ pub fn build_update_person(
     instance_url: &str,
     user: &User,
 ) -> Result<UpdatePerson, DatabaseError> {
-    let actor = build_local_actor(instance_url, user, false)?;
+    let authority = Authority::from_user(instance_url, user, false);
+    let actor = build_local_actor(instance_url, &authority, user)?;
     let followers = LocalActorCollection::Followers.of(&actor.id);
     // Update(Person) is idempotent so its ID can be random
     let internal_activity_id = generate_ulid();

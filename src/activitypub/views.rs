@@ -11,6 +11,7 @@ use serde::Deserialize;
 use serde_json::{Value as JsonValue};
 use uuid::Uuid;
 
+use mitra_adapters::authority::Authority;
 use mitra_config::Config;
 use mitra_federation::{
     constants::AP_MEDIA_TYPE,
@@ -45,7 +46,7 @@ use crate::web_client::urls::{
 use super::actors::builders::{
     build_instance_actor,
     build_local_actor,
-    build_local_actor_fep_ef61,
+    sign_object_fep_ef61,
 };
 use super::authentication::verify_signed_c2s_activity;
 use super::builders::{
@@ -101,20 +102,25 @@ async fn actor_view(
             .finish();
         return Ok(response);
     };
-    let actor_value = if query_params.fep_ef61 {
-        build_local_actor_fep_ef61(
-            &config.instance_url(),
+    let authority = Authority::from_user(
+        &config.instance_url(),
+        &user,
+        query_params.fep_ef61,
+    );
+    let actor = build_local_actor(
+        &config.instance_url(),
+        &authority,
+        &user,
+    )?;
+    let mut actor_value = serde_json::to_value(actor)
+        .expect("actor should be serializable");
+    if authority.is_fep_ef61() {
+        actor_value = sign_object_fep_ef61(
+            &authority,
             &user,
+            &actor_value,
             None,
-        )?
-    } else {
-        let actor = build_local_actor(
-            &config.instance_url(),
-            &user,
-            false, // no FEP-ef61
-        )?;
-        serde_json::to_value(actor)
-            .expect("actor should be serializable")
+        );
     };
     let response = HttpResponse::Ok()
         .content_type(AP_MEDIA_TYPE)

@@ -144,16 +144,12 @@ pub struct Actor {
 
 pub fn build_local_actor(
     instance_url: &str,
+    authority: &Authority,
     user: &User,
-    fep_ef61_enabled: bool,
 ) -> Result<Actor, DatabaseError> {
-    let authority = Authority::from_user(
-        instance_url,
-        user,
-        fep_ef61_enabled,
-    );
+    assert_eq!(authority.base_url(), instance_url);
     let username = &user.profile.username;
-    let actor_id = local_actor_id_unified(&authority, username);
+    let actor_id = local_actor_id_unified(authority, username);
     let inbox = LocalActorCollection::Inbox.of(&actor_id);
     let outbox = LocalActorCollection::Outbox.of(&actor_id);
     let followers = LocalActorCollection::Followers.of(&actor_id);
@@ -206,7 +202,7 @@ pub fn build_local_actor(
     };
     for payment_option in user.profile.payment_options.clone().into_inner() {
         let attachment = attach_payment_option(
-            &authority,
+            authority,
             &user.profile.username,
             payment_option,
         );
@@ -259,29 +255,23 @@ pub fn build_local_actor(
     Ok(actor)
 }
 
-pub fn build_local_actor_fep_ef61(
-    instance_url: &str,
+pub fn sign_object_fep_ef61(
+    authority: &Authority,
     user: &User,
+    object: &JsonValue,
     current_time: Option<DateTime<Utc>>,
-) -> Result<JsonValue, DatabaseError> {
-    let actor = build_local_actor(instance_url, user, true)?;
-    let actor_value = serde_json::to_value(actor)
-        .expect("actor should be serializable");
+) -> JsonValue {
+    assert!(authority.is_fep_ef61());
     let ed25519_secret_key = user.ed25519_private_key;
     // Key ID is DID
-    let authority = Authority::server_key(
-        instance_url,
-        &ed25519_secret_key,
-    );
     let ed25519_key_id = authority.to_string();
-    let signed_actor = sign_object_eddsa(
+    sign_object_eddsa(
         &ed25519_secret_key,
         &ed25519_key_id,
-        &actor_value,
+        object,
         current_time,
         false, // use eddsa-jcs-2022
-    ).expect("actor object should be ready for signing");
-    Ok(signed_actor)
+    ).expect("actor object should be ready for signing")
 }
 
 pub fn build_instance_actor(
@@ -338,7 +328,8 @@ mod tests {
             ..Default::default()
         };
         let user = User { profile, ..Default::default() };
-        let actor = build_local_actor(INSTANCE_URL, &user, false).unwrap();
+        let authority = Authority::from_user(INSTANCE_URL, &user, false);
+        let actor = build_local_actor(INSTANCE_URL, &authority, &user).unwrap();
         let value = serde_json::to_value(actor).unwrap();
         let expected_value = json!({
             "@context": [
@@ -422,13 +413,17 @@ mod tests {
             ..Default::default()
         };
         let user = User { profile, ..Default::default() };
+        let authority = Authority::from_user(INSTANCE_URL, &user, true);
         let current_time = DateTime::parse_from_rfc3339("2023-02-24T23:36:38Z")
             .unwrap().with_timezone(&Utc);
-        let actor = build_local_actor_fep_ef61(
-            INSTANCE_URL,
+        let actor = build_local_actor(INSTANCE_URL, &authority, &user).unwrap();
+        let value = serde_json::to_value(actor).unwrap();
+        let signed_value = sign_object_fep_ef61(
+            &authority,
             &user,
+            &value,
             Some(current_time),
-        ).unwrap();
+        );
         let expected_value = json!({
             "@context": [
                 "https://www.w3.org/ns/activitystreams",
@@ -511,7 +506,7 @@ mod tests {
                 "verificationMethod": "did:ap:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6",
             },
         });
-        assert_eq!(actor, expected_value);
+        assert_eq!(signed_value, expected_value);
     }
 
     #[test]

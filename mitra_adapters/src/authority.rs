@@ -59,6 +59,13 @@ impl Authority {
     pub fn is_fep_ef61(&self) -> bool {
         !matches!(self, Self::Server(_))
     }
+
+    pub fn base_url(&self) -> &str {
+        match self {
+            Self::Server(ref base_url) => base_url,
+            Self::ServerKey((ref base_url, _)) => base_url,
+        }
+    }
 }
 
 #[cfg(test)]
@@ -73,6 +80,7 @@ mod tests {
         let authority = Authority::server(BASE_URL);
         assert!(!authority.is_fep_ef61());
         assert_eq!(authority.to_string(), "https://server.example");
+        assert_eq!(authority.base_url(), BASE_URL);
     }
 
     #[test]
@@ -81,5 +89,6 @@ mod tests {
         let authority = Authority::server_key(BASE_URL, &secret_key);
         assert!(authority.is_fep_ef61());
         assert_eq!(authority.to_string(), "did:ap:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6");
+        assert_eq!(authority.base_url(), BASE_URL);
     }
 }
