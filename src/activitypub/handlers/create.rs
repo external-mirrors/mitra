@@ -229,7 +229,7 @@ pub async fn get_object_attachments(
             },
         };
         match attachment.attachment_type.as_str() {
-            DOCUMENT | IMAGE | VIDEO => (),
+            AUDIO | DOCUMENT | IMAGE | VIDEO => (),
             LINK => {
                 // Lemmy compatibility
                 let link_href = attachment.href

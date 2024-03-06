@@ -18,6 +18,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Validate hostname length before saving profile or emoji to database.
 - Ignore invalid emoji reactions.
 - Use FEP-ef61 payment links in FEP-ef61 actor representation.
+- Accept object attachments with type `Audio`.
 
 ### Removed
 

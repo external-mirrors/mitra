@@ -24,6 +24,7 @@ pub const GROUP: &str = "Group";
 pub const PERSON: &str = "Person";
 
 // Object types
+pub const AUDIO: &str = "Audio";
 pub const DOCUMENT: &str = "Document";
 pub const IMAGE: &str = "Image";
 pub const NOTE: &str = "Note";
