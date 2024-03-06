@@ -451,6 +451,7 @@ pub async fn get_object_tags(
                     },
                     Err(other_error) => return Err(other_error),
                 };
+                log::info!("found mentioned profile by 'name': {tag_name}");
                 if !mentions.contains(&profile.id) {
                     mentions.push(profile.id);
                 };
