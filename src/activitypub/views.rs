@@ -72,7 +72,7 @@ use super::identifiers::{
     post_object_id,
     LocalActorCollection,
 };
-use super::receiver::{receive_activity, HandlerError};
+use super::receiver::{receive_activity, InboxError, HandlerError};
 use super::valueflows::builders::build_proposal;
 
 #[derive(Deserialize)]
@@ -159,8 +159,9 @@ async fn inbox(
     ).await
         .map_err(|error| {
             // TODO: preserve original error text in DatabaseError
-            if let HandlerError::DatabaseError(
-                DatabaseError::DatabaseClientError(ref pg_error)) = error
+            if let InboxError::HandlerError(
+                HandlerError::DatabaseError(
+                    DatabaseError::DatabaseClientError(ref pg_error))) = error
             {
                 log::error!("database client error: {}", pg_error);
             };

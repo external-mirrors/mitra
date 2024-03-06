@@ -61,31 +61,8 @@ pub enum HandlerError {
     #[error("{0}")]
     ServiceError(&'static str),
 
-    #[error(transparent)]
-    AuthError(#[from] AuthenticationError),
-
     #[error("unsolicited message from {0}")]
     UnsolicitedMessage(String),
-}
-
-impl From<HandlerError> for HttpError {
-    fn from(error: HandlerError) -> Self {
-        match error {
-            HandlerError::LocalObject => HttpError::InternalError,
-            HandlerError::FetchError(error) => {
-                HttpError::ValidationError(error.to_string())
-            },
-            HandlerError::ValidationError(error) => error.into(),
-            HandlerError::DatabaseError(error) => error.into(),
-            HandlerError::StorageError(_) => HttpError::InternalError,
-            HandlerError::ServiceError(_) => HttpError::InternalError,
-            HandlerError::AuthError(_) => {
-                HttpError::AuthError("invalid signature")
-            },
-            // Return 403 Forbidden
-            HandlerError::UnsolicitedMessage(_) => HttpError::PermissionError,
-        }
-    }
 }
 
 pub async fn handle_activity(
@@ -156,6 +133,48 @@ pub async fn handle_activity(
     Ok(())
 }
 
+#[derive(thiserror::Error, Debug)]
+pub enum InboxError {
+    #[error(transparent)]
+    ValidationError(#[from] ValidationError),
+
+    #[error(transparent)]
+    DatabaseError(#[from] DatabaseError),
+
+    #[error(transparent)]
+    AuthError(#[from] AuthenticationError),
+
+    // Might be returned by validate_create()
+    #[error(transparent)]
+    HandlerError(#[from] HandlerError),
+}
+
+impl From<InboxError> for HttpError {
+    fn from(error: InboxError) -> Self {
+        match error {
+            InboxError::ValidationError(error) => error.into(),
+            InboxError::DatabaseError(error) => error.into(),
+            InboxError::AuthError(_) => {
+                HttpError::AuthError("invalid signature")
+            },
+            InboxError::HandlerError(error) => {
+                match error {
+                    HandlerError::LocalObject => HttpError::InternalError,
+                    HandlerError::FetchError(error) => {
+                        HttpError::ValidationError(error.to_string())
+                    },
+                    HandlerError::ValidationError(error) => error.into(),
+                    HandlerError::DatabaseError(error) => error.into(),
+                    HandlerError::StorageError(_) => HttpError::InternalError,
+                    HandlerError::ServiceError(_) => HttpError::InternalError,
+                    // Return 403 Forbidden
+                    HandlerError::UnsolicitedMessage(_) => HttpError::PermissionError,
+                }
+            },
+        }
+    }
+}
+
 fn is_hostname_allowed(
     blocklist: &[String],
     allowlist: &[String],
@@ -178,7 +197,7 @@ pub async fn receive_activity(
     request: &HttpRequest,
     activity: &JsonValue,
     activity_digest: [u8; 32],
-) -> Result<(), HandlerError> {
+) -> Result<(), InboxError> {
     let activity_type = activity["type"].as_str()
         .ok_or(ValidationError("type property is missing"))?;
     let activity_actor = get_object_id(&activity["actor"])
