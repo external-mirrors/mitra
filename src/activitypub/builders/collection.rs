@@ -1,8 +1,10 @@
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 use serde_json::{Value as JsonValue};
 
-use super::contexts::{build_default_context, Context};
-use super::vocabulary::{ORDERED_COLLECTION, ORDERED_COLLECTION_PAGE};
+use crate::activitypub::{
+    contexts::{build_default_context, Context},
+    vocabulary::{ORDERED_COLLECTION, ORDERED_COLLECTION_PAGE},
+};
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -73,9 +75,4 @@ impl OrderedCollectionPage {
             ordered_items: items,
         }
     }
-}
-
-#[derive(Deserialize)]
-pub struct CollectionQueryParams {
-    pub page: Option<bool>,
 }

@@ -58,6 +58,10 @@ use super::actors::builders::{
 use super::authentication::verify_signed_c2s_activity;
 use super::builders::{
     announce::build_announce,
+    collection::{
+        OrderedCollection,
+        OrderedCollectionPage,
+    },
     create_note::build_create_note,
     emoji::build_emoji,
     note::build_note,
@@ -66,11 +70,6 @@ use super::builders::{
         is_update_person_activity,
         validate_update_person_c2s,
     },
-};
-use super::collections::{
-    CollectionQueryParams,
-    OrderedCollection,
-    OrderedCollectionPage,
 };
 use super::receiver::{receive_activity, InboxError, HandlerError};
 use super::valueflows::builders::build_proposal;
@@ -173,6 +172,11 @@ async fn inbox(
             error
         })?;
     Ok(HttpResponse::Accepted().finish())
+}
+
+#[derive(Deserialize)]
+pub struct CollectionQueryParams {
+    page: Option<bool>,
 }
 
 #[get("/outbox")]

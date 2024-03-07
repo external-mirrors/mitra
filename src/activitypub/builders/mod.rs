@@ -4,6 +4,7 @@ pub mod add_note;
 pub mod add_person;
 mod agreement;
 pub mod announce;
+pub(super) mod collection;
 pub mod create_note;
 pub mod delete_note;
 pub mod delete_person;

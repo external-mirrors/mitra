@@ -2,7 +2,6 @@ mod actors;
 pub mod agent;
 mod authentication;
 pub mod builders;
-mod collections;
 mod constants;
 mod contexts;
 mod deliverer;
