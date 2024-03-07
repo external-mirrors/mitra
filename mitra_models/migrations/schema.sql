@@ -152,9 +152,12 @@ CREATE TABLE post_reaction (
     id UUID PRIMARY KEY,
     author_id UUID NOT NULL REFERENCES actor_profile (id) ON DELETE CASCADE,
     post_id UUID NOT NULL REFERENCES post (id) ON DELETE CASCADE,
+    content VARCHAR(102),
+    emoji_id UUID REFERENCES emoji (id) ON DELETE CASCADE,
     activity_id VARCHAR(2000) UNIQUE,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
-    UNIQUE (author_id, post_id)
+    UNIQUE (author_id, post_id),
+    CHECK (content IS NOT NULL OR emoji_id IS NULL)
 );
 
 CREATE TABLE media_attachment (

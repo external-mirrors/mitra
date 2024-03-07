@@ -22,6 +22,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Write message to log when profile lookup by mention name is successful.
 - Change media description max length to 2000.
 - Perform unsolicited message check after putting activity into a queue.
+- Save content of remote emoji reactions to database.
 
 ### Removed
 

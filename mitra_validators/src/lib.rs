@@ -5,5 +5,6 @@ pub mod media;
 pub mod oauth;
 pub mod posts;
 pub mod profiles;
+pub mod reactions;
 pub mod tags;
 pub mod users;

@@ -61,6 +61,7 @@ use mitra_validators::{
         validate_post_mentions,
         validate_post_update_data,
     },
+    reactions::validate_reaction_data,
 };
 
 use crate::activitypub::{
@@ -486,8 +487,11 @@ async fn favourite(
     let reaction_data = ReactionData {
         author_id: current_user.id,
         post_id: status_id.into_inner(),
+        content: None,
+        emoji_id: None,
         activity_id: None,
     };
+    validate_reaction_data(&reaction_data)?;
     let maybe_reaction_created = match create_reaction(
         db_client, reaction_data,
     ).await {

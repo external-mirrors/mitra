@@ -8,6 +8,8 @@ pub struct DbReaction {
     pub id: Uuid,
     pub author_id: Uuid,
     pub post_id: Uuid,
+    pub content: Option<String>,
+    pub emoji_id: Option<Uuid>,
     pub activity_id: Option<String>,
     pub created_at: DateTime<Utc>,
 }
@@ -15,5 +17,7 @@ pub struct DbReaction {
 pub struct ReactionData {
     pub author_id: Uuid,
     pub post_id: Uuid,
+    pub content: Option<String>,
+    pub emoji_id: Option<Uuid>,
     pub activity_id: Option<String>,
 }

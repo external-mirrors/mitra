@@ -28,9 +28,11 @@ pub async fn create_reaction(
             id,
             author_id,
             post_id,
+            content,
+            emoji_id,
             activity_id
         )
-        SELECT $1, $2, $3, $4
+        SELECT $1, $2, $3, $4, $5, $6
         WHERE NOT EXISTS (
             SELECT 1 FROM post
             WHERE post.id = $3 AND post.repost_of_id IS NOT NULL
@@ -41,6 +43,8 @@ pub async fn create_reaction(
             &reaction_id,
             &reaction_data.author_id,
             &reaction_data.post_id,
+            &reaction_data.content,
+            &reaction_data.emoji_id,
             &reaction_data.activity_id,
         ],
     ).await.map_err(catch_unique_violation("reaction"))?;
@@ -153,15 +157,20 @@ mod tests {
             ..Default::default()
         };
         let post = create_post(db_client, &user_2.id, post_data).await.unwrap();
+        let emoji = "❤️";
         let reaction_data = ReactionData {
             author_id: user_1.id,
             post_id: post.id,
+            content: Some(emoji.to_string()),
+            emoji_id: None,
             activity_id: None,
         };
         let reaction = create_reaction(db_client, reaction_data).await.unwrap();
 
         assert_eq!(reaction.author_id, user_1.id);
         assert_eq!(reaction.post_id, post.id);
+        assert_eq!(reaction.content.unwrap(), emoji);
+        assert_eq!(reaction.emoji_id.is_none(), true);
         assert_eq!(reaction.activity_id.is_none(), true);
     }
 }

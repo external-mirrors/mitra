@@ -18,7 +18,10 @@ use mitra_models::{
 };
 use mitra_services::media::MediaStorage;
 use mitra_utils::unicode::is_single_character;
-use mitra_validators::errors::ValidationError;
+use mitra_validators::{
+    errors::ValidationError,
+    reactions::validate_reaction_data,
+};
 
 use crate::activitypub::{
     importers::{
@@ -73,12 +76,11 @@ pub async fn handle_like(
         Err(DatabaseError::NotFound(_)) => return Ok(None),
         Err(other_error) => return Err(other_error.into()),
     };
-    match activity.content {
+    let (maybe_content, maybe_emoji_id) = match activity.content {
         Some(content) if is_single_character(&content) => {
-            log::info!("reaction with emoji: {content}");
+            (Some(content), None)
         },
         Some(content) => {
-            log::info!("reaction with custom emoji: {content}");
             let emoji_name = content.trim_matches(':');
             let maybe_db_emoji = if let Some(emoji_value) = activity.tag.first() {
                 let maybe_db_emoji = handle_emoji(
@@ -92,18 +94,23 @@ pub async fn handle_like(
             } else {
                 None
             };
-            if maybe_db_emoji.is_none() {
+            if let Some(db_emoji) = maybe_db_emoji {
+                (Some(content), Some(db_emoji.id))
+            } else {
                 log::warn!("invalid custom emoji reaction");
                 return Ok(None);
-            };
+            }
         },
-        None => (),
+        None => (None, None),
     };
     let reaction_data = ReactionData {
         author_id: author.id,
         post_id: post_id,
+        content: maybe_content,
+        emoji_id: maybe_emoji_id,
         activity_id: Some(activity.id),
     };
+    validate_reaction_data(&reaction_data)?;
     match create_reaction(db_client, reaction_data).await {
         Ok(_) => (),
         // Ignore activity if reaction is already saved

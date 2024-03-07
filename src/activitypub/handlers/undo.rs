@@ -108,7 +108,7 @@ pub async fn handle_undo(
 
     match get_reaction_by_remote_activity_id(db_client, &activity.object).await {
         Ok(reaction) => {
-            // Undo(Like)
+            // Undo(Like) or Undo(EmojiReact)
             if reaction.author_id != actor_profile.id {
                 return Err(ValidationError("actor is not an author").into());
             };
