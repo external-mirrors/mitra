@@ -232,8 +232,12 @@ pub async fn get_object_attachments(
             AUDIO | DOCUMENT | IMAGE | VIDEO => (),
             LINK => {
                 // Lemmy compatibility
-                let link_href = attachment.href
-                    .ok_or(ValidationError("invalid link attachment"))?;
+                let link_href = if let Some(href) = attachment.href {
+                    href
+                } else {
+                    log::warn!("invalid link attachment");
+                    continue;
+                };
                 unprocessed.push(link_href);
                 continue;
             },
@@ -255,8 +259,12 @@ pub async fn get_object_attachments(
         if let Some(ref description) = attachment.name {
             validate_media_description(description)?;
         };
-        let attachment_url = attachment.url
-            .ok_or(ValidationError("attachment URL is missing"))?;
+        let attachment_url = if let Some(url) = attachment.url {
+            url
+        } else {
+            log::warn!("attachment URL is missing");
+            continue;
+        };
         let (file_data, file_size, media_type) = match fetch_file(
             &agent,
             &attachment_url,

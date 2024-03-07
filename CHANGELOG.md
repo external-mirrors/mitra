@@ -30,6 +30,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Fixed
 
 - Don't mark posts from remote actor as spam if pending follow request exists.
+- Don't drop activity if attachment doesn't have `url` or `href` property.
 
 ## [2.12.0] - 2024-02-26
 
