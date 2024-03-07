@@ -82,34 +82,34 @@ pub struct AttributedObject {
     pub object_type: String,
 
     // Required for conversion into "post" entity
-    pub attributed_to: JsonValue,
+    attributed_to: JsonValue,
 
-    pub name: Option<String>,
-    pub content: Option<String>,
-    pub media_type: Option<String>,
+    name: Option<String>,
+    content: Option<String>,
+    media_type: Option<String>,
     pub sensitive: Option<bool>,
-    pub summary: Option<String>,
+    summary: Option<String>,
 
     #[serde(
         default,
         deserialize_with = "deserialize_object_array",
     )]
-    pub attachment: Vec<JsonValue>,
+    attachment: Vec<JsonValue>,
 
     #[serde(
         default,
         deserialize_with = "deserialize_object_array",
     )]
-    pub tag: Vec<JsonValue>,
+    tag: Vec<JsonValue>,
 
     pub in_reply_to: Option<String>,
-    pub to: Option<JsonValue>,
-    pub cc: Option<JsonValue>,
-    pub published: Option<DateTime<Utc>>,
+    to: Option<JsonValue>,
+    cc: Option<JsonValue>,
+    published: Option<DateTime<Utc>>,
     pub updated: Option<DateTime<Utc>>,
-    pub url: Option<JsonValue>,
+    url: Option<JsonValue>,
 
-    pub quote_url: Option<String>,
+    quote_url: Option<String>,
 }
 
 fn get_object_attributed_to(object: &AttributedObject)
