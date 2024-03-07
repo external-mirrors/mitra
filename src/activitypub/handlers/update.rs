@@ -4,7 +4,10 @@ use chrono::Utc;
 use serde::Deserialize;
 use serde_json::{Value as JsonValue};
 
-use mitra_activitypub::identifiers::profile_actor_id;
+use mitra_activitypub::{
+    agent::build_federation_agent,
+    identifiers::profile_actor_id,
+};
 use mitra_config::Config;
 use mitra_federation::{
     deserialization::{deserialize_into_object_id, get_object_id},
@@ -34,7 +37,6 @@ use crate::activitypub::{
         helpers::update_remote_profile,
         types::Actor,
     },
-    agent::build_federation_agent,
     handlers::create::{
         create_content_link,
         get_object_attachments,

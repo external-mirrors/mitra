@@ -1,6 +1,9 @@
 use serde::Deserialize;
 use serde_json::{Value as JsonValue};
 
+use mitra_activitypub::{
+    agent::build_federation_agent,
+};
 use mitra_config::Config;
 use mitra_federation::deserialization::{
     deserialize_into_object_id,
@@ -15,7 +18,6 @@ use mitra_utils::unicode::is_single_character;
 use mitra_validators::errors::ValidationError;
 
 use crate::activitypub::{
-    agent::build_federation_agent,
     importers::{
         get_post_by_object_id,
         ActorIdResolver,

@@ -7,7 +7,6 @@ use serde_json::{Value as JsonValue};
 use uuid::Uuid;
 
 use mitra::activitypub::{
-    agent::build_federation_agent,
     builders::delete_note::prepare_delete_note,
     builders::delete_person::prepare_delete_person,
     importers::{
@@ -17,6 +16,9 @@ use mitra::activitypub::{
     },
 };
 use mitra::payments::monero::{get_payment_address, reopen_invoice};
+use mitra_activitypub::{
+    agent::build_federation_agent,
+};
 use mitra_adapters::{
     dynamic_config::{set_editable_property, EDITABLE_PROPERTIES},
     media::{delete_files, delete_media},

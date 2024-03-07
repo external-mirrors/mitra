@@ -1,10 +1,3 @@
-use mitra_activitypub::{
-    identifiers::{
-        local_actor_id,
-        local_actor_key_id,
-        local_instance_actor_id,
-    },
-};
 use mitra_config::Instance;
 use mitra_federation::agent::FederationAgent;
 use mitra_models::{
@@ -13,7 +6,15 @@ use mitra_models::{
 };
 use mitra_utils::crypto_rsa::RsaPrivateKey;
 
-pub(super) fn build_federation_agent_with_key(
+use super::{
+    identifiers::{
+        local_actor_id,
+        local_actor_key_id,
+        local_instance_actor_id,
+    },
+};
+
+pub fn build_federation_agent_with_key(
     instance: &Instance,
     signer_key: RsaPrivateKey,
     signer_key_id: String,

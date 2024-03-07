@@ -5,6 +5,7 @@ use serde::Deserialize;
 use serde_json::{Value as JsonValue};
 
 use mitra_activitypub::{
+    agent::build_federation_agent,
     identifiers::{parse_local_actor_id, parse_local_object_id},
 };
 use mitra_config::{Config, Instance};
@@ -38,7 +39,6 @@ use mitra_validators::errors::ValidationError;
 use crate::activitypub::{
     actors::helpers::{create_remote_profile, update_remote_profile},
     actors::types::Actor,
-    agent::build_federation_agent,
     handlers::create::{get_object_links, handle_note, AttributedObject},
     receiver::{handle_activity, HandlerError},
     vocabulary::GROUP,

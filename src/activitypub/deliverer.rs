@@ -15,6 +15,7 @@ use serde::{
 use serde_json::{Value as JsonValue};
 
 use mitra_activitypub::{
+    agent::build_federation_agent_with_key,
     identifiers::{local_actor_id, local_actor_key_id},
 };
 use mitra_config::Instance;
@@ -42,8 +43,6 @@ use mitra_utils::{
     },
     urls::get_hostname,
 };
-
-use super::agent::build_federation_agent_with_key;
 
 fn deserialize_rsa_private_key<'de, D>(
     deserializer: D,

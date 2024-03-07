@@ -2020,6 +2020,7 @@ dependencies = [
  "clap",
  "clap_lex",
  "mitra",
+ "mitra_activitypub",
  "mitra_adapters",
  "mitra_config",
  "mitra_federation",
