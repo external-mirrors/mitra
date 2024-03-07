@@ -2,6 +2,14 @@ use serde::Serialize;
 use serde_json::{Value as JsonValue};
 use uuid::Uuid;
 
+use mitra_activitypub::{
+    identifiers::{
+        local_object_id,
+        parse_local_actor_id,
+        parse_local_object_id,
+        LocalActorCollection,
+    },
+};
 use mitra_adapters::authority::Authority;
 use mitra_config::Instance;
 use mitra_federation::constants::AP_PUBLIC;
@@ -18,12 +26,6 @@ use mitra_validators::errors::ValidationError;
 use crate::activitypub::{
     actors::builders::{build_local_actor, Actor},
     contexts::{build_default_context, Context},
-    identifiers::{
-        local_object_id,
-        parse_local_actor_id,
-        parse_local_object_id,
-        LocalActorCollection,
-    },
     queues::OutgoingActivityJobData,
     receiver::HandlerError,
     vocabulary::{PERSON, UPDATE},

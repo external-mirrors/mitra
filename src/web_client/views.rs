@@ -12,6 +12,7 @@ use actix_web::{
 };
 use uuid::Uuid;
 
+use mitra_activitypub::identifiers::{post_object_id, profile_actor_id};
 use mitra_config::Config;
 use mitra_federation::http_server::is_activitypub_request;
 use mitra_models::{
@@ -20,9 +21,6 @@ use mitra_models::{
     profiles::queries::get_profile_by_acct,
 };
 
-use crate::activitypub::{
-    identifiers::{post_object_id, profile_actor_id},
-};
 use crate::errors::HttpError;
 
 use super::urls::get_opengraph_image_url;

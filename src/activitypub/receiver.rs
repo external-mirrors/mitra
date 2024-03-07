@@ -2,6 +2,7 @@ use actix_web::HttpRequest;
 use serde_json::{Value as JsonValue};
 use wildmatch::WildMatch;
 
+use mitra_activitypub::identifiers::profile_actor_id;
 use mitra_config::Config;
 use mitra_federation::{
     deserialization::get_object_id,
@@ -37,7 +38,6 @@ use super::handlers::{
     undo::handle_undo,
     update::handle_update,
 };
-use super::identifiers::profile_actor_id;
 use super::queues::IncomingActivityJobData;
 use super::vocabulary::*;
 

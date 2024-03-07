@@ -1,6 +1,7 @@
 use serde::Deserialize;
 use serde_json::Value;
 
+use mitra_activitypub::identifiers::parse_local_object_id;
 use mitra_config::Config;
 use mitra_federation::deserialization::deserialize_into_object_id;
 use mitra_models::{
@@ -14,10 +15,7 @@ use mitra_models::{
 };
 use mitra_validators::errors::ValidationError;
 
-use crate::activitypub::{
-    identifiers::parse_local_object_id,
-    vocabulary::FOLLOW,
-};
+use crate::activitypub::vocabulary::FOLLOW;
 
 use super::HandlerResult;
 

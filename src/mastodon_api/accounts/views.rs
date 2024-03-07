@@ -15,6 +15,9 @@ use actix_web_httpauth::extractors::bearer::BearerAuth;
 use chrono::Utc;
 use uuid::Uuid;
 
+use mitra_activitypub::{
+    identifiers::local_actor_id,
+};
 use mitra_adapters::roles::from_default_role;
 use mitra_config::{
     AuthenticationMethod,
@@ -107,7 +110,6 @@ use crate::activitypub::{
             prepare_update_person,
         },
     },
-    identifiers::local_actor_id,
     identity::{
         create_identity_claim_fep_c390,
         create_identity_proof_fep_c390,

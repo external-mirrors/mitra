@@ -3,6 +3,9 @@ use std::str::FromStr;
 use regex::Regex;
 use url::Url;
 
+use mitra_activitypub::{
+    identifiers::parse_local_object_id,
+};
 use mitra_config::Config;
 use mitra_federation::addresses::ActorAddress;
 use mitra_models::{
@@ -31,7 +34,6 @@ use mitra_utils::{
 use mitra_validators::errors::ValidationError;
 
 use crate::activitypub::{
-    identifiers::parse_local_object_id,
     importers::{
         import_post,
         import_profile_by_actor_address,

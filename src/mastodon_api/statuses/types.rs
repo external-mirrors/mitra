@@ -2,17 +2,17 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
+use mitra_activitypub::identifiers::{
+    local_tag_collection,
+    post_object_id,
+    profile_actor_url,
+};
 use mitra_models::{
     emojis::types::DbEmoji,
     posts::types::{Post, Visibility},
     profiles::types::DbActorProfile,
 };
 
-use crate::activitypub::identifiers::{
-    local_tag_collection,
-    post_object_id,
-    profile_actor_url,
-};
 use crate::mastodon_api::{
     accounts::types::Account,
     custom_emojis::types::CustomEmoji,

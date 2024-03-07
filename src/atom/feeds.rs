@@ -1,3 +1,4 @@
+use mitra_activitypub::identifiers::{local_actor_id, local_object_id};
 use mitra_config::Instance;
 use mitra_models::{
     posts::types::Post,
@@ -7,8 +8,6 @@ use mitra_utils::{
     datetime::get_min_datetime,
     html::{clean_html_all, escape_html},
 };
-
-use crate::activitypub::identifiers::{local_actor_id, local_object_id};
 
 use super::urls::get_user_feed_url;
 

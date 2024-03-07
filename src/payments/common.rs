@@ -1,6 +1,9 @@
 use chrono::{DateTime, Utc};
 use uuid::Uuid;
 
+use mitra_activitypub::{
+    identifiers::LocalActorCollection,
+};
 use mitra_config::Instance;
 use mitra_models::{
     database::{
@@ -26,7 +29,6 @@ use crate::activitypub::{
         add_person::prepare_add_person,
         remove_person::prepare_remove_person,
     },
-    identifiers::LocalActorCollection,
 };
 
 pub async fn send_subscription_notifications(

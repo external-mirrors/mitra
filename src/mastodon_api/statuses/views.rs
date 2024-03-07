@@ -14,6 +14,9 @@ use actix_web_httpauth::extractors::bearer::BearerAuth;
 use chrono::{DateTime, Utc};
 use uuid::Uuid;
 
+use mitra_activitypub::{
+    identifiers::local_object_id,
+};
 use mitra_adapters::authority::Authority;
 use mitra_config::Config;
 use mitra_models::{
@@ -72,7 +75,6 @@ use crate::activitypub::{
         undo_like::prepare_undo_like,
         update_note::prepare_update_note,
     },
-    identifiers::local_object_id,
 };
 use crate::http::{get_request_base_url, QsFormOrJson};
 use crate::mastodon_api::{

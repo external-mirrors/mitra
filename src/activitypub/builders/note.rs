@@ -1,6 +1,17 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
+use mitra_activitypub::{
+    identifiers::{
+        local_actor_id_unified,
+        local_object_id_unified,
+        local_object_replies,
+        local_tag_collection,
+        post_object_id,
+        profile_actor_id,
+        LocalActorCollection,
+    },
+};
 use mitra_adapters::authority::Authority;
 use mitra_federation::{
     addresses::ActorAddress,
@@ -19,15 +30,6 @@ use mitra_services::media::get_file_url;
 
 use crate::activitypub::{
     contexts::{build_default_context, Context},
-    identifiers::{
-        local_actor_id_unified,
-        local_object_id_unified,
-        local_object_replies,
-        local_tag_collection,
-        post_object_id,
-        profile_actor_id,
-        LocalActorCollection,
-    },
     vocabulary::{DOCUMENT, HASHTAG, LINK, MENTION, NOTE},
 };
 

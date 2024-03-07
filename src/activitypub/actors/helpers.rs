@@ -1,5 +1,6 @@
 use uuid::Uuid;
 
+use mitra_activitypub::identifiers::validate_object_id;
 use mitra_federation::{
     agent::FederationAgent,
     deserialization::parse_into_id_array,
@@ -36,7 +37,6 @@ use mitra_validators::{
 use crate::activitypub::{
     actors::types::Actor,
     handlers::emoji::handle_emoji,
-    identifiers::validate_object_id,
     receiver::HandlerError,
     valueflows::parsers::{parse_proposal, Proposal},
     vocabulary::{

@@ -1,13 +1,13 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
+use mitra_activitypub::{
+    identifiers::local_emoji_id,
+};
 use mitra_models::emojis::types::DbEmoji;
 use mitra_services::media::get_file_url;
 
-use crate::activitypub::{
-    identifiers::local_emoji_id,
-    vocabulary::{EMOJI, IMAGE},
-};
+use crate::activitypub::vocabulary::{EMOJI, IMAGE};
 
 #[derive(Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]

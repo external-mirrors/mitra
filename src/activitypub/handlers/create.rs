@@ -5,6 +5,9 @@ use serde::Deserialize;
 use serde_json::{Value as JsonValue};
 use uuid::Uuid;
 
+use mitra_activitypub::{
+    identifiers::{parse_local_actor_id, profile_actor_id},
+};
 use mitra_adapters::permissions::filter_mentions;
 use mitra_config::{Config, Instance};
 use mitra_federation::{
@@ -51,7 +54,6 @@ use mitra_validators::{
 use crate::activitypub::{
     agent::build_federation_agent,
     builders::note::LinkTag,
-    identifiers::{parse_local_actor_id, profile_actor_id},
     importers::{
         get_or_import_profile_by_actor_address,
         get_post_by_object_id,

@@ -1,5 +1,12 @@
 use serde::Serialize;
 
+use mitra_activitypub::{
+    identifiers::{
+        local_actor_id,
+        local_actor_proposal_id,
+        local_agreement_id,
+    },
+};
 use mitra_models::{
     database::DatabaseTypeError,
     invoices::types::DbInvoice,
@@ -9,11 +16,6 @@ use mitra_utils::caip10::AccountId;
 
 use crate::activitypub::{
     constants::PAYMENT_LINK_RELATION_TYPE,
-    identifiers::{
-        local_actor_id,
-        local_actor_proposal_id,
-        local_agreement_id,
-    },
     valueflows::builders::{
         fep_0837_primary_fragment_id,
         fep_0837_reciprocal_fragment_id,

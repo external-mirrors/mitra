@@ -1,5 +1,8 @@
 use serde::Serialize;
 
+use mitra_activitypub::{
+    identifiers::{local_actor_id, local_object_id, LocalActorCollection},
+};
 use mitra_config::Instance;
 use mitra_models::{
     profiles::types::DbActor,
@@ -9,7 +12,6 @@ use mitra_utils::id::generate_ulid;
 
 use crate::activitypub::{
     contexts::{build_default_context, Context},
-    identifiers::{local_actor_id, local_object_id, LocalActorCollection},
     queues::OutgoingActivityJobData,
     vocabulary::REMOVE,
 };

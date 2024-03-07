@@ -1,6 +1,13 @@
 use serde::Serialize;
 use uuid::Uuid;
 
+use mitra_activitypub::{
+    identifiers::{
+        local_actor_id,
+        local_object_id,
+        LocalActorCollection,
+    },
+};
 use mitra_config::Instance;
 use mitra_federation::constants::AP_PUBLIC;
 use mitra_models::{
@@ -12,11 +19,6 @@ use mitra_models::{
 
 use crate::activitypub::{
     contexts::{build_default_context, Context},
-    identifiers::{
-        local_actor_id,
-        local_object_id,
-        LocalActorCollection,
-    },
     queues::OutgoingActivityJobData,
     vocabulary::UNDO,
 };

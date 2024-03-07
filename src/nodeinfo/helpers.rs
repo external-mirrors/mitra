@@ -1,3 +1,4 @@
+use mitra_activitypub::identifiers::local_actor_id;
 use mitra_config::Config;
 use mitra_models::{
     database::{DatabaseClient, DatabaseError},
@@ -9,8 +10,6 @@ use mitra_models::{
     },
 };
 use mitra_utils::datetime::days_before_now;
-
-use crate::activitypub::identifiers::local_actor_id;
 
 use super::types::{Usage, Users};
 

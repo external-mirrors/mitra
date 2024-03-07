@@ -1,5 +1,8 @@
 use serde::Serialize;
 
+use mitra_activitypub::{
+    identifiers::local_object_id,
+};
 use mitra_adapters::authority::Authority;
 use mitra_config::Instance;
 use mitra_models::{
@@ -11,7 +14,6 @@ use mitra_utils::id::generate_ulid;
 
 use crate::activitypub::{
     contexts::{build_default_context, Context},
-    identifiers::local_object_id,
     queues::OutgoingActivityJobData,
     vocabulary::UPDATE,
 };

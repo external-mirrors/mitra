@@ -11,6 +11,13 @@ use serde::Deserialize;
 use serde_json::{Value as JsonValue};
 use uuid::Uuid;
 
+use mitra_activitypub::identifiers::{
+    local_actor_id,
+    local_object_id,
+    local_object_replies,
+    post_object_id,
+    LocalActorCollection,
+};
 use mitra_adapters::authority::Authority;
 use mitra_config::Config;
 use mitra_federation::{
@@ -64,13 +71,6 @@ use super::collections::{
     CollectionQueryParams,
     OrderedCollection,
     OrderedCollectionPage,
-};
-use super::identifiers::{
-    local_actor_id,
-    local_object_id,
-    local_object_replies,
-    post_object_id,
-    LocalActorCollection,
 };
 use super::receiver::{receive_activity, InboxError, HandlerError};
 use super::valueflows::builders::build_proposal;

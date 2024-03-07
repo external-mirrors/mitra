@@ -3,6 +3,10 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Value as JsonValue};
 use uuid::Uuid;
 
+use mitra_activitypub::identifiers::{
+    profile_actor_id,
+    profile_actor_url,
+};
 use mitra_models::{
     profiles::types::{
         DbActorProfile,
@@ -31,10 +35,6 @@ use mitra_validators::{
     profiles::{allowed_profile_image_media_types, PROFILE_IMAGE_SIZE_MAX},
 };
 
-use crate::activitypub::identifiers::{
-    profile_actor_id,
-    profile_actor_url,
-};
 use crate::mastodon_api::{
     custom_emojis::types::CustomEmoji,
     errors::MastodonError,

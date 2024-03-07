@@ -1,6 +1,7 @@
 use serde::Deserialize;
 use serde_json::Value;
 
+use mitra_activitypub::identifiers::parse_local_actor_id;
 use mitra_config::Config;
 use mitra_models::{
     database::{DatabaseClient, DatabaseError},
@@ -17,10 +18,7 @@ use mitra_models::{
 };
 use mitra_validators::errors::ValidationError;
 
-use crate::activitypub::{
-    identifiers::parse_local_actor_id,
-    vocabulary::{NOTE, PERSON},
-};
+use crate::activitypub::vocabulary::{NOTE, PERSON};
 
 use super::HandlerResult;
 

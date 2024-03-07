@@ -4,6 +4,9 @@ use chrono::{Duration, Utc};
 use serde::Deserialize;
 use serde_json::{Value as JsonValue};
 
+use mitra_activitypub::{
+    identifiers::{parse_local_actor_id, parse_local_object_id},
+};
 use mitra_config::{Config, Instance};
 use mitra_federation::{
     addresses::ActorAddress,
@@ -37,7 +40,6 @@ use crate::activitypub::{
     actors::types::Actor,
     agent::build_federation_agent,
     handlers::create::{get_object_links, handle_note, AttributedObject},
-    identifiers::{parse_local_actor_id, parse_local_object_id},
     receiver::{handle_activity, HandlerError},
     vocabulary::GROUP,
 };

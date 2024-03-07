@@ -2,6 +2,13 @@
 use actix_web::{get, web, HttpResponse};
 use serde::Deserialize;
 
+use mitra_activitypub::{
+    identifiers::{
+        local_actor_id,
+        local_instance_actor_id,
+        parse_local_actor_id,
+    },
+};
 use mitra_config::{Config, Instance};
 use mitra_federation::{
     addresses::ActorAddress,
@@ -20,13 +27,6 @@ use mitra_models::{
     users::queries::is_registered_user,
 };
 
-use crate::activitypub::{
-    identifiers::{
-        local_actor_id,
-        local_instance_actor_id,
-        parse_local_actor_id,
-    },
-};
 use crate::atom::urls::get_user_feed_url;
 use crate::errors::HttpError;
 

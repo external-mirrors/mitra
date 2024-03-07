@@ -1,5 +1,8 @@
 use serde::Serialize;
 
+use mitra_activitypub::{
+    identifiers::{local_actor_id, local_object_id},
+};
 use mitra_config::Instance;
 use mitra_models::{
     database::{DatabaseError, DatabaseTypeError},
@@ -11,7 +14,6 @@ use mitra_utils::id::generate_ulid;
 
 use crate::activitypub::{
     contexts::Context,
-    identifiers::{local_actor_id, local_object_id},
     queues::OutgoingActivityJobData,
     valueflows::builders::build_valueflows_context,
     vocabulary::ACCEPT,

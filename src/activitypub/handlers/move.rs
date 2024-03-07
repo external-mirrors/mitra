@@ -1,6 +1,7 @@
 use serde::Deserialize;
 use serde_json::Value;
 
+use mitra_activitypub::identifiers::profile_actor_id;
 use mitra_config::Config;
 use mitra_models::{
     database::DatabaseClient,
@@ -20,7 +21,6 @@ use crate::activitypub::{
         follow::follow_or_create_request,
         undo_follow::prepare_undo_follow,
     },
-    identifiers::profile_actor_id,
     importers::ActorIdResolver,
     vocabulary::PERSON,
 };

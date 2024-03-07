@@ -1,6 +1,7 @@
 use regex::{Captures, Regex};
 
-use crate::activitypub::identifiers::local_tag_collection;
+use mitra_activitypub::identifiers::local_tag_collection;
+
 use super::links::is_inside_code_block;
 
 // See also: HASHTAG_NAME_RE in mitra_validators::tags

@@ -1,6 +1,7 @@
 use serde::Deserialize;
 use serde_json::Value;
 
+use mitra_activitypub::identifiers::parse_local_actor_id;
 use mitra_config::Config;
 use mitra_federation::deserialization::deserialize_into_object_id;
 use mitra_models::{
@@ -19,7 +20,6 @@ use mitra_validators::errors::ValidationError;
 
 use crate::activitypub::{
     builders::accept_follow::prepare_accept_follow,
-    identifiers::parse_local_actor_id,
     importers::ActorIdResolver,
     vocabulary::PERSON,
 };

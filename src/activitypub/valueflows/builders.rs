@@ -1,6 +1,12 @@
 /// https://codeberg.org/silverpill/feps/src/branch/main/0837/fep-0837.md
 use serde::Serialize;
 
+use mitra_activitypub::{
+    identifiers::{
+        local_actor_id,
+        local_actor_proposal_id,
+    },
+};
 use mitra_federation::constants::AP_PUBLIC;
 use mitra_models::profiles::types::MoneroSubscription;
 use mitra_utils::caip19::AssetType;
@@ -11,10 +17,6 @@ use crate::activitypub::{
         Context,
         UNITS_OF_MEASURE_CONTEXT,
         W3ID_VALUEFLOWS_CONTEXT,
-    },
-    identifiers::{
-        local_actor_id,
-        local_actor_proposal_id,
     },
     vocabulary::{INTENT, PROPOSAL},
 };

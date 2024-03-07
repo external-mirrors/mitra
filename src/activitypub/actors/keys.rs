@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 
+use mitra_activitypub::identifiers::local_actor_key_id;
 use mitra_models::profiles::types::{DbActorKey, PublicKeyType};
 use mitra_utils::{
     crypto_eddsa::{
@@ -22,10 +23,7 @@ use mitra_utils::{
 };
 use mitra_validators::errors::ValidationError;
 
-use crate::activitypub::{
-    identifiers::local_actor_key_id,
-    vocabulary::MULTIKEY,
-};
+use crate::activitypub::vocabulary::MULTIKEY;
 
 #[derive(Deserialize, Serialize)]
 #[cfg_attr(test, derive(Default))]

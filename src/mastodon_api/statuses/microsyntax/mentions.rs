@@ -2,14 +2,13 @@ use std::collections::HashMap;
 
 use regex::{Captures, Regex};
 
+use mitra_activitypub::identifiers::profile_actor_url;
 use mitra_federation::addresses::ActorAddress;
 use mitra_models::{
     database::{DatabaseClient, DatabaseError},
     profiles::queries::get_profiles_by_accts,
     profiles::types::DbActorProfile,
 };
-
-use crate::activitypub::identifiers::profile_actor_url;
 
 use super::links::is_inside_code_block;
 

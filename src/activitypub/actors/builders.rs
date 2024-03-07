@@ -4,6 +4,15 @@ use chrono::{DateTime, Utc};
 use serde::Serialize;
 use serde_json::{Value as JsonValue};
 
+use mitra_activitypub::{
+    identifiers::{
+        local_actor_id,
+        local_actor_id_fep_ef61_fallback,
+        local_actor_id_unified,
+        local_instance_actor_id,
+        LocalActorCollection,
+    },
+};
 use mitra_adapters::authority::Authority;
 use mitra_config::Instance;
 use mitra_models::{
@@ -27,13 +36,6 @@ use crate::activitypub::{
         W3ID_DATA_INTEGRITY_CONTEXT,
         W3ID_MULTIKEY_CONTEXT,
         W3ID_SECURITY_CONTEXT,
-    },
-    identifiers::{
-        local_actor_id,
-        local_actor_id_fep_ef61_fallback,
-        local_actor_id_unified,
-        local_instance_actor_id,
-        LocalActorCollection,
     },
     vocabulary::{APPLICATION, IMAGE, PERSON},
 };

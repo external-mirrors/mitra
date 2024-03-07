@@ -4,6 +4,7 @@ use chrono::Utc;
 use serde::Deserialize;
 use serde_json::{Value as JsonValue};
 
+use mitra_activitypub::identifiers::profile_actor_id;
 use mitra_config::Config;
 use mitra_federation::{
     deserialization::{deserialize_into_object_id, get_object_id},
@@ -42,7 +43,6 @@ use crate::activitypub::{
         get_object_url,
         AttributedObject,
     },
-    identifiers::profile_actor_id,
     vocabulary::{NOTE, PERSON},
 };
 

@@ -1957,6 +1957,7 @@ dependencies = [
  "futures",
  "hex",
  "log",
+ "mitra_activitypub",
  "mitra_adapters",
  "mitra_config",
  "mitra_federation",
@@ -1975,6 +1976,20 @@ dependencies = [
  "url",
  "uuid",
  "wildmatch",
+]
+
+[[package]]
+name = "mitra_activitypub"
+version = "2.12.0"
+dependencies = [
+ "mitra_adapters",
+ "mitra_config",
+ "mitra_federation",
+ "mitra_models",
+ "mitra_utils",
+ "mitra_validators",
+ "regex",
+ "uuid",
 ]
 
 [[package]]

@@ -1,6 +1,7 @@
 use serde::Deserialize;
 use serde_json::{Value as JsonValue};
 
+use mitra_activitypub::identifiers::parse_local_primary_intent_id;
 use mitra_config::Config;
 use mitra_models::{
     database::DatabaseClient,
@@ -14,7 +15,6 @@ use mitra_validators::errors::ValidationError;
 
 use crate::activitypub::{
     builders::accept_offer::prepare_accept_offer,
-    identifiers::parse_local_primary_intent_id,
     vocabulary::AGREEMENT,
 };
 

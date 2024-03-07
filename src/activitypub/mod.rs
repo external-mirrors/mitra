@@ -7,7 +7,6 @@ mod constants;
 mod contexts;
 mod deliverer;
 mod handlers;
-pub mod identifiers;
 pub mod identity;
 pub mod importers;
 pub mod queues;

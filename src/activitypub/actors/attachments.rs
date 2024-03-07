@@ -1,6 +1,9 @@
 use serde::{Deserialize, Serialize};
 use serde_json::{Value as JsonValue};
 
+use mitra_activitypub::{
+    identifiers::{local_actor_id_unified, local_actor_proposal_id},
+};
 use mitra_adapters::authority::Authority;
 use mitra_federation::{
     constants::AP_MEDIA_TYPE,
@@ -41,7 +44,6 @@ use crate::activitypub::{
         PAYMENT_LINK_RELATION_TYPE,
     },
     contexts::W3ID_VALUEFLOWS_CONTEXT,
-    identifiers::{local_actor_id_unified, local_actor_proposal_id},
     identity::VerifiableIdentityStatement,
     vocabulary::{
         IDENTITY_PROOF,
