@@ -70,7 +70,10 @@ impl Authority {
 
 #[cfg(test)]
 mod tests {
-    use mitra_utils::crypto_eddsa::generate_weak_ed25519_key;
+    use mitra_utils::{
+        crypto_eddsa::generate_weak_ed25519_key,
+        urls::Url,
+    };
     use super::*;
 
     const BASE_URL: &str = "https://server.example";
@@ -90,5 +93,18 @@ mod tests {
         assert!(authority.is_fep_ef61());
         assert_eq!(authority.to_string(), "did:ap:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6");
         assert_eq!(authority.base_url(), BASE_URL);
+    }
+
+    #[test]
+    fn test_fep_ef61_identity_url_compat() {
+        let secret_key = generate_weak_ed25519_key();
+        let did_ap_key = fep_ef61_identity(&secret_key);
+        let did_url = format!("{did_ap_key}/objects/1");
+        assert_eq!(did_url, "did:ap:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/objects/1");
+        let url = Url::parse(&did_url).unwrap();
+        assert_eq!(url.scheme(), "did");
+        assert_eq!(url.authority(), "");
+        assert_eq!(url.path(), "ap:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/objects/1");
+        assert_eq!(url.to_string(), did_url);
     }
 }
