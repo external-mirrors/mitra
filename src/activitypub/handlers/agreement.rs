@@ -2,7 +2,7 @@ use serde::Deserialize;
 
 use mitra_validators::errors::ValidationError;
 
-use crate::activitypub::valueflows::parsers::Quantity;
+use super::proposal::Quantity;
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]

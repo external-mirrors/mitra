@@ -36,9 +36,11 @@ use mitra_validators::{
 
 use crate::activitypub::{
     actors::types::Actor,
-    handlers::emoji::handle_emoji,
+    handlers::{
+        emoji::handle_emoji,
+        proposal::{parse_proposal, Proposal},
+    },
     receiver::HandlerError,
-    valueflows::parsers::{parse_proposal, Proposal},
     vocabulary::{
         EMOJI,
         HASHTAG,

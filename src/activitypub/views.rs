@@ -65,6 +65,7 @@ use super::builders::{
     create_note::build_create_note,
     emoji::build_emoji,
     note::build_note,
+    proposal::build_proposal,
     update_person::{
         forward_update_person,
         is_update_person_activity,
@@ -72,7 +73,6 @@ use super::builders::{
     },
 };
 use super::receiver::{receive_activity, InboxError, HandlerError};
-use super::valueflows::builders::build_proposal;
 
 #[derive(Deserialize)]
 pub struct ObjectQueryParams {

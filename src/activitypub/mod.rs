@@ -9,7 +9,6 @@ pub mod identity;
 pub mod importers;
 pub mod queues;
 mod receiver;
-mod valueflows;
 pub mod views;
 mod vocabulary;
 

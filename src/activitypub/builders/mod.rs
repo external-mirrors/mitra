@@ -14,6 +14,7 @@ pub mod like;
 pub mod move_person;
 pub mod note;
 pub mod offer_agreement;
+pub(super) mod proposal;
 pub mod reject_follow;
 pub mod remove_note;
 pub mod remove_person;

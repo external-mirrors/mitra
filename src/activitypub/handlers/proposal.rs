@@ -8,7 +8,7 @@ use mitra_models::{
 use mitra_utils::caip19::AssetType;
 use mitra_validators::errors::ValidationError;
 
-use super::constants::{
+use crate::activitypub::builders::proposal::{
     ACTION_DELIVER_SERVICE,
     ACTION_TRANSFER,
     CLASS_USER_GENERATED_CONTENT,

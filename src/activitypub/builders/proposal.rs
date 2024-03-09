@@ -21,14 +21,18 @@ use crate::activitypub::{
     vocabulary::{INTENT, PROPOSAL},
 };
 
-use super::constants::{
-    ACTION_DELIVER_SERVICE,
-    ACTION_TRANSFER,
-    CLASS_USER_GENERATED_CONTENT,
-    PURPOSE_OFFER,
-    UNIT_ONE,
-    UNIT_SECOND,
-};
+pub const PURPOSE_OFFER: &str = "offer";
+
+// https://www.valueflo.ws/concepts/actions/#action-definitions
+pub const ACTION_DELIVER_SERVICE: &str = "deliverService";
+pub const ACTION_TRANSFER: &str = "transfer";
+
+pub const CLASS_USER_GENERATED_CONTENT: &str = "https://www.wikidata.org/wiki/Q579716";
+
+// http://www.ontology-of-units-of-measure.org/resource/om-2/one
+pub const UNIT_ONE: &str = "one";
+// http://www.ontology-of-units-of-measure.org/resource/om-2/second-Time
+pub const UNIT_SECOND: &str = "second";
 
 pub fn build_valueflows_context() -> Context {
     let mut context = build_default_context();

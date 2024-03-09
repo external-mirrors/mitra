@@ -16,12 +16,13 @@ use mitra_utils::caip10::AccountId;
 
 use crate::activitypub::{
     constants::PAYMENT_LINK_RELATION_TYPE,
-    valueflows::builders::{
-        fep_0837_primary_fragment_id,
-        fep_0837_reciprocal_fragment_id,
-        Quantity,
-    },
     vocabulary::{AGREEMENT, COMMITMENT, LINK},
+};
+
+use super::proposal::{
+    fep_0837_primary_fragment_id,
+    fep_0837_reciprocal_fragment_id,
+    Quantity,
 };
 
 #[derive(Clone, Serialize)]

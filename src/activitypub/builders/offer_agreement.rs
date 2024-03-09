@@ -16,18 +16,16 @@ use mitra_models::{
 use crate::activitypub::{
     contexts::Context,
     queues::OutgoingActivityJobData,
-    valueflows::{
-        builders::{
-            build_valueflows_context,
-            fep_0837_primary_fragment_id,
-            fep_0837_reciprocal_fragment_id,
-            Quantity,
-        },
-    },
     vocabulary::{AGREEMENT, COMMITMENT, OFFER},
 };
 
 use super::agreement::{Commitment, Agreement};
+use super::proposal::{
+    build_valueflows_context,
+    fep_0837_primary_fragment_id,
+    fep_0837_reciprocal_fragment_id,
+    Quantity,
+};
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]

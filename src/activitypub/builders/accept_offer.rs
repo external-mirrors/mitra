@@ -15,11 +15,11 @@ use mitra_utils::id::generate_ulid;
 use crate::activitypub::{
     contexts::Context,
     queues::OutgoingActivityJobData,
-    valueflows::builders::build_valueflows_context,
     vocabulary::ACCEPT,
 };
 
 use super::agreement::{build_agreement, Agreement};
+use super::proposal::build_valueflows_context;
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
