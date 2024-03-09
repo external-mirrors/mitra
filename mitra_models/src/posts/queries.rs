@@ -257,7 +257,7 @@ pub async fn create_post(
     // Update counters
     let author = update_post_count(&transaction, &db_post.author_id, 1).await?;
     let mut notified_users = vec![];
-    if let Some(in_reply_to_id) = &db_post.in_reply_to_id {
+    if let Some(in_reply_to_id) = db_post.in_reply_to_id {
         update_reply_count(&transaction, in_reply_to_id, 1).await?;
         let in_reply_to_author = get_post_author(&transaction, in_reply_to_id).await?;
         if in_reply_to_author.is_local() &&
@@ -265,15 +265,15 @@ pub async fn create_post(
         {
             create_reply_notification(
                 &transaction,
-                &db_post.author_id,
-                &in_reply_to_author.id,
-                &db_post.id,
+                db_post.author_id,
+                in_reply_to_author.id,
+                db_post.id,
             ).await?;
             notified_users.push(in_reply_to_author.id);
         };
     };
     // Notify reposted
-    if let Some(repost_of_id) = &db_post.repost_of_id {
+    if let Some(repost_of_id) = db_post.repost_of_id {
         update_repost_count(&transaction, repost_of_id, 1).await?;
         let repost_of_author = get_post_author(&transaction, repost_of_id).await?;
         if repost_of_author.is_local() &&
@@ -283,8 +283,8 @@ pub async fn create_post(
         {
             create_repost_notification(
                 &transaction,
-                &db_post.author_id,
-                &repost_of_author.id,
+                db_post.author_id,
+                repost_of_author.id,
                 repost_of_id,
             ).await?;
             notified_users.push(repost_of_author.id);
@@ -300,9 +300,9 @@ pub async fn create_post(
         {
             create_mention_notification(
                 &transaction,
-                &db_post.author_id,
-                &profile.id,
-                &db_post.id,
+                db_post.author_id,
+                profile.id,
+                db_post.id,
             ).await?;
         };
     };
@@ -416,15 +416,15 @@ pub async fn update_post(
         {
             create_mention_notification(
                 &transaction,
-                &db_post.author_id,
-                &profile.id,
-                &db_post.id,
+                db_post.author_id,
+                profile.id,
+                db_post.id,
             ).await?;
         };
     };
 
     // Construct post object
-    let author = get_post_author(&transaction, &db_post.id).await?;
+    let author = get_post_author(&transaction, db_post.id).await?;
     let post = Post::new(
         db_post,
         author,
@@ -1127,7 +1127,7 @@ pub async fn set_pinned_flag(
 
 pub async fn update_reply_count(
     db_client: &impl DatabaseClient,
-    post_id: &Uuid,
+    post_id: Uuid,
     change: i32,
 ) -> Result<(), DatabaseError> {
     let updated_count = db_client.execute(
@@ -1146,7 +1146,7 @@ pub async fn update_reply_count(
 
 pub async fn update_reaction_count(
     db_client: &impl DatabaseClient,
-    post_id: &Uuid,
+    post_id: Uuid,
     change: i32,
 ) -> Result<(), DatabaseError> {
     let updated_count = db_client.execute(
@@ -1165,7 +1165,7 @@ pub async fn update_reaction_count(
 
 pub async fn update_repost_count(
     db_client: &impl DatabaseClient,
-    post_id: &Uuid,
+    post_id: Uuid,
     change: i32,
 ) -> Result<(), DatabaseError> {
     let updated_count = db_client.execute(
@@ -1252,7 +1252,7 @@ pub async fn set_post_token_tx_id(
 
 pub async fn get_post_author(
     db_client: &impl DatabaseClient,
-    post_id: &Uuid,
+    post_id: Uuid,
 ) -> Result<DbActorProfile, DatabaseError> {
     let maybe_row = db_client.query_opt(
         "
@@ -1290,7 +1290,7 @@ pub async fn get_repost_by_author(
 /// Finds items reposted by user among given posts
 pub async fn find_reposted_by_user(
     db_client: &impl DatabaseClient,
-    user_id: &Uuid,
+    user_id: Uuid,
     posts_ids: &[Uuid],
 ) -> Result<Vec<Uuid>, DatabaseError> {
     let rows = db_client.query(
@@ -1497,10 +1497,10 @@ pub async fn delete_post(
     let post_row = maybe_post_row.ok_or(DatabaseError::NotFound("post"))?;
     let db_post: DbPost = post_row.try_get("post")?;
     // Update counters
-    if let Some(parent_id) = &db_post.in_reply_to_id {
+    if let Some(parent_id) = db_post.in_reply_to_id {
         update_reply_count(&transaction, parent_id, -1).await?;
     }
-    if let Some(repost_of_id) = &db_post.repost_of_id {
+    if let Some(repost_of_id) = db_post.repost_of_id {
         update_repost_count(&transaction, repost_of_id, -1).await?;
     };
     let orphaned_files = find_orphaned_files(&transaction, files).await?;

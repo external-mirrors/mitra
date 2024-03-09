@@ -66,15 +66,15 @@ pub async fn handle_follow(
     ).await?;
     let is_following = has_relationship(
         db_client,
-        &follow_request.source_id,
-        &follow_request.target_id,
+        follow_request.source_id,
+        follow_request.target_id,
         RelationshipType::Follow,
     ).await?;
     if !is_following && target_user.profile.manually_approves_followers {
         create_follow_request_notification(
             db_client,
-            &follow_request.source_id,
-            &follow_request.target_id,
+            follow_request.source_id,
+            follow_request.target_id,
         ).await?;
     } else {
         match follow_request_accepted(db_client, &follow_request.id).await {

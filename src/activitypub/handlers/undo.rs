@@ -114,8 +114,8 @@ pub async fn handle_undo(
             };
             delete_reaction(
                 db_client,
-                &reaction.author_id,
-                &reaction.post_id,
+                reaction.author_id,
+                reaction.post_id,
             ).await?;
             Ok(Some(LIKE))
         },

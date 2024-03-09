@@ -41,8 +41,8 @@ pub async fn send_subscription_notifications(
 ) -> Result<(), DatabaseError> {
     create_subscription_notification(
         db_client,
-        &sender.id,
-        &recipient.id,
+        sender.id,
+        recipient.id,
     ).await?;
     if let Some(ref remote_sender) = sender.actor_json {
         prepare_add_person(
@@ -82,8 +82,8 @@ pub async fn update_expired_subscriptions(
         } else {
             create_subscription_expiration_notification(
                 db_client,
-                &subscription.recipient_id,
-                &subscription.sender_id,
+                subscription.recipient_id,
+                subscription.sender_id,
             ).await?;
         };
     };

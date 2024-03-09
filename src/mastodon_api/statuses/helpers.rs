@@ -133,7 +133,7 @@ pub async fn build_status(
 ) -> Result<Status, DatabaseError> {
     add_related_posts(db_client, vec![&mut post]).await?;
     if let Some(user) = user {
-        add_user_actions(db_client, &user.id, vec![&mut post]).await?;
+        add_user_actions(db_client, user.id, vec![&mut post]).await?;
     };
     let status = Status::from_post(base_url, instance_url, post);
     Ok(status)
@@ -148,7 +148,7 @@ pub async fn build_status_list(
 ) -> Result<Vec<Status>, DatabaseError> {
     add_related_posts(db_client, posts.iter_mut().collect()).await?;
     if let Some(user) = user {
-        add_user_actions(db_client, &user.id, posts.iter_mut().collect()).await?;
+        add_user_actions(db_client, user.id, posts.iter_mut().collect()).await?;
     };
     let statuses: Vec<Status> = posts
         .into_iter()

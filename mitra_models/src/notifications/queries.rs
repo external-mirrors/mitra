@@ -17,9 +17,9 @@ use super::types::{EventType, Notification};
 
 pub(super) async fn create_notification(
     db_client: &impl DatabaseClient,
-    sender_id: &Uuid,
-    recipient_id: &Uuid,
-    post_id: Option<&Uuid>,
+    sender_id: Uuid,
+    recipient_id: Uuid,
+    post_id: Option<Uuid>,
     event_type: EventType,
 ) -> Result<(), DatabaseError> {
     db_client.execute(
@@ -32,21 +32,29 @@ pub(super) async fn create_notification(
         )
         VALUES ($1, $2, $3, $4)
         ",
-        &[&sender_id, &recipient_id, &post_id, &event_type],
+        &[
+            &sender_id,
+            &recipient_id,
+            &post_id,
+            &event_type,
+        ],
     ).await?;
     Ok(())
 }
 
 pub async fn get_notifications(
     db_client: &impl DatabaseClient,
-    recipient_id: &Uuid,
+    recipient_id: Uuid,
     max_id: Option<i32>,
     limit: u16,
 ) -> Result<Vec<Notification>, DatabaseError> {
     let statement = format!(
         "
         SELECT
-            notification, sender, post, post_author,
+            notification,
+            sender,
+            post,
+            post_author,
             {related_attachments},
             {related_mentions},
             {related_tags},

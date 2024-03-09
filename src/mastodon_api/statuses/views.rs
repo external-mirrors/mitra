@@ -352,7 +352,7 @@ async fn edit_status(
     // Same as add_related_posts
     post.in_reply_to = maybe_in_reply_to.map(Box::new);
     post.linked = linked;
-    add_user_actions(db_client, &current_user.id, vec![&mut post]).await?;
+    add_user_actions(db_client, current_user.id, vec![&mut post]).await?;
 
     // Federate
     prepare_update_note(
@@ -483,7 +483,7 @@ async fn favourite(
         return Err(MastodonError::NotFoundError("post"));
     };
     let maybe_reaction_created = match create_reaction(
-        db_client, &current_user.id, &status_id, None,
+        db_client, current_user.id, *status_id, None,
     ).await {
         Ok(reaction) => {
             post.reaction_count += 1;
@@ -526,7 +526,7 @@ async fn unfavourite(
     let current_user = get_current_user(db_client, auth.token()).await?;
     let mut post = get_post_by_id(db_client, &status_id).await?;
     let maybe_reaction_deleted = match delete_reaction(
-        db_client, &current_user.id, &status_id,
+        db_client, current_user.id, *status_id,
     ).await {
         Ok(reaction_id) => {
             post.reaction_count -= 1;

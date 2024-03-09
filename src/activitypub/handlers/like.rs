@@ -98,8 +98,8 @@ pub async fn handle_like(
     };
     match create_reaction(
         db_client,
-        &author.id,
-        &post_id,
+        author.id,
+        post_id,
         Some(&activity.id),
     ).await {
         Ok(_) => (),

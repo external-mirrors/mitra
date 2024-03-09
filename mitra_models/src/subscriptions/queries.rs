@@ -289,8 +289,8 @@ mod tests {
 
         let is_subscribed = has_relationship(
             db_client,
-            &sender.id,
-            &recipient.id,
+            sender.id,
+            recipient.id,
             RelationshipType::Subscription,
         ).await.unwrap();
         assert_eq!(is_subscribed, true);

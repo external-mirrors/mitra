@@ -111,8 +111,8 @@ pub async fn get_relationships_many(
 
 pub async fn has_relationship(
     db_client: &impl DatabaseClient,
-    source_id: &Uuid,
-    target_id: &Uuid,
+    source_id: Uuid,
+    target_id: Uuid,
     relationship_type: RelationshipType,
 ) -> Result<bool, DatabaseError> {
     if matches!(relationship_type, RelationshipType::FollowRequest) {
@@ -158,7 +158,7 @@ pub async fn follow(
     let target_profile = update_follower_count(&transaction, target_id, 1).await?;
     update_following_count(&transaction, source_id, 1).await?;
     if target_profile.is_local() && !target_profile.manually_approves_followers {
-        create_follow_notification(&transaction, source_id, target_id).await?;
+        create_follow_notification(&transaction, *source_id, *target_id).await?;
     };
     transaction.commit().await?;
     Ok(())
@@ -205,8 +205,8 @@ pub async fn unfollow(
 
 pub(super) async fn create_follow_request_unchecked(
     db_client: &impl DatabaseClient,
-    source_id: &Uuid,
-    target_id: &Uuid,
+    source_id: Uuid,
+    target_id: Uuid,
 ) -> Result<DbFollowRequest, DatabaseError> {
     let request_id = generate_ulid();
     let row = db_client.query_one(
@@ -786,8 +786,8 @@ mod tests {
         // Create follow request
         let follow_request = create_follow_request_unchecked(
             db_client,
-            &source.id,
-            &target.id,
+            source.id,
+            target.id,
         ).await.unwrap();
         assert_eq!(follow_request.source_id, source.id);
         assert_eq!(follow_request.target_id, target.id);
@@ -845,8 +845,8 @@ mod tests {
         // Create follow request
         let follow_request = create_follow_request_unchecked(
             db_client,
-            &source.id,
-            &target.id,
+            source.id,
+            target.id,
         ).await.unwrap();
         // Reject follow request
         follow_request_rejected(db_client, &follow_request.id).await.unwrap();
@@ -861,8 +861,8 @@ mod tests {
         ));
         let is_rejected = has_relationship(
             db_client,
-            &target.id,
-            &source.id,
+            target.id,
+            source.id,
             RelationshipType::Reject,
         ).await.unwrap();
         assert_eq!(is_rejected, true);
@@ -924,8 +924,8 @@ mod tests {
         let target = create_user(db_client, target_data).await.unwrap();
         let follow_request = create_follow_request_unchecked(
             db_client,
-            &source.id,
-            &target.id,
+            source.id,
+            target.id,
         ).await.unwrap();
         let results = get_follow_requests_paginated(
             db_client,
@@ -959,8 +959,8 @@ mod tests {
         assert!(
             has_relationship(
                 db_client,
-                &source.id,
-                &target.id,
+                source.id,
+                target.id,
                 RelationshipType::Mute
             ).await.unwrap()
         );
@@ -969,8 +969,8 @@ mod tests {
         assert!(
             !has_relationship(
                 db_client,
-                &source.id,
-                &target.id,
+                source.id,
+                target.id,
                 RelationshipType::Mute
             ).await.unwrap()
         );

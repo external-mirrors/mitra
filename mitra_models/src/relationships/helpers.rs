@@ -10,8 +10,8 @@ use super::types::{DbFollowRequest, RelationshipType};
 
 pub async fn create_follow_request(
     db_client: &mut impl DatabaseClient,
-    source_id: &Uuid,
-    target_id: &Uuid,
+    source_id: Uuid,
+    target_id: Uuid,
 ) -> Result<DbFollowRequest, DatabaseError> {
     let transaction = db_client.transaction().await?;
     // Prevent changes to relationship table

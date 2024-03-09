@@ -87,8 +87,8 @@ pub async fn follow_or_create_request(
         // Create follow request if target requires approval or it is remote
         match create_follow_request(
             db_client,
-            &current_user.id,
-            &target_profile.id,
+            current_user.id,
+            target_profile.id,
         ).await {
             Ok(follow_request) => {
                 if let Some(ref remote_actor) = target_profile.actor_json {
@@ -101,8 +101,8 @@ pub async fn follow_or_create_request(
                 } else {
                     create_follow_request_notification(
                         db_client,
-                        &current_user.id,
-                        &target_profile.id,
+                        current_user.id,
+                        target_profile.id,
                     ).await?;
                 };
             },

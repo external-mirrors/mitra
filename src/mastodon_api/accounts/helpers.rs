@@ -196,7 +196,7 @@ mod tests {
         assert_eq!(relationship.showing_reblogs, true);
         assert_eq!(relationship.showing_replies, true);
         // Follow request
-        let follow_request = create_follow_request(db_client, &user_1.id, &user_2.id).await.unwrap();
+        let follow_request = create_follow_request(db_client, user_1.id, user_2.id).await.unwrap();
         let relationship = get_relationship(db_client, &user_1.id, &user_2.id).await.unwrap();
         assert_eq!(relationship.following, false);
         assert_eq!(relationship.followed_by, false);

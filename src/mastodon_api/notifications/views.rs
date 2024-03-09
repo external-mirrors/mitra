@@ -38,7 +38,7 @@ async fn get_notifications_view(
     let instance = config.instance();
     let notifications: Vec<ApiNotification> = get_notifications(
         db_client,
-        &current_user.id,
+        current_user.id,
         query_params.max_id,
         query_params.limit.inner(),
     ).await?

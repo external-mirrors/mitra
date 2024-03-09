@@ -110,8 +110,8 @@ pub async fn handle_move(
         ).await?;
         create_move_notification(
             db_client,
-            &new_profile.id,
-            &follower.id,
+            new_profile.id,
+            follower.id,
         ).await?;
     };
 

@@ -276,7 +276,7 @@ pub async fn get_note_recipients(
     };
     if let Some(in_reply_to_id) = post.in_reply_to_id {
         // TODO: use post.in_reply_to ?
-        let in_reply_to_author = get_post_author(db_client, &in_reply_to_id).await?;
+        let in_reply_to_author = get_post_author(db_client, in_reply_to_id).await?;
         audience.push(in_reply_to_author);
     };
     audience.extend(post.mentions.clone());

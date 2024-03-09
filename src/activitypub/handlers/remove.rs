@@ -54,8 +54,8 @@ pub async fn handle_remove(
             Ok(_) => {
                 create_subscription_expiration_notification(
                     db_client,
-                    &actor_profile.id,
-                    &user.id,
+                    actor_profile.id,
+                    user.id,
                 ).await?;
                 return Ok(Some(PERSON));
             },

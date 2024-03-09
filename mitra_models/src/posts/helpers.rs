@@ -55,7 +55,7 @@ pub async fn add_related_posts(
 
 pub async fn add_user_actions(
     db_client: &impl DatabaseClient,
-    user_id: &Uuid,
+    user_id: Uuid,
     posts: Vec<&mut Post>,
 ) -> Result<(), DatabaseError> {
     let posts_ids: Vec<Uuid> = posts.iter()
@@ -107,8 +107,8 @@ pub async fn can_view_post(
             if let Some(user) = user {
                 let is_following = has_relationship(
                     db_client,
-                    &user.id,
-                    &post.author.id,
+                    user.id,
+                    post.author.id,
                     RelationshipType::Follow,
                 ).await?;
                 is_following || is_mentioned(user)

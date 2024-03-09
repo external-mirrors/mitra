@@ -17,8 +17,8 @@ use super::types::DbReaction;
 
 pub async fn create_reaction(
     db_client: &mut impl DatabaseClient,
-    author_id: &Uuid,
-    post_id: &Uuid,
+    author_id: Uuid,
+    post_id: Uuid,
     activity_id: Option<&String>,
 ) -> Result<DbReaction, DatabaseError> {
     let transaction = db_client.transaction().await?;
@@ -40,11 +40,11 @@ pub async fn create_reaction(
     let reaction: DbReaction = row.try_get("post_reaction")?;
     update_reaction_count(&transaction, post_id, 1).await?;
     let post_author = get_post_author(&transaction, post_id).await?;
-    if post_author.is_local() && post_author.id != *author_id {
+    if post_author.is_local() && post_author.id != author_id {
         create_reaction_notification(
             &transaction,
             author_id,
-            &post_author.id,
+            post_author.id,
             post_id,
         ).await?;
     };
@@ -71,8 +71,8 @@ pub async fn get_reaction_by_remote_activity_id(
 
 pub async fn delete_reaction(
     db_client: &mut impl DatabaseClient,
-    author_id: &Uuid,
-    post_id: &Uuid,
+    author_id: Uuid,
+    post_id: Uuid,
 ) -> Result<Uuid, DatabaseError> {
     let transaction = db_client.transaction().await?;
     let maybe_row = transaction.query_opt(
@@ -93,7 +93,7 @@ pub async fn delete_reaction(
 /// Finds favourites among given posts and returns their IDs
 pub async fn find_favourited_by_user(
     db_client: &impl DatabaseClient,
-    user_id: &Uuid,
+    user_id: Uuid,
     posts_ids: &[Uuid],
 ) -> Result<Vec<Uuid>, DatabaseError> {
     let rows = db_client.query(

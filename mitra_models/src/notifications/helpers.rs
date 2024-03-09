@@ -15,8 +15,8 @@ use super::types::EventType;
 
 pub async fn create_follow_notification(
     db_client: &impl DatabaseClient,
-    sender_id: &Uuid,
-    recipient_id: &Uuid,
+    sender_id: Uuid,
+    recipient_id: Uuid,
 ) -> Result<(), DatabaseError> {
     if has_relationship(
         db_client,
@@ -34,8 +34,8 @@ pub async fn create_follow_notification(
 
 pub async fn create_follow_request_notification(
     db_client: &impl DatabaseClient,
-    sender_id: &Uuid,
-    recipient_id: &Uuid,
+    sender_id: Uuid,
+    recipient_id: Uuid,
 ) -> Result<(), DatabaseError> {
     if has_relationship(
         db_client,
@@ -53,9 +53,9 @@ pub async fn create_follow_request_notification(
 
 pub async fn create_reply_notification(
     db_client: &impl DatabaseClient,
-    sender_id: &Uuid,
-    recipient_id: &Uuid,
-    post_id: &Uuid,
+    sender_id: Uuid,
+    recipient_id: Uuid,
+    post_id: Uuid,
 ) -> Result<(), DatabaseError> {
     if has_relationship(
         db_client,
@@ -73,9 +73,9 @@ pub async fn create_reply_notification(
 
 pub async fn create_reaction_notification(
     db_client: &impl DatabaseClient,
-    sender_id: &Uuid,
-    recipient_id: &Uuid,
-    post_id: &Uuid,
+    sender_id: Uuid,
+    recipient_id: Uuid,
+    post_id: Uuid,
 ) -> Result<(), DatabaseError> {
     if has_relationship(
         db_client,
@@ -93,9 +93,9 @@ pub async fn create_reaction_notification(
 
 pub async fn create_mention_notification(
     db_client: &impl DatabaseClient,
-    sender_id: &Uuid,
-    recipient_id: &Uuid,
-    post_id: &Uuid,
+    sender_id: Uuid,
+    recipient_id: Uuid,
+    post_id: Uuid,
 ) -> Result<(), DatabaseError> {
     if has_relationship(
         db_client,
@@ -113,9 +113,9 @@ pub async fn create_mention_notification(
 
 pub async fn create_repost_notification(
     db_client: &impl DatabaseClient,
-    sender_id: &Uuid,
-    recipient_id: &Uuid,
-    post_id: &Uuid,
+    sender_id: Uuid,
+    recipient_id: Uuid,
+    post_id: Uuid,
 ) -> Result<(), DatabaseError> {
     if has_relationship(
         db_client,
@@ -133,8 +133,8 @@ pub async fn create_repost_notification(
 
 pub async fn create_subscription_notification(
     db_client: &impl DatabaseClient,
-    sender_id: &Uuid,
-    recipient_id: &Uuid,
+    sender_id: Uuid,
+    recipient_id: Uuid,
 ) -> Result<(), DatabaseError> {
     create_notification(
         db_client, sender_id, recipient_id, None,
@@ -144,8 +144,8 @@ pub async fn create_subscription_notification(
 
 pub async fn create_subscription_expiration_notification(
     db_client: &impl DatabaseClient,
-    sender_id: &Uuid,
-    recipient_id: &Uuid,
+    sender_id: Uuid,
+    recipient_id: Uuid,
 ) -> Result<(), DatabaseError> {
     create_notification(
         db_client, sender_id, recipient_id, None,
@@ -155,8 +155,8 @@ pub async fn create_subscription_expiration_notification(
 
 pub async fn create_move_notification(
     db_client: &impl DatabaseClient,
-    sender_id: &Uuid,
-    recipient_id: &Uuid,
+    sender_id: Uuid,
+    recipient_id: Uuid,
 ) -> Result<(), DatabaseError> {
     create_notification(
         db_client, sender_id, recipient_id, None,
@@ -166,12 +166,12 @@ pub async fn create_move_notification(
 
 pub async fn create_signup_notifications(
     db_client: &impl DatabaseClient,
-    sender_id: &Uuid,
+    sender_id: Uuid,
 ) -> Result<(), DatabaseError> {
     let admins = get_users_by_role(db_client, Role::Admin).await?;
     for recipient_id in admins {
         create_notification(
-            db_client, sender_id, &recipient_id, None,
+            db_client, sender_id, recipient_id, None,
             EventType::SignUp,
         ).await?;
     };
@@ -207,12 +207,12 @@ mod tests {
         let user_2 = create_user(db_client, user_data_2).await.unwrap();
         create_follow_notification(
             db_client,
-            &user_2.id,
-            &user_1.id,
+            user_2.id,
+            user_1.id,
         ).await.unwrap();
         let notifications = get_notifications(
             db_client,
-            &user_1.id,
+            user_1.id,
             None,
             5,
         ).await.unwrap();
