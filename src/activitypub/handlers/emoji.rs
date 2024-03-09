@@ -24,10 +24,9 @@ use mitra_validators::{
     errors::ValidationError,
 };
 
-use crate::activitypub::{
-    builders::emoji::Emoji,
-    receiver::HandlerError,
-};
+use crate::activitypub::builders::emoji::Emoji;
+
+use super::HandlerError;
 
 // Returns None if emoji is not valid or when fetcher fails.
 // Returns HandlerError on database and filesystem errors.

@@ -1986,9 +1986,11 @@ dependencies = [
  "mitra_config",
  "mitra_federation",
  "mitra_models",
+ "mitra_services",
  "mitra_utils",
  "mitra_validators",
  "regex",
+ "thiserror",
  "uuid",
 ]
 

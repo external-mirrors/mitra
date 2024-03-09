@@ -1,6 +1,9 @@
 use uuid::Uuid;
 
-use mitra_activitypub::identifiers::validate_object_id;
+use mitra_activitypub::{
+    errors::HandlerError,
+    identifiers::validate_object_id,
+};
 use mitra_federation::{
     agent::FederationAgent,
     deserialization::parse_into_id_array,
@@ -40,7 +43,6 @@ use crate::activitypub::{
         emoji::handle_emoji,
         proposal::{parse_proposal, Proposal},
     },
-    receiver::HandlerError,
     vocabulary::{
         EMOJI,
         HASHTAG,

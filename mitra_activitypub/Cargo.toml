@@ -8,6 +8,8 @@ rust-version = "1.63.0"
 [dependencies]
 # Used for working with regular expressions
 regex = "1.9.6"
+# Used for creating error types
+thiserror = "1.0.37"
 # Used to work with UUIDs
 uuid = { version = "1.1.2" }
 
@@ -15,5 +17,6 @@ mitra_adapters = { path = "../mitra_adapters" }
 mitra_config = { path = "../mitra_config" }
 mitra_federation = { path = "../mitra_federation" }
 mitra_models = { path = "../mitra_models" }
+mitra_services = { path = "../mitra_services" }
 mitra_utils = { path = "../mitra_utils" }
 mitra_validators = { path = "../mitra_validators" }

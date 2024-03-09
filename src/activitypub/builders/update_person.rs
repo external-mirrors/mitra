@@ -3,6 +3,7 @@ use serde_json::{Value as JsonValue};
 use uuid::Uuid;
 
 use mitra_activitypub::{
+    errors::HandlerError,
     identifiers::{
         local_object_id,
         parse_local_actor_id,
@@ -27,7 +28,6 @@ use crate::activitypub::{
     actors::builders::{build_local_actor, Actor},
     contexts::{build_default_context, Context},
     queues::OutgoingActivityJobData,
-    receiver::HandlerError,
     vocabulary::{PERSON, UPDATE},
 };
 

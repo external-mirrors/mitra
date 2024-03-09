@@ -61,12 +61,12 @@ use crate::activitypub::{
         import_post,
         ActorIdResolver,
     },
-    receiver::HandlerError,
     vocabulary::*,
 };
 
 use super::{
     emoji::handle_emoji,
+    HandlerError,
     HandlerResult,
 };
 

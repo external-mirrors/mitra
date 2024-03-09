@@ -1,7 +1,7 @@
-pub use super::receiver::HandlerError;
+use mitra_activitypub::errors::HandlerError;
 // Handlers should return object type if activity has been accepted
 // or None if it has been ignored
-pub type HandlerResult = Result<Option<&'static str>, HandlerError>;
+type HandlerResult = Result<Option<&'static str>, HandlerError>;
 
 pub mod accept;
 pub mod add;

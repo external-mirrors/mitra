@@ -1,6 +1,9 @@
 use actix_web::HttpRequest;
 use serde_json::{Value as JsonValue};
 
+use mitra_activitypub::{
+    errors::HandlerError,
+};
 use mitra_config::Config;
 use mitra_federation::{
     deserialization::get_object_id,
@@ -48,7 +51,6 @@ use mitra_utils::{
 };
 
 use super::importers::ActorIdResolver;
-use super::receiver::HandlerError;
 
 const AUTHENTICATION_FETCHER_TIMEOUT: u64 = 10;
 

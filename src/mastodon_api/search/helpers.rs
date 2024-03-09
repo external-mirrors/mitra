@@ -4,6 +4,7 @@ use regex::Regex;
 use url::Url;
 
 use mitra_activitypub::{
+    errors::HandlerError,
     identifiers::parse_local_object_id,
 };
 use mitra_config::Config;
@@ -39,7 +40,6 @@ use crate::activitypub::{
         import_profile_by_actor_address,
         ActorIdResolver,
     },
-    HandlerError,
 };
 
 const SEARCH_FETCHER_TIMEOUT: u64 = 15;

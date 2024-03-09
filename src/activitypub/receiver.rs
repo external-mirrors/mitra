@@ -2,14 +2,13 @@ use actix_web::HttpRequest;
 use serde_json::{Value as JsonValue};
 use wildmatch::WildMatch;
 
-use mitra_activitypub::identifiers::profile_actor_id;
-use mitra_config::Config;
-use mitra_federation::{
-    deserialization::get_object_id,
-    fetch::FetchError,
+use mitra_activitypub::{
+    errors::HandlerError,
+    identifiers::profile_actor_id,
 };
+use mitra_config::Config;
+use mitra_federation::deserialization::get_object_id;
 use mitra_models::database::{DatabaseClient, DatabaseError};
-use mitra_services::media::MediaStorageError;
 use mitra_utils::urls::get_hostname;
 use mitra_validators::errors::ValidationError;
 
@@ -37,30 +36,6 @@ use super::handlers::{
 };
 use super::queues::IncomingActivityJobData;
 use super::vocabulary::*;
-
-#[derive(thiserror::Error, Debug)]
-pub enum HandlerError {
-    #[error("local object")]
-    LocalObject,
-
-    #[error(transparent)]
-    FetchError(#[from] FetchError),
-
-    #[error(transparent)]
-    ValidationError(#[from] ValidationError),
-
-    #[error(transparent)]
-    DatabaseError(#[from] DatabaseError),
-
-    #[error("media storage error")]
-    StorageError(#[from] MediaStorageError),
-
-    #[error("{0}")]
-    ServiceError(&'static str),
-
-    #[error("unsolicited message from {0}")]
-    UnsolicitedMessage(String),
-}
 
 pub async fn handle_activity(
     config: &Config,

@@ -6,6 +6,7 @@ use serde_json::{Value as JsonValue};
 
 use mitra_activitypub::{
     agent::build_federation_agent,
+    errors::HandlerError,
     identifiers::{parse_local_actor_id, parse_local_object_id},
 };
 use mitra_config::{Config, Instance};
@@ -40,7 +41,7 @@ use crate::activitypub::{
     actors::helpers::{create_remote_profile, update_remote_profile},
     actors::types::Actor,
     handlers::create::{get_object_links, handle_note, AttributedObject},
-    receiver::{handle_activity, HandlerError},
+    receiver::handle_activity,
     vocabulary::GROUP,
 };
 
