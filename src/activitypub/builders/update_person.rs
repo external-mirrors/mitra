@@ -137,9 +137,6 @@ pub async fn validate_update_person_c2s(
     Ok(user)
 }
 
-// TODO: remove
-pub use crate::activitypub::authentication::verify_signed_c2s_activity;
-
 pub async fn forward_update_person(
     db_client: &impl DatabaseClient,
     user: &User,
