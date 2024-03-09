@@ -35,7 +35,7 @@ use mitra_models::{
 };
 
 use super::deliverer::{deliver_activity_worker, Recipient, Sender};
-use super::receiver::handle_activity;
+use super::handlers::activity::handle_activity;
 
 const JOB_TIMEOUT: u32 = 3600; // 1 hour
 

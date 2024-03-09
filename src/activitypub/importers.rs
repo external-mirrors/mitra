@@ -40,8 +40,10 @@ use mitra_validators::errors::ValidationError;
 use crate::activitypub::{
     actors::helpers::{create_remote_profile, update_remote_profile},
     actors::types::Actor,
-    handlers::create::{get_object_links, handle_note, AttributedObject},
-    receiver::handle_activity,
+    handlers::{
+        activity::handle_activity,
+        create::{get_object_links, handle_note, AttributedObject},
+    },
     vocabulary::GROUP,
 };
 
