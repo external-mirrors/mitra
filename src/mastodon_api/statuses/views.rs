@@ -45,6 +45,7 @@ use mitra_models::{
         create_reaction,
         delete_reaction,
     },
+    reactions::types::ReactionData,
     relationships::queries::get_subscribers,
 };
 use mitra_services::{
@@ -482,8 +483,13 @@ async fn favourite(
     if post.repost_of_id.is_some() {
         return Err(MastodonError::NotFoundError("post"));
     };
+    let reaction_data = ReactionData {
+        author_id: current_user.id,
+        post_id: status_id.into_inner(),
+        activity_id: None,
+    };
     let maybe_reaction_created = match create_reaction(
-        db_client, current_user.id, *status_id, None,
+        db_client, reaction_data,
     ).await {
         Ok(reaction) => {
             post.reaction_count += 1;

@@ -11,7 +11,10 @@ use mitra_federation::deserialization::{
 };
 use mitra_models::{
     database::{DatabaseClient, DatabaseError},
-    reactions::queries::create_reaction,
+    reactions::{
+        queries::create_reaction,
+        types::ReactionData,
+    },
 };
 use mitra_services::media::MediaStorage;
 use mitra_utils::unicode::is_single_character;
@@ -96,12 +99,12 @@ pub async fn handle_like(
         },
         None => (),
     };
-    match create_reaction(
-        db_client,
-        author.id,
-        post_id,
-        Some(&activity.id),
-    ).await {
+    let reaction_data = ReactionData {
+        author_id: author.id,
+        post_id: post_id,
+        activity_id: Some(activity.id),
+    };
+    match create_reaction(db_client, reaction_data).await {
         Ok(_) => (),
         // Ignore activity if reaction is already saved
         Err(DatabaseError::AlreadyExists(_)) => return Ok(None),

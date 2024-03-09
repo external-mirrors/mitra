@@ -13,20 +13,23 @@ use crate::posts::queries::{
     get_post_author,
 };
 
-use super::types::DbReaction;
+use super::types::{DbReaction, ReactionData};
 
 pub async fn create_reaction(
     db_client: &mut impl DatabaseClient,
-    author_id: Uuid,
-    post_id: Uuid,
-    activity_id: Option<&String>,
+    reaction_data: ReactionData,
 ) -> Result<DbReaction, DatabaseError> {
     let transaction = db_client.transaction().await?;
     let reaction_id = generate_ulid();
     // Reactions to reposts are not allowed
     let maybe_row = transaction.query_opt(
         "
-        INSERT INTO post_reaction (id, author_id, post_id, activity_id)
+        INSERT INTO post_reaction (
+            id,
+            author_id,
+            post_id,
+            activity_id
+        )
         SELECT $1, $2, $3, $4
         WHERE NOT EXISTS (
             SELECT 1 FROM post
@@ -34,18 +37,23 @@ pub async fn create_reaction(
         )
         RETURNING post_reaction
         ",
-        &[&reaction_id, &author_id, &post_id, &activity_id],
+        &[
+            &reaction_id,
+            &reaction_data.author_id,
+            &reaction_data.post_id,
+            &reaction_data.activity_id,
+        ],
     ).await.map_err(catch_unique_violation("reaction"))?;
     let row = maybe_row.ok_or(DatabaseError::NotFound("post"))?;
     let reaction: DbReaction = row.try_get("post_reaction")?;
-    update_reaction_count(&transaction, post_id, 1).await?;
-    let post_author = get_post_author(&transaction, post_id).await?;
-    if post_author.is_local() && post_author.id != author_id {
+    update_reaction_count(&transaction, reaction.post_id, 1).await?;
+    let post_author = get_post_author(&transaction, reaction.post_id).await?;
+    if post_author.is_local() && post_author.id != reaction.author_id {
         create_reaction_notification(
             &transaction,
-            author_id,
+            reaction.author_id,
             post_author.id,
-            post_id,
+            reaction.post_id,
         ).await?;
     };
     transaction.commit().await?;
@@ -145,12 +153,12 @@ mod tests {
             ..Default::default()
         };
         let post = create_post(db_client, &user_2.id, post_data).await.unwrap();
-        let reaction = create_reaction(
-            db_client,
-            user_1.id,
-            post.id,
-            None,
-        ).await.unwrap();
+        let reaction_data = ReactionData {
+            author_id: user_1.id,
+            post_id: post.id,
+            activity_id: None,
+        };
+        let reaction = create_reaction(db_client, reaction_data).await.unwrap();
 
         assert_eq!(reaction.author_id, user_1.id);
         assert_eq!(reaction.post_id, post.id);

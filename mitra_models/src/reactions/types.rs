@@ -11,3 +11,9 @@ pub struct DbReaction {
     pub activity_id: Option<String>,
     pub created_at: DateTime<Utc>,
 }
+
+pub struct ReactionData {
+    pub author_id: Uuid,
+    pub post_id: Uuid,
+    pub activity_id: Option<String>,
+}
