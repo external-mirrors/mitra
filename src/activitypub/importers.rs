@@ -515,6 +515,7 @@ pub async fn import_from_outbox(
             db_client,
             &activity,
             true, // is authenticated
+            true, // activity is being pulled
         ).await.unwrap_or_else(|error| {
             log::warn!(
                 "failed to process activity ({}): {}",

@@ -752,25 +752,10 @@ async fn check_unsolicited_message(
 }
 
 #[derive(Deserialize)]
-pub struct CreateNote {
+struct CreateNote {
     #[serde(deserialize_with = "deserialize_into_object_id")]
-    pub actor: String,
-    pub object: AttributedObject,
-}
-
-pub async fn validate_create(
-    config: &Config,
-    db_client: &impl DatabaseClient,
-    activity: &JsonValue,
-) -> Result<(), HandlerError> {
-    let CreateNote { object, .. } = serde_json::from_value(activity.clone())
-        .map_err(|_| ValidationError("invalid object"))?;
-    check_unsolicited_message(
-        db_client,
-        &config.instance_url(),
-        &object,
-    ).await?;
-    Ok(())
+    actor: String,
+    object: AttributedObject,
 }
 
 pub async fn handle_create(
@@ -778,10 +763,19 @@ pub async fn handle_create(
     db_client: &mut impl DatabaseClient,
     activity: JsonValue,
     mut is_authenticated: bool,
+    is_pulled: bool,
 ) -> HandlerResult {
     let activity: CreateNote = serde_json::from_value(activity)
         .map_err(|_| ValidationError("invalid object"))?;
     let object = activity.object;
+
+    if !is_pulled {
+        check_unsolicited_message(
+            db_client,
+            &config.instance_url(),
+            &object,
+        ).await?;
+    };
 
     // Verify attribution
     let author_id = get_object_attributed_to(&object)?;

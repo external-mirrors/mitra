@@ -24,10 +24,7 @@ use super::handlers::{
     accept::handle_accept,
     add::handle_add,
     announce::handle_announce,
-    create::{
-        handle_create,
-        validate_create,
-    },
+    create::handle_create,
     delete::handle_delete,
     follow::handle_follow,
     like::handle_like,
@@ -70,6 +67,7 @@ pub async fn handle_activity(
     db_client: &mut impl DatabaseClient,
     activity: &JsonValue,
     is_authenticated: bool,
+    is_pulled: bool,
 ) -> Result<(), HandlerError> {
     let activity_type = activity["type"].as_str()
         .ok_or(ValidationError("type property is missing"))?
@@ -88,7 +86,13 @@ pub async fn handle_activity(
             handle_announce(config, db_client, activity).await?
         },
         CREATE => {
-            handle_create(config, db_client, activity, is_authenticated).await?
+            handle_create(
+                config,
+                db_client,
+                activity,
+                is_authenticated,
+                is_pulled,
+            ).await?
         },
         DELETE => {
             handle_delete(config, db_client, activity).await?
@@ -143,10 +147,6 @@ pub enum InboxError {
 
     #[error(transparent)]
     AuthError(#[from] AuthenticationError),
-
-    // Might be returned by validate_create()
-    #[error(transparent)]
-    HandlerError(#[from] HandlerError),
 }
 
 impl From<InboxError> for HttpError {
@@ -156,20 +156,6 @@ impl From<InboxError> for HttpError {
             InboxError::DatabaseError(error) => error.into(),
             InboxError::AuthError(_) => {
                 HttpError::AuthError("invalid signature")
-            },
-            InboxError::HandlerError(error) => {
-                match error {
-                    HandlerError::LocalObject => HttpError::InternalError,
-                    HandlerError::FetchError(error) => {
-                        HttpError::ValidationError(error.to_string())
-                    },
-                    HandlerError::ValidationError(error) => error.into(),
-                    HandlerError::DatabaseError(error) => error.into(),
-                    HandlerError::StorageError(_) => HttpError::InternalError,
-                    HandlerError::ServiceError(_) => HttpError::InternalError,
-                    // Return 403 Forbidden
-                    HandlerError::UnsolicitedMessage(_) => HttpError::PermissionError,
-                }
             },
         }
     }
@@ -305,11 +291,6 @@ pub async fn receive_activity(
                 return Err(AuthenticationError::UnexpectedSigner.into());
             },
         };
-    };
-
-    if activity_type == CREATE {
-        // Validate before putting into the queue
-        validate_create(config, db_client, activity).await?;
     };
 
     // Add activity to job queue and release lock

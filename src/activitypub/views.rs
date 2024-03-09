@@ -28,7 +28,6 @@ use mitra_models::{
     database::{
         get_database_client,
         DatabaseConnectionPool,
-        DatabaseError,
     },
     emojis::queries::get_local_emoji_by_name,
     posts::helpers::{add_related_posts, can_view_post},
@@ -72,7 +71,7 @@ use super::builders::{
         validate_update_person_c2s,
     },
 };
-use super::receiver::{receive_activity, InboxError, HandlerError};
+use super::receiver::receive_activity;
 
 #[derive(Deserialize)]
 pub struct ObjectQueryParams {
@@ -157,13 +156,6 @@ async fn inbox(
         activity_digest,
     ).await
         .map_err(|error| {
-            // TODO: preserve original error text in DatabaseError
-            if let InboxError::HandlerError(
-                HandlerError::DatabaseError(
-                    DatabaseError::DatabaseClientError(ref pg_error))) = error
-            {
-                log::error!("database client error: {}", pg_error);
-            };
             log::warn!(
                 "failed to process activity ({}): {}",
                 error,

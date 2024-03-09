@@ -98,6 +98,7 @@ pub async fn process_queued_incoming_activities(
             db_client,
             &job_data.activity,
             job_data.is_authenticated,
+            false, // activity was pushed
         );
         let handler_result = match tokio::time::timeout(
             duration_max,
@@ -128,10 +129,14 @@ pub async fn process_queued_incoming_activities(
             );
             if job_data.failure_count <= INCOMING_QUEUE_RETRIES_MAX &&
                 // Don't retry after fetcher recursion error
-                !matches!(error, HandlerError::FetchError(
-                    FetchError::RecursionError |
-                    FetchError::NotFound(_)
-                ))
+                // Don't retry unsolicited messages
+                !matches!(
+                    error,
+                    HandlerError::FetchError(
+                        FetchError::RecursionError |
+                        FetchError::NotFound(_)
+                    ) | HandlerError::UnsolicitedMessage(_)
+                )
             {
                 // Re-queue
                 let retry_after = incoming_queue_backoff(job_data.failure_count);

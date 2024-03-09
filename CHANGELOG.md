@@ -21,6 +21,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Accept object attachments with type `Audio`.
 - Write message to log when profile lookup by mention name is successful.
 - Change media description max length to 2000.
+- Perform unsolicited message check after putting activity into a queue.
 
 ### Removed
 
