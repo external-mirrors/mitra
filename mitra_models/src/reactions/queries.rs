@@ -109,3 +109,51 @@ pub async fn find_favourited_by_user(
         .collect::<Result<_, _>>()?;
     Ok(favourites)
 }
+
+#[cfg(test)]
+mod tests {
+    use serial_test::serial;
+    use crate::database::test_utils::create_test_database;
+    use crate::posts::{
+        queries::create_post,
+        types::PostCreateData,
+    };
+    use crate::users::{
+        queries::create_user,
+        types::UserCreateData,
+    };
+    use super::*;
+
+    #[tokio::test]
+    #[serial]
+    async fn test_create_reaction() {
+        let db_client = &mut create_test_database().await;
+        let user_data_1 = UserCreateData {
+            username: "test1".to_string(),
+            password_hash: Some("test1".to_string()),
+            ..Default::default()
+        };
+        let user_1 = create_user(db_client, user_data_1).await.unwrap();
+        let user_data_2 = UserCreateData {
+            username: "test2".to_string(),
+            password_hash: Some("test2".to_string()),
+            ..Default::default()
+        };
+        let user_2 = create_user(db_client, user_data_2).await.unwrap();
+        let post_data = PostCreateData {
+            content: "my post".to_string(),
+            ..Default::default()
+        };
+        let post = create_post(db_client, &user_2.id, post_data).await.unwrap();
+        let reaction = create_reaction(
+            db_client,
+            user_1.id,
+            post.id,
+            None,
+        ).await.unwrap();
+
+        assert_eq!(reaction.author_id, user_1.id);
+        assert_eq!(reaction.post_id, post.id);
+        assert_eq!(reaction.activity_id.is_none(), true);
+    }
+}
