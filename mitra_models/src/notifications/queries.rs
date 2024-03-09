@@ -20,6 +20,7 @@ pub(super) async fn create_notification(
     sender_id: Uuid,
     recipient_id: Uuid,
     post_id: Option<Uuid>,
+    reaction_id: Option<Uuid>,
     event_type: EventType,
 ) -> Result<(), DatabaseError> {
     db_client.execute(
@@ -28,14 +29,16 @@ pub(super) async fn create_notification(
             sender_id,
             recipient_id,
             post_id,
+            reaction_id,
             event_type
         )
-        VALUES ($1, $2, $3, $4)
+        VALUES ($1, $2, $3, $4, $5)
         ",
         &[
             &sender_id,
             &recipient_id,
             &post_id,
+            &reaction_id,
             &event_type,
         ],
     ).await?;
@@ -59,7 +62,9 @@ pub async fn get_notifications(
             {related_mentions},
             {related_tags},
             {related_links},
-            {related_emojis}
+            {related_emojis},
+            post_reaction.content AS reaction_content,
+            emoji AS reaction_emoji
         FROM notification
         JOIN actor_profile AS sender
         ON notification.sender_id = sender.id
@@ -67,6 +72,10 @@ pub async fn get_notifications(
         ON notification.post_id = post.id
         LEFT JOIN actor_profile AS post_author
         ON post.author_id = post_author.id
+        LEFT JOIN post_reaction
+        ON notification.reaction_id = post_reaction.id
+        LEFT JOIN emoji
+        ON post_reaction.emoji_id = emoji.id
         WHERE
             recipient_id = $1
             AND NOT EXISTS (

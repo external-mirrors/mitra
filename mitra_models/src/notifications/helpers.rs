@@ -28,6 +28,7 @@ pub async fn create_follow_notification(
     };
     create_notification(
         db_client, sender_id, recipient_id, None,
+        None,
         EventType::Follow,
     ).await
 }
@@ -47,6 +48,7 @@ pub async fn create_follow_request_notification(
     };
     create_notification(
         db_client, sender_id, recipient_id, None,
+        None,
         EventType::FollowRequest,
     ).await
 }
@@ -67,6 +69,7 @@ pub async fn create_reply_notification(
     };
     create_notification(
         db_client, sender_id, recipient_id, Some(post_id),
+        None,
         EventType::Reply,
     ).await
 }
@@ -76,6 +79,7 @@ pub async fn create_reaction_notification(
     sender_id: Uuid,
     recipient_id: Uuid,
     post_id: Uuid,
+    reaction_id: Uuid,
 ) -> Result<(), DatabaseError> {
     if has_relationship(
         db_client,
@@ -86,7 +90,9 @@ pub async fn create_reaction_notification(
         return Ok(());
     };
     create_notification(
-        db_client, sender_id, recipient_id, Some(post_id),
+        db_client, sender_id, recipient_id,
+        Some(post_id),
+        Some(reaction_id),
         EventType::Reaction,
     ).await
 }
@@ -107,6 +113,7 @@ pub async fn create_mention_notification(
     };
     create_notification(
         db_client, sender_id, recipient_id, Some(post_id),
+        None,
         EventType::Mention,
     ).await
 }
@@ -127,6 +134,7 @@ pub async fn create_repost_notification(
     };
     create_notification(
         db_client, sender_id, recipient_id, Some(post_id),
+        None,
         EventType::Repost,
     ).await
 }
@@ -138,6 +146,7 @@ pub async fn create_subscription_notification(
 ) -> Result<(), DatabaseError> {
     create_notification(
         db_client, sender_id, recipient_id, None,
+        None,
         EventType::Subscription,
     ).await
 }
@@ -149,6 +158,7 @@ pub async fn create_subscription_expiration_notification(
 ) -> Result<(), DatabaseError> {
     create_notification(
         db_client, sender_id, recipient_id, None,
+        None,
         EventType::SubscriptionExpiration,
     ).await
 }
@@ -160,6 +170,7 @@ pub async fn create_move_notification(
 ) -> Result<(), DatabaseError> {
     create_notification(
         db_client, sender_id, recipient_id, None,
+        None,
         EventType::Move,
     ).await
 }
@@ -172,6 +183,7 @@ pub async fn create_signup_notifications(
     for recipient_id in admins {
         create_notification(
             db_client, sender_id, recipient_id, None,
+            None,
             EventType::SignUp,
         ).await?;
     };

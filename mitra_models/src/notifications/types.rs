@@ -79,6 +79,7 @@ struct DbNotification {
     sender_id: Uuid,
     recipient_id: Uuid,
     post_id: Option<Uuid>,
+    reaction_id: Option<Uuid>,
     event_type: EventType,
     created_at: DateTime<Utc>,
 }
@@ -87,6 +88,8 @@ pub struct Notification {
     pub id: i32,
     pub sender: DbActorProfile,
     pub post: Option<Post>,
+    pub reaction_content: Option<String>,
+    pub reaction_emoji: Option<DbEmoji>,
     pub event_type: EventType,
     pub created_at: DateTime<Utc>,
 }
@@ -120,10 +123,14 @@ impl TryFrom<&Row> for Notification {
             },
             None => None,
         };
+        let maybe_reaction_content = row.try_get("reaction_content")?;
+        let maybe_reaction_emoji = row.try_get("reaction_emoji")?;
         let notification = Self {
             id: db_notification.id,
             sender: db_sender,
             post: maybe_post,
+            reaction_content: maybe_reaction_content,
+            reaction_emoji: maybe_reaction_emoji,
             event_type: db_notification.event_type,
             created_at: db_notification.created_at,
         };

@@ -58,6 +58,7 @@ pub async fn create_reaction(
             reaction.author_id,
             post_author.id,
             reaction.post_id,
+            reaction.id,
         ).await?;
     };
     transaction.commit().await?;
