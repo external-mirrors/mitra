@@ -20,7 +20,7 @@ pub async fn create_emoji(
     hostname: Option<&str>,
     image: EmojiImage,
     object_id: Option<&str>,
-    updated_at: &DateTime<Utc>,
+    updated_at: DateTime<Utc>,
 ) -> Result<DbEmoji, DatabaseError> {
     let emoji_id = generate_ulid();
     if let Some(hostname) = hostname {
@@ -54,9 +54,9 @@ pub async fn create_emoji(
 
 pub async fn update_emoji(
     db_client: &impl DatabaseClient,
-    emoji_id: &Uuid,
+    emoji_id: Uuid,
     image: EmojiImage,
-    updated_at: &DateTime<Utc>,
+    updated_at: DateTime<Utc>,
 ) -> Result<DbEmoji, DatabaseError> {
     let row = db_client.query_one(
         "
@@ -268,7 +268,7 @@ mod tests {
             Some(hostname),
             image,
             Some(object_id),
-            &updated_at,
+            updated_at,
         ).await.unwrap();
         let emoji = get_emoji_by_remote_object_id(
             db_client,
@@ -290,13 +290,13 @@ mod tests {
             None,
             image.clone(),
             None,
-            &Utc::now(),
+            Utc::now(),
         ).await.unwrap();
         let updated_emoji = update_emoji(
             db_client,
-            &emoji.id,
+            emoji.id,
             image,
-            &Utc::now(),
+            Utc::now(),
         ).await.unwrap();
         assert_ne!(updated_emoji.updated_at, emoji.updated_at);
     }
@@ -332,7 +332,7 @@ mod tests {
             None,
             image,
             None,
-            &Utc::now(),
+            Utc::now(),
         ).await.unwrap();
         let deletion_queue = delete_emoji(db_client, &emoji.id).await.unwrap();
         assert_eq!(deletion_queue.files.len(), 1);

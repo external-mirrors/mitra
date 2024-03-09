@@ -280,8 +280,8 @@ pub async fn check_monero_subscriptions(
                 update_subscription(
                     db_client,
                     subscription.id,
-                    &expires_at,
-                    &Utc::now(),
+                    expires_at,
+                    Utc::now(),
                 ).await?;
                 log::info!(
                     "subscription updated: {0} to {1}",
@@ -295,12 +295,12 @@ pub async fn check_monero_subscriptions(
                 let expires_at = Utc::now() + Duration::seconds(duration_secs);
                 create_subscription(
                     db_client,
-                    &sender.id,
+                    sender.id,
                     None, // matching by address is not required
-                    &recipient.id,
+                    recipient.id,
                     &config.chain_id,
-                    &expires_at,
-                    &Utc::now(),
+                    expires_at,
+                    Utc::now(),
                 ).await?;
                 log::info!(
                     "subscription created: {0} to {1}",

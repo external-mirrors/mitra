@@ -1332,7 +1332,7 @@ pub async fn get_token_waitlist(
 /// that do not contain local posts, reposts, mentions, links or reactions.
 pub async fn find_extraneous_posts(
     db_client: &impl DatabaseClient,
-    updated_before: &DateTime<Utc>,
+    updated_before: DateTime<Utc>,
 ) -> Result<Vec<Uuid>, DatabaseError> {
     let rows = db_client.query(
         "
@@ -2076,7 +2076,7 @@ mod tests {
         let updated_before = Utc::now() - Duration::days(1);
         let result = find_extraneous_posts(
             db_client,
-            &updated_before,
+            updated_before,
         ).await.unwrap();
         assert_eq!(result, vec![post_2.id]);
     }

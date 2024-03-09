@@ -582,7 +582,7 @@ impl DeleteExtraneousPosts {
         db_client: &mut impl DatabaseClient,
     ) -> Result<(), Error> {
         let updated_before = days_before_now(self.days);
-        let posts = find_extraneous_posts(db_client, &updated_before).await?;
+        let posts = find_extraneous_posts(db_client, updated_before).await?;
         for post_id in posts {
             let deletion_queue = delete_post(db_client, &post_id).await?;
             delete_media(config, deletion_queue).await;
@@ -607,7 +607,7 @@ impl DeleteUnusedAttachments {
         let created_before = days_before_now(self.days);
         let deletion_queue = delete_unused_attachments(
             db_client,
-            &created_before,
+            created_before,
         ).await?;
         delete_media(config, deletion_queue).await;
         println!("unused attachments deleted");
@@ -655,7 +655,7 @@ impl DeleteEmptyProfiles {
         db_client: &mut impl DatabaseClient,
     ) -> Result<(), Error> {
         let updated_before = days_before_now(self.days);
-        let profiles = find_empty_profiles(db_client, &updated_before).await?;
+        let profiles = find_empty_profiles(db_client, updated_before).await?;
         for profile_id in profiles {
             let profile = get_profile_by_id(db_client, &profile_id).await?;
             let deletion_queue = delete_profile(db_client, &profile.id).await?;
@@ -699,7 +699,7 @@ impl ListUnreachableActors {
         db_client: &impl DatabaseClient,
     ) -> Result<(), Error> {
         let unreachable_since = days_before_now(self.days);
-        let profiles = find_unreachable(db_client, &unreachable_since).await?;
+        let profiles = find_unreachable(db_client, unreachable_since).await?;
         println!(
             "{0: <60} | {1: <35} | {2: <35}",
             "ID", "unreachable since", "updated at",

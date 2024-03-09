@@ -721,19 +721,19 @@ use {
 
 #[cfg(feature = "ethereum-extras")]
 fn create_post_metadata(
-    post_id: &Uuid,
+    post_id: Uuid,
     post_url: &str,
     content: &str,
-    created_at: &DateTime<Utc>,
+    created_at: DateTime<Utc>,
     image_cid: Option<&str>,
 ) -> PostMetadata { PostMetadata::new(post_id, post_url, content, created_at, image_cid) }
 
 #[cfg(not(feature = "ethereum-extras"))]
 fn create_post_metadata(
-    _: &Uuid,
+    _: Uuid,
     _: &str,
     _: &str,
-    _: &DateTime<Utc>,
+    _: DateTime<Utc>,
     _: Option<&str>,
 ) -> () { }
 
@@ -777,10 +777,10 @@ async fn make_permanent(
             .and_then(|attachment| attachment.ipfs_cid.as_deref());
         #[allow(clippy::let_unit_value)]
         let post_metadata = create_post_metadata(
-            &post.id,
+            post.id,
             &post_url,
             &post.content,
-            &post.created_at,
+            post.created_at,
             maybe_post_image_cid,
         );
         serde_json::to_value(post_metadata)

@@ -104,8 +104,8 @@ pub async fn handle_add(
                 update_subscription(
                     db_client,
                     subscription.id,
-                    &subscription_expires_at,
-                    &Utc::now(),
+                    subscription_expires_at,
+                    Utc::now(),
                 ).await?;
                 log::info!(
                     "subscription updated: {0} to {1}",
@@ -116,12 +116,12 @@ pub async fn handle_add(
             Err(DatabaseError::NotFound(_)) => {
                 create_subscription(
                     db_client,
-                    &user.id,
+                    user.id,
                     None, // matching by address is not required
-                    &actor_profile.id,
+                    actor_profile.id,
                     invoice.chain_id.inner(),
-                    &subscription_expires_at,
-                    &Utc::now(),
+                    subscription_expires_at,
+                    Utc::now(),
                 ).await?;
                 log::info!(
                     "subscription created: {0} to {1}",

@@ -103,11 +103,11 @@ async fn authorize_view(
     create_oauth_authorization(
         db_client,
         &authorization_code,
-        &user.id,
+        user.id,
         oauth_app.id,
         &query_params.scope.replace('+', " "),
-        &created_at,
-        &expires_at,
+        created_at,
+        expires_at,
     ).await?;
 
     let response = if oauth_app.redirect_uri == "urn:ietf:wg:oauth:2.0:oob" {
@@ -236,10 +236,10 @@ async fn token_view(
         Duration::seconds(config.authentication_token_lifetime.into());
     save_oauth_token(
         db_client,
-        &user.id,
+        user.id,
         &access_token,
-        &created_at,
-        &expires_at,
+        created_at,
+        expires_at,
     ).await?;
     log::warn!("created auth token for user {}", user.id);
     let token_response = TokenResponse::new(

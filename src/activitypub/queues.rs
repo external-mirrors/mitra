@@ -67,7 +67,7 @@ impl IncomingActivityJobData {
             db_client,
             &JobType::IncomingActivity,
             &job_data,
-            &scheduled_for,
+            scheduled_for,
         ).await
     }
 }
@@ -206,7 +206,7 @@ impl OutgoingActivityJobData {
             db_client,
             &JobType::OutgoingActivity,
             &job_data,
-            &scheduled_for,
+            scheduled_for,
         ).await
     }
 

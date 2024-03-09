@@ -802,7 +802,7 @@ pub async fn set_reachability_status(
 
 pub async fn find_unreachable(
     db_client: &impl DatabaseClient,
-    unreachable_since: &DateTime<Utc>,
+    unreachable_since: DateTime<Utc>,
 ) -> Result<Vec<DbActorProfile>, DatabaseError> {
     let rows = db_client.query(
         "
@@ -824,7 +824,7 @@ pub async fn find_unreachable(
 /// updated before the specified date
 pub async fn find_empty_profiles(
     db_client: &impl DatabaseClient,
-    updated_before: &DateTime<Utc>,
+    updated_before: DateTime<Utc>,
 ) -> Result<Vec<Uuid>, DatabaseError> {
     let rows = db_client.query(
         "
@@ -968,7 +968,7 @@ mod tests {
             None,
             image,
             None,
-            &Utc::now(),
+            Utc::now(),
         ).await.unwrap();
         let profile_data = ProfileCreateData {
             username: "test".to_string(),
@@ -1128,7 +1128,7 @@ mod tests {
     async fn test_find_empty_profiles() {
         let db_client = &mut create_test_database().await;
         let updated_before = Utc::now();
-        let profiles = find_empty_profiles(db_client, &updated_before).await.unwrap();
+        let profiles = find_empty_profiles(db_client, updated_before).await.unwrap();
         assert_eq!(profiles.is_empty(), true);
     }
 }

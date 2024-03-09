@@ -85,9 +85,9 @@ pub async fn handle_emoji(
     let db_emoji = if let Some(emoji_id) = maybe_emoji_id {
         update_emoji(
             db_client,
-            &emoji_id,
+            emoji_id,
             image,
-            &tag.updated,
+            tag.updated,
         ).await?
     } else {
         let hostname = match get_hostname(&tag.id)
@@ -106,7 +106,7 @@ pub async fn handle_emoji(
             Some(&hostname),
             image,
             Some(&tag.id),
-            &tag.updated,
+            tag.updated,
         ).await {
             Ok(db_emoji) => db_emoji,
             Err(DatabaseError::AlreadyExists(_)) => {

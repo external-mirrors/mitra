@@ -19,12 +19,12 @@ use super::types::{DbSubscription, Subscription};
 
 pub async fn create_subscription(
     db_client: &mut impl DatabaseClient,
-    sender_id: &Uuid,
+    sender_id: Uuid,
     sender_address: Option<&str>,
-    recipient_id: &Uuid,
+    recipient_id: Uuid,
     chain_id: &ChainId,
-    expires_at: &DateTime<Utc>,
-    updated_at: &DateTime<Utc>,
+    expires_at: DateTime<Utc>,
+    updated_at: DateTime<Utc>,
 ) -> Result<(), DatabaseError> {
     assert!(chain_id.is_ethereum() == sender_address.is_some());
     let mut transaction = db_client.transaction().await?;
@@ -49,7 +49,7 @@ pub async fn create_subscription(
             &updated_at,
         ],
     ).await.map_err(catch_unique_violation("subscription"))?;
-    subscribe_opt(&mut transaction, sender_id, recipient_id).await?;
+    subscribe_opt(&mut transaction, &sender_id, &recipient_id).await?;
     transaction.commit().await?;
     Ok(())
 }
@@ -57,8 +57,8 @@ pub async fn create_subscription(
 pub async fn update_subscription(
     db_client: &mut impl DatabaseClient,
     subscription_id: i32,
-    expires_at: &DateTime<Utc>,
-    updated_at: &DateTime<Utc>,
+    expires_at: DateTime<Utc>,
+    updated_at: DateTime<Utc>,
 ) -> Result<(), DatabaseError> {
     let mut transaction = db_client.transaction().await?;
     let maybe_row = transaction.query_opt(
@@ -79,7 +79,7 @@ pub async fn update_subscription(
     let row = maybe_row.ok_or(DatabaseError::NotFound("subscription"))?;
     let sender_id: Uuid = row.try_get("sender_id")?;
     let recipient_id: Uuid = row.try_get("recipient_id")?;
-    if *expires_at > Utc::now() {
+    if expires_at > Utc::now() {
         subscribe_opt(&mut transaction, &sender_id, &recipient_id).await?;
     };
     transaction.commit().await?;
@@ -279,12 +279,12 @@ mod tests {
         let updated_at = Utc::now();
         create_subscription(
             db_client,
-            &sender.id,
+            sender.id,
             Some(sender_address),
-            &recipient.id,
+            recipient.id,
             &chain_id,
-            &expires_at,
-            &updated_at,
+            expires_at,
+            updated_at,
         ).await.unwrap();
 
         let is_subscribed = has_relationship(

@@ -118,8 +118,8 @@ pub async fn check_ethereum_subscriptions(
                 update_subscription(
                     db_client,
                     subscription.id,
-                    &expires_at,
-                    &block_date,
+                    expires_at,
+                    block_date,
                 ).await?;
                 match expires_at.cmp(&subscription.expires_at) {
                     Ordering::Greater => {
@@ -144,12 +144,12 @@ pub async fn check_ethereum_subscriptions(
                 // New subscription
                 create_subscription(
                     db_client,
-                    &sender.id,
+                    sender.id,
                     Some(&sender_address),
-                    &recipient.id,
+                    recipient.id,
                     &config.chain_id,
-                    &expires_at,
-                    &block_date,
+                    expires_at,
+                    block_date,
                 ).await?;
                 log::info!(
                     "subscription created: {0} to {1}",

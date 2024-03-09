@@ -108,7 +108,7 @@ pub async fn set_attachment_ipfs_cid(
 
 pub async fn delete_unused_attachments(
     db_client: &impl DatabaseClient,
-    created_before: &DateTime<Utc>,
+    created_before: DateTime<Utc>,
 ) -> Result<DeletionQueue, DatabaseError> {
     let rows = db_client.query(
         "

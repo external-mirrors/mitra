@@ -28,10 +28,10 @@ pub struct PostMetadata {
 
 impl PostMetadata {
     pub fn new(
-        post_id: &Uuid,
+        post_id: Uuid,
         post_url: &str,
         content: &str,
-        created_at: &DateTime<Utc>,
+        created_at: DateTime<Utc>,
         image_cid: Option<&str>,
     ) -> Self {
         // Use IPFS logo if there's no image

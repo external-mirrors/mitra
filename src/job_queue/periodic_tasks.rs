@@ -150,7 +150,7 @@ pub async fn delete_extraneous_posts(
         Some(days) => days_before_now(days),
         None => return Ok(()), // not configured
     };
-    let posts = find_extraneous_posts(db_client, &updated_before).await?;
+    let posts = find_extraneous_posts(db_client, updated_before).await?;
     for post_id in posts {
         let deletion_queue = delete_post(db_client, &post_id).await?;
         delete_media(config, deletion_queue).await;
@@ -168,7 +168,7 @@ pub async fn delete_empty_profiles(
         Some(days) => days_before_now(days),
         None => return Ok(()), // not configured
     };
-    let profiles = find_empty_profiles(db_client, &updated_before).await?;
+    let profiles = find_empty_profiles(db_client, updated_before).await?;
     for profile_id in profiles {
         let profile = get_profile_by_id(db_client, &profile_id).await?;
         let deletion_queue = delete_profile(db_client, &profile.id).await?;

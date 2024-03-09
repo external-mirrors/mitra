@@ -61,11 +61,11 @@ pub async fn get_oauth_app_by_client_id(
 pub async fn create_oauth_authorization(
     db_client: &impl DatabaseClient,
     authorization_code: &str,
-    user_id: &Uuid,
+    user_id: Uuid,
     application_id: i32,
     scopes: &str,
-    created_at: &DateTime<Utc>,
-    expires_at: &DateTime<Utc>,
+    created_at: DateTime<Utc>,
+    expires_at: DateTime<Utc>,
 ) -> Result<(), DatabaseError> {
     db_client.execute(
         "
@@ -116,10 +116,10 @@ pub async fn get_user_by_authorization_code(
 
 pub async fn save_oauth_token(
     db_client: &impl DatabaseClient,
-    owner_id: &Uuid,
+    owner_id: Uuid,
     token: &str,
-    created_at: &DateTime<Utc>,
-    expires_at: &DateTime<Utc>,
+    created_at: DateTime<Utc>,
+    expires_at: DateTime<Utc>,
 ) -> Result<(), DatabaseError> {
     db_client.execute(
         "
@@ -235,11 +235,11 @@ mod tests {
         create_oauth_authorization(
             db_client,
             "code",
-            &user.id,
+            user.id,
             app.id,
             "read write",
-            &Utc::now(),
-            &Utc::now(),
+            Utc::now(),
+            Utc::now(),
         ).await.unwrap();
     }
 
@@ -256,10 +256,10 @@ mod tests {
         let token = "test-token";
         save_oauth_token(
             db_client,
-            &user.id,
+            user.id,
             token,
-            &Utc::now(),
-            &Utc::now(),
+            Utc::now(),
+            Utc::now(),
         ).await.unwrap();
         delete_oauth_token(
             db_client,

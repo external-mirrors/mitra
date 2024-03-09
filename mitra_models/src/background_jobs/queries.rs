@@ -9,7 +9,7 @@ pub async fn enqueue_job(
     db_client: &impl DatabaseClient,
     job_type: &JobType,
     job_data: &Value,
-    scheduled_for: &DateTime<Utc>,
+    scheduled_for: DateTime<Utc>,
 ) -> Result<(), DatabaseError> {
     let job_id = Uuid::new_v4();
     db_client.execute(
@@ -128,7 +128,7 @@ mod tests {
             "failure_count": 0,
         });
         let scheduled_for = Utc::now();
-        enqueue_job(db_client, &job_type, &job_data, &scheduled_for).await.unwrap();
+        enqueue_job(db_client, &job_type, &job_data, scheduled_for).await.unwrap();
 
         let batch_1 = get_job_batch(db_client, &job_type, 10, 3600).await.unwrap();
         assert_eq!(batch_1.len(), 1);

@@ -25,7 +25,7 @@ impl DeletionQueue {
             db_client,
             &JobType::MediaCleanup,
             &job_data,
-            &scheduled_for,
+            scheduled_for,
         ).await
     }
 
