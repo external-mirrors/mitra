@@ -261,7 +261,7 @@ CREATE TABLE subscription (
     sender_id UUID NOT NULL REFERENCES actor_profile (id) ON DELETE CASCADE,
     sender_address VARCHAR(500),
     recipient_id UUID NOT NULL REFERENCES actor_profile (id) ON DELETE CASCADE,
-    chain_id VARCHAR(50) NOT NULL,
+    chain_id VARCHAR(50),
     expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL,
     UNIQUE (sender_id, recipient_id),

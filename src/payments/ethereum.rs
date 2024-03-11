@@ -6,6 +6,7 @@ use mitra_models::{
         get_database_client,
         DatabaseConnectionPool,
         DatabaseError,
+        DatabaseTypeError,
     },
     profiles::queries::search_profiles_by_wallet_address,
     subscriptions::queries::{
@@ -87,7 +88,10 @@ pub async fn check_ethereum_subscriptions(
             &recipient.id,
         ).await {
             Ok(subscription) => {
-                if subscription.chain_id != config.chain_id {
+                // Local recipient, chain ID should be present
+                let subscription_chain_id = subscription.chain_id
+                    .ok_or(DatabaseError::from(DatabaseTypeError))?;
+                if subscription_chain_id != config.chain_id {
                     // Reset is required (mitractl reset-subscriptions).
                     // Without this precaution, sender_address can be
                     // lost during the switch, leading to a loss
@@ -147,7 +151,7 @@ pub async fn check_ethereum_subscriptions(
                     sender.id,
                     Some(&sender_address),
                     recipient.id,
-                    &config.chain_id,
+                    Some(&config.chain_id),
                     expires_at,
                     block_date,
                 ).await?;

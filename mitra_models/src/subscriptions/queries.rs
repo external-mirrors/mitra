@@ -7,9 +7,13 @@ use crate::database::{
     catch_unique_violation,
     DatabaseClient,
     DatabaseError,
+    DatabaseTypeError,
 };
 use crate::invoices::types::DbChainId;
-use crate::profiles::types::PaymentType;
+use crate::profiles::{
+    queries::get_profile_by_id,
+    types::PaymentType,
+};
 use crate::relationships::{
     queries::subscribe_opt,
     types::RelationshipType,
@@ -22,12 +26,19 @@ pub async fn create_subscription(
     sender_id: Uuid,
     sender_address: Option<&str>,
     recipient_id: Uuid,
-    chain_id: &ChainId,
+    chain_id: Option<&ChainId>,
     expires_at: DateTime<Utc>,
     updated_at: DateTime<Utc>,
 ) -> Result<(), DatabaseError> {
-    assert!(chain_id.is_ethereum() == sender_address.is_some());
+    if let Some(chain_id) = chain_id {
+        assert!(chain_id.is_ethereum() == sender_address.is_some());
+    };
     let mut transaction = db_client.transaction().await?;
+    // Only local recipients require chain ID
+    let recipient = get_profile_by_id(&transaction, &recipient_id).await?;
+    if recipient.is_local() != chain_id.is_some() {
+        return Err(DatabaseTypeError.into());
+    };
     transaction.execute(
         "
         INSERT INTO subscription (
@@ -44,7 +55,7 @@ pub async fn create_subscription(
             &sender_id,
             &sender_address,
             &recipient_id,
-            &DbChainId::new(chain_id),
+            &chain_id.map(DbChainId::new),
             &expires_at,
             &updated_at,
         ],
@@ -282,7 +293,7 @@ mod tests {
             sender.id,
             Some(sender_address),
             recipient.id,
-            &chain_id,
+            Some(&chain_id),
             expires_at,
             updated_at,
         ).await.unwrap();

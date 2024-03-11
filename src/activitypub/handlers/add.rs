@@ -119,7 +119,7 @@ pub async fn handle_add(
                     user.id,
                     None, // matching by address is not required
                     actor_profile.id,
-                    invoice.chain_id.inner(),
+                    None, // chain ID is not required
                     subscription_expires_at,
                     Utc::now(),
                 ).await?;

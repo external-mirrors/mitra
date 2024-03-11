@@ -14,7 +14,7 @@ pub struct DbSubscription {
     pub sender_id: Uuid,
     pub sender_address: Option<String>,
     pub recipient_id: Uuid,
-    pub chain_id: DbChainId,
+    pub chain_id: Option<DbChainId>,
     pub expires_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }

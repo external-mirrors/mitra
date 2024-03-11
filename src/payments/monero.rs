@@ -8,6 +8,7 @@ use mitra_models::{
         DatabaseClient,
         DatabaseConnectionPool,
         DatabaseError,
+        DatabaseTypeError,
     },
     invoices::helpers::{invoice_forwarded, invoice_reopened},
     invoices::queries::{
@@ -268,7 +269,10 @@ pub async fn check_monero_subscriptions(
             &recipient.id,
         ).await {
             Ok(subscription) => {
-                if subscription.chain_id != config.chain_id {
+                // Local recipient, chain ID should be present
+                let subscription_chain_id = subscription.chain_id
+                    .ok_or(DatabaseError::from(DatabaseTypeError))?;
+                if subscription_chain_id != config.chain_id {
                     // Reset is required (mitractl reset-subscriptions)
                     log::error!("can't switch to another chain");
                     continue;
@@ -298,7 +302,7 @@ pub async fn check_monero_subscriptions(
                     sender.id,
                     None, // matching by address is not required
                     recipient.id,
-                    &config.chain_id,
+                    Some(&config.chain_id),
                     expires_at,
                     Utc::now(),
                 ).await?;
