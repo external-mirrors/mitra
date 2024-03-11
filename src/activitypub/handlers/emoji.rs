@@ -36,40 +36,40 @@ pub async fn handle_emoji(
     storage: &MediaStorage,
     tag_value: JsonValue,
 ) -> Result<Option<DbEmoji>, HandlerError> {
-    let tag: Emoji = match serde_json::from_value(tag_value) {
-        Ok(tag) => tag,
+    let emoji: Emoji = match serde_json::from_value(tag_value) {
+        Ok(emoji) => emoji,
         Err(error) => {
             log::warn!("invalid emoji tag: {}", error);
             return Ok(None);
         },
     };
-    let emoji_name = tag.name.trim_matches(':');
+    let emoji_name = emoji.name.trim_matches(':');
     if validate_emoji_name(emoji_name).is_err() {
         log::warn!("invalid emoji name: {}", emoji_name);
         return Ok(None);
     };
     let maybe_emoji_id = match get_emoji_by_remote_object_id(
         db_client,
-        &tag.id,
+        &emoji.id,
     ).await {
-        Ok(emoji) => {
-            if emoji.updated_at >= tag.updated {
+        Ok(db_emoji) => {
+            if db_emoji.updated_at >= emoji.updated {
                 // Emoji already exists and is up to date
-                return Ok(Some(emoji));
+                return Ok(Some(db_emoji));
             };
-            if emoji.emoji_name != emoji_name {
+            if db_emoji.emoji_name != emoji_name {
                 log::warn!("emoji name can't be changed");
                 return Ok(None);
             };
-            Some(emoji.id)
+            Some(db_emoji.id)
         },
         Err(DatabaseError::NotFound("emoji")) => None,
         Err(other_error) => return Err(other_error.into()),
     };
     let (file_data, file_size, media_type) = match fetch_file(
         agent,
-        &tag.icon.url,
-        tag.icon.media_type.as_deref(),
+        &emoji.icon.url,
+        emoji.icon.media_type.as_deref(),
         &EMOJI_MEDIA_TYPES,
         storage.emoji_size_limit,
     ).await {
@@ -80,17 +80,17 @@ pub async fn handle_emoji(
         },
     };
     let file_name = storage.save_file(file_data, &media_type)?;
-    log::info!("downloaded emoji {}", tag.icon.url);
+    log::info!("downloaded emoji {}", emoji.icon.url);
     let image = EmojiImage { file_name, file_size, media_type };
     let db_emoji = if let Some(emoji_id) = maybe_emoji_id {
         update_emoji(
             db_client,
             emoji_id,
             image,
-            tag.updated,
+            emoji.updated,
         ).await?
     } else {
-        let hostname = match get_hostname(&tag.id)
+        let hostname = match get_hostname(&emoji.id)
             .map_err(|_| ValidationError("invalid emoji ID"))
             .and_then(|value| validate_hostname(&value).map(|()| value))
         {
@@ -105,8 +105,8 @@ pub async fn handle_emoji(
             emoji_name,
             Some(&hostname),
             image,
-            Some(&tag.id),
-            tag.updated,
+            Some(&emoji.id),
+            emoji.updated,
         ).await {
             Ok(db_emoji) => db_emoji,
             Err(DatabaseError::AlreadyExists(_)) => {
