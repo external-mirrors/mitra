@@ -56,7 +56,7 @@ pub async fn handle_add(
         db_client,
         &activity.actor,
     ).await?;
-    let actor = actor_profile.actor_json
+    let actor = actor_profile.actor_json.as_ref()
         .expect("actor data should be present");
     if Some(activity.target.clone()) == actor.subscribers {
         // Adding to subscribers
@@ -64,41 +64,51 @@ pub async fn handle_add(
             &config.instance_url(),
             &activity.object,
         )?;
-        let user = get_user_by_name(db_client, &username).await?;
-        subscribe_opt(db_client, &user.id, &actor_profile.id).await?;
+        let sender = get_user_by_name(db_client, &username).await?;
+        let recipient = actor_profile;
+        subscribe_opt(db_client, &sender.id, &recipient.id).await?;
 
         // FEP-0837 confirmation
-        let (invoice, subscription_expires_at) = match (
+        let subscription_expires_at = match (
             activity.context,
             activity.end_time,
         ) {
             (Some(ref agreement_id), Some(subscription_expires_at)) => {
-                let invoice = get_invoice_by_remote_object_id(
+                match get_invoice_by_remote_object_id(
                     db_client,
                     agreement_id,
-                ).await?;
-                (invoice, subscription_expires_at)
+                ).await {
+                    Ok(invoice) => {
+                        // FEP-0837 confirmation
+                        if invoice.sender_id != sender.id || invoice.recipient_id != recipient.id {
+                            return Err(ValidationError("invalid context ID").into());
+                        };
+                        if invoice.invoice_status == InvoiceStatus::Completed {
+                            // Activity has been already processed
+                            return Ok(Some(PERSON));
+                        };
+                        set_invoice_status(
+                            db_client,
+                            &invoice.id,
+                            InvoiceStatus::Completed,
+                        ).await?;
+                    },
+                    Err(DatabaseError::NotFound(_)) => {
+                        // Payment initiated via payment page (no FEP-0837)
+                        log::warn!("unknown agreement");
+                    },
+                    Err(other_error) => return Err(other_error.into()),
+                };
+                subscription_expires_at
             },
             // FEP-0837 confirmation not implemented, return
             _ => return Ok(Some(PERSON)),
         };
-        if invoice.sender_id != user.id || invoice.recipient_id != actor_profile.id {
-            return Err(ValidationError("invalid context ID").into());
-        };
-        if invoice.invoice_status == InvoiceStatus::Completed {
-            // Activity has been already processed
-            return Ok(Some(PERSON));
-        };
-        set_invoice_status(
-            db_client,
-            &invoice.id,
-            InvoiceStatus::Completed,
-        ).await?;
 
         match get_subscription_by_participants(
             db_client,
-            &invoice.sender_id,
-            &invoice.recipient_id,
+            &sender.id,
+            &recipient.id,
         ).await {
             Ok(subscription) => {
                 update_subscription(
@@ -116,17 +126,17 @@ pub async fn handle_add(
             Err(DatabaseError::NotFound(_)) => {
                 create_subscription(
                     db_client,
-                    user.id,
+                    sender.id,
                     None, // matching by address is not required
-                    actor_profile.id,
+                    recipient.id,
                     None, // chain ID is not required
                     subscription_expires_at,
                     Utc::now(),
                 ).await?;
                 log::info!(
                     "subscription created: {0} to {1}",
-                    invoice.sender_id,
-                    invoice.recipient_id,
+                    sender.id,
+                    recipient.id,
                 );
             },
             Err(other_error) => return Err(other_error.into()),

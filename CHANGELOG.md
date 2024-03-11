@@ -37,6 +37,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Don't mark posts from remote actor as spam if pending follow request exists.
 - Don't drop activity if attachment doesn't have `url` or `href` property.
+- Fix error in `Add(Person)` activity handling when FEP-0837 is not used.
 
 ## [2.12.0] - 2024-02-26
 
