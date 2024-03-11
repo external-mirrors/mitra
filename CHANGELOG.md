@@ -24,6 +24,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Change media description max length to 2000.
 - Perform unsolicited message check after putting activity into a queue.
 - Save content of remote emoji reactions to database.
+- Don't reject `Emoji` objects without `updated` property.
 
 ### Removed
 

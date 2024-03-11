@@ -22,16 +22,17 @@ pub struct EmojiImage {
 #[serde(rename_all = "camelCase")]
 pub struct Emoji {
     #[serde(rename = "type")]
-    tag_type: String,
+    object_type: String,
     pub icon: EmojiImage,
     pub id: String,
     pub name: String,
+    #[serde(default)]
     pub updated: DateTime<Utc>,
 }
 
 pub fn build_emoji(instance_url: &str, db_emoji: &DbEmoji) -> Emoji {
     Emoji {
-        tag_type: EMOJI.to_string(),
+        object_type: EMOJI.to_string(),
         icon: EmojiImage {
             object_type: IMAGE.to_string(),
             url: get_file_url(instance_url, &db_emoji.image.file_name),
