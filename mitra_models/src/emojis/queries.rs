@@ -231,6 +231,11 @@ pub async fn find_unused_remote_emojis(
             )
             AND NOT EXISTS (
                 SELECT 1
+                FROM post_reaction
+                WHERE post_reaction.emoji_id = emoji.id
+            )
+            AND NOT EXISTS (
+                SELECT 1
                 FROM profile_emoji
                 WHERE profile_emoji.emoji_id = emoji.id
             )
