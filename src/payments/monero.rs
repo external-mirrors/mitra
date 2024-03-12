@@ -20,12 +20,14 @@ use mitra_models::{
     },
     invoices::types::{DbInvoice, InvoiceStatus},
     profiles::queries::get_profile_by_id,
+    profiles::types::DbActorProfile,
     subscriptions::queries::{
         create_subscription,
         get_subscription_by_participants,
         update_subscription,
     },
     users::queries::get_user_by_id,
+    users::types::User,
 };
 use mitra_services::monero::wallet::{
     create_monero_address,
@@ -49,6 +51,79 @@ const MONERO_CONFIRMATIONS_SAFE: u64 = 3;
 
 fn invoice_payment_address(invoice: &DbInvoice) -> Result<String, DatabaseError> {
     invoice.try_payment_address().map_err(Into::into)
+}
+
+// Returns false on chain ID mismatch
+pub async fn create_or_update_monero_subscription(
+    config: &MoneroConfig,
+    db_client: &mut impl DatabaseClient,
+    instance: &Instance,
+    sender: &DbActorProfile,
+    recipient: &User,
+    duration_secs: i64,
+    maybe_invoice_id: Option<Uuid>,
+) -> Result<(), DatabaseError> {
+    let subscription_expires_at = match get_subscription_by_participants(
+        db_client,
+        &sender.id,
+        &recipient.id,
+    ).await {
+        Ok(subscription) => {
+            // Local recipient, chain ID should be present
+            let subscription_chain_id = subscription.chain_id
+                .ok_or(DatabaseError::from(DatabaseTypeError))?;
+            if subscription_chain_id != config.chain_id {
+                // Reset is required (mitractl reset-subscriptions)
+                log::error!("can't switch to another chain");
+                return Ok(());
+            };
+            // Update subscription expiration date
+            let expires_at =
+                std::cmp::max(subscription.expires_at, Utc::now()) +
+                Duration::seconds(duration_secs);
+            update_subscription(
+                db_client,
+                subscription.id,
+                expires_at,
+                Utc::now(),
+            ).await?;
+            log::info!(
+                "subscription updated: {0} to {1}",
+                subscription.sender_id,
+                subscription.recipient_id,
+            );
+            expires_at
+        },
+        Err(DatabaseError::NotFound(_)) => {
+            // New subscription
+            let expires_at = Utc::now() + Duration::seconds(duration_secs);
+            create_subscription(
+                db_client,
+                sender.id,
+                None, // matching by address is not required
+                recipient.id,
+                Some(&config.chain_id),
+                expires_at,
+                Utc::now(),
+            ).await?;
+            log::info!(
+                "subscription created: {0} to {1}",
+                sender.id,
+                recipient.id,
+            );
+            expires_at
+        },
+        Err(other_error) => return Err(other_error),
+    };
+    send_subscription_notifications(
+        db_client,
+        instance,
+        sender,
+        recipient,
+        subscription_expires_at,
+        maybe_invoice_id,
+    ).await?;
+    Ok(())
 }
 
 pub async fn check_monero_subscriptions(
@@ -263,65 +338,14 @@ pub async fn check_monero_subscriptions(
         set_invoice_status(db_client, &invoice.id, InvoiceStatus::Completed).await?;
         log::info!("payout transaction confirmed for invoice {}", invoice.id);
 
-        let subscription_expires_at = match get_subscription_by_participants(
-            db_client,
-            &sender.id,
-            &recipient.id,
-        ).await {
-            Ok(subscription) => {
-                // Local recipient, chain ID should be present
-                let subscription_chain_id = subscription.chain_id
-                    .ok_or(DatabaseError::from(DatabaseTypeError))?;
-                if subscription_chain_id != config.chain_id {
-                    // Reset is required (mitractl reset-subscriptions)
-                    log::error!("can't switch to another chain");
-                    continue;
-                };
-                // Update subscription expiration date
-                let expires_at =
-                    std::cmp::max(subscription.expires_at, Utc::now()) +
-                    Duration::seconds(duration_secs);
-                update_subscription(
-                    db_client,
-                    subscription.id,
-                    expires_at,
-                    Utc::now(),
-                ).await?;
-                log::info!(
-                    "subscription updated: {0} to {1}",
-                    subscription.sender_id,
-                    subscription.recipient_id,
-                );
-                expires_at
-            },
-            Err(DatabaseError::NotFound(_)) => {
-                // New subscription
-                let expires_at = Utc::now() + Duration::seconds(duration_secs);
-                create_subscription(
-                    db_client,
-                    sender.id,
-                    None, // matching by address is not required
-                    recipient.id,
-                    Some(&config.chain_id),
-                    expires_at,
-                    Utc::now(),
-                ).await?;
-                log::info!(
-                    "subscription created: {0} to {1}",
-                    sender.id,
-                    recipient.id,
-                );
-                expires_at
-            },
-            Err(other_error) => return Err(other_error.into()),
-        };
-        send_subscription_notifications(
+        create_or_update_monero_subscription(
+            config,
             db_client,
             instance,
             &sender,
             &recipient,
-            subscription_expires_at,
-            Some(&invoice.id),
+            duration_secs,
+            Some(invoice.id),
         ).await?;
     };
     Ok(())

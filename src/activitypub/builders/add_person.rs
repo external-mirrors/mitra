@@ -51,7 +51,7 @@ fn build_add_person(
     person_id: &str,
     collection: LocalActorCollection,
     end_time: DateTime<Utc>,
-    maybe_invoice_id: Option<&Uuid>,
+    maybe_invoice_id: Option<Uuid>,
 ) -> AddPerson {
     let actor_id = local_actor_id(instance_url, sender_username);
     let activity_id = local_object_id(instance_url, &generate_ulid());
@@ -78,7 +78,7 @@ pub fn prepare_add_person(
     person: &DbActor,
     collection: LocalActorCollection,
     end_time: DateTime<Utc>,
-    maybe_invoice_id: Option<&Uuid>,
+    maybe_invoice_id: Option<Uuid>,
 ) -> OutgoingActivityJobData {
     let activity = build_add_person(
         &instance.url(),
@@ -115,7 +115,7 @@ mod tests {
             person_id,
             collection,
             subscription_expires_at,
-            Some(&invoice_id),
+            Some(invoice_id),
         );
 
         assert_eq!(activity.activity_type, "Add");

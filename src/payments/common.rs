@@ -37,7 +37,7 @@ pub async fn send_subscription_notifications(
     sender: &DbActorProfile,
     recipient: &User,
     subscription_expires_at: DateTime<Utc>,
-    maybe_invoice_id: Option<&Uuid>,
+    maybe_invoice_id: Option<Uuid>,
 ) -> Result<(), DatabaseError> {
     create_subscription_notification(
         db_client,

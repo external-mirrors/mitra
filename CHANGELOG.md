@@ -11,6 +11,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Support calling actor endpoint with `fep_ef61` query parameter.
 - Publish FEP-ef61 representations of local objects.
 - Add new notification type for emoji reactions.
+- Create `add-subscriber` command.
 
 ### Changed
 

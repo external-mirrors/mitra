@@ -79,7 +79,7 @@ pub fn build_agreement(
         &actor_id,
         &payment_info.chain_id,
     );
-    let agreement_id = local_agreement_id(instance_url, &invoice.id);
+    let agreement_id = local_agreement_id(instance_url, invoice.id);
     let amount = invoice.amount_u64()?;
     let duration = amount / payment_info.price.get();
     let primary_commitment = Commitment {

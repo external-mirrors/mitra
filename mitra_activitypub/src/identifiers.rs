@@ -95,7 +95,7 @@ pub fn local_emoji_id(instance_url: &str, emoji_name: &str) -> String {
     format!("{}/objects/emojis/{}", instance_url, emoji_name)
 }
 
-pub fn local_agreement_id(instance_url: &str, invoice_id: &Uuid) -> String {
+pub fn local_agreement_id(instance_url: &str, invoice_id: Uuid) -> String {
     format!("{}/objects/agreements/{}", instance_url, invoice_id)
 }
 
