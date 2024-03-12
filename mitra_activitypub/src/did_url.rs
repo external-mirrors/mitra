@@ -24,12 +24,10 @@ impl DidApUrl {
         Self { did, path: None }
     }
 
-    #[allow(dead_code)]
     pub fn did(&self) -> &Did {
         &self.did
     }
 
-    #[allow(dead_code)]
     pub fn path(&self) -> Option<&str> {
         self.path.as_deref()
     }

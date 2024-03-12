@@ -37,7 +37,9 @@ use mitra_activitypub::{
     identifiers::{
         local_actor_id,
         local_object_id,
+        local_object_id_fep_ef61_fallback,
         local_object_replies,
+        parse_fep_ef61_local_object_id,
         post_object_id,
         LocalActorCollection,
     },
@@ -60,6 +62,8 @@ use mitra_models::{
 };
 use mitra_utils::{
     caip2::ChainId,
+    crypto_eddsa::ed25519_public_key_from_private_key,
+    did_key::DidKey,
     http_digest::get_sha256_digest,
 };
 use mitra_validators::errors::ValidationError;
@@ -632,5 +636,60 @@ pub async fn tag_view(
     let response = HttpResponse::Found()
         .append_header((http_header::LOCATION, page_url))
         .finish();
+    Ok(response)
+}
+
+#[get("/.well-known/apresolver/{url:.*}")]
+pub async fn apresolver_view(
+    config: web::Data<Config>,
+    db_pool: web::Data<DatabaseConnectionPool>,
+    url: web::Path<String>,
+) -> Result<HttpResponse, HttpError> {
+    let db_client = &**get_database_client(&db_pool).await?;
+    let (did_key, internal_object_id) =
+        parse_fep_ef61_local_object_id(&url)?;
+    let instance = config.instance();
+    // TODO: store DID URL in database?
+    let mut post = get_post_by_id(db_client, &internal_object_id).await?;
+    // Verify ownership
+    let post_author = get_user_by_id(db_client, &post.author.id).await?;
+    let post_author_public_key =
+        ed25519_public_key_from_private_key(&post_author.ed25519_private_key);
+    let post_author_did_key =
+        DidKey::from_ed25519_key(post_author_public_key.as_bytes());
+    if post_author_did_key != did_key {
+        return Err(HttpError::NotFoundError("post"));
+    };
+    // Create FEP-ef61 representation
+    let authority = Authority::from_user(
+        &instance.url(),
+        &post_author,
+        true,
+    );
+    add_related_posts(db_client, vec![&mut post]).await?;
+    let object = build_note(
+        &instance.hostname(),
+        &instance.url(),
+        &authority,
+        &post,
+        config.federation.fep_e232_enabled,
+        true,
+    );
+    let mut object_value = serde_json::to_value(object)
+        .expect("actor should be serializable");
+    object_value = sign_object_fep_ef61(
+        &authority,
+        &post_author,
+        &object_value,
+        None,
+    );
+    let link_header_value = format!(
+        r#"<{url}>; rel="alternate""#,
+        url=local_object_id_fep_ef61_fallback(&instance.url(), post.id),
+    );
+    let response = HttpResponse::Ok()
+        .content_type(AP_MEDIA_TYPE)
+        .append_header((http_header::LINK, link_header_value))
+        .json(object_value);
     Ok(response)
 }
