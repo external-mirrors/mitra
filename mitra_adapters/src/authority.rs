@@ -26,7 +26,7 @@ pub enum Authority {
 impl fmt::Display for Authority {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         let authority_str = match self {
-            Self::Server(ref base_url) => base_url.to_owned(),
+            Self::Server(ref server_url) => server_url.to_owned(),
             Self::ServerKey((_, secret_key)) => {
                 fep_ef61_identity(secret_key)
             },
@@ -36,23 +36,23 @@ impl fmt::Display for Authority {
 }
 
 impl Authority {
-    pub fn server(base_url: &str) -> Self {
-        Self::Server(base_url.to_owned())
+    pub fn server(server_url: &str) -> Self {
+        Self::Server(server_url.to_owned())
     }
 
-    pub fn server_key(base_url: &str, secret_key: &Ed25519PrivateKey) -> Self {
-        Self::ServerKey((base_url.to_owned(), *secret_key))
+    pub fn server_key(server_url: &str, secret_key: &Ed25519PrivateKey) -> Self {
+        Self::ServerKey((server_url.to_owned(), *secret_key))
     }
 
     pub fn from_user(
-        base_url: &str,
+        server_url: &str,
         user: &User,
         fep_ef61_enabled: bool,
     ) -> Self {
         if fep_ef61_enabled {
-            Self::server_key(base_url, &user.ed25519_private_key)
+            Self::server_key(server_url, &user.ed25519_private_key)
         } else {
-            Self::server(base_url)
+            Self::server(server_url)
         }
     }
 
@@ -60,10 +60,10 @@ impl Authority {
         !matches!(self, Self::Server(_))
     }
 
-    pub fn base_url(&self) -> &str {
+    pub fn server_url(&self) -> &str {
         match self {
-            Self::Server(ref base_url) => base_url,
-            Self::ServerKey((ref base_url, _)) => base_url,
+            Self::Server(ref server_url) => server_url,
+            Self::ServerKey((ref server_url, _)) => server_url,
         }
     }
 }
@@ -76,23 +76,23 @@ mod tests {
     };
     use super::*;
 
-    const BASE_URL: &str = "https://server.example";
+    const SERVER_URL: &str = "https://server.example";
 
     #[test]
     fn test_authority() {
-        let authority = Authority::server(BASE_URL);
+        let authority = Authority::server(SERVER_URL);
         assert!(!authority.is_fep_ef61());
         assert_eq!(authority.to_string(), "https://server.example");
-        assert_eq!(authority.base_url(), BASE_URL);
+        assert_eq!(authority.server_url(), SERVER_URL);
     }
 
     #[test]
     fn test_authority_fep_ef61() {
         let secret_key = generate_weak_ed25519_key();
-        let authority = Authority::server_key(BASE_URL, &secret_key);
+        let authority = Authority::server_key(SERVER_URL, &secret_key);
         assert!(authority.is_fep_ef61());
         assert_eq!(authority.to_string(), "did:ap:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6");
-        assert_eq!(authority.base_url(), BASE_URL);
+        assert_eq!(authority.server_url(), SERVER_URL);
     }
 
     #[test]

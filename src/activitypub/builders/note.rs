@@ -129,7 +129,7 @@ pub fn build_note(
     fep_e232_enabled: bool,
     with_context: bool,
 ) -> Note {
-    assert_eq!(authority.base_url(), instance_url);
+    assert_eq!(authority.server_url(), instance_url);
     let object_id = local_object_id_unified(authority, post.id);
     let actor_id = local_actor_id_unified(authority, &post.author.username);
     let attachments: Vec<_> = post.attachments.iter().map(|db_item| {

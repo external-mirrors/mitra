@@ -149,7 +149,7 @@ pub fn build_local_actor(
     authority: &Authority,
     user: &User,
 ) -> Result<Actor, DatabaseError> {
-    assert_eq!(authority.base_url(), instance_url);
+    assert_eq!(authority.server_url(), instance_url);
     let username = &user.profile.username;
     let actor_id = local_actor_id_unified(authority, username);
     let inbox = LocalActorCollection::Inbox.of(&actor_id);
