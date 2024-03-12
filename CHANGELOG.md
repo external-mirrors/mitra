@@ -26,6 +26,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Save content of remote emoji reactions to database.
 - Don't reject `Emoji` objects without `updated` property.
 - Don't store chain ID if subscription has remote recipient.
+- Update subscription expiration date if `Add(Person)` activity is not linked to an agreement.
 
 ### Removed
 

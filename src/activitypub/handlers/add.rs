@@ -69,11 +69,13 @@ pub async fn handle_add(
         subscribe_opt(db_client, &sender.id, &recipient.id).await?;
 
         // FEP-0837 confirmation
-        let subscription_expires_at = match (
-            activity.context,
-            activity.end_time,
-        ) {
-            (Some(ref agreement_id), Some(subscription_expires_at)) => {
+        let subscription_expires_at = match activity.end_time {
+            Some(subscription_expires_at) => subscription_expires_at,
+            // FEP-0837 confirmation not implemented, return
+            _ => return Ok(Some(PERSON)),
+        };
+        match activity.context {
+            Some(ref agreement_id) => {
                 match get_invoice_by_remote_object_id(
                     db_client,
                     agreement_id,
@@ -99,10 +101,8 @@ pub async fn handle_add(
                     },
                     Err(other_error) => return Err(other_error.into()),
                 };
-                subscription_expires_at
             },
-            // FEP-0837 confirmation not implemented, return
-            _ => return Ok(Some(PERSON)),
+            _ => log::warn!("no agreement"),
         };
 
         match get_subscription_by_participants(
