@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [2.13.0] - 2024-03-12
+
 ### Added
 
 - Support calling actor endpoint with `fep_ef61` query parameter.
