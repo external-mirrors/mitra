@@ -53,7 +53,9 @@ Minimum system requirements:
 
 ### Building from source
 
-Run:
+Clone the git repository or download the source archive from the [Releases](https://codeberg.org/silverpill/mitra/releases) page.
+
+Install `cargo`. Then run:
 
 ```shell
 cargo build --release --features production
@@ -61,7 +63,7 @@ cargo build --release --features production
 
 This command will produce two binaries in `target/release` directory, `mitra` and `mitractl`.
 
-Install PostgreSQL and create the database:
+Install PostgreSQL, then create the database:
 
 ```sql
 CREATE USER mitra WITH PASSWORD 'mitra';
@@ -90,13 +92,15 @@ Create admin user when installation is finished:
 
 ### Debian package
 
-Download and install Mitra package:
+Download package from the [Releases](https://codeberg.org/silverpill/mitra/releases) page.
+
+Install Mitra:
 
 ```shell
-dpkg -i mitra.deb
+dpkg -i mitra_amd64.deb
 ```
 
-Install PostgreSQL and create the database:
+Install PostgreSQL, then create the database:
 
 ```sql
 CREATE USER mitra WITH PASSWORD 'mitra';
