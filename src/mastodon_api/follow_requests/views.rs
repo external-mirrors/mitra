@@ -11,6 +11,12 @@ use actix_web::{
 use actix_web_httpauth::extractors::bearer::BearerAuth;
 use uuid::Uuid;
 
+use mitra_activitypub::{
+    builders::{
+        accept_follow::prepare_accept_follow,
+        reject_follow::prepare_reject_follow,
+    },
+};
 use mitra_config::Config;
 use mitra_models::{
     database::{get_database_client, DatabaseConnectionPool},
@@ -23,12 +29,6 @@ use mitra_models::{
     },
 };
 
-use crate::activitypub::{
-    builders::{
-        accept_follow::prepare_accept_follow,
-        reject_follow::prepare_reject_follow,
-    },
-};
 use crate::http::get_request_base_url;
 use crate::mastodon_api::{
     accounts::{

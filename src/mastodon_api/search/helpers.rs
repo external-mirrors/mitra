@@ -6,6 +6,11 @@ use url::Url;
 use mitra_activitypub::{
     errors::HandlerError,
     identifiers::parse_local_object_id,
+    importers::{
+        import_post,
+        import_profile_by_actor_address,
+        ActorIdResolver,
+    },
 };
 use mitra_config::Config;
 use mitra_federation::addresses::ActorAddress;
@@ -33,14 +38,6 @@ use mitra_utils::{
     did::Did,
 };
 use mitra_validators::errors::ValidationError;
-
-use crate::activitypub::{
-    importers::{
-        import_post,
-        import_profile_by_actor_address,
-        ActorIdResolver,
-    },
-};
 
 const SEARCH_FETCHER_TIMEOUT: u64 = 15;
 

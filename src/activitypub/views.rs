@@ -11,12 +11,35 @@ use serde::Deserialize;
 use serde_json::{Value as JsonValue};
 use uuid::Uuid;
 
-use mitra_activitypub::identifiers::{
-    local_actor_id,
-    local_object_id,
-    local_object_replies,
-    post_object_id,
-    LocalActorCollection,
+use mitra_activitypub::{
+    actors::builders::{
+        build_instance_actor,
+        build_local_actor,
+        sign_object_fep_ef61,
+    },
+    builders::{
+        announce::build_announce,
+        collection::{
+            OrderedCollection,
+            OrderedCollectionPage,
+        },
+        create_note::build_create_note,
+        emoji::build_emoji,
+        note::build_note,
+        proposal::build_proposal,
+        update_person::{
+            forward_update_person,
+            is_update_person_activity,
+            validate_update_person_c2s,
+        },
+    },
+    identifiers::{
+        local_actor_id,
+        local_object_id,
+        local_object_replies,
+        post_object_id,
+        LocalActorCollection,
+    },
 };
 use mitra_adapters::authority::Authority;
 use mitra_config::Config;
@@ -49,28 +72,7 @@ use crate::web_client::urls::{
     get_tag_page_url,
 };
 
-use super::actors::builders::{
-    build_instance_actor,
-    build_local_actor,
-    sign_object_fep_ef61,
-};
 use super::authentication::verify_signed_c2s_activity;
-use super::builders::{
-    announce::build_announce,
-    collection::{
-        OrderedCollection,
-        OrderedCollectionPage,
-    },
-    create_note::build_create_note,
-    emoji::build_emoji,
-    note::build_note,
-    proposal::build_proposal,
-    update_person::{
-        forward_update_person,
-        is_update_person_activity,
-        validate_update_person_c2s,
-    },
-};
 use super::receiver::receive_activity;
 
 #[derive(Deserialize)]

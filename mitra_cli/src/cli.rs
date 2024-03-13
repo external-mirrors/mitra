@@ -6,15 +6,6 @@ use clap::Parser;
 use serde_json::{Value as JsonValue};
 use uuid::Uuid;
 
-use mitra::activitypub::{
-    builders::delete_note::prepare_delete_note,
-    builders::delete_person::prepare_delete_person,
-    importers::{
-        import_from_outbox,
-        import_replies,
-        ActorIdResolver,
-    },
-};
 use mitra::payments::monero::{
     create_or_update_monero_subscription,
     get_payment_address,
@@ -22,6 +13,15 @@ use mitra::payments::monero::{
 };
 use mitra_activitypub::{
     agent::build_federation_agent,
+    builders::{
+        delete_note::prepare_delete_note,
+        delete_person::prepare_delete_person,
+    },
+    importers::{
+        import_from_outbox,
+        import_replies,
+        ActorIdResolver,
+    },
 };
 use mitra_adapters::{
     dynamic_config::{set_editable_property, EDITABLE_PROPERTIES},

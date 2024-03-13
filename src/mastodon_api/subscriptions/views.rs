@@ -12,6 +12,12 @@ use actix_web::{
 use actix_web_httpauth::extractors::bearer::BearerAuth;
 use uuid::Uuid;
 
+use mitra_activitypub::{
+    builders::{
+        offer_agreement::prepare_offer_agreement,
+        update_person::prepare_update_person,
+    },
+};
 use mitra_config::Config;
 use mitra_models::{
     database::{get_database_client, DatabaseConnectionPool},
@@ -56,12 +62,6 @@ use mitra_validators::{
     errors::ValidationError,
 };
 
-use crate::activitypub::{
-    builders::{
-        offer_agreement::prepare_offer_agreement,
-        update_person::prepare_update_person,
-    },
-};
 use crate::http::get_request_base_url;
 use crate::mastodon_api::{
     accounts::types::Account,

@@ -1,5 +1,9 @@
 use anyhow::Error;
 
+use mitra_activitypub::queues::{
+    process_queued_incoming_activities,
+    process_queued_outgoing_activities,
+};
 use mitra_adapters::media::delete_media;
 use mitra_config::Config;
 use mitra_models::{
@@ -24,10 +28,6 @@ use mitra_models::{
 use mitra_services::ethereum::contracts::EthereumBlockchain;
 use mitra_utils::datetime::days_before_now;
 
-use crate::activitypub::queues::{
-    process_queued_incoming_activities,
-    process_queued_outgoing_activities,
-};
 use crate::payments::{
     common::update_expired_subscriptions,
     ethereum::check_ethereum_subscriptions,

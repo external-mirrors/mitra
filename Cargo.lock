@@ -1954,7 +1954,6 @@ dependencies = [
  "actix-web-httpauth",
  "anyhow",
  "chrono",
- "futures",
  "hex",
  "log",
  "mitra_activitypub",
@@ -1982,6 +1981,10 @@ dependencies = [
 name = "mitra_activitypub"
 version = "2.13.0"
 dependencies = [
+ "chrono",
+ "futures",
+ "hex",
+ "log",
  "mitra_adapters",
  "mitra_config",
  "mitra_federation",
@@ -1990,7 +1993,10 @@ dependencies = [
  "mitra_utils",
  "mitra_validators",
  "regex",
+ "serde",
+ "serde_json",
  "thiserror",
+ "tokio",
  "uuid",
 ]
 

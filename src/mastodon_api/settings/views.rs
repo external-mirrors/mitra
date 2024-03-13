@@ -9,6 +9,7 @@ use actix_web::{
 use actix_web_httpauth::extractors::bearer::BearerAuth;
 
 use mitra_activitypub::{
+    builders::update_person::prepare_update_person,
     identifiers::profile_actor_id,
 };
 use mitra_config::Config;
@@ -37,7 +38,6 @@ use mitra_validators::{
     users::validate_client_config_update,
 };
 
-use crate::activitypub::builders::update_person::prepare_update_person;
 use crate::http::get_request_base_url;
 use crate::mastodon_api::{
     accounts::helpers::get_aliases,

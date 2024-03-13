@@ -16,7 +16,19 @@ use chrono::Utc;
 use uuid::Uuid;
 
 use mitra_activitypub::{
+    builders::{
+        follow::follow_or_create_request,
+        undo_follow::prepare_undo_follow,
+        update_person::{
+            build_update_person,
+            prepare_update_person,
+        },
+    },
     identifiers::local_actor_id,
+    identity::{
+        create_identity_claim_fep_c390,
+        create_identity_proof_fep_c390,
+    },
 };
 use mitra_adapters::roles::from_default_role;
 use mitra_config::{
@@ -101,20 +113,6 @@ use mitra_validators::{
 };
 use mitra_utils::crypto_eddsa::generate_ed25519_key;
 
-use crate::activitypub::{
-    builders::{
-        follow::follow_or_create_request,
-        undo_follow::prepare_undo_follow,
-        update_person::{
-            build_update_person,
-            prepare_update_person,
-        },
-    },
-    identity::{
-        create_identity_claim_fep_c390,
-        create_identity_proof_fep_c390,
-    },
-};
 use crate::http::{
     get_request_base_url,
     ratelimit_config,

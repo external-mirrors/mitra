@@ -4,6 +4,8 @@ use wildmatch::WildMatch;
 
 use mitra_activitypub::{
     identifiers::profile_actor_id,
+    queues::IncomingActivityJobData,
+    vocabulary::{DELETE, CREATE, LIKE, UPDATE},
 };
 use mitra_config::Config;
 use mitra_federation::deserialization::get_object_id;
@@ -18,8 +20,6 @@ use super::authentication::{
     verify_signed_request,
     AuthenticationError,
 };
-use super::queues::IncomingActivityJobData;
-use super::vocabulary::{DELETE, CREATE, LIKE, UPDATE};
 
 #[derive(thiserror::Error, Debug)]
 pub enum InboxError {

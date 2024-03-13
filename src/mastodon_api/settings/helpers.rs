@@ -1,7 +1,13 @@
 use uuid::Uuid;
 
 use mitra_activitypub::{
+    builders::{
+        follow::follow_or_create_request,
+        move_person::prepare_move_person,
+        undo_follow::prepare_undo_follow,
+    },
     errors::HandlerError,
+    importers::get_or_import_profile_by_actor_address,
 };
 use mitra_config::Config;
 use mitra_federation::addresses::ActorAddress;
@@ -23,15 +29,6 @@ use mitra_models::{
 };
 use mitra_services::media::MediaStorage;
 use mitra_validators::errors::ValidationError;
-
-use crate::activitypub::{
-    builders::{
-        follow::follow_or_create_request,
-        move_person::prepare_move_person,
-        undo_follow::prepare_undo_follow,
-    },
-    importers::get_or_import_profile_by_actor_address,
-};
 
 fn export_profiles_to_csv(
     local_hostname: &str,

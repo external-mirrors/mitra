@@ -3,6 +3,7 @@ use serde_json::{Value as JsonValue};
 
 use mitra_activitypub::{
     errors::HandlerError,
+    importers::ActorIdResolver,
 };
 use mitra_config::Config;
 use mitra_federation::{
@@ -49,8 +50,6 @@ use mitra_utils::{
     },
     urls::UrlError,
 };
-
-use super::importers::ActorIdResolver;
 
 const AUTHENTICATION_FETCHER_TIMEOUT: u64 = 10;
 

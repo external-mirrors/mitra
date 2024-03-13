@@ -14,7 +14,7 @@ use super::{
     },
 };
 
-pub fn build_federation_agent_with_key(
+pub(super) fn build_federation_agent_with_key(
     instance: &Instance,
     signer_key: RsaPrivateKey,
     signer_key_id: String,

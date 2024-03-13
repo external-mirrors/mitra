@@ -51,8 +51,6 @@ chrono = { version = "0.4.23", default-features = false, features = ["std", "ser
 hex = { version = "0.4.3" }
 # Used for logging
 log = "0.4.20"
-# Used for working with futures
-futures = "0.3.13"
 # Used to determine the number of CPUs on the system
 num_cpus = "1.13.0"
 # Used for working with regular expressions
