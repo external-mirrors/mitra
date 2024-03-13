@@ -5,12 +5,12 @@ use mitra_utils::{
     crypto_eddsa::{
         ed25519_public_key_from_private_key,
         Ed25519PrivateKey,
+        Ed25519PublicKey,
     },
     did_key::DidKey,
 };
 
-fn fep_ef61_identity(secret_key: &Ed25519PrivateKey) -> String {
-    let public_key = ed25519_public_key_from_private_key(secret_key);
+fn fep_ef61_identity(public_key: &Ed25519PublicKey) -> String {
     let did_key = DidKey::from_ed25519_key(public_key.as_bytes());
     format!(
         "did:ap:key:{}",
@@ -20,15 +20,15 @@ fn fep_ef61_identity(secret_key: &Ed25519PrivateKey) -> String {
 
 pub enum Authority {
     Server(String),
-    ServerKey((String, Ed25519PrivateKey)),
+    ServerKey((String, Ed25519PublicKey)),
 }
 
 impl fmt::Display for Authority {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         let authority_str = match self {
             Self::Server(ref server_url) => server_url.to_owned(),
-            Self::ServerKey((_, secret_key)) => {
-                fep_ef61_identity(secret_key)
+            Self::ServerKey((_, public_key)) => {
+                fep_ef61_identity(public_key)
             },
         };
         write!(formatter, "{}", authority_str)
@@ -41,7 +41,8 @@ impl Authority {
     }
 
     pub fn server_key(server_url: &str, secret_key: &Ed25519PrivateKey) -> Self {
-        Self::ServerKey((server_url.to_owned(), *secret_key))
+        let public_key = ed25519_public_key_from_private_key(secret_key);
+        Self::ServerKey((server_url.to_owned(), public_key))
     }
 
     pub fn from_user(
@@ -98,7 +99,8 @@ mod tests {
     #[test]
     fn test_fep_ef61_identity_url_compat() {
         let secret_key = generate_weak_ed25519_key();
-        let did_ap_key = fep_ef61_identity(&secret_key);
+        let public_key = ed25519_public_key_from_private_key(&secret_key);
+        let did_ap_key = fep_ef61_identity(&public_key);
         let did_url = format!("{did_ap_key}/objects/1");
         assert_eq!(did_url, "did:ap:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/objects/1");
         let url = Url::parse(&did_url).unwrap();
