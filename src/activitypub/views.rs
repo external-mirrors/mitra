@@ -17,6 +17,7 @@ use mitra_activitypub::{
         build_local_actor,
         sign_object_fep_ef61,
     },
+    authority::Authority,
     builders::{
         announce::build_announce,
         collection::{
@@ -41,7 +42,6 @@ use mitra_activitypub::{
         LocalActorCollection,
     },
 };
-use mitra_adapters::authority::Authority;
 use mitra_config::Config;
 use mitra_federation::{
     constants::AP_MEDIA_TYPE,

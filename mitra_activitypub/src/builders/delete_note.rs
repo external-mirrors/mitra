@@ -1,6 +1,5 @@
 use serde::Serialize;
 
-use mitra_adapters::authority::Authority;
 use mitra_config::Instance;
 use mitra_models::{
     database::{DatabaseClient, DatabaseError},
@@ -10,6 +9,7 @@ use mitra_models::{
 };
 
 use crate::{
+    authority::Authority,
     contexts::{build_default_context, Context},
     identifiers::{local_actor_id, local_object_id},
     queues::OutgoingActivityJobData,

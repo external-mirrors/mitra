@@ -1,7 +1,6 @@
 use serde::{Deserialize, Serialize};
 use serde_json::{Value as JsonValue};
 
-use mitra_adapters::authority::Authority;
 use mitra_federation::{
     constants::AP_MEDIA_TYPE,
     deserialization::deserialize_string_array,
@@ -36,6 +35,7 @@ use mitra_utils::{
 use mitra_validators::errors::ValidationError;
 
 use crate::{
+    authority::Authority,
     constants::{
         CHAT_LINK_RELATION_TYPE,
         PAYMENT_LINK_RELATION_TYPE,

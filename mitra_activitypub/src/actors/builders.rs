@@ -4,7 +4,6 @@ use chrono::{DateTime, Utc};
 use serde::Serialize;
 use serde_json::{Value as JsonValue};
 
-use mitra_adapters::authority::Authority;
 use mitra_config::Instance;
 use mitra_models::{
     database::{DatabaseError, DatabaseTypeError},
@@ -18,6 +17,7 @@ use mitra_utils::{
 };
 
 use crate::{
+    authority::Authority,
     contexts::{
         AP_CONTEXT,
         MASTODON_CONTEXT,

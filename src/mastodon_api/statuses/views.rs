@@ -15,6 +15,7 @@ use chrono::{DateTime, Utc};
 use uuid::Uuid;
 
 use mitra_activitypub::{
+    authority::Authority,
     builders::{
         announce::prepare_announce,
         add_note::prepare_add_note,
@@ -29,7 +30,6 @@ use mitra_activitypub::{
     },
     identifiers::local_object_id,
 };
-use mitra_adapters::authority::Authority;
 use mitra_config::Config;
 use mitra_models::{
     database::{

@@ -1,7 +1,6 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-use mitra_adapters::authority::Authority;
 use mitra_federation::{
     addresses::ActorAddress,
     constants::{AP_MEDIA_TYPE, AP_PUBLIC},
@@ -18,6 +17,7 @@ use mitra_models::{
 use mitra_services::media::get_file_url;
 
 use crate::{
+    authority::Authority,
     contexts::{build_default_context, Context},
     identifiers::{
         local_actor_id_unified,

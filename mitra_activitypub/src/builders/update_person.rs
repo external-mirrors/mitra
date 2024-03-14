@@ -2,7 +2,6 @@ use serde::Serialize;
 use serde_json::{Value as JsonValue};
 use uuid::Uuid;
 
-use mitra_adapters::authority::Authority;
 use mitra_config::Instance;
 use mitra_federation::constants::AP_PUBLIC;
 use mitra_models::{
@@ -17,6 +16,7 @@ use mitra_validators::errors::ValidationError;
 
 use crate::{
     actors::builders::{build_local_actor, Actor},
+    authority::Authority,
     contexts::{build_default_context, Context},
     errors::HandlerError,
     identifiers::{
