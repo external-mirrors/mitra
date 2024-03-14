@@ -10,12 +10,12 @@ use mitra_utils::{
     did_key::DidKey,
 };
 
+use super::did_url::DidApUrl;
+
 fn fep_ef61_identity(public_key: &Ed25519PublicKey) -> String {
     let did_key = DidKey::from_ed25519_key(public_key.as_bytes());
-    format!(
-        "did:ap:key:{}",
-        did_key.key_multibase(),
-    )
+    let did_url = DidApUrl::from_did_key(&did_key);
+    did_url.to_string()
 }
 
 pub enum Authority {

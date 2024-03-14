@@ -22,6 +22,8 @@ pub struct DidKey {
 }
 
 impl DidKey {
+    pub(super) const METHOD: &'static str = "key";
+
     pub fn key_multibase(&self) -> String {
         let multidata = self.codec.encode(&self.key_data);
         encode_multibase_base58btc(&multidata)
@@ -57,8 +59,12 @@ impl FromStr for DidKey {
 
 impl fmt::Display for DidKey {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let did_str = format!("did:key:{}", self.key_multibase());
-        write!(formatter, "{}", did_str)
+        write!(
+            formatter,
+            "did:{}:{}",
+            Self::METHOD,
+            self.key_multibase(),
+        )
     }
 }
 

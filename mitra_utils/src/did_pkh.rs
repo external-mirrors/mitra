@@ -15,6 +15,12 @@ pub struct DidPkh {
 }
 
 impl DidPkh {
+    pub(super) const METHOD: &'static str = "pkh";
+
+    pub(super) fn account_id(&self) -> &AccountId {
+        &self.account_id
+    }
+
     pub fn address(&self) -> String {
         self.account_id.address.clone()
     }
@@ -40,7 +46,7 @@ impl DidPkh {
 
 impl fmt::Display for DidPkh {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(formatter, "did:pkh:{}", self.account_id)
+        write!(formatter, "did:{}:{}", Self::METHOD, self.account_id)
     }
 }
 

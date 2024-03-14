@@ -5,6 +5,7 @@ pub mod builders;
 mod constants;
 mod contexts;
 mod deliverer;
+mod did_url;
 pub mod errors;
 mod handlers;
 pub mod identifiers;
