@@ -29,7 +29,7 @@ pub fn local_actor_id_fep_ef61_fallback(instance_url: &str, username: &str) -> S
 pub fn local_actor_id_unified(authority: &Authority, username: &str) -> String {
     match authority {
         Authority::Server(_) => local_actor_id(&authority.to_string(), username),
-        Authority::ServerKey(_) => local_instance_actor_id(&authority.to_string()),
+        Authority::Key(_) => local_instance_actor_id(&authority.to_string()),
     }
 }
 
