@@ -261,10 +261,11 @@ pub fn sign_object_fep_ef61(
     object: &JsonValue,
     current_time: Option<DateTime<Utc>>,
 ) -> JsonValue {
-    assert!(authority.is_fep_ef61());
     let ed25519_secret_key = user.ed25519_private_key;
     // Key ID is DID
-    let ed25519_key_id = authority.to_string();
+    let ed25519_key_id = authority.as_did_url()
+        .expect("authority should be of 'did:ap' kind")
+        .to_string();
     sign_object_eddsa(
         &ed25519_secret_key,
         &ed25519_key_id,

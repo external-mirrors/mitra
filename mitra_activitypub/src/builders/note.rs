@@ -298,21 +298,21 @@ mod tests {
     };
     use super::*;
 
-    const INSTANCE_HOSTNAME: &str = "example.com";
-    const INSTANCE_URL: &str = "https://example.com";
+    const INSTANCE_HOSTNAME: &str = "server.example";
+    const INSTANCE_URL: &str = "https://server.example";
 
     #[test]
     fn test_build_tag() {
         let simple_tag = SimpleTag {
             tag_type: HASHTAG.to_string(),
-            href: "https://example.org/tags/test".to_string(),
+            href: "https://server.example/tags/test".to_string(),
             name: "#test".to_string(),
         };
         let tag = Tag::SimpleTag(simple_tag);
         let value = serde_json::to_value(tag).unwrap();
         assert_eq!(value, json!({
             "type": "Hashtag",
-            "href": "https://example.org/tags/test",
+            "href": "https://server.example/tags/test",
             "name": "#test",
         }));
     }
@@ -364,7 +364,7 @@ mod tests {
             _ => panic!(),
         };
         assert_eq!(tag.name, "#test");
-        assert_eq!(tag.href, "https://example.com/collections/tags/test");
+        assert_eq!(tag.href, "https://server.example/collections/tags/test");
 
         assert_eq!(note.published, post.created_at);
         assert_eq!(note.updated, None);

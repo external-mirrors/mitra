@@ -30,6 +30,7 @@ pub fn local_actor_id_unified(authority: &Authority, username: &str) -> String {
     match authority {
         Authority::Server(_) => local_actor_id(&authority.to_string(), username),
         Authority::Key(_) => local_instance_actor_id(&authority.to_string()),
+        Authority::KeyWithResolver(_) => local_instance_actor_id(&authority.to_string()),
     }
 }
 
