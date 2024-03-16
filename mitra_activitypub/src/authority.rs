@@ -49,12 +49,12 @@ impl Authority {
         Self::Server(server_url.to_owned())
     }
 
+    #[allow(dead_code)]
     fn key(server_url: &str, secret_key: &Ed25519PrivateKey) -> Self {
         let public_key = ed25519_public_key_from_private_key(secret_key);
         Self::Key((server_url.to_owned(), public_key))
     }
 
-    #[allow(dead_code)]
     fn key_with_resolver(server_url: &str, secret_key: &Ed25519PrivateKey) -> Self {
         let public_key = ed25519_public_key_from_private_key(secret_key);
         Self::KeyWithResolver((server_url.to_owned(), public_key))
@@ -66,7 +66,7 @@ impl Authority {
         fep_ef61_enabled: bool,
     ) -> Self {
         if fep_ef61_enabled {
-            Self::key(server_url, &user.ed25519_private_key)
+            Self::key_with_resolver(server_url, &user.ed25519_private_key)
         } else {
             Self::server(server_url)
         }
