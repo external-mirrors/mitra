@@ -29,8 +29,17 @@ pub enum InboxError {
     #[error(transparent)]
     DatabaseError(#[from] DatabaseError),
 
-    #[error(transparent)]
-    AuthError(#[from] AuthenticationError),
+    #[error("{0}")]
+    AuthError(#[source] AuthenticationError),
+}
+
+impl From<AuthenticationError> for InboxError {
+    fn from(error: AuthenticationError) -> Self {
+        match error {
+            AuthenticationError::DatabaseError(db_error) => db_error.into(),
+            _ => Self::AuthError(error),
+        }
+    }
 }
 
 impl From<InboxError> for HttpError {

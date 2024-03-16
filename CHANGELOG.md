@@ -10,6 +10,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Implemented FEP-ef61 resolver endpoint.
 
+### Changed
+
+- Preserve wrapped database errors when converting from `AuthenticationError` to `InboxError`.
+
 ## [2.13.0] - 2024-03-12
 
 ### Added
