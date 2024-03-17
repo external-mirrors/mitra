@@ -58,12 +58,14 @@ use mitra_models::{
     posts::helpers::{add_related_posts, can_view_post},
     posts::queries::{get_post_by_id, get_posts_by_author, get_thread},
     profiles::types::PaymentOption,
-    users::queries::{get_user_by_id, get_user_by_name},
+    users::queries::{
+        get_user_by_id,
+        get_user_by_identity_key,
+        get_user_by_name,
+    },
 };
 use mitra_utils::{
     caip2::ChainId,
-    crypto_eddsa::ed25519_public_key_from_private_key,
-    did_key::DidKey,
     http_digest::get_sha256_digest,
 };
 use mitra_validators::errors::ValidationError;
@@ -105,6 +107,9 @@ async fn actor_view(
             .append_header((http_header::LOCATION, page_url))
             .finish();
         return Ok(response);
+    };
+    if query_params.fep_ef61 && user.profile.identity_key.is_none() {
+        return Err(HttpError::PermissionError);
     };
     let authority = Authority::from_user(
         &config.instance_url(),
@@ -526,6 +531,9 @@ pub async fn object_view(
     };
     add_related_posts(db_client, vec![&mut post]).await?;
     let user = get_user_by_id(db_client, &post.author.id).await?;
+    if query_params.fep_ef61 && user.profile.identity_key.is_none() {
+        return Err(HttpError::PermissionError);
+    };
     let authority = Authority::from_user(
         &instance.url(),
         &user,
@@ -648,24 +656,20 @@ pub async fn apresolver_view(
     let db_client = &**get_database_client(&db_pool).await?;
     let (did_key, internal_object_id) =
         parse_fep_ef61_local_object_id(&url)?;
+    let identity_key = did_key.key_multibase();
+    let user = get_user_by_identity_key(db_client, &identity_key).await?;
     let instance = config.instance();
+    let authority = Authority::from_user(
+        &instance.url(),
+        &user,
+        true,
+    );
     // TODO: store DID URL in database?
     let mut post = get_post_by_id(db_client, &internal_object_id).await?;
     // Verify ownership
-    let post_author = get_user_by_id(db_client, &post.author.id).await?;
-    let post_author_public_key =
-        ed25519_public_key_from_private_key(&post_author.ed25519_private_key);
-    let post_author_did_key =
-        DidKey::from_ed25519_key(post_author_public_key.as_bytes());
-    if post_author_did_key != did_key {
+    if post.author.id != user.id {
         return Err(HttpError::NotFoundError("post"));
     };
-    // Create FEP-ef61 representation
-    let authority = Authority::from_user(
-        &instance.url(),
-        &post_author,
-        true,
-    );
     add_related_posts(db_client, vec![&mut post]).await?;
     let object = build_note(
         &instance.hostname(),
@@ -679,7 +683,7 @@ pub async fn apresolver_view(
         .expect("object should be serializable");
     object_value = sign_object_fep_ef61(
         &authority,
-        &post_author,
+        &user,
         &object_value,
         None,
     );

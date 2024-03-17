@@ -13,7 +13,12 @@ use uuid::Uuid;
 
 use mitra_utils::{
     caip2::ChainId,
+    crypto_eddsa::{
+        ed25519_public_key_from_private_key,
+        Ed25519PrivateKey,
+    },
     did::Did,
+    did_key::DidKey,
 };
 
 use crate::database::{
@@ -654,6 +659,7 @@ pub struct DbActorProfile {
     pub post_count: i32,
     pub emojis: ProfileEmojis,
     pub actor_json: Option<DbActor>,
+    pub identity_key: Option<String>, // multibase + multicodec
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
     pub unreachable_since: Option<DateTime<Utc>>,
@@ -677,6 +683,12 @@ pub(super) fn get_profile_acct(username: &str, hostname: Option<&str>) -> String
     }
 }
 
+pub(crate) fn get_identity_key(secret_key: Ed25519PrivateKey) -> String {
+    let public_key = ed25519_public_key_from_private_key(&secret_key);
+    let did_key = DidKey::from_ed25519_key(public_key.as_bytes());
+    did_key.key_multibase()
+}
+
 impl DbActorProfile {
     pub(crate) fn check_consistency(&self) -> Result<(), DatabaseTypeError> {
         if self.hostname.is_none() != self.actor_json.is_none() {
@@ -692,6 +704,10 @@ impl DbActorProfile {
             };
         } else if self.hostname.is_none() {
             // Only remote accounts may have empty acct
+            return Err(DatabaseTypeError);
+        };
+        if self.hostname.is_some() && self.identity_key.is_some() {
+            // Remote accounts can't have identity keys
             return Err(DatabaseTypeError);
         };
         Ok(())
@@ -776,6 +792,7 @@ impl Default for DbActorProfile {
             emojis: ProfileEmojis(vec![]),
             actor_json: None,
             actor_id: None,
+            identity_key: None,
             created_at: now,
             updated_at: now,
             unreachable_since: None,

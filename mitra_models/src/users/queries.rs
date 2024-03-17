@@ -4,6 +4,7 @@ use uuid::Uuid;
 
 use mitra_utils::{
     caip10::{AccountId as ChainAccountId},
+    crypto_eddsa::Ed25519PrivateKey,
     currencies::Currency,
     did::Did,
     did_pkh::DidPkh,
@@ -187,8 +188,8 @@ pub async fn set_user_password(
 
 pub(super) async fn set_user_ed25519_private_key(
     db_client: &impl DatabaseClient,
-    user_id: &Uuid,
-    private_key: [u8; 32],
+    user_id: Uuid,
+    private_key: Ed25519PrivateKey,
 ) -> Result<(), DatabaseError> {
     let updated_count = db_client.execute(
         "
@@ -356,6 +357,25 @@ pub async fn get_user_by_public_wallet_address(
     get_user_by_did(db_client, &did).await
 }
 
+pub async fn get_user_by_identity_key(
+    db_client: &impl DatabaseClient,
+    identity_key: &str,
+) -> Result<User, DatabaseError> {
+    let maybe_row = db_client.query_opt(
+        "
+        SELECT user_account, actor_profile
+        FROM user_account JOIN actor_profile USING (id)
+        WHERE actor_profile.identity_key = $1
+        ",
+        &[&identity_key],
+    ).await?;
+    let row = maybe_row.ok_or(DatabaseError::NotFound("user"))?;
+    let db_user: DbUser = row.try_get("user_account")?;
+    let db_profile: DbActorProfile = row.try_get("actor_profile")?;
+    let user = User::new(db_user, db_profile)?;
+    Ok(user)
+}
+
 pub async fn get_users_by_role(
     db_client: &impl DatabaseClient,
     role: Role,
@@ -513,7 +533,7 @@ mod tests {
         let private_key = [9; 32];
         set_user_ed25519_private_key(
             db_client,
-            &user.id,
+            user.id,
             private_key,
         ).await.unwrap();
         let user = get_user_by_id(db_client, &user.id).await.unwrap();

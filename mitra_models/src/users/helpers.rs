@@ -1,10 +1,16 @@
 use uuid::Uuid;
 
-use mitra_utils::crypto_eddsa::generate_ed25519_key;
+use mitra_utils::{
+    crypto_eddsa::{
+        generate_ed25519_key,
+    },
+};
 
-use crate::database::{
-    DatabaseClient,
-    DatabaseError,
+use crate::{
+    database::{
+        DatabaseClient,
+        DatabaseError,
+    },
 };
 
 use super::queries::set_user_ed25519_private_key;
@@ -25,7 +31,7 @@ pub async fn add_ed25519_keys(
         let ed25519_private_key = generate_ed25519_key();
         set_user_ed25519_private_key(
             db_client,
-            &user_id,
+            user_id,
             ed25519_private_key,
         ).await?;
     };

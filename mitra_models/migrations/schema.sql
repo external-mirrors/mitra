@@ -40,6 +40,7 @@ CREATE TABLE actor_profile (
     emojis JSONB NOT NULL DEFAULT '[]',
     actor_json JSONB,
     actor_id VARCHAR(2000) UNIQUE GENERATED ALWAYS AS (actor_json ->> 'id') STORED,
+    identity_key VARCHAR(100) UNIQUE,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
     unreachable_since TIMESTAMP WITH TIME ZONE,

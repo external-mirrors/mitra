@@ -2,6 +2,7 @@ use chrono::{DateTime, Utc};
 use uuid::Uuid;
 
 use mitra_utils::{
+    crypto_eddsa::Ed25519PrivateKey,
     currencies::Currency,
     did::Did,
     did_pkh::DidPkh,
@@ -24,6 +25,7 @@ use crate::instances::queries::create_instance;
 use crate::relationships::types::RelationshipType;
 
 use super::types::{
+    get_identity_key,
     get_profile_acct,
     Aliases,
     DbActorProfile,
@@ -317,6 +319,29 @@ pub async fn update_profile(
         ipfs_objects: vec![],
     };
     Ok((profile, deletion_queue))
+}
+
+pub async fn set_profile_identity_key(
+    db_client: &mut impl DatabaseClient,
+    profile_id: Uuid,
+    ed25519_secret_key: Ed25519PrivateKey,
+) -> Result<DbActorProfile, DatabaseError> {
+    let transaction = db_client.transaction().await?;
+    let identity_key = get_identity_key(ed25519_secret_key);
+    let maybe_row = transaction.query_opt(
+        "
+        UPDATE actor_profile
+        SET identity_key = $2
+        WHERE id = $1
+        RETURNING actor_profile
+        ",
+        &[&profile_id, &identity_key],
+    ).await?;
+    let row = maybe_row.ok_or(DatabaseError::NotFound("profile"))?;
+    let profile: DbActorProfile = row.try_get("actor_profile")?;
+    profile.check_consistency()?;
+    transaction.commit().await?;
+    Ok(profile)
 }
 
 pub async fn get_profile_by_id(

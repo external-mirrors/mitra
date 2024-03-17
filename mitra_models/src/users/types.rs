@@ -26,7 +26,7 @@ use crate::database::{
     DatabaseError,
     DatabaseTypeError,
 };
-use crate::profiles::types::DbActorProfile;
+use crate::profiles::types::{get_identity_key, DbActorProfile};
 
 #[allow(dead_code)]
 #[derive(FromSql)]
@@ -195,6 +195,11 @@ impl User {
         let ed25519_private_key =
             ed25519_private_key_from_bytes(&db_user.ed25519_private_key)
                 .map_err(|_| DatabaseTypeError)?;
+        if let Some(ref identity_key) = db_profile.identity_key {
+            if *identity_key != get_identity_key(ed25519_private_key) {
+                return Err(DatabaseTypeError);
+            };
+        };
         let user = Self {
             id: db_user.id,
             password_hash: db_user.password_hash,
@@ -256,7 +261,7 @@ impl UserCreateData {
 impl Default for UserCreateData {
     fn default() -> Self {
         use mitra_utils::{
-            crypto_eddsa::generate_weak_ed25519_key,
+            crypto_eddsa::generate_ed25519_key,
             crypto_rsa::{
                 generate_weak_rsa_key,
                 rsa_private_key_to_pkcs8_pem,
@@ -265,7 +270,9 @@ impl Default for UserCreateData {
         let rsa_private_key = generate_weak_rsa_key().unwrap();
         let rsa_private_key_pem =
             rsa_private_key_to_pkcs8_pem(&rsa_private_key).unwrap();
-        let ed25519_private_key = generate_weak_ed25519_key();
+        // Generating unique key for each user to satisfy identity_key
+        // uniqueness constraint.
+        let ed25519_private_key = generate_ed25519_key();
         Self {
             username: Default::default(),
             password_hash: None,
