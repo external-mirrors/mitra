@@ -387,6 +387,9 @@ pub async fn update_remote_profile(
         actor.preferred_username.clone()
     } else {
         // Keep using cached value
+        if actor.preferred_username != profile.username {
+            log::warn!("preferred username doesn't match cached value");
+        };
         profile.username.clone()
     };
     let actor_old = profile.actor_json
