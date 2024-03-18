@@ -495,7 +495,7 @@ mod tests {
         let parent_author = DbActorProfile {
             username: "test".to_string(),
             hostname: Some("test.net".to_string()),
-            acct: parent_author_acct.to_string(),
+            acct: Some(parent_author_acct.to_string()),
             actor_json: Some(DbActor {
                 id: parent_author_actor_id.to_string(),
                 url: Some(parent_author_actor_url.to_string()),

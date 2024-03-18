@@ -24,6 +24,7 @@ use crate::instances::queries::create_instance;
 use crate::relationships::types::RelationshipType;
 
 use super::types::{
+    get_profile_acct,
     Aliases,
     DbActorProfile,
     ExtraFields,
@@ -132,12 +133,18 @@ pub async fn create_profile(
     if let Some(ref hostname) = profile_data.hostname {
         create_instance(&transaction, hostname).await?;
     };
+    // TODO: nullify acct field on conflicting records
+    let profile_acct = get_profile_acct(
+        &profile_data.username,
+        profile_data.hostname.as_deref(),
+    );
     transaction.execute(
         "
         INSERT INTO actor_profile (
             id,
             username,
             hostname,
+            acct,
             display_name,
             bio,
             avatar,
@@ -151,13 +158,14 @@ pub async fn create_profile(
             aliases,
             actor_json
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
         RETURNING actor_profile
         ",
         &[
             &profile_id,
             &profile_data.username,
             &profile_data.hostname,
+            &profile_acct,
             &profile_data.display_name,
             &profile_data.bio,
             &profile_data.avatar,
@@ -192,49 +200,58 @@ pub async fn update_profile(
 ) -> Result<(DbActorProfile, DeletionQueue), DatabaseError> {
     profile_data.check_consistency()?;
     let transaction = db_client.transaction().await?;
-    // Get currently used images
-    let maybe_images_row = transaction.query_opt(
+     // Get hostname and currently used images
+    let maybe_row = transaction.query_opt(
         "
-        SELECT array_remove(
-            ARRAY[
-                avatar ->> 'file_name',
-                banner ->> 'file_name'
-            ],
-            NULL
-        ) AS images
+        SELECT
+            hostname,
+            array_remove(
+                ARRAY[
+                    avatar ->> 'file_name',
+                    banner ->> 'file_name'
+                ],
+                NULL
+            ) AS images
         FROM actor_profile WHERE id = $1
         FOR UPDATE
         ",
         &[&profile_id],
     ).await?;
-    let images_row = maybe_images_row
-        .ok_or(DatabaseError::NotFound("profile"))?;
-    let images = images_row.try_get("images")?;
+    let row = maybe_row.ok_or(DatabaseError::NotFound("profile"))?;
+    let maybe_hostname: Option<String> = row.try_get("hostname")?;
+    let images = row.try_get("images")?;
 
+    // TODO: nullify acct field on conflicting records
+    let profile_acct = get_profile_acct(
+        &profile_data.username,
+        maybe_hostname.as_deref(),
+    );
     let updated_count = transaction.execute(
         "
         UPDATE actor_profile
         SET
             username = $1,
-            display_name = $2,
-            bio = $3,
-            bio_source = $4,
-            avatar = $5,
-            banner = $6,
-            manually_approves_followers = $7,
-            mention_policy = $8,
-            public_keys = $9,
-            identity_proofs = $10,
-            payment_options = $11,
-            extra_fields = $12,
-            aliases = $13,
-            actor_json = $14,
+            acct = $2,
+            display_name = $3,
+            bio = $4,
+            bio_source = $5,
+            avatar = $6,
+            banner = $7,
+            manually_approves_followers = $8,
+            mention_policy = $9,
+            public_keys = $10,
+            identity_proofs = $11,
+            payment_options = $12,
+            extra_fields = $13,
+            aliases = $14,
+            actor_json = $15,
             updated_at = CURRENT_TIMESTAMP,
             unreachable_since = NULL
-        WHERE id = $15
+        WHERE id = $16
         ",
         &[
             &profile_data.username,
+            &profile_acct,
             &profile_data.display_name,
             &profile_data.bio,
             &profile_data.bio_source,
@@ -925,7 +942,7 @@ mod tests {
         let profile = create_profile(db_client, profile_data).await.unwrap();
         assert_eq!(profile.username, "test");
         assert_eq!(profile.hostname, None);
-        assert_eq!(profile.acct, "test");
+        assert_eq!(profile.acct.unwrap(), "test");
         assert_eq!(profile.identity_proofs.into_inner().len(), 0);
         assert_eq!(profile.payment_options.inner().len(), 1);
         assert_eq!(profile.extra_fields.into_inner().len(), 0);
@@ -946,7 +963,7 @@ mod tests {
         let profile = create_profile(db_client, profile_data).await.unwrap();
         assert_eq!(profile.username, "test");
         assert_eq!(profile.hostname.unwrap(), "example.com");
-        assert_eq!(profile.acct, "test@example.com");
+        assert_eq!(profile.acct.unwrap(), "test@example.com");
         assert_eq!(
             profile.actor_id.unwrap(),
             "https://example.com/users/test",
@@ -1019,6 +1036,7 @@ mod tests {
             profile_data,
         ).await.unwrap();
         assert_eq!(profile_updated.username, profile.username);
+        assert_eq!(profile_updated.acct, profile.acct);
         assert_eq!(profile_updated.bio.unwrap(), bio);
         assert!(profile_updated.updated_at != profile.updated_at);
         assert_eq!(deletion_queue.files.len(), 0);

@@ -635,6 +635,7 @@ pub struct DbActorProfile {
     pub id: Uuid,
     pub username: String,
     pub hostname: Option<String>,
+    pub acct: Option<String>, // unique acct string
     pub display_name: Option<String>,
     pub bio: Option<String>, // html
     pub bio_source: Option<String>, // plaintext or markdown
@@ -658,7 +659,6 @@ pub struct DbActorProfile {
     pub unreachable_since: Option<DateTime<Utc>>,
 
     // auto-generated database fields
-    pub acct: String,
     pub actor_id: Option<String>,
 }
 
@@ -670,7 +670,7 @@ pub struct DbActorProfile {
 // actor RSA key: can be updated at any time by the instance admin
 // identity proofs: TBD (likely will do "Trust on first use" (TOFU))
 
-fn get_profile_acct(username: &str, hostname: Option<&str>) -> String {
+pub(super) fn get_profile_acct(username: &str, hostname: Option<&str>) -> String {
     if let Some(hostname) = hostname {
         format!("{}@{}", username, hostname)
     } else {
@@ -683,11 +683,16 @@ impl DbActorProfile {
         if self.hostname.is_none() != self.actor_json.is_none() {
             return Err(DatabaseTypeError);
         };
-        let expected_acct = get_profile_acct(
-            &self.username,
-            self.hostname.as_deref(),
-        );
-        if self.acct != expected_acct {
+        if let Some(ref acct) = self.acct {
+            let expected_acct = get_profile_acct(
+                &self.username,
+                self.hostname.as_deref(),
+            );
+            if acct != &expected_acct {
+                return Err(DatabaseTypeError);
+            };
+        } else if self.hostname.is_none() {
+            // Only remote accounts may have empty acct
             return Err(DatabaseTypeError);
         };
         Ok(())
@@ -725,6 +730,16 @@ impl DbActorProfile {
         }
     }
 
+    // For Mastodon API
+    pub fn preferred_handle(&self) -> &str {
+        if let Some(ref acct) = self.acct {
+            acct
+        } else {
+            // Only remote actors may have empty acct
+            self.expect_remote_actor_id()
+        }
+    }
+
     pub fn monero_subscription(
         &self,
         chain_id: &ChainId,
@@ -742,7 +757,7 @@ impl Default for DbActorProfile {
             id: Uuid::new_v4(),
             username: "test".to_string(),
             hostname: None,
-            acct: "test".to_string(),
+            acct: Some("test".to_string()),
             display_name: None,
             bio: None,
             bio_source: None,

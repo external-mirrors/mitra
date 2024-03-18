@@ -20,7 +20,7 @@ CREATE TABLE actor_profile (
     id UUID PRIMARY KEY,
     username VARCHAR(100) NOT NULL,
     hostname VARCHAR(100) REFERENCES instance (hostname) ON DELETE RESTRICT,
-    acct VARCHAR(200) UNIQUE GENERATED ALWAYS AS (CASE WHEN hostname IS NULL THEN username ELSE username || '@' || hostname END) STORED,
+    acct VARCHAR(200) UNIQUE,
     display_name VARCHAR(200),
     bio TEXT,
     bio_source TEXT,

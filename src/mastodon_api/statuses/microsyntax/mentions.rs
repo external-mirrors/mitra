@@ -58,7 +58,10 @@ pub async fn find_mentioned_profiles(
     let profiles = get_profiles_by_accts(db_client, mentions).await?;
     let mut mention_map: HashMap<String, DbActorProfile> = HashMap::new();
     for profile in profiles {
-        mention_map.insert(profile.acct.clone(), profile);
+        let acct = profile.acct.as_ref()
+            .expect("acct should be present")
+            .to_string();
+        mention_map.insert(acct, profile);
     };
     Ok(mention_map)
 }

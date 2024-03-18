@@ -108,7 +108,7 @@ async fn post_page_opengraph_view(
     let page = format!(
         include_str!("opengraph.html"),
         title=config.instance_title,
-        subtitle=format!("Post by @{}", post.author.acct),
+        subtitle=format!("Post by @{}", post.author.preferred_handle()),
         image_url=get_opengraph_image_url(&config.instance_url()),
     );
     let response = HttpResponse::Ok()

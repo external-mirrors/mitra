@@ -151,6 +151,7 @@ impl Account {
     ) -> Self {
         let actor_id = profile_actor_id(instance_url, &profile);
         let profile_url = profile_actor_url(instance_url, &profile);
+        let preferred_handle = profile.preferred_handle().to_owned();
         let mention_policy = match profile.mention_policy {
             MentionPolicy::None => "none",
             MentionPolicy::OnlyKnown => "only_known",
@@ -238,7 +239,7 @@ impl Account {
         Self {
             id: profile.id,
             username: profile.username,
-            acct: profile.acct,
+            acct: preferred_handle,
             actor_id: actor_id,
             url: profile_url,
             display_name: profile.display_name,

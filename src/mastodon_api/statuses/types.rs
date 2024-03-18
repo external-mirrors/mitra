@@ -33,7 +33,7 @@ impl Mention {
         Mention {
             id: profile.id.to_string(),
             username: profile.username.clone(),
-            acct: profile.acct.clone(),
+            acct: profile.preferred_handle().to_owned(),
             url: profile_actor_url(instance_url, &profile),
         }
     }
