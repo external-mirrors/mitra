@@ -12,7 +12,6 @@ use mitra_models::{
         get_post_by_remote_object_id,
     },
     profiles::queries::{
-        get_profile_by_acct,
         get_profile_by_remote_actor_id,
     },
     reactions::queries::{
@@ -23,6 +22,7 @@ use mitra_models::{
         get_follow_request_by_activity_id,
         unfollow,
     },
+    users::queries::get_user_by_name,
 };
 use mitra_validators::errors::ValidationError;
 
@@ -57,8 +57,8 @@ async fn handle_undo_follow(
         &target_actor_id,
     )?;
     // acct equals username if profile is local
-    let target_profile = get_profile_by_acct(db_client, &target_username).await?;
-    match unfollow(db_client, &source_profile.id, &target_profile.id).await {
+    let target_user = get_user_by_name(db_client, &target_username).await?;
+    match unfollow(db_client, &source_profile.id, &target_user.id).await {
         Ok(_) => (),
         // Ignore Undo if relationship doesn't exist
         Err(DatabaseError::NotFound(_)) => return Ok(None),
