@@ -82,7 +82,7 @@ async fn import_profile(
     let profile = match get_profile_by_acct(db_client, &acct).await {
         Ok(profile) => {
             // WARNING: Possible actor ID change
-            log::info!("re-fetched profile {}", profile.acct);
+            log::info!("re-fetched actor {}", actor.id);
             let profile_updated = update_remote_profile(
                 &agent,
                 db_client,
@@ -94,7 +94,7 @@ async fn import_profile(
             profile_updated
         },
         Err(DatabaseError::NotFound(_)) => {
-            log::info!("fetched profile {}", acct);
+            log::info!("fetched actor {}", actor.id);
             let profile = create_remote_profile(
                 &agent,
                 db_client,
@@ -126,7 +126,7 @@ async fn refresh_remote_profile(
         // Try to re-fetch actor profile
         match fetch_object::<Actor>(&agent, actor_id).await {
             Ok(actor) => {
-                log::info!("re-fetched profile {}", profile.acct);
+                log::info!("re-fetched actor {}", actor.id);
                 let profile_updated = update_remote_profile(
                     &agent,
                     db_client,
@@ -137,10 +137,12 @@ async fn refresh_remote_profile(
                 ).await?;
                 profile_updated
             },
-            Err(err) => {
+            Err(error) => {
                 // Ignore error and return stored profile
                 log::warn!(
-                    "failed to re-fetch {} ({})", profile.acct, err,
+                    "failed to re-fetch {} ({})",
+                    actor_id,
+                    error,
                 );
                 profile
             },

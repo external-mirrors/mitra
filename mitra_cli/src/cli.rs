@@ -665,7 +665,7 @@ impl DeleteEmptyProfiles {
             let profile = get_profile_by_id(db_client, &profile_id).await?;
             let deletion_queue = delete_profile(db_client, &profile.id).await?;
             delete_media(config, deletion_queue).await;
-            println!("profile {} deleted", profile.acct);
+            println!("profile deleted: {}", profile.expect_remote_actor_id());
         };
         Ok(())
     }

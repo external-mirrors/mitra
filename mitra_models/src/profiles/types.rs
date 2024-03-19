@@ -716,6 +716,15 @@ impl DbActorProfile {
         &self.expect_actor_data().id
     }
 
+    // For logging
+    pub fn username_or_actor_id(&self) -> String {
+        if let Some(ref actor_json) = self.actor_json {
+            actor_json.id.clone()
+        } else {
+            format!("@{}", self.username)
+        }
+    }
+
     pub fn monero_subscription(
         &self,
         chain_id: &ChainId,

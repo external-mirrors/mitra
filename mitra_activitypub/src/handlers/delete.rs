@@ -50,7 +50,7 @@ pub async fn handle_delete(
         };
         let deletion_queue = delete_profile(db_client, &profile.id).await?;
         deletion_queue.into_job(db_client).await?;
-        log::info!("deleted profile {}", profile.acct);
+        log::info!("deleted remote actor {}", activity.object);
         return Ok(Some(PERSON));
     };
     let post = match get_post_by_remote_object_id(

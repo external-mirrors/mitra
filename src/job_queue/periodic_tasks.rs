@@ -154,7 +154,7 @@ pub async fn delete_extraneous_posts(
     for post_id in posts {
         let deletion_queue = delete_post(db_client, &post_id).await?;
         delete_media(config, deletion_queue).await;
-        log::info!("deleted post {}", post_id);
+        log::info!("deleted remote post {}", post_id);
     };
     Ok(())
 }
@@ -173,7 +173,10 @@ pub async fn delete_empty_profiles(
         let profile = get_profile_by_id(db_client, &profile_id).await?;
         let deletion_queue = delete_profile(db_client, &profile.id).await?;
         delete_media(config, deletion_queue).await;
-        log::info!("deleted profile {}", profile.acct);
+        log::info!(
+            "deleted empty profile {}",
+            profile.expect_remote_actor_id(),
+        );
     };
     Ok(())
 }
@@ -187,7 +190,7 @@ pub async fn prune_remote_emojis(
     for emoji_id in emojis {
         let deletion_queue = delete_emoji(db_client, &emoji_id).await?;
         delete_media(config, deletion_queue).await;
-        log::info!("deleted emoji {}", emoji_id);
+        log::info!("deleted unused emoji {}", emoji_id);
     };
     Ok(())
 }

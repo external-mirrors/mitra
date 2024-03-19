@@ -599,7 +599,7 @@ fn get_object_visibility(
     };
     log::info!(
         "processing note with visibility 'direct' attributed to {}",
-        author.acct,
+        actor.id,
     );
     Visibility::Direct
 }
