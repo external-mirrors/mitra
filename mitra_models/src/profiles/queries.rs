@@ -140,7 +140,6 @@ pub async fn create_profile(
             hostname,
             display_name,
             bio,
-            bio_source,
             avatar,
             banner,
             manually_approves_followers,
@@ -152,7 +151,7 @@ pub async fn create_profile(
             aliases,
             actor_json
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
         RETURNING actor_profile
         ",
         &[
@@ -160,7 +159,6 @@ pub async fn create_profile(
             &profile_data.username,
             &profile_data.hostname,
             &profile_data.display_name,
-            &profile_data.bio,
             &profile_data.bio,
             &profile_data.avatar,
             &profile_data.banner,

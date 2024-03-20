@@ -16,6 +16,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Use resolver URLs instead of plain DID URLs in FEP-ef61 representations of objects.
 - Write warning to log if `preferrredUsername` doesn't match cached value.
 
+### Fixed
+
+- Don't fill `bio_source` database column when new profile is created.
+
 ## [2.13.0] - 2024-03-12
 
 ### Added
