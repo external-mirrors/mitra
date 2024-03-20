@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::fmt;
 
 use chrono::{DateTime, Utc};
 use postgres_types::FromSql;
@@ -157,6 +158,12 @@ pub struct User {
     pub role: Role,
     pub client_config: ClientConfig,
     pub profile: DbActorProfile,
+}
+
+impl fmt::Display for User {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(formatter, "{}", self.profile)
+    }
 }
 
 #[cfg(feature = "test-utils")]

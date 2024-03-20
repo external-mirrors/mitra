@@ -89,8 +89,8 @@ pub async fn create_or_update_monero_subscription(
             ).await?;
             log::info!(
                 "subscription updated: {0} to {1}",
-                subscription.sender_id,
-                subscription.recipient_id,
+                sender,
+                recipient,
             );
             expires_at
         },
@@ -108,8 +108,8 @@ pub async fn create_or_update_monero_subscription(
             ).await?;
             log::info!(
                 "subscription created: {0} to {1}",
-                sender.id,
-                recipient.id,
+                sender,
+                recipient,
             );
             expires_at
         },
@@ -231,7 +231,10 @@ pub async fn check_monero_subscriptions(
         let payment_info = if let Some(payment_info) = maybe_payment_info {
             payment_info
         } else {
-            log::error!("subscription is not configured for user {}", recipient.id);
+            log::error!(
+                "subscription is not configured for user {}",
+                recipient,
+            );
             continue;
         };
         // Send all available balance to payout address
@@ -328,7 +331,10 @@ pub async fn check_monero_subscriptions(
         let payment_info = if let Some(payment_info) = maybe_payment_info {
             payment_info
         } else {
-            log::error!("subscription is not configured for user {}", recipient.id);
+            log::error!(
+                "subscription is not configured for user {}",
+                recipient,
+            );
             continue;
         };
         let duration_secs = (transfer.amount.as_pico() / payment_info.price)

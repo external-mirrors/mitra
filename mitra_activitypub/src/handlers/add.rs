@@ -121,8 +121,8 @@ pub async fn handle_add(
                 ).await?;
                 log::info!(
                     "subscription updated: {0} to {1}",
-                    subscription.sender_id,
-                    subscription.recipient_id,
+                    sender,
+                    recipient,
                 );
             },
             Err(DatabaseError::NotFound(_)) => {
@@ -137,8 +137,8 @@ pub async fn handle_add(
                 ).await?;
                 log::info!(
                     "subscription created: {0} to {1}",
-                    sender.id,
-                    recipient.id,
+                    sender,
+                    recipient,
                 );
             },
             Err(other_error) => return Err(other_error.into()),

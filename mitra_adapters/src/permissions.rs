@@ -79,8 +79,8 @@ pub async fn filter_mentions(
         if !is_mention_allowed {
             log::warn!(
                 "removing mention of {} made by {}",
-                profile.username_or_actor_id(),
-                author.username_or_actor_id(),
+                profile,
+                author,
             );
             continue;
         };

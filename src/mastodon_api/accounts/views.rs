@@ -272,7 +272,7 @@ pub async fn create_account(
         Err(other_error) => return Err(other_error.into()),
     };
     create_signup_notifications(db_client, user.id).await?;
-    log::warn!("created user {}", user.id);
+    log::warn!("created user {}", user);
     let account = Account::from_user(
         &get_request_base_url(connection_info),
         &config.instance_url(),

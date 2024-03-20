@@ -129,15 +129,15 @@ pub async fn check_ethereum_subscriptions(
                     Ordering::Greater => {
                         log::info!(
                             "subscription extended: {0} to {1}",
-                            subscription.sender_id,
-                            subscription.recipient_id,
+                            sender,
+                            recipient,
                         );
                     },
                     Ordering::Less => {
                         log::info!(
                             "subscription cancelled: {0} to {1}",
-                            subscription.sender_id,
-                            subscription.recipient_id,
+                            sender,
+                            recipient,
                         );
                         continue;
                     },
@@ -157,8 +157,8 @@ pub async fn check_ethereum_subscriptions(
                 ).await?;
                 log::info!(
                     "subscription created: {0} to {1}",
-                    sender.id,
-                    recipient.id,
+                    sender,
+                    recipient,
                 );
             },
             Err(other_error) => return Err(other_error.into()),

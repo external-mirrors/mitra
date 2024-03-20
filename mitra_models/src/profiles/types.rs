@@ -1,3 +1,4 @@
+use std::fmt;
 use std::num::NonZeroU64;
 
 use chrono::{DateTime, Utc};
@@ -736,15 +737,6 @@ impl DbActorProfile {
         &self.expect_actor_data().id
     }
 
-    // For logging
-    pub fn username_or_actor_id(&self) -> String {
-        if let Some(ref actor_json) = self.actor_json {
-            actor_json.id.clone()
-        } else {
-            format!("@{}", self.username)
-        }
-    }
-
     // For Mastodon API
     pub fn preferred_handle(&self) -> &str {
         if let Some(ref acct) = self.acct {
@@ -761,6 +753,16 @@ impl DbActorProfile {
     ) -> Option<MoneroSubscription> {
         assert!(chain_id.is_monero());
         self.payment_options.find_subscription_option(chain_id)
+    }
+}
+
+impl fmt::Display for DbActorProfile {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if let Some(ref actor_json) = self.actor_json {
+            write!(formatter, "{}", actor_json.id)
+        } else {
+            write!(formatter, "@{}", self.username)
+        }
     }
 }
 
