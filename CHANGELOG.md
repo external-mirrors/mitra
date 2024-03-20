@@ -15,6 +15,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Preserve wrapped database errors when converting from `AuthenticationError` to `InboxError`.
 - Use resolver URLs instead of plain DID URLs in FEP-ef61 representations of objects.
 - Write warning to log if `preferrredUsername` doesn't match cached value.
+- Don't rely on acct comparsion when verifying activity signature.
 
 ### Fixed
 

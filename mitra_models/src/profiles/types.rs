@@ -707,6 +707,15 @@ impl DbActorProfile {
         }
     }
 
+    fn expect_actor_data(&self) -> &DbActor {
+        self.actor_json.as_ref()
+            .expect("actor data should be present")
+    }
+
+    pub fn expect_remote_actor_id(&self) -> &str {
+        &self.expect_actor_data().id
+    }
+
     pub fn monero_subscription(
         &self,
         chain_id: &ChainId,

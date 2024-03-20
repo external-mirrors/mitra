@@ -3,7 +3,6 @@ use serde_json::{Value as JsonValue};
 use wildmatch::WildMatch;
 
 use mitra_activitypub::{
-    identifiers::profile_actor_id,
     queues::IncomingActivityJobData,
     vocabulary::{DELETE, CREATE, LIKE, UPDATE},
 };
@@ -109,7 +108,8 @@ pub async fn receive_activity(
         is_self_delete,
     ).await {
         Ok(request_signer) => {
-            log::debug!("request signed by {}", request_signer.acct);
+            let request_signer_id = request_signer.expect_remote_actor_id();
+            log::debug!("request signed by {}", request_signer_id);
             request_signer
         },
         Err(error) => {
@@ -136,14 +136,16 @@ pub async fn receive_activity(
         is_self_delete,
     ).await {
         Ok(activity_signer) => {
-            if activity_signer.acct != signer.acct {
+            let signer_id = signer.expect_remote_actor_id();
+            let activity_signer_id = activity_signer.expect_remote_actor_id();
+            if activity_signer_id != signer_id {
                 log::warn!(
                     "request signer {} is different from activity signer {}",
-                    signer.acct,
-                    activity_signer.acct,
+                    signer_id,
+                    activity_signer_id,
                 );
             } else {
-                log::debug!("activity signed by {}", activity_signer.acct);
+                log::debug!("activity signed by {}", activity_signer_id);
             };
             // Activity signature has higher priority
             signer = activity_signer;
@@ -154,18 +156,18 @@ pub async fn receive_activity(
         },
     };
 
-    let signer_hostname = signer.hostname.as_ref()
-        .expect("signer should be remote");
+    let signer_id = signer.expect_remote_actor_id();
+    let signer_hostname = get_hostname(signer_id)
+        .map_err(|_| ValidationError("invalid actor ID"))?;
     if !is_hostname_allowed(
         &config.blocked_instances,
         &config.allowed_instances,
-        signer_hostname,
+        &signer_hostname,
     ) {
         log::info!("ignoring activity from blocked instance {signer_hostname}");
         return Ok(());
     };
 
-    let signer_id = profile_actor_id(&config.instance_url(), &signer);
     let is_authenticated = activity_actor == signer_id;
     if !is_authenticated {
         match activity_type {

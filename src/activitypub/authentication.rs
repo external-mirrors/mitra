@@ -117,6 +117,7 @@ async fn get_signer(
             },
         }
     };
+    assert!(!signer.is_local(), "signer should not be local actor");
     Ok(signer)
 }
 
