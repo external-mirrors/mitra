@@ -28,7 +28,6 @@ use mitra_validators::{
         allowed_profile_image_media_types,
         clean_profile_create_data,
         clean_profile_update_data,
-        validate_updated_actor_id,
         PROFILE_IMAGE_SIZE_MAX,
     },
 };
@@ -376,32 +375,13 @@ pub async fn update_remote_profile(
     storage: &MediaStorage,
     profile: DbActorProfile,
     actor: Actor,
-    update_username: bool,
 ) -> Result<DbActorProfile, HandlerError> {
-    let username = if update_username {
-        // WARNING: changing acct
-        // This will break some mentions in old posts and may cause
-        // integrity error upon saving if account with the same acct
-        // already exists in database
-        log::warn!("updating preferred username");
-        actor.preferred_username.clone()
-    } else {
-        // Keep using cached value
-        if actor.preferred_username != profile.username {
-            log::warn!("preferred username doesn't match cached value");
-        };
-        profile.username.clone()
+    if actor.preferred_username != profile.username {
+        log::warn!("preferred username doesn't match cached value");
     };
     let actor_old = profile.actor_json
         .expect("actor data should be present");
-    if actor_old.id != actor.id {
-        validate_updated_actor_id(&actor_old.id, &actor.id)?;
-        log::warn!(
-            "actor ID changed from {} to {}",
-            actor_old.id,
-            actor.id,
-        );
-    };
+    assert_eq!(actor_old.id, actor.id, "actor ID shouldn't change");
     if actor_old.public_key.public_key_pem != actor.public_key.public_key_pem {
         log::warn!(
             "actor public key changed from {} to {}",
@@ -432,7 +412,7 @@ pub async fn update_remote_profile(
         &actor,
     ).await?;
     let mut profile_data = ProfileUpdateData {
-        username: username,
+        username: actor.preferred_username.clone(),
         display_name: actor.name.clone(),
         bio: actor.summary.clone(),
         bio_source: actor.summary.clone(),

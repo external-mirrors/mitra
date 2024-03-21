@@ -7,7 +7,6 @@ use mitra_models::profiles::types::{
 };
 use mitra_utils::{
     html::{clean_html, clean_html_strict},
-    urls::get_hostname,
 };
 
 use super::errors::ValidationError;
@@ -163,20 +162,6 @@ pub fn clean_profile_update_data(
     Ok(())
 }
 
-pub fn validate_updated_actor_id(
-    old_actor_id: &str,
-    new_actor_id: &str,
-) -> Result<(), ValidationError> {
-    let old_hostname = get_hostname(old_actor_id)
-        .map_err(|_| ValidationError("invalid actor ID"))?;
-    let new_hostname = get_hostname(new_actor_id)
-        .map_err(|_| ValidationError("invalid actor ID"))?;
-    if old_hostname != new_hostname {
-        return Err(ValidationError("actor ID base can't change"));
-    };
-    Ok(())
-}
-
 #[cfg(test)]
 mod tests {
     use mitra_models::profiles::types::DbActor;
@@ -243,17 +228,5 @@ mod tests {
         };
         let result = clean_profile_create_data(&mut profile_data);
         assert_eq!(result.is_ok(), true);
-    }
-
-    #[test]
-    fn test_validate_updated_actor_id() {
-        let old_actor_id = "https://server1.example/users/test";
-        let new_actor_id = "https://server1.example/users/abdc";
-        let result = validate_updated_actor_id(old_actor_id, new_actor_id);
-        assert_eq!(result.is_ok(), true);
-
-        let new_actor_id = "https://server2.example/users/test";
-        let result = validate_updated_actor_id(old_actor_id, new_actor_id);
-        assert_eq!(result.is_ok(), false);
     }
 }

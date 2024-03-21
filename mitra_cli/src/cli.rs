@@ -382,9 +382,6 @@ impl SetRole {
 #[derive(Parser)]
 pub struct FetchActor {
     id: String,
-
-    #[arg(long)]
-    update_username: bool,
 }
 
 impl FetchActor {
@@ -393,12 +390,9 @@ impl FetchActor {
         config: &Config,
         db_client: &mut impl DatabaseClient,
     ) -> Result<(), Error> {
-        let mut resolver = ActorIdResolver::default()
+        let resolver = ActorIdResolver::default()
             .only_remote()
             .force_refetch();
-        if self.update_username {
-            resolver = resolver.update_username();
-        };
         resolver.resolve(
             db_client,
             &config.instance(),

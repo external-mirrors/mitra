@@ -151,7 +151,6 @@ async fn handle_update_person(
         &MediaStorage::from(config),
         profile,
         activity.object,
-        false,
     ).await?;
     Ok(Some(PERSON))
 }

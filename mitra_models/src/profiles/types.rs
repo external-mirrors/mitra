@@ -664,9 +664,8 @@ pub struct DbActorProfile {
 
 // Profile identifiers:
 // id (local profile UUID): never changes
-// acct (webfinger): should not be changed
-// - may change if actor ID remains the same; requires manual intervention
-// actor_id of remote actor: may change if acct remains the same
+// actor_id of remote actor: must not change
+// acct (webfinger): may change if actor ID remains the same
 // actor RSA key: can be updated at any time by the instance admin
 // identity proofs: TBD (likely will do "Trust on first use" (TOFU))
 
