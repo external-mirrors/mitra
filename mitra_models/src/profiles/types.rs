@@ -670,10 +670,24 @@ pub struct DbActorProfile {
 // actor RSA key: can be updated at any time by the instance admin
 // identity proofs: TBD (likely will do "Trust on first use" (TOFU))
 
+fn get_profile_acct(username: &str, hostname: Option<&str>) -> String {
+    if let Some(hostname) = hostname {
+        format!("{}@{}", username, hostname)
+    } else {
+        username.to_owned()
+    }
+}
+
 impl DbActorProfile {
-    pub(super) fn check_remote(&self) -> Result<(), DatabaseTypeError> {
-        // Consistency checks
-        if self.hostname.is_none() || self.actor_json.is_none() {
+    pub(crate) fn check_consistency(&self) -> Result<(), DatabaseTypeError> {
+        if self.hostname.is_none() != self.actor_json.is_none() {
+            return Err(DatabaseTypeError);
+        };
+        let expected_acct = get_profile_acct(
+            &self.username,
+            self.hostname.as_deref(),
+        );
+        if self.acct != expected_acct {
             return Err(DatabaseTypeError);
         };
         Ok(())

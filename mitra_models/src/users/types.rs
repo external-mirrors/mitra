@@ -185,6 +185,7 @@ impl User {
         db_user: DbUser,
         db_profile: DbActorProfile,
     ) -> Result<Self, DatabaseTypeError> {
+        db_profile.check_consistency()?;
         if db_user.id != db_profile.id {
             return Err(DatabaseTypeError);
         };

@@ -280,7 +280,7 @@ pub async fn get_profile_by_id(
     db_client: &impl DatabaseClient,
     profile_id: &Uuid,
 ) -> Result<DbActorProfile, DatabaseError> {
-    let result = db_client.query_opt(
+    let maybe_row = db_client.query_opt(
         "
         SELECT actor_profile
         FROM actor_profile
@@ -288,10 +288,9 @@ pub async fn get_profile_by_id(
         ",
         &[&profile_id],
     ).await?;
-    let profile = match result {
-        Some(row) => row.try_get("actor_profile")?,
-        None => return Err(DatabaseError::NotFound("profile")),
-    };
+    let row = maybe_row.ok_or(DatabaseError::NotFound("profile"))?;
+    let profile: DbActorProfile = row.try_get("actor_profile")?;
+    profile.check_consistency()?;
     Ok(profile)
 }
 
@@ -309,7 +308,7 @@ pub async fn get_profile_by_remote_actor_id(
     ).await?;
     let row = maybe_row.ok_or(DatabaseError::NotFound("profile"))?;
     let profile: DbActorProfile = row.try_get("actor_profile")?;
-    profile.check_remote()?;
+    profile.check_consistency()?;
     Ok(profile)
 }
 
@@ -317,7 +316,7 @@ pub async fn get_profile_by_acct(
     db_client: &impl DatabaseClient,
     acct: &str,
 ) -> Result<DbActorProfile, DatabaseError> {
-    let result = db_client.query_opt(
+    let maybe_row = db_client.query_opt(
         "
         SELECT actor_profile
         FROM actor_profile
@@ -325,10 +324,9 @@ pub async fn get_profile_by_acct(
         ",
         &[&acct],
     ).await?;
-    let profile = match result {
-        Some(row) => row.try_get("actor_profile")?,
-        None => return Err(DatabaseError::NotFound("profile")),
-    };
+    let row = maybe_row.ok_or(DatabaseError::NotFound("profile"))?;
+    let profile: DbActorProfile = row.try_get("actor_profile")?;
+    profile.check_consistency()?;
     Ok(profile)
 }
 
