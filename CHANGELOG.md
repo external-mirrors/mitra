@@ -22,6 +22,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Fixed
 
 - Don't fill `bio_source` database column when new profile is created.
+- Prevent violation of unique constraint on `acct` column when changing username.
 
 ## [2.13.0] - 2024-03-12
 

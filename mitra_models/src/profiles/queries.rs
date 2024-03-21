@@ -35,6 +35,24 @@ use super::types::{
     PublicKeys,
 };
 
+// Nullifies acct field on conflicting records
+// (in case remote actor changes username)
+async fn prevent_acct_conflict(
+    db_client: &impl DatabaseClient,
+    profile_id: Uuid,
+    acct: &str,
+) -> Result<(), DatabaseError> {
+    db_client.execute(
+        "
+        UPDATE actor_profile
+        SET acct = NULL
+        WHERE id != $1 AND acct = $2 AND actor_json IS NOT NULL
+        ",
+        &[&profile_id, &acct],
+    ).await?;
+    Ok(())
+}
+
 async fn create_profile_emojis(
     db_client: &impl DatabaseClient,
     profile_id: &Uuid,
@@ -133,11 +151,15 @@ pub async fn create_profile(
     if let Some(ref hostname) = profile_data.hostname {
         create_instance(&transaction, hostname).await?;
     };
-    // TODO: nullify acct field on conflicting records
     let profile_acct = get_profile_acct(
         &profile_data.username,
         profile_data.hostname.as_deref(),
     );
+    prevent_acct_conflict(
+        &transaction,
+        profile_id,
+        &profile_acct,
+    ).await?;
     transaction.execute(
         "
         INSERT INTO actor_profile (
@@ -221,11 +243,15 @@ pub async fn update_profile(
     let maybe_hostname: Option<String> = row.try_get("hostname")?;
     let images = row.try_get("images")?;
 
-    // TODO: nullify acct field on conflicting records
     let profile_acct = get_profile_acct(
         &profile_data.username,
         maybe_hostname.as_deref(),
     );
+    prevent_acct_conflict(
+        &transaction,
+        *profile_id,
+        &profile_acct,
+    ).await?;
     let updated_count = transaction.execute(
         "
         UPDATE actor_profile
@@ -1016,6 +1042,34 @@ mod tests {
         };
         let error = create_profile(db_client, profile_data_2).await.err().unwrap();
         assert_eq!(error.to_string(), "profile already exists");
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_create_profile_acct_conflict() {
+        let db_client = &mut create_test_database().await;
+        let profile_data_1 = ProfileCreateData {
+            username: "test".to_string(),
+            hostname: Some("social.example".to_string()),
+            public_keys: vec![DbActorKey::default()],
+            actor_json: Some(create_test_actor("https://social.example/users/1")),
+            ..Default::default()
+        };
+        let profile_1 = create_profile(db_client, profile_data_1).await.unwrap();
+        assert_eq!(profile_1.acct.unwrap(), "test@social.example");
+        let profile_data_2 = ProfileCreateData {
+            username: "test".to_string(),
+            hostname: Some("social.example".to_string()),
+            public_keys: vec![DbActorKey::default()],
+            actor_json: Some(create_test_actor("https://social.example/users/2")),
+            ..Default::default()
+        };
+        let profile_2 = create_profile(db_client, profile_data_2).await.unwrap();
+        assert_eq!(profile_2.acct.unwrap(), "test@social.example");
+
+        let profile_1_updated =
+            get_profile_by_id(db_client, &profile_1.id).await.unwrap();
+        assert_eq!(profile_1_updated.acct, None);
     }
 
     #[tokio::test]
