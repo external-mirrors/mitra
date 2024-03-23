@@ -20,6 +20,7 @@ It also supports the following standards:
 - [FEP-521a: Representing actor's public keys](https://codeberg.org/silverpill/feps/src/branch/main/521a/fep-521a.md)
 - [FEP-c390: Identity Proofs](https://codeberg.org/silverpill/feps/src/branch/main/c390/fep-c390.md)
 - [FEP-0837: Federated Marketplace](https://codeberg.org/silverpill/feps/src/branch/main/0837/fep-0837.md)
+- [FEP-03c1: Actors without acct-URI](https://codeberg.org/fediverse/fep/src/branch/main/fep/03c1/fep-03c1.md)
 
 ## ActivityPub
 
