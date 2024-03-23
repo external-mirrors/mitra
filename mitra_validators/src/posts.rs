@@ -6,7 +6,7 @@ use mitra_models::posts::types::{
     PostUpdateData,
     Visibility,
 };
-use mitra_utils::html::clean_html_strict;
+use mitra_utils::html::{clean_html_strict, clean_html_all};
 
 use super::errors::ValidationError;
 
@@ -39,7 +39,7 @@ pub fn content_allowed_classes() -> Vec<(&'static str, Vec<&'static str>)> {
 }
 
 pub fn clean_title(title: &str) -> String {
-    let title = title.trim();
+    let title = clean_html_all(title).trim().to_owned();
     let title_truncated: String = title.chars()
         .take(TITLE_LENGTH_MAX)
         .collect();
