@@ -36,9 +36,11 @@ use mitra_activitypub::{
     },
     identifiers::{
         local_actor_id,
+        local_actor_id_fep_ef61_fallback,
         local_object_id,
         local_object_id_fep_ef61_fallback,
         local_object_replies,
+        parse_fep_ef61_local_actor_id,
         parse_fep_ef61_local_object_id,
         post_object_id,
         LocalActorCollection,
@@ -654,8 +656,15 @@ pub async fn apresolver_view(
     url: web::Path<String>,
 ) -> Result<HttpResponse, HttpError> {
     let db_client = &**get_database_client(&db_pool).await?;
-    let (did_key, internal_object_id) =
-        parse_fep_ef61_local_object_id(&url)?;
+    let (did_key, maybe_internal_object_id) = if let
+        Ok(did_key) = parse_fep_ef61_local_actor_id(&url)
+    {
+        (did_key, None)
+    } else {
+        let (did_key, internal_object_id) =
+            parse_fep_ef61_local_object_id(&url)?;
+        (did_key, Some(internal_object_id))
+    };
     let identity_key = did_key.key_multibase();
     let user = get_user_by_identity_key(db_client, &identity_key).await?;
     let instance = config.instance();
@@ -664,23 +673,43 @@ pub async fn apresolver_view(
         &user,
         true,
     );
-    // TODO: store DID URL in database?
-    let mut post = get_post_by_id(db_client, &internal_object_id).await?;
-    // Verify ownership
-    if post.author.id != user.id {
-        return Err(HttpError::NotFoundError("post"));
+    let (mut object_value, fallback_url) = if let
+        Some(internal_object_id) = maybe_internal_object_id
+    {
+        let mut post = get_post_by_id(db_client, &internal_object_id).await?;
+        // Verify ownership
+        if post.author.id != user.id {
+            return Err(HttpError::NotFoundError("post"));
+        };
+        add_related_posts(db_client, vec![&mut post]).await?;
+        // Create FEP-ef61 representation
+        let object = build_note(
+            &instance.hostname(),
+            &instance.url(),
+            &authority,
+            &post,
+            config.federation.fep_e232_enabled,
+            true,
+        );
+        let object_value = serde_json::to_value(object)
+            .expect("object should be serializable");
+        let fallback_url =
+            local_object_id_fep_ef61_fallback(&instance.url(), post.id);
+        (object_value, fallback_url)
+    } else {
+        let actor = build_local_actor(
+            &instance.url(),
+            &authority,
+            &user,
+        )?;
+        let actor_value = serde_json::to_value(actor)
+            .expect("actor should be serializable");
+        let fallback_url = local_actor_id_fep_ef61_fallback(
+            &instance.url(),
+            &user.profile.username,
+        );
+        (actor_value, fallback_url)
     };
-    add_related_posts(db_client, vec![&mut post]).await?;
-    let object = build_note(
-        &instance.hostname(),
-        &instance.url(),
-        &authority,
-        &post,
-        config.federation.fep_e232_enabled,
-        true,
-    );
-    let mut object_value = serde_json::to_value(object)
-        .expect("object should be serializable");
     object_value = sign_object_fep_ef61(
         &authority,
         &user,
@@ -689,7 +718,7 @@ pub async fn apresolver_view(
     );
     let link_header_value = format!(
         r#"<{url}>; rel="alternate""#,
-        url=local_object_id_fep_ef61_fallback(&instance.url(), post.id),
+        url=fallback_url,
     );
     let response = HttpResponse::Ok()
         .content_type(AP_MEDIA_TYPE)

@@ -138,6 +138,20 @@ pub fn parse_local_actor_id(
     Ok(username)
 }
 
+pub fn parse_fep_ef61_local_actor_id(
+    actor_id: &str,
+) -> Result<DidKey, ValidationError> {
+    let did_url: DidApUrl = actor_id.parse()
+        .map_err(ValidationError)?;
+    let did_key = did_url.did().as_did_key()
+        .ok_or(ValidationError("unexpected DID method"))?;
+    let path = did_url.path().unwrap_or_default();
+    if path != "/actor" {
+        return Err(ValidationError("invalid path"));
+    };
+    Ok(did_key.clone())
+}
+
 pub fn parse_local_object_id(
     instance_url: &str,
     object_id: &str,
@@ -268,6 +282,16 @@ mod tests {
             "https://example.gov/users/test",
         ).unwrap_err();
         assert_eq!(error.to_string(), "instance mismatch");
+    }
+
+    #[test]
+    fn test_parse_fep_ef61_local_actor_id() {
+        let actor_id = "did:ap:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor";
+        let did_key = parse_fep_ef61_local_actor_id(actor_id).unwrap();
+        assert_eq!(
+            did_key.to_string(),
+            "did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6",
+        );
     }
 
     #[test]
