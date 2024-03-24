@@ -676,7 +676,7 @@ pub async fn apresolver_view(
         true,
     );
     let mut object_value = serde_json::to_value(object)
-        .expect("actor should be serializable");
+        .expect("object should be serializable");
     object_value = sign_object_fep_ef61(
         &authority,
         &post_author,
