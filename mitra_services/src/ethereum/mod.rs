@@ -8,10 +8,5 @@ pub mod subscriptions;
 pub mod sync;
 pub mod utils;
 
-#[cfg(feature = "ethereum-extras")]
-pub mod erc721_metadata;
-#[cfg(feature = "ethereum-extras")]
-pub mod nft;
-
 pub use api::{EthereumApi, EthereumContract};
 pub use errors::EthereumError;

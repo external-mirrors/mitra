@@ -87,8 +87,6 @@ pub struct Status {
 
     // Extra fields
     pub ipfs_cid: Option<String>,
-    pub token_id: Option<i32>,
-    pub token_tx_id: Option<String>,
     links: Vec<Status>,
 }
 
@@ -156,8 +154,6 @@ impl Status {
             favourited: post.actions.as_ref().map_or(false, |actions| actions.favourited),
             reblogged: post.actions.as_ref().map_or(false, |actions| actions.reposted),
             ipfs_cid: post.ipfs_cid,
-            token_id: post.token_id,
-            token_tx_id: post.token_tx_id,
             links: links,
         }
     }
@@ -254,9 +250,4 @@ pub struct StatusUpdateData {
 pub struct Context {
     pub ancestors: Vec<Status>,
     pub descendants: Vec<Status>,
-}
-
-#[derive(Deserialize)]
-pub struct TransactionData {
-    pub transaction_id: String,
 }

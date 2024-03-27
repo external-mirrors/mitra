@@ -1,2 +1,3 @@
 pub mod store;
-pub mod utils;
+#[allow(dead_code)]
+mod utils;

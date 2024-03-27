@@ -1072,40 +1072,6 @@ pub async fn get_post_by_remote_object_id(
     Ok(post)
 }
 
-pub async fn get_post_by_ipfs_cid(
-    db_client: &impl DatabaseClient,
-    ipfs_cid: &str,
-) -> Result<Post, DatabaseError> {
-    let statement = format!(
-        "
-        SELECT
-            post, actor_profile,
-            {related_attachments},
-            {related_mentions},
-            {related_tags},
-            {related_links},
-            {related_emojis}
-        FROM post
-        JOIN actor_profile ON post.author_id = actor_profile.id
-        WHERE post.ipfs_cid = $1
-        ",
-        related_attachments=RELATED_ATTACHMENTS,
-        related_mentions=RELATED_MENTIONS,
-        related_tags=RELATED_TAGS,
-        related_links=RELATED_LINKS,
-        related_emojis=RELATED_EMOJIS,
-    );
-    let result = db_client.query_opt(
-        &statement,
-        &[&ipfs_cid],
-    ).await?;
-    let post = match result {
-        Some(row) => Post::try_from(&row)?,
-        None => return Err(DatabaseError::NotFound("post")),
-    };
-    Ok(post)
-}
-
 pub async fn set_pinned_flag(
     db_client: &impl DatabaseClient,
     post_id: &Uuid,
@@ -1209,47 +1175,6 @@ pub async fn set_post_ipfs_cid(
     Ok(())
 }
 
-pub async fn set_post_token_id(
-    db_client: &impl DatabaseClient,
-    post_id: &Uuid,
-    token_id: i32,
-) -> Result<(), DatabaseError> {
-    let updated_count = db_client.execute(
-        "
-        UPDATE post
-        SET token_id = $1
-        WHERE id = $2
-            AND repost_of_id IS NULL
-            AND token_id IS NULL
-        ",
-        &[&token_id, &post_id],
-    ).await?;
-    if updated_count == 0 {
-        return Err(DatabaseError::NotFound("post"));
-    };
-    Ok(())
-}
-
-pub async fn set_post_token_tx_id(
-    db_client: &impl DatabaseClient,
-    post_id: &Uuid,
-    token_tx_id: &str,
-) -> Result<(), DatabaseError> {
-    let updated_count = db_client.execute(
-        "
-        UPDATE post
-        SET token_tx_id = $1
-        WHERE id = $2
-            AND repost_of_id IS NULL
-        ",
-        &[&token_tx_id, &post_id],
-    ).await?;
-    if updated_count == 0 {
-        return Err(DatabaseError::NotFound("post"));
-    };
-    Ok(())
-}
-
 pub async fn get_post_author(
     db_client: &impl DatabaseClient,
     post_id: Uuid,
@@ -1308,23 +1233,6 @@ pub async fn find_reposted_by_user(
         .map(|row| row.try_get("id"))
         .collect::<Result<_, _>>()?;
     Ok(reposted)
-}
-
-pub async fn get_token_waitlist(
-    db_client: &impl DatabaseClient,
-) -> Result<Vec<Uuid>, DatabaseError> {
-    let rows = db_client.query(
-        "
-        SELECT post.id
-        FROM post
-        WHERE token_tx_id IS NOT NULL AND token_id IS NULL
-        ",
-        &[],
-    ).await?;
-    let waitlist: Vec<Uuid> = rows.iter()
-        .map(|row| row.try_get("id"))
-        .collect::<Result<_, _>>()?;
-    Ok(waitlist)
 }
 
 /// Finds all contexts (identified by top-level post)

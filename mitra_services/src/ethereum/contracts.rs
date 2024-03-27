@@ -134,9 +134,7 @@ pub async fn get_contracts(
     };
 
     let minter_abi = load_abi(&config.contract_dir, MINTER)?;
-    if cfg!(feature = "ethereum-extras") &&
-        is_interface_supported(&erc165, &minter_abi).await?
-    {
+    if is_interface_supported(&erc165, &minter_abi).await? {
         let minter = Contract::new(
             web3.eth(),
             adapter_address,

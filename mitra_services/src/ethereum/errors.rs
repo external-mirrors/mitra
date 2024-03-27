@@ -33,7 +33,4 @@ pub enum EthereumError {
 
     #[error("signature error")]
     SignatureError(#[from] SignatureError),
-
-    #[error("{0}")]
-    OtherError(&'static str),
 }

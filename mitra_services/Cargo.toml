@@ -32,8 +32,6 @@ sha2 = "0.10.6"
 siwe = "0.5.2"
 # Used for creating error types
 thiserror = "1.0.37"
-# Used to work with UUIDs
-uuid = { version = "1.1.2", features = ["serde", "v4"] }
 # Used to query ethereum node
 web3 = { version = "0.19.0", default-features = false, features = ["http", "http-tls", "signing"] }
 
@@ -46,5 +44,3 @@ default = ["native-tls"]
 
 native-tls = ["reqwest/native-tls"]
 rustls-tls = ["reqwest/rustls-tls-native-roots"]
-
-ethereum-extras = []

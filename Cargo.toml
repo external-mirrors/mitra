@@ -88,6 +88,4 @@ mitra_models = { path = "mitra_models", features = ["test-utils"] }
 mitra_utils = { path = "mitra_utils", features = ["test-utils"] }
 
 [features]
-ethereum-extras = ["mitra_services/ethereum-extras"]
-
 production = ["mitra_config/production"]

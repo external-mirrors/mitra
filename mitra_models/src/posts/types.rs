@@ -70,8 +70,8 @@ pub struct DbPost {
     pub repost_count: i32,
     pub object_id: Option<String>,
     pub ipfs_cid: Option<String>,
-    pub token_id: Option<i32>,
-    pub token_tx_id: Option<String>,
+    token_id: Option<i32>, // deprecated
+    token_tx_id: Option<String>, // deprecated
     pub created_at: DateTime<Utc>,
     pub updated_at: Option<DateTime<Utc>>, // edited at
 }
@@ -104,8 +104,6 @@ pub struct Post {
     pub emojis: Vec<DbEmoji>,
     pub object_id: Option<String>,
     pub ipfs_cid: Option<String>,
-    pub token_id: Option<i32>,
-    pub token_tx_id: Option<String>,
     pub created_at: DateTime<Utc>,
     pub updated_at: Option<DateTime<Utc>>,
 
@@ -171,8 +169,6 @@ impl Post {
             emojis: db_emojis,
             object_id: db_post.object_id,
             ipfs_cid: db_post.ipfs_cid,
-            token_id: db_post.token_id,
-            token_tx_id: db_post.token_tx_id,
             created_at: db_post.created_at,
             updated_at: db_post.updated_at,
             actions: None,
@@ -215,8 +211,6 @@ impl Default for Post {
             emojis: vec![],
             object_id: None,
             ipfs_cid: None,
-            token_id: None,
-            token_tx_id: None,
             created_at: Utc::now(),
             updated_at: None,
             actions: None,

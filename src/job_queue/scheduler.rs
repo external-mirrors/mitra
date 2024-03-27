@@ -21,9 +21,6 @@ enum PeriodicTask {
     EthereumSubscriptionMonitor,
     MoneroPaymentMonitor,
     MoneroRecurrentPaymentMonitor,
-
-    #[cfg(feature = "ethereum-extras")]
-    NftMonitor,
 }
 
 impl PeriodicTask {
@@ -40,9 +37,6 @@ impl PeriodicTask {
             Self::EthereumSubscriptionMonitor => 300,
             Self::MoneroPaymentMonitor => 30,
             Self::MoneroRecurrentPaymentMonitor => 600,
-
-            #[cfg(feature = "ethereum-extras")]
-            Self::NftMonitor => 30,
         }
     }
 
@@ -78,8 +72,6 @@ pub fn run(
         };
         if config.ethereum_config().is_some() {
             scheduler_state.insert(PeriodicTask::EthereumSubscriptionMonitor, None);
-            #[cfg(feature = "ethereum-extras")]
-            scheduler_state.insert(PeriodicTask::NftMonitor, None);
         };
         if config.monero_config().is_some() {
             scheduler_state.insert(PeriodicTask::MoneroPaymentMonitor, None);
@@ -119,13 +111,6 @@ pub fn run(
                     PeriodicTask::EthereumSubscriptionMonitor => {
                         ethereum_subscription_monitor(
                             &config,
-                            maybe_ethereum_blockchain.as_mut(),
-                            &db_pool,
-                        ).await
-                    },
-                    #[cfg(feature = "ethereum-extras")]
-                    PeriodicTask::NftMonitor => {
-                        nft_monitor(
                             maybe_ethereum_blockchain.as_mut(),
                             &db_pool,
                         ).await

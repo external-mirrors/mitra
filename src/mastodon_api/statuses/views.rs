@@ -11,7 +11,7 @@ use actix_web::{
     Scope,
 };
 use actix_web_httpauth::extractors::bearer::BearerAuth;
-use chrono::{DateTime, Utc};
+use chrono::Utc;
 use uuid::Uuid;
 
 use mitra_activitypub::{
@@ -28,7 +28,6 @@ use mitra_activitypub::{
         undo_like::prepare_undo_like,
         update_note::prepare_update_note,
     },
-    identifiers::local_object_id,
 };
 use mitra_config::Config;
 use mitra_models::{
@@ -713,38 +712,6 @@ async fn unpin(
     Ok(HttpResponse::Ok().json(status))
 }
 
-#[cfg(feature = "ethereum-extras")]
-use {
-    mitra_models::posts::queries::set_post_token_tx_id,
-    mitra_services::{
-        ethereum::{
-            erc721_metadata::PostMetadata,
-            nft::create_mint_signature,
-        },
-        ipfs::utils::get_ipfs_url,
-    },
-    mitra_utils::currencies::Currency,
-    super::types::TransactionData,
-};
-
-#[cfg(feature = "ethereum-extras")]
-fn create_post_metadata(
-    post_id: Uuid,
-    post_url: &str,
-    content: &str,
-    created_at: DateTime<Utc>,
-    image_cid: Option<&str>,
-) -> PostMetadata { PostMetadata::new(post_id, post_url, content, created_at, image_cid) }
-
-#[cfg(not(feature = "ethereum-extras"))]
-fn create_post_metadata(
-    _: Uuid,
-    _: &str,
-    _: &str,
-    _: DateTime<Utc>,
-    _: Option<&str>,
-) -> () { }
-
 #[post("/{status_id}/make_permanent")]
 async fn make_permanent(
     auth: BearerAuth,
@@ -779,33 +746,17 @@ async fn make_permanent(
     };
     assert!(post.is_local());
     let instance = config.instance();
-    let post_metadata = if cfg!(feature = "ethereum-extras") {
-        let post_url = local_object_id(&instance.url(), &post.id);
-        let maybe_post_image_cid = post.attachments.first()
-            .and_then(|attachment| attachment.ipfs_cid.as_deref());
-        #[allow(clippy::let_unit_value)]
-        let post_metadata = create_post_metadata(
-            post.id,
-            &post_url,
-            &post.content,
-            post.created_at,
-            maybe_post_image_cid,
-        );
-        serde_json::to_value(post_metadata)
-            .map_err(|_| MastodonError::InternalError)?
-    } else {
-        let authority = Authority::server(&instance.url());
-        let note = build_note(
-            &instance.hostname(),
-            &instance.url(),
-            &authority,
-            &post,
-            config.federation.fep_e232_enabled,
-            true,
-        );
-        serde_json::to_value(note)
-            .map_err(|_| MastodonError::InternalError)?
-    };
+    let authority = Authority::server(&instance.url());
+    let note = build_note(
+        &instance.hostname(),
+        &instance.url(),
+        &authority,
+        &post,
+        config.federation.fep_e232_enabled,
+        true,
+    );
+    let post_metadata = serde_json::to_value(note)
+        .map_err(|_| MastodonError::InternalError)?;
     let post_metadata_json = post_metadata.to_string().as_bytes().to_vec();
     let post_metadata_cid = ipfs_store::add(ipfs_api_url, post_metadata_json).await
         .map_err(|_| MastodonError::InternalError)?;
@@ -823,85 +774,8 @@ async fn make_permanent(
     Ok(HttpResponse::Ok().json(status))
 }
 
-#[cfg(feature = "ethereum-extras")]
-#[get("/{status_id}/signature")]
-async fn get_signature(
-    auth: BearerAuth,
-    config: web::Data<Config>,
-    db_pool: web::Data<DatabaseConnectionPool>,
-    status_id: web::Path<Uuid>,
-) -> Result<HttpResponse, MastodonError> {
-    let db_client = &**get_database_client(&db_pool).await?;
-    let current_user = get_current_user(db_client, auth.token()).await?;
-    let ethereum_config = config.ethereum_config()
-        .ok_or(MastodonError::NotSupported)?;
-    // User must have a public ethereum address
-    let wallet_address = current_user
-        .public_wallet_address(&Currency::Ethereum)
-        .ok_or(MastodonError::PermissionError)?;
-    let post = get_post_by_id(db_client, &status_id).await?;
-    if post.author.id != current_user.id || !post.is_public() || post.repost_of_id.is_some() {
-        // Users can only tokenize their own public posts
-        return Err(MastodonError::PermissionError);
-    };
-    let ipfs_cid = post.ipfs_cid
-        // Post metadata is not immutable
-        .ok_or(MastodonError::PermissionError)?;
-    let token_uri = get_ipfs_url(&ipfs_cid);
-    let signature = create_mint_signature(
-        ethereum_config,
-        &wallet_address,
-        &token_uri,
-    ).map_err(|_| MastodonError::InternalError)?;
-    Ok(HttpResponse::Ok().json(signature))
-}
-
-#[cfg(feature = "ethereum-extras")]
-#[post("/{status_id}/token_minted")]
-async fn token_minted(
-    auth: BearerAuth,
-    connection_info: ConnectionInfo,
-    config: web::Data<Config>,
-    db_pool: web::Data<DatabaseConnectionPool>,
-    status_id: web::Path<Uuid>,
-    transaction_data: web::Json<TransactionData>,
-) -> Result<HttpResponse, MastodonError> {
-    let db_client = &**get_database_client(&db_pool).await?;
-    let current_user = get_current_user(db_client, auth.token()).await?;
-    let mut post = get_post_by_id(db_client, &status_id).await?;
-    if post.token_tx_id.is_some() {
-        return Err(MastodonError::OperationError("transaction is already registered"));
-    };
-    if post.author.id != current_user.id || !post.is_public() || post.repost_of_id.is_some() {
-        return Err(MastodonError::PermissionError);
-    };
-    let token_tx_id = transaction_data.into_inner().transaction_id;
-    set_post_token_tx_id(db_client, &post.id, &token_tx_id).await?;
-    post.token_tx_id = Some(token_tx_id);
-
-    let status = build_status(
-        db_client,
-        &get_request_base_url(connection_info),
-        &config.instance_url(),
-        Some(&current_user),
-        post,
-    ).await?;
-    Ok(HttpResponse::Ok().json(status))
-}
-
-#[cfg(feature = "ethereum-extras")]
-fn with_ethereum_extras(scope: Scope) -> Scope {
-    scope
-        .service(get_signature)
-        .service(token_minted)
-}
-#[cfg(not(feature = "ethereum-extras"))]
-fn with_ethereum_extras(scope: Scope) -> Scope {
-    scope
-}
-
 pub fn status_api_scope() -> Scope {
-    let scope = web::scope("/api/v1/statuses")
+    web::scope("/api/v1/statuses")
         // Routes without status ID
         .service(create_status)
         .service(preview_status)
@@ -918,6 +792,5 @@ pub fn status_api_scope() -> Scope {
         .service(unreblog)
         .service(pin)
         .service(unpin)
-        .service(make_permanent);
-    with_ethereum_extras(scope)
+        .service(make_permanent)
 }

@@ -34,31 +34,6 @@ use crate::payments::{
     monero::{check_closed_invoices, check_monero_subscriptions},
 };
 
-#[cfg(feature = "ethereum-extras")]
-use mitra_services::ethereum::nft::process_nft_events;
-
-#[cfg(feature = "ethereum-extras")]
-pub async fn nft_monitor(
-    maybe_blockchain: Option<&mut EthereumBlockchain>,
-    db_pool: &DatabaseConnectionPool,
-) -> Result<(), Error> {
-    let blockchain = match maybe_blockchain {
-        Some(blockchain) => blockchain,
-        None => return Ok(()),
-    };
-    let collectible = match &blockchain.contract_set.collectible {
-        Some(contract) => contract,
-        None => return Ok(()), // feature not enabled
-    };
-    process_nft_events(
-        &blockchain.contract_set.web3,
-        collectible,
-        &mut blockchain.sync_state,
-        db_pool,
-    ).await?;
-    Ok(())
-}
-
 pub async fn ethereum_subscription_monitor(
     config: &Config,
     maybe_blockchain: Option<&mut EthereumBlockchain>,
