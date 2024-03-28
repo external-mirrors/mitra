@@ -27,7 +27,7 @@ use crate::mastodon_api::{
 };
 
 use super::microsyntax::{
-    emojis::find_emojis,
+    emojis::{find_emojis, replace_emojis},
     hashtags::{find_hashtags, replace_hashtags},
     links::{replace_object_links, find_linked_posts},
     mentions::{find_mentioned_profiles, replace_mentions},
@@ -82,11 +82,12 @@ async fn parse_microsyntaxes(
     let links = link_map.values().map(|post| post.id).collect();
     let linked = link_map.into_values().collect();
     // Emojis
-    let emoji_map = find_emojis(
+    let custom_emoji_map = find_emojis(
         db_client,
         &content,
     ).await?;
-    let emojis = emoji_map.into_values().collect();
+    content = replace_emojis(&content, &custom_emoji_map);
+    let emojis = custom_emoji_map.into_values().collect();
     Ok(PostContent {
         content,
         content_source: None,

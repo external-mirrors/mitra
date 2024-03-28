@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use regex::Regex;
+use regex::{Captures, Regex};
 
 use mitra_models::{
     database::{DatabaseClient, DatabaseError},
@@ -46,11 +46,38 @@ pub async fn find_emojis(
     Ok(emoji_map)
 }
 
+pub fn replace_emojis(
+    text: &str,
+    custom_emoji_map: &HashMap<String, DbEmoji>,
+) -> String {
+    let shortcode_re = Regex::new(SHORTCODE_SEARCH_RE)
+        .expect("regexp should be valid");
+    let result = shortcode_re.replace_all(text, |caps: &Captures| {
+        let name_match = caps.name("name").expect("should have name group");
+        if is_inside_code_block(&name_match, text) {
+            // Ignore shortcodes inside code blocks
+            return caps[0].to_string();
+        };
+        let name = &caps["name"];
+        if custom_emoji_map.contains_key(name) {
+            // Don't replace custom emojis
+            return caps[0].to_string();
+        };
+        if let Some(emoji) = emojis::get_by_shortcode(name) {
+            // Replace
+            return emoji.as_str().to_owned();
+        };
+        // Leave unchanged if shortcode is not known
+        caps[0].to_string()
+    });
+    result.to_string()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    const TEXT_WITH_EMOJIS: &str = "@user1@server1 text :emoji_name: :abc:";
+    const TEXT_WITH_EMOJIS: &str = "@user1@server1 text :emoji_name: :abc: <code>:abc:</code>";
 
     #[test]
     fn test_find_shortcodes() {
@@ -60,5 +87,15 @@ mod tests {
             "emoji_name",
             "abc",
         ]);
+    }
+
+    #[test]
+    fn test_replace_emojis() {
+        let custom_emoji_map = HashMap::new();
+        let result = replace_emojis(TEXT_WITH_EMOJIS, &custom_emoji_map);
+        assert_eq!(
+            result,
+            "@user1@server1 text :emoji_name: 🔤 <code>:abc:</code>",
+        );
     }
 }

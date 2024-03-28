@@ -11,6 +11,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Implemented FEP-ef61 resolver endpoint.
 - Use actor ID as handle if acct URI is not known.
 - Added `enable-fep-ef61` command.
+- Support unicode emoji shortcodes.
 
 ### Changed
 
