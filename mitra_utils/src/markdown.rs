@@ -13,7 +13,7 @@ use comrak::{
     ParseOptions,
     RenderOptionsBuilder,
 };
-use regex::Regex;
+use regex::{Captures, Regex};
 
 #[derive(thiserror::Error, Debug)]
 pub enum MarkdownError {
@@ -44,6 +44,16 @@ fn protect_greentext(text: &str) -> Cow<str> {
     let greentext_re = Regex::new("(?m)^(>)(.+)")
         .expect("regexp should be valid");
     greentext_re.replace_all(text, "&gt;$2")
+}
+
+/// Prevents underscores in mentions from being parsed as emphasis markers
+fn protect_mentions(text: &str) -> Cow<str> {
+    let mention_re = Regex::new(r#"(?m)@([\w]+)@"#)
+        .expect("regexp should be valid");
+    mention_re.replace_all(text, |caps: &Captures| -> String {
+        let escaped = caps[1].replace('_', r#"\_"#);
+        format!("@{}@", escaped)
+    })
 }
 
 fn iter_nodes<'a, F>(
@@ -149,6 +159,7 @@ pub fn markdown_lite_to_html(text: &str) -> Result<String, MarkdownError> {
     let arena = Arena::new();
 
     let text = protect_greentext(text);
+    let text = protect_mentions(&text);
     let root = parse_document(
         &arena,
         &text,
@@ -338,6 +349,13 @@ mod tests {
         let text = "@user@example.org test";
         let html = markdown_lite_to_html(text).unwrap();
         assert_eq!(html, format!("<p>{}</p>", text));
+    }
+
+    #[test]
+    fn test_markdown_lite_to_html_mention_with_underscores() {
+        let text = r#"@_user_@example.org test"#;
+        let html = markdown_lite_to_html(text).unwrap();
+        assert_eq!(html, "<p>@_user_@example.org test</p>");
     }
 
     #[test]
