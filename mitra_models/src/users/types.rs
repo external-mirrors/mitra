@@ -166,8 +166,9 @@ impl Default for User {
             crypto_eddsa::generate_weak_ed25519_key,
             crypto_rsa::generate_weak_rsa_key,
         };
+        let id = Uuid::new_v4();
         Self {
-            id: Default::default(),
+            id: id,
             password_hash: None,
             login_address_ethereum: None,
             login_address_monero: None,
@@ -175,7 +176,10 @@ impl Default for User {
             ed25519_private_key: generate_weak_ed25519_key(),
             role: Role::default(),
             client_config: ClientConfig::default(),
-            profile: DbActorProfile::default(),
+            profile: DbActorProfile {
+                id: id,
+                ..Default::default()
+            },
         }
     }
 }

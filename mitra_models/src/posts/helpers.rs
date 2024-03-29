@@ -87,39 +87,39 @@ pub async fn add_user_actions(
 
 pub async fn can_view_post(
     db_client: &impl DatabaseClient,
-    user: Option<&User>,
+    maybe_user: Option<&User>,
     post: &Post,
 ) -> Result<bool, DatabaseError> {
+    let is_author = |user: &User| post.author.id == user.id;
     let is_mentioned = |user: &User| {
         post.mentions.iter().any(|profile| profile.id == user.profile.id)
     };
     let result = match post.visibility {
         Visibility::Public => true,
         Visibility::Direct => {
-            if let Some(user) = user {
-                // Returns true if user is mentioned
-                is_mentioned(user)
+            if let Some(user) = maybe_user {
+                is_author(user) || is_mentioned(user)
             } else {
                 false
             }
         },
         Visibility::Followers => {
-            if let Some(user) = user {
+            if let Some(user) = maybe_user {
                 let is_following = has_relationship(
                     db_client,
                     user.id,
                     post.author.id,
                     RelationshipType::Follow,
                 ).await?;
-                is_following || is_mentioned(user)
+                is_following || is_author(user) || is_mentioned(user)
             } else {
                 false
             }
         },
         Visibility::Subscribers => {
-            if let Some(user) = user {
+            if let Some(user) = maybe_user {
                 // Can view only if mentioned
-                is_mentioned(user)
+                is_author(user) || is_mentioned(user)
             } else {
                 false
             }
@@ -246,6 +246,20 @@ mod tests {
         let db_client = &create_test_database().await;
         let result = can_view_post(db_client, Some(&user), &post).await.unwrap();
         assert_eq!(result, false);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_can_view_post_direct_author() {
+        let user = User::default();
+        let post = Post {
+            author: user.profile.clone(),
+            visibility: Visibility::Direct,
+            ..Default::default()
+        };
+        let db_client = &create_test_database().await;
+        let result = can_view_post(db_client, Some(&user), &post).await.unwrap();
+        assert_eq!(result, true);
     }
 
     #[tokio::test]

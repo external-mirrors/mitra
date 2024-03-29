@@ -35,6 +35,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Prevent violation of unique constraint on `acct` column when changing username.
 - Remove HTML tags from post title.
 - Fixed incorrect parsing of mentions containing two underscores.
+- Fixed permission check that prevented users from viewing their own direct messages.
 
 ## [2.13.0] - 2024-03-12
 
