@@ -31,3 +31,9 @@ pub struct DbEmoji {
     pub object_id: Option<String>,
     pub updated_at: DateTime<Utc>,
 }
+
+impl DbEmoji {
+    pub fn shortcode(&self) -> String {
+        format!(":{}:", self.emoji_name)
+    }
+}

@@ -39,7 +39,7 @@ pub fn build_emoji(instance_url: &str, db_emoji: &DbEmoji) -> Emoji {
             media_type: Some(db_emoji.image.media_type.clone()),
         },
         id: local_emoji_id(instance_url, &db_emoji.emoji_name),
-        name: format!(":{}:", db_emoji.emoji_name),
+        name: db_emoji.shortcode(),
         updated: db_emoji.updated_at,
     }
 }

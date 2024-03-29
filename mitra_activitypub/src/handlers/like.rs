@@ -79,7 +79,6 @@ pub async fn handle_like(
             (Some(content), None)
         },
         Some(content) => {
-            let emoji_name = content.trim_matches(':');
             let maybe_db_emoji = if let Some(emoji_value) = activity.tag.first() {
                 let maybe_db_emoji = handle_emoji(
                     &agent,
@@ -87,8 +86,9 @@ pub async fn handle_like(
                     &storage,
                     emoji_value.clone(),
                 ).await?;
+                // Emoji shortcode must match content
                 maybe_db_emoji
-                    .filter(|emoji| emoji.emoji_name == emoji_name)
+                    .filter(|emoji| emoji.shortcode() == content)
             } else {
                 None
             };

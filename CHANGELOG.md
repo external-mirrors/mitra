@@ -22,6 +22,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Use actor ID instead of webfinger address in logs.
 - Use actor ID as primary identifier instead of webfinger address.
 - Don't publish FEP-ef61 representation if user didn't enable FEP-ef61.
+- Remove colon only once when parsing emoji shortcodes.
 
 ### Removed
 
