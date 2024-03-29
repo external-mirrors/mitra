@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Added `enable-fep-ef61` command.
 - Support unicode emoji shortcodes.
 - Process incoming `Dislike` activities as "👎" reaction.
+- Added API endpoint for self-deletion.
 
 ### Changed
 
