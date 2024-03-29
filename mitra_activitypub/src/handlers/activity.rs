@@ -62,7 +62,7 @@ pub async fn handle_activity(
         FOLLOW => {
             handle_follow(config, db_client, activity).await?
         },
-        LIKE | EMOJI_REACT => {
+        DISLIKE | LIKE | EMOJI_REACT => {
             handle_like(config, db_client, activity).await?
         },
         MOVE => {

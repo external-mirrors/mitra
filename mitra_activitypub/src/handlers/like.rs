@@ -26,7 +26,7 @@ use crate::{
         get_post_by_object_id,
         ActorIdResolver,
     },
-    vocabulary::NOTE,
+    vocabulary::{DISLIKE, NOTE},
 };
 
 use super::{
@@ -37,6 +37,10 @@ use super::{
 #[derive(Deserialize)]
 struct Like {
     id: String,
+
+    #[serde(rename = "type")]
+    activity_type: String,
+
     actor: String,
 
     #[serde(deserialize_with = "deserialize_into_object_id")]
@@ -99,7 +103,14 @@ pub async fn handle_like(
                 return Ok(None);
             }
         },
-        None => (None, None),
+        None => {
+            if activity.activity_type == DISLIKE {
+                // Transform Dislike activity into emoji reaction
+                (Some("👎".to_string()), None)
+            } else {
+                (None, None)
+            }
+        },
     };
     let reaction_data = ReactionData {
         author_id: author.id,

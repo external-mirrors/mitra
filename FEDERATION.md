@@ -28,7 +28,7 @@ The following activities and object types are supported:
 
 - `Follow(Actor)`, `Accept(Follow)`, `Reject(Follow)`, `Undo(Follow)`.
 - `Create(Note)`, `Update(Note)`, `Delete(Note)`.
-- `Like()`, `Undo(Like)`.
+- `Like()`, `EmojiReact()`, `Dislike()`, `Undo(Like)`.
 - `Announce(Note)`, `Undo(Announce)`.
 - `Update(Actor)`, `Move(Actor)`, `Delete(Actor)`.
 - `Offer(Agreement)`, `Accept(Agreement)`.
