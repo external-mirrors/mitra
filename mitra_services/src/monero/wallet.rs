@@ -27,7 +27,7 @@ use super::utils::parse_monero_address;
 
 pub type TransferCategory = GetTransfersCategory;
 
-const MONERO_RPC_TIMEOUT: u64 = 10;
+const MONERO_RPC_TIMEOUT: u64 = 15;
 
 #[derive(thiserror::Error, Debug)]
 pub enum MoneroError {
