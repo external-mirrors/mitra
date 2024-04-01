@@ -1495,6 +1495,38 @@ paths:
           description: IPFS integration is not enabled
         422:
           description: Post already saved to IPFS
+  /api/v1/subscriptions:
+    post:
+      summary: Add subscriber or extend existing subscription.
+      security:
+        - tokenAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                subscriber_id:
+                  description: The subscriber ID.
+                  type: string
+                  format: uuid
+                duration:
+                  description: The subscription duration (in seconds).
+                  type: integer
+                  example: 100000000
+      responses:
+        200:
+          description: Subscription created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubscriptionDetails'
+        400:
+          description: Invalid request.
+        404:
+          description: Profile not found.
+        418:
+          description: Blockchain integration is not enabled.
   /api/v1/subscriptions/authorize:
     get:
       summary: Get authorization for setting up Ethereum subscription.
@@ -1578,16 +1610,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  id:
-                    description: Subscription ID.
-                    type: number
-                    example: 1
-                  expires_at:
-                    description: The date when subscription expires.
-                    type: string
-                    format: date-time
+                $ref: '#/components/schemas/SubscriptionDetails'
         404:
           description: Subscription not found
   /api/v1/subscriptions/invoices:
@@ -1907,7 +1930,7 @@ components:
       type: object
       properties:
         id:
-          description: The account id.
+          description: The account ID.
           type: string
           format: uuid
         username:
@@ -2532,6 +2555,17 @@ components:
           type: string
           nullable: true
           example: '0xd8da6bf...'
+        expires_at:
+          description: The date when subscription expires.
+          type: string
+          format: date-time
+    SubscriptionDetails:
+      type: object
+      properties:
+        id:
+          description: Subscription ID.
+          type: number
+          example: 1
         expires_at:
           description: The date when subscription expires.
           type: string

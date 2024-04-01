@@ -39,6 +39,8 @@ use mitra_models::{
         ProfileUpdateData,
         RemoteMoneroSubscription,
     },
+    relationships::queries::has_relationship,
+    relationships::types::RelationshipType,
     subscriptions::queries::get_subscription_by_participants,
     users::queries::get_user_by_id,
     users::types::Permission,
@@ -68,15 +70,63 @@ use crate::mastodon_api::{
     errors::MastodonError,
     oauth::auth::get_current_user,
 };
+use crate::payments::monero::create_or_update_monero_subscription;
 
 use super::types::{
     Invoice,
     InvoiceData,
+    SubscriberData,
     SubscriptionAuthorizationQueryParams,
     SubscriptionDetails,
     SubscriptionOption,
     SubscriptionQueryParams,
 };
+
+#[post("")]
+async fn create_subscription_view(
+    auth: BearerAuth,
+    config: web::Data<Config>,
+    db_pool: web::Data<DatabaseConnectionPool>,
+    subscriber_data: web::Json<SubscriberData>,
+) -> Result<HttpResponse, MastodonError> {
+    let db_client = &mut **get_database_client(&db_pool).await?;
+    let current_user = get_current_user(db_client, auth.token()).await?;
+    // Local subscriptions require chain_id
+    let monero_config = config.monero_config()
+        .ok_or(MastodonError::NotSupported)?;
+    current_user.profile.monero_subscription(&monero_config.chain_id)
+        .ok_or(ValidationError("subscriptions are not enabled"))?;
+    let subscriber = get_profile_by_id(
+        db_client,
+        &subscriber_data.subscriber_id,
+    ).await?;
+    let is_follower = has_relationship(
+        db_client,
+        subscriber.id,
+        current_user.id,
+        RelationshipType::Follow,
+    ).await?;
+    let is_subscriber = has_relationship(
+        db_client,
+        subscriber.id,
+        current_user.id,
+        RelationshipType::Subscription,
+    ).await?;
+    if !is_follower && !is_subscriber {
+        return Err(ValidationError("account should be either follower or subscriber").into());
+    };
+    let subscription = create_or_update_monero_subscription(
+        monero_config,
+        db_client,
+        &config.instance(),
+        &subscriber, // sender
+        &current_user, // recipient
+        subscriber_data.duration.into(),
+        None, // no invoice
+    ).await?.ok_or(MastodonError::InternalError)?;
+    let details = SubscriptionDetails::from(subscription);
+    Ok(HttpResponse::Ok().json(details))
+}
 
 #[get("/authorize")]
 pub async fn authorize_subscription(
@@ -216,10 +266,7 @@ async fn find_subscription(
         &query_params.sender_id,
         &query_params.recipient_id,
     ).await?;
-    let details = SubscriptionDetails {
-        id: subscription.id,
-        expires_at: subscription.expires_at,
-    };
+    let details = SubscriptionDetails::from(subscription);
     Ok(HttpResponse::Ok().json(details))
 }
 
@@ -320,6 +367,7 @@ async fn cancel_invoice_view(
 
 pub fn subscription_api_scope() -> Scope {
     web::scope("/api/v1/subscriptions")
+        .service(create_subscription_view)
         .service(authorize_subscription)
         .service(get_subscription_options)
         .service(register_subscription_option)

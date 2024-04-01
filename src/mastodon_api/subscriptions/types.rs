@@ -5,10 +5,17 @@ use uuid::Uuid;
 use mitra_models::{
     invoices::types::{DbInvoice, InvoiceStatus},
     profiles::types::PaymentOption,
+    subscriptions::types::DbSubscription,
 };
 use mitra_utils::caip2::ChainId;
 
 use crate::payments::monero::MONERO_INVOICE_TIMEOUT;
+
+#[derive(Deserialize)]
+pub struct SubscriberData {
+    pub subscriber_id: Uuid,
+    pub duration: i32,
+}
 
 #[derive(Deserialize)]
 pub struct InvoiceData {
@@ -110,4 +117,13 @@ pub struct SubscriptionQueryParams {
 pub struct SubscriptionDetails {
     pub id: i32,
     pub expires_at: DateTime<Utc>,
+}
+
+impl From<DbSubscription> for SubscriptionDetails {
+    fn from(db_subscription: DbSubscription) -> Self {
+        Self {
+            id: db_subscription.id,
+            expires_at: db_subscription.expires_at,
+        }
+    }
 }

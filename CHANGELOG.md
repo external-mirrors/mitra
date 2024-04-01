@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+
+- Added API endpoint for manually adding subscribers.
+
 ### Changed
 
 - Increased Monero Wallet RPC timeout to 15 seconds.
