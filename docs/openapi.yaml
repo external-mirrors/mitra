@@ -1133,6 +1133,8 @@ paths:
   /api/v1/settings/move_followers:
     post:
       summary: Move followers from remote alias.
+      security:
+        - tokenAuth: []
       requestBody:
         content:
           application/json:
@@ -1158,6 +1160,14 @@ paths:
                 $ref: '#/components/schemas/CredentialAccount'
         400:
           description: Invalid data.
+  /api/v1/settings/delete_account:
+    post:
+      summary: Delete account.
+      security:
+        - tokenAuth: []
+      responses:
+        204:
+          description: Account deleted
   /api/v1/statuses:
     post:
       summary: Create new post.
@@ -1485,51 +1495,6 @@ paths:
           description: IPFS integration is not enabled
         422:
           description: Post already saved to IPFS
-  /api/v1/statuses/{status_id}/signature:
-    get:
-      summary: Sign post data with instance key
-      parameters:
-        - $ref: '#/components/parameters/status_id'
-      responses:
-        200:
-          description: Signature created
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Signature'
-        403:
-          description: Post does not belong to user, is not public or not saved to IPFS, or user's wallet address is not known or not verified
-        404:
-          description: Post not found
-        418:
-          description: Blockchain integration is not enabled
-  /api/v1/statuses/{status_id}/token_minted:
-    post:
-      summary: Register transaction that mints a token
-      parameters:
-        - $ref: '#/components/parameters/status_id'
-      requestBody:
-        content:
-          application/json:
-            schema:
-              properties:
-                transaction_id:
-                  type: string
-                  description: Transaction ID
-                  example: '581186ab56765aed64a3e73172872a6454c604c6b4e08a8ed03eabad94e74d64'
-      responses:
-        200:
-          description: Successful operation
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Status'
-        403:
-          description: Post does not belong to user or is not public
-        404:
-          description: Post not found
-        422:
-          description: Transaction already registered
   /api/v1/subscriptions/authorize:
     get:
       summary: Get authorization for setting up Ethereum subscription.
@@ -2365,6 +2330,7 @@ components:
             - follow_request
             - reply
             - favourite
+            - emoji_reaction
             - mention
             - reblog
             - subscription
