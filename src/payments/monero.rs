@@ -26,6 +26,7 @@ use mitra_models::{
         get_subscription_by_participants,
         update_subscription,
     },
+    subscriptions::types::DbSubscription,
     users::queries::get_user_by_id,
     users::types::User,
 };
@@ -53,7 +54,7 @@ fn invoice_payment_address(invoice: &DbInvoice) -> Result<String, DatabaseError>
     invoice.try_payment_address().map_err(Into::into)
 }
 
-// Returns false on chain ID mismatch
+// Returns None on chain ID mismatch
 pub async fn create_or_update_monero_subscription(
     config: &MoneroConfig,
     db_client: &mut impl DatabaseClient,
@@ -62,8 +63,8 @@ pub async fn create_or_update_monero_subscription(
     recipient: &User,
     duration_secs: i64,
     maybe_invoice_id: Option<Uuid>,
-) -> Result<(), DatabaseError> {
-    let subscription_expires_at = match get_subscription_by_participants(
+) -> Result<Option<DbSubscription>, DatabaseError> {
+    let subscription = match get_subscription_by_participants(
         db_client,
         &sender.id,
         &recipient.id,
@@ -75,13 +76,13 @@ pub async fn create_or_update_monero_subscription(
             if subscription_chain_id != config.chain_id {
                 // Reset is required (mitractl reset-subscriptions)
                 log::error!("can't switch to another chain");
-                return Ok(());
+                return Ok(None);
             };
             // Update subscription expiration date
             let expires_at =
                 std::cmp::max(subscription.expires_at, Utc::now()) +
                 Duration::seconds(duration_secs);
-            update_subscription(
+            let subscription = update_subscription(
                 db_client,
                 subscription.id,
                 expires_at,
@@ -92,12 +93,12 @@ pub async fn create_or_update_monero_subscription(
                 sender,
                 recipient,
             );
-            expires_at
+            subscription
         },
         Err(DatabaseError::NotFound(_)) => {
             // New subscription
             let expires_at = Utc::now() + Duration::seconds(duration_secs);
-            create_subscription(
+            let subscription = create_subscription(
                 db_client,
                 sender.id,
                 None, // matching by address is not required
@@ -111,7 +112,7 @@ pub async fn create_or_update_monero_subscription(
                 sender,
                 recipient,
             );
-            expires_at
+            subscription
         },
         Err(other_error) => return Err(other_error),
     };
@@ -120,10 +121,10 @@ pub async fn create_or_update_monero_subscription(
         instance,
         sender,
         recipient,
-        subscription_expires_at,
+        subscription.expires_at,
         maybe_invoice_id,
     ).await?;
-    Ok(())
+    Ok(Some(subscription))
 }
 
 pub async fn check_monero_subscriptions(

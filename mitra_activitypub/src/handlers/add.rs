@@ -68,7 +68,7 @@ pub async fn handle_add(
         )?;
         let sender = get_user_by_name(db_client, &username).await?;
         let recipient = actor_profile;
-        subscribe_opt(db_client, &sender.id, &recipient.id).await?;
+        subscribe_opt(db_client, sender.id, recipient.id).await?;
 
         // FEP-0837 confirmation
         let subscription_expires_at = match activity.end_time {

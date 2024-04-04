@@ -52,7 +52,7 @@ pub async fn handle_remove(
         )?;
         let user = get_user_by_name(db_client, &username).await?;
         // actor is recipient, user is sender
-        match unsubscribe(db_client, &user.id, &actor_profile.id).await {
+        match unsubscribe(db_client, user.id, actor_profile.id).await {
             Ok(_) => {
                 create_subscription_expiration_notification(
                     db_client,

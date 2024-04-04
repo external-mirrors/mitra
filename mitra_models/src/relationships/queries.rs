@@ -550,8 +550,8 @@ pub async fn get_follow_requests_paginated(
 
 pub async fn subscribe(
     db_client: &mut impl DatabaseClient,
-    source_id: &Uuid,
-    target_id: &Uuid,
+    source_id: Uuid,
+    target_id: Uuid,
 ) -> Result<(), DatabaseError> {
     let transaction = db_client.transaction().await?;
     transaction.execute(
@@ -568,8 +568,8 @@ pub async fn subscribe(
 
 pub async fn subscribe_opt(
     db_client: &mut impl DatabaseClient,
-    source_id: &Uuid,
-    target_id: &Uuid,
+    source_id: Uuid,
+    target_id: Uuid,
 ) -> Result<(), DatabaseError> {
     let transaction = db_client.transaction().await?;
     let inserted_count = transaction.execute(
@@ -589,8 +589,8 @@ pub async fn subscribe_opt(
 
 pub async fn unsubscribe(
     db_client: &mut impl DatabaseClient,
-    source_id: &Uuid,
-    target_id: &Uuid,
+    source_id: Uuid,
+    target_id: Uuid,
 ) -> Result<(), DatabaseError> {
     let transaction = db_client.transaction().await?;
     let deleted_count = transaction.execute(

@@ -1649,7 +1649,7 @@ mod tests {
             ..Default::default()
         };
         let user_3 = create_user(db_client, user_data_3).await.unwrap();
-        subscribe(db_client, &current_user.id, &user_3.id).await.unwrap();
+        subscribe(db_client, current_user.id, user_3.id).await.unwrap();
         let post_data_11 = PostCreateData {
             content: "subscribers only".to_string(),
             visibility: Visibility::Subscribers,

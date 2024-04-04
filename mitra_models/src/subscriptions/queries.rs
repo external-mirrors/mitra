@@ -29,7 +29,7 @@ pub async fn create_subscription(
     chain_id: Option<&ChainId>,
     expires_at: DateTime<Utc>,
     updated_at: DateTime<Utc>,
-) -> Result<(), DatabaseError> {
+) -> Result<DbSubscription, DatabaseError> {
     if let Some(chain_id) = chain_id {
         assert!(chain_id.is_ethereum() == sender_address.is_some());
     };
@@ -39,7 +39,7 @@ pub async fn create_subscription(
     if recipient.is_local() != chain_id.is_some() {
         return Err(DatabaseTypeError.into());
     };
-    transaction.execute(
+    let row = transaction.query_one(
         "
         INSERT INTO subscription (
             sender_id,
@@ -50,6 +50,7 @@ pub async fn create_subscription(
             updated_at
         )
         VALUES ($1, $2, $3, $4, $5, $6)
+        RETURNING subscription
         ",
         &[
             &sender_id,
@@ -60,9 +61,14 @@ pub async fn create_subscription(
             &updated_at,
         ],
     ).await.map_err(catch_unique_violation("subscription"))?;
-    subscribe_opt(&mut transaction, &sender_id, &recipient_id).await?;
+    let subscription: DbSubscription = row.try_get("subscription")?;
+    subscribe_opt(
+        &mut transaction,
+        subscription.sender_id,
+        subscription.recipient_id,
+    ).await?;
     transaction.commit().await?;
-    Ok(())
+    Ok(subscription)
 }
 
 pub async fn update_subscription(
@@ -70,7 +76,7 @@ pub async fn update_subscription(
     subscription_id: i32,
     expires_at: DateTime<Utc>,
     updated_at: DateTime<Utc>,
-) -> Result<(), DatabaseError> {
+) -> Result<DbSubscription, DatabaseError> {
     let mut transaction = db_client.transaction().await?;
     let maybe_row = transaction.query_opt(
         "
@@ -79,7 +85,7 @@ pub async fn update_subscription(
             expires_at = $2,
             updated_at = $3
         WHERE id = $1
-        RETURNING sender_id, recipient_id
+        RETURNING subscription
         ",
         &[
             &subscription_id,
@@ -88,13 +94,16 @@ pub async fn update_subscription(
         ],
     ).await?;
     let row = maybe_row.ok_or(DatabaseError::NotFound("subscription"))?;
-    let sender_id: Uuid = row.try_get("sender_id")?;
-    let recipient_id: Uuid = row.try_get("recipient_id")?;
+    let subscription: DbSubscription = row.try_get("subscription")?;
     if expires_at > Utc::now() {
-        subscribe_opt(&mut transaction, &sender_id, &recipient_id).await?;
+        subscribe_opt(
+            &mut transaction,
+            subscription.sender_id,
+            subscription.recipient_id,
+        ).await?;
     };
     transaction.commit().await?;
-    Ok(())
+    Ok(subscription)
 }
 
 pub async fn get_subscription_by_participants(
@@ -288,7 +297,8 @@ mod tests {
         let chain_id = ChainId::ethereum_mainnet();
         let expires_at = Utc::now();
         let updated_at = Utc::now();
-        create_subscription(
+
+        let subscription = create_subscription(
             db_client,
             sender.id,
             Some(sender_address),
@@ -297,6 +307,12 @@ mod tests {
             expires_at,
             updated_at,
         ).await.unwrap();
+        assert_eq!(subscription.sender_id, sender.id);
+        assert_eq!(subscription.recipient_id, recipient.id);
+        assert_eq!(
+            subscription.expires_at.timestamp_millis(),
+            expires_at.timestamp_millis(),
+        );
 
         let is_subscribed = has_relationship(
             db_client,

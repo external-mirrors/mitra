@@ -223,12 +223,12 @@ mod tests {
         let db_client = &mut create_test_database().await;
         let (user_1, user_2) = create_users(db_client).await.unwrap();
 
-        subscribe(db_client, &user_1.id, &user_2.id).await.unwrap();
+        subscribe(db_client, user_1.id, user_2.id).await.unwrap();
         let relationship = get_relationship(db_client, &user_1.id, &user_2.id).await.unwrap();
         assert_eq!(relationship.subscription_to, true);
         assert_eq!(relationship.subscription_from, false);
 
-        unsubscribe(db_client, &user_1.id, &user_2.id).await.unwrap();
+        unsubscribe(db_client, user_1.id, user_2.id).await.unwrap();
         let relationship = get_relationship(db_client, &user_1.id, &user_2.id).await.unwrap();
         assert_eq!(relationship.subscription_to, false);
         assert_eq!(relationship.subscription_from, false);

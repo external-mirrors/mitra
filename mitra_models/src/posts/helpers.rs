@@ -314,7 +314,7 @@ mod tests {
         let follower = create_test_user(db_client, "follower").await;
         follow(db_client, &follower.id, &author.id).await.unwrap();
         let subscriber = create_test_user(db_client, "subscriber").await;
-        subscribe(db_client, &subscriber.id, &author.id).await.unwrap();
+        subscribe(db_client, subscriber.id, author.id).await.unwrap();
         let post = Post {
             author: author.profile,
             visibility: Visibility::Subscribers,
