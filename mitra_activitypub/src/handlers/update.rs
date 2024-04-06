@@ -4,6 +4,7 @@ use chrono::Utc;
 use serde::Deserialize;
 use serde_json::{Value as JsonValue};
 
+use mitra_adapters::permissions::filter_mentions;
 use mitra_config::Config;
 use mitra_federation::{
     deserialization::{deserialize_into_object_id, get_object_id},
@@ -16,7 +17,7 @@ use mitra_models::{
         get_post_by_remote_object_id,
         update_post,
     },
-    posts::types::PostUpdateData,
+    posts::types::{PostUpdateData, Visibility},
     profiles::queries::get_profile_by_remote_actor_id,
 };
 use mitra_services::media::MediaStorage;
@@ -102,12 +103,25 @@ async fn handle_update_note(
     ).await?;
     let is_sensitive = object.sensitive.unwrap_or(false);
     let updated_at = object.updated.unwrap_or(Utc::now());
+
+    let mentions = filter_mentions(
+        db_client,
+        mentions,
+        &post.author,
+        post.in_reply_to_id,
+    ).await?;
+    if post.visibility == Visibility::Direct &&
+        !mentions.iter().any(|profile| profile.is_local())
+    {
+        log::warn!("direct message has no local recipients");
+    };
+
     let post_data = PostUpdateData {
         content,
         content_source: None,
         is_sensitive,
         attachments,
-        mentions,
+        mentions: mentions.iter().map(|profile| profile.id).collect(),
         tags: hashtags,
         links,
         emojis,
