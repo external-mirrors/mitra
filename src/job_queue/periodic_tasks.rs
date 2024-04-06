@@ -4,7 +4,7 @@ use mitra_activitypub::queues::{
     process_queued_incoming_activities,
     process_queued_outgoing_activities,
 };
-use mitra_adapters::media::delete_media;
+use mitra_adapters::media::delete_orphaned_media;
 use mitra_config::Config;
 use mitra_models::{
     background_jobs::queries::{
@@ -128,7 +128,7 @@ pub async fn delete_extraneous_posts(
     let posts = find_extraneous_posts(db_client, updated_before).await?;
     for post_id in posts {
         let deletion_queue = delete_post(db_client, &post_id).await?;
-        delete_media(config, deletion_queue).await;
+        delete_orphaned_media(config, db_client, deletion_queue).await?;
         log::info!("deleted remote post {}", post_id);
     };
     Ok(())
@@ -147,7 +147,7 @@ pub async fn delete_empty_profiles(
     for profile_id in profiles {
         let profile = get_profile_by_id(db_client, &profile_id).await?;
         let deletion_queue = delete_profile(db_client, &profile.id).await?;
-        delete_media(config, deletion_queue).await;
+        delete_orphaned_media(config, db_client, deletion_queue).await?;
         log::info!("deleted empty profile {}", profile);
     };
     Ok(())
@@ -161,13 +161,13 @@ pub async fn prune_remote_emojis(
     let emojis = find_unused_remote_emojis(db_client).await?;
     for emoji_id in emojis {
         let deletion_queue = delete_emoji(db_client, &emoji_id).await?;
-        delete_media(config, deletion_queue).await;
+        delete_orphaned_media(config, db_client, deletion_queue).await?;
         log::info!("deleted unused emoji {}", emoji_id);
     };
     Ok(())
 }
 
-pub async fn delete_orphaned_media(
+pub async fn media_cleanup_queue_executor(
     config: &Config,
     db_pool: &DatabaseConnectionPool,
 ) -> Result<(), Error> {
@@ -181,10 +181,9 @@ pub async fn delete_orphaned_media(
         JOB_TIMEOUT,
     ).await?;
     for job in batch {
-        let mut job_data: DeletionQueue =
+        let job_data: DeletionQueue =
             serde_json::from_value(job.job_data)?;
-        job_data.filter_objects(db_client).await?;
-        delete_media(config, job_data).await;
+        delete_orphaned_media(config, db_client, job_data).await?;
         delete_job_from_queue(db_client, &job.id).await?;
     };
     Ok(())

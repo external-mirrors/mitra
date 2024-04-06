@@ -9,11 +9,7 @@ use mitra_utils::{
     id::generate_ulid,
 };
 
-use crate::cleanup::{
-    find_orphaned_files,
-    find_orphaned_ipfs_objects,
-    DeletionQueue,
-};
+use crate::cleanup::DeletionQueue;
 use crate::database::{
     catch_unique_violation,
     query_macro::query,
@@ -620,14 +616,9 @@ pub async fn delete_profile(
     ).await?;
     if deleted_count == 0 {
         return Err(DatabaseError::NotFound("profile"));
-    }
-    let orphaned_files = find_orphaned_files(&transaction, files).await?;
-    let orphaned_ipfs_objects = find_orphaned_ipfs_objects(&transaction, ipfs_objects).await?;
+    };
     transaction.commit().await?;
-    Ok(DeletionQueue {
-        files: orphaned_files,
-        ipfs_objects: orphaned_ipfs_objects,
-    })
+    Ok(DeletionQueue { files, ipfs_objects })
 }
 
 pub async fn search_profiles(

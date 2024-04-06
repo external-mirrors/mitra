@@ -76,7 +76,7 @@ pub async fn find_orphaned_files(
     Ok(orphaned_files)
 }
 
-pub(super) async fn find_orphaned_ipfs_objects(
+async fn find_orphaned_ipfs_objects(
     db_client: &impl DatabaseClient,
     ipfs_objects: Vec<String>,
 ) -> Result<Vec<String>, DatabaseError> {

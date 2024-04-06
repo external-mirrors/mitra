@@ -1,6 +1,7 @@
 use mitra_config::Config;
-use mitra_models::cleanup::{
-    DeletionQueue,
+use mitra_models::{
+    cleanup::DeletionQueue,
+    database::{DatabaseClient, DatabaseError},
 };
 use mitra_services::{
     ipfs::{store as ipfs_store},
@@ -21,7 +22,7 @@ pub fn delete_files(
     };
 }
 
-pub async fn delete_media(
+async fn delete_media(
     config: &Config,
     queue: DeletionQueue,
 ) -> () {
@@ -43,4 +44,14 @@ pub async fn delete_media(
             },
         }
     }
+}
+
+pub async fn delete_orphaned_media(
+    config: &Config,
+    db_client: &impl DatabaseClient,
+    mut queue: DeletionQueue,
+) -> Result<(), DatabaseError> {
+    queue.filter_objects(db_client).await?;
+    delete_media(config, queue).await;
+    Ok(())
 }

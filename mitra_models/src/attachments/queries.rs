@@ -3,11 +3,7 @@ use uuid::Uuid;
 
 use mitra_utils::id::generate_ulid;
 
-use crate::cleanup::{
-    find_orphaned_files,
-    find_orphaned_ipfs_objects,
-    DeletionQueue,
-};
+use crate::cleanup::DeletionQueue;
 use crate::database::{DatabaseClient, DatabaseError};
 
 use super::types::DbMediaAttachment;
@@ -127,12 +123,7 @@ pub async fn delete_unused_attachments(
             ipfs_objects.push(ipfs_cid);
         };
     };
-    let orphaned_files = find_orphaned_files(db_client, files).await?;
-    let orphaned_ipfs_objects = find_orphaned_ipfs_objects(db_client, ipfs_objects).await?;
-    Ok(DeletionQueue {
-        files: orphaned_files,
-        ipfs_objects: orphaned_ipfs_objects,
-    })
+    Ok(DeletionQueue { files, ipfs_objects })
 }
 
 #[cfg(test)]

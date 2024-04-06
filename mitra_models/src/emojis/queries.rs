@@ -3,7 +3,7 @@ use uuid::Uuid;
 
 use mitra_utils::id::generate_ulid;
 
-use crate::cleanup::{find_orphaned_files, DeletionQueue};
+use crate::cleanup::DeletionQueue;
 use crate::database::{
     catch_unique_violation,
     DatabaseClient,
@@ -205,12 +205,8 @@ pub async fn delete_emoji(
     let row = maybe_row.ok_or(DatabaseError::NotFound("emoji"))?;
     let emoji: DbEmoji = row.try_get("emoji")?;
     update_emoji_caches(db_client, &emoji.id).await?;
-    let orphaned_files = find_orphaned_files(
-        db_client,
-        vec![emoji.image.file_name],
-    ).await?;
     Ok(DeletionQueue {
-        files: orphaned_files,
+        files: vec![emoji.image.file_name],
         ipfs_objects: vec![],
     })
 }

@@ -7,11 +7,7 @@ use crate::attachments::{
     queries::set_attachment_ipfs_cid,
     types::DbMediaAttachment,
 };
-use crate::cleanup::{
-    find_orphaned_files,
-    find_orphaned_ipfs_objects,
-    DeletionQueue,
-};
+use crate::cleanup::DeletionQueue;
 use crate::database::{
     catch_unique_violation,
     query_macro::query,
@@ -1411,13 +1407,8 @@ pub async fn delete_post(
     if let Some(repost_of_id) = db_post.repost_of_id {
         update_repost_count(&transaction, repost_of_id, -1).await?;
     };
-    let orphaned_files = find_orphaned_files(&transaction, files).await?;
-    let orphaned_ipfs_objects = find_orphaned_ipfs_objects(&transaction, ipfs_objects).await?;
     transaction.commit().await?;
-    Ok(DeletionQueue {
-        files: orphaned_files,
-        ipfs_objects: orphaned_ipfs_objects,
-    })
+    Ok(DeletionQueue { files, ipfs_objects })
 }
 
 pub async fn get_post_count(
