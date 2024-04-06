@@ -327,7 +327,9 @@ pub async fn set_profile_identity_key(
     let maybe_row = transaction.query_opt(
         "
         UPDATE actor_profile
-        SET identity_key = $2
+        SET
+            identity_key = $2,
+            updated_at = CURRENT_TIMESTAMP
         WHERE id = $1
         RETURNING actor_profile
         ",
@@ -941,7 +943,10 @@ pub async fn find_empty_profiles(
 mod tests {
     use serde_json::json;
     use serial_test::serial;
-    use mitra_utils::caip2::ChainId;
+    use mitra_utils::{
+        caip2::ChainId,
+        crypto_eddsa::generate_weak_ed25519_key,
+    };
     use crate::database::test_utils::create_test_database;
     use crate::emojis::{
         queries::create_emoji,
@@ -1111,6 +1116,27 @@ mod tests {
         assert!(profile_updated.updated_at != profile.updated_at);
         assert_eq!(deletion_queue.files.len(), 0);
         assert_eq!(deletion_queue.ipfs_objects.len(), 0);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_set_profile_identity_key() {
+        let db_client = &mut create_test_database().await;
+        let profile_data = ProfileCreateData {
+            username: "test".to_string(),
+            ..Default::default()
+        };
+        let profile = create_profile(db_client, profile_data).await.unwrap();
+        let identity_key = generate_weak_ed25519_key();
+        let profile_updated = set_profile_identity_key(
+            db_client,
+            profile.id,
+            identity_key,
+        ).await.unwrap();
+        assert_eq!(
+            profile_updated.identity_key.unwrap(),
+            "z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6",
+        );
     }
 
     #[tokio::test]
