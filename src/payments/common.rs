@@ -36,11 +36,14 @@ pub async fn send_subscription_notifications(
     subscription_expires_at: DateTime<Utc>,
     maybe_invoice_id: Option<Uuid>,
 ) -> Result<(), DatabaseError> {
-    create_subscription_notification(
-        db_client,
-        sender.id,
-        recipient.id,
-    ).await?;
+    if maybe_invoice_id.is_some() {
+        // Create notification only if payment was made
+        create_subscription_notification(
+            db_client,
+            sender.id,
+            recipient.id,
+        ).await?;
+    };
     if let Some(ref remote_sender) = sender.actor_json {
         prepare_add_person(
             instance,
