@@ -40,6 +40,22 @@ pub fn deserialize_into_object_id<'de, D>(
     Ok(object_id)
 }
 
+pub fn deserialize_into_object_id_opt<'de, D>(
+    deserializer: D,
+) -> Result<Option<String>, D::Error>
+    where D: Deserializer<'de>
+{
+    let maybe_value: Option<Value> = Option::deserialize(deserializer)?;
+    let maybe_object_id = if let Some(value) = maybe_value {
+        let object_id = get_object_id(&value)
+            .map_err(DeserializerError::custom)?;
+        Some(object_id)
+    } else {
+        None
+    };
+    Ok(maybe_object_id)
+}
+
 /// Transforms single string or an array value into array of strings
 fn parse_string_array(
     value: &Value,

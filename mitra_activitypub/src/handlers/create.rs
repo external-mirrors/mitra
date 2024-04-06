@@ -12,6 +12,7 @@ use mitra_federation::{
     constants::{AP_MEDIA_TYPE, AS_MEDIA_TYPE},
     deserialization::{
         deserialize_into_object_id,
+        deserialize_into_object_id_opt,
         deserialize_object_array,
         parse_into_href_array,
         parse_into_id_array,
@@ -100,7 +101,9 @@ pub struct AttributedObject {
     )]
     tag: Vec<JsonValue>,
 
+    #[serde(default, deserialize_with = "deserialize_into_object_id_opt")]
     pub in_reply_to: Option<String>,
+
     to: Option<JsonValue>,
     cc: Option<JsonValue>,
     published: Option<DateTime<Utc>>,
@@ -806,6 +809,28 @@ mod tests {
     use mitra_federation::constants::AP_PUBLIC;
     use mitra_models::profiles::types::DbActor;
     use super::*;
+
+    #[test]
+    fn test_deserialize_object() {
+        let object_value = json!({
+            "id": "https://social.example/objects/123",
+            "type": "Note",
+            "attributedTo": "https://social.example/users/1",
+            "content": "test",
+            "inReplyTo": "https://social.example/objects/121",
+        });
+        let object: AttributedObject =
+            serde_json::from_value(object_value).unwrap();
+        assert_eq!(
+            object.attributed_to,
+            json!("https://social.example/users/1"),
+        );
+        assert_eq!(object.content.unwrap(), "test");
+        assert_eq!(
+            object.in_reply_to.unwrap(),
+            "https://social.example/objects/121",
+        );
+    }
 
     #[test]
     fn test_get_object_attributed_to() {
