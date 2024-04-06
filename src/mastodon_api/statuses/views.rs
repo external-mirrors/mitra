@@ -347,7 +347,9 @@ async fn edit_status(
     if let Some(ref in_reply_to) = maybe_in_reply_to {
         validate_local_reply(in_reply_to, &post_data.mentions, &post.visibility)?;
     };
-    let mut post = update_post(db_client, &post.id, post_data).await?;
+    let (mut post, deletion_queue) =
+        update_post(db_client, &post.id, post_data).await?;
+    deletion_queue.into_job(db_client).await?;
     // Same as add_related_posts
     post.in_reply_to = maybe_in_reply_to.map(Box::new);
     post.linked = linked;

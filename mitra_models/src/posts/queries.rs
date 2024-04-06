@@ -320,7 +320,7 @@ pub async fn update_post(
     db_client: &mut impl DatabaseClient,
     post_id: &Uuid,
     post_data: PostUpdateData,
-) -> Result<Post, DatabaseError> {
+) -> Result<(Post, DeletionQueue), DatabaseError> {
     let transaction = db_client.transaction().await?;
     // Reposts and immutable posts can't be updated
     let maybe_row = transaction.query_opt(
@@ -348,13 +348,24 @@ pub async fn update_post(
    let db_post: DbPost = row.try_get("post")?;
 
     // Delete and re-create related objects
-    transaction.execute(
+    let detached_media_rows = transaction.query(
         "
         DELETE FROM media_attachment
         WHERE post_id = $1 AND id <> ALL($2)
+        RETURNING file_name, ipfs_cid
         ",
         &[&db_post.id, &post_data.attachments],
     ).await?;
+    let mut detached_files = vec![];
+    let mut detached_ipfs_objects = vec![];
+    for row in detached_media_rows {
+        let file_name = row.try_get("file_name")?;
+        detached_files.push(file_name);
+        let maybe_ipfs_cid: Option<String> = row.try_get("ipfs_cid")?;
+        if let Some(ipfs_cid) = maybe_ipfs_cid {
+            detached_ipfs_objects.push(ipfs_cid);
+        };
+    };
     let old_mentions_rows = transaction.query(
         "
         DELETE FROM mention WHERE post_id = $1
@@ -431,7 +442,11 @@ pub async fn update_post(
         db_emojis,
     )?;
     transaction.commit().await?;
-    Ok(post)
+    let deletion_queue = DeletionQueue {
+        files: detached_files,
+        ipfs_objects: detached_ipfs_objects,
+    };
+    Ok((post, deletion_queue))
 }
 
 pub(crate) const RELATED_ATTACHMENTS: &str =
@@ -1517,9 +1532,12 @@ mod tests {
             updated_at: Utc::now(),
             ..Default::default()
         };
-        let post = update_post(db_client, &post.id, post_data).await.unwrap();
+        let (post, deletion_queue) =
+            update_post(db_client, &post.id, post_data).await.unwrap();
         assert_eq!(post.content, "test update");
         assert_eq!(post.updated_at.is_some(), true);
+        assert_eq!(deletion_queue.files.len(), 0);
+        assert_eq!(deletion_queue.ipfs_objects.len(), 0);
     }
 
     #[tokio::test]
