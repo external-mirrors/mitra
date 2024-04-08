@@ -7,7 +7,6 @@ use serde_json::{Value as JsonValue};
 use uuid::Uuid;
 
 use mitra::payments::monero::{
-    create_or_update_monero_subscription,
     get_payment_address,
     reopen_invoice,
 };
@@ -158,7 +157,6 @@ pub enum SubCommand {
     ImportEmoji(ImportEmoji),
     UpdateCurrentBlock(UpdateCurrentBlock),
     ResetSubscriptions(ResetSubscriptions),
-    AddSubscriber(AddSubscriber),
     CreateMoneroWallet(CreateMoneroWallet),
     CreateMoneroSignature(CreateMoneroSignature),
     VerifyMoneroSignature(VerifyMoneroSignature),
@@ -849,40 +847,6 @@ impl ResetSubscriptions {
     ) -> Result<(), Error> {
         reset_subscriptions(db_client, self.keep_subscription_options).await?;
         println!("subscriptions deleted");
-        Ok(())
-    }
-}
-
-/// Create or update subscription without payment
-#[derive(Parser)]
-pub struct AddSubscriber {
-    sender_id: Uuid,
-    recipient_id: Uuid,
-    duration: i64,
-}
-
-impl AddSubscriber {
-    pub async fn execute(
-        &self,
-        config: &Config,
-        db_client: &mut impl DatabaseClient,
-    ) -> Result<(), Error> {
-        let monero_config = config.monero_config()
-            .ok_or(anyhow!("monero configuration not found"))?;
-        let sender = get_profile_by_id(db_client, &self.sender_id).await?;
-        // Recipient must be local
-        let recipient = get_user_by_id(db_client, &self.recipient_id).await?;
-        recipient.profile.monero_subscription(&monero_config.chain_id)
-            .ok_or(anyhow!("monero subscription is not enabled"))?;
-        create_or_update_monero_subscription(
-            monero_config,
-            db_client,
-            &config.instance(),
-            &sender,
-            &recipient,
-            self.duration,
-            None,
-        ).await?;
         Ok(())
     }
 }

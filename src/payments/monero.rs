@@ -55,7 +55,7 @@ fn invoice_payment_address(invoice: &DbInvoice) -> Result<String, DatabaseError>
 }
 
 // Returns None on chain ID mismatch
-pub async fn create_or_update_monero_subscription(
+pub(crate) async fn create_or_update_monero_subscription(
     config: &MoneroConfig,
     db_client: &mut impl DatabaseClient,
     instance: &Instance,
