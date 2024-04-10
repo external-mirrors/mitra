@@ -25,7 +25,7 @@ use actix_web::{
 };
 use serde_json::json;
 use serde_qs::{
-    actix::{QsForm, QsFormConfig, QsQuery, QsQueryConfig},
+    actix::{QsForm, QsQuery, QsQueryConfig},
     Config as QsConfig,
 };
 
@@ -42,12 +42,6 @@ pub fn multiquery_config() -> QsQueryConfig {
     // Disable strict mode
     let qs_config = QsConfig::new(2, false);
     QsQueryConfig::default().qs_config(qs_config)
-}
-
-pub fn multiquery_form_config() -> QsFormConfig {
-    // Disable strict mode
-    let qs_config = QsConfig::new(2, false);
-    QsFormConfig::default().qs_config(qs_config)
 }
 
 pub type RatelimitConfig = GovernorConfig<PeerIpKeyExtractor, NoOpMiddleware>;

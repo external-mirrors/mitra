@@ -3290,8 +3290,8 @@ dependencies = [
 
 [[package]]
 name = "serde_qs"
-version = "0.12.0"
-source = "git+https://github.com/silverpill/serde_qs?rev=568c7007df8048ae3a05e469d9473e4e31ab7e5f#568c7007df8048ae3a05e469d9473e4e31ab7e5f"
+version = "0.13.0"
+source = "git+https://github.com/samscott89/serde_qs?rev=2bb118fce16f2d5a1a85fce96d228acc23df827e#2bb118fce16f2d5a1a85fce96d228acc23df827e"
 dependencies = [
  "actix-web",
  "futures",
