@@ -48,7 +48,6 @@ pub const PROPOSAL: &str = "Proposal";
 // Misc
 pub const EMOJI: &str = "Emoji";
 pub const HASHTAG: &str = "Hashtag";
-pub const IDENTITY_PROOF: &str = "IdentityProof";
 pub const LOCK: &str = "Lock"; // Lemmy
 pub const MULTIKEY: &str = "Multikey";
 pub const PROPERTY_VALUE: &str = "PropertyValue";

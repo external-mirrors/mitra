@@ -44,15 +44,6 @@ pub struct ActorAttachment {
 
     #[serde(skip_serializing_if = "Option::is_none")]
     pub value: Option<String>,
-
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub href: Option<String>,
-
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub signature_algorithm: Option<String>,
-
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub signature_value: Option<String>,
 }
 
 fn deserialize_image_opt<'de, D>(

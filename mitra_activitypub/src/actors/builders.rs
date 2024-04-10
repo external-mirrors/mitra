@@ -40,7 +40,6 @@ use crate::{
 
 use super::attachments::{
     attach_extra_field,
-    attach_identity_proof,
     attach_payment_option,
 };
 use super::keys::{Multikey, PublicKey};
@@ -69,7 +68,6 @@ fn build_actor_context() -> Context {
             ("value", "schema:value"),
             ("sameAs", "schema:sameAs"),
             ("toot", MASTODON_CONTEXT),
-            ("IdentityProof", "toot:IdentityProof"),
             ("featured", "toot:featured"),
             ("mitra", MITRA_CONTEXT),
             ("subscribers", "mitra:subscribers"),
@@ -192,9 +190,8 @@ pub fn build_local_actor(
             IdentityProofType::LegacyEip191IdentityProof |
                 IdentityProofType::LegacyMinisignIdentityProof =>
             {
-                let attachment = attach_identity_proof(proof)?;
-                serde_json::to_value(attachment)
-                    .expect("attachment should be serializable")
+                // Don't attach legacy identity proofs
+                continue;
             },
             _ => proof.value,
         };
@@ -346,7 +343,6 @@ mod tests {
                     "value": "schema:value",
                     "sameAs": "schema:sameAs",
                     "toot": "http://joinmastodon.org/ns#",
-                    "IdentityProof": "toot:IdentityProof",
                     "featured": "toot:featured",
                     "mitra": "http://jsonld.mitra.social#",
                     "subscribers": "mitra:subscribers",
@@ -439,7 +435,6 @@ mod tests {
                     "value": "schema:value",
                     "sameAs": "schema:sameAs",
                     "toot": "http://joinmastodon.org/ns#",
-                    "IdentityProof": "toot:IdentityProof",
                     "featured": "toot:featured",
                     "mitra": "http://jsonld.mitra.social#",
                     "subscribers": "mitra:subscribers",
@@ -502,7 +497,7 @@ mod tests {
                 "created": "2023-02-24T23:36:38Z",
                 "cryptosuite": "eddsa-jcs-2022",
                 "proofPurpose": "assertionMethod",
-                "proofValue": "z67hsvp8S5zzsYuJU73bCmhNKqESmc1zEVmZxS1cYzqmPtXsfoQdYxcxJnQpJ4rs7aFBsU7i8qyZHSWPFEip2YL2Z",
+                "proofValue": "z5BUP8HGrP1M5dDo9q5DVsYdZqpPdewKERPiaizVFd7nw25Rey71BUFNZM45ATgUQymENiVEzmzdZtK3hD4rPNNmT",
                 "type": "DataIntegrityProof",
                 "verificationMethod": "did:ap:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6",
             },
@@ -530,7 +525,6 @@ mod tests {
                     "value": "schema:value",
                     "sameAs": "schema:sameAs",
                     "toot": "http://joinmastodon.org/ns#",
-                    "IdentityProof": "toot:IdentityProof",
                     "featured": "toot:featured",
                     "mitra": "http://jsonld.mitra.social#",
                     "subscribers": "mitra:subscribers",

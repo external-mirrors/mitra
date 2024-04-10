@@ -6,7 +6,6 @@ use mitra_federation::{
     deserialization::deserialize_string_array,
 };
 use mitra_models::{
-    database::DatabaseTypeError,
     profiles::types::{
         ExtraField,
         IdentityProof,
@@ -20,8 +19,6 @@ use mitra_utils::{
     json_signatures::{
         proofs::{
             ProofType,
-            PROOF_TYPE_ID_EIP191,
-            PROOF_TYPE_ID_MINISIGN,
         },
         verify::{
             get_json_signature,
@@ -44,7 +41,6 @@ use crate::{
     identifiers::{local_actor_id_unified, local_actor_proposal_id},
     identity::VerifiableIdentityStatement,
     vocabulary::{
-        IDENTITY_PROOF,
         LINK,
         PROPERTY_VALUE,
         PROPOSAL,
@@ -53,28 +49,6 @@ use crate::{
 };
 
 use super::types::ActorAttachment;
-
-pub fn attach_identity_proof(
-    proof: IdentityProof,
-) -> Result<ActorAttachment, DatabaseTypeError> {
-    let proof_type_str = match proof.proof_type {
-        IdentityProofType::LegacyEip191IdentityProof => PROOF_TYPE_ID_EIP191,
-        IdentityProofType::LegacyMinisignIdentityProof => PROOF_TYPE_ID_MINISIGN,
-        _ => unimplemented!("expected legacy identity proof"),
-    };
-    let proof_value = proof.value.as_str()
-        .ok_or(DatabaseTypeError)?
-        .to_string();
-    let attachment = ActorAttachment {
-        object_type: IDENTITY_PROOF.to_string(),
-        name: proof.issuer.to_string(),
-        value: None,
-        href: None,
-        signature_algorithm: Some(proof_type_str.to_string()),
-        signature_value: Some(proof_value),
-    };
-    Ok(attachment)
-}
 
 pub fn parse_identity_proof_fep_c390(
     actor_id: &str,
@@ -270,9 +244,6 @@ pub fn attach_extra_field(
         object_type: PROPERTY_VALUE.to_string(),
         name: field.name,
         value: Some(field.value),
-        href: None,
-        signature_algorithm: None,
-        signature_value: None,
     }
 }
 
