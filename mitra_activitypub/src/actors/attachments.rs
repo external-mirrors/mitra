@@ -48,8 +48,6 @@ use crate::{
     },
 };
 
-use super::types::ActorAttachment;
-
 pub fn parse_identity_proof_fep_c390(
     actor_id: &str,
     attachment: &JsonValue,
@@ -237,10 +235,22 @@ pub fn parse_link(
     Ok(result)
 }
 
+#[derive(Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PropertyValue {
+    name: String,
+
+    #[serde(rename = "type")]
+    object_type: String,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    value: Option<String>,
+}
+
 pub fn attach_extra_field(
     field: ExtraField,
-) -> ActorAttachment {
-    ActorAttachment {
+) -> PropertyValue {
+    PropertyValue {
         object_type: PROPERTY_VALUE.to_string(),
         name: field.name,
         value: Some(field.value),
@@ -250,7 +260,7 @@ pub fn attach_extra_field(
 pub fn parse_property_value(
     attachment: &JsonValue,
 ) -> Result<ExtraField, ValidationError> {
-    let attachment: ActorAttachment = serde_json::from_value(attachment.clone())
+    let attachment: PropertyValue = serde_json::from_value(attachment.clone())
         .map_err(|_| ValidationError("invalid attachment"))?;
     if attachment.object_type != PROPERTY_VALUE {
         return Err(ValidationError("invalid attachment type"));

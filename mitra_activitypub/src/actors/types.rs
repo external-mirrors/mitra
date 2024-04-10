@@ -34,18 +34,6 @@ pub struct ActorImage {
     pub media_type: Option<String>,
 }
 
-#[derive(Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ActorAttachment {
-    pub name: String,
-
-    #[serde(rename = "type")]
-    pub object_type: String,
-
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub value: Option<String>,
-}
-
 fn deserialize_image_opt<'de, D>(
     deserializer: D,
 ) -> Result<Option<ActorImage>, D::Error>
