@@ -652,9 +652,10 @@ impl DeleteOrphanedFiles {
                 .to_string_lossy().to_string();
             files.push(file_name);
         };
-        println!("found {} files", files.len());
         let orphaned = find_orphaned_files(db_client, files).await?;
-        if !orphaned.is_empty() {
+        if orphaned.is_empty() {
+            println!("no orphaned files found");
+        } else {
             delete_files(&media_storage, orphaned);
             println!("orphaned files deleted");
         };

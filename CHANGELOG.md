@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- Don't add total number of files to `delete-orphaned-files` command output.
+
 ## [2.15.1] - 2024-04-09
 
 ### Removed
