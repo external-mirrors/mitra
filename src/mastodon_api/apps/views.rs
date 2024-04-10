@@ -48,6 +48,7 @@ async fn create_app_view(
     validate_redirect_uri(&db_app_data.redirect_uri)?;
     let db_app = create_oauth_app(db_client, db_app_data).await?;
     let app = OauthApp {
+        id: db_app.id.to_string(),
         name: db_app.app_name,
         website: db_app.website,
         redirect_uri: db_app.redirect_uri,

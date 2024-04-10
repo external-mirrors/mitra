@@ -32,6 +32,7 @@ impl From<CreateAppMultipartForm> for CreateAppData {
 /// https://docs.joinmastodon.org/entities/Application/
 #[derive(Serialize)]
 pub struct OauthApp {
+    pub id: String,
     pub name: String,
     pub website: Option<String>,
     pub redirect_uri: String,

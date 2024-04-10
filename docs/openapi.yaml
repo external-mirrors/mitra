@@ -2075,6 +2075,10 @@ components:
     Application:
       type: object
       properties:
+        id:
+          description: The id of the application in the database.
+          type: string
+          example: 1
         name:
           description: The name of your application.
           type: string

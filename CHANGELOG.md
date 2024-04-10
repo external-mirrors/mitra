@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Changed
 
 - Don't add total number of files to `delete-orphaned-files` command output.
+- Added `id` field to Mastodon API `Application` object.
 
 ### Removed
 
