@@ -16,6 +16,7 @@ use mitra_activitypub::{
         delete_note::prepare_delete_note,
         delete_person::prepare_delete_person,
     },
+    identifiers::parse_portable_id,
     importers::{
         import_from_outbox,
         import_replies,
@@ -141,6 +142,7 @@ pub enum SubCommand {
     SetRole(SetRole),
     EnableFepEf61(EnableFepEf61),
     FetchActor(FetchActor),
+    FetchPortableObject(FetchPortableObject),
     ReadOutbox(ReadOutbox),
     FetchReplies(FetchReplies),
     FetchObjectAs(FetchObjectAs),
@@ -421,6 +423,28 @@ impl FetchActor {
             &self.id,
         ).await?;
         println!("profile saved");
+        Ok(())
+    }
+}
+
+#[derive(Parser)]
+pub struct FetchPortableObject {
+    id: String,
+}
+
+impl FetchPortableObject {
+    pub async fn execute(
+        &self,
+        config: &Config,
+        _db_client: &mut impl DatabaseClient,
+    ) -> Result<(), Error> {
+        let agent = build_federation_agent(&config.instance(), None);
+        let object: JsonValue = fetch_object(&agent, &self.id).await?;
+        let object_id = object["id"].as_str()
+            .ok_or(anyhow!("invalid object"))?;
+        let (id, maybe_gateway) = parse_portable_id(object_id)?;
+        println!("fetched object: {}", id);
+        println!("gateway: {}", maybe_gateway.unwrap_or("-".to_string()));
         Ok(())
     }
 }

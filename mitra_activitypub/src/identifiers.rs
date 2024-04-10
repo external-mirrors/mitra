@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use regex::Regex;
 use uuid::Uuid;
 
@@ -12,7 +14,7 @@ use mitra_models::{
 use mitra_utils::{
     caip2::ChainId,
     did_key::DidKey,
-    urls::{get_hostname, url_encode},
+    urls::{get_hostname, url_encode, Url},
 };
 use mitra_validators::errors::ValidationError;
 
@@ -222,6 +224,35 @@ pub fn profile_actor_url(instance_url: &str, profile: &DbActorProfile) -> String
     profile_actor_id(instance_url, profile)
 }
 
+const GATEWAY_PATH_PREFIX: &str = "/.well-known/apresolver/";
+
+pub fn parse_portable_id(
+    object_id: &str,
+) -> Result<(String, Option<String>), ValidationError> {
+    let url = Url::parse(object_id)
+        .map_err(|_| ValidationError("invalid URL"))?;
+    let mut maybe_gateway = None;
+    let object_id = match url.scheme() {
+        "did" => {
+            let _parsed = DidApUrl::from_str(object_id)
+                .map_err(ValidationError)?;
+            object_id
+        },
+        "http" | "https" => {
+            // Unwrap DID URL
+            let did_url = url.path().strip_prefix(GATEWAY_PATH_PREFIX)
+                .ok_or(ValidationError("invalid gateway URL"))?;
+            let _parsed = DidApUrl::from_str(did_url)
+                .map_err(ValidationError)?;
+            let gateway_url = url.origin().ascii_serialization();
+            maybe_gateway = Some(gateway_url);
+            did_url
+        },
+        _ => return Err(ValidationError("unexpected URI scheme")),
+    };
+    Ok((object_id.to_owned(), maybe_gateway))
+}
+
 #[cfg(test)]
 mod tests {
     use uuid::uuid;
@@ -355,5 +386,21 @@ mod tests {
             profile_url,
             "https://social.example/users/test",
         );
+    }
+
+    #[test]
+    fn test_parse_portable_id_did_url() {
+        let url = "did:ap:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor";
+        let (id, maybe_gateway) = parse_portable_id(url).unwrap();
+        assert_eq!(id, "did:ap:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor");
+        assert_eq!(maybe_gateway, None);
+    }
+
+    #[test]
+    fn test_parse_portable_id_gateway_url() {
+        let url = "https://server.example/.well-known/apresolver/did:ap:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor";
+        let (id, maybe_gateway) = parse_portable_id(url).unwrap();
+        assert_eq!(id, "did:ap:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor");
+        assert_eq!(maybe_gateway.unwrap(), "https://server.example");
     }
 }

@@ -50,6 +50,7 @@ async fn main() {
                 SubCommand::SetRole(cmd) => cmd.execute(db_client).await.unwrap(),
                 SubCommand::EnableFepEf61(cmd) => cmd.execute(db_client).await.unwrap(),
                 SubCommand::FetchActor(cmd) => cmd.execute(&config, db_client).await.unwrap(),
+                SubCommand::FetchPortableObject(cmd) => cmd.execute(&config, db_client).await.unwrap(),
                 SubCommand::ReadOutbox(cmd) => cmd.execute(&config, db_client).await.unwrap(),
                 SubCommand::FetchReplies(cmd) => cmd.execute(&config, db_client).await.unwrap(),
                 SubCommand::FetchObjectAs(cmd) => cmd.execute(&config, db_client).await.unwrap(),
