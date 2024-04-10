@@ -31,7 +31,7 @@ use mitra_validators::{
 
 use crate::{
     actors::{
-        helpers::update_remote_profile,
+        handlers::update_remote_profile,
         types::Actor,
     },
     agent::build_federation_agent,

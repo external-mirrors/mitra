@@ -33,7 +33,6 @@ use mitra_validators::{
 };
 
 use crate::{
-    actors::types::Actor,
     errors::HandlerError,
     handlers::{
         emoji::handle_emoji,
@@ -57,6 +56,7 @@ use super::attachments::{
     parse_property_value,
     LinkAttachment,
 };
+use super::types::Actor;
 
 async fn fetch_actor_images(
     agent: &FederationAgent,

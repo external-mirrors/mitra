@@ -34,7 +34,7 @@ use mitra_validators::errors::ValidationError;
 
 use crate::{
     actors::{
-        helpers::{create_remote_profile, update_remote_profile},
+        handlers::{create_remote_profile, update_remote_profile},
         types::Actor,
     },
     agent::build_federation_agent,
