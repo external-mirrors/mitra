@@ -149,7 +149,6 @@ mod tests {
         crypto_eddsa::{
             generate_weak_ed25519_key,
             ed25519_private_key_from_bytes,
-            ed25519_public_key_from_bytes,
             ed25519_public_key_from_private_key,
         },
         did_key::DidKey,
@@ -169,8 +168,7 @@ mod tests {
         let ed25519_private_key = generate_weak_ed25519_key();
         let ed25519_public_key =
             ed25519_public_key_from_private_key(&ed25519_private_key);
-        let did = Did::Key(
-            DidKey::from_ed25519_key(ed25519_public_key.as_bytes()));
+        let did = Did::Key(DidKey::from_ed25519_key(&ed25519_public_key));
         let created_at = Utc::now();
         let (_claim, message) = create_identity_claim_fep_c390(
             actor_id,
@@ -232,9 +230,8 @@ mod tests {
             signature_data.proof_type,
             ProofType::JcsEddsaSignature,
         );
-        let public_key_bytes = did.as_did_key().unwrap()
+        let public_key = did.as_did_key().unwrap()
             .try_ed25519_key().unwrap();
-        let public_key = ed25519_public_key_from_bytes(&public_key_bytes).unwrap();
         let result = verify_eddsa_json_signature(
             &public_key,
             &signature_data.object,

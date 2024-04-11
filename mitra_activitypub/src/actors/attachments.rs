@@ -15,7 +15,6 @@ use mitra_models::{
     },
 };
 use mitra_utils::{
-    crypto_eddsa::ed25519_public_key_from_bytes,
     json_signatures::{
         proofs::{
             ProofType,
@@ -93,9 +92,7 @@ pub fn parse_identity_proof_fep_c390(
         ProofType::JcsEddsaSignature => {
             let did_key = signer.as_did_key()
                 .ok_or(ValidationError("unexpected DID type"))?;
-            let ed25519_key_bytes = did_key.try_ed25519_key()
-                .map_err(|_| ValidationError("invalid public key"))?;
-            let ed25519_key = ed25519_public_key_from_bytes(&ed25519_key_bytes)
+            let ed25519_key = did_key.try_ed25519_key()
                 .map_err(|_| ValidationError("invalid public key"))?;
             verify_eddsa_json_signature(
                 &ed25519_key,

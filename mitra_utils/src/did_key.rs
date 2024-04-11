@@ -5,6 +5,10 @@ use std::str::FromStr;
 use regex::Regex;
 
 use super::{
+    crypto_eddsa::{
+        ed25519_public_key_from_bytes,
+        Ed25519PublicKey,
+    },
     did::DidParseError,
     multibase::{
         decode_multibase_base58btc,
@@ -29,15 +33,21 @@ impl DidKey {
         encode_multibase_base58btc(&multidata)
     }
 
-    pub fn from_ed25519_key(key: &[u8]) -> Self {
-        Self { codec: Multicodec::Ed25519Pub, key_data: key.to_vec() }
+    pub fn from_ed25519_key(key: &Ed25519PublicKey) -> Self {
+        Self {
+            codec: Multicodec::Ed25519Pub,
+            key_data: key.as_bytes().to_vec(),
+        }
     }
 
-    pub fn try_ed25519_key(&self) -> Result<Vec<u8>, MulticodecError> {
+    pub fn try_ed25519_key(&self) -> Result<Ed25519PublicKey, MulticodecError> {
         if self.codec != Multicodec::Ed25519Pub {
             return Err(MulticodecError);
         };
-        Ok(self.key_data.clone())
+        // Encoded data should be valid ed25519 key
+        let public_key = ed25519_public_key_from_bytes(&self.key_data)
+            .map_err(|_| MulticodecError)?;
+        Ok(public_key)
     }
 }
 

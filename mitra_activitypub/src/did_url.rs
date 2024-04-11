@@ -80,7 +80,7 @@ mod tests {
     fn test_did_url_from_key() {
         let secret_key = generate_weak_ed25519_key();
         let public_key = ed25519_public_key_from_private_key(&secret_key);
-        let did_key = DidKey::from_ed25519_key(public_key.as_bytes());
+        let did_key = DidKey::from_ed25519_key(&public_key);
         let url = DidApUrl::from_did_key(&did_key);
         assert_eq!(url.did().as_did_key().unwrap(), &did_key);
         assert_eq!(url.path(), None);

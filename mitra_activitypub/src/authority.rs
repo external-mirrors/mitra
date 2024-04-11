@@ -13,7 +13,7 @@ use mitra_utils::{
 use super::did_url::DidApUrl;
 
 fn fep_ef61_identity(public_key: &Ed25519PublicKey) -> DidApUrl {
-    let did_key = DidKey::from_ed25519_key(public_key.as_bytes());
+    let did_key = DidKey::from_ed25519_key(public_key);
     DidApUrl::from_did_key(&did_key)
 }
 

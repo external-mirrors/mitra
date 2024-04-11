@@ -84,7 +84,7 @@ use mitra_services::{
 };
 use mitra_utils::{
     caip2::ChainId,
-    crypto_eddsa::ed25519_public_key_from_bytes,
+    crypto_eddsa::generate_ed25519_key,
     crypto_rsa::{
         generate_rsa_key,
         rsa_private_key_to_pkcs8_pem,
@@ -111,7 +111,6 @@ use mitra_validators::{
     profiles::clean_profile_update_data,
     users::validate_local_username,
 };
-use mitra_utils::crypto_eddsa::generate_ed25519_key;
 
 use crate::http::{
     get_request_base_url,
@@ -493,9 +492,7 @@ async fn create_identity_proof(
         IdentityProofType::FepC390LegacyJcsEddsaProof => {
             let did_key = did.as_did_key()
                 .ok_or(ValidationError("unexpected DID type"))?;
-            let ed25519_key_bytes = did_key.try_ed25519_key()
-                .map_err(|_| ValidationError("invalid public key"))?;
-            let ed25519_key = ed25519_public_key_from_bytes(&ed25519_key_bytes)
+            let ed25519_key = did_key.try_ed25519_key()
                 .map_err(|_| ValidationError("invalid public key"))?;
             let signature = parse_minisign_signature_file(&proof_data.signature)
                 .map_err(|_| ValidationError("invalid signature encoding"))?;

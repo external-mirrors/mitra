@@ -25,6 +25,9 @@ pub enum ParseError {
     #[error("invalid encoding")]
     InvalidEncoding(#[from] base64::DecodeError),
 
+    #[error("invalid key")]
+    InvalidKey(#[from] Ed25519SerializationError),
+
     #[error("invalid key length")]
     InvalidKeyLength,
 
@@ -39,7 +42,7 @@ pub enum ParseError {
 // base64(<signature_algorithm> || <key_id> || <public_key>)
 fn parse_minisign_public_key(
     key_b64: &str,
-) -> Result<[u8; 32], ParseError> {
+) -> Result<Ed25519PublicKey, ParseError> {
     let key_bin = base64::decode(key_b64)?;
     if key_bin.len() != 42 {
         return Err(ParseError::InvalidKeyLength);
@@ -47,20 +50,22 @@ fn parse_minisign_public_key(
 
     let mut signature_algorithm = [0; 2];
     let mut _key_id = [0; 8];
-    let mut key = [0; 32];
+    let mut key_data = [0; 32];
     signature_algorithm.copy_from_slice(&key_bin[0..2]);
     _key_id.copy_from_slice(&key_bin[2..10]);
-    key.copy_from_slice(&key_bin[10..42]);
+    key_data.copy_from_slice(&key_bin[10..42]);
 
     if signature_algorithm.as_ref() != MINISIGN_SIGNATURE_CODE {
         return Err(ParseError::InvalidSignatureType);
     };
+
+    let key = ed25519_public_key_from_bytes(&key_data)?;
     Ok(key)
 }
 
 fn parse_minisign_public_key_file(
     key_file: &str,
-) -> Result<[u8; 32], ParseError> {
+) -> Result<Ed25519PublicKey, ParseError> {
     let key_b64 = key_file.lines()
         .find(|line| !line.starts_with("untrusted comment"))
         .ok_or(ParseError::InvalidFormat)?;
@@ -122,9 +127,6 @@ pub(crate) enum VerificationError {
     ParseError(#[from] ParseError),
 
     #[error(transparent)]
-    KeyError(#[from] Ed25519SerializationError),
-
-    #[error(transparent)]
     SignatureError(#[from] EddsaError),
 }
 
@@ -145,8 +147,7 @@ pub(crate) fn verify_minisign_signature(
     message: &str,
     signature: &[u8],
 ) -> Result<(), VerificationError> {
-    let ed25519_key_bytes = signer.try_ed25519_key()?;
-    let ed25519_key = ed25519_public_key_from_bytes(&ed25519_key_bytes)?;
+    let ed25519_key = signer.try_ed25519_key()?;
     let ed25519_signature = signature.try_into()
         .map_err(|_| ParseError::InvalidSignatureLength)?;
     // TODO: don't add newline

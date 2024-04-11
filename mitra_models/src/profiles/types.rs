@@ -686,7 +686,7 @@ pub(super) fn get_profile_acct(username: &str, hostname: Option<&str>) -> String
 
 pub(crate) fn get_identity_key(secret_key: Ed25519PrivateKey) -> String {
     let public_key = ed25519_public_key_from_private_key(&secret_key);
-    let did_key = DidKey::from_ed25519_key(public_key.as_bytes());
+    let did_key = DidKey::from_ed25519_key(&public_key);
     did_key.key_multibase()
 }
 
