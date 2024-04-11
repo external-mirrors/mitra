@@ -61,7 +61,7 @@ impl Multicodec {
         encode(self.code(), data)
     }
 
-    fn decode_exact(&self, value: &[u8]) -> Result<Vec<u8>, MulticodecError> {
+    pub fn decode_exact(&self, value: &[u8]) -> Result<Vec<u8>, MulticodecError> {
         let (code, data) = decode(value)?;
         if code != self.code() {
             return Err(MulticodecError);
@@ -76,46 +76,6 @@ impl Multicodec {
     }
 }
 
-pub fn encode_ed25519_public_key(key: [u8; 32]) -> Vec<u8> {
-    Multicodec::Ed25519Pub.encode(&key)
-}
-
-pub fn decode_ed25519_public_key(value: &[u8])
-    -> Result<[u8; 32], MulticodecError>
-{
-    let data = Multicodec::Ed25519Pub.decode_exact(value)?;
-    let key: [u8; 32] = data.try_into().map_err(|_| MulticodecError)?;
-    Ok(key)
-}
-
-pub fn encode_ed25519_private_key(key: [u8; 32]) -> Vec<u8> {
-    Multicodec::Ed25519Priv.encode(&key)
-}
-
-pub fn decode_ed25519_private_key(value: &[u8])
-    -> Result<[u8; 32], MulticodecError>
-{
-    let data = Multicodec::Ed25519Priv.decode_exact(value)?;
-    let key: [u8; 32] = data.try_into().map_err(|_| MulticodecError)?;
-    Ok(key)
-}
-
-pub fn encode_rsa_public_key(key_der: &[u8]) -> Vec<u8> {
-    Multicodec::RsaPub.encode(key_der)
-}
-
-pub fn decode_rsa_public_key(value: &[u8]) -> Result<Vec<u8>, MulticodecError> {
-    Multicodec::RsaPub.decode_exact(value)
-}
-
-pub fn encode_rsa_private_key(key: &[u8]) -> Vec<u8> {
-    Multicodec::RsaPriv.encode(key)
-}
-
-pub fn decode_rsa_private_key(value: &[u8]) -> Result<Vec<u8>, MulticodecError> {
-    Multicodec::RsaPriv.decode_exact(value)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -123,40 +83,40 @@ mod tests {
     #[test]
     fn test_ed25519_pub_encode_decode() {
         let value = [1; 32];
-        let encoded = encode_ed25519_public_key(value);
+        let encoded = Multicodec::Ed25519Pub.encode(&value);
         assert_eq!(encoded.len(), 34);
-        let decoded = decode_ed25519_public_key(&encoded).unwrap();
+        let decoded = Multicodec::Ed25519Pub.decode_exact(&encoded).unwrap();
         assert_eq!(decoded, value);
     }
 
     #[test]
     fn test_ed25519_priv_encode_decode() {
         let value = [2; 32];
-        let encoded = encode_ed25519_private_key(value);
-        let decoded = decode_ed25519_private_key(&encoded).unwrap();
+        let encoded = Multicodec::Ed25519Priv.encode(&value);
+        let decoded = Multicodec::Ed25519Priv.decode_exact(&encoded).unwrap();
         assert_eq!(decoded, value);
     }
 
     #[test]
     fn test_rsa_pub_encode_decode() {
         let value = vec![1];
-        let encoded = encode_rsa_public_key(&value);
-        let decoded = decode_rsa_public_key(&encoded).unwrap();
+        let encoded = Multicodec::RsaPub.encode(&value);
+        let decoded = Multicodec::RsaPub.decode_exact(&encoded).unwrap();
         assert_eq!(decoded, value);
     }
 
     #[test]
     fn test_rsa_priv_encode_decode() {
         let value = vec![1];
-        let encoded = encode_rsa_private_key(&value);
-        let decoded = decode_rsa_private_key(&encoded).unwrap();
+        let encoded = Multicodec::RsaPriv.encode(&value);
+        let decoded = Multicodec::RsaPriv.decode_exact(&encoded).unwrap();
         assert_eq!(decoded, value);
     }
 
     #[test]
     fn test_decode() {
         let value = [1; 32];
-        let encoded = encode_ed25519_public_key(value);
+        let encoded = Multicodec::Ed25519Pub.encode(&value);
         let (codec, decoded) = Multicodec::decode(&encoded).unwrap();
         assert_eq!(codec, Multicodec::Ed25519Pub);
         assert_eq!(decoded, value);

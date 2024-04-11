@@ -159,7 +159,7 @@ mod tests {
             verify::{get_json_signature, verify_eddsa_json_signature},
         },
         multibase::decode_multibase_base58btc,
-        multicodec::decode_ed25519_private_key,
+        multicodec::Multicodec,
     };
     use super::*;
 
@@ -191,7 +191,9 @@ mod tests {
         let did = did_str.parse().unwrap();
         let private_key_multibase = "z3u2en7t5LR2WtQH5PfFqMqwVHBeXouLzo6haApm8XHqvjxq";
         let private_key_multicode = decode_multibase_base58btc(private_key_multibase).unwrap();
-        let private_key_bytes = decode_ed25519_private_key(&private_key_multicode).unwrap();
+        let private_key_bytes = Multicodec::Ed25519Priv
+            .decode_exact(&private_key_multicode)
+            .unwrap();
         let private_key = ed25519_private_key_from_bytes(&private_key_bytes).unwrap();
         let actor_id = "https://server.example/users/alice";
         let created_at = DateTime::parse_from_rfc3339("2023-02-24T23:36:38Z")
