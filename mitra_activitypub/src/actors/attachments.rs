@@ -238,13 +238,11 @@ pub fn parse_link(
 #[derive(Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PropertyValue {
-    name: String,
-
     #[serde(rename = "type")]
     object_type: String,
 
-    #[serde(skip_serializing_if = "Option::is_none")]
-    value: Option<String>,
+    name: String,
+    value: String,
 }
 
 pub fn attach_extra_field(
@@ -253,7 +251,7 @@ pub fn attach_extra_field(
     PropertyValue {
         object_type: PROPERTY_VALUE.to_string(),
         name: field.name,
-        value: Some(field.value),
+        value: field.value,
     }
 }
 
@@ -265,11 +263,9 @@ pub fn parse_property_value(
     if attachment.object_type != PROPERTY_VALUE {
         return Err(ValidationError("invalid attachment type"));
     };
-    let property_value = attachment.value.as_ref()
-        .ok_or(ValidationError("missing property value"))?;
     let field = ExtraField {
-        name: attachment.name.clone(),
-        value: property_value.to_string(),
+        name: attachment.name,
+        value: attachment.value,
         value_source: None,
     };
     Ok(field)
