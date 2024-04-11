@@ -226,23 +226,23 @@ pub fn profile_actor_url(instance_url: &str, profile: &DbActorProfile) -> String
 
 const GATEWAY_PATH_PREFIX: &str = "/.well-known/apresolver/";
 
-pub fn parse_portable_id(
+pub(crate) fn parse_portable_id(
     object_id: &str,
-) -> Result<(String, Option<String>), ValidationError> {
+) -> Result<(DidApUrl, Option<String>), ValidationError> {
     let url = Url::parse(object_id)
         .map_err(|_| ValidationError("invalid URL"))?;
     let mut maybe_gateway = None;
-    let object_id = match url.scheme() {
+    let canonical_object_id = match url.scheme() {
         "did" => {
-            let _parsed = DidApUrl::from_str(object_id)
+            let did_url = DidApUrl::from_str(object_id)
                 .map_err(ValidationError)?;
-            object_id
+            did_url
         },
         "http" | "https" => {
             // Unwrap DID URL
-            let did_url = url.path().strip_prefix(GATEWAY_PATH_PREFIX)
+            let did_url_str = url.path().strip_prefix(GATEWAY_PATH_PREFIX)
                 .ok_or(ValidationError("invalid gateway URL"))?;
-            let _parsed = DidApUrl::from_str(did_url)
+            let did_url = DidApUrl::from_str(did_url_str)
                 .map_err(ValidationError)?;
             let gateway_url = url.origin().ascii_serialization();
             maybe_gateway = Some(gateway_url);
@@ -250,7 +250,7 @@ pub fn parse_portable_id(
         },
         _ => return Err(ValidationError("unexpected URI scheme")),
     };
-    Ok((object_id.to_owned(), maybe_gateway))
+    Ok((canonical_object_id, maybe_gateway))
 }
 
 #[cfg(test)]
@@ -392,7 +392,10 @@ mod tests {
     fn test_parse_portable_id_did_url() {
         let url = "did:ap:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor";
         let (id, maybe_gateway) = parse_portable_id(url).unwrap();
-        assert_eq!(id, "did:ap:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor");
+        assert_eq!(
+            id.to_string(),
+            "did:ap:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor",
+        );
         assert_eq!(maybe_gateway, None);
     }
 
@@ -400,7 +403,10 @@ mod tests {
     fn test_parse_portable_id_gateway_url() {
         let url = "https://server.example/.well-known/apresolver/did:ap:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor";
         let (id, maybe_gateway) = parse_portable_id(url).unwrap();
-        assert_eq!(id, "did:ap:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor");
+        assert_eq!(
+            id.to_string(),
+            "did:ap:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor",
+        );
         assert_eq!(maybe_gateway.unwrap(), "https://server.example");
     }
 }

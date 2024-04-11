@@ -12,11 +12,11 @@ use mitra::payments::monero::{
 };
 use mitra_activitypub::{
     agent::build_federation_agent,
+    authentication::verify_portable_object,
     builders::{
         delete_note::prepare_delete_note,
         delete_person::prepare_delete_person,
     },
-    identifiers::parse_portable_id,
     importers::{
         import_from_outbox,
         import_replies,
@@ -440,11 +440,8 @@ impl FetchPortableObject {
     ) -> Result<(), Error> {
         let agent = build_federation_agent(&config.instance(), None);
         let object: JsonValue = fetch_object(&agent, &self.id).await?;
-        let object_id = object["id"].as_str()
-            .ok_or(anyhow!("invalid object"))?;
-        let (id, maybe_gateway) = parse_portable_id(object_id)?;
-        println!("fetched object: {}", id);
-        println!("gateway: {}", maybe_gateway.unwrap_or("-".to_string()));
+        verify_portable_object(&object)?;
+        println!("portable object has been verified");
         Ok(())
     }
 }

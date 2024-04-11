@@ -1,0 +1,71 @@
+use serde_json::{Value as JsonValue};
+use thiserror::Error;
+
+use mitra_utils::{
+    json_signatures::{
+        proofs::ProofType,
+        verify::{
+            get_json_signature,
+            verify_eddsa_json_signature,
+            JsonSignatureVerificationError as JsonSignatureError,
+            JsonSigner,
+        },
+    },
+};
+
+use super::identifiers::parse_portable_id;
+
+#[derive(Debug, Error)]
+pub enum AuthenticationError {
+    #[error("{0}")]
+    InvalidObjectID(&'static str),
+
+    #[error("invalid verification method")]
+    InvalidVerificationMethod,
+
+    #[error("owner and object signer do not match")]
+    UnexpectedSigner,
+
+    #[error("unexpected proof type")]
+    UnexpectedProofType,
+
+    #[error(transparent)]
+    JsonSignatureError(#[from] JsonSignatureError),
+}
+
+pub fn verify_portable_object(
+    object: &JsonValue,
+) -> Result<(), AuthenticationError> {
+    let object_id = object["id"].as_str()
+        .ok_or(AuthenticationError::InvalidObjectID("'id' property not found"))?;
+    let (object_id, maybe_gateway) = parse_portable_id(object_id)
+        .map_err(|error| AuthenticationError::InvalidObjectID(error.0))?;
+    log::info!("canonical object ID: {}", object_id);
+    log::info!("gateway: {}", maybe_gateway.unwrap_or("-".to_string()));
+    let signature_data = get_json_signature(object)?;
+    match signature_data.signer {
+        JsonSigner::Did(did) => {
+            // Object must be signed by its owner
+            if object_id.did() != &did {
+                return Err(AuthenticationError::UnexpectedSigner);
+            };
+            match signature_data.proof_type {
+                ProofType::EddsaJcsSignature => {
+                    let signer_key = did.as_did_key()
+                        .ok_or(AuthenticationError::InvalidVerificationMethod)?
+                        .try_ed25519_key()
+                        .map_err(|_| AuthenticationError::InvalidVerificationMethod)?;
+                    verify_eddsa_json_signature(
+                        &signer_key,
+                        &signature_data.object,
+                        &signature_data.proof_config,
+                        &signature_data.signature,
+                    )?;
+                },
+                _ => return Err(AuthenticationError::UnexpectedProofType),
+            };
+        },
+        _ => return Err(AuthenticationError::InvalidVerificationMethod),
+    };
+    Ok(())
+}
