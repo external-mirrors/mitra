@@ -1,6 +1,7 @@
 use regex::Regex;
 
 use mitra_models::profiles::types::{
+    DbActor,
     ExtraField,
     ProfileCreateData,
     ProfileUpdateData,
@@ -9,8 +10,11 @@ use mitra_utils::{
     html::{clean_html, clean_html_strict},
 };
 
-use super::errors::ValidationError;
-use super::posts::EMOJI_LIMIT;
+use super::{
+    activitypub::validate_object_id,
+    errors::ValidationError,
+    posts::EMOJI_LIMIT,
+};
 
 const USERNAME_RE: &str = r"^[a-zA-Z0-9_\.-]+$";
 const USERNAME_LENGTH_MAX: usize = 100;
@@ -112,6 +116,14 @@ pub fn allowed_profile_image_media_types(
         .collect()
 }
 
+pub fn validate_actor_data(
+    actor: &DbActor,
+) -> Result<(), ValidationError> {
+    validate_object_id(&actor.id)?;
+    validate_object_id(&actor.inbox)?;
+    Ok(())
+}
+
 pub fn clean_profile_create_data(
     profile_data: &mut ProfileCreateData,
 ) -> Result<(), ValidationError> {
@@ -125,7 +137,12 @@ pub fn clean_profile_create_data(
     if let Some(display_name) = &profile_data.display_name {
         validate_display_name(display_name)?;
     };
-    let is_remote = profile_data.actor_json.is_some();
+    let is_remote = if let Some(ref actor) = profile_data.actor_json {
+        validate_actor_data(actor)?;
+        true
+    } else {
+        false
+    };
     if let Some(bio) = &profile_data.bio {
         let cleaned_bio = clean_bio(bio, is_remote)?;
         profile_data.bio = Some(cleaned_bio);
@@ -147,7 +164,12 @@ pub fn clean_profile_update_data(
     if let Some(display_name) = &profile_data.display_name {
         validate_display_name(display_name)?;
     };
-    let is_remote = profile_data.actor_json.is_some();
+    let is_remote = if let Some(ref actor) = profile_data.actor_json {
+        validate_actor_data(actor)?;
+        true
+    } else {
+        false
+    };
     if let Some(bio) = &profile_data.bio {
         let cleaned_bio = clean_bio(bio, is_remote)?;
         profile_data.bio = Some(cleaned_bio);
@@ -218,10 +240,11 @@ mod tests {
     fn test_clean_profile_create_data() {
         let mut profile_data = ProfileCreateData {
             username: "test".to_string(),
-            hostname: Some("example.org".to_string()),
+            hostname: Some("social.example".to_string()),
             display_name: Some("Test Test".to_string()),
             actor_json: Some(DbActor {
-                id: "https://example.org/test".to_string(),
+                id: "https://social.example/test".to_string(),
+                inbox: "https://social.example/test/inbox".to_string(),
                 ..Default::default()
             }),
             ..Default::default()
