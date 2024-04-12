@@ -20,7 +20,10 @@ use mitra_utils::{
     multibase::{decode_multibase_base58btc, encode_multibase_base58btc},
     multicodec::Multicodec,
 };
-use mitra_validators::errors::ValidationError;
+use mitra_validators::{
+    activitypub::validate_object_id,
+    errors::ValidationError,
+};
 
 use crate::{
     identifiers::local_actor_key_id,
@@ -52,6 +55,7 @@ impl PublicKey {
     }
 
     pub fn to_db_key(&self) -> Result<DbActorKey, ValidationError> {
+        validate_object_id(&self.id)?;
         let (key_type, key_data) = match deserialize_rsa_public_key(&self.public_key_pem) {
             Ok(public_key) => {
                 let public_key_der = rsa_public_key_to_pkcs1_der(&public_key)
@@ -118,6 +122,7 @@ impl Multikey {
     }
 
     pub fn to_db_key(&self) -> Result<DbActorKey, ValidationError> {
+        validate_object_id(&self.id)?;
         let public_key_multicode = decode_multibase_base58btc(&self.public_key_multibase)
             .map_err(|_| ValidationError("invalid key encoding"))?;
         let public_key_decoded = Multicodec::decode(&public_key_multicode)

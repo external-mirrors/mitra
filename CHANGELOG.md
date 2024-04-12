@@ -16,6 +16,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Added `id` field to Mastodon API `Application` object.
 - Improve validation of object IDs.
 - Validate actor ID and inbox URL before saving actor profile to database.
+- Validate key IDs before saving actor profile to database.
 
 ### Removed
 
