@@ -14,7 +14,7 @@ use mitra_models::{
 use mitra_utils::{
     caip2::ChainId,
     did_key::DidKey,
-    urls::{get_hostname, url_encode, Url},
+    urls::{url_encode, Url},
 };
 use mitra_validators::errors::ValidationError;
 
@@ -117,12 +117,6 @@ pub fn local_agreement_id(instance_url: &str, invoice_id: Uuid) -> String {
 
 pub fn local_tag_collection(instance_url: &str, tag_name: &str) -> String {
     format!("{}/collections/tags/{}", instance_url, url_encode(tag_name))
-}
-
-pub fn validate_object_id(object_id: &str) -> Result<(), ValidationError> {
-    get_hostname(object_id)
-        .map_err(|_| ValidationError("invalid object ID"))?;
-    Ok(())
 }
 
 pub fn parse_local_actor_id(

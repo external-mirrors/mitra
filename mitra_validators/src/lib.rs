@@ -1,3 +1,4 @@
+pub mod activitypub;
 pub mod emojis;
 pub mod errors;
 pub mod invoices;

@@ -22,6 +22,7 @@ use mitra_models::{
 };
 use mitra_services::media::{MediaStorage, MediaStorageError};
 use mitra_validators::{
+    activitypub::validate_object_id,
     errors::ValidationError,
     posts::EMOJI_LIMIT,
     profiles::{
@@ -38,7 +39,6 @@ use crate::{
         emoji::handle_emoji,
         proposal::{parse_proposal, Proposal},
     },
-    identifiers::validate_object_id,
     vocabulary::{
         EMOJI,
         HASHTAG,
