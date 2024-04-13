@@ -1426,6 +1426,44 @@ pub async fn delete_post(
     Ok(DeletionQueue { files, ipfs_objects })
 }
 
+pub async fn search_posts(
+    db_client: &impl DatabaseClient,
+    text: &str,
+    current_user_id: Uuid,
+    limit: u16,
+) -> Result<Vec<Post>, DatabaseError> {
+    let statement = format!(
+        "
+        SELECT
+            post, actor_profile,
+            {related_attachments},
+            {related_mentions},
+            {related_tags},
+            {related_links},
+            {related_emojis}
+        FROM post
+        JOIN actor_profile ON post.author_id = actor_profile.id
+        WHERE content_source ILIKE $1 AND author_id = $2
+        ORDER BY post.id DESC
+        LIMIT $3
+        ",
+        related_attachments=RELATED_ATTACHMENTS,
+        related_mentions=RELATED_MENTIONS,
+        related_tags=RELATED_TAGS,
+        related_links=RELATED_LINKS,
+        related_emojis=RELATED_EMOJIS,
+    );
+    let db_search_query = format!("%{}%", text);
+    let rows = db_client.query(
+        &statement,
+        &[&db_search_query, &current_user_id, &i64::from(limit)],
+    ).await?;
+    let posts = rows.iter()
+        .map(Post::try_from)
+        .collect::<Result<_, _>>()?;
+    Ok(posts)
+}
+
 pub async fn get_post_count(
     db_client: &impl DatabaseClient,
     only_local: bool,

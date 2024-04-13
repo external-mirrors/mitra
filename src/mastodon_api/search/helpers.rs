@@ -17,6 +17,7 @@ use mitra_federation::addresses::ActorAddress;
 use mitra_models::{
     database::{DatabaseClient, DatabaseError},
     posts::{
+        queries::search_posts,
         helpers::{can_view_post, get_local_post_by_id},
         types::Post,
     },
@@ -42,6 +43,7 @@ use mitra_validators::errors::ValidationError;
 const SEARCH_FETCHER_TIMEOUT: u64 = 15;
 
 enum SearchQuery {
+    Text(String),
     ProfileQuery(String, Option<String>),
     TagQuery(String),
     Url(String),
@@ -79,6 +81,15 @@ fn parse_tag_query(query: &str) -> Result<String, ValidationError> {
     Ok(tag)
 }
 
+fn parse_text_query(query: &str) -> Result<String, ValidationError> {
+    let text_query_re = Regex::new(r"^\? (?P<text>.+)$")
+        .expect("regexp should be valid");
+    let captures = text_query_re.captures(query)
+        .ok_or(ValidationError("invalid text query"))?;
+    let text = captures["text"].to_string();
+    Ok(text)
+}
+
 fn parse_search_query(search_query: &str) -> SearchQuery {
     let search_query = search_query.trim();
     // DID is a valid URI so it should be tried before Url::parse
@@ -95,6 +106,11 @@ fn parse_search_query(search_query: &str) -> SearchQuery {
     if let Ok(tag) = parse_tag_query(search_query) {
         return SearchQuery::TagQuery(tag);
     };
+    if let Ok(text) = parse_text_query(search_query) {
+        return SearchQuery::Text(text);
+    };
+    // Profile query may not start with @,
+    // and should be tried after all others
     if let Ok((username, maybe_hostname)) = parse_profile_query(search_query) {
         return SearchQuery::ProfileQuery(username, maybe_hostname);
     };
@@ -230,6 +246,14 @@ pub async fn search(
     let mut posts = vec![];
     let mut tags = vec![];
     match parse_search_query(search_query) {
+        SearchQuery::Text(text) => {
+            posts = search_posts(
+                db_client,
+                &text,
+                current_user.id,
+                limit,
+            ).await?;
+        },
         SearchQuery::ProfileQuery(username, maybe_hostname) => {
             profiles = search_profiles_or_import(
                 config,
@@ -312,6 +336,13 @@ mod tests {
     use super::*;
 
     #[test]
+    fn test_parse_text_query() {
+        let query = "? some text";
+        let text = parse_text_query(query).unwrap();
+        assert_eq!(text, "some text");
+    }
+
+    #[test]
     fn test_parse_profile_query() {
         let query = "@user";
         let (username, maybe_hostname) = parse_profile_query(query).unwrap();
@@ -341,5 +372,19 @@ mod tests {
         let tag = parse_tag_query(query).unwrap();
 
         assert_eq!(tag, "Activity");
+    }
+
+    #[test]
+    fn test_parse_search_query_single_word() {
+        let query = "string";
+        let result = parse_search_query(query);
+        assert!(matches!(result, SearchQuery::ProfileQuery(_, _)));
+    }
+
+    #[test]
+    fn test_parse_search_query_text() {
+        let query = "some text";
+        let result = parse_search_query(query);
+        assert!(matches!(result, SearchQuery::Unknown));
     }
 }
