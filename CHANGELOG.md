@@ -25,6 +25,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Stop attaching legacy identity proofs to actors.
 
+### Fixed
+
+- Fixed incorrect un-following of a remote actor during migration.
+
 ## [2.15.1] - 2024-04-09
 
 ### Removed

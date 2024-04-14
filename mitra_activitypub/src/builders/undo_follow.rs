@@ -112,11 +112,16 @@ mod tests {
             format!("{}/objects/{}/undo", INSTANCE_URL, follow_request_id),
         );
         assert_eq!(activity.activity_type, "Undo");
+        assert_eq!(
+            activity.actor,
+            format!("{}/users/user", INSTANCE_URL),
+        );
         assert_eq!(activity.object._context, None);
         assert_eq!(
             activity.object.id,
             format!("{}/objects/{}", INSTANCE_URL, follow_request_id),
         );
+        assert_eq!(activity.object.actor, activity.actor);
         assert_eq!(activity.object.object, target_actor_id);
         assert_eq!(activity.to, vec![target_actor_id]);
     }

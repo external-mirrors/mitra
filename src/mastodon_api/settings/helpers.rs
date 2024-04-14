@@ -218,9 +218,11 @@ pub async fn move_followers_task(
                             .expect("actor data must be present");
                         let follow_request_id = maybe_follow_request_id
                             .expect("follow request must exist");
+                        let follower =
+                            get_user_by_id(db_client, &follower.id).await?;
                         prepare_undo_follow(
                             &instance,
-                            &user,
+                            &follower,
                             remote_actor,
                             &follow_request_id,
                         ).enqueue(db_client).await?;
