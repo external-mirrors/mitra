@@ -19,7 +19,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Validate actor ID and inbox URL before saving actor profile to database.
 - Validate key IDs before saving actor profile to database.
 - Write warning to log if key ID lookup fails.
-- Use job queue to run follow list import procedure.
+- Use job queue to run follows and followers import procedures.
 
 ### Removed
 

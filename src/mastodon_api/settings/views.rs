@@ -53,7 +53,6 @@ use crate::mastodon_api::{
 use super::helpers::{
     export_followers,
     export_follows,
-    move_followers_task,
     parse_address_list,
     ImporterJobData,
 };
@@ -297,21 +296,16 @@ async fn move_followers(
             return Err(ValidationError("old profile is not an alias").into());
         };
     };
-    let address_list = parse_address_list(&request_data.followers_csv)?;
-    let current_user_clone = current_user.clone();
-    // TODO: use job queue
-    tokio::spawn(async move {
-        move_followers_task(
-            &config,
-            &db_pool,
-            current_user_clone,
-            &request_data.from_actor_id,
-            maybe_from_profile,
-            address_list,
-        ).await.unwrap_or_else(|error| {
-            log::error!("move followers: {}", error);
-        });
-    });
+    let address_list = parse_address_list(&request_data.followers_csv)?
+        .iter()
+        .map(|address| address.to_string())
+        .collect();
+    let job_data = ImporterJobData::Followers {
+        user_id: current_user.id,
+        from_actor_id: request_data.from_actor_id.clone(),
+        address_list,
+    };
+    job_data.into_job(db_client).await?;
 
     let account = Account::from_user(
         &get_request_base_url(connection_info),

@@ -19,12 +19,13 @@ use mitra_models::{
         types::JobType,
     },
     database::{
-        get_database_client,
         DatabaseClient,
-        DatabaseConnectionPool,
         DatabaseError,
     },
-    profiles::types::DbActorProfile,
+    profiles::{
+        queries::get_profile_by_remote_actor_id,
+        types::DbActorProfile,
+    },
     relationships::queries::{
         follow,
         get_followers,
@@ -33,7 +34,6 @@ use mitra_models::{
     },
     users::{
         queries::get_user_by_id,
-        types::User,
     },
 };
 use mitra_services::media::MediaStorage;
@@ -100,6 +100,11 @@ pub enum ImporterJobData {
         user_id: Uuid,
         address_list: Vec<String>,
     },
+    Followers {
+        user_id: Uuid,
+        from_actor_id: String,
+        address_list: Vec<String>,
+    },
 }
 
 impl ImporterJobData {
@@ -161,17 +166,25 @@ pub async fn import_follows_task(
 
 pub async fn move_followers_task(
     config: &Config,
-    db_pool: &DatabaseConnectionPool,
-    current_user: User,
-    from_actor_id: &str,
-    maybe_from_profile: Option<DbActorProfile>,
-    address_list: Vec<ActorAddress>,
+    db_client: &mut impl DatabaseClient,
+    user_id: Uuid,
+    from_actor_id: String,
+    address_list: Vec<String>,
 ) -> Result<(), anyhow::Error> {
-    let db_client = &mut **get_database_client(db_pool).await?;
+    let user = get_user_by_id(db_client, &user_id).await?;
+    let maybe_from_profile = match get_profile_by_remote_actor_id(
+        db_client,
+        &from_actor_id,
+    ).await {
+        Ok(profile) => Some(profile),
+        Err(DatabaseError::NotFound(_)) => None,
+        Err(other_error) => return Err(other_error.into()),
+    };
     let instance = config.instance();
     let storage = MediaStorage::from(config);
     let mut remote_followers = vec![];
     for follower_address in address_list {
+        let follower_address: ActorAddress = follower_address.parse()?;
         let follower = match get_or_import_profile_by_actor_address(
             db_client,
             &instance,
@@ -207,7 +220,7 @@ pub async fn move_followers_task(
                             .expect("follow request must exist");
                         prepare_undo_follow(
                             &instance,
-                            &current_user,
+                            &user,
                             remote_actor,
                             &follow_request_id,
                         ).enqueue(db_client).await?;
@@ -216,7 +229,7 @@ pub async fn move_followers_task(
                     Err(DatabaseError::NotFound(_)) => continue,
                     Err(other_error) => return Err(other_error.into()),
                 };
-                match follow(db_client, &follower.id, &current_user.id).await {
+                match follow(db_client, &follower.id, &user.id).await {
                     Ok(_) => (),
                     // Ignore if already following
                     Err(DatabaseError::AlreadyExists(_)) => (),
@@ -227,8 +240,8 @@ pub async fn move_followers_task(
     };
     prepare_move_person(
         &instance,
-        &current_user,
-        from_actor_id,
+        &user,
+        &from_actor_id,
         remote_followers,
         None,
     ).enqueue(db_client).await?;
