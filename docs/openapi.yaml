@@ -1295,6 +1295,43 @@ paths:
               schema:
                 type: string
                 example: '<https://social.example/api/v1/notification?limit=20&max_id=5339>; rel="next"'
+  /api/v1/polls/{poll_id}/votes:
+    post:
+      summary: Vote on a poll attached to a post.
+      security:
+        - tokenAuth: []
+      parameters:
+        - name: poll_id
+          in: path
+          description: ID of the post.
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                'choices[]':
+                  description: Provide your own votes as an index for each option (starting from 0).
+                  type: array
+                  items:
+                    type: integer
+      responses:
+        200:
+          description: Successful operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Poll'
+        400:
+          description: Invalid request data.
+        404:
+          description: The poll doesn't exist.
+        422:
+          description: Invalid request data.
   /api/v1/settings/client_config:
     post:
       summary: Update client configuration.
@@ -3043,6 +3080,60 @@ components:
           description: The timestamp of the notification.
           type: string
           format: date-time
+    Poll:
+      type: object
+      properties:
+        id:
+          description: The ID of the poll in the database.
+          type: string
+          format: uuid
+        expires_at:
+          description: When the poll ends.
+          type: string
+          format: date-time
+        expired:
+          description: Has the poll expired?
+          type: boolean
+          example: false
+        multiple:
+          description: Does the poll allow multiple-choice answers?
+          type: boolean
+          example: false
+        votes_count:
+          description: How many votes have been received.
+          type: integer
+        voters_count:
+          description: How many unique accounts have voted on a multiple-choice poll.
+          type: integer
+        options:
+          description: Possible answers for the poll.
+          type: array
+          items:
+            $ref: '#/components/schemas/PollOption'
+        emojis:
+          description: Custom emoji to be used for rendering poll options.
+          type: array
+          items:
+            $ref: '#/components/schemas/CustomEmoji'
+        voted:
+          description: When called with a user token, has the authorized user voted?
+          type: boolean
+          nullable: true
+          example: false
+        own_votes:
+          description: When called with a user token, which options has the authorized user chosen? Contains an array of index values for `options`.
+          type: array
+          items:
+            type: integer
+    PollOption:
+      type: object
+      properties:
+        title:
+          description: The text value of the poll option.
+          type: string
+        votes_count:
+          description: The total number of received votes for this option.
+          type: integer
     Relationship:
       type: object
       properties:
@@ -3168,6 +3259,11 @@ components:
           description: Have you pinned this post?
           type: boolean
           example: false
+        poll:
+          allOf:
+            - $ref: '#/components/schemas/Poll'
+            - description: The poll attached to the post.
+              nullable: true
         media_attachments:
           description: Media that is attached to this post.
           type: array

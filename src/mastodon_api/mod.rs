@@ -34,6 +34,7 @@ mod media;
 mod mutes;
 mod notifications;
 mod oauth;
+mod polls;
 mod reactions;
 mod search;
 mod settings;
@@ -135,6 +136,7 @@ pub fn mastodon_api_scope(
         .service(media::views::media_api_v2_scope())
         .service(mutes::views::mute_api_scope())
         .service(notifications::views::notification_api_scope())
+        .service(polls::views::poll_api_scope())
         .service(reactions::views::reaction_api_scope())
         .service(search::views::search_api_scope())
         .service(settings::views::settings_api_scope())

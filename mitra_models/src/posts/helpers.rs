@@ -3,6 +3,7 @@ use uuid::Uuid;
 use crate::bookmarks::queries::find_bookmarked_by_user;
 use crate::conversations::queries::is_conversation_participant;
 use crate::database::{DatabaseClient, DatabaseError};
+use crate::polls::queries::find_votes_by_user;
 use crate::reactions::queries::find_reacted_by_user;
 use crate::relationships::{
     queries::has_relationship,
@@ -71,6 +72,7 @@ pub async fn add_user_actions(
     let reactions = find_reacted_by_user(db_client, user_id, &posts_ids).await?;
     let reposts = find_reposted_by_user(db_client, user_id, &posts_ids).await?;
     let bookmarks = find_bookmarked_by_user(db_client, user_id, &posts_ids).await?;
+    let votes = find_votes_by_user(db_client, user_id, &posts_ids).await?;
     let get_actions = |post: &Post| -> PostActions {
         let liked = reactions.iter()
             .any(|(post_id, content)| *post_id == post.id && content.is_none());
@@ -80,11 +82,16 @@ pub async fn add_user_actions(
             .collect();
         let reposted = reposts.contains(&post.id);
         let bookmarked = bookmarks.contains(&post.id);
+        let voted_for = votes.iter()
+            .find(|(post_id, _)| *post_id == post.id)
+            .map(|(_, votes)| votes.clone())
+            .unwrap_or_default();
         PostActions {
             liked: liked,
             reacted_with: reacted_with,
             reposted: reposted,
             bookmarked: bookmarked,
+            voted_for: voted_for,
         }
     };
     for post in posts {

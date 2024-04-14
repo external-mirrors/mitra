@@ -14,6 +14,7 @@ use mitra_utils::html::{clean_html_strict, clean_html_all};
 use super::{
     activitypub::validate_any_object_id,
     errors::ValidationError,
+    polls::validate_poll_data,
 };
 
 pub const ATTACHMENT_LIMIT: usize = 15;
@@ -100,6 +101,9 @@ pub fn validate_post_create_data(
     if post_data.emojis.len() > EMOJI_LIMIT {
         return Err(ValidationError("too many emojis"));
     };
+    if let Some(ref poll_data) = post_data.poll {
+        validate_poll_data(poll_data)?;
+    };
     if let Some(ref object_id) = post_data.object_id {
         validate_any_object_id(object_id)?;
     };
@@ -126,6 +130,9 @@ pub fn validate_post_update_data(
     };
     if post_data.emojis.len() > EMOJI_LIMIT {
         return Err(ValidationError("too many emojis"));
+    };
+    if let Some(ref poll_data) = post_data.poll {
+        validate_poll_data(poll_data)?;
     };
     Ok(())
 }

@@ -7,6 +7,7 @@ mod agreement;
 pub mod announce;
 pub mod collection;
 pub mod create_note;
+pub mod create_question_vote;
 pub mod delete_note;
 pub mod delete_person;
 pub mod emoji;

@@ -30,6 +30,7 @@ use mitra_models::{
     database::{DatabaseClient, DatabaseError},
     filter_rules::types::FilterAction,
     media::types::MediaInfo,
+    polls::types::{PollData, PollResult},
     posts::{
         queries::{create_post, update_post},
         types::{
@@ -49,6 +50,7 @@ use mitra_utils::{
 use mitra_validators::{
     errors::ValidationError,
     media::{validate_media_description, validate_media_url},
+    polls::validate_poll_data,
     posts::{
         clean_title,
         content_allowed_classes,
@@ -720,7 +722,7 @@ fn get_object_visibility(
 
 fn parse_poll_results(
     object: &AttributedObject,
-) -> Result<String, ValidationError> {
+) -> Result<PollData, ValidationError> {
     #[derive(Deserialize)]
     #[serde(rename_all = "camelCase")]
     struct Replies {
@@ -745,35 +747,28 @@ fn parse_poll_results(
     let values = values
         .as_array()
         .ok_or(ValidationError("invalid poll options"))?;
-    if values.is_empty() {
-        return Err(ValidationError("poll is empty"));
-    };
 
-    let mut poll_results = "".to_string();
+    let mut results = vec![];
     for note_value in values {
         let note: Note = serde_json::from_value(note_value.clone())
             .map_err(|_| ValidationError("invalid poll option"))?;
-        let option_name = note.name;
-        let option_vote_count = note.replies.total_items;
-        let option_text = format!(
-            r#"<p>{0}: {1}</p>"#,
-            option_name,
-            option_vote_count,
-        );
-        poll_results += &option_text;
-    };
-    if is_multichoice {
-        poll_results += "<p>Multiple choices</p>";
-    } else {
-        poll_results += "<p>Single choice</p>";
+        let result = PollResult {
+            option_name: note.name,
+            vote_count: note.replies.total_items,
+        };
+        results.push(result);
     };
     let ends_at = object.end_time
         // Pleroma uses closed property even when poll is still active
         .or(object.closed)
         .ok_or(ValidationError("endless poll"))?;
-    let ends_at_text = format!("<p>Poll ends at: {}</p>", ends_at);
-    poll_results += &ends_at_text;
-    Ok(poll_results)
+    let poll_data = PollData {
+        multiple_choices: is_multichoice,
+        ends_at: ends_at,
+        results: results,
+    };
+    validate_poll_data(&poll_data)?;
+    Ok(poll_data)
 }
 
 pub async fn create_remote_post(
@@ -809,13 +804,18 @@ pub async fn create_remote_post(
     })?;
 
     let mut content = get_object_content(&object)?;
-    if object.object_type == QUESTION {
+    let maybe_poll_data = if object.object_type == QUESTION {
         match parse_poll_results(&object) {
-            Ok(poll_results) => content += &poll_results,
-            Err(error) => log::warn!("{error}"),
-        };
+            Ok(poll_data) => Some(poll_data),
+            Err(error) => {
+                log::warn!("{error}");
+                None
+            },
+        }
+    } else {
+        None
     };
-    if object.object_type != NOTE {
+    if object.object_type != NOTE && object.object_type != QUESTION {
         // Append link to object
         let object_url = get_object_url(&object)?;
         content += &create_content_link(object_url);
@@ -886,6 +886,7 @@ pub async fn create_remote_post(
         tags: hashtags,
         links: links,
         emojis: emojis,
+        poll: maybe_poll_data,
         object_id: Some(canonical_object_id.to_string()),
         created_at,
     };
@@ -915,13 +916,25 @@ pub async fn update_remote_post(
         return Err(ValidationError("object owner can't be changed").into());
     };
     let mut content = get_object_content(object)?;
-    if object.object_type == QUESTION {
+    let maybe_poll_data = if object.object_type == QUESTION {
         match parse_poll_results(object) {
-            Ok(poll_results) => content += &poll_results,
-            Err(error) => log::warn!("{error}"),
-        };
+            Ok(poll_data) => {
+                if post.poll.is_some() {
+                    Some(poll_data)
+                } else {
+                    log::warn!("poll can't be added to existing post");
+                    None
+                }
+            },
+            Err(error) => {
+                log::warn!("{error}");
+                None
+            },
+        }
+    } else {
+        None
     };
-    if object.object_type != NOTE {
+    if object.object_type != NOTE && object.object_type != QUESTION {
         // Append link to object
         let object_url = get_object_url(object)?;
         content += &create_content_link(object_url);
@@ -966,6 +979,7 @@ pub async fn update_remote_post(
         tags: hashtags,
         links,
         emojis,
+        poll: maybe_poll_data,
         updated_at,
     };
     validate_post_update_data(&post_data)?;

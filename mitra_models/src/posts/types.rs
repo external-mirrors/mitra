@@ -13,6 +13,7 @@ use crate::database::{
     DatabaseTypeError,
 };
 use crate::emojis::types::DbEmoji;
+use crate::polls::types::{Poll, PollData};
 use crate::profiles::types::DbActorProfile;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -133,6 +134,7 @@ pub struct PostActions {
     pub reacted_with: Vec<String>,
     pub reposted: bool,
     pub bookmarked: bool,
+    pub voted_for: Vec<String>,
 }
 
 #[derive(Clone)]
@@ -150,6 +152,7 @@ pub struct Post {
     pub reply_count: i32,
     pub reaction_count: i32,
     pub repost_count: i32,
+    pub poll: Option<Poll>,
     pub attachments: Vec<DbMediaAttachment>,
     pub mentions: Vec<DbActorProfile>,
     pub tags: Vec<String>,
@@ -177,6 +180,7 @@ impl Post {
         db_post: DbPost,
         db_author: DbActorProfile,
         db_conversation: Option<Conversation>,
+        db_poll: Option<Poll>,
         db_attachments: Vec<DbMediaAttachment>,
         db_mentions: Vec<DbActorProfile>,
         db_tags: Vec<String>,
@@ -202,6 +206,7 @@ impl Post {
             db_post.is_pinned ||
             db_post.in_reply_to_id.is_some() ||
             db_post.ipfs_cid.is_some() ||
+            db_poll.is_some() ||
             !db_attachments.is_empty() ||
             !db_mentions.is_empty() ||
             !db_tags.is_empty() ||
@@ -215,6 +220,11 @@ impl Post {
             db_post.conversation_id
         {
             return Err(DatabaseTypeError);
+        };
+        if let Some(ref poll) = db_poll {
+            if poll.id != db_post.id {
+                return Err(DatabaseTypeError);
+            };
         };
         let post = Self {
             id: db_post.id,
@@ -230,6 +240,7 @@ impl Post {
             reply_count: db_post.reply_count,
             reaction_count: db_post.reaction_count,
             repost_count: db_post.repost_count,
+            poll: db_poll,
             attachments: db_attachments,
             mentions: db_mentions,
             tags: db_tags,
@@ -284,6 +295,7 @@ impl Default for Post {
             reply_count: 0,
             reaction_count: 0,
             repost_count: 0,
+            poll: None,
             attachments: vec![],
             mentions: vec![],
             tags: vec![],
@@ -311,6 +323,7 @@ impl TryFrom<&Row> for Post {
         let db_profile: DbActorProfile = row.try_get("actor_profile")?;
         // Data from subqueries
         let db_conversation: Option<Conversation> = row.try_get("conversation")?;
+        let maybe_poll: Option<Poll> = row.try_get("poll")?;
         let db_attachments: Vec<DbMediaAttachment> = row.try_get("attachments")?;
         let db_mentions: Vec<DbActorProfile> = row.try_get("mentions")?;
         let db_tags: Vec<String> = row.try_get("tags")?;
@@ -321,6 +334,7 @@ impl TryFrom<&Row> for Post {
             db_post,
             db_profile,
             db_conversation,
+            maybe_poll,
             db_attachments,
             db_mentions,
             db_tags,
@@ -379,6 +393,7 @@ pub struct PostCreateData {
     pub tags: Vec<String>,
     pub links: Vec<Uuid>,
     pub emojis: Vec<Uuid>,
+    pub poll: Option<PollData>,
     pub object_id: Option<String>,
     pub created_at: DateTime<Utc>,
 }
@@ -407,5 +422,6 @@ pub struct PostUpdateData {
     pub tags: Vec<String>,
     pub links: Vec<Uuid>,
     pub emojis: Vec<Uuid>,
+    pub poll: Option<PollData>,
     pub updated_at: DateTime<Utc>,
 }

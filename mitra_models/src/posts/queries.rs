@@ -27,6 +27,7 @@ use crate::notifications::helpers::{
     create_reply_notification,
     create_repost_notification,
 };
+use crate::polls::queries::{create_poll, reset_votes, update_poll};
 use crate::profiles::{
     queries::update_post_count,
     types::DbActorProfile,
@@ -301,6 +302,16 @@ pub async fn create_post(
         db_post.id,
         post_data.emojis,
     ).await?;
+    let maybe_poll = if let Some(poll_data) = post_data.poll {
+        let poll = create_poll(
+            &transaction,
+            db_post.id,
+            poll_data,
+        ).await?;
+        Some(poll)
+    } else {
+        None
+    };
 
     // Update counters
     let author = update_post_count(&transaction, db_post.author_id, 1).await?;
@@ -359,6 +370,7 @@ pub async fn create_post(
         db_post,
         author,
         maybe_conversation,
+        maybe_poll,
         db_attachments,
         db_mentions,
         db_tags,
@@ -476,6 +488,19 @@ pub async fn update_post(
     ).await?;
     let db_reactions =
         get_post_reactions(&transaction, db_post.id).await?;
+    let maybe_poll = if let Some(poll_data) = post_data.poll {
+        let (poll, options_changed) = update_poll(
+            &transaction,
+            db_post.id,
+            poll_data,
+        ).await?;
+        if options_changed {
+            reset_votes(&transaction, poll.id).await?;
+        };
+        Some(poll)
+    } else {
+        None
+    };
 
     // Create notifications
     for profile in db_mentions.iter() {
@@ -498,6 +523,7 @@ pub async fn update_post(
         db_post,
         author,
         Some(conversation),
+        maybe_poll,
         db_attachments,
         db_mentions,
         db_tags,
@@ -519,6 +545,13 @@ const RELATED_CONVERSATION: &str = "
         FROM conversation
         WHERE conversation.id = post.conversation_id
     ) AS conversation";
+
+const RELATED_POLL: &str = "
+    (
+        SELECT poll
+        FROM poll
+        WHERE poll.id = post.id
+    ) AS poll";
 
 const RELATED_ATTACHMENTS: &str = "
     ARRAY(
@@ -575,6 +608,7 @@ const RELATED_REACTIONS: &str = "
 pub(crate) fn post_subqueries() -> String {
     [
         RELATED_CONVERSATION,
+        RELATED_POLL,
         RELATED_ATTACHMENTS,
         RELATED_MENTIONS,
         RELATED_TAGS,

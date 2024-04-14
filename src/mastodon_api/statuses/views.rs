@@ -221,6 +221,7 @@ async fn create_status(
         tags: hashtags,
         links: links,
         emojis: emojis.iter().map(|emoji| emoji.id).collect(),
+        poll: None,
         object_id: None,
         created_at: Utc::now(),
     };
@@ -428,6 +429,7 @@ async fn edit_status(
         tags: hashtags,
         links: links,
         emojis: emojis.iter().map(|emoji| emoji.id).collect(),
+        poll: None,
         updated_at: Utc::now(),
     };
     validate_post_update_data(&post_data)?;

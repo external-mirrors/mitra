@@ -19,6 +19,7 @@ use crate::mastodon_api::{
     custom_emojis::types::CustomEmoji,
     media::types::Attachment,
     media_server::ClientMediaServer,
+    polls::types::Poll,
 };
 
 pub const POST_CONTENT_TYPE_HTML: &str = "text/html";
@@ -100,6 +101,7 @@ pub struct Status {
     pub replies_count: i32,
     pub favourites_count: i32,
     pub reblogs_count: i32,
+    poll: Option<Poll>,
     pub media_attachments: Vec<Attachment>,
     mentions: Vec<Mention>,
     tags: Vec<Tag>,
@@ -126,6 +128,14 @@ impl Status {
     ) -> Self {
         let object_id = post_object_id(instance_url, &post);
         let object_url = compatible_post_object_id(instance_url, &post);
+        let maybe_poll = if let Some(ref db_poll) = post.poll {
+            let maybe_voted_for = post.actions.as_ref()
+                .map(|actions| actions.voted_for.clone());
+            let poll = Poll::from_db(db_poll, maybe_voted_for);
+            Some(poll)
+        } else {
+            None
+        };
         let attachments: Vec<Attachment> = post.attachments.into_iter()
             .map(|item| Attachment::from_db(media_server, item))
             .collect();
@@ -207,6 +217,7 @@ impl Status {
             replies_count: post.reply_count,
             favourites_count: favourites_count,
             reblogs_count: post.repost_count,
+            poll: maybe_poll,
             media_attachments: attachments,
             mentions: mentions,
             tags: tags,

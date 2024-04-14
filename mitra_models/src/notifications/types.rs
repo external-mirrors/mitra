@@ -110,6 +110,7 @@ impl TryFrom<&Row> for Notification {
             Some(db_post) => {
                 let db_post_author: DbActorProfile = row.try_get("post_author")?;
                 let db_conversation: Option<Conversation> = row.try_get("conversation")?;
+                let maybe_poll = row.try_get("poll")?;
                 let db_attachments: Vec<DbMediaAttachment> = row.try_get("attachments")?;
                 let db_mentions: Vec<DbActorProfile> = row.try_get("mentions")?;
                 let db_tags: Vec<String> = row.try_get("tags")?;
@@ -120,6 +121,7 @@ impl TryFrom<&Row> for Notification {
                     db_post,
                     db_post_author,
                     db_conversation,
+                    maybe_poll,
                     db_attachments,
                     db_mentions,
                     db_tags,
