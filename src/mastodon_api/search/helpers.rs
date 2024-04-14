@@ -82,7 +82,7 @@ fn parse_tag_query(query: &str) -> Result<String, ValidationError> {
 }
 
 fn parse_text_query(query: &str) -> Result<String, ValidationError> {
-    let text_query_re = Regex::new(r"^\? (?P<text>.+)$")
+    let text_query_re = Regex::new(r"^>(?P<text>.+)$")
         .expect("regexp should be valid");
     let captures = text_query_re.captures(query)
         .ok_or(ValidationError("invalid text query"))?;
@@ -337,7 +337,7 @@ mod tests {
 
     #[test]
     fn test_parse_text_query() {
-        let query = "? some text";
+        let query = ">some text";
         let text = parse_text_query(query).unwrap();
         assert_eq!(text, "some text");
     }
