@@ -1,3 +1,5 @@
+use chrono::Utc;
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use mitra_activitypub::{
@@ -12,6 +14,10 @@ use mitra_activitypub::{
 use mitra_config::Config;
 use mitra_federation::addresses::ActorAddress;
 use mitra_models::{
+    background_jobs::{
+        queries::enqueue_job,
+        types::JobType,
+    },
     database::{
         get_database_client,
         DatabaseClient,
@@ -25,7 +31,10 @@ use mitra_models::{
         get_following,
         unfollow,
     },
-    users::types::User,
+    users::{
+        queries::get_user_by_id,
+        types::User,
+    },
 };
 use mitra_services::media::MediaStorage;
 use mitra_validators::errors::ValidationError;
@@ -84,15 +93,42 @@ pub fn parse_address_list(csv: &str)
     Ok(addresses)
 }
 
+#[derive(Serialize, Deserialize)]
+#[serde(tag = "type")]
+pub enum ImporterJobData {
+    Follows {
+        user_id: Uuid,
+        address_list: Vec<String>,
+    },
+}
+
+impl ImporterJobData {
+    pub async fn into_job(
+        self,
+        db_client: &impl DatabaseClient,
+    ) -> Result<(), DatabaseError> {
+        let job_data = serde_json::to_value(self)
+            .expect("job data should be serializable");
+        let scheduled_for = Utc::now(); // run immediately
+        enqueue_job(
+            db_client,
+            &JobType::DataImport,
+            &job_data,
+            scheduled_for,
+        ).await
+    }
+}
+
 pub async fn import_follows_task(
     config: &Config,
-    current_user: User,
-    db_pool: &DatabaseConnectionPool,
-    address_list: Vec<ActorAddress>,
+    db_client: &mut impl DatabaseClient,
+    user_id: Uuid,
+    address_list: Vec<String>,
 ) -> Result<(), anyhow::Error> {
-    let db_client = &mut **get_database_client(db_pool).await?;
+    let user = get_user_by_id(db_client, &user_id).await?;
     let storage = MediaStorage::from(config);
     for actor_address in address_list {
+        let actor_address: ActorAddress = actor_address.parse()?;
         let profile = match get_or_import_profile_by_actor_address(
             db_client,
             &config.instance(),
@@ -116,7 +152,7 @@ pub async fn import_follows_task(
         follow_or_create_request(
             db_client,
             &config.instance(),
-            &current_user,
+            &user,
             &profile,
         ).await?;
     };

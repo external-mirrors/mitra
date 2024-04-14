@@ -13,6 +13,7 @@ pub enum JobType {
     IncomingActivity,
     OutgoingActivity,
     MediaCleanup,
+    DataImport,
 }
 
 impl From<&JobType> for i16 {
@@ -21,6 +22,7 @@ impl From<&JobType> for i16 {
             JobType::IncomingActivity => 1,
             JobType::OutgoingActivity => 2,
             JobType::MediaCleanup => 3,
+            JobType::DataImport => 4,
         }
     }
 }
@@ -33,6 +35,7 @@ impl TryFrom<i16> for JobType {
             1 => Self::IncomingActivity,
             2 => Self::OutgoingActivity,
             3 => Self::MediaCleanup,
+            4 => Self::DataImport,
             _ => return Err(DatabaseTypeError),
         };
         Ok(job_type)

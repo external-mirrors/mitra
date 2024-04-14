@@ -28,6 +28,10 @@ use mitra_models::{
 use mitra_services::ethereum::contracts::EthereumBlockchain;
 use mitra_utils::datetime::days_before_now;
 
+use crate::mastodon_api::settings::helpers::{
+    import_follows_task,
+    ImporterJobData,
+};
 use crate::payments::{
     common::update_expired_subscriptions,
     ethereum::check_ethereum_subscriptions,
@@ -184,6 +188,37 @@ pub async fn media_cleanup_queue_executor(
         let job_data: DeletionQueue =
             serde_json::from_value(job.job_data)?;
         delete_orphaned_media(config, db_client, job_data).await?;
+        delete_job_from_queue(db_client, &job.id).await?;
+    };
+    Ok(())
+}
+
+pub async fn importer_queue_executor(
+    config: &Config,
+    db_pool: &DatabaseConnectionPool,
+) -> Result<(), Error> {
+    const BATCH_SIZE: u32 = 1;
+    const JOB_TIMEOUT: u32 = 3600; // 1 hour
+    let db_client = &mut **get_database_client(db_pool).await?;
+    let batch = get_job_batch(
+        db_client,
+        &JobType::DataImport,
+        BATCH_SIZE,
+        JOB_TIMEOUT,
+    ).await?;
+    for job in batch {
+        let job_data: ImporterJobData =
+            serde_json::from_value(job.job_data)?;
+        match job_data {
+            ImporterJobData::Follows { user_id, address_list } => {
+                import_follows_task(
+                    config,
+                    db_client,
+                    user_id,
+                    address_list,
+                ).await?;
+            },
+        };
         delete_job_from_queue(db_client, &job.id).await?;
     };
     Ok(())

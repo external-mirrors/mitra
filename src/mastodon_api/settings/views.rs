@@ -53,9 +53,9 @@ use crate::mastodon_api::{
 use super::helpers::{
     export_followers,
     export_follows,
-    import_follows_task,
     move_followers_task,
     parse_address_list,
+    ImporterJobData,
 };
 use super::types::{
     AddAliasRequest,
@@ -241,24 +241,20 @@ async fn export_follows_view(
 #[post("/import_follows")]
 async fn import_follows_view(
     auth: BearerAuth,
-    config: web::Data<Config>,
     db_pool: web::Data<DatabaseConnectionPool>,
     request_data: web::Json<ImportFollowsRequest>,
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &**get_database_client(&db_pool).await?;
     let current_user = get_current_user(db_client, auth.token()).await?;
-    let address_list = parse_address_list(&request_data.follows_csv)?;
-    // TODO: use job queue
-    tokio::spawn(async move {
-        import_follows_task(
-            &config,
-            current_user,
-            &db_pool,
-            address_list,
-        ).await.unwrap_or_else(|error| {
-            log::error!("import follows: {}", error);
-        });
-    });
+    let address_list = parse_address_list(&request_data.follows_csv)?
+        .iter()
+        .map(|address| address.to_string())
+        .collect();
+    let job_data = ImporterJobData::Follows {
+        user_id: current_user.id,
+        address_list: address_list,
+    };
+    job_data.into_job(db_client).await?;
     Ok(HttpResponse::NoContent().finish())
 }
 
