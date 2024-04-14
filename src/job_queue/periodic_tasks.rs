@@ -121,6 +121,8 @@ pub async fn outgoing_activity_queue_executor(
     Ok(())
 }
 
+pub use mitra_activitypub::queues::fetcher_queue_executor;
+
 pub async fn delete_extraneous_posts(
     config: &Config,
     db_pool: &DatabaseConnectionPool,

@@ -35,6 +35,7 @@ use crate::{
     deliverer::{deliver_activity_worker, Recipient, Sender},
     errors::HandlerError,
     handlers::activity::handle_activity,
+    importers::import_from_outbox,
 };
 
 const JOB_TIMEOUT: u32 = 3600; // 1 hour
@@ -342,6 +343,66 @@ pub async fn process_queued_outgoing_activities(
                 ).await?;
             };
         };
+        delete_job_from_queue(db_client, &job.id).await?;
+    };
+    Ok(())
+}
+
+#[derive(Serialize, Deserialize)]
+#[serde(tag = "type")]
+pub enum FetcherJobData {
+    Outbox { actor_id: String },
+}
+
+impl FetcherJobData {
+    pub async fn into_job(
+        self,
+        db_client: &impl DatabaseClient,
+    ) -> Result<(), DatabaseError> {
+        let job_data = serde_json::to_value(self)
+            .expect("job data should be serializable");
+        let scheduled_for = Utc::now(); // run immediately
+        enqueue_job(
+            db_client,
+            &JobType::Fetcher,
+            &job_data,
+            scheduled_for,
+        ).await
+    }
+}
+
+pub async fn fetcher_queue_executor(
+    config: &Config,
+    db_pool: &DatabaseConnectionPool,
+) -> Result<(), DatabaseError> {
+    const BATCH_SIZE: u32 = 1;
+    // Re-queue running (failed) jobs after 1 hour
+    const JOB_TIMEOUT: u32 = 3600;
+    let db_client = &mut **get_database_client(db_pool).await?;
+    let batch = get_job_batch(
+        db_client,
+        &JobType::Fetcher,
+        BATCH_SIZE,
+        JOB_TIMEOUT,
+    ).await?;
+    for job in batch {
+        let job_data: FetcherJobData =
+            serde_json::from_value(job.job_data)
+                .map_err(|_| DatabaseTypeError)?;
+        let result = match job_data {
+            FetcherJobData::Outbox { actor_id } => {
+                const ACTIVITY_LIMIT: usize = 10;
+                import_from_outbox(
+                    config,
+                    db_client,
+                    &actor_id,
+                    ACTIVITY_LIMIT,
+                ).await
+            },
+        };
+        result.unwrap_or_else(|error| {
+            log::error!("background fetcher: {}", error);
+        });
         delete_job_from_queue(db_client, &job.id).await?;
     };
     Ok(())

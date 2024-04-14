@@ -29,6 +29,7 @@ use mitra_activitypub::{
         create_identity_claim_fep_c390,
         create_identity_proof_fep_c390,
     },
+    queues::FetcherJobData,
 };
 use mitra_adapters::roles::from_default_role;
 use mitra_config::{
@@ -71,7 +72,7 @@ use mitra_models::{
         get_user_by_did,
         is_valid_invite_code,
     },
-    users::types::UserCreateData,
+    users::types::{Permission, UserCreateData},
 };
 use mitra_services::{
     ethereum::{
@@ -981,6 +982,28 @@ async fn get_account_aliases(
     Ok(HttpResponse::Ok().json(aliases))
 }
 
+#[post("/{account_id}/load_activities")]
+async fn load_activities(
+    auth: BearerAuth,
+    db_pool: web::Data<DatabaseConnectionPool>,
+    account_id: web::Path<Uuid>,
+) -> Result<HttpResponse, MastodonError> {
+    let db_client = &**get_database_client(&db_pool).await?;
+    let current_user = get_current_user(db_client, auth.token()).await?;
+    if !current_user.role.has_permission(Permission::DeleteAnyProfile) {
+        return Err(MastodonError::PermissionError);
+    };
+    let profile = get_profile_by_id(db_client, &account_id).await?;
+    let job_data = if let Some(ref remote_actor) = profile.actor_json {
+        FetcherJobData::Outbox { actor_id: remote_actor.id.clone() }
+    } else {
+        // Local profile
+        return Err(MastodonError::NotFoundError("profile"));
+    };
+    job_data.into_job(db_client).await?;
+    Ok(HttpResponse::NoContent().finish())
+}
+
 pub fn account_api_scope() -> Scope {
     // One request per 5 seconds
     let ratelimit_config = ratelimit_config(2, 30);
@@ -1012,4 +1035,5 @@ pub fn account_api_scope() -> Scope {
         .service(get_account_following)
         .service(get_account_subscribers)
         .service(get_account_aliases)
+        .service(load_activities)
 }

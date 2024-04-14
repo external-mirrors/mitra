@@ -13,6 +13,7 @@ use super::periodic_tasks::*;
 enum PeriodicTask {
     IncomingActivityQueueExecutor,
     OutgoingActivityQueueExecutor,
+    FetcherQueueExecutor,
     DeleteExtraneousPosts,
     DeleteEmptyProfiles,
     PruneRemoteEmojis,
@@ -30,6 +31,7 @@ impl PeriodicTask {
         match self {
             Self::IncomingActivityQueueExecutor => 5,
             Self::OutgoingActivityQueueExecutor => 5,
+            Self::FetcherQueueExecutor => 10,
             Self::DeleteExtraneousPosts => 3600,
             Self::DeleteEmptyProfiles => 3600,
             Self::PruneRemoteEmojis => 3600,
@@ -62,6 +64,7 @@ pub fn run(
         let mut scheduler_state = HashMap::from([
             (PeriodicTask::IncomingActivityQueueExecutor, None),
             (PeriodicTask::OutgoingActivityQueueExecutor, None),
+            (PeriodicTask::FetcherQueueExecutor, None),
             (PeriodicTask::PruneRemoteEmojis, None),
             (PeriodicTask::MediaCleanupQueueExecutor, None),
             (PeriodicTask::ImporterQueueExecutor, None),
@@ -95,6 +98,10 @@ pub fn run(
                     },
                     PeriodicTask::OutgoingActivityQueueExecutor => {
                         outgoing_activity_queue_executor(&config, &db_pool).await
+                    },
+                    PeriodicTask::FetcherQueueExecutor => {
+                        fetcher_queue_executor(&config, &db_pool).await
+                            .map_err(Into::into)
                     },
                     PeriodicTask::DeleteExtraneousPosts => {
                         delete_extraneous_posts(&config, &db_pool).await

@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Added `fetch-portable-object` command.
 - Enabled full text search (limited to posts created by the current user).
+- Added API endpoint for loading activities from remote actor's outbox.
 
 ### Changed
 

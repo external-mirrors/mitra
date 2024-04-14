@@ -685,6 +685,18 @@ paths:
                 $ref: '#/components/schemas/Aliases'
         404:
           description: Profile not found
+  /api/v1/accounts/{account_id}/load_activities:
+    post:
+      summary: Load latest activities from outbox.
+      parameters:
+        - $ref: '#/components/parameters/account_id'
+      responses:
+        204:
+          description: Successful operation
+        403:
+          description: The user doesn't have a permission to load activities.
+        404:
+          description: Profile not found or is local.
   /api/v1/apps:
     post:
       summary: Create a new application to obtain OAuth2 credentials.
