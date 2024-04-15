@@ -22,6 +22,7 @@ use mitra_models::{
         DatabaseClient,
         DatabaseError,
     },
+    notifications::helpers::create_move_notification,
     profiles::{
         queries::get_profile_by_remote_actor_id,
         types::DbActorProfile,
@@ -237,6 +238,11 @@ pub async fn move_followers_task(
                     Err(DatabaseError::AlreadyExists(_)) => (),
                     Err(other_error) => return Err(other_error.into()),
                 };
+                create_move_notification(
+                    db_client,
+                    user.id,
+                    follower.id,
+                ).await?;
             };
         };
     };
