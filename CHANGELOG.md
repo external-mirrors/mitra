@@ -28,6 +28,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Fixed
 
 - Fixed incorrect un-following of a remote actor during migration.
+- Fixed "user not found" error in `Move()` activity handler.
 
 ## [2.15.1] - 2024-04-09
 

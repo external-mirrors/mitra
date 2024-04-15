@@ -1,3 +1,4 @@
+/// https://codeberg.org/fediverse/fep/src/branch/main/fep/7628/fep-7628.md
 use serde::Deserialize;
 use serde_json::Value;
 
@@ -42,8 +43,8 @@ pub async fn handle_move(
     // Move(Person)
     let activity: Move = serde_json::from_value(activity)
         .map_err(|_| ValidationError("unexpected activity structure"))?;
-    // Mastodon: actor is old profile (object)
-    // Mitra: actor is new profile (target)
+    // Mastodon (push mode): actor is old profile (object)
+    // Mitra (pull mode): actor is new profile (target)
     if activity.object != activity.actor && activity.target != activity.actor {
         return Err(ValidationError("actor ID mismatch").into());
     };
@@ -79,6 +80,11 @@ pub async fn handle_move(
 
     let followers = get_followers(db_client, &old_profile.id).await?;
     for follower in followers {
+        if !follower.is_local() {
+            // Push mode: old actor is remote, so all followers are local
+            // Pull mode: ignore remote followers if old actor is local
+            continue;
+        };
         let follower = get_user_by_id(db_client, &follower.id).await?;
         // Unfollow old profile
         let maybe_follow_request_id = unfollow(
