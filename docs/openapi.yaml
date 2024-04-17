@@ -1960,6 +1960,9 @@ components:
           description: The location of the user's profile page.
           type: string
           example: https://social.example/@user
+        note:
+          description: The profile’s bio or description.
+          type: string
         locked:
           description: Whether the actor manually approves follow requests.
           type: boolean
