@@ -68,12 +68,6 @@ impl FromStr for Did {
                 let did_pkh = DidPkh::from_str(value)?;
                 Self::Pkh(did_pkh)
             },
-            "ap" => {
-                // TODO: remove, use ap:// URL scheme
-                let did_key_str = value.replacen(":ap:key", ":key", 1);
-                let did_key = DidKey::from_str(&did_key_str)?;
-                Self::Key(did_key)
-            },
             _ => return Err(DidParseError),
         };
         Ok(did)

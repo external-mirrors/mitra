@@ -34,6 +34,7 @@ use mitra_activitypub::{
             validate_update_person_c2s,
         },
     },
+    did_url::with_ap_prefix,
     identifiers::{
         local_actor_id,
         local_actor_id_fep_ef61_fallback,
@@ -653,16 +654,17 @@ pub async fn tag_view(
 pub async fn apgateway_view(
     config: web::Data<Config>,
     db_pool: web::Data<DatabaseConnectionPool>,
-    url: web::Path<String>,
+    did_url: web::Path<String>,
 ) -> Result<HttpResponse, HttpError> {
     let db_client = &**get_database_client(&db_pool).await?;
+    let ap_url = with_ap_prefix(&did_url);
     let (did_key, maybe_internal_object_id) = if let
-        Ok(did_key) = parse_fep_ef61_local_actor_id(&url)
+        Ok(did_key) = parse_fep_ef61_local_actor_id(&ap_url)
     {
         (did_key, None)
     } else {
         let (did_key, internal_object_id) =
-            parse_fep_ef61_local_object_id(&url)?;
+            parse_fep_ef61_local_object_id(&ap_url)?;
         (did_key, Some(internal_object_id))
     };
     let identity_key = did_key.key_multibase();

@@ -10,13 +10,12 @@ use mitra_utils::{
     did_key::DidKey,
 };
 
-use super::did_url::DidApUrl;
+use crate::did_url::with_ap_prefix;
 
 pub(super) const GATEWAY_PATH_PREFIX: &str = "/.well-known/apgateway/";
 
-fn fep_ef61_identity(public_key: &Ed25519PublicKey) -> DidApUrl {
-    let did_key = DidKey::from_ed25519_key(public_key);
-    DidApUrl::from_did_key(&did_key)
+fn fep_ef61_identity(public_key: &Ed25519PublicKey) -> DidKey {
+    DidKey::from_ed25519_key(public_key)
 }
 
 pub enum Authority {
@@ -31,7 +30,8 @@ impl fmt::Display for Authority {
         let authority_str = match self {
             Self::Server(ref server_url) => server_url.to_owned(),
             Self::Key((_, public_key)) => {
-                fep_ef61_identity(public_key).to_string()
+                let did = fep_ef61_identity(public_key);
+                with_ap_prefix(&did.to_string())
             },
             Self::KeyWithGateway((server_url, public_key)) => {
                 let did = fep_ef61_identity(public_key);
@@ -87,7 +87,7 @@ impl Authority {
         }
     }
 
-    pub fn as_did_url(&self) -> Option<DidApUrl> {
+    pub fn as_did_key(&self) -> Option<DidKey> {
         match self {
             Self::Server(_) => None,
             Self::Key((_, public_key)) | Self::KeyWithGateway((_, public_key)) => {
@@ -99,10 +99,7 @@ impl Authority {
 
 #[cfg(test)]
 mod tests {
-    use mitra_utils::{
-        crypto_eddsa::generate_weak_ed25519_key,
-        urls::Url,
-    };
+    use mitra_utils::crypto_eddsa::generate_weak_ed25519_key;
     use super::*;
 
     const SERVER_URL: &str = "https://server.example";
@@ -113,7 +110,7 @@ mod tests {
         assert!(!authority.is_fep_ef61());
         assert_eq!(authority.to_string(), "https://server.example");
         assert_eq!(authority.server_url(), SERVER_URL);
-        assert_eq!(authority.as_did_url().is_none(), true);
+        assert_eq!(authority.as_did_key().is_none(), true);
     }
 
     #[test]
@@ -121,9 +118,9 @@ mod tests {
         let secret_key = generate_weak_ed25519_key();
         let authority = Authority::key(SERVER_URL, &secret_key);
         assert!(authority.is_fep_ef61());
-        assert_eq!(authority.to_string(), "did:ap:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6");
+        assert_eq!(authority.to_string(), "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6");
         assert_eq!(authority.server_url(), SERVER_URL);
-        assert_eq!(authority.as_did_url().is_some(), true);
+        assert_eq!(authority.as_did_key().is_some(), true);
     }
 
     #[test]
@@ -131,22 +128,8 @@ mod tests {
         let secret_key = generate_weak_ed25519_key();
         let authority = Authority::key_with_gateway(SERVER_URL, &secret_key);
         assert!(authority.is_fep_ef61());
-        assert_eq!(authority.to_string(), "https://server.example/.well-known/apgateway/did:ap:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6");
+        assert_eq!(authority.to_string(), "https://server.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6");
         assert_eq!(authority.server_url(), SERVER_URL);
-        assert_eq!(authority.as_did_url().is_some(), true);
-    }
-
-    #[test]
-    fn test_fep_ef61_identity_url_compat() {
-        let secret_key = generate_weak_ed25519_key();
-        let public_key = ed25519_public_key_from_private_key(&secret_key);
-        let did_ap_key = fep_ef61_identity(&public_key);
-        let did_url = format!("{did_ap_key}/objects/1");
-        assert_eq!(did_url, "did:ap:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/objects/1");
-        let url = Url::parse(&did_url).unwrap();
-        assert_eq!(url.scheme(), "did");
-        assert_eq!(url.authority(), "");
-        assert_eq!(url.path(), "ap:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/objects/1");
-        assert_eq!(url.to_string(), did_url);
+        assert_eq!(authority.as_did_key().is_some(), true);
     }
 }

@@ -14,13 +14,13 @@ use mitra_models::{
 use mitra_utils::{
     caip2::ChainId,
     did_key::DidKey,
-    urls::{url_encode, Url},
+    urls::{url_encode, Position, Url},
 };
 use mitra_validators::errors::ValidationError;
 
 use crate::{
     authority::{Authority, GATEWAY_PATH_PREFIX},
-    did_url::DidApUrl,
+    did_url::ApUrl,
 };
 
 pub fn local_actor_id_fep_ef61_fallback(instance_url: &str, username: &str) -> String {
@@ -137,12 +137,11 @@ pub fn parse_local_actor_id(
 pub fn parse_fep_ef61_local_actor_id(
     actor_id: &str,
 ) -> Result<DidKey, ValidationError> {
-    let did_url: DidApUrl = actor_id.parse()
+    let ap_url: ApUrl = actor_id.parse()
         .map_err(ValidationError)?;
-    let did_key = did_url.did().as_did_key()
+    let did_key = ap_url.did().as_did_key()
         .ok_or(ValidationError("unexpected DID method"))?;
-    let path = did_url.path().unwrap_or_default();
-    if path != "/actor" {
+    if ap_url.relative_url() != "/actor" {
         return Err(ValidationError("invalid path"));
     };
     Ok(did_key.clone())
@@ -165,14 +164,14 @@ pub fn parse_local_object_id(
 pub fn parse_fep_ef61_local_object_id(
     object_id: &str,
 ) -> Result<(DidKey, Uuid), ValidationError> {
-    let did_url: DidApUrl = object_id.parse()
+    let ap_url: ApUrl = object_id.parse()
         .map_err(ValidationError)?;
-    let did_key = did_url.did().as_did_key()
+    let did_key = ap_url.did().as_did_key()
         .ok_or(ValidationError("unexpected DID method"))?;
-    let path = did_url.path().unwrap_or_default();
+    let path = ap_url.relative_url();
     let path_re = Regex::new("^/objects/(?P<uuid>[0-9a-f-]+)$")
         .expect("regexp should be valid");
-    let path_caps = path_re.captures(path)
+    let path_caps = path_re.captures(&path)
         .ok_or(ValidationError("invalid path"))?;
     let internal_object_id = path_caps["uuid"].parse()
         .map_err(|_| ValidationError("invalid path"))?;
@@ -220,27 +219,27 @@ pub fn profile_actor_url(instance_url: &str, profile: &DbActorProfile) -> String
 
 pub(crate) fn parse_portable_id(
     object_id: &str,
-) -> Result<(DidApUrl, Option<String>), ValidationError> {
-    let url = Url::parse(object_id)
-        .map_err(|_| ValidationError("invalid URL"))?;
+) -> Result<(ApUrl, Option<String>), ValidationError> {
     let mut maybe_gateway = None;
-    let canonical_object_id = match url.scheme() {
-        "did" => {
-            let did_url = DidApUrl::from_str(object_id)
-                .map_err(ValidationError)?;
-            did_url
-        },
-        "http" | "https" => {
-            // Unwrap DID URL
-            let did_url_str = url.path().strip_prefix(GATEWAY_PATH_PREFIX)
-                .ok_or(ValidationError("invalid gateway URL"))?;
-            let did_url = DidApUrl::from_str(did_url_str)
-                .map_err(ValidationError)?;
-            let gateway_url = url.origin().ascii_serialization();
-            maybe_gateway = Some(gateway_url);
-            did_url
-        },
-        _ => return Err(ValidationError("unexpected URI scheme")),
+    let canonical_object_id = if let Ok(ap_url) = ApUrl::from_str(object_id) {
+        ap_url
+    } else {
+        let url = Url::parse(object_id)
+            .map_err(|_| ValidationError("invalid URL"))?;
+        match url.scheme() {
+            "http" | "https" => {
+                // Unwrap AP URL
+                let did_url = url[Position::BeforePath..]
+                    .strip_prefix(GATEWAY_PATH_PREFIX)
+                    .ok_or(ValidationError("invalid gateway URL"))?;
+                let ap_url = ApUrl::from_did_url(did_url)
+                    .map_err(ValidationError)?;
+                let gateway_url = url.origin().ascii_serialization();
+                maybe_gateway = Some(gateway_url);
+                ap_url
+            },
+            _ => return Err(ValidationError("unexpected URI scheme")),
+        }
     };
     Ok((canonical_object_id, maybe_gateway))
 }
@@ -309,7 +308,7 @@ mod tests {
 
     #[test]
     fn test_parse_fep_ef61_local_actor_id() {
-        let actor_id = "did:ap:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor";
+        let actor_id = "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor";
         let did_key = parse_fep_ef61_local_actor_id(actor_id).unwrap();
         assert_eq!(
             did_key.to_string(),
@@ -343,7 +342,7 @@ mod tests {
 
     #[test]
     fn test_parse_fep_ef61_local_object_id() {
-        let object_id = "did:ap:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/objects/cb26ed69-a6e9-47e3-8bf2-bbb26d06d1fb";
+        let object_id = "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/objects/cb26ed69-a6e9-47e3-8bf2-bbb26d06d1fb";
         let (did_key, internal_object_id) =
             parse_fep_ef61_local_object_id(object_id).unwrap();
         assert_eq!(
@@ -381,23 +380,20 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_portable_id_did_url() {
-        let url = "did:ap:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor";
+    fn test_parse_portable_id_ap_url() {
+        let url = "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor";
         let (id, maybe_gateway) = parse_portable_id(url).unwrap();
-        assert_eq!(
-            id.to_string(),
-            "did:ap:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor",
-        );
+        assert_eq!(id.to_string(), url);
         assert_eq!(maybe_gateway, None);
     }
 
     #[test]
     fn test_parse_portable_id_gateway_url() {
-        let url = "https://server.example/.well-known/apgateway/did:ap:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor";
+        let url = "https://server.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor";
         let (id, maybe_gateway) = parse_portable_id(url).unwrap();
         assert_eq!(
             id.to_string(),
-            "did:ap:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor",
+            "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor",
         );
         assert_eq!(maybe_gateway.unwrap(), "https://server.example");
     }
