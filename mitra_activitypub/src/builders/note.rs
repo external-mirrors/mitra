@@ -575,18 +575,18 @@ mod tests {
                     "verificationMethod": "sec:verificationMethod",
                 },
             ],
-            "id": "https://server.example/.well-known/apresolver/did:ap:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/objects/11fa64ff-b5a3-47bf-b23d-22b360581c3f",
+            "id": "https://server.example/.well-known/apgateway/did:ap:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/objects/11fa64ff-b5a3-47bf-b23d-22b360581c3f",
             "type": "Note",
-            "attributedTo": "https://server.example/.well-known/apresolver/did:ap:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor",
+            "attributedTo": "https://server.example/.well-known/apgateway/did:ap:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor",
             "content": "",
             "sensitive": false,
-            "replies": "https://server.example/.well-known/apresolver/did:ap:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/objects/11fa64ff-b5a3-47bf-b23d-22b360581c3f/replies",
+            "replies": "https://server.example/.well-known/apgateway/did:ap:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/objects/11fa64ff-b5a3-47bf-b23d-22b360581c3f/replies",
             "published": "2023-02-24T23:36:38Z",
             "to": [
                 "https://www.w3.org/ns/activitystreams#Public",
             ],
             "cc": [
-                "https://server.example/.well-known/apresolver/did:ap:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor/followers",
+                "https://server.example/.well-known/apgateway/did:ap:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor/followers",
             ],
         });
         assert_eq!(value, expected_value);

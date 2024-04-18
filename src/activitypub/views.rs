@@ -649,8 +649,8 @@ pub async fn tag_view(
     Ok(response)
 }
 
-#[get("/.well-known/apresolver/{url:.*}")]
-pub async fn apresolver_view(
+#[get("/.well-known/apgateway/{url:.*}")]
+pub async fn apgateway_view(
     config: web::Data<Config>,
     db_pool: web::Data<DatabaseConnectionPool>,
     url: web::Path<String>,

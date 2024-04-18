@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Changed
 
 - Make `note` property non-nullable in Mastodon API `Account` object.
+- Renamed `apresolver` well-known endpoint to `apgateway`.
 
 ## [2.16.0] - 2024-04-16
 

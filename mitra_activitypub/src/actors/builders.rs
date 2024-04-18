@@ -261,7 +261,7 @@ pub fn sign_object_fep_ef61(
     let ed25519_secret_key = user.ed25519_private_key;
     // Key ID is DID
     let ed25519_key_id = authority.as_did_url()
-        .expect("authority should be of 'did:ap' kind")
+        .expect("authority should be of FEP-ef61 kind")
         .to_string();
     sign_object_eddsa(
         &ed25519_secret_key,
@@ -444,47 +444,47 @@ mod tests {
                     "proofPurpose": "sec:proofPurpose",
                 },
             ],
-            "id": "https://server.example/.well-known/apresolver/did:ap:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor",
+            "id": "https://server.example/.well-known/apgateway/did:ap:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor",
             "type": "Person",
             "name": null,
             "preferredUsername": "testuser",
-            "inbox": "https://server.example/.well-known/apresolver/did:ap:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor/inbox",
-            "outbox": "https://server.example/.well-known/apresolver/did:ap:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor/outbox",
-            "followers": "https://server.example/.well-known/apresolver/did:ap:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor/followers",
-            "following": "https://server.example/.well-known/apresolver/did:ap:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor/following",
-            "subscribers": "https://server.example/.well-known/apresolver/did:ap:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor/subscribers",
-            "featured": "https://server.example/.well-known/apresolver/did:ap:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor/collections/featured",
+            "inbox": "https://server.example/.well-known/apgateway/did:ap:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor/inbox",
+            "outbox": "https://server.example/.well-known/apgateway/did:ap:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor/outbox",
+            "followers": "https://server.example/.well-known/apgateway/did:ap:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor/followers",
+            "following": "https://server.example/.well-known/apgateway/did:ap:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor/following",
+            "subscribers": "https://server.example/.well-known/apgateway/did:ap:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor/subscribers",
+            "featured": "https://server.example/.well-known/apgateway/did:ap:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor/collections/featured",
             "authentication": [
                 {
-                    "id": "https://server.example/.well-known/apresolver/did:ap:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor#main-key",
+                    "id": "https://server.example/.well-known/apgateway/did:ap:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor#main-key",
                     "type": "Multikey",
-                    "controller": "https://server.example/.well-known/apresolver/did:ap:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor",
+                    "controller": "https://server.example/.well-known/apgateway/did:ap:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor",
                     "publicKeyMultibase": "zDrrewXm1cTFaEwruJq4sA7sPhxciancezhnoCxrdvSLs3gQSupJxKA719sQGmG71CkuQdnDxAUpecZ1b7fYQTTrhKA7KbdxWUPRXqs3e",
                 },
                 {
-                    "id": "https://server.example/.well-known/apresolver/did:ap:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor#ed25519-key",
+                    "id": "https://server.example/.well-known/apgateway/did:ap:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor#ed25519-key",
                     "type": "Multikey",
-                    "controller": "https://server.example/.well-known/apresolver/did:ap:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor",
+                    "controller": "https://server.example/.well-known/apgateway/did:ap:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor",
                     "publicKeyMultibase": "z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6",
                 },
             ],
             "assertionMethod": [
                 {
-                    "id": "https://server.example/.well-known/apresolver/did:ap:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor#main-key",
+                    "id": "https://server.example/.well-known/apgateway/did:ap:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor#main-key",
                     "type": "Multikey",
-                    "controller": "https://server.example/.well-known/apresolver/did:ap:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor",
+                    "controller": "https://server.example/.well-known/apgateway/did:ap:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor",
                     "publicKeyMultibase": "zDrrewXm1cTFaEwruJq4sA7sPhxciancezhnoCxrdvSLs3gQSupJxKA719sQGmG71CkuQdnDxAUpecZ1b7fYQTTrhKA7KbdxWUPRXqs3e",
                 },
                 {
-                    "id": "https://server.example/.well-known/apresolver/did:ap:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor#ed25519-key",
+                    "id": "https://server.example/.well-known/apgateway/did:ap:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor#ed25519-key",
                     "type": "Multikey",
-                    "controller": "https://server.example/.well-known/apresolver/did:ap:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor",
+                    "controller": "https://server.example/.well-known/apgateway/did:ap:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor",
                     "publicKeyMultibase": "z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6",
                 },
             ],
             "publicKey": {
-                "id": "https://server.example/.well-known/apresolver/did:ap:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor#main-key",
-                "owner": "https://server.example/.well-known/apresolver/did:ap:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor",
+                "id": "https://server.example/.well-known/apgateway/did:ap:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor#main-key",
+                "owner": "https://server.example/.well-known/apgateway/did:ap:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor",
                 "publicKeyPem": "-----BEGIN PUBLIC KEY-----\nMFwwDQYJKoZIhvcNAQEBBQADSwAwSAJBAOIh58ZQbo45MuZvv1nMWAzTzN9oghNC\nbxJkFEFD1Y49LEeNHMk6GrPByUz8kn4y8Hf6brb+DVm7ZW4cdhOx1TsCAwEAAQ==\n-----END PUBLIC KEY-----\n",
             },
             "summary": "testbio",
@@ -497,7 +497,7 @@ mod tests {
                 "created": "2023-02-24T23:36:38Z",
                 "cryptosuite": "eddsa-jcs-2022",
                 "proofPurpose": "assertionMethod",
-                "proofValue": "z5BUP8HGrP1M5dDo9q5DVsYdZqpPdewKERPiaizVFd7nw25Rey71BUFNZM45ATgUQymENiVEzmzdZtK3hD4rPNNmT",
+                "proofValue": "zLJRe7BCrEBYv7BitSv4bd66M1i9YbiGQRTGvvsFNLmgLfEbvwpdKpx6J7qBE869iisV6xjByEBYYesT5Jbth9zJ",
                 "type": "DataIntegrityProof",
                 "verificationMethod": "did:ap:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6",
             },

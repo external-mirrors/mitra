@@ -19,7 +19,7 @@ use mitra_utils::{
 use mitra_validators::errors::ValidationError;
 
 use crate::{
-    authority::Authority,
+    authority::{Authority, GATEWAY_PATH_PREFIX},
     did_url::DidApUrl,
 };
 
@@ -32,7 +32,7 @@ pub fn local_actor_id_unified(authority: &Authority, username: &str) -> String {
     match authority {
         Authority::Server(_) => local_actor_id(&authority.to_string(), username),
         Authority::Key(_) => local_instance_actor_id(&authority.to_string()),
-        Authority::KeyWithResolver(_) => local_instance_actor_id(&authority.to_string()),
+        Authority::KeyWithGateway(_) => local_instance_actor_id(&authority.to_string()),
     }
 }
 
@@ -218,8 +218,6 @@ pub fn profile_actor_url(instance_url: &str, profile: &DbActorProfile) -> String
     profile_actor_id(instance_url, profile)
 }
 
-const GATEWAY_PATH_PREFIX: &str = "/.well-known/apresolver/";
-
 pub(crate) fn parse_portable_id(
     object_id: &str,
 ) -> Result<(DidApUrl, Option<String>), ValidationError> {
@@ -395,7 +393,7 @@ mod tests {
 
     #[test]
     fn test_parse_portable_id_gateway_url() {
-        let url = "https://server.example/.well-known/apresolver/did:ap:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor";
+        let url = "https://server.example/.well-known/apgateway/did:ap:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor";
         let (id, maybe_gateway) = parse_portable_id(url).unwrap();
         assert_eq!(
             id.to_string(),

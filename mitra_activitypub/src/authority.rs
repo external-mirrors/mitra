@@ -12,6 +12,8 @@ use mitra_utils::{
 
 use super::did_url::DidApUrl;
 
+pub(super) const GATEWAY_PATH_PREFIX: &str = "/.well-known/apgateway/";
+
 fn fep_ef61_identity(public_key: &Ed25519PublicKey) -> DidApUrl {
     let did_key = DidKey::from_ed25519_key(public_key);
     DidApUrl::from_did_key(&did_key)
@@ -21,7 +23,7 @@ pub enum Authority {
     Server(String),
     // TODO: remove server URL after transition
     Key((String, Ed25519PublicKey)),
-    KeyWithResolver((String, Ed25519PublicKey)),
+    KeyWithGateway((String, Ed25519PublicKey)),
 }
 
 impl fmt::Display for Authority {
@@ -31,11 +33,12 @@ impl fmt::Display for Authority {
             Self::Key((_, public_key)) => {
                 fep_ef61_identity(public_key).to_string()
             },
-            Self::KeyWithResolver((server_url, public_key)) => {
+            Self::KeyWithGateway((server_url, public_key)) => {
                 let did = fep_ef61_identity(public_key);
                 format!(
-                    "{}/.well-known/apresolver/{}",
+                    "{}{}{}",
                     server_url,
+                    GATEWAY_PATH_PREFIX,
                     did,
                 )
             },
@@ -55,9 +58,9 @@ impl Authority {
         Self::Key((server_url.to_owned(), public_key))
     }
 
-    fn key_with_resolver(server_url: &str, secret_key: &Ed25519PrivateKey) -> Self {
+    fn key_with_gateway(server_url: &str, secret_key: &Ed25519PrivateKey) -> Self {
         let public_key = ed25519_public_key_from_private_key(secret_key);
-        Self::KeyWithResolver((server_url.to_owned(), public_key))
+        Self::KeyWithGateway((server_url.to_owned(), public_key))
     }
 
     pub fn from_user(
@@ -66,7 +69,7 @@ impl Authority {
         fep_ef61_enabled: bool,
     ) -> Self {
         if fep_ef61_enabled {
-            Self::key_with_resolver(server_url, &user.ed25519_private_key)
+            Self::key_with_gateway(server_url, &user.ed25519_private_key)
         } else {
             Self::server(server_url)
         }
@@ -80,14 +83,14 @@ impl Authority {
         match self {
             Self::Server(ref server_url) => server_url,
             Self::Key((ref server_url, _)) => server_url,
-            Self::KeyWithResolver((ref server_url, _)) => server_url,
+            Self::KeyWithGateway((ref server_url, _)) => server_url,
         }
     }
 
     pub fn as_did_url(&self) -> Option<DidApUrl> {
         match self {
             Self::Server(_) => None,
-            Self::Key((_, public_key)) | Self::KeyWithResolver((_, public_key)) => {
+            Self::Key((_, public_key)) | Self::KeyWithGateway((_, public_key)) => {
                 Some(fep_ef61_identity(public_key))
             },
         }
@@ -124,11 +127,11 @@ mod tests {
     }
 
     #[test]
-    fn test_authority_key_with_resolver() {
+    fn test_authority_key_with_gateway() {
         let secret_key = generate_weak_ed25519_key();
-        let authority = Authority::key_with_resolver(SERVER_URL, &secret_key);
+        let authority = Authority::key_with_gateway(SERVER_URL, &secret_key);
         assert!(authority.is_fep_ef61());
-        assert_eq!(authority.to_string(), "https://server.example/.well-known/apresolver/did:ap:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6");
+        assert_eq!(authority.to_string(), "https://server.example/.well-known/apgateway/did:ap:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6");
         assert_eq!(authority.server_url(), SERVER_URL);
         assert_eq!(authority.as_did_url().is_some(), true);
     }
