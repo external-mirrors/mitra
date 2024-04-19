@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Don't write warning to log if actor's public key changes.
 - Increase importer limit from 50 items to 500.
 - Use `ap://` URLs instead of `did:ap` URLs.
+- Add canonical actor ID to `sameAs` array in portable actor objects.
 
 ### Fixed
 

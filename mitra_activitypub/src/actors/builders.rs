@@ -218,12 +218,20 @@ pub fn build_local_actor(
     // TODO: portable actors should point to a primary server
     let profile_url = local_actor_id(instance_url, username);
 
-    let same_as = if authority.is_fep_ef61() {
+    let mut same_as = if authority.is_fep_ef61() {
         // TODO: list all known locations
-        let url = local_actor_id_fep_ef61_fallback(instance_url, username);
-        vec![url]
+        let fallback_url =
+            local_actor_id_fep_ef61_fallback(instance_url, username);
+        vec![fallback_url]
     } else {
         vec![]
+    };
+    if let Authority::KeyWithGateway((server_url, public_key)) = authority {
+        let canonical_authority =
+            Authority::Key((server_url.clone(), *public_key));
+        let canonical_actor_id =
+            local_actor_id_unified(&canonical_authority, username);
+        same_as.push(canonical_actor_id);
     };
     let actor = Actor {
         _context: build_actor_context(),
@@ -492,12 +500,13 @@ mod tests {
             "url": "https://server.example/users/testuser",
             "sameAs": [
                 "https://server.example/users/testuser?fep_ef61=true",
+                "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor",
             ],
             "proof": {
                 "created": "2023-02-24T23:36:38Z",
                 "cryptosuite": "eddsa-jcs-2022",
                 "proofPurpose": "assertionMethod",
-                "proofValue": "zyNovy2H5qd9jawF64QvcgozZEfADoeyA8wUEAyKfnDmFpvJ89mWak2o3Nkg11yd2qhccm1CcKuD3Py52455vfLV",
+                "proofValue": "z276AHNSrMVQKRYoeisxd3bFaXbGYDPn7apYSLHNzZSDd2Dxjzy7JowweGtqQkdNdXqe24CJ6YhDZqyRnPBFnMq1W",
                 "type": "DataIntegrityProof",
                 "verificationMethod": "did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6",
             },
