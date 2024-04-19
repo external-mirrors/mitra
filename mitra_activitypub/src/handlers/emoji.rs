@@ -28,10 +28,9 @@ use crate::builders::emoji::Emoji;
 
 use super::HandlerError;
 
-fn parse_emoji_shortcode(shortcode: &str) -> Result<&str, ValidationError> {
+fn parse_emoji_shortcode(shortcode: &str) -> Option<&str> {
     shortcode.strip_prefix(':')
         .and_then(|val| val.strip_suffix(':'))
-        .ok_or(ValidationError("invalid emoji shortcode"))
 }
 
 // Returns None if emoji is not valid or when fetcher fails.
@@ -49,7 +48,11 @@ pub async fn handle_emoji(
             return Ok(None);
         },
     };
-    let emoji_name = parse_emoji_shortcode(&emoji.name)?;
+    let emoji_name = if let Some(emoji_name) = parse_emoji_shortcode(&emoji.name) {
+        emoji_name
+    } else {
+        &emoji.name
+    };
     if validate_emoji_name(emoji_name).is_err() {
         log::warn!("invalid emoji name: {}", emoji_name);
         return Ok(None);
