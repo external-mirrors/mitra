@@ -15,10 +15,7 @@ use mitra_federation::{
     },
 };
 use mitra_models::{
-    profiles::types::{
-        DbActor,
-        DbActorPublicKey,
-    },
+    profiles::types::DbActor,
 };
 use mitra_utils::urls::get_hostname;
 use mitra_validators::errors::ValidationError;
@@ -148,11 +145,7 @@ impl Actor {
             subscribers: self.subscribers,
             featured: self.featured,
             url: self.url,
-            public_key: DbActorPublicKey {
-                id: self.public_key.id,
-                owner: self.public_key.owner,
-                public_key_pem: self.public_key.public_key_pem,
-            },
+            public_key: None,
         }
     }
 }

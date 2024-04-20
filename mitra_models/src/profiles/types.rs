@@ -629,7 +629,7 @@ pub struct DbActor {
     pub featured: Option<String>,
     pub url: Option<String>,
 
-    pub public_key: DbActorPublicKey,
+    pub public_key: Option<DbActorPublicKey>,
 }
 
 json_from_sql!(DbActor);

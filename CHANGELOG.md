@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Make `note` property non-nullable in Mastodon API `Account` object.
 - Renamed `apresolver` well-known endpoint to `apgateway`.
+- Don't write warning to log if actor's public key changes.
 
 ### Fixed
 

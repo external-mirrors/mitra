@@ -382,13 +382,6 @@ pub async fn update_remote_profile(
     let actor_old = profile.actor_json
         .expect("actor data should be present");
     assert_eq!(actor_old.id, actor.id, "actor ID shouldn't change");
-    if actor_old.public_key.public_key_pem != actor.public_key.public_key_pem {
-        log::warn!(
-            "actor public key changed from {} to {}",
-            actor_old.public_key.public_key_pem,
-            actor.public_key.public_key_pem,
-        );
-    };
     let (maybe_avatar, maybe_banner) = fetch_actor_images(
         agent,
         storage,
