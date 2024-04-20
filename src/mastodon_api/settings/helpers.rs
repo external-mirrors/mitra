@@ -40,6 +40,8 @@ use mitra_models::{
 use mitra_services::media::MediaStorage;
 use mitra_validators::errors::ValidationError;
 
+const IMPORTER_JOB_LIMIT: usize = 500;
+
 fn export_profiles_to_csv(
     local_hostname: &str,
     profiles: Vec<DbActorProfile>,
@@ -88,8 +90,8 @@ pub fn parse_address_list(csv: &str)
         .map_err(|error| ValidationError(error.message()))?;
     addresses.sort();
     addresses.dedup();
-    if addresses.len() > 50 {
-        return Err(ValidationError("can't process more than 50 items at once"));
+    if addresses.len() > IMPORTER_JOB_LIMIT {
+        return Err(ValidationError("can't process more than 500 items at once"));
     };
     Ok(addresses)
 }

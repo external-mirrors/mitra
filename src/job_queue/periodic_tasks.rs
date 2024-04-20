@@ -201,7 +201,7 @@ pub async fn importer_queue_executor(
     db_pool: &DatabaseConnectionPool,
 ) -> Result<(), Error> {
     const BATCH_SIZE: u32 = 1;
-    const JOB_TIMEOUT: u32 = 3600; // 1 hour
+    const JOB_TIMEOUT: u32 = 6 * 3600; // 6 hours
     let db_client = &mut **get_database_client(db_pool).await?;
     let batch = get_job_batch(
         db_client,
