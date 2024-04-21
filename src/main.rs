@@ -1,7 +1,10 @@
 use actix_cors::Cors;
 use actix_web::{
     dev::Service,
-    http::Method,
+    http::{
+        header as http_header,
+        Method,
+    },
     middleware::{
         Logger as ActixLogger,
         NormalizePath,
@@ -166,6 +169,19 @@ async fn main() -> std::io::Result<()> {
                         };
                     };
                     Ok(res)
+                }
+            })
+            .wrap_fn(|request, service| {
+                // Fix for https://github.com/actix/actix-web/issues/3191
+                let path = request.path().to_owned();
+                let fut = service.call(request);
+                async move {
+                    let mut response = fut.await?;
+                    if path.contains(MEDIA_ROOT_URL) {
+                        response.headers_mut()
+                            .remove(http_header::CONTENT_ENCODING);
+                    };
+                    Ok(response)
                 }
             })
             .wrap(create_auth_error_handler())
