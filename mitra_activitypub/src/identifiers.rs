@@ -12,6 +12,7 @@ use mitra_models::{
     },
 };
 use mitra_utils::{
+    ap_url::ApUrl,
     caip2::ChainId,
     did_key::DidKey,
     urls::{url_encode, Position, Url},
@@ -20,7 +21,6 @@ use mitra_validators::errors::ValidationError;
 
 use crate::{
     authority::{Authority, GATEWAY_PATH_PREFIX},
-    did_url::ApUrl,
 };
 
 pub fn local_actor_id_fep_ef61_fallback(instance_url: &str, username: &str) -> String {

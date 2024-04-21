@@ -2,6 +2,7 @@ use std::fmt;
 
 use mitra_models::users::types::User;
 use mitra_utils::{
+    ap_url::with_ap_prefix,
     crypto_eddsa::{
         ed25519_public_key_from_private_key,
         Ed25519PrivateKey,
@@ -9,8 +10,6 @@ use mitra_utils::{
     },
     did_key::DidKey,
 };
-
-use crate::did_url::with_ap_prefix;
 
 pub(super) const GATEWAY_PATH_PREFIX: &str = "/.well-known/apgateway/";
 

@@ -34,7 +34,6 @@ use mitra_activitypub::{
             validate_update_person_c2s,
         },
     },
-    did_url::with_ap_prefix,
     identifiers::{
         local_actor_id,
         local_actor_id_fep_ef61_fallback,
@@ -68,6 +67,7 @@ use mitra_models::{
     },
 };
 use mitra_utils::{
+    ap_url::with_ap_prefix,
     caip2::ChainId,
     http_digest::get_sha256_digest,
 };

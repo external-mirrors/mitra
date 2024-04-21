@@ -3,7 +3,7 @@ use std::str::FromStr;
 
 use regex::Regex;
 
-use mitra_utils::{
+use crate::{
     did::Did,
     urls::{Position, Url},
 };
