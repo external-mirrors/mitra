@@ -11,7 +11,7 @@ use mitra_models::{
 use super::links::is_inside_code_block;
 
 // See also: EMOJI_NAME_RE in mitra_validators::emojis
-const SHORTCODE_SEARCH_RE: &str = r"(?m):(?P<name>[a-zA-Z0-9._-]+):";
+const SHORTCODE_SEARCH_RE: &str = r"(?m):(?P<name>[a-zA-Z0-9._-]+):(?P<after>\s|$|\)|<)";
 
 /// Finds emoji shortcodes in text
 fn find_shortcodes(text: &str) -> Vec<String> {
@@ -65,7 +65,7 @@ pub fn replace_emojis(
         };
         if let Some(emoji) = emojis::get_by_shortcode(name) {
             // Replace
-            return emoji.as_str().to_owned();
+            return format!("{}{}", emoji, &caps["after"]);
         };
         // Leave unchanged if shortcode is not known
         caps[0].to_string()
@@ -77,7 +77,11 @@ pub fn replace_emojis(
 mod tests {
     use super::*;
 
-    const TEXT_WITH_EMOJIS: &str = "@user1@server1 text :emoji_name: :abc: <code>:abc:</code>";
+    const TEXT_WITH_EMOJIS: &str = concat!(
+        "@user1@server1 text :emoji_name: :abc: ",
+        "did:key:zXyvw (:key:) ",
+        "<code>:abc:</code>",
+    );
 
     #[test]
     fn test_find_shortcodes() {
@@ -86,6 +90,7 @@ mod tests {
         assert_eq!(emoji_names, vec![
             "emoji_name",
             "abc",
+            "key",
         ]);
     }
 
@@ -93,9 +98,11 @@ mod tests {
     fn test_replace_emojis() {
         let custom_emoji_map = HashMap::new();
         let result = replace_emojis(TEXT_WITH_EMOJIS, &custom_emoji_map);
-        assert_eq!(
-            result,
-            "@user1@server1 text :emoji_name: 🔤 <code>:abc:</code>",
+        let expected_result = concat!(
+            "@user1@server1 text :emoji_name: 🔤 ",
+            "did:key:zXyvw (🔑) ",
+            "<code>:abc:</code>",
         );
+        assert_eq!(result, expected_result);
     }
 }
