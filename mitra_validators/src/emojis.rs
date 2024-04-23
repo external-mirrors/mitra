@@ -4,7 +4,6 @@ use super::errors::ValidationError;
 
 const EMOJI_NAME_RE: &str = r"^[a-zA-Z0-9._-]+$";
 pub(super) const EMOJI_NAME_SIZE_MAX: usize = 100; // database column limit
-pub const EMOJI_LOCAL_MAX_SIZE: usize = 50 * 1000; // 50 kB
 pub const EMOJI_MEDIA_TYPES: [&str; 4] = [
     "image/apng",
     "image/gif",

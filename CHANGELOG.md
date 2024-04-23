@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+
+- Make local emoji size limit configurable.
+
 ### Changed
 
 - Make `note` property non-nullable in Mastodon API `Account` object.
@@ -15,6 +19,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Use `ap://` URLs instead of `did:ap` URLs.
 - Add canonical actor ID to `sameAs` array in portable actor objects.
 - Do not follow redirects on activity delivery.
+- Change default local emoji size limit to 256 kB.
 
 ### Fixed
 

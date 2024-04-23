@@ -114,7 +114,6 @@ use mitra_utils::{
 use mitra_validators::{
     emojis::{
         validate_emoji_name,
-        EMOJI_LOCAL_MAX_SIZE,
         EMOJI_MEDIA_TYPES,
     },
     users::validate_local_username,
@@ -785,7 +784,7 @@ impl AddEmoji {
             return Ok(());
         };
         let file_size = file.len();
-        if file_size > EMOJI_LOCAL_MAX_SIZE {
+        if file_size > config.limits.media.emoji_local_size_limit {
             println!("emoji is too big");
             return Ok(());
         };
@@ -812,7 +811,7 @@ pub struct ImportEmoji {
 impl ImportEmoji {
     pub async fn execute(
         &self,
-        _config: &Config,
+        config: &Config,
         db_client: &impl DatabaseClient,
     ) -> Result<(), Error> {
         let emoji = get_emoji_by_name_and_hostname(
@@ -820,7 +819,7 @@ impl ImportEmoji {
             &self.emoji_name,
             &self.hostname,
         ).await?;
-        if emoji.image.file_size > EMOJI_LOCAL_MAX_SIZE {
+        if emoji.image.file_size > config.limits.media.emoji_local_size_limit {
             println!("emoji is too big");
             return Ok(());
         };

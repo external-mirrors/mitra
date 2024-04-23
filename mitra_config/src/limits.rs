@@ -40,6 +40,9 @@ fn deserialize_file_size<'de, D>(
 const fn default_file_size_limit() -> usize { 20_000_000 } // 20 MB
 const fn default_emoji_size_limit() -> usize { 500_000 } // 500 kB
 
+// https://github.com/mastodon/mastodon/blob/v4.2.8/app/models/custom_emoji.rb#L27
+const fn default_emoji_local_size_limit() -> usize { 256_000 } // 256 kB
+
 #[derive(Clone, Deserialize)]
 pub struct MediaLimits {
     #[serde(
@@ -54,6 +57,12 @@ pub struct MediaLimits {
     )]
     pub emoji_size_limit: usize,
 
+    #[serde(
+        default = "default_emoji_local_size_limit",
+        deserialize_with = "deserialize_file_size",
+    )]
+    pub emoji_local_size_limit: usize,
+
     // Add items to the list of supported media types
     #[serde(default)]
     pub extra_supported_types: Vec<String>,
@@ -64,6 +73,7 @@ impl Default for MediaLimits {
         Self {
             file_size_limit: default_file_size_limit(),
             emoji_size_limit: default_emoji_size_limit(),
+            emoji_local_size_limit: default_emoji_local_size_limit(),
             extra_supported_types: vec![],
         }
     }
