@@ -152,6 +152,14 @@ Where `object` is an ID of old account and `target` is an ID of new account. Act
 
 ## Subscriptions
 
+### Subscriber-only posts
+
+Local actors have `subscribers` property which points to the collection of actor's paid subscribers.
+
+Subscriber-only posts are addressed to this collection. They are also addressed to each subscriber individually, and therefore could be processed by other Fediverse services as direct messages with multiple recipients.
+
+### Payments
+
 Cross-instance payments are implemented according to [FEP-0837](https://codeberg.org/silverpill/feps/src/branch/main/0837/fep-0837.md) specification.
 
 Proposals are linked to actors using [FEP-0ea0](https://codeberg.org/silverpill/feps/src/branch/main/0ea0/fep-0ea0.md) payment links. [CAIP-19](https://chainagnostic.org/CAIPs/caip-19) asset IDs are used to specify currencies.
@@ -160,9 +168,7 @@ Agreements contain a FEP-0ea0 payment link pointing to [CAIP-10](https://chainag
 
 ### Subscription events
 
-Local actor profiles have `subscribers` property which points to the collection of actor's paid subscribers.
-
-The `Add` activity is used to notify the subscriber about successful subscription payment. Upon receipt of this activity, the receiving server should add specified `object` to actors's `subscribers` collection (specified in `target` property):
+The `Add` activity is used to notify subscribers about their status (e.g. after successful subscription payment). Upon receipt of this activity, the receiving server should add the actor specified in the `object` property to sender's `subscribers` collection (specified in the `target` property):
 
 ```json
 {
@@ -187,7 +193,7 @@ The `endTime` property specifies the subscription expiration time.
 
 The `context` property contains a reference to an `Agreement` object.
 
-The `Remove` activity is used to notify the subscriber about expired subscription. Upon receipt of this activity, the receiving server should remove specified `object` from actors's `subscribers` collection (specified in `target` property):
+The `Remove` activity is used to notify subscribers about expired subscriptions. Upon receipt of this activity, the receiving server should remove the actor specified in the `object` property from sender's `subscribers` collection (specified in the `target` property):
 
 ```json
 {
