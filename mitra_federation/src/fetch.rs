@@ -19,6 +19,7 @@ use super::{
         build_http_client,
         get_network_type,
         limited_response,
+        REDIRECT_LIMIT,
         RESPONSE_SIZE_LIMIT,
     },
     utils::{extract_media_type, is_same_hostname},
@@ -40,6 +41,9 @@ pub enum FetchError {
 
     #[error("resource not found: {0}")]
     NotFound(String),
+
+    #[error("redirection error")]
+    RedirectionError,
 
     #[error("response size exceeds limit")]
     ResponseTooLarge,
@@ -63,20 +67,21 @@ pub enum FetchError {
 fn build_fetcher_client(
     agent: &FederationAgent,
     request_url: &str,
+    no_redirect: bool,
 ) -> Result<Client, FetchError> {
     let network = get_network_type(request_url)?;
     let http_client = build_http_client(
         agent,
         network,
         agent.fetcher_timeout,
-        false,
+        no_redirect,
     )?;
     Ok(http_client)
 }
 
 fn build_request(
     agent: &FederationAgent,
-    http_client: Client,
+    http_client: &Client,
     method: Method,
     url: &str,
 ) -> RequestBuilder {
@@ -101,32 +106,57 @@ fn fetcher_error_for_status(error: reqwest::Error) -> FetchError {
 /// Sends GET request to fetch AP object
 pub async fn fetch_object<T: DeserializeOwned>(
     agent: &FederationAgent,
-    object_url: &str,
+    object_id: &str,
 ) -> Result<T, FetchError> {
-    let http_client = build_fetcher_client(agent, object_url)?;
-    let mut request_builder =
-        build_request(agent, http_client, Method::GET, object_url)
-            .header(reqwest::header::ACCEPT, AP_MEDIA_TYPE);
+    // Don't follow redirects automatically,
+    // because request needs to be signed again after every redirect
+    let http_client = build_fetcher_client(
+        agent,
+        object_id,
+        true,
+    )?;
 
-    if !agent.is_instance_private {
-        // Only public instances can send signed requests
-        let headers = create_http_signature(
-            Method::GET,
-            object_url,
-            b"",
-            &agent.signer_key,
-            &agent.signer_key_id,
-        )?;
-        request_builder = request_builder
-            .header("Host", headers.host)
-            .header("Date", headers.date)
-            .header("Signature", headers.signature);
+    let mut redirect_count = 0;
+    let mut target_url = object_id.to_string();
+    let mut response = loop {
+        let mut request_builder =
+            build_request(agent, &http_client, Method::GET, &target_url)
+                .header(header::ACCEPT, AP_MEDIA_TYPE);
+
+        if !agent.is_instance_private {
+            // Only public instances can send signed requests
+            let headers = create_http_signature(
+                Method::GET,
+                &target_url,
+                b"",
+                &agent.signer_key,
+                &agent.signer_key_id,
+            )?;
+            request_builder = request_builder
+                .header("Host", headers.host)
+                .header("Date", headers.date)
+                .header("Signature", headers.signature);
+        };
+        let response = request_builder
+            .send().await?
+            .error_for_status()
+            .map_err(fetcher_error_for_status)?;
+        if !response.status().is_redirection() {
+            break response;
+        };
+        // Redirected
+        redirect_count += 1;
+        if redirect_count >= REDIRECT_LIMIT {
+            return Err(FetchError::RedirectionError);
+        };
+        target_url = response.headers()
+            .get(header::LOCATION)
+            .ok_or(FetchError::RedirectionError)?
+            .to_str()
+            .map_err(|_| FetchError::RedirectionError)?
+            .to_string();
     };
 
-    let mut response = request_builder
-        .send().await?
-        .error_for_status()
-        .map_err(fetcher_error_for_status)?;
     let data = limited_response(&mut response, RESPONSE_SIZE_LIMIT)
         .await?
         .ok_or(FetchError::ResponseTooLarge)?;
@@ -181,9 +211,10 @@ pub async fn fetch_file(
     if !is_safe_url(url) {
         return Err(FetchError::UnsafeUrl);
     };
-    let http_client = build_fetcher_client(agent, url)?;
+    // Redirects are allowed
+    let http_client = build_fetcher_client(agent, url, false)?;
     let request_builder =
-        build_request(agent, http_client, Method::GET, url);
+        build_request(agent, &http_client, Method::GET, url);
     let mut response = request_builder.send().await?.error_for_status()?;
     if let Some(file_size) = response.content_length() {
         let file_size: usize = file_size.try_into()
@@ -217,9 +248,10 @@ pub async fn fetch_json<T: DeserializeOwned>(
     url: &str,
     query: &[(&str, &str)],
 ) -> Result<T, FetchError> {
-    let http_client = build_fetcher_client(agent, url)?;
+    // Redirects are allowed
+    let http_client = build_fetcher_client(agent, url, false)?;
     let request_builder =
-        build_request(agent, http_client, Method::GET, url);
+        build_request(agent, &http_client, Method::GET, url);
     let mut response = request_builder
         .query(query)
         .send()
