@@ -69,6 +69,7 @@ fn build_fetcher_client(
         agent,
         network,
         agent.fetcher_timeout,
+        false,
     )?;
     Ok(http_client)
 }

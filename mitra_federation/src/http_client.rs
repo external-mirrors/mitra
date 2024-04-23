@@ -43,6 +43,7 @@ pub fn build_http_client(
     agent: &FederationAgent,
     network: Network,
     timeout: u64,
+    no_redirect: bool,
 ) -> reqwest::Result<Client> {
     let mut client_builder = Client::builder();
     let mut maybe_proxy_url = agent.proxy_url.as_ref();
@@ -65,7 +66,11 @@ pub fn build_http_client(
         // https://github.com/hyperium/hyper/issues/3427
         client_builder = client_builder.http1_only();
     };
-    let redirect_policy = RedirectPolicy::limited(REDIRECT_LIMIT);
+    let redirect_policy = if no_redirect {
+        RedirectPolicy::none()
+    } else {
+        RedirectPolicy::limited(REDIRECT_LIMIT)
+    };
     let request_timeout = Duration::from_secs(timeout);
     let connect_timeout = Duration::from_secs(max(
         timeout,

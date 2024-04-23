@@ -54,6 +54,7 @@ fn build_deliverer_client(
         agent,
         network,
         agent.deliverer_timeout,
+        true, // do not follow redirects
     )?;
     Ok(http_client)
 }
@@ -107,7 +108,8 @@ pub async fn send_activity(
             response_status.as_str(),
             response_text,
         );
-        if response_status.is_client_error() || response_status.is_server_error() {
+        // https://www.w3.org/wiki/ActivityPub/Primer/HTTP_status_codes_for_delivery
+        if !response_status.is_success() {
             return Err(DelivererError::HttpError(response_status));
         };
     };
