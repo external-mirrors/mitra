@@ -57,6 +57,13 @@ impl FromStr for ApUrl {
              .expect("regexp should be valid");
         let captures = url_re.captures(value).ok_or("invalid AP URL")?;
         let did = Did::from_str(&captures["did"]).map_err(|_| "invalid DID")?;
+        // Authority should be an Ed25519 key
+        if did.as_did_key()
+            .and_then(|did_key| did_key.try_ed25519_key().ok())
+            .is_none()
+        {
+            return Err("DID method not supported");
+        };
         // Parse relative URL
         let base = Url::parse(AP_URL_PREFIX).expect("scheme should be valid");
         let url = Url::options()
