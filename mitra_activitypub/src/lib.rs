@@ -12,5 +12,5 @@ pub mod identifiers;
 pub mod identity;
 pub mod importers;
 pub mod queues;
-mod url;
+pub mod url;
 pub mod vocabulary;

@@ -22,6 +22,7 @@ use mitra_activitypub::{
         import_replies,
         ActorIdResolver,
     },
+    url::parse_url,
 };
 use mitra_adapters::{
     dynamic_config::{set_editable_property, EDITABLE_PROPERTIES},
@@ -429,6 +430,7 @@ impl FetchActor {
 #[derive(Parser)]
 pub struct FetchPortableObject {
     id: String,
+    gateway: Option<String>,
 }
 
 impl FetchPortableObject {
@@ -437,8 +439,13 @@ impl FetchPortableObject {
         config: &Config,
         _db_client: &mut impl DatabaseClient,
     ) -> Result<(), Error> {
+        let (object_id, mut maybe_gateway) = parse_url(&self.id)?;
+        maybe_gateway = maybe_gateway.or(self.gateway.clone());
+        let http_url = object_id.to_http_url(maybe_gateway.as_deref())
+            .ok_or(anyhow!("gateway is not specified"))?;
         let agent = build_federation_agent(&config.instance(), None);
-        let object: JsonValue = fetch_object(&agent, &self.id).await?;
+        let object: JsonValue = fetch_object(&agent, &http_url).await?;
+        println!("object fetched");
         verify_portable_object(&object)?;
         println!("portable object has been verified");
         Ok(())

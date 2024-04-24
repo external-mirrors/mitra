@@ -16,6 +16,27 @@ pub enum Url {
     Ap(ApUrl),
 }
 
+fn with_gateway(ap_url: &ApUrl, gateway_url: &str) -> String {
+    format!("{}{}{}", gateway_url, GATEWAY_PATH_PREFIX, ap_url.to_did_url())
+}
+
+impl Url {
+    pub fn to_http_url(&self, maybe_gateway: Option<&str>) -> Option<String> {
+        let url = match self {
+            Self::Http(http_url) => http_url.to_string(),
+            Self::Ap(ap_url) => {
+                if let Some(gateway) = maybe_gateway {
+                    with_gateway(ap_url, gateway)
+                } else {
+                    // Not enough context
+                    return None;
+                }
+            },
+        };
+        Some(url)
+    }
+}
+
 impl fmt::Display for Url {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -61,6 +82,35 @@ pub fn parse_url(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_http_url_from_http_url() {
+        let url_str = "https://social.example/users/test";
+        let http_url = HttpUrl::parse(url_str).unwrap();
+        let url = Url::Http(http_url);
+        let output = url.to_http_url(None).unwrap();
+        assert_eq!(output, url_str);
+    }
+
+    #[test]
+    fn test_http_url_from_ap_url() {
+        let url_str = "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor";
+        let ap_url = url_str.parse::<ApUrl>().unwrap();
+        let url = Url::Ap(ap_url);
+        let gateway = "https://gateway.example";
+        let output = url.to_http_url(Some(gateway)).unwrap();
+        let expected_output = "https://gateway.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor";
+        assert_eq!(output, expected_output);
+    }
+
+    #[test]
+    fn test_http_url_from_ap_url_no_gateway() {
+        let url_str = "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor";
+        let ap_url = url_str.parse::<ApUrl>().unwrap();
+        let url = Url::Ap(ap_url);
+        let maybe_output = url.to_http_url(None);
+        assert!(maybe_output.is_none());
+    }
 
     #[test]
     fn test_parse_url_https() {
