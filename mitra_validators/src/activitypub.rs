@@ -4,6 +4,7 @@ use super::errors::ValidationError;
 
 const OBJECT_ID_SIZE_MAX: usize = 2000;
 
+// Validates HTTP(S) URL (ap:// URLs are not allowed)
 pub fn validate_object_id(object_id: &str) -> Result<(), ValidationError> {
     if object_id.len() > OBJECT_ID_SIZE_MAX {
         return Err(ValidationError("object ID is too long"));

@@ -2,6 +2,7 @@ use regex::Regex;
 
 use mitra_models::profiles::types::{
     DbActor,
+    DbActorKey,
     ExtraField,
     ProfileCreateData,
     ProfileUpdateData,
@@ -71,6 +72,15 @@ fn clean_bio(bio: &str, is_remote: bool) -> Result<String, ValidationError> {
         clean_html_strict(bio, &BIO_ALLOWED_TAGS, vec![])
     };
     Ok(cleaned_bio)
+}
+
+fn validate_public_keys(
+    public_keys: &[DbActorKey],
+) -> Result<(), ValidationError> {
+    for public_key in public_keys {
+        validate_object_id(&public_key.id)?;
+    };
+    Ok(())
 }
 
 /// Validates extra fields and removes fields with empty labels
@@ -147,6 +157,7 @@ pub fn clean_profile_create_data(
         let cleaned_bio = clean_bio(bio, is_remote)?;
         profile_data.bio = Some(cleaned_bio);
     };
+    validate_public_keys(&profile_data.public_keys)?;
     profile_data.extra_fields = clean_extra_fields(
         &profile_data.extra_fields,
         is_remote,
@@ -174,6 +185,7 @@ pub fn clean_profile_update_data(
         let cleaned_bio = clean_bio(bio, is_remote)?;
         profile_data.bio = Some(cleaned_bio);
     };
+    validate_public_keys(&profile_data.public_keys)?;
     profile_data.extra_fields = clean_extra_fields(
         &profile_data.extra_fields,
         is_remote,
