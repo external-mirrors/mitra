@@ -6,6 +6,7 @@ const OBJECT_ID_SIZE_MAX: usize = 2000;
 
 // Object ID is an IRI
 // https://www.w3.org/TR/activitystreams-core/#urls
+// TODO: allow only canonical URLs
 pub fn validate_object_id(object_id: &str) -> Result<(), ValidationError> {
     if object_id.len() > OBJECT_ID_SIZE_MAX {
         return Err(ValidationError("object ID is too long"));

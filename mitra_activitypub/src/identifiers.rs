@@ -1,5 +1,3 @@
-use std::str::FromStr;
-
 use regex::Regex;
 use uuid::Uuid;
 
@@ -15,12 +13,13 @@ use mitra_utils::{
     ap_url::ApUrl,
     caip2::ChainId,
     did_key::DidKey,
-    urls::{url_encode, Position, Url},
+    urls::url_encode,
 };
 use mitra_validators::errors::ValidationError;
 
 use crate::{
-    authority::{Authority, GATEWAY_PATH_PREFIX},
+    authority::Authority,
+    url::{parse_url, Url},
 };
 
 pub fn local_actor_id_fep_ef61_fallback(instance_url: &str, username: &str) -> String {
@@ -220,28 +219,11 @@ pub fn profile_actor_url(instance_url: &str, profile: &DbActorProfile) -> String
 pub(crate) fn parse_portable_id(
     object_id: &str,
 ) -> Result<(ApUrl, Option<String>), ValidationError> {
-    let mut maybe_gateway = None;
-    let canonical_object_id = if let Ok(ap_url) = ApUrl::from_str(object_id) {
-        ap_url
-    } else {
-        let url = Url::parse(object_id)
-            .map_err(|_| ValidationError("invalid URL"))?;
-        match url.scheme() {
-            "http" | "https" => {
-                // Unwrap AP URL
-                let did_url = url[Position::BeforePath..]
-                    .strip_prefix(GATEWAY_PATH_PREFIX)
-                    .ok_or(ValidationError("invalid gateway URL"))?;
-                let ap_url = ApUrl::from_did_url(did_url)
-                    .map_err(ValidationError)?;
-                let gateway_url = url.origin().ascii_serialization();
-                maybe_gateway = Some(gateway_url);
-                ap_url
-            },
-            _ => return Err(ValidationError("unexpected URI scheme")),
-        }
-    };
-    Ok((canonical_object_id, maybe_gateway))
+    let (canonical_object_id, maybe_gateway) = parse_url(object_id)?;
+    match canonical_object_id {
+        Url::Http(_) => Err(ValidationError("unexpected ID type")),
+        Url::Ap(ap_url) => Ok((ap_url, maybe_gateway)),
+    }
 }
 
 #[cfg(test)]

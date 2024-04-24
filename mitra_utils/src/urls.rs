@@ -9,7 +9,6 @@ use url::Host;
 
 pub use url::{
     ParseError as UrlError,
-    Position,
     Url,
 };
 

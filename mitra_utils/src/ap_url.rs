@@ -11,6 +11,10 @@ use crate::did::Did;
 const AP_URL_RE: &str = r"^ap://(?P<did>did:[[:alpha:]]+:[A-Za-z0-9._:-]+)(?P<path>/.+)$";
 const AP_URL_PREFIX: &str = "ap://";
 
+pub fn is_ap_url(url: &str) -> bool {
+    url.starts_with(AP_URL_PREFIX)
+}
+
 pub fn with_ap_prefix(did_url: &str) -> String {
     format!("{}{}", AP_URL_PREFIX, did_url)
 }
