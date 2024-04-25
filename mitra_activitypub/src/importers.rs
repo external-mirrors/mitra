@@ -29,7 +29,7 @@ use mitra_models::{
         get_profile_by_acct,
         get_remote_profile_by_actor_id,
     },
-    profiles::types::DbActorProfile,
+    profiles::types::{DbActor, DbActorProfile},
     users::queries::{
         check_local_username_unique,
         create_portable_user,
@@ -73,6 +73,12 @@ pub struct FetcherContext {
 impl From<Vec<String>> for FetcherContext {
     fn from(gateways: Vec<String>) -> Self {
         Self { gateways }
+    }
+}
+
+impl From<&DbActor> for FetcherContext {
+    fn from(db_actor: &DbActor) -> Self {
+        Self { gateways: db_actor.gateways.clone() }
     }
 }
 
@@ -150,12 +156,15 @@ async fn import_profile(
 ) -> Result<DbActorProfile, HandlerError> {
     let agent = build_federation_agent(instance, None);
     let actor: ActorJson = fetch_any_object(&agent, actor_id).await?;
+    // TODO: FEP-ef61: 'ap' URLs are not supported
+    // TODO: FEP-ef61: local portable actors are not supported
     if actor.hostname()? == instance.hostname() {
         return Err(HandlerError::LocalObject);
     };
+    let canonical_actor_id = canonicalize_id(&actor.id)?;
     let profile = match get_remote_profile_by_actor_id(
         db_client,
-        &actor.id,
+        &canonical_actor_id,
     ).await {
         Ok(profile) => {
             log::info!("re-fetched actor {}", actor.id);
@@ -192,12 +201,14 @@ async fn refresh_remote_profile(
     force: bool,
 ) -> Result<DbActorProfile, HandlerError> {
     let agent = build_federation_agent(instance, None);
-    let actor_id = profile.expect_remote_actor_id();
+    let actor_data = profile.expect_actor_data();
+    let mut context = FetcherContext::from(actor_data);
+    let actor_id = context.prepare_object_id(&actor_data.id)?;
     let profile = if force ||
         profile.updated_at < Utc::now() - Duration::days(1)
     {
         // Try to re-fetch actor profile
-        match fetch_any_object::<ActorJson>(&agent, actor_id).await {
+        match fetch_any_object::<ActorJson>(&agent, &actor_id).await {
             Ok(actor) => {
                 log::info!("re-fetched actor {}", actor.id);
                 let profile_updated = update_remote_profile(
@@ -577,8 +588,10 @@ pub async fn import_from_outbox(
     let agent = build_federation_agent(&instance, None);
     let profile = get_remote_profile_by_actor_id(db_client, actor_id).await?;
     let actor_data = profile.expect_actor_data();
+    let mut context = FetcherContext::from(actor_data);
+    let outbox_url = context.prepare_object_id(&actor_data.outbox)?;
     let activities =
-        fetch_collection(&agent, &actor_data.outbox, limit).await?;
+        fetch_collection(&agent, &outbox_url, limit).await?;
     log::info!("fetched {} activities", activities.len());
     // Outbox has reverse chronological order
     let activities = activities.into_iter().rev();
