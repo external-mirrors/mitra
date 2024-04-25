@@ -9,6 +9,7 @@ use serde_json::{Value as JsonValue};
 use mitra_federation::{
     deserialization::{
         deserialize_object_array,
+        deserialize_string_array,
         parse_into_array,
         parse_into_href_array,
     },
@@ -119,6 +120,9 @@ pub struct Actor {
 
     #[serde(default, deserialize_with = "deserialize_url_opt")]
     pub url: Option<String>,
+
+    #[serde(default, deserialize_with = "deserialize_string_array")]
+    pub gateways: Vec<String>,
 }
 
 impl Actor {

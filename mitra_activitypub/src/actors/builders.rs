@@ -73,6 +73,7 @@ fn build_actor_context() -> Context {
             ("subscribers", "mitra:subscribers"),
             ("VerifiableIdentityStatement", "mitra:VerifiableIdentityStatement"),
             ("MitraJcsEip191Signature2022", "mitra:MitraJcsEip191Signature2022"),
+            ("gateways", "mitra:gateways"),
             // Workarounds for MitraJcsEip191Signature2022
             // (not required for DataIntegrityProof)
             ("proofValue", "sec:proofValue"),
@@ -138,6 +139,9 @@ pub struct Actor {
     // Required for FEP-ef61
     #[serde(skip_serializing_if = "Vec::is_empty")]
     same_as: Vec<String>,
+
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    gateways: Vec<String>,
 }
 
 pub fn build_local_actor(
@@ -233,6 +237,9 @@ pub fn build_local_actor(
             local_actor_id_unified(&canonical_authority, username);
         same_as.push(canonical_actor_id);
     };
+    let gateways = authority.is_fep_ef61()
+        .then_some(vec![instance_url.to_string()])
+        .unwrap_or_default();
     let actor = Actor {
         _context: build_actor_context(),
         id: actor_id.clone(),
@@ -256,6 +263,7 @@ pub fn build_local_actor(
         manually_approves_followers: user.profile.manually_approves_followers,
         url: Some(profile_url),
         same_as: same_as,
+        gateways: gateways,
     };
     Ok(actor)
 }
@@ -314,6 +322,7 @@ pub fn build_instance_actor(
         manually_approves_followers: false,
         url: None,
         same_as: vec![],
+        gateways: vec![],
     };
     Ok(actor)
 }
@@ -356,6 +365,7 @@ mod tests {
                     "subscribers": "mitra:subscribers",
                     "VerifiableIdentityStatement": "mitra:VerifiableIdentityStatement",
                     "MitraJcsEip191Signature2022": "mitra:MitraJcsEip191Signature2022",
+                    "gateways": "mitra:gateways",
                     "proofValue": "sec:proofValue",
                     "proofPurpose": "sec:proofPurpose",
                 },
@@ -448,6 +458,7 @@ mod tests {
                     "subscribers": "mitra:subscribers",
                     "VerifiableIdentityStatement": "mitra:VerifiableIdentityStatement",
                     "MitraJcsEip191Signature2022": "mitra:MitraJcsEip191Signature2022",
+                    "gateways": "mitra:gateways",
                     "proofValue": "sec:proofValue",
                     "proofPurpose": "sec:proofPurpose",
                 },
@@ -502,11 +513,14 @@ mod tests {
                 "https://server.example/users/testuser?fep_ef61=true",
                 "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor",
             ],
+            "gateways": [
+                "https://server.example"
+            ],
             "proof": {
                 "created": "2023-02-24T23:36:38Z",
                 "cryptosuite": "eddsa-jcs-2022",
                 "proofPurpose": "assertionMethod",
-                "proofValue": "z276AHNSrMVQKRYoeisxd3bFaXbGYDPn7apYSLHNzZSDd2Dxjzy7JowweGtqQkdNdXqe24CJ6YhDZqyRnPBFnMq1W",
+                "proofValue": "zkS1iz6kXh3eoFjLUekCrY4gTepkeFqy7RiV6Zuq5W2obvjMN4NpRpwJhyDnox6i49JNZnhvP1z3kR39KLqZWpzt",
                 "type": "DataIntegrityProof",
                 "verificationMethod": "did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6",
             },
@@ -539,6 +553,7 @@ mod tests {
                     "subscribers": "mitra:subscribers",
                     "VerifiableIdentityStatement": "mitra:VerifiableIdentityStatement",
                     "MitraJcsEip191Signature2022": "mitra:MitraJcsEip191Signature2022",
+                    "gateways": "mitra:gateways",
                     "proofValue": "sec:proofValue",
                     "proofPurpose": "sec:proofPurpose",
                 },
