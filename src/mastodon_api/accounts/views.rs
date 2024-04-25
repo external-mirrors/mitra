@@ -18,6 +18,7 @@ use uuid::Uuid;
 use mitra_activitypub::{
     builders::{
         follow::follow_or_create_request,
+        reject_follow::prepare_reject_follow,
         undo_follow::prepare_undo_follow,
         update_person::{
             build_update_person,
@@ -55,6 +56,7 @@ use mitra_models::{
         IdentityProofType,
         ProfileUpdateData,
     },
+    relationships::helpers::remove_follower,
     relationships::queries::{
         get_followers_paginated,
         get_following_paginated,
@@ -744,6 +746,44 @@ async fn unfollow_account(
     Ok(HttpResponse::Ok().json(relationship))
 }
 
+#[post("/{account_id}/remove_from_followers")]
+async fn remove_follower_view(
+    auth: BearerAuth,
+    config: web::Data<Config>,
+    db_pool: web::Data<DatabaseConnectionPool>,
+    account_id: web::Path<Uuid>,
+) -> Result<HttpResponse, MastodonError> {
+    let db_client = &mut **get_database_client(&db_pool).await?;
+    let current_user = get_current_user(db_client, auth.token()).await?;
+    let follower = get_profile_by_id(db_client, &account_id).await?;
+    let maybe_follow_activity_id = match remove_follower(
+        db_client,
+        follower.id,
+        current_user.id,
+    ).await {
+        Ok(maybe_follow_activity_id) => maybe_follow_activity_id,
+        // Not a follower, don't send Reject(Follow) activity
+        Err(DatabaseError::NotFound(_)) => None,
+        Err(other_error) => return Err(other_error.into()),
+    };
+    if let Some(follow_activity_id) = maybe_follow_activity_id {
+        let remote_actor = follower.actor_json
+            .expect("actor data should be present");
+        prepare_reject_follow(
+            &config.instance(),
+            &current_user,
+            &remote_actor,
+            &follow_activity_id,
+        ).enqueue(db_client).await?;
+    };
+    let relationship = get_relationship(
+        db_client,
+        &current_user.id,
+        &follower.id,
+    ).await?;
+    Ok(HttpResponse::Ok().json(relationship))
+}
+
 #[post("/{account_id}/mute")]
 async fn mute_account(
     auth: BearerAuth,
@@ -1028,6 +1068,7 @@ pub fn account_api_scope() -> Scope {
         .service(get_account)
         .service(follow_account)
         .service(unfollow_account)
+        .service(remove_follower_view)
         .service(mute_account)
         .service(unmute_account)
         .service(get_account_statuses)

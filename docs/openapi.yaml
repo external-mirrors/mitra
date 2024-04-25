@@ -639,6 +639,22 @@ paths:
                 $ref: '#/components/schemas/Relationship'
         404:
           description: Profile not found
+  /api/v1/accounts/{account_id}/remove_from_followers:
+    post:
+      summary: Remove the given actor from your followers.
+      security:
+        - tokenAuth: []
+      parameters:
+        - $ref: '#/components/parameters/account_id'
+      responses:
+        200:
+          description: Successfully removed from followers, or actor was already not following you
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Relationship'
+        404:
+          description: Account not found
   /api/v1/accounts/{account_id}/mute:
     post:
       summary: Mute the given account.
