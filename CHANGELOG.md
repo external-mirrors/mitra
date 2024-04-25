@@ -20,6 +20,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Add canonical actor ID to `sameAs` array in portable actor objects.
 - Do not follow redirects on activity delivery.
 - Change default local emoji size limit to 256 kB.
+- Validate all object IDs before saving them to database.
 
 ### Fixed
 

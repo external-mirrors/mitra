@@ -15,7 +15,10 @@ use mitra_models::{
     relationships::types::FollowRequestStatus,
 };
 use mitra_utils::caip10::AccountId;
-use mitra_validators::errors::ValidationError;
+use mitra_validators::{
+    activitypub::validate_object_id,
+    errors::ValidationError,
+};
 
 use crate::{
     identifiers::parse_local_object_id,
@@ -103,6 +106,7 @@ async fn handle_accept_offer(
     if account_id.chain_id != *invoice.chain_id.inner() {
         return Err(ValidationError("unexpected chain ID").into());
     };
+    validate_object_id(agreement_id)?;
     remote_invoice_opened(
         db_client,
         &invoice.id,

@@ -1,8 +1,11 @@
 use mitra_models::reactions::types::ReactionData;
 use mitra_utils::unicode::is_single_character;
 
-use super::emojis::EMOJI_NAME_SIZE_MAX;
-use super::errors::ValidationError;
+use super::{
+    activitypub::validate_object_id,
+    emojis::EMOJI_NAME_SIZE_MAX,
+    errors::ValidationError,
+};
 
 const REACTION_CONTENT_SIZE_MAX: usize = EMOJI_NAME_SIZE_MAX + 2; // database column limit
 
@@ -21,6 +24,9 @@ pub fn validate_reaction_data(
         if reaction_data.emoji_id.is_some() {
             return Err(ValidationError("custom emoji reaction without content"));
         };
+    };
+    if let Some(ref activity_id) = reaction_data.activity_id {
+        validate_object_id(activity_id)?;
     };
     Ok(())
 }

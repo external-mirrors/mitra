@@ -4,6 +4,7 @@ use mitra_models::profiles::types::{
     DbActor,
     DbActorKey,
     ExtraField,
+    PaymentOption,
     ProfileCreateData,
     ProfileUpdateData,
 };
@@ -74,11 +75,32 @@ fn clean_bio(bio: &str, is_remote: bool) -> Result<String, ValidationError> {
     Ok(cleaned_bio)
 }
 
+pub fn allowed_profile_image_media_types(
+    allowed_types: &[impl AsRef<str>],
+) -> Vec<&str> {
+    allowed_types
+        .iter()
+        .map(|media_type| media_type.as_ref())
+        .filter(|media_type| media_type.starts_with("image/"))
+        .collect()
+}
+
 fn validate_public_keys(
     public_keys: &[DbActorKey],
 ) -> Result<(), ValidationError> {
     for public_key in public_keys {
         validate_object_id(&public_key.id)?;
+    };
+    Ok(())
+}
+
+fn validate_payment_options(
+    payment_options: &[PaymentOption],
+) -> Result<(), ValidationError> {
+    for payment_option in payment_options {
+        if let PaymentOption::RemoteMoneroSubscription(option) = payment_option {
+            validate_object_id(&option.object_id)?;
+        };
     };
     Ok(())
 }
@@ -116,21 +138,21 @@ fn clean_extra_fields(
     Ok(cleaned_extra_fields)
 }
 
-pub fn allowed_profile_image_media_types(
-    allowed_types: &[impl AsRef<str>],
-) -> Vec<&str> {
-    allowed_types
-        .iter()
-        .map(|media_type| media_type.as_ref())
-        .filter(|media_type| media_type.starts_with("image/"))
-        .collect()
-}
-
 pub fn validate_actor_data(
     actor: &DbActor,
 ) -> Result<(), ValidationError> {
     validate_object_id(&actor.id)?;
     validate_object_id(&actor.inbox)?;
+    validate_object_id(&actor.outbox)?;
+    if let Some(ref followers) = actor.followers {
+        validate_object_id(followers)?;
+    };
+    if let Some(ref subscribers) = actor.subscribers {
+        validate_object_id(subscribers)?;
+    };
+    if let Some(ref featured) = actor.featured {
+        validate_object_id(featured)?;
+    };
     Ok(())
 }
 
@@ -158,6 +180,7 @@ pub fn clean_profile_create_data(
         profile_data.bio = Some(cleaned_bio);
     };
     validate_public_keys(&profile_data.public_keys)?;
+    validate_payment_options(&profile_data.payment_options)?;
     profile_data.extra_fields = clean_extra_fields(
         &profile_data.extra_fields,
         is_remote,
@@ -186,6 +209,7 @@ pub fn clean_profile_update_data(
         profile_data.bio = Some(cleaned_bio);
     };
     validate_public_keys(&profile_data.public_keys)?;
+    validate_payment_options(&profile_data.payment_options)?;
     profile_data.extra_fields = clean_extra_fields(
         &profile_data.extra_fields,
         is_remote,
@@ -257,6 +281,7 @@ mod tests {
             actor_json: Some(DbActor {
                 id: "https://social.example/test".to_string(),
                 inbox: "https://social.example/test/inbox".to_string(),
+                outbox: "https://social.example/test/outbox".to_string(),
                 ..Default::default()
             }),
             ..Default::default()

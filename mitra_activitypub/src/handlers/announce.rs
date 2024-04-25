@@ -17,7 +17,10 @@ use mitra_models::{
     profiles::queries::get_profile_by_remote_actor_id,
 };
 use mitra_services::media::MediaStorage;
-use mitra_validators::errors::ValidationError;
+use mitra_validators::{
+    activitypub::validate_object_id,
+    errors::ValidationError,
+};
 
 use crate::{
     identifiers::parse_local_object_id,
@@ -95,6 +98,7 @@ pub async fn handle_announce(
             post.id
         },
     };
+    validate_object_id(&repost_object_id)?;
     let repost_data = PostCreateData::repost(
         post_id,
         Some(repost_object_id.clone()),

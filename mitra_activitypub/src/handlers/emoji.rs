@@ -16,6 +16,7 @@ use mitra_models::{
 use mitra_services::media::MediaStorage;
 use mitra_utils::urls::get_hostname;
 use mitra_validators::{
+    activitypub::validate_object_id,
     emojis::{
         validate_emoji_name,
         EMOJI_MEDIA_TYPES,
@@ -109,6 +110,7 @@ pub async fn handle_emoji(
                 return Ok(None);
             },
         };
+        validate_object_id(&emoji.id)?;
         match create_emoji(
             db_client,
             emoji_name,

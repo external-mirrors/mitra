@@ -15,7 +15,10 @@ use mitra_models::{
     users::queries::get_user_by_name,
 };
 use mitra_services::media::MediaStorage;
-use mitra_validators::errors::ValidationError;
+use mitra_validators::{
+    activitypub::validate_object_id,
+    errors::ValidationError,
+};
 
 use crate::{
     builders::accept_follow::prepare_accept_follow,
@@ -58,6 +61,7 @@ pub async fn handle_follow(
     let target_user = get_user_by_name(db_client, &target_username).await?;
     // Create new follow request or update activity ID on existing one,
     // because latest activity ID might be needed to process Undo(Follow)
+    validate_object_id(&activity.id)?;
     let follow_request = create_remote_follow_request_opt(
         db_client,
         &source_profile.id,
