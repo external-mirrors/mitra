@@ -13,6 +13,7 @@ use serde_json::{Value as JsonValue};
 use uuid::Uuid;
 
 use mitra_utils::{
+    ap_url::is_ap_url,
     caip2::ChainId,
     crypto_eddsa::{
         ed25519_public_key_from_secret_key,
@@ -642,6 +643,12 @@ pub struct DbActor {
 
 json_from_sql!(DbActor);
 json_to_sql!(DbActor);
+
+impl DbActor {
+    pub fn is_portable(&self) -> bool {
+        is_ap_url(&self.id)
+    }
+}
 
 #[allow(dead_code)]
 #[derive(Clone, FromSql)]

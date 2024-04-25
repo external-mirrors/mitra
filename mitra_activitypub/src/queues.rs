@@ -173,6 +173,11 @@ impl OutgoingActivityJobData {
         // Sort and de-duplicate recipients
         let mut recipient_map = BTreeMap::new();
         for actor in recipients {
+            if actor.is_portable() {
+                // TODO: FEP-EF61: deliver to all gateways
+                log::warn!("skipping portable recipient: {}", actor.id);
+                continue;
+            };
             if !recipient_map.contains_key(&actor.id) {
                 let recipient = Recipient {
                     id: actor.id.clone(),

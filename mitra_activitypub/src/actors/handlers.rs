@@ -55,6 +55,7 @@ use crate::{
         proposal::{parse_proposal, Proposal},
     },
     importers::fetch_any_object,
+    url::canonicalize_id,
     vocabulary::{
         EMOJI,
         HASHTAG,
@@ -204,19 +205,32 @@ impl Actor {
         Ok(hostname)
     }
 
-    fn into_db_actor(self) -> DbActor {
-        DbActor {
-            object_type: self.object_type,
-            id: self.id,
-            inbox: self.inbox,
-            outbox: self.outbox,
-            followers: self.followers,
-            subscribers: self.subscribers,
-            featured: self.featured,
-            url: self.url,
-            gateways: self.gateways,
+    fn to_db_actor(&self) -> Result<DbActor, ValidationError> {
+        let canonical_actor_id = canonicalize_id(&self.id)?;
+        let canonical_inbox = canonicalize_id(&self.inbox)?;
+        let canonical_outbox = canonicalize_id(&self.outbox)?;
+        let maybe_canonical_followers = self.followers.as_deref()
+            .map(canonicalize_id)
+            .transpose()?;
+        let maybe_canonical_subscribers = self.subscribers.as_deref()
+            .map(canonicalize_id)
+            .transpose()?;
+        let maybe_canonical_featured = self.featured.as_deref()
+            .map(canonicalize_id)
+            .transpose()?;
+        let db_actor = DbActor {
+            object_type: self.object_type.clone(),
+            id: canonical_actor_id.to_string(),
+            inbox: canonical_inbox,
+            outbox: canonical_outbox,
+            followers: maybe_canonical_followers,
+            subscribers: maybe_canonical_subscribers,
+            featured: maybe_canonical_featured,
+            url: self.url.clone(),
+            gateways: self.gateways.clone(),
             public_key: None,
-        }
+        };
+        Ok(db_actor)
     }
 }
 
@@ -400,6 +414,7 @@ async fn fetch_proposals(
 ) -> Vec<PaymentOption> {
     let mut payment_options = vec![];
     for proposal_id in proposals {
+        // TODO: FEP-EF61: 'ap' URLs are not supported
         let proposal: Proposal = match fetch_any_object(agent, &proposal_id).await {
             Ok(proposal) => proposal,
             Err(error) => {
@@ -490,6 +505,7 @@ pub async fn create_remote_profile(
     // TODO: implement reverse webfinger lookup
     // https://swicg.github.io/activitypub-webfinger/#reverse-discovery
     let actor_hostname = actor.hostname()?;
+    let actor_data = actor.to_db_actor()?;
     let (maybe_avatar, maybe_banner) = fetch_actor_images(
         agent,
         storage,
@@ -527,7 +543,7 @@ pub async fn create_remote_profile(
         extra_fields,
         aliases,
         emojis,
-        actor_json: Some(actor.into_db_actor()),
+        actor_json: Some(actor_data),
     };
     clean_profile_create_data(&mut profile_data)?;
     let profile = create_profile(db_client, profile_data).await?;
@@ -554,9 +570,9 @@ pub async fn update_remote_profile(
     if actor.preferred_username != profile.username {
         log::warn!("preferred username doesn't match cached value");
     };
-    let actor_old = profile.actor_json
-        .expect("actor data should be present");
-    assert_eq!(actor_old.id, actor.id, "actor ID shouldn't change");
+    let actor_data_old = profile.expect_actor_data();
+    let actor_data = actor.to_db_actor()?;
+    assert_eq!(actor_data_old.id, actor_data.id, "actor ID shouldn't change");
     let (maybe_avatar, maybe_banner) = fetch_actor_images(
         agent,
         storage,
@@ -594,7 +610,7 @@ pub async fn update_remote_profile(
         extra_fields,
         aliases,
         emojis,
-        actor_json: Some(actor.into_db_actor()),
+        actor_json: Some(actor_data),
     };
     clean_profile_update_data(&mut profile_data)?;
     // update_profile() clears unreachable_since

@@ -40,6 +40,7 @@ use crate::{
     contexts::W3ID_VALUEFLOWS_CONTEXT,
     identifiers::{local_actor_id_unified, local_actor_proposal_id},
     identity::VerifiableIdentityStatement,
+    url::canonicalize_id,
     vocabulary::{
         LINK,
         PROPERTY_VALUE,
@@ -52,12 +53,13 @@ pub fn parse_identity_proof_fep_c390(
     actor_id: &str,
     attachment: &JsonValue,
 ) -> Result<IdentityProof, ValidationError> {
+    let canonical_actor_id = canonicalize_id(actor_id)?;
     let statement: VerifiableIdentityStatement = serde_json::from_value(attachment.clone())
         .map_err(|_| ValidationError("invalid FEP-c390 attachment"))?;
     if statement.object_type != VERIFIABLE_IDENTITY_STATEMENT {
         return Err(ValidationError("invalid attachment type"));
     };
-    if statement.also_known_as != actor_id {
+    if statement.also_known_as != canonical_actor_id {
         return Err(ValidationError("actor ID mismatch"));
     };
     let signature_data = get_json_signature(attachment)

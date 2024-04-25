@@ -15,7 +15,10 @@ use mitra_utils::{
 };
 
 use super::{
-    activitypub::{validate_gateway_url, validate_object_id},
+    activitypub::{
+        validate_any_object_id,
+        validate_gateway_url,
+    },
     errors::ValidationError,
     posts::EMOJI_LIMIT,
 };
@@ -103,7 +106,7 @@ fn validate_public_keys(
     public_keys: &[DbActorKey],
 ) -> Result<(), ValidationError> {
     for public_key in public_keys {
-        validate_object_id(&public_key.id)?;
+        validate_any_object_id(&public_key.id)?;
     };
     Ok(())
 }
@@ -122,7 +125,7 @@ fn validate_payment_options(
 ) -> Result<(), ValidationError> {
     for payment_option in payment_options {
         if let PaymentOption::RemoteMoneroSubscription(option) = payment_option {
-            validate_object_id(&option.object_id)?;
+            validate_any_object_id(&option.object_id)?;
         };
     };
     Ok(())
@@ -178,17 +181,20 @@ pub fn validate_aliases(
 pub fn validate_actor_data(
     actor: &DbActor,
 ) -> Result<(), ValidationError> {
-    validate_object_id(&actor.id)?;
-    validate_object_id(&actor.inbox)?;
-    validate_object_id(&actor.outbox)?;
+    validate_any_object_id(&actor.id)?;
+    validate_any_object_id(&actor.inbox)?;
+    validate_any_object_id(&actor.outbox)?;
     if let Some(ref followers) = actor.followers {
-        validate_object_id(followers)?;
+        validate_any_object_id(followers)?;
     };
     if let Some(ref subscribers) = actor.subscribers {
-        validate_object_id(subscribers)?;
+        validate_any_object_id(subscribers)?;
     };
     if let Some(ref featured) = actor.featured {
-        validate_object_id(featured)?;
+        validate_any_object_id(featured)?;
+    };
+    if actor.is_portable() && actor.gateways.is_empty() {
+        return Err(ValidationError("at least one gateway must be specified"));
     };
     for gateway in &actor.gateways {
         validate_gateway_url(gateway)?;

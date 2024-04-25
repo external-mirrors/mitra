@@ -26,6 +26,7 @@ use mitra_validators::{
 
 use crate::{
     identifiers::local_actor_key_id,
+    url::canonicalize_id,
     vocabulary::MULTIKEY,
 };
 
@@ -54,6 +55,7 @@ impl PublicKey {
     }
 
     pub fn to_db_key(&self) -> Result<DbActorKey, ValidationError> {
+        let key_id = canonicalize_id(&self.id)?;
         let (key_type, key_data) = match deserialize_rsa_public_key(&self.public_key_pem) {
             Ok(public_key) => {
                 let public_key_der = rsa_public_key_to_pkcs1_der(&public_key)
@@ -67,7 +69,7 @@ impl PublicKey {
             },
         };
         let db_key = DbActorKey {
-            id: self.id.clone(),
+            id: key_id,
             key_type,
             key_data,
         };
@@ -120,6 +122,7 @@ impl Multikey {
     }
 
     pub fn to_db_key(&self) -> Result<DbActorKey, ValidationError> {
+        let key_id = canonicalize_id(&self.id)?;
         let public_key_multicode = decode_multibase_base58btc(&self.public_key_multibase)
             .map_err(|_| ValidationError("invalid key encoding"))?;
         let public_key_decoded = Multicodec::decode(&public_key_multicode)
@@ -140,7 +143,7 @@ impl Multikey {
             _ => return Err(ValidationError("unexpected key type")),
         };
         let db_key = DbActorKey {
-            id: self.id.clone(),
+            id: key_id,
             key_type,
             key_data,
         };

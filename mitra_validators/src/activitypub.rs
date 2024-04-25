@@ -12,7 +12,10 @@ const GATEWAY_PATH_PREFIX: &str = "/.well-known/apgateway/";
 
 // Object ID is an URI
 // https://www.w3.org/TR/activitypub/#obj-id
-pub fn validate_object_id(object_id: &str) -> Result<(), ValidationError> {
+fn _validate_any_object_id(
+    object_id: &str,
+    allow_ap: bool,
+) -> Result<(), ValidationError> {
     if object_id.len() > OBJECT_ID_SIZE_MAX {
         return Err(ValidationError("object ID is too long"));
     };
@@ -20,8 +23,9 @@ pub fn validate_object_id(object_id: &str) -> Result<(), ValidationError> {
         // Validate 'ap' URL
         ApUrl::parse(object_id)
             .map_err(|_| ValidationError("invalid object ID"))?;
-        // TODO: FEP-EF61: allow 'ap' URLs
-        return Err(ValidationError("object ID is 'ap' URL"));
+        if !allow_ap {
+            return Err(ValidationError("object ID is 'ap' URL"));
+        };
     } else {
         // Validate HTTP(S) URL
         let http_url = HttpUrl::parse(object_id)
@@ -31,6 +35,16 @@ pub fn validate_object_id(object_id: &str) -> Result<(), ValidationError> {
         };
     };
     Ok(())
+}
+
+pub fn validate_object_id(object_id: &str) -> Result<(), ValidationError> {
+    // Doesn't allow 'ap' URLs
+    _validate_any_object_id(object_id, false)
+}
+
+pub fn validate_any_object_id(object_id: &str) -> Result<(), ValidationError> {
+    // Allows 'ap' URLs
+    _validate_any_object_id(object_id, true)
 }
 
 pub fn validate_gateway_url(url: &str) -> Result<(), ValidationError> {

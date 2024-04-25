@@ -8,13 +8,16 @@ use mitra_models::{
 use mitra_utils::caip19::AssetType;
 use mitra_validators::errors::ValidationError;
 
-use crate::builders::proposal::{
-    ACTION_DELIVER_SERVICE,
-    ACTION_TRANSFER,
-    CLASS_USER_GENERATED_CONTENT,
-    PURPOSE_OFFER,
-    UNIT_ONE,
-    UNIT_SECOND,
+use crate::{
+    builders::proposal::{
+        ACTION_DELIVER_SERVICE,
+        ACTION_TRANSFER,
+        CLASS_USER_GENERATED_CONTENT,
+        PURPOSE_OFFER,
+        UNIT_ONE,
+        UNIT_SECOND,
+    },
+    url::canonicalize_id,
 };
 
 #[derive(Deserialize)]
@@ -70,6 +73,7 @@ pub struct Proposal {
 pub fn parse_proposal(
     proposal: Proposal,
 ) -> Result<PaymentOption, ValidationError> {
+    let canonical_proposal_id = canonicalize_id(&proposal.id)?;
     // Purpose
     if let Some(purpose) = proposal.purpose {
         if purpose != PURPOSE_OFFER {
@@ -106,7 +110,7 @@ pub fn parse_proposal(
     let payment_option = PaymentOption::remote_monero_subscription(
         asset_type.chain_id,
         price,
-        proposal.id,
+        canonical_proposal_id,
         true,
     );
     Ok(payment_option)
