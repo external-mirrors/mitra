@@ -228,7 +228,7 @@ pub(super) async fn create_follow_request_unchecked(
     Ok(request)
 }
 
-// Save follow request from remote actor
+/// Save follow request from remote actor
 pub async fn create_remote_follow_request_opt(
     db_client: &impl DatabaseClient,
     source_id: &Uuid,
@@ -236,6 +236,7 @@ pub async fn create_remote_follow_request_opt(
     activity_id: &str,
 ) -> Result<DbFollowRequest, DatabaseError> {
     let request_id = generate_ulid();
+    // Update activity ID if follow request already exists
     let row = db_client.query_one(
         "
         INSERT INTO follow_request (
@@ -886,6 +887,7 @@ mod tests {
             ..Default::default()
         };
         let target = create_user(db_client, target_data).await.unwrap();
+
         // Create follow request
         let activity_id = "https://example.org/objects/123";
         let _follow_request = create_remote_follow_request_opt(
@@ -904,6 +906,21 @@ mod tests {
         let follow_request = get_follow_request_by_id(db_client, &follow_request.id)
             .await.unwrap();
         assert_eq!(follow_request.request_status, FollowRequestStatus::Accepted);
+
+        // Another request received
+        let activity_id = "https://example.org/objects/125";
+        let follow_request_updated = create_remote_follow_request_opt(
+            db_client, &source.id, &target.id, activity_id,
+        ).await.unwrap();
+        assert_eq!(follow_request_updated.id, follow_request.id);
+        assert_eq!(
+            follow_request_updated.activity_id.unwrap(),
+            activity_id,
+        );
+        assert_eq!(
+            follow_request_updated.request_status,
+            FollowRequestStatus::Accepted,
+        );
     }
 
     #[tokio::test]

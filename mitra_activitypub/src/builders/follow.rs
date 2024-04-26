@@ -104,7 +104,9 @@ pub async fn follow_or_create_request(
                     ).await?;
                 };
             },
-            Err(DatabaseError::AlreadyExists(_)) => (), // already sent request
+            // Do nothing if request has already been sent,
+            // or if already following
+            Err(DatabaseError::AlreadyExists(_)) => (),
             Err(other_error) => return Err(other_error),
         };
     } else {
