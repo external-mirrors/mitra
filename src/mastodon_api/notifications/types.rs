@@ -74,9 +74,10 @@ impl ApiNotification {
             EventType::Reaction => "pleroma:emoji_reaction",
             EventType::Mention => "mention",
             EventType::Repost => "reblog",
-            EventType::Subscription => "subscription",
+            EventType::SubscriberPayment => "subscription",
             EventType::SubscriptionStart => "", // not supported
             EventType::SubscriptionExpiration => "subscription_expiration",
+            EventType::SubscriberLeaving => "subscriber_leaving",
             EventType::Move => "move",
             EventType::SignUp => "admin.sign_up",
         };

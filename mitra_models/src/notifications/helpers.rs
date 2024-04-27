@@ -139,7 +139,7 @@ pub async fn create_repost_notification(
     ).await
 }
 
-pub async fn create_subscription_notification(
+pub async fn create_subscriber_payment_notification(
     db_client: &impl DatabaseClient,
     sender_id: Uuid,
     recipient_id: Uuid,
@@ -147,7 +147,19 @@ pub async fn create_subscription_notification(
     create_notification(
         db_client, sender_id, recipient_id, None,
         None,
-        EventType::Subscription,
+        EventType::SubscriberPayment,
+    ).await
+}
+
+pub async fn create_subscriber_leaving_notification(
+    db_client: &impl DatabaseClient,
+    sender_id: Uuid,
+    recipient_id: Uuid,
+) -> Result<(), DatabaseError> {
+    create_notification(
+        db_client, sender_id, recipient_id, None,
+        None,
+        EventType::SubscriberLeaving,
     ).await
 }
 

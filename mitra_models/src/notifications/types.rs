@@ -21,11 +21,12 @@ pub enum EventType {
     Reaction,
     Mention,
     Repost,
-    Subscription,
+    SubscriberPayment,
     SubscriptionStart,
     SubscriptionExpiration,
     Move,
     SignUp,
+    SubscriberLeaving,
 }
 
 impl From<&EventType> for i16 {
@@ -37,11 +38,12 @@ impl From<&EventType> for i16 {
             EventType::Reaction => 4,
             EventType::Mention => 5,
             EventType::Repost => 6,
-            EventType::Subscription => 7,
+            EventType::SubscriberPayment => 7,
             EventType::SubscriptionStart => unimplemented!("not supported"),
             EventType::SubscriptionExpiration => 9,
             EventType::Move => 10,
             EventType::SignUp => 11,
+            EventType::SubscriberLeaving => 12,
         }
     }
 }
@@ -57,11 +59,12 @@ impl TryFrom<i16> for EventType {
             4 => Self::Reaction,
             5 => Self::Mention,
             6 => Self::Repost,
-            7 => Self::Subscription,
+            7 => Self::SubscriberPayment,
             8 => Self::SubscriptionStart,
             9 => Self::SubscriptionExpiration,
             10 => Self::Move,
             11 => Self::SignUp,
+            12 => Self::SubscriberLeaving,
             _ => return Err(DatabaseTypeError),
         };
         Ok(event_type)

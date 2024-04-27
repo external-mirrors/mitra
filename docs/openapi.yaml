@@ -2701,6 +2701,7 @@ components:
             - reblog
             - subscription
             - subscription_expiration
+            - subscriber_leaving
             - move
             - admin.sign_up
           example: favourite

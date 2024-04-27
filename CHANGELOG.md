@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+
+- Generate notification when subscriber is leaving.
+
 ### Changed
 
 - Allow reactions with remote emojis.

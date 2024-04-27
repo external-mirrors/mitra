@@ -17,7 +17,8 @@ use mitra_models::{
         DatabaseError,
     },
     notifications::helpers::{
-        create_subscription_notification,
+        create_subscriber_leaving_notification,
+        create_subscriber_payment_notification,
         create_subscription_expiration_notification,
     },
     profiles::queries::get_profile_by_id,
@@ -38,7 +39,7 @@ pub async fn send_subscription_notifications(
 ) -> Result<(), DatabaseError> {
     if maybe_invoice_id.is_some() {
         // Create notification only if payment was made
-        create_subscription_notification(
+        create_subscriber_payment_notification(
             db_client,
             sender.id,
             recipient.id,
@@ -86,6 +87,11 @@ pub async fn update_expired_subscriptions(
                 subscription.sender_id,
             ).await?;
         };
+        create_subscriber_leaving_notification(
+            db_client,
+            sender.id,
+            recipient.id,
+        ).await?;
     };
     Ok(())
 }
