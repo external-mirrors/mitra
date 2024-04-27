@@ -37,6 +37,7 @@ use mitra_validators::{
 
 use crate::mastodon_api::{
     custom_emojis::types::CustomEmoji,
+    deserializers::deserialize_boolean,
     errors::MastodonError,
     pagination::PageSize,
     uploads::{save_b64_file, UploadError},
@@ -518,7 +519,7 @@ fn default_search_page_size() -> PageSize { PageSize::new(40) }
 pub struct SearchAcctQueryParams {
     pub q: String,
 
-    #[serde(default)]
+    #[serde(default, deserialize_with = "deserialize_boolean")]
     pub resolve: bool,
 
     #[serde(default = "default_search_page_size")]
@@ -555,13 +556,22 @@ const fn default_exclude_replies() -> bool { true }
 
 #[derive(Deserialize)]
 pub struct StatusListQueryParams {
-    #[serde(default = "default_only_media")]
+    #[serde(
+        default = "default_only_media",
+        deserialize_with = "deserialize_boolean",
+    )]
     pub only_media: bool,
 
-    #[serde(default = "default_exclude_replies")]
+    #[serde(
+        default = "default_exclude_replies",
+        deserialize_with = "deserialize_boolean",
+    )]
     pub exclude_replies: bool,
 
-    #[serde(default)]
+    #[serde(
+        default,
+        deserialize_with = "deserialize_boolean",
+    )]
     pub pinned: bool,
 
     pub max_id: Option<Uuid>,

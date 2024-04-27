@@ -22,6 +22,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Do not follow redirects on activity delivery.
 - Change default local emoji size limit to 256 kB.
 - Validate all object IDs before saving them to database.
+- Accept `off`, `on`, `0` and `1` as valid boolean values in Mastodon API queries.
 
 ### Fixed
 

@@ -1,6 +1,9 @@
 use serde::Deserialize;
 
-use crate::mastodon_api::pagination::PageSize;
+use crate::mastodon_api::{
+    deserializers::deserialize_boolean,
+    pagination::PageSize,
+};
 
 fn default_page_size() -> PageSize { PageSize::new(40) }
 
@@ -15,6 +18,9 @@ pub struct DirectoryQueryParams {
     #[serde(default = "default_page_size")]
     pub limit: PageSize,
 
-    #[serde(default = "default_only_local")]
+    #[serde(
+        default = "default_only_local",
+        deserialize_with = "deserialize_boolean",
+    )]
     pub local: bool,
 }
