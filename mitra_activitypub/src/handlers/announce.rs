@@ -120,6 +120,7 @@ pub async fn handle_announce(
 /// https://codeberg.org/fediverse/fep/src/branch/main/fep/1b12/fep-1b12.md
 #[derive(Deserialize)]
 struct GroupAnnounce {
+    #[serde(deserialize_with = "deserialize_into_object_id")]
     actor: String,
     object: JsonValue,
 }

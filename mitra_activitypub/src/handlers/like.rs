@@ -41,6 +41,7 @@ struct Like {
     #[serde(rename = "type")]
     activity_type: String,
 
+    #[serde(deserialize_with = "deserialize_into_object_id")]
     actor: String,
 
     #[serde(deserialize_with = "deserialize_into_object_id")]
