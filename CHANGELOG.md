@@ -26,6 +26,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Validate all object IDs before saving them to database.
 - Accept `off`, `on`, `0` and `1` as valid boolean values in Mastodon API queries.
 - Allow `actor` property of `Like` and FEP-1b12 `Announce` activities to contain object.
+- Verify that object is not an actor when importing it as a post.
 
 ### Fixed
 

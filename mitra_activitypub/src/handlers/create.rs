@@ -111,6 +111,18 @@ pub struct AttributedObject {
     url: Option<JsonValue>,
 
     quote_url: Option<String>,
+
+    // TODO: Use is_object?
+    inbox: Option<String>,
+}
+
+impl AttributedObject {
+    pub fn check_not_actor(&self) -> Result<(), ValidationError> {
+        if self.inbox.is_some() {
+            return Err(ValidationError("object is actor"));
+        };
+        Ok(())
+    }
 }
 
 fn get_object_attributed_to(object: &AttributedObject)
@@ -614,6 +626,7 @@ pub async fn handle_note(
     object: AttributedObject,
     redirects: &HashMap<String, String>,
 ) -> Result<Post, HandlerError> {
+    object.check_not_actor()?;
     if object.object_type != NOTE {
         // Attempting to convert any object that has attributedTo property
         // into post
