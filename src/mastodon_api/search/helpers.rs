@@ -57,7 +57,7 @@ fn parse_profile_query(query: &str) ->
 {
     // See also: ACTOR_ADDRESS_RE in mitra_federation::addresses
     let acct_query_re =
-        Regex::new(r"^(@|!)?(?P<username>[\w\.-]+)(@(?P<hostname>[\w\.-]*))?$")
+        Regex::new(r"^(@|!|acct:)?(?P<username>[\w\.-]+)(@(?P<hostname>[\w\.-]*))?$")
             .expect("regexp should be valid");
     let acct_query_caps = acct_query_re.captures(query)
         .ok_or(ValidationError("invalid profile query"))?;
@@ -364,6 +364,14 @@ mod tests {
         let (username, maybe_hostname) = parse_profile_query(query).unwrap();
         assert_eq!(username, "group");
         assert_eq!(maybe_hostname.as_deref(), Some("example.com"));
+    }
+
+    #[test]
+    fn test_parse_profile_query_acct_uri() {
+        let query = "acct:user@social.example";
+        let (username, maybe_hostname) = parse_profile_query(query).unwrap();
+        assert_eq!(username, "user");
+        assert_eq!(maybe_hostname.as_deref(), Some("social.example"));
     }
 
     #[test]
