@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [2.17.0] - 2024-04-27
+
 ### Added
 
 - Make local emoji size limit configurable.
