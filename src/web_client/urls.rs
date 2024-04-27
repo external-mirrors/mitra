@@ -21,6 +21,10 @@ pub fn get_subscription_page_url(instance_url: &str, username: &str) -> String {
     )
 }
 
+pub fn get_search_page_url(instance_url: &str, query: &str) -> String {
+    format!("{instance_url}/search?q={query}")
+}
+
 pub fn get_opengraph_image_url(instance_url: &str) -> String {
     format!("{instance_url}/ogp-image.png")
 }

@@ -29,8 +29,10 @@ use mitra_models::{
 
 use crate::atom::urls::get_user_feed_url;
 use crate::errors::HttpError;
+use crate::web_client::urls::get_search_page_url;
 
 const WEBFINGER_PROFILE_RELATION_TYPE: &str = "http://webfinger.net/rel/profile-page";
+const REMOTE_INTERACTION_RELATION_TYPE: &str = "http://ostatus.org/schema/1.0/subscribe";
 // Relation type used by Friendica
 const FEED_RELATION_TYPE: &str = "http://schemas.google.com/g/2010#updates-from";
 
@@ -79,6 +81,14 @@ async fn get_jrd(
             .with_media_type("application/atom+xml")
             .with_href(&feed_url);
         links.push(feed_link);
+        // Add remote interaction template
+        let remote_interaction_template = get_search_page_url(
+            &instance.url(),
+            "{uri}",
+        );
+        let remote_interaction_link = Link::new(REMOTE_INTERACTION_RELATION_TYPE)
+            .with_template(&remote_interaction_template);
+        links.push(remote_interaction_link);
     };
     let jrd = JsonResourceDescriptor {
         subject: actor_address.to_acct_uri(),
@@ -112,6 +122,7 @@ pub async fn webfinger_view(
 
 #[cfg(test)]
 mod tests {
+    use serde_json::json;
     use serial_test::serial;
     use mitra_models::{
         database::test_utils::create_test_database,
@@ -126,25 +137,40 @@ mod tests {
     #[serial]
     async fn test_get_jrd() {
         let db_client = &mut create_test_database().await;
-        let instance = Instance::for_test("https://example.com");
+        let instance = Instance::for_test("https://social.example");
         let user_data = UserCreateData {
             username: "test".to_string(),
             password_hash: Some("test".to_string()),
             ..Default::default()
         };
         create_user(db_client, user_data).await.unwrap();
-        let resource = "acct:test@example.com";
+        let resource = "acct:test@social.example";
         let jrd = get_jrd(db_client, instance, resource).await.unwrap();
-        assert_eq!(jrd.subject, resource);
-        assert_eq!(jrd.links[0].rel, "http://webfinger.net/rel/profile-page");
-        assert_eq!(
-            jrd.links[0].href.as_ref().unwrap(),
-            "https://example.com/users/test",
-        );
-        assert_eq!(jrd.links[1].rel, "self");
-        assert_eq!(
-            jrd.links[1].href.as_ref().unwrap(),
-            "https://example.com/users/test",
-        );
+        let jrd_value = serde_json::to_value(jrd).unwrap();
+        let expected_jrd_value = json!({
+            "subject": "acct:test@social.example",
+            "links": [
+                {
+                    "rel": "http://webfinger.net/rel/profile-page",
+                    "type": "text/html",
+                    "href": "https://social.example/users/test"
+                },
+                {
+                    "rel": "self",
+                    "type": "application/ld+json; profile=\"https://www.w3.org/ns/activitystreams\"",
+                    "href": "https://social.example/users/test"
+                },
+                {
+                    "rel": "http://schemas.google.com/g/2010#updates-from",
+                    "type": "application/atom+xml",
+                    "href": "https://social.example/feeds/users/test"
+                },
+                {
+                    "rel": "http://ostatus.org/schema/1.0/subscribe",
+                    "template": "https://social.example/search?q={uri}"
+                }
+            ]
+        });
+        assert_eq!(jrd_value, expected_jrd_value);
     }
 }

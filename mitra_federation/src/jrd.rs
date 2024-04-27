@@ -10,15 +10,19 @@ pub const JRD_MEDIA_TYPE: &str = "application/jrd+json";
 // https://datatracker.ietf.org/doc/html/rfc7033#section-4.4.4
 #[derive(Deserialize, Serialize)]
 pub struct Link {
-    pub rel: String,
+    rel: String,
 
     #[serde(rename = "type", skip_serializing_if = "Option::is_none")]
-    pub media_type: Option<String>,
+    media_type: Option<String>,
 
-    pub href: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    href: Option<String>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    template: Option<String>,
 
     #[serde(default, skip_serializing_if = "HashMap::is_empty")]
-    pub properties: HashMap<String, String>,
+    properties: HashMap<String, String>,
 }
 
 impl Link {
@@ -27,6 +31,7 @@ impl Link {
             rel: rel.to_string(),
             media_type: None,
             href: None,
+            template: None,
             properties: Default::default(),
         }
     }
@@ -38,6 +43,11 @@ impl Link {
 
     pub fn with_href(mut self, href: &str) -> Self {
         self.href = Some(href.to_string());
+        self
+    }
+
+    pub fn with_template(mut self, template: &str) -> Self {
+        self.template = Some(template.to_string());
         self
     }
 
@@ -105,12 +115,14 @@ mod tests {
             rel: "http://webfinger.net/rel/profile-page".to_string(),
             media_type: Some("text/html".to_string()),
             href: Some(actor_id.to_string()),
+            template: None,
             properties: Default::default(),
         };
         let actor_link = Link {
             rel: "self".to_string(),
             media_type: Some("application/activity+json".to_string()),
             href: Some(actor_id.to_string()),
+            template: None,
             properties: Default::default(),
         };
         let jrd = JsonResourceDescriptor {
@@ -127,6 +139,7 @@ mod tests {
             rel: "self".to_string(),
             media_type: Some("application/activity+json".to_string()),
             href: Some(person_id.to_string()),
+            template: None,
             properties: HashMap::from([(
                 "https://www.w3.org/ns/activitystreams#type".to_string(),
                 "Person".to_string(),
@@ -137,6 +150,7 @@ mod tests {
             rel: "self".to_string(),
             media_type: Some("application/activity+json".to_string()),
             href: Some(group_id.to_string()),
+            template: None,
             properties: HashMap::from([(
                 "https://www.w3.org/ns/activitystreams#type".to_string(),
                 "Group".to_string(),
