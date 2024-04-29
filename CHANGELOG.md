@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- Increased attachment description limit to 3000 bytes.
+
 ### Fixed
 
 - Don't reject whole activity if attachment description is not valid.
