@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Fixed
+
+- Don't reject whole activity if attachment description is not valid.
+
 ## [2.17.0] - 2024-04-27
 
 ### Added

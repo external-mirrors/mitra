@@ -271,9 +271,11 @@ pub async fn get_object_attachments(
             // Don't fetch HTML pages attached by GNU Social
             continue;
         };
-        if let Some(ref description) = attachment.name {
-            validate_media_description(description)?;
-        };
+        let maybe_description = attachment.name.filter(|name| {
+            validate_media_description(name)
+                .map_err(|error| log::warn!("{error}"))
+                .is_ok()
+        });
         let attachment_url = if let Some(url) = attachment.url {
             url
         } else {
@@ -304,7 +306,7 @@ pub async fn get_object_attachments(
             file_name,
             file_size,
             media_type,
-            attachment.name,
+            maybe_description,
         ));
     };
     for (file_name, file_size, media_type, description) in downloaded {
