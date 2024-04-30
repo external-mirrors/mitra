@@ -51,6 +51,39 @@ Minimum system requirements:
 
 ## Installation
 
+### Debian package
+
+Download package from the [Releases](https://codeberg.org/silverpill/mitra/releases) page.
+
+Install Mitra:
+
+```shell
+dpkg -i mitra_amd64.deb
+```
+
+Install PostgreSQL, then create the database:
+
+```sql
+CREATE USER mitra WITH PASSWORD 'mitra';
+CREATE DATABASE mitra OWNER mitra ENCODING 'UTF8';
+```
+
+Open configuration file `/etc/mitra/config.yaml` and configure the instance.
+
+Start Mitra:
+
+```shell
+systemctl start mitra
+```
+
+An HTTP server will be needed to handle HTTPS requests. See examples of [Nginx](./contrib/mitra.nginx) and [Caddy](./contrib/Caddyfile) configuration files.
+
+Create admin user when installation is finished:
+
+```shell
+su mitra -c "mitractl create-user <username> <password> admin"
+```
+
 ### Building from source
 
 Clone the git repository or download the source archive from the [Releases](https://codeberg.org/silverpill/mitra/releases) page.
@@ -88,39 +121,6 @@ Create admin user when installation is finished:
 
 ```shell
 ./mitractl create-user <username> <password> admin
-```
-
-### Debian package
-
-Download package from the [Releases](https://codeberg.org/silverpill/mitra/releases) page.
-
-Install Mitra:
-
-```shell
-dpkg -i mitra_amd64.deb
-```
-
-Install PostgreSQL, then create the database:
-
-```sql
-CREATE USER mitra WITH PASSWORD 'mitra';
-CREATE DATABASE mitra OWNER mitra ENCODING 'UTF8';
-```
-
-Open configuration file `/etc/mitra/config.yaml` and configure the instance.
-
-Start Mitra:
-
-```shell
-systemctl start mitra
-```
-
-An HTTP server will be needed to handle HTTPS requests. See examples of [Nginx](./contrib/mitra.nginx) and [Caddy](./contrib/Caddyfile) configuration files.
-
-Create admin user when installation is finished:
-
-```shell
-su mitra -c "mitractl create-user <username> <password> admin"
 ```
 
 ### Other installation methods
