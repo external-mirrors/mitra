@@ -138,6 +138,7 @@ pub async fn process_queued_incoming_activities(
                     error,
                     HandlerError::FetchError(
                         FetchError::RecursionError |
+                        FetchError::Forbidden(_) |
                         FetchError::NotFound(_)
                     ) | HandlerError::UnsolicitedMessage(_)
                 )

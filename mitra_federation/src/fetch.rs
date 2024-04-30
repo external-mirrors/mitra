@@ -39,6 +39,9 @@ pub enum FetchError {
     #[error(transparent)]
     RequestError(#[from] reqwest::Error),
 
+    #[error("access denied: {0}")]
+    Forbidden(String),
+
     #[error("resource not found: {0}")]
     NotFound(String),
 
@@ -96,6 +99,9 @@ fn build_request(
 
 fn fetcher_error_for_status(error: reqwest::Error) -> FetchError {
     match (error.url(), error.status()) {
+        (Some(url), Some(StatusCode::FORBIDDEN)) => {
+            FetchError::Forbidden(url.to_string())
+        },
         (Some(url), Some(StatusCode::NOT_FOUND)) => {
             FetchError::NotFound(url.to_string())
         },
