@@ -13,7 +13,9 @@ use crate::{
     },
 };
 
-use super::queries::set_user_ed25519_secret_key;
+use super::{
+    queries::set_user_ed25519_secret_key,
+};
 
 pub async fn add_ed25519_keys(
     db_client: &impl DatabaseClient,

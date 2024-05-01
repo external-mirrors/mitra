@@ -206,9 +206,6 @@ pub fn clean_profile_create_data(
     profile_data: &mut ProfileCreateData,
 ) -> Result<(), ValidationError> {
     validate_username(&profile_data.username)?;
-    if profile_data.hostname.is_some() != profile_data.actor_json.is_some() {
-        return Err(ValidationError("hostname and actor_json field mismatch"));
-    };
     if let Some(hostname) = &profile_data.hostname {
         validate_hostname(hostname)?;
     };
@@ -217,6 +214,10 @@ pub fn clean_profile_create_data(
     };
     let is_remote = if let Some(ref actor) = profile_data.actor_json {
         validate_actor_data(actor)?;
+        if !actor.is_portable() && profile_data.hostname.is_none() {
+            return Err(ValidationError(
+                "non-portable remote profile should have hostname"));
+        };
         true
     } else {
         false

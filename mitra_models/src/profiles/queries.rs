@@ -403,7 +403,9 @@ pub async fn get_profiles_paginated(
     offset: u16,
     limit: u16,
 ) -> Result<Vec<DbActorProfile>, DatabaseError> {
-    let condition = if only_local { "WHERE user_id IS NOT NULL" } else { "" };
+    let condition = if only_local {
+        "WHERE (user_id IS NOT NULL OR portable_user_id IS NOT NULL)"
+    } else { "" };
     let statement = format!(
         "
         SELECT actor_profile
@@ -646,7 +648,9 @@ pub async fn search_profiles(
         SELECT actor_profile
         FROM actor_profile
         WHERE acct ILIKE $1
-        ORDER BY user_id IS NOT NULL DESC
+        ORDER BY
+            user_id IS NOT NULL DESC,
+            portable_user_id IS NOT NULL DESC
         LIMIT $2
         ",
         &[&db_search_query, &i64::from(limit)],
@@ -891,7 +895,8 @@ pub async fn find_empty_profiles(
         SELECT actor_profile.id
         FROM actor_profile
         WHERE
-            actor_profile.user_id IS NULL
+            (actor_profile.user_id IS NULL
+                AND actor_profile.portable_user_id IS NULL)
             AND actor_profile.updated_at < $1
             AND NOT EXISTS (
                 SELECT 1 FROM relationship

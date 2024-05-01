@@ -193,7 +193,7 @@ async fn main() -> std::io::Result<()> {
             .service(activitypub::emoji_view)
             .service(activitypub::tag_view)
             .service(activitypub::activity_view)
-            .service(activitypub::apgateway_view)
+            .service(activitypub::gateway_scope())
             .service(atom_scope())
             .service(nodeinfo::get_nodeinfo_jrd)
             .service(nodeinfo::get_nodeinfo_2_0)

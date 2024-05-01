@@ -21,6 +21,7 @@ use mitra_federation::{
 };
 use mitra_models::{
     database::{DatabaseClient, DatabaseError},
+    notifications::helpers::create_signup_notifications,
     posts::helpers::get_local_post_by_id,
     posts::queries::get_remote_post_by_object_id,
     posts::types::Post,
@@ -29,16 +30,29 @@ use mitra_models::{
         get_remote_profile_by_actor_id,
     },
     profiles::types::DbActorProfile,
-    users::queries::get_user_by_name,
+    users::queries::{
+        check_local_username_unique,
+        create_portable_user,
+        get_user_by_name,
+        is_valid_invite_code,
+    },
+    users::types::PortableUserData,
 };
 use mitra_services::media::MediaStorage;
-use mitra_utils::urls::guess_protocol;
+use mitra_utils::{
+    crypto_eddsa::ed25519_secret_key_from_bytes,
+    crypto_rsa::rsa_secret_key_from_pkcs1_der,
+    multibase::decode_multibase_base58btc,
+    multicodec::Multicodec,
+    urls::guess_protocol,
+};
 use mitra_validators::errors::ValidationError;
 
 use crate::{
     actors::handlers::{
         create_remote_profile,
         update_remote_profile,
+        Actor,
         ActorJson,
     },
     agent::build_federation_agent,
@@ -49,7 +63,7 @@ use crate::{
         create::{get_object_links, handle_note, AttributedObject},
     },
     identifiers::{parse_local_actor_id, parse_local_object_id},
-    url::{parse_url, Url},
+    url::{canonicalize_id, parse_url, Url},
     vocabulary::GROUP,
 };
 
@@ -161,6 +175,7 @@ async fn import_profile(
             let profile = create_remote_profile(
                 &agent,
                 db_client,
+                &instance.hostname(),
                 storage,
                 actor.value,
             ).await?;
@@ -627,6 +642,84 @@ pub async fn import_replies(
             );
         }).ok();
     };
+    Ok(())
+}
+
+pub async fn register_portable_actor(
+    config: &Config,
+    db_client: &mut impl DatabaseClient,
+    actor_json: JsonValue,
+    rsa_secret_key_multibase: &str,
+    ed25519_secret_key_multibase: &str,
+    invite_code: &str,
+) -> Result<(), HandlerError> {
+    let instance = config.instance();
+    let agent = build_federation_agent(&instance, None);
+    let storage = MediaStorage::from(config);
+    let rsa_secret_key_multicode = decode_multibase_base58btc(rsa_secret_key_multibase)
+        .map_err(|_| ValidationError("invalid RSA key"))?;
+    let rsa_secret_key_der = Multicodec::RsaPriv.decode_exact(&rsa_secret_key_multicode)
+        .map_err(|_| ValidationError("invalid RSA key"))?;
+    let rsa_secret_key = rsa_secret_key_from_pkcs1_der(&rsa_secret_key_der)
+        .map_err(|_| ValidationError("invalid RSA key"))?;
+    let ed25519_secret_key_multicode = decode_multibase_base58btc(ed25519_secret_key_multibase)
+        .map_err(|_| ValidationError("invalid Ed25519 key"))?;
+    let ed25519_secret_key_bytes = Multicodec::Ed25519Priv.decode_exact(&ed25519_secret_key_multicode)
+        .map_err(|_| ValidationError("invalid Ed25519 key"))?;
+    let ed25519_secret_key = ed25519_secret_key_from_bytes(&ed25519_secret_key_bytes)
+        .map_err(|_| ValidationError("invalid Ed25519 key"))?;
+    verify_portable_object(&actor_json)
+        .map_err(|error| {
+            log::warn!("{error}");
+            ValidationError("invalid portable actor")
+        })?;
+    let actor: Actor = serde_json::from_value(actor_json.clone())
+        .map_err(|_| ValidationError("invalid actor object"))?;
+    check_local_username_unique(
+        db_client,
+        &actor.preferred_username,
+    ).await?;
+    if !is_valid_invite_code(db_client, invite_code).await? {
+        return Err(ValidationError("invalid invite code").into());
+    };
+    // Create or update profile
+    let canonical_actor_id = canonicalize_id(&actor.id)?;
+    let profile = match get_remote_profile_by_actor_id(
+        db_client,
+        &canonical_actor_id,
+    ).await {
+        Ok(profile) => {
+            let profile_updated = update_remote_profile(
+                &agent,
+                db_client,
+                &storage,
+                profile,
+                actor_json,
+            ).await?;
+            profile_updated
+        },
+        Err(DatabaseError::NotFound(_)) => {
+            // TODO: create profile and user account in a single transaction
+            let profile = create_remote_profile(
+                &agent,
+                db_client,
+                &instance.hostname(),
+                &storage,
+                actor_json,
+            ).await?;
+            profile
+        },
+        Err(other_error) => return Err(other_error.into()),
+    };
+    // Create user
+    let user_data = PortableUserData {
+        profile_id: profile.id,
+        rsa_secret_key: rsa_secret_key,
+        ed25519_secret_key: ed25519_secret_key,
+        invite_code: invite_code.to_string(),
+    };
+    let user = create_portable_user(db_client, user_data).await?;
+    create_signup_notifications(db_client, user.id).await?;
     Ok(())
 }
 

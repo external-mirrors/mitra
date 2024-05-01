@@ -35,6 +35,7 @@ use mitra_activitypub::{
             validate_update_person_c2s,
         },
     },
+    errors::HandlerError,
     identifiers::{
         local_actor_id,
         local_object_id,
@@ -44,6 +45,7 @@ use mitra_activitypub::{
         post_object_id,
         LocalActorCollection,
     },
+    importers::register_portable_actor,
 };
 use mitra_config::Config;
 use mitra_federation::{
@@ -674,8 +676,43 @@ pub async fn activity_view(
     Ok(response)
 }
 
-#[get("/.well-known/apgateway/{url:.*}")]
-pub async fn apgateway_view(
+#[post("")]
+async fn apgateway_create_actor_view(
+    config: web::Data<Config>,
+    db_pool: web::Data<DatabaseConnectionPool>,
+    request: HttpRequest,
+    actor: web::Json<JsonValue>,
+) -> Result<HttpResponse, HttpError> {
+    let rsa_secret_key = request.headers()
+        .get("X-Rsa-Secret-Key")
+        .and_then(|value| value.to_str().ok())
+        .ok_or(ValidationError("RSA secret key is required"))?;
+    let ed25519_secret_key = request.headers()
+       .get("X-Ed25519-Secret-Key")
+       .and_then(|value| value.to_str().ok())
+       .ok_or(ValidationError("Ed25519 secret key is required"))?;
+    let invite_code = request.headers()
+        .get("X-Invite-Code")
+        .and_then(|value| value.to_str().ok())
+        .ok_or(ValidationError("invite code is required"))?;
+    let db_client = &mut **get_database_client(&db_pool).await?;
+    register_portable_actor(
+        &config,
+        db_client,
+        actor.into_inner(),
+        rsa_secret_key,
+        ed25519_secret_key,
+        invite_code,
+    ).await.map_err(|error| match error {
+        HandlerError::ValidationError(error) => error.into(),
+        HandlerError::DatabaseError(error) => error.into(),
+        _ => HttpError::InternalError,
+    })?;
+    Ok(HttpResponse::Created().finish())
+}
+
+#[get("/{url:.*}")]
+async fn apgateway_view(
     config: web::Data<Config>,
     db_pool: web::Data<DatabaseConnectionPool>,
     did_url: web::Path<String>,
@@ -740,4 +777,10 @@ pub async fn apgateway_view(
         .content_type(AP_MEDIA_TYPE)
         .json(object_value);
     Ok(response)
+}
+
+pub fn gateway_scope() -> Scope {
+    web::scope("/.well-known/apgateway")
+        .service(apgateway_create_actor_view)
+        .service(apgateway_view)
 }

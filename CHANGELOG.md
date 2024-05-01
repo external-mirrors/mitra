@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Added
 
 - Enable caching of remote portable actors.
+- Implement registration endpoint for FEP-ef61 clients.
 
 ### Changed
 

@@ -5,6 +5,7 @@ use uuid::Uuid;
 use mitra_utils::{
     caip10::{AccountId as ChainAccountId},
     crypto_eddsa::Ed25519SecretKey,
+    crypto_rsa::rsa_secret_key_to_pkcs1_der,
     currencies::Currency,
     did::Did,
     did_pkh::DidPkh,
@@ -14,6 +15,7 @@ use crate::database::{
     catch_unique_violation,
     DatabaseClient,
     DatabaseError,
+    DatabaseTypeError,
 };
 use crate::profiles::{
     queries::create_profile,
@@ -25,7 +27,10 @@ use super::types::{
     ClientConfig,
     DbClientConfig,
     DbInviteCode,
+    DbPortableUser,
     DbUser,
+    PortableUser,
+    PortableUserData,
     Role,
     User,
     UserCreateData,
@@ -96,6 +101,27 @@ async fn use_invite_code(
     Ok(())
 }
 
+pub async fn check_local_username_unique(
+    db_client: &impl DatabaseClient,
+    username: &str,
+) -> Result<(), DatabaseError> {
+    let maybe_row = db_client.query_opt(
+        "
+        SELECT 1
+        FROM actor_profile
+        WHERE
+            (user_id IS NOT NULL OR portable_user_id IS NOT NULL)
+            AND actor_profile.username ILIKE $1
+        LIMIT 1
+        ",
+        &[&username],
+    ).await?;
+    if maybe_row.is_some() {
+        return Err(DatabaseError::AlreadyExists("user"));
+    };
+    Ok(())
+}
+
 pub async fn create_user(
     db_client: &mut impl DatabaseClient,
     user_data: UserCreateData,
@@ -108,18 +134,7 @@ pub async fn create_user(
         &[],
     ).await?;
     // Ensure there are no local accounts with a similar name
-    let maybe_row = transaction.query_opt(
-        "
-        SELECT 1
-        FROM user_account JOIN actor_profile USING (id)
-        WHERE actor_profile.username ILIKE $1
-        LIMIT 1
-        ",
-        &[&user_data.username],
-    ).await?;
-    if maybe_row.is_some() {
-        return Err(DatabaseError::AlreadyExists("user"));
-    };
+    check_local_username_unique(&transaction, &user_data.username).await?;
     // Use invite code
     if let Some(ref invite_code) = user_data.invite_code {
         use_invite_code(&transaction, invite_code).await?;
@@ -490,12 +505,65 @@ pub async fn get_users_admin(
     Ok(users)
 }
 
+pub async fn create_portable_user(
+    db_client: &mut impl DatabaseClient,
+    user_data: PortableUserData,
+) -> Result<PortableUser, DatabaseError> {
+    let transaction = db_client.transaction().await?;
+    // Use invite code
+    use_invite_code(&transaction, &user_data.invite_code).await?;
+    // Create user
+    let rsa_secret_key_der =
+        rsa_secret_key_to_pkcs1_der(&user_data.rsa_secret_key)
+            .map_err(|_| DatabaseTypeError)?;
+    let row = transaction.query_one(
+        "
+        INSERT INTO portable_user_account (
+            id,
+            rsa_secret_key,
+            ed25519_secret_key,
+            invite_code
+        )
+        VALUES ($1, $2, $3, $4)
+        RETURNING portable_user_account
+        ",
+        &[
+            &user_data.profile_id,
+            &rsa_secret_key_der,
+            &user_data.ed25519_secret_key,
+            &user_data.invite_code,
+        ],
+    ).await.map_err(catch_unique_violation("portable user"))?;
+    let db_user: DbPortableUser = row.try_get("portable_user_account")?;
+    // Create reverse FK
+    let row = transaction.query_one(
+        "
+        UPDATE actor_profile
+        SET portable_user_id = actor_profile.id
+        WHERE id = $1
+        RETURNING actor_profile
+        ",
+        &[&user_data.profile_id],
+    ).await?;
+    let db_profile: DbActorProfile = row.try_get("actor_profile")?;
+    let user = PortableUser::new(db_user, db_profile)?;
+    transaction.commit().await?;
+    Ok(user)
+}
+
 #[cfg(test)]
 mod tests {
     use serde_json::json;
     use serial_test::serial;
-    use crate::database::test_utils::create_test_database;
-    use crate::users::types::Role;
+    use mitra_utils::{
+        crypto_eddsa::generate_weak_ed25519_key,
+        crypto_rsa::generate_weak_rsa_key,
+    };
+    use crate::{
+        database::test_utils::create_test_database,
+        profiles::types::{DbActor, DbActorKey},
+        users::types::Role,
+    };
     use super::*;
 
     #[tokio::test]
@@ -616,5 +684,36 @@ mod tests {
         let user = create_user(db_client, user_data).await.unwrap();
         let maybe_admin = get_admin_user(db_client).await.unwrap();
         assert_eq!(maybe_admin.unwrap().id, user.id);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_create_portable_user() {
+        let db_client = &mut create_test_database().await;
+        let profile_data = ProfileCreateData {
+            username: "test".to_string(),
+            hostname: None,
+            public_keys: vec![DbActorKey::default()],
+            actor_json: Some(DbActor {
+                id: "ap://xxx/actor".to_string(),
+                ..Default::default()
+            }),
+            ..Default::default()
+        };
+        let profile = create_profile(db_client, profile_data).await.unwrap();
+        let rsa_secret_key = generate_weak_rsa_key().unwrap();
+        let ed25519_secret_key = generate_weak_ed25519_key();
+        let invite_code =
+            create_invite_code(db_client, Some("test")).await.unwrap();
+        let user_data = PortableUserData {
+            profile_id: profile.id,
+            rsa_secret_key: rsa_secret_key.clone(),
+            ed25519_secret_key: ed25519_secret_key,
+            invite_code: invite_code,
+        };
+        let user = create_portable_user(db_client, user_data).await.unwrap();
+        assert_eq!(user.id, profile.id);
+        assert_eq!(user.rsa_secret_key, rsa_secret_key);
+        assert_eq!(user.ed25519_secret_key, ed25519_secret_key);
     }
 }

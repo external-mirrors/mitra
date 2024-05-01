@@ -696,7 +696,8 @@ pub async fn get_public_timeline(
 ) -> Result<Vec<Post>, DatabaseError> {
     let mut filter = "".to_owned();
     if only_local {
-        filter += "actor_profile.user_id IS NOT NULL AND";
+        filter += "(actor_profile.user_id IS NOT NULL
+            OR actor_profile.portable_user_id IS NOT NULL) AND";
     };
     let statement = format!(
         "
@@ -1352,7 +1353,10 @@ pub async fn find_extraneous_posts(
                 JOIN actor_profile ON post.author_id = actor_profile.id
                 WHERE
                     post.id = ANY(context.posts)
-                    AND actor_profile.user_id IS NOT NULL
+                    AND (
+                        actor_profile.user_id IS NOT NULL
+                        OR actor_profile.portable_user_id IS NOT NULL
+                    )
             )
             -- no local mentions in any post from context
             AND NOT EXISTS (
@@ -1361,7 +1365,10 @@ pub async fn find_extraneous_posts(
                 JOIN actor_profile ON mention.profile_id = actor_profile.id
                 WHERE
                     mention.post_id = ANY(context.posts)
-                    AND actor_profile.user_id IS NOT NULL
+                    AND (
+                        actor_profile.user_id IS NOT NULL
+                        OR actor_profile.portable_user_id IS NOT NULL
+                    )
             )
             -- no local reactions on any post from context
             AND NOT EXISTS (
@@ -1370,7 +1377,10 @@ pub async fn find_extraneous_posts(
                 JOIN actor_profile ON post_reaction.author_id = actor_profile.id
                 WHERE
                     post_reaction.post_id = ANY(context.posts)
-                    AND actor_profile.user_id IS NOT NULL
+                    AND (
+                        actor_profile.user_id IS NOT NULL
+                        OR actor_profile.portable_user_id IS NOT NULL
+                    )
             )
             -- no local links to any post in context
             AND NOT EXISTS (
@@ -1380,7 +1390,10 @@ pub async fn find_extraneous_posts(
                 JOIN actor_profile ON post.author_id = actor_profile.id
                 WHERE
                     post_link.target_id = ANY(context.posts)
-                    AND actor_profile.user_id IS NOT NULL
+                    AND (
+                        actor_profile.user_id IS NOT NULL
+                        OR actor_profile.portable_user_id IS NOT NULL
+                    )
             )
             -- no links to any post in context from other contexts
             AND NOT EXISTS (
@@ -1536,7 +1549,9 @@ pub async fn get_post_count(
     let mut condition =
         "post.in_reply_to_id IS NULL AND post.repost_of_id IS NULL".to_string();
     if only_local {
-        condition.push_str(" AND actor_profile.user_id IS NOT NULL");
+        condition.push_str(" AND (
+            actor_profile.user_id IS NOT NULL
+            OR actor_profile.portable_user_id IS NOT NULL)");
     };
     let statement = format!(
         "

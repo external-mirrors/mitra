@@ -14,6 +14,7 @@ use mitra_utils::{
         Ed25519SecretKey,
     },
     crypto_rsa::{
+        rsa_secret_key_from_pkcs1_der,
         rsa_secret_key_from_pkcs8_pem,
         RsaSecretKey,
     },
@@ -319,6 +320,63 @@ impl TryFrom<&Row> for AdminUser {
         let last_login = row.try_get("last_login")?;
         Ok(Self { profile, role, last_login })
     }
+}
+
+#[derive(FromSql)]
+#[postgres(name = "portable_user_account")]
+pub struct DbPortableUser {
+    id: Uuid,
+    rsa_secret_key: Vec<u8>,
+    ed25519_secret_key: Vec<u8>,
+    #[allow(dead_code)]
+    invite_code: String,
+    #[allow(dead_code)]
+    created_at: DateTime<Utc>,
+}
+
+pub struct PortableUser {
+    pub id: Uuid,
+    pub profile: DbActorProfile,
+    pub rsa_secret_key: RsaSecretKey,
+    pub ed25519_secret_key: Ed25519SecretKey,
+}
+
+impl PortableUser {
+    pub fn new(
+        db_user: DbPortableUser,
+        db_profile: DbActorProfile,
+    ) -> Result<Self, DatabaseTypeError> {
+        db_profile.check_consistency()?;
+        if !db_profile.is_portable() {
+            return Err(DatabaseTypeError);
+        };
+        if db_user.id != db_profile.id {
+            return Err(DatabaseTypeError);
+        };
+        if db_profile.portable_user_id != Some(db_user.id) {
+            return Err(DatabaseTypeError);
+        };
+        let rsa_secret_key =
+            rsa_secret_key_from_pkcs1_der(&db_user.rsa_secret_key)
+                .map_err(|_| DatabaseTypeError)?;
+        let ed25519_secret_key =
+            ed25519_secret_key_from_bytes(&db_user.ed25519_secret_key)
+                .map_err(|_| DatabaseTypeError)?;
+        let user = Self {
+            id: db_user.id,
+            rsa_secret_key,
+            ed25519_secret_key,
+            profile: db_profile,
+        };
+        Ok(user)
+    }
+}
+
+pub struct PortableUserData {
+    pub profile_id: Uuid,
+    pub rsa_secret_key: RsaSecretKey,
+    pub ed25519_secret_key: Ed25519SecretKey,
+    pub invite_code: String,
 }
 
 #[cfg(test)]

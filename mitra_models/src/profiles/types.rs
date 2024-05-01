@@ -656,6 +656,7 @@ impl DbActor {
 pub struct DbActorProfile {
     pub id: Uuid,
     pub(crate) user_id: Option<Uuid>,
+    pub(crate) portable_user_id: Option<Uuid>,
     pub username: String,
     pub hostname: Option<String>,
     pub acct: Option<String>, // unique acct string
@@ -709,12 +710,21 @@ pub(crate) fn get_identity_key(secret_key: Ed25519SecretKey) -> String {
 
 impl DbActorProfile {
     pub(crate) fn check_consistency(&self) -> Result<(), DatabaseTypeError> {
+        if self.user_id.is_some() && self.portable_user_id.is_some() {
+            return Err(DatabaseTypeError);
+        };
         if self.user_id.is_some() != self.actor_json.is_none() {
             // NOTE: no CHECK constraint because
             // it can not be deferred
             return Err(DatabaseTypeError);
         };
-        if self.hostname.is_none() != self.actor_json.is_none() {
+        if self.portable_user_id.is_some() && self.actor_json.is_none() {
+            return Err(DatabaseTypeError);
+        };
+        if self.hostname.is_none() && !self.has_account() {
+            // Remote actors without local account must have hostname
+            // NOTE: no CHECK constraint because
+            // it can not be deferred
             return Err(DatabaseTypeError);
         };
         if let Some(ref acct) = self.acct {
@@ -737,6 +747,12 @@ impl DbActorProfile {
         Ok(())
     }
 
+    /// Has local account?
+    pub fn has_account(&self) -> bool {
+        self.user_id.is_some() || self.portable_user_id.is_some()
+    }
+
+    /// Is actor local (managed)?
     pub fn is_local(&self) -> bool {
         self.actor_json.is_none()
     }
@@ -748,6 +764,14 @@ impl DbActorProfile {
                     .contains(&db_actor.object_type.as_str())
             },
             None => false,
+        }
+    }
+
+    pub fn is_portable(&self) -> bool {
+        if let Some(ref db_actor) = self.actor_json {
+            db_actor.is_portable()
+        } else {
+            false
         }
     }
 
@@ -796,6 +820,7 @@ impl Default for DbActorProfile {
         Self {
             id: Uuid::new_v4(),
             user_id: None,
+            portable_user_id: None,
             username: "test".to_string(),
             hostname: None,
             acct: Some("test".to_string()),

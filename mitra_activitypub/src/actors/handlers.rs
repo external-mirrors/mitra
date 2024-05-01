@@ -157,7 +157,7 @@ pub struct Actor {
     object_type: String,
 
     name: Option<String>,
-    preferred_username: String,
+    pub preferred_username: String,
 
     inbox: String,
     outbox: String,
@@ -497,6 +497,7 @@ async fn parse_tags(
 pub async fn create_remote_profile(
     agent: &FederationAgent,
     db_client: &mut impl DatabaseClient,
+    instance_hostname: &str,
     storage: &MediaStorage,
     actor_json: JsonValue,
 ) -> Result<DbActorProfile, HandlerError> {
@@ -505,6 +506,12 @@ pub async fn create_remote_profile(
     // TODO: implement reverse webfinger lookup
     // https://swicg.github.io/activitypub-webfinger/#reverse-discovery
     let actor_hostname = actor.hostname()?;
+    let maybe_actor_hostname = if actor_hostname == instance_hostname {
+        // Portable actor is attempting to register
+        None
+    } else {
+        Some(actor_hostname)
+    };
     let actor_data = actor.to_db_actor()?;
     let (maybe_avatar, maybe_banner) = fetch_actor_images(
         agent,
@@ -530,7 +537,7 @@ pub async fn create_remote_profile(
     ).await?;
     let mut profile_data = ProfileCreateData {
         username: actor.preferred_username.clone(),
-        hostname: Some(actor_hostname),
+        hostname: maybe_actor_hostname,
         display_name: actor.name.clone(),
         bio: actor.summary.clone(),
         avatar: maybe_avatar,

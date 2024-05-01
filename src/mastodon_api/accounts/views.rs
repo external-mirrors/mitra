@@ -164,6 +164,7 @@ pub async fn create_account(
     account_data: web::Json<AccountCreateData>,
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &mut **get_database_client(&db_pool).await?;
+    let instance = config.instance();
     // Validate
     if config.registration.registration_type == RegistrationType::Invite {
         let invite_code = account_data.invite_code.as_ref()
@@ -203,7 +204,7 @@ pub async fn create_account(
         let session_data = verify_eip4361_signature(
             message,
             signature,
-            &config.instance().hostname(),
+            &instance.hostname(),
             &config.login_message,
         ).map_err(|err| MastodonError::ValidationError(err.to_string()))?;
         // Don't remember nonce to avoid extra signature requests
@@ -221,7 +222,7 @@ pub async fn create_account(
             .ok_or(MastodonError::NotSupported)?;
         let session_data = verify_monero_caip122_signature(
             monero_config,
-            &config.instance().hostname(),
+            &instance.hostname(),
             &config.login_message,
             message,
             signature,
@@ -276,7 +277,7 @@ pub async fn create_account(
     log::warn!("created user {}", user);
     let account = Account::from_user(
         &get_request_base_url(connection_info),
-        &config.instance_url(),
+        &instance.url(),
         user,
     );
     Ok(HttpResponse::Created().json(account))
