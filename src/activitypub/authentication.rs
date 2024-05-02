@@ -48,7 +48,6 @@ use mitra_utils::{
             JsonSigner,
         },
     },
-    urls::UrlError,
 };
 
 const AUTHENTICATION_FETCHER_TIMEOUT: u64 = 10;
@@ -71,7 +70,7 @@ pub enum AuthenticationError {
     InvalidJsonSignatureType,
 
     #[error("invalid key ID")]
-    InvalidKeyId(#[from] UrlError),
+    InvalidKeyId,
 
     #[error("database error")]
     DatabaseError(#[from] DatabaseError),
@@ -179,7 +178,8 @@ pub async fn verify_signed_request(
         },
         Err(other_error) => return Err(other_error.into()),
     };
-    let signer_id = key_id_to_actor_id(&signature_data.key_id)?;
+    let signer_id = key_id_to_actor_id(&signature_data.key_id)
+        .map_err(|_| AuthenticationError::InvalidKeyId)?;
     let signer = get_signer(config, db_client, &signer_id, no_fetch).await?;
     let signer_key = get_signer_rsa_key(
         &signer,
@@ -218,7 +218,8 @@ pub async fn verify_signed_activity(
 
     match signature_data.signer {
         JsonSigner::ActorKeyId(ref key_id) => {
-            let signer_id = key_id_to_actor_id(key_id)?;
+            let signer_id = key_id_to_actor_id(key_id)
+                .map_err(|_| AuthenticationError::InvalidKeyId)?;
             if signer_id != actor_id {
                 return Err(AuthenticationError::UnexpectedSigner);
             };

@@ -24,6 +24,39 @@ impl HttpUrl {
         let http_url = Self(iri.into());
         Ok(http_url)
     }
+
+    fn scheme(&self) -> &str {
+        self.0.scheme()
+    }
+
+    fn authority(&self) -> &str {
+        self.0.authority().expect("authority should be present")
+    }
+
+    pub fn path(&self) -> &str {
+        self.0.path()
+    }
+
+    pub fn query(&self) -> Option<&str> {
+        self.0.query()
+    }
+
+    pub fn without_query_and_fragment(&self) -> String {
+        format!(
+            "{}://{}{}",
+            self.scheme(),
+            self.authority(),
+            self.path(),
+        )
+    }
+
+    pub fn without_fragment(&self) -> String {
+        format!(
+            "{}{}",
+            self.without_query_and_fragment(),
+            self.query().map(|query| format!("?{query}")).unwrap_or_default(),
+        )
+    }
 }
 
 impl fmt::Display for HttpUrl {

@@ -1,11 +1,12 @@
 use http::HeaderValue;
 use serde_json::{Value as JsonValue};
 
-use mitra_utils::urls::{
-    get_hostname,
-    Position,
-    Url,
-    UrlError,
+use mitra_utils::{
+    http_url::HttpUrl,
+    urls::{
+        get_hostname,
+        UrlError,
+    },
 };
 
 use super::constants::AP_PUBLIC;
@@ -27,17 +28,16 @@ pub fn is_object(value: &JsonValue) -> bool {
     !is_actor(value) && !is_activity(value)
 }
 
-pub fn key_id_to_actor_id(key_id: &str) -> Result<String, UrlError> {
-    let key_url = Url::parse(key_id)?;
-    let position = if key_url.query_pairs().any(|(name, _)| name == "id") {
+pub fn key_id_to_actor_id(key_id: &str) -> Result<String, &'static str> {
+    let key_url = key_id.parse::<HttpUrl>()?;
+    let actor_id = if key_url.query().filter(|query| query.contains("id=")).is_some() {
         // Podcast Index compat
         // Strip fragment, keep query
-        Position::AfterQuery
+        key_url.without_fragment()
     } else {
         // Strip fragment and query (works with most AP servers)
-        Position::AfterPath
+        key_url.without_query_and_fragment()
     };
-    let actor_id = &key_url[..position];
     // GoToSocial compat
     let actor_id = actor_id.trim_end_matches("/main-key");
     Ok(actor_id.to_string())
@@ -139,6 +139,11 @@ mod tests {
         let key_id = "https://ap.podcastindex.org/podcasts?id=920666#main-key";
         let actor_id = key_id_to_actor_id(key_id).unwrap();
         assert_eq!(actor_id, "https://ap.podcastindex.org/podcasts?id=920666");
+
+        // microblog.pub
+        let key_id = "https://social.example#main-key";
+        let actor_id = key_id_to_actor_id(key_id).unwrap();
+        assert_eq!(actor_id, "https://social.example");
     }
 
     #[test]
