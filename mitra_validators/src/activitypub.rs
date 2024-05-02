@@ -1,21 +1,18 @@
-use mitra_utils::urls::Url;
+use mitra_utils::http_url::HttpUrl;
 
 use super::errors::ValidationError;
 
 const OBJECT_ID_SIZE_MAX: usize = 2000;
 
-// Validates HTTP(S) URL (ap:// URLs are not allowed)
+// Object ID is an IRI
+// https://www.w3.org/TR/activitystreams-core/#urls
 pub fn validate_object_id(object_id: &str) -> Result<(), ValidationError> {
     if object_id.len() > OBJECT_ID_SIZE_MAX {
         return Err(ValidationError("object ID is too long"));
     };
-    let url = Url::parse(object_id)
+    // Validates HTTP(S) URL (ap:// URLs are not allowed)
+    HttpUrl::parse(object_id)
         .map_err(|_| ValidationError("invalid object ID"))?;
-    match url.scheme() {
-        "http" | "https" => (),
-        _ => return Err(ValidationError("invalid object ID")),
-    };
-    url.host().ok_or(ValidationError("invalid object ID"))?;
     Ok(())
 }
 
