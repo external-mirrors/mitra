@@ -41,6 +41,18 @@ impl HttpUrl {
         self.0.query()
     }
 
+    fn fragment(&self) -> Option<&str> {
+        self.0.fragment()
+    }
+
+    pub fn origin(&self) -> String {
+        format!(
+            "{}://{}",
+            self.scheme(),
+            self.authority(),
+        )
+    }
+
     pub fn without_query_and_fragment(&self) -> String {
         format!(
             "{}://{}{}",
@@ -55,6 +67,15 @@ impl HttpUrl {
             "{}{}",
             self.without_query_and_fragment(),
             self.query().map(|query| format!("?{query}")).unwrap_or_default(),
+        )
+    }
+
+    pub fn to_relative(&self) -> String {
+        format!(
+            "{}{}{}",
+            self.path(),
+            self.query().map(|query| format!("?{query}")).unwrap_or_default(),
+            self.fragment().map(|frag| format!("#{frag}")).unwrap_or_default(),
         )
     }
 }

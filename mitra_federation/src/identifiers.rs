@@ -3,7 +3,7 @@ use std::str::FromStr;
 use regex::{Captures, Regex};
 use thiserror::Error;
 
-use mitra_utils::urls::{Position, Url};
+use mitra_utils::http_url::HttpUrl;
 
 #[derive(Debug, Error)]
 #[error("{0}")]
@@ -55,11 +55,11 @@ pub fn parse_object_id<T: FromCaptures>(
     object_id: &str,
     path_re: Regex,
 ) -> Result<(String, T), PathError> {
-    let url = Url::parse(object_id)
+    let url = HttpUrl::parse(object_id)
         .map_err(|_| PathError("invalid URL"))?;
-    let base_url = &url[..Position::BeforePath];
-    let path = &url[Position::BeforePath..];
-    let path_caps = path_re.captures(path)
+    let base_url = url.origin();
+    let path = url.to_relative();
+    let path_caps = path_re.captures(&path)
         .ok_or(PathError("invalid path"))?;
     let value = T::from_captures(path_caps)?;
     Ok((base_url.to_string(), value))
