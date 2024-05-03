@@ -102,6 +102,7 @@ mod tests {
     fn test_http_url() {
         let url = "https://social.example/users?user_id=123#main-key";
         let http_url = HttpUrl::parse(url).unwrap();
+        assert_eq!(http_url.to_relative(), "/users?user_id=123#main-key");
         assert_eq!(http_url.to_string(), url);
     }
 
@@ -116,6 +117,8 @@ mod tests {
     fn test_http_url_no_path() {
         let url = "https://social.example";
         let http_url = HttpUrl::parse(url).unwrap();
+        assert_eq!(http_url.path(), "");
+        assert_eq!(http_url.to_relative(), "");
         assert_eq!(http_url.to_string(), url);
     }
 
