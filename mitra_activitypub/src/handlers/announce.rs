@@ -4,6 +4,7 @@ use serde_json::{Value as JsonValue};
 use mitra_config::Config;
 use mitra_federation::{
     deserialization::{deserialize_into_object_id, get_object_id},
+    fetch::fetch_object,
 };
 use mitra_models::{
     database::{DatabaseClient, DatabaseError},
@@ -23,6 +24,7 @@ use mitra_validators::{
 };
 
 use crate::{
+    agent::build_federation_agent,
     identifiers::parse_local_object_id,
     importers::{import_post, ActorIdResolver},
     vocabulary::*,
@@ -58,7 +60,7 @@ pub async fn handle_announce(
 ) -> HandlerResult {
     match activity["object"]["type"].as_str() {
         Some(object_type) if FEP_1B12_ACTIVITIES.contains(&object_type) => {
-            return handle_fep_1b12_announce(db_client, activity).await;
+            return handle_fep_1b12_announce(config, db_client, activity).await;
         },
         _ => (),
     };
@@ -126,15 +128,23 @@ struct GroupAnnounce {
 }
 
 async fn handle_fep_1b12_announce(
+    config: &Config,
     db_client: &mut impl DatabaseClient,
     activity: JsonValue,
 ) -> HandlerResult {
     let GroupAnnounce { actor: group_id, object: activity } =
         serde_json::from_value(activity)
             .map_err(|_| ValidationError("unexpected activity structure"))?;
+    let activity_id = activity["id"].as_str()
+        .ok_or(ValidationError("unexpected activity structure"))?;
     let activity_type = activity["type"].as_str()
         .ok_or(ValidationError("unexpected activity structure"))?;
+    let instance = config.instance();
+    let agent = build_federation_agent(&instance, None);
     if activity_type == DELETE {
+        // Re-fetch activity
+        let activity: JsonValue = fetch_object(&agent, activity_id).await?;
+        log::info!("fetched activity {}", activity_id);
         let group = get_profile_by_remote_actor_id(
             db_client,
             &group_id,
