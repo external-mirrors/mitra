@@ -497,7 +497,7 @@ impl FetchReplies {
 #[derive(Parser)]
 pub struct FetchObjectAs {
     object_id: String,
-    username: String,
+    username: Option<String>,
 }
 
 impl FetchObjectAs {
@@ -506,8 +506,16 @@ impl FetchObjectAs {
         config: &Config,
         db_client: &impl DatabaseClient,
     ) -> Result<(), Error> {
-        let user = get_user_by_name(db_client, &self.username).await?;
-        let agent = build_federation_agent(&config.instance(), Some(&user));
+        let maybe_user = if let Some(ref username) = self.username {
+            let user = get_user_by_name(db_client, username).await?;
+            Some(user)
+        } else {
+            None
+        };
+        let agent = build_federation_agent(
+            &config.instance(),
+            maybe_user.as_ref(),
+        );
         let object: JsonValue = fetch_object(&agent, &self.object_id).await?;
         println!("{}", object);
         Ok(())
