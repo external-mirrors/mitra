@@ -1,6 +1,6 @@
 use http::header;
 use reqwest::{Client, Method, RequestBuilder, StatusCode};
-use serde::de::{DeserializeOwned, Error as _};
+use serde::de::DeserializeOwned;
 use serde_json::{Value as JsonValue};
 
 use mitra_utils::{
@@ -57,8 +57,11 @@ pub enum FetchError {
     #[error("unexpected content type: {0}")]
     UnexpectedContentType(String),
 
-    #[error("unexpected object ID")]
-    UnexpectedObjectId,
+    #[error("object without ID at {0}")]
+    NoObjectId(String),
+
+    #[error("unexpected object ID at {0}")]
+    UnexpectedObjectId(String),
 
     #[error("too many objects")]
     RecursionError,
@@ -166,10 +169,11 @@ pub async fn fetch_object<T: DeserializeOwned>(
 
     let object_json: JsonValue = serde_json::from_slice(&data)?;
     // Verify object is owned by server
+    let object_location = response.url().as_str();
     let object_id = object_json["id"].as_str()
-        .ok_or(serde_json::Error::missing_field("id"))?;
-    if !is_same_hostname(object_id, response.url().as_str())? {
-        return Err(FetchError::UnexpectedObjectId);
+        .ok_or(FetchError::NoObjectId(object_location.to_string()))?;
+    if !is_same_hostname(object_id, object_location)? {
+        return Err(FetchError::UnexpectedObjectId(object_location.to_string()));
     };
     // Verify object is not a malicious upload
     let content_type = response.headers()

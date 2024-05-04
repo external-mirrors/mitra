@@ -488,6 +488,7 @@ pub async fn import_from_outbox(
     let instance = config.instance();
     let agent = build_federation_agent(&instance, None);
     let actor: Actor = fetch_object(&agent, actor_id).await?;
+    log::info!("fetched actor {}", actor.id);
     let activities =
         fetch_collection(&agent, &actor.outbox, limit).await?;
     log::info!("fetched {} activities", activities.len());
