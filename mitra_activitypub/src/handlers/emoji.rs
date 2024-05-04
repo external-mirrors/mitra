@@ -49,6 +49,10 @@ pub async fn handle_emoji(
             return Ok(None);
         },
     };
+    if validate_object_id(&emoji.id).is_err() {
+        log::warn!("invalid emoji ID: {}", emoji.id);
+        return Ok(None);
+    };
     let emoji_name = if let Some(emoji_name) = parse_emoji_shortcode(&emoji.name) {
         emoji_name
     } else {
@@ -110,7 +114,6 @@ pub async fn handle_emoji(
                 return Ok(None);
             },
         };
-        validate_object_id(&emoji.id)?;
         match create_emoji(
             db_client,
             emoji_name,

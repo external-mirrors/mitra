@@ -14,6 +14,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Fixed content encoding errors when serving media files.
 - Fixed key ID to actor ID transformation for microblog.pub.
+- Do not discard object if emoji ID is not valid.
 
 ## [2.17.1] - 2024-04-29
 
