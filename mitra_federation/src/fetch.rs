@@ -60,9 +60,6 @@ pub enum FetchError {
     #[error("unexpected object ID")]
     UnexpectedObjectId,
 
-    #[error("unsupported media type: {0}")]
-    UnsupportedMediaType(String),
-
     #[error("too many objects")]
     RecursionError,
 }
@@ -243,7 +240,7 @@ pub async fn fetch_file(
         expected_media_type,
     );
     if !allowed_media_types.contains(&media_type.as_str()) {
-        return Err(FetchError::UnsupportedMediaType(media_type));
+        return Err(FetchError::UnexpectedContentType(media_type));
     };
     Ok((file_data.into(), file_size, media_type))
 }
