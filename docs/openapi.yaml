@@ -1158,7 +1158,7 @@ paths:
           description: Successful operation
         400:
           description: Invalid data.
-  /api/v1/settings/move_followers:
+  /api/v1/settings/import_followers:
     post:
       summary: Move followers from remote alias.
       security:

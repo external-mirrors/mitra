@@ -257,8 +257,7 @@ async fn import_follows_view(
     Ok(HttpResponse::NoContent().finish())
 }
 
-#[post("/move_followers")]
-async fn move_followers(
+async fn import_followers_view(
     auth: BearerAuth,
     connection_info: ConnectionInfo,
     config: web::Data<Config>,
@@ -343,6 +342,7 @@ pub fn settings_api_scope() -> Scope {
         .service(export_followers_view)
         .service(export_follows_view)
         .service(import_follows_view)
-        .service(move_followers)
+        .service(web::resource("/move_followers").route(web::post().to(import_followers_view)))
+        .service(web::resource("/import_followers").route(web::post().to(import_followers_view)))
         .service(delete_account)
 }

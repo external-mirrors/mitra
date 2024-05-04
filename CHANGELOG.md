@@ -6,11 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+
+- Added `/api/v1/settings/import_followers` API endpoint (replaces `/move_followers`).
+
 ### Changed
 
 - Do not retry incoming activity if access to referenced object is denied.
 - Allow `fetch-object-as` command to be called without username argument.
 - Display better error message if fetched object doesn't have an ID.
+
+### Deprecated
+
+- Deprecate `/api/v1/settings/move_followers` API.
 
 ### Fixed
 
