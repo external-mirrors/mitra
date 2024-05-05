@@ -153,10 +153,15 @@ fn fix_linebreaks(html: &str) -> String {
 }
 
 /// Markdown Lite
+///
 /// Supported features:
+/// - headings (level 1 only)
 /// - bold and italic
 /// - links and autolinks
 /// - inline code and code blocks
+///
+/// The output should be displayed correctly on all popular platforms:
+/// https://funfedi.dev/support_tables/generated/html_tags/
 pub fn markdown_lite_to_html(text: &str) -> Result<String, MarkdownError> {
     let options = build_comrak_options();
     let arena = Arena::new();
@@ -170,11 +175,14 @@ pub fn markdown_lite_to_html(text: &str) -> Result<String, MarkdownError> {
     );
 
     // Re-render blockquotes, headings, HRs, images and lists
-    // Headings: poorly degrade on Pleroma
     // TODO: disable parser rules https://github.com/kivikakk/comrak/issues/244
     iter_nodes(root, &|node| {
         let node_value = node.data.borrow().value.clone();
         match node_value {
+            // Level 1 headings are allowed.
+            // Consecutive headings poorly degrade on Pleroma:
+            // https://git.pleroma.social/pleroma/pleroma/-/issues/2413
+            NodeValue::Heading(heading) if heading.level == 1 => (),
             // Blocks
             // TODO: don't re-render blockquotes?
             NodeValue::BlockQuote | NodeValue::Heading(_) | NodeValue::ThematicBreak => {
@@ -322,12 +330,20 @@ mod tests {
         let text = "# heading\n\ntest **bold** test *italic* test ~~strike~~ with `code`, <span>html</span> and https://example.com and admin@email.example\nnew line\n\ntwo new lines and a list:\n- item 1\n- item 2\n\n>greentext\n\n---\n\nimage: ![logo](logo.png)\n\ncode block:\n```\nlet test\ntest = 1\n```";
         let html = markdown_lite_to_html(text).unwrap();
         let expected_html = concat!(
-            r#"<p># heading</p><p>test <strong>bold</strong> test <em>italic</em> test ~~strike~~ with <code>code</code>, &lt;span&gt;html&lt;/span&gt;"#,
+            r#"<h1>heading</h1><p>test <strong>bold</strong> test <em>italic</em> test ~~strike~~ with <code>code</code>, &lt;span&gt;html&lt;/span&gt;"#,
             r#" and <a href="https://example.com">https://example.com</a>"#,
             r#" and <a href="mailto:admin@email.example">admin@email.example</a>"#,
             r#"<br>new line</p><p>two new lines and a list:</p><p>- item 1<br>- item 2</p><p>&gt;greentext</p><p>-----</p><p>image: ![logo](logo.png)</p><p>code block:</p>"#,
             "<pre><code>let test\ntest = 1\n</code></pre>",
         );
+        assert_eq!(html, expected_html);
+    }
+
+    #[test]
+    fn test_markdown_lite_to_html_headings() {
+        let text = "# heading1\n\n## heading2\n\ntext";
+        let html = markdown_lite_to_html(text).unwrap();
+        let expected_html = r#"<h1>heading1</h1><p>## heading2</p><p>text</p>"#;
         assert_eq!(html, expected_html);
     }
 

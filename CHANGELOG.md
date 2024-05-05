@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+
+- Allow level 1 markdown headings in posts.
+
 ### Changed
 
 - Improved error reporting during activity parsing.
