@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Added
 
 - Added `/api/v1/settings/import_followers` API endpoint (replaces `/move_followers`).
+- Support `Announce(Like)` activities.
 
 ### Changed
 

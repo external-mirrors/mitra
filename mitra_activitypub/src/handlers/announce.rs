@@ -30,7 +30,10 @@ use crate::{
     vocabulary::*,
 };
 
-use super::HandlerResult;
+use super::{
+    like::handle_like,
+    HandlerResult,
+};
 
 const FEP_1B12_ACTIVITIES: [&str; 10] = [
     ADD,
@@ -169,6 +172,11 @@ async fn handle_fep_1b12_announce(
             Err(other_error) => return Err(other_error.into()),
         };
         Ok(Some(DELETE))
+    } else if activity_type == LIKE {
+        let activity: JsonValue = fetch_object(&agent, activity_id).await?;
+        log::info!("fetched activity {}", activity_id);
+        handle_like(config, db_client, activity).await?;
+        Ok(Some(LIKE))
     } else {
         // Ignore other activities
         Ok(None)
