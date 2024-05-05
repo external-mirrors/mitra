@@ -888,6 +888,17 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Instance'
+  /api/v2/instance:
+    get:
+      summary: Information about the instance.
+      security: []
+      responses:
+        200:
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InstanceV2'
   /api/v1/media:
     post:
       summary: Create an attachment to be used with a new post.
@@ -2198,7 +2209,7 @@ components:
         version:
           description: Mastodon API compatibility version and the version of Mitra server.
           type: string
-          example: '3.0.0 (compatible; Mitra 0.4.0)'
+          example: '4.0.0 (compatible; Mitra 2.0.0)'
         registrations:
           description: Whether registrations are enabled.
           type: boolean
@@ -2313,6 +2324,93 @@ components:
           description: IPFS gateway URL.
           type: string
           nullable: true
+    InstanceV2:
+      type: object
+      properties:
+        domain:
+          description: The domain name of the instance.
+          type: string
+        title:
+          description: The title of the website.
+          type: string
+        description:
+          description: A short, plain-text description defined by the admin.
+          type: string
+        version:
+          description: Mastodon API compatibility version and the version of Mitra server.
+          type: string
+          example: '4.0.0 (compatible; Mitra 2.0.0)'
+        source_url:
+          description: The URL for the source code of the software running on this instance.
+          type: string
+        usage:
+          description: Usage data for this instance.
+          type: object
+          properties:
+            users:
+              description: Usage data related to users on this instance.
+              type: object
+              properties:
+                active_month:
+                  description: The number of active users in the past 4 weeks.
+                  type: integer
+        configuration:
+          description: Configured values and limits for this instance.
+          type: object
+          properties:
+            statuses:
+              description: Limits related to authoring posts.
+              type: object
+              properties:
+                max_characters:
+                  description: The maximum number of allowed characters per post.
+                  type: integer
+                  example: 5000
+                max_media_attachments:
+                  description: The maximum number of media attachments that can be added to a post.
+                  type: integer
+                  example: 15
+            media_attachments:
+              description: Limits realted to uploading attachments.
+              type: object
+              properties:
+                supported_mime_types:
+                  description: Contains MIME types that can be uploaded.
+                  type: array
+                  items:
+                    type: string
+                    example: 'image/png'
+                image_size_limit:
+                  description: The maximum size of any uploaded image, in bytes.
+                  type: integer
+                  example: 5242880
+        registrations:
+          description: Information about registering for this website.
+          type: object
+          properties:
+            enabled:
+              description: Whether registrations are enabled.
+              type: boolean
+            approval_required:
+              description: Whether registrations require moderator approval.
+              type: boolean
+            message:
+              description: A custom message to be shown when registrations are closed.
+              type: string
+              nullable: true
+              example: null
+        contact:
+          description: Hints related to contacting a representative of the website.
+          type: object
+          properties:
+            email:
+              description: An email address that can be messaged regarding inquiries or issues.
+              type: string
+              example: ''
+            account:
+              allOf:
+                - description: An account that can be contacted natively over the network regarding inquiries or issues.
+                - $ref: '#/components/schemas/Account'
     Invoice:
       type: object
       properties:

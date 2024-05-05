@@ -29,7 +29,7 @@ use mitra::mastodon_api::apps::views::application_api_scope;
 use mitra::mastodon_api::custom_emojis::views::custom_emoji_api_scope;
 use mitra::mastodon_api::directory::views::directory_api_scope;
 use mitra::mastodon_api::follow_requests::views::follow_request_api_scope;
-use mitra::mastodon_api::instance::views::instance_api_scope;
+use mitra::mastodon_api::instance::{views as instance_api};
 use mitra::mastodon_api::markers::views::marker_api_scope;
 use mitra::mastodon_api::media::{views as media_api};
 use mitra::mastodon_api::notifications::views::notification_api_scope;
@@ -205,7 +205,8 @@ async fn main() -> std::io::Result<()> {
             .service(custom_emoji_api_scope())
             .service(directory_api_scope())
             .service(follow_request_api_scope())
-            .service(instance_api_scope())
+            .service(instance_api::instance_api_v1_scope())
+            .service(instance_api::instance_api_v2_scope())
             .service(marker_api_scope())
             .service(media_api::media_api_v1_scope())
             .service(media_api::media_api_v2_scope())

@@ -8,6 +8,7 @@ use mitra_config::{
     Config,
     RegistrationType,
     SOFTWARE_NAME,
+    SOFTWARE_REPOSITORY,
     SOFTWARE_VERSION,
 };
 use mitra_models::users::types::User;
@@ -29,28 +30,28 @@ use crate::mastodon_api::{
 };
 
 #[derive(Serialize)]
-struct InstanceStats {
+struct Stats {
     user_count: i64,
     status_count: i64,
     domain_count: i64,
 }
 
 #[derive(Serialize)]
-struct InstanceStatusLimits {
+struct StatusLimits {
     max_characters: usize,
     max_media_attachments: usize,
 }
 
 #[derive(Serialize)]
-struct InstanceMediaLimits {
+struct MediaLimits {
     supported_mime_types: Vec<String>,
     image_size_limit: usize,
 }
 
 #[derive(Serialize)]
-struct InstanceConfiguration {
-    statuses: InstanceStatusLimits,
-    media_attachments: InstanceMediaLimits,
+struct Configuration {
+    statuses: StatusLimits,
+    media_attachments: MediaLimits,
 }
 
 #[derive(Serialize)]
@@ -84,8 +85,8 @@ pub struct InstanceInfo {
     registrations: bool,
     approval_required: bool,
     invites_enabled: bool,
-    stats: InstanceStats,
-    configuration: InstanceConfiguration,
+    stats: Stats,
+    configuration: Configuration,
     contact_account: Option<Account>,
 
     authentication_methods: Vec<String>,
@@ -177,17 +178,17 @@ impl InstanceInfo {
             invites_enabled:
                 config.registration.registration_type ==
                 RegistrationType::Invite,
-            stats: InstanceStats {
+            stats: Stats {
                 user_count,
                 status_count: post_count,
                 domain_count: peer_count,
             },
-            configuration: InstanceConfiguration {
-                statuses: InstanceStatusLimits {
+            configuration: Configuration {
+                statuses: StatusLimits {
                     max_characters: config.limits.posts.character_limit,
                     max_media_attachments: ATTACHMENT_LIMIT,
                 },
-                media_attachments: InstanceMediaLimits {
+                media_attachments: MediaLimits {
                     supported_mime_types: MediaStorage::from(config)
                         .supported_media_types().iter()
                         .map(|media_type| media_type.to_string()).collect(),
@@ -216,6 +217,98 @@ impl InstanceInfo {
             blockchains: blockchains,
             ipfs_gateway_url: config.ipfs_gateway_url.clone(),
             federated_timeline_restricted: dynamic_config.federated_timeline_restricted,
+        }
+    }
+}
+
+#[derive(Serialize)]
+struct UsageUsers {
+    active_month: i64,
+}
+
+#[derive(Serialize)]
+struct Usage {
+    users: UsageUsers,
+}
+
+#[derive(Serialize)]
+struct ConfigurationV2 {
+    statuses: StatusLimits,
+    media_attachments: MediaLimits,
+}
+
+#[derive(Serialize)]
+struct Registrations {
+    enabled: bool,
+    approval_required: bool,
+    message: Option<String>,
+}
+
+#[derive(Serialize)]
+struct Contact {
+    email: String,
+    account: Option<Account>,
+}
+
+/// https://docs.joinmastodon.org/entities/Instance/
+#[derive(Serialize)]
+pub struct InstanceInfoV2 {
+    domain: String,
+    title: String,
+    description: String,
+    version: String,
+    source_url: String,
+    usage: Usage,
+    configuration: ConfigurationV2,
+    registrations: Registrations,
+    contact: Contact,
+}
+
+impl InstanceInfoV2 {
+    pub fn create(
+        base_url: &str,
+        config: &Config,
+        maybe_admin: Option<User>,
+        user_count_active_month: i64,
+    ) -> Self {
+        Self {
+            domain: config.instance().hostname(),
+            title: config.instance_title.clone(),
+            description: config.instance_short_description.clone(),
+            version: get_full_api_version(SOFTWARE_VERSION),
+            source_url: SOFTWARE_REPOSITORY.to_string(),
+            usage: Usage {
+                users: UsageUsers {
+                    active_month: user_count_active_month,
+                },
+            },
+            configuration: ConfigurationV2 {
+                statuses: StatusLimits {
+                    max_characters: config.limits.posts.character_limit,
+                    max_media_attachments: ATTACHMENT_LIMIT,
+                },
+                media_attachments: MediaLimits {
+                    supported_mime_types: MediaStorage::from(config)
+                        .supported_media_types().iter()
+                        .map(|media_type| media_type.to_string()).collect(),
+                    image_size_limit: config.limits.media.file_size_limit,
+                },
+            },
+            registrations: Registrations {
+                enabled:
+                    config.registration.registration_type !=
+                    RegistrationType::Invite,
+                approval_required: false,
+                message: None,
+            },
+            contact: Contact {
+                email: "".to_string(),
+                account: maybe_admin.map(|user| Account::from_profile(
+                    base_url,
+                    &config.instance().url(),
+                    user.profile,
+                )),
+            },
         }
     }
 }

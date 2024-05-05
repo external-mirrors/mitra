@@ -12,14 +12,19 @@ use mitra_models::{
     database::{get_database_client, DatabaseConnectionPool},
     instances::queries::{get_peers, get_peer_count},
     posts::queries::get_post_count,
-    users::queries::{get_admin_user, get_user_count},
+    users::queries::{
+        get_active_user_count,
+        get_admin_user,
+        get_user_count,
+    },
 };
 use mitra_services::ethereum::contracts::ContractSet;
+use mitra_utils::datetime::days_before_now;
 
 use crate::http::get_request_base_url;
 use crate::mastodon_api::errors::MastodonError;
 
-use super::types::InstanceInfo;
+use super::types::{InstanceInfo, InstanceInfoV2};
 
 /// https://docs.joinmastodon.org/methods/instance/#v1
 #[get("")]
@@ -61,8 +66,38 @@ async fn instance_peers_view(
     Ok(HttpResponse::Ok().json(peers))
 }
 
-pub fn instance_api_scope() -> Scope {
+pub fn instance_api_v1_scope() -> Scope {
     web::scope("/api/v1/instance")
         .service(instance_view)
         .service(instance_peers_view)
+}
+
+#[get("")]
+async fn instance_v2_view(
+    config: web::Data<Config>,
+    connection_info: ConnectionInfo,
+    db_pool: web::Data<DatabaseConnectionPool>,
+) -> Result<HttpResponse, MastodonError> {
+    let db_client = &**get_database_client(&db_pool).await?;
+    let maybe_admin = if config.instance_staff_public {
+        get_admin_user(db_client).await?
+    } else {
+        None
+    };
+    let user_count_active_month = get_active_user_count(
+        db_client,
+        days_before_now(28), // 4 weeks
+    ).await?;
+    let instance = InstanceInfoV2::create(
+        &get_request_base_url(connection_info),
+        config.as_ref(),
+        maybe_admin,
+        user_count_active_month,
+    );
+    Ok(HttpResponse::Ok().json(instance))
+}
+
+pub fn instance_api_v2_scope() -> Scope {
+    web::scope("/api/v2/instance")
+        .service(instance_v2_view)
 }
