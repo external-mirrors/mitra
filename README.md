@@ -149,7 +149,7 @@ See [defaults](./.env).
 
 ### Tor/I2P federation
 
-See [guide](./docs/onion.md).
+See [Tor guide](./docs/onion.md) and [I2P guide](./docs/i2p.md).
 
 ### Blockchain integrations
 
