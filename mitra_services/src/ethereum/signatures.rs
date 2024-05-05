@@ -1,4 +1,5 @@
 use std::convert::TryInto;
+use std::fmt;
 use std::str::FromStr;
 
 use secp256k1::{Error as KeyError, SecretKey, rand::rngs::OsRng};
@@ -58,9 +59,13 @@ impl SignatureData {
     }
 }
 
-impl ToString for SignatureData {
-    fn to_string(&self) -> String {
-        hex::encode(self.to_bytes())
+impl fmt::Display for SignatureData {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            formatter,
+            "{}",
+            hex::encode(self.to_bytes())
+        )
     }
 }
 
