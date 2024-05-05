@@ -35,8 +35,8 @@ use crate::mastodon_api::{
         helpers::get_relationship,
         types::Account,
     },
+    auth::get_current_user,
     errors::MastodonError,
-    oauth::auth::get_current_user,
     pagination::{get_last_item, get_paginated_response},
 };
 

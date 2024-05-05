@@ -122,8 +122,8 @@ use crate::http::{
     MultiQuery,
 };
 use crate::mastodon_api::{
+    auth::get_current_user,
     errors::MastodonError,
-    oauth::auth::get_current_user,
     pagination::{get_last_item, get_paginated_response},
     search::helpers::search_profiles_only,
     statuses::helpers::get_paginated_status_list,

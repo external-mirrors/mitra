@@ -14,6 +14,7 @@ pub mod statuses;
 pub mod subscriptions;
 pub mod timelines;
 
+mod auth;
 mod deserializers;
 mod errors;
 mod pagination;

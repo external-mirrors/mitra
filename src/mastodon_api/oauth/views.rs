@@ -39,9 +39,11 @@ use mitra_utils::passwords::verify_password;
 use mitra_validators::errors::ValidationError;
 
 use crate::http::{ContentSecurityPolicy, FormOrJson};
-use crate::mastodon_api::errors::MastodonError;
+use crate::mastodon_api::{
+    auth::get_current_user,
+    errors::MastodonError,
+};
 
-use super::auth::get_current_user;
 use super::types::{
     AuthorizationRequest,
     AuthorizationQueryParams,

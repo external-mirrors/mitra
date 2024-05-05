@@ -22,8 +22,8 @@ use mitra_services::media::MediaStorage;
 use mitra_validators::media::validate_media_description;
 
 use crate::mastodon_api::{
+    auth::get_current_user,
     errors::MastodonError,
-    oauth::auth::get_current_user,
     uploads::save_b64_file,
 };
 

@@ -24,8 +24,8 @@ use mitra_models::{
 
 use crate::http::get_request_base_url;
 use crate::mastodon_api::{
+    auth::get_current_user,
     errors::MastodonError,
-    oauth::auth::get_current_user,
     statuses::helpers::get_paginated_status_list,
 };
 use super::types::{

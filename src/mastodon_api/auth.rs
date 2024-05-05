@@ -4,7 +4,7 @@ use mitra_models::{
     users::types::User,
 };
 
-use crate::mastodon_api::errors::MastodonError;
+use super::errors::MastodonError;
 
 pub async fn get_current_user(
     db_client: &impl DatabaseClient,

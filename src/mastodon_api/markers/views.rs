@@ -11,8 +11,8 @@ use mitra_models::{
 };
 
 use crate::mastodon_api::{
+    auth::get_current_user,
     errors::MastodonError,
-    oauth::auth::get_current_user,
 };
 
 use super::types::{MarkerQueryParams, MarkerCreateData, Markers};

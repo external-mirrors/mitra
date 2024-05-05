@@ -17,8 +17,8 @@ use mitra_models::{
 use crate::http::get_request_base_url;
 use crate::mastodon_api::{
     accounts::types::Account,
+    auth::get_current_user,
     errors::MastodonError,
-    oauth::auth::get_current_user,
 };
 use super::types::DirectoryQueryParams;
 

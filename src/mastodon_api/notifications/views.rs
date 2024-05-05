@@ -17,8 +17,8 @@ use mitra_models::{
 
 use crate::http::get_request_base_url;
 use crate::mastodon_api::{
+    auth::get_current_user,
     errors::MastodonError,
-    oauth::auth::get_current_user,
     pagination::{get_last_item, get_paginated_response},
 };
 use super::types::{ApiNotification, NotificationQueryParams};

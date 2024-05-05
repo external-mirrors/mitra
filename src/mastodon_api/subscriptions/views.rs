@@ -67,8 +67,8 @@ use mitra_validators::{
 use crate::http::get_request_base_url;
 use crate::mastodon_api::{
     accounts::types::Account,
+    auth::get_current_user,
     errors::MastodonError,
-    oauth::auth::get_current_user,
 };
 use crate::payments::monero::create_or_update_monero_subscription;
 
