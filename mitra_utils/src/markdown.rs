@@ -28,6 +28,7 @@ fn build_comrak_options() -> Options {
     Options {
         extension: ExtensionOptions::builder()
             .autolink(true)
+            .strikethrough(true)
             .build(),
         parse: ParseOptions::builder()
             .relaxed_autolinks(true)
@@ -160,6 +161,7 @@ fn fix_linebreaks(html: &str) -> String {
 /// - bold and italic
 /// - links and autolinks
 /// - inline code and code blocks
+/// - strikethrough
 ///
 /// The output should be displayed correctly on all popular platforms:
 /// https://funfedi.dev/support_tables/generated/html_tags/
@@ -179,7 +181,8 @@ pub fn markdown_lite_to_html(text: &str) -> Result<String, MarkdownError> {
         &options,
     );
 
-    // Re-render blockquotes, headings, HRs, images and lists
+    // Re-render blockquotes, headings, HRs and lists
+    // Replace images with links
     // TODO: disable parser rules https://github.com/kivikakk/comrak/issues/244
     iter_nodes(root, &|node| {
         let node_value = node.data.borrow().value.clone();
@@ -345,7 +348,7 @@ mod tests {
         let text = "# heading\n\ntest **bold** test *italic* test ~~strike~~ with `code`, <span>html</span> and https://example.com and admin@email.example\nnew line\n\ntwo new lines and a list:\n- item 1\n- item 2\n\n>greentext\n\n---\n\nimage: ![logo](logo.png)\n\ncode block:\n```\nlet test\ntest = 1\n```";
         let html = markdown_lite_to_html(text).unwrap();
         let expected_html = concat!(
-            r#"<h1>heading</h1><p>test <strong>bold</strong> test <em>italic</em> test ~~strike~~ with <code>code</code>, &lt;span&gt;html&lt;/span&gt;"#,
+            r#"<h1>heading</h1><p>test <strong>bold</strong> test <em>italic</em> test <del>strike</del> with <code>code</code>, &lt;span&gt;html&lt;/span&gt;"#,
             r#" and <a href="https://example.com">https://example.com</a>"#,
             r#" and <a href="mailto:admin@email.example">admin@email.example</a>"#,
             r#"<br>new line</p><p>two new lines and a list:</p><p>- item 1<br>- item 2</p><p>&gt;greentext</p><p>-----</p><p>image: ![logo](logo.png)</p><p>code block:</p>"#,
@@ -383,6 +386,14 @@ mod tests {
         let text = ">one\n>two\n>three\n\ntest";
         let html = markdown_lite_to_html(text).unwrap();
         let expected_html = r#"<p>&gt;one<br>&gt;two<br>&gt;three</p><p>test</p>"#;
+        assert_eq!(html, expected_html);
+    }
+
+    #[test]
+    fn test_markdown_lite_to_html_strikethrough() {
+        let text = "test ~~strikethrough~~\n~test~ end.";
+        let html = markdown_lite_to_html(text).unwrap();
+        let expected_html = r#"<p>test <del>strikethrough</del><br><del>test</del> end.</p>"#;
         assert_eq!(html, expected_html);
     }
 

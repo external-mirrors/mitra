@@ -25,7 +25,7 @@ pub const EMOJI_LIMIT: usize = 50;
 
 const TITLE_LENGTH_MAX: usize = 300;
 const CONTENT_MAX_SIZE: usize = 100000;
-const CONTENT_ALLOWED_TAGS: [&str; 10] = [
+const CONTENT_ALLOWED_TAGS: [&str; 11] = [
     "a",
     "br",
     "pre",
@@ -33,6 +33,7 @@ const CONTENT_ALLOWED_TAGS: [&str; 10] = [
     "strong",
     "em",
     "u",
+    "del",
     "h1",
     "p",
     "span",
