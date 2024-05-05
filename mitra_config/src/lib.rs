@@ -19,7 +19,9 @@ pub use environment::Environment;
 pub use loader::parse_config;
 pub use registration::{DefaultRole, RegistrationType};
 
-pub const MITRA_VERSION: &str = env!("CARGO_PKG_VERSION");
+pub const SOFTWARE_NAME: &str = "Mitra";
+pub const SOFTWARE_VERSION: &str = env!("CARGO_PKG_VERSION");
+pub const SOFTWARE_REPOSITORY: &str = "https://codeberg.org/silverpill/mitra";
 
 #[derive(thiserror::Error, Debug)]
 #[error("{0}")]

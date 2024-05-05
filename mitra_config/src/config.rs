@@ -26,7 +26,7 @@ use super::federation::FederationConfig;
 use super::limits::Limits;
 use super::registration::RegistrationConfig;
 use super::retention::RetentionConfig;
-use super::MITRA_VERSION;
+use super::{SOFTWARE_NAME, SOFTWARE_VERSION};
 
 fn default_log_level() -> LogLevel { LogLevel::Info }
 
@@ -239,8 +239,9 @@ impl Instance {
 
     pub fn agent(&self) -> String {
         format!(
-            "Mitra {version}; {instance_url}",
-            version=MITRA_VERSION,
+            "{name} {version}; {instance_url}",
+            name=SOFTWARE_NAME,
+            version=SOFTWARE_VERSION,
             instance_url=self.url(),
         )
     }
@@ -300,7 +301,7 @@ mod tests {
         assert_eq!(instance.hostname(), "example.com");
         assert_eq!(
             instance.agent(),
-            format!("Mitra {}; https://example.com", MITRA_VERSION),
+            format!("Mitra {}; https://example.com", SOFTWARE_VERSION),
         );
     }
 

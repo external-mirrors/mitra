@@ -47,7 +47,7 @@ use mitra_adapters::init::{
     initialize_app,
     prepare_instance_keys,
 };
-use mitra_config::{Environment, MITRA_VERSION};
+use mitra_config::{Environment, SOFTWARE_VERSION};
 use mitra_models::{
     database::{
         connect::create_pool,
@@ -97,7 +97,7 @@ async fn main() -> std::io::Result<()> {
     std::mem::drop(db_client);
     log::info!(
         "app initialized; version {}, environment = '{:?}'",
-        MITRA_VERSION,
+        SOFTWARE_VERSION,
         config.environment,
     );
     log::info!("instance URL {}", config.instance_url());

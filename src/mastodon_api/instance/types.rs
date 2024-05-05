@@ -7,7 +7,8 @@ use mitra_config::{
     BlockchainConfig,
     Config,
     RegistrationType,
-    MITRA_VERSION,
+    SOFTWARE_NAME,
+    SOFTWARE_VERSION,
 };
 use mitra_models::users::types::User;
 use mitra_services::{
@@ -99,9 +100,10 @@ pub struct InstanceInfo {
 
 fn get_full_api_version(version: &str) -> String {
     format!(
-        "{0} (compatible; Mitra {1})",
-        MASTODON_API_VERSION,
-        version,
+        "{api_version} (compatible; {name} {version})",
+        api_version=MASTODON_API_VERSION,
+        name=SOFTWARE_NAME,
+        version=version,
     )
 }
 
@@ -167,7 +169,7 @@ impl InstanceInfo {
             title: config.instance_title.clone(),
             short_description: config.instance_short_description.clone(),
             description: markdown_to_html(&config.instance_description),
-            version: get_full_api_version(MITRA_VERSION),
+            version: get_full_api_version(SOFTWARE_VERSION),
             registrations:
                 config.registration.registration_type !=
                 RegistrationType::Invite,
@@ -215,5 +217,16 @@ impl InstanceInfo {
             ipfs_gateway_url: config.ipfs_gateway_url.clone(),
             federated_timeline_restricted: dynamic_config.federated_timeline_restricted,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_get_full_api_version() {
+        let full_version = get_full_api_version("2.0.0");
+        assert_eq!(full_version, "4.0.0 (compatible; Mitra 2.0.0)");
     }
 }

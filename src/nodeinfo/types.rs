@@ -2,10 +2,14 @@
 
 use serde::Serialize;
 
-use mitra_config::{Config, RegistrationType, MITRA_VERSION};
+use mitra_config::{
+    Config,
+    RegistrationType,
+    SOFTWARE_NAME,
+    SOFTWARE_REPOSITORY,
+    SOFTWARE_VERSION,
+};
 
-const MITRA_NAME: &str = "mitra";
-const MITRA_REPOSITORY: &str = "https://codeberg.org/silverpill/mitra";
 const ATOM_SERVICE: &str = "atom1.0";
 const ACTIVITYPUB_PROTOCOL: &str = "activitypub";
 
@@ -18,8 +22,8 @@ struct Software20 {
 impl Default for Software20 {
     fn default() -> Self {
         Self {
-            name: MITRA_NAME.to_string(),
-            version: MITRA_VERSION.to_string(),
+            name: SOFTWARE_NAME.to_lowercase(),
+            version: SOFTWARE_VERSION.to_string(),
         }
     }
 }
@@ -34,9 +38,9 @@ struct Software21 {
 impl Default for Software21 {
     fn default() -> Self {
         Self {
-            name: MITRA_NAME.to_string(),
-            version: MITRA_VERSION.to_string(),
-            repository: MITRA_REPOSITORY.to_string(),
+            name: SOFTWARE_NAME.to_lowercase(),
+            version: SOFTWARE_VERSION.to_string(),
+            repository: SOFTWARE_REPOSITORY.to_string(),
         }
     }
 }
