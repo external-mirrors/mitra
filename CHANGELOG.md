@@ -19,6 +19,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Display better error message if fetched object doesn't have an ID.
 - Set `Relationship.muting_notifications` flag to True if account is muted.
 - Add `blocking` and `blocked_by` properties to Mastodon API Relationship object.
+- Increase response size limit to 2MB.
 
 ### Deprecated
 

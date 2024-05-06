@@ -17,7 +17,6 @@ use crate::{
         build_http_client,
         get_network_type,
         limited_response,
-        RESPONSE_SIZE_LIMIT,
     },
 };
 
@@ -92,7 +91,7 @@ pub async fn send_activity(
     } else {
         let mut response = request.send().await?;
         let response_status = response.status();
-        let response_data = limited_response(&mut response, RESPONSE_SIZE_LIMIT)
+        let response_data = limited_response(&mut response, agent.response_size_limit)
             .await?
             .ok_or(DelivererError::ResponseTooLarge)?;
         let response_text: String = String::from_utf8(response_data.to_vec())

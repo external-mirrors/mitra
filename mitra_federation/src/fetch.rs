@@ -20,7 +20,6 @@ use super::{
         get_network_type,
         limited_response,
         REDIRECT_LIMIT,
-        RESPONSE_SIZE_LIMIT,
     },
     utils::{extract_media_type, is_same_hostname},
 };
@@ -163,7 +162,7 @@ pub async fn fetch_object<T: DeserializeOwned>(
             .to_string();
     };
 
-    let data = limited_response(&mut response, RESPONSE_SIZE_LIMIT)
+    let data = limited_response(&mut response, agent.response_size_limit)
         .await?
         .ok_or(FetchError::ResponseTooLarge)?;
 
@@ -213,7 +212,7 @@ pub async fn fetch_file(
     url: &str,
     expected_media_type: Option<&str>,
     allowed_media_types: &[&str],
-    file_max_size: usize,
+    file_size_limit: usize,
 ) -> Result<(Vec<u8>, usize, String), FetchError> {
     if !is_safe_url(url) {
         return Err(FetchError::UnsafeUrl);
@@ -226,14 +225,14 @@ pub async fn fetch_file(
     if let Some(file_size) = response.content_length() {
         let file_size: usize = file_size.try_into()
             .map_err(|_| FetchError::ResponseTooLarge)?;
-        if file_size > file_max_size {
+        if file_size > file_size_limit {
             return Err(FetchError::ResponseTooLarge);
         };
     };
     let maybe_content_type_header = response.headers()
         .get(header::CONTENT_TYPE)
         .and_then(extract_media_type);
-    let file_data = limited_response(&mut response, file_max_size)
+    let file_data = limited_response(&mut response, file_size_limit)
         .await?
         .ok_or(FetchError::ResponseTooLarge)?;
     let file_size = file_data.len();
@@ -264,7 +263,7 @@ pub async fn fetch_json<T: DeserializeOwned>(
         .send()
         .await?
         .error_for_status()?;
-    let data = limited_response(&mut response, RESPONSE_SIZE_LIMIT)
+    let data = limited_response(&mut response, agent.response_size_limit)
         .await?
         .ok_or(FetchError::ResponseTooLarge)?;
     let object: T = serde_json::from_slice(&data)?;

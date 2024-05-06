@@ -16,9 +16,6 @@ use super::agent::FederationAgent;
 const CONNECTION_TIMEOUT: u64 = 30;
 pub const REDIRECT_LIMIT: usize = 3;
 
-// See also: mitra_validators::posts::CONTENT_MAX_SIZE
-pub const RESPONSE_SIZE_LIMIT: usize = 1_000_000;
-
 pub enum Network {
     Default,
     Tor,

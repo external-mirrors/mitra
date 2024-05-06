@@ -14,6 +14,10 @@ use super::{
     },
 };
 
+// Roughly equals to content size limit * collection size limit
+// See also: mitra_validators::posts::CONTENT_MAX_SIZE
+const RESPONSE_SIZE_LIMIT: usize = 2_000_000;
+
 pub(super) fn build_federation_agent_with_key(
     instance: &Instance,
     signer_key: RsaPrivateKey,
@@ -22,6 +26,7 @@ pub(super) fn build_federation_agent_with_key(
     FederationAgent {
         user_agent: instance.agent(),
         is_instance_private: instance.is_private,
+        response_size_limit: RESPONSE_SIZE_LIMIT,
         fetcher_timeout: instance.fetcher_timeout,
         deliverer_timeout: instance.deliverer_timeout,
         deliverer_log_response_length: instance.deliverer_log_response_length,
@@ -65,6 +70,7 @@ mod tests {
         let agent = build_federation_agent(&instance, None);
         assert_eq!(agent.user_agent.ends_with(instance_url), true);
         assert_eq!(agent.is_instance_private, true);
+        assert_eq!(agent.response_size_limit, RESPONSE_SIZE_LIMIT);
         assert_eq!(agent.signer_key, instance.actor_rsa_key);
         assert_eq!(agent.signer_key_id, "https://social.example/actor#main-key");
     }

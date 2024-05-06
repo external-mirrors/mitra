@@ -5,6 +5,7 @@ pub struct FederationAgent {
     // Private instance won't send signed HTTP requests
     pub is_instance_private: bool,
 
+    pub response_size_limit: usize,
     pub fetcher_timeout: u64,
     pub deliverer_timeout: u64,
     pub deliverer_log_response_length: usize,
