@@ -2553,6 +2553,14 @@ components:
           description: Are you muting notifications from this user?
           type: boolean
           default: false
+        blocking:
+          description: Are you blocking this user?
+          type: boolean
+          default: false
+        blocked_by:
+          description: Is this user blocking you?
+          type: boolean
+          default: false
     Role:
       type: object
       properties:

@@ -485,6 +485,8 @@ pub struct RelationshipMap {
     pub showing_replies: bool,
     pub muting: bool,
     pub muting_notifications: bool,
+    pub blocking: bool,
+    pub blocked_by: bool,
 }
 
 fn default_showing_reblogs() -> bool { true }
@@ -506,6 +508,8 @@ impl Default for RelationshipMap {
             showing_replies: default_showing_replies(),
             muting: false,
             muting_notifications: false,
+            blocking: false,
+            blocked_by: false,
         }
     }
 }
