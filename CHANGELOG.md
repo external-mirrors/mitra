@@ -17,6 +17,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Do not retry incoming activity if access to referenced object is denied.
 - Allow `fetch-object-as` command to be called without username argument.
 - Display better error message if fetched object doesn't have an ID.
+- Set `Relationship.muting_notifications` flag to True if account is muted.
 
 ### Deprecated
 

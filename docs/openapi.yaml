@@ -2549,6 +2549,10 @@ components:
           description: Are you muting this user?
           type: boolean
           default: false
+        muting_notifications:
+          description: Are you muting notifications from this user?
+          type: boolean
+          default: false
     Role:
       type: object
       properties:

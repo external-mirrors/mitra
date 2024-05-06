@@ -58,6 +58,7 @@ fn create_relationship_map(
             RelationshipType::Mute => {
                 if relationship.is_direct(source_id, target_id)? {
                     relationship_map.muting = true;
+                    relationship_map.muting_notifications = true;
                 };
             },
             RelationshipType::Reject => {
@@ -150,9 +151,11 @@ mod tests {
             follow,
             follow_request_accepted,
             hide_reposts,
+            mute,
             show_reposts,
             subscribe,
             unfollow,
+            unmute,
             unsubscribe,
         },
         users::queries::create_user,
@@ -253,5 +256,25 @@ mod tests {
         let relationship = get_relationship(db_client, &user_1.id, &user_2.id).await.unwrap();
         assert_eq!(relationship.following, true);
         assert_eq!(relationship.showing_reblogs, true);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_mute() {
+        let db_client = &mut create_test_database().await;
+        let (user_1, user_2) = create_users(db_client).await.unwrap();
+        let relationship = get_relationship(db_client, &user_1.id, &user_2.id).await.unwrap();
+        assert_eq!(relationship.muting, false);
+        assert_eq!(relationship.muting_notifications, false);
+
+        mute(db_client, &user_1.id, &user_2.id).await.unwrap();
+        let relationship = get_relationship(db_client, &user_1.id, &user_2.id).await.unwrap();
+        assert_eq!(relationship.muting, true);
+        assert_eq!(relationship.muting_notifications, true);
+
+        unmute(db_client, &user_1.id, &user_2.id).await.unwrap();
+        let relationship = get_relationship(db_client, &user_1.id, &user_2.id).await.unwrap();
+        assert_eq!(relationship.muting, false);
+        assert_eq!(relationship.muting_notifications, false);
     }
 }
