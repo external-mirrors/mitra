@@ -770,6 +770,8 @@ paths:
   /api/v1/directory:
     get:
       summary: List profiles visible in the directory.
+      security:
+        - tokenAuth: []
       parameters:
         - name: offset
           in: query
