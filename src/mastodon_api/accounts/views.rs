@@ -1,6 +1,7 @@
 use std::time::Duration;
 
 use actix_governor::{Governor, GovernorExtractor};
+use actix_multipart::form::MultipartForm;
 use actix_web::{
     dev::ConnectionInfo,
     get,
@@ -8,6 +9,7 @@ use actix_web::{
     patch,
     post,
     web,
+    Either,
     HttpResponse,
     Scope,
 };
@@ -138,6 +140,7 @@ use super::types::{
     Account,
     AccountCreateData,
     AccountUpdateData,
+    AccountUpdateMultipartForm,
     ApiSubscription,
     AUTHENTICATION_METHOD_CAIP122_MONERO,
     AUTHENTICATION_METHOD_EIP4361,
@@ -306,16 +309,28 @@ async fn update_credentials(
     connection_info: ConnectionInfo,
     config: web::Data<Config>,
     db_pool: web::Data<DatabaseConnectionPool>,
-    account_data: web::Json<AccountUpdateData>,
+    account_data: Either<
+        MultipartForm<AccountUpdateMultipartForm>,
+        web::Json<AccountUpdateData>,
+    >,
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &mut **get_database_client(&db_pool).await?;
     let mut current_user = get_current_user(db_client, auth.token()).await?;
     let media_storage = MediaStorage::from(config.as_ref());
-    let mut profile_data = account_data.into_inner()
-        .into_profile_data(
-            &current_user.profile,
-            &media_storage,
-        )?;
+    let mut profile_data = match account_data {
+        Either::Left(form) => {
+            form.into_inner().into_profile_data(
+                &current_user.profile,
+                &media_storage,
+            )?
+        },
+        Either::Right(data) => {
+            data.into_inner().into_profile_data(
+                &current_user.profile,
+                &media_storage,
+            )?
+        },
+    };
     clean_profile_update_data(&mut profile_data)?;
     let (updated_profile, deletion_queue) = update_profile(
         db_client,

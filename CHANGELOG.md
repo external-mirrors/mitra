@@ -21,6 +21,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Set `Relationship.muting_notifications` flag to True if account is muted.
 - Add `blocking` and `blocked_by` properties to Mastodon API Relationship object.
 - Increase response size limit to 2MB.
+- Added partial support for `multipart/form-data` payloads in `/api/v1/accounts/update_credentials`.
 
 ### Deprecated
 

@@ -1,3 +1,8 @@
+use actix_multipart::form::{
+    bytes::Bytes,
+    text::Text,
+    MultipartForm,
+};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value as JsonValue};
@@ -26,6 +31,7 @@ use mitra_models::{
 };
 use mitra_services::media::{get_file_url, MediaStorage};
 use mitra_utils::{
+    base64,
     caip2::ChainId,
     did::Did,
     markdown::markdown_basic_to_html,
@@ -436,6 +442,43 @@ impl AccountUpdateData {
             extra_fields.push(extra_field);
         };
         profile_data.extra_fields = extra_fields;
+        Ok(profile_data)
+    }
+}
+
+#[derive(MultipartForm)]
+pub struct AccountUpdateMultipartForm {
+    display_name: Option<Text<String>>,
+    avatar: Option<Bytes>,
+    header: Option<Bytes>,
+}
+
+impl AccountUpdateMultipartForm {
+    pub fn into_profile_data(
+        self,
+        profile: &DbActorProfile,
+        storage: &MediaStorage,
+    ) -> Result<ProfileUpdateData, MastodonError> {
+        assert!(profile.is_local());
+        let mut profile_data = ProfileUpdateData::from(profile);
+
+        profile_data.display_name = self.display_name
+            .map(|value| value.into_inner());
+
+        profile_data.avatar = process_b64_image_field_value(
+            self.avatar.as_ref().map(|file| base64::encode(&file.data)),
+            self.avatar.and_then(|file| file.content_type
+                .map(|media_type| media_type.essence_str().to_string())),
+            profile.avatar.clone(),
+            storage,
+        )?;
+        profile_data.banner = process_b64_image_field_value(
+            self.header.as_ref().map(|file| base64::encode(&file.data)),
+            self.header.and_then(|file| file.content_type
+                .map(|media_type| media_type.essence_str().to_string())),
+            profile.banner.clone(),
+            storage,
+        )?;
         Ok(profile_data)
     }
 }

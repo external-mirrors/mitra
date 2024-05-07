@@ -206,6 +206,22 @@ paths:
                     - none
                     - only_known
                     - only_contacts
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                display_name:
+                  description: The display name to use for the profile.
+                  type: string
+                  nullable: true
+                avatar:
+                  description: Avatar image.
+                  type: string
+                  format: binary
+                header:
+                  description: Header image.
+                  type: string
+                  format: binary
       responses:
         200:
           description: Successful operation.
