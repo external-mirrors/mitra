@@ -9,7 +9,10 @@ use mitra_activitypub::{
         undo_follow::prepare_undo_follow,
     },
     errors::HandlerError,
-    importers::get_or_import_profile_by_actor_address,
+    importers::{
+        is_actor_importer_error,
+        get_or_import_profile_by_actor_address,
+    },
 };
 use mitra_config::Config;
 use mitra_federation::addresses::ActorAddress;
@@ -144,10 +147,7 @@ pub async fn import_follows_task(
             &actor_address,
         ).await {
             Ok(profile) => profile,
-            Err(error @ (
-                HandlerError::FetchError(_) |
-                HandlerError::DatabaseError(DatabaseError::NotFound(_))
-            )) => {
+            Err(error) if is_actor_importer_error(&error) => {
                 log::warn!(
                     "failed to import profile {}: {}",
                     actor_address,

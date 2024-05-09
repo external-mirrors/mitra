@@ -214,6 +214,14 @@ impl ActorIdResolver {
     }
 }
 
+pub fn is_actor_importer_error(error: &HandlerError) -> bool {
+    matches!(
+        error,
+        HandlerError::FetchError(_) |
+            HandlerError::ValidationError(_) |
+            HandlerError::DatabaseError(DatabaseError::NotFound(_)))
+}
+
 async fn perform_webfinger_query(
     agent: &FederationAgent,
     actor_address: &ActorAddress,

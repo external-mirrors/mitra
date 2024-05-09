@@ -58,6 +58,7 @@ use crate::{
         get_post_by_object_id,
         get_profile_by_actor_id,
         import_post,
+        is_actor_importer_error,
         ActorIdResolver,
     },
     vocabulary::*,
@@ -430,11 +431,7 @@ pub async fn get_object_tags(
                         };
                         continue;
                     },
-                    Err(error @ (
-                        HandlerError::FetchError(_) |
-                        HandlerError::ValidationError(_) |
-                        HandlerError::DatabaseError(DatabaseError::NotFound(_))
-                    )) => {
+                    Err(error) if is_actor_importer_error(&error) => {
                         log::warn!(
                             "failed to find mentioned profile by ID {}: {}",
                             href,
@@ -460,11 +457,7 @@ pub async fn get_object_tags(
                     &actor_address,
                 ).await {
                     Ok(profile) => profile,
-                    Err(error @ (
-                        HandlerError::FetchError(_) |
-                        HandlerError::ValidationError(_) |
-                        HandlerError::DatabaseError(DatabaseError::NotFound(_))
-                    )) => {
+                    Err(error) if is_actor_importer_error(&error) => {
                         // Ignore mention if fetcher fails
                         // Ignore mention if local address is not valid
                         log::warn!(
