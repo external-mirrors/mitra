@@ -19,7 +19,6 @@ use mitra_validators::errors::ValidationError;
 
 use crate::{
     authority::Authority,
-    url::{parse_url, Url},
 };
 
 pub fn local_actor_id_fep_ef61_fallback(instance_url: &str, username: &str) -> String {
@@ -216,16 +215,6 @@ pub fn profile_actor_url(instance_url: &str, profile: &DbActorProfile) -> String
     profile_actor_id(instance_url, profile)
 }
 
-pub(crate) fn parse_portable_id(
-    object_id: &str,
-) -> Result<(ApUrl, Option<String>), ValidationError> {
-    let (canonical_object_id, maybe_gateway) = parse_url(object_id)?;
-    match canonical_object_id {
-        Url::Http(_) => Err(ValidationError("unexpected ID type")),
-        Url::Ap(ap_url) => Ok((ap_url, maybe_gateway)),
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use uuid::uuid;
@@ -359,24 +348,5 @@ mod tests {
             profile_url,
             "https://social.example/users/test",
         );
-    }
-
-    #[test]
-    fn test_parse_portable_id_ap_url() {
-        let url = "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor";
-        let (id, maybe_gateway) = parse_portable_id(url).unwrap();
-        assert_eq!(id.to_string(), url);
-        assert_eq!(maybe_gateway, None);
-    }
-
-    #[test]
-    fn test_parse_portable_id_gateway_url() {
-        let url = "https://server.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor";
-        let (id, maybe_gateway) = parse_portable_id(url).unwrap();
-        assert_eq!(
-            id.to_string(),
-            "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor",
-        );
-        assert_eq!(maybe_gateway.unwrap(), "https://server.example");
     }
 }

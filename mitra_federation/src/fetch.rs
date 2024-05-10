@@ -64,6 +64,9 @@ pub enum FetchError {
 
     #[error("too many objects")]
     RecursionError,
+
+    #[error("gateways are not provided")]
+    NoGateway,
 }
 
 fn build_fetcher_client(

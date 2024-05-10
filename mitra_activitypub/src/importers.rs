@@ -1,7 +1,10 @@
 use std::collections::HashMap;
 
 use chrono::{Duration, Utc};
-use serde::Deserialize;
+use serde::{
+    Deserialize,
+    de::DeserializeOwned,
+};
 use serde_json::{Value as JsonValue};
 
 use mitra_config::{Config, Instance};
@@ -38,14 +41,60 @@ use crate::{
         types::Actor,
     },
     agent::build_federation_agent,
+    authentication::verify_object,
     errors::HandlerError,
     handlers::{
         activity::handle_activity,
         create::{get_object_links, handle_note, AttributedObject},
     },
     identifiers::{parse_local_actor_id, parse_local_object_id},
+    url::{parse_url, Url},
     vocabulary::GROUP,
 };
+
+// Gateway pool for resolving 'ap' URLs
+pub struct FetcherContext {
+    gateways: Vec<String>,
+}
+
+impl From<Vec<String>> for FetcherContext {
+    fn from(gateways: Vec<String>) -> Self {
+        Self { gateways }
+    }
+}
+
+impl FetcherContext {
+    pub fn prepare_object_id(&mut self, object_id: &str) -> Result<Url, ValidationError> {
+        let (canonical_object_id, maybe_gateway) = parse_url(object_id)?;
+        if let Some(gateway) = maybe_gateway {
+            if !self.gateways.contains(&gateway) {
+                self.gateways.insert(0, gateway);
+            };
+        };
+        Ok(canonical_object_id)
+    }
+}
+
+pub async fn fetch_any_object<T: DeserializeOwned>(
+    agent: &FederationAgent,
+    context: &FetcherContext,
+    object_id: &Url,
+) -> Result<T, HandlerError> {
+    let maybe_gateway = context.gateways.first()
+        .map(|gateway| gateway.as_str());
+    // TODO: remove Url::to_http_url
+    let http_url = object_id
+        .to_http_url(maybe_gateway)
+        .ok_or(FetchError::NoGateway)?;
+    let object_json: JsonValue = fetch_object(agent, &http_url).await?;
+    // TODO: improve error reporting
+    verify_object(&object_json)
+        .map_err(|_| ValidationError("authentication error"))?;
+    // TODO: improve error reporting
+    let object: T = serde_json::from_value(object_json)
+        .map_err(|_| ValidationError("object deserialization error"))?;
+    Ok(object)
+}
 
 pub async fn get_profile_by_actor_id(
     db_client: &impl DatabaseClient,

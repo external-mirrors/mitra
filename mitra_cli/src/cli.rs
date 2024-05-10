@@ -12,17 +12,17 @@ use mitra::payments::monero::{
 };
 use mitra_activitypub::{
     agent::build_federation_agent,
-    authentication::verify_portable_object,
     builders::{
         delete_note::prepare_delete_note,
         delete_person::prepare_delete_person,
     },
     importers::{
+        fetch_any_object,
         import_from_outbox,
         import_replies,
         ActorIdResolver,
+        FetcherContext,
     },
-    url::parse_url,
 };
 use mitra_adapters::{
     dynamic_config::{set_editable_property, EDITABLE_PROPERTIES},
@@ -439,15 +439,18 @@ impl FetchPortableObject {
         config: &Config,
         _db_client: &mut impl DatabaseClient,
     ) -> Result<(), Error> {
-        let (object_id, mut maybe_gateway) = parse_url(&self.id)?;
-        maybe_gateway = maybe_gateway.or(self.gateway.clone());
-        let http_url = object_id.to_http_url(maybe_gateway.as_deref())
-            .ok_or(anyhow!("gateway is not specified"))?;
+        let gateways = self.gateway.as_ref()
+            .map(|gateway| vec![gateway.to_string()])
+            .unwrap_or_default();
+        let mut context = FetcherContext::from(gateways);
+        let canonical_object_id = context.prepare_object_id(&self.id)?;
         let agent = build_federation_agent(&config.instance(), None);
-        let object: JsonValue = fetch_object(&agent, &http_url).await?;
-        println!("object fetched");
-        verify_portable_object(&object)?;
-        println!("portable object has been verified");
+        let _object: JsonValue = fetch_any_object(
+            &agent,
+            &context,
+            &canonical_object_id,
+        ).await?;
+        println!("object has been fetched and verified");
         Ok(())
     }
 }

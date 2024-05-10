@@ -13,7 +13,7 @@ use mitra_utils::{
     },
 };
 
-use super::identifiers::parse_portable_id;
+use super::url::{parse_url, Url};
 
 #[derive(Debug, Error)]
 pub enum AuthenticationError {
@@ -33,20 +33,25 @@ pub enum AuthenticationError {
     JsonSignatureError(#[from] JsonSignatureError),
 }
 
-pub fn verify_portable_object(
+pub fn verify_object(
     object: &JsonValue,
 ) -> Result<(), AuthenticationError> {
     let object_id = object["id"].as_str()
         .ok_or(AuthenticationError::InvalidObjectID("'id' property not found"))?;
-    let (object_id, maybe_gateway) = parse_portable_id(object_id)
+    let (canonical_object_id, maybe_gateway) = parse_url(object_id)
         .map_err(|error| AuthenticationError::InvalidObjectID(error.0))?;
-    log::info!("canonical object ID: {}", object_id);
+    let canonical_object_id = match canonical_object_id {
+        // Only portable objects must have an integrity proof
+        Url::Http(_) => return Ok(()),
+        Url::Ap(ap_url) => ap_url,
+    };
+    log::info!("canonical object ID: {}", canonical_object_id);
     log::info!("gateway: {}", maybe_gateway.unwrap_or("-".to_string()));
     let signature_data = get_json_signature(object)?;
     match signature_data.signer {
         JsonSigner::Did(did) => {
             // Object must be signed by its owner
-            if object_id.did() != &did {
+            if canonical_object_id.did() != &did {
                 return Err(AuthenticationError::UnexpectedSigner);
             };
             match signature_data.proof_type {
