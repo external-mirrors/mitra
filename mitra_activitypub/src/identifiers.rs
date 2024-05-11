@@ -126,7 +126,7 @@ pub fn parse_local_actor_id(
     let path_re = Regex::new("^/users/(?P<username>[0-9a-z_]+)$")
         .expect("regexp should be valid");
     let (base_url, (username,)) = parse_object_id(actor_id, path_re)
-        .map_err(|_| ValidationError("invalid actor ID"))?;
+        .map_err(|_| ValidationError("invalid local actor ID"))?;
     if base_url != instance_url {
         return Err(ValidationError("instance mismatch"));
     };
@@ -153,7 +153,7 @@ pub fn parse_local_object_id(
     let path_re = Regex::new("^/objects/(?P<uuid>[0-9a-f-]+)$")
         .expect("regexp should be valid");
     let (base_url, (internal_object_id,)) = parse_object_id(object_id, path_re)
-        .map_err(|_| ValidationError("invalid object ID"))?;
+        .map_err(|_| ValidationError("invalid local object ID"))?;
     if base_url != instance_url {
         return Err(ValidationError("instance mismatch"));
     };
@@ -186,7 +186,7 @@ pub fn parse_local_primary_intent_id(
         .expect("regexp should be valid");
     let (base_url, (username, chain_id)) =
         parse_object_id(proposal_id, path_re)
-            .map_err(|_| ValidationError("invalid proposal ID"))?;
+            .map_err(|_| ValidationError("invalid local proposal ID"))?;
     if base_url != instance_url {
         return Err(ValidationError("instance mismatch"));
     };
@@ -249,7 +249,7 @@ mod tests {
             INSTANCE_URL,
             "https://social.example/user/test",
         ).unwrap_err();
-        assert_eq!(error.to_string(), "invalid actor ID");
+        assert_eq!(error.to_string(), "invalid local actor ID");
     }
 
     #[test]
@@ -258,7 +258,7 @@ mod tests {
             INSTANCE_URL,
             "https://social.example/users/tes-t",
         ).unwrap_err();
-        assert_eq!(error.to_string(), "invalid actor ID");
+        assert_eq!(error.to_string(), "invalid local actor ID");
     }
 
     #[test]
@@ -267,7 +267,7 @@ mod tests {
             INSTANCE_URL,
             "https://social.example/users/test/followers",
         ).unwrap_err();
-        assert_eq!(error.to_string(), "invalid actor ID");
+        assert_eq!(error.to_string(), "invalid local actor ID");
     }
 
     #[test]
@@ -276,7 +276,7 @@ mod tests {
             INSTANCE_URL,
             "https://social.example/users/test#main-key",
         ).unwrap_err();
-        assert_eq!(error.to_string(), "invalid actor ID");
+        assert_eq!(error.to_string(), "invalid local actor ID");
     }
 
     #[test]
@@ -319,7 +319,7 @@ mod tests {
             INSTANCE_URL,
             object_id,
         ).unwrap_err();
-        assert_eq!(error.to_string(), "invalid object ID");
+        assert_eq!(error.to_string(), "invalid local object ID");
     }
 
     #[test]

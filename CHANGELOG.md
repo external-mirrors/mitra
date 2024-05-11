@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- Improved reporting of local ID parsing errors.
+
 ### Fixed
 
 - Do not stop follow importer task on validation error.
