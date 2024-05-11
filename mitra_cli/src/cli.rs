@@ -35,7 +35,6 @@ use mitra_adapters::{
     },
 };
 use mitra_config::Config;
-use mitra_federation::fetch::fetch_object;
 use mitra_models::{
     attachments::queries::delete_unused_attachments,
     background_jobs::queries::get_job_count,
@@ -142,10 +141,9 @@ pub enum SubCommand {
     SetRole(SetRole),
     EnableFepEf61(EnableFepEf61),
     FetchActor(FetchActor),
-    FetchPortableObject(FetchPortableObject),
     ReadOutbox(ReadOutbox),
     FetchReplies(FetchReplies),
-    FetchObjectAs(FetchObjectAs),
+    FetchObject(FetchObject),
     DeleteProfile(DeleteProfile),
     DeletePost(DeletePost),
     DeleteEmoji(DeleteEmoji),
@@ -427,34 +425,6 @@ impl FetchActor {
     }
 }
 
-#[derive(Parser)]
-pub struct FetchPortableObject {
-    id: String,
-    gateway: Option<String>,
-}
-
-impl FetchPortableObject {
-    pub async fn execute(
-        &self,
-        config: &Config,
-        _db_client: &mut impl DatabaseClient,
-    ) -> Result<(), Error> {
-        let gateways = self.gateway.as_ref()
-            .map(|gateway| vec![gateway.to_string()])
-            .unwrap_or_default();
-        let mut context = FetcherContext::from(gateways);
-        let canonical_object_id = context.prepare_object_id(&self.id)?;
-        let agent = build_federation_agent(&config.instance(), None);
-        let _object: JsonValue = fetch_any_object(
-            &agent,
-            &context,
-            &canonical_object_id,
-        ).await?;
-        println!("object has been fetched and verified");
-        Ok(())
-    }
-}
-
 /// Pull activities from actor's outbox
 #[derive(Parser)]
 pub struct ReadOutbox {
@@ -503,20 +473,23 @@ impl FetchReplies {
     }
 }
 
-/// Fetch object as a local user
+/// Fetch object as a local user, verify and print it to stdout
 #[derive(Parser)]
-pub struct FetchObjectAs {
+pub struct FetchObject {
     object_id: String,
-    username: Option<String>,
+    #[arg(long)]
+    gateway: Option<String>,
+    #[arg(long)]
+    as_user: Option<String>,
 }
 
-impl FetchObjectAs {
+impl FetchObject {
     pub async fn execute(
         &self,
         config: &Config,
         db_client: &impl DatabaseClient,
     ) -> Result<(), Error> {
-        let maybe_user = if let Some(ref username) = self.username {
+        let maybe_user = if let Some(ref username) = self.as_user {
             let user = get_user_by_name(db_client, username).await?;
             Some(user)
         } else {
@@ -526,7 +499,16 @@ impl FetchObjectAs {
             &config.instance(),
             maybe_user.as_ref(),
         );
-        let object: JsonValue = fetch_object(&agent, &self.object_id).await?;
+        let gateways = self.gateway.as_ref()
+            .map(|gateway| vec![gateway.to_string()])
+            .unwrap_or_default();
+        let mut context = FetcherContext::from(gateways);
+        let canonical_object_id = context.prepare_object_id(&self.object_id)?;
+        let object: JsonValue = fetch_any_object(
+            &agent,
+            &context,
+            &canonical_object_id,
+        ).await?;
         println!("{}", object);
         Ok(())
     }
