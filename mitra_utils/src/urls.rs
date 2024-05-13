@@ -22,6 +22,7 @@ pub fn url_decode(input: &str) -> String {
 }
 
 /// Returns URL host name (without port number)
+/// IDNs are converted into punycode
 pub fn get_hostname(url: &str) -> Result<String, UrlError> {
     let hostname = match Url::parse(url)?
         .host()
@@ -152,6 +153,13 @@ mod tests {
     }
 
     #[test]
+    fn test_get_hostname_idn() {
+        let url = "https://räksmörgås.josefsson.org/raksmorgas.jpg";
+        let hostname = get_hostname(url).unwrap();
+        assert_eq!(hostname, "xn--rksmrgs-5wao1o.josefsson.org");
+    }
+
+    #[test]
     fn test_get_hostname_email() {
         let url = "mailto:user@example.org";
         let result = get_hostname(url);
@@ -202,11 +210,20 @@ mod tests {
         assert_eq!(result.to_string(), "https://social.example/");
         let result = normalize_url("social.example").unwrap();
         assert_eq!(result.to_string(), "https://social.example/");
-        let result = normalize_url("127.0.0.1:8380").unwrap();
+        // IDN
+        let output = normalize_url("嘟文.com").unwrap();
+        assert_eq!(output.to_string(), "https://xn--j5r817a.com/");
         // IP address
+        let result = normalize_url("127.0.0.1:8380").unwrap();
         assert_eq!(result.to_string(), "http://127.0.0.1:8380/");
         // Onion
         let result = normalize_url("xyz.onion").unwrap();
         assert_eq!(result.to_string(), "http://xyz.onion/");
+        // I2P
+        let output = normalize_url("http://xyz.i2p").unwrap();
+        assert_eq!(output.to_string(), "http://xyz.i2p/");
+        // I2P (no scheme)
+        let output = normalize_url("xyz.i2p").unwrap();
+        assert_eq!(output.to_string(), "http://xyz.i2p/");
     }
 }
