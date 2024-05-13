@@ -7,7 +7,7 @@ use serde::Deserialize;
 use mitra_utils::{
     crypto_eddsa::Ed25519PrivateKey,
     crypto_rsa::RsaPrivateKey,
-    urls::{normalize_url, Url, UrlError},
+    urls::{get_hostname, normalize_origin, UrlError},
 };
 
 use super::authentication::{
@@ -134,8 +134,8 @@ impl Config {
         self.instance_rsa_key = Some(secret_key);
     }
 
-    pub(super) fn try_instance_url(&self) -> Result<Url, UrlError> {
-        normalize_url(&self.instance_uri)
+    pub(super) fn try_instance_url(&self) -> Result<String, UrlError> {
+        normalize_origin(&self.instance_uri)
     }
 
     pub fn instance(&self) -> Instance {
@@ -207,7 +207,7 @@ impl Config {
 
 #[derive(Clone)]
 pub struct Instance {
-    _url: Url,
+    _url: String,
     // Instance actor keys
     pub actor_ed25519_key: Ed25519PrivateKey,
     pub actor_rsa_key: RsaPrivateKey,
@@ -226,15 +226,14 @@ pub struct Instance {
 
 impl Instance {
     pub fn url(&self) -> String {
-        self._url.origin().ascii_serialization()
+        self._url.clone()
     }
 
     /// Returns instance host name (without port number)
     pub fn hostname(&self) -> String {
-        self._url.host_str()
+        get_hostname(&self._url)
             // URL is being validated at instantiation
             .expect("instance URL should have hostname")
-            .to_string()
     }
 
     pub fn agent(&self) -> String {
@@ -255,7 +254,7 @@ impl Instance {
             crypto_rsa::generate_weak_rsa_key,
         };
         Self {
-            _url: Url::parse(url).unwrap(),
+            _url: normalize_origin(url).unwrap(),
             actor_rsa_key: generate_weak_rsa_key().unwrap(),
             actor_ed25519_key: generate_weak_ed25519_key(),
             proxy_url: None,
@@ -272,30 +271,12 @@ impl Instance {
 
 #[cfg(test)]
 mod tests {
-    use mitra_utils::{
-        crypto_eddsa::generate_weak_ed25519_key,
-        crypto_rsa::generate_weak_rsa_key,
-    };
     use super::*;
 
     #[test]
     fn test_instance_url_https_dns() {
-        let instance_url = Url::parse("https://example.com/").unwrap();
-        let instance_ed25519_key = generate_weak_ed25519_key();
-        let instance_rsa_key = generate_weak_rsa_key().unwrap();
-        let instance = Instance {
-            _url: instance_url,
-            actor_ed25519_key: instance_ed25519_key,
-            actor_rsa_key: instance_rsa_key,
-            proxy_url: None,
-            onion_proxy_url: None,
-            i2p_proxy_url: None,
-            is_private: true,
-            fetcher_timeout: 0,
-            deliverer_timeout: 0,
-            deliverer_log_response_length: 0,
-            fep_8b32_eddsa_enabled: false,
-        };
+        let instance_url = "https://example.com/";
+        let instance = Instance::for_test(instance_url);
 
         assert_eq!(instance.url(), "https://example.com");
         assert_eq!(instance.hostname(), "example.com");
@@ -307,22 +288,8 @@ mod tests {
 
     #[test]
     fn test_instance_url_http_ipv4_with_port() {
-        let instance_url = Url::parse("http://1.2.3.4:3777/").unwrap();
-        let instance_ed25519_key = generate_weak_ed25519_key();
-        let instance_rsa_key = generate_weak_rsa_key().unwrap();
-        let instance = Instance {
-            _url: instance_url,
-            actor_ed25519_key: instance_ed25519_key,
-            actor_rsa_key: instance_rsa_key,
-            proxy_url: None,
-            onion_proxy_url: None,
-            i2p_proxy_url: None,
-            is_private: true,
-            fetcher_timeout: 0,
-            deliverer_timeout: 0,
-            deliverer_log_response_length: 0,
-            fep_8b32_eddsa_enabled: false,
-        };
+        let instance_url = "http://1.2.3.4:3777/";
+        let instance = Instance::for_test(instance_url);
 
         assert_eq!(instance.url(), "http://1.2.3.4:3777");
         assert_eq!(instance.hostname(), "1.2.3.4");

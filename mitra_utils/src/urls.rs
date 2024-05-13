@@ -84,8 +84,10 @@ pub fn is_safe_url(url: &str) -> bool {
     }
 }
 
-// Normalize URL: add a scheme if it's missing
-pub fn normalize_url(url: &str) -> Result<Url, UrlError> {
+// Normalize HTTP origin:
+// - add a scheme if it's missing
+// - convert IDN to punycode
+pub fn normalize_origin(url: &str) -> Result<String, UrlError> {
     let normalized_url = if
         url.starts_with("http://") ||
         url.starts_with("https://")
@@ -108,7 +110,8 @@ pub fn normalize_url(url: &str) -> Result<Url, UrlError> {
     };
     let url = Url::parse(&normalized_url)?;
     url.host().ok_or(UrlError::EmptyHost)?; // validates URL
-    Ok(url)
+    let origin = url.origin().ascii_serialization();
+    Ok(origin)
 }
 
 #[cfg(test)]
@@ -205,25 +208,25 @@ mod tests {
     }
 
     #[test]
-    fn test_normalize_url() {
-        let result = normalize_url("https://social.example").unwrap();
-        assert_eq!(result.to_string(), "https://social.example/");
-        let result = normalize_url("social.example").unwrap();
-        assert_eq!(result.to_string(), "https://social.example/");
+    fn test_normalize_origin() {
+        let output = normalize_origin("https://social.example").unwrap();
+        assert_eq!(output, "https://social.example");
+        let output = normalize_origin("social.example").unwrap();
+        assert_eq!(output, "https://social.example");
         // IDN
-        let output = normalize_url("嘟文.com").unwrap();
-        assert_eq!(output.to_string(), "https://xn--j5r817a.com/");
+        let output = normalize_origin("嘟文.com").unwrap();
+        assert_eq!(output, "https://xn--j5r817a.com");
         // IP address
-        let result = normalize_url("127.0.0.1:8380").unwrap();
-        assert_eq!(result.to_string(), "http://127.0.0.1:8380/");
+        let output = normalize_origin("127.0.0.1:8380").unwrap();
+        assert_eq!(output, "http://127.0.0.1:8380");
         // Onion
-        let result = normalize_url("xyz.onion").unwrap();
-        assert_eq!(result.to_string(), "http://xyz.onion/");
+        let output = normalize_origin("xyz.onion").unwrap();
+        assert_eq!(output, "http://xyz.onion");
         // I2P
-        let output = normalize_url("http://xyz.i2p").unwrap();
-        assert_eq!(output.to_string(), "http://xyz.i2p/");
+        let output = normalize_origin("http://xyz.i2p").unwrap();
+        assert_eq!(output, "http://xyz.i2p");
         // I2P (no scheme)
-        let output = normalize_url("xyz.i2p").unwrap();
-        assert_eq!(output.to_string(), "http://xyz.i2p/");
+        let output = normalize_origin("xyz.i2p").unwrap();
+        assert_eq!(output, "http://xyz.i2p");
     }
 }
