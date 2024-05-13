@@ -32,11 +32,12 @@ Demo instance: https://public.mitra.social/ ([invite-only](https://public.mitra.
 
 ## Supported clients
 
-- [mitra-web](https://codeberg.org/silverpill/mitra-web) (default)
-- [Bloat](https://git.freesoftwareextremist.com/bloat/about/)
-- [Phanpy](https://github.com/cheeaun/phanpy)
-- [Husky](https://codeberg.org/husky/husky)
-- [toot](https://github.com/ihabunek/toot)
+- [mitra-web](https://codeberg.org/silverpill/mitra-web) (Web)
+- [Bloat](https://git.freesoftwareextremist.com/bloat/about/) (Web, NoJS)
+- [Phanpy](https://github.com/cheeaun/phanpy) (Web)
+- [Husky](https://codeberg.org/husky/husky) (Android)
+- [Fedicat](https://github.com/technicat/fedicat) (iOS)
+- [toot](https://github.com/ihabunek/toot) (CLI)
 
 ## Requirements
 
