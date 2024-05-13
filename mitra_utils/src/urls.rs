@@ -5,12 +5,16 @@ use percent_encoding::{
     utf8_percent_encode,
     NON_ALPHANUMERIC,
 };
-use url::Host;
+use url::{Host, Url};
 
 pub use url::{
     ParseError as UrlError,
-    Url,
 };
+
+pub fn validate_uri(uri: &str) -> Result<(), UrlError> {
+    Url::parse(uri)?;
+    Ok(())
+}
 
 pub fn url_encode(input: &str) -> String {
     utf8_percent_encode(input, NON_ALPHANUMERIC).to_string()

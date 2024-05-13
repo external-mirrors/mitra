@@ -1,9 +1,9 @@
-use mitra_utils::urls::Url;
+use mitra_utils::urls::validate_uri;
 
 use super::errors::ValidationError;
 
 pub fn validate_redirect_uri(uri: &str) -> Result<(), ValidationError> {
-    Url::parse(uri)
+    validate_uri(uri)
         .map_err(|_| ValidationError("invalid redirect URI"))?;
     Ok(())
 }
