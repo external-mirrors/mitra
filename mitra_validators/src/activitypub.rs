@@ -4,8 +4,8 @@ use super::errors::ValidationError;
 
 const OBJECT_ID_SIZE_MAX: usize = 2000;
 
-// Object ID is an IRI
-// https://www.w3.org/TR/activitystreams-core/#urls
+// Object ID is an URI
+// https://www.w3.org/TR/activitypub/#obj-id
 // TODO: allow only canonical URLs
 pub fn validate_object_id(object_id: &str) -> Result<(), ValidationError> {
     if object_id.len() > OBJECT_ID_SIZE_MAX {

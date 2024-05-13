@@ -26,13 +26,13 @@ ed25519-dalek = { version = "2.0.0", features = ["rand_core"] }
 hex = "0.4.3"
 # Used for verifying HTTP signatures
 http = "0.2.9"
+# Used for working with URIs
+iri-string = "0.6.0"
 # Used for working with ECDSA signatures
 k256 = { version = "0.11.6", default-features = false, features = ["std", "ecdsa", "keccak256"] }
 # Used to guess media type of a file
 mime_guess = "2.0.4"
 infer = "=0.13.0"
-# Used for working with IRIs
-oxiri = "0.2.3"
 # Used to generate random numbers
 rand = "0.8.4"
 # Used for working with regular expressions

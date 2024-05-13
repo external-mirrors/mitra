@@ -1,48 +1,49 @@
 use std::fmt;
 use std::str::FromStr;
 
-use oxiri::Iri;
+use iri_string::types::UriString;
 use url::Url;
 
-pub struct HttpUrl(Iri<String>);
+/// Valid HTTP(S) URI (RFC-3986)
+pub struct HttpUrl(UriString);
 
 impl HttpUrl {
     pub fn parse(value: &str) -> Result<Self, &'static str> {
-        // RFC-3987
-        let iri = Iri::parse(value).map_err(|_| "invalid IRI")?;
+        let uri = UriString::from_str(value).map_err(|_| "invalid URI")?;
+        // TODO: accept only normalized URIs
         // Verify scheme
-        match iri.scheme() {
+        match uri.scheme_str() {
             "http" | "https" => (),
             _ => return Err("invalid URL scheme"),
         };
-        if iri.authority().unwrap_or_default() == "" {
+        if uri.authority_str().unwrap_or_default() == "" {
             return Err("invalid URL authority");
         };
         // Additional validation (WHATWG URL spec)
         let url = Url::parse(value).map_err(|_| "invalid URL")?;
         url.host().ok_or("invalid URL")?;
-        let http_url = Self(iri.into());
+        let http_url = Self(uri);
         Ok(http_url)
     }
 
     fn scheme(&self) -> &str {
-        self.0.scheme()
+        self.0.scheme_str()
     }
 
     fn authority(&self) -> &str {
-        self.0.authority().expect("authority should be present")
+        self.0.authority_str().expect("authority should be present")
     }
 
     pub fn path(&self) -> &str {
-        self.0.path()
+        self.0.path_str()
     }
 
     pub fn query(&self) -> Option<&str> {
-        self.0.query()
+        self.0.query_str()
     }
 
     fn fragment(&self) -> Option<&str> {
-        self.0.fragment()
+        self.0.fragment().map(|fragment| fragment.as_str())
     }
 
     pub fn origin(&self) -> String {
@@ -80,6 +81,7 @@ impl HttpUrl {
     }
 }
 
+/// Returns the original URI string
 impl fmt::Display for HttpUrl {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(formatter, "{}", self.0)
@@ -125,6 +127,13 @@ mod tests {
     #[test]
     fn test_http_url_idn() {
         let url = "https://räksmörgås.josefsson.org/raksmorgas.jpg";
+        let error = HttpUrl::parse(url).err().unwrap();
+        assert_eq!(error, "invalid URI");
+    }
+
+    #[test]
+    fn test_http_url_percent_encoded() {
+        let url = "https://bridge.example/actors/https%3A%2F%2Fthreads%2Enet%2Fap%2Fusers%2F17841400033000000%2F";
         let http_url = HttpUrl::parse(url).unwrap();
         assert_eq!(http_url.to_string(), url);
     }
@@ -154,6 +163,6 @@ mod tests {
     fn test_http_url_with_whitespace() {
         let url = "https://rebased.taihou.website/emoji/taihou.website emojos/nix.png";
         let error = HttpUrl::parse(url).err().unwrap();
-        assert_eq!(error, "invalid IRI");
+        assert_eq!(error, "invalid URI");
     }
 }

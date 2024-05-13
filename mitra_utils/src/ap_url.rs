@@ -1,7 +1,7 @@
 use std::fmt;
 use std::str::FromStr;
 
-use oxiri::IriRef;
+use iri_string::types::UriRelativeString;
 use regex::Regex;
 
 use crate::did::Did;
@@ -22,7 +22,7 @@ pub fn with_ap_prefix(did_url: &str) -> String {
 /// https://codeberg.org/fediverse/fep/src/branch/main/fep/ef61/fep-ef61.md
 pub struct ApUrl {
     did: Did,
-    location: IriRef<String>,
+    location: UriRelativeString,
 }
 
 impl ApUrl {
@@ -33,7 +33,7 @@ impl ApUrl {
     pub fn relative_url(&self) -> String {
         format!(
             "{}{}{}",
-            self.location.path(),
+            self.location.path_str(),
             self.location.query().map(|query| format!("?{query}")).unwrap_or_default(),
             self.location.fragment().map(|frag| format!("#{frag}")).unwrap_or_default(),
         )
@@ -76,10 +76,9 @@ impl FromStr for ApUrl {
             return Err("invalid 'ap' URL authority");
         };
         // Parse relative URL
-        let location: IriRef<String> = IriRef::parse(&captures["path"])
-            .map_err(|_| "invalid 'ap' URL")?
-            .into();
-        if location.scheme().is_some() || location.authority().is_some() {
+        let location = UriRelativeString::from_str(&captures["path"])
+            .map_err(|_| "invalid 'ap' URL")?;
+        if location.authority_str().is_some() {
             return Err("invalid 'ap' URL");
         };
         let ap_url = Self { did, location };
@@ -96,9 +95,8 @@ mod tests {
         let url_str = "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/objects/123";
         let url = ApUrl::from_str(url_str).unwrap();
         assert_eq!(url.did().to_string(), "did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6");
-        assert_eq!(url.location.scheme(), None);
-        assert_eq!(url.location.authority(), None);
-        assert_eq!(url.location.path(), "/objects/123");
+        assert_eq!(url.location.authority_str(), None);
+        assert_eq!(url.location.path_str(), "/objects/123");
         assert_eq!(url.relative_url(), "/objects/123");
         assert_eq!(url.to_string(), url_str);
     }
