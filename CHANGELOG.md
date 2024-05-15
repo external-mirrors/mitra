@@ -11,6 +11,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Improved reporting of local ID parsing errors.
 - Replace `fetch-object-as` and `fetch-portable-object` commands with `fetch-object` command.
 - Require object IDs to be URIs.
+- Normalize URLs when searching profiles/posts.
 
 ### Fixed
 

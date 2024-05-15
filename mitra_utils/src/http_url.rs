@@ -105,6 +105,14 @@ impl FromStr for HttpUrl {
     }
 }
 
+pub fn normalize_http_url(url: &str) -> Result<String, &'static str> {
+    // WHATWG URL spec
+    // See also: https://www.rfc-editor.org/rfc/rfc3986#section-6.2.3
+    // WARNING: Adds a trailing slash
+    let url = parse_http_url_whatwg(url)?;
+    Ok(url.to_string())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -173,5 +181,37 @@ mod tests {
         let url = "https://rebased.taihou.website/emoji/taihou.website emojos/nix.png";
         let error = HttpUrl::parse(url).err().unwrap();
         assert_eq!(error, "invalid URI");
+    }
+
+    #[test]
+    fn test_normalize_http_url_no_path() {
+        let url = "https://social.example";
+        let output = normalize_http_url(url).unwrap();
+        assert_eq!(output, "https://social.example/");
+        assert!(HttpUrl::parse(&output).is_ok());
+    }
+
+    #[test]
+    fn test_normalize_http_url_idn() {
+        let url = "https://räksmörgås.josefsson.org/raksmorgas.jpg";
+        let output = normalize_http_url(url).unwrap();
+        assert_eq!(output, "https://xn--rksmrgs-5wao1o.josefsson.org/raksmorgas.jpg");
+        assert!(HttpUrl::parse(&output).is_ok());
+    }
+
+    #[test]
+    fn test_normalize_http_url_with_whitespace() {
+        let url = "https://social.example/path with a space/1";
+        let output = normalize_http_url(url).unwrap();
+        assert_eq!(output, "https://social.example/path%20with%20a%20space/1");
+        assert!(HttpUrl::parse(&output).is_ok());
+    }
+
+    #[test]
+    fn test_normalize_http_url_unicode() {
+        let url = "https://zh.wikipedia.org/wiki/百分号编码";
+        let output = normalize_http_url(url).unwrap();
+        assert_eq!(output, "https://zh.wikipedia.org/wiki/%E7%99%BE%E5%88%86%E5%8F%B7%E7%BC%96%E7%A0%81");
+        assert!(HttpUrl::parse(&output).is_ok());
     }
 }

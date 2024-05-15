@@ -1,7 +1,6 @@
 use std::str::FromStr;
 
 use regex::Regex;
-use url::Url;
 
 use mitra_activitypub::{
     errors::HandlerError,
@@ -37,6 +36,7 @@ use mitra_services::{
 use mitra_utils::{
     currencies::Currency,
     did::Did,
+    http_url::normalize_http_url,
 };
 use mitra_validators::errors::ValidationError;
 
@@ -50,6 +50,12 @@ enum SearchQuery {
     WalletAddress(String),
     Did(Did),
     Unknown,
+}
+
+fn parse_url_query(query: &str) -> Result<String, ValidationError> {
+    let url = normalize_http_url(query)
+        .map_err(ValidationError)?;
+    Ok(url)
 }
 
 fn parse_profile_query(query: &str) ->
@@ -92,12 +98,11 @@ fn parse_text_query(query: &str) -> Result<String, ValidationError> {
 
 fn parse_search_query(search_query: &str) -> SearchQuery {
     let search_query = search_query.trim();
-    // DID is a valid URI so it should be tried before Url::parse
     if let Ok(did) = Did::from_str(search_query) {
         return SearchQuery::Did(did);
     };
-    if Url::parse(search_query).is_ok() {
-        return SearchQuery::Url(search_query.to_string());
+    if let Ok(url) = parse_url_query(search_query) {
+        return SearchQuery::Url(url);
     };
     // TODO: support other currencies
     if validate_ethereum_address(&search_query.to_lowercase()).is_ok() {
