@@ -17,3 +17,7 @@ uuid = "1.1.2"
 
 mitra_models = { path = "../mitra_models" }
 mitra_utils = { path = "../mitra_utils" }
+
+[dev-dependencies]
+mitra_models = { path = "../mitra_models", features = ["test-utils"] }
+mitra_utils = { path = "../mitra_utils", features = ["test-utils"] }

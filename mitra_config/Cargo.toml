@@ -21,6 +21,9 @@ thiserror = "1.0.37"
 
 mitra_utils = { path = "../mitra_utils" }
 
+[dev-dependencies]
+mitra_utils = { path = "../mitra_utils", features = ["test-utils"] }
+
 [features]
 production = []
 test-utils = []

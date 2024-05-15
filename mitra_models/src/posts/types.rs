@@ -188,7 +188,7 @@ impl Post {
     }
 }
 
-#[cfg(feature = "test-utils")]
+#[cfg(any(test, feature = "test-utils"))]
 impl Default for Post {
     fn default() -> Self {
         Self {

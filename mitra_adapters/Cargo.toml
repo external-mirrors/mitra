@@ -28,6 +28,7 @@ mitra_validators = { path = "../mitra_validators" }
 serial_test = "0.7.0"
 
 mitra_models = { path = "../mitra_models", features = ["test-utils"] }
+mitra_utils = { path = "../mitra_utils", features = ["test-utils"] }
 
 [target.'cfg(target_env = "musl")'.dependencies]
 openssl = { version = "0.10.63", features = ["vendored"] }

@@ -30,7 +30,7 @@ pub fn generate_rsa_key() -> Result<RsaPrivateKey, RsaError> {
     RsaPrivateKey::new(&mut rng, bits)
 }
 
-#[cfg(feature = "test-utils")]
+#[cfg(any(test, feature = "test-utils"))]
 pub fn generate_weak_rsa_key() -> Result<RsaPrivateKey, RsaError> {
     use rand::SeedableRng;
     let mut rng = rand::rngs::StdRng::seed_from_u64(0);

@@ -24,7 +24,7 @@ pub fn generate_ed25519_key() -> SecretKey {
     keypair.to_bytes()
 }
 
-#[cfg(feature = "test-utils")]
+#[cfg(any(test, feature = "test-utils"))]
 pub fn generate_weak_ed25519_key() -> SecretKey {
     use rand::SeedableRng;
     let mut rng = rand::rngs::StdRng::seed_from_u64(0);

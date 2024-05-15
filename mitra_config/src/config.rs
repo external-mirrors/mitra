@@ -247,7 +247,7 @@ impl Instance {
     }
 }
 
-#[cfg(feature = "test-utils")]
+#[cfg(any(test, feature = "test-utils"))]
 impl Instance {
     pub fn for_test(url: &str) -> Self {
         use mitra_utils::{

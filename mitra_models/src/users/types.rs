@@ -166,7 +166,7 @@ impl fmt::Display for User {
     }
 }
 
-#[cfg(feature = "test-utils")]
+#[cfg(any(test, feature = "test-utils"))]
 impl Default for User {
     fn default() -> Self {
         use mitra_utils::{
@@ -268,7 +268,7 @@ impl UserCreateData {
     }
 }
 
-#[cfg(feature = "test-utils")]
+#[cfg(any(test, feature = "test-utils"))]
 impl Default for UserCreateData {
     fn default() -> Self {
         use mitra_utils::{

@@ -6,7 +6,7 @@ pub mod json_macro;
 pub mod migrate;
 pub mod query_macro;
 
-#[cfg(feature = "test-utils")]
+#[cfg(any(test, feature = "test-utils"))]
 pub mod test_utils;
 
 pub type DatabaseConnectionPool = deadpool_postgres::Pool;

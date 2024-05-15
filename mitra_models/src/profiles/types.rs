@@ -147,7 +147,7 @@ pub struct DbActorKey {
     pub key_data: Vec<u8>,
 }
 
-#[cfg(feature = "test-utils")]
+#[cfg(any(test, feature = "test-utils"))]
 impl Default for DbActorKey {
     fn default() -> Self {
         Self {
@@ -606,7 +606,7 @@ impl ProfileEmojis {
 json_from_sql!(ProfileEmojis);
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
-#[cfg_attr(feature = "test-utils", derive(Default))]
+#[cfg_attr(any(test, feature = "test-utils"), derive(Default))]
 #[serde(rename_all = "camelCase")]
 pub struct DbActorPublicKey {
     pub id: String,
@@ -615,7 +615,7 @@ pub struct DbActorPublicKey {
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
-#[cfg_attr(feature = "test-utils", derive(Default))]
+#[cfg_attr(any(test, feature = "test-utils"), derive(Default))]
 #[serde(rename_all = "camelCase")]
 pub struct DbActor {
     #[serde(rename = "type")]
@@ -766,7 +766,7 @@ impl fmt::Display for DbActorProfile {
     }
 }
 
-#[cfg(feature = "test-utils")]
+#[cfg(any(test, feature = "test-utils"))]
 impl Default for DbActorProfile {
     fn default() -> Self {
         let now = Utc::now();
@@ -802,7 +802,7 @@ impl Default for DbActorProfile {
     }
 }
 
-#[cfg_attr(feature = "test-utils", derive(Default))]
+#[cfg_attr(any(test, feature = "test-utils"), derive(Default))]
 pub struct ProfileCreateData {
     pub username: String,
     pub hostname: Option<String>,
