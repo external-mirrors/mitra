@@ -4,6 +4,16 @@ use std::str::FromStr;
 use iri_string::types::UriString;
 use url::Url;
 
+pub(crate) fn parse_http_url_whatwg(url: &str) -> Result<Url, &'static str> {
+    let url = Url::parse(url).map_err(|_| "invalid URL")?;
+    match url.scheme() {
+        "http" | "https" => (),
+        _ => return Err("invalid URL scheme"),
+    };
+    url.host().ok_or("invalid HTTP URL")?;
+    Ok(url)
+}
+
 /// Valid HTTP(S) URI (RFC-3986)
 pub struct HttpUrl(UriString);
 
@@ -20,8 +30,7 @@ impl HttpUrl {
             return Err("invalid URL authority");
         };
         // Additional validation (WHATWG URL spec)
-        let url = Url::parse(value).map_err(|_| "invalid URL")?;
-        url.host().ok_or("invalid URL")?;
+        parse_http_url_whatwg(value)?;
         let http_url = Self(uri);
         Ok(http_url)
     }
