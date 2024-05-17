@@ -67,23 +67,28 @@ pub struct JsonResourceDescriptor {
 
 impl JsonResourceDescriptor {
     pub fn find_actor_id(&self, preferred_type: &str) -> Option<String> {
-        // Lemmy servers can have Group and Person actors with the same name
-        // https://github.com/LemmyNet/lemmy/issues/2037
-        let ap_type_property = format!("{}#type", AP_CONTEXT);
-        let link = self.links.iter()
+        let links: Vec<_> = self.links.iter()
             .filter(|link| link.rel == SELF_RELATION_TYPE)
             .filter(|link| link.media_type.iter().any(|media_type| {
                 media_type == AP_MEDIA_TYPE || media_type == AS_MEDIA_TYPE
             }))
+            .collect();
+        // Lemmy servers can have Group and Person actors with the same name
+        // https://github.com/LemmyNet/lemmy/issues/2037
+        let ap_type_property = format!("{}#type", AP_CONTEXT);
+        // Choose preferred type if actor type is provided.
+        let mut maybe_actor_link = links.iter()
             .find(|link| {
                 let ap_type = link.properties
                     .get(&ap_type_property)
                     .map(|val| val.as_str());
-                // Choose preferred type if actor type is provided.
-                // Otherwise take first "self" link
-                ap_type.is_none() || ap_type == Some(preferred_type)
-            })?;
-        let actor_id = link.href.as_ref()?.to_string();
+                ap_type == Some(preferred_type)
+            });
+        // Otherwise take first "self" link
+        if maybe_actor_link.is_none() {
+            maybe_actor_link = links.first();
+        };
+        let actor_id = maybe_actor_link?.href.as_ref()?.to_string();
         Some(actor_id)
     }
 }
@@ -161,5 +166,29 @@ mod tests {
             links: vec![person_link, group_link],
         };
         assert_eq!(jrd.find_actor_id("Group").unwrap(), group_id);
+    }
+
+    #[test]
+    fn test_jrd_find_actor_id_piefed() {
+        let jrd_value = json!({
+            "aliases": ["https://piefed.example/u/user"],
+            "links": [{
+                "href": "https://piefed.example/u/user",
+                "rel": "http://webfinger.net/rel/profile-page",
+                "type": "text/html",
+            }, {
+                "href": "https://piefed.example/u/user",
+                "properties": {"https://www.w3.org/ns/activitystreams#type": "Person"},
+                "rel": "self",
+                "type": "application/activity+json",
+            }],
+            "subject": "acct:user@piefed.example",
+        });
+        let jrd: JsonResourceDescriptor =
+            serde_json::from_value(jrd_value).unwrap();
+        assert_eq!(
+            jrd.find_actor_id("Group").unwrap(),
+            "https://piefed.example/u/user",
+        );
     }
 }
