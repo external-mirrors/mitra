@@ -51,19 +51,19 @@ async fn get_jrd(
         } else {
             parse_local_actor_id(&instance.url(), resource)?
         };
-        ActorAddress { username, hostname: instance.hostname() }
+        ActorAddress::new_unchecked(&username, &instance.hostname())
     };
-    if actor_address.hostname != instance.hostname() {
+    if actor_address.hostname() != instance.hostname() {
         // Wrong instance
         return Err(HttpError::NotFoundError("user"));
     };
-    let actor_id = if actor_address.username == instance.hostname() {
+    let actor_id = if actor_address.username() == instance.hostname() {
         local_instance_actor_id(&instance.url())
     } else {
-        if !is_registered_user(db_client, &actor_address.username).await? {
+        if !is_registered_user(db_client, actor_address.username()).await? {
             return Err(HttpError::NotFoundError("user"));
         };
-        local_actor_id(&instance.url(), &actor_address.username)
+        local_actor_id(&instance.url(), actor_address.username())
     };
     // Required by GNU Social
     let profile_link = Link::new(WEBFINGER_PROFILE_RELATION_TYPE)
@@ -71,11 +71,11 @@ async fn get_jrd(
         .with_href(&actor_id);
     let actor_link = Link::actor(&actor_id);
     let mut links = vec![profile_link, actor_link];
-    if actor_address.username != instance.hostname() {
+    if actor_address.username() != instance.hostname() {
         // Add feed link for users
         let feed_url = get_user_feed_url(
             &instance.url(),
-            &actor_address.username,
+            actor_address.username(),
         );
         let feed_link = Link::new(FEED_RELATION_TYPE)
             .with_media_type("application/atom+xml")

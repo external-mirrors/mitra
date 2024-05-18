@@ -33,12 +33,12 @@ fn find_mentions(
             continue;
         };
         if let Some(secondary_caps) = mention_secondary_re.captures(&caps["mention"]) {
-            let username = secondary_caps["username"].to_string();
+            let username = &secondary_caps["username"];
             let hostname = secondary_caps.name("hostname")
                 .map(|match_| match_.as_str())
-                .unwrap_or(instance_hostname)
-                .to_string();
-            let actor_address = ActorAddress { username, hostname };
+                .unwrap_or(instance_hostname);
+            // TODO: normalize hostname
+            let actor_address = ActorAddress::new_unchecked(username, hostname);
             let acct = actor_address.acct(instance_hostname);
             if !mentions.contains(&acct) {
                 mentions.push(acct);
@@ -83,12 +83,12 @@ pub fn replace_mentions(
             return caps[0].to_string();
         };
         if let Some(secondary_caps) = mention_secondary_re.captures(&caps["mention"]) {
-            let username = secondary_caps["username"].to_string();
+            let username = &secondary_caps["username"];
             let hostname = secondary_caps.name("hostname")
                 .map(|match_| match_.as_str())
-                .unwrap_or(instance_hostname)
-                .to_string();
-            let actor_address = ActorAddress { username, hostname };
+                .unwrap_or(instance_hostname);
+            // TODO: normalize hostname
+            let actor_address = ActorAddress::new_unchecked(username, hostname);
             let acct = actor_address.acct(instance_hostname);
             if let Some(profile) = mention_map.get(&acct) {
                 // Replace with a link to profile.

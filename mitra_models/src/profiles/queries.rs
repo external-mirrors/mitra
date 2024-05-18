@@ -382,6 +382,7 @@ pub async fn get_profile_by_acct(
     db_client: &impl DatabaseClient,
     acct: &str,
 ) -> Result<DbActorProfile, DatabaseError> {
+    // acct is case-sensitive
     let maybe_row = db_client.query_opt(
         "
         SELECT actor_profile

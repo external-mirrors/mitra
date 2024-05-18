@@ -348,7 +348,7 @@ pub async fn create_remote_profile(
     ).await?;
     let mut profile_data = ProfileCreateData {
         username: actor.preferred_username.clone(),
-        hostname: Some(actor_address.hostname),
+        hostname: Some(actor_address.hostname().to_string()),
         display_name: actor.name.clone(),
         bio: actor.summary.clone(),
         avatar: maybe_avatar,

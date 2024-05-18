@@ -150,7 +150,7 @@ async fn search_profiles_or_import(
     ).await?;
     if profiles.is_empty() && resolve {
         if let Some(hostname) = maybe_hostname {
-            let actor_address = ActorAddress { username, hostname };
+            let actor_address = ActorAddress::new_unchecked(&username, &hostname);
             instance.fetcher_timeout = SEARCH_FETCHER_TIMEOUT;
             match import_profile_by_actor_address(
                 db_client,

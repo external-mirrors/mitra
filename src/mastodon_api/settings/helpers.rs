@@ -51,7 +51,7 @@ fn export_profiles_to_csv(
 ) -> String {
     let mut csv = String::new();
     for profile in profiles {
-        let actor_address = ActorAddress::new(
+        let actor_address = ActorAddress::new_unchecked(
             &profile.username,
             profile.hostname.as_deref().unwrap_or(local_hostname),
         );

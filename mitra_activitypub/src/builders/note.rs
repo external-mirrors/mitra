@@ -162,7 +162,7 @@ pub fn build_note(
 
     let mut tags = vec![];
     for profile in &post.mentions {
-        let actor_address = ActorAddress::new(
+        let actor_address = ActorAddress::new_unchecked(
             &profile.username,
             profile.hostname.as_deref().unwrap_or(instance_hostname),
         );

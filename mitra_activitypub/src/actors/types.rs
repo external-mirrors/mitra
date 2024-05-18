@@ -128,10 +128,11 @@ impl Actor {
     ) -> Result<ActorAddress, ValidationError> {
         let hostname = get_hostname(&self.id)
             .map_err(|_| ValidationError("invalid actor ID"))?;
-        let actor_address = ActorAddress {
-            username: self.preferred_username.clone(),
-            hostname: hostname,
-        };
+        // Hostname is already normalized
+        let actor_address = ActorAddress::new_unchecked(
+            &self.preferred_username,
+            &hostname,
+        );
         Ok(actor_address)
     }
 

@@ -123,7 +123,7 @@ async fn import_profile(
     let agent = build_federation_agent(instance, None);
     let actor: Actor = fetch_object(&agent, actor_id).await?;
     let actor_address = actor.address()?; // validates actor ID
-    if actor_address.hostname == instance.hostname() {
+    if actor_address.hostname() == instance.hostname() {
         return Err(HandlerError::LocalObject);
     };
     let profile = match get_profile_by_remote_actor_id(
@@ -278,8 +278,8 @@ async fn perform_webfinger_query(
     let webfinger_resource = actor_address.to_acct_uri();
     let webfinger_url = format!(
         "{}://{}/.well-known/webfinger",
-        guess_protocol(&actor_address.hostname),
-        actor_address.hostname,
+        guess_protocol(actor_address.hostname()),
+        actor_address.hostname(),
     );
     let jrd: JsonResourceDescriptor = fetch_json(
         agent,
@@ -298,7 +298,7 @@ pub async fn import_profile_by_actor_address(
     storage: &MediaStorage,
     actor_address: &ActorAddress,
 ) -> Result<DbActorProfile, HandlerError> {
-    if actor_address.hostname == instance.hostname() {
+    if actor_address.hostname() == instance.hostname() {
         return Err(HandlerError::LocalObject);
     };
     let agent = build_federation_agent(instance, None);
@@ -319,7 +319,7 @@ pub async fn get_or_import_profile_by_actor_address(
         &acct,
     ).await {
         Ok(profile) => {
-            if actor_address.hostname == instance.hostname() {
+            if actor_address.hostname() == instance.hostname() {
                 profile
             } else {
                 refresh_remote_profile(
@@ -332,7 +332,7 @@ pub async fn get_or_import_profile_by_actor_address(
             }
         },
         Err(db_error @ DatabaseError::NotFound(_)) => {
-            if actor_address.hostname == instance.hostname() {
+            if actor_address.hostname() == instance.hostname() {
                 return Err(db_error.into());
             };
             import_profile_by_actor_address(

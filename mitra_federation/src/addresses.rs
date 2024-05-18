@@ -15,16 +15,25 @@ impl ActorAddressError {
 
 #[derive(Eq, Ord, PartialEq, PartialOrd)]
 pub struct ActorAddress {
-    pub username: String,
-    pub hostname: String, // does not include port number
+    username: String,
+    hostname: String, // does not include port number
 }
 
 impl ActorAddress {
-    pub fn new(username: &str, hostname: &str) -> Self {
+    // Does not validate username and hostname
+    pub fn new_unchecked(username: &str, hostname: &str) -> Self {
         Self {
             username: username.to_string(),
             hostname: hostname.to_string(),
         }
+    }
+
+    pub fn username(&self) -> &str {
+        &self.username
+    }
+
+    pub fn hostname(&self) -> &str {
+        &self.hostname
     }
 
     pub fn from_handle(
@@ -73,7 +82,7 @@ impl FromStr for ActorAddress {
             .expect("regexp should be valid");
         let caps = actor_address_re.captures(value)
             .ok_or(ActorAddressError("invalid actor address"))?;
-        let actor_address = Self::new(
+        let actor_address = Self::new_unchecked(
             &caps["username"],
             &caps["hostname"],
         );
@@ -94,7 +103,7 @@ mod tests {
     #[test]
     fn test_local_actor_address() {
         let local_hostname = "local.example";
-        let actor_address = ActorAddress::new(
+        let actor_address = ActorAddress::new_unchecked(
             "user",
             local_hostname,
         );
@@ -111,7 +120,7 @@ mod tests {
     #[test]
     fn test_remote_actor_address() {
         let local_hostname = "local.example";
-        let actor_address = ActorAddress::new(
+        let actor_address = ActorAddress::new_unchecked(
             "user",
             "remote.example",
         );
