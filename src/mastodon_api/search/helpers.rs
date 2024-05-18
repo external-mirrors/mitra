@@ -62,9 +62,10 @@ fn parse_url_query(query: &str) -> Result<String, ValidationError> {
 fn parse_profile_query(query: &str) ->
     Result<(String, Option<String>), ValidationError>
 {
-    // See also: ACTOR_ADDRESS_RE in mitra_federation::addresses
+    // Only valid usernames are recognized
+    // See also: USERNAME_RE in mitra_validators::profiles
     let acct_query_re =
-        Regex::new(r"^(@|!|acct:)?(?P<username>[\w\.-]+)(@(?P<hostname>[^@\s]*))?$")
+        Regex::new(r"^(@|!|acct:)?(?P<username>[A-Za-z0-9\-\._]+)(@(?P<hostname>[^@\s]*))?$")
             .expect("regexp should be valid");
     let acct_query_caps = acct_query_re.captures(query)
         .ok_or(ValidationError("invalid profile query"))?;

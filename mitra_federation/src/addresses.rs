@@ -3,7 +3,10 @@ use std::{fmt, str::FromStr};
 use regex::Regex;
 use thiserror::Error;
 
-const ACTOR_ADDRESS_RE: &str = r"^(?P<username>[\w\.-]+)@(?P<hostname>[\w\.-]+)$";
+// https://swicg.github.io/activitypub-webfinger/#names
+// username: RFC-3986 unreserved plus % for percent encoding; case-sensitive
+// hostname: normalized (ASCII)
+const ACTOR_ADDRESS_RE: &str = r"^(?P<username>[A-Za-z0-9\-\._~%]+)@(?P<hostname>[a-z0-9\.-]+)$";
 
 #[derive(Debug, Error)]
 #[error("{0}")]
@@ -135,12 +138,35 @@ mod tests {
     }
 
     #[test]
-    fn test_actor_address_parse_address() {
+    fn test_actor_address_parse() {
         let value = "user_1@example.com";
-        let actor_address: ActorAddress = value.parse().unwrap();
+        let actor_address = value.parse::<ActorAddress>().unwrap();
         assert_eq!(actor_address.username, "user_1");
         assert_eq!(actor_address.hostname, "example.com");
         assert_eq!(actor_address.to_string(), value);
+    }
+
+    #[test]
+    fn test_actor_address_parse_percent_encoded() {
+        let value = "did%3Aexample%3A12-34@social.example";
+        let actor_address = value.parse::<ActorAddress>().unwrap();
+        assert_eq!(actor_address.username, "did%3Aexample%3A12-34");
+        assert_eq!(actor_address.hostname, "social.example");
+        assert_eq!(actor_address.to_string(), value);
+    }
+
+    #[test]
+    fn test_actor_address_parse_unicode_username() {
+        let value = "δοκιμή@social.example";
+        let error = value.parse::<ActorAddress>().err().unwrap();
+        assert_eq!(error.0, "invalid actor address");
+    }
+
+    #[test]
+    fn test_actor_address_parse_idn() {
+        let value = "user_1@bücher.example";
+        let error = value.parse::<ActorAddress>().err().unwrap();
+        assert_eq!(error.0, "invalid actor address");
     }
 
     #[test]
@@ -176,7 +202,14 @@ mod tests {
         let actor_address = ActorAddress::from_acct_uri(uri).unwrap();
         assert_eq!(actor_address.username, "user_1");
         assert_eq!(actor_address.hostname, "example.com");
-
         assert_eq!(actor_address.to_acct_uri(), uri);
+    }
+
+    #[test]
+    fn test_actor_address_acct_uri_unicode() {
+        // Hostname in 'acct' URI must be encoded
+        let uri = "acct:user_1@δοκιμή.example";
+        let error = ActorAddress::from_acct_uri(uri).err().unwrap();
+        assert_eq!(error.0, "invalid actor address");
     }
 }

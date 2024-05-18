@@ -42,6 +42,7 @@ async fn get_jrd(
     resource: &str,
 ) -> Result<JsonResourceDescriptor, HttpError> {
     let actor_address = if resource.starts_with("acct:") {
+        // NOTE: hostname should not contain Unicode characters
         ActorAddress::from_acct_uri(resource)
             .map_err(|error| HttpError::ValidationError(error.to_string()))?
     } else {

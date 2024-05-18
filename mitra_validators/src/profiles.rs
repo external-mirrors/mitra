@@ -19,7 +19,7 @@ use super::{
 };
 
 // See also: ACTOR_ADDRESS_RE in mitra_federation::addresses
-const USERNAME_RE: &str = r"^[a-zA-Z0-9_\.-]+$";
+const USERNAME_RE: &str = r"^[A-Za-z0-9\-\._]+$";
 const USERNAME_LENGTH_MAX: usize = 100;
 const HOSTNAME_LENGTH_MAX: usize = 100;
 const DISPLAY_NAME_MAX_LENGTH: usize = 200;

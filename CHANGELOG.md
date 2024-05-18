@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Require object IDs to be URIs.
 - Normalize URLs when searching profiles/posts.
 - Normalize hostnames when searching profiles.
+- Do not allow unicode in 'acct' URIs and handles.
 
 ### Fixed
 
