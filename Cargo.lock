@@ -1727,6 +1727,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "iri-string"
+version = "0.7.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7f5f6c2df22c009ac44f6f1499308e7a3ac7ba42cd2378475cc691510e1eef1b"
+dependencies = [
+ "memchr",
+ "serde",
+]
+
+[[package]]
 name = "itoa"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2144,7 +2154,7 @@ dependencies = [
  "html5ever",
  "http",
  "infer",
- "iri-string",
+ "iri-string 0.7.2",
  "k256",
  "mime_guess",
  "pem",
@@ -3426,7 +3436,7 @@ checksum = "4e6d1f422a568af1e98db37c6d0427c7218459ccac39218fd15a51a34d3933af"
 dependencies = [
  "hex",
  "http",
- "iri-string",
+ "iri-string 0.6.0",
  "k256",
  "rand",
  "sha3",

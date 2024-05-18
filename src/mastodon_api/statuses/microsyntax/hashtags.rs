@@ -104,7 +104,7 @@ mod tests {
             r#"@user1@server1 some text <a class="hashtag" href="https://example.com/collections/tags/testtag" rel="tag">#TestTag</a>."#, "\n",
             r#"<a class="hashtag" href="https://example.com/collections/tags/tag1" rel="tag">#TAG1</a> "#,
             r#"<a class="hashtag" href="https://example.com/collections/tags/tag1" rel="tag">#tag1</a> "#,
-            r#"<a class="hashtag" href="https://example.com/collections/tags/test%5Funderscore" rel="tag">#test_underscore</a> #test*special "#,
+            r#"<a class="hashtag" href="https://example.com/collections/tags/test_underscore" rel="tag">#test_underscore</a> #test*special "#,
             r#"#test-tag # <a class="hashtag" href="https://example.com/collections/tags/123" rel="tag">#123</a> "#,
             r#"<a class="hashtag" href="https://example.com/collections/tags/a%CE%B2c%CE%B4" rel="tag">#aβcδ</a> "#,
             r#"more text (<a class="hashtag" href="https://example.com/collections/tags/tag2" rel="tag">#tag2</a>) text "#,
