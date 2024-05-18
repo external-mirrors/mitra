@@ -1,5 +1,6 @@
 use std::net::{Ipv4Addr, Ipv6Addr};
 
+use idna::{domain_to_ascii, Errors as IdnaError};
 use iri_string::percent_encode::PercentEncodedForUri;
 use percent_encoding::percent_decode_str;
 use url::{Host, Url};
@@ -22,6 +23,10 @@ pub fn url_encode(input: &str) -> String {
 pub fn url_decode(input: &str) -> String {
     let bytes = percent_decode_str(input);
     bytes.decode_utf8_lossy().to_string()
+}
+
+pub fn encode_hostname(hostname: &str) -> Result<String, IdnaError> {
+    domain_to_ascii(hostname)
 }
 
 /// Returns URL host name (without port number)
@@ -152,6 +157,13 @@ mod tests {
         assert_eq!(output, "https%3A%2F%2Fsocial.example%2Fusers%2Ftest_user");
         let decoded = url_decode(&output);
         assert_eq!(decoded, input);
+    }
+
+    #[test]
+    fn test_encode_hostname() {
+        let hostname = "räksmörgås.josefsson.org";
+        let encoded = encode_hostname(hostname).unwrap();
+        assert_eq!(encoded, "xn--rksmrgs-5wao1o.josefsson.org");
     }
 
     #[test]

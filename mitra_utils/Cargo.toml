@@ -26,6 +26,8 @@ ed25519-dalek = { version = "2.0.0", features = ["rand_core"] }
 hex = "0.4.3"
 # Used for verifying HTTP signatures
 http = "0.2.9"
+# Used for working with IDNs
+idna = "0.4.0"
 # Used for working with URIs
 iri-string = "0.7.2"
 # Used for working with ECDSA signatures

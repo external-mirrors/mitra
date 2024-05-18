@@ -37,6 +37,7 @@ use mitra_utils::{
     currencies::Currency,
     did::Did,
     http_url::normalize_http_url,
+    urls::encode_hostname,
 };
 use mitra_validators::errors::ValidationError;
 
@@ -63,7 +64,7 @@ fn parse_profile_query(query: &str) ->
 {
     // See also: ACTOR_ADDRESS_RE in mitra_federation::addresses
     let acct_query_re =
-        Regex::new(r"^(@|!|acct:)?(?P<username>[\w\.-]+)(@(?P<hostname>[\w\.-]*))?$")
+        Regex::new(r"^(@|!|acct:)?(?P<username>[\w\.-]+)(@(?P<hostname>[^@\s]*))?$")
             .expect("regexp should be valid");
     let acct_query_caps = acct_query_re.captures(query)
         .ok_or(ValidationError("invalid profile query"))?;
@@ -71,8 +72,12 @@ fn parse_profile_query(query: &str) ->
         .ok_or(ValidationError("invalid profile query"))?
         .as_str().to_string();
     let maybe_hostname = acct_query_caps.name("hostname")
-        .map(|val| val.as_str().to_string())
-        .filter(|val| !val.is_empty());
+        .map(|val| val.as_str())
+        .filter(|val| !val.is_empty())
+        // Normalize domain name
+        .map(encode_hostname)
+        .transpose()
+        .map_err(|_| ValidationError("invalid domain name"))?;
     Ok((username, maybe_hostname))
 }
 
@@ -356,11 +361,19 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_profile_query_domain_incomplete() {
+    fn test_parse_profile_query_domain_empty() {
         let query = "@user@";
         let (username, maybe_hostname) = parse_profile_query(query).unwrap();
         assert_eq!(username, "user");
         assert_eq!(maybe_hostname, None);
+    }
+
+    #[test]
+    fn test_parse_profile_query_domain_incomplete() {
+        let query = "@user@social";
+        let (username, maybe_hostname) = parse_profile_query(query).unwrap();
+        assert_eq!(username, "user");
+        assert_eq!(maybe_hostname.as_deref(), Some("social"));
     }
 
     #[test]
@@ -377,6 +390,14 @@ mod tests {
         let (username, maybe_hostname) = parse_profile_query(query).unwrap();
         assert_eq!(username, "user");
         assert_eq!(maybe_hostname.as_deref(), Some("social.example"));
+    }
+
+    #[test]
+    fn test_parse_profile_query_idn() {
+        let query = "@user_01@☕.example";
+        let (username, maybe_hostname) = parse_profile_query(query).unwrap();
+        assert_eq!(username, "user_01");
+        assert_eq!(maybe_hostname.as_deref(), Some("xn--53h.example"));
     }
 
     #[test]

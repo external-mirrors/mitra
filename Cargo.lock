@@ -2153,6 +2153,7 @@ dependencies = [
  "hex",
  "html5ever",
  "http",
+ "idna",
  "infer",
  "iri-string 0.7.2",
  "k256",
