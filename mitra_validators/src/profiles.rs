@@ -10,6 +10,7 @@ use mitra_models::profiles::types::{
 };
 use mitra_utils::{
     html::{clean_html, clean_html_strict},
+    urls::encode_hostname,
 };
 
 use super::{
@@ -48,6 +49,11 @@ pub fn validate_username(username: &str) -> Result<(), ValidationError> {
 pub fn validate_hostname(hostname: &str) -> Result<(), ValidationError> {
     if hostname.len() > HOSTNAME_LENGTH_MAX {
         return Err(ValidationError("hostname is too long"));
+    };
+    let normalized_hostname = encode_hostname(hostname)
+        .map_err(|_| ValidationError("invalid hostname"))?;
+    if normalized_hostname != hostname {
+        return Err(ValidationError("hostname is not normalized"));
     };
     Ok(())
 }
@@ -242,6 +248,17 @@ mod tests {
         assert_eq!(error.to_string(), "username is empty");
         let error = validate_username("abc&").unwrap_err();
         assert_eq!(error.to_string(), "invalid username");
+    }
+
+    #[test]
+    fn test_validate_hostname() {
+        let hostname = "δοκιμή.example";
+        let result = validate_hostname(hostname);
+        assert!(result.is_err());
+
+        let normalized_hostname = "xn--jxalpdlp.example";
+        let result = validate_hostname(normalized_hostname);
+        assert!(result.is_ok());
     }
 
     #[test]
