@@ -9,12 +9,29 @@ use mitra_models::{
     profiles::queries::get_profiles_by_accts,
     profiles::types::DbActorProfile,
 };
+use mitra_utils::urls::encode_hostname;
 
 use super::links::is_inside_code_block;
 
 // See also: USERNAME_RE in mitra_validators::profiles
 const MENTION_SEARCH_RE: &str = r"(?m)(?P<before>^|\s|>|[\(])@(?P<mention>[^\s<]+)";
 const MENTION_SEARCH_SECONDARY_RE: &str = r"^(?P<username>[A-Za-z0-9\-\._]+)(@(?P<hostname>[\w\.-]+\w))?(?P<after>[\.,:?!\)]?)$";
+
+fn caps_to_acct(instance_hostname: &str, caps: &Captures) -> Option<String> {
+    let username = &caps["username"];
+    let hostname = if let Ok(maybe_hostname) = caps.name("hostname")
+        .map(|match_| encode_hostname(match_.as_str()))
+        .transpose()
+    {
+        maybe_hostname.unwrap_or(instance_hostname.to_string())
+    } else {
+        // Invalid hostname
+        return None;
+    };
+    let actor_address = ActorAddress::new_unchecked(username, &hostname);
+    let acct = actor_address.acct(instance_hostname);
+    Some(acct)
+}
 
 /// Finds everything that looks like a mention
 fn find_mentions(
@@ -33,13 +50,12 @@ fn find_mentions(
             continue;
         };
         if let Some(secondary_caps) = mention_secondary_re.captures(&caps["mention"]) {
-            let username = &secondary_caps["username"];
-            let hostname = secondary_caps.name("hostname")
-                .map(|match_| match_.as_str())
-                .unwrap_or(instance_hostname);
-            // TODO: normalize hostname
-            let actor_address = ActorAddress::new_unchecked(username, hostname);
-            let acct = actor_address.acct(instance_hostname);
+            let acct = if let Some(acct) = caps_to_acct(instance_hostname, &secondary_caps) {
+                acct
+            } else {
+                // Invalid mention
+                continue;
+            };
             if !mentions.contains(&acct) {
                 mentions.push(acct);
             };
@@ -83,13 +99,12 @@ pub fn replace_mentions(
             return caps[0].to_string();
         };
         if let Some(secondary_caps) = mention_secondary_re.captures(&caps["mention"]) {
-            let username = &secondary_caps["username"];
-            let hostname = secondary_caps.name("hostname")
-                .map(|match_| match_.as_str())
-                .unwrap_or(instance_hostname);
-            // TODO: normalize hostname
-            let actor_address = ActorAddress::new_unchecked(username, hostname);
-            let acct = actor_address.acct(instance_hostname);
+            let acct = if let Some(acct) = caps_to_acct(instance_hostname, &secondary_caps) {
+                acct
+            } else {
+                // Invalid mention
+                return caps[0].to_string();
+            };
             if let Some(profile) = mention_map.get(&acct) {
                 // Replace with a link to profile.
                 // Actor URL may differ from actor ID.
@@ -122,7 +137,7 @@ mod tests {
         "@user1 ",
         "@user_x@server1.com,<br>",
         "(@user2@server2.com boosted) ",
-        "@user3@server2.com.\n",
+        "@user3@δοκιμή.example.\n",
         "@@invalid@server2.com ",
         "@test@server3.com@nospace@server4.com ",
         "@ email@unknown.org ",
@@ -137,7 +152,7 @@ mod tests {
             "user1",
             "user_x",
             "user2@server2.com",
-            "user3@server2.com",
+            "user3@xn--jxalpdlp.example",
         ]);
     }
 
@@ -165,8 +180,8 @@ mod tests {
         let profile_4 = DbActorProfile {
             username: "user3".to_string(),
             actor_json: Some(DbActor {
-                id: "https://server2.com/actors/user3".to_string(),
-                url: Some("https://server2.com/@user3".to_string()),
+                id: "https://xn--jxalpdlp.example/actors/user3".to_string(),
+                url: Some("https://xn--jxalpdlp.example/@user3".to_string()),
                 ..Default::default()
             }),
             ..Default::default()
@@ -175,7 +190,7 @@ mod tests {
             ("user1".to_string(), profile_1),
             ("user_x".to_string(), profile_2),
             ("user2@server2.com".to_string(), profile_3),
-            ("user3@server2.com".to_string(), profile_4),
+            ("user3@xn--jxalpdlp.example".to_string(), profile_4),
         ]);
         let result = replace_mentions(
             &mention_map,
@@ -188,7 +203,7 @@ mod tests {
             r#"<span class="h-card"><a class="u-url mention" href="https://server1.com/users/user1">@user1</a></span> "#,
             r#"<span class="h-card"><a class="u-url mention" href="https://server1.com/users/user_x">@user_x</a></span>,<br>"#,
             r#"(<span class="h-card"><a class="u-url mention" href="https://server2.com/@user2">@user2</a></span> boosted) "#,
-            r#"<span class="h-card"><a class="u-url mention" href="https://server2.com/@user3">@user3</a></span>."#, "\n",
+            r#"<span class="h-card"><a class="u-url mention" href="https://xn--jxalpdlp.example/@user3">@user3</a></span>."#, "\n",
             r#"@@invalid@server2.com @test@server3.com@nospace@server4.com "#,
             r#"@ email@unknown.org <span class="h-card"><a class="u-url mention" href="https://server2.com/@user2">@user2</a></span> copy some text"#,
         );
