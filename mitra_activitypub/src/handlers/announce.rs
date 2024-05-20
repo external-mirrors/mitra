@@ -144,10 +144,22 @@ async fn handle_fep_1b12_announce(
         .ok_or(ValidationError("unexpected activity structure"))?;
     let instance = config.instance();
     let agent = build_federation_agent(&instance, None);
+    let activity: JsonValue = if let DELETE | LIKE = activity_type {
+        match fetch_object(&agent, activity_id).await {
+            Ok(activity) => {
+                log::info!("fetched activity {}", activity_id);
+                activity
+            },
+            Err(error) => {
+                // Wrapped activities are not always available
+                log::warn!("failed to fetch activity ({error}): {activity_id}");
+                return Ok(None);
+            },
+        }
+    } else {
+        return Ok(None);
+    };
     if activity_type == DELETE {
-        // Re-fetch activity
-        let activity: JsonValue = fetch_object(&agent, activity_id).await?;
-        log::info!("fetched activity {}", activity_id);
         let group = get_profile_by_remote_actor_id(
             db_client,
             &group_id,
@@ -173,8 +185,6 @@ async fn handle_fep_1b12_announce(
         };
         Ok(Some(DELETE))
     } else if activity_type == LIKE {
-        let activity: JsonValue = fetch_object(&agent, activity_id).await?;
-        log::info!("fetched activity {}", activity_id);
         handle_like(config, db_client, activity).await?;
         Ok(Some(LIKE))
     } else {

@@ -22,6 +22,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Ensure hostname is properly encoded before saving profile or emoji to database.
 - Don't ignore empty profile field names.
 - Show local accounts first when searching for profiles.
+- Don't retry FEP-1b12 activities if wrapped activity can't be fetched.
 
 ### Fixed
 
