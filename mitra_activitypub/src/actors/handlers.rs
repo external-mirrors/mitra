@@ -323,7 +323,9 @@ pub async fn create_remote_profile(
     storage: &MediaStorage,
     actor: Actor,
 ) -> Result<DbActorProfile, HandlerError> {
-    let actor_address = actor.address()?;
+    // TODO: implement reverse webfinger lookup
+    // https://swicg.github.io/activitypub-webfinger/#reverse-discovery
+    let actor_hostname = actor.hostname()?;
     let (maybe_avatar, maybe_banner) = fetch_actor_images(
         agent,
         storage,
@@ -348,7 +350,7 @@ pub async fn create_remote_profile(
     ).await?;
     let mut profile_data = ProfileCreateData {
         username: actor.preferred_username.clone(),
-        hostname: Some(actor_address.hostname().to_string()),
+        hostname: Some(actor_hostname),
         display_name: actor.name.clone(),
         bio: actor.summary.clone(),
         avatar: maybe_avatar,

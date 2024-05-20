@@ -7,7 +7,6 @@ use serde::{
 use serde_json::{Value as JsonValue};
 
 use mitra_federation::{
-    addresses::ActorAddress,
     deserialization::{
         deserialize_object_array,
         parse_into_array,
@@ -123,17 +122,10 @@ pub struct Actor {
 }
 
 impl Actor {
-    pub fn address(
-        &self,
-    ) -> Result<ActorAddress, ValidationError> {
+    pub fn hostname(&self) -> Result<String, ValidationError> {
         let hostname = get_hostname(&self.id)
             .map_err(|_| ValidationError("invalid actor ID"))?;
-        // Hostname is already normalized
-        let actor_address = ActorAddress::new_unchecked(
-            &self.preferred_username,
-            &hostname,
-        );
-        Ok(actor_address)
+        Ok(hostname)
     }
 
     pub fn into_db_actor(self) -> DbActor {
@@ -155,16 +147,14 @@ impl Actor {
 mod tests {
     use super::*;
 
-    const INSTANCE_HOSTNAME: &str = "example.com";
-
     #[test]
-    fn test_get_actor_address() {
+    fn test_get_actor_hostname() {
         let actor = Actor {
-            id: "https://test.org/users/1".to_string(),
+            id: "https://δοκιμή.example/users/1".to_string(),
             preferred_username: "test".to_string(),
             ..Default::default()
         };
-        let actor_address = actor.address().unwrap();
-        assert_eq!(actor_address.acct(INSTANCE_HOSTNAME), "test@test.org");
+        let hostname = actor.hostname().unwrap();
+        assert_eq!(hostname, "xn--jxalpdlp.example");
     }
 }

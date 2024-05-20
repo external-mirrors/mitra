@@ -122,8 +122,7 @@ async fn import_profile(
 ) -> Result<DbActorProfile, HandlerError> {
     let agent = build_federation_agent(instance, None);
     let actor: Actor = fetch_object(&agent, actor_id).await?;
-    let actor_address = actor.address()?; // validates actor ID
-    if actor_address.hostname() == instance.hostname() {
+    if actor.hostname()? == instance.hostname() {
         return Err(HandlerError::LocalObject);
     };
     let profile = match get_profile_by_remote_actor_id(
