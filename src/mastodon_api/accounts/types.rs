@@ -432,6 +432,9 @@ impl AccountUpdateData {
 
         let mut extra_fields = vec![];
         for field_source in self.fields_attributes.unwrap_or(vec![]) {
+            if field_source.name.trim().is_empty() {
+                continue;
+            };
             let value = markdown_basic_to_html(&field_source.value)
                 .map_err(|_| ValidationError("invalid markdown"))?;
             let extra_field = ExtraField {

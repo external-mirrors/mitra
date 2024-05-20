@@ -122,7 +122,7 @@ fn clean_extra_fields(
         field.name = field.name.trim().to_string();
         field.value = clean_html_strict(&field.value, &BIO_ALLOWED_TAGS, vec![]);
         if field.name.is_empty() {
-            continue;
+            return Err(ValidationError("field name is empty"));
         };
         if field.name.len() > FIELD_NAME_MAX_SIZE {
             return Err(ValidationError("field name is too long"));
