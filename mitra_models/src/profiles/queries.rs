@@ -640,11 +640,13 @@ pub async fn search_profiles(
             format!("%{}%", username)
         },
     };
+    // Showing local accounts first
     let rows = db_client.query(
         "
         SELECT actor_profile
         FROM actor_profile
         WHERE acct ILIKE $1
+        ORDER BY actor_json IS NULL DESC
         LIMIT $2
         ",
         &[&db_search_query, &i64::from(limit)],
