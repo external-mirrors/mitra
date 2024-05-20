@@ -27,6 +27,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Do not stop follow importer task on validation error.
 - Fixed PieFed webfinger address resolution.
 - Fixed URL component encoding.
+- Don't discard actor if one profile field is not valid.
 
 ## [2.18.0] - 2024-05-07
 

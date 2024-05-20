@@ -112,6 +112,19 @@ fn validate_payment_options(
     Ok(())
 }
 
+pub fn validate_extra_field(field: &ExtraField) -> Result<(), ValidationError> {
+    if field.name.is_empty() {
+        return Err(ValidationError("field name is empty"));
+    };
+    if field.name.len() > FIELD_NAME_MAX_SIZE {
+        return Err(ValidationError("field name is too long"));
+    };
+    if field.value.len() > FIELD_VALUE_MAX_SIZE {
+        return Err(ValidationError("field value is too long"));
+    };
+    Ok(())
+}
+
 /// Validates extra fields and removes fields with empty labels
 fn clean_extra_fields(
     extra_fields: &[ExtraField],
@@ -121,15 +134,7 @@ fn clean_extra_fields(
     for mut field in extra_fields.iter().cloned() {
         field.name = field.name.trim().to_string();
         field.value = clean_html_strict(&field.value, &BIO_ALLOWED_TAGS, vec![]);
-        if field.name.is_empty() {
-            return Err(ValidationError("field name is empty"));
-        };
-        if field.name.len() > FIELD_NAME_MAX_SIZE {
-            return Err(ValidationError("field name is too long"));
-        };
-        if field.value.len() > FIELD_VALUE_MAX_SIZE {
-            return Err(ValidationError("field value is too long"));
-        };
+        validate_extra_field(&field)?;
         cleaned_extra_fields.push(field);
     };
     #[allow(clippy::collapsible_else_if)]

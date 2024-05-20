@@ -14,6 +14,7 @@ use mitra_models::{
         PaymentOption,
     },
 };
+use mitra_validators::profiles::validate_extra_field;
 use mitra_utils::{
     json_signatures::{
         proofs::{
@@ -265,6 +266,7 @@ pub fn parse_property_value(
         value: attachment.value,
         value_source: None,
     };
+    validate_extra_field(&field)?;
     Ok(field)
 }
 
@@ -285,6 +287,7 @@ pub fn parse_metadata_field(
         value: note.content,
         value_source: None,
     };
+    validate_extra_field(&field)?;
     Ok(field)
 }
 
