@@ -107,10 +107,11 @@ Delete unused remote emojis:
 mitractl prune-remote-emojis
 ```
 
-Add custom emoji:
+Add custom emoji to local collection:
 
 ```shell
 mitractl add-emoji emoji_name /path/to/image.png
+mitractl add-emoji emoji_name https://social.example/path/to/image.png
 ```
 
 Import custom emoji from another instance:

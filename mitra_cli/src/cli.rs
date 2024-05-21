@@ -1,4 +1,3 @@
-use std::path::PathBuf;
 use std::str::FromStr;
 
 use anyhow::{anyhow, Error};
@@ -35,6 +34,7 @@ use mitra_adapters::{
     },
 };
 use mitra_config::Config;
+use mitra_federation::fetch::fetch_file;
 use mitra_models::{
     attachments::queries::delete_unused_attachments,
     background_jobs::queries::get_job_count,
@@ -109,6 +109,7 @@ use mitra_utils::{
     },
     datetime::days_before_now,
     files::sniff_media_type,
+    http_url::HttpUrl,
     passwords::hash_password,
 };
 use mitra_validators::{
@@ -763,7 +764,8 @@ impl ListUnreachableActors {
 #[derive(Parser)]
 pub struct AddEmoji {
     name: String,
-    path: PathBuf,
+    /// File path or URL
+    location: String,
 }
 
 impl AddEmoji {
@@ -776,20 +778,34 @@ impl AddEmoji {
             println!("invalid emoji name");
             return Ok(());
         };
-        let file = std::fs::read(&self.path)?;
-        let media_type = sniff_media_type(&file)
-            .ok_or(anyhow!("unknown media type"))?;
-        if !EMOJI_MEDIA_TYPES.contains(&media_type.as_str()) {
-            println!("media type {} is not supported", media_type);
-            return Ok(());
+        let storage = MediaStorage::from(config);
+        let (file_data, file_size, media_type) = if
+            HttpUrl::parse(&self.location).is_ok()
+        {
+            let agent = build_federation_agent(&config.instance(), None);
+            fetch_file(
+                &agent,
+                &self.location,
+                None, // no expectations
+                &EMOJI_MEDIA_TYPES,
+                storage.emoji_size_limit,
+            ).await?
+        } else {
+            let file = std::fs::read(&self.location)?;
+            let media_type = sniff_media_type(&file)
+                .ok_or(anyhow!("unknown media type"))?;
+            if !EMOJI_MEDIA_TYPES.contains(&media_type.as_str()) {
+                println!("media type {} is not supported", media_type);
+                return Ok(());
+            };
+            let file_size = file.len();
+            if file_size > config.limits.media.emoji_local_size_limit {
+                println!("emoji is too big");
+                return Ok(());
+            };
+            (file, file_size, media_type)
         };
-        let file_size = file.len();
-        if file_size > config.limits.media.emoji_local_size_limit {
-            println!("emoji is too big");
-            return Ok(());
-        };
-        let file_name = MediaStorage::from(config)
-            .save_file(file, &media_type)?;
+        let file_name = storage.save_file(file_data, &media_type)?;
         let image = EmojiImage { file_name, file_size, media_type };
         create_or_update_local_emoji(
             db_client,

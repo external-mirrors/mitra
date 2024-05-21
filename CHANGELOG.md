@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Support mentions containing internationalized domain names.
 - Add `gateways` property to portable actor objects.
+- Download image with `add-emoji` command if URL is provided.
 
 ### Changed
 
