@@ -1,6 +1,6 @@
 [package]
 name = "mitra_utils"
-version = "2.18.0"
+version = "2.19.0"
 license = "AGPL-3.0-only"
 edition = "2021"
 rust-version = "1.63.0"
