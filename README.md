@@ -35,7 +35,7 @@ Demo instance: https://public.mitra.social/ ([invite-only](https://public.mitra.
 - [mitra-web](https://codeberg.org/silverpill/mitra-web) (Web)
 - [Bloat](https://git.freesoftwareextremist.com/bloat/about/) (Web, NoJS)
 - [Phanpy](https://github.com/cheeaun/phanpy) (Web)
-- [Husky](https://codeberg.org/husky/husky) (Android)
+- [Husky](https://github.com/captainepoch/husky) (Android)
 - [Fedicat](https://github.com/technicat/fedicat) (iOS)
 - [toot](https://github.com/ihabunek/toot) (CLI)
 
