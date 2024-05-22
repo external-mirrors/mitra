@@ -1,24 +1,4 @@
-# Rustflags are not cumulative
-# https://github.com/rust-lang/cargo/issues/5376
-
 [build]
 # Enable unstable ammonia features
 # https://github.com/rust-ammonia/ammonia/issues/164#issuecomment-1406467845
 rustflags = ["--cfg=ammonia_unstable"]
-
-# https://github.com/rust-lang/cargo/issues/5034#issuecomment-927105016
-[target.'cfg(feature = "cargo-clippy")']
-rustflags = [
-  "--cfg=ammonia_unstable",
-  "-Wclippy::unwrap_used",
-  "-Aclippy::derive_partial_eq_without_eq",
-  "-Aclippy::len_zero",
-  "-Aclippy::let_and_return",
-  "-Aclippy::map_entry",
-  "-Aclippy::or_fun_call",
-  "-Aclippy::redundant_field_names",
-  "-Aclippy::unused_unit",
-  "-Aclippy::enum_variant_names",
-  "-Aclippy::format_push_string",
-  "-Aclippy::unwrap_or_default",
-]

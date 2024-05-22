@@ -35,6 +35,19 @@ default-members = [
   "mitra_validators",
 ]
 
+[workspace.lints.clippy]
+unwrap_used = "warn"
+derive_partial_eq_without_eq = "allow"
+len_zero = "allow"
+let_and_return = "allow"
+map_entry = "allow"
+or_fun_call = "allow"
+redundant_field_names = "allow"
+unused_unit = "allow"
+enum_variant_names = "allow"
+format_push_string = "allow"
+unwrap_or_default = "allow"
+
 [dependencies]
 # Used to handle incoming HTTP requests
 actix-cors = "0.6.4"
@@ -91,3 +104,6 @@ mitra_utils = { path = "mitra_utils", features = ["test-utils"] }
 
 [features]
 production = ["mitra_config/production"]
+
+[lints]
+workspace = true

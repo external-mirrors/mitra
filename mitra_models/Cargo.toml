@@ -45,3 +45,6 @@ mitra_utils = { path = "../mitra_utils", features = ["test-utils"] }
 
 [features]
 test-utils = []
+
+[lints]
+workspace = true

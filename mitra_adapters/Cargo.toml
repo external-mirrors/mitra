@@ -33,3 +33,6 @@ mitra_utils = { path = "../mitra_utils", features = ["test-utils"] }
 [target.'cfg(target_env = "musl")'.dependencies]
 openssl = { version = "0.10.63", features = ["vendored"] }
 openssl-probe = "0.1.5"
+
+[lints]
+workspace = true

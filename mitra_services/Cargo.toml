@@ -44,3 +44,6 @@ default = ["native-tls"]
 
 native-tls = ["reqwest/native-tls"]
 rustls-tls = ["reqwest/rustls-tls-native-roots"]
+
+[lints]
+workspace = true

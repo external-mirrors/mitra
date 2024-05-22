@@ -21,3 +21,6 @@ mitra_utils = { path = "../mitra_utils" }
 [dev-dependencies]
 mitra_models = { path = "../mitra_models", features = ["test-utils"] }
 mitra_utils = { path = "../mitra_utils", features = ["test-utils"] }
+
+[lints]
+workspace = true
