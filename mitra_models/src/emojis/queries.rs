@@ -149,6 +149,7 @@ pub async fn get_local_emojis(
         SELECT emoji
         FROM emoji
         WHERE hostname IS NULL
+        ORDER BY emoji_name
         ",
         &[],
     ).await?;

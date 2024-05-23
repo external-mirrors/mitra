@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Save gateway lists to database.
 - Always add author of the parent post to mentions.
+- Order emojis in local collection by name.
 
 ### Fixed
 
