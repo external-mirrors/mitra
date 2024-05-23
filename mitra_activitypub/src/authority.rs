@@ -19,7 +19,7 @@ fn fep_ef61_identity(public_key: &Ed25519PublicKey) -> DidKey {
 
 pub enum Authority {
     Server(String),
-    // TODO: remove server URL after transition
+    // TODO: FEP-EF61: remove server URL after transition
     Key((String, Ed25519PublicKey)),
     KeyWithGateway((String, Ed25519PublicKey)),
 }
