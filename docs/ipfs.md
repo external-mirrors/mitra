@@ -1,10 +1,20 @@
-# Running IPFS node
+# IPFS integration
+
+Add these lines to your instance configuration file:
+
+```
+ipfs_api_url: 'http://127.0.0.1:5001'
+# IPFS gateway (for clients)
+ipfs_gateway_url: 'https://ipfs.example.tld'
+```
+
+## Running IPFS node
 
 This guide explains how to run IPFS node in resource-constrained environment (such as cheap VPS or single-board computer).
 
 The recommended IPFS implementation is [kubo](https://github.com/ipfs/kubo), version 0.18.1 or higher. Normally **kubo** requires at least 2 GB RAM, but after tweaking it can run on a machine with only 512 MB.
 
-## Configuration profiles
+### Configuration profiles
 
 IPFS configuration should be initialized with `server` profile if your node is running on a cloud server:
 
@@ -16,7 +26,7 @@ If you're running it on single-board computer, the recommended profile is `lowpo
 
 Documentation on configuration profiles: https://github.com/ipfs/kubo/blob/master/docs/config.md#profiles
 
-## Configuration options
+### Configuration options
 
 - `Datastore.StorageMax`. Recommended value is `1G`.
 - `Gateway.NoFetch`. Configures gateway to not fetch files from the network. Recommended value is `true`.
@@ -31,7 +41,7 @@ Documentation on configuration profiles: https://github.com/ipfs/kubo/blob/maste
 
 Documentation: https://github.com/ipfs/kubo/blob/master/docs/config.md
 
-## Systemd service
+### Systemd service
 
 When **kubo** starts, its memory usage is around 100 MB and then it slowly increases, often beyond the Resource Manager's limit. To keep memory usage within reasonable bounds the service needs to be restarted regularly.
 

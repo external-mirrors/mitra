@@ -99,8 +99,3 @@ retention:
 #    wallet_name: null
 #    wallet_password: null
 #    account_index: 0
-
-# IPFS integration
-#ipfs_api_url: 'http://127.0.0.1:5001'
-# IPFS gateway (for clients)
-#ipfs_gateway_url: 'https://ipfs.example.tld'
