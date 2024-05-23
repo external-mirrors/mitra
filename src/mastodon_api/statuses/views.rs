@@ -152,6 +152,10 @@ async fn create_status(
         ).await?;
 
     // Extend mentions
+    if let Some(ref in_reply_to) = maybe_in_reply_to {
+        // Always mention the author of the parent post
+        mentions.push(in_reply_to.author.id);
+    };
     if visibility == Visibility::Subscribers {
         // Mention all subscribers.
         // This makes post accessible only to active subscribers
