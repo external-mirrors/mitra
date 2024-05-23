@@ -4,7 +4,6 @@ use serde_json::{Value as JsonValue};
 use mitra_config::Config;
 use mitra_federation::{
     deserialization::{deserialize_into_object_id, get_object_id},
-    fetch::fetch_object,
 };
 use mitra_models::{
     database::{DatabaseClient, DatabaseError},
@@ -26,7 +25,7 @@ use mitra_validators::{
 use crate::{
     agent::build_federation_agent,
     identifiers::parse_local_object_id,
-    importers::{import_post, ActorIdResolver},
+    importers::{fetch_any_object, import_post, ActorIdResolver},
     vocabulary::*,
 };
 
@@ -145,7 +144,7 @@ async fn handle_fep_1b12_announce(
     let instance = config.instance();
     let agent = build_federation_agent(&instance, None);
     let activity: JsonValue = if let DELETE | LIKE = activity_type {
-        match fetch_object(&agent, activity_id).await {
+        match fetch_any_object(&agent, activity_id).await {
             Ok(activity) => {
                 log::info!("fetched activity {}", activity_id);
                 activity

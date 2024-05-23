@@ -18,7 +18,7 @@ use mitra_activitypub::{
         delete_person::prepare_delete_person,
     },
     importers::{
-        fetch_any_object,
+        fetch_any_object_with_context,
         import_from_outbox,
         import_replies,
         ActorIdResolver,
@@ -508,7 +508,7 @@ impl FetchObject {
             .unwrap_or_default();
         let mut context = FetcherContext::from(gateways);
         let canonical_object_id = context.prepare_object_id(&self.object_id)?;
-        let object: JsonValue = fetch_any_object(
+        let object: JsonValue = fetch_any_object_with_context(
             &agent,
             &context,
             &canonical_object_id,

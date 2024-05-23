@@ -9,7 +9,7 @@ use mitra_utils::{
         create_http_signature,
         HttpSignatureError,
     },
-    urls::{is_safe_url, UrlError},
+    urls::is_safe_url,
 };
 
 use super::{
@@ -30,7 +30,7 @@ pub enum FetchError {
     SignatureError(#[from] HttpSignatureError),
 
     #[error("inavlid URL")]
-    UrlError(#[from] UrlError),
+    UrlError,
 
     #[error("invalid URL")]
     UnsafeUrl,
@@ -62,6 +62,9 @@ pub enum FetchError {
     #[error("unexpected object ID at {0}")]
     UnexpectedObjectId(String),
 
+    #[error("invalid proof")]
+    InvalidProof,
+
     #[error("too many objects")]
     RecursionError,
 
@@ -74,7 +77,8 @@ fn build_fetcher_client(
     request_url: &str,
     no_redirect: bool,
 ) -> Result<Client, FetchError> {
-    let network = get_network_type(request_url)?;
+    let network = get_network_type(request_url)
+        .map_err(|_| FetchError::UrlError)?;
     let http_client = build_http_client(
         agent,
         network,
@@ -174,7 +178,9 @@ pub async fn fetch_object<T: DeserializeOwned>(
     let object_location = response.url().as_str();
     let object_id = object_json["id"].as_str()
         .ok_or(FetchError::NoObjectId(object_location.to_string()))?;
-    if !is_same_hostname(object_id, object_location)? {
+    let is_same_origin = is_same_hostname(object_id, object_location)
+        .unwrap_or(false);
+    if !is_same_origin {
         return Err(FetchError::UnexpectedObjectId(object_location.to_string()));
     };
     // Verify object is not a malicious upload

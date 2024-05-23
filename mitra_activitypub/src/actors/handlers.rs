@@ -3,7 +3,7 @@ use uuid::Uuid;
 use mitra_federation::{
     agent::FederationAgent,
     deserialization::parse_into_id_array,
-    fetch::{fetch_file, fetch_object},
+    fetch::fetch_file,
 };
 use mitra_models::{
     database::DatabaseClient,
@@ -39,6 +39,7 @@ use crate::{
         emoji::handle_emoji,
         proposal::{parse_proposal, Proposal},
     },
+    importers::fetch_any_object,
     vocabulary::{
         EMOJI,
         HASHTAG,
@@ -238,7 +239,7 @@ async fn fetch_proposals(
 ) -> Vec<PaymentOption> {
     let mut payment_options = vec![];
     for proposal_id in proposals {
-        let proposal: Proposal = match fetch_object(agent, &proposal_id).await {
+        let proposal: Proposal = match fetch_any_object(agent, &proposal_id).await {
             Ok(proposal) => proposal,
             Err(error) => {
                 log::warn!("invalid proposal: {}", error);

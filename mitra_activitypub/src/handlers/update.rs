@@ -8,7 +8,6 @@ use mitra_adapters::permissions::filter_mentions;
 use mitra_config::Config;
 use mitra_federation::{
     deserialization::{deserialize_into_object_id, get_object_id},
-    fetch::fetch_object,
     utils::{is_actor, is_object},
 };
 use mitra_models::{
@@ -44,6 +43,7 @@ use crate::{
         AttributedObject,
     },
     identifiers::profile_actor_id,
+    importers::fetch_any_object,
     vocabulary::{NOTE, PERSON},
 };
 
@@ -183,7 +183,7 @@ pub async fn handle_update(
         let object_id = get_object_id(&activity["object"])
             .map_err(|_| ValidationError("invalid activity object"))?;
         let agent = build_federation_agent(&config.instance(), None);
-        activity["object"] = fetch_object(&agent, &object_id).await?;
+        activity["object"] = fetch_any_object(&agent, &object_id).await?;
         log::info!("fetched object {}", object_id);
     };
     if is_actor(&activity["object"]) {

@@ -75,11 +75,12 @@ impl FetcherContext {
     }
 }
 
-pub async fn fetch_any_object<T: DeserializeOwned>(
+pub async fn fetch_any_object_with_context<T: DeserializeOwned>(
     agent: &FederationAgent,
     context: &FetcherContext,
     object_id: &Url,
-) -> Result<T, HandlerError> {
+) -> Result<T, FetchError> {
+    // TODO: FEP-EF61: use random gateway
     let maybe_gateway = context.gateways.first()
         .map(|gateway| gateway.as_str());
     // TODO: FEP-EF61: remove Url::to_http_url
@@ -90,13 +91,24 @@ pub async fn fetch_any_object<T: DeserializeOwned>(
     match verify_portable_object(&object_json) {
         Ok(_) => (),
         Err(AuthenticationError::NotPortable) => (), // skip proof verification
-        // TODO: FEP-EF61: improve error reporting
-        Err(_) => return Err(ValidationError("authentication error").into()),
+        Err(_) => return Err(FetchError::InvalidProof),
     };
-    // TODO: FEP-EF61 improve error reporting
-    let object: T = serde_json::from_value(object_json)
-        .map_err(|_| ValidationError("object deserialization error"))?;
+    let object: T = serde_json::from_value(object_json)?;
     Ok(object)
+}
+
+pub async fn fetch_any_object<T: DeserializeOwned>(
+    agent: &FederationAgent,
+    object_id: &str,
+) -> Result<T, FetchError> {
+    let mut context = FetcherContext { gateways: vec![] };
+    let canonical_object_id = context.prepare_object_id(object_id)
+        .map_err(|_| FetchError::UrlError)?;
+    fetch_any_object_with_context(
+        agent,
+        &context,
+        &canonical_object_id,
+    ).await
 }
 
 pub async fn get_profile_by_actor_id(
@@ -124,7 +136,7 @@ async fn import_profile(
     actor_id: &str,
 ) -> Result<DbActorProfile, HandlerError> {
     let agent = build_federation_agent(instance, None);
-    let actor: Actor = fetch_object(&agent, actor_id).await?;
+    let actor: Actor = fetch_any_object(&agent, actor_id).await?;
     if actor.hostname()? == instance.hostname() {
         return Err(HandlerError::LocalObject);
     };
@@ -166,14 +178,12 @@ async fn refresh_remote_profile(
     force: bool,
 ) -> Result<DbActorProfile, HandlerError> {
     let agent = build_federation_agent(instance, None);
-    let actor_id = &profile.actor_json.as_ref()
-        .expect("actor data should be present")
-        .id;
+    let actor_id = profile.expect_remote_actor_id();
     let profile = if force ||
         profile.updated_at < Utc::now() - Duration::days(1)
     {
         // Try to re-fetch actor profile
-        match fetch_object::<Actor>(&agent, actor_id).await {
+        match fetch_any_object::<Actor>(&agent, actor_id).await {
             Ok(actor) => {
                 log::info!("re-fetched actor {}", actor.id);
                 let profile_updated = update_remote_profile(
@@ -437,7 +447,7 @@ pub async fn import_post(
                     return Err(FetchError::RecursionError.into());
                 };
                 let object: AttributedObject =
-                    fetch_object(&agent, &object_id).await?;
+                    fetch_any_object(&agent, &object_id).await?;
                 log::info!("fetched object {}", object.id);
                 fetch_count +=  1;
                 object
@@ -511,7 +521,7 @@ async fn fetch_collection(
     }
 
     let collection: Collection =
-        fetch_object(agent, collection_url).await?;
+        fetch_any_object(agent, collection_url).await?;
     let mut items = [collection.items, collection.ordered_items].concat();
     if let Some(first_page_value) = collection.first {
         // Mastodon replies collection:
@@ -519,7 +529,7 @@ async fn fetch_collection(
         // - Next page contains replies from others
         let first_page: CollectionPage = match first_page_value {
             JsonValue::String(first_page_url) => {
-                fetch_object(agent, &first_page_url).await?
+                fetch_any_object(agent, &first_page_url).await?
             },
             _ => serde_json::from_value(first_page_value)?,
         };
@@ -527,7 +537,7 @@ async fn fetch_collection(
         items.extend(first_page.ordered_items);
         if let Some(next_page_url) = first_page.next {
             let next_page: CollectionPage =
-                fetch_object(agent, &next_page_url).await?;
+                fetch_any_object(agent, &next_page_url).await?;
             items.extend(next_page.items);
             items.extend(next_page.ordered_items);
         };
@@ -546,7 +556,7 @@ pub async fn import_from_outbox(
 ) -> Result<(), HandlerError> {
     let instance = config.instance();
     let agent = build_federation_agent(&instance, None);
-    let actor: Actor = fetch_object(&agent, actor_id).await?;
+    let actor: Actor = fetch_any_object(&agent, actor_id).await?;
     log::info!("fetched actor {}", actor.id);
     let activities =
         fetch_collection(&agent, &actor.outbox, limit).await?;
@@ -586,7 +596,7 @@ pub async fn import_replies(
     let instance = config.instance();
     let agent = build_federation_agent(&instance, None);
     let storage = MediaStorage::from(config);
-    let object: JsonValue = fetch_object(&agent, object_id).await?;
+    let object: JsonValue = fetch_any_object(&agent, object_id).await?;
     let collection_items = match &object["replies"] {
         JsonValue::Null => vec![], // no replies
         value => {
