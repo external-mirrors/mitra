@@ -26,6 +26,29 @@ pub struct ApUrl {
 }
 
 impl ApUrl {
+    pub fn parse(value: &str) -> Result<Self, &'static str> {
+        let url_re = Regex::new(AP_URL_RE)
+             .expect("regexp should be valid");
+        let captures = url_re.captures(value).ok_or("invalid 'ap' URL")?;
+        let did = Did::from_str(&captures["did"])
+            .map_err(|_| "invalid 'ap' URL authority")?;
+        // Authority should be an Ed25519 key
+        if did.as_did_key()
+            .and_then(|did_key| did_key.try_ed25519_key().ok())
+            .is_none()
+        {
+            return Err("invalid 'ap' URL authority");
+        };
+        // Parse relative URL
+        let location = UriRelativeString::from_str(&captures["path"])
+            .map_err(|_| "invalid 'ap' URL")?;
+        if location.authority_str().is_some() {
+            return Err("invalid 'ap' URL");
+        };
+        let ap_url = Self { did, location };
+        Ok(ap_url)
+    }
+
     pub fn did(&self) -> &Did {
         &self.did
     }
@@ -40,7 +63,7 @@ impl ApUrl {
     }
 
     pub fn from_did_url(did_url: &str) -> Result<Self, &'static str> {
-        Self::from_str(&with_ap_prefix(did_url))
+        Self::parse(&with_ap_prefix(did_url))
     }
 
     pub fn to_did_url(&self) -> String {
@@ -63,26 +86,7 @@ impl FromStr for ApUrl {
     type Err = &'static str;
 
     fn from_str(value: &str) -> Result<Self, Self::Err> {
-        let url_re = Regex::new(AP_URL_RE)
-             .expect("regexp should be valid");
-        let captures = url_re.captures(value).ok_or("invalid 'ap' URL")?;
-        let did = Did::from_str(&captures["did"])
-            .map_err(|_| "invalid 'ap' URL authority")?;
-        // Authority should be an Ed25519 key
-        if did.as_did_key()
-            .and_then(|did_key| did_key.try_ed25519_key().ok())
-            .is_none()
-        {
-            return Err("invalid 'ap' URL authority");
-        };
-        // Parse relative URL
-        let location = UriRelativeString::from_str(&captures["path"])
-            .map_err(|_| "invalid 'ap' URL")?;
-        if location.authority_str().is_some() {
-            return Err("invalid 'ap' URL");
-        };
-        let ap_url = Self { did, location };
-        Ok(ap_url)
+        Self::parse(value)
     }
 }
 
@@ -93,7 +97,7 @@ mod tests {
     #[test]
     fn test_parse_ap_url() {
         let url_str = "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/objects/123";
-        let url = ApUrl::from_str(url_str).unwrap();
+        let url = ApUrl::parse(url_str).unwrap();
         assert_eq!(url.did().to_string(), "did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6");
         assert_eq!(url.location.authority_str(), None);
         assert_eq!(url.location.path_str(), "/objects/123");
@@ -104,7 +108,7 @@ mod tests {
     #[test]
     fn test_parse_ap_url_with_fragment() {
         let url_str = "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor#main-key";
-        let url = ApUrl::from_str(url_str).unwrap();
+        let url = ApUrl::parse(url_str).unwrap();
         assert_eq!(url.did().to_string(), "did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6");
         assert_eq!(url.relative_url(), "/actor#main-key");
         assert_eq!(url.to_string(), url_str);
@@ -113,25 +117,25 @@ mod tests {
     #[test]
     fn test_parse_ap_url_without_path() {
         let url_str = "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6";
-        let error = ApUrl::from_str(url_str).err().unwrap();
+        let error = ApUrl::parse(url_str).err().unwrap();
         assert_eq!(error, "invalid 'ap' URL");
     }
 
     #[test]
     fn test_parse_ap_url_empty_path() {
         let url_str = "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/";
-        let error = ApUrl::from_str(url_str).err().unwrap();
+        let error = ApUrl::parse(url_str).err().unwrap();
         assert_eq!(error, "invalid 'ap' URL");
 
         let url_str = "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6//";
-        let error = ApUrl::from_str(url_str).err().unwrap();
+        let error = ApUrl::parse(url_str).err().unwrap();
         assert_eq!(error, "invalid 'ap' URL");
     }
 
     #[test]
     fn test_parse_ap_url_with_double_slash() {
         let url_str = "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6//actor";
-        let error = ApUrl::from_str(url_str).err().unwrap();
+        let error = ApUrl::parse(url_str).err().unwrap();
         assert_eq!(error, "invalid 'ap' URL");
     }
 }

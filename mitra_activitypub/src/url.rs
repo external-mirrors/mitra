@@ -1,5 +1,4 @@
 use std::fmt;
-use std::str::FromStr;
 
 use mitra_utils::{
     ap_url::{is_ap_url, ApUrl},
@@ -64,7 +63,7 @@ pub fn parse_url(
 ) -> Result<(Url, Option<String>), ValidationError> {
     let mut maybe_gateway = None;
     let url = if is_ap_url(value) {
-        let ap_url = ApUrl::from_str(value).map_err(ValidationError)?;
+        let ap_url = ApUrl::parse(value).map_err(ValidationError)?;
         Url::Ap(ap_url)
     } else {
         let http_url = HttpUrl::parse(value).map_err(ValidationError)?;
@@ -95,7 +94,7 @@ mod tests {
     #[test]
     fn test_http_url_from_ap_url() {
         let url_str = "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor";
-        let ap_url = url_str.parse::<ApUrl>().unwrap();
+        let ap_url = ApUrl::parse(url_str).unwrap();
         let url = Url::Ap(ap_url);
         let gateway = "https://gateway.example";
         let output = url.to_http_url(Some(gateway)).unwrap();
@@ -106,7 +105,7 @@ mod tests {
     #[test]
     fn test_http_url_from_ap_url_no_gateway() {
         let url_str = "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor";
-        let ap_url = url_str.parse::<ApUrl>().unwrap();
+        let ap_url = ApUrl::parse(url_str).unwrap();
         let url = Url::Ap(ap_url);
         let maybe_output = url.to_http_url(None);
         assert!(maybe_output.is_none());
