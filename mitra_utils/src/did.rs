@@ -11,7 +11,7 @@ use serde::{
 use super::did_key::DidKey;
 use super::did_pkh::DidPkh;
 
-const DID_RE: &str = r"did:(?P<method>\w+):.+";
+const DID_RE: &str = r"^did:(?P<method>\w+):.+$";
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Did {
@@ -124,5 +124,12 @@ mod tests {
         assert_eq!(did.method(), "pkh");
         assert_eq!(did.identifier(), "eip155:1:0xb9c5714089478a327f09197987f16f9e5d936e8a");
         assert_eq!(did.to_string(), did_str);
+    }
+
+    #[test]
+    fn test_did_parse_http_url() {
+        let value = "https://social.example/resolver/did:key:z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK";
+        let result = value.parse::<Did>();
+        assert!(result.is_err());
     }
 }

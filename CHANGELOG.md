@@ -10,6 +10,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Save gateway lists to database.
 
+### Fixed
+
+- Fix URL search when URL contains a DID.
+
 ## [2.19.0] - 2024-05-22
 
 ### Added
