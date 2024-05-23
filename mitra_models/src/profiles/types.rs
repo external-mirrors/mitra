@@ -629,6 +629,9 @@ pub struct DbActor {
     pub featured: Option<String>,
     pub url: Option<String>,
 
+    #[serde(default)]
+    pub gateways: Vec<String>,
+
     pub public_key: Option<DbActorPublicKey>,
 }
 

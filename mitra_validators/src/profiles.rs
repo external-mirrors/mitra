@@ -14,7 +14,7 @@ use mitra_utils::{
 };
 
 use super::{
-    activitypub::validate_object_id,
+    activitypub::{validate_gateway_url, validate_object_id},
     errors::ValidationError,
     posts::EMOJI_LIMIT,
 };
@@ -164,6 +164,9 @@ pub fn validate_actor_data(
     };
     if let Some(ref featured) = actor.featured {
         validate_object_id(featured)?;
+    };
+    for gateway in &actor.gateways {
+        validate_gateway_url(gateway)?;
     };
     Ok(())
 }

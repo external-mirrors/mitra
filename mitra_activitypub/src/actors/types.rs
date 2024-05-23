@@ -142,6 +142,7 @@ impl Actor {
             subscribers: self.subscribers,
             featured: self.featured,
             url: self.url,
+            gateways: self.gateways,
             public_key: None,
         }
     }

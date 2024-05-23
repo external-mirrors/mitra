@@ -17,6 +17,15 @@ pub fn validate_object_id(object_id: &str) -> Result<(), ValidationError> {
     Ok(())
 }
 
+pub fn validate_gateway_url(url: &str) -> Result<(), ValidationError> {
+    let http_url = HttpUrl::parse(url)
+        .map_err(|_| ValidationError("invalid gateway URL"))?;
+    if http_url.origin() != url {
+        return Err(ValidationError("invalid gateway URL"));
+    };
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -39,6 +48,27 @@ mod tests {
     fn test_validate_object_id_ftp() {
         let object_id = "ftp://ftp.social.example/";
         let result = validate_object_id(object_id);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_validate_gateway_url() {
+        let url = "https://social.example";
+        let result = validate_gateway_url(url);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_validate_gateway_url_trailing_slash() {
+        let url = "https://social.example/";
+        let result = validate_gateway_url(url);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_validate_gateway_url_with_path() {
+        let url = "https://social.example/.well-known/apgateway";
+        let result = validate_gateway_url(url);
         assert!(result.is_err());
     }
 }
