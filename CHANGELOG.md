@@ -15,6 +15,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Support adding quote to post using `quote_id` parameter.
 - Added `/api/v1/statuses/{status_id}/load_conversation` API endpoint.
 - Support searching posts and profiles by `ap://` URL.
+- Allow portable actors to send activities to regular inboxes.
 
 ### Changed
 

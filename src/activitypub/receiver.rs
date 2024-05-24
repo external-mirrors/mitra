@@ -19,7 +19,6 @@ use mitra_models::{
 };
 use mitra_utils::urls::get_hostname;
 use mitra_validators::{
-    activitypub::validate_object_id,
     errors::ValidationError,
 };
 
@@ -95,6 +94,7 @@ pub async fn receive_activity(
         .ok_or(ValidationError("'type' property is missing"))?;
     let activity_actor = get_object_id(&activity["actor"])
         .map_err(|_| ValidationError("invalid 'actor' property"))?;
+    let canonical_actor_id = canonicalize_id(&activity_actor)?;
 
     let actor_hostname = get_hostname(&activity_actor)
         .map_err(|_| ValidationError("invalid actor ID"))?;
@@ -106,8 +106,6 @@ pub async fn receive_activity(
         log::info!("ignoring activity from blocked instance {actor_hostname}");
         return Ok(());
     };
-
-    validate_object_id(activity_id)?;
 
     let is_self_delete = if activity_type == DELETE {
         let object_id = get_object_id(&activity["object"])
@@ -168,13 +166,6 @@ pub async fn receive_activity(
             // Activity signature has higher priority
             signer = activity_signer;
         },
-        Err(error @ (
-            AuthenticationError::PortableActivity |
-            AuthenticationError::InvalidPortableActivity(_)
-        )) => {
-            // TODO: FEP-EF61: portable activities are not supported
-            return Err(error.into());
-        },
         Err(AuthenticationError::NoJsonSignature) => (), // ignore
         Err(other_error) => {
             log::warn!("invalid JSON signature: {}", other_error);
@@ -183,18 +174,21 @@ pub async fn receive_activity(
     };
 
     let signer_id = signer.expect_remote_actor_id();
-    let signer_hostname = get_hostname(signer_id)
-        .map_err(|_| ValidationError("invalid actor ID"))?;
-    if !is_hostname_allowed(
-        &config.blocked_instances,
-        &config.allowed_instances,
-        &signer_hostname,
-    ) {
-        log::info!("ignoring activity from blocked instance {signer_hostname}");
-        return Ok(());
+    // TODO: FEP-EF61: implement instance blocking for portable actors
+    if !signer.is_portable() {
+        let signer_hostname = get_hostname(signer_id)
+            .map_err(|_| ValidationError("invalid actor ID"))?;
+        if !is_hostname_allowed(
+            &config.blocked_instances,
+            &config.allowed_instances,
+            &signer_hostname,
+        ) {
+            log::info!("ignoring activity from blocked instance {signer_hostname}");
+            return Ok(());
+        };
     };
 
-    let is_authenticated = activity_actor == signer_id;
+    let is_authenticated = canonical_actor_id == signer_id;
     if !is_authenticated {
         match activity_type {
             CREATE | UPDATE => {

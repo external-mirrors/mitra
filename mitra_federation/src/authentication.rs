@@ -41,7 +41,7 @@ pub enum AuthenticationError {
 
 pub fn verify_portable_object(
     object: &JsonValue,
-) -> Result<(), AuthenticationError> {
+) -> Result<String, AuthenticationError> {
     let object_id = object["id"].as_str()
         .ok_or(AuthenticationError::InvalidObjectID("'id' property not found"))?;
     let canonical_object_id = Url::parse(object_id)
@@ -80,7 +80,7 @@ pub fn verify_portable_object(
         },
         _ => return Err(AuthenticationError::InvalidVerificationMethod),
     };
-    Ok(())
+    Ok(object_id.to_string())
 }
 
 #[cfg(test)]

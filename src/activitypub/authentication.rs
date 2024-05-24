@@ -13,6 +13,7 @@ use mitra_federation::{
         AuthenticationError as PortableObjectAuthenticationError,
     },
     deserialization::get_object_id,
+    url::is_same_authority,
     utils::key_id_to_actor_id,
 };
 use mitra_models::{
@@ -95,9 +96,6 @@ pub enum AuthenticationError {
     #[error("actor and request signer do not match")]
     UnexpectedSigner,
 
-    #[error("portable activities are not supported")]
-    PortableActivity,
-
     #[error("invalid portable activity: {0}")]
     InvalidPortableActivity(#[from] PortableObjectAuthenticationError),
 }
@@ -110,7 +108,12 @@ async fn get_signer(
 ) -> Result<DbActorProfile, AuthenticationError> {
     let signer = if no_fetch {
         // Avoid fetching (e.g. if signer was deleted)
-        get_remote_profile_by_actor_id(db_client, signer_id).await?
+        let canonical_signer_id = canonicalize_id(signer_id)
+            .map_err(|_| AuthenticationError::ActorError("invalid actor ID"))?;
+        get_remote_profile_by_actor_id(
+            db_client,
+            &canonical_signer_id,
+        ).await?
     } else {
         let mut instance = config.instance();
         instance.fetcher_timeout = AUTHENTICATION_FETCHER_TIMEOUT;
@@ -135,9 +138,11 @@ fn get_signer_ed25519_key(
     profile: &DbActorProfile,
     key_id: &str,
 ) -> Result<Ed25519PublicKey, AuthenticationError> {
+    let canonical_key_id = canonicalize_id(key_id)
+        .map_err(|_| AuthenticationError::ActorError("invalid key ID"))?;
     let actor_key = profile.public_keys
         .inner().iter()
-        .find(|key| key.id == key_id)
+        .find(|key| key.id == canonical_key_id)
         .ok_or(AuthenticationError::ActorError("key not found"))?;
     if actor_key.key_type != PublicKeyType::Ed25519 {
         return Err(AuthenticationError::ActorError("unexpected key type"));
@@ -150,16 +155,19 @@ fn get_signer_rsa_key(
     profile: &DbActorProfile,
     key_id: &str,
 ) -> Result<RsaPublicKey, AuthenticationError> {
+    let canonical_key_id = canonicalize_id(key_id)
+        .map_err(|_| AuthenticationError::ActorError("invalid key ID"))?;
     let maybe_actor_key = profile.public_keys
         .inner().iter()
-        .find(|key| key.id == key_id);
+        .find(|key| key.id == canonical_key_id);
     let rsa_public_key = if let Some(actor_key) = maybe_actor_key {
         if actor_key.key_type != PublicKeyType::RsaPkcs1 {
             return Err(AuthenticationError::ActorError("unexpected key type"));
         };
         rsa_public_key_from_pkcs1_der(&actor_key.key_data)?
     } else {
-        log::warn!("key not found in public_keys: {}", key_id);
+        // TODO: remove public_key from actor data
+        log::warn!("key not found in public_keys: {}", canonical_key_id);
         let public_key = &profile.actor_json.as_ref()
             .expect("should be signed by remote actor")
             .public_key.as_ref()
@@ -189,6 +197,7 @@ pub async fn verify_signed_request(
         },
         Err(other_error) => return Err(other_error.into()),
     };
+    // TODO: FEP-EF61: support 'ap' URLs
     let signer_id = key_id_to_actor_id(&signature_data.key_id)
         .map_err(|_| AuthenticationError::InvalidKeyId)?;
     let signer = get_signer(config, db_client, &signer_id, no_fetch).await?;
@@ -222,6 +231,7 @@ pub async fn verify_signed_get_request(
         },
         Err(other_error) => return Err(other_error.into()),
     };
+    // TODO: FEP-EF61: support 'ap' URLs
     let signer_id = key_id_to_actor_id(&signature_data.key_id)
         .map_err(|_| AuthenticationError::InvalidKeyId)?;
     let canonical_signer_id = canonicalize_id(&signer_id)
@@ -256,9 +266,17 @@ pub async fn verify_signed_activity(
     no_fetch: bool,
 ) -> Result<DbActorProfile, AuthenticationError> {
     match verify_portable_object(activity) {
-        // Portable activities are not supported
-        // TODO: FEP-EF61: find cached profile by actor ID and return
-        Ok(_) => return Err(AuthenticationError::PortableActivity),
+        Ok(activity_id) => {
+            let actor_id = get_object_id(&activity["actor"])
+                .map_err(|_| AuthenticationError::ActorError("unknown actor"))?;
+            if !is_same_authority(&activity_id, &actor_id)
+                .map_err(|_| AuthenticationError::ActorError("invalid actor ID"))?
+            {
+                return Err(AuthenticationError::UnexpectedSigner);
+            };
+            let actor_profile = get_signer(config, db_client, &actor_id, no_fetch).await?;
+            return Ok(actor_profile);
+        },
         // Continue verification if activity is not portable
         Err(PortableObjectAuthenticationError::NotPortable) => (),
         Err(PortableObjectAuthenticationError::InvalidObjectID(message)) => {
