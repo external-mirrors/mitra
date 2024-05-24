@@ -149,12 +149,12 @@ fn get_signer_rsa_key(
         rsa_public_key_from_pkcs1_der(&actor_key.key_data)?
     } else {
         log::warn!("key not found in public_keys: {}", key_id);
-        let public_key_pem = &profile.actor_json.as_ref()
+        let public_key = &profile.actor_json.as_ref()
             .expect("should be signed by remote actor")
             .public_key.as_ref()
-            .map(|public_key| &public_key.public_key_pem)
+            .filter(|public_key| public_key.id == key_id)
             .ok_or(AuthenticationError::ActorError("key not found"))?;
-        deserialize_rsa_public_key(public_key_pem)?
+        deserialize_rsa_public_key(&public_key.public_key_pem)?
     };
     Ok(rsa_public_key)
 }
