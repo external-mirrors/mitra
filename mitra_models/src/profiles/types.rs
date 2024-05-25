@@ -588,6 +588,11 @@ impl Aliases {
         let Self(aliases) = self;
         aliases.into_iter().map(|alias| alias.id).collect()
     }
+
+    pub fn contains(&self, actor_id: &str) -> bool {
+        let Self(aliases) = self;
+        aliases.iter().any(|alias| alias.id == actor_id)
+    }
 }
 
 json_from_sql!(Aliases);

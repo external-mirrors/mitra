@@ -11,6 +11,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Added `load-portable-object` command.
 - Perform proof verification if fetched object is portable.
 - Added `pleroma.emoji_reactions` list to `Status` entity.
+- Added `/api/v1/settings/move_followers` API endpoint (replaces deprecated one).
 
 ### Changed
 

@@ -25,3 +25,8 @@ pub struct ImportFollowersRequest {
     pub from_actor_id: String,
     pub followers_csv: String,
 }
+
+#[derive(Deserialize)]
+pub struct MoveFollowersRequest {
+    pub target_acct: String,
+}

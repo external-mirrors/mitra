@@ -40,16 +40,19 @@ struct MovePerson {
 fn build_move_person(
     instance_url: &str,
     sender: &User,
-    from_actor_id: &str,
+    linked_actor_id: &str,
+    pull_mode: bool,
 ) -> MovePerson {
     // Move(Person) is idempotent so its ID can be random
     let internal_activity_id = generate_ulid();
     let activity_id = local_object_id(instance_url, &internal_activity_id);
     let actor_id = local_actor_id(instance_url, &sender.profile.username);
     let followers = LocalActorCollection::Followers.of(&actor_id);
-    // pull mode: actor == target
-    let object_id = from_actor_id.to_string();
-    let target_id = actor_id.clone();
+    let (object_id, target_id) = if pull_mode {
+        (linked_actor_id.to_string(), actor_id.clone())
+    } else {
+        (actor_id.clone(), linked_actor_id.to_string())
+    };
     MovePerson {
         context: build_default_context(),
         activity_type: MOVE.to_string(),
@@ -65,13 +68,15 @@ fn build_move_person(
 pub fn prepare_move_person(
     instance: &Instance,
     sender: &User,
-    from_actor_id: &str,
+    linked_actor_id: &str,
+    pull_mode: bool,
     followers: Vec<DbActor>,
 ) -> OutgoingActivityJobData {
     let activity = build_move_person(
         &instance.url(),
         sender,
-        from_actor_id,
+        linked_actor_id,
+        pull_mode,
     );
     OutgoingActivityJobData::new(
         sender,
@@ -101,6 +106,7 @@ mod tests {
             INSTANCE_URL,
             &sender,
             from_actor_id,
+            true,
         );
 
         assert_eq!(activity.activity_type, "Move");

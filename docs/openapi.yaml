@@ -1217,6 +1217,29 @@ paths:
                 $ref: '#/components/schemas/CredentialAccount'
         400:
           description: Invalid data.
+  /api/v1/settings/move_followers:
+    post:
+      summary: Move followers to remote alias.
+      security:
+        - tokenAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                target_acct:
+                  description: The address of the account where followers will be moved.
+                  type: string
+      responses:
+        200:
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CredentialAccount'
+        400:
+          description: Invalid data.
   /api/v1/settings/delete_account:
     post:
       summary: Delete account.

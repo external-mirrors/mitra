@@ -11,6 +11,8 @@ use actix_web_httpauth::extractors::bearer::BearerAuth;
 use mitra_activitypub::{
     builders::{
         delete_person::prepare_delete_person,
+        follow::follow_or_create_request,
+        move_person::prepare_move_person,
         update_person::prepare_update_person,
     },
     identifiers::profile_actor_id,
@@ -22,6 +24,7 @@ use mitra_models::{
         DatabaseConnectionPool,
         DatabaseError,
     },
+    notifications::helpers::create_move_notification,
     profiles::helpers::find_verified_aliases,
     profiles::queries::{
         delete_profile,
@@ -30,7 +33,9 @@ use mitra_models::{
         update_profile,
     },
     profiles::types::ProfileUpdateData,
+    relationships::queries::{get_followers, unfollow},
     users::queries::{
+        get_user_by_id,
         set_user_password,
         update_client_config,
     },
@@ -61,6 +66,7 @@ use super::types::{
     AddAliasRequest,
     ImportFollowersRequest,
     ImportFollowsRequest,
+    MoveFollowersRequest,
     PasswordChangeRequest,
     RemoveAliasRequest,
 };
@@ -320,6 +326,66 @@ async fn import_followers_view(
     Ok(HttpResponse::Ok().json(account))
 }
 
+#[post("/move_followers")]
+async fn move_followers_view(
+    auth: BearerAuth,
+    connection_info: ConnectionInfo,
+    config: web::Data<Config>,
+    db_pool: web::Data<DatabaseConnectionPool>,
+    request_data: web::Json<MoveFollowersRequest>,
+) -> Result<HttpResponse, MastodonError> {
+    let db_client = &mut **get_database_client(&db_pool).await?;
+    let instance = config.instance();
+    let current_user = get_current_user(db_client, auth.token()).await?;
+    let current_actor_id = profile_actor_id(
+        &instance.url(),
+        &current_user.profile,
+    );
+    let target = get_profile_by_acct(db_client, &request_data.target_acct).await?;
+    if !target.aliases.contains(&current_actor_id) {
+        return Err(ValidationError("target is not an alias").into());
+    };
+    if target.is_local() {
+        return Err(ValidationError("can't move followers to a local actor").into());
+    };
+    let followers = get_followers(db_client, &current_user.id).await?;
+    let mut remote_followers = vec![];
+    for follower in followers {
+        if let Some(remote_actor) = follower.actor_json {
+            remote_followers.push(remote_actor);
+            continue;
+        };
+        let follower = get_user_by_id(db_client, &follower.id).await?;
+        unfollow(db_client, &follower.id, &current_user.id).await?;
+        follow_or_create_request(
+            db_client,
+            &instance,
+            &follower,
+            &target,
+        ).await?;
+        create_move_notification(
+            db_client,
+            target.id,
+            follower.id,
+        ).await?;
+    };
+    let target_actor_id = profile_actor_id(&instance.url(), &target);
+    prepare_move_person(
+        &instance,
+        &current_user,
+        &target_actor_id,
+        false, // push mode
+        remote_followers,
+    ).enqueue(db_client).await?;
+
+    let account = Account::from_user(
+        &get_request_base_url(connection_info),
+        &instance.url(),
+        current_user,
+    );
+    Ok(HttpResponse::Ok().json(account))
+}
+
 #[post("/delete_account")]
 async fn delete_account(
     auth: BearerAuth,
@@ -349,5 +415,6 @@ pub fn settings_api_scope() -> Scope {
         .service(export_follows_view)
         .service(import_follows_view)
         .service(import_followers_view)
+        .service(move_followers_view)
         .service(delete_account)
 }
