@@ -167,7 +167,7 @@ pub async fn import_follows_task(
     Ok(())
 }
 
-pub async fn move_followers_task(
+pub async fn import_followers_task(
     config: &Config,
     db_client: &mut impl DatabaseClient,
     user_id: Uuid,

@@ -6,11 +6,6 @@ pub struct PasswordChangeRequest {
 }
 
 #[derive(Deserialize)]
-pub struct ImportFollowsRequest {
-    pub follows_csv: String,
-}
-
-#[derive(Deserialize)]
 pub struct AddAliasRequest {
     pub acct: String,
 }
@@ -21,7 +16,12 @@ pub struct RemoveAliasRequest {
 }
 
 #[derive(Deserialize)]
-pub struct MoveFollowersRequest {
+pub struct ImportFollowsRequest {
+    pub follows_csv: String,
+}
+
+#[derive(Deserialize)]
+pub struct ImportFollowersRequest {
     pub from_actor_id: String,
     pub followers_csv: String,
 }

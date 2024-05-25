@@ -58,8 +58,8 @@ use super::helpers::{
 };
 use super::types::{
     AddAliasRequest,
+    ImportFollowersRequest,
     ImportFollowsRequest,
-    MoveFollowersRequest,
     PasswordChangeRequest,
     RemoveAliasRequest,
 };
@@ -262,7 +262,7 @@ async fn import_followers_view(
     connection_info: ConnectionInfo,
     config: web::Data<Config>,
     db_pool: web::Data<DatabaseConnectionPool>,
-    request_data: web::Json<MoveFollowersRequest>,
+    request_data: web::Json<ImportFollowersRequest>,
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &mut **get_database_client(&db_pool).await?;
     let current_user = get_current_user(db_client, auth.token()).await?;

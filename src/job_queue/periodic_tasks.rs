@@ -29,8 +29,8 @@ use mitra_services::ethereum::contracts::EthereumBlockchain;
 use mitra_utils::datetime::days_before_now;
 
 use crate::mastodon_api::settings::helpers::{
+    import_followers_task,
     import_follows_task,
-    move_followers_task,
     ImporterJobData,
 };
 use crate::payments::{
@@ -222,7 +222,7 @@ pub async fn importer_queue_executor(
                 ).await?;
             },
             ImporterJobData::Followers { user_id, from_actor_id, address_list } => {
-                move_followers_task(
+                import_followers_task(
                     config,
                     db_client,
                     user_id,
