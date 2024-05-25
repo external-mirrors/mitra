@@ -20,6 +20,9 @@ pub enum AuthenticationError {
     #[error("{0}")]
     InvalidObjectID(&'static str),
 
+    #[error("object is not portable")]
+    NotPortable,
+
     #[error("invalid verification method")]
     InvalidVerificationMethod,
 
@@ -33,7 +36,7 @@ pub enum AuthenticationError {
     JsonSignatureError(#[from] JsonSignatureError),
 }
 
-pub fn verify_object(
+pub fn verify_portable_object(
     object: &JsonValue,
 ) -> Result<(), AuthenticationError> {
     let object_id = object["id"].as_str()
@@ -42,7 +45,7 @@ pub fn verify_object(
         .map_err(|error| AuthenticationError::InvalidObjectID(error.0))?;
     let canonical_object_id = match canonical_object_id {
         // Only portable objects must have an integrity proof
-        Url::Http(_) => return Ok(()),
+        Url::Http(_) => return Err(AuthenticationError::NotPortable),
         Url::Ap(ap_url) => ap_url,
     };
     log::info!("canonical object ID: {}", canonical_object_id);
@@ -73,4 +76,59 @@ pub fn verify_object(
         _ => return Err(AuthenticationError::InvalidVerificationMethod),
     };
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use serde_json::json;
+    use super::*;
+
+    #[test]
+    fn test_verify_portable_object() {
+        let object = json!({
+            "@context": [
+                "https://www.w3.org/ns/activitystreams",
+                "https://w3id.org/security/data-integrity/v1",
+            ],
+            "type": "Note",
+            "attributedTo": "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor",
+            "id": "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/testobject",
+            "content": "test",
+            "proof": {
+                "type": "DataIntegrityProof",
+                "cryptosuite": "eddsa-jcs-2022",
+                "created": "2023-02-24T23:36:38Z",
+                "verificationMethod": "did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6",
+                "proofPurpose": "assertionMethod",
+                "proofValue": "z5kjVLvxaFQ4WpdCcM1RbkGqruFUTtYgX89XynSQjH4DYEVUWQhCVKLMRuTByYWqQS8SmxSJKeiBh9f2Y84pbfemn",
+            },
+        });
+        let result = verify_portable_object(&object);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_verify_portable_object_not_portable() {
+        let object = json!({
+            "@context": [
+                "https://www.w3.org/ns/activitystreams",
+                "https://w3id.org/security/data-integrity/v1",
+            ],
+            "type": "Note",
+            "attributedTo": "https://social.example/actor",
+            "id": "https://social.example/testobject",
+            "content": "test",
+            "proof": {
+                "type": "DataIntegrityProof",
+                "cryptosuite": "eddsa-jcs-2022",
+                "created": "2023-02-24T23:36:38Z",
+                "verificationMethod": "did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6",
+                "proofPurpose": "assertionMethod",
+                "proofValue": "z2h4dRMiJ81tjdgBGAYw2EzASUWVMcEXBfod2T9mg2YMYCHAP4ehHjdT6nPAFJbpugAkG4bN7xcN8BvyVSxk4f79U",
+            },
+        });
+        let result = verify_portable_object(&object);
+        assert!(result.is_err());
+        assert_eq!(result.err().unwrap().to_string(), "object is not portable");
+    }
 }

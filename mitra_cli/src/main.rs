@@ -53,6 +53,7 @@ async fn main() {
                 SubCommand::ReadOutbox(cmd) => cmd.execute(&config, db_client).await.unwrap(),
                 SubCommand::FetchReplies(cmd) => cmd.execute(&config, db_client).await.unwrap(),
                 SubCommand::FetchObject(cmd) => cmd.execute(&config, db_client).await.unwrap(),
+                SubCommand::LoadPortableObject(cmd) => cmd.execute(&config, db_client).await.unwrap(),
                 SubCommand::DeleteProfile(cmd) => cmd.execute(&config, db_client).await.unwrap(),
                 SubCommand::DeletePost(cmd) => cmd.execute(&config, db_client).await.unwrap(),
                 SubCommand::DeleteEmoji(cmd) => cmd.execute(&config, db_client).await.unwrap(),

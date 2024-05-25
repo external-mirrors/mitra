@@ -41,7 +41,7 @@ use crate::{
         types::Actor,
     },
     agent::build_federation_agent,
-    authentication::verify_object,
+    authentication::{verify_portable_object, AuthenticationError},
     errors::HandlerError,
     handlers::{
         activity::handle_activity,
@@ -82,15 +82,18 @@ pub async fn fetch_any_object<T: DeserializeOwned>(
 ) -> Result<T, HandlerError> {
     let maybe_gateway = context.gateways.first()
         .map(|gateway| gateway.as_str());
-    // TODO: remove Url::to_http_url
+    // TODO: FEP-EF61: remove Url::to_http_url
     let http_url = object_id
         .to_http_url(maybe_gateway)
         .ok_or(FetchError::NoGateway)?;
     let object_json: JsonValue = fetch_object(agent, &http_url).await?;
-    // TODO: improve error reporting
-    verify_object(&object_json)
-        .map_err(|_| ValidationError("authentication error"))?;
-    // TODO: improve error reporting
+    match verify_portable_object(&object_json) {
+        Ok(_) => (),
+        Err(AuthenticationError::NotPortable) => (), // skip proof verification
+        // TODO: FEP-EF61: improve error reporting
+        Err(_) => return Err(ValidationError("authentication error").into()),
+    };
+    // TODO: FEP-EF61 improve error reporting
     let object: T = serde_json::from_value(object_json)
         .map_err(|_| ValidationError("object deserialization error"))?;
     Ok(object)

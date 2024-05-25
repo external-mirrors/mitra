@@ -1,3 +1,4 @@
+use std::path::PathBuf;
 use std::str::FromStr;
 
 use anyhow::{anyhow, Error};
@@ -11,6 +12,7 @@ use mitra::payments::monero::{
 };
 use mitra_activitypub::{
     agent::build_federation_agent,
+    authentication::verify_portable_object,
     builders::{
         delete_note::prepare_delete_note,
         delete_person::prepare_delete_person,
@@ -145,6 +147,7 @@ pub enum SubCommand {
     ReadOutbox(ReadOutbox),
     FetchReplies(FetchReplies),
     FetchObject(FetchObject),
+    LoadPortableObject(LoadPortableObject),
     DeleteProfile(DeleteProfile),
     DeletePost(DeletePost),
     DeleteEmoji(DeleteEmoji),
@@ -511,6 +514,25 @@ impl FetchObject {
             &canonical_object_id,
         ).await?;
         println!("{}", object);
+        Ok(())
+    }
+}
+
+#[derive(Parser)]
+pub struct LoadPortableObject {
+    path: PathBuf,
+}
+
+impl LoadPortableObject {
+    pub async fn execute(
+        &self,
+        _config: &Config,
+        _db_client: &impl DatabaseClient,
+    ) -> Result<(), Error> {
+        let file_data = std::fs::read(&self.path)?;
+        let object_json: JsonValue = serde_json::from_slice(&file_data)?;
+        verify_portable_object(&object_json)?;
+        println!("portable object is valid");
         Ok(())
     }
 }
