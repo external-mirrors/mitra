@@ -33,12 +33,17 @@ pub struct ApiNotification {
     pub id: String,
 
     #[serde(rename = "type")]
-    pub event_type: String,
+    event_type: String,
 
-    pub account: Account,
-    pub status: Option<Status>,
-    pub reaction: Option<EmojiReaction>,
-    pub created_at: DateTime<Utc>,
+    account: Account,
+    status: Option<Status>,
+
+    reaction: Option<EmojiReaction>,
+    // Pleroma compatibility
+    emoji: Option<String>,
+    emoji_url: Option<String>,
+
+    created_at: DateTime<Utc>,
 }
 
 impl ApiNotification {
@@ -80,12 +85,19 @@ impl ApiNotification {
         } else {
             None
         };
+        let maybe_emoji_content = maybe_reaction.as_ref()
+            .map(|reaction| reaction.content.clone());
+        let maybe_emoji_url = maybe_reaction.as_ref().and_then(|reaction| {
+            reaction.emoji.as_ref().map(|emoji| emoji.url.clone())
+        });
         Self {
             id: notification.id.to_string(),
             event_type: event_type_mastodon.to_string(),
             account,
             status,
             reaction: maybe_reaction,
+            emoji: maybe_emoji_content,
+            emoji_url: maybe_emoji_url,
             created_at: notification.created_at,
         }
     }

@@ -7,7 +7,7 @@ use mitra_services::media::get_file_url;
 #[derive(Serialize)]
 pub struct CustomEmoji {
     shortcode: String,
-    url: String,
+    pub url: String,
     static_url: String,
     visible_in_picker: bool,
 }

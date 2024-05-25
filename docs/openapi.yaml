@@ -2512,14 +2512,34 @@ components:
             - move
             - admin.sign_up
           example: reply
+        account:
+          $ref: '#/components/schemas/Account'
+        status:
+          $ref: '#/components/schemas/Status'
+        reaction:
+          description: Emoji reaction.
+          type: object
+          nullable: true
+          properties:
+            content:
+              description: Content of emoji reaction.
+              type: string
+            emoji:
+              allOf:
+                - $ref: '#/components/schemas/CustomEmoji'
+                - nullable: true
+        emoji:
+          description: The name of emoji used in emoji reaction.
+          type: string
+          nullable: true
+        emoji_url:
+          description: A link to the custom emoji.
+          type: string
+          nullable: true
         created_at:
           description: The timestamp of the notification.
           type: string
           format: date-time
-        account:
-          $ref: '#/components/schemas/Account'
-        status:
-          $ref: '#/components/schemas/Account'
     Relationship:
       type: object
       properties:
