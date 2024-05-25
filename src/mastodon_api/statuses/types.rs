@@ -56,6 +56,21 @@ impl Tag {
     }
 }
 
+#[derive(Serialize)]
+struct PleromaEmojiReaction {
+    account_ids: Vec<Uuid>,
+    count: i32,
+    me: bool,
+    name: String,
+    url: Option<String>,
+}
+
+/// https://docs-develop.pleroma.social/backend/development/API/differences_in_mastoapi_responses/#statuses
+#[derive(Serialize)]
+struct PleromaData {
+    emoji_reactions: Vec<PleromaEmojiReaction>,
+}
+
 /// https://docs.joinmastodon.org/entities/status/
 #[derive(Serialize)]
 pub struct Status {
@@ -84,6 +99,9 @@ pub struct Status {
     // Authorized user attributes
     pub favourited: bool,
     pub reblogged: bool,
+
+    // Pleroma API
+    pleroma: PleromaData,
 
     // Extra fields
     pub ipfs_cid: Option<String>,
@@ -129,6 +147,20 @@ impl Status {
             Visibility::Followers => "private",
             Visibility::Subscribers => "subscribers",
         };
+        let emoji_reactions = post.emoji_reactions.into_iter().map(|reaction| {
+            let maybe_custom_emoji = reaction.emoji
+                .map(|emoji| CustomEmoji::from_db(base_url, emoji));
+            PleromaEmojiReaction {
+                account_ids: reaction.authors,
+                count: reaction.count,
+                me: false,
+                // Emoji name or emoji symbol
+                name: maybe_custom_emoji.as_ref()
+                    .map(|emoji| emoji.shortcode.clone())
+                    .unwrap_or(reaction.content),
+                url: maybe_custom_emoji.map(|emoji| emoji.url),
+            }
+        }).collect();
         Self {
             id: post.id,
             uri: object_id,
@@ -153,6 +185,7 @@ impl Status {
             emojis: emojis,
             favourited: post.actions.as_ref().map_or(false, |actions| actions.favourited),
             reblogged: post.actions.as_ref().map_or(false, |actions| actions.reposted),
+            pleroma: PleromaData { emoji_reactions },
             ipfs_cid: post.ipfs_cid,
             links: links,
         }

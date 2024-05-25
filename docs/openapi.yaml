@@ -2725,6 +2725,34 @@ components:
           type: array
           items:
             type: object
+        pleroma:
+          description: Additional Pleroma API attributes.
+          type: object
+          properties:
+            emoji_reactions:
+              description: The list of emoji reactions.
+              type: array
+              items:
+                description: Emoji reaction.
+                type: object
+                properties:
+                  account_ids:
+                    description: The list of accounts who sent this reaction.
+                    type: array
+                    items:
+                      type: string
+                      format: uuid
+                  count:
+                    description: The total number of reactions of this type.
+                    type: number
+                  name:
+                    description: The emoji name.
+                    type: string
+                  url:
+                    description: A link to the custom emoji.
+                    type: string
+                    nullable: true
+              example: []
     Subscription:
       type: object
       properties:

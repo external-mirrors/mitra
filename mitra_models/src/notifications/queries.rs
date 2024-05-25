@@ -5,6 +5,7 @@ use crate::posts::{
     helpers::{add_related_posts, add_user_actions},
     queries::{
         RELATED_ATTACHMENTS,
+        RELATED_EMOJI_REACTIONS,
         RELATED_EMOJIS,
         RELATED_LINKS,
         RELATED_MENTIONS,
@@ -63,6 +64,7 @@ pub async fn get_notifications(
             {related_tags},
             {related_links},
             {related_emojis},
+            {related_emoji_reactions},
             post_reaction.content AS reaction_content,
             emoji AS reaction_emoji
         FROM notification
@@ -94,6 +96,7 @@ pub async fn get_notifications(
         related_tags=RELATED_TAGS,
         related_links=RELATED_LINKS,
         related_emojis=RELATED_EMOJIS,
+        related_emoji_reactions=RELATED_EMOJI_REACTIONS,
         relationship_mute=i16::from(&RelationshipType::Mute),
     );
     let rows = db_client.query(

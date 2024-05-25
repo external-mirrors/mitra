@@ -1,11 +1,13 @@
 use chrono::{DateTime, Utc};
 use postgres_types::FromSql;
+use serde::Deserialize;
 use tokio_postgres::Row;
 use uuid::Uuid;
 
 use crate::attachments::types::DbMediaAttachment;
 use crate::database::{
     int_enum::{int_enum_from_sql, int_enum_to_sql},
+    json_macro::json_from_sql,
     DatabaseError,
     DatabaseTypeError,
 };
@@ -76,6 +78,16 @@ pub struct DbPost {
     pub updated_at: Option<DateTime<Utc>>, // edited at
 }
 
+#[derive(Clone, Deserialize)]
+pub struct DbEmojiReactions {
+    pub authors: Vec<Uuid>,
+    pub count: i32,
+    pub content: String, // should not be null for emoji reactions
+    pub emoji: Option<DbEmoji>,
+}
+
+json_from_sql!(DbEmojiReactions);
+
 // List of user's actions
 #[derive(Clone)]
 pub struct PostActions {
@@ -102,6 +114,7 @@ pub struct Post {
     pub tags: Vec<String>,
     pub links: Vec<Uuid>,
     pub emojis: Vec<DbEmoji>,
+    pub emoji_reactions: Vec<DbEmojiReactions>,
     pub object_id: Option<String>,
     pub ipfs_cid: Option<String>,
     pub created_at: DateTime<Utc>,
@@ -116,6 +129,7 @@ pub struct Post {
 }
 
 impl Post {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         db_post: DbPost,
         db_author: DbActorProfile,
@@ -124,6 +138,7 @@ impl Post {
         db_tags: Vec<String>,
         db_links: Vec<Uuid>,
         db_emojis: Vec<DbEmoji>,
+        db_emoji_reactions: Vec<DbEmojiReactions>,
     ) -> Result<Self, DatabaseTypeError> {
         // Consistency checks
         if db_post.author_id != db_author.id {
@@ -145,7 +160,8 @@ impl Post {
             !db_mentions.is_empty() ||
             !db_tags.is_empty() ||
             !db_links.is_empty() ||
-            !db_emojis.is_empty()
+            !db_emojis.is_empty() ||
+            !db_emoji_reactions.is_empty()
         ) {
             return Err(DatabaseTypeError);
         };
@@ -167,6 +183,7 @@ impl Post {
             tags: db_tags,
             links: db_links,
             emojis: db_emojis,
+            emoji_reactions: db_emoji_reactions,
             object_id: db_post.object_id,
             ipfs_cid: db_post.ipfs_cid,
             created_at: db_post.created_at,
@@ -209,6 +226,7 @@ impl Default for Post {
             tags: vec![],
             links: vec![],
             emojis: vec![],
+            emoji_reactions: vec![],
             object_id: None,
             ipfs_cid: None,
             created_at: Utc::now(),
@@ -233,6 +251,7 @@ impl TryFrom<&Row> for Post {
         let db_tags: Vec<String> = row.try_get("tags")?;
         let db_links: Vec<Uuid> = row.try_get("links")?;
         let db_emojis: Vec<DbEmoji> = row.try_get("emojis")?;
+        let db_emoji_reactions: Vec<DbEmojiReactions> = row.try_get("emoji_reactions")?;
         let post = Self::new(
             db_post,
             db_profile,
@@ -241,6 +260,7 @@ impl TryFrom<&Row> for Post {
             db_tags,
             db_links,
             db_emojis,
+            db_emoji_reactions,
         )?;
         Ok(post)
     }

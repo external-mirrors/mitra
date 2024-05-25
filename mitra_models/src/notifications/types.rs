@@ -10,7 +10,7 @@ use crate::database::{
     DatabaseTypeError,
 };
 use crate::emojis::types::DbEmoji;
-use crate::posts::types::{DbPost, Post};
+use crate::posts::types::{DbEmojiReactions, DbPost, Post};
 use crate::profiles::types::DbActorProfile;
 
 #[derive(Debug, PartialEq)]
@@ -110,6 +110,7 @@ impl TryFrom<&Row> for Notification {
                 let db_tags: Vec<String> = row.try_get("tags")?;
                 let db_links: Vec<Uuid> = row.try_get("links")?;
                 let db_emojis: Vec<DbEmoji> = row.try_get("emojis")?;
+                let db_emoji_reactions: Vec<DbEmojiReactions> = row.try_get("emoji_reactions")?;
                 let post = Post::new(
                     db_post,
                     db_post_author,
@@ -118,6 +119,7 @@ impl TryFrom<&Row> for Notification {
                     db_tags,
                     db_links,
                     db_emojis,
+                    db_emoji_reactions,
                 )?;
                 Some(post)
             },

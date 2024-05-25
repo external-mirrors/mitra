@@ -6,7 +6,7 @@ use mitra_services::media::get_file_url;
 /// https://docs.joinmastodon.org/entities/CustomEmoji/
 #[derive(Serialize)]
 pub struct CustomEmoji {
-    shortcode: String,
+    pub shortcode: String,
     pub url: String,
     static_url: String,
     visible_in_picker: bool,
