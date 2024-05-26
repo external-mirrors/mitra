@@ -20,6 +20,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Ensure compatible 'ap' URLs are not saved to database.
 - Reject HTTP signature if key ID doesn't match one indicated by `publicKey` property.
 - Add `emoji` and `emoji_url` fields to `Notification` entity for compatibility with Pleroma.
+- Address `Move` activity to `Public` and followers collection instead of individual actors.
 
 ### Fixed
 

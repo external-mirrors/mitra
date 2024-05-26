@@ -21,6 +21,7 @@ It also supports the following standards:
 - [FEP-c390: Identity Proofs](https://codeberg.org/silverpill/feps/src/branch/main/c390/fep-c390.md)
 - [FEP-0837: Federated Marketplace](https://codeberg.org/silverpill/feps/src/branch/main/0837/fep-0837.md)
 - [FEP-03c1: Actors without acct-URI](https://codeberg.org/fediverse/fep/src/branch/main/fep/03c1/fep-03c1.md)
+- [FEP-7628: Move actor](https://codeberg.org/fediverse/fep/src/branch/main/fep/7628/fep-7628.md)
 
 ## ActivityPub
 
@@ -129,6 +130,8 @@ Supported proof types:
 - `MitraJcsEd25519Signature2022`: [Minisign](https://jedisct1.github.io/minisign/) (pre-hashed)
 
 ## Account migrations
+
+### FEP-7628 (pull mode)
 
 After registering an account its owner can upload the list of followers and start the migration process. The server then sends `Move` activity to each follower:
 
