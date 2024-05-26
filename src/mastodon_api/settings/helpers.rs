@@ -253,7 +253,6 @@ pub async fn import_followers_task(
         &user,
         &from_actor_id,
         remote_followers,
-        None,
     ).enqueue(db_client).await?;
     Ok(())
 }

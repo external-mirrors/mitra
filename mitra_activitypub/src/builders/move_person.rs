@@ -1,5 +1,4 @@
 use serde::Serialize;
-use uuid::Uuid;
 
 use mitra_config::Instance;
 use mitra_models::{
@@ -16,7 +15,7 @@ use crate::{
 };
 
 #[derive(Serialize)]
-pub struct MovePerson {
+struct MovePerson {
     #[serde(rename = "@context")]
     context: Context,
 
@@ -31,15 +30,14 @@ pub struct MovePerson {
     to: Vec<String>,
 }
 
-pub fn build_move_person(
+fn build_move_person(
     instance_url: &str,
     sender: &User,
     from_actor_id: &str,
     followers: &[String],
-    maybe_internal_activity_id: Option<&Uuid>,
 ) -> MovePerson {
-    let internal_activity_id = maybe_internal_activity_id.copied()
-        .unwrap_or(generate_ulid());
+    // Move(Person) is idempotent so its ID can be random
+    let internal_activity_id = generate_ulid();
     let activity_id = local_object_id(instance_url, &internal_activity_id);
     let actor_id = local_actor_id(instance_url, &sender.profile.username);
     MovePerson {
@@ -58,7 +56,6 @@ pub fn prepare_move_person(
     sender: &User,
     from_actor_id: &str,
     followers: Vec<DbActor>,
-    maybe_internal_activity_id: Option<&Uuid>,
 ) -> OutgoingActivityJobData {
     let followers_ids: Vec<String> = followers.iter()
         .map(|actor| actor.id.clone())
@@ -68,7 +65,6 @@ pub fn prepare_move_person(
         sender,
         from_actor_id,
         &followers_ids,
-        maybe_internal_activity_id,
     );
     OutgoingActivityJobData::new(
         sender,
@@ -79,7 +75,6 @@ pub fn prepare_move_person(
 
 #[cfg(test)]
 mod tests {
-    use mitra_utils::id::generate_ulid;
     use mitra_models::profiles::types::DbActorProfile;
     use super::*;
 
@@ -99,19 +94,13 @@ mod tests {
             "https://server1.org/users/1".to_string(),
             "https://server2.org/users/2".to_string(),
         ];
-        let internal_activity_id = generate_ulid();
         let activity = build_move_person(
             INSTANCE_URL,
             &sender,
             from_actor_id,
             &followers,
-            Some(&internal_activity_id),
         );
 
-        assert_eq!(
-            activity.id,
-            format!("{}/objects/{}", INSTANCE_URL, internal_activity_id),
-        );
         assert_eq!(activity.activity_type, "Move");
         assert_eq!(
             activity.actor,
