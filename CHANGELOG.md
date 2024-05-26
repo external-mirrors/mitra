@@ -22,6 +22,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Add `emoji` and `emoji_url` fields to `Notification` entity for compatibility with Pleroma.
 - Address `Move` activity to `Public` and followers collection instead of individual actors.
 
+### Removed
+
+- Removed `/api/v1/settings/move_followers` API endpoint.
+
 ### Fixed
 
 - Fix URL search when URL contains a DID.
