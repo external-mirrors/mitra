@@ -39,6 +39,7 @@ use mitra_models::{
 use mitra_utils::passwords::hash_password;
 use mitra_validators::{
     errors::ValidationError,
+    profiles::validate_aliases,
     users::validate_client_config_update,
 };
 
@@ -140,6 +141,7 @@ async fn add_alias_view(
     } else {
         return Err(ValidationError("alias already exists").into());
     };
+    validate_aliases(&profile_data.aliases)?;
     // Media cleanup is not needed
     let (updated_profile, _) = update_profile(
         db_client,

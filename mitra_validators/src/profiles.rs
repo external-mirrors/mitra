@@ -4,6 +4,7 @@ use mitra_models::profiles::types::{
     DbActor,
     DbActorKey,
     ExtraField,
+    IdentityProof,
     PaymentOption,
     ProfileCreateData,
     ProfileUpdateData,
@@ -101,6 +102,15 @@ fn validate_public_keys(
     Ok(())
 }
 
+pub fn validate_identity_proofs(
+    identity_proofs: &[IdentityProof],
+) -> Result<(), ValidationError> {
+    if identity_proofs.len() > 10 {
+        return Err(ValidationError("at most 10 identity proofs are allowed"));
+    };
+    Ok(())
+}
+
 fn validate_payment_options(
     payment_options: &[PaymentOption],
 ) -> Result<(), ValidationError> {
@@ -150,6 +160,15 @@ fn clean_extra_fields(
     Ok(cleaned_extra_fields)
 }
 
+pub fn validate_aliases(
+    identity_proofs: &[String],
+) -> Result<(), ValidationError> {
+    if identity_proofs.len() > 10 {
+        return Err(ValidationError("at most 10 aliases are allowed"));
+    };
+    Ok(())
+}
+
 pub fn validate_actor_data(
     actor: &DbActor,
 ) -> Result<(), ValidationError> {
@@ -195,11 +214,13 @@ pub fn clean_profile_create_data(
         profile_data.bio = Some(cleaned_bio);
     };
     validate_public_keys(&profile_data.public_keys)?;
+    validate_identity_proofs(&profile_data.identity_proofs)?;
     validate_payment_options(&profile_data.payment_options)?;
     profile_data.extra_fields = clean_extra_fields(
         &profile_data.extra_fields,
         is_remote,
     )?;
+    validate_aliases(&profile_data.aliases)?;
     if profile_data.emojis.len() > EMOJI_LIMIT {
         return Err(ValidationError("too many emojis"));
     };
@@ -224,11 +245,13 @@ pub fn clean_profile_update_data(
         profile_data.bio = Some(cleaned_bio);
     };
     validate_public_keys(&profile_data.public_keys)?;
+    validate_identity_proofs(&profile_data.identity_proofs)?;
     validate_payment_options(&profile_data.payment_options)?;
     profile_data.extra_fields = clean_extra_fields(
         &profile_data.extra_fields,
         is_remote,
     )?;
+    validate_aliases(&profile_data.aliases)?;
     if profile_data.emojis.len() > EMOJI_LIMIT {
         return Err(ValidationError("too many emojis"));
     };

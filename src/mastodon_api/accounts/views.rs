@@ -113,7 +113,7 @@ use mitra_utils::{
 };
 use mitra_validators::{
     errors::ValidationError,
-    profiles::clean_profile_update_data,
+    profiles::{clean_profile_update_data, validate_identity_proofs},
     users::validate_local_username,
 };
 
@@ -541,6 +541,7 @@ async fn create_identity_proof(
     );
     let mut profile_data = ProfileUpdateData::from(&current_user.profile);
     profile_data.add_identity_proof(proof);
+    validate_identity_proofs(&profile_data.identity_proofs)?;
     // Only identity proofs are updated, media cleanup is not needed
     let (updated_profile, _) = update_profile(
         db_client,
