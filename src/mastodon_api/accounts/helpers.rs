@@ -121,6 +121,7 @@ pub async fn get_aliases(
         })
         .collect();
     let declared = declared_db.iter()
+        // Without unknown and local actors
         .filter_map(|(_, maybe_profile)| {
             maybe_profile.as_ref().map(|profile| Account::from_profile(
                 base_url,

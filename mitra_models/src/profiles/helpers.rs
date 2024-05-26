@@ -37,6 +37,7 @@ pub async fn find_declared_aliases(
             &actor_id,
         ).await {
             Ok(profile) => Some(profile),
+            // Unknown or local actor
             Err(DatabaseError::NotFound(_)) => None,
             Err(other_error) => return Err(other_error),
         };

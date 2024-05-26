@@ -133,6 +133,9 @@ async fn add_alias_view(
     if alias.id == current_user.id {
         return Err(ValidationError("alias must differ from current account").into());
     };
+    if alias.is_local() {
+        return Err(ValidationError("alias must be on another server").into());
+    };
     let instance = config.instance();
     let alias_id = profile_actor_id(&instance.url(), &alias);
     let mut profile_data = ProfileUpdateData::from(&current_user.profile);

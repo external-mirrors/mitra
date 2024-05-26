@@ -23,6 +23,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Address `Move` activity to `Public` and followers collection instead of individual actors.
 - Do not allow more than 10 identity proofs.
 - Do not allow more than 10 aliases.
+- Do not allow adding local aliases.
 
 ### Removed
 
