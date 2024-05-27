@@ -82,7 +82,7 @@ An HTTP server will be needed to handle HTTPS requests. See examples of [Nginx](
 Create admin user when installation is finished:
 
 ```shell
-su mitra -c "mitractl create-user <username> <password> admin"
+su mitra -s $SHELL -c "mitractl create-user <username> <password> admin"
 ```
 
 ### Building from source
