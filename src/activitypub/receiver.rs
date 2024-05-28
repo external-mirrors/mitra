@@ -128,6 +128,7 @@ pub async fn receive_activity(
     };
 
     // JSON signature is optional
+    // (unless the activity is portable)
     match verify_signed_activity(
         config,
         db_client,
@@ -149,6 +150,13 @@ pub async fn receive_activity(
             };
             // Activity signature has higher priority
             signer = activity_signer;
+        },
+        Err(error @ (
+            AuthenticationError::PortableActivity |
+            AuthenticationError::InvalidPortableActivity(_)
+        )) => {
+            // TODO: FEP-EF61: portable activities are not supported
+            return Err(error.into());
         },
         Err(AuthenticationError::NoJsonSignature) => (), // ignore
         Err(other_error) => {

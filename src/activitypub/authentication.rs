@@ -2,6 +2,10 @@ use actix_web::HttpRequest;
 use serde_json::{Value as JsonValue};
 
 use mitra_activitypub::{
+    authentication::{
+        verify_portable_object,
+        AuthenticationError as PortableObjectAuthenticationError,
+    },
     errors::HandlerError,
     importers::ActorIdResolver,
 };
@@ -89,6 +93,12 @@ pub enum AuthenticationError {
 
     #[error("actor and request signer do not match")]
     UnexpectedSigner,
+
+    #[error("portable activities are not supported")]
+    PortableActivity,
+
+    #[error("invalid portable activity: {0}")]
+    InvalidPortableActivity(#[from] PortableObjectAuthenticationError),
 }
 
 async fn get_signer(
@@ -202,6 +212,17 @@ pub async fn verify_signed_activity(
     activity: &JsonValue,
     no_fetch: bool,
 ) -> Result<DbActorProfile, AuthenticationError> {
+    match verify_portable_object(activity) {
+        // Portable activities are not supported
+        // TODO: FEP-EF61: find cached profile by actor ID and return
+        Ok(_) => return Err(AuthenticationError::PortableActivity),
+        // Continue verification if activity is not portable
+        Err(PortableObjectAuthenticationError::NotPortable) => (),
+        Err(PortableObjectAuthenticationError::InvalidObjectID(message)) => {
+            return Err(AuthenticationError::ActorError(message));
+        },
+        Err(other_error) => return Err(other_error.into()),
+    };
     let signature_data = match get_json_signature(activity) {
         Ok(signature_data) => signature_data,
         Err(JsonSignatureError::NoProof) => {
