@@ -19,7 +19,7 @@ use crate::{
     queues::OutgoingActivityJobData,
     vocabulary::REMOVE,
 };
-use super::update_person::get_update_person_recipients;
+use super::add_note::get_add_note_recipients;
 
 #[derive(Serialize)]
 struct RemoveNote {
@@ -71,7 +71,7 @@ pub async fn prepare_remove_note(
         &sender.profile.username,
         post_id,
     );
-    let recipients = get_update_person_recipients(db_client, &sender.id).await?;
+    let recipients = get_add_note_recipients(db_client, sender.id).await?;
     Ok(OutgoingActivityJobData::new(
         sender,
         activity,

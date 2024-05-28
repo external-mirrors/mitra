@@ -1,11 +1,11 @@
 use serde::Serialize;
 use serde_json::{Value as JsonValue};
-use uuid::Uuid;
 
 use mitra_config::Instance;
 use mitra_federation::constants::AP_PUBLIC;
 use mitra_models::{
     database::{DatabaseClient, DatabaseError},
+    profiles::helpers::find_declared_aliases,
     profiles::types::DbActor,
     relationships::queries::get_followers,
     users::queries::get_user_by_name,
@@ -67,14 +67,23 @@ pub fn build_update_person(
     Ok(activity)
 }
 
-pub(super) async fn get_update_person_recipients(
+async fn get_update_person_recipients(
     db_client: &impl DatabaseClient,
-    user_id: &Uuid,
+    user: &User,
 ) -> Result<Vec<DbActor>, DatabaseError> {
-    let followers = get_followers(db_client, user_id).await?;
+    let followers = get_followers(db_client, &user.id).await?;
     let mut recipients = vec![];
     for profile in followers {
         if let Some(remote_actor) = profile.actor_json {
+            recipients.push(remote_actor);
+        };
+    };
+    // Remote aliases
+    let aliases = find_declared_aliases(db_client, &user.profile).await?;
+    for (_, maybe_profile) in aliases {
+        let maybe_remote_actor = maybe_profile
+            .and_then(|profile| profile.actor_json);
+        if let Some(remote_actor) = maybe_remote_actor {
             recipients.push(remote_actor);
         };
     };
@@ -90,7 +99,7 @@ pub async fn prepare_update_person(
         &instance.url(),
         user,
     )?;
-    let recipients = get_update_person_recipients(db_client, &user.id).await?;
+    let recipients = get_update_person_recipients(db_client, user).await?;
     Ok(OutgoingActivityJobData::new(
         user,
         activity,
@@ -141,7 +150,7 @@ pub async fn forward_update_person(
     activity: &JsonValue,
 ) -> Result<OutgoingActivityJobData, DatabaseError> {
     // TODO: parse to and cc fields
-    let recipients = get_update_person_recipients(db_client, &user.id).await?;
+    let recipients = get_update_person_recipients(db_client, user).await?;
     Ok(OutgoingActivityJobData::new(
         user,
         activity,

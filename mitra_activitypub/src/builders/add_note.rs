@@ -5,6 +5,8 @@ use mitra_config::Instance;
 use mitra_federation::constants::AP_PUBLIC;
 use mitra_models::{
     database::{DatabaseClient, DatabaseError},
+    profiles::types::DbActor,
+    relationships::queries::get_followers,
     users::types::User,
 };
 use mitra_utils::id::generate_ulid;
@@ -19,7 +21,6 @@ use crate::{
     queues::OutgoingActivityJobData,
     vocabulary::ADD,
 };
-use super::update_person::get_update_person_recipients;
 
 #[derive(Serialize)]
 struct AddNote {
@@ -60,6 +61,20 @@ fn build_add_note(
     }
 }
 
+pub(super) async fn get_add_note_recipients(
+    db_client: &impl DatabaseClient,
+    user_id: Uuid,
+) -> Result<Vec<DbActor>, DatabaseError> {
+    let followers = get_followers(db_client, &user_id).await?;
+    let mut recipients = vec![];
+    for profile in followers {
+        if let Some(remote_actor) = profile.actor_json {
+            recipients.push(remote_actor);
+        };
+    };
+    Ok(recipients)
+}
+
 pub async fn prepare_add_note(
     db_client: &impl DatabaseClient,
     instance: &Instance,
@@ -71,7 +86,7 @@ pub async fn prepare_add_note(
         &sender.profile.username,
         post_id,
     );
-    let recipients = get_update_person_recipients(db_client, &sender.id).await?;
+    let recipients = get_add_note_recipients(db_client, sender.id).await?;
     Ok(OutgoingActivityJobData::new(
         sender,
         activity,

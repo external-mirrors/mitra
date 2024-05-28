@@ -25,6 +25,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Do not allow more than 10 identity proofs.
 - Do not allow more than 10 aliases.
 - Do not allow adding local aliases.
+- Add declared aliases to recipient list of `Update(Person)` activity.
 
 ### Removed
 
