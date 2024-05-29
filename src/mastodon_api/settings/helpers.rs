@@ -157,6 +157,9 @@ pub async fn import_follows_task(
             },
             Err(other_error) => return Err(other_error.into()),
         };
+        if profile.id == user.id {
+            continue;
+        };
         follow_or_create_request(
             db_client,
             &config.instance(),
