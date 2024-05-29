@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [2.20.1] - 2024-05-29
+
 ### Fixed
 
 - Prevent self-following when importing follow list.
