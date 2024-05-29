@@ -15,6 +15,7 @@ use mitra_models::{
     },
     posts::types::PostCreateData,
     profiles::queries::get_profile_by_remote_actor_id,
+    reactions::queries::get_reaction_by_remote_activity_id,
 };
 use mitra_services::media::MediaStorage;
 use mitra_validators::{
@@ -141,6 +142,14 @@ async fn handle_fep_1b12_announce(
         .ok_or(ValidationError("unexpected activity structure"))?;
     let activity_type = activity["type"].as_str()
         .ok_or(ValidationError("unexpected activity structure"))?;
+    if activity_type == LIKE {
+        // Return early if reaction already exists (no need to fetch the activity)
+        match get_reaction_by_remote_activity_id(db_client, activity_id).await {
+            Ok(_) => return Ok(None),
+            Err(DatabaseError::NotFound(_)) => (),
+            Err(other_error) => return Err(other_error.into()),
+        };
+    };
     let instance = config.instance();
     let agent = build_federation_agent(&instance, None);
     let activity: JsonValue = if let DELETE | LIKE = activity_type {
