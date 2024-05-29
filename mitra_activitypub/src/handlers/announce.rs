@@ -143,6 +143,9 @@ async fn handle_fep_1b12_announce(
     let activity_type = activity["type"].as_str()
         .ok_or(ValidationError("unexpected activity structure"))?;
     if activity_type == LIKE {
+        if !config.federation.announce_like_enabled {
+            return Ok(None);
+        };
         // Return early if reaction already exists (no need to fetch the activity)
         match get_reaction_by_remote_activity_id(db_client, activity_id).await {
             Ok(_) => return Ok(None),
