@@ -24,7 +24,7 @@ pub enum DatabaseError {
     #[error("database query error")]
     DatabaseQueryError(#[from] postgres_query::Error),
 
-    #[error("database client error")]
+    #[error(transparent)]
     DatabaseClientError(#[from] tokio_postgres::Error),
 
     #[error(transparent)]
