@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Changed
 
 - Increased incoming activity queue batch size to 20.
+- Change type of emoji reaction notification to `pleroma:emoji_reaction`.
 
 ### Fixed
 

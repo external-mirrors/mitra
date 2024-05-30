@@ -65,7 +65,8 @@ impl ApiNotification {
             EventType::FollowRequest => "follow_request",
             EventType::Reply => "reply",
             EventType::Reaction if notification.reaction_content.is_none() => "favourite",
-            EventType::Reaction => "emoji_reaction",
+            // https://docs.pleroma.social/backend/development/API/differences_in_mastoapi_responses/#emojireact-notification
+            EventType::Reaction => "pleroma:emoji_reaction",
             EventType::Mention => "mention",
             EventType::Repost => "reblog",
             EventType::Subscription => "subscription",
