@@ -59,6 +59,6 @@ async fn create_app_view(
 }
 
 pub fn application_api_scope() -> Scope {
-    web::scope("/api/v1/apps")
+    web::scope("/v1/apps")
         .service(create_app_view)
 }

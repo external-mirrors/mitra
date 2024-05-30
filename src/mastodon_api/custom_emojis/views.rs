@@ -31,6 +31,6 @@ async fn custom_emoji_list(
 }
 
 pub fn custom_emoji_api_scope() -> Scope {
-    web::scope("/api/v1/custom_emojis")
+    web::scope("/v1/custom_emojis")
         .service(custom_emoji_list)
 }

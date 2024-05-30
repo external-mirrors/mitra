@@ -781,7 +781,7 @@ async fn make_permanent(
 }
 
 pub fn status_api_scope() -> Scope {
-    web::scope("/api/v1/statuses")
+    web::scope("/v1/statuses")
         // Routes without status ID
         .service(create_status)
         .service(preview_status)

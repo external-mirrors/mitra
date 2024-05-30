@@ -366,7 +366,7 @@ async fn cancel_invoice_view(
 }
 
 pub fn subscription_api_scope() -> Scope {
-    web::scope("/api/v1/subscriptions")
+    web::scope("/v1/subscriptions")
         .service(create_subscription_view)
         .service(authorize_subscription)
         .service(get_subscription_options)

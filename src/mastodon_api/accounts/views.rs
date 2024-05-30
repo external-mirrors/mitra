@@ -1068,7 +1068,7 @@ pub fn account_api_scope() -> Scope {
         web::get()
             .to(search_by_acct)
             .wrap(Governor::new(&ratelimit_config)));
-    web::scope("/api/v1/accounts")
+    web::scope("/v1/accounts")
         // Routes without account ID
         .service(create_account)
         .service(verify_credentials)

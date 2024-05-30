@@ -185,7 +185,7 @@ async fn hashtag_timeline(
 }
 
 pub fn timeline_api_scope() -> Scope {
-    web::scope("/api/v1/timelines")
+    web::scope("/v1/timelines")
         .service(home_timeline)
         .service(public_timeline)
         .service(direct_timeline)

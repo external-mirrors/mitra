@@ -53,7 +53,7 @@ async fn update_marker_view(
 }
 
 pub fn marker_api_scope() -> Scope {
-    web::scope("/api/v1/markers")
+    web::scope("/v1/markers")
         .service(get_marker_view)
         .service(update_marker_view)
 }

@@ -121,13 +121,13 @@ async fn update_attachment_view(
 }
 
 pub fn media_api_v1_scope() -> Scope {
-    web::scope("/api/v1/media")
+    web::scope("/v1/media")
         .route("", web::post().to(create_attachment_view))
         .route("/{attachment_id}", web::get().to(get_attachment_view))
         .route("/{attachment_id}", web::put().to(update_attachment_view))
 }
 
 pub fn media_api_v2_scope() -> Scope {
-    web::scope("/api/v2/media")
+    web::scope("/v2/media")
         .route("", web::post().to(create_attachment_view))
 }

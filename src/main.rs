@@ -24,21 +24,7 @@ use mitra::http::{
     multiquery_config,
 };
 use mitra::job_queue::scheduler;
-use mitra::mastodon_api::accounts::views::account_api_scope;
-use mitra::mastodon_api::apps::views::application_api_scope;
-use mitra::mastodon_api::custom_emojis::views::custom_emoji_api_scope;
-use mitra::mastodon_api::directory::views::directory_api_scope;
-use mitra::mastodon_api::follow_requests::views::follow_request_api_scope;
-use mitra::mastodon_api::instance::{views as instance_api};
-use mitra::mastodon_api::markers::views::marker_api_scope;
-use mitra::mastodon_api::media::{views as media_api};
-use mitra::mastodon_api::notifications::views::notification_api_scope;
-use mitra::mastodon_api::oauth::views::oauth_api_scope;
-use mitra::mastodon_api::search::views::search_api_scope;
-use mitra::mastodon_api::settings::views::settings_api_scope;
-use mitra::mastodon_api::statuses::views::status_api_scope;
-use mitra::mastodon_api::subscriptions::views::subscription_api_scope;
-use mitra::mastodon_api::timelines::views::timeline_api_scope;
+use mitra::mastodon_api::{mastodon_api_scope, oauth_api_scope};
 use mitra::nodeinfo::views as nodeinfo;
 use mitra::webfinger::views as webfinger;
 use mitra::web_client::views as web_client;
@@ -200,22 +186,7 @@ async fn main() -> std::io::Result<()> {
                 media_storage.media_dir.clone(),
             ))
             .service(oauth_api_scope())
-            .service(account_api_scope())
-            .service(application_api_scope())
-            .service(custom_emoji_api_scope())
-            .service(directory_api_scope())
-            .service(follow_request_api_scope())
-            .service(instance_api::instance_api_v1_scope())
-            .service(instance_api::instance_api_v2_scope())
-            .service(marker_api_scope())
-            .service(media_api::media_api_v1_scope())
-            .service(media_api::media_api_v2_scope())
-            .service(notification_api_scope())
-            .service(search_api_scope())
-            .service(settings_api_scope())
-            .service(status_api_scope())
-            .service(subscription_api_scope())
-            .service(timeline_api_scope())
+            .service(mastodon_api_scope())
             .service(webfinger::webfinger_view)
             .service(activitypub::actor_scope())
             .service(activitypub::instance_actor_scope())

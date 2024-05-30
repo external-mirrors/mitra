@@ -61,6 +61,6 @@ async fn get_notifications_view(
 }
 
 pub fn notification_api_scope() -> ActixScope {
-    web::scope("/api/v1/notifications")
+    web::scope("/v1/notifications")
         .service(get_notifications_view)
 }

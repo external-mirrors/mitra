@@ -409,7 +409,7 @@ async fn delete_account(
 }
 
 pub fn settings_api_scope() -> Scope {
-    web::scope("/api/v1/settings")
+    web::scope("/v1/settings")
         .service(client_config_view)
         .service(change_password_view)
         .service(add_alias_view)

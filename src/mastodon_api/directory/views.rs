@@ -52,6 +52,6 @@ async fn profile_directory(
 }
 
 pub fn directory_api_scope() -> Scope {
-    web::scope("/api/v1/directory")
+    web::scope("/v1/directory")
         .service(profile_directory)
 }

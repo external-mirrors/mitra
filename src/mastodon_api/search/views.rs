@@ -68,6 +68,6 @@ async fn search_view(
 }
 
 pub fn search_api_scope() -> Scope {
-    web::scope("/api/v2/search")
+    web::scope("/v2/search")
         .service(search_view)
 }

@@ -149,7 +149,7 @@ async fn reject_follow_request_view(
 }
 
 pub fn follow_request_api_scope() -> Scope {
-    web::scope("/api/v1/follow_requests")
+    web::scope("/v1/follow_requests")
         .service(follow_request_list)
         .service(accept_follow_request_view)
         .service(reject_follow_request_view)

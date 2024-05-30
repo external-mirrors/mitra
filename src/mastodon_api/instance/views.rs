@@ -67,7 +67,7 @@ async fn instance_peers_view(
 }
 
 pub fn instance_api_v1_scope() -> Scope {
-    web::scope("/api/v1/instance")
+    web::scope("/v1/instance")
         .service(instance_view)
         .service(instance_peers_view)
 }
@@ -98,6 +98,6 @@ async fn instance_v2_view(
 }
 
 pub fn instance_api_v2_scope() -> Scope {
-    web::scope("/api/v2/instance")
+    web::scope("/v2/instance")
         .service(instance_v2_view)
 }
