@@ -351,6 +351,9 @@ async fn move_followers_view(
     let followers = get_followers(db_client, &current_user.id).await?;
     let mut remote_followers = vec![];
     for follower in followers {
+        if follower.id == target.id {
+            continue;
+        };
         if let Some(remote_actor) = follower.actor_json {
             remote_followers.push(remote_actor);
             continue;
