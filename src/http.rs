@@ -7,23 +7,14 @@ use actix_governor::{
     PeerIpKeyExtractor,
 };
 use actix_web::{
-    body::{BodySize, BoxBody, MessageBody},
-    dev::{ConnectionInfo, ServiceResponse},
+    dev::ConnectionInfo,
     error::{Error, JsonPayloadError},
-    http::{
-        header as http_header,
-        StatusCode,
-    },
-    middleware::{
-        DefaultHeaders,
-        ErrorHandlerResponse,
-        ErrorHandlers,
-    },
+    http::{header as http_header},
+    middleware::DefaultHeaders,
     web::{Form, Json},
     Either,
     HttpRequest,
 };
-use serde_json::json;
 use serde_qs::{
     actix::{QsForm, QsQuery, QsQueryConfig},
     Config as QsConfig,
@@ -52,26 +43,6 @@ pub fn ratelimit_config(num_requests: u32, period: u64) -> RatelimitConfig {
         .burst_size(num_requests)
         .finish()
         .expect("governor parameters should be non-zero")
-}
-
-/// Error handler for 401 Unauthorized
-pub fn create_auth_error_handler<B: MessageBody + 'static>() -> ErrorHandlers<B> {
-    // Creates and returns actix middleware
-    ErrorHandlers::new()
-        .handler(StatusCode::UNAUTHORIZED, |response: ServiceResponse<B>| {
-            let response_new = response.map_body(|_, body| {
-                if let BodySize::None | BodySize::Sized(0) = body.size() {
-                    // Insert error description if response body is empty
-                    // https://github.com/actix/actix-extras/issues/156
-                    let error_data = json!({
-                        "message": "auth header is not present",
-                    });
-                    return BoxBody::new(error_data.to_string());
-                };
-                body.boxed()
-            });
-            Ok(ErrorHandlerResponse::Response(response_new.map_into_right_body()))
-        })
 }
 
 pub struct ContentSecurityPolicy {

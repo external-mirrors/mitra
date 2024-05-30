@@ -61,9 +61,18 @@ impl From<ValidationError> for MastodonError {
 
 /// https://docs.joinmastodon.org/entities/Error/
 #[derive(Serialize)]
-struct MastodonErrorData {
+pub struct MastodonErrorData {
     error: String,
     error_description: Option<String>,
+}
+
+impl MastodonErrorData {
+    pub fn new(message: &str) -> Self {
+        Self {
+            error: message.to_string(),
+            error_description: Some(message.to_string()),
+        }
+    }
 }
 
 impl ResponseError for MastodonError {

@@ -18,7 +18,6 @@ use actix_web::{
 use mitra::activitypub::views as activitypub;
 use mitra::atom::views::atom_scope;
 use mitra::http::{
-    create_auth_error_handler,
     create_default_headers_middleware,
     json_error_handler,
     multiquery_config,
@@ -170,7 +169,6 @@ async fn main() -> std::io::Result<()> {
                     Ok(response)
                 }
             })
-            .wrap(create_auth_error_handler())
             .wrap(create_default_headers_middleware())
             .app_data(web::PayloadConfig::default().limit(payload_size_limit))
             .app_data(web::JsonConfig::default()
