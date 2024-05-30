@@ -14,11 +14,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Increased incoming activity queue batch size to 20.
 - Change type of emoji reaction notification to `pleroma:emoji_reaction`.
+- Set limit on multipart form size.
 
 ### Fixed
 
 - Prevent self-follow when moving followers to another account.
 - Fixed incorrect response format when `Authorization` header is missing.
+- Fixed incorrect format of Mastodon API validation errors.
 
 ## [2.20.2] - 2024-05-29
 

@@ -1,6 +1,8 @@
+use actix_multipart::form::MultipartFormConfig;
 use actix_web::{
     body::{BodySize, BoxBody, EitherBody, MessageBody},
     dev::{ServiceFactory, ServiceRequest, ServiceResponse},
+    error::ResponseError,
     http::StatusCode,
     middleware::{
         ErrorHandlerResponse,
@@ -8,7 +10,12 @@ use actix_web::{
     },
     web,
     Error,
+    HttpRequest,
     Scope,
+};
+use serde_qs::{
+    actix::QsQueryConfig,
+    Config as QsConfig,
 };
 
 mod accounts;
@@ -35,8 +42,15 @@ mod uploads;
 
 const MASTODON_API_VERSION: &str = "4.0.0";
 
-use errors::MastodonErrorData;
+use errors::{MastodonError, MastodonErrorData};
 pub use oauth::views::oauth_api_scope;
+
+fn validation_error_handler(
+    error: impl ResponseError,
+    _: &HttpRequest,
+) -> Error {
+    MastodonError::ValidationError(error.to_string()).into()
+}
 
 /// Error handler for 401 Unauthorized
 fn create_auth_error_handler() -> ErrorHandlers<BoxBody> {
@@ -60,14 +74,39 @@ fn create_auth_error_handler() -> ErrorHandlers<BoxBody> {
         })
 }
 
-pub fn mastodon_api_scope() -> Scope<impl ServiceFactory<
+pub fn mastodon_api_scope(
+    payload_size_limit: usize,
+) -> Scope<impl ServiceFactory<
     ServiceRequest,
     Config = (),
     Response = ServiceResponse<EitherBody<BoxBody>>,
     Error = Error,
     InitError = (),
 >> {
+    let path_config = web::PathConfig::default()
+        .error_handler(validation_error_handler);
+    let query_config = web::QueryConfig::default()
+        .error_handler(validation_error_handler);
+    let json_config = web::JsonConfig::default()
+        .limit(payload_size_limit)
+        .error_handler(validation_error_handler);
+    let form_config = web::FormConfig::default()
+        .error_handler(validation_error_handler);
+    let multipart_form_config = MultipartFormConfig::default()
+        .total_limit(payload_size_limit)
+        .error_handler(validation_error_handler);
+    // Disable strict mode
+    let qs_config = QsConfig::new(2, false);
+    let multiquery_config = QsQueryConfig::default()
+        .qs_config(qs_config)
+        .error_handler(validation_error_handler);
     web::scope("/api")
+        .app_data(path_config)
+        .app_data(query_config)
+        .app_data(json_config)
+        .app_data(form_config)
+        .app_data(multipart_form_config)
+        .app_data(multiquery_config)
         .wrap(create_auth_error_handler())
         .service(accounts::views::account_api_scope())
         .service(apps::views::application_api_scope())

@@ -20,7 +20,6 @@ use mitra::atom::views::atom_scope;
 use mitra::http::{
     create_default_headers_middleware,
     json_error_handler,
-    multiquery_config,
 };
 use mitra::job_queue::scheduler;
 use mitra::mastodon_api::{mastodon_api_scope, oauth_api_scope};
@@ -175,7 +174,6 @@ async fn main() -> std::io::Result<()> {
                 .limit(payload_size_limit)
                 .error_handler(json_error_handler)
             )
-            .app_data(multiquery_config())
             .app_data(web::Data::new(config.clone()))
             .app_data(web::Data::new(db_pool.clone()))
             .app_data(web::Data::new(maybe_ethereum_contracts.clone()))
@@ -184,7 +182,7 @@ async fn main() -> std::io::Result<()> {
                 media_storage.media_dir.clone(),
             ))
             .service(oauth_api_scope())
-            .service(mastodon_api_scope())
+            .service(mastodon_api_scope(payload_size_limit))
             .service(webfinger::webfinger_view)
             .service(activitypub::actor_scope())
             .service(activitypub::instance_actor_scope())
