@@ -1074,15 +1074,22 @@ impl InstanceReport {
     ) -> Result<(), Error> {
         // General info
         let users = get_user_count(db_client).await?;
+        let posts = get_post_count(db_client, false).await?;
+        println!("local users: {users}");
+        println!("total posts: {posts}");
+        // Queues
         let incoming_activities =
             get_job_count(db_client, JobType::IncomingActivity).await?;
         let outgoing_activities =
             get_job_count(db_client, JobType::OutgoingActivity).await?;
-        let posts = get_post_count(db_client, false).await?;
-        println!("local users: {}", users);
-        println!("incoming activities: {}", incoming_activities);
-        println!("outgoing activities: {}", outgoing_activities);
-        println!("total posts: {}", posts);
+        let data_import_queue_size =
+            get_job_count(db_client, JobType::DataImport).await?;
+        let fetcher_queue_size =
+            get_job_count(db_client, JobType::Fetcher).await?;
+        println!("incoming activity queue: {incoming_activities}");
+        println!("outgoing activity queue: {outgoing_activities}");
+        println!("data import queue: {data_import_queue_size}");
+        println!("fetcher queue: {fetcher_queue_size}");
         // Subscriptions
         let active_subscriptions =
             get_active_subscription_count(db_client).await?;
