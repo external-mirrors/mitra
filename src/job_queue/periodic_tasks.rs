@@ -28,15 +28,15 @@ use mitra_models::{
 use mitra_services::ethereum::contracts::EthereumBlockchain;
 use mitra_utils::datetime::days_before_now;
 
-use crate::mastodon_api::settings::helpers::{
-    import_followers_task,
-    import_follows_task,
-    ImporterJobData,
-};
 use crate::payments::{
     common::update_expired_subscriptions,
     ethereum::check_ethereum_subscriptions,
     monero::{check_closed_invoices, check_monero_subscriptions},
+};
+use super::importer::{
+    import_followers_task,
+    import_follows_task,
+    ImporterJobData,
 };
 
 pub async fn ethereum_subscription_monitor(

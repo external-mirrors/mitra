@@ -49,6 +49,7 @@ use mitra_validators::{
 };
 
 use crate::http::get_request_base_url;
+use crate::job_queue::importer::ImporterJobData;
 use crate::mastodon_api::{
     accounts::helpers::get_aliases,
     accounts::types::Account,
@@ -60,7 +61,6 @@ use super::helpers::{
     export_followers,
     export_follows,
     parse_address_list,
-    ImporterJobData,
 };
 use super::types::{
     AddAliasRequest,

@@ -11,7 +11,7 @@ mod media;
 mod notifications;
 mod oauth;
 mod search;
-pub mod settings;
+mod settings;
 mod statuses;
 mod subscriptions;
 mod timelines;
