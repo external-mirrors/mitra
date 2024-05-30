@@ -73,7 +73,7 @@ impl IncomingActivityJobData {
     }
 }
 
-const INCOMING_QUEUE_BATCH_SIZE: u32 = 10;
+const INCOMING_QUEUE_BATCH_SIZE: u32 = 20;
 const INCOMING_QUEUE_RETRIES_MAX: u32 = 2;
 
 const fn incoming_queue_backoff(_failure_count: u32) -> u32 {

@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- Increased incoming activity queue batch size to 20.
+
 ### Fixed
 
 - Prevent self-follow when moving followers to another account.
