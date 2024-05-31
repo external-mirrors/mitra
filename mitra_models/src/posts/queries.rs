@@ -2020,30 +2020,51 @@ mod tests {
     #[serial]
     async fn test_get_thread() {
         let db_client = &mut create_test_database().await;
-        let user_data = UserCreateData {
-            username: "test".to_string(),
+        let user_data_1 = UserCreateData {
+            username: "test_1".to_string(),
             password_hash: Some("test".to_string()),
             ..Default::default()
         };
-        let user = create_user(db_client, user_data).await.unwrap();
+        let user_1 = create_user(db_client, user_data_1).await.unwrap();
+        let user_data_2 = UserCreateData {
+            username: "test_2".to_string(),
+            password_hash: Some("test".to_string()),
+            ..Default::default()
+        };
+        let user_2 = create_user(db_client, user_data_2).await.unwrap();
         let post_data_1 = PostCreateData {
             content: "my post".to_string(),
             ..Default::default()
         };
-        let post_1 = create_post(db_client, &user.id, post_data_1).await.unwrap();
+        let post_1 = create_post(db_client, &user_1.id, post_data_1).await.unwrap();
         let post_data_2 = PostCreateData {
-            content: "my reply".to_string(),
+            content: "reply".to_string(),
             in_reply_to_id: Some(post_1.id.clone()),
             ..Default::default()
         };
-        let post_2 = create_post(db_client, &user.id, post_data_2).await.unwrap();
+        let post_2 = create_post(db_client, &user_2.id, post_data_2).await.unwrap();
+        let post_data_3 = PostCreateData {
+            content: "hidden reply".to_string(),
+            in_reply_to_id: Some(post_1.id.clone()),
+            visibility: Visibility::Direct,
+            ..Default::default()
+        };
+        let post_3 = create_post(db_client, &user_2.id, post_data_3).await.unwrap();
         let thread = get_thread(
             db_client,
             &post_2.id,
-            Some(&user.id),
+            Some(&user_1.id),
         ).await.unwrap();
+        assert_eq!(thread.len(), 2);
         assert_eq!(thread[0].id, post_1.id);
         assert_eq!(thread[1].id, post_2.id);
+
+        let error = get_thread(
+            db_client,
+            &post_3.id,
+            Some(&user_1.id),
+        ).await.err().unwrap();
+        assert_eq!(error.to_string(), "post not found");
     }
 
     #[tokio::test]
