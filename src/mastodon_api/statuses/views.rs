@@ -523,6 +523,8 @@ async fn favourite(
             &current_user,
             &post,
             &reaction.id,
+            None,
+            None,
         ).await?.enqueue(db_client).await?;
     };
 

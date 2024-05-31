@@ -164,6 +164,28 @@ async fn create_post_emojis(
     Ok(emojis)
 }
 
+pub async fn get_post_emoji_reactions(
+    db_client: &impl DatabaseClient,
+    post_id: Uuid,
+) -> Result<Vec<DbEmojiReactions>, DatabaseError> {
+    let statement = format!(
+        "
+        SELECT {related_emoji_reactions}
+        FROM post
+        WHERE post.id = $1
+        ",
+        related_emoji_reactions=RELATED_EMOJI_REACTIONS,
+    );
+    let maybe_row = db_client.query_opt(
+        &statement,
+        &[&post_id],
+    ).await?;
+    let row = maybe_row.ok_or(DatabaseError::NotFound("post"))?;
+    let reactions: Vec<DbEmojiReactions> =
+        row.try_get("emoji_reactions")?;
+    Ok(reactions)
+}
+
 pub async fn create_post(
     db_client: &mut impl DatabaseClient,
     author_id: &Uuid,
@@ -416,22 +438,8 @@ pub async fn update_post(
         &db_post.id,
         post_data.emojis,
     ).await?;
-
-    // Get emoji reactions
-    let statement = format!(
-        "
-        SELECT {related_emoji_reactions}
-        FROM post
-        WHERE post.id = $1
-        ",
-        related_emoji_reactions=RELATED_EMOJI_REACTIONS,
-    );
-    let emoji_reactions_row = transaction.query_one(
-        &statement,
-        &[&post_id],
-    ).await?;
-    let db_emoji_reactions: Vec<DbEmojiReactions> =
-        emoji_reactions_row.try_get("emoji_reactions")?;
+    let db_emoji_reactions =
+        get_post_emoji_reactions(&transaction, db_post.id).await?;
 
     // Create notifications
     for profile in db_mentions.iter() {

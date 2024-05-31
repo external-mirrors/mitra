@@ -28,6 +28,7 @@ mod markers;
 mod media;
 mod notifications;
 mod oauth;
+mod reactions;
 mod search;
 mod settings;
 mod statuses;
@@ -119,6 +120,7 @@ pub fn mastodon_api_scope(
         .service(media::views::media_api_v1_scope())
         .service(media::views::media_api_v2_scope())
         .service(notifications::views::notification_api_scope())
+        .service(reactions::views::reaction_api_scope())
         .service(search::views::search_api_scope())
         .service(settings::views::settings_api_scope())
         .service(statuses::views::status_api_scope())

@@ -5,6 +5,7 @@ use mitra_config::Instance;
 use mitra_federation::constants::AP_PUBLIC;
 use mitra_models::{
     database::{DatabaseClient, DatabaseError},
+    emojis::types::DbEmoji,
     posts::types::{Post, Visibility},
     profiles::types::{DbActor, DbActorProfile},
     users::types::User,
@@ -19,8 +20,10 @@ use crate::{
         profile_actor_id,
     },
     queues::OutgoingActivityJobData,
-    vocabulary::LIKE,
+    vocabulary::{EMOJI_REACT, LIKE},
 };
+
+use super::emoji::{build_emoji, Emoji};
 
 #[derive(Serialize)]
 struct Like {
@@ -33,6 +36,11 @@ struct Like {
     id: String,
     actor: String,
     object: String,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    content: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    tag: Option<Emoji>,
 
     to: Vec<String>,
     cc: Vec<String>,
@@ -50,24 +58,36 @@ pub fn get_like_audience(
     (primary_audience, secondary_audience)
 }
 
+#[allow(clippy::too_many_arguments)]
 fn build_like(
     instance_url: &str,
     actor_profile: &DbActorProfile,
     object_id: &str,
     reaction_id: &Uuid,
+    maybe_reaction_content: Option<String>,
+    maybe_custom_emoji: Option<&DbEmoji>,
     post_author_id: &str,
     post_visibility: &Visibility,
 ) -> Like {
     let activity_id = local_object_id(instance_url, reaction_id);
+    let activity_type = if maybe_reaction_content.is_some() {
+        EMOJI_REACT
+    } else {
+        LIKE
+    };
     let actor_id = local_actor_id(instance_url, &actor_profile.username);
+    let maybe_tag = maybe_custom_emoji
+        .map(|db_emoji| build_emoji(instance_url, db_emoji));
     let (primary_audience, secondary_audience) =
         get_like_audience(post_author_id, post_visibility);
     Like {
         context: build_default_context(),
-        activity_type: LIKE.to_string(),
+        activity_type: activity_type.to_string(),
         id: activity_id,
         actor: actor_id,
         object: object_id.to_string(),
+        content: maybe_reaction_content,
+        tag: maybe_tag,
         to: primary_audience,
         cc: secondary_audience,
     }
@@ -91,6 +111,8 @@ pub async fn prepare_like(
     sender: &User,
     post: &Post,
     reaction_id: &Uuid,
+    maybe_reaction_content: Option<String>,
+    maybe_custom_emoji: Option<&DbEmoji>,
 ) -> Result<OutgoingActivityJobData, DatabaseError> {
     let recipients = get_like_recipients(
         db_client,
@@ -104,6 +126,8 @@ pub async fn prepare_like(
         &sender.profile,
         &object_id,
         reaction_id,
+        maybe_reaction_content,
+        maybe_custom_emoji,
         &post_author_id,
         &post.visibility,
     );
@@ -132,6 +156,8 @@ mod tests {
             &author,
             post_id,
             &reaction_id,
+            None,
+            None,
             post_author_id,
             &Visibility::Public,
         );
@@ -140,6 +166,8 @@ mod tests {
             format!("{}/objects/{}", INSTANCE_URL, reaction_id),
         );
         assert_eq!(activity.object, post_id);
+        assert_eq!(activity.content.is_none(), true);
+        assert_eq!(activity.tag.is_none(), true);
         assert_eq!(activity.to, vec![post_author_id, AP_PUBLIC]);
         assert_eq!(activity.cc.is_empty(), true);
     }
