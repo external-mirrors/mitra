@@ -30,7 +30,6 @@ use crate::{
     },
     identifiers::{
         local_actor_id,
-        local_actor_id_fep_ef61_fallback,
         local_actor_id_unified,
         local_instance_actor_id,
         LocalActorCollection,
@@ -66,7 +65,6 @@ fn build_actor_context() -> Context {
             ("schema", SCHEMA_ORG_CONTEXT),
             ("PropertyValue", "schema:PropertyValue"),
             ("value", "schema:value"),
-            ("sameAs", "schema:sameAs"),
             ("toot", MASTODON_CONTEXT),
             ("featured", "toot:featured"),
             ("mitra", MITRA_CONTEXT),
@@ -137,9 +135,6 @@ pub struct Actor {
     url: Option<String>,
 
     // Required for FEP-ef61
-    #[serde(skip_serializing_if = "Vec::is_empty")]
-    same_as: Vec<String>,
-
     #[serde(skip_serializing_if = "Vec::is_empty")]
     gateways: Vec<String>,
 }
@@ -222,21 +217,6 @@ pub fn build_local_actor(
     // TODO: portable actors should point to a primary server
     let profile_url = local_actor_id(instance_url, username);
 
-    let mut same_as = if authority.is_fep_ef61() {
-        // TODO: list all known locations
-        let fallback_url =
-            local_actor_id_fep_ef61_fallback(instance_url, username);
-        vec![fallback_url]
-    } else {
-        vec![]
-    };
-    if let Authority::KeyWithGateway((server_url, public_key)) = authority {
-        let canonical_authority =
-            Authority::Key((server_url.clone(), *public_key));
-        let canonical_actor_id =
-            local_actor_id_unified(&canonical_authority, username);
-        same_as.push(canonical_actor_id);
-    };
     let gateways = authority.is_fep_ef61()
         .then_some(vec![instance_url.to_string()])
         .unwrap_or_default();
@@ -262,7 +242,6 @@ pub fn build_local_actor(
         attachment: attachments,
         manually_approves_followers: user.profile.manually_approves_followers,
         url: Some(profile_url),
-        same_as: same_as,
         gateways: gateways,
     };
     Ok(actor)
@@ -321,7 +300,6 @@ pub fn build_instance_actor(
         attachment: vec![],
         manually_approves_followers: false,
         url: None,
-        same_as: vec![],
         gateways: vec![],
     };
     Ok(actor)
@@ -358,7 +336,6 @@ mod tests {
                     "schema": "http://schema.org/",
                     "PropertyValue": "schema:PropertyValue",
                     "value": "schema:value",
-                    "sameAs": "schema:sameAs",
                     "toot": "http://joinmastodon.org/ns#",
                     "featured": "toot:featured",
                     "mitra": "http://jsonld.mitra.social#",
@@ -451,7 +428,6 @@ mod tests {
                     "schema": "http://schema.org/",
                     "PropertyValue": "schema:PropertyValue",
                     "value": "schema:value",
-                    "sameAs": "schema:sameAs",
                     "toot": "http://joinmastodon.org/ns#",
                     "featured": "toot:featured",
                     "mitra": "http://jsonld.mitra.social#",
@@ -509,10 +485,6 @@ mod tests {
             "summary": "testbio",
             "manuallyApprovesFollowers": false,
             "url": "https://server.example/users/testuser",
-            "sameAs": [
-                "https://server.example/users/testuser?fep_ef61=true",
-                "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor",
-            ],
             "gateways": [
                 "https://server.example"
             ],
@@ -520,7 +492,7 @@ mod tests {
                 "created": "2023-02-24T23:36:38Z",
                 "cryptosuite": "eddsa-jcs-2022",
                 "proofPurpose": "assertionMethod",
-                "proofValue": "zkS1iz6kXh3eoFjLUekCrY4gTepkeFqy7RiV6Zuq5W2obvjMN4NpRpwJhyDnox6i49JNZnhvP1z3kR39KLqZWpzt",
+                "proofValue": "z263zBw6X92dywjHqqFeUCciUZqbGsw3e5pv5uXarB7yCwxdZHQvhuaphyFShwwrCUXCZyHzzZoZTjSU2BjPpcCDW",
                 "type": "DataIntegrityProof",
                 "verificationMethod": "did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6",
             },
@@ -546,7 +518,6 @@ mod tests {
                     "schema": "http://schema.org/",
                     "PropertyValue": "schema:PropertyValue",
                     "value": "schema:value",
-                    "sameAs": "schema:sameAs",
                     "toot": "http://joinmastodon.org/ns#",
                     "featured": "toot:featured",
                     "mitra": "http://jsonld.mitra.social#",
