@@ -28,6 +28,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Fixed incorrect response format when `Authorization` header is missing.
 - Fixed incorrect format of Mastodon API validation errors.
 
+### Security
+
+- Don't allow reactions if user can't view post.
+
 ## [2.20.2] - 2024-05-29
 
 ### Added

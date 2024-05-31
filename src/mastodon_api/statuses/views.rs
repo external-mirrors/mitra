@@ -40,6 +40,7 @@ use mitra_models::{
         add_user_actions,
         can_create_post,
         can_view_post,
+        get_post_by_id_for_view,
     },
     posts::queries::{
         create_post,
@@ -483,7 +484,11 @@ async fn favourite(
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &mut **get_database_client(&db_pool).await?;
     let current_user = get_current_user(db_client, auth.token()).await?;
-    let mut post = get_post_by_id(db_client, &status_id).await?;
+    let mut post = get_post_by_id_for_view(
+        db_client,
+        Some(&current_user),
+        *status_id,
+    ).await?;
     if post.repost_of_id.is_some() {
         return Err(MastodonError::NotFoundError("post"));
     };
@@ -537,7 +542,11 @@ async fn unfavourite(
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &mut **get_database_client(&db_pool).await?;
     let current_user = get_current_user(db_client, auth.token()).await?;
-    let mut post = get_post_by_id(db_client, &status_id).await?;
+    let mut post = get_post_by_id_for_view(
+        db_client,
+        Some(&current_user),
+        *status_id,
+    ).await?;
     let maybe_reaction_deleted = match delete_reaction(
         db_client, current_user.id, *status_id,
     ).await {

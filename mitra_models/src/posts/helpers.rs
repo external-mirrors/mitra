@@ -145,6 +145,18 @@ pub async fn get_local_post_by_id(
     Ok(post)
 }
 
+pub async fn get_post_by_id_for_view(
+    db_client: &impl DatabaseClient,
+    maybe_user: Option<&User>,
+    post_id: Uuid,
+) -> Result<Post, DatabaseError> {
+    let post = get_post_by_id(db_client, &post_id).await?;
+    if !can_view_post(db_client, maybe_user, &post).await? {
+        return Err(DatabaseError::NotFound("post"));
+    };
+    Ok(post)
+}
+
 #[cfg(test)]
 mod tests {
     use serial_test::serial;
@@ -344,5 +356,25 @@ mod tests {
         assert_eq!(can_create_post(&user), true);
         user.role = Role::ReadOnlyUser;
         assert_eq!(can_create_post(&user), false);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_get_post_by_id_for_view() {
+        let db_client = &mut create_test_database().await;
+        let author = create_test_user(db_client, "test").await;
+        let post_data = PostCreateData {
+            content: "post".to_string(),
+            visibility: Visibility::Followers,
+            ..Default::default()
+        };
+        let post = create_post(db_client, &author.id, post_data).await.unwrap();
+        // View as guest
+        let error = get_post_by_id_for_view(
+            db_client,
+            None,
+            post.id,
+        ).await.err().unwrap();
+        assert_eq!(error.to_string(), "post not found");
     }
 }
