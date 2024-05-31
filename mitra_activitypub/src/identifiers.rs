@@ -21,11 +21,6 @@ use crate::{
     authority::Authority,
 };
 
-pub fn local_actor_id_fep_ef61_fallback(instance_url: &str, username: &str) -> String {
-    let actor_id = local_actor_id(instance_url, username);
-    format!("{}?fep_ef61=true", actor_id)
-}
-
 pub fn local_actor_id_unified(authority: &Authority, username: &str) -> String {
     match authority {
         Authority::Server(_) => local_actor_id(&authority.to_string(), username),
@@ -87,14 +82,6 @@ pub fn local_actor_proposal_id(
 
 pub fn local_object_id(instance_url: &str, internal_object_id: &Uuid) -> String {
     format!("{}/objects/{}", instance_url, internal_object_id)
-}
-
-pub fn local_object_id_fep_ef61_fallback(
-    instance_url: &str,
-    internal_object_id: Uuid,
-) -> String {
-    let object_id = local_object_id(instance_url, &internal_object_id);
-    format!("{}?fep_ef61=true", object_id)
 }
 
 pub fn local_object_id_unified(authority: &Authority, internal_object_id: Uuid) -> String {

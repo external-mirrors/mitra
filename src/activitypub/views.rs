@@ -36,9 +36,7 @@ use mitra_activitypub::{
     },
     identifiers::{
         local_actor_id,
-        local_actor_id_fep_ef61_fallback,
         local_object_id,
-        local_object_id_fep_ef61_fallback,
         local_object_replies,
         parse_fep_ef61_local_actor_id,
         parse_fep_ef61_local_object_id,
@@ -675,7 +673,7 @@ pub async fn apgateway_view(
         &user,
         true,
     );
-    let (mut object_value, fallback_url) = if let
+    let mut object_value = if let
         Some(internal_object_id) = maybe_internal_object_id
     {
         let mut post = get_post_by_id(db_client, &internal_object_id).await?;
@@ -695,9 +693,7 @@ pub async fn apgateway_view(
         );
         let object_value = serde_json::to_value(object)
             .expect("object should be serializable");
-        let fallback_url =
-            local_object_id_fep_ef61_fallback(&instance.url(), post.id);
-        (object_value, fallback_url)
+        object_value
     } else {
         let actor = build_local_actor(
             &instance.url(),
@@ -706,11 +702,7 @@ pub async fn apgateway_view(
         )?;
         let actor_value = serde_json::to_value(actor)
             .expect("actor should be serializable");
-        let fallback_url = local_actor_id_fep_ef61_fallback(
-            &instance.url(),
-            &user.profile.username,
-        );
-        (actor_value, fallback_url)
+        actor_value
     };
     object_value = sign_object_fep_ef61(
         &authority,
@@ -718,13 +710,8 @@ pub async fn apgateway_view(
         &object_value,
         None,
     );
-    let link_header_value = format!(
-        r#"<{url}>; rel="alternate""#,
-        url=fallback_url,
-    );
     let response = HttpResponse::Ok()
         .content_type(AP_MEDIA_TYPE)
-        .append_header((http_header::LINK, link_header_value))
         .json(object_value);
     Ok(response)
 }
