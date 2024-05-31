@@ -16,6 +16,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Change type of emoji reaction notification to `pleroma:emoji_reaction`.
 - Set limit on multipart form size.
 - Verify and drop portable activities sent to inbox.
+- Don't allow replies to posts that user can't view.
 
 ### Removed
 

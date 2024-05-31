@@ -39,7 +39,6 @@ use mitra_models::{
     posts::helpers::{
         add_user_actions,
         can_create_post,
-        can_view_post,
         get_post_by_id_for_view,
     },
     posts::queries::{
@@ -116,8 +115,12 @@ async fn create_status(
         Either::Left(form) => form.into_inner(),
         Either::Right(json) => json.into_inner(),
     };
-    let maybe_in_reply_to = if let Some(in_reply_to_id) = status_data.in_reply_to_id.as_ref() {
-        let in_reply_to = match get_post_by_id(db_client, in_reply_to_id).await {
+    let maybe_in_reply_to = if let Some(in_reply_to_id) = status_data.in_reply_to_id {
+        let in_reply_to = match get_post_by_id_for_view(
+            db_client,
+            Some(&current_user),
+            in_reply_to_id,
+        ).await {
             Ok(post) => post,
             Err(DatabaseError::NotFound(_)) => {
                 return Err(ValidationError("parent post does not exist").into());
@@ -258,10 +261,11 @@ async fn get_status(
         Some(auth) => Some(get_current_user(db_client, auth.token()).await?),
         None => None,
     };
-    let post = get_post_by_id(db_client, &status_id).await?;
-    if !can_view_post(db_client, maybe_current_user.as_ref(), &post).await? {
-        return Err(MastodonError::NotFoundError("post"));
-    };
+    let post = get_post_by_id_for_view(
+        db_client,
+        maybe_current_user.as_ref(),
+        *status_id,
+    ).await?;
     let status = build_status(
         db_client,
         &get_request_base_url(connection_info),
