@@ -1,19 +1,17 @@
 FROM alpine:3.18 as builder
 
-RUN apk update && apk add --no-cache curl gcc musl-dev libressl-dev ca-certificates rust cargo
-
-ENV OPENSSL_NO_VENDOR="Y"
+RUN apk update && apk add --no-cache curl gcc musl-dev rust cargo
 
 WORKDIR /app
 
 COPY ./mitra ./
 
-RUN cargo build --release --features production
+RUN cargo build --release --no-default-features --features production,rustls-tls
 
 # --------------
 FROM alpine:3.18
 
-RUN apk add --no-cache libressl-dev ca-certificates gcc
+RUN apk add --no-cache ca-certificates gcc
 
 WORKDIR /usr/bin
 
