@@ -18,6 +18,7 @@ use mitra_utils::urls::get_hostname;
 use mitra_validators::{
     activitypub::validate_object_id,
     emojis::{
+        clean_emoji_name,
         validate_emoji_name,
         EMOJI_MEDIA_TYPES,
     },
@@ -28,11 +29,6 @@ use mitra_validators::{
 use crate::builders::emoji::Emoji;
 
 use super::HandlerError;
-
-fn parse_emoji_shortcode(shortcode: &str) -> Option<&str> {
-    shortcode.strip_prefix(':')
-        .and_then(|val| val.strip_suffix(':'))
-}
 
 // Returns None if emoji is not valid or when fetcher fails.
 // Returns HandlerError on database and filesystem errors.
@@ -53,11 +49,7 @@ pub async fn handle_emoji(
         log::warn!("invalid emoji ID: {}", emoji.id);
         return Ok(None);
     };
-    let emoji_name = if let Some(emoji_name) = parse_emoji_shortcode(&emoji.name) {
-        emoji_name
-    } else {
-        &emoji.name
-    };
+    let emoji_name = clean_emoji_name(&emoji.name);
     if validate_emoji_name(emoji_name).is_err() {
         log::warn!("invalid emoji name: {}", emoji_name);
         return Ok(None);
@@ -131,16 +123,4 @@ pub async fn handle_emoji(
         }
     };
     Ok(Some(db_emoji))
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_parse_emoji_shortcode() {
-        let shortcode = ":test:";
-        let emoji_name = parse_emoji_shortcode(shortcode).unwrap();
-        assert_eq!(emoji_name, "test");
-    }
 }

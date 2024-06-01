@@ -23,6 +23,19 @@ pub fn validate_emoji_name(emoji_name: &str) -> Result<(), ValidationError> {
     Ok(())
 }
 
+fn parse_emoji_shortcode(shortcode: &str) -> Option<&str> {
+    shortcode.strip_prefix(':')
+        .and_then(|val| val.strip_suffix(':'))
+}
+
+pub fn clean_emoji_name(emoji_name: &str) -> &str {
+    if let Some(emoji_name) = parse_emoji_shortcode(emoji_name) {
+        emoji_name
+    } else {
+        emoji_name
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -40,5 +53,15 @@ mod tests {
         let invalid_name = "emoji\"<script>";
         let result = validate_emoji_name(invalid_name);
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_clean_emoji_name() {
+        let emoji_name = "test_emoji";
+        let output = clean_emoji_name(emoji_name);
+        assert_eq!(output, "test_emoji");
+        let shortcode = ":test_emoji:";
+        let output = clean_emoji_name(shortcode);
+        assert_eq!(output, "test_emoji");
     }
 }
