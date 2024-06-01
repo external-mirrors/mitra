@@ -23,7 +23,7 @@ pub fn validate_emoji_name(emoji_name: &str) -> Result<(), ValidationError> {
     Ok(())
 }
 
-fn parse_emoji_shortcode(shortcode: &str) -> Option<&str> {
+pub(super) fn parse_emoji_shortcode(shortcode: &str) -> Option<&str> {
     shortcode.strip_prefix(':')
         .and_then(|val| val.strip_suffix(':'))
 }

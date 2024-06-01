@@ -3,7 +3,11 @@ use mitra_utils::unicode::is_single_character;
 
 use super::{
     activitypub::validate_object_id,
-    emojis::EMOJI_NAME_SIZE_MAX,
+    emojis::{
+        parse_emoji_shortcode,
+        validate_emoji_name,
+        EMOJI_NAME_SIZE_MAX,
+    },
     errors::ValidationError,
 };
 
@@ -17,8 +21,13 @@ pub fn validate_reaction_data(
         if content.len() > REACTION_CONTENT_SIZE_MAX {
             return Err(ValidationError("reaction content is too long"));
         };
-        if !is_single_character(content) && reaction_data.emoji_id.is_none() {
-            return Err(ValidationError("invalid reaction content"));
+        if !is_single_character(content) {
+            if reaction_data.emoji_id.is_none() {
+                return Err(ValidationError("invalid reaction content"));
+            };
+            let emoji_name = parse_emoji_shortcode(content)
+                .ok_or(ValidationError("invalid emoji shortcode"))?;
+            validate_emoji_name(emoji_name)?;
         };
     } else {
         if reaction_data.emoji_id.is_some() {
