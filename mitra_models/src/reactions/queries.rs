@@ -103,7 +103,8 @@ pub async fn delete_reaction(
     Ok(reaction_id)
 }
 
-/// Finds favourites among given posts and returns their IDs
+/// Finds favourites among given posts and returns their IDs.
+/// Emoji reactions are not counted.
 pub async fn find_favourited_by_user(
     db_client: &impl DatabaseClient,
     user_id: Uuid,
@@ -113,7 +114,7 @@ pub async fn find_favourited_by_user(
         "
         SELECT post_id
         FROM post_reaction
-        WHERE author_id = $1 AND post_id = ANY($2)
+        WHERE author_id = $1 AND post_id = ANY($2) AND content IS NULL
         ",
         &[&user_id, &posts_ids],
     ).await?;
