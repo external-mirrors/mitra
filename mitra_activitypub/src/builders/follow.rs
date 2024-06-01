@@ -54,7 +54,7 @@ fn build_follow(
     }
 }
 
-pub fn prepare_follow(
+fn prepare_follow(
     instance: &Instance,
     sender: &User,
     target_actor: &DbActor,
