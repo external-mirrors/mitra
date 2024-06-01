@@ -118,6 +118,7 @@ pub async fn handle_undo(
                 db_client,
                 reaction.author_id,
                 reaction.post_id,
+                reaction.content.as_deref(),
             ).await?;
             Ok(Some(LIKE))
         },

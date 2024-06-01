@@ -14,6 +14,7 @@ pub struct DbReaction {
     pub created_at: DateTime<Utc>,
 }
 
+#[derive(Clone)]
 pub struct ReactionData {
     pub author_id: Uuid,
     pub post_id: Uuid,

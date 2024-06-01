@@ -552,7 +552,10 @@ async fn unfavourite(
         *status_id,
     ).await?;
     let maybe_reaction_deleted = match delete_reaction(
-        db_client, current_user.id, *status_id,
+        db_client,
+        current_user.id,
+        *status_id,
+        None, // not an emoji reaction
     ).await {
         Ok(reaction_id) => {
             post.reaction_count -= 1;

@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Added
 
 - Add sizes of data import and fetcher queues to instance report.
+- Allow multiple emoji reactions on a single post.
 
 ### Changed
 

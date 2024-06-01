@@ -86,15 +86,17 @@ pub async fn delete_reaction(
     db_client: &mut impl DatabaseClient,
     author_id: Uuid,
     post_id: Uuid,
+    maybe_content: Option<&str>,
 ) -> Result<Uuid, DatabaseError> {
     let transaction = db_client.transaction().await?;
     let maybe_row = transaction.query_opt(
         "
         DELETE FROM post_reaction
         WHERE author_id = $1 AND post_id = $2
+            AND ($3::text IS NULL OR content = $3)
         RETURNING post_reaction.id
         ",
-        &[&author_id, &post_id],
+        &[&author_id, &post_id, &maybe_content],
     ).await?;
     let row = maybe_row.ok_or(DatabaseError::NotFound("reaction"))?;
     let reaction_id = row.try_get("id")?;
@@ -159,11 +161,11 @@ mod tests {
             ..Default::default()
         };
         let post = create_post(db_client, &user_2.id, post_data).await.unwrap();
-        let emoji = "❤️";
+        let content = "❤️";
         let reaction_data = ReactionData {
             author_id: user_1.id,
             post_id: post.id,
-            content: Some(emoji.to_string()),
+            content: Some(content.to_string()),
             emoji_id: None,
             activity_id: None,
         };
@@ -171,8 +173,87 @@ mod tests {
 
         assert_eq!(reaction.author_id, user_1.id);
         assert_eq!(reaction.post_id, post.id);
-        assert_eq!(reaction.content.unwrap(), emoji);
+        assert_eq!(reaction.content.unwrap(), content);
         assert_eq!(reaction.emoji_id.is_none(), true);
         assert_eq!(reaction.activity_id.is_none(), true);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_create_reaction_uniqueness() {
+        let db_client = &mut create_test_database().await;
+        let user_data_1 = UserCreateData {
+            username: "test1".to_string(),
+            password_hash: Some("test1".to_string()),
+            ..Default::default()
+        };
+        let user_1 = create_user(db_client, user_data_1).await.unwrap();
+        let user_data_2 = UserCreateData {
+            username: "test2".to_string(),
+            password_hash: Some("test2".to_string()),
+            ..Default::default()
+        };
+        let user_2 = create_user(db_client, user_data_2).await.unwrap();
+        let post_data = PostCreateData {
+            content: "my post".to_string(),
+            ..Default::default()
+        };
+        let post = create_post(db_client, &user_2.id, post_data).await.unwrap();
+        let reaction_data_1 = ReactionData {
+            author_id: user_1.id,
+            post_id: post.id,
+            content: None,
+            emoji_id: None,
+            activity_id: None,
+        };
+        create_reaction(db_client, reaction_data_1).await.unwrap();
+        let reaction_data_2 = ReactionData {
+            author_id: user_1.id,
+            post_id: post.id,
+            content: Some("❤️".to_string()),
+            emoji_id: None,
+            activity_id: None,
+        };
+        create_reaction(db_client, reaction_data_2.clone()).await.unwrap();
+        let error = create_reaction(db_client, reaction_data_2).await.err().unwrap();
+        assert_eq!(error.to_string(), "reaction already exists");
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_delete_reaction() {
+        let db_client = &mut create_test_database().await;
+        let user_data_1 = UserCreateData {
+            username: "test1".to_string(),
+            password_hash: Some("test1".to_string()),
+            ..Default::default()
+        };
+        let user_1 = create_user(db_client, user_data_1).await.unwrap();
+        let user_data_2 = UserCreateData {
+            username: "test2".to_string(),
+            password_hash: Some("test2".to_string()),
+            ..Default::default()
+        };
+        let user_2 = create_user(db_client, user_data_2).await.unwrap();
+        let post_data = PostCreateData {
+            content: "my post".to_string(),
+            ..Default::default()
+        };
+        let post = create_post(db_client, &user_2.id, post_data).await.unwrap();
+        let reaction_data = ReactionData {
+            author_id: user_1.id,
+            post_id: post.id,
+            content: None,
+            emoji_id: None,
+            activity_id: None,
+        };
+        let reaction = create_reaction(db_client, reaction_data).await.unwrap();
+        let reaction_id = delete_reaction(
+            db_client,
+            user_1.id,
+            post.id,
+            None,
+        ).await.unwrap();
+        assert_eq!(reaction_id, reaction.id);
     }
 }

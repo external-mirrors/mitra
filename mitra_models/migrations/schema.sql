@@ -157,9 +157,11 @@ CREATE TABLE post_reaction (
     emoji_id UUID REFERENCES emoji (id) ON DELETE CASCADE,
     activity_id VARCHAR(2000) UNIQUE,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
-    UNIQUE (author_id, post_id),
+    UNIQUE (author_id, post_id, content),
     CHECK (content IS NOT NULL OR emoji_id IS NULL)
 );
+
+CREATE UNIQUE INDEX post_reaction_author_id_post_id_content_null_idx ON post_reaction (author_id, post_id) WHERE content IS NULL;
 
 CREATE TABLE media_attachment (
     id UUID PRIMARY KEY,
