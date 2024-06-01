@@ -556,17 +556,17 @@ pub async fn import_from_outbox(
 ) -> Result<(), HandlerError> {
     let instance = config.instance();
     let agent = build_federation_agent(&instance, None);
-    let actor: Actor = fetch_any_object(&agent, actor_id).await?;
-    log::info!("fetched actor {}", actor.id);
+    let profile = get_profile_by_remote_actor_id(db_client, actor_id).await?;
+    let actor_data = profile.expect_actor_data();
     let activities =
-        fetch_collection(&agent, &actor.outbox, limit).await?;
+        fetch_collection(&agent, &actor_data.outbox, limit).await?;
     log::info!("fetched {} activities", activities.len());
     // Outbox has reverse chronological order
     let activities = activities.into_iter().rev();
     for activity in activities {
         let activity_actor = get_object_id(&activity["actor"])
             .map_err(|_| ValidationError("invalid actor property"))?;
-        if activity_actor != actor.id {
+        if activity_actor != actor_data.id {
             log::warn!("activity doesn't belong to outbox owner");
             continue;
         };

@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Changed
 
 - Use rustls when building docker image.
+- Don't re-fetch actor when reading outbox.
 
 ## [2.21.0] - 2024-06-01
 

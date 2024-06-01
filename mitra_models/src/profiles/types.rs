@@ -736,7 +736,7 @@ impl DbActorProfile {
         }
     }
 
-    fn expect_actor_data(&self) -> &DbActor {
+    pub fn expect_actor_data(&self) -> &DbActor {
         self.actor_json.as_ref()
             .expect("actor data should be present")
     }
