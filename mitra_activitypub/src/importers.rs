@@ -455,6 +455,9 @@ pub async fn import_post(
         };
         if object.id != object_id {
             // ID of fetched object doesn't match requested ID
+            if !objects.is_empty() {
+                log::warn!("invalid reference: {object_id}");
+            };
             // Add IDs to the map of redirects
             redirects.insert(object_id, object.id.clone());
             queue.push(object.id.clone());
