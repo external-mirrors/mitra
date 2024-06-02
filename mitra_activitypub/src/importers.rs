@@ -61,7 +61,7 @@ use crate::{
         create::{get_object_links, handle_note, AttributedObject},
     },
     identifiers::{parse_local_actor_id, parse_local_object_id},
-    url::{canonicalize_id, parse_url, Url},
+    url::{canonicalize_id, parse_url},
     vocabulary::GROUP,
 };
 
@@ -77,29 +77,31 @@ impl From<Vec<String>> for FetcherContext {
 }
 
 impl FetcherContext {
-    pub fn prepare_object_id(&mut self, object_id: &str) -> Result<Url, ValidationError> {
-        let (canonical_object_id, maybe_gateway) = parse_url(object_id)?;
+    fn prepare_object_id(&mut self, object_id: &str) -> Result<String, FetchError> {
+        let (canonical_object_id, maybe_gateway) = parse_url(object_id)
+            .map_err(|_| FetchError::UrlError)?;
         if let Some(gateway) = maybe_gateway {
             if !self.gateways.contains(&gateway) {
                 self.gateways.insert(0, gateway);
             };
         };
-        Ok(canonical_object_id)
+        // TODO: FEP-EF61: use random gateway
+        let maybe_gateway = self.gateways.first()
+            .map(|gateway| gateway.as_str());
+        // TODO: FEP-EF61: remove Url::to_http_url
+        let http_url = canonical_object_id
+            .to_http_url(maybe_gateway)
+            .ok_or(FetchError::NoGateway)?;
+        Ok(http_url)
     }
 }
 
 pub async fn fetch_any_object_with_context<T: DeserializeOwned>(
     agent: &FederationAgent,
-    context: &FetcherContext,
-    object_id: &Url,
+    context: &mut FetcherContext,
+    object_id: &str,
 ) -> Result<T, FetchError> {
-    // TODO: FEP-EF61: use random gateway
-    let maybe_gateway = context.gateways.first()
-        .map(|gateway| gateway.as_str());
-    // TODO: FEP-EF61: remove Url::to_http_url
-    let http_url = object_id
-        .to_http_url(maybe_gateway)
-        .ok_or(FetchError::NoGateway)?;
+    let http_url = context.prepare_object_id(object_id)?;
     let object_json: JsonValue = fetch_object(agent, &http_url).await?;
     match verify_portable_object(&object_json) {
         Ok(_) => (),
@@ -115,12 +117,10 @@ pub async fn fetch_any_object<T: DeserializeOwned>(
     object_id: &str,
 ) -> Result<T, FetchError> {
     let mut context = FetcherContext { gateways: vec![] };
-    let canonical_object_id = context.prepare_object_id(object_id)
-        .map_err(|_| FetchError::UrlError)?;
     fetch_any_object_with_context(
         agent,
-        &context,
-        &canonical_object_id,
+        &mut context,
+        object_id,
     ).await
 }
 
@@ -718,6 +718,21 @@ pub async fn register_portable_actor(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_fetcher_context() {
+        let gateways = vec![];
+        let actor_id = "https://social.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor";
+        let mut context = FetcherContext::from(gateways);
+        let http_url = context.prepare_object_id(actor_id).unwrap();
+        assert_eq!(http_url, actor_id);
+        let object_id = "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/objects/1";
+        let http_url = context.prepare_object_id(object_id).unwrap();
+        assert_eq!(
+            http_url,
+            "https://social.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/objects/1",
+        );
+    }
 
     #[test]
     fn test_actor_id_resolver_default() {

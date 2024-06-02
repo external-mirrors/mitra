@@ -507,11 +507,10 @@ impl FetchObject {
             .map(|gateway| vec![gateway.to_string()])
             .unwrap_or_default();
         let mut context = FetcherContext::from(gateways);
-        let canonical_object_id = context.prepare_object_id(&self.object_id)?;
         let object: JsonValue = fetch_any_object_with_context(
             &agent,
-            &context,
-            &canonical_object_id,
+            &mut context,
+            &self.object_id,
         ).await?;
         println!("{}", object);
         Ok(())
