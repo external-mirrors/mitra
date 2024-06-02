@@ -126,7 +126,7 @@ impl AttributedObject {
     }
 }
 
-fn get_object_attributed_to(object: &AttributedObject)
+pub(super) fn get_object_attributed_to(object: &AttributedObject)
     -> Result<String, ValidationError>
 {
     let author_id = parse_into_id_array(&object.attributed_to)

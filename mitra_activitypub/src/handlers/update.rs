@@ -37,6 +37,7 @@ use crate::{
     handlers::create::{
         create_content_link,
         get_object_attachments,
+        get_object_attributed_to,
         get_object_content,
         get_object_tags,
         get_object_url,
@@ -64,6 +65,10 @@ async fn handle_update_note(
     let activity: UpdateNote = serde_json::from_value(activity)
         .map_err(|_| ValidationError("invalid object"))?;
     let object = activity.object;
+    let author_id = get_object_attributed_to(&object)?;
+    if author_id != activity.actor {
+        return Err(ValidationError("attributedTo value doesn't match actor").into());
+    };
     let post = match get_post_by_remote_object_id(
         db_client,
         &object.id,
@@ -74,8 +79,8 @@ async fn handle_update_note(
         Err(other_error) => return Err(other_error.into()),
     };
     let instance = config.instance();
-    if profile_actor_id(&instance.url(), &post.author) != activity.actor {
-        return Err(ValidationError("actor is not an author").into());
+    if profile_actor_id(&instance.url(), &post.author) != author_id {
+        return Err(ValidationError("object owner can't be changed").into());
     };
     let mut content = get_object_content(&object)?;
     if object.object_type != NOTE {
