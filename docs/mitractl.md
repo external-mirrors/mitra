@@ -10,6 +10,12 @@ Default config file path is `/etc/mitra/config.yaml`, but it can be changed usin
 
 ---
 
+Print version:
+
+```shell
+mitractl --version
+```
+
 Print help:
 
 ```shell
