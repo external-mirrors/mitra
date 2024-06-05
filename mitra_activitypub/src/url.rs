@@ -1,4 +1,5 @@
 use std::fmt;
+use std::str::FromStr;
 
 use mitra_utils::{
     ap_url::{is_ap_url, ApUrl},
@@ -10,6 +11,7 @@ use mitra_validators::{
 
 use crate::authority::GATEWAY_PATH_PREFIX;
 
+// TODO: FEP-EF61: rename to ID
 pub enum Url {
     Http(HttpUrl),
     Ap(ApUrl),
@@ -77,6 +79,20 @@ pub fn parse_url(
         }
     };
     Ok((url, maybe_gateway))
+}
+
+impl FromStr for Url {
+    type Err = ValidationError;
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        let (url, _) = parse_url(value)?;
+        Ok(url)
+    }
+}
+
+pub fn canonicalize_id(url: &str) -> Result<String, ValidationError> {
+    let url = Url::from_str(url)?;
+    Ok(url.to_string())
 }
 
 #[cfg(test)]
@@ -163,5 +179,40 @@ mod tests {
         let url_str = "https://social.example/.well-known/apgateway/did:example:123456";
         let error = parse_url(url_str).err().unwrap();
         assert_eq!(error.to_string(), "invalid 'ap' URL");
+    }
+
+    #[test]
+    fn test_canonicalize_id_http() {
+        let url = "https://social.example/users/alice#main-key";
+        let canonical_url = canonicalize_id(url).unwrap();
+        assert_eq!(canonical_url, url);
+
+        let url = "https://social.example";
+        let canonical_url = canonicalize_id(url).unwrap();
+        assert_eq!(canonical_url, url);
+    }
+
+    #[test]
+    fn test_canonicalize_id_http_idn() {
+        let url = "https://δοκιμή.example/users/alice#main-key";
+        let result = canonicalize_id(url);
+        assert!(result.is_err()); // not a URI
+    }
+
+    #[test]
+    fn test_canonicalize_id_ap() {
+        let url = "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor?type=group";
+        let canonical_url = canonicalize_id(url).unwrap();
+        assert_eq!(canonical_url, url);
+    }
+
+    #[test]
+    fn test_canonicalize_id_gateway() {
+        let url = "https://social.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor#main-key";
+        let canonical_url = canonicalize_id(url).unwrap();
+        assert_eq!(
+            canonical_url,
+            "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor#main-key",
+        );
     }
 }
