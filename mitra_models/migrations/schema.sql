@@ -270,3 +270,9 @@ CREATE TABLE subscription (
     UNIQUE (sender_id, recipient_id),
     CHECK (sender_id != recipient_id)
 );
+
+CREATE TABLE activitypub_object (
+    object_id VARCHAR(2000) PRIMARY KEY,
+    object_data JSONB NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+);

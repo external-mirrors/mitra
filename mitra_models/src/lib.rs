@@ -1,3 +1,4 @@
+pub mod activitypub;
 pub mod attachments;
 pub mod background_jobs;
 pub mod caip122;

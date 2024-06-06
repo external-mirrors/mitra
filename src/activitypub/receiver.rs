@@ -8,7 +8,10 @@ use mitra_activitypub::{
 };
 use mitra_config::Config;
 use mitra_federation::deserialization::get_object_id;
-use mitra_models::database::{DatabaseClient, DatabaseError};
+use mitra_models::{
+    activitypub::queries::save_activity,
+    database::{DatabaseClient, DatabaseError},
+};
 use mitra_utils::urls::get_hostname;
 use mitra_validators::{
     activitypub::validate_object_id,
@@ -205,6 +208,11 @@ pub async fn receive_activity(
                 return Err(AuthenticationError::UnexpectedSigner.into());
             },
         };
+    };
+
+    // Save authenticated activities to database
+    if is_authenticated {
+        save_activity(db_client, activity_id, activity).await?;
     };
 
     // Add activity to job queue and release lock

@@ -17,6 +17,7 @@ enum PeriodicTask {
     DeleteExtraneousPosts,
     DeleteEmptyProfiles,
     PruneRemoteEmojis,
+    PruneActivityPubObjects,
     MediaCleanupQueueExecutor,
     ImporterQueueExecutor,
     SubscriptionExpirationMonitor,
@@ -35,6 +36,7 @@ impl PeriodicTask {
             Self::DeleteExtraneousPosts => 3600,
             Self::DeleteEmptyProfiles => 3600,
             Self::PruneRemoteEmojis => 3600,
+            Self::PruneActivityPubObjects => 3600,
             Self::MediaCleanupQueueExecutor => 10,
             Self::ImporterQueueExecutor => 60,
             Self::SubscriptionExpirationMonitor => 300,
@@ -66,6 +68,7 @@ pub fn run(
             (PeriodicTask::OutgoingActivityQueueExecutor, None),
             (PeriodicTask::FetcherQueueExecutor, None),
             (PeriodicTask::PruneRemoteEmojis, None),
+            (PeriodicTask::PruneActivityPubObjects, None),
             (PeriodicTask::MediaCleanupQueueExecutor, None),
             (PeriodicTask::ImporterQueueExecutor, None),
             (PeriodicTask::SubscriptionExpirationMonitor, None),
@@ -111,6 +114,9 @@ pub fn run(
                     },
                     PeriodicTask::PruneRemoteEmojis => {
                         prune_remote_emojis(&config, &db_pool).await
+                    },
+                    PeriodicTask::PruneActivityPubObjects => {
+                        prune_activitypub_objects(&config, &db_pool).await
                     },
                     PeriodicTask::MediaCleanupQueueExecutor => {
                         media_cleanup_queue_executor(&config, &db_pool).await
