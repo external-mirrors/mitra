@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use chrono::{DateTime, Utc};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use serde_json::{Value as JsonValue};
 
 use mitra_config::Instance;
@@ -42,7 +42,6 @@ use super::attachments::{
     attach_payment_option,
 };
 use super::keys::{Multikey, PublicKey};
-use super::types::ActorImage;
 
 type Context = (
     &'static str,
@@ -82,6 +81,16 @@ fn build_actor_context() -> Context {
         ]),
     )
 }
+
+#[derive(Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ActorImage {
+    #[serde(rename = "type")]
+    pub object_type: String,
+    pub url: String,
+    pub media_type: Option<String>,
+}
+
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]

@@ -29,10 +29,7 @@ use mitra_validators::{
 };
 
 use crate::{
-    actors::{
-        handlers::update_remote_profile,
-        types::Actor,
-    },
+    actors::handlers::{update_remote_profile, Actor},
     agent::build_federation_agent,
     handlers::create::{
         create_content_link,

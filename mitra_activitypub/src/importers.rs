@@ -36,9 +36,10 @@ use mitra_utils::urls::guess_protocol;
 use mitra_validators::errors::ValidationError;
 
 use crate::{
-    actors::{
-        handlers::{create_remote_profile, update_remote_profile},
-        types::Actor,
+    actors::handlers::{
+        create_remote_profile,
+        update_remote_profile,
+        Actor,
     },
     agent::build_federation_agent,
     authentication::{verify_portable_object, AuthenticationError},

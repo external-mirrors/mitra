@@ -1,14 +1,27 @@
+use serde::{
+    Deserialize,
+    Deserializer,
+    de::{Error as DeserializerError},
+};
+use serde_json::{Value as JsonValue};
 use uuid::Uuid;
 
 use mitra_federation::{
     agent::FederationAgent,
-    deserialization::parse_into_id_array,
+    deserialization::{
+        deserialize_object_array,
+        deserialize_string_array,
+        parse_into_array,
+        parse_into_href_array,
+        parse_into_id_array,
+    },
     fetch::fetch_file,
 };
 use mitra_models::{
     database::DatabaseClient,
     profiles::queries::{create_profile, update_profile},
     profiles::types::{
+        DbActor,
         DbActorKey,
         DbActorProfile,
         ExtraField,
@@ -21,6 +34,7 @@ use mitra_models::{
     },
 };
 use mitra_services::media::{MediaStorage, MediaStorageError};
+use mitra_utils::urls::get_hostname;
 use mitra_validators::{
     activitypub::validate_object_id,
     errors::ValidationError,
@@ -50,14 +64,133 @@ use crate::{
     },
 };
 
-use super::attachments::{
-    parse_identity_proof_fep_c390,
-    parse_link,
-    parse_metadata_field,
-    parse_property_value,
-    LinkAttachment,
+use super::{
+    attachments::{
+        parse_identity_proof_fep_c390,
+        parse_link,
+        parse_metadata_field,
+        parse_property_value,
+        LinkAttachment,
+    },
+    builders::ActorImage,
+    keys::{Multikey, PublicKey},
 };
-use super::types::Actor;
+
+fn deserialize_image_opt<'de, D>(
+    deserializer: D,
+) -> Result<Option<ActorImage>, D::Error>
+    where D: Deserializer<'de>
+{
+    let maybe_value: Option<JsonValue> = Option::deserialize(deserializer)?;
+    let maybe_image = if let Some(value) = maybe_value {
+        // Some implementations use empty object instead of null
+        let is_empty_object = value.as_object()
+            .map(|map| map.is_empty())
+            .unwrap_or(false);
+        if is_empty_object {
+            None
+        } else {
+            let images: Vec<ActorImage> = parse_into_array(&value)
+                .map_err(DeserializerError::custom)?;
+            // Take first image
+            images.into_iter().next()
+        }
+    } else {
+        None
+    };
+    Ok(maybe_image)
+}
+
+fn deserialize_url_opt<'de, D>(
+    deserializer: D,
+) -> Result<Option<String>, D::Error>
+    where D: Deserializer<'de>
+{
+    let maybe_value: Option<JsonValue> = Option::deserialize(deserializer)?;
+    let maybe_url = if let Some(value) = maybe_value {
+        let urls = parse_into_href_array(&value)
+            .map_err(DeserializerError::custom)?;
+        // Take first url
+        urls.into_iter().next()
+    } else {
+        None
+    };
+    Ok(maybe_url)
+}
+
+#[derive(Deserialize)]
+#[cfg_attr(test, derive(Default))]
+#[serde(rename_all = "camelCase")]
+pub struct Actor {
+    pub id: String,
+
+    #[serde(rename = "type")]
+    object_type: String,
+
+    name: Option<String>,
+    preferred_username: String,
+
+    inbox: String,
+    outbox: String,
+    followers: Option<String>,
+    subscribers: Option<String>,
+    featured: Option<String>,
+
+    #[serde(default, deserialize_with = "deserialize_object_array")]
+    assertion_method: Vec<Multikey>,
+    #[serde(default)]
+    authentication: Vec<Multikey>,
+
+    public_key: PublicKey,
+
+    #[serde(default, deserialize_with = "deserialize_image_opt")]
+    icon: Option<ActorImage>,
+
+    #[serde(default, deserialize_with = "deserialize_image_opt")]
+    image: Option<ActorImage>,
+
+    summary: Option<String>,
+
+    also_known_as: Option<JsonValue>,
+
+    #[serde(default, deserialize_with = "deserialize_object_array")]
+    attachment: Vec<JsonValue>,
+
+    #[serde(default)]
+    manually_approves_followers: bool,
+
+    #[serde(default, deserialize_with = "deserialize_object_array")]
+    tag: Vec<JsonValue>,
+
+    #[serde(default, deserialize_with = "deserialize_url_opt")]
+    url: Option<String>,
+
+    #[serde(default, deserialize_with = "deserialize_string_array")]
+    gateways: Vec<String>,
+}
+
+impl Actor {
+    pub fn hostname(&self) -> Result<String, ValidationError> {
+        let hostname = get_hostname(&self.id)
+            .map_err(|_| ValidationError("invalid actor ID"))?;
+        Ok(hostname)
+    }
+
+    fn into_db_actor(self) -> DbActor {
+        DbActor {
+            object_type: self.object_type,
+            id: self.id,
+            inbox: self.inbox,
+            outbox: self.outbox,
+            followers: self.followers,
+            subscribers: self.subscribers,
+            featured: self.featured,
+            url: self.url,
+            gateways: self.gateways,
+            public_key: None,
+        }
+    }
+}
 
 async fn fetch_actor_images(
     agent: &FederationAgent,
@@ -448,6 +581,17 @@ mod tests {
     };
     use crate::actors::keys::{Multikey, PublicKey};
     use super::*;
+
+    #[test]
+    fn test_get_actor_hostname() {
+        let actor = Actor {
+            id: "https://δοκιμή.example/users/1".to_string(),
+            preferred_username: "test".to_string(),
+            ..Default::default()
+        };
+        let hostname = actor.hostname().unwrap();
+        assert_eq!(hostname, "xn--jxalpdlp.example");
+    }
 
     #[test]
     fn test_parse_public_keys() {
