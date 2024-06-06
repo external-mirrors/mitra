@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- Save imported actor objects to database.
+
 ### Removed
 
 - Removed `/api/v1/accounts/signed_update` API endpoint.

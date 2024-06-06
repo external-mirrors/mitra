@@ -18,6 +18,7 @@ use mitra_federation::{
     fetch::fetch_file,
 };
 use mitra_models::{
+    activitypub::queries::save_actor,
     database::DatabaseClient,
     profiles::queries::{create_profile, update_profile},
     profiles::types::{
@@ -75,6 +76,33 @@ use super::{
     builders::ActorImage,
     keys::{Multikey, PublicKey},
 };
+
+pub struct ActorJson {
+    pub id: String,
+    pub value: JsonValue,
+}
+
+impl<'de> Deserialize<'de> for ActorJson {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where D: Deserializer<'de>
+    {
+        let value = JsonValue::deserialize(deserializer)?;
+        let actor_id = value["id"].as_str()
+            .ok_or(DeserializerError::custom("'id' property not found"))?;
+        Ok(Self {
+            id: actor_id.to_string(),
+            value: value,
+        })
+    }
+}
+
+impl ActorJson {
+    pub fn hostname(&self) -> Result<String, ValidationError> {
+        let hostname = get_hostname(&self.id)
+            .map_err(|_| ValidationError("invalid actor ID"))?;
+        Ok(hostname)
+    }
+}
 
 fn deserialize_image_opt<'de, D>(
     deserializer: D,
@@ -170,7 +198,7 @@ pub struct Actor {
 }
 
 impl Actor {
-    pub fn hostname(&self) -> Result<String, ValidationError> {
+    fn hostname(&self) -> Result<String, ValidationError> {
         let hostname = get_hostname(&self.id)
             .map_err(|_| ValidationError("invalid actor ID"))?;
         Ok(hostname)
@@ -455,8 +483,10 @@ pub async fn create_remote_profile(
     agent: &FederationAgent,
     db_client: &mut impl DatabaseClient,
     storage: &MediaStorage,
-    actor: Actor,
+    actor_json: JsonValue,
 ) -> Result<DbActorProfile, HandlerError> {
+    let actor: Actor = serde_json::from_value(actor_json.clone())
+        .map_err(|_| ValidationError("invalid actor object"))?;
     // TODO: implement reverse webfinger lookup
     // https://swicg.github.io/activitypub-webfinger/#reverse-discovery
     let actor_hostname = actor.hostname()?;
@@ -501,6 +531,13 @@ pub async fn create_remote_profile(
     };
     clean_profile_create_data(&mut profile_data)?;
     let profile = create_profile(db_client, profile_data).await?;
+    // Save actor object
+    save_actor(
+        db_client,
+        profile.expect_remote_actor_id(),
+        &actor_json,
+        profile.id,
+    ).await?;
     Ok(profile)
 }
 
@@ -510,8 +547,10 @@ pub async fn update_remote_profile(
     db_client: &mut impl DatabaseClient,
     storage: &MediaStorage,
     profile: DbActorProfile,
-    actor: Actor,
+    actor_json: JsonValue,
 ) -> Result<DbActorProfile, HandlerError> {
+    let actor: Actor = serde_json::from_value(actor_json.clone())
+        .map_err(|_| ValidationError("invalid actor object"))?;
     if actor.preferred_username != profile.username {
         log::warn!("preferred username doesn't match cached value");
     };
@@ -563,6 +602,13 @@ pub async fn update_remote_profile(
         update_profile(db_client, &profile.id, profile_data).await?;
     // Delete orphaned images after update
     deletion_queue.into_job(db_client).await?;
+    // Save actor object
+    save_actor(
+        db_client,
+        profile.expect_remote_actor_id(),
+        &actor_json,
+        profile.id,
+    ).await?;
     Ok(profile)
 }
 

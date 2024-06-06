@@ -39,7 +39,7 @@ use crate::{
     actors::handlers::{
         create_remote_profile,
         update_remote_profile,
-        Actor,
+        ActorJson,
     },
     agent::build_federation_agent,
     authentication::{verify_portable_object, AuthenticationError},
@@ -137,7 +137,7 @@ async fn import_profile(
     actor_id: &str,
 ) -> Result<DbActorProfile, HandlerError> {
     let agent = build_federation_agent(instance, None);
-    let actor: Actor = fetch_any_object(&agent, actor_id).await?;
+    let actor: ActorJson = fetch_any_object(&agent, actor_id).await?;
     if actor.hostname()? == instance.hostname() {
         return Err(HandlerError::LocalObject);
     };
@@ -152,7 +152,7 @@ async fn import_profile(
                 db_client,
                 storage,
                 profile,
-                actor,
+                actor.value,
             ).await?;
             profile_updated
         },
@@ -162,7 +162,7 @@ async fn import_profile(
                 &agent,
                 db_client,
                 storage,
-                actor,
+                actor.value,
             ).await?;
             profile
         },
@@ -184,7 +184,7 @@ async fn refresh_remote_profile(
         profile.updated_at < Utc::now() - Duration::days(1)
     {
         // Try to re-fetch actor profile
-        match fetch_any_object::<Actor>(&agent, actor_id).await {
+        match fetch_any_object::<ActorJson>(&agent, actor_id).await {
             Ok(actor) => {
                 log::info!("re-fetched actor {}", actor.id);
                 let profile_updated = update_remote_profile(
@@ -192,7 +192,7 @@ async fn refresh_remote_profile(
                     db_client,
                     storage,
                     profile,
-                    actor,
+                    actor.value,
                 ).await?;
                 profile_updated
             },

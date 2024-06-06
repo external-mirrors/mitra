@@ -29,7 +29,7 @@ use mitra_validators::{
 };
 
 use crate::{
-    actors::handlers::{update_remote_profile, Actor},
+    actors::handlers::{update_remote_profile, ActorJson},
     agent::build_federation_agent,
     handlers::create::{
         create_content_link,
@@ -140,7 +140,7 @@ async fn handle_update_note(
 #[derive(Deserialize)]
 struct UpdatePerson {
     actor: String,
-    object: Actor,
+    object: ActorJson,
 }
 
 async fn handle_update_person(
@@ -168,7 +168,7 @@ async fn handle_update_person(
         db_client,
         &MediaStorage::from(config),
         profile,
-        activity.object,
+        activity.object.value,
     ).await?;
     Ok(Some(PERSON))
 }

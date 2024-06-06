@@ -1,5 +1,6 @@
 use chrono::{DateTime, Utc};
 use serde_json::{Value as JsonValue};
+use uuid::Uuid;
 
 use crate::database::{
     DatabaseClient,
@@ -22,6 +23,28 @@ pub async fn save_activity(
         DO UPDATE SET object_data = $2
         ",
         &[&activity_id, &activity],
+    ).await?;
+    Ok(())
+}
+
+pub async fn save_actor(
+    db_client: &impl DatabaseClient,
+    actor_id: &str,
+    actor_json: &JsonValue,
+    profile_id: Uuid,
+) -> Result<(), DatabaseError> {
+    db_client.execute(
+        "
+        INSERT INTO activitypub_object (
+            object_id,
+            object_data,
+            profile_id
+        )
+        VALUES ($1, $2, $3)
+        ON CONFLICT (object_id)
+        DO UPDATE SET object_data = $2
+        ",
+        &[&actor_id, &actor_json, &profile_id],
     ).await?;
     Ok(())
 }
@@ -49,10 +72,12 @@ pub async fn delete_activitypub_objects(
     db_client: &impl DatabaseClient,
     created_before: DateTime<Utc>,
 ) -> Result<u64, DatabaseError> {
+    // Don't delete actors
     let deleted_count = db_client.execute(
         "
         DELETE FROM activitypub_object
         WHERE created_at < $1
+            AND profile_id IS NULL
         ",
         &[&created_before],
     ).await?;
@@ -65,6 +90,7 @@ mod tests {
     use serial_test::serial;
     use crate::{
         database::test_utils::create_test_database,
+        profiles::test_utils::create_test_remote_profile,
     };
     use super::*;
 
@@ -83,6 +109,39 @@ mod tests {
         save_activity(db_client, canonical_id, &activity).await.unwrap();
         // Update
         save_activity(db_client, canonical_id, &activity).await.unwrap();
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_save_actor() {
+        let db_client = &mut create_test_database().await;
+        let canonical_id = "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor";
+        let profile = create_test_remote_profile(
+            db_client,
+            "test",
+            "social.example",
+            canonical_id,
+        ).await;
+
+        // Create
+        let actor_json = json!({
+            "type": "Person",
+            "id": "https://social.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor",
+            "inbox": "https://social.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor/inbox",
+            "outbox": "https://social.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor/outbox",
+            "name": "test-1",
+        });
+        save_actor(db_client, canonical_id, &actor_json, profile.id).await.unwrap();
+
+        // Update
+        let actor_json = json!({
+            "type": "Person",
+            "id": "https://social.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor",
+            "inbox": "https://social.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor/inbox",
+            "outbox": "https://social.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor/outbox",
+            "name": "test-2",
+        });
+        save_actor(db_client, canonical_id, &actor_json, profile.id).await.unwrap();
     }
 
     #[tokio::test]
