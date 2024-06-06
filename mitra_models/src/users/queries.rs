@@ -78,6 +78,24 @@ pub async fn is_valid_invite_code(
     Ok(maybe_row.is_some())
 }
 
+async fn use_invite_code(
+    db_client: &impl DatabaseClient,
+    invite_code: &str,
+) -> Result<(), DatabaseError> {
+    let updated_count = db_client.execute(
+        "
+        UPDATE user_invite_code
+        SET used = TRUE
+        WHERE code = $1 AND used = FALSE
+        ",
+        &[&invite_code],
+    ).await?;
+    if updated_count == 0 {
+        return Err(DatabaseError::NotFound("invite code"));
+    };
+    Ok(())
+}
+
 pub async fn create_user(
     db_client: &mut impl DatabaseClient,
     user_data: UserCreateData,
@@ -104,17 +122,7 @@ pub async fn create_user(
     };
     // Use invite code
     if let Some(ref invite_code) = user_data.invite_code {
-        let updated_count = transaction.execute(
-            "
-            UPDATE user_invite_code
-            SET used = TRUE
-            WHERE code = $1 AND used = FALSE
-            ",
-            &[&invite_code],
-        ).await?;
-        if updated_count == 0 {
-            return Err(DatabaseError::NotFound("invite code"));
-        };
+        use_invite_code(&transaction, invite_code).await?;
     };
     // Create profile
     let profile_data = ProfileCreateData {

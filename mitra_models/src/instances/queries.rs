@@ -1,6 +1,6 @@
 use crate::database::{DatabaseClient, DatabaseError};
 
-pub async fn create_instance(
+pub(crate) async fn create_instance(
     db_client: &impl DatabaseClient,
     hostname: &str,
 ) -> Result<(), DatabaseError> {
