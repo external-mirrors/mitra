@@ -175,9 +175,9 @@ mod tests {
     use crate::{
         crypto_eddsa::{
             generate_ed25519_key,
-            ed25519_private_key_from_bytes,
+            ed25519_secret_key_from_bytes,
             ed25519_public_key_from_bytes,
-            ed25519_public_key_from_private_key,
+            ed25519_public_key_from_secret_key,
         },
         crypto_rsa::generate_weak_rsa_key,
         currencies::Currency,
@@ -291,7 +291,7 @@ mod tests {
         assert_eq!(signature_data.signer, expected_signer);
 
         let signer_public_key =
-            ed25519_public_key_from_private_key(&signer_key);
+            ed25519_public_key_from_secret_key(&signer_key);
         let result = verify_eddsa_json_signature(
             &signer_public_key,
             &signature_data.object,
@@ -336,7 +336,7 @@ mod tests {
         assert_eq!(signature_data.signer, expected_signer);
 
         let signer_public_key =
-            ed25519_public_key_from_private_key(&signer_key);
+            ed25519_public_key_from_secret_key(&signer_key);
         let result = verify_eddsa_json_signature(
             &signer_public_key,
             &signature_data.object,
@@ -348,11 +348,11 @@ mod tests {
 
     #[test]
     fn test_create_and_verify_eddsa_signature_test_vector() {
-        let private_key_multibase = "z3u2en7t5LR2WtQH5PfFqMqwVHBeXouLzo6haApm8XHqvjxq";
-        let private_key_multicode = decode_multibase_base58btc(private_key_multibase).unwrap();
-        let private_key_bytes = Multicodec::Ed25519Priv
-            .decode_exact(&private_key_multicode).unwrap();
-        let private_key = ed25519_private_key_from_bytes(&private_key_bytes).unwrap();
+        let secret_key_multibase = "z3u2en7t5LR2WtQH5PfFqMqwVHBeXouLzo6haApm8XHqvjxq";
+        let secret_key_multicode = decode_multibase_base58btc(secret_key_multibase).unwrap();
+        let secret_key_bytes = Multicodec::Ed25519Priv
+            .decode_exact(&secret_key_multicode).unwrap();
+        let secret_key = ed25519_secret_key_from_bytes(&secret_key_bytes).unwrap();
         let key_id = "https://server.example/users/alice#ed25519-key";
         let created_at = DateTime::parse_from_rfc3339("2023-02-24T23:36:38Z")
             .unwrap().with_timezone(&Utc);
@@ -369,7 +369,7 @@ mod tests {
             }
         });
         let signed_object = sign_object_eddsa(
-            &private_key,
+            &secret_key,
             key_id,
             &object,
             Some(created_at),

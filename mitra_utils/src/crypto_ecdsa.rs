@@ -21,10 +21,10 @@ pub fn generate_ecdsa_key() -> SigningKey {
 }
 
 pub fn create_ecdsa_signature(
-    private_key: &SigningKey,
+    secret_key: &SigningKey,
     message: &[u8],
 ) -> Result<[u8; 65], EcdsaError> {
-    let signature: recoverable::Signature = private_key.sign(message);
+    let signature: recoverable::Signature = secret_key.sign(message);
     let signature_bytes: [u8; 65] = signature.as_ref().try_into()
         .expect("signature size should be 65 bytes");
     Ok(signature_bytes)
@@ -51,11 +51,11 @@ mod tests {
 
     #[test]
     fn test_recover_ecdsa_public_key() {
-        let private_key = generate_ecdsa_key();
-        let public_key = private_key.verifying_key();
+        let secret_key = generate_ecdsa_key();
+        let public_key = secret_key.verifying_key();
         let message = b"test";
         let signature =
-            create_ecdsa_signature(&private_key, message).unwrap();
+            create_ecdsa_signature(&secret_key, message).unwrap();
         let recovered_key = recover_ecdsa_public_key(
             message,
             signature,

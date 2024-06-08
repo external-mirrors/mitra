@@ -6,7 +6,7 @@ use crate::{
     crypto_rsa::{
         create_rsa_sha256_signature,
         RsaError,
-        RsaPrivateKey,
+        RsaSecretKey,
     },
     http_digest::get_digest_header,
 };
@@ -37,7 +37,7 @@ pub fn create_http_signature(
     request_method: Method,
     request_url: &str,
     request_body: &[u8],
-    signer_key: &RsaPrivateKey,
+    signer_key: &RsaSecretKey,
     signer_key_id: &str,
 ) -> Result<HttpSignatureHeaders, HttpSignatureError> {
     let request_url_object = url::Url::parse(request_url)?;

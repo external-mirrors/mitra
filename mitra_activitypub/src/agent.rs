@@ -4,7 +4,7 @@ use mitra_models::{
     profiles::types::PublicKeyType,
     users::types::User,
 };
-use mitra_utils::crypto_rsa::RsaPrivateKey;
+use mitra_utils::crypto_rsa::RsaSecretKey;
 
 use super::{
     identifiers::{
@@ -20,7 +20,7 @@ const RESPONSE_SIZE_LIMIT: usize = 2_000_000;
 
 pub(super) fn build_federation_agent_with_key(
     instance: &Instance,
-    signer_key: RsaPrivateKey,
+    signer_key: RsaSecretKey,
     signer_key_id: String,
 ) -> FederationAgent {
     FederationAgent {
@@ -43,7 +43,7 @@ pub fn build_federation_agent(
     maybe_user: Option<&User>,
 ) -> FederationAgent {
     let (signer_key, signer_key_id) = if let Some(user) = maybe_user {
-        let actor_key = user.rsa_private_key.clone();
+        let actor_key = user.rsa_secret_key.clone();
         let actor_id = local_actor_id(&instance.url(), &user.profile.username);
         let actor_key_id = local_actor_key_id(&actor_id, PublicKeyType::RsaPkcs1);
         (actor_key, actor_key_id)

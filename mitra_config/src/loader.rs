@@ -4,8 +4,8 @@ use std::str::FromStr;
 
 use mitra_utils::{
     crypto_rsa::{
-        rsa_private_key_from_pkcs8_pem,
-        RsaPrivateKey,
+        rsa_secret_key_from_pkcs8_pem,
+        RsaSecretKey,
     },
 };
 
@@ -56,14 +56,14 @@ fn check_directory_owner(path: &Path) -> () {
 }
 
 /// Read secret key from instance_rsa_key file
-fn read_instance_rsa_key(storage_dir: &Path) -> Option<RsaPrivateKey> {
-    let private_key_path = storage_dir.join("instance_rsa_key");
-    if private_key_path.exists() {
-        let private_key_str = std::fs::read_to_string(&private_key_path)
+fn read_instance_rsa_key(storage_dir: &Path) -> Option<RsaSecretKey> {
+    let secret_key_path = storage_dir.join("instance_rsa_key");
+    if secret_key_path.exists() {
+        let secret_key_str = std::fs::read_to_string(&secret_key_path)
             .expect("failed to read instance RSA key");
-        let private_key = rsa_private_key_from_pkcs8_pem(&private_key_str)
+        let secret_key = rsa_secret_key_from_pkcs8_pem(&secret_key_str)
             .expect("failed to read instance RSA key");
-        Some(private_key)
+        Some(secret_key)
     } else {
         None
     }

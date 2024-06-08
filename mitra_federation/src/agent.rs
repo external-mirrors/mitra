@@ -1,4 +1,4 @@
-use mitra_utils::crypto_rsa::RsaPrivateKey;
+use mitra_utils::crypto_rsa::RsaSecretKey;
 
 pub struct FederationAgent {
     pub user_agent: String,
@@ -15,6 +15,6 @@ pub struct FederationAgent {
     pub onion_proxy_url: Option<String>,
     pub i2p_proxy_url: Option<String>,
 
-    pub signer_key: RsaPrivateKey,
+    pub signer_key: RsaSecretKey,
     pub signer_key_id: String,
 }

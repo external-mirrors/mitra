@@ -11,13 +11,13 @@ use crate::{
     },
     crypto_eddsa::{
         create_eddsa_signature,
-        Ed25519PrivateKey,
+        Ed25519SecretKey,
         EddsaError,
     },
     crypto_rsa::{
         create_rsa_sha256_signature,
         RsaError,
-        RsaPrivateKey,
+        RsaSecretKey,
     },
     did_key::DidKey,
     did_pkh::DidPkh,
@@ -180,7 +180,7 @@ pub fn add_integrity_proof(
 }
 
 pub fn sign_object_rsa(
-    signer_key: &RsaPrivateKey,
+    signer_key: &RsaSecretKey,
     signer_key_id: &str,
     object: &JsonValue,
     current_time: Option<DateTime<Utc>>,
@@ -218,7 +218,7 @@ pub fn prepare_jcs_sha256_data(
 
 /// https://codeberg.org/silverpill/feps/src/branch/main/8b32/fep-8b32.md
 pub fn sign_object_eddsa(
-    signer_key: &Ed25519PrivateKey,
+    signer_key: &Ed25519SecretKey,
     signer_key_id: &str,
     object: &JsonValue,
     current_time: Option<DateTime<Utc>>,

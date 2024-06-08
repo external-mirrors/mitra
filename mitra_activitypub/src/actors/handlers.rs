@@ -571,7 +571,7 @@ mod tests {
     use mitra_models::profiles::types::PublicKeyType;
     use mitra_utils::{
         crypto_eddsa::{
-            ed25519_public_key_from_private_key,
+            ed25519_public_key_from_secret_key,
             generate_ed25519_key,
         },
         crypto_rsa::{
@@ -596,14 +596,14 @@ mod tests {
     #[test]
     fn test_parse_public_keys() {
         let actor_id = "https://test.example/users/1";
-        let rsa_private_key = generate_weak_rsa_key().unwrap();
-        let ed25519_private_key = generate_ed25519_key();
+        let rsa_secret_key = generate_weak_rsa_key().unwrap();
+        let ed25519_secret_key = generate_ed25519_key();
         let actor_public_key =
-            PublicKey::build(actor_id, &rsa_private_key).unwrap();
+            PublicKey::build(actor_id, &rsa_secret_key).unwrap();
         let actor_auth_key_1 =
-            Multikey::build_rsa(actor_id, &rsa_private_key).unwrap();
+            Multikey::build_rsa(actor_id, &rsa_secret_key).unwrap();
         let actor_auth_key_2 =
-            Multikey::build_ed25519(actor_id, &ed25519_private_key);
+            Multikey::build_ed25519(actor_id, &ed25519_secret_key);
         let actor = Actor {
             id: actor_id.to_string(),
             public_key: actor_public_key,
@@ -613,11 +613,11 @@ mod tests {
         let public_keys = parse_public_keys(&actor).unwrap();
         assert_eq!(public_keys.len(), 2);
         let ed25519_public_key_bytes =
-            ed25519_public_key_from_private_key(&ed25519_private_key).to_bytes();
+            ed25519_public_key_from_secret_key(&ed25519_secret_key).to_bytes();
         assert_eq!(public_keys[0].key_type, PublicKeyType::Ed25519);
         assert_eq!(public_keys[0].key_data, ed25519_public_key_bytes);
         let rsa_public_key_der =
-            rsa_public_key_to_pkcs1_der(&rsa_private_key.into()).unwrap();
+            rsa_public_key_to_pkcs1_der(&rsa_secret_key.into()).unwrap();
         assert_eq!(public_keys[1].key_type, PublicKeyType::RsaPkcs1);
         assert_eq!(public_keys[1].key_data, rsa_public_key_der);
     }

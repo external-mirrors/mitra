@@ -5,15 +5,15 @@ use mitra_utils::{
     crypto_eddsa::{
         ed25519_public_key_from_bytes,
         ed25519_public_key_from_pkcs8_pem,
-        ed25519_public_key_from_private_key,
-        Ed25519PrivateKey,
+        ed25519_public_key_from_secret_key,
+        Ed25519SecretKey,
     },
     crypto_rsa::{
         deserialize_rsa_public_key,
         rsa_public_key_from_pkcs1_der,
         rsa_public_key_to_pkcs1_der,
         rsa_public_key_to_pkcs8_pem,
-        RsaPrivateKey,
+        RsaSecretKey,
         RsaPublicKey,
         RsaSerializationError,
     },
@@ -41,9 +41,9 @@ pub struct PublicKey {
 impl PublicKey {
     pub fn build(
         actor_id: &str,
-        private_key: &RsaPrivateKey,
+        secret_key: &RsaSecretKey,
     ) -> Result<Self, RsaSerializationError> {
-        let public_key = RsaPublicKey::from(private_key);
+        let public_key = RsaPublicKey::from(secret_key);
         let public_key_pem = rsa_public_key_to_pkcs8_pem(&public_key)?;
         let public_key_obj = Self {
             id: local_actor_key_id(actor_id, PublicKeyType::RsaPkcs1),
@@ -89,9 +89,9 @@ pub struct Multikey {
 impl Multikey {
     pub fn build_ed25519(
         actor_id: &str,
-        private_key: &Ed25519PrivateKey,
+        secret_key: &Ed25519SecretKey,
     ) -> Self {
-        let public_key = ed25519_public_key_from_private_key(private_key);
+        let public_key = ed25519_public_key_from_secret_key(secret_key);
         let public_key_multicode = Multicodec::Ed25519Pub.encode(public_key.as_bytes());
         let public_key_multibase = encode_multibase_base58btc(&public_key_multicode);
         Self {
@@ -104,9 +104,9 @@ impl Multikey {
 
     pub fn build_rsa(
         actor_id: &str,
-        private_key: &RsaPrivateKey,
+        secret_key: &RsaSecretKey,
     ) -> Result<Self, RsaSerializationError> {
-        let public_key = RsaPublicKey::from(private_key);
+        let public_key = RsaPublicKey::from(secret_key);
         let public_key_der = rsa_public_key_to_pkcs1_der(&public_key)?;
         let public_key_multicode = Multicodec::RsaPub.encode(&public_key_der);
         let public_key_multibase = encode_multibase_base58btc(&public_key_multicode);
@@ -156,8 +156,8 @@ mod tests {
     #[test]
     fn test_build_ed25519_multikey() {
         let actor_id = "https://test.example/users/1";
-        let private_key = generate_ed25519_key();
-        let multikey = Multikey::build_ed25519(actor_id, &private_key);
+        let secret_key = generate_ed25519_key();
+        let multikey = Multikey::build_ed25519(actor_id, &secret_key);
         assert_eq!(multikey.id, "https://test.example/users/1#ed25519-key");
         assert_eq!(multikey.controller, actor_id);
     }

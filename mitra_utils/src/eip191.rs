@@ -37,11 +37,11 @@ pub fn ecdsa_public_key_to_address_hex(public_key: &VerifyingKey) -> String {
 }
 
 pub fn create_eip191_signature(
-    private_key: &SigningKey,
+    secret_key: &SigningKey,
     message: &[u8],
 ) -> Result<[u8; 65], EcdsaError> {
     let eip191_message = prepare_eip191_message(message);
-    create_ecdsa_signature(private_key, &eip191_message)
+    create_ecdsa_signature(secret_key, &eip191_message)
 }
 
 pub fn recover_address_eip191(
@@ -95,13 +95,13 @@ mod tests {
 
     #[test]
     fn test_verify_eip191_signature() {
-        let private_key = generate_ecdsa_key();
-        let public_key = private_key.verifying_key();
+        let secret_key = generate_ecdsa_key();
+        let public_key = secret_key.verifying_key();
         let address = ecdsa_public_key_to_address_hex(&public_key);
         let signer = DidPkh::from_address(&Currency::Ethereum, &address);
         let message = "test";
         let signature = create_eip191_signature(
-            &private_key,
+            &secret_key,
             message.as_bytes(),
         ).unwrap();
         let result = verify_eip191_signature(

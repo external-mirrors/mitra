@@ -14,7 +14,7 @@ use ed25519_dalek::{
     VerifyingKey,
 };
 
-pub type Ed25519PrivateKey = SecretKey;
+pub type Ed25519SecretKey = SecretKey;
 pub type Ed25519PublicKey = VerifyingKey;
 pub type EddsaError = SignatureError;
 
@@ -44,12 +44,12 @@ pub enum Ed25519SerializationError {
     Pkcs8Error,
 }
 
-pub fn ed25519_private_key_from_bytes(
+pub fn ed25519_secret_key_from_bytes(
     bytes: &[u8],
 ) -> Result<SecretKey, Ed25519SerializationError> {
-    let private_key: SecretKey = bytes.try_into()
+    let secret_key: SecretKey = bytes.try_into()
         .map_err(|_| Ed25519SerializationError::ConversionError)?;
-    Ok(private_key)
+    Ok(secret_key)
 }
 
 pub fn ed25519_public_key_from_bytes(
@@ -70,18 +70,18 @@ pub fn ed25519_public_key_from_pkcs8_pem(
     Ok(public_key)
 }
 
-pub fn ed25519_public_key_from_private_key(
-    private_key: &SecretKey,
+pub fn ed25519_public_key_from_secret_key(
+    secret_key: &SecretKey,
 ) -> VerifyingKey {
-    SigningKey::from(private_key).verifying_key()
+    SigningKey::from(secret_key).verifying_key()
 }
 
 pub fn create_eddsa_signature(
-    private_key: &SecretKey,
+    secret_key: &SecretKey,
     message: &[u8],
 ) -> [u8; 64] {
-    let private_key = SigningKey::from_bytes(private_key);
-    let signature = private_key.sign(message);
+    let secret_key = SigningKey::from_bytes(secret_key);
+    let signature = secret_key.sign(message);
     signature.to_bytes()
 }
 
@@ -101,14 +101,14 @@ mod tests {
 
     #[test]
     fn test_verify_eddsa_signature() {
-        let private_key = generate_ed25519_key();
+        let secret_key = generate_ed25519_key();
         let message = "test";
         let signature = create_eddsa_signature(
-            &private_key,
+            &secret_key,
             message.as_bytes(),
         );
         let public_key =
-            ed25519_public_key_from_private_key(&private_key);
+            ed25519_public_key_from_secret_key(&secret_key);
         let result = verify_eddsa_signature(
             &public_key,
             message.as_bytes(),

@@ -7,8 +7,8 @@ use web3::{
     types::Address,
 };
 
-pub fn key_to_ethereum_address(private_key: &SecretKey) -> Address {
-    private_key.address()
+pub fn key_to_ethereum_address(secret_key: &SecretKey) -> Address {
+    secret_key.address()
 }
 
 #[derive(thiserror::Error, Debug)]

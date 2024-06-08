@@ -2,7 +2,7 @@ use chrono::{DateTime, Utc};
 use uuid::Uuid;
 
 use mitra_utils::{
-    crypto_eddsa::Ed25519PrivateKey,
+    crypto_eddsa::Ed25519SecretKey,
     currencies::Currency,
     did::Did,
     did_pkh::DidPkh,
@@ -320,7 +320,7 @@ pub async fn update_profile(
 pub async fn set_profile_identity_key(
     db_client: &mut impl DatabaseClient,
     profile_id: Uuid,
-    ed25519_secret_key: Ed25519PrivateKey,
+    ed25519_secret_key: Ed25519SecretKey,
 ) -> Result<DbActorProfile, DatabaseError> {
     let transaction = db_client.transaction().await?;
     let identity_key = get_identity_key(ed25519_secret_key);

@@ -107,7 +107,7 @@ use mitra_utils::{
     crypto_eddsa::generate_ed25519_key,
     crypto_rsa::{
         generate_rsa_key,
-        rsa_private_key_to_pkcs8_pem,
+        rsa_secret_key_to_pkcs8_pem,
     },
     datetime::days_before_now,
     files::sniff_media_type,
@@ -176,9 +176,9 @@ pub struct GenerateRsaKey;
 
 impl GenerateRsaKey {
     pub fn execute(&self) -> Result<(), Error> {
-        let private_key = generate_rsa_key()?;
-        let private_key_pem = rsa_private_key_to_pkcs8_pem(&private_key)?;
-        println!("{}", private_key_pem);
+        let secret_key = generate_rsa_key()?;
+        let secret_key_pem = rsa_secret_key_to_pkcs8_pem(&secret_key)?;
+        println!("{}", secret_key_pem);
         Ok(())
     }
 }
@@ -189,11 +189,11 @@ pub struct GenerateEthereumAddress;
 
 impl GenerateEthereumAddress {
     pub fn execute(&self) -> () {
-        let private_key = generate_ecdsa_key();
-        let address = key_to_ethereum_address(&private_key);
+        let secret_key = generate_ecdsa_key();
+        let address = key_to_ethereum_address(&secret_key);
         println!(
-            "address {:?}; private key {}",
-            address, private_key.display_secret(),
+            "address {:?}; secret key {}",
+            address, secret_key.display_secret(),
         );
     }
 }
@@ -281,10 +281,10 @@ impl CreateUser {
     ) -> Result<(), Error> {
         validate_local_username(&self.username)?;
         let password_hash = hash_password(&self.password)?;
-        let rsa_private_key = generate_rsa_key()?;
-        let rsa_private_key_pem =
-            rsa_private_key_to_pkcs8_pem(&rsa_private_key)?;
-        let ed25519_private_key = generate_ed25519_key();
+        let rsa_secret_key = generate_rsa_key()?;
+        let rsa_secret_key_pem =
+            rsa_secret_key_to_pkcs8_pem(&rsa_secret_key)?;
+        let ed25519_secret_key = generate_ed25519_key();
         let role = match &self.role {
             Some(value) => role_from_str(value)?,
             None => from_default_role(&config.registration.default_role),
@@ -294,8 +294,8 @@ impl CreateUser {
             password_hash: Some(password_hash),
             login_address_ethereum: None,
             login_address_monero: None,
-            rsa_private_key: rsa_private_key_pem,
-            ed25519_private_key: ed25519_private_key,
+            rsa_secret_key: rsa_secret_key_pem,
+            ed25519_secret_key: ed25519_secret_key,
             invite_code: None,
             role,
         };
@@ -396,7 +396,7 @@ impl EnableFepEf61 {
         set_profile_identity_key(
             db_client,
             user.id,
-            user.ed25519_private_key,
+            user.ed25519_secret_key,
         ).await?;
         println!("FEP-ef61 enabled for actor");
         Ok(())

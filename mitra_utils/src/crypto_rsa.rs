@@ -21,21 +21,21 @@ use rsa::{
 };
 use sha2::Sha256;
 
-pub use rsa::{RsaPrivateKey, RsaPublicKey};
+pub use rsa::{RsaPrivateKey as RsaSecretKey, RsaPublicKey};
 pub type RsaError = rsa::errors::Error;
 
-pub fn generate_rsa_key() -> Result<RsaPrivateKey, RsaError> {
+pub fn generate_rsa_key() -> Result<RsaSecretKey, RsaError> {
     let mut rng = rand::rngs::OsRng;
     let bits = 2048;
-    RsaPrivateKey::new(&mut rng, bits)
+    RsaSecretKey::new(&mut rng, bits)
 }
 
 #[cfg(any(test, feature = "test-utils"))]
-pub fn generate_weak_rsa_key() -> Result<RsaPrivateKey, RsaError> {
+pub fn generate_weak_rsa_key() -> Result<RsaSecretKey, RsaError> {
     use rand::SeedableRng;
     let mut rng = rand::rngs::StdRng::seed_from_u64(0);
     let bits = 512;
-    RsaPrivateKey::new(&mut rng, bits)
+    RsaSecretKey::new(&mut rng, bits)
 }
 
 #[derive(thiserror::Error, Debug)]
@@ -50,18 +50,18 @@ pub enum RsaSerializationError {
     PemError(#[from] pem::PemError),
 }
 
-pub fn rsa_private_key_to_pkcs1_der(
-    private_key: &RsaPrivateKey,
+pub fn rsa_secret_key_to_pkcs1_der(
+    secret_key: &RsaSecretKey,
 ) -> Result<Vec<u8>, RsaSerializationError> {
-    let bytes = private_key.to_pkcs1_der()?.as_bytes().to_vec();
+    let bytes = secret_key.to_pkcs1_der()?.as_bytes().to_vec();
     Ok(bytes)
 }
 
-pub fn rsa_private_key_from_pkcs1_der(
+pub fn rsa_secret_key_from_pkcs1_der(
     bytes: &[u8],
-) -> Result<RsaPrivateKey, RsaSerializationError> {
-    let private_key = RsaPrivateKey::from_pkcs1_der(bytes)?;
-    Ok(private_key)
+) -> Result<RsaSecretKey, RsaSerializationError> {
+    let secret_key = RsaSecretKey::from_pkcs1_der(bytes)?;
+    Ok(secret_key)
 }
 
 pub fn rsa_public_key_to_pkcs1_der(
@@ -78,19 +78,19 @@ pub fn rsa_public_key_from_pkcs1_der(
     Ok(public_key)
 }
 
-pub fn rsa_private_key_to_pkcs8_pem(
-    private_key: &RsaPrivateKey,
+pub fn rsa_secret_key_to_pkcs8_pem(
+    secret_key: &RsaSecretKey,
 ) -> Result<String, RsaSerializationError> {
-    let private_key_pem = private_key.to_pkcs8_pem(LineEnding::LF)
+    let secret_key_pem = secret_key.to_pkcs8_pem(LineEnding::LF)
         .map(|val| val.to_string())?;
-    Ok(private_key_pem)
+    Ok(secret_key_pem)
 }
 
-pub fn rsa_private_key_from_pkcs8_pem(
-    private_key_pem: &str,
-) -> Result<RsaPrivateKey, RsaSerializationError> {
-    let private_key = RsaPrivateKey::from_pkcs8_pem(private_key_pem)?;
-    Ok(private_key)
+pub fn rsa_secret_key_from_pkcs8_pem(
+    secret_key_pem: &str,
+) -> Result<RsaSecretKey, RsaSerializationError> {
+    let secret_key = RsaSecretKey::from_pkcs8_pem(secret_key_pem)?;
+    Ok(secret_key)
 }
 
 pub fn rsa_public_key_to_pkcs8_pem(
@@ -119,10 +119,10 @@ pub fn deserialize_rsa_public_key(
 
 /// RSASSA-PKCS1-v1_5 signature
 pub fn create_rsa_sha256_signature(
-    private_key: &RsaPrivateKey,
+    secret_key: &RsaSecretKey,
     message: &str,
 ) -> Result<Vec<u8>, RsaError> {
-    let signing_key = SigningKey::<Sha256>::new_with_prefix(private_key.clone());
+    let signing_key = SigningKey::<Sha256>::new_with_prefix(secret_key.clone());
     let signature = signing_key.sign(message.as_bytes());
     Ok(signature.to_vec())
 }
@@ -150,28 +150,28 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_private_key_pkcs1_der_encode_decode() {
-        let private_key = generate_weak_rsa_key().unwrap();
-        let encoded = rsa_private_key_to_pkcs1_der(&private_key).unwrap();
-        let decoded = rsa_private_key_from_pkcs1_der(&encoded).unwrap();
-        assert_eq!(decoded, private_key);
+    fn test_secret_key_pkcs1_der_encode_decode() {
+        let secret_key = generate_weak_rsa_key().unwrap();
+        let encoded = rsa_secret_key_to_pkcs1_der(&secret_key).unwrap();
+        let decoded = rsa_secret_key_from_pkcs1_der(&encoded).unwrap();
+        assert_eq!(decoded, secret_key);
     }
 
     #[test]
     fn test_public_key_pkcs1_der_encode_decode() {
-        let private_key = generate_weak_rsa_key().unwrap();
-        let public_key = RsaPublicKey::from(private_key);
+        let secret_key = generate_weak_rsa_key().unwrap();
+        let public_key = RsaPublicKey::from(secret_key);
         let encoded = rsa_public_key_to_pkcs1_der(&public_key).unwrap();
         let decoded = rsa_public_key_from_pkcs1_der(&encoded).unwrap();
         assert_eq!(decoded, public_key);
     }
 
     #[test]
-    fn test_private_key_pkcs8_pem_encode_decode() {
-        let private_key = generate_weak_rsa_key().unwrap();
-        let encoded = rsa_private_key_to_pkcs8_pem(&private_key).unwrap();
-        let decoded = rsa_private_key_from_pkcs8_pem(&encoded).unwrap();
-        assert_eq!(decoded, private_key);
+    fn test_secret_key_pkcs8_pem_encode_decode() {
+        let secret_key = generate_weak_rsa_key().unwrap();
+        let encoded = rsa_secret_key_to_pkcs8_pem(&secret_key).unwrap();
+        let decoded = rsa_secret_key_from_pkcs8_pem(&encoded).unwrap();
+        assert_eq!(decoded, secret_key);
     }
 
     #[test]
@@ -191,11 +191,11 @@ YsFtrgWDQ/s8k86sNBU+Ce2GOL7seh46kyAWgJeohh4Rcrr23rftHbvxOcRM8VzYuCeb1DgVhPGtA0xU
 
     #[test]
     fn test_public_key_serialization_deserialization() {
-        let private_key = generate_weak_rsa_key().unwrap();
-        let public_key = RsaPublicKey::from(&private_key);
+        let secret_key = generate_weak_rsa_key().unwrap();
+        let public_key = RsaPublicKey::from(&secret_key);
         let public_key_pem = rsa_public_key_to_pkcs8_pem(&public_key).unwrap();
         let public_key = deserialize_rsa_public_key(&public_key_pem).unwrap();
-        assert_eq!(public_key, RsaPublicKey::from(&private_key));
+        assert_eq!(public_key, RsaPublicKey::from(&secret_key));
     }
 
     #[test]
@@ -224,13 +224,13 @@ NwIDAQAB
 
     #[test]
     fn test_create_and_verify_rsa_signature() {
-        let private_key = generate_weak_rsa_key().unwrap();
+        let secret_key = generate_weak_rsa_key().unwrap();
         let message = "test".to_string();
         let signature = create_rsa_sha256_signature(
-            &private_key,
+            &secret_key,
             &message,
         ).unwrap();
-        let public_key = RsaPublicKey::from(&private_key);
+        let public_key = RsaPublicKey::from(&secret_key);
 
         let is_valid = verify_rsa_sha256_signature(
             &public_key,

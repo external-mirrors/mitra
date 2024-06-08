@@ -5,8 +5,8 @@ use log::{Level as LogLevel};
 use serde::Deserialize;
 
 use mitra_utils::{
-    crypto_eddsa::Ed25519PrivateKey,
-    crypto_rsa::RsaPrivateKey,
+    crypto_eddsa::Ed25519SecretKey,
+    crypto_rsa::RsaSecretKey,
     urls::{get_hostname, normalize_origin, UrlError},
 };
 
@@ -71,9 +71,9 @@ pub struct Config {
     pub instance_timeline_public: bool,
 
     #[serde(skip)]
-    instance_ed25519_key: Option<Ed25519PrivateKey>,
+    instance_ed25519_key: Option<Ed25519SecretKey>,
     #[serde(skip)]
-    pub(super) instance_rsa_key: Option<RsaPrivateKey>,
+    pub(super) instance_rsa_key: Option<RsaSecretKey>,
 
     #[serde(default)]
     pub registration: RegistrationConfig,
@@ -114,7 +114,7 @@ pub struct Config {
 }
 
 impl Config {
-    pub fn set_instance_ed25519_key(&mut self, secret_key: Ed25519PrivateKey) -> () {
+    pub fn set_instance_ed25519_key(&mut self, secret_key: Ed25519SecretKey) -> () {
         assert!(
             self.instance_ed25519_key.is_none(),
             "instance Ed25519 key can not be replaced",
@@ -122,11 +122,11 @@ impl Config {
         self.instance_ed25519_key = Some(secret_key);
     }
 
-    pub fn get_instance_rsa_key(&self) -> Option<&RsaPrivateKey> {
+    pub fn get_instance_rsa_key(&self) -> Option<&RsaSecretKey> {
         self.instance_rsa_key.as_ref()
     }
 
-    pub fn set_instance_rsa_key(&mut self, secret_key: RsaPrivateKey) -> () {
+    pub fn set_instance_rsa_key(&mut self, secret_key: RsaSecretKey) -> () {
         assert!(
             self.instance_rsa_key.is_none(),
             "instance RSA key can not be replaced",
@@ -209,8 +209,8 @@ impl Config {
 pub struct Instance {
     _url: String,
     // Instance actor keys
-    pub actor_ed25519_key: Ed25519PrivateKey,
-    pub actor_rsa_key: RsaPrivateKey,
+    pub actor_ed25519_key: Ed25519SecretKey,
+    pub actor_rsa_key: RsaSecretKey,
     // Proxy for outgoing requests
     pub proxy_url: Option<String>,
     pub onion_proxy_url: Option<String>,

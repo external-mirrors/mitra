@@ -24,13 +24,13 @@ use mitra_models::{
 };
 use mitra_utils::{
     crypto_eddsa::{
-        ed25519_private_key_from_bytes,
-        Ed25519PrivateKey,
+        ed25519_secret_key_from_bytes,
+        Ed25519SecretKey,
     },
     crypto_rsa::{
-        rsa_private_key_from_pkcs1_der,
-        rsa_private_key_to_pkcs1_der,
-        RsaPrivateKey,
+        rsa_secret_key_from_pkcs1_der,
+        rsa_secret_key_to_pkcs1_der,
+        RsaSecretKey,
     },
     json_signatures::create::{
         is_object_signed,
@@ -45,75 +45,75 @@ use crate::{
     identifiers::{local_actor_id, local_actor_key_id},
 };
 
-fn deserialize_rsa_private_key<'de, D>(
+fn deserialize_rsa_secret_key<'de, D>(
     deserializer: D,
-) -> Result<RsaPrivateKey, D::Error>
+) -> Result<RsaSecretKey, D::Error>
     where D: Deserializer<'de>
 {
-    let private_key_der = Vec::deserialize(deserializer)?;
-    let private_key = rsa_private_key_from_pkcs1_der(&private_key_der)
+    let secret_key_der = Vec::deserialize(deserializer)?;
+    let secret_key = rsa_secret_key_from_pkcs1_der(&secret_key_der)
         .map_err(DeserializerError::custom)?;
-    Ok(private_key)
+    Ok(secret_key)
 }
 
-fn serialize_rsa_private_key<S>(
-    private_key: &RsaPrivateKey,
+fn serialize_rsa_secret_key<S>(
+    secret_key: &RsaSecretKey,
     serializer: S,
 ) -> Result<S::Ok, S::Error>
     where S: Serializer,
 {
-    let private_key_der = rsa_private_key_to_pkcs1_der(private_key)
+    let secret_key_der = rsa_secret_key_to_pkcs1_der(secret_key)
         .map_err(S::Error::custom)?;
-    Vec::serialize(&private_key_der, serializer)
+    Vec::serialize(&secret_key_der, serializer)
 }
 
-fn deserialize_ed25519_private_key<'de, D>(
+fn deserialize_ed25519_secret_key<'de, D>(
     deserializer: D,
-) -> Result<Option<Ed25519PrivateKey>, D::Error>
+) -> Result<Option<Ed25519SecretKey>, D::Error>
     where D: Deserializer<'de>
 {
-    let maybe_private_key_bytes: Option<Vec<u8>> =
+    let maybe_secret_key_bytes: Option<Vec<u8>> =
         Option::deserialize(deserializer)?;
-    let maybe_private_key = if let Some(private_key_bytes) = maybe_private_key_bytes {
-        let private_key = ed25519_private_key_from_bytes(&private_key_bytes)
+    let maybe_secret_key = if let Some(secret_key_bytes) = maybe_secret_key_bytes {
+        let secret_key = ed25519_secret_key_from_bytes(&secret_key_bytes)
             .map_err(DeserializerError::custom)?;
-        Some(private_key)
+        Some(secret_key)
     } else {
         None
     };
-    Ok(maybe_private_key)
+    Ok(maybe_secret_key)
 }
 
-fn serialize_ed25519_private_key<S>(
-    maybe_private_key: &Option<Ed25519PrivateKey>,
+fn serialize_ed25519_secret_key<S>(
+    maybe_secret_key: &Option<Ed25519SecretKey>,
     serializer: S,
 ) -> Result<S::Ok, S::Error>
     where S: Serializer,
 {
-    Option::serialize(maybe_private_key, serializer)
+    Option::serialize(maybe_secret_key, serializer)
 }
 
 #[derive(Clone, Deserialize, Serialize)]
 pub struct Sender {
     pub(super) username: String,
     #[serde(
-        deserialize_with = "deserialize_rsa_private_key",
-        serialize_with = "serialize_rsa_private_key",
+        deserialize_with = "deserialize_rsa_secret_key",
+        serialize_with = "serialize_rsa_secret_key",
     )]
-    pub(super) rsa_private_key: RsaPrivateKey,
+    pub(super) rsa_private_key: RsaSecretKey,
     #[serde(
-        deserialize_with = "deserialize_ed25519_private_key",
-        serialize_with = "serialize_ed25519_private_key",
+        deserialize_with = "deserialize_ed25519_secret_key",
+        serialize_with = "serialize_ed25519_secret_key",
     )]
-    pub(super) ed25519_private_key: Option<Ed25519PrivateKey>,
+    pub(super) ed25519_private_key: Option<Ed25519SecretKey>,
 }
 
 impl From<User> for Sender {
     fn from(user: User) -> Self {
         Self {
             username: user.profile.username,
-            rsa_private_key: user.rsa_private_key,
-            ed25519_private_key: Some(user.ed25519_private_key),
+            rsa_private_key: user.rsa_secret_key,
+            ed25519_private_key: Some(user.ed25519_secret_key),
         }
     }
 }
@@ -148,7 +148,7 @@ pub(super) async fn deliver_activity_worker(
     activity: JsonValue,
     recipients: &mut [Recipient],
 ) -> Result<(), DelivererError> {
-    let rsa_private_key = sender.rsa_private_key;
+    let rsa_secret_key = sender.rsa_private_key;
     let actor_id = local_actor_id(
         &instance.url(),
         &sender.username,
@@ -160,13 +160,13 @@ pub(super) async fn deliver_activity_worker(
         activity
     } else {
         match sender.ed25519_private_key {
-            Some(ref ed25519_private_key) if instance.fep_8b32_eddsa_enabled => {
+            Some(ref ed25519_secret_key) if instance.fep_8b32_eddsa_enabled => {
                 let ed25519_key_id = local_actor_key_id(
                     &actor_id,
                     PublicKeyType::Ed25519,
                 );
                 sign_object_eddsa(
-                    ed25519_private_key,
+                    ed25519_secret_key,
                     &ed25519_key_id,
                     &activity,
                     None,
@@ -175,7 +175,7 @@ pub(super) async fn deliver_activity_worker(
             },
             _ => {
                 sign_object_rsa(
-                    &rsa_private_key,
+                    &rsa_secret_key,
                     &rsa_key_id,
                     &activity,
                     None,
@@ -198,7 +198,7 @@ pub(super) async fn deliver_activity_worker(
 
     let agent = build_federation_agent_with_key(
         &instance,
-        rsa_private_key,
+        rsa_secret_key,
         rsa_key_id,
     );
     let mut delivery_pool = FuturesUnordered::new();
@@ -271,16 +271,16 @@ mod tests {
 
     #[test]
     fn test_sender_serialization_deserialization() {
-        let rsa_private_key = generate_weak_rsa_key().unwrap();
-        let ed25519_private_key = generate_weak_ed25519_key();
+        let rsa_secret_key = generate_weak_rsa_key().unwrap();
+        let ed25519_secret_key = generate_weak_ed25519_key();
         let sender = Sender {
             username: "test".to_string(),
-            rsa_private_key: rsa_private_key.clone(),
-            ed25519_private_key: Some(ed25519_private_key),
+            rsa_private_key: rsa_secret_key.clone(),
+            ed25519_private_key: Some(ed25519_secret_key),
         };
         let value = serde_json::to_value(sender).unwrap();
         let sender: Sender = serde_json::from_value(value).unwrap();
-        assert_eq!(sender.rsa_private_key, rsa_private_key);
-        assert_eq!(sender.ed25519_private_key, Some(ed25519_private_key));
+        assert_eq!(sender.rsa_private_key, rsa_secret_key);
+        assert_eq!(sender.ed25519_private_key, Some(ed25519_secret_key));
     }
 }

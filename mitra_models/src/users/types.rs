@@ -10,12 +10,12 @@ use uuid::Uuid;
 
 use mitra_utils::{
     crypto_eddsa::{
-        ed25519_private_key_from_bytes,
-        Ed25519PrivateKey,
+        ed25519_secret_key_from_bytes,
+        Ed25519SecretKey,
     },
     crypto_rsa::{
-        rsa_private_key_from_pkcs8_pem,
-        RsaPrivateKey,
+        rsa_secret_key_from_pkcs8_pem,
+        RsaSecretKey,
     },
     currencies::Currency,
     did::Did,
@@ -153,8 +153,8 @@ pub struct User {
     pub password_hash: Option<String>,
     pub login_address_ethereum: Option<String>,
     pub login_address_monero: Option<String>,
-    pub rsa_private_key: RsaPrivateKey,
-    pub ed25519_private_key: Ed25519PrivateKey,
+    pub rsa_secret_key: RsaSecretKey,
+    pub ed25519_secret_key: Ed25519SecretKey,
     pub role: Role,
     pub client_config: ClientConfig,
     pub profile: DbActorProfile,
@@ -179,8 +179,8 @@ impl Default for User {
             password_hash: None,
             login_address_ethereum: None,
             login_address_monero: None,
-            rsa_private_key: generate_weak_rsa_key().unwrap(),
-            ed25519_private_key: generate_weak_ed25519_key(),
+            rsa_secret_key: generate_weak_rsa_key().unwrap(),
+            ed25519_secret_key: generate_weak_ed25519_key(),
             role: Role::default(),
             client_config: ClientConfig::default(),
             profile: DbActorProfile {
@@ -200,14 +200,14 @@ impl User {
         if db_user.id != db_profile.id {
             return Err(DatabaseTypeError);
         };
-        let rsa_private_key =
-            rsa_private_key_from_pkcs8_pem(&db_user.rsa_private_key)
+        let rsa_secret_key =
+            rsa_secret_key_from_pkcs8_pem(&db_user.rsa_private_key)
                 .map_err(|_| DatabaseTypeError)?;
-        let ed25519_private_key =
-            ed25519_private_key_from_bytes(&db_user.ed25519_private_key)
+        let ed25519_secret_key =
+            ed25519_secret_key_from_bytes(&db_user.ed25519_private_key)
                 .map_err(|_| DatabaseTypeError)?;
         if let Some(ref identity_key) = db_profile.identity_key {
-            if *identity_key != get_identity_key(ed25519_private_key) {
+            if *identity_key != get_identity_key(ed25519_secret_key) {
                 return Err(DatabaseTypeError);
             };
         };
@@ -216,8 +216,8 @@ impl User {
             password_hash: db_user.password_hash,
             login_address_ethereum: db_user.login_address_ethereum,
             login_address_monero: db_user.login_address_monero,
-            rsa_private_key: rsa_private_key,
-            ed25519_private_key: ed25519_private_key,
+            rsa_secret_key: rsa_secret_key,
+            ed25519_secret_key: ed25519_secret_key,
             role: db_user.user_role,
             client_config: db_user.client_config.into_inner(),
             profile: db_profile,
@@ -249,8 +249,8 @@ pub struct UserCreateData {
     pub password_hash: Option<String>,
     pub login_address_ethereum: Option<String>,
     pub login_address_monero: Option<String>,
-    pub rsa_private_key: String,
-    pub ed25519_private_key: Ed25519PrivateKey,
+    pub rsa_secret_key: String,
+    pub ed25519_secret_key: Ed25519SecretKey,
     pub invite_code: Option<String>,
     pub role: Role,
 }
@@ -275,22 +275,22 @@ impl Default for UserCreateData {
             crypto_eddsa::generate_ed25519_key,
             crypto_rsa::{
                 generate_weak_rsa_key,
-                rsa_private_key_to_pkcs8_pem,
+                rsa_secret_key_to_pkcs8_pem,
             },
         };
-        let rsa_private_key = generate_weak_rsa_key().unwrap();
-        let rsa_private_key_pem =
-            rsa_private_key_to_pkcs8_pem(&rsa_private_key).unwrap();
+        let rsa_secret_key = generate_weak_rsa_key().unwrap();
+        let rsa_secret_key_pem =
+            rsa_secret_key_to_pkcs8_pem(&rsa_secret_key).unwrap();
         // Generating unique key for each user to satisfy identity_key
         // uniqueness constraint.
-        let ed25519_private_key = generate_ed25519_key();
+        let ed25519_secret_key = generate_ed25519_key();
         Self {
             username: Default::default(),
             password_hash: None,
             login_address_ethereum: None,
             login_address_monero: None,
-            rsa_private_key: rsa_private_key_pem,
-            ed25519_private_key: ed25519_private_key,
+            rsa_secret_key: rsa_secret_key_pem,
+            ed25519_secret_key: ed25519_secret_key,
             invite_code: None,
             role: Role::default(),
         }
@@ -322,15 +322,15 @@ mod tests {
 
     #[test]
     fn test_user_cloned() {
-        let ed25519_private_key = generate_ed25519_key();
+        let ed25519_secret_key = generate_ed25519_key();
         let user = User {
-            ed25519_private_key: ed25519_private_key,
+            ed25519_secret_key: ed25519_secret_key,
             ..Default::default()
         };
         let user_cloned = user.clone();
         assert_eq!(
-            user_cloned.ed25519_private_key,
-            ed25519_private_key,
+            user_cloned.ed25519_secret_key,
+            ed25519_secret_key,
         );
     }
 

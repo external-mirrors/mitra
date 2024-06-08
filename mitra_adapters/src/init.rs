@@ -13,15 +13,15 @@ use mitra_models::{
 };
 use mitra_utils::{
     crypto_eddsa::{
-        ed25519_private_key_from_bytes,
+        ed25519_secret_key_from_bytes,
         generate_ed25519_key,
-        Ed25519PrivateKey,
+        Ed25519SecretKey,
     },
     crypto_rsa::{
         generate_rsa_key,
-        rsa_private_key_from_pkcs1_der,
-        rsa_private_key_to_pkcs1_der,
-        RsaPrivateKey,
+        rsa_secret_key_from_pkcs1_der,
+        rsa_secret_key_to_pkcs1_der,
+        RsaSecretKey,
     },
 };
 
@@ -57,9 +57,9 @@ pub async fn apply_custom_migrations(
 
 async fn save_instance_rsa_key(
     db_client: &impl DatabaseClient,
-    secret_key: &RsaPrivateKey,
+    secret_key: &RsaSecretKey,
 ) -> Result<(), DatabaseError> {
-    let secret_key_der = rsa_private_key_to_pkcs1_der(secret_key)
+    let secret_key_der = rsa_secret_key_to_pkcs1_der(secret_key)
         .map_err(|_| DatabaseTypeError)?;
     set_internal_property(
         db_client,
@@ -71,12 +71,12 @@ async fn save_instance_rsa_key(
 
 async fn prepare_instance_rsa_key(
     db_client: &impl DatabaseClient,
-) -> Result<RsaPrivateKey, DatabaseError> {
+) -> Result<RsaSecretKey, DatabaseError> {
     let maybe_secret_key_bytes: Option<Vec<u8>> =
         get_internal_property(db_client, INSTANCE_RSA_SECRET_KEY)
             .await?;
     let secret_key = if let Some(secret_key_der) = maybe_secret_key_bytes {
-        rsa_private_key_from_pkcs1_der(&secret_key_der)
+        rsa_secret_key_from_pkcs1_der(&secret_key_der)
             .map_err(|_| DatabaseTypeError)?
     } else {
         let secret_key = generate_rsa_key()
@@ -90,12 +90,12 @@ async fn prepare_instance_rsa_key(
 
 async fn prepare_instance_ed25519_key(
     db_client: &impl DatabaseClient,
-) -> Result<Ed25519PrivateKey, DatabaseError> {
+) -> Result<Ed25519SecretKey, DatabaseError> {
     let maybe_secret_key_bytes: Option<Vec<u8>> =
         get_internal_property(db_client, INSTANCE_ED25519_SECRET_KEY)
             .await?;
     let secret_key = if let Some(secret_key_bytes) = maybe_secret_key_bytes {
-        ed25519_private_key_from_bytes(&secret_key_bytes)
+        ed25519_secret_key_from_bytes(&secret_key_bytes)
             .map_err(|_| DatabaseTypeError)?
     } else {
         let secret_key = generate_ed25519_key();

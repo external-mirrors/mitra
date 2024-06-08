@@ -15,8 +15,8 @@ use uuid::Uuid;
 use mitra_utils::{
     caip2::ChainId,
     crypto_eddsa::{
-        ed25519_public_key_from_private_key,
-        Ed25519PrivateKey,
+        ed25519_public_key_from_secret_key,
+        Ed25519SecretKey,
     },
     did::Did,
     did_key::DidKey,
@@ -692,8 +692,8 @@ pub(super) fn get_profile_acct(username: &str, hostname: Option<&str>) -> String
     }
 }
 
-pub(crate) fn get_identity_key(secret_key: Ed25519PrivateKey) -> String {
-    let public_key = ed25519_public_key_from_private_key(&secret_key);
+pub(crate) fn get_identity_key(secret_key: Ed25519SecretKey) -> String {
+    let public_key = ed25519_public_key_from_secret_key(&secret_key);
     let did_key = DidKey::from_ed25519_key(&public_key);
     did_key.key_multibase()
 }

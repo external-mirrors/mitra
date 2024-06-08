@@ -163,12 +163,12 @@ pub fn build_local_actor(
     let subscribers = LocalActorCollection::Subscribers.of(&actor_id);
     let featured = LocalActorCollection::Featured.of(&actor_id);
 
-    let public_key = PublicKey::build(&actor_id, &user.rsa_private_key)
+    let public_key = PublicKey::build(&actor_id, &user.rsa_secret_key)
         .map_err(|_| DatabaseTypeError)?;
     let verification_methods = vec![
-        Multikey::build_rsa(&actor_id, &user.rsa_private_key)
+        Multikey::build_rsa(&actor_id, &user.rsa_secret_key)
             .map_err(|_| DatabaseTypeError)?,
-        Multikey::build_ed25519(&actor_id, &user.ed25519_private_key),
+        Multikey::build_ed25519(&actor_id, &user.ed25519_secret_key),
     ];
     let avatar = match &user.profile.avatar {
         Some(image) => {
@@ -262,7 +262,7 @@ pub fn sign_object_fep_ef61(
     object: &JsonValue,
     current_time: Option<DateTime<Utc>>,
 ) -> JsonValue {
-    let ed25519_secret_key = user.ed25519_private_key;
+    let ed25519_secret_key = user.ed25519_secret_key;
     // Key ID is DID
     let ed25519_key_id = authority.as_did_key()
         .expect("authority should be of FEP-ef61 kind")

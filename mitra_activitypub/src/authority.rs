@@ -4,8 +4,8 @@ use mitra_models::users::types::User;
 use mitra_utils::{
     ap_url::with_ap_prefix,
     crypto_eddsa::{
-        ed25519_public_key_from_private_key,
-        Ed25519PrivateKey,
+        ed25519_public_key_from_secret_key,
+        Ed25519SecretKey,
         Ed25519PublicKey,
     },
     did_key::DidKey,
@@ -52,13 +52,13 @@ impl Authority {
     }
 
     #[allow(dead_code)]
-    fn key(server_url: &str, secret_key: &Ed25519PrivateKey) -> Self {
-        let public_key = ed25519_public_key_from_private_key(secret_key);
+    fn key(server_url: &str, secret_key: &Ed25519SecretKey) -> Self {
+        let public_key = ed25519_public_key_from_secret_key(secret_key);
         Self::Key((server_url.to_owned(), public_key))
     }
 
-    fn key_with_gateway(server_url: &str, secret_key: &Ed25519PrivateKey) -> Self {
-        let public_key = ed25519_public_key_from_private_key(secret_key);
+    fn key_with_gateway(server_url: &str, secret_key: &Ed25519SecretKey) -> Self {
+        let public_key = ed25519_public_key_from_secret_key(secret_key);
         Self::KeyWithGateway((server_url.to_owned(), public_key))
     }
 
@@ -68,7 +68,7 @@ impl Authority {
         fep_ef61_enabled: bool,
     ) -> Self {
         if fep_ef61_enabled {
-            Self::key_with_gateway(server_url, &user.ed25519_private_key)
+            Self::key_with_gateway(server_url, &user.ed25519_secret_key)
         } else {
             Self::server(server_url)
         }

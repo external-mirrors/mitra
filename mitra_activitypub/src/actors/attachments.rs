@@ -315,8 +315,8 @@ mod tests {
     #[test]
     fn test_identity_proof_fep_c390() {
         let actor_id = "https://server.example/users/test";
-        let private_key = generate_ecdsa_key();
-        let address = ecdsa_public_key_to_address_hex(&private_key.verifying_key());
+        let secret_key = generate_ecdsa_key();
+        let address = ecdsa_public_key_to_address_hex(&secret_key.verifying_key());
         let did_pkh = DidPkh::from_address(&Currency::Ethereum, &address);
         let did = Did::Pkh(did_pkh);
         let proof_type = IdentityProofType::FepC390JcsEip191Proof;
@@ -328,7 +328,7 @@ mod tests {
             created_at,
         ).unwrap();
         let signature = create_eip191_signature(
-            &private_key,
+            &secret_key,
             message.as_bytes(),
         ).unwrap();
         let identity_proof = create_identity_proof_fep_c390(
