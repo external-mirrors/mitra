@@ -22,6 +22,7 @@ It also supports the following standards:
 - [FEP-0837: Federated Marketplace](https://codeberg.org/silverpill/feps/src/branch/main/0837/fep-0837.md)
 - [FEP-03c1: Actors without acct-URI](https://codeberg.org/fediverse/fep/src/branch/main/fep/03c1/fep-03c1.md)
 - [FEP-7628: Move actor](https://codeberg.org/fediverse/fep/src/branch/main/fep/7628/fep-7628.md)
+- [FEP-c7d3: Ownership](https://codeberg.org/silverpill/feps/src/branch/main/c7d3/fep-c7d3.md)
 
 ## ActivityPub
 
