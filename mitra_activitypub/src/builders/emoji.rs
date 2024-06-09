@@ -5,7 +5,7 @@ use mitra_models::emojis::types::DbEmoji;
 use mitra_services::media::get_file_url;
 
 use crate::{
-    identifiers::local_emoji_id,
+    identifiers::{local_emoji_id, local_instance_actor_id},
     vocabulary::{EMOJI, IMAGE},
 };
 
@@ -23,9 +23,10 @@ pub struct EmojiImage {
 pub struct Emoji {
     #[serde(rename = "type")]
     object_type: String,
-    pub icon: EmojiImage,
     pub id: String,
     pub name: String,
+    attributed_to: Option<String>,
+    pub icon: EmojiImage,
     #[serde(default)]
     pub updated: DateTime<Utc>,
 }
@@ -33,13 +34,14 @@ pub struct Emoji {
 pub fn build_emoji(instance_url: &str, db_emoji: &DbEmoji) -> Emoji {
     Emoji {
         object_type: EMOJI.to_string(),
+        id: local_emoji_id(instance_url, &db_emoji.emoji_name),
+        name: db_emoji.shortcode(),
+        attributed_to: Some(local_instance_actor_id(instance_url)),
         icon: EmojiImage {
             object_type: IMAGE.to_string(),
             url: get_file_url(instance_url, &db_emoji.image.file_name),
             media_type: Some(db_emoji.image.media_type.clone()),
         },
-        id: local_emoji_id(instance_url, &db_emoji.emoji_name),
-        name: db_emoji.shortcode(),
         updated: db_emoji.updated_at,
     }
 }
@@ -62,9 +64,10 @@ mod tests {
         let emoji = build_emoji(instance_url, &db_emoji);
         let emoji_value = serde_json::to_value(emoji).unwrap();
         let expected_value = json!({
-            "id": "https://social.example/objects/emojis/test",
             "type": "Emoji",
+            "id": "https://social.example/objects/emojis/test",
             "name": ":test:",
+            "attributedTo": "https://social.example/actor",
             "icon": {
                 "type": "Image",
                 "url": "https://social.example/media/",
