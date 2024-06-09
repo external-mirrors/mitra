@@ -171,6 +171,7 @@ pub(super) async fn deliver_activity_worker(
                     &activity,
                     None,
                     false, // use eddsa-jcs-2022
+                    false, // no proof context
                 )?
             },
             _ => {

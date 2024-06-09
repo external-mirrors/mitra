@@ -273,6 +273,7 @@ pub fn sign_object_fep_ef61(
         object,
         current_time,
         false, // use eddsa-jcs-2022
+        false, // no proof context
     ).expect("actor object should be ready for signing")
 }
 

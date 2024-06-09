@@ -48,6 +48,8 @@ pub struct IntegrityProofConfig {
     pub proof_purpose: String,
     pub verification_method: String,
     pub created: DateTime<Utc>,
+    #[serde(rename = "@context", skip_serializing_if = "Option::is_none")]
+    _context: Option<JsonValue>,
 }
 
 #[derive(Deserialize, Serialize)]
@@ -62,6 +64,7 @@ impl IntegrityProofConfig {
     pub fn jcs_eddsa(
         verification_method: &str,
         created_at: DateTime<Utc>,
+        maybe_proof_context: Option<JsonValue>,
     ) -> Self {
         Self {
             proof_type: DATA_INTEGRITY_PROOF.to_string(),
@@ -69,6 +72,7 @@ impl IntegrityProofConfig {
             proof_purpose: PURPOSE_ASSERTION_METHOD.to_string(),
             verification_method: verification_method.to_string(),
             created: created_at,
+            _context: maybe_proof_context,
         }
     }
 
@@ -82,6 +86,7 @@ impl IntegrityProofConfig {
             proof_purpose: PURPOSE_ASSERTION_METHOD.to_string(),
             verification_method: verification_method.to_string(),
             created: created_at,
+            _context: None,
         }
     }
 }
@@ -108,6 +113,7 @@ impl IntegrityProof {
             proof_purpose: PURPOSE_ASSERTION_METHOD.to_string(),
             verification_method: signer_key_id.to_string(),
             created: created_at,
+            _context: None,
         };
         Self::new(proof_config, signature)
     }
@@ -122,6 +128,7 @@ impl IntegrityProof {
             proof_purpose: PURPOSE_ASSERTION_METHOD.to_string(),
             verification_method: signer.to_string(),
             created: Utc::now(),
+            _context: None,
         };
         Self::new(proof_config, signature)
     }
@@ -136,6 +143,7 @@ impl IntegrityProof {
             proof_purpose: PURPOSE_ASSERTION_METHOD.to_string(),
             verification_method: signer.to_string(),
             created: Utc::now(),
+            _context: None,
         };
         Self::new(proof_config, signature)
     }
@@ -223,6 +231,7 @@ pub fn sign_object_eddsa(
     object: &JsonValue,
     current_time: Option<DateTime<Utc>>,
     use_legacy_cryptosuite: bool,
+    use_proof_context: bool,
 ) -> Result<JsonValue, JsonSignatureError> {
     let signature_created_at = current_time.unwrap_or(Utc::now());
     let proof_config = if use_legacy_cryptosuite {
@@ -233,10 +242,12 @@ pub fn sign_object_eddsa(
         )
     } else {
         // eddsa-jcs-2022 (requires context injection)
-        object.get("@context").ok_or(JsonSignatureError::ContextRequired)?;
+        let context = object.get("@context")
+            .ok_or(JsonSignatureError::ContextRequired)?;
         IntegrityProofConfig::jcs_eddsa(
             signer_key_id,
             signature_created_at,
+            use_proof_context.then_some(context.clone()),
         )
     };
     let hash_data = prepare_jcs_sha256_data(object, &proof_config)?;
@@ -337,6 +348,7 @@ mod tests {
             &object,
             Some(created_at),
             false,
+            false, // no proof context
         ).unwrap();
 
         let expected_result = json!({

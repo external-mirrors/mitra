@@ -73,6 +73,7 @@ pub fn create_identity_claim_fep_c390(
             let proof_config = IntegrityProofConfig::jcs_eddsa(
                 &subject.to_string(),
                 proof_created_at,
+                None,
             );
             let hash_data = prepare_jcs_sha256_data(&claim, &proof_config)?;
             hex::encode(hash_data)
@@ -125,6 +126,7 @@ pub fn create_identity_proof_fep_c390(
             let proof_config = IntegrityProofConfig::jcs_eddsa(
                 &did_key.to_string(),
                 proof_created_at,
+                None,
             );
             IntegrityProof::new(proof_config, signature_bin)
         },
@@ -209,6 +211,7 @@ mod tests {
             &claim_value,
             Some(created_at),
             true,
+            false, // no proof context
         ).unwrap();
         let expected_result = json!({
             "type": "VerifiableIdentityStatement",

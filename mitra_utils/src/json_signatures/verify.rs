@@ -77,6 +77,11 @@ pub fn get_json_signature(
     object_map.remove(LD_SIGNATURE_KEY);
     let proof = object_map.remove(PROOF_KEY)
         .ok_or(VerificationError::NoProof)?;
+    if let Some(context) = proof.get("@context") {
+        if *context != object["@context"] {
+            return Err(VerificationError::InvalidProof("incorrect proof context"));
+        };
+    };
     let IntegrityProof {
         proof_config,
         proof_value,
@@ -280,6 +285,7 @@ mod tests {
             &object,
             None,
             true,
+            false,
         ).unwrap();
 
         let signature_data = get_json_signature(&signed_object).unwrap();
@@ -325,6 +331,7 @@ mod tests {
             &object,
             None,
             false,
+            false,
         ).unwrap();
 
         let signature_data = get_json_signature(&signed_object).unwrap();
@@ -347,7 +354,7 @@ mod tests {
     }
 
     #[test]
-    fn test_create_and_verify_eddsa_signature_test_vector() {
+    fn test_create_and_verify_eddsa_signature_fep_8b32_test_vector() {
         let secret_key_multibase = "z3u2en7t5LR2WtQH5PfFqMqwVHBeXouLzo6haApm8XHqvjxq";
         let secret_key_multicode = decode_multibase_base58btc(secret_key_multibase).unwrap();
         let secret_key_bytes = Multicodec::Ed25519Priv
@@ -374,6 +381,7 @@ mod tests {
             &object,
             Some(created_at),
             false,
+            false,
         ).unwrap();
 
         let expected_result = json!({
@@ -395,6 +403,94 @@ mod tests {
                 "proofValue": "z3sXaxjKs4M3BRicwWA9peyNPJvJqxtGsDmpt1jjoHCjgeUf71TRFz56osPSfDErszyLp5Ks1EhYSgpDaNM977Rg2",
                 "created": "2023-02-24T23:36:38Z"
             }
+        });
+        assert_eq!(signed_object, expected_result);
+
+        let signature_data = get_json_signature(&signed_object).unwrap();
+        assert_eq!(
+            signature_data.proof_type,
+            ProofType::EddsaJcsSignature,
+        );
+        let public_key_multibase = "z6MkrJVnaZkeFzdQyMZu1cgjg7k1pZZ6pvBQ7XJPt4swbTQ2";
+        let public_key_multicode = decode_multibase_base58btc(public_key_multibase).unwrap();
+        let public_key_bytes = Multicodec::Ed25519Pub
+            .decode_exact(&public_key_multicode).unwrap();
+        let public_key = ed25519_public_key_from_bytes(&public_key_bytes).unwrap();
+        let result = verify_eddsa_json_signature(
+            &public_key,
+            &signature_data.object,
+            &signature_data.proof_config,
+            &signature_data.signature,
+        );
+        assert_eq!(result.is_ok(), true);
+    }
+
+    /// https://w3c.github.io/vc-di-eddsa/#representation-eddsa-jcs-2022
+    #[test]
+    fn test_create_and_verify_eddsa_signature_vc_di_eddsa_test_vector() {
+        let secret_key_multibase = "z3u2en7t5LR2WtQH5PfFqMqwVHBeXouLzo6haApm8XHqvjxq";
+        let secret_key_multicode = decode_multibase_base58btc(secret_key_multibase).unwrap();
+        let secret_key_bytes = Multicodec::Ed25519Priv
+            .decode_exact(&secret_key_multicode).unwrap();
+        let secret_key = ed25519_secret_key_from_bytes(&secret_key_bytes).unwrap();
+        let key_id = "https://vc.example/issuers/5678#z6MkrJVnaZkeFzdQyMZu1cgjg7k1pZZ6pvBQ7XJPt4swbTQ2";
+        let created_at = DateTime::parse_from_rfc3339("2023-02-24T23:36:38Z")
+            .unwrap().with_timezone(&Utc);
+        let object = json!({
+            "@context": [
+                "https://www.w3.org/ns/credentials/v2",
+                "https://www.w3.org/ns/credentials/examples/v2"
+            ],
+            "id": "urn:uuid:58172aac-d8ba-11ed-83dd-0b3aef56cc33",
+            "type": ["VerifiableCredential", "AlumniCredential"],
+            "name": "Alumni Credential",
+            "description": "A minimum viable example of an Alumni Credential.",
+            "issuer": "https://vc.example/issuers/5678",
+            "validFrom": "2023-01-01T00:00:00Z",
+            "credentialSubject": {
+                "id": "did:example:abcdefgh",
+                "alumniOf": "The School of Examples"
+            }
+        });
+        let signed_object = sign_object_eddsa(
+            &secret_key,
+            key_id,
+            &object,
+            Some(created_at),
+            false,
+            true, // with proof context
+        ).unwrap();
+
+        let expected_result = json!({
+            "@context": [
+                "https://www.w3.org/ns/credentials/v2",
+                "https://www.w3.org/ns/credentials/examples/v2"
+            ],
+            "id": "urn:uuid:58172aac-d8ba-11ed-83dd-0b3aef56cc33",
+            "type": [
+                "VerifiableCredential",
+                "AlumniCredential"
+            ],
+            "name": "Alumni Credential",
+            "description": "A minimum viable example of an Alumni Credential.",
+            "issuer": "https://vc.example/issuers/5678",
+            "validFrom": "2023-01-01T00:00:00Z",
+            "credentialSubject": {
+                "id": "did:example:abcdefgh",
+                "alumniOf": "The School of Examples"
+            },
+            "proof": {
+                "type": "DataIntegrityProof",
+                "cryptosuite": "eddsa-jcs-2022",
+                "created": "2023-02-24T23:36:38Z",
+                "verificationMethod": "https://vc.example/issuers/5678#z6MkrJVnaZkeFzdQyMZu1cgjg7k1pZZ6pvBQ7XJPt4swbTQ2",
+                "proofPurpose": "assertionMethod",
+                "@context": [
+                    "https://www.w3.org/ns/credentials/v2",
+                    "https://www.w3.org/ns/credentials/examples/v2"
+                ],
+                "proofValue": "z63t83Y53KfzJ5ZosfKTnqfMcKB2dmTrfjSaQjeNNjAD5srBowQfmWqeRb8rRjmeEuCBEsddF9LsVogtuTsijJKh4"
+            },
         });
         assert_eq!(signed_object, expected_result);
 
