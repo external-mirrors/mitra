@@ -16,7 +16,7 @@ use mitra_federation::{
 };
 use mitra_models::{
     database::{DatabaseClient, DatabaseError},
-    profiles::queries::get_profile_by_remote_actor_id,
+    profiles::queries::get_remote_profile_by_actor_id,
     profiles::types::{
         DbActorProfile,
         PublicKeyType,
@@ -109,7 +109,7 @@ async fn get_signer(
 ) -> Result<DbActorProfile, AuthenticationError> {
     let signer = if no_fetch {
         // Avoid fetching (e.g. if signer was deleted)
-        get_profile_by_remote_actor_id(db_client, signer_id).await?
+        get_remote_profile_by_actor_id(db_client, signer_id).await?
     } else {
         let mut instance = config.instance();
         instance.fetcher_timeout = AUTHENTICATION_FETCHER_TIMEOUT;

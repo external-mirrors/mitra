@@ -65,7 +65,7 @@ pub async fn create_reaction(
     Ok(reaction)
 }
 
-pub async fn get_reaction_by_remote_activity_id(
+pub async fn get_remote_reaction_by_activity_id(
     db_client: &impl DatabaseClient,
     activity_id: &str,
 ) -> Result<DbReaction, DatabaseError> {

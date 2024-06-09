@@ -10,12 +10,12 @@ use mitra_models::{
     posts::queries::{
         create_post,
         delete_post,
-        get_post_by_remote_object_id,
+        get_remote_post_by_object_id,
         get_repost_by_author,
     },
     posts::types::PostCreateData,
-    profiles::queries::get_profile_by_remote_actor_id,
-    reactions::queries::get_reaction_by_remote_activity_id,
+    profiles::queries::get_remote_profile_by_actor_id,
+    reactions::queries::get_remote_reaction_by_activity_id,
 };
 use mitra_services::media::MediaStorage;
 use mitra_validators::{
@@ -70,7 +70,7 @@ pub async fn handle_announce(
     let activity: Announce = serde_json::from_value(activity)
         .map_err(|_| ValidationError("unexpected activity structure"))?;
     let repost_object_id = activity.id;
-    match get_post_by_remote_object_id(
+    match get_remote_post_by_object_id(
         db_client,
         &repost_object_id,
     ).await {
@@ -147,7 +147,7 @@ async fn handle_fep_1b12_announce(
             return Ok(None);
         };
         // Return early if reaction already exists (no need to fetch the activity)
-        match get_reaction_by_remote_activity_id(db_client, activity_id).await {
+        match get_remote_reaction_by_activity_id(db_client, activity_id).await {
             Ok(_) => return Ok(None),
             Err(DatabaseError::NotFound(_)) => (),
             Err(other_error) => return Err(other_error.into()),
@@ -171,13 +171,13 @@ async fn handle_fep_1b12_announce(
         return Ok(None);
     };
     if activity_type == DELETE {
-        let group = get_profile_by_remote_actor_id(
+        let group = get_remote_profile_by_actor_id(
             db_client,
             &group_id,
         ).await?;
         let object_id = get_object_id(&activity["object"])
             .map_err(|_| ValidationError("invalid activity object"))?;
-        let post_id = match get_post_by_remote_object_id(
+        let post_id = match get_remote_post_by_object_id(
             db_client,
             &object_id,
         ).await {

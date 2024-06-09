@@ -9,14 +9,14 @@ use mitra_models::{
     database::{DatabaseClient, DatabaseError},
     posts::queries::{
         delete_post,
-        get_post_by_remote_object_id,
+        get_remote_post_by_object_id,
     },
     profiles::queries::{
-        get_profile_by_remote_actor_id,
+        get_remote_profile_by_actor_id,
     },
     reactions::queries::{
         delete_reaction,
-        get_reaction_by_remote_activity_id,
+        get_remote_reaction_by_activity_id,
     },
     relationships::queries::{
         get_follow_request_by_activity_id,
@@ -46,7 +46,7 @@ async fn handle_undo_follow(
 ) -> HandlerResult {
     let activity: UndoFollow = serde_json::from_value(activity)
         .map_err(|_| ValidationError("unexpected activity structure"))?;
-    let source_profile = get_profile_by_remote_actor_id(
+    let source_profile = get_remote_profile_by_actor_id(
         db_client,
         &activity.actor,
     ).await?;
@@ -86,7 +86,7 @@ pub async fn handle_undo(
 
     let activity: Undo = serde_json::from_value(activity)
         .map_err(|_| ValidationError("unexpected activity structure"))?;
-    let actor_profile = get_profile_by_remote_actor_id(
+    let actor_profile = get_remote_profile_by_actor_id(
         db_client,
         &activity.actor,
     ).await?;
@@ -108,7 +108,7 @@ pub async fn handle_undo(
         Err(other_error) => return Err(other_error.into()),
     };
 
-    match get_reaction_by_remote_activity_id(db_client, &activity.object).await {
+    match get_remote_reaction_by_activity_id(db_client, &activity.object).await {
         Ok(reaction) => {
             // Undo(Like), Undo(EmojiReact), Undo(Dislike)
             if reaction.author_id != actor_profile.id {
@@ -124,7 +124,7 @@ pub async fn handle_undo(
         },
         Err(DatabaseError::NotFound(_)) => {
             // Undo(Announce)
-            let post = match get_post_by_remote_object_id(
+            let post = match get_remote_post_by_object_id(
                 db_client,
                 &activity.object,
             ).await {

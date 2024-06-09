@@ -7,7 +7,7 @@ use mitra_models::{
     database::DatabaseClient,
     invoices::helpers::remote_invoice_opened,
     invoices::queries::get_invoice_by_id,
-    profiles::queries::get_profile_by_remote_actor_id,
+    profiles::queries::get_remote_profile_by_actor_id,
     relationships::queries::{
         follow_request_accepted,
         get_follow_request_by_id,
@@ -51,7 +51,7 @@ pub async fn handle_accept(
         return handle_accept_offer(config, db_client, activity).await;
     };
     // Accept(Follow)
-    let actor_profile = get_profile_by_remote_actor_id(
+    let actor_profile = get_remote_profile_by_actor_id(
         db_client,
         &activity.actor,
     ).await?;
@@ -76,7 +76,7 @@ async fn handle_accept_offer(
     db_client: &mut impl DatabaseClient,
     activity: Accept,
 ) -> HandlerResult {
-    let actor_profile = get_profile_by_remote_actor_id(
+    let actor_profile = get_remote_profile_by_actor_id(
         db_client,
         &activity.actor,
     ).await?;

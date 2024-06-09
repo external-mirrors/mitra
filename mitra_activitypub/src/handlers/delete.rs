@@ -7,11 +7,11 @@ use mitra_models::{
     database::{DatabaseClient, DatabaseError},
     posts::queries::{
         delete_post,
-        get_post_by_remote_object_id,
+        get_remote_post_by_object_id,
     },
     profiles::queries::{
         delete_profile,
-        get_profile_by_remote_actor_id,
+        get_remote_profile_by_actor_id,
     },
 };
 use mitra_validators::errors::ValidationError;
@@ -39,7 +39,7 @@ pub async fn handle_delete(
         .map_err(|_| ValidationError("unexpected activity structure"))?;
     if activity.object == activity.actor {
         // Self-delete
-        let profile = match get_profile_by_remote_actor_id(
+        let profile = match get_remote_profile_by_actor_id(
             db_client,
             &activity.object,
         ).await {
@@ -53,7 +53,7 @@ pub async fn handle_delete(
         log::info!("deleted remote actor {}", activity.object);
         return Ok(Some(PERSON));
     };
-    let post = match get_post_by_remote_object_id(
+    let post = match get_remote_post_by_object_id(
         db_client,
         &activity.object,
     ).await {
@@ -62,7 +62,7 @@ pub async fn handle_delete(
         Err(DatabaseError::NotFound(_)) => return Ok(None),
         Err(other_error) => return Err(other_error.into()),
     };
-    let actor_profile = get_profile_by_remote_actor_id(
+    let actor_profile = get_remote_profile_by_actor_id(
         db_client,
         &activity.actor,
     ).await?;

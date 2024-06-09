@@ -13,11 +13,11 @@ use mitra_federation::{
 use mitra_models::{
     database::{DatabaseClient, DatabaseError},
     posts::queries::{
-        get_post_by_remote_object_id,
+        get_remote_post_by_object_id,
         update_post,
     },
     posts::types::{PostUpdateData, Visibility},
-    profiles::queries::get_profile_by_remote_actor_id,
+    profiles::queries::get_remote_profile_by_actor_id,
 };
 use mitra_services::media::MediaStorage;
 use mitra_validators::{
@@ -66,7 +66,7 @@ async fn handle_update_note(
     if author_id != activity.actor {
         return Err(ValidationError("attributedTo value doesn't match actor").into());
     };
-    let post = match get_post_by_remote_object_id(
+    let post = match get_remote_post_by_object_id(
         db_client,
         &object.id,
     ).await {
@@ -153,7 +153,7 @@ async fn handle_update_person(
     if activity.object.id != activity.actor {
         return Err(ValidationError("actor ID mismatch").into());
     };
-    let profile = match get_profile_by_remote_actor_id(
+    let profile = match get_remote_profile_by_actor_id(
         db_client,
         &activity.object.id,
     ).await {

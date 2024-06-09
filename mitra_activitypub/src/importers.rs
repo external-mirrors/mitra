@@ -22,11 +22,11 @@ use mitra_federation::{
 use mitra_models::{
     database::{DatabaseClient, DatabaseError},
     posts::helpers::get_local_post_by_id,
-    posts::queries::get_post_by_remote_object_id,
+    posts::queries::get_remote_post_by_object_id,
     posts::types::Post,
     profiles::queries::{
         get_profile_by_acct,
-        get_profile_by_remote_actor_id,
+        get_remote_profile_by_actor_id,
     },
     profiles::types::DbActorProfile,
     users::queries::get_user_by_name,
@@ -125,7 +125,7 @@ pub async fn get_profile_by_actor_id(
         },
         Err(_) => {
             // Remote actor
-            get_profile_by_remote_actor_id(db_client, actor_id).await
+            get_remote_profile_by_actor_id(db_client, actor_id).await
         },
     }
 }
@@ -141,7 +141,7 @@ async fn import_profile(
     if actor.hostname()? == instance.hostname() {
         return Err(HandlerError::LocalObject);
     };
-    let profile = match get_profile_by_remote_actor_id(
+    let profile = match get_remote_profile_by_actor_id(
         db_client,
         &actor.id,
     ).await {
@@ -254,7 +254,7 @@ impl ActorIdResolver {
             };
         };
         // Remote ID
-        let profile = match get_profile_by_remote_actor_id(
+        let profile = match get_remote_profile_by_actor_id(
             db_client,
             actor_id,
         ).await {
@@ -373,7 +373,7 @@ pub async fn get_post_by_object_id(
         },
         Err(_) => {
             // Remote post
-            let post = get_post_by_remote_object_id(db_client, object_id).await?;
+            let post = get_remote_post_by_object_id(db_client, object_id).await?;
             Ok(post)
         },
     }
@@ -418,7 +418,7 @@ pub async fn import_post(
                     get_local_post_by_id(db_client, &post_id).await?;
                     continue;
                 };
-                match get_post_by_remote_object_id(
+                match get_remote_post_by_object_id(
                     db_client,
                     &object_id,
                 ).await {
@@ -560,7 +560,7 @@ pub async fn import_from_outbox(
 ) -> Result<(), HandlerError> {
     let instance = config.instance();
     let agent = build_federation_agent(&instance, None);
-    let profile = get_profile_by_remote_actor_id(db_client, actor_id).await?;
+    let profile = get_remote_profile_by_actor_id(db_client, actor_id).await?;
     let actor_data = profile.expect_actor_data();
     let activities =
         fetch_collection(&agent, &actor_data.outbox, limit).await?;

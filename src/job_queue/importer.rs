@@ -27,7 +27,7 @@ use mitra_models::{
     },
     notifications::helpers::create_move_notification,
     profiles::{
-        queries::get_profile_by_remote_actor_id,
+        queries::get_remote_profile_by_actor_id,
     },
     relationships::queries::{follow, unfollow},
     users::{
@@ -115,7 +115,7 @@ pub async fn import_followers_task(
     address_list: Vec<String>,
 ) -> Result<(), anyhow::Error> {
     let user = get_user_by_id(db_client, &user_id).await?;
-    let maybe_from_profile = match get_profile_by_remote_actor_id(
+    let maybe_from_profile = match get_remote_profile_by_actor_id(
         db_client,
         &from_actor_id,
     ).await {

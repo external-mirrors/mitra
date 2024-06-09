@@ -1111,7 +1111,7 @@ pub async fn get_conversation_participants(
     Ok(profiles)
 }
 
-pub async fn get_post_by_remote_object_id(
+pub async fn get_remote_post_by_object_id(
     db_client: &impl DatabaseClient,
     object_id: &str,
 ) -> Result<Post, DatabaseError> {
@@ -1833,7 +1833,7 @@ mod tests {
         };
         let current_user = create_user(db_client, current_user_data)
             .await.unwrap();
-        let remote_user_data = ProfileCreateData {
+        let remote_profile_data = ProfileCreateData {
             username: "test".to_string(),
             hostname: Some("example.com".to_string()),
             public_keys: vec![DbActorKey::default()],
@@ -1843,7 +1843,7 @@ mod tests {
             }),
             ..Default::default()
         };
-        let remote_profile = create_profile(db_client, remote_user_data)
+        let remote_profile = create_profile(db_client, remote_profile_data)
             .await.unwrap();
         let post_data_1 = PostCreateData {
             content: "test post".to_string(),

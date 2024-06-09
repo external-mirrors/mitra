@@ -7,15 +7,15 @@ use mitra_federation::deserialization::deserialize_into_object_id;
 use mitra_models::{
     database::{DatabaseClient, DatabaseError},
     invoices::queries::{
-        get_invoice_by_remote_object_id,
+        get_remote_invoice_by_object_id,
         set_invoice_status,
     },
     invoices::types::InvoiceStatus,
     posts::queries::{
-        get_post_by_remote_object_id,
+        get_remote_post_by_object_id,
         set_pinned_flag,
     },
-    profiles::queries::get_profile_by_remote_actor_id,
+    profiles::queries::get_remote_profile_by_actor_id,
     relationships::queries::subscribe_opt,
     subscriptions::queries::{
         create_subscription,
@@ -54,7 +54,7 @@ pub async fn handle_add(
 ) -> HandlerResult {
     let activity: Add = serde_json::from_value(activity)
         .map_err(|_| ValidationError("unexpected activity structure"))?;
-    let actor_profile = get_profile_by_remote_actor_id(
+    let actor_profile = get_remote_profile_by_actor_id(
         db_client,
         &activity.actor,
     ).await?;
@@ -78,7 +78,7 @@ pub async fn handle_add(
         };
         match activity.context {
             Some(ref agreement_id) => {
-                match get_invoice_by_remote_object_id(
+                match get_remote_invoice_by_object_id(
                     db_client,
                     agreement_id,
                 ).await {
@@ -147,7 +147,7 @@ pub async fn handle_add(
     };
     if Some(activity.target.clone()) == actor.featured {
         // Add to featured
-        let post = match get_post_by_remote_object_id(
+        let post = match get_remote_post_by_object_id(
             db_client,
             &activity.object,
         ).await {

@@ -153,7 +153,7 @@ pub async fn get_invoice_by_participants(
     Ok(invoice)
 }
 
-pub async fn get_invoice_by_remote_object_id(
+pub async fn get_remote_invoice_by_object_id(
     db_client: &impl DatabaseClient,
     object_id: &str,
 ) -> Result<DbInvoice, DatabaseError> {

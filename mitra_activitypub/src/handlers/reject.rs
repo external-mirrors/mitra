@@ -5,7 +5,7 @@ use mitra_config::Config;
 use mitra_federation::deserialization::deserialize_into_object_id;
 use mitra_models::{
     database::{DatabaseClient, DatabaseError},
-    profiles::queries::get_profile_by_remote_actor_id,
+    profiles::queries::get_remote_profile_by_actor_id,
     relationships::queries::{
         follow_request_rejected,
         get_follow_request_by_id,
@@ -36,7 +36,7 @@ pub async fn handle_reject(
     // Reject(Follow)
     let activity: Reject = serde_json::from_value(activity)
         .map_err(|_| ValidationError("unexpected activity structure"))?;
-    let actor_profile = get_profile_by_remote_actor_id(
+    let actor_profile = get_remote_profile_by_actor_id(
         db_client,
         &activity.actor,
     ).await?;

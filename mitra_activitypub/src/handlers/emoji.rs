@@ -8,7 +8,7 @@ use mitra_models::{
     database::{DatabaseClient, DatabaseError},
     emojis::queries::{
         create_emoji,
-        get_emoji_by_remote_object_id,
+        get_remote_emoji_by_object_id,
         update_emoji,
     },
     emojis::types::{DbEmoji, EmojiImage},
@@ -54,7 +54,7 @@ pub async fn handle_emoji(
         log::warn!("invalid emoji name: {}", emoji_name);
         return Ok(None);
     };
-    let maybe_emoji_id = match get_emoji_by_remote_object_id(
+    let maybe_emoji_id = match get_remote_emoji_by_object_id(
         db_client,
         &emoji.id,
     ).await {

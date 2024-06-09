@@ -23,7 +23,7 @@ use mitra_models::{
         DatabaseTypeError,
     },
     profiles::queries::{
-        get_profile_by_remote_actor_id,
+        get_remote_profile_by_actor_id,
         set_reachability_status,
     },
     profiles::types::DbActor,
@@ -296,7 +296,7 @@ pub async fn process_queued_outgoing_activities(
             // TODO: O(1)
             for recipient in recipients.iter_mut() {
                 if !recipient.is_delivered {
-                    let profile = match get_profile_by_remote_actor_id(
+                    let profile = match get_remote_profile_by_actor_id(
                         db_client,
                         &recipient.id,
                     ).await {

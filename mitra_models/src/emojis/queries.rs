@@ -176,7 +176,7 @@ pub async fn get_emoji_by_name_and_hostname(
     Ok(emoji)
 }
 
-pub async fn get_emoji_by_remote_object_id(
+pub async fn get_remote_emoji_by_object_id(
     db_client: &impl DatabaseClient,
     object_id: &str,
 ) -> Result<DbEmoji, DatabaseError> {
@@ -272,7 +272,7 @@ mod tests {
             Some(object_id),
             updated_at,
         ).await.unwrap();
-        let emoji = get_emoji_by_remote_object_id(
+        let emoji = get_remote_emoji_by_object_id(
             db_client,
             object_id,
         ).await.unwrap();

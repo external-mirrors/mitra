@@ -5,7 +5,7 @@ use mitra_config::Config;
 use mitra_models::{
     database::DatabaseClient,
     invoices::queries::create_invoice,
-    profiles::queries::get_profile_by_remote_actor_id,
+    profiles::queries::get_remote_profile_by_actor_id,
     profiles::types::MoneroSubscription,
     users::queries::get_user_by_name,
 };
@@ -39,7 +39,7 @@ pub async fn handle_offer(
 ) -> HandlerResult {
     let activity: Offer = serde_json::from_value(activity)
         .map_err(|_| ValidationError("unexpected activity structure"))?;
-    let actor_profile = get_profile_by_remote_actor_id(
+    let actor_profile = get_remote_profile_by_actor_id(
         db_client,
         &activity.actor,
     ).await?;

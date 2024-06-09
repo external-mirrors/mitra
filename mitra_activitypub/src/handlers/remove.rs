@@ -8,10 +8,10 @@ use mitra_models::{
         create_subscription_expiration_notification,
     },
     posts::queries::{
-        get_post_by_remote_object_id,
+        get_remote_post_by_object_id,
         set_pinned_flag,
     },
-    profiles::queries::get_profile_by_remote_actor_id,
+    profiles::queries::get_remote_profile_by_actor_id,
     relationships::queries::unsubscribe,
     users::queries::get_user_by_name,
 };
@@ -38,7 +38,7 @@ pub async fn handle_remove(
 ) -> HandlerResult {
     let activity: Remove = serde_json::from_value(activity)
         .map_err(|_| ValidationError("unexpected activity structure"))?;
-    let actor_profile = get_profile_by_remote_actor_id(
+    let actor_profile = get_remote_profile_by_actor_id(
         db_client,
         &activity.actor,
     ).await?;
@@ -68,7 +68,7 @@ pub async fn handle_remove(
     };
     if Some(activity.target) == actor.featured {
         // Remove from featured
-        let post = match get_post_by_remote_object_id(
+        let post = match get_remote_post_by_object_id(
             db_client,
             &activity.object,
         ).await {

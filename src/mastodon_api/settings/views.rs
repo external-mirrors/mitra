@@ -29,7 +29,7 @@ use mitra_models::{
     profiles::queries::{
         delete_profile,
         get_profile_by_acct,
-        get_profile_by_remote_actor_id,
+        get_remote_profile_by_actor_id,
         update_profile,
     },
     profiles::types::ProfileUpdateData,
@@ -287,7 +287,7 @@ async fn import_followers_view(
     };
     // Existence of actor is not verified because
     // the old profile could have been deleted
-    let maybe_from_profile = match get_profile_by_remote_actor_id(
+    let maybe_from_profile = match get_remote_profile_by_actor_id(
         db_client,
         &request_data.from_actor_id,
     ).await {

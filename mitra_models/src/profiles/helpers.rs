@@ -7,7 +7,7 @@ use crate::database::{DatabaseClient, DatabaseError};
 use super::queries::{
     get_profile_by_acct,
     get_profile_by_id,
-    get_profile_by_remote_actor_id,
+    get_remote_profile_by_actor_id,
     search_profiles_by_did_only,
 };
 use super::types::DbActorProfile;
@@ -16,7 +16,7 @@ pub async fn get_profile_by_id_or_acct(
     db_client: &impl DatabaseClient,
     profile_id_or_acct: &str,
 ) -> Result<DbActorProfile, DatabaseError> {
-    // Only remote profiles could have usernames that are valid UUIDs
+    // Only remote profiles can have usernames that are valid UUIDs
     if let Ok(profile_id) = Uuid::from_str(profile_id_or_acct) {
         let profile = get_profile_by_id(db_client, &profile_id).await?;
         Ok(profile)
@@ -32,7 +32,7 @@ pub async fn find_declared_aliases(
 ) -> Result<Vec<(String, Option<DbActorProfile>)>, DatabaseError> {
     let mut results = vec![];
     for actor_id in profile.aliases.clone().into_actor_ids() {
-        let maybe_profile = match get_profile_by_remote_actor_id(
+        let maybe_profile = match get_remote_profile_by_actor_id(
             db_client,
             &actor_id,
         ).await {
