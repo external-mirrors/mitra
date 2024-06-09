@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Changed
 
 - Save imported actor objects to database.
+- Block deletion of user account if profile is not deleted.
 
 ### Removed
 

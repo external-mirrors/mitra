@@ -142,7 +142,7 @@ pub async fn create_user(
         emojis: vec![],
         actor_json: None,
     };
-    let profile = create_profile(&mut transaction, profile_data).await?;
+    let db_profile = create_profile(&mut transaction, profile_data).await?;
     // Create user
     let row = transaction.query_one(
         "
@@ -160,7 +160,7 @@ pub async fn create_user(
         RETURNING user_account
         ",
         &[
-            &profile.id,
+            &db_profile.id,
             &user_data.password_hash,
             &user_data.login_address_ethereum,
             &user_data.login_address_monero,
@@ -171,7 +171,18 @@ pub async fn create_user(
         ],
     ).await.map_err(catch_unique_violation("user"))?;
     let db_user: DbUser = row.try_get("user_account")?;
-    let user = User::new(db_user, profile)?;
+    // Create reverse FK
+    let row = transaction.query_one(
+        "
+        UPDATE actor_profile
+        SET user_id = actor_profile.id
+        WHERE id = $1
+        RETURNING actor_profile
+        ",
+        &[&db_profile.id],
+    ).await?;
+    let db_profile: DbActorProfile = row.try_get("actor_profile")?;
+    let user = User::new(db_user, db_profile)?;
     transaction.commit().await?;
     Ok(user)
 }

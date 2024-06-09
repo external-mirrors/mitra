@@ -648,6 +648,7 @@ json_to_sql!(DbActor);
 #[postgres(name = "actor_profile")]
 pub struct DbActorProfile {
     pub id: Uuid,
+    pub(crate) user_id: Option<Uuid>,
     pub username: String,
     pub hostname: Option<String>,
     pub acct: Option<String>, // unique acct string
@@ -701,6 +702,11 @@ pub(crate) fn get_identity_key(secret_key: Ed25519SecretKey) -> String {
 
 impl DbActorProfile {
     pub(crate) fn check_consistency(&self) -> Result<(), DatabaseTypeError> {
+        if self.user_id.is_some() != self.actor_json.is_none() {
+            // NOTE: no CHECK constraint because
+            // it can not be deferred
+            return Err(DatabaseTypeError);
+        };
         if self.hostname.is_none() != self.actor_json.is_none() {
             return Err(DatabaseTypeError);
         };
@@ -713,11 +719,12 @@ impl DbActorProfile {
                 return Err(DatabaseTypeError);
             };
         } else if self.actor_json.is_none() {
-            // Only remote accounts may have empty acct
+            // Only remote actors may have empty acct
             return Err(DatabaseTypeError);
         };
+        // TODO: remove
         if self.actor_json.is_some() && self.identity_key.is_some() {
-            // Remote accounts can't have identity keys
+            // Remote actors can't have identity keys
             return Err(DatabaseTypeError);
         };
         Ok(())
@@ -781,6 +788,7 @@ impl Default for DbActorProfile {
         let now = Utc::now();
         Self {
             id: Uuid::new_v4(),
+            user_id: None,
             username: "test".to_string(),
             hostname: None,
             acct: Some("test".to_string()),

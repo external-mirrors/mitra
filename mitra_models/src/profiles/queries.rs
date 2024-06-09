@@ -957,6 +957,7 @@ mod tests {
     };
     use crate::profiles::{
         queries::create_profile,
+        test_utils::create_test_local_profile,
         types::{
             DbActor,
             DbActorKey,
@@ -1125,11 +1126,7 @@ mod tests {
     #[serial]
     async fn test_set_profile_identity_key() {
         let db_client = &mut create_test_database().await;
-        let profile_data = ProfileCreateData {
-            username: "test".to_string(),
-            ..Default::default()
-        };
-        let profile = create_profile(db_client, profile_data).await.unwrap();
+        let profile = create_test_local_profile(db_client, "test").await;
         let identity_key = generate_weak_ed25519_key();
         let profile_updated = set_profile_identity_key(
             db_client,

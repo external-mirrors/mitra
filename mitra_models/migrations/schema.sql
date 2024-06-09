@@ -18,6 +18,7 @@ CREATE TABLE instance (
 
 CREATE TABLE actor_profile (
     id UUID PRIMARY KEY,
+    user_id UUID UNIQUE,
     username VARCHAR(100) NOT NULL,
     hostname VARCHAR(100) REFERENCES instance (hostname) ON DELETE RESTRICT,
     acct VARCHAR(200) UNIQUE,
@@ -44,6 +45,7 @@ CREATE TABLE actor_profile (
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
     unreachable_since TIMESTAMP WITH TIME ZONE,
+    CHECK (user_id IS NULL OR user_id = id),
     CHECK ((hostname IS NULL) = (actor_json IS NULL))
 );
 
@@ -66,6 +68,10 @@ CREATE TABLE user_account (
     client_config JSONB NOT NULL DEFAULT '{}',
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
 );
+
+ALTER TABLE actor_profile
+    ADD CONSTRAINT actor_profile_user_id_fkey
+    FOREIGN KEY (user_id) REFERENCES user_account (id) ON DELETE RESTRICT;
 
 CREATE TABLE caip122_nonce (
     account_id VARCHAR(500) NOT NULL,

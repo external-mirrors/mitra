@@ -1,6 +1,9 @@
 use tokio_postgres::Client;
+use uuid::Uuid;
 
 use mitra_utils::urls::get_hostname;
+
+use crate::users::test_utils::create_test_user;
 
 use super::{
     queries::create_profile,
@@ -12,6 +15,14 @@ use super::{
         ProfileCreateData,
     },
 };
+
+pub async fn create_test_local_profile(
+    db_client: &mut Client,
+    username: &str,
+) -> DbActorProfile {
+    let user = create_test_user(db_client, username).await;
+    user.profile
+}
 
 pub async fn create_test_remote_profile(
     db_client: &mut Client,
@@ -36,7 +47,10 @@ pub async fn create_test_remote_profile(
 
 impl DbActorProfile {
     pub fn local_for_test(username: &str) -> Self {
+        let id = Uuid::new_v4();
         let profile = Self {
+            id: id,
+            user_id: Some(id),
             username: username.to_string(),
             acct: Some(username.to_string()),
             ..Default::default()

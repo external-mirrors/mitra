@@ -203,6 +203,9 @@ impl User {
         if db_user.id != db_profile.id {
             return Err(DatabaseTypeError);
         };
+        if db_profile.user_id != Some(db_user.id) {
+            return Err(DatabaseTypeError);
+        };
         let rsa_secret_key =
             rsa_secret_key_from_pkcs8_pem(&db_user.rsa_private_key)
                 .map_err(|_| DatabaseTypeError)?;
