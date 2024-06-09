@@ -1576,11 +1576,12 @@ mod tests {
     #[serial]
     async fn test_create_post() {
         let db_client = &mut create_test_database().await;
-        let author_data = ProfileCreateData {
+        let author_data = UserCreateData {
             username: "test".to_string(),
+            password_hash: Some("test".to_string()),
             ..Default::default()
         };
-        let author = create_profile(db_client, author_data).await.unwrap();
+        let author = create_user(db_client, author_data).await.unwrap();
         let post_data = PostCreateData {
             content: "test post".to_string(),
             ..Default::default()
@@ -1592,6 +1593,9 @@ mod tests {
         assert_eq!(post.mentions.is_empty(), true);
         assert_eq!(post.tags.is_empty(), true);
         assert_eq!(post.links.is_empty(), true);
+        assert_eq!(post.emojis.is_empty(), true);
+        assert_eq!(post.emoji_reactions.is_empty(), true);
+        assert_eq!(post.object_id, None);
         assert_eq!(post.updated_at, None);
     }
 
@@ -1599,11 +1603,12 @@ mod tests {
     #[serial]
     async fn test_create_post_with_link() {
         let db_client = &mut create_test_database().await;
-        let author_data = ProfileCreateData {
+        let author_data = UserCreateData {
             username: "test".to_string(),
+            password_hash: Some("test".to_string()),
             ..Default::default()
         };
-        let author = create_profile(db_client, author_data).await.unwrap();
+        let author = create_user(db_client, author_data).await.unwrap();
         let post_data_1 = PostCreateData::default();
         let post_1 = create_post(db_client, &author.id, post_data_1).await.unwrap();
         let post_data_2 = PostCreateData {
