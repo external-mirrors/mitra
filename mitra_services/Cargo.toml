@@ -40,7 +40,7 @@ mitra_models = { path = "../mitra_models", default-features = false }
 mitra_utils = { path = "../mitra_utils" }
 
 [features]
-default = ["native-tls"]
+default = ["rustls-tls"]
 
 native-tls = ["reqwest/native-tls", "monero-rpc/native-tls", "web3/http-native-tls", "mitra_models/native-tls"]
 rustls-tls = ["reqwest/rustls-tls-native-roots", "monero-rpc/rustls-tls", "web3/http-rustls-tls", "mitra_models/rustls-tls"]

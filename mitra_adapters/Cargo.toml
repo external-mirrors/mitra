@@ -36,7 +36,7 @@ openssl = { version = "0.10.63", features = ["vendored"], optional = true }
 openssl-probe = { version = "0.1.5", optional = true }
 
 [features]
-default = ["native-tls"]
+default = ["rustls-tls"]
 
 native-tls = ["mitra_models/native-tls", "mitra_services/native-tls", "openssl", "openssl-probe"]
 rustls-tls = ["mitra_models/rustls-tls", "mitra_services/rustls-tls"]

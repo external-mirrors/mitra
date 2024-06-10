@@ -51,7 +51,7 @@ serial_test = "0.7.0"
 mitra_utils = { path = "../mitra_utils", features = ["test-utils"] }
 
 [features]
-default = ["native-tls"]
+default = ["rustls-tls"]
 
 native-tls = ["openssl", "postgres-openssl"]
 rustls-tls = ["rustls", "rustls-pemfile", "tokio-postgres-rustls"]

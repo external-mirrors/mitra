@@ -19,6 +19,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Write warning to log when object reference is invalid.
 - Verify that profile linked to user account is local.
 - Update Webfinger endpoint to return 404 Not Found when actor ID is unknown.
+- Enable rustls by default.
+
+### Deprecated
+
+- Deprecate OpenSSL support.
 
 ## [2.21.0] - 2024-06-01
 

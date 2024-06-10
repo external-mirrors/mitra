@@ -22,5 +22,11 @@ mitra_utils = { path = "../mitra_utils" }
 mitra_models = { path = "../mitra_models", features = ["test-utils"] }
 mitra_utils = { path = "../mitra_utils", features = ["test-utils"] }
 
+[features]
+default = ["rustls-tls"]
+
+native-tls = ["mitra_models/native-tls"]
+rustls-tls = ["mitra_models/rustls-tls"]
+
 [lints]
 workspace = true

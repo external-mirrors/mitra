@@ -33,7 +33,7 @@ mitra_validators = { path = "../mitra_validators" }
 mitra = { path = "..", default-features = false }
 
 [features]
-default = ["native-tls"]
+default = ["rustls-tls"]
 
 native-tls = [
   "mitra/native-tls",

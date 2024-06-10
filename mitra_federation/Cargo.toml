@@ -24,7 +24,7 @@ thiserror = "1.0.37"
 mitra_utils = { path = "../mitra_utils" }
 
 [features]
-default = ["native-tls"]
+default = ["rustls-tls"]
 
 native-tls = ["reqwest/native-tls"]
 rustls-tls = ["reqwest/rustls-tls-native-roots"]

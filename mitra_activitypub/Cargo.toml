@@ -40,7 +40,7 @@ mitra_models = { path = "../mitra_models", default-features = false, features = 
 mitra_utils = { path = "../mitra_utils", features = ["test-utils"] }
 
 [features]
-default = ["native-tls"]
+default = ["rustls-tls"]
 
 native-tls = [
   "mitra_adapters/native-tls",

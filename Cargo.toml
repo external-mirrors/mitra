@@ -103,7 +103,7 @@ mitra_models = { path = "mitra_models", default-features = false, features = ["t
 mitra_utils = { path = "mitra_utils", features = ["test-utils"] }
 
 [features]
-default = ["native-tls"]
+default = ["rustls-tls"]
 
 native-tls = [
   "mitra_activitypub/native-tls",
