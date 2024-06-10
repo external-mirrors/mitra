@@ -891,7 +891,7 @@ pub async fn find_empty_profiles(
         SELECT actor_profile.id
         FROM actor_profile
         WHERE
-            actor_profile.hostname IS NOT NULL
+            actor_profile.actor_json IS NOT NULL
             AND actor_profile.updated_at < $1
             AND NOT EXISTS (
                 SELECT 1 FROM relationship
