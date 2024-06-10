@@ -50,7 +50,8 @@ async fn get_jrd(
         let username = if resource == local_instance_actor_id(&instance.url()) {
             instance.hostname()
         } else {
-            parse_local_actor_id(&instance.url(), resource)?
+            parse_local_actor_id(&instance.url(), resource)
+                .map_err(|_| HttpError::NotFoundError("user"))?
         };
         ActorAddress::new_unchecked(&username, &instance.hostname())
     };
