@@ -168,6 +168,7 @@ pub async fn receive_activity(
         Err(AuthenticationError::NoJsonSignature) => (), // ignore
         Err(other_error) => {
             log::warn!("invalid JSON signature: {}", other_error);
+            return Err(other_error.into());
         },
     };
 

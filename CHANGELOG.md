@@ -23,6 +23,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Validate IDs of incoming activities.
 - Write message to log when processing forwarded activities.
 - Silently ignore `Listen` activities from Pleroma.
+- Drop activity if integrity proof is invalid.
 
 ### Deprecated
 
