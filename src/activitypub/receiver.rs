@@ -186,7 +186,10 @@ pub async fn receive_activity(
     let is_authenticated = activity_actor == signer_id;
     if !is_authenticated {
         match activity_type {
-            CREATE | UPDATE => (), // Accept forwarded Create() and Update() activities
+            CREATE | UPDATE => {
+                // Accept forwarded Create() and Update() activities
+                log::info!("processing forwarded {activity_type} activity");
+            },
             DELETE | LIKE => {
                 // Ignore forwarded Delete and Like activities
                 return Ok(());

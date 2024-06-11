@@ -21,6 +21,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Update Webfinger endpoint to return 404 Not Found when actor ID is unknown.
 - Enable rustls by default.
 - Validate IDs of incoming activities.
+- Write message to log when processing forwarded activities.
 
 ### Deprecated
 
