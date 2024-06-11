@@ -10,7 +10,10 @@ use mitra_config::Config;
 use mitra_federation::deserialization::get_object_id;
 use mitra_models::database::{DatabaseClient, DatabaseError};
 use mitra_utils::urls::get_hostname;
-use mitra_validators::errors::ValidationError;
+use mitra_validators::{
+    activitypub::validate_object_id,
+    errors::ValidationError,
+};
 
 use crate::errors::HttpError;
 
@@ -76,10 +79,12 @@ pub async fn receive_activity(
     activity: &JsonValue,
     activity_digest: [u8; 32],
 ) -> Result<(), InboxError> {
+    let activity_id = activity["id"].as_str()
+        .ok_or(ValidationError("'id' property is missing"))?;
     let activity_type = activity["type"].as_str()
-        .ok_or(ValidationError("type property is missing"))?;
+        .ok_or(ValidationError("'type' property is missing"))?;
     let activity_actor = get_object_id(&activity["actor"])
-        .map_err(|_| ValidationError("invalid actor property"))?;
+        .map_err(|_| ValidationError("invalid 'actor' property"))?;
 
     let actor_hostname = get_hostname(&activity_actor)
         .map_err(|_| ValidationError("invalid actor ID"))?;
@@ -91,6 +96,8 @@ pub async fn receive_activity(
         log::info!("ignoring activity from blocked instance {actor_hostname}");
         return Ok(());
     };
+
+    validate_object_id(activity_id)?;
 
     let is_self_delete = if activity_type == DELETE {
         let object_id = get_object_id(&activity["object"])
