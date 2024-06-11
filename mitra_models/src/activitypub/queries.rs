@@ -102,6 +102,51 @@ pub async fn delete_activitypub_objects(
     Ok(deleted_count)
 }
 
+pub async fn add_object_to_collection(
+    db_client: &impl DatabaseClient,
+    owner_id: Uuid,
+    collection_id: &str,
+    object_id: &str,
+) -> Result<(), DatabaseError> {
+    db_client.execute(
+        "
+        INSERT INTO activitypub_collection_item (
+            owner_id,
+            collection_id,
+            object_id
+        )
+        VALUES ($1, $2, $3)
+        ON CONFLICT (collection_id, object_id)
+        DO NOTHING
+        ",
+        &[&owner_id, &collection_id, &object_id],
+    ).await?;
+    Ok(())
+}
+
+pub async fn get_collection_items(
+    db_client: &impl DatabaseClient,
+    collection_id: &str,
+    limit: u32,
+) -> Result<Vec<JsonValue>, DatabaseError> {
+    // Reverse chronological order
+    let rows = db_client.query(
+        "
+        SELECT activitypub_object.object_data
+        FROM activitypub_object
+        JOIN activitypub_collection_item USING (object_id)
+        WHERE collection_id = $1
+        ORDER BY activitypub_object.created_at DESC
+        LIMIT $2
+        ",
+        &[&collection_id, &i64::from(limit)],
+    ).await?;
+    let items = rows.iter()
+        .map(|row| row.try_get("object_data"))
+        .collect::<Result<_, _>>()?;
+    Ok(items)
+}
+
 #[cfg(test)]
 mod tests {
     use serde_json::json;
@@ -109,6 +154,7 @@ mod tests {
     use crate::{
         database::test_utils::create_test_database,
         profiles::test_utils::create_test_remote_profile,
+        users::test_utils::create_test_portable_user,
     };
     use super::*;
 
@@ -192,5 +238,50 @@ mod tests {
             "https://www.w3.org/ns/activitystreams#Public",
         ).await.err().unwrap();
         assert_eq!(error.to_string(), "activitypub object not found");
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_add_object_to_collection() {
+        let db_client = &mut create_test_database().await;
+        let canonical_actor_id = "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor";
+        let user = create_test_portable_user(
+            db_client,
+            "test",
+            "social.example",
+            canonical_actor_id,
+        ).await;
+        // Create activity
+        let canonical_activity_id = "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/activities/321";
+        let activity = json!({
+            "id": "https://social.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/activities/321",
+            "type": "Create",
+            "actor": "https://social.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor",
+            "object": "https://social.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/objects/321",
+        });
+        save_activity(db_client, canonical_activity_id, &activity).await.unwrap();
+        // Add to collection
+        let canonical_collection_id = "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor/outbox";
+        add_object_to_collection(
+            db_client,
+            user.id,
+            canonical_collection_id,
+            canonical_activity_id,
+        ).await.unwrap();
+        // Re-add
+        add_object_to_collection(
+            db_client,
+            user.id,
+            canonical_collection_id,
+            canonical_activity_id,
+        ).await.unwrap();
+        // Read collection
+        let items = get_collection_items(
+            db_client,
+            canonical_collection_id,
+            10,
+        ).await.unwrap();
+        assert_eq!(items.len(), 1);
+        assert_eq!(items[0], activity);
     }
 }

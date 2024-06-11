@@ -46,6 +46,7 @@ use mitra_activitypub::{
         LocalActorCollection,
     },
     importers::register_portable_actor,
+    url::canonicalize_id,
 };
 use mitra_config::Config;
 use mitra_federation::{
@@ -53,7 +54,11 @@ use mitra_federation::{
     http_server::is_activitypub_request,
 };
 use mitra_models::{
-    activitypub::queries::{get_actor, get_object_as_target},
+    activitypub::queries::{
+        get_actor,
+        get_collection_items,
+        get_object_as_target,
+    },
     database::{
         get_database_client,
         DatabaseConnectionPool,
@@ -62,7 +67,9 @@ use mitra_models::{
     emojis::queries::get_local_emoji_by_name,
     posts::helpers::{add_related_posts, can_view_post},
     posts::queries::{get_post_by_id, get_posts_by_author, get_thread},
-    profiles::types::PaymentOption,
+    profiles::{
+        types::PaymentOption,
+    },
     users::queries::{
         get_user_by_id,
         get_user_by_identity_key,
@@ -84,7 +91,10 @@ use crate::web_client::urls::{
     get_tag_page_url,
 };
 
-use super::authentication::verify_signed_c2s_activity;
+use super::authentication::{
+    verify_signed_c2s_activity,
+    verify_signed_get_request,
+};
 use super::receiver::receive_activity;
 
 #[derive(Deserialize)]
@@ -790,8 +800,58 @@ async fn apgateway_view(
     Ok(response)
 }
 
+// TODO: FEP-EF61: how to detect collections?
+// TODO: shared inbox?
+#[get("/{url:.*}/inbox")]
+pub async fn apgateway_inbox_client_to_server_view(
+    config: web::Data<Config>,
+    db_pool: web::Data<DatabaseConnectionPool>,
+    request_path: Uri,
+    request: HttpRequest,
+) -> Result<HttpResponse, HttpError> {
+    let db_client = &mut **get_database_client(&db_pool).await?;
+    let signer = verify_signed_get_request(
+        &config,
+        db_client,
+        &request,
+    ).await.map_err(|error| {
+        log::warn!("C2S authentication error: {}", error);
+        HttpError::PermissionError
+    })?;
+    if !signer.has_account() {
+        // Only local portable users can have inbox
+        return Err(HttpError::NotFoundError("portable user"));
+    };
+    let collection_id = format!(
+        "{}{}",
+        config.instance_url(),
+        request_path,
+    );
+    let canonical_collection_id = canonicalize_id(&collection_id)?;
+    if canonical_collection_id != signer.expect_actor_data().inbox {
+        return Err(HttpError::PermissionError);
+    };
+    const LIMIT: u32 = 20;
+    let items = get_collection_items(
+        db_client,
+        &canonical_collection_id,
+        LIMIT,
+    ).await?;
+    // TODO: FEP-EF61: collection or collection page?
+    let collection_page = OrderedCollectionPage::new(
+        collection_id,
+        items,
+    );
+    let response = HttpResponse::Ok()
+        .content_type(AP_MEDIA_TYPE)
+        .json(collection_page);
+    Ok(response)
+}
+
 pub fn gateway_scope() -> Scope {
     web::scope("/.well-known/apgateway")
         .service(apgateway_create_actor_view)
+        // Inbox service goes before generic gateway service
+        .service(apgateway_inbox_client_to_server_view)
         .service(apgateway_view)
 }
