@@ -160,7 +160,7 @@ pub(super) async fn deliver_activity_worker(
         activity
     } else {
         match sender.ed25519_private_key {
-            Some(ref ed25519_secret_key) if instance.fep_8b32_eddsa_enabled => {
+            Some(ref ed25519_secret_key) => {
                 let ed25519_key_id = local_actor_key_id(
                     &actor_id,
                     PublicKeyType::Ed25519,

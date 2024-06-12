@@ -156,7 +156,6 @@ impl Config {
             fetcher_timeout: self.federation.fetcher_timeout,
             deliverer_timeout: self.federation.deliverer_timeout,
             deliverer_log_response_length: self.federation.deliverer_log_response_length,
-            fep_8b32_eddsa_enabled: self.federation.fep_8b32_eddsa_enabled,
         }
     }
 
@@ -220,8 +219,6 @@ pub struct Instance {
     pub fetcher_timeout: u64,
     pub deliverer_timeout: u64,
     pub deliverer_log_response_length: usize,
-
-    pub fep_8b32_eddsa_enabled: bool,
 }
 
 impl Instance {
@@ -264,7 +261,6 @@ impl Instance {
             fetcher_timeout: 0,
             deliverer_timeout: 0,
             deliverer_log_response_length: 0,
-            fep_8b32_eddsa_enabled: false,
         }
     }
 }
