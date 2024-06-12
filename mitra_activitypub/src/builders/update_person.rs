@@ -101,6 +101,7 @@ pub async fn prepare_update_person(
     )?;
     let recipients = get_update_person_recipients(db_client, user).await?;
     Ok(OutgoingActivityJobData::new(
+        &instance.url(),
         user,
         activity,
         recipients,
@@ -146,12 +147,14 @@ pub async fn validate_update_person_c2s(
 
 pub async fn forward_update_person(
     db_client: &impl DatabaseClient,
+    instance: &Instance,
     user: &User,
     activity: &JsonValue,
 ) -> Result<OutgoingActivityJobData, DatabaseError> {
     // TODO: parse to and cc fields
     let recipients = get_update_person_recipients(db_client, user).await?;
     Ok(OutgoingActivityJobData::new(
+        &instance.url(),
         user,
         activity,
         recipients,

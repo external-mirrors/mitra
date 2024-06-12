@@ -106,6 +106,7 @@ pub fn prepare_offer_agreement(
     );
     let recipients = vec![proposer_actor.clone()];
     OutgoingActivityJobData::new(
+        &instance.url(),
         sender,
         activity,
         recipients,

@@ -81,6 +81,7 @@ pub async fn prepare_update_note(
     );
     let recipients = get_note_recipients(db_client, author, post).await?;
     Ok(OutgoingActivityJobData::new(
+        &instance.url(),
         author,
         activity,
         recipients,

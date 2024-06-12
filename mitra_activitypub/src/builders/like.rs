@@ -132,6 +132,7 @@ pub async fn prepare_like(
         &post.visibility,
     );
     Ok(OutgoingActivityJobData::new(
+        &instance.url(),
         sender,
         activity,
         recipients,

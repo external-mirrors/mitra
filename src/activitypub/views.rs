@@ -266,6 +266,7 @@ async fn outbox_client_to_server(
                 .map_err(|_| ValidationError("invalid integrity proof"))?;
             forward_update_person(
                 db_client,
+                &instance,
                 &user,
                 &activity,
             ).await?

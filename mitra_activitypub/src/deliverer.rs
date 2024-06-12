@@ -35,7 +35,7 @@ use mitra_utils::{
     json_signatures::create::{
         is_object_signed,
         sign_object_eddsa,
-        sign_object_rsa,
+        JsonSignatureError,
     },
     urls::get_hostname,
 };
@@ -140,6 +140,35 @@ impl Recipient {
     }
 }
 
+pub(super) fn sign_activity(
+    instance_url: &str,
+    sender: &User,
+    activity: JsonValue,
+) -> Result<JsonValue, JsonSignatureError> {
+    let actor_id = local_actor_id(
+        instance_url,
+        &sender.profile.username,
+    );
+    let activity_signed = if is_object_signed(&activity) {
+        log::warn!("activity is already signed");
+        activity
+    } else {
+        let ed25519_key_id = local_actor_key_id(
+            &actor_id,
+            PublicKeyType::Ed25519,
+        );
+        sign_object_eddsa(
+            &sender.ed25519_secret_key,
+            &ed25519_key_id,
+            &activity,
+            None,
+            false, // use eddsa-jcs-2022
+            false, // no proof context
+        )?
+    };
+    Ok(activity_signed)
+}
+
 const DELIVERY_BATCH_SIZE: usize = 5;
 
 pub(super) async fn deliver_activity_worker(
@@ -154,37 +183,7 @@ pub(super) async fn deliver_activity_worker(
         &sender.username,
     );
     let rsa_key_id = local_actor_key_id(&actor_id, PublicKeyType::RsaPkcs1);
-
-    let activity_signed = if is_object_signed(&activity) {
-        log::warn!("activity is already signed");
-        activity
-    } else {
-        match sender.ed25519_private_key {
-            Some(ref ed25519_secret_key) => {
-                let ed25519_key_id = local_actor_key_id(
-                    &actor_id,
-                    PublicKeyType::Ed25519,
-                );
-                sign_object_eddsa(
-                    ed25519_secret_key,
-                    &ed25519_key_id,
-                    &activity,
-                    None,
-                    false, // use eddsa-jcs-2022
-                    false, // no proof context
-                )?
-            },
-            _ => {
-                sign_object_rsa(
-                    &rsa_secret_key,
-                    &rsa_key_id,
-                    &activity,
-                    None,
-                )?
-            },
-        }
-    };
-    let activity_json = serde_json::to_string(&activity_signed)?;
+    let activity_json = serde_json::to_string(&activity)?;
 
     let mut deliveries = vec![];
     let mut sent = vec![];

@@ -81,6 +81,7 @@ pub async fn prepare_undo_like(
         &post.visibility,
     );
     Ok(OutgoingActivityJobData::new(
+        &instance.url(),
         sender,
         activity,
         recipients,

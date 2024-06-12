@@ -79,6 +79,7 @@ pub fn prepare_move_person(
         pull_mode,
     );
     OutgoingActivityJobData::new(
+        &instance.url(),
         sender,
         activity,
         followers,

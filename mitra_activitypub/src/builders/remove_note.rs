@@ -73,6 +73,7 @@ pub async fn prepare_remove_note(
     );
     let recipients = get_add_note_recipients(db_client, sender.id).await?;
     Ok(OutgoingActivityJobData::new(
+        &instance.url(),
         sender,
         activity,
         recipients,

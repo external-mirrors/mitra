@@ -79,6 +79,7 @@ pub fn prepare_undo_follow(
     );
     let recipients = vec![target_actor.clone()];
     OutgoingActivityJobData::new(
+        &instance.url(),
         sender,
         activity,
         recipients,

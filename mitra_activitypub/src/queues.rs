@@ -32,7 +32,12 @@ use mitra_models::{
 };
 
 use crate::{
-    deliverer::{deliver_activity_worker, Recipient, Sender},
+    deliverer::{
+        deliver_activity_worker,
+        sign_activity,
+        Recipient,
+        Sender,
+    },
     errors::HandlerError,
     handlers::activity::handle_activity,
     importers::import_from_outbox,
@@ -160,6 +165,7 @@ pub struct OutgoingActivityJobData {
 
 impl OutgoingActivityJobData {
     pub(super) fn new(
+        instance_url: &str,
         sender: &User,
         activity: impl Serialize,
         recipients: Vec<DbActor>,
@@ -179,8 +185,13 @@ impl OutgoingActivityJobData {
         };
         let activity = serde_json::to_value(activity)
             .expect("activity should be serializable");
+        let activity_signed = sign_activity(
+            instance_url,
+            sender,
+            activity,
+        ).expect("activity should be valid");
         Self {
-            activity: activity,
+            activity: activity_signed,
             sender_id: sender.id,
             sender: Some(Sender::from(sender.clone())),
             recipients: recipient_map.into_values().collect(),

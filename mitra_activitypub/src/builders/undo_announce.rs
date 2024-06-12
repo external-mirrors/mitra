@@ -86,6 +86,7 @@ pub async fn prepare_undo_announce(
         &primary_recipient,
     );
     Ok(OutgoingActivityJobData::new(
+        &instance.url(),
         sender,
         activity,
         recipients,

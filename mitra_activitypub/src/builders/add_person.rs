@@ -88,6 +88,7 @@ pub fn prepare_add_person(
     );
     let recipients = vec![person.clone()];
     OutgoingActivityJobData::new(
+        &instance.url(),
         sender,
         activity,
         recipients,
