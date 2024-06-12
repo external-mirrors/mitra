@@ -9,6 +9,7 @@ use uuid::Uuid;
 use mitra_config::Config;
 use mitra_federation::fetch::FetchError;
 use mitra_models::{
+    activitypub::queries::save_activity,
     background_jobs::queries::{
         enqueue_job,
         get_job_batch,
@@ -204,6 +205,10 @@ impl OutgoingActivityJobData {
         db_client: &impl DatabaseClient,
         delay: u32,
     ) -> Result<(), DatabaseError> {
+        // Activity ID should be present
+        let activity_id = self.activity["id"].as_str()
+            .ok_or(DatabaseTypeError)?;
+        save_activity(db_client, activity_id, &self.activity).await?;
         if self.recipients.is_empty() {
             return Ok(());
         };
