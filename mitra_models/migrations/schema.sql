@@ -119,6 +119,7 @@ CREATE TABLE follow_request (
     target_id UUID NOT NULL REFERENCES actor_profile (id) ON DELETE CASCADE,
     activity_id VARCHAR(2000) UNIQUE,
     request_status SMALLINT NOT NULL,
+    has_deprecated_ap_id BOOLEAN NOT NULL DEFAULT FALSE,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UNIQUE (source_id, target_id),
     CHECK (source_id != target_id)
@@ -131,6 +132,7 @@ CREATE TABLE post (
     content_source TEXT,
     in_reply_to_id UUID REFERENCES post (id) ON DELETE CASCADE,
     repost_of_id UUID REFERENCES post (id) ON DELETE CASCADE,
+    repost_has_deprecated_ap_id BOOLEAN NOT NULL DEFAULT FALSE,
     visibility SMALLINT NOT NULL,
     is_sensitive BOOLEAN NOT NULL,
     is_pinned BOOLEAN NOT NULL DEFAULT FALSE,
@@ -156,6 +158,7 @@ CREATE TABLE post_reaction (
     content VARCHAR(102),
     emoji_id UUID REFERENCES emoji (id) ON DELETE CASCADE,
     activity_id VARCHAR(2000) UNIQUE,
+    has_deprecated_ap_id BOOLEAN NOT NULL DEFAULT FALSE,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
     UNIQUE (author_id, post_id, content),
     CHECK (content IS NOT NULL OR emoji_id IS NULL)

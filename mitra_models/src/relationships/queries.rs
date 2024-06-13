@@ -169,7 +169,7 @@ pub async fn unfollow(
     db_client: &mut impl DatabaseClient,
     source_id: &Uuid,
     target_id: &Uuid,
-) -> Result<Option<Uuid>, DatabaseError> {
+) -> Result<Option<(Uuid, bool)>, DatabaseError> {
     let transaction = db_client.transaction().await?;
     // Delete relationship
     let deleted_count = transaction.execute(
@@ -318,20 +318,24 @@ async fn delete_follow_request_opt(
     db_client: &impl DatabaseClient,
     source_id: &Uuid,
     target_id: &Uuid,
-) -> Result<Option<Uuid>, DatabaseError> {
+) -> Result<Option<(Uuid, bool)>, DatabaseError> {
     let maybe_row = db_client.query_opt(
         "
         DELETE FROM follow_request
         WHERE source_id = $1 AND target_id = $2
-        RETURNING id
+        RETURNING
+            follow_request.id,
+            follow_request.has_deprecated_ap_id
         ",
         &[&source_id, &target_id],
     ).await?;
-    let maybe_request_id = if let Some(row) = maybe_row {
-        let request_id: Uuid = row.try_get("id")?;
-        Some(request_id)
-    } else { None };
-    Ok(maybe_request_id)
+    if let Some(row) = maybe_row {
+        let request_id = row.try_get("id")?;
+        let request_has_deprecated_ap_id = row.try_get("has_deprecated_ap_id")?;
+        Ok(Some((request_id, request_has_deprecated_ap_id)))
+    } else {
+        Ok(None)
+    }
 }
 
 pub async fn get_follow_request_by_id(
@@ -808,9 +812,10 @@ mod tests {
         assert_eq!(target_has_followers, true);
 
         // Unfollow
-        let follow_request_id = unfollow(db_client, &source.id, &target.id)
-            .await.unwrap().unwrap();
+        let (follow_request_id, follow_request_has_deprecated_ap_id) =
+            unfollow(db_client, &source.id, &target.id).await.unwrap().unwrap();
         assert_eq!(follow_request_id, follow_request.id);
+        assert_eq!(follow_request_has_deprecated_ap_id, false);
         let follow_request_result =
             get_follow_request_by_id(db_client, &follow_request_id).await;
         assert!(matches!(

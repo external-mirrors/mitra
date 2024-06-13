@@ -21,7 +21,7 @@ use mitra_validators::{
 };
 
 use crate::{
-    identifiers::parse_local_object_id,
+    identifiers::parse_local_activity_id,
     vocabulary::{FOLLOW, OFFER},
 };
 
@@ -55,7 +55,7 @@ pub async fn handle_accept(
         db_client,
         &activity.actor,
     ).await?;
-    let follow_request_id = parse_local_object_id(
+    let follow_request_id = parse_local_activity_id(
         &config.instance_url(),
         &activity.object,
     )?;
@@ -80,7 +80,7 @@ async fn handle_accept_offer(
         db_client,
         &activity.actor,
     ).await?;
-    let invoice_id = parse_local_object_id(
+    let invoice_id = parse_local_activity_id(
         &config.instance_url(),
         &activity.object,
     )?;

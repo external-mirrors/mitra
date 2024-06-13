@@ -155,11 +155,14 @@ pub async fn import_followers_task(
             // Immediately move local followers (only if alias can be verified)
             if let Some(ref from_profile) = maybe_from_profile {
                 match unfollow(db_client, &follower.id, &from_profile.id).await {
-                    Ok(maybe_follow_request_id) => {
+                    Ok(maybe_follow_request_deleted) => {
                         // Send Undo(Follow) to a remote actor
                         let remote_actor = from_profile.actor_json.as_ref()
                             .expect("actor data must be present");
-                        let follow_request_id = maybe_follow_request_id
+                        let (
+                            follow_request_id,
+                            follow_request_has_deprecated_ap_id,
+                        ) = maybe_follow_request_deleted
                             .expect("follow request must exist");
                         let follower =
                             get_user_by_id(db_client, &follower.id).await?;
@@ -168,6 +171,7 @@ pub async fn import_followers_task(
                             &follower,
                             remote_actor,
                             follow_request_id,
+                            follow_request_has_deprecated_ap_id,
                         ).enqueue(db_client).await?;
                     },
                     // Not a follower, ignore

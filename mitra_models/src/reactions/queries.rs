@@ -87,22 +87,25 @@ pub async fn delete_reaction(
     author_id: Uuid,
     post_id: Uuid,
     maybe_content: Option<&str>,
-) -> Result<Uuid, DatabaseError> {
+) -> Result<(Uuid, bool), DatabaseError> {
     let transaction = db_client.transaction().await?;
     let maybe_row = transaction.query_opt(
         "
         DELETE FROM post_reaction
         WHERE author_id = $1 AND post_id = $2
             AND ($3::text IS NULL OR content = $3)
-        RETURNING post_reaction.id
+        RETURNING
+            post_reaction.id,
+            post_reaction.has_deprecated_ap_id
         ",
         &[&author_id, &post_id, &maybe_content],
     ).await?;
     let row = maybe_row.ok_or(DatabaseError::NotFound("reaction"))?;
     let reaction_id = row.try_get("id")?;
+    let reaction_has_deprecated_ap_id = row.try_get("has_deprecated_ap_id")?;
     update_reaction_count(&transaction, post_id, -1).await?;
     transaction.commit().await?;
-    Ok(reaction_id)
+    Ok((reaction_id, reaction_has_deprecated_ap_id))
 }
 
 /// Finds favourites among given posts and returns their IDs.
@@ -248,12 +251,13 @@ mod tests {
             activity_id: None,
         };
         let reaction = create_reaction(db_client, reaction_data).await.unwrap();
-        let reaction_id = delete_reaction(
+        let (reaction_id, reaction_has_deprecated_ap_id) = delete_reaction(
             db_client,
             user_1.id,
             post.id,
             None,
         ).await.unwrap();
         assert_eq!(reaction_id, reaction.id);
+        assert_eq!(reaction_has_deprecated_ap_id, false);
     }
 }

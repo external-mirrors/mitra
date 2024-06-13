@@ -1,5 +1,6 @@
 use chrono::{DateTime, Utc};
 use serde::Serialize;
+use uuid::Uuid;
 
 use mitra_config::Instance;
 use mitra_federation::constants::AP_PUBLIC;
@@ -14,6 +15,7 @@ use mitra_models::{
 use crate::{
     contexts::{build_default_context, Context},
     identifiers::{
+        local_activity_id,
         local_actor_id,
         local_object_id,
         post_object_id,
@@ -41,6 +43,18 @@ pub struct Announce {
     cc: Vec<String>,
 }
 
+pub(super) fn local_announce_activity_id(
+    instance_url: &str,
+    repost_id: Uuid,
+    repost_has_deprecated_ap_id: bool,
+) -> String {
+    if repost_has_deprecated_ap_id {
+        local_object_id(instance_url, repost_id)
+    } else {
+        local_activity_id(instance_url, ANNOUNCE, repost_id)
+    }
+}
+
 pub fn build_announce(
     instance_url: &str,
     repost: &Post,
@@ -49,7 +63,7 @@ pub fn build_announce(
     let post = repost.repost_of.as_ref()
         .expect("repost_of field should be populated");
     let object_id = post_object_id(instance_url, post);
-    let activity_id = local_object_id(instance_url, repost.id);
+    let activity_id = local_announce_activity_id(instance_url, repost.id, false);
     let recipient_id = profile_actor_id(instance_url, &post.author);
     let followers = LocalActorCollection::Followers.of(&actor_id);
     Announce {
@@ -151,7 +165,7 @@ mod tests {
         );
         assert_eq!(
             activity.id,
-            format!("{}/objects/{}", INSTANCE_URL, repost.id),
+            format!("{}/activities/announce/{}", INSTANCE_URL, repost.id),
         );
         assert_eq!(
             activity.actor,

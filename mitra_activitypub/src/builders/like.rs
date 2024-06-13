@@ -14,6 +14,7 @@ use mitra_models::{
 use crate::{
     contexts::{build_default_context, Context},
     identifiers::{
+        local_activity_id,
         local_actor_id,
         local_object_id,
         post_object_id,
@@ -46,7 +47,19 @@ struct Like {
     cc: Vec<String>,
 }
 
-pub fn get_like_audience(
+pub(super) fn local_like_activity_id(
+    instance_url: &str,
+    reaction_id: Uuid,
+    reaction_has_deprecated_ap_id: bool,
+) -> String {
+    if reaction_has_deprecated_ap_id {
+        local_object_id(instance_url, reaction_id)
+    } else {
+        local_activity_id(instance_url, LIKE, reaction_id)
+    }
+}
+
+pub(super) fn get_like_audience(
     note_author_id: &str,
     note_visibility: &Visibility,
 ) -> (Vec<String>, Vec<String>) {
@@ -69,12 +82,12 @@ fn build_like(
     post_author_id: &str,
     post_visibility: &Visibility,
 ) -> Like {
-    let activity_id = local_object_id(instance_url, reaction_id);
     let activity_type = if maybe_reaction_content.is_some() {
         EMOJI_REACT
     } else {
         LIKE
     };
+    let activity_id = local_like_activity_id(instance_url, reaction_id, false);
     let actor_id = local_actor_id(instance_url, &actor_profile.username);
     let maybe_tag = maybe_custom_emoji
         .map(|db_emoji| build_emoji(instance_url, db_emoji));
@@ -164,7 +177,7 @@ mod tests {
         );
         assert_eq!(
             activity.id,
-            format!("{}/objects/{}", INSTANCE_URL, reaction_id),
+            format!("{}/activities/like/{}", INSTANCE_URL, reaction_id),
         );
         assert_eq!(activity.object, post_id);
         assert_eq!(activity.content.is_none(), true);

@@ -187,7 +187,7 @@ async fn handle_fep_1b12_announce(
             Err(other_error) => return Err(other_error.into()),
         };
         match get_repost_by_author(db_client, &post_id, &group.id).await {
-            Ok(repost_id) => {
+            Ok((repost_id, _)) => {
                 delete_post(db_client, &repost_id).await?;
             },
             // Ignore Announce(Delete) if repost is not found

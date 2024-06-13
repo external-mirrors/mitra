@@ -10,6 +10,7 @@ use mitra_models::{
 use crate::{
     authority::Authority,
     contexts::{build_default_context, Context},
+    identifiers::local_activity_id,
     queues::OutgoingActivityJobData,
     vocabulary::CREATE,
 };
@@ -49,7 +50,7 @@ pub fn build_create_note(
     );
     let primary_audience = object.to.clone();
     let secondary_audience = object.cc.clone();
-    let activity_id = format!("{}/create", object.id);
+    let activity_id = local_activity_id(instance_url, CREATE, post.id);
     CreateNote {
         _context: build_default_context(),
         activity_type: CREATE.to_string(),
@@ -110,7 +111,7 @@ mod tests {
 
         assert_eq!(
             activity.id,
-            format!("{}/objects/{}/create", INSTANCE_URL, post.id),
+            format!("{}/activities/create/{}", INSTANCE_URL, post.id),
         );
         assert_eq!(activity.activity_type, CREATE);
         assert_eq!(

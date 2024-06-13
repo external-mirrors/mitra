@@ -12,6 +12,7 @@ use mitra_utils::id::generate_ulid;
 use crate::{
     contexts::{build_default_context, Context},
     identifiers::{
+        local_activity_id,
         local_actor_id,
         local_object_id,
         LocalActorCollection,
@@ -44,7 +45,7 @@ fn build_remove_note(
     post_id: Uuid,
 ) -> RemoveNote {
     let actor_id = local_actor_id(instance_url, sender_username);
-    let activity_id = local_object_id(instance_url, generate_ulid());
+    let activity_id = local_activity_id(instance_url, REMOVE, generate_ulid());
     let object_id = local_object_id(instance_url, post_id);
     let target_id = LocalActorCollection::Featured.of(&actor_id);
     let followers = LocalActorCollection::Followers.of(&actor_id);

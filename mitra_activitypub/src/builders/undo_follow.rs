@@ -9,7 +9,7 @@ use mitra_models::{
 
 use crate::{
     contexts::{build_default_context, Context},
-    identifiers::local_actor_id,
+    identifiers::{local_activity_id, local_actor_id},
     queues::OutgoingActivityJobData,
     vocabulary::UNDO,
 };
@@ -36,15 +36,21 @@ fn build_undo_follow(
     actor_profile: &DbActorProfile,
     target_actor_id: &str,
     follow_request_id: Uuid,
+    follow_request_has_deprecated_ap_id: bool,
 ) -> UndoFollow {
     let object = build_follow(
         instance_url,
         actor_profile,
         target_actor_id,
         follow_request_id,
+        follow_request_has_deprecated_ap_id,
         false, // no context
     );
-    let activity_id = format!("{}/undo", object.id);
+    let activity_id = local_activity_id(
+        instance_url,
+        UNDO,
+        follow_request_id,
+    );
     let actor_id = local_actor_id(instance_url, &actor_profile.username);
     UndoFollow {
         _context: build_default_context(),
@@ -61,12 +67,14 @@ pub fn prepare_undo_follow(
     sender: &User,
     target_actor: &DbActor,
     follow_request_id: Uuid,
+    follow_request_has_deprecated_ap_id: bool,
 ) -> OutgoingActivityJobData {
     let activity = build_undo_follow(
         &instance.url(),
         &sender.profile,
         &target_actor.id,
         follow_request_id,
+        follow_request_has_deprecated_ap_id,
     );
     let recipients = vec![target_actor.clone()];
     OutgoingActivityJobData::new(
@@ -97,11 +105,12 @@ mod tests {
             &actor_profile,
             target_actor_id,
             follow_request_id,
+            true, // legacy activity ID
         );
 
         assert_eq!(
             activity.id,
-            format!("{}/objects/{}/undo", INSTANCE_URL, follow_request_id),
+            format!("{}/activities/undo/{}", INSTANCE_URL, follow_request_id),
         );
         assert_eq!(activity.activity_type, "Undo");
         assert_eq!(
@@ -116,5 +125,17 @@ mod tests {
         assert_eq!(activity.object.actor, activity.actor);
         assert_eq!(activity.object.object, target_actor_id);
         assert_eq!(activity.to, vec![target_actor_id]);
+
+        let activity = build_undo_follow(
+            INSTANCE_URL,
+            &actor_profile,
+            target_actor_id,
+            follow_request_id,
+            false, // no legacy activity ID
+        );
+        assert_eq!(
+            activity.object.id,
+            format!("{}/activities/follow/{}", INSTANCE_URL, follow_request_id),
+        );
     }
 }

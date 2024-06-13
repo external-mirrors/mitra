@@ -87,20 +87,22 @@ pub async fn handle_move(
         };
         let follower = get_user_by_id(db_client, &follower.id).await?;
         // Unfollow old profile
-        let maybe_follow_request_id = unfollow(
+        let maybe_follow_request_deleted = unfollow(
             db_client,
             &follower.id,
             &old_profile.id,
         ).await?;
         // Send Undo(Follow) if old actor is not local
         if let Some(ref old_actor) = old_profile.actor_json {
-            let follow_request_id = maybe_follow_request_id
-                .expect("follow request must exist");
+            let (follow_request_id, follow_request_has_deprecated_ap_id) =
+                maybe_follow_request_deleted
+                    .expect("follow request must exist");
             prepare_undo_follow(
                 &instance,
                 &follower,
                 old_actor,
                 follow_request_id,
+                follow_request_has_deprecated_ap_id,
             ).enqueue(db_client).await?;
         };
         if follower.id == new_profile.id {

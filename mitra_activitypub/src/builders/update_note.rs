@@ -11,7 +11,7 @@ use mitra_utils::id::generate_ulid;
 use crate::{
     authority::Authority,
     contexts::{build_default_context, Context},
-    identifiers::local_object_id,
+    identifiers::local_activity_id,
     queues::OutgoingActivityJobData,
     vocabulary::UPDATE,
 };
@@ -52,8 +52,7 @@ fn build_update_note(
     let primary_audience = object.to.clone();
     let secondary_audience = object.cc.clone();
     // Update(Note) is idempotent so its ID can be random
-    let internal_activity_id = generate_ulid();
-    let activity_id = local_object_id(instance_url, internal_activity_id);
+    let activity_id = local_activity_id(instance_url, UPDATE, generate_ulid());
     UpdateNote {
         _context: build_default_context(),
         activity_type: UPDATE.to_string(),

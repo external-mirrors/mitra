@@ -559,15 +559,15 @@ async fn unfavourite(
         *status_id,
         None, // not an emoji reaction
     ).await {
-        Ok(reaction_id) => {
+        Ok(reaction_deleted) => {
             post.reaction_count -= 1;
-            Some(reaction_id)
+            Some(reaction_deleted)
         },
         Err(DatabaseError::NotFound(_)) => None, // post not favourited
         Err(other_error) => return Err(other_error.into()),
     };
 
-    if let Some(reaction_id) = maybe_reaction_deleted {
+    if let Some((reaction_id, reaction_has_deprecated_ap_id)) = maybe_reaction_deleted {
         // Federate
         prepare_undo_like(
             db_client,
@@ -575,6 +575,7 @@ async fn unfavourite(
             &current_user,
             &post,
             reaction_id,
+            reaction_has_deprecated_ap_id,
         ).await?.enqueue(db_client).await?;
     };
 
@@ -638,7 +639,7 @@ async fn unreblog(
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &mut **get_database_client(&db_pool).await?;
     let current_user = get_current_user(db_client, auth.token()).await?;
-    let repost_id = get_repost_by_author(
+    let (repost_id, repost_has_deprecated_ap_id) = get_repost_by_author(
         db_client,
         &status_id,
         &current_user.id,
@@ -654,6 +655,7 @@ async fn unreblog(
         &current_user,
         &post,
         repost_id,
+        repost_has_deprecated_ap_id,
     ).await?.enqueue(db_client).await?;
 
     let status = build_status(

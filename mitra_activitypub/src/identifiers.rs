@@ -104,6 +104,19 @@ pub fn local_tag_collection(instance_url: &str, tag_name: &str) -> String {
     format!("{}/collections/tags/{}", instance_url, url_encode(tag_name))
 }
 
+pub fn local_activity_id(
+    instance_url: &str,
+    activity_type: &str,
+    internal_id: Uuid,
+) -> String {
+    format!(
+        "{}/activities/{}/{}",
+        instance_url,
+        activity_type.to_lowercase(),
+        internal_id,
+    )
+}
+
 pub fn parse_local_actor_id(
     instance_url: &str,
     actor_id: &str,
@@ -179,6 +192,28 @@ pub fn parse_local_primary_intent_id(
     Ok((username, chain_id))
 }
 
+pub fn parse_local_activity_id(
+    instance_url: &str,
+    activity_id: &str,
+) -> Result<Uuid, ValidationError> {
+    if let Ok(internal_activity_id) = parse_local_object_id(
+        instance_url,
+        activity_id,
+    ) {
+        // Legacy format
+        return Ok(internal_activity_id);
+    };
+    let path_re = Regex::new("^/activities/[a-z]+/(?P<uuid>[0-9a-f-]+)$")
+        .expect("regexp should be valid");
+    let (base_url, (internal_activity_id,)) =
+        parse_object_id(activity_id, path_re)
+            .map_err(|_| ValidationError("invalid local activity ID"))?;
+    if base_url != instance_url {
+        return Err(ValidationError("instance mismatch"));
+    };
+    Ok(internal_activity_id)
+}
+
 pub fn post_object_id(instance_url: &str, post: &Post) -> String {
     match post.object_id {
         Some(ref object_id) => object_id.to_string(),
@@ -209,6 +244,16 @@ mod tests {
     use super::*;
 
     const INSTANCE_URL: &str = "https://social.example";
+
+    #[test]
+    fn test_local_activity_id() {
+        let internal_id = uuid!("cb26ed69-a6e9-47e3-8bf2-bbb26d06d1fb");
+        let activity_id = local_activity_id(INSTANCE_URL, "Like", internal_id);
+        assert_eq!(
+            activity_id,
+            "https://social.example/activities/like/cb26ed69-a6e9-47e3-8bf2-bbb26d06d1fb",
+        );
+    }
 
     #[test]
     fn test_parse_local_actor_id() {
@@ -322,6 +367,18 @@ mod tests {
         ).unwrap();
         assert_eq!(username, "test");
         assert_eq!(chain_id, ChainId::monero_mainnet());
+    }
+
+    #[test]
+    fn test_parse_local_activity_id() {
+        let expected_internal_id = generate_ulid();
+        let activity_id =
+            local_activity_id(INSTANCE_URL, "Like", expected_internal_id);
+        let internal_id = parse_local_activity_id(
+            INSTANCE_URL,
+            &activity_id,
+        ).unwrap();
+        assert_eq!(internal_id, expected_internal_id);
     }
 
     #[test]

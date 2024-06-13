@@ -158,6 +158,8 @@ pub struct DbFollowRequest {
     pub activity_id: Option<String>,
     pub request_status: FollowRequestStatus,
     #[allow(dead_code)]
+    has_deprecated_ap_id: bool,
+    #[allow(dead_code)]
     created_at: DateTime<Utc>,
 }
 

@@ -46,7 +46,7 @@ server {
         try_files $uri /index.html;
     }
 
-    location ~ ^/(actor|api|collections|contracts|feeds|media|nodeinfo|oauth|objects|users|.well-known) {
+    location ~ ^/(activities|actor|api|collections|contracts|feeds|media|nodeinfo|oauth|objects|users|.well-known) {
         # Backend
         proxy_pass http://127.0.0.1:8383;
         proxy_set_header Host $http_host;

@@ -20,9 +20,9 @@ use crate::{
     contexts::{build_default_context, Context},
     errors::HandlerError,
     identifiers::{
-        local_object_id,
+        local_activity_id,
+        parse_local_activity_id,
         parse_local_actor_id,
-        parse_local_object_id,
         LocalActorCollection,
     },
     queues::OutgoingActivityJobData,
@@ -53,8 +53,7 @@ pub fn build_update_person(
     let actor = build_local_actor(instance_url, &authority, user)?;
     let followers = LocalActorCollection::Followers.of(&actor.id);
     // Update(Person) is idempotent so its ID can be random
-    let internal_activity_id = generate_ulid();
-    let activity_id = local_object_id(instance_url, internal_activity_id);
+    let activity_id = local_activity_id(instance_url, UPDATE, generate_ulid());
     let activity = UpdatePerson {
         context: build_default_context(),
         activity_type: UPDATE.to_string(),
@@ -131,7 +130,7 @@ pub async fn validate_update_person_c2s(
     let activity_id = activity["id"].as_str()
         .ok_or(ValidationError("invalid activity"))?;
     // TODO: verify activity ID has not been used before
-    let _internal_activity_id = parse_local_object_id(
+    let _internal_activity_id = parse_local_activity_id(
         &instance.url(),
         activity_id,
     ).map_err(|_| ValidationError("invalid activity"))?;

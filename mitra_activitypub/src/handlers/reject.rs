@@ -15,7 +15,7 @@ use mitra_models::{
 use mitra_validators::errors::ValidationError;
 
 use crate::{
-    identifiers::parse_local_object_id,
+    identifiers::parse_local_activity_id,
     vocabulary::FOLLOW,
 };
 
@@ -40,7 +40,7 @@ pub async fn handle_reject(
         db_client,
         &activity.actor,
     ).await?;
-    let follow_request_id = parse_local_object_id(
+    let follow_request_id = parse_local_activity_id(
         &config.instance_url(),
         &activity.object,
     )?;

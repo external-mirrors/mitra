@@ -737,16 +737,20 @@ async fn unfollow_account(
     let current_user = get_current_user(db_client, auth.token()).await?;
     let target = get_profile_by_id(db_client, &account_id).await?;
     match unfollow(db_client, &current_user.id, &target.id).await {
-        Ok(maybe_follow_request_id) => {
+        Ok(maybe_follow_request_deleted) => {
             if let Some(remote_actor) = target.actor_json {
                 // Remote follow
-                let follow_request_id = maybe_follow_request_id
+                let (
+                    follow_request_id,
+                    follow_request_has_deprecated_ap_id,
+                ) = maybe_follow_request_deleted
                     .ok_or(MastodonError::InternalError)?;
                 prepare_undo_follow(
                     &config.instance(),
                     &current_user,
                     &remote_actor,
                     follow_request_id,
+                    follow_request_has_deprecated_ap_id,
                 ).enqueue(db_client).await?;
             };
         },

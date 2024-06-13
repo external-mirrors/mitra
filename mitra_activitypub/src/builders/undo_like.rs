@@ -11,7 +11,11 @@ use mitra_models::{
 
 use crate::{
     contexts::{build_default_context, Context},
-    identifiers::{local_actor_id, local_object_id, profile_actor_id},
+    identifiers::{
+        local_activity_id,
+        local_actor_id,
+        profile_actor_id,
+    },
     queues::OutgoingActivityJobData,
     vocabulary::UNDO,
 };
@@ -19,6 +23,7 @@ use crate::{
 use super::like::{
     get_like_audience,
     get_like_recipients,
+    local_like_activity_id,
 };
 
 #[derive(Serialize)]
@@ -41,11 +46,16 @@ fn build_undo_like(
     instance_url: &str,
     actor_profile: &DbActorProfile,
     reaction_id: Uuid,
+    reaction_has_deprecated_ap_id: bool,
     post_author_id: &str,
     post_visibility: &Visibility,
 ) -> UndoLike {
-    let object_id = local_object_id(instance_url, reaction_id);
-    let activity_id = format!("{}/undo", object_id);
+    let object_id = local_like_activity_id(
+        instance_url,
+        reaction_id,
+        reaction_has_deprecated_ap_id,
+    );
+    let activity_id = local_activity_id(instance_url, UNDO, reaction_id);
     let actor_id = local_actor_id(instance_url, &actor_profile.username);
     let (primary_audience, secondary_audience) =
         get_like_audience(post_author_id, post_visibility);
@@ -66,6 +76,7 @@ pub async fn prepare_undo_like(
     sender: &User,
     post: &Post,
     reaction_id: Uuid,
+    reaction_has_deprecated_ap_id: bool,
 ) -> Result<OutgoingActivityJobData, DatabaseError> {
     let recipients = get_like_recipients(
         db_client,
@@ -77,6 +88,7 @@ pub async fn prepare_undo_like(
         &instance.url(),
         &sender.profile,
         reaction_id,
+        reaction_has_deprecated_ap_id,
         &post_author_id,
         &post.visibility,
     );
@@ -105,12 +117,13 @@ mod tests {
             INSTANCE_URL,
             &author,
             reaction_id,
+            true, // legacy activity ID
             post_author_id,
             &Visibility::Public,
         );
         assert_eq!(
             activity.id,
-            format!("{}/objects/{}/undo", INSTANCE_URL, reaction_id),
+            format!("{}/activities/undo/{}", INSTANCE_URL, reaction_id),
         );
         assert_eq!(
             activity.object,
@@ -118,5 +131,18 @@ mod tests {
         );
         assert_eq!(activity.to, vec![post_author_id, AP_PUBLIC]);
         assert_eq!(activity.cc.is_empty(), true);
+
+        let activity = build_undo_like(
+            INSTANCE_URL,
+            &author,
+            reaction_id,
+            false, // no legacy activity ID
+            post_author_id,
+            &Visibility::Public,
+        );
+        assert_eq!(
+            activity.object,
+            format!("{}/activities/like/{}", INSTANCE_URL, reaction_id),
+        );
     }
 }

@@ -12,7 +12,7 @@ use mitra_models::{
 
 use crate::{
     contexts::{build_default_context, Context},
-    identifiers::local_actor_id,
+    identifiers::{local_activity_id, local_actor_id},
     queues::OutgoingActivityJobData,
     vocabulary::DELETE,
 };
@@ -37,7 +37,7 @@ fn build_delete_person(
     user: &User,
 ) -> DeletePerson {
     let actor_id = local_actor_id(instance_url, &user.profile.username);
-    let activity_id = format!("{}/delete", actor_id);
+    let activity_id = local_activity_id(instance_url, DELETE, user.id);
     DeletePerson {
         context: build_default_context(),
         activity_type: DELETE.to_string(),
@@ -97,7 +97,7 @@ mod tests {
         let activity = build_delete_person(INSTANCE_URL, &user);
         assert_eq!(
             activity.id,
-            format!("{}/users/testuser/delete", INSTANCE_URL),
+            format!("{}/activities/delete/{}", INSTANCE_URL, user.id),
         );
         assert_eq!(activity.actor, activity.object);
         assert_eq!(

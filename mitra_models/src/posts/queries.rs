@@ -1271,18 +1271,19 @@ pub async fn get_repost_by_author(
     db_client: &impl DatabaseClient,
     post_id: &Uuid,
     profile_id: &Uuid,
-) -> Result<Uuid, DatabaseError> {
+) -> Result<(Uuid, bool), DatabaseError> {
     let maybe_row = db_client.query_opt(
         "
-        SELECT post.id
+        SELECT post.id, post.repost_has_deprecated_ap_id
         FROM post
         WHERE post.repost_of_id = $1 AND post.author_id = $2
         ",
         &[&post_id, &profile_id],
     ).await?;
     let row = maybe_row.ok_or(DatabaseError::NotFound("post"))?;
-    let post_id = row.try_get("id")?;
-    Ok(post_id)
+    let repost_id = row.try_get("id")?;
+    let repost_has_deprecated_ap_id = row.try_get("repost_has_deprecated_ap_id")?;
+    Ok((repost_id, repost_has_deprecated_ap_id))
 }
 
 /// Finds items reposted by user among given posts
@@ -1617,6 +1618,41 @@ mod tests {
         };
         let post_2 = create_post(db_client, &author.id, post_data_2).await.unwrap();
         assert_eq!(post_2.links, vec![post_1.id]);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_create_repost() {
+        let db_client = &mut create_test_database().await;
+        let author_data = UserCreateData {
+            username: "test".to_string(),
+            password_hash: Some("test".to_string()),
+            ..Default::default()
+        };
+        let author = create_user(db_client, author_data).await.unwrap();
+        let post_data = PostCreateData {
+            content: "test post".to_string(),
+            ..Default::default()
+        };
+        let post = create_post(db_client, &author.id, post_data).await.unwrap();
+        let repost_data = PostCreateData::repost(post.id, None);
+        let repost = create_post(
+            db_client,
+            &author.id,
+            repost_data,
+        ).await.unwrap();
+        assert_eq!(repost.content, "");
+        assert_eq!(repost.author.id, author.id);
+        assert_eq!(repost.repost_of_id, Some(post.id));
+        assert_eq!(repost.object_id, None);
+
+        let (repost_id, repost_has_deprecated_ap_id) = get_repost_by_author(
+            db_client,
+            &post.id,
+            &author.id,
+        ).await.unwrap();
+        assert_eq!(repost_id, repost.id);
+        assert_eq!(repost_has_deprecated_ap_id, false);
     }
 
     #[tokio::test]

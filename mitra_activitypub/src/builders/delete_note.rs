@@ -11,7 +11,7 @@ use mitra_models::{
 use crate::{
     authority::Authority,
     contexts::{build_default_context, Context},
-    identifiers::{local_actor_id, local_object_id},
+    identifiers::{local_activity_id, local_actor_id, local_object_id},
     queues::OutgoingActivityJobData,
     vocabulary::{DELETE, NOTE, TOMBSTONE},
 };
@@ -53,7 +53,7 @@ fn build_delete_note(
 ) -> DeleteNote {
     assert!(post.is_local());
     let object_id = local_object_id(instance_url, post.id);
-    let activity_id = format!("{}/delete", object_id);
+    let activity_id = local_activity_id(instance_url, DELETE, post.id);
     let actor_id = local_actor_id(instance_url, &post.author.username);
     let authority = Authority::server(instance_url);
     let Note { to, cc, .. } = build_note(
@@ -129,7 +129,7 @@ mod tests {
 
         assert_eq!(
             activity.id,
-            format!("{}/objects/{}/delete", INSTANCE_URL, post.id),
+            format!("{}/activities/delete/{}", INSTANCE_URL, post.id),
         );
         assert_eq!(
             activity.object.id,

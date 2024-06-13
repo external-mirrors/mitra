@@ -12,7 +12,7 @@ use mitra_models::{
 
 use crate::{
     contexts::Context,
-    identifiers::{local_actor_id, local_object_id},
+    identifiers::{local_activity_id, local_actor_id},
     queues::OutgoingActivityJobData,
     vocabulary::{AGREEMENT, COMMITMENT, OFFER},
 };
@@ -53,7 +53,7 @@ fn build_offer_agreement(
     let reciprocal_intent_id = fep_0837_reciprocal_fragment_id(&proposal_id);
     let duration = invoice_amount / subscription_option.price;
     let actor_id = local_actor_id(instance_url, sender_username);
-    let activity_id = local_object_id(instance_url, invoice_id);
+    let activity_id = local_activity_id(instance_url, OFFER, invoice_id);
     let primary_commitment = Commitment {
         id: None,
         object_type: COMMITMENT.to_string(),
@@ -181,7 +181,7 @@ mod tests {
                 },
             ],
             "type": "Offer",
-            "id": "https://local.example/objects/46d160ae-af12-484d-9f44-419f00fc1b31",
+            "id": "https://local.example/activities/offer/46d160ae-af12-484d-9f44-419f00fc1b31",
             "actor": "https://local.example/users/payer",
             "object": {
                 "type": "Agreement",

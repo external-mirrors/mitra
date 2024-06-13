@@ -11,6 +11,8 @@ pub struct DbReaction {
     pub content: Option<String>,
     pub emoji_id: Option<Uuid>,
     pub activity_id: Option<String>,
+    #[allow(dead_code)]
+    has_deprecated_ap_id: bool,
     pub created_at: DateTime<Utc>,
 }
 

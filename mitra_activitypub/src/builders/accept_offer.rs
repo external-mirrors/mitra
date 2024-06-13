@@ -11,7 +11,7 @@ use mitra_utils::id::generate_ulid;
 
 use crate::{
     contexts::Context,
-    identifiers::{local_actor_id, local_object_id},
+    identifiers::{local_activity_id, local_actor_id},
     queues::OutgoingActivityJobData,
     vocabulary::ACCEPT,
 };
@@ -50,7 +50,7 @@ fn build_accept_offer(
         invoice,
     )?;
     let actor_id = local_actor_id(instance_url, sender_username);
-    let activity_id = local_object_id(instance_url, generate_ulid());
+    let activity_id = local_activity_id(instance_url, ACCEPT, generate_ulid());
     let activity = AcceptOffer {
         _context: build_valueflows_context(),
         activity_type: ACCEPT.to_string(),

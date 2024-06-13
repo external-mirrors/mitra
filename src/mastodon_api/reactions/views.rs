@@ -124,7 +124,7 @@ async fn delete_reaction_view(
         let emoji_name = clean_emoji_name(&content);
         format!(":{emoji_name}:")
     };
-    let reaction_id = delete_reaction(
+    let (reaction_id, reaction_has_deprecated_ap_id) = delete_reaction(
         db_client,
         current_user.id,
         status_id,
@@ -138,6 +138,7 @@ async fn delete_reaction_view(
         &current_user,
         &post,
         reaction_id,
+        reaction_has_deprecated_ap_id,
     ).await?.enqueue(db_client).await?;
 
     let status = build_status(
