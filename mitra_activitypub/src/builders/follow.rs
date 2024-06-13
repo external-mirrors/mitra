@@ -35,7 +35,7 @@ pub(super) struct Follow {
     pub to: Vec<String>,
 }
 
-fn build_follow(
+pub(super) fn build_follow(
     instance_url: &str,
     actor_profile: &DbActorProfile,
     target_actor_id: &str,

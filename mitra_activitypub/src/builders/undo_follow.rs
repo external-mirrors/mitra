@@ -9,12 +9,12 @@ use mitra_models::{
 
 use crate::{
     contexts::{build_default_context, Context},
-    identifiers::{local_actor_id, local_object_id},
+    identifiers::local_actor_id,
     queues::OutgoingActivityJobData,
-    vocabulary::{FOLLOW, UNDO},
+    vocabulary::UNDO,
 };
 
-use super::follow::Follow;
+use super::follow::{build_follow, Follow};
 
 #[derive(Serialize)]
 struct UndoFollow {
@@ -37,22 +37,13 @@ fn build_undo_follow(
     target_actor_id: &str,
     follow_request_id: Uuid,
 ) -> UndoFollow {
-    let follow_activity_id = local_object_id(
+    let object = build_follow(
         instance_url,
+        actor_profile,
+        target_actor_id,
         follow_request_id,
+        false, // no context
     );
-    let follow_actor_id = local_actor_id(
-        instance_url,
-        &actor_profile.username,
-    );
-    let object = Follow {
-        _context: None,
-        activity_type: FOLLOW.to_string(),
-        id: follow_activity_id,
-        actor: follow_actor_id,
-        object: target_actor_id.to_string(),
-        to: vec![target_actor_id.to_string()],
-    };
     let activity_id = format!("{}/undo", object.id);
     let actor_id = local_actor_id(instance_url, &actor_profile.username);
     UndoFollow {

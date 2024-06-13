@@ -39,6 +39,7 @@ struct UndoFollow {
     object: Value,
 }
 
+/// Special handler for Undo with embedded Follow
 async fn handle_undo_follow(
     config: &Config,
     db_client: &mut impl DatabaseClient,
