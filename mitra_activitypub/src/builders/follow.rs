@@ -39,7 +39,7 @@ fn build_follow(
     instance_url: &str,
     actor_profile: &DbActorProfile,
     target_actor_id: &str,
-    follow_request_id: &Uuid,
+    follow_request_id: Uuid,
     with_context: bool,
 ) -> Follow {
     let activity_id = local_object_id(instance_url, follow_request_id);
@@ -58,7 +58,7 @@ fn prepare_follow(
     instance: &Instance,
     sender: &User,
     target_actor: &DbActor,
-    follow_request_id: &Uuid,
+    follow_request_id: Uuid,
 ) -> OutgoingActivityJobData {
     let activity = build_follow(
         &instance.url(),
@@ -95,7 +95,7 @@ pub async fn follow_or_create_request(
                         instance,
                         current_user,
                         remote_actor,
-                        &follow_request.id,
+                        follow_request.id,
                     ).enqueue(db_client).await?;
                 } else {
                     create_follow_request_notification(
@@ -139,7 +139,7 @@ mod tests {
             INSTANCE_URL,
             &follower,
             target_actor_id,
-            &follow_request_id,
+            follow_request_id,
             true,
         );
 

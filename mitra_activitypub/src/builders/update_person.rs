@@ -54,7 +54,7 @@ pub fn build_update_person(
     let followers = LocalActorCollection::Followers.of(&actor.id);
     // Update(Person) is idempotent so its ID can be random
     let internal_activity_id = generate_ulid();
-    let activity_id = local_object_id(instance_url, &internal_activity_id);
+    let activity_id = local_object_id(instance_url, internal_activity_id);
     let activity = UpdatePerson {
         context: build_default_context(),
         activity_type: UPDATE.to_string(),

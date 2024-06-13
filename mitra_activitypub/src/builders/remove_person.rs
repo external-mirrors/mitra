@@ -37,7 +37,7 @@ fn build_remove_person(
     collection: LocalActorCollection,
 ) -> RemovePerson {
     let actor_id = local_actor_id(instance_url, sender_username);
-    let activity_id = local_object_id(instance_url, &generate_ulid());
+    let activity_id = local_object_id(instance_url, generate_ulid());
     let collection_id = collection.of(&actor_id);
     RemovePerson {
         context: build_default_context(),

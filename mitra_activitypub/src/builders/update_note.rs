@@ -53,7 +53,7 @@ fn build_update_note(
     let secondary_audience = object.cc.clone();
     // Update(Note) is idempotent so its ID can be random
     let internal_activity_id = generate_ulid();
-    let activity_id = local_object_id(instance_url, &internal_activity_id);
+    let activity_id = local_object_id(instance_url, internal_activity_id);
     UpdateNote {
         _context: build_default_context(),
         activity_type: UPDATE.to_string(),

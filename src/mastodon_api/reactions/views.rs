@@ -86,7 +86,7 @@ async fn create_reaction_view(
         &config.instance(),
         &current_user,
         &post,
-        &reaction.id,
+        reaction.id,
         reaction.content.clone(),
         maybe_emoji.as_ref(),
     ).await?.enqueue(db_client).await?;
@@ -137,7 +137,7 @@ async fn delete_reaction_view(
         &config.instance(),
         &current_user,
         &post,
-        &reaction_id,
+        reaction_id,
     ).await?.enqueue(db_client).await?;
 
     let status = build_status(

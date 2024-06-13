@@ -35,7 +35,7 @@ fn build_undo_follow(
     instance_url: &str,
     actor_profile: &DbActorProfile,
     target_actor_id: &str,
-    follow_request_id: &Uuid,
+    follow_request_id: Uuid,
 ) -> UndoFollow {
     let follow_activity_id = local_object_id(
         instance_url,
@@ -69,7 +69,7 @@ pub fn prepare_undo_follow(
     instance: &Instance,
     sender: &User,
     target_actor: &DbActor,
-    follow_request_id: &Uuid,
+    follow_request_id: Uuid,
 ) -> OutgoingActivityJobData {
     let activity = build_undo_follow(
         &instance.url(),
@@ -105,7 +105,7 @@ mod tests {
             INSTANCE_URL,
             &actor_profile,
             target_actor_id,
-            &follow_request_id,
+            follow_request_id,
         );
 
         assert_eq!(

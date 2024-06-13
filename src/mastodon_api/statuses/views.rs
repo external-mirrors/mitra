@@ -522,7 +522,7 @@ async fn favourite(
             &config.instance(),
             &current_user,
             &post,
-            &reaction.id,
+            reaction.id,
             None,
             None,
         ).await?.enqueue(db_client).await?;
@@ -574,7 +574,7 @@ async fn unfavourite(
             &config.instance(),
             &current_user,
             &post,
-            &reaction_id,
+            reaction_id,
         ).await?.enqueue(db_client).await?;
     };
 
@@ -653,7 +653,7 @@ async fn unreblog(
         &config.instance(),
         &current_user,
         &post,
-        &repost_id,
+        repost_id,
     ).await?.enqueue(db_client).await?;
 
     let status = build_status(
@@ -688,7 +688,7 @@ async fn pin(
         db_client,
         &config.instance(),
         &current_user,
-        &post.id,
+        post.id,
     ).await?.enqueue(db_client).await?;
 
     let status = build_status(
@@ -723,7 +723,7 @@ async fn unpin(
         db_client,
         &config.instance(),
         &current_user,
-        &post.id,
+        post.id,
     ).await?.enqueue(db_client).await?;
 
     let status = build_status(

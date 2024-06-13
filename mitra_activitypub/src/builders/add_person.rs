@@ -52,7 +52,7 @@ fn build_add_person(
     maybe_invoice_id: Option<Uuid>,
 ) -> AddPerson {
     let actor_id = local_actor_id(instance_url, sender_username);
-    let activity_id = local_object_id(instance_url, &generate_ulid());
+    let activity_id = local_object_id(instance_url, generate_ulid());
     let collection_id = collection.of(&actor_id);
     let maybe_context_id = maybe_invoice_id
         .map(|id| local_agreement_id(instance_url, id));

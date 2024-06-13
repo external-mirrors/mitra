@@ -581,7 +581,7 @@ pub async fn replies_collection(
         return Err(HttpError::NotFoundError("post"));
     };
     let instance = config.instance();
-    let object_id = local_object_id(&instance.url(), &internal_object_id);
+    let object_id = local_object_id(&instance.url(), internal_object_id);
     let collection_id = local_object_replies(&object_id);
     let first_page_id = format!("{}?page=true", collection_id);
     if query_params.page.is_none() {

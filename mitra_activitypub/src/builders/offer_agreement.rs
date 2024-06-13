@@ -45,7 +45,7 @@ fn build_offer_agreement(
     sender_username: &str,
     proposer_actor_id: &str,
     subscription_option: &RemoteMoneroSubscription,
-    invoice_id: &Uuid,
+    invoice_id: Uuid,
     invoice_amount: u64,
 ) -> OfferAgreement {
     let proposal_id = subscription_option.object_id.clone();
@@ -93,7 +93,7 @@ pub fn prepare_offer_agreement(
     sender: &User,
     proposer_actor: &DbActor,
     subscription_option: &RemoteMoneroSubscription,
-    invoice_id: &Uuid,
+    invoice_id: Uuid,
     invoice_amount: u64,
 ) -> OutgoingActivityJobData {
     let activity = build_offer_agreement(
@@ -117,6 +117,7 @@ pub fn prepare_offer_agreement(
 mod tests {
     use std::num::NonZeroU64;
     use serde_json::json;
+    use uuid::uuid;
     use mitra_utils::caip2::ChainId;
     use super::*;
 
@@ -132,15 +133,14 @@ mod tests {
             object_id: proposal_id.to_string(),
             fep_0837_enabled: true,
         };
-        let invoice_id =
-            "46d160ae-af12-484d-9f44-419f00fc1b31".parse().unwrap();
+        let invoice_id = uuid!("46d160ae-af12-484d-9f44-419f00fc1b31");
         let invoice_amount = 200000;
         let activity = build_offer_agreement(
             instance_url,
             sender_username,
             proposer_actor_id,
             &subscription_option,
-            &invoice_id,
+            invoice_id,
             invoice_amount,
         );
 

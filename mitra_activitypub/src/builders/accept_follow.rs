@@ -36,7 +36,7 @@ fn build_accept_follow(
     follow_activity_id: &str,
 ) -> AcceptFollow {
     // Accept(Follow) is idempotent so its ID can be random
-    let activity_id = local_object_id(instance_url, &generate_ulid());
+    let activity_id = local_object_id(instance_url, generate_ulid());
     let actor_id = local_actor_id(instance_url, &actor_profile.username);
     AcceptFollow {
         context: build_default_context(),

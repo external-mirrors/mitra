@@ -330,7 +330,7 @@ async fn create_invoice_view(
             &sender,
             recipient_actor,
             &subscription_option,
-            &db_invoice.id,
+            db_invoice.id,
             invoice_data.amount,
         ).enqueue(db_client).await?;
         db_invoice

@@ -167,7 +167,7 @@ pub async fn import_followers_task(
                             &instance,
                             &follower,
                             remote_actor,
-                            &follow_request_id,
+                            follow_request_id,
                         ).enqueue(db_client).await?;
                     },
                     // Not a follower, ignore

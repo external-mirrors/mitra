@@ -100,7 +100,7 @@ pub async fn handle_move(
                 &instance,
                 &follower,
                 old_actor,
-                &follow_request_id,
+                follow_request_id,
             ).enqueue(db_client).await?;
         };
         if follower.id == new_profile.id {

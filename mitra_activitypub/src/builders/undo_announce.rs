@@ -41,7 +41,7 @@ struct UndoAnnounce {
 fn build_undo_announce(
     instance_url: &str,
     actor_profile: &DbActorProfile,
-    repost_id: &Uuid,
+    repost_id: Uuid,
     recipient_id: &str,
 ) -> UndoAnnounce {
     let object_id = local_object_id(instance_url, repost_id);
@@ -70,9 +70,9 @@ pub async fn prepare_undo_announce(
     instance: &Instance,
     sender: &User,
     post: &Post,
-    repost_id: &Uuid,
+    repost_id: Uuid,
 ) -> Result<OutgoingActivityJobData, DatabaseError> {
-    assert_ne!(&post.id, repost_id);
+    assert_ne!(post.id, repost_id);
     let (recipients, primary_recipient) = get_announce_recipients(
         db_client,
         &instance.url(),
@@ -108,7 +108,7 @@ mod tests {
         let activity = build_undo_announce(
             INSTANCE_URL,
             &announcer,
-            &repost_id,
+            repost_id,
             post_author_id,
         );
         assert_eq!(

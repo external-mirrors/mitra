@@ -40,7 +40,7 @@ struct UndoLike {
 fn build_undo_like(
     instance_url: &str,
     actor_profile: &DbActorProfile,
-    reaction_id: &Uuid,
+    reaction_id: Uuid,
     post_author_id: &str,
     post_visibility: &Visibility,
 ) -> UndoLike {
@@ -65,7 +65,7 @@ pub async fn prepare_undo_like(
     instance: &Instance,
     sender: &User,
     post: &Post,
-    reaction_id: &Uuid,
+    reaction_id: Uuid,
 ) -> Result<OutgoingActivityJobData, DatabaseError> {
     let recipients = get_like_recipients(
         db_client,
@@ -104,7 +104,7 @@ mod tests {
         let activity = build_undo_like(
             INSTANCE_URL,
             &author,
-            &reaction_id,
+            reaction_id,
             post_author_id,
             &Visibility::Public,
         );

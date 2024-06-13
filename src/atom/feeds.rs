@@ -23,7 +23,7 @@ fn make_entry(
     instance_url: &str,
     post: &Post,
 ) -> String {
-    let object_id = local_object_id(instance_url, &post.id);
+    let object_id = local_object_id(instance_url, post.id);
     let content_escaped = escape_html(&post.content);
     let content_cleaned = clean_html_all(&post.content);
     // Use trimmed content for title

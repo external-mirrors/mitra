@@ -45,7 +45,7 @@ fn build_move_person(
 ) -> MovePerson {
     // Move(Person) is idempotent so its ID can be random
     let internal_activity_id = generate_ulid();
-    let activity_id = local_object_id(instance_url, &internal_activity_id);
+    let activity_id = local_object_id(instance_url, internal_activity_id);
     let actor_id = local_actor_id(instance_url, &sender.profile.username);
     let followers = LocalActorCollection::Followers.of(&actor_id);
     let (object_id, target_id) = if pull_mode {

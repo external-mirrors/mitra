@@ -746,7 +746,7 @@ async fn unfollow_account(
                     &config.instance(),
                     &current_user,
                     &remote_actor,
-                    &follow_request_id,
+                    follow_request_id,
                 ).enqueue(db_client).await?;
             };
         },

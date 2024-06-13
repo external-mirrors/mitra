@@ -36,7 +36,7 @@ fn build_reject_follow(
     follow_activity_id: &str,
 ) -> RejectFollow {
     // Reject(Follow) is idempotent so its ID can be random
-    let activity_id = local_object_id(instance_url, &generate_ulid());
+    let activity_id = local_object_id(instance_url, generate_ulid());
     let actor_id = local_actor_id(instance_url, &actor_profile.username);
     RejectFollow {
         context: build_default_context(),

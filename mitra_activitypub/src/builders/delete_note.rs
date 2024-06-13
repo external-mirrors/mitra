@@ -52,7 +52,7 @@ fn build_delete_note(
     fep_e232_enabled: bool,
 ) -> DeleteNote {
     assert!(post.is_local());
-    let object_id = local_object_id(instance_url, &post.id);
+    let object_id = local_object_id(instance_url, post.id);
     let activity_id = format!("{}/delete", object_id);
     let actor_id = local_actor_id(instance_url, &post.author.username);
     let authority = Authority::server(instance_url);

@@ -80,7 +80,7 @@ pub fn local_actor_proposal_id(
     format!("{}/proposals/{}", actor_id, chain_id)
 }
 
-pub fn local_object_id(instance_url: &str, internal_object_id: &Uuid) -> String {
+pub fn local_object_id(instance_url: &str, internal_object_id: Uuid) -> String {
     format!("{}/objects/{}", instance_url, internal_object_id)
 }
 
@@ -182,7 +182,7 @@ pub fn parse_local_primary_intent_id(
 pub fn post_object_id(instance_url: &str, post: &Post) -> String {
     match post.object_id {
         Some(ref object_id) => object_id.to_string(),
-        None => local_object_id(instance_url, &post.id),
+        None => local_object_id(instance_url, post.id),
     }
 }
 
