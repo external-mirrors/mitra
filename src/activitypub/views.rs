@@ -3,6 +3,7 @@ use actix_web::{
     post,
     web,
     http::header as http_header,
+    http::Uri,
     HttpRequest,
     HttpResponse,
     Scope,
@@ -46,10 +47,11 @@ use mitra_activitypub::{
 };
 use mitra_config::Config;
 use mitra_federation::{
-    constants::AP_MEDIA_TYPE,
+    constants::{AP_MEDIA_TYPE, AP_PUBLIC},
     http_server::is_activitypub_request,
 };
 use mitra_models::{
+    activitypub::queries::get_object_as_target,
     database::{
         get_database_client,
         DatabaseConnectionPool,
@@ -646,6 +648,29 @@ pub async fn tag_view(
     let response = HttpResponse::Found()
         .append_header((http_header::LOCATION, page_url))
         .finish();
+    Ok(response)
+}
+
+#[get("/activities/{tail:.*}")]
+pub async fn activity_view(
+    config: web::Data<Config>,
+    db_pool: web::Data<DatabaseConnectionPool>,
+    request_path: Uri,
+) -> Result<HttpResponse, HttpError> {
+    let db_client = &**get_database_client(&db_pool).await?;
+    let activity_id = format!(
+        "{}{}",
+        config.instance_url(),
+        request_path,
+    );
+    let activity = get_object_as_target(
+        db_client,
+        &activity_id,
+        AP_PUBLIC,
+    ).await?;
+    let response = HttpResponse::Ok()
+        .content_type(AP_MEDIA_TYPE)
+        .json(activity);
     Ok(response)
 }
 

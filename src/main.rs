@@ -190,6 +190,7 @@ async fn main() -> std::io::Result<()> {
             .service(activitypub::replies_collection)
             .service(activitypub::emoji_view)
             .service(activitypub::tag_view)
+            .service(activitypub::activity_view)
             .service(activitypub::apgateway_view)
             .service(atom_scope())
             .service(nodeinfo::get_nodeinfo_jrd)

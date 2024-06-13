@@ -26,6 +26,25 @@ pub async fn save_activity(
     Ok(())
 }
 
+pub async fn get_object_as_target(
+    db_client: &impl DatabaseClient,
+    object_id: &str,
+    target: &str,
+) -> Result<JsonValue, DatabaseError> {
+    let maybe_row = db_client.query_opt(
+        "
+        SELECT object_data
+        FROM activitypub_object
+        WHERE object_id = $1
+        AND object_data -> 'to' @> to_jsonb($2::text)
+        ",
+        &[&object_id, &target],
+    ).await?;
+    let row = maybe_row.ok_or(DatabaseError::NotFound("activitypub object"))?;
+    let object_data = row.try_get("object_data")?;
+    Ok(object_data)
+}
+
 pub async fn delete_activitypub_objects(
     db_client: &impl DatabaseClient,
     created_before: DateTime<Utc>,
@@ -52,7 +71,7 @@ mod tests {
     #[tokio::test]
     #[serial]
     async fn test_save_activity() {
-        let db_client = &mut create_test_database().await;
+        let db_client = &create_test_database().await;
         let canonical_id = "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/activities/1";
         let activity = json!({
             "id": "https://social.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/activities/1",
@@ -64,5 +83,33 @@ mod tests {
         save_activity(db_client, canonical_id, &activity).await.unwrap();
         // Update
         save_activity(db_client, canonical_id, &activity).await.unwrap();
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_get_object_as_target() {
+        let db_client = &create_test_database().await;
+        let activity_id = "https://social.example/activities/123";
+        let target_id = "https://social.example/users/2";
+        let activity = json!({
+            "id": activity_id,
+            "type": "Like",
+            "actor": "https://social.example/users/1",
+            "object": "https://social.example/objects/321",
+            "to": [target_id],
+        });
+        save_activity(db_client, activity_id, &activity).await.unwrap();
+        let activity_found = get_object_as_target(
+            db_client,
+            activity_id,
+            target_id,
+        ).await.unwrap();
+        assert_eq!(activity_found, activity);
+        let error = get_object_as_target(
+            db_client,
+            activity_id,
+            "https://www.w3.org/ns/activitystreams#Public",
+        ).await.err().unwrap();
+        assert_eq!(error.to_string(), "activitypub object not found");
     }
 }
