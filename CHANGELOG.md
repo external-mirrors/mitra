@@ -40,6 +40,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Removed `federation.fep_8b32_eddsa_enabled` configuration parameter.
 
+### Fixed
+
+- Fixed panic when searching for handle with invalid hostname.
+
 ## [2.21.0] - 2024-06-01
 
 ### Added
