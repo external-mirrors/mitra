@@ -1,6 +1,11 @@
 use mitra_config::{parse_config, Config};
 use mitra_models::{
-    database::{DatabaseClient, DatabaseError, DatabaseTypeError},
+    database::{
+        DatabaseClient,
+        DatabaseError,
+        DatabaseTypeError,
+        utils::get_postgres_version,
+    },
     properties::constants::{
         INSTANCE_ED25519_SECRET_KEY,
         INSTANCE_RSA_SECRET_KEY,
@@ -42,6 +47,18 @@ pub fn initialize_app() -> Config {
         };
     };
     config
+}
+
+pub async fn check_postgres_version(
+    db_client: &impl  DatabaseClient,
+) -> () {
+    if let Ok(version) = get_postgres_version(db_client).await {
+        if version < 130_000 {
+            log::warn!("unsupported PostgreSQL version: {version}");
+        } else {
+            log::info!("PostgreSQL version: {version}");
+        };
+    };
 }
 
 pub async fn apply_custom_migrations(

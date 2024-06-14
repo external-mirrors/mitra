@@ -2,6 +2,7 @@ use clap::Parser;
 
 use mitra_adapters::init::{
     apply_custom_migrations,
+    check_postgres_version,
     initialize_app,
     prepare_instance_keys,
 };
@@ -32,6 +33,7 @@ async fn main() {
                 &db_config,
                 config.database_tls_ca_file.as_deref(),
             ).await.expect("failed to connect to database");
+            check_postgres_version(db_client).await;
             apply_migrations(db_client).await
                 .expect("failed to apply migrations");
             apply_custom_migrations(db_client).await

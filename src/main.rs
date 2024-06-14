@@ -28,6 +28,7 @@ use mitra::webfinger::views as webfinger;
 use mitra::web_client::views as web_client;
 use mitra_adapters::init::{
     apply_custom_migrations,
+    check_postgres_version,
     initialize_app,
     prepare_instance_keys,
 };
@@ -58,6 +59,7 @@ async fn main() -> std::io::Result<()> {
     ).expect("failed to connect to database");
     let mut db_client = get_database_client(&db_pool).await
         .expect("failed to connect to database");
+    check_postgres_version(&**db_client).await;
     apply_migrations(&mut db_client).await
         .expect("failed to apply migrations");
     apply_custom_migrations(&**db_client).await

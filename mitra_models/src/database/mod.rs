@@ -5,6 +5,7 @@ pub mod int_enum;
 pub mod json_macro;
 pub mod migrate;
 pub mod query_macro;
+pub mod utils;
 
 #[cfg(any(test, feature = "test-utils"))]
 pub mod test_utils;
