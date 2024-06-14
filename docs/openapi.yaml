@@ -1974,6 +1974,45 @@ paths:
                     type: array
                     items:
                       $ref: '#/components/schemas/Tag'
+  /api/v1/pleroma/statuses/{status_id}/reactions/{content}:
+    put:
+      summary: Add emoji reaction.
+      parameters:
+        - $ref: '#/components/parameters/status_id'
+        - name: content
+          in: path
+          description: Emoji or emoji shortcode.
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+        404:
+          description: Post or custom emoji does not exist.
+    delete:
+      summary: Remove emoji reaction.
+      parameters:
+        - $ref: '#/components/parameters/status_id'
+        - name: content
+          in: path
+          description: Emoji or emoji shortcode.
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+        404:
+          description: Post or custom emoji does not exist.
 
 components:
   securitySchemes:
