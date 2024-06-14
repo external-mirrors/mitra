@@ -79,7 +79,6 @@ impl IncomingActivityJobData {
     }
 }
 
-const INCOMING_QUEUE_BATCH_SIZE: u32 = 20;
 const INCOMING_QUEUE_RETRIES_MAX: u32 = 2;
 
 const fn incoming_queue_backoff(_failure_count: u32) -> u32 {
@@ -94,7 +93,7 @@ pub async fn process_queued_incoming_activities(
     let batch = get_job_batch(
         db_client,
         &JobType::IncomingActivity,
-        INCOMING_QUEUE_BATCH_SIZE,
+        config.federation.inbox_queue_batch_size,
         JOB_TIMEOUT,
     ).await?;
     for job in batch {

@@ -11,6 +11,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Add `attributedTo` property to `Emoji` objects.
 - Support integrity proofs with injected context.
 - Serve outgoing public activities.
+- Added `federation.inbox_queue_batch_size` configuration parameter.
 
 ### Changed
 
