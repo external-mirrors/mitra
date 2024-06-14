@@ -32,8 +32,8 @@ impl PeriodicTask {
     /// Returns task period (in seconds)
     fn period(&self) -> i64 {
         match self {
-            Self::IncomingActivityQueueExecutor => 5,
-            Self::OutgoingActivityQueueExecutor => 5,
+            Self::IncomingActivityQueueExecutor => 1,
+            Self::OutgoingActivityQueueExecutor => 1,
             Self::FetcherQueueExecutor => 10,
             Self::DeleteExtraneousPosts => 3600,
             Self::DeleteEmptyProfiles => 3600,
