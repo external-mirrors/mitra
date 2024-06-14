@@ -39,7 +39,10 @@ use mitra_utils::{
     http_url::normalize_http_url,
     urls::encode_hostname,
 };
-use mitra_validators::errors::ValidationError;
+use mitra_validators::{
+    errors::ValidationError,
+    profiles::validate_hostname,
+};
 
 const SEARCH_FETCHER_TIMEOUT: u64 = 15;
 
@@ -79,6 +82,9 @@ fn parse_profile_query(query: &str) ->
         .map(encode_hostname)
         .transpose()
         .map_err(|_| ValidationError("invalid domain name"))?;
+    if let Some(ref hostname) = maybe_hostname {
+        validate_hostname(hostname)?;
+    };
     Ok((username, maybe_hostname))
 }
 
@@ -399,6 +405,13 @@ mod tests {
         let (username, maybe_hostname) = parse_profile_query(query).unwrap();
         assert_eq!(username, "user_01");
         assert_eq!(maybe_hostname.as_deref(), Some("xn--53h.example"));
+    }
+
+    #[test]
+    fn test_parse_profile_query_invalid_hostname() {
+        let query = "@user_01@social%example";
+        let error = parse_profile_query(query).unwrap_err();
+        assert_eq!(error.to_string(), "invalid hostname");
     }
 
     #[test]

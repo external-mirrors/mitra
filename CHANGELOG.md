@@ -31,6 +31,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Use new activity ID format.
 - Changed worker delay from 5 seconds to 500 milliseconds.
 - Run federation queue executors every 1 second.
+- Improved validation of hostname part in profile search queries.
 
 ### Deprecated
 

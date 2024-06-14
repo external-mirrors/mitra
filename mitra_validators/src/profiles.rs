@@ -23,6 +23,7 @@ use super::{
 // See also: ACTOR_ADDRESS_RE in mitra_federation::addresses
 const USERNAME_RE: &str = r"^[A-Za-z0-9\-\._]+$";
 const USERNAME_LENGTH_MAX: usize = 100;
+const HOSTNAME_RE: &str = r"^[a-z0-9\.-]+$";
 const HOSTNAME_LENGTH_MAX: usize = 100;
 const DISPLAY_NAME_MAX_LENGTH: usize = 200;
 const BIO_MAX_LENGTH: usize = 10000;
@@ -55,6 +56,11 @@ pub fn validate_hostname(hostname: &str) -> Result<(), ValidationError> {
         .map_err(|_| ValidationError("invalid hostname"))?;
     if normalized_hostname != hostname {
         return Err(ValidationError("hostname is not normalized"));
+    };
+    let hostname_re = Regex::new(HOSTNAME_RE)
+        .expect("regexp should be valid");
+    if !hostname_re.is_match(hostname) {
+        return Err(ValidationError("invalid hostname"));
     };
     Ok(())
 }
@@ -284,12 +290,19 @@ mod tests {
     #[test]
     fn test_validate_hostname() {
         let hostname = "δοκιμή.example";
-        let result = validate_hostname(hostname);
-        assert!(result.is_err());
+        let error = validate_hostname(hostname).unwrap_err();
+        assert_eq!(error.to_string(), "hostname is not normalized");
 
         let normalized_hostname = "xn--jxalpdlp.example";
         let result = validate_hostname(normalized_hostname);
         assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_validate_hostname_special_character() {
+        let hostname = r#"social.example""#;
+        let error = validate_hostname(hostname).unwrap_err();
+        assert_eq!(error.to_string(), "invalid hostname");
     }
 
     #[test]
