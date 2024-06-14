@@ -21,6 +21,8 @@ pub fn is_actor(value: &JsonValue) -> bool {
 // Activities must have `actor` property
 pub fn is_activity(value: &JsonValue) -> bool {
     // Pleroma adds 'actor' property to Note objects
+    // https://git.pleroma.social/pleroma/pleroma/-/issues/3269
+    // https://akkoma.dev/AkkomaGang/akkoma/issues/770
     !value["actor"].is_null() && value["attributedTo"].is_null()
 }
 
