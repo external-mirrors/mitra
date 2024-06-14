@@ -9,6 +9,8 @@ use mitra_services::ethereum::contracts::EthereumBlockchain;
 
 use super::periodic_tasks::*;
 
+const WORKER_DELAY: u64 = 500;
+
 #[derive(Debug, Eq, Hash, PartialEq)]
 enum PeriodicTask {
     IncomingActivityQueueExecutor,
@@ -87,7 +89,9 @@ pub fn run(
             scheduler_state.insert(PeriodicTask::MoneroRecurrentPaymentMonitor, None);
         };
 
-        let mut interval = tokio::time::interval(Duration::from_secs(5));
+        // Start worker loop
+        let mut interval =
+            tokio::time::interval(Duration::from_millis(WORKER_DELAY));
         loop {
             interval.tick().await;
 
