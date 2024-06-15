@@ -231,23 +231,6 @@ paths:
                 $ref: '#/components/schemas/CredentialAccount'
         400:
           description: Invalid user data.
-  /api/v1/accounts/signed_update:
-    get:
-      summary: Build Update(Person) activity for signing (experimental).
-      security:
-        - tokenAuth: []
-      responses:
-        200:
-          description: Successful operation
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  value:
-                    description: Activity
-                    type: object
-                    example: {"type": "Update"}
   /api/v1/accounts/identity_proof:
     get:
       summary: Get unsigned data for identity proof.

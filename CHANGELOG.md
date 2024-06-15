@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Removed
+
+- Removed `/api/v1/accounts/signed_update` API endpoint.
+
 ## [2.22.0] - 2024-06-15
 
 ### Added

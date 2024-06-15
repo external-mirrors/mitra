@@ -30,7 +30,7 @@ use crate::{
 };
 
 #[derive(Serialize)]
-pub struct UpdatePerson {
+struct UpdatePerson {
     #[serde(rename = "@context")]
     context: Context,
 
@@ -45,7 +45,7 @@ pub struct UpdatePerson {
     cc: Vec<String>,
 }
 
-pub fn build_update_person(
+fn build_update_person(
     instance_url: &str,
     user: &User,
 ) -> Result<UpdatePerson, DatabaseError> {

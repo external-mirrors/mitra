@@ -5,7 +5,6 @@ use actix_multipart::form::{
 };
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use serde_json::{Value as JsonValue};
 use uuid::Uuid;
 
 use mitra_activitypub::identifiers::{
@@ -484,11 +483,6 @@ impl AccountUpdateMultipartForm {
         )?;
         Ok(profile_data)
     }
-}
-
-#[derive(Serialize)]
-pub struct UnsignedActivity {
-    pub value: JsonValue,
 }
 
 #[derive(Deserialize)]

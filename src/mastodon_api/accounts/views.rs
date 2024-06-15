@@ -22,10 +22,7 @@ use mitra_activitypub::{
         follow::follow_or_create_request,
         reject_follow::prepare_reject_follow,
         undo_follow::prepare_undo_follow,
-        update_person::{
-            build_update_person,
-            prepare_update_person,
-        },
+        update_person::prepare_update_person,
     },
     identifiers::local_actor_id,
     identity::{
@@ -156,7 +153,6 @@ use super::types::{
     SearchDidQueryParams,
     StatusListQueryParams,
     SubscriptionListQueryParams,
-    UnsignedActivity,
 };
 
 #[post("")]
@@ -354,26 +350,6 @@ async fn update_credentials(
         current_user,
     );
     Ok(HttpResponse::Ok().json(account))
-}
-
-#[get("/signed_update")]
-async fn get_unsigned_update(
-    auth: BearerAuth,
-    config: web::Data<Config>,
-    db_pool: web::Data<DatabaseConnectionPool>,
-) -> Result<HttpResponse, MastodonError> {
-    let db_client = &**get_database_client(&db_pool).await?;
-    let current_user = get_current_user(db_client, auth.token()).await?;
-    let activity = build_update_person(
-        &config.instance_url(),
-        &current_user,
-    )?;
-    let activity_value = serde_json::to_value(activity)
-        .map_err(|_| MastodonError::InternalError)?;
-    let data = UnsignedActivity {
-        value: activity_value,
-    };
-    Ok(HttpResponse::Ok().json(data))
 }
 
 #[get("/identity_proof")]
@@ -1077,7 +1053,6 @@ pub fn account_api_scope() -> Scope {
         .service(create_account)
         .service(verify_credentials)
         .service(update_credentials)
-        .service(get_unsigned_update)
         .service(get_identity_claim)
         .service(create_identity_proof)
         .service(get_relationships_view)
