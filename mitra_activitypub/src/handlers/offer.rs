@@ -4,7 +4,7 @@ use serde_json::{Value as JsonValue};
 use mitra_config::Config;
 use mitra_models::{
     database::DatabaseClient,
-    invoices::queries::create_invoice,
+    invoices::queries::create_local_invoice,
     profiles::queries::get_remote_profile_by_actor_id,
     profiles::types::MoneroSubscription,
     users::queries::get_user_by_name,
@@ -70,7 +70,7 @@ pub async fn handle_offer(
     let payment_address = create_monero_address(monero_config).await
         .map_err(|_| HandlerError::ServiceError("failed to create monero address"))?
         .to_string();
-    let db_invoice = create_invoice(
+    let db_invoice = create_local_invoice(
         db_client,
         &actor_profile.id,
         &proposer.id,

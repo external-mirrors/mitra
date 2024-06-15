@@ -32,6 +32,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Changed worker delay from 5 seconds to 500 milliseconds.
 - Run federation queue executors every 1 second.
 - Improved validation of hostname part in profile search queries.
+- Prevent remote invoices from being processed as local.
 
 ### Deprecated
 

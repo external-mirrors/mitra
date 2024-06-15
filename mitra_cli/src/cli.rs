@@ -8,7 +8,7 @@ use uuid::Uuid;
 
 use mitra::payments::monero::{
     get_payment_address,
-    reopen_invoice,
+    reopen_local_invoice,
 };
 use mitra_activitypub::{
     agent::build_federation_agent,
@@ -51,7 +51,7 @@ use mitra_models::{
         get_emoji_by_name_and_hostname,
     },
     emojis::types::EmojiImage,
-    invoices::queries::{get_invoice_by_address, get_invoice_by_id},
+    invoices::queries::{get_local_invoice_by_address, get_invoice_by_id},
     oauth::queries::delete_oauth_tokens,
     posts::queries::{
         delete_post,
@@ -999,13 +999,13 @@ impl ReopenInvoice {
         let invoice = if let Ok(invoice_id) = Uuid::from_str(&self.id_or_address) {
             get_invoice_by_id(db_client, &invoice_id).await?
         } else {
-            get_invoice_by_address(
+            get_local_invoice_by_address(
                 db_client,
                 &monero_config.chain_id,
                 &self.id_or_address,
             ).await?
         };
-        reopen_invoice(
+        reopen_local_invoice(
             monero_config,
             db_client,
             &invoice,

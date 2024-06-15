@@ -22,7 +22,7 @@ use mitra_config::Config;
 use mitra_models::{
     database::{get_database_client, DatabaseConnectionPool},
     invoices::queries::{
-        create_invoice,
+        create_local_invoice,
         create_remote_invoice,
         get_invoice_by_id,
         set_invoice_status,
@@ -298,7 +298,7 @@ async fn create_invoice_view(
         let payment_address = create_monero_address(monero_config).await
             .map_err(|_| MastodonError::InternalError)?
             .to_string();
-        create_invoice(
+        create_local_invoice(
             db_client,
             &sender.id,
             &recipient.id,

@@ -8,7 +8,7 @@ use mitra_models::{
         DatabaseError,
         DatabaseTypeError,
     },
-    invoices::queries::create_invoice,
+    invoices::queries::create_local_invoice,
     profiles::queries::search_profiles_by_wallet_address,
     subscriptions::queries::{
         create_subscription,
@@ -166,7 +166,7 @@ pub async fn check_ethereum_subscriptions(
         };
 
         // Create invoice
-        let invoice = create_invoice(
+        let invoice = create_local_invoice(
             db_client,
             &sender.id,
             &recipient.id,

@@ -14,7 +14,8 @@ use crate::database::{
 
 use super::types::{DbChainId, DbInvoice, InvoiceStatus};
 
-pub async fn create_invoice(
+/// Create invoice with local recipient
+pub async fn create_local_invoice(
     db_client: &impl DatabaseClient,
     sender_id: &Uuid,
     recipient_id: &Uuid,
@@ -36,7 +37,10 @@ pub async fn create_invoice(
             amount
         )
         SELECT $1, $2, $3, $4, $5, $6
-        WHERE EXISTS (SELECT 1 FROM user_account WHERE id = $3)
+        WHERE EXISTS (
+            -- local recipient
+            SELECT 1 FROM user_account WHERE id = $3
+        )
         RETURNING invoice
         ",
         &[
@@ -74,8 +78,14 @@ pub async fn create_remote_invoice(
         )
         SELECT $1, $2, $3, $4, $5, $6
         WHERE
-            EXISTS (SELECT 1 FROM user_account WHERE id = $2)
-            AND NOT EXISTS (SELECT 1 FROM user_account WHERE id = $3)
+            EXISTS (
+                -- local sender
+                SELECT 1 FROM user_account WHERE id = $2
+            )
+            AND NOT EXISTS (
+                -- local recipient
+                SELECT 1 FROM user_account WHERE id = $3
+            )
         RETURNING invoice
         ",
         &[
@@ -107,7 +117,7 @@ pub async fn get_invoice_by_id(
     Ok(invoice)
 }
 
-pub async fn get_invoice_by_address(
+pub async fn get_local_invoice_by_address(
     db_client: &impl DatabaseClient,
     chain_id: &ChainId,
     payment_address: &str,
@@ -115,7 +125,9 @@ pub async fn get_invoice_by_address(
     let maybe_row = db_client.query_opt(
         "
         SELECT invoice
-        FROM invoice WHERE chain_id = $1 AND payment_address = $2
+        FROM invoice
+        JOIN user_account ON (invoice.recipient_id = user_account.id)
+        WHERE chain_id = $1 AND payment_address = $2
         ",
         &[&DbChainId::new(chain_id), &payment_address],
     ).await?;
@@ -170,7 +182,7 @@ pub async fn get_remote_invoice_by_object_id(
     Ok(invoice)
 }
 
-pub async fn get_invoices_by_status(
+pub async fn get_local_invoices_by_status(
     db_client: &impl DatabaseClient,
     chain_id: &ChainId,
     status: InvoiceStatus,
@@ -178,7 +190,9 @@ pub async fn get_invoices_by_status(
     let rows = db_client.query(
         "
         SELECT invoice
-        FROM invoice WHERE chain_id = $1 AND invoice_status = $2
+        FROM invoice
+        JOIN user_account ON (invoice.recipient_id = user_account.id)
+        WHERE chain_id = $1 AND invoice_status = $2
         ",
         &[&DbChainId::new(chain_id), &status],
     ).await?;
@@ -296,14 +310,14 @@ mod tests {
 
     #[tokio::test]
     #[serial]
-    async fn test_create_invoice() {
+    async fn test_create_local_invoice() {
         let db_client = &mut create_test_database().await;
         let (recipient_id, sender_id) =
             create_participants(db_client).await;
         let chain_id = ChainId::monero_mainnet();
         let payment_address = "8MxABajuo71BZya9";
         let amount = 100000000000109212;
-        let invoice = create_invoice(
+        let invoice = create_local_invoice(
             db_client,
             &sender_id,
             &recipient_id,
@@ -351,7 +365,7 @@ mod tests {
         let db_client = &mut create_test_database().await;
         let (recipient_id, sender_id) =
             create_participants(db_client).await;
-        let invoice = create_invoice(
+        let invoice = create_local_invoice(
             db_client,
             &sender_id,
             &recipient_id,

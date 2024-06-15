@@ -10,12 +10,12 @@ use mitra_models::{
         DatabaseError,
         DatabaseTypeError,
     },
-    invoices::helpers::{invoice_forwarded, invoice_reopened},
+    invoices::helpers::{local_invoice_forwarded, local_invoice_reopened},
     invoices::queries::{
-        create_invoice,
-        get_invoice_by_address,
+        create_local_invoice,
         get_invoice_by_participants,
-        get_invoices_by_status,
+        get_local_invoice_by_address,
+        get_local_invoices_by_status,
         set_invoice_status,
     },
     invoices::types::{DbInvoice, InvoiceStatus},
@@ -137,7 +137,7 @@ pub async fn check_monero_subscriptions(
 
     // Invoices waiting for payment
     let mut address_waitlist = vec![];
-    let open_invoices = get_invoices_by_status(
+    let open_invoices = get_local_invoices_by_status(
         db_client,
         &config.chain_id,
         InvoiceStatus::Open,
@@ -150,10 +150,6 @@ pub async fn check_monero_subscriptions(
                 &invoice.id,
                 InvoiceStatus::Timeout,
             ).await?;
-            continue;
-        };
-        if invoice.object_id.is_some() {
-            // Don't monitor remote invoices
             continue;
         };
         let payment_address = invoice_payment_address(&invoice)?;
@@ -177,7 +173,7 @@ pub async fn check_monero_subscriptions(
                 &wallet_client,
                 &transfer.subaddr_index,
             ).await?;
-            let invoice = get_invoice_by_address(
+            let invoice = get_local_invoice_by_address(
                 db_client,
                 &config.chain_id,
                 &subaddress.to_string(),
@@ -196,7 +192,7 @@ pub async fn check_monero_subscriptions(
     };
 
     // Invoices waiting to be forwarded
-    let paid_invoices = get_invoices_by_status(
+    let paid_invoices = get_local_invoices_by_status(
         db_client,
         &config.chain_id,
         InvoiceStatus::Paid,
@@ -258,7 +254,7 @@ pub async fn check_monero_subscriptions(
             Err(other_error) => return Err(other_error.into()),
         };
 
-        invoice_forwarded(
+        local_invoice_forwarded(
             db_client,
             &invoice.id,
             &payout_tx_id,
@@ -266,7 +262,7 @@ pub async fn check_monero_subscriptions(
         log::info!("forwarded payment for invoice {}", invoice.id);
     };
 
-    let forwarded_invoices = get_invoices_by_status(
+    let forwarded_invoices = get_local_invoices_by_status(
         db_client,
         &config.chain_id,
         InvoiceStatus::Forwarded,
@@ -369,7 +365,7 @@ pub async fn check_closed_invoices(
     ).await?;
     let db_client = &mut **get_database_client(db_pool).await?;
     for (address, _) in addresses {
-        let invoice = match get_invoice_by_address(
+        let invoice = match get_local_invoice_by_address(
             db_client,
             &config.chain_id,
             &address.to_string(),
@@ -392,12 +388,12 @@ pub async fn check_closed_invoices(
             invoice.id,
             invoice.invoice_status,
         );
-        invoice_reopened(db_client, &invoice.id).await?;
+        local_invoice_reopened(db_client, &invoice.id).await?;
     };
     Ok(())
 }
 
-pub async fn reopen_invoice(
+pub async fn reopen_local_invoice(
     config: &MoneroConfig,
     db_client: &mut impl DatabaseClient,
     invoice: &DbInvoice,
@@ -432,7 +428,7 @@ pub async fn reopen_invoice(
                 transfer.amount,
             );
         };
-        invoice_reopened(db_client, &invoice.id).await?;
+        local_invoice_reopened(db_client, &invoice.id).await?;
     };
     Ok(())
 }
@@ -456,7 +452,7 @@ pub async fn get_payment_address(
         Ok(invoice) => invoice, // invoice will be re-opened automatically on incoming payment
         Err(DatabaseError::NotFound(_)) => {
             let payment_address = create_monero_address(config).await?;
-            create_invoice(
+            create_local_invoice(
                 db_client,
                 sender_id,
                 recipient_id,
