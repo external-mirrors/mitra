@@ -53,10 +53,11 @@ use mitra_federation::{
     http_server::is_activitypub_request,
 };
 use mitra_models::{
-    activitypub::queries::get_object_as_target,
+    activitypub::queries::{get_actor, get_object_as_target},
     database::{
         get_database_client,
         DatabaseConnectionPool,
+        DatabaseError,
     },
     emojis::queries::get_local_emoji_by_name,
     posts::helpers::{add_related_posts, can_view_post},
@@ -719,6 +720,16 @@ async fn apgateway_view(
 ) -> Result<HttpResponse, HttpError> {
     let db_client = &**get_database_client(&db_pool).await?;
     let ap_url = with_ap_prefix(&did_url);
+    match get_actor(db_client, &ap_url).await {
+        Ok(actor_value) => {
+            let response = HttpResponse::Ok()
+                .content_type(AP_MEDIA_TYPE)
+                .json(actor_value);
+            return Ok(response);
+        },
+        Err(DatabaseError::NotFound(_)) => (),
+        Err(other_error) => return Err(other_error.into()),
+    };
     let (did_key, maybe_internal_object_id) = if let
         Ok(did_key) = parse_fep_ef61_local_actor_id(&ap_url)
     {

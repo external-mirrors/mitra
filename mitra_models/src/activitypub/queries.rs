@@ -68,6 +68,24 @@ pub async fn get_object_as_target(
     Ok(object_data)
 }
 
+pub async fn get_actor(
+    db_client: &impl DatabaseClient,
+    actor_id: &str,
+) -> Result<JsonValue, DatabaseError> {
+    // Actors can not be private
+    let maybe_row = db_client.query_opt(
+        "
+        SELECT object_data
+        FROM activitypub_object
+        WHERE object_id = $1 AND profile_id IS NOT NULL
+        ",
+        &[&actor_id],
+    ).await?;
+    let row = maybe_row.ok_or(DatabaseError::NotFound("activitypub object"))?;
+    let object_data = row.try_get("object_data")?;
+    Ok(object_data)
+}
+
 pub async fn delete_activitypub_objects(
     db_client: &impl DatabaseClient,
     created_before: DateTime<Utc>,
@@ -142,6 +160,10 @@ mod tests {
             "name": "test-2",
         });
         save_actor(db_client, canonical_id, &actor_json, profile.id).await.unwrap();
+
+        // Get
+        let actor_json_stored = get_actor(db_client, canonical_id).await.unwrap();
+        assert_eq!(actor_json_stored, actor_json);
     }
 
     #[tokio::test]
