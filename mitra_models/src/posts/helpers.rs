@@ -160,7 +160,6 @@ pub async fn get_post_by_id_for_view(
 #[cfg(test)]
 mod tests {
     use serial_test::serial;
-    use tokio_postgres::Client;
     use crate::database::test_utils::create_test_database;
     use crate::posts::{
         queries::create_post,
@@ -168,19 +167,10 @@ mod tests {
     };
     use crate::relationships::queries::{follow, subscribe};
     use crate::users::{
-        queries::create_user,
-        types::{Role, User, UserCreateData},
+        test_utils::create_test_user,
+        types::{Role, User},
     };
     use super::*;
-
-    async fn create_test_user(db_client: &mut Client, username: &str) -> User {
-        let user_data = UserCreateData {
-            username: username.to_string(),
-            password_hash: Some("test".to_string()),
-            ..Default::default()
-        };
-        create_user(db_client, user_data).await.unwrap()
-    }
 
     #[tokio::test]
     #[serial]
