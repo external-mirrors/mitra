@@ -78,18 +78,12 @@ mod tests {
     use serial_test::serial;
     use crate::{
         database::test_utils::create_test_database,
-        profiles::{
-            queries::create_profile,
-            types::{DbActor, DbActorKey, ProfileCreateData},
-        },
+        profiles::test_utils::create_test_remote_profile,
         relationships::queries::{
             create_remote_follow_request_opt,
             follow_request_accepted,
         },
-        users::{
-            queries::create_user,
-            types::UserCreateData,
-        },
+        users::test_utils::create_test_user,
     };
     use super::*;
 
@@ -97,20 +91,13 @@ mod tests {
     #[serial]
     async fn test_remove_follower() {
         let db_client = &mut create_test_database().await;
-        let target_data = UserCreateData {
-            username: "test".to_string(),
-            password_hash: Some("test".to_string()),
-            ..Default::default()
-        };
-        let target = create_user(db_client, target_data).await.unwrap();
-        let source_data = ProfileCreateData {
-            username: "follower".to_string(),
-            hostname: Some("social.example".to_string()),
-            public_keys: vec![DbActorKey::default()],
-            actor_json: Some(DbActor::default()),
-            ..Default::default()
-        };
-        let source = create_profile(db_client, source_data).await.unwrap();
+        let target = create_test_user(db_client, "test").await;
+        let source = create_test_remote_profile(
+            db_client,
+            "follower",
+            "social.example",
+            "https://social.example/1",
+        ).await;
         let follow_activity_id = "https://social.example/activities/1";
         let follow_request = create_remote_follow_request_opt(
             db_client,

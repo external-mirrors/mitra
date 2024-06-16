@@ -1558,8 +1558,7 @@ mod tests {
     use serial_test::serial;
     use crate::database::test_utils::create_test_database;
     use crate::profiles::{
-        queries::create_profile,
-        types::{DbActor, DbActorKey, ProfileCreateData},
+        test_utils::create_test_remote_profile,
     };
     use crate::relationships::queries::{
         follow,
@@ -1569,6 +1568,7 @@ mod tests {
     };
     use crate::users::{
         queries::create_user,
+        test_utils::create_test_user,
         types::UserCreateData,
     };
     use super::*;
@@ -1577,12 +1577,7 @@ mod tests {
     #[serial]
     async fn test_create_post() {
         let db_client = &mut create_test_database().await;
-        let author_data = UserCreateData {
-            username: "test".to_string(),
-            password_hash: Some("test".to_string()),
-            ..Default::default()
-        };
-        let author = create_user(db_client, author_data).await.unwrap();
+        let author = create_test_user(db_client, "test").await;
         let post_data = PostCreateData {
             content: "test post".to_string(),
             ..Default::default()
@@ -1604,12 +1599,7 @@ mod tests {
     #[serial]
     async fn test_create_post_with_link() {
         let db_client = &mut create_test_database().await;
-        let author_data = UserCreateData {
-            username: "test".to_string(),
-            password_hash: Some("test".to_string()),
-            ..Default::default()
-        };
-        let author = create_user(db_client, author_data).await.unwrap();
+        let author = create_test_user(db_client, "test").await;
         let post_data_1 = PostCreateData::default();
         let post_1 = create_post(db_client, &author.id, post_data_1).await.unwrap();
         let post_data_2 = PostCreateData {
@@ -1624,12 +1614,7 @@ mod tests {
     #[serial]
     async fn test_create_repost() {
         let db_client = &mut create_test_database().await;
-        let author_data = UserCreateData {
-            username: "test".to_string(),
-            password_hash: Some("test".to_string()),
-            ..Default::default()
-        };
-        let author = create_user(db_client, author_data).await.unwrap();
+        let author = create_test_user(db_client, "test").await;
         let post_data = PostCreateData {
             content: "test post".to_string(),
             ..Default::default()
@@ -1659,17 +1644,12 @@ mod tests {
     #[serial]
     async fn test_update_post() {
         let db_client = &mut create_test_database().await;
-        let user_data = UserCreateData {
-            username: "test".to_string(),
-            password_hash: Some("test".to_string()),
-            ..Default::default()
-        };
-        let user = create_user(db_client, user_data).await.unwrap();
+        let author = create_test_user(db_client, "test").await;
         let post_data = PostCreateData {
             content: "test post".to_string(),
             ..Default::default()
         };
-        let post = create_post(db_client, &user.id, post_data).await.unwrap();
+        let post = create_post(db_client, &author.id, post_data).await.unwrap();
         let post_data = PostUpdateData {
             content: "test update".to_string(),
             updated_at: Utc::now(),
@@ -1686,18 +1666,13 @@ mod tests {
     #[tokio::test]
     #[serial]
     async fn test_delete_post() {
-         let db_client = &mut create_test_database().await;
-        let user_data = UserCreateData {
-            username: "test".to_string(),
-            password_hash: Some("test".to_string()),
-            ..Default::default()
-        };
-        let user = create_user(db_client, user_data).await.unwrap();
+        let db_client = &mut create_test_database().await;
+        let author = create_test_user(db_client, "test").await;
         let post_data = PostCreateData {
             content: "test post".to_string(),
             ..Default::default()
         };
-        let post = create_post(db_client, &user.id, post_data).await.unwrap();
+        let post = create_post(db_client, &author.id, post_data).await.unwrap();
         let deletion_queue = delete_post(db_client, &post.id).await.unwrap();
         assert_eq!(deletion_queue.files.len(), 0);
         assert_eq!(deletion_queue.ipfs_objects.len(), 0);
@@ -1867,25 +1842,13 @@ mod tests {
     #[serial]
     async fn test_public_timeline() {
         let db_client = &mut create_test_database().await;
-        let current_user_data = UserCreateData {
-            username: "test".to_string(),
-            password_hash: Some("test".to_string()),
-            ..Default::default()
-        };
-        let current_user = create_user(db_client, current_user_data)
-            .await.unwrap();
-        let remote_profile_data = ProfileCreateData {
-            username: "test".to_string(),
-            hostname: Some("example.com".to_string()),
-            public_keys: vec![DbActorKey::default()],
-            actor_json: Some(DbActor {
-                id: "https://example.com/users/1".to_string(),
-                ..Default::default()
-            }),
-            ..Default::default()
-        };
-        let remote_profile = create_profile(db_client, remote_profile_data)
-            .await.unwrap();
+        let current_user = create_test_user(db_client, "test").await;
+        let remote_profile = create_test_remote_profile(
+            db_client,
+            "test",
+            "example.com",
+            "https://example.com/users/1",
+        ).await;
         let post_data_1 = PostCreateData {
             content: "test post".to_string(),
             object_id: Some("https://example.com/objects/1".to_string()),
@@ -2120,17 +2083,12 @@ mod tests {
     #[serial]
     async fn test_find_extraneous_posts() {
         let db_client = &mut create_test_database().await;
-        let author_data = ProfileCreateData {
-            username: "test".to_string(),
-            hostname: Some("social.example".to_string()),
-            public_keys: vec![DbActorKey::default()],
-            actor_json: Some(DbActor {
-                id: "https://social.example/users/1".to_string(),
-                ..Default::default()
-            }),
-            ..Default::default()
-        };
-        let author = create_profile(db_client, author_data).await.unwrap();
+        let author = create_test_remote_profile(
+            db_client,
+            "test",
+            "social.example",
+            "https://social.example/users/1",
+        ).await;
         let post_data_1 = PostCreateData {
             content: "test post".to_string(),
             object_id: Some("https://social.example/objects/1".to_string()),

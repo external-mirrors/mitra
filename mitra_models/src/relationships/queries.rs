@@ -756,38 +756,22 @@ mod tests {
         test_utils::create_test_database,
         DatabaseError,
     };
-    use crate::profiles::{
-        queries::create_profile,
-        types::{DbActor, DbActorKey, ProfileCreateData},
-    };
-    use crate::users::{
-        queries::create_user,
-        types::UserCreateData,
-    };
+    use crate::profiles::test_utils::create_test_remote_profile;
+    use crate::users::test_utils::create_test_user;
     use super::*;
 
     #[tokio::test]
     #[serial]
     async fn test_follow_remote_actor() {
         let db_client = &mut create_test_database().await;
-        let source_data = UserCreateData {
-            username: "test".to_string(),
-            password_hash: Some("test".to_string()),
-            ..Default::default()
-        };
-        let source = create_user(db_client, source_data).await.unwrap();
-        let target_actor_id = "https://example.org/users/1";
-        let target_data = ProfileCreateData {
-            username: "followed".to_string(),
-            hostname: Some("example.org".to_string()),
-            public_keys: vec![DbActorKey::default()],
-            actor_json: Some(DbActor {
-                id: target_actor_id.to_string(),
-                ..Default::default()
-            }),
-            ..Default::default()
-        };
-        let target = create_profile(db_client, target_data).await.unwrap();
+        let source = create_test_user(db_client, "test").await;
+        let target_actor_id = "https://social.example/users/1";
+        let target = create_test_remote_profile(
+            db_client,
+            "followed",
+            "social.example",
+            target_actor_id,
+        ).await;
         // Create follow request
         let follow_request = create_follow_request_unchecked(
             db_client,
@@ -830,24 +814,13 @@ mod tests {
     #[serial]
     async fn test_follow_remote_actor_rejected() {
         let db_client = &mut create_test_database().await;
-        let source_data = UserCreateData {
-            username: "test".to_string(),
-            password_hash: Some("test".to_string()),
-            ..Default::default()
-        };
-        let source = create_user(db_client, source_data).await.unwrap();
-        let target_actor_id = "https://social.example/users/1";
-        let target_data = ProfileCreateData {
-            username: "followed".to_string(),
-            hostname: Some("social.example".to_string()),
-            public_keys: vec![DbActorKey::default()],
-            actor_json: Some(DbActor {
-                id: target_actor_id.to_string(),
-                ..Default::default()
-            }),
-            ..Default::default()
-        };
-        let target = create_profile(db_client, target_data).await.unwrap();
+        let source = create_test_user(db_client, "test").await;
+        let target = create_test_remote_profile(
+            db_client,
+            "followed",
+            "social.example",
+            "https://social.example/users/1",
+        ).await;
         // Create follow request
         let follow_request = create_follow_request_unchecked(
             db_client,
@@ -878,20 +851,13 @@ mod tests {
     #[serial]
     async fn test_followed_by_remote_actor() {
         let db_client = &mut create_test_database().await;
-        let source_data = ProfileCreateData {
-            username: "follower".to_string(),
-            hostname: Some("example.org".to_string()),
-            public_keys: vec![DbActorKey::default()],
-            actor_json: Some(DbActor::default()),
-            ..Default::default()
-        };
-        let source = create_profile(db_client, source_data).await.unwrap();
-        let target_data = UserCreateData {
-            username: "test".to_string(),
-            password_hash: Some("test".to_string()),
-            ..Default::default()
-        };
-        let target = create_user(db_client, target_data).await.unwrap();
+        let source = create_test_remote_profile(
+            db_client,
+            "follower",
+            "social.example",
+            "https://social.example/1",
+        ).await;
+        let target = create_test_user(db_client, "test").await;
 
         // Create follow request
         let activity_id = "https://example.org/objects/123";
@@ -913,7 +879,7 @@ mod tests {
         assert_eq!(follow_request.request_status, FollowRequestStatus::Accepted);
 
         // Another request received
-        let activity_id = "https://example.org/objects/125";
+        let activity_id = "https://social.example/objects/125";
         let follow_request_updated = create_remote_follow_request_opt(
             db_client, &source.id, &target.id, activity_id,
         ).await.unwrap();
@@ -932,18 +898,8 @@ mod tests {
     #[serial]
     async fn test_get_follow_requests_paginated() {
         let db_client = &mut create_test_database().await;
-        let source_data = UserCreateData {
-            username: "source".to_string(),
-            password_hash: Some("source".to_string()),
-            ..Default::default()
-        };
-        let source = create_user(db_client, source_data).await.unwrap();
-        let target_data = UserCreateData {
-            username: "target".to_string(),
-            password_hash: Some("target".to_string()),
-            ..Default::default()
-        };
-        let target = create_user(db_client, target_data).await.unwrap();
+        let source = create_test_user(db_client, "source").await;
+        let target = create_test_user(db_client, "target").await;
         let follow_request = create_follow_request_unchecked(
             db_client,
             source.id,
@@ -964,18 +920,8 @@ mod tests {
     #[serial]
     async fn test_mute_and_unmute_actor() {
         let db_client = &mut create_test_database().await;
-        let source_data = UserCreateData {
-            username: "test".to_string(),
-            password_hash: Some("test".to_string()),
-            ..Default::default()
-        };
-        let source = create_user(db_client, source_data).await.unwrap();
-        let target_data = UserCreateData {
-            username: "muted".to_string(),
-            password_hash: Some("test".to_string()),
-            ..Default::default()
-        };
-        let target = create_user(db_client, target_data).await.unwrap();
+        let source = create_test_user(db_client, "source").await;
+        let target = create_test_user(db_client, "target").await;
         // Mute
         mute(db_client, &source.id, &target.id).await.unwrap();
         assert!(
@@ -1002,18 +948,8 @@ mod tests {
     #[serial]
     async fn test_get_relationships() {
         let db_client = &mut create_test_database().await;
-        let source_data = UserCreateData {
-            username: "source".to_string(),
-            password_hash: Some("source".to_string()),
-            ..Default::default()
-        };
-        let source = create_user(db_client, source_data).await.unwrap();
-        let target_data = UserCreateData {
-            username: "target".to_string(),
-            password_hash: Some("target".to_string()),
-            ..Default::default()
-        };
-        let target = create_user(db_client, target_data).await.unwrap();
+        let source = create_test_user(db_client, "source").await;
+        let target = create_test_user(db_client, "target").await;
         follow(db_client, &source.id, &target.id).await.unwrap();
 
         let relationships = get_relationships(
