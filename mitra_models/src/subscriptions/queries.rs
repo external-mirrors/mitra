@@ -197,7 +197,7 @@ pub async fn reset_subscriptions(
             UPDATE actor_profile
             SET payment_options = '[]'
             WHERE
-                actor_json IS NULL
+                user_id IS NOT NULL
                 AND
                 EXISTS (
                     SELECT 1
@@ -226,14 +226,14 @@ pub async fn reset_subscriptions(
 pub async fn get_active_subscription_count(
     db_client: &impl DatabaseClient,
 ) -> Result<i64, DatabaseError> {
-    // Only local recipients
+    // Only local (managed) recipients
     let row = db_client.query_one(
         "
         SELECT count(subscription)
         FROM subscription
         JOIN actor_profile ON (subscription.recipient_id = actor_profile.id)
         WHERE
-            actor_profile.actor_json IS NULL
+            actor_profile.user_id IS NOT NULL
             AND expires_at > CURRENT_TIMESTAMP
         ",
         &[],
@@ -245,13 +245,14 @@ pub async fn get_active_subscription_count(
 pub async fn get_expired_subscription_count(
     db_client: &impl DatabaseClient,
 ) -> Result<i64, DatabaseError> {
+    // Only local (managed) recipients
     let row = db_client.query_one(
         "
         SELECT count(subscription)
         FROM subscription
         JOIN actor_profile ON (subscription.recipient_id = actor_profile.id)
         WHERE
-            actor_profile.actor_json IS NULL
+            actor_profile.user_id IS NOT NULL
             AND expires_at <= CURRENT_TIMESTAMP
         ",
         &[],
