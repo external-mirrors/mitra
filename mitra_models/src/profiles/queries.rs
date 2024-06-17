@@ -403,7 +403,7 @@ pub async fn get_profiles_paginated(
     offset: u16,
     limit: u16,
 ) -> Result<Vec<DbActorProfile>, DatabaseError> {
-    let condition = if only_local { "WHERE actor_id IS NULL" } else { "" };
+    let condition = if only_local { "WHERE actor_json IS NULL" } else { "" };
     let statement = format!(
         "
         SELECT actor_profile
