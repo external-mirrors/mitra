@@ -170,7 +170,6 @@ pub fn validate_local_reply(
 #[cfg(test)]
 mod tests {
     use mitra_models::profiles::types::DbActorProfile;
-    use mitra_utils::id::generate_ulid;
     use super::*;
 
     #[test]
@@ -227,20 +226,20 @@ mod tests {
 
     #[test]
     fn test_validate_local_reply_adding_recipients() {
-        let profile_1 = generate_ulid();
-        let profile_2 = generate_ulid();
-        let profile_3 = generate_ulid();
+        let profile_1 = DbActorProfile::local_for_test("1");
+        let profile_2 = DbActorProfile::local_for_test("2");
+        let profile_3 = DbActorProfile::local_for_test("3");
         let in_reply_to = Post {
-            author: DbActorProfile { id: profile_1, ..Default::default() },
+            author: profile_1.clone(),
             visibility: Visibility::Direct,
             mentions: vec![
-                DbActorProfile { id: profile_2, ..Default::default() },
+                profile_2.clone(),
             ],
             ..Default::default()
         };
         let error = validate_local_reply(
             &in_reply_to,
-            &vec![profile_1, profile_3],
+            &vec![profile_1.id, profile_3.id],
             &Visibility::Direct,
         ).err().unwrap();
         assert_eq!(error.0, "can't add more recipients");

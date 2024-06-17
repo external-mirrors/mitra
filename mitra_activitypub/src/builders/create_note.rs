@@ -97,10 +97,7 @@ mod tests {
     #[test]
     fn test_build_create_note() {
         let author_username = "author";
-        let author = DbActorProfile {
-            username: author_username.to_string(),
-            ..Default::default()
-        };
+        let author = DbActorProfile::local_for_test(author_username);
         let post = Post { author, ..Default::default() };
         let activity = build_create_note(
             INSTANCE_HOSTNAME,

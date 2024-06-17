@@ -94,11 +94,8 @@ mod tests {
     #[test]
     fn test_make_entry() {
         let instance_url = "https://social.example";
-        let author = DbActorProfile {
-            username: "username".to_string(),
-            display_name: Some("User".to_string()),
-            ..Default::default()
-        };
+        let mut author = DbActorProfile::local_for_test("username");
+        author.display_name = Some("User".to_string());
         let post_id = uuid!("67e55044-10b1-426f-9247-bb680e5fe0c8");
         let created_at = Utc.with_ymd_and_hms(2020, 3, 3, 3, 3, 3).unwrap();
         let post = Post {

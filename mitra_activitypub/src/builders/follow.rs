@@ -135,10 +135,7 @@ mod tests {
 
     #[test]
     fn test_build_follow() {
-        let follower = DbActorProfile {
-            username: "follower".to_string(),
-            ..Default::default()
-        };
+        let follower = DbActorProfile::local_for_test("follower");
         let follow_request_id = generate_ulid();
         let target_actor_id = "https://test.remote/actor/test";
         let activity = build_follow(

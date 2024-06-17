@@ -383,10 +383,7 @@ mod tests {
 
     #[test]
     fn test_profile_actor_url() {
-        let profile = DbActorProfile {
-            username: "test".to_string(),
-            ..Default::default()
-        };
+        let profile = DbActorProfile::local_for_test("test");
         let profile_url = profile_actor_url(INSTANCE_URL, &profile);
         assert_eq!(
             profile_url,

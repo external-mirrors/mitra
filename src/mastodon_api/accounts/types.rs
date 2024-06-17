@@ -697,14 +697,12 @@ mod tests {
 
     #[test]
     fn test_create_account_from_profile() {
-        let profile = DbActorProfile {
-            avatar: Some(ProfileImage::new(
-                "test".to_string(),
-                1000,
-                "image/png".to_string(),
-            )),
-            ..Default::default()
-        };
+        let mut profile = DbActorProfile::local_for_test("test");
+        profile.avatar = Some(ProfileImage::new(
+            "test".to_string(),
+            1000,
+            "image/png".to_string(),
+        ));
         let account = Account::from_profile(
             INSTANCE_URL,
             INSTANCE_URL,
@@ -722,10 +720,8 @@ mod tests {
     fn test_create_account_from_user() {
         let bio_source = "test";
         let login_address = "0x1234";
-        let profile = DbActorProfile {
-            bio_source: Some(bio_source.to_string()),
-            ..Default::default()
-        };
+        let mut profile = DbActorProfile::local_for_test("test");
+        profile.bio_source = Some(bio_source.to_string());
         let user = User {
             login_address_ethereum: Some(login_address.to_string()),
             profile,

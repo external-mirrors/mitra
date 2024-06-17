@@ -115,10 +115,7 @@ mod tests {
 
     #[test]
     fn test_build_delete_note() {
-        let author = DbActorProfile {
-            username: "author".to_string(),
-            ..Default::default()
-        };
+        let author = DbActorProfile::local_for_test("author");
         let post = Post { author, ..Default::default() };
         let activity = build_delete_note(
             INSTANCE_HOSTNAME,

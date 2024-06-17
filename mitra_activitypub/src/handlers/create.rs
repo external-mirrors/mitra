@@ -894,7 +894,7 @@ mod tests {
 
     #[test]
     fn test_get_object_visibility_public() {
-        let author = DbActorProfile::default();
+        let author = DbActorProfile::local_for_test("test");
         let audience = vec![AP_PUBLIC.to_string()];
         let visibility = get_object_visibility(&author, &audience);
         assert_eq!(visibility, Visibility::Public);
@@ -902,14 +902,16 @@ mod tests {
 
     #[test]
     fn test_get_object_visibility_followers() {
+        let author_id = "https://example.com/users/author";
         let author_followers = "https://example.com/users/author/followers";
-        let author = DbActorProfile {
-            actor_json: Some(DbActor {
+        let author = DbActorProfile::remote_for_test_with_data(
+            "author",
+            DbActor {
+                id: author_id.to_string(),
                 followers: Some(author_followers.to_string()),
                 ..Default::default()
-            }),
-            ..Default::default()
-        };
+            },
+        );
         let audience = vec![author_followers.to_string()];
         let visibility = get_object_visibility(&author, &audience);
         assert_eq!(visibility, Visibility::Followers);
@@ -917,16 +919,18 @@ mod tests {
 
     #[test]
     fn test_get_object_visibility_subscribers() {
+        let author_id = "https://example.com/users/author";
         let author_followers = "https://example.com/users/author/followers";
         let author_subscribers = "https://example.com/users/author/subscribers";
-        let author = DbActorProfile {
-            actor_json: Some(DbActor {
+        let author = DbActorProfile::remote_for_test_with_data(
+            "author",
+            DbActor {
+                id: author_id.to_string(),
                 followers: Some(author_followers.to_string()),
                 subscribers: Some(author_subscribers.to_string()),
                 ..Default::default()
-            }),
-            ..Default::default()
-        };
+            },
+        );
         let audience = vec![author_subscribers.to_string()];
         let visibility = get_object_visibility(&author, &audience);
         assert_eq!(visibility, Visibility::Subscribers);
@@ -934,10 +938,7 @@ mod tests {
 
     #[test]
     fn test_get_object_visibility_direct() {
-        let author = DbActorProfile {
-            actor_json: Some(DbActor::default()),
-            ..Default::default()
-        };
+        let author = DbActorProfile::remote_for_test("test", "https://x.example");
         let audience = vec!["https://example.com/users/1".to_string()];
         let visibility = get_object_visibility(&author, &audience);
         assert_eq!(visibility, Visibility::Direct);

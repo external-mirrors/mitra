@@ -77,10 +77,7 @@ mod tests {
 
     #[test]
     fn test_build_accept_follow() {
-        let target = DbActorProfile {
-            username: "user".to_string(),
-            ..Default::default()
-        };
+        let target = DbActorProfile::local_for_test("user");
         let follow_activity_id = "https://remote.example/objects/999";
         let follower_id = "https://remote.example/users/123";
         let activity = build_accept_follow(

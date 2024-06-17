@@ -95,10 +95,7 @@ mod tests {
     #[test]
     fn test_build_move_person() {
         let sender = User {
-            profile: DbActorProfile {
-                username: "testuser".to_string(),
-                ..Default::default()
-            },
+            profile: DbActorProfile::local_for_test("testuser"),
             ..Default::default()
         };
         let from_actor_id = "https://server0.org/users/test";

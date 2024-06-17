@@ -170,10 +170,7 @@ mod tests {
     #[test]
     fn test_build_update_person() {
         let user = User {
-            profile: DbActorProfile {
-                username: "testuser".to_string(),
-                ..Default::default()
-            },
+            profile: DbActorProfile::local_for_test("testuser"),
             ..Default::default()
         };
         let activity = build_update_person(

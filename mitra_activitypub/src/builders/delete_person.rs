@@ -88,10 +88,7 @@ mod tests {
     #[test]
     fn test_build_delete_person() {
         let user = User {
-            profile: DbActorProfile {
-                username: "testuser".to_string(),
-                ..Default::default()
-            },
+            profile: DbActorProfile::local_for_test("testuser"),
             ..Default::default()
         };
         let activity = build_delete_person(INSTANCE_URL, &user);

@@ -319,10 +319,7 @@ mod tests {
 
     #[test]
     fn test_build_note() {
-        let author = DbActorProfile {
-            username: "author".to_string(),
-            ..Default::default()
-        };
+        let author = DbActorProfile::local_for_test("author");
         let post = Post {
             author,
             tags: vec!["test".to_string()],
@@ -395,16 +392,10 @@ mod tests {
     #[test]
     fn test_build_note_subscribers_only() {
         let subscriber_id = "https://test.com/users/3";
-        let subscriber = DbActorProfile {
-            username: "subscriber".to_string(),
-            hostname: Some("test.com".to_string()),
-            actor_json: Some(DbActor {
-                id: subscriber_id.to_string(),
-                ..Default::default()
-            }),
-            actor_id: Some(subscriber_id.to_string()),
-            ..Default::default()
-        };
+        let subscriber = DbActorProfile::remote_for_test(
+            "subscriber",
+            subscriber_id,
+        );
         let post = Post {
             visibility: Visibility::Subscribers,
             mentions: vec![subscriber],
@@ -430,16 +421,10 @@ mod tests {
     #[test]
     fn test_build_note_direct() {
         let mentioned_id = "https://test.com/users/3";
-        let mentioned = DbActorProfile {
-            username: "mention".to_string(),
-            hostname: Some("test.com".to_string()),
-            actor_json: Some(DbActor {
-                id: mentioned_id.to_string(),
-                ..Default::default()
-            }),
-            actor_id: Some(mentioned_id.to_string()),
-            ..Default::default()
-        };
+        let mentioned = DbActorProfile::remote_for_test(
+            "mention",
+            mentioned_id,
+        );
         let post = Post {
             visibility: Visibility::Direct,
             mentions: vec![mentioned],
@@ -492,18 +477,14 @@ mod tests {
         let parent_author_acct = "test@test.net";
         let parent_author_actor_id = "https://test.net/user/test";
         let parent_author_actor_url = "https://test.net/@test";
-        let parent_author = DbActorProfile {
-            username: "test".to_string(),
-            hostname: Some("test.net".to_string()),
-            acct: Some(parent_author_acct.to_string()),
-            actor_json: Some(DbActor {
+        let parent_author = DbActorProfile::remote_for_test_with_data(
+            "test",
+            DbActor {
                 id: parent_author_actor_id.to_string(),
                 url: Some(parent_author_actor_url.to_string()),
                 ..Default::default()
-            }),
-            actor_id: Some(parent_author_actor_id.to_string()),
-            ..Default::default()
-        };
+            },
+        );
         let parent = Post {
             author: parent_author.clone(),
             object_id: Some("https://test.net/obj/123".to_string()),

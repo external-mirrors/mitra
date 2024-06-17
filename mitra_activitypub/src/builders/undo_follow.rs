@@ -94,15 +94,12 @@ mod tests {
 
     #[test]
     fn test_build_undo_follow() {
-        let actor_profile = DbActorProfile {
-            username: "user".to_string(),
-            ..Default::default()
-        };
+        let source = DbActorProfile::local_for_test("user");
         let target_actor_id = "https://test.remote/users/123";
         let follow_request_id = generate_ulid();
         let activity = build_undo_follow(
             INSTANCE_URL,
-            &actor_profile,
+            &source,
             target_actor_id,
             follow_request_id,
             true, // legacy activity ID
@@ -128,7 +125,7 @@ mod tests {
 
         let activity = build_undo_follow(
             INSTANCE_URL,
-            &actor_profile,
+            &source,
             target_actor_id,
             follow_request_id,
             false, // no legacy activity ID

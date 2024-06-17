@@ -325,11 +325,8 @@ mod tests {
 
     #[test]
     fn test_build_local_actor() {
-        let profile = DbActorProfile {
-            username: "testuser".to_string(),
-            bio: Some("testbio".to_string()),
-            ..Default::default()
-        };
+        let mut profile = DbActorProfile::local_for_test("testuser");
+        profile.bio = Some("testbio".to_string());
         let user = User { profile, ..Default::default() };
         let authority = Authority::from_user(INSTANCE_URL, &user, false);
         let actor = build_local_actor(INSTANCE_URL, &authority, &user).unwrap();
@@ -409,11 +406,8 @@ mod tests {
 
     #[test]
     fn test_build_local_actor_fep_ef61() {
-        let profile = DbActorProfile {
-            username: "testuser".to_string(),
-            bio: Some("testbio".to_string()),
-            ..Default::default()
-        };
+        let mut profile = DbActorProfile::local_for_test("testuser");
+        profile.bio = Some("testbio".to_string());
         let user = User { profile, ..Default::default() };
         let authority = Authority::from_user(INSTANCE_URL, &user, true);
         let current_time = DateTime::parse_from_rfc3339("2023-02-24T23:36:38Z")

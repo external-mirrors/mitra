@@ -135,24 +135,17 @@ mod tests {
     #[test]
     fn test_build_announce() {
         let post_author_id = "https://test.net/user/test";
-        let post_author = DbActorProfile {
-            actor_json: Some(DbActor {
-                id: post_author_id.to_string(),
-                ..Default::default()
-            }),
-            actor_id: Some(post_author_id.to_string()),
-            ..Default::default()
-        };
+        let post_author = DbActorProfile::remote_for_test(
+            "test",
+            post_author_id,
+        );
         let post_id = "https://test.net/obj/123";
         let post = Post {
             author: post_author.clone(),
             object_id: Some(post_id.to_string()),
             ..Default::default()
         };
-        let repost_author = DbActorProfile {
-            username: "announcer".to_string(),
-            ..Default::default()
-        };
+        let repost_author = DbActorProfile::local_for_test("announcer");
         let repost = Post {
             author: repost_author,
             repost_of_id: Some(post.id),

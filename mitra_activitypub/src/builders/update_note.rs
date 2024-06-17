@@ -99,10 +99,7 @@ mod tests {
         let instance_hostname = "social.example";
         let instance_url = "https://social.com";
         let author_username = "author";
-        let author = DbActorProfile {
-            username: author_username.to_string(),
-            ..Default::default()
-        };
+        let author = DbActorProfile::local_for_test(author_username);
         let post = Post {
             author,
             updated_at: Some(Utc::now()),

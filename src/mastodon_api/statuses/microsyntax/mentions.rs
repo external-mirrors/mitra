@@ -159,33 +159,25 @@ mod tests {
     #[test]
     fn test_replace_mentions() {
         // Local actors
-        let profile_1 = DbActorProfile {
-            username: "user1".to_string(),
-            ..Default::default()
-        };
-        let profile_2 = DbActorProfile {
-            username: "user_x".to_string(),
-            ..Default::default()
-        };
+        let profile_1 = DbActorProfile::local_for_test("user1");
+        let profile_2 = DbActorProfile::local_for_test("user_x");
         // Remote actors
-        let profile_3 = DbActorProfile {
-            username: "user2".to_string(),
-            actor_json: Some(DbActor {
+        let profile_3 = DbActorProfile::remote_for_test_with_data(
+            "user2",
+            DbActor {
                 id: "https://server2.com/actors/user2".to_string(),
                 url: Some("https://server2.com/@user2".to_string()),
                 ..Default::default()
-            }),
-            ..Default::default()
-        };
-        let profile_4 = DbActorProfile {
-            username: "user3".to_string(),
-            actor_json: Some(DbActor {
+            },
+        );
+        let profile_4 = DbActorProfile::remote_for_test_with_data(
+            "user3",
+            DbActor {
                 id: "https://xn--jxalpdlp.example/actors/user3".to_string(),
                 url: Some("https://xn--jxalpdlp.example/@user3".to_string()),
                 ..Default::default()
-            }),
-            ..Default::default()
-        };
+            },
+        );
         let mention_map = HashMap::from([
             ("user1".to_string(), profile_1),
             ("user_x".to_string(), profile_2),

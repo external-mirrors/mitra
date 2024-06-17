@@ -643,6 +643,7 @@ pub struct DbActor {
 json_from_sql!(DbActor);
 json_to_sql!(DbActor);
 
+#[allow(dead_code)]
 #[derive(Clone, FromSql)]
 #[postgres(name = "actor_profile")]
 pub struct DbActorProfile {
@@ -674,7 +675,7 @@ pub struct DbActorProfile {
     pub unreachable_since: Option<DateTime<Utc>>,
 
     // auto-generated database fields
-    pub actor_id: Option<String>,
+    pub(crate) actor_id: Option<String>,
 }
 
 // Profile identifiers:

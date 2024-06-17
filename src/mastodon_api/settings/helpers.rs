@@ -69,21 +69,15 @@ pub fn parse_address_list(csv: &str)
 
 #[cfg(test)]
 mod tests {
-    use mitra_models::profiles::types::DbActor;
     use super::*;
 
     #[test]
     fn test_export_profiles_to_csv() {
-        let profile_1 = DbActorProfile {
-            username: "user1".to_string(),
-            ..Default::default()
-        };
-        let profile_2 = DbActorProfile {
-            username: "user2".to_string(),
-            hostname: Some("test.net".to_string()),
-            actor_json: Some(DbActor::default()),
-            ..Default::default()
-        };
+        let profile_1 = DbActorProfile::local_for_test("user1");
+        let profile_2 = DbActorProfile::remote_for_test(
+            "user2",
+            "https://test.net",
+        );
         let csv = export_profiles_to_csv(
             "example.org",
             vec![profile_1, profile_2],
