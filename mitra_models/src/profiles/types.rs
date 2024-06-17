@@ -712,11 +712,11 @@ impl DbActorProfile {
             if acct != &expected_acct {
                 return Err(DatabaseTypeError);
             };
-        } else if self.hostname.is_none() {
+        } else if self.actor_json.is_none() {
             // Only remote accounts may have empty acct
             return Err(DatabaseTypeError);
         };
-        if self.hostname.is_some() && self.identity_key.is_some() {
+        if self.actor_json.is_some() && self.identity_key.is_some() {
             // Remote accounts can't have identity keys
             return Err(DatabaseTypeError);
         };
