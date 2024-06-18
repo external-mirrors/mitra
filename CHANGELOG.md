@@ -12,6 +12,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Implement registration endpoint for FEP-ef61 clients.
 - Serve portable actor objects stored in database.
 - Implemented C2S inbox for portable users.
+- Put outgoing activities into inbox if portable recipient has local account.
 
 ### Changed
 

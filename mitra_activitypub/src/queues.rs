@@ -9,7 +9,10 @@ use uuid::Uuid;
 use mitra_config::Config;
 use mitra_federation::fetch::FetchError;
 use mitra_models::{
-    activitypub::queries::save_activity,
+    activitypub::queries::{
+        save_activity,
+        add_object_to_collection,
+    },
     background_jobs::queries::{
         enqueue_job,
         get_job_batch,
@@ -42,6 +45,7 @@ use crate::{
     errors::HandlerError,
     handlers::activity::handle_activity,
     importers::import_from_outbox,
+    url::{canonicalize_id, Url},
 };
 
 const JOB_TIMEOUT: u32 = 3600; // 1 hour
@@ -174,8 +178,27 @@ impl OutgoingActivityJobData {
         let mut recipient_map = BTreeMap::new();
         for actor in recipients {
             if actor.is_portable() {
-                // TODO: FEP-EF61: deliver to all gateways
-                log::warn!("skipping portable recipient: {}", actor.id);
+                for gateway in actor.gateways {
+                    // TODO: FEP-EF61: refactor
+                    let actor_id: Url = actor.id.parse()
+                        .expect("actor ID should be valid");
+                    let http_actor_id = actor_id.to_http_url(Some(&gateway))
+                        .expect("actor ID should be valid");
+                    let actor_inbox: Url = actor.inbox.parse()
+                        .expect("actor inbox URL should be valid");
+                    let http_actor_inbox = actor_inbox.to_http_url(Some(&gateway))
+                        .expect("actor inbox URL should be valid");
+                    if !recipient_map.contains_key(&http_actor_id) {
+                        let recipient = Recipient {
+                            id: http_actor_id.clone(),
+                            inbox: http_actor_inbox,
+                            is_delivered: false,
+                            is_unreachable: false,
+                            is_local: gateway == instance_url,
+                        };
+                        recipient_map.insert(http_actor_id, recipient);
+                    };
+                };
                 continue;
             };
             if !recipient_map.contains_key(&actor.id) {
@@ -184,6 +207,7 @@ impl OutgoingActivityJobData {
                     inbox: actor.inbox,
                     is_delivered: false,
                     is_unreachable: false,
+                    is_local: false,
                 };
                 recipient_map.insert(actor.id, recipient);
             };
@@ -205,16 +229,42 @@ impl OutgoingActivityJobData {
     }
 
     async fn into_job(
-        self,
+        mut self,
         db_client: &impl DatabaseClient,
         delay: u32,
     ) -> Result<(), DatabaseError> {
         // Activity ID should be present
         let activity_id = self.activity["id"].as_str()
             .ok_or(DatabaseTypeError)?;
-        save_activity(db_client, activity_id, &self.activity).await?;
+        let canonical_activity_id = canonicalize_id(activity_id)
+            .map_err(|_| DatabaseTypeError)?;
+        save_activity(
+            db_client,
+            &canonical_activity_id,
+            &self.activity,
+        ).await?;
         if self.recipients.is_empty() {
             return Ok(());
+        };
+        // Immediately put into inbox if recipient is local
+        for recipient in self.recipients.iter_mut() {
+            // TODO: FEP-EF61: bulk add
+            if recipient.is_local {
+                // TODO: FEP-EF61: use canonical actor ID as reicpient.id ?
+                let canonical_actor_id = canonicalize_id(&recipient.id)
+                    .map_err(|_| DatabaseTypeError)?;
+                let profile = get_remote_profile_by_actor_id(
+                    db_client,
+                    &canonical_actor_id,
+                ).await?;
+                add_object_to_collection(
+                    db_client,
+                    profile.id,
+                    &profile.expect_actor_data().inbox,
+                    &canonical_activity_id,
+                ).await?;
+                recipient.is_delivered = true;
+            };
         };
         let job_data = serde_json::to_value(self)
             .expect("activity should be serializable");

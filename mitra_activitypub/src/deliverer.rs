@@ -132,6 +132,10 @@ pub struct Recipient {
     // Default to false if serialized data contains no value.
     #[serde(default)]
     pub is_unreachable: bool,
+
+    // Local portable actor (HTTP request is not needed)
+    #[serde(default)]
+    pub is_local: bool,
 }
 
 impl Recipient {
