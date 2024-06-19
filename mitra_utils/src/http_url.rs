@@ -39,7 +39,7 @@ impl HttpUrl {
         self.0.scheme_str()
     }
 
-    fn authority(&self) -> &str {
+    pub fn authority(&self) -> &str {
         self.0.authority_str().expect("authority should be present")
     }
 

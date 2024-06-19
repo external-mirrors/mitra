@@ -47,6 +47,7 @@ use mitra_activitypub::{
         LocalActorCollection,
     },
     importers::register_portable_actor,
+    queues::IncomingActivityJobData,
     url::canonicalize_id,
 };
 use mitra_config::Config;
@@ -900,6 +901,9 @@ pub async fn apgateway_outbox_client_to_server_view(
         &canonical_collection_id,
         &canonical_activity_id,
     ).await?;
+    IncomingActivityJobData::new(&activity, true)
+        .into_job(db_client, 0)
+        .await?;
     Ok(HttpResponse::Accepted().finish())
 }
 

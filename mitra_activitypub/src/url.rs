@@ -95,6 +95,21 @@ pub fn canonicalize_id(url: &str) -> Result<String, ValidationError> {
     Ok(url.to_string())
 }
 
+pub fn is_same_authority(id_1: &str, id_2: &str) -> Result<bool, ValidationError> {
+    let id_1 = Url::from_str(id_1)?;
+    let id_2 = Url::from_str(id_2)?;
+    let is_same = match (id_1, id_2) {
+        (Url::Http(http_url_1), Url::Http(http_url_2)) => {
+            http_url_1.authority() == http_url_2.authority()
+        },
+        (Url::Ap(ap_url_1), Url::Ap(ap_url_2)) => {
+            ap_url_1.did() == ap_url_2.did()
+        },
+        _ => false, // can't compare different types of authorities
+    };
+    Ok(is_same)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -214,5 +229,25 @@ mod tests {
             canonical_url,
             "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor#main-key",
         );
+    }
+
+    #[test]
+    fn test_is_same_authority() {
+        let id_1 = "https://one.example/1";
+        let id_2 = "https://one.example/2";
+        let id_3 = "https://two.example/3";
+        assert_eq!(is_same_authority(id_1, id_2).unwrap(), true);
+        assert_eq!(is_same_authority(id_1, id_3).unwrap(), false);
+
+        let id_4 = "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/one";
+        let id_5 = "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/two";
+        let id_6 = "ap://did:key:z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK/one";
+        assert_eq!(is_same_authority(id_4, id_5).unwrap(), true);
+        assert_eq!(is_same_authority(id_4, id_6).unwrap(), false);
+        assert_eq!(is_same_authority(id_4, id_1).unwrap(), false);
+
+        let id_7 = "https://one.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor";
+        assert_eq!(is_same_authority(id_7, id_4).unwrap(), true);
+        assert_eq!(is_same_authority(id_7, id_1).unwrap(), false);
     }
 }

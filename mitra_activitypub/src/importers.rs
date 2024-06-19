@@ -269,9 +269,10 @@ impl ActorIdResolver {
             };
         };
         // Remote ID
+        let canonical_actor_id = canonicalize_id(actor_id)?;
         let profile = match get_remote_profile_by_actor_id(
             db_client,
-            actor_id,
+            &canonical_actor_id,
         ).await {
             Ok(profile) => {
                 refresh_remote_profile(
@@ -433,9 +434,10 @@ pub async fn import_post(
                     get_local_post_by_id(db_client, &post_id).await?;
                     continue;
                 };
+                let canonical_object_id = canonicalize_id(&object_id)?;
                 match get_remote_post_by_object_id(
                     db_client,
-                    &object_id,
+                    &canonical_object_id,
                 ).await {
                     Ok(post) => {
                         // Object already fetched
@@ -492,7 +494,7 @@ pub async fn import_post(
         maybe_object = None;
         objects.push(object);
     };
-    let initial_object_id = objects[0].id.clone();
+    let initial_object_id = canonicalize_id(&objects[0].id)?;
 
     // Objects are ordered according to their place in reply tree,
     // starting with the root

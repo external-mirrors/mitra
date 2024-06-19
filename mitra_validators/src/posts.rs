@@ -9,7 +9,7 @@ use mitra_models::posts::types::{
 use mitra_utils::html::{clean_html_strict, clean_html_all};
 
 use super::{
-    activitypub::validate_object_id,
+    activitypub::validate_any_object_id,
     errors::ValidationError,
 };
 
@@ -91,7 +91,7 @@ pub fn validate_post_create_data(
         return Err(ValidationError("too many emojis"));
     };
     if let Some(ref object_id) = post_data.object_id {
-        validate_object_id(object_id)?;
+        validate_any_object_id(object_id)?;
     };
     Ok(())
 }

@@ -18,7 +18,7 @@ use mitra_federation::{
         parse_into_id_array,
     },
     fetch::fetch_file,
-    utils::{is_public, is_same_hostname},
+    utils::is_public,
 };
 use mitra_models::{
     attachments::queries::create_attachment,
@@ -51,6 +51,7 @@ use mitra_validators::{
 
 use crate::{
     agent::build_federation_agent,
+    authentication::{verify_portable_object, AuthenticationError},
     builders::note::LinkTag,
     identifiers::{parse_local_actor_id, profile_actor_id},
     importers::{
@@ -61,6 +62,7 @@ use crate::{
         is_actor_importer_error,
         ActorIdResolver,
     },
+    url::{is_same_authority, canonicalize_id},
     vocabulary::*,
 };
 
@@ -621,6 +623,8 @@ pub async fn handle_note(
     object: AttributedObject,
     redirects: &HashMap<String, String>,
 ) -> Result<Post, HandlerError> {
+    let canonical_object_id = canonicalize_id(&object.id)?;
+
     object.check_not_actor()?;
     if object.object_type != NOTE {
         // Attempting to convert any object that has attributedTo property
@@ -629,7 +633,7 @@ pub async fn handle_note(
     };
 
     let author_id = get_object_attributed_to(&object)?;
-    if !is_same_hostname(&author_id, &object.id)
+    if !is_same_authority(&author_id, &object.id)
         .map_err(|_| ValidationError("invalid object ID"))?
     {
         return Err(ValidationError("object attributed to actor from different server").into());
@@ -713,7 +717,7 @@ pub async fn handle_note(
         tags: hashtags,
         links: links,
         emojis: emojis,
-        object_id: Some(object.id),
+        object_id: Some(canonical_object_id),
         created_at,
     };
     validate_post_create_data(&post_data)?;
@@ -764,7 +768,7 @@ async fn check_unsolicited_message(
 struct CreateNote {
     #[serde(deserialize_with = "deserialize_into_object_id")]
     actor: String,
-    object: AttributedObject,
+    object: JsonValue,
 }
 
 pub async fn handle_create(
@@ -775,8 +779,18 @@ pub async fn handle_create(
     is_pulled: bool,
 ) -> HandlerResult {
     let activity: CreateNote = serde_json::from_value(activity)
-        .map_err(|_| ValidationError("invalid object"))?;
+        .map_err(|_| ValidationError("unexpected activity structure"))?;
     let object = activity.object;
+    match verify_portable_object(&object) {
+        Ok(_) => (),
+        Err(AuthenticationError::NotPortable) => (),
+        Err(_) => {
+            return Err(ValidationError("invalid portable object").into());
+        },
+    };
+    // TODO: FEP-EF61: save object to database
+    let object: AttributedObject = serde_json::from_value(object)
+        .map_err(|_| ValidationError("unexpected object structure"))?;
 
     if !is_pulled {
         check_unsolicited_message(
