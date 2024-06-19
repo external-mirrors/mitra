@@ -18,6 +18,7 @@ use mitra_activitypub::{
         build_local_actor,
         sign_object_fep_ef61,
     },
+    authentication::verify_portable_object,
     authority::Authority,
     builders::{
         announce::build_announce,
@@ -51,13 +52,16 @@ use mitra_activitypub::{
 use mitra_config::Config;
 use mitra_federation::{
     constants::{AP_MEDIA_TYPE, AP_PUBLIC},
+    deserialization::get_object_id,
     http_server::is_activitypub_request,
 };
 use mitra_models::{
     activitypub::queries::{
+        add_object_to_collection,
         get_actor,
         get_collection_items,
         get_object_as_target,
+        save_activity,
     },
     database::{
         get_database_client,
@@ -68,6 +72,7 @@ use mitra_models::{
     posts::helpers::{add_related_posts, can_view_post},
     posts::queries::{get_post_by_id, get_posts_by_author, get_thread},
     profiles::{
+        queries::get_remote_profile_by_actor_id,
         types::PaymentOption,
     },
     users::queries::{
@@ -77,7 +82,7 @@ use mitra_models::{
     },
 };
 use mitra_utils::{
-    ap_url::with_ap_prefix,
+    ap_url::{with_ap_prefix, ApUrl},
     caip2::ChainId,
     http_digest::get_sha256_digest,
 };
@@ -848,10 +853,61 @@ pub async fn apgateway_inbox_client_to_server_view(
     Ok(response)
 }
 
+#[post("/{url:.*}/outbox")]
+pub async fn apgateway_outbox_client_to_server_view(
+    config: web::Data<Config>,
+    db_pool: web::Data<DatabaseConnectionPool>,
+    request_path: Uri,
+    activity: web::Json<JsonValue>,
+) -> Result<HttpResponse, HttpError> {
+    let db_client = &mut **get_database_client(&db_pool).await?;
+    let authority = verify_portable_object(&activity).map_err(|error| {
+        log::warn!("C2S authentication error: {}", error);
+        HttpError::PermissionError
+    })?;
+    let activity_id = activity["id"].as_str()
+        .ok_or(ValidationError("'id' property is missing"))?;
+    let canonical_activity_id = canonicalize_id(activity_id)?;
+    let activity_actor = get_object_id(&activity["actor"])
+        .map_err(|_| ValidationError("invalid 'actor' property"))?;
+    let canonical_actor_id = canonicalize_id(&activity_actor)?;
+    let canonical_actor_id_ap = ApUrl::parse(&canonical_actor_id)
+        .map_err(ValidationError)?;
+    if canonical_actor_id_ap.did() != &authority {
+        return Err(ValidationError("actor and activity authorities do not match").into());
+    };
+    let signer = get_remote_profile_by_actor_id(
+        db_client,
+        &canonical_actor_id,
+    ).await?;
+    if !signer.has_account() {
+        // Only local portable users can have outbox
+        return Err(HttpError::NotFoundError("portable user"));
+    };
+    let collection_id = format!(
+        "{}{}",
+        config.instance_url(),
+        request_path,
+    );
+    let canonical_collection_id = canonicalize_id(&collection_id)?;
+    if canonical_collection_id != signer.expect_actor_data().outbox {
+        return Err(HttpError::PermissionError);
+    };
+    save_activity(db_client, &canonical_activity_id, &activity).await?;
+    add_object_to_collection(
+        db_client,
+        signer.id,
+        &canonical_collection_id,
+        &canonical_activity_id,
+    ).await?;
+    Ok(HttpResponse::Accepted().finish())
+}
+
 pub fn gateway_scope() -> Scope {
     web::scope("/.well-known/apgateway")
         .service(apgateway_create_actor_view)
         // Inbox service goes before generic gateway service
         .service(apgateway_inbox_client_to_server_view)
+        .service(apgateway_outbox_client_to_server_view)
         .service(apgateway_view)
 }

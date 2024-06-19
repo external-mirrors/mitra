@@ -2,6 +2,7 @@ use serde_json::{Value as JsonValue};
 use thiserror::Error;
 
 use mitra_utils::{
+    did::Did,
     json_signatures::{
         proofs::ProofType,
         verify::{
@@ -38,7 +39,7 @@ pub enum AuthenticationError {
 
 pub fn verify_portable_object(
     object: &JsonValue,
-) -> Result<(), AuthenticationError> {
+) -> Result<Did, AuthenticationError> {
     let object_id = object["id"].as_str()
         .ok_or(AuthenticationError::InvalidObjectID("'id' property not found"))?;
     let (canonical_object_id, maybe_gateway) = parse_url(object_id)
@@ -50,11 +51,12 @@ pub fn verify_portable_object(
     };
     log::info!("canonical object ID: {}", canonical_object_id);
     log::info!("gateway: {}", maybe_gateway.unwrap_or("-".to_string()));
+    let authority = canonical_object_id.did();
     let signature_data = get_json_signature(object)?;
     match signature_data.signer {
         JsonSigner::Did(did) => {
             // Object must be signed by its owner
-            if canonical_object_id.did() != &did {
+            if did != *authority {
                 return Err(AuthenticationError::UnexpectedSigner);
             };
             match signature_data.proof_type {
@@ -75,7 +77,7 @@ pub fn verify_portable_object(
         },
         _ => return Err(AuthenticationError::InvalidVerificationMethod),
     };
-    Ok(())
+    Ok(authority.clone())
 }
 
 #[cfg(test)]

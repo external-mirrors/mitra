@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Serve portable actor objects stored in database.
 - Implemented C2S inbox for portable users.
 - Put outgoing activities into inbox if portable recipient has local account.
+- Implemented C2S outbox for portable users.
 
 ### Changed
 
