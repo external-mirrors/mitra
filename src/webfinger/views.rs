@@ -8,6 +8,7 @@ use mitra_activitypub::{
         local_instance_actor_id,
         parse_local_actor_id,
     },
+    url::Url,
 };
 use mitra_config::{Config, Instance};
 use mitra_federation::{
@@ -23,8 +24,13 @@ use mitra_models::{
         get_database_client,
         DatabaseClient,
         DatabaseConnectionPool,
+        DatabaseError,
+        DatabaseTypeError,
     },
-    users::queries::is_registered_user,
+    users::queries::{
+        get_portable_user_by_name,
+        is_registered_user,
+    },
 };
 
 use crate::atom::urls::get_user_feed_url;
@@ -63,10 +69,7 @@ async fn get_jrd(
         let actor_id = local_instance_actor_id(&instance.url());
         let actor_link = Link::actor(&actor_id);
         vec![actor_link]
-    } else {
-        if !is_registered_user(db_client, actor_address.username()).await? {
-            return Err(HttpError::NotFoundError("user"));
-        };
+    } else if is_registered_user(db_client, actor_address.username()).await? {
         let actor_id = local_actor_id(&instance.url(), actor_address.username());
         // Required by GNU Social
         let profile_link = Link::new(WEBFINGER_PROFILE_RELATION_TYPE)
@@ -90,6 +93,18 @@ async fn get_jrd(
         let remote_interaction_link = Link::new(REMOTE_INTERACTION_RELATION_TYPE)
             .with_template(&remote_interaction_template);
         vec![profile_link, actor_link, feed_link, remote_interaction_link]
+    } else {
+        let user = get_portable_user_by_name(
+            db_client,
+            actor_address.username(),
+        ).await?;
+        let actor_id = user.profile.expect_remote_actor_id();
+        let compatible_actor_id = actor_id.parse::<Url>()
+            .map_err(|_| DatabaseError::from(DatabaseTypeError))?
+            .to_http_url(Some(&instance.url()))
+            .ok_or(DatabaseError::from(DatabaseTypeError))?;
+        let actor_link = Link::actor(&compatible_actor_id);
+        vec![actor_link]
     };
     let jrd = JsonResourceDescriptor {
         subject: actor_address.to_acct_uri(),
