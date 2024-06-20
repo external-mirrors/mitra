@@ -59,21 +59,21 @@ async fn get_jrd(
         // Wrong instance
         return Err(HttpError::NotFoundError("user"));
     };
-    let actor_id = if actor_address.username() == instance.hostname() {
-        local_instance_actor_id(&instance.url())
+    let links = if actor_address.username() == instance.hostname() {
+        let actor_id = local_instance_actor_id(&instance.url());
+        let actor_link = Link::actor(&actor_id);
+        vec![actor_link]
     } else {
         if !is_registered_user(db_client, actor_address.username()).await? {
             return Err(HttpError::NotFoundError("user"));
         };
-        local_actor_id(&instance.url(), actor_address.username())
-    };
-    // Required by GNU Social
-    let profile_link = Link::new(WEBFINGER_PROFILE_RELATION_TYPE)
-        .with_media_type("text/html")
-        .with_href(&actor_id);
-    let actor_link = Link::actor(&actor_id);
-    let mut links = vec![profile_link, actor_link];
-    if actor_address.username() != instance.hostname() {
+        let actor_id = local_actor_id(&instance.url(), actor_address.username());
+        // Required by GNU Social
+        let profile_link = Link::new(WEBFINGER_PROFILE_RELATION_TYPE)
+            .with_media_type("text/html")
+            .with_href(&actor_id);
+        // Actor link
+        let actor_link = Link::actor(&actor_id);
         // Add feed link for users
         let feed_url = get_user_feed_url(
             &instance.url(),
@@ -82,7 +82,6 @@ async fn get_jrd(
         let feed_link = Link::new(FEED_RELATION_TYPE)
             .with_media_type("application/atom+xml")
             .with_href(&feed_url);
-        links.push(feed_link);
         // Add remote interaction template
         let remote_interaction_template = get_search_page_url(
             &instance.url(),
@@ -90,7 +89,7 @@ async fn get_jrd(
         );
         let remote_interaction_link = Link::new(REMOTE_INTERACTION_RELATION_TYPE)
             .with_template(&remote_interaction_template);
-        links.push(remote_interaction_link);
+        vec![profile_link, actor_link, feed_link, remote_interaction_link]
     };
     let jrd = JsonResourceDescriptor {
         subject: actor_address.to_acct_uri(),
