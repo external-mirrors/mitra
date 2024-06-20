@@ -5,6 +5,7 @@ use mitra_federation::identifiers::parse_object_id;
 use mitra_models::{
     posts::types::Post,
     profiles::types::{
+        DbActor,
         DbActorProfile,
         PublicKeyType,
     },
@@ -19,6 +20,7 @@ use mitra_validators::errors::ValidationError;
 
 use crate::{
     authority::Authority,
+    url::Url,
 };
 
 pub fn local_actor_id_unified(authority: &Authority, username: &str) -> String {
@@ -233,8 +235,23 @@ pub fn profile_actor_url(instance_url: &str, profile: &DbActorProfile) -> String
         if let Some(ref actor_url) = actor.url {
             return actor_url.to_string();
         };
+        if actor.is_portable() {
+            // Use compatible ID as 'url'
+            return compatible_actor_id(actor)
+                .expect("actor ID should be valid");
+        };
     };
     profile_actor_id(instance_url, profile)
+}
+
+pub fn compatible_actor_id(actor: &DbActor) -> Result<String, ValidationError> {
+    // TODO: FEP-EF61: actor ID in database must be valid
+    let actor_id = actor.id.parse::<Url>()?;
+    // TODO: FEP-EF61: at least one gateway must be stored
+    let maybe_gateway = actor.gateways.first().map(|gateway| gateway.as_str());
+    let compatible_id = actor_id.to_http_url(maybe_gateway)
+        .ok_or(ValidationError("invalid actor ID"))?;
+    Ok(compatible_id)
 }
 
 #[cfg(test)]
