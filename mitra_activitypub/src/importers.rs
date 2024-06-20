@@ -36,7 +36,7 @@ use mitra_models::{
         get_user_by_name,
         is_valid_invite_code,
     },
-    users::types::PortableUserData,
+    users::types::{PortableUser, PortableUserData},
 };
 use mitra_services::media::MediaStorage;
 use mitra_utils::{
@@ -654,7 +654,7 @@ pub async fn register_portable_actor(
     rsa_secret_key_multibase: &str,
     ed25519_secret_key_multibase: &str,
     invite_code: &str,
-) -> Result<(), HandlerError> {
+) -> Result<PortableUser, HandlerError> {
     let instance = config.instance();
     let agent = build_federation_agent(&instance, None);
     let storage = MediaStorage::from(config);
@@ -722,7 +722,7 @@ pub async fn register_portable_actor(
     };
     let user = create_portable_user(db_client, user_data).await?;
     create_signup_notifications(db_client, user.id).await?;
-    Ok(())
+    Ok(user)
 }
 
 #[cfg(test)]

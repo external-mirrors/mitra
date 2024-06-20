@@ -372,6 +372,12 @@ impl PortableUser {
     }
 }
 
+impl fmt::Display for PortableUser {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(formatter, "{}", self.profile)
+    }
+}
+
 pub struct PortableUserData {
     pub profile_id: Uuid,
     pub rsa_secret_key: RsaSecretKey,

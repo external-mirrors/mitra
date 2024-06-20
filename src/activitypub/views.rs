@@ -713,7 +713,7 @@ async fn apgateway_create_actor_view(
         .and_then(|value| value.to_str().ok())
         .ok_or(ValidationError("invite code is required"))?;
     let db_client = &mut **get_database_client(&db_pool).await?;
-    register_portable_actor(
+    let user = register_portable_actor(
         &config,
         db_client,
         actor.into_inner(),
@@ -725,6 +725,7 @@ async fn apgateway_create_actor_view(
         HandlerError::DatabaseError(error) => error.into(),
         _ => HttpError::InternalError,
     })?;
+    log::warn!("created portable user {}", user);
     Ok(HttpResponse::Created().finish())
 }
 
