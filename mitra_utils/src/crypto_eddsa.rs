@@ -14,6 +14,11 @@ use ed25519_dalek::{
     VerifyingKey,
 };
 
+use crate::{
+    multibase::{decode_multibase_base58btc, encode_multibase_base58btc},
+    multicodec::Multicodec,
+};
+
 pub type Ed25519SecretKey = SecretKey;
 pub type Ed25519PublicKey = VerifyingKey;
 pub type EddsaError = SignatureError;
@@ -42,6 +47,9 @@ pub enum Ed25519SerializationError {
 
     #[error("pkcs8 decoding error")]
     Pkcs8Error,
+
+    #[error("multikey error")]
+    MultikeyError,
 }
 
 pub fn ed25519_secret_key_from_bytes(
@@ -49,6 +57,25 @@ pub fn ed25519_secret_key_from_bytes(
 ) -> Result<SecretKey, Ed25519SerializationError> {
     let secret_key: SecretKey = bytes.try_into()
         .map_err(|_| Ed25519SerializationError::ConversionError)?;
+    Ok(secret_key)
+}
+
+pub fn ed25519_secret_key_to_multikey(
+    secret_key: &Ed25519SecretKey,
+) -> String {
+    let secret_key_multicode = Multicodec::Ed25519Priv.encode(secret_key);
+    encode_multibase_base58btc(&secret_key_multicode)
+}
+
+pub fn ed25519_secret_key_from_multikey(
+    secret_key_multibase: &str,
+) -> Result<Ed25519SecretKey, Ed25519SerializationError> {
+    let secret_key_multicode = decode_multibase_base58btc(secret_key_multibase)
+        .map_err(|_| Ed25519SerializationError::MultikeyError)?;
+    let secret_key_bytes =
+        Multicodec::Ed25519Priv.decode_exact(&secret_key_multicode)
+            .map_err(|_| Ed25519SerializationError::MultikeyError)?;
+    let secret_key = ed25519_secret_key_from_bytes(&secret_key_bytes)?;
     Ok(secret_key)
 }
 
@@ -76,6 +103,26 @@ pub fn ed25519_public_key_from_secret_key(
     SigningKey::from(secret_key).verifying_key()
 }
 
+pub fn ed25519_public_key_to_multikey(
+    public_key: &Ed25519PublicKey,
+) -> String {
+    let public_key_multicode =
+        Multicodec::Ed25519Pub.encode(public_key.as_bytes());
+    encode_multibase_base58btc(&public_key_multicode)
+}
+
+pub fn ed25519_public_key_from_multikey(
+    multikey: &str,
+) -> Result<Ed25519PublicKey, Ed25519SerializationError> {
+    let public_key_multicode = decode_multibase_base58btc(multikey)
+        .map_err(|_| Ed25519SerializationError::MultikeyError)?;
+    let public_key_bytes =
+        Multicodec::Ed25519Pub.decode_exact(&public_key_multicode)
+            .map_err(|_| Ed25519SerializationError::MultikeyError)?;
+    let public_key = ed25519_public_key_from_bytes(&public_key_bytes)?;
+    Ok(public_key)
+}
+
 pub fn create_eddsa_signature(
     secret_key: &SecretKey,
     message: &[u8],
@@ -98,6 +145,23 @@ pub fn verify_eddsa_signature(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_secret_key_multikey_encode_decode() {
+        let secret_key = generate_weak_ed25519_key();
+        let encoded = ed25519_secret_key_to_multikey(&secret_key);
+        let decoded = ed25519_secret_key_from_multikey(&encoded).unwrap();
+        assert_eq!(decoded, secret_key);
+    }
+
+    #[test]
+    fn test_public_key_multikey_encode_decode() {
+        let secret_key = generate_weak_ed25519_key();
+        let public_key = ed25519_public_key_from_secret_key(&secret_key);
+        let encoded = ed25519_public_key_to_multikey(&public_key);
+        let decoded = ed25519_public_key_from_multikey(&encoded).unwrap();
+        assert_eq!(decoded, public_key);
+    }
 
     #[test]
     fn test_verify_eddsa_signature() {

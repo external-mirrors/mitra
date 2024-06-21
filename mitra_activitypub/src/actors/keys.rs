@@ -6,6 +6,7 @@ use mitra_utils::{
         ed25519_public_key_from_bytes,
         ed25519_public_key_from_pkcs8_pem,
         ed25519_public_key_from_secret_key,
+        ed25519_public_key_to_multikey,
         Ed25519SecretKey,
     },
     crypto_rsa::{
@@ -94,8 +95,7 @@ impl Multikey {
         secret_key: &Ed25519SecretKey,
     ) -> Self {
         let public_key = ed25519_public_key_from_secret_key(secret_key);
-        let public_key_multicode = Multicodec::Ed25519Pub.encode(public_key.as_bytes());
-        let public_key_multibase = encode_multibase_base58btc(&public_key_multicode);
+        let public_key_multibase = ed25519_public_key_to_multikey(&public_key);
         Self {
             id: local_actor_key_id(actor_id, PublicKeyType::Ed25519),
             object_type: MULTIKEY.to_string(),

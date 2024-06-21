@@ -180,9 +180,9 @@ mod tests {
     use crate::{
         crypto_eddsa::{
             generate_ed25519_key,
-            ed25519_secret_key_from_bytes,
-            ed25519_public_key_from_bytes,
+            ed25519_public_key_from_multikey,
             ed25519_public_key_from_secret_key,
+            ed25519_secret_key_from_multikey,
         },
         crypto_rsa::generate_weak_rsa_key,
         currencies::Currency,
@@ -190,8 +190,6 @@ mod tests {
             sign_object_eddsa,
             sign_object_rsa,
         },
-        multibase::decode_multibase_base58btc,
-        multicodec::Multicodec,
     };
     use super::*;
 
@@ -356,10 +354,7 @@ mod tests {
     #[test]
     fn test_create_and_verify_eddsa_signature_fep_8b32_test_vector() {
         let secret_key_multibase = "z3u2en7t5LR2WtQH5PfFqMqwVHBeXouLzo6haApm8XHqvjxq";
-        let secret_key_multicode = decode_multibase_base58btc(secret_key_multibase).unwrap();
-        let secret_key_bytes = Multicodec::Ed25519Priv
-            .decode_exact(&secret_key_multicode).unwrap();
-        let secret_key = ed25519_secret_key_from_bytes(&secret_key_bytes).unwrap();
+        let secret_key = ed25519_secret_key_from_multikey(secret_key_multibase).unwrap();
         let key_id = "https://server.example/users/alice#ed25519-key";
         let created_at = DateTime::parse_from_rfc3339("2023-02-24T23:36:38Z")
             .unwrap().with_timezone(&Utc);
@@ -412,10 +407,7 @@ mod tests {
             ProofType::EddsaJcsSignature,
         );
         let public_key_multibase = "z6MkrJVnaZkeFzdQyMZu1cgjg7k1pZZ6pvBQ7XJPt4swbTQ2";
-        let public_key_multicode = decode_multibase_base58btc(public_key_multibase).unwrap();
-        let public_key_bytes = Multicodec::Ed25519Pub
-            .decode_exact(&public_key_multicode).unwrap();
-        let public_key = ed25519_public_key_from_bytes(&public_key_bytes).unwrap();
+        let public_key = ed25519_public_key_from_multikey(public_key_multibase).unwrap();
         let result = verify_eddsa_json_signature(
             &public_key,
             &signature_data.object,
@@ -429,10 +421,7 @@ mod tests {
     #[test]
     fn test_create_and_verify_eddsa_signature_vc_di_eddsa_test_vector() {
         let secret_key_multibase = "z3u2en7t5LR2WtQH5PfFqMqwVHBeXouLzo6haApm8XHqvjxq";
-        let secret_key_multicode = decode_multibase_base58btc(secret_key_multibase).unwrap();
-        let secret_key_bytes = Multicodec::Ed25519Priv
-            .decode_exact(&secret_key_multicode).unwrap();
-        let secret_key = ed25519_secret_key_from_bytes(&secret_key_bytes).unwrap();
+        let secret_key = ed25519_secret_key_from_multikey(secret_key_multibase).unwrap();
         let key_id = "https://vc.example/issuers/5678#z6MkrJVnaZkeFzdQyMZu1cgjg7k1pZZ6pvBQ7XJPt4swbTQ2";
         let created_at = DateTime::parse_from_rfc3339("2023-02-24T23:36:38Z")
             .unwrap().with_timezone(&Utc);
@@ -500,10 +489,7 @@ mod tests {
             ProofType::EddsaJcsSignature,
         );
         let public_key_multibase = "z6MkrJVnaZkeFzdQyMZu1cgjg7k1pZZ6pvBQ7XJPt4swbTQ2";
-        let public_key_multicode = decode_multibase_base58btc(public_key_multibase).unwrap();
-        let public_key_bytes = Multicodec::Ed25519Pub
-            .decode_exact(&public_key_multicode).unwrap();
-        let public_key = ed25519_public_key_from_bytes(&public_key_bytes).unwrap();
+        let public_key = ed25519_public_key_from_multikey(public_key_multibase).unwrap();
         let result = verify_eddsa_json_signature(
             &public_key,
             &signature_data.object,

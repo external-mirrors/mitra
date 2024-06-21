@@ -150,8 +150,8 @@ mod tests {
     use mitra_utils::{
         crypto_eddsa::{
             generate_weak_ed25519_key,
-            ed25519_secret_key_from_bytes,
             ed25519_public_key_from_secret_key,
+            ed25519_secret_key_from_multikey,
         },
         did_key::DidKey,
         json_signatures::{
@@ -159,8 +159,6 @@ mod tests {
             proofs::ProofType,
             verify::{get_json_signature, verify_eddsa_json_signature},
         },
-        multibase::decode_multibase_base58btc,
-        multicodec::Multicodec,
     };
     use super::*;
 
@@ -190,11 +188,7 @@ mod tests {
         let did_str = "did:key:z6MkrJVnaZkeFzdQyMZu1cgjg7k1pZZ6pvBQ7XJPt4swbTQ2";
         let did = did_str.parse().unwrap();
         let secret_key_multibase = "z3u2en7t5LR2WtQH5PfFqMqwVHBeXouLzo6haApm8XHqvjxq";
-        let secret_key_multicode = decode_multibase_base58btc(secret_key_multibase).unwrap();
-        let secret_key_bytes = Multicodec::Ed25519Priv
-            .decode_exact(&secret_key_multicode)
-            .unwrap();
-        let secret_key = ed25519_secret_key_from_bytes(&secret_key_bytes).unwrap();
+        let secret_key = ed25519_secret_key_from_multikey(secret_key_multibase).unwrap();
         let actor_id = "https://server.example/users/alice";
         let created_at = DateTime::parse_from_rfc3339("2023-02-24T23:36:38Z")
             .unwrap().with_timezone(&Utc);
