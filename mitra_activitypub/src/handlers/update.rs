@@ -76,6 +76,7 @@ async fn handle_update_note(
         Err(other_error) => return Err(other_error.into()),
     };
     let instance = config.instance();
+    // TODO: FEP-EF61: use get_remote_profile_by_actor_id
     if profile_actor_id(&instance.url(), &post.author) != author_id {
         return Err(ValidationError("object owner can't be changed").into());
     };

@@ -20,12 +20,12 @@ use crate::{
     authority::Authority,
     contexts::{build_default_context, Context},
     identifiers::{
+        compatible_profile_actor_id,
         local_actor_id_unified,
         local_object_id_unified,
         local_object_replies,
         local_tag_collection,
         post_object_id,
-        profile_actor_id,
         LocalActorCollection,
     },
     vocabulary::{DOCUMENT, HASHTAG, LINK, MENTION, NOTE},
@@ -167,7 +167,7 @@ pub fn build_note(
             profile.hostname.as_deref().unwrap_or(instance_hostname),
         );
         let tag_name = actor_address.handle();
-        let actor_id = profile_actor_id(instance_url, profile);
+        let actor_id = compatible_profile_actor_id(instance_url, profile);
         if !primary_audience.contains(&actor_id) {
             primary_audience.push(actor_id.clone());
         };
@@ -224,7 +224,7 @@ pub fn build_note(
             let in_reply_to = post.in_reply_to.as_ref()
                 .expect("in_reply_to should be populated");
             assert_eq!(in_reply_to.id, in_reply_to_id);
-            let in_reply_to_actor_id = profile_actor_id(
+            let in_reply_to_actor_id = compatible_profile_actor_id(
                 instance_url,
                 &in_reply_to.author,
             );

@@ -63,7 +63,11 @@ impl DbActorProfile {
         username: &str,
         actor_data: DbActor,
     ) -> Self {
-        let hostname = get_hostname(&actor_data.id).unwrap();
+        let hostname = if actor_data.is_portable() {
+            get_hostname(&actor_data.gateways.first().unwrap()).unwrap()
+        } else {
+            get_hostname(&actor_data.id).unwrap()
+        };
         let acct = get_profile_acct(username, Some(&hostname));
         let actor_id = actor_data.id.clone();
         let profile = Self {

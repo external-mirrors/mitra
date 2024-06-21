@@ -254,6 +254,23 @@ pub fn compatible_actor_id(actor: &DbActor) -> Result<String, ValidationError> {
     Ok(compatible_id)
 }
 
+pub fn compatible_profile_actor_id(
+    instance_url: &str,
+    profile: &DbActorProfile,
+) -> String {
+    match profile.actor_json {
+        Some(ref actor) => {
+            if actor.is_portable() {
+                compatible_actor_id(actor)
+                    .expect("actor ID should be valid")
+            } else {
+                actor.id.clone()
+            }
+        },
+        None => local_actor_id(instance_url, &profile.username),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use uuid::uuid;
@@ -405,6 +422,36 @@ mod tests {
         assert_eq!(
             profile_url,
             "https://social.example/users/test",
+        );
+    }
+
+    #[test]
+    fn test_compatible_profile_actor_id() {
+        let profile = DbActorProfile::remote_for_test(
+            "test",
+            "https://social.example/users/1",
+        );
+        let actor_id = compatible_profile_actor_id(INSTANCE_URL, &profile);
+        assert_eq!(
+            actor_id,
+            "https://social.example/users/1",
+        );
+    }
+
+    #[test]
+    fn test_compatible_profile_actor_id_ap_url() {
+        let profile = DbActorProfile::remote_for_test_with_data(
+            "test",
+            DbActor {
+                id: "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor".to_string(),
+                gateways: vec!["https://social.example".to_string()],
+                ..Default::default()
+            },
+        );
+        let actor_id = compatible_profile_actor_id(INSTANCE_URL, &profile);
+        assert_eq!(
+            actor_id,
+            "https://social.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor",
         );
     }
 }
