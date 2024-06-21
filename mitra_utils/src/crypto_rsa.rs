@@ -21,6 +21,11 @@ use rsa::{
 };
 use sha2::Sha256;
 
+use crate::{
+    multibase::{decode_multibase_base58btc, encode_multibase_base58btc},
+    multicodec::Multicodec,
+};
+
 pub use rsa::{RsaPrivateKey as RsaSecretKey, RsaPublicKey};
 pub type RsaError = rsa::errors::Error;
 
@@ -48,6 +53,9 @@ pub enum RsaSerializationError {
 
     #[error(transparent)]
     PemError(#[from] pem::PemError),
+
+    #[error("multikey error")]
+    MultikeyError,
 }
 
 pub fn rsa_secret_key_to_pkcs1_der(
@@ -93,6 +101,26 @@ pub fn rsa_secret_key_from_pkcs8_pem(
     Ok(secret_key)
 }
 
+pub fn rsa_secret_key_to_multikey(
+    secret_key: &RsaSecretKey,
+) -> Result<String, RsaSerializationError> {
+    let secret_key_der = rsa_secret_key_to_pkcs1_der(secret_key)?;
+    let secret_key_multicode = Multicodec::RsaPriv.encode(&secret_key_der);
+    let secret_key_multibase = encode_multibase_base58btc(&secret_key_multicode);
+    Ok(secret_key_multibase)
+}
+
+pub fn rsa_secret_key_from_multikey(
+    secret_key_multibase: &str,
+) -> Result<RsaSecretKey, RsaSerializationError> {
+    let secret_key_multicode = decode_multibase_base58btc(secret_key_multibase)
+        .map_err(|_| RsaSerializationError::MultikeyError)?;
+    let secret_key_der = Multicodec::RsaPriv.decode_exact(&secret_key_multicode)
+        .map_err(|_| RsaSerializationError::MultikeyError)?;
+    let secret_key = rsa_secret_key_from_pkcs1_der(&secret_key_der)?;
+    Ok(secret_key)
+}
+
 pub fn rsa_public_key_to_pkcs8_pem(
     public_key: &RsaPublicKey,
 ) -> Result<String, RsaSerializationError> {
@@ -114,6 +142,27 @@ pub fn deserialize_rsa_public_key(
     let normalized_pem = pem::encode(&parsed_pem);
     let public_key = RsaPublicKey::from_public_key_pem(&normalized_pem)
         .map_err(rsa::pkcs8::Error::from)?;
+    Ok(public_key)
+}
+
+pub fn rsa_public_key_to_multikey(
+    public_key: &RsaPublicKey,
+) -> Result<String, RsaSerializationError> {
+    let public_key_der = rsa_public_key_to_pkcs1_der(public_key)?;
+    let public_key_multicode = Multicodec::RsaPub.encode(&public_key_der);
+    let public_key_multibase = encode_multibase_base58btc(&public_key_multicode);
+    Ok(public_key_multibase)
+}
+
+pub fn rsa_public_key_from_multikey(
+    multikey: &str,
+) -> Result<RsaPublicKey, RsaSerializationError> {
+    let public_key_multicode = decode_multibase_base58btc(multikey)
+        .map_err(|_| RsaSerializationError::MultikeyError)?;
+    let public_key_der =
+        Multicodec::RsaPub.decode_exact(&public_key_multicode)
+            .map_err(|_| RsaSerializationError::MultikeyError)?;
+    let public_key = rsa_public_key_from_pkcs1_der(&public_key_der)?;
     Ok(public_key)
 }
 
@@ -175,6 +224,14 @@ mod tests {
     }
 
     #[test]
+    fn test_secret_key_multikey_encode_decode() {
+        let secret_key = generate_weak_rsa_key().unwrap();
+        let encoded = rsa_secret_key_to_multikey(&secret_key).unwrap();
+        let decoded = rsa_secret_key_from_multikey(&encoded).unwrap();
+        assert_eq!(decoded, secret_key);
+    }
+
+    #[test]
     fn test_deserialize_rsa_public_key_nowrap() {
         let public_key_pem = "-----BEGIN PUBLIC KEY-----\nMIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQC8ehqQ7n6+pw19U8q2UtxE/9017STW3yRnnqV5nVk8LJ00ba+berqwekxDW+nw77GAu3TJ+hYeeSerUNPup7y3yO3V
 YsFtrgWDQ/s8k86sNBU+Ce2GOL7seh46kyAWgJeohh4Rcrr23rftHbvxOcRM8VzYuCeb1DgVhPGtA0xULwIDAQAB\n-----END PUBLIC KEY-----";
@@ -196,6 +253,15 @@ YsFtrgWDQ/s8k86sNBU+Ce2GOL7seh46kyAWgJeohh4Rcrr23rftHbvxOcRM8VzYuCeb1DgVhPGtA0xU
         let public_key_pem = rsa_public_key_to_pkcs8_pem(&public_key).unwrap();
         let public_key = deserialize_rsa_public_key(&public_key_pem).unwrap();
         assert_eq!(public_key, RsaPublicKey::from(&secret_key));
+    }
+
+    #[test]
+    fn test_public_key_multikey_encode_decode() {
+        let secret_key = generate_weak_rsa_key().unwrap();
+        let public_key = RsaPublicKey::from(&secret_key);
+        let encoded = rsa_public_key_to_multikey(&public_key).unwrap();
+        let decoded = rsa_public_key_from_multikey(&encoded).unwrap();
+        assert_eq!(decoded, public_key);
     }
 
     #[test]

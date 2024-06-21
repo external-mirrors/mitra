@@ -12,13 +12,14 @@ use mitra_utils::{
     crypto_rsa::{
         deserialize_rsa_public_key,
         rsa_public_key_from_pkcs1_der,
+        rsa_public_key_to_multikey,
         rsa_public_key_to_pkcs1_der,
         rsa_public_key_to_pkcs8_pem,
         RsaSecretKey,
         RsaPublicKey,
         RsaSerializationError,
     },
-    multibase::{decode_multibase_base58btc, encode_multibase_base58btc},
+    multibase::decode_multibase_base58btc,
     multicodec::Multicodec,
 };
 use mitra_validators::{
@@ -109,9 +110,7 @@ impl Multikey {
         secret_key: &RsaSecretKey,
     ) -> Result<Self, RsaSerializationError> {
         let public_key = RsaPublicKey::from(secret_key);
-        let public_key_der = rsa_public_key_to_pkcs1_der(&public_key)?;
-        let public_key_multicode = Multicodec::RsaPub.encode(&public_key_der);
-        let public_key_multibase = encode_multibase_base58btc(&public_key_multicode);
+        let public_key_multibase = rsa_public_key_to_multikey(&public_key)?;
         let multikey = Self {
             id: local_actor_key_id(actor_id, PublicKeyType::RsaPkcs1),
             object_type: MULTIKEY.to_string(),

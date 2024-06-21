@@ -41,9 +41,7 @@ use mitra_models::{
 use mitra_services::media::MediaStorage;
 use mitra_utils::{
     crypto_eddsa::ed25519_secret_key_from_multikey,
-    crypto_rsa::rsa_secret_key_from_pkcs1_der,
-    multibase::decode_multibase_base58btc,
-    multicodec::Multicodec,
+    crypto_rsa::rsa_secret_key_from_multikey,
     urls::guess_protocol,
 };
 use mitra_validators::errors::ValidationError;
@@ -658,11 +656,7 @@ pub async fn register_portable_actor(
     let instance = config.instance();
     let agent = build_federation_agent(&instance, None);
     let storage = MediaStorage::from(config);
-    let rsa_secret_key_multicode = decode_multibase_base58btc(rsa_secret_key_multibase)
-        .map_err(|_| ValidationError("invalid RSA key"))?;
-    let rsa_secret_key_der = Multicodec::RsaPriv.decode_exact(&rsa_secret_key_multicode)
-        .map_err(|_| ValidationError("invalid RSA key"))?;
-    let rsa_secret_key = rsa_secret_key_from_pkcs1_der(&rsa_secret_key_der)
+    let rsa_secret_key = rsa_secret_key_from_multikey(rsa_secret_key_multibase)
         .map_err(|_| ValidationError("invalid RSA key"))?;
     let ed25519_secret_key = ed25519_secret_key_from_multikey(ed25519_secret_key_multibase)
         .map_err(|_| ValidationError("invalid Ed25519 key"))?;
