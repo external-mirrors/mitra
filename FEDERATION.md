@@ -73,11 +73,12 @@ Example:
   "id": "https://server1.example/objects/0185f5f8-10b5-1b69-f45e-25f06792f411",
   "object": "https://server2.example/users/bob/posts/141892712081205472",
   "proof": {
+    "type": "DataIntegrityProof",
+    "cryptosuite": "eddsa-jcs-2022",
     "created": "2023-01-28T01:22:40.183273595Z",
     "proofPurpose": "assertionMethod",
     "proofValue": "z5djAdMSrV...",
-    "type": "MitraJcsRsaSignature2022",
-    "verificationMethod": "https://server1.example/users/alice#main-key"
+    "verificationMethod": "https://server1.example/users/alice#ed25519-key"
   },
   "to": [
     "https://server2.example/users/bob",
@@ -88,6 +89,10 @@ Example:
 ```
 
 ### Supported proof suites
+
+#### eddsa-jcs-2022
+
+https://w3c.github.io/vc-di-eddsa/#eddsa-jcs-2022
 
 #### jcs-eddsa-2022
 
