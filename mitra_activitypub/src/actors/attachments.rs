@@ -14,7 +14,6 @@ use mitra_models::{
         PaymentOption,
     },
 };
-use mitra_validators::profiles::validate_extra_field;
 use mitra_utils::{
     json_signatures::{
         proofs::{
@@ -29,7 +28,10 @@ use mitra_utils::{
         },
     },
 };
-use mitra_validators::errors::ValidationError;
+use mitra_validators::{
+    profiles::{clean_extra_field, validate_extra_field},
+    errors::ValidationError,
+};
 
 use crate::{
     authority::Authority,
@@ -263,11 +265,12 @@ pub fn parse_property_value(
     if attachment.object_type != PROPERTY_VALUE {
         return Err(ValidationError("invalid attachment type"));
     };
-    let field = ExtraField {
+    let mut field = ExtraField {
         name: attachment.name,
         value: attachment.value,
         value_source: None,
     };
+    clean_extra_field(&mut field);
     validate_extra_field(&field)?;
     Ok(field)
 }
@@ -284,11 +287,12 @@ pub fn parse_metadata_field(
 
     let note: Note = serde_json::from_value(attachment.clone())
         .map_err(|_| ValidationError("invalid metadata field"))?;
-    let field = ExtraField {
+    let mut field = ExtraField {
         name: note.name,
         value: note.content,
         value_source: None,
     };
+    clean_extra_field(&mut field);
     validate_extra_field(&field)?;
     Ok(field)
 }

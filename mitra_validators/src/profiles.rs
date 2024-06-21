@@ -131,6 +131,11 @@ fn validate_payment_options(
     Ok(())
 }
 
+pub fn clean_extra_field(field: &mut ExtraField) {
+    field.name = field.name.trim().to_string();
+    field.value = clean_html_strict(&field.value, &BIO_ALLOWED_TAGS, vec![]);
+}
+
 pub fn validate_extra_field(field: &ExtraField) -> Result<(), ValidationError> {
     if field.name.is_empty() {
         return Err(ValidationError("field name is empty"));
@@ -151,8 +156,7 @@ fn clean_extra_fields(
 ) -> Result<Vec<ExtraField>, ValidationError> {
     let mut cleaned_extra_fields = vec![];
     for mut field in extra_fields.iter().cloned() {
-        field.name = field.name.trim().to_string();
-        field.value = clean_html_strict(&field.value, &BIO_ALLOWED_TAGS, vec![]);
+        clean_extra_field(&mut field);
         validate_extra_field(&field)?;
         cleaned_extra_fields.push(field);
     };

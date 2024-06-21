@@ -26,6 +26,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Removed `/api/v1/accounts/signed_update` API endpoint.
 
+### Fixed
+
+- Don't reject actors with empty `PropertyValue` names.
+
 ## [2.22.0] - 2024-06-15
 
 ### Added
