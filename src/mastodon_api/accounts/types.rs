@@ -37,7 +37,11 @@ use mitra_utils::{
 };
 use mitra_validators::{
     errors::ValidationError,
-    profiles::{allowed_profile_image_media_types, PROFILE_IMAGE_SIZE_MAX},
+    profiles::{
+        allowed_profile_image_media_types,
+        clean_extra_field,
+        PROFILE_IMAGE_SIZE_MAX,
+    },
 };
 
 use crate::mastodon_api::{
@@ -436,11 +440,12 @@ impl AccountUpdateData {
             };
             let value = markdown_basic_to_html(&field_source.value)
                 .map_err(|_| ValidationError("invalid markdown"))?;
-            let extra_field = ExtraField {
+            let mut extra_field = ExtraField {
                 name: field_source.name,
                 value: value,
                 value_source: Some(field_source.value),
             };
+            clean_extra_field(&mut extra_field);
             extra_fields.push(extra_field);
         };
         profile_data.extra_fields = extra_fields;

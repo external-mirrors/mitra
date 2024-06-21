@@ -77,6 +77,10 @@ fn validate_display_name(display_name: &str)
     Ok(())
 }
 
+fn clean_bio_html(bio: &str) -> String {
+    clean_html_strict(bio, &BIO_ALLOWED_TAGS, vec![])
+}
+
 fn clean_bio(bio: &str, is_remote: bool) -> Result<String, ValidationError> {
     let cleaned_bio = if is_remote {
         // Remote profile
@@ -87,7 +91,7 @@ fn clean_bio(bio: &str, is_remote: bool) -> Result<String, ValidationError> {
         if bio.chars().count() > BIO_MAX_LENGTH {
             return Err(ValidationError("bio is too long"));
         };
-        clean_html_strict(bio, &BIO_ALLOWED_TAGS, vec![])
+        clean_bio_html(bio)
     };
     Ok(cleaned_bio)
 }
@@ -137,7 +141,7 @@ pub fn clean_extra_field(field: &mut ExtraField) {
 }
 
 pub fn validate_extra_field(field: &ExtraField) -> Result<(), ValidationError> {
-    if field.name.is_empty() {
+    if field.name.trim().is_empty() {
         return Err(ValidationError("field name is empty"));
     };
     if field.name.len() > FIELD_NAME_MAX_SIZE {
@@ -146,31 +150,30 @@ pub fn validate_extra_field(field: &ExtraField) -> Result<(), ValidationError> {
     if field.value.len() > FIELD_VALUE_MAX_SIZE {
         return Err(ValidationError("field value is too long"));
     };
+    if field.value != clean_bio_html(&field.value) {
+        return Err(ValidationError("field has not been sanitized"));
+    };
     Ok(())
 }
 
-/// Validates extra fields and removes fields with empty labels
-fn clean_extra_fields(
+fn validate_extra_fields(
     extra_fields: &[ExtraField],
     is_remote: bool,
-) -> Result<Vec<ExtraField>, ValidationError> {
-    let mut cleaned_extra_fields = vec![];
-    for mut field in extra_fields.iter().cloned() {
-        clean_extra_field(&mut field);
-        validate_extra_field(&field)?;
-        cleaned_extra_fields.push(field);
+) -> Result<(), ValidationError> {
+    for field in extra_fields {
+        validate_extra_field(field)?;
     };
     #[allow(clippy::collapsible_else_if)]
     if is_remote {
-        if cleaned_extra_fields.len() > 100 {
+        if extra_fields.len() > 100 {
             return Err(ValidationError("at most 100 fields are allowed"));
         };
     } else {
-        if cleaned_extra_fields.len() > 10 {
+        if extra_fields.len() > 10 {
             return Err(ValidationError("at most 10 fields are allowed"));
         };
     };
-    Ok(cleaned_extra_fields)
+    Ok(())
 }
 
 pub fn validate_aliases(
@@ -233,10 +236,7 @@ pub fn clean_profile_create_data(
     validate_public_keys(&profile_data.public_keys)?;
     validate_identity_proofs(&profile_data.identity_proofs)?;
     validate_payment_options(&profile_data.payment_options)?;
-    profile_data.extra_fields = clean_extra_fields(
-        &profile_data.extra_fields,
-        is_remote,
-    )?;
+    validate_extra_fields(&profile_data.extra_fields, is_remote)?;
     validate_aliases(&profile_data.aliases)?;
     if profile_data.emojis.len() > EMOJI_LIMIT {
         return Err(ValidationError("too many emojis"));
@@ -264,10 +264,7 @@ pub fn clean_profile_update_data(
     validate_public_keys(&profile_data.public_keys)?;
     validate_identity_proofs(&profile_data.identity_proofs)?;
     validate_payment_options(&profile_data.payment_options)?;
-    profile_data.extra_fields = clean_extra_fields(
-        &profile_data.extra_fields,
-        is_remote,
-    )?;
+    validate_extra_fields(&profile_data.extra_fields, is_remote)?;
     validate_aliases(&profile_data.aliases)?;
     if profile_data.emojis.len() > EMOJI_LIMIT {
         return Err(ValidationError("too many emojis"));
@@ -333,16 +330,17 @@ mod tests {
     }
 
     #[test]
-    fn test_clean_extra_fields() {
-        let extra_fields = vec![ExtraField {
+    fn test_clean_extra_field() {
+        let mut field = ExtraField {
             name: " $ETH ".to_string(),
             value: "<p>0x1234</p>".to_string(),
             value_source: None,
-        }];
-        let result = clean_extra_fields(&extra_fields, false)
-            .unwrap().pop().unwrap();
-        assert_eq!(result.name, "$ETH");
-        assert_eq!(result.value, "0x1234");
+        };
+        assert_eq!(validate_extra_field(&field).is_err(), true);
+        clean_extra_field(&mut field);
+        assert_eq!(field.name, "$ETH");
+        assert_eq!(field.value, "0x1234");
+        assert_eq!(validate_extra_field(&field).is_err(), false);
     }
 
     #[test]
