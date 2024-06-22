@@ -771,7 +771,7 @@ async fn remove_follower_view(
             &current_user,
             &remote_actor,
             &follow_activity_id,
-        ).enqueue(db_client).await?;
+        )?.enqueue(db_client).await?;
     };
     let relationship = get_relationship(
         db_client,

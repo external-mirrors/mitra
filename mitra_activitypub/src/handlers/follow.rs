@@ -16,7 +16,7 @@ use mitra_models::{
 };
 use mitra_services::media::MediaStorage;
 use mitra_validators::{
-    activitypub::validate_object_id,
+    activitypub::validate_any_object_id,
     errors::ValidationError,
 };
 
@@ -24,6 +24,7 @@ use crate::{
     builders::accept_follow::prepare_accept_follow,
     identifiers::parse_local_actor_id,
     importers::ActorIdResolver,
+    url::canonicalize_id,
     vocabulary::PERSON,
 };
 
@@ -61,12 +62,13 @@ pub async fn handle_follow(
     let target_user = get_user_by_name(db_client, &target_username).await?;
     // Create new follow request or update activity ID on existing one,
     // because latest activity ID might be needed to process Undo(Follow)
-    validate_object_id(&activity.id)?;
+    let canonical_activity_id = canonicalize_id(&activity.id)?;
+    validate_any_object_id(&canonical_activity_id)?;
     let follow_request = create_remote_follow_request_opt(
         db_client,
         &source_profile.id,
         &target_user.id,
-        &activity.id,
+        &canonical_activity_id,
     ).await?;
     let is_following = has_relationship(
         db_client,
@@ -92,8 +94,8 @@ pub async fn handle_follow(
             &config.instance(),
             &target_user,
             &source_actor,
-            &activity.id,
-        ).enqueue(db_client).await?;
+            &canonical_activity_id,
+        )?.enqueue(db_client).await?;
     };
     Ok(Some(PERSON))
 }

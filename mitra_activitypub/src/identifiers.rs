@@ -3,6 +3,7 @@ use uuid::Uuid;
 
 use mitra_federation::identifiers::parse_object_id;
 use mitra_models::{
+    database::DatabaseTypeError,
     posts::types::Post,
     profiles::types::{
         DbActor,
@@ -20,7 +21,7 @@ use mitra_validators::errors::ValidationError;
 
 use crate::{
     authority::Authority,
-    url::Url,
+    url::parse_url,
 };
 
 pub fn local_actor_id_unified(authority: &Authority, username: &str) -> String {
@@ -244,14 +245,32 @@ pub fn profile_actor_url(instance_url: &str, profile: &DbActorProfile) -> String
     profile_actor_id(instance_url, profile)
 }
 
-pub fn compatible_actor_id(actor: &DbActor) -> Result<String, ValidationError> {
-    // TODO: FEP-EF61: actor ID in database must be valid
-    let actor_id = actor.id.parse::<Url>()?;
+/// Convert canonical object ID (from database) to compatible ID,
+/// to be used in object construction.
+/// If object ID is an 'ap' URL, compatible ID will be based on primary gateway.
+pub fn compatible_id(
+    db_actor: &DbActor,
+    object_id: &str,
+) -> Result<String, DatabaseTypeError> {
+    // ID is expected to be valid
+    let (canonical_object_id, maybe_gateway) = parse_url(object_id)
+        .map_err(|_| DatabaseTypeError)?;
+    if maybe_gateway.is_some() {
+        // Compatible IDs can't be stored
+        return Err(DatabaseTypeError);
+    };
     // TODO: FEP-EF61: at least one gateway must be stored
-    let maybe_gateway = actor.gateways.first().map(|gateway| gateway.as_str());
-    let compatible_id = actor_id.to_http_url(maybe_gateway)
-        .ok_or(ValidationError("invalid actor ID"))?;
-    Ok(compatible_id)
+    let maybe_gateway = db_actor.gateways.first()
+        .map(|gateway| gateway.as_str());
+    let http_url = canonical_object_id.to_http_url(maybe_gateway)
+        .ok_or(DatabaseTypeError)?;
+    Ok(http_url)
+}
+
+pub fn compatible_actor_id(
+    db_actor: &DbActor,
+) -> Result<String, DatabaseTypeError> {
+   compatible_id(db_actor, &db_actor.id)
 }
 
 pub fn compatible_profile_actor_id(

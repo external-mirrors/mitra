@@ -2,6 +2,7 @@ use serde::Serialize;
 
 use mitra_config::Instance;
 use mitra_models::{
+    database::DatabaseError,
     profiles::types::{DbActor, DbActorProfile},
     users::types::User,
 };
@@ -9,7 +10,11 @@ use mitra_utils::id::generate_ulid;
 
 use crate::{
     contexts::{build_default_context, Context},
-    identifiers::{local_activity_id, local_actor_id},
+    identifiers::{
+        compatible_id,
+        local_activity_id,
+        local_actor_id,
+    },
     queues::OutgoingActivityJobData,
     vocabulary::ACCEPT,
 };
@@ -53,20 +58,25 @@ pub fn prepare_accept_follow(
     sender: &User,
     source_actor: &DbActor,
     follow_activity_id: &str,
-) -> OutgoingActivityJobData {
+) -> Result<OutgoingActivityJobData, DatabaseError> {
+    let source_actor_id = compatible_id(source_actor, &source_actor.id)?;
+    let follow_activity_id = compatible_id(
+        source_actor,
+        follow_activity_id,
+    )?;
     let activity = build_accept_follow(
         &instance.url(),
         &sender.profile,
-        &source_actor.id,
-        follow_activity_id,
+        &source_actor_id,
+        &follow_activity_id,
     );
     let recipients = vec![source_actor.clone()];
-    OutgoingActivityJobData::new(
+    Ok(OutgoingActivityJobData::new(
         &instance.url(),
         sender,
         activity,
         recipients,
-    )
+    ))
 }
 
 #[cfg(test)]
