@@ -9,7 +9,6 @@ use mitra_utils::{
         create_http_signature,
         HttpSignatureError,
     },
-    urls::is_safe_url,
 };
 
 use super::{
@@ -19,6 +18,8 @@ use super::{
         build_http_client,
         get_network_type,
         limited_response,
+        require_safe_url,
+        UnsafeUrlError,
         REDIRECT_LIMIT,
     },
     utils::{extract_media_type, is_same_hostname},
@@ -32,8 +33,8 @@ pub enum FetchError {
     #[error("inavlid URL")]
     UrlError,
 
-    #[error("invalid URL")]
-    UnsafeUrl,
+    #[error(transparent)]
+    UnsafeUrl(#[from] UnsafeUrlError),
 
     #[error(transparent)]
     RequestError(#[from] reqwest::Error),
@@ -131,6 +132,7 @@ pub async fn fetch_object<T: DeserializeOwned>(
     let mut redirect_count = 0;
     let mut target_url = object_id.to_string();
     let mut response = loop {
+        require_safe_url(&target_url)?;
         let mut request_builder =
             build_request(agent, &http_client, Method::GET, &target_url)
                 .header(header::ACCEPT, AP_MEDIA_TYPE);
@@ -223,9 +225,7 @@ pub async fn fetch_file(
     allowed_media_types: &[&str],
     file_size_limit: usize,
 ) -> Result<(Vec<u8>, usize, String), FetchError> {
-    if !is_safe_url(url) {
-        return Err(FetchError::UnsafeUrl);
-    };
+    require_safe_url(url)?;
     // Redirects are allowed
     let http_client = build_fetcher_client(agent, url, false)?;
     let request_builder =
@@ -263,6 +263,7 @@ pub async fn fetch_json<T: DeserializeOwned>(
     url: &str,
     query: &[(&str, &str)],
 ) -> Result<T, FetchError> {
+    require_safe_url(url)?;
     // Redirects are allowed
     let http_client = build_fetcher_client(agent, url, false)?;
     let request_builder =

@@ -8,8 +8,9 @@ use reqwest::{
     Proxy,
     Response,
 };
+use thiserror::Error;
 
-use mitra_utils::urls::{get_hostname, UrlError};
+use mitra_utils::urls::{get_hostname, is_safe_url, UrlError};
 
 use super::agent::FederationAgent;
 
@@ -34,6 +35,29 @@ pub fn get_network_type(request_url: &str) ->
         Network::Default
     };
     Ok(network)
+}
+
+#[derive(Debug, Error)]
+#[error("unsafe URL")]
+pub struct UnsafeUrlError;
+
+pub fn require_safe_url(url: &str) -> Result<(), UnsafeUrlError> {
+    if !is_safe_url(url) {
+        return Err(UnsafeUrlError);
+    };
+    Ok(())
+}
+
+fn build_safe_redirect_policy() -> RedirectPolicy {
+    RedirectPolicy::custom(|attempt| {
+        if attempt.previous().len() > REDIRECT_LIMIT {
+            attempt.error("too many redirects")
+        } else if !is_safe_url(attempt.url().as_str()) {
+            attempt.stop()
+        } else {
+            attempt.follow()
+        }
+    })
 }
 
 pub fn build_http_client(
@@ -66,7 +90,7 @@ pub fn build_http_client(
     let redirect_policy = if no_redirect {
         RedirectPolicy::none()
     } else {
-        RedirectPolicy::limited(REDIRECT_LIMIT)
+        build_safe_redirect_policy()
     };
     let request_timeout = Duration::from_secs(timeout);
     let connect_timeout = Duration::from_secs(max(

@@ -17,6 +17,8 @@ use crate::{
         build_http_client,
         get_network_type,
         limited_response,
+        require_safe_url,
+        UnsafeUrlError,
     },
 };
 
@@ -33,6 +35,9 @@ pub enum DelivererError {
 
     #[error("inavlid URL")]
     UrlError(#[from] UrlError),
+
+    #[error(transparent)]
+    UnsafeUrl(#[from] UnsafeUrlError),
 
     #[error(transparent)]
     RequestError(#[from] reqwest::Error),
@@ -63,6 +68,7 @@ pub async fn send_activity(
     activity_json: &str,
     inbox_url: &str,
 ) -> Result<(), DelivererError> {
+    require_safe_url(inbox_url)?;
     let headers = create_http_signature(
         Method::POST,
         inbox_url,
