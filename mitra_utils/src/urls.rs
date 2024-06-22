@@ -68,6 +68,7 @@ pub fn guess_protocol(hostname: &str) -> &'static str {
 }
 
 /// Returns false if untrusted URL is not safe for fetching
+// TODO: move to mitra_federation
 pub fn is_safe_url(url: &str) -> bool {
     if let Ok(url) = Url::parse(url) {
         match url.scheme() {
@@ -79,7 +80,7 @@ pub fn is_safe_url(url: &str) -> bool {
             None => return false,
         };
         match host {
-            // TODO: DNS resolution
+            // This check is not sufficient, name must be resolved
             Host::Domain("localhost") => false,
             Host::Domain(domain) if domain.ends_with(".local") => false,
             // TODO: allow only global

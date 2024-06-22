@@ -2071,7 +2071,9 @@ name = "mitra_federation"
 version = "2.22.0"
 dependencies = [
  "bytes",
+ "futures-util",
  "http",
+ "hyper",
  "log",
  "mitra_utils",
  "regex",

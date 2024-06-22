@@ -1,4 +1,5 @@
 use std::cmp::max;
+use std::sync::Arc;
 use std::time::Duration;
 
 use bytes::{BufMut, Bytes, BytesMut};
@@ -60,6 +61,47 @@ fn build_safe_redirect_policy() -> RedirectPolicy {
     })
 }
 
+mod dns_resolver {
+    // https://github.com/seanmonstar/reqwest/blob/v0.11.27/src/dns/gai.rs
+    use std::net::{IpAddr, SocketAddr};
+
+    use futures_util::future::FutureExt;
+    use hyper::client::connect::dns::{GaiResolver as HyperGaiResolver, Name};
+    use hyper::service::Service;
+    use reqwest::dns::{Addrs, Resolve, Resolving};
+
+    type BoxError = Box<dyn std::error::Error + Send + Sync>;
+
+    pub struct SafeResolver(HyperGaiResolver);
+
+    impl SafeResolver {
+        pub fn new() -> Self {
+            Self(HyperGaiResolver::new())
+        }
+    }
+
+    // https://www.w3.org/TR/activitypub/#security-localhost
+    fn is_safe_addr(addr: &SocketAddr) -> bool {
+        match addr.ip() {
+            IpAddr::V4(addr_v4) => !addr_v4.is_loopback(),
+            IpAddr::V6(addr_v6) => !addr_v6.is_loopback(),
+        }
+    }
+
+    impl Resolve for SafeResolver {
+        fn resolve(&self, name: Name) -> Resolving {
+            let this = &mut self.0.clone();
+            Box::pin(Service::<Name>::call(this, name).map(|result| {
+                result
+                    .map(|addrs| -> Addrs {
+                        Box::new(addrs.filter(is_safe_addr))
+                    })
+                    .map_err(|err| -> BoxError { Box::new(err) })
+            }))
+        }
+    }
+}
+
 pub fn build_http_client(
     agent: &FederationAgent,
     network: Network,
@@ -98,6 +140,7 @@ pub fn build_http_client(
         CONNECTION_TIMEOUT,
     ));
     client_builder
+        .dns_resolver(Arc::new(dns_resolver::SafeResolver::new()))
         .timeout(request_timeout)
         .connect_timeout(connect_timeout)
         .redirect(redirect_policy)
