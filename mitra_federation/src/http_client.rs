@@ -129,10 +129,16 @@ pub fn build_http_client(
         // https://github.com/hyperium/hyper/issues/3427
         client_builder = client_builder.http1_only();
     };
+    if agent.protect_localhost {
+        client_builder = client_builder.dns_resolver(
+            Arc::new(dns_resolver::SafeResolver::new()));
+    };
     let redirect_policy = if no_redirect {
         RedirectPolicy::none()
-    } else {
+    } else if agent.protect_localhost {
         build_safe_redirect_policy()
+    } else {
+        RedirectPolicy::limited(REDIRECT_LIMIT)
     };
     let request_timeout = Duration::from_secs(timeout);
     let connect_timeout = Duration::from_secs(max(
@@ -140,7 +146,6 @@ pub fn build_http_client(
         CONNECTION_TIMEOUT,
     ));
     client_builder
-        .dns_resolver(Arc::new(dns_resolver::SafeResolver::new()))
         .timeout(request_timeout)
         .connect_timeout(connect_timeout)
         .redirect(redirect_policy)

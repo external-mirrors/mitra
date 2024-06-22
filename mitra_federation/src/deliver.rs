@@ -68,7 +68,9 @@ pub async fn send_activity(
     activity_json: &str,
     inbox_url: &str,
 ) -> Result<(), DelivererError> {
-    require_safe_url(inbox_url)?;
+    if agent.protect_localhost {
+        require_safe_url(inbox_url)?;
+    };
     let headers = create_http_signature(
         Method::POST,
         inbox_url,
