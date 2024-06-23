@@ -771,7 +771,7 @@ pub async fn apgateway_outbox_client_to_server_view(
     let canonical_actor_id = canonicalize_id(&activity_actor)?;
     let canonical_actor_id_ap = ApUrl::parse(&canonical_actor_id)
         .map_err(ValidationError)?;
-    if canonical_actor_id_ap.did() != &authority {
+    if canonical_actor_id_ap.authority() != &authority {
         return Err(ValidationError("actor and activity authorities do not match").into());
     };
     let signer = get_remote_profile_by_actor_id(

@@ -103,7 +103,7 @@ pub fn is_same_authority(id_1: &str, id_2: &str) -> Result<bool, ValidationError
             http_url_1.authority() == http_url_2.authority()
         },
         (Url::Ap(ap_url_1), Url::Ap(ap_url_2)) => {
-            ap_url_1.did() == ap_url_2.did()
+            ap_url_1.authority() == ap_url_2.authority()
         },
         _ => false, // can't compare different types of authorities
     };

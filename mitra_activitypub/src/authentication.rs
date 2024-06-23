@@ -51,7 +51,7 @@ pub fn verify_portable_object(
     };
     log::info!("canonical object ID: {}", canonical_object_id);
     log::info!("gateway: {}", maybe_gateway.unwrap_or("-".to_string()));
-    let authority = canonical_object_id.did();
+    let authority = canonical_object_id.authority();
     let signature_data = get_json_signature(object)?;
     match signature_data.signer {
         JsonSigner::Did(did) => {

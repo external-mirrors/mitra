@@ -21,7 +21,7 @@ pub fn with_ap_prefix(did_url: &str) -> String {
 
 /// https://codeberg.org/fediverse/fep/src/branch/main/fep/ef61/fep-ef61.md
 pub struct ApUrl {
-    did: Did,
+    authority: Did,
     location: UriRelativeString,
 }
 
@@ -30,10 +30,10 @@ impl ApUrl {
         let url_re = Regex::new(AP_URL_RE)
              .expect("regexp should be valid");
         let captures = url_re.captures(value).ok_or("invalid 'ap' URL")?;
-        let did = Did::from_str(&captures["did"])
+        let authority = Did::from_str(&captures["did"])
             .map_err(|_| "invalid 'ap' URL authority")?;
         // Authority should be an Ed25519 key
-        if did.as_did_key()
+        if authority.as_did_key()
             .and_then(|did_key| did_key.try_ed25519_key().ok())
             .is_none()
         {
@@ -45,12 +45,12 @@ impl ApUrl {
         if location.authority_str().is_some() {
             return Err("invalid 'ap' URL");
         };
-        let ap_url = Self { did, location };
+        let ap_url = Self { authority, location };
         Ok(ap_url)
     }
 
-    pub fn did(&self) -> &Did {
-        &self.did
+    pub fn authority(&self) -> &Did {
+        &self.authority
     }
 
     pub fn relative_url(&self) -> String {
@@ -67,7 +67,7 @@ impl ApUrl {
     }
 
     pub fn to_did_url(&self) -> String {
-        format!("{}{}", self.did(), self.relative_url())
+        format!("{}{}", self.authority(), self.relative_url())
     }
 }
 
@@ -98,7 +98,7 @@ mod tests {
     fn test_parse_ap_url() {
         let url_str = "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/objects/123";
         let url = ApUrl::parse(url_str).unwrap();
-        assert_eq!(url.did().to_string(), "did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6");
+        assert_eq!(url.authority().to_string(), "did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6");
         assert_eq!(url.location.authority_str(), None);
         assert_eq!(url.location.path_str(), "/objects/123");
         assert_eq!(url.relative_url(), "/objects/123");
@@ -109,7 +109,7 @@ mod tests {
     fn test_parse_ap_url_with_fragment() {
         let url_str = "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor#main-key";
         let url = ApUrl::parse(url_str).unwrap();
-        assert_eq!(url.did().to_string(), "did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6");
+        assert_eq!(url.authority().to_string(), "did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6");
         assert_eq!(url.relative_url(), "/actor#main-key");
         assert_eq!(url.to_string(), url_str);
     }
