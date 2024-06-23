@@ -16,7 +16,6 @@ use mitra_activitypub::{
     actors::builders::{
         build_instance_actor,
         build_local_actor,
-        sign_object_fep_ef61,
     },
     authentication::verify_portable_object,
     authority::Authority,
@@ -41,8 +40,6 @@ use mitra_activitypub::{
         local_actor_id,
         local_object_id,
         local_object_replies,
-        parse_fep_ef61_local_actor_id,
-        parse_fep_ef61_local_object_id,
         post_object_id,
         LocalActorCollection,
     },
@@ -67,7 +64,6 @@ use mitra_models::{
     database::{
         get_database_client,
         DatabaseConnectionPool,
-        DatabaseError,
     },
     emojis::queries::get_local_emoji_by_name,
     posts::helpers::{add_related_posts, can_view_post},
@@ -78,7 +74,6 @@ use mitra_models::{
     },
     users::queries::{
         get_user_by_id,
-        get_user_by_identity_key,
         get_user_by_name,
     },
 };
@@ -103,24 +98,16 @@ use super::authentication::{
 };
 use super::receiver::receive_activity;
 
-#[derive(Deserialize)]
-pub struct ObjectQueryParams {
-    #[serde(default)]
-    fep_ef61: bool,
-}
-
 #[get("")]
 async fn actor_view(
     config: web::Data<Config>,
     db_pool: web::Data<DatabaseConnectionPool>,
     request: HttpRequest,
     username: web::Path<String>,
-    query_params: web::Query<ObjectQueryParams>,
 ) -> Result<HttpResponse, HttpError> {
     let db_client = &**get_database_client(&db_pool).await?;
     let user = get_user_by_name(db_client, &username).await?;
-    // Do not redirect when viewing FEP-ef61 representation
-    if !is_activitypub_request(request.headers()) && !query_params.fep_ef61 {
+    if !is_activitypub_request(request.headers()) {
         let page_url = get_profile_page_url(
             &config.instance_url(),
             &user.profile.username,
@@ -130,32 +117,19 @@ async fn actor_view(
             .finish();
         return Ok(response);
     };
-    if query_params.fep_ef61 && user.profile.identity_key.is_none() {
-        return Err(HttpError::PermissionError);
-    };
     let authority = Authority::from_user(
         &config.instance_url(),
         &user,
-        query_params.fep_ef61,
+        false,
     );
     let actor = build_local_actor(
         &config.instance_url(),
         &authority,
         &user,
     )?;
-    let mut actor_value = serde_json::to_value(actor)
-        .expect("actor should be serializable");
-    if authority.is_fep_ef61() {
-        actor_value = sign_object_fep_ef61(
-            &authority,
-            &user,
-            &actor_value,
-            None,
-        );
-    };
     let response = HttpResponse::Ok()
         .content_type(AP_MEDIA_TYPE)
-        .json(actor_value);
+        .json(actor);
     Ok(response)
 }
 
@@ -534,7 +508,6 @@ pub async fn object_view(
     db_pool: web::Data<DatabaseConnectionPool>,
     request: HttpRequest,
     internal_object_id: web::Path<Uuid>,
-    query_params: web::Query<ObjectQueryParams>,
 ) -> Result<HttpResponse, HttpError> {
     let db_client = &**get_database_client(&db_pool).await?;
     let internal_object_id = internal_object_id.into_inner();
@@ -545,7 +518,7 @@ pub async fn object_view(
     if !post.is_local() || !can_view_post(db_client, None, &post).await? {
         return Err(HttpError::NotFoundError("post"));
     };
-    if !is_activitypub_request(request.headers()) && !query_params.fep_ef61 {
+    if !is_activitypub_request(request.headers()) {
         let page_url = get_post_page_url(&instance.url(), &post.id);
         let response = HttpResponse::Found()
             .append_header((http_header::LOCATION, page_url))
@@ -554,13 +527,10 @@ pub async fn object_view(
     };
     add_related_posts(db_client, vec![&mut post]).await?;
     let user = get_user_by_id(db_client, &post.author.id).await?;
-    if query_params.fep_ef61 && user.profile.identity_key.is_none() {
-        return Err(HttpError::PermissionError);
-    };
     let authority = Authority::from_user(
         &instance.url(),
         &user,
-        query_params.fep_ef61,
+        false,
     );
     let object = build_note(
         &instance.hostname(),
@@ -570,19 +540,9 @@ pub async fn object_view(
         config.federation.fep_e232_enabled,
         true,
     );
-    let mut object_value = serde_json::to_value(object)
-        .expect("actor should be serializable");
-    if authority.is_fep_ef61() {
-        object_value = sign_object_fep_ef61(
-            &authority,
-            &user,
-            &object_value,
-            None,
-        );
-    };
     let response = HttpResponse::Ok()
         .content_type(AP_MEDIA_TYPE)
-        .json(object_value);
+        .json(object);
     Ok(response)
 }
 
@@ -731,79 +691,15 @@ async fn apgateway_create_actor_view(
 
 #[get("/{url:.*}")]
 async fn apgateway_view(
-    config: web::Data<Config>,
     db_pool: web::Data<DatabaseConnectionPool>,
     did_url: web::Path<String>,
 ) -> Result<HttpResponse, HttpError> {
     let db_client = &**get_database_client(&db_pool).await?;
     let ap_url = with_ap_prefix(&did_url);
-    match get_actor(db_client, &ap_url).await {
-        Ok(actor_value) => {
-            let response = HttpResponse::Ok()
-                .content_type(AP_MEDIA_TYPE)
-                .json(actor_value);
-            return Ok(response);
-        },
-        Err(DatabaseError::NotFound(_)) => (),
-        Err(other_error) => return Err(other_error.into()),
-    };
-    let (did_key, maybe_internal_object_id) = if let
-        Ok(did_key) = parse_fep_ef61_local_actor_id(&ap_url)
-    {
-        (did_key, None)
-    } else {
-        let (did_key, internal_object_id) =
-            parse_fep_ef61_local_object_id(&ap_url)?;
-        (did_key, Some(internal_object_id))
-    };
-    let identity_key = did_key.key_multibase();
-    let user = get_user_by_identity_key(db_client, &identity_key).await?;
-    let instance = config.instance();
-    let authority = Authority::from_user(
-        &instance.url(),
-        &user,
-        true,
-    );
-    let mut object_value = if let
-        Some(internal_object_id) = maybe_internal_object_id
-    {
-        let mut post = get_post_by_id(db_client, &internal_object_id).await?;
-        // Verify ownership
-        if post.author.id != user.id {
-            return Err(HttpError::NotFoundError("post"));
-        };
-        add_related_posts(db_client, vec![&mut post]).await?;
-        // Create FEP-ef61 representation
-        let object = build_note(
-            &instance.hostname(),
-            &instance.url(),
-            &authority,
-            &post,
-            config.federation.fep_e232_enabled,
-            true,
-        );
-        let object_value = serde_json::to_value(object)
-            .expect("object should be serializable");
-        object_value
-    } else {
-        let actor = build_local_actor(
-            &instance.url(),
-            &authority,
-            &user,
-        )?;
-        let actor_value = serde_json::to_value(actor)
-            .expect("actor should be serializable");
-        actor_value
-    };
-    object_value = sign_object_fep_ef61(
-        &authority,
-        &user,
-        &object_value,
-        None,
-    );
+    let actor_value = get_actor(db_client, &ap_url).await?;
     let response = HttpResponse::Ok()
         .content_type(AP_MEDIA_TYPE)
-        .json(object_value);
+        .json(actor_value);
     Ok(response)
 }
 

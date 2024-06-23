@@ -391,7 +391,8 @@ pub async fn get_user_by_public_wallet_address(
     get_user_by_did(db_client, &did).await
 }
 
-pub async fn get_user_by_identity_key(
+#[allow(dead_code)]
+async fn get_user_by_identity_key(
     db_client: &impl DatabaseClient,
     identity_key: &str,
 ) -> Result<User, DatabaseError> {

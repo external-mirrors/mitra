@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 
-use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value as JsonValue};
 
@@ -13,7 +12,6 @@ use mitra_models::{
 use mitra_services::media::get_file_url;
 use mitra_utils::{
     crypto_rsa::RsaSerializationError,
-    json_signatures::create::sign_object_eddsa,
 };
 
 use crate::{
@@ -256,27 +254,6 @@ pub fn build_local_actor(
     Ok(actor)
 }
 
-pub fn sign_object_fep_ef61(
-    authority: &Authority,
-    user: &User,
-    object: &JsonValue,
-    current_time: Option<DateTime<Utc>>,
-) -> JsonValue {
-    let ed25519_secret_key = user.ed25519_secret_key;
-    // Key ID is DID
-    let ed25519_key_id = authority.as_did_key()
-        .expect("authority should be of FEP-ef61 kind")
-        .to_string();
-    sign_object_eddsa(
-        &ed25519_secret_key,
-        &ed25519_key_id,
-        object,
-        current_time,
-        false, // use eddsa-jcs-2022
-        false, // no proof context
-    ).expect("actor object should be ready for signing")
-}
-
 pub fn build_instance_actor(
     instance: &Instance,
 ) -> Result<Actor, RsaSerializationError> {
@@ -410,16 +387,8 @@ mod tests {
         profile.bio = Some("testbio".to_string());
         let user = User { profile, ..Default::default() };
         let authority = Authority::from_user(INSTANCE_URL, &user, true);
-        let current_time = DateTime::parse_from_rfc3339("2023-02-24T23:36:38Z")
-            .unwrap().with_timezone(&Utc);
         let actor = build_local_actor(INSTANCE_URL, &authority, &user).unwrap();
         let value = serde_json::to_value(actor).unwrap();
-        let signed_value = sign_object_fep_ef61(
-            &authority,
-            &user,
-            &value,
-            Some(current_time),
-        );
         let expected_value = json!({
             "@context": [
                 "https://www.w3.org/ns/activitystreams",
@@ -492,16 +461,8 @@ mod tests {
             "gateways": [
                 "https://server.example"
             ],
-            "proof": {
-                "created": "2023-02-24T23:36:38Z",
-                "cryptosuite": "eddsa-jcs-2022",
-                "proofPurpose": "assertionMethod",
-                "proofValue": "z263zBw6X92dywjHqqFeUCciUZqbGsw3e5pv5uXarB7yCwxdZHQvhuaphyFShwwrCUXCZyHzzZoZTjSU2BjPpcCDW",
-                "type": "DataIntegrityProof",
-                "verificationMethod": "did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6",
-            },
         });
-        assert_eq!(signed_value, expected_value);
+        assert_eq!(value, expected_value);
     }
 
     #[test]

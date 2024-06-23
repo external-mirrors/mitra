@@ -12,9 +12,7 @@ use mitra_models::{
     },
 };
 use mitra_utils::{
-    ap_url::ApUrl,
     caip2::ChainId,
-    did_key::DidKey,
     urls::url_encode,
 };
 use mitra_validators::errors::ValidationError;
@@ -135,19 +133,6 @@ pub fn parse_local_actor_id(
     Ok(username)
 }
 
-pub fn parse_fep_ef61_local_actor_id(
-    actor_id: &str,
-) -> Result<DidKey, ValidationError> {
-    let ap_url: ApUrl = actor_id.parse()
-        .map_err(ValidationError)?;
-    let did_key = ap_url.did().as_did_key()
-        .ok_or(ValidationError("unexpected DID method"))?;
-    if ap_url.relative_url() != "/actor" {
-        return Err(ValidationError("invalid path"));
-    };
-    Ok(did_key.clone())
-}
-
 pub fn parse_local_object_id(
     instance_url: &str,
     object_id: &str,
@@ -160,23 +145,6 @@ pub fn parse_local_object_id(
         return Err(ValidationError("instance mismatch"));
     };
     Ok(internal_object_id)
-}
-
-pub fn parse_fep_ef61_local_object_id(
-    object_id: &str,
-) -> Result<(DidKey, Uuid), ValidationError> {
-    let ap_url: ApUrl = object_id.parse()
-        .map_err(ValidationError)?;
-    let did_key = ap_url.did().as_did_key()
-        .ok_or(ValidationError("unexpected DID method"))?;
-    let path = ap_url.relative_url();
-    let path_re = Regex::new("^/objects/(?P<uuid>[0-9a-f-]+)$")
-        .expect("regexp should be valid");
-    let path_caps = path_re.captures(&path)
-        .ok_or(ValidationError("invalid path"))?;
-    let internal_object_id = path_caps["uuid"].parse()
-        .map_err(|_| ValidationError("invalid path"))?;
-    Ok((did_key.clone(), internal_object_id))
 }
 
 pub fn parse_local_primary_intent_id(
@@ -363,16 +331,6 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_fep_ef61_local_actor_id() {
-        let actor_id = "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor";
-        let did_key = parse_fep_ef61_local_actor_id(actor_id).unwrap();
-        assert_eq!(
-            did_key.to_string(),
-            "did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6",
-        );
-    }
-
-    #[test]
     fn test_parse_local_object_id() {
         let expected_uuid = generate_ulid();
         let object_id = format!(
@@ -394,21 +352,6 @@ mod tests {
             object_id,
         ).unwrap_err();
         assert_eq!(error.to_string(), "invalid local object ID");
-    }
-
-    #[test]
-    fn test_parse_fep_ef61_local_object_id() {
-        let object_id = "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/objects/cb26ed69-a6e9-47e3-8bf2-bbb26d06d1fb";
-        let (did_key, internal_object_id) =
-            parse_fep_ef61_local_object_id(object_id).unwrap();
-        assert_eq!(
-            did_key.to_string(),
-            "did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6",
-        );
-        assert_eq!(
-            internal_object_id,
-            uuid!("cb26ed69-a6e9-47e3-8bf2-bbb26d06d1fb"),
-        );
     }
 
     #[test]
