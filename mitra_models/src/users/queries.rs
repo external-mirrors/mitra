@@ -715,7 +715,8 @@ mod tests {
             hostname: None,
             public_keys: vec![DbActorKey::default()],
             actor_json: Some(DbActor {
-                id: "ap://xxx/actor".to_string(),
+                id: "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor".to_string(),
+                gateways: vec!["https://gateway.example".to_string()],
                 ..Default::default()
             }),
             ..Default::default()

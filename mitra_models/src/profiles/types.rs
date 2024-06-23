@@ -13,7 +13,7 @@ use serde_json::{Value as JsonValue};
 use uuid::Uuid;
 
 use mitra_utils::{
-    ap_url::is_ap_url,
+    ap_url::{is_ap_url, ApUrl},
     caip2::ChainId,
     crypto_eddsa::{
         ed25519_public_key_from_secret_key,
@@ -648,6 +648,19 @@ impl DbActor {
     pub fn is_portable(&self) -> bool {
         is_ap_url(&self.id)
     }
+
+    fn check_consistency(&self) -> Result<(), DatabaseTypeError> {
+        if self.is_portable() {
+            ApUrl::parse(&self.id).map_err(|_| DatabaseTypeError)?;
+            if self.gateways.is_empty() {
+                // At least one gateway must be stored
+                return Err(DatabaseTypeError);
+            };
+        };
+        // Don't verify HTTP URLs, some of them had been added
+        // before strict validation of IDs were introduced
+        Ok(())
+    }
 }
 
 #[allow(dead_code)]
@@ -738,6 +751,9 @@ impl DbActorProfile {
         } else if self.actor_json.is_none() {
             // Only remote actors may have empty acct
             return Err(DatabaseTypeError);
+        };
+        if let Some(ref actor_data) = self.actor_json {
+            actor_data.check_consistency()?;
         };
         // TODO: remove
         if self.actor_json.is_some() && self.identity_key.is_some() {
@@ -872,7 +888,10 @@ pub struct ProfileCreateData {
 
 impl ProfileCreateData {
     pub(super) fn check_consistency(&self) -> Result<(), DatabaseTypeError> {
-        let is_remote = self.actor_json.is_some();
+        let is_remote = self.actor_json.as_ref()
+            .map(|actor| actor.check_consistency())
+            .transpose()?
+            .is_some();
         check_public_keys(&self.public_keys, is_remote)?;
         check_identity_proofs(&self.identity_proofs)?;
         check_payment_options(&self.payment_options, is_remote)?;
@@ -902,7 +921,10 @@ pub struct ProfileUpdateData {
 
 impl ProfileUpdateData {
     pub(super) fn check_consistency(&self) -> Result<(), DatabaseTypeError> {
-        let is_remote = self.actor_json.is_some();
+        let is_remote = self.actor_json.as_ref()
+            .map(|actor| actor.check_consistency())
+            .transpose()?
+            .is_some();
         check_public_keys(&self.public_keys, is_remote)?;
         check_identity_proofs(&self.identity_proofs)?;
         check_payment_options(&self.payment_options, is_remote)?;

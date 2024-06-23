@@ -1,7 +1,10 @@
 use tokio_postgres::Client;
 use uuid::Uuid;
 
-use mitra_utils::urls::get_hostname;
+use mitra_utils::{
+    ap_url::is_ap_url,
+    urls::get_hostname,
+};
 
 use crate::users::test_utils::create_test_user;
 
@@ -30,14 +33,18 @@ pub async fn create_test_remote_profile(
     hostname: &str,
     actor_id: &str,
 ) -> DbActorProfile {
+    let mut db_actor = DbActor {
+        id: actor_id.to_string(),
+        ..Default::default()
+    };
+    if is_ap_url(&db_actor.id) {
+        db_actor.gateways.push(format!("https://{hostname}"));
+    };
     let profile_data = ProfileCreateData {
         username: username.to_string(),
         hostname: Some(hostname.to_string()),
         public_keys: vec![DbActorKey::default()],
-        actor_json: Some(DbActor {
-            id: actor_id.to_string(),
-            ..Default::default()
-        }),
+        actor_json: Some(db_actor),
         ..Default::default()
     };
     let profile = create_profile(db_client, profile_data).await.unwrap();
