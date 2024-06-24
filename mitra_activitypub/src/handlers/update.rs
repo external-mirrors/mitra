@@ -31,6 +31,10 @@ use mitra_validators::{
 use crate::{
     actors::handlers::{update_remote_profile, ActorJson},
     agent::build_federation_agent,
+    authentication::{
+        verify_portable_object,
+        AuthenticationError,
+    },
     handlers::create::{
         create_content_link,
         get_object_attachments,
@@ -42,6 +46,7 @@ use crate::{
     },
     identifiers::profile_actor_id,
     importers::fetch_any_object,
+    url::canonicalize_id,
     vocabulary::{NOTE, PERSON},
 };
 
@@ -154,9 +159,10 @@ async fn handle_update_person(
     if activity.object.id != activity.actor {
         return Err(ValidationError("actor ID mismatch").into());
     };
+    let canonical_actor_id = canonicalize_id(&activity.object.id)?;
     let profile = match get_remote_profile_by_actor_id(
         db_client,
-        &activity.object.id,
+        &canonical_actor_id,
     ).await {
         Ok(profile) => profile,
         // Ignore Update if profile is not found locally
@@ -188,6 +194,13 @@ pub async fn handle_update(
         let agent = build_federation_agent(&config.instance(), None);
         activity["object"] = fetch_any_object(&agent, &object_id).await?;
         log::info!("fetched object {}", object_id);
+    };
+    match verify_portable_object(&activity["object"]) {
+        Ok(_) => (),
+        Err(AuthenticationError::NotPortable) => (),
+        Err(_) => {
+            return Err(ValidationError("invalid portable object").into());
+        },
     };
     if is_actor(&activity["object"]) {
         handle_update_person(config, db_client, activity).await
