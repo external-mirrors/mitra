@@ -15,6 +15,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Accept `Update(Person)` C2S activities.
 - Disable same-origin check if fetched object is portable.
 - Log activities submitted to outbox.
+- Don't log canonical object ID on FEP-ef61 object verification.
 
 ## [2.23.0] - 2024-06-23
 

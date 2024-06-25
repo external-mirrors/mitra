@@ -14,7 +14,7 @@ use mitra_utils::{
     },
 };
 
-use super::url::{parse_url, Url};
+use super::url::Url;
 
 #[derive(Debug, Error)]
 pub enum AuthenticationError {
@@ -42,15 +42,13 @@ pub fn verify_portable_object(
 ) -> Result<Did, AuthenticationError> {
     let object_id = object["id"].as_str()
         .ok_or(AuthenticationError::InvalidObjectID("'id' property not found"))?;
-    let (canonical_object_id, maybe_gateway) = parse_url(object_id)
+    let canonical_object_id = Url::parse(object_id)
         .map_err(|error| AuthenticationError::InvalidObjectID(error.0))?;
     let canonical_object_id = match canonical_object_id {
         // Only portable objects must have an integrity proof
         Url::Http(_) => return Err(AuthenticationError::NotPortable),
         Url::Ap(ap_url) => ap_url,
     };
-    log::info!("canonical object ID: {}", canonical_object_id);
-    log::info!("gateway: {}", maybe_gateway.unwrap_or("-".to_string()));
     let authority = canonical_object_id.authority();
     let signature_data = get_json_signature(object)?;
     match signature_data.signer {
