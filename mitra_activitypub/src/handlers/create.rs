@@ -18,6 +18,7 @@ use mitra_federation::{
         parse_into_id_array,
     },
     fetch::fetch_file,
+    url::is_same_authority,
     utils::is_public,
 };
 use mitra_models::{
@@ -66,7 +67,6 @@ use crate::{
         is_actor_importer_error,
         ActorIdResolver,
     },
-    url::is_same_authority,
     vocabulary::*,
 };
 

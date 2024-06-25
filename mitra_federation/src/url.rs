@@ -8,7 +8,7 @@ use mitra_utils::{
     http_url::HttpUrl,
 };
 
-pub(super) const GATEWAY_PATH_PREFIX: &str = "/.well-known/apgateway/";
+pub const GATEWAY_PATH_PREFIX: &str = "/.well-known/apgateway/";
 
 #[derive(Debug, Error)]
 #[error("{0}")]
@@ -77,7 +77,6 @@ pub fn parse_url(
         Url::Ap(ap_url)
     } else {
         let http_url = HttpUrl::parse(value).map_err(ObjectIdError)?;
-        // TODO: FEP-EF61: see also mitra_validators::activitypub
         if http_url.path().starts_with(GATEWAY_PATH_PREFIX) {
             let (ap_url, gateway) = get_canonical_ap_url(http_url)?;
             maybe_gateway = Some(gateway);

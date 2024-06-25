@@ -1,5 +1,6 @@
 use std::fmt;
 
+use mitra_federation::url::GATEWAY_PATH_PREFIX;
 use mitra_models::users::types::User;
 use mitra_utils::{
     ap_url::with_ap_prefix,
@@ -10,8 +11,6 @@ use mitra_utils::{
     },
     did_key::DidKey,
 };
-
-use super::url::GATEWAY_PATH_PREFIX;
 
 fn fep_ef61_identity(public_key: &Ed25519PublicKey) -> DidKey {
     DidKey::from_ed25519_key(public_key)

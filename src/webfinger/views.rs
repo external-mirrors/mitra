@@ -8,7 +8,6 @@ use mitra_activitypub::{
         local_instance_actor_id,
         parse_local_actor_id,
     },
-    url::Url,
 };
 use mitra_config::{Config, Instance};
 use mitra_federation::{
@@ -18,6 +17,7 @@ use mitra_federation::{
         Link,
         JRD_MEDIA_TYPE,
     },
+    url::Url,
 };
 use mitra_models::{
     database::{

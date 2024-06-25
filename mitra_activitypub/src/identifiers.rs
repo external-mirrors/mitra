@@ -1,7 +1,10 @@
 use regex::Regex;
 use uuid::Uuid;
 
-use mitra_federation::identifiers::parse_object_id;
+use mitra_federation::{
+    identifiers::parse_object_id,
+    url::{parse_url, Url},
+};
 use mitra_models::{
     database::DatabaseTypeError,
     posts::types::Post,
@@ -17,10 +20,7 @@ use mitra_utils::{
 };
 use mitra_validators::errors::ValidationError;
 
-use crate::{
-    authority::Authority,
-    url::{parse_url, Url},
-};
+use crate::authority::Authority;
 
 pub fn local_actor_id_unified(authority: &Authority, username: &str) -> String {
     match authority {

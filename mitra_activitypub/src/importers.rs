@@ -18,6 +18,7 @@ use mitra_federation::{
         FetchError,
     },
     jrd::JsonResourceDescriptor,
+    url::parse_url,
 };
 use mitra_models::{
     database::{DatabaseClient, DatabaseError},
@@ -65,7 +66,6 @@ use crate::{
         parse_local_actor_id,
         parse_local_object_id,
     },
-    url::parse_url,
     vocabulary::GROUP,
 };
 

@@ -7,7 +7,10 @@ use serde_json::Value;
 use uuid::Uuid;
 
 use mitra_config::Config;
-use mitra_federation::fetch::FetchError;
+use mitra_federation::{
+    fetch::FetchError,
+    url::Url,
+};
 use mitra_models::{
     activitypub::queries::{
         save_activity,
@@ -46,7 +49,6 @@ use crate::{
     handlers::activity::handle_activity,
     identifiers::canonicalize_id,
     importers::import_from_outbox,
-    url::Url,
 };
 
 const JOB_TIMEOUT: u32 = 3600; // 1 hour
