@@ -1,6 +1,5 @@
 pub mod actors;
 pub mod agent;
-pub mod authentication;
 pub mod authority;
 pub mod builders;
 mod constants;

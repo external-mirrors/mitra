@@ -2,16 +2,16 @@ use actix_web::HttpRequest;
 use serde_json::{Value as JsonValue};
 
 use mitra_activitypub::{
-    authentication::{
-        verify_portable_object,
-        AuthenticationError as PortableObjectAuthenticationError,
-    },
     errors::HandlerError,
     identifiers::canonicalize_id,
     importers::ActorIdResolver,
 };
 use mitra_config::Config;
 use mitra_federation::{
+    authentication::{
+        verify_portable_object,
+        AuthenticationError as PortableObjectAuthenticationError,
+    },
     deserialization::get_object_id,
     utils::key_id_to_actor_id,
 };

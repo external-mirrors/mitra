@@ -1,5 +1,6 @@
 pub mod addresses;
 pub mod agent;
+pub mod authentication;
 pub mod constants;
 pub mod deliver;
 pub mod deserialization;

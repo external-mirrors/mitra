@@ -11,6 +11,7 @@ use mitra_config::{Config, Instance};
 use mitra_federation::{
     addresses::ActorAddress,
     agent::FederationAgent,
+    authentication::{verify_portable_object, AuthenticationError},
     deserialization::get_object_id,
     fetch::{
         fetch_json,
@@ -55,7 +56,6 @@ use crate::{
         ActorJson,
     },
     agent::build_federation_agent,
-    authentication::{verify_portable_object, AuthenticationError},
     errors::HandlerError,
     handlers::{
         activity::handle_activity,

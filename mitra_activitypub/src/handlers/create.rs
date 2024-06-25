@@ -9,6 +9,7 @@ use mitra_adapters::permissions::filter_mentions;
 use mitra_config::{Config, Instance};
 use mitra_federation::{
     addresses::ActorAddress,
+    authentication::{verify_portable_object, AuthenticationError},
     constants::{AP_MEDIA_TYPE, AS_MEDIA_TYPE},
     deserialization::{
         deserialize_into_object_id,
@@ -52,7 +53,6 @@ use mitra_validators::{
 
 use crate::{
     agent::build_federation_agent,
-    authentication::{verify_portable_object, AuthenticationError},
     builders::note::LinkTag,
     identifiers::{
         canonicalize_id,

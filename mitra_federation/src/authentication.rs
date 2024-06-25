@@ -1,7 +1,6 @@
 use serde_json::{Value as JsonValue};
 use thiserror::Error;
 
-use mitra_federation::url::{parse_url, Url};
 use mitra_utils::{
     did::Did,
     json_signatures::{
@@ -14,6 +13,8 @@ use mitra_utils::{
         },
     },
 };
+
+use super::url::{parse_url, Url};
 
 #[derive(Debug, Error)]
 pub enum AuthenticationError {

@@ -17,7 +17,6 @@ use mitra_activitypub::{
         build_instance_actor,
         build_local_actor,
     },
-    authentication::verify_portable_object,
     authority::Authority,
     builders::{
         announce::build_announce,
@@ -49,6 +48,7 @@ use mitra_activitypub::{
 };
 use mitra_config::Config;
 use mitra_federation::{
+    authentication::verify_portable_object,
     constants::{AP_MEDIA_TYPE, AP_PUBLIC},
     deserialization::get_object_id,
     http_server::is_activitypub_request,

@@ -7,6 +7,10 @@ use serde_json::{Value as JsonValue};
 use mitra_adapters::permissions::filter_mentions;
 use mitra_config::Config;
 use mitra_federation::{
+    authentication::{
+        verify_portable_object,
+        AuthenticationError,
+    },
     deserialization::{deserialize_into_object_id, get_object_id},
     utils::{is_actor, is_object},
 };
@@ -31,10 +35,6 @@ use mitra_validators::{
 use crate::{
     actors::handlers::{update_remote_profile, ActorJson},
     agent::build_federation_agent,
-    authentication::{
-        verify_portable_object,
-        AuthenticationError,
-    },
     handlers::create::{
         create_content_link,
         get_object_attachments,

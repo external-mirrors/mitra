@@ -12,7 +12,6 @@ use mitra::payments::monero::{
 };
 use mitra_activitypub::{
     agent::build_federation_agent,
-    authentication::verify_portable_object,
     builders::{
         delete_note::prepare_delete_note,
         delete_person::prepare_delete_person,
@@ -36,7 +35,10 @@ use mitra_adapters::{
     },
 };
 use mitra_config::Config;
-use mitra_federation::fetch::fetch_file;
+use mitra_federation::{
+    authentication::verify_portable_object,
+    fetch::fetch_file,
+};
 use mitra_models::{
     attachments::queries::delete_unused_attachments,
     background_jobs::queries::get_job_count,
