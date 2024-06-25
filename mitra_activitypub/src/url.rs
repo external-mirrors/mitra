@@ -1,6 +1,8 @@
 use std::fmt;
 use std::str::FromStr;
 
+use thiserror::Error;
+
 use mitra_utils::{
     ap_url::{is_ap_url, ApUrl},
     http_url::HttpUrl,
@@ -10,6 +12,10 @@ use mitra_validators::{
 };
 
 pub(super) const GATEWAY_PATH_PREFIX: &str = "/.well-known/apgateway/";
+
+#[derive(Debug, Error)]
+#[error("{0}")]
+pub struct ObjectIdError(pub &'static str);
 
 // TODO: FEP-EF61: rename to ID
 pub enum Url {
@@ -22,6 +28,11 @@ fn with_gateway(ap_url: &ApUrl, gateway_url: &str) -> String {
 }
 
 impl Url {
+    fn parse(value: &str) -> Result<Self, ObjectIdError> {
+        let (url, _) = parse_url(value)?;
+        Ok(url)
+    }
+
     pub fn to_http_url(&self, maybe_gateway: Option<&str>) -> Option<String> {
         let url = match self {
             Self::Http(http_url) => http_url.to_string(),
@@ -49,26 +60,26 @@ impl fmt::Display for Url {
 
 fn get_canonical_ap_url(
     http_url: HttpUrl,
-) -> Result<(ApUrl, String), ValidationError> {
+) -> Result<(ApUrl, String), ObjectIdError> {
     let relative_http_url = http_url.to_relative();
     let did_url = relative_http_url
         .strip_prefix(GATEWAY_PATH_PREFIX)
-        .ok_or(ValidationError("invalid gateway URL"))?;
+        .ok_or(ObjectIdError("invalid gateway URL"))?;
     let ap_url = ApUrl::from_did_url(did_url)
-        .map_err(ValidationError)?;
+        .map_err(ObjectIdError)?;
     let gateway = http_url.origin();
     Ok((ap_url, gateway))
 }
 
 pub fn parse_url(
     value: &str,
-) -> Result<(Url, Option<String>), ValidationError> {
+) -> Result<(Url, Option<String>), ObjectIdError> {
     let mut maybe_gateway = None;
     let url = if is_ap_url(value) {
-        let ap_url = ApUrl::parse(value).map_err(ValidationError)?;
+        let ap_url = ApUrl::parse(value).map_err(ObjectIdError)?;
         Url::Ap(ap_url)
     } else {
-        let http_url = HttpUrl::parse(value).map_err(ValidationError)?;
+        let http_url = HttpUrl::parse(value).map_err(ObjectIdError)?;
         // TODO: FEP-EF61: see also mitra_validators::activitypub
         if http_url.path().starts_with(GATEWAY_PATH_PREFIX) {
             let (ap_url, gateway) = get_canonical_ap_url(http_url)?;
@@ -82,22 +93,21 @@ pub fn parse_url(
 }
 
 impl FromStr for Url {
-    type Err = ValidationError;
+    type Err = ObjectIdError;
 
     fn from_str(value: &str) -> Result<Self, Self::Err> {
-        let (url, _) = parse_url(value)?;
-        Ok(url)
+        Self::parse(value)
     }
 }
 
 pub fn canonicalize_id(url: &str) -> Result<String, ValidationError> {
-    let url = Url::from_str(url)?;
+    let url = Url::parse(url).map_err(|error| ValidationError(error.0))?;
     Ok(url.to_string())
 }
 
-pub fn is_same_authority(id_1: &str, id_2: &str) -> Result<bool, ValidationError> {
-    let id_1 = Url::from_str(id_1)?;
-    let id_2 = Url::from_str(id_2)?;
+pub fn is_same_authority(id_1: &str, id_2: &str) -> Result<bool, ObjectIdError> {
+    let id_1 = Url::parse(id_1)?;
+    let id_2 = Url::parse(id_2)?;
     let is_same = match (id_1, id_2) {
         (Url::Http(http_url_1), Url::Http(http_url_2)) => {
             http_url_1.authority() == http_url_2.authority()
