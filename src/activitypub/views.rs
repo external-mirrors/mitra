@@ -37,6 +37,7 @@ use mitra_activitypub::{
     },
     errors::HandlerError,
     identifiers::{
+        canonicalize_id,
         local_actor_id,
         local_object_id,
         local_object_replies,
@@ -45,7 +46,6 @@ use mitra_activitypub::{
     },
     importers::register_portable_actor,
     queues::IncomingActivityJobData,
-    url::canonicalize_id,
 };
 use mitra_config::Config;
 use mitra_federation::{

@@ -19,7 +19,7 @@ use mitra_validators::errors::ValidationError;
 
 use crate::{
     authority::Authority,
-    url::parse_url,
+    url::{parse_url, Url},
 };
 
 pub fn local_actor_id_unified(authority: &Authority, username: &str) -> String {
@@ -258,6 +258,11 @@ pub fn compatible_profile_actor_id(
     }
 }
 
+pub fn canonicalize_id(url: &str) -> Result<String, ValidationError> {
+    let url = Url::parse(url).map_err(|error| ValidationError(error.0))?;
+    Ok(url.to_string())
+}
+
 #[cfg(test)]
 mod tests {
     use uuid::uuid;
@@ -414,6 +419,41 @@ mod tests {
         assert_eq!(
             actor_id,
             "https://social.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor",
+        );
+    }
+
+    #[test]
+    fn test_canonicalize_id_http() {
+        let url = "https://social.example/users/alice#main-key";
+        let canonical_url = canonicalize_id(url).unwrap();
+        assert_eq!(canonical_url, url);
+
+        let url = "https://social.example";
+        let canonical_url = canonicalize_id(url).unwrap();
+        assert_eq!(canonical_url, url);
+    }
+
+    #[test]
+    fn test_canonicalize_id_http_idn() {
+        let url = "https://δοκιμή.example/users/alice#main-key";
+        let result = canonicalize_id(url);
+        assert!(result.is_err()); // not a URI
+    }
+
+    #[test]
+    fn test_canonicalize_id_ap() {
+        let url = "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor?type=group";
+        let canonical_url = canonicalize_id(url).unwrap();
+        assert_eq!(canonical_url, url);
+    }
+
+    #[test]
+    fn test_canonicalize_id_gateway() {
+        let url = "https://social.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor#main-key";
+        let canonical_url = canonicalize_id(url).unwrap();
+        assert_eq!(
+            canonical_url,
+            "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor#main-key",
         );
     }
 }

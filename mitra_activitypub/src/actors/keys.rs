@@ -27,8 +27,7 @@ use mitra_validators::{
 };
 
 use crate::{
-    identifiers::local_actor_key_id,
-    url::canonicalize_id,
+    identifiers::{canonicalize_id, local_actor_key_id},
     vocabulary::MULTIKEY,
 };
 

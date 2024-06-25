@@ -44,8 +44,9 @@ use crate::{
     },
     errors::HandlerError,
     handlers::activity::handle_activity,
+    identifiers::canonicalize_id,
     importers::import_from_outbox,
-    url::{canonicalize_id, Url},
+    url::Url,
 };
 
 const JOB_TIMEOUT: u32 = 3600; // 1 hour

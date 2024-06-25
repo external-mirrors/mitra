@@ -53,7 +53,11 @@ use crate::{
     agent::build_federation_agent,
     authentication::{verify_portable_object, AuthenticationError},
     builders::note::LinkTag,
-    identifiers::{parse_local_actor_id, profile_actor_id},
+    identifiers::{
+        canonicalize_id,
+        parse_local_actor_id,
+        profile_actor_id,
+    },
     importers::{
         get_or_import_profile_by_actor_address,
         get_post_by_object_id,
@@ -62,7 +66,7 @@ use crate::{
         is_actor_importer_error,
         ActorIdResolver,
     },
-    url::{is_same_authority, canonicalize_id},
+    url::is_same_authority,
     vocabulary::*,
 };
 

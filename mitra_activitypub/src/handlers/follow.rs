@@ -22,9 +22,8 @@ use mitra_validators::{
 
 use crate::{
     builders::accept_follow::prepare_accept_follow,
-    identifiers::parse_local_actor_id,
+    identifiers::{canonicalize_id, parse_local_actor_id},
     importers::ActorIdResolver,
-    url::canonicalize_id,
     vocabulary::PERSON,
 };
 

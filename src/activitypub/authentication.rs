@@ -7,8 +7,8 @@ use mitra_activitypub::{
         AuthenticationError as PortableObjectAuthenticationError,
     },
     errors::HandlerError,
+    identifiers::canonicalize_id,
     importers::ActorIdResolver,
-    url::canonicalize_id,
 };
 use mitra_config::Config;
 use mitra_federation::{

@@ -40,9 +40,12 @@ use crate::{
         PAYMENT_LINK_RELATION_TYPE,
     },
     contexts::W3ID_VALUEFLOWS_CONTEXT,
-    identifiers::{local_actor_id_unified, local_actor_proposal_id},
+    identifiers::{
+        canonicalize_id,
+        local_actor_id_unified,
+        local_actor_proposal_id,
+    },
     identity::VerifiableIdentityStatement,
-    url::canonicalize_id,
     vocabulary::{
         LINK,
         PROPERTY_VALUE,

@@ -60,8 +60,12 @@ use crate::{
         activity::handle_activity,
         create::{get_object_links, handle_note, AttributedObject},
     },
-    identifiers::{parse_local_actor_id, parse_local_object_id},
-    url::{canonicalize_id, parse_url},
+    identifiers::{
+        canonicalize_id,
+        parse_local_actor_id,
+        parse_local_object_id,
+    },
+    url::parse_url,
     vocabulary::GROUP,
 };
 

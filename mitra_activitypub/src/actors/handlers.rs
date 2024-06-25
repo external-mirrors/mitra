@@ -54,8 +54,8 @@ use crate::{
         emoji::handle_emoji,
         proposal::{parse_proposal, Proposal},
     },
+    identifiers::canonicalize_id,
     importers::fetch_any_object,
-    url::canonicalize_id,
     vocabulary::{
         EMOJI,
         HASHTAG,

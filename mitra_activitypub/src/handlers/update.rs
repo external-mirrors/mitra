@@ -44,9 +44,8 @@ use crate::{
         get_object_url,
         AttributedObject,
     },
-    identifiers::profile_actor_id,
+    identifiers::{canonicalize_id, profile_actor_id},
     importers::fetch_any_object,
-    url::canonicalize_id,
     vocabulary::{NOTE, PERSON},
 };
 
