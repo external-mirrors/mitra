@@ -11,7 +11,7 @@ use mitra_utils::{
     did_key::DidKey,
 };
 
-pub(super) const GATEWAY_PATH_PREFIX: &str = "/.well-known/apgateway/";
+use super::url::GATEWAY_PATH_PREFIX;
 
 fn fep_ef61_identity(public_key: &Ed25519PublicKey) -> DidKey {
     DidKey::from_ed25519_key(public_key)

@@ -9,7 +9,7 @@ use mitra_validators::{
     errors::ValidationError,
 };
 
-use crate::authority::GATEWAY_PATH_PREFIX;
+pub(super) const GATEWAY_PATH_PREFIX: &str = "/.well-known/apgateway/";
 
 // TODO: FEP-EF61: rename to ID
 pub enum Url {
