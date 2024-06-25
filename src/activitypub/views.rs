@@ -781,8 +781,8 @@ pub async fn apgateway_outbox_client_to_server_view(
         &canonical_actor_id,
     ).await?;
     if !signer.has_account() {
-        // Only local portable users can have outbox
-        return Err(HttpError::NotFoundError("portable user"));
+        // Only local portable users can post to outbox
+        return Ok(HttpResponse::MethodNotAllowed().finish());
     };
     let collection_id = format!(
         "{}{}",
@@ -791,6 +791,7 @@ pub async fn apgateway_outbox_client_to_server_view(
     );
     let canonical_collection_id = canonicalize_id(&collection_id)?;
     if canonical_collection_id != signer.expect_actor_data().outbox {
+        // Wrong outbox path
         return Err(HttpError::PermissionError);
     };
     save_activity(db_client, &canonical_activity_id, &activity).await?;

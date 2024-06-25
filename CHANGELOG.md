@@ -16,6 +16,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Disable same-origin check if fetched object is portable.
 - Log activities submitted to outbox.
 - Don't log canonical object ID on FEP-ef61 object verification.
+- Return `405 Method Not Allowed` if client can't POST to outbox.
 
 ## [2.23.0] - 2024-06-23
 
