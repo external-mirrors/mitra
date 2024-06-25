@@ -758,6 +758,8 @@ pub async fn apgateway_outbox_client_to_server_view(
     request_path: Uri,
     activity: web::Json<JsonValue>,
 ) -> Result<HttpResponse, HttpError> {
+    let activity_type = activity["type"].as_str().unwrap_or("Unknown");
+    log::info!("received in {}: {}", request_path, activity_type);
     let db_client = &mut **get_database_client(&db_pool).await?;
     let authority = verify_portable_object(&activity).map_err(|error| {
         log::warn!("C2S authentication error: {}", error);
