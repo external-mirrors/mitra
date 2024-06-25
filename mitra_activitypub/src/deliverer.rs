@@ -20,16 +20,19 @@ use mitra_federation::{
 };
 use mitra_models::{
     profiles::types::PublicKeyType,
-    users::types::User,
+    users::types::{PortableUser, User},
 };
 use mitra_utils::{
     crypto_eddsa::{
+        ed25519_public_key_from_secret_key,
         ed25519_secret_key_from_bytes,
         Ed25519SecretKey,
     },
     crypto_rsa::{
+        rsa_public_key_to_pkcs1_der,
         rsa_secret_key_from_pkcs1_der,
         rsa_secret_key_to_pkcs1_der,
+        RsaPublicKey,
         RsaSecretKey,
     },
     json_signatures::create::{
@@ -135,6 +138,30 @@ impl Sender {
             ed25519_secret_key: Some(user.ed25519_secret_key),
             ed25519_key_id: Some(ed25519_key_id),
         }
+    }
+
+    // Returns None if the registered secret key doesn't correspond to
+    // any of public keys associated with the actor
+    pub fn from_portable_user(user: &PortableUser) -> Option<Self> {
+        let rsa_public_key = RsaPublicKey::from(&user.rsa_secret_key);
+        let rsa_public_key_der = rsa_public_key_to_pkcs1_der(&rsa_public_key)
+            .expect("RSA key should be serializable");
+        let rsa_key_id = user.profile.public_keys
+            .find_by_value(&rsa_public_key_der)?
+            .id.clone();
+        let ed25519_public_key =
+            ed25519_public_key_from_secret_key(&user.ed25519_secret_key);
+        let ed25519_key_id = user.profile.public_keys
+            .find_by_value(ed25519_public_key.as_bytes())?
+            .id.clone();
+        let sender = Self {
+            username: user.profile.username.clone(),
+            rsa_secret_key: user.rsa_secret_key.clone(),
+            rsa_key_id: Some(rsa_key_id),
+            ed25519_secret_key: Some(user.ed25519_secret_key),
+            ed25519_key_id: Some(ed25519_key_id),
+        };
+        Some(sender)
     }
 }
 

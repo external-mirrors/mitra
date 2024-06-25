@@ -574,6 +574,25 @@ pub async fn get_portable_user_by_name(
     Ok(user)
 }
 
+pub async fn get_portable_user_by_actor_id(
+    db_client: &impl DatabaseClient,
+    actor_id: &str,
+) -> Result<PortableUser, DatabaseError> {
+    let maybe_row = db_client.query_opt(
+        "
+        SELECT portable_user_account, actor_profile
+        FROM portable_user_account JOIN actor_profile USING (id)
+        WHERE actor_profile.actor_id = $1
+        ",
+        &[&actor_id],
+    ).await?;
+    let row = maybe_row.ok_or(DatabaseError::NotFound("user"))?;
+    let db_user: DbPortableUser = row.try_get("portable_user_account")?;
+    let db_profile: DbActorProfile = row.try_get("actor_profile")?;
+    let user = PortableUser::new(db_user, db_profile)?;
+    Ok(user)
+}
+
 #[cfg(test)]
 mod tests {
     use serde_json::json;

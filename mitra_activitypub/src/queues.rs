@@ -35,7 +35,7 @@ use mitra_models::{
     },
     profiles::types::DbActor,
     users::queries::get_user_by_id,
-    users::types::User,
+    users::types::{PortableUser, User},
 };
 
 use crate::{
@@ -226,6 +226,46 @@ impl OutgoingActivityJobData {
         }
     }
 
+    pub fn new_forwarded(
+        instance_url: &str,
+        sender: &PortableUser,
+        activity: &JsonValue,
+    ) -> Option<Self> {
+        // Sort and de-duplicate recipients
+        let mut recipient_map = BTreeMap::new();
+        let actor_data = sender.profile.expect_actor_data();
+        for gateway_url in &actor_data.gateways {
+            if gateway_url == instance_url {
+                // Already cached
+                continue;
+            };
+            let http_actor_outbox = Url::parse(&actor_data.outbox)
+                .expect("actor outbox URL should be valid")
+                .to_http_url(Some(gateway_url))
+                .expect("actor outbox URL should be valid");
+            if !recipient_map.contains_key(&http_actor_outbox) {
+                let recipient = Recipient {
+                    id: actor_data.id.clone(),
+                    inbox: http_actor_outbox.clone(),
+                    is_delivered: false,
+                    is_unreachable: false,
+                    is_local: false, // activity from outbox, don't put it in inbox
+                };
+                recipient_map.insert(http_actor_outbox, recipient);
+            };
+        };
+        let sender_id = sender.id;
+        let sender = Sender::from_portable_user(sender)?;
+        let job_data = Self {
+            activity: activity.clone(),
+            sender_id: sender_id,
+            sender: Some(sender),
+            recipients: recipient_map.into_values().collect(),
+            failure_count: 0,
+        };
+        Some(job_data)
+    }
+
     async fn save_activity(
         &mut self,
         db_client: &impl DatabaseClient,
@@ -283,7 +323,7 @@ impl OutgoingActivityJobData {
         ).await
     }
 
-    async fn enqueue(
+    pub async fn enqueue(
         self,
         db_client: &impl DatabaseClient,
     ) -> Result<(), DatabaseError> {

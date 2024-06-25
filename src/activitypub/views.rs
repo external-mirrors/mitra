@@ -39,7 +39,7 @@ use mitra_activitypub::{
         LocalActorCollection,
     },
     importers::register_portable_actor,
-    queues::IncomingActivityJobData,
+    queues::{IncomingActivityJobData, OutgoingActivityJobData},
 };
 use mitra_config::Config;
 use mitra_federation::{
@@ -64,11 +64,9 @@ use mitra_models::{
     emojis::queries::get_local_emoji_by_name,
     posts::helpers::{add_related_posts, can_view_post},
     posts::queries::{get_post_by_id, get_posts_by_author, get_thread},
-    profiles::{
-        queries::get_remote_profile_by_actor_id,
-        types::PaymentOption,
-    },
+    profiles::types::PaymentOption,
     users::queries::{
+        get_portable_user_by_actor_id,
         get_user_by_id,
         get_user_by_name,
     },
@@ -740,6 +738,7 @@ pub async fn apgateway_outbox_client_to_server_view(
     let activity_type = activity["type"].as_str().unwrap_or("Unknown");
     log::info!("received in {}: {}", request_path, activity_type);
     let db_client = &mut **get_database_client(&db_pool).await?;
+    let instance = config.instance();
     let authority = verify_portable_object(&activity).map_err(|error| {
         log::warn!("C2S authentication error: {}", error);
         HttpError::PermissionError
@@ -755,21 +754,24 @@ pub async fn apgateway_outbox_client_to_server_view(
     if canonical_actor_id_ap.authority() != &authority {
         return Err(ValidationError("actor and activity authorities do not match").into());
     };
-    let signer = get_remote_profile_by_actor_id(
+    let signer = match get_portable_user_by_actor_id(
         db_client,
         &canonical_actor_id,
-    ).await?;
-    if !signer.has_account() {
-        // Only local portable users can post to outbox
-        return Ok(HttpResponse::MethodNotAllowed().finish());
+    ).await {
+        Ok(signer) => signer,
+        Err(DatabaseError::NotFound(_)) => {
+            // Only local portable users can post to outbox
+            return Ok(HttpResponse::MethodNotAllowed().finish());
+        },
+        Err(other_error) => return Err(other_error.into()),
     };
     let collection_id = format!(
         "{}{}",
-        config.instance_url(),
+        instance.url(),
         request_path,
     );
     let canonical_collection_id = canonicalize_id(&collection_id)?;
-    if canonical_collection_id != signer.expect_actor_data().outbox {
+    if canonical_collection_id != signer.profile.expect_actor_data().outbox {
         // Wrong outbox path
         return Err(HttpError::PermissionError);
     };
@@ -783,6 +785,15 @@ pub async fn apgateway_outbox_client_to_server_view(
     IncomingActivityJobData::new(&activity, true)
         .into_job(db_client, 0)
         .await?;
+    // Forward only if HTTP signature can be created
+    if let Some(job_data) = OutgoingActivityJobData::new_forwarded(
+        &instance.url(),
+        &signer,
+        &activity,
+    ) {
+        // Activity has already been saved
+        job_data.enqueue(db_client).await?;
+    };
     Ok(HttpResponse::Accepted().finish())
 }
 

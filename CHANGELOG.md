@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+
+- Forward portable activities from outbox to other actor's clones.
+
 ### Fixed
 
 - Ignore delivery to local inbox if it doesn't exist.
