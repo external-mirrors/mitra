@@ -11,7 +11,7 @@ use mitra_config::{Config, Instance};
 use mitra_federation::{
     addresses::ActorAddress,
     agent::FederationAgent,
-    authentication::{verify_portable_object, AuthenticationError},
+    authentication::verify_portable_object,
     deserialization::get_object_id,
     fetch::{
         fetch_json,
@@ -112,13 +112,7 @@ pub async fn fetch_any_object_with_context<T: DeserializeOwned>(
     object_id: &str,
 ) -> Result<T, FetchError> {
     let http_url = context.prepare_object_id(object_id)?;
-    let object_json: JsonValue = fetch_object(agent, &http_url).await?;
-    match verify_portable_object(&object_json) {
-        Ok(_) => (),
-        Err(AuthenticationError::NotPortable) => (), // skip proof verification
-        Err(_) => return Err(FetchError::InvalidProof),
-    };
-    let object: T = serde_json::from_value(object_json)?;
+    let object: T = fetch_object(agent, &http_url).await?;
     Ok(object)
 }
 

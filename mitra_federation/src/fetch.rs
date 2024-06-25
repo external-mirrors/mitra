@@ -13,6 +13,10 @@ use mitra_utils::{
 
 use super::{
     agent::FederationAgent,
+    authentication::{
+        verify_portable_object,
+        AuthenticationError,
+    },
     constants::{AP_MEDIA_TYPE, AS_MEDIA_TYPE},
     http_client::{
         build_http_client,
@@ -178,15 +182,24 @@ pub async fn fetch_object<T: DeserializeOwned>(
         .ok_or(FetchError::ResponseTooLarge)?;
 
     let object_json: JsonValue = serde_json::from_slice(&data)?;
-    // Verify object is owned by server
     let object_location = response.url().as_str();
     let object_id = object_json["id"].as_str()
         .ok_or(FetchError::NoObjectId(object_location.to_string()))?;
-    let is_same_origin = is_same_hostname(object_id, object_location)
-        .unwrap_or(false);
-    if !is_same_origin {
-        return Err(FetchError::UnexpectedObjectId(object_location.to_string()));
+
+    // Perform authentication
+    match verify_portable_object(&object_json) {
+        Ok(_) => (),
+        Err(AuthenticationError::NotPortable) => {
+            // Verify origin is object is not portable
+            let is_same_origin = is_same_hostname(object_id, object_location)
+                .unwrap_or(false);
+            if !is_same_origin {
+                return Err(FetchError::UnexpectedObjectId(object_location.to_string()));
+            };
+        },
+        Err(_) => return Err(FetchError::InvalidProof),
     };
+
     // Verify object is not a malicious upload
     let content_type = response.headers()
         .get(header::CONTENT_TYPE)
