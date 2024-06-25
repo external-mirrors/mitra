@@ -154,9 +154,7 @@ async fn import_profile(
 ) -> Result<DbActorProfile, HandlerError> {
     let agent = build_federation_agent(instance, None);
     let actor: ActorJson = fetch_any_object(&agent, actor_id).await?;
-    // TODO: FEP-ef61: 'ap' URLs are not supported
-    // TODO: FEP-ef61: local portable actors are not supported
-    if actor.hostname()? == instance.hostname() {
+    if actor.is_local(&instance.hostname())? {
         return Err(HandlerError::LocalObject);
     };
     let canonical_actor_id = canonicalize_id(&actor.id)?;

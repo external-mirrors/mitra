@@ -16,6 +16,7 @@ use mitra_federation::{
         parse_into_id_array,
     },
     fetch::fetch_file,
+    url::Url,
 };
 use mitra_models::{
     activitypub::queries::save_actor,
@@ -98,10 +99,10 @@ impl<'de> Deserialize<'de> for ActorJson {
 }
 
 impl ActorJson {
-    pub fn hostname(&self) -> Result<String, ValidationError> {
-        let hostname = get_hostname(&self.id)
+    pub fn is_local(&self, local_hostname: &str) -> Result<bool, ValidationError> {
+        let canonical_actor_id = Url::parse(&self.id)
             .map_err(|_| ValidationError("invalid actor ID"))?;
-        Ok(hostname)
+        Ok(canonical_actor_id.authority() == local_hostname)
     }
 }
 
@@ -650,6 +651,26 @@ mod tests {
     };
     use crate::actors::keys::{Multikey, PublicKey};
     use super::*;
+
+    #[test]
+    fn test_actor_json_is_local() {
+        let actor_json = ActorJson {
+            id: "https://social.example/users/1".to_string(),
+            value: Default::default()
+        };
+        let is_local = actor_json.is_local("social.example").unwrap();
+        assert!(is_local);
+    }
+
+    #[test]
+    fn test_actor_json_is_local_compatible_id() {
+        let actor_json = ActorJson {
+            id: "https://gateway.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor".to_string(),
+            value: Default::default()
+        };
+        let is_local = actor_json.is_local("gateway.example").unwrap();
+        assert!(!is_local);
+    }
 
     #[test]
     fn test_get_actor_hostname() {

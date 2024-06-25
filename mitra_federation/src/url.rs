@@ -30,6 +30,13 @@ impl Url {
         Ok(url)
     }
 
+    pub fn authority(&self) -> String {
+        match self {
+            Self::Http(http_url) => http_url.authority().to_string(),
+            Self::Ap(ap_url) => ap_url.authority().to_string(),
+        }
+    }
+
     pub fn to_http_url(&self, maybe_gateway: Option<&str>) -> Option<String> {
         let url = match self {
             Self::Http(http_url) => http_url.to_string(),
