@@ -200,10 +200,19 @@ pub struct Actor {
 }
 
 impl Actor {
-    fn hostname(&self) -> Result<String, ValidationError> {
-        let hostname = get_hostname(&self.id)
+    fn hostname(&self) -> Result<Option<String>, ValidationError> {
+        let canonical_actor_id = Url::parse(&self.id)
             .map_err(|_| ValidationError("invalid actor ID"))?;
-        Ok(hostname)
+        let maybe_hostname = match canonical_actor_id {
+            Url::Http(http_url) => {
+                let hostname = get_hostname(&http_url.to_string())
+                    .map_err(|_| ValidationError("invalid actor ID"))?;
+                Some(hostname)
+            },
+            // TODO: FEP-EF61: verify primary gateway
+            Url::Ap(_) => None,
+        };
+        Ok(maybe_hostname)
     }
 
     fn to_db_actor(&self) -> Result<DbActor, ValidationError> {
@@ -498,7 +507,7 @@ async fn parse_tags(
 pub async fn create_remote_profile(
     agent: &FederationAgent,
     db_client: &mut impl DatabaseClient,
-    instance_hostname: &str,
+    _instance_hostname: &str,
     storage: &MediaStorage,
     actor_json: JsonValue,
 ) -> Result<DbActorProfile, HandlerError> {
@@ -506,13 +515,8 @@ pub async fn create_remote_profile(
         .map_err(|_| ValidationError("invalid actor object"))?;
     // TODO: implement reverse webfinger lookup
     // https://swicg.github.io/activitypub-webfinger/#reverse-discovery
-    let actor_hostname = actor.hostname()?;
-    let maybe_actor_hostname = if actor_hostname == instance_hostname {
-        // Portable actor is attempting to register
-        None
-    } else {
-        Some(actor_hostname)
-    };
+    // TODO: FEP-EF61: make reverse lookup on primary gateway
+    let maybe_actor_hostname = actor.hostname()?;
     let actor_data = actor.to_db_actor()?;
     let (maybe_avatar, maybe_banner) = fetch_actor_images(
         agent,
@@ -675,12 +679,35 @@ mod tests {
     #[test]
     fn test_get_actor_hostname() {
         let actor = Actor {
-            id: "https://δοκιμή.example/users/1".to_string(),
+            id: "https://xn--jxalpdlp.example/users/1".to_string(),
             preferred_username: "test".to_string(),
             ..Default::default()
         };
-        let hostname = actor.hostname().unwrap();
-        assert_eq!(hostname, "xn--jxalpdlp.example");
+        let maybe_hostname = actor.hostname().unwrap();
+        assert_eq!(maybe_hostname.as_deref(), Some("xn--jxalpdlp.example"));
+    }
+
+    #[test]
+    fn test_get_actor_hostname_ip_and_port() {
+        let actor = Actor {
+            id: "https://127.0.0.1:8380/users/1".to_string(),
+            preferred_username: "test".to_string(),
+            ..Default::default()
+        };
+        let maybe_hostname = actor.hostname().unwrap();
+        assert_eq!(maybe_hostname.as_deref(), Some("127.0.0.1"));
+    }
+
+    #[test]
+    fn test_get_actor_hostname_gateway() {
+        let actor = Actor {
+            id: "https://social.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor".to_string(),
+            preferred_username: "test".to_string(),
+            gateways: vec!["https://gateway.example".to_string()],
+            ..Default::default()
+        };
+        let maybe_hostname = actor.hostname().unwrap();
+        assert_eq!(maybe_hostname, None);
     }
 
     #[test]
