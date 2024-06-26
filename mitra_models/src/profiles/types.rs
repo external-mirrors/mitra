@@ -172,6 +172,10 @@ impl PublicKeys {
         let Self(public_keys) = self;
         public_keys
     }
+
+    pub fn find_by_value(&self, key_data: &[u8]) -> Option<&DbActorKey> {
+        self.inner().iter().find(|key| key.key_data == key_data)
+    }
 }
 
 json_from_sql!(PublicKeys);

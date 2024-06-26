@@ -46,7 +46,10 @@ use mitra_utils::{
     crypto_rsa::rsa_secret_key_from_multikey,
     urls::guess_protocol,
 };
-use mitra_validators::errors::ValidationError;
+use mitra_validators::{
+    errors::ValidationError,
+    users::validate_portable_user_data,
+};
 
 use crate::{
     actors::handlers::{
@@ -718,6 +721,7 @@ pub async fn register_portable_actor(
         ed25519_secret_key: ed25519_secret_key,
         invite_code: invite_code.to_string(),
     };
+    validate_portable_user_data(&user_data, &profile)?;
     let user = create_portable_user(db_client, user_data).await?;
     create_signup_notifications(db_client, user.id).await?;
     Ok(user)
