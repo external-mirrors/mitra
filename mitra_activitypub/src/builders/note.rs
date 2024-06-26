@@ -10,7 +10,7 @@ use mitra_models::{
     database::{DatabaseClient, DatabaseError},
     posts::queries::get_post_author,
     posts::types::{Post, Visibility},
-    profiles::types::DbActor,
+    profiles::types::{DbActor, WebfingerHostname},
     relationships::queries::{get_followers, get_subscribers},
     users::types::User,
 };
@@ -162,11 +162,17 @@ pub fn build_note(
 
     let mut tags = vec![];
     for profile in &post.mentions {
-        let actor_address = ActorAddress::new_unchecked(
-            &profile.username,
-            profile.hostname.as_deref().unwrap_or(instance_hostname),
-        );
-        let tag_name = actor_address.handle();
+        let tag_name = match profile.hostname() {
+            WebfingerHostname::Local => {
+                ActorAddress::new_unchecked(
+                    &profile.username, instance_hostname).handle()
+            },
+            WebfingerHostname::Remote(hostname) => {
+                ActorAddress::new_unchecked(
+                    &profile.username, &hostname).handle()
+            },
+            WebfingerHostname::Unknown => format!("@{}", profile.username),
+        };
         let actor_id = compatible_profile_actor_id(instance_url, profile);
         if !primary_audience.contains(&actor_id) {
             primary_audience.push(actor_id.clone());

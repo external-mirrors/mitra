@@ -700,7 +700,6 @@ pub async fn register_portable_actor(
             profile_updated
         },
         Err(DatabaseError::NotFound(_)) => {
-            // TODO: create profile and user account in a single transaction
             let profile = create_remote_profile(
                 &agent,
                 db_client,

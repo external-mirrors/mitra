@@ -22,7 +22,6 @@ use crate::relationships::types::RelationshipType;
 
 use super::types::{
     get_identity_key,
-    get_profile_acct,
     Aliases,
     DbActorProfile,
     ExtraFields,
@@ -31,6 +30,7 @@ use super::types::{
     ProfileCreateData,
     ProfileUpdateData,
     PublicKeys,
+    WebfingerHostname,
 };
 
 // Nullifies acct field on conflicting records
@@ -149,15 +149,20 @@ pub async fn create_profile(
     if let Some(ref hostname) = profile_data.hostname {
         create_instance(&transaction, hostname).await?;
     };
-    let profile_acct = get_profile_acct(
-        &profile_data.username,
-        profile_data.hostname.as_deref(),
-    );
-    prevent_acct_conflict(
-        &transaction,
-        profile_id,
-        &profile_acct,
-    ).await?;
+    let profile_acct = match profile_data.hostname() {
+        WebfingerHostname::Local => Some(profile_data.username.clone()),
+        WebfingerHostname::Remote(hostname) => {
+            let profile_acct =
+                format!("{}@{}", profile_data.username, hostname);
+            prevent_acct_conflict(
+                &transaction,
+                profile_id,
+                &profile_acct,
+            ).await?;
+            Some(profile_acct)
+        },
+        WebfingerHostname::Unknown => None,
+    };
     transaction.execute(
         "
         INSERT INTO actor_profile (
@@ -224,7 +229,7 @@ pub async fn update_profile(
     let maybe_row = transaction.query_opt(
         "
         SELECT
-            hostname,
+            actor_profile,
             array_remove(
                 ARRAY[
                     avatar ->> 'file_name',
@@ -238,18 +243,23 @@ pub async fn update_profile(
         &[&profile_id],
     ).await?;
     let row = maybe_row.ok_or(DatabaseError::NotFound("profile"))?;
-    let maybe_hostname: Option<String> = row.try_get("hostname")?;
+    let profile: DbActorProfile = row.try_get("actor_profile")?;
     let images = row.try_get("images")?;
 
-    let profile_acct = get_profile_acct(
-        &profile_data.username,
-        maybe_hostname.as_deref(),
-    );
-    prevent_acct_conflict(
-        &transaction,
-        *profile_id,
-        &profile_acct,
-    ).await?;
+    let profile_acct = match profile.hostname() {
+        WebfingerHostname::Local => Some(profile_data.username.clone()),
+        WebfingerHostname::Remote(hostname) => {
+            let profile_acct =
+                format!("{}@{}", profile_data.username, hostname);
+            prevent_acct_conflict(
+                &transaction,
+                *profile_id,
+                &profile_acct,
+            ).await?;
+            Some(profile_acct)
+        },
+        WebfingerHostname::Unknown => None,
+    };
     let updated_count = transaction.execute(
         "
         UPDATE actor_profile

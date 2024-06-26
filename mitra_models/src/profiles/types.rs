@@ -671,7 +671,7 @@ pub struct DbActorProfile {
     pub(crate) user_id: Option<Uuid>,
     pub(crate) portable_user_id: Option<Uuid>,
     pub username: String,
-    pub hostname: Option<String>,
+    pub(crate) hostname: Option<String>,
     pub acct: Option<String>, // unique acct string
     pub display_name: Option<String>,
     pub bio: Option<String>, // html
@@ -707,12 +707,10 @@ pub struct DbActorProfile {
 // actor RSA key: can be updated at any time by the instance admin
 // identity proofs: TBD (likely will do "Trust on first use" (TOFU))
 
-pub(super) fn get_profile_acct(username: &str, hostname: Option<&str>) -> String {
-    if let Some(hostname) = hostname {
-        format!("{}@{}", username, hostname)
-    } else {
-        username.to_owned()
-    }
+pub enum WebfingerHostname {
+    Local,
+    Remote(String),
+    Unknown,
 }
 
 pub(crate) fn get_identity_key(secret_key: Ed25519SecretKey) -> String {
@@ -734,23 +732,25 @@ impl DbActorProfile {
         if self.portable_user_id.is_some() && self.actor_json.is_none() {
             return Err(DatabaseTypeError);
         };
-        if self.hostname.is_none() && !self.has_account() {
-            // Remote actors without local account must have hostname
-            // NOTE: no CHECK constraint because
-            // it can not be deferred
-            return Err(DatabaseTypeError);
-        };
-        if let Some(ref acct) = self.acct {
-            let expected_acct = get_profile_acct(
-                &self.username,
-                self.hostname.as_deref(),
-            );
-            if acct != &expected_acct {
-                return Err(DatabaseTypeError);
-            };
-        } else if self.actor_json.is_none() {
-            // Only remote actors may have empty acct
-            return Err(DatabaseTypeError);
+        match self.hostname() {
+            WebfingerHostname::Local => {
+                if self.acct.as_ref() != Some(&self.username) {
+                    return Err(DatabaseTypeError);
+                };
+            },
+            WebfingerHostname::Remote(hostname) => {
+                // Acct can be empty if there's a conflict
+                if let Some(ref acct) = self.acct {
+                    if acct != &format!("{}@{}", self.username, hostname) {
+                        return Err(DatabaseTypeError);
+                    };
+                };
+            },
+            WebfingerHostname::Unknown => {
+                if self.acct.is_some() {
+                    return Err(DatabaseTypeError);
+                };
+            },
         };
         if let Some(ref actor_data) = self.actor_json {
             actor_data.check_consistency()?;
@@ -761,6 +761,16 @@ impl DbActorProfile {
             return Err(DatabaseTypeError);
         };
         Ok(())
+    }
+
+    pub fn hostname(&self) -> WebfingerHostname {
+        if let Some(ref hostname) = self.hostname {
+            WebfingerHostname::Remote(hostname.to_string())
+        } else if self.actor_json.is_none() || self.portable_user_id.is_some() {
+            WebfingerHostname::Local
+        } else {
+            WebfingerHostname::Unknown
+        }
     }
 
     /// Has local account?
@@ -898,6 +908,17 @@ impl ProfileCreateData {
         // Aliases are not checked.
         // The list may contain duplicates or self-references.
         Ok(())
+    }
+
+    pub(super) fn hostname(&self) -> WebfingerHostname {
+        if let Some(ref hostname) = self.hostname {
+            WebfingerHostname::Remote(hostname.to_string())
+        } else if self.actor_json.is_none() {
+            WebfingerHostname::Local
+        } else {
+            // Possible cause: portable user account is being created
+            WebfingerHostname::Unknown
+        }
     }
 }
 

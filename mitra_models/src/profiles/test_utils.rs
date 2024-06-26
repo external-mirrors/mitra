@@ -11,7 +11,6 @@ use crate::users::test_utils::create_test_user;
 use super::{
     queries::create_profile,
     types::{
-        get_profile_acct,
         DbActor,
         DbActorKey,
         DbActorProfile,
@@ -75,7 +74,7 @@ impl DbActorProfile {
         } else {
             get_hostname(&actor_data.id).unwrap()
         };
-        let acct = get_profile_acct(username, Some(&hostname));
+        let acct = format!("{}@{}", username, hostname);
         let actor_id = actor_data.id.clone();
         let profile = Self {
             username: username.to_string(),

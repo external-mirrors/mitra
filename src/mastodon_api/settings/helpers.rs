@@ -6,7 +6,7 @@ use mitra_models::{
         DatabaseClient,
         DatabaseError,
     },
-    profiles::types::DbActorProfile,
+    profiles::types::{DbActorProfile, WebfingerHostname},
     relationships::queries::{get_followers, get_following},
 };
 use mitra_validators::errors::ValidationError;
@@ -19,10 +19,15 @@ fn export_profiles_to_csv(
 ) -> String {
     let mut csv = String::new();
     for profile in profiles {
-        let actor_address = ActorAddress::new_unchecked(
-            &profile.username,
-            profile.hostname.as_deref().unwrap_or(local_hostname),
-        );
+        let actor_address = match profile.hostname() {
+            WebfingerHostname::Local => {
+                ActorAddress::new_unchecked(&profile.username, local_hostname)
+            },
+            WebfingerHostname::Remote(hostname) => {
+                ActorAddress::new_unchecked(&profile.username, &hostname)
+            },
+            WebfingerHostname::Unknown => continue,
+        };
         csv += &format!("{}\n", actor_address);
     };
     csv

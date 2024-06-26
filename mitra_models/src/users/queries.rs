@@ -536,11 +536,14 @@ pub async fn create_portable_user(
         ],
     ).await.map_err(catch_unique_violation("portable user"))?;
     let db_user: DbPortableUser = row.try_get("portable_user_account")?;
-    // Create reverse FK
+    // Create reverse FK and generate local 'acct'
     let row = transaction.query_one(
         "
         UPDATE actor_profile
-        SET portable_user_id = actor_profile.id
+        SET
+            portable_user_id = actor_profile.id,
+            hostname = NULL,
+            acct = actor_profile.username
         WHERE id = $1
         RETURNING actor_profile
         ",
@@ -722,6 +725,7 @@ mod tests {
             ..Default::default()
         };
         let profile = create_profile(db_client, profile_data).await.unwrap();
+        profile.check_consistency().unwrap();
         let rsa_secret_key = generate_weak_rsa_key().unwrap();
         let ed25519_secret_key = generate_weak_ed25519_key();
         let invite_code =
