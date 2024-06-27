@@ -225,7 +225,7 @@ impl OutgoingActivityJobData {
         Self {
             activity: activity_signed,
             sender_id: sender.id,
-            sender: Some(Sender::from(sender.clone())),
+            sender: Some(Sender::from_user(instance_url, sender)),
             recipients: recipient_map.into_values().collect(),
             failure_count: 0,
         }
@@ -318,7 +318,7 @@ pub async fn process_queued_outgoing_activities(
             db_client,
             &job_data.sender_id,
         ).await {
-            Ok(user) => Sender::from(user),
+            Ok(user) => Sender::from_user(&config.instance_url(), &user),
             Err(DatabaseError::NotFound(_)) => {
                 // User has been deleted, use "sender" property
                 if let Some(ref sender) = job_data.sender {

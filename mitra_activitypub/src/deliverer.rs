@@ -95,25 +95,43 @@ fn serialize_ed25519_secret_key<S>(
 
 #[derive(Clone, Deserialize, Serialize)]
 pub struct Sender {
-    pub(super) username: String,
+    username: String,
+
     #[serde(
         deserialize_with = "deserialize_rsa_secret_key",
         serialize_with = "serialize_rsa_secret_key",
     )]
-    pub(super) rsa_private_key: RsaSecretKey,
+    rsa_private_key: RsaSecretKey,
+    rsa_key_id: Option<String>,
+
     #[serde(
         deserialize_with = "deserialize_ed25519_secret_key",
         serialize_with = "serialize_ed25519_secret_key",
     )]
-    pub(super) ed25519_private_key: Option<Ed25519SecretKey>,
+    ed25519_private_key: Option<Ed25519SecretKey>,
+    ed25519_key_id: Option<String>,
 }
 
-impl From<User> for Sender {
-    fn from(user: User) -> Self {
+impl Sender {
+    pub fn from_user(instance_url: &str, user: &User) -> Self {
+        let actor_id = local_actor_id(
+            instance_url,
+            &user.profile.username,
+        );
+        let rsa_key_id = local_actor_key_id(
+            &actor_id,
+            PublicKeyType::RsaPkcs1,
+        );
+        let ed25519_key_id = local_actor_key_id(
+            &actor_id,
+            PublicKeyType::Ed25519,
+        );
         Self {
-            username: user.profile.username,
-            rsa_private_key: user.rsa_secret_key,
+            username: user.profile.username.clone(),
+            rsa_private_key: user.rsa_secret_key.clone(),
+            rsa_key_id: Some(rsa_key_id),
             ed25519_private_key: Some(user.ed25519_secret_key),
+            ed25519_key_id: Some(ed25519_key_id),
         }
     }
 }
@@ -182,11 +200,16 @@ pub(super) async fn deliver_activity_worker(
     recipients: &mut [Recipient],
 ) -> Result<(), DelivererError> {
     let rsa_secret_key = sender.rsa_private_key;
-    let actor_id = local_actor_id(
-        &instance.url(),
-        &sender.username,
-    );
-    let rsa_key_id = local_actor_key_id(&actor_id, PublicKeyType::RsaPkcs1);
+    let rsa_key_id = if let Some(rsa_key_id) = sender.rsa_key_id {
+        rsa_key_id
+    } else {
+        log::warn!("deliverer job data doesn't contain key ID");
+        let actor_id = local_actor_id(
+            &instance.url(),
+            &sender.username,
+        );
+        local_actor_key_id(&actor_id, PublicKeyType::RsaPkcs1)
+    };
     let activity_json = serde_json::to_string(&activity)?;
 
     let mut deliveries = vec![];
@@ -280,7 +303,9 @@ mod tests {
         let sender = Sender {
             username: "test".to_string(),
             rsa_private_key: rsa_secret_key.clone(),
+            rsa_key_id: Some("https://social.example/rsa-key".to_string()),
             ed25519_private_key: Some(ed25519_secret_key),
+            ed25519_key_id: Some("https://social.example/ed25519-key".to_string()),
         };
         let value = serde_json::to_value(sender).unwrap();
         let sender: Sender = serde_json::from_value(value).unwrap();
