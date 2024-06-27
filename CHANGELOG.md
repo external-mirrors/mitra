@@ -24,6 +24,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Fixed
 
 - Fix incorrect handling of outgoing delivery result.
+- Use compatible ID when setting `inReplyTo` value.
 
 ## [2.23.0] - 2024-06-23
 

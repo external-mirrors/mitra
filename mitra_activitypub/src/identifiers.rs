@@ -258,6 +258,22 @@ pub fn compatible_profile_actor_id(
     }
 }
 
+pub fn compatible_post_object_id(instance_url: &str, post: &Post) -> String {
+    match post.object_id {
+        Some(ref object_id) => {
+            let actor_data = post.author.expect_actor_data();
+            if actor_data.is_portable() {
+                // Use compatible ID
+                compatible_id(actor_data, object_id)
+                    .expect("object ID should be valid")
+            } else {
+                object_id.to_string()
+            }
+        },
+        None => local_object_id(instance_url, post.id),
+    }
+}
+
 pub fn canonicalize_id(url: &str) -> Result<String, ValidationError> {
     let url = Url::parse(url).map_err(|error| ValidationError(error.0))?;
     Ok(url.to_string())
@@ -389,6 +405,44 @@ mod tests {
         assert_eq!(
             profile_url,
             "https://social.example/users/test",
+        );
+    }
+
+    #[test]
+    fn test_compatible_post_object_id() {
+        let profile = DbActorProfile::remote_for_test(
+            "test",
+            "https://social.example/users/1",
+        );
+        let post = Post::remote_for_test(
+            &profile,
+            "https://social.example/posts/1",
+        );
+        let object_id = compatible_post_object_id(INSTANCE_URL, &post);
+        assert_eq!(
+            object_id,
+            "https://social.example/posts/1",
+        );
+    }
+
+    #[test]
+    fn test_compatible_post_object_id_ap_url() {
+        let profile = DbActorProfile::remote_for_test_with_data(
+            "test",
+            DbActor {
+                id: "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor".to_string(),
+                gateways: vec!["https://social.example".to_string()],
+                ..Default::default()
+            },
+        );
+        let post = Post::remote_for_test(
+            &profile,
+            "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/posts/1",
+        );
+        let object_id = compatible_post_object_id(INSTANCE_URL, &post);
+        assert_eq!(
+            object_id,
+            "https://social.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/posts/1",
         );
     }
 

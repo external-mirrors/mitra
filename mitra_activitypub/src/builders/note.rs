@@ -20,12 +20,12 @@ use crate::{
     authority::Authority,
     contexts::{build_default_context, Context},
     identifiers::{
+        compatible_post_object_id,
         compatible_profile_actor_id,
         local_actor_id_unified,
         local_object_id_unified,
         local_object_replies,
         local_tag_collection,
-        post_object_id,
         LocalActorCollection,
     },
     vocabulary::{DOCUMENT, HASHTAG, LINK, MENTION, NOTE},
@@ -198,7 +198,7 @@ pub fn build_note(
     for (index, linked) in post.linked.iter().enumerate() {
         // Build FEP-e232 object link
         // https://codeberg.org/silverpill/feps/src/branch/main/e232/fep-e232.md
-        let link_href = post_object_id(instance_url, linked);
+        let link_href = compatible_post_object_id(instance_url, linked);
         let link_rel = if index == 0 {
             // Present first link as a quote
             vec![LINK_REL_MISSKEY_QUOTE.to_string()]
@@ -218,7 +218,7 @@ pub fn build_note(
     };
     // Present first link as a quote
     let maybe_quote_url = post.linked.first()
-        .map(|linked| post_object_id(instance_url, linked));
+        .map(|linked| compatible_post_object_id(instance_url, linked));
 
     for emoji in &post.emojis {
         let tag = build_emoji(instance_url, emoji);
@@ -237,7 +237,7 @@ pub fn build_note(
             if !primary_audience.contains(&in_reply_to_actor_id) {
                 primary_audience.push(in_reply_to_actor_id);
             };
-            Some(post_object_id(instance_url, in_reply_to))
+            Some(compatible_post_object_id(instance_url, in_reply_to))
         },
         None => None,
     };
