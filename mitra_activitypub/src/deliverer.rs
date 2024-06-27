@@ -98,17 +98,19 @@ pub struct Sender {
     username: String,
 
     #[serde(
+        alias = "rsa_private_key",
         deserialize_with = "deserialize_rsa_secret_key",
         serialize_with = "serialize_rsa_secret_key",
     )]
-    rsa_private_key: RsaSecretKey,
+    rsa_secret_key: RsaSecretKey,
     rsa_key_id: Option<String>,
 
     #[serde(
+        alias = "ed25519_private_key",
         deserialize_with = "deserialize_ed25519_secret_key",
         serialize_with = "serialize_ed25519_secret_key",
     )]
-    ed25519_private_key: Option<Ed25519SecretKey>,
+    ed25519_secret_key: Option<Ed25519SecretKey>,
     ed25519_key_id: Option<String>,
 }
 
@@ -128,9 +130,9 @@ impl Sender {
         );
         Self {
             username: user.profile.username.clone(),
-            rsa_private_key: user.rsa_secret_key.clone(),
+            rsa_secret_key: user.rsa_secret_key.clone(),
             rsa_key_id: Some(rsa_key_id),
-            ed25519_private_key: Some(user.ed25519_secret_key),
+            ed25519_secret_key: Some(user.ed25519_secret_key),
             ed25519_key_id: Some(ed25519_key_id),
         }
     }
@@ -199,7 +201,7 @@ pub(super) async fn deliver_activity_worker(
     activity: JsonValue,
     recipients: &mut [Recipient],
 ) -> Result<(), DelivererError> {
-    let rsa_secret_key = sender.rsa_private_key;
+    let rsa_secret_key = sender.rsa_secret_key;
     let rsa_key_id = if let Some(rsa_key_id) = sender.rsa_key_id {
         rsa_key_id
     } else {
@@ -302,14 +304,40 @@ mod tests {
         let ed25519_secret_key = generate_weak_ed25519_key();
         let sender = Sender {
             username: "test".to_string(),
-            rsa_private_key: rsa_secret_key.clone(),
+            rsa_secret_key: rsa_secret_key.clone(),
             rsa_key_id: Some("https://social.example/rsa-key".to_string()),
-            ed25519_private_key: Some(ed25519_secret_key),
+            ed25519_secret_key: Some(ed25519_secret_key),
             ed25519_key_id: Some("https://social.example/ed25519-key".to_string()),
         };
         let value = serde_json::to_value(sender).unwrap();
         let sender: Sender = serde_json::from_value(value).unwrap();
-        assert_eq!(sender.rsa_private_key, rsa_secret_key);
-        assert_eq!(sender.ed25519_private_key, Some(ed25519_secret_key));
+        assert_eq!(sender.rsa_secret_key, rsa_secret_key);
+        assert_eq!(sender.ed25519_secret_key, Some(ed25519_secret_key));
+    }
+
+    #[test]
+    fn test_sender_serialization_deserialization_legacy() {
+        let rsa_secret_key = generate_weak_rsa_key().unwrap();
+        let ed25519_secret_key = generate_weak_ed25519_key();
+        let sender = Sender {
+            username: "test".to_string(),
+            rsa_secret_key: rsa_secret_key.clone(),
+            rsa_key_id: Some("https://social.example/rsa-key".to_string()),
+            ed25519_secret_key: Some(ed25519_secret_key),
+            ed25519_key_id: Some("https://social.example/ed25519-key".to_string()),
+        };
+        let value = serde_json::to_value(sender).unwrap();
+        let rsa_secret_key_json = &value["rsa_secret_key"];
+        let ed25519_secret_key_json = &value["ed25519_secret_key"];
+        let value = serde_json::json!({
+            "username": "test",
+            "rsa_private_key": rsa_secret_key_json,
+            "ed25519_private_key": ed25519_secret_key_json,
+        });
+        let sender: Sender = serde_json::from_value(value).unwrap();
+        assert_eq!(sender.rsa_secret_key, rsa_secret_key);
+        assert_eq!(sender.rsa_key_id, None);
+        assert_eq!(sender.ed25519_secret_key, Some(ed25519_secret_key));
+        assert_eq!(sender.ed25519_key_id, None);
     }
 }
