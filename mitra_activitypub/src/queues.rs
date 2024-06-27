@@ -182,37 +182,32 @@ impl OutgoingActivityJobData {
         for actor in recipients {
             if actor.is_portable() {
                 for gateway in actor.gateways {
-                    // TODO: FEP-EF61: refactor
-                    let actor_id: Url = actor.id.parse()
-                        .expect("actor ID should be valid");
-                    let http_actor_id = actor_id.to_http_url(Some(&gateway))
-                        .expect("actor ID should be valid");
-                    let actor_inbox: Url = actor.inbox.parse()
+                    let http_actor_inbox = Url::parse(&actor.inbox)
+                        .expect("actor inbox URL should be valid")
+                        .to_http_url(Some(&gateway))
                         .expect("actor inbox URL should be valid");
-                    let http_actor_inbox = actor_inbox.to_http_url(Some(&gateway))
-                        .expect("actor inbox URL should be valid");
-                    if !recipient_map.contains_key(&http_actor_id) {
+                    if !recipient_map.contains_key(&http_actor_inbox) {
                         let recipient = Recipient {
-                            id: http_actor_id.clone(),
-                            inbox: http_actor_inbox,
+                            id: actor.id.clone(),
+                            inbox: http_actor_inbox.clone(),
                             is_delivered: false,
                             is_unreachable: false,
                             is_local: gateway == instance_url,
                         };
-                        recipient_map.insert(http_actor_id, recipient);
+                        recipient_map.insert(http_actor_inbox, recipient);
                     };
                 };
                 continue;
             };
-            if !recipient_map.contains_key(&actor.id) {
+            if !recipient_map.contains_key(&actor.inbox) {
                 let recipient = Recipient {
                     id: actor.id.clone(),
-                    inbox: actor.inbox,
+                    inbox: actor.inbox.clone(),
                     is_delivered: false,
                     is_unreachable: false,
                     is_local: false,
                 };
-                recipient_map.insert(actor.id, recipient);
+                recipient_map.insert(actor.inbox, recipient);
             };
         };
         let activity = serde_json::to_value(activity)
@@ -253,12 +248,9 @@ impl OutgoingActivityJobData {
         for recipient in self.recipients.iter_mut() {
             // TODO: FEP-EF61: bulk add
             if recipient.is_local {
-                // TODO: FEP-EF61: use canonical actor ID as reicpient.id ?
-                let canonical_actor_id = canonicalize_id(&recipient.id)
-                    .map_err(|_| DatabaseTypeError)?;
                 let profile = get_remote_profile_by_actor_id(
                     db_client,
-                    &canonical_actor_id,
+                    &recipient.id,
                 ).await?;
                 add_object_to_collection(
                     db_client,

@@ -138,6 +138,7 @@ impl Sender {
     }
 }
 
+/// Represents delivery to a single inbox
 #[derive(Deserialize, Serialize)]
 pub struct Recipient {
     pub id: String,

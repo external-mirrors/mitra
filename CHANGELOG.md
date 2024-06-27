@@ -21,6 +21,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Don't raise error if actor's webfinger hostname is not known.
 - Verify that keys provided during registration of portable user are present in actor document.
 
+### Fixed
+
+- Fix incorrect handling of outgoing delivery result.
+
 ## [2.23.0] - 2024-06-23
 
 ### Added
