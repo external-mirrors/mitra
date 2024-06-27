@@ -32,7 +32,7 @@ use mitra_adapters::init::{
     initialize_app,
     prepare_instance_keys,
 };
-use mitra_config::{Environment, SOFTWARE_VERSION};
+use mitra_config::Environment;
 use mitra_models::{
     database::{
         connect::create_pool,
@@ -81,11 +81,7 @@ async fn main() -> std::io::Result<()> {
         .map(|blockchain| blockchain.contract_set);
 
     std::mem::drop(db_client);
-    log::info!(
-        "app initialized; version {}, environment = '{:?}'",
-        SOFTWARE_VERSION,
-        config.environment,
-    );
+
     log::info!("instance URL {}", config.instance_url());
 
     scheduler::run(
