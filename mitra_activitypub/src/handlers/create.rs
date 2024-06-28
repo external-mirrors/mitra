@@ -787,6 +787,9 @@ pub async fn handle_create(
     let object = activity.object;
     match verify_portable_object(&object) {
         Ok(_) => (),
+        Err(AuthenticationError::InvalidObjectID(message)) => {
+            return Err(ValidationError(message).into());
+        },
         Err(AuthenticationError::NotPortable) => (),
         Err(_) => {
             return Err(ValidationError("invalid portable object").into());
