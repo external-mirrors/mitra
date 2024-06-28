@@ -1600,9 +1600,19 @@ pub async fn search_posts(
             {related_reactions}
         FROM post
         JOIN actor_profile ON post.author_id = actor_profile.id
-        WHERE content_source ILIKE $1
-            AND author_id = $2
+        WHERE
+            -- can parse HTML documents
+            to_tsvector(post.content) @@ plainto_tsquery($1)
             AND repost_of_id IS NULL
+            AND (
+                post.author_id = $2
+                OR EXISTS (
+                    SELECT 1 FROM bookmark
+                    WHERE
+                        bookmark.post_id = post.id
+                        AND bookmark.owner_id = $2
+                )
+            )
         ORDER BY post.id DESC
         LIMIT $3 OFFSET $4
         ",

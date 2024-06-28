@@ -210,8 +210,9 @@ pub fn clean_html_all(html: &str) -> String {
 }
 
 pub fn html_to_text(html: &str) -> String {
+    const WRAP_WIDTH: usize = 100;
     let decorator = TrivialDecorator::new();
-    from_read_with_decorator(html.as_bytes(), 100, decorator)
+    from_read_with_decorator(html.as_bytes(), WRAP_WIDTH, decorator)
 }
 
 #[cfg(test)]
@@ -299,7 +300,6 @@ mod tests {
 
     #[test]
     fn test_clean_html_strict_noopener() {
-        // TODO: fix cleaner
         let unsafe_html = r#"<a href="https://external.example">link</a>"#;
         let expected_safe_html = r#"<a href="https://external.example" rel="noopener">link</a>"#;
         let safe_html = clean_html_strict(

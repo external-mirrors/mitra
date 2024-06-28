@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Generate notification when subscriber is leaving.
 - Added `federation.ssrf_protection_enabled` configuration parameter.
+- Include bookmarked posts in full text search results.
 
 ### Changed
 
