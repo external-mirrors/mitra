@@ -6,7 +6,7 @@ use mitra_models::{
 };
 use mitra_utils::{
     datetime::get_min_datetime,
-    html::{clean_html_all, escape_html},
+    html::{escape_html, html_to_text},
 };
 
 use super::urls::get_user_feed_url;
@@ -25,13 +25,18 @@ fn make_entry(
 ) -> String {
     let object_id = local_object_id(instance_url, post.id);
     let content_escaped = escape_html(&post.content);
-    let content_cleaned = clean_html_all(&post.content);
-    // Use trimmed content for title
-    let mut title: String = content_cleaned.chars()
+    let content_first_line = html_to_text(&post.content)
+        .lines()
+        .map(|line| line.trim())
+        .find(|line| !line.is_empty())
+        .map(|line| line.to_string())
+        .unwrap_or("-".to_string());
+    let mut title: String = content_first_line
+        .chars()
         .take(ENTRY_TITLE_MAX_LENGTH)
         .collect();
     if title.len() == ENTRY_TITLE_MAX_LENGTH &&
-            content_cleaned.len() != ENTRY_TITLE_MAX_LENGTH {
+            content_first_line.len() != ENTRY_TITLE_MAX_LENGTH {
         title += "...";
     };
     format!(
@@ -109,7 +114,7 @@ mod tests {
         let expected_entry = concat!(
             "<entry>\n",
             "    <id>https://social.example/objects/67e55044-10b1-426f-9247-bb680e5fe0c8</id>\n",
-            "    <title>titletext text text</title>\n",
+            "    <title>title</title>\n",
             "    <updated>2020-03-03T03:03:03+00:00</updated>\n",
             "    <author><name>User</name></author>\n",
             r#"    <content type="html">&lt;p&gt;title&lt;&#47;p&gt;&lt;p&gt;text&#32;text&#32;text&lt;&#47;p&gt;</content>"#, "\n",

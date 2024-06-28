@@ -9,6 +9,10 @@ use ammonia::{
     Document,
     UrlRelative,
 };
+use html2text::{
+    from_read_with_decorator,
+    render::text_renderer::TrivialDecorator,
+};
 use html5ever::serialize::{serialize, SerializeOpts};
 
 pub use ammonia::{clean_text as escape_html};
@@ -204,6 +208,11 @@ pub fn clean_html_all(html: &str) -> String {
     text
 }
 
+pub fn html_to_text(html: &str) -> String {
+    let decorator = TrivialDecorator::new();
+    from_read_with_decorator(html.as_bytes(), 100, decorator)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -305,5 +314,12 @@ mod tests {
         let html = r#"<p>test <b>bold</b><script>dangerous</script> with <a href="https://example.com">link</a> and <code>code</code></p>"#;
         let text = clean_html_all(html);
         assert_eq!(text, "test bold with link and code");
+    }
+
+    #[test]
+    fn test_html_to_text() {
+        let html = r#"<h1>heading</h1><p>next line</p>"#;
+        let text = html_to_text(html);
+        assert_eq!(text, "heading\n\nnext line\n");
     }
 }

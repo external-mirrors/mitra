@@ -21,6 +21,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Don't raise error if actor's webfinger hostname is not known.
 - Verify that keys provided during registration of portable user are present in actor document.
 - Write app version to log before applying migrations.
+- Use first line of content to create title for Atom feed entry.
 
 ### Fixed
 

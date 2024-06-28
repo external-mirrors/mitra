@@ -24,6 +24,8 @@ ed25519_1 = { package = "ed25519", version = "1.5.3", features = ["pkcs8"] }
 ed25519-dalek = { version = "2.0.0", features = ["rand_core"] }
 # Used to work with hexadecimal strings
 hex = "0.4.3"
+# Used for extracting text from HTML
+html2text = "=0.12.4"
 # Used for verifying HTTP signatures
 http = "0.2.9"
 # Used for working with IDNs

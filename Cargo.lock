@@ -1499,6 +1499,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "html2text"
+version = "0.12.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "31a3116545498f77e4d7b33562c8d2e32c7ddb7a4b6b6ccb24e9dcf957940636"
+dependencies = [
+ "dashmap",
+ "html5ever",
+ "markup5ever",
+ "tendril",
+ "thiserror",
+ "unicode-width",
+]
+
+[[package]]
 name = "html5ever"
 version = "0.26.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2147,6 +2161,7 @@ dependencies = [
  "ed25519 1.5.3",
  "ed25519-dalek",
  "hex",
+ "html2text",
  "html5ever",
  "http",
  "idna",
@@ -3661,22 +3676,22 @@ dependencies = [
 
 [[package]]
 name = "thiserror"
-version = "1.0.37"
+version = "1.0.50"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "10deb33631e3c9018b9baf9dcbbc4f737320d2b576bac10f6aefa048fa407e3e"
+checksum = "f9a7210f5c9a7156bb50aa36aed4c95afb51df0df00713949448cf9e97d382d2"
 dependencies = [
  "thiserror-impl",
 ]
 
 [[package]]
 name = "thiserror-impl"
-version = "1.0.37"
+version = "1.0.50"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "982d17546b47146b28f7c22e3d08465f6b8903d0ea13c1660d9d84a6e7adcdbb"
+checksum = "266b2e40bc00e5a6c09c3584011e08b06f123c00362c92b975ba9843aaaa14b8"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 1.0.109",
+ "syn 2.0.49",
 ]
 
 [[package]]
