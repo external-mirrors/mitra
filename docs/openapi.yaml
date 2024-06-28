@@ -445,6 +445,13 @@ paths:
           schema:
             type: boolean
             default: true
+        - name: exclude_reblogs
+          in: query
+          description: Exclude reposts from results.
+          required: false
+          schema:
+            type: boolean
+            default: false
         - name: pinned
           in: query
           description: Filter for pinned posts only.

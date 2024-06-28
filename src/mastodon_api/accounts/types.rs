@@ -605,6 +605,8 @@ const fn default_only_media() -> bool { false }
 
 const fn default_exclude_replies() -> bool { true }
 
+const fn default_exclude_reblogs() -> bool { false }
+
 #[derive(Deserialize)]
 pub struct StatusListQueryParams {
     #[serde(
@@ -618,6 +620,12 @@ pub struct StatusListQueryParams {
         deserialize_with = "deserialize_boolean",
     )]
     pub exclude_replies: bool,
+
+    #[serde(
+        default = "default_exclude_reblogs",
+        deserialize_with = "deserialize_boolean",
+    )]
+    pub exclude_reblogs: bool,
 
     #[serde(
         default,

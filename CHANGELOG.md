@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Support importing remote portable actor profiles.
 - Allow registration of portable actors with ap:// IDs.
+- Support calling `/api/v1/accounts/{account_id}/statuses` with `exclude_reblogs` parameter.
 
 ### Changed
 

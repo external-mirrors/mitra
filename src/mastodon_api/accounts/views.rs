@@ -854,7 +854,7 @@ async fn get_account_statuses(
         &profile.id,
         maybe_current_user.as_ref().map(|user| &user.id),
         !query_params.exclude_replies,
-        true,
+        !query_params.exclude_reblogs,
         query_params.pinned,
         query_params.only_media,
         query_params.max_id,
