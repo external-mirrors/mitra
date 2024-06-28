@@ -1,5 +1,4 @@
 use serde::Serialize;
-use serde_json::{Value as JsonValue};
 
 use mitra_config::Instance;
 use mitra_federation::constants::AP_PUBLIC;
@@ -8,25 +7,20 @@ use mitra_models::{
     profiles::helpers::find_declared_aliases,
     profiles::types::DbActor,
     relationships::queries::get_followers,
-    users::queries::get_user_by_name,
     users::types::User,
 };
 use mitra_utils::id::generate_ulid;
-use mitra_validators::errors::ValidationError;
 
 use crate::{
     actors::builders::{build_local_actor, Actor},
     authority::Authority,
     contexts::{build_default_context, Context},
-    errors::HandlerError,
     identifiers::{
         local_activity_id,
-        parse_local_activity_id,
-        parse_local_actor_id,
         LocalActorCollection,
     },
     queues::OutgoingActivityJobData,
-    vocabulary::{PERSON, UPDATE},
+    vocabulary::UPDATE,
 };
 
 #[derive(Serialize)]
@@ -98,59 +92,6 @@ pub async fn prepare_update_person(
         &instance.url(),
         user,
     )?;
-    let recipients = get_update_person_recipients(db_client, user).await?;
-    Ok(OutgoingActivityJobData::new(
-        &instance.url(),
-        user,
-        activity,
-        recipients,
-    ))
-}
-
-pub fn is_update_person_activity(activity: &JsonValue) -> bool {
-    let maybe_activity_type = activity["type"].as_str();
-    if maybe_activity_type != Some(UPDATE) {
-        return false;
-    };
-    let maybe_object_type = activity["object"]["type"].as_str();
-    if maybe_object_type != Some(PERSON) {
-        return false;
-    };
-    true
-}
-
-pub async fn validate_update_person_c2s(
-    db_client: &impl DatabaseClient,
-    instance: &Instance,
-    activity: &JsonValue,
-) -> Result<User, HandlerError> {
-    if !is_update_person_activity(activity) {
-        return Err(ValidationError("invalid activity").into());
-    };
-    let activity_id = activity["id"].as_str()
-        .ok_or(ValidationError("invalid activity"))?;
-    // TODO: verify activity ID has not been used before
-    let _internal_activity_id = parse_local_activity_id(
-        &instance.url(),
-        activity_id,
-    ).map_err(|_| ValidationError("invalid activity"))?;
-    let actor_id = activity["actor"].as_str()
-        .ok_or(ValidationError("invalid activity"))?;
-    let username = parse_local_actor_id(
-        &instance.url(),
-        actor_id,
-    ).map_err(|_| ValidationError("invalid activity"))?;
-    let user = get_user_by_name(db_client, &username).await?;
-    Ok(user)
-}
-
-pub async fn forward_update_person(
-    db_client: &impl DatabaseClient,
-    instance: &Instance,
-    user: &User,
-    activity: &JsonValue,
-) -> Result<OutgoingActivityJobData, DatabaseError> {
-    // TODO: parse to and cc fields
     let recipients = get_update_person_recipients(db_client, user).await?;
     Ok(OutgoingActivityJobData::new(
         &instance.url(),

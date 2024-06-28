@@ -23,6 +23,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Write app version to log before applying migrations.
 - Use first line of content to create title for Atom feed entry.
 
+### Removed
+
+- Removed FEP-c390 C2S outbox.
+
 ### Fixed
 
 - Fix incorrect handling of outgoing delivery result.

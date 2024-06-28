@@ -28,11 +28,6 @@ use mitra_activitypub::{
         emoji::build_emoji,
         note::build_note,
         proposal::build_proposal,
-        update_person::{
-            forward_update_person,
-            is_update_person_activity,
-            validate_update_person_c2s,
-        },
     },
     errors::HandlerError,
     identifiers::{
@@ -93,7 +88,6 @@ use crate::web_client::urls::{
 };
 
 use super::authentication::{
-    verify_signed_c2s_activity,
     verify_signed_get_request,
 };
 use super::receiver::receive_activity;
@@ -243,33 +237,8 @@ async fn outbox(
 }
 
 #[post("/outbox")]
-async fn outbox_client_to_server(
-    config: web::Data<Config>,
-    db_pool: web::Data<DatabaseConnectionPool>,
-    activity: web::Json<JsonValue>,
-) -> Result<HttpResponse, HttpError> {
-    let db_client = &mut **get_database_client(&db_pool).await?;
-    let instance = config.instance();
-    let outgoing_activity = match is_update_person_activity(&activity) {
-        true => {
-            let user = validate_update_person_c2s(
-                db_client,
-                &instance,
-                &activity,
-            ).await.map_err(|_| ValidationError("invalid activity"))?;
-            verify_signed_c2s_activity(&user.profile, &activity)
-                .map_err(|_| ValidationError("invalid integrity proof"))?;
-            forward_update_person(
-                db_client,
-                &instance,
-                &user,
-                &activity,
-            ).await?
-        },
-        false => return Err(ValidationError("unsupported activity type").into()),
-    };
-    outgoing_activity.enqueue(db_client).await?;
-    Ok(HttpResponse::Accepted().finish())
+async fn outbox_client_to_server() -> HttpResponse {
+    HttpResponse::MethodNotAllowed().finish()
 }
 
 #[get("/followers")]
