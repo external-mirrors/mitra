@@ -1571,20 +1571,23 @@ pub async fn get_post_count(
 mod tests {
     use chrono::Duration;
     use serial_test::serial;
-    use crate::database::test_utils::create_test_database;
-    use crate::profiles::{
-        test_utils::create_test_remote_profile,
-    };
-    use crate::relationships::queries::{
-        follow,
-        hide_reposts,
-        subscribe,
-        mute,
-    };
-    use crate::users::{
-        queries::create_user,
-        test_utils::create_test_user,
-        types::UserCreateData,
+    use crate::{
+        database::test_utils::create_test_database,
+        posts::test_utils::create_test_local_post,
+        profiles::test_utils::{
+            create_test_remote_profile,
+        },
+        relationships::queries::{
+            follow,
+            hide_reposts,
+            subscribe,
+            mute,
+        },
+        users::{
+            queries::create_user,
+            test_utils::create_test_user,
+            types::UserCreateData,
+        },
     };
     use super::*;
 
@@ -2133,5 +2136,27 @@ mod tests {
             updated_before,
         ).await.unwrap();
         assert_eq!(result, vec![post_2.id]);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_search_posts() {
+        let db_client = &mut create_test_database().await;
+        let user = create_test_user(db_client, "viewer").await;
+        let author = create_test_user(db_client, "author").await;
+        let post_1 = create_test_local_post(
+            db_client,
+            user.id,
+            "test post 1",
+        ).await;
+        let _post_2 = create_test_local_post(
+            db_client,
+            author.id,
+            "test post 2",
+        ).await;
+        let results =
+            search_posts(db_client, "post", user.id, 5).await.unwrap();
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].id, post_1.id);
     }
 }
