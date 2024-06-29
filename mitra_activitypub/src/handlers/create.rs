@@ -775,7 +775,7 @@ struct CreateNote {
     object: JsonValue,
 }
 
-pub async fn handle_create(
+pub(super) async fn handle_create(
     config: &Config,
     db_client: &mut impl DatabaseClient,
     activity: JsonValue,
@@ -784,19 +784,9 @@ pub async fn handle_create(
 ) -> HandlerResult {
     let activity: CreateNote = serde_json::from_value(activity)
         .map_err(|_| ValidationError("unexpected activity structure"))?;
-    let object = activity.object;
-    match verify_portable_object(&object) {
-        Ok(_) => (),
-        Err(AuthenticationError::InvalidObjectID(message)) => {
-            return Err(ValidationError(message).into());
-        },
-        Err(AuthenticationError::NotPortable) => (),
-        Err(_) => {
-            return Err(ValidationError("invalid portable object").into());
-        },
-    };
+    let object_value = activity.object.clone();
     // TODO: FEP-EF61: save object to database
-    let object: AttributedObject = serde_json::from_value(object)
+    let object: AttributedObject = serde_json::from_value(activity.object)
         .map_err(|_| ValidationError("unexpected object structure"))?;
 
     if !is_pulled {
@@ -807,11 +797,23 @@ pub async fn handle_create(
         ).await?;
     };
 
-    // Verify attribution
+    // Authentication
     let author_id = get_object_attributed_to(&object)?;
     if author_id != activity.actor {
         log::warn!("attributedTo value doesn't match actor");
         is_authenticated = false; // Object will be fetched
+    };
+    match verify_portable_object(&object_value) {
+        Ok(_) => {
+            is_authenticated = true;
+        },
+        Err(AuthenticationError::InvalidObjectID(message)) => {
+            return Err(ValidationError(message).into());
+        },
+        Err(AuthenticationError::NotPortable) => (),
+        Err(_) => {
+            return Err(ValidationError("invalid portable object").into());
+        },
     };
 
     let object_id = object.id.clone();

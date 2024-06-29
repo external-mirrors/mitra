@@ -23,6 +23,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Verify that keys provided during registration of portable user are present in actor document.
 - Write app version to log before applying migrations.
 - Use first line of content to create title for Atom feed entry.
+- Don't fetch object of Create activity when it is portable and valid.
 
 ### Removed
 
