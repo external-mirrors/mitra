@@ -35,7 +35,7 @@ iri-string = "0.7.2"
 # Used for working with ECDSA signatures
 k256 = { version = "0.11.6", default-features = false, features = ["std", "ecdsa", "keccak256"] }
 # Used to guess media type of a file
-mime_guess = "2.0.4"
+mime_guess = "2.0.5"
 infer = "=0.13.0"
 # Used to generate random numbers
 rand = "0.8.4"
