@@ -36,6 +36,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Use compatible ID when setting `inReplyTo` value.
 - Fix incorrect error message during verification of `Create` and `Update` activities.
 
+### Security
+
+- Reject object if ID and owner have different authority.
+
 ## [2.23.0] - 2024-06-23
 
 ### Added

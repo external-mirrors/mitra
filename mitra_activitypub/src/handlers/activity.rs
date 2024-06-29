@@ -5,7 +5,10 @@ use mitra_federation::deserialization::get_object_id;
 use mitra_models::database::DatabaseClient;
 use mitra_validators::errors::ValidationError;
 
-use crate::vocabulary::*;
+use crate::{
+    authentication::verify_activity_owner,
+    vocabulary::*,
+};
 
 use super::{
     accept::handle_accept,
@@ -31,6 +34,7 @@ pub async fn handle_activity(
     is_authenticated: bool,
     is_pulled: bool,
 ) -> Result<(), HandlerError> {
+    verify_activity_owner(activity)?;
     let activity_type = activity["type"].as_str()
         .ok_or(ValidationError("type property is missing"))?
         .to_owned();

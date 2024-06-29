@@ -58,6 +58,7 @@ use mitra_validators::{
 
 use crate::{
     agent::build_federation_agent,
+    authentication::{parse_attributed_to, verify_object_owner},
     builders::note::LinkTag,
     identifiers::{
         canonicalize_id,
@@ -173,12 +174,7 @@ impl AttributedObjectJson {
 pub(super) fn get_object_attributed_to(object: &AttributedObject)
     -> Result<String, ValidationError>
 {
-    let author_id = parse_into_id_array(&object.attributed_to)
-        .map_err(|_| ValidationError("invalid attributedTo property"))?
-        .first()
-        .ok_or(ValidationError("invalid attributedTo property"))?
-        .to_string();
-    Ok(author_id)
+    parse_attributed_to(&object.attributed_to)
 }
 
 pub fn get_object_url(object: &AttributedObject)
@@ -859,6 +855,7 @@ pub(super) async fn handle_create(
             return Err(ValidationError("invalid portable object").into());
         },
     };
+    verify_object_owner(&object.value)?;
 
     let object_id = object.id().to_owned();
     let object_received = if is_authenticated {

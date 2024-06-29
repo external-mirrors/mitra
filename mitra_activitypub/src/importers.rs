@@ -59,6 +59,7 @@ use crate::{
         ActorJson,
     },
     agent::build_federation_agent,
+    authentication::verify_object_owner,
     errors::HandlerError,
     handlers::{
         activity::handle_activity,
@@ -477,6 +478,7 @@ pub async fn import_post(
                 };
                 let object: AttributedObjectJson =
                     fetch_any_object(&agent, &object_id).await?;
+                verify_object_owner(&object.value)?;
                 log::info!("fetched object {}", object.id());
                 fetch_count +=  1;
                 object

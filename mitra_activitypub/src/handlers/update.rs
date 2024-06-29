@@ -35,6 +35,7 @@ use mitra_validators::{
 use crate::{
     actors::handlers::{update_remote_profile, ActorJson},
     agent::build_federation_agent,
+    authentication::verify_object_owner,
     handlers::create::{
         create_content_link,
         get_object_attachments,
@@ -207,6 +208,7 @@ pub async fn handle_update(
     if is_actor(&activity["object"]) {
         handle_update_person(config, db_client, activity).await
     } else if is_object(&activity["object"]) {
+        verify_object_owner(&activity["object"])?;
         handle_update_note(config, db_client, activity).await
     } else {
         log::warn!("unexpected object structure: {}", activity["object"]);
