@@ -62,7 +62,10 @@ use crate::{
     errors::HandlerError,
     handlers::{
         activity::handle_activity,
-        create::{get_object_links, handle_note, AttributedObject},
+        create::{
+            handle_note,
+            AttributedObjectJson,
+        },
     },
     identifiers::{
         canonicalize_id,
@@ -410,14 +413,14 @@ pub async fn import_post(
     instance: &Instance,
     storage: &MediaStorage,
     object_id: String,
-    object_received: Option<AttributedObject>,
+    object_received: Option<AttributedObjectJson>,
 ) -> Result<Post, HandlerError> {
     let agent = build_federation_agent(instance, None);
 
     let mut queue = vec![object_id]; // LIFO queue
     let mut fetch_count = 0;
     let mut maybe_object = object_received;
-    let mut objects: Vec<AttributedObject> = vec![];
+    let mut objects: Vec<AttributedObjectJson> = vec![];
     let mut redirects: HashMap<String, String> = HashMap::new();
     let mut posts = vec![];
 
@@ -427,7 +430,7 @@ pub async fn import_post(
     loop {
         let object_id = match queue.pop() {
             Some(object_id) => {
-                if objects.iter().any(|object| object.id == object_id) {
+                if objects.iter().any(|object| object.id() == object_id) {
                     // Can happen due to redirections
                     log::warn!("loop detected");
                     continue;
@@ -472,37 +475,37 @@ pub async fn import_post(
                     // TODO: create tombstone
                     return Err(FetchError::RecursionError.into());
                 };
-                let object: AttributedObject =
+                let object: AttributedObjectJson =
                     fetch_any_object(&agent, &object_id).await?;
-                log::info!("fetched object {}", object.id);
+                log::info!("fetched object {}", object.id());
                 fetch_count +=  1;
                 object
             },
         };
-        if object.id != object_id {
+        if object.id() != object_id {
             // ID of fetched object doesn't match requested ID
             if !objects.is_empty() {
                 log::warn!("invalid reference: {object_id}");
             };
             // Add IDs to the map of redirects
-            redirects.insert(object_id, object.id.clone());
-            queue.push(object.id.clone());
+            redirects.insert(object_id, object.id().to_owned());
+            queue.push(object.id().to_owned());
             // Don't re-fetch object on the next iteration
             maybe_object = Some(object);
             continue;
         };
-        if let Some(ref object_id) = object.in_reply_to {
+        if let Some(object_id) = object.in_reply_to() {
             // Fetch parent object on next iteration
             queue.push(object_id.to_owned());
         };
-        for object_id in get_object_links(&object) {
+        for object_id in object.links() {
             // Fetch linked objects after fetching current thread
             queue.insert(0, object_id);
         };
         maybe_object = None;
         objects.push(object);
     };
-    let initial_object_id = canonicalize_id(&objects[0].id)?;
+    let initial_object_id = canonicalize_id(objects[0].id())?;
 
     // Objects are ordered according to their place in reply tree,
     // starting with the root

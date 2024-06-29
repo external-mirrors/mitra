@@ -59,6 +59,7 @@ use mitra_models::{
     database::{
         get_database_client,
         DatabaseConnectionPool,
+        DatabaseError,
     },
     emojis::queries::get_local_emoji_by_name,
     posts::helpers::{add_related_posts, can_view_post},
@@ -665,10 +666,20 @@ async fn apgateway_view(
 ) -> Result<HttpResponse, HttpError> {
     let db_client = &**get_database_client(&db_pool).await?;
     let ap_url = with_ap_prefix(&did_url);
-    let actor_value = get_actor(db_client, &ap_url).await?;
+    let object_value = match get_actor(db_client, &ap_url).await {
+        Ok(actor_value) => actor_value,
+        Err(DatabaseError::NotFound(_)) => {
+            get_object_as_target(
+                db_client,
+                &ap_url,
+                AP_PUBLIC,
+            ).await?
+        },
+        Err(other_error) => return Err(other_error.into()),
+    };
     let response = HttpResponse::Ok()
         .content_type(AP_MEDIA_TYPE)
-        .json(actor_value);
+        .json(object_value);
     Ok(response)
 }
 

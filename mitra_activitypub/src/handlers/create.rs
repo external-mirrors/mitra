@@ -1,7 +1,11 @@
 use std::collections::HashMap;
 
 use chrono::{DateTime, Utc};
-use serde::Deserialize;
+use serde::{
+    Deserialize,
+    Deserializer,
+    de::{Error as DeserializerError},
+};
 use serde_json::{Value as JsonValue};
 use uuid::Uuid;
 
@@ -23,6 +27,7 @@ use mitra_federation::{
     utils::is_public,
 };
 use mitra_models::{
+    activitypub::queries::save_attributed_object,
     attachments::queries::create_attachment,
     database::{DatabaseClient, DatabaseError},
     posts::{
@@ -129,6 +134,39 @@ impl AttributedObject {
             return Err(ValidationError("object is actor"));
         };
         Ok(())
+    }
+}
+
+pub struct AttributedObjectJson {
+    pub inner: AttributedObject,
+    pub value: JsonValue,
+}
+
+impl<'de> Deserialize<'de> for AttributedObjectJson {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where D: Deserializer<'de>
+    {
+        let value = JsonValue::deserialize(deserializer)?;
+        let attributed_object = serde_json::from_value(value.clone())
+            .map_err(DeserializerError::custom)?;
+        Ok(Self {
+            inner: attributed_object,
+            value: value,
+        })
+    }
+}
+
+impl AttributedObjectJson {
+    pub fn id(&self) -> &str {
+        &self.inner.id
+    }
+
+    pub fn in_reply_to(&self) -> Option<&str> {
+        self.inner.in_reply_to.as_deref()
+    }
+
+    pub fn links(&self) -> Vec<String> {
+        get_object_links(&self.inner)
     }
 }
 
@@ -342,7 +380,7 @@ fn normalize_hashtag(tag: &str) -> Result<String, ValidationError> {
     Ok(tag_name.to_lowercase())
 }
 
-pub fn get_object_links(
+fn get_object_links(
     object: &AttributedObject,
 ) -> Vec<String> {
     let mut links = vec![];
@@ -624,9 +662,10 @@ pub async fn handle_note(
     db_client: &mut impl DatabaseClient,
     instance: &Instance,
     storage: &MediaStorage,
-    object: AttributedObject,
+    object: AttributedObjectJson,
     redirects: &HashMap<String, String>,
 ) -> Result<Post, HandlerError> {
+    let AttributedObjectJson { inner: object, value: object_value } = object;
     let canonical_object_id = canonicalize_id(&object.id)?;
 
     object.check_not_actor()?;
@@ -721,12 +760,18 @@ pub async fn handle_note(
         tags: hashtags,
         links: links,
         emojis: emojis,
-        object_id: Some(canonical_object_id),
+        object_id: Some(canonical_object_id.clone()),
         created_at,
     };
     validate_post_create_data(&post_data)?;
     validate_post_mentions(&post_data.mentions, &post_data.visibility)?;
     let post = create_post(db_client, &author.id, post_data).await?;
+    save_attributed_object(
+        db_client,
+        &canonical_object_id,
+        &object_value,
+        post.id,
+    ).await?;
     Ok(post)
 }
 
@@ -784,26 +829,25 @@ pub(super) async fn handle_create(
 ) -> HandlerResult {
     let activity: CreateNote = serde_json::from_value(activity)
         .map_err(|_| ValidationError("unexpected activity structure"))?;
-    let object_value = activity.object.clone();
     // TODO: FEP-EF61: save object to database
-    let object: AttributedObject = serde_json::from_value(activity.object)
+    let object: AttributedObjectJson = serde_json::from_value(activity.object)
         .map_err(|_| ValidationError("unexpected object structure"))?;
 
     if !is_pulled {
         check_unsolicited_message(
             db_client,
             &config.instance_url(),
-            &object,
+            &object.inner,
         ).await?;
     };
 
     // Authentication
-    let author_id = get_object_attributed_to(&object)?;
+    let author_id = get_object_attributed_to(&object.inner)?;
     if author_id != activity.actor {
         log::warn!("attributedTo value doesn't match actor");
         is_authenticated = false; // Object will be fetched
     };
-    match verify_portable_object(&object_value) {
+    match verify_portable_object(&object.value) {
         Ok(_) => {
             is_authenticated = true;
         },
@@ -816,7 +860,7 @@ pub(super) async fn handle_create(
         },
     };
 
-    let object_id = object.id.clone();
+    let object_id = object.id().to_owned();
     let object_received = if is_authenticated {
         Some(object)
     } else {

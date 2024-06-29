@@ -1,0 +1,1 @@
+ALTER TABLE activitypub_object ADD COLUMN post_id UUID UNIQUE REFERENCES post (id) ON DELETE CASCADE;

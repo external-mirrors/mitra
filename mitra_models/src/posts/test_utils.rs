@@ -23,6 +23,20 @@ pub async fn create_test_local_post(
     create_post(db_client, &author_id, post_data).await.unwrap()
 }
 
+pub async fn create_test_remote_post(
+    db_client: &mut impl DatabaseClient,
+    author_id: Uuid,
+    content: &str,
+    object_id: &str,
+) -> Post {
+    let post_data = PostCreateData {
+        content: content.to_string(),
+        object_id: Some(object_id.to_string()),
+        ..Default::default()
+    };
+    create_post(db_client, &author_id, post_data).await.unwrap()
+}
+
 impl Post {
     pub fn remote_for_test(
         author: &DbActorProfile,

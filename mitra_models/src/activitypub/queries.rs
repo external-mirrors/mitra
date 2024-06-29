@@ -49,6 +49,28 @@ pub async fn save_actor(
     Ok(())
 }
 
+pub async fn save_attributed_object(
+    db_client: &impl DatabaseClient,
+    object_id: &str,
+    object_json: &JsonValue,
+    post_id: Uuid,
+) -> Result<(), DatabaseError> {
+    db_client.execute(
+        "
+        INSERT INTO activitypub_object (
+            object_id,
+            object_data,
+            post_id
+        )
+        VALUES ($1, $2, $3)
+        ON CONFLICT (object_id)
+        DO UPDATE SET object_data = $2
+        ",
+        &[&object_id, &object_json, &post_id],
+    ).await?;
+    Ok(())
+}
+
 pub async fn get_object_as_target(
     db_client: &impl DatabaseClient,
     object_id: &str,
@@ -96,6 +118,7 @@ pub async fn delete_activitypub_objects(
         DELETE FROM activitypub_object
         WHERE created_at < $1
             AND profile_id IS NULL
+            AND post_id IS NULL
         ",
         &[&created_before],
     ).await?;
@@ -153,6 +176,7 @@ mod tests {
     use serial_test::serial;
     use crate::{
         database::test_utils::create_test_database,
+        posts::test_utils::create_test_remote_post,
         profiles::test_utils::create_test_remote_profile,
         users::test_utils::create_test_portable_user,
     };
@@ -210,6 +234,49 @@ mod tests {
         // Get
         let actor_json_stored = get_actor(db_client, canonical_id).await.unwrap();
         assert_eq!(actor_json_stored, actor_json);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_save_attributed_object() {
+        let db_client = &mut create_test_database().await;
+        let canonical_actor_id = "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor";
+        let profile = create_test_remote_profile(
+            db_client,
+            "test",
+            "social.example",
+            canonical_actor_id,
+        ).await;
+        let canonical_object_id = "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/objects/1";
+        let post = create_test_remote_post(
+            db_client,
+            profile.id,
+            "test",
+            canonical_object_id,
+        ).await;
+
+        // Create
+        let object_json = json!({
+            "type": "Note",
+            "id": "https://social.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/objects/1",
+            "attributedTo": "https://social.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor",
+            "content": "test",
+            "to": ["https://www.w3.org/ns/activitystreams#Public"],
+        });
+        save_attributed_object(
+            db_client,
+            canonical_object_id,
+            &object_json,
+            post.id,
+        ).await.unwrap();
+
+        // Get
+        let object_json_stored = get_object_as_target(
+            db_client,
+            canonical_object_id,
+            "https://www.w3.org/ns/activitystreams#Public",
+        ).await.unwrap();
+        assert_eq!(object_json_stored, object_json);
     }
 
     #[tokio::test]

@@ -297,6 +297,7 @@ CREATE TABLE activitypub_object (
     object_id VARCHAR(2000) PRIMARY KEY,
     object_data JSONB NOT NULL,
     profile_id UUID UNIQUE REFERENCES actor_profile (id) ON DELETE CASCADE,
+    post_id UUID UNIQUE REFERENCES post (id) ON DELETE CASCADE,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
