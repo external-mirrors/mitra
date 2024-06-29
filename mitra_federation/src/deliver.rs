@@ -63,10 +63,11 @@ fn build_deliverer_client(
     Ok(http_client)
 }
 
-pub async fn send_activity(
+pub async fn send_object(
     agent: &FederationAgent,
-    activity_json: &str,
+    object_json: &str,
     inbox_url: &str,
+    extra_headers: &[(&str, &str)],
 ) -> Result<(), DelivererError> {
     if agent.protect_localhost {
         require_safe_url(inbox_url)?;
@@ -74,7 +75,7 @@ pub async fn send_activity(
     let headers = create_http_signature(
         Method::POST,
         inbox_url,
-        activity_json.as_bytes(),
+        object_json.as_bytes(),
         &agent.signer_key,
         &agent.signer_key_id,
     )?;
@@ -82,22 +83,27 @@ pub async fn send_activity(
     let http_client = build_deliverer_client(agent, inbox_url)?;
     let digest = headers.digest
         .expect("digest header should be present if method is POST");
-    let request = http_client.post(inbox_url)
+    let mut request_builder = http_client.post(inbox_url)
         .header("Host", headers.host)
         .header("Date", headers.date)
         .header("Digest", digest)
         .header("Signature", headers.signature)
         .header(reqwest::header::CONTENT_TYPE, AP_MEDIA_TYPE)
-        .header(reqwest::header::USER_AGENT, &agent.user_agent)
-        .body(activity_json.to_owned());
+        .header(reqwest::header::USER_AGENT, &agent.user_agent);
+    for (name, value) in extra_headers {
+        request_builder = request_builder.header(*name, *value);
+    };
 
     if agent.is_instance_private {
         log::info!(
-            "private mode: not sending activity to {}",
+            "private mode: not delivering to {}",
             inbox_url,
         );
     } else {
-        let mut response = request.send().await?;
+        let mut response = request_builder
+            .body(object_json.to_owned())
+            .send()
+            .await?;
         let response_status = response.status();
         let response_data = limited_response(&mut response, agent.response_size_limit)
             .await?

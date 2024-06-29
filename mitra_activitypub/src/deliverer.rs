@@ -16,7 +16,7 @@ use serde_json::{Value as JsonValue};
 
 use mitra_config::Instance;
 use mitra_federation::{
-    deliver::{send_activity, DelivererError},
+    deliver::{send_object, DelivererError},
 };
 use mitra_models::{
     profiles::types::PublicKeyType,
@@ -252,10 +252,11 @@ pub(super) async fn deliver_activity_worker(
             };
             // Deliver activities concurrently
             let future = async {
-                let result = send_activity(
+                let result = send_object(
                     &agent,
                     &activity_json,
                     inbox,
+                    &[],
                 ).await;
                 (*index, result)
             };
