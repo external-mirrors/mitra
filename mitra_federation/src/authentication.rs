@@ -24,6 +24,9 @@ pub enum AuthenticationError {
     #[error("object is not portable")]
     NotPortable,
 
+    #[error("no proof")]
+    NoProof,
+
     #[error("invalid verification method")]
     InvalidVerificationMethod,
 
@@ -50,7 +53,11 @@ pub fn verify_portable_object(
         Url::Ap(ap_url) => ap_url,
     };
     let authority = canonical_object_id.authority();
-    let signature_data = get_json_signature(object)?;
+    let signature_data = match get_json_signature(object) {
+        Ok(signature_data) => signature_data,
+        Err(JsonSignatureError::NoProof) => return Err(AuthenticationError::NoProof),
+        Err(other_error) => return Err(other_error.into()),
+    };
     match signature_data.signer {
         JsonSigner::Did(did) => {
             // Object must be signed by its owner

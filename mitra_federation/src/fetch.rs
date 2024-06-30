@@ -124,6 +124,7 @@ fn fetcher_error_for_status(error: reqwest::Error) -> FetchError {
 pub async fn fetch_object<T: DeserializeOwned>(
     agent: &FederationAgent,
     object_id: &str,
+    allow_fep_ef61_noproof: bool,
 ) -> Result<T, FetchError> {
     // Don't follow redirects automatically,
     // because request needs to be signed again after every redirect
@@ -190,10 +191,18 @@ pub async fn fetch_object<T: DeserializeOwned>(
     match verify_portable_object(&object_json) {
         Ok(_) => (),
         Err(AuthenticationError::NotPortable) => {
-            // Verify origin is object is not portable
+            // Verify authority if object is not portable
             let is_same_origin = is_same_hostname(object_id, object_location)
                 .unwrap_or(false);
             if !is_same_origin {
+                return Err(FetchError::UnexpectedObjectId(object_location.to_string()));
+            };
+        },
+        Err(AuthenticationError::NoProof) if allow_fep_ef61_noproof => {
+            // Fallback to authority check
+            let is_same_authority = is_same_hostname(object_id, object_location)
+                .unwrap_or(false);
+            if !is_same_authority {
                 return Err(FetchError::UnexpectedObjectId(object_location.to_string()));
             };
         },
