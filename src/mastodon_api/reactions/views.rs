@@ -89,7 +89,7 @@ async fn create_reaction_view(
         reaction.id,
         reaction.content.clone(),
         maybe_emoji.as_ref(),
-    ).await?.enqueue(db_client).await?;
+    ).await?.save_and_enqueue(db_client).await?;
 
     let status = build_status(
         db_client,
@@ -139,7 +139,7 @@ async fn delete_reaction_view(
         &post,
         reaction_id,
         reaction_has_deprecated_ap_id,
-    ).await?.enqueue(db_client).await?;
+    ).await?.save_and_enqueue(db_client).await?;
 
     let status = build_status(
         db_client,

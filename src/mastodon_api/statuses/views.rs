@@ -211,7 +211,7 @@ async fn create_status(
         &current_user,
         &post,
         config.federation.fep_e232_enabled,
-    ).await?.enqueue(db_client).await?;
+    ).await?.save_and_enqueue(db_client).await?;
 
     let status = Status::from_post(
         &get_request_base_url(connection_info),
@@ -371,7 +371,7 @@ async fn edit_status(
         &current_user,
         &post,
         config.federation.fep_e232_enabled,
-    ).await?.enqueue(db_client).await?;
+    ).await?.save_and_enqueue(db_client).await?;
 
     let status = Status::from_post(
         &get_request_base_url(connection_info),
@@ -403,7 +403,7 @@ async fn delete_status(
     ).await?;
     let deletion_queue = delete_post(db_client, &status_id).await?;
     deletion_queue.into_job(db_client).await?;
-    delete_note.enqueue(db_client).await?;
+    delete_note.save_and_enqueue(db_client).await?;
     Ok(HttpResponse::NoContent().finish())
 }
 
@@ -525,7 +525,7 @@ async fn favourite(
             reaction.id,
             None,
             None,
-        ).await?.enqueue(db_client).await?;
+        ).await?.save_and_enqueue(db_client).await?;
     };
 
     let status = build_status(
@@ -576,7 +576,7 @@ async fn unfavourite(
             &post,
             reaction_id,
             reaction_has_deprecated_ap_id,
-        ).await?.enqueue(db_client).await?;
+        ).await?.save_and_enqueue(db_client).await?;
     };
 
     let status = build_status(
@@ -617,7 +617,7 @@ async fn reblog(
         &config.instance(),
         &current_user,
         &repost,
-    ).await?.enqueue(db_client).await?;
+    ).await?.save_and_enqueue(db_client).await?;
 
     let status = build_status(
         db_client,
@@ -656,7 +656,7 @@ async fn unreblog(
         &post,
         repost_id,
         repost_has_deprecated_ap_id,
-    ).await?.enqueue(db_client).await?;
+    ).await?.save_and_enqueue(db_client).await?;
 
     let status = build_status(
         db_client,
@@ -691,7 +691,7 @@ async fn pin(
         &config.instance(),
         &current_user,
         post.id,
-    ).await?.enqueue(db_client).await?;
+    ).await?.save_and_enqueue(db_client).await?;
 
     let status = build_status(
         db_client,
@@ -726,7 +726,7 @@ async fn unpin(
         &config.instance(),
         &current_user,
         post.id,
-    ).await?.enqueue(db_client).await?;
+    ).await?.save_and_enqueue(db_client).await?;
 
     let status = build_status(
         db_client,

@@ -94,7 +94,7 @@ pub async fn handle_follow(
             &target_user,
             &source_actor,
             &canonical_activity_id,
-        )?.enqueue(db_client).await?;
+        )?.save_and_enqueue(db_client).await?;
     };
     Ok(Some(PERSON))
 }

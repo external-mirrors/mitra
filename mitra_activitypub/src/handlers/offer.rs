@@ -87,6 +87,6 @@ pub async fn handle_offer(
         &db_invoice,
         &remote_actor,
         &activity.id,
-    )?.enqueue(db_client).await?;
+    )?.save_and_enqueue(db_client).await?;
     Ok(Some(AGREEMENT))
 }

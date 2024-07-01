@@ -104,7 +104,7 @@ async fn accept_follow_request_view(
             &current_user,
             &remote_actor,
             &activity_id,
-        )?.enqueue(db_client).await?;
+        )?.save_and_enqueue(db_client).await?;
     };
     let relationship = get_relationship(
         db_client,
@@ -138,7 +138,7 @@ async fn reject_follow_request_view(
             &current_user,
             &remote_actor,
             &activity_id,
-        )?.enqueue(db_client).await?;
+        )?.save_and_enqueue(db_client).await?;
     };
     let relationship = get_relationship(
         db_client,

@@ -244,7 +244,7 @@ pub async fn register_subscription_option(
             db_client,
             &config.instance(),
             &current_user,
-        ).await?.enqueue(db_client).await?;
+        ).await?.save_and_enqueue(db_client).await?;
     };
 
     let account = Account::from_user(
@@ -332,7 +332,7 @@ async fn create_invoice_view(
             &subscription_option,
             db_invoice.id,
             invoice_data.amount,
-        ).enqueue(db_client).await?;
+        ).save_and_enqueue(db_client).await?;
         db_invoice
     };
     let invoice = Invoice::from(db_invoice);

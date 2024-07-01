@@ -102,7 +102,7 @@ pub async fn follow_or_create_request(
                         current_user,
                         remote_actor,
                         follow_request.id,
-                    ).enqueue(db_client).await?;
+                    ).save_and_enqueue(db_client).await?;
                 } else {
                     create_follow_request_notification(
                         db_client,

@@ -162,7 +162,7 @@ async fn add_alias_view(
         db_client,
         &instance,
         &current_user,
-    ).await?.enqueue(db_client).await?;
+    ).await?.save_and_enqueue(db_client).await?;
     let aliases = get_aliases(
         db_client,
         &get_request_base_url(connection_info),
@@ -200,7 +200,7 @@ async fn remove_alias_view(
         db_client,
         &instance,
         &current_user,
-    ).await?.enqueue(db_client).await?;
+    ).await?.save_and_enqueue(db_client).await?;
     let aliases = get_aliases(
         db_client,
         &get_request_base_url(connection_info),
@@ -379,7 +379,7 @@ async fn move_followers_view(
         &target_actor_id,
         false, // push mode
         remote_followers,
-    ).enqueue(db_client).await?;
+    ).save_and_enqueue(db_client).await?;
 
     let account = Account::from_user(
         &get_request_base_url(connection_info),
@@ -404,7 +404,7 @@ async fn delete_account(
     ).await?;
     let deletion_queue = delete_profile(db_client, &current_user.id).await?;
     deletion_queue.into_job(db_client).await?;
-    activity.enqueue(db_client).await?;
+    activity.save_and_enqueue(db_client).await?;
     Ok(HttpResponse::NoContent().finish())
 }
 

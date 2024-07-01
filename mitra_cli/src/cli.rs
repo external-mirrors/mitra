@@ -565,7 +565,7 @@ impl DeleteProfile {
         delete_orphaned_media(config, db_client, deletion_queue).await?;
         // Send Delete(Person) activities
         if let Some(activity) = maybe_delete_person {
-            activity.enqueue(db_client).await?;
+            activity.save_and_enqueue(db_client).await?;
         };
         println!("profile deleted");
         Ok(())
@@ -601,7 +601,7 @@ impl DeletePost {
         delete_orphaned_media(config, db_client, deletion_queue).await?;
         // Send Delete(Note) activity
         if let Some(activity) = maybe_delete_note {
-            activity.enqueue(db_client).await?;
+            activity.save_and_enqueue(db_client).await?;
         };
         println!("post deleted");
         Ok(())

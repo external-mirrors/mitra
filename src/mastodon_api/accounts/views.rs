@@ -343,7 +343,7 @@ async fn update_credentials(
         db_client,
         &config.instance(),
         &current_user,
-    ).await?.enqueue(db_client).await?;
+    ).await?.save_and_enqueue(db_client).await?;
 
     let account = Account::from_user(
         &get_request_base_url(connection_info),
@@ -532,7 +532,7 @@ async fn create_identity_proof(
         db_client,
         &config.instance(),
         &current_user,
-    ).await?.enqueue(db_client).await?;
+    ).await?.save_and_enqueue(db_client).await?;
 
     let account = Account::from_user(
         &get_request_base_url(connection_info),
@@ -728,7 +728,7 @@ async fn unfollow_account(
                     &remote_actor,
                     follow_request_id,
                     follow_request_has_deprecated_ap_id,
-                ).enqueue(db_client).await?;
+                ).save_and_enqueue(db_client).await?;
             };
         },
         Err(DatabaseError::NotFound(_)) => (), // not following
@@ -771,7 +771,7 @@ async fn remove_follower_view(
             &current_user,
             &remote_actor,
             &follow_activity_id,
-        )?.enqueue(db_client).await?;
+        )?.save_and_enqueue(db_client).await?;
     };
     let relationship = get_relationship(
         db_client,

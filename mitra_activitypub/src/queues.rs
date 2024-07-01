@@ -3,7 +3,7 @@ use std::time::Instant;
 
 use chrono::{Duration, Utc};
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
+use serde_json::{Value as JsonValue};
 use uuid::Uuid;
 
 use mitra_config::Config;
@@ -55,13 +55,13 @@ const JOB_TIMEOUT: u32 = 3600; // 1 hour
 
 #[derive(Deserialize, Serialize)]
 pub struct IncomingActivityJobData {
-    activity: Value,
+    activity: JsonValue,
     is_authenticated: bool,
     failure_count: u32,
 }
 
 impl IncomingActivityJobData {
-    pub fn new(activity: &Value, is_authenticated: bool) -> Self {
+    pub fn new(activity: &JsonValue, is_authenticated: bool) -> Self {
         Self {
             activity: activity.clone(),
             is_authenticated,
@@ -163,7 +163,7 @@ pub async fn process_queued_incoming_activities(
 
 #[derive(Deserialize, Serialize)]
 pub struct OutgoingActivityJobData {
-    activity: Value,
+    activity: JsonValue,
     sender_id: Uuid,
     sender: Option<Sender>,
     recipients: Vec<Recipient>,
@@ -226,10 +226,9 @@ impl OutgoingActivityJobData {
         }
     }
 
-    async fn into_job(
-        mut self,
+    async fn save_activity(
+        &mut self,
         db_client: &impl DatabaseClient,
-        delay: u32,
     ) -> Result<(), DatabaseError> {
         // Activity ID should be present
         let activity_id = self.activity["id"].as_str()
@@ -241,9 +240,6 @@ impl OutgoingActivityJobData {
             &canonical_activity_id,
             &self.activity,
         ).await?;
-        if self.recipients.is_empty() {
-            return Ok(());
-        };
         // Immediately put into inbox if recipient is local
         for recipient in self.recipients.iter_mut() {
             // TODO: FEP-EF61: bulk add
@@ -261,6 +257,17 @@ impl OutgoingActivityJobData {
                 recipient.is_delivered = true;
             };
         };
+        Ok(())
+    }
+
+    async fn into_job(
+        self,
+        db_client: &impl DatabaseClient,
+        delay: u32,
+    ) -> Result<(), DatabaseError> {
+        if self.recipients.is_empty() {
+            return Ok(());
+        };
         let job_data = serde_json::to_value(self)
             .expect("activity should be serializable");
         let scheduled_for = Utc::now() + Duration::seconds(delay.into());
@@ -272,11 +279,19 @@ impl OutgoingActivityJobData {
         ).await
     }
 
-    pub async fn enqueue(
+    async fn enqueue(
         self,
         db_client: &impl DatabaseClient,
     ) -> Result<(), DatabaseError> {
         self.into_job(db_client, 0).await
+    }
+
+    pub async fn save_and_enqueue(
+        mut self,
+        db_client: &impl DatabaseClient,
+    ) -> Result<(), DatabaseError> {
+        self.save_activity(db_client).await?;
+        self.enqueue(db_client).await
     }
 }
 
