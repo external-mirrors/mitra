@@ -3,14 +3,19 @@ use serde_json::{Value as JsonValue};
 use wildmatch::WildMatch;
 
 use mitra_activitypub::{
+    identifiers::canonicalize_id,
     queues::IncomingActivityJobData,
     vocabulary::{DELETE, CREATE, LIKE, UPDATE},
 };
 use mitra_config::Config;
 use mitra_federation::deserialization::get_object_id;
 use mitra_models::{
-    activitypub::queries::save_activity,
+    activitypub::queries::{
+        add_object_to_collection,
+        save_activity,
+    },
     database::{DatabaseClient, DatabaseError},
+    users::types::PortableUser,
 };
 use mitra_utils::urls::get_hostname;
 use mitra_validators::{
@@ -78,12 +83,14 @@ fn is_hostname_allowed(
 pub async fn receive_activity(
     config: &Config,
     db_client: &mut impl DatabaseClient,
+    maybe_fep_ef61_recipient: Option<&PortableUser>,
     request: &HttpRequest,
     activity: &JsonValue,
     activity_digest: [u8; 32],
 ) -> Result<(), InboxError> {
     let activity_id = activity["id"].as_str()
         .ok_or(ValidationError("'id' property is missing"))?;
+    let canonical_activity_id = canonicalize_id(activity_id)?;
     let activity_type = activity["type"].as_str()
         .ok_or(ValidationError("'type' property is missing"))?;
     let activity_actor = get_object_id(&activity["actor"])
@@ -212,7 +219,15 @@ pub async fn receive_activity(
 
     // Save authenticated activities to database
     if is_authenticated {
-        save_activity(db_client, activity_id, activity).await?;
+        save_activity(db_client, &canonical_activity_id, activity).await?;
+        if let Some(recipient) = maybe_fep_ef61_recipient {
+            add_object_to_collection(
+                db_client,
+                recipient.id,
+                &recipient.profile.expect_actor_data().inbox,
+                &canonical_activity_id,
+            ).await?;
+        };
     };
 
     // Add activity to job queue and release lock

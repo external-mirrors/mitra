@@ -67,6 +67,7 @@ use mitra_models::{
     profiles::types::PaymentOption,
     users::queries::{
         get_portable_user_by_actor_id,
+        get_portable_user_by_inbox_id,
         get_user_by_id,
         get_user_by_name,
     },
@@ -150,6 +151,7 @@ async fn inbox(
     receive_activity(
         &config,
         db_client,
+        None,
         &request,
         &activity,
         activity_digest,
@@ -680,10 +682,60 @@ async fn apgateway_view(
     Ok(response)
 }
 
+#[post("/{url:.*}/inbox")]
+async fn apgateway_inbox_server_to_server_view(
+    config: web::Data<Config>,
+    db_pool: web::Data<DatabaseConnectionPool>,
+    request: HttpRequest,
+    request_path: Uri,
+    request_body: web::Bytes,
+) -> Result<HttpResponse, HttpError> {
+    if !config.federation.enabled {
+        return Err(HttpError::PermissionError);
+    };
+    let activity: JsonValue = serde_json::from_slice(&request_body)
+        .map_err(|_| ValidationError("invalid activity"))?;
+    let activity_type = activity["type"].as_str().unwrap_or("Unknown");
+    log::info!("received in {}: {}", request.uri().path(), activity_type);
+
+    let activity_digest = get_sha256_digest(&request_body);
+    drop(request_body);
+
+    let collection_id = format!(
+        "{}{}",
+        config.instance_url(),
+        request_path,
+    );
+    let canonical_collection_id = canonicalize_id(&collection_id)?;
+    let db_client = &mut **get_database_client(&db_pool).await?;
+    let recipient = get_portable_user_by_inbox_id(
+        db_client,
+        &canonical_collection_id,
+    ).await?;
+
+    receive_activity(
+        &config,
+        db_client,
+        Some(&recipient),
+        &request,
+        &activity,
+        activity_digest,
+    ).await
+        .map_err(|error| {
+            log::warn!(
+                "failed to process activity ({}): {}",
+                error,
+                activity,
+            );
+            error
+        })?;
+    Ok(HttpResponse::Accepted().finish())
+}
+
 // TODO: FEP-EF61: how to detect collections?
 // TODO: shared inbox?
 #[get("/{url:.*}/inbox")]
-pub async fn apgateway_inbox_client_to_server_view(
+async fn apgateway_inbox_client_to_server_view(
     config: web::Data<Config>,
     db_pool: web::Data<DatabaseConnectionPool>,
     request_path: Uri,
@@ -729,7 +781,7 @@ pub async fn apgateway_inbox_client_to_server_view(
 }
 
 #[post("/{url:.*}/outbox")]
-pub async fn apgateway_outbox_client_to_server_view(
+async fn apgateway_outbox_client_to_server_view(
     config: web::Data<Config>,
     db_pool: web::Data<DatabaseConnectionPool>,
     request_path: Uri,
@@ -801,6 +853,7 @@ pub fn gateway_scope() -> Scope {
     web::scope("/.well-known/apgateway")
         .service(apgateway_create_actor_view)
         // Inbox service goes before generic gateway service
+        .service(apgateway_inbox_server_to_server_view)
         .service(apgateway_inbox_client_to_server_view)
         .service(apgateway_outbox_client_to_server_view)
         .service(apgateway_view)

@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Added
 
 - Forward portable activities from outbox to other actor's clones.
+- Implement S2S inbox endpoints for portable users.
 
 ### Fixed
 
