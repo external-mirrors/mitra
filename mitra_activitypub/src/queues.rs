@@ -248,12 +248,16 @@ impl OutgoingActivityJobData {
                     db_client,
                     &recipient.id,
                 ).await?;
-                add_object_to_collection(
-                    db_client,
-                    profile.id,
-                    &profile.expect_actor_data().inbox,
-                    &canonical_activity_id,
-                ).await?;
+                if profile.has_account() {
+                    add_object_to_collection(
+                        db_client,
+                        profile.id,
+                        &profile.expect_actor_data().inbox,
+                        &canonical_activity_id,
+                    ).await?;
+                } else {
+                    log::warn!("local inbox doesn't exist: {}", recipient.inbox);
+                };
                 recipient.is_delivered = true;
             };
         };

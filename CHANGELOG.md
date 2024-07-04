@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Fixed
+
+- Ignore delivery to local inbox if it doesn't exist.
+
 ## [2.24.0] - 2024-06-30
 
 ### Added
