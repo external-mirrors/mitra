@@ -114,6 +114,15 @@ pub fn parse_into_id_array(
     Ok(result)
 }
 
+pub fn deserialize_into_id_array<'de, D>(
+    deserializer: D,
+) -> Result<Vec<String>, D::Error>
+    where D: Deserializer<'de>
+{
+    let value: Value = Value::deserialize(deserializer)?;
+    parse_into_id_array(&value).map_err(DeserializerError::custom)
+}
+
 /// Parses link object and returns its "href"
 fn get_link_href(
     link: &Value,
@@ -240,6 +249,10 @@ mod tests {
             rel: Vec<String>,
         }
 
+        let value = json!({});
+        let error = serde_json::from_value::<TestObject>(value).err().unwrap();
+        assert_eq!(error.to_string(), "missing field `rel`");
+
         let value = json!({"rel": "test"});
         let object: TestObject = serde_json::from_value(value).unwrap();
         assert_eq!(object.rel, vec!["test".to_string()]);
@@ -286,6 +299,26 @@ mod tests {
         assert_eq!(
             parse_into_id_array(value).unwrap().is_empty(),
             true,
+        );
+    }
+
+    #[test]
+    fn test_deserialize_into_id_array() {
+        #[derive(Deserialize)]
+        struct TestObject {
+            #[serde(default, deserialize_with = "deserialize_into_id_array")]
+            to: Vec<String>,
+        }
+
+        let value = json!({});
+        let object: TestObject = serde_json::from_value(value).unwrap();
+        assert_eq!(object.to.is_empty(), true);
+
+        let value = json!({"to": "https://social.example/actor"});
+        let object: TestObject = serde_json::from_value(value).unwrap();
+        assert_eq!(
+            object.to,
+            vec!["https://social.example/actor".to_string()],
         );
     }
 

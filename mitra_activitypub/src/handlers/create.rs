@@ -16,11 +16,11 @@ use mitra_federation::{
     authentication::{verify_portable_object, AuthenticationError},
     constants::{AP_MEDIA_TYPE, AS_MEDIA_TYPE},
     deserialization::{
+        deserialize_into_id_array,
         deserialize_into_object_id,
         deserialize_into_object_id_opt,
         deserialize_object_array,
         parse_into_href_array,
-        parse_into_id_array,
     },
     fetch::fetch_file,
     url::is_same_authority,
@@ -117,8 +117,11 @@ pub struct AttributedObject {
     #[serde(default, deserialize_with = "deserialize_into_object_id_opt")]
     pub in_reply_to: Option<String>,
 
-    to: Option<JsonValue>,
-    cc: Option<JsonValue>,
+    #[serde(default, deserialize_with = "deserialize_into_id_array")]
+    to: Vec<String>,
+    #[serde(default, deserialize_with = "deserialize_into_id_array")]
+    cc: Vec<String>,
+
     published: Option<DateTime<Utc>>,
     pub updated: Option<DateTime<Utc>>,
     url: Option<JsonValue>,
@@ -567,7 +570,7 @@ pub async fn get_object_tags(
     };
 
     // Create mentions for known actors in "to" and "cc" fields
-    let audience = get_audience(object)?;
+    let audience = get_audience(object);
     for target_id in audience {
         if is_public(&target_id) {
             continue;
@@ -607,25 +610,8 @@ pub async fn get_object_tags(
     Ok((mentions, hashtags, links, emojis))
 }
 
-fn get_audience(object: &AttributedObject) ->
-    Result<Vec<String>, ValidationError>
-{
-    let primary_audience = match object.to {
-        Some(ref value) => {
-            parse_into_id_array(value)
-                .map_err(|_| ValidationError("invalid 'to' property value"))?
-        },
-        None => vec![],
-    };
-    let secondary_audience = match object.cc {
-        Some(ref value) => {
-            parse_into_id_array(value)
-                .map_err(|_| ValidationError("invalid 'cc' property value"))?
-        },
-        None => vec![],
-    };
-    let audience = [primary_audience, secondary_audience].concat();
-    Ok(audience)
+fn get_audience(object: &AttributedObject) -> Vec<String> {
+    [object.to.clone(), object.cc.clone()].concat()
 }
 
 fn get_object_visibility(
@@ -733,7 +719,7 @@ pub async fn handle_note(
         maybe_in_reply_to.as_ref().map(|post| post.id),
     ).await?;
 
-    let audience = get_audience(&object)?;
+    let audience = get_audience(&object);
     let visibility = get_object_visibility(&author, &audience);
     let is_sensitive = object.sensitive.unwrap_or(false);
     let created_at = object.published.unwrap_or(Utc::now());
@@ -779,7 +765,7 @@ async fn check_unsolicited_message(
     let author_id = get_object_attributed_to(object)?;
     let author_has_followers =
         has_local_followers(db_client, &author_id).await?;
-    let audience = get_audience(object)?;
+    let audience = get_audience(object);
     let has_local_recipients = audience.iter().any(|actor_id| {
         parse_local_actor_id(instance_url, actor_id).is_ok()
     });
