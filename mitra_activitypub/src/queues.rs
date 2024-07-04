@@ -171,12 +171,10 @@ pub struct OutgoingActivityJobData {
 }
 
 impl OutgoingActivityJobData {
-    pub(super) fn new(
+    fn prepare_recipients(
         instance_url: &str,
-        sender: &User,
-        activity: impl Serialize,
         recipients: Vec<DbActor>,
-    ) -> Self {
+    ) -> BTreeMap<String, Recipient> {
         // Sort and de-duplicate recipients
         let mut recipient_map = BTreeMap::new();
         for actor in recipients {
@@ -210,6 +208,16 @@ impl OutgoingActivityJobData {
                 recipient_map.insert(actor.inbox, recipient);
             };
         };
+        recipient_map
+    }
+
+    pub(super) fn new(
+        instance_url: &str,
+        sender: &User,
+        activity: impl Serialize,
+        recipients: Vec<DbActor>,
+    ) -> Self {
+        let recipient_map = Self::prepare_recipients(instance_url, recipients);
         let activity = serde_json::to_value(activity)
             .expect("activity should be serializable");
         let activity_signed = sign_activity(
@@ -230,10 +238,11 @@ impl OutgoingActivityJobData {
         instance_url: &str,
         sender: &PortableUser,
         activity: &JsonValue,
+        recipients: Vec<DbActor>,
     ) -> Option<Self> {
-        // Sort and de-duplicate recipients
-        let mut recipient_map = BTreeMap::new();
+        let mut recipient_map = Self::prepare_recipients(instance_url, recipients);
         let actor_data = sender.profile.expect_actor_data();
+        // Deliver to actor's clones
         for gateway_url in &actor_data.gateways {
             if gateway_url == instance_url {
                 // Already cached

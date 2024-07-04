@@ -30,6 +30,7 @@ use mitra_activitypub::{
         proposal::build_proposal,
     },
     errors::HandlerError,
+    forwarder::get_activity_remote_recipients,
     identifiers::{
         canonicalize_id,
         local_actor_id,
@@ -837,11 +838,19 @@ async fn apgateway_outbox_client_to_server_view(
     IncomingActivityJobData::new(&activity, true)
         .into_job(db_client, 0)
         .await?;
+    let recipients = get_activity_remote_recipients(db_client, &activity)
+        .await
+        .map_err(|error| match error {
+            HandlerError::ValidationError(error) => error.into(),
+            HandlerError::DatabaseError(error) => error.into(),
+            _ => HttpError::InternalError,
+        })?;
     // Forward only if HTTP signature can be created
     if let Some(job_data) = OutgoingActivityJobData::new_forwarded(
         &instance.url(),
         &signer,
         &activity,
+        recipients,
     ) {
         // Activity has already been saved
         job_data.enqueue(db_client).await?;
