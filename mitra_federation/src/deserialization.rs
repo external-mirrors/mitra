@@ -212,6 +212,27 @@ mod tests {
     }
 
     #[test]
+    fn test_deserialize_into_object_id_opt() {
+        #[derive(Deserialize)]
+        #[serde(rename_all = "camelCase")]
+        struct TestObject {
+            #[serde(default, deserialize_with = "deserialize_into_object_id_opt")]
+            in_reply_to: Option<String>,
+        }
+
+        let value = json!({});
+        let object: TestObject = serde_json::from_value(value).unwrap();
+        assert_eq!(object.in_reply_to, None);
+
+        let value = json!({"inReplyTo": "https://social.example/mypost"});
+        let object: TestObject = serde_json::from_value(value).unwrap();
+        assert_eq!(
+            object.in_reply_to,
+            Some("https://social.example/mypost".to_string()),
+        );
+    }
+
+    #[test]
     fn test_deserialize_string_array() {
         #[derive(Deserialize)]
         struct TestObject {
