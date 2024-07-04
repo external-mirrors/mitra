@@ -141,12 +141,11 @@ async fn inbox(
     };
     let activity: JsonValue = serde_json::from_slice(&request_body)
         .map_err(|_| ValidationError("invalid activity"))?;
-    let activity_digest = get_sha256_digest(&request_body);
-    drop(request_body);
-
-    log::debug!("received activity: {}", activity);
     let activity_type = activity["type"].as_str().unwrap_or("Unknown");
     log::info!("received in {}: {}", request.uri().path(), activity_type);
+
+    let activity_digest = get_sha256_digest(&request_body);
+    drop(request_body);
 
     let db_client = &mut **get_database_client(&db_pool).await?;
     let _user = get_user_by_name(db_client, &username).await?;
