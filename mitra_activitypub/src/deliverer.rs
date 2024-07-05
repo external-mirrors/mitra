@@ -45,7 +45,7 @@ use mitra_utils::{
 
 use crate::{
     agent::build_federation_agent_with_key,
-    identifiers::{local_actor_id, local_actor_key_id},
+    identifiers::{compatible_id, local_actor_id, local_actor_key_id},
 };
 
 fn deserialize_rsa_secret_key<'de, D>(
@@ -143,23 +143,28 @@ impl Sender {
     // Returns None if the registered secret key doesn't correspond to
     // any of public keys associated with the actor
     pub fn from_portable_user(user: &PortableUser) -> Option<Self> {
+        let actor_data = user.profile.expect_actor_data();
         let rsa_public_key = RsaPublicKey::from(&user.rsa_secret_key);
         let rsa_public_key_der = rsa_public_key_to_pkcs1_der(&rsa_public_key)
             .expect("RSA key should be serializable");
-        let rsa_key_id = user.profile.public_keys
+        let rsa_key_id = &user.profile.public_keys
             .find_by_value(&rsa_public_key_der)?
-            .id.clone();
+            .id;
+        let http_rsa_key_id = compatible_id(actor_data, rsa_key_id)
+            .expect("actor data should be valid");
         let ed25519_public_key =
             ed25519_public_key_from_secret_key(&user.ed25519_secret_key);
-        let ed25519_key_id = user.profile.public_keys
+        let ed25519_key_id = &user.profile.public_keys
             .find_by_value(ed25519_public_key.as_bytes())?
-            .id.clone();
+            .id;
+        let http_ed25519_key_id = compatible_id(actor_data, ed25519_key_id)
+            .expect("actor data should be valid");
         let sender = Self {
             username: user.profile.username.clone(),
             rsa_secret_key: user.rsa_secret_key.clone(),
-            rsa_key_id: Some(rsa_key_id),
+            rsa_key_id: Some(http_rsa_key_id),
             ed25519_secret_key: Some(user.ed25519_secret_key),
-            ed25519_key_id: Some(ed25519_key_id),
+            ed25519_key_id: Some(http_ed25519_key_id),
         };
         Some(sender)
     }
