@@ -69,6 +69,8 @@ struct PleromaEmojiReaction {
 #[derive(Serialize)]
 struct PleromaData {
     emoji_reactions: Vec<PleromaEmojiReaction>,
+    quote: Option<Box<Status>>,
+    quote_visible: bool,
 }
 
 /// https://docs.joinmastodon.org/entities/status/
@@ -138,7 +140,11 @@ impl Status {
         } else {
             None
         };
-        let links = post.linked.into_iter().map(|post| {
+        let maybe_quote = post.linked.first().cloned().map(|post| {
+            let status = Status::from_post(base_url, instance_url, post);
+            Box::new(status)
+        });
+        let links: Vec<Status> = post.linked.into_iter().map(|post| {
             Status::from_post(base_url, instance_url, post)
         }).collect();
         let visibility = match post.visibility {
@@ -185,7 +191,11 @@ impl Status {
             emojis: emojis,
             favourited: post.actions.as_ref().map_or(false, |actions| actions.favourited),
             reblogged: post.actions.as_ref().map_or(false, |actions| actions.reposted),
-            pleroma: PleromaData { emoji_reactions },
+            pleroma: PleromaData {
+                emoji_reactions,
+                quote_visible: maybe_quote.is_some(),
+                quote: maybe_quote,
+            },
             ipfs_cid: post.ipfs_cid,
             links: links,
         }

@@ -2805,6 +2805,15 @@ components:
                     type: string
                     nullable: true
               example: []
+            quote:
+              allOf:
+                - description: The post being quoted.
+                  nullable: true
+                  example: null
+                - $ref: '#/components/schemas/Status'
+            quote_visible:
+              type: boolean
+              example: false
     Subscription:
       type: object
       properties:
