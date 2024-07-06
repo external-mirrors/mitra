@@ -264,7 +264,7 @@ impl OutgoingActivityJobData {
             };
         };
         let sender_id = sender.id;
-        let sender = Sender::from_portable_user(sender)?;
+        let sender = Sender::from_portable_user(instance_url, sender)?;
         let job_data = Self {
             activity: activity.clone(),
             sender_id: sender_id,

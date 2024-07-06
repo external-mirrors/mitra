@@ -17,6 +17,7 @@ use serde_json::{Value as JsonValue};
 use mitra_config::Instance;
 use mitra_federation::{
     deliver::{send_object, DelivererError},
+    url::Url,
 };
 use mitra_models::{
     profiles::types::PublicKeyType,
@@ -45,7 +46,7 @@ use mitra_utils::{
 
 use crate::{
     agent::build_federation_agent_with_key,
-    identifiers::{compatible_id, local_actor_id, local_actor_key_id},
+    identifiers::{local_actor_id, local_actor_key_id},
 };
 
 fn deserialize_rsa_secret_key<'de, D>(
@@ -142,23 +143,29 @@ impl Sender {
 
     // Returns None if the registered secret key doesn't correspond to
     // any of public keys associated with the actor
-    pub fn from_portable_user(user: &PortableUser) -> Option<Self> {
-        let actor_data = user.profile.expect_actor_data();
+    pub fn from_portable_user(
+        instance_url: &str,
+        user: &PortableUser,
+    ) -> Option<Self> {
         let rsa_public_key = RsaPublicKey::from(&user.rsa_secret_key);
         let rsa_public_key_der = rsa_public_key_to_pkcs1_der(&rsa_public_key)
             .expect("RSA key should be serializable");
         let rsa_key_id = &user.profile.public_keys
             .find_by_value(&rsa_public_key_der)?
             .id;
-        let http_rsa_key_id = compatible_id(actor_data, rsa_key_id)
-            .expect("actor data should be valid");
+        let http_rsa_key_id = Url::parse(rsa_key_id)
+            .expect("RSA key ID should be valid")
+            .to_http_url(Some(instance_url))
+            .expect("RSA key ID should be valid");
         let ed25519_public_key =
             ed25519_public_key_from_secret_key(&user.ed25519_secret_key);
         let ed25519_key_id = &user.profile.public_keys
             .find_by_value(ed25519_public_key.as_bytes())?
             .id;
-        let http_ed25519_key_id = compatible_id(actor_data, ed25519_key_id)
-            .expect("actor data should be valid");
+        let http_ed25519_key_id = Url::parse(ed25519_key_id)
+            .expect("RSA key ID should be valid")
+            .to_http_url(Some(instance_url))
+            .expect("RSA key ID should be valid");
         let sender = Self {
             username: user.profile.username.clone(),
             rsa_secret_key: user.rsa_secret_key.clone(),
