@@ -17,7 +17,6 @@ Features:
 - Donation buttons.
 - Account migrations (from one server to another). Identity can be detached from the server.
 - Federation over Tor and/or I2P.
-- [Sign-in with a wallet](https://github.com/ChainAgnostic/CAIPs/blob/master/CAIPs/caip-122.md).
 
 Follow: [@mitra@mitra.social](https://mitra.social/@mitra)
 
