@@ -14,6 +14,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Added `pleroma.quote` property to Mastodon API `Status` entity.
 - Support adding quote to post using `quote_id` parameter.
 
+### Changed
+
+- Don't discard actor object if "icon" property value is a string.
+
 ### Fixed
 
 - Ignore delivery to local inbox if it doesn't exist.

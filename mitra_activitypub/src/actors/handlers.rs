@@ -113,17 +113,17 @@ fn deserialize_image_opt<'de, D>(
 {
     let maybe_value: Option<JsonValue> = Option::deserialize(deserializer)?;
     let maybe_image = if let Some(value) = maybe_value {
-        // Some implementations use empty object instead of null
-        let is_empty_object = value.as_object()
-            .map(|map| map.is_empty())
-            .unwrap_or(false);
-        if is_empty_object {
-            None
-        } else {
-            let images: Vec<ActorImage> = parse_into_array(&value)
-                .map_err(DeserializerError::custom)?;
-            // Take first image
-            images.into_iter().next()
+        match value {
+            // Don't attempt to reconstruct Image object
+            JsonValue::String(_) => None,
+            // Some implementations use empty object instead of null
+            JsonValue::Object(map) if map.is_empty() => None,
+            _ => {
+                let images: Vec<ActorImage> = parse_into_array(&value)
+                    .map_err(DeserializerError::custom)?;
+                // Take first image
+                images.into_iter().next()
+            },
         }
     } else {
         None
@@ -674,6 +674,27 @@ mod tests {
         };
         let is_local = actor_json.is_local("gateway.example").unwrap();
         assert!(!is_local);
+    }
+
+    #[test]
+    fn test_deserialize_image_opt() {
+        #[derive(Deserialize)]
+        struct TestObject {
+            #[serde(default, deserialize_with = "deserialize_image_opt")]
+            image: Option<ActorImage>,
+        }
+        let object_value = serde_json::json!({});
+        let object: TestObject = serde_json::from_value(object_value).unwrap();
+        assert_eq!(object.image.is_none(), true);
+
+        let object_value = serde_json::json!({"image": {}});
+        let object: TestObject = serde_json::from_value(object_value).unwrap();
+        assert_eq!(object.image.is_none(), true);
+
+        let object_value =
+            serde_json::json!({"image": "https://social.example/image.png"});
+        let object: TestObject = serde_json::from_value(object_value).unwrap();
+        assert_eq!(object.image.is_none(), true);
     }
 
     #[test]

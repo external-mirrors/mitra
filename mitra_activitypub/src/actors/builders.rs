@@ -89,7 +89,6 @@ pub struct ActorImage {
     pub media_type: Option<String>,
 }
 
-
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Actor {
