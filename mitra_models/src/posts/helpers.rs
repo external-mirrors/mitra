@@ -134,6 +134,18 @@ pub fn can_create_post(
     user.role.has_permission(Permission::CreatePost)
 }
 
+pub fn can_link_post(post: &Post) -> bool {
+    if post.repost_of_id.is_some() {
+        // Can't reference reposts
+        return false;
+    };
+    if post.visibility != Visibility::Public {
+        // Can't reference non-public posts
+        return false;
+    };
+    true
+}
+
 pub async fn get_local_post_by_id(
     db_client: &impl DatabaseClient,
     post_id: &Uuid,

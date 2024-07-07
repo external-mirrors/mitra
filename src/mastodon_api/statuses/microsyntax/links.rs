@@ -5,7 +5,10 @@ use regex::{Captures, Match, Regex};
 use mitra_activitypub::importers::get_post_by_object_id;
 use mitra_models::{
     database::{DatabaseClient, DatabaseError},
-    posts::types::{Post, Visibility},
+    posts::{
+        helpers::can_link_post,
+        types::Post,
+    },
 };
 use mitra_validators::posts::LINK_LIMIT;
 
@@ -60,12 +63,7 @@ pub async fn find_linked_posts(
             &url,
         ).await {
             Ok(post) => {
-                if post.repost_of_id.is_some() {
-                    // Can't reference reposts
-                    continue;
-                };
-                if post.visibility != Visibility::Public {
-                    // Can't reference non-public posts
+                if !can_link_post(&post) {
                     continue;
                 };
                 link_map.insert(url, post);
