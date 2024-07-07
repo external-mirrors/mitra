@@ -153,6 +153,7 @@ async fn create_status(
             &instance,
             &status_data.status,
             &status_data.content_type,
+            status_data.quote_id,
         ).await?;
 
     // Extend mentions
@@ -238,6 +239,7 @@ async fn preview_status(
             &instance,
             &status_data.status,
             &status_data.content_type,
+            None,
         ).await?;
     // Return preview
     let preview = StatusPreview::new(
@@ -322,6 +324,7 @@ async fn edit_status(
             &instance,
             &status_data.status,
             &status_data.content_type,
+            status_data.quote_id,
         ).await?;
 
     // Extend mentions

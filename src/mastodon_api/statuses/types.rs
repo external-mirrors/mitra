@@ -225,6 +225,9 @@ pub struct StatusData {
 
     #[serde(default = "default_post_content_type")]
     pub content_type: String,
+
+    // Pleroma API
+    pub quote_id: Option<Uuid>,
 }
 
 #[derive(Deserialize)]
@@ -287,6 +290,9 @@ pub struct StatusUpdateData {
 
     #[serde(default = "default_post_content_type")]
     pub content_type: String,
+
+    // Pleroma API
+    pub quote_id: Option<Uuid>,
 }
 
 #[derive(Serialize)]

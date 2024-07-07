@@ -2,7 +2,10 @@ use std::collections::HashMap;
 
 use regex::{Captures, Match, Regex};
 
-use mitra_activitypub::importers::get_post_by_object_id;
+use mitra_activitypub::{
+    identifiers::compatible_post_object_id,
+    importers::get_post_by_object_id,
+};
 use mitra_models::{
     database::{DatabaseClient, DatabaseError},
     posts::{
@@ -101,6 +104,17 @@ pub fn replace_object_links(
         caps[0].to_string()
     });
     result.to_string()
+}
+
+pub fn insert_quote(
+    instance_url: &str,
+    content: &str,
+    quote_of: &Post,
+) -> String {
+    format!(
+        r#"{content}<p>RE: <a href="{0}">{0}</a></p>"#,
+        compatible_post_object_id(instance_url, quote_of),
+    )
 }
 
 #[cfg(test)]

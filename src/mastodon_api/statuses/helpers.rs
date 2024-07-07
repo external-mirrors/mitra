@@ -6,7 +6,8 @@ use mitra_models::{
     database::{DatabaseClient, DatabaseError},
     emojis::types::DbEmoji,
     posts::{
-        helpers::{add_related_posts, add_user_actions},
+        queries::get_post_by_id,
+        helpers::{add_related_posts, add_user_actions, can_link_post},
         types::Post,
     },
     users::types::User,
@@ -29,7 +30,7 @@ use crate::mastodon_api::{
 use super::microsyntax::{
     emojis::{find_emojis, replace_emojis},
     hashtags::{find_hashtags, replace_hashtags},
-    links::{replace_object_links, find_linked_posts},
+    links::{find_linked_posts, insert_quote, replace_object_links},
     mentions::{find_mentioned_profiles, replace_mentions},
 };
 use super::types::Status;
@@ -104,6 +105,7 @@ pub async fn parse_content(
     instance: &Instance,
     content: &str,
     content_type: &str,
+    maybe_quote_of_id: Option<Uuid>,
 ) -> Result<PostContent, MastodonError> {
     let (content_html, maybe_content_source) = match content_type {
         "text/html" => (content.to_owned(), None),
@@ -120,6 +122,24 @@ pub async fn parse_content(
         content_html,
     ).await?;
     output.content_source = maybe_content_source;
+    if let Some(quote_of_id) = maybe_quote_of_id {
+        let quote_of = match get_post_by_id(db_client, &quote_of_id).await {
+            Ok(post) if can_link_post(&post) => post,
+            Ok(_) | Err(DatabaseError::NotFound(_)) => {
+                return Err(ValidationError("quoted post does not exist").into());
+            },
+            Err(other_error) => return Err(other_error.into()),
+        };
+        if !output.links.contains(&quote_of.id) {
+            output.content = insert_quote(
+                &instance.url(),
+                &output.content,
+                &quote_of,
+            );
+            output.links.insert(0, quote_of.id);
+            output.linked.insert(0, quote_of);
+        };
+    };
     output.content = clean_local_content(&output.content)?;
     Ok(output)
 }

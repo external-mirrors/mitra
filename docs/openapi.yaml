@@ -1279,6 +1279,11 @@ paths:
                   description: Mark post and attached media as sensitive?
                   type: boolean
                   default: false
+                quote_id:
+                  description: ID of the quoted post.
+                  type: string
+                  format: uuid
+                  nullable: true
               required:
                 - status
       responses:
@@ -1374,6 +1379,11 @@ paths:
                   description: Mark post and attached media as sensitive?
                   type: boolean
                   default: false
+                quote_id:
+                  description: ID of the quoted post.
+                  type: string
+                  format: uuid
+                  nullable: true
               required:
                 - status
       responses:
