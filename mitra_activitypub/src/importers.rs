@@ -81,6 +81,12 @@ pub struct FetcherContext {
     gateways: Vec<String>,
 }
 
+impl FetcherContext {
+    fn remove_gateway(&mut self, gateway_url: &str) -> () {
+        self.gateways.retain(|url| url != gateway_url);
+    }
+}
+
 impl From<Vec<String>> for FetcherContext {
     fn from(gateways: Vec<String>) -> Self {
         Self { gateways }
@@ -208,14 +214,19 @@ async fn refresh_remote_profile(
     force: bool,
 ) -> Result<DbActorProfile, HandlerError> {
     let agent = build_federation_agent(instance, None);
-    let actor_data = profile.expect_actor_data();
-    let mut context = FetcherContext::from(actor_data);
-    let actor_id = context.prepare_object_id(&actor_data.id)?;
     let profile = if force ||
         profile.updated_at < Utc::now() - Duration::days(1)
     {
+        if profile.has_account() {
+            // Local nomadic accounts should not be refreshed
+            return Ok(profile);
+        };
         // Try to re-fetch actor profile
-        match fetch_any_object::<ActorJson>(&agent, &actor_id).await {
+        let actor_data = profile.expect_actor_data();
+        let mut context = FetcherContext::from(actor_data);
+        // Don't re-fetch from local gateway
+        context.remove_gateway(&instance.url());
+        match fetch_any_object::<ActorJson>(&agent, &actor_data.id).await {
             Ok(actor) => {
                 log::info!("re-fetched actor {}", actor.id);
                 let profile_updated = update_remote_profile(
@@ -231,7 +242,7 @@ async fn refresh_remote_profile(
                 // Ignore error and return stored profile
                 log::warn!(
                     "failed to re-fetch {} ({})",
-                    actor_id,
+                    actor_data.id,
                     error,
                 );
                 profile

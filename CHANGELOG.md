@@ -21,6 +21,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Don't discard actor object if "icon" property value is a string.
 - Signal support for Pleroma features via `/api/v1/instance` info.
 - Enable rate limiting for `/api/v1/accounts` API endpoint.
+- Don't refresh portable actors that have local accounts.
 
 ### Fixed
 
