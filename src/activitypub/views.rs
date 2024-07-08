@@ -48,6 +48,7 @@ use mitra_federation::{
     constants::{AP_MEDIA_TYPE, AP_PUBLIC},
     deserialization::get_object_id,
     http_server::is_activitypub_request,
+    url::is_same_authority,
 };
 use mitra_models::{
     activitypub::queries::{
@@ -74,7 +75,7 @@ use mitra_models::{
     },
 };
 use mitra_utils::{
-    ap_url::{with_ap_prefix, ApUrl},
+    ap_url::with_ap_prefix,
     caip2::ChainId,
     http_digest::get_sha256_digest,
 };
@@ -792,7 +793,7 @@ async fn apgateway_outbox_client_to_server_view(
     log::info!("received in {}: {}", request_path, activity_type);
     let db_client = &mut **get_database_client(&db_pool).await?;
     let instance = config.instance();
-    let authority = verify_portable_object(&activity).map_err(|error| {
+    verify_portable_object(&activity).map_err(|error| {
         log::warn!("C2S authentication error: {}", error);
         HttpError::PermissionError
     })?;
@@ -802,9 +803,9 @@ async fn apgateway_outbox_client_to_server_view(
     let activity_actor = get_object_id(&activity["actor"])
         .map_err(|_| ValidationError("invalid 'actor' property"))?;
     let canonical_actor_id = canonicalize_id(&activity_actor)?;
-    let canonical_actor_id_ap = ApUrl::parse(&canonical_actor_id)
-        .map_err(ValidationError)?;
-    if canonical_actor_id_ap.authority() != &authority {
+    if !is_same_authority(activity_id, &activity_actor)
+        .map_err(|error| ValidationError(error.0))?
+    {
         return Err(ValidationError("actor and activity authorities do not match").into());
     };
     let signer = match get_portable_user_by_actor_id(
