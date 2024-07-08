@@ -74,6 +74,16 @@ struct BlockchainInfo {
     features: BlockchainFeatures,
 }
 
+#[derive(Serialize)]
+struct PleromaMetadata {
+    features: [&'static str; 3],
+}
+
+#[derive(Serialize)]
+struct PleromaInfo {
+    metadata: PleromaMetadata,
+}
+
 /// https://docs.joinmastodon.org/entities/V1_Instance/
 #[derive(Serialize)]
 pub struct InstanceInfo {
@@ -97,6 +107,8 @@ pub struct InstanceInfo {
 
     blockchains: Vec<BlockchainInfo>,
     ipfs_gateway_url: Option<String>,
+
+    pleroma: PleromaInfo,
 }
 
 fn get_full_api_version(version: &str) -> String {
@@ -214,9 +226,18 @@ impl InstanceInfo {
             allow_unauthenticated: AllowUnauthenticated {
                 timeline_local: config.instance_timeline_public,
             },
+            federated_timeline_restricted: dynamic_config.federated_timeline_restricted,
             blockchains: blockchains,
             ipfs_gateway_url: config.ipfs_gateway_url.clone(),
-            federated_timeline_restricted: dynamic_config.federated_timeline_restricted,
+            pleroma: PleromaInfo {
+                metadata: PleromaMetadata {
+                    features: [
+                        "quote_posting",
+                        "pleroma_emoji_reactions",
+                        "pleroma_custom_emoji_reactions",
+                    ],
+                },
+            },
         }
     }
 }

@@ -17,6 +17,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Changed
 
 - Don't discard actor object if "icon" property value is a string.
+- Signal support for Pleroma features via `/api/v1/instance` info.
 
 ### Fixed
 
