@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Implement S2S inbox endpoints for portable users.
 - Added `pleroma.quote` property to Mastodon API `Status` entity.
 - Support adding quote to post using `quote_id` parameter.
+- Added `/api/v1/statuses/{status_id}/load_conversation` API endpoint.
 
 ### Changed
 

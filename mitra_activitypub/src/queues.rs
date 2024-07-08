@@ -48,7 +48,7 @@ use crate::{
     errors::HandlerError,
     handlers::activity::handle_activity,
     identifiers::canonicalize_id,
-    importers::import_from_outbox,
+    importers::{import_from_outbox, import_replies},
 };
 
 const JOB_TIMEOUT: u32 = 3600; // 1 hour
@@ -481,6 +481,7 @@ pub async fn process_queued_outgoing_activities(
 #[serde(tag = "type")]
 pub enum FetcherJobData {
     Outbox { actor_id: String },
+    Context { object_id: String },
 }
 
 impl FetcherJobData {
@@ -526,6 +527,15 @@ pub async fn fetcher_queue_executor(
                     db_client,
                     &actor_id,
                     ACTIVITY_LIMIT,
+                ).await
+            },
+            FetcherJobData::Context { object_id } => {
+                const LIMIT: usize = 20;
+                import_replies(
+                    config,
+                    db_client,
+                    &object_id,
+                    LIMIT,
                 ).await
             },
         };

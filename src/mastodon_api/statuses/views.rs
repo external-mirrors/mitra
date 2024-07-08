@@ -28,6 +28,7 @@ use mitra_activitypub::{
         undo_like::prepare_undo_like,
         update_note::prepare_update_note,
     },
+    queues::FetcherJobData,
 };
 use mitra_config::Config;
 use mitra_models::{
@@ -58,6 +59,7 @@ use mitra_models::{
     },
     reactions::types::ReactionData,
     relationships::queries::get_subscribers,
+    users::types::Permission,
 };
 use mitra_services::{
     ipfs::{store as ipfs_store},
@@ -803,6 +805,35 @@ async fn make_permanent(
     Ok(HttpResponse::Ok().json(status))
 }
 
+#[post("/{status_id}/load_conversation")]
+async fn load_conversation(
+    auth: BearerAuth,
+    db_pool: web::Data<DatabaseConnectionPool>,
+    status_id: web::Path<Uuid>,
+) -> Result<HttpResponse, MastodonError> {
+    let db_client = &**get_database_client(&db_pool).await?;
+    let current_user = get_current_user(db_client, auth.token()).await?;
+    if !current_user.role.has_permission(Permission::DeleteAnyProfile) {
+        return Err(MastodonError::PermissionError);
+    };
+    let post = get_post_by_id_for_view(
+        db_client,
+        Some(&current_user),
+        *status_id,
+    ).await?;
+    if post.repost_of_id.is_some() {
+        return Err(MastodonError::NotFoundError("post"));
+    };
+    let job_data = if let Some(object_id) = post.object_id {
+        FetcherJobData::Context { object_id }
+    } else {
+        // Local posts
+        return Err(MastodonError::NotFoundError("post"));
+    };
+    job_data.into_job(db_client).await?;
+    Ok(HttpResponse::NoContent().finish())
+}
+
 pub fn status_api_scope() -> Scope {
     web::scope("/v1/statuses")
         // Routes without status ID
@@ -822,4 +853,5 @@ pub fn status_api_scope() -> Scope {
         .service(pin)
         .service(unpin)
         .service(make_permanent)
+        .service(load_conversation)
 }

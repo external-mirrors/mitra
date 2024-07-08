@@ -1558,6 +1558,8 @@ paths:
   /api/v1/statuses/{status_id}/make_permanent:
     post:
       summary: Save post to IPFS
+      security:
+        - tokenAuth: []
       parameters:
         - $ref: '#/components/parameters/status_id'
       responses:
@@ -1575,6 +1577,20 @@ paths:
           description: IPFS integration is not enabled
         422:
           description: Post already saved to IPFS
+  /api/v1/statuses/{status_id}/load_conversation:
+    post:
+      summary: Load conversation from a remote server.
+      security:
+        - tokenAuth: []
+      parameters:
+        - $ref: '#/components/parameters/status_id'
+      responses:
+        204:
+          description: Successful operation
+        403:
+          description: The user doesn't have a permission to load conversation.
+        404:
+          description: Post not found or is local.
   /api/v1/subscriptions:
     post:
       summary: Add subscriber or extend existing subscription.
