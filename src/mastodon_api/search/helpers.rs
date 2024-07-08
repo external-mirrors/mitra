@@ -34,6 +34,7 @@ use mitra_services::{
     media::MediaStorage,
 };
 use mitra_utils::{
+    ap_url::is_ap_url,
     currencies::Currency,
     did::Did,
     http_url::normalize_http_url,
@@ -57,8 +58,12 @@ enum SearchQuery {
 }
 
 fn parse_url_query(query: &str) -> Result<String, ValidationError> {
-    let url = normalize_http_url(query)
-        .map_err(ValidationError)?;
+    let url = if is_ap_url(query) {
+        query.to_string()
+    } else {
+        normalize_http_url(query)
+            .map_err(ValidationError)?
+    };
     Ok(url)
 }
 
