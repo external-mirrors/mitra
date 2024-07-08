@@ -4,7 +4,7 @@ use std::str::FromStr;
 use iri_string::types::UriString;
 use url::Url;
 
-pub(crate) fn parse_http_url_whatwg(url: &str) -> Result<Url, &'static str> {
+pub fn parse_http_url_whatwg(url: &str) -> Result<Url, &'static str> {
     let url = Url::parse(url).map_err(|_| "invalid URL")?;
     match url.scheme() {
         "http" | "https" => (),

@@ -1,4 +1,5 @@
 use std::cmp::max;
+use std::net::IpAddr;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -11,7 +12,14 @@ use reqwest::{
 };
 use thiserror::Error;
 
-use mitra_utils::urls::{get_hostname, is_safe_url, UrlError};
+use mitra_utils::{
+    http_url::parse_http_url_whatwg,
+    urls::{
+        get_hostname,
+        get_ip_address,
+        UrlError,
+    },
+};
 
 use super::agent::FederationAgent;
 
@@ -36,6 +44,29 @@ pub fn get_network_type(request_url: &str) ->
         Network::Default
     };
     Ok(network)
+}
+
+// https://www.w3.org/TR/activitypub/#security-localhost
+fn is_safe_addr(ip_addr: IpAddr) -> bool {
+    match ip_addr {
+        IpAddr::V4(addr_v4) => !addr_v4.is_loopback(),
+        IpAddr::V6(addr_v6) => !addr_v6.is_loopback(),
+    }
+}
+
+/// Returns false if untrusted URL is not safe for fetching
+fn is_safe_url(url: &str) -> bool {
+    if let Ok(url) = parse_http_url_whatwg(url) {
+        if let Some(ip_address) = get_ip_address(&url) {
+            is_safe_addr(ip_address)
+        } else {
+            // Don't resolve domain name
+            true
+        }
+    } else {
+        // Not a valid 'http' URL
+        false
+    }
 }
 
 #[derive(Debug, Error)]
@@ -63,12 +94,12 @@ fn build_safe_redirect_policy() -> RedirectPolicy {
 
 mod dns_resolver {
     // https://github.com/seanmonstar/reqwest/blob/v0.11.27/src/dns/gai.rs
-    use std::net::{IpAddr, SocketAddr};
-
     use futures_util::future::FutureExt;
     use hyper::client::connect::dns::{GaiResolver as HyperGaiResolver, Name};
     use hyper::service::Service;
     use reqwest::dns::{Addrs, Resolve, Resolving};
+
+    use super::is_safe_addr;
 
     type BoxError = Box<dyn std::error::Error + Send + Sync>;
 
@@ -80,21 +111,13 @@ mod dns_resolver {
         }
     }
 
-    // https://www.w3.org/TR/activitypub/#security-localhost
-    fn is_safe_addr(addr: &SocketAddr) -> bool {
-        match addr.ip() {
-            IpAddr::V4(addr_v4) => !addr_v4.is_loopback(),
-            IpAddr::V6(addr_v6) => !addr_v6.is_loopback(),
-        }
-    }
-
     impl Resolve for SafeResolver {
         fn resolve(&self, name: Name) -> Resolving {
             let this = &mut self.0.clone();
             Box::pin(Service::<Name>::call(this, name).map(|result| {
                 result
                     .map(|addrs| -> Addrs {
-                        Box::new(addrs.filter(is_safe_addr))
+                        Box::new(addrs.filter(|addr| is_safe_addr(addr.ip())))
                     })
                     .map_err(|err| -> BoxError { Box::new(err) })
             }))
@@ -166,4 +189,21 @@ pub async fn limited_response(
         bytes.put(chunk);
     };
     Ok(Some(bytes.freeze()))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_is_safe_url() {
+        assert_eq!(is_safe_url("https://server.example/test"), true);
+        assert_eq!(is_safe_url("http://bq373nez4.onion/test"), true);
+        assert_eq!(is_safe_url("ftp://user@server.example"), false);
+        assert_eq!(is_safe_url("file:///etc/passwd"), false);
+        assert_eq!(is_safe_url("http://127.0.0.1:5941/test"), false);
+        assert_eq!(is_safe_url("http://[::1]:5941/test"), false);
+        assert_eq!(is_safe_url("http://localhost:5941/test"), true);
+        assert_eq!(is_safe_url("https://server.local/test"), true);
+    }
 }

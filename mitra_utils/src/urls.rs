@@ -1,4 +1,4 @@
-use std::net::{Ipv4Addr, Ipv6Addr};
+use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 
 use idna::{domain_to_ascii, Errors as IdnaError};
 use iri_string::percent_encode::PercentEncodedForUri;
@@ -67,29 +67,12 @@ pub fn guess_protocol(hostname: &str) -> &'static str {
     }
 }
 
-/// Returns false if untrusted URL is not safe for fetching
-// TODO: move to mitra_federation
-pub fn is_safe_url(url: &str) -> bool {
-    if let Ok(url) = Url::parse(url) {
-        match url.scheme() {
-            "http" | "https" => (),
-            _ => return false,
-        };
-        let host = match url.host() {
-            Some(host) => host,
-            None => return false,
-        };
-        match host {
-            // This check is not sufficient, name must be resolved
-            Host::Domain("localhost") => false,
-            Host::Domain(domain) if domain.ends_with(".local") => false,
-            // TODO: allow only global
-            Host::Ipv4(addr) if addr.is_loopback() => false,
-            Host::Ipv6(addr) if addr.is_loopback() => false,
-            _ => true,
-        }
-    } else {
-        false
+pub fn get_ip_address(url: &Url) -> Option<IpAddr> {
+    let host = url.host()?;
+    match host {
+        Host::Domain(_) => None,
+        Host::Ipv4(addr) => Some(IpAddr::V4(addr)),
+        Host::Ipv6(addr) => Some(IpAddr::V6(addr)),
     }
 }
 
@@ -236,15 +219,21 @@ mod tests {
     }
 
     #[test]
-    fn test_is_safe_url() {
-        assert_eq!(is_safe_url("https://server.example/test"), true);
-        assert_eq!(is_safe_url("http://bq373nez4.onion/test"), true);
-        assert_eq!(is_safe_url("ftp://user@server.example"), false);
-        assert_eq!(is_safe_url("file:///etc/passwd"), false);
-        assert_eq!(is_safe_url("http://127.0.0.1:5941/test"), false);
-        assert_eq!(is_safe_url("http://[::1]:5941/test"), false);
-        assert_eq!(is_safe_url("http://localhost:5941/test"), false);
-        assert_eq!(is_safe_url("https://server.local/test"), false);
+    fn test_get_ip_address() {
+        let url = Url::parse("https://server.example/test").unwrap();
+        assert_eq!(get_ip_address(&url), None);
+
+        let url = Url::parse("http://127.0.0.1:5941/test").unwrap();
+        assert_eq!(
+            get_ip_address(&url),
+            Some(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1))),
+        );
+
+        let url = Url::parse("http://[::1]:5941/test").unwrap();
+        assert_eq!(
+            get_ip_address(&url),
+            Some(IpAddr::V6(Ipv6Addr::new(0, 0, 0, 0, 0, 0, 0, 1))),
+        );
     }
 
     #[test]
