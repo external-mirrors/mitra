@@ -155,7 +155,6 @@ use super::types::{
     SubscriptionListQueryParams,
 };
 
-#[post("")]
 pub async fn create_account(
     connection_info: ConnectionInfo,
     config: web::Data<Config>,
@@ -1043,15 +1042,20 @@ async fn load_activities(
 
 pub fn account_api_scope() -> Scope {
     // One request per 5 seconds
-    let ratelimit_config = ratelimit_config(2, 30);
+    let search_limit = ratelimit_config(2, 30);
     // TODO: use Resource::get() (requires actix-web 4.4.0)
     let search_by_acct_limited = web::resource("/search").route(
         web::get()
             .to(search_by_acct)
-            .wrap(Governor::new(&ratelimit_config)));
+            .wrap(Governor::new(&search_limit)));
+    let registration_limit = ratelimit_config(2, 300);
+    let create_account_limited = web::resource("").route(
+        web::post()
+            .to(create_account)
+            .wrap(Governor::new(&registration_limit)));
     web::scope("/v1/accounts")
         // Routes without account ID
-        .service(create_account)
+        .service(create_account_limited)
         .service(verify_credentials)
         .service(update_credentials)
         .service(get_identity_claim)
