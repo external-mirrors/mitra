@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [2.25.0] - 2024-07-10
+
 ### Added
 
 - Forward portable activities from outbox to actors listed in `to` and `cc`.
