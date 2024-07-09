@@ -3,6 +3,7 @@ use serde_json::{Value as JsonValue};
 use uuid::Uuid;
 
 use crate::database::{
+    catch_unique_violation,
     DatabaseClient,
     DatabaseError,
 };
@@ -11,20 +12,23 @@ pub async fn save_activity(
     db_client: &impl DatabaseClient,
     activity_id: &str,
     activity: &JsonValue,
-) -> Result<(), DatabaseError> {
-    db_client.execute(
+) -> Result<bool, DatabaseError> {
+    let result = db_client.execute(
         "
         INSERT INTO activitypub_object (
             object_id,
             object_data
         )
         VALUES ($1, $2)
-        ON CONFLICT (object_id)
-        DO UPDATE SET object_data = $2
         ",
         &[&activity_id, &activity],
-    ).await?;
-    Ok(())
+    ).await.map_err(catch_unique_violation("activitypub_object"));
+    let is_new = match result {
+        Ok(_) => true,
+        Err(DatabaseError::AlreadyExists(_)) => false,
+        Err(other_error) => return Err(other_error),
+    };
+    Ok(is_new)
 }
 
 pub async fn save_actor(
@@ -194,9 +198,19 @@ mod tests {
             "object": "https://social.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/objects/1",
         });
         // Create
-        save_activity(db_client, canonical_id, &activity).await.unwrap();
+        let is_new = save_activity(
+            db_client,
+            canonical_id,
+            &activity,
+        ).await.unwrap();
+        assert!(is_new);
         // Update
-        save_activity(db_client, canonical_id, &activity).await.unwrap();
+        let is_new = save_activity(
+            db_client,
+            canonical_id,
+            &activity,
+        ).await.unwrap();
+        assert!(!is_new);
     }
 
     #[tokio::test]

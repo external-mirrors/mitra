@@ -829,7 +829,15 @@ async fn apgateway_outbox_client_to_server_view(
         // Wrong outbox path
         return Err(HttpError::PermissionError);
     };
-    save_activity(db_client, &canonical_activity_id, &activity).await?;
+    let is_new_activity = save_activity(
+        db_client,
+        &canonical_activity_id,
+        &activity,
+    ).await?;
+    if !is_new_activity {
+        // Already processed
+        return Ok(HttpResponse::Accepted().finish());
+    };
     add_object_to_collection(
         db_client,
         signer.id,
