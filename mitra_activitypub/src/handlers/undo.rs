@@ -27,7 +27,7 @@ use mitra_models::{
 use mitra_validators::errors::ValidationError;
 
 use crate::{
-    identifiers::parse_local_actor_id,
+    identifiers::{canonicalize_id, parse_local_actor_id},
     vocabulary::{ANNOUNCE, FOLLOW, LIKE},
 };
 
@@ -47,9 +47,10 @@ async fn handle_undo_follow(
 ) -> HandlerResult {
     let activity: UndoFollow = serde_json::from_value(activity)
         .map_err(|_| ValidationError("unexpected activity structure"))?;
+    let canonical_actor_id = canonicalize_id(&activity.actor)?;
     let source_profile = get_remote_profile_by_actor_id(
         db_client,
-        &activity.actor,
+        &canonical_actor_id,
     ).await?;
     let target_actor_id = get_object_id(&activity.object["object"])
         .map_err(|_| ValidationError("invalid follow activity object"))?;
@@ -87,12 +88,17 @@ pub async fn handle_undo(
 
     let activity: Undo = serde_json::from_value(activity)
         .map_err(|_| ValidationError("unexpected activity structure"))?;
+    let canonical_actor_id = canonicalize_id(&activity.actor)?;
     let actor_profile = get_remote_profile_by_actor_id(
         db_client,
-        &activity.actor,
+        &canonical_actor_id,
     ).await?;
+    let canonical_object_id = canonicalize_id(&activity.object)?;
 
-    match get_follow_request_by_activity_id(db_client, &activity.object).await {
+    match get_follow_request_by_activity_id(
+        db_client,
+        &canonical_object_id,
+    ).await {
         Ok(follow_request) => {
             // Undo(Follow)
             if follow_request.source_id != actor_profile.id {
@@ -109,7 +115,10 @@ pub async fn handle_undo(
         Err(other_error) => return Err(other_error.into()),
     };
 
-    match get_remote_reaction_by_activity_id(db_client, &activity.object).await {
+    match get_remote_reaction_by_activity_id(
+        db_client,
+        &canonical_object_id,
+    ).await {
         Ok(reaction) => {
             // Undo(Like), Undo(EmojiReact), Undo(Dislike)
             if reaction.author_id != actor_profile.id {
@@ -127,7 +136,7 @@ pub async fn handle_undo(
             // Undo(Announce)
             let post = match get_remote_post_by_object_id(
                 db_client,
-                &activity.object,
+                &canonical_object_id,
             ).await {
                 Ok(post) => post,
                 // Ignore undo if neither reaction nor repost is found

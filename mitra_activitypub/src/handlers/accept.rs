@@ -21,7 +21,7 @@ use mitra_validators::{
 };
 
 use crate::{
-    identifiers::parse_local_activity_id,
+    identifiers::{canonicalize_id, parse_local_activity_id},
     vocabulary::{FOLLOW, OFFER},
 };
 
@@ -51,9 +51,10 @@ pub async fn handle_accept(
         return handle_accept_offer(config, db_client, activity).await;
     };
     // Accept(Follow)
+    let canonical_actor_id = canonicalize_id(&activity.actor)?;
     let actor_profile = get_remote_profile_by_actor_id(
         db_client,
-        &activity.actor,
+        &canonical_actor_id,
     ).await?;
     let follow_request_id = parse_local_activity_id(
         &config.instance_url(),
