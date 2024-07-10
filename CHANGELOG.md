@@ -24,6 +24,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Enable rate limiting for `/api/v1/accounts` API endpoint.
 - Don't refresh portable actors that have local accounts.
 - Process activities submitted to outbox only once.
+- Use compatible target actor ID when building `Follow` and `Undo(Follow)` activities.
 
 ### Fixed
 

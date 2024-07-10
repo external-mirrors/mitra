@@ -727,7 +727,7 @@ async fn unfollow_account(
                     &remote_actor,
                     follow_request_id,
                     follow_request_has_deprecated_ap_id,
-                ).save_and_enqueue(db_client).await?;
+                )?.save_and_enqueue(db_client).await?;
             };
         },
         Err(DatabaseError::NotFound(_)) => (), // not following

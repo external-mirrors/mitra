@@ -172,7 +172,7 @@ pub async fn import_followers_task(
                             remote_actor,
                             follow_request_id,
                             follow_request_has_deprecated_ap_id,
-                        ).save_and_enqueue(db_client).await?;
+                        )?.save_and_enqueue(db_client).await?;
                     },
                     // Not a follower, ignore
                     Err(DatabaseError::NotFound(_)) => continue,

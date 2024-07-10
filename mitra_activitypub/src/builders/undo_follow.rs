@@ -3,13 +3,18 @@ use uuid::Uuid;
 
 use mitra_config::Instance;
 use mitra_models::{
+    database::DatabaseError,
     profiles::types::{DbActor, DbActorProfile},
     users::types::User,
 };
 
 use crate::{
     contexts::{build_default_context, Context},
-    identifiers::{local_activity_id, local_actor_id},
+    identifiers::{
+        compatible_id,
+        local_activity_id,
+        local_actor_id,
+    },
     queues::OutgoingActivityJobData,
     vocabulary::UNDO,
 };
@@ -68,21 +73,22 @@ pub fn prepare_undo_follow(
     target_actor: &DbActor,
     follow_request_id: Uuid,
     follow_request_has_deprecated_ap_id: bool,
-) -> OutgoingActivityJobData {
+) -> Result<OutgoingActivityJobData, DatabaseError> {
+    let target_actor_id = compatible_id(target_actor, &target_actor.id)?;
     let activity = build_undo_follow(
         &instance.url(),
         &sender.profile,
-        &target_actor.id,
+        &target_actor_id,
         follow_request_id,
         follow_request_has_deprecated_ap_id,
     );
     let recipients = vec![target_actor.clone()];
-    OutgoingActivityJobData::new(
+    Ok(OutgoingActivityJobData::new(
         &instance.url(),
         sender,
         activity,
         recipients,
-    )
+    ))
 }
 
 #[cfg(test)]

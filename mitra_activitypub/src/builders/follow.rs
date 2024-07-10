@@ -15,7 +15,12 @@ use mitra_models::{
 
 use crate::{
     contexts::{build_default_context, Context},
-    identifiers::{local_activity_id, local_actor_id, local_object_id},
+    identifiers::{
+        compatible_id,
+        local_activity_id,
+        local_actor_id,
+        local_object_id,
+    },
     queues::OutgoingActivityJobData,
     vocabulary::FOLLOW,
 };
@@ -64,22 +69,23 @@ fn prepare_follow(
     sender: &User,
     target_actor: &DbActor,
     follow_request_id: Uuid,
-) -> OutgoingActivityJobData {
+) -> Result<OutgoingActivityJobData, DatabaseError> {
+    let target_actor_id = compatible_id(target_actor, &target_actor.id)?;
     let activity = build_follow(
         &instance.url(),
         &sender.profile,
-        &target_actor.id,
+        &target_actor_id,
         follow_request_id,
         false, // don't use legacy activity IDs
         true, // with context
     );
     let recipients = vec![target_actor.clone()];
-    OutgoingActivityJobData::new(
+    Ok(OutgoingActivityJobData::new(
         &instance.url(),
         sender,
         activity,
         recipients,
-    )
+    ))
 }
 
 pub async fn follow_or_create_request(
@@ -102,7 +108,7 @@ pub async fn follow_or_create_request(
                         current_user,
                         remote_actor,
                         follow_request.id,
-                    ).save_and_enqueue(db_client).await?;
+                    )?.save_and_enqueue(db_client).await?;
                 } else {
                     create_follow_request_notification(
                         db_client,
