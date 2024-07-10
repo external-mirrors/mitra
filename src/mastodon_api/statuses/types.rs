@@ -69,6 +69,7 @@ struct PleromaEmojiReaction {
 #[derive(Serialize)]
 struct PleromaData {
     emoji_reactions: Vec<PleromaEmojiReaction>,
+    in_reply_to_account_acct: Option<String>,
     quote: Option<Box<Status>>,
     quote_visible: bool,
 }
@@ -176,7 +177,8 @@ impl Status {
             account: account,
             content: post.content,
             in_reply_to_id: post.in_reply_to_id,
-            in_reply_to_account_id: post.in_reply_to.map(|post| post.author.id),
+            in_reply_to_account_id: post.in_reply_to.as_ref()
+                .map(|post| post.author.id),
             reblog: reblog,
             visibility: visibility.to_string(),
             sensitive: post.is_sensitive,
@@ -193,6 +195,8 @@ impl Status {
             reblogged: post.actions.as_ref().map_or(false, |actions| actions.reposted),
             pleroma: PleromaData {
                 emoji_reactions,
+                in_reply_to_account_acct: post.in_reply_to
+                    .map(|post| post.author.preferred_handle().to_owned()),
                 quote_visible: maybe_quote.is_some(),
                 quote: maybe_quote,
             },

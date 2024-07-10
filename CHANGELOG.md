@@ -25,6 +25,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Don't refresh portable actors that have local accounts.
 - Process activities submitted to outbox only once.
 - Use compatible target actor ID when building `Follow` and `Undo(Follow)` activities.
+- Added `pleroma.in_reply_to_account_acct` field to Mastodon API `Status` entity.
 
 ### Fixed
 
