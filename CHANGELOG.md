@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [2.25.1] - 2024-07-11
+
 ### Fixed
 
 - Prevent panic if actor ID changes during profile refresh.
