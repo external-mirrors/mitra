@@ -228,7 +228,14 @@ async fn refresh_remote_profile(
         context.remove_gateway(&instance.url());
         match fetch_any_object::<ActorJson>(&agent, &actor_data.id).await {
             Ok(actor) => {
-                log::info!("re-fetched actor {}", actor.id);
+                if canonicalize_id(&actor.id)? != actor_data.id {
+                    log::warn!(
+                        "ignoring actor ID change: {}",
+                        actor_data.id,
+                    );
+                    return Ok(profile);
+                };
+                log::info!("re-fetched actor {}", actor_data.id);
                 let profile_updated = update_remote_profile(
                     &agent,
                     db_client,
