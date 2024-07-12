@@ -1054,7 +1054,6 @@ pub async fn get_thread(
         JOIN actor_profile ON post.author_id = actor_profile.id
         WHERE
             {visibility_filter}
-            AND {mute_filter}
         ORDER BY thread.path
         ",
         related_attachments=RELATED_ATTACHMENTS,
@@ -1064,7 +1063,6 @@ pub async fn get_thread(
         related_emojis=RELATED_EMOJIS,
         related_emoji_reactions=RELATED_EMOJI_REACTIONS,
         visibility_filter=build_visibility_filter(),
-        mute_filter=build_mute_filter(),
     );
     let query = query!(
         &statement,
