@@ -554,12 +554,7 @@ mod tests {
                 "https://w3id.org/security/data-integrity/v1",
                 {
                     "Hashtag": "as:Hashtag",
-                    "sensitive": "as:sensitive",
-                    "mitra": "http://jsonld.mitra.social#",
-                    "MitraJcsRsaSignature2022": "mitra:MitraJcsRsaSignature2022",
-                    "proofValue": "sec:proofValue",
-                    "proofPurpose": "sec:proofPurpose",
-                    "verificationMethod": "sec:verificationMethod",
+                    "sensitive": "as:sensitive"
                 },
             ],
             "id": "https://server.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/objects/11fa64ff-b5a3-47bf-b23d-22b360581c3f",

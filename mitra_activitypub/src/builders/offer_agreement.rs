@@ -152,11 +152,6 @@ mod tests {
                 {
                     "Hashtag": "as:Hashtag",
                     "sensitive": "as:sensitive",
-                    "proofValue": "sec:proofValue",
-                    "proofPurpose": "sec:proofPurpose",
-                    "verificationMethod": "sec:verificationMethod",
-                    "mitra": "http://jsonld.mitra.social#",
-                    "MitraJcsRsaSignature2022": "mitra:MitraJcsRsaSignature2022",
                     "vf": "https://w3id.org/valueflows/ont/vf#",
                     "om2": "http://www.ontology-of-units-of-measure.org/resource/om-2/",
                     "Proposal": "vf:Proposal",
