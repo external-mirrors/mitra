@@ -136,7 +136,7 @@ impl InstanceInfo {
             BlockchainConfig::Ethereum(ethereum_config) => {
                 let features = if let Some(contract_set) = maybe_ethereum_contracts {
                     BlockchainFeatures {
-                        gate: contract_set.gate.is_some(),
+                        gate: false,
                         minter: contract_set.collectible.is_some(),
                         subscriptions: contract_set.subscription.is_some(),
                     }

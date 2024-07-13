@@ -20,7 +20,6 @@ use super::sync::{
 use super::utils::parse_address;
 
 const ERC165: &str = "IERC165";
-const GATE: &str = "IGate";
 const MINTER: &str = "IMinter";
 const SUBSCRIPTION_ADAPTER: &str = "ISubscriptionAdapter";
 const SUBSCRIPTION: &str = "ISubscription";
@@ -85,7 +84,6 @@ async fn is_interface_supported(
 pub struct ContractSet {
     pub web3: Web3<Http>,
 
-    pub gate: Option<Contract<Http>>,
     pub collectible: Option<Contract<Http>>,
     pub subscription: Option<Contract<Http>>,
     pub subscription_adapter: Option<Contract<Http>>,
@@ -116,22 +114,10 @@ pub async fn get_contracts(
         erc165_abi,
     );
 
-    let mut maybe_gate = None;
     let mut maybe_collectible = None;
     let mut maybe_subscription = None;
     let mut maybe_subscription_adapter = None;
     let mut sync_targets = vec![];
-
-    let gate_abi = load_abi(&config.contract_dir, GATE)?;
-    if is_interface_supported(&erc165, &gate_abi).await? {
-        let gate = Contract::new(
-            web3.eth(),
-            adapter_address,
-            gate_abi,
-        );
-        maybe_gate = Some(gate);
-        log::info!("found gate interface");
-    };
 
     let minter_abi = load_abi(&config.contract_dir, MINTER)?;
     if is_interface_supported(&erc165, &minter_abi).await? {
@@ -190,7 +176,6 @@ pub async fn get_contracts(
 
     let contract_set = ContractSet {
         web3,
-        gate: maybe_gate,
         collectible: maybe_collectible,
         subscription: maybe_subscription,
         subscription_adapter: maybe_subscription_adapter,

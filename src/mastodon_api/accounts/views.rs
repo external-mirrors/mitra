@@ -76,11 +76,7 @@ use mitra_models::{
     users::types::{Permission, UserCreateData},
 };
 use mitra_services::{
-    ethereum::{
-        contracts::ContractSet,
-        eip4361::verify_eip4361_signature,
-        gate::is_allowed_user,
-    },
+    ethereum::eip4361::verify_eip4361_signature,
     media::MediaStorage,
     monero::caip122::verify_monero_caip122_signature,
 };
@@ -160,7 +156,6 @@ pub async fn create_account(
     connection_info: ConnectionInfo,
     config: web::Data<Config>,
     db_pool: web::Data<DatabaseConnectionPool>,
-    maybe_ethereum_contracts: web::Data<Option<ContractSet>>,
     account_data: web::Json<AccountCreateData>,
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &mut **get_database_client(&db_pool).await?;
@@ -230,19 +225,6 @@ pub async fn create_account(
         Some(session_data.account_id.address)
     } else {
         None
-    };
-
-    if let Some(contract_set) = maybe_ethereum_contracts.as_ref() {
-        if let Some(ref gate) = contract_set.gate {
-            // Wallet address is required if token gate is present
-            let ethereum_address = maybe_ethereum_address.as_ref()
-                .ok_or(ValidationError("wallet address is required"))?;
-            let is_allowed = is_allowed_user(gate, ethereum_address).await
-                .map_err(|_| MastodonError::InternalError)?;
-            if !is_allowed {
-                return Err(ValidationError("not allowed to sign up").into());
-            };
-        };
     };
 
     // Generate RSA private key for actor

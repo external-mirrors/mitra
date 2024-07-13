@@ -10,6 +10,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Don't panic if `blockchain` configuration parameter is present.
 
+### Removed
+
+- Removed token gate.
+
 ## [2.26.0] - 2024-07-20
 
 ### Added
