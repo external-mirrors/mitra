@@ -31,6 +31,8 @@ pub fn build_default_context() -> Context {
             // Copied from Mastodon
             ("Hashtag", "as:Hashtag"),
             ("sensitive", "as:sensitive"),
+            ("toot", MASTODON_CONTEXT),
+            ("Emoji", "toot:Emoji"),
         ]),
     )
 }
