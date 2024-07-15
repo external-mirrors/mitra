@@ -88,12 +88,19 @@ fn clean_bio(bio: &str, is_remote: bool) -> Result<String, ValidationError> {
         clean_html(&truncated_bio, vec![])
     } else {
         // Local profile
-        if bio.chars().count() > BIO_MAX_LENGTH {
-            return Err(ValidationError("bio is too long"));
-        };
         clean_bio_html(bio)
     };
     Ok(cleaned_bio)
+}
+
+fn validate_bio(bio: &str) -> Result<(), ValidationError> {
+    if bio.chars().count() > BIO_MAX_LENGTH {
+            return Err(ValidationError("bio is too long"));
+        };
+    if bio != clean_html(bio, vec![]) {
+        return Err(ValidationError("bio has not been sanitized"));
+    };
+    Ok(())
 }
 
 pub fn allowed_profile_image_media_types(
@@ -231,6 +238,7 @@ pub fn clean_profile_create_data(
     };
     if let Some(bio) = &profile_data.bio {
         let cleaned_bio = clean_bio(bio, is_remote)?;
+        validate_bio(&cleaned_bio)?;
         profile_data.bio = Some(cleaned_bio);
     };
     validate_public_keys(&profile_data.public_keys)?;
@@ -259,6 +267,7 @@ pub fn clean_profile_update_data(
     };
     if let Some(bio) = &profile_data.bio {
         let cleaned_bio = clean_bio(bio, is_remote)?;
+        validate_bio(&cleaned_bio)?;
         profile_data.bio = Some(cleaned_bio);
     };
     validate_public_keys(&profile_data.public_keys)?;
