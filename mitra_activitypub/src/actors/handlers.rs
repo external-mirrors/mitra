@@ -45,6 +45,7 @@ use mitra_validators::{
         allowed_profile_image_media_types,
         clean_profile_create_data,
         clean_profile_update_data,
+        ALIAS_LIMIT,
         PROFILE_IMAGE_SIZE_MAX,
     },
 };
@@ -453,6 +454,10 @@ fn parse_aliases(actor: &Actor) -> Vec<String> {
                 Ok(array) => {
                     let mut aliases = vec![];
                     for actor_id in array {
+                        if aliases.len() >= ALIAS_LIMIT {
+                            log::warn!("too many aliases");
+                            break;
+                        };
                         if actor_id == actor.id ||
                             validate_object_id(&actor_id).is_err()
                         {

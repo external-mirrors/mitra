@@ -15,6 +15,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Do not remove posts by muted users from threads.
 - Removed `MitraJcsRsaSignature2022` from default `@context`.
 - Added `Emoji` to default `@context`.
+- Don't discard actor if it has more than 10 aliases.
 
 ## [2.25.1] - 2024-07-11
 

@@ -33,6 +33,7 @@ const BIO_MAX_LENGTH: usize = 10000;
 const BIO_ALLOWED_TAGS: [&str; 2] = ["a", "br"];
 const FIELD_NAME_MAX_SIZE: usize = 500;
 const FIELD_VALUE_MAX_SIZE: usize = 5000;
+pub const ALIAS_LIMIT: usize = 10;
 
 pub const PROFILE_IMAGE_SIZE_MAX: usize = 5 * 1000 * 1000; // 5 MB
 
@@ -184,9 +185,9 @@ fn validate_extra_fields(
 }
 
 pub fn validate_aliases(
-    identity_proofs: &[String],
+    aliases: &[String],
 ) -> Result<(), ValidationError> {
-    if identity_proofs.len() > 10 {
+    if aliases.len() > ALIAS_LIMIT {
         return Err(ValidationError("at most 10 aliases are allowed"));
     };
     Ok(())
