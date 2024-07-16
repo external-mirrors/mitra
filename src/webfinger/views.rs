@@ -70,7 +70,14 @@ async fn get_jrd(
     let links = if actor_address.username() == instance.hostname() {
         let actor_id = local_instance_actor_id(&instance.url());
         let actor_link = Link::actor(&actor_id);
-        vec![actor_link]
+        // Add remote interaction template
+        let remote_interaction_template = get_search_page_url(
+            &instance.url(),
+            "{uri}",
+        );
+        let remote_interaction_link = Link::new(REMOTE_INTERACTION_RELATION_TYPE)
+            .with_template(&remote_interaction_template);
+        vec![actor_link, remote_interaction_link]
     } else if is_registered_user(db_client, actor_address.username()).await? {
         let actor_id = local_actor_id(&instance.url(), actor_address.username());
         // Required by GNU Social
