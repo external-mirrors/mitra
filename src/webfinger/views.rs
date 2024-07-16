@@ -53,7 +53,9 @@ async fn get_jrd(
             .map_err(|error| HttpError::ValidationError(error.to_string()))?
     } else {
         // Actor ID? (reverse webfinger)
-        let username = if resource == local_instance_actor_id(&instance.url()) {
+        let username = if resource == instance.url() ||
+            resource == local_instance_actor_id(&instance.url())
+        {
             instance.hostname()
         } else {
             parse_local_actor_id(&instance.url(), resource)

@@ -16,6 +16,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Removed `MitraJcsRsaSignature2022` from default `@context`.
 - Added `Emoji` to default `@context`.
 - Don't discard actor if it has more than 10 aliases.
+- Return instance actor JRD if Webfinger is queried with instance base URL.
 
 ## [2.25.1] - 2024-07-11
 
