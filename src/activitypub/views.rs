@@ -70,6 +70,7 @@ use mitra_models::{
     users::queries::{
         get_portable_user_by_actor_id,
         get_portable_user_by_inbox_id,
+        get_portable_user_by_outbox_id,
         get_user_by_id,
         get_user_by_name,
     },
@@ -867,6 +868,52 @@ async fn apgateway_outbox_push_view(
     Ok(HttpResponse::Accepted().finish())
 }
 
+#[get("/{url:.*}/outbox")]
+async fn apgateway_outbox_pull_view(
+    config: web::Data<Config>,
+    db_pool: web::Data<DatabaseConnectionPool>,
+    request_path: Uri,
+    request: HttpRequest,
+) -> Result<HttpResponse, HttpError> {
+    let db_client = &mut **get_database_client(&db_pool).await?;
+    let signer = verify_signed_get_request(
+        &config,
+        db_client,
+        &request,
+    ).await.map_err(|error| {
+        log::warn!("C2S authentication error: {}", error);
+        HttpError::PermissionError
+    })?;
+    let collection_id = format!(
+        "{}{}",
+        config.instance_url(),
+        request_path,
+    );
+    let canonical_collection_id = canonicalize_id(&collection_id)?;
+    let collection_owner = get_portable_user_by_outbox_id(
+        db_client,
+        &canonical_collection_id,
+    ).await?;
+    if collection_owner.id != signer.id {
+        return Err(HttpError::PermissionError);
+    };
+    const LIMIT: u32 = 20;
+    let items = get_collection_items(
+        db_client,
+        &canonical_collection_id,
+        LIMIT,
+    ).await?;
+    // TODO: FEP-EF61: collection or collection page?
+    let collection_page = OrderedCollectionPage::new(
+        collection_id,
+        items,
+    );
+    let response = HttpResponse::Ok()
+        .content_type(AP_MEDIA_TYPE)
+        .json(collection_page);
+    Ok(response)
+}
+
 pub fn gateway_scope() -> Scope {
     web::scope("/.well-known/apgateway")
         .service(apgateway_create_actor_view)
@@ -874,5 +921,6 @@ pub fn gateway_scope() -> Scope {
         .service(apgateway_inbox_push_view)
         .service(apgateway_inbox_pull_view)
         .service(apgateway_outbox_push_view)
+        .service(apgateway_outbox_pull_view)
         .service(apgateway_view)
 }

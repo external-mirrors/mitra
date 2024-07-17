@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Write amount of disk space available for media to log at startup.
 - Implemented remote interaction with posts.
+- Added portable outbox view.
 
 ### Changed
 
