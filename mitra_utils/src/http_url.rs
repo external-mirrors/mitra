@@ -14,6 +14,10 @@ pub fn parse_http_url_whatwg(url: &str) -> Result<Url, &'static str> {
     Ok(url)
 }
 
+fn parse_port_number(port: &str) -> Result<u16, &'static str> {
+    u16::from_str(port).map_err(|_| "invalid port number")
+}
+
 /// Valid HTTP(S) URI (RFC-3986)
 pub struct HttpUrl(UriString);
 
@@ -26,9 +30,15 @@ impl HttpUrl {
             "http" | "https" => (),
             _ => return Err("invalid URL scheme"),
         };
+        // Validate URI
         if uri.authority_str().unwrap_or_default() == "" {
             return Err("invalid URL authority");
         };
+        let authority_components = uri.authority_components()
+            .ok_or("invalid URL authority")?;
+        authority_components.port()
+            .map(parse_port_number)
+            .transpose()?;
         // Additional validation (WHATWG URL spec)
         parse_http_url_whatwg(value)?;
         let http_url = Self(uri);
@@ -181,6 +191,13 @@ mod tests {
         let url = "https://rebased.taihou.website/emoji/taihou.website emojos/nix.png";
         let error = HttpUrl::parse(url).err().unwrap();
         assert_eq!(error, "invalid URI");
+    }
+
+    #[test]
+    fn test_http_url_invalid_port() {
+        let url = "https://social.example:9999999/test";
+        let error = HttpUrl::parse(url).err().unwrap();
+        assert_eq!(error, "invalid port number");
     }
 
     #[test]

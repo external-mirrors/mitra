@@ -18,6 +18,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Added `Emoji` to default `@context`.
 - Don't discard actor if it has more than 10 aliases.
 - Return instance actor JRD if Webfinger is queried with instance base URL.
+- Validate port number when parsing 'http' URLs.
 
 ## [2.25.1] - 2024-07-11
 
