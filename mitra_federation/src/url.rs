@@ -104,17 +104,17 @@ impl FromStr for Url {
     }
 }
 
-pub fn is_same_authority(id_1: &str, id_2: &str) -> Result<bool, ObjectIdError> {
+pub fn is_same_origin(id_1: &str, id_2: &str) -> Result<bool, ObjectIdError> {
     let id_1 = Url::parse(id_1)?;
     let id_2 = Url::parse(id_2)?;
     let is_same = match (id_1, id_2) {
         (Url::Http(http_url_1), Url::Http(http_url_2)) => {
-            http_url_1.authority() == http_url_2.authority()
+            http_url_1.origin() == http_url_2.origin()
         },
         (Url::Ap(ap_url_1), Url::Ap(ap_url_2)) => {
-            ap_url_1.authority() == ap_url_2.authority()
+            ap_url_1.origin() == ap_url_2.origin()
         },
-        _ => false, // can't compare different types of authorities
+        _ => false, // can't compare different types of origins
     };
     Ok(is_same)
 }
@@ -206,22 +206,22 @@ mod tests {
     }
 
     #[test]
-    fn test_is_same_authority() {
+    fn test_is_same_origin() {
         let id_1 = "https://one.example/1";
         let id_2 = "https://one.example/2";
         let id_3 = "https://two.example/3";
-        assert_eq!(is_same_authority(id_1, id_2).unwrap(), true);
-        assert_eq!(is_same_authority(id_1, id_3).unwrap(), false);
+        assert_eq!(is_same_origin(id_1, id_2).unwrap(), true);
+        assert_eq!(is_same_origin(id_1, id_3).unwrap(), false);
 
         let id_4 = "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/one";
         let id_5 = "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/two";
         let id_6 = "ap://did:key:z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK/one";
-        assert_eq!(is_same_authority(id_4, id_5).unwrap(), true);
-        assert_eq!(is_same_authority(id_4, id_6).unwrap(), false);
-        assert_eq!(is_same_authority(id_4, id_1).unwrap(), false);
+        assert_eq!(is_same_origin(id_4, id_5).unwrap(), true);
+        assert_eq!(is_same_origin(id_4, id_6).unwrap(), false);
+        assert_eq!(is_same_origin(id_4, id_1).unwrap(), false);
 
         let id_7 = "https://one.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor";
-        assert_eq!(is_same_authority(id_7, id_4).unwrap(), true);
-        assert_eq!(is_same_authority(id_7, id_1).unwrap(), false);
+        assert_eq!(is_same_origin(id_7, id_4).unwrap(), true);
+        assert_eq!(is_same_origin(id_7, id_1).unwrap(), false);
     }
 }

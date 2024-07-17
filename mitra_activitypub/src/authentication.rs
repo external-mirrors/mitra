@@ -3,7 +3,7 @@ use serde_json::{Value as JsonValue};
 
 use mitra_federation::{
     deserialization::{get_object_id, parse_into_id_array},
-    url::is_same_authority,
+    url::is_same_origin,
 };
 use mitra_validators::errors::ValidationError;
 
@@ -14,7 +14,7 @@ pub fn verify_activity_owner(
         .ok_or(ValidationError("'id' property is missing"))?;
     let owner_id = get_object_id(&activity["actor"])
         .map_err(|_| ValidationError("invalid 'actor' property"))?;
-    let is_valid = is_same_authority(activity_id, &owner_id)
+    let is_valid = is_same_origin(activity_id, &owner_id)
         .map_err(|error| ValidationError(error.0))?;
     if !is_valid {
         return Err(ValidationError("owner has different origin"));
@@ -39,7 +39,7 @@ pub fn verify_object_owner(
     let object_id = object["id"].as_str()
         .ok_or(ValidationError("'id' property is missing"))?;
     let owner_id = parse_attributed_to(&object["attributedTo"])?;
-    let is_valid = is_same_authority(object_id, &owner_id)
+    let is_valid = is_same_origin(object_id, &owner_id)
         .map_err(|error| ValidationError(error.0))?;
     if !is_valid {
         return Err(ValidationError("owner has different origin"));

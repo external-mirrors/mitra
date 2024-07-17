@@ -13,7 +13,7 @@ use mitra_federation::{
         AuthenticationError as PortableObjectAuthenticationError,
     },
     deserialization::get_object_id,
-    url::is_same_authority,
+    url::is_same_origin,
     utils::key_id_to_actor_id,
 };
 use mitra_models::{
@@ -269,7 +269,7 @@ pub async fn verify_signed_activity(
         Ok(activity_id) => {
             let actor_id = get_object_id(&activity["actor"])
                 .map_err(|_| AuthenticationError::ActorError("unknown actor"))?;
-            if !is_same_authority(&activity_id, &actor_id)
+            if !is_same_origin(&activity_id, &actor_id)
                 .map_err(|_| AuthenticationError::ActorError("invalid actor ID"))?
             {
                 return Err(AuthenticationError::UnexpectedSigner);

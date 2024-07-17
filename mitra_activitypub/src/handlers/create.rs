@@ -23,7 +23,7 @@ use mitra_federation::{
         parse_into_href_array,
     },
     fetch::fetch_file,
-    url::is_same_authority,
+    url::is_same_origin,
     utils::is_public,
 };
 use mitra_models::{
@@ -658,7 +658,7 @@ pub async fn handle_note(
     };
 
     let author_id = get_object_attributed_to(&object)?;
-    if !is_same_authority(&author_id, &object.id)
+    if !is_same_origin(&author_id, &object.id)
         .map_err(|_| ValidationError("invalid object ID"))?
     {
         return Err(ValidationError("object attributed to actor from different server").into());

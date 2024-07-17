@@ -48,7 +48,7 @@ use mitra_federation::{
     constants::{AP_MEDIA_TYPE, AP_PUBLIC},
     deserialization::get_object_id,
     http_server::is_activitypub_request,
-    url::is_same_authority,
+    url::is_same_origin,
 };
 use mitra_models::{
     activitypub::queries::{
@@ -803,7 +803,7 @@ async fn apgateway_outbox_client_to_server_view(
     let activity_actor = get_object_id(&activity["actor"])
         .map_err(|_| ValidationError("invalid 'actor' property"))?;
     let canonical_actor_id = canonicalize_id(&activity_actor)?;
-    if !is_same_authority(activity_id, &activity_actor)
+    if !is_same_origin(activity_id, &activity_actor)
         .map_err(|error| ValidationError(error.0))?
     {
         return Err(ValidationError("actor and activity authorities do not match").into());
