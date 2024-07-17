@@ -595,7 +595,7 @@ pub async fn get_portable_user_by_actor_id(
 
 pub async fn get_portable_user_by_inbox_id(
     db_client: &impl DatabaseClient,
-    actor_id: &str,
+    collection_id: &str, // canonical
 ) -> Result<PortableUser, DatabaseError> {
     let maybe_row = db_client.query_opt(
         "
@@ -603,7 +603,7 @@ pub async fn get_portable_user_by_inbox_id(
         FROM portable_user_account JOIN actor_profile USING (id)
         WHERE actor_profile.actor_json ->> 'inbox' = $1
         ",
-        &[&actor_id],
+        &[&collection_id],
     ).await?;
     let row = maybe_row.ok_or(DatabaseError::NotFound("user"))?;
     let db_user: DbPortableUser = row.try_get("portable_user_account")?;

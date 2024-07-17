@@ -685,7 +685,7 @@ async fn apgateway_view(
 }
 
 #[post("/{url:.*}/inbox")]
-async fn apgateway_inbox_server_to_server_view(
+async fn apgateway_inbox_push_view(
     config: web::Data<Config>,
     db_pool: web::Data<DatabaseConnectionPool>,
     request: HttpRequest,
@@ -737,7 +737,7 @@ async fn apgateway_inbox_server_to_server_view(
 // TODO: FEP-EF61: how to detect collections?
 // TODO: shared inbox?
 #[get("/{url:.*}/inbox")]
-async fn apgateway_inbox_client_to_server_view(
+async fn apgateway_inbox_pull_view(
     config: web::Data<Config>,
     db_pool: web::Data<DatabaseConnectionPool>,
     request_path: Uri,
@@ -752,17 +752,17 @@ async fn apgateway_inbox_client_to_server_view(
         log::warn!("C2S authentication error: {}", error);
         HttpError::PermissionError
     })?;
-    if !signer.has_account() {
-        // Only local portable users can have inbox
-        return Err(HttpError::NotFoundError("portable user"));
-    };
     let collection_id = format!(
         "{}{}",
         config.instance_url(),
         request_path,
     );
     let canonical_collection_id = canonicalize_id(&collection_id)?;
-    if canonical_collection_id != signer.expect_actor_data().inbox {
+    let collection_owner = get_portable_user_by_inbox_id(
+        db_client,
+        &canonical_collection_id,
+    ).await?;
+    if collection_owner.id != signer.id {
         return Err(HttpError::PermissionError);
     };
     const LIMIT: u32 = 20;
@@ -783,7 +783,7 @@ async fn apgateway_inbox_client_to_server_view(
 }
 
 #[post("/{url:.*}/outbox")]
-async fn apgateway_outbox_client_to_server_view(
+async fn apgateway_outbox_push_view(
     config: web::Data<Config>,
     db_pool: web::Data<DatabaseConnectionPool>,
     request_path: Uri,
@@ -870,9 +870,9 @@ async fn apgateway_outbox_client_to_server_view(
 pub fn gateway_scope() -> Scope {
     web::scope("/.well-known/apgateway")
         .service(apgateway_create_actor_view)
-        // Inbox service goes before generic gateway service
-        .service(apgateway_inbox_server_to_server_view)
-        .service(apgateway_inbox_client_to_server_view)
-        .service(apgateway_outbox_client_to_server_view)
+        // Inbox and outbox services go before generic gateway service
+        .service(apgateway_inbox_push_view)
+        .service(apgateway_inbox_pull_view)
+        .service(apgateway_outbox_push_view)
         .service(apgateway_view)
 }
