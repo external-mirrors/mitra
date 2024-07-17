@@ -20,6 +20,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Return instance actor JRD if Webfinger is queried with instance base URL.
 - Validate port number when parsing 'http' URLs.
 - Replace "same authority" checks with "same origin".
+- Discard portable actor if ID of a special collection has different origin than actor ID.
 
 ## [2.25.1] - 2024-07-11
 

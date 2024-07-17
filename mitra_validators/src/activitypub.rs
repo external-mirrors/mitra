@@ -47,6 +47,34 @@ pub fn validate_any_object_id(object_id: &str) -> Result<(), ValidationError> {
     _validate_any_object_id(object_id, true)
 }
 
+pub fn validate_origin(
+    id_1: &str,
+    id_2: &str,
+) -> Result<(), ValidationError> {
+    let origin_1 = if is_ap_url(id_1) {
+        ApUrl::parse(id_1)
+            .map_err(|_| ValidationError("invalid object ID"))?
+            .origin()
+    } else {
+        HttpUrl::parse(id_1)
+            .map_err(|_| ValidationError("invalid object ID"))?
+            .origin()
+    };
+    let origin_2 = if is_ap_url(id_2) {
+        ApUrl::parse(id_2)
+            .map_err(|_| ValidationError("invalid object ID"))?
+            .origin()
+    } else {
+        HttpUrl::parse(id_2)
+            .map_err(|_| ValidationError("invalid object ID"))?
+            .origin()
+    };
+    if origin_1 != origin_2 {
+        return Err(ValidationError("related ID has different origin"));
+    };
+    Ok(())
+}
+
 pub fn validate_gateway_url(url: &str) -> Result<(), ValidationError> {
     let http_url = HttpUrl::parse(url)
         .map_err(|_| ValidationError("invalid gateway URL"))?;
@@ -94,6 +122,22 @@ mod tests {
         let object_id = "ftp://ftp.social.example/";
         let result = validate_object_id(object_id);
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_validate_origin_http() {
+        let object_id_1 = "https://server1.example/actor";
+        let object_id_2 = "https://server1.example/actor/followers";
+        let result = validate_origin(object_id_1, object_id_2);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_validate_origin_ap() {
+        let object_id_1 = "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor";
+        let object_id_2 = "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor/followers";
+        let result = validate_origin(object_id_1, object_id_2);
+        assert!(result.is_ok());
     }
 
     #[test]

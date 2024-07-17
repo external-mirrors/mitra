@@ -18,6 +18,7 @@ use super::{
     activitypub::{
         validate_any_object_id,
         validate_gateway_url,
+        validate_origin,
     },
     errors::ValidationError,
     posts::EMOJI_LIMIT,
@@ -208,8 +209,12 @@ pub fn validate_actor_data(
     if let Some(ref featured) = actor.featured {
         validate_any_object_id(featured)?;
     };
-    if actor.is_portable() && actor.gateways.is_empty() {
-        return Err(ValidationError("at least one gateway must be specified"));
+    if actor.is_portable() {
+        validate_origin(&actor.id, &actor.inbox)?;
+        validate_origin(&actor.id, &actor.outbox)?;
+        if actor.gateways.is_empty() {
+            return Err(ValidationError("at least one gateway must be specified"));
+        };
     };
     for gateway in &actor.gateways {
         validate_gateway_url(gateway)?;
