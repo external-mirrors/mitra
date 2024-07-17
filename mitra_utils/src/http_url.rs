@@ -19,6 +19,7 @@ fn parse_port_number(port: &str) -> Result<u16, &'static str> {
 }
 
 /// Valid HTTP(S) URI (RFC-3986)
+#[derive(Clone)]
 pub struct HttpUrl(UriString);
 
 impl HttpUrl {

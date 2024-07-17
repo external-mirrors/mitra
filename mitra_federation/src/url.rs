@@ -15,6 +15,7 @@ pub const GATEWAY_PATH_PREFIX: &str = "/.well-known/apgateway/";
 pub struct ObjectIdError(pub &'static str);
 
 // TODO: FEP-EF61: rename to ID
+#[derive(Clone)]
 pub enum Url {
     Http(HttpUrl),
     Ap(ApUrl),

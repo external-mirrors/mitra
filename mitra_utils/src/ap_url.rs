@@ -20,6 +20,7 @@ pub fn with_ap_prefix(did_url: &str) -> String {
 }
 
 /// https://codeberg.org/fediverse/fep/src/branch/main/fep/ef61/fep-ef61.md
+#[derive(Clone)]
 pub struct ApUrl {
     authority: Did,
     location: UriRelativeString,
