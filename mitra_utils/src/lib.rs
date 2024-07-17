@@ -28,4 +28,5 @@ pub mod passwords;
 pub mod random;
 pub mod sysinfo;
 pub mod unicode;
+mod url;
 pub mod urls;

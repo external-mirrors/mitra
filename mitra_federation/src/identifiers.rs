@@ -57,7 +57,7 @@ pub fn parse_object_id<T: FromCaptures>(
 ) -> Result<(String, T), PathError> {
     let url = HttpUrl::parse(object_id)
         .map_err(|_| PathError("invalid URL"))?;
-    let base_url = url.origin();
+    let base_url = url.base();
     let path = url.to_relative();
     let path_caps = path_re.captures(&path)
         .ok_or(PathError("invalid path"))?;

@@ -50,7 +50,7 @@ pub fn validate_any_object_id(object_id: &str) -> Result<(), ValidationError> {
 pub fn validate_gateway_url(url: &str) -> Result<(), ValidationError> {
     let http_url = HttpUrl::parse(url)
         .map_err(|_| ValidationError("invalid gateway URL"))?;
-    if http_url.origin() != url {
+    if http_url.base() != url {
         return Err(ValidationError("invalid gateway URL"));
     };
     Ok(())

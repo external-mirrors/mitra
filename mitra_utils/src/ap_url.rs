@@ -4,7 +4,10 @@ use std::str::FromStr;
 use iri_string::types::UriRelativeString;
 use regex::Regex;
 
-use crate::did::Did;
+use crate::{
+    did::Did,
+    url::common::Origin,
+};
 
 // https://www.w3.org/TR/did-core/
 // ap:// URL must have path
@@ -69,6 +72,12 @@ impl ApUrl {
 
     pub fn to_did_url(&self) -> String {
         format!("{}{}", self.authority(), self.relative_url())
+    }
+
+    // https://www.rfc-editor.org/rfc/rfc6454.html
+    pub fn origin(&self) -> Origin {
+        // Default port is 0
+        Origin::new("ap", &self.authority.to_string(), 0)
     }
 }
 
@@ -138,5 +147,11 @@ mod tests {
         let url_str = "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6//actor";
         let error = ApUrl::parse(url_str).err().unwrap();
         assert_eq!(error, "invalid 'ap' URL");
+    }
+
+    #[test]
+    fn test_origin() {
+        let ap_url = ApUrl::parse("ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor").unwrap();
+        assert_eq!(ap_url.origin(), Origin::new("ap", "did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6", 0));
     }
 }

@@ -4,6 +4,8 @@ use std::str::FromStr;
 use iri_string::types::UriString;
 use url::Url;
 
+use crate::url::common::Origin;
+
 pub fn parse_http_url_whatwg(url: &str) -> Result<Url, &'static str> {
     let url = Url::parse(url).map_err(|_| "invalid URL")?;
     match url.scheme() {
@@ -66,7 +68,7 @@ impl HttpUrl {
         self.0.fragment().map(|fragment| fragment.as_str())
     }
 
-    pub fn origin(&self) -> String {
+    pub fn base(&self) -> String {
         format!(
             "{}://{}",
             self.scheme(),
@@ -98,6 +100,23 @@ impl HttpUrl {
             self.query().map(|query| format!("?{query}")).unwrap_or_default(),
             self.fragment().map(|frag| format!("#{frag}")).unwrap_or_default(),
         )
+    }
+
+    // https://www.rfc-editor.org/rfc/rfc6454.html
+    pub fn origin(&self) -> Origin {
+        let authority_components = self.0.authority_components()
+            .expect("authority should be present");
+        let host = authority_components.host();
+        let port = authority_components.port()
+            .map(parse_port_number)
+            .transpose()
+            .expect("port number should be valid")
+            .unwrap_or_else(|| match self.scheme() {
+                "http" => 80,
+                "https" => 443,
+                _ => panic!("scheme should be valid"),
+            });
+        Origin::new(self.scheme(), host, port)
     }
 }
 
@@ -199,6 +218,21 @@ mod tests {
         let url = "https://social.example:9999999/test";
         let error = HttpUrl::parse(url).err().unwrap();
         assert_eq!(error, "invalid port number");
+    }
+
+    #[test]
+    fn test_origin() {
+        let http_url = HttpUrl::parse("https://social.example/test").unwrap();
+        let origin = http_url.origin();
+        assert_eq!(origin, Origin::new("https", "social.example", 443));
+
+        let http_url = HttpUrl::parse("http://2gzyxa5ihm7nsggfxnu52rck2vv4rvmdlkiu3zzui5du4xyclen53wid.onion/test").unwrap();
+        let origin = http_url.origin();
+        assert_eq!(origin, Origin::new("http", "2gzyxa5ihm7nsggfxnu52rck2vv4rvmdlkiu3zzui5du4xyclen53wid.onion", 80));
+
+        let http_url = HttpUrl::parse("http://127.0.0.1:8380/test").unwrap();
+        let origin = http_url.origin();
+        assert_eq!(origin, Origin::new("http", "127.0.0.1", 8380));
     }
 
     #[test]

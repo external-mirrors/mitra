@@ -72,7 +72,7 @@ fn get_canonical_ap_url(
         .ok_or(ObjectIdError("invalid gateway URL"))?;
     let ap_url = ApUrl::from_did_url(did_url)
         .map_err(ObjectIdError)?;
-    let gateway = http_url.origin();
+    let gateway = http_url.base();
     Ok((ap_url, gateway))
 }
 
