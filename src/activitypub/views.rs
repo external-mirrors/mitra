@@ -794,6 +794,25 @@ async fn apgateway_outbox_push_view(
     log::info!("received in {}: {}", request_path, activity_type);
     let db_client = &mut **get_database_client(&db_pool).await?;
     let instance = config.instance();
+    // Find outbox owner
+    let collection_id = format!(
+        "{}{}",
+        instance.url(),
+        request_path,
+    );
+    let canonical_collection_id = canonicalize_id(&collection_id)?;
+    let collection_owner = match get_portable_user_by_outbox_id(
+        db_client,
+        &canonical_collection_id,
+    ).await {
+        Ok(signer) => signer,
+        Err(DatabaseError::NotFound(_)) => {
+            // Only local portable users can post to outbox
+            return Ok(HttpResponse::MethodNotAllowed().finish());
+        },
+        Err(other_error) => return Err(other_error.into()),
+    };
+    // Verify activity
     verify_portable_object(&activity).map_err(|error| {
         log::warn!("C2S authentication error: {}", error);
         HttpError::PermissionError
@@ -809,25 +828,11 @@ async fn apgateway_outbox_push_view(
     {
         return Err(ValidationError("actor and activity authorities do not match").into());
     };
-    let signer = match get_portable_user_by_actor_id(
+    let signer = get_portable_user_by_actor_id(
         db_client,
         &canonical_actor_id,
-    ).await {
-        Ok(signer) => signer,
-        Err(DatabaseError::NotFound(_)) => {
-            // Only local portable users can post to outbox
-            return Ok(HttpResponse::MethodNotAllowed().finish());
-        },
-        Err(other_error) => return Err(other_error.into()),
-    };
-    let collection_id = format!(
-        "{}{}",
-        instance.url(),
-        request_path,
-    );
-    let canonical_collection_id = canonicalize_id(&collection_id)?;
-    if canonical_collection_id != signer.profile.expect_actor_data().outbox {
-        // Wrong outbox path
+    ).await?;
+    if signer.id != collection_owner.id {
         return Err(HttpError::PermissionError);
     };
     let is_new_activity = save_activity(
