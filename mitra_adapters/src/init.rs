@@ -1,3 +1,5 @@
+use log::Level;
+
 use mitra_config::{
     parse_config,
     Config,
@@ -37,9 +39,12 @@ use mitra_utils::{
 
 use crate::logger::configure_logger;
 
-pub fn initialize_app() -> Config {
+pub fn initialize_app(
+    override_log_level: Option<Level>,
+) -> Config {
     let (config, config_warnings) = parse_config();
-    configure_logger(config.log_level);
+    let log_level = override_log_level.unwrap_or(config.log_level);
+    configure_logger(log_level);
     log::info!(
         "{} v{}, environment = '{:?}'",
         SOFTWARE_NAME,

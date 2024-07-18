@@ -3,6 +3,7 @@ use std::str::FromStr;
 
 use anyhow::{anyhow, Error};
 use clap::Parser;
+use log::Level;
 use serde_json::{Value as JsonValue};
 use uuid::Uuid;
 
@@ -128,6 +129,9 @@ use mitra_validators::{
 #[derive(Parser)]
 #[command(version)]
 pub struct Cli {
+    #[arg(long)]
+    pub log_level: Option<Level>,
+
     #[clap(subcommand)]
     pub subcmd: SubCommand,
 }

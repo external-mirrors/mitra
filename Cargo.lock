@@ -2092,6 +2092,7 @@ dependencies = [
  "anyhow",
  "clap",
  "clap_lex",
+ "log",
  "mitra",
  "mitra_activitypub",
  "mitra_adapters",

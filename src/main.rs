@@ -48,7 +48,7 @@ use mitra_utils::urls::get_hostname;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    let mut config = initialize_app();
+    let mut config = initialize_app(None);
 
     // https://wiki.postgresql.org/wiki/Number_Of_Database_Connections
     let db_pool_size = num_cpus::get() * 2;

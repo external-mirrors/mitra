@@ -24,7 +24,7 @@ async fn main() {
         SubCommand::GenerateEthereumAddress(cmd) => cmd.execute(),
         subcmd => {
             // Other commands require initialized app
-            let mut config = initialize_app();
+            let mut config = initialize_app(opts.log_level);
 
             let db_config = config.database_url.parse()
                 .expect("failed to parse database URL");
