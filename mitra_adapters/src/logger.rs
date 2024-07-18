@@ -3,11 +3,16 @@ use std::io::Write;
 use log::Level;
 use chrono::Local;
 
+// Next level (less verbose)
+fn next_level(level: Level) -> Level {
+    Level::iter()
+        .filter(|item| *item < level)
+        .last()
+        .unwrap_or(Level::Error)
+}
+
 pub fn configure_logger(base_level: Level) -> () {
-    let actix_level = match base_level {
-        Level::Info => Level::Warn,
-        other_level => other_level,
-    };
+    let actix_level = next_level(base_level);
     env_logger::Builder::new()
         .format(|buf, record| {
             writeln!(buf,
