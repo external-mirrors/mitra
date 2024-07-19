@@ -126,6 +126,9 @@ pub struct AttributedObject {
     pub updated: Option<DateTime<Utc>>,
     url: Option<JsonValue>,
 
+    // Polls
+    one_of: Option<JsonValue>,
+
     quote_url: Option<String>,
 
     // TODO: Use is_object?
@@ -640,6 +643,42 @@ fn get_object_visibility(
     Visibility::Direct
 }
 
+pub fn parse_poll_results(
+    object: &AttributedObject,
+) -> Result<String, ValidationError> {
+    #[derive(Deserialize)]
+    #[serde(rename_all = "camelCase")]
+    struct Replies {
+        total_items: u32,
+    }
+    #[derive(Deserialize)]
+    struct PollOption {
+        name: String,
+        replies: Replies,
+    }
+
+    let values = object.one_of.as_ref()
+        .ok_or(ValidationError("poll results are not present"))?
+        .as_array()
+        .ok_or(ValidationError("invalid poll results"))?;
+    if values.is_empty() {
+        return Err(ValidationError("poll is empty"));
+    };
+
+    let mut poll_results = "".to_string();
+    for option_value in values {
+        let option: PollOption = serde_json::from_value(option_value.clone())
+            .map_err(|_| ValidationError("invalid poll result"))?;
+        let option_text = format!(
+            r#"<p>{0}: {1}</p>"#,
+            option.name,
+            option.replies.total_items,
+        );
+        poll_results += &option_text;
+    };
+    Ok(poll_results)
+}
+
 pub async fn handle_note(
     db_client: &mut impl DatabaseClient,
     instance: &Instance,
@@ -674,6 +713,12 @@ pub async fn handle_note(
     })?;
 
     let mut content = get_object_content(&object)?;
+    if object.object_type == QUESTION {
+        match parse_poll_results(&object) {
+            Ok(poll_results) => content += &poll_results,
+            Err(error) => log::warn!("{error}"),
+        };
+    };
     if object.object_type != NOTE {
         // Append link to object
         let object_url = get_object_url(&object)?;

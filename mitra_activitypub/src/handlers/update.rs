@@ -43,11 +43,12 @@ use crate::{
         get_object_content,
         get_object_tags,
         get_object_url,
+        parse_poll_results,
         AttributedObject,
     },
     identifiers::{canonicalize_id, profile_actor_id},
     importers::fetch_any_object,
-    vocabulary::{NOTE, PERSON},
+    vocabulary::{NOTE, PERSON, QUESTION},
 };
 
 use super::HandlerResult;
@@ -86,6 +87,12 @@ async fn handle_update_note(
         return Err(ValidationError("object owner can't be changed").into());
     };
     let mut content = get_object_content(&object)?;
+    if object.object_type == QUESTION {
+        match parse_poll_results(&object) {
+            Ok(poll_results) => content += &poll_results,
+            Err(error) => log::warn!("{error}"),
+        };
+    };
     if object.object_type != NOTE {
         // Append link to object
         let object_url = get_object_url(&object)?;
