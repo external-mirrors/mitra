@@ -20,6 +20,12 @@ use mitra_validators::{
 
 use crate::mastodon_api::{
     errors::MastodonError,
+    microsyntax::{
+        emojis::{find_emojis, replace_emojis},
+        hashtags::{find_hashtags, replace_hashtags},
+        links::{find_linked_posts, insert_quote, replace_object_links},
+        mentions::{find_mentioned_profiles, replace_mentions},
+    },
     pagination::{
         get_last_item,
         get_paginated_response,
@@ -27,12 +33,6 @@ use crate::mastodon_api::{
     },
 };
 
-use super::microsyntax::{
-    emojis::{find_emojis, replace_emojis},
-    hashtags::{find_hashtags, replace_hashtags},
-    links::{find_linked_posts, insert_quote, replace_object_links},
-    mentions::{find_mentioned_profiles, replace_mentions},
-};
 use super::types::Status;
 
 pub struct PostContent {

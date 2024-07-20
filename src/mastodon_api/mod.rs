@@ -38,6 +38,7 @@ mod timelines;
 mod auth;
 mod deserializers;
 mod errors;
+mod microsyntax;
 mod pagination;
 mod uploads;
 
