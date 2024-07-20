@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Added portable outbox view.
 - Support changing mitractl log level using `--log-level` parameter.
 - Insert poll results into post as text.
+- Support adding custom emojis to display name.
 
 ### Changed
 

@@ -132,6 +132,7 @@ use super::helpers::{
     get_aliases,
     get_relationship,
     get_relationships,
+    parse_microsyntaxes,
 };
 use super::types::{
     Account,
@@ -327,6 +328,7 @@ async fn update_credentials(
             )?
         },
     };
+    parse_microsyntaxes(db_client, &mut profile_data).await?;
     clean_profile_update_data(&mut profile_data)?;
     let (updated_profile, deletion_queue) = update_profile(
         db_client,

@@ -6,7 +6,7 @@ use mitra_models::{
         find_declared_aliases,
         find_verified_aliases,
     },
-    profiles::types::DbActorProfile,
+    profiles::types::{DbActorProfile, ProfileUpdateData},
     relationships::queries::{
         get_relationships as get_relationships_one,
         get_relationships_many,
@@ -14,7 +14,29 @@ use mitra_models::{
     relationships::types::{DbRelationship, RelationshipType},
 };
 
+use crate::mastodon_api::{
+    microsyntax::emojis::{find_emojis, replace_emojis},
+};
+
 use super::types::{Account, Alias, Aliases, RelationshipMap};
+
+pub async fn parse_microsyntaxes(
+    db_client: &impl DatabaseClient,
+    profile_data: &mut ProfileUpdateData,
+) -> Result<(), DatabaseError> {
+    if let Some(ref display_name) = profile_data.display_name {
+        let custom_emoji_map = find_emojis(
+            db_client,
+            display_name,
+        ).await?;
+        let display_name = replace_emojis(display_name, &custom_emoji_map);
+        profile_data.display_name = Some(display_name);
+        profile_data.emojis = custom_emoji_map.into_values()
+            .map(|emoji| emoji.id)
+            .collect();
+    };
+    Ok(())
+}
 
 fn create_relationship_map(
     source_id: &Uuid,

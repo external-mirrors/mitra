@@ -16,6 +16,7 @@ use mitra_utils::{
 
 use crate::{
     authority::Authority,
+    builders::emoji::{build_emoji, Emoji},
     contexts::{
         AP_CONTEXT,
         MASTODON_CONTEXT,
@@ -64,6 +65,7 @@ fn build_actor_context() -> Context {
             ("value", "schema:value"),
             ("toot", MASTODON_CONTEXT),
             ("featured", "toot:featured"),
+            ("Emoji", "toot:Emoji"),
             ("mitra", MITRA_CONTEXT),
             ("subscribers", "mitra:subscribers"),
             ("VerifiableIdentityStatement", "mitra:VerifiableIdentityStatement"),
@@ -134,6 +136,9 @@ pub struct Actor {
 
     #[serde(skip_serializing_if = "Vec::is_empty")]
     attachment: Vec<JsonValue>,
+
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    tag: Vec<Emoji>,
 
     manually_approves_followers: bool,
 
@@ -218,6 +223,11 @@ pub fn build_local_actor(
             .expect("attachment should be serializable");
         attachments.push(attachment_value);
     };
+    let mut emojis = vec![];
+    for db_emoji in user.profile.emojis.clone().into_inner() {
+        let emoji = build_emoji(instance_url, &db_emoji);
+        emojis.push(emoji);
+    };
     let aliases = user.profile.aliases.clone().into_actor_ids();
     // HTML representation
     // TODO: portable actors should point to a primary server
@@ -246,6 +256,7 @@ pub fn build_local_actor(
         summary: user.profile.bio.clone(),
         also_known_as: aliases,
         attachment: attachments,
+        tag: emojis,
         manually_approves_followers: user.profile.manually_approves_followers,
         url: Some(profile_url),
         gateways: gateways,
@@ -284,6 +295,7 @@ pub fn build_instance_actor(
         summary: None,
         also_known_as: vec![],
         attachment: vec![],
+        tag: vec![],
         manually_approves_followers: false,
         url: None,
         gateways: vec![],
@@ -321,6 +333,7 @@ mod tests {
                     "value": "schema:value",
                     "toot": "http://joinmastodon.org/ns#",
                     "featured": "toot:featured",
+                    "Emoji": "toot:Emoji",
                     "mitra": "http://jsonld.mitra.social#",
                     "subscribers": "mitra:subscribers",
                     "VerifiableIdentityStatement": "mitra:VerifiableIdentityStatement",
@@ -402,6 +415,7 @@ mod tests {
                     "value": "schema:value",
                     "toot": "http://joinmastodon.org/ns#",
                     "featured": "toot:featured",
+                    "Emoji": "toot:Emoji",
                     "mitra": "http://jsonld.mitra.social#",
                     "subscribers": "mitra:subscribers",
                     "VerifiableIdentityStatement": "mitra:VerifiableIdentityStatement",
@@ -484,6 +498,7 @@ mod tests {
                     "value": "schema:value",
                     "toot": "http://joinmastodon.org/ns#",
                     "featured": "toot:featured",
+                    "Emoji": "toot:Emoji",
                     "mitra": "http://jsonld.mitra.social#",
                     "subscribers": "mitra:subscribers",
                     "VerifiableIdentityStatement": "mitra:VerifiableIdentityStatement",
