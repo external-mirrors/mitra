@@ -29,6 +29,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Dropped support for Mitra 1.x outgoing queue data format.
 - Removed support for `authentication` array in actor objects.
 
+### Fixed
+
+- Fix incorrect payment link `rel`.
+
 ## [2.26.0] - 2024-07-20
 
 ### Added

@@ -148,7 +148,7 @@ fn valueflows_proposal_rel_legacy() -> String {
 }
 
 fn valueflows_proposal_rel() -> String {
-    format!("{}#{}", W3ID_VALUEFLOWS_CONTEXT, PROPOSAL)
+    format!("{}{}", W3ID_VALUEFLOWS_CONTEXT, PROPOSAL)
 }
 
 pub fn attach_payment_option(
