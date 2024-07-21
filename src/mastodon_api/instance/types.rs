@@ -127,8 +127,7 @@ impl InstanceInfo {
         post_count: i64,
         peer_count: i64,
     ) -> Self {
-        let blockchains = config.blockchains().iter().filter_map(|item| match item {
-            BlockchainConfig::Ethereum(_) => None,
+        let blockchains = config.blockchains().iter().map(|item| match item {
             BlockchainConfig::Monero(monero_config) => {
                 let features = BlockchainFeatures {
                     subscriptions: true,
@@ -138,11 +137,11 @@ impl InstanceInfo {
                     .and_then(|metadata| metadata.description.as_ref())
                     .map(|text| markdown_to_html(text))
                     .map(|html| json!({"description": html}));
-                Some(BlockchainInfo {
+                BlockchainInfo {
                     chain_id: monero_config.chain_id.to_string(),
                     chain_metadata: maybe_chain_metadata,
                     features: features,
-                })
+                }
             },
         }).collect();
         Self {

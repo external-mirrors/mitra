@@ -164,8 +164,7 @@ impl Config {
         let is_error = self.blockchains.iter()
             .fold(HashMap::new(), |mut map, blockchain_config| {
                 let key = match blockchain_config {
-                    BlockchainConfig::Ethereum(_) => 1,
-                    BlockchainConfig::Monero(_) => 2,
+                    BlockchainConfig::Monero(_) => 1,
                 };
                 map.entry(key)
                     .and_modify(|count| *count += 1)
@@ -180,11 +179,11 @@ impl Config {
         &self.blockchains
     }
 
+    #[allow(clippy::unnecessary_find_map)]
     pub fn monero_config(&self) -> Option<&MoneroConfig> {
         self.blockchains().iter()
             .find_map(|item| match item {
                 BlockchainConfig::Monero(config) => Some(config),
-                _ => None,
             })
     }
 }

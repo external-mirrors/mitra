@@ -98,10 +98,6 @@ pub fn parse_config() -> (Config, Vec<&'static str>) {
     };
     for blockchain_config in config.blockchains() {
         match blockchain_config {
-            BlockchainConfig::Ethereum(ethereum_config) => {
-                ethereum_config.try_ethereum_chain_id()
-                    .expect("invalid ethereum chain ID");
-            },
             BlockchainConfig::Monero(monero_config) => {
                 monero_config.chain_id.monero_network()
                     .expect("invalid monero chain ID");
