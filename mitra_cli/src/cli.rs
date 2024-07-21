@@ -133,8 +133,6 @@ pub struct Cli {
 
 #[derive(Parser)]
 pub enum SubCommand {
-    GenerateRsaKey(GenerateRsaKey),
-
     UpdateConfig(UpdateConfig),
     GenerateInviteCode(GenerateInviteCode),
     ListInviteCodes(ListInviteCodes),
@@ -167,19 +165,6 @@ pub enum SubCommand {
     ListActiveAddresses(ListActiveAddresses),
     GetPaymentAddress(GetPaymentAddress),
     InstanceReport(InstanceReport),
-}
-
-/// Generate RSA private key
-#[derive(Parser)]
-pub struct GenerateRsaKey;
-
-impl GenerateRsaKey {
-    pub fn execute(&self) -> Result<(), Error> {
-        let secret_key = generate_rsa_key()?;
-        let secret_key_pem = rsa_secret_key_to_pkcs8_pem(&secret_key)?;
-        println!("{}", secret_key_pem);
-        Ok(())
-    }
 }
 
 /// Change value of a dynamic configuration parameter

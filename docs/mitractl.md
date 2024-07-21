@@ -29,12 +29,6 @@ mitractl update-config --help
 mitractl update-config <parameter> <value>
 ```
 
-Generate RSA private key:
-
-```shell
-mitractl generate-rsa-key
-```
-
 Generate invite code (note is optional):
 
 ```shell

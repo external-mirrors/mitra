@@ -19,8 +19,6 @@ async fn main() {
     let opts: Cli = Cli::parse();
 
     match opts.subcmd {
-        #[allow(clippy::unwrap_used)]
-        SubCommand::GenerateRsaKey(cmd) => cmd.execute().unwrap(),
         subcmd => {
             // Other commands require initialized app
             let mut config = initialize_app(Some(opts.log_level));
@@ -75,7 +73,6 @@ async fn main() {
                 SubCommand::ListActiveAddresses(cmd) => cmd.execute(&config).await.unwrap(),
                 SubCommand::GetPaymentAddress(cmd) => cmd.execute(&config, db_client).await.unwrap(),
                 SubCommand::InstanceReport(cmd) => cmd.execute(&config, db_client).await.unwrap(),
-                _ => unreachable!(),
             };
         },
     };

@@ -16,6 +16,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Return error if PostgreSQL version check fails.
 - Changed default value of `federation.fetcher_timeout` config parameter to `60`.
 - Disallow Ethereum chains in `blockchains` array in configuration file.
+- Write warning to log if `instance_rsa_key` file is present.
 
 ### Deprecated
 
@@ -35,6 +36,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Removed support for `clauses` property in `Agreement` object.
 - Removed `daemon_url` alias of `node_url` parameter in Monero integration configuration.
 - Removed `wallet_url` alias of `wallet_rpc_url` parameter in Monero integration configuration.
+- Removed `generate-rsa-key` command.
 
 ### Fixed
 
