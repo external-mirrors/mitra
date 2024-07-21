@@ -37,7 +37,7 @@ struct AddPerson {
 
     start_time: Option<DateTime<Utc>>,
     end_time: DateTime<Utc>,
-    // 'context' is not used with Ethereum subscriptions
+    // 'context' is not when subscription status is granted manually
     context: Option<String>,
 
     to: Vec<String>,

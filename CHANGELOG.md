@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Don't panic if `blockchain` configuration parameter is present.
 - Changed default log level in `mitractl` to `WARN`.
+- Stop accepting `Add(Person)` activities without `endTime` property.
 
 ### Deprecated
 

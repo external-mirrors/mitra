@@ -43,7 +43,7 @@ struct Add {
     #[serde(deserialize_with = "deserialize_into_object_id")]
     target: String,
 
-    end_time: Option<DateTime<Utc>>,
+    end_time: DateTime<Utc>,
     context: Option<String>,
 }
 
@@ -71,11 +71,7 @@ pub async fn handle_add(
         subscribe_opt(db_client, sender.id, recipient.id).await?;
 
         // FEP-0837 confirmation
-        let subscription_expires_at = match activity.end_time {
-            Some(subscription_expires_at) => subscription_expires_at,
-            // FEP-0837 confirmation not implemented, return
-            _ => return Ok(Some(PERSON)),
-        };
+        let subscription_expires_at = activity.end_time;
         match activity.context {
             Some(ref agreement_id) => {
                 match get_remote_invoice_by_object_id(
