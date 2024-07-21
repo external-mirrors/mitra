@@ -169,8 +169,6 @@ pub struct Actor {
 
     #[serde(default, deserialize_with = "deserialize_object_array")]
     assertion_method: Vec<Multikey>,
-    #[serde(default)]
-    authentication: Vec<Multikey>,
 
     public_key: PublicKey,
 
@@ -314,8 +312,7 @@ fn parse_public_keys(
     };
     let db_key = actor.public_key.to_db_key()?;
     keys.push(db_key);
-    let verification_methods = actor.authentication.iter()
-        .chain(actor.assertion_method.iter());
+    let verification_methods = &actor.assertion_method;
     for multikey in verification_methods {
         if multikey.controller == actor.id {
             let db_key = multikey.to_db_key()?;
@@ -750,7 +747,7 @@ mod tests {
         let actor = Actor {
             id: actor_id.to_string(),
             public_key: actor_public_key,
-            authentication: vec![actor_auth_key_1, actor_auth_key_2],
+            assertion_method: vec![actor_auth_key_1, actor_auth_key_2],
             ..Default::default()
         };
         let public_keys = parse_public_keys(&actor).unwrap();

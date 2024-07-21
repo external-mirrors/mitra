@@ -118,8 +118,6 @@ pub struct Actor {
 
     #[serde(skip_serializing_if = "Vec::is_empty")]
     assertion_method: Vec<Multikey>,
-    #[serde(skip_serializing_if = "Vec::is_empty")]
-    authentication: Vec<Multikey>,
 
     public_key: PublicKey,
 
@@ -251,8 +249,7 @@ pub fn build_local_actor(
         following: Some(following),
         subscribers: Some(subscribers),
         featured: Some(featured),
-        assertion_method: verification_methods.clone(),
-        authentication: verification_methods,
+        assertion_method: verification_methods,
         public_key,
         icon: avatar,
         image: banner,
@@ -290,7 +287,6 @@ pub fn build_instance_actor(
         following: None,
         subscribers: None,
         featured: None,
-        authentication: verification_methods.clone(),
         assertion_method: verification_methods,
         public_key,
         icon: None,
@@ -356,20 +352,6 @@ mod tests {
             "following": "https://server.example/users/testuser/following",
             "subscribers": "https://server.example/users/testuser/subscribers",
             "featured": "https://server.example/users/testuser/collections/featured",
-            "authentication": [
-                {
-                    "id": "https://server.example/users/testuser#main-key",
-                    "type": "Multikey",
-                    "controller": "https://server.example/users/testuser",
-                    "publicKeyMultibase": "zDrrewXm1cTFaEwruJq4sA7sPhxciancezhnoCxrdvSLs3gQSupJxKA719sQGmG71CkuQdnDxAUpecZ1b7fYQTTrhKA7KbdxWUPRXqs3e",
-                },
-                {
-                    "id": "https://server.example/users/testuser#ed25519-key",
-                    "type": "Multikey",
-                    "controller": "https://server.example/users/testuser",
-                    "publicKeyMultibase": "z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6",
-                },
-            ],
             "assertionMethod": [
                 {
                     "id": "https://server.example/users/testuser#main-key",
@@ -438,20 +420,6 @@ mod tests {
             "following": "https://server.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor/following",
             "subscribers": "https://server.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor/subscribers",
             "featured": "https://server.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor/collections/featured",
-            "authentication": [
-                {
-                    "id": "https://server.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor#main-key",
-                    "type": "Multikey",
-                    "controller": "https://server.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor",
-                    "publicKeyMultibase": "zDrrewXm1cTFaEwruJq4sA7sPhxciancezhnoCxrdvSLs3gQSupJxKA719sQGmG71CkuQdnDxAUpecZ1b7fYQTTrhKA7KbdxWUPRXqs3e",
-                },
-                {
-                    "id": "https://server.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor#ed25519-key",
-                    "type": "Multikey",
-                    "controller": "https://server.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor",
-                    "publicKeyMultibase": "z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6",
-                },
-            ],
             "assertionMethod": [
                 {
                     "id": "https://server.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor#main-key",
@@ -517,20 +485,6 @@ mod tests {
             "preferredUsername": "server.example",
             "inbox": "https://server.example/actor/inbox",
             "outbox": "https://server.example/actor/outbox",
-            "authentication": [
-                {
-                    "id": "https://server.example/actor#main-key",
-                    "type": "Multikey",
-                    "controller": "https://server.example/actor",
-                    "publicKeyMultibase": "zDrrewXm1cTFaEwruJq4sA7sPhxciancezhnoCxrdvSLs3gQSupJxKA719sQGmG71CkuQdnDxAUpecZ1b7fYQTTrhKA7KbdxWUPRXqs3e",
-                },
-                {
-                    "id": "https://server.example/actor#ed25519-key",
-                    "type": "Multikey",
-                    "controller": "https://server.example/actor",
-                    "publicKeyMultibase": "z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6",
-                },
-            ],
             "assertionMethod": [
                 {
                     "id": "https://server.example/actor#main-key",
