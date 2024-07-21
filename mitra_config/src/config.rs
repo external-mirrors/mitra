@@ -103,8 +103,6 @@ pub struct Config {
     pub allowed_instances: Vec<String>,
 
     // Blockchain integrations
-    #[serde(rename = "blockchain")]
-    _blockchain: Option<BlockchainConfig>, // deprecated
     #[serde(default)]
     blockchains: Vec<BlockchainConfig>,
 
@@ -164,27 +162,23 @@ impl Config {
     }
 
     pub fn blockchains(&self) -> &[BlockchainConfig] {
-        if let Some(ref _blockchain_config) = self._blockchain {
-            panic!("'blockchain' setting is not supported anymore, use 'blockchains' instead");
-        } else {
-            let is_error = self.blockchains.iter()
-                .fold(HashMap::new(), |mut map, blockchain_config| {
-                    let key = match blockchain_config {
-                        BlockchainConfig::Ethereum(_) => 1,
-                        BlockchainConfig::Monero(_) => 2,
-                    };
-                    map.entry(key)
-                        .and_modify(|count| *count += 1)
-                        .or_insert(1);
-                    map
-                })
-                .into_values()
-                .any(|count| count > 1);
-            if is_error {
-                panic!("'blockchains' array contains more than one chain of the same kind");
-            };
-            &self.blockchains
-        }
+        let is_error = self.blockchains.iter()
+            .fold(HashMap::new(), |mut map, blockchain_config| {
+                let key = match blockchain_config {
+                    BlockchainConfig::Ethereum(_) => 1,
+                    BlockchainConfig::Monero(_) => 2,
+                };
+                map.entry(key)
+                    .and_modify(|count| *count += 1)
+                    .or_insert(1);
+                map
+            })
+            .into_values()
+            .any(|count| count > 1);
+        if is_error {
+            panic!("'blockchains' array contains more than one chain of the same kind");
+        };
+        &self.blockchains
     }
 
     pub fn ethereum_config(&self) -> Option<&EthereumConfig> {
