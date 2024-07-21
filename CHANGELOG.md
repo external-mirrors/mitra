@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Changed
 
 - Don't panic if `blockchain` configuration parameter is present.
+- Changed default log level in `mitractl` to `WARN`.
 
 ### Removed
 

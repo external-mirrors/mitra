@@ -124,8 +124,8 @@ use mitra_validators::{
 #[derive(Parser)]
 #[command(version)]
 pub struct Cli {
-    #[arg(long)]
-    pub log_level: Option<Level>,
+    #[arg(long, default_value_t = Level::Warn)]
+    pub log_level: Level,
 
     #[clap(subcommand)]
     pub subcmd: SubCommand,
