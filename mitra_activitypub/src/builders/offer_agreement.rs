@@ -158,8 +158,6 @@ mod tests {
                     "publishes": "vf:publishes",
                     "reciprocal": "vf:reciprocal",
                     "unitBased": "vf:unitBased",
-                    "provider": "vf:provider",
-                    "receiver": "vf:receiver",
                     "action": "vf:action",
                     "Agreement": "vf:Agreement",
                     "stipulates": "vf:stipulates",

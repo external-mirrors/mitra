@@ -44,8 +44,6 @@ pub fn build_valueflows_context() -> Context {
         ("publishes", "vf:publishes"),
         ("reciprocal", "vf:reciprocal"),
         ("unitBased", "vf:unitBased"),
-        ("provider", "vf:provider"),
-        ("receiver", "vf:receiver"),
         ("action", "vf:action"),
         ("Agreement", "vf:Agreement"),
         ("stipulates", "vf:stipulates"),
@@ -101,13 +99,6 @@ struct Intent {
     action: String,
     resource_conforms_to: String,
     resource_quantity: Quantity,
-
-    // TODO: remove
-    #[serde(skip_serializing_if = "Option::is_none")]
-    provider: Option<String>,
-
-    #[serde(skip_serializing_if = "Option::is_none")]
-    receiver: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -158,8 +149,6 @@ pub fn build_proposal(
             action: ACTION_DELIVER_SERVICE.to_string(),
             resource_conforms_to: CLASS_USER_GENERATED_CONTENT.to_string(),
             resource_quantity: Quantity::duration(1),
-            provider: Some(actor_id.clone()),
-            receiver: None,
         },
         reciprocal: Intent {
             object_type: INTENT.to_string(),
@@ -169,8 +158,6 @@ pub fn build_proposal(
             resource_quantity:
                 // piconeros per second
                 Quantity::currency_amount(payment_info.price.get()),
-            provider: None,
-            receiver: Some(actor_id),
         },
         unit_based: true,
         to: AP_PUBLIC.to_string(),
@@ -217,8 +204,6 @@ mod tests {
                     "publishes": "vf:publishes",
                     "reciprocal": "vf:reciprocal",
                     "unitBased": "vf:unitBased",
-                    "provider": "vf:provider",
-                    "receiver": "vf:receiver",
                     "action": "vf:action",
                     "Agreement": "vf:Agreement",
                     "stipulates": "vf:stipulates",
@@ -245,7 +230,6 @@ mod tests {
                     "hasUnit": "second",
                     "hasNumericalValue": "1",
                 },
-                "provider": "https://test.example/users/alice",
             },
             "reciprocal": {
                 "type": "Intent",
@@ -256,7 +240,6 @@ mod tests {
                     "hasUnit": "one",
                     "hasNumericalValue": "20000",
                 },
-                "receiver": "https://test.example/users/alice",
             },
             "unitBased": true,
             "to": "https://www.w3.org/ns/activitystreams#Public",

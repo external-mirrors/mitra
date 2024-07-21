@@ -137,8 +137,6 @@ mod tests {
                     "publishes": "vf:publishes",
                     "reciprocal": "vf:reciprocal",
                     "unitBased": "vf:unitBased",
-                    "provider": "vf:provider",
-                    "receiver": "vf:receiver",
                     "action": "vf:action",
                     "Agreement": "vf:Agreement",
                     "stipulates": "vf:stipulates",
@@ -165,7 +163,6 @@ mod tests {
                     "hasUnit": "second",
                     "hasNumericalValue": "1",
                 },
-                "provider": "https://test.example/users/alice",
             },
             "reciprocal": {
                 "type": "Intent",
@@ -176,7 +173,6 @@ mod tests {
                     "hasUnit": "one",
                     "hasNumericalValue": "20000",
                 },
-                "receiver": "https://test.example/users/alice",
             },
             "unitBased": true,
         });
