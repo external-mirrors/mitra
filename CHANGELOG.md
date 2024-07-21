@@ -11,6 +11,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Don't panic if `blockchain` configuration parameter is present.
 - Changed default log level in `mitractl` to `WARN`.
 
+### Deprecated
+
+- Deprecate `mitra-jcs-rsa-2022` cryptosuite.
+- Deprecate FEP-c390 + old FEP-ae97 authentication.
+
 ### Removed
 
 - Removed token gate.
