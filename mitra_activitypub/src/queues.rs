@@ -4,7 +4,6 @@ use std::time::Instant;
 use chrono::{Duration, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value as JsonValue};
-use uuid::Uuid;
 
 use mitra_config::Config;
 use mitra_federation::{
@@ -34,7 +33,6 @@ use mitra_models::{
         set_reachability_status,
     },
     profiles::types::DbActor,
-    users::queries::get_user_by_id,
     users::types::{PortableUser, User},
 };
 
@@ -164,7 +162,6 @@ pub async fn process_queued_incoming_activities(
 #[derive(Deserialize, Serialize)]
 pub struct OutgoingActivityJobData {
     activity: JsonValue,
-    sender_id: Uuid,
     sender: Option<Sender>,
     recipients: Vec<Recipient>,
     failure_count: u32,
@@ -227,7 +224,6 @@ impl OutgoingActivityJobData {
         ).expect("activity should be valid");
         Self {
             activity: activity_signed,
-            sender_id: sender.id,
             sender: Some(Sender::from_user(instance_url, sender)),
             recipients: recipient_map.into_values().collect(),
             failure_count: 0,
@@ -263,11 +259,9 @@ impl OutgoingActivityJobData {
                 recipient_map.insert(http_actor_outbox, recipient);
             };
         };
-        let sender_id = sender.id;
         let sender = Sender::from_portable_user(instance_url, sender)?;
         let job_data = Self {
             activity: activity.clone(),
-            sender_id: sender_id,
             sender: Some(sender),
             recipients: recipient_map.into_values().collect(),
             failure_count: 0,
@@ -370,26 +364,15 @@ pub async fn process_queued_outgoing_activities(
         JOB_TIMEOUT,
     ).await?;
     for job in batch {
-        // TODO: delete job from queue if job_data has old format
         let mut job_data: OutgoingActivityJobData =
             serde_json::from_value(job.job_data)
                 .map_err(|_| DatabaseTypeError)?;
-        let sender = match get_user_by_id(
-            db_client,
-            &job_data.sender_id,
-        ).await {
-            Ok(user) => Sender::from_user(&config.instance_url(), &user),
-            Err(DatabaseError::NotFound(_)) => {
-                // User has been deleted, use "sender" property
-                if let Some(ref sender) = job_data.sender {
-                    sender.clone()
-                } else {
-                    log::error!("signing keys can not be found");
-                    delete_job_from_queue(db_client, &job.id).await?;
-                    return Ok(());
-                }
-            },
-            Err(other_error) => return Err(other_error),
+        let sender = if let Some(ref sender) = job_data.sender {
+            sender.clone()
+        } else {
+            log::error!("signing keys can not be found");
+            delete_job_from_queue(db_client, &job.id).await?;
+            return Ok(());
         };
         let mut recipients = job_data.recipients;
         let start_time = Instant::now();
