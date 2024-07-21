@@ -66,15 +66,15 @@ pub fn initialize_app(
 }
 
 pub async fn check_postgres_version(
-    db_client: &impl  DatabaseClient,
-) -> () {
-    if let Ok(version) = get_postgres_version(db_client).await {
-        if version < 130_000 {
-            log::warn!("unsupported PostgreSQL version: {version}");
-        } else {
-            log::info!("PostgreSQL version: {version}");
-        };
+    db_client: &impl DatabaseClient,
+) -> Result<(), DatabaseError> {
+    let version = get_postgres_version(db_client).await?;
+    if version < 130_000 {
+        log::warn!("unsupported PostgreSQL version: {version}");
+    } else {
+        log::info!("PostgreSQL version: {version}");
     };
+    Ok(())
 }
 
 pub async fn apply_custom_migrations(
