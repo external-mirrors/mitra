@@ -9,6 +9,10 @@ If you're using Mitra 1.x, read the [Mitra 2.0 migration guide](./mitra_2_0.md).
 - Minimum supported version of PostgreSQL is 15.
 - Minimum supported version of Rust is 1.75.
 
+## Configuration
+
+- Changed the default value of `federation.fetcher_timeout` configuration parameter to `60`. Operators of Tor and I2P instances may need to use a bigger value (e.g. `120`).
+
 ## Web client
 
 - Minimum supported version of NodeJS is 18.

@@ -14,6 +14,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Stop accepting proposals without `purpose` property.
 - Don't add `provider` and `receiver` properties to `Intent` objects.
 - Return error if PostgreSQL version check fails.
+- Changed default value of `federation.fetcher_timeout` config parameter to `60`.
 
 ### Deprecated
 
