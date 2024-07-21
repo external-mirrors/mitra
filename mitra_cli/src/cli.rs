@@ -89,11 +89,6 @@ use mitra_models::{
     users::types::UserCreateData,
 };
 use mitra_services::{
-    ethereum::{
-        signatures::generate_ecdsa_key,
-        sync::save_current_block_number,
-        utils::key_to_ethereum_address,
-    },
     media::MediaStorage,
     monero::{
         wallet::{
@@ -139,7 +134,6 @@ pub struct Cli {
 #[derive(Parser)]
 pub enum SubCommand {
     GenerateRsaKey(GenerateRsaKey),
-    GenerateEthereumAddress(GenerateEthereumAddress),
 
     UpdateConfig(UpdateConfig),
     GenerateInviteCode(GenerateInviteCode),
@@ -165,7 +159,6 @@ pub enum SubCommand {
     ListUnreachableActors(ListUnreachableActors),
     AddEmoji(AddEmoji),
     ImportEmoji(ImportEmoji),
-    UpdateCurrentBlock(UpdateCurrentBlock),
     ResetSubscriptions(ResetSubscriptions),
     CreateMoneroWallet(CreateMoneroWallet),
     CreateMoneroSignature(CreateMoneroSignature),
@@ -186,21 +179,6 @@ impl GenerateRsaKey {
         let secret_key_pem = rsa_secret_key_to_pkcs8_pem(&secret_key)?;
         println!("{}", secret_key_pem);
         Ok(())
-    }
-}
-
-/// Generate ethereum address
-#[derive(Parser)]
-pub struct GenerateEthereumAddress;
-
-impl GenerateEthereumAddress {
-    pub fn execute(&self) -> () {
-        let secret_key = generate_ecdsa_key();
-        let address = key_to_ethereum_address(&secret_key);
-        println!(
-            "address {:?}; secret key {}",
-            address, secret_key.display_secret(),
-        );
     }
 }
 
@@ -872,24 +850,6 @@ impl ImportEmoji {
             emoji.image,
         ).await?;
         println!("added emoji to local collection");
-        Ok(())
-    }
-}
-
-/// Update blockchain synchronization starting block
-#[derive(Parser)]
-pub struct UpdateCurrentBlock {
-    number: u64,
-}
-
-impl UpdateCurrentBlock {
-    pub async fn execute(
-        &self,
-        _config: &Config,
-        db_client: &impl DatabaseClient,
-    ) -> Result<(), Error> {
-        save_current_block_number(db_client, self.number).await?;
-        println!("current block updated");
         Ok(())
     }
 }

@@ -126,18 +126,6 @@ Import custom emoji from another instance:
 mitractl import-emoji emoji_name example.org
 ```
 
-Generate ethereum address:
-
-```shell
-mitractl generate-ethereum-address
-```
-
-Update synchronization starting block of Ethereum blockchain:
-
-```shell
-mitractl update-current-block 2000000
-```
-
 Create Monero wallet:
 
 ```shell

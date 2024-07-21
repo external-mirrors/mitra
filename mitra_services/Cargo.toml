@@ -20,8 +20,6 @@ monero-rpc = { git = "https://github.com/monero-rs/monero-rpc-rs", rev = "519878
 regex = "1.9.6"
 # Used for making async HTTP requests
 reqwest = { version = "0.11.27", default-features = false, features = ["json", "multipart"] }
-# Used for working with ethereum keys
-secp256k1 = { version = "0.27.0", features = ["rand", "rand-std"] }
 # Used for serialization/deserialization
 # monero-rs is not compatible with serde 1.0.168+
 serde = { version = "1.0.136,<1.0.168", features = ["derive"] }
@@ -33,7 +31,7 @@ siwe = "0.5.2"
 # Used for creating error types
 thiserror = "1.0.37"
 # Used to query ethereum node
-web3 = { version = "0.19.0", default-features = false, features = ["signing"] }
+web3 = { version = "0.19.0", default-features = false }
 
 mitra_config = { path = "../mitra_config" }
 mitra_models = { path = "../mitra_models", default-features = false }

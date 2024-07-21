@@ -101,9 +101,6 @@ pub fn parse_config() -> (Config, Vec<&'static str>) {
             BlockchainConfig::Ethereum(ethereum_config) => {
                 ethereum_config.try_ethereum_chain_id()
                     .expect("invalid ethereum chain ID");
-                if !ethereum_config.contract_dir.exists() {
-                    panic!("contract directory does not exist");
-                };
             },
             BlockchainConfig::Monero(monero_config) => {
                 monero_config.chain_id.monero_network()

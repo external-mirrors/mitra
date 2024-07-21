@@ -1,5 +1,5 @@
 use serde::Serialize;
-use serde_json::{json, to_value, Value};
+use serde_json::{json, Value};
 
 use mitra_adapters::dynamic_config::DynamicConfig;
 use mitra_config::{
@@ -60,8 +60,6 @@ struct AllowUnauthenticated {
 
 #[derive(Serialize)]
 struct BlockchainFeatures {
-    gate: bool,
-    minter: bool,
     subscriptions: bool,
 }
 
@@ -69,7 +67,6 @@ struct BlockchainFeatures {
 struct BlockchainInfo {
     chain_id: String,
     chain_metadata: Option<Value>,
-    contract_address: Option<String>,
     features: BlockchainFeatures,
 }
 
@@ -130,28 +127,10 @@ impl InstanceInfo {
         post_count: i64,
         peer_count: i64,
     ) -> Self {
-        let blockchains = config.blockchains().iter().map(|item| match item {
-            BlockchainConfig::Ethereum(ethereum_config) => {
-                let features = BlockchainFeatures {
-                    gate: false,
-                    minter: false,
-                    subscriptions: false,
-                };
-                let maybe_chain_metadata = ethereum_config
-                    .chain_metadata.as_ref()
-                    .and_then(|metadata| to_value(metadata).ok());
-                BlockchainInfo {
-                    chain_id: ethereum_config.chain_id.to_string(),
-                    chain_metadata: maybe_chain_metadata,
-                    contract_address:
-                        Some(ethereum_config.contract_address.clone()),
-                    features: features,
-                }
-            },
+        let blockchains = config.blockchains().iter().filter_map(|item| match item {
+            BlockchainConfig::Ethereum(_) => None,
             BlockchainConfig::Monero(monero_config) => {
                 let features = BlockchainFeatures {
-                    gate: false,
-                    minter: false,
                     subscriptions: true,
                 };
                 let maybe_chain_metadata = monero_config
@@ -159,12 +138,11 @@ impl InstanceInfo {
                     .and_then(|metadata| metadata.description.as_ref())
                     .map(|text| markdown_to_html(text))
                     .map(|html| json!({"description": html}));
-                BlockchainInfo {
+                Some(BlockchainInfo {
                     chain_id: monero_config.chain_id.to_string(),
                     chain_metadata: maybe_chain_metadata,
-                    contract_address: None,
                     features: features,
-                }
+                })
             },
         }).collect();
         Self {

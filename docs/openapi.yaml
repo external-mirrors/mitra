@@ -2372,22 +2372,10 @@ components:
                 description: Additional information about blockchain
                 type: object
                 nullable: true
-              contract_address:
-                description: Blockchain contract address.
-                type: string
-                nullable: true
               features:
                 description: Blockchain features.
                 type: object
                 properties:
-                  gate:
-                    description: Token gate feature flag.
-                    type: boolean
-                    example: true
-                  minter:
-                    description: Minter feature flag.
-                    type: boolean
-                    example: true
                   subscriptions:
                     description: Subscriptions feature flag.
                     type: boolean

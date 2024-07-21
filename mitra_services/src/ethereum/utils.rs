@@ -1,23 +1,9 @@
-use std::str::FromStr;
-
 use regex::Regex;
-use secp256k1::SecretKey;
-use web3::{
-    signing::Key,
-    types::Address,
-};
-
-pub fn key_to_ethereum_address(secret_key: &SecretKey) -> Address {
-    secret_key.address()
-}
+use web3::types::Address;
 
 #[derive(thiserror::Error, Debug)]
 #[error("{0}")]
 pub struct AddressError(&'static str);
-
-pub fn parse_address(address: &str) -> Result<Address, AddressError> {
-    Address::from_str(address).map_err(|_| AddressError("invalid address"))
-}
 
 /// Converts address object to lowercase hex string
 pub fn address_to_string(address: Address) -> String {

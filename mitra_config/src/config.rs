@@ -18,7 +18,6 @@ use super::authentication::{
 };
 use super::blockchain::{
     BlockchainConfig,
-    EthereumConfig,
     MoneroConfig,
 };
 use super::environment::Environment;
@@ -179,14 +178,6 @@ impl Config {
             panic!("'blockchains' array contains more than one chain of the same kind");
         };
         &self.blockchains
-    }
-
-    pub fn ethereum_config(&self) -> Option<&EthereumConfig> {
-        self.blockchains().iter()
-            .find_map(|item| match item {
-                BlockchainConfig::Ethereum(config) => Some(config),
-                _ => None,
-            })
     }
 
     pub fn monero_config(&self) -> Option<&MoneroConfig> {

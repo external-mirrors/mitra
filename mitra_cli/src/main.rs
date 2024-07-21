@@ -21,7 +21,6 @@ async fn main() {
     match opts.subcmd {
         #[allow(clippy::unwrap_used)]
         SubCommand::GenerateRsaKey(cmd) => cmd.execute().unwrap(),
-        SubCommand::GenerateEthereumAddress(cmd) => cmd.execute(),
         subcmd => {
             // Other commands require initialized app
             let mut config = initialize_app(opts.log_level);
@@ -67,7 +66,6 @@ async fn main() {
                 SubCommand::ListUnreachableActors(cmd) => cmd.execute(&config, db_client).await.unwrap(),
                 SubCommand::AddEmoji(cmd) => cmd.execute(&config, db_client).await.unwrap(),
                 SubCommand::ImportEmoji(cmd) => cmd.execute(&config, db_client).await.unwrap(),
-                SubCommand::UpdateCurrentBlock(cmd) => cmd.execute(&config, db_client).await.unwrap(),
                 SubCommand::ResetSubscriptions(cmd) => cmd.execute(&config, db_client).await.unwrap(),
                 SubCommand::CreateMoneroWallet(cmd) => cmd.execute(&config).await.unwrap(),
                 SubCommand::CreateMoneroSignature(cmd) => cmd.execute(&config).await.unwrap(),

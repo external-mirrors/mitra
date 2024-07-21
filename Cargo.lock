@@ -2180,7 +2180,6 @@ dependencies = [
  "monero-rpc",
  "regex",
  "reqwest",
- "secp256k1",
  "serde",
  "serde_json",
  "sha2",
@@ -3258,25 +3257,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "secp256k1"
-version = "0.27.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "25996b82292a7a57ed3508f052cfff8640d38d32018784acd714758b43da9c8f"
-dependencies = [
- "rand",
- "secp256k1-sys",
-]
-
-[[package]]
-name = "secp256k1-sys"
-version = "0.8.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "70a129b9e9efbfb223753b9163c4ab3b13cff7fd9c7f010fbac25ab4099fa07e"
-dependencies = [
- "cc",
-]
-
-[[package]]
 name = "security-framework"
 version = "2.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4258,12 +4238,10 @@ dependencies = [
  "idna",
  "jsonrpc-core",
  "log",
- "once_cell",
  "parking_lot",
  "pin-project",
  "reqwest",
  "rlp",
- "secp256k1",
  "serde",
  "serde_json",
  "tiny-keccak",

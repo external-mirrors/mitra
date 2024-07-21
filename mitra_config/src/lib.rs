@@ -11,7 +11,6 @@ mod retention;
 pub use authentication::AuthenticationMethod;
 pub use blockchain::{
     BlockchainConfig,
-    EthereumConfig,
     MoneroConfig,
 };
 pub use config::{Config, Instance};

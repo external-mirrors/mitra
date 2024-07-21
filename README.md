@@ -151,10 +151,9 @@ See [defaults](./.env).
 
 See [Tor guide](./docs/onion.md) and [I2P guide](./docs/i2p.md).
 
-### Blockchain integrations
+### Payments
 
 - [Monero](./docs/monero.md)
-- [Ethereum](./docs/ethereum.md) ([unmaintained](https://codeberg.org/silverpill/mitra/issues/27))
 
 ### IPFS integration (experimental)
 
