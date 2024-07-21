@@ -43,8 +43,8 @@ pub async fn handle_offer(
         db_client,
         &activity.actor,
     ).await?;
-    let primary_commitment = activity.object.primary_commitment()?;
-    let reciprocal_commitment = activity.object.reciprocal_commitment()?;
+    let primary_commitment = activity.object.primary_commitment();
+    let reciprocal_commitment = activity.object.reciprocal_commitment();
     let (username, chain_id) = parse_local_primary_intent_id(
         &config.instance_url(),
         &primary_commitment.satisfies,

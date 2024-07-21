@@ -94,7 +94,7 @@ async fn handle_accept_offer(
         .map_err(|_| ValidationError("unexpected activity structure"))?;
     let agreement_id = agreement.id.as_ref()
         .ok_or(ValidationError("missing 'id' field"))?;
-    let invoice_amount: i64 = agreement.reciprocal_commitment()?
+    let invoice_amount: i64 = agreement.reciprocal_commitment()
         .resource_quantity
         .parse_currency_amount()?;
     if invoice_amount != invoice.amount {

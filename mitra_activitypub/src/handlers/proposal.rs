@@ -141,7 +141,6 @@ mod tests {
                     "receiver": "vf:receiver",
                     "action": "vf:action",
                     "Agreement": "vf:Agreement",
-                    "clauses": "vf:clauses",
                     "stipulates": "vf:stipulates",
                     "stipulatesReciprocal": "vf:stipulatesReciprocal",
                     "Commitment": "vf:Commitment",

@@ -69,10 +69,6 @@ fn build_offer_agreement(
     let agreement = Agreement {
         id: None,
         object_type: AGREEMENT.to_string(),
-        clauses: (
-            primary_commitment.clone(),
-            reciprocal_commitment.clone(),
-        ),
         stipulates: primary_commitment,
         stipulates_reciprocal: reciprocal_commitment,
         url: None, // pre-agreement shouldn't have payment link
@@ -166,7 +162,6 @@ mod tests {
                     "receiver": "vf:receiver",
                     "action": "vf:action",
                     "Agreement": "vf:Agreement",
-                    "clauses": "vf:clauses",
                     "stipulates": "vf:stipulates",
                     "stipulatesReciprocal": "vf:stipulatesReciprocal",
                     "Commitment": "vf:Commitment",
@@ -182,24 +177,6 @@ mod tests {
             "actor": "https://local.example/users/payer",
             "object": {
                 "type": "Agreement",
-                "clauses": [
-                    {
-                        "type": "Commitment",
-                        "satisfies": "https://remote.example/proposals/1#primary",
-                        "resourceQuantity": {
-                            "hasUnit": "second",
-                            "hasNumericalValue": "10",
-                        },
-                    },
-                    {
-                        "type": "Commitment",
-                        "satisfies": "https://remote.example/proposals/1#reciprocal",
-                        "resourceQuantity": {
-                            "hasUnit": "one",
-                            "hasNumericalValue": "200000",
-                        },
-                    },
-                ],
                 "stipulates": {
                     "type": "Commitment",
                     "satisfies": "https://remote.example/proposals/1#primary",

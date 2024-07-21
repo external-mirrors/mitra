@@ -28,6 +28,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Removed `contract_address`, `features.gate` and `features.miner` from instance info.
 - Dropped support for Mitra 1.x outgoing queue data format.
 - Removed support for `authentication` array in actor objects.
+- Removed support for `clauses` property in `Agreement` object.
 
 ### Fixed
 

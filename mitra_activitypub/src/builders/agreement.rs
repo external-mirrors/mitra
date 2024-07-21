@@ -56,8 +56,6 @@ pub struct Agreement {
     #[serde(rename = "type")]
     pub object_type: String,
 
-    // TODO: remove
-    pub clauses: (Commitment, Commitment),
     pub stipulates: Commitment,
     pub stipulates_reciprocal: Commitment,
 
@@ -105,10 +103,6 @@ pub fn build_agreement(
     let agreement = Agreement {
         id: Some(agreement_id),
         object_type: AGREEMENT.to_string(),
-        clauses: (
-            primary_commitment.clone(),
-            reciprocal_commitment.clone(),
-        ),
         stipulates: primary_commitment,
         stipulates_reciprocal: reciprocal_commitment,
         url: Some(payment_link),
@@ -152,26 +146,6 @@ mod tests {
         let expected_value = json!({
             "type": "Agreement",
             "id": "https://test.example/objects/agreements/edc374aa-e580-4a58-9404-f3e8bf8556b2",
-            "clauses": [
-                {
-                    "id": "https://test.example/objects/agreements/edc374aa-e580-4a58-9404-f3e8bf8556b2#primary",
-                    "type": "Commitment",
-                    "satisfies": "https://test.example/users/alice/proposals/monero:418015bb9ae982a1975da7d79277c270#primary",
-                    "resourceQuantity": {
-                        "hasUnit": "second",
-                        "hasNumericalValue": "3000",
-                    },
-                },
-                {
-                    "id": "https://test.example/objects/agreements/edc374aa-e580-4a58-9404-f3e8bf8556b2#reciprocal",
-                    "type": "Commitment",
-                    "satisfies": "https://test.example/users/alice/proposals/monero:418015bb9ae982a1975da7d79277c270#reciprocal",
-                    "resourceQuantity": {
-                        "hasUnit": "one",
-                        "hasNumericalValue": "60000000",
-                    },
-                },
-            ],
             "stipulates": {
                 "id": "https://test.example/objects/agreements/edc374aa-e580-4a58-9404-f3e8bf8556b2#primary",
                 "type": "Commitment",
