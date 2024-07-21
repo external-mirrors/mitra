@@ -61,8 +61,7 @@ pub struct Intent {
 #[serde(rename_all = "camelCase")]
 pub struct Proposal {
     pub id: String,
-    // TODO: make required
-    purpose: Option<String>,
+    purpose: String,
 
     publishes: Intent,
     reciprocal: Intent,
@@ -75,10 +74,8 @@ pub fn parse_proposal(
 ) -> Result<PaymentOption, ValidationError> {
     let canonical_proposal_id = canonicalize_id(&proposal.id)?;
     // Purpose
-    if let Some(purpose) = proposal.purpose {
-        if purpose != PURPOSE_OFFER {
-            return Err(ValidationError("proposal is not an offer"));
-        };
+    if proposal.purpose != PURPOSE_OFFER {
+        return Err(ValidationError("proposal is not an offer"));
     };
     // Primary intent
     if proposal.publishes.action != ACTION_DELIVER_SERVICE {
@@ -128,16 +125,27 @@ mod tests {
             "@context": [
                 "https://www.w3.org/ns/activitystreams",
                 {
-                    "vf": "https://w3id.org/valueflows/",
+                    "Hashtag": "as:Hashtag",
+                    "sensitive": "as:sensitive",
+                    "toot": "http://joinmastodon.org/ns#",
+                    "Emoji": "toot:Emoji",
+                    "vf": "https://w3id.org/valueflows/ont/vf#",
                     "om2": "http://www.ontology-of-units-of-measure.org/resource/om-2/",
                     "Proposal": "vf:Proposal",
                     "Intent": "vf:Intent",
+                    "purpose": "vf:purpose",
                     "publishes": "vf:publishes",
                     "reciprocal": "vf:reciprocal",
                     "unitBased": "vf:unitBased",
                     "provider": "vf:provider",
                     "receiver": "vf:receiver",
                     "action": "vf:action",
+                    "Agreement": "vf:Agreement",
+                    "clauses": "vf:clauses",
+                    "stipulates": "vf:stipulates",
+                    "stipulatesReciprocal": "vf:stipulatesReciprocal",
+                    "Commitment": "vf:Commitment",
+                    "satisfies": "vf:satisfies",
                     "resourceConformsTo": "vf:resourceConformsTo",
                     "resourceQuantity": "vf:resourceQuantity",
                     "hasUnit": "om2:hasUnit",
@@ -146,6 +154,7 @@ mod tests {
             ],
             "type": "Proposal",
             "id": "https://test.example/users/alice/proposals/monero:418015bb9ae982a1975da7d79277c270",
+            "purpose": "offer",
             "attributedTo": "https://test.example/users/alice",
             "name": "Pay for subscription",
             "publishes": {
