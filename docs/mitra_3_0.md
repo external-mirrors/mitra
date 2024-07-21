@@ -8,6 +8,7 @@ If you're using Mitra 1.x, read the [Mitra 2.0 migration guide](./mitra_2_0.md).
 
 - Minimum supported version of PostgreSQL is 15.
 - Minimum supported version of Rust is 1.75.
+- OpenSSL builds are no longer supported.
 
 ## Configuration
 

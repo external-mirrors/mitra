@@ -15,11 +15,11 @@ hex = { version = "0.4.3", features = ["serde"] }
 # Used for logging
 log = "0.4.20"
 # Used to query Monero node
-monero-rpc = { git = "https://github.com/monero-rs/monero-rpc-rs", rev = "519878d1413a8e220461852cf24c8f5bca23cc12", default-features = false, features = ["rpc_authentication"] }
+monero-rpc = { git = "https://github.com/monero-rs/monero-rpc-rs", rev = "519878d1413a8e220461852cf24c8f5bca23cc12", default-features = false, features = ["rpc_authentication", "rustls-tls"] }
 # Used for working with regular expressions
 regex = "1.9.6"
 # Used for making async HTTP requests
-reqwest = { version = "0.11.27", default-features = false, features = ["json", "multipart"] }
+reqwest = { version = "0.11.27", default-features = false, features = ["json", "multipart", "rustls-tls-native-roots"] }
 # Used for serialization/deserialization
 # monero-rs is not compatible with serde 1.0.168+
 serde = { version = "1.0.136,<1.0.168", features = ["derive"] }
@@ -31,17 +31,11 @@ siwe = "0.5.2"
 # Used for creating error types
 thiserror = "1.0.37"
 # Used to query ethereum node
-web3 = { version = "0.19.0", default-features = false }
+web3 = { version = "0.19.0", default-features = false, features = ["http-rustls-tls"] }
 
 mitra_config = { path = "../mitra_config" }
-mitra_models = { path = "../mitra_models", default-features = false }
+mitra_models = { path = "../mitra_models" }
 mitra_utils = { path = "../mitra_utils" }
-
-[features]
-default = ["rustls-tls"]
-
-native-tls = ["reqwest/native-tls", "monero-rpc/native-tls", "web3/http-native-tls", "mitra_models/native-tls"]
-rustls-tls = ["reqwest/rustls-tls-native-roots", "monero-rpc/rustls-tls", "web3/http-rustls-tls", "mitra_models/rustls-tls"]
 
 [lints]
 workspace = true

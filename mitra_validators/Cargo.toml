@@ -15,18 +15,12 @@ thiserror = "1.0.37"
 # Used to work with UUIDs
 uuid = "1.1.2"
 
-mitra_models = { path = "../mitra_models", default-features = false }
+mitra_models = { path = "../mitra_models" }
 mitra_utils = { path = "../mitra_utils" }
 
 [dev-dependencies]
 mitra_models = { path = "../mitra_models", features = ["test-utils"] }
 mitra_utils = { path = "../mitra_utils", features = ["test-utils"] }
-
-[features]
-default = ["rustls-tls"]
-
-native-tls = ["mitra_models/native-tls"]
-rustls-tls = ["mitra_models/rustls-tls"]
 
 [lints]
 workspace = true

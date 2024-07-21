@@ -37,6 +37,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Removed `daemon_url` alias of `node_url` parameter in Monero integration configuration.
 - Removed `wallet_url` alias of `wallet_rpc_url` parameter in Monero integration configuration.
 - Removed `generate-rsa-key` command.
+- Removed `native-tls` and `rustls-tls` features.
 
 ### Fixed
 

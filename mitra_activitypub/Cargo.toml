@@ -26,34 +26,18 @@ tokio = { version = "1.28.2" }
 # Used to work with UUIDs
 uuid = { version = "1.1.2" }
 
-mitra_adapters = { path = "../mitra_adapters", default-features = false }
+mitra_adapters = { path = "../mitra_adapters" }
 mitra_config = { path = "../mitra_config" }
-mitra_federation = { path = "../mitra_federation", default-features = false }
-mitra_models = { path = "../mitra_models", default-features = false }
-mitra_services = { path = "../mitra_services", default-features = false }
+mitra_federation = { path = "../mitra_federation" }
+mitra_models = { path = "../mitra_models" }
+mitra_services = { path = "../mitra_services" }
 mitra_utils = { path = "../mitra_utils" }
 mitra_validators = { path = "../mitra_validators" }
 
 [dev-dependencies]
 mitra_config = { path = "../mitra_config", features = ["test-utils"] }
-mitra_models = { path = "../mitra_models", default-features = false, features = ["test-utils"] }
+mitra_models = { path = "../mitra_models", features = ["test-utils"] }
 mitra_utils = { path = "../mitra_utils", features = ["test-utils"] }
-
-[features]
-default = ["rustls-tls"]
-
-native-tls = [
-  "mitra_adapters/native-tls",
-  "mitra_federation/native-tls",
-  "mitra_models/native-tls",
-  "mitra_services/native-tls",
-]
-rustls-tls = [
-  "mitra_adapters/rustls-tls",
-  "mitra_federation/rustls-tls",
-  "mitra_models/rustls-tls",
-  "mitra_services/rustls-tls",
-]
 
 [lints]
 workspace = true
