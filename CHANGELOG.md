@@ -18,6 +18,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Removed `update-current-block` command.
 - Removed `generate-ethereum-address` command.
 - Removed `contract_address`, `features.gate` and `features.miner` from instance info.
+- Dropped support for Mitra 1.x outgoing queue data format.
 
 ## [2.26.0] - 2024-07-20
 

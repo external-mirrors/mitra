@@ -183,14 +183,10 @@ pub struct Recipient {
     pub id: String,
     pub(super) inbox: String,
 
-    // Default to false if serialized data contains no value.
-    #[serde(default)]
     pub is_delivered: bool,
 
     // This flag is set after first failed delivery attempt
     // if the recipient had prior unreachable status.
-    // Default to false if serialized data contains no value.
-    #[serde(default)]
     pub is_unreachable: bool,
 
     // Local portable actor (HTTP request is not needed)
