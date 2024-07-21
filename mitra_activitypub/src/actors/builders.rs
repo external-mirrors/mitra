@@ -6,7 +6,7 @@ use serde_json::{Value as JsonValue};
 use mitra_config::Instance;
 use mitra_models::{
     database::{DatabaseError, DatabaseTypeError},
-    profiles::types::IdentityProofType,
+    profiles::types::{IdentityProofType, PaymentOption},
     users::types::User,
 };
 use mitra_services::media::get_file_url;
@@ -208,6 +208,9 @@ pub fn build_local_actor(
         attachments.push(attachment_value);
     };
     for payment_option in user.profile.payment_options.clone().into_inner() {
+        if matches!(payment_option, PaymentOption::EthereumSubscription(_)) {
+            continue;
+        };
         let attachment = attach_payment_option(
             authority,
             &user.profile.username,

@@ -1623,29 +1623,6 @@ paths:
           description: Profile not found.
         418:
           description: Blockchain integration is not enabled.
-  /api/v1/subscriptions/authorize:
-    get:
-      summary: Get authorization for setting up Ethereum subscription.
-      security:
-        - tokenAuth: []
-      parameters:
-        - name: price
-          in: query
-          description: Subscription price
-          required: true
-          schema:
-            type: number
-      responses:
-        200:
-          description: Signature created
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Signature'
-        403:
-          description: User's wallet address is not known or not verified
-        418:
-          description: Blockchain integration is not enabled
   /api/v1/subscriptions/options:
     get:
       summary: Get list of subscription options
@@ -2117,7 +2094,6 @@ components:
                 type: string
                 enum:
                   - link
-                  - ethereum-subscription
                   - monero-subscription
               name:
                 description: Link name (only for link type).
@@ -2128,7 +2104,7 @@ components:
                 type: string
                 nullable: true
               chain_id:
-                description: CAIP-2 chain ID  (only for ethereum-subscription and monero-subscription types).
+                description: CAIP-2 chain ID  (only for monero-subscription type).
                 type: string
                 example: null
               price:
@@ -2848,11 +2824,6 @@ components:
           type: number
         sender:
           $ref: '#/components/schemas/Account'
-        sender_address:
-          description: Sender address.
-          type: string
-          nullable: true
-          example: '0xd8da6bf...'
         expires_at:
           description: The date when subscription expires.
           type: string
@@ -2875,7 +2846,6 @@ components:
           description: Subscription type
           type: string
           enum:
-            - ethereum
             - monero
         chain_id:
           description: CAIP-2 chain ID.

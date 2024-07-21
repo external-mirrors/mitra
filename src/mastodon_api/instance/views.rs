@@ -18,7 +18,6 @@ use mitra_models::{
         get_user_count,
     },
 };
-use mitra_services::ethereum::contracts::ContractSet;
 use mitra_utils::datetime::days_before_now;
 
 use crate::http::get_request_base_url;
@@ -32,7 +31,6 @@ async fn instance_view(
     config: web::Data<Config>,
     connection_info: ConnectionInfo,
     db_pool: web::Data<DatabaseConnectionPool>,
-    maybe_ethereum_contracts: web::Data<Option<ContractSet>>,
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &**get_database_client(&db_pool).await?;
     let maybe_admin = if config.instance_staff_public {
@@ -49,7 +47,6 @@ async fn instance_view(
         config.as_ref(),
         dynamic_config,
         maybe_admin,
-        maybe_ethereum_contracts.as_ref().as_ref(),
         user_count,
         post_count,
         peer_count,

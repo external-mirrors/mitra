@@ -26,12 +26,10 @@ use mitra_models::{
         get_profile_by_id,
     },
 };
-use mitra_services::ethereum::contracts::EthereumBlockchain;
 use mitra_utils::datetime::days_before_now;
 
 use crate::payments::{
     common::update_expired_subscriptions,
-    ethereum::check_ethereum_subscriptions,
     monero::{check_closed_invoices, check_monero_subscriptions},
 };
 use super::importer::{
@@ -39,29 +37,6 @@ use super::importer::{
     import_follows_task,
     ImporterJobData,
 };
-
-pub async fn ethereum_subscription_monitor(
-    config: &Config,
-    maybe_blockchain: Option<&mut EthereumBlockchain>,
-    db_pool: &DatabaseConnectionPool,
-) -> Result<(), Error> {
-    let blockchain = match maybe_blockchain {
-        Some(blockchain) => blockchain,
-        None => return Ok(()),
-    };
-    let subscription = match &blockchain.contract_set.subscription {
-        Some(contract) => contract,
-        None => return Ok(()), // feature not enabled
-    };
-    check_ethereum_subscriptions(
-        &blockchain.config,
-        &config.instance(),
-        &blockchain.contract_set.web3,
-        subscription,
-        &mut blockchain.sync_state,
-        db_pool,
-    ).await.map_err(Error::from)
-}
 
 pub async fn subscription_expiration_monitor(
     config: &Config,

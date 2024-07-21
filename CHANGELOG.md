@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Removed
 
 - Removed token gate.
+- Removed Ethereum subscriptions.
 
 ## [2.26.0] - 2024-07-20
 

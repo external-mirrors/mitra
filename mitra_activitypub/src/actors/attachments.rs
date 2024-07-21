@@ -140,7 +140,6 @@ pub struct PaymentLink {
     pub rel: Vec<String>,
 }
 
-const PAYMENT_LINK_NAME_ETHEREUM: &str = "EthereumSubscription";
 const PAYMENT_LINK_NAME_MONERO: &str = "MoneroSubscription";
 
 // TODO: remove
@@ -161,15 +160,7 @@ pub fn attach_payment_option(
     let (name, href) = match payment_option {
         // Local actors can't have payment links
         PaymentOption::Link(_) => unimplemented!(),
-        PaymentOption::EthereumSubscription(payment_info) => {
-            let name = PAYMENT_LINK_NAME_ETHEREUM.to_string();
-            let actor_id = local_actor_id_unified(authority, username);
-            let href = local_actor_proposal_id(
-                &actor_id,
-                &payment_info.chain_id,
-            );
-            (name, href)
-        },
+        PaymentOption::EthereumSubscription(_) => unimplemented!(),
         PaymentOption::MoneroSubscription(payment_info) => {
             let name = PAYMENT_LINK_NAME_MONERO.to_string();
             let actor_id = local_actor_id_unified(authority, username);

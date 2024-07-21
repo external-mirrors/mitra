@@ -70,7 +70,6 @@ pub struct AccountField {
 #[serde(tag = "type", rename_all = "kebab-case")]
 pub enum AccountPaymentOption {
     Link { name: String, href: String },
-    EthereumSubscription { chain_id: ChainId },
     MoneroSubscription {
         chain_id: ChainId,
         price: u64,
@@ -210,32 +209,28 @@ impl Account {
 
         let payment_options = profile.payment_options.into_inner()
             .into_iter()
-            .map(|option| {
+            .filter_map(|option| {
                 match option {
                     PaymentOption::Link(link) => {
-                        AccountPaymentOption::Link {
+                        Some(AccountPaymentOption::Link {
                             name: link.name,
                             href: link.href,
-                        }
+                        })
                     },
-                    PaymentOption::EthereumSubscription(payment_info) => {
-                        AccountPaymentOption::EthereumSubscription {
-                            chain_id: payment_info.chain_id,
-                        }
-                    },
+                    PaymentOption::EthereumSubscription(_) => None,
                     PaymentOption::MoneroSubscription(payment_info) => {
-                        AccountPaymentOption::MoneroSubscription {
+                        Some(AccountPaymentOption::MoneroSubscription {
                             chain_id: payment_info.chain_id,
                             price: payment_info.price.into(),
                             object_id: None,
-                        }
+                        })
                     },
                     PaymentOption::RemoteMoneroSubscription(payment_info) => {
-                        AccountPaymentOption::MoneroSubscription {
+                        Some(AccountPaymentOption::MoneroSubscription {
                             chain_id: payment_info.chain_id,
                             price: payment_info.price.into(),
                             object_id: Some(payment_info.object_id),
-                        }
+                        })
                     },
                 }
             })
@@ -664,7 +659,6 @@ pub struct SubscriptionListQueryParams {
 pub struct ApiSubscription {
     pub id: i32,
     pub sender: Account,
-    pub sender_address: Option<String>,
     pub expires_at: DateTime<Utc>,
 }
 
@@ -682,7 +676,6 @@ impl ApiSubscription {
         Self {
             id: subscription.id,
             sender,
-            sender_address: subscription.sender_address,
             expires_at: subscription.expires_at,
         }
     }

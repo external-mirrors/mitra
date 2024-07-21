@@ -3,7 +3,6 @@ pub mod contracts;
 pub mod eip4361;
 mod errors;
 pub mod signatures;
-pub mod subscriptions;
 pub mod sync;
 pub mod utils;
 

@@ -41,7 +41,6 @@ use mitra_models::{
     },
 };
 use mitra_services::{
-    ethereum::contracts::get_contracts,
     media::{MediaStorage, MEDIA_ROOT_URL},
 };
 use mitra_utils::urls::get_hostname;
@@ -70,23 +69,12 @@ async fn main() -> std::io::Result<()> {
     let media_storage = MediaStorage::from(&config);
     media_storage.init().expect("failed to create media directory");
 
-    let maybe_ethereum_blockchain = if let Some(ethereum_config) = config.ethereum_config() {
-        // Create blockchain interface
-        get_contracts(&**db_client, ethereum_config).await
-            .map(Some).expect("failed to verify contracts")
-    } else {
-        None
-    };
-    let maybe_ethereum_contracts = maybe_ethereum_blockchain.clone()
-        .map(|blockchain| blockchain.contract_set);
-
     std::mem::drop(db_client);
 
     log::info!("instance URL {}", config.instance_url());
 
     scheduler::run(
         config.clone(),
-        maybe_ethereum_blockchain,
         db_pool.clone(),
     );
     log::info!("scheduler started");
@@ -174,7 +162,6 @@ async fn main() -> std::io::Result<()> {
             )
             .app_data(web::Data::new(config.clone()))
             .app_data(web::Data::new(db_pool.clone()))
-            .app_data(web::Data::new(maybe_ethereum_contracts.clone()))
             .service(actix_files::Files::new(
                 MEDIA_ROOT_URL,
                 media_storage.media_dir.clone(),

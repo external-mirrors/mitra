@@ -5,7 +5,6 @@ use chrono::{DateTime, Utc};
 
 use mitra_config::Config;
 use mitra_models::database::DatabaseConnectionPool;
-use mitra_services::ethereum::contracts::EthereumBlockchain;
 
 use super::periodic_tasks::*;
 
@@ -23,7 +22,6 @@ enum PeriodicTask {
     MediaCleanupQueueExecutor,
     ImporterQueueExecutor,
     SubscriptionExpirationMonitor,
-    EthereumSubscriptionMonitor,
     MoneroPaymentMonitor,
     MoneroRecurrentPaymentMonitor,
 }
@@ -42,7 +40,6 @@ impl PeriodicTask {
             Self::MediaCleanupQueueExecutor => 10,
             Self::ImporterQueueExecutor => 60,
             Self::SubscriptionExpirationMonitor => 300,
-            Self::EthereumSubscriptionMonitor => 300,
             Self::MoneroPaymentMonitor => 30,
             Self::MoneroRecurrentPaymentMonitor => 600,
         }
@@ -61,7 +58,6 @@ impl PeriodicTask {
 
 pub fn run(
     config: Config,
-    mut maybe_ethereum_blockchain: Option<EthereumBlockchain>,
     db_pool: DatabaseConnectionPool,
 ) -> () {
     tokio::spawn(async move {
@@ -80,9 +76,6 @@ pub fn run(
         };
         if config.retention.empty_profiles.is_some() {
             scheduler_state.insert(PeriodicTask::DeleteEmptyProfiles, None);
-        };
-        if config.ethereum_config().is_some() {
-            scheduler_state.insert(PeriodicTask::EthereumSubscriptionMonitor, None);
         };
         if config.monero_config().is_some() {
             scheduler_state.insert(PeriodicTask::MoneroPaymentMonitor, None);
@@ -130,13 +123,6 @@ pub fn run(
                     },
                     PeriodicTask::SubscriptionExpirationMonitor => {
                         subscription_expiration_monitor(&config, &db_pool).await
-                    },
-                    PeriodicTask::EthereumSubscriptionMonitor => {
-                        ethereum_subscription_monitor(
-                            &config,
-                            maybe_ethereum_blockchain.as_mut(),
-                            &db_pool,
-                        ).await
                     },
                     PeriodicTask::MoneroPaymentMonitor => {
                         monero_payment_monitor(&config, &db_pool).await

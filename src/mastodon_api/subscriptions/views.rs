@@ -35,7 +35,6 @@ use mitra_models::{
     profiles::types::{
         MoneroSubscription,
         PaymentOption,
-        PaymentType,
         ProfileUpdateData,
         RemoteMoneroSubscription,
     },
@@ -46,19 +45,11 @@ use mitra_models::{
     users::types::Permission,
 };
 use mitra_services::{
-    ethereum::{
-        contracts::ContractSet,
-        subscriptions::{
-            create_subscription_signature,
-            is_registered_recipient,
-        },
-    },
     monero::{
         utils::validate_monero_address,
         wallet::create_monero_address,
     },
 };
-use mitra_utils::currencies::Currency;
 use mitra_validators::{
     invoices::validate_amount,
     errors::ValidationError,
@@ -76,7 +67,6 @@ use super::types::{
     Invoice,
     InvoiceData,
     SubscriberData,
-    SubscriptionAuthorizationQueryParams,
     SubscriptionDetails,
     SubscriptionOption,
     SubscriptionQueryParams,
@@ -128,31 +118,6 @@ async fn create_subscription_view(
     Ok(HttpResponse::Ok().json(details))
 }
 
-#[get("/authorize")]
-pub async fn authorize_subscription(
-    auth: BearerAuth,
-    config: web::Data<Config>,
-    db_pool: web::Data<DatabaseConnectionPool>,
-    query_params: web::Query<SubscriptionAuthorizationQueryParams>,
-) -> Result<HttpResponse, MastodonError> {
-    let db_client = &**get_database_client(&db_pool).await?;
-    let current_user = get_current_user(db_client, auth.token()).await?;
-    let ethereum_config = config.ethereum_config()
-        .ok_or(MastodonError::NotSupported)?;
-    // The user must have a public ethereum address,
-    // because subscribers should be able
-    // to verify that payments are actually sent to the recipient.
-    let wallet_address = current_user
-        .public_wallet_address(&Currency::Ethereum)
-        .ok_or(MastodonError::PermissionError)?;
-    let signature = create_subscription_signature(
-        ethereum_config,
-        &wallet_address,
-        query_params.price,
-    ).map_err(|_| MastodonError::InternalError)?;
-    Ok(HttpResponse::Ok().json(signature))
-}
-
 #[get("/options")]
 async fn get_subscription_options(
     auth: BearerAuth,
@@ -168,12 +133,11 @@ async fn get_subscription_options(
 }
 
 #[post("/options")]
-pub async fn register_subscription_option(
+async fn register_subscription_option(
     auth: BearerAuth,
     connection_info: ConnectionInfo,
     config: web::Data<Config>,
     db_pool: web::Data<DatabaseConnectionPool>,
-    maybe_ethereum_contracts: web::Data<Option<ContractSet>>,
     subscription_option: web::Json<SubscriptionOption>,
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &mut **get_database_client(&db_pool).await?;
@@ -183,33 +147,6 @@ pub async fn register_subscription_option(
     };
 
     let maybe_payment_option = match subscription_option.into_inner() {
-        SubscriptionOption::Ethereum { chain_id } => {
-            let ethereum_config = config.ethereum_config()
-                .ok_or(MastodonError::NotSupported)?;
-            if chain_id != ethereum_config.chain_id {
-                return Err(ValidationError("unexpected chain ID").into());
-            };
-            let contract_set = maybe_ethereum_contracts.as_ref().as_ref()
-                .ok_or(MastodonError::NotSupported)?;
-            let wallet_address = current_user
-                .public_wallet_address(&Currency::Ethereum)
-                .ok_or(MastodonError::PermissionError)?;
-            if current_user.profile.payment_options
-                .any(PaymentType::EthereumSubscription)
-            {
-                // Ignore attempts to update payment option
-                None
-            } else {
-                let is_registered = is_registered_recipient(
-                    contract_set,
-                    &wallet_address,
-                ).await.map_err(|_| MastodonError::InternalError)?;
-                if !is_registered {
-                    return Err(ValidationError("recipient is not registered").into());
-                };
-                Some(PaymentOption::ethereum_subscription(chain_id))
-            }
-        },
         SubscriptionOption::Monero { chain_id, price, payout_address } => {
             let monero_config = config.monero_config()
                 .ok_or(MastodonError::NotSupported)?;
@@ -368,7 +305,6 @@ async fn cancel_invoice_view(
 pub fn subscription_api_scope() -> Scope {
     web::scope("/v1/subscriptions")
         .service(create_subscription_view)
-        .service(authorize_subscription)
         .service(get_subscription_options)
         .service(register_subscription_option)
         .service(find_subscription)

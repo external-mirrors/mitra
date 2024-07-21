@@ -13,7 +13,6 @@ use mitra_config::{
 };
 use mitra_models::users::types::User;
 use mitra_services::{
-    ethereum::contracts::ContractSet,
     media::MediaStorage,
 };
 use mitra_utils::markdown::markdown_to_html;
@@ -127,25 +126,16 @@ impl InstanceInfo {
         config: &Config,
         dynamic_config: DynamicConfig,
         maybe_admin: Option<User>,
-        maybe_ethereum_contracts: Option<&ContractSet>,
         user_count: i64,
         post_count: i64,
         peer_count: i64,
     ) -> Self {
         let blockchains = config.blockchains().iter().map(|item| match item {
             BlockchainConfig::Ethereum(ethereum_config) => {
-                let features = if let Some(contract_set) = maybe_ethereum_contracts {
-                    BlockchainFeatures {
-                        gate: false,
-                        minter: contract_set.collectible.is_some(),
-                        subscriptions: contract_set.subscription.is_some(),
-                    }
-                } else {
-                    BlockchainFeatures {
-                        gate: false,
-                        minter: false,
-                        subscriptions: false,
-                    }
+                let features = BlockchainFeatures {
+                    gate: false,
+                    minter: false,
+                    subscriptions: false,
                 };
                 let maybe_chain_metadata = ethereum_config
                     .chain_metadata.as_ref()

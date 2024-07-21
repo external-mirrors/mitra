@@ -22,7 +22,8 @@ pub struct DbSubscription {
 pub struct Subscription {
     pub id: i32,
     pub sender: DbActorProfile,
-    pub sender_address: Option<String>,
+    #[allow(dead_code)]
+    sender_address: Option<String>,
     pub expires_at: DateTime<Utc>,
 }
 

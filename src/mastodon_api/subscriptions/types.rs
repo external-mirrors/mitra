@@ -71,17 +71,9 @@ impl From<DbInvoice> for Invoice {
     }
 }
 
-#[derive(Deserialize)]
-pub struct SubscriptionAuthorizationQueryParams {
-    pub price: u64,
-}
-
 #[derive(Deserialize, Serialize)]
 #[serde(tag = "type", rename_all = "kebab-case")]
 pub enum SubscriptionOption {
-    Ethereum {
-        chain_id: ChainId,
-    },
     Monero {
         chain_id: ChainId,
         price: u64,
@@ -93,9 +85,7 @@ impl SubscriptionOption {
     pub fn from_payment_option(payment_option: PaymentOption) -> Option<Self> {
         let settings = match payment_option {
             PaymentOption::Link(_) => return None,
-            PaymentOption::EthereumSubscription(payment_info) => Self::Ethereum {
-                chain_id: payment_info.chain_id,
-            },
+            PaymentOption::EthereumSubscription(_) => return None,
             PaymentOption::MoneroSubscription(payment_info) => Self::Monero {
                 chain_id: payment_info.chain_id,
                 price: payment_info.price.into(),
