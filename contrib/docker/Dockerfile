@@ -6,7 +6,7 @@ WORKDIR /app
 
 COPY ./mitra ./
 
-RUN cargo build --release --no-default-features --features production,rustls-tls
+RUN cargo build --release --features production
 
 # --------------
 FROM alpine:3.18
