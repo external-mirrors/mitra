@@ -10,10 +10,10 @@ use mitra_services::{
 
 pub fn delete_files(
     storage: &MediaStorage,
-    files: Vec<String>,
+    files: &[String],
 ) -> () {
     for file_name in files {
-        match storage.delete_file(&file_name) {
+        match storage.delete_file(file_name) {
             Ok(_) => log::info!("removed file {}", file_name),
             Err(err) => {
                 log::warn!("failed to remove file {} ({})", file_name, err);
@@ -28,7 +28,7 @@ async fn delete_media(
 ) -> () {
     if !queue.files.is_empty() {
         let storage = MediaStorage::from(config);
-        delete_files(&storage, queue.files);
+        delete_files(&storage, &queue.files);
     };
     if !queue.ipfs_objects.is_empty() {
         match &config.ipfs_api_url {

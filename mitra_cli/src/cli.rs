@@ -667,8 +667,8 @@ impl DeleteOrphanedFiles {
         if orphaned.is_empty() {
             println!("no orphaned files found");
         } else {
-            delete_files(&media_storage, orphaned);
-            println!("orphaned files deleted");
+            delete_files(&media_storage, &orphaned);
+            println!("orphaned files deleted: {}", orphaned.len());
         };
         Ok(())
     }
