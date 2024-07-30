@@ -89,12 +89,10 @@ pub async fn receive_activity(
 ) -> Result<(), InboxError> {
     let activity_id = activity["id"].as_str()
         .ok_or(ValidationError("'id' property is missing"))?;
-    let canonical_activity_id = canonicalize_id(activity_id)?;
     let activity_type = activity["type"].as_str()
         .ok_or(ValidationError("'type' property is missing"))?;
     let activity_actor = get_object_id(&activity["actor"])
         .map_err(|_| ValidationError("invalid 'actor' property"))?;
-    let canonical_actor_id = canonicalize_id(&activity_actor)?;
 
     let actor_hostname = get_hostname(&activity_actor)
         .map_err(|_| ValidationError("invalid actor ID"))?;
@@ -106,6 +104,9 @@ pub async fn receive_activity(
         log::info!("ignoring activity from blocked instance {actor_hostname}");
         return Ok(());
     };
+    // Validates URIs; should be performed after filtering
+    let canonical_activity_id = canonicalize_id(activity_id)?;
+    let canonical_actor_id = canonicalize_id(&activity_actor)?;
 
     let is_self_delete = if activity_type == DELETE {
         let object_id = get_object_id(&activity["object"])

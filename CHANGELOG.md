@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Changed
 
 - Display number of deleted files when running `delete-orphaned-files` command.
+- Don't validate activities from blocked instances.
 
 ### Fixed
 
