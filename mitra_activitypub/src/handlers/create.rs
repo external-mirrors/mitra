@@ -128,6 +128,7 @@ pub struct AttributedObject {
 
     // Polls
     one_of: Option<JsonValue>,
+    any_of: Option<JsonValue>,
 
     quote_url: Option<String>,
 
@@ -657,8 +658,16 @@ pub fn parse_poll_results(
         replies: Replies,
     }
 
-    let values = object.one_of.as_ref()
-        .ok_or(ValidationError("poll results are not present"))?
+    let poll = if let Some(ref value) = object.one_of {
+        // Single choice
+        value
+    } else {
+        // Multiple choices
+        object.any_of.as_ref()
+            .ok_or(ValidationError("poll results are not present"))?
+    };
+
+    let values = poll
         .as_array()
         .ok_or(ValidationError("invalid poll results"))?;
     if values.is_empty() {

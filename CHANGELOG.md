@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+
+- Support viewing polls with multiple choices.
+
 ### Changed
 
 - Display number of deleted files when running `delete-orphaned-files` command.
