@@ -2,6 +2,7 @@ use serde::Deserialize;
 use serde_json::Value;
 
 use mitra_config::Config;
+use mitra_federation::deserialization::deserialize_into_object_id;
 use mitra_models::{
     database::{DatabaseClient, DatabaseError},
     notifications::helpers::{
@@ -27,7 +28,10 @@ use super::HandlerResult;
 #[derive(Deserialize)]
 struct Remove {
     actor: String,
+
+    #[serde(deserialize_with = "deserialize_into_object_id")]
     object: String,
+    #[serde(deserialize_with = "deserialize_into_object_id")]
     target: String,
 }
 

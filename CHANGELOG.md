@@ -14,6 +14,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Display number of deleted files when running `delete-orphaned-files` command.
 - Don't validate activities from blocked instances.
+- Accept `Remove` activities with partially embedded target.
 
 ### Fixed
 
