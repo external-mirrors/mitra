@@ -428,6 +428,8 @@ pub struct FetchReplies {
     object_id: String,
     #[arg(long, default_value_t = 20)]
     limit: usize,
+    #[arg(long, default_value_t = false)]
+    use_context: bool,
 }
 
 impl FetchReplies {
@@ -440,6 +442,7 @@ impl FetchReplies {
             config,
             db_client,
             &self.object_id,
+            self.use_context,
             self.limit,
         ).await?;
         Ok(())

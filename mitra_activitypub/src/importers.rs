@@ -12,7 +12,7 @@ use mitra_federation::{
     addresses::ActorAddress,
     agent::FederationAgent,
     authentication::verify_portable_object,
-    deserialization::get_object_id,
+    deserialization::{deserialize_into_object_id_opt, get_object_id},
     fetch::{
         fetch_json,
         fetch_object,
@@ -649,24 +649,35 @@ pub async fn import_replies(
     config: &Config,
     db_client: &mut impl DatabaseClient,
     object_id: &str,
+    use_context: bool,
     limit: usize,
 ) -> Result<(), HandlerError> {
+    #[derive(Deserialize)]
+    struct ConverationItem {
+        #[serde(default, deserialize_with = "deserialize_into_object_id_opt")]
+        context: Option<String>,
+        #[serde(default, deserialize_with = "deserialize_into_object_id_opt")]
+        replies: Option<String>,
+    }
+
     let instance = config.instance();
     let agent = build_federation_agent(&instance, None);
     let storage = MediaStorage::from(config);
-    let object: JsonValue = fetch_any_object(&agent, object_id).await?;
-    let collection_items = match &object["replies"] {
-        JsonValue::Null => vec![], // no replies
-        value => {
-            let collection_id = get_object_id(value)
-                .map_err(|_| ValidationError("invalid 'replies' value"))?;
-            fetch_collection(&agent, &collection_id, limit).await?
-        },
+    let object: ConverationItem = fetch_any_object(&agent, object_id).await?;
+    let maybe_collection_id = if use_context {
+        object.context
+    } else {
+        object.replies
     };
-    log::info!("found {} replies", collection_items.len());
+    let collection_items = if let Some(collection_id) = maybe_collection_id {
+        fetch_collection(&agent, &collection_id, limit).await?
+    } else {
+        vec![] // no context, no replies
+    };
+    log::info!("found {} items in conversation", collection_items.len());
     for item in collection_items {
         let object_id = get_object_id(&item)
-            .map_err(|_| ValidationError("invalid reply"))?;
+            .map_err(|_| ValidationError("invalid conversation item"))?;
         import_post(
             db_client,
             &instance,
@@ -675,7 +686,7 @@ pub async fn import_replies(
             None,
         ).await.map_err(|error| {
             log::warn!(
-                "failed to import reply ({}): {}",
+                "failed to import post ({}): {}",
                 error,
                 object_id,
             );

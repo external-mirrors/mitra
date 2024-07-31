@@ -518,6 +518,7 @@ pub async fn fetcher_queue_executor(
                     config,
                     db_client,
                     &object_id,
+                    false, // use replies collection
                     LIMIT,
                 ).await
             },

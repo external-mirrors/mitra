@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Added
 
 - Support viewing polls with multiple choices.
+- Support fetching context collection with `fetch-replies` command.
 
 ### Changed
 
