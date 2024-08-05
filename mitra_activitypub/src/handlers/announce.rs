@@ -4,6 +4,7 @@ use serde_json::{Value as JsonValue};
 use mitra_config::Config;
 use mitra_federation::{
     deserialization::{deserialize_into_object_id, get_object_id},
+    utils::is_activity,
 };
 use mitra_models::{
     database::{DatabaseClient, DatabaseError},
@@ -35,19 +36,6 @@ use super::{
     HandlerResult,
 };
 
-const FEP_1B12_ACTIVITIES: [&str; 10] = [
-    ADD,
-    BLOCK,
-    CREATE,
-    DELETE,
-    DISLIKE,
-    LIKE,
-    LOCK,
-    REMOVE,
-    UNDO,
-    UPDATE,
-];
-
 #[derive(Deserialize)]
 struct Announce {
     id: String,
@@ -61,11 +49,8 @@ pub async fn handle_announce(
     db_client: &mut impl DatabaseClient,
     activity: JsonValue,
 ) -> HandlerResult {
-    match activity["object"]["type"].as_str() {
-        Some(object_type) if FEP_1B12_ACTIVITIES.contains(&object_type) => {
-            return handle_fep_1b12_announce(config, db_client, activity).await;
-        },
-        _ => (),
+    if is_activity(&activity["object"]) {
+        return handle_fep_1b12_announce(config, db_client, activity).await;
     };
     let activity: Announce = serde_json::from_value(activity)
         .map_err(|_| ValidationError("unexpected activity structure"))?;
