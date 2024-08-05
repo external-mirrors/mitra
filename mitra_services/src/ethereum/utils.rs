@@ -1,5 +1,7 @@
+use ethereum_types::H160;
 use regex::Regex;
-use web3::types::Address;
+
+pub type Address = H160;
 
 #[derive(thiserror::Error, Debug)]
 #[error("{0}")]

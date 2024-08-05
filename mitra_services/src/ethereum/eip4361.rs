@@ -1,14 +1,13 @@
 /// Sign-In with Ethereum https://eips.ethereum.org/EIPS/eip-4361
 use hex::FromHex;
 use siwe::Message;
-use web3::types::H160;
 
 use mitra_utils::{
     caip10::AccountId,
     caip2::ChainId,
 };
 
-use super::utils::address_to_string;
+use super::utils::{address_to_string, Address};
 
 #[derive(thiserror::Error, Debug)]
 #[error("{0}")]
@@ -46,7 +45,7 @@ pub fn verify_eip4361_signature(
 
     let chain_id = ChainId::from_ethereum_chain_id(message.chain_id);
     // Return wallet address in lower case
-    let wallet_address = address_to_string(H160(message.address));
+    let wallet_address = address_to_string(Address::from(message.address));
     let account_id = AccountId { chain_id, address: wallet_address };
     let session_data = Eip4361SessionData {
         account_id,

@@ -10,6 +10,8 @@ rust-version = "1.63.0"
 anyhow = "1.0.58"
 # Used for working with dates
 chrono = { version = "0.4.23", default-features = false, features = ["std"] }
+# Used for working with ethereum addresses
+ethereum-types = "0.14.1"
 # Used to work with hexadecimal strings
 hex = { version = "0.4.3", features = ["serde"] }
 # Used for logging
@@ -30,8 +32,6 @@ sha2 = "0.10.6"
 siwe = "0.5.2"
 # Used for creating error types
 thiserror = "1.0.37"
-# Used to query ethereum node
-web3 = { version = "0.19.0", default-features = false, features = ["http-rustls-tls"] }
 
 mitra_config = { path = "../mitra_config" }
 mitra_models = { path = "../mitra_models" }
