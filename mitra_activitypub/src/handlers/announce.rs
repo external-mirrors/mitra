@@ -32,6 +32,7 @@ use crate::{
 };
 
 use super::{
+    create::handle_create,
     like::handle_like,
     HandlerResult,
 };
@@ -127,7 +128,8 @@ async fn handle_fep_1b12_announce(
         .ok_or(ValidationError("unexpected activity structure"))?;
     let activity_type = activity["type"].as_str()
         .ok_or(ValidationError("unexpected activity structure"))?;
-    if activity_type == LIKE {
+    if let CREATE | LIKE = activity_type {
+        // TODO: rename configuration parameter
         if !config.federation.announce_like_enabled {
             return Ok(None);
         };
@@ -140,7 +142,7 @@ async fn handle_fep_1b12_announce(
     };
     let instance = config.instance();
     let agent = build_federation_agent(&instance, None);
-    let activity: JsonValue = if let DELETE | LIKE = activity_type {
+    let activity: JsonValue = if let CREATE | DELETE | LIKE = activity_type {
         match fetch_any_object(&agent, activity_id).await {
             Ok(activity) => {
                 log::info!("fetched activity {}", activity_id);
@@ -171,6 +173,8 @@ async fn handle_fep_1b12_announce(
             Err(DatabaseError::NotFound(_)) => return Ok(None),
             Err(other_error) => return Err(other_error.into()),
         };
+        // Don't delete post, only remove announcement
+        // https://join-lemmy.org/docs/contributors/05-federation.html#delete-post-or-comment
         match get_repost_by_author(db_client, &post_id, &group.id).await {
             Ok((repost_id, _)) => {
                 delete_post(db_client, &repost_id).await?;
@@ -180,6 +184,15 @@ async fn handle_fep_1b12_announce(
             Err(other_error) => return Err(other_error.into()),
         };
         Ok(Some(DELETE))
+    } else if activity_type == CREATE {
+        handle_create(
+            config,
+            db_client,
+            activity,
+            false, // not authenticated; object will be fetched
+            true, // don't perform spam check
+        ).await?;
+        Ok(Some(CREATE))
     } else if activity_type == LIKE {
         handle_like(config, db_client, activity).await?;
         Ok(Some(LIKE))
