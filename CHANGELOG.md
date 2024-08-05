@@ -18,6 +18,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Don't validate activities from blocked instances.
 - Accept `Remove` activities with partially embedded target.
 - Use duck typing for detecting FEP-1b12 `Announce` activities.
+- Don't process `Announce` activities more than once.
 
 ### Fixed
 

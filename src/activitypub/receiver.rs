@@ -5,7 +5,7 @@ use wildmatch::WildMatch;
 use mitra_activitypub::{
     identifiers::canonicalize_id,
     queues::IncomingActivityJobData,
-    vocabulary::{DELETE, CREATE, LIKE, UPDATE},
+    vocabulary::{ANNOUNCE, DELETE, CREATE, LIKE, UPDATE},
 };
 use mitra_config::Config;
 use mitra_federation::deserialization::get_object_id;
@@ -214,7 +214,11 @@ pub async fn receive_activity(
 
     // Save authenticated activities to database
     if is_authenticated {
-        save_activity(db_client, &canonical_activity_id, activity).await?;
+        let is_new = save_activity(
+            db_client,
+            &canonical_activity_id,
+            activity,
+        ).await?;
         if let Some(recipient) = maybe_fep_ef61_recipient {
             add_object_to_collection(
                 db_client,
@@ -222,6 +226,19 @@ pub async fn receive_activity(
                 &recipient.profile.expect_actor_data().inbox,
                 &canonical_activity_id,
             ).await?;
+        };
+        if !is_new {
+            log::warn!(
+                "activity is already processed ({}): {}",
+                canonical_activity_id,
+                activity,
+            );
+            if activity_type == ANNOUNCE {
+                // Optimization for FEP-1b12.
+                // Activity will be processed only once,
+                // even if submitted to multiple inboxes
+                return Ok(());
+            };
         };
     };
 

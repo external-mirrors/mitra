@@ -16,7 +16,6 @@ use mitra_models::{
     },
     posts::types::PostCreateData,
     profiles::queries::get_remote_profile_by_actor_id,
-    reactions::queries::get_remote_reaction_by_activity_id,
 };
 use mitra_services::media::MediaStorage;
 use mitra_validators::{
@@ -132,12 +131,6 @@ async fn handle_fep_1b12_announce(
         // TODO: rename configuration parameter
         if !config.federation.announce_like_enabled {
             return Ok(None);
-        };
-        // Return early if reaction already exists (no need to fetch the activity)
-        match get_remote_reaction_by_activity_id(db_client, activity_id).await {
-            Ok(_) => return Ok(None),
-            Err(DatabaseError::NotFound(_)) => (),
-            Err(other_error) => return Err(other_error.into()),
         };
     };
     let instance = config.instance();
