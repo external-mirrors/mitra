@@ -11,10 +11,12 @@ Built on [ActivityPub](https://www.w3.org/TR/activitypub/) protocol, self-hosted
 Features:
 
 - Micro-blogging service (includes support for quote posts, custom emojis and more).
+- Default character limit is 5000.
+- Support for a limited subset of markdown-style formatting.
+- Easy installation and small memory footprint (<50 MB).
 - Mastodon API.
 - Content subscription service. Subscriptions provide a way to receive monthly payments from subscribers and to publish private content made exclusively for them.
-  - Supported payment methods: [Monero](https://www.getmonero.org/get-started/what-is-monero/).
-- Donation buttons.
+  - Supported payment methods: [Monero](https://www.getmonero.org/get-started/what-is-monero/), a peer to peer digital cash system where transactions are private by default.
 - Account migrations (from one server to another). Identity can be detached from the server.
 - Federation over Tor and/or I2P.
 
