@@ -186,8 +186,8 @@ async fn handle_fep_1b12_announce(
         ).await?;
         Ok(Some(CREATE))
     } else if activity_type == LIKE {
-        handle_like(config, db_client, activity).await?;
-        Ok(Some(LIKE))
+        let maybe_type = handle_like(config, db_client, activity).await?;
+        Ok(maybe_type.map(|_| LIKE))
     } else {
         // Ignore other activities
         Ok(None)
