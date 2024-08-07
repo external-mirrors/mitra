@@ -19,6 +19,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Accept `Remove` activities with partially embedded target.
 - Use duck typing for detecting FEP-1b12 `Announce` activities.
 - Don't process `Announce` activities more than once.
+- Rename `federation.announce_like_enabled` configuration parameter to `federation.fep_1b12_full_enabled`.
 
 ### Fixed
 

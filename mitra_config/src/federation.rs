@@ -6,7 +6,7 @@ const fn default_fetcher_timeout() -> u64 { 60 }
 const fn default_deliverer_timeout() -> u64 { 30 }
 const fn default_deliverer_log_response_length() -> usize { 75 }
 const fn default_fep_e232_enabled() -> bool { false }
-const fn default_announce_like_enabled() -> bool { true }
+const fn default_fep_1b12_full_enabled() -> bool { true }
 
 #[derive(Clone, Deserialize)]
 pub struct FederationConfig {
@@ -29,8 +29,11 @@ pub struct FederationConfig {
 
     #[serde(default = "default_fep_e232_enabled")]
     pub fep_e232_enabled: bool,
-    #[serde(default = "default_announce_like_enabled")]
-    pub announce_like_enabled: bool,
+    #[serde(
+        alias = "announce_like_enabled",
+        default = "default_fep_1b12_full_enabled",
+    )]
+    pub fep_1b12_full_enabled: bool,
 }
 
 impl Default for FederationConfig {
@@ -45,7 +48,7 @@ impl Default for FederationConfig {
             onion_proxy_url: None,
             i2p_proxy_url: None,
             fep_e232_enabled: default_fep_e232_enabled(),
-            announce_like_enabled: default_announce_like_enabled(),
+            fep_1b12_full_enabled: default_fep_1b12_full_enabled(),
         }
     }
 }

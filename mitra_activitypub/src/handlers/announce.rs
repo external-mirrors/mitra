@@ -128,8 +128,7 @@ async fn handle_fep_1b12_announce(
     let activity_type = activity["type"].as_str()
         .ok_or(ValidationError("unexpected activity structure"))?;
     if let CREATE | LIKE = activity_type {
-        // TODO: rename configuration parameter
-        if !config.federation.announce_like_enabled {
+        if !config.federation.fep_1b12_full_enabled {
             return Ok(None);
         };
     };
