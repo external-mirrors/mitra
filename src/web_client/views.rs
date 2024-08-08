@@ -25,9 +25,11 @@ use crate::errors::HttpError;
 
 use super::urls::get_opengraph_image_url;
 
-pub fn static_service(web_client_dir: &Path) -> Files {
+const INDEX_FILE: &str = "index.html";
+
+fn web_client_service(web_client_dir: &Path) -> Files {
     Files::new("/", web_client_dir)
-        .index_file("index.html")
+        .index_file(INDEX_FILE)
         .prefer_utf8(true)
         .use_hidden_files()
         .default_handler(fn_service(|service_request: ServiceRequest| {
@@ -37,13 +39,27 @@ pub fn static_service(web_client_dir: &Path) -> Files {
                 .expect("app data should contain config")
                 .web_client_dir.as_ref()
                 .expect("web_client_dir should be present in config")
-                .join("index.html");
+                .join(INDEX_FILE);
             async {
                 let index_file = NamedFile::open_async(index_path).await?;
                 let response = index_file.into_response(&request);
                 Ok(ServiceResponse::new(request, response))
             }
         }))
+}
+
+pub fn themeable_web_client_service(
+    web_client_dir: &Path,
+    maybe_theme_dir: Option<&Path>,
+) -> Files {
+    let service = web_client_service(web_client_dir);
+    if let Some(theme_dir) = maybe_theme_dir {
+        Files::new("/", theme_dir)
+            .index_file(INDEX_FILE)
+            .default_handler(service)
+    } else {
+        service
+    }
 }
 
 fn activitypub_guard() -> impl guard::Guard {

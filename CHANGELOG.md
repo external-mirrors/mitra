@@ -11,6 +11,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Support viewing polls with multiple choices.
 - Support fetching context collection with `fetch-replies` command.
 - Process comments announced by FEP-1b12 implementations.
+- Added `web_client_theme_dir` configuration parameter for replacing web client assets with custom ones.
 
 ### Changed
 

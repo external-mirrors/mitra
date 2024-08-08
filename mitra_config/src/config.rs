@@ -47,6 +47,7 @@ pub struct Config {
 
     pub storage_dir: PathBuf,
     pub web_client_dir: Option<PathBuf>,
+    pub web_client_theme_dir: Option<PathBuf>,
 
     pub http_host: String,
     pub http_port: u32,

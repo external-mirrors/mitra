@@ -190,7 +190,10 @@ async fn main() -> std::io::Result<()> {
                     .to(HttpResponse::NotFound)
             );
         if let Some(ref web_client_dir) = config.web_client_dir {
-            app = app.service(web_client::static_service(web_client_dir));
+            app = app.service(web_client::themeable_web_client_service(
+                web_client_dir,
+                config.web_client_theme_dir.as_deref(),
+            ));
         };
         app
     });
