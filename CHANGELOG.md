@@ -26,6 +26,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Fixed
 
 - Fix processing of `Add(Note)` activities.
+- Fixed re-fetching of nomadic actors.
 
 ## [3.0.0] - 2024-07-22
 

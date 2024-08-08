@@ -226,7 +226,11 @@ async fn refresh_remote_profile(
         let mut context = FetcherContext::from(actor_data);
         // Don't re-fetch from local gateway
         context.remove_gateway(&instance.url());
-        match fetch_any_object::<ActorJson>(&agent, &actor_data.id).await {
+        match fetch_any_object_with_context::<ActorJson>(
+            &agent,
+            &mut context,
+            &actor_data.id,
+        ).await {
             Ok(actor) => {
                 if canonicalize_id(&actor.id)? != actor_data.id {
                     log::warn!(
