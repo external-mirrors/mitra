@@ -52,13 +52,13 @@ async fn handle_undo_follow(
         db_client,
         &canonical_actor_id,
     ).await?;
+    // Use object because activity ID might not be present
     let target_actor_id = get_object_id(&activity.object["object"])
         .map_err(|_| ValidationError("invalid follow activity object"))?;
     let target_username = parse_local_actor_id(
         &config.instance_url(),
         &target_actor_id,
     )?;
-    // acct equals username if profile is local
     let target_user = get_user_by_name(db_client, &target_username).await?;
     match unfollow(db_client, &source_profile.id, &target_user.id).await {
         Ok(_) => (),
