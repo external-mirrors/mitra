@@ -12,6 +12,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Support fetching context collection with `fetch-replies` command.
 - Process comments announced by FEP-1b12 implementations.
 - Added `web_client_theme_dir` configuration parameter for replacing web client assets with custom ones.
+- Allow overriding `http_port` configuration parameter using `HTTP_PORT` environment variable.
 
 ### Changed
 

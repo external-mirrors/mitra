@@ -16,6 +16,7 @@ use super::environment::Environment;
 struct EnvConfig {
     config_path: String,
     environment: Option<Environment>,
+    http_port: Option<u32>,
 }
 
 #[cfg(feature = "production")]
@@ -30,9 +31,12 @@ fn parse_env() -> EnvConfig {
         .unwrap_or(DEFAULT_CONFIG_PATH.to_string());
     let environment = std::env::var("ENVIRONMENT").ok()
         .map(|val| Environment::from_str(&val).expect("invalid environment type"));
+    let maybe_http_port = std::env::var("HTTP_PORT").ok()
+        .map(|val| u32::from_str(&val).expect("invalid port number"));
     EnvConfig {
         config_path,
         environment,
+        http_port: maybe_http_port,
     }
 }
 
@@ -82,6 +86,9 @@ pub fn parse_config() -> (Config, Vec<&'static str>) {
     if let Some(environment) = env.environment {
         // Overwrite default only if ENVIRONMENT variable is set
         config.environment = environment;
+    };
+    if let Some(http_port) = env.http_port {
+        config.http_port = http_port;
     };
 
     // Validate config
