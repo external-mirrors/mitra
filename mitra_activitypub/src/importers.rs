@@ -330,6 +330,7 @@ impl ActorIdResolver {
     }
 }
 
+// Return true if error is not internal
 pub fn is_actor_importer_error(error: &HandlerError) -> bool {
     matches!(
         error,

@@ -27,6 +27,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Fix processing of `Add(Note)` activities.
 - Fixed re-fetching of nomadic actors.
+- Use correct level when logging background fetcher errors.
 
 ## [3.0.0] - 2024-07-22
 

@@ -46,7 +46,11 @@ use crate::{
     errors::HandlerError,
     handlers::activity::handle_activity,
     identifiers::canonicalize_id,
-    importers::{import_from_outbox, import_replies},
+    importers::{
+        import_from_outbox,
+        import_replies,
+        is_actor_importer_error,
+    },
 };
 
 const JOB_TIMEOUT: u32 = 3600; // 1 hour
@@ -524,7 +528,12 @@ pub async fn fetcher_queue_executor(
             },
         };
         result.unwrap_or_else(|error| {
-            log::error!("background fetcher: {}", error);
+            let level = if is_actor_importer_error(&error) {
+                log::Level::Warn
+            } else {
+                log::Level::Error
+            };
+            log::log!(level, "background fetcher: {}", error);
         });
         delete_job_from_queue(db_client, &job.id).await?;
     };
