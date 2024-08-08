@@ -1,11 +1,12 @@
 [package]
 name = "mitra"
-version = "3.0.0"
 description = "Federated micro-blogging platform and content subscription service"
-license = "AGPL-3.0-only"
+version.workspace = true
+license.workspace = true
 
-edition = "2021"
-rust-version = "1.63.0"
+edition.workspace = true
+rust-version.workspace = true
+
 publish = false
 default-run = "mitra"
 
@@ -34,6 +35,13 @@ default-members = [
   "mitra_utils",
   "mitra_validators",
 ]
+
+[workspace.package]
+version = "3.0.0"
+license = "AGPL-3.0-only"
+
+edition = "2021"
+rust-version = "1.64.0"
 
 [workspace.lints.clippy]
 unwrap_used = "warn"
