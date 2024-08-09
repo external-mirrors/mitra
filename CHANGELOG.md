@@ -24,6 +24,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Rename `federation.announce_like_enabled` configuration parameter to `federation.fep_1b12_full_enabled`.
 - Don't log `Announce(Like)` result if reaction was not created.
 - Changed MSRV to 1.64.0.
+- Improve logging of database errors during authentication.
 
 ### Fixed
 

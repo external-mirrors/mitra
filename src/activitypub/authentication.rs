@@ -78,7 +78,7 @@ pub enum AuthenticationError {
     #[error("invalid key ID")]
     InvalidKeyId,
 
-    #[error("database error")]
+    #[error(transparent)]
     DatabaseError(#[from] DatabaseError),
 
     #[error("{0}")]
