@@ -63,7 +63,7 @@ pub async fn check_postgres_version(
 ) -> Result<(), DatabaseError> {
     let version = get_postgres_version(db_client).await?;
     if version < 130_000 {
-        log::warn!("unsupported PostgreSQL version: {version}");
+        log::error!("unsupported PostgreSQL version: {version}");
     } else {
         log::info!("PostgreSQL version: {version}");
     };

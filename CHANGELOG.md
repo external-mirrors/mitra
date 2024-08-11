@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- Log failed PostgreSQL version check with `ERROR` level.
+
 ## [3.1.0] - 2024-08-08
 
 ### Added
