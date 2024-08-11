@@ -590,6 +590,7 @@ async fn search_by_acct(
         &query_params.q,
         query_params.resolve,
         query_params.limit.inner(),
+        query_params.offset,
     ).await?;
     let base_url = get_request_base_url(connection_info);
     let instance_url = config.instance().url();

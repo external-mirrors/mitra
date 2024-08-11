@@ -16,14 +16,14 @@ pub struct SearchQueryParams {
     #[serde(rename = "type")]
     pub search_type: Option<String>,
 
-    #[serde(default)]
-    pub offset: usize,
-
     #[serde(default = "default_page_size")]
     pub limit: PageSize,
+
+    #[serde(default)]
+    pub offset: u16,
 }
 
-#[derive(Default, Serialize)]
+#[derive(Serialize)]
 pub struct SearchResults {
     pub accounts: Vec<Account>,
     pub statuses: Vec<Status>,

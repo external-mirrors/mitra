@@ -570,6 +570,9 @@ pub struct SearchAcctQueryParams {
 
     #[serde(default = "default_search_page_size")]
     pub limit: PageSize,
+
+    #[serde(default)]
+    pub offset: u16,
 }
 
 #[derive(Deserialize)]

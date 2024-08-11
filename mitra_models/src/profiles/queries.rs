@@ -641,6 +641,7 @@ pub async fn search_profiles(
     username: &str,
     maybe_hostname: Option<&String>,
     limit: u16,
+    offset: u16,
 ) -> Result<Vec<DbActorProfile>, DatabaseError> {
     let db_search_query = match maybe_hostname {
         Some(hostname) => {
@@ -661,9 +662,13 @@ pub async fn search_profiles(
         ORDER BY
             user_id IS NOT NULL DESC,
             portable_user_id IS NOT NULL DESC
-        LIMIT $2
+        LIMIT $2 OFFSET $3
         ",
-        &[&db_search_query, &i64::from(limit)],
+        &[
+            &db_search_query,
+            &i64::from(limit),
+            &i64::from(offset),
+        ],
     ).await?;
     let profiles: Vec<DbActorProfile> = rows.iter()
         .map(|row| row.try_get("actor_profile"))
@@ -1163,6 +1168,23 @@ mod tests {
         let deletion_queue = delete_profile(db_client, &profile.id).await.unwrap();
         assert_eq!(deletion_queue.files.len(), 0);
         assert_eq!(deletion_queue.ipfs_objects.len(), 0);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_search_profiles() {
+        let db_client = &mut create_test_database().await;
+        let profile = create_test_local_profile(db_client, "test").await;
+        let profiles = search_profiles(
+            db_client,
+            "tes",
+            None,
+            10,
+            0, // no offset
+        ).await.unwrap();
+
+        assert_eq!(profiles.len(), 1);
+        assert_eq!(profiles[0].id, profile.id);
     }
 
     const ETHEREUM: Currency = Currency::Ethereum;

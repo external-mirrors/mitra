@@ -146,6 +146,7 @@ async fn search_profiles_or_import(
     mut maybe_hostname: Option<String>,
     resolve: bool,
     limit: u16,
+    offset: u16,
 ) -> Result<Vec<DbActorProfile>, DatabaseError> {
     let mut instance = config.instance();
     if let Some(ref hostname) = maybe_hostname {
@@ -159,6 +160,7 @@ async fn search_profiles_or_import(
         &username,
         maybe_hostname.as_ref(),
         limit,
+        offset,
     ).await?;
     if profiles.is_empty() && resolve {
         if let Some(hostname) = maybe_hostname {
@@ -263,6 +265,7 @@ pub async fn search(
     db_client: &mut impl DatabaseClient,
     search_query: &str,
     limit: u16,
+    offset: u16,
 ) -> Result<SearchResults, DatabaseError> {
     let mut profiles = vec![];
     let mut posts = vec![];
@@ -274,6 +277,7 @@ pub async fn search(
                 &text,
                 current_user.id,
                 limit,
+                offset,
             ).await?;
         },
         SearchQuery::ProfileQuery(username, maybe_hostname) => {
@@ -284,6 +288,7 @@ pub async fn search(
                 maybe_hostname,
                 true,
                 limit,
+                offset,
             ).await?;
         },
         SearchQuery::TagQuery(tag) => {
@@ -291,6 +296,7 @@ pub async fn search(
                 db_client,
                 &tag,
                 limit,
+                offset,
             ).await?;
         },
         SearchQuery::Url(url) => {
@@ -337,6 +343,7 @@ pub async fn search_profiles_only(
     search_query: &str,
     resolve: bool,
     limit: u16,
+    offset: u16,
 ) -> Result<Vec<DbActorProfile>, DatabaseError> {
     let (username, maybe_hostname) = match parse_profile_query(search_query) {
         Ok(result) => result,
@@ -349,6 +356,7 @@ pub async fn search_profiles_only(
         maybe_hostname,
         resolve,
         limit,
+        offset,
     ).await?;
     Ok(profiles)
 }
@@ -358,12 +366,14 @@ pub async fn search_posts_only(
     db_client: &impl DatabaseClient,
     search_query: &str,
     limit: u16,
+    offset: u16,
 ) -> Result<Vec<Post>, DatabaseError> {
     search_posts(
         db_client,
         search_query,
         current_user.id,
         limit,
+        offset,
     ).await
 }
 

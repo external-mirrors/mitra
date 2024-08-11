@@ -1505,6 +1505,7 @@ pub async fn search_posts(
     text: &str,
     current_user_id: Uuid,
     limit: u16,
+    offset: u16,
 ) -> Result<Vec<Post>, DatabaseError> {
     let statement = format!(
         "
@@ -1520,7 +1521,7 @@ pub async fn search_posts(
         JOIN actor_profile ON post.author_id = actor_profile.id
         WHERE content_source ILIKE $1 AND author_id = $2
         ORDER BY post.id DESC
-        LIMIT $3
+        LIMIT $3 OFFSET $4
         ",
         related_attachments=RELATED_ATTACHMENTS,
         related_mentions=RELATED_MENTIONS,
@@ -1532,7 +1533,12 @@ pub async fn search_posts(
     let db_search_query = format!("%{}%", text);
     let rows = db_client.query(
         &statement,
-        &[&db_search_query, &current_user_id, &i64::from(limit)],
+        &[
+            &db_search_query,
+            &current_user_id,
+            &i64::from(limit),
+            &i64::from(offset),
+        ],
     ).await?;
     let posts = rows.iter()
         .map(Post::try_from)
@@ -2152,8 +2158,13 @@ mod tests {
             author.id,
             "test post 2",
         ).await;
-        let results =
-            search_posts(db_client, "post", user.id, 5).await.unwrap();
+        let results = search_posts(
+            db_client,
+            "post",
+            user.id,
+            5,
+            0, // no offset
+        ).await.unwrap();
         assert_eq!(results.len(), 1);
         assert_eq!(results[0].id, post_1.id);
     }

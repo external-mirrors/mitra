@@ -32,11 +32,6 @@ async fn search_view(
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &mut **get_database_client(&db_pool).await?;
     let current_user = get_current_user(db_client, auth.token()).await?;
-    if query_params.offset > 0 {
-        // Pagination is not supported; return empty results
-        let results = SearchResults::default();
-        return Ok(HttpResponse::Ok().json(results));
-    };
     let search_query = query_params.q.trim();
     let (profiles, posts, tags) = match query_params.search_type.as_deref() {
         Some("accounts") => {
@@ -46,6 +41,7 @@ async fn search_view(
                 search_query,
                 false,
                 query_params.limit.inner(),
+                query_params.offset,
             ).await?;
             (profiles, vec![], vec![])
         },
@@ -55,6 +51,7 @@ async fn search_view(
                 db_client,
                 search_query,
                 query_params.limit.inner(),
+                query_params.offset,
             ).await?;
             (vec![], posts, vec![])
         },
@@ -65,6 +62,7 @@ async fn search_view(
                 db_client,
                 search_query,
                 query_params.limit.inner(),
+                query_params.offset,
             ).await?
         },
     };
