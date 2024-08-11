@@ -90,7 +90,9 @@ impl MediaStorage {
                 let amount_mb = amount / u64::pow(10, 6);
                 log::info!("available space: {amount_mb}MB");
             },
-            Err(error) => log::error!("{error}"),
+            Err(error) => {
+                log::warn!("failed to determine available space: {error}");
+            },
         };
         Ok(())
     }

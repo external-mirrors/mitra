@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Changed
 
 - Log failed PostgreSQL version check with `ERROR` level.
+- Provide better error message when available space can't be determined.
 
 ## [3.1.0] - 2024-08-08
 
