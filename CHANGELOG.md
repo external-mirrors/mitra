@@ -16,6 +16,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Provide better error message when available space can't be determined.
 - Set `me` parameter of emoji reaction to `true` if it was made by current user.
 
+### Fixed
+
+- Fixed database error that occurred when trying to undo like.
+
 ## [3.1.0] - 2024-08-08
 
 ### Added

@@ -93,7 +93,7 @@ pub async fn delete_reaction(
         "
         DELETE FROM post_reaction
         WHERE author_id = $1 AND post_id = $2
-            AND ($3::text IS NULL OR content = $3)
+            AND ($3::text IS NULL AND content IS NULL OR content = $3)
         RETURNING
             post_reaction.id,
             post_reaction.has_deprecated_ap_id
