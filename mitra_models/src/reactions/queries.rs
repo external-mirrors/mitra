@@ -108,25 +108,28 @@ pub async fn delete_reaction(
     Ok((reaction_id, reaction_has_deprecated_ap_id))
 }
 
-/// Finds favourites among given posts and returns their IDs.
-/// Emoji reactions are not counted.
-pub async fn find_favourited_by_user(
+/// Finds posts with reactions among given posts and returns their IDs.
+pub async fn find_reacted_by_user(
     db_client: &impl DatabaseClient,
     user_id: Uuid,
     posts_ids: &[Uuid],
-) -> Result<Vec<Uuid>, DatabaseError> {
+) -> Result<Vec<(Uuid, Option<String>)>, DatabaseError> {
     let rows = db_client.query(
         "
-        SELECT post_id
+        SELECT post_id, content
         FROM post_reaction
-        WHERE author_id = $1 AND post_id = ANY($2) AND content IS NULL
+        WHERE author_id = $1 AND post_id = ANY($2)
         ",
         &[&user_id, &posts_ids],
     ).await?;
-    let favourites: Vec<Uuid> = rows.iter()
-        .map(|row| row.try_get("post_id"))
-        .collect::<Result<_, _>>()?;
-    Ok(favourites)
+    let reactions = rows.iter()
+        .map(|row| {
+            let post_id = row.try_get("post_id")?;
+            let content = row.try_get("content")?;
+            Ok((post_id, content))
+        })
+        .collect::<Result<Vec<_>, DatabaseError>>()?;
+    Ok(reactions)
 }
 
 #[cfg(test)]

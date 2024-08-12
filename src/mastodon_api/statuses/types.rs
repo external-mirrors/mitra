@@ -160,7 +160,9 @@ impl Status {
             PleromaEmojiReaction {
                 account_ids: reaction.authors,
                 count: reaction.count,
-                me: false,
+                me: post.actions.as_ref().map_or(false, |actions| {
+                    actions.reacted_with.contains(&reaction.content)
+                }),
                 // Emoji name or emoji symbol
                 name: maybe_custom_emoji.as_ref()
                     .map(|emoji| emoji.shortcode.clone())
@@ -191,7 +193,7 @@ impl Status {
             mentions: mentions,
             tags: tags,
             emojis: emojis,
-            favourited: post.actions.as_ref().map_or(false, |actions| actions.favourited),
+            favourited: post.actions.as_ref().map_or(false, |actions| actions.liked),
             reblogged: post.actions.as_ref().map_or(false, |actions| actions.reposted),
             pleroma: PleromaData {
                 emoji_reactions,

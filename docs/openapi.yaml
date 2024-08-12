@@ -2684,19 +2684,6 @@ components:
               - delete_any_post
               - delete_any_profile
               - manage_subscription_options
-    Signature:
-      type: object
-      properties:
-        v:
-          type: integer
-          format: int64
-          example: 27
-        r:
-          type: string
-          example: '6f61670e67bf72...'
-        s:
-          type: string
-          example: '6a5cb313907cd3...'
     Status:
       type: object
       properties:
@@ -2802,6 +2789,9 @@ components:
                     items:
                       type: string
                       format: uuid
+                  me:
+                    description: Has current account reacted with this emoji?
+                    type: boolean
                   count:
                     description: The total number of reactions of this type.
                     type: number

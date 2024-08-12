@@ -93,7 +93,8 @@ json_from_sql!(DbEmojiReactions);
 // List of user's actions
 #[derive(Clone)]
 pub struct PostActions {
-    pub favourited: bool,
+    pub liked: bool,
+    pub reacted_with: Vec<String>,
     pub reposted: bool,
 }
 

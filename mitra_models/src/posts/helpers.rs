@@ -1,7 +1,7 @@
 use uuid::Uuid;
 
 use crate::database::{DatabaseClient, DatabaseError};
-use crate::reactions::queries::find_favourited_by_user;
+use crate::reactions::queries::find_reacted_by_user;
 use crate::relationships::{
     queries::has_relationship,
     types::RelationshipType,
@@ -66,20 +66,28 @@ pub async fn add_user_actions(
                 .map(|post| post.id)
         )
         .collect();
-    let favourites = find_favourited_by_user(db_client, user_id, &posts_ids).await?;
-    let reposted = find_reposted_by_user(db_client, user_id, &posts_ids).await?;
+    let reactions = find_reacted_by_user(db_client, user_id, &posts_ids).await?;
+    let reposts = find_reposted_by_user(db_client, user_id, &posts_ids).await?;
+    let get_actions = |post: &Post| -> PostActions {
+        let liked = reactions.iter()
+            .any(|(post_id, content)| *post_id == post.id && content.is_none());
+        let reacted_with: Vec<_> = reactions.iter()
+            .filter(|(post_id, _)| *post_id == post.id)
+            .filter_map(|(_, content)| content.clone())
+            .collect();
+        let reposted = reposts.contains(&post.id);
+        PostActions {
+            liked: liked,
+            reacted_with: reacted_with,
+            reposted: reposted,
+        }
+    };
     for post in posts {
         if let Some(ref mut repost_of) = post.repost_of {
-            let actions = PostActions {
-                favourited: favourites.contains(&repost_of.id),
-                reposted: reposted.contains(&repost_of.id),
-            };
+            let actions = get_actions(repost_of);
             repost_of.actions = Some(actions);
         };
-        let actions = PostActions {
-            favourited: favourites.contains(&post.id),
-            reposted: reposted.contains(&post.id),
-        };
+        let actions = get_actions(post);
         post.actions = Some(actions);
     }
     Ok(())
@@ -250,13 +258,15 @@ mod tests {
         create_test_local_reaction(db_client, liker.id, post.id, Some("❤️")).await;
         add_user_actions(db_client, liker.id, vec![&mut post]).await.unwrap();
         let actions = post.actions.as_ref().unwrap();
-        assert_eq!(actions.favourited, false);
+        assert_eq!(actions.liked, false);
+        assert_eq!(actions.reacted_with, vec!["❤️".to_string()]);
         assert_eq!(actions.reposted, false);
 
         create_test_local_reaction(db_client, liker.id, post.id, None).await;
         add_user_actions(db_client, liker.id, vec![&mut post]).await.unwrap();
         let actions = post.actions.as_ref().unwrap();
-        assert_eq!(actions.favourited, true);
+        assert_eq!(actions.liked, true);
+        assert_eq!(actions.reacted_with, vec!["❤️".to_string()]);
         assert_eq!(actions.reposted, false);
     }
 
