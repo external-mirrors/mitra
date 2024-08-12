@@ -175,8 +175,10 @@ mod tests {
     use crate::database::test_utils::create_test_database;
     use crate::posts::{
         queries::create_post,
+        test_utils::create_test_local_post,
         types::PostCreateData,
     };
+    use crate::reactions::test_utils::create_test_local_reaction;
     use crate::relationships::queries::{follow, subscribe};
     use crate::users::{
         test_utils::create_test_user,
@@ -235,6 +237,27 @@ mod tests {
             repost.repost_of.unwrap().in_reply_to.unwrap().id,
             post.id,
         );
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_add_user_actions() {
+        let db_client = &mut create_test_database().await;
+        let author = create_test_user(db_client, "author").await;
+        let mut post = create_test_local_post(db_client, author.id, "test").await;
+        let liker = create_test_user(db_client, "liker").await;
+
+        create_test_local_reaction(db_client, liker.id, post.id, Some("❤️")).await;
+        add_user_actions(db_client, liker.id, vec![&mut post]).await.unwrap();
+        let actions = post.actions.as_ref().unwrap();
+        assert_eq!(actions.favourited, false);
+        assert_eq!(actions.reposted, false);
+
+        create_test_local_reaction(db_client, liker.id, post.id, None).await;
+        add_user_actions(db_client, liker.id, vec![&mut post]).await.unwrap();
+        let actions = post.actions.as_ref().unwrap();
+        assert_eq!(actions.favourited, true);
+        assert_eq!(actions.reposted, false);
     }
 
     #[tokio::test]
