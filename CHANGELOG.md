@@ -17,6 +17,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Set `me` parameter of emoji reaction to `true` if it was made by current user.
 - Don't include emoji reactions in favourites count.
 - Change `import-emoji` command to accept shortcodes.
+- Log all incoming activities when log level is set to "debug".
 
 ### Fixed
 

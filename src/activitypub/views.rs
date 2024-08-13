@@ -145,6 +145,7 @@ async fn inbox(
         .map_err(|_| ValidationError("invalid activity"))?;
     let activity_type = activity["type"].as_str().unwrap_or("Unknown");
     log::info!("received in {}: {}", request.uri().path(), activity_type);
+    log::debug!("activity: {activity}");
 
     let activity_digest = get_sha256_digest(&request_body);
     drop(request_body);
