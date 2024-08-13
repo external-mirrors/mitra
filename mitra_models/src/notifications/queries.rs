@@ -121,3 +121,42 @@ pub async fn get_notifications(
     ).await?;
     Ok(notifications)
 }
+
+#[cfg(test)]
+mod tests {
+    use serial_test::serial;
+    use crate::{
+        database::test_utils::create_test_database,
+        posts::test_utils::create_test_local_post,
+        reactions::test_utils::create_test_local_reaction,
+        users::test_utils::create_test_user,
+    };
+    use super::*;
+
+    #[tokio::test]
+    #[serial]
+    async fn test_get_notifications() {
+        let db_client = &mut create_test_database().await;
+        let user_1 = create_test_user(db_client, "test1").await;
+        let user_2 = create_test_user(db_client, "test2").await;
+        let post = create_test_local_post(db_client, user_1.id, "test").await;
+        create_test_local_reaction(
+            db_client,
+            user_2.id,
+            post.id,
+            Some("❤️"),
+        ).await;
+        let notifications = get_notifications(
+            db_client,
+            user_1.id,
+            None,
+            5,
+        ).await.unwrap();
+        assert_eq!(notifications.len(), 1);
+        assert_eq!(notifications[0].sender.id, user_2.id);
+        assert_eq!(notifications[0].post.as_ref().unwrap().id, post.id);
+        assert_eq!(notifications[0].event_type, EventType::Reaction);
+        assert_eq!(notifications[0].reaction_content, Some("❤️".to_string()));
+        assert_eq!(notifications[0].reaction_emoji.is_none(), true);
+    }
+}
