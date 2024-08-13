@@ -114,6 +114,7 @@ use mitra_utils::{
 };
 use mitra_validators::{
     emojis::{
+        clean_emoji_name,
         validate_emoji_name,
         EMOJI_MEDIA_TYPES,
     },
@@ -823,9 +824,10 @@ impl ImportEmoji {
         config: &Config,
         db_client: &impl DatabaseClient,
     ) -> Result<(), Error> {
+        let emoji_name = clean_emoji_name(&self.emoji_name);
         let emoji = get_emoji_by_name_and_hostname(
             db_client,
-            &self.emoji_name,
+            emoji_name,
             &self.hostname,
         ).await?;
         if emoji.image.file_size > config.limits.media.emoji_local_size_limit {
