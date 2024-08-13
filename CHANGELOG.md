@@ -18,6 +18,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Don't include emoji reactions in favourites count.
 - Change `import-emoji` command to accept shortcodes.
 - Log all incoming activities when log level is set to "debug".
+- Use `tag` array in `EmojiReact` activity.
 
 ### Fixed
 

@@ -40,8 +40,8 @@ struct Like {
 
     #[serde(skip_serializing_if = "Option::is_none")]
     content: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    tag: Option<Emoji>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    tag: Vec<Emoji>,
 
     to: Vec<String>,
     cc: Vec<String>,
@@ -100,7 +100,7 @@ fn build_like(
         actor: actor_id,
         object: object_id.to_string(),
         content: maybe_reaction_content,
-        tag: maybe_tag,
+        tag: maybe_tag.map(|tag| vec![tag]).unwrap_or_default(),
         to: primary_audience,
         cc: secondary_audience,
     }
@@ -181,7 +181,7 @@ mod tests {
         );
         assert_eq!(activity.object, post_id);
         assert_eq!(activity.content.is_none(), true);
-        assert_eq!(activity.tag.is_none(), true);
+        assert_eq!(activity.tag.is_empty(), true);
         assert_eq!(activity.to, vec![post_author_id, AP_PUBLIC]);
         assert_eq!(activity.cc.is_empty(), true);
     }
