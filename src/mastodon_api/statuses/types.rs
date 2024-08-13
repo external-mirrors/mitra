@@ -154,22 +154,31 @@ impl Status {
             Visibility::Followers => "private",
             Visibility::Subscribers => "subscribers",
         };
-        let emoji_reactions = post.emoji_reactions.into_iter().map(|reaction| {
+        let mut emoji_reactions = vec![];
+        let mut favourites_count = 0;
+        for reaction in post.reactions {
+            let content = if let Some(content) = reaction.content {
+                content
+            } else {
+                favourites_count += reaction.count;
+                continue;
+            };
             let maybe_custom_emoji = reaction.emoji
                 .map(|emoji| CustomEmoji::from_db(base_url, emoji));
-            PleromaEmojiReaction {
+            let reaction = PleromaEmojiReaction {
                 account_ids: reaction.authors,
                 count: reaction.count,
                 me: post.actions.as_ref().map_or(false, |actions| {
-                    actions.reacted_with.contains(&reaction.content)
+                    actions.reacted_with.contains(&content)
                 }),
                 // Emoji name or emoji symbol
                 name: maybe_custom_emoji.as_ref()
                     .map(|emoji| emoji.shortcode.clone())
-                    .unwrap_or(reaction.content),
+                    .unwrap_or(content),
                 url: maybe_custom_emoji.map(|emoji| emoji.url),
-            }
-        }).collect();
+            };
+            emoji_reactions.push(reaction);
+        };
         Self {
             id: post.id,
             uri: object_id,
@@ -187,7 +196,7 @@ impl Status {
             spoiler_text: "".to_string(),
             pinned: post.is_pinned,
             replies_count: post.reply_count,
-            favourites_count: post.reaction_count,
+            favourites_count: favourites_count,
             reblogs_count: post.repost_count,
             media_attachments: attachments,
             mentions: mentions,

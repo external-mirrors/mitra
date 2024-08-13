@@ -24,7 +24,7 @@ use mitra_models::{
     },
     emojis::queries::get_local_emoji_by_name,
     posts::helpers::get_post_by_id_for_view,
-    posts::queries::get_post_emoji_reactions,
+    posts::queries::get_post_reactions,
     reactions::queries::{
         create_reaction,
         delete_reaction,
@@ -80,7 +80,7 @@ async fn create_reaction_view(
     validate_reaction_data(&reaction_data)?;
     let reaction = create_reaction(db_client, reaction_data).await?;
     post.reaction_count += 1;
-    post.emoji_reactions = get_post_emoji_reactions(db_client, post.id).await?;
+    post.reactions = get_post_reactions(db_client, post.id).await?;
     prepare_like(
         db_client,
         &config.instance(),
@@ -131,7 +131,7 @@ async fn delete_reaction_view(
         Some(&content),
     ).await?;
     post.reaction_count -= 1;
-    post.emoji_reactions = get_post_emoji_reactions(db_client, status_id).await?;
+    post.reactions = get_post_reactions(db_client, status_id).await?;
     prepare_undo_like(
         db_client,
         &config.instance(),

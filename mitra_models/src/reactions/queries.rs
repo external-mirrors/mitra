@@ -137,7 +137,7 @@ mod tests {
     use serial_test::serial;
     use crate::database::test_utils::create_test_database;
     use crate::posts::{
-        queries::create_post,
+        queries::{create_post, get_post_by_id},
         types::PostCreateData,
     };
     use crate::users::{
@@ -182,6 +182,9 @@ mod tests {
         assert_eq!(reaction.content.unwrap(), content);
         assert_eq!(reaction.emoji_id.is_none(), true);
         assert_eq!(reaction.activity_id.is_none(), true);
+
+        let post = get_post_by_id(db_client, &post.id).await.unwrap();
+        assert_eq!(post.reactions.len(), 1);
     }
 
     #[tokio::test]

@@ -46,6 +46,7 @@ use mitra_models::{
         create_post,
         delete_post,
         get_post_by_id,
+        get_post_reactions,
         get_repost_by_author,
         get_thread,
         set_pinned_flag,
@@ -514,6 +515,7 @@ async fn favourite(
     ).await {
         Ok(reaction) => {
             post.reaction_count += 1;
+            post.reactions = get_post_reactions(db_client, post.id).await?;
             Some(reaction)
         },
         Err(DatabaseError::AlreadyExists(_)) => None, // post already favourited
@@ -566,6 +568,7 @@ async fn unfavourite(
     ).await {
         Ok(reaction_deleted) => {
             post.reaction_count -= 1;
+            post.reactions = get_post_reactions(db_client, post.id).await?;
             Some(reaction_deleted)
         },
         Err(DatabaseError::NotFound(_)) => None, // post not favourited
