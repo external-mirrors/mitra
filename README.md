@@ -10,9 +10,10 @@ Built on [ActivityPub](https://www.w3.org/TR/activitypub/) protocol, self-hosted
 
 Features:
 
-- Micro-blogging service (includes support for quote posts, custom emojis and more).
-- Default character limit is 5000.
-- Support for a limited subset of markdown-style formatting.
+- Micro-blogging service
+  - Quote posts, custom emojis, reactions and more.
+  - Default character limit is 5000.
+  - Support for a limited subset of markdown-style formatting.
 - Easy installation and small memory footprint (<50 MB).
 - Mastodon API.
 - Content subscription service. Subscriptions provide a way to receive monthly payments from subscribers and to publish private content made exclusively for them.
