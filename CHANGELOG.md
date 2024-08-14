@@ -20,6 +20,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Log all incoming activities when log level is set to "debug".
 - Use `tag` array in `EmojiReact` activity.
 
+### Removed
+
+- Removed support for FEP-c390 + (old) FEP-ae97 activity authentication.
+
 ### Fixed
 
 - Fixed database error that occurred when trying to undo like.

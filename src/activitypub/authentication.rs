@@ -46,9 +46,7 @@ use mitra_utils::{
         proofs::ProofType,
         verify::{
             get_json_signature,
-            verify_blake2_ed25519_json_signature,
             verify_eddsa_json_signature,
-            verify_eip191_json_signature,
             verify_rsa_json_signature,
             JsonSignatureVerificationError as JsonSignatureError,
             JsonSigner,
@@ -335,30 +333,8 @@ pub async fn verify_signed_activity(
             };
         },
         JsonSigner::Did(did) => {
-            if !actor_profile.identity_proofs.any(&did) {
-                return Err(AuthenticationError::UnexpectedSigner);
-            };
-            match signature_data.proof_type {
-                ProofType::JcsBlake2Ed25519Signature => {
-                    let did_key = did.as_did_key()
-                        .ok_or(AuthenticationError::InvalidJsonSignatureType)?;
-                    verify_blake2_ed25519_json_signature(
-                        did_key,
-                        &signature_data.object,
-                        &signature_data.signature,
-                    )?;
-                },
-                ProofType::JcsEip191Signature => {
-                    let did_pkh = did.as_did_pkh()
-                        .ok_or(AuthenticationError::InvalidJsonSignatureType)?;
-                    verify_eip191_json_signature(
-                        did_pkh,
-                        &signature_data.object,
-                        &signature_data.signature,
-                    )?;
-                },
-                _ => return Err(AuthenticationError::InvalidJsonSignatureType),
-            };
+            log::warn!("activity signed by {did}");
+            return Err(AuthenticationError::InvalidJsonSignatureType);
         },
     };
     // Signer is actor
