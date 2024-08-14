@@ -33,6 +33,8 @@ pub fn build_default_context() -> Context {
             ("sensitive", "as:sensitive"),
             ("toot", MASTODON_CONTEXT),
             ("Emoji", "toot:Emoji"),
+            ("litepub", "http://litepub.social/ns#"),
+            ("EmojiReact", "litepub:EmojiReact"),
         ]),
     )
 }

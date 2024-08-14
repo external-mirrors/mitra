@@ -24,6 +24,7 @@ It also supports the following standards:
 - [FEP-7628: Move actor](https://codeberg.org/fediverse/fep/src/branch/main/fep/7628/fep-7628.md)
 - [FEP-c7d3: Ownership](https://codeberg.org/silverpill/feps/src/branch/main/c7d3/fep-c7d3.md)
 - [FEP-d556: Server-Level Actor Discovery Using WebFinger](https://codeberg.org/fediverse/fep/src/branch/main/fep/d556/fep-d556.md)
+- [FEP-c0e0: Emoji reactions](https://codeberg.org/silverpill/feps/src/branch/main/c0e0/fep-c0e0.md)
 
 ## ActivityPub
 
