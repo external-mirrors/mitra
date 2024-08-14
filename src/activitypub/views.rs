@@ -751,7 +751,7 @@ async fn apgateway_inbox_pull_view(
         db_client,
         &request,
     ).await.map_err(|error| {
-        log::warn!("C2S authentication error: {}", error);
+        log::warn!("C2S authentication error (GET {request_path}): {error}");
         HttpError::PermissionError
     })?;
     let collection_id = format!(
@@ -815,7 +815,7 @@ async fn apgateway_outbox_push_view(
     };
     // Verify activity
     verify_portable_object(&activity).map_err(|error| {
-        log::warn!("C2S authentication error: {}", error);
+        log::warn!("C2S authentication error (POST {request_path}): {error}");
         HttpError::PermissionError
     })?;
     let activity_id = activity["id"].as_str()
@@ -887,7 +887,7 @@ async fn apgateway_outbox_pull_view(
         db_client,
         &request,
     ).await.map_err(|error| {
-        log::warn!("C2S authentication error: {}", error);
+        log::warn!("C2S authentication error (GET {request_path}): {error}");
         HttpError::PermissionError
     })?;
     let collection_id = format!(
