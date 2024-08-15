@@ -3225,6 +3225,21 @@ paths:
                 $ref: '#/components/schemas/Status'
         404:
           description: Post or custom emoji does not exist.
+  /api/v2/admin/accounts:
+    get:
+      summary: View local accounts.
+      security:
+        - tokenAuth: []
+      responses:
+        200:
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                description: Account list
+                type: array
+                items:
+                  $ref: '#/components/schemas/AdminAccount'
   /api/v1/admin/accounts/{account_id}:
     delete:
       summary: Delete user.
@@ -3483,6 +3498,33 @@ components:
               description: Client configurations.
               type: object
               example: {"mitra-web":{"theme":"dark"}}
+    AdminAccount:
+      type: object
+      properties:
+        id:
+          description: The ID of the user in the database.
+          type: string
+          format: uuid
+        role:
+          allOf:
+            - $ref: '#/components/schemas/Role'
+            - description: The current role of the user.
+              nullable: true
+        account:
+          $ref: '#/components/schemas/Account'
+        account_type:
+          description: The type of the local account
+          type: string
+          enum:
+            - user
+            - group
+            - anonymous
+            - nomadic
+        last_login_at:
+          description: When the most recent OAuth token was issued.
+          type: string
+          format: date-time
+          nullable: true
     Affiliation:
       type: object
       properties:

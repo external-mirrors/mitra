@@ -122,7 +122,7 @@ pub struct Role {
 }
 
 impl Role {
-    fn from_db(role: DbRole) -> Self {
+    pub fn from_db(role: DbRole) -> Self {
         let role_name = match role {
             DbRole::Guest => unimplemented!(),
             DbRole::NormalUser => "user",
