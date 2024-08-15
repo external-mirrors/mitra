@@ -17,9 +17,10 @@ use html5ever::serialize::{serialize, SerializeOpts};
 
 pub use ammonia::{clean_text as escape_html};
 
-const EXTRA_URI_SCHEMES: [&str; 2] = [
+const EXTRA_URI_SCHEMES: [&str; 3] = [
     "gemini",
     "monero",
+    "mumble",
 ];
 
 fn document_to_node(document: &Document) -> Handle {
