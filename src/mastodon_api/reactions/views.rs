@@ -60,9 +60,6 @@ async fn create_reaction_view(
         Some(&current_user),
         status_id,
     ).await?;
-    if post.repost_of_id.is_some() {
-        return Err(MastodonError::NotFoundError("post"));
-    };
     let (content, maybe_emoji) = if is_single_character(&content) {
         (content, None)
     } else {

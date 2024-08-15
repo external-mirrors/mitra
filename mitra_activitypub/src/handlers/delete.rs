@@ -69,7 +69,7 @@ pub async fn handle_delete(
     if post.author.id != actor_profile.id {
         return Err(ValidationError("actor is not an author").into());
     };
-    let deletion_queue = delete_post(db_client, &post.id).await?;
+    let deletion_queue = delete_post(db_client, post.id).await?;
     deletion_queue.into_job(db_client).await?;
     Ok(Some(NOTE))
 }

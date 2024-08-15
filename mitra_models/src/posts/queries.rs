@@ -13,6 +13,7 @@ use crate::database::{
     query_macro::query,
     DatabaseClient,
     DatabaseError,
+    DatabaseTypeError,
 };
 use crate::emojis::types::DbEmoji;
 use crate::notifications::helpers::{
@@ -976,6 +977,7 @@ pub async fn get_posts_by_tag(
     Ok(posts)
 }
 
+/// Get a single post (not a repost)
 pub async fn get_post_by_id(
     db_client: &impl DatabaseClient,
     post_id: &Uuid,
@@ -993,6 +995,7 @@ pub async fn get_post_by_id(
         FROM post
         JOIN actor_profile ON post.author_id = actor_profile.id
         WHERE post.id = $1
+            AND post.repost_of_id IS NULL
         ",
         related_attachments=RELATED_ATTACHMENTS,
         related_mentions=RELATED_MENTIONS,
@@ -1087,7 +1090,7 @@ pub async fn get_conversation_participants(
         WITH RECURSIVE ancestors (author_id, in_reply_to_id) AS (
             SELECT post.author_id, post.in_reply_to_id
             FROM post
-            WHERE post.id = $1
+            WHERE post.id = $1 AND post.repost_of_id IS NULL
             UNION
             SELECT post.author_id, post.in_reply_to_id
             FROM post
@@ -1124,7 +1127,7 @@ pub async fn get_remote_post_by_object_id(
             {related_reactions}
         FROM post
         JOIN actor_profile ON post.author_id = actor_profile.id
-        WHERE post.object_id = $1
+        WHERE post.object_id = $1 AND post.repost_of_id IS NULL
         ",
         related_attachments=RELATED_ATTACHMENTS,
         related_mentions=RELATED_MENTIONS,
@@ -1140,6 +1143,40 @@ pub async fn get_remote_post_by_object_id(
     let row = maybe_row.ok_or(DatabaseError::NotFound("post"))?;
     let post = Post::try_from(&row)?;
     Ok(post)
+}
+
+pub async fn get_remote_repost_by_activity_id(
+    db_client: &impl DatabaseClient,
+    activity_id: &str,
+) -> Result<Post, DatabaseError> {
+    let statement = format!(
+        "
+        SELECT
+            post, actor_profile,
+            {related_attachments},
+            {related_mentions},
+            {related_tags},
+            {related_links},
+            {related_emojis},
+            {related_reactions}
+        FROM post
+        JOIN actor_profile ON post.author_id = actor_profile.id
+        WHERE post.object_id = $1 AND post.repost_of_id IS NOT NULL
+        ",
+        related_attachments=RELATED_ATTACHMENTS,
+        related_mentions=RELATED_MENTIONS,
+        related_tags=RELATED_TAGS,
+        related_links=RELATED_LINKS,
+        related_emojis=RELATED_EMOJIS,
+        related_reactions=RELATED_REACTIONS,
+    );
+    let maybe_row = db_client.query_opt(
+        &statement,
+        &[&activity_id],
+    ).await?;
+    let row = maybe_row.ok_or(DatabaseError::NotFound("post"))?;
+    let repost = Post::try_from(&row)?;
+    Ok(repost)
 }
 
 pub async fn set_pinned_flag(
@@ -1412,7 +1449,7 @@ pub async fn find_extraneous_posts(
 /// Deletes post from database and returns collection of orphaned objects.
 pub async fn delete_post(
     db_client: &mut impl DatabaseClient,
-    post_id: &Uuid,
+    post_id: Uuid,
 ) -> Result<DeletionQueue, DatabaseError> {
     let transaction = db_client.transaction().await?;
     // Select all posts that will be deleted.
@@ -1480,7 +1517,7 @@ pub async fn delete_post(
     // Delete post
     let maybe_post_row = transaction.query_opt(
         "
-        DELETE FROM post WHERE id = $1
+        DELETE FROM post WHERE id = $1 AND repost_of_id IS NULL
         RETURNING post
         ",
         &[&post_id],
@@ -1490,12 +1527,30 @@ pub async fn delete_post(
     // Update counters
     if let Some(parent_id) = db_post.in_reply_to_id {
         update_reply_count(&transaction, parent_id, -1).await?;
-    }
-    if let Some(repost_of_id) = db_post.repost_of_id {
-        update_repost_count(&transaction, repost_of_id, -1).await?;
     };
     transaction.commit().await?;
     Ok(DeletionQueue { files, ipfs_objects })
+}
+
+pub async fn delete_repost(
+    db_client: &mut impl DatabaseClient,
+    repost_id: Uuid,
+) -> Result<(), DatabaseError> {
+    let transaction = db_client.transaction().await?;
+    let maybe_post_row = transaction.query_opt(
+        "
+        DELETE FROM post WHERE id = $1 AND repost_of_id IS NOT NULL
+        RETURNING post
+        ",
+        &[&repost_id],
+    ).await?;
+    let post_row = maybe_post_row.ok_or(DatabaseError::NotFound("post"))?;
+    let db_post: DbPost = post_row.try_get("post")?;
+    // Update counters
+    let repost_of_id = db_post.repost_of_id.ok_or(DatabaseTypeError)?;
+    update_repost_count(&transaction, repost_of_id, -1).await?;
+    transaction.commit().await?;
+    Ok(())
 }
 
 pub async fn search_posts(
@@ -1517,7 +1572,9 @@ pub async fn search_posts(
             {related_reactions}
         FROM post
         JOIN actor_profile ON post.author_id = actor_profile.id
-        WHERE content_source ILIKE $1 AND author_id = $2
+        WHERE content_source ILIKE $1
+            AND author_id = $2
+            AND repost_of_id IS NULL
         ORDER BY post.id DESC
         LIMIT $3 OFFSET $4
         ",
@@ -1693,9 +1750,27 @@ mod tests {
             ..Default::default()
         };
         let post = create_post(db_client, &author.id, post_data).await.unwrap();
-        let deletion_queue = delete_post(db_client, &post.id).await.unwrap();
+        let deletion_queue = delete_post(db_client, post.id).await.unwrap();
         assert_eq!(deletion_queue.files.len(), 0);
         assert_eq!(deletion_queue.ipfs_objects.len(), 0);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_delete_repost() {
+        let db_client = &mut create_test_database().await;
+        let author = create_test_user(db_client, "test").await;
+        let post = create_test_local_post(db_client, author.id, "test").await;
+        let repost_data = PostCreateData::repost(post.id, None);
+        let repost = create_post(
+            db_client,
+            &author.id,
+            repost_data,
+        ).await.unwrap();
+        delete_repost(db_client, repost.id).await.unwrap();
+
+        let post = get_post_by_id(db_client, &post.id).await.unwrap();
+        assert_eq!(post.repost_count, 0);
     }
 
     #[tokio::test]

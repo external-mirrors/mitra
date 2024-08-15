@@ -64,8 +64,12 @@ use mitra_models::{
         DatabaseError,
     },
     emojis::queries::get_local_emoji_by_name,
-    posts::helpers::{add_related_posts, can_view_post},
-    posts::queries::{get_post_by_id, get_posts_by_author, get_thread},
+    posts::helpers::{
+        add_related_posts,
+        can_view_post,
+        get_post_by_id_for_view,
+    },
+    posts::queries::{get_posts_by_author, get_thread},
     profiles::types::PaymentOption,
     users::queries::{
         get_portable_user_by_actor_id,
@@ -487,8 +491,12 @@ pub async fn object_view(
     let instance = config.instance();
     // Try to find local post by ID,
     // return 404 if not found, or not public, or it is a repost
-    let mut post = get_post_by_id(db_client, &internal_object_id).await?;
-    if !post.is_local() || !can_view_post(db_client, None, &post).await? {
+    let mut post = get_post_by_id_for_view(
+        db_client,
+        None,
+        internal_object_id,
+    ).await?;
+    if !post.is_local() {
         return Err(HttpError::NotFoundError("post"));
     };
     if !is_activitypub_request(request.headers()) {

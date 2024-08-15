@@ -8,8 +8,8 @@ use mitra_federation::{
 use mitra_models::{
     database::{DatabaseClient, DatabaseError},
     posts::queries::{
-        delete_post,
-        get_remote_post_by_object_id,
+        delete_repost,
+        get_remote_repost_by_activity_id,
     },
     profiles::queries::{
         get_remote_profile_by_actor_id,
@@ -134,24 +134,19 @@ pub async fn handle_undo(
         },
         Err(DatabaseError::NotFound(_)) => {
             // Undo(Announce)
-            let post = match get_remote_post_by_object_id(
+            let repost = match get_remote_repost_by_activity_id(
                 db_client,
                 &canonical_object_id,
             ).await {
-                Ok(post) => post,
+                Ok(repost) => repost,
                 // Ignore undo if neither reaction nor repost is found
                 Err(DatabaseError::NotFound(_)) => return Ok(None),
                 Err(other_error) => return Err(other_error.into()),
             };
-            if post.author.id != actor_profile.id {
+            if repost.author.id != actor_profile.id {
                 return Err(ValidationError("actor is not an author").into());
             };
-            match post.repost_of_id {
-                // Ignore returned data because reposts don't have attached files
-                Some(_) => delete_post(db_client, &post.id).await?,
-                // Can't undo regular post
-                None => return Err(ValidationError("object is not a repost").into()),
-            };
+            delete_repost(db_client, repost.id).await?;
             Ok(Some(ANNOUNCE))
         },
         Err(other_error) => Err(other_error.into()),

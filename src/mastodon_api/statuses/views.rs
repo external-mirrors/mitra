@@ -45,6 +45,7 @@ use mitra_models::{
     posts::queries::{
         create_post,
         delete_post,
+        delete_repost,
         get_post_by_id,
         get_post_reactions,
         get_repost_by_author,
@@ -407,7 +408,7 @@ async fn delete_status(
         &post,
         config.federation.fep_e232_enabled,
     ).await?;
-    let deletion_queue = delete_post(db_client, &status_id).await?;
+    let deletion_queue = delete_post(db_client, *status_id).await?;
     deletion_queue.into_job(db_client).await?;
     delete_note.save_and_enqueue(db_client).await?;
     Ok(HttpResponse::NoContent().finish())
@@ -499,9 +500,6 @@ async fn favourite(
         Some(&current_user),
         *status_id,
     ).await?;
-    if post.repost_of_id.is_some() {
-        return Err(MastodonError::NotFoundError("post"));
-    };
     let reaction_data = ReactionData {
         author_id: current_user.id,
         post_id: status_id.into_inner(),
@@ -611,7 +609,7 @@ async fn reblog(
         return Err(MastodonError::PermissionError);
     };
     let mut post = get_post_by_id(db_client, &status_id).await?;
-    if !post.is_public() || post.repost_of_id.is_some() {
+    if !post.is_public() {
         return Err(MastodonError::NotFoundError("post"));
     };
     let repost_data = PostCreateData::repost(status_id.into_inner(), None);
@@ -652,8 +650,7 @@ async fn unreblog(
         &status_id,
         &current_user.id,
     ).await?;
-    // Ignore returned data because reposts don't have attached files
-    delete_post(db_client, &repost_id).await?;
+    delete_repost(db_client, repost_id).await?;
     let post = get_post_by_id(db_client, &status_id).await?;
 
     // Federate
@@ -688,7 +685,7 @@ async fn pin(
     let db_client = &**get_database_client(&db_pool).await?;
     let current_user = get_current_user(db_client, auth.token()).await?;
     let mut post = get_post_by_id(db_client, &status_id).await?;
-    if post.author.id != current_user.id || !post.is_public() || post.repost_of_id.is_some() {
+    if post.author.id != current_user.id || !post.is_public() {
         return Err(MastodonError::OperationError("can't pin post"));
     };
     set_pinned_flag(db_client, &post.id, true).await?;
@@ -723,7 +720,7 @@ async fn unpin(
     let db_client = &**get_database_client(&db_pool).await?;
     let current_user = get_current_user(db_client, auth.token()).await?;
     let mut post = get_post_by_id(db_client, &status_id).await?;
-    if post.author.id != current_user.id || !post.is_public() || post.repost_of_id.is_some() {
+    if post.author.id != current_user.id || !post.is_public() {
         return Err(MastodonError::OperationError("can't unpin post"));
     };
     set_pinned_flag(db_client, &post.id, false).await?;
@@ -760,7 +757,7 @@ async fn make_permanent(
     if post.ipfs_cid.is_some() {
         return Err(MastodonError::OperationError("post already saved to IPFS"));
     };
-    if post.author.id != current_user.id || !post.is_public() || post.repost_of_id.is_some() {
+    if post.author.id != current_user.id || !post.is_public() {
         // Users can only archive their own public posts
         return Err(MastodonError::PermissionError);
     };
@@ -824,9 +821,6 @@ async fn load_conversation(
         Some(&current_user),
         *status_id,
     ).await?;
-    if post.repost_of_id.is_some() {
-        return Err(MastodonError::NotFoundError("post"));
-    };
     let job_data = if let Some(object_id) = post.object_id {
         FetcherJobData::Context { object_id }
     } else {

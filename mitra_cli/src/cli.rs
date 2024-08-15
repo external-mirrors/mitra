@@ -568,7 +568,7 @@ impl DeletePost {
             ).await?;
             maybe_delete_note = Some(activity);
         };
-        let deletion_queue = delete_post(db_client, &post.id).await?;
+        let deletion_queue = delete_post(db_client, post.id).await?;
         delete_orphaned_media(config, db_client, deletion_queue).await?;
         // Send Delete(Note) activity
         if let Some(activity) = maybe_delete_note {
@@ -619,7 +619,7 @@ impl DeleteExtraneousPosts {
         let updated_before = days_before_now(self.days);
         let posts = find_extraneous_posts(db_client, updated_before).await?;
         for post_id in posts {
-            let deletion_queue = delete_post(db_client, &post_id).await?;
+            let deletion_queue = delete_post(db_client, post_id).await?;
             delete_orphaned_media(config, db_client, deletion_queue).await?;
             println!("post {} deleted", post_id);
         };

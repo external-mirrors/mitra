@@ -10,8 +10,9 @@ use mitra_models::{
     database::{DatabaseClient, DatabaseError},
     posts::queries::{
         create_post,
-        delete_post,
+        delete_repost,
         get_remote_post_by_object_id,
+        get_remote_repost_by_activity_id,
         get_repost_by_author,
     },
     posts::types::PostCreateData,
@@ -54,10 +55,9 @@ pub async fn handle_announce(
     };
     let activity: Announce = serde_json::from_value(activity)
         .map_err(|_| ValidationError("unexpected activity structure"))?;
-    let repost_object_id = activity.id;
-    match get_remote_post_by_object_id(
+    match get_remote_repost_by_activity_id(
         db_client,
-        &repost_object_id,
+        &activity.id,
     ).await {
         Ok(_) => return Ok(None), // Ignore if repost already exists
         Err(DatabaseError::NotFound(_)) => (),
@@ -88,17 +88,17 @@ pub async fn handle_announce(
             post.id
         },
     };
-    validate_object_id(&repost_object_id)?;
+    validate_object_id(&activity.id)?;
     let repost_data = PostCreateData::repost(
         post_id,
-        Some(repost_object_id.clone()),
+        Some(activity.id.clone()),
     );
     match create_post(db_client, &author.id, repost_data).await {
         Ok(_) => Ok(Some(NOTE)),
         Err(DatabaseError::AlreadyExists("post")) => {
             // Ignore activity if repost already exists (with a different
-            // object ID, or due to race condition in a handler).
-            log::warn!("repost already exists: {}", repost_object_id);
+            // activity ID, or due to race condition in a handler).
+            log::warn!("repost already exists: {}", activity.id);
             Ok(None)
         },
         // May return "post not found" error if post if not public
@@ -169,7 +169,7 @@ async fn handle_fep_1b12_announce(
         // https://join-lemmy.org/docs/contributors/05-federation.html#delete-post-or-comment
         match get_repost_by_author(db_client, &post_id, &group.id).await {
             Ok((repost_id, _)) => {
-                delete_post(db_client, &repost_id).await?;
+                delete_repost(db_client, repost_id).await?;
             },
             // Ignore Announce(Delete) if repost is not found
             Err(DatabaseError::NotFound(_)) => return Ok(None),
