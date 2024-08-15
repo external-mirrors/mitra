@@ -17,7 +17,10 @@ use mitra_config::Config;
 use mitra_federation::http_server::is_activitypub_request;
 use mitra_models::{
     database::{get_database_client, DatabaseConnectionPool},
-    posts::queries::get_post_by_id,
+    posts::{
+        helpers::get_post_by_id_for_view,
+        queries::get_post_by_id,
+    },
     profiles::queries::get_profile_by_acct,
 };
 
@@ -99,6 +102,7 @@ pub fn profile_page_redirect() -> Resource {
         .route(web::get().to(profile_page_redirect_view))
 }
 
+/// Redirect to ActivityPub representation
 async fn post_page_redirect_view(
     config: web::Data<Config>,
     db_pool: web::Data<DatabaseConnectionPool>,
@@ -119,7 +123,7 @@ async fn post_page_opengraph_view(
     post_id: web::Path<Uuid>,
 ) -> Result<HttpResponse, HttpError> {
     let db_client = &**get_database_client(&db_pool).await?;
-    let post = get_post_by_id(db_client, &post_id).await?;
+    let post = get_post_by_id_for_view(db_client, None, *post_id).await?;
     #[allow(clippy::format_in_format_args)]
     let page = format!(
         include_str!("opengraph.html"),
