@@ -160,8 +160,6 @@ CREATE TABLE post (
     repost_count INTEGER NOT NULL CHECK (repost_count >= 0) DEFAULT 0,
     object_id VARCHAR(2000) UNIQUE,
     ipfs_cid VARCHAR(200),
-    token_id INTEGER,
-    token_tx_id VARCHAR(200),
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
     updated_at TIMESTAMP WITH TIME ZONE,
     UNIQUE (author_id, repost_of_id)

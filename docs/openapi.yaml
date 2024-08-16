@@ -2763,10 +2763,6 @@ components:
           type: string
           nullable: true
           example: 'bafkr...'
-        token_tx_id:
-          type: string
-          nullable: true
-          example: '0x5fe80cdea7f...'
         links:
           description: Posts linked to this post.
           type: array

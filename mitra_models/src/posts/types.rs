@@ -74,8 +74,6 @@ pub struct DbPost {
     pub repost_count: i32,
     pub object_id: Option<String>,
     pub ipfs_cid: Option<String>,
-    token_id: Option<i32>, // deprecated
-    token_tx_id: Option<String>, // deprecated
     pub created_at: DateTime<Utc>,
     pub updated_at: Option<DateTime<Utc>>, // edited at
 }
@@ -157,8 +155,6 @@ impl Post {
             db_post.is_pinned ||
             db_post.in_reply_to_id.is_some() ||
             db_post.ipfs_cid.is_some() ||
-            db_post.token_id.is_some() ||
-            db_post.token_tx_id.is_some() ||
             !db_attachments.is_empty() ||
             !db_mentions.is_empty() ||
             !db_tags.is_empty() ||
