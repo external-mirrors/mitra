@@ -182,24 +182,40 @@ pub async fn get_remote_invoice_by_object_id(
     Ok(invoice)
 }
 
-pub async fn get_local_invoices_by_status(
+pub async fn get_invoices_by_status(
     db_client: &impl DatabaseClient,
     chain_id: &ChainId,
     status: InvoiceStatus,
+    only_local: bool,
 ) -> Result<Vec<DbInvoice>, DatabaseError> {
-    let rows = db_client.query(
+    let condition = if only_local { "AND object_id IS NULL" } else { "" };
+    let statement = format!(
         "
         SELECT invoice
         FROM invoice
-        JOIN user_account ON (invoice.recipient_id = user_account.id)
-        WHERE chain_id = $1 AND invoice_status = $2
+        JOIN actor_profile ON (invoice.recipient_id = actor_profile.id)
+        WHERE
+            chain_id = $1
+            AND invoice_status = $2
+            {condition}
         ",
+    );
+    let rows = db_client.query(
+        &statement,
         &[&DbChainId::new(chain_id), &status],
     ).await?;
     let invoices = rows.iter()
         .map(|row| row.try_get("invoice"))
         .collect::<Result<_, _>>()?;
     Ok(invoices)
+}
+
+pub async fn get_local_invoices_by_status(
+    db_client: &impl DatabaseClient,
+    chain_id: &ChainId,
+    status: InvoiceStatus,
+) -> Result<Vec<DbInvoice>, DatabaseError> {
+    get_invoices_by_status(db_client, chain_id, status, true).await
 }
 
 pub async fn set_invoice_status(

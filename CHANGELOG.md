@@ -31,6 +31,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Fixed database error that occurred when trying to undo like.
 - Don't generate OpenGraph response for non-public posts.
+- Fixed remote invoices never timing out.
 
 ## [3.1.0] - 2024-08-08
 

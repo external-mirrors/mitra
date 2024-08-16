@@ -13,6 +13,7 @@ use mitra_models::{
     invoices::queries::{
         create_local_invoice,
         get_invoice_by_participants,
+        get_invoices_by_status,
         get_local_invoice_by_address,
         get_local_invoices_by_status,
         set_invoice_status,
@@ -126,10 +127,11 @@ pub async fn check_monero_subscriptions(
 
     // Invoices waiting for payment
     let mut address_waitlist = vec![];
-    let open_invoices = get_local_invoices_by_status(
+    let open_invoices = get_invoices_by_status(
         db_client,
         &config.chain_id,
         InvoiceStatus::Open,
+        false, // include remote invoices
     ).await?;
     for invoice in open_invoices {
         let invoice_age = Utc::now() - invoice.created_at;
@@ -139,6 +141,10 @@ pub async fn check_monero_subscriptions(
                 &invoice.id,
                 InvoiceStatus::Timeout,
             ).await?;
+            continue;
+        };
+        if invoice.object_id.is_some() {
+            // Don't monitor remote invoices
             continue;
         };
         let payment_address = invoice_payment_address(&invoice)?;
