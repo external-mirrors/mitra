@@ -948,8 +948,8 @@ pub async fn get_posts_by_tag(
                 WHERE post_tag.post_id = post.id AND tag.tag_name = $tag_name
             )
             AND {visibility_filter}
-            AND ($max_post_id::uuid IS NULL OR post.id < $max_post_id)
             AND {mute_filter}
+            AND ($max_post_id::uuid IS NULL OR post.id < $max_post_id)
         ORDER BY post.id DESC
         LIMIT $limit
         ",

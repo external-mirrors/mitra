@@ -26,6 +26,7 @@ mod follow_requests;
 mod instance;
 mod markers;
 mod media;
+mod mutes;
 mod notifications;
 mod oauth;
 mod reactions;
@@ -120,6 +121,7 @@ pub fn mastodon_api_scope(
         .service(markers::views::marker_api_scope())
         .service(media::views::media_api_v1_scope())
         .service(media::views::media_api_v2_scope())
+        .service(mutes::views::mute_api_scope())
         .service(notifications::views::notification_api_scope())
         .service(reactions::views::reaction_api_scope())
         .service(search::views::search_api_scope())

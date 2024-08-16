@@ -756,6 +756,22 @@ pub async fn unmute(
     Ok(())
 }
 
+pub async fn get_mutes_paginated(
+    db_client: &impl DatabaseClient,
+    source_id: Uuid,
+    max_relationship_id: Option<i32>,
+    limit: u16,
+) -> Result<Vec<RelatedActorProfile<i32>>, DatabaseError> {
+    get_related_paginated(
+        db_client,
+        source_id,
+        RelationshipType::Mute,
+        true, // direct
+        max_relationship_id,
+        limit,
+    ).await
+}
+
 #[cfg(test)]
 mod tests {
     use serial_test::serial;
