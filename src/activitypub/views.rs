@@ -407,10 +407,7 @@ async fn proposal_view(
     let payment_info = match payment_option {
         PaymentOption::MoneroSubscription(payment_info)
             if is_activitypub_request(request.headers()) => payment_info,
-        PaymentOption::EthereumSubscription(_) |
-            PaymentOption::MoneroSubscription(_) =>
-        {
-            // Ethereum subscription proposals are not implemented, redirect
+        PaymentOption::MoneroSubscription(_) => {
             let page_url = get_subscription_page_url(
                 &config.instance_url(),
                 &user.profile.username,

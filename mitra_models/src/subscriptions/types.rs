@@ -4,7 +4,6 @@ use tokio_postgres::Row;
 use uuid::Uuid;
 
 use crate::database::DatabaseError;
-use crate::invoices::types::DbChainId;
 use crate::profiles::types::DbActorProfile;
 
 #[derive(FromSql)]
@@ -12,9 +11,7 @@ use crate::profiles::types::DbActorProfile;
 pub struct DbSubscription {
     pub id: i32,
     pub sender_id: Uuid,
-    pub sender_address: Option<String>,
     pub recipient_id: Uuid,
-    pub chain_id: Option<DbChainId>,
     pub expires_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -22,8 +19,6 @@ pub struct DbSubscription {
 pub struct Subscription {
     pub id: i32,
     pub sender: DbActorProfile,
-    #[allow(dead_code)]
-    sender_address: Option<String>,
     pub expires_at: DateTime<Utc>,
 }
 
@@ -37,7 +32,6 @@ impl TryFrom<&Row> for Subscription {
         Ok(Self {
             id: db_subscription.id,
             sender: db_sender,
-            sender_address: db_subscription.sender_address,
             expires_at: db_subscription.expires_at,
         })
     }

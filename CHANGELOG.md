@@ -25,6 +25,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Removed
 
 - Removed support for FEP-c390 + (old) FEP-ae97 activity authentication.
+- Removed ethereum subscriptions from database.
 
 ### Fixed
 

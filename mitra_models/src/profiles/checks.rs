@@ -62,7 +62,7 @@ pub fn check_payment_options(
     if is_remote && payment_options.iter()
         .any(|option| matches!(
             option.payment_type(),
-            PaymentType::EthereumSubscription | PaymentType::MoneroSubscription,
+            PaymentType::MoneroSubscription,
         ))
     {
         return Err(DatabaseTypeError);

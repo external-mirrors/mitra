@@ -126,9 +126,7 @@ pub async fn handle_add(
                 create_subscription(
                     db_client,
                     sender.id,
-                    None, // matching by address is not required
                     recipient.id,
-                    None, // chain ID is not required
                     subscription_expires_at,
                     Utc::now(),
                 ).await?;

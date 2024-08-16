@@ -85,7 +85,6 @@ impl SubscriptionOption {
     pub fn from_payment_option(payment_option: PaymentOption) -> Option<Self> {
         let settings = match payment_option {
             PaymentOption::Link(_) => return None,
-            PaymentOption::EthereumSubscription(_) => return None,
             PaymentOption::MoneroSubscription(payment_info) => Self::Monero {
                 chain_id: payment_info.chain_id,
                 price: payment_info.price.into(),

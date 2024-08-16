@@ -160,7 +160,6 @@ pub fn attach_payment_option(
     let (name, href) = match payment_option {
         // Local actors can't have payment links
         PaymentOption::Link(_) => unimplemented!(),
-        PaymentOption::EthereumSubscription(_) => unimplemented!(),
         PaymentOption::MoneroSubscription(payment_info) => {
             let name = PAYMENT_LINK_NAME_MONERO.to_string();
             let actor_id = local_actor_id_unified(authority, username);

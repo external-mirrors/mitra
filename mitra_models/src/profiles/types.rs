@@ -283,7 +283,6 @@ json_to_sql!(IdentityProofs);
 #[derive(PartialEq)]
 pub enum PaymentType {
     Link,
-    EthereumSubscription,
     MoneroSubscription,
     RemoteMoneroSubscription,
 }
@@ -292,7 +291,7 @@ impl From<&PaymentType> for i16 {
     fn from(payment_type: &PaymentType) -> i16 {
         match payment_type {
             PaymentType::Link => 1,
-            PaymentType::EthereumSubscription => 2,
+            // PaymentType::EthereumSubscription => 2,
             PaymentType::MoneroSubscription => 3,
             PaymentType::RemoteMoneroSubscription => 4,
         }
@@ -305,7 +304,6 @@ impl TryFrom<i16> for PaymentType {
     fn try_from(value: i16) -> Result<Self, Self::Error> {
         let payment_type = match value {
             1 => Self::Link,
-            2 => Self::EthereumSubscription,
             3 => Self::MoneroSubscription,
             4 => Self::RemoteMoneroSubscription,
             _ => return Err(DatabaseTypeError),
@@ -318,11 +316,6 @@ impl TryFrom<i16> for PaymentType {
 pub struct PaymentLink {
     pub name: String,
     pub href: String,
-}
-
-#[derive(Clone, Debug, Deserialize, Serialize)]
-pub struct EthereumSubscription {
-    pub chain_id: ChainId,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -344,7 +337,6 @@ pub struct RemoteMoneroSubscription {
 #[derive(Clone, Debug)]
 pub enum PaymentOption {
     Link(PaymentLink),
-    EthereumSubscription(EthereumSubscription),
     MoneroSubscription(MoneroSubscription),
     RemoteMoneroSubscription(RemoteMoneroSubscription),
 }
@@ -383,10 +375,6 @@ impl SubscriptionOption for RemoteMoneroSubscription {
 }
 
 impl PaymentOption {
-    pub fn ethereum_subscription(chain_id: ChainId) -> Self {
-        Self::EthereumSubscription(EthereumSubscription { chain_id })
-    }
-
     pub fn monero_subscription(
         chain_id: ChainId,
         price: NonZeroU64,
@@ -416,7 +404,6 @@ impl PaymentOption {
     pub(super) fn payment_type(&self) -> PaymentType {
         match self {
             Self::Link(_) => PaymentType::Link,
-            Self::EthereumSubscription(_) => PaymentType::EthereumSubscription,
             Self::MoneroSubscription(_) => PaymentType::MoneroSubscription,
             Self::RemoteMoneroSubscription(_) => PaymentType::RemoteMoneroSubscription,
         }
@@ -425,7 +412,6 @@ impl PaymentOption {
     pub fn chain_id(&self) -> Option<&ChainId> {
         match self {
             Self::Link(_) => None,
-            Self::EthereumSubscription(info) => Some(&info.chain_id),
             Self::MoneroSubscription(info) => Some(&info.chain_id),
             Self::RemoteMoneroSubscription(info) => Some(&info.chain_id),
         }
@@ -434,11 +420,6 @@ impl PaymentOption {
     pub(super) fn check_chain_id(&self) -> Result<(), DatabaseTypeError> {
         match self {
             Self::Link(_) => (),
-            Self::EthereumSubscription(payment_info) => {
-                if !payment_info.chain_id.is_ethereum() {
-                    return Err(DatabaseTypeError);
-                };
-            },
             Self::MoneroSubscription(payment_info) => {
                 if !payment_info.chain_id.is_monero() {
                     return Err(DatabaseTypeError);
@@ -472,11 +453,6 @@ impl<'de> Deserialize<'de> for PaymentOption {
                     .map_err(DeserializerError::custom)?;
                 Self::Link(link)
             },
-            PaymentType::EthereumSubscription => {
-                let payment_info = EthereumSubscription::deserialize(value)
-                    .map_err(DeserializerError::custom)?;
-                Self::EthereumSubscription(payment_info)
-            },
             PaymentType::MoneroSubscription => {
                 let payment_info = MoneroSubscription::deserialize(value)
                     .map_err(DeserializerError::custom)?;
@@ -503,9 +479,6 @@ impl Serialize for PaymentOption {
 
         match self {
             Self::Link(link) => link.serialize(FlatMapSerializer(&mut map))?,
-            Self::EthereumSubscription(payment_info) => {
-                payment_info.serialize(FlatMapSerializer(&mut map))?
-            },
             Self::MoneroSubscription(payment_info) => {
                 payment_info.serialize(FlatMapSerializer(&mut map))?
             },
@@ -1044,16 +1017,18 @@ mod tests {
     }
 
     #[test]
-    fn test_payment_option_ethereum_subscription_serialization() {
-        let json_data = r#"{"payment_type":2,"chain_id":"eip155:1","name":null}"#;
+    fn test_payment_option_monero_subscription_serialization() {
+        let json_data = r#"{"payment_type":3,"chain_id":"monero:418015bb9ae982a1975da7d79277c270","price":41387,"payout_address":"xxx"}"#;
         let payment_option: PaymentOption = serde_json::from_str(json_data).unwrap();
         let payment_info = match payment_option {
-            PaymentOption::EthereumSubscription(ref payment_info) => payment_info,
+            PaymentOption::MoneroSubscription(ref payment_info) => payment_info,
             _ => panic!("wrong option"),
         };
-        assert_eq!(payment_info.chain_id, ChainId::ethereum_mainnet());
+        assert_eq!(payment_info.chain_id, ChainId::monero_mainnet());
+        assert_eq!(payment_info.price.get(), 41387);
+        assert_eq!(payment_info.payout_address, "xxx");
         let serialized = serde_json::to_string(&payment_option).unwrap();
-        assert_eq!(serialized, r#"{"payment_type":2,"chain_id":"eip155:1"}"#);
+        assert_eq!(serialized, json_data);
     }
 
     #[test]

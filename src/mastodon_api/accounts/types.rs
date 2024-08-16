@@ -209,28 +209,27 @@ impl Account {
 
         let payment_options = profile.payment_options.into_inner()
             .into_iter()
-            .filter_map(|option| {
+            .map(|option| {
                 match option {
                     PaymentOption::Link(link) => {
-                        Some(AccountPaymentOption::Link {
+                        AccountPaymentOption::Link {
                             name: link.name,
                             href: link.href,
-                        })
+                        }
                     },
-                    PaymentOption::EthereumSubscription(_) => None,
                     PaymentOption::MoneroSubscription(payment_info) => {
-                        Some(AccountPaymentOption::MoneroSubscription {
+                        AccountPaymentOption::MoneroSubscription {
                             chain_id: payment_info.chain_id,
                             price: payment_info.price.into(),
                             object_id: None,
-                        })
+                        }
                     },
                     PaymentOption::RemoteMoneroSubscription(payment_info) => {
-                        Some(AccountPaymentOption::MoneroSubscription {
+                        AccountPaymentOption::MoneroSubscription {
                             chain_id: payment_info.chain_id,
                             price: payment_info.price.into(),
                             object_id: Some(payment_info.object_id),
-                        })
+                        }
                     },
                 }
             })

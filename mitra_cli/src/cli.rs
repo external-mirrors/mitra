@@ -71,7 +71,6 @@ use mitra_models::{
         set_profile_identity_key,
     },
     subscriptions::queries::{
-        reset_subscriptions,
         get_active_subscription_count,
         get_expired_subscription_count,
     },
@@ -158,7 +157,6 @@ pub enum SubCommand {
     ListUnreachableActors(ListUnreachableActors),
     AddEmoji(AddEmoji),
     ImportEmoji(ImportEmoji),
-    ResetSubscriptions(ResetSubscriptions),
     CreateMoneroWallet(CreateMoneroWallet),
     CreateMoneroSignature(CreateMoneroSignature),
     VerifyMoneroSignature(VerifyMoneroSignature),
@@ -840,27 +838,6 @@ impl ImportEmoji {
             emoji.image,
         ).await?;
         println!("added emoji to local collection");
-        Ok(())
-    }
-}
-
-/// Reset all subscriptions
-/// (can be used during development or when switching between chains)
-#[derive(Parser)]
-pub struct ResetSubscriptions {
-    // Subscription options are removed by default
-    #[arg(long)]
-    keep_subscription_options: bool,
-}
-
-impl ResetSubscriptions {
-    pub async fn execute(
-        &self,
-        _config: &Config,
-        db_client: &mut impl DatabaseClient,
-    ) -> Result<(), Error> {
-        reset_subscriptions(db_client, self.keep_subscription_options).await?;
-        println!("subscriptions deleted");
         Ok(())
     }
 }

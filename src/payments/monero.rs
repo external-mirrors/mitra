@@ -8,7 +8,6 @@ use mitra_models::{
         DatabaseClient,
         DatabaseConnectionPool,
         DatabaseError,
-        DatabaseTypeError,
     },
     invoices::helpers::{local_invoice_forwarded, local_invoice_reopened},
     invoices::queries::{
@@ -56,7 +55,7 @@ fn invoice_payment_address(invoice: &DbInvoice) -> Result<String, DatabaseError>
 
 // Returns None on chain ID mismatch
 pub(crate) async fn create_or_update_monero_subscription(
-    config: &MoneroConfig,
+    _config: &MoneroConfig,
     db_client: &mut impl DatabaseClient,
     instance: &Instance,
     sender: &DbActorProfile,
@@ -70,14 +69,6 @@ pub(crate) async fn create_or_update_monero_subscription(
         &recipient.id,
     ).await {
         Ok(subscription) => {
-            // Local recipient, chain ID should be present
-            let subscription_chain_id = subscription.chain_id
-                .ok_or(DatabaseError::from(DatabaseTypeError))?;
-            if subscription_chain_id != config.chain_id {
-                // Reset is required (mitractl reset-subscriptions)
-                log::error!("can't switch to another chain");
-                return Ok(None);
-            };
             // Update subscription expiration date
             let expires_at =
                 std::cmp::max(subscription.expires_at, Utc::now()) +
@@ -101,9 +92,7 @@ pub(crate) async fn create_or_update_monero_subscription(
             let subscription = create_subscription(
                 db_client,
                 sender.id,
-                None, // matching by address is not required
                 recipient.id,
-                Some(&config.chain_id),
                 expires_at,
                 Utc::now(),
             ).await?;

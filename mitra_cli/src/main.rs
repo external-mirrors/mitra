@@ -59,7 +59,6 @@ async fn main() {
         SubCommand::ListUnreachableActors(cmd) => cmd.execute(&config, db_client).await.unwrap(),
         SubCommand::AddEmoji(cmd) => cmd.execute(&config, db_client).await.unwrap(),
         SubCommand::ImportEmoji(cmd) => cmd.execute(&config, db_client).await.unwrap(),
-        SubCommand::ResetSubscriptions(cmd) => cmd.execute(&config, db_client).await.unwrap(),
         SubCommand::CreateMoneroWallet(cmd) => cmd.execute(&config).await.unwrap(),
         SubCommand::CreateMoneroSignature(cmd) => cmd.execute(&config).await.unwrap(),
         SubCommand::VerifyMoneroSignature(cmd) => cmd.execute(&config).await.unwrap(),

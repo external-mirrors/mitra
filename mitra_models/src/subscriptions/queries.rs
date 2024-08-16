@@ -1,18 +1,10 @@
 use chrono::{DateTime, Utc};
 use uuid::Uuid;
 
-use mitra_utils::caip2::ChainId;
-
 use crate::database::{
     catch_unique_violation,
     DatabaseClient,
     DatabaseError,
-    DatabaseTypeError,
-};
-use crate::invoices::types::DbChainId;
-use crate::profiles::{
-    queries::get_profile_by_id,
-    types::PaymentType,
 };
 use crate::relationships::{
     queries::subscribe_opt,
@@ -24,39 +16,25 @@ use super::types::{DbSubscription, Subscription};
 pub async fn create_subscription(
     db_client: &mut impl DatabaseClient,
     sender_id: Uuid,
-    sender_address: Option<&str>,
     recipient_id: Uuid,
-    chain_id: Option<&ChainId>,
     expires_at: DateTime<Utc>,
     updated_at: DateTime<Utc>,
 ) -> Result<DbSubscription, DatabaseError> {
-    if let Some(chain_id) = chain_id {
-        assert!(chain_id.is_ethereum() == sender_address.is_some());
-    };
     let mut transaction = db_client.transaction().await?;
-    // Only local recipients require chain ID
-    let recipient = get_profile_by_id(&transaction, &recipient_id).await?;
-    if recipient.is_local() != chain_id.is_some() {
-        return Err(DatabaseTypeError.into());
-    };
     let row = transaction.query_one(
         "
         INSERT INTO subscription (
             sender_id,
-            sender_address,
             recipient_id,
-            chain_id,
             expires_at,
             updated_at
         )
-        VALUES ($1, $2, $3, $4, $5, $6)
+        VALUES ($1, $2, $3, $4)
         RETURNING subscription
         ",
         &[
             &sender_id,
-            &sender_address,
             &recipient_id,
-            &chain_id.map(DbChainId::new),
             &expires_at,
             &updated_at,
         ],
@@ -182,47 +160,6 @@ pub async fn get_incoming_subscriptions(
     Ok(subscriptions)
 }
 
-pub async fn reset_subscriptions(
-    db_client: &mut impl DatabaseClient,
-    keep_subscription_options: bool,
-) -> Result<(), DatabaseError> {
-    let transaction = db_client.transaction().await?;
-    if !keep_subscription_options {
-        let payment_types = vec![
-            i16::from(&PaymentType::EthereumSubscription),
-            i16::from(&PaymentType::MoneroSubscription),
-        ];
-        transaction.execute(
-            "
-            UPDATE actor_profile
-            SET payment_options = '[]'
-            WHERE
-                user_id IS NOT NULL
-                AND
-                EXISTS (
-                    SELECT 1
-                    FROM jsonb_array_elements(payment_options) AS option
-                    WHERE CAST(option ->> 'payment_type' AS SMALLINT) = ANY($1)
-                )
-            ",
-            &[&payment_types],
-        ).await?;
-    };
-    transaction.execute(
-        "
-        DELETE FROM relationship
-        WHERE relationship_type = $1
-        ",
-        &[&RelationshipType::Subscription],
-    ).await?;
-    transaction.execute(
-        "UPDATE actor_profile SET subscriber_count = 0", &[],
-    ).await?;
-    transaction.execute("DELETE FROM subscription", &[]).await?;
-    transaction.commit().await?;
-    Ok(())
-}
-
 pub async fn get_active_subscription_count(
     db_client: &impl DatabaseClient,
 ) -> Result<i64, DatabaseError> {
@@ -288,23 +225,19 @@ mod tests {
             ..Default::default()
         };
         let sender = create_profile(db_client, sender_data).await.unwrap();
-        let sender_address = "0xb9c5714089478a327f09197987f16f9e5d936e8a";
         let recipient_data = UserCreateData {
             username: "recipient".to_string(),
             password_hash: Some("test".to_string()),
             ..Default::default()
         };
         let recipient = create_user(db_client, recipient_data).await.unwrap();
-        let chain_id = ChainId::ethereum_mainnet();
         let expires_at = Utc::now();
         let updated_at = Utc::now();
 
         let subscription = create_subscription(
             db_client,
             sender.id,
-            Some(sender_address),
             recipient.id,
-            Some(&chain_id),
             expires_at,
             updated_at,
         ).await.unwrap();
