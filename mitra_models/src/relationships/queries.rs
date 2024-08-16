@@ -135,6 +135,45 @@ pub async fn has_relationship(
     Ok(maybe_row.is_some())
 }
 
+async fn get_related_paginated(
+    db_client: &impl DatabaseClient,
+    source_id: Uuid,
+    relationship_type: RelationshipType,
+    is_direct: bool,
+    max_relationship_id: Option<i32>,
+    limit: u16,
+) -> Result<Vec<RelatedActorProfile<i32>>, DatabaseError> {
+    let statement = format!(
+        "
+        SELECT relationship.id, actor_profile
+        FROM actor_profile
+        JOIN relationship
+        ON (actor_profile.id = relationship.{target_id})
+        WHERE
+            relationship.{source_id} = $1
+            AND relationship.relationship_type = $2
+            AND ($3::integer IS NULL OR relationship.id < $3)
+        ORDER BY relationship.id DESC
+        LIMIT $4
+        ",
+        source_id=if is_direct { "source_id" } else { "target_id" },
+        target_id=if is_direct { "target_id" } else { "source_id" },
+    );
+    let rows = db_client.query(
+        &statement,
+        &[
+            &source_id,
+            &relationship_type,
+            &max_relationship_id,
+            &i64::from(limit),
+        ],
+    ).await?;
+    let related_profiles = rows.iter()
+        .map(RelatedActorProfile::try_from)
+        .collect::<Result<_, _>>()?;
+    Ok(related_profiles)
+}
+
 pub async fn follow(
     db_client: &mut impl DatabaseClient,
     source_id: Uuid,
@@ -418,30 +457,14 @@ pub async fn get_followers_paginated(
     max_relationship_id: Option<i32>,
     limit: u16,
 ) -> Result<Vec<RelatedActorProfile<i32>>, DatabaseError> {
-    let rows = db_client.query(
-        "
-        SELECT relationship.id, actor_profile
-        FROM actor_profile
-        JOIN relationship
-        ON (actor_profile.id = relationship.source_id)
-        WHERE
-            relationship.target_id = $1
-            AND relationship.relationship_type = $2
-            AND ($3::integer IS NULL OR relationship.id < $3)
-        ORDER BY relationship.id DESC
-        LIMIT $4
-        ",
-        &[
-            &profile_id,
-            &RelationshipType::Follow,
-            &max_relationship_id,
-            &i64::from(limit),
-        ],
-    ).await?;
-    let related_profiles = rows.iter()
-        .map(RelatedActorProfile::try_from)
-        .collect::<Result<_, _>>()?;
-    Ok(related_profiles)
+    get_related_paginated(
+        db_client,
+        profile_id,
+        RelationshipType::Follow,
+        false, // reverse
+        max_relationship_id,
+        limit,
+    ).await
 }
 
 /// Returns true if actor has local followers or follow requests
@@ -494,30 +517,14 @@ pub async fn get_following_paginated(
     max_relationship_id: Option<i32>,
     limit: u16,
 ) -> Result<Vec<RelatedActorProfile<i32>>, DatabaseError> {
-    let rows = db_client.query(
-        "
-        SELECT relationship.id, actor_profile
-        FROM actor_profile
-        JOIN relationship
-        ON (actor_profile.id = relationship.target_id)
-        WHERE
-            relationship.source_id = $1
-            AND relationship.relationship_type = $2
-            AND ($3::integer IS NULL OR relationship.id < $3)
-        ORDER BY relationship.id DESC
-        LIMIT $4
-        ",
-        &[
-            &profile_id,
-            &RelationshipType::Follow,
-            &max_relationship_id,
-            &i64::from(limit),
-        ],
-    ).await?;
-    let related_profiles = rows.iter()
-        .map(RelatedActorProfile::try_from)
-        .collect::<Result<_, _>>()?;
-    Ok(related_profiles)
+    get_related_paginated(
+        db_client,
+        profile_id,
+        RelationshipType::Follow,
+        true, // direct
+        max_relationship_id,
+        limit,
+    ).await
 }
 
 /// Returns incoming follow requests
@@ -933,6 +940,23 @@ mod tests {
             follow_request_updated.request_status,
             FollowRequestStatus::Accepted,
         );
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_get_following_paginated() {
+        let db_client = &mut create_test_database().await;
+        let source = create_test_user(db_client, "source").await;
+        let target = create_test_user(db_client, "target").await;
+        follow(db_client, source.id, target.id).await.unwrap();
+        let results = get_following_paginated(
+            db_client,
+            source.id,
+            None,
+            10,
+        ).await.unwrap();
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].profile.id, target.id);
     }
 
     #[tokio::test]
