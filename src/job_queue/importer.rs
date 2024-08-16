@@ -154,7 +154,7 @@ pub async fn import_followers_task(
         } else {
             // Immediately move local followers (only if alias can be verified)
             if let Some(ref from_profile) = maybe_from_profile {
-                match unfollow(db_client, &follower.id, &from_profile.id).await {
+                match unfollow(db_client, follower.id, from_profile.id).await {
                     Ok(maybe_follow_request_deleted) => {
                         // Send Undo(Follow) to a remote actor
                         let remote_actor = from_profile.actor_json.as_ref()
@@ -178,7 +178,7 @@ pub async fn import_followers_task(
                     Err(DatabaseError::NotFound(_)) => continue,
                     Err(other_error) => return Err(other_error.into()),
                 };
-                match follow(db_client, &follower.id, &user.id).await {
+                match follow(db_client, follower.id, user.id).await {
                     Ok(_) => (),
                     // Ignore if already following
                     Err(DatabaseError::AlreadyExists(_)) => (),

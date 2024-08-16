@@ -65,8 +65,8 @@ pub async fn handle_follow(
     validate_any_object_id(&canonical_activity_id)?;
     let follow_request = create_remote_follow_request_opt(
         db_client,
-        &source_profile.id,
-        &target_user.id,
+        source_profile.id,
+        target_user.id,
         &canonical_activity_id,
     ).await?;
     let is_following = has_relationship(
@@ -82,7 +82,7 @@ pub async fn handle_follow(
             follow_request.target_id,
         ).await?;
     } else {
-        match follow_request_accepted(db_client, &follow_request.id).await {
+        match follow_request_accepted(db_client, follow_request.id).await {
             Ok(_) => (),
             // Proceed even if relationship already exists
             Err(DatabaseError::AlreadyExists(_)) => (),

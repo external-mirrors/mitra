@@ -775,7 +775,7 @@ pub async fn search_profiles_by_wallet_address(
 
 pub async fn update_follower_count(
     db_client: &impl DatabaseClient,
-    profile_id: &Uuid,
+    profile_id: Uuid,
     change: i32,
 ) -> Result<DbActorProfile, DatabaseError> {
     let maybe_row = db_client.query_opt(
@@ -794,7 +794,7 @@ pub async fn update_follower_count(
 
 pub async fn update_following_count(
     db_client: &impl DatabaseClient,
-    profile_id: &Uuid,
+    profile_id: Uuid,
     change: i32,
 ) -> Result<DbActorProfile, DatabaseError> {
     let maybe_row = db_client.query_opt(

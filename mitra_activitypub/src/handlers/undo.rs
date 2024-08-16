@@ -60,7 +60,7 @@ async fn handle_undo_follow(
         &target_actor_id,
     )?;
     let target_user = get_user_by_name(db_client, &target_username).await?;
-    match unfollow(db_client, &source_profile.id, &target_user.id).await {
+    match unfollow(db_client, source_profile.id, target_user.id).await {
         Ok(_) => (),
         // Ignore Undo if relationship doesn't exist
         Err(DatabaseError::NotFound(_)) => return Ok(None),
@@ -106,8 +106,8 @@ pub async fn handle_undo(
             };
             unfollow(
                 db_client,
-                &follow_request.source_id,
-                &follow_request.target_id,
+                follow_request.source_id,
+                follow_request.target_id,
             ).await?;
             return Ok(Some(FOLLOW));
         },

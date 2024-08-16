@@ -84,7 +84,7 @@ pub async fn get_announce_recipients(
     current_user: &User,
     post: &Post,
 ) -> Result<(Vec<DbActor>, String), DatabaseError> {
-    let followers = get_followers(db_client, &current_user.id).await?;
+    let followers = get_followers(db_client, current_user.id).await?;
     let mut recipients = vec![];
     for profile in followers {
         if let Some(remote_actor) = profile.actor_json {

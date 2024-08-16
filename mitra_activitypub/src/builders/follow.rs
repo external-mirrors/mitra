@@ -123,7 +123,7 @@ pub async fn follow_or_create_request(
             Err(other_error) => return Err(other_error),
         };
     } else {
-        match follow(db_client, &current_user.id, &target_profile.id).await {
+        match follow(db_client, current_user.id, target_profile.id).await {
             Ok(_) => (),
             Err(DatabaseError::AlreadyExists(_)) => (), // already following
             Err(other_error) => return Err(other_error),

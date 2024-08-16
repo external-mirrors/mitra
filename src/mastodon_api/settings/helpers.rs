@@ -36,7 +36,7 @@ fn export_profiles_to_csv(
 pub async fn export_followers(
     db_client: &impl DatabaseClient,
     local_hostname: &str,
-    user_id: &Uuid,
+    user_id: Uuid,
 ) -> Result<String, DatabaseError> {
     let followers = get_followers(db_client, user_id).await?;
     let csv = export_profiles_to_csv(local_hostname, followers);
@@ -46,7 +46,7 @@ pub async fn export_followers(
 pub async fn export_follows(
     db_client: &impl DatabaseClient,
     local_hostname: &str,
-    user_id: &Uuid,
+    user_id: Uuid,
 ) -> Result<String, DatabaseError> {
     let following = get_following(db_client, user_id).await?;
     let csv = export_profiles_to_csv(local_hostname, following);

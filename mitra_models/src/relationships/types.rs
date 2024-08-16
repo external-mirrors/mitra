@@ -69,12 +69,12 @@ pub struct DbRelationship {
 impl DbRelationship {
     pub fn is_direct(
         &self,
-        source_id: &Uuid,
-        target_id: &Uuid,
+        source_id: Uuid,
+        target_id: Uuid,
     ) -> Result<bool, DatabaseTypeError> {
-        if &self.source_id == source_id && &self.target_id == target_id {
+        if self.source_id == source_id && self.target_id == target_id {
             Ok(true)
-        } else if &self.source_id == target_id && &self.target_id == source_id {
+        } else if self.source_id == target_id && self.target_id == source_id {
             Ok(false)
         } else {
             Err(DatabaseTypeError)
@@ -83,12 +83,12 @@ impl DbRelationship {
 
     pub(super) fn with(
         &self,
-        profile_id: &Uuid,
+        profile_id: Uuid,
     ) -> Result<Uuid, DatabaseTypeError> {
-        if self.source_id == *profile_id {
+        if self.source_id == profile_id {
             // Direct relationship
             Ok(self.target_id)
-        } else if self.target_id == *profile_id {
+        } else if self.target_id == profile_id {
             // Inverse relationship
             Ok(self.source_id)
         } else {
@@ -109,6 +109,23 @@ impl TryFrom<&Row> for DbRelationship {
             created_at: row.try_get("created_at")?,
         };
         Ok(relationship)
+    }
+}
+
+pub struct RelatedActorProfile<T> {
+    pub related_id: T,
+    pub profile: DbActorProfile,
+}
+
+impl<T> TryFrom<&Row> for RelatedActorProfile<T>
+    where for<'sql> T: FromSql<'sql>
+{
+    type Error = DatabaseError;
+
+    fn try_from(row: &Row) -> Result<Self, Self::Error> {
+        let related_id: T = row.try_get("id")?;
+        let profile = row.try_get("actor_profile")?;
+        Ok(Self { related_id, profile })
     }
 }
 
@@ -161,21 +178,4 @@ pub struct DbFollowRequest {
     has_deprecated_ap_id: bool,
     #[allow(dead_code)]
     created_at: DateTime<Utc>,
-}
-
-pub struct RelatedActorProfile<T> {
-    pub related_id: T,
-    pub profile: DbActorProfile,
-}
-
-impl<T> TryFrom<&Row> for RelatedActorProfile<T>
-    where for<'sql> T: FromSql<'sql>
-{
-    type Error = DatabaseError;
-
-    fn try_from(row: &Row) -> Result<Self, Self::Error> {
-        let related_id: T = row.try_get("id")?;
-        let profile = row.try_get("actor_profile")?;
-        Ok(Self { related_id, profile })
-    }
 }

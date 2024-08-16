@@ -46,7 +46,7 @@ pub async fn handle_reject(
     )?;
     let follow_request = match get_follow_request_by_id(
         db_client,
-        &follow_request_id,
+        follow_request_id,
     ).await {
         Ok(follow_request) => follow_request,
         Err(DatabaseError::NotFound(_)) => {
@@ -58,13 +58,13 @@ pub async fn handle_reject(
     if follow_request.target_id != actor_profile.id {
         return Err(ValidationError("actor is not a target").into());
     };
-    follow_request_rejected(db_client, &follow_request.id).await?;
+    follow_request_rejected(db_client, follow_request.id).await?;
     // Delete follow request, and delete relationship too.
     // Reject() activity might be used to remove followers.
     match unfollow(
         db_client,
-        &follow_request.source_id,
-        &follow_request.target_id,
+        follow_request.source_id,
+        follow_request.target_id,
     ).await {
         Ok(_) | Err(DatabaseError::NotFound(_)) => (),
         Err(other_error) => return Err(other_error.into()),

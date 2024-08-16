@@ -18,8 +18,8 @@ const ACTOR_PROFILE_AGE_MIN: i64 = 60; // minutes
 
 async fn is_connected(
     db_client: &impl DatabaseClient,
-    source_id: &Uuid,
-    target_id: &Uuid,
+    source_id: Uuid,
+    target_id: Uuid,
 ) -> Result<bool, DatabaseError> {
     let relationships =
         get_relationships(db_client, source_id, target_id).await?;
@@ -68,12 +68,12 @@ pub async fn filter_mentions(
                 let age = Utc::now() - author.created_at;
                 is_participant(profile.id) ||
                 // Mentions from connections are always accepted
-                is_connected(db_client, &author.id, &profile.id).await? ||
+                is_connected(db_client, author.id, profile.id).await? ||
                     age >= Duration::minutes(ACTOR_PROFILE_AGE_MIN)
             },
             MentionPolicy::OnlyContacts => {
                 is_participant(profile.id) ||
-                is_connected(db_client, &author.id, &profile.id).await?
+                is_connected(db_client, author.id, profile.id).await?
             },
         };
         if !is_mention_allowed {

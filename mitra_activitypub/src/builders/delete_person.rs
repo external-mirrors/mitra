@@ -50,7 +50,7 @@ fn build_delete_person(
 
 async fn get_delete_person_recipients(
     db_client: &impl DatabaseClient,
-    user_id: &Uuid,
+    user_id: Uuid,
 ) -> Result<Vec<DbActor>, DatabaseError> {
     let followers = get_followers(db_client, user_id).await?;
     let following = get_following(db_client, user_id).await?;
@@ -69,7 +69,7 @@ pub async fn prepare_delete_person(
     user: &User,
 ) -> Result<OutgoingActivityJobData, DatabaseError> {
     let activity = build_delete_person(&instance.url(), user);
-    let recipients = get_delete_person_recipients(db_client, &user.id).await?;
+    let recipients = get_delete_person_recipients(db_client, user.id).await?;
     Ok(OutgoingActivityJobData::new(
         &instance.url(),
         user,

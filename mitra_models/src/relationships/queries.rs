@@ -30,8 +30,8 @@ use super::types::{
 
 pub async fn get_relationships(
     db_client: &impl DatabaseClient,
-    source_id: &Uuid,
-    target_id: &Uuid,
+    source_id: Uuid,
+    target_id: Uuid,
 ) -> Result<Vec<DbRelationship>, DatabaseError> {
     let rows = db_client.query(
         "
@@ -67,7 +67,7 @@ pub async fn get_relationships(
 
 pub async fn get_relationships_many(
     db_client: &impl DatabaseClient,
-    source_id: &Uuid,
+    source_id: Uuid,
     target_ids: &[Uuid],
 ) -> Result<Vec<(Uuid, Vec<DbRelationship>)>, DatabaseError> {
     let rows = db_client.query(
@@ -137,8 +137,8 @@ pub async fn has_relationship(
 
 pub async fn follow(
     db_client: &mut impl DatabaseClient,
-    source_id: &Uuid,
-    target_id: &Uuid,
+    source_id: Uuid,
+    target_id: Uuid,
 ) -> Result<(), DatabaseError> {
     let transaction = db_client.transaction().await?;
     transaction.execute(
@@ -158,7 +158,7 @@ pub async fn follow(
     let target_profile = update_follower_count(&transaction, target_id, 1).await?;
     update_following_count(&transaction, source_id, 1).await?;
     if target_profile.is_local() && !target_profile.manually_approves_followers {
-        create_follow_notification(&transaction, *source_id, *target_id).await?;
+        create_follow_notification(&transaction, source_id, target_id).await?;
     };
     transaction.commit().await?;
     Ok(())
@@ -167,8 +167,8 @@ pub async fn follow(
 /// Deletes both a relationship and a corresponding follow request
 pub async fn unfollow(
     db_client: &mut impl DatabaseClient,
-    source_id: &Uuid,
-    target_id: &Uuid,
+    source_id: Uuid,
+    target_id: Uuid,
 ) -> Result<Option<(Uuid, bool)>, DatabaseError> {
     let transaction = db_client.transaction().await?;
     // Delete relationship
@@ -231,8 +231,8 @@ pub(super) async fn create_follow_request_unchecked(
 /// Save follow request from remote actor
 pub async fn create_remote_follow_request_opt(
     db_client: &impl DatabaseClient,
-    source_id: &Uuid,
-    target_id: &Uuid,
+    source_id: Uuid,
+    target_id: Uuid,
     activity_id: &str,
 ) -> Result<DbFollowRequest, DatabaseError> {
     let request_id = generate_ulid();
@@ -265,7 +265,7 @@ pub async fn create_remote_follow_request_opt(
 
 pub async fn follow_request_accepted(
     db_client: &mut impl DatabaseClient,
-    request_id: &Uuid,
+    request_id: Uuid,
 ) -> Result<(), DatabaseError> {
     let mut transaction = db_client.transaction().await?;
     let maybe_row = transaction.query_opt(
@@ -280,14 +280,14 @@ pub async fn follow_request_accepted(
     let row = maybe_row.ok_or(DatabaseError::NotFound("follow request"))?;
     let source_id: Uuid = row.try_get("source_id")?;
     let target_id: Uuid = row.try_get("target_id")?;
-    follow(&mut transaction, &source_id, &target_id).await?;
+    follow(&mut transaction, source_id, target_id).await?;
     transaction.commit().await?;
     Ok(())
 }
 
 pub async fn follow_request_rejected(
     db_client: &mut impl DatabaseClient,
-    request_id: &Uuid,
+    request_id: Uuid,
 ) -> Result<(), DatabaseError> {
     let transaction = db_client.transaction().await?;
     let maybe_row = transaction.query_opt(
@@ -316,8 +316,8 @@ pub async fn follow_request_rejected(
 
 async fn delete_follow_request_opt(
     db_client: &impl DatabaseClient,
-    source_id: &Uuid,
-    target_id: &Uuid,
+    source_id: Uuid,
+    target_id: Uuid,
 ) -> Result<Option<(Uuid, bool)>, DatabaseError> {
     let maybe_row = db_client.query_opt(
         "
@@ -340,7 +340,7 @@ async fn delete_follow_request_opt(
 
 pub async fn get_follow_request_by_id(
     db_client:  &impl DatabaseClient,
-    request_id: &Uuid,
+    request_id: Uuid,
 ) -> Result<DbFollowRequest, DatabaseError> {
     let maybe_row = db_client.query_opt(
         "
@@ -374,8 +374,8 @@ pub async fn get_follow_request_by_activity_id(
 
 pub async fn get_follow_request_by_participants(
     db_client: &impl DatabaseClient,
-    source_id: &Uuid,
-    target_id: &Uuid,
+    source_id: Uuid,
+    target_id: Uuid,
 ) -> Result<DbFollowRequest, DatabaseError> {
     let maybe_row = db_client.query_opt(
         "
@@ -392,7 +392,7 @@ pub async fn get_follow_request_by_participants(
 
 pub async fn get_followers(
     db_client: &impl DatabaseClient,
-    profile_id: &Uuid,
+    profile_id: Uuid,
 ) -> Result<Vec<DbActorProfile>, DatabaseError> {
     let rows = db_client.query(
         "
@@ -414,7 +414,7 @@ pub async fn get_followers(
 
 pub async fn get_followers_paginated(
     db_client: &impl DatabaseClient,
-    profile_id: &Uuid,
+    profile_id: Uuid,
     max_relationship_id: Option<i32>,
     limit: u16,
 ) -> Result<Vec<RelatedActorProfile<i32>>, DatabaseError> {
@@ -468,7 +468,7 @@ pub async fn has_local_followers(
 
 pub async fn get_following(
     db_client: &impl DatabaseClient,
-    profile_id: &Uuid,
+    profile_id: Uuid,
 ) -> Result<Vec<DbActorProfile>, DatabaseError> {
     let rows = db_client.query(
         "
@@ -490,7 +490,7 @@ pub async fn get_following(
 
 pub async fn get_following_paginated(
     db_client: &impl DatabaseClient,
-    profile_id: &Uuid,
+    profile_id: Uuid,
     max_relationship_id: Option<i32>,
     limit: u16,
 ) -> Result<Vec<RelatedActorProfile<i32>>, DatabaseError> {
@@ -523,7 +523,7 @@ pub async fn get_following_paginated(
 /// Returns incoming follow requests
 pub async fn get_follow_requests_paginated(
     db_client: &impl DatabaseClient,
-    profile_id: &Uuid,
+    profile_id: Uuid,
     max_request_id: Option<Uuid>,
     limit: u16,
 ) -> Result<Vec<RelatedActorProfile<Uuid>>, DatabaseError> {
@@ -617,7 +617,7 @@ pub async fn unsubscribe(
 
 pub async fn get_subscribers(
     db_client: &impl DatabaseClient,
-    profile_id: &Uuid,
+    profile_id: Uuid,
 ) -> Result<Vec<DbActorProfile>, DatabaseError> {
     let rows = db_client.query(
         "
@@ -640,8 +640,8 @@ pub async fn get_subscribers(
 
 pub async fn hide_reposts(
     db_client: &impl DatabaseClient,
-    source_id: &Uuid,
-    target_id: &Uuid,
+    source_id: Uuid,
+    target_id: Uuid,
 ) -> Result<(), DatabaseError> {
     db_client.execute(
         "
@@ -656,8 +656,8 @@ pub async fn hide_reposts(
 
 pub async fn show_reposts(
     db_client: &impl DatabaseClient,
-    source_id: &Uuid,
-    target_id: &Uuid,
+    source_id: Uuid,
+    target_id: Uuid,
 ) -> Result<(), DatabaseError> {
     // Does not return NotFound error
     db_client.execute(
@@ -674,8 +674,8 @@ pub async fn show_reposts(
 
 pub async fn hide_replies(
     db_client: &impl DatabaseClient,
-    source_id: &Uuid,
-    target_id: &Uuid,
+    source_id: Uuid,
+    target_id: Uuid,
 ) -> Result<(), DatabaseError> {
     db_client.execute(
         "
@@ -690,8 +690,8 @@ pub async fn hide_replies(
 
 pub async fn show_replies(
     db_client: &impl DatabaseClient,
-    source_id: &Uuid,
-    target_id: &Uuid,
+    source_id: Uuid,
+    target_id: Uuid,
 ) -> Result<(), DatabaseError> {
     // Does not return NotFound error
     db_client.execute(
@@ -708,8 +708,8 @@ pub async fn show_replies(
 
 pub async fn mute(
     db_client: &impl DatabaseClient,
-    source_id: &Uuid,
-    target_id: &Uuid,
+    source_id: Uuid,
+    target_id: Uuid,
 ) -> Result<(), DatabaseError> {
     db_client
         .execute(
@@ -728,8 +728,8 @@ pub async fn mute(
 
 pub async fn unmute(
     db_client: &impl DatabaseClient,
-    source_id: &Uuid,
-    target_id: &Uuid,
+    source_id: Uuid,
+    target_id: Uuid,
 ) -> Result<(), DatabaseError> {
     db_client
         .query_opt(
@@ -762,6 +762,38 @@ mod tests {
 
     #[tokio::test]
     #[serial]
+    async fn test_get_relationships() {
+        let db_client = &mut create_test_database().await;
+        let source = create_test_user(db_client, "source").await;
+        let target = create_test_user(db_client, "target").await;
+        follow(db_client, source.id, target.id).await.unwrap();
+
+        let relationships = get_relationships(
+            db_client,
+            source.id,
+            target.id,
+        ).await.unwrap();
+        assert_eq!(relationships.len(), 1);
+        let relationship = &relationships[0];
+        assert_eq!(relationship.source_id, source.id);
+        assert_eq!(relationship.target_id, target.id);
+
+        let relationships = get_relationships_many(
+            db_client,
+            source.id,
+            &[target.id],
+        ).await.unwrap();
+        assert_eq!(relationships.len(), 1);
+        let (target_id, target_relationships) = &relationships[0];
+        assert_eq!(*target_id, target.id);
+        assert_eq!(target_relationships.len(), 1);
+        let relationship = &target_relationships[0];
+        assert_eq!(relationship.source_id, source.id);
+        assert_eq!(relationship.target_id, target.id);
+    }
+
+    #[tokio::test]
+    #[serial]
     async fn test_follow_remote_actor() {
         let db_client = &mut create_test_database().await;
         let source = create_test_user(db_client, "test").await;
@@ -782,14 +814,14 @@ mod tests {
         assert_eq!(follow_request.target_id, target.id);
         assert_eq!(follow_request.activity_id, None);
         assert_eq!(follow_request.request_status, FollowRequestStatus::Pending);
-        let following = get_following(db_client, &source.id).await.unwrap();
+        let following = get_following(db_client, source.id).await.unwrap();
         assert!(following.is_empty());
         // Accept follow request
-        follow_request_accepted(db_client, &follow_request.id).await.unwrap();
-        let follow_request = get_follow_request_by_id(db_client, &follow_request.id)
+        follow_request_accepted(db_client, follow_request.id).await.unwrap();
+        let follow_request = get_follow_request_by_id(db_client, follow_request.id)
             .await.unwrap();
         assert_eq!(follow_request.request_status, FollowRequestStatus::Accepted);
-        let following = get_following(db_client, &source.id).await.unwrap();
+        let following = get_following(db_client, source.id).await.unwrap();
         assert_eq!(following[0].id, target.id);
         let target_has_followers =
             has_local_followers(db_client, target_actor_id).await.unwrap();
@@ -797,16 +829,16 @@ mod tests {
 
         // Unfollow
         let (follow_request_id, follow_request_has_deprecated_ap_id) =
-            unfollow(db_client, &source.id, &target.id).await.unwrap().unwrap();
+            unfollow(db_client, source.id, target.id).await.unwrap().unwrap();
         assert_eq!(follow_request_id, follow_request.id);
         assert_eq!(follow_request_has_deprecated_ap_id, false);
         let follow_request_result =
-            get_follow_request_by_id(db_client, &follow_request_id).await;
+            get_follow_request_by_id(db_client, follow_request_id).await;
         assert!(matches!(
             follow_request_result,
             Err(DatabaseError::NotFound("follow request")),
         ));
-        let following = get_following(db_client, &source.id).await.unwrap();
+        let following = get_following(db_client, source.id).await.unwrap();
         assert!(following.is_empty());
     }
 
@@ -828,11 +860,11 @@ mod tests {
             target.id,
         ).await.unwrap();
         // Reject follow request
-        follow_request_rejected(db_client, &follow_request.id).await.unwrap();
+        follow_request_rejected(db_client, follow_request.id).await.unwrap();
 
         let result = get_follow_request_by_id(
             db_client,
-            &follow_request.id,
+            follow_request.id,
         ).await;
         assert!(matches!(
             result,
@@ -862,26 +894,35 @@ mod tests {
         // Create follow request
         let activity_id = "https://example.org/objects/123";
         let _follow_request = create_remote_follow_request_opt(
-            db_client, &source.id, &target.id, activity_id,
+            db_client,
+            source.id,
+            target.id,
+            activity_id,
         ).await.unwrap();
         // Repeat
         let follow_request = create_remote_follow_request_opt(
-            db_client, &source.id, &target.id, activity_id,
+            db_client,
+            source.id,
+            target.id,
+            activity_id,
         ).await.unwrap();
         assert_eq!(follow_request.source_id, source.id);
         assert_eq!(follow_request.target_id, target.id);
         assert_eq!(follow_request.activity_id, Some(activity_id.to_string()));
         assert_eq!(follow_request.request_status, FollowRequestStatus::Pending);
         // Accept follow request
-        follow_request_accepted(db_client, &follow_request.id).await.unwrap();
-        let follow_request = get_follow_request_by_id(db_client, &follow_request.id)
+        follow_request_accepted(db_client, follow_request.id).await.unwrap();
+        let follow_request = get_follow_request_by_id(db_client, follow_request.id)
             .await.unwrap();
         assert_eq!(follow_request.request_status, FollowRequestStatus::Accepted);
 
         // Another request received
         let activity_id = "https://social.example/objects/125";
         let follow_request_updated = create_remote_follow_request_opt(
-            db_client, &source.id, &target.id, activity_id,
+            db_client,
+            source.id,
+            target.id,
+            activity_id,
         ).await.unwrap();
         assert_eq!(follow_request_updated.id, follow_request.id);
         assert_eq!(
@@ -907,7 +948,7 @@ mod tests {
         ).await.unwrap();
         let results = get_follow_requests_paginated(
             db_client,
-            &target.id,
+            target.id,
             None,
             10,
         ).await.unwrap();
@@ -923,7 +964,7 @@ mod tests {
         let source = create_test_user(db_client, "source").await;
         let target = create_test_user(db_client, "target").await;
         // Mute
-        mute(db_client, &source.id, &target.id).await.unwrap();
+        mute(db_client, source.id, target.id).await.unwrap();
         assert!(
             has_relationship(
                 db_client,
@@ -933,7 +974,7 @@ mod tests {
             ).await.unwrap()
         );
         // Unmute
-        unmute(db_client, &source.id, &target.id).await.unwrap();
+        unmute(db_client, source.id, target.id).await.unwrap();
         assert!(
             !has_relationship(
                 db_client,
@@ -942,37 +983,5 @@ mod tests {
                 RelationshipType::Mute
             ).await.unwrap()
         );
-    }
-
-    #[tokio::test]
-    #[serial]
-    async fn test_get_relationships() {
-        let db_client = &mut create_test_database().await;
-        let source = create_test_user(db_client, "source").await;
-        let target = create_test_user(db_client, "target").await;
-        follow(db_client, &source.id, &target.id).await.unwrap();
-
-        let relationships = get_relationships(
-            db_client,
-            &source.id,
-            &target.id,
-        ).await.unwrap();
-        assert_eq!(relationships.len(), 1);
-        let relationship = &relationships[0];
-        assert_eq!(relationship.source_id, source.id);
-        assert_eq!(relationship.target_id, target.id);
-
-        let relationships = get_relationships_many(
-            db_client,
-            &source.id,
-            &[target.id],
-        ).await.unwrap();
-        assert_eq!(relationships.len(), 1);
-        let (target_id, target_relationships) = &relationships[0];
-        assert_eq!(*target_id, target.id);
-        assert_eq!(target_relationships.len(), 1);
-        let relationship = &target_relationships[0];
-        assert_eq!(relationship.source_id, source.id);
-        assert_eq!(relationship.target_id, target.id);
     }
 }

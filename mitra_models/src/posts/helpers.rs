@@ -343,7 +343,7 @@ mod tests {
         let db_client = &mut create_test_database().await;
         let author = create_test_user(db_client, "author").await;
         let follower = create_test_user(db_client, "follower").await;
-        follow(db_client, &follower.id, &author.id).await.unwrap();
+        follow(db_client, follower.id, author.id).await.unwrap();
         let post = Post {
             author: author.profile,
             visibility: Visibility::Followers,
@@ -359,7 +359,7 @@ mod tests {
         let db_client = &mut create_test_database().await;
         let author = create_test_user(db_client, "author").await;
         let follower = create_test_user(db_client, "follower").await;
-        follow(db_client, &follower.id, &author.id).await.unwrap();
+        follow(db_client, follower.id, author.id).await.unwrap();
         let subscriber = create_test_user(db_client, "subscriber").await;
         subscribe(db_client, subscriber.id, author.id).await.unwrap();
         let post = Post {

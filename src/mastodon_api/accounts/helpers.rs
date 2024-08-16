@@ -39,11 +39,11 @@ pub async fn parse_microsyntaxes(
 }
 
 fn create_relationship_map(
-    source_id: &Uuid,
-    target_id: &Uuid,
+    source_id: Uuid,
+    target_id: Uuid,
     relationships: Vec<DbRelationship>,
 ) -> Result<RelationshipMap, DatabaseError> {
-    let mut relationship_map = RelationshipMap { id: *target_id, ..Default::default() };
+    let mut relationship_map = RelationshipMap { id: target_id, ..Default::default() };
     for relationship in relationships {
         match relationship.relationship_type {
             RelationshipType::Follow => {
@@ -95,8 +95,8 @@ fn create_relationship_map(
 
 pub async fn get_relationship(
     db_client: &impl DatabaseClient,
-    source_id: &Uuid,
-    target_id: &Uuid,
+    source_id: Uuid,
+    target_id: Uuid,
 ) -> Result<RelationshipMap, DatabaseError> {
     // NOTE: this method returns relationship map even if target does not exist
     let relationships =
@@ -106,7 +106,7 @@ pub async fn get_relationship(
 
 pub async fn get_relationships(
     db_client: &impl DatabaseClient,
-    source_id: &Uuid,
+    source_id: Uuid,
     target_ids: &[Uuid],
 ) -> Result<Vec<RelationshipMap>, DatabaseError> {
     // NOTE: this method returns relationship map even if target does not exist
@@ -116,7 +116,7 @@ pub async fn get_relationships(
     for (target_id, target_relationships) in relationships {
         let relationship_map = create_relationship_map(
             source_id,
-            &target_id,
+            target_id,
             target_relationships,
         )?;
         results.push(relationship_map);
@@ -210,7 +210,7 @@ mod tests {
         let db_client = &mut create_test_database().await;
         let (user_1, user_2) = create_users(db_client).await.unwrap();
         // Initial state
-        let relationship = get_relationship(db_client, &user_1.id, &user_2.id).await.unwrap();
+        let relationship = get_relationship(db_client, user_1.id, user_2.id).await.unwrap();
         assert_eq!(relationship.id, user_2.id);
         assert_eq!(relationship.following, false);
         assert_eq!(relationship.followed_by, false);
@@ -223,21 +223,21 @@ mod tests {
         assert_eq!(relationship.showing_replies, true);
         // Follow request
         let follow_request = create_follow_request(db_client, user_1.id, user_2.id).await.unwrap();
-        let relationship = get_relationship(db_client, &user_1.id, &user_2.id).await.unwrap();
+        let relationship = get_relationship(db_client, user_1.id, user_2.id).await.unwrap();
         assert_eq!(relationship.following, false);
         assert_eq!(relationship.followed_by, false);
         assert_eq!(relationship.requested, true);
         assert_eq!(relationship.requested_by, false);
         // Mutual follow
-        follow_request_accepted(db_client, &follow_request.id).await.unwrap();
-        follow(db_client, &user_2.id, &user_1.id).await.unwrap();
-        let relationship = get_relationship(db_client, &user_1.id, &user_2.id).await.unwrap();
+        follow_request_accepted(db_client, follow_request.id).await.unwrap();
+        follow(db_client, user_2.id, user_1.id).await.unwrap();
+        let relationship = get_relationship(db_client, user_1.id, user_2.id).await.unwrap();
         assert_eq!(relationship.following, true);
         assert_eq!(relationship.followed_by, true);
         assert_eq!(relationship.requested, false);
         // Unfollow
-        unfollow(db_client, &user_1.id, &user_2.id).await.unwrap();
-        let relationship = get_relationship(db_client, &user_1.id, &user_2.id).await.unwrap();
+        unfollow(db_client, user_1.id, user_2.id).await.unwrap();
+        let relationship = get_relationship(db_client, user_1.id, user_2.id).await.unwrap();
         assert_eq!(relationship.following, false);
         assert_eq!(relationship.followed_by, true);
         assert_eq!(relationship.requested, false);
@@ -250,12 +250,12 @@ mod tests {
         let (user_1, user_2) = create_users(db_client).await.unwrap();
 
         subscribe(db_client, user_1.id, user_2.id).await.unwrap();
-        let relationship = get_relationship(db_client, &user_1.id, &user_2.id).await.unwrap();
+        let relationship = get_relationship(db_client, user_1.id, user_2.id).await.unwrap();
         assert_eq!(relationship.subscription_to, true);
         assert_eq!(relationship.subscription_from, false);
 
         unsubscribe(db_client, user_1.id, user_2.id).await.unwrap();
-        let relationship = get_relationship(db_client, &user_1.id, &user_2.id).await.unwrap();
+        let relationship = get_relationship(db_client, user_1.id, user_2.id).await.unwrap();
         assert_eq!(relationship.subscription_to, false);
         assert_eq!(relationship.subscription_from, false);
     }
@@ -265,18 +265,18 @@ mod tests {
     async fn test_hide_reblogs() {
         let db_client = &mut create_test_database().await;
         let (user_1, user_2) = create_users(db_client).await.unwrap();
-        follow(db_client, &user_1.id, &user_2.id).await.unwrap();
-        let relationship = get_relationship(db_client, &user_1.id, &user_2.id).await.unwrap();
+        follow(db_client, user_1.id, user_2.id).await.unwrap();
+        let relationship = get_relationship(db_client, user_1.id, user_2.id).await.unwrap();
         assert_eq!(relationship.following, true);
         assert_eq!(relationship.showing_reblogs, true);
 
-        hide_reposts(db_client, &user_1.id, &user_2.id).await.unwrap();
-        let relationship = get_relationship(db_client, &user_1.id, &user_2.id).await.unwrap();
+        hide_reposts(db_client, user_1.id, user_2.id).await.unwrap();
+        let relationship = get_relationship(db_client, user_1.id, user_2.id).await.unwrap();
         assert_eq!(relationship.following, true);
         assert_eq!(relationship.showing_reblogs, false);
 
-        show_reposts(db_client, &user_1.id, &user_2.id).await.unwrap();
-        let relationship = get_relationship(db_client, &user_1.id, &user_2.id).await.unwrap();
+        show_reposts(db_client, user_1.id, user_2.id).await.unwrap();
+        let relationship = get_relationship(db_client, user_1.id, user_2.id).await.unwrap();
         assert_eq!(relationship.following, true);
         assert_eq!(relationship.showing_reblogs, true);
     }
@@ -286,17 +286,17 @@ mod tests {
     async fn test_mute() {
         let db_client = &mut create_test_database().await;
         let (user_1, user_2) = create_users(db_client).await.unwrap();
-        let relationship = get_relationship(db_client, &user_1.id, &user_2.id).await.unwrap();
+        let relationship = get_relationship(db_client, user_1.id, user_2.id).await.unwrap();
         assert_eq!(relationship.muting, false);
         assert_eq!(relationship.muting_notifications, false);
 
-        mute(db_client, &user_1.id, &user_2.id).await.unwrap();
-        let relationship = get_relationship(db_client, &user_1.id, &user_2.id).await.unwrap();
+        mute(db_client, user_1.id, user_2.id).await.unwrap();
+        let relationship = get_relationship(db_client, user_1.id, user_2.id).await.unwrap();
         assert_eq!(relationship.muting, true);
         assert_eq!(relationship.muting_notifications, true);
 
-        unmute(db_client, &user_1.id, &user_2.id).await.unwrap();
-        let relationship = get_relationship(db_client, &user_1.id, &user_2.id).await.unwrap();
+        unmute(db_client, user_1.id, user_2.id).await.unwrap();
+        let relationship = get_relationship(db_client, user_1.id, user_2.id).await.unwrap();
         assert_eq!(relationship.muting, false);
         assert_eq!(relationship.muting_notifications, false);
     }

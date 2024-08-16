@@ -78,7 +78,7 @@ pub async fn handle_move(
         return Err(ValidationError("target ID is not an alias").into());
     };
 
-    let followers = get_followers(db_client, &old_profile.id).await?;
+    let followers = get_followers(db_client, old_profile.id).await?;
     for follower in followers {
         if !follower.is_local() {
             // Push mode: old actor is remote, so all followers are local
@@ -89,8 +89,8 @@ pub async fn handle_move(
         // Unfollow old profile
         let maybe_follow_request_deleted = unfollow(
             db_client,
-            &follower.id,
-            &old_profile.id,
+            follower.id,
+            old_profile.id,
         ).await?;
         // Send Undo(Follow) if old actor is not local
         if let Some(ref old_actor) = old_profile.actor_json {

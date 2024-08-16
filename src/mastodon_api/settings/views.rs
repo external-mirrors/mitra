@@ -221,7 +221,7 @@ async fn export_followers_view(
     let csv = export_followers(
         db_client,
         &config.instance().hostname(),
-        &current_user.id,
+        current_user.id,
     ).await?;
     let response = HttpResponse::Ok()
         .content_type("text/csv")
@@ -240,7 +240,7 @@ async fn export_follows_view(
     let csv = export_follows(
         db_client,
         &config.instance().hostname(),
-        &current_user.id,
+        current_user.id,
     ).await?;
     let response = HttpResponse::Ok()
         .content_type("text/csv")
@@ -348,7 +348,7 @@ async fn move_followers_view(
     if target.is_local() {
         return Err(ValidationError("can't move followers to a local actor").into());
     };
-    let followers = get_followers(db_client, &current_user.id).await?;
+    let followers = get_followers(db_client, current_user.id).await?;
     let mut remote_followers = vec![];
     for follower in followers {
         if follower.id == target.id {
@@ -359,7 +359,7 @@ async fn move_followers_view(
             continue;
         };
         let follower = get_user_by_id(db_client, &follower.id).await?;
-        unfollow(db_client, &follower.id, &current_user.id).await?;
+        unfollow(db_client, follower.id, current_user.id).await?;
         follow_or_create_request(
             db_client,
             &instance,

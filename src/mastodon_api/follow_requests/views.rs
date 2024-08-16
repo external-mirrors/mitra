@@ -55,7 +55,7 @@ async fn follow_request_list(
     let current_user = get_current_user(db_client, auth.token()).await?;
     let profiles = get_follow_requests_paginated(
         db_client,
-        &current_user.id,
+        current_user.id,
         query_params.max_id,
         query_params.limit.inner(),
     ).await?;
@@ -91,10 +91,10 @@ async fn accept_follow_request_view(
     let source_profile = get_profile_by_id(db_client, &account_id).await?;
     let follow_request = get_follow_request_by_participants(
         db_client,
-        &source_profile.id,
-        &current_user.id,
+        source_profile.id,
+        current_user.id,
     ).await?;
-    follow_request_accepted(db_client, &follow_request.id).await?;
+    follow_request_accepted(db_client, follow_request.id).await?;
     if let Some(remote_actor) = source_profile.actor_json {
         // Activity ID should be known
         let activity_id = follow_request.activity_id
@@ -108,8 +108,8 @@ async fn accept_follow_request_view(
     };
     let relationship = get_relationship(
         db_client,
-        &current_user.id,
-        &source_profile.id,
+        current_user.id,
+        source_profile.id,
     ).await?;
     Ok(HttpResponse::Ok().json(relationship))
 }
@@ -126,10 +126,10 @@ async fn reject_follow_request_view(
     let source_profile = get_profile_by_id(db_client, &account_id).await?;
     let follow_request = get_follow_request_by_participants(
         db_client,
-        &source_profile.id,
-        &current_user.id,
+        source_profile.id,
+        current_user.id,
     ).await?;
-    follow_request_rejected(db_client, &follow_request.id).await?;
+    follow_request_rejected(db_client, follow_request.id).await?;
     if let Some(remote_actor) = source_profile.actor_json {
         let activity_id = follow_request.activity_id
             .ok_or(MastodonError::InternalError)?;
@@ -142,8 +142,8 @@ async fn reject_follow_request_view(
     };
     let relationship = get_relationship(
         db_client,
-        &current_user.id,
-        &source_profile.id,
+        current_user.id,
+        source_profile.id,
     ).await?;
     Ok(HttpResponse::Ok().json(relationship))
 }

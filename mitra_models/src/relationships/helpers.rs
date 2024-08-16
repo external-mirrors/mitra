@@ -54,13 +54,13 @@ pub async fn remove_follower(
     let mut maybe_activity_id = None;
     match get_follow_request_by_participants(
         &transaction,
-        &source_id,
-        &target_id,
+        source_id,
+        target_id,
     ).await {
         Ok(follow_request) => {
             follow_request_rejected(
                 &mut transaction,
-                &follow_request.id,
+                follow_request.id,
             ).await?;
             // NOTE: Old follow requests may not have activity ID
             maybe_activity_id = follow_request.activity_id;
@@ -68,7 +68,7 @@ pub async fn remove_follower(
         Err(DatabaseError::NotFound(_)) => (),
         Err(other_error) => return Err(other_error),
     };
-    unfollow(&mut transaction, &source_id, &target_id).await?;
+    unfollow(&mut transaction, source_id, target_id).await?;
     transaction.commit().await?;
     Ok(maybe_activity_id)
 }
@@ -101,11 +101,11 @@ mod tests {
         let follow_activity_id = "https://social.example/activities/1";
         let follow_request = create_remote_follow_request_opt(
             db_client,
-            &source.id,
-            &target.id,
+            source.id,
+            target.id,
             &follow_activity_id,
         ).await.unwrap();
-        follow_request_accepted(db_client, &follow_request.id).await.unwrap();
+        follow_request_accepted(db_client, follow_request.id).await.unwrap();
         let maybe_activity_id =
             remove_follower(db_client, source.id, target.id).await.unwrap();
 

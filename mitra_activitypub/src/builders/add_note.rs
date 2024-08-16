@@ -66,7 +66,7 @@ pub(super) async fn get_add_note_recipients(
     db_client: &impl DatabaseClient,
     user_id: Uuid,
 ) -> Result<Vec<DbActor>, DatabaseError> {
-    let followers = get_followers(db_client, &user_id).await?;
+    let followers = get_followers(db_client, user_id).await?;
     let mut recipients = vec![];
     for profile in followers {
         if let Some(remote_actor) = profile.actor_json {

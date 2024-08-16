@@ -535,7 +535,7 @@ async fn get_relationships_view(
     let current_user = get_current_user(db_client, auth.token()).await?;
     let relationships = get_relationships(
         db_client,
-        &current_user.id,
+        current_user.id,
         &query_params.id,
     ).await?;
     Ok(HttpResponse::Ok().json(relationships))
@@ -670,19 +670,19 @@ async fn follow_account(
         &target,
     ).await?;
     if follow_data.reblogs {
-        show_reposts(db_client, &current_user.id, &target.id).await?;
+        show_reposts(db_client, current_user.id, target.id).await?;
     } else {
-        hide_reposts(db_client, &current_user.id, &target.id).await?;
+        hide_reposts(db_client, current_user.id, target.id).await?;
     };
     if follow_data.replies {
-        show_replies(db_client, &current_user.id, &target.id).await?;
+        show_replies(db_client, current_user.id, target.id).await?;
     } else {
-        hide_replies(db_client, &current_user.id, &target.id).await?;
+        hide_replies(db_client, current_user.id, target.id).await?;
     };
     let relationship = get_relationship(
         db_client,
-        &current_user.id,
-        &target.id,
+        current_user.id,
+        target.id,
     ).await?;
     Ok(HttpResponse::Ok().json(relationship))
 }
@@ -697,7 +697,7 @@ async fn unfollow_account(
     let db_client = &mut **get_database_client(&db_pool).await?;
     let current_user = get_current_user(db_client, auth.token()).await?;
     let target = get_profile_by_id(db_client, &account_id).await?;
-    match unfollow(db_client, &current_user.id, &target.id).await {
+    match unfollow(db_client, current_user.id, target.id).await {
         Ok(maybe_follow_request_deleted) => {
             if let Some(remote_actor) = target.actor_json {
                 // Remote follow
@@ -721,8 +721,8 @@ async fn unfollow_account(
 
     let relationship = get_relationship(
         db_client,
-        &current_user.id,
-        &target.id,
+        current_user.id,
+        target.id,
     ).await?;
     Ok(HttpResponse::Ok().json(relationship))
 }
@@ -759,8 +759,8 @@ async fn remove_follower_view(
     };
     let relationship = get_relationship(
         db_client,
-        &current_user.id,
-        &follower.id,
+        current_user.id,
+        follower.id,
     ).await?;
     Ok(HttpResponse::Ok().json(relationship))
 }
@@ -778,7 +778,7 @@ async fn mute_account(
         return Err(ValidationError("target is current user").into());
     };
 
-    match mute(db_client, &current_user.id, &target.id).await {
+    match mute(db_client, current_user.id, target.id).await {
         Ok(_) => (),
         Err(DatabaseError::AlreadyExists(_)) => (),
         Err(other_error) => return Err(other_error.into()),
@@ -786,8 +786,8 @@ async fn mute_account(
 
     let relationship = get_relationship(
         db_client,
-        &current_user.id,
-        &target.id,
+        current_user.id,
+        target.id,
     ).await?;
     Ok(HttpResponse::Ok().json(relationship))
 }
@@ -802,7 +802,7 @@ async fn unmute_account(
     let current_user = get_current_user(db_client, auth.token()).await?;
     let target = get_profile_by_id(db_client, &account_id).await?;
 
-    match unmute(db_client, &current_user.id, &target.id).await {
+    match unmute(db_client, current_user.id, target.id).await {
         Ok(_) => (),
         Err(DatabaseError::NotFound(_)) => (),
         Err(other_error) => return Err(other_error.into()),
@@ -810,8 +810,8 @@ async fn unmute_account(
 
     let relationship = get_relationship(
         db_client,
-        &current_user.id,
-        &target.id,
+        current_user.id,
+        target.id,
     ).await?;
     Ok(HttpResponse::Ok().json(relationship))
 }
@@ -878,7 +878,7 @@ async fn get_account_followers(
     };
     let followers = get_followers_paginated(
         db_client,
-        &profile.id,
+        profile.id,
         query_params.max_id,
         query_params.limit.inner(),
     ).await?;
@@ -922,7 +922,7 @@ async fn get_account_following(
     };
     let following = get_following_paginated(
         db_client,
-        &profile.id,
+        profile.id,
         query_params.max_id,
         query_params.limit.inner(),
     ).await?;

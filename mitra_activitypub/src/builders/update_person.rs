@@ -64,7 +64,7 @@ async fn get_update_person_recipients(
     db_client: &impl DatabaseClient,
     user: &User,
 ) -> Result<Vec<DbActor>, DatabaseError> {
-    let followers = get_followers(db_client, &user.id).await?;
+    let followers = get_followers(db_client, user.id).await?;
     let mut recipients = vec![];
     for profile in followers {
         if let Some(remote_actor) = profile.actor_json {

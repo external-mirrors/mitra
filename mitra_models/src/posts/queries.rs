@@ -1830,7 +1830,7 @@ mod tests {
             ..Default::default()
         };
         let user_2 = create_user(db_client, user_data_2).await.unwrap();
-        follow(db_client, &current_user.id, &user_2.id).await.unwrap();
+        follow(db_client, current_user.id, user_2.id).await.unwrap();
         let post_data_6 = PostCreateData {
             content: "test post".to_string(),
             ..Default::default()
@@ -1893,8 +1893,8 @@ mod tests {
             ..Default::default()
         };
         let user_4 = create_user(db_client, user_data_4).await.unwrap();
-        follow(db_client, &current_user.id, &user_4.id).await.unwrap();
-        hide_reposts(db_client, &current_user.id, &user_4.id).await.unwrap();
+        follow(db_client, current_user.id, user_4.id).await.unwrap();
+        hide_reposts(db_client, current_user.id, user_4.id).await.unwrap();
         let post_data_13 = PostCreateData {
             repost_of_id: Some(post_3.id),
             ..Default::default()
@@ -1907,8 +1907,8 @@ mod tests {
             ..Default::default()
         };
         let user_5 = create_user(db_client, user_data_5).await.unwrap();
-        follow(db_client, &current_user.id, &user_5.id).await.unwrap();
-        mute(db_client, &current_user.id, &user_5.id).await.unwrap();
+        follow(db_client, current_user.id, user_5.id).await.unwrap();
+        mute(db_client, current_user.id, user_5.id).await.unwrap();
         let post_data_14 = PostCreateData {
             content: "test post".to_string(),
             ..Default::default()

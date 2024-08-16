@@ -170,7 +170,7 @@ async fn create_status(
         // This makes post accessible only to active subscribers
         // and is required for sending activities to subscribers
         // on other instances.
-        let subscribers = get_subscribers(db_client, &current_user.id).await?
+        let subscribers = get_subscribers(db_client, current_user.id).await?
             .into_iter().map(|profile| profile.id);
         mentions.extend(subscribers);
     };
@@ -337,7 +337,7 @@ async fn edit_status(
         // This makes post accessible only to active subscribers
         // and is required for sending activities to subscribers
         // on other instances.
-        let subscribers = get_subscribers(db_client, &current_user.id).await?
+        let subscribers = get_subscribers(db_client, current_user.id).await?
             .into_iter().map(|profile| profile.id);
         mentions.extend(subscribers);
     };

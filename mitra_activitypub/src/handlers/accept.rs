@@ -60,7 +60,7 @@ pub async fn handle_accept(
         &config.instance_url(),
         &activity.object,
     )?;
-    let follow_request = get_follow_request_by_id(db_client, &follow_request_id).await?;
+    let follow_request = get_follow_request_by_id(db_client, follow_request_id).await?;
     if follow_request.target_id != actor_profile.id {
         return Err(ValidationError("actor is not a target").into());
     };
@@ -68,7 +68,7 @@ pub async fn handle_accept(
         // Ignore Accept if follow request already accepted
         return Ok(None);
     };
-    follow_request_accepted(db_client, &follow_request.id).await?;
+    follow_request_accepted(db_client, follow_request.id).await?;
     Ok(Some(FOLLOW))
 }
 
