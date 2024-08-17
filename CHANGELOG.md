@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Enabled pagination of search results.
 - Added `/api/v1/mutes` Mastodon API endpoint.
+- Add `pleroma.parent_visible` attribute to Mastodon API `Status` entity.
 
 ### Changed
 

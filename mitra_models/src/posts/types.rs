@@ -127,6 +127,8 @@ pub struct Post {
     pub in_reply_to: Option<Box<Post>>,
     pub repost_of: Option<Box<Post>>,
     pub linked: Vec<Post>,
+    // Might be set in get_thread
+    pub parent_visible: bool,
 }
 
 impl Post {
@@ -191,6 +193,7 @@ impl Post {
             in_reply_to: None,
             repost_of: None,
             linked: vec![],
+            parent_visible: true,
         };
         Ok(post)
     }
@@ -234,6 +237,7 @@ impl Default for Post {
             in_reply_to: None,
             repost_of: None,
             linked: vec![],
+            parent_visible: true,
         }
     }
 }

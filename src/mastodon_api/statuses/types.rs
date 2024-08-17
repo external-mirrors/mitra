@@ -70,6 +70,7 @@ struct PleromaEmojiReaction {
 struct PleromaData {
     emoji_reactions: Vec<PleromaEmojiReaction>,
     in_reply_to_account_acct: Option<String>,
+    parent_visible: bool,
     quote: Option<Box<Status>>,
     quote_visible: bool,
 }
@@ -208,6 +209,7 @@ impl Status {
                 emoji_reactions,
                 in_reply_to_account_acct: post.in_reply_to
                     .map(|post| post.author.preferred_handle().to_owned()),
+                parent_visible: post.parent_visible,
                 quote_visible: maybe_quote.is_some(),
                 quote: maybe_quote,
             },

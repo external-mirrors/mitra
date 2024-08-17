@@ -2836,6 +2836,10 @@ components:
                     type: string
                     nullable: true
               example: []
+            parent_visible:
+              description: If the parent of this post is visible to the user or not.
+              type: boolean
+              example: true
             quote:
               allOf:
                 - description: The post being quoted.

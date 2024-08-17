@@ -1049,7 +1049,14 @@ pub async fn get_thread(
             {related_tags},
             {related_links},
             {related_emojis},
-            {related_reactions}
+            {related_reactions},
+            EXISTS (
+                SELECT 1 FROM relationship
+                WHERE
+                    source_id = $current_user_id
+                    AND target_id = post.author_id
+                    AND relationship_type = {relationship_mute}
+            ) AS is_author_muted
         FROM post
         JOIN thread ON post.id = thread.id
         JOIN actor_profile ON post.author_id = actor_profile.id
@@ -1063,6 +1070,7 @@ pub async fn get_thread(
         related_links=RELATED_LINKS,
         related_emojis=RELATED_EMOJIS,
         related_reactions=RELATED_REACTIONS,
+        relationship_mute=i16::from(&RelationshipType::Mute),
         visibility_filter=build_visibility_filter(),
     );
     let query = query!(
@@ -1071,9 +1079,23 @@ pub async fn get_thread(
         current_user_id=current_user_id,
     )?;
     let rows = db_client.query(query.sql(), query.parameters()).await?;
-    let posts: Vec<Post> = rows.iter()
-        .map(Post::try_from)
-        .collect::<Result<_, _>>()?;
+    let mut posts = vec![];
+    let mut hidden_posts = vec![];
+    for row in rows {
+        let mut post = Post::try_from(&row)?;
+        if let Some(ref in_reply_to_id) = post.in_reply_to_id {
+            if hidden_posts.contains(in_reply_to_id) {
+                post.parent_visible = false;
+            };
+        };
+        let is_author_muted = row.try_get("is_author_muted")?;
+        if is_author_muted {
+            hidden_posts.push(post.id);
+            // Don't include muted post
+            continue;
+        };
+        posts.push(post);
+    };
     if posts.is_empty() {
         return Err(DatabaseError::NotFound("post"));
     };
