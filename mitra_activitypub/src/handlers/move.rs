@@ -23,10 +23,9 @@ use crate::{
     },
     identifiers::profile_actor_id,
     importers::ActorIdResolver,
-    vocabulary::PERSON,
 };
 
-use super::HandlerResult;
+use super::{Descriptor, HandlerResult};
 
 #[derive(Deserialize)]
 struct Move {
@@ -123,5 +122,5 @@ pub async fn handle_move(
         ).await?;
     };
 
-    Ok(Some(PERSON))
+    Ok(Some(Descriptor::object("Actor")))
 }

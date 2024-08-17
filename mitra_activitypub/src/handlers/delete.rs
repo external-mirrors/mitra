@@ -16,11 +16,7 @@ use mitra_models::{
 };
 use mitra_validators::errors::ValidationError;
 
-use crate::{
-    vocabulary::{NOTE, PERSON},
-};
-
-use super::HandlerResult;
+use super::{Descriptor, HandlerResult};
 
 #[derive(Deserialize)]
 struct Delete {
@@ -51,7 +47,7 @@ pub async fn handle_delete(
         let deletion_queue = delete_profile(db_client, &profile.id).await?;
         deletion_queue.into_job(db_client).await?;
         log::info!("deleted remote actor {}", activity.object);
-        return Ok(Some(PERSON));
+        return Ok(Some(Descriptor::object("Actor")));
     };
     let post = match get_remote_post_by_object_id(
         db_client,
@@ -71,5 +67,5 @@ pub async fn handle_delete(
     };
     let deletion_queue = delete_post(db_client, post.id).await?;
     deletion_queue.into_job(db_client).await?;
-    Ok(Some(NOTE))
+    Ok(Some(Descriptor::object("Object")))
 }

@@ -26,11 +26,12 @@ use crate::{
         get_post_by_object_id,
         ActorIdResolver,
     },
-    vocabulary::{DISLIKE, NOTE},
+    vocabulary::DISLIKE,
 };
 
 use super::{
     emoji::handle_emoji,
+    Descriptor,
     HandlerResult,
 };
 
@@ -127,5 +128,5 @@ pub async fn handle_like(
         Err(DatabaseError::AlreadyExists(_)) => return Ok(None),
         Err(other_error) => return Err(other_error.into()),
     };
-    Ok(Some(NOTE))
+    Ok(Some(Descriptor::object("Object")))
 }

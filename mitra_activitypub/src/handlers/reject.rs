@@ -19,7 +19,7 @@ use crate::{
     vocabulary::FOLLOW,
 };
 
-use super::HandlerResult;
+use super::{Descriptor, HandlerResult};
 
 #[derive(Deserialize)]
 struct Reject {
@@ -69,5 +69,5 @@ pub async fn handle_reject(
         Ok(_) | Err(DatabaseError::NotFound(_)) => (),
         Err(other_error) => return Err(other_error.into()),
     };
-    Ok(Some(FOLLOW))
+    Ok(Some(Descriptor::object(FOLLOW)))
 }

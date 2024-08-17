@@ -27,6 +27,7 @@ use crate::{
 
 use super::{
     agreement::Agreement,
+    Descriptor,
     HandlerResult,
 };
 
@@ -69,7 +70,7 @@ pub async fn handle_accept(
         return Ok(None);
     };
     follow_request_accepted(db_client, follow_request.id).await?;
-    Ok(Some(FOLLOW))
+    Ok(Some(Descriptor::object(FOLLOW)))
 }
 
 async fn handle_accept_offer(
@@ -114,5 +115,5 @@ async fn handle_accept_offer(
         &account_id.address,
         agreement_id,
     ).await?;
-    Ok(Some(OFFER))
+    Ok(Some(Descriptor::object(OFFER)))
 }

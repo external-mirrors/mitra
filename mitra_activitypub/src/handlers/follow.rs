@@ -1,5 +1,5 @@
 use serde::Deserialize;
-use serde_json::Value;
+use serde_json::{Value as JsonValue};
 
 use mitra_config::Config;
 use mitra_federation::deserialization::deserialize_into_object_id;
@@ -24,10 +24,9 @@ use crate::{
     builders::accept_follow::prepare_accept_follow,
     identifiers::{canonicalize_id, parse_local_actor_id},
     importers::ActorIdResolver,
-    vocabulary::PERSON,
 };
 
-use super::HandlerResult;
+use super::{Descriptor, HandlerResult};
 
 #[derive(Deserialize)]
 struct Follow {
@@ -41,7 +40,7 @@ struct Follow {
 pub async fn handle_follow(
     config: &Config,
     db_client: &mut impl DatabaseClient,
-    activity: Value,
+    activity: JsonValue,
 ) -> HandlerResult {
     // Follow(Person)
     let activity: Follow = serde_json::from_value(activity)
@@ -96,5 +95,5 @@ pub async fn handle_follow(
             &canonical_activity_id,
         )?.save_and_enqueue(db_client).await?;
     };
-    Ok(Some(PERSON))
+    Ok(Some(Descriptor::object("Actor")))
 }

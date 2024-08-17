@@ -1,8 +1,3 @@
-use crate::errors::HandlerError;
-// Handlers should return object type if activity has been accepted
-// or None if it has been ignored
-type HandlerResult = Result<Option<&'static str>, HandlerError>;
-
 mod accept;
 pub mod activity;
 mod add;
@@ -20,3 +15,11 @@ mod reject;
 mod remove;
 mod undo;
 mod update;
+
+use crate::errors::HandlerError;
+
+use activity::Descriptor;
+
+// Handlers should return activity description if activity has been accepted
+// or None if it has been ignored
+type HandlerResult = Result<Option<Descriptor>, HandlerError>;

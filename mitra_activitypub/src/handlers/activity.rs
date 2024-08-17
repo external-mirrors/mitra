@@ -1,3 +1,5 @@
+use std::fmt;
+
 use serde_json::{Value as JsonValue};
 
 use mitra_config::Config;
@@ -27,6 +29,30 @@ use super::{
     HandlerError,
 };
 
+pub enum Descriptor {
+    Object(String),
+    Target(String),
+}
+
+impl Descriptor {
+    pub fn object(object_type: impl ToString) -> Self {
+        Self::Object(object_type.to_string())
+    }
+
+    pub fn target(target_prop: &'static str) -> Self {
+        Self::Target(target_prop.to_string())
+    }
+}
+
+impl fmt::Display for Descriptor {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Object(object) => write!(formatter, "{object})"),
+            Self::Target(target) => write!(formatter, "target: {target}"),
+        }
+    }
+}
+
 pub async fn handle_activity(
     config: &Config,
     db_client: &mut impl DatabaseClient,
@@ -41,7 +67,7 @@ pub async fn handle_activity(
     let activity_actor = get_object_id(&activity["actor"])
         .map_err(|_| ValidationError("invalid actor property"))?;
     let activity = activity.clone();
-    let maybe_object_type = match activity_type.as_str() {
+    let maybe_descriptor = match activity_type.as_str() {
         ACCEPT => {
             handle_accept(config, db_client, activity).await?
         },
@@ -95,11 +121,11 @@ pub async fn handle_activity(
             None
         },
     };
-    if let Some(object_type) = maybe_object_type {
+    if let Some(descriptor) = maybe_descriptor {
         log::info!(
             "processed {}({}) from {}",
             activity_type,
-            object_type,
+            descriptor,
             activity_actor,
         );
     };

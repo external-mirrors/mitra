@@ -28,10 +28,9 @@ use mitra_validators::errors::ValidationError;
 
 use crate::{
     identifiers::parse_local_actor_id,
-    vocabulary::{NOTE, PERSON},
 };
 
-use super::HandlerResult;
+use super::{Descriptor, HandlerResult};
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -86,7 +85,7 @@ pub async fn handle_add(
                         };
                         if invoice.invoice_status == InvoiceStatus::Completed {
                             // Activity has been already processed
-                            return Ok(Some(PERSON));
+                            return Ok(Some(Descriptor::target("subscribers")));
                         };
                         set_invoice_status(
                             db_client,
@@ -138,7 +137,7 @@ pub async fn handle_add(
             },
             Err(other_error) => return Err(other_error.into()),
         };
-        return Ok(Some(PERSON));
+        return Ok(Some(Descriptor::target("subscribers")));
     };
     if Some(activity.target.clone()) == actor.featured {
         // Add to featured
@@ -151,7 +150,7 @@ pub async fn handle_add(
             Err(other_error) => return Err(other_error.into()),
         };
         set_pinned_flag(db_client, &post.id, true).await?;
-        return Ok(Some(NOTE));
+        return Ok(Some(Descriptor::target("featured")));
     };
     log::warn!("unknown target: {}", activity.target);
     Ok(None)

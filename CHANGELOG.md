@@ -24,6 +24,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Use `tag` array in `EmojiReact` activity.
 - Improve logging of C2S authentication errors.
 - Allow `mumble:` URIs in post content.
+- Improved logging of processed activities.
 
 ### Removed
 

@@ -78,6 +78,7 @@ use crate::{
 
 use super::{
     emoji::handle_emoji,
+    Descriptor,
     HandlerError,
     HandlerResult,
 };
@@ -898,6 +899,7 @@ pub(super) async fn handle_create(
     verify_object_owner(&object.value)?;
 
     let object_id = object.id().to_owned();
+    let object_type = object.inner.object_type.clone();
     let object_received = if is_authenticated {
         Some(object)
     } else {
@@ -912,7 +914,7 @@ pub(super) async fn handle_create(
         object_id,
         object_received,
     ).await?;
-    Ok(Some(NOTE))
+    Ok(Some(Descriptor::object(object_type)))
 }
 
 #[cfg(test)]

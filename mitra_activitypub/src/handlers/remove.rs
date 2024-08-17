@@ -20,10 +20,9 @@ use mitra_validators::errors::ValidationError;
 
 use crate::{
     identifiers::parse_local_actor_id,
-    vocabulary::{NOTE, PERSON},
 };
 
-use super::HandlerResult;
+use super::{Descriptor, HandlerResult};
 
 #[derive(Deserialize)]
 struct Remove {
@@ -63,7 +62,7 @@ pub async fn handle_remove(
                     actor_profile.id,
                     user.id,
                 ).await?;
-                return Ok(Some(PERSON));
+                return Ok(Some(Descriptor::target("subscribers")));
             },
             // Ignore removal if relationship does not exist
             Err(DatabaseError::NotFound(_)) => return Ok(None),
@@ -81,7 +80,7 @@ pub async fn handle_remove(
             Err(other_error) => return Err(other_error.into()),
         };
         set_pinned_flag(db_client, &post.id, false).await?;
-        return Ok(Some(NOTE));
+        return Ok(Some(Descriptor::target("featured")));
     };
     Ok(None)
 }

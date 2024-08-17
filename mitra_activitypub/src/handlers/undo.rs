@@ -31,7 +31,7 @@ use crate::{
     vocabulary::{ANNOUNCE, FOLLOW, LIKE},
 };
 
-use super::HandlerResult;
+use super::{Descriptor, HandlerResult};
 
 #[derive(Deserialize)]
 struct UndoFollow {
@@ -66,7 +66,7 @@ async fn handle_undo_follow(
         Err(DatabaseError::NotFound(_)) => return Ok(None),
         Err(other_error) => return Err(other_error.into()),
     };
-    Ok(Some(FOLLOW))
+    Ok(Some(Descriptor::object(FOLLOW)))
 }
 
 #[derive(Deserialize)]
@@ -109,7 +109,7 @@ pub async fn handle_undo(
                 follow_request.source_id,
                 follow_request.target_id,
             ).await?;
-            return Ok(Some(FOLLOW));
+            return Ok(Some(Descriptor::object(FOLLOW)));
         },
         Err(DatabaseError::NotFound(_)) => (), // try other object types
         Err(other_error) => return Err(other_error.into()),
@@ -130,7 +130,7 @@ pub async fn handle_undo(
                 reaction.post_id,
                 reaction.content.as_deref(),
             ).await?;
-            Ok(Some(LIKE))
+            Ok(Some(Descriptor::object(LIKE)))
         },
         Err(DatabaseError::NotFound(_)) => {
             // Undo(Announce)
@@ -147,7 +147,7 @@ pub async fn handle_undo(
                 return Err(ValidationError("actor is not an author").into());
             };
             delete_repost(db_client, repost.id).await?;
-            Ok(Some(ANNOUNCE))
+            Ok(Some(Descriptor::object(ANNOUNCE)))
         },
         Err(other_error) => Err(other_error.into()),
     }

@@ -34,6 +34,7 @@ use crate::{
 use super::{
     create::handle_create,
     like::handle_like,
+    Descriptor,
     HandlerResult,
 };
 
@@ -94,7 +95,7 @@ pub async fn handle_announce(
         Some(activity.id.clone()),
     );
     match create_post(db_client, &author.id, repost_data).await {
-        Ok(_) => Ok(Some(NOTE)),
+        Ok(_) => Ok(Some(Descriptor::object("Object"))),
         Err(DatabaseError::AlreadyExists("post")) => {
             // Ignore activity if repost already exists (with a different
             // activity ID, or due to race condition in a handler).
@@ -175,7 +176,7 @@ async fn handle_fep_1b12_announce(
             Err(DatabaseError::NotFound(_)) => return Ok(None),
             Err(other_error) => return Err(other_error.into()),
         };
-        Ok(Some(DELETE))
+        Ok(Some(Descriptor::object(activity_type)))
     } else if activity_type == CREATE {
         handle_create(
             config,
@@ -184,10 +185,10 @@ async fn handle_fep_1b12_announce(
             false, // not authenticated; object will be fetched
             true, // don't perform spam check
         ).await?;
-        Ok(Some(CREATE))
+        Ok(Some(Descriptor::object(activity_type)))
     } else if activity_type == LIKE || activity_type == DISLIKE {
         let maybe_type = handle_like(config, db_client, activity).await?;
-        Ok(maybe_type.map(|_| LIKE))
+        Ok(maybe_type.map(|_| Descriptor::object(activity_type)))
     } else {
         // Ignore other activities
         Ok(None)

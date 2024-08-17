@@ -20,6 +20,7 @@ use crate::{
 
 use super::{
     agreement::Agreement,
+    Descriptor,
     HandlerError,
     HandlerResult,
 };
@@ -88,5 +89,5 @@ pub async fn handle_offer(
         &remote_actor,
         &activity.id,
     )?.save_and_enqueue(db_client).await?;
-    Ok(Some(AGREEMENT))
+    Ok(Some(Descriptor::object(AGREEMENT)))
 }

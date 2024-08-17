@@ -48,10 +48,10 @@ use crate::{
     },
     identifiers::{canonicalize_id, profile_actor_id},
     importers::fetch_any_object,
-    vocabulary::{NOTE, PERSON, QUESTION},
+    vocabulary::{NOTE, QUESTION},
 };
 
-use super::HandlerResult;
+use super::{Descriptor, HandlerResult};
 
 #[derive(Deserialize)]
 struct UpdateNote {
@@ -147,7 +147,7 @@ async fn handle_update_note(
     let (_, deletion_queue) =
         update_post(db_client, &post.id, post_data).await?;
     deletion_queue.into_job(db_client).await?;
-    Ok(Some(NOTE))
+    Ok(Some(Descriptor::object(object.object_type)))
 }
 
 #[derive(Deserialize)]
@@ -177,14 +177,15 @@ async fn handle_update_person(
         Err(other_error) => return Err(other_error.into()),
     };
     let agent = build_federation_agent(&config.instance(), None);
-    update_remote_profile(
+    let profile = update_remote_profile(
         &agent,
         db_client,
         &MediaStorage::from(config),
         profile,
         activity.object.value,
     ).await?;
-    Ok(Some(PERSON))
+    let actor_type = &profile.expect_actor_data().object_type;
+    Ok(Some(Descriptor::object(actor_type)))
 }
 
 pub async fn handle_update(
