@@ -26,7 +26,7 @@ pub(super) fn build_federation_agent_with_key(
     FederationAgent {
         user_agent: instance.agent(),
         is_instance_private: instance.is_private,
-        protect_localhost: true,
+        ssrf_protection_enabled: true,
         response_size_limit: RESPONSE_SIZE_LIMIT,
         fetcher_timeout: instance.fetcher_timeout,
         deliverer_timeout: instance.deliverer_timeout,
@@ -71,7 +71,7 @@ mod tests {
         let agent = build_federation_agent(&instance, None);
         assert_eq!(agent.user_agent.ends_with(instance_url), true);
         assert_eq!(agent.is_instance_private, true);
-        assert_eq!(agent.protect_localhost, true);
+        assert_eq!(agent.ssrf_protection_enabled, true);
         assert_eq!(agent.response_size_limit, RESPONSE_SIZE_LIMIT);
         assert_eq!(agent.signer_key, instance.actor_rsa_key);
         assert_eq!(agent.signer_key_id, "https://social.example/actor#main-key");

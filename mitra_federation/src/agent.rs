@@ -5,7 +5,7 @@ pub struct FederationAgent {
     // Private instance won't send signed HTTP requests
     pub is_instance_private: bool,
     // https://www.w3.org/TR/activitypub/#security-localhost
-    pub protect_localhost: bool,
+    pub ssrf_protection_enabled: bool,
 
     pub response_size_limit: usize,
     pub fetcher_timeout: u64,

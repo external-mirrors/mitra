@@ -137,7 +137,7 @@ pub async fn fetch_object<T: DeserializeOwned>(
     let mut redirect_count = 0;
     let mut target_url = object_id.to_string();
     let mut response = loop {
-        if agent.protect_localhost {
+        if agent.ssrf_protection_enabled {
             require_safe_url(&target_url)?;
         };
         let mut request_builder =
@@ -249,7 +249,7 @@ pub async fn fetch_file(
     allowed_media_types: &[&str],
     file_size_limit: usize,
 ) -> Result<(Vec<u8>, usize, String), FetchError> {
-    if agent.protect_localhost {
+    if agent.ssrf_protection_enabled {
         require_safe_url(url)?;
     };
     // Redirects are allowed
@@ -289,7 +289,7 @@ pub async fn fetch_json<T: DeserializeOwned>(
     url: &str,
     query: &[(&str, &str)],
 ) -> Result<T, FetchError> {
-    if agent.protect_localhost {
+    if agent.ssrf_protection_enabled {
         require_safe_url(url)?;
     };
     // Redirects are allowed

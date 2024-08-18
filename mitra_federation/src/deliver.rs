@@ -69,7 +69,7 @@ pub async fn send_object(
     inbox_url: &str,
     extra_headers: &[(&str, &str)],
 ) -> Result<(), DelivererError> {
-    if agent.protect_localhost {
+    if agent.ssrf_protection_enabled {
         require_safe_url(inbox_url)?;
     };
     let headers = create_http_signature(

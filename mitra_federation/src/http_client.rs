@@ -47,9 +47,10 @@ pub fn get_network_type(request_url: &str) ->
 }
 
 // https://www.w3.org/TR/activitypub/#security-localhost
+// https://cheatsheetseries.owasp.org/cheatsheets/Server_Side_Request_Forgery_Prevention_Cheat_Sheet.html
 fn is_safe_addr(ip_addr: IpAddr) -> bool {
     match ip_addr {
-        IpAddr::V4(addr_v4) => !addr_v4.is_loopback(),
+        IpAddr::V4(addr_v4) => !addr_v4.is_loopback() && !addr_v4.is_private(),
         IpAddr::V6(addr_v6) => !addr_v6.is_loopback(),
     }
 }
@@ -152,13 +153,13 @@ pub fn build_http_client(
         // https://github.com/hyperium/hyper/issues/3427
         client_builder = client_builder.http1_only();
     };
-    if agent.protect_localhost {
+    if agent.ssrf_protection_enabled {
         client_builder = client_builder.dns_resolver(
             Arc::new(dns_resolver::SafeResolver::new()));
     };
     let redirect_policy = if no_redirect {
         RedirectPolicy::none()
-    } else if agent.protect_localhost {
+    } else if agent.ssrf_protection_enabled {
         build_safe_redirect_policy()
     } else {
         RedirectPolicy::limited(REDIRECT_LIMIT)
