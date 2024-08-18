@@ -25,6 +25,7 @@ It also supports the following standards:
 - [FEP-c7d3: Ownership](https://codeberg.org/silverpill/feps/src/branch/main/c7d3/fep-c7d3.md)
 - [FEP-d556: Server-Level Actor Discovery Using WebFinger](https://codeberg.org/fediverse/fep/src/branch/main/fep/d556/fep-d556.md)
 - [FEP-c0e0: Emoji reactions](https://codeberg.org/silverpill/feps/src/branch/main/c0e0/fep-c0e0.md)
+- [FEP-ae97: Client-side activity signing](https://codeberg.org/silverpill/feps/src/branch/main/ae97/fep-ae97.md)
 
 ## ActivityPub
 
@@ -160,6 +161,13 @@ After registering an account its owner can upload the list of followers and star
 ```
 
 Where `object` is an ID of old account and `target` is an ID of new account. Actors identified by `object` and `target` properties must have at least one FEP-c390 identity in common to be considered aliases. Upon receipt of such activity, actors that follow `object` should un-follow it and follow `target` instead.
+
+## FEP-ae97 C2S API
+
+In addition to `X-Rsa-Secret-Key` header specified in the FEP, the following headers are required for registration of portable actors:
+
+- `X-Ed25519-Secret-Key`: multibase encoded Ed25519 key.
+- `X-Invite-Code`: invite code.
 
 ## Subscriptions
 
