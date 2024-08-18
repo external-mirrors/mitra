@@ -26,6 +26,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Allow `mumble:` URIs in post content.
 - Improved logging of processed activities.
 
+### Deprecated
+
+- Deprecated `federation.fep_1b12_full_enabled` configuration parameter.
+
 ### Removed
 
 - Removed support for FEP-c390 + (old) FEP-ae97 activity authentication.
