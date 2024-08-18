@@ -47,7 +47,7 @@ impl Descriptor {
 impl fmt::Display for Descriptor {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Object(object) => write!(formatter, "{object})"),
+            Self::Object(object) => write!(formatter, "{object}"),
             Self::Target(target) => write!(formatter, "target: {target}"),
         }
     }
