@@ -2,9 +2,9 @@
 
 ## Payments
 
-Install Monero node or choose a [public one](https://monero.fail/).
+Install a [Monero node](https://www.getmonero.org/resources/user-guides/vps_run_node.html) (requires at least 2 GB RAM and 200 GB storage) or choose a [public one](https://monero.fail/).
 
-Install and configure [monero-wallet-rpc](https://monerodocs.org/interacting/monero-wallet-rpc-reference/) service. See configuration file [example](../contrib/monero/wallet.conf).
+Install and configure [monero-wallet-rpc](https://www.getmonero.org/resources/developer-guides/wallet-rpc.html) service. See configuration file [example](../contrib/monero/wallet.conf).
 
 Start `monero-wallet-rpc`. Create a wallet for your instance:
 
@@ -12,7 +12,15 @@ Start `monero-wallet-rpc`. Create a wallet for your instance:
 mitractl create-monero-wallet "mitra-wallet" "passw0rd"
 ```
 
-Add blockchain configuration to `blockchains` array in your configuration file.
+Add blockchain configuration to `blockchains` array in your configuration file. Example:
+
+```yaml
+blockchains:
+  - chain_id: monero:mainnet
+    wallet_rpc_url: 'http://127.0.0.1:18083'
+    wallet_name: "mitra-wallet"
+    wallet_password: "passw0rd"
+```
 
 ## Sign-in with Monero wallet
 

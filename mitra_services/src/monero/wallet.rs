@@ -77,7 +77,7 @@ fn build_wallet_client(config: &MoneroConfig)
     Ok(wallet_client)
 }
 
-/// https://monerodocs.org/interacting/monero-wallet-rpc-reference/#create_wallet
+/// https://www.getmonero.org/resources/developer-guides/wallet-rpc.html#create_wallet
 pub async fn create_monero_wallet(
     config: &MoneroConfig,
     name: String,
@@ -89,7 +89,7 @@ pub async fn create_monero_wallet(
     Ok(())
 }
 
-/// https://monerodocs.org/interacting/monero-wallet-rpc-reference/#open_wallet
+/// https://www.getmonero.org/resources/developer-guides/wallet-rpc.html#open_wallet
 pub async fn open_monero_wallet(
     config: &MoneroConfig,
 ) -> Result<WalletClient, MoneroError> {
@@ -223,7 +223,7 @@ pub async fn get_incoming_transfers(
     Ok(transfers)
 }
 
-/// https://monerodocs.org/interacting/monero-wallet-rpc-reference/#sweep_all
+/// https://www.getmonero.org/resources/developer-guides/wallet-rpc.html#sweep_all
 pub async fn send_monero(
     wallet_client: &WalletClient,
     from_account: u32,
@@ -311,7 +311,7 @@ pub async fn get_address_count(
     Ok(address_data.addresses.len())
 }
 
-/// https://monerodocs.org/interacting/monero-wallet-rpc-reference/#sign
+/// https://www.getmonero.org/resources/developer-guides/wallet-rpc.html#sign
 pub async fn create_monero_signature(
     config: &MoneroConfig,
     message: &str,
@@ -326,7 +326,7 @@ pub async fn create_monero_signature(
     Ok((address, signature))
 }
 
-/// https://monerodocs.org/interacting/monero-wallet-rpc-reference/#verify
+/// https://www.getmonero.org/resources/developer-guides/wallet-rpc.html#verify
 pub async fn verify_monero_signature(
     config: &MoneroConfig,
     address: &str,
