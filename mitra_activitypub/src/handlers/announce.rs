@@ -128,14 +128,12 @@ async fn handle_fep_1b12_announce(
         .ok_or(ValidationError("unexpected activity structure"))?;
     let activity_type = activity["type"].as_str()
         .ok_or(ValidationError("unexpected activity structure"))?;
-    if let CREATE | LIKE = activity_type {
-        if !config.federation.fep_1b12_full_enabled {
-            return Ok(None);
-        };
+    if activity_type != DELETE && !config.federation.fep_1b12_full_enabled {
+        return Ok(None);
     };
     let instance = config.instance();
     let agent = build_federation_agent(&instance, None);
-    let activity: JsonValue = if let CREATE | DELETE | LIKE = activity_type {
+    let activity: JsonValue = if let CREATE | DELETE | DISLIKE | LIKE = activity_type {
         match fetch_any_object(&agent, activity_id).await {
             Ok(activity) => {
                 log::info!("fetched activity {}", activity_id);
