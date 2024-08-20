@@ -6,13 +6,23 @@ Install a [Monero node](https://www.getmonero.org/resources/user-guides/vps_run_
 
 Install and configure [monero-wallet-rpc](https://www.getmonero.org/resources/developer-guides/wallet-rpc.html) service. See configuration file [example](../contrib/monero/wallet.conf).
 
-Start `monero-wallet-rpc`. Create a wallet for your instance:
+Start `monero-wallet-rpc`.
+
+Add blockchain configuration to `blockchains` array in your configuration file. Example:
+
+```yaml
+blockchains:
+  - chain_id: monero:mainnet
+    wallet_rpc_url: 'http://127.0.0.1:18083'
+```
+
+Create a wallet for your instance:
 
 ```
 mitractl create-monero-wallet "mitra-wallet" "passw0rd"
 ```
 
-Add blockchain configuration to `blockchains` array in your configuration file. Example:
+Set `wallet_name` and `wallet_password` parameters in your configuration:
 
 ```yaml
 blockchains:
