@@ -25,16 +25,22 @@ pub async fn parse_microsyntaxes(
     profile_data: &mut ProfileUpdateData,
 ) -> Result<(), DatabaseError> {
     if let Some(ref display_name) = profile_data.display_name {
-        let custom_emoji_map = find_emojis(
-            db_client,
-            display_name,
-        ).await?;
+        let custom_emoji_map = find_emojis(db_client, display_name).await?;
         let display_name = replace_emojis(display_name, &custom_emoji_map);
         profile_data.display_name = Some(display_name);
-        profile_data.emojis = custom_emoji_map.into_values()
-            .map(|emoji| emoji.id)
-            .collect();
+        profile_data.emojis
+            .extend(custom_emoji_map.into_values().map(|emoji| emoji.id))
     };
+    if let Some(ref bio) = profile_data.bio {
+        let custom_emoji_map = find_emojis(db_client, bio).await?;
+        let bio = replace_emojis(bio, &custom_emoji_map);
+        profile_data.bio = Some(bio);
+        profile_data.emojis
+            .extend(custom_emoji_map.into_values().map(|emoji| emoji.id))
+    };
+    // Remove duplicates
+    profile_data.emojis.sort();
+    profile_data.emojis.dedup();
     Ok(())
 }
 
