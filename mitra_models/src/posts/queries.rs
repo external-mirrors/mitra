@@ -7,7 +7,6 @@ use crate::attachments::{
     queries::set_attachment_ipfs_cid,
     types::DbMediaAttachment,
 };
-use crate::cleanup::DeletionQueue;
 use crate::database::{
     catch_unique_violation,
     query_macro::query,
@@ -16,6 +15,7 @@ use crate::database::{
     DatabaseTypeError,
 };
 use crate::emojis::types::DbEmoji;
+use crate::media::DeletionQueue;
 use crate::notifications::helpers::{
     create_mention_notification,
     create_reply_notification,

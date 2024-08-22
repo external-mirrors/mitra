@@ -44,7 +44,6 @@ use mitra_models::{
     attachments::queries::delete_unused_attachments,
     background_jobs::queries::get_job_count,
     background_jobs::types::JobType,
-    cleanup::find_orphaned_files,
     database::DatabaseClient,
     emojis::helpers::get_emoji_by_name,
     emojis::queries::{
@@ -55,6 +54,7 @@ use mitra_models::{
     },
     emojis::types::EmojiImage,
     invoices::queries::{get_local_invoice_by_address, get_invoice_by_id},
+    media::find_orphaned_files,
     oauth::queries::delete_oauth_tokens,
     posts::queries::{
         delete_post,

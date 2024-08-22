@@ -3,8 +3,8 @@ use uuid::Uuid;
 
 use mitra_utils::id::generate_ulid;
 
-use crate::cleanup::DeletionQueue;
 use crate::database::{DatabaseClient, DatabaseError};
+use crate::media::DeletionQueue;
 
 use super::types::DbMediaAttachment;
 

@@ -3,13 +3,13 @@ use uuid::Uuid;
 
 use mitra_utils::id::generate_ulid;
 
-use crate::cleanup::DeletionQueue;
 use crate::database::{
     catch_unique_violation,
     DatabaseClient,
     DatabaseError,
 };
 use crate::instances::queries::create_instance;
+use crate::media::DeletionQueue;
 use crate::profiles::queries::update_emoji_caches;
 
 use super::types::{DbEmoji, EmojiImage};

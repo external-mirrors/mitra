@@ -9,7 +9,6 @@ use mitra_utils::{
     id::generate_ulid,
 };
 
-use crate::cleanup::DeletionQueue;
 use crate::database::{
     catch_unique_violation,
     query_macro::query,
@@ -18,6 +17,7 @@ use crate::database::{
 };
 use crate::emojis::types::DbEmoji;
 use crate::instances::queries::create_instance;
+use crate::media::DeletionQueue;
 use crate::relationships::types::RelationshipType;
 
 use super::types::{

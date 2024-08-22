@@ -13,12 +13,12 @@ use mitra_models::{
         get_job_batch,
     },
     background_jobs::types::JobType,
-    cleanup::DeletionQueue,
     database::{get_database_client, DatabaseConnectionPool},
     emojis::queries::{
         delete_emoji,
         find_unused_remote_emojis,
     },
+    media::DeletionQueue,
     posts::queries::{delete_post, find_extraneous_posts},
     profiles::queries::{
         delete_profile,

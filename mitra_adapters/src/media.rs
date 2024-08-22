@@ -1,7 +1,7 @@
 use mitra_config::Config;
 use mitra_models::{
-    cleanup::DeletionQueue,
     database::{DatabaseClient, DatabaseError},
+    media::DeletionQueue,
 };
 use mitra_services::{
     ipfs::{store as ipfs_store},
