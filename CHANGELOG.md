@@ -11,6 +11,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Added `list-local-files` command.
 - Support adding custom emojis to profile description.
 
+### Changed
+
+- Add `'` and `;` to the list of stop characters for mentions and hashtags.
+
 ### Fixed
 
 - Don't drop `Announce(Dislike)` activities.

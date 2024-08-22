@@ -15,7 +15,7 @@ use super::links::is_inside_code_block;
 
 // See also: USERNAME_RE in mitra_validators::profiles
 const MENTION_SEARCH_RE: &str = r"(?m)(?P<before>^|\s|>|[\(])@(?P<mention>[^\s<]+)";
-const MENTION_SEARCH_SECONDARY_RE: &str = r"^(?P<username>[A-Za-z0-9\-\._]+)(@(?P<hostname>[\w\.-]+\w))?(?P<after>[\.,:?!\)]?)$";
+const MENTION_SEARCH_SECONDARY_RE: &str = r"^(?P<username>[A-Za-z0-9\-\._]+)(@(?P<hostname>[\w\.-]+\w))?(?P<after>[\.,:;?!\)']?)$";
 
 fn caps_to_acct(instance_hostname: &str, caps: &Captures) -> Option<String> {
     let username = &caps["username"];
