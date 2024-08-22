@@ -54,7 +54,10 @@ use mitra_models::{
     },
     emojis::types::EmojiImage,
     invoices::queries::{get_local_invoice_by_address, get_invoice_by_id},
-    media::find_orphaned_files,
+    media::{
+        find_orphaned_files,
+        get_local_files,
+    },
     oauth::queries::delete_oauth_tokens,
     posts::queries::{
         delete_post,
@@ -154,6 +157,7 @@ pub enum SubCommand {
     DeleteOrphanedFiles(DeleteOrphanedFiles),
     DeleteEmptyProfiles(DeleteEmptyProfiles),
     PruneRemoteEmojis(PruneRemoteEmojis),
+    ListLocalFiles(ListLocalFiles),
     ListUnreachableActors(ListUnreachableActors),
     AddEmoji(AddEmoji),
     ImportEmoji(ImportEmoji),
@@ -715,6 +719,24 @@ impl PruneRemoteEmojis {
             let deletion_queue = delete_emoji(db_client, &emoji_id).await?;
             delete_orphaned_media(config, db_client, deletion_queue).await?;
             println!("emoji {} deleted", emoji_id);
+        };
+        Ok(())
+    }
+}
+
+/// List files uploaded by local users
+#[derive(Parser)]
+pub struct ListLocalFiles;
+
+impl ListLocalFiles {
+    pub async fn execute(
+        &self,
+        _config: &Config,
+        db_client: &impl DatabaseClient,
+    ) -> Result<(), Error> {
+        let filenames = get_local_files(db_client).await?;
+        for file_name in filenames {
+            println!("{file_name}");
         };
         Ok(())
     }
