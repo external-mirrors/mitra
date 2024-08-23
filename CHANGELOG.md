@@ -14,6 +14,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Changed
 
 - Add `'` and `;` to the list of stop characters for mentions and hashtags.
+- Don't allow HTML tags in display name.
 
 ### Fixed
 

@@ -10,7 +10,7 @@ use mitra_models::profiles::types::{
     ProfileUpdateData,
 };
 use mitra_utils::{
-    html::{clean_html, clean_html_strict},
+    html::{clean_html, clean_html_all, clean_html_strict},
     urls::encode_hostname,
 };
 
@@ -70,11 +70,18 @@ pub fn validate_hostname(hostname: &str) -> Result<(), ValidationError> {
     Ok(())
 }
 
+fn clean_display_name(display_name: &str) -> String {
+    clean_html_all(display_name)
+}
+
 fn validate_display_name(display_name: &str)
     -> Result<(), ValidationError>
 {
     if display_name.chars().count() > DISPLAY_NAME_MAX_LENGTH {
         return Err(ValidationError("display name is too long"));
+    };
+    if display_name != clean_display_name(display_name) {
+        return Err(ValidationError("display name has not been sanitized"));
     };
     Ok(())
 }
@@ -222,8 +229,8 @@ pub fn validate_actor_data(
     Ok(())
 }
 
-pub fn clean_profile_create_data(
-    profile_data: &mut ProfileCreateData,
+fn validate_profile_create_data(
+    profile_data: &ProfileCreateData,
 ) -> Result<(), ValidationError> {
     validate_username(&profile_data.username)?;
     if let Some(hostname) = &profile_data.hostname {
@@ -243,9 +250,51 @@ pub fn clean_profile_create_data(
         false
     };
     if let Some(bio) = &profile_data.bio {
-        let cleaned_bio = clean_bio(bio, is_remote)?;
-        validate_bio(&cleaned_bio)?;
-        profile_data.bio = Some(cleaned_bio);
+        validate_bio(bio)?;
+    };
+    validate_public_keys(&profile_data.public_keys)?;
+    validate_identity_proofs(&profile_data.identity_proofs)?;
+    validate_payment_options(&profile_data.payment_options)?;
+    validate_extra_fields(&profile_data.extra_fields, is_remote)?;
+    validate_aliases(&profile_data.aliases)?;
+    if profile_data.emojis.len() > EMOJI_LIMIT {
+        return Err(ValidationError("too many emojis"));
+    };
+    Ok(())
+}
+
+pub fn clean_profile_create_data(
+    profile_data: &mut ProfileCreateData,
+) -> Result<(), ValidationError> {
+    let is_remote = profile_data.actor_json.is_some();
+    if let Some(ref display_name) = profile_data.display_name {
+        let clean_name = clean_display_name(display_name);
+        profile_data.display_name = Some(clean_name);
+    };
+    if let Some(bio) = &profile_data.bio {
+        let clean_bio = clean_bio(bio, is_remote)?;
+        validate_bio(&clean_bio)?;
+        profile_data.bio = Some(clean_bio);
+    };
+    validate_profile_create_data(profile_data)?;
+    Ok(())
+}
+
+fn validate_profile_update_data(
+    profile_data: &ProfileUpdateData,
+) -> Result<(), ValidationError> {
+    validate_username(&profile_data.username)?;
+    if let Some(display_name) = &profile_data.display_name {
+        validate_display_name(display_name)?;
+    };
+    let is_remote = if let Some(ref actor) = profile_data.actor_json {
+        validate_actor_data(actor)?;
+        true
+    } else {
+        false
+    };
+    if let Some(bio) = &profile_data.bio {
+        validate_bio(bio)?;
     };
     validate_public_keys(&profile_data.public_keys)?;
     validate_identity_proofs(&profile_data.identity_proofs)?;
@@ -261,29 +310,17 @@ pub fn clean_profile_create_data(
 pub fn clean_profile_update_data(
     profile_data: &mut ProfileUpdateData,
 ) -> Result<(), ValidationError> {
-    validate_username(&profile_data.username)?;
-    if let Some(display_name) = &profile_data.display_name {
-        validate_display_name(display_name)?;
-    };
-    let is_remote = if let Some(ref actor) = profile_data.actor_json {
-        validate_actor_data(actor)?;
-        true
-    } else {
-        false
+    let is_remote = profile_data.actor_json.is_some();
+    if let Some(ref display_name) = profile_data.display_name {
+        let clean_name = clean_display_name(display_name);
+        profile_data.display_name = Some(clean_name);
     };
     if let Some(bio) = &profile_data.bio {
-        let cleaned_bio = clean_bio(bio, is_remote)?;
-        validate_bio(&cleaned_bio)?;
-        profile_data.bio = Some(cleaned_bio);
+        let clean_bio = clean_bio(bio, is_remote)?;
+        validate_bio(&clean_bio)?;
+        profile_data.bio = Some(clean_bio);
     };
-    validate_public_keys(&profile_data.public_keys)?;
-    validate_identity_proofs(&profile_data.identity_proofs)?;
-    validate_payment_options(&profile_data.payment_options)?;
-    validate_extra_fields(&profile_data.extra_fields, is_remote)?;
-    validate_aliases(&profile_data.aliases)?;
-    if profile_data.emojis.len() > EMOJI_LIMIT {
-        return Err(ValidationError("too many emojis"));
-    };
+    validate_profile_update_data(profile_data)?;
     Ok(())
 }
 
@@ -326,6 +363,13 @@ mod tests {
         let hostname = r#"social.example""#;
         let error = validate_hostname(hostname).unwrap_err();
         assert_eq!(error.to_string(), "invalid hostname");
+    }
+
+    #[test]
+    fn test_clean_display_name() {
+        let name = "test <script>alert()</script>test :emoji:";
+        let output = clean_display_name(name);
+        assert_eq!(output, "test test :emoji:");
     }
 
     #[test]
