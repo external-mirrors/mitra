@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use indexmap::IndexMap;
 
 pub use mitra_federation::constants::{
     AP_CONTEXT,
@@ -18,7 +18,7 @@ pub type Context = (
     &'static str,
     &'static str,
     &'static str,
-    HashMap<&'static str, &'static str>,
+    IndexMap<&'static str, &'static str>,
 );
 
 // Default context for activities and objects
@@ -27,7 +27,7 @@ pub fn build_default_context() -> Context {
         AP_CONTEXT,
         W3ID_SECURITY_CONTEXT,
         W3ID_DATA_INTEGRITY_CONTEXT,
-        HashMap::from([
+        IndexMap::from([
             // Copied from Mastodon
             ("Hashtag", "as:Hashtag"),
             ("sensitive", "as:sensitive"),

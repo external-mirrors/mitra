@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use indexmap::IndexMap;
 
 use serde::{Deserialize, Serialize};
 use serde_json::{Value as JsonValue};
@@ -48,7 +48,7 @@ type Context = (
     &'static str,
     &'static str,
     &'static str,
-    HashMap<&'static str, &'static str>,
+    IndexMap<&'static str, &'static str>,
 );
 
 fn build_actor_context() -> Context {
@@ -58,7 +58,7 @@ fn build_actor_context() -> Context {
         W3ID_SECURITY_CONTEXT,
         W3ID_DATA_INTEGRITY_CONTEXT,
         W3ID_MULTIKEY_CONTEXT,
-        HashMap::from([
+        IndexMap::from([
             ("manuallyApprovesFollowers", "as:manuallyApprovesFollowers"),
             ("schema", SCHEMA_ORG_CONTEXT),
             ("PropertyValue", "schema:PropertyValue"),

@@ -1667,6 +1667,7 @@ checksum = "233cf39063f058ea2caae4091bf4a3ef70a653afbc026f5c4a4135d114e3c177"
 dependencies = [
  "equivalent",
  "hashbrown 0.14.3",
+ "serde",
 ]
 
 [[package]]
@@ -1997,6 +1998,7 @@ dependencies = [
  "chrono",
  "futures",
  "hex",
+ "indexmap",
  "log",
  "mitra_adapters",
  "mitra_config",
