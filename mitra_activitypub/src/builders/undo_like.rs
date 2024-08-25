@@ -12,9 +12,9 @@ use mitra_models::{
 use crate::{
     contexts::{build_default_context, Context},
     identifiers::{
+        compatible_profile_actor_id,
         local_activity_id,
         local_actor_id,
-        profile_actor_id,
     },
     queues::OutgoingActivityJobData,
     vocabulary::UNDO,
@@ -83,7 +83,8 @@ pub async fn prepare_undo_like(
         &instance.url(),
         post,
     ).await?;
-    let post_author_id = profile_actor_id(&instance.url(), &post.author);
+    let post_author_id =
+        compatible_profile_actor_id(&instance.url(), &post.author);
     let activity = build_undo_like(
         &instance.url(),
         &sender.profile,

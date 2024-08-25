@@ -17,6 +17,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Don't allow HTML tags in display name.
 - Add missing `url` value to Mastodon API `Status` entities.
 - Determine webfinger address when importing portable actors.
+- Use compatible actor IDs when generating `Like` and `Undo(Like)` activities.
 
 ### Fixed
 

@@ -14,11 +14,11 @@ use mitra_models::{
 use crate::{
     contexts::{build_default_context, Context},
     identifiers::{
+        compatible_profile_actor_id,
         local_activity_id,
         local_actor_id,
         local_object_id,
         post_object_id,
-        profile_actor_id,
     },
     queues::OutgoingActivityJobData,
     vocabulary::{EMOJI_REACT, LIKE},
@@ -133,7 +133,8 @@ pub async fn prepare_like(
         post,
     ).await?;
     let object_id = post_object_id(&instance.url(), post);
-    let post_author_id = profile_actor_id(&instance.url(), &post.author);
+    let post_author_id =
+        compatible_profile_actor_id(&instance.url(), &post.author);
     let activity = build_like(
         &instance.url(),
         &sender.profile,
