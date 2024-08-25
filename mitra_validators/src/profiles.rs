@@ -71,7 +71,7 @@ pub fn validate_hostname(hostname: &str) -> Result<(), ValidationError> {
 }
 
 fn clean_display_name(display_name: &str) -> String {
-    clean_html_all(display_name)
+    clean_html_all(display_name).replace("&nbsp;", " ")
 }
 
 fn validate_display_name(display_name: &str)
@@ -373,6 +373,13 @@ mod tests {
         let name = "test <script>alert()</script>test :emoji:";
         let output = clean_display_name(name);
         assert_eq!(output, "test test :emoji:");
+    }
+
+    #[test]
+    fn test_clean_display_name_whitespace() {
+        let name = "ワフ   ⁰͡ ⌵ ⁰͡ ";
+        let output = clean_display_name(name);
+        assert_eq!(output, "ワフ   ⁰͡ ⌵ ⁰͡ ");
     }
 
     #[test]
