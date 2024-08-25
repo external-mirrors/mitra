@@ -901,6 +901,7 @@ impl ProfileCreateData {
 
 pub struct ProfileUpdateData {
     pub username: String,
+    pub hostname: Option<String>,
     pub display_name: Option<String>,
     pub bio: Option<String>,
     pub bio_source: Option<String>,
@@ -929,6 +930,17 @@ impl ProfileUpdateData {
         Ok(())
     }
 
+    pub(super) fn hostname(&self) -> WebfingerHostname {
+        if let Some(ref hostname) = self.hostname {
+            WebfingerHostname::Remote(hostname.to_string())
+        } else if self.actor_json.is_none() {
+            WebfingerHostname::Local
+        } else {
+            // Portable user without webfinger address
+            WebfingerHostname::Unknown
+        }
+    }
+
     /// Adds new identity proof
     /// or replaces the existing one if it has the same issuer.
     pub fn add_identity_proof(&mut self, proof: IdentityProof) -> () {
@@ -951,6 +963,7 @@ impl From<&DbActorProfile> for ProfileUpdateData {
         let profile = profile.clone();
         Self {
             username: profile.username,
+            hostname: profile.hostname,
             display_name: profile.display_name,
             bio: profile.bio,
             bio_source: profile.bio_source,

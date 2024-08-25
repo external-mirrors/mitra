@@ -284,6 +284,9 @@ fn validate_profile_update_data(
     profile_data: &ProfileUpdateData,
 ) -> Result<(), ValidationError> {
     validate_username(&profile_data.username)?;
+    if let Some(hostname) = &profile_data.hostname {
+        validate_hostname(hostname)?;
+    };
     if let Some(display_name) = &profile_data.display_name {
         validate_display_name(display_name)?;
     };

@@ -14,6 +14,7 @@ use crate::database::{
     query_macro::query,
     DatabaseClient,
     DatabaseError,
+    DatabaseTypeError,
 };
 use crate::emojis::types::DbEmoji;
 use crate::instances::queries::create_instance;
@@ -245,8 +246,12 @@ pub async fn update_profile(
     let row = maybe_row.ok_or(DatabaseError::NotFound("profile"))?;
     let profile: DbActorProfile = row.try_get("actor_profile")?;
     let images = row.try_get("images")?;
+    if profile_data.hostname != profile.hostname && !profile.is_portable() {
+        // Only portable actors can change hostname
+        return Err(DatabaseTypeError.into());
+    };
 
-    let profile_acct = match profile.hostname() {
+    let profile_acct = match profile_data.hostname() {
         WebfingerHostname::Local => Some(profile_data.username.clone()),
         WebfingerHostname::Remote(hostname) => {
             let profile_acct =
@@ -265,26 +270,28 @@ pub async fn update_profile(
         UPDATE actor_profile
         SET
             username = $1,
-            acct = $2,
-            display_name = $3,
-            bio = $4,
-            bio_source = $5,
-            avatar = $6,
-            banner = $7,
-            manually_approves_followers = $8,
-            mention_policy = $9,
-            public_keys = $10,
-            identity_proofs = $11,
-            payment_options = $12,
-            extra_fields = $13,
-            aliases = $14,
-            actor_json = $15,
+            hostname = $2,
+            acct = $3,
+            display_name = $4,
+            bio = $5,
+            bio_source = $6,
+            avatar = $7,
+            banner = $8,
+            manually_approves_followers = $9,
+            mention_policy = $10,
+            public_keys = $11,
+            identity_proofs = $12,
+            payment_options = $13,
+            extra_fields = $14,
+            aliases = $15,
+            actor_json = $16,
             updated_at = CURRENT_TIMESTAMP,
             unreachable_since = NULL
-        WHERE id = $16
+        WHERE id = $17
         ",
         &[
             &profile_data.username,
+            &profile_data.hostname,
             &profile_acct,
             &profile_data.display_name,
             &profile_data.bio,
