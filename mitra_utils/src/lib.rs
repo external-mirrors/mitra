@@ -19,6 +19,7 @@ pub mod http_digest;
 pub mod http_signatures;
 pub mod http_url;
 pub mod id;
+pub mod identicons;
 pub mod json_signatures;
 pub mod markdown;
 pub mod minisign;

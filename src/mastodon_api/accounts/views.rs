@@ -90,6 +90,7 @@ use mitra_utils::{
     currencies::Currency,
     did::Did,
     did_pkh::DidPkh,
+    identicons::{generate_identicon, generate_pixel},
     json_signatures::{
         create::IntegrityProofConfig,
         verify::{
@@ -141,6 +142,7 @@ use super::types::{
     AUTHENTICATION_METHOD_PASSWORD,
     FollowData,
     FollowListQueryParams,
+    IdenticonQueryParams,
     IdentityClaim,
     IdentityClaimQueryParams,
     IdentityProofData,
@@ -627,6 +629,21 @@ async fn search_by_did(
     Ok(HttpResponse::Ok().json(accounts))
 }
 
+#[get("/identicon")]
+async fn generate_identicon_view(
+    query_params: web::Query<IdenticonQueryParams>,
+) -> Result<HttpResponse, MastodonError> {
+    let png = if let Some(ref input) = query_params.input {
+        generate_identicon(input)
+    } else {
+        generate_pixel()
+    };
+    let response = HttpResponse::Ok()
+        .content_type("image/png")
+        .body(png);
+    Ok(response)
+}
+
 #[get("/{account_id}")]
 async fn get_account(
     connection_info: ConnectionInfo,
@@ -1049,6 +1066,7 @@ pub fn account_api_scope() -> Scope {
         .service(lookup_acct)
         .service(search_by_acct_limited)
         .service(search_by_did)
+        .service(generate_identicon_view)
         // Routes with account ID
         .service(get_account)
         .service(follow_account)

@@ -18,6 +18,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Add missing `url` value to Mastodon API `Status` entities.
 - Determine webfinger address when importing portable actors.
 - Use compatible actor IDs when generating `Like` and `Undo(Like)` activities.
+- Generate identicons for users without avatar image.
+- Generate empty banner for users without banner image.
 
 ### Fixed
 

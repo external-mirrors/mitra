@@ -131,8 +131,8 @@ pub struct Account {
     pub display_name: Option<String>,
     pub created_at: DateTime<Utc>,
     pub note: String,
-    pub avatar: Option<String>,
-    pub header: Option<String>,
+    pub avatar: String,
+    pub header: String,
     pub locked: bool,
     pub mention_policy: String,
     pub bot: bool,
@@ -169,9 +169,11 @@ impl Account {
         let is_automated = profile.is_automated();
 
         let avatar_url = profile.avatar
-            .map(|image| get_file_url(base_url, &image.file_name));
+            .map(|image| get_file_url(base_url, &image.file_name))
+            .unwrap_or(format!("{base_url}/api/v1/accounts/identicon?input={actor_id}"));
         let header_url = profile.banner
-            .map(|image| get_file_url(base_url, &image.file_name));
+            .map(|image| get_file_url(base_url, &image.file_name))
+            .unwrap_or(format!("{base_url}/api/v1/accounts/identicon"));
 
         let mut identity_proofs = vec![];
         for proof in profile.identity_proofs.into_inner() {
@@ -580,6 +582,11 @@ pub struct SearchDidQueryParams {
 }
 
 #[derive(Deserialize)]
+pub struct IdenticonQueryParams {
+    pub input: Option<String>,
+}
+
+#[derive(Deserialize)]
 pub struct FollowData {
     #[serde(default = "default_showing_reblogs")]
     pub reblogs: bool,
@@ -718,7 +725,7 @@ mod tests {
         );
 
         assert_eq!(
-            account.avatar.unwrap(),
+            account.avatar,
             format!("{}/media/test", INSTANCE_URL),
         );
         assert!(account.source.is_none());

@@ -2118,6 +2118,12 @@ components:
         note:
           description: The profile’s bio or description.
           type: string
+        avatar:
+          description: An image icon that is shown next to posts and in the profile.
+          type: string
+        header:
+          description: An image banner that is shown above the profile and in profile cards.
+          type: string
         locked:
           description: Whether the actor manually approves follow requests.
           type: boolean
