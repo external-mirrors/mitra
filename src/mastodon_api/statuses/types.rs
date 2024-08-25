@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use mitra_activitypub::identifiers::{
+    compatible_post_object_id,
     local_tag_collection,
     post_object_id,
     profile_actor_url,
@@ -80,7 +81,7 @@ struct PleromaData {
 pub struct Status {
     pub id: Uuid,
     pub uri: String,
-    pub url: Option<String>,
+    url: String,
     pub created_at: DateTime<Utc>,
     edited_at: Option<DateTime<Utc>>,
     pub account: Account,
@@ -119,6 +120,7 @@ impl Status {
         post: Post,
     ) -> Self {
         let object_id = post_object_id(instance_url, &post);
+        let object_url = compatible_post_object_id(instance_url, &post);
         let attachments: Vec<Attachment> = post.attachments.into_iter()
             .map(|item| Attachment::from_db(base_url, item))
             .collect();
@@ -183,7 +185,7 @@ impl Status {
         Self {
             id: post.id,
             uri: object_id,
-            url: None,
+            url: object_url,
             created_at: post.created_at,
             edited_at: post.updated_at,
             account: account,
