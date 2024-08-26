@@ -34,6 +34,7 @@ pub struct ApiNotification {
 
     #[serde(rename = "type")]
     event_type: String,
+    subtype: Option<String>,
 
     account: Account,
     status: Option<Status>,
@@ -60,10 +61,14 @@ impl ApiNotification {
         let status = notification.post.map(|post| {
             Status::from_post(base_url, instance_url, post)
         });
+        let mut maybe_event_subtype = None;
         let event_type_mastodon = match notification.event_type {
             EventType::Follow => "follow",
             EventType::FollowRequest => "follow_request",
-            EventType::Reply => "reply",
+            EventType::Reply => {
+                maybe_event_subtype = Some("reply".to_string());
+                "mention"
+            },
             EventType::Reaction if notification.reaction_content.is_none() => "favourite",
             // https://docs.pleroma.social/backend/development/API/differences_in_mastoapi_responses/#emojireact-notification
             EventType::Reaction => "pleroma:emoji_reaction",
@@ -94,6 +99,7 @@ impl ApiNotification {
         Self {
             id: notification.id.to_string(),
             event_type: event_type_mastodon.to_string(),
+            subtype: maybe_event_subtype,
             account,
             status,
             reaction: maybe_reaction,

@@ -2605,16 +2605,21 @@ components:
           enum:
             - follow
             - follow_request
-            - reply
             - favourite
-            - emoji_reaction
+            - pleroma:emoji_reaction
             - mention
             - reblog
             - subscription
             - subscription_expiration
             - move
             - admin.sign_up
-          example: reply
+          example: favourite
+        subtype:
+          description: The subtype of the event.
+          type: string
+          nullable: true
+          enum:
+            - reply
         account:
           $ref: '#/components/schemas/Account'
         status:
