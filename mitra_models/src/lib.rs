@@ -3,6 +3,7 @@ pub mod attachments;
 pub mod background_jobs;
 pub mod bookmarks;
 pub mod caip122;
+pub mod custom_feeds;
 pub mod database;
 pub mod emojis;
 pub mod instances;

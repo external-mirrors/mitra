@@ -25,6 +25,7 @@ mod custom_emojis;
 mod directory;
 mod follow_requests;
 mod instance;
+mod lists;
 mod markers;
 mod media;
 mod mutes;
@@ -120,6 +121,7 @@ pub fn mastodon_api_scope(
         .service(follow_requests::views::follow_request_api_scope())
         .service(instance::views::instance_api_v1_scope())
         .service(instance::views::instance_api_v2_scope())
+        .service(lists::views::list_api_scope())
         .service(markers::views::marker_api_scope())
         .service(media::views::media_api_v1_scope())
         .service(media::views::media_api_v2_scope())

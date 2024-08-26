@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+
+- Implemented Mastodon List API.
+
 ### Changed
 
 - Moved library modules from `mitra_utils` to `apx_core` package.

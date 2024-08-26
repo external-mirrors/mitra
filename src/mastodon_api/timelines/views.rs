@@ -12,8 +12,10 @@ use actix_web_httpauth::extractors::bearer::BearerAuth;
 use mitra_adapters::dynamic_config::get_dynamic_config;
 use mitra_config::Config;
 use mitra_models::{
+    custom_feeds::queries::get_custom_feed,
     database::{get_database_client, DatabaseConnectionPool},
     posts::queries::{
+        get_custom_feed_timeline,
         get_direct_timeline,
         get_home_timeline,
         get_posts_by_tag,
@@ -184,10 +186,50 @@ async fn hashtag_timeline(
     Ok(response)
 }
 
+/// https://docs.joinmastodon.org/methods/timelines/#list
+#[get("/list/{list_id}")]
+async fn list_timeline(
+    auth: BearerAuth,
+    connection_info: ConnectionInfo,
+    config: web::Data<Config>,
+    db_pool: web::Data<DatabaseConnectionPool>,
+    request_uri: Uri,
+    list_id: web::Path<i32>,
+    query_params: web::Query<TimelineQueryParams>,
+) -> Result<HttpResponse, MastodonError> {
+    let db_client = &**get_database_client(&db_pool).await?;
+    let current_user = get_current_user(db_client, auth.token()).await?;
+    let feed = get_custom_feed(
+        db_client,
+        *list_id,
+        current_user.id,
+    ).await?;
+    let posts = get_custom_feed_timeline(
+        db_client,
+        feed.id,
+        current_user.id,
+        query_params.max_id,
+        query_params.limit.inner(),
+    ).await?;
+    let base_url = get_request_base_url(connection_info);
+    let instance_url = config.instance().url();
+    let response = get_paginated_status_list(
+        db_client,
+        &base_url,
+        &instance_url,
+        &request_uri,
+        Some(&current_user),
+        posts,
+        &query_params.limit,
+    ).await?;
+    Ok(response)
+}
+
 pub fn timeline_api_scope() -> Scope {
     web::scope("/v1/timelines")
         .service(home_timeline)
         .service(public_timeline)
         .service(direct_timeline)
         .service(hashtag_timeline)
+        .service(list_timeline)
 }

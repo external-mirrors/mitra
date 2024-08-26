@@ -951,6 +951,148 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/InstanceV2'
+  /api/v1/lists:
+    get:
+      summary: Fetch all custom feeds that the user owns.
+      security:
+        - tokenAuth: []
+      responses:
+        200:
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                description: List of custom feeds
+                type: array
+                items:
+                  $ref: '#/components/schemas/List'
+    post:
+      summary: Create a new custom feed.
+      security:
+        - tokenAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  description: The title of the custom feed to be created.
+                  type: string
+      responses:
+        200:
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/List'
+        400:
+          description: Invalid custom feed data.
+  /api/v1/lists/{list_id}:
+    get:
+      summary: Fetch the custom feed with the given ID.
+      security:
+        - tokenAuth: []
+      parameters:
+        - $ref: '#/components/parameters/list_id'
+      responses:
+        200:
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/List'
+        404:
+          description: Custom feed does not exist or is not owned by you.
+    delete:
+      summary: Delete a custom feed.
+      security:
+        - tokenAuth: []
+      parameters:
+        - $ref: '#/components/parameters/list_id'
+      responses:
+        200:
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+        404:
+          description: Custom feed does not exist or is not owned by you.
+  /api/v1/lists/{list_id}/accounts:
+    get:
+      summary: View user list of a custom feed.
+      security:
+        - tokenAuth: []
+      parameters:
+        - $ref: '#/components/parameters/list_id'
+      responses:
+        200:
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                description: User list
+                type: array
+                items:
+                  $ref: '#/components/schemas/Account'
+        404:
+          description: Custom feed does not exist or is not owned by you.
+    post:
+      summary: Add users to the given custom feed.
+      security:
+        - tokenAuth: []
+      parameters:
+        - $ref: '#/components/parameters/list_id'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                'account_ids[]':
+                  description: The users that should be added to the custom feed.
+                  type: array
+                  items:
+                    type: string
+                    format: uuid
+      responses:
+        200:
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+        400:
+          description: Invalid request data.
+        404:
+          description: Custom feed does not exist or is not owned by you.
+    delete:
+      summary: Remove users from the given custom feed.
+      security:
+        - tokenAuth: []
+      parameters:
+        - $ref: '#/components/parameters/list_id'
+        - name: 'account_ids[]'
+          in: query
+          description: The users that should be removed from the custom feed.
+          required: true
+          schema:
+            type: array
+            items:
+              type: string
+              format: uuid
+      responses:
+        200:
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+        400:
+          description: Invalid request data.
+        404:
+          description: Custom feed does not exist or is not owned by you.
   /api/v1/media:
     post:
       summary: Create an attachment to be used with a new post.
@@ -2058,6 +2200,43 @@ paths:
               schema:
                 type: string
                 example: '<https://social.example/api/v1/timelines/tag/test?limit=20&max_id=0187871e-5a09-c6d6-6570-5158ffdcc845>; rel="next"'
+  /api/v1/timelines/list/{list_id}:
+    get:
+      summary: View posts in the given list timeline.
+      security:
+        - tokenAuth: []
+      parameters:
+        - $ref: '#/components/parameters/list_id'
+        - name: max_id
+          in: query
+          description: Return results older than this ID.
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - name: limit
+          in: query
+          description: Maximum number of results to return.
+          required: false
+          schema:
+            type: integer
+            default: 20
+      responses:
+        200:
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                description: Post list
+                type: array
+                items:
+                  $ref: '#/components/schemas/Status'
+          headers:
+            Link:
+              description: Link to the next page
+              schema:
+                type: string
+                example: '<https://social.example/api/v1/timelines/list/18?limit=20&max_id=0187871e-5a09-c6d6-6570-5158ffdcc845>; rel="next"'
   /api/v2/search:
     get:
       summary: Search for profiles or posts
@@ -2174,6 +2353,13 @@ components:
       schema:
         type: string
         format: uuid
+    list_id:
+      name: list_id
+      in: path
+      description: List ID
+      required: true
+      schema:
+        type: integer
     status_id:
       name: status_id
       in: path
@@ -2668,6 +2854,23 @@ components:
           description: The date when invoice times out.
           type: string
           format: date-time
+    List:
+      type: object
+      properties:
+        id:
+          description: The internal database ID of the list.
+          type: integer
+        title:
+          description: The user-defined title of the list.
+          type: string
+        replies_policy:
+          description: Which replies should be shown in the list.
+          type: string
+          enum:
+            - followed
+        exclusive:
+          description: Are list accounts hidden from the home timeline?
+          type: boolean
     Mention:
       type: object
       properties:

@@ -646,6 +646,13 @@ pub async fn get_home_timeline(
                                 AND in_reply_to.author_id = $current_user_id
                         )
                     )
+                    -- exlclude authors that are displayed in custom feeds
+                    AND NOT EXISTS (
+                        SELECT 1 FROM custom_feed_source
+                        JOIN custom_feed ON custom_feed.id = custom_feed_source.feed_id
+                        WHERE custom_feed.owner_id = $current_user_id
+                            AND custom_feed_source.source_id = post.author_id
+                    )
                 )
                 OR EXISTS (
                     SELECT 1 FROM mention
@@ -966,6 +973,66 @@ pub async fn get_posts_by_tag(
     let query = query!(
         &statement,
         tag_name=tag_name,
+        current_user_id=current_user_id,
+        max_post_id=max_post_id,
+        limit=limit,
+    )?;
+    let rows = db_client.query(query.sql(), query.parameters()).await?;
+    let posts: Vec<Post> = rows.iter()
+        .map(Post::try_from)
+        .collect::<Result<_, _>>()?;
+    Ok(posts)
+}
+
+pub async fn get_custom_feed_timeline(
+    db_client: &impl DatabaseClient,
+    feed_id: i32,
+    current_user_id: Uuid,
+    max_post_id: Option<Uuid>,
+    limit: u16,
+) -> Result<Vec<Post>, DatabaseError> {
+    // show_replies / show_reposts settings are ignored
+    let statement = format!(
+        "
+        SELECT
+            post, actor_profile,
+            {related_attachments},
+            {related_mentions},
+            {related_tags},
+            {related_links},
+            {related_emojis},
+            {related_reactions}
+        FROM post
+        JOIN actor_profile ON post.author_id = actor_profile.id
+        WHERE
+            EXISTS (
+                SELECT 1
+                FROM custom_feed
+                JOIN custom_feed_source
+                ON custom_feed.id = custom_feed_source.feed_id
+                WHERE
+                    custom_feed.id = $feed_id
+                    AND post.author_id = custom_feed_source.source_id
+            )
+            AND {visibility_filter}
+            AND {mute_filter}
+            AND ($max_post_id::uuid IS NULL OR post.id < $max_post_id)
+        ORDER BY post.id DESC
+        LIMIT $limit
+        ",
+        related_attachments=RELATED_ATTACHMENTS,
+        related_mentions=RELATED_MENTIONS,
+        related_tags=RELATED_TAGS,
+        related_links=RELATED_LINKS,
+        related_emojis=RELATED_EMOJIS,
+        related_reactions=RELATED_REACTIONS,
+        visibility_filter=build_visibility_filter(),
+        mute_filter=build_mute_filter(),
+    );
+    let limit: i64 = limit.into();
+    let query = query!(
+        &statement,
+        feed_id=feed_id,
         current_user_id=current_user_id,
         max_post_id=max_post_id,
         limit=limit,
@@ -1669,6 +1736,10 @@ mod tests {
     use chrono::Duration;
     use serial_test::serial;
     use crate::{
+        custom_feeds::queries::{
+            add_custom_feed_sources,
+            create_custom_feed,
+        },
         database::test_utils::create_test_database,
         posts::test_utils::create_test_local_post,
         profiles::test_utils::{
@@ -2159,6 +2230,45 @@ mod tests {
         assert_eq!(timeline.iter().any(|post| post.id == post_4.id), false);
         assert_eq!(timeline.iter().any(|post| post.id == reply.id), false);
         assert_eq!(timeline.iter().any(|post| post.id == repost.id), true);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_custom_feed_timline() {
+        let db_client = &mut create_test_database().await;
+        let viewer = create_test_user(db_client, "viewer").await;
+        let author_1 = create_test_user(db_client, "author_1").await;
+        let author_2 = create_test_user(db_client, "author_2").await;
+        let feed = create_custom_feed(
+            db_client,
+            viewer.id,
+            "test",
+        ).await.unwrap();
+        add_custom_feed_sources(
+            db_client,
+            feed.id,
+            &[author_1.id],
+        ).await.unwrap();
+        let post_1 = create_test_local_post(
+            db_client,
+            author_1.id,
+            "test post 1",
+        ).await;
+        let post_2 = create_test_local_post(
+            db_client,
+            author_2.id,
+            "test post 2",
+        ).await;
+        let timeline = get_custom_feed_timeline(
+            db_client,
+            feed.id,
+            viewer.id,
+            None,
+            10,
+        ).await.unwrap();
+        assert_eq!(timeline.len(), 1);
+        assert_eq!(timeline.iter().any(|post| post.id == post_1.id), true);
+        assert_eq!(timeline.iter().any(|post| post.id == post_2.id), false);
     }
 
     #[tokio::test]

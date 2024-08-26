@@ -952,6 +952,10 @@ pub async fn find_empty_profiles(
                 WHERE profile_id = actor_profile.id
             )
             AND NOT EXISTS (
+                SELECT 1 FROM custom_feed_source
+                WHERE source_id = actor_profile.id
+            )
+            AND NOT EXISTS (
                 SELECT 1 FROM notification
                 WHERE sender_id = actor_profile.id
             )
