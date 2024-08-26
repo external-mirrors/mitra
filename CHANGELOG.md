@@ -21,6 +21,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Generate identicons for users without avatar image.
 - Generate empty banner for users without banner image.
 - Represent reply notification as `mention` with `reply` subtype.
+- Don't log content of repeated activities.
 
 ### Fixed
 

@@ -228,16 +228,14 @@ pub async fn receive_activity(
             ).await?;
         };
         if !is_new {
-            log::warn!(
-                "activity is already processed ({}): {}",
-                canonical_activity_id,
-                activity,
-            );
             if activity_type == ANNOUNCE {
                 // Optimization for FEP-1b12.
                 // Activity will be processed only once,
                 // even if submitted to multiple inboxes
+                log::warn!("skipping repeated activity: {canonical_activity_id}");
                 return Ok(());
+            } else {
+                log::info!("repeated activity: {canonical_activity_id}");
             };
         };
     };
