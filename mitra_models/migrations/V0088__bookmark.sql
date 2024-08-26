@@ -1,0 +1,6 @@
+CREATE TABLE bookmark (
+    id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    owner_id UUID NOT NULL REFERENCES user_account (id) ON DELETE CASCADE,
+    post_id UUID NOT NULL REFERENCES post (id) ON DELETE CASCADE,
+    UNIQUE (owner_id, post_id)
+);

@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Added `list-local-files` command.
 - Support adding custom emojis to profile description.
+- Added API endpoints for bookmark management.
 
 ### Changed
 

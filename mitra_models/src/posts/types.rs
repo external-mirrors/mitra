@@ -94,6 +94,7 @@ pub struct PostActions {
     pub liked: bool,
     pub reacted_with: Vec<String>,
     pub reposted: bool,
+    pub bookmarked: bool,
 }
 
 #[derive(Clone)]

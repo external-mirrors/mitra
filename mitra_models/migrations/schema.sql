@@ -244,6 +244,13 @@ CREATE TABLE profile_emoji (
     PRIMARY KEY (profile_id, emoji_id)
 );
 
+CREATE TABLE bookmark (
+    id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    owner_id UUID NOT NULL REFERENCES user_account (id) ON DELETE CASCADE,
+    post_id UUID NOT NULL REFERENCES post (id) ON DELETE CASCADE,
+    UNIQUE (owner_id, post_id)
+);
+
 CREATE TABLE notification (
     id SERIAL PRIMARY KEY,
     sender_id UUID NOT NULL REFERENCES actor_profile (id) ON DELETE CASCADE,

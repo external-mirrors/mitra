@@ -1459,6 +1459,12 @@ pub async fn find_extraneous_posts(
                     post_link.target_id = ANY(context.posts)
                     AND post_link.source_id <> ALL(context.posts)
             )
+            -- no bookmarks of any post in context
+            AND NOT EXISTS (
+                SELECT 1
+                FROM bookmark
+                WHERE bookmark.post_id = ANY(context.posts)
+            )
         ",
         &[&updated_before],
     ).await?;

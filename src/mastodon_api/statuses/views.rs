@@ -32,6 +32,7 @@ use mitra_activitypub::{
 };
 use mitra_config::Config;
 use mitra_models::{
+    bookmarks::queries::{create_bookmark, delete_bookmark},
     database::{
         get_database_client,
         DatabaseConnectionPool,
@@ -673,6 +674,66 @@ async fn unreblog(
     Ok(HttpResponse::Ok().json(status))
 }
 
+/// https://docs.joinmastodon.org/methods/statuses/#bookmark
+#[post("/{status_id}/bookmark")]
+async fn bookmark_view(
+    auth: BearerAuth,
+    connection_info: ConnectionInfo,
+    config: web::Data<Config>,
+    db_pool: web::Data<DatabaseConnectionPool>,
+    status_id: web::Path<Uuid>,
+) -> Result<HttpResponse, MastodonError> {
+    let db_client = &mut **get_database_client(&db_pool).await?;
+    let current_user = get_current_user(db_client, auth.token()).await?;
+    let post = get_post_by_id_for_view(
+        db_client,
+        Some(&current_user),
+        *status_id,
+    ).await?;
+    match create_bookmark(db_client, current_user.id, post.id).await {
+        Ok(_) | Err(DatabaseError::AlreadyExists(_)) => (),
+        Err(other_error) => return Err(other_error.into()),
+    };
+    let status = build_status(
+        db_client,
+        &get_request_base_url(connection_info),
+        &config.instance_url(),
+        Some(&current_user),
+        post,
+    ).await?;
+    Ok(HttpResponse::Ok().json(status))
+}
+
+/// https://docs.joinmastodon.org/methods/statuses/#unbookmark
+#[post("/{status_id}/unbookmark")]
+async fn unbookmark_view(
+    auth: BearerAuth,
+    connection_info: ConnectionInfo,
+    config: web::Data<Config>,
+    db_pool: web::Data<DatabaseConnectionPool>,
+    status_id: web::Path<Uuid>,
+) -> Result<HttpResponse, MastodonError> {
+    let db_client = &mut **get_database_client(&db_pool).await?;
+    let current_user = get_current_user(db_client, auth.token()).await?;
+    let post = get_post_by_id_for_view(
+        db_client,
+        Some(&current_user),
+        *status_id,
+    ).await?;
+    match delete_bookmark(db_client, current_user.id, post.id).await {
+        Ok(_) | Err(DatabaseError::NotFound(_)) => (),
+        Err(other_error) => return Err(other_error.into()),
+    };
+    let status = build_status(
+        db_client,
+        &get_request_base_url(connection_info),
+        &config.instance_url(),
+        Some(&current_user),
+        post,
+    ).await?;
+    Ok(HttpResponse::Ok().json(status))
+}
+
 /// https://docs.joinmastodon.org/methods/statuses/#pin
 #[post("/{status_id}/pin")]
 async fn pin(
@@ -849,6 +910,8 @@ pub fn status_api_scope() -> Scope {
         .service(unreblog)
         .service(pin)
         .service(unpin)
+        .service(bookmark_view)
+        .service(unbookmark_view)
         .service(make_permanent)
         .service(load_conversation)
 }

@@ -20,6 +20,7 @@ use serde_qs::{
 
 mod accounts;
 mod apps;
+mod bookmarks;
 mod custom_emojis;
 mod directory;
 mod follow_requests;
@@ -113,6 +114,7 @@ pub fn mastodon_api_scope(
         .wrap(create_auth_error_handler())
         .service(accounts::views::account_api_scope())
         .service(apps::views::application_api_scope())
+        .service(bookmarks::views::bookmark_api_scope())
         .service(custom_emojis::views::custom_emoji_api_scope())
         .service(directory::views::directory_api_scope())
         .service(follow_requests::views::follow_request_api_scope())

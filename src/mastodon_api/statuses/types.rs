@@ -104,6 +104,7 @@ pub struct Status {
     // Authorized user attributes
     pub favourited: bool,
     pub reblogged: bool,
+    bookmarked: bool,
 
     // Pleroma API
     pleroma: PleromaData,
@@ -207,6 +208,7 @@ impl Status {
             emojis: emojis,
             favourited: post.actions.as_ref().map_or(false, |actions| actions.liked),
             reblogged: post.actions.as_ref().map_or(false, |actions| actions.reposted),
+            bookmarked: post.actions.as_ref().map_or(false, |actions| actions.bookmarked),
             pleroma: PleromaData {
                 emoji_reactions,
                 in_reply_to_account_acct: post.in_reply_to

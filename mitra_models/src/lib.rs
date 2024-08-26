@@ -1,6 +1,7 @@
 pub mod activitypub;
 pub mod attachments;
 pub mod background_jobs;
+pub mod bookmarks;
 pub mod caip122;
 pub mod database;
 pub mod emojis;

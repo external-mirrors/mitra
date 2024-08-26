@@ -1,5 +1,6 @@
 use uuid::Uuid;
 
+use crate::bookmarks::queries::find_bookmarked_by_user;
 use crate::database::{DatabaseClient, DatabaseError};
 use crate::reactions::queries::find_reacted_by_user;
 use crate::relationships::{
@@ -68,6 +69,7 @@ pub async fn add_user_actions(
         .collect();
     let reactions = find_reacted_by_user(db_client, user_id, &posts_ids).await?;
     let reposts = find_reposted_by_user(db_client, user_id, &posts_ids).await?;
+    let bookmarks = find_bookmarked_by_user(db_client, user_id, &posts_ids).await?;
     let get_actions = |post: &Post| -> PostActions {
         let liked = reactions.iter()
             .any(|(post_id, content)| *post_id == post.id && content.is_none());
@@ -76,10 +78,12 @@ pub async fn add_user_actions(
             .filter_map(|(_, content)| content.clone())
             .collect();
         let reposted = reposts.contains(&post.id);
+        let bookmarked = bookmarks.contains(&post.id);
         PostActions {
             liked: liked,
             reacted_with: reacted_with,
             reposted: reposted,
+            bookmarked: bookmarked,
         }
     };
     for post in posts {
