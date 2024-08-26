@@ -115,16 +115,14 @@ fn deserialize_image_opt<'de, D>(
 {
     let maybe_value: Option<JsonValue> = Option::deserialize(deserializer)?;
     let maybe_image = if let Some(value) = maybe_value {
-        match value {
-            // Don't attempt to reconstruct Image object
-            JsonValue::String(_) => None,
-            // Some implementations use empty object instead of null
-            JsonValue::Object(map) if map.is_empty() => None,
-            _ => {
-                let images: Vec<ActorImage> = parse_into_array(&value)
-                    .map_err(DeserializerError::custom)?;
+        match parse_into_array::<ActorImage>(&value) {
+            Ok(images) => {
                 // Take first image
                 images.into_iter().next()
+            },
+            Err(_) => {
+                log::warn!("ignoring invalid actor image: {value}");
+                None
             },
         }
     } else {
