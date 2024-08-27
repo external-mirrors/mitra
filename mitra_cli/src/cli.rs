@@ -149,16 +149,16 @@ pub enum SubCommand {
     LoadPortableObject(LoadPortableObject),
     DeleteProfile(DeleteProfile),
     DeletePost(DeletePost),
+    AddEmoji(AddEmoji),
+    ImportEmoji(ImportEmoji),
     DeleteEmoji(DeleteEmoji),
     DeleteExtraneousPosts(DeleteExtraneousPosts),
     DeleteUnusedAttachments(DeleteUnusedAttachments),
-    DeleteOrphanedFiles(DeleteOrphanedFiles),
     DeleteEmptyProfiles(DeleteEmptyProfiles),
     PruneRemoteEmojis(PruneRemoteEmojis),
     ListLocalFiles(ListLocalFiles),
+    DeleteOrphanedFiles(DeleteOrphanedFiles),
     ListUnreachableActors(ListUnreachableActors),
-    AddEmoji(AddEmoji),
-    ImportEmoji(ImportEmoji),
     CreateMoneroWallet(CreateMoneroWallet),
     CreateMoneroSignature(CreateMoneroSignature),
     VerifyMoneroSignature(VerifyMoneroSignature),
@@ -558,199 +558,6 @@ impl DeletePost {
     }
 }
 
-/// Delete custom emoji
-#[derive(Parser)]
-pub struct DeleteEmoji {
-    emoji_name: String,
-    hostname: Option<String>,
-}
-
-impl DeleteEmoji {
-    pub async fn execute(
-        &self,
-        config: &Config,
-        db_client: &impl DatabaseClient,
-    ) -> Result<(), Error> {
-        let emoji = get_emoji_by_name(
-            db_client,
-            &self.emoji_name,
-            self.hostname.as_deref(),
-        ).await?;
-        let deletion_queue = delete_emoji(db_client, &emoji.id).await?;
-        delete_orphaned_media(config, db_client, deletion_queue).await?;
-        println!("emoji deleted");
-        Ok(())
-    }
-}
-
-/// Delete old remote posts
-#[derive(Parser)]
-pub struct DeleteExtraneousPosts {
-    days: u32,
-}
-
-impl DeleteExtraneousPosts {
-    pub async fn execute(
-        &self,
-        config: &Config,
-        db_client: &mut impl DatabaseClient,
-    ) -> Result<(), Error> {
-        let updated_before = days_before_now(self.days);
-        let posts = find_extraneous_posts(db_client, updated_before).await?;
-        for post_id in posts {
-            let deletion_queue = delete_post(db_client, post_id).await?;
-            delete_orphaned_media(config, db_client, deletion_queue).await?;
-            println!("post {} deleted", post_id);
-        };
-        Ok(())
-    }
-}
-
-/// Delete attachments that don't belong to any post
-#[derive(Parser)]
-pub struct DeleteUnusedAttachments {
-    days: u32,
-}
-
-impl DeleteUnusedAttachments {
-    pub async fn execute(
-        &self,
-        config: &Config,
-        db_client: &impl DatabaseClient,
-    ) -> Result<(), Error> {
-        let created_before = days_before_now(self.days);
-        let deletion_queue = delete_unused_attachments(
-            db_client,
-            created_before,
-        ).await?;
-        delete_orphaned_media(config, db_client, deletion_queue).await?;
-        println!("unused attachments deleted");
-        Ok(())
-    }
-}
-
-/// Find and delete orphaned files
-#[derive(Parser)]
-pub struct DeleteOrphanedFiles;
-
-impl DeleteOrphanedFiles {
-    pub async fn execute(
-        &self,
-        config: &Config,
-        db_client: &impl DatabaseClient,
-    ) -> Result<(), Error> {
-        let media_storage = MediaStorage::from(config);
-        let mut files = vec![];
-        for maybe_path in std::fs::read_dir(&media_storage.media_dir)? {
-            let file_name = maybe_path?.file_name()
-                .to_string_lossy().to_string();
-            files.push(file_name);
-        };
-        let orphaned = find_orphaned_files(db_client, files).await?;
-        if orphaned.is_empty() {
-            println!("no orphaned files found");
-        } else {
-            delete_files(&media_storage, &orphaned);
-            println!("orphaned files deleted: {}", orphaned.len());
-        };
-        Ok(())
-    }
-}
-
-/// Delete empty remote profiles
-#[derive(Parser)]
-pub struct DeleteEmptyProfiles {
-    days: u32,
-}
-
-impl DeleteEmptyProfiles {
-    pub async fn execute(
-        &self,
-        config: &Config,
-        db_client: &mut impl DatabaseClient,
-    ) -> Result<(), Error> {
-        let updated_before = days_before_now(self.days);
-        let profiles = find_empty_profiles(db_client, updated_before).await?;
-        for profile_id in profiles {
-            let profile = get_profile_by_id(db_client, &profile_id).await?;
-            let deletion_queue = delete_profile(db_client, &profile.id).await?;
-            delete_orphaned_media(config, db_client, deletion_queue).await?;
-            println!("profile deleted: {}", profile.expect_remote_actor_id());
-        };
-        Ok(())
-    }
-}
-
-/// Delete unused remote emojis
-#[derive(Parser)]
-pub struct PruneRemoteEmojis;
-
-impl PruneRemoteEmojis {
-    pub async fn execute(
-        &self,
-        config: &Config,
-        db_client: &mut impl DatabaseClient,
-    ) -> Result<(), Error> {
-        let emojis = find_unused_remote_emojis(db_client).await?;
-        for emoji_id in emojis {
-            let deletion_queue = delete_emoji(db_client, &emoji_id).await?;
-            delete_orphaned_media(config, db_client, deletion_queue).await?;
-            println!("emoji {} deleted", emoji_id);
-        };
-        Ok(())
-    }
-}
-
-/// List files uploaded by local users
-#[derive(Parser)]
-pub struct ListLocalFiles;
-
-impl ListLocalFiles {
-    pub async fn execute(
-        &self,
-        _config: &Config,
-        db_client: &impl DatabaseClient,
-    ) -> Result<(), Error> {
-        let filenames = get_local_files(db_client).await?;
-        for file_name in filenames {
-            println!("{file_name}");
-        };
-        Ok(())
-    }
-}
-
-/// List unreachable actors
-#[derive(Parser)]
-pub struct ListUnreachableActors {
-    days: u32,
-}
-
-impl ListUnreachableActors {
-    pub async fn execute(
-        &self,
-        _config: &Config,
-        db_client: &impl DatabaseClient,
-    ) -> Result<(), Error> {
-        let unreachable_since = days_before_now(self.days);
-        let profiles = find_unreachable(db_client, unreachable_since).await?;
-        println!(
-            "{0: <60} | {1: <35} | {2: <35}",
-            "ID", "unreachable since", "updated at",
-        );
-        for profile in profiles {
-            println!(
-                "{0: <60} | {1: <35} | {2: <35}",
-                profile.expect_remote_actor_id(),
-                profile.unreachable_since
-                    .expect("unreachable flag should be present")
-                    .to_string(),
-                profile.updated_at.to_string(),
-            );
-        };
-        Ok(())
-    }
-}
-
 /// Add custom emoji to local collection
 #[derive(Parser)]
 pub struct AddEmoji {
@@ -837,6 +644,199 @@ impl ImportEmoji {
             emoji.image,
         ).await?;
         println!("added emoji to local collection");
+        Ok(())
+    }
+}
+
+/// Delete custom emoji
+#[derive(Parser)]
+pub struct DeleteEmoji {
+    emoji_name: String,
+    hostname: Option<String>,
+}
+
+impl DeleteEmoji {
+    pub async fn execute(
+        &self,
+        config: &Config,
+        db_client: &impl DatabaseClient,
+    ) -> Result<(), Error> {
+        let emoji = get_emoji_by_name(
+            db_client,
+            &self.emoji_name,
+            self.hostname.as_deref(),
+        ).await?;
+        let deletion_queue = delete_emoji(db_client, &emoji.id).await?;
+        delete_orphaned_media(config, db_client, deletion_queue).await?;
+        println!("emoji deleted");
+        Ok(())
+    }
+}
+
+/// Delete old remote posts
+#[derive(Parser)]
+pub struct DeleteExtraneousPosts {
+    days: u32,
+}
+
+impl DeleteExtraneousPosts {
+    pub async fn execute(
+        &self,
+        config: &Config,
+        db_client: &mut impl DatabaseClient,
+    ) -> Result<(), Error> {
+        let updated_before = days_before_now(self.days);
+        let posts = find_extraneous_posts(db_client, updated_before).await?;
+        for post_id in posts {
+            let deletion_queue = delete_post(db_client, post_id).await?;
+            delete_orphaned_media(config, db_client, deletion_queue).await?;
+            println!("post {} deleted", post_id);
+        };
+        Ok(())
+    }
+}
+
+/// Delete attachments that don't belong to any post
+#[derive(Parser)]
+pub struct DeleteUnusedAttachments {
+    days: u32,
+}
+
+impl DeleteUnusedAttachments {
+    pub async fn execute(
+        &self,
+        config: &Config,
+        db_client: &impl DatabaseClient,
+    ) -> Result<(), Error> {
+        let created_before = days_before_now(self.days);
+        let deletion_queue = delete_unused_attachments(
+            db_client,
+            created_before,
+        ).await?;
+        delete_orphaned_media(config, db_client, deletion_queue).await?;
+        println!("unused attachments deleted");
+        Ok(())
+    }
+}
+
+/// Delete empty remote profiles
+#[derive(Parser)]
+pub struct DeleteEmptyProfiles {
+    days: u32,
+}
+
+impl DeleteEmptyProfiles {
+    pub async fn execute(
+        &self,
+        config: &Config,
+        db_client: &mut impl DatabaseClient,
+    ) -> Result<(), Error> {
+        let updated_before = days_before_now(self.days);
+        let profiles = find_empty_profiles(db_client, updated_before).await?;
+        for profile_id in profiles {
+            let profile = get_profile_by_id(db_client, &profile_id).await?;
+            let deletion_queue = delete_profile(db_client, &profile.id).await?;
+            delete_orphaned_media(config, db_client, deletion_queue).await?;
+            println!("profile deleted: {}", profile.expect_remote_actor_id());
+        };
+        Ok(())
+    }
+}
+
+/// Delete unused remote emojis
+#[derive(Parser)]
+pub struct PruneRemoteEmojis;
+
+impl PruneRemoteEmojis {
+    pub async fn execute(
+        &self,
+        config: &Config,
+        db_client: &mut impl DatabaseClient,
+    ) -> Result<(), Error> {
+        let emojis = find_unused_remote_emojis(db_client).await?;
+        for emoji_id in emojis {
+            let deletion_queue = delete_emoji(db_client, &emoji_id).await?;
+            delete_orphaned_media(config, db_client, deletion_queue).await?;
+            println!("emoji {} deleted", emoji_id);
+        };
+        Ok(())
+    }
+}
+
+/// List files uploaded by local users
+#[derive(Parser)]
+pub struct ListLocalFiles;
+
+impl ListLocalFiles {
+    pub async fn execute(
+        &self,
+        _config: &Config,
+        db_client: &impl DatabaseClient,
+    ) -> Result<(), Error> {
+        let filenames = get_local_files(db_client).await?;
+        for file_name in filenames {
+            println!("{file_name}");
+        };
+        Ok(())
+    }
+}
+
+/// Find and delete orphaned files
+#[derive(Parser)]
+pub struct DeleteOrphanedFiles;
+
+impl DeleteOrphanedFiles {
+    pub async fn execute(
+        &self,
+        config: &Config,
+        db_client: &impl DatabaseClient,
+    ) -> Result<(), Error> {
+        let media_storage = MediaStorage::from(config);
+        let mut files = vec![];
+        for maybe_path in std::fs::read_dir(&media_storage.media_dir)? {
+            let file_name = maybe_path?.file_name()
+                .to_string_lossy().to_string();
+            files.push(file_name);
+        };
+        let orphaned = find_orphaned_files(db_client, files).await?;
+        if orphaned.is_empty() {
+            println!("no orphaned files found");
+        } else {
+            delete_files(&media_storage, &orphaned);
+            println!("orphaned files deleted: {}", orphaned.len());
+        };
+        Ok(())
+    }
+}
+
+/// List unreachable actors
+#[derive(Parser)]
+pub struct ListUnreachableActors {
+    days: u32,
+}
+
+impl ListUnreachableActors {
+    pub async fn execute(
+        &self,
+        _config: &Config,
+        db_client: &impl DatabaseClient,
+    ) -> Result<(), Error> {
+        let unreachable_since = days_before_now(self.days);
+        let profiles = find_unreachable(db_client, unreachable_since).await?;
+        println!(
+            "{0: <60} | {1: <35} | {2: <35}",
+            "ID", "unreachable since", "updated at",
+        );
+        for profile in profiles {
+            println!(
+                "{0: <60} | {1: <35} | {2: <35}",
+                profile.expect_remote_actor_id(),
+                profile.unreachable_since
+                    .expect("unreachable flag should be present")
+                    .to_string(),
+                profile.updated_at.to_string(),
+            );
+        };
         Ok(())
     }
 }

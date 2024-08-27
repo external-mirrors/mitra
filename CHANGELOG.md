@@ -24,6 +24,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Represent reply notification as `mention` with `reply` subtype.
 - Don't log content of repeated activities.
 - Ignore invalid `icon` and `image` values on actor.
+- Changed order of commands in mitractl help text.
 
 ### Removed
 
