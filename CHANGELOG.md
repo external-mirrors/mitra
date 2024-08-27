@@ -25,6 +25,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Don't log content of repeated activities.
 - Ignore invalid `icon` and `image` values on actor.
 
+### Removed
+
+- Removed `enable-fep-ef61` command.
+
 ### Fixed
 
 - Don't drop `Announce(Dislike)` activities.

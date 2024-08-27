@@ -71,7 +71,6 @@ use mitra_models::{
         find_empty_profiles,
         find_unreachable,
         get_profile_by_id,
-        set_profile_identity_key,
     },
     subscriptions::queries::{
         get_active_subscription_count,
@@ -143,7 +142,6 @@ pub enum SubCommand {
     ListUsers(ListUsers),
     SetPassword(SetPassword),
     SetRole(SetRole),
-    EnableFepEf61(EnableFepEf61),
     FetchActor(FetchActor),
     ReadOutbox(ReadOutbox),
     FetchReplies(FetchReplies),
@@ -350,27 +348,6 @@ impl SetRole {
         let role = role_from_str(&self.role)?;
         set_user_role(db_client, &profile.id, role).await?;
         println!("role changed");
-        Ok(())
-    }
-}
-
-#[derive(Parser)]
-pub struct EnableFepEf61 {
-    username: String,
-}
-
-impl EnableFepEf61 {
-    pub async fn execute(
-        &self,
-        db_client: &mut impl DatabaseClient,
-    ) -> Result<(), Error> {
-        let user = get_user_by_name(db_client, &self.username).await?;
-        set_profile_identity_key(
-            db_client,
-            user.id,
-            user.ed25519_secret_key,
-        ).await?;
-        println!("FEP-ef61 enabled for actor");
         Ok(())
     }
 }
