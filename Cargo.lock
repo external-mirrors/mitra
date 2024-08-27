@@ -1981,7 +1981,7 @@ dependencies = [
 
 [[package]]
 name = "mitra"
-version = "3.2.0"
+version = "3.3.0"
 dependencies = [
  "actix-cors",
  "actix-files",
@@ -2017,7 +2017,7 @@ dependencies = [
 
 [[package]]
 name = "mitra_activitypub"
-version = "3.2.0"
+version = "3.3.0"
 dependencies = [
  "chrono",
  "futures",
@@ -2041,7 +2041,7 @@ dependencies = [
 
 [[package]]
 name = "mitra_adapters"
-version = "3.2.0"
+version = "3.3.0"
 dependencies = [
  "chrono",
  "env_logger",
@@ -2059,7 +2059,7 @@ dependencies = [
 
 [[package]]
 name = "mitra_cli"
-version = "3.2.0"
+version = "3.3.0"
 dependencies = [
  "anyhow",
  "clap",
@@ -2081,7 +2081,7 @@ dependencies = [
 
 [[package]]
 name = "mitra_config"
-version = "3.2.0"
+version = "3.3.0"
 dependencies = [
  "dotenvy",
  "log",
@@ -2094,7 +2094,7 @@ dependencies = [
 
 [[package]]
 name = "mitra_federation"
-version = "3.2.0"
+version = "3.3.0"
 dependencies = [
  "bytes",
  "futures-util",
@@ -2111,7 +2111,7 @@ dependencies = [
 
 [[package]]
 name = "mitra_models"
-version = "3.2.0"
+version = "3.3.0"
 dependencies = [
  "chrono",
  "deadpool",
@@ -2138,7 +2138,7 @@ dependencies = [
 
 [[package]]
 name = "mitra_services"
-version = "3.2.0"
+version = "3.3.0"
 dependencies = [
  "anyhow",
  "chrono",
@@ -2160,7 +2160,7 @@ dependencies = [
 
 [[package]]
 name = "mitra_utils"
-version = "3.2.0"
+version = "3.3.0"
 dependencies = [
  "ammonia",
  "base64 0.21.4",
@@ -2202,7 +2202,7 @@ dependencies = [
 
 [[package]]
 name = "mitra_validators"
-version = "3.2.0"
+version = "3.3.0"
 dependencies = [
  "mitra_models",
  "mitra_utils",
