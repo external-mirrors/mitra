@@ -165,6 +165,7 @@ See [guide](./docs/ipfs.md).
 ## Administration
 
 - [Backup and restore](./docs/backup_and_restore.md)
+- [Cache management](./docs/cache_management.md)
 - [Relays](./docs/relays.md)
 
 ## CLI
