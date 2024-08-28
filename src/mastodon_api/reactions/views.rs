@@ -25,6 +25,7 @@ use mitra_models::{
     emojis::queries::get_local_emoji_by_name,
     posts::helpers::get_post_by_id_for_view,
     posts::queries::get_post_reactions,
+    posts::types::DbPostReactions,
     reactions::queries::{
         create_reaction,
         delete_reaction,
@@ -43,6 +44,10 @@ use crate::mastodon_api::{
     errors::MastodonError,
     statuses::helpers::build_status,
 };
+
+fn emoji_shortcode(emoji_name: &str) -> String {
+    format!(":{emoji_name}:")
+}
 
 #[put("/{status_id}/reactions/{content}")]
 async fn create_reaction_view(
@@ -64,7 +69,23 @@ async fn create_reaction_view(
         (content, None)
     } else {
         let emoji_name = clean_emoji_name(&content);
-        let emoji = get_local_emoji_by_name(db_client, emoji_name).await?;
+        // Find most popular reaction with matching content
+        let maybe_emoji = post.reactions.iter()
+            .fold(None, |result: Option<&DbPostReactions>, item| {
+                if item.content == Some(emoji_shortcode(emoji_name)) &&
+                    (result.is_none() || item.count > result.map_or(0, |val| val.count))
+                {
+                    Some(item)
+                } else {
+                    result
+                }
+            })
+            .and_then(|reaction| reaction.emoji.clone());
+        let emoji = if let Some(emoji) = maybe_emoji {
+            emoji
+        } else {
+            get_local_emoji_by_name(db_client, emoji_name).await?
+        };
         (emoji.shortcode(), Some(emoji))
     };
     let reaction_data = ReactionData {
@@ -119,7 +140,7 @@ async fn delete_reaction_view(
     } else {
         // The value could be a name or a shortcode
         let emoji_name = clean_emoji_name(&content);
-        format!(":{emoji_name}:")
+        emoji_shortcode(emoji_name)
     };
     let (reaction_id, reaction_has_deprecated_ap_id) = delete_reaction(
         db_client,
