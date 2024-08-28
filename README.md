@@ -162,6 +162,11 @@ See [Tor guide](./docs/onion.md) and [I2P guide](./docs/i2p.md).
 
 See [guide](./docs/ipfs.md).
 
+## Administration
+
+- [Backup and restore](./docs/backup_and_restore.md)
+- [Relays](./docs/relays.md)
+
 ## CLI
 
 `mitractl` is a command-line tool for performing instance maintenance.
