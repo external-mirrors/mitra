@@ -4,7 +4,7 @@ use super::ConfigError;
 
 #[derive(Clone, Debug)]
 pub enum Environment {
-    Development,
+    Development, // enables private federation mode and permissive CORS
     Production,
 }
 
