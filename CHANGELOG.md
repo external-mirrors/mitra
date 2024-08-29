@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Allow reactions with remote emojis.
 - Store bookmark creation date.
+- Display better error message when config file is not found.
 
 ## [3.3.0] - 2024-08-28
 

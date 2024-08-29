@@ -76,7 +76,9 @@ fn read_instance_rsa_key(storage_dir: &Path) -> Option<RsaSecretKey> {
 pub fn parse_config() -> (Config, Vec<&'static str>) {
     let env = parse_env();
     let config_yaml = std::fs::read_to_string(&env.config_path)
-        .expect("failed to load config file");
+        .unwrap_or_else(|_| {
+            panic!("failed to read config from {}", env.config_path);
+        });
     let mut config = serde_yaml::from_str::<Config>(&config_yaml)
         .expect("invalid yaml data");
     let mut warnings = vec![];

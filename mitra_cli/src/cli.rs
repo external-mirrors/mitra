@@ -1040,7 +1040,6 @@ impl InstanceReport {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use clap::CommandFactory;
