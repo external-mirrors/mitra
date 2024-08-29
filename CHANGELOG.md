@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Changed
 
 - Allow reactions with remote emojis.
+- Store bookmark creation date.
 
 ## [3.3.0] - 2024-08-28
 
