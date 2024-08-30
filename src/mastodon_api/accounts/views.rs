@@ -5,7 +5,10 @@ use actix_multipart::form::MultipartForm;
 use actix_web::{
     dev::ConnectionInfo,
     get,
-    http::Uri,
+    http::{
+        header::{CacheControl, CacheDirective},
+        Uri,
+    },
     patch,
     post,
     web,
@@ -640,6 +643,7 @@ async fn generate_identicon_view(
     };
     let response = HttpResponse::Ok()
         .content_type("image/png")
+        .append_header(CacheControl(vec![CacheDirective::MaxAge(86400 * 3)]))
         .body(png);
     Ok(response)
 }

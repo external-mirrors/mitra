@@ -11,6 +11,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Allow reactions with remote emojis.
 - Store bookmark creation date.
 - Display better error message when config file is not found.
+- Enable identicon caching.
 
 ### Fixed
 
