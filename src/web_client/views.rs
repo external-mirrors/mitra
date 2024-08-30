@@ -29,6 +29,7 @@ use crate::errors::HttpError;
 use super::urls::get_opengraph_image_url;
 
 const INDEX_FILE: &str = "index.html";
+const CUSTOM_CSS_PATH: &str = "/assets/custom.css";
 
 fn web_client_service(web_client_dir: &Path) -> Files {
     Files::new("/", web_client_dir)
@@ -44,6 +45,11 @@ fn web_client_service(web_client_dir: &Path) -> Files {
                 .expect("web_client_dir should be present in config")
                 .join(INDEX_FILE);
             async {
+                if request.path() == CUSTOM_CSS_PATH {
+                    // Don't serve index.html if custom.css doesn't exist
+                    let response = HttpResponse::NotFound().finish();
+                    return Ok(ServiceResponse::new(request, response));
+                };
                 let index_file = NamedFile::open_async(index_path).await?;
                 let response = index_file.into_response(&request);
                 Ok(ServiceResponse::new(request, response))

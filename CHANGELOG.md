@@ -12,6 +12,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Store bookmark creation date.
 - Display better error message when config file is not found.
 - Enable identicon caching.
+- Don't serve `index.html` if `assets/custom.css` doesn't exist.
 
 ### Fixed
 
