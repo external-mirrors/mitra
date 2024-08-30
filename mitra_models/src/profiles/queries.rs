@@ -250,6 +250,9 @@ pub async fn update_profile(
         // Only portable actors can change hostname
         return Err(DatabaseTypeError.into());
     };
+    if let Some(ref hostname) = profile_data.hostname {
+        create_instance(&transaction, hostname).await?;
+    };
 
     let profile_acct = match profile_data.hostname() {
         WebfingerHostname::Local => Some(profile_data.username.clone()),

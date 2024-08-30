@@ -12,6 +12,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Store bookmark creation date.
 - Display better error message when config file is not found.
 
+### Fixed
+
+- Fixed FK constraint violation error on profile update.
+
 ## [3.3.0] - 2024-08-28
 
 ### Added
