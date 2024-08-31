@@ -11,11 +11,11 @@ use mitra_activitypub::{
     errors::HandlerError,
     importers::{
         is_actor_importer_error,
-        get_or_import_profile_by_actor_address,
+        get_or_import_profile_by_webfinger_address,
     },
 };
 use mitra_config::Config;
-use mitra_federation::addresses::ActorAddress;
+use mitra_federation::addresses::WebfingerAddress;
 use mitra_models::{
     background_jobs::{
         queries::enqueue_job,
@@ -75,19 +75,19 @@ pub async fn import_follows_task(
 ) -> Result<(), anyhow::Error> {
     let user = get_user_by_id(db_client, &user_id).await?;
     let storage = MediaStorage::from(config);
-    for actor_address in address_list {
-        let actor_address: ActorAddress = actor_address.parse()?;
-        let profile = match get_or_import_profile_by_actor_address(
+    for webfinger_address in address_list {
+        let webfinger_address: WebfingerAddress = webfinger_address.parse()?;
+        let profile = match get_or_import_profile_by_webfinger_address(
             db_client,
             &config.instance(),
             &storage,
-            &actor_address,
+            &webfinger_address,
         ).await {
             Ok(profile) => profile,
             Err(error) if is_actor_importer_error(&error) => {
                 log::warn!(
                     "failed to import profile {}: {}",
-                    actor_address,
+                    webfinger_address,
                     error,
                 );
                 continue;
@@ -127,8 +127,8 @@ pub async fn import_followers_task(
     let storage = MediaStorage::from(config);
     let mut remote_followers = vec![];
     for follower_address in address_list {
-        let follower_address: ActorAddress = follower_address.parse()?;
-        let follower = match get_or_import_profile_by_actor_address(
+        let follower_address: WebfingerAddress = follower_address.parse()?;
+        let follower = match get_or_import_profile_by_webfinger_address(
             db_client,
             &instance,
             &storage,

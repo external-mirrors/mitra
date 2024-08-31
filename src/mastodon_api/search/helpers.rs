@@ -7,12 +7,12 @@ use mitra_activitypub::{
     identifiers::parse_local_object_id,
     importers::{
         import_post,
-        import_profile_by_actor_address,
+        import_profile_by_webfinger_address,
         ActorIdResolver,
     },
 };
 use mitra_config::Config;
-use mitra_federation::addresses::ActorAddress;
+use mitra_federation::addresses::WebfingerAddress;
 use mitra_models::{
     database::{DatabaseClient, DatabaseError},
     posts::{
@@ -163,13 +163,14 @@ async fn search_profiles_or_import(
     ).await?;
     if profiles.is_empty() && resolve {
         if let Some(hostname) = maybe_hostname {
-            let actor_address = ActorAddress::new_unchecked(&username, &hostname);
+            let webfinger_address =
+                WebfingerAddress::new_unchecked(&username, &hostname);
             instance.fetcher_timeout = SEARCH_FETCHER_TIMEOUT;
-            match import_profile_by_actor_address(
+            match import_profile_by_webfinger_address(
                 db_client,
                 &instance,
                 &MediaStorage::from(config),
-                &actor_address,
+                &webfinger_address,
             ).await {
                 Ok(profile) => {
                     profiles.push(profile);
@@ -181,7 +182,7 @@ async fn search_profiles_or_import(
                 Err(other_error) => {
                     log::warn!(
                         "failed to import profile {}: {}",
-                        actor_address,
+                        webfinger_address,
                         other_error,
                     );
                 },

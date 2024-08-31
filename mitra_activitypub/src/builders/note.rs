@@ -2,7 +2,7 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 use mitra_federation::{
-    addresses::ActorAddress,
+    addresses::WebfingerAddress,
     constants::{AP_MEDIA_TYPE, AP_PUBLIC},
     deserialization::deserialize_string_array,
 };
@@ -164,11 +164,11 @@ pub fn build_note(
     for profile in &post.mentions {
         let tag_name = match profile.hostname() {
             WebfingerHostname::Local => {
-                ActorAddress::new_unchecked(
+                WebfingerAddress::new_unchecked(
                     &profile.username, instance_hostname).handle()
             },
             WebfingerHostname::Remote(hostname) => {
-                ActorAddress::new_unchecked(
+                WebfingerAddress::new_unchecked(
                     &profile.username, &hostname).handle()
             },
             WebfingerHostname::Unknown => format!("@{}", profile.username),

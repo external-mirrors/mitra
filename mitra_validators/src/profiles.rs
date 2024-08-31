@@ -24,7 +24,7 @@ use super::{
     posts::EMOJI_LIMIT,
 };
 
-// See also: ACTOR_ADDRESS_RE in mitra_federation::addresses
+// See also: WEBFINGER_ADDRESS_RE in mitra_federation::addresses
 const USERNAME_RE: &str = r"^[A-Za-z0-9\-\._]+$";
 const USERNAME_LENGTH_MAX: usize = 100;
 const HOSTNAME_RE: &str = r"^[a-z0-9\.-]+$";

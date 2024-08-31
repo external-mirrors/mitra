@@ -7,7 +7,7 @@ use serde_json::{Value as JsonValue};
 use uuid::Uuid;
 
 use mitra_federation::{
-    addresses::ActorAddress,
+    addresses::WebfingerAddress,
     agent::FederationAgent,
     deserialization::{
         deserialize_object_array,
@@ -246,13 +246,13 @@ async fn get_webfinger_hostname(
             if let Some(gateway) = actor.gateways.first() {
                 let hostname = get_hostname(gateway)
                     .map_err(|_| ValidationError("invalid gateway URL"))?;
-                let actor_address = ActorAddress::new_unchecked(
+                let webfinger_address = WebfingerAddress::new_unchecked(
                     &actor.preferred_username,
                     &hostname,
                 );
                 let actor_id = perform_webfinger_query(
                     agent,
-                    &actor_address,
+                    &webfinger_address,
                 ).await?;
                 if actor_id == actor.id {
                     Some(hostname)

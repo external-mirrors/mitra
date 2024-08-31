@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use regex::{Captures, Regex};
 
 use mitra_activitypub::identifiers::profile_actor_url;
-use mitra_federation::addresses::ActorAddress;
+use mitra_federation::addresses::WebfingerAddress;
 use mitra_models::{
     database::{DatabaseClient, DatabaseError},
     profiles::queries::get_profiles_by_accts,
@@ -28,8 +28,11 @@ fn caps_to_acct(instance_hostname: &str, caps: &Captures) -> Option<String> {
         // Invalid hostname
         return None;
     };
-    let actor_address = ActorAddress::new_unchecked(username, &hostname);
-    let acct = actor_address.acct(instance_hostname);
+    let webfinger_address = WebfingerAddress::new_unchecked(
+        username,
+        &hostname,
+    );
+    let acct = webfinger_address.acct(instance_hostname);
     Some(acct)
 }
 

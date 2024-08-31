@@ -655,7 +655,7 @@ pub async fn search_profiles(
 ) -> Result<Vec<DbActorProfile>, DatabaseError> {
     let db_search_query = match maybe_hostname {
         Some(hostname) => {
-            // Search for actor address
+            // Search for webfinger address
             format!("{}@{}%", username, hostname)
         },
         None => {

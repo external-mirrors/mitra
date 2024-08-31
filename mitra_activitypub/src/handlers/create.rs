@@ -12,7 +12,7 @@ use uuid::Uuid;
 use mitra_adapters::permissions::filter_mentions;
 use mitra_config::{Config, Instance};
 use mitra_federation::{
-    addresses::ActorAddress,
+    addresses::WebfingerAddress,
     authentication::{verify_portable_object, AuthenticationError},
     constants::{AP_MEDIA_TYPE, AS_MEDIA_TYPE},
     deserialization::{
@@ -66,7 +66,7 @@ use crate::{
         profile_actor_id,
     },
     importers::{
-        get_or_import_profile_by_actor_address,
+        get_or_import_profile_by_webfinger_address,
         get_post_by_object_id,
         get_profile_by_actor_id,
         import_post,
@@ -489,7 +489,7 @@ pub async fn get_object_tags(
                     Err(other_error) => return Err(other_error),
                 };
             };
-            // Try to find profile by actor address
+            // Try to find profile by webfinger address
             let tag_name = match tag.name {
                 Some(name) => name,
                 None => {
@@ -497,12 +497,12 @@ pub async fn get_object_tags(
                     continue;
                 },
             };
-            if let Ok(actor_address) = ActorAddress::from_handle(&tag_name) {
-                let profile = match get_or_import_profile_by_actor_address(
+            if let Ok(webfinger_address) = WebfingerAddress::from_handle(&tag_name) {
+                let profile = match get_or_import_profile_by_webfinger_address(
                     db_client,
                     instance,
                     storage,
-                    &actor_address,
+                    &webfinger_address,
                 ).await {
                     Ok(profile) => profile,
                     Err(error) if is_actor_importer_error(&error) => {
@@ -510,7 +510,7 @@ pub async fn get_object_tags(
                         // Ignore mention if local address is not valid
                         log::warn!(
                             "failed to find mentioned profile {}: {}",
-                            actor_address,
+                            webfinger_address,
                             error,
                         );
                         continue;

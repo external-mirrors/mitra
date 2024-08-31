@@ -1,6 +1,6 @@
 use uuid::Uuid;
 
-use mitra_federation::addresses::ActorAddress;
+use mitra_federation::addresses::WebfingerAddress;
 use mitra_models::{
     database::{
         DatabaseClient,
@@ -19,16 +19,16 @@ fn export_profiles_to_csv(
 ) -> String {
     let mut csv = String::new();
     for profile in profiles {
-        let actor_address = match profile.hostname() {
+        let webfinger_address = match profile.hostname() {
             WebfingerHostname::Local => {
-                ActorAddress::new_unchecked(&profile.username, local_hostname)
+                WebfingerAddress::new_unchecked(&profile.username, local_hostname)
             },
             WebfingerHostname::Remote(hostname) => {
-                ActorAddress::new_unchecked(&profile.username, &hostname)
+                WebfingerAddress::new_unchecked(&profile.username, &hostname)
             },
             WebfingerHostname::Unknown => continue,
         };
-        csv += &format!("{}\n", actor_address);
+        csv += &format!("{}\n", webfinger_address);
     };
     csv
 }
@@ -54,14 +54,14 @@ pub async fn export_follows(
 }
 
 pub fn parse_address_list(csv: &str)
-    -> Result<Vec<ActorAddress>, ValidationError>
+    -> Result<Vec<WebfingerAddress>, ValidationError>
 {
     let mut addresses: Vec<_> = csv.lines()
         .filter_map(|line| line.split(',').next())
         .map(|line| line.trim().to_string())
         // Skip header and empty lines
         .filter(|line| line != "Account address" && !line.is_empty())
-        .map(|line| ActorAddress::from_handle(&line))
+        .map(|line| WebfingerAddress::from_handle(&line))
         .collect::<Result<_, _>>()
         .map_err(|error| ValidationError(error.message()))?;
     addresses.sort();

@@ -11,7 +11,7 @@ use mitra_activitypub::{
 };
 use mitra_config::{Config, Instance};
 use mitra_federation::{
-    addresses::ActorAddress,
+    addresses::WebfingerAddress,
     jrd::{
         JsonResourceDescriptor,
         Link,
@@ -47,9 +47,9 @@ async fn get_jrd(
     instance: Instance,
     resource: &str,
 ) -> Result<JsonResourceDescriptor, HttpError> {
-    let actor_address = if resource.starts_with("acct:") {
+    let webfinger_address = if resource.starts_with("acct:") {
         // NOTE: hostname should not contain Unicode characters
-        ActorAddress::from_acct_uri(resource)
+        WebfingerAddress::from_acct_uri(resource)
             .map_err(|error| HttpError::ValidationError(error.to_string()))?
     } else {
         // Actor ID? (reverse webfinger)
@@ -61,13 +61,13 @@ async fn get_jrd(
             parse_local_actor_id(&instance.url(), resource)
                 .map_err(|_| HttpError::NotFoundError("user"))?
         };
-        ActorAddress::new_unchecked(&username, &instance.hostname())
+        WebfingerAddress::new_unchecked(&username, &instance.hostname())
     };
-    if actor_address.hostname() != instance.hostname() {
+    if webfinger_address.hostname() != instance.hostname() {
         // Wrong instance
         return Err(HttpError::NotFoundError("user"));
     };
-    let links = if actor_address.username() == instance.hostname() {
+    let links = if webfinger_address.username() == instance.hostname() {
         let actor_id = local_instance_actor_id(&instance.url());
         let actor_link = Link::actor(&actor_id);
         // Add remote interaction template
@@ -78,8 +78,11 @@ async fn get_jrd(
         let remote_interaction_link = Link::new(REMOTE_INTERACTION_RELATION_TYPE)
             .with_template(&remote_interaction_template);
         vec![actor_link, remote_interaction_link]
-    } else if is_registered_user(db_client, actor_address.username()).await? {
-        let actor_id = local_actor_id(&instance.url(), actor_address.username());
+    } else if is_registered_user(db_client, webfinger_address.username()).await? {
+        let actor_id = local_actor_id(
+            &instance.url(),
+            webfinger_address.username(),
+        );
         // Required by GNU Social
         let profile_link = Link::new(WEBFINGER_PROFILE_RELATION_TYPE)
             .with_media_type("text/html")
@@ -89,7 +92,7 @@ async fn get_jrd(
         // Add feed link for users
         let feed_url = get_user_feed_url(
             &instance.url(),
-            actor_address.username(),
+            webfinger_address.username(),
         );
         let feed_link = Link::new(FEED_RELATION_TYPE)
             .with_media_type("application/atom+xml")
@@ -105,7 +108,7 @@ async fn get_jrd(
     } else {
         let user = get_portable_user_by_name(
             db_client,
-            actor_address.username(),
+            webfinger_address.username(),
         ).await?;
         let actor_id = user.profile.expect_remote_actor_id();
         let compatible_actor_id = actor_id.parse::<Url>()
@@ -116,7 +119,7 @@ async fn get_jrd(
         vec![actor_link]
     };
     let jrd = JsonResourceDescriptor {
-        subject: actor_address.to_acct_uri(),
+        subject: webfinger_address.to_acct_uri(),
         links: links,
     };
     Ok(jrd)
