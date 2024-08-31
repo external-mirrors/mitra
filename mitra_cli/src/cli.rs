@@ -109,7 +109,7 @@ use mitra_utils::{
         rsa_secret_key_to_pkcs8_pem,
     },
     datetime::days_before_now,
-    files::sniff_media_type,
+    files::{sniff_media_type, FileSize},
     http_url::HttpUrl,
     passwords::hash_password,
 };
@@ -598,7 +598,10 @@ impl AddEmoji {
             };
             let file_size = file.len();
             if file_size > config.limits.media.emoji_local_size_limit {
-                println!("emoji is too big");
+                println!(
+                    "emoji file size must be less than {}",
+                    FileSize::new(config.limits.media.emoji_local_size_limit),
+                );
                 return Ok(());
             };
             (file, file_size, media_type)
@@ -635,7 +638,10 @@ impl ImportEmoji {
             &self.hostname,
         ).await?;
         if emoji.image.file_size > config.limits.media.emoji_local_size_limit {
-            println!("emoji is too big");
+            println!(
+                "emoji file size must be less than {}",
+                FileSize::new(config.limits.media.emoji_local_size_limit),
+            );
             return Ok(());
         };
         create_or_update_local_emoji(
