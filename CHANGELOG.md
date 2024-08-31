@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Display better error message when config file is not found.
 - Enable identicon caching.
 - Don't serve `index.html` if `assets/custom.css` doesn't exist.
+- Improved formatting of "available space" message.
 
 ### Fixed
 

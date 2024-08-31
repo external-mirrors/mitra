@@ -1,3 +1,4 @@
+use std::fmt;
 use std::fs::{
     set_permissions,
     File,
@@ -39,6 +40,26 @@ pub fn set_file_permissions(file_path: &Path, mode: u32) -> Result<(), Error> {
     Ok(())
 }
 
+pub struct FileSize(usize);
+
+impl FileSize {
+    pub fn new(size: usize) -> Self {
+        Self(size)
+    }
+}
+
+impl fmt::Display for FileSize {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let (value, unit) = match self.0 {
+            size if size > 10_000_000_000 => (size / 1_000_000_000, "GB"),
+            size if size > 10_000_000 => (size / 1_000_000, "MB"),
+            size if size > 10_000 => (size / 1_000, "kB"),
+            size => (size, "B"),
+        };
+        write!(formatter, "{}{}", value, unit)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -64,5 +85,23 @@ mod tests {
             get_media_type_extension("image/avif"),
             Some("avif"),
         );
+    }
+
+    #[test]
+    fn test_format_file_size() {
+        let size = FileSize::new(9_999_000_000_000);
+        assert_eq!(size.to_string(), "9999GB");
+        let size = FileSize::new(10_123_000_000);
+        assert_eq!(size.to_string(), "10GB");
+        let size = FileSize::new(1_123_000_000);
+        assert_eq!(size.to_string(), "1123MB");
+        let size = FileSize::new(10_123_000);
+        assert_eq!(size.to_string(), "10MB");
+        let size = FileSize::new(123_000);
+        assert_eq!(size.to_string(), "123kB");
+        let size = FileSize::new(10_123);
+        assert_eq!(size.to_string(), "10kB");
+        let size = FileSize::new(123);
+        assert_eq!(size.to_string(), "123B");
     }
 }

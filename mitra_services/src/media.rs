@@ -6,7 +6,7 @@ use sha2::{Digest, Sha256};
 
 use mitra_config::Config;
 use mitra_utils::{
-    files::{get_media_type_extension, write_file},
+    files::{get_media_type_extension, write_file, FileSize},
     sysinfo::get_available_disk_space,
 };
 
@@ -87,8 +87,7 @@ impl MediaStorage {
         };
         match get_available_disk_space(&self.media_dir) {
             Ok(amount) => {
-                let amount_mb = amount / u64::pow(10, 6);
-                log::info!("available space: {amount_mb}MB");
+                log::info!("available space: {}", FileSize::new(amount));
             },
             Err(error) => {
                 log::warn!("failed to determine available space: {error}");
