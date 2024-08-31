@@ -716,10 +716,7 @@ pub async fn search_profiles_by_did(
 ) -> Result<Vec<DbActorProfile>, DatabaseError> {
     let verified = search_profiles_by_did_only(db_client, did).await?;
     let maybe_currency_address = match did {
-        Did::Pkh(did_pkh) => {
-            did_pkh.currency()
-                .map(|currency| (currency, did_pkh.address()))
-        },
+        Did::Pkh(did_pkh) => Some((did_pkh.currency(), did_pkh.address())),
         _ => None,
     };
     let unverified = if let Some((currency, address)) = maybe_currency_address {

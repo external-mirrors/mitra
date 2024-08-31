@@ -241,10 +241,8 @@ impl User {
             };
             // Return the first matching address, because only
             // one proof per currency is allowed.
-            if let Some(ref address_currency) = did_pkh.currency() {
-                if address_currency == currency {
-                    return Some(did_pkh.address());
-                };
+            if did_pkh.currency() == *currency {
+                return Some(did_pkh.address());
             };
         };
         None

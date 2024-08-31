@@ -61,8 +61,37 @@ impl FromStr for MoneroNetwork {
 }
 
 #[derive(Clone, Debug, PartialEq)]
+enum Namespace {
+    Eip155,
+    Monero,
+}
+
+impl FromStr for Namespace {
+    type Err = ChainIdError;
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        let namespace = match value {
+            CAIP2_ETHEREUM_NAMESPACE => Self::Eip155,
+            CAIP2_MONERO_NAMESPACE => Self::Monero,
+            _ => return Err(ChainIdError("unsupported CAIP-2 namespace")),
+        };
+        Ok(namespace)
+    }
+}
+
+impl fmt::Display for Namespace {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let value = match self {
+            Self::Eip155 => CAIP2_ETHEREUM_NAMESPACE,
+            Self::Monero => CAIP2_MONERO_NAMESPACE,
+        };
+        write!(formatter, "{value}")
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
 pub struct ChainId {
-    namespace: String,
+    namespace: Namespace,
     reference: String,
 }
 
@@ -75,12 +104,13 @@ impl ChainId {
         namespace: &str,
         reference: &str,
     ) -> Result<Self, ChainIdError> {
+        let namespace = Namespace::from_str(namespace)?;
         let reference = match namespace {
-            CAIP2_ETHEREUM_NAMESPACE => {
+            Namespace::Eip155 => {
                 parse_ethereum_chain_id(reference)?; // validation
                 reference
             },
-            CAIP2_MONERO_NAMESPACE => {
+            Namespace::Monero => {
                 // Allow CAIP-2 IDs and network names,
                 // but always use IDs internally.
                 let maybe_network = MoneroNetwork::from_str(reference);
@@ -97,10 +127,9 @@ impl ChainId {
                     },
                 }
             },
-            _ => return Err(ChainIdError("unsupported CAIP-2 namespace")),
         };
         let chain_id = Self {
-            namespace: namespace.to_string(),
+            namespace: namespace,
             reference: reference.to_string(),
         };
         Ok(chain_id)
@@ -108,7 +137,7 @@ impl ChainId {
 
     pub fn from_ethereum_chain_id(chain_id: u64) -> Self {
         Self {
-            namespace: CAIP2_ETHEREUM_NAMESPACE.to_string(),
+            namespace: Namespace::Eip155,
             reference: chain_id.to_string(),
         }
     }
@@ -122,7 +151,7 @@ impl ChainId {
     }
 
     pub fn is_ethereum(&self) -> bool {
-        self.namespace == CAIP2_ETHEREUM_NAMESPACE
+        self.namespace == Namespace::Eip155
     }
 
     pub fn ethereum_chain_id(&self) -> Result<u32, ChainIdError> {
@@ -140,7 +169,7 @@ impl ChainId {
             MoneroNetwork::Private => MONERO_PRIVATE_ID,
         };
         Self {
-            namespace: CAIP2_MONERO_NAMESPACE.to_string(),
+            namespace: Namespace::Monero,
             reference: reference.to_string(),
         }
     }
@@ -150,7 +179,7 @@ impl ChainId {
     }
 
     pub fn is_monero(&self) -> bool {
-        self.namespace == CAIP2_MONERO_NAMESPACE
+        self.namespace == Namespace::Monero
     }
 
     pub(super) fn is_wownero_mainnet(&self) -> bool {
@@ -171,13 +200,11 @@ impl ChainId {
         Ok(network)
     }
 
-    pub fn currency(&self) -> Option<Currency> {
-        let currency = match self.namespace.as_str() {
-            CAIP2_ETHEREUM_NAMESPACE => Currency::Ethereum,
-            CAIP2_MONERO_NAMESPACE => Currency::Monero,
-            _ => return None,
-        };
-        Some(currency)
+    pub fn currency(&self) -> Currency {
+        match self.namespace {
+            Namespace::Eip155 => Currency::Ethereum,
+            Namespace::Monero => Currency::Monero,
+        }
     }
 }
 
@@ -235,7 +262,7 @@ mod tests {
     fn test_parse_ethereum_chain_id() {
         let value = "eip155:1";
         let chain_id = value.parse::<ChainId>().unwrap();
-        assert_eq!(chain_id.namespace, "eip155");
+        assert_eq!(chain_id.namespace, Namespace::Eip155);
         assert_eq!(chain_id.reference, "1");
         assert_eq!(chain_id.to_string(), value);
     }
@@ -244,7 +271,7 @@ mod tests {
     fn test_parse_monero_chain_id() {
         let value = "monero:418015bb9ae982a1975da7d79277c270";
         let chain_id = value.parse::<ChainId>().unwrap();
-        assert_eq!(chain_id.namespace, "monero");
+        assert_eq!(chain_id.namespace, Namespace::Monero);
         assert_eq!(chain_id.reference, "418015bb9ae982a1975da7d79277c270");
         assert_eq!(chain_id.to_string(), value);
     }
@@ -253,7 +280,7 @@ mod tests {
     fn test_parse_monero_chain_id_alias() {
         let value = "monero:mainnet";
         let chain_id = value.parse::<ChainId>().unwrap();
-        assert_eq!(chain_id.namespace, "monero");
+        assert_eq!(chain_id.namespace, Namespace::Monero);
         assert_eq!(chain_id.reference, "418015bb9ae982a1975da7d79277c270");
     }
 
@@ -295,11 +322,9 @@ mod tests {
     #[test]
     fn test_chain_id_conversion() {
         let ethereum_chain_id = ChainId::ethereum_mainnet();
-        let currency = ethereum_chain_id.currency().unwrap();
-        assert_eq!(currency, Currency::Ethereum);
+        assert_eq!(ethereum_chain_id.currency(), Currency::Ethereum);
 
         let monero_chain_id = ChainId::monero_mainnet();
-        let currency = monero_chain_id.currency().unwrap();
-        assert_eq!(currency, Currency::Monero);
+        assert_eq!(monero_chain_id.currency(), Currency::Monero);
     }
 }

@@ -182,9 +182,7 @@ impl Account {
                     ("Key".to_string(), did_key.key_multibase())
                 },
                 Did::Pkh(did_pkh) => {
-                    let field_name = did_pkh.currency()
-                        .map(|currency| currency.field_name())
-                        .unwrap_or("$".to_string());
+                    let field_name = did_pkh.currency().field_name();
                     (field_name, did_pkh.address())
                 }
             };

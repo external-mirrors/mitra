@@ -39,7 +39,7 @@ impl DidPkh {
         self.account_id.chain_id.clone()
     }
 
-    pub fn currency(&self) -> Option<Currency> {
+    pub fn currency(&self) -> Currency {
         self.account_id.chain_id.currency()
     }
 }
@@ -72,7 +72,7 @@ mod tests {
         let ethereum = Currency::Ethereum;
         let did = DidPkh::from_address(&ethereum, address);
         assert_eq!(did.chain_id(), ChainId::ethereum_mainnet());
-        assert_eq!(did.currency().unwrap(), ethereum);
+        assert_eq!(did.currency(), ethereum);
         assert_eq!(did.address(), address.to_lowercase());
 
         let did_str = did.to_string();

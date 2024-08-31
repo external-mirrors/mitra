@@ -333,9 +333,8 @@ pub async fn get_user_by_login_address(
     account_id: &ChainAccountId,
 ) -> Result<User, DatabaseError> {
     let column_name = match account_id.chain_id.currency() {
-        Some(Currency::Ethereum) => "login_address_ethereum",
-        Some(Currency::Monero) => "login_address_monero",
-        _ => unimplemented!(),
+        Currency::Ethereum => "login_address_ethereum",
+        Currency::Monero => "login_address_monero",
     };
     let statement = format!(
         "
