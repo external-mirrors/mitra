@@ -18,7 +18,6 @@ use mitra_utils::{
         rsa_secret_key_from_pkcs8_pem,
         RsaSecretKey,
     },
-    currencies::Currency,
     did::Did,
 };
 
@@ -233,7 +232,7 @@ impl User {
     }
 
     /// Returns wallet address if it is verified
-    pub fn public_wallet_address(&self, currency: &Currency) -> Option<String> {
+    pub fn public_ethereum_address(&self) -> Option<String> {
         for proof in self.profile.identity_proofs.clone().into_inner() {
             let did_pkh = match proof.issuer {
                 Did::Pkh(did_pkh) => did_pkh,
@@ -241,7 +240,7 @@ impl User {
             };
             // Return the first matching address, because only
             // one proof per currency is allowed.
-            if did_pkh.currency() == *currency {
+            if did_pkh.chain_id().is_ethereum() {
                 return Some(did_pkh.address());
             };
         };
@@ -403,12 +402,11 @@ mod tests {
     }
 
     #[test]
-    fn test_public_wallet_address_login_address_not_exposed() {
+    fn test_public_ethereum_address_login_address_not_exposed() {
         let user = User {
             login_address_ethereum: Some("0x1234".to_string()),
             ..Default::default()
         };
-        let ethereum = Currency::Ethereum;
-        assert_eq!(user.public_wallet_address(&ethereum), None);
+        assert_eq!(user.public_ethereum_address(), None);
     }
 }

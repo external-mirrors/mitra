@@ -32,6 +32,7 @@ use mitra_services::media::{get_file_url, MediaStorage};
 use mitra_utils::{
     base64,
     caip2::ChainId,
+    currencies::Currency,
     did::Did,
     markdown::markdown_basic_to_html,
 };
@@ -182,7 +183,8 @@ impl Account {
                     ("Key".to_string(), did_key.key_multibase())
                 },
                 Did::Pkh(did_pkh) => {
-                    let field_name = did_pkh.currency().field_name();
+                    let field_name =
+                        Currency::from(did_pkh.chain_id()).field_name();
                     (field_name, did_pkh.address())
                 }
             };

@@ -90,7 +90,6 @@ use mitra_utils::{
         generate_rsa_key,
         rsa_secret_key_to_pkcs8_pem,
     },
-    currencies::Currency,
     did::Did,
     did_pkh::DidPkh,
     identicons::{generate_identicon, generate_pixel},
@@ -452,9 +451,7 @@ async fn create_identity_proof(
                 // identifier on any Ethereum chain
                 return Err(ValidationError("unsupported chain ID").into());
             };
-            let maybe_public_address =
-                current_user.public_wallet_address(&Currency::Ethereum);
-            if let Some(address) = maybe_public_address {
+            if let Some(address) = current_user.public_ethereum_address() {
                 // Do not allow to add more than one address proof
                 if did_pkh.address() != address {
                     return Err(ValidationError("DID doesn't match current identity").into());

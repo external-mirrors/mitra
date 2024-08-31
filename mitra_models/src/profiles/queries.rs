@@ -715,11 +715,12 @@ pub async fn search_profiles_by_did(
     prefer_verified: bool,
 ) -> Result<Vec<DbActorProfile>, DatabaseError> {
     let verified = search_profiles_by_did_only(db_client, did).await?;
-    let maybe_currency_address = match did {
-        Did::Pkh(did_pkh) => Some((did_pkh.currency(), did_pkh.address())),
+    let maybe_chain_id_address = match did {
+        Did::Pkh(did_pkh) => Some((did_pkh.chain_id(), did_pkh.address())),
         _ => None,
     };
-    let unverified = if let Some((currency, address)) = maybe_currency_address {
+    let unverified = if let Some((chain_id, address)) = maybe_chain_id_address {
+        let currency = Currency::from(chain_id);
         // If currency is Ethereum,
         // search over extra fields must be case insensitive.
         let value_op = match currency {

@@ -3,10 +3,10 @@ use serde_json::{Value as JsonValue};
 use uuid::Uuid;
 
 use mitra_utils::{
+    caip2::{Namespace as ChainNamespace},
     caip10::{AccountId as ChainAccountId},
     crypto_eddsa::Ed25519SecretKey,
     crypto_rsa::rsa_secret_key_to_pkcs1_der,
-    currencies::Currency,
     did::Did,
 };
 
@@ -331,9 +331,9 @@ pub async fn get_user_by_login_address(
     db_client: &impl DatabaseClient,
     account_id: &ChainAccountId,
 ) -> Result<User, DatabaseError> {
-    let column_name = match account_id.chain_id.currency() {
-        Currency::Ethereum => "login_address_ethereum",
-        Currency::Monero => "login_address_monero",
+    let column_name = match account_id.chain_id.namespace() {
+        ChainNamespace::Eip155 => "login_address_ethereum",
+        ChainNamespace::Monero => "login_address_monero",
     };
     let statement = format!(
         "

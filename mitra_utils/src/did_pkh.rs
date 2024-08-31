@@ -5,7 +5,6 @@ use std::str::FromStr;
 use super::{
     caip10::AccountId,
     caip2::ChainId,
-    currencies::Currency,
     did::DidParseError,
 };
 
@@ -37,10 +36,6 @@ impl DidPkh {
     pub fn chain_id(&self) -> ChainId {
         self.account_id.chain_id.clone()
     }
-
-    pub fn currency(&self) -> Currency {
-        self.account_id.chain_id.currency()
-    }
 }
 
 impl fmt::Display for DidPkh {
@@ -70,7 +65,6 @@ mod tests {
         let address = "0xB9C5714089478a327F09197987f16f9E5d936E8a";
         let did = DidPkh::from_ethereum_address(address);
         assert_eq!(did.chain_id(), ChainId::ethereum_mainnet());
-        assert_eq!(did.currency(), Currency::Ethereum);
         assert_eq!(did.address(), address.to_lowercase());
 
         let did_str = did.to_string();

@@ -11,8 +11,6 @@ use serde::{
     de::Error as DeserializerError,
 };
 
-use super::currencies::Currency;
-
 pub(super) const CAIP2_RE: &str = r"(?P<namespace>[-a-z0-9]{3,8}):(?P<reference>[-a-zA-Z0-9]{1,32})";
 
 const CAIP2_ETHEREUM_NAMESPACE: &str = "eip155";
@@ -61,7 +59,7 @@ impl FromStr for MoneroNetwork {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-enum Namespace {
+pub enum Namespace {
     Eip155,
     Monero,
 }
@@ -135,6 +133,10 @@ impl ChainId {
         Ok(chain_id)
     }
 
+    pub fn namespace(&self) -> &Namespace {
+        &self.namespace
+    }
+
     pub fn from_ethereum_chain_id(chain_id: u64) -> Self {
         Self {
             namespace: Namespace::Eip155,
@@ -198,13 +200,6 @@ impl ChainId {
             _ => return Err(ChainIdError("unknown monero network")),
         };
         Ok(network)
-    }
-
-    pub fn currency(&self) -> Currency {
-        match self.namespace {
-            Namespace::Eip155 => Currency::Ethereum,
-            Namespace::Monero => Currency::Monero,
-        }
     }
 }
 
@@ -317,14 +312,5 @@ mod tests {
         let chain_id: ChainId = "monero:regtest".parse().unwrap();
         let network = chain_id.monero_network().unwrap();
         assert_eq!(network, MoneroNetwork::Private);
-    }
-
-    #[test]
-    fn test_chain_id_conversion() {
-        let ethereum_chain_id = ChainId::ethereum_mainnet();
-        assert_eq!(ethereum_chain_id.currency(), Currency::Ethereum);
-
-        let monero_chain_id = ChainId::monero_mainnet();
-        assert_eq!(monero_chain_id.currency(), Currency::Monero);
     }
 }
