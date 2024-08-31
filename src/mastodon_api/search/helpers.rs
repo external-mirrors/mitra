@@ -23,7 +23,7 @@ use mitra_models::{
     profiles::queries::{
         search_profiles,
         search_profiles_by_did_only,
-        search_profiles_by_wallet_address,
+        search_profiles_by_ethereum_address,
     },
     profiles::types::DbActorProfile,
     tags::queries::search_tags,
@@ -35,7 +35,6 @@ use mitra_services::{
 };
 use mitra_utils::{
     ap_url::is_ap_url,
-    currencies::Currency,
     did::Did,
     http_url::normalize_http_url,
     urls::encode_hostname,
@@ -319,9 +318,8 @@ pub async fn search(
         SearchQuery::WalletAddress(address) => {
             // Search by wallet address, assuming it's ethereum address
             // TODO: support other currencies
-            profiles = search_profiles_by_wallet_address(
+            profiles = search_profiles_by_ethereum_address(
                 db_client,
-                &Currency::Ethereum,
                 &address,
                 false,
             ).await?;

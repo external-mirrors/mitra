@@ -352,10 +352,7 @@ async fn get_identity_claim(
     let current_user = get_current_user(db_client, auth.token()).await?;
     let (did, proof_type) = match query_params.proof_type.as_str() {
         "ethereum" => {
-            let did_pkh = DidPkh::from_address(
-                &Currency::Ethereum,
-                &query_params.signer,
-            );
+            let did_pkh = DidPkh::from_ethereum_address(&query_params.signer);
             (Did::Pkh(did_pkh), IdentityProofType::FepC390JcsEip191Proof)
         },
         "minisign" => {

@@ -769,13 +769,12 @@ pub async fn search_profiles_by_did(
     Ok(results)
 }
 
-pub async fn search_profiles_by_wallet_address(
+pub async fn search_profiles_by_ethereum_address(
     db_client: &impl DatabaseClient,
-    currency: &Currency,
     wallet_address: &str,
     prefer_verified: bool,
 ) -> Result<Vec<DbActorProfile>, DatabaseError> {
-    let did_pkh = DidPkh::from_address(currency, wallet_address);
+    let did_pkh = DidPkh::from_ethereum_address(wallet_address);
     let did = Did::Pkh(did_pkh);
     search_profiles_by_did(db_client, &did, prefer_verified).await
 }
@@ -1194,11 +1193,9 @@ mod tests {
         assert_eq!(profiles[0].id, profile.id);
     }
 
-    const ETHEREUM: Currency = Currency::Ethereum;
-
     #[tokio::test]
     #[serial]
-    async fn test_search_profiles_by_wallet_address_local() {
+    async fn test_search_profiles_by_ethereum_address_local() {
         let db_client = &mut create_test_database().await;
         let wallet_address = "0x1234abcd";
         let user_data = UserCreateData {
@@ -1206,9 +1203,8 @@ mod tests {
             ..Default::default()
         };
         let _user = create_user(db_client, user_data).await.unwrap();
-        let profiles = search_profiles_by_wallet_address(
+        let profiles = search_profiles_by_ethereum_address(
             db_client,
-            &ETHEREUM,
             wallet_address,
             false,
         ).await.unwrap();
@@ -1219,7 +1215,7 @@ mod tests {
 
     #[tokio::test]
     #[serial]
-    async fn test_search_profiles_by_wallet_address_remote() {
+    async fn test_search_profiles_by_ethereum_address_remote() {
         let db_client = &mut create_test_database().await;
         let extra_field = ExtraField {
             name: "$eth".to_string(),
@@ -1231,8 +1227,11 @@ mod tests {
             ..Default::default()
         };
         let profile = create_profile(db_client, profile_data).await.unwrap();
-        let profiles = search_profiles_by_wallet_address(
-            db_client, &ETHEREUM, "0x1234abcd", false).await.unwrap();
+        let profiles = search_profiles_by_ethereum_address(
+            db_client,
+            "0x1234abcd",
+            false,
+        ).await.unwrap();
 
         assert_eq!(profiles.len(), 1);
         assert_eq!(profiles[0].id, profile.id);
@@ -1240,10 +1239,10 @@ mod tests {
 
     #[tokio::test]
     #[serial]
-    async fn test_search_profiles_by_wallet_address_identity_proof() {
+    async fn test_search_profiles_by_ethereum_address_identity_proof() {
         let db_client = &mut create_test_database().await;
         let identity_proof = IdentityProof {
-            issuer: Did::Pkh(DidPkh::from_address(&ETHEREUM, "0x1234abcd")),
+            issuer: Did::Pkh(DidPkh::from_ethereum_address("0x1234abcd")),
             proof_type: IdentityProofType::LegacyEip191IdentityProof,
             value: json!("13590013185bdea963"),
         };
@@ -1252,8 +1251,11 @@ mod tests {
             ..Default::default()
         };
         let profile = create_profile(db_client, profile_data).await.unwrap();
-        let profiles = search_profiles_by_wallet_address(
-            db_client, &ETHEREUM, "0x1234abcd", false).await.unwrap();
+        let profiles = search_profiles_by_ethereum_address(
+            db_client,
+            "0x1234abcd",
+            false,
+        ).await.unwrap();
 
         assert_eq!(profiles.len(), 1);
         assert_eq!(profiles[0].id, profile.id);

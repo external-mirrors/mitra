@@ -8,7 +8,6 @@ use mitra_utils::{
     crypto_rsa::rsa_secret_key_to_pkcs1_der,
     currencies::Currency,
     did::Did,
-    did_pkh::DidPkh,
 };
 
 use crate::database::{
@@ -378,16 +377,6 @@ pub async fn get_user_by_did(
     let db_profile: DbActorProfile = row.try_get("actor_profile")?;
     let user = User::new(db_user, db_profile)?;
     Ok(user)
-}
-
-pub async fn get_user_by_public_wallet_address(
-    db_client: &impl DatabaseClient,
-    currency: &Currency,
-    wallet_address: &str,
-) -> Result<User, DatabaseError> {
-    let did_pkh = DidPkh::from_address(currency, wallet_address);
-    let did = Did::Pkh(did_pkh);
-    get_user_by_did(db_client, &did).await
 }
 
 #[allow(dead_code)]

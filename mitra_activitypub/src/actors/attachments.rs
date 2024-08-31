@@ -298,7 +298,6 @@ mod tests {
     use mitra_utils::{
         caip2::ChainId,
         crypto_ecdsa::generate_ecdsa_key,
-        currencies::Currency,
         did::Did,
         did_pkh::DidPkh,
         eip191::{create_eip191_signature, ecdsa_public_key_to_address_hex},
@@ -316,7 +315,7 @@ mod tests {
         let actor_id = "https://server.example/users/test";
         let secret_key = generate_ecdsa_key();
         let address = ecdsa_public_key_to_address_hex(&secret_key.verifying_key());
-        let did_pkh = DidPkh::from_address(&Currency::Ethereum, &address);
+        let did_pkh = DidPkh::from_ethereum_address(&address);
         let did = Did::Pkh(did_pkh);
         let proof_type = IdentityProofType::FepC390JcsEip191Proof;
         let created_at = Utc::now();

@@ -185,7 +185,6 @@ mod tests {
             ed25519_secret_key_from_multikey,
         },
         crypto_rsa::generate_weak_rsa_key,
-        currencies::Currency,
         json_signatures::create::{
             sign_object_eddsa,
             sign_object_rsa,
@@ -211,10 +210,11 @@ mod tests {
             signature_data.proof_type,
             ProofType::JcsEip191Signature,
         );
-        let expected_signer = JsonSigner::Did(Did::Pkh(DidPkh::from_address(
-            &Currency::Ethereum,
-            "0xb9c5714089478a327f09197987f16f9e5d936e8a",
-        )));
+        let expected_signer = JsonSigner::Did(Did::Pkh(
+            DidPkh::from_ethereum_address(
+                "0xb9c5714089478a327f09197987f16f9e5d936e8a",
+            ),
+        ));
         assert_eq!(signature_data.signer, expected_signer);
         assert_eq!(signature_data.signature, [171, 205]);
     }

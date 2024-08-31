@@ -15,13 +15,6 @@ impl Currency {
     pub fn field_name(&self) -> String {
         format!("${}", self.code())
     }
-
-    pub fn normalize_address(&self, address: &str) -> String {
-        match self {
-            Self::Ethereum => address.to_lowercase(),
-            Self::Monero => address.to_string(),
-        }
-    }
 }
 
 #[cfg(test)]

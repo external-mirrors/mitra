@@ -25,13 +25,12 @@ impl DidPkh {
         self.account_id.address.clone()
     }
 
-    pub fn from_address(currency: &Currency, address: &str) -> Self {
-        let chain_id = match currency {
-            Currency::Ethereum => ChainId::ethereum_mainnet(),
-            Currency::Monero => unimplemented!(),
+    pub fn from_ethereum_address(address: &str) -> Self {
+        let chain_id = ChainId::ethereum_mainnet();
+        let account_id = AccountId {
+            chain_id,
+            address: address.to_lowercase(),
         };
-        let address = currency.normalize_address(address);
-        let account_id = AccountId { chain_id, address };
         Self { account_id }
     }
 
@@ -69,10 +68,9 @@ mod tests {
     #[test]
     fn test_did_pkh_string_conversion() {
         let address = "0xB9C5714089478a327F09197987f16f9E5d936E8a";
-        let ethereum = Currency::Ethereum;
-        let did = DidPkh::from_address(&ethereum, address);
+        let did = DidPkh::from_ethereum_address(address);
         assert_eq!(did.chain_id(), ChainId::ethereum_mainnet());
-        assert_eq!(did.currency(), ethereum);
+        assert_eq!(did.currency(), Currency::Ethereum);
         assert_eq!(did.address(), address.to_lowercase());
 
         let did_str = did.to_string();
