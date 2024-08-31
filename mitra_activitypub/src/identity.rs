@@ -6,11 +6,11 @@ use mitra_models::profiles::types::{
     IdentityProofType,
 };
 use mitra_utils::{
-    canonicalization::{
+    did::Did,
+    jcs::{
         canonicalize_object,
         CanonicalizationError,
     },
-    did::Did,
     json_signatures::create::{
         prepare_jcs_sha256_data,
         IntegrityProof,

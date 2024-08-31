@@ -5,10 +5,6 @@ use serde_json::{Value as JsonValue};
 use sha2::{Digest, Sha256};
 
 use crate::{
-    canonicalization::{
-        canonicalize_object,
-        CanonicalizationError,
-    },
     crypto_eddsa::{
         create_eddsa_signature,
         Ed25519SecretKey,
@@ -21,6 +17,10 @@ use crate::{
     },
     did_key::DidKey,
     did_pkh::DidPkh,
+    jcs::{
+        canonicalize_object,
+        CanonicalizationError,
+    },
     multibase::encode_multibase_base58btc,
 };
 

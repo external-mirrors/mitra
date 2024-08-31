@@ -4,16 +4,16 @@ use serde_json::{Value as JsonValue};
 use url::Url;
 
 use crate::{
-    canonicalization::{
-        canonicalize_object,
-        CanonicalizationError,
-    },
     crypto_eddsa::{verify_eddsa_signature, Ed25519PublicKey},
     crypto_rsa::{verify_rsa_sha256_signature, RsaPublicKey},
     did::Did,
     did_key::DidKey,
     did_pkh::DidPkh,
     eip191::verify_eip191_signature,
+    jcs::{
+        canonicalize_object,
+        CanonicalizationError,
+    },
     minisign::verify_minisign_signature,
     multibase::{decode_multibase_base58btc, MultibaseError},
 };
