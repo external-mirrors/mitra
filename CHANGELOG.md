@@ -20,6 +20,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Improved formatting of "available space" message.
 - Display better error message when imported emoji is too big.
 - Delete `instance_rsa_key` file after copying key into database.
+- Don't display reposts made by current user in home timeline.
 
 ### Fixed
 

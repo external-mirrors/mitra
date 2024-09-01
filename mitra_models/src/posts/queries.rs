@@ -599,7 +599,7 @@ pub async fn get_home_timeline(
         JOIN actor_profile ON post.author_id = actor_profile.id
         WHERE
             (
-                post.author_id = $current_user_id
+                post.author_id = $current_user_id AND post.repost_of_id IS NULL
                 OR (
                     -- is following or subscribed to the post author
                     EXISTS (
