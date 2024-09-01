@@ -627,6 +627,11 @@ pub async fn import_from_outbox(
     // Outbox has reverse chronological order
     let activities = activities.into_iter().rev();
     for activity in activities {
+        if activity.is_string() {
+            // Ignore if activity is not embedded
+            continue;
+        };
+        // Trust but perform same-owner check
         let activity_actor = get_object_id(&activity["actor"])
             .map_err(|_| ValidationError("invalid actor property"))?;
         if activity_actor != actor_data.id {
@@ -638,7 +643,7 @@ pub async fn import_from_outbox(
             db_client,
             &activity,
             true, // is authenticated
-            true, // activity is being pulled
+            true, // activity is being pulled (not a spam)
         ).await.unwrap_or_else(|error| {
             log::warn!(
                 "failed to process activity ({}): {}",
@@ -683,6 +688,7 @@ pub async fn import_replies(
     for item in collection_items {
         let object_id = get_object_id(&item)
             .map_err(|_| ValidationError("invalid conversation item"))?;
+        // Don't trust, always retrieve objects from origin
         import_post(
             db_client,
             &instance,
