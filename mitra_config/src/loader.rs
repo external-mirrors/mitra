@@ -122,7 +122,6 @@ pub fn parse_config() -> (Config, Vec<&'static str>) {
     // Insert instance RSA key
     if let Some(instance_rsa_key) = read_instance_rsa_key(&config.storage_dir) {
         config.instance_rsa_key = Some(instance_rsa_key);
-        warnings.push("instance_rsa_key file can be deleted");
     };
 
     (config, warnings)

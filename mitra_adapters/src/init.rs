@@ -1,3 +1,5 @@
+use std::fs::remove_file;
+
 use log::Level;
 
 use mitra_config::{
@@ -142,7 +144,11 @@ pub async fn prepare_instance_keys(
 ) -> Result<(), DatabaseError> {
     if let Some(instance_rsa_key) = config.get_instance_rsa_key() {
         save_instance_rsa_key(db_client, instance_rsa_key).await?;
-        log::info!("instance RSA key copied from file");
+        log::warn!("instance RSA key copied from file");
+        let secret_key_path = config.storage_dir.join("instance_rsa_key");
+        remove_file(secret_key_path)
+            .expect("can't delete instance_rsa_key file");
+        log::warn!("instance_rsa_key file deleted");
     } else {
         let instance_rsa_key = prepare_instance_rsa_key(db_client).await?;
         config.set_instance_rsa_key(instance_rsa_key);

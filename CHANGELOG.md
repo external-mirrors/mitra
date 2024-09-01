@@ -19,6 +19,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Don't serve `index.html` if `assets/custom.css` doesn't exist.
 - Improved formatting of "available space" message.
 - Display better error message when imported emoji is too big.
+- Delete `instance_rsa_key` file after copying key into database.
 
 ### Fixed
 
