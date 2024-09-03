@@ -101,6 +101,9 @@ pub fn parse_config() -> (Config, Vec<&'static str>) {
     if config.authentication_methods.is_empty() {
         panic!("authentication_methods must not be empty");
     };
+    if !config.federation.ssrf_protection_enabled {
+        warnings.push("SSRF protection disabled");
+    };
     if !config.federation.fep_1b12_full_enabled {
         warnings.push("federation.fep_1b12_full_enabled parameter is deprecated");
     };

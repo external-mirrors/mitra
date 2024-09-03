@@ -26,7 +26,7 @@ pub(super) fn build_federation_agent_with_key(
     FederationAgent {
         user_agent: instance.agent(),
         is_instance_private: instance.is_private,
-        ssrf_protection_enabled: true,
+        ssrf_protection_enabled: instance.ssrf_protection_enabled,
         response_size_limit: RESPONSE_SIZE_LIMIT,
         fetcher_timeout: instance.fetcher_timeout,
         deliverer_timeout: instance.deliverer_timeout,

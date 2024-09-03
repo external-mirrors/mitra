@@ -151,6 +151,7 @@ impl Config {
             is_private:
                 !self.federation.enabled ||
                 matches!(self.environment, Environment::Development),
+            ssrf_protection_enabled: self.federation.ssrf_protection_enabled,
             fetcher_timeout: self.federation.fetcher_timeout,
             deliverer_timeout: self.federation.deliverer_timeout,
             deliverer_log_response_length: self.federation.deliverer_log_response_length,
@@ -201,6 +202,7 @@ pub struct Instance {
     pub i2p_proxy_url: Option<String>,
     // Private instance won't send signed HTTP requests
     pub is_private: bool,
+    pub ssrf_protection_enabled: bool,
     pub fetcher_timeout: u64,
     pub deliverer_timeout: u64,
     pub deliverer_log_response_length: usize,
@@ -243,6 +245,7 @@ impl Instance {
             onion_proxy_url: None,
             i2p_proxy_url: None,
             is_private: true,
+            ssrf_protection_enabled: true,
             fetcher_timeout: 0,
             deliverer_timeout: 0,
             deliverer_log_response_length: 0,
