@@ -24,6 +24,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Delete `instance_rsa_key` file after copying key into database.
 - Don't display reposts made by current user in home timeline.
 - Ignore non-embedded activities when loading outbox.
+- Increase delivery pool size from 5 to 10.
 
 ### Fixed
 
