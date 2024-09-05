@@ -14,16 +14,7 @@ use serde::{
 };
 use serde_json::{Value as JsonValue};
 
-use mitra_config::Instance;
-use mitra_federation::{
-    deliver::{send_object, DelivererError},
-    url::Url,
-};
-use mitra_models::{
-    profiles::types::PublicKeyType,
-    users::types::{PortableUser, User},
-};
-use mitra_utils::{
+use apx_core::{
     crypto_eddsa::{
         ed25519_public_key_from_secret_key,
         ed25519_secret_key_from_bytes,
@@ -42,6 +33,15 @@ use mitra_utils::{
         JsonSignatureError,
     },
     urls::get_hostname,
+};
+use mitra_config::Instance;
+use mitra_federation::{
+    deliver::{send_object, DelivererError},
+    url::Url,
+};
+use mitra_models::{
+    profiles::types::PublicKeyType,
+    users::types::{PortableUser, User},
 };
 
 use crate::{
@@ -329,7 +329,7 @@ pub(super) async fn deliver_activity_worker(
 
 #[cfg(test)]
 mod tests {
-    use mitra_utils::{
+    use apx_core::{
         crypto_eddsa::generate_weak_ed25519_key,
         crypto_rsa::generate_weak_rsa_key,
     };

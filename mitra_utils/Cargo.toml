@@ -10,33 +10,14 @@ rust-version.workspace = true
 # Used for HTML sanitization
 ammonia = "3.2.0"
 html5ever = "0.26.0"
-# Used for working with RSA keys, HTTP signatures and file uploads
-base64_ext = { package = "base64", version = "0.21.4" }
-# Used to verify minisign signatures
-blake2 = "0.10.5"
 # Used to generate identicons
 eth-blockies = "1.1.0"
-# Used to decode base58btc
-bs58 = "0.4.0"
 # Used for working with dates
-chrono = { version = "0.4.23", default-features = false, features = ["std", "serde", "clock"] }
+chrono = { version = "0.4.23", default-features = false, features = ["std", "clock"] }
 # Used for parsing markdown
 comrak = { version = "0.19.0", default-features = false }
-# Used for working with EdDSA signatures
-ed25519_1 = { package = "ed25519", version = "1.5.3", features = ["pkcs8"] }
-ed25519-dalek = { version = "2.0.0", features = ["rand_core"] }
-# Used to work with hexadecimal strings
-hex = "0.4.3"
 # Used for extracting text from HTML
 html2text = "=0.12.4"
-# Used for verifying HTTP signatures
-http = "0.2.9"
-# Used for working with IDNs
-idna = "0.4.0"
-# Used for working with URIs
-iri-string = "0.7.2"
-# Used for working with ECDSA signatures
-k256 = { version = "0.11.6", default-features = false, features = ["std", "ecdsa", "keccak256"] }
 # Used to gather disk info
 lfs-core = "=0.11.1"
 # Used to guess media type of a file
@@ -46,36 +27,18 @@ infer = "=0.13.0"
 rand = "0.8.4"
 # Used for working with regular expressions
 regex = "1.9.6, <1.10.0"
-# Used for working with RSA keys
-rsa = "0.8.2"
-pem = "2.0.1"
 # Used for hashing passwords
 rust-argon2 = "1.0.0"
-# Used for serialization/deserialization
-serde = { version = "1.0.136", features = ["derive"] }
-serde_json = "1.0.89"
-# Used to create JCS representations
-serde_json_canonicalizer = "0.2.0"
-# Used to calculate SHA2 hashes
-sha2 = { version = "0.10.6", features = ["oid"] }
-# Used to calculate keccak-256 hashes
-sha3 = "0.10.6"
 # Used for creating error types
 thiserror = "1.0.37"
 # Used to generate lexicographically sortable IDs
 ulid = { version = "1.0.0", features = ["uuid"] }
 # Used to work with Unicode
 unicode-segmentation = "1.10.1"
-# Used for multicodec implementation
-unsigned-varint = "0.7.1"
-# Used to work with URLs
-url = "2.4.1"
-percent-encoding = "*"
 # Used to work with UUIDs
 uuid = "1.1.2"
 
-[features]
-test-utils = ["rand/small_rng"]
+apx_core = { path = "../apx_core" }
 
 [lints]
 workspace = true

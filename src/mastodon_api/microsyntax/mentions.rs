@@ -2,6 +2,7 @@ use std::collections::HashMap;
 
 use regex::{Captures, Regex};
 
+use apx_core::urls::encode_hostname;
 use mitra_activitypub::identifiers::profile_actor_url;
 use mitra_federation::addresses::WebfingerAddress;
 use mitra_models::{
@@ -9,7 +10,6 @@ use mitra_models::{
     profiles::queries::get_profiles_by_accts,
     profiles::types::DbActorProfile,
 };
-use mitra_utils::urls::encode_hostname;
 
 use super::links::is_inside_code_block;
 

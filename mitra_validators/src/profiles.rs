@@ -1,5 +1,8 @@
 use regex::Regex;
 
+use apx_core::{
+    urls::encode_hostname,
+};
 use mitra_models::profiles::types::{
     DbActor,
     DbActorKey,
@@ -11,7 +14,6 @@ use mitra_models::profiles::types::{
 };
 use mitra_utils::{
     html::{clean_html, clean_html_all, clean_html_strict},
-    urls::encode_hostname,
 };
 
 use super::{

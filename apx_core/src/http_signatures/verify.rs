@@ -198,9 +198,11 @@ pub fn verify_http_signature(
 
 #[cfg(test)]
 mod tests {
-    use crate::crypto_rsa::generate_weak_rsa_key;
-    use crate::http_digest::get_sha256_digest;
-    use crate::http_signatures::create::create_http_signature;
+    use crate::{
+        crypto_rsa::generate_weak_rsa_key,
+        http_digest::get_sha256_digest,
+        http_signatures::create::create_http_signature,
+    };
     use super::*;
 
     #[test]

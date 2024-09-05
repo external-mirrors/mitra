@@ -1,4 +1,4 @@
-use crate::caip2::{ChainId, Namespace};
+use apx_core::caip2::{ChainId, Namespace};
 
 #[derive(Debug, PartialEq)]
 pub enum Currency {

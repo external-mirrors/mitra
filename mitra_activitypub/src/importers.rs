@@ -7,6 +7,11 @@ use serde::{
 };
 use serde_json::{Value as JsonValue};
 
+use apx_core::{
+    crypto_eddsa::ed25519_secret_key_from_multikey,
+    crypto_rsa::rsa_secret_key_from_multikey,
+    urls::guess_protocol,
+};
 use mitra_config::{Config, Instance};
 use mitra_federation::{
     addresses::WebfingerAddress,
@@ -41,11 +46,6 @@ use mitra_models::{
     users::types::{PortableUser, PortableUserData},
 };
 use mitra_services::media::MediaStorage;
-use mitra_utils::{
-    crypto_eddsa::ed25519_secret_key_from_multikey,
-    crypto_rsa::rsa_secret_key_from_multikey,
-    urls::guess_protocol,
-};
 use mitra_validators::{
     errors::ValidationError,
     users::validate_portable_user_data,

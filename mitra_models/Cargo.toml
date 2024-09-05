@@ -39,12 +39,13 @@ rustls-pemfile = { version = "1.0.4" }
 # Used to work with UUIDs
 uuid = { version = "1.1.2", features = ["serde", "v4"] }
 
+apx_core = { path = "../apx_core" }
 mitra_utils = { path = "../mitra_utils" }
 
 [dev-dependencies]
 serial_test = "0.7.0"
 
-mitra_utils = { path = "../mitra_utils", features = ["test-utils"] }
+apx_core = { path = "../apx_core", features = ["test-utils"] }
 
 [features]
 test-utils = []

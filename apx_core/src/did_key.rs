@@ -4,7 +4,7 @@ use std::str::FromStr;
 
 use regex::Regex;
 
-use super::{
+use crate::{
     crypto_eddsa::{
         ed25519_public_key_from_bytes,
         Ed25519PublicKey,

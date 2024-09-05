@@ -1,7 +1,7 @@
 use reqwest::{Client, Method};
 use thiserror::Error;
 
-use mitra_utils::{
+use apx_core::{
     http_signatures::create::{
         create_http_signature,
         HttpSignatureError,

@@ -5,12 +5,14 @@ use k256::{
 };
 use sha3::{Digest, Keccak256};
 
-use super::crypto_ecdsa::{
-    create_ecdsa_signature,
-    recover_ecdsa_public_key,
-    EcdsaError,
+use crate::{
+    crypto_ecdsa::{
+        create_ecdsa_signature,
+        recover_ecdsa_public_key,
+        EcdsaError,
+    },
+    did_pkh::DidPkh,
 };
-use super::did_pkh::DidPkh;
 
 fn prepare_eip191_message(message: &[u8]) -> Vec<u8> {
     [

@@ -6,13 +6,13 @@ use actix_multipart::form::{
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
+use apx_core::base64;
 use mitra_models::attachments::types::{
     AttachmentType,
     DbMediaAttachment,
 };
 use mitra_services::media::get_file_url;
 use mitra_utils::{
-    base64,
     files::sniff_media_type,
 };
 

@@ -1,6 +1,7 @@
 [workspace]
 members = [
   ".",
+  "apx_core",
   "mitra_activitypub",
   "mitra_adapters",
   "mitra_cli",
@@ -13,6 +14,7 @@ members = [
 ]
 default-members = [
   ".",
+  "apx_core",
   "mitra_activitypub",
   "mitra_adapters",
   "mitra_cli",
@@ -94,6 +96,7 @@ uuid = { version = "1.1.2", features = ["serde", "v4"] }
 # User for working with block/allow lists
 wildmatch = "2.1.1"
 
+apx_core = { path = "apx_core" }
 mitra_activitypub = { path = "mitra_activitypub" }
 mitra_adapters = { path = "mitra_adapters" }
 mitra_config = { path = "mitra_config" }
@@ -106,9 +109,9 @@ mitra_validators = { path = "mitra_validators" }
 [dev-dependencies]
 serial_test = "0.7.0"
 
+apx_core = { path = "apx_core", features = ["test-utils"] }
 mitra_config = { path = "mitra_config", features = ["test-utils"] }
 mitra_models = { path = "mitra_models", features = ["test-utils"] }
-mitra_utils = { path = "mitra_utils", features = ["test-utils"] }
 
 [features]
 production = ["mitra_config/production"]

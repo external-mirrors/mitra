@@ -1,8 +1,6 @@
 use std::fmt;
 
-use mitra_federation::url::GATEWAY_PATH_PREFIX;
-use mitra_models::users::types::User;
-use mitra_utils::{
+use apx_core::{
     ap_url::with_ap_prefix,
     crypto_eddsa::{
         ed25519_public_key_from_secret_key,
@@ -11,6 +9,8 @@ use mitra_utils::{
     },
     did_key::DidKey,
 };
+use mitra_federation::url::GATEWAY_PATH_PREFIX;
+use mitra_models::users::types::User;
 
 fn fep_ef61_identity(public_key: &Ed25519PublicKey) -> DidKey {
     DidKey::from_ed25519_key(public_key)
@@ -97,7 +97,7 @@ impl Authority {
 
 #[cfg(test)]
 mod tests {
-    use mitra_utils::crypto_eddsa::generate_weak_ed25519_key;
+    use apx_core::crypto_eddsa::generate_weak_ed25519_key;
     use super::*;
 
     const SERVER_URL: &str = "https://server.example";

@@ -2,6 +2,19 @@ use std::fs::remove_file;
 
 use log::Level;
 
+use apx_core::{
+    crypto_eddsa::{
+        ed25519_secret_key_from_bytes,
+        generate_ed25519_key,
+        Ed25519SecretKey,
+    },
+    crypto_rsa::{
+        generate_rsa_key,
+        rsa_secret_key_from_pkcs1_der,
+        rsa_secret_key_to_pkcs1_der,
+        RsaSecretKey,
+    },
+};
 use mitra_config::{
     parse_config,
     Config,
@@ -24,19 +37,6 @@ use mitra_models::{
         set_internal_property,
     },
     users::helpers::add_ed25519_keys,
-};
-use mitra_utils::{
-    crypto_eddsa::{
-        ed25519_secret_key_from_bytes,
-        generate_ed25519_key,
-        Ed25519SecretKey,
-    },
-    crypto_rsa::{
-        generate_rsa_key,
-        rsa_secret_key_from_pkcs1_der,
-        rsa_secret_key_to_pkcs1_der,
-        RsaSecretKey,
-    },
 };
 
 use crate::logger::configure_logger;

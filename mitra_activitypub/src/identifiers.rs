@@ -1,6 +1,10 @@
 use regex::Regex;
 use uuid::Uuid;
 
+use apx_core::{
+    caip2::ChainId,
+    urls::url_encode,
+};
 use mitra_federation::{
     identifiers::parse_object_id,
     url::{parse_url, Url},
@@ -13,10 +17,6 @@ use mitra_models::{
         DbActorProfile,
         PublicKeyType,
     },
-};
-use mitra_utils::{
-    caip2::ChainId,
-    urls::url_encode,
 };
 use mitra_validators::errors::ValidationError;
 

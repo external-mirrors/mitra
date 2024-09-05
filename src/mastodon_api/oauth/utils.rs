@@ -1,5 +1,6 @@
+use apx_core::base64;
+
 use mitra_utils::{
-    base64,
     random::generate_random_sequence,
 };
 

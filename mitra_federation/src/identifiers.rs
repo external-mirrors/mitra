@@ -3,7 +3,7 @@ use std::str::FromStr;
 use regex::{Captures, Regex};
 use thiserror::Error;
 
-use mitra_utils::http_url::HttpUrl;
+use apx_core::http_url::HttpUrl;
 
 #[derive(Debug, Error)]
 #[error("{0}")]

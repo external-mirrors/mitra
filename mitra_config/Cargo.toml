@@ -20,10 +20,11 @@ serde_yaml = "0.9.25"
 # Used for creating error types
 thiserror = "1.0.37"
 
+apx_core = { path = "../apx_core" }
 mitra_utils = { path = "../mitra_utils" }
 
 [dev-dependencies]
-mitra_utils = { path = "../mitra_utils", features = ["test-utils"] }
+apx_core = { path = "../apx_core", features = ["test-utils"] }
 
 [features]
 production = []

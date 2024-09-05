@@ -1,11 +1,14 @@
 use chrono::{DateTime, Utc};
 use uuid::Uuid;
 
-use mitra_utils::{
+use apx_core::{
     crypto_eddsa::Ed25519SecretKey,
-    currencies::Currency,
     did::Did,
     did_pkh::DidPkh,
+};
+
+use mitra_utils::{
+    currencies::Currency,
     id::generate_ulid,
 };
 
@@ -973,7 +976,7 @@ pub async fn find_empty_profiles(
 mod tests {
     use serde_json::json;
     use serial_test::serial;
-    use mitra_utils::{
+    use apx_core::{
         caip2::ChainId,
         crypto_eddsa::generate_weak_ed25519_key,
     };

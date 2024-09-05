@@ -1,9 +1,9 @@
 /// https://codeberg.org/silverpill/feps/src/branch/main/0837/fep-0837.md
 use serde::Serialize;
 
+use apx_core::caip19::AssetType;
 use mitra_federation::constants::AP_PUBLIC;
 use mitra_models::profiles::types::MoneroSubscription;
-use mitra_utils::caip19::AssetType;
 
 use crate::{
     contexts::{
@@ -168,7 +168,7 @@ pub fn build_proposal(
 mod tests {
     use std::num::NonZeroU64;
     use serde_json::json;
-    use mitra_utils::caip2::ChainId;
+    use apx_core::caip2::ChainId;
     use super::*;
 
     #[test]

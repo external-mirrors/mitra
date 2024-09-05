@@ -1,8 +1,8 @@
 use tokio_postgres::Client;
 
-use mitra_utils::{
-    crypto_rsa::generate_weak_rsa_key,
+use apx_core::{
     crypto_eddsa::generate_weak_ed25519_key,
+    crypto_rsa::generate_weak_rsa_key,
 };
 
 use crate::profiles::test_utils::create_test_remote_profile;

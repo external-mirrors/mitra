@@ -2,6 +2,7 @@ use actix_web::HttpRequest;
 use serde_json::{Value as JsonValue};
 use wildmatch::WildMatch;
 
+use apx_core::urls::get_hostname;
 use mitra_activitypub::{
     identifiers::canonicalize_id,
     queues::IncomingActivityJobData,
@@ -17,7 +18,6 @@ use mitra_models::{
     database::{DatabaseClient, DatabaseError},
     users::types::PortableUser,
 };
-use mitra_utils::urls::get_hostname;
 use mitra_validators::{
     errors::ValidationError,
 };

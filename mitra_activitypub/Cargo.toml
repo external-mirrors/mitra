@@ -29,6 +29,7 @@ tokio = { version = "1.28.2" }
 # Used to work with UUIDs
 uuid = { version = "1.1.2" }
 
+apx_core = { path = "../apx_core" }
 mitra_adapters = { path = "../mitra_adapters" }
 mitra_config = { path = "../mitra_config" }
 mitra_federation = { path = "../mitra_federation" }
@@ -38,9 +39,9 @@ mitra_utils = { path = "../mitra_utils" }
 mitra_validators = { path = "../mitra_validators" }
 
 [dev-dependencies]
+apx_core = { path = "../apx_core", features = ["test-utils"] }
 mitra_config = { path = "../mitra_config", features = ["test-utils"] }
 mitra_models = { path = "../mitra_models", features = ["test-utils"] }
-mitra_utils = { path = "../mitra_utils", features = ["test-utils"] }
 
 [lints]
 workspace = true

@@ -8,7 +8,7 @@ use serde_json::{Value as JsonValue};
 use tokio_postgres::Row;
 use uuid::Uuid;
 
-use mitra_utils::{
+use apx_core::{
     crypto_eddsa::{
         ed25519_secret_key_from_bytes,
         Ed25519SecretKey,
@@ -169,7 +169,7 @@ impl fmt::Display for User {
 #[cfg(any(test, feature = "test-utils"))]
 impl Default for User {
     fn default() -> Self {
-        use mitra_utils::{
+        use apx_core::{
             crypto_eddsa::generate_weak_ed25519_key,
             crypto_rsa::generate_weak_rsa_key,
         };
@@ -275,7 +275,7 @@ impl UserCreateData {
 #[cfg(any(test, feature = "test-utils"))]
 impl Default for UserCreateData {
     fn default() -> Self {
-        use mitra_utils::{
+        use apx_core::{
             crypto_eddsa::generate_ed25519_key,
             crypto_rsa::{
                 generate_weak_rsa_key,
@@ -384,7 +384,7 @@ pub struct PortableUserData {
 
 #[cfg(test)]
 mod tests {
-    use mitra_utils::crypto_eddsa::generate_ed25519_key;
+    use apx_core::crypto_eddsa::generate_ed25519_key;
     use super::*;
 
     #[test]

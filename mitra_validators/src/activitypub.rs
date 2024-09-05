@@ -1,4 +1,4 @@
-use mitra_utils::{
+use apx_core::{
     ap_url::{is_ap_url, ApUrl},
     http_url::HttpUrl,
 };

@@ -1,7 +1,7 @@
 use http::HeaderValue;
 use serde_json::{Value as JsonValue};
 
-use mitra_utils::{
+use apx_core::{
     http_url::HttpUrl,
     urls::{
         get_hostname,

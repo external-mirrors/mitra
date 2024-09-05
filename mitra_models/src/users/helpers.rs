@@ -1,9 +1,7 @@
 use uuid::Uuid;
 
-use mitra_utils::{
-    crypto_eddsa::{
-        generate_ed25519_key,
-    },
+use apx_core::{
+    crypto_eddsa::generate_ed25519_key,
 };
 
 use crate::{

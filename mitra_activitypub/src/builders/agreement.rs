@@ -1,11 +1,11 @@
 use serde::Serialize;
 
+use apx_core::caip10::AccountId;
 use mitra_models::{
     database::DatabaseTypeError,
     invoices::types::DbInvoice,
     profiles::types::MoneroSubscription,
 };
-use mitra_utils::caip10::AccountId;
 
 use crate::{
     constants::PAYMENT_LINK_RELATION_TYPE,
@@ -114,8 +114,8 @@ pub fn build_agreement(
 mod tests {
     use std::num::NonZeroU64;
     use serde_json::json;
+    use apx_core::caip2::ChainId;
     use mitra_models::invoices::types::DbChainId;
-    use mitra_utils::caip2::ChainId;
     use super::*;
 
     #[test]

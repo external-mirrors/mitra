@@ -1,9 +1,7 @@
 use uuid::Uuid;
 
-use mitra_utils::{
-    caip2::ChainId,
-    id::generate_ulid,
-};
+use apx_core::caip2::ChainId;
+use mitra_utils::id::generate_ulid;
 
 use crate::database::{
     catch_unique_violation,

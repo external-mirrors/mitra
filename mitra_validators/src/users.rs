@@ -1,17 +1,15 @@
 use regex::Regex;
 
-use mitra_models::{
-    profiles::types::DbActorProfile,
-    users::types::{ClientConfig, PortableUserData},
-};
-use mitra_utils::{
+use apx_core::{
+    crypto_eddsa::ed25519_public_key_from_secret_key,
     crypto_rsa::{
         rsa_public_key_to_pkcs1_der,
         RsaPublicKey,
     },
-    crypto_eddsa::{
-        ed25519_public_key_from_secret_key,
-    },
+};
+use mitra_models::{
+    profiles::types::DbActorProfile,
+    users::types::{ClientConfig, PortableUserData},
 };
 
 use super::errors::ValidationError;

@@ -2,12 +2,13 @@ use chrono::{DateTime, Duration, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
+use apx_core::caip2::ChainId;
 use mitra_models::{
     invoices::types::{DbInvoice, InvoiceStatus},
     profiles::types::PaymentOption,
     subscriptions::types::DbSubscription,
 };
-use mitra_utils::caip2::ChainId;
+
 
 use crate::payments::monero::MONERO_INVOICE_TIMEOUT;
 

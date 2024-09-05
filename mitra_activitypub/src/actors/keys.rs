@@ -1,7 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use mitra_models::profiles::types::{DbActorKey, PublicKeyType};
-use mitra_utils::{
+use apx_core::{
     crypto_eddsa::{
         ed25519_public_key_from_bytes,
         ed25519_public_key_from_pkcs8_pem,
@@ -15,13 +14,15 @@ use mitra_utils::{
         rsa_public_key_to_multikey,
         rsa_public_key_to_pkcs1_der,
         rsa_public_key_to_pkcs8_pem,
-        RsaSecretKey,
         RsaPublicKey,
+        RsaSecretKey,
         RsaSerializationError,
     },
     multibase::decode_multibase_base58btc,
     multicodec::Multicodec,
 };
+
+use mitra_models::profiles::types::{DbActorKey, PublicKeyType};
 use mitra_validators::{
     errors::ValidationError,
 };
@@ -151,7 +152,7 @@ impl Multikey {
 
 #[cfg(test)]
 mod tests {
-    use mitra_utils::crypto_eddsa::generate_ed25519_key;
+    use apx_core::crypto_eddsa::generate_ed25519_key;
     use super::*;
 
     #[test]

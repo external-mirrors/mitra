@@ -4,7 +4,7 @@ use std::path::PathBuf;
 use log::{Level as LogLevel};
 use serde::Deserialize;
 
-use mitra_utils::{
+use apx_core::{
     crypto_eddsa::Ed25519SecretKey,
     crypto_rsa::RsaSecretKey,
     urls::{get_hostname, normalize_origin, UrlError},
@@ -233,7 +233,7 @@ impl Instance {
 #[cfg(any(test, feature = "test-utils"))]
 impl Instance {
     pub fn for_test(url: &str) -> Self {
-        use mitra_utils::{
+        use apx_core::{
             crypto_eddsa::generate_weak_ed25519_key,
             crypto_rsa::generate_weak_rsa_key,
         };

@@ -2,10 +2,10 @@ use std::str::FromStr;
 
 use serde::Deserialize;
 
+use apx_core::caip19::AssetType;
 use mitra_models::{
     profiles::types::PaymentOption,
 };
-use mitra_utils::caip19::AssetType;
 use mitra_validators::errors::ValidationError;
 
 use crate::{
@@ -116,7 +116,7 @@ pub fn parse_proposal(
 #[cfg(test)]
 mod tests {
     use serde_json::json;
-    use mitra_utils::caip2::ChainId;
+    use apx_core::caip2::ChainId;
     use super::*;
 
     #[test]

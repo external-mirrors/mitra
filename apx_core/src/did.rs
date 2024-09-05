@@ -8,8 +8,10 @@ use serde::{
     de::Error as DeserializerError,
 };
 
-use super::did_key::DidKey;
-use super::did_pkh::DidPkh;
+use crate::{
+    did_key::DidKey,
+    did_pkh::DidPkh,
+};
 
 const DID_RE: &str = r"^did:(?P<method>\w+):.+$";
 

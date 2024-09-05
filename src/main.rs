@@ -15,6 +15,7 @@ use actix_web::{
     HttpServer,
 };
 
+use apx_core::urls::get_hostname;
 use mitra::activitypub::views as activitypub;
 use mitra::atom::views::atom_scope;
 use mitra::http::{
@@ -43,7 +44,6 @@ use mitra_models::{
 use mitra_services::{
     media::{MediaStorage, MEDIA_ROOT_URL},
 };
-use mitra_utils::urls::get_hostname;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {

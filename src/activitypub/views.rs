@@ -12,6 +12,11 @@ use serde::Deserialize;
 use serde_json::{Value as JsonValue};
 use uuid::Uuid;
 
+use apx_core::{
+    ap_url::with_ap_prefix,
+    caip2::ChainId,
+    http_digest::get_sha256_digest,
+};
 use mitra_activitypub::{
     actors::builders::{
         build_instance_actor,
@@ -78,11 +83,6 @@ use mitra_models::{
         get_user_by_id,
         get_user_by_name,
     },
-};
-use mitra_utils::{
-    ap_url::with_ap_prefix,
-    caip2::ChainId,
-    http_digest::get_sha256_digest,
 };
 use mitra_validators::errors::ValidationError;
 

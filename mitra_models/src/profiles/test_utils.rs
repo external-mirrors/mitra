@@ -1,7 +1,7 @@
 use tokio_postgres::Client;
 use uuid::Uuid;
 
-use mitra_utils::{
+use apx_core::{
     ap_url::is_ap_url,
     urls::get_hostname,
 };

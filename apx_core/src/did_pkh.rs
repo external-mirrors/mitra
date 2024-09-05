@@ -2,9 +2,9 @@
 use std::fmt;
 use std::str::FromStr;
 
-use super::{
-    caip10::AccountId,
+use crate::{
     caip2::ChainId,
+    caip10::AccountId,
     did::DidParseError,
 };
 

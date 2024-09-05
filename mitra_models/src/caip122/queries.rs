@@ -1,4 +1,4 @@
-use mitra_utils::caip10::AccountId;
+use apx_core::caip10::AccountId;
 
 use crate::database::{
     catch_unique_violation,

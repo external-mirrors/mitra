@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use mitra_utils::caip2::ChainId;
+use apx_core::caip2::ChainId;
 
 fn default_wallet_account_index() -> u32 { 0 }
 

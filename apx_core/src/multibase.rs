@@ -1,3 +1,5 @@
+use bs58;
+
 /// https://datatracker.ietf.org/doc/draft-multiformats-multibase/07/
 #[derive(thiserror::Error, Debug)]
 pub enum MultibaseError {

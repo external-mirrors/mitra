@@ -1,7 +1,7 @@
 use serde_json::{Value as JsonValue};
 use thiserror::Error;
 
-use mitra_utils::{
+use apx_core::{
     json_signatures::{
         proofs::ProofType,
         verify::{

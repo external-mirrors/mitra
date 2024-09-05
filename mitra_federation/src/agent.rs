@@ -1,4 +1,4 @@
-use mitra_utils::crypto_rsa::RsaSecretKey;
+use apx_core::crypto_rsa::RsaSecretKey;
 
 pub struct FederationAgent {
     pub user_agent: String,

@@ -6,6 +6,7 @@ use serde::{
 use serde_json::{Value as JsonValue};
 use uuid::Uuid;
 
+use apx_core::urls::get_hostname;
 use mitra_federation::{
     addresses::WebfingerAddress,
     agent::FederationAgent,
@@ -37,7 +38,6 @@ use mitra_models::{
     },
 };
 use mitra_services::media::{MediaStorage, MediaStorageError};
-use mitra_utils::urls::get_hostname;
 use mitra_validators::{
     activitypub::validate_object_id,
     errors::ValidationError,
@@ -669,8 +669,7 @@ pub async fn update_remote_profile(
 
 #[cfg(test)]
 mod tests {
-    use mitra_models::profiles::types::PublicKeyType;
-    use mitra_utils::{
+    use apx_core::{
         crypto_eddsa::{
             ed25519_public_key_from_secret_key,
             generate_ed25519_key,
@@ -680,6 +679,7 @@ mod tests {
             rsa_public_key_to_pkcs1_der,
         },
     };
+    use mitra_models::profiles::types::PublicKeyType;
     use crate::actors::keys::{Multikey, PublicKey};
     use super::*;
 

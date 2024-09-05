@@ -1,20 +1,7 @@
 use serde::{Deserialize, Serialize};
 use serde_json::{Value as JsonValue};
 
-use mitra_federation::{
-    constants::AP_MEDIA_TYPE,
-    deserialization::deserialize_string_array,
-};
-use mitra_models::{
-    profiles::types::{
-        ExtraField,
-        IdentityProof,
-        IdentityProofType,
-        PaymentLink as DbPaymentLink,
-        PaymentOption,
-    },
-};
-use mitra_utils::{
+use apx_core::{
     json_signatures::{
         proofs::{
             ProofType,
@@ -26,6 +13,19 @@ use mitra_utils::{
             verify_eip191_json_signature,
             JsonSigner,
         },
+    },
+};
+use mitra_federation::{
+    constants::AP_MEDIA_TYPE,
+    deserialization::deserialize_string_array,
+};
+use mitra_models::{
+    profiles::types::{
+        ExtraField,
+        IdentityProof,
+        IdentityProofType,
+        PaymentLink as DbPaymentLink,
+        PaymentOption,
     },
 };
 use mitra_validators::{
@@ -295,7 +295,7 @@ mod tests {
     use std::num::NonZeroU64;
     use chrono::Utc;
     use serde_json::json;
-    use mitra_utils::{
+    use apx_core::{
         caip2::ChainId,
         crypto_ecdsa::generate_ecdsa_key,
         did::Did,

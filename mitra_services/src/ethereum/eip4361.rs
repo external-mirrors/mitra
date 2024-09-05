@@ -2,9 +2,9 @@
 use hex::FromHex;
 use siwe::Message;
 
-use mitra_utils::{
-    caip10::AccountId,
+use apx_core::{
     caip2::ChainId,
+    caip10::AccountId,
 };
 
 use super::utils::{address_to_string, Address};

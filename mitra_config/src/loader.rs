@@ -2,7 +2,7 @@ use std::os::unix::fs::MetadataExt;
 use std::path::Path;
 use std::str::FromStr;
 
-use mitra_utils::{
+use apx_core::{
     crypto_rsa::{
         rsa_secret_key_from_pkcs8_pem,
         RsaSecretKey,

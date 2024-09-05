@@ -12,7 +12,7 @@ use serde::{
 use serde_json::{Value as JsonValue};
 use uuid::Uuid;
 
-use mitra_utils::{
+use apx_core::{
     ap_url::{is_ap_url, ApUrl},
     caip2::ChainId,
     crypto_eddsa::{

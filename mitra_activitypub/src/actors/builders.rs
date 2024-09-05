@@ -3,6 +3,9 @@ use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value as JsonValue};
 
+use apx_core::{
+    crypto_rsa::RsaSerializationError,
+};
 use mitra_config::Instance;
 use mitra_models::{
     database::{DatabaseError, DatabaseTypeError},
@@ -10,9 +13,6 @@ use mitra_models::{
     users::types::User,
 };
 use mitra_services::media::get_file_url;
-use mitra_utils::{
-    crypto_rsa::RsaSerializationError,
-};
 
 use crate::{
     authority::Authority,

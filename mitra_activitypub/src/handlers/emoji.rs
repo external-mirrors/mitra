@@ -1,5 +1,6 @@
 use serde_json::{Value as JsonValue};
 
+use apx_core::urls::get_hostname;
 use mitra_federation::{
     agent::FederationAgent,
     fetch::fetch_file,
@@ -14,7 +15,6 @@ use mitra_models::{
     emojis::types::{DbEmoji, EmojiImage},
 };
 use mitra_services::media::MediaStorage;
-use mitra_utils::urls::get_hostname;
 use mitra_validators::{
     activitypub::validate_object_id,
     emojis::{

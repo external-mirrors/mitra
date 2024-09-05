@@ -12,7 +12,7 @@ use reqwest::{
 };
 use thiserror::Error;
 
-use mitra_utils::{
+use apx_core::{
     http_url::parse_http_url_whatwg,
     urls::{
         get_hostname,

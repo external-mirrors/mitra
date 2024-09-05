@@ -1,6 +1,7 @@
 use serde::Deserialize;
 use serde_json::{Value as JsonValue};
 
+use apx_core::caip10::AccountId;
 use mitra_config::Config;
 use mitra_federation::deserialization::deserialize_into_object_id;
 use mitra_models::{
@@ -14,7 +15,6 @@ use mitra_models::{
     },
     relationships::types::FollowRequestStatus,
 };
-use mitra_utils::caip10::AccountId;
 use mitra_validators::{
     activitypub::validate_object_id,
     errors::ValidationError,

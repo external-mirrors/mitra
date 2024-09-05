@@ -361,6 +361,36 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bb07d2053ccdbe10e2af2995a2f116c1330396493dc1269f6a91d0ae82e19704"
 
 [[package]]
+name = "apx_core"
+version = "0.1.0"
+dependencies = [
+ "base64 0.21.4",
+ "blake2",
+ "bs58",
+ "chrono",
+ "ed25519 1.5.3",
+ "ed25519-dalek",
+ "hex",
+ "http",
+ "idna",
+ "iri-string 0.7.2",
+ "k256",
+ "pem",
+ "percent-encoding",
+ "rand",
+ "regex",
+ "rsa",
+ "serde",
+ "serde_json",
+ "serde_json_canonicalizer",
+ "sha2",
+ "sha3",
+ "thiserror",
+ "unsigned-varint",
+ "url",
+]
+
+[[package]]
 name = "array-init"
 version = "2.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1990,6 +2020,7 @@ dependencies = [
  "actix-web",
  "actix-web-httpauth",
  "anyhow",
+ "apx_core",
  "chrono",
  "emojis",
  "hex",
@@ -2019,6 +2050,7 @@ dependencies = [
 name = "mitra_activitypub"
 version = "3.4.0"
 dependencies = [
+ "apx_core",
  "chrono",
  "futures",
  "hex",
@@ -2043,6 +2075,7 @@ dependencies = [
 name = "mitra_adapters"
 version = "3.4.0"
 dependencies = [
+ "apx_core",
  "chrono",
  "env_logger",
  "log",
@@ -2062,6 +2095,7 @@ name = "mitra_cli"
 version = "3.4.0"
 dependencies = [
  "anyhow",
+ "apx_core",
  "clap",
  "clap_lex",
  "log",
@@ -2083,6 +2117,7 @@ dependencies = [
 name = "mitra_config"
 version = "3.4.0"
 dependencies = [
+ "apx_core",
  "dotenvy",
  "log",
  "mitra_utils",
@@ -2096,6 +2131,7 @@ dependencies = [
 name = "mitra_federation"
 version = "3.4.0"
 dependencies = [
+ "apx_core",
  "bytes",
  "futures-util",
  "http",
@@ -2113,6 +2149,7 @@ dependencies = [
 name = "mitra_models"
 version = "3.4.0"
 dependencies = [
+ "apx_core",
  "chrono",
  "deadpool",
  "deadpool-postgres",
@@ -2141,6 +2178,7 @@ name = "mitra_services"
 version = "3.4.0"
 dependencies = [
  "anyhow",
+ "apx_core",
  "chrono",
  "ethereum-types",
  "hex",
@@ -2163,40 +2201,21 @@ name = "mitra_utils"
 version = "3.4.0"
 dependencies = [
  "ammonia",
- "base64 0.21.4",
- "blake2",
- "bs58",
+ "apx_core",
  "chrono",
  "comrak",
- "ed25519 1.5.3",
- "ed25519-dalek",
  "eth-blockies",
- "hex",
  "html2text",
  "html5ever",
- "http",
- "idna",
  "infer",
- "iri-string 0.7.2",
- "k256",
  "lfs-core",
  "mime_guess",
- "pem",
- "percent-encoding",
  "rand",
  "regex",
- "rsa",
  "rust-argon2",
- "serde",
- "serde_json",
- "serde_json_canonicalizer",
- "sha2",
- "sha3",
  "thiserror",
  "ulid",
  "unicode-segmentation",
- "unsigned-varint",
- "url",
  "uuid",
 ]
 
@@ -2204,6 +2223,7 @@ dependencies = [
 name = "mitra_validators"
 version = "3.4.0"
 dependencies = [
+ "apx_core",
  "mitra_models",
  "mitra_utils",
  "regex",

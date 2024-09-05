@@ -2,6 +2,12 @@ use std::str::FromStr;
 
 use regex::Regex;
 
+use apx_core::{
+    ap_url::is_ap_url,
+    did::Did,
+    http_url::normalize_http_url,
+    urls::encode_hostname,
+};
 use mitra_activitypub::{
     errors::HandlerError,
     identifiers::parse_local_object_id,
@@ -32,12 +38,6 @@ use mitra_models::{
 use mitra_services::{
     ethereum::utils::validate_ethereum_address,
     media::MediaStorage,
-};
-use mitra_utils::{
-    ap_url::is_ap_url,
-    did::Did,
-    http_url::normalize_http_url,
-    urls::encode_hostname,
 };
 use mitra_validators::{
     errors::ValidationError,

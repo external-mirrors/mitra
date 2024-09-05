@@ -91,8 +91,8 @@ pub fn prepare_accept_offer(
 #[cfg(test)]
 mod tests {
     use std::num::NonZeroU64;
+    use apx_core::caip2::ChainId;
     use mitra_models::invoices::types::DbChainId;
-    use mitra_utils::caip2::ChainId;
     use super::*;
 
     #[test]

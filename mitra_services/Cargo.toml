@@ -34,6 +34,7 @@ siwe = "0.5.2"
 # Used for creating error types
 thiserror = "1.0.37"
 
+apx_core = { path = "../apx_core" }
 mitra_config = { path = "../mitra_config" }
 mitra_models = { path = "../mitra_models" }
 mitra_utils = { path = "../mitra_utils" }

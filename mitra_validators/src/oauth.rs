@@ -1,4 +1,4 @@
-use mitra_utils::urls::validate_uri;
+use apx_core::urls::validate_uri;
 
 use super::errors::ValidationError;
 

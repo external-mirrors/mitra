@@ -1,11 +1,7 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-use mitra_models::profiles::types::{
-    IdentityProof as DbIdentityProof,
-    IdentityProofType,
-};
-use mitra_utils::{
+use apx_core::{
     did::Did,
     jcs::{
         canonicalize_object,
@@ -16,6 +12,10 @@ use mitra_utils::{
         IntegrityProof,
         IntegrityProofConfig,
     },
+};
+use mitra_models::profiles::types::{
+    IdentityProof as DbIdentityProof,
+    IdentityProofType,
 };
 
 use super::vocabulary::VERIFIABLE_IDENTITY_STATEMENT;
@@ -147,7 +147,7 @@ pub fn create_identity_proof_fep_c390(
 #[cfg(test)]
 mod tests {
     use serde_json::json;
-    use mitra_utils::{
+    use apx_core::{
         crypto_eddsa::{
             generate_weak_ed25519_key,
             ed25519_public_key_from_secret_key,

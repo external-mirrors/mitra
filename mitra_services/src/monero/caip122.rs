@@ -7,11 +7,11 @@ use monero_rpc::monero::{
     util::address::Error as AddressError,
 };
 
-use mitra_config::MoneroConfig;
-use mitra_utils::{
-    caip10::AccountId,
+use apx_core::{
     caip2::{ChainId, MoneroNetwork},
+    caip10::AccountId,
 };
+use mitra_config::MoneroConfig;
 
 use super::utils::parse_monero_address;
 use super::wallet::{verify_monero_signature, MoneroError};

@@ -3,12 +3,14 @@ use reqwest::{Client, Method, RequestBuilder, StatusCode};
 use serde::de::DeserializeOwned;
 use serde_json::{Value as JsonValue};
 
-use mitra_utils::{
-    files::sniff_media_type,
+use apx_core::{
     http_signatures::create::{
         create_http_signature,
         HttpSignatureError,
     },
+};
+use mitra_utils::{
+    files::sniff_media_type,
 };
 
 use super::{
