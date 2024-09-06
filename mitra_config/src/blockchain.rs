@@ -14,7 +14,6 @@ pub struct MoneroConfig {
     pub chain_id: ChainId,
     // Additional information for clients
     pub chain_metadata: Option<MoneroChainMetadata>,
-    pub node_url: String,
     pub wallet_rpc_url: String,
     pub wallet_rpc_username: Option<String>,
     pub wallet_rpc_password: Option<String>,
