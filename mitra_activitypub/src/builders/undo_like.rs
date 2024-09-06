@@ -103,7 +103,7 @@ pub async fn prepare_undo_like(
 
 #[cfg(test)]
 mod tests {
-    use mitra_federation::constants::AP_PUBLIC;
+    use apx_sdk::constants::AP_PUBLIC;
     use mitra_utils::id::generate_ulid;
     use super::*;
 

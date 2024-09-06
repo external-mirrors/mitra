@@ -5,11 +5,11 @@ use chrono::{Duration, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value as JsonValue};
 
-use mitra_config::Config;
-use mitra_federation::{
+use apx_sdk::{
     fetch::FetchError,
     url::Url,
 };
+use mitra_config::Config;
 use mitra_models::{
     activitypub::queries::{
         save_activity,

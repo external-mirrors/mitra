@@ -16,6 +16,10 @@ use apx_core::{
     http_url::HttpUrl,
     media_type::sniff_media_type,
 };
+use apx_sdk::{
+    authentication::verify_portable_object,
+    fetch::fetch_file,
+};
 use mitra::payments::monero::{
     get_payment_address,
     reopen_local_invoice,
@@ -45,10 +49,6 @@ use mitra_adapters::{
     },
 };
 use mitra_config::Config;
-use mitra_federation::{
-    authentication::verify_portable_object,
-    fetch::fetch_file,
-};
 use mitra_models::{
     attachments::queries::delete_unused_attachments,
     background_jobs::queries::get_job_count,

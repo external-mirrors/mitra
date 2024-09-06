@@ -17,6 +17,13 @@ use apx_core::{
     caip2::ChainId,
     http_digest::get_sha256_digest,
 };
+use apx_sdk::{
+    authentication::verify_portable_object,
+    constants::{AP_MEDIA_TYPE, AP_PUBLIC},
+    deserialization::get_object_id,
+    http_server::is_activitypub_request,
+    url::is_same_origin,
+};
 use mitra_activitypub::{
     actors::builders::{
         build_instance_actor,
@@ -48,13 +55,6 @@ use mitra_activitypub::{
     queues::{IncomingActivityJobData, OutgoingActivityJobData},
 };
 use mitra_config::Config;
-use mitra_federation::{
-    authentication::verify_portable_object,
-    constants::{AP_MEDIA_TYPE, AP_PUBLIC},
-    deserialization::get_object_id,
-    http_server::is_activitypub_request,
-    url::is_same_origin,
-};
 use mitra_models::{
     activitypub::queries::{
         add_object_to_collection,

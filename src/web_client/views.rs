@@ -12,9 +12,9 @@ use actix_web::{
 };
 use uuid::Uuid;
 
+use apx_sdk::http_server::is_activitypub_request;
 use mitra_activitypub::identifiers::{post_object_id, profile_actor_id};
 use mitra_config::Config;
-use mitra_federation::http_server::is_activitypub_request;
 use mitra_models::{
     database::{get_database_client, DatabaseConnectionPool},
     posts::{

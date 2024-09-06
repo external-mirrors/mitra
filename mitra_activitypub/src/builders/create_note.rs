@@ -87,7 +87,7 @@ pub async fn prepare_create_note(
 
 #[cfg(test)]
 mod tests {
-    use mitra_federation::constants::AP_PUBLIC;
+    use apx_sdk::constants::AP_PUBLIC;
     use mitra_models::profiles::types::DbActorProfile;
     use super::*;
 

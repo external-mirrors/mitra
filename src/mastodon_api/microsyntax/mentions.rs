@@ -3,8 +3,8 @@ use std::collections::HashMap;
 use regex::{Captures, Regex};
 
 use apx_core::urls::encode_hostname;
+use apx_sdk::addresses::WebfingerAddress;
 use mitra_activitypub::identifiers::profile_actor_url;
-use mitra_federation::addresses::WebfingerAddress;
 use mitra_models::{
     database::{DatabaseClient, DatabaseError},
     profiles::queries::get_profiles_by_accts,

@@ -34,11 +34,11 @@ use apx_core::{
     },
     urls::get_hostname,
 };
-use mitra_config::Instance;
-use mitra_federation::{
+use apx_sdk::{
     deliver::{send_object, DelivererError},
     url::Url,
 };
+use mitra_config::Instance;
 use mitra_models::{
     profiles::types::PublicKeyType,
     users::types::{PortableUser, User},

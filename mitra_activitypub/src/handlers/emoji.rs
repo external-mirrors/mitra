@@ -1,7 +1,7 @@
 use serde_json::{Value as JsonValue};
 
 use apx_core::urls::get_hostname;
-use mitra_federation::{
+use apx_sdk::{
     agent::FederationAgent,
     fetch::fetch_file,
 };

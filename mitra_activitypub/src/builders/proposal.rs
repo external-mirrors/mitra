@@ -2,7 +2,7 @@
 use serde::Serialize;
 
 use apx_core::caip19::AssetType;
-use mitra_federation::constants::AP_PUBLIC;
+use apx_sdk::constants::AP_PUBLIC;
 use mitra_models::profiles::types::MoneroSubscription;
 
 use crate::{

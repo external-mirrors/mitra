@@ -12,8 +12,7 @@ use apx_core::{
     crypto_rsa::rsa_secret_key_from_multikey,
     urls::guess_protocol,
 };
-use mitra_config::{Config, Instance};
-use mitra_federation::{
+use apx_sdk::{
     addresses::WebfingerAddress,
     agent::FederationAgent,
     authentication::verify_portable_object,
@@ -26,6 +25,7 @@ use mitra_federation::{
     jrd::JsonResourceDescriptor,
     url::parse_url,
 };
+use mitra_config::{Config, Instance};
 use mitra_models::{
     database::{DatabaseClient, DatabaseError},
     notifications::helpers::create_signup_notifications,

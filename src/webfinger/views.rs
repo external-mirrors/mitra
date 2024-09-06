@@ -2,15 +2,7 @@
 use actix_web::{get, web, HttpResponse};
 use serde::Deserialize;
 
-use mitra_activitypub::{
-    identifiers::{
-        local_actor_id,
-        local_instance_actor_id,
-        parse_local_actor_id,
-    },
-};
-use mitra_config::{Config, Instance};
-use mitra_federation::{
+use apx_sdk::{
     addresses::WebfingerAddress,
     jrd::{
         JsonResourceDescriptor,
@@ -19,6 +11,14 @@ use mitra_federation::{
     },
     url::Url,
 };
+use mitra_activitypub::{
+    identifiers::{
+        local_actor_id,
+        local_instance_actor_id,
+        parse_local_actor_id,
+    },
+};
+use mitra_config::{Config, Instance};
 use mitra_models::{
     database::{
         get_database_client,

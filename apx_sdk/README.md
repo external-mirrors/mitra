@@ -1,4 +1,4 @@
-# mitra_federation
+# apx_sdk
 
 Minimalistic ActivityPub toolkit.
 

@@ -3,13 +3,13 @@ use serde_json::{Value as JsonValue};
 use wildmatch::WildMatch;
 
 use apx_core::urls::get_hostname;
+use apx_sdk::deserialization::get_object_id;
 use mitra_activitypub::{
     identifiers::canonicalize_id,
     queues::IncomingActivityJobData,
     vocabulary::{ANNOUNCE, DELETE, CREATE, LIKE, UPDATE},
 };
 use mitra_config::Config;
-use mitra_federation::deserialization::get_object_id;
 use mitra_models::{
     activitypub::queries::{
         add_object_to_collection,

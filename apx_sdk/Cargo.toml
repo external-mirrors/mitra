@@ -1,6 +1,6 @@
 [package]
-name = "mitra_federation"
-version.workspace = true
+name = "apx_sdk"
+version = "0.1.0"
 license.workspace = true
 
 edition.workspace = true

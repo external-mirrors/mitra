@@ -1,11 +1,11 @@
 use serde::Deserialize;
 use serde_json::{Value as JsonValue};
 
-use mitra_config::Config;
-use mitra_federation::deserialization::{
+use apx_sdk::deserialization::{
     deserialize_into_object_id,
     deserialize_object_array,
 };
+use mitra_config::Config;
 use mitra_models::{
     database::{DatabaseClient, DatabaseError},
     reactions::{

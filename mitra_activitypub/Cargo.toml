@@ -30,9 +30,9 @@ tokio = { version = "1.28.2" }
 uuid = { version = "1.1.2" }
 
 apx_core = { path = "../apx_core" }
+apx_sdk = { path = "../apx_sdk" }
 mitra_adapters = { path = "../mitra_adapters" }
 mitra_config = { path = "../mitra_config" }
-mitra_federation = { path = "../mitra_federation" }
 mitra_models = { path = "../mitra_models" }
 mitra_services = { path = "../mitra_services" }
 mitra_utils = { path = "../mitra_utils" }

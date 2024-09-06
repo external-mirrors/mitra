@@ -1,7 +1,7 @@
 use serde::Deserialize;
 use serde_json::{Value as JsonValue};
 
-use mitra_federation::{
+use apx_sdk::{
     deserialization::deserialize_into_id_array,
 };
 use mitra_models::{

@@ -1,7 +1,7 @@
 use serde::Serialize;
 
+use apx_sdk::constants::AP_PUBLIC;
 use mitra_config::Instance;
-use mitra_federation::constants::AP_PUBLIC;
 use mitra_models::{
     database::{DatabaseClient, DatabaseError},
     profiles::helpers::find_declared_aliases,

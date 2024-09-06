@@ -392,6 +392,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "apx_sdk"
+version = "0.1.0"
+dependencies = [
+ "apx_core",
+ "bytes",
+ "futures-util",
+ "http",
+ "hyper",
+ "log",
+ "regex",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "thiserror",
+]
+
+[[package]]
 name = "array-init"
 version = "2.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2022,6 +2039,7 @@ dependencies = [
  "actix-web-httpauth",
  "anyhow",
  "apx_core",
+ "apx_sdk",
  "chrono",
  "emojis",
  "hex",
@@ -2029,7 +2047,6 @@ dependencies = [
  "mitra_activitypub",
  "mitra_adapters",
  "mitra_config",
- "mitra_federation",
  "mitra_models",
  "mitra_services",
  "mitra_utils",
@@ -2052,6 +2069,7 @@ name = "mitra_activitypub"
 version = "3.4.0"
 dependencies = [
  "apx_core",
+ "apx_sdk",
  "chrono",
  "futures",
  "hex",
@@ -2059,7 +2077,6 @@ dependencies = [
  "log",
  "mitra_adapters",
  "mitra_config",
- "mitra_federation",
  "mitra_models",
  "mitra_services",
  "mitra_utils",
@@ -2097,6 +2114,7 @@ version = "3.4.0"
 dependencies = [
  "anyhow",
  "apx_core",
+ "apx_sdk",
  "clap",
  "clap_lex",
  "log",
@@ -2104,7 +2122,6 @@ dependencies = [
  "mitra_activitypub",
  "mitra_adapters",
  "mitra_config",
- "mitra_federation",
  "mitra_models",
  "mitra_services",
  "mitra_utils",
@@ -2125,23 +2142,6 @@ dependencies = [
  "regex",
  "serde",
  "serde_yaml",
- "thiserror",
-]
-
-[[package]]
-name = "mitra_federation"
-version = "3.4.0"
-dependencies = [
- "apx_core",
- "bytes",
- "futures-util",
- "http",
- "hyper",
- "log",
- "regex",
- "reqwest",
- "serde",
- "serde_json",
  "thiserror",
 ]
 

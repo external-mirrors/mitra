@@ -8,6 +8,7 @@ use apx_core::{
     http_url::normalize_http_url,
     urls::encode_hostname,
 };
+use apx_sdk::addresses::WebfingerAddress;
 use mitra_activitypub::{
     errors::HandlerError,
     identifiers::parse_local_object_id,
@@ -18,7 +19,6 @@ use mitra_activitypub::{
     },
 };
 use mitra_config::Config;
-use mitra_federation::addresses::WebfingerAddress;
 use mitra_models::{
     database::{DatabaseClient, DatabaseError},
     posts::{

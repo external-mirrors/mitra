@@ -1,6 +1,6 @@
 use thiserror::Error;
 
-use mitra_federation::fetch::FetchError;
+use apx_sdk::fetch::FetchError;
 use mitra_models::database::DatabaseError;
 use mitra_services::media::MediaStorageError;
 use mitra_validators::errors::ValidationError;

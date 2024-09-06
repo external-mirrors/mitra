@@ -1,7 +1,7 @@
 use serde::Serialize;
 
+use apx_sdk::constants::AP_PUBLIC;
 use mitra_config::Instance;
-use mitra_federation::constants::AP_PUBLIC;
 use mitra_models::{
     profiles::types::DbActor,
     users::types::User,

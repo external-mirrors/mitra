@@ -1,6 +1,6 @@
 use indexmap::IndexMap;
 
-pub use mitra_federation::constants::{
+pub use apx_sdk::constants::{
     AP_CONTEXT,
 };
 

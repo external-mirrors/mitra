@@ -7,7 +7,7 @@ use super::errors::ValidationError;
 
 const OBJECT_ID_SIZE_MAX: usize = 2000;
 
-// TODO: FEP-EF61: import from mitra_federation?
+// TODO: FEP-EF61: import from apx_sdk?
 const GATEWAY_PATH_PREFIX: &str = "/.well-known/apgateway/";
 
 // Object ID is an URI

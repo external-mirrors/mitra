@@ -1,7 +1,7 @@
 /// https://codeberg.org/silverpill/feps/src/branch/main/c7d3/fep-c7d3.md
 use serde_json::{Value as JsonValue};
 
-use mitra_federation::{
+use apx_sdk::{
     deserialization::{get_object_id, parse_into_id_array},
     url::is_same_origin,
 };

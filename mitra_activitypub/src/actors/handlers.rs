@@ -7,7 +7,7 @@ use serde_json::{Value as JsonValue};
 use uuid::Uuid;
 
 use apx_core::urls::get_hostname;
-use mitra_federation::{
+use apx_sdk::{
     addresses::WebfingerAddress,
     agent::FederationAgent,
     deserialization::{

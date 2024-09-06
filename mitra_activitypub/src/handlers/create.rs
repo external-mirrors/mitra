@@ -9,9 +9,7 @@ use serde::{
 use serde_json::{Value as JsonValue};
 use uuid::Uuid;
 
-use mitra_adapters::permissions::filter_mentions;
-use mitra_config::{Config, Instance};
-use mitra_federation::{
+use apx_sdk::{
     addresses::WebfingerAddress,
     authentication::{verify_portable_object, AuthenticationError},
     constants::{AP_MEDIA_TYPE, AS_MEDIA_TYPE},
@@ -26,6 +24,8 @@ use mitra_federation::{
     url::is_same_origin,
     utils::is_public,
 };
+use mitra_adapters::permissions::filter_mentions;
+use mitra_config::{Config, Instance};
 use mitra_models::{
     activitypub::queries::save_attributed_object,
     attachments::queries::create_attachment,
@@ -920,7 +920,7 @@ pub(super) async fn handle_create(
 #[cfg(test)]
 mod tests {
     use serde_json::json;
-    use mitra_federation::constants::AP_PUBLIC;
+    use apx_sdk::constants::AP_PUBLIC;
     use mitra_models::profiles::types::DbActor;
     use super::*;
 

@@ -2,6 +2,7 @@ use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
+use apx_sdk::addresses::WebfingerAddress;
 use mitra_activitypub::{
     builders::{
         follow::follow_or_create_request,
@@ -15,7 +16,6 @@ use mitra_activitypub::{
     },
 };
 use mitra_config::Config;
-use mitra_federation::addresses::WebfingerAddress;
 use mitra_models::{
     background_jobs::{
         queries::enqueue_job,

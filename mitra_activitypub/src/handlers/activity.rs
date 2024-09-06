@@ -2,8 +2,8 @@ use std::fmt;
 
 use serde_json::{Value as JsonValue};
 
+use apx_sdk::deserialization::get_object_id;
 use mitra_config::Config;
-use mitra_federation::deserialization::get_object_id;
 use mitra_models::database::DatabaseClient;
 use mitra_validators::errors::ValidationError;
 

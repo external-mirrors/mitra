@@ -5,7 +5,7 @@ use apx_core::{
     caip2::ChainId,
     urls::url_encode,
 };
-use mitra_federation::{
+use apx_sdk::{
     identifiers::parse_object_id,
     url::{parse_url, Url},
 };

@@ -9,7 +9,7 @@ use apx_core::{
     },
     did_key::DidKey,
 };
-use mitra_federation::url::GATEWAY_PATH_PREFIX;
+use apx_sdk::url::GATEWAY_PATH_PREFIX;
 use mitra_models::users::types::User;
 
 fn fep_ef61_identity(public_key: &Ed25519PublicKey) -> DidKey {

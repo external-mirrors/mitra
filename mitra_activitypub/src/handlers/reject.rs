@@ -1,8 +1,8 @@
 use serde::Deserialize;
 use serde_json::Value;
 
+use apx_sdk::deserialization::deserialize_into_object_id;
 use mitra_config::Config;
-use mitra_federation::deserialization::deserialize_into_object_id;
 use mitra_models::{
     database::{DatabaseClient, DatabaseError},
     profiles::queries::get_remote_profile_by_actor_id,

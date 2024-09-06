@@ -29,13 +29,7 @@ use apx_core::{
         },
     },
 };
-use mitra_activitypub::{
-    errors::HandlerError,
-    identifiers::canonicalize_id,
-    importers::ActorIdResolver,
-};
-use mitra_config::Config;
-use mitra_federation::{
+use apx_sdk::{
     authentication::{
         verify_portable_object,
         AuthenticationError as PortableObjectAuthenticationError,
@@ -44,6 +38,12 @@ use mitra_federation::{
     url::is_same_origin,
     utils::key_id_to_actor_id,
 };
+use mitra_activitypub::{
+    errors::HandlerError,
+    identifiers::canonicalize_id,
+    importers::ActorIdResolver,
+};
+use mitra_config::Config;
 use mitra_models::{
     database::{DatabaseClient, DatabaseError},
     profiles::queries::get_remote_profile_by_actor_id,

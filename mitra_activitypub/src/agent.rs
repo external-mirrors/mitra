@@ -1,6 +1,6 @@
 use apx_core::crypto_rsa::RsaSecretKey;
+use apx_sdk::agent::FederationAgent;
 use mitra_config::Instance;
-use mitra_federation::agent::FederationAgent;
 use mitra_models::{
     profiles::types::PublicKeyType,
     users::types::User,

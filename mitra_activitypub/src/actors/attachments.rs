@@ -15,7 +15,7 @@ use apx_core::{
         },
     },
 };
-use mitra_federation::{
+use apx_sdk::{
     constants::AP_MEDIA_TYPE,
     deserialization::deserialize_string_array,
 };
