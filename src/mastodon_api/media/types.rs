@@ -6,15 +6,15 @@ use actix_multipart::form::{
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use apx_core::base64;
+use apx_core::{
+    base64,
+    media_type::sniff_media_type,
+};
 use mitra_models::attachments::types::{
     AttachmentType,
     DbMediaAttachment,
 };
 use mitra_services::media::get_file_url;
-use mitra_utils::{
-    files::sniff_media_type,
-};
 
 #[derive(Deserialize)]
 pub struct AttachmentData {

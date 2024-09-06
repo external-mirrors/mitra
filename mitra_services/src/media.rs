@@ -140,7 +140,7 @@ impl From<&Config> for MediaStorage {
 
 #[cfg(test)]
 mod tests {
-    use mitra_utils::files::sniff_media_type;
+    use apx_core::media_type::sniff_media_type;
     use super::*;
 
     #[test]

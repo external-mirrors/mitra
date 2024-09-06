@@ -15,6 +15,7 @@ pub mod http_signatures;
 pub mod http_url;
 pub mod jcs;
 pub mod json_signatures;
+pub mod media_type;
 pub mod minisign;
 pub mod multibase;
 pub mod multicodec;

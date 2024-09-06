@@ -14,6 +14,7 @@ use apx_core::{
         rsa_secret_key_to_pkcs8_pem,
     },
     http_url::HttpUrl,
+    media_type::sniff_media_type,
 };
 use mitra::payments::monero::{
     get_payment_address,
@@ -112,7 +113,7 @@ use mitra_services::{
 };
 use mitra_utils::{
     datetime::days_before_now,
-    files::{sniff_media_type, FileSize},
+    files::FileSize,
     passwords::hash_password,
 };
 use mitra_validators::{

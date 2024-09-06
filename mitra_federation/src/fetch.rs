@@ -8,9 +8,7 @@ use apx_core::{
         create_http_signature,
         HttpSignatureError,
     },
-};
-use mitra_utils::{
-    files::sniff_media_type,
+    media_type::sniff_media_type,
 };
 
 use super::{

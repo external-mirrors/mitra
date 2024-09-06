@@ -20,9 +20,8 @@ comrak = { version = "0.19.0", default-features = false }
 html2text = "=0.12.4"
 # Used to gather disk info
 lfs-core = "=0.11.1"
-# Used to guess media type of a file
+# Used to determine file extension
 mime_guess = "2.0.5"
-infer = "=0.13.0"
 # Used to generate random numbers
 rand = "0.8.4"
 # Used for working with regular expressions
