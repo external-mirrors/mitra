@@ -15,7 +15,7 @@ use super::links::is_inside_code_block;
 
 // See also: USERNAME_RE in mitra_validators::profiles
 const MENTION_SEARCH_RE: &str = r"(?m)(?P<before>^|\s|>|[\(])@(?P<mention>[^\s<]+)";
-const MENTION_SEARCH_SECONDARY_RE: &str = r"^(?P<username>[A-Za-z0-9\-\._]+)(@(?P<hostname>[\w\.-]+\w))?(?P<after>[\.,:;?!\)']?)$";
+const MENTION_SEARCH_SECONDARY_RE: &str = r"^(?P<username>[A-Za-z0-9\-\._]+)(@(?P<hostname>[\w\.-]+\w))?(?P<after>[\.,:;?!\)']*)$";
 
 fn caps_to_acct(instance_hostname: &str, caps: &Captures) -> Option<String> {
     let username = &caps["username"];
@@ -150,13 +150,22 @@ mod tests {
 
     #[test]
     fn test_find_mentions() {
-        let results = find_mentions(INSTANCE_HOSTNAME, TEXT_WITH_MENTIONS);
-        assert_eq!(results, vec![
+        let mentions = find_mentions(INSTANCE_HOSTNAME, TEXT_WITH_MENTIONS);
+        assert_eq!(mentions, vec![
             "user1",
             "user_x",
             "user2@server2.com",
             "user3@xn--jxalpdlp.example",
         ]);
+    }
+
+    #[test]
+    fn test_find_mentions_multiple_characters_after() {
+        let mentions = find_mentions(
+            INSTANCE_HOSTNAME,
+            "test (test @user@server.example).",
+        );
+        assert_eq!(mentions, vec!["user@server.example"]);
     }
 
     #[test]
