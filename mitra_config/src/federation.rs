@@ -6,7 +6,7 @@ const fn default_inbox_queue_batch_size() -> u32 { 20 }
 const fn default_fetcher_timeout() -> u64 { 60 }
 const fn default_deliverer_timeout() -> u64 { 30 }
 const fn default_deliverer_log_response_length() -> usize { 75 }
-const fn default_fep_e232_enabled() -> bool { false }
+const fn default_fep_e232_enabled() -> bool { true }
 const fn default_fep_1b12_full_enabled() -> bool { true }
 
 #[derive(Clone, Deserialize)]

@@ -11,6 +11,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Moved library modules from `mitra_utils` to `apx_core` package.
 - Renamed `mitra_federation` package to `apx_sdk`.
 - Allow mentions and hashtags with multiple stop characters after them.
+- Enable FEP-e232 by default.
 
 ### Removed
 
