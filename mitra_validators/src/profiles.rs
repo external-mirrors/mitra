@@ -33,9 +33,14 @@ const HOSTNAME_RE: &str = r"^[a-z0-9\.-]+$";
 const HOSTNAME_LENGTH_MAX: usize = 100;
 const DISPLAY_NAME_MAX_LENGTH: usize = 200;
 const BIO_MAX_LENGTH: usize = 10000;
-const BIO_ALLOWED_TAGS: [&str; 2] = ["a", "br"];
+const BIO_ALLOWED_TAGS: [&str; 3] = [
+    "a",
+    "br",
+    "p",
+];
 const FIELD_NAME_MAX_SIZE: usize = 500;
 const FIELD_VALUE_MAX_SIZE: usize = 5000;
+const FIELD_ALLOWED_TAGS: [&str; 1] = ["a"];
 pub const ALIAS_LIMIT: usize = 10;
 
 pub const PROFILE_IMAGE_SIZE_MAX: usize = 5 * 1000 * 1000; // 5 MB
@@ -153,9 +158,13 @@ fn validate_payment_options(
     Ok(())
 }
 
+fn clean_extra_field_value(value: &str) -> String {
+    clean_html_strict(value, &FIELD_ALLOWED_TAGS, vec![])
+}
+
 pub fn clean_extra_field(field: &mut ExtraField) {
     field.name = field.name.trim().to_string();
-    field.value = clean_html_strict(&field.value, &BIO_ALLOWED_TAGS, vec![]);
+    field.value = clean_extra_field_value(&field.value);
 }
 
 pub fn validate_extra_field(field: &ExtraField) -> Result<(), ValidationError> {
@@ -168,7 +177,7 @@ pub fn validate_extra_field(field: &ExtraField) -> Result<(), ValidationError> {
     if field.value.len() > FIELD_VALUE_MAX_SIZE {
         return Err(ValidationError("field value is too long"));
     };
-    if field.value != clean_bio_html(&field.value) {
+    if field.value != clean_extra_field_value(&field.value) {
         return Err(ValidationError("field has not been sanitized"));
     };
     Ok(())
