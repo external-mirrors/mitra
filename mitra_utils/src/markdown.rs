@@ -373,6 +373,13 @@ mod tests {
     }
 
     #[test]
+    fn test_markdown_lite_to_html_double_quote() {
+        let text = r#"quote "test #tag" end"#;
+        let html = markdown_lite_to_html(text).unwrap();
+        assert_eq!(html, "<p>quote &quot;test #tag&quot; end</p>");
+    }
+
+    #[test]
     fn test_markdown_basic_to_html() {
         let text = "test **bold** test *italic* test ~~strike~~ with `code`, <span>html</span> and https://example.com and admin@email.example\nnew line\n\nanother line";
         let html = markdown_basic_to_html(text).unwrap();
