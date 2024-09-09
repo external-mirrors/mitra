@@ -803,7 +803,7 @@ paths:
               description: Link to the next page
               schema:
                 type: string
-                example: '<https://social.example/api/v1/bookmarks?limit=20&max_id=0187871e-5a09-c6d6-6570-5158ffdcc845>; rel="next"'
+                example: '<https://social.example/api/v1/bookmarks?limit=20&max_id=123>; rel="next"'
   /api/v1/custom_emojis:
     get:
       summary: Returns custom emojis that are available on the server.

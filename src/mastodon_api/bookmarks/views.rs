@@ -18,9 +18,11 @@ use crate::http::get_request_base_url;
 use crate::mastodon_api::{
     auth::get_current_user,
     errors::MastodonError,
-    statuses::helpers::get_paginated_status_list,
-    timelines::types::TimelineQueryParams,
+    pagination::{get_last_item, get_paginated_response},
+    statuses::helpers::build_status_list,
 };
+
+use super::types::BookmarkListQueryParams;
 
 /// https://docs.joinmastodon.org/methods/bookmarks/
 #[get("")]
@@ -30,11 +32,11 @@ async fn bookmark_list_view(
     connection_info: ConnectionInfo,
     db_pool: web::Data<DatabaseConnectionPool>,
     request_uri: Uri,
-    query_params: web::Query<TimelineQueryParams>,
+    query_params: web::Query<BookmarkListQueryParams>,
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &**get_database_client(&db_pool).await?;
     let current_user = get_current_user(db_client, auth.token()).await?;
-    let posts = get_bookmarked_posts(
+    let bookmarks = get_bookmarked_posts(
         db_client,
         current_user.id,
         query_params.max_id,
@@ -42,15 +44,24 @@ async fn bookmark_list_view(
     ).await?;
     let base_url = get_request_base_url(connection_info);
     let instance_url = config.instance().url();
-    let response = get_paginated_status_list(
+    let maybe_last_id = get_last_item(&bookmarks, &query_params.limit)
+        .map(|bookmark| bookmark.bookmark_id);
+    let posts = bookmarks.into_iter()
+        .map(|bookmark| bookmark.post)
+        .collect();
+    let statuses = build_status_list(
         db_client,
         &base_url,
         &instance_url,
-        &request_uri,
         Some(&current_user),
         posts,
-        &query_params.limit,
     ).await?;
+    let response = get_paginated_response(
+        &base_url,
+        &request_uri,
+        statuses,
+        maybe_last_id,
+    );
     Ok(response)
 }
 

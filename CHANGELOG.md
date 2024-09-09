@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Allow mentions and hashtags with multiple stop characters after them.
 - Enable FEP-e232 by default.
 - Don't remove paragraphs when editing bio.
+- Sort bookmarks by creation date.
 
 ### Removed
 

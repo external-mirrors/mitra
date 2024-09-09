@@ -16,9 +16,10 @@ use crate::{
             RELATED_REACTIONS,
             RELATED_TAGS,
         },
-        types::Post,
     },
 };
+
+use super::types::BookmarkedPost;
 
 pub async fn create_bookmark(
     db_client: &impl DatabaseClient,
@@ -56,13 +57,14 @@ pub async fn delete_bookmark(
 pub async fn get_bookmarked_posts(
     db_client: &impl DatabaseClient,
     owner_id: Uuid,
-    max_post_id: Option<Uuid>,
+    max_bookmark_id: Option<i32>,
     limit: u16,
-) -> Result<Vec<Post>, DatabaseError> {
+) -> Result<Vec<BookmarkedPost>, DatabaseError> {
     // No visibility check because it was done when bookmark was created
     let statement = format!(
         "
         SELECT
+            bookmark.id,
             post, actor_profile,
             {related_attachments},
             {related_mentions},
@@ -75,8 +77,11 @@ pub async fn get_bookmarked_posts(
         JOIN bookmark ON bookmark.post_id = post.id
         WHERE
             bookmark.owner_id = $owner_id
-            AND ($max_post_id::uuid IS NULL OR post.id < $max_post_id)
-        ORDER BY post.id DESC
+            AND (
+                $max_bookmark_id::integer IS NULL
+                OR bookmark.id < $max_bookmark_id
+            )
+        ORDER BY bookmark.id DESC
         LIMIT $limit
         ",
         related_attachments=RELATED_ATTACHMENTS,
@@ -90,14 +95,14 @@ pub async fn get_bookmarked_posts(
     let query = query!(
         &statement,
         owner_id=owner_id,
-        max_post_id=max_post_id,
+        max_bookmark_id=max_bookmark_id,
         limit=limit,
     )?;
     let rows = db_client.query(query.sql(), query.parameters()).await?;
-    let posts = rows.iter()
-        .map(Post::try_from)
+    let bookmarks = rows.iter()
+        .map(BookmarkedPost::try_from)
         .collect::<Result<_, _>>()?;
-    Ok(posts)
+    Ok(bookmarks)
 }
 
 pub async fn find_bookmarked_by_user(
@@ -149,7 +154,7 @@ mod tests {
             5
         ).await.unwrap();
         assert_eq!(bookmarks.len(), 1);
-        assert_eq!(bookmarks[0].id, post.id);
+        assert_eq!(bookmarks[0].post.id, post.id);
 
         delete_bookmark(db_client, viewer.id, post.id).await.unwrap();
         let bookmarks = get_bookmarked_posts(
