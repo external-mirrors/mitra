@@ -1043,14 +1043,14 @@ async fn load_activities(
 }
 
 pub fn account_api_scope() -> Scope {
-    // One request per 5 seconds
-    let search_limit = ratelimit_config(2, 30);
+    // Two requests per 30 seconds; to be used with extractor
+    let search_limit = ratelimit_config(2, 30, true);
     // TODO: use Resource::get() (requires actix-web 4.4.0)
     let search_by_acct_limited = web::resource("/search").route(
         web::get()
             .to(search_by_acct)
             .wrap(Governor::new(&search_limit)));
-    let registration_limit = ratelimit_config(2, 300);
+    let registration_limit = ratelimit_config(2, 300, false);
     let create_account_limited = web::resource("").route(
         web::post()
             .to(create_account)

@@ -23,6 +23,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Removed `node_url` parameter from Monero configuration.
 
+### Fixed
+
+- Don't rate-limit authenticated calls to `/api/v1/accounts/search`.
+
 ## [3.4.0] - 2024-09-04
 
 ### Added

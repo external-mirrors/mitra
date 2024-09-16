@@ -28,10 +28,15 @@ pub type MultiQuery<T> = QsQuery<T>;
 
 pub type RatelimitConfig = GovernorConfig<PeerIpKeyExtractor, NoOpMiddleware>;
 
-pub fn ratelimit_config(num_requests: u32, period: u64) -> RatelimitConfig {
+pub fn ratelimit_config(
+    num_requests: u32,
+    period: u64,
+    permissive: bool,
+) -> RatelimitConfig {
     GovernorConfigBuilder::default()
-        .per_second(period)
         .burst_size(num_requests)
+        .per_second(period)
+        .permissive(permissive)
         .finish()
         .expect("governor parameters should be non-zero")
 }
