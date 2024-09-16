@@ -71,7 +71,6 @@ use mitra_models::{
     emojis::queries::get_local_emoji_by_name,
     posts::helpers::{
         add_related_posts,
-        can_view_post,
         get_post_by_id_for_view,
     },
     posts::queries::{get_posts_by_author, get_thread},
@@ -536,7 +535,8 @@ pub async fn replies_collection(
     let posts = get_thread(db_client, &internal_object_id, None).await?;
     let post = posts.iter().find(|post| post.id == internal_object_id)
         .expect("get_thread return value should contain target post");
-    if !post.is_local() || !can_view_post(db_client, None, post).await? {
+    // Visibility check is done in get_thread
+    if !post.is_local() {
         return Err(HttpError::NotFoundError("post"));
     };
     let instance = config.instance();
@@ -555,11 +555,10 @@ pub async fn replies_collection(
             .json(collection);
         return Ok(response);
     };
-    let mut replies: Vec<_> = posts.into_iter()
+    let replies: Vec<_> = posts.into_iter()
         .filter(|post| post.in_reply_to_id == Some(internal_object_id))
         .take(OrderedCollectionPage::DEFAULT_SIZE.into())
         .collect();
-    add_related_posts(db_client, replies.iter_mut().collect()).await?;
     let objects = replies.iter().map(|post| {
         let object_id = post_object_id(&instance.url(), post);
         serde_json::to_value(object_id)
