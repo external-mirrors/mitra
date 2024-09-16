@@ -107,6 +107,12 @@ pub struct AttributedObject {
         default,
         deserialize_with = "deserialize_object_array",
     )]
+    icon: Vec<JsonValue>,
+
+    #[serde(
+        default,
+        deserialize_with = "deserialize_object_array",
+    )]
     attachment: Vec<JsonValue>,
 
     #[serde(
@@ -276,16 +282,21 @@ pub async fn get_object_attachments(
     author: &DbActorProfile,
 ) -> Result<(Vec<Uuid>, Vec<String>), HandlerError> {
     let agent = build_federation_agent(instance, None);
+    let values = object.attachment.iter()
+        // PeerTube video thumbnails
+        .chain(object.icon.iter().take(1));
     let mut attachments = vec![];
     let mut unprocessed = vec![];
     let mut downloaded = vec![];
-    for attachment_value in object.attachment.clone() {
+    for attachment_value in values {
         // Stop downloading if limit is reached
         if downloaded.len() >= ATTACHMENT_LIMIT {
             log::warn!("too many attachments");
             break;
         };
-        let attachment: Attachment = match serde_json::from_value(attachment_value) {
+        let attachment: Attachment =
+            match serde_json::from_value(attachment_value.clone())
+        {
             Ok(attachment) => attachment,
             Err(_) => {
                 log::warn!("invalid attachment");
