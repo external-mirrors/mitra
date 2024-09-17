@@ -32,6 +32,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Fixed
 
 - Don't rate-limit authenticated calls to `/api/v1/accounts/search`.
+- Fixed incorrect reporting of object ID errors during fetching.
 
 ## [3.4.0] - 2024-09-04
 

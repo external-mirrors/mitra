@@ -190,6 +190,9 @@ pub async fn fetch_object<T: DeserializeOwned>(
     // Perform authentication
     match verify_portable_object(&object_json) {
         Ok(_) => (),
+        Err(AuthenticationError::InvalidObjectID(_)) => {
+            return Err(FetchError::UrlError);
+        },
         Err(AuthenticationError::NotPortable) => {
             // Verify authority if object is not portable
             let is_same_origin = is_same_hostname(object_id, object_location)
