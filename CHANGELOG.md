@@ -10,6 +10,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Implemented Mastodon List API.
 - Display PeerTube video thumbnails as attachments.
+- Include posts to which current user reacted in full text search results.
+- Include posts where current user is mentioned in full text search results.
 
 ### Changed
 

@@ -1672,12 +1672,28 @@ pub async fn search_posts(
             to_tsvector(post.content) @@ plainto_tsquery($1)
             AND repost_of_id IS NULL
             AND (
+                -- posts published by the current user
                 post.author_id = $2
+                -- posts bookmarked by the current user
                 OR EXISTS (
                     SELECT 1 FROM bookmark
                     WHERE
                         bookmark.post_id = post.id
                         AND bookmark.owner_id = $2
+                )
+                -- posts with reactions from the current user
+                OR EXISTS (
+                    SELECT 1 FROM post_reaction
+                    WHERE
+                        post_reaction.post_id = post.id
+                        AND post_reaction.author_id = $2
+                )
+                -- posts where the current user is mentioned
+                OR EXISTS (
+                    SELECT 1 FROM mention
+                    WHERE
+                        mention.post_id = post.id
+                        AND mention.profile_id = $2
                 )
             )
         ORDER BY post.id DESC
