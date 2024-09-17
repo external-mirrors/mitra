@@ -237,6 +237,16 @@ mod tests {
     }
 
     #[test]
+    fn test_get_ip_address_invalid_ip() {
+        let url = Url::parse("https://127:5941/test").unwrap();
+        assert_eq!(url.host_str().unwrap(), "0.0.0.127");
+        assert_eq!(
+            get_ip_address(&url),
+            Some(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 127))),
+        );
+    }
+
+    #[test]
     fn test_normalize_origin() {
         let output = normalize_origin("https://social.example").unwrap();
         assert_eq!(output, "https://social.example");
