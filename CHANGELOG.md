@@ -23,6 +23,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Sort bookmarks by creation date.
 - Federate 👎 reaction as `Dislike` activity.
 - Optimize generation of `replies` collection.
+- Increased delay before first delivery retry.
 
 ### Removed
 

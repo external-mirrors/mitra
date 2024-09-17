@@ -350,10 +350,10 @@ const OUTGOING_QUEUE_BATCH_SIZE: u32 = 1;
 const OUTGOING_QUEUE_RETRIES_MAX: u32 = 3;
 const OUTGOING_QUEUE_UNREACHABLE_NORETRY: i64 = 3600 * 24 * 30; // 30 days
 
-// 5 mins, 50 mins, 8 hours
+// 10 mins, 55 mins, 8.4 hours
 pub fn outgoing_queue_backoff(failure_count: u32) -> u32 {
     debug_assert!(failure_count > 0);
-    30 * 10_u32.pow(failure_count)
+    30 * (10_u32.pow(failure_count) + 10)
 }
 
 pub async fn process_queued_outgoing_activities(
@@ -546,7 +546,7 @@ mod tests {
 
     #[test]
     fn test_outgoing_queue_backoff() {
-        assert_eq!(outgoing_queue_backoff(1), 300);
-        assert_eq!(outgoing_queue_backoff(2), 3000);
+        assert_eq!(outgoing_queue_backoff(1), 600);
+        assert_eq!(outgoing_queue_backoff(2), 3300);
     }
 }
