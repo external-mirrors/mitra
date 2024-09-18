@@ -27,6 +27,10 @@ thiserror = "1.0.37"
 
 apx_core = { path = "../apx_core" }
 
+[dev-dependencies]
+# Async runtime for examples
+tokio = { version = "1.28.2", features = ["macros", "rt-multi-thread"] }
+
 [features]
 default = ["rustls-tls"]
 
