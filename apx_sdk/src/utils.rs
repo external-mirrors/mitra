@@ -122,6 +122,19 @@ mod tests {
     }
 
     #[test]
+    fn test_is_object_lemmy_group() {
+        let actor = json!({
+            "id": "https://group.example/c/test",
+            "type": "Group",
+            "attributedTo": ["https://group.example/u/mod"],
+            "inbox": "https://group.example/c/test/inbox",
+            "outbox": "https://group.example/c/test/outbox",
+        });
+        assert_eq!(is_actor(&actor), true);
+        assert_eq!(is_object(&actor), false);
+    }
+
+    #[test]
     fn test_key_id_to_actor_id() {
         let key_id = "https://server.example/actor#main-key";
         let actor_id = key_id_to_actor_id(key_id).unwrap();
