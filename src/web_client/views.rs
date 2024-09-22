@@ -4,9 +4,7 @@ use actix_files::{Files, NamedFile};
 use actix_web::{
     dev::{fn_service, ServiceRequest, ServiceResponse},
     guard,
-    http::header as http_header,
     web,
-    web::Data,
     HttpResponse,
     Resource,
 };
@@ -18,7 +16,6 @@ use mitra_config::Config;
 use mitra_models::{
     database::{get_database_client, DatabaseConnectionPool},
     posts::{
-        helpers::get_post_by_id_for_view,
         queries::get_post_by_id,
     },
     profiles::queries::get_profile_by_acct,
@@ -39,7 +36,7 @@ fn web_client_service(web_client_dir: &Path) -> Files {
         .default_handler(fn_service(|service_request: ServiceRequest| {
             // Workaround for https://github.com/actix/actix-web/issues/2617
             let (request, _) = service_request.into_parts();
-            let index_path = request.app_data::<Data<Config>>()
+            let index_path = request.app_data::<web::Data<Config>>()
                 .expect("app data should contain config")
                 .web_client_dir.as_ref()
                 .expect("web_client_dir should be present in config")
@@ -77,14 +74,10 @@ fn activitypub_guard() -> impl guard::Guard {
     })
 }
 
-fn opengraph_guard() -> impl guard::Guard {
-    guard::fn_guard(|ctx| {
-        let headers = ctx.head().headers();
-        let maybe_user_agent = headers.get(http_header::USER_AGENT)
-            .and_then(|value| value.to_str().ok());
-        if let Some(user_agent) = maybe_user_agent {
-            user_agent == "Synapse (bot; +https://github.com/matrix-org/synapse)"
-        } else { false }
+fn opengraph_guard(with_opengraph: bool) -> impl guard::Guard {
+    guard::fn_guard(move |_ctx| {
+        // TODO: use .app_data (actix-web 4.7.0)
+        with_opengraph
     })
 }
 
@@ -129,23 +122,37 @@ async fn post_page_opengraph_view(
     post_id: web::Path<Uuid>,
 ) -> Result<HttpResponse, HttpError> {
     let db_client = &**get_database_client(&db_pool).await?;
-    let post = get_post_by_id_for_view(db_client, None, *post_id).await?;
-    #[allow(clippy::format_in_format_args)]
-    let page = format!(
-        include_str!("opengraph.html"),
-        title=config.instance_title,
-        subtitle=format!("Post by @{}", post.author.preferred_handle()),
-        image_url=get_opengraph_image_url(&config.instance_url()),
-    );
+    let post = get_post_by_id(db_client, &post_id).await?;
+    let web_client_dir = config.web_client_dir.as_ref()
+        .ok_or(HttpError::InternalError)?;
+    let index_html = std::fs::read_to_string(web_client_dir.join(INDEX_FILE))
+        .map_err(|_| HttpError::InternalError)?;
+    let page = if post.is_public() {
+        // Rewrite index.html and insert metadata
+        let metadata_block = format!(
+            include_str!("metadata_block.html"),
+            title=config.instance_title,
+            subtitle=format!("Post by @{}", post.author.preferred_handle()),
+            image_url=get_opengraph_image_url(&config.instance_url()),
+        );
+        index_html.replace(
+            "<title>Mitra - Federated social network</title>",
+            &metadata_block,
+        )
+    } else {
+        // Don't insert metadata
+        index_html
+    };
     let response = HttpResponse::Ok()
         .content_type("text/html")
         .body(page);
     Ok(response)
 }
 
-pub fn post_page_redirect() -> Resource {
+pub fn post_page_overlay(config: &Config) -> Resource {
+    let with_opengraph = config.web_client_dir.is_some() && config.web_client_rewrite_index;
     web::resource("/post/{object_id}")
-        .guard(guard::Any(activitypub_guard()).or(opengraph_guard()))
+        .guard(guard::Any(activitypub_guard()).or(opengraph_guard(with_opengraph)))
         .route(web::get().guard(activitypub_guard()).to(post_page_redirect_view))
-        .route(web::get().guard(opengraph_guard()).to(post_page_opengraph_view))
+        .route(web::get().guard(opengraph_guard(with_opengraph)).to(post_page_opengraph_view))
 }

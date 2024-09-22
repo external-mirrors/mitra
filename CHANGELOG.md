@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+
+- Insert OpenGraph tags into `index.html` when serving post page.
+
 ### Changed
 
 - Don't duck-type collections as "objects".

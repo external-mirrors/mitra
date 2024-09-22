@@ -29,6 +29,8 @@ use super::{SOFTWARE_NAME, SOFTWARE_VERSION};
 
 fn default_log_level() -> LogLevel { LogLevel::Info }
 
+const fn default_web_client_rewrite_index() -> bool { true }
+
 const fn default_instance_staff_public() -> bool { true }
 
 #[derive(Clone, Deserialize)]
@@ -46,8 +48,11 @@ pub struct Config {
     pub database_tls_ca_file: Option<PathBuf>,
 
     pub storage_dir: PathBuf,
+
     pub web_client_dir: Option<PathBuf>,
     pub web_client_theme_dir: Option<PathBuf>,
+    #[serde(default = "default_web_client_rewrite_index")]
+    pub web_client_rewrite_index: bool,
 
     pub http_host: String,
     pub http_port: u32,
