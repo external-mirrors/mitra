@@ -11,6 +11,7 @@ use crate::{
 
 // https://www.w3.org/TR/did-core/
 // ap:// URL must have path
+// See also: DID_RE in apx_core::did
 const AP_URL_RE: &str = r"^ap://(?P<did>did:[[:alpha:]]+:[A-Za-z0-9._:-]+)(?P<path>/.+)$";
 const AP_URL_PREFIX: &str = "ap://";
 

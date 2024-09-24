@@ -13,7 +13,8 @@ use crate::{
     did_pkh::DidPkh,
 };
 
-const DID_RE: &str = r"^did:(?P<method>\w+):.+$";
+// https://www.w3.org/TR/did-core/#did-syntax
+const DID_RE: &str = r"^did:(?P<method>[[:alpha:]]+):[A-Za-z0-9._:-]+$";
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Did {
