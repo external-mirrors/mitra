@@ -1,5 +1,3 @@
-use std::str::FromStr;
-
 use serde_json::{Value as JsonValue};
 use url::Url;
 
@@ -101,7 +99,9 @@ pub fn get_json_signature(
         proof_config.proof_type.parse()
             .map_err(|_| VerificationError::InvalidProof("unsupported proof type"))?
     };
-    let signer = if let Ok(did) = Did::from_str(&proof_config.verification_method) {
+    let signer = if let Ok((did, _)) = Did::parse_url(&proof_config.verification_method) {
+        // Fragment is ignored because supported DIDs
+        // can't have more than one verification method
         JsonSigner::Did(did)
     } else if Url::parse(&proof_config.verification_method).is_ok() {
         JsonSigner::ActorKeyId(proof_config.verification_method.clone())

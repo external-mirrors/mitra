@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Don't duck-type collections as "objects".
 - Display reposts made by current user in home timeline (reverting change made in v3.4.0).
+- Allow `proof.verificationMethod` to be DID URL.
 
 ## [3.5.0] - 2024-09-17
 
