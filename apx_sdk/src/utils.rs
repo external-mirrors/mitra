@@ -26,8 +26,12 @@ pub fn is_activity(value: &JsonValue) -> bool {
     !value["actor"].is_null() && value["attributedTo"].is_null()
 }
 
+pub fn is_collection(value: &JsonValue) -> bool {
+    !value["items"].is_null() || !value["orderedItems"].is_null()
+}
+
 pub fn is_object(value: &JsonValue) -> bool {
-    !is_actor(value) && !is_activity(value)
+    !is_actor(value) && !is_activity(value) && !is_collection(value)
 }
 
 pub fn key_id_to_actor_id(key_id: &str) -> Result<String, &'static str> {
@@ -91,6 +95,7 @@ mod tests {
         });
         assert_eq!(is_actor(&actor), true);
         assert_eq!(is_activity(&actor), false);
+        assert_eq!(is_collection(&actor), false);
         assert_eq!(is_object(&actor), false);
     }
 
@@ -104,7 +109,21 @@ mod tests {
         });
         assert_eq!(is_actor(&activity), false);
         assert_eq!(is_activity(&activity), true);
+        assert_eq!(is_collection(&activity), false);
         assert_eq!(is_object(&activity), false);
+    }
+
+    #[test]
+    fn test_is_collection() {
+        let collection = json!({
+            "id": "https://social.example/collection/1",
+            "type": "Collection",
+            "items": ["https://social.example/objects/1"],
+        });
+        assert_eq!(is_actor(&collection), false);
+        assert_eq!(is_activity(&collection), false);
+        assert_eq!(is_collection(&collection), true);
+        assert_eq!(is_object(&collection), false);
     }
 
     #[test]
@@ -118,6 +137,7 @@ mod tests {
         });
         assert_eq!(is_actor(&object), false);
         assert_eq!(is_activity(&object), false);
+        assert_eq!(is_collection(&object), false);
         assert_eq!(is_object(&object), true);
     }
 
