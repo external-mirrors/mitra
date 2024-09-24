@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Changed
 
 - Don't duck-type collections as "objects".
+- Display reposts made by current user in home timeline (reverting change made in v3.4.0).
 
 ## [3.5.0] - 2024-09-17
 
