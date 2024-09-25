@@ -26,6 +26,7 @@ use mitra_validators::{
 
 use crate::{
     agent::build_federation_agent,
+    authentication::{is_embedded_activity_trusted, verify_activity_owner},
     identifiers::parse_local_object_id,
     importers::{fetch_any_object, import_post, ActorIdResolver},
     vocabulary::*,
@@ -121,6 +122,9 @@ async fn handle_fep_1b12_announce(
     db_client: &mut impl DatabaseClient,
     activity: JsonValue,
 ) -> HandlerResult {
+    verify_activity_owner(&activity)?;
+    verify_activity_owner(&activity["object"])?;
+    let is_embedded_trusted = is_embedded_activity_trusted(&activity)?;
     let GroupAnnounce { actor: group_id, object: activity } =
         serde_json::from_value(activity)
             .map_err(|_| ValidationError("unexpected activity structure"))?;
@@ -138,18 +142,23 @@ async fn handle_fep_1b12_announce(
             return Ok(None);
         },
     };
-    let instance = config.instance();
-    let agent = build_federation_agent(&instance, None);
-    let activity: JsonValue = match fetch_any_object(&agent, activity_id).await {
-        Ok(activity) => {
-            log::info!("fetched activity {}", activity_id);
-            activity
-        },
-        Err(error) => {
-            // Wrapped activities are not always available
-            log::warn!("failed to fetch activity ({error}): {activity_id}");
-            return Ok(None);
-        },
+    let activity = if is_embedded_trusted {
+        // Don't fetch
+        activity.clone()
+    } else {
+        let instance = config.instance();
+        let agent = build_federation_agent(&instance, None);
+        match fetch_any_object(&agent, activity_id).await {
+            Ok(activity) => {
+                log::info!("fetched activity {}", activity_id);
+                activity
+            },
+            Err(error) => {
+                // Wrapped activities are not always available
+                log::warn!("failed to fetch activity ({error}): {activity_id}");
+                return Ok(None);
+            },
+        }
     };
     if activity_type == DELETE {
         let group = get_remote_profile_by_actor_id(
