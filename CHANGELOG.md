@@ -14,6 +14,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Write message to log if FEP-1b12 activity is not supported.
 - Don't fetch embedded FEP-1b12 activity if it has same origin as its parent.
 
+### Fixed
+
+- Fixed incorrect processing of `created` value during FEP-8b32 proof verification.
+
 ## [3.5.0] - 2024-09-17
 
 ### Added

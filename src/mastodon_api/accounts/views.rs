@@ -482,10 +482,12 @@ async fn create_identity_proof(
                 &did_key.to_string(),
                 proof_data.created_at,
             );
+            let proof_config_value = serde_json::to_value(proof_config)
+                .expect("proof config should be serializable");
             verify_eddsa_json_signature(
                 &ed25519_key,
                 &claim_value,
-                &proof_config,
+                &proof_config_value,
                 &signature.value,
             ).map_err(|_| ValidationError("invalid signature"))?;
             signature.value.to_vec()

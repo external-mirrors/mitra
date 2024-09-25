@@ -56,8 +56,8 @@ pub struct IntegrityProofConfig {
 #[serde(rename_all = "camelCase")]
 pub struct IntegrityProof {
     #[serde(flatten)]
-    pub proof_config: IntegrityProofConfig,
-    pub proof_value: String,
+    proof_config: IntegrityProofConfig,
+    proof_value: String,
 }
 
 impl IntegrityProofConfig {
@@ -214,7 +214,7 @@ pub fn sign_object_rsa(
 
 pub fn prepare_jcs_sha256_data(
     object: &impl Serialize,
-    proof_config: &IntegrityProofConfig,
+    proof_config: &impl Serialize,
 ) -> Result<Vec<u8>, CanonicalizationError> {
     let canonical_object = canonicalize_object(object)?;
     let object_hash = Sha256::digest(canonical_object.as_bytes());

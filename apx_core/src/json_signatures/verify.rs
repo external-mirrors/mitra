@@ -18,7 +18,6 @@ use crate::{
 
 use super::create::{
     prepare_jcs_sha256_data,
-    IntegrityProof,
     IntegrityProofConfig,
     LD_SIGNATURE_KEY,
     PROOF_KEY,
@@ -26,6 +25,8 @@ use super::create::{
     PURPOSE_AUTHENTICATION,
 };
 use super::proofs::{ProofType, DATA_INTEGRITY_PROOF};
+
+const PROOF_VALUE_KEY: &str = "proofValue";
 
 #[derive(Debug, PartialEq)]
 pub enum JsonSigner {
@@ -37,7 +38,7 @@ pub struct JsonSignatureData {
     pub proof_type: ProofType,
     pub signer: JsonSigner,
     pub object: JsonValue,
-    pub proof_config: IntegrityProofConfig,
+    pub proof_config: JsonValue,
     pub signature: Vec<u8>,
 }
 
@@ -73,18 +74,22 @@ pub fn get_json_signature(
     // If linked data signature is present,
     // it must be removed before verification (per FEP-8b32)
     object_map.remove(LD_SIGNATURE_KEY);
-    let proof = object_map.remove(PROOF_KEY)
+    let mut proof = object_map.remove(PROOF_KEY)
         .ok_or(VerificationError::NoProof)?;
     if let Some(context) = proof.get("@context") {
         if *context != object["@context"] {
             return Err(VerificationError::InvalidProof("incorrect proof context"));
         };
     };
-    let IntegrityProof {
-        proof_config,
-        proof_value,
-    } = serde_json::from_value(proof)
-        .map_err(|_| VerificationError::InvalidProof("invalid proof"))?;
+    let proof_value = proof.as_object_mut()
+        .ok_or(VerificationError::InvalidProof("invalid proof"))?
+        .remove(PROOF_VALUE_KEY)
+        .ok_or(VerificationError::InvalidProof("'proofValue' is missing"))?
+        .as_str()
+        .ok_or(VerificationError::InvalidProof("invalid proof value"))?
+        .to_string();
+    let proof_config: IntegrityProofConfig = serde_json::from_value(proof.clone())
+        .map_err(|_| VerificationError::InvalidProof("invalid proof configuration"))?;
     if proof_config.proof_purpose != PURPOSE_ASSERTION_METHOD &&
         proof_config.proof_purpose != PURPOSE_AUTHENTICATION
     {
@@ -113,7 +118,7 @@ pub fn get_json_signature(
         proof_type,
         signer,
         object,
-        proof_config,
+        proof_config: proof,
         signature,
     };
     Ok(signature_data)
@@ -139,7 +144,7 @@ pub fn verify_rsa_json_signature(
 pub fn verify_eddsa_json_signature(
     signer_key: &Ed25519PublicKey,
     object: &JsonValue,
-    proof_config: &IntegrityProofConfig,
+    proof_config: &JsonValue,
     signature: &[u8],
 ) -> Result<(), VerificationError> {
     let hash_data = prepare_jcs_sha256_data(object, proof_config)?;
