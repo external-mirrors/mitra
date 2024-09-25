@@ -131,22 +131,25 @@ async fn handle_fep_1b12_announce(
     if activity_type != DELETE && !config.federation.fep_1b12_full_enabled {
         return Ok(None);
     };
+    match activity_type {
+        CREATE | DELETE | DISLIKE | LIKE => (),
+        _ => {
+            log::warn!("activity is not supported: Announce({activity_type})");
+            return Ok(None);
+        },
+    };
     let instance = config.instance();
     let agent = build_federation_agent(&instance, None);
-    let activity: JsonValue = if let CREATE | DELETE | DISLIKE | LIKE = activity_type {
-        match fetch_any_object(&agent, activity_id).await {
-            Ok(activity) => {
-                log::info!("fetched activity {}", activity_id);
-                activity
-            },
-            Err(error) => {
-                // Wrapped activities are not always available
-                log::warn!("failed to fetch activity ({error}): {activity_id}");
-                return Ok(None);
-            },
-        }
-    } else {
-        return Ok(None);
+    let activity: JsonValue = match fetch_any_object(&agent, activity_id).await {
+        Ok(activity) => {
+            log::info!("fetched activity {}", activity_id);
+            activity
+        },
+        Err(error) => {
+            // Wrapped activities are not always available
+            log::warn!("failed to fetch activity ({error}): {activity_id}");
+            return Ok(None);
+        },
     };
     if activity_type == DELETE {
         let group = get_remote_profile_by_actor_id(
