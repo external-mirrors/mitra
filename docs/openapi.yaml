@@ -1004,6 +1004,21 @@ paths:
                 $ref: '#/components/schemas/List'
         404:
           description: Custom feed does not exist or is not owned by you.
+    put:
+      summary: Change the name of a custom feed.
+      security:
+        - tokenAuth: []
+      parameters:
+        - $ref: '#/components/parameters/list_id'
+      responses:
+        200:
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/List'
+        404:
+          description: Custom feed does not exist or is not owned by you.
     delete:
       summary: Delete a custom feed.
       security:

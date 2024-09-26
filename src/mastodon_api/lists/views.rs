@@ -3,6 +3,7 @@ use actix_web::{
     dev::ConnectionInfo,
     get,
     post,
+    put,
     web,
     HttpResponse,
     Scope,
@@ -25,6 +26,7 @@ use mitra_models::{
         get_custom_feeds,
         get_custom_feed_sources,
         remove_custom_feed_sources,
+        update_custom_feed,
     },
 };
 use mitra_validators::custom_feeds::validate_custom_feed_name;
@@ -39,10 +41,10 @@ use crate::{
 };
 
 use super::types::{
-    AccountListQueryParams,
     List,
     ListAccountsData,
-    ListCreateData,
+    ListAccountsQueryParams,
+    ListData,
 };
 
 /// https://docs.joinmastodon.org/methods/lists/#get
@@ -63,7 +65,7 @@ async fn get_lists(
 async fn create_list(
     auth: BearerAuth,
     db_pool: web::Data<DatabaseConnectionPool>,
-    list_data: web::Json<ListCreateData>,
+    list_data: web::Json<ListData>,
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &**get_database_client(&db_pool).await?;
     let current_user = get_current_user(db_client, auth.token()).await?;
@@ -95,6 +97,26 @@ async fn get_list(
     Ok(HttpResponse::Ok().json(list))
 }
 
+/// https://docs.joinmastodon.org/methods/lists/#update
+#[put("/{list_id}")]
+async fn update_list(
+    auth: BearerAuth,
+    db_pool: web::Data<DatabaseConnectionPool>,
+    list_id: web::Path<i32>,
+    list_data: web::Json<ListData>,
+) -> Result<HttpResponse, MastodonError> {
+    let db_client = &**get_database_client(&db_pool).await?;
+    let current_user = get_current_user(db_client, auth.token()).await?;
+    let feed = update_custom_feed(
+        db_client,
+        *list_id,
+        current_user.id,
+        &list_data.title,
+    ).await?;
+    let list = List::from_db(feed);
+    Ok(HttpResponse::Ok().json(list))
+}
+
 /// https://docs.joinmastodon.org/methods/lists/#delete
 #[delete("/{list_id}")]
 async fn delete_list(
@@ -121,7 +143,7 @@ async fn get_list_accounts(
     connection_info: ConnectionInfo,
     db_pool: web::Data<DatabaseConnectionPool>,
     list_id: web::Path<i32>,
-    query_params: web::Query<AccountListQueryParams>,
+    query_params: web::Query<ListAccountsQueryParams>,
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &**get_database_client(&db_pool).await?;
     let current_user = get_current_user(db_client, auth.token()).await?;
@@ -207,6 +229,7 @@ pub fn list_api_scope() -> Scope {
         .service(get_lists)
         .service(create_list)
         .service(get_list)
+        .service(update_list)
         .service(delete_list)
         .service(get_list_accounts)
         .service(add_accounts_to_list)

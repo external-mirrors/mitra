@@ -32,17 +32,17 @@ impl List {
 }
 
 #[derive(Deserialize)]
-pub struct ListCreateData {
+pub struct ListData {
     pub title: String,
 }
 
-fn default_account_list_page_size() -> PageSize { PageSize::new(40) }
+fn default_list_accounts_page_size() -> PageSize { PageSize::new(40) }
 
 #[derive(Deserialize)]
-pub struct AccountListQueryParams {
+pub struct ListAccountsQueryParams {
     pub max_id: Option<Uuid>,
 
-    #[serde(default = "default_account_list_page_size")]
+    #[serde(default = "default_list_accounts_page_size")]
     pub limit: PageSize,
 }
 

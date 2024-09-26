@@ -28,6 +28,26 @@ pub async fn create_custom_feed(
     Ok(feed)
 }
 
+pub async fn update_custom_feed(
+    db_client: &impl DatabaseClient,
+    feed_id: i32,
+    owner_id: Uuid,
+    feed_name: &str,
+) -> Result<DbCustomFeed, DatabaseError> {
+    let maybe_row = db_client.query_opt(
+        "
+        UPDATE custom_feed
+        SET feed_name = $3
+        WHERE id = $1 AND owner_id = $2
+        RETURNING custom_feed
+        ",
+        &[&feed_id, &owner_id, &feed_name],
+    ).await?;
+    let row = maybe_row.ok_or(DatabaseError::NotFound("custom feed"))?;
+    let feed = row.try_get("custom_feed")?;
+    Ok(feed)
+}
+
 pub async fn delete_custom_feed(
     db_client: &impl DatabaseClient,
     feed_id: i32,
@@ -160,6 +180,26 @@ mod tests {
         ).await.unwrap();
         assert_eq!(feed.owner_id, user.id);
         assert_eq!(feed.feed_name, feed_name);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_update_custom_feed() {
+        let db_client = &mut create_test_database().await;
+        let user = create_test_user(db_client, "user").await;
+        let feed_name = "test feed";
+        let feed = create_custom_feed(
+            db_client,
+            user.id,
+            feed_name,
+        ).await.unwrap();
+        let updated_feed = update_custom_feed(
+            db_client,
+            feed.id,
+            user.id,
+            "My custom feed",
+        ).await.unwrap();
+        assert_eq!(updated_feed.feed_name, "My custom feed");
     }
 
     #[tokio::test]

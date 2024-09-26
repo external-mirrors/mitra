@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Added
 
 - Insert OpenGraph tags into `index.html` when serving post page.
+- Added API endpoint for editing custom feed name.
 
 ### Changed
 
