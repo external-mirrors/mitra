@@ -33,7 +33,7 @@ k256 = { version = "0.11.6", default-features = false, features = ["std", "ecdsa
 # Used to generate random numbers
 rand = "0.8.4"
 # Used for working with regular expressions
-regex = "1.9.6, <1.10.0"
+regex = "1.10.6"
 # Used for working with RSA keys
 rsa = "0.8.2"
 pem = "2.0.1"

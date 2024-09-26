@@ -20,7 +20,7 @@ log = "0.4.20"
 # Used to query Monero node
 monero-rpc = { git = "https://github.com/monero-rs/monero-rpc-rs", rev = "519878d1413a8e220461852cf24c8f5bca23cc12", default-features = false, features = ["rpc_authentication", "rustls-tls"] }
 # Used for working with regular expressions
-regex = "1.9.6"
+regex = "1.10.6"
 # Used for making async HTTP requests
 reqwest = { version = "0.11.27", default-features = false, features = ["json", "multipart", "rustls-tls-native-roots"] }
 # Used for serialization/deserialization

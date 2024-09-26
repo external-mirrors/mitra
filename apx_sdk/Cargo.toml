@@ -15,7 +15,7 @@ futures-util = { version = "0.3.28", default-features = false }
 # Used for logging
 log = "0.4.20"
 # Used for working with regular expressions
-regex = "1.9.6"
+regex = "1.10.6"
 # Used for making async HTTP requests
 reqwest = { version = "0.11.27", default-features = false, features = ["json", "socks"] }
 bytes = "=1.2.0"

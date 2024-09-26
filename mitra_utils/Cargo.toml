@@ -25,7 +25,7 @@ mime_guess = "2.0.5"
 # Used to generate random numbers
 rand = "0.8.4"
 # Used for working with regular expressions
-regex = "1.9.6, <1.10.0"
+regex = "1.10.6"
 # Used for hashing passwords
 rust-argon2 = "1.0.0"
 # Used for creating error types
