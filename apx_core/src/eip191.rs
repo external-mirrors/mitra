@@ -1,7 +1,6 @@
 /// https://eips.ethereum.org/EIPS/eip-191
 use k256::{
     ecdsa::{SigningKey, VerifyingKey},
-    elliptic_curve::sec1::ToEncodedPoint,
 };
 use sha3::{Digest, Keccak256};
 

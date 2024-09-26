@@ -29,7 +29,7 @@ infer = "=0.13.0"
 # Used for working with URIs
 iri-string = "0.7.2"
 # Used for working with ECDSA signatures
-k256 = { version = "0.11.6", default-features = false, features = ["std", "ecdsa", "keccak256"] }
+k256 = { version = "0.13.0", default-features = false, features = ["std", "ecdsa"] }
 # Used to generate random numbers
 rand = "0.8.4"
 # Used for working with regular expressions

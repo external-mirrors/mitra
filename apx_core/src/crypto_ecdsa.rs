@@ -1,16 +1,13 @@
 use k256::{
     ecdsa::{
-        recoverable,
-        signature::{
-            Signature as _Signature,
-            Signer as _Signer,
-        },
         Error,
+        RecoveryId,
         Signature,
         SigningKey,
         VerifyingKey,
     },
 };
+use sha3::{Digest, Keccak256};
 
 pub type EcdsaError = Error;
 
@@ -20,34 +17,41 @@ pub fn generate_ecdsa_key() -> SigningKey {
     signing_key
 }
 
+fn prehash(message: &[u8]) -> [u8; 32] {
+    Keccak256::digest(message).into()
+}
+
 pub fn create_ecdsa_signature(
     secret_key: &SigningKey,
     message: &[u8],
 ) -> Result<[u8; 65], EcdsaError> {
-    let signature: recoverable::Signature = secret_key.sign(message);
-    let signature_bytes: [u8; 65] = signature.as_ref().try_into()
-        .expect("signature size should be 65 bytes");
+    let message_hash = prehash(message);
+    let (signature, recovery_id) =
+        secret_key.sign_prehash_recoverable(&message_hash)?;
+    let mut signature_bytes = [0u8; 65];
+    signature_bytes[..64].copy_from_slice(signature.to_bytes().as_slice());
+    signature_bytes[64] = recovery_id.to_byte();
     Ok(signature_bytes)
 }
 
 pub fn recover_ecdsa_public_key(
     message: &[u8],
-    signature: [u8; 65],
+    signature_bytes: [u8; 65],
 ) -> Result<VerifyingKey, EcdsaError> {
-    let signature_raw = Signature::from_bytes(&signature[..64])?;
-    let recovery_id = recoverable::Id::new(&signature[64] % 27)?;
-    let recoverable_signature = recoverable::Signature::new(
-        &signature_raw,
-        recovery_id,
+    let signature = Signature::try_from(&signature_bytes[..64])?;
+    let recovery_id = RecoveryId::from_byte(&signature_bytes[64] % 27)
+        .ok_or(EcdsaError::new())?;
+    let message_hash = prehash(message);
+    let public_key = VerifyingKey::recover_from_prehash(
+        &message_hash,
+        &signature,
+        recovery_id
     )?;
-    // Requires keccak256 feature
-    let public_key = recoverable_signature.recover_verifying_key(message)?;
     Ok(public_key)
 }
 
 #[cfg(test)]
 mod tests {
-    use k256::elliptic_curve::sec1::ToEncodedPoint;
     use super::*;
 
     #[test]
@@ -76,6 +80,6 @@ mod tests {
             message,
             signature,
         ).unwrap();
-        assert_eq!(recovered_key, public_key);
+        assert_eq!(recovered_key, *public_key);
     }
 }
