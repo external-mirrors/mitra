@@ -16,8 +16,7 @@ bs58 = "0.4.0"
 # Used for working with dates
 chrono = { version = "0.4.23", default-features = false, features = ["std", "serde", "clock"] }
 # Used for working with EdDSA signatures
-ed25519_1 = { package = "ed25519", version = "1.5.3", features = ["pkcs8"] }
-ed25519-dalek = { version = "2.0.0", features = ["rand_core"] }
+ed25519-dalek = { version = "2.0.0", features = ["pem", "pkcs8", "rand_core"] }
 # Used to work with hexadecimal strings
 hex = "0.4.3"
 # Used for verifying HTTP signatures

@@ -1,10 +1,8 @@
-// Using ed25519 v1.5
-// because ed25519 v2.2 requires Rust 1.65 (via pkcs8 dependency)
-use ed25519_1::pkcs8::{
-    DecodePublicKey,
-    PublicKeyBytes,
-};
 use ed25519_dalek::{
+    pkcs8::{
+        DecodePublicKey,
+        PublicKeyBytes,
+    },
     SecretKey,
     SigningKey,
     Signature,
