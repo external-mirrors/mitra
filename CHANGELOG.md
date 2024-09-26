@@ -17,6 +17,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Allow `proof.verificationMethod` to be DID URL.
 - Write message to log if FEP-1b12 activity is not supported.
 - Don't fetch embedded FEP-1b12 activity if it has same origin as its parent.
+- Changed MSRV to 1.65.0.
 
 ### Fixed
 

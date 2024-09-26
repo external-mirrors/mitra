@@ -53,9 +53,7 @@ fn find_mentions(
             continue;
         };
         if let Some(secondary_caps) = mention_secondary_re.captures(&caps["mention"]) {
-            let acct = if let Some(acct) = caps_to_acct(instance_hostname, &secondary_caps) {
-                acct
-            } else {
+            let Some(acct) = caps_to_acct(instance_hostname, &secondary_caps) else {
                 // Invalid mention
                 continue;
             };
