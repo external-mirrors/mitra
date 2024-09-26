@@ -171,7 +171,7 @@ pub fn create_rsa_sha256_signature(
     secret_key: &RsaSecretKey,
     message: &str,
 ) -> Result<Vec<u8>, RsaError> {
-    let signing_key = SigningKey::<Sha256>::new_with_prefix(secret_key.clone());
+    let signing_key = SigningKey::<Sha256>::new(secret_key.clone());
     let signature = signing_key.sign(message.as_bytes());
     Ok(signature.to_vec())
 }
@@ -181,7 +181,7 @@ pub fn verify_rsa_sha256_signature(
     message: &str,
     signature: &[u8],
 ) -> bool {
-    let verifying_key = VerifyingKey::<Sha256>::new_with_prefix(public_key.clone());
+    let verifying_key = VerifyingKey::<Sha256>::new(public_key.clone());
     let signature = match Signature::try_from(signature) {
         Ok(signature) => signature,
         Err(_) => return false,

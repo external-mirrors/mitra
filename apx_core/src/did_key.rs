@@ -80,7 +80,7 @@ impl fmt::Display for DidKey {
 
 #[cfg(test)]
 mod tests {
-    use rsa::PublicKeyParts;
+    use rsa::traits::PublicKeyParts;
     use crate::crypto_rsa::rsa_public_key_from_pkcs1_der;
     use super::*;
 
