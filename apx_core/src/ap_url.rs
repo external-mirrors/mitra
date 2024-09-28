@@ -1,3 +1,4 @@
+/// https://codeberg.org/fediverse/fep/src/branch/main/fep/ef61/fep-ef61.md
 use std::fmt;
 use std::str::FromStr;
 
@@ -6,13 +7,13 @@ use regex::Regex;
 
 use crate::{
     did::Did,
-    url::common::Origin,
+    url::common::{url_decode, Origin},
 };
 
 // https://www.w3.org/TR/did-core/
 // ap:// URL must have path
-// See also: DID_RE in apx_core::did
-const AP_URL_RE: &str = r"^ap://(?P<did>did:[[:alpha:]]+:[A-Za-z0-9._:-]+)(?P<path>/.+)$";
+// authority: DID regexp plus percent sign (see also: DID_RE in apx_core::did)
+const AP_URL_RE: &str = r"^ap://(?P<did>did(:|%3A)[[:alpha:]]+(:|%3A)[A-Za-z0-9._:%-]+)(?P<path>/.+)$";
 const AP_URL_PREFIX: &str = "ap://";
 
 pub fn is_ap_url(url: &str) -> bool {
@@ -23,7 +24,6 @@ pub fn with_ap_prefix(did_url: &str) -> String {
     format!("{}{}", AP_URL_PREFIX, did_url)
 }
 
-/// https://codeberg.org/fediverse/fep/src/branch/main/fep/ef61/fep-ef61.md
 #[derive(Clone)]
 pub struct ApUrl {
     authority: Did,
@@ -35,7 +35,8 @@ impl ApUrl {
         let url_re = Regex::new(AP_URL_RE)
              .expect("regexp should be valid");
         let captures = url_re.captures(value).ok_or("invalid 'ap' URL")?;
-        let authority = Did::from_str(&captures["did"])
+        let did_str = url_decode(&captures["did"]);
+        let authority = Did::from_str(&did_str)
             .map_err(|_| "invalid 'ap' URL authority")?;
         // Authority should be an Ed25519 key
         if authority.as_did_key()
@@ -123,6 +124,13 @@ mod tests {
         assert_eq!(url.authority().to_string(), "did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6");
         assert_eq!(url.relative_url(), "/actor#main-key");
         assert_eq!(url.to_string(), url_str);
+    }
+
+    #[test]
+    fn test_parse_ap_url_with_percent_encoded_authority() {
+        let url_str = "ap://did%3Akey%3Az6MkrJVnaZkeFzdQyMZu1cgjg7k1pZZ6pvBQ7XJPt4swbTQ2/actor";
+        let url = ApUrl::parse(url_str).unwrap();
+        assert_eq!(url.authority().to_string(), "did:key:z6MkrJVnaZkeFzdQyMZu1cgjg7k1pZZ6pvBQ7XJPt4swbTQ2");
     }
 
     #[test]
