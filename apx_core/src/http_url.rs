@@ -65,7 +65,7 @@ impl HttpUrl {
     }
 
     fn fragment(&self) -> Option<&str> {
-        self.0.fragment().map(|fragment| fragment.as_str())
+        self.0.fragment_str()
     }
 
     pub fn base(&self) -> String {

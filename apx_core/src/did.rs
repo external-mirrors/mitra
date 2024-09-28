@@ -160,7 +160,7 @@ mod tests {
         assert_eq!(resource.path_str(), "");
         assert_eq!(resource.query_str(), None);
         assert_eq!(
-            resource.fragment().map(|fragment| fragment.as_str()),
+            resource.fragment_str(),
             Some("z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK"),
         );
     }
