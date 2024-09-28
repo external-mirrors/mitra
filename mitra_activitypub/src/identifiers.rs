@@ -3,7 +3,7 @@ use uuid::Uuid;
 
 use apx_core::{
     caip2::ChainId,
-    urls::url_encode,
+    url::common::url_encode,
 };
 use apx_sdk::{
     identifiers::parse_object_id,

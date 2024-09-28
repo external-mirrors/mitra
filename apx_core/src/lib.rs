@@ -19,5 +19,5 @@ pub mod media_type;
 pub mod minisign;
 pub mod multibase;
 pub mod multicodec;
-mod url;
+pub mod url;
 pub mod urls;
