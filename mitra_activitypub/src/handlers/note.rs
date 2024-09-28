@@ -675,26 +675,45 @@ pub(super) fn get_audience(object: &AttributedObject) -> Vec<String> {
 fn get_object_visibility(
     author: &DbActorProfile,
     audience: &[String],
-) -> Visibility {
-    if audience.iter().any(is_public) {
-        return Visibility::Public;
-    };
-    let actor = author.expect_actor_data();
-    if let Some(ref followers) = actor.followers {
-        if audience.contains(followers) {
-            return Visibility::Followers;
+    maybe_in_reply_to: Option<&Post>,
+) -> (Visibility, PostContext) {
+    if let Some(in_reply_to) = maybe_in_reply_to {
+        let conversation = in_reply_to.expect_conversation();
+        let context = PostContext::Reply {
+            conversation_id: conversation.id,
+            in_reply_to_id: in_reply_to.id,
         };
-    };
-    if let Some(ref subscribers) = actor.subscribers {
-        if audience.contains(subscribers) {
-            return Visibility::Subscribers;
+        let visibility = if audience.iter().any(is_public) {
+            Visibility::Public
+        } else if let Some(ref conversation_audience) = conversation.audience {
+            if audience.contains(conversation_audience) {
+                Visibility::Conversation
+            } else {
+                Visibility::Direct
+            }
+        } else {
+            Visibility::Direct
         };
-    };
-    log::info!(
-        "processing note with visibility 'direct' attributed to {}",
-        actor.id,
-    );
-    Visibility::Direct
+        (visibility, context)
+    } else {
+        let actor = author.expect_actor_data();
+        let mut conversation_audience = None;
+        let visibility = if audience.iter().any(is_public) {
+            Visibility::Public
+        } else if audience.iter().any(|id| Some(id) == actor.followers.as_ref()) {
+            conversation_audience = actor.followers.clone();
+            Visibility::Followers
+        } else if audience.iter().any(|id| Some(id) == actor.subscribers.as_ref()) {
+            conversation_audience = actor.subscribers.clone();
+            Visibility::Subscribers
+        } else {
+            Visibility::Direct
+        };
+        let context = PostContext::Top {
+            audience: conversation_audience,
+        };
+        (visibility, context)
+    }
 }
 
 fn parse_poll_results(
@@ -826,11 +845,11 @@ pub async fn create_remote_post(
     ).await?;
 
     let audience = get_audience(&object);
-    let context = match maybe_in_reply_to {
-        Some(ref in_reply_to) => PostContext::Reply { in_reply_to_id: in_reply_to.id },
-        None => PostContext::Top,
-    };
-    let visibility = get_object_visibility(&author, &audience);
+    let (visibility, context) = get_object_visibility(
+        &author,
+        &audience,
+        maybe_in_reply_to.as_ref(),
+    );
     let is_sensitive = object.sensitive.unwrap_or(false);
     let created_at = object.published.unwrap_or(Utc::now());
 
@@ -1033,8 +1052,29 @@ mod tests {
         let author =
             DbActorProfile::remote_for_test("test", "https://social.example");
         let audience = vec![AP_PUBLIC.to_string()];
-        let visibility = get_object_visibility(&author, &audience);
+        let (visibility, context) = get_object_visibility(
+            &author,
+            &audience,
+            None,
+        );
         assert_eq!(visibility, Visibility::Public);
+        assert!(matches!(context, PostContext::Top { .. }));
+    }
+
+    #[test]
+    fn test_get_object_visibility_public_reply() {
+        let in_reply_to_author = DbActorProfile::local_for_test("test");
+        let in_reply_to = Post::local_for_test(&in_reply_to_author);
+        let author =
+            DbActorProfile::remote_for_test("test", "https://social.example");
+        let audience = vec![AP_PUBLIC.to_string()];
+        let (visibility, context) = get_object_visibility(
+            &author,
+            &audience,
+            Some(&in_reply_to),
+        );
+        assert_eq!(visibility, Visibility::Public);
+        assert!(matches!(context, PostContext::Reply { .. }));
     }
 
     #[test]
@@ -1050,8 +1090,37 @@ mod tests {
             },
         );
         let audience = vec![author_followers.to_string()];
-        let visibility = get_object_visibility(&author, &audience);
+        let (visibility, context) = get_object_visibility(
+            &author,
+            &audience,
+            None,
+        );
         assert_eq!(visibility, Visibility::Followers);
+        assert!(matches!(context, PostContext::Top { .. }));
+    }
+
+    #[test]
+    fn test_get_object_visibility_followers_conversation() {
+        let in_reply_to_author = DbActorProfile::local_for_test("test");
+        let in_reply_to_followers = "https://social.example/users/test/followers";
+        let in_reply_to = {
+            let mut post = Post::local_for_test(&in_reply_to_author);
+            post.visibility = Visibility::Followers;
+            if let Some(ref mut conversation) = post.conversation.as_mut() {
+                conversation.audience = Some(in_reply_to_followers.to_string());
+            };
+            post
+        };
+        let author_id = "https://social.example/users/test";
+        let author = DbActorProfile::remote_for_test("author", author_id);
+        let audience = vec![in_reply_to_followers.to_string()];
+        let (visibility, context) = get_object_visibility(
+            &author,
+            &audience,
+            Some(&in_reply_to),
+        );
+        assert_eq!(visibility, Visibility::Conversation);
+        assert!(matches!(context, PostContext::Reply { .. }));
     }
 
     #[test]
@@ -1069,15 +1138,25 @@ mod tests {
             },
         );
         let audience = vec![author_subscribers.to_string()];
-        let visibility = get_object_visibility(&author, &audience);
+        let (visibility, context) = get_object_visibility(
+            &author,
+            &audience,
+            None,
+        );
         assert_eq!(visibility, Visibility::Subscribers);
+        assert!(matches!(context, PostContext::Top { .. }));
     }
 
     #[test]
     fn test_get_object_visibility_direct() {
         let author = DbActorProfile::remote_for_test("test", "https://x.example");
         let audience = vec!["https://example.com/users/1".to_string()];
-        let visibility = get_object_visibility(&author, &audience);
+        let (visibility, context) = get_object_visibility(
+            &author,
+            &audience,
+            None,
+        );
         assert_eq!(visibility, Visibility::Direct);
+        assert!(matches!(context, PostContext::Top { .. }));
     }
 }

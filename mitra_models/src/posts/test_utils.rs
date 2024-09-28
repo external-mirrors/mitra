@@ -2,6 +2,7 @@ use uuid::Uuid;
 
 use crate::{
     database::DatabaseClient,
+    conversations::types::Conversation,
     profiles::types::DbActorProfile,
 };
 
@@ -38,12 +39,27 @@ pub async fn create_test_remote_post(
 }
 
 impl Post {
+    pub fn local_for_test(author: &DbActorProfile) -> Self {
+        let post_id = Uuid::new_v4();
+        let conversation = Conversation::for_test(post_id);
+        Post {
+            id: post_id,
+            author: author.clone(),
+            conversation: Some(conversation),
+            ..Default::default()
+        }
+    }
+
     pub fn remote_for_test(
         author: &DbActorProfile,
         object_id: &str,
     ) -> Self {
+        let post_id = Uuid::new_v4();
+        let conversation = Conversation::for_test(post_id);
         Post {
+            id: post_id,
             author: author.clone(),
+            conversation: Some(conversation),
             object_id: Some(object_id.to_string()),
             ..Default::default()
         }
@@ -52,6 +68,9 @@ impl Post {
 
 impl PostContext {
     pub fn reply_to(post: &Post) -> Self {
-        Self::Reply { in_reply_to_id: post.id }
+        Self::Reply {
+            conversation_id: post.expect_conversation().id,
+            in_reply_to_id: post.id,
+        }
     }
 }

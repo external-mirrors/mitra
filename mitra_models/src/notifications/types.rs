@@ -4,6 +4,7 @@ use tokio_postgres::Row;
 use uuid::Uuid;
 
 use crate::attachments::types::DbMediaAttachment;
+use crate::conversations::types::Conversation;
 use crate::database::{
     int_enum::{int_enum_from_sql, int_enum_to_sql},
     DatabaseError,
@@ -108,6 +109,7 @@ impl TryFrom<&Row> for Notification {
         let maybe_post = match maybe_db_post {
             Some(db_post) => {
                 let db_post_author: DbActorProfile = row.try_get("post_author")?;
+                let db_conversation: Option<Conversation> = row.try_get("conversation")?;
                 let db_attachments: Vec<DbMediaAttachment> = row.try_get("attachments")?;
                 let db_mentions: Vec<DbActorProfile> = row.try_get("mentions")?;
                 let db_tags: Vec<String> = row.try_get("tags")?;
@@ -117,6 +119,7 @@ impl TryFrom<&Row> for Notification {
                 let post = Post::new(
                     db_post,
                     db_post_author,
+                    db_conversation,
                     db_attachments,
                     db_mentions,
                     db_tags,

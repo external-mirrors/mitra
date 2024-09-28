@@ -7,6 +7,12 @@ use crate::attachments::{
     queries::set_attachment_ipfs_cid,
     types::DbMediaAttachment,
 };
+use crate::conversations::{
+    queries::{
+        create_conversation,
+        get_conversation,
+    },
+};
 use crate::database::{
     catch_unique_violation,
     query_macro::query,
@@ -31,6 +37,7 @@ use super::types::{
     DbPost,
     DbPostReactions,
     Post,
+    PostContext,
     PostCreateData,
     PostUpdateData,
     Visibility,
@@ -193,6 +200,26 @@ pub async fn create_post(
 ) -> Result<Post, DatabaseError> {
     let transaction = db_client.transaction().await?;
     let post_id = generate_ulid();
+
+    // Create or find existing conversation
+    let maybe_conversation = match post_data.context {
+        PostContext::Top { ref audience } => {
+            let conversation = create_conversation(
+                &transaction,
+                post_id,
+                audience.as_deref(),
+            ).await?;
+            Some(conversation)
+        },
+        PostContext::Reply { conversation_id, .. } => {
+            let conversation =
+                get_conversation(&transaction, conversation_id).await?;
+            Some(conversation)
+        },
+        PostContext::Repost { .. } => None,
+    };
+
+    // Create post
     let insert_statement = format!(
         "
         INSERT INTO post (
@@ -200,6 +227,7 @@ pub async fn create_post(
             author_id,
             content,
             content_source,
+            conversation_id,
             in_reply_to_id,
             repost_of_id,
             visibility,
@@ -207,17 +235,17 @@ pub async fn create_post(
             object_id,
             created_at
         )
-        SELECT $1, $2, $3, $4, $5, $6, $7, $8, $9, $10
+        SELECT $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11
         WHERE
         -- don't allow replies to reposts
         NOT EXISTS (
             SELECT 1 FROM post
-            WHERE post.id = $5 AND post.repost_of_id IS NOT NULL
+            WHERE post.id = $6 AND post.repost_of_id IS NOT NULL
         )
         -- don't allow reposts of non-public posts
         AND NOT EXISTS (
             SELECT 1 FROM post
-            WHERE post.id = $6 AND (
+            WHERE post.id = $7 AND (
                 post.repost_of_id IS NOT NULL
                 OR post.visibility != {visibility_public}
             )
@@ -233,6 +261,7 @@ pub async fn create_post(
             &author_id,
             &post_data.content,
             &post_data.content_source,
+            &maybe_conversation.as_ref().map(|conversation| conversation.id),
             &post_data.context.in_reply_to_id(),
             &post_data.context.repost_of_id(),
             &post_data.visibility,
@@ -329,6 +358,7 @@ pub async fn create_post(
     let post = Post::new(
         db_post,
         author,
+        maybe_conversation,
         db_attachments,
         db_mentions,
         db_tags,
@@ -370,6 +400,12 @@ pub async fn update_post(
     ).await?;
     let row = maybe_row.ok_or(DatabaseError::NotFound("post"))?;
     let db_post: DbPost = row.try_get("post")?;
+
+    // Get conversation details
+    let conversation = get_conversation(
+        &transaction,
+        db_post.conversation_id.expect("should not be a repost"),
+    ).await?;
 
     // Delete and re-create related objects
     let detached_media_rows = transaction.query(
@@ -461,6 +497,7 @@ pub async fn update_post(
     let post = Post::new(
         db_post,
         author,
+        Some(conversation),
         db_attachments,
         db_mentions,
         db_tags,
@@ -475,6 +512,13 @@ pub async fn update_post(
     };
     Ok((post, deletion_queue))
 }
+
+const RELATED_CONVERSATION: &str = "
+    (
+        SELECT conversation
+        FROM conversation
+        WHERE conversation.id = post.conversation_id
+    ) AS conversation";
 
 const RELATED_ATTACHMENTS: &str = "
     ARRAY(
@@ -530,6 +574,7 @@ const RELATED_REACTIONS: &str = "
 
 pub(crate) fn post_subqueries() -> String {
     [
+        RELATED_CONVERSATION,
         RELATED_ATTACHMENTS,
         RELATED_MENTIONS,
         RELATED_TAGS,
@@ -544,8 +589,7 @@ fn build_visibility_filter() -> String {
         "(
             post.author_id = $current_user_id
             OR post.visibility = {visibility_public}
-            -- covers direct messages, subscribers-only posts
-            -- and posts in conversations
+            -- covers direct messages and subscribers-only posts
             OR EXISTS (
                 SELECT 1 FROM mention
                 WHERE post_id = post.id AND profile_id = $current_user_id
@@ -557,9 +601,30 @@ fn build_visibility_filter() -> String {
                     AND target_id = post.author_id
                     AND relationship_type = {relationship_follow}
             )
+            OR post.visibility = {visibility_conversation} AND EXISTS (
+                SELECT 1
+                FROM conversation
+                JOIN post AS root ON conversation.root_id = root.id
+                WHERE
+                    conversation.id = post.conversation_id
+                    AND (
+                        root.author_id = $current_user_id
+                        OR EXISTS (
+                            SELECT 1 FROM relationship
+                            WHERE
+                                source_id = $current_user_id
+                                AND target_id = root.author_id
+                                AND (
+                                    root.visibility = {visibility_followers}
+                                    AND relationship_type = {relationship_follow}
+                                )
+                        )
+                    )
+            )
         )",
         visibility_public=i16::from(Visibility::Public),
         visibility_followers=i16::from(Visibility::Followers),
+        visibility_conversation=i16::from(Visibility::Conversation),
         relationship_follow=i16::from(RelationshipType::Follow),
     )
 }
@@ -1650,7 +1715,6 @@ mod tests {
         },
         database::test_utils::create_test_database,
         posts::test_utils::create_test_local_post,
-        posts::types::PostContext,
         profiles::test_utils::{
             create_test_remote_profile,
         },
@@ -2151,6 +2215,52 @@ mod tests {
             db_client,
             post_3.id,
             Some(user_1.id),
+        ).await.err().unwrap();
+        assert_eq!(error.to_string(), "post not found");
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_get_thread_followers_only_conversation() {
+        let db_client = &mut create_test_database().await;
+        let user_1 = create_test_user(db_client, "test_1").await;
+        let user_2 = create_test_user(db_client, "test_2").await;
+        follow(db_client, user_2.id, user_1.id).await.unwrap();
+        let user_3 = create_test_user(db_client, "test_3").await;
+        follow(db_client, user_3.id, user_2.id).await.unwrap();
+        let post_data_1 = PostCreateData {
+            context: PostContext::Top { audience: None },
+            content: "my post".to_string(),
+            visibility: Visibility::Followers,
+            ..Default::default()
+        };
+        let post_1 = create_post(db_client, user_1.id, post_data_1).await.unwrap();
+        let post_data_2 = PostCreateData {
+            context: PostContext::reply_to(&post_1),
+            content: "reply".to_string(),
+            visibility: Visibility::Conversation,
+            ..Default::default()
+        };
+        let post_2 = create_post(db_client, user_2.id, post_data_2).await.unwrap();
+
+        let thread = get_thread(
+            db_client,
+            post_2.id,
+            Some(user_1.id),
+        ).await.unwrap();
+        assert_eq!(thread.len(), 2);
+
+        let thread = get_thread(
+            db_client,
+            post_2.id,
+            Some(user_2.id),
+        ).await.unwrap();
+        assert_eq!(thread.len(), 2);
+
+        let error = get_thread(
+            db_client,
+            post_2.id,
+            Some(user_3.id),
         ).await.err().unwrap();
         assert_eq!(error.to_string(), "post not found");
     }

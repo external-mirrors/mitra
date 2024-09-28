@@ -1,6 +1,7 @@
 use uuid::Uuid;
 
 use crate::bookmarks::queries::find_bookmarked_by_user;
+use crate::conversations::queries::is_conversation_participant;
 use crate::database::{DatabaseClient, DatabaseError};
 use crate::reactions::queries::find_reacted_by_user;
 use crate::relationships::{
@@ -131,8 +132,13 @@ pub async fn can_view_post(
         },
         Visibility::Conversation => {
             if let Some(user) = maybe_user {
-                // TODO: check conversation audience
-                is_author(user) || is_mentioned(user)
+                let conversation = post.expect_conversation();
+                let is_participant = is_conversation_participant(
+                    db_client,
+                    user.id,
+                    conversation.id,
+                ).await?;
+                is_participant || is_author(user) || is_mentioned(user)
             } else {
                 false
             }
@@ -398,11 +404,23 @@ mod tests {
     #[serial]
     async fn test_can_view_post_conversation() {
         let db_client = &mut create_test_database().await;
+        let root_author = create_test_user(db_client, "op").await;
+        let root_follower = create_test_user(db_client, "root_follower").await;
+        follow(db_client, root_follower.id, root_author.id).await.unwrap();
+        let root_data = PostCreateData {
+            context: PostContext::Top { audience: None },
+            content: "root".to_string(),
+            visibility: Visibility::Followers,
+            ..Default::default()
+        };
+        let root = create_post(db_client, root_author.id, root_data).await.unwrap();
         let author = create_test_user(db_client, "author").await;
-        let follower = create_test_user(db_client, "follower").await;
-        follow(db_client, follower.id, author.id).await.unwrap();
+        let author_follower = create_test_user(db_client, "author_follower").await;
+        follow(db_client, author_follower.id, author.id).await.unwrap();
         let post = Post {
             author: author.profile.clone(),
+            conversation: root.conversation.clone(),
+            in_reply_to_id: Some(root.id),
             visibility: Visibility::Conversation,
             ..Default::default()
         };
@@ -415,7 +433,11 @@ mod tests {
             true,
         );
         assert_eq!(
-            can_view_post(db_client, Some(&follower), &post).await.unwrap(),
+            can_view_post(db_client, Some(&root_follower), &post).await.unwrap(),
+            true,
+        );
+        assert_eq!(
+            can_view_post(db_client, Some(&author_follower), &post).await.unwrap(),
             false,
         );
     }

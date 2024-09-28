@@ -29,6 +29,10 @@ use mitra_activitypub::{
         undo_like::prepare_undo_like,
         update_note::prepare_update_note,
     },
+    identifiers::{
+        local_actor_id,
+        LocalActorCollection,
+    },
     queues::FetcherJobData,
 };
 use mitra_config::Config;
@@ -182,9 +186,27 @@ async fn create_status(
     ).await?;
 
     // Determine post context
-    let context = match maybe_in_reply_to {
-        Some(ref in_reply_to) => PostContext::Reply { in_reply_to_id: in_reply_to.id },
-        None => PostContext::Top,
+    let context = if let Some(ref in_reply_to) = maybe_in_reply_to {
+        PostContext::Reply {
+            conversation_id: in_reply_to.expect_conversation().id,
+            in_reply_to_id: in_reply_to.id,
+        }
+    } else {
+        let actor_id = local_actor_id(
+            &instance.url(),
+            &current_user.profile.username,
+        );
+        let audience = match visibility {
+            Visibility::Public | Visibility::Direct => None,
+            Visibility::Followers => {
+                Some(LocalActorCollection::Followers.of(&actor_id))
+            },
+            Visibility::Subscribers => {
+                Some(LocalActorCollection::Subscribers.of(&actor_id))
+            },
+            Visibility::Conversation => unreachable!(),
+        };
+        PostContext::Top { audience }
     };
 
     // Validate post data

@@ -1,10 +1,12 @@
 use uuid::Uuid;
 
-use mitra_models::posts::types::{
-    Post,
-    PostCreateData,
-    PostUpdateData,
-    Visibility,
+use mitra_models::{
+    posts::types::{
+        Post,
+        PostCreateData,
+        PostUpdateData,
+        Visibility,
+    },
 };
 use mitra_utils::html::{clean_html_strict, clean_html_all};
 

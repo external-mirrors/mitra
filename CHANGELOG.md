@@ -14,6 +14,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Make profile image size limit configurable.
 - Update profile bio, lock and fields when processing `update_credentials` request with `multipart/form-data` body.
 - Added `revoke-oauth-tokens` command.
+- Support followers-only conversations.
 
 ### Changed
 

@@ -254,6 +254,17 @@ pub fn build_note(
                 };
             };
             // TODO: replies to subscribers-only posts should work in the same way
+            if post.visibility == Visibility::Conversation {
+                // Copy conversation audience
+                let conversation = in_reply_to.expect_conversation();
+                // Conversations created by database migration
+                // will have empty audience
+                if let Some(ref audience) = conversation.audience {
+                    if !primary_audience.contains(audience) {
+                        primary_audience.push(audience.clone());
+                    };
+                };
+            };
             if post.visibility == Visibility::Conversation &&
                 in_reply_to.visibility == Visibility::Followers
             {
@@ -321,7 +332,11 @@ pub async fn get_note_recipients(
             let subscribers = get_subscribers(db_client, current_user.id).await?;
             audience.extend(subscribers);
         },
-        Visibility::Conversation => (),
+        Visibility::Conversation => {
+            let conversation = post.expect_conversation();
+            let owner = get_post_author(db_client, conversation.root_id).await?;
+            audience.push(owner);
+        },
         Visibility::Direct => (),
     };
     if let Some(in_reply_to_id) = post.in_reply_to_id {
@@ -600,13 +615,15 @@ mod tests {
             },
         );
         let parent = Post {
-            author: parent_author.clone(),
             visibility: Visibility::Followers,
-            object_id: Some("https://social.example/obj/123".to_string()),
-            ..Default::default()
+            ..Post::remote_for_test(
+                &parent_author,
+                "https://social.example/obj/123",
+            )
         };
         let post = Post {
             id: uuid!("11fa64ff-b5a3-47bf-b23d-22b360581c3f"),
+            conversation: parent.conversation.clone(),
             in_reply_to_id: Some(parent.id),
             in_reply_to: Some(Box::new(parent.clone())),
             visibility: Visibility::Conversation,

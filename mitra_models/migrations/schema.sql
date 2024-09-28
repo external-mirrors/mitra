@@ -26,8 +26,8 @@ CREATE TABLE filter_rule (
 
 CREATE TABLE actor_profile (
     id UUID PRIMARY KEY,
-    user_id UUID UNIQUE,
-    portable_user_id UUID UNIQUE,
+    user_id UUID UNIQUE, -- FK is added later
+    portable_user_id UUID UNIQUE, -- FK is added later
     username VARCHAR(100) NOT NULL,
     hostname VARCHAR(100) REFERENCES instance (hostname) ON DELETE RESTRICT,
     acct VARCHAR(200) UNIQUE,
@@ -159,6 +159,7 @@ CREATE TABLE post (
     author_id UUID NOT NULL REFERENCES actor_profile (id) ON DELETE CASCADE,
     content TEXT NOT NULL,
     content_source TEXT,
+    conversation_id UUID, -- FK is added later
     in_reply_to_id UUID REFERENCES post (id) ON DELETE CASCADE,
     repost_of_id UUID REFERENCES post (id) ON DELETE CASCADE,
     repost_has_deprecated_ap_id BOOLEAN NOT NULL DEFAULT FALSE,
@@ -172,11 +173,22 @@ CREATE TABLE post (
     ipfs_cid VARCHAR(200),
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
     updated_at TIMESTAMP WITH TIME ZONE,
-    UNIQUE (author_id, repost_of_id)
+    UNIQUE (author_id, repost_of_id),
+    CHECK ((conversation_id IS NULL) != (repost_of_id IS NULL))
 );
 
 CREATE INDEX post_in_reply_to_id_btree ON post (in_reply_to_id);
 CREATE INDEX post_repost_of_id_btree ON post (repost_of_id);
+
+CREATE TABLE conversation (
+    id UUID PRIMARY KEY,
+    root_id UUID UNIQUE NOT NULL REFERENCES post (id) ON DELETE CASCADE DEFERRABLE INITIALLY DEFERRED,
+    audience VARCHAR(2000)
+);
+
+ALTER TABLE post
+    ADD CONSTRAINT post_conversation_id_fkey
+    FOREIGN KEY (conversation_id) REFERENCES conversation (id) ON DELETE CASCADE;
 
 CREATE TABLE post_reaction (
     id UUID PRIMARY KEY,

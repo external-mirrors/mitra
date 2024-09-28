@@ -5,6 +5,7 @@ use tokio_postgres::Row;
 use uuid::Uuid;
 
 use crate::attachments::types::DbMediaAttachment;
+use crate::conversations::types::Conversation;
 use crate::database::{
     int_enum::{int_enum_from_sql, int_enum_to_sql},
     json_macro::json_from_sql,
@@ -40,10 +41,12 @@ impl Visibility {
                 Self::Direct,
                 Self::Conversation,
             ],
+            // TODO: support subscribers conversations
             Self::Subscribers => vec![
                 Self::Direct,
             ],
             Self::Conversation => vec![
+                Self::Conversation,
                 Self::Direct,
             ],
             Self::Direct => vec![
@@ -96,6 +99,7 @@ pub struct DbPost {
     pub author_id: Uuid,
     pub content: String,
     pub content_source: Option<String>,
+    pub conversation_id: Option<Uuid>,
     pub in_reply_to_id: Option<Uuid>,
     pub repost_of_id: Option<Uuid>,
     #[allow(dead_code)]
@@ -137,6 +141,7 @@ pub struct Post {
     pub author: DbActorProfile,
     pub content: String,
     pub content_source: Option<String>,
+    pub conversation: Option<Conversation>,
     pub in_reply_to_id: Option<Uuid>,
     pub repost_of_id: Option<Uuid>,
     pub visibility: Visibility,
@@ -171,6 +176,7 @@ impl Post {
     pub fn new(
         db_post: DbPost,
         db_author: DbActorProfile,
+        db_conversation: Option<Conversation>,
         db_attachments: Vec<DbMediaAttachment>,
         db_mentions: Vec<DbActorProfile>,
         db_tags: Vec<String>,
@@ -185,6 +191,10 @@ impl Post {
         if db_author.is_local() != db_post.object_id.is_none() {
             return Err(DatabaseTypeError);
         };
+        if db_post.conversation_id !=
+                db_conversation.as_ref().map(|conversation| conversation.id) {
+            return Err(DatabaseTypeError);
+        };
         if db_post.repost_of_id.is_some() && (
             db_post.content.len() != 0 ||
             db_post.content_source.is_some() ||
@@ -192,6 +202,7 @@ impl Post {
             db_post.is_pinned ||
             db_post.in_reply_to_id.is_some() ||
             db_post.ipfs_cid.is_some() ||
+            db_conversation.is_some() ||
             !db_attachments.is_empty() ||
             !db_mentions.is_empty() ||
             !db_tags.is_empty() ||
@@ -206,6 +217,7 @@ impl Post {
             author: db_author,
             content: db_post.content,
             content_source: db_post.content_source,
+            conversation: db_conversation,
             in_reply_to_id: db_post.in_reply_to_id,
             repost_of_id: db_post.repost_of_id,
             visibility: db_post.visibility,
@@ -240,16 +252,26 @@ impl Post {
     pub fn is_public(&self) -> bool {
         matches!(self.visibility, Visibility::Public)
     }
+
+    pub fn expect_conversation(&self) -> &Conversation {
+        assert!(self.repost_of_id.is_none(), "should not be a repost");
+        self.conversation
+            .as_ref()
+            .expect("conversation should not be null")
+    }
 }
 
 #[cfg(any(test, feature = "test-utils"))]
 impl Default for Post {
     fn default() -> Self {
+        // TODO: use Post::new()
+        let post_id = Uuid::new_v4();
         Self {
-            id: Uuid::new_v4(),
-            author: Default::default(),
+            id: post_id,
+            author: DbActorProfile::default(),
             content: "".to_string(),
             content_source: None,
+            conversation: Some(Conversation::for_test(post_id)),
             in_reply_to_id: None,
             repost_of_id: None,
             visibility: Visibility::Public,
@@ -284,6 +306,7 @@ impl TryFrom<&Row> for Post {
         let db_post: DbPost = row.try_get("post")?;
         let db_profile: DbActorProfile = row.try_get("actor_profile")?;
         // Data from subqueries
+        let db_conversation: Option<Conversation> = row.try_get("conversation")?;
         let db_attachments: Vec<DbMediaAttachment> = row.try_get("attachments")?;
         let db_mentions: Vec<DbActorProfile> = row.try_get("mentions")?;
         let db_tags: Vec<String> = row.try_get("tags")?;
@@ -293,6 +316,7 @@ impl TryFrom<&Row> for Post {
         let post = Self::new(
             db_post,
             db_profile,
+            db_conversation,
             db_attachments,
             db_mentions,
             db_tags,
@@ -305,8 +329,11 @@ impl TryFrom<&Row> for Post {
 }
 
 pub enum PostContext {
-    Top,
+    Top {
+        audience: Option<String>,
+    },
     Reply {
+        conversation_id: Uuid,
         in_reply_to_id: Uuid,
     },
     Repost {
@@ -317,7 +344,7 @@ pub enum PostContext {
 impl PostContext {
     pub(super) fn in_reply_to_id(&self) -> Option<Uuid> {
         match self {
-            Self::Reply { in_reply_to_id } => Some(*in_reply_to_id),
+            Self::Reply { in_reply_to_id, .. } => Some(*in_reply_to_id),
             _ => None,
         }
     }
@@ -332,7 +359,7 @@ impl PostContext {
 
 impl Default for PostContext {
     fn default() -> Self {
-        Self::Top
+        Self::Top { audience: None }
     }
 }
 
