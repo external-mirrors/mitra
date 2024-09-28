@@ -145,8 +145,10 @@ async fn create_status(
         Some("direct") => Visibility::Direct,
         Some("private") => Visibility::Followers,
         Some("subscribers") => Visibility::Subscribers,
+        Some("conversation") => Visibility::Conversation,
         Some(_) => return Err(ValidationError("invalid visibility parameter").into()),
         None => {
+            // Default visibility
             maybe_in_reply_to.as_ref()
                 .map(|post| match post.visibility {
                     Visibility::Public => Visibility::Public,

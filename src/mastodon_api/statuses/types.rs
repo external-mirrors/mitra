@@ -160,6 +160,7 @@ impl Status {
             Visibility::Direct => "direct",
             Visibility::Followers => "private",
             Visibility::Subscribers => "subscribers",
+            Visibility::Conversation => "conversation",
         };
         let mut emoji_reactions = vec![];
         let mut favourites_count = 0;

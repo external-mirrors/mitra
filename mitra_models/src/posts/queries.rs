@@ -533,7 +533,8 @@ fn build_visibility_filter() -> String {
         "(
             post.author_id = $current_user_id
             OR post.visibility = {visibility_public}
-            -- covers direct messages and subscribers-only posts
+            -- covers direct messages, subscribers-only posts
+            -- and posts in conversations
             OR EXISTS (
                 SELECT 1 FROM mention
                 WHERE post_id = post.id AND profile_id = $current_user_id

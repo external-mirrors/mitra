@@ -129,6 +129,14 @@ pub async fn can_view_post(
                 false
             }
         },
+        Visibility::Conversation => {
+            if let Some(user) = maybe_user {
+                // TODO: check conversation audience
+                is_author(user) || is_mentioned(user)
+            } else {
+                false
+            }
+        },
         Visibility::Direct => {
             if let Some(user) = maybe_user {
                 is_author(user) || is_mentioned(user)
@@ -383,6 +391,32 @@ mod tests {
         assert_eq!(
             can_view_post(db_client, Some(&subscriber), &post).await.unwrap(),
             true,
+        );
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_can_view_post_conversation() {
+        let db_client = &mut create_test_database().await;
+        let author = create_test_user(db_client, "author").await;
+        let follower = create_test_user(db_client, "follower").await;
+        follow(db_client, follower.id, author.id).await.unwrap();
+        let post = Post {
+            author: author.profile.clone(),
+            visibility: Visibility::Conversation,
+            ..Default::default()
+        };
+        assert_eq!(
+            can_view_post(db_client, None, &post).await.unwrap(),
+            false,
+        );
+        assert_eq!(
+            can_view_post(db_client, Some(&author), &post).await.unwrap(),
+            true,
+        );
+        assert_eq!(
+            can_view_post(db_client, Some(&follower), &post).await.unwrap(),
+            false,
         );
     }
 

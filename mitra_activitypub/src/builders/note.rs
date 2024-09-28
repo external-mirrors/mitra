@@ -20,8 +20,10 @@ use crate::{
     authority::Authority,
     contexts::{build_default_context, Context},
     identifiers::{
+        compatible_id,
         compatible_post_object_id,
         compatible_profile_actor_id,
+        local_actor_id,
         local_actor_id_unified,
         local_object_id_unified,
         local_object_replies,
@@ -157,6 +159,7 @@ pub fn build_note(
         Visibility::Subscribers => {
             primary_audience.push(subscribers_collection_id);
         },
+        Visibility::Conversation => (),
         Visibility::Direct => (),
     };
 
@@ -240,6 +243,35 @@ pub fn build_note(
                     primary_audience.push(in_reply_to_actor_id);
                 };
             };
+            // TODO: replies to subscribers-only posts should work in the same way
+            if post.visibility == Visibility::Conversation &&
+                in_reply_to.visibility == Visibility::Followers
+            {
+                // Add followers of a parent post author to audience
+                let maybe_in_reply_to_followers = match in_reply_to.author.actor_json {
+                    Some(ref actor_data) => {
+                        actor_data.followers.as_ref().map(|followers| {
+                            compatible_id(actor_data, followers)
+                                .expect("actor ID should be valid")
+                        })
+                    },
+                    None => {
+                        // Can't use "authority" parameter here
+                        // because parent post author may have a different one
+                        let actor_id = local_actor_id(
+                            instance_url,
+                            &in_reply_to.author.username,
+                        );
+                        let followers = LocalActorCollection::Followers.of(&actor_id);
+                        Some(followers)
+                    },
+                };
+                if let Some(in_reply_to_followers) = maybe_in_reply_to_followers {
+                    if !primary_audience.contains(&in_reply_to_followers) {
+                        primary_audience.push(in_reply_to_followers);
+                    };
+                };
+            };
             Some(compatible_post_object_id(instance_url, in_reply_to))
         },
         None => None,
@@ -279,6 +311,7 @@ pub async fn get_note_recipients(
             let subscribers = get_subscribers(db_client, current_user.id).await?;
             audience.extend(subscribers);
         },
+        Visibility::Conversation => (),
         Visibility::Direct => (),
     };
     if let Some(in_reply_to_id) = post.in_reply_to_id {
@@ -528,6 +561,84 @@ mod tests {
         assert_eq!(tag.name, format!("@{}", parent_author_acct));
         assert_eq!(tag.href, parent_author_actor_id);
         assert_eq!(note.to, vec![AP_PUBLIC, parent_author_actor_id]);
+    }
+
+    #[test]
+    fn test_build_note_with_remote_parent_and_with_conversation() {
+        let parent_author_actor_id = "https://social.example/user/test";
+        let parent_author_followers = "https://social.example/user/test/followers";
+        let parent_author_actor_url = "https://social.example/@test";
+        let parent_author = DbActorProfile::remote_for_test_with_data(
+            "test",
+            DbActor {
+                id: parent_author_actor_id.to_string(),
+                followers: Some(parent_author_followers.to_string()),
+                url: Some(parent_author_actor_url.to_string()),
+                ..Default::default()
+            },
+        );
+        let parent = Post {
+            author: parent_author.clone(),
+            visibility: Visibility::Followers,
+            object_id: Some("https://social.example/obj/123".to_string()),
+            ..Default::default()
+        };
+        let post = Post {
+            id: uuid!("11fa64ff-b5a3-47bf-b23d-22b360581c3f"),
+            in_reply_to_id: Some(parent.id),
+            in_reply_to: Some(Box::new(parent.clone())),
+            visibility: Visibility::Conversation,
+            mentions: vec![parent_author],
+            created_at: DateTime::parse_from_rfc3339("2023-02-24T23:36:38Z")
+                .unwrap().with_timezone(&Utc),
+            ..Default::default()
+        };
+        let authority = Authority::server(INSTANCE_URL);
+        let note = build_note(
+            INSTANCE_HOSTNAME,
+            INSTANCE_URL,
+            &authority,
+            &post,
+            false,
+            true,
+        );
+        let value = serde_json::to_value(note).unwrap();
+        let expected_value = json!({
+            "@context": [
+                "https://www.w3.org/ns/activitystreams",
+                "https://w3id.org/security/v1",
+                "https://w3id.org/security/data-integrity/v1",
+                {
+                    "Hashtag": "as:Hashtag",
+                    "sensitive": "as:sensitive",
+                    "toot": "http://joinmastodon.org/ns#",
+                    "Emoji": "toot:Emoji",
+                    "litepub": "http://litepub.social/ns#",
+                    "EmojiReact": "litepub:EmojiReact"
+                },
+            ],
+            "id": "https://server.example/objects/11fa64ff-b5a3-47bf-b23d-22b360581c3f",
+            "type": "Note",
+            "attributedTo": "https://server.example/users/test",
+            "inReplyTo": "https://social.example/obj/123",
+            "content": "",
+            "sensitive": false,
+            "tag": [
+                {
+                    "type": "Mention",
+                    "name": "@test@social.example",
+                    "href": "https://social.example/user/test",
+                },
+            ],
+            "replies": "https://server.example/objects/11fa64ff-b5a3-47bf-b23d-22b360581c3f/replies",
+            "published": "2023-02-24T23:36:38Z",
+            "to": [
+                "https://social.example/user/test",
+                "https://social.example/user/test/followers",
+            ],
+            "cc": [],
+        });
+        assert_eq!(value, expected_value);
     }
 
     #[test]

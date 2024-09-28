@@ -655,8 +655,7 @@ fn get_object_visibility(
     if audience.iter().any(is_public) {
         return Visibility::Public;
     };
-    let actor = author.actor_json.as_ref()
-        .expect("actor data should be present");
+    let actor = author.expect_actor_data();
     if let Some(ref followers) = actor.followers {
         if audience.contains(followers) {
             return Visibility::Followers;

@@ -20,6 +20,7 @@ pub enum Visibility {
     Direct,
     Followers,
     Subscribers,
+    Conversation,
 }
 
 impl Visibility {
@@ -37,8 +38,12 @@ impl Visibility {
             ],
             Self::Followers => vec![
                 Self::Direct,
+                Self::Conversation,
             ],
             Self::Subscribers => vec![
+                Self::Direct,
+            ],
+            Self::Conversation => vec![
                 Self::Direct,
             ],
             Self::Direct => vec![
@@ -60,6 +65,7 @@ impl From<Visibility> for i16 {
             Visibility::Direct => 2,
             Visibility::Followers => 3,
             Visibility::Subscribers => 4,
+            Visibility::Conversation => 5,
         }
     }
 }
@@ -73,6 +79,7 @@ impl TryFrom<i16> for Visibility {
             2 => Self::Direct,
             3 => Self::Followers,
             4 => Self::Subscribers,
+            5 => Self::Conversation,
             _ => return Err(DatabaseTypeError),
         };
         Ok(visibility)
