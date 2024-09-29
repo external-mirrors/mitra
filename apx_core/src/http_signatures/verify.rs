@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use chrono::{DateTime, Duration, TimeZone, Utc};
-use http::{HeaderMap, HeaderName, HeaderValue, Method, Uri};
+use http::{HeaderMap, Method, Uri};
 use regex::Regex;
 
 use crate::{
@@ -62,16 +62,11 @@ fn remove_quotes(value: &str) -> String {
         .to_string()
 }
 
-pub fn parse_http_signature<'m>(
+pub fn parse_http_signature(
     request_method: &Method,
     request_uri: &Uri,
-    request_headers: impl IntoIterator<Item = (&'m HeaderName, &'m HeaderValue)>,
+    request_headers: &HeaderMap,
 ) -> Result<HttpSignatureData, VerificationError> {
-    // Create header map
-    let request_headers = HeaderMap::from_iter(
-        request_headers.into_iter()
-            .map(|(name, val)| (name.clone(), val.clone())));
-
     // Parse Digest header
     let maybe_digest = match *request_method {
         Method::GET => None,
@@ -198,6 +193,7 @@ pub fn verify_http_signature(
 
 #[cfg(test)]
 mod tests {
+    use http::{HeaderName, HeaderValue};
     use crate::{
         crypto_rsa::generate_weak_rsa_key,
         http_digest::get_sha256_digest,
@@ -218,7 +214,7 @@ mod tests {
         let request_method = Method::GET;
         let request_uri = "/user/123/inbox".parse::<Uri>().unwrap();
         let date = "20 Oct 2022 20:00:00 GMT";
-        let mut request_headers = HashMap::new();
+        let mut request_headers = HeaderMap::new();
         request_headers.insert(
             HeaderName::from_static("host"),
             HeaderValue::from_static("example.com"),
@@ -268,7 +264,7 @@ mod tests {
         ).unwrap();
 
         let request_url = request_url.parse::<Uri>().unwrap();
-        let mut request_headers = HashMap::new();
+        let mut request_headers = HeaderMap::new();
         request_headers.insert(
             HeaderName::from_static("host"),
             HeaderValue::from_str(&signed_headers.host).unwrap(),
@@ -313,7 +309,7 @@ mod tests {
         ).unwrap();
 
         let request_url = request_url.parse::<Uri>().unwrap();
-        let mut request_headers = HashMap::new();
+        let mut request_headers = HeaderMap::new();
         request_headers.insert(
             HeaderName::from_static("host"),
             HeaderValue::from_str(&signed_headers.host).unwrap(),

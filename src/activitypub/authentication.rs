@@ -1,4 +1,3 @@
-use actix_web::HttpRequest;
 use serde_json::{Value as JsonValue};
 
 use apx_core::{
@@ -13,10 +12,19 @@ use apx_core::{
         RsaPublicKey,
         RsaSerializationError,
     },
-    http_signatures::verify::{
-        parse_http_signature,
-        verify_http_signature,
-        HttpSignatureVerificationError as HttpSignatureError,
+    http_signatures::{
+        http::{
+            HeaderMap,
+            HeaderName,
+            HeaderValue,
+            Method,
+            Uri,
+        },
+        verify::{
+            parse_http_signature,
+            verify_http_signature,
+            HttpSignatureVerificationError as HttpSignatureError,
+        },
     },
     json_signatures::{
         proofs::ProofType,
@@ -180,14 +188,17 @@ fn get_signer_rsa_key(
 pub async fn verify_signed_request(
     config: &Config,
     db_client: &mut impl DatabaseClient,
-    request: &HttpRequest,
+    request_method: &Method,
+    request_uri: &Uri,
+    request_headers: impl IntoIterator<Item = (HeaderName, HeaderValue)>,
     maybe_content_digest: Option<[u8; 32]>,
     no_fetch: bool,
 ) -> Result<DbActorProfile, AuthenticationError> {
+    let request_headers = HeaderMap::from_iter(request_headers.into_iter());
     let signature_data = match parse_http_signature(
-        request.method(),
-        request.uri(),
-        request.headers(),
+        request_method,
+        request_uri,
+        &request_headers,
     ) {
         Ok(signature_data) => signature_data,
         Err(HttpSignatureError::NoSignature) => {

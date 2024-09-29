@@ -118,7 +118,9 @@ pub async fn receive_activity(
     let mut signer = match verify_signed_request(
         config,
         db_client,
-        request,
+        request.method(),
+        request.uri(),
+        request.headers().clone(),
         Some(activity_digest),
         // Don't fetch signer if this is Delete(Person) activity
         is_self_delete,

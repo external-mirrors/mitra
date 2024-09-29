@@ -753,7 +753,9 @@ async fn apgateway_inbox_pull_view(
     let signer = verify_signed_request(
         &config,
         db_client,
-        &request,
+        request.method(),
+        request.uri(),
+        request.headers().clone(),
         None, // GET request has no content
         true, // don't fetch actor
     ).await.map_err(|error| {
@@ -891,7 +893,9 @@ async fn apgateway_outbox_pull_view(
     let signer = verify_signed_request(
         &config,
         db_client,
-        &request,
+        request.method(),
+        request.uri(),
+        request.headers().clone(),
         None, // GET request has no content
         true, // don't fetch actor
     ).await.map_err(|error| {
