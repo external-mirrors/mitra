@@ -11,3 +11,5 @@ pub mod identifiers;
 pub mod jrd;
 pub mod url;
 pub mod utils;
+
+pub use apx_core as core;

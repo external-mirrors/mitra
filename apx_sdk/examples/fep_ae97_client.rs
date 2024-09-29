@@ -1,14 +1,14 @@
-use apx_core::{
-    crypto_eddsa::{
-        ed25519_public_key_from_secret_key,
-        generate_ed25519_key,
-    },
-    crypto_rsa::generate_rsa_key,
-    did_key::DidKey,
-    json_signatures::create::sign_object_eddsa,
-};
 use apx_sdk::{
     agent::FederationAgent,
+    core::{
+        crypto_eddsa::{
+            ed25519_public_key_from_secret_key,
+            generate_ed25519_key,
+        },
+        crypto_rsa::generate_rsa_key,
+        did_key::DidKey,
+        json_signatures::create::sign_object_eddsa,
+    },
     deliver::send_object,
 };
 use serde_json::json;
