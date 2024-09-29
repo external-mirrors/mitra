@@ -1,8 +1,12 @@
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
-use serde_json::Value;
+use serde_json::{Value as JsonValue};
 
-use apx_sdk::deserialization::deserialize_into_object_id;
+use apx_sdk::{
+    deserialization::deserialize_into_object_id,
+    url::is_same_origin,
+    utils::is_activity,
+};
 use mitra_config::Config;
 use mitra_models::{
     database::{DatabaseClient, DatabaseError},
@@ -27,10 +31,17 @@ use mitra_models::{
 use mitra_validators::errors::ValidationError;
 
 use crate::{
+    authentication::{verify_signed_activity, AuthenticationError},
     identifiers::parse_local_actor_id,
+    ownership::verify_activity_owner,
+    vocabulary::{DISLIKE, LIKE},
 };
 
-use super::{Descriptor, HandlerResult};
+use super::{
+    like::handle_like,
+    Descriptor,
+    HandlerResult,
+};
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -46,11 +57,77 @@ struct Add {
     context: Option<String>,
 }
 
+#[derive(Deserialize)]
+struct ConversationAdd {
+    #[serde(deserialize_with = "deserialize_into_object_id")]
+    actor: String,
+
+    object: JsonValue,
+
+    #[serde(deserialize_with = "deserialize_into_object_id")]
+    target: String,
+}
+
+// https://fediversity.site/help/develop/en/Containers
+async fn handle_fep_171b_add(
+    config: &Config,
+    db_client: &mut impl DatabaseClient,
+    add: JsonValue,
+) -> HandlerResult {
+    let ConversationAdd {
+        actor: conversation_owner,
+        object: activity,
+        target,
+    } =
+        serde_json::from_value(add)
+            .map_err(|_| ValidationError("unexpected activity structure"))?;
+    // Authentication
+    verify_activity_owner(&activity)?;
+    let _signer = match verify_signed_activity(
+        config,
+        db_client,
+        &activity,
+        false, // fetch signer
+    ).await {
+        Ok(profile) => profile,
+        Err(AuthenticationError::DatabaseError(db_error)) => return Err(db_error.into()),
+        // TODO: better reporting of authentication errors
+        Err(_) => return Err(ValidationError("invalid integrity proof").into()),
+    };
+    // Authorization
+    if !is_same_origin(&conversation_owner, &target)
+        .map_err(|_| ValidationError("invalid object ID"))?
+    {
+        return Err(ValidationError("actor is not allowed to modify target").into());
+    };
+    if let Some(context) = activity["context"].as_str() {
+        if context != target {
+            log::warn!("context doesn't match Add target");
+        };
+    } else {
+        log::warn!("'context' is missing");
+    };
+
+    let activity_type = activity["type"].as_str()
+        .ok_or(ValidationError("unexpected activity structure"))?
+        .to_owned();
+    if let LIKE | DISLIKE = activity_type.as_str() {
+        let maybe_type = handle_like(config, db_client, activity).await?;
+        Ok(maybe_type.map(|_| Descriptor::object(activity_type)))
+    } else {
+        log::warn!("activity is not supported: Add({activity_type})");
+        Ok(None)
+    }
+}
+
 pub async fn handle_add(
     config: &Config,
     db_client: &mut impl DatabaseClient,
-    activity: Value,
+    activity: JsonValue,
 ) -> HandlerResult {
+    if is_activity(&activity["object"]) {
+        return handle_fep_171b_add(config, db_client, activity).await;
+    };
     let activity: Add = serde_json::from_value(activity)
         .map_err(|_| ValidationError("unexpected activity structure"))?;
     let actor_profile = get_remote_profile_by_actor_id(

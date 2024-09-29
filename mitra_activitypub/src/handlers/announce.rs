@@ -126,6 +126,7 @@ async fn handle_fep_1b12_announce(
     let GroupAnnounce { actor: group_id, object: activity } =
         serde_json::from_value(announce)
             .map_err(|_| ValidationError("unexpected activity structure"))?;
+    verify_activity_owner(&activity)?;
     let activity_id = activity["id"].as_str()
         .ok_or(ValidationError("unexpected activity structure"))?;
     let activity_type = activity["type"].as_str()
