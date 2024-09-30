@@ -1,6 +1,5 @@
 pub mod actors;
 pub mod agent;
-mod authentication;
 pub mod authority;
 pub mod builders;
 mod constants;
@@ -12,5 +11,6 @@ mod handlers;
 pub mod identifiers;
 pub mod identity;
 pub mod importers;
+mod ownership;
 pub mod queues;
 pub mod vocabulary;

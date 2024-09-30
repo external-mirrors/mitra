@@ -26,9 +26,9 @@ use mitra_validators::{
 
 use crate::{
     agent::build_federation_agent,
-    authentication::{is_embedded_activity_trusted, verify_activity_owner},
     identifiers::parse_local_object_id,
     importers::{fetch_any_object, import_post, ActorIdResolver},
+    ownership::{is_embedded_activity_trusted, verify_activity_owner},
     vocabulary::*,
 };
 

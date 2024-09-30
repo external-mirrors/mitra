@@ -35,7 +35,6 @@ use mitra_validators::{
 use crate::{
     actors::handlers::{update_remote_profile, ActorJson},
     agent::build_federation_agent,
-    authentication::verify_object_owner,
     handlers::create::{
         create_content_link,
         get_object_attachments,
@@ -48,6 +47,7 @@ use crate::{
     },
     identifiers::{canonicalize_id, profile_actor_id},
     importers::fetch_any_object,
+    ownership::verify_object_owner,
     vocabulary::{NOTE, QUESTION},
 };
 

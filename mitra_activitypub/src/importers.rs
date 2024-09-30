@@ -59,7 +59,6 @@ use crate::{
         ActorJson,
     },
     agent::build_federation_agent,
-    authentication::verify_object_owner,
     errors::HandlerError,
     handlers::{
         activity::handle_activity,
@@ -73,6 +72,7 @@ use crate::{
         parse_local_actor_id,
         parse_local_object_id,
     },
+    ownership::verify_object_owner,
     vocabulary::GROUP,
 };
 

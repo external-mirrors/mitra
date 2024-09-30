@@ -58,7 +58,6 @@ use mitra_validators::{
 
 use crate::{
     agent::build_federation_agent,
-    authentication::{parse_attributed_to, verify_object_owner},
     builders::note::LinkTag,
     identifiers::{
         canonicalize_id,
@@ -73,6 +72,7 @@ use crate::{
         is_actor_importer_error,
         ActorIdResolver,
     },
+    ownership::{parse_attributed_to, verify_object_owner},
     vocabulary::*,
 };
 

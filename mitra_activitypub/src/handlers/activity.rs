@@ -8,7 +8,7 @@ use mitra_models::database::DatabaseClient;
 use mitra_validators::errors::ValidationError;
 
 use crate::{
-    authentication::verify_activity_owner,
+    ownership::verify_activity_owner,
     vocabulary::*,
 };
 
