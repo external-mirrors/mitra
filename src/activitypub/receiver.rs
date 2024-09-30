@@ -5,6 +5,11 @@ use wildmatch::WildMatch;
 use apx_core::urls::get_hostname;
 use apx_sdk::deserialization::get_object_id;
 use mitra_activitypub::{
+    authentication::{
+        verify_signed_activity,
+        verify_signed_request,
+        AuthenticationError,
+    },
     identifiers::canonicalize_id,
     queues::IncomingActivityJobData,
     vocabulary::{ANNOUNCE, DELETE, CREATE, LIKE, UPDATE},
@@ -23,12 +28,6 @@ use mitra_validators::{
 };
 
 use crate::errors::HttpError;
-
-use super::authentication::{
-    verify_signed_activity,
-    verify_signed_request,
-    AuthenticationError,
-};
 
 #[derive(thiserror::Error, Debug)]
 pub enum InboxError {

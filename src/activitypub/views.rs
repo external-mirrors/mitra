@@ -29,6 +29,7 @@ use mitra_activitypub::{
         build_instance_actor,
         build_local_actor,
     },
+    authentication::verify_signed_request,
     authority::Authority,
     builders::{
         announce::build_announce,
@@ -93,9 +94,6 @@ use crate::web_client::urls::{
     get_tag_page_url,
 };
 
-use super::authentication::{
-    verify_signed_request,
-};
 use super::receiver::receive_activity;
 
 #[get("")]

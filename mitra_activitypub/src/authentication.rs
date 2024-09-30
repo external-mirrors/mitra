@@ -46,11 +46,6 @@ use apx_sdk::{
     url::is_same_origin,
     utils::key_id_to_actor_id,
 };
-use mitra_activitypub::{
-    errors::HandlerError,
-    identifiers::canonicalize_id,
-    importers::ActorIdResolver,
-};
 use mitra_config::Config;
 use mitra_models::{
     database::{DatabaseClient, DatabaseError},
@@ -61,6 +56,12 @@ use mitra_models::{
     },
 };
 use mitra_services::media::MediaStorage;
+
+use crate::{
+    errors::HandlerError,
+    identifiers::canonicalize_id,
+    importers::ActorIdResolver,
+};
 
 const AUTHENTICATION_FETCHER_TIMEOUT: u64 = 10;
 
