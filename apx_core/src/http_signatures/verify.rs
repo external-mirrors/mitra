@@ -286,6 +286,7 @@ mod tests {
             &request_url,
             &request_headers,
         ).unwrap();
+        assert_eq!(signature_data.content_digest.is_some(), false);
 
         let signer_public_key = RsaPublicKey::from(signer_key);
         let result = verify_http_signature(
@@ -334,6 +335,7 @@ mod tests {
             &request_url,
             &request_headers,
         ).unwrap();
+        assert_eq!(signature_data.content_digest.is_some(), true);
 
         let signer_public_key = RsaPublicKey::from(signer_key);
         let content_digest = get_sha256_digest(request_body.as_bytes());

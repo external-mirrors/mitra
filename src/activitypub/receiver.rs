@@ -119,7 +119,7 @@ pub async fn receive_activity(
         config,
         db_client,
         request,
-        activity_digest,
+        Some(activity_digest),
         // Don't fetch signer if this is Delete(Person) activity
         is_self_delete,
     ).await {

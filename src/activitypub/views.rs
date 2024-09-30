@@ -94,7 +94,7 @@ use crate::web_client::urls::{
 };
 
 use super::authentication::{
-    verify_signed_get_request,
+    verify_signed_request,
 };
 use super::receiver::receive_activity;
 
@@ -750,10 +750,12 @@ async fn apgateway_inbox_pull_view(
     request: HttpRequest,
 ) -> Result<HttpResponse, HttpError> {
     let db_client = &mut **get_database_client(&db_pool).await?;
-    let signer = verify_signed_get_request(
+    let signer = verify_signed_request(
         &config,
         db_client,
         &request,
+        None, // GET request has no content
+        true, // don't fetch actor
     ).await.map_err(|error| {
         log::warn!("C2S authentication error (GET {request_path}): {error}");
         HttpError::PermissionError
@@ -886,10 +888,12 @@ async fn apgateway_outbox_pull_view(
     request: HttpRequest,
 ) -> Result<HttpResponse, HttpError> {
     let db_client = &mut **get_database_client(&db_pool).await?;
-    let signer = verify_signed_get_request(
+    let signer = verify_signed_request(
         &config,
         db_client,
         &request,
+        None, // GET request has no content
+        true, // don't fetch actor
     ).await.map_err(|error| {
         log::warn!("C2S authentication error (GET {request_path}): {error}");
         HttpError::PermissionError

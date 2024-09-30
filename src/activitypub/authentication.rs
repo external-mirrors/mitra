@@ -181,7 +181,7 @@ pub async fn verify_signed_request(
     config: &Config,
     db_client: &mut impl DatabaseClient,
     request: &HttpRequest,
-    content_digest: [u8; 32],
+    maybe_content_digest: Option<[u8; 32]>,
     no_fetch: bool,
 ) -> Result<DbActorProfile, AuthenticationError> {
     let signature_data = match parse_http_signature(
@@ -207,50 +207,7 @@ pub async fn verify_signed_request(
     verify_http_signature(
         &signature_data,
         &signer_key,
-        Some(content_digest),
-    )?;
-
-    Ok(signer)
-}
-
-pub async fn verify_signed_get_request(
-    config: &Config,
-    db_client: &mut impl DatabaseClient,
-    request: &HttpRequest,
-) -> Result<DbActorProfile, AuthenticationError> {
-    let signature_data = match parse_http_signature(
-        request.method(),
-        request.uri(),
-        request.headers(),
-    ) {
-        Ok(signature_data) => signature_data,
-        Err(HttpSignatureError::NoSignature) => {
-            return Err(AuthenticationError::NoHttpSignature);
-        },
-        Err(other_error) => return Err(other_error.into()),
-    };
-    // TODO: FEP-EF61: support 'ap' URLs
-    let signer_id = key_id_to_actor_id(&signature_data.key_id)
-        .map_err(|_| AuthenticationError::InvalidKeyId)?;
-    let canonical_signer_id = canonicalize_id(&signer_id)
-        .map_err(|_| AuthenticationError::InvalidKeyId)?;
-    let signer = get_signer(
-        config,
-        db_client,
-        &canonical_signer_id,
-        true, // don't fetch
-    ).await?;
-    let canonical_key_id = canonicalize_id(&signature_data.key_id)
-        .map_err(|_| AuthenticationError::InvalidKeyId)?;
-    let signer_key = get_signer_rsa_key(
-        &signer,
-        &canonical_key_id,
-    )?;
-
-    verify_http_signature(
-        &signature_data,
-        &signer_key,
-        None,
+        maybe_content_digest,
     )?;
 
     Ok(signer)
