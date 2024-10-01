@@ -120,13 +120,11 @@ struct GroupAnnounce {
 async fn handle_fep_1b12_announce(
     config: &Config,
     db_client: &mut impl DatabaseClient,
-    activity: JsonValue,
+    announce: JsonValue,
 ) -> HandlerResult {
-    verify_activity_owner(&activity)?;
-    verify_activity_owner(&activity["object"])?;
-    let is_embedded_trusted = is_embedded_activity_trusted(&activity)?;
+    let is_embedded_trusted = is_embedded_activity_trusted(&announce)?;
     let GroupAnnounce { actor: group_id, object: activity } =
-        serde_json::from_value(activity)
+        serde_json::from_value(announce)
             .map_err(|_| ValidationError("unexpected activity structure"))?;
     let activity_id = activity["id"].as_str()
         .ok_or(ValidationError("unexpected activity structure"))?;
@@ -160,6 +158,7 @@ async fn handle_fep_1b12_announce(
             },
         }
     };
+    verify_activity_owner(&activity)?;
     if activity_type == DELETE {
         let group = get_remote_profile_by_actor_id(
             db_client,
