@@ -81,6 +81,9 @@ async fn handle_fep_171b_add(
     } =
         serde_json::from_value(add)
             .map_err(|_| ValidationError("unexpected activity structure"))?;
+    let activity_type = activity["type"].as_str()
+        .ok_or(ValidationError("unexpected activity structure"))?
+        .to_owned();
     // Authentication
     verify_activity_owner(&activity)?;
     let _signer = match verify_signed_activity(
@@ -90,6 +93,10 @@ async fn handle_fep_171b_add(
         false, // fetch signer
     ).await {
         Ok(profile) => profile,
+        Err(AuthenticationError::NoJsonSignature) => {
+            log::info!("ignoring unsigned {activity_type} in conversation");
+            return Ok(None);
+        },
         Err(AuthenticationError::DatabaseError(db_error)) => return Err(db_error.into()),
         // TODO: better reporting of authentication errors
         Err(_) => return Err(ValidationError("invalid integrity proof").into()),
@@ -108,9 +115,6 @@ async fn handle_fep_171b_add(
         log::warn!("'context' is missing");
     };
 
-    let activity_type = activity["type"].as_str()
-        .ok_or(ValidationError("unexpected activity structure"))?
-        .to_owned();
     if let LIKE | DISLIKE = activity_type.as_str() {
         let maybe_type = handle_like(config, db_client, activity).await?;
         Ok(maybe_type.map(|_| Descriptor::object(activity_type)))
