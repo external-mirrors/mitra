@@ -2,7 +2,7 @@ use mitra_models::reactions::types::ReactionData;
 use mitra_utils::unicode::is_single_character;
 
 use super::{
-    activitypub::validate_object_id,
+    activitypub::validate_any_object_id,
     emojis::{
         parse_emoji_shortcode,
         validate_emoji_name,
@@ -35,7 +35,7 @@ pub fn validate_reaction_data(
         };
     };
     if let Some(ref activity_id) = reaction_data.activity_id {
-        validate_object_id(activity_id)?;
+        validate_any_object_id(activity_id)?;
     };
     Ok(())
 }

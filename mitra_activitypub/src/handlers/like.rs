@@ -22,6 +22,7 @@ use mitra_validators::{
 
 use crate::{
     agent::build_federation_agent,
+    identifiers::canonicalize_id,
     importers::{
         get_post_by_object_id,
         ActorIdResolver,
@@ -114,12 +115,13 @@ pub async fn handle_like(
             }
         },
     };
+    let canonical_activity_id = canonicalize_id(&activity.id)?;
     let reaction_data = ReactionData {
         author_id: author.id,
         post_id: post_id,
         content: maybe_content,
         emoji_id: maybe_emoji_id,
-        activity_id: Some(activity.id),
+        activity_id: Some(canonical_activity_id),
     };
     validate_reaction_data(&reaction_data)?;
     match create_reaction(db_client, reaction_data).await {

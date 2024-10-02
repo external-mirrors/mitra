@@ -21,6 +21,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Don't fetch embedded FEP-1b12 activity if it has same origin as its parent.
 - Changed MSRV to 1.65.0.
 - Accept 'ap' URLs with percent-encoded authority.
+- Support portable `Like` activities.
 
 ### Fixed
 
