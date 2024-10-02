@@ -38,6 +38,8 @@ The following activities and object types are supported:
 - `Update(Actor)`, `Move(Actor)`, `Delete(Actor)`.
 - `Offer(Agreement)`, `Accept(Agreement)`.
 - `Add(Actor)`, `Remove(Actor)`.
+- `Announce(Create)`, `Announce(Update)`, `Announce(Delete)`, `Announce(Like)`, `Announce(Dislike)`.
+- `Add(Like)`, `Add(Dislike)`.
 
 Activities are implemented in way that is compatible with Pleroma, Mastodon and other popular ActivityPub servers.
 
