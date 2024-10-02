@@ -35,6 +35,7 @@ use crate::{
 use super::{
     create::handle_create,
     like::handle_like,
+    update::handle_update,
     Descriptor,
     HandlerResult,
 };
@@ -135,7 +136,7 @@ async fn handle_fep_1b12_announce(
         return Ok(None);
     };
     match activity_type {
-        CREATE | DELETE | DISLIKE | LIKE => (),
+        CREATE | DELETE | DISLIKE | LIKE | UPDATE => (),
         _ => {
             log::warn!("activity is not supported: Announce({activity_type})");
             return Ok(None);
@@ -198,6 +199,14 @@ async fn handle_fep_1b12_announce(
         Ok(Some(Descriptor::object(activity_type)))
     } else if activity_type == LIKE || activity_type == DISLIKE {
         let maybe_type = handle_like(config, db_client, activity).await?;
+        Ok(maybe_type.map(|_| Descriptor::object(activity_type)))
+    } else if activity_type == UPDATE {
+        let maybe_type = handle_update(
+            config,
+            db_client,
+            activity,
+            false, // not authenticated; object will be fetched
+        ).await?;
         Ok(maybe_type.map(|_| Descriptor::object(activity_type)))
     } else {
         // Ignore other activities

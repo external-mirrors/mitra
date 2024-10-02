@@ -11,6 +11,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Insert OpenGraph tags into `index.html` when serving post page.
 - Added API endpoint for editing custom feed name.
 - Support `Add(Like)` and `Add(Dislike)` conversation container activities.
+- Support `Announce(Update)` activities.
 
 ### Changed
 
