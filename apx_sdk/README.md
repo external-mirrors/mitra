@@ -2,6 +2,13 @@
 
 Minimalistic ActivityPub toolkit.
 
+Features:
+
+- Networking.
+- Authentication (HTTP signatures, object integrity proofs).
+- WebFinger.
+- Nomadic identity.
+
 Using in a Cargo Project:
 
 ```toml
