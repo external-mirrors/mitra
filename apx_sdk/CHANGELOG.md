@@ -21,6 +21,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Move `url_encode` and `url_decode` functions to `apx_core::url::common`.
 - Accept 'ap' URLs with percent-encoded authority.
 - Change `parse_http_signature` to accept `HeaderMap`.
+- Changed MSRV to 1.65.0.
 
 ### Fixed
 
