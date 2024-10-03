@@ -13,7 +13,7 @@ Using in a Cargo Project:
 
 ```toml
 [dependencies]
-apx_sdk = { git = "https://codeberg.org/silverpill/mitra", rev = "apx-v0.1.0" }
+apx_sdk = { git = "https://codeberg.org/silverpill/mitra", rev = "apx-v0.2.0" }
 ```
 
 Examples:
