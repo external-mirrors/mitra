@@ -56,6 +56,18 @@ mod tests {
     }
 
     #[test]
+    fn test_parse_emoji_shortcode() {
+        let result = parse_emoji_shortcode("test_emoji");
+        assert_eq!(result, None);
+        let result = parse_emoji_shortcode(":test_emoji");
+        assert_eq!(result, None);
+        let result = parse_emoji_shortcode("test_emoji:");
+        assert_eq!(result, None);
+        let result = parse_emoji_shortcode(":test_emoji:");
+        assert_eq!(result, Some("test_emoji"));
+    }
+
+    #[test]
     fn test_clean_emoji_name() {
         let emoji_name = "test_emoji";
         let output = clean_emoji_name(emoji_name);
@@ -63,5 +75,12 @@ mod tests {
         let shortcode = ":test_emoji:";
         let output = clean_emoji_name(shortcode);
         assert_eq!(output, "test_emoji");
+    }
+
+    #[test]
+    fn test_clean_emoji_name_invalid_shortcode() {
+        let shortcode = "test_emoji:";
+        let output = clean_emoji_name(shortcode);
+        assert_eq!(output, "test_emoji:");
     }
 }
