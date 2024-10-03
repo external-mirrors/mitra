@@ -63,6 +63,7 @@ use mitra_config::{
     RegistrationType,
 };
 use mitra_models::{
+    custom_feeds::queries::get_custom_feeds_by_source,
     database::{
         get_database_client,
         DatabaseConnectionPool,
@@ -124,6 +125,7 @@ use crate::http::{
 use crate::mastodon_api::{
     auth::get_current_user,
     errors::MastodonError,
+    lists::types::List,
     pagination::{get_last_item, get_paginated_response},
     search::helpers::search_profiles_only,
     statuses::helpers::get_paginated_status_list,
@@ -1002,6 +1004,24 @@ async fn get_account_subscribers(
     Ok(HttpResponse::Ok().json(subscriptions))
 }
 
+/// https://docs.joinmastodon.org/methods/accounts/#lists
+#[get("/{account_id}/lists")]
+async fn get_account_lists(
+    auth: BearerAuth,
+    db_pool: web::Data<DatabaseConnectionPool>,
+    account_id: web::Path<Uuid>,
+) -> Result<HttpResponse, MastodonError> {
+    let db_client = &**get_database_client(&db_pool).await?;
+    let current_user = get_current_user(db_client, auth.token()).await?;
+    let feeds = get_custom_feeds_by_source(
+        db_client,
+        current_user.id,
+        *account_id,
+    ).await?;
+    let lists: Vec<_> = feeds.into_iter().map(List::from_db).collect();
+    Ok(HttpResponse::Ok().json(lists))
+}
+
 #[get("/{account_id}/aliases/all")]
 async fn get_account_aliases(
     connection_info: ConnectionInfo,
@@ -1080,6 +1100,7 @@ pub fn account_api_scope() -> Scope {
         .service(get_account_followers)
         .service(get_account_following)
         .service(get_account_subscribers)
+        .service(get_account_lists)
         .service(get_account_aliases)
         .service(load_activities)
 }

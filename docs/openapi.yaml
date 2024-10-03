@@ -701,6 +701,23 @@ paths:
                 $ref: '#/components/schemas/Relationship'
         404:
           description: Profile not found
+  /api/v1/accounts/{account_id}/lists:
+    get:
+      summary: Custom feeds that you have added this account to.
+      security:
+        - tokenAuth: []
+      parameters:
+        - $ref: '#/components/parameters/account_id'
+      responses:
+        200:
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                description: List of custom feeds
+                type: array
+                items:
+                  $ref: '#/components/schemas/List'
   /api/v1/accounts/{account_id}/aliases/all:
     get:
       summary: Get actor's aliases.
@@ -718,6 +735,8 @@ paths:
   /api/v1/accounts/{account_id}/load_activities:
     post:
       summary: Load latest activities from outbox.
+      security:
+        - tokenAuth: []
       parameters:
         - $ref: '#/components/parameters/account_id'
       responses:

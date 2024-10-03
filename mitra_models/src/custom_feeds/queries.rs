@@ -158,6 +158,27 @@ pub async fn get_custom_feed_sources(
     Ok(sources)
 }
 
+pub async fn get_custom_feeds_by_source(
+    db_client: &impl DatabaseClient,
+    owner_id: Uuid,
+    source_id: Uuid,
+) -> Result<Vec<DbCustomFeed>, DatabaseError> {
+    let rows = db_client.query(
+        "
+        SELECT custom_feed
+        FROM custom_feed
+        JOIN custom_feed_source ON custom_feed_source.feed_id = custom_feed.id
+        WHERE custom_feed.owner_id = $1
+            AND custom_feed_source.source_id = $2
+        ",
+        &[&owner_id, &source_id],
+    ).await?;
+    let feeds = rows.iter()
+        .map(|row| row.try_get("custom_feed"))
+        .collect::<Result<_, _>>()?;
+    Ok(feeds)
+}
+
 #[cfg(test)]
 mod tests {
     use serial_test::serial;
@@ -244,6 +265,7 @@ mod tests {
             &[author_2.id],
         ).await.err().unwrap();
         assert_eq!(error.to_string(), "custom feed source already exists");
+
         let sources = get_custom_feed_sources(
             db_client,
             feed.id,
@@ -251,6 +273,13 @@ mod tests {
             5,
         ).await.unwrap();
         assert_eq!(sources.len(), 2);
+        let feeds = get_custom_feeds_by_source(
+            db_client,
+            viewer.id,
+            author_1.id,
+        ).await.unwrap();
+        assert_eq!(feeds.len(), 1);
+        assert_eq!(feeds[0].id, feed.id);
 
         remove_custom_feed_sources(
             db_client,

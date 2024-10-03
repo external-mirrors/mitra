@@ -12,6 +12,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Added API endpoint for editing custom feed name.
 - Support `Add(Like)` and `Add(Dislike)` conversation container activities.
 - Support `Announce(Update)` activities.
+- Added `/api/v1/accounts/{account_id}/lists` API endpoint.
 
 ### Changed
 
