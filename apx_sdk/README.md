@@ -1,6 +1,6 @@
-# apx_sdk
+# APx
 
-Minimalistic ActivityPub toolkit.
+Minimalistic ActivityPub toolkit written in Rust.
 
 Features:
 

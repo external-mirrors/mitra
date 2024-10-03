@@ -1,5 +1,6 @@
 [package]
 name = "apx_sdk"
+description = "Minimalistic ActivityPub toolkit"
 version = "0.2.0"
 license.workspace = true
 
