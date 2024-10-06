@@ -71,10 +71,11 @@ pub async fn handle_like(
         &storage,
         &activity.actor,
     ).await?;
+    let canonical_object_id = canonicalize_id(&activity.object)?;
     let post_id = match get_post_by_object_id(
         db_client,
         &instance.url(),
-        &activity.object,
+        &canonical_object_id,
     ).await {
         Ok(post) => post.id,
         // Ignore like if post is not found locally

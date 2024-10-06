@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use regex::{Captures, Match, Regex};
 
 use mitra_activitypub::{
-    identifiers::compatible_post_object_id,
+    identifiers::{canonicalize_id, compatible_post_object_id},
     importers::get_post_by_object_id,
 };
 use mitra_models::{
@@ -60,10 +60,14 @@ pub async fn find_linked_posts(
             break;
             // TODO: single database query
         };
+        let Ok(canonical_id) = canonicalize_id(&url) else {
+            // Skip invalid IDs
+            continue;
+        };
         match get_post_by_object_id(
             db_client,
             instance_url,
-            &url,
+            &canonical_id,
         ).await {
             Ok(post) => {
                 if !can_link_post(&post) {

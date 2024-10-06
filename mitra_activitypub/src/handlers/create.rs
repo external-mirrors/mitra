@@ -554,10 +554,11 @@ pub async fn get_object_tags(
                 continue;
             };
             let href = redirects.get(&tag.href).unwrap_or(&tag.href);
+            let canonical_linked_id = canonicalize_id(href)?;
             let linked = get_post_by_object_id(
                 db_client,
                 &instance.url(),
-                href,
+                &canonical_linked_id,
             ).await?;
             if !links.contains(&linked.id) {
                 links.push(linked.id);
@@ -614,10 +615,11 @@ pub async fn get_object_tags(
     // Parse quoteUrl as an object link
     if let Some(ref object_id) = object.quote_url {
         let object_id = redirects.get(object_id).unwrap_or(object_id);
+        let canonical_object_id = canonicalize_id(object_id)?;
         let linked = get_post_by_object_id(
             db_client,
             &instance.url(),
-            object_id,
+            &canonical_object_id,
         ).await?;
         if !links.contains(&linked.id) {
             links.push(linked.id);
@@ -767,10 +769,11 @@ pub async fn handle_note(
     let maybe_in_reply_to = match object.in_reply_to {
         Some(ref object_id) => {
             let object_id = redirects.get(object_id).unwrap_or(object_id);
+            let canonical_in_reply_to_id = canonicalize_id(object_id)?;
             let in_reply_to = get_post_by_object_id(
                 db_client,
                 &instance.url(),
-                object_id,
+                &canonical_in_reply_to_id,
             ).await?;
             Some(in_reply_to)
         },
@@ -837,10 +840,11 @@ async fn check_unsolicited_message(
     });
     // Is it a reply to a known post?
     let is_disconnected = if let Some(ref in_reply_to_id) = object.in_reply_to {
+        let canonical_in_reply_to_id = canonicalize_id(in_reply_to_id)?;
         match get_post_by_object_id(
             db_client,
             instance_url,
-            in_reply_to_id,
+            &canonical_in_reply_to_id,
         ).await {
             Ok(_) => false,
             Err(DatabaseError::NotFound(_)) => true,
