@@ -50,7 +50,7 @@ async fn handle_undo_follow(
     let canonical_actor_id = canonicalize_id(&activity.actor)?;
     let source_profile = get_remote_profile_by_actor_id(
         db_client,
-        &canonical_actor_id,
+        &canonical_actor_id.to_string(),
     ).await?;
     // Use object because activity ID might not be present
     let target_actor_id = get_object_id(&activity.object["object"])
@@ -91,13 +91,13 @@ pub async fn handle_undo(
     let canonical_actor_id = canonicalize_id(&activity.actor)?;
     let actor_profile = get_remote_profile_by_actor_id(
         db_client,
-        &canonical_actor_id,
+        &canonical_actor_id.to_string(),
     ).await?;
     let canonical_object_id = canonicalize_id(&activity.object)?;
 
     match get_follow_request_by_activity_id(
         db_client,
-        &canonical_object_id,
+        &canonical_object_id.to_string(),
     ).await {
         Ok(follow_request) => {
             // Undo(Follow)
@@ -117,7 +117,7 @@ pub async fn handle_undo(
 
     match get_remote_reaction_by_activity_id(
         db_client,
-        &canonical_object_id,
+        &canonical_object_id.to_string(),
     ).await {
         Ok(reaction) => {
             // Undo(Like), Undo(EmojiReact), Undo(Dislike)
@@ -136,7 +136,7 @@ pub async fn handle_undo(
             // Undo(Announce)
             let repost = match get_remote_repost_by_activity_id(
                 db_client,
-                &canonical_object_id,
+                &canonical_object_id.to_string(),
             ).await {
                 Ok(repost) => repost,
                 // Ignore undo if neither reaction nor repost is found

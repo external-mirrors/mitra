@@ -71,7 +71,7 @@ impl PublicKey {
             },
         };
         let db_key = DbActorKey {
-            id: key_id,
+            id: key_id.to_string(),
             key_type,
             key_data,
         };
@@ -142,7 +142,7 @@ impl Multikey {
             _ => return Err(ValidationError("unexpected key type")),
         };
         let db_key = DbActorKey {
-            id: key_id,
+            id: key_id.to_string(),
             key_type,
             key_data,
         };

@@ -169,7 +169,7 @@ async fn handle_update_person(
     let canonical_actor_id = canonicalize_id(&activity.object.id)?;
     let profile = match get_remote_profile_by_actor_id(
         db_client,
-        &canonical_actor_id,
+        &canonical_actor_id.to_string(),
     ).await {
         Ok(profile) => profile,
         // Ignore Update if profile is not found locally

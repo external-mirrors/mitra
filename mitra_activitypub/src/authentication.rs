@@ -119,7 +119,7 @@ async fn get_signer(
             .map_err(|_| AuthenticationError::ActorError("invalid actor ID"))?;
         get_remote_profile_by_actor_id(
             db_client,
-            &canonical_signer_id,
+            &canonical_signer_id.to_string(),
         ).await?
     } else {
         let mut instance = config.instance();
@@ -149,7 +149,7 @@ fn get_signer_ed25519_key(
         .map_err(|_| AuthenticationError::ActorError("invalid key ID"))?;
     let actor_key = profile.public_keys
         .inner().iter()
-        .find(|key| key.id == canonical_key_id)
+        .find(|key| key.id == canonical_key_id.to_string())
         .ok_or(AuthenticationError::ActorError("key not found"))?;
     if actor_key.key_type != PublicKeyType::Ed25519 {
         return Err(AuthenticationError::ActorError("unexpected key type"));
@@ -166,7 +166,7 @@ fn get_signer_rsa_key(
         .map_err(|_| AuthenticationError::ActorError("invalid key ID"))?;
     let maybe_actor_key = profile.public_keys
         .inner().iter()
-        .find(|key| key.id == canonical_key_id);
+        .find(|key| key.id == canonical_key_id.to_string());
     let rsa_public_key = if let Some(actor_key) = maybe_actor_key {
         if actor_key.key_type != PublicKeyType::RsaPkcs1 {
             return Err(AuthenticationError::ActorError("unexpected key type"));

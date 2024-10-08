@@ -23,7 +23,7 @@ use apx_sdk::{
         FetchError,
     },
     jrd::JsonResourceDescriptor,
-    url::parse_url,
+    url::{parse_url, Url},
 };
 use mitra_config::{Config, Instance};
 use mitra_models::{
@@ -177,7 +177,7 @@ async fn import_profile(
     let canonical_actor_id = canonicalize_id(&actor.id)?;
     let profile = match get_remote_profile_by_actor_id(
         db_client,
-        &canonical_actor_id,
+        &canonical_actor_id.to_string(),
     ).await {
         Ok(profile) => {
             log::info!("re-fetched actor {}", actor.id);
@@ -232,7 +232,7 @@ async fn refresh_remote_profile(
             &actor_data.id,
         ).await {
             Ok(actor) => {
-                if canonicalize_id(&actor.id)? != actor_data.id {
+                if canonicalize_id(&actor.id)?.to_string() != actor_data.id {
                     log::warn!(
                         "ignoring actor ID change: {}",
                         actor_data.id,
@@ -310,7 +310,7 @@ impl ActorIdResolver {
         let canonical_actor_id = canonicalize_id(actor_id)?;
         let profile = match get_remote_profile_by_actor_id(
             db_client,
-            &canonical_actor_id,
+            &canonical_actor_id.to_string(),
         ).await {
             Ok(profile) => {
                 refresh_remote_profile(
@@ -418,9 +418,10 @@ pub async fn get_or_import_profile_by_webfinger_address(
 pub async fn get_post_by_object_id(
     db_client: &impl DatabaseClient,
     instance_url: &str,
-    object_id: &str,
+    object_id: &Url,
 ) -> Result<Post, DatabaseError> {
-    match parse_local_object_id(instance_url, object_id) {
+    let object_id = object_id.to_string();
+    match parse_local_object_id(instance_url, &object_id) {
         Ok(post_id) => {
             // Local post
             let post = get_local_post_by_id(db_client, &post_id).await?;
@@ -428,7 +429,7 @@ pub async fn get_post_by_object_id(
         },
         Err(_) => {
             // Remote post
-            let post = get_remote_post_by_object_id(db_client, object_id).await?;
+            let post = get_remote_post_by_object_id(db_client, &object_id).await?;
             Ok(post)
         },
     }
@@ -476,7 +477,7 @@ pub async fn import_post(
                 let canonical_object_id = canonicalize_id(&object_id)?;
                 match get_remote_post_by_object_id(
                     db_client,
-                    &canonical_object_id,
+                    &canonical_object_id.to_string(),
                 ).await {
                     Ok(post) => {
                         // Object already fetched
@@ -551,7 +552,7 @@ pub async fn import_post(
     };
 
     let initial_post = posts.into_iter()
-        .find(|post| post.object_id.as_ref() == Some(&initial_object_id))
+        .find(|post| post.object_id.as_ref() == Some(&initial_object_id.to_string()))
         .expect("requested post should be among fetched objects");
     Ok(initial_post)
 }
@@ -739,7 +740,7 @@ pub async fn register_portable_actor(
     let canonical_actor_id = canonicalize_id(&actor.id)?;
     let profile = match get_remote_profile_by_actor_id(
         db_client,
-        &canonical_actor_id,
+        &canonical_actor_id.to_string(),
     ).await {
         Ok(profile) => {
             let profile_updated = update_remote_profile(

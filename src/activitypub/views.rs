@@ -716,7 +716,7 @@ async fn apgateway_inbox_push_view(
     let db_client = &mut **get_database_client(&db_pool).await?;
     let recipient = get_portable_user_by_inbox_id(
         db_client,
-        &canonical_collection_id,
+        &canonical_collection_id.to_string(),
     ).await?;
 
     receive_activity(
@@ -768,7 +768,7 @@ async fn apgateway_inbox_pull_view(
     let canonical_collection_id = canonicalize_id(&collection_id)?;
     let collection_owner = get_portable_user_by_inbox_id(
         db_client,
-        &canonical_collection_id,
+        &canonical_collection_id.to_string(),
     ).await?;
     if collection_owner.id != signer.id {
         return Err(HttpError::PermissionError);
@@ -776,7 +776,7 @@ async fn apgateway_inbox_pull_view(
     const LIMIT: u32 = 20;
     let items = get_collection_items(
         db_client,
-        &canonical_collection_id,
+        &canonical_collection_id.to_string(),
         LIMIT,
     ).await?;
     // TODO: FEP-EF61: collection or collection page?
@@ -810,7 +810,7 @@ async fn apgateway_outbox_push_view(
     let canonical_collection_id = canonicalize_id(&collection_id)?;
     let collection_owner = match get_portable_user_by_outbox_id(
         db_client,
-        &canonical_collection_id,
+        &canonical_collection_id.to_string(),
     ).await {
         Ok(signer) => signer,
         Err(DatabaseError::NotFound(_)) => {
@@ -837,14 +837,14 @@ async fn apgateway_outbox_push_view(
     };
     let signer = get_portable_user_by_actor_id(
         db_client,
-        &canonical_actor_id,
+        &canonical_actor_id.to_string(),
     ).await?;
     if signer.id != collection_owner.id {
         return Err(HttpError::PermissionError);
     };
     let is_new_activity = save_activity(
         db_client,
-        &canonical_activity_id,
+        &canonical_activity_id.to_string(),
         &activity,
     ).await?;
     if !is_new_activity {
@@ -854,8 +854,8 @@ async fn apgateway_outbox_push_view(
     add_object_to_collection(
         db_client,
         signer.id,
-        &canonical_collection_id,
-        &canonical_activity_id,
+        &canonical_collection_id.to_string(),
+        &canonical_activity_id.to_string(),
     ).await?;
     IncomingActivityJobData::new(&activity, true)
         .into_job(db_client, 0)
@@ -908,7 +908,7 @@ async fn apgateway_outbox_pull_view(
     let canonical_collection_id = canonicalize_id(&collection_id)?;
     let collection_owner = get_portable_user_by_outbox_id(
         db_client,
-        &canonical_collection_id,
+        &canonical_collection_id.to_string(),
     ).await?;
     if collection_owner.id != signer.id {
         return Err(HttpError::PermissionError);
@@ -916,7 +916,7 @@ async fn apgateway_outbox_pull_view(
     const LIMIT: u32 = 20;
     let items = get_collection_items(
         db_client,
-        &canonical_collection_id,
+        &canonical_collection_id.to_string(),
         LIMIT,
     ).await?;
     // TODO: FEP-EF61: collection or collection page?

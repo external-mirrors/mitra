@@ -811,7 +811,7 @@ pub async fn handle_note(
         tags: hashtags,
         links: links,
         emojis: emojis,
-        object_id: Some(canonical_object_id.clone()),
+        object_id: Some(canonical_object_id.to_string()),
         created_at,
     };
     validate_post_create_data(&post_data)?;
@@ -819,7 +819,7 @@ pub async fn handle_note(
     let post = create_post(db_client, &author.id, post_data).await?;
     save_attributed_object(
         db_client,
-        &canonical_object_id,
+        &canonical_object_id.to_string(),
         &object_value,
         post.id,
     ).await?;

@@ -64,7 +64,7 @@ pub fn parse_identity_proof_fep_c390(
     if statement.object_type != VERIFIABLE_IDENTITY_STATEMENT {
         return Err(ValidationError("invalid attachment type"));
     };
-    if statement.also_known_as != canonical_actor_id {
+    if statement.also_known_as != canonical_actor_id.to_string() {
         return Err(ValidationError("actor ID mismatch"));
     };
     let signature_data = get_json_signature(attachment)

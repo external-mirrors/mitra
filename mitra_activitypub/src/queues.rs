@@ -284,7 +284,7 @@ impl OutgoingActivityJobData {
             .map_err(|_| DatabaseTypeError)?;
         save_activity(
             db_client,
-            &canonical_activity_id,
+            &canonical_activity_id.to_string(),
             &self.activity,
         ).await?;
         // Immediately put into inbox if recipient is local
@@ -300,7 +300,7 @@ impl OutgoingActivityJobData {
                         db_client,
                         profile.id,
                         &profile.expect_actor_data().inbox,
-                        &canonical_activity_id,
+                        &canonical_activity_id.to_string(),
                     ).await?;
                 } else {
                     log::warn!("local inbox doesn't exist: {}", recipient.inbox);

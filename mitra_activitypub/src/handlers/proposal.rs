@@ -107,7 +107,7 @@ pub fn parse_proposal(
     let payment_option = PaymentOption::remote_monero_subscription(
         asset_type.chain_id,
         price,
-        canonical_proposal_id,
+        canonical_proposal_id.to_string(),
         true,
     );
     Ok(payment_option)

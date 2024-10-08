@@ -39,7 +39,7 @@ pub async fn get_activity_remote_recipients(
         let canonical_target_id = canonicalize_id(&target_id)?;
         let profile = match get_remote_profile_by_actor_id(
             db_client,
-            &canonical_target_id,
+            &canonical_target_id.to_string(),
         ).await {
             Ok(profile) => profile,
             Err(DatabaseError::NotFound(_)) => continue,

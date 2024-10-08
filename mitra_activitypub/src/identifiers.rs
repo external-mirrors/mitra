@@ -274,9 +274,9 @@ pub fn compatible_post_object_id(instance_url: &str, post: &Post) -> String {
     }
 }
 
-pub fn canonicalize_id(url: &str) -> Result<String, ValidationError> {
+pub fn canonicalize_id(url: &str) -> Result<Url, ValidationError> {
     let url = Url::parse(url).map_err(|error| ValidationError(error.0))?;
-    Ok(url.to_string())
+    Ok(url)
 }
 
 #[cfg(test)]
@@ -480,11 +480,11 @@ mod tests {
     fn test_canonicalize_id_http() {
         let url = "https://social.example/users/alice#main-key";
         let canonical_url = canonicalize_id(url).unwrap();
-        assert_eq!(canonical_url, url);
+        assert_eq!(canonical_url.to_string(), url);
 
         let url = "https://social.example";
         let canonical_url = canonicalize_id(url).unwrap();
-        assert_eq!(canonical_url, url);
+        assert_eq!(canonical_url.to_string(), url);
     }
 
     #[test]
@@ -498,7 +498,7 @@ mod tests {
     fn test_canonicalize_id_ap() {
         let url = "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor?type=group";
         let canonical_url = canonicalize_id(url).unwrap();
-        assert_eq!(canonical_url, url);
+        assert_eq!(canonical_url.to_string(), url);
     }
 
     #[test]
@@ -506,7 +506,7 @@ mod tests {
         let url = "https://social.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor#main-key";
         let canonical_url = canonicalize_id(url).unwrap();
         assert_eq!(
-            canonical_url,
+            canonical_url.to_string(),
             "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor#main-key",
         );
     }

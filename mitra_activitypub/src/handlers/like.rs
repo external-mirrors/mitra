@@ -1,9 +1,11 @@
 use serde::Deserialize;
 use serde_json::{Value as JsonValue};
 
-use apx_sdk::deserialization::{
-    deserialize_into_object_id,
-    deserialize_object_array,
+use apx_sdk::{
+    deserialization::{
+        deserialize_into_object_id,
+        deserialize_object_array,
+    },
 };
 use mitra_config::Config;
 use mitra_models::{
@@ -122,7 +124,7 @@ pub async fn handle_like(
         post_id: post_id,
         content: maybe_content,
         emoji_id: maybe_emoji_id,
-        activity_id: Some(canonical_activity_id),
+        activity_id: Some(canonical_activity_id.to_string()),
     };
     validate_reaction_data(&reaction_data)?;
     match create_reaction(db_client, reaction_data).await {

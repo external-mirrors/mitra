@@ -61,12 +61,12 @@ pub async fn handle_follow(
     // Create new follow request or update activity ID on existing one,
     // because latest activity ID might be needed to process Undo(Follow)
     let canonical_activity_id = canonicalize_id(&activity.id)?;
-    validate_any_object_id(&canonical_activity_id)?;
+    validate_any_object_id(&canonical_activity_id.to_string())?;
     let follow_request = create_remote_follow_request_opt(
         db_client,
         source_profile.id,
         target_user.id,
-        &canonical_activity_id,
+        &canonical_activity_id.to_string(),
     ).await?;
     let is_following = has_relationship(
         db_client,
@@ -92,7 +92,7 @@ pub async fn handle_follow(
             &config.instance(),
             &target_user,
             &source_actor,
-            &canonical_activity_id,
+            &canonical_activity_id.to_string(),
         )?.save_and_enqueue(db_client).await?;
     };
     Ok(Some(Descriptor::object("Actor")))

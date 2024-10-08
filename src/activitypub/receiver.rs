@@ -190,7 +190,7 @@ pub async fn receive_activity(
         };
     };
 
-    let is_authenticated = canonical_actor_id == signer_id;
+    let is_authenticated = canonical_actor_id.to_string() == signer_id;
     if !is_authenticated {
         match activity_type {
             CREATE | UPDATE => {
@@ -217,7 +217,7 @@ pub async fn receive_activity(
     if is_authenticated {
         let is_new = save_activity(
             db_client,
-            &canonical_activity_id,
+            &canonical_activity_id.to_string(),
             activity,
         ).await?;
         if let Some(recipient) = maybe_fep_ef61_recipient {
@@ -225,7 +225,7 @@ pub async fn receive_activity(
                 db_client,
                 recipient.id,
                 &recipient.profile.expect_actor_data().inbox,
-                &canonical_activity_id,
+                &canonical_activity_id.to_string(),
             ).await?;
         };
         if !is_new {
