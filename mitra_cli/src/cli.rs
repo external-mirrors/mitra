@@ -141,8 +141,8 @@ pub enum SubCommand {
     UpdateConfig(UpdateConfig),
     GenerateInviteCode(GenerateInviteCode),
     ListInviteCodes(ListInviteCodes),
-    CreateUser(CreateUser),
-    ListUsers(ListUsers),
+    CreateAccount(CreateAccount),
+    ListAccounts(ListAccounts),
     SetPassword(SetPassword),
     SetRole(SetRole),
     FetchActor(FetchActor),
@@ -150,7 +150,7 @@ pub enum SubCommand {
     FetchReplies(FetchReplies),
     FetchObject(FetchObject),
     LoadPortableObject(LoadPortableObject),
-    DeleteProfile(DeleteProfile),
+    DeleteUser(DeleteUser),
     DeletePost(DeletePost),
     AddEmoji(AddEmoji),
     ImportEmoji(ImportEmoji),
@@ -237,16 +237,17 @@ impl ListInviteCodes {
     }
 }
 
-/// Create new user
+/// Create new account
 #[derive(Parser)]
-pub struct CreateUser {
+#[command(visible_alias = "create-user")]
+pub struct CreateAccount {
     username: String,
     password: String,
     #[arg(value_parser = ALLOWED_ROLES)]
     role: Option<String>,
 }
 
-impl CreateUser {
+impl CreateAccount {
     pub async fn execute(
         &self,
         config: &Config,
@@ -273,16 +274,17 @@ impl CreateUser {
             role,
         };
         create_user(db_client, user_data).await?;
-        println!("user created");
+        println!("account created");
         Ok(())
     }
 }
 
 /// List local users
 #[derive(Parser)]
-pub struct ListUsers;
+#[command(visible_alias = "list-users")]
+pub struct ListAccounts;
 
-impl ListUsers {
+impl ListAccounts {
     pub async fn execute(
         &self,
         db_client: &impl DatabaseClient,
@@ -432,7 +434,7 @@ impl FetchReplies {
     }
 }
 
-/// Fetch object as a local user, verify and print it to stdout
+/// Fetch object as local actor, verify and print it to stdout
 #[derive(Parser)]
 pub struct FetchObject {
     object_id: String,
@@ -491,13 +493,14 @@ impl LoadPortableObject {
     }
 }
 
-/// Delete profile
+/// Delete user
 #[derive(Parser)]
-pub struct DeleteProfile {
+#[command(visible_alias = "delete-profile")]
+pub struct DeleteUser {
     id_or_name: String,
 }
 
-impl DeleteProfile {
+impl DeleteUser {
     pub async fn execute(
         &self,
         config: &Config,
@@ -520,7 +523,7 @@ impl DeleteProfile {
         if let Some(activity) = maybe_delete_person {
             activity.save_and_enqueue(db_client).await?;
         };
-        println!("profile deleted");
+        println!("user deleted");
         Ok(())
     }
 }
