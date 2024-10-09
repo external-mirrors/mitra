@@ -93,7 +93,7 @@ paths:
           description: Token doesn't belong to user.
   /api/v1/accounts:
     post:
-      summary: Creates a user and profile records.
+      summary: Creates an account and profile.
       requestBody:
         content:
           application/json:
@@ -134,7 +134,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/CredentialAccount'
         400:
-          description: Invalid user data
+          description: Invalid account data
   /api/v1/accounts/verify_credentials:
     get:
       summary: Test to make sure that the user token works.
@@ -149,7 +149,7 @@ paths:
                 $ref: '#/components/schemas/CredentialAccount'
   /api/v1/accounts/update_credentials:
     patch:
-      summary: Update the user's display and preferences.
+      summary: Update the user's display name and preferences.
       security:
         - tokenAuth: []
       requestBody:
@@ -163,7 +163,7 @@ paths:
                   type: string
                   nullable: true
                 note:
-                  description: The account bio (markdown).
+                  description: The bio to use for the profile (markdown).
                   type: string
                   nullable: true
                 avatar:
@@ -314,13 +314,13 @@ paths:
           description: Invalid proof data.
   /api/v1/accounts/relationships:
     get:
-      summary: Find out whether a given actor is followed, blocked, muted, etc.
+      summary: Find out whether a given user is followed, blocked, muted, etc.
       security:
         - tokenAuth: []
       parameters:
         - name: 'id[]'
           in: query
-          description: Check relationships for the provided profile IDs.
+          description: Check relationships for the provided user IDs.
           required: true
           schema:
             type: array
@@ -339,11 +339,11 @@ paths:
                   $ref: '#/components/schemas/Relationship'
   /api/v1/accounts/lookup:
     get:
-      summary: Lookup webfinger address.
+      summary: Lookup WebFinger address.
       parameters:
         - name: acct
           in: query
-          description: The username or Webfinger address to lookup.
+          description: The username or WebFinger address to lookup.
           required: true
           schema:
             type: string
@@ -355,7 +355,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Account'
         404:
-          description: Profile not found
+          description: User not found
   /api/v1/accounts/search:
     get:
       summary: Search for matching profiles by username.
@@ -400,7 +400,7 @@ paths:
           description: Too many requests.
   /api/v1/accounts/search_did:
     get:
-      summary: Search profile by DID
+      summary: Search profiles by DID
       parameters:
         - name: did
           in: query
@@ -422,7 +422,7 @@ paths:
           description: Invalid DID
   /api/v1/accounts/{account_id}:
     get:
-      summary: View information about a profile.
+      summary: View information about a user.
       parameters:
         - $ref: '#/components/parameters/account_id'
       responses:
@@ -433,10 +433,10 @@ paths:
               schema:
                 $ref: '#/components/schemas/Account'
         404:
-          description: Profile not found
+          description: User not found
   /api/v1/accounts/{account_id}/statuses:
     get:
-      summary: Posts created by the given actor.
+      summary: Posts created by the given user.
       parameters:
         - $ref: '#/components/parameters/account_id'
         - name: only_media
@@ -498,10 +498,10 @@ paths:
                 type: string
                 example: '<https://social.example/api/v1/accounts/017e8206-376e-9133-4c9b-cdcca92ed20c/statuses?limit=20&max_id=0187871e-5a09-c6d6-6570-5158ffdcc845>; rel="next"'
         404:
-          description: Profile not found
+          description: User not found
   /api/v1/accounts/{account_id}/followers:
     get:
-      summary: Actors which follow the given actor.
+      summary: Users which follow the given user.
       parameters:
         - $ref: '#/components/parameters/account_id'
         - name: max_id
@@ -534,10 +534,10 @@ paths:
                 type: string
                 example: '<https://social.example/api/v1/accounts/1/followers?limit=40&max_id=7628164>; rel="next"'
         404:
-          description: Profile not found
+          description: User not found
   /api/v1/accounts/{account_id}/following:
     get:
-      summary: Actors which the given actor is following.
+      summary: Users which the given user is following.
       parameters:
         - $ref: '#/components/parameters/account_id'
         - name: max_id
@@ -570,10 +570,10 @@ paths:
                 type: string
                 example: '<https://social.example/api/v1/accounts/1/following?limit=40&max_id=7628164>; rel="next"'
         404:
-          description: Profile not found
+          description: User not found
   /api/v1/accounts/{account_id}/subscribers:
     get:
-      summary: Subscriptions to the given actor.
+      summary: Subscriptions to the given user.
       parameters:
         - $ref: '#/components/parameters/account_id'
         - name: include_expired
@@ -606,10 +606,10 @@ paths:
                 items:
                   $ref: '#/components/schemas/Subscription'
         404:
-          description: Profile not found
+          description: User not found
   /api/v1/accounts/{account_id}/follow:
     post:
-      summary: Follow the given actor.
+      summary: Follow the given user.
       security:
         - tokenAuth: []
       parameters:
@@ -621,89 +621,89 @@ paths:
               type: object
               properties:
                 reblogs:
-                  description: Receive this actor's reposts in home timeline?
+                  description: Receive this user's reposts in home timeline?
                   type: boolean
                   default: true
                 replies:
-                  description: Receive this actor's replies in home timeline?
+                  description: Receive this user's replies in home timeline?
                   type: boolean
                   default: true
       responses:
         200:
-          description: Successfully followed, or actor was already followed
+          description: Successfully followed, or user was already followed
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Relationship'
         404:
-          description: Profile not found
+          description: User not found
   /api/v1/accounts/{account_id}/unfollow:
     post:
-      summary: Unfollow the given actor.
+      summary: Unfollow the given user.
       security:
         - tokenAuth: []
       parameters:
         - $ref: '#/components/parameters/account_id'
       responses:
         200:
-          description: Successfully unfollowed, or actor was already not followed
+          description: Successfully unfollowed, or user was already not followed.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Relationship'
         404:
-          description: Profile not found
+          description: User not found
   /api/v1/accounts/{account_id}/remove_from_followers:
     post:
-      summary: Remove the given actor from your followers.
+      summary: Remove the given user from your followers.
       security:
         - tokenAuth: []
       parameters:
         - $ref: '#/components/parameters/account_id'
       responses:
         200:
-          description: Successfully removed from followers, or actor was already not following you
+          description: Successfully removed from followers, or user was already not following you
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Relationship'
         404:
-          description: Account not found
+          description: User not found
   /api/v1/accounts/{account_id}/mute:
     post:
-      summary: Mute the given account.
+      summary: Mute the given user.
       security:
         - tokenAuth: []
       parameters:
         - $ref: '#/components/parameters/account_id'
       responses:
         200:
-          description: Successfully muted, or account was already muted.
+          description: Successfully muted, or user was already muted.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Relationship'
         404:
-          description: Profile not found
+          description: User not found
   /api/v1/accounts/{account_id}/unmute:
     post:
-      summary: Unmute the given account.
+      summary: Unmute the given user.
       security:
         - tokenAuth: []
       parameters:
         - $ref: '#/components/parameters/account_id'
       responses:
         200:
-          description: Successfully unmuted, or account was already unmuted.
+          description: Successfully unmuted, or user was already unmuted.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Relationship'
         404:
-          description: Profile not found
+          description: User not found
   /api/v1/accounts/{account_id}/lists:
     get:
-      summary: Custom feeds that you have added this account to.
+      summary: Custom feeds that you have added this user to.
       security:
         - tokenAuth: []
       parameters:
@@ -720,7 +720,7 @@ paths:
                   $ref: '#/components/schemas/List'
   /api/v1/accounts/{account_id}/aliases/all:
     get:
-      summary: Get actor's aliases.
+      summary: Get account's aliases.
       parameters:
         - $ref: '#/components/parameters/account_id'
       responses:
@@ -731,7 +731,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Aliases'
         404:
-          description: Profile not found
+          description: User not found
   /api/v1/accounts/{account_id}/load_activities:
     post:
       summary: Load latest activities from outbox.
@@ -745,7 +745,7 @@ paths:
         403:
           description: The user doesn't have a permission to load activities.
         404:
-          description: Profile not found or is local.
+          description: User not found or is local.
   /api/v1/apps:
     post:
       summary: Create a new application to obtain OAuth2 credentials.
@@ -1227,7 +1227,7 @@ paths:
                 $ref: '#/components/schemas/Attachment'
   /api/v1/mutes:
     get:
-      summary: View profiles the user has muted.
+      summary: View users the given user has muted.
       security:
         - tokenAuth: []
       parameters:
@@ -1320,7 +1320,7 @@ paths:
           description: Invalid request data.
   /api/v1/settings/change_password:
     post:
-      summary: Set or change user's password.
+      summary: Set or change account's password.
       security:
         - tokenAuth: []
       requestBody:
@@ -1351,7 +1351,7 @@ paths:
               type: object
               properties:
                 acct:
-                  description: Actor address.
+                  description: WebFinger address.
                   type: string
                   example: user@social.example
       responses:
@@ -1362,7 +1362,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Aliases'
         404:
-          description: Profile not found.
+          description: User not found.
   /api/v1/settings/aliases/remove:
     post:
       summary: Remove alias.
@@ -1931,7 +1931,7 @@ paths:
         400:
           description: Invalid request.
         404:
-          description: Profile not found.
+          description: User not found.
         418:
           description: Blockchain integration is not enabled.
   /api/v1/subscriptions/options:
@@ -1965,7 +1965,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Account'
         400:
-          description: User hasn't enabled subscriptions or incorrect subscription parameters.
+          description: User hasn't enabled subscriptions or subscription parameters are incorrect.
         403:
           description: User's wallet address is not known or not verified
         418:
@@ -2283,7 +2283,7 @@ paths:
             type: string
         - name: type
           in: query
-          description: Specify whether to search for only accounts or statuses.
+          description: Specify whether to search for only profiles or posts.
           required: false
           schema:
             type: string
@@ -2374,7 +2374,7 @@ components:
     account_id:
       name: account_id
       in: path
-      description: Profile ID
+      description: User ID
       required: true
       schema:
         type: string
@@ -2407,15 +2407,15 @@ components:
       type: object
       properties:
         id:
-          description: The account ID.
+          description: The user ID.
           type: string
           format: uuid
         username:
-          description: The username of the actor, not including domain.
+          description: The username of the account, not including domain.
           type: string
           example: user
         acct:
-          description: The Webfinger account URI. Equal to username for local actors, or username@domain for remote actors.
+          description: The WebFinger account URI. Equal to username for local users, or username@domain for remote users.
           type: string
           example: user@social.example
         actor_id:
@@ -2435,7 +2435,7 @@ components:
           description: An image banner that is shown above the profile and in profile cards.
           type: string
         locked:
-          description: Whether the actor manually approves follow requests.
+          description: Whether the user manually approves follow requests.
           type: boolean
           example: false
         mention_policy:
@@ -2499,13 +2499,13 @@ components:
           items:
             $ref: '#/components/schemas/CustomEmoji'
         followers_count:
-          description: The reported followers of this profile.
+          description: The reported followers of this user.
           type: number
         following_count:
-          description: The reported follows of this profile.
+          description: The reported follows of this user.
           type: number
         subscribers_count:
-          description: The reported subscribers of this profile.
+          description: The reported subscribers of this user.
           type: number
     CredentialAccount:
       allOf:
@@ -2670,7 +2670,7 @@ components:
               description: Users registered on this instance
               type: integer
             status_count:
-              description: Statuses authored by users on instance.
+              description: Posts authored by users on instance.
               type: integer
             domain_count:
               description: Domains federated with this instance.
@@ -2840,7 +2840,7 @@ components:
               example: ''
             account:
               allOf:
-                - description: An account that can be contacted natively over the network regarding inquiries or issues.
+                - description: A user that can be contacted natively over the network regarding inquiries or issues.
                 - $ref: '#/components/schemas/Account'
     Invoice:
       type: object
@@ -2850,11 +2850,11 @@ components:
           type: string
           format: uuid
         sender_id:
-          description: The profile ID of the sender.
+          description: The ID of the sender.
           type: string
           format: uuid
         recipient_id:
-          description: The profile ID of the recipient.
+          description: The ID of the recipient.
           type: string
           format: uuid
         chain_id:
@@ -2892,24 +2892,24 @@ components:
       type: object
       properties:
         id:
-          description: The internal database ID of the list.
+          description: The internal database ID of the custom feed.
           type: integer
         title:
-          description: The user-defined title of the list.
+          description: The user-defined title of the custom feed.
           type: string
         replies_policy:
-          description: Which replies should be shown in the list.
+          description: Which replies should be shown in the custom feed.
           type: string
           enum:
             - followed
         exclusive:
-          description: Are list accounts hidden from the home timeline?
+          description: Are feed sources hidden from the home timeline?
           type: boolean
     Mention:
       type: object
       properties:
         id:
-          description: The profile ID of the mentioned user.
+          description: The ID of the mentioned user.
           type: string
           format: uuid
         username:
@@ -2980,7 +2980,7 @@ components:
       type: object
       properties:
         id:
-          description: Target profile id.
+          description: Target user ID.
           type: string
           format: uuid
         following:
@@ -3082,7 +3082,7 @@ components:
           format: date-time
           nullable: true
         account:
-          description: The profile that authored this post.
+          description: The user that authored this post.
           $ref: '#/components/schemas/Account'
         content:
           description: HTML-encoded post content.
@@ -3127,7 +3127,7 @@ components:
           format: uuid
           nullable: true
         in_reply_to_account_id:
-          description: ID of the profile that authored the post being replied to.
+          description: ID of the user that authored the post being replied to.
           type: string
           format: uuid
           nullable: true
@@ -3167,13 +3167,13 @@ components:
                 type: object
                 properties:
                   account_ids:
-                    description: The list of accounts who sent this reaction.
+                    description: The list of users who sent this reaction.
                     type: array
                     items:
                       type: string
                       format: uuid
                   me:
-                    description: Has current account reacted with this emoji?
+                    description: Has current user reacted with this emoji?
                     type: boolean
                   count:
                     description: The total number of reactions of this type.
