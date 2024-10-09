@@ -73,7 +73,7 @@ pub async fn import_follows_task(
     user_id: Uuid,
     address_list: Vec<String>,
 ) -> Result<(), anyhow::Error> {
-    let user = get_user_by_id(db_client, &user_id).await?;
+    let user = get_user_by_id(db_client, user_id).await?;
     let storage = MediaStorage::from(config);
     for webfinger_address in address_list {
         let webfinger_address: WebfingerAddress = webfinger_address.parse()?;
@@ -114,7 +114,7 @@ pub async fn import_followers_task(
     from_actor_id: String,
     address_list: Vec<String>,
 ) -> Result<(), anyhow::Error> {
-    let user = get_user_by_id(db_client, &user_id).await?;
+    let user = get_user_by_id(db_client, user_id).await?;
     let maybe_from_profile = match get_remote_profile_by_actor_id(
         db_client,
         &from_actor_id,
@@ -165,7 +165,7 @@ pub async fn import_followers_task(
                         ) = maybe_follow_request_deleted
                             .expect("follow request must exist");
                         let follower =
-                            get_user_by_id(db_client, &follower.id).await?;
+                            get_user_by_id(db_client, follower.id).await?;
                         prepare_undo_follow(
                             &instance,
                             &follower,

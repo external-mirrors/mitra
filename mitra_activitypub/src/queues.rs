@@ -128,7 +128,7 @@ pub async fn process_queued_incoming_activities(
                     "failed to process activity (timeout): {}",
                     job_data.activity,
                 );
-                delete_job_from_queue(db_client, &job.id).await?;
+                delete_job_from_queue(db_client, job.id).await?;
                 continue;
             },
         };
@@ -158,7 +158,7 @@ pub async fn process_queued_incoming_activities(
                 log::info!("activity re-queued");
             };
         };
-        delete_job_from_queue(db_client, &job.id).await?;
+        delete_job_from_queue(db_client, job.id).await?;
     };
     Ok(())
 }
@@ -375,7 +375,7 @@ pub async fn process_queued_outgoing_activities(
             sender.clone()
         } else {
             log::error!("signing keys can not be found");
-            delete_job_from_queue(db_client, &job.id).await?;
+            delete_job_from_queue(db_client, job.id).await?;
             return Ok(());
         };
         let mut recipients = job_data.recipients;
@@ -395,7 +395,7 @@ pub async fn process_queued_outgoing_activities(
             Err(error) => {
                 // Unexpected error
                 log::error!("{}", error);
-                delete_job_from_queue(db_client, &job.id).await?;
+                delete_job_from_queue(db_client, job.id).await?;
                 return Ok(());
             },
         };
@@ -459,7 +459,7 @@ pub async fn process_queued_outgoing_activities(
                 ).await?;
             };
         };
-        delete_job_from_queue(db_client, &job.id).await?;
+        delete_job_from_queue(db_client, job.id).await?;
     };
     Ok(())
 }
@@ -535,7 +535,7 @@ pub async fn fetcher_queue_executor(
             };
             log::log!(level, "background fetcher: {}", error);
         });
-        delete_job_from_queue(db_client, &job.id).await?;
+        delete_job_from_queue(db_client, job.id).await?;
     };
     Ok(())
 }

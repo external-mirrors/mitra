@@ -203,7 +203,7 @@ async fn create_status(
     if let Some(ref in_reply_to) = maybe_in_reply_to {
         validate_local_reply(in_reply_to, &post_data.mentions, &post_data.visibility)?;
     };
-    let mut post = create_post(db_client, &current_user.id, post_data).await?;
+    let mut post = create_post(db_client, current_user.id, post_data).await?;
     // Same as add_related_posts
     post.in_reply_to = maybe_in_reply_to.map(|mut in_reply_to| {
         in_reply_to.reply_count += 1;
@@ -291,7 +291,7 @@ async fn get_status_source(
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &**get_database_client(&db_pool).await?;
     let current_user = get_current_user(db_client, auth.token()).await?;
-    let post = get_post_by_id(db_client, &status_id).await?;
+    let post = get_post_by_id(db_client, *status_id).await?;
     if post.author.id != current_user.id {
         return Err(MastodonError::PermissionError);
     };
@@ -310,11 +310,11 @@ async fn edit_status(
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &mut **get_database_client(&db_pool).await?;
     let current_user = get_current_user(db_client, auth.token()).await?;
-    let post = get_post_by_id(db_client, &status_id).await?;
+    let post = get_post_by_id(db_client, *status_id).await?;
     if post.author.id != current_user.id {
         return Err(MastodonError::PermissionError);
     };
-    let maybe_in_reply_to = if let Some(ref in_reply_to_id) = post.in_reply_to_id {
+    let maybe_in_reply_to = if let Some(in_reply_to_id) = post.in_reply_to_id {
         let in_reply_to = get_post_by_id(db_client, in_reply_to_id).await?;
         Some(in_reply_to)
     } else {
@@ -365,7 +365,7 @@ async fn edit_status(
         validate_local_reply(in_reply_to, &post_data.mentions, &post.visibility)?;
     };
     let (mut post, deletion_queue) =
-        update_post(db_client, &post.id, post_data).await?;
+        update_post(db_client, post.id, post_data).await?;
     deletion_queue.into_job(db_client).await?;
     // Same as add_related_posts
     post.in_reply_to = maybe_in_reply_to.map(Box::new);
@@ -398,7 +398,7 @@ async fn delete_status(
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &mut **get_database_client(&db_pool).await?;
     let current_user = get_current_user(db_client, auth.token()).await?;
-    let post = get_post_by_id(db_client, &status_id).await?;
+    let post = get_post_by_id(db_client, *status_id).await?;
     if post.author.id != current_user.id {
         return Err(MastodonError::PermissionError);
     };
@@ -430,8 +430,8 @@ async fn get_context(
     };
     let posts = get_thread(
         db_client,
-        &status_id,
-        maybe_current_user.as_ref().map(|user| &user.id),
+        *status_id,
+        maybe_current_user.as_ref().map(|user| user.id),
     ).await?;
     let statuses = build_status_list(
         db_client,
@@ -473,8 +473,8 @@ async fn get_thread_view(
     };
     let posts = get_thread(
         db_client,
-        &status_id,
-        maybe_current_user.as_ref().map(|user| &user.id),
+        *status_id,
+        maybe_current_user.as_ref().map(|user| user.id),
     ).await?;
     let statuses = build_status_list(
         db_client,
@@ -609,12 +609,12 @@ async fn reblog(
     if !can_create_post(&current_user) {
         return Err(MastodonError::PermissionError);
     };
-    let mut post = get_post_by_id(db_client, &status_id).await?;
+    let mut post = get_post_by_id(db_client, *status_id).await?;
     if !post.is_public() {
         return Err(MastodonError::NotFoundError("post"));
     };
     let repost_data = PostCreateData::repost(status_id.into_inner(), None);
-    let mut repost = create_post(db_client, &current_user.id, repost_data).await?;
+    let mut repost = create_post(db_client, current_user.id, repost_data).await?;
     post.repost_count += 1;
     repost.repost_of = Some(Box::new(post));
 
@@ -648,11 +648,11 @@ async fn unreblog(
     let current_user = get_current_user(db_client, auth.token()).await?;
     let (repost_id, repost_has_deprecated_ap_id) = get_repost_by_author(
         db_client,
-        &status_id,
-        &current_user.id,
+        *status_id,
+        current_user.id,
     ).await?;
     delete_repost(db_client, repost_id).await?;
-    let post = get_post_by_id(db_client, &status_id).await?;
+    let post = get_post_by_id(db_client, *status_id).await?;
 
     // Federate
     prepare_undo_announce(
@@ -745,11 +745,11 @@ async fn pin(
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &**get_database_client(&db_pool).await?;
     let current_user = get_current_user(db_client, auth.token()).await?;
-    let mut post = get_post_by_id(db_client, &status_id).await?;
+    let mut post = get_post_by_id(db_client, *status_id).await?;
     if post.author.id != current_user.id || !post.is_public() {
         return Err(MastodonError::OperationError("can't pin post"));
     };
-    set_pinned_flag(db_client, &post.id, true).await?;
+    set_pinned_flag(db_client, post.id, true).await?;
     post.is_pinned = true;
 
     prepare_add_note(
@@ -780,11 +780,11 @@ async fn unpin(
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &**get_database_client(&db_pool).await?;
     let current_user = get_current_user(db_client, auth.token()).await?;
-    let mut post = get_post_by_id(db_client, &status_id).await?;
+    let mut post = get_post_by_id(db_client, *status_id).await?;
     if post.author.id != current_user.id || !post.is_public() {
         return Err(MastodonError::OperationError("can't unpin post"));
     };
-    set_pinned_flag(db_client, &post.id, false).await?;
+    set_pinned_flag(db_client, post.id, false).await?;
     post.is_pinned = false;
 
     prepare_remove_note(
@@ -814,7 +814,7 @@ async fn make_permanent(
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &mut **get_database_client(&db_pool).await?;
     let current_user = get_current_user(db_client, auth.token()).await?;
-    let mut post = get_post_by_id(db_client, &status_id).await?;
+    let mut post = get_post_by_id(db_client, *status_id).await?;
     if post.ipfs_cid.is_some() {
         return Err(MastodonError::OperationError("post already saved to IPFS"));
     };
@@ -853,7 +853,7 @@ async fn make_permanent(
     let post_metadata_cid = ipfs_store::add(ipfs_api_url, post_metadata_json).await
         .map_err(|_| MastodonError::InternalError)?;
 
-    set_post_ipfs_cid(db_client, &post.id, &post_metadata_cid, attachments).await?;
+    set_post_ipfs_cid(db_client, post.id, &post_metadata_cid, attachments).await?;
     post.ipfs_cid = Some(post_metadata_cid);
 
     let status = build_status(

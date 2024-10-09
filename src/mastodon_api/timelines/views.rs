@@ -48,7 +48,7 @@ async fn home_timeline(
     let current_user = get_current_user(db_client, auth.token()).await?;
     let posts = get_home_timeline(
         db_client,
-        &current_user.id,
+        current_user.id,
         query_params.max_id,
         query_params.limit.inner(),
     ).await?;
@@ -100,7 +100,7 @@ async fn public_timeline(
     };
     let posts = get_public_timeline(
         db_client,
-        maybe_current_user.as_ref().map(|user| &user.id),
+        maybe_current_user.as_ref().map(|user| user.id),
         query_params.local,
         query_params.max_id,
         query_params.limit.inner(),
@@ -132,7 +132,7 @@ async fn direct_timeline(
     let current_user = get_current_user(db_client, auth.token()).await?;
     let posts = get_direct_timeline(
         db_client,
-        &current_user.id,
+        current_user.id,
         query_params.max_id,
         query_params.limit.inner(),
     ).await?;
@@ -168,7 +168,7 @@ async fn hashtag_timeline(
     let posts = get_posts_by_tag(
         db_client,
         &hashtag,
-        maybe_current_user.as_ref().map(|user| &user.id),
+        maybe_current_user.as_ref().map(|user| user.id),
         query_params.max_id,
         query_params.limit.inner(),
     ).await?;

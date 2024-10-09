@@ -160,7 +160,7 @@ pub fn can_link_post(post: &Post) -> bool {
 
 pub async fn get_local_post_by_id(
     db_client: &impl DatabaseClient,
-    post_id: &Uuid,
+    post_id: Uuid,
 ) -> Result<Post, DatabaseError> {
     let post = get_post_by_id(db_client, post_id).await?;
     if !post.is_local() {
@@ -174,7 +174,7 @@ pub async fn get_post_by_id_for_view(
     maybe_user: Option<&User>,
     post_id: Uuid,
 ) -> Result<Post, DatabaseError> {
-    let post = get_post_by_id(db_client, &post_id).await?;
+    let post = get_post_by_id(db_client, post_id).await?;
     if !can_view_post(db_client, maybe_user, &post).await? {
         return Err(DatabaseError::NotFound("post"));
     };
@@ -207,13 +207,13 @@ mod tests {
             content: "post".to_string(),
             ..Default::default()
         };
-        let post = create_post(db_client, &author.id, post_data).await.unwrap();
+        let post = create_post(db_client, author.id, post_data).await.unwrap();
         let reply_data = PostCreateData {
             content: "reply".to_string(),
             in_reply_to_id: Some(post.id.clone()),
             ..Default::default()
         };
-        let mut reply = create_post(db_client, &author.id, reply_data).await.unwrap();
+        let mut reply = create_post(db_client, author.id, reply_data).await.unwrap();
         add_related_posts(db_client, vec![&mut reply]).await.unwrap();
         assert_eq!(reply.in_reply_to.unwrap().id, post.id);
         assert_eq!(reply.linked.is_empty(), true);
@@ -229,15 +229,15 @@ mod tests {
             content: "post".to_string(),
             ..Default::default()
         };
-        let post = create_post(db_client, &author.id, post_data).await.unwrap();
+        let post = create_post(db_client, author.id, post_data).await.unwrap();
         let reply_data = PostCreateData {
             content: "reply".to_string(),
             in_reply_to_id: Some(post.id.clone()),
             ..Default::default()
         };
-        let reply = create_post(db_client, &author.id, reply_data).await.unwrap();
+        let reply = create_post(db_client, author.id, reply_data).await.unwrap();
         let repost_data = PostCreateData::repost(reply.id, None);
-        let mut repost = create_post(db_client, &author.id, repost_data).await.unwrap();
+        let mut repost = create_post(db_client, author.id, repost_data).await.unwrap();
         add_related_posts(db_client, vec![&mut repost]).await.unwrap();
         assert_eq!(repost.in_reply_to.is_none(), true);
         assert_eq!(repost.linked.is_empty(), true);
@@ -407,7 +407,7 @@ mod tests {
             visibility: Visibility::Followers,
             ..Default::default()
         };
-        let post = create_post(db_client, &author.id, post_data).await.unwrap();
+        let post = create_post(db_client, author.id, post_data).await.unwrap();
         // View as guest
         let error = get_post_by_id_for_view(
             db_client,

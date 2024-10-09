@@ -27,7 +27,7 @@ async fn get_marker_view(
     let db_client = &**get_database_client(&db_pool).await?;
     let current_user = get_current_user(db_client, auth.token()).await?;
     let timeline = query_params.to_timeline()?;
-    let maybe_db_marker = get_marker_opt(db_client, &current_user.id, timeline).await?;
+    let maybe_db_marker = get_marker_opt(db_client, current_user.id, timeline).await?;
     let markers = Markers {
         notifications: maybe_db_marker.map(|db_marker| db_marker.into()),
     };
@@ -44,7 +44,7 @@ async fn update_marker_view(
     let current_user = get_current_user(db_client, auth.token()).await?;
     let db_marker = create_or_update_marker(
         db_client,
-        &current_user.id,
+        current_user.id,
         Timeline::Notifications,
         marker_data.into_inner().notifications,
     ).await?;

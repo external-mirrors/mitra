@@ -14,7 +14,7 @@ use super::types::{DbInvoice, InvoiceStatus};
 
 pub async fn local_invoice_forwarded(
     db_client: &mut impl DatabaseClient,
-    invoice_id: &Uuid,
+    invoice_id: Uuid,
     payout_tx_id: &str,
 ) -> Result<DbInvoice, DatabaseError> {
     let mut transaction = db_client.transaction().await?;
@@ -34,7 +34,7 @@ pub async fn local_invoice_forwarded(
 
 pub async fn local_invoice_reopened(
     db_client: &mut impl DatabaseClient,
-    invoice_id: &Uuid,
+    invoice_id: Uuid,
 ) -> Result<DbInvoice, DatabaseError> {
     let mut transaction = db_client.transaction().await?;
     set_invoice_payout_tx_id(
@@ -53,7 +53,7 @@ pub async fn local_invoice_reopened(
 
 pub async fn remote_invoice_opened(
     db_client: &mut impl DatabaseClient,
-    invoice_id: &Uuid,
+    invoice_id: Uuid,
     payment_address: &str,
     object_id: &str,
 ) -> Result<DbInvoice, DatabaseError> {
@@ -106,22 +106,22 @@ mod tests {
         let recipient = create_user(db_client, recipient_data).await.unwrap();
         let invoice = create_local_invoice(
             db_client,
-            &sender.id,
-            &recipient.id,
+            sender.id,
+            recipient.id,
             &ChainId::monero_mainnet(),
             "8MxABajuo71BZya9",
             100000000000000_u64,
         ).await.unwrap();
         set_invoice_status(
             db_client,
-            &invoice.id,
+            invoice.id,
             InvoiceStatus::Paid,
         ).await.unwrap();
 
         let payout_tx_id = "12abcd";
         let invoice = local_invoice_forwarded(
             db_client,
-            &invoice.id,
+            invoice.id,
             payout_tx_id,
         ).await.unwrap();
         assert_eq!(invoice.invoice_status, InvoiceStatus::Forwarded);
@@ -129,13 +129,13 @@ mod tests {
 
         set_invoice_status(
             db_client,
-            &invoice.id,
+            invoice.id,
             InvoiceStatus::Completed,
         ).await.unwrap();
 
         let invoice = local_invoice_reopened(
             db_client,
-            &invoice.id,
+            invoice.id,
         ).await.unwrap();
         assert_eq!(invoice.invoice_status, InvoiceStatus::Paid);
         assert_eq!(invoice.payout_tx_id, None);
@@ -158,8 +158,8 @@ mod tests {
         let recipient = create_profile(db_client, recipient_data).await.unwrap();
         let invoice = create_remote_invoice(
             db_client,
-            &sender.id,
-            &recipient.id,
+            sender.id,
+            recipient.id,
             &ChainId::monero_mainnet(),
             100000000000000_u64,
         ).await.unwrap();
@@ -169,7 +169,7 @@ mod tests {
         let object_id = "https://remote.example/objects/1";
         let invoice = remote_invoice_opened(
             db_client,
-            &invoice.id,
+            invoice.id,
             payment_address,
             object_id,
         ).await.unwrap();

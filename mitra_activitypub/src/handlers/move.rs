@@ -84,7 +84,7 @@ pub async fn handle_move(
             // Pull mode: ignore remote followers if old actor is local
             continue;
         };
-        let follower = get_user_by_id(db_client, &follower.id).await?;
+        let follower = get_user_by_id(db_client, follower.id).await?;
         // Unfollow old profile
         let maybe_follow_request_deleted = unfollow(
             db_client,

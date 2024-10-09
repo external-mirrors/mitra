@@ -10,7 +10,7 @@ use super::types::DbMediaAttachment;
 
 pub async fn create_attachment(
     db_client: &impl DatabaseClient,
-    owner_id: &Uuid,
+    owner_id: Uuid,
     file_name: String,
     file_size: usize,
     media_type: String,
@@ -47,8 +47,8 @@ pub async fn create_attachment(
 
 pub async fn get_attachment(
     db_client: &impl DatabaseClient,
-    owner_id: &Uuid,
-    attachment_id: &Uuid,
+    owner_id: Uuid,
+    attachment_id: Uuid,
 ) -> Result<DbMediaAttachment, DatabaseError> {
     let maybe_row = db_client.query_opt(
         "
@@ -65,8 +65,8 @@ pub async fn get_attachment(
 
 pub async fn update_attachment(
     db_client: &impl DatabaseClient,
-    owner_id: &Uuid,
-    attachment_id: &Uuid,
+    owner_id: Uuid,
+    attachment_id: Uuid,
     description: Option<&str>,
 ) -> Result<DbMediaAttachment, DatabaseError> {
     let maybe_row = db_client.query_opt(
@@ -85,7 +85,7 @@ pub async fn update_attachment(
 
 pub async fn set_attachment_ipfs_cid(
     db_client: &impl DatabaseClient,
-    attachment_id: &Uuid,
+    attachment_id: Uuid,
     ipfs_cid: &str,
 ) -> Result<DbMediaAttachment, DatabaseError> {
     let maybe_row = db_client.query_opt(
@@ -151,7 +151,7 @@ mod tests {
         let description = "test";
         let attachment = create_attachment(
             db_client,
-            &profile.id,
+            profile.id,
             file_name.to_string(),
             file_size,
             media_type.to_string(),
@@ -187,7 +187,7 @@ mod tests {
         let media_type = "image/png";
         let DbMediaAttachment { id: attachment_id, .. } = create_attachment(
             db_client,
-            &profile_1.id,
+            profile_1.id,
             file_name.to_string(),
             file_size,
             media_type.to_string(),
@@ -196,15 +196,15 @@ mod tests {
 
         let attachment = get_attachment(
             db_client,
-            &profile_1.id,
-            &attachment_id,
+            profile_1.id,
+            attachment_id,
         ).await.unwrap();
         assert_eq!(attachment.file_name, file_name);
 
         let error = get_attachment(
             db_client,
-            &profile_2.id,
-            &attachment_id,
+            profile_2.id,
+            attachment_id,
         ).await.err().unwrap();
         assert!(matches!(error, DatabaseError::NotFound(_)));
     }
@@ -224,7 +224,7 @@ mod tests {
         let description = "test image";
         let attachment = create_attachment(
             db_client,
-            &profile.id,
+            profile.id,
             file_name.to_string(),
             file_size,
             media_type.to_string(),
@@ -234,8 +234,8 @@ mod tests {
 
         let attachment_updated = update_attachment(
             db_client,
-            &profile.id,
-            &attachment.id,
+            profile.id,
+            attachment.id,
             None,
         ).await.unwrap();
         assert_eq!(attachment_updated.file_name, attachment.file_name);

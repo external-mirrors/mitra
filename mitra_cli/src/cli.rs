@@ -323,9 +323,9 @@ impl SetPassword {
             &self.id_or_name,
         ).await?;
         let password_hash = hash_password(&self.password)?;
-        set_user_password(db_client, &profile.id, &password_hash).await?;
+        set_user_password(db_client, profile.id, &password_hash).await?;
         // Revoke all sessions
-        delete_oauth_tokens(db_client, &profile.id).await?;
+        delete_oauth_tokens(db_client, profile.id).await?;
         println!("password updated");
         Ok(())
     }
@@ -349,7 +349,7 @@ impl SetRole {
             &self.id_or_name,
         ).await?;
         let role = role_from_str(&self.role)?;
-        set_user_role(db_client, &profile.id, role).await?;
+        set_user_role(db_client, profile.id, role).await?;
         println!("role changed");
         Ok(())
     }
@@ -509,12 +509,12 @@ impl DeleteProfile {
         ).await?;
         let mut maybe_delete_person = None;
         if profile.is_local() {
-            let user = get_user_by_id(db_client, &profile.id).await?;
+            let user = get_user_by_id(db_client, profile.id).await?;
             let activity =
                 prepare_delete_person(db_client, &config.instance(), &user).await?;
             maybe_delete_person = Some(activity);
         };
-        let deletion_queue = delete_profile(db_client, &profile.id).await?;
+        let deletion_queue = delete_profile(db_client, profile.id).await?;
         delete_orphaned_media(config, db_client, deletion_queue).await?;
         // Send Delete(Person) activities
         if let Some(activity) = maybe_delete_person {
@@ -537,10 +537,10 @@ impl DeletePost {
         config: &Config,
         db_client: &mut impl DatabaseClient,
     ) -> Result<(), Error> {
-        let post = get_post_by_id(db_client, &self.id).await?;
+        let post = get_post_by_id(db_client, self.id).await?;
         let mut maybe_delete_note = None;
         if post.author.is_local() {
-            let author = get_user_by_id(db_client, &post.author.id).await?;
+            let author = get_user_by_id(db_client, post.author.id).await?;
             let activity = prepare_delete_note(
                 db_client,
                 &config.instance(),
@@ -675,7 +675,7 @@ impl DeleteEmoji {
             &self.emoji_name,
             self.hostname.as_deref(),
         ).await?;
-        let deletion_queue = delete_emoji(db_client, &emoji.id).await?;
+        let deletion_queue = delete_emoji(db_client, emoji.id).await?;
         delete_orphaned_media(config, db_client, deletion_queue).await?;
         println!("emoji deleted");
         Ok(())
@@ -743,8 +743,8 @@ impl DeleteEmptyProfiles {
         let updated_before = days_before_now(self.days);
         let profiles = find_empty_profiles(db_client, updated_before).await?;
         for profile_id in profiles {
-            let profile = get_profile_by_id(db_client, &profile_id).await?;
-            let deletion_queue = delete_profile(db_client, &profile.id).await?;
+            let profile = get_profile_by_id(db_client, profile_id).await?;
+            let deletion_queue = delete_profile(db_client, profile.id).await?;
             delete_orphaned_media(config, db_client, deletion_queue).await?;
             println!("profile deleted: {}", profile.expect_remote_actor_id());
         };
@@ -764,7 +764,7 @@ impl PruneRemoteEmojis {
     ) -> Result<(), Error> {
         let emojis = find_unused_remote_emojis(db_client).await?;
         for emoji_id in emojis {
-            let deletion_queue = delete_emoji(db_client, &emoji_id).await?;
+            let deletion_queue = delete_emoji(db_client, emoji_id).await?;
             delete_orphaned_media(config, db_client, deletion_queue).await?;
             println!("emoji {} deleted", emoji_id);
         };
@@ -937,7 +937,7 @@ impl ReopenInvoice {
         let monero_config = config.monero_config()
             .ok_or(anyhow!("monero configuration not found"))?;
         let invoice = if let Ok(invoice_id) = Uuid::from_str(&self.id_or_address) {
-            get_invoice_by_id(db_client, &invoice_id).await?
+            get_invoice_by_id(db_client, invoice_id).await?
         } else {
             get_local_invoice_by_address(
                 db_client,
@@ -994,8 +994,8 @@ impl GetPaymentAddress {
         let payment_address = get_payment_address(
             monero_config,
             db_client,
-            &self.sender_id,
-            &self.recipient_id,
+            self.sender_id,
+            self.recipient_id,
         ).await?;
         print!("payment address: {}", payment_address);
         Ok(())

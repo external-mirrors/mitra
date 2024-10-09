@@ -88,7 +88,7 @@ async fn create_subscription_view(
         .ok_or(ValidationError("subscriptions are not enabled"))?;
     let subscriber = get_profile_by_id(
         db_client,
-        &subscriber_data.subscriber_id,
+        subscriber_data.subscriber_id,
     ).await?;
     let is_follower = has_relationship(
         db_client,
@@ -171,7 +171,7 @@ async fn register_subscription_option(
         // Media cleanup is not needed
         let (updated_profile, _) = update_profile(
             db_client,
-            &current_user.id,
+            current_user.id,
             profile_data,
         ).await?;
         current_user.profile = updated_profile;
@@ -200,8 +200,8 @@ async fn find_subscription(
     let db_client = &**get_database_client(&db_pool).await?;
     let subscription = get_subscription_by_participants(
         db_client,
-        &query_params.sender_id,
-        &query_params.recipient_id,
+        query_params.sender_id,
+        query_params.recipient_id,
     ).await?;
     let details = SubscriptionDetails::from(subscription);
     Ok(HttpResponse::Ok().json(details))
@@ -218,8 +218,8 @@ async fn create_invoice_view(
     };
     validate_amount(invoice_data.amount)?;
     let db_client = &**get_database_client(&db_pool).await?;
-    let sender = get_profile_by_id(db_client, &invoice_data.sender_id).await?;
-    let recipient = get_profile_by_id(db_client, &invoice_data.recipient_id).await?;
+    let sender = get_profile_by_id(db_client, invoice_data.sender_id).await?;
+    let recipient = get_profile_by_id(db_client, invoice_data.recipient_id).await?;
 
     let db_invoice = if recipient.is_local() {
         // Local recipient
@@ -237,15 +237,15 @@ async fn create_invoice_view(
             .to_string();
         create_local_invoice(
             db_client,
-            &sender.id,
-            &recipient.id,
+            sender.id,
+            recipient.id,
             &invoice_data.chain_id,
             &payment_address,
             invoice_data.amount,
         ).await?
     } else {
         // Remote recipient; the sender must be local
-        let sender = get_user_by_id(db_client, &sender.id).await?;
+        let sender = get_user_by_id(db_client, sender.id).await?;
         let recipient_actor = recipient.actor_json.as_ref()
             .expect("actor data should be present");
         let subscription_option: RemoteMoneroSubscription = recipient
@@ -257,8 +257,8 @@ async fn create_invoice_view(
         };
         let db_invoice = create_remote_invoice(
             db_client,
-            &sender.id,
-            &recipient.id,
+            sender.id,
+            recipient.id,
             &invoice_data.chain_id,
             invoice_data.amount,
         ).await?;
@@ -282,7 +282,7 @@ async fn get_invoice_view(
     invoice_id: web::Path<Uuid>,
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &**get_database_client(&db_pool).await?;
-    let db_invoice = get_invoice_by_id(db_client, &invoice_id).await?;
+    let db_invoice = get_invoice_by_id(db_client, *invoice_id).await?;
     let invoice = Invoice::from(db_invoice);
     Ok(HttpResponse::Ok().json(invoice))
 }
@@ -295,7 +295,7 @@ async fn cancel_invoice_view(
     let db_client = &mut **get_database_client(&db_pool).await?;
     let db_invoice = set_invoice_status(
         db_client,
-        &invoice_id,
+        *invoice_id,
         InvoiceStatus::Cancelled,
     ).await?;
     let invoice = Invoice::from(db_invoice);

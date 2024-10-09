@@ -79,7 +79,7 @@ pub async fn get_job_batch(
 
 pub async fn delete_job_from_queue(
     db_client: &impl DatabaseClient,
-    job_id: &Uuid,
+    job_id: Uuid,
 ) -> Result<(), DatabaseError> {
     let deleted_count = db_client.execute(
         "
@@ -140,7 +140,7 @@ mod tests {
         let batch_2 = get_job_batch(db_client, &job_type, 10, 3600).await.unwrap();
         assert_eq!(batch_2.len(), 0);
 
-        delete_job_from_queue(db_client, &job.id).await.unwrap();
+        delete_job_from_queue(db_client, job.id).await.unwrap();
         let batch_3 = get_job_batch(db_client, &job_type, 10, 3600).await.unwrap();
         assert_eq!(batch_3.len(), 0);
     }

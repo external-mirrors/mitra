@@ -170,7 +170,7 @@ pub async fn handle_add(
                         };
                         set_invoice_status(
                             db_client,
-                            &invoice.id,
+                            invoice.id,
                             InvoiceStatus::Completed,
                         ).await?;
                     },
@@ -186,8 +186,8 @@ pub async fn handle_add(
 
         match get_subscription_by_participants(
             db_client,
-            &sender.id,
-            &recipient.id,
+            sender.id,
+            recipient.id,
         ).await {
             Ok(subscription) => {
                 update_subscription(
@@ -230,7 +230,7 @@ pub async fn handle_add(
             Err(DatabaseError::NotFound(_)) => return Ok(None),
             Err(other_error) => return Err(other_error.into()),
         };
-        set_pinned_flag(db_client, &post.id, true).await?;
+        set_pinned_flag(db_client, post.id, true).await?;
         return Ok(Some(Descriptor::target("featured")));
     };
     log::warn!("unknown target: {}", activity.target);

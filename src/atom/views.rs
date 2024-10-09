@@ -22,7 +22,7 @@ async fn user_feed_view(
     // Posts are ordered by creation date
     let posts = get_posts_by_author(
         db_client,
-        &user.id,
+        user.id,
         None, // include only public posts
         false, // exclude replies
         false, // exclude reposts

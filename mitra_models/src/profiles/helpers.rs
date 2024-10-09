@@ -18,7 +18,7 @@ pub async fn get_profile_by_id_or_acct(
 ) -> Result<DbActorProfile, DatabaseError> {
     // Only remote profiles can have usernames that are valid UUIDs
     if let Ok(profile_id) = Uuid::from_str(profile_id_or_acct) {
-        let profile = get_profile_by_id(db_client, &profile_id).await?;
+        let profile = get_profile_by_id(db_client, profile_id).await?;
         Ok(profile)
     } else {
         let profile = get_profile_by_acct(db_client, profile_id_or_acct).await?;

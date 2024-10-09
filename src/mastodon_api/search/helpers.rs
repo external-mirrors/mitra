@@ -203,7 +203,7 @@ async fn find_post_by_url(
     let maybe_post = match parse_local_object_id(&instance.url(), url) {
         Ok(post_id) => {
             // Local URL
-            match get_local_post_by_id(db_client, &post_id).await {
+            match get_local_post_by_id(db_client, post_id).await {
                 Ok(post) => Some(post),
                 Err(DatabaseError::NotFound(_)) => None,
                 Err(other_error) => return Err(other_error),

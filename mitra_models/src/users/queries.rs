@@ -203,7 +203,7 @@ pub async fn create_user(
 
 pub async fn set_user_password(
     db_client: &impl DatabaseClient,
-    user_id: &Uuid,
+    user_id: Uuid,
     password_hash: &str,
 ) -> Result<(), DatabaseError> {
     let updated_count = db_client.execute(
@@ -239,7 +239,7 @@ pub(super) async fn set_user_ed25519_secret_key(
 
 pub async fn set_user_role(
     db_client: &impl DatabaseClient,
-    user_id: &Uuid,
+    user_id: Uuid,
     role: Role,
 ) -> Result<(), DatabaseError> {
     let updated_count = db_client.execute(
@@ -257,7 +257,7 @@ pub async fn set_user_role(
 
 pub async fn update_client_config(
     db_client: &impl DatabaseClient,
-    user_id: &Uuid,
+    user_id: Uuid,
     client_name: &str,
     client_config_value: &JsonValue,
 ) -> Result<ClientConfig, DatabaseError> {
@@ -277,7 +277,7 @@ pub async fn update_client_config(
 
 pub async fn get_user_by_id(
     db_client: &impl DatabaseClient,
-    user_id: &Uuid,
+    user_id: Uuid,
 ) -> Result<User, DatabaseError> {
     let maybe_row = db_client.query_opt(
         "
@@ -691,7 +691,7 @@ mod tests {
             user.id,
             secret_key,
         ).await.unwrap();
-        let user = get_user_by_id(db_client, &user.id).await.unwrap();
+        let user = get_user_by_id(db_client, user.id).await.unwrap();
         assert_eq!(user.ed25519_secret_key, secret_key);
     }
 
@@ -706,8 +706,8 @@ mod tests {
         };
         let user = create_user(db_client, user_data).await.unwrap();
         assert_eq!(user.role, Role::NormalUser);
-        set_user_role(db_client, &user.id, Role::ReadOnlyUser).await.unwrap();
-        let user = get_user_by_id(db_client, &user.id).await.unwrap();
+        set_user_role(db_client, user.id, Role::ReadOnlyUser).await.unwrap();
+        let user = get_user_by_id(db_client, user.id).await.unwrap();
         assert_eq!(user.role, Role::ReadOnlyUser);
     }
 
@@ -726,7 +726,7 @@ mod tests {
         let client_config_value = json!({"a": 1});
         let client_config = update_client_config(
             db_client,
-            &user.id,
+            user.id,
             client_name,
             &client_config_value,
         ).await.unwrap();

@@ -5,7 +5,7 @@ use super::types::{DbTimelineMarker, Timeline};
 
 pub async fn create_or_update_marker(
     db_client: &impl DatabaseClient,
-    user_id: &Uuid,
+    user_id: Uuid,
     timeline: Timeline,
     last_read_id: String,
 ) -> Result<DbTimelineMarker, DatabaseError> {
@@ -25,7 +25,7 @@ pub async fn create_or_update_marker(
 
 pub async fn get_marker_opt(
     db_client: &impl DatabaseClient,
-    user_id: &Uuid,
+    user_id: Uuid,
     timeline: Timeline,
 ) -> Result<Option<DbTimelineMarker>, DatabaseError> {
     let maybe_row = db_client.query_opt(

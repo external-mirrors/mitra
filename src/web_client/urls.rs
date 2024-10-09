@@ -6,7 +6,7 @@ pub fn get_profile_page_url(instance_url: &str, username: &str) -> String {
     format!("{}/@{}", instance_url, username)
 }
 
-pub fn get_post_page_url(instance_url: &str, post_id: &Uuid) -> String {
+pub fn get_post_page_url(instance_url: &str, post_id: Uuid) -> String {
     format!("{}/post/{}", instance_url, post_id)
 }
 

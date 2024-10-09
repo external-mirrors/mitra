@@ -372,7 +372,7 @@ pub async fn get_object_attachments(
     for (file_name, file_size, media_type, description) in downloaded {
         let db_attachment = create_attachment(
             db_client,
-            &author.id,
+            author.id,
             file_name,
             file_size,
             media_type,
@@ -816,7 +816,7 @@ pub async fn handle_note(
     };
     validate_post_create_data(&post_data)?;
     validate_post_mentions(&post_data.mentions, &post_data.visibility)?;
-    let post = create_post(db_client, &author.id, post_data).await?;
+    let post = create_post(db_client, author.id, post_data).await?;
     save_attributed_object(
         db_client,
         &canonical_object_id.to_string(),

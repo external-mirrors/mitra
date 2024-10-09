@@ -62,7 +62,7 @@ async fn create_attachment_view(
     };
     let db_attachment = create_attachment(
         db_client,
-        &current_user.id,
+        current_user.id,
         file_name,
         file_size,
         media_type,
@@ -85,8 +85,8 @@ async fn get_attachment_view(
     let current_user = get_current_user(db_client, auth.token()).await?;
     let db_attachment = get_attachment(
         db_client,
-        &current_user.id,
-        &attachment_id,
+        current_user.id,
+        *attachment_id,
     ).await?;
     let attachment = Attachment::from_db(
         &config.instance_url(),
@@ -109,8 +109,8 @@ async fn update_attachment_view(
     };
     let db_attachment = update_attachment(
         db_client,
-        &current_user.id,
-        &attachment_id,
+        current_user.id,
+        *attachment_id,
         attachment_data.description.as_deref(),
     ).await?;
     let attachment = Attachment::from_db(

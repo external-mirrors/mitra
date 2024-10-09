@@ -74,7 +74,7 @@ pub async fn update_emoji(
         ],
     ).await?;
     let emoji: DbEmoji = row.try_get("emoji")?;
-    update_emoji_caches(db_client, &emoji.id).await?;
+    update_emoji_caches(db_client, emoji.id).await?;
     Ok(emoji)
 }
 
@@ -102,7 +102,7 @@ pub async fn create_or_update_local_emoji(
         &[&emoji_id, &emoji_name, &image],
     ).await?;
     let emoji: DbEmoji = row.try_get("emoji")?;
-    update_emoji_caches(db_client, &emoji.id).await?;
+    update_emoji_caches(db_client, emoji.id).await?;
     Ok(emoji)
 }
 
@@ -194,7 +194,7 @@ pub async fn get_remote_emoji_by_object_id(
 
 pub async fn delete_emoji(
     db_client: &impl DatabaseClient,
-    emoji_id: &Uuid,
+    emoji_id: Uuid,
 ) -> Result<DeletionQueue, DatabaseError> {
     let maybe_row = db_client.query_opt(
         "
@@ -205,7 +205,7 @@ pub async fn delete_emoji(
     ).await?;
     let row = maybe_row.ok_or(DatabaseError::NotFound("emoji"))?;
     let emoji: DbEmoji = row.try_get("emoji")?;
-    update_emoji_caches(db_client, &emoji.id).await?;
+    update_emoji_caches(db_client, emoji.id).await?;
     Ok(DeletionQueue {
         files: vec![emoji.image.file_name],
         ipfs_objects: vec![],
@@ -336,7 +336,7 @@ mod tests {
             None,
             Utc::now(),
         ).await.unwrap();
-        let deletion_queue = delete_emoji(db_client, &emoji.id).await.unwrap();
+        let deletion_queue = delete_emoji(db_client, emoji.id).await.unwrap();
         assert_eq!(deletion_queue.files.len(), 1);
         assert_eq!(deletion_queue.ipfs_objects.len(), 0);
     }

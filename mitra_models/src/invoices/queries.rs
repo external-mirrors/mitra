@@ -15,8 +15,8 @@ use super::types::{DbChainId, DbInvoice, InvoiceStatus};
 /// Create invoice with local recipient
 pub async fn create_local_invoice(
     db_client: &impl DatabaseClient,
-    sender_id: &Uuid,
-    recipient_id: &Uuid,
+    sender_id: Uuid,
+    recipient_id: Uuid,
     chain_id: &ChainId,
     payment_address: &str,
     amount: impl TryInto<i64>,
@@ -56,8 +56,8 @@ pub async fn create_local_invoice(
 
 pub async fn create_remote_invoice(
     db_client: &impl DatabaseClient,
-    sender_id: &Uuid,
-    recipient_id: &Uuid,
+    sender_id: Uuid,
+    recipient_id: Uuid,
     chain_id: &ChainId,
     amount: impl TryInto<i64>,
 ) -> Result<DbInvoice, DatabaseError> {
@@ -101,7 +101,7 @@ pub async fn create_remote_invoice(
 
 pub async fn get_invoice_by_id(
     db_client: &impl DatabaseClient,
-    invoice_id: &Uuid,
+    invoice_id: Uuid,
 ) -> Result<DbInvoice, DatabaseError> {
     let maybe_row = db_client.query_opt(
         "
@@ -136,8 +136,8 @@ pub async fn get_local_invoice_by_address(
 
 pub async fn get_invoice_by_participants(
     db_client: &impl DatabaseClient,
-    sender_id: &Uuid,
-    recipient_id: &Uuid,
+    sender_id: Uuid,
+    recipient_id: Uuid,
     chain_id: &ChainId,
 ) -> Result<DbInvoice, DatabaseError> {
     // Always return oldest invoice
@@ -218,7 +218,7 @@ pub async fn get_local_invoices_by_status(
 
 pub async fn set_invoice_status(
     db_client: &mut impl DatabaseClient,
-    invoice_id: &Uuid,
+    invoice_id: Uuid,
     new_status: InvoiceStatus,
 ) -> Result<DbInvoice, DatabaseError> {
     let transaction = db_client.transaction().await?;
@@ -254,7 +254,7 @@ pub async fn set_invoice_status(
 
 pub(super) async fn set_invoice_payout_tx_id(
     db_client: &impl DatabaseClient,
-    invoice_id: &Uuid,
+    invoice_id: Uuid,
     payout_tx_id: Option<&str>,
 ) -> Result<DbInvoice, DatabaseError> {
     let maybe_row = db_client.query_opt(
@@ -272,7 +272,7 @@ pub(super) async fn set_invoice_payout_tx_id(
 
 pub(super) async fn set_remote_invoice_data(
     db_client: &impl DatabaseClient,
-    invoice_id: &Uuid,
+    invoice_id: Uuid,
     payment_address: &str,
     object_id: &str,
 ) -> Result<(), DatabaseError> {
@@ -333,8 +333,8 @@ mod tests {
         let amount = 100000000000109212;
         let invoice = create_local_invoice(
             db_client,
-            &sender_id,
-            &recipient_id,
+            sender_id,
+            recipient_id,
             &chain_id,
             payment_address,
             amount,
@@ -359,8 +359,8 @@ mod tests {
         let amount = 100000000000109212;
         let invoice = create_remote_invoice(
             db_client,
-            &sender_id,
-            &recipient_id,
+            sender_id,
+            recipient_id,
             &chain_id,
             amount,
         ).await.unwrap();
@@ -381,8 +381,8 @@ mod tests {
             create_participants(db_client).await;
         let invoice = create_local_invoice(
             db_client,
-            &sender_id,
-            &recipient_id,
+            sender_id,
+            recipient_id,
             &ChainId::monero_mainnet(),
             "8MxABajuo71BZya9",
             100000000000000_u64,
@@ -390,7 +390,7 @@ mod tests {
 
         let invoice = set_invoice_status(
             db_client,
-            &invoice.id,
+            invoice.id,
             InvoiceStatus::Paid,
         ).await.unwrap();
         assert_eq!(invoice.invoice_status, InvoiceStatus::Paid);
@@ -398,7 +398,7 @@ mod tests {
 
         let error = set_invoice_status(
             db_client,
-            &invoice.id,
+            invoice.id,
             InvoiceStatus::Cancelled,
         ).await.err().unwrap();
         assert!(matches!(error, DatabaseError::DatabaseTypeError(_)));

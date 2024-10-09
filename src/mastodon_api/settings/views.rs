@@ -91,7 +91,7 @@ async fn client_config_view(
         request_data.iter().next().expect("hashmap entry should exist");
     current_user.client_config = update_client_config(
         db_client,
-        &current_user.id,
+        current_user.id,
         client_name,
         client_config_value,
     ).await?;
@@ -115,7 +115,7 @@ async fn change_password_view(
     let mut current_user = get_current_user(db_client, auth.token()).await?;
     let password_hash = hash_password(&request_data.new_password)
         .map_err(|_| MastodonError::InternalError)?;
-    set_user_password(db_client, &current_user.id, &password_hash).await?;
+    set_user_password(db_client, current_user.id, &password_hash).await?;
     current_user.password_hash = Some(password_hash);
     let account = Account::from_user(
         &get_request_base_url(connection_info),
@@ -154,7 +154,7 @@ async fn add_alias_view(
     // Media cleanup is not needed
     let (updated_profile, _) = update_profile(
         db_client,
-        &current_user.id,
+        current_user.id,
         profile_data,
     ).await?;
     current_user.profile = updated_profile;
@@ -192,7 +192,7 @@ async fn remove_alias_view(
     // Media cleanup is not needed
     let (updated_profile, _) = update_profile(
         db_client,
-        &current_user.id,
+        current_user.id,
         profile_data,
     ).await?;
     current_user.profile = updated_profile;
@@ -358,7 +358,7 @@ async fn move_followers_view(
             remote_followers.push(remote_actor);
             continue;
         };
-        let follower = get_user_by_id(db_client, &follower.id).await?;
+        let follower = get_user_by_id(db_client, follower.id).await?;
         unfollow(db_client, follower.id, current_user.id).await?;
         follow_or_create_request(
             db_client,
@@ -402,7 +402,7 @@ async fn delete_account(
         &config.instance(),
         &current_user,
     ).await?;
-    let deletion_queue = delete_profile(db_client, &current_user.id).await?;
+    let deletion_queue = delete_profile(db_client, current_user.id).await?;
     deletion_queue.into_job(db_client).await?;
     activity.save_and_enqueue(db_client).await?;
     Ok(HttpResponse::NoContent().finish())

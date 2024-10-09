@@ -205,7 +205,7 @@ async fn outbox(
     // Posts are ordered by creation date
     let mut posts = get_posts_by_author(
         db_client,
-        &user.id,
+        user.id,
         None, // include only public posts
         true, // include replies
         true, // include reposts
@@ -354,7 +354,7 @@ async fn featured_collection(
     };
     let mut posts = get_posts_by_author(
         db_client,
-        &user.id,
+        user.id,
         None, // include only public posts
         true, // include replies
         false, // exclude reposts
@@ -494,14 +494,14 @@ pub async fn object_view(
         return Err(HttpError::NotFoundError("post"));
     };
     if !is_activitypub_request(request.headers()) {
-        let page_url = get_post_page_url(&instance.url(), &post.id);
+        let page_url = get_post_page_url(&instance.url(), post.id);
         let response = HttpResponse::Found()
             .append_header((http_header::LOCATION, page_url))
             .finish();
         return Ok(response);
     };
     add_related_posts(db_client, vec![&mut post]).await?;
-    let user = get_user_by_id(db_client, &post.author.id).await?;
+    let user = get_user_by_id(db_client, post.author.id).await?;
     let authority = Authority::from_user(
         &instance.url(),
         &user,
@@ -530,7 +530,7 @@ pub async fn replies_collection(
 ) -> Result<HttpResponse, HttpError> {
     let db_client = &**get_database_client(&db_pool).await?;
     let internal_object_id = internal_object_id.into_inner();
-    let posts = get_thread(db_client, &internal_object_id, None).await?;
+    let posts = get_thread(db_client, internal_object_id, None).await?;
     let post = posts.iter().find(|post| post.id == internal_object_id)
         .expect("get_thread return value should contain target post");
     // Visibility check is done in get_thread

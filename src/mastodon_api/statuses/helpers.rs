@@ -123,7 +123,7 @@ pub async fn parse_content(
     ).await?;
     output.content_source = maybe_content_source;
     if let Some(quote_of_id) = maybe_quote_of_id {
-        let quote_of = match get_post_by_id(db_client, &quote_of_id).await {
+        let quote_of = match get_post_by_id(db_client, quote_of_id).await {
             Ok(post) if can_link_post(&post) => post,
             Ok(_) | Err(DatabaseError::NotFound(_)) => {
                 return Err(ValidationError("quoted post does not exist").into());

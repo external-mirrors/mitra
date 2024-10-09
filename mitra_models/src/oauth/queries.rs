@@ -43,7 +43,7 @@ pub async fn create_oauth_app(
 
 pub async fn get_oauth_app_by_client_id(
     db_client: &impl DatabaseClient,
-    client_id: &Uuid,
+    client_id: Uuid,
 ) -> Result<DbOauthApp, DatabaseError> {
     let maybe_row = db_client.query_opt(
         "
@@ -133,7 +133,7 @@ pub async fn save_oauth_token(
 
 pub async fn delete_oauth_token(
     db_client: &mut impl DatabaseClient,
-    current_user_id: &Uuid,
+    current_user_id: Uuid,
     token: &str,
 ) -> Result<(), DatabaseError> {
     let transaction = db_client.transaction().await?;
@@ -147,7 +147,7 @@ pub async fn delete_oauth_token(
     ).await?;
     if let Some(row) = maybe_row {
         let owner_id: Uuid = row.try_get("owner_id")?;
-        if owner_id != *current_user_id {
+        if owner_id != current_user_id {
             // Return error if token is owned by a different user
             return Err(DatabaseError::NotFound("token"));
         } else {
@@ -163,7 +163,7 @@ pub async fn delete_oauth_token(
 
 pub async fn delete_oauth_tokens(
     db_client: &impl DatabaseClient,
-    owner_id: &Uuid,
+    owner_id: Uuid,
 ) -> Result<(), DatabaseError> {
     db_client.execute(
         "DELETE FROM oauth_token WHERE owner_id = $1",
@@ -263,7 +263,7 @@ mod tests {
         ).await.unwrap();
         delete_oauth_token(
             db_client,
-            &user.id,
+            user.id,
             token,
         ).await.unwrap();
     }

@@ -57,7 +57,7 @@ async fn prevent_acct_conflict(
 
 async fn create_profile_emojis(
     db_client: &impl DatabaseClient,
-    profile_id: &Uuid,
+    profile_id: Uuid,
     emojis: Vec<Uuid>,
 ) -> Result<Vec<DbEmoji>, DatabaseError> {
     let emojis_rows = db_client.query(
@@ -82,7 +82,7 @@ async fn create_profile_emojis(
 
 async fn update_emoji_cache(
     db_client: &impl DatabaseClient,
-    profile_id: &Uuid,
+    profile_id: Uuid,
 ) -> Result<DbActorProfile, DatabaseError> {
     let maybe_row = db_client.query_opt(
         "
@@ -114,7 +114,7 @@ async fn update_emoji_cache(
 
 pub async fn update_emoji_caches(
     db_client: &impl DatabaseClient,
-    emoji_id: &Uuid,
+    emoji_id: Uuid,
 ) -> Result<(), DatabaseError> {
     db_client.execute(
         "
@@ -213,10 +213,10 @@ pub async fn create_profile(
     // Create related objects
     create_profile_emojis(
         &transaction,
-        &profile_id,
+        profile_id,
         profile_data.emojis,
     ).await?;
-    let profile = update_emoji_cache(&transaction, &profile_id).await?;
+    let profile = update_emoji_cache(&transaction, profile_id).await?;
 
     transaction.commit().await?;
     Ok(profile)
@@ -224,7 +224,7 @@ pub async fn create_profile(
 
 pub async fn update_profile(
     db_client: &mut impl DatabaseClient,
-    profile_id: &Uuid,
+    profile_id: Uuid,
     profile_data: ProfileUpdateData,
 ) -> Result<(DbActorProfile, DeletionQueue), DatabaseError> {
     profile_data.check_consistency()?;
@@ -264,7 +264,7 @@ pub async fn update_profile(
                 format!("{}@{}", profile_data.username, hostname);
             prevent_acct_conflict(
                 &transaction,
-                *profile_id,
+                profile_id,
                 &profile_acct,
             ).await?;
             Some(profile_acct)
@@ -322,7 +322,7 @@ pub async fn update_profile(
     // Delete and re-create related objects
     transaction.execute(
         "DELETE FROM profile_emoji WHERE profile_id = $1",
-        &[profile_id],
+        &[&profile_id],
     ).await?;
     create_profile_emojis(
         &transaction,
@@ -367,7 +367,7 @@ pub async fn set_profile_identity_key(
 
 pub async fn get_profile_by_id(
     db_client: &impl DatabaseClient,
-    profile_id: &Uuid,
+    profile_id: Uuid,
 ) -> Result<DbActorProfile, DatabaseError> {
     let maybe_row = db_client.query_opt(
         "
@@ -488,7 +488,7 @@ pub async fn get_profiles_by_accts(
 /// Deletes profile from database and returns collection of orphaned objects.
 pub async fn delete_profile(
     db_client: &mut impl DatabaseClient,
-    profile_id: &Uuid,
+    profile_id: Uuid,
 ) -> Result<DeletionQueue, DatabaseError> {
     let transaction = db_client.transaction().await?;
     // Select all posts authored by given actor,
@@ -842,7 +842,7 @@ pub async fn update_subscriber_count(
 
 pub async fn update_post_count(
     db_client: &impl DatabaseClient,
-    profile_id: &Uuid,
+    profile_id: Uuid,
     change: i32,
 ) -> Result<DbActorProfile, DatabaseError> {
     let maybe_row = db_client.query_opt(
@@ -1127,7 +1127,7 @@ mod tests {
         assert_eq!(profile_2.acct.unwrap(), "test@social.example");
 
         let profile_1_updated =
-            get_profile_by_id(db_client, &profile_1.id).await.unwrap();
+            get_profile_by_id(db_client, profile_1.id).await.unwrap();
         assert_eq!(profile_1_updated.acct, None);
     }
 
@@ -1145,7 +1145,7 @@ mod tests {
         profile_data.bio = Some(bio.to_string());
         let (profile_updated, deletion_queue) = update_profile(
             db_client,
-            &profile.id,
+            profile.id,
             profile_data,
         ).await.unwrap();
         assert_eq!(profile_updated.username, profile.username);
@@ -1179,7 +1179,7 @@ mod tests {
         let profile_data = ProfileCreateData::default();
         let db_client = &mut create_test_database().await;
         let profile = create_profile(db_client, profile_data).await.unwrap();
-        let deletion_queue = delete_profile(db_client, &profile.id).await.unwrap();
+        let deletion_queue = delete_profile(db_client, profile.id).await.unwrap();
         assert_eq!(deletion_queue.files.len(), 0);
         assert_eq!(deletion_queue.ipfs_objects.len(), 0);
     }
@@ -1283,7 +1283,7 @@ mod tests {
         };
         let profile = create_profile(db_client, profile_data).await.unwrap();
         set_reachability_status(db_client, actor_id, false).await.unwrap();
-        let profile = get_profile_by_id(db_client, &profile.id).await.unwrap();
+        let profile = get_profile_by_id(db_client, profile.id).await.unwrap();
         assert_eq!(profile.unreachable_since.is_some(), true);
     }
 

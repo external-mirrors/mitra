@@ -86,7 +86,7 @@ async fn handle_accept_offer(
         &config.instance_url(),
         &activity.object,
     )?;
-    let invoice = get_invoice_by_id(db_client, &invoice_id).await?;
+    let invoice = get_invoice_by_id(db_client, invoice_id).await?;
     if invoice.recipient_id != actor_profile.id {
         return Err(ValidationError("actor is not a recipient").into());
     };
@@ -111,7 +111,7 @@ async fn handle_accept_offer(
     validate_object_id(agreement_id)?;
     remote_invoice_opened(
         db_client,
-        &invoice.id,
+        invoice.id,
         &account_id.address,
         agreement_id,
     ).await?;

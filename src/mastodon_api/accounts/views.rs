@@ -322,7 +322,7 @@ async fn update_credentials(
     clean_profile_update_data(&mut profile_data)?;
     let (updated_profile, deletion_queue) = update_profile(
         db_client,
-        &current_user.id,
+        current_user.id,
         profile_data,
     ).await?;
     current_user.profile = updated_profile;
@@ -510,7 +510,7 @@ async fn create_identity_proof(
     // Only identity proofs are updated, media cleanup is not needed
     let (updated_profile, _) = update_profile(
         db_client,
-        &current_user.id,
+        current_user.id,
         profile_data,
     ).await?;
     current_user.profile = updated_profile;
@@ -656,7 +656,7 @@ async fn get_account(
     account_id: web::Path<Uuid>,
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &**get_database_client(&db_pool).await?;
-    let profile = get_profile_by_id(db_client, &account_id).await?;
+    let profile = get_profile_by_id(db_client, *account_id).await?;
     let account = Account::from_profile(
         &get_request_base_url(connection_info),
         &config.instance_url(),
@@ -679,7 +679,7 @@ async fn follow_account(
         .unwrap_or_default();
     let db_client = &mut **get_database_client(&db_pool).await?;
     let current_user = get_current_user(db_client, auth.token()).await?;
-    let target = get_profile_by_id(db_client, &account_id).await?;
+    let target = get_profile_by_id(db_client, *account_id).await?;
     if target.id == current_user.id {
         return Err(ValidationError("target is current user").into());
     };
@@ -717,7 +717,7 @@ async fn unfollow_account(
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &mut **get_database_client(&db_pool).await?;
     let current_user = get_current_user(db_client, auth.token()).await?;
-    let target = get_profile_by_id(db_client, &account_id).await?;
+    let target = get_profile_by_id(db_client, *account_id).await?;
     match unfollow(db_client, current_user.id, target.id).await {
         Ok(maybe_follow_request_deleted) => {
             if let Some(remote_actor) = target.actor_json {
@@ -757,7 +757,7 @@ async fn remove_follower_view(
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &mut **get_database_client(&db_pool).await?;
     let current_user = get_current_user(db_client, auth.token()).await?;
-    let follower = get_profile_by_id(db_client, &account_id).await?;
+    let follower = get_profile_by_id(db_client, *account_id).await?;
     let maybe_follow_activity_id = match remove_follower(
         db_client,
         follower.id,
@@ -794,7 +794,7 @@ async fn mute_account(
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &mut **get_database_client(&db_pool).await?;
     let current_user = get_current_user(db_client, auth.token()).await?;
-    let target = get_profile_by_id(db_client, &account_id).await?;
+    let target = get_profile_by_id(db_client, *account_id).await?;
     if target.id == current_user.id {
         return Err(ValidationError("target is current user").into());
     };
@@ -821,7 +821,7 @@ async fn unmute_account(
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &mut **get_database_client(&db_pool).await?;
     let current_user = get_current_user(db_client, auth.token()).await?;
-    let target = get_profile_by_id(db_client, &account_id).await?;
+    let target = get_profile_by_id(db_client, *account_id).await?;
 
     match unmute(db_client, current_user.id, target.id).await {
         Ok(_) => (),
@@ -852,12 +852,12 @@ async fn get_account_statuses(
         Some(auth) => Some(get_current_user(db_client, auth.token()).await?),
         None => None,
     };
-    let profile = get_profile_by_id(db_client, &account_id).await?;
+    let profile = get_profile_by_id(db_client, *account_id).await?;
     // Include reposts but not replies
     let posts = get_posts_by_author(
         db_client,
-        &profile.id,
-        maybe_current_user.as_ref().map(|user| &user.id),
+        profile.id,
+        maybe_current_user.as_ref().map(|user| user.id),
         !query_params.exclude_replies,
         !query_params.exclude_reblogs,
         query_params.pinned,
@@ -891,7 +891,7 @@ async fn get_account_followers(
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &**get_database_client(&db_pool).await?;
     let current_user = get_current_user(db_client, auth.token()).await?;
-    let profile = get_profile_by_id(db_client, &account_id).await?;
+    let profile = get_profile_by_id(db_client, *account_id).await?;
     if profile.id != current_user.id {
         // Social graph is hidden
         let accounts: Vec<Account> = vec![];
@@ -935,7 +935,7 @@ async fn get_account_following(
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &**get_database_client(&db_pool).await?;
     let current_user = get_current_user(db_client, auth.token()).await?;
-    let profile = get_profile_by_id(db_client, &account_id).await?;
+    let profile = get_profile_by_id(db_client, *account_id).await?;
     if profile.id != current_user.id {
         // Social graph is hidden
         let accounts: Vec<Account> = vec![];
@@ -978,7 +978,7 @@ async fn get_account_subscribers(
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &**get_database_client(&db_pool).await?;
     let current_user = get_current_user(db_client, auth.token()).await?;
-    let profile = get_profile_by_id(db_client, &account_id).await?;
+    let profile = get_profile_by_id(db_client, *account_id).await?;
     if profile.id != current_user.id {
         // Social graph is hidden
         let subscriptions: Vec<ApiSubscription> = vec![];
@@ -988,7 +988,7 @@ async fn get_account_subscribers(
     let instance_url = config.instance_url();
     let subscriptions: Vec<ApiSubscription> = get_incoming_subscriptions(
         db_client,
-        &profile.id,
+        profile.id,
         query_params.include_expired,
         query_params.max_id,
         query_params.limit.inner(),
@@ -1030,7 +1030,7 @@ async fn get_account_aliases(
     account_id: web::Path<Uuid>,
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &**get_database_client(&db_pool).await?;
-    let profile = get_profile_by_id(db_client, &account_id).await?;
+    let profile = get_profile_by_id(db_client, *account_id).await?;
     let base_url = get_request_base_url(connection_info);
     let instance_url = config.instance_url();
     let aliases = get_aliases(
@@ -1053,7 +1053,7 @@ async fn load_activities(
     if !current_user.role.has_permission(Permission::DeleteAnyProfile) {
         return Err(MastodonError::PermissionError);
     };
-    let profile = get_profile_by_id(db_client, &account_id).await?;
+    let profile = get_profile_by_id(db_client, *account_id).await?;
     let job_data = if let Some(ref remote_actor) = profile.actor_json {
         FetcherJobData::Outbox { actor_id: remote_actor.id.clone() }
     } else {

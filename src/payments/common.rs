@@ -66,8 +66,8 @@ pub async fn update_expired_subscriptions(
     for subscription in get_expired_subscriptions(db_client).await? {
         // Remove relationship
         unsubscribe(db_client, subscription.sender_id, subscription.recipient_id).await?;
-        let sender = get_profile_by_id(db_client, &subscription.sender_id).await?;
-        let recipient = get_user_by_id(db_client, &subscription.recipient_id).await?;
+        let sender = get_profile_by_id(db_client, subscription.sender_id).await?;
+        let recipient = get_user_by_id(db_client, subscription.recipient_id).await?;
         log::info!(
             "subscription expired: {0} to {1}",
             sender,

@@ -88,7 +88,7 @@ async fn accept_follow_request_view(
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &mut **get_database_client(&db_pool).await?;
     let current_user = get_current_user(db_client, auth.token()).await?;
-    let source_profile = get_profile_by_id(db_client, &account_id).await?;
+    let source_profile = get_profile_by_id(db_client, *account_id).await?;
     let follow_request = get_follow_request_by_participants(
         db_client,
         source_profile.id,
@@ -123,14 +123,14 @@ async fn reject_follow_request_view(
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &mut **get_database_client(&db_pool).await?;
     let current_user = get_current_user(db_client, auth.token()).await?;
-    let source_profile = get_profile_by_id(db_client, &account_id).await?;
+    let source = get_profile_by_id(db_client, *account_id).await?;
     let follow_request = get_follow_request_by_participants(
         db_client,
-        source_profile.id,
+        source.id,
         current_user.id,
     ).await?;
     follow_request_rejected(db_client, follow_request.id).await?;
-    if let Some(remote_actor) = source_profile.actor_json {
+    if let Some(remote_actor) = source.actor_json {
         let activity_id = follow_request.activity_id
             .ok_or(MastodonError::InternalError)?;
         prepare_reject_follow(
@@ -143,7 +143,7 @@ async fn reject_follow_request_view(
     let relationship = get_relationship(
         db_client,
         current_user.id,
-        source_profile.id,
+        source.id,
     ).await?;
     Ok(HttpResponse::Ok().json(relationship))
 }

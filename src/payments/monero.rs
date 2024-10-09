@@ -66,8 +66,8 @@ pub(crate) async fn create_or_update_monero_subscription(
 ) -> Result<Option<DbSubscription>, DatabaseError> {
     let subscription = match get_subscription_by_participants(
         db_client,
-        &sender.id,
-        &recipient.id,
+        sender.id,
+        recipient.id,
     ).await {
         Ok(subscription) => {
             // Update subscription expiration date
@@ -138,7 +138,7 @@ pub async fn check_monero_subscriptions(
         if invoice_age.num_seconds() >= MONERO_INVOICE_TIMEOUT {
             set_invoice_status(
                 db_client,
-                &invoice.id,
+                invoice.id,
                 InvoiceStatus::Timeout,
             ).await?;
             continue;
@@ -179,7 +179,11 @@ pub async fn check_monero_subscriptions(
                 transfer.amount,
             );
             if invoice.invoice_status == InvoiceStatus::Open {
-                set_invoice_status(db_client, &invoice.id, InvoiceStatus::Paid).await?;
+                set_invoice_status(
+                    db_client,
+                    invoice.id,
+                    InvoiceStatus::Paid,
+                ).await?;
             } else {
                 log::warn!("invoice has already been paid");
             };
@@ -218,7 +222,7 @@ pub async fn check_monero_subscriptions(
             log::info!("invoice {}: waiting for unlock", invoice.id);
             continue;
         };
-        let recipient = get_user_by_id(db_client, &invoice.recipient_id).await?;
+        let recipient = get_user_by_id(db_client, invoice.recipient_id).await?;
         let maybe_payment_info = recipient.profile.monero_subscription(&config.chain_id);
         let payment_info = if let Some(payment_info) = maybe_payment_info {
             payment_info
@@ -241,7 +245,7 @@ pub async fn check_monero_subscriptions(
                 log::warn!("invoice {}: {}", invoice.id, error);
                 set_invoice_status(
                     db_client,
-                    &invoice.id,
+                    invoice.id,
                     InvoiceStatus::Underpaid,
                 ).await?;
                 continue;
@@ -251,7 +255,7 @@ pub async fn check_monero_subscriptions(
 
         local_invoice_forwarded(
             db_client,
-            &invoice.id,
+            invoice.id,
             &payout_tx_id,
         ).await?;
         log::info!("forwarded payment for invoice {}", invoice.id);
@@ -269,7 +273,11 @@ pub async fn check_monero_subscriptions(
             // Legacy invoices don't have payout_tx_id.
             // Assume payment was fully processed and subscription was updated
             log::warn!("invoice {}: no payout transaction ID", invoice.id);
-            set_invoice_status(db_client, &invoice.id, InvoiceStatus::Completed).await?;
+            set_invoice_status(
+                db_client,
+                invoice.id,
+                InvoiceStatus::Completed,
+            ).await?;
             continue;
         };
         let transfer = match get_transaction_by_id(
@@ -300,7 +308,11 @@ pub async fn check_monero_subscriptions(
             TransferCategory::Pending | TransferCategory::Out => (),
             TransferCategory::Failed => {
                 log::error!("invoice {}: payout transaction failed", invoice.id);
-                set_invoice_status(db_client, &invoice.id, InvoiceStatus::Failed).await?;
+                set_invoice_status(
+                    db_client,
+                    invoice.id,
+                    InvoiceStatus::Failed,
+                ).await?;
                 continue;
             },
             _ => {
@@ -317,8 +329,8 @@ pub async fn check_monero_subscriptions(
             log::info!("invoice {}: waiting for payout confirmation", invoice.id);
             continue;
         };
-        let sender = get_profile_by_id(db_client, &invoice.sender_id).await?;
-        let recipient = get_user_by_id(db_client, &invoice.recipient_id).await?;
+        let sender = get_profile_by_id(db_client, invoice.sender_id).await?;
+        let recipient = get_user_by_id(db_client, invoice.recipient_id).await?;
         let maybe_payment_info = recipient.profile.monero_subscription(&config.chain_id);
         let payment_info = if let Some(payment_info) = maybe_payment_info {
             payment_info
@@ -333,7 +345,7 @@ pub async fn check_monero_subscriptions(
             .try_into()
             .map_err(|_| MoneroError::OtherError("amount is too big"))?;
 
-        set_invoice_status(db_client, &invoice.id, InvoiceStatus::Completed).await?;
+        set_invoice_status(db_client, invoice.id, InvoiceStatus::Completed).await?;
         log::info!("payout transaction confirmed for invoice {}", invoice.id);
 
         create_or_update_monero_subscription(
@@ -383,7 +395,7 @@ pub async fn check_closed_invoices(
             invoice.id,
             invoice.invoice_status,
         );
-        local_invoice_reopened(db_client, &invoice.id).await?;
+        local_invoice_reopened(db_client, invoice.id).await?;
     };
     Ok(())
 }
@@ -423,7 +435,7 @@ pub async fn reopen_local_invoice(
                 transfer.amount,
             );
         };
-        local_invoice_reopened(db_client, &invoice.id).await?;
+        local_invoice_reopened(db_client, invoice.id).await?;
     };
     Ok(())
 }
@@ -431,8 +443,8 @@ pub async fn reopen_local_invoice(
 pub async fn get_payment_address(
     config: &MoneroConfig,
     db_client: &mut impl DatabaseClient,
-    sender_id: &Uuid,
-    recipient_id: &Uuid,
+    sender_id: Uuid,
+    recipient_id: Uuid,
 ) -> Result<String, PaymentError> {
     let recipient = get_user_by_id(db_client, recipient_id).await?;
     if recipient.profile.monero_subscription(&config.chain_id).is_none() {

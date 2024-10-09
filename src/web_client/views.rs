@@ -108,7 +108,7 @@ async fn post_page_redirect_view(
     post_id: web::Path<Uuid>,
 ) -> Result<HttpResponse, HttpError> {
     let db_client = &**get_database_client(&db_pool).await?;
-    let post = get_post_by_id(db_client, &post_id).await?;
+    let post = get_post_by_id(db_client, *post_id).await?;
     let object_id = post_object_id(&config.instance_url(), &post);
     let response = HttpResponse::Found()
         .append_header(("Location", object_id))
@@ -122,7 +122,7 @@ async fn post_page_opengraph_view(
     post_id: web::Path<Uuid>,
 ) -> Result<HttpResponse, HttpError> {
     let db_client = &**get_database_client(&db_pool).await?;
-    let post = get_post_by_id(db_client, &post_id).await?;
+    let post = get_post_by_id(db_client, *post_id).await?;
     let web_client_dir = config.web_client_dir.as_ref()
         .ok_or(HttpError::InternalError)?;
     let index_html = std::fs::read_to_string(web_client_dir.join(INDEX_FILE))

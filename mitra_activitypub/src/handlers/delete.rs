@@ -44,7 +44,7 @@ pub async fn handle_delete(
             Err(DatabaseError::NotFound(_)) => return Ok(None),
             Err(other_error) => return Err(other_error.into()),
         };
-        let deletion_queue = delete_profile(db_client, &profile.id).await?;
+        let deletion_queue = delete_profile(db_client, profile.id).await?;
         deletion_queue.into_job(db_client).await?;
         log::info!("deleted remote actor {}", activity.object);
         return Ok(Some(Descriptor::object("Actor")));

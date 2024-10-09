@@ -20,7 +20,7 @@ pub async fn create_test_local_post(
         content_source: Some(content.to_string()),
         ..Default::default()
     };
-    create_post(db_client, &author_id, post_data).await.unwrap()
+    create_post(db_client, author_id, post_data).await.unwrap()
 }
 
 pub async fn create_test_remote_post(
@@ -34,7 +34,7 @@ pub async fn create_test_remote_post(
         object_id: Some(object_id.to_string()),
         ..Default::default()
     };
-    create_post(db_client, &author_id, post_data).await.unwrap()
+    create_post(db_client, author_id, post_data).await.unwrap()
 }
 
 impl Post {

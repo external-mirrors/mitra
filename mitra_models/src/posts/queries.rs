@@ -38,8 +38,8 @@ use super::types::{
 
 async fn create_post_attachments(
     db_client: &impl DatabaseClient,
-    post_id: &Uuid,
-    author_id: &Uuid,
+    post_id: Uuid,
+    author_id: Uuid,
     attachments: Vec<Uuid>,
 ) -> Result<Vec<DbMediaAttachment>, DatabaseError> {
     let attachments_rows = db_client.query(
@@ -64,7 +64,7 @@ async fn create_post_attachments(
 
 async fn create_post_mentions(
     db_client: &impl DatabaseClient,
-    post_id: &Uuid,
+    post_id: Uuid,
     mentions: Vec<Uuid>,
 ) -> Result<Vec<DbActorProfile>, DatabaseError> {
     let mentions_rows = db_client.query(
@@ -90,7 +90,7 @@ async fn create_post_mentions(
 
 async fn create_post_tags(
     db_client: &impl DatabaseClient,
-    post_id: &Uuid,
+    post_id: Uuid,
     tags: Vec<String>,
 ) -> Result<Vec<String>, DatabaseError> {
     db_client.execute(
@@ -120,7 +120,7 @@ async fn create_post_tags(
 
 async fn create_post_links(
     db_client: &impl DatabaseClient,
-    post_id: &Uuid,
+    post_id: Uuid,
     links: Vec<Uuid>,
 ) -> Result<Vec<Uuid>, DatabaseError> {
     let links_rows = db_client.query(
@@ -142,7 +142,7 @@ async fn create_post_links(
 
 async fn create_post_emojis(
     db_client: &impl DatabaseClient,
-    post_id: &Uuid,
+    post_id: Uuid,
     emojis: Vec<Uuid>,
 ) -> Result<Vec<DbEmoji>, DatabaseError> {
     let emojis_rows = db_client.query(
@@ -188,7 +188,7 @@ pub async fn get_post_reactions(
 
 pub async fn create_post(
     db_client: &mut impl DatabaseClient,
-    author_id: &Uuid,
+    author_id: Uuid,
     post_data: PostCreateData,
 ) -> Result<Post, DatabaseError> {
     let transaction = db_client.transaction().await?;
@@ -248,33 +248,33 @@ pub async fn create_post(
     // Create related objects
     let db_attachments = create_post_attachments(
         &transaction,
-        &db_post.id,
-        &db_post.author_id,
+        db_post.id,
+        db_post.author_id,
         post_data.attachments,
     ).await?;
     let db_mentions = create_post_mentions(
         &transaction,
-        &db_post.id,
+        db_post.id,
         post_data.mentions,
     ).await?;
     let db_tags = create_post_tags(
         &transaction,
-        &db_post.id,
+        db_post.id,
         post_data.tags,
     ).await?;
     let db_links = create_post_links(
         &transaction,
-        &db_post.id,
+        db_post.id,
         post_data.links,
     ).await?;
     let db_emojis = create_post_emojis(
         &transaction,
-        &db_post.id,
+        db_post.id,
         post_data.emojis,
     ).await?;
 
     // Update counters
-    let author = update_post_count(&transaction, &db_post.author_id, 1).await?;
+    let author = update_post_count(&transaction, db_post.author_id, 1).await?;
     let mut notified_users = vec![];
     if let Some(in_reply_to_id) = db_post.in_reply_to_id {
         update_reply_count(&transaction, in_reply_to_id, 1).await?;
@@ -342,7 +342,7 @@ pub async fn create_post(
 
 pub async fn update_post(
     db_client: &mut impl DatabaseClient,
-    post_id: &Uuid,
+    post_id: Uuid,
     post_data: PostUpdateData,
 ) -> Result<(Post, DeletionQueue), DatabaseError> {
     let transaction = db_client.transaction().await?;
@@ -414,28 +414,28 @@ pub async fn update_post(
     ).await?;
     let db_attachments = create_post_attachments(
         &transaction,
-        &db_post.id,
-        &db_post.author_id,
+        db_post.id,
+        db_post.author_id,
         post_data.attachments,
     ).await?;
     let db_mentions = create_post_mentions(
         &transaction,
-        &db_post.id,
+        db_post.id,
         post_data.mentions,
     ).await?;
     let db_tags = create_post_tags(
         &transaction,
-        &db_post.id,
+        db_post.id,
         post_data.tags,
     ).await?;
     let db_links = create_post_links(
         &transaction,
-        &db_post.id,
+        db_post.id,
         post_data.links,
     ).await?;
     let db_emojis = create_post_emojis(
         &transaction,
-        &db_post.id,
+        db_post.id,
         post_data.emojis,
     ).await?;
     let db_reactions =
@@ -578,7 +578,7 @@ fn build_mute_filter() -> String {
 
 pub async fn get_home_timeline(
     db_client: &impl DatabaseClient,
-    current_user_id: &Uuid,
+    current_user_id: Uuid,
     max_post_id: Option<Uuid>,
     limit: u16,
 ) -> Result<Vec<Post>, DatabaseError> {
@@ -695,7 +695,7 @@ pub async fn get_home_timeline(
 
 pub async fn get_public_timeline(
     db_client: &impl DatabaseClient,
-    current_user_id: Option<&Uuid>,
+    current_user_id: Option<Uuid>,
     only_local: bool,
     max_post_id: Option<Uuid>,
     limit: u16,
@@ -752,7 +752,7 @@ pub async fn get_public_timeline(
 
 pub async fn get_direct_timeline(
     db_client: &impl DatabaseClient,
-    current_user_id: &Uuid,
+    current_user_id: Uuid,
     max_post_id: Option<Uuid>,
     limit: u16,
 ) -> Result<Vec<Post>, DatabaseError> {
@@ -860,8 +860,8 @@ pub async fn get_related_posts(
 #[allow(clippy::too_many_arguments)]
 pub async fn get_posts_by_author(
     db_client: &impl DatabaseClient,
-    profile_id: &Uuid,
-    current_user_id: Option<&Uuid>,
+    profile_id: Uuid,
+    current_user_id: Option<Uuid>,
     include_replies: bool,
     include_reposts: bool,
     only_pinned: bool,
@@ -932,7 +932,7 @@ pub async fn get_posts_by_author(
 pub async fn get_posts_by_tag(
     db_client: &impl DatabaseClient,
     tag_name: &str,
-    current_user_id: Option<&Uuid>,
+    current_user_id: Option<Uuid>,
     max_post_id: Option<Uuid>,
     limit: u16,
 ) -> Result<Vec<Post>, DatabaseError> {
@@ -1047,7 +1047,7 @@ pub async fn get_custom_feed_timeline(
 /// Get a single post (not a repost)
 pub async fn get_post_by_id(
     db_client: &impl DatabaseClient,
-    post_id: &Uuid,
+    post_id: Uuid,
 ) -> Result<Post, DatabaseError> {
     let statement = format!(
         "
@@ -1086,8 +1086,8 @@ pub async fn get_post_by_id(
 /// Results are sorted by tree path.
 pub async fn get_thread(
     db_client: &impl DatabaseClient,
-    post_id: &Uuid,
-    current_user_id: Option<&Uuid>,
+    post_id: Uuid,
+    current_user_id: Option<Uuid>,
 ) -> Result<Vec<Post>, DatabaseError> {
     // TODO: limit recursion depth
     let statement = format!(
@@ -1270,7 +1270,7 @@ pub async fn get_remote_repost_by_activity_id(
 
 pub async fn set_pinned_flag(
     db_client: &impl DatabaseClient,
-    post_id: &Uuid,
+    post_id: Uuid,
     is_pinned: bool,
 ) -> Result<(), DatabaseError> {
     let updated_count = db_client.execute(
@@ -1346,7 +1346,7 @@ pub async fn update_repost_count(
 
 pub async fn set_post_ipfs_cid(
     db_client: &mut impl DatabaseClient,
-    post_id: &Uuid,
+    post_id: Uuid,
     ipfs_cid: &str,
     attachments: Vec<(Uuid, String)>,
 ) -> Result<(), DatabaseError> {
@@ -1365,7 +1365,7 @@ pub async fn set_post_ipfs_cid(
         return Err(DatabaseError::NotFound("post"));
     };
     for (attachment_id, cid) in attachments {
-        set_attachment_ipfs_cid(&transaction, &attachment_id, &cid).await?;
+        set_attachment_ipfs_cid(&transaction, attachment_id, &cid).await?;
     };
     transaction.commit().await?;
     Ok(())
@@ -1392,8 +1392,8 @@ pub async fn get_post_author(
 /// Finds repost of a given post
 pub async fn get_repost_by_author(
     db_client: &impl DatabaseClient,
-    post_id: &Uuid,
-    profile_id: &Uuid,
+    post_id: Uuid,
+    author_id: Uuid,
 ) -> Result<(Uuid, bool), DatabaseError> {
     let maybe_row = db_client.query_opt(
         "
@@ -1401,7 +1401,7 @@ pub async fn get_repost_by_author(
         FROM post
         WHERE post.repost_of_id = $1 AND post.author_id = $2
         ",
-        &[&post_id, &profile_id],
+        &[&post_id, &author_id],
     ).await?;
     let row = maybe_row.ok_or(DatabaseError::NotFound("post"))?;
     let repost_id = row.try_get("id")?;
@@ -1784,7 +1784,7 @@ mod tests {
             content: "test post".to_string(),
             ..Default::default()
         };
-        let post = create_post(db_client, &author.id, post_data).await.unwrap();
+        let post = create_post(db_client, author.id, post_data).await.unwrap();
         assert_eq!(post.content, "test post");
         assert_eq!(post.author.id, author.id);
         assert_eq!(post.attachments.is_empty(), true);
@@ -1803,12 +1803,12 @@ mod tests {
         let db_client = &mut create_test_database().await;
         let author = create_test_user(db_client, "test").await;
         let post_data_1 = PostCreateData::default();
-        let post_1 = create_post(db_client, &author.id, post_data_1).await.unwrap();
+        let post_1 = create_post(db_client, author.id, post_data_1).await.unwrap();
         let post_data_2 = PostCreateData {
             links: vec![post_1.id],
             ..Default::default()
         };
-        let post_2 = create_post(db_client, &author.id, post_data_2).await.unwrap();
+        let post_2 = create_post(db_client, author.id, post_data_2).await.unwrap();
         assert_eq!(post_2.links, vec![post_1.id]);
     }
 
@@ -1821,11 +1821,11 @@ mod tests {
             content: "test post".to_string(),
             ..Default::default()
         };
-        let post = create_post(db_client, &author.id, post_data).await.unwrap();
+        let post = create_post(db_client, author.id, post_data).await.unwrap();
         let repost_data = PostCreateData::repost(post.id, None);
         let repost = create_post(
             db_client,
-            &author.id,
+            author.id,
             repost_data,
         ).await.unwrap();
         assert_eq!(repost.content, "");
@@ -1835,8 +1835,8 @@ mod tests {
 
         let (repost_id, repost_has_deprecated_ap_id) = get_repost_by_author(
             db_client,
-            &post.id,
-            &author.id,
+            post.id,
+            author.id,
         ).await.unwrap();
         assert_eq!(repost_id, repost.id);
         assert_eq!(repost_has_deprecated_ap_id, false);
@@ -1851,14 +1851,14 @@ mod tests {
             content: "test post".to_string(),
             ..Default::default()
         };
-        let post = create_post(db_client, &author.id, post_data).await.unwrap();
+        let post = create_post(db_client, author.id, post_data).await.unwrap();
         let post_data = PostUpdateData {
             content: "test update".to_string(),
             updated_at: Utc::now(),
             ..Default::default()
         };
         let (post, deletion_queue) =
-            update_post(db_client, &post.id, post_data).await.unwrap();
+            update_post(db_client, post.id, post_data).await.unwrap();
         assert_eq!(post.content, "test update");
         assert_eq!(post.updated_at.is_some(), true);
         assert_eq!(deletion_queue.files.len(), 0);
@@ -1874,7 +1874,7 @@ mod tests {
             content: "test post".to_string(),
             ..Default::default()
         };
-        let post = create_post(db_client, &author.id, post_data).await.unwrap();
+        let post = create_post(db_client, author.id, post_data).await.unwrap();
         let deletion_queue = delete_post(db_client, post.id).await.unwrap();
         assert_eq!(deletion_queue.files.len(), 0);
         assert_eq!(deletion_queue.ipfs_objects.len(), 0);
@@ -1889,12 +1889,12 @@ mod tests {
         let repost_data = PostCreateData::repost(post.id, None);
         let repost = create_post(
             db_client,
-            &author.id,
+            author.id,
             repost_data,
         ).await.unwrap();
         delete_repost(db_client, repost.id).await.unwrap();
 
-        let post = get_post_by_id(db_client, &post.id).await.unwrap();
+        let post = get_post_by_id(db_client, post.id).await.unwrap();
         assert_eq!(post.repost_count, 0);
     }
 
@@ -1913,14 +1913,14 @@ mod tests {
             content: "my post".to_string(),
             ..Default::default()
         };
-        let post_1 = create_post(db_client, &current_user.id, post_data_1).await.unwrap();
+        let post_1 = create_post(db_client, current_user.id, post_data_1).await.unwrap();
         // Current user's direct message
         let post_data_2 = PostCreateData {
             content: "my post".to_string(),
             visibility: Visibility::Direct,
             ..Default::default()
         };
-        let post_2 = create_post(db_client, &current_user.id, post_data_2).await.unwrap();
+        let post_2 = create_post(db_client, current_user.id, post_data_2).await.unwrap();
         // Another user's public post
         let user_data_1 = UserCreateData {
             username: "another-user".to_string(),
@@ -1932,7 +1932,7 @@ mod tests {
             content: "test post".to_string(),
             ..Default::default()
         };
-        let post_3 = create_post(db_client, &user_1.id, post_data_3).await.unwrap();
+        let post_3 = create_post(db_client, user_1.id, post_data_3).await.unwrap();
         // Direct message from another user to current user
         let post_data_4 = PostCreateData {
             content: "test post".to_string(),
@@ -1940,14 +1940,14 @@ mod tests {
             mentions: vec![current_user.id],
             ..Default::default()
         };
-        let post_4 = create_post(db_client, &user_1.id, post_data_4).await.unwrap();
+        let post_4 = create_post(db_client, user_1.id, post_data_4).await.unwrap();
         // Followers-only post from another user
         let post_data_5 = PostCreateData {
             content: "followers only".to_string(),
             visibility: Visibility::Followers,
             ..Default::default()
         };
-        let post_5 = create_post(db_client, &user_1.id, post_data_5).await.unwrap();
+        let post_5 = create_post(db_client, user_1.id, post_data_5).await.unwrap();
         // Followed user's public post
         let user_data_2 = UserCreateData {
             username: "followed".to_string(),
@@ -1960,13 +1960,13 @@ mod tests {
             content: "test post".to_string(),
             ..Default::default()
         };
-        let post_6 = create_post(db_client, &user_2.id, post_data_6).await.unwrap();
+        let post_6 = create_post(db_client, user_2.id, post_data_6).await.unwrap();
         // Followed user's repost
         let post_data_7 = PostCreateData {
             repost_of_id: Some(post_3.id),
             ..Default::default()
         };
-        let post_7 = create_post(db_client, &user_2.id, post_data_7).await.unwrap();
+        let post_7 = create_post(db_client, user_2.id, post_data_7).await.unwrap();
         // Direct message from followed user sent to another user
         let post_data_8 = PostCreateData {
             content: "test post".to_string(),
@@ -1974,21 +1974,21 @@ mod tests {
             mentions: vec![user_1.id],
             ..Default::default()
         };
-        let post_8 = create_post(db_client, &user_2.id, post_data_8).await.unwrap();
+        let post_8 = create_post(db_client, user_2.id, post_data_8).await.unwrap();
         // Followers-only post from followed user
         let post_data_9 = PostCreateData {
             content: "followers only".to_string(),
             visibility: Visibility::Followers,
             ..Default::default()
         };
-        let post_9 = create_post(db_client, &user_2.id, post_data_9).await.unwrap();
+        let post_9 = create_post(db_client, user_2.id, post_data_9).await.unwrap();
         // Subscribers-only post by followed user
         let post_data_10 = PostCreateData {
             content: "subscribers only".to_string(),
             visibility: Visibility::Subscribers,
             ..Default::default()
         };
-        let post_10 = create_post(db_client, &user_2.id, post_data_10).await.unwrap();
+        let post_10 = create_post(db_client, user_2.id, post_data_10).await.unwrap();
         // Subscribers-only post by subscription (without mention)
         let user_data_3 = UserCreateData {
             username: "subscription".to_string(),
@@ -2002,7 +2002,7 @@ mod tests {
             visibility: Visibility::Subscribers,
             ..Default::default()
         };
-        let post_11 = create_post(db_client, &user_3.id, post_data_11).await.unwrap();
+        let post_11 = create_post(db_client, user_3.id, post_data_11).await.unwrap();
         // Subscribers-only post by subscription (with mention)
         let post_data_12 = PostCreateData {
             content: "subscribers only".to_string(),
@@ -2010,7 +2010,7 @@ mod tests {
             mentions: vec![current_user.id],
             ..Default::default()
         };
-        let post_12 = create_post(db_client, &user_3.id, post_data_12).await.unwrap();
+        let post_12 = create_post(db_client, user_3.id, post_data_12).await.unwrap();
         // Repost from followed user if hiding reposts
         let user_data_4 = UserCreateData {
             username: "hide reposts".to_string(),
@@ -2024,7 +2024,7 @@ mod tests {
             repost_of_id: Some(post_3.id),
             ..Default::default()
         };
-        let post_13 = create_post(db_client, &user_4.id, post_data_13).await.unwrap();
+        let post_13 = create_post(db_client, user_4.id, post_data_13).await.unwrap();
         // Post from followed user if muted
         let user_data_5 = UserCreateData {
             username: "muted".to_string(),
@@ -2038,9 +2038,9 @@ mod tests {
             content: "test post".to_string(),
             ..Default::default()
         };
-        let post_14 = create_post(db_client, &user_5.id, post_data_14).await.unwrap();
+        let post_14 = create_post(db_client, user_5.id, post_data_14).await.unwrap();
 
-        let timeline = get_home_timeline(db_client, &current_user.id, None, 20).await.unwrap();
+        let timeline = get_home_timeline(db_client, current_user.id, None, 20).await.unwrap();
         assert_eq!(timeline.len(), 7);
         assert_eq!(timeline.iter().any(|post| post.id == post_1.id), true);
         assert_eq!(timeline.iter().any(|post| post.id == post_2.id), true);
@@ -2074,7 +2074,7 @@ mod tests {
             object_id: Some("https://example.com/objects/1".to_string()),
             ..Default::default()
         };
-        let post_1 = create_post(db_client, &remote_profile.id, post_data_1)
+        let post_1 = create_post(db_client, remote_profile.id, post_data_1)
             .await.unwrap();
         let post_data_2 = PostCreateData {
             content: "test post".to_string(),
@@ -2083,13 +2083,13 @@ mod tests {
             object_id: Some("https://example.com/objects/2".to_string()),
             ..Default::default()
         };
-        let post_2 = create_post(db_client, &remote_profile.id, post_data_2)
+        let post_2 = create_post(db_client, remote_profile.id, post_data_2)
             .await.unwrap();
 
         // As local user
         let timeline = get_public_timeline(
             db_client,
-            Some(&current_user.id),
+            Some(current_user.id),
             false,
             None,
             20,
@@ -2143,7 +2143,7 @@ mod tests {
             mentions: vec![current_user.id],
             ..Default::default()
         };
-        let post_1 = create_post(db_client, &user_1.id, post_data_1)
+        let post_1 = create_post(db_client, user_1.id, post_data_1)
             .await.unwrap();
         // Public post with mention
         let post_data_2 = PostCreateData {
@@ -2152,7 +2152,7 @@ mod tests {
             mentions: vec![current_user.id],
             ..Default::default()
         };
-        let post_2 = create_post(db_client, &user_1.id, post_data_2)
+        let post_2 = create_post(db_client, user_1.id, post_data_2)
             .await.unwrap();
         // Message to other user
         let post_data_3 = PostCreateData {
@@ -2161,12 +2161,12 @@ mod tests {
             mentions: vec![user_1.id],
             ..Default::default()
         };
-        let post_3 = create_post(db_client, &user_2.id, post_data_3)
+        let post_3 = create_post(db_client, user_2.id, post_data_3)
             .await.unwrap();
 
         let timeline = get_direct_timeline(
             db_client,
-            &current_user.id,
+            current_user.id,
             None,
             20,
         ).await.unwrap();
@@ -2191,46 +2191,46 @@ mod tests {
             content: "my post".to_string(),
             ..Default::default()
         };
-        let post_1 = create_post(db_client, &user.id, post_data_1).await.unwrap();
+        let post_1 = create_post(db_client, user.id, post_data_1).await.unwrap();
         // Followers only post
         let post_data_2 = PostCreateData {
             content: "my post".to_string(),
             visibility: Visibility::Followers,
             ..Default::default()
         };
-        let post_2 = create_post(db_client, &user.id, post_data_2).await.unwrap();
+        let post_2 = create_post(db_client, user.id, post_data_2).await.unwrap();
         // Subscribers only post
         let post_data_3 = PostCreateData {
             content: "my post".to_string(),
             visibility: Visibility::Subscribers,
             ..Default::default()
         };
-        let post_3 = create_post(db_client, &user.id, post_data_3).await.unwrap();
+        let post_3 = create_post(db_client, user.id, post_data_3).await.unwrap();
         // Direct message
         let post_data_4 = PostCreateData {
             content: "my post".to_string(),
             visibility: Visibility::Direct,
             ..Default::default()
         };
-        let post_4 = create_post(db_client, &user.id, post_data_4).await.unwrap();
+        let post_4 = create_post(db_client, user.id, post_data_4).await.unwrap();
         // Reply
         let reply_data = PostCreateData {
             content: "my reply".to_string(),
             in_reply_to_id: Some(post_1.id.clone()),
             ..Default::default()
         };
-        let reply = create_post(db_client, &user.id, reply_data).await.unwrap();
+        let reply = create_post(db_client, user.id, reply_data).await.unwrap();
         // Repost
         let repost_data = PostCreateData {
             repost_of_id: Some(reply.id.clone()),
             ..Default::default()
         };
-        let repost = create_post(db_client, &user.id, repost_data).await.unwrap();
+        let repost = create_post(db_client, user.id, repost_data).await.unwrap();
 
         // Anonymous viewer
         let timeline = get_posts_by_author(
             db_client,
-            &user.id,
+            user.id,
             None,
             false,
             true,
@@ -2307,24 +2307,24 @@ mod tests {
             content: "my post".to_string(),
             ..Default::default()
         };
-        let post_1 = create_post(db_client, &user_1.id, post_data_1).await.unwrap();
+        let post_1 = create_post(db_client, user_1.id, post_data_1).await.unwrap();
         let post_data_2 = PostCreateData {
             content: "reply".to_string(),
             in_reply_to_id: Some(post_1.id.clone()),
             ..Default::default()
         };
-        let post_2 = create_post(db_client, &user_2.id, post_data_2).await.unwrap();
+        let post_2 = create_post(db_client, user_2.id, post_data_2).await.unwrap();
         let post_data_3 = PostCreateData {
             content: "hidden reply".to_string(),
             in_reply_to_id: Some(post_1.id.clone()),
             visibility: Visibility::Direct,
             ..Default::default()
         };
-        let post_3 = create_post(db_client, &user_2.id, post_data_3).await.unwrap();
+        let post_3 = create_post(db_client, user_2.id, post_data_3).await.unwrap();
         let thread = get_thread(
             db_client,
-            &post_2.id,
-            Some(&user_1.id),
+            post_2.id,
+            Some(user_1.id),
         ).await.unwrap();
         assert_eq!(thread.len(), 2);
         assert_eq!(thread[0].id, post_1.id);
@@ -2332,8 +2332,8 @@ mod tests {
 
         let error = get_thread(
             db_client,
-            &post_3.id,
-            Some(&user_1.id),
+            post_3.id,
+            Some(user_1.id),
         ).await.err().unwrap();
         assert_eq!(error.to_string(), "post not found");
     }
@@ -2356,7 +2356,7 @@ mod tests {
         };
         let _post_1 = create_post(
             db_client,
-            &author.id,
+            author.id,
             post_data_1,
         ).await.unwrap();
         let post_data_2 = PostCreateData {
@@ -2367,7 +2367,7 @@ mod tests {
         };
         let post_2 = create_post(
             db_client,
-            &author.id,
+            author.id,
             post_data_2,
         ).await.unwrap();
 

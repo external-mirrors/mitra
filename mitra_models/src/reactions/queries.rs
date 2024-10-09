@@ -166,7 +166,7 @@ mod tests {
             content: "my post".to_string(),
             ..Default::default()
         };
-        let post = create_post(db_client, &user_2.id, post_data).await.unwrap();
+        let post = create_post(db_client, user_2.id, post_data).await.unwrap();
         let content = "❤️";
         let reaction_data = ReactionData {
             author_id: user_1.id,
@@ -183,7 +183,7 @@ mod tests {
         assert_eq!(reaction.emoji_id.is_none(), true);
         assert_eq!(reaction.activity_id.is_none(), true);
 
-        let post = get_post_by_id(db_client, &post.id).await.unwrap();
+        let post = get_post_by_id(db_client, post.id).await.unwrap();
         assert_eq!(post.reactions.len(), 1);
     }
 
@@ -207,7 +207,7 @@ mod tests {
             content: "my post".to_string(),
             ..Default::default()
         };
-        let post = create_post(db_client, &user_2.id, post_data).await.unwrap();
+        let post = create_post(db_client, user_2.id, post_data).await.unwrap();
         let reaction_data_1 = ReactionData {
             author_id: user_1.id,
             post_id: post.id,
@@ -248,7 +248,7 @@ mod tests {
             content: "my post".to_string(),
             ..Default::default()
         };
-        let post = create_post(db_client, &user_2.id, post_data).await.unwrap();
+        let post = create_post(db_client, user_2.id, post_data).await.unwrap();
         let reaction_data = ReactionData {
             author_id: user_1.id,
             post_id: post.id,

@@ -73,8 +73,8 @@ pub async fn handle_offer(
         .to_string();
     let db_invoice = create_local_invoice(
         db_client,
-        &actor_profile.id,
-        &proposer.id,
+        actor_profile.id,
+        proposer.id,
         &subscription_option.chain_id,
         &payment_address,
         amount,

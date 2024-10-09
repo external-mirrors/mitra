@@ -424,7 +424,7 @@ pub async fn get_post_by_object_id(
     match parse_local_object_id(instance_url, &object_id) {
         Ok(post_id) => {
             // Local post
-            let post = get_local_post_by_id(db_client, &post_id).await?;
+            let post = get_local_post_by_id(db_client, post_id).await?;
             Ok(post)
         },
         Err(_) => {
@@ -471,7 +471,7 @@ pub async fn import_post(
                     };
                     // Object is a local post
                     // Verify post exists, return error if it doesn't
-                    get_local_post_by_id(db_client, &post_id).await?;
+                    get_local_post_by_id(db_client, post_id).await?;
                     continue;
                 };
                 let canonical_object_id = canonicalize_id(&object_id)?;

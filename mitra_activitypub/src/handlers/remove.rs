@@ -79,7 +79,7 @@ pub async fn handle_remove(
             Err(DatabaseError::NotFound(_)) => return Ok(None),
             Err(other_error) => return Err(other_error.into()),
         };
-        set_pinned_flag(db_client, &post.id, false).await?;
+        set_pinned_flag(db_client, post.id, false).await?;
         return Ok(Some(Descriptor::target("featured")));
     };
     Ok(None)

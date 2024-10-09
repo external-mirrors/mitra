@@ -86,8 +86,8 @@ pub async fn update_subscription(
 
 pub async fn get_subscription_by_participants(
     db_client: &impl DatabaseClient,
-    sender_id: &Uuid,
-    recipient_id: &Uuid,
+    sender_id: Uuid,
+    recipient_id: Uuid,
 ) -> Result<DbSubscription, DatabaseError> {
     let maybe_row = db_client.query_opt(
         "
@@ -95,7 +95,7 @@ pub async fn get_subscription_by_participants(
         FROM subscription
         WHERE sender_id = $1 AND recipient_id = $2
         ",
-        &[sender_id, recipient_id],
+        &[&sender_id, &recipient_id],
     ).await?;
     let row = maybe_row.ok_or(DatabaseError::NotFound("subscription"))?;
     let subscription: DbSubscription = row.try_get("subscription")?;
@@ -127,7 +127,7 @@ pub async fn get_expired_subscriptions(
 
 pub async fn get_incoming_subscriptions(
     db_client: &impl DatabaseClient,
-    recipient_id: &Uuid,
+    recipient_id: Uuid,
     include_expired: bool,
     max_subscription_id: Option<i32>,
     limit: u16,
@@ -269,7 +269,7 @@ mod tests {
             create_profile(db_client, recipient_data).await.unwrap();
         let results = get_incoming_subscriptions(
             db_client,
-            &recipient.id,
+            recipient.id,
             true,
             None,
             40,

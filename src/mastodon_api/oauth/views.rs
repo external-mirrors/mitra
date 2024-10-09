@@ -93,7 +93,7 @@ async fn authorize_view(
     };
     let oauth_app = get_oauth_app_by_client_id(
         db_client,
-        &query_params.client_id,
+        query_params.client_id,
     ).await?;
     if oauth_app.redirect_uri != query_params.redirect_uri {
         return Err(ValidationError("invalid redirect_uri parameter").into());
@@ -261,7 +261,7 @@ async fn revoke_token_view(
     let current_user = get_current_user(db_client, auth.token()).await?;
     match delete_oauth_token(
         db_client,
-        &current_user.id,
+        current_user.id,
         &request_data.token,
     ).await {
         Ok(_) => (),
