@@ -22,7 +22,7 @@ use crate::profiles::{
 };
 
 use super::types::{
-    AdminUser,
+    AccountAdminInfo,
     ClientConfig,
     DbClientConfig,
     DbInviteCode,
@@ -471,9 +471,9 @@ pub async fn get_active_user_count(
     Ok(count)
 }
 
-pub async fn get_users_admin(
+pub async fn get_accounts_for_admin(
     db_client: &impl DatabaseClient,
-) -> Result<Vec<AdminUser>, DatabaseError> {
+) -> Result<Vec<AccountAdminInfo>, DatabaseError> {
     let rows = db_client.query(
         "
         SELECT
@@ -489,7 +489,7 @@ pub async fn get_users_admin(
         &[],
     ).await?;
     let users = rows.iter()
-        .map(AdminUser::try_from)
+        .map(AccountAdminInfo::try_from)
         .collect::<Result<_, _>>()?;
     Ok(users)
 }

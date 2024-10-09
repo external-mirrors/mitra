@@ -76,8 +76,8 @@ use mitra_models::{
     users::queries::{
         create_invite_code,
         create_user,
+        get_accounts_for_admin,
         get_invite_codes,
-        get_users_admin,
         get_user_count,
         get_user_by_id,
         set_user_password,
@@ -292,19 +292,19 @@ impl ListAccounts {
         &self,
         db_client: &impl DatabaseClient,
     ) -> Result<(), Error> {
-        let users = get_users_admin(db_client).await?;
+        let accounts = get_accounts_for_admin(db_client).await?;
         println!(
             "{0: <40} | {1: <35} | {2: <20} | {3: <35} | {4: <35}",
             "ID", "username", "role", "created", "last login",
         );
-        for user in users {
+        for account in accounts {
             println!(
                 "{0: <40} | {1: <35} | {2: <20} | {3: <35} | {4: <35}",
-                user.profile.id.to_string(),
-                user.profile.username,
-                role_to_str(&user.role),
-                user.profile.created_at.to_string(),
-                user.last_login.map(|dt| dt.to_string()).unwrap_or_default(),
+                account.profile.id.to_string(),
+                account.profile.username,
+                role_to_str(&account.role),
+                account.profile.created_at.to_string(),
+                account.last_login.map(|dt| dt.to_string()).unwrap_or_default(),
             );
         };
         Ok(())

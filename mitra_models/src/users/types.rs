@@ -301,13 +301,13 @@ impl Default for UserCreateData {
     }
 }
 
-pub struct AdminUser {
+pub struct AccountAdminInfo {
     pub profile: DbActorProfile,
     pub role: Role,
     pub last_login: Option<DateTime<Utc>>,
 }
 
-impl TryFrom<&Row> for AdminUser {
+impl TryFrom<&Row> for AccountAdminInfo {
 
     type Error = DatabaseError;
 
