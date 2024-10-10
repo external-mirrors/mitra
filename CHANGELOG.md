@@ -15,6 +15,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Fixed
 
 - Canonicalize IDs when parsing `inReplyTo` and object links.
+- Fixed rendering of "Post not found" page.
 
 ## [3.6.0] - 2024-10-03
 

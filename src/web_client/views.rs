@@ -14,7 +14,11 @@ use apx_sdk::http_server::is_activitypub_request;
 use mitra_activitypub::identifiers::{post_object_id, profile_actor_id};
 use mitra_config::Config;
 use mitra_models::{
-    database::{get_database_client, DatabaseConnectionPool},
+    database::{
+        get_database_client,
+        DatabaseConnectionPool,
+        DatabaseError,
+    },
     posts::{
         queries::get_post_by_id,
     },
@@ -122,26 +126,29 @@ async fn post_page_opengraph_view(
     post_id: web::Path<Uuid>,
 ) -> Result<HttpResponse, HttpError> {
     let db_client = &**get_database_client(&db_pool).await?;
-    let post = get_post_by_id(db_client, *post_id).await?;
     let web_client_dir = config.web_client_dir.as_ref()
         .ok_or(HttpError::InternalError)?;
     let index_html = std::fs::read_to_string(web_client_dir.join(INDEX_FILE))
         .map_err(|_| HttpError::InternalError)?;
-    let page = if post.is_public() {
-        // Rewrite index.html and insert metadata
-        let metadata_block = format!(
-            include_str!("metadata_block.html"),
-            title=config.instance_title,
-            subtitle=format!("Post by @{}", post.author.preferred_handle()),
-            image_url=get_opengraph_image_url(&config.instance_url()),
-        );
-        index_html.replace(
-            "<title>Mitra - Federated social network</title>",
-            &metadata_block,
-        )
-    } else {
-        // Don't insert metadata
-        index_html
+    let page = match get_post_by_id(db_client, *post_id).await {
+        Ok(post) if post.is_public() => {
+            // Rewrite index.html and insert metadata
+            let metadata_block = format!(
+                include_str!("metadata_block.html"),
+                title=config.instance_title,
+                subtitle=format!("Post by @{}", post.author.preferred_handle()),
+                image_url=get_opengraph_image_url(&config.instance_url()),
+            );
+            index_html.replace(
+                "<title>Mitra - Federated social network</title>",
+                &metadata_block,
+            )
+        },
+        Ok(_) | Err(DatabaseError::NotFound(_)) => {
+            // Don't insert metadata if post doesn't exist or not public
+            index_html
+        },
+        Err(other_error) => return Err(other_error.into()),
     };
     let response = HttpResponse::Ok()
         .content_type("text/html")
