@@ -25,6 +25,10 @@ use crate::mastodon_api::{
         AUTHENTICATION_METHOD_PASSWORD,
         AUTHENTICATION_METHOD_EIP4361,
     },
+    statuses::types::{
+        POST_CONTENT_TYPE_HTML,
+        POST_CONTENT_TYPE_MARKDOWN,
+    },
     MASTODON_API_VERSION,
 };
 
@@ -73,6 +77,7 @@ struct BlockchainInfo {
 #[derive(Serialize)]
 struct PleromaMetadata {
     features: [&'static str; 3],
+    post_formats: [&'static str; 2],
 }
 
 #[derive(Serialize)]
@@ -202,6 +207,10 @@ impl InstanceInfo {
                         "quote_posting",
                         "pleroma_emoji_reactions",
                         "pleroma_custom_emoji_reactions",
+                    ],
+                    post_formats: [
+                        POST_CONTENT_TYPE_HTML,
+                        POST_CONTENT_TYPE_MARKDOWN,
                     ],
                 },
             },

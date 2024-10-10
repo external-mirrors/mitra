@@ -2634,6 +2634,27 @@ components:
           description: Timestamp of when the server verified the field value.
           type: string
           format: date-time
+    InstancePleroma:
+      type: object
+      properties:
+        metadata:
+          type: object
+          properties:
+            features:
+              type: array
+              items:
+                type: string
+              example:
+                - quote_posting
+                - pleroma_emoji_reactions
+                - pleroma_custom_emoji_reactions
+            post_formats:
+              type: array
+              items:
+                type: string
+              example:
+                - text/html
+                - text/markdown
     Instance:
       type: object
       properties:
@@ -2755,6 +2776,8 @@ components:
           description: IPFS gateway URL.
           type: string
           nullable: true
+        pleroma:
+          $ref: '#/components/schemas/InstancePleroma'
     InstanceV2:
       type: object
       properties:

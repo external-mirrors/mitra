@@ -20,6 +20,9 @@ use crate::mastodon_api::{
     media::types::Attachment,
 };
 
+pub const POST_CONTENT_TYPE_HTML: &str = "text/html";
+pub const POST_CONTENT_TYPE_MARKDOWN: &str = "text/markdown";
+
 /// https://docs.joinmastodon.org/entities/mention/
 #[derive(Serialize)]
 pub struct Mention {
@@ -223,7 +226,7 @@ impl Status {
     }
 }
 
-fn default_post_content_type() -> String { "text/markdown".to_string() }
+fn default_post_content_type() -> String { POST_CONTENT_TYPE_MARKDOWN.to_string() }
 
 /// https://docs.joinmastodon.org/methods/statuses/
 #[derive(Debug, Deserialize)]

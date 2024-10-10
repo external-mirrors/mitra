@@ -33,7 +33,11 @@ use crate::mastodon_api::{
     },
 };
 
-use super::types::Status;
+use super::types::{
+    Status,
+    POST_CONTENT_TYPE_HTML,
+    POST_CONTENT_TYPE_MARKDOWN,
+};
 
 pub struct PostContent {
     pub content: String,
@@ -108,8 +112,8 @@ pub async fn parse_content(
     maybe_quote_of_id: Option<Uuid>,
 ) -> Result<PostContent, MastodonError> {
     let (content_html, maybe_content_source) = match content_type {
-        "text/html" => (content.to_owned(), None),
-        "text/markdown" => {
+        POST_CONTENT_TYPE_HTML => (content.to_owned(), None),
+        POST_CONTENT_TYPE_MARKDOWN => {
             let content_html = markdown_lite_to_html(content)
                 .map_err(|_| ValidationError("invalid markdown"))?;
             (content_html, Some(content.to_owned()))

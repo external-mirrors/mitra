@@ -11,6 +11,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Added `create-account` alias to `create-user` command.
 - Added `list-accounts` alias to `list-users` command.
 - Added `delete-user` alias to `delete-profile` command.
+- Added information about supported post formats to `/api/v1/instance` response.
 
 ### Fixed
 
