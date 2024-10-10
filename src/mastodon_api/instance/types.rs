@@ -80,6 +80,22 @@ struct PleromaMetadata {
     post_formats: [&'static str; 2],
 }
 
+impl PleromaMetadata {
+    fn new() -> Self {
+        Self {
+            features: [
+                "quote_posting",
+                "pleroma_emoji_reactions",
+                "pleroma_custom_emoji_reactions",
+            ],
+            post_formats: [
+                POST_CONTENT_TYPE_HTML,
+                POST_CONTENT_TYPE_MARKDOWN,
+            ],
+        }
+    }
+}
+
 #[derive(Serialize)]
 struct PleromaInfo {
     metadata: PleromaMetadata,
@@ -202,17 +218,7 @@ impl InstanceInfo {
             blockchains: blockchains,
             ipfs_gateway_url: config.ipfs_gateway_url.clone(),
             pleroma: PleromaInfo {
-                metadata: PleromaMetadata {
-                    features: [
-                        "quote_posting",
-                        "pleroma_emoji_reactions",
-                        "pleroma_custom_emoji_reactions",
-                    ],
-                    post_formats: [
-                        POST_CONTENT_TYPE_HTML,
-                        POST_CONTENT_TYPE_MARKDOWN,
-                    ],
-                },
+                metadata: PleromaMetadata::new(),
             },
         }
     }
@@ -259,6 +265,8 @@ pub struct InstanceInfoV2 {
     configuration: ConfigurationV2,
     registrations: Registrations,
     contact: Contact,
+
+    pleroma: PleromaInfo,
 }
 
 impl InstanceInfoV2 {
@@ -305,6 +313,9 @@ impl InstanceInfoV2 {
                     &config.instance().url(),
                     user.profile,
                 )),
+            },
+            pleroma: PleromaInfo {
+                metadata: PleromaMetadata::new(),
             },
         }
     }

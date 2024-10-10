@@ -2865,6 +2865,8 @@ components:
               allOf:
                 - description: A user that can be contacted natively over the network regarding inquiries or issues.
                 - $ref: '#/components/schemas/Account'
+        pleroma:
+          $ref: '#/components/schemas/InstancePleroma'
     Invoice:
       type: object
       properties:
