@@ -6,6 +6,7 @@ pub mod caip122;
 pub mod custom_feeds;
 pub mod database;
 pub mod emojis;
+pub mod filter_rules;
 pub mod instances;
 pub mod invoices;
 pub mod markers;

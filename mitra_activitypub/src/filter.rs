@@ -3,8 +3,13 @@ use wildmatch::WildMatch;
 use apx_core::{
     http_url::{HttpUrl, Hostname},
 };
+use mitra_config::Config;
 use mitra_models::{
-    database::{DatabaseError, DatabaseTypeError},
+    database::{DatabaseClient, DatabaseError, DatabaseTypeError},
+    filter_rules::{
+        queries::get_filter_rules,
+        types::{FilterRule, FilterAction},
+    },
     profiles::types::DbActor,
 };
 
@@ -24,7 +29,7 @@ pub fn get_moderation_domain(
     Ok(hostname)
 }
 
-pub fn is_hostname_allowed(
+fn is_hostname_allowed(
     blocklist: &[String],
     allowlist: &[String],
     hostname: &str,
@@ -40,8 +45,61 @@ pub fn is_hostname_allowed(
     }
 }
 
+pub struct FederationFilter {
+    blocklist: Vec<String>,
+    allowlist: Vec<String>,
+    rules: Vec<FilterRule>,
+}
+
+impl FederationFilter {
+    pub async fn init(
+        config: &Config,
+        db_client: &impl DatabaseClient,
+    ) -> Result<Self, DatabaseError> {
+        let rules = get_filter_rules(db_client).await?;
+        Ok(Self {
+            blocklist: config.blocked_instances.clone(),
+            allowlist: config.allowed_instances.clone(),
+            rules,
+        })
+    }
+
+    fn is_action_required(
+        &self,
+        hostname: &str,
+        action: FilterAction,
+    ) -> bool {
+        let mut is_required = false;
+        // Blocklist and allowlist have lower priority than filter rules
+        if action == FilterAction::Reject {
+            is_required = !is_hostname_allowed(
+                &self.blocklist,
+                &self.allowlist,
+                hostname,
+            );
+        };
+        let applicable_rules = self.rules.iter()
+            .filter(|rule| WildMatch::new(&rule.target).matches(hostname))
+            .filter(|rule| rule.filter_action == action);
+        // Apply rules, starting with less specific
+        for rule in applicable_rules {
+            is_required = !rule.is_reversed;
+        };
+        is_required
+    }
+
+    pub fn is_blocked(&self, hostname: &str) -> bool {
+        self.is_action_required(hostname, FilterAction::Reject)
+    }
+}
+
 #[cfg(test)]
 mod tests {
+    use serial_test::serial;
+    use mitra_models::{
+        database::test_utils::create_test_database,
+        filter_rules::queries::add_filter_rule,
+    };
     use super::*;
 
     #[test]
@@ -72,5 +130,36 @@ mod tests {
         assert_eq!(result, true);
         let result = is_hostname_allowed(&blocklist, &allowlist, "other.example");
         assert_eq!(result, false);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_federation_filter() {
+        let db_client = &create_test_database().await;
+        let target_1 = "*";
+        let target_2 = "one.example";
+        let target_3 = "two.example";
+        add_filter_rule(
+            db_client,
+            target_1,
+            FilterAction::Reject,
+            false, // block
+        ).await.unwrap();
+        add_filter_rule(
+            db_client,
+            target_2,
+            FilterAction::Reject,
+            true, // allow
+        ).await.unwrap();
+        let rules = get_filter_rules(db_client).await.unwrap();
+
+        let filter = FederationFilter {
+            blocklist: vec![],
+            allowlist: vec![target_3.to_string()], // overridden
+            rules,
+        };
+        assert_eq!(filter.is_blocked("one.example"), false);
+        assert_eq!(filter.is_blocked("two.example"), true);
+        assert_eq!(filter.is_blocked("any.example"), true);
     }
 }

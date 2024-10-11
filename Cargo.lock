@@ -2075,6 +2075,7 @@ dependencies = [
  "regex",
  "serde",
  "serde_json",
+ "serial_test",
  "thiserror",
  "tokio",
  "uuid",

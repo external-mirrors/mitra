@@ -12,6 +12,8 @@ use mitra_models::database::{
 };
 
 mod cli;
+mod commands;
+
 use cli::{Cli, SubCommand};
 
 #[tokio::main]
@@ -36,6 +38,9 @@ async fn main() {
     #[allow(clippy::unwrap_used)]
     match opts.subcmd {
         SubCommand::UpdateConfig(cmd) => cmd.execute(db_client).await.unwrap(),
+        SubCommand::AddFilterRule(cmd) => cmd.execute(db_client).await.unwrap(),
+        SubCommand::RemoveFilterRule(cmd) => cmd.execute(db_client).await.unwrap(),
+        SubCommand::ListFilterRules(cmd) => cmd.execute(db_client).await.unwrap(),
         SubCommand::GenerateInviteCode(cmd) => cmd.execute(db_client).await.unwrap(),
         SubCommand::ListInviteCodes(cmd) => cmd.execute(db_client).await.unwrap(),
         SubCommand::CreateAccount(cmd) => cmd.execute(&config, db_client).await.unwrap(),

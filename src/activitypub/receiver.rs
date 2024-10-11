@@ -9,7 +9,7 @@ use mitra_activitypub::{
         verify_signed_request,
         AuthenticationError,
     },
-    filter::{get_moderation_domain, is_hostname_allowed},
+    filter::{get_moderation_domain, FederationFilter},
     identifiers::canonicalize_id,
     queues::IncomingActivityJobData,
     vocabulary::{ANNOUNCE, DELETE, CREATE, LIKE, UPDATE},
@@ -79,11 +79,8 @@ pub async fn receive_activity(
 
     let actor_hostname = get_hostname(&activity_actor)
         .map_err(|_| ValidationError("invalid actor ID"))?;
-    if !is_hostname_allowed(
-        &config.blocked_instances,
-        &config.allowed_instances,
-        &actor_hostname,
-    ) {
+    let filter = FederationFilter::init(config, db_client).await?;
+    if filter.is_blocked(&actor_hostname) {
         log::info!("ignoring activity from blocked instance {actor_hostname}");
         return Ok(());
     };
@@ -160,11 +157,7 @@ pub async fn receive_activity(
     };
 
     let signer_hostname = get_moderation_domain(signer.expect_actor_data())?;
-    if !is_hostname_allowed(
-        &config.blocked_instances,
-        &config.allowed_instances,
-        signer_hostname.as_str(),
-    ) {
+    if filter.is_blocked(signer_hostname.as_str()) {
         log::info!("ignoring activity from blocked instance {signer_hostname}");
         return Ok(());
     };

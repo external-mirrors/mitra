@@ -125,6 +125,10 @@ use mitra_validators::{
     users::validate_local_username,
 };
 
+use crate::commands::{
+    filter::{AddFilterRule, ListFilterRules, RemoveFilterRule},
+};
+
 /// Mitra admin CLI
 #[derive(Parser)]
 #[command(version)]
@@ -139,6 +143,9 @@ pub struct Cli {
 #[derive(Parser)]
 pub enum SubCommand {
     UpdateConfig(UpdateConfig),
+    AddFilterRule(AddFilterRule),
+    RemoveFilterRule(RemoveFilterRule),
+    ListFilterRules(ListFilterRules),
     GenerateInviteCode(GenerateInviteCode),
     ListInviteCodes(ListInviteCodes),
     CreateAccount(CreateAccount),

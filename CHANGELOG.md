@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Added `delete-user` alias to `delete-profile` command.
 - Added information about supported post formats to `/api/v1/instance` response.
 - Added `pleroma` object to `/api/v2/instance` response.
+- Support storing blocklist and allowlist configuration in database.
 
 ### Changed
 
