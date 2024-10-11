@@ -208,7 +208,7 @@ pub async fn receive_activity(
                     signer_id,
                     activity_actor,
                 );
-                return Err(AuthenticationError::UnexpectedSigner.into());
+                return Err(AuthenticationError::UnexpectedRequestSigner.into());
             },
         };
     };

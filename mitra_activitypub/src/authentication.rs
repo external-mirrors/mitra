@@ -101,7 +101,10 @@ pub enum AuthenticationError {
     InvalidEd25519PublicKey(#[from] Ed25519SerializationError),
 
     #[error("actor and request signer do not match")]
-    UnexpectedSigner,
+    UnexpectedRequestSigner,
+
+    #[error("actor and object signer do not match")]
+    UnexpectedObjectSigner,
 
     #[error("invalid portable activity: {0}")]
     InvalidPortableActivity(#[from] PortableObjectAuthenticationError),
@@ -239,7 +242,7 @@ pub async fn verify_signed_activity(
             if !is_same_origin(&activity_id, &actor_id)
                 .map_err(|_| AuthenticationError::ActorError("invalid actor ID"))?
             {
-                return Err(AuthenticationError::UnexpectedSigner);
+                return Err(AuthenticationError::UnexpectedObjectSigner);
             };
             let actor_profile = get_signer(config, db_client, &actor_id, no_fetch).await?;
             return Ok(actor_profile);
@@ -270,7 +273,7 @@ pub async fn verify_signed_activity(
             let signer_id = key_id_to_actor_id(key_id)
                 .map_err(|_| AuthenticationError::InvalidKeyId)?;
             if signer_id != actor_id {
-                return Err(AuthenticationError::UnexpectedSigner);
+                return Err(AuthenticationError::UnexpectedObjectSigner);
             };
             match signature_data.proof_type {
                 ProofType::JcsRsaSignature => {
