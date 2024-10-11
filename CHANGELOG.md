@@ -25,6 +25,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Canonicalize IDs when parsing `inReplyTo` and object links.
 - Fixed rendering of "Post not found" page.
 - Fixed incorrect error message when object signer doesn't match owner.
+- Fixed miscategorization of portable replies as spam.
 
 ## [3.6.0] - 2024-10-03
 

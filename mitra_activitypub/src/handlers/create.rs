@@ -845,9 +845,11 @@ async fn check_unsolicited_message(
     object: &AttributedObject,
 ) -> Result<(), HandlerError> {
     let author_id = get_object_attributed_to(object)?;
+    let canonical_author_id = canonicalize_id(&author_id)?.to_string();
     let author_has_followers =
-        has_local_followers(db_client, &author_id).await?;
+        has_local_followers(db_client, &canonical_author_id).await?;
     let audience = get_audience(object);
+    // TODO: FEP-EF61: find portable local recipients
     let has_local_recipients = audience.iter().any(|actor_id| {
         parse_local_actor_id(instance_url, actor_id).is_ok()
     });
@@ -873,7 +875,7 @@ async fn check_unsolicited_message(
         // Possible cause: a failure to process Undo(Follow)
         !author_has_followers;
     if is_unsolicited {
-        return Err(HandlerError::UnsolicitedMessage(author_id));
+        return Err(HandlerError::UnsolicitedMessage(canonical_author_id));
     };
     Ok(())
 }
