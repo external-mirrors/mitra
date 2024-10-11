@@ -18,6 +18,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Display better error message when request signer is not found is local cache.
 - Fetch conversation container item if integrity proof is not present.
+- De-duplicate media attachments by URL.
 
 ### Fixed
 

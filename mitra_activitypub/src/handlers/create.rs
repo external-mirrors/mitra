@@ -281,13 +281,21 @@ pub async fn get_object_attachments(
     object: &AttributedObject,
     author: &DbActorProfile,
 ) -> Result<(Vec<Uuid>, Vec<String>), HandlerError> {
+    struct AttachmentData {
+        url: String,
+        file_name: String,
+        file_size: usize,
+        media_type: String,
+        description: Option<String>,
+    }
+
     let agent = build_federation_agent(instance, None);
     let values = object.attachment.iter()
         // PeerTube video thumbnails
         .chain(object.icon.iter().take(1));
     let mut attachments = vec![];
     let mut unprocessed = vec![];
-    let mut downloaded = vec![];
+    let mut downloaded: Vec<AttachmentData> = vec![];
     for attachment_value in values {
         // Stop downloading if limit is reached
         if downloaded.len() >= ATTACHMENT_LIMIT {
@@ -331,17 +339,21 @@ pub async fn get_object_attachments(
             // Don't fetch HTML pages attached by GNU Social
             continue;
         };
-        let maybe_description = attachment.name.filter(|name| {
-            validate_media_description(name)
-                .map_err(|error| log::warn!("{error}"))
-                .is_ok()
-        });
         let attachment_url = if let Some(url) = attachment.url {
             url
         } else {
             log::warn!("attachment URL is missing");
             continue;
         };
+        if downloaded.iter().any(|item| item.url == attachment_url) {
+            // Already downloaded
+            continue;
+        };
+        let maybe_description = attachment.name.filter(|name| {
+            validate_media_description(name)
+                .map_err(|error| log::warn!("{error}"))
+                .is_ok()
+        });
         let (file_data, file_size, media_type) = match fetch_file(
             &agent,
             &attachment_url,
@@ -362,21 +374,22 @@ pub async fn get_object_attachments(
         };
         let file_name = storage.save_file(file_data, &media_type)?;
         log::info!("downloaded attachment {}", attachment_url);
-        downloaded.push((
+        downloaded.push(AttachmentData {
+            url: attachment_url,
             file_name,
             file_size,
             media_type,
-            maybe_description,
-        ));
+            description: maybe_description,
+        });
     };
-    for (file_name, file_size, media_type, description) in downloaded {
+    for attachment_data in downloaded {
         let db_attachment = create_attachment(
             db_client,
             author.id,
-            file_name,
-            file_size,
-            media_type,
-            description.as_deref(),
+            attachment_data.file_name,
+            attachment_data.file_size,
+            attachment_data.media_type,
+            attachment_data.description.as_deref(),
         ).await?;
         attachments.push(db_attachment.id);
     };
