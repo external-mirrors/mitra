@@ -31,8 +31,10 @@ use mitra_models::{
 use mitra_validators::errors::ValidationError;
 
 use crate::{
+    agent::build_federation_agent,
     authentication::{verify_signed_activity, AuthenticationError},
     identifiers::parse_local_actor_id,
+    importers::fetch_any_object,
     ownership::verify_activity_owner,
     vocabulary::{DISLIKE, LIKE},
 };
@@ -76,26 +78,37 @@ async fn handle_fep_171b_add(
 ) -> HandlerResult {
     let ConversationAdd {
         actor: conversation_owner,
-        object: activity,
+        object: mut activity,
         target,
     } =
         serde_json::from_value(add)
             .map_err(|_| ValidationError("unexpected activity structure"))?;
-    let activity_type = activity["type"].as_str()
-        .ok_or(ValidationError("unexpected activity structure"))?
-        .to_owned();
     // Authentication
-    verify_activity_owner(&activity)?;
-    let _signer = match verify_signed_activity(
+    match verify_signed_activity(
         config,
         db_client,
         &activity,
         false, // fetch signer
     ).await {
-        Ok(profile) => profile,
+        Ok(_) => (),
         Err(AuthenticationError::NoJsonSignature) => {
-            log::info!("ignoring unsigned {activity_type} in conversation");
-            return Ok(None);
+            // Verify activity by fetching it from origin
+            let activity_id = activity["id"].as_str()
+                .ok_or(ValidationError("unexpected activity structure"))?
+                .to_owned();
+            let instance = config.instance();
+            let agent = build_federation_agent(&instance, None);
+            match fetch_any_object(&agent, &activity_id).await {
+                Ok(activity_fetched) => {
+                    log::info!("fetched activity {}", activity_id);
+                    activity = activity_fetched
+                },
+                Err(error) => {
+                    // Wrapped activities are not always available
+                    log::warn!("failed to fetch activity ({error}): {activity_id}");
+                    return Ok(None);
+                },
+            };
         },
         Err(AuthenticationError::DatabaseError(db_error)) => return Err(db_error.into()),
         // TODO: better reporting of authentication errors
@@ -107,6 +120,7 @@ async fn handle_fep_171b_add(
     {
         return Err(ValidationError("actor is not allowed to modify target").into());
     };
+    verify_activity_owner(&activity)?;
     if let Some(context) = activity["context"].as_str() {
         if context != target {
             log::warn!("context doesn't match Add target");
@@ -115,6 +129,9 @@ async fn handle_fep_171b_add(
         log::warn!("'context' is missing");
     };
 
+    let activity_type = activity["type"].as_str()
+        .ok_or(ValidationError("unexpected activity structure"))?
+        .to_owned();
     if let LIKE | DISLIKE = activity_type.as_str() {
         let maybe_type = handle_like(config, db_client, activity).await?;
         Ok(maybe_type.map(|_| Descriptor::object(activity_type)))
