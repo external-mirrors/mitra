@@ -41,16 +41,16 @@ List generated invites:
 mitractl list-invite-codes
 ```
 
-Create user:
+Create account:
 
 ```shell
-mitractl create-user <username> <password> <role-name>
+mitractl create-account <username> <password> <role-name>
 ```
 
-List local users:
+List local accounts:
 
 ```shell
-mitractl list-users
+mitractl list-accounts
 ```
 
 Set or change password:
@@ -65,10 +65,10 @@ Change user's role (admin, user or read_only_user).
 mitractl set-role <user-id-or-name> <role-name>
 ```
 
-Delete profile:
+Delete user:
 
 ```shell
-mitractl delete-profile 55a3005f-f293-4168-ab70-6ab09a879679
+mitractl delete-user 55a3005f-f293-4168-ab70-6ab09a879679
 ```
 
 Delete post:

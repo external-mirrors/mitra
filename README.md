@@ -82,10 +82,10 @@ systemctl start mitra
 
 An HTTP server will be needed to handle HTTPS requests. See examples of [Nginx](./contrib/mitra.nginx) and [Caddy](./contrib/Caddyfile) configuration files.
 
-Create admin user when installation is finished:
+Create admin account when installation is finished:
 
 ```shell
-su mitra -s $SHELL -c "mitractl create-user <username> <password> admin"
+su mitra -s $SHELL -c "mitractl create-account <username> <password> admin"
 ```
 
 ### Building from source
@@ -121,10 +121,10 @@ An HTTP server will be needed to handle HTTPS requests. See examples of [Nginx](
 
 To run Mitra as a systemd service, check out the [systemd unit file example](./contrib/mitra.service).
 
-Create admin user when installation is finished:
+Create admin account when installation is finished:
 
 ```shell
-./mitractl create-user <username> <password> admin
+./mitractl create-account <username> <password> admin
 ```
 
 ### Other installation methods
