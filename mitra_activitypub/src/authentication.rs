@@ -134,6 +134,10 @@ async fn get_signer(
             signer_id,
         ).await {
             Ok(profile) => profile,
+            Err(HandlerError::DatabaseError(DatabaseError::NotFound(_))) => {
+                let error_message = "signer not found in cache";
+                return Err(AuthenticationError::ImportError(error_message.to_string()));
+            },
             Err(HandlerError::DatabaseError(error)) => return Err(error.into()),
             Err(other_error) => {
                 return Err(AuthenticationError::ImportError(other_error.to_string()));

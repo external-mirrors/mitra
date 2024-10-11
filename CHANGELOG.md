@@ -14,6 +14,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Added information about supported post formats to `/api/v1/instance` response.
 - Added `pleroma` object to `/api/v2/instance` response.
 
+### Changed
+
+- Display better error message when request signer is not found is local cache.
+
 ### Fixed
 
 - Canonicalize IDs when parsing `inReplyTo` and object links.
