@@ -91,6 +91,10 @@ impl FederationFilter {
     pub fn is_blocked(&self, hostname: &str) -> bool {
         self.is_action_required(hostname, FilterAction::Reject)
     }
+
+    pub fn is_media_blocked(&self, hostname: &str) -> bool {
+        self.is_action_required(hostname, FilterAction::RejectMedia)
+    }
 }
 
 #[cfg(test)]

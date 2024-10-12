@@ -20,6 +20,8 @@ use mitra_validators::filter_rules::validate_target;
 enum FilterAction {
     Reject,
     Accept,
+    RejectMedia,
+    AcceptMedia,
 }
 
 impl FilterAction {
@@ -27,6 +29,8 @@ impl FilterAction {
         match self {
             Self::Reject => (DbFilterAction::Reject, false),
             Self::Accept => (DbFilterAction::Reject, true),
+            Self::RejectMedia => (DbFilterAction::RejectMedia, false),
+            Self::AcceptMedia => (DbFilterAction::RejectMedia, true),
         }
     }
 
@@ -37,6 +41,8 @@ impl FilterAction {
         match (action, is_reversed) {
             (DbFilterAction::Reject, false) => Self::Reject,
             (DbFilterAction::Reject, true) => Self::Accept,
+            (DbFilterAction::RejectMedia, false) => Self::RejectMedia,
+            (DbFilterAction::RejectMedia, true) => Self::AcceptMedia,
         }
     }
 }

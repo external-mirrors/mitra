@@ -26,6 +26,7 @@ use mitra_validators::{
 
 use crate::{
     agent::build_federation_agent,
+    filter::FederationFilter,
     identifiers::parse_local_object_id,
     importers::{fetch_any_object, import_post, ActorIdResolver},
     ownership::{is_embedded_activity_trusted, verify_activity_owner},
@@ -81,8 +82,10 @@ pub async fn handle_announce(
         Ok(post_id) => post_id,
         Err(_) => {
             // Try to get remote post
+            let filter = FederationFilter::init(config, db_client).await?;
             let post = import_post(
                 db_client,
+                &filter,
                 &instance,
                 &storage,
                 activity.object,

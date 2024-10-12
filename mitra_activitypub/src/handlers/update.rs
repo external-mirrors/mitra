@@ -35,6 +35,7 @@ use mitra_validators::{
 use crate::{
     actors::handlers::{update_remote_profile, ActorJson},
     agent::build_federation_agent,
+    filter::FederationFilter,
     handlers::create::{
         create_content_link,
         get_object_attachments,
@@ -99,10 +100,12 @@ async fn handle_update_note(
         let object_url = get_object_url(&object)?;
         content += &create_content_link(object_url);
     };
+    let filter = FederationFilter::init(config, db_client).await?;
     let storage = MediaStorage::from(config);
     let (attachments, unprocessed) = get_object_attachments(
         &agent,
         db_client,
+        &filter,
         &storage,
         &object,
         &post.author,

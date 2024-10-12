@@ -8,12 +8,14 @@ use crate::database::{
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum FilterAction {
     Reject,
+    RejectMedia,
 }
 
 impl From<&FilterAction> for i16 {
     fn from(value: &FilterAction) -> i16 {
         match value {
             FilterAction::Reject => 1,
+            FilterAction::RejectMedia => 2,
         }
     }
 }
@@ -24,6 +26,7 @@ impl TryFrom<i16> for FilterAction {
     fn try_from(value: i16) -> Result<Self, Self::Error> {
         let action = match value {
             1 => Self::Reject,
+            2 => Self::RejectMedia,
             _ => return Err(DatabaseTypeError),
         };
         Ok(action)

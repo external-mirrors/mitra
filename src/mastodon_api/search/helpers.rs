@@ -11,6 +11,7 @@ use apx_core::{
 use apx_sdk::addresses::WebfingerAddress;
 use mitra_activitypub::{
     errors::HandlerError,
+    filter::FederationFilter,
     identifiers::parse_local_object_id,
     importers::{
         import_post,
@@ -210,9 +211,11 @@ async fn find_post_by_url(
             }
         },
         Err(_) => {
+            let filter = FederationFilter::init(config, db_client).await?;
             instance.fetcher_timeout = SEARCH_FETCHER_TIMEOUT;
             match import_post(
                 db_client,
+                &filter,
                 &instance,
                 &storage,
                 url.to_string(),

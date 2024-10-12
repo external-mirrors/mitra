@@ -60,6 +60,7 @@ use crate::{
     },
     agent::build_federation_agent,
     errors::HandlerError,
+    filter::FederationFilter,
     handlers::{
         activity::handle_activity,
         create::{
@@ -439,6 +440,7 @@ const RECURSION_DEPTH_MAX: usize = 50;
 
 pub async fn import_post(
     db_client: &mut impl DatabaseClient,
+    filter: &FederationFilter,
     instance: &Instance,
     storage: &MediaStorage,
     object_id: String,
@@ -543,6 +545,7 @@ pub async fn import_post(
     for object in objects {
         let post = handle_note(
             db_client,
+            filter,
             instance,
             storage,
             object,
@@ -673,6 +676,7 @@ pub async fn import_replies(
 
     let instance = config.instance();
     let agent = build_federation_agent(&instance, None);
+    let filter = FederationFilter::init(config, db_client).await?;
     let storage = MediaStorage::from(config);
     let object: ConverationItem = fetch_any_object(&agent, object_id).await?;
     let maybe_collection_id = if use_context {
@@ -692,6 +696,7 @@ pub async fn import_replies(
         // Don't trust, always retrieve objects from origin
         import_post(
             db_client,
+            &filter,
             &instance,
             &storage,
             object_id.clone(),

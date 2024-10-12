@@ -60,6 +60,7 @@ use mitra_validators::{
 use crate::{
     agent::build_federation_agent,
     builders::note::LinkTag,
+    filter::{get_moderation_domain, FederationFilter},
     identifiers::{
         canonicalize_id,
         parse_local_actor_id,
@@ -277,6 +278,7 @@ struct Attachment {
 pub async fn get_object_attachments(
     agent: &FederationAgent,
     db_client: &impl DatabaseClient,
+    filter: &FederationFilter,
     storage: &MediaStorage,
     object: &AttributedObject,
     author: &DbActorProfile,
@@ -289,6 +291,8 @@ pub async fn get_object_attachments(
         description: Option<String>,
     }
 
+    let author_hostname = get_moderation_domain(author.expect_actor_data())?;
+    let is_media_blocked = filter.is_media_blocked(author_hostname.as_str());
     let values = object.attachment.iter()
         // PeerTube video thumbnails
         .chain(object.icon.iter().take(1));
@@ -353,6 +357,12 @@ pub async fn get_object_attachments(
                 .map_err(|error| log::warn!("{error}"))
                 .is_ok()
         });
+        if is_media_blocked {
+            // Do not download
+            log::warn!("attachment rejected: {attachment_url}");
+            unprocessed.push(attachment_url);
+            continue;
+        };
         let (file_data, file_size, media_type) = match fetch_file(
             agent,
             &attachment_url,
@@ -716,6 +726,7 @@ pub fn parse_poll_results(
 
 pub async fn handle_note(
     db_client: &mut impl DatabaseClient,
+    filter: &FederationFilter,
     instance: &Instance,
     storage: &MediaStorage,
     object: AttributedObjectJson,
@@ -763,6 +774,7 @@ pub async fn handle_note(
     let (attachments, unprocessed) = get_object_attachments(
         &agent,
         db_client,
+        filter,
         storage,
         &object,
         &author,
@@ -937,8 +949,10 @@ pub(super) async fn handle_create(
         // Most likely it's a forwarded reply.
         None
     };
+    let filter = FederationFilter::init(config, db_client).await?;
     import_post(
         db_client,
+        &filter,
         &config.instance(),
         &MediaStorage::from(config),
         object_id,
