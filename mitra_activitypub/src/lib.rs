@@ -7,6 +7,7 @@ mod constants;
 mod contexts;
 mod deliverer;
 pub mod errors;
+pub mod filter;
 pub mod forwarder;
 mod handlers;
 pub mod identifiers;

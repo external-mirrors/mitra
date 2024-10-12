@@ -1,6 +1,5 @@
 use actix_web::HttpRequest;
 use serde_json::{Value as JsonValue};
-use wildmatch::WildMatch;
 
 use apx_core::urls::get_hostname;
 use apx_sdk::deserialization::get_object_id;
@@ -10,6 +9,7 @@ use mitra_activitypub::{
         verify_signed_request,
         AuthenticationError,
     },
+    filter::is_hostname_allowed,
     identifiers::canonicalize_id,
     queues::IncomingActivityJobData,
     vocabulary::{ANNOUNCE, DELETE, CREATE, LIKE, UPDATE},
@@ -59,22 +59,6 @@ impl From<InboxError> for HttpError {
                 HttpError::AuthError("invalid signature")
             },
         }
-    }
-}
-
-fn is_hostname_allowed(
-    blocklist: &[String],
-    allowlist: &[String],
-    hostname: &str,
-) -> bool {
-    if blocklist.iter()
-        .any(|blocked| WildMatch::new(blocked).matches(hostname))
-    {
-        // Blocked, checking allowlist
-        allowlist.iter()
-            .any(|allowed| WildMatch::new(allowed).matches(hostname))
-    } else {
-        true
     }
 }
 
@@ -247,39 +231,4 @@ pub async fn receive_activity(
         .await?;
     log::debug!("activity added to the queue: {}", activity_type);
     Ok(())
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_is_hostname_allowed() {
-        let blocklist = vec!["bad.example".to_string()];
-        let allowlist = vec![];
-        let result = is_hostname_allowed(&blocklist, &allowlist, "social.example");
-        assert_eq!(result, true);
-        let result = is_hostname_allowed(&blocklist, &allowlist, "bad.example");
-        assert_eq!(result, false);
-    }
-
-    #[test]
-    fn test_is_hostname_allowed_wildcard() {
-        let blocklist = vec!["*.eu".to_string()];
-        let allowlist = vec![];
-        let result = is_hostname_allowed(&blocklist, &allowlist, "social.example");
-        assert_eq!(result, true);
-        let result = is_hostname_allowed(&blocklist, &allowlist, "social.eu");
-        assert_eq!(result, false);
-    }
-
-    #[test]
-    fn test_is_hostname_allowed_allowlist() {
-        let blocklist = vec!["*".to_string()];
-        let allowlist = vec!["social.example".to_string()];
-        let result = is_hostname_allowed(&blocklist, &allowlist, "social.example");
-        assert_eq!(result, true);
-        let result = is_hostname_allowed(&blocklist, &allowlist, "other.example");
-        assert_eq!(result, false);
-    }
 }

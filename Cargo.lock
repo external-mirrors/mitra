@@ -2053,7 +2053,6 @@ dependencies = [
  "tokio",
  "url",
  "uuid",
- "wildmatch",
 ]
 
 [[package]]
@@ -2079,6 +2078,7 @@ dependencies = [
  "thiserror",
  "tokio",
  "uuid",
+ "wildmatch",
 ]
 
 [[package]]
