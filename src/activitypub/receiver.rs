@@ -9,7 +9,7 @@ use mitra_activitypub::{
         verify_signed_request,
         AuthenticationError,
     },
-    filter::is_hostname_allowed,
+    filter::{get_moderation_domain, is_hostname_allowed},
     identifiers::canonicalize_id,
     queues::IncomingActivityJobData,
     vocabulary::{ANNOUNCE, DELETE, CREATE, LIKE, UPDATE},
@@ -159,21 +159,17 @@ pub async fn receive_activity(
         },
     };
 
-    let signer_id = signer.expect_remote_actor_id();
-    // TODO: FEP-EF61: implement instance blocking for portable actors
-    if !signer.is_portable() {
-        let signer_hostname = get_hostname(signer_id)
-            .map_err(|_| ValidationError("invalid actor ID"))?;
-        if !is_hostname_allowed(
-            &config.blocked_instances,
-            &config.allowed_instances,
-            &signer_hostname,
-        ) {
-            log::info!("ignoring activity from blocked instance {signer_hostname}");
-            return Ok(());
-        };
+    let signer_hostname = get_moderation_domain(signer.expect_actor_data())?;
+    if !is_hostname_allowed(
+        &config.blocked_instances,
+        &config.allowed_instances,
+        signer_hostname.as_str(),
+    ) {
+        log::info!("ignoring activity from blocked instance {signer_hostname}");
+        return Ok(());
     };
 
+    let signer_id = signer.expect_remote_actor_id();
     let is_authenticated = canonical_actor_id.to_string() == signer_id;
     if !is_authenticated {
         match activity_type {

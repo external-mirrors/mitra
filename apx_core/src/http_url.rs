@@ -18,6 +18,12 @@ impl Hostname {
     }
 }
 
+impl fmt::Display for Hostname {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(formatter, "{}", self.as_str())
+    }
+}
+
 pub fn parse_http_url_whatwg(url: &str) -> Result<Url, &'static str> {
     let url = Url::parse(url).map_err(|_| "invalid URL")?;
     match url.scheme() {

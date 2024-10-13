@@ -1,5 +1,29 @@
 use wildmatch::WildMatch;
 
+use apx_core::{
+    http_url::{HttpUrl, Hostname},
+};
+use mitra_models::{
+    database::{DatabaseError, DatabaseTypeError},
+    profiles::types::DbActor,
+};
+
+// Return DatabaseError if actor data is not valid
+// TODO: validation should happen during actor data deserialization
+pub fn get_moderation_domain(
+    actor: &DbActor,
+) -> Result<Hostname, DatabaseError> {
+    let http_url = if actor.is_portable() {
+        actor.gateways.first().ok_or(DatabaseTypeError)?
+    } else {
+        &actor.id
+    };
+    let hostname = HttpUrl::parse(http_url)
+        .map_err(|_| DatabaseTypeError)?
+        .hostname();
+    Ok(hostname)
+}
+
 pub fn is_hostname_allowed(
     blocklist: &[String],
     allowlist: &[String],
