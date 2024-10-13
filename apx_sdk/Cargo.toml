@@ -38,5 +38,7 @@ default = ["rustls-tls"]
 native-tls = ["reqwest/native-tls"]
 rustls-tls = ["reqwest/rustls-tls-native-roots"]
 
+test-utils = ["apx_core/test-utils"]
+
 [lints]
 workspace = true
