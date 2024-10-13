@@ -6,6 +6,18 @@ use url::Url;
 
 use crate::url::common::Origin;
 
+pub struct Hostname(String);
+
+impl Hostname {
+    fn new_unchecked(value: &str) -> Self {
+        Self(value.to_owned())
+    }
+
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
 pub fn parse_http_url_whatwg(url: &str) -> Result<Url, &'static str> {
     let url = Url::parse(url).map_err(|_| "invalid URL")?;
     match url.scheme() {
@@ -102,6 +114,17 @@ impl HttpUrl {
         )
     }
 
+    pub fn hostname(&self) -> Hostname {
+        let authority_components = self.0.authority_components()
+            .expect("authority should be present");
+        let hostname = authority_components.host();
+        if hostname.starts_with('[') && hostname.ends_with(']') {
+            Hostname::new_unchecked(&hostname[1 .. hostname.len() - 1])
+        } else {
+            Hostname::new_unchecked(hostname)
+        }
+    }
+
     // https://www.rfc-editor.org/rfc/rfc6454.html
     pub fn origin(&self) -> Origin {
         let authority_components = self.0.authority_components()
@@ -153,6 +176,27 @@ mod tests {
         let http_url = HttpUrl::parse(url).unwrap();
         assert_eq!(http_url.to_relative(), "/users?user_id=123#main-key");
         assert_eq!(http_url.to_string(), url);
+    }
+
+    #[test]
+    fn test_http_url_ipv4_address() {
+        let url = "http://10.4.1.13/test";
+        let http_url = HttpUrl::parse(url).unwrap();
+        assert_eq!(http_url.authority(), "10.4.1.13");
+    }
+
+    #[test]
+    fn test_http_url_ipv6_address() {
+        let url = "http://[319:3cf0:dd1d:47b9:20c:29ff:fe2c:39be]/test";
+        let http_url = HttpUrl::parse(url).unwrap();
+        assert_eq!(http_url.authority(), "[319:3cf0:dd1d:47b9:20c:29ff:fe2c:39be]");
+    }
+
+    #[test]
+    fn test_http_url_invalid_ipv6_address() {
+        let url = "http://[319:3cf0:dd1d:47b9:20c:29ff:fe2c:39be/test";
+        let error = HttpUrl::parse(url).err().unwrap();
+        assert_eq!(error, "invalid URI");
     }
 
     #[test]
@@ -218,6 +262,18 @@ mod tests {
         let url = "https://social.example:9999999/test";
         let error = HttpUrl::parse(url).err().unwrap();
         assert_eq!(error, "invalid port number");
+    }
+
+    #[test]
+    fn test_http_url_hostname() {
+        let http_url = HttpUrl::parse("https://social.example/test").unwrap();
+        assert_eq!(http_url.hostname().as_str(), "social.example");
+
+        let http_url = HttpUrl::parse("http://127.0.0.1:8380/test").unwrap();
+        assert_eq!(http_url.hostname().as_str(), "127.0.0.1");
+
+        let http_url = HttpUrl::parse("http://[319:3cf0:dd1d:47b9:20c:29ff:fe2c:39be]/test").unwrap();
+        assert_eq!(http_url.hostname().as_str(), "319:3cf0:dd1d:47b9:20c:29ff:fe2c:39be");
     }
 
     #[test]

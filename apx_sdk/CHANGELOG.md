@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Added
 
 - Added `test-utils` feature to `apx_sdk` that enables `test-utils` feature on `apx_core`.
+- Added `hostname()` method to `HttpUrl` type.
 
 ## [0.2.0] - 2024-10-03
 
