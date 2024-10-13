@@ -82,6 +82,7 @@ async fn handle_update_note(
         Err(other_error) => return Err(other_error.into()),
     };
     let instance = config.instance();
+    let agent = build_federation_agent(&instance, None);
     // TODO: FEP-EF61: use get_remote_profile_by_actor_id
     if profile_actor_id(&instance.url(), &post.author) != author_id {
         return Err(ValidationError("object owner can't be changed").into());
@@ -100,8 +101,8 @@ async fn handle_update_note(
     };
     let storage = MediaStorage::from(config);
     let (attachments, unprocessed) = get_object_attachments(
+        &agent,
         db_client,
-        &instance,
         &storage,
         &object,
         &post.author,

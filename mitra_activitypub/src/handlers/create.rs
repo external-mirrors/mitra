@@ -11,6 +11,7 @@ use uuid::Uuid;
 
 use apx_sdk::{
     addresses::WebfingerAddress,
+    agent::FederationAgent,
     authentication::{verify_portable_object, AuthenticationError},
     constants::{AP_MEDIA_TYPE, AS_MEDIA_TYPE},
     deserialization::{
@@ -62,7 +63,6 @@ use crate::{
     identifiers::{
         canonicalize_id,
         parse_local_actor_id,
-        profile_actor_id,
     },
     importers::{
         get_or_import_profile_by_webfinger_address,
@@ -275,8 +275,8 @@ struct Attachment {
 }
 
 pub async fn get_object_attachments(
+    agent: &FederationAgent,
     db_client: &impl DatabaseClient,
-    instance: &Instance,
     storage: &MediaStorage,
     object: &AttributedObject,
     author: &DbActorProfile,
@@ -289,7 +289,6 @@ pub async fn get_object_attachments(
         description: Option<String>,
     }
 
-    let agent = build_federation_agent(instance, None);
     let values = object.attachment.iter()
         // PeerTube video thumbnails
         .chain(object.icon.iter().take(1));
@@ -333,7 +332,7 @@ pub async fn get_object_attachments(
             },
         };
         if is_gnu_social_link(
-            &profile_actor_id(&instance.url(), author),
+            author.expect_remote_actor_id(),
             &attachment,
         ) {
             // Don't fetch HTML pages attached by GNU Social
@@ -355,7 +354,7 @@ pub async fn get_object_attachments(
                 .is_ok()
         });
         let (file_data, file_size, media_type) = match fetch_file(
-            &agent,
+            agent,
             &attachment_url,
             attachment.media_type.as_deref(),
             &storage.supported_media_types(),
@@ -738,6 +737,7 @@ pub async fn handle_note(
     {
         return Err(ValidationError("object attributed to actor from different server").into());
     };
+    let agent = build_federation_agent(instance, None);
     let author = ActorIdResolver::default().only_remote().resolve(
         db_client,
         instance,
@@ -761,8 +761,8 @@ pub async fn handle_note(
         content += &create_content_link(object_url);
     };
     let (attachments, unprocessed) = get_object_attachments(
+        &agent,
         db_client,
-        instance,
         storage,
         &object,
         &author,
