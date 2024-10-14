@@ -293,9 +293,12 @@ pub async fn get_object_attachments(
 
     let author_hostname = get_moderation_domain(author.expect_actor_data())?;
     let is_media_blocked = filter.is_media_blocked(author_hostname.as_str());
-    let values = object.attachment.iter()
+
+    let mut values = object.attachment.clone();
+    if object.object_type == VIDEO {
         // PeerTube video thumbnails
-        .chain(object.icon.iter().take(1));
+        values.extend(object.icon.iter().take(1).cloned());
+    };
     let mut attachments = vec![];
     let mut unprocessed = vec![];
     let mut downloaded: Vec<AttachmentData> = vec![];
@@ -306,7 +309,7 @@ pub async fn get_object_attachments(
             break;
         };
         let attachment: Attachment =
-            match serde_json::from_value(attachment_value.clone())
+            match serde_json::from_value(attachment_value)
         {
             Ok(attachment) => attachment,
             Err(_) => {
