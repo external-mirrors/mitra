@@ -3,6 +3,7 @@ use mitra_services::media::{
     MediaStorage,
     MediaStorageError,
 };
+use mitra_utils::files::FileInfo;
 
 use super::errors::MastodonError;
 
@@ -41,7 +42,7 @@ pub fn save_b64_file(
     storage: &MediaStorage,
     file_size_limit: usize,
     allowed_media_types: &[&str],
-) -> Result<(String, usize, String), UploadError> {
+) -> Result<FileInfo, UploadError> {
     let file_data = base64::decode(b64data)?;
     let file_size = file_data.len();
     if file_size > file_size_limit {
@@ -52,5 +53,6 @@ pub fn save_b64_file(
         return Err(UploadError::InvalidMediaType(media_type));
     };
     let file_name = storage.save_file(file_data, &media_type)?;
-    Ok((file_name, file_size, media_type))
+    let file_info = FileInfo::new(file_name, file_size, media_type);
+    Ok(file_info)
 }

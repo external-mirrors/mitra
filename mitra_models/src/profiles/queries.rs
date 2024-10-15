@@ -21,7 +21,7 @@ use crate::database::{
 };
 use crate::emojis::types::DbEmoji;
 use crate::instances::queries::create_instance;
-use crate::media::DeletionQueue;
+use crate::media::types::DeletionQueue;
 use crate::relationships::types::RelationshipType;
 
 use super::types::{
@@ -989,6 +989,7 @@ mod tests {
         queries::create_emoji,
         types::EmojiImage,
     };
+    use crate::media::types::MediaInfo;
     use crate::profiles::{
         queries::create_profile,
         test_utils::create_test_local_profile,
@@ -1059,7 +1060,7 @@ mod tests {
     #[serial]
     async fn test_create_profile_with_emoji() {
         let db_client = &mut create_test_database().await;
-        let image = EmojiImage::default();
+        let image = EmojiImage::from(MediaInfo::png_for_test());
         let emoji = create_emoji(
             db_client,
             "testemoji",

@@ -13,8 +13,10 @@ use mitra_models::{
         update_emoji,
     },
     emojis::types::{DbEmoji, EmojiImage},
+    media::types::MediaInfo,
 };
 use mitra_services::media::MediaStorage;
+use mitra_utils::files::FileInfo;
 use mitra_validators::{
     activitypub::validate_object_id,
     emojis::{
@@ -87,7 +89,8 @@ pub async fn handle_emoji(
     };
     let file_name = storage.save_file(file_data, &media_type)?;
     log::info!("downloaded emoji {}", emoji.icon.url);
-    let image = EmojiImage { file_name, file_size, media_type };
+    let file_info = FileInfo::new(file_name, file_size, media_type);
+    let image = EmojiImage::from(MediaInfo::from(file_info));
     let db_emoji = if let Some(emoji_id) = maybe_emoji_id {
         update_emoji(
             db_client,

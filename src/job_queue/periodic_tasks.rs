@@ -18,7 +18,7 @@ use mitra_models::{
         delete_emoji,
         find_unused_remote_emojis,
     },
-    media::DeletionQueue,
+    media::types::DeletionQueue,
     posts::queries::{delete_post, find_extraneous_posts},
     profiles::queries::{
         delete_profile,

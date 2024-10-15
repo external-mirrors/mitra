@@ -9,7 +9,7 @@ use crate::database::{
     DatabaseError,
 };
 use crate::instances::queries::create_instance;
-use crate::media::DeletionQueue;
+use crate::media::types::DeletionQueue;
 use crate::profiles::queries::update_emoji_caches;
 
 use super::types::{DbEmoji, EmojiImage};
@@ -248,7 +248,10 @@ pub async fn find_unused_remote_emojis(
 #[cfg(test)]
 mod tests {
     use serial_test::serial;
-    use crate::database::test_utils::create_test_database;
+    use crate::{
+        database::test_utils::create_test_database,
+        media::types::MediaInfo,
+    };
     use super::*;
 
     #[tokio::test]
@@ -257,11 +260,7 @@ mod tests {
         let db_client = &create_test_database().await;
         let emoji_name = "test";
         let hostname = "example.org";
-        let image = EmojiImage {
-            file_name: "test.png".to_string(),
-            file_size: 10000,
-            media_type: "image/png".to_string(),
-        };
+        let image = EmojiImage::from(MediaInfo::png_for_test());
         let object_id = "https://example.org/emojis/test";
         let updated_at = Utc::now();
         let DbEmoji { id: emoji_id, .. } = create_emoji(
@@ -279,13 +278,14 @@ mod tests {
         assert_eq!(emoji.id, emoji_id);
         assert_eq!(emoji.emoji_name, emoji_name);
         assert_eq!(emoji.hostname, Some(hostname.to_string()));
+        assert_eq!(emoji.image.media_type, "image/png");
     }
 
     #[tokio::test]
     #[serial]
     async fn test_update_emoji() {
         let db_client = &create_test_database().await;
-        let image = EmojiImage::default();
+        let image = EmojiImage::from(MediaInfo::png_for_test());
         let emoji = create_emoji(
             db_client,
             "test",
@@ -307,7 +307,7 @@ mod tests {
     #[serial]
     async fn test_create_or_update_local_emoji() {
         let db_client = &create_test_database().await;
-        let image = EmojiImage::default();
+        let image = EmojiImage::from(MediaInfo::png_for_test());
         let emoji = create_or_update_local_emoji(
             db_client,
             "local",
@@ -327,7 +327,7 @@ mod tests {
     #[serial]
     async fn test_delete_emoji() {
         let db_client = &create_test_database().await;
-        let image = EmojiImage::default();
+        let image = EmojiImage::from(MediaInfo::png_for_test());
         let emoji = create_emoji(
             db_client,
             "test",

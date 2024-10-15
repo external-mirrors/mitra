@@ -17,6 +17,7 @@ use mitra_models::{
         update_attachment,
     },
     database::{get_database_client, DatabaseConnectionPool},
+    media::types::MediaInfo,
 };
 use mitra_services::media::MediaStorage;
 use mitra_validators::media::validate_media_description;
@@ -50,7 +51,7 @@ async fn create_attachment_view(
     let db_client = &**get_database_client(&db_pool).await?;
     let current_user = get_current_user(db_client, auth.token()).await?;
     let media_storage = MediaStorage::from(config.as_ref());
-    let (file_name, file_size, media_type) = save_b64_file(
+    let file_info = save_b64_file(
         &attachment_data.file,
         &attachment_data.media_type,
         &media_storage,
@@ -63,9 +64,7 @@ async fn create_attachment_view(
     let db_attachment = create_attachment(
         db_client,
         current_user.id,
-        file_name,
-        file_size,
-        media_type,
+        MediaInfo::from(file_info),
         attachment_data.description.as_deref(),
     ).await?;
     let attachment = Attachment::from_db(

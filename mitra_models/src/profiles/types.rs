@@ -29,6 +29,7 @@ use crate::database::{
     DatabaseTypeError,
 };
 use crate::emojis::types::DbEmoji;
+use crate::media::types::MediaInfo;
 
 use super::checks::{
     check_identity_proofs,
@@ -43,16 +44,12 @@ pub struct ProfileImage {
     pub media_type: Option<String>,
 }
 
-impl ProfileImage {
-    pub fn new(
-        file_name: String,
-        file_size: usize,
-        media_type: String,
-    ) -> Self {
+impl From<MediaInfo> for ProfileImage {
+    fn from(media_info: MediaInfo) -> Self {
         Self {
-            file_name,
-            file_size: Some(file_size),
-            media_type: Some(media_type),
+            file_name: media_info.file_name,
+            file_size: Some(media_info.file_size),
+            media_type: Some(media_info.media_type),
         }
     }
 }

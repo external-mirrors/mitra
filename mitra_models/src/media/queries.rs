@@ -1,5 +1,4 @@
 use chrono::Utc;
-use serde::{Deserialize, Serialize};
 
 use crate::background_jobs::{
     queries::enqueue_job,
@@ -7,11 +6,7 @@ use crate::background_jobs::{
 };
 use crate::database::{DatabaseClient, DatabaseError};
 
-#[derive(Deserialize, Serialize)]
-pub struct DeletionQueue {
-    pub files: Vec<String>,
-    pub ipfs_objects: Vec<String>,
-}
+use super::types::DeletionQueue;
 
 impl DeletionQueue {
     pub async fn into_job(

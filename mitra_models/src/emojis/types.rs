@@ -3,7 +3,10 @@ use postgres_types::FromSql;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::database::json_macro::{json_from_sql, json_to_sql};
+use crate::{
+    database::json_macro::{json_from_sql, json_to_sql},
+    media::types::MediaInfo,
+};
 
 // Migration
 fn default_emoji_file_size() -> usize { 250 * 1000 }
@@ -15,6 +18,16 @@ pub struct EmojiImage {
     #[serde(default = "default_emoji_file_size")]
     pub file_size: usize,
     pub media_type: String,
+}
+
+impl From<MediaInfo> for EmojiImage {
+    fn from(media_info: MediaInfo) -> Self {
+        Self {
+            file_name: media_info.file_name,
+            file_size: media_info.file_size,
+            media_type: media_info.media_type,
+        }
+    }
 }
 
 json_from_sql!(EmojiImage);

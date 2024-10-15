@@ -15,7 +15,7 @@ use crate::database::{
     DatabaseTypeError,
 };
 use crate::emojis::types::DbEmoji;
-use crate::media::DeletionQueue;
+use crate::media::types::DeletionQueue;
 use crate::notifications::helpers::{
     create_mention_notification,
     create_reply_notification,

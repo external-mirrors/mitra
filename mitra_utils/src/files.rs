@@ -55,6 +55,18 @@ impl fmt::Display for FileSize {
     }
 }
 
+pub struct FileInfo {
+    pub name: String,
+    pub size: usize,
+    pub media_type: String,
+}
+
+impl FileInfo {
+    pub fn new(name: String, size: usize, media_type: String) -> Self {
+        Self { name, size, media_type }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

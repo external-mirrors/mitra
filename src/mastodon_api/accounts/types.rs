@@ -17,6 +17,7 @@ use mitra_activitypub::identifiers::{
     profile_actor_url,
 };
 use mitra_models::{
+    media::types::MediaInfo,
     profiles::types::{
         DbActorProfile,
         ExtraField,
@@ -369,18 +370,14 @@ fn process_b64_image_field_value(
                 // Decode and save file
                 let media_type = form_media_type
                     .ok_or(UploadError::NoMediaType)?;
-                let (file_name, file_size, media_type) = save_b64_file(
+                let file_info = save_b64_file(
                     &b64_data,
                     &media_type,
                     storage,
                     PROFILE_IMAGE_SIZE_MAX,
                     &allowed_profile_image_media_types(&storage.supported_media_types()),
                 )?;
-                let image = ProfileImage::new(
-                    file_name,
-                    file_size,
-                    media_type,
-                );
+                let image = ProfileImage::from(MediaInfo::from(file_info));
                 Some(image)
             }
         },
@@ -707,7 +704,10 @@ pub struct Aliases {
 
 #[cfg(test)]
 mod tests {
-    use mitra_models::profiles::types::ProfileImage;
+    use mitra_models::{
+        media::types::MediaInfo,
+        profiles::types::ProfileImage,
+    };
     use super::*;
 
     const INSTANCE_URL: &str = "https://example.com";
@@ -715,11 +715,7 @@ mod tests {
     #[test]
     fn test_create_account_from_profile() {
         let mut profile = DbActorProfile::local_for_test("test");
-        profile.avatar = Some(ProfileImage::new(
-            "test".to_string(),
-            1000,
-            "image/png".to_string(),
-        ));
+        profile.avatar = Some(ProfileImage::from(MediaInfo::png_for_test()));
         let account = Account::from_profile(
             INSTANCE_URL,
             INSTANCE_URL,
@@ -728,7 +724,7 @@ mod tests {
 
         assert_eq!(
             account.avatar,
-            format!("{}/media/test", INSTANCE_URL),
+            format!("{}/media/test.png", INSTANCE_URL),
         );
         assert!(account.source.is_none());
     }

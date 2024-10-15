@@ -4,20 +4,18 @@ use uuid::Uuid;
 use mitra_utils::id::generate_ulid;
 
 use crate::database::{DatabaseClient, DatabaseError};
-use crate::media::DeletionQueue;
+use crate::media::types::{DeletionQueue, MediaInfo};
 
 use super::types::DbMediaAttachment;
 
 pub async fn create_attachment(
     db_client: &impl DatabaseClient,
     owner_id: Uuid,
-    file_name: String,
-    file_size: usize,
-    media_type: String,
+    media_info: MediaInfo,
     description: Option<&str>,
 ) -> Result<DbMediaAttachment, DatabaseError> {
     let attachment_id = generate_ulid();
-    let file_size: i32 = file_size.try_into()
+    let file_size: i32 = media_info.file_size.try_into()
         .expect("value should be within bounds");
     let inserted_row = db_client.query_one(
         "
@@ -35,13 +33,13 @@ pub async fn create_attachment(
         &[
             &attachment_id,
             &owner_id,
-            &file_name,
+            &media_info.file_name,
             &file_size,
-            &media_type,
+            &media_info.media_type,
             &description,
         ],
     ).await?;
-    let db_attachment: DbMediaAttachment = inserted_row.try_get("media_attachment")?;
+    let db_attachment = inserted_row.try_get("media_attachment")?;
     Ok(db_attachment)
 }
 
@@ -145,22 +143,18 @@ mod tests {
             ..Default::default()
         };
         let profile = create_profile(db_client, profile_data).await.unwrap();
-        let file_name = "test.jpg";
-        let file_size = 10000;
-        let media_type = "image/png";
+        let image_info = MediaInfo::png_for_test();
         let description = "test";
         let attachment = create_attachment(
             db_client,
             profile.id,
-            file_name.to_string(),
-            file_size,
-            media_type.to_string(),
+            image_info.clone(),
             Some(description),
         ).await.unwrap();
         assert_eq!(attachment.owner_id, profile.id);
-        assert_eq!(attachment.file_name, file_name);
-        assert_eq!(attachment.file_size.unwrap(), file_size as i32);
-        assert_eq!(attachment.media_type.unwrap(), media_type);
+        assert_eq!(attachment.file_name, image_info.file_name);
+        assert_eq!(attachment.file_size.unwrap(), image_info.file_size as i32);
+        assert_eq!(attachment.media_type.unwrap(), image_info.media_type);
         assert_eq!(attachment.description.unwrap(), description);
         assert_eq!(attachment.ipfs_cid.is_none(), true);
         assert_eq!(attachment.post_id.is_none(), true);
@@ -182,15 +176,11 @@ mod tests {
         };
         let profile_2 =
             create_profile(db_client, profile_data_2).await.unwrap();
-        let file_name = "test.jpg";
-        let file_size = 10000;
-        let media_type = "image/png";
+        let image_info = MediaInfo::png_for_test();
         let DbMediaAttachment { id: attachment_id, .. } = create_attachment(
             db_client,
             profile_1.id,
-            file_name.to_string(),
-            file_size,
-            media_type.to_string(),
+            image_info.clone(),
             None,
         ).await.unwrap();
 
@@ -199,7 +189,7 @@ mod tests {
             profile_1.id,
             attachment_id,
         ).await.unwrap();
-        assert_eq!(attachment.file_name, file_name);
+        assert_eq!(attachment.file_name, image_info.file_name);
 
         let error = get_attachment(
             db_client,
@@ -218,16 +208,12 @@ mod tests {
             ..Default::default()
         };
         let profile = create_profile(db_client, profile_data).await.unwrap();
-        let file_name = "test.jpg";
-        let file_size = 10000;
-        let media_type = "image/png";
+        let image_info = MediaInfo::png_for_test();
         let description = "test image";
         let attachment = create_attachment(
             db_client,
             profile.id,
-            file_name.to_string(),
-            file_size,
-            media_type.to_string(),
+            image_info,
             Some(description),
         ).await.unwrap();
         assert_eq!(attachment.description.unwrap(), description);

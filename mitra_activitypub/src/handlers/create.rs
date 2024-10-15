@@ -31,6 +31,7 @@ use mitra_models::{
     activitypub::queries::save_attributed_object,
     attachments::queries::create_attachment,
     database::{DatabaseClient, DatabaseError},
+    media::types::MediaInfo,
     posts::{
         queries::create_post,
         types::{Post, PostCreateData, Visibility},
@@ -39,7 +40,10 @@ use mitra_models::{
     relationships::queries::has_local_followers,
 };
 use mitra_services::media::MediaStorage;
-use mitra_utils::html::clean_html;
+use mitra_utils::{
+    files::FileInfo,
+    html::clean_html,
+};
 use mitra_validators::{
     errors::ValidationError,
     media::validate_media_description,
@@ -283,14 +287,6 @@ pub async fn get_object_attachments(
     object: &AttributedObject,
     author: &DbActorProfile,
 ) -> Result<(Vec<Uuid>, Vec<String>), HandlerError> {
-    struct AttachmentData {
-        url: String,
-        file_name: String,
-        file_size: usize,
-        media_type: String,
-        description: Option<String>,
-    }
-
     let author_hostname = get_moderation_domain(author.expect_actor_data())?;
     let is_media_blocked = filter.is_media_blocked(author_hostname.as_str());
 
@@ -301,7 +297,7 @@ pub async fn get_object_attachments(
     };
     let mut attachments = vec![];
     let mut unprocessed = vec![];
-    let mut downloaded: Vec<AttachmentData> = vec![];
+    let mut downloaded: Vec<(String, FileInfo, Option<String>)> = vec![];
     for attachment_value in values {
         // Stop downloading if limit is reached
         if downloaded.len() >= ATTACHMENT_LIMIT {
@@ -351,7 +347,7 @@ pub async fn get_object_attachments(
             log::warn!("attachment URL is missing");
             continue;
         };
-        if downloaded.iter().any(|item| item.url == attachment_url) {
+        if downloaded.iter().any(|(url, ..)| *url == attachment_url) {
             // Already downloaded
             continue;
         };
@@ -386,22 +382,15 @@ pub async fn get_object_attachments(
         };
         let file_name = storage.save_file(file_data, &media_type)?;
         log::info!("downloaded attachment {}", attachment_url);
-        downloaded.push(AttachmentData {
-            url: attachment_url,
-            file_name,
-            file_size,
-            media_type,
-            description: maybe_description,
-        });
+        let file_info = FileInfo::new(file_name, file_size, media_type);
+        downloaded.push((attachment_url, file_info, maybe_description));
     };
-    for attachment_data in downloaded {
+    for (_attachment_url, file_info, description) in downloaded {
         let db_attachment = create_attachment(
             db_client,
             author.id,
-            attachment_data.file_name,
-            attachment_data.file_size,
-            attachment_data.media_type,
-            attachment_data.description.as_deref(),
+            MediaInfo::from(file_info),
+            description.as_deref(),
         ).await?;
         attachments.push(db_attachment.id);
     };
