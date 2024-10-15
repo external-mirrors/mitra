@@ -42,6 +42,7 @@ pub struct ProfileImage {
     pub file_name: String,
     pub file_size: Option<usize>,
     pub media_type: Option<String>,
+    url: Option<String>,
 }
 
 impl From<MediaInfo> for ProfileImage {
@@ -50,6 +51,7 @@ impl From<MediaInfo> for ProfileImage {
             file_name: media_info.file_name,
             file_size: Some(media_info.file_size),
             media_type: Some(media_info.media_type),
+            url: media_info.url,
         }
     }
 }

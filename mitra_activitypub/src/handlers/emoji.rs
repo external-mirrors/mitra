@@ -24,6 +24,7 @@ use mitra_validators::{
         validate_emoji_name,
         EMOJI_MEDIA_TYPES,
     },
+    media::validate_media_url,
     profiles::validate_hostname,
     errors::ValidationError,
 };
@@ -74,6 +75,10 @@ pub async fn handle_emoji(
         Err(DatabaseError::NotFound("emoji")) => None,
         Err(other_error) => return Err(other_error.into()),
     };
+    if let Err(error) = validate_media_url(&emoji.icon.url) {
+        log::warn!("invalid emoji URL ({error}): {}", emoji.icon.url);
+        return Ok(None);
+    };
     let (file_data, file_size, media_type) = match fetch_file(
         agent,
         &emoji.icon.url,
@@ -90,7 +95,7 @@ pub async fn handle_emoji(
     let file_name = storage.save_file(file_data, &media_type)?;
     log::info!("downloaded emoji {}", emoji.icon.url);
     let file_info = FileInfo::new(file_name, file_size, media_type);
-    let image = EmojiImage::from(MediaInfo::from(file_info));
+    let image = EmojiImage::from(MediaInfo::remote(file_info, emoji.icon.url));
     let db_emoji = if let Some(emoji_id) = maybe_emoji_id {
         update_emoji(
             db_client,

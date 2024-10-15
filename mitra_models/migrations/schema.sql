@@ -197,6 +197,7 @@ CREATE TABLE media_attachment (
     file_name VARCHAR(200) NOT NULL,
     file_size INTEGER,
     media_type VARCHAR(50),
+    url VARCHAR(2000),
     description TEXT,
     ipfs_cid VARCHAR(200),
     post_id UUID REFERENCES post (id) ON DELETE CASCADE,

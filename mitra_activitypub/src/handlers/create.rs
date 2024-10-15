@@ -46,7 +46,7 @@ use mitra_utils::{
 };
 use mitra_validators::{
     errors::ValidationError,
-    media::validate_media_description,
+    media::{validate_media_description, validate_media_url},
     posts::{
         clean_title,
         content_allowed_classes,
@@ -342,6 +342,10 @@ pub async fn get_object_attachments(
             continue;
         };
         let attachment_url = if let Some(url) = attachment.url {
+            if let Err(error) = validate_media_url(&url) {
+                log::warn!("invalid attachment URL ({error}): {url}");
+                continue;
+            };
             url
         } else {
             log::warn!("attachment URL is missing");
@@ -385,11 +389,11 @@ pub async fn get_object_attachments(
         let file_info = FileInfo::new(file_name, file_size, media_type);
         downloaded.push((attachment_url, file_info, maybe_description));
     };
-    for (_attachment_url, file_info, description) in downloaded {
+    for (attachment_url, file_info, description) in downloaded {
         let db_attachment = create_attachment(
             db_client,
             author.id,
-            MediaInfo::from(file_info),
+            MediaInfo::remote(file_info, attachment_url),
             description.as_deref(),
         ).await?;
         attachments.push(db_attachment.id);

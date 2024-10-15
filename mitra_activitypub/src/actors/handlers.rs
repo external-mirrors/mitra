@@ -43,6 +43,7 @@ use mitra_utils::files::FileInfo;
 use mitra_validators::{
     activitypub::validate_object_id,
     errors::ValidationError,
+    media::validate_media_url,
     posts::EMOJI_LIMIT,
     profiles::{
         allowed_profile_image_media_types,
@@ -278,6 +279,10 @@ async fn fetch_actor_image(
     default: Option<ProfileImage>,
 ) -> Result<Option<ProfileImage>, MediaStorageError> {
     let maybe_image = if let Some(actor_image) = actor_image {
+        if let Err(error) = validate_media_url(&actor_image.url) {
+            log::warn!("invalid actor image URL ({error}): {}", actor_image.url);
+            return Ok(default);
+        };
         match fetch_file(
             agent,
             &actor_image.url,
@@ -288,7 +293,10 @@ async fn fetch_actor_image(
             Ok((file_data, file_size, media_type)) => {
                 let file_name = storage.save_file(file_data, &media_type)?;
                 let file_info = FileInfo::new(file_name, file_size, media_type);
-                let image = ProfileImage::from(MediaInfo::from(file_info));
+                let image = ProfileImage::from(MediaInfo::remote(
+                    file_info,
+                    actor_image.url.clone(),
+                ));
                 Some(image)
             },
             Err(error) => {

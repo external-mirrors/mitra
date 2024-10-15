@@ -377,7 +377,7 @@ fn process_b64_image_field_value(
                     PROFILE_IMAGE_SIZE_MAX,
                     &allowed_profile_image_media_types(&storage.supported_media_types()),
                 )?;
-                let image = ProfileImage::from(MediaInfo::from(file_info));
+                let image = ProfileImage::from(MediaInfo::local(file_info));
                 Some(image)
             }
         },

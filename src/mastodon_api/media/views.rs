@@ -64,7 +64,7 @@ async fn create_attachment_view(
     let db_attachment = create_attachment(
         db_client,
         current_user.id,
-        MediaInfo::from(file_info),
+        MediaInfo::local(file_info),
         attachment_data.description.as_deref(),
     ).await?;
     let attachment = Attachment::from_db(

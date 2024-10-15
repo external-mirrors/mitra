@@ -25,9 +25,10 @@ pub async fn create_attachment(
             file_name,
             file_size,
             media_type,
+            url,
             description
         )
-        VALUES ($1, $2, $3, $4, $5, $6)
+        VALUES ($1, $2, $3, $4, $5, $6, $7)
         RETURNING media_attachment
         ",
         &[
@@ -36,6 +37,7 @@ pub async fn create_attachment(
             &media_info.file_name,
             &file_size,
             &media_info.media_type,
+            &media_info.url,
             &description,
         ],
     ).await?;
@@ -155,6 +157,7 @@ mod tests {
         assert_eq!(attachment.file_name, image_info.file_name);
         assert_eq!(attachment.file_size.unwrap(), image_info.file_size as i32);
         assert_eq!(attachment.media_type.unwrap(), image_info.media_type);
+        assert_eq!(attachment.url, None);
         assert_eq!(attachment.description.unwrap(), description);
         assert_eq!(attachment.ipfs_cid.is_none(), true);
         assert_eq!(attachment.post_id.is_none(), true);

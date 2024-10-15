@@ -621,7 +621,7 @@ impl AddEmoji {
         };
         let file_name = storage.save_file(file_data, &media_type)?;
         let file_info = FileInfo::new(file_name, file_size, media_type);
-        let image = EmojiImage::from(MediaInfo::from(file_info));
+        let image = EmojiImage::from(MediaInfo::local(file_info));
         create_or_update_local_emoji(
             db_client,
             &self.name,

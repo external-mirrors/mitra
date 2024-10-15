@@ -10,6 +10,7 @@ pub struct DbMediaAttachment {
     pub file_name: String,
     pub file_size: Option<i32>,
     pub media_type: Option<String>,
+    pub url: Option<String>,
     pub description: Option<String>,
     pub ipfs_cid: Option<String>,
     pub post_id: Option<Uuid>,

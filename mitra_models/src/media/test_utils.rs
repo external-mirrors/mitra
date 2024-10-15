@@ -6,6 +6,7 @@ impl MediaInfo {
             file_name: "test.png".to_string(),
             file_size: 10000,
             media_type: "image/png".to_string(),
+            url: None,
         }
     }
 }
