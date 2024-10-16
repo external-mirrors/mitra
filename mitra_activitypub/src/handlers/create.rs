@@ -353,6 +353,7 @@ pub async fn get_object_attachments(
         };
         if downloaded.iter().any(|(url, ..)| *url == attachment_url) {
             // Already downloaded
+            log::warn!("skipping duplicate attachment: {attachment_url}");
             continue;
         };
         let maybe_description = attachment.name.filter(|name| {
