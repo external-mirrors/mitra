@@ -25,6 +25,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Ignore images in `icon` field if object type is not `Video`.
 - Store URLs of remote media.
 - Delete orphanded image files after updating emoji.
+- Accept `Emoji` objects without `id`.
 
 ### Fixed
 

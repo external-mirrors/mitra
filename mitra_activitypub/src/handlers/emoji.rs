@@ -43,7 +43,7 @@ struct EmojiImage {
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct Emoji {
-    id: String,
+    id: Option<String>,
     name: String,
     icon: EmojiImage,
     #[serde(default)]
@@ -65,8 +65,11 @@ pub async fn handle_emoji(
             return Ok(None);
         },
     };
-    if validate_object_id(&emoji.id).is_err() {
-        log::warn!("invalid emoji ID: {}", emoji.id);
+    // Akkoma uses anonymous Emojis
+    // https://akkoma.dev/AkkomaGang/akkoma/pulls/815
+    let emoji_object_id = emoji.id.unwrap_or(emoji.icon.url.clone());
+    if validate_object_id(&emoji_object_id).is_err() {
+        log::warn!("invalid emoji ID: {}", emoji_object_id);
         return Ok(None);
     };
     let emoji_name = clean_emoji_name(&emoji.name);
@@ -76,7 +79,7 @@ pub async fn handle_emoji(
     };
     let maybe_emoji_id = match get_remote_emoji_by_object_id(
         db_client,
-        &emoji.id,
+        &emoji_object_id,
     ).await {
         Ok(db_emoji) => {
             if db_emoji.updated_at >= emoji.updated {
@@ -123,7 +126,7 @@ pub async fn handle_emoji(
         deletion_queue.into_job(db_client).await?;
         db_emoji
     } else {
-        let hostname = match get_hostname(&emoji.id)
+        let hostname = match get_hostname(&emoji_object_id)
             .map_err(|_| ValidationError("invalid emoji ID"))
             .and_then(|value| validate_hostname(&value).map(|()| value))
         {
@@ -138,7 +141,7 @@ pub async fn handle_emoji(
             emoji_name,
             Some(&hostname),
             image,
-            Some(&emoji.id),
+            Some(&emoji_object_id),
             emoji.updated,
         ).await {
             Ok(db_emoji) => db_emoji,
