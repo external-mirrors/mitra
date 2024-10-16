@@ -497,7 +497,7 @@ fn parse_aliases(actor: &Actor) -> Vec<String> {
 
 async fn parse_tags(
     agent: &FederationAgent,
-    db_client: &impl DatabaseClient,
+    db_client: &mut impl DatabaseClient,
     storage: &MediaStorage,
     actor: &Actor,
 ) -> Result<Vec<Uuid>, HandlerError> {

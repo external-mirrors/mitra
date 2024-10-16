@@ -583,7 +583,7 @@ impl AddEmoji {
     pub async fn execute(
         &self,
         config: &Config,
-        db_client: &impl DatabaseClient,
+        db_client: &mut impl DatabaseClient,
     ) -> Result<(), Error> {
         if validate_emoji_name(&self.name).is_err() {
             println!("invalid emoji name");
@@ -622,11 +622,12 @@ impl AddEmoji {
         let file_name = storage.save_file(file_data, &media_type)?;
         let file_info = FileInfo::new(file_name, file_size, media_type);
         let image = EmojiImage::from(MediaInfo::local(file_info));
-        create_or_update_local_emoji(
+        let (_, deletion_queue) = create_or_update_local_emoji(
             db_client,
             &self.name,
             image,
         ).await?;
+        deletion_queue.into_job(db_client).await?;
         println!("added emoji to local collection");
         Ok(())
     }
@@ -643,7 +644,7 @@ impl ImportEmoji {
     pub async fn execute(
         &self,
         config: &Config,
-        db_client: &impl DatabaseClient,
+        db_client: &mut impl DatabaseClient,
     ) -> Result<(), Error> {
         let emoji_name = clean_emoji_name(&self.emoji_name);
         let emoji = get_emoji_by_name_and_hostname(
@@ -658,11 +659,12 @@ impl ImportEmoji {
             );
             return Ok(());
         };
-        create_or_update_local_emoji(
+        let (_, deletion_queue) = create_or_update_local_emoji(
             db_client,
             &emoji.emoji_name,
             emoji.image,
         ).await?;
+        deletion_queue.into_job(db_client).await?;
         println!("added emoji to local collection");
         Ok(())
     }

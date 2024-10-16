@@ -53,12 +53,22 @@ pub async fn create_emoji(
 }
 
 pub async fn update_emoji(
-    db_client: &impl DatabaseClient,
+    db_client: &mut impl DatabaseClient,
     emoji_id: Uuid,
     image: EmojiImage,
     updated_at: DateTime<Utc>,
-) -> Result<DbEmoji, DatabaseError> {
-    let row = db_client.query_one(
+) -> Result<(DbEmoji, DeletionQueue), DatabaseError> {
+    let transaction = db_client.transaction().await?;
+    let prev_image_row = transaction.query_one(
+        "
+        SELECT image ->> 'file_name' AS file_name
+        FROM emoji WHERE id = $1
+        FOR UPDATE
+        ",
+        &[&emoji_id],
+    ).await?;
+    let prev_image = prev_image_row.try_get("file_name")?;
+    let row = transaction.query_one(
         "
         UPDATE emoji
         SET
@@ -74,19 +84,37 @@ pub async fn update_emoji(
         ],
     ).await?;
     let emoji: DbEmoji = row.try_get("emoji")?;
-    update_emoji_caches(db_client, emoji.id).await?;
-    Ok(emoji)
+    update_emoji_caches(&transaction, emoji.id).await?;
+    transaction.commit().await?;
+    let deletion_queue = DeletionQueue {
+        files: vec![prev_image],
+        ipfs_objects: vec![],
+    };
+    Ok((emoji, deletion_queue))
 }
 
 pub async fn create_or_update_local_emoji(
-    db_client: &impl DatabaseClient,
+    db_client: &mut impl DatabaseClient,
     emoji_name: &str,
     image: EmojiImage,
-) -> Result<DbEmoji, DatabaseError> {
+) -> Result<(DbEmoji, DeletionQueue), DatabaseError> {
+    let transaction = db_client.transaction().await?;
+    let maybe_prev_image_row = transaction.query_opt(
+        "
+        SELECT image ->> 'file_name' AS file_name
+        FROM emoji WHERE emoji_name = $1 AND hostname IS NULL
+        FOR UPDATE
+        ",
+        &[&emoji_name],
+    ).await?;
+    let maybe_prev_image = match maybe_prev_image_row {
+        Some(prev_image_row) => prev_image_row.try_get("file_name")?,
+        None => None,
+    };
     let emoji_id = generate_ulid();
     // Partial index on emoji_name is used
     // UNIQUE NULLS NOT DISTINCT requires Postgresql 15+
-    let row = db_client.query_one(
+    let row = transaction.query_one(
         "
         INSERT INTO emoji (
             id,
@@ -102,8 +130,13 @@ pub async fn create_or_update_local_emoji(
         &[&emoji_id, &emoji_name, &image],
     ).await?;
     let emoji: DbEmoji = row.try_get("emoji")?;
-    update_emoji_caches(db_client, emoji.id).await?;
-    Ok(emoji)
+    update_emoji_caches(&transaction, emoji.id).await?;
+    transaction.commit().await?;
+    let deletion_queue = DeletionQueue {
+        files: maybe_prev_image.map(|name| vec![name]).unwrap_or_default(),
+        ipfs_objects: vec![],
+    };
+    Ok((emoji, deletion_queue))
 }
 
 pub async fn get_local_emoji_by_name(
@@ -284,7 +317,7 @@ mod tests {
     #[tokio::test]
     #[serial]
     async fn test_update_emoji() {
-        let db_client = &create_test_database().await;
+        let db_client = &mut create_test_database().await;
         let image = EmojiImage::from(MediaInfo::png_for_test());
         let emoji = create_emoji(
             db_client,
@@ -294,26 +327,29 @@ mod tests {
             None,
             Utc::now(),
         ).await.unwrap();
-        let updated_emoji = update_emoji(
+        let (updated_emoji, deletion_queue) = update_emoji(
             db_client,
             emoji.id,
             image,
             Utc::now(),
         ).await.unwrap();
         assert_ne!(updated_emoji.updated_at, emoji.updated_at);
+        assert_eq!(deletion_queue.files.len(), 1);
     }
 
     #[tokio::test]
     #[serial]
     async fn test_create_or_update_local_emoji() {
-        let db_client = &create_test_database().await;
+        let db_client = &mut create_test_database().await;
         let image = EmojiImage::from(MediaInfo::png_for_test());
-        let emoji = create_or_update_local_emoji(
+        let (emoji, deletion_queue) = create_or_update_local_emoji(
             db_client,
             "local",
             image.clone(),
         ).await.unwrap();
-        let updated_emoji = create_or_update_local_emoji(
+        assert_eq!(emoji.hostname.is_none(), true);
+        assert_eq!(deletion_queue.files.len(), 0);
+        let (updated_emoji, deletion_queue) = create_or_update_local_emoji(
             db_client,
             "local",
             image,
@@ -321,6 +357,7 @@ mod tests {
         assert_eq!(updated_emoji.id, emoji.id);
         assert_eq!(updated_emoji.hostname.is_none(), true);
         assert_ne!(updated_emoji.updated_at, emoji.updated_at);
+        assert_eq!(deletion_queue.files.len(), 1);
     }
 
     #[tokio::test]

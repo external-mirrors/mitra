@@ -37,7 +37,7 @@ use super::HandlerError;
 // Returns HandlerError on database and filesystem errors.
 pub async fn handle_emoji(
     agent: &FederationAgent,
-    db_client: &impl DatabaseClient,
+    db_client: &mut impl DatabaseClient,
     storage: &MediaStorage,
     tag_value: JsonValue,
 ) -> Result<Option<DbEmoji>, HandlerError> {
@@ -97,12 +97,14 @@ pub async fn handle_emoji(
     let file_info = FileInfo::new(file_name, file_size, media_type);
     let image = EmojiImage::from(MediaInfo::remote(file_info, emoji.icon.url));
     let db_emoji = if let Some(emoji_id) = maybe_emoji_id {
-        update_emoji(
+        let (db_emoji, deletion_queue) = update_emoji(
             db_client,
             emoji_id,
             image,
             emoji.updated,
-        ).await?
+        ).await?;
+        deletion_queue.into_job(db_client).await?;
+        db_emoji
     } else {
         let hostname = match get_hostname(&emoji.id)
             .map_err(|_| ValidationError("invalid emoji ID"))
