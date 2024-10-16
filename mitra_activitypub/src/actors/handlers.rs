@@ -269,6 +269,40 @@ async fn get_webfinger_hostname(
     Ok(maybe_hostname)
 }
 
+async fn fetch_actor_image(
+    agent: &FederationAgent,
+    storage: &MediaStorage,
+    actor_image: &Option<ActorImage>,
+    default: Option<ProfileImage>,
+) -> Result<Option<ProfileImage>, MediaStorageError> {
+    let maybe_image = if let Some(actor_image) = actor_image {
+        match fetch_file(
+            agent,
+            &actor_image.url,
+            actor_image.media_type.as_deref(),
+            &allowed_profile_image_media_types(&storage.supported_media_types()),
+            PROFILE_IMAGE_SIZE_MAX,
+        ).await {
+            Ok((file_data, file_size, media_type)) => {
+                let file_name = storage.save_file(file_data, &media_type)?;
+                let image = ProfileImage::new(
+                    file_name,
+                    file_size,
+                    media_type,
+                );
+                Some(image)
+            },
+            Err(error) => {
+                log::warn!("failed to fetch actor image ({error})");
+                default
+            },
+        }
+    } else {
+        None
+    };
+    Ok(maybe_image)
+}
+
 async fn fetch_actor_images(
     agent: &FederationAgent,
     storage: &MediaStorage,
@@ -276,56 +310,10 @@ async fn fetch_actor_images(
     default_avatar: Option<ProfileImage>,
     default_banner: Option<ProfileImage>,
 ) -> Result<(Option<ProfileImage>, Option<ProfileImage>), MediaStorageError>  {
-    let maybe_avatar = if let Some(icon) = &actor.icon {
-        match fetch_file(
-            agent,
-            &icon.url,
-            icon.media_type.as_deref(),
-            &allowed_profile_image_media_types(&storage.supported_media_types()),
-            PROFILE_IMAGE_SIZE_MAX,
-        ).await {
-            Ok((file_data, file_size, media_type)) => {
-                let file_name = storage.save_file(file_data, &media_type)?;
-                let image = ProfileImage::new(
-                    file_name,
-                    file_size,
-                    media_type,
-                );
-                Some(image)
-            },
-            Err(error) => {
-                log::warn!("failed to fetch avatar ({})", error);
-                default_avatar
-            },
-        }
-    } else {
-        None
-    };
-    let maybe_banner = if let Some(image) = &actor.image {
-        match fetch_file(
-            agent,
-            &image.url,
-            image.media_type.as_deref(),
-            &allowed_profile_image_media_types(&storage.supported_media_types()),
-            PROFILE_IMAGE_SIZE_MAX,
-        ).await {
-            Ok((file_data, file_size, media_type)) => {
-                let file_name = storage.save_file(file_data, &media_type)?;
-                let image = ProfileImage::new(
-                    file_name,
-                    file_size,
-                    media_type,
-                );
-                Some(image)
-            },
-            Err(error) => {
-                log::warn!("failed to fetch banner ({})", error);
-                default_banner
-            },
-        }
-    } else {
-        None
-    };
+    let maybe_avatar =
+        fetch_actor_image(agent, storage, &actor.icon, default_avatar).await?;
+    let maybe_banner =
+        fetch_actor_image(agent, storage, &actor.image, default_banner).await?;
     Ok((maybe_avatar, maybe_banner))
 }
 
