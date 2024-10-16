@@ -1,3 +1,5 @@
+use chrono::{DateTime, Utc};
+use serde::Deserialize;
 use serde_json::{Value as JsonValue};
 
 use apx_core::urls::get_hostname;
@@ -12,7 +14,7 @@ use mitra_models::{
         get_remote_emoji_by_object_id,
         update_emoji,
     },
-    emojis::types::{DbEmoji, EmojiImage},
+    emojis::types::{DbEmoji, EmojiImage as DbEmojiImage},
     media::types::MediaInfo,
 };
 use mitra_services::media::MediaStorage;
@@ -29,9 +31,24 @@ use mitra_validators::{
     errors::ValidationError,
 };
 
-use crate::builders::emoji::Emoji;
-
 use super::HandlerError;
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct EmojiImage {
+    url: String,
+    media_type: Option<String>,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct Emoji {
+    id: String,
+    name: String,
+    icon: EmojiImage,
+    #[serde(default)]
+    updated: DateTime<Utc>,
+}
 
 // Returns None if emoji is not valid or when fetcher fails.
 // Returns HandlerError on database and filesystem errors.
@@ -95,7 +112,7 @@ pub async fn handle_emoji(
     let file_name = storage.save_file(file_data, &media_type)?;
     log::info!("downloaded emoji {}", emoji.icon.url);
     let file_info = FileInfo::new(file_name, file_size, media_type);
-    let image = EmojiImage::from(MediaInfo::remote(file_info, emoji.icon.url));
+    let image = DbEmojiImage::from(MediaInfo::remote(file_info, emoji.icon.url));
     let db_emoji = if let Some(emoji_id) = maybe_emoji_id {
         let (db_emoji, deletion_queue) = update_emoji(
             db_client,

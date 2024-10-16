@@ -1,5 +1,5 @@
 use chrono::{DateTime, Utc};
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 
 use mitra_models::emojis::types::DbEmoji;
 use mitra_services::media::get_file_url;
@@ -9,26 +9,25 @@ use crate::{
     vocabulary::{EMOJI, IMAGE},
 };
 
-#[derive(Deserialize, Serialize)]
+#[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct EmojiImage {
+struct EmojiImage {
     #[serde(rename = "type")]
     object_type: String,
-    pub url: String,
-    pub media_type: Option<String>,
+    url: String,
+    media_type: String,
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Emoji {
     #[serde(rename = "type")]
     object_type: String,
-    pub id: String,
-    pub name: String,
-    attributed_to: Option<String>,
-    pub icon: EmojiImage,
-    #[serde(default)]
-    pub updated: DateTime<Utc>,
+    id: String,
+    name: String,
+    attributed_to: String,
+    icon: EmojiImage,
+    updated: DateTime<Utc>,
 }
 
 pub fn build_emoji(instance_url: &str, db_emoji: &DbEmoji) -> Emoji {
@@ -36,11 +35,11 @@ pub fn build_emoji(instance_url: &str, db_emoji: &DbEmoji) -> Emoji {
         object_type: EMOJI.to_string(),
         id: local_emoji_id(instance_url, &db_emoji.emoji_name),
         name: db_emoji.shortcode(),
-        attributed_to: Some(local_instance_actor_id(instance_url)),
+        attributed_to: local_instance_actor_id(instance_url),
         icon: EmojiImage {
             object_type: IMAGE.to_string(),
             url: get_file_url(instance_url, &db_emoji.image.file_name),
-            media_type: Some(db_emoji.image.media_type.clone()),
+            media_type: db_emoji.image.media_type.clone(),
         },
         updated: db_emoji.updated_at,
     }
