@@ -111,8 +111,10 @@ async fn handle_fep_171b_add(
             };
         },
         Err(AuthenticationError::DatabaseError(db_error)) => return Err(db_error.into()),
-        // TODO: better reporting of authentication errors
-        Err(_) => return Err(ValidationError("invalid integrity proof").into()),
+        Err(other_error) => {
+            log::warn!("{other_error}");
+            return Err(ValidationError("invalid integrity proof").into());
+        },
     };
     // Authorization
     if !is_same_origin(&conversation_owner, &target)
