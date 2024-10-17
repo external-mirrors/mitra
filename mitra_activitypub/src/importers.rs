@@ -185,6 +185,7 @@ async fn import_profile(
             let profile_updated = update_remote_profile(
                 &agent,
                 db_client,
+                &instance.hostname(),
                 storage,
                 profile,
                 actor.value,
@@ -244,6 +245,7 @@ async fn refresh_remote_profile(
                 let profile_updated = update_remote_profile(
                     &agent,
                     db_client,
+                    &instance.hostname(),
                     storage,
                     profile,
                     actor.value,
@@ -751,6 +753,7 @@ pub async fn register_portable_actor(
             let profile_updated = update_remote_profile(
                 &agent,
                 db_client,
+                &instance.hostname(),
                 &storage,
                 profile,
                 actor_json,

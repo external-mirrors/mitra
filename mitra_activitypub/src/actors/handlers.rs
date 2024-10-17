@@ -233,6 +233,7 @@ impl Actor {
 // Determine hostname part of 'acct' URI
 async fn get_webfinger_hostname(
     agent: &FederationAgent,
+    instance_hostname: &str,
     actor: &Actor,
 ) -> Result<Option<String>, HandlerError> {
     let canonical_actor_id = Url::parse(&actor.id)
@@ -249,6 +250,10 @@ async fn get_webfinger_hostname(
             if let Some(gateway) = actor.gateways.first() {
                 let hostname = get_hostname(gateway)
                     .map_err(|_| ValidationError("invalid gateway URL"))?;
+                if hostname == instance_hostname {
+                    // Portable actor with local account (unmanaged)
+                    return Ok(None);
+                };
                 let webfinger_address = WebfingerAddress::new_unchecked(
                     &actor.preferred_username,
                     &hostname,
@@ -530,13 +535,17 @@ async fn parse_tags(
 pub async fn create_remote_profile(
     agent: &FederationAgent,
     db_client: &mut impl DatabaseClient,
-    _instance_hostname: &str,
+    instance_hostname: &str,
     storage: &MediaStorage,
     actor_json: JsonValue,
 ) -> Result<DbActorProfile, HandlerError> {
     let actor: Actor = serde_json::from_value(actor_json.clone())
         .map_err(|_| ValidationError("invalid actor object"))?;
-    let maybe_webfinger_hostname = get_webfinger_hostname(agent, &actor).await?;
+    let maybe_webfinger_hostname = get_webfinger_hostname(
+        agent,
+        instance_hostname,
+        &actor,
+    ).await?;
     let actor_data = actor.to_db_actor()?;
     let (maybe_avatar, maybe_banner) = fetch_actor_images(
         agent,
@@ -593,6 +602,7 @@ pub async fn create_remote_profile(
 pub async fn update_remote_profile(
     agent: &FederationAgent,
     db_client: &mut impl DatabaseClient,
+    instance_hostname: &str,
     storage: &MediaStorage,
     profile: DbActorProfile,
     actor_json: JsonValue,
@@ -605,7 +615,11 @@ pub async fn update_remote_profile(
     let actor_data_old = profile.expect_actor_data();
     let actor_data = actor.to_db_actor()?;
     assert_eq!(actor_data_old.id, actor_data.id, "actor ID shouldn't change");
-    let maybe_webfinger_hostname = get_webfinger_hostname(agent, &actor).await?;
+    let maybe_webfinger_hostname = get_webfinger_hostname(
+        agent,
+        instance_hostname,
+        &actor,
+    ).await?;
     let (maybe_avatar, maybe_banner) = fetch_actor_images(
         agent,
         storage,

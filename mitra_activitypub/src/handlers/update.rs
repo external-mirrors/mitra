@@ -180,10 +180,12 @@ async fn handle_update_person(
         Err(DatabaseError::NotFound(_)) => return Ok(None),
         Err(other_error) => return Err(other_error.into()),
     };
-    let agent = build_federation_agent(&config.instance(), None);
+    let instance = config.instance();
+    let agent = build_federation_agent(&instance, None);
     let profile = update_remote_profile(
         &agent,
         db_client,
+        &instance.hostname(),
         &MediaStorage::from(config),
         profile,
         activity.object.value,
