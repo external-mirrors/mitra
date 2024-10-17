@@ -655,12 +655,15 @@ async fn apgateway_create_actor_view(
         rsa_secret_key,
         ed25519_secret_key,
         invite_code,
-    ).await.map_err(|error| match error {
-        HandlerError::ValidationError(error) => error.into(),
-        HandlerError::DatabaseError(error) => error.into(),
-        _ => HttpError::InternalError,
+    ).await.map_err(|error| {
+        log::warn!("failed to register portable actor ({error})");
+        match error {
+            HandlerError::ValidationError(error) => error.into(),
+            HandlerError::DatabaseError(error) => error.into(),
+            _ => HttpError::InternalError,
+        }
     })?;
-    log::warn!("created portable user {}", user);
+    log::warn!("created portable account {}", user);
     Ok(HttpResponse::Created().finish())
 }
 
