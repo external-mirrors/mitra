@@ -3,7 +3,6 @@ use serde_json::{Value as JsonValue};
 use uuid::Uuid;
 
 use crate::database::{
-    catch_unique_violation,
     DatabaseClient,
     DatabaseError,
 };
@@ -13,21 +12,19 @@ pub async fn save_activity(
     activity_id: &str,
     activity: &JsonValue,
 ) -> Result<bool, DatabaseError> {
-    let result = db_client.execute(
+    let inserted_count = db_client.execute(
         "
         INSERT INTO activitypub_object (
             object_id,
             object_data
         )
         VALUES ($1, $2)
+        ON CONFLICT (object_id)
+        DO NOTHING
         ",
         &[&activity_id, &activity],
-    ).await.map_err(catch_unique_violation("activitypub_object"));
-    let is_new = match result {
-        Ok(_) => true,
-        Err(DatabaseError::AlreadyExists(_)) => false,
-        Err(other_error) => return Err(other_error),
-    };
+    ).await?;
+    let is_new = inserted_count > 0;
     Ok(is_new)
 }
 
