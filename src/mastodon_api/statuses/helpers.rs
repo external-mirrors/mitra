@@ -207,3 +207,47 @@ pub async fn get_paginated_status_list(
     );
     Ok(response)
 }
+
+#[cfg(test)]
+mod tests {
+    use serial_test::serial;
+    use mitra_models::{
+        database::test_utils::create_test_database,
+        posts::test_utils::create_test_remote_post,
+        profiles::test_utils::create_test_remote_profile,
+    };
+    use super::*;
+
+    #[tokio::test]
+    #[serial]
+    async fn test_parse_content_object_link_and_mention() {
+        let db_client = &mut create_test_database().await;
+        let profile = create_test_remote_profile(
+            db_client,
+            "test",
+            "social.example",
+            "https://social.example/users/1",
+        ).await;
+        let _post = create_test_remote_post(
+            db_client,
+            profile.id,
+            "test",
+            "https://social.example/posts/1",
+        ).await;
+        let instance = Instance::for_test("https://local.example");
+        let content_str = "@test@social.example test [[https://social.example/posts/1]].";
+        let content = parse_content(
+            db_client,
+            &instance,
+            content_str,
+            POST_CONTENT_TYPE_MARKDOWN,
+            None,
+        ).await.unwrap();
+        assert_eq!(
+            content.content,
+            r#"<p><span class="h-card"><a class="u-url mention" href="https://social.example/users/1" rel="noopener">@test</a></span> test <a href="https://social.example/posts/1" rel="noopener">https://social.example/posts/1</a>.</p>"#,
+        );
+        assert_eq!(content.mentions.len(), 1);
+        assert_eq!(content.links.len(), 1);
+    }
+}
