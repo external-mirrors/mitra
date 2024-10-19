@@ -145,6 +145,10 @@ apk update
 apk add -vi mitra@testing
 ```
 
+### Hosting providers
+
+- [K&T Host](https://www.knthost.com/mitra)
+
 ## Configuration
 
 ### Environment variables
