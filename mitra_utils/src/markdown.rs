@@ -10,7 +10,7 @@ use comrak::{
     Arena,
     ExtensionOptionsBuilder,
     Options,
-    ParseOptions,
+    ParseOptionsBuilder,
     RenderOptionsBuilder,
 };
 use regex::{Captures, Regex};
@@ -30,7 +30,10 @@ fn build_comrak_options() -> Options {
             .autolink(true)
             .build()
             .expect("extension options should be correct"),
-        parse: ParseOptions::default(),
+        parse: ParseOptionsBuilder::default()
+            .relaxed_autolinks(true)
+            .build()
+            .expect("parser options should be correct"),
         render: RenderOptionsBuilder::default()
             .hardbreaks(true)
             .escape(true)
@@ -377,6 +380,20 @@ mod tests {
         let text = r#"quote "test #tag" end"#;
         let html = markdown_lite_to_html(text).unwrap();
         assert_eq!(html, "<p>quote &quot;test #tag&quot; end</p>");
+    }
+
+    #[test]
+    fn test_markdown_lite_to_html_bitcoin_autolink() {
+        let text = "test bitcoin:175tWpb8K1S7NmH4Zx6rewF9WQrcZv245W.";
+        let html = markdown_lite_to_html(text).unwrap();
+        assert_eq!(html, r#"<p>test bitcoin:175tWpb8K1S7NmH4Zx6rewF9WQrcZv245W.</p>"#);
+    }
+
+    #[test]
+    fn test_markdown_lite_to_html_gemini_autolink() {
+        let text = "test gemini://geminispace.info.";
+        let html = markdown_lite_to_html(text).unwrap();
+        assert_eq!(html, r#"<p>test <a href="gemini://geminispace.info">gemini://geminispace.info</a>.</p>"#);
     }
 
     #[test]

@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- Enable markdown autolinks for `gemini://` URL scheme.
+
 ## [3.7.1] - 2024-10-17
 
 ### Changed
