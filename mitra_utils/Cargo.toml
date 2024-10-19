@@ -15,7 +15,7 @@ eth-blockies = "1.1.0"
 # Used for working with dates
 chrono = { version = "0.4.23", default-features = false, features = ["std", "clock"] }
 # Used for parsing markdown
-comrak = { version = "0.19.0", default-features = false }
+comrak = { version = "0.24.1", default-features = false }
 # Used for extracting text from HTML
 html2text = "=0.12.4"
 # Used to gather disk info
