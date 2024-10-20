@@ -1,3 +1,5 @@
+use chrono::DateTime;
+
 use mitra_activitypub::identifiers::{local_actor_id, local_object_id};
 use mitra_config::Instance;
 use mitra_models::{
@@ -5,7 +7,6 @@ use mitra_models::{
     profiles::types::DbActorProfile,
 };
 use mitra_utils::{
-    datetime::get_min_datetime,
     html::{escape_html, html_to_text},
 };
 
@@ -65,7 +66,7 @@ pub fn make_feed(
     let feed_url = get_user_feed_url(&instance.url(), &profile.username);
     let feed_title = get_author_name(profile);
     let mut entries = vec![];
-    let mut feed_updated_at = get_min_datetime();
+    let mut feed_updated_at = DateTime::UNIX_EPOCH;
     for post in posts {
         let entry = make_entry(&instance.url(), &post);
         entries.push(entry);

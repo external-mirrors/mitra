@@ -8,7 +8,7 @@ rust-version.workspace = true
 
 [dependencies]
 # Used for working with dates
-chrono = { version = "0.4.23", default-features = false, features = ["std", "serde"] }
+chrono = { version = "0.4.31", default-features = false, features = ["std", "serde"] }
 # Used for pooling database connections
 deadpool = "0.9.2"
 deadpool-postgres = { version = "0.10.2", default-features = false }

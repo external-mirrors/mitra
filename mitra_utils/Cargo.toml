@@ -13,7 +13,7 @@ html5ever = "0.26.0"
 # Used to generate identicons
 eth-blockies = "1.1.0"
 # Used for working with dates
-chrono = { version = "0.4.23", default-features = false, features = ["std", "clock"] }
+chrono = { version = "0.4.31", default-features = false, features = ["std", "clock"] }
 # Used for parsing markdown
 comrak = { version = "0.24.1", default-features = false }
 # Used for extracting text from HTML

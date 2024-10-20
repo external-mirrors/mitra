@@ -8,7 +8,7 @@ rust-version.workspace = true
 
 [dependencies]
 # Used for working with dates
-chrono = { version = "0.4.23", default-features = false, features = ["std", "serde"] }
+chrono = { version = "0.4.31", default-features = false, features = ["std", "serde"] }
 # Used for working with futures
 futures = "0.3.13"
 # Used to work with hexadecimal strings
