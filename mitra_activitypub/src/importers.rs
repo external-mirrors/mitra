@@ -56,7 +56,6 @@ use crate::{
         create_remote_profile,
         update_remote_profile,
         Actor,
-        ActorJson,
     },
     agent::build_federation_agent,
     errors::HandlerError,
@@ -171,35 +170,35 @@ async fn import_profile(
     actor_id: &str,
 ) -> Result<DbActorProfile, HandlerError> {
     let agent = build_federation_agent(instance, None);
-    let actor: ActorJson = fetch_any_object(&agent, actor_id).await?;
+    let actor: Actor = fetch_any_object(&agent, actor_id).await?;
     if actor.is_local(&instance.hostname())? {
         return Err(HandlerError::LocalObject);
     };
-    let canonical_actor_id = canonicalize_id(&actor.id)?;
+    let canonical_actor_id = canonicalize_id(actor.id())?;
     let profile = match get_remote_profile_by_actor_id(
         db_client,
         &canonical_actor_id.to_string(),
     ).await {
         Ok(profile) => {
-            log::info!("re-fetched actor {}", actor.id);
+            log::info!("re-fetched actor {}", actor.id());
             let profile_updated = update_remote_profile(
                 &agent,
                 db_client,
                 &instance.hostname(),
                 storage,
                 profile,
-                actor.value,
+                actor,
             ).await?;
             profile_updated
         },
         Err(DatabaseError::NotFound(_)) => {
-            log::info!("fetched actor {}", actor.id);
+            log::info!("fetched actor {}", actor.id());
             let profile = create_remote_profile(
                 &agent,
                 db_client,
                 &instance.hostname(),
                 storage,
-                actor.value,
+                actor,
             ).await?;
             profile
         },
@@ -228,13 +227,13 @@ async fn refresh_remote_profile(
         let mut context = FetcherContext::from(actor_data);
         // Don't re-fetch from local gateway
         context.remove_gateway(&instance.url());
-        match fetch_any_object_with_context::<ActorJson>(
+        match fetch_any_object_with_context::<Actor>(
             &agent,
             &mut context,
             &actor_data.id,
         ).await {
             Ok(actor) => {
-                if canonicalize_id(&actor.id)?.to_string() != actor_data.id {
+                if canonicalize_id(actor.id())?.to_string() != actor_data.id {
                     log::warn!(
                         "ignoring actor ID change: {}",
                         actor_data.id,
@@ -248,7 +247,7 @@ async fn refresh_remote_profile(
                     &instance.hostname(),
                     storage,
                     profile,
-                    actor.value,
+                    actor,
                 ).await?;
                 profile_updated
             },
@@ -738,13 +737,13 @@ pub async fn register_portable_actor(
         .map_err(|_| ValidationError("invalid actor object"))?;
     check_local_username_unique(
         db_client,
-        &actor.preferred_username,
+        actor.preferred_username(),
     ).await?;
     if !is_valid_invite_code(db_client, invite_code).await? {
         return Err(ValidationError("invalid invite code").into());
     };
     // Create or update profile
-    let canonical_actor_id = canonicalize_id(&actor.id)?;
+    let canonical_actor_id = canonicalize_id(actor.id())?;
     let profile = match get_remote_profile_by_actor_id(
         db_client,
         &canonical_actor_id.to_string(),
@@ -756,7 +755,7 @@ pub async fn register_portable_actor(
                 &instance.hostname(),
                 &storage,
                 profile,
-                actor_json,
+                actor,
             ).await?;
             profile_updated
         },
@@ -766,7 +765,7 @@ pub async fn register_portable_actor(
                 db_client,
                 &instance.hostname(),
                 &storage,
-                actor_json,
+                actor,
             ).await?;
             profile
         },

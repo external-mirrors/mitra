@@ -84,28 +84,36 @@ use super::{
     keys::{Multikey, PublicKey},
 };
 
-pub struct ActorJson {
-    pub id: String,
-    pub value: JsonValue,
+pub struct Actor {
+    inner: ValidatedActor,
+    value: JsonValue,
 }
 
-impl<'de> Deserialize<'de> for ActorJson {
+impl<'de> Deserialize<'de> for Actor {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
         where D: Deserializer<'de>
     {
         let value = JsonValue::deserialize(deserializer)?;
-        let actor_id = value["id"].as_str()
-            .ok_or(DeserializerError::custom("'id' property not found"))?;
-        Ok(Self {
-            id: actor_id.to_string(),
-            value: value,
-        })
+        let inner: ValidatedActor = serde_json::from_value(value.clone())
+            .map_err(|error| {
+                log::warn!("{error}");
+                DeserializerError::custom("invalid actor object")
+            })?;
+        Ok(Self { inner, value })
     }
 }
 
-impl ActorJson {
+impl Actor {
+    pub fn id(&self) -> &str {
+        &self.inner.id
+    }
+
+    pub fn preferred_username(&self) -> &str {
+        &self.inner.preferred_username
+    }
+
     pub fn is_local(&self, local_hostname: &str) -> Result<bool, ValidationError> {
-        let canonical_actor_id = Url::parse(&self.id)
+        let canonical_actor_id = Url::parse(self.id())
             .map_err(|_| ValidationError("invalid actor ID"))?;
         Ok(canonical_actor_id.authority() == local_hostname)
     }
@@ -154,14 +162,14 @@ fn deserialize_url_opt<'de, D>(
 #[derive(Deserialize)]
 #[cfg_attr(test, derive(Default))]
 #[serde(rename_all = "camelCase")]
-pub struct Actor {
-    pub id: String,
+struct ValidatedActor {
+    id: String,
 
     #[serde(rename = "type")]
     object_type: String,
 
     name: Option<String>,
-    pub preferred_username: String,
+    preferred_username: String,
 
     inbox: String,
     outbox: String,
@@ -200,7 +208,7 @@ pub struct Actor {
     gateways: Vec<String>,
 }
 
-impl Actor {
+impl ValidatedActor {
     fn to_db_actor(&self) -> Result<DbActor, ValidationError> {
         let canonical_actor_id = canonicalize_id(&self.id)?;
         let canonical_inbox = canonicalize_id(&self.inbox)?;
@@ -234,7 +242,7 @@ impl Actor {
 async fn get_webfinger_hostname(
     agent: &FederationAgent,
     instance_hostname: &str,
-    actor: &Actor,
+    actor: &ValidatedActor,
 ) -> Result<Option<String>, HandlerError> {
     let canonical_actor_id = Url::parse(&actor.id)
         .map_err(|_| ValidationError("invalid actor ID"))?;
@@ -318,7 +326,7 @@ async fn fetch_actor_image(
 async fn fetch_actor_images(
     agent: &FederationAgent,
     storage: &MediaStorage,
-    actor: &Actor,
+    actor: &ValidatedActor,
     default_avatar: Option<ProfileImage>,
     default_banner: Option<ProfileImage>,
 ) -> Result<(Option<ProfileImage>, Option<ProfileImage>), MediaStorageError>  {
@@ -330,7 +338,7 @@ async fn fetch_actor_images(
 }
 
 fn parse_public_keys(
-    actor: &Actor,
+    actor: &ValidatedActor,
 ) -> Result<Vec<DbActorKey>, ValidationError> {
     let mut keys = vec![];
     if actor.public_key.owner != actor.id {
@@ -355,7 +363,7 @@ fn parse_public_keys(
     Ok(keys)
 }
 
-fn parse_attachments(actor: &Actor) -> (
+fn parse_attachments(actor: &ValidatedActor) -> (
     Vec<IdentityProof>,
     Vec<PaymentOption>,
     Vec<String>,
@@ -469,7 +477,7 @@ async fn fetch_proposals(
     payment_options
 }
 
-fn parse_aliases(actor: &Actor) -> Vec<String> {
+fn parse_aliases(actor: &ValidatedActor) -> Vec<String> {
     // Aliases reported by server (not signed)
     actor.also_known_as.as_ref()
         .and_then(|value| {
@@ -504,7 +512,7 @@ async fn parse_tags(
     agent: &FederationAgent,
     db_client: &mut impl DatabaseClient,
     storage: &MediaStorage,
-    actor: &Actor,
+    actor: &ValidatedActor,
 ) -> Result<Vec<Uuid>, HandlerError> {
     let mut emojis = vec![];
     for tag_value in actor.tag.clone() {
@@ -537,10 +545,9 @@ pub async fn create_remote_profile(
     db_client: &mut impl DatabaseClient,
     instance_hostname: &str,
     storage: &MediaStorage,
-    actor_json: JsonValue,
+    actor: Actor,
 ) -> Result<DbActorProfile, HandlerError> {
-    let actor: Actor = serde_json::from_value(actor_json.clone())
-        .map_err(|_| ValidationError("invalid actor object"))?;
+    let Actor { inner: actor, value: actor_json } = actor;
     let maybe_webfinger_hostname = get_webfinger_hostname(
         agent,
         instance_hostname,
@@ -605,10 +612,9 @@ pub async fn update_remote_profile(
     instance_hostname: &str,
     storage: &MediaStorage,
     profile: DbActorProfile,
-    actor_json: JsonValue,
+    actor: Actor,
 ) -> Result<DbActorProfile, HandlerError> {
-    let actor: Actor = serde_json::from_value(actor_json.clone())
-        .map_err(|_| ValidationError("invalid actor object"))?;
+    let Actor { inner: actor, value: actor_json } = actor;
     if actor.preferred_username != profile.username {
         log::warn!("preferred username doesn't match cached value");
     };
@@ -693,22 +699,28 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_actor_json_is_local() {
-        let actor_json = ActorJson {
-            id: "https://social.example/users/1".to_string(),
+    fn test_actor_is_local() {
+        let actor = Actor {
+            inner: ValidatedActor {
+                id: "https://social.example/users/1".to_string(),
+                ..Default::default()
+            },
             value: Default::default()
         };
-        let is_local = actor_json.is_local("social.example").unwrap();
+        let is_local = actor.is_local("social.example").unwrap();
         assert!(is_local);
     }
 
     #[test]
-    fn test_actor_json_is_local_compatible_id() {
-        let actor_json = ActorJson {
-            id: "https://gateway.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor".to_string(),
+    fn test_actor_is_local_compatible_id() {
+        let actor = Actor {
+            inner: ValidatedActor {
+                id: "https://gateway.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor".to_string(),
+                ..Default::default()
+            },
             value: Default::default()
         };
-        let is_local = actor_json.is_local("gateway.example").unwrap();
+        let is_local = actor.is_local("gateway.example").unwrap();
         assert!(!is_local);
     }
 
@@ -744,7 +756,7 @@ mod tests {
             Multikey::build_rsa(actor_id, &rsa_secret_key).unwrap();
         let actor_auth_key_2 =
             Multikey::build_ed25519(actor_id, &ed25519_secret_key);
-        let actor = Actor {
+        let actor = ValidatedActor {
             id: actor_id.to_string(),
             public_key: actor_public_key,
             assertion_method: vec![actor_auth_key_1, actor_auth_key_2],

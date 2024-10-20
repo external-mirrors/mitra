@@ -33,7 +33,7 @@ use mitra_validators::{
 };
 
 use crate::{
-    actors::handlers::{update_remote_profile, ActorJson},
+    actors::handlers::{update_remote_profile, Actor},
     agent::build_federation_agent,
     filter::FederationFilter,
     handlers::create::{
@@ -157,7 +157,7 @@ async fn handle_update_note(
 #[derive(Deserialize)]
 struct UpdatePerson {
     actor: String,
-    object: ActorJson,
+    object: Actor,
 }
 
 async fn handle_update_person(
@@ -167,10 +167,10 @@ async fn handle_update_person(
 ) -> HandlerResult {
     let activity: UpdatePerson = serde_json::from_value(activity)
         .map_err(|_| ValidationError("invalid actor data"))?;
-    if activity.object.id != activity.actor {
+    if activity.object.id() != activity.actor {
         return Err(ValidationError("actor ID mismatch").into());
     };
-    let canonical_actor_id = canonicalize_id(&activity.object.id)?;
+    let canonical_actor_id = canonicalize_id(activity.object.id())?;
     let profile = match get_remote_profile_by_actor_id(
         db_client,
         &canonical_actor_id.to_string(),
@@ -188,7 +188,7 @@ async fn handle_update_person(
         &instance.hostname(),
         &MediaStorage::from(config),
         profile,
-        activity.object.value,
+        activity.object,
     ).await?;
     let actor_type = &profile.expect_actor_data().object_type;
     Ok(Some(Descriptor::object(actor_type)))
