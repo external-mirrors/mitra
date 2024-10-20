@@ -1,5 +1,5 @@
+use chrono::{DateTime, Utc};
 use indexmap::IndexMap;
-
 use serde::{Deserialize, Serialize};
 use serde_json::{Value as JsonValue};
 
@@ -143,6 +143,9 @@ pub struct Actor {
     #[serde(skip_serializing_if = "Option::is_none")]
     url: Option<String>,
 
+    #[serde(skip_serializing_if = "Option::is_none")]
+    published: Option<DateTime<Utc>>,
+
     // Required for FEP-ef61
     #[serde(skip_serializing_if = "Vec::is_empty")]
     gateways: Vec<String>,
@@ -256,6 +259,7 @@ pub fn build_local_actor(
         tag: emojis,
         manually_approves_followers: user.profile.manually_approves_followers,
         url: Some(profile_url),
+        published: Some(user.profile.created_at),
         gateways: gateways,
     };
     Ok(actor)
@@ -294,6 +298,7 @@ pub fn build_instance_actor(
         tag: vec![],
         manually_approves_followers: false,
         url: None,
+        published: None,
         gateways: vec![],
     };
     Ok(actor)
@@ -311,6 +316,9 @@ mod tests {
     fn test_build_local_actor() {
         let mut profile = DbActorProfile::local_for_test("testuser");
         profile.bio = Some("testbio".to_string());
+        profile.created_at = DateTime::parse_from_rfc3339("2023-02-24T23:36:38Z")
+            .unwrap()
+            .with_timezone(&Utc);
         let user = User { profile, ..Default::default() };
         let authority = Authority::from_user(INSTANCE_URL, &user, false);
         let actor = build_local_actor(INSTANCE_URL, &authority, &user).unwrap();
@@ -371,6 +379,7 @@ mod tests {
             "summary": "testbio",
             "manuallyApprovesFollowers": false,
             "url": "https://server.example/users/testuser",
+            "published": "2023-02-24T23:36:38Z",
         });
         assert_eq!(value, expected_value);
     }
@@ -379,6 +388,9 @@ mod tests {
     fn test_build_local_actor_fep_ef61() {
         let mut profile = DbActorProfile::local_for_test("testuser");
         profile.bio = Some("testbio".to_string());
+        profile.created_at = DateTime::parse_from_rfc3339("2023-02-24T23:36:38Z")
+            .unwrap()
+            .with_timezone(&Utc);
         let user = User { profile, ..Default::default() };
         let authority = Authority::from_user(INSTANCE_URL, &user, true);
         let actor = build_local_actor(INSTANCE_URL, &authority, &user).unwrap();
@@ -439,6 +451,7 @@ mod tests {
             "summary": "testbio",
             "manuallyApprovesFollowers": false,
             "url": "https://server.example/users/testuser",
+            "published": "2023-02-24T23:36:38Z",
             "gateways": [
                 "https://server.example"
             ],
