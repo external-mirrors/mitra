@@ -8,6 +8,7 @@ use mitra_adapters::media::delete_orphaned_media;
 use mitra_config::Config;
 use mitra_models::{
     activitypub::queries::delete_activitypub_objects,
+    attachments::queries::delete_unused_attachments,
     background_jobs::queries::{
         delete_job_from_queue,
         get_job_batch,
@@ -146,6 +147,24 @@ pub async fn prune_remote_emojis(
         let deletion_queue = delete_emoji(db_client, emoji_id).await?;
         delete_orphaned_media(config, db_client, deletion_queue).await?;
         log::info!("deleted unused emoji {}", emoji_id);
+    };
+    Ok(())
+}
+
+pub async fn prune_unused_attachments(
+    config: &Config,
+    db_pool: &DatabaseConnectionPool,
+) -> Result<(), Error> {
+    const ATTACHMENT_AGE_MAX: u32 = 30;
+    let db_client = &**get_database_client(db_pool).await?;
+    let created_before = days_before_now(ATTACHMENT_AGE_MAX);
+    let (deleted_count, deletion_queue) = delete_unused_attachments(
+        db_client,
+        created_before,
+    ).await?;
+    if deleted_count > 0 {
+        delete_orphaned_media(config, db_client, deletion_queue).await?;
+        log::info!("deleted {deleted_count} unused attachments");
     };
     Ok(())
 }

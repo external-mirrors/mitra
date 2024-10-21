@@ -105,7 +105,7 @@ pub async fn set_attachment_ipfs_cid(
 pub async fn delete_unused_attachments(
     db_client: &impl DatabaseClient,
     created_before: DateTime<Utc>,
-) -> Result<DeletionQueue, DatabaseError> {
+) -> Result<(usize, DeletionQueue), DatabaseError> {
     let rows = db_client.query(
         "
         DELETE FROM media_attachment
@@ -114,6 +114,7 @@ pub async fn delete_unused_attachments(
         ",
         &[&created_before],
     ).await?;
+    let deleted_count = rows.len();
     let mut files = vec![];
     let mut ipfs_objects = vec![];
     for row in rows {
@@ -123,7 +124,7 @@ pub async fn delete_unused_attachments(
             ipfs_objects.push(ipfs_cid);
         };
     };
-    Ok(DeletionQueue { files, ipfs_objects })
+    Ok((deleted_count, DeletionQueue { files, ipfs_objects }))
 }
 
 #[cfg(test)]

@@ -731,12 +731,12 @@ impl DeleteUnusedAttachments {
         db_client: &impl DatabaseClient,
     ) -> Result<(), Error> {
         let created_before = days_before_now(self.days);
-        let deletion_queue = delete_unused_attachments(
+        let (deleted_count, deletion_queue) = delete_unused_attachments(
             db_client,
             created_before,
         ).await?;
         delete_orphaned_media(config, db_client, deletion_queue).await?;
-        println!("unused attachments deleted");
+        println!("deleted {deleted_count} unused attachments");
         Ok(())
     }
 }
