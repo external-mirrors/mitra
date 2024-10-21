@@ -16,11 +16,22 @@ Posts:
 
 ```shell
 mitractl delete-extraneous-posts 15
-
 ```
 
 Profiles:
 
 ```shell
 mitractl delete-empty-profiles 60
+```
+
+Delete attachments that don't belong to any post:
+
+```shell
+mitractl delete-unused-attachments 5
+```
+
+Delete unused remote emojis:
+
+```shell
+mitractl prune-remote-emojis
 ```

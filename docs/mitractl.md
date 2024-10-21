@@ -83,30 +83,6 @@ Delete custom emoji:
 mitractl delete-emoji emoji_name example.org
 ```
 
-Remove remote posts and media older than 30 days:
-
-```shell
-mitractl delete-extraneous-posts 30
-```
-
-Delete attachments that don't belong to any post:
-
-```shell
-mitractl delete-unused-attachments 5
-```
-
-Delete empty remote profiles:
-
-```shell
-mitractl delete-empty-profiles 100
-```
-
-Delete unused remote emojis:
-
-```shell
-mitractl prune-remote-emojis
-```
-
 Add custom emoji to local collection:
 
 ```shell
@@ -118,18 +94,6 @@ Import custom emoji from another instance:
 
 ```shell
 mitractl import-emoji emoji_name example.org
-```
-
-Create Monero wallet:
-
-```shell
-mitractl create-monero-wallet "mitra-wallet" "passw0rd"
-```
-
-Check expired invoice:
-
-```shell
-mitractl check-expired-invoice 0184b062-d8d5-cbf1-a71b-6d1aafbae2ab
 ```
 
 Generate instance report:
