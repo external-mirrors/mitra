@@ -14,7 +14,7 @@ use mitra_models::{
         types::{FilterAction as DbFilterAction},
     },
 };
-use mitra_validators::filter_rules::validate_target;
+use mitra_validators::filter_rules::validate_rule_target;
 
 #[derive(Clone, ValueEnum)]
 enum FilterAction {
@@ -68,7 +68,7 @@ impl AddFilterRule {
         &self,
         db_client: &impl DatabaseClient,
     ) -> Result<(), Error> {
-        validate_target(&self.target)?;
+        validate_rule_target(&self.target)?;
         let (action, is_reversed) = self.action.to_db_action();
         add_filter_rule(
             db_client,
@@ -104,7 +104,7 @@ impl RemoveFilterRule {
     }
 }
 
-/// List federation filter rules
+/// List federation filter rules in the order of precedence.
 #[derive(Parser)]
 pub struct ListFilterRules;
 
