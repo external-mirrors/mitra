@@ -48,6 +48,7 @@ async fn main() {
         SubCommand::SetPassword(cmd) => cmd.execute(db_client).await.unwrap(),
         SubCommand::SetRole(cmd) => cmd.execute(db_client).await.unwrap(),
         SubCommand::FetchActor(cmd) => cmd.execute(&config, db_client).await.unwrap(),
+        SubCommand::FetchActivity(cmd) => cmd.execute(&config, db_client).await.unwrap(),
         SubCommand::ReadOutbox(cmd) => cmd.execute(&config, db_client).await.unwrap(),
         SubCommand::FetchReplies(cmd) => cmd.execute(&config, db_client).await.unwrap(),
         SubCommand::FetchObject(cmd) => cmd.execute(&config, db_client).await.unwrap(),

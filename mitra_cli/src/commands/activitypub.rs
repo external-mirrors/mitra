@@ -9,6 +9,7 @@ use mitra_activitypub::{
     agent::build_federation_agent,
     importers::{
         fetch_any_object_with_context,
+        import_activity,
         import_from_outbox,
         import_replies,
         ActorIdResolver,
@@ -44,6 +45,23 @@ impl FetchActor {
             &self.id,
         ).await?;
         println!("profile saved");
+        Ok(())
+    }
+}
+
+#[derive(Parser)]
+pub struct FetchActivity {
+    id: String,
+}
+
+impl FetchActivity {
+    pub async fn execute(
+        &self,
+        config: &Config,
+        db_client: &mut impl DatabaseClient,
+    ) -> Result<(), Error> {
+        import_activity(config, db_client, &self.id).await?;
+        println!("activity imported");
         Ok(())
     }
 }

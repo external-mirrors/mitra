@@ -114,6 +114,7 @@ use mitra_validators::{
 
 use crate::commands::{
     activitypub::{
+        FetchActivity,
         FetchActor,
         FetchReplies,
         FetchObject,
@@ -147,6 +148,7 @@ pub enum SubCommand {
     SetPassword(SetPassword),
     SetRole(SetRole),
     FetchActor(FetchActor),
+    FetchActivity(FetchActivity),
     ReadOutbox(ReadOutbox),
     FetchReplies(FetchReplies),
     FetchObject(FetchObject),

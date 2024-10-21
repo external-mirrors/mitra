@@ -561,6 +561,23 @@ pub async fn import_post(
     Ok(initial_post)
 }
 
+pub async fn import_activity(
+    config: &Config,
+    db_client: &mut impl DatabaseClient,
+    activity_id: &str,
+) -> Result<(), HandlerError> {
+    let agent = build_federation_agent(&config.instance(), None);
+    let activity: JsonValue = fetch_any_object(&agent, activity_id).await?;
+    handle_activity(
+        config,
+        db_client,
+        &activity,
+        true, // is authenticated
+        true, // activity is being pulled (not a spam)
+    ).await?;
+    Ok(())
+}
+
 async fn fetch_collection(
     agent: &FederationAgent,
     collection_url: &str,
