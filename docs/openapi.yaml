@@ -2738,6 +2738,10 @@ components:
         login_message:
           description: Login message for signer.
           type: string
+        new_accounts_read_only:
+          description: Whether new accounts are in read only mode.
+          type: boolean
+          example: false
         allow_unauthenticated:
           description: Features available to unauthenticated users.
           type: object

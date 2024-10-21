@@ -6,6 +6,7 @@ use mitra_config::{
     AuthenticationMethod,
     BlockchainConfig,
     Config,
+    DefaultRole,
     RegistrationType,
     SOFTWARE_NAME,
     SOFTWARE_REPOSITORY,
@@ -118,6 +119,7 @@ pub struct InstanceInfo {
 
     authentication_methods: Vec<String>,
     login_message: String,
+    new_accounts_read_only: bool,
     // Similar to pleroma.restrict_unauthenticated
     allow_unauthenticated: AllowUnauthenticated,
     federated_timeline_restricted: bool, // from dynamic config
@@ -211,6 +213,8 @@ impl InstanceInfo {
                 })
                 .collect(),
             login_message: config.login_message.clone(),
+            new_accounts_read_only:
+                matches!(config.registration.default_role, DefaultRole::ReadOnlyUser),
             allow_unauthenticated: AllowUnauthenticated {
                 timeline_local: config.instance_timeline_public,
             },

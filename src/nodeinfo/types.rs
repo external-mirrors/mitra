@@ -85,6 +85,8 @@ struct FederationMetadata {
 pub struct Metadata {
     node_name: String,
     node_description: String,
+
+    // Pleroma extensions
     federation: FederationMetadata,
     staff_accounts: Vec<String>,
 }
