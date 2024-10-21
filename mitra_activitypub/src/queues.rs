@@ -133,6 +133,19 @@ pub async fn process_queued_incoming_activities(
             },
         };
         if let Err(error) = handler_result {
+            if !matches!(
+                error,
+                HandlerError::FetchError(FetchError::RequestError(_))
+            ) {
+                // Error is not retriable
+                log::warn!(
+                    "failed to process activity ({}): {}",
+                    error,
+                    job_data.activity,
+                );
+                delete_job_from_queue(db_client, job.id).await?;
+                continue;
+            };
             job_data.failure_count += 1;
             log::warn!(
                 "failed to process activity ({}) (attempt #{}): {}",
@@ -140,18 +153,7 @@ pub async fn process_queued_incoming_activities(
                 job_data.failure_count,
                 job_data.activity,
             );
-            if job_data.failure_count <= INCOMING_QUEUE_RETRIES_MAX &&
-                // Don't retry after fetcher recursion error
-                // Don't retry unsolicited messages
-                !matches!(
-                    error,
-                    HandlerError::FetchError(
-                        FetchError::RecursionError |
-                        FetchError::Forbidden(_) |
-                        FetchError::NotFound(_)
-                    ) | HandlerError::UnsolicitedMessage(_)
-                )
-            {
+            if job_data.failure_count <= INCOMING_QUEUE_RETRIES_MAX {
                 // Re-queue
                 let retry_after = incoming_queue_backoff(job_data.failure_count);
                 job_data.into_job(db_client, retry_after).await?;
