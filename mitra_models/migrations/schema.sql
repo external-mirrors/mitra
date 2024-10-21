@@ -189,6 +189,8 @@ CREATE TABLE post_reaction (
     CHECK (content IS NOT NULL OR emoji_id IS NULL)
 );
 
+CREATE INDEX post_reaction_post_id_btree ON post_reaction (post_id);
+
 CREATE UNIQUE INDEX post_reaction_author_id_post_id_content_null_idx ON post_reaction (author_id, post_id) WHERE content IS NULL;
 
 CREATE TABLE media_attachment (
@@ -203,6 +205,8 @@ CREATE TABLE media_attachment (
     post_id UUID REFERENCES post (id) ON DELETE CASCADE,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
 );
+
+CREATE INDEX media_attachment_post_id_btree ON media_attachment (post_id);
 
 CREATE TABLE mention (
     post_id UUID NOT NULL REFERENCES post (id) ON DELETE CASCADE,
