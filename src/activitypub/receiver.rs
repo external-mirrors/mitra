@@ -167,7 +167,8 @@ pub async fn receive_activity(
     if !is_authenticated {
         match activity_type {
             CREATE | UPDATE => {
-                // Accept forwarded Create() and Update() activities
+                // Accept forwarded Create() and Update() activities,
+                // but re-authenticate object in handler
                 log::info!("processing forwarded {activity_type} activity");
             },
             DELETE | LIKE => {

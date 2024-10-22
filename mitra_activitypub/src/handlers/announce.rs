@@ -196,7 +196,7 @@ async fn handle_fep_1b12_announce(
             config,
             db_client,
             activity,
-            false, // not authenticated; object will be fetched
+            true, // authenticated (by embedding or fetched from origin)
             true, // don't perform spam check
         ).await?;
         Ok(Some(Descriptor::object(activity_type)))
@@ -208,7 +208,7 @@ async fn handle_fep_1b12_announce(
             config,
             db_client,
             activity,
-            false, // not authenticated; object will be fetched
+            true, // authenticated (by embedding or fetched from origin)
         ).await?;
         Ok(maybe_type.map(|_| Descriptor::object(activity_type)))
     } else {

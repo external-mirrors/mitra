@@ -20,6 +20,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Optimized post queries.
 - Improved documentation of `list-filter-rules` command.
 - Retry incoming activities only on fetcher errors.
+- Don't fetch object of FEP-1b12 announced `Create` and `Update` activities.
 
 ## [3.7.1] - 2024-10-17
 
