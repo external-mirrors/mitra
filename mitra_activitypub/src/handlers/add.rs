@@ -36,7 +36,7 @@ use crate::{
     identifiers::parse_local_actor_id,
     importers::fetch_any_object,
     ownership::verify_activity_owner,
-    vocabulary::{DISLIKE, LIKE},
+    vocabulary::{DISLIKE, EMOJI_REACT, LIKE},
 };
 
 use super::{
@@ -134,12 +134,15 @@ async fn handle_fep_171b_add(
     let activity_type = activity["type"].as_str()
         .ok_or(ValidationError("unexpected activity structure"))?
         .to_owned();
-    if let LIKE | DISLIKE = activity_type.as_str() {
-        let maybe_type = handle_like(config, db_client, activity).await?;
-        Ok(maybe_type.map(|_| Descriptor::object(activity_type)))
-    } else {
-        log::warn!("activity is not supported: Add({activity_type})");
-        Ok(None)
+    match activity_type.as_str() {
+        LIKE | DISLIKE | EMOJI_REACT => {
+            let maybe_type = handle_like(config, db_client, activity).await?;
+            Ok(maybe_type.map(|_| Descriptor::object(activity_type)))
+        },
+        _ => {
+            log::warn!("activity is not supported: Add({activity_type})");
+            Ok(None)
+        },
     }
 }
 

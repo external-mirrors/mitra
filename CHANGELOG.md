@@ -11,6 +11,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Automatically delete media attachments that were not attached to posts.
 - Added `new_accounts_read_only` field to `/api/v1/instance` response.
 - Added `fetch-activity` command.
+- Support `Add(EmojiReact)` conversation container activities (incoming).
 
 ### Changed
 
