@@ -12,6 +12,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Added `new_accounts_read_only` field to `/api/v1/instance` response.
 - Added `fetch-activity` command.
 - Support `Add(EmojiReact)` conversation container activities (incoming).
+- Support `Add(Create)` conversation container activities (incoming).
 
 ### Changed
 

@@ -36,10 +36,11 @@ use crate::{
     identifiers::parse_local_actor_id,
     importers::fetch_any_object,
     ownership::verify_activity_owner,
-    vocabulary::{DISLIKE, EMOJI_REACT, LIKE},
+    vocabulary::{CREATE, DISLIKE, EMOJI_REACT, LIKE},
 };
 
 use super::{
+    create::handle_create,
     like::handle_like,
     Descriptor,
     HandlerResult,
@@ -135,6 +136,16 @@ async fn handle_fep_171b_add(
         .ok_or(ValidationError("unexpected activity structure"))?
         .to_owned();
     match activity_type.as_str() {
+        CREATE => {
+            handle_create(
+                config,
+                db_client,
+                activity,
+                true, // authenticated (FEP-8b32 or fetched from origin)
+                true, // don't perform spam check
+            ).await?;
+            Ok(Some(Descriptor::object(activity_type)))
+        },
         LIKE | DISLIKE | EMOJI_REACT => {
             let maybe_type = handle_like(config, db_client, activity).await?;
             Ok(maybe_type.map(|_| Descriptor::object(activity_type)))
