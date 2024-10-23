@@ -4,6 +4,7 @@ const fn default_federation_enabled() -> bool { true }
 const fn default_ssrf_protection_enabled() -> bool { true }
 const fn default_inbox_queue_batch_size() -> u32 { 20 }
 const fn default_fetcher_timeout() -> u64 { 60 }
+const fn default_deliverer_standalone() -> bool { false }
 const fn default_deliverer_timeout() -> u64 { 30 }
 const fn default_deliverer_log_response_length() -> usize { 75 }
 const fn default_fep_e232_enabled() -> bool { true }
@@ -26,6 +27,8 @@ pub struct FederationConfig {
     pub(super) deliverer_timeout: u64,
     #[serde(default = "default_deliverer_log_response_length")]
     pub(super) deliverer_log_response_length: usize,
+    #[serde(default = "default_deliverer_standalone")]
+    pub deliverer_standalone: bool,
 
     pub(super) proxy_url: Option<String>,
     pub(super) onion_proxy_url: Option<String>,
@@ -49,6 +52,7 @@ impl Default for FederationConfig {
             fetcher_timeout: default_fetcher_timeout(),
             deliverer_timeout: default_deliverer_timeout(),
             deliverer_log_response_length: default_deliverer_log_response_length(),
+            deliverer_standalone: default_deliverer_standalone(),
             proxy_url: None,
             onion_proxy_url: None,
             i2p_proxy_url: None,

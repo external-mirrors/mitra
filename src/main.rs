@@ -79,6 +79,10 @@ async fn main() -> std::io::Result<()> {
         db_pool.clone(),
     );
     log::info!("scheduler started");
+    if config.federation.deliverer_standalone {
+        scheduler::start_delivery_worker(config.clone(), db_pool.clone());
+        log::info!("delivery worker started");
+    };
 
     let num_workers = std::cmp::max(num_cpus::get(), 4);
     let http_socket_addr = format!(

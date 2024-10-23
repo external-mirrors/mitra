@@ -131,7 +131,6 @@ pub fn start_worker(
     tokio::spawn(async move {
         let mut tasks = vec![
             PeriodicTask::IncomingActivityQueueExecutor,
-            PeriodicTask::OutgoingActivityQueueExecutor,
             PeriodicTask::FetcherQueueExecutor,
             PeriodicTask::PruneRemoteEmojis,
             PeriodicTask::PruneUnusedAttachments,
@@ -140,6 +139,9 @@ pub fn start_worker(
             PeriodicTask::ImporterQueueExecutor,
             PeriodicTask::SubscriptionExpirationMonitor,
         ];
+        if !config.federation.deliverer_standalone {
+            tasks.push(PeriodicTask::OutgoingActivityQueueExecutor);
+        };
         if config.retention.extraneous_posts.is_some() {
             tasks.push(PeriodicTask::DeleteExtraneousPosts);
         };
@@ -150,6 +152,16 @@ pub fn start_worker(
             tasks.push(PeriodicTask::MoneroPaymentMonitor);
             tasks.push(PeriodicTask::MoneroRecurrentPaymentMonitor);
         };
+        run_worker(config, db_pool, tasks).await
+    });
+}
+
+pub fn start_delivery_worker(
+    config: Config,
+    db_pool: DatabaseConnectionPool,
+) -> () {
+    tokio::spawn(async move {
+        let tasks = vec![PeriodicTask::OutgoingActivityQueueExecutor];
         run_worker(config, db_pool, tasks).await
     });
 }

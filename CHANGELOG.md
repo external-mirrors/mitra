@@ -14,6 +14,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Support `Add(EmojiReact)` conversation container activities (incoming).
 - Support `Add(Create)` conversation container activities (incoming).
 - Include portable accounts in `list-accounts` command output.
+- Allow running delivery worker separately from other background tasks.
 
 ### Changed
 
