@@ -60,6 +60,8 @@ pub async fn get_job_batch(
                 job_status ASC,
                 scheduled_for ASC
             LIMIT $4
+            -- lock is required when there are multiple workers
+            FOR UPDATE SKIP LOCKED
         )
         RETURNING background_job
         ",

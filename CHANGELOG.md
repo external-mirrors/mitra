@@ -25,6 +25,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Retry incoming activities only on fetcher errors.
 - Don't fetch object of FEP-1b12 announced `Create` and `Update` activities.
 
+### Fixed
+
+- Try to fix `background job not found` error that occurs in multi-process setup.
+
 ## [3.7.1] - 2024-10-17
 
 ### Changed
