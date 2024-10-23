@@ -478,12 +478,18 @@ pub async fn get_accounts_for_admin(
         "
         SELECT
             actor_profile,
+            portable_user_account.id IS NOT NULL as is_portable,
             user_account.user_role AS role,
             max(oauth_token.created_at) AS last_login
-        FROM user_account
-        JOIN actor_profile USING (id)
+        FROM actor_profile
+        LEFT JOIN user_account USING (id)
+        LEFT JOIN portable_user_account USING (id)
         LEFT JOIN oauth_token ON (oauth_token.owner_id = user_account.id)
-        GROUP BY actor_profile.id, user_account.id
+        WHERE user_id IS NOT NULL OR portable_user_id IS NOT NULL
+        GROUP BY
+            actor_profile.id,
+            user_account.id,
+            portable_user_account.id
         ORDER BY actor_profile.created_at DESC
         ",
         &[],

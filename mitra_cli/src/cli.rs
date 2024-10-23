@@ -298,11 +298,15 @@ impl ListAccounts {
             "ID", "username", "role", "created", "last login",
         );
         for account in accounts {
+            let role = match account.role {
+                Some(role) => role_to_str(&role),
+                None => "user (portable)",
+            };
             println!(
                 "{0: <40} | {1: <35} | {2: <20} | {3: <35} | {4: <35}",
                 account.profile.id.to_string(),
                 account.profile.username,
-                role_to_str(&account.role),
+                role,
                 account.profile.created_at.to_string(),
                 account.last_login.map(|dt| dt.to_string()).unwrap_or_default(),
             );

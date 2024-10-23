@@ -301,24 +301,6 @@ impl Default for UserCreateData {
     }
 }
 
-pub struct AccountAdminInfo {
-    pub profile: DbActorProfile,
-    pub role: Role,
-    pub last_login: Option<DateTime<Utc>>,
-}
-
-impl TryFrom<&Row> for AccountAdminInfo {
-
-    type Error = DatabaseError;
-
-    fn try_from(row: &Row) -> Result<Self, Self::Error> {
-        let profile = row.try_get("actor_profile")?;
-        let role = row.try_get("role")?;
-        let last_login = row.try_get("last_login")?;
-        Ok(Self { profile, role, last_login })
-    }
-}
-
 #[derive(FromSql)]
 #[postgres(name = "portable_user_account")]
 pub struct DbPortableUser {
@@ -380,6 +362,26 @@ pub struct PortableUserData {
     pub rsa_secret_key: RsaSecretKey,
     pub ed25519_secret_key: Ed25519SecretKey,
     pub invite_code: String,
+}
+
+pub struct AccountAdminInfo {
+    pub profile: DbActorProfile,
+    pub is_portable: bool,
+    pub role: Option<Role>,
+    pub last_login: Option<DateTime<Utc>>,
+}
+
+impl TryFrom<&Row> for AccountAdminInfo {
+
+    type Error = DatabaseError;
+
+    fn try_from(row: &Row) -> Result<Self, Self::Error> {
+        let profile = row.try_get("actor_profile")?;
+        let is_portable = row.try_get("is_portable")?;
+        let role = row.try_get("role")?;
+        let last_login = row.try_get("last_login")?;
+        Ok(Self { profile, is_portable, role, last_login })
+    }
 }
 
 #[cfg(test)]
