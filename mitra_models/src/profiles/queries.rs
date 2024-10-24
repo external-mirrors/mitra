@@ -862,30 +862,31 @@ pub async fn update_post_count(
 // Doesn't return error if profile doesn't exist
 pub async fn set_reachability_status(
     db_client: &impl DatabaseClient,
-    actor_id: &str,
-    is_reachable: bool,
+    statuses: Vec<(String, bool)>, // (actor_id, is_unreachable)
 ) -> Result<(), DatabaseError> {
-    if !is_reachable {
-        // Don't update profile if unreachable_since is already set
-        db_client.execute(
-            "
-            UPDATE actor_profile
-            SET unreachable_since = CURRENT_TIMESTAMP
-            WHERE actor_id = $1 AND unreachable_since IS NULL
-            ",
-            &[&actor_id],
-        ).await?;
-    } else {
-        // Remove status (if set)
-        db_client.execute(
-            "
-            UPDATE actor_profile
-            SET unreachable_since = NULL
-            WHERE actor_id = $1
-            ",
-            &[&actor_id],
-        ).await?;
-    };
+    let statuses_json = serde_json::to_value(statuses)
+        .expect("status data should be serializable");
+    db_client.execute(
+        "
+        UPDATE actor_profile
+        SET unreachable_since = CASE
+            WHEN new.is_unreachable AND unreachable_since IS NOT NULL
+                -- don't update if unreachable_since is already set
+                THEN unreachable_since
+            WHEN new.is_unreachable AND unreachable_since IS NULL
+                THEN CURRENT_TIMESTAMP
+            ELSE NULL
+            END
+        FROM (
+            SELECT
+                (pair ->> 0)::text AS actor_id,
+                (pair -> 1)::boolean AS is_unreachable
+            FROM jsonb_array_elements($1) AS pair
+        ) AS new
+        WHERE actor_profile.actor_id = new.actor_id
+        ",
+        &[&statuses_json],
+    ).await?;
     Ok(())
 }
 
@@ -1283,7 +1284,8 @@ mod tests {
             ..Default::default()
         };
         let profile = create_profile(db_client, profile_data).await.unwrap();
-        set_reachability_status(db_client, actor_id, false).await.unwrap();
+        let statuses = vec![(actor_id.to_string(), true)];
+        set_reachability_status(db_client, statuses).await.unwrap();
         let profile = get_profile_by_id(db_client, profile.id).await.unwrap();
         assert_eq!(profile.unreachable_since.is_some(), true);
     }

@@ -452,14 +452,10 @@ pub async fn process_queued_outgoing_activities(
         } else {
             // Update inbox status if all deliveries are successful
             // or if retry limit is reached
-            for recipient in recipients {
-                // TODO: O(1)
-                set_reachability_status(
-                    db_client,
-                    &recipient.id,
-                    recipient.is_delivered,
-                ).await?;
-            };
+            let statuses = recipients.into_iter()
+                .map(|recipient| (recipient.id, !recipient.is_delivered))
+                .collect();
+            set_reachability_status(db_client, statuses).await?;
         };
         delete_job_from_queue(db_client, job.id).await?;
     };
