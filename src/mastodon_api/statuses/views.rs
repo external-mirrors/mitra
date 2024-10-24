@@ -7,6 +7,7 @@ use actix_web::{
     put,
     web,
     Either,
+    HttpRequest,
     HttpResponse,
     Scope,
 };
@@ -85,6 +86,7 @@ use crate::mastodon_api::{
     auth::get_current_user,
     errors::MastodonError,
 };
+use crate::state::AppState;
 
 use super::helpers::{
     build_status,
@@ -104,10 +106,12 @@ use super::types::{
 
 #[post("")]
 async fn create_status(
+    app_state: web::Data<AppState>,
     auth: BearerAuth,
-    connection_info: ConnectionInfo,
     config: web::Data<Config>,
+    connection_info: ConnectionInfo,
     db_pool: web::Data<DatabaseConnectionPool>,
+    request: HttpRequest,
     status_data: QsFormOrJson<StatusData>,
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &mut **get_database_client(&db_pool).await?;
@@ -179,7 +183,7 @@ async fn create_status(
     mentions.sort();
     mentions.dedup();
 
-    // Create post
+    // Validate post data
     let post_data = PostCreateData {
         content: content,
         content_source: content_source,
@@ -203,7 +207,43 @@ async fn create_status(
     if let Some(ref in_reply_to) = maybe_in_reply_to {
         validate_local_reply(in_reply_to, &post_data.mentions, &post_data.visibility)?;
     };
+
+    // Check idempotency key
+    // https://datatracker.ietf.org/doc/draft-ietf-httpapi-idempotency-key-header/
+    let maybe_idempotency_key = request.headers()
+        .get("Idempotency-Key")
+        .and_then(|value| value.to_str().ok())
+        .map(|value| value.to_string());
+    let mut post_id_cache = app_state.post_id_cache.lock().await;
+    if let Some(ref idempotency_key) = maybe_idempotency_key {
+        if let Some(post_id) = post_id_cache.get(idempotency_key) {
+            log::warn!("idempotency key re-used: {idempotency_key}");
+            // TODO: store Uuid in cache
+            let post_id = Uuid::parse_str(post_id)
+                .map_err(|_| MastodonError::InternalError)?;
+            let post = get_post_by_id_for_view(
+                db_client,
+                Some(&current_user),
+                post_id,
+            ).await?;
+            let status = build_status(
+                db_client,
+                &get_request_base_url(connection_info),
+                &instance.url(),
+                Some(&current_user),
+                post,
+            ).await?;
+            return Ok(HttpResponse::Ok().json(status));
+        };
+    };
+
+    // Create post
     let mut post = create_post(db_client, current_user.id, post_data).await?;
+    if let Some(idempotency_key) = maybe_idempotency_key {
+        post_id_cache.set(idempotency_key, post.id.to_string());
+    };
+    drop(post_id_cache); // release lock
+
     // Same as add_related_posts
     post.in_reply_to = maybe_in_reply_to.map(|mut in_reply_to| {
         in_reply_to.reply_count += 1;

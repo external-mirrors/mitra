@@ -6,5 +6,6 @@ pub mod job_queue;
 pub mod mastodon_api;
 pub mod nodeinfo;
 pub mod payments;
+pub mod state;
 pub mod webfinger;
 pub mod web_client;

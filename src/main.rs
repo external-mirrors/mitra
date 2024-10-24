@@ -25,6 +25,7 @@ use mitra::http::{
 use mitra::job_queue::scheduler;
 use mitra::mastodon_api::{mastodon_api_scope, oauth_api_scope};
 use mitra::nodeinfo::views as nodeinfo;
+use mitra::state::AppState;
 use mitra::webfinger::views as webfinger;
 use mitra::web_client::views as web_client;
 use mitra_adapters::init::{
@@ -84,6 +85,7 @@ async fn main() -> std::io::Result<()> {
         log::info!("delivery worker started");
     };
 
+    let app_state = web::Data::new(AppState::default());
     let num_workers = std::cmp::max(num_cpus::get(), 4);
     let http_socket_addr = format!(
         "{}:{}",
@@ -167,6 +169,7 @@ async fn main() -> std::io::Result<()> {
             )
             .app_data(web::Data::new(config.clone()))
             .app_data(web::Data::new(db_pool.clone()))
+            .app_data(web::Data::clone(&app_state))
             .service(actix_files::Files::new(
                 MEDIA_ROOT_URL,
                 media_storage.media_dir.clone(),
