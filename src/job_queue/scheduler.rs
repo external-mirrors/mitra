@@ -58,90 +58,98 @@ impl PeriodicTask {
     }
 }
 
-pub fn run(
+async fn run_worker(
+    config: Config,
+    db_pool: DatabaseConnectionPool,
+    tasks: Vec<PeriodicTask>,
+) -> () {
+    let mut worker_state: HashMap<PeriodicTask, Option<DateTime<Utc>>> =
+        HashMap::from_iter(tasks.into_iter().map(|task| (task, None)));
+    let mut interval =
+        tokio::time::interval(Duration::from_millis(WORKER_DELAY));
+    loop {
+        interval.tick().await;
+
+        for (task, last_run) in worker_state.iter_mut() {
+            if !task.is_ready(last_run) {
+                continue;
+            };
+            let task_result = match task {
+                PeriodicTask::IncomingActivityQueueExecutor => {
+                    incoming_activity_queue_executor(&config, &db_pool).await
+                },
+                PeriodicTask::OutgoingActivityQueueExecutor => {
+                    outgoing_activity_queue_executor(&config, &db_pool).await
+                },
+                PeriodicTask::FetcherQueueExecutor => {
+                    fetcher_queue_executor(&config, &db_pool).await
+                        .map_err(Into::into)
+                },
+                PeriodicTask::DeleteExtraneousPosts => {
+                    delete_extraneous_posts(&config, &db_pool).await
+                },
+                PeriodicTask::DeleteEmptyProfiles => {
+                    delete_empty_profiles(&config, &db_pool).await
+                },
+                PeriodicTask::PruneRemoteEmojis => {
+                    prune_remote_emojis(&config, &db_pool).await
+                },
+                PeriodicTask::PruneUnusedAttachments => {
+                    prune_unused_attachments(&config, &db_pool).await
+                },
+                PeriodicTask::PruneActivityPubObjects => {
+                    prune_activitypub_objects(&config, &db_pool).await
+                },
+                PeriodicTask::MediaCleanupQueueExecutor => {
+                    media_cleanup_queue_executor(&config, &db_pool).await
+                },
+                PeriodicTask::ImporterQueueExecutor => {
+                    importer_queue_executor(&config, &db_pool).await
+                },
+                PeriodicTask::SubscriptionExpirationMonitor => {
+                    subscription_expiration_monitor(&config, &db_pool).await
+                },
+                PeriodicTask::MoneroPaymentMonitor => {
+                    monero_payment_monitor(&config, &db_pool).await
+                },
+                PeriodicTask::MoneroRecurrentPaymentMonitor => {
+                    monero_recurrent_payment_monitor(&config, &db_pool).await
+                },
+            };
+            task_result.unwrap_or_else(|err| {
+                log::error!("{:?}: {}", task, err);
+            });
+            *last_run = Some(Utc::now());
+        };
+    };
+}
+
+pub fn start_worker(
     config: Config,
     db_pool: DatabaseConnectionPool,
 ) -> () {
     tokio::spawn(async move {
-        let mut scheduler_state = HashMap::from([
-            (PeriodicTask::IncomingActivityQueueExecutor, None),
-            (PeriodicTask::OutgoingActivityQueueExecutor, None),
-            (PeriodicTask::FetcherQueueExecutor, None),
-            (PeriodicTask::PruneRemoteEmojis, None),
-            (PeriodicTask::PruneUnusedAttachments, None),
-            (PeriodicTask::PruneActivityPubObjects, None),
-            (PeriodicTask::MediaCleanupQueueExecutor, None),
-            (PeriodicTask::ImporterQueueExecutor, None),
-            (PeriodicTask::SubscriptionExpirationMonitor, None),
-        ]);
+        let mut tasks = vec![
+            PeriodicTask::IncomingActivityQueueExecutor,
+            PeriodicTask::OutgoingActivityQueueExecutor,
+            PeriodicTask::FetcherQueueExecutor,
+            PeriodicTask::PruneRemoteEmojis,
+            PeriodicTask::PruneUnusedAttachments,
+            PeriodicTask::PruneActivityPubObjects,
+            PeriodicTask::MediaCleanupQueueExecutor,
+            PeriodicTask::ImporterQueueExecutor,
+            PeriodicTask::SubscriptionExpirationMonitor,
+        ];
         if config.retention.extraneous_posts.is_some() {
-            scheduler_state.insert(PeriodicTask::DeleteExtraneousPosts, None);
+            tasks.push(PeriodicTask::DeleteExtraneousPosts);
         };
         if config.retention.empty_profiles.is_some() {
-            scheduler_state.insert(PeriodicTask::DeleteEmptyProfiles, None);
+            tasks.push(PeriodicTask::DeleteEmptyProfiles);
         };
         if config.monero_config().is_some() {
-            scheduler_state.insert(PeriodicTask::MoneroPaymentMonitor, None);
-            scheduler_state.insert(PeriodicTask::MoneroRecurrentPaymentMonitor, None);
+            tasks.push(PeriodicTask::MoneroPaymentMonitor);
+            tasks.push(PeriodicTask::MoneroRecurrentPaymentMonitor);
         };
-
-        // Start worker loop
-        let mut interval =
-            tokio::time::interval(Duration::from_millis(WORKER_DELAY));
-        loop {
-            interval.tick().await;
-
-            for (task, last_run) in scheduler_state.iter_mut() {
-                if !task.is_ready(last_run) {
-                    continue;
-                };
-                let task_result = match task {
-                    PeriodicTask::IncomingActivityQueueExecutor => {
-                        incoming_activity_queue_executor(&config, &db_pool).await
-                    },
-                    PeriodicTask::OutgoingActivityQueueExecutor => {
-                        outgoing_activity_queue_executor(&config, &db_pool).await
-                    },
-                    PeriodicTask::FetcherQueueExecutor => {
-                        fetcher_queue_executor(&config, &db_pool).await
-                            .map_err(Into::into)
-                    },
-                    PeriodicTask::DeleteExtraneousPosts => {
-                        delete_extraneous_posts(&config, &db_pool).await
-                    },
-                    PeriodicTask::DeleteEmptyProfiles => {
-                        delete_empty_profiles(&config, &db_pool).await
-                    },
-                    PeriodicTask::PruneRemoteEmojis => {
-                        prune_remote_emojis(&config, &db_pool).await
-                    },
-                    PeriodicTask::PruneUnusedAttachments => {
-                        prune_unused_attachments(&config, &db_pool).await
-                    },
-                    PeriodicTask::PruneActivityPubObjects => {
-                        prune_activitypub_objects(&config, &db_pool).await
-                    },
-                    PeriodicTask::MediaCleanupQueueExecutor => {
-                        media_cleanup_queue_executor(&config, &db_pool).await
-                    },
-                    PeriodicTask::ImporterQueueExecutor => {
-                        importer_queue_executor(&config, &db_pool).await
-                    },
-                    PeriodicTask::SubscriptionExpirationMonitor => {
-                        subscription_expiration_monitor(&config, &db_pool).await
-                    },
-                    PeriodicTask::MoneroPaymentMonitor => {
-                        monero_payment_monitor(&config, &db_pool).await
-                    },
-                    PeriodicTask::MoneroRecurrentPaymentMonitor => {
-                        monero_recurrent_payment_monitor(&config, &db_pool).await
-                    },
-                };
-                task_result.unwrap_or_else(|err| {
-                    log::error!("{:?}: {}", task, err);
-                });
-                *last_run = Some(Utc::now());
-            };
-        };
+        run_worker(config, db_pool, tasks).await
     });
 }

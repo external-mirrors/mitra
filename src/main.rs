@@ -74,7 +74,7 @@ async fn main() -> std::io::Result<()> {
 
     log::info!("instance URL {}", config.instance_url());
 
-    scheduler::run(
+    scheduler::start_worker(
         config.clone(),
         db_pool.clone(),
     );
