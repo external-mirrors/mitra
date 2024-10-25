@@ -24,7 +24,7 @@ http = "0.2.9"
 # Used for working with IDNs
 idna = "0.4.0"
 # Used to guess media type of a file
-infer = "=0.13.0"
+infer = "0.13.0"
 # Used for working with URIs
 iri-string = "0.7.6"
 # Used for working with ECDSA signatures
