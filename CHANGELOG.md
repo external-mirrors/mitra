@@ -27,6 +27,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Don't fetch object of FEP-1b12 announced `Create` and `Update` activities.
 - Update actor reachability statuses with a single query.
 - Don't publish post if `Idempotency-Key` header value is reused.
+- Ignore forwarded unsigned `EmojiReact` activities.
 
 ### Fixed
 

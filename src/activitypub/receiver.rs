@@ -12,7 +12,7 @@ use mitra_activitypub::{
     filter::{get_moderation_domain, FederationFilter},
     identifiers::canonicalize_id,
     queues::IncomingActivityJobData,
-    vocabulary::{ANNOUNCE, DELETE, CREATE, LIKE, UPDATE},
+    vocabulary::{ANNOUNCE, CREATE, DELETE, EMOJI_REACT, LIKE, UPDATE},
 };
 use mitra_config::Config;
 use mitra_models::{
@@ -171,8 +171,9 @@ pub async fn receive_activity(
                 // but re-authenticate object in handler
                 log::info!("processing forwarded {activity_type} activity");
             },
-            DELETE | LIKE => {
-                // Ignore forwarded Delete and Like activities
+            DELETE | EMOJI_REACT | LIKE => {
+                // Ignore forwarded Delete, EmojiReact and Like activities
+                // if they are not signed
                 return Ok(());
             },
             _ => {
