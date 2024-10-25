@@ -40,8 +40,7 @@ pub async fn handle_move(
     activity: Value,
 ) -> HandlerResult {
     // Move(Person)
-    let activity: Move = serde_json::from_value(activity)
-        .map_err(|_| ValidationError("unexpected activity structure"))?;
+    let activity: Move = serde_json::from_value(activity)?;
     // Mastodon (push mode): actor is old profile (object)
     // Mitra (pull mode): actor is new profile (target)
     if activity.object != activity.actor && activity.target != activity.actor {

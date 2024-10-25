@@ -81,9 +81,7 @@ async fn handle_fep_171b_add(
         actor: conversation_owner,
         object: mut activity,
         target,
-    } =
-        serde_json::from_value(add)
-            .map_err(|_| ValidationError("unexpected activity structure"))?;
+    } = serde_json::from_value(add)?;
     // Authentication
     match verify_signed_activity(
         config,
@@ -165,8 +163,7 @@ pub async fn handle_add(
     if is_activity(&activity["object"]) {
         return handle_fep_171b_add(config, db_client, activity).await;
     };
-    let activity: Add = serde_json::from_value(activity)
-        .map_err(|_| ValidationError("unexpected activity structure"))?;
+    let activity: Add = serde_json::from_value(activity)?;
     let actor_profile = get_remote_profile_by_actor_id(
         db_client,
         &activity.actor,

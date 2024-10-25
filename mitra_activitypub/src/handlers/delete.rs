@@ -31,8 +31,7 @@ pub async fn handle_delete(
     db_client: &mut impl DatabaseClient,
     activity: Value,
 ) -> HandlerResult {
-    let activity: Delete = serde_json::from_value(activity)
-        .map_err(|_| ValidationError("unexpected activity structure"))?;
+    let activity: Delete = serde_json::from_value(activity)?;
     if activity.object == activity.actor {
         // Self-delete
         let profile = match get_remote_profile_by_actor_id(

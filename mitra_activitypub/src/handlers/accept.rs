@@ -45,8 +45,7 @@ pub async fn handle_accept(
     db_client: &mut impl DatabaseClient,
     activity: JsonValue,
 ) -> HandlerResult {
-    let activity: Accept = serde_json::from_value(activity)
-        .map_err(|_| ValidationError("unexpected activity structure"))?;
+    let activity: Accept = serde_json::from_value(activity)?;
     if activity.result.is_some() {
         // Accept(Offer)
         return handle_accept_offer(config, db_client, activity).await;
@@ -91,8 +90,7 @@ async fn handle_accept_offer(
         return Err(ValidationError("actor is not a recipient").into());
     };
     let agreement_value = activity.result.expect("result should be present");
-    let agreement: Agreement = serde_json::from_value(agreement_value)
-        .map_err(|_| ValidationError("unexpected activity structure"))?;
+    let agreement: Agreement = serde_json::from_value(agreement_value)?;
     let agreement_id = agreement.id.as_ref()
         .ok_or(ValidationError("missing 'id' field"))?;
     let invoice_amount: i64 = agreement.reciprocal_commitment()

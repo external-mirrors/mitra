@@ -18,7 +18,6 @@ use mitra_models::{
 use mitra_services::media::MediaStorage;
 use mitra_utils::unicode::is_single_character;
 use mitra_validators::{
-    errors::ValidationError,
     reactions::validate_reaction_data,
 };
 
@@ -62,8 +61,7 @@ pub async fn handle_like(
     db_client: &mut impl DatabaseClient,
     activity_value: JsonValue,
 ) -> HandlerResult {
-    let activity: Like = serde_json::from_value(activity_value)
-        .map_err(|_| ValidationError("unexpected activity structure"))?;
+    let activity: Like = serde_json::from_value(activity_value)?;
     let instance = config.instance();
     let agent = build_federation_agent(&instance, None);
     let storage = MediaStorage::from(config);

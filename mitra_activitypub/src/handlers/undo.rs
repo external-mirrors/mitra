@@ -45,8 +45,7 @@ async fn handle_undo_follow(
     db_client: &mut impl DatabaseClient,
     activity: Value,
 ) -> HandlerResult {
-    let activity: UndoFollow = serde_json::from_value(activity)
-        .map_err(|_| ValidationError("unexpected activity structure"))?;
+    let activity: UndoFollow = serde_json::from_value(activity)?;
     let canonical_actor_id = canonicalize_id(&activity.actor)?;
     let source_profile = get_remote_profile_by_actor_id(
         db_client,
@@ -86,8 +85,7 @@ pub async fn handle_undo(
         return handle_undo_follow(config, db_client, activity).await;
     };
 
-    let activity: Undo = serde_json::from_value(activity)
-        .map_err(|_| ValidationError("unexpected activity structure"))?;
+    let activity: Undo = serde_json::from_value(activity)?;
     let canonical_actor_id = canonicalize_id(&activity.actor)?;
     let actor_profile = get_remote_profile_by_actor_id(
         db_client,

@@ -658,7 +658,8 @@ async fn apgateway_create_actor_view(
     ).await.map_err(|error| {
         log::warn!("failed to register portable actor ({error})");
         match error {
-            HandlerError::ValidationError(error) => error.into(),
+            HandlerError::ValidationError(error) =>
+                HttpError::ValidationError(error),
             HandlerError::DatabaseError(error) => error.into(),
             _ => HttpError::InternalError,
         }
@@ -866,7 +867,8 @@ async fn apgateway_outbox_push_view(
     let recipients = get_activity_remote_recipients(db_client, &activity)
         .await
         .map_err(|error| match error {
-            HandlerError::ValidationError(error) => error.into(),
+            HandlerError::ValidationError(error) =>
+                HttpError::ValidationError(error),
             HandlerError::DatabaseError(error) => error.into(),
             _ => HttpError::InternalError,
         })?;

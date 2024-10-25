@@ -1,3 +1,4 @@
+use serde_json::{Error as DeserializationError};
 use thiserror::Error;
 
 use apx_sdk::fetch::FetchError;
@@ -13,8 +14,8 @@ pub enum HandlerError {
     #[error(transparent)]
     FetchError(#[from] FetchError),
 
-    #[error(transparent)]
-    ValidationError(#[from] ValidationError),
+    #[error("{0}")]
+    ValidationError(String),
 
     #[error(transparent)]
     DatabaseError(#[from] DatabaseError),
@@ -27,4 +28,16 @@ pub enum HandlerError {
 
     #[error("unsolicited message from {0}")]
     UnsolicitedMessage(String),
+}
+
+impl From<DeserializationError> for HandlerError {
+    fn from(error: DeserializationError) -> Self {
+        Self::ValidationError(format!("deserialization error: {error}"))
+    }
+}
+
+impl From<ValidationError> for HandlerError {
+    fn from(error: ValidationError) -> Self {
+        Self::ValidationError(error.to_string())
+    }
 }

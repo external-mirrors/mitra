@@ -16,7 +16,6 @@ use mitra_models::{
     relationships::queries::unsubscribe,
     users::queries::get_user_by_name,
 };
-use mitra_validators::errors::ValidationError;
 
 use crate::{
     identifiers::parse_local_actor_id,
@@ -39,8 +38,7 @@ pub async fn handle_remove(
     db_client: &mut impl DatabaseClient,
     activity: Value,
 ) -> HandlerResult {
-    let activity: Remove = serde_json::from_value(activity)
-        .map_err(|_| ValidationError("unexpected activity structure"))?;
+    let activity: Remove = serde_json::from_value(activity)?;
     let actor_profile = get_remote_profile_by_actor_id(
         db_client,
         &activity.actor,

@@ -167,12 +167,9 @@ impl<'de> Deserialize<'de> for AttributedObjectJson {
         where D: Deserializer<'de>
     {
         let value = JsonValue::deserialize(deserializer)?;
-        let attributed_object = serde_json::from_value(value.clone())
+        let inner = serde_json::from_value(value.clone())
             .map_err(DeserializerError::custom)?;
-        Ok(Self {
-            inner: attributed_object,
-            value: value,
-        })
+        Ok(Self { inner, value })
     }
 }
 
@@ -893,7 +890,7 @@ async fn check_unsolicited_message(
 struct CreateNote {
     #[serde(deserialize_with = "deserialize_into_object_id")]
     actor: String,
-    object: JsonValue,
+    object: AttributedObjectJson,
 }
 
 pub(super) async fn handle_create(
@@ -903,11 +900,10 @@ pub(super) async fn handle_create(
     mut is_authenticated: bool,
     is_pulled: bool,
 ) -> HandlerResult {
-    let activity: CreateNote = serde_json::from_value(activity)
-        .map_err(|_| ValidationError("unexpected activity structure"))?;
-    // TODO: FEP-EF61: save object to database
-    let object: AttributedObjectJson = serde_json::from_value(activity.object)
-        .map_err(|_| ValidationError("unexpected object structure"))?;
+    let CreateNote {
+        actor: activity_actor,
+        object,
+    } = serde_json::from_value(activity)?;
 
     if !is_pulled {
         check_unsolicited_message(
@@ -919,7 +915,7 @@ pub(super) async fn handle_create(
 
     // Authentication
     let author_id = get_object_attributed_to(&object.inner)?;
-    if author_id != activity.actor {
+    if author_id != activity_actor {
         log::warn!("attributedTo value doesn't match actor");
         is_authenticated = false; // Object will be fetched
     };

@@ -17,7 +17,6 @@ use mitra_models::{
 use mitra_services::media::MediaStorage;
 use mitra_validators::{
     activitypub::validate_any_object_id,
-    errors::ValidationError,
 };
 
 use crate::{
@@ -43,8 +42,7 @@ pub async fn handle_follow(
     activity: JsonValue,
 ) -> HandlerResult {
     // Follow(Person)
-    let activity: Follow = serde_json::from_value(activity)
-        .map_err(|_| ValidationError("unexpected activity structure"))?;
+    let activity: Follow = serde_json::from_value(activity)?;
     let source_profile = ActorIdResolver::default().only_remote().resolve(
         db_client,
         &config.instance(),

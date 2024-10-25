@@ -66,8 +66,7 @@ async fn handle_update_note(
     db_client: &mut impl DatabaseClient,
     activity: JsonValue,
 ) -> HandlerResult {
-    let activity: UpdateNote = serde_json::from_value(activity)
-        .map_err(|_| ValidationError("invalid object"))?;
+    let activity: UpdateNote = serde_json::from_value(activity)?;
     let object = activity.object;
     let author_id = get_object_attributed_to(&object)?;
     if author_id != activity.actor {
@@ -165,8 +164,7 @@ async fn handle_update_person(
     db_client: &mut impl DatabaseClient,
     activity: JsonValue,
 ) -> HandlerResult {
-    let activity: UpdatePerson = serde_json::from_value(activity)
-        .map_err(|_| ValidationError("invalid actor data"))?;
+    let activity: UpdatePerson = serde_json::from_value(activity)?;
     if activity.object.id() != activity.actor {
         return Err(ValidationError("actor ID mismatch").into());
     };

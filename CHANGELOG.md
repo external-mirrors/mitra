@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- Improved error reporting during activity parsing.
+
 ### Fixed
 
 - Limit results to posts made by current user when checking idempotency key.

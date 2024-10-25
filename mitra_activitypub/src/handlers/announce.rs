@@ -57,8 +57,7 @@ pub async fn handle_announce(
     if is_activity(&activity["object"]) {
         return handle_fep_1b12_announce(config, db_client, activity).await;
     };
-    let activity: Announce = serde_json::from_value(activity)
-        .map_err(|_| ValidationError("unexpected activity structure"))?;
+    let activity: Announce = serde_json::from_value(activity)?;
     match get_remote_repost_by_activity_id(
         db_client,
         &activity.id,
@@ -128,8 +127,7 @@ async fn handle_fep_1b12_announce(
 ) -> HandlerResult {
     let is_embedded_trusted = is_embedded_activity_trusted(&announce)?;
     let GroupAnnounce { actor: group_id, object: activity } =
-        serde_json::from_value(announce)
-            .map_err(|_| ValidationError("unexpected activity structure"))?;
+        serde_json::from_value(announce)?;
     verify_activity_owner(&activity)?;
     let activity_id = activity["id"].as_str()
         .ok_or(ValidationError("unexpected activity structure"))?;

@@ -750,8 +750,7 @@ pub async fn register_portable_actor(
             log::warn!("{error}");
             ValidationError("invalid portable actor")
         })?;
-    let actor: Actor = serde_json::from_value(actor_json.clone())
-        .map_err(|_| ValidationError("invalid actor object"))?;
+    let actor: Actor = serde_json::from_value(actor_json.clone())?;
     check_local_username_unique(
         db_client,
         actor.preferred_username(),
