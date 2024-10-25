@@ -221,11 +221,10 @@ async fn create_status(
             // TODO: store Uuid in cache
             let post_id = Uuid::parse_str(post_id)
                 .map_err(|_| MastodonError::InternalError)?;
-            let post = get_post_by_id_for_view(
-                db_client,
-                Some(&current_user),
-                post_id,
-            ).await?;
+            let post = get_post_by_id(db_client, post_id).await?;
+            if post.author.id != current_user.id {
+                return Err(MastodonError::PermissionError);
+            };
             let status = build_status(
                 db_client,
                 &get_request_base_url(connection_info),
