@@ -68,13 +68,14 @@ async fn handle_update_note(
 ) -> HandlerResult {
     let activity: UpdateNote = serde_json::from_value(activity)?;
     let object = activity.object;
+    let canonical_object_id = canonicalize_id(&object.id)?;
     let author_id = get_object_attributed_to(&object)?;
     if author_id != activity.actor {
         return Err(ValidationError("attributedTo value doesn't match actor").into());
     };
     let post = match get_remote_post_by_object_id(
         db_client,
-        &object.id,
+        &canonical_object_id.to_string(),
     ).await {
         Ok(post) => post,
         // Ignore Update if post is not found locally
