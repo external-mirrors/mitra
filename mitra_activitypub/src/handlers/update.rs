@@ -15,6 +15,7 @@ use apx_sdk::{
 use mitra_adapters::permissions::filter_mentions;
 use mitra_config::Config;
 use mitra_models::{
+    activitypub::queries::save_attributed_object,
     database::{DatabaseClient, DatabaseError},
     posts::queries::{
         get_remote_post_by_object_id,
@@ -44,7 +45,7 @@ use crate::{
         get_object_tags,
         get_object_url,
         parse_poll_results,
-        AttributedObject,
+        AttributedObjectJson,
     },
     identifiers::{canonicalize_id, profile_actor_id},
     importers::fetch_any_object,
@@ -58,7 +59,7 @@ use super::{Descriptor, HandlerResult};
 struct UpdateNote {
     #[serde(deserialize_with = "deserialize_into_object_id")]
     actor: String,
-    object: AttributedObject,
+    object: AttributedObjectJson,
 }
 
 async fn handle_update_note(
@@ -67,7 +68,7 @@ async fn handle_update_note(
     activity: JsonValue,
 ) -> HandlerResult {
     let activity: UpdateNote = serde_json::from_value(activity)?;
-    let object = activity.object;
+    let AttributedObjectJson { inner: object, value: object_json } = activity.object;
     let canonical_object_id = canonicalize_id(&object.id)?;
     let author_id = get_object_attributed_to(&object)?;
     if author_id != activity.actor {
@@ -151,6 +152,12 @@ async fn handle_update_note(
     let (_, deletion_queue) =
         update_post(db_client, post.id, post_data).await?;
     deletion_queue.into_job(db_client).await?;
+    save_attributed_object(
+        db_client,
+        &canonical_object_id.to_string(),
+        &object_json,
+        post.id,
+    ).await?;
     Ok(Some(Descriptor::object(object.object_type)))
 }
 

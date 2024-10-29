@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Improved error reporting during activity parsing.
 - Support portable `Update(Note)` activities.
+- Update cached ActivityPub object when processing `Update(Object)` activity.
 
 ### Fixed
 
