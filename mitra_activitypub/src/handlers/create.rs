@@ -913,12 +913,11 @@ pub(super) async fn handle_create(
         ).await?;
     };
 
-    // Authentication
     let author_id = get_object_attributed_to(&object.inner)?;
     if author_id != activity_actor {
-        log::warn!("attributedTo value doesn't match actor");
-        is_authenticated = false; // Object will be fetched
+        return Err(ValidationError("actor is not authorized to create object").into());
     };
+    // Authentication
     match verify_portable_object(&object.value) {
         Ok(_) => {
             is_authenticated = true;
