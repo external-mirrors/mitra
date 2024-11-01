@@ -121,11 +121,11 @@ fn fetcher_error_for_status(error: reqwest::Error) -> FetchError {
 }
 
 /// Sends GET request to fetch AP object
-pub async fn fetch_object<T: DeserializeOwned>(
+pub async fn fetch_object(
     agent: &FederationAgent,
     object_id: &str,
     allow_fep_ef61_noproof: bool,
-) -> Result<T, FetchError> {
+) -> Result<JsonValue, FetchError> {
     // Don't follow redirects automatically,
     // because request needs to be signed again after every redirect
     let http_client = build_fetcher_client(
@@ -226,8 +226,7 @@ pub async fn fetch_object<T: DeserializeOwned>(
         return Err(FetchError::UnexpectedContentType(content_type));
     };
 
-    let object: T = serde_json::from_value(object_json)?;
-    Ok(object)
+    Ok(object_json)
 }
 
 fn get_media_type(

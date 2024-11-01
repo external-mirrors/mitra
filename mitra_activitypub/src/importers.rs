@@ -125,11 +125,13 @@ pub async fn fetch_any_object_with_context<T: DeserializeOwned>(
     object_id: &str,
 ) -> Result<T, FetchError> {
     let http_url = context.prepare_object_id(object_id)?;
-    let object: T = fetch_object(
+    let object_json = fetch_object(
         agent,
         &http_url,
         false, // do not allow FEP-ef61 objects without proof
     ).await?;
+    // TODO: convert into HandlerError::ValidationError
+    let object: T = serde_json::from_value(object_json)?;
     Ok(object)
 }
 
