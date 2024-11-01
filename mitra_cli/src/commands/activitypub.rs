@@ -4,7 +4,10 @@ use anyhow::Error;
 use clap::Parser;
 use serde_json::{Value as JsonValue};
 
-use apx_sdk::authentication::verify_portable_object;
+use apx_sdk::{
+    authentication::verify_portable_object,
+    fetch::FetchObjectOptions,
+};
 use mitra_activitypub::{
     agent::build_federation_agent,
     importers::{
@@ -125,6 +128,8 @@ pub struct FetchObject {
     gateway: Option<String>,
     #[arg(long)]
     as_user: Option<String>,
+    #[arg(long)]
+    skip_verification: bool,
 }
 
 impl FetchObject {
@@ -147,10 +152,15 @@ impl FetchObject {
             .map(|gateway| vec![gateway.to_string()])
             .unwrap_or_default();
         let mut context = FetcherContext::from(gateways);
+        let options = FetchObjectOptions {
+            skip_verification: self.skip_verification,
+            ..Default::default()
+        };
         let object: JsonValue = fetch_any_object_with_context(
             &agent,
             &mut context,
             &self.object_id,
+            options,
         ).await?;
         println!("{}", object);
         Ok(())

@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Allow level 1 markdown headings in posts.
 - Add `published` and `updated` properties to actor documents.
+- Added `--skip-verification` parameter to `fetch-object` command.
 
 ### Changed
 

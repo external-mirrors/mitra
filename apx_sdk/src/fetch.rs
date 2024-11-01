@@ -119,11 +119,17 @@ fn fetcher_error_for_status(error: reqwest::Error) -> FetchError {
     }
 }
 
+#[derive(Default)]
+pub struct FetchObjectOptions {
+    pub skip_verification: bool,
+    pub allow_fep_ef61_noproof: bool,
+}
+
 /// Sends GET request to fetch AP object
 pub async fn fetch_object(
     agent: &FederationAgent,
     object_id: &str,
-    allow_fep_ef61_noproof: bool,
+    options: FetchObjectOptions,
 ) -> Result<JsonValue, FetchError> {
     // Don't follow redirects automatically,
     // because request needs to be signed again after every redirect
@@ -182,11 +188,15 @@ pub async fn fetch_object(
         .ok_or(FetchError::ResponseTooLarge)?;
 
     let object_json: JsonValue = serde_json::from_slice(&data)?;
+    if options.skip_verification {
+        return Ok(object_json);
+    };
+
+    // Perform authentication
     let object_location = response.url().as_str();
     let object_id = object_json["id"].as_str()
         .ok_or(FetchError::NoObjectId(object_location.to_string()))?;
 
-    // Perform authentication
     match verify_portable_object(&object_json) {
         Ok(_) => (),
         Err(AuthenticationError::InvalidObjectID(_)) => {
@@ -200,7 +210,7 @@ pub async fn fetch_object(
                 return Err(FetchError::UnexpectedObjectId(object_location.to_string()));
             };
         },
-        Err(AuthenticationError::NoProof) if allow_fep_ef61_noproof => {
+        Err(AuthenticationError::NoProof) if options.allow_fep_ef61_noproof => {
             // Fallback to authority check
             let is_same_authority = is_same_hostname(object_id, object_location)
                 .unwrap_or(false);

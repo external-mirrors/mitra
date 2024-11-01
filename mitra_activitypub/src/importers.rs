@@ -21,6 +21,7 @@ use apx_sdk::{
         fetch_json,
         fetch_object,
         FetchError,
+        FetchObjectOptions,
     },
     jrd::JsonResourceDescriptor,
     url::{parse_url, Url},
@@ -123,12 +124,13 @@ pub async fn fetch_any_object_with_context<T: DeserializeOwned>(
     agent: &FederationAgent,
     context: &mut FetcherContext,
     object_id: &str,
+    options: FetchObjectOptions,
 ) -> Result<T, FetchError> {
     let http_url = context.prepare_object_id(object_id)?;
     let object_json = fetch_object(
         agent,
         &http_url,
-        false, // do not allow FEP-ef61 objects without proof
+        options,
     ).await?;
     // TODO: convert into HandlerError::ValidationError
     let object: T = serde_json::from_value(object_json)?;
@@ -144,6 +146,7 @@ pub async fn fetch_any_object<T: DeserializeOwned>(
         agent,
         &mut context,
         object_id,
+        FetchObjectOptions::default(),
     ).await
 }
 
@@ -233,6 +236,7 @@ async fn refresh_remote_profile(
             &agent,
             &mut context,
             &actor_data.id,
+            FetchObjectOptions::default(),
         ).await {
             Ok(actor) => {
                 if canonicalize_id(actor.id())?.to_string() != actor_data.id {

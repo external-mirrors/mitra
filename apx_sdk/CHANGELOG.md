@@ -6,10 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+
+- Added `skip_verification` parameter to `fetch_object` options.
+
 ### Changed
 
 - Make `fetch_object` return `JsonValue`.
 - Make `fetch_json` return `JsonValue`.
+- Pass `FetchObjectOptions` type to `fetch_object`.
 
 ## [0.3.0] - 2024-10-16
 
