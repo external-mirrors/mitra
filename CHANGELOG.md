@@ -9,7 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Added
 
 - Allow level 1 markdown headings in posts.
-- Add `published` property to actor documents.
+- Add `published` and `updated` properties to actor documents.
 
 ### Changed
 

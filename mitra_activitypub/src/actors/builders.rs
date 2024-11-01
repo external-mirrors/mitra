@@ -145,6 +145,8 @@ pub struct Actor {
 
     #[serde(skip_serializing_if = "Option::is_none")]
     published: Option<DateTime<Utc>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    updated: Option<DateTime<Utc>>,
 
     // Required for FEP-ef61
     #[serde(skip_serializing_if = "Vec::is_empty")]
@@ -260,6 +262,7 @@ pub fn build_local_actor(
         manually_approves_followers: user.profile.manually_approves_followers,
         url: Some(profile_url),
         published: Some(user.profile.created_at),
+        updated: Some(user.profile.updated_at),
         gateways: gateways,
     };
     Ok(actor)
@@ -299,6 +302,7 @@ pub fn build_instance_actor(
         manually_approves_followers: false,
         url: None,
         published: None,
+        updated: None,
         gateways: vec![],
     };
     Ok(actor)
@@ -319,6 +323,7 @@ mod tests {
         profile.created_at = DateTime::parse_from_rfc3339("2023-02-24T23:36:38Z")
             .unwrap()
             .with_timezone(&Utc);
+        profile.updated_at = profile.created_at;
         let user = User { profile, ..Default::default() };
         let authority = Authority::from_user(INSTANCE_URL, &user, false);
         let actor = build_local_actor(INSTANCE_URL, &authority, &user).unwrap();
@@ -380,6 +385,7 @@ mod tests {
             "manuallyApprovesFollowers": false,
             "url": "https://server.example/users/testuser",
             "published": "2023-02-24T23:36:38Z",
+            "updated": "2023-02-24T23:36:38Z",
         });
         assert_eq!(value, expected_value);
     }
@@ -391,6 +397,7 @@ mod tests {
         profile.created_at = DateTime::parse_from_rfc3339("2023-02-24T23:36:38Z")
             .unwrap()
             .with_timezone(&Utc);
+        profile.updated_at = profile.created_at;
         let user = User { profile, ..Default::default() };
         let authority = Authority::from_user(INSTANCE_URL, &user, true);
         let actor = build_local_actor(INSTANCE_URL, &authority, &user).unwrap();
@@ -452,6 +459,7 @@ mod tests {
             "manuallyApprovesFollowers": false,
             "url": "https://server.example/users/testuser",
             "published": "2023-02-24T23:36:38Z",
+            "updated": "2023-02-24T23:36:38Z",
             "gateways": [
                 "https://server.example"
             ],
