@@ -1,6 +1,5 @@
 use http::header;
 use reqwest::{Client, Method, RequestBuilder, StatusCode};
-use serde::de::DeserializeOwned;
 use serde_json::{Value as JsonValue};
 
 use apx_core::{
@@ -286,11 +285,11 @@ pub async fn fetch_file(
 }
 
 /// Fetches arbitrary JSON data (unsigned request)
-pub async fn fetch_json<T: DeserializeOwned>(
+pub async fn fetch_json(
     agent: &FederationAgent,
     url: &str,
     query: &[(&str, &str)],
-) -> Result<T, FetchError> {
+) -> Result<JsonValue, FetchError> {
     if agent.ssrf_protection_enabled {
         require_safe_url(url)?;
     };
@@ -306,6 +305,6 @@ pub async fn fetch_json<T: DeserializeOwned>(
     let data = limited_response(&mut response, agent.response_size_limit)
         .await?
         .ok_or(FetchError::ResponseTooLarge)?;
-    let object: T = serde_json::from_slice(&data)?;
-    Ok(object)
+    let object_json = serde_json::from_slice(&data)?;
+    Ok(object_json)
 }

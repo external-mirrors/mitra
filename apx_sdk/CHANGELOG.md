@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Changed
 
 - Make `fetch_object` return `JsonValue`.
+- Make `fetch_json` return `JsonValue`.
 
 ## [0.3.0] - 2024-10-16
 

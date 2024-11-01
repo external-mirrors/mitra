@@ -353,11 +353,12 @@ pub(crate) async fn perform_webfinger_query(
         guess_protocol(webfinger_address.hostname()),
         webfinger_address.hostname(),
     );
-    let jrd: JsonResourceDescriptor = fetch_json(
+    let jrd_value = fetch_json(
         agent,
         &webfinger_url,
         &[("resource", &webfinger_resource)],
     ).await?;
+    let jrd: JsonResourceDescriptor = serde_json::from_value(jrd_value)?;
     // Prefer Group actor if webfinger results are ambiguous
     let actor_id = jrd.find_actor_id(GROUP)
         .ok_or(ValidationError("actor ID is not found in JRD"))?;
