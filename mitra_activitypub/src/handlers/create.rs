@@ -834,7 +834,7 @@ pub async fn handle_note(
         created_at,
     };
     validate_post_create_data(&post_data)?;
-    validate_post_mentions(&post_data.mentions, &post_data.visibility)?;
+    validate_post_mentions(&post_data.mentions, post_data.visibility)?;
     let post = create_post(db_client, author.id, post_data).await?;
     save_attributed_object(
         db_client,

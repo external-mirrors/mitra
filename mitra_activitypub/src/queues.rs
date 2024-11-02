@@ -81,7 +81,7 @@ impl IncomingActivityJobData {
         let scheduled_for = Utc::now() + Duration::seconds(delay.into());
         enqueue_job(
             db_client,
-            &JobType::IncomingActivity,
+            JobType::IncomingActivity,
             &job_data,
             scheduled_for,
         ).await
@@ -101,7 +101,7 @@ pub async fn process_queued_incoming_activities(
 ) -> Result<(), DatabaseError> {
     let batch = get_job_batch(
         db_client,
-        &JobType::IncomingActivity,
+        JobType::IncomingActivity,
         config.federation.inbox_queue_batch_size,
         JOB_TIMEOUT,
     ).await?;
@@ -326,7 +326,7 @@ impl OutgoingActivityJobData {
         let scheduled_for = Utc::now() + Duration::seconds(delay.into());
         enqueue_job(
             db_client,
-            &JobType::OutgoingActivity,
+            JobType::OutgoingActivity,
             &job_data,
             scheduled_for,
         ).await
@@ -365,7 +365,7 @@ pub async fn process_queued_outgoing_activities(
     let db_client = &**get_database_client(db_pool).await?;
     let batch = get_job_batch(
         db_client,
-        &JobType::OutgoingActivity,
+        JobType::OutgoingActivity,
         OUTGOING_QUEUE_BATCH_SIZE,
         JOB_TIMEOUT,
     ).await?;
@@ -479,7 +479,7 @@ impl FetcherJobData {
         let scheduled_for = Utc::now(); // run immediately
         enqueue_job(
             db_client,
-            &JobType::Fetcher,
+            JobType::Fetcher,
             &job_data,
             scheduled_for,
         ).await
@@ -496,7 +496,7 @@ pub async fn fetcher_queue_executor(
     let db_client = &mut **get_database_client(db_pool).await?;
     let batch = get_job_batch(
         db_client,
-        &JobType::Fetcher,
+        JobType::Fetcher,
         BATCH_SIZE,
         JOB_TIMEOUT,
     ).await?;

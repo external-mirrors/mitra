@@ -7,7 +7,7 @@ use super::types::{DbBackgroundJob, JobStatus, JobType};
 
 pub async fn enqueue_job(
     db_client: &impl DatabaseClient,
-    job_type: &JobType,
+    job_type: JobType,
     job_data: &Value,
     scheduled_for: DateTime<Utc>,
 ) -> Result<(), DatabaseError> {
@@ -30,7 +30,7 @@ pub async fn enqueue_job(
 /// Returns queued jobs, as well as running jobs that have become stale
 pub async fn get_job_batch(
     db_client: &impl DatabaseClient,
-    job_type: &JobType,
+    job_type: JobType,
     batch_size: u32,
     job_timeout: u32,
 ) -> Result<Vec<DbBackgroundJob>, DatabaseError> {
@@ -130,20 +130,20 @@ mod tests {
             "failure_count": 0,
         });
         let scheduled_for = Utc::now();
-        enqueue_job(db_client, &job_type, &job_data, scheduled_for).await.unwrap();
+        enqueue_job(db_client, job_type, &job_data, scheduled_for).await.unwrap();
 
-        let batch_1 = get_job_batch(db_client, &job_type, 10, 3600).await.unwrap();
+        let batch_1 = get_job_batch(db_client, job_type, 10, 3600).await.unwrap();
         assert_eq!(batch_1.len(), 1);
         let job = &batch_1[0];
         assert_eq!(job.job_type, job_type);
         assert_eq!(job.job_data, job_data);
         assert_eq!(job.job_status, JobStatus::Running);
 
-        let batch_2 = get_job_batch(db_client, &job_type, 10, 3600).await.unwrap();
+        let batch_2 = get_job_batch(db_client, job_type, 10, 3600).await.unwrap();
         assert_eq!(batch_2.len(), 0);
 
         delete_job_from_queue(db_client, job.id).await.unwrap();
-        let batch_3 = get_job_batch(db_client, &job_type, 10, 3600).await.unwrap();
+        let batch_3 = get_job_batch(db_client, job_type, 10, 3600).await.unwrap();
         assert_eq!(batch_3.len(), 0);
     }
 }

@@ -148,7 +148,7 @@ async fn handle_update_note(
         updated_at,
     };
     validate_post_update_data(&post_data)?;
-    validate_post_mentions(&post_data.mentions, &post.visibility)?;
+    validate_post_mentions(&post_data.mentions, post.visibility)?;
     let (_, deletion_queue) =
         update_post(db_client, post.id, post_data).await?;
     deletion_queue.into_job(db_client).await?;

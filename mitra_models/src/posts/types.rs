@@ -14,7 +14,7 @@ use crate::database::{
 use crate::emojis::types::DbEmoji;
 use crate::profiles::types::DbActorProfile;
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Visibility {
     Public,
     Direct,
@@ -26,8 +26,8 @@ impl Default for Visibility {
     fn default() -> Self { Self::Public }
 }
 
-impl From<&Visibility> for i16 {
-    fn from(value: &Visibility) -> i16 {
+impl From<Visibility> for i16 {
+    fn from(value: Visibility) -> i16 {
         match value {
             Visibility::Public => 1,
             Visibility::Direct => 2,

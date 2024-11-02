@@ -12,7 +12,7 @@ use crate::{
     profiles::types::DbActorProfile,
 };
 
-#[derive(Debug)]
+#[derive(Clone, Copy, Debug)]
 pub enum RelationshipType {
     Follow,
     FollowRequest, // follow_request table
@@ -23,8 +23,8 @@ pub enum RelationshipType {
     Reject, // follow request rejected
 }
 
-impl From<&RelationshipType> for i16 {
-    fn from(value: &RelationshipType) -> i16 {
+impl From<RelationshipType> for i16 {
+    fn from(value: RelationshipType) -> i16 {
         match value {
             RelationshipType::Follow => 1,
             RelationshipType::FollowRequest => 2,
@@ -129,7 +129,7 @@ impl<T> TryFrom<&Row> for RelatedActorProfile<T>
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum FollowRequestStatus {
     Pending,
     Accepted,
@@ -137,8 +137,8 @@ pub enum FollowRequestStatus {
     Rejected,
 }
 
-impl From<&FollowRequestStatus> for i16 {
-    fn from(value: &FollowRequestStatus) -> i16 {
+impl From<FollowRequestStatus> for i16 {
+    fn from(value: FollowRequestStatus) -> i16 {
         match value {
             FollowRequestStatus::Pending  => 1,
             FollowRequestStatus::Accepted => 2,

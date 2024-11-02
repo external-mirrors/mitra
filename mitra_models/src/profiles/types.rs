@@ -59,7 +59,7 @@ impl From<MediaInfo> for ProfileImage {
 json_from_sql!(ProfileImage);
 json_to_sql!(ProfileImage);
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Copy, Debug, Default)]
 pub enum MentionPolicy {
     #[default]
     None,
@@ -67,8 +67,8 @@ pub enum MentionPolicy {
     OnlyContacts,
 }
 
-impl From<&MentionPolicy> for i16 {
-    fn from(value: &MentionPolicy) -> i16 {
+impl From<MentionPolicy> for i16 {
+    fn from(value: MentionPolicy) -> i16 {
         match value {
             MentionPolicy::None => 0,
             MentionPolicy::OnlyKnown => 1,

@@ -7,14 +7,14 @@ use crate::database::{
     DatabaseTypeError,
 };
 
-#[derive(Debug)]
+#[derive(Clone, Copy, Debug)]
 pub enum Timeline {
     Home,
     Notifications,
 }
 
-impl From<&Timeline> for i16 {
-    fn from(value: &Timeline) -> i16 {
+impl From<Timeline> for i16 {
+    fn from(value: Timeline) -> i16 {
         match value {
             Timeline::Home => 1,
             Timeline::Notifications => 2,

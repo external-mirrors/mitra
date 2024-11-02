@@ -61,7 +61,7 @@ pub(super) fn local_like_activity_id(
 
 pub(super) fn get_like_audience(
     note_author_id: &str,
-    note_visibility: &Visibility,
+    note_visibility: Visibility,
 ) -> (Vec<String>, Vec<String>) {
     let mut primary_audience = vec![note_author_id.to_string()];
     if matches!(note_visibility, Visibility::Public) {
@@ -80,7 +80,7 @@ fn build_like(
     maybe_reaction_content: Option<String>,
     maybe_custom_emoji: Option<&DbEmoji>,
     post_author_id: &str,
-    post_visibility: &Visibility,
+    post_visibility: Visibility,
 ) -> Like {
     let activity_type = match maybe_reaction_content.as_deref() {
         Some("👎") => DISLIKE,
@@ -143,7 +143,7 @@ pub async fn prepare_like(
         maybe_reaction_content,
         maybe_custom_emoji,
         &post_author_id,
-        &post.visibility,
+        post.visibility,
     );
     Ok(OutgoingActivityJobData::new(
         &instance.url(),
@@ -174,7 +174,7 @@ mod tests {
             None,
             None,
             post_author_id,
-            &Visibility::Public,
+            Visibility::Public,
         );
         assert_eq!(
             activity.id,

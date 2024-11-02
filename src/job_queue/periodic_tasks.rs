@@ -193,7 +193,7 @@ pub async fn media_cleanup_queue_executor(
     let db_client = &**get_database_client(db_pool).await?;
     let batch = get_job_batch(
         db_client,
-        &JobType::MediaCleanup,
+        JobType::MediaCleanup,
         BATCH_SIZE,
         JOB_TIMEOUT,
     ).await?;
@@ -215,7 +215,7 @@ pub async fn importer_queue_executor(
     let db_client = &mut **get_database_client(db_pool).await?;
     let batch = get_job_batch(
         db_client,
-        &JobType::DataImport,
+        JobType::DataImport,
         BATCH_SIZE,
         JOB_TIMEOUT,
     ).await?;

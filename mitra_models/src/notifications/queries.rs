@@ -97,7 +97,7 @@ pub async fn get_notifications(
         related_links=RELATED_LINKS,
         related_emojis=RELATED_EMOJIS,
         related_reactions=RELATED_REACTIONS,
-        relationship_mute=i16::from(&RelationshipType::Mute),
+        relationship_mute=i16::from(RelationshipType::Mute),
     );
     let rows = db_client.query(
         &statement,

@@ -11,8 +11,8 @@ pub enum FilterAction {
     RejectMedia,
 }
 
-impl From<&FilterAction> for i16 {
-    fn from(value: &FilterAction) -> i16 {
+impl From<FilterAction> for i16 {
+    fn from(value: FilterAction) -> i16 {
         match value {
             FilterAction::Reject => 1,
             FilterAction::RejectMedia => 2,

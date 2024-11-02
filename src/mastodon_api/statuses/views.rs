@@ -202,10 +202,10 @@ async fn create_status(
         created_at: Utc::now(),
     };
     validate_post_create_data(&post_data)?;
-    validate_post_mentions(&post_data.mentions, &post_data.visibility)?;
-    validate_local_post_links(&post_data.links, &post_data.visibility)?;
+    validate_post_mentions(&post_data.mentions, post_data.visibility)?;
+    validate_local_post_links(&post_data.links, post_data.visibility)?;
     if let Some(ref in_reply_to) = maybe_in_reply_to {
-        validate_local_reply(in_reply_to, &post_data.mentions, &post_data.visibility)?;
+        validate_local_reply(in_reply_to, &post_data.mentions, post_data.visibility)?;
     };
 
     // Check idempotency key
@@ -398,10 +398,10 @@ async fn edit_status(
         updated_at: Utc::now(),
     };
     validate_post_update_data(&post_data)?;
-    validate_post_mentions(&post_data.mentions, &post.visibility)?;
-    validate_local_post_links(&post_data.links, &post.visibility)?;
+    validate_post_mentions(&post_data.mentions, post.visibility)?;
+    validate_local_post_links(&post_data.links, post.visibility)?;
     if let Some(ref in_reply_to) = maybe_in_reply_to {
-        validate_local_reply(in_reply_to, &post_data.mentions, &post.visibility)?;
+        validate_local_reply(in_reply_to, &post_data.mentions, post.visibility)?;
     };
     let (mut post, deletion_queue) =
         update_post(db_client, post.id, post_data).await?;

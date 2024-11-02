@@ -14,7 +14,7 @@ pub fn role_from_str(role_str: &str) -> Result<Role, ValidationError> {
     Ok(role)
 }
 
-pub fn role_to_str(role: &Role) -> &'static str {
+pub fn role_to_str(role: Role) -> &'static str {
     match role {
         Role::Guest => "guest",
         Role::NormalUser => "user",

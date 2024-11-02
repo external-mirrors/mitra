@@ -224,7 +224,7 @@ pub async fn create_post(
         )
         RETURNING post
         ",
-        visibility_public=i16::from(&Visibility::Public),
+        visibility_public=i16::from(Visibility::Public),
     );
     let maybe_post_row = transaction.query_opt(
         &insert_statement,
@@ -546,9 +546,9 @@ fn build_visibility_filter() -> String {
                     AND relationship_type = {relationship_follow}
             )
         )",
-        visibility_public=i16::from(&Visibility::Public),
-        visibility_followers=i16::from(&Visibility::Followers),
-        relationship_follow=i16::from(&RelationshipType::Follow),
+        visibility_public=i16::from(Visibility::Public),
+        visibility_followers=i16::from(Visibility::Followers),
+        relationship_follow=i16::from(RelationshipType::Follow),
     )
 }
 
@@ -572,7 +572,7 @@ fn build_mute_filter() -> String {
                     AND relationship_type = {relationship_mute}
             )
         )",
-        relationship_mute=i16::from(&RelationshipType::Mute),
+        relationship_mute=i16::from(RelationshipType::Mute),
     )
 }
 
@@ -672,10 +672,10 @@ pub async fn get_home_timeline(
         related_links=RELATED_LINKS,
         related_emojis=RELATED_EMOJIS,
         related_reactions=RELATED_REACTIONS,
-        relationship_follow=i16::from(&RelationshipType::Follow),
-        relationship_subscription=i16::from(&RelationshipType::Subscription),
-        relationship_hide_reposts=i16::from(&RelationshipType::HideReposts),
-        relationship_hide_replies=i16::from(&RelationshipType::HideReplies),
+        relationship_follow=i16::from(RelationshipType::Follow),
+        relationship_subscription=i16::from(RelationshipType::Subscription),
+        relationship_hide_reposts=i16::from(RelationshipType::HideReposts),
+        relationship_hide_replies=i16::from(RelationshipType::HideReplies),
         mute_filter=build_mute_filter(),
         visibility_filter=build_visibility_filter(),
     );
@@ -733,7 +733,7 @@ pub async fn get_public_timeline(
         related_emojis=RELATED_EMOJIS,
         related_reactions=RELATED_REACTIONS,
         filter=filter,
-        visibility_public=i16::from(&Visibility::Public),
+        visibility_public=i16::from(Visibility::Public),
         mute_filter=build_mute_filter(),
     );
     let limit: i64 = limit.into();
@@ -788,7 +788,7 @@ pub async fn get_direct_timeline(
         related_links=RELATED_LINKS,
         related_emojis=RELATED_EMOJIS,
         related_reactions=RELATED_REACTIONS,
-        visibility_direct=i16::from(&Visibility::Direct),
+        visibility_direct=i16::from(Visibility::Direct),
         mute_filter=build_mute_filter(),
     );
     let limit: i64 = limit.into();
@@ -1137,7 +1137,7 @@ pub async fn get_thread(
         related_links=RELATED_LINKS,
         related_emojis=RELATED_EMOJIS,
         related_reactions=RELATED_REACTIONS,
-        relationship_mute=i16::from(&RelationshipType::Mute),
+        relationship_mute=i16::from(RelationshipType::Mute),
         visibility_filter=build_visibility_filter(),
     );
     let query = query!(

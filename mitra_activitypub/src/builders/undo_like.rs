@@ -48,7 +48,7 @@ fn build_undo_like(
     reaction_id: Uuid,
     reaction_has_deprecated_ap_id: bool,
     post_author_id: &str,
-    post_visibility: &Visibility,
+    post_visibility: Visibility,
 ) -> UndoLike {
     let object_id = local_like_activity_id(
         instance_url,
@@ -91,7 +91,7 @@ pub async fn prepare_undo_like(
         reaction_id,
         reaction_has_deprecated_ap_id,
         &post_author_id,
-        &post.visibility,
+        post.visibility,
     );
     Ok(OutgoingActivityJobData::new(
         &instance.url(),
@@ -120,7 +120,7 @@ mod tests {
             reaction_id,
             true, // legacy activity ID
             post_author_id,
-            &Visibility::Public,
+            Visibility::Public,
         );
         assert_eq!(
             activity.id,
@@ -139,7 +139,7 @@ mod tests {
             reaction_id,
             false, // no legacy activity ID
             post_author_id,
-            &Visibility::Public,
+            Visibility::Public,
         );
         assert_eq!(
             activity.object,

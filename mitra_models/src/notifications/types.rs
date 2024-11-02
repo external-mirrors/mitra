@@ -13,7 +13,7 @@ use crate::emojis::types::DbEmoji;
 use crate::posts::types::{DbPostReactions, DbPost, Post};
 use crate::profiles::types::DbActorProfile;
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum EventType {
     Follow,
     FollowRequest,
@@ -29,8 +29,8 @@ pub enum EventType {
     SubscriberLeaving,
 }
 
-impl From<&EventType> for i16 {
-    fn from(value: &EventType) -> i16 {
+impl From<EventType> for i16 {
+    fn from(value: EventType) -> i16 {
         match value {
             EventType::Follow => 1,
             EventType::FollowRequest => 2,

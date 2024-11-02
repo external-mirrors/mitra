@@ -299,7 +299,7 @@ impl ListAccounts {
         );
         for account in accounts {
             let role = match account.role {
-                Some(role) => role_to_str(&role),
+                Some(role) => role_to_str(role),
                 None => "user (portable)",
             };
             println!(

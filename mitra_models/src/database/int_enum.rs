@@ -23,7 +23,7 @@ macro_rules! int_enum_to_sql {
                 _: &postgres_types::Type,
                 out: &mut postgres_types::private::BytesMut,
             ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>> {
-                let int_value: i16 = self.into();
+                let int_value = i16::from(*self);
                 postgres_protocol::types::int2_to_sql(int_value, out);
                 Ok(postgres_types::IsNull::No)
             }

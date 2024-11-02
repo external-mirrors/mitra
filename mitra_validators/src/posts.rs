@@ -123,9 +123,9 @@ pub fn validate_post_update_data(
 
 pub fn validate_post_mentions(
     mentions: &[Uuid],
-    visibility: &Visibility,
+    visibility: Visibility,
 ) -> Result<(), ValidationError> {
-    if mentions.is_empty() && *visibility == Visibility::Direct {
+    if mentions.is_empty() && visibility == Visibility::Direct {
         return Err(ValidationError("direct message should have at least one mention"));
     };
     Ok(())
@@ -133,9 +133,9 @@ pub fn validate_post_mentions(
 
 pub fn validate_local_post_links(
     links: &[Uuid],
-    visibility: &Visibility,
+    visibility: Visibility,
 ) -> Result<(), ValidationError> {
-    if links.len() > 0 && *visibility != Visibility::Public {
+    if links.len() > 0 && visibility != Visibility::Public {
         return Err(ValidationError("can't add links to non-public posts"));
     };
     Ok(())
@@ -144,18 +144,18 @@ pub fn validate_local_post_links(
 pub fn validate_local_reply(
     in_reply_to: &Post,
     mentions: &[Uuid],
-    visibility: &Visibility,
+    visibility: Visibility,
 ) -> Result<(), ValidationError> {
      if in_reply_to.repost_of_id.is_some() {
         return Err(ValidationError("can't reply to repost"));
     };
     if in_reply_to.visibility != Visibility::Public &&
-        *visibility != Visibility::Direct
+        visibility != Visibility::Direct
     {
         return Err(ValidationError("reply must have direct visibility"));
     };
     if in_reply_to.visibility != Visibility::Public &&
-        *visibility != Visibility::Public
+        visibility != Visibility::Public
     {
         let mut in_reply_to_audience: Vec<_> = in_reply_to.mentions.iter()
             .map(|profile| profile.id).collect();
@@ -240,8 +240,8 @@ mod tests {
         };
         let error = validate_local_reply(
             &in_reply_to,
-            &vec![profile_1.id, profile_3.id],
-            &Visibility::Direct,
+            &[profile_1.id, profile_3.id],
+            Visibility::Direct,
         ).err().unwrap();
         assert_eq!(error.0, "can't add more recipients");
     }

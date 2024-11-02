@@ -117,7 +117,7 @@ impl ApiRole {
             })
             .collect();
         Self {
-            id: i16::from(&role).into(),
+            id: i16::from(role).into(),
             name: role_name.to_string(),
             permissions: permissions,
         }

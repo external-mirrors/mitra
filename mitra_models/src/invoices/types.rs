@@ -71,7 +71,7 @@ impl ToSql for DbChainId {
     to_sql_checked!();
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum InvoiceStatus {
     Open,
     Paid,
@@ -85,7 +85,7 @@ pub enum InvoiceStatus {
 }
 
 impl InvoiceStatus {
-    pub fn is_final(&self) -> bool {
+    pub fn is_final(self) -> bool {
         matches!(
             self,
             Self::Timeout |
@@ -96,8 +96,8 @@ impl InvoiceStatus {
     }
 }
 
-impl From<&InvoiceStatus> for i16 {
-    fn from(value: &InvoiceStatus) -> i16 {
+impl From<InvoiceStatus> for i16 {
+    fn from(value: InvoiceStatus) -> i16 {
         match value {
             InvoiceStatus::Open => 1,
             InvoiceStatus::Paid => 2,
@@ -156,7 +156,7 @@ impl DbInvoice {
         u64::try_from(self.amount).map_err(|_| DatabaseTypeError)
     }
 
-    pub fn can_change_status(&self, to: &InvoiceStatus) -> bool {
+    pub fn can_change_status(&self, to: InvoiceStatus) -> bool {
         use InvoiceStatus::*;
         let allowed = match self.invoice_status {
             Open => {
@@ -199,7 +199,7 @@ impl DbInvoice {
                 }
             }
         };
-        allowed.contains(to)
+        allowed.contains(&to)
     }
 
     pub fn try_payment_address(&self) -> Result<String, DatabaseTypeError> {

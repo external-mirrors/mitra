@@ -232,7 +232,7 @@ pub async fn set_invoice_status(
     ).await?;
     let row = maybe_row.ok_or(DatabaseError::NotFound("invoice"))?;
     let invoice: DbInvoice = row.try_get("invoice")?;
-    if !invoice.can_change_status(&new_status) {
+    if !invoice.can_change_status(new_status) {
         return Err(DatabaseTypeError.into());
     };
     let maybe_row = transaction.query_opt(

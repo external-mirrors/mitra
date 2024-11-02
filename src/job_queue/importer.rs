@@ -60,7 +60,7 @@ impl ImporterJobData {
         let scheduled_for = Utc::now(); // run immediately
         enqueue_job(
             db_client,
-            &JobType::DataImport,
+            JobType::DataImport,
             &job_data,
             scheduled_for,
         ).await

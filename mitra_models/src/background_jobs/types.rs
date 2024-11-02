@@ -8,7 +8,7 @@ use crate::database::{
     DatabaseTypeError,
 };
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum JobType {
     IncomingActivity,
     OutgoingActivity,
@@ -17,8 +17,8 @@ pub enum JobType {
     Fetcher,
 }
 
-impl From<&JobType> for i16 {
-    fn from(value: &JobType) -> i16 {
+impl From<JobType> for i16 {
+    fn from(value: JobType) -> i16 {
         match value {
             JobType::IncomingActivity => 1,
             JobType::OutgoingActivity => 2,
@@ -48,14 +48,14 @@ impl TryFrom<i16> for JobType {
 int_enum_from_sql!(JobType);
 int_enum_to_sql!(JobType);
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum JobStatus {
     Queued,
     Running,
 }
 
-impl From<&JobStatus> for i16 {
-    fn from(value: &JobStatus) -> i16 {
+impl From<JobStatus> for i16 {
+    fn from(value: JobStatus) -> i16 {
         match value {
             JobStatus::Queued => 1,
             JobStatus::Running => 2,

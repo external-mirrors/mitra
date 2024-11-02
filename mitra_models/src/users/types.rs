@@ -48,7 +48,7 @@ pub enum Permission {
     ManageSubscriptionOptions,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Role {
     Guest,
     NormalUser,
@@ -87,8 +87,8 @@ impl Role {
     }
 }
 
-impl From<&Role> for i16 {
-    fn from(value: &Role) -> i16 {
+impl From<Role> for i16 {
+    fn from(value: Role) -> i16 {
         match value {
             Role::Guest => 0,
             Role::NormalUser => 1,
