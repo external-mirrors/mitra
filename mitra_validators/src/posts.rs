@@ -149,10 +149,8 @@ pub fn validate_local_reply(
      if in_reply_to.repost_of_id.is_some() {
         return Err(ValidationError("can't reply to repost"));
     };
-    if in_reply_to.visibility != Visibility::Public &&
-        visibility != Visibility::Direct
-    {
-        return Err(ValidationError("reply must have direct visibility"));
+    if !in_reply_to.visibility.can_reply_with(visibility) {
+        return Err(ValidationError("reply must have narrower visibility"));
     };
     if in_reply_to.visibility != Visibility::Public &&
         visibility != Visibility::Public
@@ -223,6 +221,23 @@ mod tests {
         let content = "test ";
         let cleaned = clean_local_content(content).unwrap();
         assert_eq!(cleaned, "test");
+    }
+
+    #[test]
+    fn test_validate_local_reply_wrong_visibility() {
+        let author = DbActorProfile::local_for_test("author");
+        let in_reply_to = Post {
+            author: author.clone(),
+            visibility: Visibility::Direct,
+            mentions: vec![author.clone()],
+            ..Default::default()
+        };
+        let error = validate_local_reply(
+            &in_reply_to,
+            &[author.id],
+            Visibility::Public,
+        ).err().unwrap();
+        assert_eq!(error.0, "reply must have narrower visibility");
     }
 
     #[test]

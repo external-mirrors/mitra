@@ -108,13 +108,6 @@ pub async fn can_view_post(
     };
     let result = match post.visibility {
         Visibility::Public => true,
-        Visibility::Direct => {
-            if let Some(user) = maybe_user {
-                is_author(user) || is_mentioned(user)
-            } else {
-                false
-            }
-        },
         Visibility::Followers => {
             if let Some(user) = maybe_user {
                 let is_following = has_relationship(
@@ -131,6 +124,13 @@ pub async fn can_view_post(
         Visibility::Subscribers => {
             if let Some(user) = maybe_user {
                 // Can view only if mentioned
+                is_author(user) || is_mentioned(user)
+            } else {
+                false
+            }
+        },
+        Visibility::Direct => {
+            if let Some(user) = maybe_user {
                 is_author(user) || is_mentioned(user)
             } else {
                 false

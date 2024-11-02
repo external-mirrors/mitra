@@ -22,6 +22,29 @@ pub enum Visibility {
     Subscribers,
 }
 
+impl Visibility {
+    pub fn can_reply_with(self, visibility: Self) -> bool {
+        let allowed = match self {
+            Self::Public => vec![
+                Self::Public,
+                Self::Followers,
+                Self::Subscribers,
+                Self::Direct,
+            ],
+            Self::Followers => vec![
+                Self::Direct,
+            ],
+            Self::Subscribers => vec![
+                Self::Direct,
+            ],
+            Self::Direct => vec![
+                Self::Direct,
+            ],
+        };
+        allowed.contains(&visibility)
+    }
+}
+
 impl Default for Visibility {
     fn default() -> Self { Self::Public }
 }
