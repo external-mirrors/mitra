@@ -23,13 +23,17 @@ pub enum Visibility {
 }
 
 impl Visibility {
-    pub fn can_reply_with(self, visibility: Self) -> bool {
+    pub fn can_reply_with(self, visibility: Self, is_same_author: bool) -> bool {
         let allowed = match self {
             Self::Public => vec![
                 Self::Public,
                 Self::Followers,
                 Self::Subscribers,
                 Self::Direct,
+            ],
+            Self::Followers if is_same_author => vec![
+                Self::Direct,
+                Self::Followers,
             ],
             Self::Followers => vec![
                 Self::Direct,

@@ -205,7 +205,12 @@ async fn create_status(
     validate_post_mentions(&post_data.mentions, post_data.visibility)?;
     validate_local_post_links(&post_data.links, post_data.visibility)?;
     if let Some(ref in_reply_to) = maybe_in_reply_to {
-        validate_local_reply(in_reply_to, &post_data.mentions, post_data.visibility)?;
+        validate_local_reply(
+            in_reply_to,
+            current_user.id,
+            post_data.visibility,
+            &post_data.mentions,
+        )?;
     };
 
     // Check idempotency key
@@ -401,7 +406,12 @@ async fn edit_status(
     validate_post_mentions(&post_data.mentions, post.visibility)?;
     validate_local_post_links(&post_data.links, post.visibility)?;
     if let Some(ref in_reply_to) = maybe_in_reply_to {
-        validate_local_reply(in_reply_to, &post_data.mentions, post.visibility)?;
+        validate_local_reply(
+            in_reply_to,
+            post.author.id,
+            post.visibility,
+            &post_data.mentions,
+        )?;
     };
     let (mut post, deletion_queue) =
         update_post(db_client, post.id, post_data).await?;

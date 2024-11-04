@@ -143,13 +143,15 @@ pub fn validate_local_post_links(
 
 pub fn validate_local_reply(
     in_reply_to: &Post,
-    mentions: &[Uuid],
+    author_id: Uuid,
     visibility: Visibility,
+    mentions: &[Uuid],
 ) -> Result<(), ValidationError> {
      if in_reply_to.repost_of_id.is_some() {
         return Err(ValidationError("can't reply to repost"));
     };
-    if !in_reply_to.visibility.can_reply_with(visibility) {
+    let is_same_author = author_id == in_reply_to.author.id;
+    if !in_reply_to.visibility.can_reply_with(visibility, is_same_author) {
         return Err(ValidationError("reply must have narrower visibility"));
     };
     if in_reply_to.visibility != Visibility::Public &&
@@ -226,6 +228,7 @@ mod tests {
     #[test]
     fn test_validate_local_reply_wrong_visibility() {
         let author = DbActorProfile::local_for_test("author");
+        let reply_author = DbActorProfile::local_for_test("author");
         let in_reply_to = Post {
             author: author.clone(),
             visibility: Visibility::Direct,
@@ -234,8 +237,9 @@ mod tests {
         };
         let error = validate_local_reply(
             &in_reply_to,
-            &[author.id],
+            reply_author.id,
             Visibility::Public,
+            &[author.id],
         ).err().unwrap();
         assert_eq!(error.0, "reply must have narrower visibility");
     }
@@ -245,6 +249,7 @@ mod tests {
         let profile_1 = DbActorProfile::local_for_test("1");
         let profile_2 = DbActorProfile::local_for_test("2");
         let profile_3 = DbActorProfile::local_for_test("3");
+        let profile_4 = DbActorProfile::local_for_test("4");
         let in_reply_to = Post {
             author: profile_1.clone(),
             visibility: Visibility::Direct,
@@ -255,8 +260,9 @@ mod tests {
         };
         let error = validate_local_reply(
             &in_reply_to,
-            &[profile_1.id, profile_3.id],
+            profile_4.id,
             Visibility::Direct,
+            &[profile_1.id, profile_3.id],
         ).err().unwrap();
         assert_eq!(error.0, "can't add more recipients");
     }
