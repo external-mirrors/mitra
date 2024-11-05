@@ -230,12 +230,15 @@ pub fn build_note(
             let in_reply_to = post.in_reply_to.as_ref()
                 .expect("in_reply_to should be populated");
             assert_eq!(in_reply_to.id, in_reply_to_id);
-            let in_reply_to_actor_id = compatible_profile_actor_id(
-                instance_url,
-                &in_reply_to.author,
-            );
-            if !primary_audience.contains(&in_reply_to_actor_id) {
-                primary_audience.push(in_reply_to_actor_id);
+            if post.author.id != in_reply_to.author.id {
+                // Add author of a parent post to audience
+                let in_reply_to_actor_id = compatible_profile_actor_id(
+                    instance_url,
+                    &in_reply_to.author,
+                );
+                if !primary_audience.contains(&in_reply_to_actor_id) {
+                    primary_audience.push(in_reply_to_actor_id);
+                };
             };
             Some(compatible_post_object_id(instance_url, in_reply_to))
         },
