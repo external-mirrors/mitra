@@ -24,6 +24,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Fixed
 
 - Limit results to posts made by current user when checking idempotency key.
+- Don't remove mention of a parent post author when editing a reply.
 
 ## [3.8.0] - 2024-10-25
 

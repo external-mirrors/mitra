@@ -8,8 +8,9 @@ use mitra_models::{
     posts::{
         queries::get_post_by_id,
         helpers::{add_related_posts, add_user_actions, can_link_post},
-        types::Post,
+        types::{Post, Visibility},
     },
+    relationships::queries::get_subscribers,
     users::types::User,
 };
 use mitra_utils::markdown::markdown_lite_to_html;
@@ -146,6 +147,35 @@ pub async fn parse_content(
     };
     output.content = clean_local_content(&output.content)?;
     Ok(output)
+}
+
+pub async fn prepare_mentions(
+    db_client: &impl DatabaseClient,
+    author_id: Uuid,
+    visibility: Visibility,
+    maybe_in_reply_to: Option<&Post>,
+    mut mentions: Vec<Uuid>,
+) -> Result<Vec<Uuid>, DatabaseError> {
+    // Extend mentions
+    if let Some(in_reply_to) = maybe_in_reply_to {
+        if in_reply_to.author.id != author_id {
+            // Mention the author of the parent post
+            mentions.push(in_reply_to.author.id);
+        };
+    };
+    if visibility == Visibility::Subscribers {
+        // Mention all subscribers.
+        // This makes post accessible only to active subscribers
+        // and is required for sending activities to subscribers
+        // on other instances.
+        let subscribers = get_subscribers(db_client, author_id).await?
+            .into_iter().map(|profile| profile.id);
+        mentions.extend(subscribers);
+    };
+    // Remove duplicate mentions
+    mentions.sort();
+    mentions.dedup();
+    Ok(mentions)
 }
 
 /// Load related objects and build status for API response

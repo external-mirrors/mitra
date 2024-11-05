@@ -62,7 +62,6 @@ use mitra_models::{
         delete_reaction,
     },
     reactions::types::ReactionData,
-    relationships::queries::get_subscribers,
     users::types::Permission,
 };
 use mitra_services::{
@@ -92,6 +91,7 @@ use super::helpers::{
     build_status,
     build_status_list,
     parse_content,
+    prepare_mentions,
     PostContent,
 };
 use super::types::{
@@ -156,7 +156,7 @@ async fn create_status(
         },
     };
     // Parse content
-    let PostContent { content, content_source, mut mentions, hashtags, links, linked, emojis } =
+    let PostContent { content, content_source, mentions, hashtags, links, linked, emojis } =
         parse_content(
             db_client,
             &instance,
@@ -164,26 +164,13 @@ async fn create_status(
             &status_data.content_type,
             status_data.quote_id,
         ).await?;
-
-    // Extend mentions
-    if let Some(ref in_reply_to) = maybe_in_reply_to {
-        if in_reply_to.author.id != current_user.id {
-            // Mention the author of the parent post
-            mentions.push(in_reply_to.author.id);
-        };
-    };
-    if visibility == Visibility::Subscribers {
-        // Mention all subscribers.
-        // This makes post accessible only to active subscribers
-        // and is required for sending activities to subscribers
-        // on other instances.
-        let subscribers = get_subscribers(db_client, current_user.id).await?
-            .into_iter().map(|profile| profile.id);
-        mentions.extend(subscribers);
-    };
-    // Remove duplicate mentions
-    mentions.sort();
-    mentions.dedup();
+    let mentions = prepare_mentions(
+        db_client,
+        current_user.id,
+        visibility,
+        maybe_in_reply_to.as_ref(),
+        mentions,
+    ).await?;
 
     // Validate post data
     let post_data = PostCreateData {
@@ -369,7 +356,7 @@ async fn edit_status(
     let instance = config.instance();
     let status_data = status_data.into_inner();
     // Parse content
-    let PostContent { content, content_source, mut mentions, hashtags, links, linked, emojis } =
+    let PostContent { content, content_source, mentions, hashtags, links, linked, emojis } =
         parse_content(
             db_client,
             &instance,
@@ -377,20 +364,13 @@ async fn edit_status(
             &status_data.content_type,
             status_data.quote_id,
         ).await?;
-
-    // Extend mentions
-    if post.visibility == Visibility::Subscribers {
-        // Mention all subscribers.
-        // This makes post accessible only to active subscribers
-        // and is required for sending activities to subscribers
-        // on other instances.
-        let subscribers = get_subscribers(db_client, current_user.id).await?
-            .into_iter().map(|profile| profile.id);
-        mentions.extend(subscribers);
-    };
-    // Remove duplicate mentions
-    mentions.sort();
-    mentions.dedup();
+    let mentions = prepare_mentions(
+        db_client,
+        post.author.id,
+        post.visibility,
+        maybe_in_reply_to.as_ref(),
+        mentions,
+    ).await?;
 
     // Update post
     let post_data = PostUpdateData {
