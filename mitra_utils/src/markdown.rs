@@ -1,17 +1,15 @@
 use std::borrow::Cow;
-use std::cell::RefCell;
 
 use comrak::{
-    arena_tree::Node,
     format_commonmark,
     format_html,
     nodes::{Ast, AstNode, ListType, NodeValue},
     parse_document,
     Arena,
-    ExtensionOptionsBuilder,
+    ExtensionOptions,
     Options,
-    ParseOptionsBuilder,
-    RenderOptionsBuilder,
+    ParseOptions,
+    RenderOptions,
 };
 use regex::{Captures, Regex};
 
@@ -26,19 +24,17 @@ pub enum MarkdownError {
 
 fn build_comrak_options() -> Options {
     Options {
-        extension: ExtensionOptionsBuilder::default()
+        extension: ExtensionOptions::builder()
             .autolink(true)
-            .build()
-            .expect("extension options should be correct"),
-        parse: ParseOptionsBuilder::default()
+            .build(),
+        parse: ParseOptions::builder()
             .relaxed_autolinks(true)
-            .build()
-            .expect("parser options should be correct"),
-        render: RenderOptionsBuilder::default()
+            .build(),
+        render: RenderOptions::builder()
             .hardbreaks(true)
             .escape(true)
-            .build()
-            .expect("render options should be correct"),
+            .ol_width(4)
+            .build(),
     }
 }
 
@@ -87,11 +83,6 @@ fn node_to_markdown<'a>(
 fn replace_node_value(node: &AstNode, value: NodeValue) -> () {
     let mut borrowed_node = node.data.borrow_mut();
     *borrowed_node = Ast::new(value, borrowed_node.sourcepos.start);
-}
-
-fn create_node<'a>(value: NodeValue) -> AstNode<'a> {
-    // Position doesn't matter
-    Node::new(RefCell::new(Ast::new(value, (0, 1).into())))
 }
 
 fn replace_with_markdown<'a>(
@@ -196,7 +187,7 @@ pub fn markdown_lite_to_html(text: &str) -> Result<String, MarkdownError> {
                     child.detach();
                 };
                 let text = NodeValue::Text(markdown);
-                let text_node = arena.alloc(create_node(text));
+                let text_node = arena.alloc(AstNode::from(text));
                 node.append(text_node);
                 replace_node_value(node, NodeValue::Paragraph);
             },
@@ -226,11 +217,13 @@ pub fn markdown_lite_to_html(text: &str) -> Result<String, MarkdownError> {
                     if !replacements.is_empty() {
                         // Insert line break before next list item
                         let linebreak = NodeValue::LineBreak;
-                        let linebreak_node = arena.alloc(create_node(linebreak));
+                        let linebreak_node =
+                            arena.alloc(AstNode::from(linebreak));
                         replacements.push(linebreak_node);
                     };
                     let list_prefix = NodeValue::Text(list_prefix_markdown);
-                    let list_prefix_node = arena.alloc(create_node(list_prefix));
+                    let list_prefix_node =
+                        arena.alloc(AstNode::from(list_prefix));
                     replacements.push(list_prefix_node);
                     for content_node in contents {
                         replacements.push(content_node);
@@ -299,7 +292,7 @@ pub fn markdown_basic_to_html(text: &str) -> Result<String, MarkdownError> {
                         if !matches!(last_child_value, NodeValue::LineBreak) {
                             let line_break = NodeValue::LineBreak;
                             let line_break_node =
-                                arena.alloc(create_node(line_break));
+                                arena.alloc(AstNode::from(line_break));
                             node.append(line_break_node);
                         };
                     };
