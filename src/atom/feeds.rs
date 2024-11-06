@@ -7,7 +7,7 @@ use mitra_models::{
     profiles::types::DbActorProfile,
 };
 use mitra_utils::{
-    html::{escape_html, html_to_text},
+    html::{escape_html, extract_title},
 };
 
 use super::urls::get_user_feed_url;
@@ -26,20 +26,7 @@ fn make_entry(
 ) -> String {
     let object_id = local_object_id(instance_url, post.id);
     let content_escaped = escape_html(&post.content);
-    let content_first_line = html_to_text(&post.content)
-        .lines()
-        .map(|line| line.trim())
-        .find(|line| !line.is_empty())
-        .map(|line| line.to_string())
-        .unwrap_or("-".to_string());
-    let mut title: String = content_first_line
-        .chars()
-        .take(ENTRY_TITLE_MAX_LENGTH)
-        .collect();
-    if title.len() == ENTRY_TITLE_MAX_LENGTH &&
-            content_first_line.len() != ENTRY_TITLE_MAX_LENGTH {
-        title += "...";
-    };
+    let title = extract_title(&post.content, ENTRY_TITLE_MAX_LENGTH);
     format!(
         r#"<entry>
     <id>{url}</id>

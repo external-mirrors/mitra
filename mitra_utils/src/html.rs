@@ -209,10 +209,26 @@ pub fn clean_html_all(html: &str) -> String {
     text
 }
 
-pub fn html_to_text(html: &str) -> String {
-    const WRAP_WIDTH: usize = 100;
+fn html_to_text(html: &str) -> String {
     let decorator = TrivialDecorator::new();
-    from_read_with_decorator(html.as_bytes(), WRAP_WIDTH, decorator)
+    from_read_with_decorator(html.as_bytes(), usize::MAX, decorator)
+}
+
+pub fn extract_title(html: &str, length: usize) -> String {
+    let first_line = html_to_text(html)
+        .lines()
+        .map(|line| line.trim())
+        .find(|line| !line.is_empty())
+        .map(|line| line.to_string())
+        .unwrap_or("-".to_string());
+    let mut title: String = first_line
+        .chars()
+        .take(length)
+        .collect();
+    if title.len() == length && first_line.len() != length {
+        title += "...";
+    };
+    title
 }
 
 #[cfg(test)]

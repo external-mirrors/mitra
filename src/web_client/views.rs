@@ -24,6 +24,7 @@ use mitra_models::{
     },
     profiles::queries::get_profile_by_acct,
 };
+use mitra_utils::html::extract_title;
 
 use crate::errors::HttpError;
 
@@ -133,11 +134,21 @@ async fn post_page_opengraph_view(
     let page = match get_post_by_id(db_client, *post_id).await {
         Ok(post) if post.is_public() => {
             // Rewrite index.html and insert metadata
+            let title_short = format!("Post by @{}", post.author.preferred_handle());
+            let title = if post.in_reply_to_id.is_none() {
+                const TITLE_LENGTH_MAX: usize = 75;
+                let title = extract_title(&post.content, TITLE_LENGTH_MAX);
+                format!("{title} - {title_short}")
+            } else {
+                // Do not extract title
+                title_short.clone()
+            };
             let metadata_block = format!(
                 include_str!("metadata_block.html"),
                 page_type="article",
                 instance_title=config.instance_title,
-                title=format!("Post by @{}", post.author.preferred_handle()),
+                title_short=title_short,
+                title=title,
                 image_url=get_opengraph_image_url(&config.instance_url()),
             );
             index_html.replace(

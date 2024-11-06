@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Added `--skip-verification` parameter to `fetch-object` command.
 - Support "conversation" visibility for replies to followers-only posts.
 - Add `og:site_name` and `og:type` directives to post page metadata.
+- Add post title to `og:title` value.
 
 ### Changed
 
