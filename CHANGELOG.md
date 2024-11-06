@@ -21,6 +21,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Reject `Create` activity if actor doesn't match object owner.
 - Allow followers-only self-replies to followers-only posts.
 - Don't add author to mentions and audience when publishing a self-reply.
+- Improved logging of media deletions.
 
 ### Fixed
 

@@ -14,9 +14,9 @@ pub fn delete_files(
 ) -> () {
     for file_name in files {
         match storage.delete_file(file_name) {
-            Ok(_) => log::info!("removed file {}", file_name),
-            Err(err) => {
-                log::warn!("failed to remove file {} ({})", file_name, err);
+            Ok(_) => log::info!("deleted file {}", file_name),
+            Err(error) => {
+                log::warn!("failed to delete file ({error}): {file_name}");
             },
         };
     };
@@ -38,7 +38,7 @@ async fn delete_media(
             },
             None => {
                 log::error!(
-                    "can not remove objects because IPFS API URL is not set: {:?}",
+                    "can not delete objects because IPFS API URL is not set: {:?}",
                     queue.ipfs_objects,
                 );
             },
