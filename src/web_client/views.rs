@@ -135,8 +135,8 @@ async fn post_page_opengraph_view(
             // Rewrite index.html and insert metadata
             let metadata_block = format!(
                 include_str!("metadata_block.html"),
-                title=config.instance_title,
-                subtitle=format!("Post by @{}", post.author.preferred_handle()),
+                instance_title=config.instance_title,
+                title=format!("Post by @{}", post.author.preferred_handle()),
                 image_url=get_opengraph_image_url(&config.instance_url()),
             );
             index_html.replace(
