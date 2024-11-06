@@ -154,7 +154,11 @@ fn fix_linebreaks(html: &str) -> String {
 /// The output should be displayed correctly on all popular platforms:
 /// https://funfedi.dev/support_tables/generated/html_tags/
 pub fn markdown_lite_to_html(text: &str) -> Result<String, MarkdownError> {
-    let options = build_comrak_options();
+    let options = {
+        let mut options = build_comrak_options();
+        options.extension.underline = true;
+        options
+    };
     let arena = Arena::new();
 
     let text = protect_greentext(text);
@@ -337,6 +341,14 @@ mod tests {
         let text = "# heading1\n\n## heading2\n\ntext";
         let html = markdown_lite_to_html(text).unwrap();
         let expected_html = r#"<h1>heading1</h1><p>## heading2</p><p>text</p>"#;
+        assert_eq!(html, expected_html);
+    }
+
+    #[test]
+    fn test_markdown_lite_to_html_underline() {
+        let text = "__underline__";
+        let html = markdown_lite_to_html(text).unwrap();
+        let expected_html = r#"<p><u>underline</u></p>"#;
         assert_eq!(html, expected_html);
     }
 
