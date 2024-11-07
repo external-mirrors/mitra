@@ -160,6 +160,7 @@ impl Config {
             fetcher_timeout: self.federation.fetcher_timeout,
             deliverer_timeout: self.federation.deliverer_timeout,
             deliverer_log_response_length: self.federation.deliverer_log_response_length,
+            deliverer_pool_size: self.federation.deliverer_pool_size,
         }
     }
 
@@ -211,6 +212,7 @@ pub struct Instance {
     pub fetcher_timeout: u64,
     pub deliverer_timeout: u64,
     pub deliverer_log_response_length: usize,
+    pub deliverer_pool_size: usize,
 }
 
 impl Instance {
@@ -254,6 +256,7 @@ impl Instance {
             fetcher_timeout: 0,
             deliverer_timeout: 0,
             deliverer_log_response_length: 0,
+            deliverer_pool_size: 0,
         }
     }
 }

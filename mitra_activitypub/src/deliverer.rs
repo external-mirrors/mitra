@@ -229,8 +229,6 @@ pub(super) fn sign_activity(
     Ok(activity_signed)
 }
 
-const DELIVERY_POOL_SIZE: usize = 10;
-
 pub(super) async fn deliver_activity_worker(
     instance: Instance,
     sender: Sender,
@@ -272,7 +270,7 @@ pub(super) async fn deliver_activity_worker(
     loop {
         for (index, hostname, ref inbox) in deliveries.iter() {
             // Add deliveries to the pool until it is full
-            if delivery_pool_state.len() == DELIVERY_POOL_SIZE {
+            if delivery_pool_state.len() == instance.deliverer_pool_size {
                 break;
             };
             if sent.contains(index) {
