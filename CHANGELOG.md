@@ -24,6 +24,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Allow followers-only self-replies to followers-only posts.
 - Don't add author to mentions and audience when publishing a self-reply.
 - Improved logging of media deletions.
+- Panic if directory specified in `web_client_dir` does not exist.
 
 ### Fixed
 

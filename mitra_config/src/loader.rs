@@ -97,6 +97,14 @@ pub fn parse_config() -> (Config, Vec<&'static str>) {
         panic!("storage directory does not exist");
     };
     check_directory_owner(&config.storage_dir);
+    if let Some(ref web_client_dir) = config.web_client_dir {
+        if !web_client_dir.exists() {
+            panic!(
+                "web client directory does not exist: {}",
+                web_client_dir.display(),
+            );
+        };
+    };
     config.try_instance_url().expect("invalid instance URI");
     if config.authentication_methods.is_empty() {
         panic!("authentication_methods must not be empty");
