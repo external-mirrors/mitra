@@ -74,6 +74,12 @@ CREATE DATABASE mitra OWNER mitra ENCODING 'UTF8';
 
 Open configuration file `/etc/mitra/config.yaml` and configure the instance.
 
+Create admin account:
+
+```shell
+su mitra -s $SHELL -c "mitractl create-account <username> <password> admin"
+```
+
 Start Mitra:
 
 ```shell
@@ -81,12 +87,6 @@ systemctl start mitra
 ```
 
 An HTTP server will be needed to handle HTTPS requests. See examples of [Nginx](./contrib/mitra.nginx) and [Caddy](./contrib/Caddyfile) configuration files.
-
-Create admin account when installation is finished:
-
-```shell
-su mitra -s $SHELL -c "mitractl create-account <username> <password> admin"
-```
 
 ### Building from source
 
@@ -111,6 +111,12 @@ Create configuration file by copying [`config.example.yaml`](./config.example.ya
 
 Put any static files into the directory specified in configuration file. Building instructions for `mitra-web` frontend can be found at https://codeberg.org/silverpill/mitra-web#project-setup.
 
+Create admin account:
+
+```shell
+./mitractl create-account <username> <password> admin
+```
+
 Start Mitra:
 
 ```shell
@@ -120,12 +126,6 @@ Start Mitra:
 An HTTP server will be needed to handle HTTPS requests. See examples of [Nginx](./contrib/mitra.nginx) and [Caddy](./contrib/Caddyfile) configuration files.
 
 To run Mitra as a systemd service, check out the [systemd unit file example](./contrib/mitra.service).
-
-Create admin account when installation is finished:
-
-```shell
-./mitractl create-account <username> <password> admin
-```
 
 ### Other installation methods
 
