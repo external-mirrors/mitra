@@ -1,5 +1,6 @@
 [package]
 name = "apx_core"
+description = "APx core primitives"
 version = "0.4.0"
 license.workspace = true
 

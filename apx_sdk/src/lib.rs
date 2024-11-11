@@ -1,3 +1,5 @@
+//! # APx: Minimalistic ActivityPub toolkit
+
 pub mod addresses;
 pub mod agent;
 pub mod authentication;

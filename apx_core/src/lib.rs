@@ -1,3 +1,5 @@
+//! # APx core primitives
+
 pub mod ap_url;
 pub mod base64;
 pub mod caip10;
