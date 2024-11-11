@@ -28,9 +28,9 @@ pub fn is_embedded_activity_trusted(
 ) -> Result<bool, ValidationError> {
     let owner_id = get_object_id(&activity["actor"])
         .map_err(|_| ValidationError("invalid 'actor' property"))?;
-    let embedded_owner_id = activity["object"]["actor"].as_str()
-        .ok_or(ValidationError("'object.actor' property is missing"))?;
-    let is_trusted = is_same_origin(&owner_id, embedded_owner_id)
+    let embedded_owner_id = get_object_id(&activity["object"]["actor"])
+        .map_err(|_| ValidationError("invalid 'object.actor' property"))?;
+    let is_trusted = is_same_origin(&owner_id, &embedded_owner_id)
         .map_err(|error| ValidationError(error.0))?;
     Ok(is_trusted)
 }
