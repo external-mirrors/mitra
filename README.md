@@ -149,6 +149,18 @@ apk add -vi mitra@testing
 
 - [K&T Host](https://www.knthost.com/mitra)
 
+## Upgrading
+
+Mitra uses semantic versioning (`major.minor.patch`):
+
+- `patch` - bugfixes
+- `minor` - improvements and new features
+- `major` - breaking changes
+
+Upgrade to a `minor` or a `patch` version is performed by replacing binaries and restarting the service.
+
+Upgrade to a `major` version requires special migration steps that are documented in release notes.
+
 ## Configuration
 
 ### Environment variables
