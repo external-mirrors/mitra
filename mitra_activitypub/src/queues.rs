@@ -520,7 +520,8 @@ pub async fn fetcher_queue_executor(
                     config,
                     db_client,
                     &object_id,
-                    false, // use replies collection
+                    false, // don't use context
+                    false, // don't use container context
                     LIMIT,
                 ).await
             },

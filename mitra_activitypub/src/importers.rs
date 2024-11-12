@@ -10,6 +10,7 @@ use serde_json::{Value as JsonValue};
 use apx_core::{
     crypto_eddsa::ed25519_secret_key_from_multikey,
     crypto_rsa::rsa_secret_key_from_multikey,
+    http_url::HttpUrl,
     urls::guess_protocol,
 };
 use apx_sdk::{
@@ -656,10 +657,31 @@ async fn fetch_collection(
         };
     };
 
-    let items = items.into_iter()
-        .take(limit)
-        .collect();
-    Ok(items)
+    let mut authenticated = vec![];
+    for item in items.into_iter().take(limit) {
+        let item_id = get_object_id(&item)
+            .map(|id| HttpUrl::parse(&id))
+            .map_err(|_| ValidationError("invalid object ID"))?
+            .map_err(|_| ValidationError("invalid object ID"))?;
+        match item {
+            JsonValue::String(_) => (),
+            _ => {
+                if item_id.origin() == collection.id.origin() {
+                    // Can be trusted
+                    authenticated.push(item);
+                    continue
+                };
+            },
+        };
+        match fetch_any_object(agent, item_id.as_str()).await {
+            Ok(item) => authenticated.push(item),
+            Err(error) => {
+                log::warn!("failed to fetch item ({error}): {item_id}");
+                continue;
+            },
+        };
+    };
+    Ok(authenticated)
 }
 
 pub async fn import_from_outbox(
@@ -680,17 +702,6 @@ pub async fn import_from_outbox(
     // Outbox has reverse chronological order
     let activities = activities.into_iter().rev();
     for activity in activities {
-        if activity.is_string() {
-            // Ignore if activity is not embedded
-            continue;
-        };
-        // Trust but perform same-owner check
-        let activity_actor = get_object_id(&activity["actor"])
-            .map_err(|_| ValidationError("invalid actor property"))?;
-        if activity_actor != actor_data.id {
-            log::warn!("activity doesn't belong to outbox owner");
-            continue;
-        };
         handle_activity(
             config,
             db_client,
@@ -713,6 +724,7 @@ pub async fn import_replies(
     db_client: &mut impl DatabaseClient,
     object_id: &str,
     use_context: bool,
+    use_container: bool,
     limit: usize,
 ) -> Result<(), HandlerError> {
     #[derive(Deserialize)]
@@ -728,6 +740,32 @@ pub async fn import_replies(
     let filter = FederationFilter::init(config, db_client).await?;
     let storage = MediaStorage::from(config);
     let object: ConverationItem = fetch_any_object(&agent, object_id).await?;
+    if use_container {
+        if let Some(ref collection_id) = object.context {
+            // Converstion container
+            let activities =
+                fetch_collection(&agent, collection_id, limit).await?;
+            log::info!("fetched {} activities", activities.len());
+            for activity in activities {
+                handle_activity(
+                    config,
+                    db_client,
+                    &activity,
+                    true, // is authenticated
+                    true, // activity is being pulled (not a spam)
+                ).await.unwrap_or_else(|error| {
+                    log::warn!(
+                        "failed to process activity ({}): {}",
+                        error,
+                        activity,
+                    );
+                });
+            };
+            return Ok(());
+        } else {
+            return Err(ValidationError("object doesn't have `context`").into());
+        };
+    };
     let maybe_collection_id = if use_context {
         object.context
     } else {
@@ -740,16 +778,15 @@ pub async fn import_replies(
     };
     log::info!("found {} items in conversation", collection_items.len());
     for item in collection_items {
-        let object_id = get_object_id(&item)
+        let object: AttributedObjectJson = serde_json::from_value(item)
             .map_err(|_| ValidationError("invalid conversation item"))?;
-        // Don't trust, always retrieve objects from origin
         import_post(
             db_client,
             &filter,
             &instance,
             &storage,
-            object_id.clone(),
-            None,
+            object.id().to_owned(),
+            Some(object),
         ).await.map_err(|error| {
             log::warn!(
                 "failed to import post ({}): {}",

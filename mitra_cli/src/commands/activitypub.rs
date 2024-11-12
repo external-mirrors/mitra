@@ -99,8 +99,10 @@ pub struct FetchReplies {
     object_id: String,
     #[arg(long, default_value_t = 20)]
     limit: usize,
-    #[arg(long, default_value_t = false)]
+    #[arg(long)]
     use_context: bool,
+    #[arg(long)]
+    use_container: bool,
 }
 
 impl FetchReplies {
@@ -114,6 +116,7 @@ impl FetchReplies {
             db_client,
             &self.object_id,
             self.use_context,
+            self.use_container,
             self.limit,
         ).await?;
         Ok(())
