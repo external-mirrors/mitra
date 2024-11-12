@@ -669,7 +669,11 @@ impl ListLocalFiles {
 
 /// Find and delete orphaned files
 #[derive(Parser)]
-pub struct DeleteOrphanedFiles;
+pub struct DeleteOrphanedFiles {
+    /// List found files, but don't delete them
+    #[arg(long)]
+    dry_run: bool,
+}
 
 impl DeleteOrphanedFiles {
     pub async fn execute(
@@ -687,6 +691,12 @@ impl DeleteOrphanedFiles {
         let orphaned = find_orphaned_files(db_client, files).await?;
         if orphaned.is_empty() {
             println!("no orphaned files found");
+            return Ok(());
+        };
+        if self.dry_run {
+            for file_name in orphaned {
+                println!("orphaned file: {file_name}");
+            };
         } else {
             delete_files(&media_storage, &orphaned);
             println!("orphaned files deleted: {}", orphaned.len());
