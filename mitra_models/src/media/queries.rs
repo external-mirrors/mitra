@@ -49,19 +49,19 @@ pub async fn find_orphaned_files(
         "
         SELECT DISTINCT fname
         FROM unnest($1::text[]) AS fname
-        WHERE
-            NOT EXISTS (
-                SELECT 1 FROM media_attachment WHERE file_name = fname
-            )
-            AND NOT EXISTS (
-                SELECT 1 FROM actor_profile
-                WHERE avatar ->> 'file_name' = fname
-                    OR banner ->> 'file_name' = fname
-            )
-            AND NOT EXISTS (
-                SELECT 1 FROM emoji
-                WHERE image ->> 'file_name' = fname
-            )
+        WHERE fname NOT IN (
+            SELECT file_name FROM media_attachment
+            UNION ALL
+            SELECT unnest(array_remove(
+                ARRAY[
+                    avatar ->> 'file_name',
+                    banner ->> 'file_name'
+                ],
+                NULL
+            )) AS file_name FROM actor_profile
+            UNION ALL
+            SELECT image ->> 'file_name' FROM emoji
+        )
         ",
         &[&files],
     ).await?;

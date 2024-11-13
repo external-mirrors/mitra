@@ -10,6 +10,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Added `--dry-run` parameter to `delete-orphaned-files` command.
 
+### Changed
+
+- Improved performance of `delete-orphaned-files` command.
+
 ### Fixed
 
 - Fixed validation of FEP-1b12 activities where `object.actor` is embedded.
