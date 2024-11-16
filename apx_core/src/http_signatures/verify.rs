@@ -11,6 +11,7 @@ use crate::{
         RsaPublicKey,
     },
     http_digest::parse_digest_header,
+    http_url::HttpUrl,
 };
 
 const SIGNATURE_PARAMETER_RE: &str = r#"^(?P<key>[a-zA-Z]+)=(?P<value>.+)$"#;
@@ -47,7 +48,7 @@ pub enum HttpSignatureVerificationError {
 type VerificationError = HttpSignatureVerificationError;
 
 pub struct HttpSignatureData {
-    pub key_id: String,
+    pub key_id: HttpUrl,
     pub message: String, // reconstructed message
     pub signature: String, // base64-encoded signature
     pub expires_at: DateTime<Utc>,
@@ -99,9 +100,10 @@ pub fn parse_http_signature(
         signature_parameters.insert(key, value);
     };
 
-    let key_id = signature_parameters.get("keyId")
-        .ok_or(VerificationError::ParseError("keyId parameter is missing"))?
-        .to_owned();
+    let key_id_str = signature_parameters.get("keyId")
+        .ok_or(VerificationError::ParseError("keyId parameter is missing"))?;
+    let key_id = HttpUrl::parse(key_id_str)
+        .map_err(|_| VerificationError::ParseError("invalid key ID"))?;
     let headers_parameter = signature_parameters.get("headers")
         .ok_or(VerificationError::ParseError("headers parameter is missing"))?
         .to_owned();
@@ -239,7 +241,10 @@ mod tests {
             &request_uri,
             &request_headers,
         ).unwrap();
-        assert_eq!(signature_data.key_id, "https://myserver.org/actor#main-key");
+        assert_eq!(
+            signature_data.key_id.as_str(),
+            "https://myserver.org/actor#main-key",
+        );
         assert_eq!(
             signature_data.message,
             "(request-target): get /user/123/inbox\nhost: example.com\ndate: 20 Oct 2022 20:00:00 GMT",

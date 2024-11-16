@@ -215,12 +215,12 @@ pub async fn verify_signed_request(
         Err(other_error) => return Err(other_error.into()),
     };
     // TODO: FEP-EF61: support 'ap' URLs
-    let signer_id = key_id_to_actor_id(&signature_data.key_id)
+    let signer_id = key_id_to_actor_id(signature_data.key_id.as_str())
         .map_err(|_| AuthenticationError::InvalidKeyId)?;
     let signer = get_signer(config, db_client, &signer_id, no_fetch).await?;
     let signer_key = get_signer_rsa_key(
         &signer,
-        &signature_data.key_id,
+        signature_data.key_id.as_str(),
     )?;
 
     verify_http_signature(
