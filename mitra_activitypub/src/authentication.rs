@@ -273,7 +273,7 @@ pub async fn verify_signed_activity(
     let actor_profile = get_signer(config, db_client, &actor_id, no_fetch).await?;
 
     match signature_data.signer {
-        JsonSigner::ActorKeyId(ref key_id) => {
+        JsonSigner::HttpUrl(ref key_id) => {
             let signer_id = key_id_to_actor_id(key_id)
                 .map_err(|_| AuthenticationError::InvalidKeyId)?;
             if signer_id != actor_id {
@@ -308,7 +308,7 @@ pub async fn verify_signed_activity(
                 _ => return Err(AuthenticationError::InvalidJsonSignatureType),
             };
         },
-        JsonSigner::Did(did) => {
+        JsonSigner::DidUrl(did) => {
             log::warn!("activity signed by {did}");
             return Err(AuthenticationError::InvalidJsonSignatureType);
         },

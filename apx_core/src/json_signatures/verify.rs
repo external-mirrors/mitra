@@ -30,8 +30,8 @@ const PROOF_VALUE_KEY: &str = "proofValue";
 
 #[derive(Debug, PartialEq)]
 pub enum JsonSigner {
-    ActorKeyId(String),
-    Did(Did),
+    HttpUrl(String),
+    DidUrl(Did),
 }
 
 pub struct JsonSignatureData {
@@ -107,9 +107,9 @@ pub fn get_json_signature(
     let signer = if let Ok((did, _)) = Did::parse_url(&proof_config.verification_method) {
         // Fragment is ignored because supported DIDs
         // can't have more than one verification method
-        JsonSigner::Did(did)
+        JsonSigner::DidUrl(did)
     } else if Url::parse(&proof_config.verification_method).is_ok() {
-        JsonSigner::ActorKeyId(proof_config.verification_method.clone())
+        JsonSigner::HttpUrl(proof_config.verification_method.clone())
     } else {
         return Err(VerificationError::InvalidProof("unsupported verification method"));
     };
@@ -215,7 +215,7 @@ mod tests {
             signature_data.proof_type,
             ProofType::JcsEip191Signature,
         );
-        let expected_signer = JsonSigner::Did(Did::Pkh(
+        let expected_signer = JsonSigner::DidUrl(Did::Pkh(
             DidPkh::from_ethereum_address(
                 "0xb9c5714089478a327f09197987f16f9e5d936e8a",
             ),
@@ -253,7 +253,7 @@ mod tests {
             signature_data.proof_type,
             ProofType::JcsRsaSignature,
         );
-        let expected_signer = JsonSigner::ActorKeyId(signer_key_id.to_string());
+        let expected_signer = JsonSigner::HttpUrl(signer_key_id.to_string());
         assert_eq!(signature_data.signer, expected_signer);
 
         let signer_public_key = RsaPublicKey::from(signer_key);
@@ -296,7 +296,7 @@ mod tests {
             signature_data.proof_type,
             ProofType::JcsEddsaSignature,
         );
-        let expected_signer = JsonSigner::ActorKeyId(signer_key_id.to_string());
+        let expected_signer = JsonSigner::HttpUrl(signer_key_id.to_string());
         assert_eq!(signature_data.signer, expected_signer);
 
         let signer_public_key =
@@ -342,7 +342,7 @@ mod tests {
             signature_data.proof_type,
             ProofType::EddsaJcsSignature,
         );
-        let expected_signer = JsonSigner::ActorKeyId(signer_key_id.to_string());
+        let expected_signer = JsonSigner::HttpUrl(signer_key_id.to_string());
         assert_eq!(signature_data.signer, expected_signer);
 
         let signer_public_key =

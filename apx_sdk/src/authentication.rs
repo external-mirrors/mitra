@@ -57,7 +57,9 @@ pub fn verify_portable_object(
         Err(other_error) => return Err(other_error.into()),
     };
     match signature_data.signer {
-        JsonSigner::Did(ref did) => {
+        JsonSigner::HttpUrl(_) =>
+            return Err(AuthenticationError::InvalidVerificationMethod),
+        JsonSigner::DidUrl(ref did) => {
             // Object must be signed by its owner
             if did != canonical_object_id.authority() {
                 return Err(AuthenticationError::UnexpectedSigner);
@@ -78,7 +80,6 @@ pub fn verify_portable_object(
                 _ => return Err(AuthenticationError::UnexpectedProofType),
             };
         },
-        _ => return Err(AuthenticationError::InvalidVerificationMethod),
     };
     Ok(object_id.to_string())
 }

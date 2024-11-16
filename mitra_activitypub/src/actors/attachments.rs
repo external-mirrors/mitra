@@ -70,8 +70,9 @@ pub fn parse_identity_proof_fep_c390(
     let signature_data = get_json_signature(attachment)
         .map_err(|_| ValidationError("invalid proof"))?;
     let signer = match signature_data.signer {
-        JsonSigner::ActorKeyId(_) => return Err(ValidationError("unsupported verification method")),
-        JsonSigner::Did(did) => did,
+        JsonSigner::HttpUrl(_) =>
+            return Err(ValidationError("unsupported verification method")),
+        JsonSigner::DidUrl(did) => did,
     };
     if signer != statement.subject {
         return Err(ValidationError("subject mismatch"));
