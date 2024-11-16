@@ -1,5 +1,4 @@
 use serde_json::{Value as JsonValue};
-use url::Url;
 
 use crate::{
     crypto_eddsa::{verify_eddsa_signature, Ed25519PublicKey},
@@ -8,6 +7,7 @@ use crate::{
     did_key::DidKey,
     did_pkh::DidPkh,
     eip191::verify_eip191_signature,
+    http_url::HttpUrl,
     jcs::{
         canonicalize_object,
         CanonicalizationError,
@@ -30,7 +30,7 @@ const PROOF_VALUE_KEY: &str = "proofValue";
 
 #[derive(Debug, PartialEq)]
 pub enum JsonSigner {
-    HttpUrl(String),
+    HttpUrl(HttpUrl),
     DidUrl(Did),
 }
 
@@ -108,8 +108,8 @@ pub fn get_json_signature(
         // Fragment is ignored because supported DIDs
         // can't have more than one verification method
         JsonSigner::DidUrl(did)
-    } else if Url::parse(&proof_config.verification_method).is_ok() {
-        JsonSigner::HttpUrl(proof_config.verification_method.clone())
+    } else if let Ok(http_url) = HttpUrl::parse(&proof_config.verification_method) {
+        JsonSigner::HttpUrl(http_url)
     } else {
         return Err(VerificationError::InvalidProof("unsupported verification method"));
     };
@@ -253,7 +253,8 @@ mod tests {
             signature_data.proof_type,
             ProofType::JcsRsaSignature,
         );
-        let expected_signer = JsonSigner::HttpUrl(signer_key_id.to_string());
+        let expected_signer =
+            JsonSigner::HttpUrl(HttpUrl::parse(signer_key_id).unwrap());
         assert_eq!(signature_data.signer, expected_signer);
 
         let signer_public_key = RsaPublicKey::from(signer_key);
@@ -296,7 +297,8 @@ mod tests {
             signature_data.proof_type,
             ProofType::JcsEddsaSignature,
         );
-        let expected_signer = JsonSigner::HttpUrl(signer_key_id.to_string());
+        let expected_signer =
+            JsonSigner::HttpUrl(HttpUrl::parse(signer_key_id).unwrap());
         assert_eq!(signature_data.signer, expected_signer);
 
         let signer_public_key =
@@ -342,7 +344,8 @@ mod tests {
             signature_data.proof_type,
             ProofType::EddsaJcsSignature,
         );
-        let expected_signer = JsonSigner::HttpUrl(signer_key_id.to_string());
+        let expected_signer =
+            JsonSigner::HttpUrl(HttpUrl::parse(signer_key_id).unwrap());
         assert_eq!(signature_data.signer, expected_signer);
 
         let signer_public_key =

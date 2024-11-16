@@ -6,9 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+
+- Implement `Debug` and `PartialEq` for `HttpUrl`.
+- Added `as_str()` method to `HttpUrl` type.
+
 ### Changed
 
 - Rename `JsonSigner` enum variants to `HttpUrl` and `DidUrl`.
+- Parse HTTP verification method as `HttpUrl` when verifying JSON signature.
 
 ## [0.4.0] - 2024-11-07
 

@@ -39,7 +39,7 @@ fn parse_port_number(port: &str) -> Result<u16, &'static str> {
 }
 
 /// Valid HTTP(S) URI (RFC-3986)
-#[derive(Clone)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct HttpUrl(UriString);
 
 impl HttpUrl {
@@ -64,6 +64,10 @@ impl HttpUrl {
         parse_http_url_whatwg(value)?;
         let http_url = Self(uri);
         Ok(http_url)
+    }
+
+    pub fn as_str(&self) -> &str {
+        self.0.as_ref()
     }
 
     fn scheme(&self) -> &str {
@@ -181,6 +185,7 @@ mod tests {
         let url = "https://social.example/users?user_id=123#main-key";
         let http_url = HttpUrl::parse(url).unwrap();
         assert_eq!(http_url.to_relative(), "/users?user_id=123#main-key");
+        assert_eq!(http_url.as_str(), url);
         assert_eq!(http_url.to_string(), url);
     }
 

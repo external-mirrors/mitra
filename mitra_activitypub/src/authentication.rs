@@ -273,8 +273,8 @@ pub async fn verify_signed_activity(
     let actor_profile = get_signer(config, db_client, &actor_id, no_fetch).await?;
 
     match signature_data.signer {
-        JsonSigner::HttpUrl(ref key_id) => {
-            let signer_id = key_id_to_actor_id(key_id)
+        JsonSigner::HttpUrl(key_id) => {
+            let signer_id = key_id_to_actor_id(key_id.as_str())
                 .map_err(|_| AuthenticationError::InvalidKeyId)?;
             if signer_id != actor_id {
                 return Err(AuthenticationError::UnexpectedObjectSigner);
@@ -283,7 +283,7 @@ pub async fn verify_signed_activity(
                 ProofType::JcsRsaSignature => {
                     let signer_key = get_signer_rsa_key(
                         &actor_profile,
-                        key_id,
+                        key_id.as_str(),
                     )?;
                     verify_rsa_json_signature(
                         &signer_key,
@@ -296,7 +296,7 @@ pub async fn verify_signed_activity(
                     // for jcs-eddsa-2022 (no context injection)
                     let signer_key = get_signer_ed25519_key(
                         &actor_profile,
-                        key_id,
+                        key_id.as_str(),
                     )?;
                     verify_eddsa_json_signature(
                         &signer_key,

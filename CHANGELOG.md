@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Changed
 
 - Improved performance of `delete-orphaned-files` command.
+- Require verification methods to be valid RFC-3986 URIs.
 
 ### Fixed
 
