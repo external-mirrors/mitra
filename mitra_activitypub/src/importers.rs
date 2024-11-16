@@ -587,7 +587,7 @@ pub async fn import_activity(
 
 async fn fetch_collection(
     agent: &FederationAgent,
-    collection_url: &str,
+    collection_id: &str,
     limit: usize,
 ) -> Result<Vec<JsonValue>, FetchError> {
     // https://www.w3.org/TR/activitystreams-core/#collections
@@ -611,27 +611,44 @@ async fn fetch_collection(
     }
 
     let collection: Collection =
-        fetch_any_object(agent, collection_url).await?;
+        fetch_any_object(agent, collection_id).await?;
+    log::info!("fetched collection: {collection_id}");
     let mut items = [collection.items, collection.ordered_items].concat();
+
+    let mut page_count = 0;
     if let Some(first_page_value) = collection.first {
         // Mastodon replies collection:
         // - First page contains self-replies
         // - Next page contains replies from others
-        let first_page: CollectionPage = match first_page_value {
-            JsonValue::String(first_page_url) => {
-                fetch_any_object(agent, &first_page_url).await?
-            },
-            _ => serde_json::from_value(first_page_value)?,
-        };
-        items.extend(first_page.items);
-        items.extend(first_page.ordered_items);
-        if let Some(next_page_url) = first_page.next {
-            let next_page: CollectionPage =
-                fetch_any_object(agent, &next_page_url).await?;
-            items.extend(next_page.items);
-            items.extend(next_page.ordered_items);
+        let mut maybe_page_id = first_page_value.as_str()
+            .map(|page_id| page_id.to_string());
+        while items.len() < limit && page_count < 3 {
+            let page = match maybe_page_id {
+                Some(page_id) => {
+                    let page: CollectionPage =
+                        fetch_any_object(agent, &page_id).await?;
+                    log::info!(
+                        "fetched collection page #{}: {}",
+                        page_count + 1,
+                        page_id,
+                    );
+                    page
+                },
+                None if page_count == 0 => {
+                    let page: CollectionPage =
+                        serde_json::from_value(first_page_value.clone())?;
+                    log::info!("first collection page is embedded");
+                    page
+                },
+                None => break,
+            };
+            items.extend(page.items);
+            items.extend(page.ordered_items);
+            page_count += 1;
+            maybe_page_id = page.next;
         };
     };
+
     let items = items.into_iter()
         .take(limit)
         .collect();
