@@ -6,6 +6,7 @@ use thiserror::Error;
 use apx_core::{
     ap_url::{is_ap_url, ApUrl},
     http_url::HttpUrl,
+    url::common::Origin,
 };
 
 pub const GATEWAY_PATH_PREFIX: &str = "/.well-known/apgateway/";
@@ -35,6 +36,13 @@ impl Url {
         match self {
             Self::Http(http_url) => http_url.authority().to_string(),
             Self::Ap(ap_url) => ap_url.authority().to_string(),
+        }
+    }
+
+    pub fn origin(&self) -> Origin {
+        match self {
+            Self::Http(http_url) => http_url.origin(),
+            Self::Ap(ap_url) => ap_url.origin(),
         }
     }
 
@@ -107,15 +115,7 @@ impl FromStr for Url {
 pub fn is_same_origin(id_1: &str, id_2: &str) -> Result<bool, ObjectIdError> {
     let id_1 = Url::parse(id_1)?;
     let id_2 = Url::parse(id_2)?;
-    let is_same = match (id_1, id_2) {
-        (Url::Http(http_url_1), Url::Http(http_url_2)) => {
-            http_url_1.origin() == http_url_2.origin()
-        },
-        (Url::Ap(ap_url_1), Url::Ap(ap_url_2)) => {
-            ap_url_1.origin() == ap_url_2.origin()
-        },
-        _ => false, // can't compare different types of origins
-    };
+    let is_same = id_1.origin() == id_2.origin();
     Ok(is_same)
 }
 
