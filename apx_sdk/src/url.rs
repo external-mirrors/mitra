@@ -1,6 +1,11 @@
 use std::fmt;
 use std::str::FromStr;
 
+use serde::{
+    Deserialize,
+    Deserializer,
+    de::Error as DeserializerError,
+};
 use thiserror::Error;
 
 use apx_core::{
@@ -109,6 +114,15 @@ impl FromStr for Url {
 
     fn from_str(value: &str) -> Result<Self, Self::Err> {
         Self::parse(value)
+    }
+}
+
+impl<'de> Deserialize<'de> for Url {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where D: Deserializer<'de>
+    {
+        let url_str: String = Deserialize::deserialize(deserializer)?;
+        url_str.parse().map_err(DeserializerError::custom)
     }
 }
 

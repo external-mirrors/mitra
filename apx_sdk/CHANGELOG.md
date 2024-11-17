@@ -11,6 +11,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Implement `Debug` and `PartialEq` for `HttpUrl`.
 - Added `as_str()` method to `HttpUrl` type.
 - Added `origin()` method to `Url` type.
+- Implement `Deserialize` for `Url` type.
 
 ### Changed
 
