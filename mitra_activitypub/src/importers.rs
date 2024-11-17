@@ -589,11 +589,12 @@ async fn fetch_collection(
     agent: &FederationAgent,
     collection_id: &str,
     limit: usize,
-) -> Result<Vec<JsonValue>, FetchError> {
+) -> Result<Vec<JsonValue>, HandlerError> {
     // https://www.w3.org/TR/activitystreams-core/#collections
     #[derive(Deserialize)]
     #[serde(rename_all = "camelCase")]
     struct Collection {
+        id: Url,
         first: Option<JsonValue>, // page can be embedded
         #[serde(default)]
         items: Vec<JsonValue>,
@@ -603,6 +604,7 @@ async fn fetch_collection(
     #[derive(Deserialize)]
     #[serde(rename_all = "camelCase")]
     struct CollectionPage {
+        id: Url,
         next: Option<String>,
         #[serde(default)]
         items: Vec<JsonValue>,
@@ -641,6 +643,11 @@ async fn fetch_collection(
                     page
                 },
                 None => break,
+            };
+            if page.id.origin() != collection.id.origin() {
+                let error =
+                    ValidationError("collection page has different origin");
+                return Err(error.into());
             };
             items.extend(page.items);
             items.extend(page.ordered_items);

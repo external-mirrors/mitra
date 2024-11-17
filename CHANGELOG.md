@@ -16,6 +16,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Require verification methods to be valid RFC-3986 URIs.
 - Require `keyId` HTTP signature parameter to be valid RFC-3986 URI.
 - Increased number of fetched collection pages to 3.
+- Verify origins of collection pages.
 
 ### Fixed
 
