@@ -93,9 +93,10 @@ impl ReadOutbox {
     }
 }
 
-/// Fetch replies
+/// Load replies from 'replies' or 'context' collection
 #[derive(Parser)]
-pub struct FetchReplies {
+#[command(visible_alias = "fetch-replies")]
+pub struct LoadReplies {
     object_id: String,
     #[arg(long, default_value_t = 20)]
     limit: usize,
@@ -105,7 +106,7 @@ pub struct FetchReplies {
     use_container: bool,
 }
 
-impl FetchReplies {
+impl LoadReplies {
     pub async fn execute(
         &self,
         config: &Config,
