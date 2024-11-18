@@ -12,7 +12,7 @@ use apx_core::{
         create_http_signature,
         HttpSignatureError,
     },
-    http_types::{header_value_adapter, Method as HttpMethod},
+    http_types::{Method as HttpMethod},
     media_type::sniff_media_type,
 };
 
@@ -230,7 +230,7 @@ pub async fn fetch_object(
     // Verify object is not a malicious upload
     let content_type = response.headers()
         .get(header::CONTENT_TYPE)
-        .and_then(|value| extract_media_type(&header_value_adapter(value)))
+        .and_then(extract_media_type)
         .unwrap_or_default();
     const ALLOWED_TYPES: [&str; 3] = [
         AP_MEDIA_TYPE,
@@ -283,7 +283,7 @@ pub async fn fetch_file(
     };
     let maybe_content_type_header = response.headers()
         .get(header::CONTENT_TYPE)
-        .and_then(|value| extract_media_type(&header_value_adapter(value)));
+        .and_then(extract_media_type);
     let file_data = limited_response(&mut response, file_size_limit)
         .await?
         .ok_or(FetchError::ResponseTooLarge)?;

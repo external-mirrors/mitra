@@ -3,7 +3,6 @@ use std::path::Path;
 use deadpool_postgres::Pool;
 use rustls::{
     client::ClientConfig as TlsClientConfig,
-    Certificate,
     Error as RustlsError,
     RootCertStore,
 };
@@ -35,11 +34,10 @@ fn create_tls_connector(
     let mut root_store = RootCertStore::empty();
     let ca_file = std::fs::File::open(ca_file_path)?;
     let mut ca_file_reader = std::io::BufReader::new(ca_file);
-    for item in certs(&mut ca_file_reader)? {
-        root_store.add(&Certificate(item))?;
+    for maybe_item in certs(&mut ca_file_reader) {
+        root_store.add(maybe_item?)?;
     };
     let tls_config = TlsClientConfig::builder()
-        .with_safe_defaults()
         .with_root_certificates(root_store)
         .with_no_client_auth();
     let connector = MakeRustlsConnect::new(tls_config);

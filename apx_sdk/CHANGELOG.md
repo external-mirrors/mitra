@@ -14,7 +14,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Changed MSRV to 1.66.1.
 - Re-export `http` types from `http_types` module.
-- Migrate to http package version 1.1.0.
+- Migrated to http package version 1.1.0.
+- Migrated to reqwest version 0.12 and rustls version 0.22.
 
 ## [0.5.0] - 2024-11-20
 

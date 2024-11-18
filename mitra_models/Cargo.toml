@@ -33,9 +33,9 @@ postgres-protocol = "0.6.4"
 postgres_query = { git = "https://github.com/nolanderc/rust-postgres-query", rev = "b4422051c8a31fbba4a35f88004c1cefb1878dd5" }
 postgres_query_macro = { git = "https://github.com/nolanderc/rust-postgres-query", rev = "b4422051c8a31fbba4a35f88004c1cefb1878dd5" }
 # Used for TLS connections
-tokio-postgres-rustls = { version = "0.10.0" }
-rustls = { version = "0.21" }
-rustls-pemfile = { version = "1.0.4" }
+tokio-postgres-rustls = { version = "0.11.1" }
+rustls = { version = "0.22" }
+rustls-pemfile = { version = "2.1.3" }
 # Used to work with UUIDs
 uuid = { version = "1.1.2", features = ["serde", "v4"] }
 

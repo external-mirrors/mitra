@@ -94,11 +94,11 @@ fn build_safe_redirect_policy() -> RedirectPolicy {
 }
 
 mod dns_resolver {
-    // https://github.com/seanmonstar/reqwest/blob/v0.11.27/src/dns/gai.rs
+    // https://github.com/seanmonstar/reqwest/blob/v0.12.4/src/dns/gai.rs
     use futures_util::future::FutureExt;
-    use hyper::client::connect::dns::{GaiResolver as HyperGaiResolver, Name};
-    use hyper::service::Service;
-    use reqwest::dns::{Addrs, Resolve, Resolving};
+    use hyper_util::client::legacy::connect::dns::GaiResolver as HyperGaiResolver;
+    use reqwest::dns::{Addrs, Name, Resolve, Resolving};
+    use tower_service::{Service as _};
 
     use super::is_safe_addr;
 
@@ -115,7 +115,9 @@ mod dns_resolver {
     impl Resolve for SafeResolver {
         fn resolve(&self, name: Name) -> Resolving {
             let this = &mut self.0.clone();
-            Box::pin(Service::<Name>::call(this, name).map(|result| {
+            let hyper_name = name.as_str().parse()
+                .expect("domain name should be valid");
+            Box::pin(this.call(hyper_name).map(|result| {
                 result
                     .map(|addrs| -> Addrs {
                         Box::new(addrs.filter(|addr| is_safe_addr(addr.ip())))
