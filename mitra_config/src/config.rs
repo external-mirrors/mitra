@@ -34,6 +34,13 @@ const fn default_web_client_rewrite_index() -> bool { true }
 const fn default_instance_staff_public() -> bool { true }
 
 #[derive(Clone, Deserialize)]
+pub struct S3Config {
+    pub bucket_name: String,
+    pub access_key: String,
+    pub secret_key: String,
+}
+
+#[derive(Clone, Deserialize)]
 pub struct Config {
     // Properties auto-populated from the environment
     #[serde(skip)]
@@ -48,6 +55,7 @@ pub struct Config {
     pub database_tls_ca_file: Option<PathBuf>,
 
     pub storage_dir: PathBuf,
+    pub s3_storage: Option<S3Config>,
 
     pub web_client_dir: Option<PathBuf>,
     pub web_client_theme_dir: Option<PathBuf>,

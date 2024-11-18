@@ -77,6 +77,7 @@ async fn main() -> std::io::Result<()> {
         MediaStorage::Filesystem(ref backend) => {
             backend.init().expect("failed to create media directory");
         },
+        MediaStorage::S3(_) => todo!(),
     };
 
     std::mem::drop(db_client);
@@ -188,7 +189,6 @@ async fn main() -> std::io::Result<()> {
                 web::resource("/.well-known/{path}")
                     .to(HttpResponse::NotFound)
             );
-        #[allow(irrefutable_let_patterns)]
         if let MediaStorage::Filesystem(ref backend) = media_storage {
             app = app.service(actix_files::Files::new(
                 MEDIA_ROOT_URL,
