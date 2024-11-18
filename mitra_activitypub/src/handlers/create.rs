@@ -55,6 +55,7 @@ use mitra_validators::{
         ATTACHMENT_LIMIT,
         CONTENT_MAX_SIZE,
         EMOJI_LIMIT,
+        HASHTAG_LIMIT,
         LINK_LIMIT,
         MENTION_LIMIT,
     },
@@ -461,6 +462,10 @@ pub async fn get_object_tags(
     for tag_value in object.tag.clone() {
         let tag_type = tag_value["type"].as_str().unwrap_or(HASHTAG);
         if tag_type == HASHTAG {
+            if hashtags.len() >= HASHTAG_LIMIT {
+                log::warn!("too many hashtags");
+                continue;
+            };
             let tag: Tag = match serde_json::from_value(tag_value) {
                 Ok(tag) => tag,
                 Err(_) => {

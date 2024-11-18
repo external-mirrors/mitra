@@ -20,6 +20,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Increased number of fetched collection pages to 3.
 - Verify origins of collection pages.
 - Rename `fetch-replies` command to `load-replies`.
+- Don't drop remote posts containing too many hashtags.
 
 ### Fixed
 
