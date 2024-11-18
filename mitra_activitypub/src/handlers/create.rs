@@ -454,16 +454,21 @@ pub async fn get_object_tags(
 ) -> Result<(Vec<Uuid>, Vec<String>, Vec<Uuid>, Vec<Uuid>), HandlerError> {
     let agent = build_federation_agent(instance, None);
 
-    let mut mentions = vec![];
+    let mut hashtag_count = 0;
+    let mut mention_count = 0;
+    let mut link_count = 0;
+    let mut emoji_count = 0;
+
     let mut hashtags = vec![];
+    let mut mentions = vec![];
     let mut links = vec![];
     let mut emojis = vec![];
 
     for tag_value in object.tag.clone() {
         let tag_type = tag_value["type"].as_str().unwrap_or(HASHTAG);
         if tag_type == HASHTAG {
-            if hashtags.len() >= HASHTAG_LIMIT {
-                log::warn!("too many hashtags");
+            hashtag_count += 1;
+            if hashtag_count > HASHTAG_LIMIT {
                 continue;
             };
             let tag: Tag = match serde_json::from_value(tag_value) {
@@ -484,8 +489,8 @@ pub async fn get_object_tags(
                 };
             };
         } else if tag_type == MENTION {
-            if mentions.len() >= MENTION_LIMIT {
-                log::warn!("too many mentions");
+            mention_count += 1;
+            if mention_count > MENTION_LIMIT {
                 continue;
             };
             let tag: Tag = match serde_json::from_value(tag_value) {
@@ -557,8 +562,8 @@ pub async fn get_object_tags(
                 log::warn!("failed to parse mention {}", tag_name);
             };
         } else if tag_type == LINK {
-            if links.len() >= LINK_LIMIT {
-                log::warn!("too many links");
+            link_count += 1;
+            if link_count > LINK_LIMIT {
                 continue;
             };
             let tag: LinkTag = match serde_json::from_value(tag_value) {
@@ -585,8 +590,8 @@ pub async fn get_object_tags(
                 links.push(linked.id);
             };
         } else if tag_type == EMOJI {
-            if emojis.len() >= EMOJI_LIMIT {
-                log::warn!("too many emojis");
+            emoji_count += 1;
+            if emoji_count > EMOJI_LIMIT {
                 continue;
             };
             match handle_emoji(
@@ -614,7 +619,7 @@ pub async fn get_object_tags(
             continue;
         };
         if mentions.len() >= MENTION_LIMIT {
-            log::warn!("too many mentions");
+            log::warn!("not adding targets to mention list");
             break;
         };
         match get_profile_by_actor_id(
@@ -642,9 +647,22 @@ pub async fn get_object_tags(
             &instance.url(),
             &canonical_object_id,
         ).await?;
-        if !links.contains(&linked.id) {
+        if links.len() < LINK_LIMIT && !links.contains(&linked.id) {
             links.push(linked.id);
         };
+    };
+
+    if hashtag_count > HASHTAG_LIMIT {
+        log::warn!("too many hashtags: {hashtag_count}");
+    };
+    if mention_count > MENTION_LIMIT {
+        log::warn!("too many mentions: {mention_count}");
+    };
+    if link_count > LINK_LIMIT {
+        log::warn!("too many links: {link_count}");
+    };
+    if emoji_count > EMOJI_LIMIT {
+        log::warn!("too many emojis: {emoji_count}");
     };
     Ok((mentions, hashtags, links, emojis))
 }

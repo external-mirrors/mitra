@@ -21,6 +21,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Verify origins of collection pages.
 - Rename `fetch-replies` command to `load-replies`.
 - Don't drop remote posts containing too many hashtags.
+- Don't write repeated messages to log when tag count exceeds limit.
 
 ### Fixed
 
