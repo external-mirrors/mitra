@@ -13,10 +13,13 @@ use actix_web::{
     HttpRequest,
     Scope,
 };
+use log::Level;
 use serde_qs::{
     actix::QsQueryConfig,
     Config as QsConfig,
 };
+
+use crate::http::log_response_error;
 
 mod accounts;
 mod apps;
@@ -58,10 +61,14 @@ fn validation_error_handler(
 }
 
 /// Error handler for 401 Unauthorized
-fn create_auth_error_handler() -> ErrorHandlers<BoxBody> {
+fn create_error_handlers() -> ErrorHandlers<BoxBody> {
     // Creates and returns actix middleware
     ErrorHandlers::new()
-        .handler(StatusCode::UNAUTHORIZED, move |response| {
+        .default_handler_client(|response| {
+            log_response_error(Level::Info, &response);
+            Ok(ErrorHandlerResponse::Response(response.map_into_left_body()))
+        })
+        .handler(StatusCode::UNAUTHORIZED, |response| {
             let response_new = response.map_body(|_, body: BoxBody| {
                 if let BodySize::None | BodySize::Sized(0) = body.size() {
                     // Insert error description if response body is empty
@@ -112,7 +119,7 @@ pub fn mastodon_api_scope(
         .app_data(form_config)
         .app_data(multipart_form_config)
         .app_data(multiquery_config)
-        .wrap(create_auth_error_handler())
+        .wrap(create_error_handlers())
         .service(accounts::views::account_api_scope())
         .service(apps::views::application_api_scope())
         .service(bookmarks::views::bookmark_api_scope())
