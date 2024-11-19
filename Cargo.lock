@@ -3265,7 +3265,8 @@ dependencies = [
 [[package]]
 name = "serde_qs"
 version = "0.13.0"
-source = "git+https://github.com/samscott89/serde_qs?rev=2bb118fce16f2d5a1a85fce96d228acc23df827e#2bb118fce16f2d5a1a85fce96d228acc23df827e"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cd34f36fe4c5ba9654417139a9b3a20d2e1de6012ee678ad14d240c22c78d8d6"
 dependencies = [
  "actix-web",
  "futures",
