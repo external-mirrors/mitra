@@ -7,7 +7,7 @@ use actix_governor::{
     PeerIpKeyExtractor,
 };
 use actix_web::{
-    dev::ConnectionInfo,
+    dev::{ConnectionInfo, ServiceResponse},
     error::{Error, JsonPayloadError},
     http::{header as http_header},
     middleware::DefaultHeaders,
@@ -15,6 +15,7 @@ use actix_web::{
     Either,
     HttpRequest,
 };
+use log::Level;
 use serde_qs::actix::{QsForm, QsQuery};
 
 use crate::errors::HttpError;
@@ -91,6 +92,21 @@ pub fn create_default_headers_middleware() -> DefaultHeaders {
             ContentSecurityPolicy::default().into_string(),
         ))
         .add((http_header::X_CONTENT_TYPE_OPTIONS, "nosniff"))
+}
+
+pub fn log_response_error<B>(
+    level: Level,
+    response: &ServiceResponse<B>,
+) -> () {
+    if let Some(error) = response.response().error() {
+        log::log!(
+            level,
+            "{} {} : {}",
+            response.request().method(),
+            response.request().path(),
+            error,
+        );
+    };
 }
 
 /// Convert JSON payload deserialization errors into validation errors

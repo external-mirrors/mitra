@@ -6,6 +6,8 @@ use actix_web::{
         Method,
     },
     middleware::{
+        ErrorHandlers,
+        ErrorHandlerResponse,
         Logger as ActixLogger,
         NormalizePath,
     },
@@ -14,6 +16,7 @@ use actix_web::{
     HttpResponse,
     HttpServer,
 };
+use log::Level;
 
 use apx_core::urls::get_hostname;
 use mitra::activitypub::views as activitypub;
@@ -21,6 +24,7 @@ use mitra::atom::views::atom_scope;
 use mitra::http::{
     create_default_headers_middleware,
     json_error_handler,
+    log_response_error,
 };
 use mitra::job_queue::scheduler;
 use mitra::mastodon_api::{mastodon_api_scope, oauth_api_scope};
@@ -130,24 +134,12 @@ async fn main() -> std::io::Result<()> {
             .wrap(NormalizePath::trim())
             .wrap(cors_config)
             .wrap(ActixLogger::new("%r : %s : %{r}a"))
-            .wrap_fn(|req, srv| {
-                // Always log server errors (500-599)
-                let fut = srv.call(req);
-                async {
-                    let res = fut.await?;
-                    if let Some(error) = res.response().error() {
-                        if error.as_response_error().status_code().is_server_error() {
-                            log::warn!(
-                                "{} {} : {}",
-                                res.request().method(),
-                                res.request().path(),
-                                error,
-                            );
-                        };
-                    };
-                    Ok(res)
-                }
-            })
+            .wrap(ErrorHandlers::new()
+                .default_handler_server(|response| {
+                   log_response_error(Level::Warn, &response);
+                   Ok(ErrorHandlerResponse::Response(response.map_into_left_body()))
+                })
+            )
             .wrap_fn(|request, service| {
                 // Fix for https://github.com/actix/actix-web/issues/3191
                 let path = request.path().to_owned();
