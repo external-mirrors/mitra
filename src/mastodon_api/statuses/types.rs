@@ -234,12 +234,7 @@ fn default_post_content_type() -> String { POST_CONTENT_TYPE_MARKDOWN.to_string(
 pub struct StatusData {
     pub status: String,
 
-    // For application/json payloads
-    #[serde(default, rename = "media_ids[]")]
-    pub media_ids_json: Vec<Uuid>,
-
-    // For application/x-www-form-urlencoded payloads
-    #[serde(default)]
+    #[serde(default, alias = "media_ids[]")]
     pub media_ids: Vec<Uuid>,
 
     pub in_reply_to_id: Option<Uuid>,
@@ -311,9 +306,8 @@ impl StatusSource {
 pub struct StatusUpdateData {
     pub status: String,
 
-    // For application/json payloads
-    #[serde(rename = "media_ids[]")]
-    pub media_ids: Option<Vec<Uuid>>,
+    #[serde(default, alias = "media_ids[]")]
+    pub media_ids: Vec<Uuid>,
 
     #[serde(default)]
     pub sensitive: bool,

@@ -182,9 +182,7 @@ async fn create_status(
         repost_of_id: None,
         visibility: visibility,
         is_sensitive: status_data.sensitive,
-        attachments: status_data.media_ids.iter().copied()
-            .chain(status_data.media_ids_json.iter().copied())
-            .collect(),
+        attachments: status_data.media_ids,
         mentions: mentions,
         tags: hashtags,
         links: links,
@@ -379,7 +377,7 @@ async fn edit_status(
         content: content,
         content_source: content_source,
         is_sensitive: status_data.sensitive,
-        attachments: status_data.media_ids.unwrap_or(vec![]),
+        attachments: status_data.media_ids,
         mentions: mentions,
         tags: hashtags,
         links: links,
