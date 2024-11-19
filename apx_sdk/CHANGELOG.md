@@ -12,6 +12,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Added `as_str()` method to `HttpUrl` type.
 - Added `origin()` method to `Url` type.
 - Implement `Deserialize` for `Url` type.
+- Export `iri_string::UriString` as `apx_core::url::common::Uri`.
 
 ### Changed
 

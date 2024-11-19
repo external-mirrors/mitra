@@ -1,9 +1,10 @@
-use apx_core::urls::validate_uri;
+use apx_core::url::common::Uri;
 
 use super::errors::ValidationError;
 
 pub fn validate_redirect_uri(uri: &str) -> Result<(), ValidationError> {
-    validate_uri(uri)
+    // https://www.rfc-editor.org/rfc/rfc6749#appendix-A.6
+    Uri::try_from(uri)
         .map_err(|_| ValidationError("invalid redirect URI"))?;
     Ok(())
 }

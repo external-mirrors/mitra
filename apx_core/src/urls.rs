@@ -7,11 +7,6 @@ pub use url::{
     ParseError as UrlError,
 };
 
-pub fn validate_uri(uri: &str) -> Result<(), UrlError> {
-    Url::parse(uri)?;
-    Ok(())
-}
-
 pub fn encode_hostname(hostname: &str) -> Result<String, IdnaError> {
     domain_to_ascii(hostname)
 }

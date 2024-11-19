@@ -1,5 +1,11 @@
-use iri_string::percent_encode::PercentEncodedForUri;
+use iri_string::{
+    percent_encode::PercentEncodedForUri,
+    types::UriString,
+};
 use percent_encoding::percent_decode_str;
+
+/// RFC-3986 URI
+pub type Uri = UriString;
 
 #[derive(Debug, PartialEq)]
 pub struct Origin(String, String, u16);
