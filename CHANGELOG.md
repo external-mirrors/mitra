@@ -28,6 +28,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Log Mastodon API server errors with level `ERROR`.
 - Log Mastodon API client errors.
 - Log OAuth client errors.
+- Return deleted `Status` entity when processing `DELETE /api/v1/statuses/{status_id}`.
 
 ### Fixed
 

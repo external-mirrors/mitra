@@ -101,6 +101,7 @@ use super::types::{
     StatusPreview,
     StatusPreviewData,
     StatusSource,
+    StatusTombstone,
     StatusUpdateData,
 };
 
@@ -424,6 +425,7 @@ async fn edit_status(
 async fn delete_status(
     auth: BearerAuth,
     config: web::Data<Config>,
+    connection_info: ConnectionInfo,
     db_pool: web::Data<DatabaseConnectionPool>,
     status_id: web::Path<Uuid>,
 ) -> Result<HttpResponse, MastodonError> {
@@ -433,9 +435,10 @@ async fn delete_status(
     if post.author.id != current_user.id {
         return Err(MastodonError::PermissionError);
     };
+    let instance = config.instance();
     let delete_note = prepare_delete_note(
         db_client,
-        &config.instance(),
+        &instance,
         &current_user,
         &post,
         config.federation.fep_e232_enabled,
@@ -443,7 +446,18 @@ async fn delete_status(
     let deletion_queue = delete_post(db_client, *status_id).await?;
     deletion_queue.into_job(db_client).await?;
     delete_note.save_and_enqueue(db_client).await?;
-    Ok(HttpResponse::NoContent().finish())
+
+    let content_source = post.content_source.clone().unwrap_or_default();
+    let status = Status::from_post(
+        &get_request_base_url(connection_info),
+        &instance.url(),
+        post,
+    );
+    let tombstone = StatusTombstone {
+        status,
+        text: content_source,
+    };
+    Ok(HttpResponse::Ok().json(tombstone))
 }
 
 #[get("/{status_id}/context")]

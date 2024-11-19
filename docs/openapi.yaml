@@ -1668,9 +1668,18 @@ paths:
       parameters:
         - $ref: '#/components/parameters/status_id'
       responses:
-        204:
+        200:
           description: Successful operation
-          content: {}
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Status'
+                  - type: object
+                    properties:
+                      text:
+                        description: Source of the post.
+                        type: string
         403:
           description: Post does not belong to user
         404:

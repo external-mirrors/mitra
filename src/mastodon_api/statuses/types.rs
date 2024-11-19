@@ -227,6 +227,13 @@ impl Status {
     }
 }
 
+#[derive(Serialize)]
+pub struct StatusTombstone {
+    #[serde(flatten)]
+    pub status: Status,
+    pub text: String,
+}
+
 fn default_post_content_type() -> String { POST_CONTENT_TYPE_MARKDOWN.to_string() }
 
 /// https://docs.joinmastodon.org/methods/statuses/
