@@ -35,7 +35,7 @@ pub fn ratelimit_config(
 ) -> RatelimitConfig {
     GovernorConfigBuilder::default()
         .burst_size(num_requests)
-        .per_second(period)
+        .seconds_per_request(period)
         .permissive(permissive)
         .finish()
         .expect("governor parameters should be non-zero")
