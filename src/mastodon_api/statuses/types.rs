@@ -286,16 +286,21 @@ impl StatusPreview {
 #[derive(Serialize)]
 pub struct StatusSource {
     id: Uuid,
+    content_type: String, // Pleroma addon
     text: String,
     spoiler_text: String,
 }
 
 impl StatusSource {
     pub fn from_post(post: Post) -> Self {
+        let (content_source, content_type) = match post.content_source {
+            Some(source) => (source, POST_CONTENT_TYPE_MARKDOWN),
+            None => (post.content, POST_CONTENT_TYPE_HTML),
+        };
         Self {
             id: post.id,
-            // Return empty string if source is not available
-            text: post.content_source.unwrap_or_default(),
+            content_type: content_type.to_string(),
+            text: content_source,
             spoiler_text: "".to_string(),
         }
     }

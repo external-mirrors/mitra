@@ -1693,6 +1693,13 @@ paths:
                   id:
                     type: string
                     format: uuid
+                  content_type:
+                    description: The content type of the post source.
+                    type: string
+                    enum:
+                      - text/html
+                      - text/markdown
+                    example: text/markdown
                   text:
                     description: The plain text used to compose the post.
                     type: string

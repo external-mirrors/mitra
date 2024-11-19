@@ -11,6 +11,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Added `--dry-run` parameter to `delete-orphaned-files` command.
 - Support fetching conversation containers with `fetch-replies` command.
 - Support `__underlined__` text in post content.
+- Added `content_type` property to `StatusSource` Mastodon API entity.
 
 ### Changed
 
