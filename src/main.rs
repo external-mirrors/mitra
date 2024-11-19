@@ -136,7 +136,7 @@ async fn main() -> std::io::Result<()> {
             .wrap(ActixLogger::new("%r : %s : %{r}a"))
             .wrap(ErrorHandlers::new()
                 .default_handler_server(|response| {
-                   log_response_error(Level::Warn, &response);
+                   log_response_error(Level::Error, &response);
                    Ok(ErrorHandlerResponse::Response(response.map_into_left_body()))
                 })
             )
