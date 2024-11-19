@@ -29,6 +29,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Fixed validation of FEP-1b12 activities where `object.actor` is embedded.
 
+### Security
+
+- Rate-limit `/oauth/token` API endpoint.
+
 ## [3.9.0] - 2024-11-07
 
 ### Added

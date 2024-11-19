@@ -1,3 +1,4 @@
+use actix_governor::{Governor, GovernorConfigBuilder};
 use actix_multipart::form::MultipartForm;
 use actix_web::{
     get,
@@ -138,7 +139,6 @@ async fn authorize_view(
 
 /// OAuth 2.0 Password Grant
 /// https://oauth.net/2/grant-types/password/
-#[post("/token")]
 async fn token_view(
     config: web::Data<Config>,
     db_pool: web::Data<DatabaseConnectionPool>,
@@ -273,9 +273,18 @@ async fn revoke_token_view(
 }
 
 pub fn oauth_api_scope() -> ActixScope {
+    let token_limit = GovernorConfigBuilder::default()
+        .burst_size(5)
+        .seconds_per_request(120)
+        .finish()
+        .expect("configuration should be valid");
+    let token_view_limited = web::resource("/token").route(
+        web::post()
+            .to(token_view)
+            .wrap(Governor::new(&token_limit)));
     web::scope("/oauth")
         .service(authorization_page_view)
         .service(authorize_view)
-        .service(token_view)
+        .service(token_view_limited)
         .service(revoke_token_view)
 }
