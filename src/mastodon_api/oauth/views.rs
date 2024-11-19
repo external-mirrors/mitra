@@ -1,16 +1,21 @@
 use actix_governor::{Governor, GovernorConfigBuilder};
 use actix_multipart::form::MultipartForm;
 use actix_web::{
+    body::{BoxBody, EitherBody},
+    dev::{ServiceFactory, ServiceRequest, ServiceResponse},
     get,
     http::header as http_header,
+    middleware::{ErrorHandlers, ErrorHandlerResponse},
     post,
     web,
     Either,
+    Error as ActixError,
     HttpResponse,
     Scope as ActixScope,
 };
 use actix_web_httpauth::extractors::bearer::BearerAuth;
 use chrono::{Duration, Utc};
+use log::Level;
 
 use mitra_config::Config;
 use mitra_models::{
@@ -39,7 +44,11 @@ use mitra_services::{
 use mitra_utils::passwords::verify_password;
 use mitra_validators::errors::ValidationError;
 
-use crate::http::{ContentSecurityPolicy, FormOrJson};
+use crate::http::{
+    log_response_error,
+    ContentSecurityPolicy,
+    FormOrJson,
+};
 use crate::mastodon_api::{
     auth::get_current_user,
     errors::MastodonError,
@@ -272,7 +281,13 @@ async fn revoke_token_view(
     Ok(HttpResponse::Ok().json(response))
 }
 
-pub fn oauth_api_scope() -> ActixScope {
+pub fn oauth_api_scope() -> ActixScope<impl ServiceFactory<
+    ServiceRequest,
+    Config = (),
+    Response = ServiceResponse<EitherBody<BoxBody>>,
+    Error = ActixError,
+    InitError = (),
+>> {
     let token_limit = GovernorConfigBuilder::default()
         .burst_size(5)
         .seconds_per_request(120)
@@ -283,6 +298,12 @@ pub fn oauth_api_scope() -> ActixScope {
             .to(token_view)
             .wrap(Governor::new(&token_limit)));
     web::scope("/oauth")
+        .wrap(ErrorHandlers::new()
+            .default_handler_client(|response| {
+                log_response_error(Level::Warn, &response);
+                Ok(ErrorHandlerResponse::Response(response.map_into_left_body()))
+            })
+        )
         .service(authorization_page_view)
         .service(authorize_view)
         .service(token_view_limited)

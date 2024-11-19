@@ -26,6 +26,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Return status 400 if WebFinger resource parameter is not valid.
 - Log Mastodon API server errors with level `ERROR`.
 - Log Mastodon API client errors.
+- Log OAuth client errors.
 
 ### Fixed
 
