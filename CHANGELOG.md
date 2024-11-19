@@ -23,6 +23,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Don't drop remote posts containing too many hashtags.
 - Don't write repeated messages to log when tag count exceeds limit.
 - Validate OAuth redirect URIs according to RFC-3986.
+- Return status 400 if WebFinger resource parameter is not valid.
 
 ### Fixed
 

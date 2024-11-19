@@ -27,7 +27,7 @@ idna = "0.4.0"
 # Used to guess media type of a file
 infer = "0.13.0"
 # Used for working with URIs
-iri-string = "0.7.6"
+iri-string = { version = "0.7.6", features = ["serde"] }
 # Used for working with ECDSA signatures
 k256 = { version = "0.13.0", default-features = false, features = ["std", "ecdsa"] }
 # Used to generate random numbers

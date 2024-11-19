@@ -4,6 +4,7 @@ use serde::Deserialize;
 
 use apx_sdk::{
     addresses::WebfingerAddress,
+    core::url::common::Uri,
     jrd::{
         JsonResourceDescriptor,
         Link,
@@ -127,7 +128,7 @@ async fn get_jrd(
 
 #[derive(Deserialize)]
 pub struct WebfingerQueryParams {
-    pub resource: String,
+    resource: Uri,
 }
 
 #[get("/.well-known/webfinger")]
@@ -140,7 +141,7 @@ pub async fn webfinger_view(
     let jrd = get_jrd(
         db_client,
         config.instance(),
-        &query_params.resource,
+        query_params.resource.as_str(),
     ).await?;
     let response = HttpResponse::Ok()
         .content_type(JRD_MEDIA_TYPE)
