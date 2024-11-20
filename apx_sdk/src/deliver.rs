@@ -42,8 +42,8 @@ pub enum DelivererError {
     #[error(transparent)]
     RequestError(#[from] reqwest::Error),
 
-    #[error("http error {0:?}")]
-    HttpError(reqwest::StatusCode),
+    #[error("http error: [{status:?}] {text}")]
+    HttpError { status: reqwest::StatusCode, text: String },
 
     #[error("response size exceeds limit")]
     ResponseTooLarge,
@@ -63,6 +63,7 @@ fn build_deliverer_client(
     Ok(http_client)
 }
 
+/// Delivers object to inbox or outbox
 pub async fn send_object(
     agent: &FederationAgent,
     object_json: &str,
@@ -117,15 +118,19 @@ pub async fn send_object(
         .filter(|chr| *chr != '\n' && *chr != '\r')
         .take(agent.deliverer_log_response_length)
         .collect();
-    log::info!(
-        "response from {}: [{}] {}",
-        inbox_url,
-        response_status.as_str(),
-        response_text,
-    );
     // https://www.w3.org/wiki/ActivityPub/Primer/HTTP_status_codes_for_delivery
-    if !response_status.is_success() {
-        return Err(DelivererError::HttpError(response_status));
+    if response_status.is_success() {
+        log::info!(
+            "response from {}: [{}] {}",
+            inbox_url,
+            response_status.as_str(),
+            response_text,
+        );
+    } else {
+        return Err(DelivererError::HttpError {
+            status: response_status,
+            text: response_text,
+        });
     };
     Ok(())
 }

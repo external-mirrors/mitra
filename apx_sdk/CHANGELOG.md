@@ -19,6 +19,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Rename `JsonSigner` enum variants to `HttpUrl` and `DidUrl`.
 - Parse HTTP verification method as `HttpUrl` when verifying JSON signature.
 - Parse `keyId` HTTP signature parameter as `HttpUrl`.
+- Don't log inbox response if status is not 2xxx.
 
 ## [0.4.0] - 2024-11-07
 
