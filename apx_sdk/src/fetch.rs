@@ -105,10 +105,9 @@ fn build_request(
     url: &str,
 ) -> RequestBuilder {
     let mut request_builder = http_client.request(method, url);
-    if !agent.is_instance_private {
-        // Public instances should set User-Agent header
+    if let Some(ref user_agent) = agent.user_agent {
         request_builder = request_builder
-            .header(header::USER_AGENT, &agent.user_agent);
+            .header(header::USER_AGENT, user_agent);
     };
     request_builder
 }

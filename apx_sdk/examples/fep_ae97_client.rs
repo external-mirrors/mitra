@@ -21,7 +21,7 @@ async fn main() -> () {
     let http_key = generate_rsa_key().unwrap();
     let http_key_id = format!("http://127.0.0.1:8380/.well-known/apgateway/{authority}/rsa_key");
     let agent = FederationAgent {
-        user_agent: "fep-ae97-client".to_string(),
+        user_agent: Some("fep-ae97-client".to_string()),
         is_instance_private: false,
         ssrf_protection_enabled: false, // allow connections to 127.0.0.1
         response_size_limit: 2_000_000,

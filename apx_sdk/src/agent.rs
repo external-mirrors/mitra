@@ -1,7 +1,8 @@
 use apx_core::crypto_rsa::RsaSecretKey;
 
 pub struct FederationAgent {
-    pub user_agent: String,
+    /// User-Agent string.
+    pub user_agent: Option<String>,
     // Private instance won't send signed HTTP requests
     pub is_instance_private: bool,
     // https://www.w3.org/TR/activitypub/#security-localhost

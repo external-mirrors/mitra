@@ -23,8 +23,14 @@ pub(super) fn build_federation_agent_with_key(
     signer_key: RsaSecretKey,
     signer_key_id: String,
 ) -> FederationAgent {
+    // Public instances should set User-Agent header
+    let maybe_user_agent = if instance.is_private {
+        None
+    } else {
+        Some(instance.agent())
+    };
     FederationAgent {
-        user_agent: instance.agent(),
+        user_agent: maybe_user_agent,
         is_instance_private: instance.is_private,
         ssrf_protection_enabled: instance.ssrf_protection_enabled,
         response_size_limit: RESPONSE_SIZE_LIMIT,
@@ -64,12 +70,26 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_build_federation_agent() {
+    fn test_build_federation_agent_private() {
         let instance_url = "https://social.example";
         let instance = Instance::for_test(instance_url);
         let agent = build_federation_agent(&instance, None);
-        assert_eq!(agent.user_agent.ends_with(instance_url), true);
+        assert_eq!(agent.user_agent.is_none(), true);
         assert_eq!(agent.is_instance_private, true);
+        assert_eq!(agent.ssrf_protection_enabled, true);
+        assert_eq!(agent.response_size_limit, RESPONSE_SIZE_LIMIT);
+        assert_eq!(agent.signer_key, instance.actor_rsa_key);
+        assert_eq!(agent.signer_key_id, "https://social.example/actor#main-key");
+    }
+
+    #[test]
+    fn test_build_federation_agent() {
+        let instance_url = "https://social.example";
+        let mut instance = Instance::for_test(instance_url);
+        instance.is_private = false;
+        let agent = build_federation_agent(&instance, None);
+        assert_eq!(agent.user_agent.unwrap().ends_with(instance_url), true);
+        assert_eq!(agent.is_instance_private, false);
         assert_eq!(agent.ssrf_protection_enabled, true);
         assert_eq!(agent.response_size_limit, RESPONSE_SIZE_LIMIT);
         assert_eq!(agent.signer_key, instance.actor_rsa_key);

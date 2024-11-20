@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Changed
 
 - Make `send_object` return response status and body.
+- Make `user_agent` parameter optional in `FederationAgent`.
 
 ### Removed
 

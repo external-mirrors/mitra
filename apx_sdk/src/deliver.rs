@@ -89,15 +89,19 @@ pub async fn send_object(
     )?;
 
     let http_client = build_deliverer_client(agent, inbox_url)?;
+    let mut request_builder = http_client.post(inbox_url)
+        .header(header::CONTENT_TYPE, AP_MEDIA_TYPE);
+    if let Some(ref user_agent) = agent.user_agent {
+        request_builder = request_builder
+            .header(header::USER_AGENT, user_agent);
+    };
     let digest = headers.digest
         .expect("digest header should be present if method is POST");
-    let mut request_builder = http_client.post(inbox_url)
+    request_builder = request_builder
         .header("Host", headers.host)
         .header("Date", headers.date)
         .header("Digest", digest)
-        .header("Signature", headers.signature)
-        .header(header::CONTENT_TYPE, AP_MEDIA_TYPE)
-        .header(header::USER_AGENT, &agent.user_agent);
+        .header("Signature", headers.signature);
     for (name, value) in extra_headers {
         request_builder = request_builder.header(*name, *value);
     };
