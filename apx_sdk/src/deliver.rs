@@ -99,32 +99,33 @@ pub async fn send_object(
             "private mode: not delivering to {}",
             inbox_url,
         );
-    } else {
-        let mut response = request_builder
-            .body(object_json.to_owned())
-            .send()
-            .await?;
-        let response_status = response.status();
-        let response_data = limited_response(&mut response, agent.response_size_limit)
-            .await?
-            .ok_or(DelivererError::ResponseTooLarge)?;
-        let response_text: String = String::from_utf8(response_data.to_vec())
-            // Replace non-UTF8 responses with empty string
-            .unwrap_or_default()
-            .chars()
-            .filter(|chr| *chr != '\n' && *chr != '\r')
-            .take(agent.deliverer_log_response_length)
-            .collect();
-        log::info!(
-            "response from {}: [{}] {}",
-            inbox_url,
-            response_status.as_str(),
-            response_text,
-        );
-        // https://www.w3.org/wiki/ActivityPub/Primer/HTTP_status_codes_for_delivery
-        if !response_status.is_success() {
-            return Err(DelivererError::HttpError(response_status));
-        };
+        return Ok(());
+    };
+
+    let mut response = request_builder
+        .body(object_json.to_owned())
+        .send()
+        .await?;
+    let response_status = response.status();
+    let response_data = limited_response(&mut response, agent.response_size_limit)
+        .await?
+        .ok_or(DelivererError::ResponseTooLarge)?;
+    let response_text: String = String::from_utf8(response_data.to_vec())
+        // Replace non-UTF8 responses with empty string
+        .unwrap_or_default()
+        .chars()
+        .filter(|chr| *chr != '\n' && *chr != '\r')
+        .take(agent.deliverer_log_response_length)
+        .collect();
+    log::info!(
+        "response from {}: [{}] {}",
+        inbox_url,
+        response_status.as_str(),
+        response_text,
+    );
+    // https://www.w3.org/wiki/ActivityPub/Primer/HTTP_status_codes_for_delivery
+    if !response_status.is_success() {
+        return Err(DelivererError::HttpError(response_status));
     };
     Ok(())
 }
