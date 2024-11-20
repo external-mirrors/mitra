@@ -369,7 +369,7 @@ checksum = "bb07d2053ccdbe10e2af2995a2f116c1330396493dc1269f6a91d0ae82e19704"
 
 [[package]]
 name = "apx_core"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "base64 0.21.4",
  "blake2",
@@ -399,7 +399,7 @@ dependencies = [
 
 [[package]]
 name = "apx_sdk"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "apx_core",
  "bytes",
@@ -2025,7 +2025,7 @@ dependencies = [
 
 [[package]]
 name = "mitra"
-version = "3.9.0"
+version = "3.10.0"
 dependencies = [
  "actix-cors",
  "actix-files",
@@ -2061,7 +2061,7 @@ dependencies = [
 
 [[package]]
 name = "mitra_activitypub"
-version = "3.9.0"
+version = "3.10.0"
 dependencies = [
  "apx_core",
  "apx_sdk",
@@ -2088,7 +2088,7 @@ dependencies = [
 
 [[package]]
 name = "mitra_adapters"
-version = "3.9.0"
+version = "3.10.0"
 dependencies = [
  "apx_core",
  "chrono",
@@ -2107,7 +2107,7 @@ dependencies = [
 
 [[package]]
 name = "mitra_cli"
-version = "3.9.0"
+version = "3.10.0"
 dependencies = [
  "anyhow",
  "apx_core",
@@ -2129,7 +2129,7 @@ dependencies = [
 
 [[package]]
 name = "mitra_config"
-version = "3.9.0"
+version = "3.10.0"
 dependencies = [
  "apx_core",
  "dotenvy",
@@ -2143,7 +2143,7 @@ dependencies = [
 
 [[package]]
 name = "mitra_models"
-version = "3.9.0"
+version = "3.10.0"
 dependencies = [
  "apx_core",
  "chrono",
@@ -2171,7 +2171,7 @@ dependencies = [
 
 [[package]]
 name = "mitra_services"
-version = "3.9.0"
+version = "3.10.0"
 dependencies = [
  "anyhow",
  "apx_core",
@@ -2194,7 +2194,7 @@ dependencies = [
 
 [[package]]
 name = "mitra_utils"
-version = "3.9.0"
+version = "3.10.0"
 dependencies = [
  "ammonia",
  "apx_core",
@@ -2216,7 +2216,7 @@ dependencies = [
 
 [[package]]
 name = "mitra_validators"
-version = "3.9.0"
+version = "3.10.0"
 dependencies = [
  "apx_core",
  "mitra_models",
