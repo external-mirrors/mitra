@@ -27,7 +27,7 @@ rand = "0.8.4"
 # Used for working with regular expressions
 regex = "1.10.6"
 # Used for hashing passwords
-rust-argon2 = "1.0.0"
+rust-argon2 = "2.1.0"
 # Used for creating error types
 thiserror = "1.0.37"
 # Used to generate lexicographically sortable IDs
