@@ -80,13 +80,6 @@ pub async fn send_object(
     if agent.ssrf_protection_enabled {
         require_safe_url(inbox_url)?;
     };
-    let headers = create_http_signature(
-        Method::POST,
-        inbox_url,
-        object_json.as_bytes(),
-        &agent.signer.key,
-        &agent.signer.key_id,
-    )?;
 
     let http_client = build_deliverer_client(agent, inbox_url)?;
     let mut request_builder = http_client.post(inbox_url)
@@ -95,13 +88,22 @@ pub async fn send_object(
         request_builder = request_builder
             .header(header::USER_AGENT, user_agent);
     };
-    let digest = headers.digest
-        .expect("digest header should be present if method is POST");
-    request_builder = request_builder
-        .header("Host", headers.host)
-        .header("Date", headers.date)
-        .header("Digest", digest)
-        .header("Signature", headers.signature);
+    if let Some(ref signer) = agent.signer {
+         let headers = create_http_signature(
+            Method::POST,
+            inbox_url,
+            object_json.as_bytes(),
+            &signer.key,
+            &signer.key_id,
+        )?;
+        let digest = headers.digest
+            .expect("digest header should be present if method is POST");
+        request_builder = request_builder
+            .header(header::HOST, headers.host)
+            .header(header::DATE, headers.date)
+            .header("Digest", digest)
+            .header("Signature", headers.signature);
+    };
     for (name, value) in extra_headers {
         request_builder = request_builder.header(*name, *value);
     };

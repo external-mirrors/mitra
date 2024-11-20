@@ -29,9 +29,15 @@ pub(super) fn build_federation_agent_with_key(
     } else {
         Some(instance.agent())
     };
-    let signer = RequestSigner {
-        key: signer_key,
-        key_id: signer_key_id,
+    // Public instances should sign requests
+    let maybe_signer = if instance.is_private {
+        None
+    } else {
+        let signer = RequestSigner {
+            key: signer_key,
+            key_id: signer_key_id,
+        };
+        Some(signer)
     };
     FederationAgent {
         user_agent: maybe_user_agent,
@@ -43,7 +49,7 @@ pub(super) fn build_federation_agent_with_key(
         proxy_url: instance.proxy_url.clone(),
         onion_proxy_url: instance.onion_proxy_url.clone(),
         i2p_proxy_url: instance.i2p_proxy_url.clone(),
-        signer: signer,
+        signer: maybe_signer,
     }
 }
 
@@ -81,8 +87,7 @@ mod tests {
         assert_eq!(agent.is_instance_private, true);
         assert_eq!(agent.ssrf_protection_enabled, true);
         assert_eq!(agent.response_size_limit, RESPONSE_SIZE_LIMIT);
-        assert_eq!(agent.signer.key, instance.actor_rsa_key);
-        assert_eq!(agent.signer.key_id, "https://social.example/actor#main-key");
+        assert_eq!(agent.signer.is_none(), true);
     }
 
     #[test]
@@ -95,7 +100,8 @@ mod tests {
         assert_eq!(agent.is_instance_private, false);
         assert_eq!(agent.ssrf_protection_enabled, true);
         assert_eq!(agent.response_size_limit, RESPONSE_SIZE_LIMIT);
-        assert_eq!(agent.signer.key, instance.actor_rsa_key);
-        assert_eq!(agent.signer.key_id, "https://social.example/actor#main-key");
+        let request_signer = agent.signer.unwrap();
+        assert_eq!(request_signer.key, instance.actor_rsa_key);
+        assert_eq!(request_signer.key_id, "https://social.example/actor#main-key");
     }
 }

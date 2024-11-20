@@ -32,7 +32,7 @@ async fn main() -> () {
         proxy_url: None,
         onion_proxy_url: None,
         i2p_proxy_url: None,
-        signer: request_signer,
+        signer: Some(request_signer),
     };
     let note = json!({
         "@context": "https://www.w3.org/ns/activitystreams",

@@ -154,14 +154,14 @@ pub async fn fetch_object(
             build_request(agent, &http_client, Method::GET, &target_url)
                 .header(header::ACCEPT, AP_MEDIA_TYPE);
 
-        if !agent.is_instance_private {
+        if let Some(ref signer) = agent.signer {
             // Only public instances can send signed requests
             let headers = create_http_signature(
                 HttpMethod::GET,
                 &target_url,
                 b"",
-                &agent.signer.key,
-                &agent.signer.key_id,
+                &signer.key,
+                &signer.key_id,
             )?;
             request_builder = request_builder
                 .header("Host", headers.host)

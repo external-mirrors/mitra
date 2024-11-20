@@ -23,5 +23,5 @@ pub struct FederationAgent {
     pub i2p_proxy_url: Option<String>,
 
     /// Key for creating HTTP signatures.
-    pub signer: RequestSigner,
+    pub signer: Option<RequestSigner>,
 }

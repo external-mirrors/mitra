@@ -11,6 +11,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Make `send_object` return response status and body.
 - Make `user_agent` parameter optional in `FederationAgent`.
 - Replace `signer_key` and `signer_key_id` fields on `FederationAgent` with `signer` field.
+- Make `signer` parameter optional in `FederationAgent`.
 
 ### Removed
 
