@@ -8,8 +8,6 @@ pub struct RequestSigner {
 pub struct FederationAgent {
     /// User-Agent string.
     pub user_agent: Option<String>,
-    // Private instance won't send signed HTTP requests
-    pub is_instance_private: bool,
     // https://www.w3.org/TR/activitypub/#security-localhost
     pub ssrf_protection_enabled: bool,
 

@@ -108,14 +108,6 @@ pub async fn send_object(
         request_builder = request_builder.header(*name, *value);
     };
 
-    if agent.is_instance_private {
-        log::info!(
-            "private mode: not delivering to {}",
-            inbox_url,
-        );
-        return Ok(None);
-    };
-
     let mut response = request_builder
         .body(object_json.to_owned())
         .send()

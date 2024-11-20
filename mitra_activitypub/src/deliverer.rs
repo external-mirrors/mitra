@@ -242,6 +242,7 @@ pub(super) async fn deliver_activity_worker(
     activity: JsonValue,
     recipients: &mut [Recipient],
 ) -> Result<(), DelivererError> {
+    assert!(!instance.is_private);
     let rsa_secret_key = sender.rsa_secret_key;
     let rsa_key_id = if let Some(rsa_key_id) = sender.rsa_key_id {
         rsa_key_id

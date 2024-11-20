@@ -380,15 +380,25 @@ pub async fn process_queued_outgoing_activities(
             delete_job_from_queue(db_client, job.id).await?;
             return Ok(());
         };
+        let instance = config.instance();
         let mut recipients = job_data.recipients;
         let start_time = Instant::now();
+        if instance.is_private {
+            log::info!(
+                "(private mode) not delivering activity to {} inboxes: {}",
+                recipients.len(),
+                job_data.activity,
+            );
+            delete_job_from_queue(db_client, job.id).await?;
+            return Ok(());
+        };
         log::info!(
             "delivering activity to {} inboxes: {}",
             recipients.len(),
             job_data.activity,
         );
         match deliver_activity_worker(
-            config.instance(),
+            instance,
             sender,
             job_data.activity.clone(),
             &mut recipients,

@@ -24,7 +24,6 @@ async fn main() -> () {
     };
     let agent = FederationAgent {
         user_agent: Some("fep-ae97-client".to_string()),
-        is_instance_private: false,
         ssrf_protection_enabled: false, // allow connections to 127.0.0.1
         response_size_limit: 2_000_000,
         fetcher_timeout: 60,

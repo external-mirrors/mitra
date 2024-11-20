@@ -41,7 +41,6 @@ pub(super) fn build_federation_agent_with_key(
     };
     FederationAgent {
         user_agent: maybe_user_agent,
-        is_instance_private: instance.is_private,
         ssrf_protection_enabled: instance.ssrf_protection_enabled,
         response_size_limit: RESPONSE_SIZE_LIMIT,
         fetcher_timeout: instance.fetcher_timeout,
@@ -84,7 +83,6 @@ mod tests {
         let instance = Instance::for_test(instance_url);
         let agent = build_federation_agent(&instance, None);
         assert_eq!(agent.user_agent.is_none(), true);
-        assert_eq!(agent.is_instance_private, true);
         assert_eq!(agent.ssrf_protection_enabled, true);
         assert_eq!(agent.response_size_limit, RESPONSE_SIZE_LIMIT);
         assert_eq!(agent.signer.is_none(), true);
@@ -97,7 +95,6 @@ mod tests {
         instance.is_private = false;
         let agent = build_federation_agent(&instance, None);
         assert_eq!(agent.user_agent.unwrap().ends_with(instance_url), true);
-        assert_eq!(agent.is_instance_private, false);
         assert_eq!(agent.ssrf_protection_enabled, true);
         assert_eq!(agent.response_size_limit, RESPONSE_SIZE_LIMIT);
         let request_signer = agent.signer.unwrap();

@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Changed
 
 - Sniff upload media type if not provided by client.
+- Don't write unnecessary delivery reports to log when in private mode.
 
 ## [3.11.0] - 2024-12-05
 
