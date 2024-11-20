@@ -30,7 +30,6 @@ pub(super) fn build_federation_agent_with_key(
         response_size_limit: RESPONSE_SIZE_LIMIT,
         fetcher_timeout: instance.fetcher_timeout,
         deliverer_timeout: instance.deliverer_timeout,
-        deliverer_log_response_length: instance.deliverer_log_response_length,
         proxy_url: instance.proxy_url.clone(),
         onion_proxy_url: instance.onion_proxy_url.clone(),
         i2p_proxy_url: instance.i2p_proxy_url.clone(),

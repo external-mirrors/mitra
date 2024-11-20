@@ -27,7 +27,6 @@ async fn main() -> () {
         response_size_limit: 2_000_000,
         fetcher_timeout: 60,
         deliverer_timeout: 60,
-        deliverer_log_response_length: 200,
         proxy_url: None,
         onion_proxy_url: None,
         i2p_proxy_url: None,

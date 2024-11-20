@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- Make `send_object` return response status and body.
+
+### Removed
+
+- Removed `deliverer_log_response_length` field from `FederationAgent`.
+
 ## [0.6.0] - 2024-12-05
 
 ### Added

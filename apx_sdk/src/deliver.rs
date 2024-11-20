@@ -23,6 +23,12 @@ use crate::{
     },
 };
 
+#[derive(Debug)]
+pub struct Response {
+    pub status: StatusCode,
+    pub body: String,
+}
+
 #[derive(Debug, Error)]
 pub enum DelivererError {
     #[error(transparent)]
@@ -43,11 +49,11 @@ pub enum DelivererError {
     #[error(transparent)]
     RequestError(#[from] reqwest::Error),
 
-    #[error("http error: [{status:?}] {text}")]
-    HttpError { status: StatusCode, text: String },
-
     #[error("response size exceeds limit")]
     ResponseTooLarge,
+
+    #[error("http error")]
+    HttpError(Response),
 }
 
 fn build_deliverer_client(
@@ -70,7 +76,7 @@ pub async fn send_object(
     object_json: &str,
     inbox_url: &str,
     extra_headers: &[(&str, &str)],
-) -> Result<(), DelivererError> {
+) -> Result<Option<Response>, DelivererError> {
     if agent.ssrf_protection_enabled {
         require_safe_url(inbox_url)?;
     };
@@ -101,7 +107,7 @@ pub async fn send_object(
             "private mode: not delivering to {}",
             inbox_url,
         );
-        return Ok(());
+        return Ok(None);
     };
 
     let mut response = request_builder
@@ -112,26 +118,14 @@ pub async fn send_object(
     let response_data = limited_response(&mut response, agent.response_size_limit)
         .await?
         .ok_or(DelivererError::ResponseTooLarge)?;
-    let response_text: String = String::from_utf8(response_data.to_vec())
+    let response_text = String::from_utf8(response_data.to_vec())
         // Replace non-UTF8 responses with empty string
-        .unwrap_or_default()
-        .chars()
-        .filter(|chr| *chr != '\n' && *chr != '\r')
-        .take(agent.deliverer_log_response_length)
-        .collect();
+        .unwrap_or_default();
+    let response = Response { status: response_status, body: response_text };
     // https://www.w3.org/wiki/ActivityPub/Primer/HTTP_status_codes_for_delivery
     if response_status.is_success() {
-        log::info!(
-            "response from {}: [{}] {}",
-            inbox_url,
-            response_status.as_str(),
-            response_text,
-        );
+        Ok(Some(response))
     } else {
-        return Err(DelivererError::HttpError {
-            status: response_status,
-            text: response_text,
-        });
-    };
-    Ok(())
+        Err(DelivererError::HttpError(response))
+    }
 }

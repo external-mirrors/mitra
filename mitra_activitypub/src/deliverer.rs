@@ -229,6 +229,13 @@ pub(super) fn sign_activity(
     Ok(activity_signed)
 }
 
+fn truncate_response(body: &str, limit: usize) -> String {
+    body.chars()
+        .filter(|chr| *chr != '\n' && *chr != '\r')
+        .take(limit)
+        .collect()
+}
+
 pub(super) async fn deliver_activity_worker(
     instance: Instance,
     sender: Sender,
@@ -303,14 +310,47 @@ pub(super) async fn deliver_activity_worker(
                 .expect("delivery should be tracked by pool state");
             let recipient = recipients.get_mut(index)
                 .expect("index should not be out of bounds");
-            if let Err(error) = result {
-                log::warn!(
-                    "failed to deliver activity to {}: {}",
-                    recipient.inbox,
-                    error,
-                );
-            } else {
-                recipient.is_delivered = true;
+            match result {
+                Ok(Some(response)) => {
+                    assert!(response.status.is_success());
+                    let response_text = truncate_response(
+                        &response.body,
+                        instance.deliverer_log_response_length,
+                    );
+                    log::info!(
+                        "response from {}: [{}] {}",
+                        recipient.inbox,
+                        response.status.as_str(),
+                        response_text,
+                    );
+                    recipient.is_delivered = true;
+                },
+                Ok(None) => {
+                    assert!(instance.is_private);
+                    recipient.is_delivered = true;
+                },
+                Err(error) => {
+                    let error_message = match error {
+                        DelivererError::HttpError(ref response) => {
+                            let response_text = truncate_response(
+                                &response.body,
+                                instance.deliverer_log_response_length,
+                            );
+                            format!(
+                                "{}: [{}] {}",
+                                error,
+                                response.status.as_str(),
+                                response_text,
+                            )
+                        },
+                        _ => error.to_string(),
+                    };
+                    log::warn!(
+                        "failed to deliver activity to {}: {}",
+                        recipient.inbox,
+                        error_message,
+                    );
+                },
             };
         };
         if delivery_pool_state.is_empty() &&
