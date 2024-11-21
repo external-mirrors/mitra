@@ -10,6 +10,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Changed MSRV to 1.66.1.
 
+### Fixed
+
+- Fixed incorrect log message when reply can not be imported.
+
 ## [3.10.0] - 2024-11-20
 
 ### Added

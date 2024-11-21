@@ -780,12 +780,13 @@ pub async fn import_replies(
     for item in collection_items {
         let object: AttributedObjectJson = serde_json::from_value(item)
             .map_err(|_| ValidationError("invalid conversation item"))?;
+        let object_id = object.id().to_owned();
         import_post(
             db_client,
             &filter,
             &instance,
             &storage,
-            object.id().to_owned(),
+            object_id.clone(),
             Some(object),
         ).await.map_err(|error| {
             log::warn!(
