@@ -6,9 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+
+- Added adapters for http version 0.2 types.
+
 ### Changed
 
 - Changed MSRV to 1.66.1.
+- Re-export `http` types from `http_types` module.
+- Migrate to http package version 1.1.0.
 
 ## [0.5.0] - 2024-11-20
 

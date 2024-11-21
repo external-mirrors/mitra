@@ -26,7 +26,10 @@ use mitra_models::{
 };
 use mitra_utils::html::extract_title;
 
-use crate::errors::HttpError;
+use crate::{
+    errors::HttpError,
+    http::actix_header_map_adapter,
+};
 
 use super::urls::get_opengraph_image_url;
 
@@ -75,7 +78,7 @@ pub fn themeable_web_client_service(
 
 fn activitypub_guard() -> impl guard::Guard {
     guard::fn_guard(|ctx| {
-        is_activitypub_request(ctx.head().headers())
+        is_activitypub_request(&actix_header_map_adapter(ctx.head().headers()))
     })
 }
 

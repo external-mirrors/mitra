@@ -1,7 +1,7 @@
-use http::HeaderValue;
 use serde_json::{Value as JsonValue};
 
 use apx_core::{
+    http_types::HeaderValue,
     http_url::HttpUrl,
     urls::{
         get_hostname,

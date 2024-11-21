@@ -1,7 +1,10 @@
 use actix_web::HttpRequest;
 use serde_json::{Value as JsonValue};
 
-use apx_core::urls::get_hostname;
+use apx_core::{
+    http_types::{method_adapter, uri_adapter},
+    urls::get_hostname,
+};
 use apx_sdk::deserialization::get_object_id;
 use mitra_activitypub::{
     authentication::{
@@ -27,7 +30,10 @@ use mitra_validators::{
     errors::ValidationError,
 };
 
-use crate::errors::HttpError;
+use crate::{
+    errors::HttpError,
+    http::actix_header_map_adapter,
+};
 
 #[derive(thiserror::Error, Debug)]
 pub enum InboxError {
@@ -98,9 +104,9 @@ pub async fn receive_activity(
     let mut signer = match verify_signed_request(
         config,
         db_client,
-        request.method(),
-        request.uri(),
-        request.headers().clone(),
+        method_adapter(request.method()),
+        uri_adapter(request.uri()),
+        actix_header_map_adapter(request.headers()),
         Some(activity_digest),
         // Don't fetch signer if this is Delete(Person) activity
         is_self_delete,

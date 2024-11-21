@@ -1,4 +1,4 @@
-use reqwest::{Client, Method};
+use reqwest::{header, Client, StatusCode};
 use thiserror::Error;
 
 use apx_core::{
@@ -6,6 +6,7 @@ use apx_core::{
         create_http_signature,
         HttpSignatureError,
     },
+    http_types::Method,
     json_signatures::create::JsonSignatureError,
     urls::UrlError,
 };
@@ -43,7 +44,7 @@ pub enum DelivererError {
     RequestError(#[from] reqwest::Error),
 
     #[error("http error: [{status:?}] {text}")]
-    HttpError { status: reqwest::StatusCode, text: String },
+    HttpError { status: StatusCode, text: String },
 
     #[error("response size exceeds limit")]
     ResponseTooLarge,
@@ -89,8 +90,8 @@ pub async fn send_object(
         .header("Date", headers.date)
         .header("Digest", digest)
         .header("Signature", headers.signature)
-        .header(reqwest::header::CONTENT_TYPE, AP_MEDIA_TYPE)
-        .header(reqwest::header::USER_AGENT, &agent.user_agent);
+        .header(header::CONTENT_TYPE, AP_MEDIA_TYPE)
+        .header(header::USER_AGENT, &agent.user_agent);
     for (name, value) in extra_headers {
         request_builder = request_builder.header(*name, *value);
     };

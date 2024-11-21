@@ -14,6 +14,7 @@ pub mod did_pkh;
 pub mod eip191;
 pub mod http_digest;
 pub mod http_signatures;
+pub mod http_types;
 pub mod http_url;
 pub mod jcs;
 pub mod json_signatures;

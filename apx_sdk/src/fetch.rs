@@ -1,5 +1,10 @@
-use http::header;
-use reqwest::{Client, Method, RequestBuilder, StatusCode};
+use reqwest::{
+    header,
+    Client,
+    Method,
+    RequestBuilder,
+    StatusCode,
+};
 use serde_json::{Value as JsonValue};
 
 use apx_core::{
@@ -7,6 +12,7 @@ use apx_core::{
         create_http_signature,
         HttpSignatureError,
     },
+    http_types::{header_value_adapter, Method as HttpMethod},
     media_type::sniff_media_type,
 };
 
@@ -102,7 +108,7 @@ fn build_request(
     if !agent.is_instance_private {
         // Public instances should set User-Agent header
         request_builder = request_builder
-            .header(reqwest::header::USER_AGENT, &agent.user_agent);
+            .header(header::USER_AGENT, &agent.user_agent);
     };
     request_builder
 }
@@ -152,7 +158,7 @@ pub async fn fetch_object(
         if !agent.is_instance_private {
             // Only public instances can send signed requests
             let headers = create_http_signature(
-                Method::GET,
+                HttpMethod::GET,
                 &target_url,
                 b"",
                 &agent.signer_key,
@@ -224,7 +230,7 @@ pub async fn fetch_object(
     // Verify object is not a malicious upload
     let content_type = response.headers()
         .get(header::CONTENT_TYPE)
-        .and_then(extract_media_type)
+        .and_then(|value| extract_media_type(&header_value_adapter(value)))
         .unwrap_or_default();
     const ALLOWED_TYPES: [&str; 3] = [
         AP_MEDIA_TYPE,
@@ -277,7 +283,7 @@ pub async fn fetch_file(
     };
     let maybe_content_type_header = response.headers()
         .get(header::CONTENT_TYPE)
-        .and_then(extract_media_type);
+        .and_then(|value| extract_media_type(&header_value_adapter(value)));
     let file_data = limited_response(&mut response, file_size_limit)
         .await?
         .ok_or(FetchError::ResponseTooLarge)?;

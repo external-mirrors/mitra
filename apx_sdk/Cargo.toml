@@ -8,8 +8,6 @@ edition.workspace = true
 rust-version.workspace = true
 
 [dependencies]
-# Used for working with HTTP headers
-http = "0.2.9"
 # Used for implementing custom DNS resolver
 hyper = { version = "0.14.28", default-features = false }
 futures-util = { version = "0.3.28", default-features = false }

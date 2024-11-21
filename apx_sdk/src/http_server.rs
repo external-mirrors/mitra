@@ -1,24 +1,14 @@
-use http::{
+use apx_core::http_types::{
     header,
     HeaderMap,
-    HeaderName,
-    HeaderValue,
 };
 
 use super::constants::{AP_MEDIA_TYPE, AS_MEDIA_TYPE};
 use super::utils::extract_media_type;
 
-// Compatible with:
-// - http::HeaderMap
-// - actix_web::http::header::HeaderMap
-pub fn is_activitypub_request<'m>(
-    headers: impl IntoIterator<Item = (&'m HeaderName, &'m HeaderValue)>,
+pub fn is_activitypub_request(
+    headers: &HeaderMap,
 ) -> bool {
-    // Create header map
-    let headers = HeaderMap::from_iter(
-        headers.into_iter()
-            .map(|(name, val)| (name.clone(), val.clone())));
-
     let maybe_user_agent = headers.get(header::USER_AGENT)
         .and_then(|value| value.to_str().ok());
     if let Some(user_agent) = maybe_user_agent {
@@ -41,6 +31,7 @@ pub fn is_activitypub_request<'m>(
 
 #[cfg(test)]
 mod tests {
+    use apx_core::http_types::HeaderValue;
     use super::*;
 
     #[test]

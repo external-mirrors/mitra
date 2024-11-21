@@ -16,6 +16,7 @@ use apx_core::{
     ap_url::with_ap_prefix,
     caip2::ChainId,
     http_digest::get_sha256_digest,
+    http_types::{method_adapter, uri_adapter},
 };
 use apx_sdk::{
     authentication::verify_portable_object,
@@ -86,12 +87,15 @@ use mitra_models::{
 };
 use mitra_validators::errors::ValidationError;
 
-use crate::errors::HttpError;
-use crate::web_client::urls::{
-    get_post_page_url,
-    get_profile_page_url,
-    get_subscription_page_url,
-    get_tag_page_url,
+use crate::{
+    errors::HttpError,
+    http::actix_header_map_adapter,
+    web_client::urls::{
+        get_post_page_url,
+        get_profile_page_url,
+        get_subscription_page_url,
+        get_tag_page_url,
+    },
 };
 
 use super::receiver::receive_activity;
@@ -105,7 +109,7 @@ async fn actor_view(
 ) -> Result<HttpResponse, HttpError> {
     let db_client = &**get_database_client(&db_pool).await?;
     let user = get_user_by_name(db_client, &username).await?;
-    if !is_activitypub_request(request.headers()) {
+    if !is_activitypub_request(&actix_header_map_adapter(request.headers())) {
         let page_url = get_profile_page_url(
             &config.instance_url(),
             &user.profile.username,
@@ -403,7 +407,7 @@ async fn proposal_view(
         .ok_or(HttpError::NotFoundError("proposal"))?;
     let payment_info = match payment_option {
         PaymentOption::MoneroSubscription(payment_info)
-            if is_activitypub_request(request.headers()) => payment_info,
+            if is_activitypub_request(&actix_header_map_adapter(request.headers())) => payment_info,
         PaymentOption::MoneroSubscription(_) => {
             let page_url = get_subscription_page_url(
                 &config.instance_url(),
@@ -493,7 +497,7 @@ pub async fn object_view(
     if !post.is_local() {
         return Err(HttpError::NotFoundError("post"));
     };
-    if !is_activitypub_request(request.headers()) {
+    if !is_activitypub_request(&actix_header_map_adapter(request.headers())) {
         let page_url = get_post_page_url(&instance.url(), post.id);
         let response = HttpResponse::Found()
             .append_header((http_header::LOCATION, page_url))
@@ -755,9 +759,9 @@ async fn apgateway_inbox_pull_view(
     let signer = verify_signed_request(
         &config,
         db_client,
-        request.method(),
-        request.uri(),
-        request.headers().clone(),
+        method_adapter(request.method()),
+        uri_adapter(request.uri()),
+        actix_header_map_adapter(request.headers()),
         None, // GET request has no content
         true, // don't fetch actor
     ).await.map_err(|error| {
@@ -896,9 +900,9 @@ async fn apgateway_outbox_pull_view(
     let signer = verify_signed_request(
         &config,
         db_client,
-        request.method(),
-        request.uri(),
-        request.headers().clone(),
+        method_adapter(request.method()),
+        uri_adapter(request.uri()),
+        actix_header_map_adapter(request.headers()),
         None, // GET request has no content
         true, // don't fetch actor
     ).await.map_err(|error| {

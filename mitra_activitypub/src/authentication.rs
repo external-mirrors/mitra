@@ -13,18 +13,16 @@ use apx_core::{
         RsaSerializationError,
     },
     http_signatures::{
-        http::{
-            HeaderMap,
-            HeaderName,
-            HeaderValue,
-            Method,
-            Uri,
-        },
         verify::{
             parse_http_signature,
             verify_http_signature,
             HttpSignatureVerificationError as HttpSignatureError,
         },
+    },
+    http_types::{
+        HeaderMap,
+        Method,
+        Uri,
     },
     json_signatures::{
         proofs::ProofType,
@@ -196,16 +194,15 @@ fn get_signer_rsa_key(
 pub async fn verify_signed_request(
     config: &Config,
     db_client: &mut impl DatabaseClient,
-    request_method: &Method,
-    request_uri: &Uri,
-    request_headers: impl IntoIterator<Item = (HeaderName, HeaderValue)>,
+    request_method: Method,
+    request_uri: Uri,
+    request_headers: HeaderMap,
     maybe_content_digest: Option<[u8; 32]>,
     no_fetch: bool,
 ) -> Result<DbActorProfile, AuthenticationError> {
-    let request_headers = HeaderMap::from_iter(request_headers.into_iter());
     let signature_data = match parse_http_signature(
-        request_method,
-        request_uri,
+        &request_method,
+        &request_uri,
         &request_headers,
     ) {
         Ok(signature_data) => signature_data,

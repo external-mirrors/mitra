@@ -21,7 +21,8 @@ ed25519-dalek = { version = "2.0.0", features = ["pem", "pkcs8", "rand_core"] }
 # Used to work with hexadecimal strings
 hex = "0.4.3"
 # Used for verifying HTTP signatures
-http = "0.2.9"
+http_0_2 = { package = "http", version = "0.2.9" }
+http = "1.1.0"
 # Used for working with IDNs
 idna = "0.4.0"
 # Used to guess media type of a file
