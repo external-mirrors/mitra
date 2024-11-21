@@ -47,9 +47,9 @@ pub async fn find_orphaned_files(
 ) -> Result<Vec<String>, DatabaseError> {
     let rows = db_client.query(
         "
-        SELECT DISTINCT fname
-        FROM unnest($1::text[]) AS fname
-        WHERE fname NOT IN (
+        SELECT DISTINCT storage_file_name
+        FROM unnest($1::text[]) AS storage_file_name
+        LEFT OUTER JOIN (
             SELECT file_name FROM media_attachment
             UNION ALL
             SELECT unnest(array_remove(
@@ -61,12 +61,14 @@ pub async fn find_orphaned_files(
             )) AS file_name FROM actor_profile
             UNION ALL
             SELECT image ->> 'file_name' FROM emoji
-        )
+        ) AS db_media
+        ON (storage_file_name = db_media.file_name)
+        WHERE db_media.file_name IS NULL
         ",
         &[&files],
     ).await?;
     let orphaned_files = rows.iter()
-        .map(|row| row.try_get("fname"))
+        .map(|row| row.try_get("storage_file_name"))
         .collect::<Result<_, _>>()?;
     Ok(orphaned_files)
 }
