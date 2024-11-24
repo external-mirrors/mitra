@@ -861,7 +861,7 @@ pub async fn create_remote_post(
     Ok(post)
 }
 
-pub(super) async fn update_remote_post(
+pub async fn update_remote_post(
     config: &Config,
     db_client: &mut impl DatabaseClient,
     post: Post,

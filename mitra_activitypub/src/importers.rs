@@ -66,6 +66,7 @@ use crate::{
         activity::handle_activity,
         note::{
             create_remote_post,
+            update_remote_post,
             AttributedObjectJson,
         },
     },
@@ -567,6 +568,41 @@ pub async fn import_post(
         .find(|post| post.object_id.as_ref() == Some(&initial_object_id.to_string()))
         .expect("requested post should be among fetched objects");
     Ok(initial_post)
+}
+
+pub async fn import_object(
+    config: &Config,
+    db_client: &mut impl DatabaseClient,
+    object_id: &str,
+) -> Result<(), HandlerError> {
+    let agent = build_federation_agent(&config.instance(), None);
+    let object: AttributedObjectJson =
+        fetch_any_object(&agent, object_id).await?;
+    let canonical_object_id = canonicalize_id(object.id())?;
+    match get_remote_post_by_object_id(
+        db_client,
+        &canonical_object_id.to_string(),
+    ).await {
+        Ok(post) => {
+            update_remote_post(config, db_client, post, &object).await?;
+            Ok(())
+        },
+        Err(DatabaseError::NotFound(_)) => {
+            let instance = config.instance();
+            let filter = FederationFilter::init(config, db_client).await?;
+            let storage = MediaStorage::from(config);
+            import_post(
+                db_client,
+                &filter,
+                &instance,
+                &storage,
+                object.id().to_owned(),
+                Some(object),
+            ).await?;
+            Ok(())
+        },
+        Err(other_error) => Err(other_error.into())
+    }
 }
 
 pub async fn import_activity(

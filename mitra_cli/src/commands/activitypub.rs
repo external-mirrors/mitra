@@ -14,6 +14,7 @@ use mitra_activitypub::{
         fetch_any_object_with_context,
         import_activity,
         import_from_outbox,
+        import_object,
         import_replies,
         ActorIdResolver,
         FetcherContext,
@@ -48,6 +49,24 @@ impl FetchActor {
             &self.id,
         ).await?;
         println!("profile saved");
+        Ok(())
+    }
+}
+
+/// Fetch contentful object and save it to local cache
+#[derive(Parser)]
+pub struct ImportObject {
+    id: String,
+}
+
+impl ImportObject {
+    pub async fn execute(
+        &self,
+        config: &Config,
+        db_client: &mut impl DatabaseClient,
+    ) -> Result<(), Error> {
+        import_object(config, db_client, &self.id).await?;
+        println!("post saved");
         Ok(())
     }
 }
