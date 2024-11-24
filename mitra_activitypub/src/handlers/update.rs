@@ -37,7 +37,7 @@ use crate::{
     actors::handlers::{update_remote_profile, Actor},
     agent::build_federation_agent,
     filter::FederationFilter,
-    identifiers::{canonicalize_id, profile_actor_id},
+    identifiers::canonicalize_id,
     importers::fetch_any_object,
     ownership::verify_object_owner,
     vocabulary::{NOTE, QUESTION},
@@ -86,10 +86,8 @@ async fn handle_update_note(
         Err(DatabaseError::NotFound(_)) => return Ok(None),
         Err(other_error) => return Err(other_error.into()),
     };
-    let instance = config.instance();
-    let agent = build_federation_agent(&instance, None);
-    // TODO: FEP-EF61: use get_remote_profile_by_actor_id
-    if profile_actor_id(&instance.url(), &post.author) != author_id {
+    let canonical_author_id = canonicalize_id(&author_id)?;
+    if canonical_author_id.to_string() != post.author.expect_remote_actor_id() {
         return Err(ValidationError("object owner can't be changed").into());
     };
     let mut content = get_object_content(&object)?;
@@ -104,6 +102,8 @@ async fn handle_update_note(
         let object_url = get_object_url(&object)?;
         content += &create_content_link(object_url);
     };
+    let instance = config.instance();
+    let agent = build_federation_agent(&instance, None);
     let filter = FederationFilter::init(config, db_client).await?;
     let storage = MediaStorage::from(config);
     let (attachments, unprocessed) = get_object_attachments(
