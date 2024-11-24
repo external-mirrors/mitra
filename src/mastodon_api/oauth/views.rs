@@ -89,10 +89,10 @@ async fn authorize_view(
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &**get_database_client(&db_pool).await?;
     let user = get_user_by_name(db_client, &form_data.username).await?;
-    let password_hash = user.password_hash.as_ref()
+    let password_digest = user.password_digest.as_ref()
         .ok_or(ValidationError("password auth is disabled"))?;
     let password_correct = verify_password(
-        password_hash,
+        password_digest,
         &form_data.password,
     ).map_err(|_| MastodonError::InternalError)?;
     if !password_correct {
@@ -231,10 +231,10 @@ async fn token_view(
     if request_data.grant_type == "password" || request_data.grant_type == "ethereum" {
         let password = request_data.password.as_ref()
             .ok_or(ValidationError("password is required"))?;
-        let password_hash = user.password_hash.as_ref()
+        let password_digest = user.password_digest.as_ref()
             .ok_or(ValidationError("password auth is disabled"))?;
         let password_correct = verify_password(
-            password_hash,
+            password_digest,
             password,
         ).map_err(|_| MastodonError::InternalError)?;
         if !password_correct {

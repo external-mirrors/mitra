@@ -190,12 +190,12 @@ pub async fn create_account(
     if !config.authentication_methods.contains(&authentication_method) {
         return Err(MastodonError::NotSupported);
     };
-    let maybe_password_hash = if authentication_method == AuthenticationMethod::Password {
+    let maybe_password_digest = if authentication_method == AuthenticationMethod::Password {
         let password = account_data.password.as_ref()
             .ok_or(ValidationError("password is required"))?;
-        let password_hash = hash_password(password)
+        let password_digest = hash_password(password)
             .map_err(|_| MastodonError::InternalError)?;
-        Some(password_hash)
+        Some(password_digest)
     } else {
         None
     };
@@ -249,7 +249,7 @@ pub async fn create_account(
     let role = from_default_role(&config.registration.default_role);
     let user_data = UserCreateData {
         username,
-        password_hash: maybe_password_hash,
+        password_digest: maybe_password_digest,
         login_address_ethereum: maybe_ethereum_address,
         login_address_monero: maybe_monero_address,
         rsa_secret_key: rsa_secret_key_pem,

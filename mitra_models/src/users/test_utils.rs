@@ -19,7 +19,7 @@ pub async fn create_test_user(
 ) -> User {
     let user_data = UserCreateData {
         username: username.to_string(),
-        password_hash: Some("test".to_string()),
+        password_digest: Some("test".to_string()),
         ..Default::default()
     };
     create_user(db_client, user_data).await.unwrap()

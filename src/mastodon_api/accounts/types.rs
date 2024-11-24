@@ -294,7 +294,7 @@ impl Account {
         };
         let role = ApiRole::from_db(user.role);
         let mut authentication_methods = vec![];
-        if user.password_hash.is_some() {
+        if user.password_digest.is_some() {
             authentication_methods.push(AUTHENTICATION_METHOD_PASSWORD.to_string());
         };
         if user.login_address_ethereum.is_some() {

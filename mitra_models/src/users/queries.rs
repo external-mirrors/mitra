@@ -162,7 +162,7 @@ pub async fn create_user(
         "
         INSERT INTO user_account (
             id,
-            password_hash,
+            password_digest,
             login_address_ethereum,
             login_address_monero,
             rsa_private_key,
@@ -175,7 +175,7 @@ pub async fn create_user(
         ",
         &[
             &db_profile.id,
-            &user_data.password_hash,
+            &user_data.password_digest,
             &user_data.login_address_ethereum,
             &user_data.login_address_monero,
             &user_data.rsa_secret_key,
@@ -204,14 +204,14 @@ pub async fn create_user(
 pub async fn set_user_password(
     db_client: &impl DatabaseClient,
     user_id: Uuid,
-    password_hash: &str,
+    password_digest: &str,
 ) -> Result<(), DatabaseError> {
     let updated_count = db_client.execute(
         "
-        UPDATE user_account SET password_hash = $1
+        UPDATE user_account SET password_digest = $1
         WHERE id = $2
         ",
-        &[&password_hash, &user_id],
+        &[&password_digest, &user_id],
     ).await?;
     if updated_count == 0 {
         return Err(DatabaseError::NotFound("user"));
@@ -654,7 +654,7 @@ mod tests {
         let db_client = &mut create_test_database().await;
         let user_data = UserCreateData {
             username: "myname".to_string(),
-            password_hash: Some("test".to_string()),
+            password_digest: Some("test".to_string()),
             ..Default::default()
         };
         let user = create_user(db_client, user_data).await.unwrap();
@@ -668,13 +668,13 @@ mod tests {
         let db_client = &mut create_test_database().await;
         let user_data = UserCreateData {
             username: "myname".to_string(),
-            password_hash: Some("test".to_string()),
+            password_digest: Some("test".to_string()),
             ..Default::default()
         };
         create_user(db_client, user_data).await.unwrap();
         let another_user_data = UserCreateData {
             username: "myName".to_string(),
-            password_hash: Some("test".to_string()),
+            password_digest: Some("test".to_string()),
             ..Default::default()
         };
         let result = create_user(db_client, another_user_data).await;
@@ -687,7 +687,7 @@ mod tests {
         let db_client = &mut create_test_database().await;
         let user_data = UserCreateData {
             username: "test".to_string(),
-            password_hash: Some("test".to_string()),
+            password_digest: Some("test".to_string()),
             ..Default::default()
         };
         let user = create_user(db_client, user_data).await.unwrap();
@@ -707,7 +707,7 @@ mod tests {
         let db_client = &mut create_test_database().await;
         let user_data = UserCreateData {
             username: "test".to_string(),
-            password_hash: Some("test".to_string()),
+            password_digest: Some("test".to_string()),
             ..Default::default()
         };
         let user = create_user(db_client, user_data).await.unwrap();
@@ -723,7 +723,7 @@ mod tests {
         let db_client = &mut create_test_database().await;
         let user_data = UserCreateData {
             username: "test".to_string(),
-            password_hash: Some("test".to_string()),
+            password_digest: Some("test".to_string()),
             ..Default::default()
         };
         let user = create_user(db_client, user_data).await.unwrap();
@@ -751,7 +751,7 @@ mod tests {
 
         let user_data = UserCreateData {
             username: "test".to_string(),
-            password_hash: Some("test".to_string()),
+            password_digest: Some("test".to_string()),
             role: Role::Admin,
             ..Default::default()
         };

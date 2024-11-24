@@ -135,7 +135,7 @@ json_from_sql!(DbClientConfig);
 #[postgres(name = "user_account")]
 pub struct DbUser {
     id: Uuid,
-    password_hash: Option<String>,
+    password_digest: Option<String>,
     login_address_ethereum: Option<String>,
     login_address_monero: Option<String>,
     rsa_private_key: String,
@@ -150,7 +150,7 @@ pub struct DbUser {
 #[derive(Clone)]
 pub struct User {
     pub id: Uuid,
-    pub password_hash: Option<String>,
+    pub password_digest: Option<String>,
     pub login_address_ethereum: Option<String>,
     pub login_address_monero: Option<String>,
     pub rsa_secret_key: RsaSecretKey,
@@ -176,7 +176,7 @@ impl Default for User {
         let id = Uuid::new_v4();
         Self {
             id: id,
-            password_hash: None,
+            password_digest: None,
             login_address_ethereum: None,
             login_address_monero: None,
             rsa_secret_key: generate_weak_rsa_key().unwrap(),
@@ -219,7 +219,7 @@ impl User {
         };
         let user = Self {
             id: db_user.id,
-            password_hash: db_user.password_hash,
+            password_digest: db_user.password_digest,
             login_address_ethereum: db_user.login_address_ethereum,
             login_address_monero: db_user.login_address_monero,
             rsa_secret_key: rsa_secret_key,
@@ -250,7 +250,7 @@ impl User {
 
 pub struct UserCreateData {
     pub username: String,
-    pub password_hash: Option<String>,
+    pub password_digest: Option<String>,
     pub login_address_ethereum: Option<String>,
     pub login_address_monero: Option<String>,
     pub rsa_secret_key: String,
@@ -261,7 +261,7 @@ pub struct UserCreateData {
 
 impl UserCreateData {
     pub(super) fn check_consistency(&self) -> Result<(), DatabaseTypeError> {
-        if self.password_hash.is_none() &&
+        if self.password_digest.is_none() &&
             self.login_address_ethereum.is_none() &&
             self.login_address_monero.is_none()
         {
@@ -290,7 +290,7 @@ impl Default for UserCreateData {
         let ed25519_secret_key = generate_ed25519_key();
         Self {
             username: Default::default(),
-            password_hash: None,
+            password_digest: None,
             login_address_ethereum: None,
             login_address_monero: None,
             rsa_secret_key: rsa_secret_key_pem,

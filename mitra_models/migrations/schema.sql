@@ -67,7 +67,7 @@ CREATE TABLE user_invite_code (
 
 CREATE TABLE user_account (
     id UUID PRIMARY KEY REFERENCES actor_profile (id) ON DELETE CASCADE,
-    password_hash VARCHAR(200),
+    password_digest VARCHAR(200),
     login_address_ethereum VARCHAR(500) UNIQUE,
     login_address_monero VARCHAR(500) UNIQUE,
     rsa_private_key TEXT NOT NULL,
@@ -113,9 +113,11 @@ CREATE TABLE oauth_authorization (
 CREATE TABLE oauth_token (
     id SERIAL PRIMARY KEY,
     owner_id UUID NOT NULL REFERENCES user_account (id) ON DELETE CASCADE,
-    token VARCHAR(100) UNIQUE NOT NULL,
+    token VARCHAR(100) UNIQUE,
+    token_digest BYTEA UNIQUE,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL,
-    expires_at TIMESTAMP WITH TIME ZONE NOT NULL
+    expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    CHECK (token IS NOT NULL OR token_digest IS NOT NULL)
 );
 
 CREATE TABLE portable_user_account (

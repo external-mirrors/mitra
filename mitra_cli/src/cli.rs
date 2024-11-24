@@ -259,7 +259,7 @@ impl CreateAccount {
         db_client: &mut impl DatabaseClient,
     ) -> Result<(), Error> {
         validate_local_username(&self.username)?;
-        let password_hash = hash_password(&self.password)?;
+        let password_digest = hash_password(&self.password)?;
         let rsa_secret_key = generate_rsa_key()?;
         let rsa_secret_key_pem =
             rsa_secret_key_to_pkcs8_pem(&rsa_secret_key)?;
@@ -270,7 +270,7 @@ impl CreateAccount {
         };
         let user_data = UserCreateData {
             username: self.username.clone(),
-            password_hash: Some(password_hash),
+            password_digest: Some(password_digest),
             login_address_ethereum: None,
             login_address_monero: None,
             rsa_secret_key: rsa_secret_key_pem,
@@ -333,8 +333,8 @@ impl SetPassword {
             db_client,
             &self.id_or_name,
         ).await?;
-        let password_hash = hash_password(&self.password)?;
-        set_user_password(db_client, profile.id, &password_hash).await?;
+        let password_digest = hash_password(&self.password)?;
+        set_user_password(db_client, profile.id, &password_digest).await?;
         // Revoke all sessions
         delete_oauth_tokens(db_client, profile.id).await?;
         println!("password updated");
