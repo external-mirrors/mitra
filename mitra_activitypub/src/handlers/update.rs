@@ -37,7 +37,14 @@ use crate::{
     actors::handlers::{update_remote_profile, Actor},
     agent::build_federation_agent,
     filter::FederationFilter,
-    handlers::create::{
+    identifiers::{canonicalize_id, profile_actor_id},
+    importers::fetch_any_object,
+    ownership::verify_object_owner,
+    vocabulary::{NOTE, QUESTION},
+};
+
+use super::{
+    note::{
         create_content_link,
         get_object_attachments,
         get_object_attributed_to,
@@ -47,13 +54,9 @@ use crate::{
         parse_poll_results,
         AttributedObjectJson,
     },
-    identifiers::{canonicalize_id, profile_actor_id},
-    importers::fetch_any_object,
-    ownership::verify_object_owner,
-    vocabulary::{NOTE, QUESTION},
+    Descriptor,
+    HandlerResult,
 };
-
-use super::{Descriptor, HandlerResult};
 
 #[derive(Deserialize)]
 struct UpdateNote {

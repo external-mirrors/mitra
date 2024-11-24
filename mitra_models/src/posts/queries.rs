@@ -2251,7 +2251,7 @@ mod tests {
 
     #[tokio::test]
     #[serial]
-    async fn test_custom_feed_timline() {
+    async fn test_custom_feed_timeline() {
         let db_client = &mut create_test_database().await;
         let viewer = create_test_user(db_client, "viewer").await;
         let author_1 = create_test_user(db_client, "author_1").await;

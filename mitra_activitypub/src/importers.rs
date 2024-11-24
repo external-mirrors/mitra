@@ -64,7 +64,7 @@ use crate::{
     filter::FederationFilter,
     handlers::{
         activity::handle_activity,
-        create::{
+        note::{
             handle_note,
             AttributedObjectJson,
         },
