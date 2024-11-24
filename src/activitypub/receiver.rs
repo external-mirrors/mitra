@@ -2,6 +2,7 @@ use actix_web::HttpRequest;
 use serde_json::{Value as JsonValue};
 
 use apx_core::{
+    http_digest::ContentDigest,
     http_types::{method_adapter, uri_adapter},
     urls::get_hostname,
 };
@@ -74,7 +75,7 @@ pub async fn receive_activity(
     maybe_fep_ef61_recipient: Option<&PortableUser>,
     request: &HttpRequest,
     activity: &JsonValue,
-    activity_digest: [u8; 32],
+    activity_digest: ContentDigest,
 ) -> Result<(), InboxError> {
     let activity_id = activity["id"].as_str()
         .ok_or(ValidationError("'id' property is missing"))?;

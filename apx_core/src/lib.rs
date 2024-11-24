@@ -12,6 +12,7 @@ pub mod did;
 pub mod did_key;
 pub mod did_pkh;
 pub mod eip191;
+pub mod hashes;
 pub mod http_digest;
 pub mod http_signatures;
 pub mod http_types;

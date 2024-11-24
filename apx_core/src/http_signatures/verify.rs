@@ -10,7 +10,7 @@ use crate::{
         verify_rsa_sha256_signature,
         RsaPublicKey,
     },
-    http_digest::parse_digest_header,
+    http_digest::{parse_digest_header, ContentDigest},
     http_url::HttpUrl,
 };
 
@@ -52,7 +52,7 @@ pub struct HttpSignatureData {
     pub message: String, // reconstructed message
     pub signature: String, // base64-encoded signature
     pub expires_at: DateTime<Utc>,
-    pub content_digest: Option<[u8; 32]>,
+    pub content_digest: Option<ContentDigest>,
 }
 
 fn remove_quotes(value: &str) -> String {
@@ -173,7 +173,7 @@ pub fn parse_http_signature(
 pub fn verify_http_signature(
     signature_data: &HttpSignatureData,
     signer_key: &RsaPublicKey,
-    content_digest: Option<[u8; 32]>,
+    content_digest: Option<ContentDigest>,
 ) -> Result<(), VerificationError> {
     if signature_data.expires_at < Utc::now() {
         return Err(VerificationError::Expired);
@@ -198,7 +198,6 @@ mod tests {
     use http::{HeaderName, HeaderValue};
     use crate::{
         crypto_rsa::generate_weak_rsa_key,
-        http_digest::get_sha256_digest,
         http_signatures::create::create_http_signature,
     };
     use super::*;
@@ -339,7 +338,7 @@ mod tests {
         assert_eq!(signature_data.content_digest.is_some(), true);
 
         let signer_public_key = RsaPublicKey::from(signer_key);
-        let content_digest = get_sha256_digest(request_body.as_bytes());
+        let content_digest = ContentDigest::new(request_body.as_bytes());
         let result = verify_http_signature(
             &signature_data,
             &signer_public_key,

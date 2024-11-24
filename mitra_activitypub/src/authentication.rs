@@ -12,6 +12,7 @@ use apx_core::{
         RsaPublicKey,
         RsaSerializationError,
     },
+    http_digest::ContentDigest,
     http_signatures::{
         verify::{
             parse_http_signature,
@@ -197,7 +198,7 @@ pub async fn verify_signed_request(
     request_method: Method,
     request_uri: Uri,
     request_headers: HeaderMap,
-    maybe_content_digest: Option<[u8; 32]>,
+    maybe_content_digest: Option<ContentDigest>,
     no_fetch: bool,
 ) -> Result<DbActorProfile, AuthenticationError> {
     let signature_data = match parse_http_signature(

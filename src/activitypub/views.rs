@@ -15,7 +15,7 @@ use uuid::Uuid;
 use apx_core::{
     ap_url::with_ap_prefix,
     caip2::ChainId,
-    http_digest::get_sha256_digest,
+    http_digest::ContentDigest,
     http_types::{method_adapter, uri_adapter},
 };
 use apx_sdk::{
@@ -152,7 +152,7 @@ async fn inbox(
     log::info!("received in {}: {}", request.uri().path(), activity_type);
     log::debug!("activity: {activity}");
 
-    let activity_digest = get_sha256_digest(&request_body);
+    let activity_digest = ContentDigest::new(&request_body);
     drop(request_body);
 
     let db_client = &mut **get_database_client(&db_pool).await?;
@@ -712,7 +712,7 @@ async fn apgateway_inbox_push_view(
     let activity_type = activity["type"].as_str().unwrap_or("Unknown");
     log::info!("received in {}: {}", request.uri().path(), activity_type);
 
-    let activity_digest = get_sha256_digest(&request_body);
+    let activity_digest = ContentDigest::new(&request_body);
     drop(request_body);
 
     let collection_id = format!(

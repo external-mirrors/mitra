@@ -1,24 +1,35 @@
-/// https://www.rfc-editor.org/rfc/rfc3230
+//! HTTP content digest
 use regex::Regex;
-use sha2::{Digest, Sha256};
 
-use crate::base64;
+use crate::{
+    base64,
+    hashes::sha256,
+};
 
+// https://www.rfc-editor.org/rfc/rfc3230
 const DIGEST_RE: &str = r"^(?P<algorithm>[\w-]+)=(?P<digest>[^,]+)(,|$)";
 
-pub fn get_sha256_digest(request_body: &[u8]) -> [u8; 32] {
-    Sha256::digest(request_body).into()
+/// HTTP content digest
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct ContentDigest([u8; 32]);
+
+impl ContentDigest {
+    /// Creates SHA-256 digest from a request body
+    pub fn new(request_body: &[u8]) -> Self {
+        let digest = sha256(request_body);
+        Self(digest)
+    }
 }
 
 pub(crate) fn get_digest_header(request_body: &[u8]) -> String {
-    let digest = get_sha256_digest(request_body);
+    let digest = sha256(request_body);
     let digest_b64 = base64::encode(digest);
     format!("SHA-256={digest_b64}")
 }
 
 pub(crate) fn parse_digest_header(
     header_value: &str,
-) -> Result<[u8; 32], &'static str> {
+) -> Result<ContentDigest, &'static str> {
     let digest_re = Regex::new(DIGEST_RE).expect("regexp should be valid");
     let caps = digest_re.captures(header_value)
         .ok_or("invalid digest header value")?;
@@ -32,7 +43,7 @@ pub(crate) fn parse_digest_header(
         .map_err(|_| "invalid digest encoding")?
         .try_into()
         .map_err(|_| "invalid digest length")?;
-    Ok(digest)
+    Ok(ContentDigest(digest))
 }
 
 #[cfg(test)]
@@ -42,7 +53,7 @@ mod tests {
     #[test]
     fn test_parse_digest_header() {
         let request_body = "test*123";
-        let digest = get_sha256_digest(request_body.as_bytes());
+        let digest = ContentDigest::new(request_body.as_bytes());
         let header_value = get_digest_header(request_body.as_bytes());
         let parsed = parse_digest_header(&header_value).unwrap();
         assert_eq!(parsed, digest);
@@ -51,8 +62,8 @@ mod tests {
     #[test]
     fn test_parse_digest_header_multiple_digests() {
         let request_body = "test*123";
-        let digest = get_sha256_digest(request_body.as_bytes());
-        let digest_b64 = base64::encode(digest);
+        let digest = ContentDigest::new(request_body.as_bytes());
+        let digest_b64 = base64::encode(digest.0);
         let header_value = format!("sha-256={digest_b64},unixsum=30637");
         let parsed = parse_digest_header(&header_value).unwrap();
         assert_eq!(parsed, digest);
