@@ -27,13 +27,14 @@ use mitra_models::{
 };
 use mitra_services::media::MediaStorage;
 
-/// (Re-)fetch actor profile by actor ID
+/// (Re-)fetch actor and save it to local cache
 #[derive(Parser)]
-pub struct FetchActor {
+#[command(visible_alias = "fetch-actor")]
+pub struct ImportActor {
     id: String,
 }
 
-impl FetchActor {
+impl ImportActor {
     pub async fn execute(
         &self,
         config: &Config,
