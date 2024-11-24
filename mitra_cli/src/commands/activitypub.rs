@@ -71,19 +71,21 @@ impl ImportObject {
     }
 }
 
+/// Fetch activity and process it
 #[derive(Parser)]
-pub struct FetchActivity {
+#[command(visible_alias = "fetch-activity")]
+pub struct ImportActivity {
     id: String,
 }
 
-impl FetchActivity {
+impl ImportActivity {
     pub async fn execute(
         &self,
         config: &Config,
         db_client: &mut impl DatabaseClient,
     ) -> Result<(), Error> {
         import_activity(config, db_client, &self.id).await?;
-        println!("activity imported");
+        println!("activity processed");
         Ok(())
     }
 }

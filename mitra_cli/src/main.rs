@@ -49,7 +49,7 @@ async fn main() {
         SubCommand::SetRole(cmd) => cmd.execute(db_client).await.unwrap(),
         SubCommand::FetchActor(cmd) => cmd.execute(&config, db_client).await.unwrap(),
         SubCommand::ImportObject(cmd) => cmd.execute(&config, db_client).await.unwrap(),
-        SubCommand::FetchActivity(cmd) => cmd.execute(&config, db_client).await.unwrap(),
+        SubCommand::ImportActivity(cmd) => cmd.execute(&config, db_client).await.unwrap(),
         SubCommand::ReadOutbox(cmd) => cmd.execute(&config, db_client).await.unwrap(),
         SubCommand::LoadReplies(cmd) => cmd.execute(&config, db_client).await.unwrap(),
         SubCommand::FetchObject(cmd) => cmd.execute(&config, db_client).await.unwrap(),
