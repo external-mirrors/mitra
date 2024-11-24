@@ -1,6 +1,3 @@
-use std::collections::HashMap;
-
-use chrono::Utc;
 use serde::Deserialize;
 use serde_json::{Value as JsonValue};
 
@@ -12,46 +9,27 @@ use apx_sdk::{
     deserialization::{deserialize_into_object_id, get_object_id},
     utils::{is_actor, is_object},
 };
-use mitra_adapters::permissions::filter_mentions;
 use mitra_config::Config;
 use mitra_models::{
-    activitypub::queries::save_attributed_object,
     database::{DatabaseClient, DatabaseError},
-    posts::queries::{
-        get_remote_post_by_object_id,
-        update_post,
-    },
-    posts::types::{PostUpdateData, Visibility},
+    posts::queries::get_remote_post_by_object_id,
     profiles::queries::get_remote_profile_by_actor_id,
 };
 use mitra_services::media::MediaStorage;
-use mitra_validators::{
-    errors::ValidationError,
-    posts::{
-        validate_post_mentions,
-        validate_post_update_data,
-    },
-};
+use mitra_validators::errors::ValidationError;
 
 use crate::{
     actors::handlers::{update_remote_profile, Actor},
     agent::build_federation_agent,
-    filter::FederationFilter,
     identifiers::canonicalize_id,
     importers::fetch_any_object,
     ownership::verify_object_owner,
-    vocabulary::{NOTE, QUESTION},
 };
 
 use super::{
     note::{
-        create_content_link,
-        get_object_attachments,
         get_object_attributed_to,
-        get_object_content,
-        get_object_tags,
-        get_object_url,
-        parse_poll_results,
+        update_remote_post,
         AttributedObjectJson,
     },
     Descriptor,
@@ -71,9 +49,9 @@ async fn handle_update_note(
     activity: JsonValue,
 ) -> HandlerResult {
     let activity: UpdateNote = serde_json::from_value(activity)?;
-    let AttributedObjectJson { inner: object, value: object_json } = activity.object;
-    let canonical_object_id = canonicalize_id(&object.id)?;
-    let author_id = get_object_attributed_to(&object)?;
+    let object = activity.object;
+    let canonical_object_id = canonicalize_id(object.id())?;
+    let author_id = get_object_attributed_to(&object.inner)?;
     if author_id != activity.actor {
         return Err(ValidationError("attributedTo value doesn't match actor").into());
     };
@@ -86,82 +64,8 @@ async fn handle_update_note(
         Err(DatabaseError::NotFound(_)) => return Ok(None),
         Err(other_error) => return Err(other_error.into()),
     };
-    let canonical_author_id = canonicalize_id(&author_id)?;
-    if canonical_author_id.to_string() != post.author.expect_remote_actor_id() {
-        return Err(ValidationError("object owner can't be changed").into());
-    };
-    let mut content = get_object_content(&object)?;
-    if object.object_type == QUESTION {
-        match parse_poll_results(&object) {
-            Ok(poll_results) => content += &poll_results,
-            Err(error) => log::warn!("{error}"),
-        };
-    };
-    if object.object_type != NOTE {
-        // Append link to object
-        let object_url = get_object_url(&object)?;
-        content += &create_content_link(object_url);
-    };
-    let instance = config.instance();
-    let agent = build_federation_agent(&instance, None);
-    let filter = FederationFilter::init(config, db_client).await?;
-    let storage = MediaStorage::from(config);
-    let (attachments, unprocessed) = get_object_attachments(
-        &agent,
-        db_client,
-        &filter,
-        &storage,
-        &object,
-        &post.author,
-    ).await?;
-    for attachment_url in unprocessed {
-        content += &create_content_link(attachment_url);
-    };
-    let (mentions, hashtags, links, emojis) = get_object_tags(
-        db_client,
-        &instance,
-        &storage,
-        &object,
-        &HashMap::new(),
-    ).await?;
-    let is_sensitive = object.sensitive.unwrap_or(false);
-    let updated_at = object.updated.unwrap_or(Utc::now());
-
-    let mentions = filter_mentions(
-        db_client,
-        mentions,
-        &post.author,
-        post.in_reply_to_id,
-    ).await?;
-    if post.visibility == Visibility::Direct &&
-        !mentions.iter().any(|profile| profile.is_local())
-    {
-        log::warn!("direct message has no local recipients");
-    };
-
-    let post_data = PostUpdateData {
-        content,
-        content_source: None,
-        is_sensitive,
-        attachments,
-        mentions: mentions.iter().map(|profile| profile.id).collect(),
-        tags: hashtags,
-        links,
-        emojis,
-        updated_at,
-    };
-    validate_post_update_data(&post_data)?;
-    validate_post_mentions(&post_data.mentions, post.visibility)?;
-    let (_, deletion_queue) =
-        update_post(db_client, post.id, post_data).await?;
-    deletion_queue.into_job(db_client).await?;
-    save_attributed_object(
-        db_client,
-        &canonical_object_id.to_string(),
-        &object_json,
-        post.id,
-    ).await?;
-    Ok(Some(Descriptor::object(object.object_type)))
+    update_remote_post(config, db_client, post, &object).await?;
+    Ok(Some(Descriptor::object(object.inner.object_type)))
 }
 
 #[derive(Deserialize)]

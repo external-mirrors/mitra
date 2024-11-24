@@ -24,15 +24,15 @@ use apx_sdk::{
     utils::is_public,
 };
 use mitra_adapters::permissions::filter_mentions;
-use mitra_config::Instance;
+use mitra_config::{Config, Instance};
 use mitra_models::{
     activitypub::queries::save_attributed_object,
     attachments::queries::create_attachment,
     database::{DatabaseClient, DatabaseError},
     media::types::MediaInfo,
     posts::{
-        queries::create_post,
-        types::{Post, PostCreateData, Visibility},
+        queries::{create_post, update_post},
+        types::{Post, PostCreateData, PostUpdateData, Visibility},
     },
     profiles::types::DbActorProfile,
 };
@@ -49,6 +49,7 @@ use mitra_validators::{
         content_allowed_classes,
         validate_post_create_data,
         validate_post_mentions,
+        validate_post_update_data,
         ATTACHMENT_LIMIT,
         CONTENT_MAX_SIZE,
         EMOJI_LIMIT,
@@ -187,7 +188,7 @@ pub(super) fn get_object_attributed_to(object: &AttributedObject)
     parse_attributed_to(&object.attributed_to)
 }
 
-pub(super) fn get_object_url(object: &AttributedObject)
+fn get_object_url(object: &AttributedObject)
     -> Result<String, ValidationError>
 {
     let maybe_object_url = match &object.url {
@@ -203,7 +204,7 @@ pub(super) fn get_object_url(object: &AttributedObject)
 }
 
 /// Get post content by concatenating name/summary and content
-pub(super) fn get_object_content(object: &AttributedObject) ->
+fn get_object_content(object: &AttributedObject) ->
     Result<String, ValidationError>
 {
     let title = if object.in_reply_to.is_none() {
@@ -237,7 +238,7 @@ pub(super) fn get_object_content(object: &AttributedObject) ->
     Ok(content_safe)
 }
 
-pub(super) fn create_content_link(url: String) -> String {
+fn create_content_link(url: String) -> String {
     format!(
         r#"<p><a href="{0}" rel="noopener">{0}</a></p>"#,
         url,
@@ -270,7 +271,7 @@ struct Attachment {
     url: Option<String>,
 }
 
-pub(super) async fn get_object_attachments(
+async fn get_object_attachments(
     agent: &FederationAgent,
     db_client: &impl DatabaseClient,
     filter: &FederationFilter,
@@ -438,7 +439,7 @@ fn get_object_links(
     links
 }
 
-pub(super) async fn get_object_tags(
+async fn get_object_tags(
     db_client: &mut impl DatabaseClient,
     instance: &Instance,
     storage: &MediaStorage,
@@ -689,7 +690,7 @@ fn get_object_visibility(
     Visibility::Direct
 }
 
-pub(super) fn parse_poll_results(
+fn parse_poll_results(
     object: &AttributedObject,
 ) -> Result<String, ValidationError> {
     #[derive(Deserialize)]
@@ -733,7 +734,7 @@ pub(super) fn parse_poll_results(
     Ok(poll_results)
 }
 
-pub async fn handle_note(
+pub async fn create_remote_post(
     db_client: &mut impl DatabaseClient,
     filter: &FederationFilter,
     instance: &Instance,
@@ -858,6 +859,93 @@ pub async fn handle_note(
         post.id,
     ).await?;
     Ok(post)
+}
+
+pub(super) async fn update_remote_post(
+    config: &Config,
+    db_client: &mut impl DatabaseClient,
+    post: Post,
+    object: &AttributedObjectJson,
+) -> Result<(), HandlerError> {
+    assert!(!post.is_local());
+    let AttributedObjectJson { inner: object, value: object_json } = object;
+    let author_id = get_object_attributed_to(object)?;
+    let canonical_author_id = canonicalize_id(&author_id)?;
+    if canonical_author_id.to_string() != post.author.expect_remote_actor_id() {
+        return Err(ValidationError("object owner can't be changed").into());
+    };
+    let mut content = get_object_content(object)?;
+    if object.object_type == QUESTION {
+        match parse_poll_results(object) {
+            Ok(poll_results) => content += &poll_results,
+            Err(error) => log::warn!("{error}"),
+        };
+    };
+    if object.object_type != NOTE {
+        // Append link to object
+        let object_url = get_object_url(object)?;
+        content += &create_content_link(object_url);
+    };
+    let instance = config.instance();
+    let agent = build_federation_agent(&instance, None);
+    let filter = FederationFilter::init(config, db_client).await?;
+    let storage = MediaStorage::from(config);
+    let (attachments, unprocessed) = get_object_attachments(
+        &agent,
+        db_client,
+        &filter,
+        &storage,
+        object,
+        &post.author,
+    ).await?;
+    for attachment_url in unprocessed {
+        content += &create_content_link(attachment_url);
+    };
+    let (mentions, hashtags, links, emojis) = get_object_tags(
+        db_client,
+        &instance,
+        &storage,
+        object,
+        &HashMap::new(),
+    ).await?;
+    let is_sensitive = object.sensitive.unwrap_or(false);
+    let updated_at = object.updated.unwrap_or(Utc::now());
+
+    let mentions = filter_mentions(
+        db_client,
+        mentions,
+        &post.author,
+        post.in_reply_to_id,
+    ).await?;
+    if post.visibility == Visibility::Direct &&
+        !mentions.iter().any(|profile| profile.is_local())
+    {
+        log::warn!("direct message has no local recipients");
+    };
+
+    let post_data = PostUpdateData {
+        content,
+        content_source: None,
+        is_sensitive,
+        attachments,
+        mentions: mentions.iter().map(|profile| profile.id).collect(),
+        tags: hashtags,
+        links,
+        emojis,
+        updated_at,
+    };
+    validate_post_update_data(&post_data)?;
+    validate_post_mentions(&post_data.mentions, post.visibility)?;
+    let (_, deletion_queue) =
+        update_post(db_client, post.id, post_data).await?;
+    deletion_queue.into_job(db_client).await?;
+    save_attributed_object(
+        db_client,
+        &post.object_id.expect("object ID should be present"),
+        object_json,
+        post.id,
+    ).await?;
+    Ok(())
 }
 
 #[cfg(test)]

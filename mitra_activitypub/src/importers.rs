@@ -65,7 +65,7 @@ use crate::{
     handlers::{
         activity::handle_activity,
         note::{
-            handle_note,
+            create_remote_post,
             AttributedObjectJson,
         },
     },
@@ -552,7 +552,7 @@ pub async fn import_post(
     // starting with the root
     objects.reverse();
     for object in objects {
-        let post = handle_note(
+        let post = create_remote_post(
             db_client,
             filter,
             instance,
