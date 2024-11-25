@@ -23,6 +23,8 @@ pub struct TokenRequest {
 
     // Required if grant type is "authorization_code"
     pub code: Option<String>,
+    pub redirect_uri: Option<String>,
+    pub client_id: Option<String>,
 
     // Required only with "password" grant type
     pub username: Option<String>,
@@ -44,6 +46,8 @@ impl From<TokenRequestMultipartForm> for TokenRequest {
         Self {
             grant_type: form.grant_type.into_inner(),
             code: Some(form.code.into_inner()),
+            redirect_uri: None,
+            client_id: None,
             username: None,
             password: None,
             message: None,

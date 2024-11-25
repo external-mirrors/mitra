@@ -145,8 +145,7 @@ async fn authorize_view(
     Ok(response)
 }
 
-/// OAuth 2.0 Password Grant
-/// https://oauth.net/2/grant-types/password/
+// https://docs.joinmastodon.org/methods/oauth/#token
 async fn token_view(
     config: web::Data<Config>,
     db_pool: web::Data<DatabaseConnectionPool>,
@@ -162,14 +161,22 @@ async fn token_view(
     let db_client = &**get_database_client(&db_pool).await?;
     let user = match request_data.grant_type.as_str() {
         "authorization_code" => {
+            // https://www.rfc-editor.org/rfc/rfc6749#section-4.1.3
             let authorization_code = request_data.code.as_ref()
                 .ok_or(ValidationError("authorization code is required"))?;
+            log::info!(
+                "authorization code grant: client_id {:?}, redirect_uri {:?}",
+                request_data.client_id,
+                request_data.redirect_uri,
+            );
             get_user_by_authorization_code(
                 db_client,
                 authorization_code,
             ).await?
         },
         "password" => {
+            // OAuth 2.0 Password Grant
+            // https://oauth.net/2/grant-types/password/
             let username = request_data.username.as_ref()
                 .ok_or(ValidationError("username is required"))?;
             get_user_by_name(db_client, username).await?
