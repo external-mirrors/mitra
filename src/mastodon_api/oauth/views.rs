@@ -227,7 +227,7 @@ async fn token_view(
             return Err(ValidationError("unsupported grant type").into());
         },
     };
-    if request_data.grant_type == "password" || request_data.grant_type == "ethereum" {
+    if request_data.grant_type == "password" {
         let password = request_data.password.as_ref()
             .ok_or(ValidationError("password is required"))?;
         let password_digest = user.password_digest.as_ref()
