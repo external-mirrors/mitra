@@ -17,6 +17,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Renamed `fetch-activity` command to `import-activity`.
 - Renamed `fetch-actor` command to `import-actor`.
 - Store hashed OAuth access tokens.
+- Changed OAuth authorization code lifetime to 5 minutes.
 
 ### Fixed
 

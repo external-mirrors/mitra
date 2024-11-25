@@ -66,6 +66,7 @@ use super::utils::{
     generate_oauth_token,
     render_authorization_page,
     render_authorization_code_page,
+    AUTHORIZATION_CODE_LIFETIME,
 };
 
 #[get("/authorize")]
@@ -78,8 +79,6 @@ async fn authorization_page_view() -> HttpResponse {
         .append_header((http_header::CONTENT_SECURITY_POLICY, csp.into_string()))
         .body(page)
 }
-
-const AUTHORIZATION_CODE_EXPIRES_IN: i64 = 86400 * 30;
 
 #[post("/authorize")]
 async fn authorize_view(
@@ -111,7 +110,7 @@ async fn authorize_view(
 
     let authorization_code = generate_oauth_token();
     let created_at = Utc::now();
-    let expires_at = created_at + Duration::seconds(AUTHORIZATION_CODE_EXPIRES_IN);
+    let expires_at = created_at + Duration::seconds(AUTHORIZATION_CODE_LIFETIME);
     create_oauth_authorization(
         db_client,
         &authorization_code,

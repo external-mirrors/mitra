@@ -4,6 +4,10 @@ use mitra_utils::{
     random::generate_random_sequence,
 };
 
+// Should be less than 10 minutes
+// https://www.rfc-editor.org/rfc/rfc6749#section-4.1.2
+pub(super) const AUTHORIZATION_CODE_LIFETIME: i64 = 60 * 5;
+
 const NONCE_SIZE: usize = 10;
 
 fn generate_nonce() -> String {
