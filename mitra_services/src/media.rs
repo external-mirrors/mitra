@@ -123,7 +123,18 @@ impl MediaStorage {
         file_name: &str,
     ) -> Result<(), MediaStorageError> {
         let file_path = self.media_dir.join(file_name);
-        remove_file(file_path)
+        remove_file(file_path)?;
+        Ok(())
+    }
+
+    pub fn list_files(&self) -> Result<Vec<String>, MediaStorageError> {
+        let mut files = vec![];
+        for maybe_path in std::fs::read_dir(&self.media_dir)? {
+            let file_name = maybe_path?.file_name()
+                .to_string_lossy().to_string();
+            files.push(file_name);
+        };
+        Ok(files)
     }
 }
 

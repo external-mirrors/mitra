@@ -684,12 +684,7 @@ impl DeleteOrphanedFiles {
         db_client: &impl DatabaseClient,
     ) -> Result<(), Error> {
         let media_storage = MediaStorage::from(config);
-        let mut files = vec![];
-        for maybe_path in std::fs::read_dir(&media_storage.media_dir)? {
-            let file_name = maybe_path?.file_name()
-                .to_string_lossy().to_string();
-            files.push(file_name);
-        };
+        let files = media_storage.list_files()?;
         let orphaned = find_orphaned_files(db_client, files).await?;
         if orphaned.is_empty() {
             println!("no orphaned files found");
