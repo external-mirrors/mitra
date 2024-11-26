@@ -1,4 +1,5 @@
 use mitra_config::Config;
+use mitra_models::media::types::PartialMediaInfo;
 use mitra_services::media::MediaServer;
 
 pub struct ClientMediaServer {
@@ -27,7 +28,12 @@ impl ClientMediaServer {
         &self.base_url
     }
 
-    pub fn url_for(&self, file_name: &str) -> String {
+    pub fn url_for(&self, media_info: &PartialMediaInfo) -> String {
+        let file_name = match media_info {
+            PartialMediaInfo::File { file_info, .. } => &file_info.file_name,
+            // TODO: use media proxy
+            PartialMediaInfo::Link { url, .. } => return url.to_owned(),
+        };
         match &self.media_server {
             MediaServer::Filesystem(backend) => {
                 let mut media_server = backend.clone();

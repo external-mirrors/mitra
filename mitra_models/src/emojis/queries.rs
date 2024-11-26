@@ -38,7 +38,7 @@ pub async fn create_or_update_remote_emoji(
         .map(|row| row.try_get("image"))
         .transpose()?
         .into_iter()
-        .map(|image: PartialMediaInfo| image.file_name)
+        .filter_map(|image: PartialMediaInfo| image.into_file_name())
         .collect();
     create_instance(&transaction, hostname).await?;
     let emoji_id = generate_ulid();
@@ -97,7 +97,9 @@ pub async fn update_emoji(
     ).await?;
     let detached_files = detached_image_row
         .try_get("image")
-        .map(|media: PartialMediaInfo| vec![media.file_name])?;
+        .map(|media: PartialMediaInfo| media.into_file_name())?
+        .into_iter()
+        .collect();
     let row = transaction.query_one(
         "
         UPDATE emoji
@@ -141,7 +143,7 @@ pub async fn create_or_update_local_emoji(
         .map(|row| row.try_get("image"))
         .transpose()?
         .into_iter()
-        .map(|image: PartialMediaInfo| image.file_name)
+        .filter_map(|image: PartialMediaInfo| image.into_file_name())
         .collect();
     let emoji_id = generate_ulid();
     // Partial index on emoji_name is used
@@ -271,7 +273,9 @@ pub async fn delete_emoji(
     let row = maybe_row.ok_or(DatabaseError::NotFound("emoji"))?;
     let emoji: DbEmoji = row.try_get("emoji")?;
     update_emoji_caches(db_client, emoji.id).await?;
-    let detached_files = vec![emoji.image.file_name];
+    let detached_files = emoji.image.into_file_name()
+        .into_iter()
+        .collect();
     Ok(DeletionQueue {
         files: detached_files,
         ipfs_objects: vec![],

@@ -318,6 +318,15 @@ impl Post {
                 return Err(DatabaseTypeError);
             };
         };
+        if db_author.is_local() {
+            // Related media must be stored locally
+            if !db_attachments.iter().all(|attachment| attachment.media.is_file()) {
+                return Err(DatabaseTypeError);
+            };
+            if !db_emojis.iter().all(|emoji| emoji.image.is_file()) {
+                return Err(DatabaseTypeError);
+            };
+        };
         let post = Self {
             id: db_post.id,
             author: db_author,

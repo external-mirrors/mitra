@@ -59,6 +59,15 @@ impl Reaction {
         if db_reaction.emoji_id.is_some() && db_reaction.content.is_none() {
             return Err(DatabaseTypeError);
         };
+        if let Some(ref db_emoji) = maybe_db_emoji {
+            if db_author.is_local()
+                && db_emoji.object_id.is_none()
+                && !db_emoji.image.is_file()
+            {
+                // Related media must be stored locally
+                return Err(DatabaseTypeError);
+            };
+        };
         let reaction = Self {
             id: db_reaction.id,
             author: db_author,

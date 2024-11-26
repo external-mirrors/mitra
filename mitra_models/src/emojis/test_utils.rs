@@ -15,17 +15,21 @@ impl DbEmoji {
     }
 
     pub fn remote_for_test(name: &str, hostname: &str) -> Self {
-        let url = format!("https://{hostname}/emoji");
-        let media_info = MediaInfo {
-            url: Some(url.clone()),
-            ..MediaInfo::png_for_test()
+        let object_id = format!("https://{hostname}/emoji");
+        let media_info = {
+            let mut media_info = MediaInfo::png_for_test();
+            let MediaInfo::File { ref mut url, .. } = media_info else {
+                unreachable!();
+            };
+            *url = Some(object_id.clone());
+            media_info
         };
         Self {
             id: Default::default(),
             emoji_name: name.to_owned(),
             hostname: Some(hostname.to_owned()),
             image: PartialMediaInfo::from(media_info),
-            object_id: Some(url),
+            object_id: Some(object_id),
             updated_at: Default::default(),
         }
     }

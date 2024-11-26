@@ -25,8 +25,8 @@ pub struct DbMediaAttachment {
 
 impl DbMediaAttachment {
     pub fn attachment_type(&self) -> AttachmentType {
-        match self.media.media_type {
-            Some(ref media_type) => {
+        match self.media.media_type() {
+            Some(media_type) => {
                 if media_type.starts_with("image/") {
                     AttachmentType::Image
                 } else if media_type.starts_with("video/") {

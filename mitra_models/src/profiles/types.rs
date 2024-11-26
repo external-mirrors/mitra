@@ -560,6 +560,11 @@ json_to_sql!(Aliases);
 pub struct ProfileEmojis(Vec<DbEmoji>);
 
 impl ProfileEmojis {
+    pub fn inner(&self) -> &[DbEmoji] {
+        let Self(emojis) = self;
+        emojis
+    }
+
     pub fn into_inner(self) -> Vec<DbEmoji> {
         let Self(emojis) = self;
         emojis
@@ -728,6 +733,23 @@ impl DbActorProfile {
         };
         if let Some(ref actor_data) = self.actor_json {
             actor_data.check_consistency()?;
+        };
+        if self.is_local() {
+            // Related media must be stored locally
+            if let Some(ref avatar) = self.avatar {
+                if !avatar.is_file() {
+                    return Err(DatabaseTypeError);
+                };
+            };
+            if let Some(ref banner) = self.banner {
+                if !banner.is_file() {
+                    return Err(DatabaseTypeError);
+                };
+            };
+            if !self.emojis.inner().iter().all(|emoji| emoji.image.is_file())
+            {
+                return Err(DatabaseTypeError);
+            };
         };
         // TODO: remove
         if self.actor_json.is_some() && self.identity_key.is_some() {

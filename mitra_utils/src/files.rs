@@ -56,6 +56,7 @@ impl fmt::Display for FileSize {
     }
 }
 
+#[derive(Clone)]
 pub struct FileInfo {
     pub file_name: String,
     pub file_size: usize,

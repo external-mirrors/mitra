@@ -38,12 +38,14 @@ pub fn build_emoji(
     let (object_id, image_url) = if let Some(object_id) = &db_emoji.object_id {
         // Reconstructing remote object for reactions
         let object_id = object_id.clone();
-        let image_url = db_emoji.image.url.clone()
+        let image_url = db_emoji.image.url().cloned()
             .unwrap_or(object_id.clone());
         (object_id, image_url)
     } else {
         let object_id = local_emoji_id(instance_url, &db_emoji.emoji_name);
-        let image_url = media_server.url_for(&db_emoji.image.file_name);
+        // Media is expected to be local (verified on database read)
+        let file_info = db_emoji.image.expect_file_info();
+        let image_url = media_server.url_for(&file_info.file_name);
         (object_id, image_url)
     };
     Emoji {
@@ -53,7 +55,7 @@ pub fn build_emoji(
         icon: EmojiImage {
             object_type: IMAGE.to_string(),
             url: image_url,
-            media_type: db_emoji.image.media_type.clone(),
+            media_type: db_emoji.image.media_type().cloned(),
         },
         updated: db_emoji.updated_at,
     }

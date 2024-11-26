@@ -216,10 +216,12 @@ pub fn build_local_actor(
     ];
     let avatar = match &user.profile.avatar {
         Some(image) => {
+            // Media is expected to be local (verified on database read)
+            let file_info = image.expect_file_info();
             let actor_image = ActorImage {
                 object_type: IMAGE.to_string(),
-                url: media_server.url_for(&image.file_name),
-                media_type: image.media_type.clone(),
+                url: media_server.url_for(&file_info.file_name),
+                media_type: file_info.media_type.clone(),
             };
             Some(actor_image)
         },
@@ -227,10 +229,11 @@ pub fn build_local_actor(
     };
     let banner = match &user.profile.banner {
         Some(image) => {
+            let file_info = image.expect_file_info();
             let actor_image = ActorImage {
                 object_type: IMAGE.to_string(),
-                url: media_server.url_for(&image.file_name),
-                media_type: image.media_type.clone(),
+                url: media_server.url_for(&file_info.file_name),
+                media_type: file_info.media_type.clone(),
             };
             Some(actor_image)
         },
@@ -266,8 +269,8 @@ pub fn build_local_actor(
         attachments.push(attachment_value);
     };
     let mut emojis = vec![];
-    for db_emoji in user.profile.emojis.clone().into_inner() {
-        let emoji = build_emoji(instance_url, media_server, &db_emoji);
+    for db_emoji in user.profile.emojis.inner() {
+        let emoji = build_emoji(instance_url, media_server, db_emoji);
         emojis.push(emoji);
     };
     let aliases = user.profile.aliases.clone().into_actor_ids();

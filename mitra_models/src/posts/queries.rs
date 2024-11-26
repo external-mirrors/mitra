@@ -449,7 +449,9 @@ pub async fn update_post(
     let mut detached_ipfs_objects = vec![];
     for row in detached_media_rows {
         let media: PartialMediaInfo = row.try_get("media")?;
-        detached_files.push(media.file_name);
+        if let Some(file_name) = media.into_file_name() {
+            detached_files.push(file_name);
+        };
         let maybe_ipfs_cid: Option<String> = row.try_get("ipfs_cid")?;
         if let Some(ipfs_cid) = maybe_ipfs_cid {
             detached_ipfs_objects.push(ipfs_cid);
@@ -1790,7 +1792,7 @@ pub async fn delete_post(
         .map(|row| row.try_get("media"))
         .collect::<Result<Vec<PartialMediaInfo>, _>>()?
         .into_iter()
-        .map(|media| media.file_name)
+        .filter_map(|media| media.into_file_name())
         .collect();
     // Get list of linked IPFS objects
     let ipfs_objects_rows = transaction.query(

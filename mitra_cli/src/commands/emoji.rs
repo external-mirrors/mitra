@@ -121,9 +121,24 @@ impl ImportEmoji {
             &self.hostname,
         ).await?;
         let media_storage = MediaStorage::new(config);
-        let file_data = media_storage.read_file(&emoji.image.file_name)?;
-        let media_type = sniff_media_type(&file_data)
-            .ok_or(anyhow!("unknown media type"))?;
+        let (file_data, media_type) = match emoji.image {
+            PartialMediaInfo::File { file_info, .. } => {
+                let file_data = media_storage.read_file(&file_info.file_name)?;
+                let media_type = sniff_media_type(&file_data)
+                    .ok_or(anyhow!("unknown media type"))?;
+                (file_data, media_type)
+            },
+            PartialMediaInfo::Link { url, .. } => {
+                let agent = build_federation_agent(&config.instance(), None);
+                fetch_file(
+                    &agent,
+                    &url,
+                    None, // no expected type
+                    &EMOJI_MEDIA_TYPES,
+                    config.limits.media.file_size_limit, // size will be checked later
+                ).await?
+            },
+        };
         validate_local_emoji_data(config, &emoji.emoji_name, &file_data, &media_type)?;
         let file_info = media_storage.save_file(file_data, &media_type)?;
         let image = PartialMediaInfo::from(MediaInfo::local(file_info));

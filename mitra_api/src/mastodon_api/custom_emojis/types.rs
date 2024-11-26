@@ -15,7 +15,7 @@ pub struct CustomEmoji {
 
 impl CustomEmoji {
     pub fn from_db(media_server: &ClientMediaServer, emoji: DbEmoji) -> Self {
-        let image_url = media_server.url_for(&emoji.image.file_name);
+        let image_url = media_server.url_for(&emoji.image);
         Self {
             shortcode: emoji.emoji_name,
             url: image_url.clone(),

@@ -250,7 +250,7 @@ pub async fn update_profile(
     let detached_files = [&profile.avatar, &profile.banner]
         .into_iter()
         .flatten()
-        .map(|image| image.file_name.clone())
+        .filter_map(|image| image.clone().into_file_name())
         .collect();
     if profile_data.hostname.as_str() != profile.hostname.as_deref() &&
         !profile.is_portable()
@@ -579,7 +579,7 @@ pub async fn delete_profile(
         .map(|row| row.try_get("media"))
         .collect::<Result<Vec<PartialMediaInfo>, _>>()?
         .into_iter()
-        .map(|media| media.file_name)
+        .filter_map(|media| media.into_file_name())
         .collect();
     // Get list of IPFS objects
     let ipfs_objects_rows = transaction.query(

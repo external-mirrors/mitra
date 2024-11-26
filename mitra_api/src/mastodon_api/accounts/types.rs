@@ -198,13 +198,13 @@ impl Account {
         let mention_policy = mention_policy_to_str(profile.mention_policy);
 
         let avatar_url = profile.avatar
-            .map(|image| media_server.url_for(&image.file_name))
+            .map(|image| media_server.url_for(&image))
             .unwrap_or(format!(
                 "{}/api/v1/accounts/identicon?input={actor_id}",
                 media_server.base_url(),
             ));
         let header_url = profile.banner
-            .map(|image| media_server.url_for(&image.file_name))
+            .map(|image| media_server.url_for(&image))
             .unwrap_or(format!(
                 "{}/api/v1/accounts/identicon",
                 media_server.base_url(),
