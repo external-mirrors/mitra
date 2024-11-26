@@ -9,6 +9,7 @@ use mitra_models::{
     relationships::queries::get_followers,
     users::types::User,
 };
+use mitra_services::media::MediaServer;
 use mitra_utils::id::generate_ulid;
 
 use crate::{
@@ -41,10 +42,16 @@ struct UpdatePerson {
 
 fn build_update_person(
     instance_url: &str,
+    media_server: &MediaServer,
     user: &User,
 ) -> Result<UpdatePerson, DatabaseError> {
     let authority = Authority::from_user(instance_url, user, false);
-    let actor = build_local_actor(instance_url, &authority, user)?;
+    let actor = build_local_actor(
+        instance_url,
+        &authority,
+        media_server,
+        user,
+    )?;
     let followers = LocalActorCollection::Followers.of(&actor.id);
     // Update(Person) is idempotent so its ID can be random
     let activity_id = local_activity_id(instance_url, UPDATE, generate_ulid());
@@ -86,10 +93,12 @@ async fn get_update_person_recipients(
 pub async fn prepare_update_person(
     db_client: &impl DatabaseClient,
     instance: &Instance,
+    media_server: &MediaServer,
     user: &User,
 ) -> Result<OutgoingActivityJobData, DatabaseError> {
     let activity = build_update_person(
         &instance.url(),
+        media_server,
         user,
     )?;
     let recipients = get_update_person_recipients(db_client, user).await?;
@@ -110,12 +119,14 @@ mod tests {
 
     #[test]
     fn test_build_update_person() {
+        let media_server = MediaServer::for_test(INSTANCE_URL);
         let user = User {
             profile: DbActorProfile::local_for_test("testuser"),
             ..Default::default()
         };
         let activity = build_update_person(
             INSTANCE_URL,
+            &media_server,
             &user,
         ).unwrap();
         assert_eq!(activity.actor, activity.object.id);

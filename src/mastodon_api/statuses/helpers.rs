@@ -21,6 +21,7 @@ use mitra_validators::{
 
 use crate::mastodon_api::{
     errors::MastodonError,
+    media_server::ClientMediaServer,
     microsyntax::{
         emojis::{find_emojis, replace_emojis},
         hashtags::{find_hashtags, replace_hashtags},
@@ -181,8 +182,8 @@ pub async fn prepare_mentions(
 /// Load related objects and build status for API response
 pub async fn build_status(
     db_client: &impl DatabaseClient,
-    base_url: &str,
     instance_url: &str,
+    media_server: &ClientMediaServer,
     user: Option<&User>,
     mut post: Post,
 ) -> Result<Status, DatabaseError> {
@@ -190,14 +191,14 @@ pub async fn build_status(
     if let Some(user) = user {
         add_user_actions(db_client, user.id, vec![&mut post]).await?;
     };
-    let status = Status::from_post(base_url, instance_url, post);
+    let status = Status::from_post(instance_url, media_server, post);
     Ok(status)
 }
 
 pub async fn build_status_list(
     db_client: &impl DatabaseClient,
-    base_url: &str,
     instance_url: &str,
+    media_server: &ClientMediaServer,
     user: Option<&User>,
     mut posts: Vec<Post>,
 ) -> Result<Vec<Status>, DatabaseError> {
@@ -207,15 +208,17 @@ pub async fn build_status_list(
     };
     let statuses: Vec<Status> = posts
         .into_iter()
-        .map(|post| Status::from_post(base_url, instance_url, post))
+        .map(|post| Status::from_post(instance_url, media_server, post))
         .collect();
     Ok(statuses)
 }
 
+#[allow(clippy::too_many_arguments)]
 pub async fn get_paginated_status_list(
     db_client: &impl DatabaseClient,
     base_url: &str,
     instance_url: &str,
+    media_server: &ClientMediaServer,
     request_uri: &Uri,
     maybe_current_user: Option<&User>,
     posts: Vec<Post>,
@@ -224,8 +227,8 @@ pub async fn get_paginated_status_list(
     let maybe_last_id = get_last_item(&posts, limit).map(|post| post.id);
     let statuses = build_status_list(
         db_client,
-        base_url,
         instance_url,
+        media_server,
         maybe_current_user,
         posts,
     ).await?;

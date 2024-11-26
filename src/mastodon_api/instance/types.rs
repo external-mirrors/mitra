@@ -31,6 +31,7 @@ use crate::mastodon_api::{
         AUTHENTICATION_METHOD_PASSWORD,
         AUTHENTICATION_METHOD_EIP4361,
     },
+    media_server::ClientMediaServer,
     statuses::types::{
         POST_CONTENT_TYPE_HTML,
         POST_CONTENT_TYPE_MARKDOWN,
@@ -162,9 +163,9 @@ fn get_full_api_version(version: &str) -> String {
 impl InstanceInfo {
     #[allow(clippy::too_many_arguments)]
     pub fn create(
-        base_url: &str,
         config: &Config,
         dynamic_config: DynamicConfig,
+        media_server: &ClientMediaServer,
         maybe_admin: Option<User>,
         user_count: i64,
         post_count: i64,
@@ -218,8 +219,8 @@ impl InstanceInfo {
                 },
             },
             contact_account: maybe_admin.map(|user| Account::from_profile(
-                base_url,
                 &config.instance().url(),
+                media_server,
                 user.profile,
             )),
             authentication_methods: config.authentication_methods.iter()
@@ -295,8 +296,8 @@ pub struct InstanceInfoV2 {
 
 impl InstanceInfoV2 {
     pub fn create(
-        base_url: &str,
         config: &Config,
+        media_server: &ClientMediaServer,
         maybe_admin: Option<User>,
         user_count_active_month: i64,
     ) -> Self {
@@ -333,8 +334,8 @@ impl InstanceInfoV2 {
             contact: Contact {
                 email: "".to_string(),
                 account: maybe_admin.map(|user| Account::from_profile(
-                    base_url,
                     &config.instance().url(),
+                    media_server,
                     user.profile,
                 )),
             },

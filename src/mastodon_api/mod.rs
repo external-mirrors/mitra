@@ -44,6 +44,7 @@ mod timelines;
 mod auth;
 mod deserializers;
 mod errors;
+mod media_server;
 mod microsyntax;
 mod pagination;
 mod uploads;

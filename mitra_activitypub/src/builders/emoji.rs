@@ -2,7 +2,7 @@ use chrono::{DateTime, Utc};
 use serde::Serialize;
 
 use mitra_models::emojis::types::DbEmoji;
-use mitra_services::media::get_file_url;
+use mitra_services::media::MediaServer;
 
 use crate::{
     identifiers::{local_emoji_id, local_instance_actor_id},
@@ -30,7 +30,11 @@ pub struct Emoji {
     updated: DateTime<Utc>,
 }
 
-pub fn build_emoji(instance_url: &str, db_emoji: &DbEmoji) -> Emoji {
+pub fn build_emoji(
+    instance_url: &str,
+    media_server: &MediaServer,
+    db_emoji: &DbEmoji,
+) -> Emoji {
     Emoji {
         object_type: EMOJI.to_string(),
         id: local_emoji_id(instance_url, &db_emoji.emoji_name),
@@ -38,7 +42,7 @@ pub fn build_emoji(instance_url: &str, db_emoji: &DbEmoji) -> Emoji {
         attributed_to: local_instance_actor_id(instance_url),
         icon: EmojiImage {
             object_type: IMAGE.to_string(),
-            url: get_file_url(instance_url, &db_emoji.image.file_name),
+            url: media_server.url_for(&db_emoji.image.file_name),
             media_type: db_emoji.image.media_type.clone(),
         },
         updated: db_emoji.updated_at,
@@ -53,6 +57,7 @@ mod tests {
     #[test]
     fn test_build_emoji() {
         let instance_url = "https://social.example";
+        let media_server = MediaServer::for_test(instance_url);
         let updated_at = DateTime::parse_from_rfc3339("2023-02-24T23:36:38Z")
             .unwrap().with_timezone(&Utc);
         let db_emoji = DbEmoji {
@@ -60,7 +65,7 @@ mod tests {
             updated_at,
             ..Default::default()
         };
-        let emoji = build_emoji(instance_url, &db_emoji);
+        let emoji = build_emoji(instance_url, &media_server, &db_emoji);
         let emoji_value = serde_json::to_value(emoji).unwrap();
         let expected_value = json!({
             "type": "Emoji",

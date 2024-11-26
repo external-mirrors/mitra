@@ -14,7 +14,8 @@ use mitra_models::attachments::types::{
     AttachmentType,
     DbMediaAttachment,
 };
-use mitra_services::media::get_file_url;
+
+use crate::mastodon_api::media_server::ClientMediaServer;
 
 #[derive(Deserialize)]
 pub struct AttachmentData {
@@ -67,17 +68,17 @@ pub struct Attachment {
 }
 
 impl Attachment {
-    pub fn from_db(base_url: &str, db_attachment: DbMediaAttachment) -> Self {
+    pub fn from_db(
+        media_server: &ClientMediaServer,
+        db_attachment: DbMediaAttachment,
+    ) -> Self {
         let attachment_type_mastodon = match db_attachment.attachment_type() {
             AttachmentType::Unknown => "unknown",
             AttachmentType::Image => "image",
             AttachmentType::Video => "video",
             AttachmentType::Audio => "audio",
         };
-        let attachment_url = get_file_url(
-            base_url,
-            &db_attachment.file_name,
-        );
+        let attachment_url = media_server.url_for(&db_attachment.file_name);
         Self {
             id: db_attachment.id,
             attachment_type: attachment_type_mastodon.to_string(),

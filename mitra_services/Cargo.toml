@@ -37,5 +37,8 @@ mitra_config = { path = "../mitra_config" }
 mitra_models = { path = "../mitra_models" }
 mitra_utils = { path = "../mitra_utils" }
 
+[features]
+test-utils = []
+
 [lints]
 workspace = true

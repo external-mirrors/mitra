@@ -16,6 +16,7 @@ use crate::mastodon_api::{
     accounts::types::Account,
     auth::get_current_user,
     errors::MastodonError,
+    media_server::ClientMediaServer,
     statuses::helpers::build_status_list,
     statuses::types::Tag,
 };
@@ -67,18 +68,19 @@ async fn search_view(
         },
     };
     let base_url = get_request_base_url(connection_info);
+    let media_server = ClientMediaServer::new(&config, &base_url);
     let instance_url = config.instance().url();
     let accounts: Vec<Account> = profiles.into_iter()
         .map(|profile| Account::from_profile(
-            &base_url,
             &instance_url,
+            &media_server,
             profile,
         ))
         .collect();
     let statuses = build_status_list(
         db_client,
-        &base_url,
         &instance_url,
+        &media_server,
         Some(&current_user),
         posts,
     ).await?;

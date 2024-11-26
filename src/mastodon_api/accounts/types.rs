@@ -35,7 +35,7 @@ use mitra_models::{
         User,
     },
 };
-use mitra_services::media::{get_file_url, MediaStorage};
+use mitra_services::media::MediaStorage;
 use mitra_utils::{
     currencies::Currency,
     markdown::markdown_basic_to_html,
@@ -52,6 +52,7 @@ use crate::mastodon_api::{
     custom_emojis::types::CustomEmoji,
     deserializers::deserialize_boolean,
     errors::MastodonError,
+    media_server::ClientMediaServer,
     pagination::PageSize,
     uploads::{save_b64_file, UploadError},
 };
@@ -158,8 +159,8 @@ pub struct Account {
 
 impl Account {
     pub fn from_profile(
-        base_url: &str,
         instance_url: &str,
+        media_server: &ClientMediaServer,
         profile: DbActorProfile,
     ) -> Self {
         let actor_id = profile_actor_id(instance_url, &profile);
@@ -173,11 +174,17 @@ impl Account {
         let is_automated = profile.is_automated();
 
         let avatar_url = profile.avatar
-            .map(|image| get_file_url(base_url, &image.file_name))
-            .unwrap_or(format!("{base_url}/api/v1/accounts/identicon?input={actor_id}"));
+            .map(|image| media_server.url_for(&image.file_name))
+            .unwrap_or(format!(
+                "{}/api/v1/accounts/identicon?input={actor_id}",
+                media_server.base_url(),
+            ));
         let header_url = profile.banner
-            .map(|image| get_file_url(base_url, &image.file_name))
-            .unwrap_or(format!("{base_url}/api/v1/accounts/identicon"));
+            .map(|image| media_server.url_for(&image.file_name))
+            .unwrap_or(format!(
+                "{}/api/v1/accounts/identicon",
+                media_server.base_url(),
+            ));
 
         let mut identity_proofs = vec![];
         for proof in profile.identity_proofs.into_inner() {
@@ -242,7 +249,7 @@ impl Account {
 
         let emojis = profile.emojis.into_inner()
             .into_iter()
-            .map(|db_emoji| CustomEmoji::from_db(base_url, db_emoji))
+            .map(|db_emoji| CustomEmoji::from_db(media_server, db_emoji))
             .collect();
 
         Self {
@@ -275,8 +282,8 @@ impl Account {
     }
 
     pub fn from_user(
-        base_url: &str,
         instance_url: &str,
+        media_server: &ClientMediaServer,
         user: User,
     ) -> Self {
         let fields_sources = user.profile.extra_fields.clone()
@@ -304,8 +311,8 @@ impl Account {
             authentication_methods.push(AUTHENTICATION_METHOD_CAIP122_MONERO.to_string());
         };
         let mut account = Self::from_profile(
-            base_url,
             instance_url,
+            media_server,
             user.profile,
         );
         account.source = Some(source);
@@ -679,13 +686,13 @@ pub struct ApiSubscription {
 
 impl ApiSubscription {
     pub fn from_subscription(
-        base_url: &str,
         instance_url: &str,
+        media_server: &ClientMediaServer,
         subscription: Subscription,
     ) -> Self {
         let sender = Account::from_profile(
-            base_url,
             instance_url,
+            media_server,
             subscription.sender,
         );
         Self {
@@ -721,11 +728,12 @@ mod tests {
 
     #[test]
     fn test_create_account_from_profile() {
+        let media_server = ClientMediaServer::for_test(INSTANCE_URL);
         let mut profile = DbActorProfile::local_for_test("test");
         profile.avatar = Some(ProfileImage::from(MediaInfo::png_for_test()));
         let account = Account::from_profile(
             INSTANCE_URL,
-            INSTANCE_URL,
+            &media_server,
             profile,
         );
 
@@ -738,6 +746,7 @@ mod tests {
 
     #[test]
     fn test_create_account_from_user() {
+        let media_server = ClientMediaServer::for_test(INSTANCE_URL);
         let bio_source = "test";
         let login_address = "0x1234";
         let mut profile = DbActorProfile::local_for_test("test");
@@ -749,7 +758,7 @@ mod tests {
         };
         let account = Account::from_user(
             INSTANCE_URL,
-            INSTANCE_URL,
+            &media_server,
             user,
         );
 

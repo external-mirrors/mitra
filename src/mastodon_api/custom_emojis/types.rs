@@ -1,7 +1,8 @@
 use serde::Serialize;
 
 use mitra_models::emojis::types::DbEmoji;
-use mitra_services::media::get_file_url;
+
+use crate::mastodon_api::media_server::ClientMediaServer;
 
 /// https://docs.joinmastodon.org/entities/CustomEmoji/
 #[derive(Serialize)]
@@ -13,8 +14,8 @@ pub struct CustomEmoji {
 }
 
 impl CustomEmoji {
-    pub fn from_db(base_url: &str, emoji: DbEmoji) -> Self {
-        let image_url = get_file_url(base_url, &emoji.image.file_name);
+    pub fn from_db(media_server: &ClientMediaServer, emoji: DbEmoji) -> Self {
+        let image_url = media_server.url_for(&emoji.image.file_name);
         Self {
             shortcode: emoji.emoji_name,
             url: image_url.clone(),

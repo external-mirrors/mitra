@@ -42,10 +42,6 @@ fn save_file(
     Ok(file_name)
 }
 
-pub fn get_file_url(instance_url: &str, file_name: &str) -> String {
-    format!("{}{}/{}", instance_url, MEDIA_ROOT_URL, file_name)
-}
-
 pub struct MediaStorage {
     pub media_dir: PathBuf,
 }
@@ -123,6 +119,34 @@ impl From<&Config> for MediaStorage {
         Self {
             media_dir: config.storage_dir.join(MEDIA_DIR),
         }
+    }
+}
+
+fn get_file_url(base_url: &str, file_name: &str) -> String {
+    format!("{}{}/{}", base_url, MEDIA_ROOT_URL, file_name)
+}
+
+#[derive(Clone)]
+pub struct MediaServer {
+    base_url: String,
+}
+
+impl MediaServer {
+    pub fn new(config: &Config) -> Self {
+        Self { base_url: config.instance_url() }
+    }
+
+    #[cfg(any(test, feature = "test-utils"))]
+    pub fn for_test(base_url: &str) -> Self {
+        Self { base_url: base_url.to_string() }
+    }
+
+    pub fn override_base_url(&mut self, base_url: &str) -> () {
+        self.base_url = base_url.to_string();
+    }
+
+    pub fn url_for(&self, file_name: &str) -> String {
+        get_file_url(&self.base_url, file_name)
     }
 }
 

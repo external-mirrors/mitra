@@ -28,6 +28,7 @@ use crate::http::get_request_base_url;
 use crate::mastodon_api::{
     auth::get_current_user,
     errors::MastodonError,
+    media_server::ClientMediaServer,
     statuses::helpers::get_paginated_status_list,
 };
 use super::types::{
@@ -53,11 +54,13 @@ async fn home_timeline(
         query_params.limit.inner(),
     ).await?;
     let base_url = get_request_base_url(connection_info);
+    let media_server = ClientMediaServer::new(&config, &base_url);
     let instance_url = config.instance().url();
     let response = get_paginated_status_list(
         db_client,
         &base_url,
         &instance_url,
+        &media_server,
         &request_uri,
         Some(&current_user),
         posts,
@@ -106,11 +109,13 @@ async fn public_timeline(
         query_params.limit.inner(),
     ).await?;
     let base_url = get_request_base_url(connection_info);
+    let media_server = ClientMediaServer::new(&config, &base_url);
     let instance_url = config.instance().url();
     let response = get_paginated_status_list(
         db_client,
         &base_url,
         &instance_url,
+        &media_server,
         &request_uri,
         maybe_current_user.as_ref(),
         posts,
@@ -137,11 +142,13 @@ async fn direct_timeline(
         query_params.limit.inner(),
     ).await?;
     let base_url = get_request_base_url(connection_info);
+    let media_server = ClientMediaServer::new(&config, &base_url);
     let instance_url = config.instance().url();
     let response = get_paginated_status_list(
         db_client,
         &base_url,
         &instance_url,
+        &media_server,
         &request_uri,
         Some(&current_user),
         posts,
@@ -173,11 +180,13 @@ async fn hashtag_timeline(
         query_params.limit.inner(),
     ).await?;
     let base_url = get_request_base_url(connection_info);
+    let media_server = ClientMediaServer::new(&config, &base_url);
     let instance_url = config.instance().url();
     let response = get_paginated_status_list(
         db_client,
         &base_url,
         &instance_url,
+        &media_server,
         &request_uri,
         maybe_current_user.as_ref(),
         posts,
@@ -212,11 +221,13 @@ async fn list_timeline(
         query_params.limit.inner(),
     ).await?;
     let base_url = get_request_base_url(connection_info);
+    let media_server = ClientMediaServer::new(&config, &base_url);
     let instance_url = config.instance().url();
     let response = get_paginated_status_list(
         db_client,
         &base_url,
         &instance_url,
+        &media_server,
         &request_uri,
         Some(&current_user),
         posts,

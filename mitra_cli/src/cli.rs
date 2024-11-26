@@ -86,7 +86,7 @@ use mitra_models::{
     users::types::UserCreateData,
 };
 use mitra_services::{
-    media::MediaStorage,
+    media::{MediaServer, MediaStorage},
     monero::{
         wallet::{
             create_monero_signature,
@@ -417,9 +417,11 @@ impl DeletePost {
         let mut maybe_delete_note = None;
         if post.author.is_local() {
             let author = get_user_by_id(db_client, post.author.id).await?;
+            let media_server = MediaServer::new(config);
             let activity = prepare_delete_note(
                 db_client,
                 &config.instance(),
+                &media_server,
                 &author,
                 &post,
                 config.federation.fep_e232_enabled,

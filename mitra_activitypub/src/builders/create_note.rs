@@ -6,6 +6,7 @@ use mitra_models::{
     posts::types::Post,
     users::types::User,
 };
+use mitra_services::media::MediaServer;
 
 use crate::{
     authority::Authority,
@@ -36,6 +37,7 @@ pub struct CreateNote {
 pub fn build_create_note(
     instance_hostname: &str,
     instance_url: &str,
+    media_server: &MediaServer,
     post: &Post,
     fep_e232_enabled: bool,
 ) -> CreateNote {
@@ -44,6 +46,7 @@ pub fn build_create_note(
         instance_hostname,
         instance_url,
         &authority,
+        media_server,
         post,
         fep_e232_enabled,
         false,
@@ -65,6 +68,7 @@ pub fn build_create_note(
 pub async fn prepare_create_note(
     db_client: &impl DatabaseClient,
     instance: &Instance,
+    media_server: &MediaServer,
     author: &User,
     post: &Post,
     fep_e232_enabled: bool,
@@ -73,6 +77,7 @@ pub async fn prepare_create_note(
     let activity = build_create_note(
         &instance.hostname(),
         &instance.url(),
+        media_server,
         post,
         fep_e232_enabled,
     );
@@ -96,12 +101,14 @@ mod tests {
 
     #[test]
     fn test_build_create_note() {
+        let media_server = MediaServer::for_test(INSTANCE_URL);
         let author_username = "author";
         let author = DbActorProfile::local_for_test(author_username);
         let post = Post { author, ..Default::default() };
         let activity = build_create_note(
             INSTANCE_HOSTNAME,
             INSTANCE_URL,
+            &media_server,
             &post,
             false,
         );

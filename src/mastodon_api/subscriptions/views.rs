@@ -45,6 +45,7 @@ use mitra_models::{
     users::types::Permission,
 };
 use mitra_services::{
+    media::MediaServer,
     monero::{
         utils::validate_monero_address,
         wallet::create_monero_address,
@@ -60,6 +61,7 @@ use crate::mastodon_api::{
     accounts::types::Account,
     auth::get_current_user,
     errors::MastodonError,
+    media_server::ClientMediaServer,
 };
 use crate::payments::monero::create_or_update_monero_subscription;
 
@@ -177,16 +179,20 @@ async fn register_subscription_option(
         current_user.profile = updated_profile;
 
         // Federate
+        let media_server = MediaServer::new(&config);
         prepare_update_person(
             db_client,
             &config.instance(),
+            &media_server,
             &current_user,
         ).await?.save_and_enqueue(db_client).await?;
     };
 
+    let base_url = get_request_base_url(connection_info);
+    let media_server = ClientMediaServer::new(&config, &base_url);
     let account = Account::from_user(
-        &get_request_base_url(connection_info),
         &config.instance_url(),
+        &media_server,
         current_user,
     );
     Ok(HttpResponse::Ok().json(account))

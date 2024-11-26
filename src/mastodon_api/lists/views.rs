@@ -37,6 +37,7 @@ use crate::{
         accounts::types::Account,
         auth::get_current_user,
         errors::MastodonError,
+        media_server::ClientMediaServer,
     },
 };
 
@@ -159,11 +160,12 @@ async fn get_list_accounts(
         query_params.limit.inner(),
     ).await?;
     let base_url = get_request_base_url(connection_info);
+    let media_server = ClientMediaServer::new(&config, &base_url);
     let instance_url = config.instance().url();
     let accounts: Vec<Account> = sources.into_iter()
         .map(|item| Account::from_profile(
-            &base_url,
             &instance_url,
+            &media_server,
             item,
         ))
         .collect();

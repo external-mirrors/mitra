@@ -6,6 +6,7 @@ use mitra_models::notifications::types::{EventType, Notification};
 use crate::mastodon_api::{
     accounts::types::Account,
     custom_emojis::types::CustomEmoji,
+    media_server::ClientMediaServer,
     pagination::PageSize,
     statuses::types::Status,
 };
@@ -49,17 +50,17 @@ pub struct ApiNotification {
 
 impl ApiNotification {
     pub fn from_db(
-        base_url: &str,
         instance_url: &str,
+        media_server: &ClientMediaServer,
         notification: Notification,
     ) -> Self {
         let account = Account::from_profile(
-            base_url,
             instance_url,
+            media_server,
             notification.sender,
         );
         let status = notification.post.map(|post| {
-            Status::from_post(base_url, instance_url, post)
+            Status::from_post(instance_url, media_server, post)
         });
         let mut maybe_event_subtype = None;
         let event_type_mastodon = match notification.event_type {
@@ -83,7 +84,7 @@ impl ApiNotification {
         };
         let maybe_reaction = if let Some(content) = notification.reaction_content {
             let maybe_custom_emoji = notification.reaction_emoji
-                .map(|emoji| CustomEmoji::from_db(base_url, emoji));
+                .map(|emoji| CustomEmoji::from_db(media_server, emoji));
             let reaction = EmojiReaction {
                 content,
                 emoji: maybe_custom_emoji,

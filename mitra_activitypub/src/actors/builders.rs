@@ -12,7 +12,7 @@ use mitra_models::{
     profiles::types::IdentityProofType,
     users::types::User,
 };
-use mitra_services::media::get_file_url;
+use mitra_services::media::MediaServer;
 
 use crate::{
     authority::Authority,
@@ -156,6 +156,7 @@ pub struct Actor {
 pub fn build_local_actor(
     instance_url: &str,
     authority: &Authority,
+    media_server: &MediaServer,
     user: &User,
 ) -> Result<Actor, DatabaseError> {
     assert_eq!(authority.server_url(), instance_url);
@@ -179,7 +180,7 @@ pub fn build_local_actor(
         Some(image) => {
             let actor_image = ActorImage {
                 object_type: IMAGE.to_string(),
-                url: get_file_url(instance_url, &image.file_name),
+                url: media_server.url_for(&image.file_name),
                 media_type: image.media_type.clone(),
             };
             Some(actor_image)
@@ -190,7 +191,7 @@ pub fn build_local_actor(
         Some(image) => {
             let actor_image = ActorImage {
                 object_type: IMAGE.to_string(),
-                url: get_file_url(instance_url, &image.file_name),
+                url: media_server.url_for(&image.file_name),
                 media_type: image.media_type.clone(),
             };
             Some(actor_image)
@@ -228,7 +229,7 @@ pub fn build_local_actor(
     };
     let mut emojis = vec![];
     for db_emoji in user.profile.emojis.clone().into_inner() {
-        let emoji = build_emoji(instance_url, &db_emoji);
+        let emoji = build_emoji(instance_url, media_server, &db_emoji);
         emojis.push(emoji);
     };
     let aliases = user.profile.aliases.clone().into_actor_ids();
@@ -326,7 +327,13 @@ mod tests {
         profile.updated_at = profile.created_at;
         let user = User { profile, ..Default::default() };
         let authority = Authority::from_user(INSTANCE_URL, &user, false);
-        let actor = build_local_actor(INSTANCE_URL, &authority, &user).unwrap();
+        let media_server = MediaServer::for_test(INSTANCE_URL);
+        let actor = build_local_actor(
+            INSTANCE_URL,
+            &authority,
+            &media_server,
+            &user,
+        ).unwrap();
         let value = serde_json::to_value(actor).unwrap();
         let expected_value = json!({
             "@context": [
@@ -400,7 +407,13 @@ mod tests {
         profile.updated_at = profile.created_at;
         let user = User { profile, ..Default::default() };
         let authority = Authority::from_user(INSTANCE_URL, &user, true);
-        let actor = build_local_actor(INSTANCE_URL, &authority, &user).unwrap();
+        let media_server = MediaServer::for_test(INSTANCE_URL);
+        let actor = build_local_actor(
+            INSTANCE_URL,
+            &authority,
+            &media_server,
+            &user,
+        ).unwrap();
         let value = serde_json::to_value(actor).unwrap();
         let expected_value = json!({
             "@context": [

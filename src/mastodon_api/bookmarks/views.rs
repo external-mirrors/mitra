@@ -18,6 +18,7 @@ use crate::http::get_request_base_url;
 use crate::mastodon_api::{
     auth::get_current_user,
     errors::MastodonError,
+    media_server::ClientMediaServer,
     pagination::{get_last_item, get_paginated_response},
     statuses::helpers::build_status_list,
 };
@@ -43,6 +44,7 @@ async fn bookmark_list_view(
         query_params.limit.inner(),
     ).await?;
     let base_url = get_request_base_url(connection_info);
+    let media_server = ClientMediaServer::new(&config, &base_url);
     let instance_url = config.instance().url();
     let maybe_last_id = get_last_item(&bookmarks, &query_params.limit)
         .map(|bookmark| bookmark.bookmark_id);
@@ -51,8 +53,8 @@ async fn bookmark_list_view(
         .collect();
     let statuses = build_status_list(
         db_client,
-        &base_url,
         &instance_url,
+        &media_server,
         Some(&current_user),
         posts,
     ).await?;

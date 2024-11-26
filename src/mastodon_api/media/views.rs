@@ -28,6 +28,7 @@ use crate::{
     mastodon_api::{
         auth::get_current_user,
         errors::MastodonError,
+        media_server::ClientMediaServer,
         uploads::save_b64_file,
     },
 };
@@ -74,8 +75,9 @@ async fn create_attachment_view(
     ).await?;
 
     let base_url = get_request_base_url(connection_info);
+    let media_server = ClientMediaServer::new(&config, &base_url);
     let attachment = Attachment::from_db(
-        &base_url,
+        &media_server,
         db_attachment,
     );
     Ok(HttpResponse::Ok().json(attachment))
@@ -83,6 +85,7 @@ async fn create_attachment_view(
 
 async fn get_attachment_view(
     auth: BearerAuth,
+    config: web::Data<Config>,
     connection_info: ConnectionInfo,
     db_pool: web::Data<DatabaseConnectionPool>,
     attachment_id: web::Path<Uuid>,
@@ -95,8 +98,9 @@ async fn get_attachment_view(
         *attachment_id,
     ).await?;
     let base_url = get_request_base_url(connection_info);
+    let media_server = ClientMediaServer::new(&config, &base_url);
     let attachment = Attachment::from_db(
-        &base_url,
+        &media_server,
         db_attachment,
     );
     Ok(HttpResponse::Ok().json(attachment))
@@ -104,6 +108,7 @@ async fn get_attachment_view(
 
 async fn update_attachment_view(
     auth: BearerAuth,
+    config: web::Data<Config>,
     connection_info: ConnectionInfo,
     db_pool: web::Data<DatabaseConnectionPool>,
     attachment_id: web::Path<Uuid>,
@@ -121,8 +126,9 @@ async fn update_attachment_view(
         attachment_data.description.as_deref(),
     ).await?;
     let base_url = get_request_base_url(connection_info);
+    let media_server = ClientMediaServer::new(&config, &base_url);
     let attachment = Attachment::from_db(
-        &base_url,
+        &media_server,
         db_attachment,
     );
     Ok(HttpResponse::Ok().json(attachment))

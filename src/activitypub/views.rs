@@ -85,6 +85,7 @@ use mitra_models::{
         get_user_by_name,
     },
 };
+use mitra_services::media::MediaServer;
 use mitra_validators::errors::ValidationError;
 
 use crate::{
@@ -124,9 +125,11 @@ async fn actor_view(
         &user,
         false,
     );
+    let media_server = MediaServer::new(&config);
     let actor = build_local_actor(
         &config.instance_url(),
         &authority,
+        &media_server,
         &user,
     )?;
     let response = HttpResponse::Ok()
@@ -219,6 +222,7 @@ async fn outbox(
         OrderedCollectionPage::DEFAULT_SIZE,
     ).await?;
     add_related_posts(db_client, posts.iter_mut().collect()).await?;
+    let media_server = MediaServer::new(&config);
     let activities = posts.iter().map(|post| {
         if post.repost_of_id.is_some() {
             let activity = build_announce(&instance.url(), post);
@@ -228,6 +232,7 @@ async fn outbox(
             let activity = build_create_note(
                 &instance.hostname(),
                 &instance.url(),
+                &media_server,
                 post,
                 config.federation.fep_e232_enabled,
             );
@@ -369,11 +374,13 @@ async fn featured_collection(
     ).await?;
     add_related_posts(db_client, posts.iter_mut().collect()).await?;
     let authority = Authority::server(&instance.url());
+    let media_server = MediaServer::new(&config);
     let objects = posts.iter().map(|post| {
         let note = build_note(
             &instance.hostname(),
             &instance.url(),
             &authority,
+            &media_server,
             post,
             config.federation.fep_e232_enabled,
             false,
@@ -511,10 +518,12 @@ pub async fn object_view(
         &user,
         false,
     );
+    let media_server = MediaServer::new(&config);
     let object = build_note(
         &instance.hostname(),
         &instance.url(),
         &authority,
+        &media_server,
         &post,
         config.federation.fep_e232_enabled,
         true,
@@ -587,8 +596,10 @@ pub async fn emoji_view(
         db_client,
         &emoji_name,
     ).await?;
+    let media_server = MediaServer::new(&config);
     let object = build_emoji(
         &config.instance().url(),
+        &media_server,
         &db_emoji,
     );
     let response = HttpResponse::Ok()

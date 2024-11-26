@@ -16,7 +16,7 @@ use mitra_models::{
     relationships::queries::{get_followers, get_subscribers},
     users::types::User,
 };
-use mitra_services::media::get_file_url;
+use mitra_services::media::MediaServer;
 
 use crate::{
     authority::Authority,
@@ -128,6 +128,7 @@ pub fn build_note(
     instance_hostname: &str,
     instance_url: &str,
     authority: &Authority,
+    media_server: &MediaServer,
     post: &Post,
     fep_e232_enabled: bool,
     with_context: bool,
@@ -136,7 +137,7 @@ pub fn build_note(
     let object_id = local_object_id_unified(authority, post.id);
     let actor_id = local_actor_id_unified(authority, &post.author.username);
     let attachments: Vec<_> = post.attachments.iter().map(|db_item| {
-        let url = get_file_url(instance_url, &db_item.file_name);
+        let url = media_server.url_for(&db_item.file_name);
         let object_type = match db_item.attachment_type() {
             AttachmentType::Image => IMAGE,
             _ => DOCUMENT,
@@ -233,7 +234,7 @@ pub fn build_note(
         .map(|linked| compatible_post_object_id(instance_url, linked));
 
     for emoji in &post.emojis {
-        let tag = build_emoji(instance_url, emoji);
+        let tag = build_emoji(instance_url, media_server, emoji);
         tags.push(Tag::EmojiTag(tag));
     };
 
@@ -377,10 +378,12 @@ mod tests {
             ..Default::default()
         };
         let authority = Authority::server(INSTANCE_URL);
+        let media_server = MediaServer::for_test(INSTANCE_URL);
         let note = build_note(
             INSTANCE_HOSTNAME,
             INSTANCE_URL,
             &authority,
+            &media_server,
             &post,
             false,
             true,
@@ -425,10 +428,12 @@ mod tests {
             ..Default::default()
         };
         let authority = Authority::server(INSTANCE_URL);
+        let media_server = MediaServer::for_test(INSTANCE_URL);
         let note = build_note(
             INSTANCE_HOSTNAME,
             INSTANCE_URL,
             &authority,
+            &media_server,
             &post,
             false,
             true,
@@ -453,10 +458,12 @@ mod tests {
             ..Default::default()
         };
         let authority = Authority::server(INSTANCE_URL);
+        let media_server = MediaServer::for_test(INSTANCE_URL);
         let note = build_note(
             INSTANCE_HOSTNAME,
             INSTANCE_URL,
             &authority,
+            &media_server,
             &post,
             false,
             true,
@@ -482,10 +489,12 @@ mod tests {
             ..Default::default()
         };
         let authority = Authority::server(INSTANCE_URL);
+        let media_server = MediaServer::for_test(INSTANCE_URL);
         let note = build_note(
             INSTANCE_HOSTNAME,
             INSTANCE_URL,
             &authority,
+            &media_server,
             &post,
             false,
             true,
@@ -504,10 +513,12 @@ mod tests {
             ..Default::default()
         };
         let authority = Authority::server(INSTANCE_URL);
+        let media_server = MediaServer::for_test(INSTANCE_URL);
         let note = build_note(
             INSTANCE_HOSTNAME,
             INSTANCE_URL,
             &authority,
+            &media_server,
             &post,
             false,
             true,
@@ -548,10 +559,12 @@ mod tests {
             ..Default::default()
         };
         let authority = Authority::server(INSTANCE_URL);
+        let media_server = MediaServer::for_test(INSTANCE_URL);
         let note = build_note(
             INSTANCE_HOSTNAME,
             INSTANCE_URL,
             &authority,
+            &media_server,
             &post,
             false,
             true,
@@ -603,10 +616,12 @@ mod tests {
             ..Default::default()
         };
         let authority = Authority::server(INSTANCE_URL);
+        let media_server = MediaServer::for_test(INSTANCE_URL);
         let note = build_note(
             INSTANCE_HOSTNAME,
             INSTANCE_URL,
             &authority,
+            &media_server,
             &post,
             false,
             true,
@@ -661,10 +676,12 @@ mod tests {
             ..Default::default()
         };
         let authority = Authority::from_user(INSTANCE_URL, &author, true);
+        let media_server = MediaServer::for_test(INSTANCE_URL);
         let note = build_note(
             INSTANCE_HOSTNAME,
             INSTANCE_URL,
             &authority,
+            &media_server,
             &post,
             true,
             true,

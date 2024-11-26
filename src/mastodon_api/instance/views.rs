@@ -21,7 +21,10 @@ use mitra_models::{
 use mitra_utils::datetime::days_before_now;
 
 use crate::http::get_request_base_url;
-use crate::mastodon_api::errors::MastodonError;
+use crate::mastodon_api::{
+    errors::MastodonError,
+    media_server::ClientMediaServer,
+};
 
 use super::types::{InstanceInfo, InstanceInfoV2};
 
@@ -42,10 +45,12 @@ async fn instance_view(
     let post_count = get_post_count(db_client, true).await?;
     let peer_count = get_peer_count(db_client).await?;
     let dynamic_config = get_dynamic_config(db_client).await?;
+    let base_url = get_request_base_url(connection_info);
+    let media_server = ClientMediaServer::new(&config, &base_url);
     let instance = InstanceInfo::create(
-        &get_request_base_url(connection_info),
         config.as_ref(),
         dynamic_config,
+        &media_server,
         maybe_admin,
         user_count,
         post_count,
@@ -85,9 +90,11 @@ async fn instance_v2_view(
         db_client,
         days_before_now(28), // 4 weeks
     ).await?;
+    let base_url = get_request_base_url(connection_info);
+    let media_server = ClientMediaServer::new(&config, &base_url);
     let instance = InstanceInfoV2::create(
-        &get_request_base_url(connection_info),
         config.as_ref(),
+        &media_server,
         maybe_admin,
         user_count_active_month,
     );

@@ -19,6 +19,7 @@ use crate::mastodon_api::{
     accounts::types::Account,
     auth::get_current_user,
     errors::MastodonError,
+    media_server::ClientMediaServer,
 };
 use super::types::DirectoryQueryParams;
 
@@ -39,12 +40,13 @@ async fn profile_directory(
         query_params.limit.inner(),
     ).await?;
     let base_url = get_request_base_url(connection_info);
+    let media_server = ClientMediaServer::new(&config, &base_url);
     let instance_url = config.instance().url();
     let accounts: Vec<Account> = profiles
         .into_iter()
         .map(|profile| Account::from_profile(
-            &base_url,
             &instance_url,
+            &media_server,
             profile,
         ))
         .collect();

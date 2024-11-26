@@ -41,6 +41,7 @@ use mitra_models::{
     },
     users::types::ClientConfig,
 };
+use mitra_services::media::MediaServer;
 use mitra_utils::passwords::hash_password;
 use mitra_validators::{
     errors::ValidationError,
@@ -55,6 +56,7 @@ use crate::mastodon_api::{
     accounts::types::Account,
     auth::get_current_user,
     errors::MastodonError,
+    media_server::ClientMediaServer,
 };
 
 use super::helpers::{
@@ -95,9 +97,11 @@ async fn client_config_view(
         client_name,
         client_config_value,
     ).await?;
+    let base_url = get_request_base_url(connection_info);
+    let media_server = ClientMediaServer::new(&config, &base_url);
     let account = Account::from_user(
-        &get_request_base_url(connection_info),
         &config.instance_url(),
+        &media_server,
         current_user,
     );
     Ok(HttpResponse::Ok().json(account))
@@ -117,9 +121,11 @@ async fn change_password_view(
         .map_err(|_| MastodonError::InternalError)?;
     set_user_password(db_client, current_user.id, &password_digest).await?;
     current_user.password_digest = Some(password_digest);
+    let base_url = get_request_base_url(connection_info);
+    let media_server = ClientMediaServer::new(&config, &base_url);
     let account = Account::from_user(
-        &get_request_base_url(connection_info),
         &config.instance_url(),
+        &media_server,
         current_user,
     );
     Ok(HttpResponse::Ok().json(account))
@@ -158,15 +164,19 @@ async fn add_alias_view(
         profile_data,
     ).await?;
     current_user.profile = updated_profile;
+    let media_server = MediaServer::new(&config);
     prepare_update_person(
         db_client,
         &instance,
+        &media_server,
         &current_user,
     ).await?.save_and_enqueue(db_client).await?;
+    let base_url = get_request_base_url(connection_info);
+    let media_server = ClientMediaServer::new(&config, &base_url);
     let aliases = get_aliases(
         db_client,
-        &get_request_base_url(connection_info),
         &instance.url(),
+        &media_server,
         &current_user.profile,
     ).await?;
     Ok(HttpResponse::Ok().json(aliases))
@@ -196,15 +206,19 @@ async fn remove_alias_view(
         profile_data,
     ).await?;
     current_user.profile = updated_profile;
+    let media_server = MediaServer::new(&config);
     prepare_update_person(
         db_client,
         &instance,
+        &media_server,
         &current_user,
     ).await?.save_and_enqueue(db_client).await?;
+    let base_url = get_request_base_url(connection_info);
+    let media_server = ClientMediaServer::new(&config, &base_url);
     let aliases = get_aliases(
         db_client,
-        &get_request_base_url(connection_info),
         &instance.url(),
+        &media_server,
         &current_user.profile,
     ).await?;
     Ok(HttpResponse::Ok().json(aliases))
@@ -318,9 +332,11 @@ async fn import_followers_view(
     };
     job_data.into_job(db_client).await?;
 
+    let base_url = get_request_base_url(connection_info);
+    let media_server = ClientMediaServer::new(&config, &base_url);
     let account = Account::from_user(
-        &get_request_base_url(connection_info),
         &instance.url(),
+        &media_server,
         current_user,
     );
     Ok(HttpResponse::Ok().json(account))
@@ -381,9 +397,11 @@ async fn move_followers_view(
         remote_followers,
     ).save_and_enqueue(db_client).await?;
 
+    let base_url = get_request_base_url(connection_info);
+    let media_server = ClientMediaServer::new(&config, &base_url);
     let account = Account::from_user(
-        &get_request_base_url(connection_info),
         &instance.url(),
+        &media_server,
         current_user,
     );
     Ok(HttpResponse::Ok().json(account))

@@ -19,6 +19,7 @@ use crate::http::get_request_base_url;
 use crate::mastodon_api::{
     auth::get_current_user,
     errors::MastodonError,
+    media_server::ClientMediaServer,
     pagination::{get_last_item, get_paginated_response},
 };
 use super::types::{ApiNotification, NotificationQueryParams};
@@ -35,6 +36,7 @@ async fn get_notifications_view(
     let db_client = &**get_database_client(&db_pool).await?;
     let current_user = get_current_user(db_client, auth.token()).await?;
     let base_url = get_request_base_url(connection_info);
+    let media_server = ClientMediaServer::new(&config, &base_url);
     let instance = config.instance();
     let notifications: Vec<ApiNotification> = get_notifications(
         db_client,
@@ -44,8 +46,8 @@ async fn get_notifications_view(
     ).await?
         .into_iter()
         .map(|item| ApiNotification::from_db(
-            &base_url,
             &instance.url(),
+            &media_server,
             item,
         ))
         .collect();

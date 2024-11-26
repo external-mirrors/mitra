@@ -6,6 +6,7 @@ use mitra_models::{
     posts::types::Post,
     users::types::User,
 };
+use mitra_services::media::MediaServer;
 use mitra_utils::id::generate_ulid;
 
 use crate::{
@@ -37,6 +38,7 @@ struct UpdateNote {
 fn build_update_note(
     instance_hostname: &str,
     instance_url: &str,
+    media_server: &MediaServer,
     post: &Post,
     fep_e232_enabled: bool,
 ) -> UpdateNote {
@@ -45,6 +47,7 @@ fn build_update_note(
         instance_hostname,
         instance_url,
         &authority,
+        media_server,
         post,
         fep_e232_enabled,
         false, // no context
@@ -67,6 +70,7 @@ fn build_update_note(
 pub async fn prepare_update_note(
     db_client: &impl DatabaseClient,
     instance: &Instance,
+    media_server: &MediaServer,
     author: &User,
     post: &Post,
     fep_e232_enabled: bool,
@@ -75,6 +79,7 @@ pub async fn prepare_update_note(
     let activity = build_update_note(
         &instance.hostname(),
         &instance.url(),
+        media_server,
         post,
         fep_e232_enabled,
     );
@@ -95,9 +100,10 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_build_create_note() {
+    fn test_build_update_note() {
         let instance_hostname = "social.example";
         let instance_url = "https://social.com";
+        let media_server = MediaServer::for_test(instance_url);
         let author_username = "author";
         let author = DbActorProfile::local_for_test(author_username);
         let post = Post {
@@ -108,6 +114,7 @@ mod tests {
         let activity = build_update_note(
             instance_hostname,
             instance_url,
+            &media_server,
             &post,
             false,
         );

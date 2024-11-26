@@ -66,7 +66,7 @@ use mitra_models::{
 };
 use mitra_services::{
     ipfs::{store as ipfs_store},
-    media::MediaStorage,
+    media::{MediaServer, MediaStorage},
 };
 use mitra_validators::{
     errors::ValidationError,
@@ -84,6 +84,7 @@ use crate::http::{get_request_base_url, QsFormOrJson};
 use crate::mastodon_api::{
     auth::get_current_user,
     errors::MastodonError,
+    media_server::ClientMediaServer,
 };
 use crate::state::AppState;
 
@@ -220,10 +221,12 @@ async fn create_status(
             if post.author.id != current_user.id {
                 return Err(MastodonError::PermissionError);
             };
+            let base_url = get_request_base_url(connection_info);
+            let media_server = ClientMediaServer::new(&config, &base_url);
             let status = build_status(
                 db_client,
-                &get_request_base_url(connection_info),
                 &instance.url(),
+                &media_server,
                 Some(&current_user),
                 post,
             ).await?;
@@ -245,17 +248,21 @@ async fn create_status(
     });
     post.linked = linked;
     // Federate
+    let media_server = MediaServer::new(&config);
     prepare_create_note(
         db_client,
         &instance,
+        &media_server,
         &current_user,
         &post,
         config.federation.fep_e232_enabled,
     ).await?.save_and_enqueue(db_client).await?;
 
+    let base_url = get_request_base_url(connection_info);
+    let media_server = ClientMediaServer::new(&config, &base_url);
     let status = Status::from_post(
-        &get_request_base_url(connection_info),
         &instance.url(),
+        &media_server,
         post,
     );
     Ok(HttpResponse::Ok().json(status))
@@ -283,8 +290,9 @@ async fn preview_status(
         ).await?;
     // Return preview
     let base_url = get_request_base_url(connection_info);
+    let media_server = ClientMediaServer::new(&config, &base_url);
     let preview = StatusPreview::new(
-        &base_url,
+        &media_server,
         content,
         emojis,
     );
@@ -309,10 +317,13 @@ async fn get_status(
         maybe_current_user.as_ref(),
         *status_id,
     ).await?;
+
+    let base_url = get_request_base_url(connection_info);
+    let media_server = ClientMediaServer::new(&config, &base_url);
     let status = build_status(
         db_client,
-        &get_request_base_url(connection_info),
         &config.instance_url(),
+        &media_server,
         maybe_current_user.as_ref(),
         post,
     ).await?;
@@ -407,17 +418,21 @@ async fn edit_status(
     add_user_actions(db_client, current_user.id, vec![&mut post]).await?;
 
     // Federate
+    let media_server = MediaServer::new(&config);
     prepare_update_note(
         db_client,
         &instance,
+        &media_server,
         &current_user,
         &post,
         config.federation.fep_e232_enabled,
     ).await?.save_and_enqueue(db_client).await?;
 
+    let base_url = get_request_base_url(connection_info);
+    let media_server = ClientMediaServer::new(&config, &base_url);
     let status = Status::from_post(
-        &get_request_base_url(connection_info),
         &instance.url(),
+        &media_server,
         post,
     );
     Ok(HttpResponse::Ok().json(status))
@@ -438,9 +453,11 @@ async fn delete_status(
         return Err(MastodonError::PermissionError);
     };
     let instance = config.instance();
+    let media_server = MediaServer::new(&config);
     let delete_note = prepare_delete_note(
         db_client,
         &instance,
+        &media_server,
         &current_user,
         &post,
         config.federation.fep_e232_enabled,
@@ -450,9 +467,11 @@ async fn delete_status(
     delete_note.save_and_enqueue(db_client).await?;
 
     let content_source = post.content_source.clone().unwrap_or_default();
+    let base_url = get_request_base_url(connection_info);
+    let media_server = ClientMediaServer::new(&config, &base_url);
     let status = Status::from_post(
-        &get_request_base_url(connection_info),
         &instance.url(),
+        &media_server,
         post,
     );
     let tombstone = StatusTombstone {
@@ -480,10 +499,12 @@ async fn get_context(
         *status_id,
         maybe_current_user.as_ref().map(|user| user.id),
     ).await?;
+    let base_url = get_request_base_url(connection_info);
+    let media_server = ClientMediaServer::new(&config, &base_url);
     let statuses = build_status_list(
         db_client,
-        &get_request_base_url(connection_info),
         &config.instance_url(),
+        &media_server,
         maybe_current_user.as_ref(),
         posts,
     ).await?;
@@ -523,10 +544,12 @@ async fn get_thread_view(
         *status_id,
         maybe_current_user.as_ref().map(|user| user.id),
     ).await?;
+    let base_url = get_request_base_url(connection_info);
+    let media_server = ClientMediaServer::new(&config, &base_url);
     let statuses = build_status_list(
         db_client,
-        &get_request_base_url(connection_info),
         &config.instance_url(),
+        &media_server,
         maybe_current_user.as_ref(),
         posts,
     ).await?;
@@ -568,11 +591,13 @@ async fn favourite(
         Err(other_error) => return Err(other_error.into()),
     };
 
+    let media_server = MediaServer::new(&config);
     if let Some(reaction) = maybe_reaction_created {
         // Federate
         prepare_like(
             db_client,
             &config.instance(),
+            &media_server,
             &current_user,
             &post,
             reaction.id,
@@ -581,10 +606,12 @@ async fn favourite(
         ).await?.save_and_enqueue(db_client).await?;
     };
 
+    let base_url = get_request_base_url(connection_info);
+    let media_server = ClientMediaServer::new(&config, &base_url);
     let status = build_status(
         db_client,
-        &get_request_base_url(connection_info),
         &config.instance_url(),
+        &media_server,
         Some(&current_user),
         post,
     ).await?;
@@ -633,10 +660,12 @@ async fn unfavourite(
         ).await?.save_and_enqueue(db_client).await?;
     };
 
+    let base_url = get_request_base_url(connection_info);
+    let media_server = ClientMediaServer::new(&config, &base_url);
     let status = build_status(
         db_client,
-        &get_request_base_url(connection_info),
         &config.instance_url(),
+        &media_server,
         Some(&current_user),
         post,
     ).await?;
@@ -673,10 +702,12 @@ async fn reblog(
         &repost,
     ).await?.save_and_enqueue(db_client).await?;
 
+    let base_url = get_request_base_url(connection_info);
+    let media_server = ClientMediaServer::new(&config, &base_url);
     let status = build_status(
         db_client,
-        &get_request_base_url(connection_info),
         &config.instance_url(),
+        &media_server,
         Some(&current_user),
         repost,
     ).await?;
@@ -711,10 +742,12 @@ async fn unreblog(
         repost_has_deprecated_ap_id,
     ).await?.save_and_enqueue(db_client).await?;
 
+    let base_url = get_request_base_url(connection_info);
+    let media_server = ClientMediaServer::new(&config, &base_url);
     let status = build_status(
         db_client,
-        &get_request_base_url(connection_info),
         &config.instance_url(),
+        &media_server,
         Some(&current_user),
         post,
     ).await?;
@@ -741,10 +774,12 @@ async fn bookmark_view(
         Ok(_) | Err(DatabaseError::AlreadyExists(_)) => (),
         Err(other_error) => return Err(other_error.into()),
     };
+    let base_url = get_request_base_url(connection_info);
+    let media_server = ClientMediaServer::new(&config, &base_url);
     let status = build_status(
         db_client,
-        &get_request_base_url(connection_info),
         &config.instance_url(),
+        &media_server,
         Some(&current_user),
         post,
     ).await?;
@@ -771,10 +806,12 @@ async fn unbookmark_view(
         Ok(_) | Err(DatabaseError::NotFound(_)) => (),
         Err(other_error) => return Err(other_error.into()),
     };
+    let base_url = get_request_base_url(connection_info);
+    let media_server = ClientMediaServer::new(&config, &base_url);
     let status = build_status(
         db_client,
-        &get_request_base_url(connection_info),
         &config.instance_url(),
+        &media_server,
         Some(&current_user),
         post,
     ).await?;
@@ -806,10 +843,12 @@ async fn pin(
         post.id,
     ).await?.save_and_enqueue(db_client).await?;
 
+    let base_url = get_request_base_url(connection_info);
+    let media_server = ClientMediaServer::new(&config, &base_url);
     let status = build_status(
         db_client,
-        &get_request_base_url(connection_info),
         &config.instance_url(),
+        &media_server,
         Some(&current_user),
         post,
     ).await?;
@@ -841,10 +880,12 @@ async fn unpin(
         post.id,
     ).await?.save_and_enqueue(db_client).await?;
 
+    let base_url = get_request_base_url(connection_info);
+    let media_server = ClientMediaServer::new(&config, &base_url);
     let status = build_status(
         db_client,
-        &get_request_base_url(connection_info),
         &config.instance_url(),
+        &media_server,
         Some(&current_user),
         post,
     ).await?;
@@ -886,10 +927,12 @@ async fn make_permanent(
     assert!(post.is_local());
     let instance = config.instance();
     let authority = Authority::server(&instance.url());
+    let media_server = MediaServer::new(&config);
     let note = build_note(
         &instance.hostname(),
         &instance.url(),
         &authority,
+        &media_server,
         &post,
         config.federation.fep_e232_enabled,
         true,
@@ -903,10 +946,12 @@ async fn make_permanent(
     set_post_ipfs_cid(db_client, post.id, &post_metadata_cid, attachments).await?;
     post.ipfs_cid = Some(post_metadata_cid);
 
+    let base_url = get_request_base_url(connection_info);
+    let media_server = ClientMediaServer::new(&config, &base_url);
     let status = build_status(
         db_client,
-        &get_request_base_url(connection_info),
         &config.instance_url(),
+        &media_server,
         Some(&current_user),
         post,
     ).await?;

@@ -32,6 +32,7 @@ use mitra_models::{
     },
     reactions::types::ReactionData,
 };
+use mitra_services::media::MediaServer;
 use mitra_utils::unicode::is_single_character;
 use mitra_validators::{
     emojis::clean_emoji_name,
@@ -42,6 +43,7 @@ use crate::http::get_request_base_url;
 use crate::mastodon_api::{
     auth::get_current_user,
     errors::MastodonError,
+    media_server::ClientMediaServer,
     statuses::helpers::build_status,
 };
 
@@ -99,9 +101,11 @@ async fn create_reaction_view(
     let reaction = create_reaction(db_client, reaction_data).await?;
     post.reaction_count += 1;
     post.reactions = get_post_reactions(db_client, post.id).await?;
+    let media_server = MediaServer::new(&config);
     prepare_like(
         db_client,
         &config.instance(),
+        &media_server,
         &current_user,
         &post,
         reaction.id,
@@ -109,10 +113,12 @@ async fn create_reaction_view(
         maybe_emoji.as_ref(),
     ).await?.save_and_enqueue(db_client).await?;
 
+    let base_url = get_request_base_url(connection_info);
+    let media_server = ClientMediaServer::new(&config, &base_url);
     let status = build_status(
         db_client,
-        &get_request_base_url(connection_info),
         &config.instance_url(),
+        &media_server,
         Some(&current_user),
         post,
     ).await?;
@@ -159,10 +165,12 @@ async fn delete_reaction_view(
         reaction_has_deprecated_ap_id,
     ).await?.save_and_enqueue(db_client).await?;
 
+    let base_url = get_request_base_url(connection_info);
+    let media_server = ClientMediaServer::new(&config, &base_url);
     let status = build_status(
         db_client,
-        &get_request_base_url(connection_info),
         &config.instance_url(),
+        &media_server,
         Some(&current_user),
         post,
     ).await?;

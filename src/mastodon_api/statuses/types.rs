@@ -18,6 +18,7 @@ use crate::mastodon_api::{
     accounts::types::Account,
     custom_emojis::types::CustomEmoji,
     media::types::Attachment,
+    media_server::ClientMediaServer,
 };
 
 pub const POST_CONTENT_TYPE_HTML: &str = "text/html";
@@ -119,14 +120,14 @@ pub struct Status {
 
 impl Status {
     pub fn from_post(
-        base_url: &str,
         instance_url: &str,
+        media_server: &ClientMediaServer,
         post: Post,
     ) -> Self {
         let object_id = post_object_id(instance_url, &post);
         let object_url = compatible_post_object_id(instance_url, &post);
         let attachments: Vec<Attachment> = post.attachments.into_iter()
-            .map(|item| Attachment::from_db(base_url, item))
+            .map(|item| Attachment::from_db(media_server, item))
             .collect();
         let mentions: Vec<Mention> = post.mentions.into_iter()
             .map(|item| Mention::from_profile(instance_url, item))
@@ -135,25 +136,25 @@ impl Status {
             .map(|tag_name| Tag::from_tag_name(instance_url, tag_name))
             .collect();
         let emojis: Vec<CustomEmoji> = post.emojis.into_iter()
-            .map(|emoji| CustomEmoji::from_db(base_url, emoji))
+            .map(|emoji| CustomEmoji::from_db(media_server, emoji))
             .collect();
         let account = Account::from_profile(
-            base_url,
             instance_url,
+            media_server,
             post.author,
         );
         let reblog = if let Some(repost_of) = post.repost_of {
-            let status = Status::from_post(base_url, instance_url, *repost_of);
+            let status = Status::from_post(instance_url, media_server, *repost_of);
             Some(Box::new(status))
         } else {
             None
         };
         let maybe_quote = post.linked.first().cloned().map(|post| {
-            let status = Status::from_post(base_url, instance_url, post);
+            let status = Status::from_post(instance_url, media_server, post);
             Box::new(status)
         });
         let links: Vec<Status> = post.linked.into_iter().map(|post| {
-            Status::from_post(base_url, instance_url, post)
+            Status::from_post(instance_url, media_server, post)
         }).collect();
         let visibility = match post.visibility {
             Visibility::Public => "public",
@@ -172,7 +173,7 @@ impl Status {
                 continue;
             };
             let maybe_custom_emoji = reaction.emoji
-                .map(|emoji| CustomEmoji::from_db(base_url, emoji));
+                .map(|emoji| CustomEmoji::from_db(media_server, emoji));
             let reaction = PleromaEmojiReaction {
                 account_ids: reaction.authors,
                 count: reaction.count,
@@ -273,12 +274,12 @@ pub struct StatusPreview {
 
 impl StatusPreview {
     pub fn new(
-        base_url: &str,
+        media_server: &ClientMediaServer,
         content: String,
         emojis: Vec<DbEmoji>,
     ) -> Self {
         let emojis: Vec<CustomEmoji> = emojis.into_iter()
-            .map(|emoji| CustomEmoji::from_db(base_url, emoji))
+            .map(|emoji| CustomEmoji::from_db(media_server, emoji))
             .collect();
         Self { content, emojis }
     }

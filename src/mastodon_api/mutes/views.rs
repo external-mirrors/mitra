@@ -19,6 +19,7 @@ use crate::mastodon_api::{
     accounts::types::Account,
     auth::get_current_user,
     errors::MastodonError,
+    media_server::ClientMediaServer,
     pagination::{get_last_item, get_paginated_response},
 };
 
@@ -45,11 +46,12 @@ async fn mute_list_view(
     let maybe_last_id = get_last_item(&profiles, &query_params.limit)
         .map(|item| item.related_id);
     let base_url = get_request_base_url(connection_info);
+    let media_server = ClientMediaServer::new(&config, &base_url);
     let instance_url = config.instance().url();
     let accounts: Vec<Account> = profiles.into_iter()
         .map(|item| Account::from_profile(
-            &base_url,
             &instance_url,
+            &media_server,
             item.profile,
         ))
         .collect();

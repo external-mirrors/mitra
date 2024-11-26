@@ -10,6 +10,7 @@ use mitra_models::{
     profiles::types::{DbActor, DbActorProfile},
     users::types::User,
 };
+use mitra_services::media::MediaServer;
 
 use crate::{
     contexts::{build_default_context, Context},
@@ -74,6 +75,7 @@ pub(super) fn get_like_audience(
 #[allow(clippy::too_many_arguments)]
 fn build_like(
     instance_url: &str,
+    media_server: &MediaServer,
     actor_profile: &DbActorProfile,
     object_id: &str,
     reaction_id: Uuid,
@@ -90,7 +92,7 @@ fn build_like(
     let activity_id = local_like_activity_id(instance_url, reaction_id, false);
     let actor_id = local_actor_id(instance_url, &actor_profile.username);
     let maybe_tag = maybe_custom_emoji
-        .map(|db_emoji| build_emoji(instance_url, db_emoji));
+        .map(|db_emoji| build_emoji(instance_url, media_server, db_emoji));
     let (primary_audience, secondary_audience) =
         get_like_audience(post_author_id, post_visibility);
     Like {
@@ -118,9 +120,11 @@ pub async fn get_like_recipients(
     Ok(recipients)
 }
 
+#[allow(clippy::too_many_arguments)]
 pub async fn prepare_like(
     db_client: &impl DatabaseClient,
     instance: &Instance,
+    media_server: &MediaServer,
     sender: &User,
     post: &Post,
     reaction_id: Uuid,
@@ -137,6 +141,7 @@ pub async fn prepare_like(
         compatible_profile_actor_id(&instance.url(), &post.author);
     let activity = build_like(
         &instance.url(),
+        media_server,
         &sender.profile,
         &object_id,
         reaction_id,
@@ -162,12 +167,14 @@ mod tests {
 
     #[test]
     fn test_build_like() {
+        let media_server = MediaServer::for_test(INSTANCE_URL);
         let author = DbActorProfile::default();
         let post_id = "https://example.com/objects/123";
         let post_author_id = "https://example.com/users/test";
         let reaction_id = generate_ulid();
         let activity = build_like(
             INSTANCE_URL,
+            &media_server,
             &author,
             post_id,
             reaction_id,

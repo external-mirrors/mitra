@@ -103,7 +103,7 @@ use mitra_models::{
 };
 use mitra_services::{
     ethereum::eip4361::verify_eip4361_signature,
-    media::MediaStorage,
+    media::{MediaServer, MediaStorage},
     monero::caip122::verify_monero_caip122_signature,
 };
 use mitra_utils::{
@@ -126,6 +126,7 @@ use crate::mastodon_api::{
     auth::get_current_user,
     errors::MastodonError,
     lists::types::List,
+    media_server::ClientMediaServer,
     pagination::{get_last_item, get_paginated_response},
     search::helpers::search_profiles_only,
     statuses::helpers::get_paginated_status_list,
@@ -265,9 +266,11 @@ pub async fn create_account(
     };
     create_signup_notifications(db_client, user.id).await?;
     log::warn!("created user {}", user);
+    let base_url = get_request_base_url(connection_info);
+    let media_server = ClientMediaServer::new(&config, &base_url);
     let account = Account::from_user(
-        &get_request_base_url(connection_info),
         &instance.url(),
+        &media_server,
         user,
     );
     Ok(HttpResponse::Created().json(account))
@@ -282,9 +285,11 @@ async fn verify_credentials(
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &**get_database_client(&db_pool).await?;
     let user = get_current_user(db_client, auth.token()).await?;
+    let base_url = get_request_base_url(connection_info);
+    let media_server = ClientMediaServer::new(&config, &base_url);
     let account = Account::from_user(
-        &get_request_base_url(connection_info),
         &config.instance_url(),
+        &media_server,
         user,
     );
     Ok(HttpResponse::Ok().json(account))
@@ -332,15 +337,19 @@ async fn update_credentials(
     deletion_queue.into_job(db_client).await?;
 
     // Federate
+    let media_server = MediaServer::new(&config);
     prepare_update_person(
         db_client,
         &config.instance(),
+        &media_server,
         &current_user,
     ).await?.save_and_enqueue(db_client).await?;
 
+    let base_url = get_request_base_url(connection_info);
+    let media_server = ClientMediaServer::new(&config, &base_url);
     let account = Account::from_user(
-        &get_request_base_url(connection_info),
         &config.instance_url(),
+        &media_server,
         current_user,
     );
     Ok(HttpResponse::Ok().json(account))
@@ -518,15 +527,19 @@ async fn create_identity_proof(
     current_user.profile = updated_profile;
 
     // Federate
+    let media_server = MediaServer::new(&config);
     prepare_update_person(
         db_client,
         &config.instance(),
+        &media_server,
         &current_user,
     ).await?.save_and_enqueue(db_client).await?;
 
+    let base_url = get_request_base_url(connection_info);
+    let media_server = ClientMediaServer::new(&config, &base_url);
     let account = Account::from_user(
-        &get_request_base_url(connection_info),
         &config.instance_url(),
+        &media_server,
         current_user,
     );
     Ok(HttpResponse::Ok().json(account))
@@ -557,9 +570,11 @@ async fn lookup_acct(
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &**get_database_client(&db_pool).await?;
     let profile = get_profile_by_acct(db_client, &query_params.acct).await?;
+    let base_url = get_request_base_url(connection_info);
+    let media_server = ClientMediaServer::new(&config, &base_url);
     let account = Account::from_profile(
-        &get_request_base_url(connection_info),
         &config.instance_url(),
+        &media_server,
         profile,
     );
     Ok(HttpResponse::Ok().json(account))
@@ -600,11 +615,12 @@ async fn search_by_acct(
         query_params.offset,
     ).await?;
     let base_url = get_request_base_url(connection_info);
+    let media_server = ClientMediaServer::new(&config, &base_url);
     let instance_url = config.instance().url();
     let accounts: Vec<Account> = profiles.into_iter()
         .map(|profile| Account::from_profile(
-            &base_url,
             &instance_url,
+            &media_server,
             profile,
         ))
         .collect();
@@ -623,11 +639,12 @@ async fn search_by_did(
         .map_err(|_| ValidationError("invalid DID"))?;
     let profiles = search_profiles_by_did(db_client, &did, false).await?;
     let base_url = get_request_base_url(connection_info);
+    let media_server = ClientMediaServer::new(&config, &base_url);
     let instance_url = config.instance().url();
     let accounts: Vec<Account> = profiles.into_iter()
         .map(|profile| Account::from_profile(
-            &base_url,
             &instance_url,
+            &media_server,
             profile,
         ))
         .collect();
@@ -659,9 +676,11 @@ async fn get_account(
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &**get_database_client(&db_pool).await?;
     let profile = get_profile_by_id(db_client, *account_id).await?;
+    let base_url = get_request_base_url(connection_info);
+    let media_server = ClientMediaServer::new(&config, &base_url);
     let account = Account::from_profile(
-        &get_request_base_url(connection_info),
         &config.instance_url(),
+        &media_server,
         profile,
     );
     Ok(HttpResponse::Ok().json(account))
@@ -868,11 +887,13 @@ async fn get_account_statuses(
         query_params.limit.inner(),
     ).await?;
     let base_url = get_request_base_url(connection_info);
+    let media_server = ClientMediaServer::new(&config, &base_url);
     let instance_url = config.instance().url();
     let response = get_paginated_status_list(
         db_client,
         &base_url,
         &instance_url,
+        &media_server,
         &request_uri,
         maybe_current_user.as_ref(),
         posts,
@@ -908,11 +929,12 @@ async fn get_account_followers(
     let maybe_last_id = get_last_item(&followers, &query_params.limit)
         .map(|item| item.related_id);
     let base_url = get_request_base_url(connection_info);
+    let media_server = ClientMediaServer::new(&config, &base_url);
     let instance_url = config.instance().url();
     let accounts: Vec<Account> = followers.into_iter()
         .map(|item| Account::from_profile(
-            &base_url,
             &instance_url,
+            &media_server,
             item.profile,
         ))
         .collect();
@@ -952,11 +974,12 @@ async fn get_account_following(
     let maybe_last_id = get_last_item(&following, &query_params.limit)
         .map(|item| item.related_id);
     let base_url = get_request_base_url(connection_info);
+    let media_server = ClientMediaServer::new(&config, &base_url);
     let instance_url = config.instance().url();
     let accounts: Vec<Account> = following.into_iter()
         .map(|item| Account::from_profile(
-            &base_url,
             &instance_url,
+            &media_server,
             item.profile,
         ))
         .collect();
@@ -987,6 +1010,7 @@ async fn get_account_subscribers(
         return Ok(HttpResponse::Ok().json(subscriptions));
     };
     let base_url = get_request_base_url(connection_info);
+    let media_server = ClientMediaServer::new(&config, &base_url);
     let instance_url = config.instance_url();
     let subscriptions: Vec<ApiSubscription> = get_incoming_subscriptions(
         db_client,
@@ -998,8 +1022,8 @@ async fn get_account_subscribers(
         .await?
         .into_iter()
         .map(|subscription| ApiSubscription::from_subscription(
-            &base_url,
             &instance_url,
+            &media_server,
             subscription,
         ))
         .collect();
@@ -1034,11 +1058,12 @@ async fn get_account_aliases(
     let db_client = &**get_database_client(&db_pool).await?;
     let profile = get_profile_by_id(db_client, *account_id).await?;
     let base_url = get_request_base_url(connection_info);
+    let media_server = ClientMediaServer::new(&config, &base_url);
     let instance_url = config.instance_url();
     let aliases = get_aliases(
         db_client,
-        &base_url,
         &instance_url,
+        &media_server,
         &profile,
     ).await?;
     Ok(HttpResponse::Ok().json(aliases))

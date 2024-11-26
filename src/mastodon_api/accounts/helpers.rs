@@ -15,6 +15,7 @@ use mitra_models::{
 };
 
 use crate::mastodon_api::{
+    media_server::ClientMediaServer,
     microsyntax::emojis::{find_emojis, replace_emojis},
 };
 
@@ -132,8 +133,8 @@ pub async fn get_relationships(
 
 pub async fn get_aliases(
     db_client: &impl DatabaseClient,
-    base_url: &str,
     instance_url: &str,
+    media_server: &ClientMediaServer,
     profile: &DbActorProfile,
 ) -> Result<Aliases, DatabaseError> {
     let declared_db = find_declared_aliases(db_client, profile).await?;
@@ -141,8 +142,8 @@ pub async fn get_aliases(
         .map(|(actor_id, maybe_profile)| {
             let maybe_account = maybe_profile.as_ref()
                 .map(|profile| Account::from_profile(
-                    base_url,
                     instance_url,
+                    media_server,
                     profile.clone(),
                 ));
             Alias { id: actor_id.to_string(), account: maybe_account }
@@ -152,8 +153,8 @@ pub async fn get_aliases(
         // Without unknown and local actors
         .filter_map(|(_, maybe_profile)| {
             maybe_profile.as_ref().map(|profile| Account::from_profile(
-                base_url,
                 instance_url,
+                media_server,
                 profile.clone(),
             ))
         })
@@ -161,8 +162,8 @@ pub async fn get_aliases(
     let verified = find_verified_aliases(db_client, profile).await?
         .into_iter()
         .map(|profile| Account::from_profile(
-            base_url,
             instance_url,
+            media_server,
             profile,
         ))
         .collect();
