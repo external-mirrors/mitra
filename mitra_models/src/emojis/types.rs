@@ -17,6 +17,7 @@ pub struct EmojiImage {
     pub file_name: String,
     #[serde(default = "default_emoji_file_size")]
     pub file_size: usize,
+    digest: Option<[u8; 32]>,
     pub media_type: String,
     url: Option<String>,
 }
@@ -26,6 +27,7 @@ impl From<MediaInfo> for EmojiImage {
         Self {
             file_name: media_info.file_name,
             file_size: media_info.file_size,
+            digest: Some(media_info.digest),
             media_type: media_info.media_type,
             url: media_info.url,
         }

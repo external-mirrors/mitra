@@ -9,6 +9,7 @@ pub struct DbMediaAttachment {
     pub owner_id: Uuid,
     pub file_name: String,
     pub file_size: Option<i32>,
+    pub digest: Option<Vec<u8>>,
     pub media_type: Option<String>,
     pub url: Option<String>,
     pub description: Option<String>,

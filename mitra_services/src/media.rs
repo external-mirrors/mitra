@@ -2,8 +2,7 @@ use std::fs::remove_file;
 use std::io::Error;
 use std::path::{Path, PathBuf};
 
-use sha2::{Digest, Sha256};
-
+use apx_core::hashes::sha256;
 use mitra_config::Config;
 use mitra_utils::{
     files::{
@@ -42,7 +41,7 @@ const SUPPORTED_MEDIA_TYPES: [&str; 15] = [
 
 /// Generates unique file name based on file contents
 fn get_file_name(data: &[u8], media_type: Option<&str>) -> String {
-    let digest = Sha256::digest(data);
+    let digest = sha256(data);
     let mut file_name = hex::encode(digest);
     let maybe_extension = media_type
         .and_then(get_media_type_extension);
@@ -107,13 +106,18 @@ impl MediaStorage {
         media_type: &str,
     ) -> Result<FileInfo, MediaStorageError> {
         let file_size = file_data.len();
+        let digest = sha256(&file_data);
         let file_name = save_file(
             file_data,
             &self.media_dir,
             Some(media_type),
         )?;
-        let file_info =
-            FileInfo::new(file_name, file_size, media_type.to_string());
+        let file_info = FileInfo::new(
+            file_name,
+            file_size,
+            digest,
+            media_type.to_string(),
+        );
         Ok(file_info)
     }
 

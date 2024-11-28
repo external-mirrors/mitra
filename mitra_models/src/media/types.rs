@@ -7,6 +7,7 @@ use mitra_utils::files::FileInfo;
 pub struct MediaInfo {
     pub file_name: String,
     pub file_size: usize,
+    pub digest: [u8; 32],
     pub media_type: String,
     pub url: Option<String>,
 }
@@ -16,6 +17,7 @@ impl MediaInfo {
         Self {
             file_name: file_info.name,
             file_size: file_info.size,
+            digest: file_info.digest,
             media_type: file_info.media_type,
             url: None,
         }

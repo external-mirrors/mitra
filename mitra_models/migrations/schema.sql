@@ -200,6 +200,7 @@ CREATE TABLE media_attachment (
     owner_id UUID NOT NULL REFERENCES actor_profile (id) ON DELETE CASCADE,
     file_name VARCHAR(200) NOT NULL,
     file_size INTEGER,
+    digest BYTEA,
     media_type VARCHAR(50),
     url VARCHAR(2000),
     description TEXT,

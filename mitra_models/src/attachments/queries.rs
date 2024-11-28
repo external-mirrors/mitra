@@ -24,11 +24,12 @@ pub async fn create_attachment(
             owner_id,
             file_name,
             file_size,
+            digest,
             media_type,
             url,
             description
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
         RETURNING media_attachment
         ",
         &[
@@ -36,6 +37,7 @@ pub async fn create_attachment(
             &owner_id,
             &media_info.file_name,
             &file_size,
+            &media_info.digest,
             &media_info.media_type,
             &media_info.url,
             &description,
@@ -157,6 +159,7 @@ mod tests {
         assert_eq!(attachment.owner_id, profile.id);
         assert_eq!(attachment.file_name, image_info.file_name);
         assert_eq!(attachment.file_size.unwrap(), image_info.file_size as i32);
+        assert_eq!(attachment.digest.unwrap(), image_info.digest);
         assert_eq!(attachment.media_type.unwrap(), image_info.media_type);
         assert_eq!(attachment.url, None);
         assert_eq!(attachment.description.unwrap(), description);
