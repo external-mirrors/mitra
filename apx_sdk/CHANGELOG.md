@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Added adapters for http version 0.2 types.
 - Added `sha256` function to `apx_core::hashes` module.
+- Added `sha256_multibase` function to `apx_core::hashes` module.
 
 ### Changed
 

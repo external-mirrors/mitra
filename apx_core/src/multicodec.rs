@@ -6,6 +6,8 @@ use unsigned_varint;
 #[error("multicodec error")]
 pub struct MulticodecError;
 
+// SHA2 256 bit (sha2-256)
+const MULTICODEC_SHA2_256: u128 = 0x12;
 // Ed25519 public key (ed25519-pub)
 const MULTICODEC_ED25519_PUB: u128 = 0xed;
 // Ed25519 private key (ed25519-priv)
@@ -17,9 +19,9 @@ const MULTICODEC_RSA_PUB: u128 = 0x1205;
 const MULTICODEC_RSA_PRIV: u128 = 0x1305;
 
 fn encode(code: u128, data: &[u8]) -> Vec<u8> {
-    let mut buf: [u8; 19] = Default::default();
-    let code = unsigned_varint::encode::u128(code, &mut buf).to_vec();
-    [code, data.to_vec()].concat()
+    let mut buf = unsigned_varint::encode::u128_buffer();
+    let code = unsigned_varint::encode::u128(code, &mut buf);
+    [code, data].concat()
 }
 
 fn decode(value: &[u8]) -> Result<(u128, Vec<u8>), MulticodecError> {
@@ -28,8 +30,23 @@ fn decode(value: &[u8]) -> Result<(u128, Vec<u8>), MulticodecError> {
     Ok((code, data.to_vec()))
 }
 
+// https://github.com/multiformats/multihash
+pub(crate) fn encode_digest(data: &[u8]) -> Vec<u8> {
+    let mut buf = unsigned_varint::encode::usize_buffer();
+    let size = unsigned_varint::encode::usize(data.len(), &mut buf);
+    [size, data].concat()
+}
+
+#[allow(dead_code)]
+fn decode_digest(value: &[u8]) -> Result<(usize, Vec<u8>), MulticodecError> {
+    let (size, data) = unsigned_varint::decode::usize(value)
+        .map_err(|_| MulticodecError)?;
+    Ok((size, data.to_vec()))
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub enum Multicodec {
+    Sha256,
     Ed25519Pub,
     Ed25519Priv,
     RsaPub,
@@ -39,6 +56,7 @@ pub enum Multicodec {
 impl Multicodec {
     fn from_code(code: u128) -> Result<Self, MulticodecError> {
         let codec = match code {
+            MULTICODEC_SHA2_256 => Self::Sha256,
             MULTICODEC_ED25519_PUB => Self::Ed25519Pub,
             MULTICODEC_ED25519_PRIV => Self::Ed25519Priv,
             MULTICODEC_RSA_PUB => Self::RsaPub,
@@ -50,6 +68,7 @@ impl Multicodec {
 
     fn code(&self) -> u128 {
         match self {
+            Self::Sha256 => MULTICODEC_SHA2_256,
             Self::Ed25519Pub => MULTICODEC_ED25519_PUB,
             Self::Ed25519Priv => MULTICODEC_ED25519_PRIV,
             Self::RsaPub => MULTICODEC_RSA_PUB,
@@ -79,6 +98,19 @@ impl Multicodec {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_sha2_256_encode_decode() {
+        // Digests require special treatment
+        let digest = [1; 32];
+        let sized = encode_digest(&digest);
+        assert_eq!(sized.len(), 33);
+        let encoded = Multicodec::Sha256.encode(&sized);
+        assert_eq!(encoded.len(), 34);
+        let decoded_sized = Multicodec::Sha256.decode_exact(&encoded).unwrap();
+        let (_, decoded) = decode_digest(&decoded_sized).unwrap();
+        assert_eq!(decoded, digest);
+    }
 
     #[test]
     fn test_ed25519_pub_encode_decode() {

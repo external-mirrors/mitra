@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 use apx_sdk::{
     addresses::WebfingerAddress,
     constants::{AP_MEDIA_TYPE, AP_PUBLIC},
+    core::hashes::sha256_multibase,
     deserialization::deserialize_string_array,
 };
 use mitra_models::{
@@ -79,6 +80,7 @@ struct MediaAttachment {
     #[serde(skip_serializing_if = "Option::is_none")]
     name: Option<String>,
     media_type: Option<String>,
+    digest_multibase: Option<String>,
     url: String,
 }
 
@@ -138,6 +140,8 @@ pub fn build_note(
             attachment_type: DOCUMENT.to_string(),
             name: db_item.description.clone(),
             media_type: db_item.media_type.clone(),
+            digest_multibase: db_item.digest.as_ref()
+                .map(|digest| sha256_multibase(digest)),
             url,
         }
     }).collect();
