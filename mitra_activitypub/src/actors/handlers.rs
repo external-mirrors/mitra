@@ -39,7 +39,6 @@ use mitra_models::{
     },
 };
 use mitra_services::media::{MediaStorage, MediaStorageError};
-use mitra_utils::files::FileInfo;
 use mitra_validators::{
     activitypub::validate_object_id,
     errors::ValidationError,
@@ -303,9 +302,8 @@ async fn fetch_actor_image(
             &allowed_profile_image_media_types(&storage.supported_media_types()),
             PROFILE_IMAGE_SIZE_MAX,
         ).await {
-            Ok((file_data, file_size, media_type)) => {
-                let file_name = storage.save_file(file_data, &media_type)?;
-                let file_info = FileInfo::new(file_name, file_size, media_type);
+            Ok((file_data, media_type)) => {
+                let file_info = storage.save_file(file_data, &media_type)?;
                 let image = ProfileImage::from(MediaInfo::remote(
                     file_info,
                     actor_image.url.clone(),

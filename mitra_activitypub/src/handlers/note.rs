@@ -359,7 +359,7 @@ async fn get_object_attachments(
             unprocessed.push(attachment_url);
             continue;
         };
-        let (file_data, file_size, media_type) = match fetch_file(
+        let (file_data, media_type) = match fetch_file(
             agent,
             &attachment_url,
             attachment.media_type.as_deref(),
@@ -377,9 +377,8 @@ async fn get_object_attachments(
                 continue;
             },
         };
-        let file_name = storage.save_file(file_data, &media_type)?;
+        let file_info = storage.save_file(file_data, &media_type)?;
         log::info!("downloaded attachment {}", attachment_url);
-        let file_info = FileInfo::new(file_name, file_size, media_type);
         downloaded.push((attachment_url, file_info, maybe_description));
     };
     for (attachment_url, file_info, description) in downloaded {

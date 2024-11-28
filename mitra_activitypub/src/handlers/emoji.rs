@@ -18,7 +18,6 @@ use mitra_models::{
     media::types::MediaInfo,
 };
 use mitra_services::media::MediaStorage;
-use mitra_utils::files::FileInfo;
 use mitra_validators::{
     activitypub::validate_object_id,
     emojis::{
@@ -99,7 +98,7 @@ pub async fn handle_emoji(
         log::warn!("invalid emoji URL ({error}): {}", emoji.icon.url);
         return Ok(None);
     };
-    let (file_data, file_size, media_type) = match fetch_file(
+    let (file_data, media_type) = match fetch_file(
         agent,
         &emoji.icon.url,
         emoji.icon.media_type.as_deref(),
@@ -112,9 +111,8 @@ pub async fn handle_emoji(
             return Ok(None);
         },
     };
-    let file_name = storage.save_file(file_data, &media_type)?;
+    let file_info = storage.save_file(file_data, &media_type)?;
     log::info!("downloaded emoji {}", emoji.icon.url);
-    let file_info = FileInfo::new(file_name, file_size, media_type);
     let image = DbEmojiImage::from(MediaInfo::remote(file_info, emoji.icon.url));
     let db_emoji = if let Some(emoji_id) = maybe_emoji_id {
         let (db_emoji, deletion_queue) = update_emoji(

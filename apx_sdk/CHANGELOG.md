@@ -18,6 +18,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Migrated to http package version 1.1.0.
 - Migrated to reqwest version 0.12 and rustls version 0.22.
 - Use `ContentDigest` type during HTTP signature verification.
+- Don't return file size from `fetch_file`.
 
 ## [0.5.0] - 2024-11-20
 

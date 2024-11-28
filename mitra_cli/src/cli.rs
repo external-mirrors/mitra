@@ -100,7 +100,7 @@ use mitra_services::{
 };
 use mitra_utils::{
     datetime::days_before_now,
-    files::{FileInfo, FileSize},
+    files::FileSize,
     passwords::hash_password,
 };
 use mitra_validators::{
@@ -456,7 +456,7 @@ impl AddEmoji {
             return Ok(());
         };
         let storage = MediaStorage::from(config);
-        let (file_data, file_size, media_type) = if
+        let (file_data, media_type) = if
             HttpUrl::parse(&self.location).is_ok()
         {
             let agent = build_federation_agent(&config.instance(), None);
@@ -468,25 +468,23 @@ impl AddEmoji {
                 storage.emoji_size_limit,
             ).await?
         } else {
-            let file = std::fs::read(&self.location)?;
-            let media_type = sniff_media_type(&file)
+            let file_data = std::fs::read(&self.location)?;
+            let media_type = sniff_media_type(&file_data)
                 .ok_or(anyhow!("unknown media type"))?;
             if !EMOJI_MEDIA_TYPES.contains(&media_type.as_str()) {
                 println!("media type {} is not supported", media_type);
                 return Ok(());
             };
-            let file_size = file.len();
-            if file_size > config.limits.media.emoji_local_size_limit {
+            if file_data.len() > config.limits.media.emoji_local_size_limit {
                 println!(
                     "emoji file size must be less than {}",
                     FileSize::new(config.limits.media.emoji_local_size_limit),
                 );
                 return Ok(());
             };
-            (file, file_size, media_type)
+            (file_data, media_type)
         };
-        let file_name = storage.save_file(file_data, &media_type)?;
-        let file_info = FileInfo::new(file_name, file_size, media_type);
+        let file_info = storage.save_file(file_data, &media_type)?;
         let image = EmojiImage::from(MediaInfo::local(file_info));
         let (_, deletion_queue) = create_or_update_local_emoji(
             db_client,

@@ -265,7 +265,7 @@ pub async fn fetch_file(
     expected_media_type: Option<&str>,
     allowed_media_types: &[&str],
     file_size_limit: usize,
-) -> Result<(Vec<u8>, usize, String), FetchError> {
+) -> Result<(Vec<u8>, String), FetchError> {
     if agent.ssrf_protection_enabled {
         require_safe_url(url)?;
     };
@@ -287,7 +287,6 @@ pub async fn fetch_file(
     let file_data = limited_response(&mut response, file_size_limit)
         .await?
         .ok_or(FetchError::ResponseTooLarge)?;
-    let file_size = file_data.len();
     // Content-Type header has the highest priority
     let media_type = get_media_type(
         &file_data,
@@ -297,7 +296,7 @@ pub async fn fetch_file(
     if !allowed_media_types.contains(&media_type.as_str()) {
         return Err(FetchError::UnexpectedContentType(media_type));
     };
-    Ok((file_data.into(), file_size, media_type))
+    Ok((file_data.into(), media_type))
 }
 
 /// Fetches arbitrary JSON data (unsigned request)
