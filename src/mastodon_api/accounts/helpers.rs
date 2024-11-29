@@ -187,34 +187,24 @@ mod tests {
             unmute,
             unsubscribe,
         },
-        users::queries::create_user,
-        users::types::{User, UserCreateData},
+        users::test_utils::create_test_user,
+        users::types::User,
     };
     use super::*;
 
-    async fn create_users(db_client: &mut impl DatabaseClient)
-        -> Result<(User, User), DatabaseError>
-    {
-        let user_data_1 = UserCreateData {
-            username: "user".to_string(),
-            password_hash: Some("test".to_string()),
-            ..Default::default()
-        };
-        let user_1 = create_user(db_client, user_data_1).await.unwrap();
-        let user_data_2 = UserCreateData {
-            username: "another-user".to_string(),
-            password_hash: Some("test".to_string()),
-            ..Default::default()
-        };
-        let user_2 = create_user(db_client, user_data_2).await.unwrap();
-        Ok((user_1, user_2))
+    async fn create_users(
+        db_client: &mut impl DatabaseClient,
+    ) -> (User, User) {
+        let user_1 = create_test_user(db_client, "user").await;
+        let user_2 = create_test_user(db_client, "another-user").await;
+        (user_1, user_2)
     }
 
     #[tokio::test]
     #[serial]
     async fn test_follow_unfollow() {
         let db_client = &mut create_test_database().await;
-        let (user_1, user_2) = create_users(db_client).await.unwrap();
+        let (user_1, user_2) = create_users(db_client).await;
         // Initial state
         let relationship = get_relationship(db_client, user_1.id, user_2.id).await.unwrap();
         assert_eq!(relationship.id, user_2.id);
@@ -253,7 +243,7 @@ mod tests {
     #[serial]
     async fn test_subscribe_unsubscribe() {
         let db_client = &mut create_test_database().await;
-        let (user_1, user_2) = create_users(db_client).await.unwrap();
+        let (user_1, user_2) = create_users(db_client).await;
 
         subscribe(db_client, user_1.id, user_2.id).await.unwrap();
         let relationship = get_relationship(db_client, user_1.id, user_2.id).await.unwrap();
@@ -270,7 +260,7 @@ mod tests {
     #[serial]
     async fn test_hide_reblogs() {
         let db_client = &mut create_test_database().await;
-        let (user_1, user_2) = create_users(db_client).await.unwrap();
+        let (user_1, user_2) = create_users(db_client).await;
         follow(db_client, user_1.id, user_2.id).await.unwrap();
         let relationship = get_relationship(db_client, user_1.id, user_2.id).await.unwrap();
         assert_eq!(relationship.following, true);
@@ -291,7 +281,7 @@ mod tests {
     #[serial]
     async fn test_mute() {
         let db_client = &mut create_test_database().await;
-        let (user_1, user_2) = create_users(db_client).await.unwrap();
+        let (user_1, user_2) = create_users(db_client).await;
         let relationship = get_relationship(db_client, user_1.id, user_2.id).await.unwrap();
         assert_eq!(relationship.muting, false);
         assert_eq!(relationship.muting_notifications, false);

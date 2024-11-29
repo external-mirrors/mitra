@@ -205,11 +205,10 @@ pub async fn create_signup_notifications(
 #[cfg(test)]
 mod tests {
     use serial_test::serial;
-    use crate::database::test_utils::create_test_database;
-    use crate::notifications::queries::get_notifications;
-    use crate::users::{
-        queries::create_user,
-        types::UserCreateData,
+    use crate::{
+        database::test_utils::create_test_database,
+        notifications::queries::get_notifications,
+        users::test_utils::create_test_user,
     };
     use super::*;
 
@@ -217,18 +216,8 @@ mod tests {
     #[serial]
     async fn test_create_follow_notification() {
         let db_client = &mut create_test_database().await;
-        let user_data_1 = UserCreateData {
-            username: "test1".to_string(),
-            password_hash: Some("test".to_string()),
-            ..Default::default()
-        };
-        let user_1 = create_user(db_client, user_data_1).await.unwrap();
-        let user_data_2 = UserCreateData {
-            username: "test2".to_string(),
-            password_hash: Some("test".to_string()),
-            ..Default::default()
-        };
-        let user_2 = create_user(db_client, user_data_2).await.unwrap();
+        let user_1 = create_test_user(db_client, "test1").await;
+        let user_2 = create_test_user(db_client, "test2").await;
         create_follow_notification(
             db_client,
             user_2.id,

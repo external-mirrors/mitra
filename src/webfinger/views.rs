@@ -155,10 +155,7 @@ mod tests {
     use serial_test::serial;
     use mitra_models::{
         database::test_utils::create_test_database,
-        users::{
-            queries::create_user,
-            types::UserCreateData,
-        },
+        users::test_utils::create_test_user,
     };
     use super::*;
 
@@ -167,12 +164,7 @@ mod tests {
     async fn test_get_jrd() {
         let db_client = &mut create_test_database().await;
         let instance = Instance::for_test("https://social.example");
-        let user_data = UserCreateData {
-            username: "test".to_string(),
-            password_hash: Some("test".to_string()),
-            ..Default::default()
-        };
-        create_user(db_client, user_data).await.unwrap();
+        let _user = create_test_user(db_client, "test").await;
         let resource = "acct:test@social.example";
         let jrd = get_jrd(db_client, instance, resource).await.unwrap();
         let jrd_value = serde_json::to_value(jrd).unwrap();

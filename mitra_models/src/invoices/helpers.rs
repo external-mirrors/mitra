@@ -77,15 +77,11 @@ pub async fn remote_invoice_opened(
 mod tests {
     use serial_test::serial;
     use apx_core::caip2::ChainId;
-    use crate::database::test_utils::create_test_database;
-    use crate::invoices::queries::{create_local_invoice, create_remote_invoice};
-    use crate::profiles::{
-        queries::create_profile,
-        types::ProfileCreateData,
-    };
-    use crate::users::{
-        queries::create_user,
-        types::UserCreateData,
+    use crate::{
+        database::test_utils::create_test_database,
+        invoices::queries::{create_local_invoice, create_remote_invoice},
+        profiles::test_utils::create_test_remote_profile,
+        users::test_utils::create_test_user,
     };
     use super::*;
 
@@ -93,17 +89,13 @@ mod tests {
     #[serial]
     async fn test_local_invoice_forwarded_and_reopened() {
         let db_client = &mut create_test_database().await;
-        let sender_data = ProfileCreateData {
-            username: "sender".to_string(),
-            ..Default::default()
-        };
-        let sender = create_profile(db_client, sender_data).await.unwrap();
-        let recipient_data = UserCreateData {
-            username: "recipient".to_string(),
-            password_hash: Some("test".to_string()),
-            ..Default::default()
-        };
-        let recipient = create_user(db_client, recipient_data).await.unwrap();
+        let sender = create_test_remote_profile(
+            db_client,
+            "sender",
+            "social.example",
+            "https://social.example/actors/1",
+        ).await;
+        let recipient = create_test_user(db_client, "recipient").await;
         let invoice = create_local_invoice(
             db_client,
             sender.id,
@@ -145,17 +137,13 @@ mod tests {
     #[serial]
     async fn test_remote_invoice_opened() {
         let db_client = &mut create_test_database().await;
-        let sender_data = UserCreateData {
-            username: "sender".to_string(),
-            password_hash: Some("test".to_string()),
-            ..Default::default()
-        };
-        let sender = create_user(db_client, sender_data).await.unwrap();
-        let recipient_data = ProfileCreateData {
-            username: "recipient".to_string(),
-            ..Default::default()
-        };
-        let recipient = create_profile(db_client, recipient_data).await.unwrap();
+        let sender = create_test_user(db_client, "sender").await;
+        let recipient = create_test_remote_profile(
+            db_client,
+            "recipient",
+            "social.example",
+            "https://social.example/actors/1",
+        ).await;
         let invoice = create_remote_invoice(
             db_client,
             sender.id,

@@ -1768,11 +1768,7 @@ mod tests {
             subscribe,
             mute,
         },
-        users::{
-            queries::create_user,
-            test_utils::create_test_user,
-            types::UserCreateData,
-        },
+        users::test_utils::create_test_user,
     };
     use super::*;
 
@@ -1903,12 +1899,7 @@ mod tests {
     #[serial]
     async fn test_home_timeline() {
         let db_client = &mut create_test_database().await;
-        let current_user_data = UserCreateData {
-            username: "test".to_string(),
-            password_hash: Some("test".to_string()),
-            ..Default::default()
-        };
-        let current_user = create_user(db_client, current_user_data).await.unwrap();
+        let current_user = create_test_user(db_client, "test").await;
         // Current user's post
         let post_data_1 = PostCreateData {
             content: "my post".to_string(),
@@ -1923,12 +1914,7 @@ mod tests {
         };
         let post_2 = create_post(db_client, current_user.id, post_data_2).await.unwrap();
         // Another user's public post
-        let user_data_1 = UserCreateData {
-            username: "another-user".to_string(),
-            password_hash: Some("test".to_string()),
-            ..Default::default()
-        };
-        let user_1 = create_user(db_client, user_data_1).await.unwrap();
+        let user_1 = create_test_user(db_client, "another-user").await;
         let post_data_3 = PostCreateData {
             content: "test post".to_string(),
             ..Default::default()
@@ -1950,12 +1936,7 @@ mod tests {
         };
         let post_5 = create_post(db_client, user_1.id, post_data_5).await.unwrap();
         // Followed user's public post
-        let user_data_2 = UserCreateData {
-            username: "followed".to_string(),
-            password_hash: Some("test".to_string()),
-            ..Default::default()
-        };
-        let user_2 = create_user(db_client, user_data_2).await.unwrap();
+        let user_2 = create_test_user(db_client, "followed").await;
         follow(db_client, current_user.id, user_2.id).await.unwrap();
         let post_data_6 = PostCreateData {
             content: "test post".to_string(),
@@ -1991,12 +1972,7 @@ mod tests {
         };
         let post_10 = create_post(db_client, user_2.id, post_data_10).await.unwrap();
         // Subscribers-only post by subscription (without mention)
-        let user_data_3 = UserCreateData {
-            username: "subscription".to_string(),
-            password_hash: Some("test".to_string()),
-            ..Default::default()
-        };
-        let user_3 = create_user(db_client, user_data_3).await.unwrap();
+        let user_3 = create_test_user(db_client, "subscription").await;
         subscribe(db_client, current_user.id, user_3.id).await.unwrap();
         let post_data_11 = PostCreateData {
             content: "subscribers only".to_string(),
@@ -2013,12 +1989,7 @@ mod tests {
         };
         let post_12 = create_post(db_client, user_3.id, post_data_12).await.unwrap();
         // Repost from followed user if hiding reposts
-        let user_data_4 = UserCreateData {
-            username: "hide reposts".to_string(),
-            password_hash: Some("test".to_string()),
-            ..Default::default()
-        };
-        let user_4 = create_user(db_client, user_data_4).await.unwrap();
+        let user_4 = create_test_user(db_client, "hide reposts").await;
         follow(db_client, current_user.id, user_4.id).await.unwrap();
         hide_reposts(db_client, current_user.id, user_4.id).await.unwrap();
         let post_data_13 = PostCreateData {
@@ -2027,12 +1998,7 @@ mod tests {
         };
         let post_13 = create_post(db_client, user_4.id, post_data_13).await.unwrap();
         // Post from followed user if muted
-        let user_data_5 = UserCreateData {
-            username: "muted".to_string(),
-            password_hash: Some("test".to_string()),
-            ..Default::default()
-        };
-        let user_5 = create_user(db_client, user_data_5).await.unwrap();
+        let user_5 = create_test_user(db_client, "muted").await;
         follow(db_client, current_user.id, user_5.id).await.unwrap();
         mute(db_client, current_user.id, user_5.id).await.unwrap();
         let post_data_14 = PostCreateData {
@@ -2116,27 +2082,9 @@ mod tests {
     #[serial]
     async fn test_direct_timeline() {
         let db_client = &mut create_test_database().await;
-        let current_user_data = UserCreateData {
-            username: "test".to_string(),
-            password_hash: Some("test".to_string()),
-            ..Default::default()
-        };
-        let current_user = create_user(db_client, current_user_data)
-            .await.unwrap();
-        let user_data_1 = UserCreateData {
-            username: "user1".to_string(),
-            password_hash: Some("test".to_string()),
-            ..Default::default()
-        };
-        let user_1 = create_user(db_client, user_data_1)
-            .await.unwrap();
-        let user_data_2 = UserCreateData {
-            username: "user2".to_string(),
-            password_hash: Some("test".to_string()),
-            ..Default::default()
-        };
-        let user_2 = create_user(db_client, user_data_2)
-            .await.unwrap();
+        let current_user = create_test_user(db_client, "test").await;
+        let user_1 = create_test_user(db_client, "user1").await;
+        let user_2 = create_test_user(db_client, "user2").await;
         // Incoming DM
         let post_data_1 = PostCreateData {
             content: "test dm".to_string(),
@@ -2181,12 +2129,7 @@ mod tests {
     #[serial]
     async fn test_profile_timeline_guest() {
         let db_client = &mut create_test_database().await;
-        let user_data = UserCreateData {
-            username: "test".to_string(),
-            password_hash: Some("test".to_string()),
-            ..Default::default()
-        };
-        let user = create_user(db_client, user_data).await.unwrap();
+        let user = create_test_user(db_client, "test").await;
         // Public post
         let post_data_1 = PostCreateData {
             content: "my post".to_string(),
@@ -2292,18 +2235,8 @@ mod tests {
     #[serial]
     async fn test_get_thread() {
         let db_client = &mut create_test_database().await;
-        let user_data_1 = UserCreateData {
-            username: "test_1".to_string(),
-            password_hash: Some("test".to_string()),
-            ..Default::default()
-        };
-        let user_1 = create_user(db_client, user_data_1).await.unwrap();
-        let user_data_2 = UserCreateData {
-            username: "test_2".to_string(),
-            password_hash: Some("test".to_string()),
-            ..Default::default()
-        };
-        let user_2 = create_user(db_client, user_data_2).await.unwrap();
+        let user_1 = create_test_user(db_client, "test_1").await;
+        let user_2 = create_test_user(db_client, "test_2").await;
         let post_data_1 = PostCreateData {
             content: "my post".to_string(),
             ..Default::default()

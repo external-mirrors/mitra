@@ -1,4 +1,3 @@
-use tokio_postgres::Client;
 use uuid::Uuid;
 
 use apx_core::{
@@ -6,7 +5,10 @@ use apx_core::{
     urls::get_hostname,
 };
 
-use crate::users::test_utils::create_test_user;
+use crate::{
+    database::DatabaseClient,
+    users::test_utils::create_test_user,
+};
 
 use super::{
     queries::create_profile,
@@ -19,7 +21,7 @@ use super::{
 };
 
 pub async fn create_test_local_profile(
-    db_client: &mut Client,
+    db_client: &mut impl DatabaseClient,
     username: &str,
 ) -> DbActorProfile {
     let user = create_test_user(db_client, username).await;
@@ -27,7 +29,7 @@ pub async fn create_test_local_profile(
 }
 
 pub async fn create_test_remote_profile(
-    db_client: &mut Client,
+    db_client: &mut impl DatabaseClient,
     username: &str,
     hostname: &str,
     actor_id: &str,

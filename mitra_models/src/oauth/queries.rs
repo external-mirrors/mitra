@@ -198,10 +198,9 @@ pub async fn get_user_by_oauth_token(
 #[cfg(test)]
 mod tests {
     use serial_test::serial;
-    use crate::database::test_utils::create_test_database;
-    use crate::users::{
-        queries::create_user,
-        types::UserCreateData,
+    use crate::{
+        database::test_utils::create_test_database,
+        users::test_utils::create_test_user,
     };
     use super::*;
 
@@ -221,12 +220,7 @@ mod tests {
     #[serial]
     async fn test_create_oauth_authorization() {
         let db_client = &mut create_test_database().await;
-        let user_data = UserCreateData {
-            username: "test".to_string(),
-            password_hash: Some("test".to_string()),
-            ..Default::default()
-        };
-        let user = create_user(db_client, user_data).await.unwrap();
+        let user = create_test_user(db_client, "test").await;
         let app_data = DbOauthAppData {
             app_name: "My App".to_string(),
             ..Default::default()
@@ -247,12 +241,7 @@ mod tests {
     #[serial]
     async fn test_delete_oauth_token() {
         let db_client = &mut create_test_database().await;
-        let user_data = UserCreateData {
-            username: "test".to_string(),
-            password_hash: Some("test".to_string()),
-            ..Default::default()
-        };
-        let user = create_user(db_client, user_data).await.unwrap();
+        let user = create_test_user(db_client, "test").await;
         let token = "test-token";
         save_oauth_token(
             db_client,

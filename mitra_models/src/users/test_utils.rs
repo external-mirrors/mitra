@@ -1,18 +1,22 @@
-use tokio_postgres::Client;
-
 use apx_core::{
     crypto_eddsa::generate_weak_ed25519_key,
     crypto_rsa::generate_weak_rsa_key,
 };
 
-use crate::profiles::test_utils::create_test_remote_profile;
+use crate::{
+    database::DatabaseClient,
+    profiles::test_utils::create_test_remote_profile,
+};
 
 use super::{
     queries::{create_invite_code, create_portable_user, create_user},
     types::{PortableUser, PortableUserData, User, UserCreateData},
 };
 
-pub async fn create_test_user(db_client: &mut Client, username: &str) -> User {
+pub async fn create_test_user(
+    db_client: &mut impl DatabaseClient,
+    username: &str,
+) -> User {
     let user_data = UserCreateData {
         username: username.to_string(),
         password_hash: Some("test".to_string()),
@@ -22,7 +26,7 @@ pub async fn create_test_user(db_client: &mut Client, username: &str) -> User {
 }
 
 pub async fn create_test_portable_user(
-    db_client: &mut Client,
+    db_client: &mut impl DatabaseClient,
     username: &str,
     hostname: &str,
     actor_id: &str,

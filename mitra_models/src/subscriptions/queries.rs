@@ -201,18 +201,14 @@ pub async fn get_expired_subscription_count(
 #[cfg(test)]
 mod tests {
     use serial_test::serial;
-    use crate::database::test_utils::create_test_database;
-    use crate::profiles::{
-        queries::create_profile,
-        types::ProfileCreateData,
-    };
-    use crate::relationships::{
-        queries::has_relationship,
-        types::RelationshipType,
-    };
-    use crate::users::{
-        queries::create_user,
-        types::UserCreateData,
+    use crate::{
+        database::test_utils::create_test_database,
+        profiles::test_utils::create_test_remote_profile,
+        relationships::{
+            queries::has_relationship,
+            types::RelationshipType,
+        },
+        users::test_utils::create_test_user,
     };
     use super::*;
 
@@ -220,17 +216,13 @@ mod tests {
     #[serial]
     async fn test_create_subscription() {
         let db_client = &mut create_test_database().await;
-        let sender_data = ProfileCreateData {
-            username: "sender".to_string(),
-            ..Default::default()
-        };
-        let sender = create_profile(db_client, sender_data).await.unwrap();
-        let recipient_data = UserCreateData {
-            username: "recipient".to_string(),
-            password_hash: Some("test".to_string()),
-            ..Default::default()
-        };
-        let recipient = create_user(db_client, recipient_data).await.unwrap();
+        let sender = create_test_remote_profile(
+            db_client,
+            "sender",
+            "social.example",
+            "https://social.example/actors/1",
+        ).await;
+        let recipient = create_test_user(db_client, "recipient").await;
         let expires_at = Utc::now();
         let updated_at = Utc::now();
 
@@ -261,12 +253,7 @@ mod tests {
     #[serial]
     async fn test_get_incoming_subscriptions() {
         let db_client = &mut create_test_database().await;
-        let recipient_data = ProfileCreateData {
-            username: "recipient".to_string(),
-            ..Default::default()
-        };
-        let recipient =
-            create_profile(db_client, recipient_data).await.unwrap();
+        let recipient = create_test_user(db_client, "recipient").await;
         let results = get_incoming_subscriptions(
             db_client,
             recipient.id,

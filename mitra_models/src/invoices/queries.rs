@@ -294,32 +294,24 @@ pub(super) async fn set_remote_invoice_data(
 #[cfg(test)]
 mod tests {
     use serial_test::serial;
-    use crate::database::test_utils::create_test_database;
-    use crate::profiles::{
-        queries::create_profile,
-        types::ProfileCreateData,
-    };
-    use crate::users::{
-        queries::create_user,
-        types::UserCreateData,
+    use crate::{
+        database::test_utils::create_test_database,
+        profiles::test_utils::create_test_remote_profile,
+        users::test_utils::create_test_user,
     };
     use super::*;
 
     async fn create_participants(
         db_client: &mut impl DatabaseClient,
     ) -> (Uuid, Uuid) {
-        let user_data = UserCreateData {
-            username: "local".to_string(),
-            password_hash: Some("test".to_string()),
-            ..Default::default()
-        };
-        let user = create_user(db_client, user_data).await.unwrap();
-        let profile_data = ProfileCreateData {
-            username: "remote".to_string(),
-            ..Default::default()
-        };
-        let profile = create_profile(db_client, profile_data).await.unwrap();
-        (user.id, profile.id)
+        let local = create_test_user(db_client, "local").await;
+        let remote = create_test_remote_profile(
+            db_client,
+            "remote",
+            "social.example",
+            "https://social.example/actors/1",
+        ).await;
+        (local.id, remote.id)
     }
 
     #[tokio::test]

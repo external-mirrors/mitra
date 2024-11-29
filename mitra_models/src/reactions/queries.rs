@@ -135,14 +135,13 @@ pub async fn find_reacted_by_user(
 #[cfg(test)]
 mod tests {
     use serial_test::serial;
-    use crate::database::test_utils::create_test_database;
-    use crate::posts::{
-        queries::{create_post, get_post_by_id},
-        types::PostCreateData,
-    };
-    use crate::users::{
-        queries::create_user,
-        types::UserCreateData,
+    use crate::{
+        database::test_utils::create_test_database,
+        posts::{
+            queries::{create_post, get_post_by_id},
+            types::PostCreateData,
+        },
+        users::test_utils::create_test_user,
     };
     use super::*;
 
@@ -150,18 +149,8 @@ mod tests {
     #[serial]
     async fn test_create_reaction() {
         let db_client = &mut create_test_database().await;
-        let user_data_1 = UserCreateData {
-            username: "test1".to_string(),
-            password_hash: Some("test1".to_string()),
-            ..Default::default()
-        };
-        let user_1 = create_user(db_client, user_data_1).await.unwrap();
-        let user_data_2 = UserCreateData {
-            username: "test2".to_string(),
-            password_hash: Some("test2".to_string()),
-            ..Default::default()
-        };
-        let user_2 = create_user(db_client, user_data_2).await.unwrap();
+        let user_1 = create_test_user(db_client, "test1").await;
+        let user_2 = create_test_user(db_client, "test2").await;
         let post_data = PostCreateData {
             content: "my post".to_string(),
             ..Default::default()
@@ -191,18 +180,8 @@ mod tests {
     #[serial]
     async fn test_create_reaction_uniqueness() {
         let db_client = &mut create_test_database().await;
-        let user_data_1 = UserCreateData {
-            username: "test1".to_string(),
-            password_hash: Some("test1".to_string()),
-            ..Default::default()
-        };
-        let user_1 = create_user(db_client, user_data_1).await.unwrap();
-        let user_data_2 = UserCreateData {
-            username: "test2".to_string(),
-            password_hash: Some("test2".to_string()),
-            ..Default::default()
-        };
-        let user_2 = create_user(db_client, user_data_2).await.unwrap();
+        let user_1 = create_test_user(db_client, "test1").await;
+        let user_2 = create_test_user(db_client, "test2").await;
         let post_data = PostCreateData {
             content: "my post".to_string(),
             ..Default::default()
@@ -232,18 +211,8 @@ mod tests {
     #[serial]
     async fn test_delete_reaction() {
         let db_client = &mut create_test_database().await;
-        let user_data_1 = UserCreateData {
-            username: "test1".to_string(),
-            password_hash: Some("test1".to_string()),
-            ..Default::default()
-        };
-        let user_1 = create_user(db_client, user_data_1).await.unwrap();
-        let user_data_2 = UserCreateData {
-            username: "test2".to_string(),
-            password_hash: Some("test2".to_string()),
-            ..Default::default()
-        };
-        let user_2 = create_user(db_client, user_data_2).await.unwrap();
+        let user_1 = create_test_user(db_client, "test1").await;
+        let user_2 = create_test_user(db_client, "test2").await;
         let post_data = PostCreateData {
             content: "my post".to_string(),
             ..Default::default()
