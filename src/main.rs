@@ -72,8 +72,12 @@ async fn main() -> std::io::Result<()> {
     prepare_instance_keys(&mut config, &**db_client).await
         .expect("failed to prepare instance keys");
 
-    let media_storage = MediaStorage::from(&config);
-    media_storage.init().expect("failed to create media directory");
+    let media_storage = MediaStorage::new(&config);
+    match media_storage {
+        MediaStorage::Filesystem(ref backend) => {
+            backend.init().expect("failed to create media directory");
+        },
+    };
 
     std::mem::drop(db_client);
 
@@ -162,10 +166,6 @@ async fn main() -> std::io::Result<()> {
             .app_data(web::Data::new(config.clone()))
             .app_data(web::Data::new(db_pool.clone()))
             .app_data(web::Data::clone(&app_state))
-            .service(actix_files::Files::new(
-                MEDIA_ROOT_URL,
-                media_storage.media_dir.clone(),
-            ))
             .service(oauth_api_scope())
             .service(mastodon_api_scope(payload_size_limit))
             .service(webfinger::webfinger_view)
@@ -188,6 +188,13 @@ async fn main() -> std::io::Result<()> {
                 web::resource("/.well-known/{path}")
                     .to(HttpResponse::NotFound)
             );
+        #[allow(irrefutable_let_patterns)]
+        if let MediaStorage::Filesystem(ref backend) = media_storage {
+            app = app.service(actix_files::Files::new(
+                MEDIA_ROOT_URL,
+                backend.media_dir.clone(),
+            ));
+        };
         if let Some(ref web_client_dir) = config.web_client_dir {
             app = app.service(web_client::themeable_web_client_service(
                 web_client_dir,

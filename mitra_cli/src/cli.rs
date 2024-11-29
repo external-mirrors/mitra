@@ -485,7 +485,7 @@ impl AddEmoji {
             };
             (file_data, media_type)
         };
-        let media_storage = MediaStorage::from(config);
+        let media_storage = MediaStorage::new(config);
         let file_info = media_storage.save_file(file_data, &media_type)?;
         let image = EmojiImage::from(MediaInfo::local(file_info));
         let (_, deletion_queue) = create_or_update_local_emoji(
@@ -683,7 +683,7 @@ impl DeleteOrphanedFiles {
         config: &Config,
         db_client: &impl DatabaseClient,
     ) -> Result<(), Error> {
-        let media_storage = MediaStorage::from(config);
+        let media_storage = MediaStorage::new(config);
         let files = media_storage.list_files()?;
         let orphaned = find_orphaned_files(db_client, files).await?;
         if orphaned.is_empty() {

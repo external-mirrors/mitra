@@ -1,6 +1,8 @@
 use std::fs::remove_file;
-use std::io::Error;
+use std::io::{Error as IoError};
 use std::path::{Path, PathBuf};
+
+use thiserror::Error;
 
 use apx_core::hashes::sha256;
 use mitra_config::Config;
@@ -35,20 +37,45 @@ fn save_file(
     data: Vec<u8>,
     output_dir: &Path,
     media_type: Option<&str>,
-) -> Result<String, Error> {
+) -> Result<String, IoError> {
     let file_name = get_file_name(&data, media_type);
     let file_path = output_dir.join(&file_name);
     write_file(&data, &file_path)?;
     Ok(file_name)
 }
 
-pub struct MediaStorage {
+#[derive(Debug, Error)]
+pub enum MediaStorageError {
+    #[error(transparent)]
+    IoError(#[from] IoError),
+}
+
+trait MediaStorageBackend {
+    fn save_file(
+        &self,
+        file_data: Vec<u8>,
+        media_type: &str,
+    ) -> Result<FileInfo, MediaStorageError>;
+
+    fn read_file(
+         &self,
+        file_name: &str,
+    ) -> Result<Vec<u8>, MediaStorageError>;
+
+    fn delete_file(
+        &self,
+        file_name: &str,
+    ) -> Result<(), MediaStorageError>;
+
+    fn list_files(&self) -> Result<Vec<String>, MediaStorageError>;
+}
+
+#[derive(Clone)]
+pub struct FilesystemStorage {
     pub media_dir: PathBuf,
 }
 
-pub type MediaStorageError = Error;
-
-impl MediaStorage {
+impl FilesystemStorage {
     pub fn init(&self) -> Result<(), MediaStorageError> {
         if !self.media_dir.exists() {
             std::fs::create_dir(&self.media_dir)?;
@@ -63,8 +90,10 @@ impl MediaStorage {
         };
         Ok(())
     }
+}
 
-    pub fn save_file(
+impl MediaStorageBackend for FilesystemStorage {
+    fn save_file(
         &self,
         file_data: Vec<u8>,
         media_type: &str,
@@ -85,7 +114,7 @@ impl MediaStorage {
         Ok(file_info)
     }
 
-    pub fn read_file(
+    fn read_file(
         &self,
         file_name: &str,
     ) -> Result<Vec<u8>, MediaStorageError> {
@@ -94,7 +123,7 @@ impl MediaStorage {
         Ok(data)
     }
 
-    pub fn delete_file(
+    fn delete_file(
         &self,
         file_name: &str,
     ) -> Result<(), MediaStorageError> {
@@ -103,7 +132,7 @@ impl MediaStorage {
         Ok(())
     }
 
-    pub fn list_files(&self) -> Result<Vec<String>, MediaStorageError> {
+    fn list_files(&self) -> Result<Vec<String>, MediaStorageError> {
         let mut files = vec![];
         for maybe_path in std::fs::read_dir(&self.media_dir)? {
             let file_name = maybe_path?.file_name()
@@ -114,11 +143,55 @@ impl MediaStorage {
     }
 }
 
-impl From<&Config> for MediaStorage {
+impl From<&Config> for FilesystemStorage {
     fn from(config: &Config) -> Self {
         Self {
             media_dir: config.storage_dir.join(MEDIA_DIR),
         }
+    }
+}
+
+#[derive(Clone)]
+pub enum MediaStorage {
+    Filesystem(FilesystemStorage),
+}
+
+impl MediaStorage {
+    pub fn new(config: &Config) -> Self {
+        let storage = FilesystemStorage::from(config);
+        Self::Filesystem(storage)
+    }
+
+    fn backend(&self) -> &dyn MediaStorageBackend {
+        match self {
+            Self::Filesystem(backend) => backend,
+        }
+    }
+
+    pub fn save_file(
+        &self,
+        file_data: Vec<u8>,
+        media_type: &str,
+    ) -> Result<FileInfo, MediaStorageError> {
+        self.backend().save_file(file_data, media_type)
+    }
+
+    pub fn read_file(
+        &self,
+        file_name: &str,
+    ) -> Result<Vec<u8>, MediaStorageError> {
+        self.backend().read_file(file_name)
+    }
+
+    pub fn delete_file(
+        &self,
+        file_name: &str,
+    ) -> Result<(), MediaStorageError> {
+        self.backend().delete_file(file_name)
+    }
+
+    pub fn list_files(&self) -> Result<Vec<String>, MediaStorageError> {
+        self.backend().list_files()
     }
 }
 
@@ -127,17 +200,12 @@ fn get_file_url(base_url: &str, file_name: &str) -> String {
 }
 
 #[derive(Clone)]
-pub struct MediaServer {
+pub struct FilesystemServer {
     base_url: String,
 }
 
-impl MediaServer {
-    pub fn new(config: &Config) -> Self {
-        Self { base_url: config.instance_url() }
-    }
-
-    #[cfg(any(test, feature = "test-utils"))]
-    pub fn for_test(base_url: &str) -> Self {
+impl FilesystemServer {
+    pub fn new(base_url: &str) -> Self {
         Self { base_url: base_url.to_string() }
     }
 
@@ -147,6 +215,29 @@ impl MediaServer {
 
     pub fn url_for(&self, file_name: &str) -> String {
         get_file_url(&self.base_url, file_name)
+    }
+}
+
+pub enum MediaServer {
+    Filesystem(FilesystemServer),
+}
+
+impl MediaServer {
+    pub fn new(config: &Config) -> Self {
+        let backend = FilesystemServer::new(&config.instance_url());
+        Self::Filesystem(backend)
+    }
+
+    #[cfg(any(test, feature = "test-utils"))]
+    pub fn for_test(base_url: &str) -> Self {
+        let backend = FilesystemServer::new(base_url);
+        Self::Filesystem(backend)
+    }
+
+    pub fn url_for(&self, file_name: &str) -> String {
+        match self {
+            Self::Filesystem(backend) => backend.url_for(file_name),
+        }
     }
 }
 

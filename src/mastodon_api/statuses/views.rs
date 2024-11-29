@@ -912,7 +912,7 @@ async fn make_permanent(
     };
     let ipfs_api_url = config.ipfs_api_url.as_ref()
         .ok_or(MastodonError::NotSupported)?;
-    let media_storage = MediaStorage::from(config.as_ref());
+    let media_storage = MediaStorage::new(&config);
 
     let mut attachments = vec![];
     for attachment in post.attachments.iter_mut() {

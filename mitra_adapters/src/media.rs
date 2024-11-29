@@ -27,7 +27,7 @@ async fn delete_media(
     queue: DeletionQueue,
 ) -> () {
     if !queue.files.is_empty() {
-        let storage = MediaStorage::from(config);
+        let storage = MediaStorage::new(config);
         delete_files(&storage, &queue.files);
     };
     if !queue.ipfs_objects.is_empty() {

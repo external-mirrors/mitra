@@ -308,7 +308,7 @@ async fn update_credentials(
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &mut **get_database_client(&db_pool).await?;
     let mut current_user = get_current_user(db_client, auth.token()).await?;
-    let media_storage = MediaStorage::from(config.as_ref());
+    let media_storage = MediaStorage::new(&config);
     let mut profile_data = match account_data {
         Either::Left(form) => {
             form.into_inner().into_profile_data(

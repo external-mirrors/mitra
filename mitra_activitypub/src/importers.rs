@@ -95,7 +95,7 @@ impl ApClient {
             instance: config.instance(),
             filter: FederationFilter::init(config, db_client).await?,
             media_limits: config.limits.media.clone(),
-            media_storage: MediaStorage::from(config),
+            media_storage: MediaStorage::new(config),
         };
         Ok(ap_client)
     }

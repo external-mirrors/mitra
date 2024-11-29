@@ -28,11 +28,12 @@ impl ClientMediaServer {
     }
 
     pub fn url_for(&self, file_name: &str) -> String {
-        let media_server = {
-            let mut media_server = self.media_server.clone();
-            media_server.override_base_url(&self.base_url);
-            media_server
-        };
-        media_server.url_for(file_name)
+        match &self.media_server {
+            MediaServer::Filesystem(backend) => {
+                let mut media_server = backend.clone();
+                media_server.override_base_url(&self.base_url);
+                media_server.url_for(file_name)
+            },
+        }
     }
 }

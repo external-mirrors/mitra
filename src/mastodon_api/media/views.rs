@@ -56,7 +56,7 @@ async fn create_attachment_view(
     };
     let db_client = &**get_database_client(&db_pool).await?;
     let current_user = get_current_user(db_client, auth.token()).await?;
-    let media_storage = MediaStorage::from(config.as_ref());
+    let media_storage = MediaStorage::new(&config);
     let file_info = save_b64_file(
         &attachment_data.file,
         &attachment_data.media_type,
