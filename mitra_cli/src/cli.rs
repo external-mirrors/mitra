@@ -455,7 +455,6 @@ impl AddEmoji {
             println!("invalid emoji name");
             return Ok(());
         };
-        let storage = MediaStorage::from(config);
         let (file_data, media_type) = if
             HttpUrl::parse(&self.location).is_ok()
         {
@@ -465,7 +464,7 @@ impl AddEmoji {
                 &self.location,
                 None, // no expectations
                 &EMOJI_MEDIA_TYPES,
-                storage.emoji_size_limit,
+                config.limits.media.emoji_size_limit,
             ).await?
         } else {
             let file_data = std::fs::read(&self.location)?;
@@ -484,7 +483,8 @@ impl AddEmoji {
             };
             (file_data, media_type)
         };
-        let file_info = storage.save_file(file_data, &media_type)?;
+        let media_storage = MediaStorage::from(config);
+        let file_info = media_storage.save_file(file_data, &media_type)?;
         let image = EmojiImage::from(MediaInfo::local(file_info));
         let (_, deletion_queue) = create_or_update_local_emoji(
             db_client,

@@ -279,7 +279,6 @@ async fn get_object_attachments(
     author: &DbActorProfile,
 ) -> Result<(Vec<Uuid>, Vec<String>), HandlerError> {
     let agent = build_federation_agent(&ap_client.instance, None);
-    let storage = &ap_client.media_storage;
     let author_hostname = get_moderation_domain(author.expect_actor_data())?;
     let is_filter_enabled = ap_client.filter.is_action_required(
         author_hostname.as_str(),
@@ -366,8 +365,8 @@ async fn get_object_attachments(
             &agent,
             &attachment_url,
             attachment.media_type.as_deref(),
-            &storage.supported_media_types(),
-            storage.file_size_limit,
+            &ap_client.media_limits.supported_media_types(),
+            ap_client.media_limits.file_size_limit,
         ).await {
             Ok(file) => file,
             Err(error) => {
@@ -380,7 +379,8 @@ async fn get_object_attachments(
                 continue;
             },
         };
-        let file_info = storage.save_file(file_data, &media_type)?;
+        let file_info =
+            ap_client.media_storage.save_file(file_data, &media_type)?;
         log::info!("downloaded attachment {}", attachment_url);
         downloaded.push((attachment_url, file_info, maybe_description));
     };

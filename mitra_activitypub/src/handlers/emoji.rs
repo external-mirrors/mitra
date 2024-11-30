@@ -104,7 +104,6 @@ pub async fn handle_emoji(
         return Ok(None);
     };
     let agent = build_federation_agent(&ap_client.instance, None);
-    let storage = &ap_client.media_storage;
     let is_filter_enabled = ap_client.filter.is_action_required(
         moderation_domain.as_str(),
         FilterAction::RejectCustomEmojis,
@@ -118,7 +117,7 @@ pub async fn handle_emoji(
         &emoji.icon.url,
         emoji.icon.media_type.as_deref(),
         &EMOJI_MEDIA_TYPES,
-        storage.emoji_size_limit,
+        ap_client.media_limits.emoji_size_limit,
     ).await {
         Ok(file) => file,
         Err(error) => {
@@ -126,7 +125,8 @@ pub async fn handle_emoji(
             return Ok(None);
         },
     };
-    let file_info = storage.save_file(file_data, &media_type)?;
+    let file_info = ap_client.media_storage
+        .save_file(file_data, &media_type)?;
     log::info!("downloaded emoji {}", emoji.icon.url);
     let image = DbEmojiImage::from(MediaInfo::remote(file_info, emoji.icon.url));
     let db_emoji = if let Some(emoji_id) = maybe_emoji_id {

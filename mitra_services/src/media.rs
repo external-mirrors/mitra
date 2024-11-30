@@ -17,28 +17,6 @@ use mitra_utils::{
 const MEDIA_DIR: &str = "media";
 pub const MEDIA_ROOT_URL: &str = "/media";
 
-const SUPPORTED_MEDIA_TYPES: [&str; 15] = [
-    "audio/flac",
-    "audio/mpeg",
-    "audio/ogg",
-    "audio/x-wav",
-    "image/apng",
-    "image/avif",
-    "image/gif",
-    "image/jpeg",
-    "image/png",
-    "image/webp",
-    "video/mp4",
-    "video/ogg",
-    "video/quicktime",
-    "video/webm",
-    "video/x-m4v",
-];
-
-// Not included
-// https://developer.mozilla.org/en-US/docs/Web/Media/Formats/Image_types
-// - image/tiff only supported by Safari
-
 /// Generates unique file name based on file contents
 fn get_file_name(data: &[u8], media_type: Option<&str>) -> String {
     let digest = sha256(data);
@@ -70,21 +48,11 @@ pub fn get_file_url(instance_url: &str, file_name: &str) -> String {
 
 pub struct MediaStorage {
     pub media_dir: PathBuf,
-    pub file_size_limit: usize,
-    pub emoji_size_limit: usize,
-    extra_supported_types: Vec<String>,
 }
 
 pub type MediaStorageError = Error;
 
 impl MediaStorage {
-    pub fn supported_media_types(&self) -> Vec<&str> {
-        SUPPORTED_MEDIA_TYPES.into_iter()
-            .chain(self.extra_supported_types.iter()
-                .map(|media_type| media_type.as_str()))
-            .collect()
-    }
-
     pub fn init(&self) -> Result<(), MediaStorageError> {
         if !self.media_dir.exists() {
             std::fs::create_dir(&self.media_dir)?;
@@ -154,9 +122,6 @@ impl From<&Config> for MediaStorage {
     fn from(config: &Config) -> Self {
         Self {
             media_dir: config.storage_dir.join(MEDIA_DIR),
-            file_size_limit: config.limits.media.file_size_limit,
-            emoji_size_limit: config.limits.media.emoji_size_limit,
-            extra_supported_types: config.limits.media.extra_supported_types.clone(),
         }
     }
 }

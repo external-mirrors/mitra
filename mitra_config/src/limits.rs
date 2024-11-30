@@ -6,6 +6,27 @@ use serde::{
 };
 use super::ConfigError;
 
+// Not included
+// https://developer.mozilla.org/en-US/docs/Web/Media/Formats/Image_types
+// - image/tiff only supported by Safari
+const SUPPORTED_MEDIA_TYPES: [&str; 15] = [
+    "audio/flac",
+    "audio/mpeg",
+    "audio/ogg",
+    "audio/x-wav",
+    "image/apng",
+    "image/avif",
+    "image/gif",
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+    "video/mp4",
+    "video/ogg",
+    "video/quicktime",
+    "video/webm",
+    "video/x-m4v",
+];
+
 const FILE_SIZE_RE: &str = r"^(?i)(?P<size>\d+)(?P<unit>[kmg]?)b?$";
 
 fn parse_file_size(value: &str) -> Result<usize, ConfigError> {
@@ -65,7 +86,7 @@ pub struct MediaLimits {
 
     // Add items to the list of supported media types
     #[serde(default)]
-    pub extra_supported_types: Vec<String>,
+    extra_supported_types: Vec<String>,
 }
 
 impl Default for MediaLimits {
@@ -76,6 +97,15 @@ impl Default for MediaLimits {
             emoji_local_size_limit: default_emoji_local_size_limit(),
             extra_supported_types: vec![],
         }
+    }
+}
+
+impl MediaLimits {
+    pub fn supported_media_types(&self) -> Vec<&str> {
+        SUPPORTED_MEDIA_TYPES.into_iter()
+            .chain(self.extra_supported_types.iter()
+                .map(|media_type| media_type.as_str()))
+            .collect()
     }
 }
 

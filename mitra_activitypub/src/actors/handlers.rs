@@ -23,6 +23,7 @@ use apx_sdk::{
     fetch::fetch_file,
     url::Url,
 };
+use mitra_config::MediaLimits;
 use mitra_models::{
     activitypub::queries::save_actor,
     database::DatabaseClient,
@@ -294,7 +295,8 @@ async fn get_webfinger_hostname(
 async fn fetch_actor_image(
     agent: &FederationAgent,
     is_filter_enabled: bool,
-    storage: &MediaStorage,
+    media_limits: &MediaLimits,
+    media_storage: &MediaStorage,
     actor_image: &Option<ActorImage>,
     default: Option<ProfileImage>,
 ) -> Result<Option<ProfileImage>, MediaStorageError> {
@@ -311,11 +313,11 @@ async fn fetch_actor_image(
             agent,
             &actor_image.url,
             actor_image.media_type.as_deref(),
-            &allowed_profile_image_media_types(&storage.supported_media_types()),
+            &allowed_profile_image_media_types(&media_limits.supported_media_types()),
             PROFILE_IMAGE_SIZE_MAX,
         ).await {
             Ok((file_data, media_type)) => {
-                let file_info = storage.save_file(file_data, &media_type)?;
+                let file_info = media_storage.save_file(file_data, &media_type)?;
                 let image = ProfileImage::from(MediaInfo::remote(
                     file_info,
                     actor_image.url.clone(),
@@ -336,7 +338,8 @@ async fn fetch_actor_image(
 async fn fetch_actor_images(
     agent: &FederationAgent,
     is_filter_enabled: bool,
-    storage: &MediaStorage,
+    media_limits: &MediaLimits,
+    media_storage: &MediaStorage,
     actor: &ValidatedActor,
     default_avatar: Option<ProfileImage>,
     default_banner: Option<ProfileImage>,
@@ -344,14 +347,16 @@ async fn fetch_actor_images(
     let maybe_avatar = fetch_actor_image(
         agent,
         is_filter_enabled,
-        storage,
+        media_limits,
+        media_storage,
         &actor.icon,
         default_avatar,
     ).await?;
     let maybe_banner = fetch_actor_image(
         agent,
         is_filter_enabled,
-        storage,
+        media_limits,
+        media_storage,
         &actor.image,
         default_banner,
     ).await?;
@@ -584,6 +589,7 @@ pub async fn create_remote_profile(
     let (maybe_avatar, maybe_banner) = fetch_actor_images(
         &agent,
         is_media_filter_enabled,
+        &ap_client.media_limits,
         &ap_client.media_storage,
         &actor,
         None,
@@ -663,6 +669,7 @@ pub async fn update_remote_profile(
     let (maybe_avatar, maybe_banner) = fetch_actor_images(
         &agent,
         is_media_filter_enabled,
+        &ap_client.media_limits,
         &ap_client.media_storage,
         &actor,
         profile.avatar,

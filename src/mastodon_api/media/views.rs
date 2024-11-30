@@ -60,8 +60,8 @@ async fn create_attachment_view(
         &attachment_data.file,
         &attachment_data.media_type,
         &media_storage,
-        media_storage.file_size_limit,
-        &media_storage.supported_media_types(),
+        config.limits.media.file_size_limit,
+        &config.limits.media.supported_media_types(),
     )?;
     if let Some(ref description) = attachment_data.description {
         validate_media_description(description)?;

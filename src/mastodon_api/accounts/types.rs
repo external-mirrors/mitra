@@ -16,6 +16,7 @@ use mitra_activitypub::identifiers::{
     profile_actor_id,
     profile_actor_url,
 };
+use mitra_config::MediaLimits;
 use mitra_models::{
     media::types::MediaInfo,
     profiles::types::{
@@ -359,7 +360,8 @@ fn process_b64_image_field_value(
     form_value: Option<String>,
     form_media_type: Option<String>,
     db_value: Option<ProfileImage>,
-    storage: &MediaStorage,
+    media_limits: &MediaLimits,
+    media_storage: &MediaStorage,
 ) -> Result<Option<ProfileImage>, UploadError> {
     let maybe_file_name = match form_value {
         Some(b64_data) => {
@@ -373,9 +375,9 @@ fn process_b64_image_field_value(
                 let file_info = save_b64_file(
                     &b64_data,
                     &media_type,
-                    storage,
+                    media_storage,
                     PROFILE_IMAGE_SIZE_MAX,
-                    &allowed_profile_image_media_types(&storage.supported_media_types()),
+                    &allowed_profile_image_media_types(&media_limits.supported_media_types()),
                 )?;
                 let image = ProfileImage::from(MediaInfo::local(file_info));
                 Some(image)
@@ -391,7 +393,8 @@ impl AccountUpdateData {
     pub fn into_profile_data(
         self,
         profile: &DbActorProfile,
-        storage: &MediaStorage,
+        media_limits: &MediaLimits,
+        media_storage: &MediaStorage,
     ) -> Result<ProfileUpdateData, MastodonError> {
         assert!(profile.is_local());
         let mut profile_data = ProfileUpdateData::from(profile);
@@ -409,13 +412,15 @@ impl AccountUpdateData {
             self.avatar,
             self.avatar_media_type,
             profile.avatar.clone(),
-            storage,
+            media_limits,
+            media_storage,
         )?;
         profile_data.banner = process_b64_image_field_value(
             self.header,
             self.header_media_type,
             profile.banner.clone(),
-            storage,
+            media_limits,
+            media_storage,
         )?;
         profile_data.manually_approves_followers = self.locked;
         if let Some(mention_policy) = self.mention_policy {
@@ -459,7 +464,8 @@ impl AccountUpdateMultipartForm {
     pub fn into_profile_data(
         self,
         profile: &DbActorProfile,
-        storage: &MediaStorage,
+        media_limits: &MediaLimits,
+        media_storage: &MediaStorage,
     ) -> Result<ProfileUpdateData, MastodonError> {
         assert!(profile.is_local());
         let mut profile_data = ProfileUpdateData::from(profile);
@@ -472,14 +478,16 @@ impl AccountUpdateMultipartForm {
             self.avatar.and_then(|file| file.content_type
                 .map(|media_type| media_type.essence_str().to_string())),
             profile.avatar.clone(),
-            storage,
+            media_limits,
+            media_storage,
         )?;
         profile_data.banner = process_b64_image_field_value(
             self.header.as_ref().map(|file| base64::encode(&file.data)),
             self.header.and_then(|file| file.content_type
                 .map(|media_type| media_type.essence_str().to_string())),
             profile.banner.clone(),
-            storage,
+            media_limits,
+            media_storage,
         )?;
         Ok(profile_data)
     }

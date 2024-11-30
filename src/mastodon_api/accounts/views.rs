@@ -308,12 +308,14 @@ async fn update_credentials(
         Either::Left(form) => {
             form.into_inner().into_profile_data(
                 &current_user.profile,
+                &config.limits.media,
                 &media_storage,
             )?
         },
         Either::Right(data) => {
             data.into_inner().into_profile_data(
                 &current_user.profile,
+                &config.limits.media,
                 &media_storage,
             )?
         },

@@ -27,7 +27,7 @@ use apx_sdk::{
     jrd::JsonResourceDescriptor,
     url::{parse_url, Url},
 };
-use mitra_config::{Config, Instance};
+use mitra_config::{Config, Instance, MediaLimits};
 use mitra_models::{
     database::{DatabaseClient, DatabaseError},
     notifications::helpers::create_signup_notifications,
@@ -82,6 +82,7 @@ use crate::{
 pub struct ApClient {
     pub instance: Instance,
     pub filter: FederationFilter,
+    pub media_limits: MediaLimits,
     pub media_storage: MediaStorage,
 }
 
@@ -93,6 +94,7 @@ impl ApClient {
         let ap_client = Self {
             instance: config.instance(),
             filter: FederationFilter::init(config, db_client).await?,
+            media_limits: config.limits.media.clone(),
             media_storage: MediaStorage::from(config),
         };
         Ok(ap_client)

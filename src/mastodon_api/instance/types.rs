@@ -13,9 +13,6 @@ use mitra_config::{
     SOFTWARE_VERSION,
 };
 use mitra_models::users::types::User;
-use mitra_services::{
-    media::MediaStorage,
-};
 use mitra_utils::markdown::markdown_to_html;
 use mitra_validators::{
     posts::ATTACHMENT_LIMIT,
@@ -214,7 +211,7 @@ impl InstanceInfo {
                     max_media_attachments: ATTACHMENT_LIMIT,
                 },
                 media_attachments: MediaLimits {
-                    supported_mime_types: MediaStorage::from(config)
+                    supported_mime_types: config.limits.media
                         .supported_media_types().iter()
                         .map(|media_type| media_type.to_string()).collect(),
                     image_size_limit: config.limits.media.file_size_limit,
@@ -320,7 +317,7 @@ impl InstanceInfoV2 {
                     max_media_attachments: ATTACHMENT_LIMIT,
                 },
                 media_attachments: MediaLimits {
-                    supported_mime_types: MediaStorage::from(config)
+                    supported_mime_types: config.limits.media
                         .supported_media_types().iter()
                         .map(|media_type| media_type.to_string()).collect(),
                     image_size_limit: config.limits.media.file_size_limit,
