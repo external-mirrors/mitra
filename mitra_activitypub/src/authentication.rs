@@ -54,12 +54,11 @@ use mitra_models::{
         PublicKeyType,
     },
 };
-use mitra_services::media::MediaStorage;
 
 use crate::{
     errors::HandlerError,
     identifiers::canonicalize_id,
-    importers::ActorIdResolver,
+    importers::{ActorIdResolver, ApClient},
 };
 
 const AUTHENTICATION_FETCHER_TIMEOUT: u64 = 10;
@@ -124,12 +123,11 @@ async fn get_signer(
             &canonical_signer_id.to_string(),
         ).await?
     } else {
-        let mut instance = config.instance();
-        instance.fetcher_timeout = AUTHENTICATION_FETCHER_TIMEOUT;
+        let mut ap_client = ApClient::new(config, db_client).await?;
+        ap_client.instance.fetcher_timeout = AUTHENTICATION_FETCHER_TIMEOUT;
         match ActorIdResolver::default().only_remote().resolve(
+            &ap_client,
             db_client,
-            &instance,
-            &MediaStorage::from(config),
             signer_id,
         ).await {
             Ok(profile) => profile,

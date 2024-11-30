@@ -13,7 +13,6 @@ use mitra_models::{
     },
     users::queries::get_user_by_id,
 };
-use mitra_services::media::MediaStorage;
 use mitra_validators::errors::ValidationError;
 
 use crate::{
@@ -22,7 +21,7 @@ use crate::{
         undo_follow::prepare_undo_follow,
     },
     identifiers::profile_actor_id,
-    importers::ActorIdResolver,
+    importers::{ActorIdResolver, ApClient},
 };
 
 use super::{Descriptor, HandlerResult};
@@ -47,21 +46,19 @@ pub async fn handle_move(
         return Err(ValidationError("actor ID mismatch").into());
     };
 
-    let instance = config.instance();
-    let storage = MediaStorage::from(config);
+    let ap_client = ApClient::new(config, db_client).await?;
+    let instance = &ap_client.instance;
 
     let old_profile = ActorIdResolver::default().resolve(
+        &ap_client,
         db_client,
-        &instance,
-        &storage,
         &activity.object,
     ).await?;
     let old_actor_id = profile_actor_id(&instance.url(), &old_profile);
 
     let new_profile = ActorIdResolver::default().force_refetch().resolve(
+        &ap_client,
         db_client,
-        &instance,
-        &storage,
         &activity.target,
     ).await?;
 
@@ -96,7 +93,7 @@ pub async fn handle_move(
                 maybe_follow_request_deleted
                     .expect("follow request must exist");
             prepare_undo_follow(
-                &instance,
+                instance,
                 &follower,
                 old_actor,
                 follow_request_id,
@@ -110,7 +107,7 @@ pub async fn handle_move(
         // Follow new profile
         follow_or_create_request(
             db_client,
-            &instance,
+            instance,
             &follower,
             &new_profile,
         ).await?;

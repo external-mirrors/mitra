@@ -15,14 +15,13 @@ use mitra_models::{
     posts::queries::get_remote_post_by_object_id,
     profiles::queries::get_remote_profile_by_actor_id,
 };
-use mitra_services::media::MediaStorage;
 use mitra_validators::errors::ValidationError;
 
 use crate::{
     actors::handlers::{update_remote_profile, Actor},
     agent::build_federation_agent,
     identifiers::canonicalize_id,
-    importers::fetch_any_object,
+    importers::{fetch_any_object, ApClient},
     ownership::verify_object_owner,
 };
 
@@ -64,7 +63,8 @@ async fn handle_update_note(
         Err(DatabaseError::NotFound(_)) => return Ok(None),
         Err(other_error) => return Err(other_error.into()),
     };
-    update_remote_post(config, db_client, post, &object).await?;
+    let ap_client = ApClient::new(config, db_client).await?;
+    update_remote_post(&ap_client, db_client, post, &object).await?;
     Ok(Some(Descriptor::object(object.inner.object_type)))
 }
 
@@ -93,13 +93,10 @@ async fn handle_update_person(
         Err(DatabaseError::NotFound(_)) => return Ok(None),
         Err(other_error) => return Err(other_error.into()),
     };
-    let instance = config.instance();
-    let agent = build_federation_agent(&instance, None);
+    let ap_client = ApClient::new(config, db_client).await?;
     let profile = update_remote_profile(
-        &agent,
+        &ap_client,
         db_client,
-        &instance.hostname(),
-        &MediaStorage::from(config),
         profile,
         activity.object,
     ).await?;

@@ -15,18 +15,17 @@ use mitra_models::{
         types::ReactionData,
     },
 };
-use mitra_services::media::MediaStorage;
 use mitra_utils::unicode::is_single_character;
 use mitra_validators::{
     reactions::validate_reaction_data,
 };
 
 use crate::{
-    agent::build_federation_agent,
     identifiers::canonicalize_id,
     importers::{
         get_post_by_object_id,
         ActorIdResolver,
+        ApClient,
     },
     vocabulary::DISLIKE,
 };
@@ -62,13 +61,11 @@ pub async fn handle_like(
     activity_value: JsonValue,
 ) -> HandlerResult {
     let activity: Like = serde_json::from_value(activity_value)?;
-    let instance = config.instance();
-    let agent = build_federation_agent(&instance, None);
-    let storage = MediaStorage::from(config);
+    let ap_client = ApClient::new(config, db_client).await?;
+    let instance = &ap_client.instance;
     let author = ActorIdResolver::default().only_remote().resolve(
+        &ap_client,
         db_client,
-        &instance,
-        &storage,
         &activity.actor,
     ).await?;
     let canonical_object_id = canonicalize_id(&activity.object)?;
@@ -89,9 +86,8 @@ pub async fn handle_like(
         Some(content) => {
             let maybe_db_emoji = if let Some(emoji_value) = activity.tag.first() {
                 let maybe_db_emoji = handle_emoji(
-                    &agent,
+                    &ap_client,
                     db_client,
-                    &storage,
                     emoji_value.clone(),
                 ).await?;
                 // Emoji shortcode must match content

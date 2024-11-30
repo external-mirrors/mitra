@@ -11,7 +11,6 @@ use uuid::Uuid;
 
 use apx_sdk::{
     addresses::WebfingerAddress,
-    agent::FederationAgent,
     constants::{AP_MEDIA_TYPE, AS_MEDIA_TYPE},
     deserialization::{
         deserialize_into_id_array,
@@ -24,7 +23,6 @@ use apx_sdk::{
     utils::is_public,
 };
 use mitra_adapters::permissions::filter_mentions;
-use mitra_config::{Config, Instance};
 use mitra_models::{
     activitypub::queries::save_attributed_object,
     attachments::queries::create_attachment,
@@ -36,7 +34,6 @@ use mitra_models::{
     },
     profiles::types::DbActorProfile,
 };
-use mitra_services::media::MediaStorage;
 use mitra_utils::{
     files::FileInfo,
     html::clean_html,
@@ -63,7 +60,7 @@ use mitra_validators::{
 use crate::{
     agent::build_federation_agent,
     builders::note::LinkTag,
-    filter::{get_moderation_domain, FederationFilter},
+    filter::get_moderation_domain,
     identifiers::{
         canonicalize_id,
     },
@@ -73,6 +70,7 @@ use crate::{
         get_profile_by_actor_id,
         is_actor_importer_error,
         ActorIdResolver,
+        ApClient,
     },
     ownership::parse_attributed_to,
     vocabulary::*,
@@ -272,15 +270,16 @@ struct Attachment {
 }
 
 async fn get_object_attachments(
-    agent: &FederationAgent,
+    ap_client: &ApClient,
     db_client: &impl DatabaseClient,
-    filter: &FederationFilter,
-    storage: &MediaStorage,
     object: &AttributedObject,
     author: &DbActorProfile,
 ) -> Result<(Vec<Uuid>, Vec<String>), HandlerError> {
+    let agent = build_federation_agent(&ap_client.instance, None);
+    let storage = &ap_client.media_storage;
     let author_hostname = get_moderation_domain(author.expect_actor_data())?;
-    let is_media_blocked = filter.is_media_blocked(author_hostname.as_str());
+    let is_media_blocked = ap_client.filter
+        .is_media_blocked(author_hostname.as_str());
 
     let mut values = object.attachment.clone();
     if object.object_type == VIDEO {
@@ -360,7 +359,7 @@ async fn get_object_attachments(
             continue;
         };
         let (file_data, media_type) = match fetch_file(
-            agent,
+            &agent,
             &attachment_url,
             attachment.media_type.as_deref(),
             &storage.supported_media_types(),
@@ -439,13 +438,12 @@ fn get_object_links(
 }
 
 async fn get_object_tags(
+    ap_client: &ApClient,
     db_client: &mut impl DatabaseClient,
-    instance: &Instance,
-    storage: &MediaStorage,
     object: &AttributedObject,
     redirects: &HashMap<String, String>,
 ) -> Result<(Vec<Uuid>, Vec<String>, Vec<Uuid>, Vec<Uuid>), HandlerError> {
-    let agent = build_federation_agent(instance, None);
+    let instance = &ap_client.instance;
 
     let mut hashtag_count = 0;
     let mut mention_count = 0;
@@ -498,9 +496,8 @@ async fn get_object_tags(
                 // NOTE: `href` attribute is usually actor ID
                 // but also can be actor URL (profile link).
                 match ActorIdResolver::default().resolve(
+                    ap_client,
                     db_client,
-                    instance,
-                    storage,
                     &href,
                 ).await {
                     Ok(profile) => {
@@ -529,9 +526,8 @@ async fn get_object_tags(
             };
             if let Ok(webfinger_address) = WebfingerAddress::from_handle(&tag_name) {
                 let profile = match get_or_import_profile_by_webfinger_address(
+                    ap_client,
                     db_client,
-                    instance,
-                    storage,
                     &webfinger_address,
                 ).await {
                     Ok(profile) => profile,
@@ -588,9 +584,8 @@ async fn get_object_tags(
                 continue;
             };
             match handle_emoji(
-                &agent,
+                ap_client,
                 db_client,
-                storage,
                 tag_value,
             ).await? {
                 Some(emoji) => {
@@ -734,10 +729,8 @@ fn parse_poll_results(
 }
 
 pub async fn create_remote_post(
+    ap_client: &ApClient,
     db_client: &mut impl DatabaseClient,
-    filter: &FederationFilter,
-    instance: &Instance,
-    storage: &MediaStorage,
     object: AttributedObjectJson,
     redirects: &HashMap<String, String>,
 ) -> Result<Post, HandlerError> {
@@ -757,11 +750,10 @@ pub async fn create_remote_post(
     {
         return Err(ValidationError("object attributed to actor from different server").into());
     };
-    let agent = build_federation_agent(instance, None);
+    let instance = &ap_client.instance;
     let author = ActorIdResolver::default().only_remote().resolve(
+        ap_client,
         db_client,
-        instance,
-        storage,
         &author_id,
     ).await.map_err(|err| {
         log::warn!("failed to import {} ({})", author_id, err);
@@ -781,10 +773,8 @@ pub async fn create_remote_post(
         content += &create_content_link(object_url);
     };
     let (attachments, unprocessed) = get_object_attachments(
-        &agent,
+        ap_client,
         db_client,
-        filter,
-        storage,
         &object,
         &author,
     ).await?;
@@ -793,9 +783,8 @@ pub async fn create_remote_post(
     };
 
     let (mentions, hashtags, links, emojis) = get_object_tags(
+        ap_client,
         db_client,
-        instance,
-        storage,
         &object,
         redirects,
     ).await?;
@@ -861,7 +850,7 @@ pub async fn create_remote_post(
 }
 
 pub async fn update_remote_post(
-    config: &Config,
+    ap_client: &ApClient,
     db_client: &mut impl DatabaseClient,
     post: Post,
     object: &AttributedObjectJson,
@@ -885,15 +874,9 @@ pub async fn update_remote_post(
         let object_url = get_object_url(object)?;
         content += &create_content_link(object_url);
     };
-    let instance = config.instance();
-    let agent = build_federation_agent(&instance, None);
-    let filter = FederationFilter::init(config, db_client).await?;
-    let storage = MediaStorage::from(config);
     let (attachments, unprocessed) = get_object_attachments(
-        &agent,
+        ap_client,
         db_client,
-        &filter,
-        &storage,
         object,
         &post.author,
     ).await?;
@@ -901,9 +884,8 @@ pub async fn update_remote_post(
         content += &create_content_link(attachment_url);
     };
     let (mentions, hashtags, links, emojis) = get_object_tags(
+        ap_client,
         db_client,
-        &instance,
-        &storage,
         object,
         &HashMap::new(),
     ).await?;

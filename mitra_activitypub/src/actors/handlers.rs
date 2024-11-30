@@ -54,13 +54,14 @@ use mitra_validators::{
 };
 
 use crate::{
+    agent::build_federation_agent,
     errors::HandlerError,
     handlers::{
         emoji::handle_emoji,
         proposal::{parse_proposal, Proposal},
     },
     identifiers::canonicalize_id,
-    importers::{fetch_any_object, perform_webfinger_query},
+    importers::{fetch_any_object, perform_webfinger_query, ApClient},
     vocabulary::{
         EMOJI,
         HASHTAG,
@@ -507,9 +508,8 @@ fn parse_aliases(actor: &ValidatedActor) -> Vec<String> {
 }
 
 async fn parse_tags(
-    agent: &FederationAgent,
+    ap_client: &ApClient,
     db_client: &mut impl DatabaseClient,
-    storage: &MediaStorage,
     actor: &ValidatedActor,
 ) -> Result<Vec<Uuid>, HandlerError> {
     let mut emojis = vec![];
@@ -521,9 +521,8 @@ async fn parse_tags(
                 continue;
             };
             match handle_emoji(
-                agent,
+                ap_client,
                 db_client,
-                storage,
                 tag_value,
             ).await? {
                 Some(emoji) => {
@@ -539,22 +538,21 @@ async fn parse_tags(
 }
 
 pub async fn create_remote_profile(
-    agent: &FederationAgent,
+    ap_client: &ApClient,
     db_client: &mut impl DatabaseClient,
-    instance_hostname: &str,
-    storage: &MediaStorage,
     actor: Actor,
 ) -> Result<DbActorProfile, HandlerError> {
     let Actor { inner: actor, value: actor_json } = actor;
+    let agent = build_federation_agent(&ap_client.instance, None);
     let maybe_webfinger_hostname = get_webfinger_hostname(
-        agent,
-        instance_hostname,
+        &agent,
+        &ap_client.instance.hostname(),
         &actor,
     ).await?;
     let actor_data = actor.to_db_actor()?;
     let (maybe_avatar, maybe_banner) = fetch_actor_images(
-        agent,
-        storage,
+        &agent,
+        &ap_client.media_storage,
         &actor,
         None,
         None,
@@ -563,15 +561,14 @@ pub async fn create_remote_profile(
     let (identity_proofs, mut payment_options, proposals, extra_fields) =
         parse_attachments(&actor);
     let subscription_options = fetch_proposals(
-        agent,
+        &agent,
         proposals,
     ).await;
     payment_options.extend(subscription_options);
     let aliases = parse_aliases(&actor);
     let emojis = parse_tags(
-        agent,
+        ap_client,
         db_client,
-        storage,
         &actor,
     ).await?;
     let mut profile_data = ProfileCreateData {
@@ -605,10 +602,8 @@ pub async fn create_remote_profile(
 
 /// Updates remote actor's profile
 pub async fn update_remote_profile(
-    agent: &FederationAgent,
+    ap_client: &ApClient,
     db_client: &mut impl DatabaseClient,
-    instance_hostname: &str,
-    storage: &MediaStorage,
     profile: DbActorProfile,
     actor: Actor,
 ) -> Result<DbActorProfile, HandlerError> {
@@ -619,14 +614,15 @@ pub async fn update_remote_profile(
     let actor_data_old = profile.expect_actor_data();
     let actor_data = actor.to_db_actor()?;
     assert_eq!(actor_data_old.id, actor_data.id, "actor ID shouldn't change");
+    let agent = build_federation_agent(&ap_client.instance, None);
     let maybe_webfinger_hostname = get_webfinger_hostname(
-        agent,
-        instance_hostname,
+        &agent,
+        &ap_client.instance.hostname(),
         &actor,
     ).await?;
     let (maybe_avatar, maybe_banner) = fetch_actor_images(
-        agent,
-        storage,
+        &agent,
+        &ap_client.media_storage,
         &actor,
         profile.avatar,
         profile.banner,
@@ -635,15 +631,14 @@ pub async fn update_remote_profile(
     let (identity_proofs, mut payment_options, proposals, extra_fields) =
         parse_attachments(&actor);
     let subscription_options = fetch_proposals(
-        agent,
+        &agent,
         proposals,
     ).await;
     payment_options.extend(subscription_options);
     let aliases = parse_aliases(&actor);
     let emojis = parse_tags(
-        agent,
+        ap_client,
         db_client,
-        storage,
         &actor,
     ).await?;
     let mut profile_data = ProfileUpdateData {

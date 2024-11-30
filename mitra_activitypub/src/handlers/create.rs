@@ -11,11 +11,9 @@ use mitra_models::{
     database::{DatabaseClient, DatabaseError},
     relationships::queries::has_local_followers,
 };
-use mitra_services::media::MediaStorage;
 use mitra_validators::errors::ValidationError;
 
 use crate::{
-    filter::FederationFilter,
     identifiers::{
         canonicalize_id,
         parse_local_actor_id,
@@ -23,6 +21,7 @@ use crate::{
     importers::{
         get_post_by_object_id,
         import_post,
+        ApClient,
     },
     ownership::verify_object_owner,
 };
@@ -135,12 +134,10 @@ pub async fn handle_create(
         // Most likely it's a forwarded reply.
         None
     };
-    let filter = FederationFilter::init(config, db_client).await?;
+    let ap_client = ApClient::new(config, db_client).await?;
     import_post(
+        &ap_client,
         db_client,
-        &filter,
-        &config.instance(),
-        &MediaStorage::from(config),
         object_id,
         object_received,
     ).await?;

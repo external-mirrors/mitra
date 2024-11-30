@@ -17,6 +17,7 @@ use mitra_activitypub::{
         import_object,
         import_replies,
         ActorIdResolver,
+        ApClient,
         FetcherContext,
     },
 };
@@ -25,7 +26,6 @@ use mitra_models::{
     database::DatabaseClient,
     users::queries::get_user_by_name,
 };
-use mitra_services::media::MediaStorage;
 
 /// (Re-)fetch actor and save it to local cache
 #[derive(Parser)]
@@ -40,13 +40,13 @@ impl ImportActor {
         config: &Config,
         db_client: &mut impl DatabaseClient,
     ) -> Result<(), Error> {
+        let ap_client = ApClient::new(config, db_client).await?;
         let resolver = ActorIdResolver::default()
             .only_remote()
             .force_refetch();
         resolver.resolve(
+            &ap_client,
             db_client,
-            &config.instance(),
-            &MediaStorage::from(config),
             &self.id,
         ).await?;
         println!("profile saved");

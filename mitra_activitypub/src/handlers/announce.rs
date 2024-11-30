@@ -18,7 +18,6 @@ use mitra_models::{
     posts::types::PostCreateData,
     profiles::queries::get_remote_profile_by_actor_id,
 };
-use mitra_services::media::MediaStorage;
 use mitra_validators::{
     activitypub::validate_object_id,
     errors::ValidationError,
@@ -26,9 +25,8 @@ use mitra_validators::{
 
 use crate::{
     agent::build_federation_agent,
-    filter::FederationFilter,
     identifiers::parse_local_object_id,
-    importers::{fetch_any_object, import_post, ActorIdResolver},
+    importers::{fetch_any_object, import_post, ActorIdResolver, ApClient},
     ownership::{is_embedded_activity_trusted, verify_activity_owner},
     vocabulary::*,
 };
@@ -66,27 +64,22 @@ pub async fn handle_announce(
         Err(DatabaseError::NotFound(_)) => (),
         Err(other_error) => return Err(other_error.into()),
     };
-    let instance = config.instance();
-    let storage = MediaStorage::from(config);
+    let ap_client = ApClient::new(config, db_client).await?;
     let author = ActorIdResolver::default().only_remote().resolve(
+        &ap_client,
         db_client,
-        &instance,
-        &storage,
         &activity.actor,
     ).await?;
     let post_id = match parse_local_object_id(
-        &instance.url(),
+        &ap_client.instance.url(),
         &activity.object,
     ) {
         Ok(post_id) => post_id,
         Err(_) => {
             // Try to get remote post
-            let filter = FederationFilter::init(config, db_client).await?;
             let post = import_post(
+                &ap_client,
                 db_client,
-                &filter,
-                &instance,
-                &storage,
                 activity.object,
                 None,
             ).await?;

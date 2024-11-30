@@ -3,10 +3,7 @@ use serde::Deserialize;
 use serde_json::{Value as JsonValue};
 
 use apx_core::urls::get_hostname;
-use apx_sdk::{
-    agent::FederationAgent,
-    fetch::fetch_file,
-};
+use apx_sdk::fetch::fetch_file;
 use mitra_models::{
     database::{DatabaseClient, DatabaseError},
     emojis::queries::{
@@ -17,7 +14,6 @@ use mitra_models::{
     emojis::types::{DbEmoji, EmojiImage as DbEmojiImage},
     media::types::MediaInfo,
 };
-use mitra_services::media::MediaStorage;
 use mitra_validators::{
     activitypub::validate_object_id,
     emojis::{
@@ -28,6 +24,11 @@ use mitra_validators::{
     media::validate_media_url,
     profiles::validate_hostname,
     errors::ValidationError,
+};
+
+use crate::{
+    agent::build_federation_agent,
+    importers::ApClient,
 };
 
 use super::HandlerError;
@@ -52,9 +53,8 @@ struct Emoji {
 // Returns None if emoji is not valid or when fetcher fails.
 // Returns HandlerError on database and filesystem errors.
 pub async fn handle_emoji(
-    agent: &FederationAgent,
+    ap_client: &ApClient,
     db_client: &mut impl DatabaseClient,
-    storage: &MediaStorage,
     tag_value: JsonValue,
 ) -> Result<Option<DbEmoji>, HandlerError> {
     let emoji: Emoji = match serde_json::from_value(tag_value) {
@@ -98,8 +98,10 @@ pub async fn handle_emoji(
         log::warn!("invalid emoji URL ({error}): {}", emoji.icon.url);
         return Ok(None);
     };
+    let agent = build_federation_agent(&ap_client.instance, None);
+    let storage = &ap_client.media_storage;
     let (file_data, media_type) = match fetch_file(
-        agent,
+        &agent,
         &emoji.icon.url,
         emoji.icon.media_type.as_deref(),
         &EMOJI_MEDIA_TYPES,

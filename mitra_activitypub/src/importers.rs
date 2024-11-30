@@ -79,6 +79,26 @@ use crate::{
     vocabulary::GROUP,
 };
 
+pub struct ApClient {
+    pub instance: Instance,
+    pub filter: FederationFilter,
+    pub media_storage: MediaStorage,
+}
+
+impl ApClient {
+    pub async fn new(
+        config: &Config,
+        db_client: &impl DatabaseClient,
+    ) -> Result<Self, DatabaseError> {
+        let ap_client = Self {
+            instance: config.instance(),
+            filter: FederationFilter::init(config, db_client).await?,
+            media_storage: MediaStorage::from(config),
+        };
+        Ok(ap_client)
+    }
+}
+
 // Gateway pool for resolving 'ap' URLs
 pub struct FetcherContext {
     gateways: Vec<String>,
@@ -171,14 +191,13 @@ pub async fn get_profile_by_actor_id(
 }
 
 async fn import_profile(
+    ap_client: &ApClient,
     db_client: &mut impl DatabaseClient,
-    instance: &Instance,
-    storage: &MediaStorage,
     actor_id: &str,
 ) -> Result<DbActorProfile, HandlerError> {
-    let agent = build_federation_agent(instance, None);
+    let agent = build_federation_agent(&ap_client.instance, None);
     let actor: Actor = fetch_any_object(&agent, actor_id).await?;
-    if actor.is_local(&instance.hostname())? {
+    if actor.is_local(&ap_client.instance.hostname())? {
         return Err(HandlerError::LocalObject);
     };
     let canonical_actor_id = canonicalize_id(actor.id())?;
@@ -189,10 +208,8 @@ async fn import_profile(
         Ok(profile) => {
             log::info!("re-fetched actor {}", actor.id());
             let profile_updated = update_remote_profile(
-                &agent,
+                ap_client,
                 db_client,
-                &instance.hostname(),
-                storage,
                 profile,
                 actor,
             ).await?;
@@ -201,10 +218,8 @@ async fn import_profile(
         Err(DatabaseError::NotFound(_)) => {
             log::info!("fetched actor {}", actor.id());
             let profile = create_remote_profile(
-                &agent,
+                ap_client,
                 db_client,
-                &instance.hostname(),
-                storage,
                 actor,
             ).await?;
             profile
@@ -215,13 +230,12 @@ async fn import_profile(
 }
 
 async fn refresh_remote_profile(
+    ap_client: &ApClient,
     db_client: &mut impl DatabaseClient,
-    instance: &Instance,
-    storage: &MediaStorage,
     profile: DbActorProfile,
     force: bool,
 ) -> Result<DbActorProfile, HandlerError> {
-    let agent = build_federation_agent(instance, None);
+    let agent = build_federation_agent(&ap_client.instance, None);
     let profile = if force ||
         profile.updated_at < Utc::now() - Duration::days(1)
     {
@@ -233,7 +247,7 @@ async fn refresh_remote_profile(
         let actor_data = profile.expect_actor_data();
         let mut context = FetcherContext::from(actor_data);
         // Don't re-fetch from local gateway
-        context.remove_gateway(&instance.url());
+        context.remove_gateway(&ap_client.instance.url());
         match fetch_any_object_with_context::<Actor>(
             &agent,
             &mut context,
@@ -250,10 +264,8 @@ async fn refresh_remote_profile(
                 };
                 log::info!("re-fetched actor {}", actor_data.id);
                 let profile_updated = update_remote_profile(
-                    &agent,
+                    ap_client,
                     db_client,
-                    &instance.hostname(),
-                    storage,
                     profile,
                     actor,
                 ).await?;
@@ -304,13 +316,12 @@ impl ActorIdResolver {
     // - ServiceError, AuthError, UnsolicitedMessage
     pub async fn resolve(
         &self,
+        ap_client: &ApClient,
         db_client: &mut impl DatabaseClient,
-        instance: &Instance,
-        storage: &MediaStorage,
         actor_id: &str,
     ) -> Result<DbActorProfile, HandlerError> {
         if !self.only_remote {
-            if let Ok(username) = parse_local_actor_id(&instance.url(), actor_id) {
+            if let Ok(username) = parse_local_actor_id(&ap_client.instance.url(), actor_id) {
                 // Local ID
                 let user = get_user_by_name(db_client, &username).await?;
                 return Ok(user.profile);
@@ -324,15 +335,14 @@ impl ActorIdResolver {
         ).await {
             Ok(profile) => {
                 refresh_remote_profile(
+                    ap_client,
                     db_client,
-                    instance,
-                    storage,
                     profile,
                     self.force_refetch,
                 ).await?
             },
             Err(DatabaseError::NotFound(_)) => {
-                import_profile(db_client, instance, storage, actor_id).await?
+                import_profile(ap_client, db_client, actor_id).await?
             },
             Err(other_error) => return Err(other_error.into()),
         };
@@ -372,26 +382,25 @@ pub(crate) async fn perform_webfinger_query(
 }
 
 pub async fn import_profile_by_webfinger_address(
+    ap_client: &ApClient,
     db_client: &mut impl DatabaseClient,
-    instance: &Instance,
-    storage: &MediaStorage,
     webfinger_address: &WebfingerAddress,
 ) -> Result<DbActorProfile, HandlerError> {
-    if webfinger_address.hostname() == instance.hostname() {
+    if webfinger_address.hostname() == ap_client.instance.hostname() {
         return Err(HandlerError::LocalObject);
     };
-    let agent = build_federation_agent(instance, None);
+    let agent = build_federation_agent(&ap_client.instance, None);
     let actor_id = perform_webfinger_query(&agent, webfinger_address).await?;
-    import_profile(db_client, instance, storage, &actor_id).await
+    import_profile(ap_client, db_client, &actor_id).await
 }
 
 // Works with local profiles
 pub async fn get_or_import_profile_by_webfinger_address(
+    ap_client: &ApClient,
     db_client: &mut impl DatabaseClient,
-    instance: &Instance,
-    storage: &MediaStorage,
     webfinger_address: &WebfingerAddress,
 ) -> Result<DbActorProfile, HandlerError> {
+    let instance = &ap_client.instance;
     let acct = webfinger_address.acct(&instance.hostname());
     let profile = match get_profile_by_acct(
         db_client,
@@ -402,9 +411,8 @@ pub async fn get_or_import_profile_by_webfinger_address(
                 profile
             } else {
                 refresh_remote_profile(
+                    ap_client,
                     db_client,
-                    instance,
-                    storage,
                     profile,
                     false,
                 ).await?
@@ -415,9 +423,8 @@ pub async fn get_or_import_profile_by_webfinger_address(
                 return Err(db_error.into());
             };
             import_profile_by_webfinger_address(
+                ap_client,
                 db_client,
-                instance,
-                storage,
                 webfinger_address,
             ).await?
         },
@@ -449,13 +456,12 @@ pub async fn get_post_by_object_id(
 const RECURSION_DEPTH_MAX: usize = 50;
 
 pub async fn import_post(
+    ap_client: &ApClient,
     db_client: &mut impl DatabaseClient,
-    filter: &FederationFilter,
-    instance: &Instance,
-    storage: &MediaStorage,
     object_id: String,
     object_received: Option<AttributedObjectJson>,
 ) -> Result<Post, HandlerError> {
+    let instance = &ap_client.instance;
     let agent = build_federation_agent(instance, None);
 
     let mut queue = vec![object_id]; // LIFO queue
@@ -554,10 +560,8 @@ pub async fn import_post(
     objects.reverse();
     for object in objects {
         let post = create_remote_post(
+            ap_client,
             db_client,
-            filter,
-            instance,
-            storage,
             object,
             &redirects,
         ).await?;
@@ -575,7 +579,8 @@ pub async fn import_object(
     db_client: &mut impl DatabaseClient,
     object_id: &str,
 ) -> Result<(), HandlerError> {
-    let agent = build_federation_agent(&config.instance(), None);
+    let ap_client = ApClient::new(config, db_client).await?;
+    let agent = build_federation_agent(&ap_client.instance, None);
     let object: AttributedObjectJson =
         fetch_any_object(&agent, object_id).await?;
     let canonical_object_id = canonicalize_id(object.id())?;
@@ -584,18 +589,13 @@ pub async fn import_object(
         &canonical_object_id.to_string(),
     ).await {
         Ok(post) => {
-            update_remote_post(config, db_client, post, &object).await?;
+            update_remote_post(&ap_client, db_client, post, &object).await?;
             Ok(())
         },
         Err(DatabaseError::NotFound(_)) => {
-            let instance = config.instance();
-            let filter = FederationFilter::init(config, db_client).await?;
-            let storage = MediaStorage::from(config);
             import_post(
+                &ap_client,
                 db_client,
-                &filter,
-                &instance,
-                &storage,
                 object.id().to_owned(),
                 Some(object),
             ).await?;
@@ -771,10 +771,9 @@ pub async fn import_replies(
         replies: Option<String>,
     }
 
+    let ap_client = ApClient::new(config, db_client).await?;
     let instance = config.instance();
     let agent = build_federation_agent(&instance, None);
-    let filter = FederationFilter::init(config, db_client).await?;
-    let storage = MediaStorage::from(config);
     let object: ConverationItem = fetch_any_object(&agent, object_id).await?;
     if use_container {
         if let Some(ref collection_id) = object.context {
@@ -818,10 +817,8 @@ pub async fn import_replies(
             .map_err(|_| ValidationError("invalid conversation item"))?;
         let object_id = object.id().to_owned();
         import_post(
+            &ap_client,
             db_client,
-            &filter,
-            &instance,
-            &storage,
             object_id.clone(),
             Some(object),
         ).await.map_err(|error| {
@@ -843,9 +840,6 @@ pub async fn register_portable_actor(
     ed25519_secret_key_multibase: &str,
     invite_code: &str,
 ) -> Result<PortableUser, HandlerError> {
-    let instance = config.instance();
-    let agent = build_federation_agent(&instance, None);
-    let storage = MediaStorage::from(config);
     let rsa_secret_key = rsa_secret_key_from_multikey(rsa_secret_key_multibase)
         .map_err(|_| ValidationError("invalid RSA key"))?;
     let ed25519_secret_key = ed25519_secret_key_from_multikey(ed25519_secret_key_multibase)
@@ -864,6 +858,7 @@ pub async fn register_portable_actor(
         return Err(ValidationError("invalid invite code").into());
     };
     // Create or update profile
+    let ap_client = ApClient::new(config, db_client).await?;
     let canonical_actor_id = canonicalize_id(actor.id())?;
     let profile = match get_remote_profile_by_actor_id(
         db_client,
@@ -871,10 +866,8 @@ pub async fn register_portable_actor(
     ).await {
         Ok(profile) => {
             let profile_updated = update_remote_profile(
-                &agent,
+                &ap_client,
                 db_client,
-                &instance.hostname(),
-                &storage,
                 profile,
                 actor,
             ).await?;
@@ -882,10 +875,8 @@ pub async fn register_portable_actor(
         },
         Err(DatabaseError::NotFound(_)) => {
             let profile = create_remote_profile(
-                &agent,
+                &ap_client,
                 db_client,
-                &instance.hostname(),
-                &storage,
                 actor,
             ).await?;
             profile

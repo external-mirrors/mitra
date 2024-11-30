@@ -11,15 +11,15 @@ use apx_core::{
 use apx_sdk::addresses::WebfingerAddress;
 use mitra_activitypub::{
     errors::HandlerError,
-    filter::FederationFilter,
     identifiers::parse_local_object_id,
     importers::{
         import_post,
         import_profile_by_webfinger_address,
         ActorIdResolver,
+        ApClient,
     },
 };
-use mitra_config::{Config, Instance};
+use mitra_config::Config;
 use mitra_models::{
     database::{DatabaseClient, DatabaseError},
     posts::{
@@ -38,7 +38,6 @@ use mitra_models::{
 };
 use mitra_services::{
     ethereum::utils::validate_ethereum_address,
-    media::MediaStorage,
 };
 use mitra_validators::{
     errors::ValidationError,
@@ -139,11 +138,9 @@ fn parse_search_query(search_query: &str) -> SearchQuery {
     SearchQuery::Unknown
 }
 
-#[allow(clippy::too_many_arguments)]
 async fn search_profiles_or_import(
+    ap_client: &ApClient,
     db_client: &mut impl DatabaseClient,
-    instance: &Instance,
-    storage: &MediaStorage,
     username: String,
     mut maybe_hostname: Option<String>,
     resolve: bool,
@@ -151,7 +148,7 @@ async fn search_profiles_or_import(
     offset: u16,
 ) -> Result<Vec<DbActorProfile>, DatabaseError> {
     if let Some(ref hostname) = maybe_hostname {
-        if hostname == &instance.hostname() {
+        if hostname == &ap_client.instance.hostname() {
             // This is a local profile
             maybe_hostname = None;
         };
@@ -168,9 +165,8 @@ async fn search_profiles_or_import(
             let webfinger_address =
                 WebfingerAddress::new_unchecked(&username, &hostname);
             match import_profile_by_webfinger_address(
+                ap_client,
                 db_client,
-                instance,
-                storage,
                 &webfinger_address,
             ).await {
                 Ok(profile) => {
@@ -195,13 +191,11 @@ async fn search_profiles_or_import(
 
 /// Finds post by its object ID
 async fn find_post_by_url(
+    ap_client: &ApClient,
     db_client: &mut impl DatabaseClient,
-    instance: &Instance,
-    storage: &MediaStorage,
-    filter: &FederationFilter,
     url: &str,
 ) -> Result<Option<Post>, DatabaseError> {
-    let maybe_post = match parse_local_object_id(&instance.url(), url) {
+    let maybe_post = match parse_local_object_id(&ap_client.instance.url(), url) {
         Ok(post_id) => {
             // Local URL
             match get_local_post_by_id(db_client, post_id).await {
@@ -212,10 +206,8 @@ async fn find_post_by_url(
         },
         Err(_) => {
             match import_post(
+                ap_client,
                 db_client,
-                filter,
-                instance,
-                storage,
                 url.to_string(),
                 None,
             ).await {
@@ -231,15 +223,13 @@ async fn find_post_by_url(
 }
 
 async fn find_profile_by_url(
+    ap_client: &ApClient,
     db_client: &mut impl DatabaseClient,
-    instance: &Instance,
-    storage: &MediaStorage,
     url: &str,
 ) -> Result<Option<DbActorProfile>, DatabaseError> {
     let maybe_profile = match ActorIdResolver::default().resolve(
+        ap_client,
         db_client,
-        instance,
-        storage,
         url,
     ).await {
         Ok(profile) => Some(profile),
@@ -270,10 +260,8 @@ pub async fn search(
     let mut profiles = vec![];
     let mut posts = vec![];
     let mut tags = vec![];
-    let mut instance = config.instance();
-    instance.fetcher_timeout = SEARCH_FETCHER_TIMEOUT;
-    let storage = MediaStorage::from(config);
-    let filter = FederationFilter::init(config, db_client).await?;
+    let mut ap_client = ApClient::new(config, db_client).await?;
+    ap_client.instance.fetcher_timeout = SEARCH_FETCHER_TIMEOUT;
     match parse_search_query(search_query) {
         SearchQuery::Text(text) => {
             posts = search_posts(
@@ -286,9 +274,8 @@ pub async fn search(
         },
         SearchQuery::ProfileQuery(username, maybe_hostname) => {
             profiles = search_profiles_or_import(
+                &ap_client,
                 db_client,
-                &instance,
-                &storage,
                 username,
                 maybe_hostname,
                 true,
@@ -306,10 +293,8 @@ pub async fn search(
         },
         SearchQuery::Url(url) => {
             let maybe_post = find_post_by_url(
+                &ap_client,
                 db_client,
-                &instance,
-                &storage,
-                &filter,
                 &url,
             ).await?;
             if let Some(post) = maybe_post {
@@ -318,9 +303,8 @@ pub async fn search(
                 };
             } else {
                 let maybe_profile = find_profile_by_url(
+                    &ap_client,
                     db_client,
-                    &instance,
-                    &storage,
                     &url,
                 ).await?;
                 if let Some(profile) = maybe_profile {
@@ -360,13 +344,11 @@ pub async fn search_profiles_only(
         Ok(result) => result,
         Err(_) => return Ok(vec![]),
     };
-    let mut instance = config.instance();
-    instance.fetcher_timeout = SEARCH_FETCHER_TIMEOUT;
-    let storage = MediaStorage::from(config);
+    let mut ap_client = ApClient::new(config, db_client).await?;
+    ap_client.instance.fetcher_timeout = SEARCH_FETCHER_TIMEOUT;
     let profiles = search_profiles_or_import(
+        &ap_client,
         db_client,
-        &instance,
-        &storage,
         username,
         maybe_hostname,
         resolve,

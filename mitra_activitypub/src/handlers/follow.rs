@@ -14,7 +14,6 @@ use mitra_models::{
     relationships::types::RelationshipType,
     users::queries::get_user_by_name,
 };
-use mitra_services::media::MediaStorage;
 use mitra_validators::{
     activitypub::validate_any_object_id,
 };
@@ -22,7 +21,7 @@ use mitra_validators::{
 use crate::{
     builders::accept_follow::prepare_accept_follow,
     identifiers::{canonicalize_id, parse_local_actor_id},
-    importers::ActorIdResolver,
+    importers::{ActorIdResolver, ApClient},
 };
 
 use super::{Descriptor, HandlerResult};
@@ -43,10 +42,10 @@ pub async fn handle_follow(
 ) -> HandlerResult {
     // Follow(Person)
     let activity: Follow = serde_json::from_value(activity)?;
+    let ap_client = ApClient::new(config, db_client).await?;
     let source_profile = ActorIdResolver::default().only_remote().resolve(
+        &ap_client,
         db_client,
-        &config.instance(),
-        &MediaStorage::from(config),
         &activity.actor,
     ).await?;
     let source_actor = source_profile.actor_json

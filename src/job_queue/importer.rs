@@ -13,6 +13,7 @@ use mitra_activitypub::{
     importers::{
         is_actor_importer_error,
         get_or_import_profile_by_webfinger_address,
+        ApClient,
     },
 };
 use mitra_config::Config;
@@ -34,7 +35,6 @@ use mitra_models::{
         queries::get_user_by_id,
     },
 };
-use mitra_services::media::MediaStorage;
 
 #[derive(Serialize, Deserialize)]
 #[serde(tag = "type")]
@@ -74,13 +74,12 @@ pub async fn import_follows_task(
     address_list: Vec<String>,
 ) -> Result<(), anyhow::Error> {
     let user = get_user_by_id(db_client, user_id).await?;
-    let storage = MediaStorage::from(config);
+    let ap_client = ApClient::new(config, db_client).await?;
     for webfinger_address in address_list {
         let webfinger_address: WebfingerAddress = webfinger_address.parse()?;
         let profile = match get_or_import_profile_by_webfinger_address(
+            &ap_client,
             db_client,
-            &config.instance(),
-            &storage,
             &webfinger_address,
         ).await {
             Ok(profile) => profile,
@@ -124,14 +123,13 @@ pub async fn import_followers_task(
         Err(other_error) => return Err(other_error.into()),
     };
     let instance = config.instance();
-    let storage = MediaStorage::from(config);
+    let ap_client = ApClient::new(config, db_client).await?;
     let mut remote_followers = vec![];
     for follower_address in address_list {
         let follower_address: WebfingerAddress = follower_address.parse()?;
         let follower = match get_or_import_profile_by_webfinger_address(
+            &ap_client,
             db_client,
-            &instance,
-            &storage,
             &follower_address,
         ).await {
             Ok(profile) => profile,
