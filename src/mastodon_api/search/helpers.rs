@@ -19,7 +19,7 @@ use mitra_activitypub::{
         ActorIdResolver,
     },
 };
-use mitra_config::Config;
+use mitra_config::{Config, Instance};
 use mitra_models::{
     database::{DatabaseClient, DatabaseError},
     posts::{
@@ -139,16 +139,17 @@ fn parse_search_query(search_query: &str) -> SearchQuery {
     SearchQuery::Unknown
 }
 
+#[allow(clippy::too_many_arguments)]
 async fn search_profiles_or_import(
-    config: &Config,
     db_client: &mut impl DatabaseClient,
+    instance: &Instance,
+    storage: &MediaStorage,
     username: String,
     mut maybe_hostname: Option<String>,
     resolve: bool,
     limit: u16,
     offset: u16,
 ) -> Result<Vec<DbActorProfile>, DatabaseError> {
-    let mut instance = config.instance();
     if let Some(ref hostname) = maybe_hostname {
         if hostname == &instance.hostname() {
             // This is a local profile
@@ -166,11 +167,10 @@ async fn search_profiles_or_import(
         if let Some(hostname) = maybe_hostname {
             let webfinger_address =
                 WebfingerAddress::new_unchecked(&username, &hostname);
-            instance.fetcher_timeout = SEARCH_FETCHER_TIMEOUT;
             match import_profile_by_webfinger_address(
                 db_client,
-                &instance,
-                &MediaStorage::from(config),
+                instance,
+                storage,
                 &webfinger_address,
             ).await {
                 Ok(profile) => {
@@ -195,12 +195,12 @@ async fn search_profiles_or_import(
 
 /// Finds post by its object ID
 async fn find_post_by_url(
-    config: &Config,
     db_client: &mut impl DatabaseClient,
+    instance: &Instance,
+    storage: &MediaStorage,
+    filter: &FederationFilter,
     url: &str,
 ) -> Result<Option<Post>, DatabaseError> {
-    let mut instance = config.instance();
-    let storage = MediaStorage::from(config);
     let maybe_post = match parse_local_object_id(&instance.url(), url) {
         Ok(post_id) => {
             // Local URL
@@ -211,13 +211,11 @@ async fn find_post_by_url(
             }
         },
         Err(_) => {
-            let filter = FederationFilter::init(config, db_client).await?;
-            instance.fetcher_timeout = SEARCH_FETCHER_TIMEOUT;
             match import_post(
                 db_client,
-                &filter,
-                &instance,
-                &storage,
+                filter,
+                instance,
+                storage,
                 url.to_string(),
                 None,
             ).await {
@@ -233,16 +231,15 @@ async fn find_post_by_url(
 }
 
 async fn find_profile_by_url(
-    config: &Config,
     db_client: &mut impl DatabaseClient,
+    instance: &Instance,
+    storage: &MediaStorage,
     url: &str,
 ) -> Result<Option<DbActorProfile>, DatabaseError> {
-    let mut instance = config.instance();
-    instance.fetcher_timeout = SEARCH_FETCHER_TIMEOUT;
     let maybe_profile = match ActorIdResolver::default().resolve(
         db_client,
-        &instance,
-        &MediaStorage::from(config),
+        instance,
+        storage,
         url,
     ).await {
         Ok(profile) => Some(profile),
@@ -273,6 +270,10 @@ pub async fn search(
     let mut profiles = vec![];
     let mut posts = vec![];
     let mut tags = vec![];
+    let mut instance = config.instance();
+    instance.fetcher_timeout = SEARCH_FETCHER_TIMEOUT;
+    let storage = MediaStorage::from(config);
+    let filter = FederationFilter::init(config, db_client).await?;
     match parse_search_query(search_query) {
         SearchQuery::Text(text) => {
             posts = search_posts(
@@ -285,8 +286,9 @@ pub async fn search(
         },
         SearchQuery::ProfileQuery(username, maybe_hostname) => {
             profiles = search_profiles_or_import(
-                config,
                 db_client,
+                &instance,
+                &storage,
                 username,
                 maybe_hostname,
                 true,
@@ -303,15 +305,22 @@ pub async fn search(
             ).await?;
         },
         SearchQuery::Url(url) => {
-            let maybe_post = find_post_by_url(config, db_client, &url).await?;
+            let maybe_post = find_post_by_url(
+                db_client,
+                &instance,
+                &storage,
+                &filter,
+                &url,
+            ).await?;
             if let Some(post) = maybe_post {
                 if can_view_post(db_client, Some(current_user), &post).await? {
                     posts = vec![post];
                 };
             } else {
                 let maybe_profile = find_profile_by_url(
-                    config,
                     db_client,
+                    &instance,
+                    &storage,
                     &url,
                 ).await?;
                 if let Some(profile) = maybe_profile {
@@ -351,9 +360,13 @@ pub async fn search_profiles_only(
         Ok(result) => result,
         Err(_) => return Ok(vec![]),
     };
+    let mut instance = config.instance();
+    instance.fetcher_timeout = SEARCH_FETCHER_TIMEOUT;
+    let storage = MediaStorage::from(config);
     let profiles = search_profiles_or_import(
-        config,
         db_client,
+        &instance,
+        &storage,
         username,
         maybe_hostname,
         resolve,
