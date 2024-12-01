@@ -22,6 +22,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Log `redirect_uri` and `client_id` parameters when OAuth access token is requested.
 - Save media digests to database.
 - Overwrite cached activity if attributed object has same ID.
+- Keep activities in portable inboxes and outboxes for 90 days.
 
 ### Fixed
 

@@ -119,13 +119,17 @@ pub async fn delete_activitypub_objects(
     db_client: &impl DatabaseClient,
     created_before: DateTime<Utc>,
 ) -> Result<u64, DatabaseError> {
-    // Don't delete actors
+    // Don't delete actors, posts and activities in collections
     let deleted_count = db_client.execute(
         "
         DELETE FROM activitypub_object
         WHERE created_at < $1
             AND profile_id IS NULL
             AND post_id IS NULL
+            AND NOT EXISTS (
+                SELECT 1 FROM activitypub_collection_item
+                WHERE object_id = activitypub_object.object_id
+            )
         ",
         &[&created_before],
     ).await?;
@@ -175,6 +179,27 @@ pub async fn get_collection_items(
         .map(|row| row.try_get("object_data"))
         .collect::<Result<_, _>>()?;
     Ok(items)
+}
+
+pub async fn delete_collection_items(
+    db_client: &impl DatabaseClient,
+    created_before: DateTime<Utc>,
+) -> Result<u64, DatabaseError> {
+    let deleted_count = db_client.execute(
+        "
+        DELETE FROM activitypub_object
+        WHERE
+            created_at < $1
+            AND profile_id IS NULL
+            AND post_id IS NULL
+            AND EXISTS (
+                SELECT 1 FROM activitypub_collection_item
+                WHERE object_id = activitypub_object.object_id
+            )
+        ",
+        &[&created_before],
+    ).await?;
+    Ok(deleted_count)
 }
 
 #[cfg(test)]

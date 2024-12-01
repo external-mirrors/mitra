@@ -20,6 +20,7 @@ enum PeriodicTask {
     PruneRemoteEmojis,
     PruneUnusedAttachments,
     PruneActivityPubObjects,
+    PruneActivityPubCollectionItems,
     MediaCleanupQueueExecutor,
     ImporterQueueExecutor,
     SubscriptionExpirationMonitor,
@@ -39,6 +40,7 @@ impl PeriodicTask {
             Self::PruneRemoteEmojis => 3600,
             Self::PruneUnusedAttachments => 3600,
             Self::PruneActivityPubObjects => 3600,
+            Self::PruneActivityPubCollectionItems => 3600,
             Self::MediaCleanupQueueExecutor => 10,
             Self::ImporterQueueExecutor => 60,
             Self::SubscriptionExpirationMonitor => 300,
@@ -100,6 +102,9 @@ async fn run_worker(
                 PeriodicTask::PruneActivityPubObjects => {
                     prune_activitypub_objects(&config, &db_pool).await
                 },
+                PeriodicTask::PruneActivityPubCollectionItems => {
+                    prune_activitypub_collection_items(&config, &db_pool).await
+                },
                 PeriodicTask::MediaCleanupQueueExecutor => {
                     media_cleanup_queue_executor(&config, &db_pool).await
                 },
@@ -135,6 +140,7 @@ pub fn start_worker(
             PeriodicTask::PruneRemoteEmojis,
             PeriodicTask::PruneUnusedAttachments,
             PeriodicTask::PruneActivityPubObjects,
+            PeriodicTask::PruneActivityPubCollectionItems,
             PeriodicTask::MediaCleanupQueueExecutor,
             PeriodicTask::ImporterQueueExecutor,
             PeriodicTask::SubscriptionExpirationMonitor,

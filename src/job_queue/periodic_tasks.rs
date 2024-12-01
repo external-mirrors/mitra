@@ -7,7 +7,10 @@ use mitra_activitypub::queues::{
 use mitra_adapters::media::delete_orphaned_media;
 use mitra_config::Config;
 use mitra_models::{
-    activitypub::queries::delete_activitypub_objects,
+    activitypub::queries::{
+        delete_activitypub_objects,
+        delete_collection_items,
+    },
     attachments::queries::delete_unused_attachments,
     background_jobs::queries::{
         delete_job_from_queue,
@@ -180,6 +183,21 @@ pub async fn prune_activitypub_objects(
         delete_activitypub_objects(db_client, created_before).await?;
     if deleted_count > 0 {
         log::info!("deleted {deleted_count} activitypub objects");
+    };
+    Ok(())
+}
+
+pub async fn prune_activitypub_collection_items(
+    _config: &Config,
+    db_pool: &DatabaseConnectionPool,
+) -> Result<(), Error> {
+    const CACHE_EXPIRATION_DAYS: u32 = 90;
+    let db_client = &**get_database_client(db_pool).await?;
+    let created_before = days_before_now(CACHE_EXPIRATION_DAYS);
+    let deleted_count =
+        delete_collection_items(db_client, created_before).await?;
+    if deleted_count > 0 {
+        log::info!("deleted {deleted_count} collection items");
     };
     Ok(())
 }
