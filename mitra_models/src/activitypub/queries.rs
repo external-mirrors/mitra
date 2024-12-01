@@ -12,6 +12,8 @@ pub async fn save_activity(
     activity_id: &str,
     activity: &JsonValue,
 ) -> Result<bool, DatabaseError> {
+    // Never overwrite existing object
+    // (some servers produce activities and objects with same ID)
     let inserted_count = db_client.execute(
         "
         INSERT INTO activitypub_object (
@@ -43,7 +45,9 @@ pub async fn save_actor(
         )
         VALUES ($1, $2, $3)
         ON CONFLICT (object_id)
-        DO UPDATE SET object_data = $2
+        DO UPDATE SET
+            object_data = $2,
+            profile_id = $3
         ",
         &[&actor_id, &actor_json, &profile_id],
     ).await?;
@@ -65,7 +69,9 @@ pub async fn save_attributed_object(
         )
         VALUES ($1, $2, $3)
         ON CONFLICT (object_id)
-        DO UPDATE SET object_data = $2
+        DO UPDATE SET
+            object_data = $2,
+            post_id = $3
         ",
         &[&object_id, &object_json, &post_id],
     ).await?;
