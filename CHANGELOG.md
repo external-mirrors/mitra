@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Added
 
 - Added `pleroma.metadata.fields_limits` to `/api/v1/instance` response.
+- Added `reject-profile-images` filter action.
 
 ### Changed
 

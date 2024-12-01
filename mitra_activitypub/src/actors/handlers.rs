@@ -23,6 +23,7 @@ use apx_sdk::{
 use mitra_models::{
     activitypub::queries::save_actor,
     database::DatabaseClient,
+    filter_rules::types::FilterAction,
     media::types::MediaInfo,
     profiles::queries::{create_profile, update_profile},
     profiles::types::{
@@ -48,6 +49,7 @@ use mitra_validators::{
         allowed_profile_image_media_types,
         clean_profile_create_data,
         clean_profile_update_data,
+        validate_actor_data,
         ALIAS_LIMIT,
         PROFILE_IMAGE_SIZE_MAX,
     },
@@ -56,6 +58,7 @@ use mitra_validators::{
 use crate::{
     agent::build_federation_agent,
     errors::HandlerError,
+    filter::get_moderation_domain,
     handlers::{
         emoji::handle_emoji,
         proposal::{parse_proposal, Proposal},
@@ -287,6 +290,7 @@ async fn get_webfinger_hostname(
 
 async fn fetch_actor_image(
     agent: &FederationAgent,
+    is_filter_enabled: bool,
     storage: &MediaStorage,
     actor_image: &Option<ActorImage>,
     default: Option<ProfileImage>,
@@ -295,6 +299,10 @@ async fn fetch_actor_image(
         if let Err(error) = validate_media_url(&actor_image.url) {
             log::warn!("invalid actor image URL ({error}): {}", actor_image.url);
             return Ok(default);
+        };
+        if is_filter_enabled {
+            log::warn!("actor image removed by filter: {}", actor_image.url);
+            return Ok(None);
         };
         match fetch_file(
             agent,
@@ -324,15 +332,26 @@ async fn fetch_actor_image(
 
 async fn fetch_actor_images(
     agent: &FederationAgent,
+    is_filter_enabled: bool,
     storage: &MediaStorage,
     actor: &ValidatedActor,
     default_avatar: Option<ProfileImage>,
     default_banner: Option<ProfileImage>,
-) -> Result<(Option<ProfileImage>, Option<ProfileImage>), MediaStorageError>  {
-    let maybe_avatar =
-        fetch_actor_image(agent, storage, &actor.icon, default_avatar).await?;
-    let maybe_banner =
-        fetch_actor_image(agent, storage, &actor.image, default_banner).await?;
+) -> Result<(Option<ProfileImage>, Option<ProfileImage>), MediaStorageError> {
+    let maybe_avatar = fetch_actor_image(
+        agent,
+        is_filter_enabled,
+        storage,
+        &actor.icon,
+        default_avatar,
+    ).await?;
+    let maybe_banner = fetch_actor_image(
+        agent,
+        is_filter_enabled,
+        storage,
+        &actor.image,
+        default_banner,
+    ).await?;
     Ok((maybe_avatar, maybe_banner))
 }
 
@@ -550,8 +569,16 @@ pub async fn create_remote_profile(
         &actor,
     ).await?;
     let actor_data = actor.to_db_actor()?;
+    validate_actor_data(&actor_data)?;
+    let moderation_domain = get_moderation_domain(&actor_data)
+        .expect("actor data should be valid");
+    let is_media_filter_enabled = ap_client.filter.is_action_required(
+        moderation_domain.as_str(),
+        FilterAction::RejectProfileImages,
+    );
     let (maybe_avatar, maybe_banner) = fetch_actor_images(
         &agent,
+        is_media_filter_enabled,
         &ap_client.media_storage,
         &actor,
         None,
@@ -620,8 +647,16 @@ pub async fn update_remote_profile(
         &ap_client.instance.hostname(),
         &actor,
     ).await?;
+    validate_actor_data(&actor_data)?;
+    let moderation_domain = get_moderation_domain(&actor_data)
+        .expect("actor data should be valid");
+    let is_media_filter_enabled = ap_client.filter.is_action_required(
+        moderation_domain.as_str(),
+        FilterAction::RejectProfileImages,
+    );
     let (maybe_avatar, maybe_banner) = fetch_actor_images(
         &agent,
+        is_media_filter_enabled,
         &ap_client.media_storage,
         &actor,
         profile.avatar,

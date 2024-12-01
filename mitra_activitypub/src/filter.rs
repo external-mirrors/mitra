@@ -19,6 +19,7 @@ pub fn get_moderation_domain(
     actor: &DbActor,
 ) -> Result<Hostname, DatabaseError> {
     let http_url = if actor.is_portable() {
+        // TODO: return None if gateway list is empty
         actor.gateways.first().ok_or(DatabaseTypeError)?
     } else {
         &actor.id

@@ -9,6 +9,7 @@ use crate::database::{
 pub enum FilterAction {
     Reject,
     RejectMediaAttachments,
+    RejectProfileImages,
 }
 
 impl From<FilterAction> for i16 {
@@ -16,6 +17,7 @@ impl From<FilterAction> for i16 {
         match value {
             FilterAction::Reject => 1,
             FilterAction::RejectMediaAttachments => 2,
+            FilterAction::RejectProfileImages => 3,
         }
     }
 }
@@ -27,6 +29,7 @@ impl TryFrom<i16> for FilterAction {
         let action = match value {
             1 => Self::Reject,
             2 => Self::RejectMediaAttachments,
+            3 => Self::RejectProfileImages,
             _ => return Err(DatabaseTypeError),
         };
         Ok(action)

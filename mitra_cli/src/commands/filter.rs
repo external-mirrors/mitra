@@ -24,6 +24,8 @@ enum FilterAction {
     AcceptMedia,
     RejectMediaAttachments,
     AcceptMediaAttachments,
+    RejectProfileImages,
+    AcceptProfileImages,
 }
 
 impl FilterAction {
@@ -39,6 +41,10 @@ impl FilterAction {
                 (DbFilterAction::RejectMediaAttachments, false),
             Self::AcceptMediaAttachments =>
                 (DbFilterAction::RejectMediaAttachments, true),
+            Self::RejectProfileImages =>
+                (DbFilterAction::RejectProfileImages, false),
+            Self::AcceptProfileImages =>
+                (DbFilterAction::RejectProfileImages, true),
         }
     }
 
@@ -51,6 +57,8 @@ impl FilterAction {
             (DbFilterAction::Reject, true) => Self::Accept,
             (DbFilterAction::RejectMediaAttachments, false) => Self::RejectMediaAttachments,
             (DbFilterAction::RejectMediaAttachments, true) => Self::AcceptMediaAttachments,
+            (DbFilterAction::RejectProfileImages, false) => Self::RejectProfileImages,
+            (DbFilterAction::RejectProfileImages, true) => Self::AcceptProfileImages,
         }
     }
 }
