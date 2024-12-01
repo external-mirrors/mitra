@@ -1,4 +1,4 @@
-/// https://www.w3.org/TR/activitystreams-vocabulary/
+// https://www.w3.org/TR/activitystreams-vocabulary/
 
 // Activity types
 pub const ACCEPT: &str = "Accept";
