@@ -21,6 +21,7 @@ use mitra_validators::{
 };
 
 use crate::{
+    filter::get_moderation_domain,
     identifiers::canonicalize_id,
     importers::{
         get_post_by_object_id,
@@ -85,9 +86,12 @@ pub async fn handle_like(
         },
         Some(content) => {
             let maybe_db_emoji = if let Some(emoji_value) = activity.tag.first() {
+                let moderation_domain =
+                    get_moderation_domain(author.expect_actor_data())?;
                 let maybe_db_emoji = handle_emoji(
                     &ap_client,
                     db_client,
+                    &moderation_domain,
                     emoji_value.clone(),
                 ).await?;
                 // Emoji shortcode must match content

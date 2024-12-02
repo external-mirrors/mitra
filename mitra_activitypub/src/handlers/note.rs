@@ -445,9 +445,11 @@ async fn get_object_tags(
     ap_client: &ApClient,
     db_client: &mut impl DatabaseClient,
     object: &AttributedObject,
+    author: &DbActorProfile,
     redirects: &HashMap<String, String>,
 ) -> Result<(Vec<Uuid>, Vec<String>, Vec<Uuid>, Vec<Uuid>), HandlerError> {
     let instance = &ap_client.instance;
+    let moderation_domain = get_moderation_domain(author.expect_actor_data())?;
 
     let mut hashtag_count = 0;
     let mut mention_count = 0;
@@ -590,6 +592,7 @@ async fn get_object_tags(
             match handle_emoji(
                 ap_client,
                 db_client,
+                &moderation_domain,
                 tag_value,
             ).await? {
                 Some(emoji) => {
@@ -790,6 +793,7 @@ pub async fn create_remote_post(
         ap_client,
         db_client,
         &object,
+        &author,
         redirects,
     ).await?;
 
@@ -891,6 +895,7 @@ pub async fn update_remote_post(
         ap_client,
         db_client,
         object,
+        &post.author,
         &HashMap::new(),
     ).await?;
     let is_sensitive = object.sensitive.unwrap_or(false);

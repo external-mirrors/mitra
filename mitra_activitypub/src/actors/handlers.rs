@@ -6,7 +6,10 @@ use serde::{
 use serde_json::{Value as JsonValue};
 use uuid::Uuid;
 
-use apx_core::urls::get_hostname;
+use apx_core::{
+    http_url::Hostname,
+    urls::get_hostname,
+};
 use apx_sdk::{
     addresses::WebfingerAddress,
     agent::FederationAgent,
@@ -529,6 +532,7 @@ fn parse_aliases(actor: &ValidatedActor) -> Vec<String> {
 async fn parse_tags(
     ap_client: &ApClient,
     db_client: &mut impl DatabaseClient,
+    moderation_domain: &Hostname,
     actor: &ValidatedActor,
 ) -> Result<Vec<Uuid>, HandlerError> {
     let mut emojis = vec![];
@@ -542,6 +546,7 @@ async fn parse_tags(
             match handle_emoji(
                 ap_client,
                 db_client,
+                moderation_domain,
                 tag_value,
             ).await? {
                 Some(emoji) => {
@@ -596,6 +601,7 @@ pub async fn create_remote_profile(
     let emojis = parse_tags(
         ap_client,
         db_client,
+        &moderation_domain,
         &actor,
     ).await?;
     let mut profile_data = ProfileCreateData {
@@ -674,6 +680,7 @@ pub async fn update_remote_profile(
     let emojis = parse_tags(
         ap_client,
         db_client,
+        &moderation_domain,
         &actor,
     ).await?;
     let mut profile_data = ProfileUpdateData {

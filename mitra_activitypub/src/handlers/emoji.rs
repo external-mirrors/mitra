@@ -2,7 +2,10 @@ use chrono::{DateTime, Utc};
 use serde::Deserialize;
 use serde_json::{Value as JsonValue};
 
-use apx_core::urls::get_hostname;
+use apx_core::{
+    http_url::Hostname,
+    urls::get_hostname,
+};
 use apx_sdk::fetch::fetch_file;
 use mitra_models::{
     database::{DatabaseClient, DatabaseError},
@@ -12,6 +15,7 @@ use mitra_models::{
         update_emoji,
     },
     emojis::types::{DbEmoji, EmojiImage as DbEmojiImage},
+    filter_rules::types::FilterAction,
     media::types::MediaInfo,
 };
 use mitra_validators::{
@@ -55,6 +59,7 @@ struct Emoji {
 pub async fn handle_emoji(
     ap_client: &ApClient,
     db_client: &mut impl DatabaseClient,
+    moderation_domain: &Hostname,
     tag_value: JsonValue,
 ) -> Result<Option<DbEmoji>, HandlerError> {
     let emoji: Emoji = match serde_json::from_value(tag_value) {
@@ -100,6 +105,14 @@ pub async fn handle_emoji(
     };
     let agent = build_federation_agent(&ap_client.instance, None);
     let storage = &ap_client.media_storage;
+    let is_filter_enabled = ap_client.filter.is_action_required(
+        moderation_domain.as_str(),
+        FilterAction::RejectCustomEmojis,
+    );
+    if is_filter_enabled {
+        log::warn!("emoji removed by filter: {}", emoji.icon.url);
+        return Ok(None);
+    };
     let (file_data, media_type) = match fetch_file(
         &agent,
         &emoji.icon.url,
