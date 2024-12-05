@@ -161,6 +161,14 @@ Upgrade to a `minor` or a `patch` version is performed by replacing binaries and
 
 Upgrade to a `major` version requires special migration steps that are documented in release notes.
 
+### Debian package
+
+```shell
+dpkg -i mitra_amd64.deb
+```
+
+Do not overwrite existing configuration file.
+
 ## Configuration
 
 ### Environment variables
