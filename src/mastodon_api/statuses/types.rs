@@ -273,12 +273,12 @@ pub struct StatusPreview {
 
 impl StatusPreview {
     pub fn new(
-        instance_url: &str,
+        base_url: &str,
         content: String,
         emojis: Vec<DbEmoji>,
     ) -> Self {
         let emojis: Vec<CustomEmoji> = emojis.into_iter()
-            .map(|emoji| CustomEmoji::from_db(instance_url, emoji))
+            .map(|emoji| CustomEmoji::from_db(base_url, emoji))
             .collect();
         Self { content, emojis }
     }

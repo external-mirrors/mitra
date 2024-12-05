@@ -265,6 +265,7 @@ async fn create_status(
 async fn preview_status(
     auth: BearerAuth,
     config: web::Data<Config>,
+    connection_info: ConnectionInfo,
     db_pool: web::Data<DatabaseConnectionPool>,
     status_data: web::Json<StatusPreviewData>,
 ) -> Result<HttpResponse, MastodonError> {
@@ -281,8 +282,9 @@ async fn preview_status(
             None,
         ).await?;
     // Return preview
+    let base_url = get_request_base_url(connection_info);
     let preview = StatusPreview::new(
-        &instance.url(),
+        &base_url,
         content,
         emojis,
     );
