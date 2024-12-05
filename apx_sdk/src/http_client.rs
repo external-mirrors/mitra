@@ -151,10 +151,6 @@ pub fn build_http_client(
         let proxy = Proxy::all(proxy_url)?;
         client_builder = client_builder.proxy(proxy);
     };
-    if cfg!(feature = "rustls-tls") {
-        // https://github.com/hyperium/hyper/issues/3427
-        client_builder = client_builder.http1_only();
-    };
     if agent.ssrf_protection_enabled {
         client_builder = client_builder.dns_resolver(
             Arc::new(dns_resolver::SafeResolver::new()));
