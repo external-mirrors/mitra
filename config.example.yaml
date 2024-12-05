@@ -1,8 +1,9 @@
 # Mitra configuration file
 
-# Database configuration
+# Database configuration.
+# Characters `@` in password `/` in hostname should be percent-encoded.
 # Examples:
-# - postgres://mitra:mitra@127.0.0.1:5432/mitra
+# - postgres://mitra:passw0rd@127.0.0.1:5432/mitra
 # - postgres://mitra@%2Fvar%2Frun%2Fpostgresql/mitra
 database_url: postgres://mitra:mitra@127.0.0.1:5432/mitra
 #database_tls_ca_file: /etc/mitra/database.pem
