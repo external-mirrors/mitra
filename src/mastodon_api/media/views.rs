@@ -1,6 +1,7 @@
 /// https://docs.joinmastodon.org/methods/media/
 use actix_multipart::form::MultipartForm;
 use actix_web::{
+    dev::ConnectionInfo,
     web,
     Either,
     HttpResponse,
@@ -22,10 +23,13 @@ use mitra_models::{
 use mitra_services::media::MediaStorage;
 use mitra_validators::media::validate_media_description;
 
-use crate::mastodon_api::{
-    auth::get_current_user,
-    errors::MastodonError,
-    uploads::save_b64_file,
+use crate::{
+    http::get_request_base_url,
+    mastodon_api::{
+        auth::get_current_user,
+        errors::MastodonError,
+        uploads::save_b64_file,
+    },
 };
 
 use super::types::{
@@ -38,6 +42,7 @@ use super::types::{
 async fn create_attachment_view(
     auth: BearerAuth,
     config: web::Data<Config>,
+    connection_info: ConnectionInfo,
     db_pool: web::Data<DatabaseConnectionPool>,
     attachment_data: Either<
         MultipartForm<AttachmentDataMultipartForm>,
@@ -67,8 +72,10 @@ async fn create_attachment_view(
         MediaInfo::local(file_info),
         attachment_data.description.as_deref(),
     ).await?;
+
+    let base_url = get_request_base_url(connection_info);
     let attachment = Attachment::from_db(
-        &config.instance_url(),
+        &base_url,
         db_attachment,
     );
     Ok(HttpResponse::Ok().json(attachment))
@@ -76,7 +83,7 @@ async fn create_attachment_view(
 
 async fn get_attachment_view(
     auth: BearerAuth,
-    config: web::Data<Config>,
+    connection_info: ConnectionInfo,
     db_pool: web::Data<DatabaseConnectionPool>,
     attachment_id: web::Path<Uuid>,
 ) -> Result<HttpResponse, MastodonError> {
@@ -87,8 +94,9 @@ async fn get_attachment_view(
         current_user.id,
         *attachment_id,
     ).await?;
+    let base_url = get_request_base_url(connection_info);
     let attachment = Attachment::from_db(
-        &config.instance_url(),
+        &base_url,
         db_attachment,
     );
     Ok(HttpResponse::Ok().json(attachment))
@@ -96,7 +104,7 @@ async fn get_attachment_view(
 
 async fn update_attachment_view(
     auth: BearerAuth,
-    config: web::Data<Config>,
+    connection_info: ConnectionInfo,
     db_pool: web::Data<DatabaseConnectionPool>,
     attachment_id: web::Path<Uuid>,
     attachment_data: web::Json<AttachmentUpdateData>,
@@ -112,8 +120,9 @@ async fn update_attachment_view(
         *attachment_id,
         attachment_data.description.as_deref(),
     ).await?;
+    let base_url = get_request_base_url(connection_info);
     let attachment = Attachment::from_db(
-        &config.instance_url(),
+        &base_url,
         db_attachment,
     );
     Ok(HttpResponse::Ok().json(attachment))

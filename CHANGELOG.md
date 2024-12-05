@@ -29,6 +29,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Fixed incorrect log message when reply can not be imported.
 - Fixed owner check in `Update(Note)` handler.
 - Fixed broken custom emojis in post preview at onion mirror.
+- Fixed broken media attachments in post editor at onion mirror.
 
 ## [3.10.0] - 2024-11-20
 
