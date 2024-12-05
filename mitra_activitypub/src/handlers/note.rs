@@ -28,6 +28,7 @@ use mitra_models::{
     activitypub::queries::save_attributed_object,
     attachments::queries::create_attachment,
     database::{DatabaseClient, DatabaseError},
+    filter_rules::types::FilterAction,
     media::types::MediaInfo,
     posts::{
         queries::{create_post, update_post},
@@ -280,8 +281,10 @@ async fn get_object_attachments(
     let agent = build_federation_agent(&ap_client.instance, None);
     let storage = &ap_client.media_storage;
     let author_hostname = get_moderation_domain(author.expect_actor_data())?;
-    let is_media_blocked = ap_client.filter
-        .is_media_blocked(author_hostname.as_str());
+    let is_filter_enabled = ap_client.filter.is_action_required(
+        author_hostname.as_str(),
+        FilterAction::RejectMediaAttachments,
+    );
 
     let mut values = object.attachment.clone();
     if object.object_type == VIDEO {
@@ -353,9 +356,9 @@ async fn get_object_attachments(
                 .map_err(|error| log::warn!("{error}"))
                 .is_ok()
         });
-        if is_media_blocked {
+        if is_filter_enabled {
             // Do not download
-            log::warn!("attachment rejected: {attachment_url}");
+            log::warn!("attachment removed by filter: {attachment_url}");
             unprocessed.push(attachment_url);
             continue;
         };

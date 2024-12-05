@@ -15,6 +15,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Sniff upload media type if not provided by client.
 - Don't write unnecessary delivery reports to log when in private mode.
 - Panic if trying to migrate from version 1.36.0 or older.
+- Rename `reject-media` filter action to `reject-media-attachments`.
+
+### Deprecated
+
+- Deprecate `reject-media` alias of `reject-media-attachments` filter action.
 
 ## [3.11.0] - 2024-12-05
 

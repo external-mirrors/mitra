@@ -64,7 +64,7 @@ impl FederationFilter {
         })
     }
 
-    fn is_action_required(
+    pub fn is_action_required(
         &self,
         hostname: &str,
         action: FilterAction,
@@ -90,10 +90,6 @@ impl FederationFilter {
 
     pub fn is_blocked(&self, hostname: &str) -> bool {
         self.is_action_required(hostname, FilterAction::Reject)
-    }
-
-    pub fn is_media_blocked(&self, hostname: &str) -> bool {
-        self.is_action_required(hostname, FilterAction::RejectMedia)
     }
 }
 

@@ -22,6 +22,8 @@ enum FilterAction {
     Accept,
     RejectMedia,
     AcceptMedia,
+    RejectMediaAttachments,
+    AcceptMediaAttachments,
 }
 
 impl FilterAction {
@@ -29,8 +31,14 @@ impl FilterAction {
         match self {
             Self::Reject => (DbFilterAction::Reject, false),
             Self::Accept => (DbFilterAction::Reject, true),
-            Self::RejectMedia => (DbFilterAction::RejectMedia, false),
-            Self::AcceptMedia => (DbFilterAction::RejectMedia, true),
+            Self::RejectMedia =>
+                (DbFilterAction::RejectMediaAttachments, false),
+            Self::AcceptMedia =>
+                (DbFilterAction::RejectMediaAttachments, true),
+            Self::RejectMediaAttachments =>
+                (DbFilterAction::RejectMediaAttachments, false),
+            Self::AcceptMediaAttachments =>
+                (DbFilterAction::RejectMediaAttachments, true),
         }
     }
 
@@ -41,8 +49,8 @@ impl FilterAction {
         match (action, is_reversed) {
             (DbFilterAction::Reject, false) => Self::Reject,
             (DbFilterAction::Reject, true) => Self::Accept,
-            (DbFilterAction::RejectMedia, false) => Self::RejectMedia,
-            (DbFilterAction::RejectMedia, true) => Self::AcceptMedia,
+            (DbFilterAction::RejectMediaAttachments, false) => Self::RejectMediaAttachments,
+            (DbFilterAction::RejectMediaAttachments, true) => Self::AcceptMediaAttachments,
         }
     }
 }
@@ -120,7 +128,7 @@ impl ListFilterRules {
                 rule.is_reversed,
             );
             println!(
-                "{0: <15} {1}",
+                "{0: <25} {1}",
                 action,
                 rule.target,
             );
