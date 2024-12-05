@@ -162,6 +162,17 @@ pub fn parse_into_href_array(
     Ok(result)
 }
 
+pub fn deserialize_into_link_href<'de, D>(
+    deserializer: D,
+) -> Result<String, D::Error>
+    where D: Deserializer<'de>
+{
+    let value = Value::deserialize(deserializer)?;
+    let link_href = get_link_href(&value)
+        .map_err(DeserializerError::custom)?;
+    Ok(link_href)
+}
+
 /// Transforms arbitrary property value into array of structs
 pub fn parse_into_array<T: DeserializeOwned>(
     value: &Value,

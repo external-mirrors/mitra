@@ -24,6 +24,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Overwrite cached activity if attributed object has same ID.
 - Keep activities in portable inboxes and outboxes for 90 days.
 - Use `Image` type to represent attached images.
+- Support attachments where `url` is a `Link` object.
 
 ### Fixed
 

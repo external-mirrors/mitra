@@ -14,6 +14,7 @@ use apx_sdk::{
     constants::{AP_MEDIA_TYPE, AS_MEDIA_TYPE},
     deserialization::{
         deserialize_into_id_array,
+        deserialize_into_link_href,
         deserialize_into_object_id_opt,
         deserialize_object_array,
         parse_into_href_array,
@@ -265,8 +266,9 @@ struct Attachment {
 
     name: Option<String>,
     media_type: Option<String>,
-    href: Option<String>,
-    url: Option<String>,
+
+    #[serde(deserialize_with = "deserialize_into_link_href")]
+    url: String,
 }
 
 async fn get_object_attachments(
@@ -295,21 +297,12 @@ async fn get_object_attachments(
             log::warn!("too many attachments");
             break;
         };
-        let attachment: Attachment =
-            match serde_json::from_value(attachment_value)
-        {
-            Ok(attachment) => attachment,
-            Err(_) => {
-                log::warn!("invalid attachment");
-                continue;
-            },
-        };
-        match attachment.attachment_type.as_str() {
-            AUDIO | DOCUMENT | IMAGE | VIDEO => (),
-            LINK => {
+        match attachment_value["type"].as_str() {
+            Some(AUDIO | DOCUMENT | IMAGE | VIDEO) => (),
+            Some(LINK) => {
                 // Lemmy compatibility
-                let link_href = if let Some(href) = attachment.href {
-                    href
+                let link_href = if let Some(href) = attachment_value["href"].as_str() {
+                    href.to_string()
                 } else {
                     log::warn!("invalid link attachment");
                     continue;
@@ -317,11 +310,24 @@ async fn get_object_attachments(
                 unprocessed.push(link_href);
                 continue;
             },
-            _ => {
+            Some(attachment_type) => {
                 log::warn!(
                     "skipping attachment of type {}",
-                    attachment.attachment_type,
+                    attachment_type,
                 );
+                continue;
+            },
+            None => {
+                log::warn!("attachment without type");
+                continue;
+            },
+        };
+        let attachment: Attachment =
+            match serde_json::from_value(attachment_value)
+        {
+            Ok(attachment) => attachment,
+            Err(error) => {
+                log::warn!("invalid attachment ({error})");
                 continue;
             },
         };
@@ -332,14 +338,9 @@ async fn get_object_attachments(
             // Don't fetch HTML pages attached by GNU Social
             continue;
         };
-        let attachment_url = if let Some(url) = attachment.url {
-            if let Err(error) = validate_media_url(&url) {
-                log::warn!("invalid attachment URL ({error}): {url}");
-                continue;
-            };
-            url
-        } else {
-            log::warn!("attachment URL is missing");
+        let attachment_url = attachment.url;
+        if let Err(error) = validate_media_url(&attachment_url) {
+            log::warn!("invalid attachment URL ({error}): {attachment_url}");
             continue;
         };
         if downloaded.iter().any(|(url, ..)| *url == attachment_url) {
