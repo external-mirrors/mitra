@@ -9,6 +9,7 @@ use apx_sdk::{
 };
 use mitra_models::{
     database::{DatabaseClient, DatabaseError},
+    attachments::types::AttachmentType,
     posts::queries::get_post_author,
     posts::types::{Post, Visibility},
     profiles::types::{DbActor, WebfingerHostname},
@@ -31,7 +32,7 @@ use crate::{
         local_tag_collection,
         LocalActorCollection,
     },
-    vocabulary::{DOCUMENT, HASHTAG, LINK, MENTION, NOTE},
+    vocabulary::{DOCUMENT, HASHTAG, IMAGE, LINK, MENTION, NOTE},
 };
 
 use super::emoji::{build_emoji, Emoji};
@@ -136,8 +137,12 @@ pub fn build_note(
     let actor_id = local_actor_id_unified(authority, &post.author.username);
     let attachments: Vec<_> = post.attachments.iter().map(|db_item| {
         let url = get_file_url(instance_url, &db_item.file_name);
+        let object_type = match db_item.attachment_type() {
+            AttachmentType::Image => IMAGE,
+            _ => DOCUMENT,
+        };
         MediaAttachment {
-            attachment_type: DOCUMENT.to_string(),
+            attachment_type: object_type.to_string(),
             name: db_item.description.clone(),
             media_type: db_item.media_type.clone(),
             digest_multibase: db_item.digest.as_ref()

@@ -72,9 +72,7 @@ pub struct Attachment {
 
 impl Attachment {
     pub fn from_db(base_url: &str, db_attachment: DbMediaAttachment) -> Self {
-        let attachment_type =
-            AttachmentType::from_media_type(db_attachment.media_type);
-        let attachment_type_mastodon = match attachment_type {
+        let attachment_type_mastodon = match db_attachment.attachment_type() {
             AttachmentType::Unknown => "unknown",
             AttachmentType::Image => "image",
             AttachmentType::Video => "video",
