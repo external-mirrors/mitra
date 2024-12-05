@@ -23,7 +23,7 @@ Features:
 
 Follow: [@mitra@mitra.social](https://mitra.social/@mitra)
 
-Matrix chat: [#mitra:hackliberty.org](https://matrix.to/#/#mitra:hackliberty.org)
+Matrix chat: [#mitra:unredacted.org](https://matrix.to/#/#mitra:unredacted.org)
 
 ## Instances
 
