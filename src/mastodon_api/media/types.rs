@@ -32,18 +32,14 @@ pub struct AttachmentDataMultipartForm {
 
 impl From<AttachmentDataMultipartForm> for AttachmentData {
     fn from(form: AttachmentDataMultipartForm) -> Self {
+        const APPLICATION_OCTET_STREAM: &str = "application/octet-stream";
         let media_type = form.file.content_type
-            .and_then(|mime| {
-                let media_type = mime.essence_str().to_string();
-                if media_type == "application/octet-stream" {
-                    // Workaround for Bloat-FE
-                    sniff_media_type(&form.file.data)
-                } else {
-                    Some(media_type)
-                }
-            })
-            // Use application/octet-stream as fallback type
-            .unwrap_or("application/octet-stream".to_string());
+            .map(|mime| mime.essence_str().to_string())
+            // Ignore if content type is application/octet-stream
+            .filter(|media_type| media_type == APPLICATION_OCTET_STREAM)
+            // Workaround for clients that don't provide content type
+            .or(sniff_media_type(&form.file.data))
+            .unwrap_or(APPLICATION_OCTET_STREAM.to_string());
         Self {
             file: base64::encode(form.file.data),
             media_type: media_type,

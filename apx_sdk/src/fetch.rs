@@ -249,14 +249,15 @@ fn get_media_type(
     maybe_media_type: Option<&str>,
     default_media_type: Option<&str>,
 ) -> String {
+    const APPLICATION_OCTET_STREAM: &str = "application/octet-stream";
     maybe_media_type
         .or(default_media_type)
         .map(|media_type| media_type.to_string())
         // Ignore if reported media type is application/octet-stream
-        .filter(|media_type| media_type != "application/octet-stream")
+        .filter(|media_type| media_type != APPLICATION_OCTET_STREAM)
         // Sniff media type if not provided
         .or(sniff_media_type(file_data))
-        .unwrap_or("application/octet-stream".to_string())
+        .unwrap_or(APPLICATION_OCTET_STREAM.to_string())
 }
 
 pub async fn fetch_file(
