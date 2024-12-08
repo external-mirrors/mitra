@@ -19,6 +19,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Allow POSTing form-encoded data to `/api/v1/markers`.
 - Added documentation for `create-post` command.
 - Mark portable actor as reachable if at least one inbox is reachable.
+- Don't retry delivery if status is `410 Gone`.
 
 ### Fixed
 

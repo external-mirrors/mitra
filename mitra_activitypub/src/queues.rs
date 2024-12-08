@@ -195,6 +195,7 @@ impl OutgoingActivityJobData {
                             inbox: http_actor_inbox.clone(),
                             is_delivered: false,
                             is_unreachable: false,
+                            is_gone: false,
                             is_local: gateway == instance_url,
                         };
                         recipient_map.insert(http_actor_inbox, recipient);
@@ -208,6 +209,7 @@ impl OutgoingActivityJobData {
                     inbox: actor.inbox.clone(),
                     is_delivered: false,
                     is_unreachable: false,
+                    is_gone: false,
                     is_local: false,
                 };
                 recipient_map.insert(actor.inbox, recipient);
@@ -260,6 +262,7 @@ impl OutgoingActivityJobData {
                     inbox: http_actor_outbox.clone(),
                     is_delivered: false,
                     is_unreachable: false,
+                    is_gone: false,
                     is_local: false, // activity from outbox, don't put it in inbox
                 };
                 recipient_map.insert(http_actor_outbox, recipient);
@@ -457,6 +460,11 @@ pub async fn process_queued_outgoing_activities(
             // TODO: O(1)
             for recipient in recipients.iter_mut() {
                 if !recipient.is_delivered {
+                    if recipient.is_gone {
+                        // Don't retry if recipient is gone
+                        recipient.is_unreachable = true;
+                        continue;
+                    };
                     let profile = match get_remote_profile_by_actor_id(
                         db_client,
                         &recipient.id,
@@ -501,6 +509,13 @@ pub async fn process_queued_outgoing_activities(
                     map
                 })
                 .into_iter()
+                .inspect(|(actor_id, inboxes)| {
+                    // Log "gone" actors
+                    // TODO: delete
+                    if inboxes.iter().all(|inbox| inbox.is_gone) {
+                        log::warn!("actor is gone: {actor_id}");
+                    };
+                })
                 .map(|(actor_id, inboxes)| {
                     // Single successful delivery is enough
                     let is_reachable = inboxes.iter()

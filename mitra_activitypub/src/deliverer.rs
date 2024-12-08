@@ -49,6 +49,8 @@ use crate::{
     utils::db_url_to_http_url,
 };
 
+const HTTP_410_GONE: u16 = 410;
+
 fn deserialize_rsa_secret_key<'de, D>(
     deserializer: D,
 ) -> Result<RsaSecretKey, D::Error>
@@ -185,6 +187,10 @@ pub struct Recipient {
     // if the recipient had prior unreachable status.
     pub is_unreachable: bool,
 
+    // This flag is set if inbox is 410 Gone
+    #[serde(default)]
+    pub is_gone: bool,
+
     // Local portable actor (HTTP request is not needed)
     #[serde(default)]
     pub is_local: bool,
@@ -320,8 +326,13 @@ pub(super) async fn deliver_activity_worker(
                     recipient.is_delivered = true;
                 },
                 Err(error) => {
+                    // To be retried
                     let error_message = match error {
                         DelivererError::HttpError(ref response) => {
+                            if response.status == HTTP_410_GONE {
+                                // Inbox deleted
+                                recipient.is_gone = true;
+                            };
                             let response_text = truncate_response(
                                 &response.body,
                                 instance.federation.deliverer_log_response_length,
