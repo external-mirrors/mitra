@@ -7,10 +7,18 @@ mod embedded {
 }
 
 pub async fn apply_migrations(db_client: &mut Client) -> Result<(), Error> {
-    let migration_report = embedded::migrations::runner()
-        .run_async(db_client)
-        .await?;
+    let runner = embedded::migrations::runner();
 
+    let maybe_last_migration =
+        runner.get_last_applied_migration_async(db_client).await;
+    if let Ok(Some(migration)) = maybe_last_migration {
+        if migration.version() < 69 {
+            // Migration v69 was added in 1.36.0
+            panic!("updating from versions older than 1.36.0 is not supported");
+        };
+    };
+
+    let migration_report = runner.run_async(db_client).await?;
     for migration in migration_report.applied_migrations() {
         log::info!(
             "migration applied: version {} ({})",
