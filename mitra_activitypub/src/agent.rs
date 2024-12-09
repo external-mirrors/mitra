@@ -1,5 +1,5 @@
 use apx_core::crypto_rsa::RsaSecretKey;
-use apx_sdk::agent::FederationAgent;
+use apx_sdk::agent::{FederationAgent, RequestSigner};
 use mitra_config::Instance;
 use mitra_models::{
     profiles::types::PublicKeyType,
@@ -29,6 +29,10 @@ pub(super) fn build_federation_agent_with_key(
     } else {
         Some(instance.agent())
     };
+    let signer = RequestSigner {
+        key: signer_key,
+        key_id: signer_key_id,
+    };
     FederationAgent {
         user_agent: maybe_user_agent,
         is_instance_private: instance.is_private,
@@ -39,8 +43,7 @@ pub(super) fn build_federation_agent_with_key(
         proxy_url: instance.proxy_url.clone(),
         onion_proxy_url: instance.onion_proxy_url.clone(),
         i2p_proxy_url: instance.i2p_proxy_url.clone(),
-        signer_key: signer_key,
-        signer_key_id: signer_key_id,
+        signer: signer,
     }
 }
 
@@ -78,8 +81,8 @@ mod tests {
         assert_eq!(agent.is_instance_private, true);
         assert_eq!(agent.ssrf_protection_enabled, true);
         assert_eq!(agent.response_size_limit, RESPONSE_SIZE_LIMIT);
-        assert_eq!(agent.signer_key, instance.actor_rsa_key);
-        assert_eq!(agent.signer_key_id, "https://social.example/actor#main-key");
+        assert_eq!(agent.signer.key, instance.actor_rsa_key);
+        assert_eq!(agent.signer.key_id, "https://social.example/actor#main-key");
     }
 
     #[test]
@@ -92,7 +95,7 @@ mod tests {
         assert_eq!(agent.is_instance_private, false);
         assert_eq!(agent.ssrf_protection_enabled, true);
         assert_eq!(agent.response_size_limit, RESPONSE_SIZE_LIMIT);
-        assert_eq!(agent.signer_key, instance.actor_rsa_key);
-        assert_eq!(agent.signer_key_id, "https://social.example/actor#main-key");
+        assert_eq!(agent.signer.key, instance.actor_rsa_key);
+        assert_eq!(agent.signer.key_id, "https://social.example/actor#main-key");
     }
 }

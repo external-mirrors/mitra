@@ -1,5 +1,10 @@
 use apx_core::crypto_rsa::RsaSecretKey;
 
+pub struct RequestSigner {
+    pub key: RsaSecretKey,
+    pub key_id: String,
+}
+
 pub struct FederationAgent {
     /// User-Agent string.
     pub user_agent: Option<String>,
@@ -17,6 +22,6 @@ pub struct FederationAgent {
     pub onion_proxy_url: Option<String>,
     pub i2p_proxy_url: Option<String>,
 
-    pub signer_key: RsaSecretKey,
-    pub signer_key_id: String,
+    /// Key for creating HTTP signatures.
+    pub signer: RequestSigner,
 }

@@ -84,8 +84,8 @@ pub async fn send_object(
         Method::POST,
         inbox_url,
         object_json.as_bytes(),
-        &agent.signer_key,
-        &agent.signer_key_id,
+        &agent.signer.key,
+        &agent.signer.key_id,
     )?;
 
     let http_client = build_deliverer_client(agent, inbox_url)?;

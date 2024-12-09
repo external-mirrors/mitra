@@ -160,8 +160,8 @@ pub async fn fetch_object(
                 HttpMethod::GET,
                 &target_url,
                 b"",
-                &agent.signer_key,
-                &agent.signer_key_id,
+                &agent.signer.key,
+                &agent.signer.key_id,
             )?;
             request_builder = request_builder
                 .header("Host", headers.host)
