@@ -25,13 +25,8 @@ async fn main() -> () {
     let agent = FederationAgent {
         user_agent: Some("fep-ae97-client".to_string()),
         ssrf_protection_enabled: false, // allow connections to 127.0.0.1
-        response_size_limit: 2_000_000,
-        fetcher_timeout: 60,
-        deliverer_timeout: 60,
-        proxy_url: None,
-        onion_proxy_url: None,
-        i2p_proxy_url: None,
         signer: Some(request_signer),
+        ..Default::default()
     };
     let note = json!({
         "@context": "https://www.w3.org/ns/activitystreams",

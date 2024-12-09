@@ -23,3 +23,19 @@ pub struct FederationAgent {
     /// Key for creating HTTP signatures.
     pub signer: Option<RequestSigner>,
 }
+
+impl Default for FederationAgent {
+    fn default() -> Self {
+        Self {
+            user_agent: None,
+            ssrf_protection_enabled: true,
+            response_size_limit: 2_000_000,
+            fetcher_timeout: 10,
+            deliverer_timeout: 10,
+            proxy_url: None,
+            onion_proxy_url: None,
+            i2p_proxy_url: None,
+            signer: None,
+        }
+    }
+}
