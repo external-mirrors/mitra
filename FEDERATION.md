@@ -17,15 +17,31 @@ It also supports the following standards:
 - [FEP-e232: Object Links](https://codeberg.org/silverpill/feps/src/branch/main/e232/fep-e232.md)
 - [FEP-8b32: Object Integrity Proofs](https://codeberg.org/silverpill/feps/src/branch/main/8b32/fep-8b32.md)
 - [FEP-0ea0: Payment Links](https://codeberg.org/silverpill/feps/src/branch/main/0ea0/fep-0ea0.md)
+- [FEP-fb2a: Actor metadata](https://codeberg.org/fediverse/fep/src/branch/main/fep/fb2a/fep-fb2a.md)
+  - Only for remote actors.
 - [FEP-521a: Representing actor's public keys](https://codeberg.org/silverpill/feps/src/branch/main/521a/fep-521a.md)
 - [FEP-c390: Identity Proofs](https://codeberg.org/silverpill/feps/src/branch/main/c390/fep-c390.md)
 - [FEP-0837: Federated Marketplace](https://codeberg.org/silverpill/feps/src/branch/main/0837/fep-0837.md)
 - [FEP-03c1: Actors without acct-URI](https://codeberg.org/fediverse/fep/src/branch/main/fep/03c1/fep-03c1.md)
 - [FEP-7628: Move actor](https://codeberg.org/fediverse/fep/src/branch/main/fep/7628/fep-7628.md)
-- [FEP-c7d3: Ownership](https://codeberg.org/silverpill/feps/src/branch/main/c7d3/fep-c7d3.md)
+- [FEP-fe34: Origin-based security model](https://codeberg.org/fediverse/fep/src/branch/main/fep/fe34/fep-fe34.md)
 - [FEP-d556: Server-Level Actor Discovery Using WebFinger](https://codeberg.org/fediverse/fep/src/branch/main/fep/d556/fep-d556.md)
-- [FEP-c0e0: Emoji reactions](https://codeberg.org/silverpill/feps/src/branch/main/c0e0/fep-c0e0.md)
+- [FEP-c0e0: Emoji reactions](https://codeberg.org/fediverse/fep/src/branch/main/fep/c0e0/fep-c0e0.md)
+- [FEP-ef61: Portable Objects](https://codeberg.org/fediverse/fep/src/branch/main/fep/ef61/fep-ef61.md)
+  - Supports portable actors hosted on remote servers and portable actors registered using [FEP-ae97 clients](#fep-ae97-c2s-api).
+  - Only `did:key` identities are supported. Planned support for `did:web`.
 - [FEP-ae97: Client-side activity signing](https://codeberg.org/silverpill/feps/src/branch/main/ae97/fep-ae97.md)
+- [FEP-1b12: Group federation](https://codeberg.org/fediverse/fep/src/branch/main/fep/1b12/fep-1b12.md)
+  - Can consume `Announce(Activity)` activities, but doesn't publish them.
+- [FEP-171b: Conversation Containers](https://codeberg.org/fediverse/fep/src/branch/main/fep/171b/fep-171b.md)
+  - Can consume `Add(Activity)` activities, but doesn't publish them.
+
+### FEPs that might be supported in the future
+
+- [FEP-8fcf: Followers collection synchronization across servers](https://codeberg.org/fediverse/fep/src/branch/main/fep/8fcf/fep-8fcf.md)
+- [FEP-7888: Demystifying the context property](https://codeberg.org/fediverse/fep/src/branch/main/fep/7888/fep-7888.md)
+- [FEP-7502: Limiting visibility to authenticated actors](https://codeberg.org/fediverse/fep/src/branch/main/fep/7502/fep-7502.md)
+- [FEP-0499: Delivering to multiple inboxes with a multibox endpoint](https://codeberg.org/fediverse/fep/src/branch/main/fep/0499/fep-0499.md)
 
 ## ActivityPub
 
@@ -164,6 +180,7 @@ After registering an account its owner can upload the list of followers and star
 
 Where `object` is an ID of old account and `target` is an ID of new account. Actors identified by `object` and `target` properties must have at least one FEP-c390 identity in common to be considered aliases. Upon receipt of such activity, actors that follow `object` should un-follow it and follow `target` instead.
 
+<a name="fep-ae97-c2s-api"></a>
 ## FEP-ae97 C2S API
 
 In addition to `X-Rsa-Secret-Key` header specified in the FEP, the following headers are required for registration of portable actors:
