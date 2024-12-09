@@ -38,8 +38,10 @@ const BIO_ALLOWED_TAGS: [&str; 3] = [
     "br",
     "p",
 ];
-const FIELD_NAME_MAX_SIZE: usize = 500;
-const FIELD_VALUE_MAX_SIZE: usize = 5000;
+pub const FIELD_LOCAL_LIMIT: usize = 10;
+pub const FIELD_REMOTE_LIMIT: usize = 100;
+pub const FIELD_NAME_LENGTH_MAX: usize = 500;
+pub const FIELD_VALUE_LENGTH_MAX: usize = 5000;
 const FIELD_ALLOWED_TAGS: [&str; 1] = ["a"];
 pub const ALIAS_LIMIT: usize = 10;
 
@@ -171,10 +173,10 @@ pub fn validate_extra_field(field: &ExtraField) -> Result<(), ValidationError> {
     if field.name.trim().is_empty() {
         return Err(ValidationError("field name is empty"));
     };
-    if field.name.len() > FIELD_NAME_MAX_SIZE {
+    if field.name.len() > FIELD_NAME_LENGTH_MAX {
         return Err(ValidationError("field name is too long"));
     };
-    if field.value.len() > FIELD_VALUE_MAX_SIZE {
+    if field.value.len() > FIELD_VALUE_LENGTH_MAX {
         return Err(ValidationError("field value is too long"));
     };
     if field.value != clean_extra_field_value(&field.value) {
@@ -192,11 +194,11 @@ fn validate_extra_fields(
     };
     #[allow(clippy::collapsible_else_if)]
     if is_remote {
-        if extra_fields.len() > 100 {
+        if extra_fields.len() > FIELD_REMOTE_LIMIT {
             return Err(ValidationError("at most 100 fields are allowed"));
         };
     } else {
-        if extra_fields.len() > 10 {
+        if extra_fields.len() > FIELD_LOCAL_LIMIT {
             return Err(ValidationError("at most 10 fields are allowed"));
         };
     };

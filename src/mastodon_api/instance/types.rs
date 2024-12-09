@@ -17,7 +17,15 @@ use mitra_services::{
     media::MediaStorage,
 };
 use mitra_utils::markdown::markdown_to_html;
-use mitra_validators::posts::ATTACHMENT_LIMIT;
+use mitra_validators::{
+    posts::ATTACHMENT_LIMIT,
+    profiles::{
+        FIELD_LOCAL_LIMIT,
+        FIELD_NAME_LENGTH_MAX,
+        FIELD_REMOTE_LIMIT,
+        FIELD_VALUE_LENGTH_MAX,
+    },
+};
 
 use crate::mastodon_api::{
     accounts::types::{
@@ -76,8 +84,17 @@ struct BlockchainInfo {
 }
 
 #[derive(Serialize)]
+struct PleromaFieldsLimits {
+    max_fields: usize,
+    max_remote_fields: usize,
+    name_length: usize,
+    value_length: usize,
+}
+
+#[derive(Serialize)]
 struct PleromaMetadata {
     features: [&'static str; 3],
+    fields_limits: PleromaFieldsLimits,
     post_formats: [&'static str; 2],
 }
 
@@ -89,6 +106,12 @@ impl PleromaMetadata {
                 "pleroma_emoji_reactions",
                 "pleroma_custom_emoji_reactions",
             ],
+            fields_limits: PleromaFieldsLimits {
+                max_fields: FIELD_LOCAL_LIMIT,
+                max_remote_fields: FIELD_REMOTE_LIMIT,
+                name_length: FIELD_NAME_LENGTH_MAX,
+                value_length: FIELD_VALUE_LENGTH_MAX,
+            },
             post_formats: [
                 POST_CONTENT_TYPE_HTML,
                 POST_CONTENT_TYPE_MARKDOWN,

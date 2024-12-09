@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+
+- Added `pleroma.metadata.fields_limits` to `/api/v1/instance` response.
+
 ### Changed
 
 - Sniff upload media type if not provided by client.

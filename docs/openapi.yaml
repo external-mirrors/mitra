@@ -2671,6 +2671,21 @@ components:
                 - quote_posting
                 - pleroma_emoji_reactions
                 - pleroma_custom_emoji_reactions
+            fields_limits:
+              type: object
+              properties:
+                max_fields:
+                  type: integer
+                  example: 10
+                max_remote_fields:
+                  type: integer
+                  example: 100
+                name_length:
+                  type: integer
+                  example: 500
+                value_length:
+                  type: integer
+                  example: 5000
             post_formats:
               type: array
               items:

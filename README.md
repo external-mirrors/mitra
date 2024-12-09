@@ -201,7 +201,7 @@ See [guide](./docs/ipfs.md).
 
 ## Client API
 
-The majority of endpoints imitate Mastodon API. A number of additional endpoints exist for features that are not supported by Mastodon.
+The majority of endpoints imitate Mastodon API. Some Pleroma extensions are supported as well. A number of additional endpoints exist for features that are unique to Mitra.
 
 Client API is not stable and may change in minor releases.
 
