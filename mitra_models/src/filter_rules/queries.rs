@@ -55,6 +55,7 @@ pub async fn get_filter_rules(
         SELECT filter_rule
         FROM filter_rule
         ORDER BY
+            position('*' IN target) = 0 ASC,
             length(target) ASC,
             reverse(target) ASC,
             filter_action ASC
@@ -108,5 +109,51 @@ mod tests {
         ).await.unwrap();
         let rules = get_filter_rules(db_client).await.unwrap();
         assert_eq!(rules.len(), 0);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_filter_rules_ordering() {
+        let db_client = &create_test_database().await;
+        add_filter_rule(
+            db_client,
+            "*",
+            FilterAction::Reject,
+            false,
+        ).await.unwrap();
+        add_filter_rule(
+            db_client,
+            "blocked.example",
+            FilterAction::Reject,
+            false,
+        ).await.unwrap();
+        add_filter_rule(
+            db_client,
+            "lain.com",
+            FilterAction::Reject,
+            true, // reversed
+        ).await.unwrap();
+        add_filter_rule(
+            db_client,
+            "*.example",
+            FilterAction::Reject,
+            true, // reversed
+        ).await.unwrap();
+        add_filter_rule(
+            db_client,
+            "blockedmedia.example",
+            FilterAction::RejectMediaAttachments,
+            false,
+        ).await.unwrap();
+
+        let rules = get_filter_rules(db_client).await.unwrap();
+        let targets: Vec<_> = rules.into_iter().map(|rule| rule.target).collect();
+        assert_eq!(targets, [
+            "*", // reject
+            "*.example", // accept
+            "lain.com", // accept
+            "blocked.example", // reject
+            "blockedmedia.example", // reject-media-attachments
+        ]);
     }
 }

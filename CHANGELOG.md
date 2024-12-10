@@ -16,6 +16,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Don't write unnecessary delivery reports to log when in private mode.
 - Panic if trying to migrate from version 1.36.0 or older.
 - Rename `reject-media` filter action to `reject-media-attachments`.
+- Ensure wildcard filter rules have lowest priority.
 
 ### Deprecated
 
