@@ -24,6 +24,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Deprecate `reject-media` alias of `reject-media-attachments` filter action.
 
+### Fixed
+
+- Remove `Content-Encoding` header only when path starts with `/media`.
+
 ## [3.11.0] - 2024-12-05
 
 ### Added

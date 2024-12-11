@@ -146,7 +146,7 @@ async fn main() -> std::io::Result<()> {
                 let fut = service.call(request);
                 async move {
                     let mut response = fut.await?;
-                    if path.contains(MEDIA_ROOT_URL) {
+                    if path.starts_with(MEDIA_ROOT_URL) {
                         response.headers_mut()
                             .remove(http_header::CONTENT_ENCODING);
                     };
