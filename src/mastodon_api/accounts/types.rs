@@ -45,7 +45,6 @@ use mitra_validators::{
     profiles::{
         allowed_profile_image_media_types,
         clean_extra_field,
-        PROFILE_IMAGE_SIZE_MAX,
     },
 };
 
@@ -376,7 +375,7 @@ fn process_b64_image_field_value(
                     &b64_data,
                     &media_type,
                     media_storage,
-                    PROFILE_IMAGE_SIZE_MAX,
+                    media_limits.profile_image_size_limit,
                     &allowed_profile_image_media_types(&media_limits.supported_media_types()),
                 )?;
                 let image = ProfileImage::from(MediaInfo::local(file_info));

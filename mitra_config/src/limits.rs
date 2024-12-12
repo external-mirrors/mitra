@@ -59,6 +59,7 @@ fn deserialize_file_size<'de, D>(
 }
 
 const fn default_file_size_limit() -> usize { 20_000_000 } // 20 MB
+const fn default_profile_image_size_limit() -> usize { 5_000_000 } // 5 MB
 const fn default_emoji_size_limit() -> usize { 500_000 } // 500 kB
 
 // https://github.com/mastodon/mastodon/blob/v4.2.8/app/models/custom_emoji.rb#L27
@@ -71,6 +72,12 @@ pub struct MediaLimits {
         deserialize_with = "deserialize_file_size",
     )]
     pub file_size_limit: usize,
+
+    #[serde(
+        default = "default_profile_image_size_limit",
+        deserialize_with = "deserialize_file_size",
+    )]
+    pub profile_image_size_limit: usize,
 
     #[serde(
         default = "default_emoji_size_limit",
@@ -93,6 +100,7 @@ impl Default for MediaLimits {
     fn default() -> Self {
         Self {
             file_size_limit: default_file_size_limit(),
+            profile_image_size_limit: default_profile_image_size_limit(),
             emoji_size_limit: default_emoji_size_limit(),
             emoji_local_size_limit: default_emoji_local_size_limit(),
             extra_supported_types: vec![],

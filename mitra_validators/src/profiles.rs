@@ -45,8 +45,6 @@ pub const FIELD_VALUE_LENGTH_MAX: usize = 5000;
 const FIELD_ALLOWED_TAGS: [&str; 1] = ["a"];
 pub const ALIAS_LIMIT: usize = 10;
 
-pub const PROFILE_IMAGE_SIZE_MAX: usize = 5 * 1000 * 1000; // 5 MB
-
 pub fn validate_username(username: &str) -> Result<(), ValidationError> {
     if username.is_empty() {
         return Err(ValidationError("username is empty"));

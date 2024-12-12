@@ -55,7 +55,6 @@ use mitra_validators::{
         clean_profile_update_data,
         validate_actor_data,
         ALIAS_LIMIT,
-        PROFILE_IMAGE_SIZE_MAX,
     },
 };
 
@@ -314,7 +313,7 @@ async fn fetch_actor_image(
             &actor_image.url,
             actor_image.media_type.as_deref(),
             &allowed_profile_image_media_types(&media_limits.supported_media_types()),
-            PROFILE_IMAGE_SIZE_MAX,
+            media_limits.profile_image_size_limit,
         ).await {
             Ok((file_data, media_type)) => {
                 let file_info = media_storage.save_file(file_data, &media_type)?;
