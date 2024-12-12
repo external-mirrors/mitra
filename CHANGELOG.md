@@ -32,6 +32,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Fixed
 
 - Remove `Content-Encoding` header only when path starts with `/media`.
+- Don't autolink URIs with unsupported URI schemes.
 
 ## [3.11.0] - 2024-12-05
 

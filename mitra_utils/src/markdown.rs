@@ -13,6 +13,8 @@ use comrak::{
 };
 use regex::{Captures, Regex};
 
+use crate::html::URI_SCHEMES;
+
 #[derive(thiserror::Error, Debug)]
 pub enum MarkdownError {
     #[error(transparent)]
@@ -99,6 +101,19 @@ fn replace_with_markdown<'a>(
     Ok(())
 }
 
+fn unlink<'a>(node: &'a AstNode<'a>) -> () {
+    let mut link_text = String::new();
+    for child in node.children() {
+        child.detach();
+        let child_value = &child.data.borrow().value;
+        if let NodeValue::Text(child_text) = child_value {
+            link_text.push_str(child_text);
+        };
+    };
+    let text = NodeValue::Text(link_text);
+    replace_node_value(node, text);
+}
+
 fn fix_microsyntaxes<'a>(
     node: &'a AstNode<'a>,
 ) -> Result<(), MarkdownError> {
@@ -106,20 +121,15 @@ fn fix_microsyntaxes<'a>(
         if let NodeValue::Text(ref prev_text) = prev.data.borrow().value {
             // Remove autolink if mention or object link syntax is found
             if prev_text.ends_with('@') || prev_text.ends_with("[[") {
-                let mut link_text = String::new();
-                for child in node.children() {
-                    child.detach();
-                    let child_value = &child.data.borrow().value;
-                    if let NodeValue::Text(child_text) = child_value {
-                        link_text.push_str(child_text);
-                    };
-                };
-                let text = NodeValue::Text(link_text);
-                replace_node_value(node, text);
+                unlink(node);
             };
         };
     };
     Ok(())
+}
+
+fn is_uri_scheme_allowed(uri: &str) -> bool {
+    URI_SCHEMES.iter().any(|scheme| uri.starts_with(scheme))
 }
 
 fn document_to_html<'a>(
@@ -239,7 +249,12 @@ pub fn markdown_lite_to_html(text: &str) -> Result<String, MarkdownError> {
                 };
                 replace_node_value(node, NodeValue::Paragraph);
             },
-            NodeValue::Link(_) => fix_microsyntaxes(node)?,
+            NodeValue::Link(link) => {
+                fix_microsyntaxes(node)?;
+                if !is_uri_scheme_allowed(&link.url) {
+                    unlink(node);
+                };
+            },
             _ => (),
         };
         Ok(())
@@ -271,6 +286,9 @@ pub fn markdown_basic_to_html(text: &str) -> Result<String, MarkdownError> {
                 => (),
             NodeValue::Link(link) => {
                 fix_microsyntaxes(node)?;
+                if !is_uri_scheme_allowed(&link.url) {
+                    unlink(node);
+                };
                 if link.url.starts_with("mailto:") {
                     // Disable email autolinking
                     let markdown = node_to_markdown(node, &options)?;
@@ -418,7 +436,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore]
     fn test_markdown_lite_to_html_unknown_uri_autolink() {
         let text = "test x://a";
         let html = markdown_lite_to_html(text).unwrap();
@@ -448,7 +465,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore]
     fn test_markdown_basic_to_html_unknown_uri_autolink() {
         let text = "test x://a";
         let html = markdown_basic_to_html(text).unwrap();
