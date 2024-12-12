@@ -418,6 +418,14 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
+    fn test_markdown_lite_to_html_unknown_uri_autolink() {
+        let text = "test x://a";
+        let html = markdown_lite_to_html(text).unwrap();
+        assert_eq!(html, r#"<p>test x://a</p>"#);
+    }
+
+    #[test]
     fn test_markdown_basic_to_html() {
         let text = "test **bold** test *italic* test ~~strike~~ with `code`, <span>html</span> and https://example.com and admin@email.example\nnew line\n\nanother line";
         let html = markdown_basic_to_html(text).unwrap();
@@ -437,6 +445,14 @@ mod tests {
         let text = "@user@example.org test";
         let html = markdown_basic_to_html(text).unwrap();
         assert_eq!(html, format!("<p>{}</p>", text));
+    }
+
+    #[test]
+    #[ignore]
+    fn test_markdown_basic_to_html_unknown_uri_autolink() {
+        let text = "test x://a";
+        let html = markdown_basic_to_html(text).unwrap();
+        assert_eq!(html, r#"<p>test x://a</p>"#);
     }
 
     #[test]
