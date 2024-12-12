@@ -25,8 +25,8 @@ use super::types::DirectoryQueryParams;
 #[get("")]
 async fn profile_directory(
     auth: BearerAuth,
-    connection_info: ConnectionInfo,
     config: web::Data<Config>,
+    connection_info: ConnectionInfo,
     db_pool: web::Data<DatabaseConnectionPool>,
     query_params: web::Query<DirectoryQueryParams>,
 ) -> Result<HttpResponse, MastodonError> {

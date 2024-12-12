@@ -26,8 +26,8 @@ use super::types::{ApiNotification, NotificationQueryParams};
 #[get("")]
 async fn get_notifications_view(
     auth: BearerAuth,
-    connection_info: ConnectionInfo,
     config: web::Data<Config>,
+    connection_info: ConnectionInfo,
     db_pool: web::Data<DatabaseConnectionPool>,
     request_uri: Uri,
     query_params: web::Query<NotificationQueryParams>,

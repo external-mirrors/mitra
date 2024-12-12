@@ -135,8 +135,8 @@ async fn get_subscription_options(
 #[post("/options")]
 async fn register_subscription_option(
     auth: BearerAuth,
-    connection_info: ConnectionInfo,
     config: web::Data<Config>,
+    connection_info: ConnectionInfo,
     db_pool: web::Data<DatabaseConnectionPool>,
     subscription_option: web::Json<SubscriptionOption>,
 ) -> Result<HttpResponse, MastodonError> {

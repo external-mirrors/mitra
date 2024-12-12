@@ -76,8 +76,8 @@ use super::types::{
 #[post("/client_config")]
 async fn client_config_view(
     auth: BearerAuth,
-    connection_info: ConnectionInfo,
     config: web::Data<Config>,
+    connection_info: ConnectionInfo,
     db_pool: web::Data<DatabaseConnectionPool>,
     request_data: web::Json<ClientConfig>,
 ) -> Result<HttpResponse, MastodonError> {
@@ -106,8 +106,8 @@ async fn client_config_view(
 #[post("/change_password")]
 async fn change_password_view(
     auth: BearerAuth,
-    connection_info: ConnectionInfo,
     config: web::Data<Config>,
+    connection_info: ConnectionInfo,
     db_pool: web::Data<DatabaseConnectionPool>,
     request_data: web::Json<PasswordChangeRequest>,
 ) -> Result<HttpResponse, MastodonError> {
@@ -271,8 +271,8 @@ async fn import_follows_view(
 #[post("/import_followers")]
 async fn import_followers_view(
     auth: BearerAuth,
-    connection_info: ConnectionInfo,
     config: web::Data<Config>,
+    connection_info: ConnectionInfo,
     db_pool: web::Data<DatabaseConnectionPool>,
     request_data: web::Json<ImportFollowersRequest>,
 ) -> Result<HttpResponse, MastodonError> {
@@ -329,8 +329,8 @@ async fn import_followers_view(
 #[post("/move_followers")]
 async fn move_followers_view(
     auth: BearerAuth,
-    connection_info: ConnectionInfo,
     config: web::Data<Config>,
+    connection_info: ConnectionInfo,
     db_pool: web::Data<DatabaseConnectionPool>,
     request_data: web::Json<MoveFollowersRequest>,
 ) -> Result<HttpResponse, MastodonError> {

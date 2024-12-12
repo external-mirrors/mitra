@@ -161,8 +161,8 @@ use super::types::{
 };
 
 pub async fn create_account(
-    connection_info: ConnectionInfo,
     config: web::Data<Config>,
+    connection_info: ConnectionInfo,
     db_pool: web::Data<DatabaseConnectionPool>,
     account_data: web::Json<AccountCreateData>,
 ) -> Result<HttpResponse, MastodonError> {
@@ -276,8 +276,8 @@ pub async fn create_account(
 #[get("/verify_credentials")]
 async fn verify_credentials(
     auth: BearerAuth,
-    connection_info: ConnectionInfo,
     config: web::Data<Config>,
+    connection_info: ConnectionInfo,
     db_pool: web::Data<DatabaseConnectionPool>,
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &**get_database_client(&db_pool).await?;
@@ -293,8 +293,8 @@ async fn verify_credentials(
 #[patch("/update_credentials")]
 async fn update_credentials(
     auth: BearerAuth,
-    connection_info: ConnectionInfo,
     config: web::Data<Config>,
+    connection_info: ConnectionInfo,
     db_pool: web::Data<DatabaseConnectionPool>,
     account_data: Either<
         MultipartForm<AccountUpdateMultipartForm>,
@@ -390,8 +390,8 @@ async fn get_identity_claim(
 #[post("/identity_proof")]
 async fn create_identity_proof(
     auth: BearerAuth,
-    connection_info: ConnectionInfo,
     config: web::Data<Config>,
+    connection_info: ConnectionInfo,
     db_pool: web::Data<DatabaseConnectionPool>,
     proof_data: web::Json<IdentityProofData>,
 ) -> Result<HttpResponse, MastodonError> {
@@ -550,8 +550,8 @@ async fn get_relationships_view(
 
 #[get("/lookup")]
 async fn lookup_acct(
-    connection_info: ConnectionInfo,
     config: web::Data<Config>,
+    connection_info: ConnectionInfo,
     db_pool: web::Data<DatabaseConnectionPool>,
     query_params: web::Query<LookupAcctQueryParams>,
 ) -> Result<HttpResponse, MastodonError> {
@@ -567,8 +567,8 @@ async fn lookup_acct(
 
 async fn search_by_acct(
     auth: Option<BearerAuth>,
-    connection_info: ConnectionInfo,
     config: web::Data<Config>,
+    connection_info: ConnectionInfo,
     db_pool: web::Data<DatabaseConnectionPool>,
     query_params: web::Query<SearchAcctQueryParams>,
     governor_result: GovernorExtractor,
@@ -613,8 +613,8 @@ async fn search_by_acct(
 
 #[get("/search_did")]
 async fn search_by_did(
-    connection_info: ConnectionInfo,
     config: web::Data<Config>,
+    connection_info: ConnectionInfo,
     db_pool: web::Data<DatabaseConnectionPool>,
     query_params: web::Query<SearchDidQueryParams>,
 ) -> Result<HttpResponse, MastodonError> {
@@ -652,8 +652,8 @@ async fn generate_identicon_view(
 
 #[get("/{account_id}")]
 async fn get_account(
-    connection_info: ConnectionInfo,
     config: web::Data<Config>,
+    connection_info: ConnectionInfo,
     db_pool: web::Data<DatabaseConnectionPool>,
     account_id: web::Path<Uuid>,
 ) -> Result<HttpResponse, MastodonError> {
@@ -842,8 +842,8 @@ async fn unmute_account(
 #[get("/{account_id}/statuses")]
 async fn get_account_statuses(
     auth: Option<BearerAuth>,
-    connection_info: ConnectionInfo,
     config: web::Data<Config>,
+    connection_info: ConnectionInfo,
     db_pool: web::Data<DatabaseConnectionPool>,
     request_uri: Uri,
     account_id: web::Path<Uuid>,
@@ -884,8 +884,8 @@ async fn get_account_statuses(
 #[get("/{account_id}/followers")]
 async fn get_account_followers(
     auth: BearerAuth,
-    connection_info: ConnectionInfo,
     config: web::Data<Config>,
+    connection_info: ConnectionInfo,
     db_pool: web::Data<DatabaseConnectionPool>,
     request_uri: Uri,
     account_id: web::Path<Uuid>,
@@ -928,8 +928,8 @@ async fn get_account_followers(
 #[get("/{account_id}/following")]
 async fn get_account_following(
     auth: BearerAuth,
-    connection_info: ConnectionInfo,
     config: web::Data<Config>,
+    connection_info: ConnectionInfo,
     db_pool: web::Data<DatabaseConnectionPool>,
     request_uri: Uri,
     account_id: web::Path<Uuid>,
@@ -972,8 +972,8 @@ async fn get_account_following(
 #[get("/{account_id}/subscribers")]
 async fn get_account_subscribers(
     auth: BearerAuth,
-    connection_info: ConnectionInfo,
     config: web::Data<Config>,
+    connection_info: ConnectionInfo,
     db_pool: web::Data<DatabaseConnectionPool>,
     account_id: web::Path<Uuid>,
     query_params: web::Query<SubscriptionListQueryParams>,
@@ -1026,8 +1026,8 @@ async fn get_account_lists(
 
 #[get("/{account_id}/aliases/all")]
 async fn get_account_aliases(
-    connection_info: ConnectionInfo,
     config: web::Data<Config>,
+    connection_info: ConnectionInfo,
     db_pool: web::Data<DatabaseConnectionPool>,
     account_id: web::Path<Uuid>,
 ) -> Result<HttpResponse, MastodonError> {

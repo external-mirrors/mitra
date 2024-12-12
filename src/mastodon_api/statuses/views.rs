@@ -294,8 +294,8 @@ async fn preview_status(
 #[get("/{status_id}")]
 async fn get_status(
     auth: Option<BearerAuth>,
-    connection_info: ConnectionInfo,
     config: web::Data<Config>,
+    connection_info: ConnectionInfo,
     db_pool: web::Data<DatabaseConnectionPool>,
     status_id: web::Path<Uuid>,
 ) -> Result<HttpResponse, MastodonError> {
@@ -338,8 +338,8 @@ async fn get_status_source(
 #[put("/{status_id}")]
 async fn edit_status(
     auth: BearerAuth,
-    connection_info: ConnectionInfo,
     config: web::Data<Config>,
+    connection_info: ConnectionInfo,
     db_pool: web::Data<DatabaseConnectionPool>,
     status_id: web::Path<Uuid>,
     status_data: web::Json<StatusUpdateData>,
@@ -465,8 +465,8 @@ async fn delete_status(
 #[get("/{status_id}/context")]
 async fn get_context(
     auth: Option<BearerAuth>,
-    connection_info: ConnectionInfo,
     config: web::Data<Config>,
+    connection_info: ConnectionInfo,
     db_pool: web::Data<DatabaseConnectionPool>,
     status_id: web::Path<Uuid>,
 ) -> Result<HttpResponse, MastodonError> {
@@ -536,8 +536,8 @@ async fn get_thread_view(
 #[post("/{status_id}/favourite")]
 async fn favourite(
     auth: BearerAuth,
-    connection_info: ConnectionInfo,
     config: web::Data<Config>,
+    connection_info: ConnectionInfo,
     db_pool: web::Data<DatabaseConnectionPool>,
     status_id: web::Path<Uuid>,
 ) -> Result<HttpResponse, MastodonError> {
@@ -594,8 +594,8 @@ async fn favourite(
 #[post("/{status_id}/unfavourite")]
 async fn unfavourite(
     auth: BearerAuth,
-    connection_info: ConnectionInfo,
     config: web::Data<Config>,
+    connection_info: ConnectionInfo,
     db_pool: web::Data<DatabaseConnectionPool>,
     status_id: web::Path<Uuid>,
 ) -> Result<HttpResponse, MastodonError> {
@@ -646,8 +646,8 @@ async fn unfavourite(
 #[post("/{status_id}/reblog")]
 async fn reblog(
     auth: BearerAuth,
-    connection_info: ConnectionInfo,
     config: web::Data<Config>,
+    connection_info: ConnectionInfo,
     db_pool: web::Data<DatabaseConnectionPool>,
     status_id: web::Path<Uuid>,
 ) -> Result<HttpResponse, MastodonError> {
@@ -686,8 +686,8 @@ async fn reblog(
 #[post("/{status_id}/unreblog")]
 async fn unreblog(
     auth: BearerAuth,
-    connection_info: ConnectionInfo,
     config: web::Data<Config>,
+    connection_info: ConnectionInfo,
     db_pool: web::Data<DatabaseConnectionPool>,
     status_id: web::Path<Uuid>,
 ) -> Result<HttpResponse, MastodonError> {
@@ -725,8 +725,8 @@ async fn unreblog(
 #[post("/{status_id}/bookmark")]
 async fn bookmark_view(
     auth: BearerAuth,
-    connection_info: ConnectionInfo,
     config: web::Data<Config>,
+    connection_info: ConnectionInfo,
     db_pool: web::Data<DatabaseConnectionPool>,
     status_id: web::Path<Uuid>,
 ) -> Result<HttpResponse, MastodonError> {
@@ -755,8 +755,8 @@ async fn bookmark_view(
 #[post("/{status_id}/unbookmark")]
 async fn unbookmark_view(
     auth: BearerAuth,
-    connection_info: ConnectionInfo,
     config: web::Data<Config>,
+    connection_info: ConnectionInfo,
     db_pool: web::Data<DatabaseConnectionPool>,
     status_id: web::Path<Uuid>,
 ) -> Result<HttpResponse, MastodonError> {
@@ -854,8 +854,8 @@ async fn unpin(
 #[post("/{status_id}/make_permanent")]
 async fn make_permanent(
     auth: BearerAuth,
-    connection_info: ConnectionInfo,
     config: web::Data<Config>,
+    connection_info: ConnectionInfo,
     db_pool: web::Data<DatabaseConnectionPool>,
     status_id: web::Path<Uuid>,
 ) -> Result<HttpResponse, MastodonError> {

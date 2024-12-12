@@ -38,8 +38,8 @@ use super::types::{
 #[get("/home")]
 async fn home_timeline(
     auth: BearerAuth,
-    connection_info: ConnectionInfo,
     config: web::Data<Config>,
+    connection_info: ConnectionInfo,
     db_pool: web::Data<DatabaseConnectionPool>,
     request_uri: Uri,
     query_params: web::Query<TimelineQueryParams>,
@@ -70,8 +70,8 @@ async fn home_timeline(
 #[get("/public")]
 async fn public_timeline(
     auth: Option<BearerAuth>,
-    connection_info: ConnectionInfo,
     config: web::Data<Config>,
+    connection_info: ConnectionInfo,
     db_pool: web::Data<DatabaseConnectionPool>,
     request_uri: Uri,
     query_params: web::Query<PublicTimelineQueryParams>,
@@ -122,8 +122,8 @@ async fn public_timeline(
 #[get("/direct")]
 async fn direct_timeline(
     auth: BearerAuth,
-    connection_info: ConnectionInfo,
     config: web::Data<Config>,
+    connection_info: ConnectionInfo,
     db_pool: web::Data<DatabaseConnectionPool>,
     request_uri: Uri,
     query_params: web::Query<TimelineQueryParams>,
@@ -153,8 +153,8 @@ async fn direct_timeline(
 #[get("/tag/{hashtag}")]
 async fn hashtag_timeline(
     auth: Option<BearerAuth>,
-    connection_info: ConnectionInfo,
     config: web::Data<Config>,
+    connection_info: ConnectionInfo,
     db_pool: web::Data<DatabaseConnectionPool>,
     request_uri: Uri,
     hashtag: web::Path<String>,
@@ -190,8 +190,8 @@ async fn hashtag_timeline(
 #[get("/list/{list_id}")]
 async fn list_timeline(
     auth: BearerAuth,
-    connection_info: ConnectionInfo,
     config: web::Data<Config>,
+    connection_info: ConnectionInfo,
     db_pool: web::Data<DatabaseConnectionPool>,
     request_uri: Uri,
     list_id: web::Path<i32>,

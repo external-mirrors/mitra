@@ -25,8 +25,8 @@ use super::types::{SearchQueryParams, SearchResults};
 #[get("")]
 async fn search_view(
     auth: BearerAuth,
-    connection_info: ConnectionInfo,
     config: web::Data<Config>,
+    connection_info: ConnectionInfo,
     db_pool: web::Data<DatabaseConnectionPool>,
     query_params: web::Query<SearchQueryParams>,
 ) -> Result<HttpResponse, MastodonError> {

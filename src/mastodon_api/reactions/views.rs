@@ -52,8 +52,8 @@ fn emoji_shortcode(emoji_name: &str) -> String {
 #[put("/{status_id}/reactions/{content}")]
 async fn create_reaction_view(
     auth: BearerAuth,
-    connection_info: ConnectionInfo,
     config: web::Data<Config>,
+    connection_info: ConnectionInfo,
     db_pool: web::Data<DatabaseConnectionPool>,
     path: web::Path<(Uuid, String)>,
 ) -> Result<HttpResponse, MastodonError> {
@@ -122,8 +122,8 @@ async fn create_reaction_view(
 #[delete("/{status_id}/reactions/{content}")]
 async fn delete_reaction_view(
     auth: BearerAuth,
-    connection_info: ConnectionInfo,
     config: web::Data<Config>,
+    connection_info: ConnectionInfo,
     db_pool: web::Data<DatabaseConnectionPool>,
     path: web::Path<(Uuid, String)>,
 ) -> Result<HttpResponse, MastodonError> {
