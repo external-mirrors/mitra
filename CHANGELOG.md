@@ -25,6 +25,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Deprecate `reject-media` alias of `reject-media-attachments` filter action.
 
+### Removed
+
+- Removed exotic URI schemes from HTML sanitizer allowlist (geo, im, mms and others).
+
 ### Fixed
 
 - Remove `Content-Encoding` header only when path starts with `/media`.

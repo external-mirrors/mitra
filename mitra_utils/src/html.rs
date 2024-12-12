@@ -17,7 +17,16 @@ use html5ever::serialize::{serialize, SerializeOpts};
 
 pub use ammonia::{clean_text as escape_html};
 
-const EXTRA_URI_SCHEMES: [&str; 3] = [
+pub(crate) const URI_SCHEMES: [&str; 10] = [
+    // https://docs.rs/ammonia/3.3.0/ammonia/struct.Builder.html#method.url_schemes
+    "bitcoin",
+    "http",
+    "https",
+    "irc",
+    "magnet",
+    "mailto",
+    "xmpp",
+    // Extra
     "gemini",
     "monero",
     "mumble",
@@ -139,7 +148,7 @@ pub fn clean_html(
         builder.add_allowed_classes(tag, classes);
     };
     let document = builder
-        .add_url_schemes(&EXTRA_URI_SCHEMES)
+        .url_schemes(URI_SCHEMES.into())
         // Disable rel-insertion, allow rel attribute on <a>
         .link_rel(None)
         .add_tag_attributes("a", &["rel"])
@@ -187,7 +196,7 @@ pub fn clean_html_strict(
     let document = Builder::default()
         .tags(allowed_tags)
         .allowed_classes(allowed_classes_map)
-        .add_url_schemes(&EXTRA_URI_SCHEMES)
+        .url_schemes(URI_SCHEMES.into())
         // Disable rel-insertion, allow rel attribute on <a>
         .link_rel(None)
         .add_tag_attributes("a", &["rel"])
