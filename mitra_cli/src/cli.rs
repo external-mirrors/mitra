@@ -113,6 +113,7 @@ use mitra_validators::{
 };
 
 use crate::commands::{
+    account::RevokeOauthTokens,
     activitypub::{
         FetchObject,
         ImportActivity,
@@ -148,6 +149,7 @@ pub enum SubCommand {
     ListAccounts(ListAccounts),
     SetPassword(SetPassword),
     SetRole(SetRole),
+    RevokeOauthTokens(RevokeOauthTokens),
     ImportActor(ImportActor),
     ImportObject(ImportObject),
     ImportActivity(ImportActivity),

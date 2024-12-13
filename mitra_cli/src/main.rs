@@ -47,6 +47,7 @@ async fn main() {
         SubCommand::ListAccounts(cmd) => cmd.execute(db_client).await.unwrap(),
         SubCommand::SetPassword(cmd) => cmd.execute(db_client).await.unwrap(),
         SubCommand::SetRole(cmd) => cmd.execute(db_client).await.unwrap(),
+        SubCommand::RevokeOauthTokens(cmd) => cmd.execute(db_client).await.unwrap(),
         SubCommand::ImportActor(cmd) => cmd.execute(&config, db_client).await.unwrap(),
         SubCommand::ImportObject(cmd) => cmd.execute(&config, db_client).await.unwrap(),
         SubCommand::ImportActivity(cmd) => cmd.execute(&config, db_client).await.unwrap(),
