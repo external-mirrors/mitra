@@ -125,6 +125,14 @@ impl ApiRole {
     }
 }
 
+fn mention_policy_to_str(mention_policy: MentionPolicy) -> &'static str {
+    match mention_policy {
+        MentionPolicy::None => "none",
+        MentionPolicy::OnlyKnown => "only_known",
+        MentionPolicy::OnlyContacts => "only_contacts",
+    }
+}
+
 /// https://docs.joinmastodon.org/entities/account/
 #[derive(Serialize)]
 pub struct Account {
@@ -166,11 +174,7 @@ impl Account {
         let actor_id = profile_actor_id(instance_url, &profile);
         let profile_url = profile_actor_url(instance_url, &profile);
         let preferred_handle = profile.preferred_handle().to_owned();
-        let mention_policy = match profile.mention_policy {
-            MentionPolicy::None => "none",
-            MentionPolicy::OnlyKnown => "only_known",
-            MentionPolicy::OnlyContacts => "only_contacts",
-        };
+        let mention_policy = mention_policy_to_str(profile.mention_policy);
         let is_automated = profile.is_automated();
 
         let avatar_url = profile.avatar
@@ -462,8 +466,76 @@ impl AccountUpdateData {
 #[derive(MultipartForm)]
 pub struct AccountUpdateMultipartForm {
     display_name: Option<Text<String>>,
+    note: Option<Text<String>>,
     avatar: Option<Bytes>,
     header: Option<Bytes>,
+    locked: Option<Text<bool>>,
+
+    // 4 fields max
+    #[multipart(rename = "fields_attributes[0][name]")]
+    fields_attributes_0_name: Option<Text<String>>,
+    #[multipart(rename = "fields_attributes[0][value]")]
+    fields_attributes_0_value: Option<Text<String>>,
+    #[multipart(rename = "fields_attributes[1][name]")]
+    fields_attributes_1_name: Option<Text<String>>,
+    #[multipart(rename = "fields_attributes[1][value]")]
+    fields_attributes_1_value: Option<Text<String>>,
+    #[multipart(rename = "fields_attributes[2][name]")]
+    fields_attributes_2_name: Option<Text<String>>,
+    #[multipart(rename = "fields_attributes[2][value]")]
+    fields_attributes_2_value: Option<Text<String>>,
+    #[multipart(rename = "fields_attributes[3][name]")]
+    fields_attributes_3_name: Option<Text<String>>,
+    #[multipart(rename = "fields_attributes[3][value]")]
+    fields_attributes_3_value: Option<Text<String>>,
+}
+
+impl From<AccountUpdateMultipartForm> for AccountUpdateData {
+    fn from(form: AccountUpdateMultipartForm) -> Self {
+        let fields_attributes = [
+            (form.fields_attributes_0_name, form.fields_attributes_0_value),
+            (form.fields_attributes_1_name, form.fields_attributes_1_value),
+            (form.fields_attributes_2_name, form.fields_attributes_2_value),
+            (form.fields_attributes_3_name, form.fields_attributes_3_value),
+        ]
+            .into_iter()
+            .filter_map(|(maybe_name, maybe_value)| {
+                match (maybe_name, maybe_value) {
+                    (Some(name), Some(value)) => {
+                        let field_source = AccountFieldSource {
+                            name: name.into_inner(),
+                            value: value.into_inner(),
+                        };
+                        Some(field_source)
+                    },
+                    _ => None,
+                }
+            })
+            .collect();
+        Self {
+            display_name: form.display_name
+                .map(|value| value.into_inner()),
+            note: form.note
+                .map(|value| value.into_inner()),
+            avatar: form.avatar.as_ref()
+                .map(|file| base64::encode(&file.data)),
+            avatar_media_type: form.avatar.and_then(|file| {
+                file.content_type
+                    .map(|media_type| media_type.essence_str().to_string())
+            }),
+            header: form.header.as_ref()
+                .map(|file| base64::encode(&file.data)),
+            header_media_type: form.header.and_then(|file| {
+                file.content_type
+                    .map(|media_type| media_type.essence_str().to_string())
+            }),
+            locked: form.locked
+                .map(|value| value.into_inner())
+                .unwrap_or_default(),
+            fields_attributes: Some(fields_attributes),
+            mention_policy: None,
+        }
+    }
 }
 
 impl AccountUpdateMultipartForm {
@@ -473,29 +545,15 @@ impl AccountUpdateMultipartForm {
         media_limits: &MediaLimits,
         media_storage: &MediaStorage,
     ) -> Result<ProfileUpdateData, MastodonError> {
-        assert!(profile.is_local());
-        let mut profile_data = ProfileUpdateData::from(profile);
-
-        profile_data.display_name = self.display_name
-            .map(|value| value.into_inner());
-
-        profile_data.avatar = process_b64_image_field_value(
-            self.avatar.as_ref().map(|file| base64::encode(&file.data)),
-            self.avatar.and_then(|file| file.content_type
-                .map(|media_type| media_type.essence_str().to_string())),
-            profile.avatar.clone(),
+        let mut account_data = AccountUpdateData::from(self);
+        // Preserve mention policy
+        let mention_policy = mention_policy_to_str(profile.mention_policy);
+        account_data.mention_policy = Some(mention_policy.to_string());
+        account_data.into_profile_data(
+            profile,
             media_limits,
             media_storage,
-        )?;
-        profile_data.banner = process_b64_image_field_value(
-            self.header.as_ref().map(|file| base64::encode(&file.data)),
-            self.header.and_then(|file| file.content_type
-                .map(|media_type| media_type.essence_str().to_string())),
-            profile.banner.clone(),
-            media_limits,
-            media_storage,
-        )?;
-        Ok(profile_data)
+        )
     }
 }
 

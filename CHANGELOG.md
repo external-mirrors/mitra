@@ -12,6 +12,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Added `reject-profile-images` filter action.
 - Added `reject-custom-emojis` filter action.
 - Make profile image size limit configurable.
+- Update profile bio, lock and fields when processing `update_credentials` request with `multipart/form-data` body.
 
 ### Changed
 

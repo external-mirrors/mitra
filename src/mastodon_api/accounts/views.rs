@@ -276,6 +276,7 @@ pub async fn create_account(
     Ok(HttpResponse::Created().json(account))
 }
 
+// https://docs.joinmastodon.org/methods/accounts/#verify_credentials
 #[get("/verify_credentials")]
 async fn verify_credentials(
     auth: BearerAuth,
@@ -295,6 +296,7 @@ async fn verify_credentials(
     Ok(HttpResponse::Ok().json(account))
 }
 
+// https://docs.joinmastodon.org/methods/accounts/#update_credentials
 #[patch("/update_credentials")]
 async fn update_credentials(
     auth: BearerAuth,
