@@ -12,6 +12,7 @@ use crate::{
     },
     http_digest::{parse_digest_header, ContentDigest},
     http_url::HttpUrl,
+    http_utils::remove_quotes,
 };
 
 const SIGNATURE_PARAMETER_RE: &str = r#"^(?P<key>[a-zA-Z]+)=(?P<value>.+)$"#;
@@ -53,14 +54,6 @@ pub struct HttpSignatureData {
     pub signature: String, // base64-encoded signature
     pub expires_at: DateTime<Utc>,
     pub content_digest: Option<ContentDigest>,
-}
-
-fn remove_quotes(value: &str) -> String {
-    value
-        .strip_prefix('"')
-        .and_then(|val| val.strip_suffix('"'))
-        .unwrap_or(value)
-        .to_string()
 }
 
 pub fn parse_http_signature(
@@ -201,14 +194,6 @@ mod tests {
         http_signatures::create::create_http_signature,
     };
     use super::*;
-
-    #[test]
-    fn test_remove_quotes() {
-        assert_eq!(remove_quotes(r#""test""#), "test");
-        assert_eq!(remove_quotes(r#"test"#), "test");
-        assert_eq!(remove_quotes(r#""test"#), r#""test"#);
-        assert_eq!(remove_quotes(r#"""test"""#), r#""test""#);
-    }
 
     #[test]
     fn test_parse_signature_get() {

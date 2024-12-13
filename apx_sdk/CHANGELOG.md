@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Added
 
 - Implement `Default` for `FederationAgent`.
+- Added `remove_quotes` function to `core::http_utils` module.
 
 ### Changed
 
@@ -16,6 +17,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Make `user_agent` parameter optional in `FederationAgent`.
 - Replace `signer_key` and `signer_key_id` fields on `FederationAgent` with `signer` field.
 - Make `signer` parameter optional in `FederationAgent`.
+- Support media type expression where `profile` parameter is not quoted.
 
 ### Removed
 

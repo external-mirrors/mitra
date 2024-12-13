@@ -3,6 +3,7 @@ use serde_json::{Value as JsonValue};
 use apx_core::{
     http_types::HeaderValue,
     http_url::HttpUrl,
+    http_utils::remove_quotes,
     urls::{
         get_hostname,
         UrlError,
@@ -70,11 +71,21 @@ pub fn extract_media_type(header_value: &HeaderValue) -> Option<String> {
     header_value.to_str().ok()
         // Take first media type if there are many
         .and_then(|value| value.split(',').next())
-        // Remove 'q' and 'charset' directives
+        // Normalize
+        // https://httpwg.org/specs/rfc9110.html#media.type
         .map(|value| {
             value
                 .split(';')
-                .map(|part| part.trim())
+                .map(|part| {
+                    let part = part.trim();
+                    if let Some((key, value)) = part.split_once('=') {
+                        let value = remove_quotes(value);
+                        format!(r#"{key}="{value}""#)
+                    } else {
+                        part.to_string()
+                    }
+                })
+                // Remove 'q' and 'charset' directives
                 .filter(|part| !part.starts_with("q=") && !part.starts_with("charset="))
                 .collect::<Vec<_>>()
                 .join("; ")
@@ -203,6 +214,13 @@ mod tests {
     #[test]
     fn test_extract_media_type_with_charset() {
         let header_value = HeaderValue::from_static(r#"application/ld+json; profile="https://www.w3.org/ns/activitystreams"; charset=utf-8"#);
+        let media_type = extract_media_type(&header_value).unwrap();
+        assert_eq!(media_type, r#"application/ld+json; profile="https://www.w3.org/ns/activitystreams""#);
+    }
+
+    #[test]
+    fn test_extract_media_type_profile_unquoted() {
+        let header_value = HeaderValue::from_static(r#"application/ld+json; profile=https://www.w3.org/ns/activitystreams"#);
         let media_type = extract_media_type(&header_value).unwrap();
         assert_eq!(media_type, r#"application/ld+json; profile="https://www.w3.org/ns/activitystreams""#);
     }
