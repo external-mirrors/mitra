@@ -304,12 +304,43 @@ impl TryFrom<&Row> for Post {
     }
 }
 
+pub enum PostContext {
+    Top,
+    Reply {
+        in_reply_to_id: Uuid,
+    },
+    Repost {
+        repost_of_id: Uuid,
+    },
+}
+
+impl PostContext {
+    pub(super) fn in_reply_to_id(&self) -> Option<Uuid> {
+        match self {
+            Self::Reply { in_reply_to_id } => Some(*in_reply_to_id),
+            _ => None,
+        }
+    }
+
+    pub(super) fn repost_of_id(&self) -> Option<Uuid> {
+        match self {
+            Self::Repost { repost_of_id } => Some(*repost_of_id),
+            _ => None,
+        }
+    }
+}
+
+impl Default for PostContext {
+    fn default() -> Self {
+        Self::Top
+    }
+}
+
 #[derive(Default)]
 pub struct PostCreateData {
+    pub context: PostContext,
     pub content: String,
     pub content_source: Option<String>,
-    pub in_reply_to_id: Option<Uuid>,
-    pub repost_of_id: Option<Uuid>,
     pub visibility: Visibility,
     pub is_sensitive: bool,
     pub attachments: Vec<Uuid>,
@@ -327,7 +358,7 @@ impl PostCreateData {
         object_id: Option<String>,
     ) -> Self {
         Self {
-            repost_of_id: Some(repost_of_id),
+            context: PostContext::Repost { repost_of_id },
             object_id: object_id,
             created_at: Utc::now(),
             ..Default::default()

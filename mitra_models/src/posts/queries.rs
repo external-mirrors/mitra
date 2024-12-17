@@ -233,8 +233,8 @@ pub async fn create_post(
             &author_id,
             &post_data.content,
             &post_data.content_source,
-            &post_data.in_reply_to_id,
-            &post_data.repost_of_id,
+            &post_data.context.in_reply_to_id(),
+            &post_data.context.repost_of_id(),
             &post_data.visibility,
             &post_data.is_sensitive,
             &post_data.object_id,
@@ -1650,6 +1650,7 @@ mod tests {
         },
         database::test_utils::create_test_database,
         posts::test_utils::create_test_local_post,
+        posts::types::PostContext,
         profiles::test_utils::{
             create_test_remote_profile,
         },
@@ -1835,10 +1836,7 @@ mod tests {
         };
         let post_6 = create_post(db_client, user_2.id, post_data_6).await.unwrap();
         // Followed user's repost
-        let post_data_7 = PostCreateData {
-            repost_of_id: Some(post_3.id),
-            ..Default::default()
-        };
+        let post_data_7 = PostCreateData::repost(post_3.id, None);
         let post_7 = create_post(db_client, user_2.id, post_data_7).await.unwrap();
         // Direct message from followed user sent to another user
         let post_data_8 = PostCreateData {
@@ -1883,10 +1881,7 @@ mod tests {
         let user_4 = create_test_user(db_client, "hide reposts").await;
         follow(db_client, current_user.id, user_4.id).await.unwrap();
         hide_reposts(db_client, current_user.id, user_4.id).await.unwrap();
-        let post_data_13 = PostCreateData {
-            repost_of_id: Some(post_3.id),
-            ..Default::default()
-        };
+        let post_data_13 = PostCreateData::repost(post_3.id, None);
         let post_13 = create_post(db_client, user_4.id, post_data_13).await.unwrap();
         // Post from followed user if muted
         let user_5 = create_test_user(db_client, "muted").await;
@@ -2050,16 +2045,13 @@ mod tests {
         let post_4 = create_post(db_client, user.id, post_data_4).await.unwrap();
         // Reply
         let reply_data = PostCreateData {
+            context: PostContext::reply_to(&post_1),
             content: "my reply".to_string(),
-            in_reply_to_id: Some(post_1.id.clone()),
             ..Default::default()
         };
         let reply = create_post(db_client, user.id, reply_data).await.unwrap();
         // Repost
-        let repost_data = PostCreateData {
-            repost_of_id: Some(reply.id.clone()),
-            ..Default::default()
-        };
+        let repost_data = PostCreateData::repost(reply.id, None);
         let repost = create_post(db_client, user.id, repost_data).await.unwrap();
 
         // Anonymous viewer
@@ -2134,14 +2126,14 @@ mod tests {
         };
         let post_1 = create_post(db_client, user_1.id, post_data_1).await.unwrap();
         let post_data_2 = PostCreateData {
+            context: PostContext::reply_to(&post_1),
             content: "reply".to_string(),
-            in_reply_to_id: Some(post_1.id.clone()),
             ..Default::default()
         };
         let post_2 = create_post(db_client, user_2.id, post_data_2).await.unwrap();
         let post_data_3 = PostCreateData {
+            context: PostContext::reply_to(&post_1),
             content: "hidden reply".to_string(),
-            in_reply_to_id: Some(post_1.id.clone()),
             visibility: Visibility::Direct,
             ..Default::default()
         };

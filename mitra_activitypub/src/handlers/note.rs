@@ -32,7 +32,13 @@ use mitra_models::{
     media::types::MediaInfo,
     posts::{
         queries::{create_post, update_post},
-        types::{Post, PostCreateData, PostUpdateData, Visibility},
+        types::{
+            Post,
+            PostContext,
+            PostCreateData,
+            PostUpdateData,
+            Visibility,
+        },
     },
     profiles::types::DbActorProfile,
 };
@@ -820,6 +826,10 @@ pub async fn create_remote_post(
     ).await?;
 
     let audience = get_audience(&object);
+    let context = match maybe_in_reply_to {
+        Some(ref in_reply_to) => PostContext::Reply { in_reply_to_id: in_reply_to.id },
+        None => PostContext::Top,
+    };
     let visibility = get_object_visibility(&author, &audience);
     let is_sensitive = object.sensitive.unwrap_or(false);
     let created_at = object.published.unwrap_or(Utc::now());
@@ -831,10 +841,9 @@ pub async fn create_remote_post(
     };
 
     let post_data = PostCreateData {
+        context: context,
         content: content,
         content_source: None,
-        in_reply_to_id: maybe_in_reply_to.map(|post| post.id),
-        repost_of_id: None,
         visibility,
         is_sensitive,
         attachments: attachments,

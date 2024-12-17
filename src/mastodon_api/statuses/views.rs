@@ -56,7 +56,12 @@ use mitra_models::{
         set_post_ipfs_cid,
         update_post,
     },
-    posts::types::{PostCreateData, PostUpdateData, Visibility},
+    posts::types::{
+        PostContext,
+        PostCreateData,
+        PostUpdateData,
+        Visibility,
+    },
     reactions::queries::{
         create_reaction,
         delete_reaction,
@@ -176,12 +181,17 @@ async fn create_status(
         mentions,
     ).await?;
 
+    // Determine post context
+    let context = match maybe_in_reply_to {
+        Some(ref in_reply_to) => PostContext::Reply { in_reply_to_id: in_reply_to.id },
+        None => PostContext::Top,
+    };
+
     // Validate post data
     let post_data = PostCreateData {
+        context: context,
         content: content,
         content_source: content_source,
-        in_reply_to_id: status_data.in_reply_to_id,
-        repost_of_id: None,
         visibility: visibility,
         is_sensitive: status_data.sensitive,
         attachments: status_data.media_ids,

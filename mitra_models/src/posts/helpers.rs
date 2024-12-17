@@ -196,7 +196,7 @@ mod tests {
     use crate::posts::{
         queries::create_post,
         test_utils::create_test_local_post,
-        types::PostCreateData,
+        types::{PostContext, PostCreateData},
     };
     use crate::reactions::test_utils::create_test_local_reaction;
     use crate::relationships::queries::{follow, subscribe};
@@ -217,8 +217,8 @@ mod tests {
         };
         let post = create_post(db_client, author.id, post_data).await.unwrap();
         let reply_data = PostCreateData {
+            context: PostContext::reply_to(&post),
             content: "reply".to_string(),
-            in_reply_to_id: Some(post.id.clone()),
             ..Default::default()
         };
         let mut reply = create_post(db_client, author.id, reply_data).await.unwrap();
@@ -239,8 +239,8 @@ mod tests {
         };
         let post = create_post(db_client, author.id, post_data).await.unwrap();
         let reply_data = PostCreateData {
+            context: PostContext::reply_to(&post),
             content: "reply".to_string(),
-            in_reply_to_id: Some(post.id.clone()),
             ..Default::default()
         };
         let reply = create_post(db_client, author.id, reply_data).await.unwrap();

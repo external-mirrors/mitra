@@ -7,7 +7,7 @@ use crate::{
 
 use super::{
     queries::create_post,
-    types::{Post, PostCreateData},
+    types::{Post, PostContext, PostCreateData},
 };
 
 pub async fn create_test_local_post(
@@ -47,5 +47,11 @@ impl Post {
             object_id: Some(object_id.to_string()),
             ..Default::default()
         }
+    }
+}
+
+impl PostContext {
+    pub fn reply_to(post: &Post) -> Self {
+        Self::Reply { in_reply_to_id: post.id }
     }
 }
