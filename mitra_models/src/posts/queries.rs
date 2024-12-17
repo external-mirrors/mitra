@@ -193,8 +193,6 @@ pub async fn create_post(
 ) -> Result<Post, DatabaseError> {
     let transaction = db_client.transaction().await?;
     let post_id = generate_ulid();
-    // Replying to reposts is not allowed
-    // Reposting of other reposts or non-public posts is not allowed
     let insert_statement = format!(
         "
         INSERT INTO post (
@@ -211,10 +209,12 @@ pub async fn create_post(
         )
         SELECT $1, $2, $3, $4, $5, $6, $7, $8, $9, $10
         WHERE
+        -- don't allow replies to reposts
         NOT EXISTS (
             SELECT 1 FROM post
             WHERE post.id = $5 AND post.repost_of_id IS NOT NULL
         )
+        -- don't allow reposts of non-public posts
         AND NOT EXISTS (
             SELECT 1 FROM post
             WHERE post.id = $6 AND (
@@ -476,44 +476,44 @@ pub async fn update_post(
     Ok((post, deletion_queue))
 }
 
-pub(crate) const RELATED_ATTACHMENTS: &str =
-    "ARRAY(
+const RELATED_ATTACHMENTS: &str = "
+    ARRAY(
         SELECT media_attachment
         FROM media_attachment WHERE post_id = post.id
         ORDER BY media_attachment.created_at
     ) AS attachments";
 
-pub(crate) const RELATED_MENTIONS: &str =
-    "ARRAY(
+const RELATED_MENTIONS: &str = "
+    ARRAY(
         SELECT actor_profile
         FROM mention
         JOIN actor_profile ON mention.profile_id = actor_profile.id
         WHERE post_id = post.id
     ) AS mentions";
 
-pub(crate) const RELATED_TAGS: &str =
-    "ARRAY(
+const RELATED_TAGS: &str = "
+    ARRAY(
         SELECT tag.tag_name FROM tag
         JOIN post_tag ON post_tag.tag_id = tag.id
         WHERE post_tag.post_id = post.id
     ) AS tags";
 
-pub(crate) const RELATED_LINKS: &str =
-    "ARRAY(
+const RELATED_LINKS: &str = "
+    ARRAY(
         SELECT post_link.target_id FROM post_link
         WHERE post_link.source_id = post.id
     ) AS links";
 
-pub(crate) const RELATED_EMOJIS: &str =
-    "ARRAY(
+const RELATED_EMOJIS: &str = "
+    ARRAY(
         SELECT emoji
         FROM post_emoji
         JOIN emoji ON post_emoji.emoji_id = emoji.id
         WHERE post_emoji.post_id = post.id
     ) AS emojis";
 
-pub(crate) const RELATED_REACTIONS: &str =
-    "ARRAY(
+const RELATED_REACTIONS: &str = "
+    ARRAY(
         SELECT
             json_build_object(
                 'authors', array_agg(post_reaction.author_id),
@@ -527,6 +527,17 @@ pub(crate) const RELATED_REACTIONS: &str =
         WHERE post_reaction.post_id = post.id
         GROUP BY post_reaction.content
     ) AS reactions";
+
+pub(crate) fn post_subqueries() -> String {
+    [
+        RELATED_ATTACHMENTS,
+        RELATED_MENTIONS,
+        RELATED_TAGS,
+        RELATED_LINKS,
+        RELATED_EMOJIS,
+        RELATED_REACTIONS,
+    ].join(",")
+}
 
 fn build_visibility_filter() -> String {
     format!(
@@ -590,12 +601,7 @@ pub async fn get_home_timeline(
         "
         SELECT
             post, actor_profile,
-            {related_attachments},
-            {related_mentions},
-            {related_tags},
-            {related_links},
-            {related_emojis},
-            {related_reactions}
+            {post_subqueries}
         FROM post
         JOIN actor_profile ON post.author_id = actor_profile.id
         WHERE
@@ -667,12 +673,7 @@ pub async fn get_home_timeline(
         ORDER BY post.id DESC
         LIMIT $limit
         ",
-        related_attachments=RELATED_ATTACHMENTS,
-        related_mentions=RELATED_MENTIONS,
-        related_tags=RELATED_TAGS,
-        related_links=RELATED_LINKS,
-        related_emojis=RELATED_EMOJIS,
-        related_reactions=RELATED_REACTIONS,
+        post_subqueries=post_subqueries(),
         relationship_follow=i16::from(RelationshipType::Follow),
         relationship_subscription=i16::from(RelationshipType::Subscription),
         relationship_hide_reposts=i16::from(RelationshipType::HideReposts),
@@ -710,12 +711,7 @@ pub async fn get_public_timeline(
         "
         SELECT
             post, actor_profile,
-            {related_attachments},
-            {related_mentions},
-            {related_tags},
-            {related_links},
-            {related_emojis},
-            {related_reactions}
+            {post_subqueries}
         FROM post
         JOIN actor_profile ON post.author_id = actor_profile.id
         WHERE
@@ -727,12 +723,7 @@ pub async fn get_public_timeline(
         ORDER BY post.id DESC
         LIMIT $limit
         ",
-        related_attachments=RELATED_ATTACHMENTS,
-        related_mentions=RELATED_MENTIONS,
-        related_tags=RELATED_TAGS,
-        related_links=RELATED_LINKS,
-        related_emojis=RELATED_EMOJIS,
-        related_reactions=RELATED_REACTIONS,
+        post_subqueries=post_subqueries(),
         filter=filter,
         visibility_public=i16::from(Visibility::Public),
         mute_filter=build_mute_filter(),
@@ -761,12 +752,7 @@ pub async fn get_direct_timeline(
         "
         SELECT
             post, actor_profile,
-            {related_attachments},
-            {related_mentions},
-            {related_tags},
-            {related_links},
-            {related_emojis},
-            {related_reactions}
+            {post_subqueries}
         FROM post
         JOIN actor_profile ON post.author_id = actor_profile.id
         WHERE
@@ -783,12 +769,7 @@ pub async fn get_direct_timeline(
         ORDER BY post.id DESC
         LIMIT $limit
         ",
-        related_attachments=RELATED_ATTACHMENTS,
-        related_mentions=RELATED_MENTIONS,
-        related_tags=RELATED_TAGS,
-        related_links=RELATED_LINKS,
-        related_emojis=RELATED_EMOJIS,
-        related_reactions=RELATED_REACTIONS,
+        post_subqueries=post_subqueries(),
         visibility_direct=i16::from(Visibility::Direct),
         mute_filter=build_mute_filter(),
     );
@@ -814,12 +795,7 @@ pub async fn get_related_posts(
         "
         SELECT
             post, actor_profile,
-            {related_attachments},
-            {related_mentions},
-            {related_tags},
-            {related_links},
-            {related_emojis},
-            {related_reactions}
+            {post_subqueries}
         FROM post
         JOIN actor_profile ON post.author_id = actor_profile.id
         WHERE post.id IN (
@@ -841,12 +817,7 @@ pub async fn get_related_posts(
             WHERE post.id = ANY($1)
         )
         ",
-        related_attachments=RELATED_ATTACHMENTS,
-        related_mentions=RELATED_MENTIONS,
-        related_tags=RELATED_TAGS,
-        related_links=RELATED_LINKS,
-        related_emojis=RELATED_EMOJIS,
-        related_reactions=RELATED_REACTIONS,
+        post_subqueries=post_subqueries(),
     );
     let rows = db_client.query(
         &statement,
@@ -895,24 +866,14 @@ pub async fn get_posts_by_author(
         "
         SELECT
             post, actor_profile,
-            {related_attachments},
-            {related_mentions},
-            {related_tags},
-            {related_links},
-            {related_emojis},
-            {related_reactions}
+            {post_subqueries}
         FROM post
         JOIN actor_profile ON post.author_id = actor_profile.id
         WHERE {condition}
         ORDER BY post.id DESC
         LIMIT $limit
         ",
-        related_attachments=RELATED_ATTACHMENTS,
-        related_mentions=RELATED_MENTIONS,
-        related_tags=RELATED_TAGS,
-        related_links=RELATED_LINKS,
-        related_emojis=RELATED_EMOJIS,
-        related_reactions=RELATED_REACTIONS,
+        post_subqueries=post_subqueries(),
         condition=condition,
     );
     let limit: i64 = limit.into();
@@ -942,12 +903,7 @@ pub async fn get_posts_by_tag(
         "
         SELECT
             post, actor_profile,
-            {related_attachments},
-            {related_mentions},
-            {related_tags},
-            {related_links},
-            {related_emojis},
-            {related_reactions}
+            {post_subqueries}
         FROM post
         JOIN actor_profile ON post.author_id = actor_profile.id
         WHERE
@@ -961,12 +917,7 @@ pub async fn get_posts_by_tag(
         ORDER BY post.id DESC
         LIMIT $limit
         ",
-        related_attachments=RELATED_ATTACHMENTS,
-        related_mentions=RELATED_MENTIONS,
-        related_tags=RELATED_TAGS,
-        related_links=RELATED_LINKS,
-        related_emojis=RELATED_EMOJIS,
-        related_reactions=RELATED_REACTIONS,
+        post_subqueries=post_subqueries(),
         visibility_filter=build_visibility_filter(),
         mute_filter=build_mute_filter(),
     );
@@ -997,12 +948,7 @@ pub async fn get_custom_feed_timeline(
         "
         SELECT
             post, actor_profile,
-            {related_attachments},
-            {related_mentions},
-            {related_tags},
-            {related_links},
-            {related_emojis},
-            {related_reactions}
+            {post_subqueries}
         FROM post
         JOIN actor_profile ON post.author_id = actor_profile.id
         WHERE
@@ -1021,12 +967,7 @@ pub async fn get_custom_feed_timeline(
         ORDER BY post.id DESC
         LIMIT $limit
         ",
-        related_attachments=RELATED_ATTACHMENTS,
-        related_mentions=RELATED_MENTIONS,
-        related_tags=RELATED_TAGS,
-        related_links=RELATED_LINKS,
-        related_emojis=RELATED_EMOJIS,
-        related_reactions=RELATED_REACTIONS,
+        post_subqueries=post_subqueries(),
         visibility_filter=build_visibility_filter(),
         mute_filter=build_mute_filter(),
     );
@@ -1054,23 +995,13 @@ pub async fn get_post_by_id(
         "
         SELECT
             post, actor_profile,
-            {related_attachments},
-            {related_mentions},
-            {related_tags},
-            {related_links},
-            {related_emojis},
-            {related_reactions}
+            {post_subqueries}
         FROM post
         JOIN actor_profile ON post.author_id = actor_profile.id
         WHERE post.id = $1
             AND post.repost_of_id IS NULL
         ",
-        related_attachments=RELATED_ATTACHMENTS,
-        related_mentions=RELATED_MENTIONS,
-        related_tags=RELATED_TAGS,
-        related_links=RELATED_LINKS,
-        related_emojis=RELATED_EMOJIS,
-        related_reactions=RELATED_REACTIONS,
+        post_subqueries=post_subqueries(),
     );
     let maybe_row = db_client.query_opt(
         &statement,
@@ -1112,12 +1043,7 @@ pub async fn get_thread(
         )
         SELECT
             post, actor_profile,
-            {related_attachments},
-            {related_mentions},
-            {related_tags},
-            {related_links},
-            {related_emojis},
-            {related_reactions},
+            {post_subqueries},
             EXISTS (
                 SELECT 1 FROM relationship
                 WHERE
@@ -1132,12 +1058,7 @@ pub async fn get_thread(
             {visibility_filter}
         ORDER BY thread.path
         ",
-        related_attachments=RELATED_ATTACHMENTS,
-        related_mentions=RELATED_MENTIONS,
-        related_tags=RELATED_TAGS,
-        related_links=RELATED_LINKS,
-        related_emojis=RELATED_EMOJIS,
-        related_reactions=RELATED_REACTIONS,
+        post_subqueries=post_subqueries(),
         relationship_mute=i16::from(RelationshipType::Mute),
         visibility_filter=build_visibility_filter(),
     );
@@ -1209,22 +1130,12 @@ pub async fn get_remote_post_by_object_id(
         "
         SELECT
             post, actor_profile,
-            {related_attachments},
-            {related_mentions},
-            {related_tags},
-            {related_links},
-            {related_emojis},
-            {related_reactions}
+            {post_subqueries}
         FROM post
         JOIN actor_profile ON post.author_id = actor_profile.id
         WHERE post.object_id = $1 AND post.repost_of_id IS NULL
         ",
-        related_attachments=RELATED_ATTACHMENTS,
-        related_mentions=RELATED_MENTIONS,
-        related_tags=RELATED_TAGS,
-        related_links=RELATED_LINKS,
-        related_emojis=RELATED_EMOJIS,
-        related_reactions=RELATED_REACTIONS,
+        post_subqueries=post_subqueries(),
     );
     let maybe_row = db_client.query_opt(
         &statement,
@@ -1243,22 +1154,12 @@ pub async fn get_remote_repost_by_activity_id(
         "
         SELECT
             post, actor_profile,
-            {related_attachments},
-            {related_mentions},
-            {related_tags},
-            {related_links},
-            {related_emojis},
-            {related_reactions}
+            {post_subqueries}
         FROM post
         JOIN actor_profile ON post.author_id = actor_profile.id
         WHERE post.object_id = $1 AND post.repost_of_id IS NOT NULL
         ",
-        related_attachments=RELATED_ATTACHMENTS,
-        related_mentions=RELATED_MENTIONS,
-        related_tags=RELATED_TAGS,
-        related_links=RELATED_LINKS,
-        related_emojis=RELATED_EMOJIS,
-        related_reactions=RELATED_REACTIONS,
+        post_subqueries=post_subqueries(),
     );
     let maybe_row = db_client.query_opt(
         &statement,
@@ -1660,12 +1561,7 @@ pub async fn search_posts(
         "
         SELECT
             post, actor_profile,
-            {related_attachments},
-            {related_mentions},
-            {related_tags},
-            {related_links},
-            {related_emojis},
-            {related_reactions}
+            {post_subqueries}
         FROM post
         JOIN actor_profile ON post.author_id = actor_profile.id
         WHERE
@@ -1700,12 +1596,7 @@ pub async fn search_posts(
         ORDER BY post.id DESC
         LIMIT $3 OFFSET $4
         ",
-        related_attachments=RELATED_ATTACHMENTS,
-        related_mentions=RELATED_MENTIONS,
-        related_tags=RELATED_TAGS,
-        related_links=RELATED_LINKS,
-        related_emojis=RELATED_EMOJIS,
-        related_reactions=RELATED_REACTIONS,
+        post_subqueries=post_subqueries(),
     );
     let db_search_query = format!("%{}%", text);
     let rows = db_client.query(

@@ -3,14 +3,7 @@ use uuid::Uuid;
 use crate::database::{DatabaseClient, DatabaseError};
 use crate::posts::{
     helpers::{add_related_posts, add_user_actions},
-    queries::{
-        RELATED_ATTACHMENTS,
-        RELATED_EMOJIS,
-        RELATED_LINKS,
-        RELATED_MENTIONS,
-        RELATED_REACTIONS,
-        RELATED_TAGS,
-    },
+    queries::post_subqueries,
 };
 use crate::relationships::types::RelationshipType;
 
@@ -59,12 +52,7 @@ pub async fn get_notifications(
             sender,
             post,
             post_author,
-            {related_attachments},
-            {related_mentions},
-            {related_tags},
-            {related_links},
-            {related_emojis},
-            {related_reactions},
+            {post_subqueries},
             post_reaction.content AS reaction_content,
             emoji AS reaction_emoji
         FROM notification
@@ -91,12 +79,7 @@ pub async fn get_notifications(
         ORDER BY notification.id DESC
         LIMIT $3
         ",
-        related_attachments=RELATED_ATTACHMENTS,
-        related_mentions=RELATED_MENTIONS,
-        related_tags=RELATED_TAGS,
-        related_links=RELATED_LINKS,
-        related_emojis=RELATED_EMOJIS,
-        related_reactions=RELATED_REACTIONS,
+        post_subqueries=post_subqueries(),
         relationship_mute=i16::from(RelationshipType::Mute),
     );
     let rows = db_client.query(

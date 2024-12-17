@@ -8,14 +8,7 @@ use crate::{
         DatabaseError,
     },
     posts::{
-        queries::{
-            RELATED_ATTACHMENTS,
-            RELATED_EMOJIS,
-            RELATED_LINKS,
-            RELATED_MENTIONS,
-            RELATED_REACTIONS,
-            RELATED_TAGS,
-        },
+        queries::post_subqueries,
     },
 };
 
@@ -66,12 +59,7 @@ pub async fn get_bookmarked_posts(
         SELECT
             bookmark.id,
             post, actor_profile,
-            {related_attachments},
-            {related_mentions},
-            {related_tags},
-            {related_links},
-            {related_emojis},
-            {related_reactions}
+            {post_subqueries}
         FROM post
         JOIN actor_profile ON post.author_id = actor_profile.id
         JOIN bookmark ON bookmark.post_id = post.id
@@ -84,12 +72,7 @@ pub async fn get_bookmarked_posts(
         ORDER BY bookmark.id DESC
         LIMIT $limit
         ",
-        related_attachments=RELATED_ATTACHMENTS,
-        related_mentions=RELATED_MENTIONS,
-        related_tags=RELATED_TAGS,
-        related_links=RELATED_LINKS,
-        related_emojis=RELATED_EMOJIS,
-        related_reactions=RELATED_REACTIONS,
+        post_subqueries=post_subqueries(),
     );
     let limit = i64::from(limit);
     let query = query!(

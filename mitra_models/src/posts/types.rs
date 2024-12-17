@@ -278,12 +278,12 @@ impl Default for Post {
 }
 
 impl TryFrom<&Row> for Post {
-
     type Error = DatabaseError;
 
     fn try_from(row: &Row) -> Result<Self, Self::Error> {
         let db_post: DbPost = row.try_get("post")?;
         let db_profile: DbActorProfile = row.try_get("actor_profile")?;
+        // Data from subqueries
         let db_attachments: Vec<DbMediaAttachment> = row.try_get("attachments")?;
         let db_mentions: Vec<DbActorProfile> = row.try_get("mentions")?;
         let db_tags: Vec<String> = row.try_get("tags")?;
