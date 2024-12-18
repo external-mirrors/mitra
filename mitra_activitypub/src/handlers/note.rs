@@ -1021,7 +1021,8 @@ mod tests {
 
     #[test]
     fn test_get_object_visibility_public() {
-        let author = DbActorProfile::local_for_test("test");
+        let author =
+            DbActorProfile::remote_for_test("test", "https://social.example");
         let audience = vec![AP_PUBLIC.to_string()];
         let visibility = get_object_visibility(&author, &audience);
         assert_eq!(visibility, Visibility::Public);

@@ -368,8 +368,8 @@ pub async fn update_post(
             &post_id,
         ],
     ).await?;
-   let row = maybe_row.ok_or(DatabaseError::NotFound("post"))?;
-   let db_post: DbPost = row.try_get("post")?;
+    let row = maybe_row.ok_or(DatabaseError::NotFound("post"))?;
+    let db_post: DbPost = row.try_get("post")?;
 
     // Delete and re-create related objects
     let detached_media_rows = transaction.query(
