@@ -24,7 +24,10 @@ hex = "0.4.3"
 http_0_2 = { package = "http", version = "0.2.9" }
 http = "1.1.0"
 # Used for working with IDNs
-idna = "0.4.0"
+idna = "1.0.0"
+# Choose unicode backend for idna
+# https://github.com/hsivonen/idna_adapter
+idna_adapter = "=1.1.0"
 # Used to guess media type of a file
 infer = "0.13.0"
 # Used for working with URIs
@@ -52,7 +55,7 @@ thiserror = "1.0.37"
 # Used for multicodec implementation
 unsigned-varint = "0.7.1"
 # Used to work with URLs
-url = "2.4.1"
+url = "2.5.0"
 percent-encoding = "*"
 
 [features]
