@@ -594,12 +594,17 @@ fn build_visibility_filter() -> String {
                 SELECT 1 FROM mention
                 WHERE post_id = post.id AND profile_id = $current_user_id
             )
-            OR post.visibility = {visibility_followers} AND EXISTS (
+            OR EXISTS (
                 SELECT 1 FROM relationship
                 WHERE
                     source_id = $current_user_id
                     AND target_id = post.author_id
-                    AND relationship_type = {relationship_follow}
+                    AND (
+                        post.visibility = {visibility_followers}
+                        AND relationship_type = {relationship_follow}
+                        OR post.visibility = {visibility_subscribers}
+                        AND relationship_type = {relationship_subscription}
+                    )
             )
             OR post.visibility = {visibility_conversation} AND EXISTS (
                 SELECT 1
@@ -617,6 +622,8 @@ fn build_visibility_filter() -> String {
                                 AND (
                                     root.visibility = {visibility_followers}
                                     AND relationship_type = {relationship_follow}
+                                    OR root.visibility = {visibility_subscribers}
+                                    AND relationship_type = {relationship_subscription}
                                 )
                         )
                     )
@@ -624,8 +631,10 @@ fn build_visibility_filter() -> String {
         )",
         visibility_public=i16::from(Visibility::Public),
         visibility_followers=i16::from(Visibility::Followers),
+        visibility_subscribers=i16::from(Visibility::Subscribers),
         visibility_conversation=i16::from(Visibility::Conversation),
         relationship_follow=i16::from(RelationshipType::Follow),
+        relationship_subscription=i16::from(RelationshipType::Subscription),
     )
 }
 
@@ -1958,7 +1967,6 @@ mod tests {
         let post_14 = create_post(db_client, user_5.id, post_data_14).await.unwrap();
 
         let timeline = get_home_timeline(db_client, current_user.id, None, 20).await.unwrap();
-        assert_eq!(timeline.len(), 7);
         assert_eq!(timeline.iter().any(|post| post.id == post_1.id), true);
         assert_eq!(timeline.iter().any(|post| post.id == post_2.id), true);
         assert_eq!(timeline.iter().any(|post| post.id == post_3.id), false);
@@ -1969,10 +1977,11 @@ mod tests {
         assert_eq!(timeline.iter().any(|post| post.id == post_8.id), false);
         assert_eq!(timeline.iter().any(|post| post.id == post_9.id), true);
         assert_eq!(timeline.iter().any(|post| post.id == post_10.id), false);
-        assert_eq!(timeline.iter().any(|post| post.id == post_11.id), false);
+        assert_eq!(timeline.iter().any(|post| post.id == post_11.id), true);
         assert_eq!(timeline.iter().any(|post| post.id == post_12.id), true);
         assert_eq!(timeline.iter().any(|post| post.id == post_13.id), false);
         assert_eq!(timeline.iter().any(|post| post.id == post_14.id), false);
+        assert_eq!(timeline.len(), 8);
     }
 
     #[tokio::test]

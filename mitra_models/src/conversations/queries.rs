@@ -78,12 +78,16 @@ pub async fn is_conversation_participant(
                         AND (
                             root.visibility = {visibility_followers}
                             AND relationship_type = {relationship_follow}
+                            OR root.visibility = {visibility_subscribers}
+                            AND relationship_type = {relationship_subscription}
                         )
                 )
             )
         ",
         visibility_followers=i16::from(Visibility::Followers),
+        visibility_subscribers=i16::from(Visibility::Subscribers),
         relationship_follow=i16::from(RelationshipType::Follow),
+        relationship_subscription=i16::from(RelationshipType::Subscription),
     );
     let maybe_row = db_client.query_opt(
         &statement,

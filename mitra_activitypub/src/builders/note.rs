@@ -253,7 +253,6 @@ pub fn build_note(
                     primary_audience.push(in_reply_to_actor_id);
                 };
             };
-            // TODO: replies to subscribers-only posts should work in the same way
             if post.visibility == Visibility::Conversation {
                 // Copy conversation audience
                 let conversation = in_reply_to.expect_conversation();
@@ -265,6 +264,7 @@ pub fn build_note(
                     };
                 };
             };
+            // TODO: remove
             if post.visibility == Visibility::Conversation &&
                 in_reply_to.visibility == Visibility::Followers
             {

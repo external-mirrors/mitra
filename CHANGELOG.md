@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+
+- Support subscribers-only conversations.
+
 ### Changed
 
 - Return proper error when attempting to fetch local actor.

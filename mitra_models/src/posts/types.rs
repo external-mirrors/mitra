@@ -38,11 +38,11 @@ impl Visibility {
                 Self::Followers,
             ],
             Self::Followers => vec![
-                Self::Direct,
                 Self::Conversation,
+                Self::Direct,
             ],
-            // TODO: support subscribers conversations
             Self::Subscribers => vec![
+                Self::Conversation,
                 Self::Direct,
             ],
             Self::Conversation => vec![
