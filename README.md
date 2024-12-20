@@ -145,10 +145,13 @@ apk update
 apk add -vi mitra@testing
 ```
 
+#### YunoHost
+
+https://apps.yunohost.org/app/mitra
+
 ### Hosting providers
 
 - [K&T Host](https://www.knthost.com/mitra)
-- [YunoHost](https://apps.yunohost.org/app/mitra)
 
 ## Upgrading
 
