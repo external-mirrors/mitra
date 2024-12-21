@@ -308,7 +308,7 @@ impl ActorIdResolver {
     }
 
     // Possible errors:
-    // - LocalObject: local URL, but not an actor ID
+    // - LocalObject: local URL
     // - FetchError: fetcher errors
     // - ValidationError: invalid actor key
     // - DatabaseError(DatabaseError::NotFound(_)): local actor not found
@@ -322,15 +322,17 @@ impl ActorIdResolver {
         db_client: &mut impl DatabaseClient,
         actor_id: &str,
     ) -> Result<DbActorProfile, HandlerError> {
-        if !self.only_remote {
-            if let Ok(username) = parse_local_actor_id(&ap_client.instance.url(), actor_id) {
-                // Local ID
-                let user = get_user_by_name(db_client, &username).await?;
-                return Ok(user.profile);
+        let canonical_actor_id = canonicalize_id(actor_id)?;
+        if canonical_actor_id.authority() == ap_client.instance.hostname() {
+            // Local ID
+            if self.only_remote {
+                return Err(HandlerError::LocalObject);
             };
+            let username = parse_local_actor_id(&ap_client.instance.url(), actor_id)?;
+            let user = get_user_by_name(db_client, &username).await?;
+            return Ok(user.profile);
         };
         // Remote ID
-        let canonical_actor_id = canonicalize_id(actor_id)?;
         let profile = match get_remote_profile_by_actor_id(
             db_client,
             &canonical_actor_id.to_string(),
@@ -766,7 +768,7 @@ pub async fn import_replies(
     limit: usize,
 ) -> Result<(), HandlerError> {
     #[derive(Deserialize)]
-    struct ConverationItem {
+    struct ConversationItem {
         #[serde(default, deserialize_with = "deserialize_into_object_id_opt")]
         context: Option<String>,
         #[serde(default, deserialize_with = "deserialize_into_object_id_opt")]
@@ -776,7 +778,7 @@ pub async fn import_replies(
     let ap_client = ApClient::new(config, db_client).await?;
     let instance = config.instance();
     let agent = build_federation_agent(&instance, None);
-    let object: ConverationItem = fetch_any_object(&agent, object_id).await?;
+    let object: ConversationItem = fetch_any_object(&agent, object_id).await?;
     if use_container {
         if let Some(ref collection_id) = object.context {
             // Converstion container
