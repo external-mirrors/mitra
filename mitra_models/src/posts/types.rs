@@ -191,18 +191,17 @@ impl Post {
         if db_author.is_local() != db_post.object_id.is_none() {
             return Err(DatabaseTypeError);
         };
-        if db_post.conversation_id !=
-                db_conversation.as_ref().map(|conversation| conversation.id) {
+        if db_post.repost_of_id.is_none() && db_post.conversation_id.is_none() {
             return Err(DatabaseTypeError);
         };
         if db_post.repost_of_id.is_some() && (
             db_post.content.len() != 0 ||
             db_post.content_source.is_some() ||
+            db_post.conversation_id.is_some() ||
             db_post.is_sensitive ||
             db_post.is_pinned ||
             db_post.in_reply_to_id.is_some() ||
             db_post.ipfs_cid.is_some() ||
-            db_conversation.is_some() ||
             !db_attachments.is_empty() ||
             !db_mentions.is_empty() ||
             !db_tags.is_empty() ||
@@ -210,6 +209,11 @@ impl Post {
             !db_emojis.is_empty() ||
             !db_reactions.is_empty()
         ) {
+            return Err(DatabaseTypeError);
+        };
+        if db_conversation.as_ref().map(|conversation| conversation.id) !=
+            db_post.conversation_id
+        {
             return Err(DatabaseTypeError);
         };
         let post = Self {

@@ -204,7 +204,7 @@ async fn create_status(
             Visibility::Subscribers => {
                 Some(LocalActorCollection::Subscribers.of(&actor_id))
             },
-            Visibility::Conversation => unreachable!(),
+            Visibility::Conversation => None, // will be rejected by validator
         };
         PostContext::Top { audience }
     };

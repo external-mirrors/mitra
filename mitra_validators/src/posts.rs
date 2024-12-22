@@ -3,6 +3,7 @@ use uuid::Uuid;
 use mitra_models::{
     posts::types::{
         Post,
+        PostContext,
         PostCreateData,
         PostUpdateData,
         Visibility,
@@ -76,6 +77,11 @@ pub fn clean_local_content(
 pub fn validate_post_create_data(
     post_data: &PostCreateData,
 ) -> Result<(), ValidationError> {
+    if let PostContext::Top { .. } = post_data.context {
+        if post_data.visibility == Visibility::Conversation {
+            return Err(ValidationError("top-level post can't have conversation visibility"));
+        };
+    };
     if post_data.content.is_empty() && post_data.attachments.is_empty() {
         return Err(ValidationError("post is empty"));
     };

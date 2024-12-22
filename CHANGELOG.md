@@ -14,6 +14,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Return proper error when attempting to fetch local actor.
 
+### Fixed
+
+- Don't panic if attempting to set "Conversation" visibility on top-level post.
+
 ## [3.12.0] - 2024-12-19
 
 ### Added
