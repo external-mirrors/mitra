@@ -1,0 +1,135 @@
+use serde::Serialize;
+use serde_json::{Value as JsonValue};
+use uuid::Uuid;
+
+use mitra_config::Instance;
+use mitra_models::{
+    database::{DatabaseClient, DatabaseError},
+    posts::types::Post,
+    users::types::User,
+};
+use mitra_utils::id::generate_ulid;
+
+use crate::{
+    contexts::{build_default_context, Context},
+    identifiers::{
+        local_activity_id,
+        local_actor_id,
+        local_context_collection,
+    },
+    queues::OutgoingActivityJobData,
+    vocabulary::{ADD, ORDERED_COLLECTION},
+};
+
+use super::note::get_note_recipients;
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct Target {
+    #[serde(rename = "type")]
+    collection_type: String,
+    id: String,
+    attributed_to: String,
+}
+
+#[derive(Serialize)]
+struct AddContextActivity {
+    #[serde(rename = "@context")]
+    context: Context,
+
+    #[serde(rename = "type")]
+    activity_type: String,
+
+    actor: String,
+    id: String,
+    object: JsonValue,
+    target: Target,
+
+    to: Vec<String>,
+}
+
+fn build_add_context_activity(
+    instance_url: &str,
+    sender_username: &str,
+    conversation_id: Uuid,
+    conversation_audience: &str,
+    activity: JsonValue,
+) -> AddContextActivity {
+    let actor_id = local_actor_id(instance_url, sender_username);
+    let activity_id = local_activity_id(instance_url, ADD, generate_ulid());
+    let target_id = local_context_collection(instance_url, conversation_id);
+    AddContextActivity {
+        context: build_default_context(),
+        activity_type: ADD.to_string(),
+        actor: actor_id.clone(),
+        id: activity_id,
+        object: activity,
+        target: Target {
+            id: target_id,
+            collection_type: ORDERED_COLLECTION.to_string(),
+            attributed_to: actor_id,
+        },
+        to: vec![conversation_audience.to_string()],
+    }
+}
+
+pub async fn prepare_add_context_activity(
+    db_client: &impl DatabaseClient,
+    instance: &Instance,
+    conversation_owner: &User,
+    conversation_id: Uuid,
+    conversation_root: &Post,
+    conversation_audience: &str,
+    conversation_activity: JsonValue,
+) -> Result<OutgoingActivityJobData, DatabaseError> {
+    assert_eq!(conversation_owner.id, conversation_root.author.id);
+    let conversation = conversation_root.expect_conversation();
+    assert_eq!(conversation_id, conversation.id);
+    let activity = build_add_context_activity(
+        &instance.url(),
+        &conversation_owner.profile.username,
+        conversation_id,
+        conversation_audience,
+        conversation_activity,
+    );
+    let recipients = get_note_recipients(db_client, conversation_root).await?;
+    Ok(OutgoingActivityJobData::new(
+        &instance.url(),
+        conversation_owner,
+        activity,
+        recipients,
+    ))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const INSTANCE_URL: &str = "https://social.example";
+
+    #[test]
+    fn test_build_add_context_activity() {
+        let owner_username = "test";
+        let conversation_id = generate_ulid();
+        let conversation_audience = "https://social.example/users/test/followers";
+        let conversation_activity = serde_json::json!({
+            "type": "Create",
+        });
+        let activity = build_add_context_activity(
+            INSTANCE_URL,
+            owner_username,
+            conversation_id,
+            conversation_audience,
+            conversation_activity.clone(),
+        );
+        assert_eq!(activity.activity_type, "Add");
+        assert_eq!(activity.actor, "https://social.example/users/test");
+        assert_eq!(activity.object, conversation_activity);
+        assert_eq!(
+            activity.target.id,
+            format!("https://social.example/collections/conversations/{conversation_id}/context"),
+        );
+        assert_eq!(activity.target.attributed_to, activity.actor);
+        assert_eq!(activity.to, vec![conversation_audience.to_string()]);
+    }
+}

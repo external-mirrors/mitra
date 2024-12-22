@@ -34,7 +34,8 @@ It also supports the following standards:
 - [FEP-1b12: Group federation](https://codeberg.org/fediverse/fep/src/branch/main/fep/1b12/fep-1b12.md)
   - Can consume `Announce(Activity)` activities, but doesn't publish them.
 - [FEP-171b: Conversation Containers](https://codeberg.org/fediverse/fep/src/branch/main/fep/171b/fep-171b.md)
-  - Can consume `Add(Activity)` activities, but doesn't publish them.
+  - Can consume `Add(Activity)` activities.
+  - Publishes `Add(Create(Note))` activities in followers-only and subscribers-only conversations.
 
 ### FEPs that might be supported in the future
 

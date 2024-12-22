@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Added
 
 - Support subscribers-only conversations.
+- Sync replies in followers-only and subscribers-only conversations between participants.
 
 ### Changed
 
