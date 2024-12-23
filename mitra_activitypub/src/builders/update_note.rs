@@ -83,7 +83,7 @@ pub async fn prepare_update_note(
         post,
         fep_e232_enabled,
     );
-    let recipients = get_note_recipients(db_client, author, post).await?;
+    let recipients = get_note_recipients(db_client, post).await?;
     Ok(OutgoingActivityJobData::new(
         &instance.url(),
         author,

@@ -14,7 +14,6 @@ use mitra_models::{
     posts::types::{Post, Visibility},
     profiles::types::{DbActor, WebfingerHostname},
     relationships::queries::{get_followers, get_subscribers},
-    users::types::User,
 };
 use mitra_services::media::MediaServer;
 
@@ -319,17 +318,16 @@ pub fn build_note(
 
 pub async fn get_note_recipients(
     db_client: &impl DatabaseClient,
-    current_user: &User,
     post: &Post,
 ) -> Result<Vec<DbActor>, DatabaseError> {
     let mut audience = vec![];
     match post.visibility {
         Visibility::Public | Visibility::Followers => {
-            let followers = get_followers(db_client, current_user.id).await?;
+            let followers = get_followers(db_client, post.author.id).await?;
             audience.extend(followers);
         },
         Visibility::Subscribers => {
-            let subscribers = get_subscribers(db_client, current_user.id).await?;
+            let subscribers = get_subscribers(db_client, post.author.id).await?;
             audience.extend(subscribers);
         },
         Visibility::Conversation => {
