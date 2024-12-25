@@ -142,6 +142,8 @@ pub struct AttributedObject {
     // Polls
     one_of: Option<JsonValue>,
     any_of: Option<JsonValue>,
+    end_time: Option<DateTime<Utc>>,
+    closed: Option<DateTime<Utc>>,
 
     quote_url: Option<String>,
 
@@ -725,38 +727,52 @@ fn parse_poll_results(
         total_items: u32,
     }
     #[derive(Deserialize)]
-    struct PollOption {
+    struct Note {
         name: String,
         replies: Replies,
     }
 
-    let poll = if let Some(ref value) = object.one_of {
+    let (values, is_multichoice) = match (
+        object.one_of.as_ref(),
+        object.any_of.as_ref(),
+    ) {
         // Single choice
-        value
-    } else {
+        (Some(values), None) => (values, false),
         // Multiple choices
-        object.any_of.as_ref()
-            .ok_or(ValidationError("poll results are not present"))?
+        (None, Some(values)) => (values, true),
+        _ => return Err(ValidationError("invalid poll")),
     };
-
-    let values = poll
+    let values = values
         .as_array()
-        .ok_or(ValidationError("invalid poll results"))?;
+        .ok_or(ValidationError("invalid poll options"))?;
     if values.is_empty() {
         return Err(ValidationError("poll is empty"));
     };
 
     let mut poll_results = "".to_string();
-    for option_value in values {
-        let option: PollOption = serde_json::from_value(option_value.clone())
-            .map_err(|_| ValidationError("invalid poll result"))?;
+    for note_value in values {
+        let note: Note = serde_json::from_value(note_value.clone())
+            .map_err(|_| ValidationError("invalid poll option"))?;
+        let option_name = note.name;
+        let option_vote_count = note.replies.total_items;
         let option_text = format!(
             r#"<p>{0}: {1}</p>"#,
-            option.name,
-            option.replies.total_items,
+            option_name,
+            option_vote_count,
         );
         poll_results += &option_text;
     };
+    if is_multichoice {
+        poll_results += "<p>Multiple choices</p>";
+    } else {
+        poll_results += "<p>Single choice</p>";
+    };
+    let ends_at = object.end_time
+        // Pleroma uses closed property even when poll is still active
+        .or(object.closed)
+        .ok_or(ValidationError("endless poll"))?;
+    let ends_at_text = format!("<p>Poll ends at: {}</p>", ends_at);
+    poll_results += &ends_at_text;
     Ok(poll_results)
 }
 
