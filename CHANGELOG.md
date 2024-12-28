@@ -18,6 +18,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Return proper error when attempting to fetch local actor.
 - Improved validation of remote polls.
 - Ignore local activities received via inbox.
+- Respect "Hide reposts" and "Hide replies" settings in custom feeds.
 
 ### Fixed
 

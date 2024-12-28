@@ -1069,6 +1069,30 @@ pub async fn get_custom_feed_timeline(
                     custom_feed.id = $feed_id
                     AND post.author_id = custom_feed_source.source_id
             )
+            AND (
+                -- show posts
+                post.repost_of_id IS NULL
+                -- show reposts if they are not hidden
+                OR NOT EXISTS (
+                    SELECT 1 FROM relationship
+                    WHERE
+                        source_id = $current_user_id
+                        AND target_id = post.author_id
+                        AND relationship_type = {relationship_hide_reposts}
+                )
+            )
+            AND (
+                -- show posts (top-level)
+                post.in_reply_to_id IS NULL
+                -- show replies if they are not hidden
+                OR NOT EXISTS (
+                    SELECT 1 FROM relationship
+                    WHERE
+                        source_id = $current_user_id
+                        AND target_id = post.author_id
+                        AND relationship_type = {relationship_hide_replies}
+                )
+            )
             AND {visibility_filter}
             AND {mute_filter}
             AND ($max_post_id::uuid IS NULL OR post.id < $max_post_id)
@@ -1076,6 +1100,8 @@ pub async fn get_custom_feed_timeline(
         LIMIT $limit
         ",
         post_subqueries=post_subqueries(),
+        relationship_hide_reposts=i16::from(RelationshipType::HideReposts),
+        relationship_hide_replies=i16::from(RelationshipType::HideReplies),
         visibility_filter=build_visibility_filter(),
         mute_filter=build_mute_filter(),
     );
