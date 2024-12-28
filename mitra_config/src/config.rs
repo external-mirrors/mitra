@@ -42,6 +42,9 @@ pub struct Config {
     #[serde(skip)]
     pub config_path: String,
 
+    #[serde(default = "default_log_level")]
+    pub log_level: LogLevel,
+
     // Core settings
     pub database_url: String,
     /// TLS certificate authority file path for validating the database secure connection
@@ -59,9 +62,6 @@ pub struct Config {
 
     #[serde(default)]
     pub http_cors_allowlist: Vec<String>,
-
-    #[serde(default = "default_log_level")]
-    pub log_level: LogLevel,
 
     // Domain name or <IP address>:<port>
     // URI scheme is optional
