@@ -45,7 +45,7 @@ use mitra_models::{
         get_user_by_name,
         is_valid_invite_code,
     },
-    users::types::{PortableUser, PortableUserData},
+    users::types::{PortableUser, PortableUserData, User},
 };
 use mitra_services::media::MediaStorage;
 use mitra_validators::{
@@ -84,6 +84,7 @@ pub struct ApClient {
     pub filter: FederationFilter,
     pub media_limits: MediaLimits,
     pub media_storage: MediaStorage,
+    pub as_user: Option<User>,
 }
 
 impl ApClient {
@@ -96,6 +97,7 @@ impl ApClient {
             filter: FederationFilter::init(config, db_client).await?,
             media_limits: config.limits.media.clone(),
             media_storage: MediaStorage::new(config),
+            as_user: None,
         };
         Ok(ap_client)
     }
@@ -579,12 +581,14 @@ pub async fn import_post(
 }
 
 pub async fn import_object(
-    config: &Config,
+    ap_client: &ApClient,
     db_client: &mut impl DatabaseClient,
     object_id: &str,
 ) -> Result<(), HandlerError> {
-    let ap_client = ApClient::new(config, db_client).await?;
-    let agent = build_federation_agent(&ap_client.instance, None);
+    let agent = build_federation_agent(
+        &ap_client.instance,
+        ap_client.as_user.as_ref(),
+    );
     let object: AttributedObjectJson =
         fetch_any_object(&agent, object_id).await?;
     let canonical_object_id = canonicalize_id(object.id())?;
@@ -593,12 +597,12 @@ pub async fn import_object(
         &canonical_object_id.to_string(),
     ).await {
         Ok(post) => {
-            update_remote_post(&ap_client, db_client, post, &object).await?;
+            update_remote_post(ap_client, db_client, post, &object).await?;
             Ok(())
         },
         Err(DatabaseError::NotFound(_)) => {
             import_post(
-                &ap_client,
+                ap_client,
                 db_client,
                 object.id().to_owned(),
                 Some(object),

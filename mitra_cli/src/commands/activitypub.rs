@@ -58,6 +58,8 @@ impl ImportActor {
 #[derive(Parser)]
 pub struct ImportObject {
     id: String,
+    #[arg(long)]
+    as_user: Option<String>,
 }
 
 impl ImportObject {
@@ -66,7 +68,15 @@ impl ImportObject {
         config: &Config,
         db_client: &mut impl DatabaseClient,
     ) -> Result<(), Error> {
-        import_object(config, db_client, &self.id).await?;
+        let maybe_user = if let Some(ref username) = self.as_user {
+            let user = get_user_by_name(db_client, username).await?;
+            Some(user)
+        } else {
+            None
+        };
+        let mut ap_client = ApClient::new(config, db_client).await?;
+        ap_client.as_user = maybe_user;
+        import_object(&ap_client, db_client, &self.id).await?;
         println!("post saved");
         Ok(())
     }
