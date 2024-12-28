@@ -195,6 +195,7 @@ See [guide](./docs/ipfs.md).
 
 - [Backup and restore](./docs/backup_and_restore.md)
 - [Cache management](./docs/cache_management.md)
+- [Filter](./docs/filter.md)
 - [Relays](./docs/relays.md)
 
 ## CLI
