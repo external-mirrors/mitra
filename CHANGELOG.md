@@ -21,6 +21,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Ignore local activities received via inbox.
 - Respect "Hide reposts" and "Hide replies" settings in custom feeds.
 - Canonicalize IDs in `to` and `cc` fields before processing them.
+- Don't write additional message to log when processing `Create(Question)` activity.
 
 ### Fixed
 

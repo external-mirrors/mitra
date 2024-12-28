@@ -788,7 +788,7 @@ pub async fn create_remote_post(
     let canonical_object_id = canonicalize_id(&object.id)?;
 
     object.check_not_actor()?;
-    if object.object_type != NOTE {
+    if object.object_type != NOTE && object.object_type != QUESTION {
         // Attempting to convert any object that has attributedTo property
         // into post
         log::info!("processing object of type {}", object.object_type);
