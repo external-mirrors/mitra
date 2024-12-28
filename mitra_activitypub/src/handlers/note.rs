@@ -673,7 +673,14 @@ async fn get_object_tags(
 }
 
 pub(super) fn get_audience(object: &AttributedObject) -> Vec<String> {
-    [object.to.clone(), object.cc.clone()].concat()
+    let mut audience = vec![];
+    for target_id in object.to.iter().chain(object.cc.iter()) {
+        match canonicalize_id(target_id) {
+            Ok(canonical_target_id) => audience.push(canonical_target_id.to_string()),
+            Err(_) => audience.push(target_id.to_string()),
+        };
+    };
+    audience
 }
 
 fn get_object_visibility(
