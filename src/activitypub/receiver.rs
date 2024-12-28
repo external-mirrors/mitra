@@ -95,6 +95,12 @@ pub async fn receive_activity(
     let canonical_activity_id = canonicalize_id(activity_id)?;
     let canonical_actor_id = canonicalize_id(&activity_actor)?;
 
+    if canonical_activity_id.authority() == config.instance().hostname() {
+        // Ignore forwarded activities
+        log::warn!("ignoring local activity: {canonical_activity_id}");
+        return Ok(());
+    };
+
     let is_self_delete = if activity_type == DELETE {
         let object_id = get_object_id(&activity["object"])
             .map_err(|_| ValidationError("invalid activity object"))?;
