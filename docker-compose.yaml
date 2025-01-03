@@ -11,31 +11,43 @@ services:
     volumes:
       - postgres_database:/var/lib/postgresql/data
 
-  # https://github.com/farcaster-project/containers
+  # https://github.com/sethforprivacy/simple-monerod-docker
   monerod:
     profiles:
       - monero
-    image: ghcr.io/farcaster-project/containers/monerod:0.18.2.2
-    environment:
-      NETWORK: regtest
-      OFFLINE: --offline
-      DIFFICULTY: 1
+    image: ghcr.io/sethforprivacy/simple-monerod:v0.18.3.4
     ports:
       - "58081:18081"
+    command:
+      - --regtest
+      - --offline
+      - --no-igd
+      - --fixed-difficulty=1
+      - --rpc-bind-ip=0.0.0.0
+      - --confirm-external-bind
+    volumes:
+      - monero_blockchain:/home/monero/.bitmonero
+
+  # https://github.com/sethforprivacy/simple-monero-wallet-rpc-docker
   monero-wallet-rpc:
     profiles:
       - monero
-    image: ghcr.io/farcaster-project/containers/monero-wallet-rpc:0.18.2.2
-    environment:
-      MONERO_DAEMON_ADDRESS: monerod:18081
-      WALLET_RPC_PORT: 18083
+    image: ghcr.io/sethforprivacy/simple-monero-wallet-rpc:v0.18.3.4
     depends_on:
       - "monerod"
     ports:
       - "58083:18083"
+    command:
+      - --daemon-address=monerod:18081
+      - --trusted-daemon
+      - --allow-mismatched-daemon-version
+      - --rpc-bind-port=18083
+      - --disable-rpc-login
+      - --wallet-dir=/home/monero/wallet
     volumes:
-      - monero_wallets:/wallets
+      - monero_wallets:/home/monero/wallet
 
 volumes:
   postgres_database:
+  monero_blockchain:
   monero_wallets:
