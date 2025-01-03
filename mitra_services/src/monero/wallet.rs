@@ -238,7 +238,9 @@ pub async fn send_monero(
         priority: TransferPriority::Default,
         mixin: 15,
         ring_size: 16,
-        unlock_time: 1,
+        // unlock_time must be zero
+        // https://github.com/monero-project/monero/pull/9151
+        unlock_time: 0,
         get_tx_keys: None,
         below_amount: None,
         do_not_relay: None,

@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Fixed
+
+- Fix monero transfer error when monero-wallet-rpc 0.18.3.4 is used.
+
 ## [3.13.0] - 2024-12-28
 
 ### Added
