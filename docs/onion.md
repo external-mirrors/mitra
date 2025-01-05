@@ -28,6 +28,8 @@ Start Mitra.
 
 For more information about running onion services, visit https://community.torproject.org/onion-services/setup/
 
+You can also generate a [vanity address](./onion-vanity-address.md) for your onion service.
+
 ## Clearnet + Tor
 
 Clearnet instances can federate with Tor-only instances.
