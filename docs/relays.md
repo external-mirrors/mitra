@@ -1,4 +1,8 @@
-# Following a relay
+# Relays
+
+Mitra only supports LitePub relay protocol. Mastodon relay protocol is not supported.
+
+## Following a relay
 
 Create a new read-only user:
 
