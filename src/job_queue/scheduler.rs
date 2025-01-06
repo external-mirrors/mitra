@@ -135,7 +135,6 @@ pub fn start_worker(
 ) -> () {
     tokio::spawn(async move {
         let mut tasks = vec![
-            PeriodicTask::IncomingActivityQueueExecutor,
             PeriodicTask::FetcherQueueExecutor,
             PeriodicTask::PruneRemoteEmojis,
             PeriodicTask::PruneUnusedAttachments,
@@ -145,6 +144,9 @@ pub fn start_worker(
             PeriodicTask::ImporterQueueExecutor,
             PeriodicTask::SubscriptionExpirationMonitor,
         ];
+        if !config.federation.incoming_queue_worker_enabled {
+            tasks.push(PeriodicTask::IncomingActivityQueueExecutor);
+        };
         if !config.federation.deliverer_standalone {
             tasks.push(PeriodicTask::OutgoingActivityQueueExecutor);
         };
@@ -162,12 +164,24 @@ pub fn start_worker(
     });
 }
 
-pub fn start_delivery_worker(
+pub fn start_outgoing_activity_queue_worker(
     config: Config,
     db_pool: DatabaseConnectionPool,
 ) -> () {
+    assert!(config.federation.deliverer_standalone);
     tokio::spawn(async move {
         let tasks = vec![PeriodicTask::OutgoingActivityQueueExecutor];
+        run_worker(config, db_pool, tasks).await
+    });
+}
+
+pub fn start_incoming_activity_queue_worker(
+    config: Config,
+    db_pool: DatabaseConnectionPool,
+) -> () {
+    assert!(config.federation.incoming_queue_worker_enabled);
+    tokio::spawn(async move {
+        let tasks = vec![PeriodicTask::IncomingActivityQueueExecutor];
         run_worker(config, db_pool, tasks).await
     });
 }

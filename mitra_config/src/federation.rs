@@ -2,6 +2,7 @@ use serde::Deserialize;
 
 const fn default_federation_enabled() -> bool { true }
 const fn default_ssrf_protection_enabled() -> bool { true }
+const fn default_incoming_queue_worker_enabled() -> bool { false }
 const fn default_inbox_queue_batch_size() -> u32 { 20 }
 const fn default_fetcher_timeout() -> u64 { 60 }
 const fn default_deliverer_standalone() -> bool { true }
@@ -19,8 +20,12 @@ pub struct FederationConfig {
     #[serde(default = "default_ssrf_protection_enabled")]
     pub ssrf_protection_enabled: bool,
 
+    // TODO: rename to incoming_queue_batch_size
     #[serde(default = "default_inbox_queue_batch_size")]
     pub inbox_queue_batch_size: u32,
+
+    #[serde(default = "default_incoming_queue_worker_enabled")]
+    pub incoming_queue_worker_enabled: bool,
 
     #[serde(default = "default_fetcher_timeout")]
     pub(super) fetcher_timeout: u64,
@@ -52,6 +57,7 @@ impl Default for FederationConfig {
             enabled: default_federation_enabled(),
             ssrf_protection_enabled: default_ssrf_protection_enabled(),
             inbox_queue_batch_size: default_inbox_queue_batch_size(),
+            incoming_queue_worker_enabled: default_incoming_queue_worker_enabled(),
             fetcher_timeout: default_fetcher_timeout(),
             deliverer_timeout: default_deliverer_timeout(),
             deliverer_log_response_length: default_deliverer_log_response_length(),

@@ -88,9 +88,19 @@ async fn main() -> std::io::Result<()> {
         db_pool.clone(),
     );
     log::info!("scheduler started");
+    if config.federation.incoming_queue_worker_enabled {
+        scheduler::start_incoming_activity_queue_worker(
+            config.clone(),
+            db_pool.clone(),
+        );
+        log::info!("incoming activity queue worker started");
+    };
     if config.federation.deliverer_standalone {
-        scheduler::start_delivery_worker(config.clone(), db_pool.clone());
-        log::info!("delivery worker started");
+        scheduler::start_outgoing_activity_queue_worker(
+            config.clone(),
+            db_pool.clone(),
+        );
+        log::info!("outgoing activity queue worker started");
     };
 
     let app_state = web::Data::new(AppState::default());

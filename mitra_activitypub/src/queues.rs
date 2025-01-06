@@ -1,5 +1,5 @@
 use std::collections::BTreeMap;
-use std::time::Instant;
+use std::time::{Duration as StdDuration, Instant};
 
 use chrono::{Duration, Utc};
 use serde::{Deserialize, Serialize};
@@ -109,8 +109,8 @@ pub async fn process_queued_incoming_activities(
         let mut job_data: IncomingActivityJobData =
             serde_json::from_value(job.job_data)
                 .map_err(|_| DatabaseTypeError)?;
-        // See also: activitypub::queues::JOB_TIMEOUT
-        let duration_max = std::time::Duration::from_secs(600);
+        let duration_max =
+            StdDuration::from_secs((JOB_TIMEOUT / 6).into());
         let handler_future = handle_activity(
             config,
             db_client,
