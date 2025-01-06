@@ -8,6 +8,7 @@ use actix_web::{
     HttpResponse,
     Scope,
 };
+use log::Level;
 use serde::Deserialize;
 use serde_json::{Value as JsonValue};
 use uuid::Uuid;
@@ -99,7 +100,7 @@ use crate::{
     },
 };
 
-use super::receiver::receive_activity;
+use super::receiver::{receive_activity, InboxError};
 
 #[get("")]
 async fn actor_view(
@@ -169,7 +170,12 @@ async fn inbox(
         activity_digest,
     ).await
         .map_err(|error| {
-            log::warn!(
+            let log_level = match error {
+                InboxError::DatabaseError(_) => Level::Error,
+                _ => Level::Warn,
+            };
+            log::log!(
+                log_level,
                 "failed to process activity ({}): {}",
                 error,
                 activity,
