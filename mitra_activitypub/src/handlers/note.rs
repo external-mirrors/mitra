@@ -815,7 +815,7 @@ pub async fn create_remote_post(
         match parse_poll_results(&object) {
             Ok(poll_data) => Some(poll_data),
             Err(error) => {
-                log::warn!("{error}");
+                log::warn!("{error}: {}", object.id);
                 None
             },
         }
@@ -934,7 +934,7 @@ pub async fn update_remote_post(
                 }
             },
             Err(error) => {
-                log::warn!("{error}");
+                log::warn!("{error}: {}", object.id);
                 None
             },
         }
