@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use emojis;
 use regex::{Captures, Regex};
 
 use mitra_models::{
@@ -11,7 +12,7 @@ use mitra_models::{
 use super::links::is_inside_code_block;
 
 // See also: EMOJI_NAME_RE in mitra_validators::emojis
-const SHORTCODE_SEARCH_RE: &str = r"(?m):(?P<name>[a-zA-Z0-9._-]+):(?P<after>\s|$|\)|<)";
+const SHORTCODE_SEARCH_RE: &str = r"(?m):(?P<name>[a-zA-Z0-9._+-]+):(?P<after>\s|$|\)|<)";
 
 /// Finds emoji shortcodes in text
 fn find_shortcodes(text: &str) -> Vec<String> {

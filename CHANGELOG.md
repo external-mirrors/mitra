@@ -15,6 +15,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Log object ID if poll data is not valid.
 - Log database errors coming from inbox handler with level ERROR.
 
+### Fixed
+
+- Allow to use `:+1:` emoji shortcode.
+
 ## [3.13.1] - 2025-01-03
 
 ### Fixed
