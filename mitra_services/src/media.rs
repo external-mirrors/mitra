@@ -2,6 +2,11 @@ use std::fs::remove_file;
 use std::io::{Error as IoError};
 use std::path::{Path, PathBuf};
 
+use s3::{
+    creds::Credentials,
+    error::S3Error,
+    Bucket,
+};
 use thiserror::Error;
 
 use apx_core::hashes::sha256;
@@ -48,6 +53,9 @@ fn save_file(
 pub enum MediaStorageError {
     #[error(transparent)]
     IoError(#[from] IoError),
+
+    #[error(transparent)]
+    S3Error(#[from] S3Error),
 }
 
 trait MediaStorageBackend {
@@ -151,20 +159,99 @@ impl From<&Config> for FilesystemStorage {
     }
 }
 
+// https://github.com/durch/rust-s3/blob/master/examples/sync-backend.rs
+#[derive(Clone)]
+pub struct S3Storage {
+    bucket: Box<Bucket>,
+}
+
+impl S3Storage {
+    pub fn new(
+        bucket_name: &str,
+        region_name: &str,
+        access_key: &str,
+        secret_key: &str,
+    ) -> Result<Self, MediaStorageError> {
+        let creds = Credentials::new(Some(access_key), Some(secret_key), None, None, None)
+            .map_err(S3Error::from)?;
+        let bucket = Bucket::new(
+            bucket_name,
+            region_name.parse().unwrap(),
+            creds,
+        )?;
+        let storage = Self { bucket: bucket };
+        Ok(storage)
+    }
+}
+
+impl MediaStorageBackend for S3Storage {
+    fn save_file(
+        &self,
+        file_data: Vec<u8>,
+        media_type: &str,
+    ) -> Result<FileInfo, MediaStorageError> {
+        let file_size = file_data.len();
+        let digest = sha256(&file_data);
+        let file_name = get_file_name(&file_data, Some(media_type));
+
+        let response_data = self.bucket.put_object(file_name.clone(), &file_data).unwrap();
+        assert_eq!(response_data.status_code(), 200);
+
+        let file_info = FileInfo::new(
+            file_name,
+            file_size,
+            digest,
+            media_type.to_string(),
+        );
+        Ok(file_info)
+    }
+
+    fn read_file(
+        &self,
+        file_name: &str,
+    ) -> Result<Vec<u8>, MediaStorageError> {
+        let response = self.bucket.get_object(file_name)?;
+        Ok(response.to_vec())
+    }
+
+    fn delete_file(
+        &self,
+        _file_name: &str,
+    ) -> Result<(), MediaStorageError> {
+        todo!();
+    }
+
+    fn list_files(&self) -> Result<Vec<String>, MediaStorageError> {
+        todo!();
+    }
+}
+
 #[derive(Clone)]
 pub enum MediaStorage {
     Filesystem(FilesystemStorage),
+    S3(S3Storage),
 }
 
 impl MediaStorage {
     pub fn new(config: &Config) -> Self {
-        let storage = FilesystemStorage::from(config);
-        Self::Filesystem(storage)
+        if let Some(ref s3_config) = config.s3_storage {
+            let storage = S3Storage::new(
+                &s3_config.bucket_name,
+                "us-east-1", // AWS region
+                &s3_config.access_key,
+                &s3_config.secret_key,
+            ).unwrap();
+            Self::S3(storage)
+        } else {
+            let storage = FilesystemStorage::from(config);
+            Self::Filesystem(storage)
+        }
     }
 
     fn backend(&self) -> &dyn MediaStorageBackend {
         match self {
             Self::Filesystem(backend) => backend,
+            Self::S3(backend) => backend,
         }
     }
 
@@ -218,14 +305,53 @@ impl FilesystemServer {
     }
 }
 
+pub struct S3Server {
+    bucket: Box<Bucket>,
+}
+
+impl S3Server {
+    pub fn new(
+        bucket_name: &str,
+        region_name: &str,
+        access_key: &str,
+        secret_key: &str,
+    ) -> Result<Self, MediaStorageError> {
+        let creds = Credentials::new(Some(access_key), Some(secret_key), None, None, None)
+            .map_err(S3Error::from)?;
+        let bucket = Bucket::new(
+            bucket_name,
+            region_name.parse().unwrap(),
+            creds,
+        )?;
+        let server = Self { bucket: bucket };
+        Ok(server)
+    }
+
+    pub fn url_for(&self, file_name: &str) -> String {
+        let bucket_url = self.bucket.url();
+        format!("{bucket_url}/{file_name}")
+    }
+}
+
 pub enum MediaServer {
     Filesystem(FilesystemServer),
+    S3(S3Server),
 }
 
 impl MediaServer {
     pub fn new(config: &Config) -> Self {
-        let backend = FilesystemServer::new(&config.instance_url());
-        Self::Filesystem(backend)
+        if let Some(ref s3_config) = config.s3_storage {
+            let backend = S3Server::new(
+                &s3_config.bucket_name,
+                "us-east-1", // AWS region
+                &s3_config.access_key,
+                &s3_config.secret_key,
+            ).unwrap();
+            Self::S3(backend)
+        } else {
+            let backend = FilesystemServer::new(&config.instance_url());
+            Self::Filesystem(backend)
+        }
     }
 
     #[cfg(any(test, feature = "test-utils"))]
@@ -237,6 +363,7 @@ impl MediaServer {
     pub fn url_for(&self, file_name: &str) -> String {
         match self {
             Self::Filesystem(backend) => backend.url_for(file_name),
+            Self::S3(backend) => backend.url_for(file_name),
         }
     }
 }

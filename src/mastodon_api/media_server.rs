@@ -34,6 +34,7 @@ impl ClientMediaServer {
                 media_server.override_base_url(&self.base_url);
                 media_server.url_for(file_name)
             },
+            MediaServer::S3(backend) => backend.url_for(file_name),
         }
     }
 }
