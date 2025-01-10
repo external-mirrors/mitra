@@ -369,6 +369,7 @@ pub async fn process_queued_outgoing_activities(
         OUTGOING_QUEUE_BATCH_SIZE,
         JOB_TIMEOUT,
     ).await?;
+    let instance = config.instance();
     for job in batch {
         let mut job_data: OutgoingActivityJobData =
             serde_json::from_value(job.job_data)
@@ -378,11 +379,9 @@ pub async fn process_queued_outgoing_activities(
         } else {
             log::error!("signing keys can not be found");
             delete_job_from_queue(db_client, job.id).await?;
-            return Ok(());
+            continue;
         };
-        let instance = config.instance();
         let mut recipients = job_data.recipients;
-        let start_time = Instant::now();
         if instance.is_private {
             log::info!(
                 "(private mode) not delivering activity to {} inboxes: {}",
@@ -390,15 +389,16 @@ pub async fn process_queued_outgoing_activities(
                 job_data.activity,
             );
             delete_job_from_queue(db_client, job.id).await?;
-            return Ok(());
+            continue;
         };
         log::info!(
             "delivering activity to {} inboxes: {}",
             recipients.len(),
             job_data.activity,
         );
+        let start_time = Instant::now();
         match deliver_activity_worker(
-            instance,
+            instance.clone(),
             sender,
             job_data.activity.clone(),
             &mut recipients,
@@ -408,7 +408,7 @@ pub async fn process_queued_outgoing_activities(
                 // Unexpected error
                 log::error!("{}", error);
                 delete_job_from_queue(db_client, job.id).await?;
-                return Ok(());
+                continue;
             },
         };
         log::info!(
