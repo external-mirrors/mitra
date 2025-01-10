@@ -59,6 +59,8 @@ pub struct Config {
 
     pub http_host: String,
     pub http_port: u32,
+    // Overrides http_host and http_port
+    pub http_socket: Option<String>,
 
     #[serde(default)]
     pub http_cors_allowlist: Vec<String>,

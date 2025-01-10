@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Added
 
 - Allow to run separate worker for processing of incoming activity queue.
+- Support binding HTTP server to unix socket.
 
 ### Changed
 

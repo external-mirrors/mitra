@@ -1,3 +1,6 @@
+use std::str::FromStr;
+use std::net::SocketAddrV4;
+
 use actix_cors::Cors;
 use actix_web::{
     dev::Service,
@@ -105,11 +108,15 @@ async fn main() -> std::io::Result<()> {
 
     let app_state = web::Data::new(AppState::default());
     let num_workers = std::cmp::max(num_cpus::get(), 4);
-    let http_socket_addr = format!(
-        "{}:{}",
-        config.http_host,
-        config.http_port,
-    );
+    let http_socket_addr = if let Some(ref http_socket) = config.http_socket {
+        http_socket.to_string()
+    } else {
+        format!(
+            "{}:{}",
+            config.http_host,
+            config.http_port,
+        )
+    };
 
     let http_server = HttpServer::new(move || {
         let cors_config = match config.environment {
@@ -214,10 +221,15 @@ async fn main() -> std::io::Result<()> {
         app
     });
 
+    let http_server = if let Ok(addr) = SocketAddrV4::from_str(&http_socket_addr) {
+        http_server.bind(addr)?
+    } else {
+        // Assume unix socket path
+        http_server.bind_uds(&http_socket_addr)?
+    };
     log::info!("listening on {}", http_socket_addr);
     http_server
         .workers(num_workers)
-        .bind(http_socket_addr)?
         .run()
         .await
 }
