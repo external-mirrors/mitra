@@ -59,6 +59,7 @@ async fn main() -> std::io::Result<()> {
 
     // https://wiki.postgresql.org/wiki/Number_Of_Database_Connections
     let db_pool_size = num_cpus::get() * 2;
+    log::info!("database connection pool size: {db_pool_size}");
     let db_pool = create_pool(
         &config.database_url,
         config.database_tls_ca_file.as_deref(),
