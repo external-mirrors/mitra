@@ -214,31 +214,6 @@ impl S3Storage {
             )
             .map_err(S3Error::from)?;
         Ok(url)
-        let mut bucket = Bucket::new(bucket_name, region, creds).map_err(S3Error::from)?;
-        if *force_path_style {
-            bucket = bucket.with_path_style();
-        };
-        assert_eq!(bucket.exists().is_ok(), true, "bucket does not exist");
-
-        // format path to ensure it starts and ends without "/"
-        let path = path
-            .trim_start_matches('/')
-            .trim_end_matches('/')
-            .to_string();
-
-        Ok(Self { bucket, path })
-    }
-
-    fn get_file_path(&self, file_name: &str) -> String {
-        format!("{}/{}", self.path, file_name)
-    }
-
-    pub fn presign_url(&self, file_name: &str) -> Result<String, MediaStorageError> {
-        let url = self
-            .bucket
-            .presign_get(self.get_file_path(file_name), 3600, None)
-            .map_err(S3Error::from)?;
-        Ok(url)
     }
 }
 

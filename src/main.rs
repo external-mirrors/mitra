@@ -74,12 +74,6 @@ async fn main() -> std::io::Result<()> {
         .expect("failed to prepare instance keys");
 
     let media_storage = MediaStorage::new(&config);
-    match media_storage {
-        MediaStorage::Filesystem(ref backend) => {
-            backend.init().expect("failed to create media directory");
-        },
-        MediaStorage::S3(_) => todo!(),
-    };
 
     std::mem::drop(db_client);
 
