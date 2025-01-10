@@ -362,15 +362,19 @@ pub async fn process_queued_outgoing_activities(
     config: &Config,
     db_pool: &DatabaseConnectionPool,
 ) -> Result<(), DatabaseError> {
-    let db_client = &**get_database_client(db_pool).await?;
+    let db_client = get_database_client(db_pool).await?;
+    let db_client_ref = &**db_client;
     let batch = get_job_batch(
-        db_client,
+        db_client_ref,
         JobType::OutgoingActivity,
         OUTGOING_QUEUE_BATCH_SIZE,
         JOB_TIMEOUT,
     ).await?;
+    drop(db_client);
     let instance = config.instance();
     for job in batch {
+        let db_client = get_database_client(db_pool).await?;
+        let db_client_ref = &**db_client;
         let mut job_data: OutgoingActivityJobData =
             serde_json::from_value(job.job_data)
                 .map_err(|_| DatabaseTypeError)?;
@@ -378,7 +382,7 @@ pub async fn process_queued_outgoing_activities(
             sender.clone()
         } else {
             log::error!("signing keys can not be found");
-            delete_job_from_queue(db_client, job.id).await?;
+            delete_job_from_queue(db_client_ref, job.id).await?;
             continue;
         };
         let mut recipients = job_data.recipients;
@@ -388,7 +392,7 @@ pub async fn process_queued_outgoing_activities(
                 recipients.len(),
                 job_data.activity,
             );
-            delete_job_from_queue(db_client, job.id).await?;
+            delete_job_from_queue(db_client_ref, job.id).await?;
             continue;
         };
         log::info!(
@@ -396,13 +400,18 @@ pub async fn process_queued_outgoing_activities(
             recipients.len(),
             job_data.activity,
         );
+        drop(db_client);
+
         let start_time = Instant::now();
-        match deliver_activity_worker(
+        let worker_result = deliver_activity_worker(
             instance.clone(),
             sender,
             job_data.activity.clone(),
             &mut recipients,
-        ).await {
+        ).await;
+
+        let db_client = &**get_database_client(db_pool).await?;
+        match worker_result {
             Ok(_) => (),
             Err(error) => {
                 // Unexpected error
