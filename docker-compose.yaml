@@ -11,6 +11,19 @@ services:
     volumes:
       - postgres_database:/var/lib/postgresql/data
 
+  minio:
+    image: minio/minio:RELEASE.2024-12-18T13-15-44Z
+    restart: always
+    environment:
+      MINIO_ACCESS_KEY: minio
+      MINIO_SECRET_KEY: minioadmin
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    command: server /data --console-address ":9001"
+
   # https://github.com/sethforprivacy/simple-monerod-docker
   monerod:
     profiles:
@@ -49,5 +62,6 @@ services:
 
 volumes:
   postgres_database:
+  minio_data:
   monero_blockchain:
   monero_wallets:
