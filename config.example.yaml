@@ -17,7 +17,7 @@ web_client_dir: /usr/share/mitra/www
 # when their names match.
 #web_client_theme_dir: /var/lib/mitra/theme
 
-http_host: '127.0.0.1'
+http_host: "127.0.0.1"
 http_port: 8383
 
 # List of allowed origins for CORS (in addition to `instance_uri`)
@@ -76,7 +76,6 @@ retention:
   extraneous_posts: 50
   # Remote accounts without posts
   empty_profiles: 150
-
 # Federation parameters
 #federation:
 #  enabled: true
@@ -106,3 +105,13 @@ retention:
 #    wallet_name: null
 #    wallet_password: null
 #    account_index: 0
+
+# S3 storage configuration
+# s3_storage:
+#   bucket: mitra
+#   region: us-east-1
+#   endpoint: http://127.0.0.1:9000
+#   access_key: minio
+#   secret_key: minioadmin
+#   path: "" # Optional, the path to store media files in the bucket
+#   force_path_style: false # Optional, for MinIO should be true

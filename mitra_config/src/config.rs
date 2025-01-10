@@ -35,11 +35,32 @@ const fn default_instance_staff_public() -> bool { true }
 
 #[derive(Clone, Deserialize)]
 pub struct S3Config {
-    pub bucket_name: String,
-    pub region_name: String,
+    pub bucket: String,
+    pub region: String,
     pub endpoint: String,
     pub access_key: String,
     pub secret_key: String,
+
+    #[serde(default = "default_s3_config_path")]
+    pub path: String,
+
+    #[serde(default = "default_s3_config_force_path_style")]
+    pub force_path_style: bool,
+
+    #[serde(default = "default_s3_config_presign_expiry_secs")]
+    pub presign_expiry_secs: u32,
+}
+
+fn default_s3_config_path() -> String {
+    "/".to_string()
+}
+
+const fn default_s3_config_force_path_style() -> bool {
+    false
+}
+
+const fn default_s3_config_presign_expiry_secs() -> u32 {
+    600
 }
 
 #[derive(Clone, Deserialize)]

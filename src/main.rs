@@ -28,6 +28,7 @@ use mitra::http::{
 };
 use mitra::job_queue::scheduler;
 use mitra::mastodon_api::{mastodon_api_scope, oauth_api_scope};
+use mitra::media;
 use mitra::nodeinfo::views as nodeinfo;
 use mitra::state::AppState;
 use mitra::webfinger::views as webfinger;
@@ -94,7 +95,7 @@ async fn main() -> std::io::Result<()> {
         log::info!("delivery worker started");
     };
 
-    let app_state = web::Data::new(AppState::default());
+    let app_state = web::Data::new(AppState::init(media_storage.clone()));
     let num_workers = std::cmp::max(num_cpus::get(), 4);
     let http_socket_addr = format!(
         "{}:{}",
@@ -190,11 +191,11 @@ async fn main() -> std::io::Result<()> {
                     .to(HttpResponse::NotFound)
             );
         if let MediaStorage::Filesystem(ref backend) = media_storage {
-            app = app.service(actix_files::Files::new(
-                MEDIA_ROOT_URL,
-                backend.media_dir.clone(),
-            ));
-        };
+            app = app.service(media::filesystem_media_server(backend.clone()));
+        } else if let MediaStorage::S3(_) = media_storage {
+            app = app.service(media::s3_media_server());
+        }
+
         if let Some(ref web_client_dir) = config.web_client_dir {
             app = app.service(web_client::themeable_web_client_service(
                 web_client_dir,

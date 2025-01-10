@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::time::Instant;
 
+use mitra_services::media::MediaStorage;
 use tokio::sync::Mutex;
 
 pub struct TimedCache {
@@ -55,15 +56,14 @@ const POST_CACHE_SIZE: usize = 100;
 // https://actix.rs/docs/application/#shared-mutable-state
 pub struct AppState {
     pub post_id_cache: Mutex<TimedCache>,
+    pub media_storage: MediaStorage,
 }
 
-impl Default for AppState {
-    fn default() -> Self {
+impl AppState {
+    pub fn init(media_storage: MediaStorage) -> Self {
         Self {
-            post_id_cache: Mutex::new(TimedCache::new(
-                POST_CACHE_EXPIRY_TIME,
-                POST_CACHE_SIZE,
-            )),
+            post_id_cache: Mutex::new(TimedCache::new(POST_CACHE_EXPIRY_TIME, POST_CACHE_SIZE)),
+            media_storage: media_storage,
         }
     }
 }
