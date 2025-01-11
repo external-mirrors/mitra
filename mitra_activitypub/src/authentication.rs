@@ -170,7 +170,12 @@ fn get_signer_rsa_key(
         .map_err(|_| AuthenticationError::ActorError("invalid key ID"))?;
     let maybe_actor_key = profile.public_keys
         .inner().iter()
-        .find(|key| key.id == canonical_key_id.to_string());
+        .find(|key| {
+            key.id == canonical_key_id.to_string()
+            // Workaround for PeerTube
+            // https://github.com/Chocobozzz/PeerTube/issues/6829
+            || key.id == format!("{canonical_key_id}#main-key")
+        });
     let rsa_public_key = if let Some(actor_key) = maybe_actor_key {
         if actor_key.key_type != PublicKeyType::RsaPkcs1 {
             return Err(AuthenticationError::ActorError("unexpected key type"));

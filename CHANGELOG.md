@@ -19,6 +19,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Fixed
 
 - Allow to use `:+1:` emoji shortcode.
+- Added workaround for PeerTube `keyId` bug.
 
 ## [3.13.1] - 2025-01-03
 
