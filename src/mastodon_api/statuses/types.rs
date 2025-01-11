@@ -127,7 +127,11 @@ impl Status {
         post: Post,
     ) -> Self {
         let object_id = post_object_id(instance_url, &post);
-        let object_url = compatible_post_object_id(instance_url, &post);
+        let object_url = if let Some(url) = post.url {
+            url
+        } else {
+            compatible_post_object_id(instance_url, &post)
+        };
         let maybe_poll = if let Some(ref db_poll) = post.poll {
             let maybe_voted_for = post.actions.as_ref()
                 .map(|actions| actions.voted_for.clone());

@@ -169,6 +169,7 @@ CREATE TABLE post (
     reply_count INTEGER NOT NULL CHECK (reply_count >= 0) DEFAULT 0,
     reaction_count INTEGER NOT NULL CHECK (reaction_count >= 0) DEFAULT 0,
     repost_count INTEGER NOT NULL CHECK (repost_count >= 0) DEFAULT 0,
+    url VARCHAR(2000),
     object_id VARCHAR(2000) UNIQUE,
     ipfs_cid VARCHAR(200),
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),

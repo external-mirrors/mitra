@@ -18,6 +18,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Log database errors coming from inbox handler with level ERROR.
 - Log database connection pool size.
 - Release database connection before delivering activity.
+- Set value of `Status.url` to actual post URL if it is known.
 
 ### Fixed
 

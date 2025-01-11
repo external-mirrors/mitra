@@ -233,10 +233,11 @@ pub async fn create_post(
             repost_of_id,
             visibility,
             is_sensitive,
+            url,
             object_id,
             created_at
         )
-        SELECT $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11
+        SELECT $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12
         WHERE
         -- don't allow replies to reposts
         NOT EXISTS (
@@ -267,6 +268,7 @@ pub async fn create_post(
             &post_data.context.repost_of_id(),
             &post_data.visibility,
             &post_data.is_sensitive,
+            &post_data.url,
             &post_data.object_id,
             &post_data.created_at,
         ],
@@ -396,8 +398,9 @@ pub async fn update_post(
             content = $1,
             content_source = $2,
             is_sensitive = $3,
-            updated_at = $4
-        WHERE id = $5
+            url = $4,
+            updated_at = $5
+        WHERE id = $6
             AND repost_of_id IS NULL
             AND ipfs_cid IS NULL
         RETURNING post
@@ -406,6 +409,7 @@ pub async fn update_post(
             &post_data.content,
             &post_data.content_source,
             &post_data.is_sensitive,
+            &post_data.url,
             &post_data.updated_at,
             &post_id,
         ],

@@ -198,19 +198,19 @@ pub(super) fn get_object_attributed_to(object: &AttributedObject)
     parse_attributed_to(&object.attributed_to)
 }
 
-fn get_object_url(object: &AttributedObject)
-    -> Result<String, ValidationError>
-{
+fn get_object_url(
+    object: &AttributedObject,
+) -> Result<Option<String>, ValidationError> {
     let maybe_object_url = match &object.url {
         Some(value) => {
             let links = parse_into_href_array(value)
                 .map_err(|_| ValidationError("invalid object URL"))?;
+            // TODO: select URL with text/html media type
             links.into_iter().next()
         },
         None => None,
     };
-    let object_url = maybe_object_url.unwrap_or(object.id.clone());
-    Ok(object_url)
+    Ok(maybe_object_url)
 }
 
 /// Get post content by concatenating name/summary and content
@@ -248,7 +248,7 @@ fn get_object_content(object: &AttributedObject) ->
     Ok(content_safe)
 }
 
-fn create_content_link(url: String) -> String {
+fn create_content_link(url: &str) -> String {
     format!(
         r#"<p><a href="{0}" rel="noopener">{0}</a></p>"#,
         url,
@@ -822,10 +822,11 @@ pub async fn create_remote_post(
     } else {
         None
     };
+    let maybe_object_url = get_object_url(&object)?;
     if object.object_type != NOTE && object.object_type != QUESTION {
         // Append link to object
-        let object_url = get_object_url(&object)?;
-        content += &create_content_link(object_url);
+        let url = maybe_object_url.as_ref().unwrap_or(&object.id);
+        content += &create_content_link(url);
     };
     let (attachments, unprocessed) = get_object_attachments(
         ap_client,
@@ -834,7 +835,7 @@ pub async fn create_remote_post(
         &author,
     ).await?;
     for attachment_url in unprocessed {
-        content += &create_content_link(attachment_url);
+        content += &create_content_link(&attachment_url);
     };
 
     let (mentions, hashtags, links, emojis) = get_object_tags(
@@ -888,12 +889,13 @@ pub async fn create_remote_post(
         content_source: None,
         visibility,
         is_sensitive,
+        poll: maybe_poll_data,
         attachments: attachments,
         mentions: mentions.iter().map(|profile| profile.id).collect(),
         tags: hashtags,
         links: links,
         emojis: emojis,
-        poll: maybe_poll_data,
+        url: maybe_object_url,
         object_id: Some(canonical_object_id.to_string()),
         created_at,
     };
@@ -941,10 +943,11 @@ pub async fn update_remote_post(
     } else {
         None
     };
+    let maybe_object_url = get_object_url(object)?;
     if object.object_type != NOTE && object.object_type != QUESTION {
         // Append link to object
-        let object_url = get_object_url(object)?;
-        content += &create_content_link(object_url);
+        let url = maybe_object_url.as_ref().unwrap_or(&object.id);
+        content += &create_content_link(url);
     };
     let (attachments, unprocessed) = get_object_attachments(
         ap_client,
@@ -953,7 +956,7 @@ pub async fn update_remote_post(
         &post.author,
     ).await?;
     for attachment_url in unprocessed {
-        content += &create_content_link(attachment_url);
+        content += &create_content_link(&attachment_url);
     };
     let (mentions, hashtags, links, emojis) = get_object_tags(
         ap_client,
@@ -981,12 +984,13 @@ pub async fn update_remote_post(
         content,
         content_source: None,
         is_sensitive,
+        poll: maybe_poll_data,
         attachments,
         mentions: mentions.iter().map(|profile| profile.id).collect(),
         tags: hashtags,
         links,
         emojis,
-        poll: maybe_poll_data,
+        url: maybe_object_url,
         updated_at,
     };
     validate_post_update_data(&post_data)?;
@@ -1068,8 +1072,8 @@ mod tests {
             ..Default::default()
         };
         let mut content = get_object_content(&object).unwrap();
-        let object_url = get_object_url(&object).unwrap();
-        content += &create_content_link(object_url);
+        let object_url = get_object_url(&object).unwrap().unwrap();
+        content += &create_content_link(&object_url);
         assert_eq!(
             content,
             r#"<h1>test-name</h1>test-content<p><a href="https://example.org/xyz" rel="noopener">https://example.org/xyz</a></p>"#,

@@ -37,6 +37,7 @@ const CONTENT_ALLOWED_TAGS: [&str; 10] = [
     "p",
     "span",
 ];
+const URL_LENGTH_MAX: usize = 2000;
 
 pub fn content_allowed_classes() -> Vec<(&'static str, Vec<&'static str>)> {
     vec![
@@ -75,6 +76,13 @@ pub fn clean_local_content(
     Ok(content_trimmed.to_string())
 }
 
+fn validate_url(url: &str) -> Result<(), ValidationError> {
+    if url.len() > URL_LENGTH_MAX {
+        return Err(ValidationError("post URL is too long"));
+    };
+    Ok(())
+}
+
 pub fn validate_post_create_data(
     post_data: &PostCreateData,
 ) -> Result<(), ValidationError> {
@@ -85,6 +93,9 @@ pub fn validate_post_create_data(
     };
     if post_data.content.is_empty() && post_data.attachments.is_empty() {
         return Err(ValidationError("post is empty"));
+    };
+    if let Some(ref poll_data) = post_data.poll {
+        validate_poll_data(poll_data)?;
     };
     if post_data.attachments.len() > ATTACHMENT_LIMIT {
         return Err(ValidationError("too many attachments"));
@@ -101,8 +112,8 @@ pub fn validate_post_create_data(
     if post_data.emojis.len() > EMOJI_LIMIT {
         return Err(ValidationError("too many emojis"));
     };
-    if let Some(ref poll_data) = post_data.poll {
-        validate_poll_data(poll_data)?;
+    if let Some(ref url) = post_data.url {
+        validate_url(url)?;
     };
     if let Some(ref object_id) = post_data.object_id {
         validate_any_object_id(object_id)?;
@@ -116,6 +127,9 @@ pub fn validate_post_update_data(
     if post_data.content.is_empty() && post_data.attachments.is_empty() {
         return Err(ValidationError("post can not be empty"));
     };
+    if let Some(ref poll_data) = post_data.poll {
+        validate_poll_data(poll_data)?;
+    };
     if post_data.attachments.len() > ATTACHMENT_LIMIT {
         return Err(ValidationError("too many attachments"));
     };
@@ -131,8 +145,8 @@ pub fn validate_post_update_data(
     if post_data.emojis.len() > EMOJI_LIMIT {
         return Err(ValidationError("too many emojis"));
     };
-    if let Some(ref poll_data) = post_data.poll {
-        validate_poll_data(poll_data)?;
+    if let Some(ref url) = post_data.url {
+        validate_url(url)?;
     };
     Ok(())
 }

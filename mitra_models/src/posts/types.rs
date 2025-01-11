@@ -111,6 +111,7 @@ pub struct DbPost {
     pub reply_count: i32,
     pub reaction_count: i32,
     pub repost_count: i32,
+    pub url: Option<String>,
     pub object_id: Option<String>,
     pub ipfs_cid: Option<String>,
     pub created_at: DateTime<Utc>,
@@ -159,6 +160,7 @@ pub struct Post {
     pub links: Vec<Uuid>,
     pub emojis: Vec<DbEmoji>,
     pub reactions: Vec<DbPostReactions>,
+    pub url: Option<String>,
     pub object_id: Option<String>,
     pub ipfs_cid: Option<String>,
     pub created_at: DateTime<Utc>,
@@ -205,6 +207,7 @@ impl Post {
             db_post.is_sensitive ||
             db_post.is_pinned ||
             db_post.in_reply_to_id.is_some() ||
+            db_post.url.is_some() ||
             db_post.ipfs_cid.is_some() ||
             db_poll.is_some() ||
             !db_attachments.is_empty() ||
@@ -247,6 +250,7 @@ impl Post {
             links: db_links,
             emojis: db_emojis,
             reactions: db_reactions,
+            url: db_post.url,
             object_id: db_post.object_id,
             ipfs_cid: db_post.ipfs_cid,
             created_at: db_post.created_at,
@@ -302,6 +306,7 @@ impl Default for Post {
             links: vec![],
             emojis: vec![],
             reactions: vec![],
+            url: None,
             object_id: None,
             ipfs_cid: None,
             created_at: Utc::now(),
@@ -388,12 +393,13 @@ pub struct PostCreateData {
     pub content_source: Option<String>,
     pub visibility: Visibility,
     pub is_sensitive: bool,
+    pub poll: Option<PollData>,
     pub attachments: Vec<Uuid>,
     pub mentions: Vec<Uuid>,
     pub tags: Vec<String>,
     pub links: Vec<Uuid>,
     pub emojis: Vec<Uuid>,
-    pub poll: Option<PollData>,
+    pub url: Option<String>,
     pub object_id: Option<String>,
     pub created_at: DateTime<Utc>,
 }
@@ -417,11 +423,12 @@ pub struct PostUpdateData {
     pub content: String,
     pub content_source: Option<String>,
     pub is_sensitive: bool,
+    pub poll: Option<PollData>,
     pub attachments: Vec<Uuid>,
     pub mentions: Vec<Uuid>,
     pub tags: Vec<String>,
     pub links: Vec<Uuid>,
     pub emojis: Vec<Uuid>,
-    pub poll: Option<PollData>,
+    pub url: Option<String>,
     pub updated_at: DateTime<Utc>,
 }
