@@ -430,7 +430,7 @@ mod tests {
     fn test_create_and_verify_eddsa_signature_vc_di_eddsa_test_vector() {
         let secret_key_multibase = "z3u2en7t5LR2WtQH5PfFqMqwVHBeXouLzo6haApm8XHqvjxq";
         let secret_key = ed25519_secret_key_from_multikey(secret_key_multibase).unwrap();
-        let key_id = "https://vc.example/issuers/5678#z6MkrJVnaZkeFzdQyMZu1cgjg7k1pZZ6pvBQ7XJPt4swbTQ2";
+        let key_id = "did:key:z6MkrJVnaZkeFzdQyMZu1cgjg7k1pZZ6pvBQ7XJPt4swbTQ2#z6MkrJVnaZkeFzdQyMZu1cgjg7k1pZZ6pvBQ7XJPt4swbTQ2";
         let created_at = DateTime::parse_from_rfc3339("2023-02-24T23:36:38Z")
             .unwrap().with_timezone(&Utc);
         let object = json!({
@@ -480,14 +480,14 @@ mod tests {
                 "type": "DataIntegrityProof",
                 "cryptosuite": "eddsa-jcs-2022",
                 "created": "2023-02-24T23:36:38Z",
-                "verificationMethod": "https://vc.example/issuers/5678#z6MkrJVnaZkeFzdQyMZu1cgjg7k1pZZ6pvBQ7XJPt4swbTQ2",
+                "verificationMethod": "did:key:z6MkrJVnaZkeFzdQyMZu1cgjg7k1pZZ6pvBQ7XJPt4swbTQ2#z6MkrJVnaZkeFzdQyMZu1cgjg7k1pZZ6pvBQ7XJPt4swbTQ2",
                 "proofPurpose": "assertionMethod",
                 "@context": [
                     "https://www.w3.org/ns/credentials/v2",
                     "https://www.w3.org/ns/credentials/examples/v2"
                 ],
-                "proofValue": "z63t83Y53KfzJ5ZosfKTnqfMcKB2dmTrfjSaQjeNNjAD5srBowQfmWqeRb8rRjmeEuCBEsddF9LsVogtuTsijJKh4"
-            },
+                "proofValue": "z2HnFSSPPBzR36zdDgK8PbEHeXbR56YF24jwMpt3R1eHXQzJDMWS93FCzpvJpwTWd3GAVFuUfjoJdcnTMuVor51aX"
+            }
         });
         assert_eq!(signed_object, expected_result);
 
