@@ -10,24 +10,31 @@ use mitra_models::{
     markers::types::Timeline,
 };
 
-use crate::mastodon_api::{
-    auth::get_current_user,
-    errors::MastodonError,
+use crate::{
+    http::MultiQuery,
+    mastodon_api::{
+        auth::get_current_user,
+        errors::MastodonError,
+    },
 };
 
 use super::types::{MarkerQueryParams, MarkerCreateData, Markers};
 
-/// https://docs.joinmastodon.org/methods/timelines/markers/
+// https://docs.joinmastodon.org/methods/markers/#get
 #[get("")]
 async fn get_marker_view(
     auth: BearerAuth,
     db_pool: web::Data<DatabaseConnectionPool>,
-    query_params: web::Query<MarkerQueryParams>,
+    query_params: MultiQuery<MarkerQueryParams>,
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &**get_database_client(&db_pool).await?;
     let current_user = get_current_user(db_client, auth.token()).await?;
-    let timeline = query_params.to_timeline()?;
-    let maybe_db_marker = get_marker_opt(db_client, current_user.id, timeline).await?;
+    let timelines = query_params.to_timelines()?;
+    let maybe_db_marker = if timelines.contains(&Timeline::Notifications) {
+        get_marker_opt(db_client, current_user.id, Timeline::Notifications).await?
+    } else {
+        None
+    };
     let markers = Markers {
         notifications: maybe_db_marker.map(|db_marker| db_marker.into()),
     };

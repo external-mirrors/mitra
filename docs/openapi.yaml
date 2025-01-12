@@ -1127,6 +1127,42 @@ paths:
           description: Invalid request data.
         404:
           description: Custom feed does not exist or is not owned by you.
+  /api/v1/markers:
+    get:
+      summary: Get current positions in timelines.
+      security:
+        - tokenAuth: []
+      parameters:
+        - name: 'timeline[]'
+          in: query
+          description: 'Specify the timeline(s) for which markers should be fetched. Possible values: home, notifications.'
+          required: false
+          schema:
+            type: array
+            items:
+              type: string
+      responses:
+        200:
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                description: Markers
+                type: object
+                properties:
+                  notifications:
+                    type: object
+                    properties:
+                      last_read_id:
+                        description: The ID of the most recently viewed entity.
+                        type: string
+                      version:
+                        description: An incrementing counter, used for locking to prevent write conflicts.
+                        type: number
+                      updated_at:
+                        description: The timestamp of when the marker was set.
+                        type: string
+                        format: dateTime
   /api/v1/media:
     post:
       summary: Create an attachment to be used with a new post.

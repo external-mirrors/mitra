@@ -20,6 +20,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Release database connection before delivering activity.
 - Set value of `Status.url` to actual post URL if it is known.
 - Don't write warning to log if alias is equal to actor ID.
+- Allow to call `/api/v1/markers` with multiple `timeline[]` parameters.
 
 ### Fixed
 
