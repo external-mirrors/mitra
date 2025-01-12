@@ -89,7 +89,7 @@ pub fn parse_config() -> (Config, Vec<&'static str>) {
     config.config_path = env.config_path;
     config.environment = env.environment;
     if let Some(http_port) = env.http_port {
-        config.http_port = http_port;
+        config.http_port = Some(http_port);
     };
 
     // Validate config
@@ -105,6 +105,7 @@ pub fn parse_config() -> (Config, Vec<&'static str>) {
             );
         };
     };
+    config.http_socket();
     config.try_instance_url().expect("invalid instance URI");
     if config.authentication_methods.is_empty() {
         panic!("authentication_methods must not be empty");

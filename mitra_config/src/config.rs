@@ -57,8 +57,8 @@ pub struct Config {
     #[serde(default = "default_web_client_rewrite_index")]
     pub web_client_rewrite_index: bool,
 
-    pub http_host: String,
-    pub http_port: u32,
+    pub http_host: Option<String>,
+    pub http_port: Option<u32>,
     // Overrides http_host and http_port
     pub http_socket: Option<String>,
 
@@ -137,6 +137,16 @@ impl Config {
             "instance RSA key can not be replaced",
         );
         self.instance_rsa_key = Some(secret_key);
+    }
+
+    pub fn http_socket(&self) -> String {
+        match (&self.http_socket, &self.http_host, self.http_port) {
+            (Some(http_socket), _, _) => http_socket.to_string(),
+            (None, Some(http_host), Some(http_port)) => {
+                format!("{http_host}:{http_port}")
+            },
+            _ => panic!("either http_socket or http_host and http_port must be specified"),
+        }
     }
 
     pub(super) fn try_instance_url(&self) -> Result<String, UrlError> {

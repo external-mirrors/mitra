@@ -108,15 +108,7 @@ async fn main() -> std::io::Result<()> {
 
     let app_state = web::Data::new(AppState::default());
     let num_workers = std::cmp::max(num_cpus::get(), 4);
-    let http_socket_addr = if let Some(ref http_socket) = config.http_socket {
-        http_socket.to_string()
-    } else {
-        format!(
-            "{}:{}",
-            config.http_host,
-            config.http_port,
-        )
-    };
+    let http_socket_addr = config.http_socket();
 
     let http_server = HttpServer::new(move || {
         let cors_config = match config.environment {
