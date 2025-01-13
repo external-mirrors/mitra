@@ -1018,9 +1018,9 @@ dependencies = [
 
 [[package]]
 name = "deadpool-postgres"
-version = "0.10.2"
+version = "0.10.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c668a58063c6331e3437e3146970943ad82b1b36169fd979bb2645ac2088209a"
+checksum = "836a24a9d49deefe610b8b60c767a7412e9a931d79a89415cd2d2d71630ca8d7"
 dependencies = [
  "deadpool",
  "log",
@@ -2959,9 +2959,9 @@ dependencies = [
 
 [[package]]
 name = "refinery"
-version = "0.8.4"
+version = "0.8.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5f02bce2299450431623ef714bef438f1ae9badfb123ef23b114f0ef4300237f"
+checksum = "a65acc0e1f0e7c80480aacb5087e3509b85806985f54dd7dfeafee4c3128943a"
 dependencies = [
  "refinery-core",
  "refinery-macros",
@@ -2969,9 +2969,9 @@ dependencies = [
 
 [[package]]
 name = "refinery-core"
-version = "0.8.4"
+version = "0.8.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f9e21e4c78f030876a62ac983e96baa45403878ec58bc6a3722123736a82a0a9"
+checksum = "6d3af3c282b6dae2e9952b28a637ee8148ee34ef6edfd0415df6de2799d4fc3b"
 dependencies = [
  "async-trait",
  "cfg-if",
@@ -2991,9 +2991,9 @@ dependencies = [
 
 [[package]]
 name = "refinery-macros"
-version = "0.8.4"
+version = "0.8.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e53d3fed32d2b561d99f1f2d976559a8ce1f3999acb1afb95f528777cac0cbe5"
+checksum = "3d6feea59ecc7e3ebf27244271063f3dfb59226629e2661f535c771fcb358ae9"
 dependencies = [
  "proc-macro2",
  "quote",
