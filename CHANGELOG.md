@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Allow to run separate worker for processing of incoming activity queue.
 - Support binding HTTP server to unix socket.
+- Process incoming `Add(Update)` activities.
 
 ### Changed
 

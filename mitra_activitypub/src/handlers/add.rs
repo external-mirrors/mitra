@@ -36,12 +36,13 @@ use crate::{
     identifiers::parse_local_actor_id,
     importers::fetch_any_object,
     ownership::verify_activity_owner,
-    vocabulary::{CREATE, DISLIKE, EMOJI_REACT, LIKE},
+    vocabulary::{CREATE, DISLIKE, EMOJI_REACT, LIKE, UPDATE},
 };
 
 use super::{
     create::handle_create,
     like::handle_like,
+    update::handle_update,
     Descriptor,
     HandlerResult,
 };
@@ -143,6 +144,15 @@ async fn handle_fep_171b_add(
                 true, // don't perform spam check
             ).await?;
             Ok(Some(Descriptor::object(activity_type)))
+        },
+        UPDATE => {
+            let maybe_type = handle_update(
+                config,
+                db_client,
+                activity,
+                true, // authenticated
+            ).await?;
+            Ok(maybe_type.map(|_| Descriptor::object(activity_type)))
         },
         LIKE | DISLIKE | EMOJI_REACT => {
             let maybe_type = handle_like(config, db_client, activity).await?;
