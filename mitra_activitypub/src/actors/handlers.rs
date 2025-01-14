@@ -514,10 +514,11 @@ fn parse_aliases(actor: &ValidatedActor) -> Vec<String> {
                             log::warn!("too many aliases");
                             break;
                         };
-                        if actor_id == actor.id ||
-                            validate_object_id(&actor_id).is_err()
-                        {
-                            log::warn!("invalid alias: {}", actor_id);
+                        if actor_id == actor.id {
+                            continue;
+                        };
+                        if let Err(error) = validate_object_id(&actor_id) {
+                            log::warn!("invalid alias ({error}): {actor_id}");
                             continue;
                         };
                         aliases.push(actor_id);

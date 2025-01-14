@@ -19,6 +19,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Log database connection pool size.
 - Release database connection before delivering activity.
 - Set value of `Status.url` to actual post URL if it is known.
+- Don't write warning to log if alias is equal to actor ID.
 
 ### Fixed
 
