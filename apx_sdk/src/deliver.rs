@@ -52,7 +52,7 @@ pub enum DelivererError {
     #[error("response size exceeds limit")]
     ResponseTooLarge,
 
-    #[error("http error")]
+    #[error("HTTP error {}", .0.status.as_u16())]
     HttpError(Response),
 }
 
@@ -125,5 +125,20 @@ pub async fn send_object(
         Ok(Some(response))
     } else {
         Err(DelivererError::HttpError(response))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_http_error_to_string() {
+        let response = Response {
+            status: StatusCode::INTERNAL_SERVER_ERROR,
+            body: "".to_string(),
+        };
+        let error = DelivererError::HttpError(response);
+        assert_eq!(error.to_string(), "HTTP error 500");
     }
 }
