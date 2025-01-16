@@ -1,9 +1,10 @@
 use ethereum_types::H160;
 use regex::Regex;
+use thiserror::Error;
 
 pub type Address = H160;
 
-#[derive(thiserror::Error, Debug)]
+#[derive(Debug, Error)]
 #[error("{0}")]
 pub struct AddressError(&'static str);
 

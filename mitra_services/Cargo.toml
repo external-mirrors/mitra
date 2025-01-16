@@ -12,7 +12,7 @@ anyhow = "1.0.58"
 # Used for working with dates
 chrono = { version = "0.4.31", default-features = false, features = ["std"] }
 # Used for working with ethereum addresses
-ethereum-types = "0.14.1"
+ethereum-types = { version = "0.15.1", default-features = false }
 # Used to work with hexadecimal strings
 hex = { version = "0.4.3", features = ["serde"] }
 # Used for logging
