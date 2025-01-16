@@ -25,7 +25,7 @@ pub enum DatabaseConnectionError {
     PostgresError(#[from] tokio_postgres::Error),
 
     #[error(transparent)]
-    PoolError(#[from] deadpool::managed::BuildError<tokio_postgres::Error>),
+    PoolError(#[from] deadpool::managed::BuildError),
 }
 
 fn create_tls_connector(
