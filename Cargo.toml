@@ -31,7 +31,7 @@ version = "3.14.0"
 license = "AGPL-3.0-only"
 
 edition = "2021"
-rust-version = "1.66.1"
+rust-version = "1.67.1"
 
 [workspace.lints.clippy]
 unwrap_used = "warn"
