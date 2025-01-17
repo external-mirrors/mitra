@@ -1602,10 +1602,23 @@ paths:
                   items:
                     type: string
                     format: uuid
+                'poll[options][]':
+                  description: Possible answers to the poll.
+                  type: array
+                  items:
+                    type: string
+                'poll[expires_in]':
+                  description: Duration that the poll should be open, in seconds.
+                  type: integer
+                'poll[multiple]':
+                  description: Allow multiple choices?
+                  type: boolean
+                  default: false
                 in_reply_to_id:
                   description: ID of the post being replied to, if post is a reply.
                   type: string
                   format: uuid
+                  nullable: true
                 visibility:
                   allOf:
                     - $ref: '#/components/schemas/Visibility'

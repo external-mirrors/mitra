@@ -12,6 +12,7 @@ mod r#move;
 pub mod note;
 mod offer;
 pub mod proposal;
+mod question_vote;
 mod reject;
 mod remove;
 mod undo;

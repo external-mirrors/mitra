@@ -27,7 +27,7 @@ use crate::{
         import_post,
         ApClient,
     },
-    ownership::verify_object_owner,
+    ownership::{parse_attributed_to, verify_object_owner},
 };
 
 use super::{
@@ -37,6 +37,7 @@ use super::{
         AttributedObject,
         AttributedObjectJson,
     },
+    question_vote::{handle_question_vote, is_question_vote},
     Descriptor,
     HandlerError,
     HandlerResult,
@@ -87,7 +88,7 @@ async fn check_unsolicited_message(
 struct CreateNote {
     #[serde(deserialize_with = "deserialize_into_object_id")]
     actor: String,
-    object: AttributedObjectJson,
+    object: JsonValue,
 }
 
 pub async fn handle_create(
@@ -102,6 +103,15 @@ pub async fn handle_create(
         object,
     } = serde_json::from_value(activity.clone())?;
 
+    let author_id = parse_attributed_to(&object["attributedTo"])?;
+    if author_id != activity_actor {
+        return Err(ValidationError("actor is not authorized to create object").into());
+    };
+
+    if is_question_vote(&object) && is_authenticated {
+        return handle_question_vote(config, db_client, object).await;
+    };
+    let object: AttributedObjectJson = serde_json::from_value(object)?;
     if !is_pulled {
         check_unsolicited_message(
             db_client,
@@ -110,10 +120,6 @@ pub async fn handle_create(
         ).await?;
     };
 
-    let author_id = get_object_attributed_to(&object.inner)?;
-    if author_id != activity_actor {
-        return Err(ValidationError("actor is not authorized to create object").into());
-    };
     // Authentication
     match verify_portable_object(&object.value) {
         Ok(_) => {

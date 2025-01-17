@@ -9,6 +9,7 @@ use uuid::Uuid;
 
 use mitra_activitypub::builders::{
     create_question_vote::prepare_create_question_vote,
+    update_note::prepare_update_note,
 };
 use mitra_config::Config;
 use mitra_models::{
@@ -19,7 +20,9 @@ use mitra_models::{
     },
     polls::queries::vote,
     posts::helpers::get_post_by_id_for_view,
+    users::queries::get_user_by_id,
 };
+use mitra_services::media::MediaServer;
 
 use crate::mastodon_api::{
     auth::get_current_user,
@@ -38,7 +41,7 @@ async fn vote_view(
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &mut **get_database_client(&db_pool).await?;
     let current_user = get_current_user(db_client, auth.token()).await?;
-    let post = get_post_by_id_for_view(
+    let mut post = get_post_by_id_for_view(
         db_client,
         Some(&current_user.profile),
         *poll_id,
@@ -65,19 +68,34 @@ async fn vote_view(
         },
         Err(other_error) => return Err(other_error.into()),
     };
+    post.poll = Some(poll_updated.clone());
+    let instance = config.instance();
+    let media_server = MediaServer::new(&config);
     if let Some(ref question_id) = post.object_id {
+        // Remote poll
         let question_owner = post.author.expect_actor_data();
         for vote in votes.iter() {
             // Each vote must be sent separately.
             // Pleroma doesn't support Create activities where object is an array.
             prepare_create_question_vote(
-                &config.instance(),
+                &instance,
                 &current_user,
                 question_id,
                 question_owner,
                 vec![vote.clone()],
             )?.save_and_enqueue(db_client).await?;
         };
+    } else {
+        // Local poll
+        let post_author = get_user_by_id(db_client, post.author.id).await?;
+        prepare_update_note(
+            db_client,
+            &instance,
+            &media_server,
+            &post_author,
+            &post,
+            config.federation.fep_e232_enabled,
+        ).await?.save_and_enqueue(db_client).await?;
     };
     let choices = votes.into_iter().map(|vote| vote.choice).collect();
     let poll = Poll::from_db(&poll_updated, Some(choices));

@@ -11,6 +11,12 @@ pub struct PollResult {
     pub vote_count: u32,
 }
 
+impl PollResult {
+    pub fn new(option_name: &str) -> Self {
+        Self { option_name: option_name.to_string(), vote_count: 0 }
+    }
+}
+
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct PollResults(Vec<PollResult>);
 

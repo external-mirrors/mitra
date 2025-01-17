@@ -266,10 +266,19 @@ pub struct StatusData {
     #[serde(default)]
     pub sensitive: bool,
 
+    #[serde(default, rename = "poll[options][]")]
+    pub poll_options: Vec<String>,
+
+    #[serde(rename = "poll[expires_in]")]
+    pub poll_expires_in: Option<u32>,
+
+    #[serde(rename = "poll[multiple]")]
+    pub poll_multiple: Option<bool>,
+
+    // Pleroma API
     #[serde(default = "default_post_content_type")]
     pub content_type: String,
 
-    // Pleroma API
     pub quote_id: Option<Uuid>,
 }
 

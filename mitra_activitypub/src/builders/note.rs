@@ -31,12 +31,34 @@ use crate::{
         local_tag_collection,
         LocalActorCollection,
     },
-    vocabulary::{DOCUMENT, HASHTAG, IMAGE, LINK, MENTION, NOTE},
+    vocabulary::{
+        DOCUMENT,
+        HASHTAG,
+        IMAGE,
+        LINK,
+        MENTION,
+        NOTE,
+        QUESTION,
+    },
 };
 
 use super::emoji::{build_emoji, Emoji};
 
 const LINK_REL_MISSKEY_QUOTE: &str = "https://misskey-hub.net/ns#_misskey_quote";
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct QuestionReplies {
+    total_items: u32,
+}
+
+#[derive(Serialize)]
+struct QuestionOption {
+    #[serde(rename = "type")]
+    object_type: String,
+    name: String,
+    replies: QuestionReplies,
+}
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -111,6 +133,13 @@ pub struct Note {
     #[serde(skip_serializing_if = "Vec::is_empty")]
     tag: Vec<Tag>,
 
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    one_of: Vec<QuestionOption>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    any_of: Vec<QuestionOption>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    end_time: Option<DateTime<Utc>>,
+
     pub to: Vec<String>,
     pub cc: Vec<String>,
 
@@ -134,6 +163,7 @@ pub fn build_note(
 ) -> Note {
     assert_eq!(authority.server_url(), instance_url);
     let object_id = local_object_id_unified(authority, post.id);
+    let mut object_type = NOTE;
     let actor_id = local_actor_id_unified(authority, &post.author.username);
     let attachments: Vec<_> = post.attachments.iter().map(|db_item| {
         let url = media_server.url_for(&db_item.file_name);
@@ -170,6 +200,28 @@ pub fn build_note(
         },
         Visibility::Conversation => (),
         Visibility::Direct => (),
+    };
+
+    let (one_of, any_of, end_time) = if let Some(ref poll) = post.poll {
+        object_type = QUESTION;
+        let results = poll.results.inner().iter()
+            .map(|result| {
+                QuestionOption {
+                    object_type: NOTE.to_string(),
+                    name: result.option_name.clone(),
+                    replies: QuestionReplies {
+                        total_items: result.vote_count,
+                    },
+                }
+            })
+            .collect();
+        if poll.multiple_choices {
+            (vec![], results, Some(poll.ends_at))
+        } else {
+            (results, vec![], Some(poll.ends_at))
+        }
+    } else {
+        (vec![], vec![], None)
     };
 
     let mut tags = vec![];
@@ -300,7 +352,7 @@ pub fn build_note(
     Note {
         _context: with_context.then(build_default_context),
         id: object_id,
-        object_type: NOTE.to_string(),
+        object_type: object_type.to_string(),
         attachment: attachments,
         attributed_to: actor_id,
         in_reply_to: in_reply_to_object_id,
@@ -308,6 +360,9 @@ pub fn build_note(
         content: post.content.clone(),
         sensitive: post.is_sensitive,
         tag: tags,
+        one_of: one_of,
+        any_of: any_of,
+        end_time: end_time,
         to: primary_audience,
         cc: secondary_audience,
         quote_url: maybe_quote_url,
@@ -358,6 +413,7 @@ mod tests {
     use serde_json::json;
     use uuid::uuid;
     use mitra_models::{
+        polls::types::{Poll, PollResult, PollResults},
         profiles::types::DbActorProfile,
         users::types::User,
     };
@@ -432,6 +488,80 @@ mod tests {
 
         assert_eq!(note.published, post.created_at);
         assert_eq!(note.updated, None);
+    }
+
+    #[test]
+    fn test_build_question() {
+        let author = DbActorProfile::local_for_test("author");
+        let poll = Poll {
+            id: uuid!("11fa64ff-b5a3-47bf-b23d-22b360581c3f"),
+            multiple_choices: false,
+            ends_at: DateTime::parse_from_rfc3339("2023-03-27T12:13:46Z")
+                .unwrap().with_timezone(&Utc),
+            results: PollResults::new(vec![
+                PollResult::new("option 1"),
+                PollResult::new("option 2"),
+            ]),
+        };
+        let post = Post {
+            id: uuid!("11fa64ff-b5a3-47bf-b23d-22b360581c3f"),
+            author,
+            poll: Some(poll),
+            created_at: DateTime::parse_from_rfc3339("2023-02-24T23:36:38Z")
+                .unwrap().with_timezone(&Utc),
+            ..Default::default()
+        };
+        let authority = Authority::server(INSTANCE_URL);
+        let media_server = MediaServer::for_test(INSTANCE_URL);
+        let question = build_note(
+            INSTANCE_HOSTNAME,
+            INSTANCE_URL,
+            &authority,
+            &media_server,
+            &post,
+            true,
+            true,
+        );
+
+        let value = serde_json::to_value(question).unwrap();
+        let expected_value = json!({
+            "@context": [
+                "https://www.w3.org/ns/activitystreams",
+                "https://w3id.org/security/v1",
+                "https://w3id.org/security/data-integrity/v1",
+                {
+                    "Hashtag": "as:Hashtag",
+                    "sensitive": "as:sensitive",
+                    "toot": "http://joinmastodon.org/ns#",
+                    "Emoji": "toot:Emoji",
+                    "litepub": "http://litepub.social/ns#",
+                    "EmojiReact": "litepub:EmojiReact"
+                },
+            ],
+            "id": "https://server.example/objects/11fa64ff-b5a3-47bf-b23d-22b360581c3f",
+            "type": "Question",
+            "attributedTo": "https://server.example/users/author",
+            "content": "",
+            "sensitive": false,
+            "replies": "https://server.example/objects/11fa64ff-b5a3-47bf-b23d-22b360581c3f/replies",
+            "oneOf": [
+                {
+                    "type": "Note",
+                    "name": "option 1",
+                    "replies": {"totalItems": 0},
+                },
+                {
+                    "type": "Note",
+                    "name": "option 2",
+                    "replies": {"totalItems": 0},
+                },
+            ],
+            "endTime": "2023-03-27T12:13:46Z",
+            "published": "2023-02-24T23:36:38Z",
+            "to": [AP_PUBLIC],
+            "cc": ["https://server.example/users/author/followers"],
+        });
+        assert_eq!(value, expected_value);
     }
 
     #[test]

@@ -1,4 +1,5 @@
-/// https://docs.joinmastodon.org/methods/statuses/
+use std::time::Duration;
+
 use actix_web::{
     delete,
     dev::ConnectionInfo,
@@ -43,6 +44,7 @@ use mitra_models::{
         DatabaseConnectionPool,
         DatabaseError,
     },
+    polls::types::{PollData, PollResult},
     posts::helpers::{
         add_user_actions,
         can_create_post,
@@ -115,6 +117,7 @@ use super::types::{
     StatusUpdateData,
 };
 
+// https://docs.joinmastodon.org/methods/statuses/#create
 #[post("")]
 async fn create_status(
     app_state: web::Data<AppState>,
@@ -209,6 +212,24 @@ async fn create_status(
         PostContext::Top { audience }
     };
 
+    // Prepare poll data
+    let maybe_poll_data = if status_data.poll_options.is_empty() {
+        None
+    } else {
+        let duration = status_data.poll_expires_in
+            .ok_or(ValidationError("poll duration must be provided"))?
+            .into();
+        let results = status_data.poll_options.iter()
+            .map(|name| PollResult::new(name))
+            .collect();
+        let poll_data = PollData {
+            multiple_choices: status_data.poll_multiple.unwrap_or(false),
+            ends_at: Utc::now() + Duration::from_secs(duration),
+            results: results,
+        };
+        Some(poll_data)
+    };
+
     // Validate post data
     let post_data = PostCreateData {
         context: context,
@@ -216,7 +237,7 @@ async fn create_status(
         content_source: content_source,
         visibility: visibility,
         is_sensitive: status_data.sensitive,
-        poll: None,
+        poll: maybe_poll_data,
         attachments: status_data.media_ids,
         mentions: mentions,
         tags: hashtags,
@@ -394,6 +415,9 @@ async fn edit_status(
     let post = get_post_by_id(db_client, *status_id).await?;
     if post.author.id != current_user.id {
         return Err(MastodonError::PermissionError);
+    };
+    if post.poll.is_some() {
+        return Err(MastodonError::OperationError("poll can not be edited"));
     };
     let maybe_in_reply_to = if let Some(in_reply_to_id) = post.in_reply_to_id {
         let in_reply_to = get_post_by_id(db_client, in_reply_to_id).await?;
