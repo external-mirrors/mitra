@@ -203,6 +203,7 @@ CREATE TABLE poll_vote (
     poll_id UUID NOT NULL REFERENCES poll (id) ON DELETE CASCADE,
     voter_id UUID NOT NULL REFERENCES actor_profile (id) ON DELETE CASCADE,
     choice VARCHAR(1000) NOT NULL,
+    object_id VARCHAR(2000) UNIQUE,
     UNIQUE (poll_id, voter_id, choice)
 );
 

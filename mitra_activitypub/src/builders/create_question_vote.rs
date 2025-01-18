@@ -126,12 +126,14 @@ mod tests {
                 poll_id: Default::default(),
                 voter_id: Default::default(),
                 choice: "1".to_string(),
+                object_id: None,
             },
             PollVote {
                 id: uuid!("11fa64ff-b5a3-47bf-b23d-22b360581c3e"),
                 poll_id: Default::default(),
                 voter_id: Default::default(),
                 choice: "2".to_string(),
+                object_id: None,
             },
         ];
         let activity = build_create_question_vote(

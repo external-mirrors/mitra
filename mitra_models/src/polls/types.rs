@@ -59,4 +59,5 @@ pub struct PollVote {
     pub poll_id: Uuid,
     pub voter_id: Uuid,
     pub choice: String,
+    pub object_id: Option<String>,
 }

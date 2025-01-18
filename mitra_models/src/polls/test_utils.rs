@@ -17,6 +17,7 @@ pub async fn create_test_local_poll(
     db_client: &mut impl DatabaseClient,
     author_id: Uuid,
     options: &[&str],
+    multiple_choices: bool,
 ) -> Post {
     let results = options.iter()
         .map(|name| PollResult {
@@ -25,7 +26,7 @@ pub async fn create_test_local_poll(
         })
         .collect();
     let poll_data = PollData {
-        multiple_choices: false,
+        multiple_choices: multiple_choices,
         ends_at: Utc::now(),
         results: results,
     };
