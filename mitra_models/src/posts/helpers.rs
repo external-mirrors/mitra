@@ -1,15 +1,18 @@
 use uuid::Uuid;
 
-use crate::bookmarks::queries::find_bookmarked_by_user;
-use crate::conversations::queries::is_conversation_participant;
-use crate::database::{DatabaseClient, DatabaseError};
-use crate::polls::queries::find_votes_by_user;
-use crate::reactions::queries::find_reacted_by_user;
-use crate::relationships::{
-    queries::has_relationship,
-    types::RelationshipType,
+use crate::{
+    bookmarks::queries::find_bookmarked_by_user,
+    conversations::queries::is_conversation_participant,
+    database::{DatabaseClient, DatabaseError},
+    polls::queries::find_votes_by_user,
+    profiles::types::DbActorProfile,
+    reactions::queries::find_reacted_by_user,
+    relationships::{
+        queries::has_relationship,
+        types::RelationshipType,
+    },
+    users::types::{Permission, User},
 };
-use crate::users::types::{Permission, User};
 
 use super::queries::{
     get_post_by_id,
@@ -107,52 +110,52 @@ pub async fn add_user_actions(
 
 pub async fn can_view_post(
     db_client: &impl DatabaseClient,
-    maybe_user: Option<&User>,
+    maybe_viewer: Option<&DbActorProfile>,
     post: &Post,
 ) -> Result<bool, DatabaseError> {
-    let is_author = |user: &User| post.author.id == user.id;
-    let is_mentioned = |user: &User| {
-        post.mentions.iter().any(|profile| profile.id == user.profile.id)
+    let is_author = |viewer: &DbActorProfile| post.author.id == viewer.id;
+    let is_mentioned = |viewer: &DbActorProfile| {
+        post.mentions.iter().any(|profile| profile.id == viewer.id)
     };
     let result = match post.visibility {
         Visibility::Public => true,
         Visibility::Followers => {
-            if let Some(user) = maybe_user {
+            if let Some(viewer) = maybe_viewer {
                 let is_following = has_relationship(
                     db_client,
-                    user.id,
+                    viewer.id,
                     post.author.id,
                     RelationshipType::Follow,
                 ).await?;
-                is_following || is_author(user) || is_mentioned(user)
+                is_following || is_author(viewer) || is_mentioned(viewer)
             } else {
                 false
             }
         },
         Visibility::Subscribers => {
-            if let Some(user) = maybe_user {
+            if let Some(viewer) = maybe_viewer {
                 // Can view only if mentioned
-                is_author(user) || is_mentioned(user)
+                is_author(viewer) || is_mentioned(viewer)
             } else {
                 false
             }
         },
         Visibility::Conversation => {
-            if let Some(user) = maybe_user {
+            if let Some(viewer) = maybe_viewer {
                 let conversation = post.expect_conversation();
                 let is_participant = is_conversation_participant(
                     db_client,
-                    user.id,
+                    viewer.id,
                     conversation.id,
                 ).await?;
-                is_participant || is_author(user) || is_mentioned(user)
+                is_participant || is_author(viewer) || is_mentioned(viewer)
             } else {
                 false
             }
         },
         Visibility::Direct => {
-            if let Some(user) = maybe_user {
-                is_author(user) || is_mentioned(user)
+            if let Some(viewer) = maybe_viewer {
+                is_author(viewer) || is_mentioned(viewer)
             } else {
                 false
             }
@@ -192,11 +195,11 @@ pub async fn get_local_post_by_id(
 
 pub async fn get_post_by_id_for_view(
     db_client: &impl DatabaseClient,
-    maybe_user: Option<&User>,
+    maybe_viewer: Option<&DbActorProfile>,
     post_id: Uuid,
 ) -> Result<Post, DatabaseError> {
     let post = get_post_by_id(db_client, post_id).await?;
-    if !can_view_post(db_client, maybe_user, &post).await? {
+    if !can_view_post(db_client, maybe_viewer, &post).await? {
         return Err(DatabaseError::NotFound("post"));
     };
     Ok(post)
@@ -205,17 +208,20 @@ pub async fn get_post_by_id_for_view(
 #[cfg(test)]
 mod tests {
     use serial_test::serial;
-    use crate::database::test_utils::create_test_database;
-    use crate::posts::{
-        queries::create_post,
-        test_utils::create_test_local_post,
-        types::{PostContext, PostCreateData},
-    };
-    use crate::reactions::test_utils::create_test_local_reaction;
-    use crate::relationships::queries::{follow, subscribe};
-    use crate::users::{
-        test_utils::create_test_user,
-        types::{Role, User},
+    use crate::{
+        database::test_utils::create_test_database,
+        posts::{
+            queries::create_post,
+            test_utils::create_test_local_post,
+            types::{PostContext, PostCreateData},
+        },
+        profiles::test_utils::create_test_remote_profile,
+        reactions::test_utils::create_test_local_reaction,
+        relationships::queries::{follow, subscribe},
+        users::{
+            test_utils::create_test_user,
+            types::{Role, User},
+        },
     };
     use super::*;
 
@@ -316,7 +322,11 @@ mod tests {
             ..Default::default()
         };
         let db_client = &create_test_database().await;
-        let result = can_view_post(db_client, Some(&user), &post).await.unwrap();
+        let result = can_view_post(
+            db_client,
+            Some(&user.profile),
+            &post,
+        ).await.unwrap();
         assert_eq!(result, false);
     }
 
@@ -330,7 +340,11 @@ mod tests {
             ..Default::default()
         };
         let db_client = &create_test_database().await;
-        let result = can_view_post(db_client, Some(&user), &post).await.unwrap();
+        let result = can_view_post(
+            db_client,
+            Some(&user.profile),
+            &post,
+        ).await.unwrap();
         assert_eq!(result, true);
     }
 
@@ -344,7 +358,11 @@ mod tests {
             ..Default::default()
         };
         let db_client = &create_test_database().await;
-        let result = can_view_post(db_client, Some(&user), &post).await.unwrap();
+        let result = can_view_post(
+            db_client,
+            Some(&user.profile),
+            &post,
+        ).await.unwrap();
         assert_eq!(result, true);
     }
 
@@ -374,7 +392,36 @@ mod tests {
             visibility: Visibility::Followers,
             ..Default::default()
         };
-        let result = can_view_post(db_client, Some(&follower), &post).await.unwrap();
+        let result = can_view_post(
+            db_client,
+            Some(&follower.profile),
+            &post,
+        ).await.unwrap();
+        assert_eq!(result, true);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_can_view_post_followers_only_remote_follower() {
+        let db_client = &mut create_test_database().await;
+        let author = create_test_user(db_client, "author").await;
+        let follower = create_test_remote_profile(
+            db_client,
+            "follower",
+            "remote.example",
+            "https://remote.example/actor",
+        ).await;
+        follow(db_client, follower.id, author.id).await.unwrap();
+        let post = Post {
+            author: author.profile,
+            visibility: Visibility::Followers,
+            ..Default::default()
+        };
+        let result = can_view_post(
+            db_client,
+            Some(&follower),
+            &post,
+        ).await.unwrap();
         assert_eq!(result, true);
     }
 
@@ -393,18 +440,20 @@ mod tests {
             mentions: vec![subscriber.profile.clone()],
             ..Default::default()
         };
-        assert_eq!(
-            can_view_post(db_client, None, &post).await.unwrap(),
-            false,
-        );
-        assert_eq!(
-            can_view_post(db_client, Some(&follower), &post).await.unwrap(),
-            false,
-        );
-        assert_eq!(
-            can_view_post(db_client, Some(&subscriber), &post).await.unwrap(),
-            true,
-        );
+        let can_view = can_view_post(db_client, None, &post).await.unwrap();
+        assert_eq!(can_view, false);
+        let can_view = can_view_post(
+            db_client,
+            Some(&follower.profile),
+            &post,
+        ).await.unwrap();
+        assert_eq!(can_view, false);
+        let can_view = can_view_post(
+            db_client,
+            Some(&subscriber.profile),
+            &post,
+        ).await.unwrap();
+        assert_eq!(can_view, true);
     }
 
     #[tokio::test]
@@ -431,22 +480,26 @@ mod tests {
             visibility: Visibility::Conversation,
             ..Default::default()
         };
-        assert_eq!(
-            can_view_post(db_client, None, &post).await.unwrap(),
-            false,
-        );
-        assert_eq!(
-            can_view_post(db_client, Some(&author), &post).await.unwrap(),
-            true,
-        );
-        assert_eq!(
-            can_view_post(db_client, Some(&root_follower), &post).await.unwrap(),
-            true,
-        );
-        assert_eq!(
-            can_view_post(db_client, Some(&author_follower), &post).await.unwrap(),
-            false,
-        );
+        let can_view = can_view_post(db_client, None, &post).await.unwrap();
+        assert_eq!(can_view, false);
+        let can_view = can_view_post(
+            db_client,
+            Some(&author.profile),
+            &post,
+        ).await.unwrap();
+        assert_eq!(can_view, true);
+        let can_view = can_view_post(
+            db_client,
+            Some(&root_follower.profile),
+            &post,
+        ).await.unwrap();
+        assert_eq!(can_view, true);
+        let can_view = can_view_post(
+            db_client,
+            Some(&author_follower.profile),
+            &post,
+        ).await.unwrap();
+        assert_eq!(can_view, false);
     }
 
     #[test]

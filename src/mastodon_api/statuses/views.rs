@@ -138,7 +138,7 @@ async fn create_status(
     let maybe_in_reply_to = if let Some(in_reply_to_id) = status_data.in_reply_to_id {
         let in_reply_to = match get_post_by_id_for_view(
             db_client,
-            Some(&current_user),
+            Some(&current_user.profile),
             in_reply_to_id,
         ).await {
             Ok(post) => post,
@@ -348,7 +348,7 @@ async fn get_status(
     };
     let post = get_post_by_id_for_view(
         db_client,
-        maybe_current_user.as_ref(),
+        maybe_current_user.as_ref().map(|user| &user.profile),
         *status_id,
     ).await?;
 
@@ -604,7 +604,7 @@ async fn favourite(
     let current_user = get_current_user(db_client, auth.token()).await?;
     let mut post = get_post_by_id_for_view(
         db_client,
-        Some(&current_user),
+        Some(&current_user.profile),
         *status_id,
     ).await?;
     let reaction_data = ReactionData {
@@ -666,7 +666,7 @@ async fn unfavourite(
     let current_user = get_current_user(db_client, auth.token()).await?;
     let mut post = get_post_by_id_for_view(
         db_client,
-        Some(&current_user),
+        Some(&current_user.profile),
         *status_id,
     ).await?;
     let maybe_reaction_deleted = match delete_reaction(
@@ -803,7 +803,7 @@ async fn bookmark_view(
     let current_user = get_current_user(db_client, auth.token()).await?;
     let post = get_post_by_id_for_view(
         db_client,
-        Some(&current_user),
+        Some(&current_user.profile),
         *status_id,
     ).await?;
     match create_bookmark(db_client, current_user.id, post.id).await {
@@ -835,7 +835,7 @@ async fn unbookmark_view(
     let current_user = get_current_user(db_client, auth.token()).await?;
     let post = get_post_by_id_for_view(
         db_client,
-        Some(&current_user),
+        Some(&current_user.profile),
         *status_id,
     ).await?;
     match delete_bookmark(db_client, current_user.id, post.id).await {
@@ -1007,7 +1007,7 @@ async fn load_conversation(
     };
     let post = get_post_by_id_for_view(
         db_client,
-        Some(&current_user),
+        Some(&current_user.profile),
         *status_id,
     ).await?;
     let job_data = if let Some(object_id) = post.object_id {

@@ -99,7 +99,7 @@ pub async fn handle_announce(
             log::warn!("repost already exists: {}", activity.id);
             Ok(None)
         },
-        // May return "post not found" error if post if not public
+        // May return "post not found" error if post is not public
         Err(other_error) => Err(other_error.into()),
     }
 }

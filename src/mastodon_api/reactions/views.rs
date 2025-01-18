@@ -64,7 +64,7 @@ async fn create_reaction_view(
     let current_user = get_current_user(db_client, auth.token()).await?;
     let mut post = get_post_by_id_for_view(
         db_client,
-        Some(&current_user),
+        Some(&current_user.profile),
         status_id,
     ).await?;
     let (content, maybe_emoji) = if is_single_character(&content) {
@@ -138,7 +138,7 @@ async fn delete_reaction_view(
     let current_user = get_current_user(db_client, auth.token()).await?;
     let mut post = get_post_by_id_for_view(
         db_client,
-        Some(&current_user),
+        Some(&current_user.profile),
         status_id,
     ).await?;
     let content = if is_single_character(&content) {

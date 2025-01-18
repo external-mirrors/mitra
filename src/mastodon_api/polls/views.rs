@@ -40,7 +40,7 @@ async fn vote_view(
     let current_user = get_current_user(db_client, auth.token()).await?;
     let post = get_post_by_id_for_view(
         db_client,
-        Some(&current_user),
+        Some(&current_user.profile),
         *poll_id,
     ).await?;
     let poll = post.poll.ok_or(MastodonError::NotFoundError("poll"))?;

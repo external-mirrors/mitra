@@ -298,7 +298,11 @@ pub async fn search(
                 &url,
             ).await?;
             if let Some(post) = maybe_post {
-                if can_view_post(db_client, Some(current_user), &post).await? {
+                if can_view_post(
+                    db_client,
+                    Some(&current_user.profile),
+                    &post,
+                ).await? {
                     posts = vec![post];
                 };
             } else {
