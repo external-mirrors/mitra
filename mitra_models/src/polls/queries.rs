@@ -10,6 +10,7 @@ use crate::{
         DatabaseError,
         DatabaseTypeError,
     },
+    profiles::types::DbActorProfile,
 };
 
 use super::types::{Poll, PollData, PollResult, PollResults, PollVote};
@@ -288,6 +289,25 @@ pub async fn vote(
     let poll = row.try_get("poll")?;
     transaction.commit().await?;
     Ok((poll, votes))
+}
+
+pub async fn get_voters(
+    db_client: &impl DatabaseClient,
+    poll_id: Uuid,
+) -> Result<Vec<DbActorProfile>, DatabaseError> {
+    let rows = db_client.query(
+        "
+        SELECT DISTINCT actor_profile
+        FROM poll_vote
+        JOIN actor_profile ON poll_vote.voter_id = actor_profile.id
+        WHERE poll_vote.poll_id = $1
+        ",
+        &[&poll_id],
+    ).await?;
+    let profiles = rows.iter()
+        .map(|row| row.try_get("actor_profile"))
+        .collect::<Result<_, _>>()?;
+    Ok(profiles)
 }
 
 pub async fn find_votes_by_user(
@@ -590,6 +610,37 @@ mod tests {
             HashSet::from([0]),
         ).await.err().unwrap();
         assert!(matches!(error, DatabaseError::AlreadyExists("poll vote")));
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_get_voters() {
+        let db_client = &mut create_test_database().await;
+        let author = create_test_user(db_client, "author").await;
+        let voter_1 = create_test_user(db_client, "voter_1").await;
+        let voter_2 = create_test_user(db_client, "voter_2").await;
+        let option_1 = "1";
+        let option_2 = "2";
+        let post = create_test_local_poll(
+            db_client,
+            author.id,
+            &[option_1, option_2],
+            false,
+        ).await;
+        vote(
+            db_client,
+            post.id,
+            voter_1.id,
+            HashSet::from([0]),
+        ).await.unwrap();
+        vote(
+            db_client,
+            post.id,
+            voter_2.id,
+            HashSet::from([1]),
+        ).await.unwrap();
+        let voters = get_voters(db_client, post.id).await.unwrap();
+        assert_eq!(voters.len(), 2);
     }
 
     #[tokio::test]

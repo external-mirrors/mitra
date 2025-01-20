@@ -10,8 +10,11 @@ use apx_sdk::{
 use mitra_models::{
     database::{DatabaseClient, DatabaseError},
     attachments::types::AttachmentType,
-    posts::queries::get_post_author,
-    posts::types::{Post, Visibility},
+    polls::queries::get_voters,
+    posts::{
+        queries::get_post_author,
+        types::{Post, Visibility},
+    },
     profiles::types::{DbActor, WebfingerHostname},
     relationships::queries::{get_followers, get_subscribers},
 };
@@ -398,6 +401,10 @@ pub async fn get_note_recipients(
         audience.push(in_reply_to_author);
     };
     audience.extend(post.mentions.clone());
+    if let Some(ref poll) = post.poll {
+        let voters = get_voters(db_client, poll.id).await?;
+        audience.extend(voters);
+    };
 
     let mut recipients = vec![];
     for profile in audience {
