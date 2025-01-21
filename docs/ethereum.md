@@ -2,11 +2,13 @@
 
 ## Sign-in with Ethereum Wallet
 
-This feature can be enabled by adding `eip4361_ethereum` to `authentication_methods` array in Mitra configuration file:
+This feature can be enabled by adding `eip4361` to `authentication_methods` array in Mitra configuration file:
 
+```yaml
 authentication_methods:
   - password
-  - eip4361_ethereum
+  - eip4361
+```
 
 ## Verify Ethereum Keys on Profile
 
