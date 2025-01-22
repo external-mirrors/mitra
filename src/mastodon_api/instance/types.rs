@@ -15,6 +15,7 @@ use mitra_config::{
 use mitra_models::users::types::User;
 use mitra_utils::markdown::markdown_to_html;
 use mitra_validators::{
+    polls::{POLL_OPTION_COUNT_MAX, POLL_OPTION_NAME_LENGTH_MAX},
     posts::ATTACHMENT_LIMIT,
     profiles::{
         FIELD_LOCAL_LIMIT,
@@ -59,9 +60,29 @@ struct MediaLimits {
 }
 
 #[derive(Serialize)]
+struct PollLimits {
+    max_options: usize,
+    max_characters_per_option: usize,
+    min_expiration: u32,
+    max_expiration: u32,
+}
+
+impl PollLimits {
+    fn new() -> Self {
+        Self {
+            max_options: POLL_OPTION_COUNT_MAX,
+            max_characters_per_option: POLL_OPTION_NAME_LENGTH_MAX,
+            min_expiration: 0,
+            max_expiration: u32::MAX,
+        }
+    }
+}
+
+#[derive(Serialize)]
 struct Configuration {
     statuses: StatusLimits,
     media_attachments: MediaLimits,
+    polls: PollLimits,
 }
 
 #[derive(Serialize)]
@@ -217,6 +238,7 @@ impl InstanceInfo {
                         .map(|media_type| media_type.to_string()).collect(),
                     image_size_limit: config.limits.media.file_size_limit,
                 },
+                polls: PollLimits::new(),
             },
             contact_account: maybe_admin.map(|user| Account::from_profile(
                 &config.instance().url(),
@@ -263,6 +285,7 @@ struct Usage {
 struct ConfigurationV2 {
     statuses: StatusLimits,
     media_attachments: MediaLimits,
+    polls: PollLimits,
 }
 
 #[derive(Serialize)]
@@ -323,6 +346,7 @@ impl InstanceInfoV2 {
                         .map(|media_type| media_type.to_string()).collect(),
                     image_size_limit: config.limits.media.file_size_limit,
                 },
+                polls: PollLimits::new(),
             },
             registrations: Registrations {
                 enabled:
