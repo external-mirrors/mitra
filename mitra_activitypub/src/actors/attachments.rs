@@ -36,7 +36,6 @@ use mitra_validators::{
 use crate::{
     authority::Authority,
     constants::{
-        CHAT_LINK_RELATION_TYPE,
         PAYMENT_LINK_RELATION_TYPE,
     },
     contexts::W3ID_VALUEFLOWS_CONTEXT,
@@ -185,10 +184,10 @@ pub fn attach_payment_option(
 pub enum LinkAttachment {
     PaymentLink(DbPaymentLink),
     Proposal(DbPaymentLink),
-    ChatLink(ExtraField),
+    OtherLink(ExtraField),
 }
 
-/// https://codeberg.org/fediverse/fep/src/branch/main/fep/fb2a/fep-fb2a.md
+// https://codeberg.org/fediverse/fep/src/branch/main/fep/fb2a/fep-fb2a.md
 pub fn parse_link(
     attachment: &JsonValue,
 ) -> Result<LinkAttachment, ValidationError> {
@@ -217,16 +216,15 @@ pub fn parse_link(
         } else {
             LinkAttachment::PaymentLink(db_payment_link)
         }
-    } else if link.rel.contains(&CHAT_LINK_RELATION_TYPE.to_string()) {
-        // https://codeberg.org/fediverse/fep/src/branch/main/fep/1970/fep-1970.md
-        let field = ExtraField {
+    } else {
+        let mut field = ExtraField {
             name: link.name,
             value: link.href,
             value_source: None,
         };
-        LinkAttachment::ChatLink(field)
-    } else {
-        return Err(ValidationError("unknown link type"));
+        clean_extra_field(&mut field);
+        validate_extra_field(&field)?;
+        LinkAttachment::OtherLink(field)
     };
     Ok(result)
 }
@@ -269,7 +267,7 @@ pub fn parse_property_value(
     Ok(field)
 }
 
-/// https://codeberg.org/fediverse/fep/src/commit/391099a97cd1ad9388e83ffff8ed1f7be5203b7b/feps/fep-fb2a.md
+// https://codeberg.org/fediverse/fep/src/branch/main/fep/fb2a/fep-fb2a.md
 pub fn parse_metadata_field(
     attachment: &JsonValue,
 ) -> Result<ExtraField, ValidationError> {
@@ -403,10 +401,12 @@ mod tests {
             "name": "Test",
             "href": "https://test.example",
         });
-        let error = parse_link(&attachment_value).err().unwrap();
-        assert!(matches!(
-            error,
-            ValidationError("unknown link type"),
-        ));
+        let attachment = parse_link(&attachment_value).unwrap();
+        let field = match attachment {
+            LinkAttachment::OtherLink(field) => field,
+            _ => panic!("not a generic link"),
+        };
+        assert_eq!(field.name, "Test");
+        assert_eq!(field.value, "https://test.example");
     }
 }

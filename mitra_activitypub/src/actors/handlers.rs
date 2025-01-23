@@ -434,7 +434,7 @@ fn parse_attachments(actor: &ValidatedActor) -> (
                             payment_options.push(option);
                         };
                     },
-                    Ok(LinkAttachment::ChatLink(field)) => {
+                    Ok(LinkAttachment::OtherLink(field)) => {
                         extra_fields.push(field);
                     },
                     Err(error) => log_error(attachment_type, error),
