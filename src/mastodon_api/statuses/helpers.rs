@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use actix_web::{http::Uri, HttpResponse};
 use uuid::Uuid;
 
@@ -161,7 +163,7 @@ pub async fn prepare_mentions(
     if let Some(in_reply_to) = maybe_in_reply_to {
         if in_reply_to.author.id != author_id {
             // Mention the author of the parent post
-            mentions.push(in_reply_to.author.id);
+            mentions.insert(0, in_reply_to.author.id);
         };
     };
     if visibility == Visibility::Subscribers {
@@ -173,9 +175,9 @@ pub async fn prepare_mentions(
             .into_iter().map(|profile| profile.id);
         mentions.extend(subscribers);
     };
-    // Remove duplicate mentions
-    mentions.sort();
-    mentions.dedup();
+    // Remove duplicate mentions (order is preserved)
+    let mut mention_set = HashSet::new();
+    mentions.retain(|mention| mention_set.insert(*mention));
     Ok(mentions)
 }
 

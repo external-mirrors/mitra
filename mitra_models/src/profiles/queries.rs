@@ -949,7 +949,7 @@ pub async fn find_empty_profiles(
                 WHERE owner_id = actor_profile.id
             )
             AND NOT EXISTS (
-                SELECT 1 FROM mention
+                SELECT 1 FROM post_mention
                 WHERE profile_id = actor_profile.id
             )
             AND NOT EXISTS (

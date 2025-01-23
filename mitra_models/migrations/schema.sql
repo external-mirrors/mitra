@@ -240,7 +240,8 @@ CREATE TABLE media_attachment (
 
 CREATE INDEX media_attachment_post_id_btree ON media_attachment (post_id);
 
-CREATE TABLE mention (
+CREATE TABLE post_mention (
+    id INTEGER UNIQUE GENERATED ALWAYS AS IDENTITY,
     post_id UUID NOT NULL REFERENCES post (id) ON DELETE CASCADE,
     profile_id UUID NOT NULL REFERENCES actor_profile (id) ON DELETE CASCADE,
     PRIMARY KEY (post_id, profile_id)

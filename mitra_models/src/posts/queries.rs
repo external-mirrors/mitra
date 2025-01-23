@@ -77,8 +77,11 @@ async fn create_post_mentions(
 ) -> Result<Vec<DbActorProfile>, DatabaseError> {
     let mentions_rows = db_client.query(
         "
-        INSERT INTO mention (post_id, profile_id)
-        SELECT $1, actor_profile.id FROM actor_profile WHERE id = ANY($2)
+        INSERT INTO post_mention (post_id, profile_id)
+        SELECT $1, profile_id
+        FROM unnest($2::uuid[]) WITH ORDINALITY AS mention(profile_id, rank)
+        JOIN actor_profile ON profile_id = actor_profile.id
+        ORDER BY rank
         RETURNING (
             SELECT actor_profile FROM actor_profile
             WHERE actor_profile.id = profile_id
@@ -444,7 +447,7 @@ pub async fn update_post(
     };
     let old_mentions_rows = transaction.query(
         "
-        DELETE FROM mention WHERE post_id = $1
+        DELETE FROM post_mention WHERE post_id = $1
         RETURNING profile_id
         ",
         &[&db_post.id],
@@ -567,9 +570,10 @@ const RELATED_ATTACHMENTS: &str = "
 const RELATED_MENTIONS: &str = "
     ARRAY(
         SELECT actor_profile
-        FROM mention
-        JOIN actor_profile ON mention.profile_id = actor_profile.id
+        FROM post_mention
+        JOIN actor_profile ON post_mention.profile_id = actor_profile.id
         WHERE post_id = post.id
+        ORDER BY post_mention.id
     ) AS mentions";
 
 const RELATED_TAGS: &str = "
@@ -629,7 +633,7 @@ fn build_visibility_filter() -> String {
             OR post.visibility = {visibility_public}
             -- covers direct messages and subscribers-only posts
             OR EXISTS (
-                SELECT 1 FROM mention
+                SELECT 1 FROM post_mention
                 WHERE post_id = post.id AND profile_id = $current_user_id
             )
             OR EXISTS (
@@ -774,7 +778,7 @@ pub async fn get_home_timeline(
                     )
                 )
                 OR EXISTS (
-                    SELECT 1 FROM mention
+                    SELECT 1 FROM post_mention
                     WHERE post_id = post.id AND profile_id = $current_user_id
                 )
             )
@@ -871,7 +875,7 @@ pub async fn get_direct_timeline(
             (
                 post.author_id = $current_user_id
                 OR EXISTS (
-                    SELECT 1 FROM mention
+                    SELECT 1 FROM post_mention
                     WHERE post_id = post.id AND profile_id = $current_user_id
                 )
             )
@@ -1523,10 +1527,10 @@ pub async fn find_extraneous_posts(
             -- no local mentions in any post from context
             AND NOT EXISTS (
                 SELECT 1
-                FROM mention
-                JOIN actor_profile ON mention.profile_id = actor_profile.id
+                FROM post_mention
+                JOIN actor_profile ON post_mention.profile_id = actor_profile.id
                 WHERE
-                    mention.post_id = ANY(context.posts)
+                    post_mention.post_id = ANY(context.posts)
                     AND (
                         actor_profile.user_id IS NOT NULL
                         OR actor_profile.portable_user_id IS NOT NULL
@@ -1725,10 +1729,10 @@ pub async fn search_posts(
                 )
                 -- posts where the current user is mentioned
                 OR EXISTS (
-                    SELECT 1 FROM mention
+                    SELECT 1 FROM post_mention
                     WHERE
-                        mention.post_id = post.id
-                        AND mention.profile_id = $2
+                        post_mention.post_id = post.id
+                        AND post_mention.profile_id = $2
                 )
             )
         ORDER BY post.id DESC
@@ -1806,15 +1810,20 @@ mod tests {
     async fn test_create_post() {
         let db_client = &mut create_test_database().await;
         let author = create_test_user(db_client, "test").await;
+        let mention_1 = create_test_user(db_client, "mention_1").await;
+        let mention_2 = create_test_user(db_client, "mention_2").await;
         let post_data = PostCreateData {
             content: "test post".to_string(),
+            mentions: vec![mention_2.id, mention_1.id],
             ..Default::default()
         };
         let post = create_post(db_client, author.id, post_data).await.unwrap();
         assert_eq!(post.content, "test post");
         assert_eq!(post.author.id, author.id);
         assert_eq!(post.attachments.is_empty(), true);
-        assert_eq!(post.mentions.is_empty(), true);
+        assert_eq!(post.mentions[0].id, mention_2.id);
+        assert_eq!(post.mentions[1].id, mention_1.id);
+        assert_eq!(post.mentions.len(), 2);
         assert_eq!(post.tags.is_empty(), true);
         assert_eq!(post.links.is_empty(), true);
         assert_eq!(post.emojis.is_empty(), true);
