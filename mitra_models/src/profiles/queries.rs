@@ -451,19 +451,23 @@ pub async fn get_profiles_paginated(
 
 pub async fn get_profiles_by_ids(
     db_client: &impl DatabaseClient,
-    profiles_ids: Vec<Uuid>,
+    profiles_ids: &[Uuid],
 ) -> Result<Vec<DbActorProfile>, DatabaseError> {
     let rows = db_client.query(
         "
         SELECT actor_profile
-        FROM actor_profile
-        WHERE id = ANY($1)
+        FROM unnest($1::uuid[]) WITH ORDINALITY AS profile_id(id, rank)
+        JOIN actor_profile USING (id)
+        ORDER BY rank
         ",
         &[&profiles_ids],
     ).await?;
-    let profiles = rows.iter()
+    let profiles: Vec<_> = rows.iter()
         .map(|row| row.try_get("actor_profile"))
         .collect::<Result<_, _>>()?;
+    if profiles.len() != profiles_ids.len() {
+        return Err(DatabaseError::NotFound("profile"));
+    };
     Ok(profiles)
 }
 

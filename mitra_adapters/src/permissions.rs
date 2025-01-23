@@ -39,10 +39,7 @@ pub async fn filter_mentions(
     author: &DbActorProfile,
     maybe_in_reply_to_id: Option<Uuid>,
 ) -> Result<Vec<DbActorProfile>, DatabaseError> {
-    let profiles = get_profiles_by_ids(db_client, mentions.clone()).await?;
-    if profiles.len() != mentions.len() {
-        return Err(DatabaseError::NotFound("profile"));
-    };
+    let profiles = get_profiles_by_ids(db_client, &mentions).await?;
 
     // Conversation participants should not be removed
     let participants = if let Some(in_reply_to_id) = maybe_in_reply_to_id {
