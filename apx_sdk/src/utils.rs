@@ -12,27 +12,62 @@ use apx_core::{
 
 use super::constants::AP_PUBLIC;
 
-// AP requires actor to have inbox and outbox,
-// but `outbox` property is not always present.
-// https://www.w3.org/TR/activitypub/#actor-objects
-pub fn is_actor(value: &JsonValue) -> bool {
-    value["inbox"].as_str().is_some()
+enum CoreType {
+    Object,
+    Link,
+    Actor,
+    Activity,
+    Collection,
 }
 
-// Activities must have `actor` property
+fn get_core_type(value: &JsonValue) -> CoreType {
+    if !value["inbox"].is_null() {
+        // AP requires actor to have inbox and outbox,
+        // but `outbox` property is not always present.
+        // https://www.w3.org/TR/activitypub/#actor-objects
+        CoreType::Actor
+    }
+    else if !value["actor"].is_null() && value["attributedTo"].is_null() {
+        // Activities must have an `actor` property:
+        // https://www.w3.org/TR/activitystreams-vocabulary/#dfn-actor
+        // However, Pleroma adds 'actor' property to Note objects
+        // https://git.pleroma.social/pleroma/pleroma/-/issues/3269
+        // https://akkoma.dev/AkkomaGang/akkoma/issues/770
+        CoreType::Activity
+    }
+    else if !value["href"].is_null() {
+        // `href` may only appear in Link objects:
+        // https://www.w3.org/TR/activitystreams-vocabulary/#dfn-href
+        CoreType::Link
+    }
+    else if
+        !value["items"].is_null() ||
+        !value["orderedItems"].is_null() ||
+        !value["totalItems"].is_null()
+    {
+        // `items` may only appear in Collection objects:
+        // https://www.w3.org/TR/activitystreams-vocabulary/#dfn-items
+        CoreType::Collection
+    }
+    else {
+        CoreType::Object
+    }
+}
+
+pub fn is_actor(value: &JsonValue) -> bool {
+    matches!(get_core_type(value), CoreType::Actor)
+}
+
 pub fn is_activity(value: &JsonValue) -> bool {
-    // Pleroma adds 'actor' property to Note objects
-    // https://git.pleroma.social/pleroma/pleroma/-/issues/3269
-    // https://akkoma.dev/AkkomaGang/akkoma/issues/770
-    !value["actor"].is_null() && value["attributedTo"].is_null()
+    matches!(get_core_type(value), CoreType::Activity)
 }
 
 pub fn is_collection(value: &JsonValue) -> bool {
-    !value["items"].is_null() || !value["orderedItems"].is_null()
+    matches!(get_core_type(value), CoreType::Collection)
 }
 
 pub fn is_object(value: &JsonValue) -> bool {
-    !is_actor(value) && !is_activity(value) && !is_collection(value)
+    matches!(get_core_type(value), CoreType::Object | CoreType::Link)
 }
 
 pub fn key_id_to_actor_id(key_id: &str) -> Result<String, &'static str> {
