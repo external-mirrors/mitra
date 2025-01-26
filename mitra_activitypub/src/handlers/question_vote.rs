@@ -34,13 +34,16 @@ struct QuestionVote {
 }
 
 pub fn is_question_vote(object: &JsonValue) -> bool {
-    let content_empty = object["content"].is_null() ||
+    let mut is_content_empty = object["content"].is_null();
+    if object["content"].as_str() == Some("") {
         // Workaround for Streams
-        object["content"].as_str() == Some("");
+        log::warn!("vote content is not null");
+        is_content_empty = true;
+    };
     object["type"].as_str() == Some(NOTE) &&
         object["inReplyTo"].is_string() &&
         object["name"].is_string() &&
-        content_empty
+        is_content_empty
 }
 
 pub async fn handle_question_vote(

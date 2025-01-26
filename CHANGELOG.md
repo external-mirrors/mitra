@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## Changed
+
+- Write warning to log when `content` of a vote is not null.
+
 ## Fixed
 
 - Change poll max expiration time to avoid integer overflow in Mastodon clients.
