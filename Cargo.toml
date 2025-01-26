@@ -74,6 +74,8 @@ chrono = { version = "0.4.31", default-features = false, features = ["std", "ser
 emojis = "0.6.1"
 # Used to work with hexadecimal strings
 hex = { version = "0.4.3" }
+# Provides order-preserving map
+indexmap = "2.2.3"
 # Used for logging
 log = "0.4.20"
 # Used to determine the number of CPUs on the system

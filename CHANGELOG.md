@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## Fixed
 
 - Change poll max expiration time to avoid integer overflow in Mastodon clients.
+- Preserve order of mentions in local posts.
 
 ## [3.15.0] - 2025-01-24
 

@@ -2066,6 +2066,7 @@ dependencies = [
  "chrono",
  "emojis",
  "hex",
+ "indexmap",
  "log",
  "mitra_activitypub",
  "mitra_adapters",

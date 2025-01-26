@@ -1,5 +1,4 @@
-use std::collections::HashMap;
-
+use indexmap::IndexMap;
 use regex::{Captures, Regex};
 
 use apx_core::urls::encode_hostname;
@@ -69,11 +68,11 @@ pub async fn find_mentioned_profiles(
     db_client: &impl DatabaseClient,
     instance_hostname: &str,
     text: &str,
-) -> Result<HashMap<String, DbActorProfile>, DatabaseError> {
+) -> Result<IndexMap<String, DbActorProfile>, DatabaseError> {
     let mentions = find_mentions(instance_hostname, text);
     // If acct doesn't exist in database, mention is ignored
     let profiles = get_profiles_by_accts(db_client, mentions).await?;
-    let mut mention_map: HashMap<String, DbActorProfile> = HashMap::new();
+    let mut mention_map: IndexMap<String, DbActorProfile> = IndexMap::new();
     for profile in profiles {
         let acct = profile.acct.as_ref()
             .expect("acct should be present")
@@ -84,7 +83,7 @@ pub async fn find_mentioned_profiles(
 }
 
 pub fn replace_mentions(
-    mention_map: &HashMap<String, DbActorProfile>,
+    mention_map: &IndexMap<String, DbActorProfile>,
     instance_hostname: &str,
     instance_url: &str,
     text: &str,
@@ -188,7 +187,7 @@ mod tests {
                 ..Default::default()
             },
         );
-        let mention_map = HashMap::from([
+        let mention_map = IndexMap::from([
             ("user1".to_string(), profile_1),
             ("user_x".to_string(), profile_2),
             ("user2@server2.com".to_string(), profile_3),
