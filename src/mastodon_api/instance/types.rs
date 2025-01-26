@@ -73,7 +73,8 @@ impl PollLimits {
             max_options: POLL_OPTION_COUNT_MAX,
             max_characters_per_option: POLL_OPTION_NAME_LENGTH_MAX,
             min_expiration: 0,
-            max_expiration: u32::MAX,
+            // Not using u32::MAX to avoid integer overflow in clients
+            max_expiration: 2_u32.pow(30),
         }
     }
 }
