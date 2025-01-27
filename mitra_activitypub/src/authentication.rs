@@ -26,6 +26,7 @@ use apx_core::{
         Method,
         Uri,
     },
+    http_url::HttpUrl,
     json_signatures::{
         proofs::ProofType,
         verify::{
@@ -57,10 +58,12 @@ use mitra_models::{
 use mitra_validators::errors::ValidationError;
 
 use crate::{
+    actors::keys::{Multikey, PublicKeyPem},
     errors::HandlerError,
     identifiers::canonicalize_id,
     importers::{ActorIdResolver, ApClient},
     ownership::{get_object_id, is_same_origin},
+    vocabulary::MULTIKEY,
 };
 
 const AUTHENTICATION_FETCHER_TIMEOUT: u64 = 10;
@@ -96,6 +99,9 @@ pub enum AuthenticationError {
 
     #[error("{0}")]
     ActorError(&'static str),
+
+    #[error("can't retrieve key")]
+    KeyRetrievalError(&'static str),
 
     #[error("invalid RSA public key")]
     InvalidRsaPublicKey(#[from] RsaSerializationError),
@@ -217,7 +223,42 @@ fn get_signer_rsa_key(
     Ok(rsa_public_key)
 }
 
+async fn get_signing_key(
+    config: &Config,
+    db_client: &impl DatabaseClient,
+    key_id: &str,
+) -> Result<PublicKey, AuthenticationError> {
+    let signer_id = key_id_to_actor_id(key_id)
+        .map_err(|_| AuthenticationError::InvalidKeyId)?;
+    let canonical_signer_id = canonicalize_id(&signer_id)
+        .map_err(|_| AuthenticationError::ActorError("invalid actor ID"))?;
+    let public_key = match get_remote_profile_by_actor_id(
+        db_client,
+        &canonical_signer_id.to_string(),
+    ).await {
+        Ok(profile) => get_signer_key(&profile, key_id)?,
+        Err(DatabaseError::NotFound(_)) => {
+            let mut ap_client = ApClient::new(config, db_client).await?;
+            ap_client.instance.federation.fetcher_timeout = AUTHENTICATION_FETCHER_TIMEOUT;
+            let key_value: JsonValue = ap_client.fetch_object(key_id).await
+                .map_err(|_| AuthenticationError::KeyRetrievalError("can't fetch key"))?;
+            if key_value["type"].as_str() == Some(MULTIKEY) {
+                let key: Multikey = serde_json::from_value(key_value)
+                    .map_err(|_| AuthenticationError::KeyRetrievalError("invalid key document"))?;
+                key.public_key()?
+            } else {
+                let key: PublicKeyPem = serde_json::from_value(key_value)
+                    .map_err(|_| AuthenticationError::KeyRetrievalError("invalid key document"))?;
+                key.public_key()?
+            }
+        },
+        Err(other_error) => return Err(other_error.into()),
+    };
+    Ok(public_key)
+}
+
 /// Verifies HTTP signature and returns signer
+#[allow(clippy::too_many_arguments)]
 pub async fn verify_signed_request(
     config: &Config,
     db_client: &mut impl DatabaseClient,
@@ -226,7 +267,8 @@ pub async fn verify_signed_request(
     request_headers: HeaderMap,
     maybe_content_digest: Option<ContentDigest>,
     no_fetch: bool,
-) -> Result<DbActorProfile, AuthenticationError> {
+    only_key: bool,
+) -> Result<(HttpUrl, Option<DbActorProfile>), AuthenticationError> {
     let signature_data = match parse_http_signature(
         &request_method,
         &request_uri,
@@ -238,22 +280,32 @@ pub async fn verify_signed_request(
         },
         Err(other_error) => return Err(other_error.into()),
     };
-    // TODO: FEP-EF61: support 'ap' URLs
-    let signer_id = key_id_to_actor_id(signature_data.key_id.as_str())
-        .map_err(|_| AuthenticationError::InvalidKeyId)?;
-    let signer = get_signer(config, db_client, &signer_id, no_fetch).await?;
-    let signer_key = get_signer_key(
-        &signer,
-        signature_data.key_id.as_str(),
-    )?;
+    let (public_key, maybe_signer) = if only_key {
+        let public_key = get_signing_key(
+            config,
+            db_client,
+            signature_data.key_id.as_str(),
+        ).await?;
+        (public_key, None)
+    } else {
+        // TODO: FEP-EF61: support 'ap' URLs
+        let signer_id = key_id_to_actor_id(signature_data.key_id.as_str())
+            .map_err(|_| AuthenticationError::InvalidKeyId)?;
+        let signer = get_signer(config, db_client, &signer_id, no_fetch).await?;
+        let signer_key = get_signer_key(
+            &signer,
+            signature_data.key_id.as_str(),
+        )?;
+        (signer_key, Some(signer))
+    };
 
     verify_http_signature(
         &signature_data,
-        &signer_key,
+        &public_key,
         maybe_content_digest,
     )?;
 
-    Ok(signer)
+    Ok((signature_data.key_id, maybe_signer))
 }
 
 /// Verifies JSON signature on activity and returns actor

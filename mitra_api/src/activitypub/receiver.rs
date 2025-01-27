@@ -118,8 +118,10 @@ pub async fn receive_activity(
         Some(activity_digest),
         // Don't fetch signer if this is Delete(Person) activity
         is_self_delete,
+        false, // not only key
     ).await {
-        Ok(request_signer) => {
+        Ok((_key_id, maybe_request_signer)) => {
+            let request_signer = maybe_request_signer.expect("signer should be returned");
             let request_signer_id = request_signer.expect_remote_actor_id();
             log::debug!("request signed by {}", request_signer_id);
             request_signer

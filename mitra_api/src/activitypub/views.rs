@@ -821,7 +821,7 @@ async fn apgateway_inbox_pull_view(
     request: HttpRequest,
 ) -> Result<HttpResponse, HttpError> {
     let db_client = &mut **get_database_client(&db_pool).await?;
-    let signer = verify_signed_request(
+    let (_key_id, maybe_signer) = verify_signed_request(
         &config,
         db_client,
         method_adapter(request.method()),
@@ -829,10 +829,12 @@ async fn apgateway_inbox_pull_view(
         actix_header_map_adapter(request.headers()),
         None, // GET request has no content
         true, // don't fetch actor
+        false, // not only key
     ).await.map_err(|error| {
         log::warn!("C2S authentication error (GET {request_path}): {error}");
         HttpError::PermissionError
     })?;
+    let signer = maybe_signer.expect("signer should be returned");
     let collection_id = format!(
         "{}{}",
         config.instance_url(),
@@ -962,7 +964,7 @@ async fn apgateway_outbox_pull_view(
     request: HttpRequest,
 ) -> Result<HttpResponse, HttpError> {
     let db_client = &mut **get_database_client(&db_pool).await?;
-    let signer = verify_signed_request(
+    let (_key_id, maybe_signer) = verify_signed_request(
         &config,
         db_client,
         method_adapter(request.method()),
@@ -970,10 +972,12 @@ async fn apgateway_outbox_pull_view(
         actix_header_map_adapter(request.headers()),
         None, // GET request has no content
         true, // don't fetch actor
+        false, // not only key
     ).await.map_err(|error| {
         log::warn!("C2S authentication error (GET {request_path}): {error}");
         HttpError::PermissionError
     })?;
+    let signer = maybe_signer.expect("signer should be returned");
     let collection_id = format!(
         "{}{}",
         config.instance_url(),

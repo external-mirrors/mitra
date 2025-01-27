@@ -77,7 +77,7 @@ impl PublicKeyPem {
         Ok(public_key_obj)
     }
 
-    fn public_key(&self) -> Result<PublicKey, ValidationError> {
+    pub fn public_key(&self) -> Result<PublicKey, ValidationError> {
         let public_key = match deserialize_rsa_public_key(&self.public_key_pem) {
             Ok(public_key) => PublicKey::Rsa(public_key),
             Err(_) => {
@@ -135,7 +135,7 @@ impl Multikey {
         Ok(multikey)
     }
 
-    fn public_key(&self) -> Result<PublicKey, ValidationError> {
+    pub fn public_key(&self) -> Result<PublicKey, ValidationError> {
         let public_key_multicode = decode_multibase_base58btc(&self.public_key_multibase)
             .map_err(|_| ValidationError("invalid key encoding"))?;
         let public_key_decoded = Multicodec::decode(&public_key_multicode)
