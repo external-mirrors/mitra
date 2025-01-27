@@ -4,13 +4,15 @@ Mitra only supports LitePub relay protocol. Mastodon relay protocol is not suppo
 
 ## Following a relay
 
-Create a new read-only user:
+Create a new user:
 
 ```
-mitractl create-account followbot <password> read_only_user
+mitractl create-account followbot <password>
 ```
 
-Log in, search for a relay actor and follow it. Posts announced by relay actor will appear in the federated timeline.
+Log in, search for a relay actor and follow it.
+
+Posts announced by relay actor will appear in the federated timeline. The relay actor will also follow the user. Any reposts made by the user will be broadcasted by the relay.
 
 ---
 
