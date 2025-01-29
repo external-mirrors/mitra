@@ -187,6 +187,7 @@ fn add_integrity_proof(
     Ok(())
 }
 
+#[deprecated]
 pub fn sign_object_rsa(
     signer_key: &RsaSecretKey,
     signer_key_id: &str,
@@ -288,6 +289,7 @@ mod tests {
     use super::*;
 
     #[test]
+    #[allow(deprecated)]
     fn test_sign_object_rsa() {
         let signer_key = generate_weak_rsa_key().unwrap();
         let signer_key_id = "https://example.org/users/test#main-key";

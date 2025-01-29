@@ -196,10 +196,12 @@ mod tests {
         json_signatures::create::{
             sign_object,
             sign_object_eddsa,
-            sign_object_rsa,
         },
     };
     use super::*;
+
+    #[allow(deprecated)]
+    use crate::json_signatures::create::sign_object_rsa;
 
     #[test]
     fn test_get_json_signature_eip191() {
@@ -229,6 +231,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(deprecated)]
     fn test_create_and_verify_rsa_signature() {
         let signer_key = generate_weak_rsa_key().unwrap();
         let signer_key_id = "https://example.org/users/test#main-key";
