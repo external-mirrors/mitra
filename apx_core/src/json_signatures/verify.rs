@@ -133,14 +133,11 @@ pub fn verify_rsa_json_signature(
     signature: &[u8],
 ) -> Result<(), VerificationError> {
     let canonical_object = canonicalize_object(object)?;
-    let is_valid_signature = verify_rsa_sha256_signature(
+    verify_rsa_sha256_signature(
         signer_key,
         canonical_object.as_bytes(),
         signature,
-    );
-    if !is_valid_signature {
-        return Err(VerificationError::InvalidSignature);
-    };
+    ).map_err(|_| VerificationError::InvalidSignature)?;
     Ok(())
 }
 

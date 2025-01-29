@@ -180,17 +180,16 @@ pub fn verify_rsa_sha256_signature(
     public_key: &RsaPublicKey,
     message: &[u8],
     signature: &[u8],
-) -> bool {
+) -> Result<(), RsaError> {
     let verifying_key = VerifyingKey::<Sha256>::new(public_key.clone());
     let signature = match Signature::try_from(signature) {
         Ok(signature) => signature,
-        Err(_) => return false,
+        // TODO: the type of error is k256::ecdsa::Error
+        Err(_) => return Err(RsaError::Verification),
     };
-    let is_valid = verifying_key.verify(
-        message,
-        &signature,
-    ).is_ok();
-    is_valid
+    // TODO: the type of error is k256::ecdsa::Error
+    verifying_key.verify(message, &signature)
+        .map_err(|_| RsaError::Verification)
 }
 
 #[cfg(test)]
@@ -284,7 +283,7 @@ NwIDAQAB
             &public_key,
             message,
             &signature_bytes,
-        );
+        ).is_ok();
         assert_eq!(is_valid, true);
     }
 
@@ -302,7 +301,7 @@ NwIDAQAB
             &public_key,
             message,
             &signature,
-        );
+        ).is_ok();
         assert_eq!(is_valid, true);
     }
 }

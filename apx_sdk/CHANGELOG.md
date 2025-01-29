@@ -18,6 +18,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Renamed `JsonSigner` type to `VerificationMethod`.
 - Renamed `signer` field on `JsonSignatureData` type to `verification_method`.
 - Changed type of `message` argument in `create_rsa_sha256_signature` to `&[u8]`.
+- Changed return type of `verify_rsa_sha256_signature` to `Result`.
 
 ## Deprecated
 
