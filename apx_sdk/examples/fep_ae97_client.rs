@@ -7,7 +7,7 @@ use apx_sdk::{
         },
         crypto_rsa::generate_rsa_key,
         did_key::DidKey,
-        json_signatures::create::sign_object_eddsa,
+        json_signatures::create::sign_object,
     },
     deliver::send_object,
 };
@@ -35,13 +35,10 @@ async fn main() -> () {
         "attributedTo": format!("http://127.0.0.1:8380/.well-known/apgateway/{authority}/actor"),
         "content": "<p>test</p>",
     });
-    let signed_note = sign_object_eddsa(
+    let signed_note = sign_object(
         &identity_key,
         &authority.verification_method_id(),
         &note,
-        None,
-        false,
-        true,
     ).unwrap();
     let create = json!({
         "@context": "https://www.w3.org/ns/activitystreams",
@@ -50,13 +47,10 @@ async fn main() -> () {
         "actor": format!("http://127.0.0.1:8380/.well-known/apgateway/{authority}/actor"),
         "object": signed_note,
     });
-    let signed_create = sign_object_eddsa(
+    let signed_create = sign_object(
         &identity_key,
         &authority.verification_method_id(),
         &create,
-        None,
-        false,
-        true,
     ).unwrap();
     send_object(
         &agent,

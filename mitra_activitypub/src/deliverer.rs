@@ -29,7 +29,7 @@ use apx_core::{
     },
     json_signatures::create::{
         is_object_signed,
-        sign_object_eddsa,
+        sign_object,
         JsonSignatureError,
     },
     urls::get_hostname,
@@ -217,13 +217,10 @@ pub(super) fn sign_activity(
             &actor_id,
             PublicKeyType::Ed25519,
         );
-        sign_object_eddsa(
+        sign_object(
             &sender.ed25519_secret_key,
             &ed25519_key_id,
             &activity,
-            None,
-            false, // use eddsa-jcs-2022
-            false, // no proof context
         )?
     };
     Ok(activity_signed)

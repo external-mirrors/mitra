@@ -194,6 +194,7 @@ mod tests {
         },
         crypto_rsa::generate_weak_rsa_key,
         json_signatures::create::{
+            sign_object,
             sign_object_eddsa,
             sign_object_rsa,
         },
@@ -333,13 +334,10 @@ mod tests {
                 "content": "test",
             },
         });
-        let signed_object = sign_object_eddsa(
+        let signed_object = sign_object(
             &signer_key,
             signer_key_id,
             &object,
-            None,
-            false,
-            false,
         ).unwrap();
 
         let signature_data = get_json_signature(&signed_object).unwrap();

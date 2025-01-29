@@ -173,7 +173,7 @@ pub enum JsonSignatureError {
     AlreadySigned,
 }
 
-pub fn add_integrity_proof(
+fn add_integrity_proof(
     object_value: &mut JsonValue,
     proof: IntegrityProof,
 ) -> Result<(), JsonSignatureError> {
@@ -224,7 +224,6 @@ pub fn prepare_jcs_sha256_data(
     Ok(hash_data)
 }
 
-/// https://codeberg.org/silverpill/feps/src/branch/main/8b32/fep-8b32.md
 pub fn sign_object_eddsa(
     signer_key: &Ed25519SecretKey,
     signer_key_id: &str,
@@ -256,6 +255,23 @@ pub fn sign_object_eddsa(
     let mut signed_object = object.clone();
     add_integrity_proof(&mut signed_object, proof)?;
     Ok(signed_object)
+}
+
+/// Adds integrity proof to a JSON document  
+/// <https://codeberg.org/silverpill/feps/src/branch/main/8b32/fep-8b32.md>
+pub fn sign_object(
+    signer_key: &Ed25519SecretKey,
+    signer_key_id: &str,
+    object: &JsonValue,
+) -> Result<JsonValue, JsonSignatureError> {
+    sign_object_eddsa(
+        signer_key,
+        signer_key_id,
+        object,
+        None,
+        false, // use eddsa-jcs-2022
+        false, // no proof context
+    )
 }
 
 pub fn is_object_signed(object: &JsonValue) -> bool {
