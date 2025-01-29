@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+
+- Added `verification_method_id` method to `DidKey` type.
+
 ### Changed
 
 - Change text representation of deliverer HTTP error to "HTTP error {code}".

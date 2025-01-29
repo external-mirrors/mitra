@@ -37,7 +37,7 @@ async fn main() -> () {
     });
     let signed_note = sign_object_eddsa(
         &identity_key,
-        &authority.to_string(),
+        &authority.verification_method_id(),
         &note,
         None,
         false,
@@ -52,7 +52,7 @@ async fn main() -> () {
     });
     let signed_create = sign_object_eddsa(
         &identity_key,
-        &authority.to_string(),
+        &authority.verification_method_id(),
         &create,
         None,
         false,
