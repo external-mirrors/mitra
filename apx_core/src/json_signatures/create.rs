@@ -199,7 +199,7 @@ pub fn sign_object_rsa(
     // Sign
     let signature = create_rsa_sha256_signature(
         signer_key,
-        &canonical_object,
+        canonical_object.as_bytes(),
     )?;
     let signature_created_at = current_time.unwrap_or(Utc::now());
     // Insert proof

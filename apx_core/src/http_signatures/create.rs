@@ -75,7 +75,10 @@ pub fn create_http_signature(
         .map(|(name, _)| name.to_string())
         .collect::<Vec<String>>()
         .join(" ");
-    let signature = create_rsa_sha256_signature(signer_key, &message)?;
+    let signature = create_rsa_sha256_signature(
+        signer_key,
+        message.as_bytes(),
+    )?;
     let signature_parameter = base64::encode(signature);
     let signature_header = format!(
         r#"keyId="{}",algorithm="{}",headers="{}",signature="{}""#,

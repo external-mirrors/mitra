@@ -177,7 +177,7 @@ pub fn verify_http_signature(
     let signature = base64::decode(&signature_data.signature)?;
     let is_valid_signature = verify_rsa_sha256_signature(
         signer_key,
-        &signature_data.message,
+        signature_data.message.as_bytes(),
         &signature,
     );
     if !is_valid_signature {

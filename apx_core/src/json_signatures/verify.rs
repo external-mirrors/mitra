@@ -135,7 +135,7 @@ pub fn verify_rsa_json_signature(
     let canonical_object = canonicalize_object(object)?;
     let is_valid_signature = verify_rsa_sha256_signature(
         signer_key,
-        &canonical_object,
+        canonical_object.as_bytes(),
         signature,
     );
     if !is_valid_signature {

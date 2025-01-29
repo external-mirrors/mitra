@@ -17,6 +17,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Make `is_actor`, `is_activity`, `is_collection` and `is_object` compatible with FEP-2277.
 - Renamed `JsonSigner` type to `VerificationMethod`.
 - Renamed `signer` field on `JsonSignatureData` type to `verification_method`.
+- Changed type of `message` argument in `create_rsa_sha256_signature` to `&[u8]`.
 
 ## Deprecated
 

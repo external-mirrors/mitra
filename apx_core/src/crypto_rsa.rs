@@ -169,16 +169,16 @@ pub fn rsa_public_key_from_multikey(
 /// RSASSA-PKCS1-v1_5 signature
 pub fn create_rsa_sha256_signature(
     secret_key: &RsaSecretKey,
-    message: &str,
+    message: &[u8],
 ) -> Result<Vec<u8>, RsaError> {
     let signing_key = SigningKey::<Sha256>::new(secret_key.clone());
-    let signature = signing_key.sign(message.as_bytes());
+    let signature = signing_key.sign(message);
     Ok(signature.to_vec())
 }
 
 pub fn verify_rsa_sha256_signature(
     public_key: &RsaPublicKey,
-    message: &str,
+    message: &[u8],
     signature: &[u8],
 ) -> bool {
     let verifying_key = VerifyingKey::<Sha256>::new(public_key.clone());
@@ -187,7 +187,7 @@ pub fn verify_rsa_sha256_signature(
         Err(_) => return false,
     };
     let is_valid = verifying_key.verify(
-        message.as_bytes(),
+        message,
         &signature,
     ).is_ok();
     is_valid
@@ -275,7 +275,7 @@ IjxLKfnZVfCkQ9t5EWkoBME8Gf8hKltxcA5jvEbgHxwmFKgIeSZXg3gQncQL1/qZ
 8AVcpaMTTqahxPCFRExlRU0y8ppGcqymyMH/P6jHclRZDqxtwT/S3nFPbwuBAx4O
 NwIDAQAB
 -----END PUBLIC KEY-----";
-        let message = "test";
+        let message = b"test";
         let signature = "NFiY1Vx+jZizdiLvS4JAoxcsCI2+SjwWPdWsj8ICqRuMcMg0Gu7/qPu2n/B8sUjXycZH0sUcATIbHaf7AtPTNEU/FDFP+1wR5K4fCEt6QpaV4uGR8KBYTJUV2vE6nnx2Hkr/bAhK8JM3f4OQATqxDc7Ozmosd48sx3alxOOGgZnQD3kCKVhaSJH/ZkYAcPmY7ksSbm9iFX09D2ytEp+FDAD3pzgiNq/MlmozAmSdX9/cS2IFbKAjiJ3wq1T4NqApTZ0Rd8HYuBveMnW3GVeyPalao7uIaYyJumqaf9cBg9l9EkwGwJZ5gsoAV5OHgMTU5bMGF1ShR5xWCnG8fq1ylg==";
 
         let public_key = deserialize_rsa_public_key(public_key_pem).unwrap();
@@ -291,16 +291,16 @@ NwIDAQAB
     #[test]
     fn test_create_and_verify_rsa_signature() {
         let secret_key = generate_weak_rsa_key().unwrap();
-        let message = "test".to_string();
+        let message = b"test";
         let signature = create_rsa_sha256_signature(
             &secret_key,
-            &message,
+            message,
         ).unwrap();
         let public_key = RsaPublicKey::from(&secret_key);
 
         let is_valid = verify_rsa_sha256_signature(
             &public_key,
-            &message,
+            message,
             &signature,
         );
         assert_eq!(is_valid, true);
