@@ -200,10 +200,12 @@ pub fn verify_http_signature(
 mod tests {
     use http::{HeaderName, HeaderValue};
     use crate::{
-        crypto::common::SecretKey,
         crypto_eddsa::generate_weak_ed25519_key,
         crypto_rsa::generate_weak_rsa_key,
-        http_signatures::create::create_http_signature,
+        http_signatures::create::{
+            create_http_signature,
+            HttpSigner,
+        },
     };
     use super::*;
 
@@ -254,14 +256,14 @@ mod tests {
     fn test_create_and_verify_signature_get() {
         let request_method = Method::GET;
         let request_url = "https://example.org/inbox";
-        let signer_key = SecretKey::Rsa(generate_weak_rsa_key().unwrap());
-        let signer_key_id = "https://myserver.org/actor#main-key";
+        let signer_key = generate_weak_rsa_key().unwrap();
+        let signer_key_id = "https://myserver.org/actor#main-key".to_string();
+        let signer = HttpSigner::new_rsa(signer_key, signer_key_id);
         let signed_headers = create_http_signature(
             request_method.clone(),
             request_url,
             b"",
-            &signer_key,
-            signer_key_id,
+            &signer,
         ).unwrap();
 
         let request_url = request_url.parse::<Uri>().unwrap();
@@ -285,7 +287,7 @@ mod tests {
         ).unwrap();
         assert_eq!(signature_data.content_digest.is_some(), false);
 
-        let signer_public_key = signer_key.public_key();
+        let signer_public_key = signer.key.public_key();
         let result = verify_http_signature(
             &signature_data,
             &signer_public_key,
@@ -299,14 +301,14 @@ mod tests {
         let request_method = Method::POST;
         let request_url = "https://example.org/inbox";
         let request_body = "{}";
-        let signer_key = SecretKey::Rsa(generate_weak_rsa_key().unwrap());
-        let signer_key_id = "https://myserver.org/actor#main-key";
+        let signer_key = generate_weak_rsa_key().unwrap();
+        let signer_key_id = "https://myserver.org/actor#main-key".to_string();
+        let signer = HttpSigner::new_rsa(signer_key, signer_key_id);
         let signed_headers = create_http_signature(
             request_method.clone(),
             request_url,
             request_body.as_bytes(),
-            &signer_key,
-            signer_key_id,
+            &signer,
         ).unwrap();
 
         let request_url = request_url.parse::<Uri>().unwrap();
@@ -334,7 +336,7 @@ mod tests {
         ).unwrap();
         assert_eq!(signature_data.content_digest.is_some(), true);
 
-        let signer_public_key = signer_key.public_key();
+        let signer_public_key = signer.key.public_key();
         let content_digest = ContentDigest::new(request_body.as_bytes());
         let result = verify_http_signature(
             &signature_data,
@@ -349,14 +351,14 @@ mod tests {
         let request_method = Method::POST;
         let request_url = "https://server.example/inbox";
         let request_body = "{}";
-        let signer_key = SecretKey::Ed25519(generate_weak_ed25519_key());
-        let signer_key_id = "https://myserver.org/actor#ed25519-key";
+        let signer_key = generate_weak_ed25519_key();
+        let signer_key_id = "https://myserver.org/actor#ed25519-key".to_string();
+        let signer = HttpSigner::new_ed25519(signer_key, signer_key_id);
         let signed_headers = create_http_signature(
             request_method.clone(),
             request_url,
             request_body.as_bytes(),
-            &signer_key,
-            signer_key_id,
+            &signer,
         ).unwrap();
 
         let request_url = request_url.parse::<Uri>().unwrap();
@@ -384,7 +386,7 @@ mod tests {
         ).unwrap();
         assert_eq!(signature_data.content_digest.is_some(), true);
 
-        let signer_public_key = signer_key.public_key();
+        let signer_public_key = signer.key.public_key();
         let content_digest = ContentDigest::new(request_body.as_bytes());
         let result = verify_http_signature(
             &signature_data,

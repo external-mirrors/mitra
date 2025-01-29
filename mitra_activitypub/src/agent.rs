@@ -1,5 +1,5 @@
 use apx_core::crypto_rsa::RsaSecretKey;
-use apx_sdk::agent::{FederationAgent, RequestSigner};
+use apx_sdk::agent::{FederationAgent, HttpSigner};
 use mitra_config::Instance;
 use mitra_models::{
     profiles::types::PublicKeyType,
@@ -33,7 +33,7 @@ pub(super) fn build_federation_agent_with_key(
     let maybe_signer = if instance.is_private {
         None
     } else {
-        let signer = RequestSigner::new_rsa(signer_key, signer_key_id);
+        let signer = HttpSigner::new_rsa(signer_key, signer_key_id);
         Some(signer)
     };
     FederationAgent {

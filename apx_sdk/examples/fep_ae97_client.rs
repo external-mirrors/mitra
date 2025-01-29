@@ -1,5 +1,5 @@
 use apx_sdk::{
-    agent::{FederationAgent, RequestSigner},
+    agent::FederationAgent,
     core::{
         crypto_eddsa::{
             ed25519_public_key_from_secret_key,
@@ -7,6 +7,7 @@ use apx_sdk::{
         },
         crypto_rsa::generate_rsa_key,
         did_key::DidKey,
+        http_signatures::create::HttpSigner,
         json_signatures::create::sign_object,
     },
     deliver::send_object,
@@ -20,11 +21,11 @@ async fn main() -> () {
     let did = DidKey::from_ed25519_key(&identity_public_key);
     let http_key = generate_rsa_key().unwrap();
     let http_key_id = format!("http://127.0.0.1:8380/.well-known/apgateway/{did}/rsa_key");
-    let request_signer = RequestSigner::new_rsa(http_key, http_key_id);
+    let http_signer = HttpSigner::new_rsa(http_key, http_key_id);
     let agent = FederationAgent {
         user_agent: Some("fep-ae97-client".to_string()),
         ssrf_protection_enabled: false, // allow connections to 127.0.0.1
-        signer: Some(request_signer),
+        signer: Some(http_signer),
         ..Default::default()
     };
     let note = json!({

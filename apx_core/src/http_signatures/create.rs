@@ -4,10 +4,14 @@ use http::Method;
 use crate::{
     base64,
     crypto::common::SecretKey,
-    crypto_eddsa::create_eddsa_signature,
+    crypto_eddsa::{
+        create_eddsa_signature,
+        Ed25519SecretKey,
+    },
     crypto_rsa::{
         create_rsa_sha256_signature,
         RsaError,
+        RsaSecretKey,
     },
     http_digest::get_digest_header,
 };
@@ -16,6 +20,27 @@ const HTTP_SIGNATURE_ALGORITHM: &str = "rsa-sha256";
 const HTTP_SIGNATURE_ALGORITHM_HS2019: &str = "hs2019";
 // https://www.rfc-editor.org/rfc/rfc9110#http.date
 const HTTP_SIGNATURE_DATE_FORMAT: &str = "%a, %d %b %Y %T GMT";
+
+pub struct HttpSigner {
+    pub key: SecretKey,
+    pub key_id: String,
+}
+
+impl HttpSigner {
+    pub fn new_rsa(key: RsaSecretKey, key_id: String) -> Self {
+        Self {
+            key: SecretKey::Rsa(key),
+            key_id,
+        }
+    }
+
+    pub fn new_ed25519(key: Ed25519SecretKey, key_id: String) -> Self {
+        Self {
+            key: SecretKey::Ed25519(key),
+            key_id,
+        }
+    }
+}
 
 pub struct HttpSignatureHeaders {
     pub host: String,
@@ -39,8 +64,7 @@ pub fn create_http_signature(
     request_method: Method,
     request_url: &str,
     request_body: &[u8],
-    signer_key: &SecretKey,
-    signer_key_id: &str,
+    signer: &HttpSigner,
 ) -> Result<HttpSignatureHeaders, HttpSignatureError> {
     let request_url_object = url::Url::parse(request_url)?;
     let request_target = format!(
@@ -77,13 +101,13 @@ pub fn create_http_signature(
         .map(|(name, _)| name.to_string())
         .collect::<Vec<String>>()
         .join(" ");
-    let (signature, algorithm) = match signer_key {
-        SecretKey::Ed25519(secret_key) => {
+    let (signature, algorithm) = match signer.key {
+        SecretKey::Ed25519(ref secret_key) => {
             let signature =
                 create_eddsa_signature(secret_key, message.as_bytes()).to_vec();
             (signature, HTTP_SIGNATURE_ALGORITHM_HS2019)
         },
-        SecretKey::Rsa(secret_key) => {
+        SecretKey::Rsa(ref secret_key) => {
             let signature =
                 create_rsa_sha256_signature(secret_key, message.as_bytes())?;
             (signature, HTTP_SIGNATURE_ALGORITHM)
@@ -92,7 +116,7 @@ pub fn create_http_signature(
     let signature_parameter = base64::encode(signature);
     let signature_header = format!(
         r#"keyId="{}",algorithm="{}",headers="{}",signature="{}""#,
-        signer_key_id,
+        signer.key_id,
         algorithm,
         headers_parameter,
         signature_parameter,
@@ -114,15 +138,15 @@ mod tests {
     #[test]
     fn test_create_signature_get() {
         let request_url = "https://example.org/inbox";
-        let signer_key = SecretKey::Rsa(generate_weak_rsa_key().unwrap());
-        let signer_key_id = "https://myserver.org/actor#main-key";
+        let signer_key = generate_weak_rsa_key().unwrap();
+        let signer_key_id = "https://myserver.org/actor#main-key".to_string();
+        let signer = HttpSigner::new_rsa(signer_key, signer_key_id);
 
         let headers = create_http_signature(
             Method::GET,
             request_url,
             b"",
-            &signer_key,
-            signer_key_id,
+            &signer,
         ).unwrap();
 
         assert_eq!(headers.host, "example.org");
@@ -143,15 +167,15 @@ mod tests {
     fn test_create_signature_post() {
         let request_url = "https://example.org/inbox";
         let request_body = "{}";
-        let signer_key = SecretKey::Rsa(generate_weak_rsa_key().unwrap());
-        let signer_key_id = "https://myserver.org/actor#main-key";
+        let signer_key = generate_weak_rsa_key().unwrap();
+        let signer_key_id = "https://myserver.org/actor#main-key".to_string();
+        let signer = HttpSigner::new_rsa(signer_key, signer_key_id);
 
         let result = create_http_signature(
             Method::POST,
             request_url,
             request_body.as_bytes(),
-            &signer_key,
-            signer_key_id,
+            &signer,
         );
         assert_eq!(result.is_ok(), true);
 

@@ -93,8 +93,7 @@ pub async fn send_object(
             Method::POST,
             inbox_url,
             object_json.as_bytes(),
-            &signer.key,
-            &signer.key_id,
+            signer,
         )?;
         let digest = headers.digest
             .expect("digest header should be present if method is POST");

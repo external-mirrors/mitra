@@ -1,23 +1,6 @@
 //! Agent is responsible for making requests to other nodes.
 
-use apx_core::{
-    crypto::common::SecretKey,
-    crypto_rsa::RsaSecretKey,
-};
-
-pub struct RequestSigner {
-    pub key: SecretKey,
-    pub key_id: String,
-}
-
-impl RequestSigner {
-    pub fn new_rsa(key: RsaSecretKey, key_id: String) -> Self {
-        Self {
-            key: SecretKey::Rsa(key),
-            key_id,
-        }
-    }
-}
+pub use apx_core::http_signatures::create::HttpSigner;
 
 pub struct FederationAgent {
     /// User-Agent string.
@@ -35,7 +18,7 @@ pub struct FederationAgent {
     pub i2p_proxy_url: Option<String>,
 
     /// Key for creating HTTP signatures.
-    pub signer: Option<RequestSigner>,
+    pub signer: Option<HttpSigner>,
 }
 
 impl Default for FederationAgent {
