@@ -29,14 +29,14 @@ use super::proofs::{ProofType, DATA_INTEGRITY_PROOF};
 const PROOF_VALUE_KEY: &str = "proofValue";
 
 #[derive(Debug, PartialEq)]
-pub enum JsonSigner {
+pub enum VerificationMethod {
     HttpUrl(HttpUrl),
     DidUrl(Did),
 }
 
 pub struct JsonSignatureData {
     pub proof_type: ProofType,
-    pub signer: JsonSigner,
+    pub verification_method: VerificationMethod,
     pub object: JsonValue,
     pub proof_config: JsonValue,
     pub signature: Vec<u8>,
@@ -65,6 +65,7 @@ pub enum JsonSignatureVerificationError {
 
 type VerificationError = JsonSignatureVerificationError;
 
+/// Parses integrity proof on a JSON document
 pub fn get_json_signature(
     object: &JsonValue,
 ) -> Result<JsonSignatureData, VerificationError> {
@@ -104,19 +105,21 @@ pub fn get_json_signature(
         proof_config.proof_type.parse()
             .map_err(|_| VerificationError::InvalidProof("unsupported proof type"))?
     };
-    let signer = if let Ok((did, _)) = Did::parse_url(&proof_config.verification_method) {
+    let verification_method = if
+        let Ok((did, _)) = Did::parse_url(&proof_config.verification_method)
+    {
         // Fragment is ignored because supported DIDs
         // can't have more than one verification method
-        JsonSigner::DidUrl(did)
+        VerificationMethod::DidUrl(did)
     } else if let Ok(http_url) = HttpUrl::parse(&proof_config.verification_method) {
-        JsonSigner::HttpUrl(http_url)
+        VerificationMethod::HttpUrl(http_url)
     } else {
         return Err(VerificationError::InvalidProof("unsupported verification method"));
     };
     let signature = decode_multibase_base58btc(&proof_value)?;
     let signature_data = JsonSignatureData {
         proof_type,
-        signer,
+        verification_method,
         object,
         proof_config: proof,
         signature,
@@ -215,12 +218,12 @@ mod tests {
             signature_data.proof_type,
             ProofType::JcsEip191Signature,
         );
-        let expected_signer = JsonSigner::DidUrl(Did::Pkh(
+        let expected_vm = VerificationMethod::DidUrl(Did::Pkh(
             DidPkh::from_ethereum_address(
                 "0xb9c5714089478a327f09197987f16f9e5d936e8a",
             ),
         ));
-        assert_eq!(signature_data.signer, expected_signer);
+        assert_eq!(signature_data.verification_method, expected_vm);
         assert_eq!(signature_data.signature, [171, 205]);
     }
 
@@ -253,9 +256,9 @@ mod tests {
             signature_data.proof_type,
             ProofType::JcsRsaSignature,
         );
-        let expected_signer =
-            JsonSigner::HttpUrl(HttpUrl::parse(signer_key_id).unwrap());
-        assert_eq!(signature_data.signer, expected_signer);
+        let expected_vm =
+            VerificationMethod::HttpUrl(HttpUrl::parse(signer_key_id).unwrap());
+        assert_eq!(signature_data.verification_method, expected_vm);
 
         let signer_public_key = RsaPublicKey::from(signer_key);
         let result = verify_rsa_json_signature(
@@ -297,9 +300,9 @@ mod tests {
             signature_data.proof_type,
             ProofType::JcsEddsaSignature,
         );
-        let expected_signer =
-            JsonSigner::HttpUrl(HttpUrl::parse(signer_key_id).unwrap());
-        assert_eq!(signature_data.signer, expected_signer);
+        let expected_vm =
+            VerificationMethod::HttpUrl(HttpUrl::parse(signer_key_id).unwrap());
+        assert_eq!(signature_data.verification_method, expected_vm);
 
         let signer_public_key =
             ed25519_public_key_from_secret_key(&signer_key);
@@ -344,9 +347,9 @@ mod tests {
             signature_data.proof_type,
             ProofType::EddsaJcsSignature,
         );
-        let expected_signer =
-            JsonSigner::HttpUrl(HttpUrl::parse(signer_key_id).unwrap());
-        assert_eq!(signature_data.signer, expected_signer);
+        let expected_vm =
+            VerificationMethod::HttpUrl(HttpUrl::parse(signer_key_id).unwrap());
+        assert_eq!(signature_data.verification_method, expected_vm);
 
         let signer_public_key =
             ed25519_public_key_from_secret_key(&signer_key);

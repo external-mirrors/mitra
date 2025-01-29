@@ -8,7 +8,7 @@ use apx_core::{
             get_json_signature,
             verify_eddsa_json_signature,
             JsonSignatureVerificationError as JsonSignatureError,
-            JsonSigner,
+            VerificationMethod,
         },
     },
 };
@@ -56,10 +56,10 @@ pub fn verify_portable_object(
         Err(JsonSignatureError::NoProof) => return Err(AuthenticationError::NoProof),
         Err(other_error) => return Err(other_error.into()),
     };
-    match signature_data.signer {
-        JsonSigner::HttpUrl(_) =>
+    match signature_data.verification_method {
+        VerificationMethod::HttpUrl(_) =>
             return Err(AuthenticationError::InvalidVerificationMethod),
-        JsonSigner::DidUrl(ref did) => {
+        VerificationMethod::DidUrl(ref did) => {
             // Object must be signed by its owner
             if did != canonical_object_id.authority() {
                 return Err(AuthenticationError::UnexpectedSigner);

@@ -11,7 +11,7 @@ use apx_core::{
             verify_blake2_ed25519_json_signature,
             verify_eddsa_json_signature,
             verify_eip191_json_signature,
-            JsonSigner,
+            VerificationMethod,
         },
     },
 };
@@ -68,10 +68,10 @@ pub fn parse_identity_proof_fep_c390(
     };
     let signature_data = get_json_signature(attachment)
         .map_err(|_| ValidationError("invalid proof"))?;
-    let signer = match signature_data.signer {
-        JsonSigner::HttpUrl(_) =>
+    let signer = match signature_data.verification_method {
+        VerificationMethod::HttpUrl(_) =>
             return Err(ValidationError("unsupported verification method")),
-        JsonSigner::DidUrl(did) => did,
+        VerificationMethod::DidUrl(did) => did,
     };
     if signer != statement.subject {
         return Err(ValidationError("subject mismatch"));

@@ -32,7 +32,7 @@ use apx_core::{
             verify_eddsa_json_signature,
             verify_rsa_json_signature,
             JsonSignatureVerificationError as JsonSignatureError,
-            JsonSigner,
+            VerificationMethod,
         },
     },
 };
@@ -273,8 +273,8 @@ pub async fn verify_signed_activity(
         .map_err(|_| AuthenticationError::ActorError("unknown actor"))?;
     let actor_profile = get_signer(config, db_client, &actor_id, no_fetch).await?;
 
-    match signature_data.signer {
-        JsonSigner::HttpUrl(key_id) => {
+    match signature_data.verification_method {
+        VerificationMethod::HttpUrl(key_id) => {
             let signer_id = key_id_to_actor_id(key_id.as_str())
                 .map_err(|_| AuthenticationError::InvalidKeyId)?;
             if signer_id != actor_id {
@@ -309,7 +309,7 @@ pub async fn verify_signed_activity(
                 _ => return Err(AuthenticationError::InvalidJsonSignatureType),
             };
         },
-        JsonSigner::DidUrl(did) => {
+        VerificationMethod::DidUrl(did) => {
             log::warn!("activity signed by {did}");
             return Err(AuthenticationError::InvalidJsonSignatureType);
         },
