@@ -45,6 +45,7 @@ unused_unit = "allow"
 enum_variant_names = "allow"
 format_push_string = "allow"
 unwrap_or_default = "allow"
+large_enum_variant = "allow"
 
 [package]
 name = "mitra"

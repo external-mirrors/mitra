@@ -1,6 +1,7 @@
 use serde_json::{Value as JsonValue};
 
 use apx_core::{
+    crypto::common::PublicKey,
     crypto_eddsa::{
         ed25519_public_key_from_bytes,
         Ed25519PublicKey,
@@ -145,27 +146,10 @@ async fn get_signer(
     Ok(signer)
 }
 
-fn get_signer_ed25519_key(
+fn get_signer_key(
     profile: &DbActorProfile,
     key_id: &str,
-) -> Result<Ed25519PublicKey, AuthenticationError> {
-    let canonical_key_id = canonicalize_id(key_id)
-        .map_err(|_| AuthenticationError::ActorError("invalid key ID"))?;
-    let actor_key = profile.public_keys
-        .inner().iter()
-        .find(|key| key.id == canonical_key_id.to_string())
-        .ok_or(AuthenticationError::ActorError("key not found"))?;
-    if actor_key.key_type != PublicKeyType::Ed25519 {
-        return Err(AuthenticationError::ActorError("unexpected key type"));
-    };
-    let ed25519_public_key = ed25519_public_key_from_bytes(&actor_key.key_data)?;
-    Ok(ed25519_public_key)
-}
-
-fn get_signer_rsa_key(
-    profile: &DbActorProfile,
-    key_id: &str,
-) -> Result<RsaPublicKey, AuthenticationError> {
+) -> Result<PublicKey, AuthenticationError> {
     let canonical_key_id = canonicalize_id(key_id)
         .map_err(|_| AuthenticationError::ActorError("invalid key ID"))?;
     let maybe_actor_key = profile.public_keys
@@ -176,11 +160,19 @@ fn get_signer_rsa_key(
             // https://github.com/Chocobozzz/PeerTube/issues/6829
             || key.id == format!("{canonical_key_id}#main-key")
         });
-    let rsa_public_key = if let Some(actor_key) = maybe_actor_key {
-        if actor_key.key_type != PublicKeyType::RsaPkcs1 {
-            return Err(AuthenticationError::ActorError("unexpected key type"));
-        };
-        rsa_public_key_from_pkcs1_der(&actor_key.key_data)?
+    let public_key = if let Some(actor_key) = maybe_actor_key {
+        match actor_key.key_type {
+            PublicKeyType::RsaPkcs1 => {
+                let public_key =
+                    rsa_public_key_from_pkcs1_der(&actor_key.key_data)?;
+                PublicKey::Rsa(public_key)
+            },
+            PublicKeyType::Ed25519 => {
+                let public_key =
+                    ed25519_public_key_from_bytes(&actor_key.key_data)?;
+                PublicKey::Ed25519(public_key)
+            },
+        }
     } else {
         // TODO: remove public_key from actor data
         log::warn!("key not found in public_keys: {}", canonical_key_id);
@@ -189,7 +181,31 @@ fn get_signer_rsa_key(
             .public_key.as_ref()
             .filter(|public_key| public_key.id == key_id)
             .ok_or(AuthenticationError::ActorError("key not found"))?;
-        deserialize_rsa_public_key(&public_key.public_key_pem)?
+        let public_key =
+            deserialize_rsa_public_key(&public_key.public_key_pem)?;
+        PublicKey::Rsa(public_key)
+    };
+    Ok(public_key)
+}
+
+fn get_signer_ed25519_key(
+    profile: &DbActorProfile,
+    key_id: &str,
+) -> Result<Ed25519PublicKey, AuthenticationError> {
+    let public_key = get_signer_key(profile, key_id)?;
+    let PublicKey::Ed25519(ed25519_public_key) = public_key else {
+        return Err(AuthenticationError::ActorError("unexpected key type"));
+    };
+    Ok(ed25519_public_key)
+}
+
+fn get_signer_rsa_key(
+    profile: &DbActorProfile,
+    key_id: &str,
+) -> Result<RsaPublicKey, AuthenticationError> {
+    let public_key = get_signer_key(profile, key_id)?;
+    let PublicKey::Rsa(rsa_public_key) = public_key else {
+        return Err(AuthenticationError::ActorError("unexpected key type"));
     };
     Ok(rsa_public_key)
 }
@@ -219,7 +235,7 @@ pub async fn verify_signed_request(
     let signer_id = key_id_to_actor_id(signature_data.key_id.as_str())
         .map_err(|_| AuthenticationError::InvalidKeyId)?;
     let signer = get_signer(config, db_client, &signer_id, no_fetch).await?;
-    let signer_key = get_signer_rsa_key(
+    let signer_key = get_signer_key(
         &signer,
         signature_data.key_id.as_str(),
     )?;

@@ -20,7 +20,7 @@ async fn main() -> () {
     let did = DidKey::from_ed25519_key(&identity_public_key);
     let http_key = generate_rsa_key().unwrap();
     let http_key_id = format!("http://127.0.0.1:8380/.well-known/apgateway/{did}/rsa_key");
-    let request_signer = RequestSigner { key: http_key, key_id: http_key_id };
+    let request_signer = RequestSigner::new_rsa(http_key, http_key_id);
     let agent = FederationAgent {
         user_agent: Some("fep-ae97-client".to_string()),
         ssrf_protection_enabled: false, // allow connections to 127.0.0.1

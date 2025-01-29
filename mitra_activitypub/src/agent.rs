@@ -33,10 +33,7 @@ pub(super) fn build_federation_agent_with_key(
     let maybe_signer = if instance.is_private {
         None
     } else {
-        let signer = RequestSigner {
-            key: signer_key,
-            key_id: signer_key_id,
-        };
+        let signer = RequestSigner::new_rsa(signer_key, signer_key_id);
         Some(signer)
     };
     FederationAgent {
@@ -75,6 +72,7 @@ pub fn build_federation_agent(
 
 #[cfg(test)]
 mod tests {
+    use apx_core::crypto::common::SecretKey;
     use super::*;
 
     #[test]
@@ -98,7 +96,10 @@ mod tests {
         assert_eq!(agent.ssrf_protection_enabled, true);
         assert_eq!(agent.response_size_limit, RESPONSE_SIZE_LIMIT);
         let request_signer = agent.signer.unwrap();
-        assert_eq!(request_signer.key, instance.actor_rsa_key);
+        let SecretKey::Rsa(secret_key) = request_signer.key else {
+            panic!("unexpected key type");
+        };
+        assert_eq!(secret_key, instance.actor_rsa_key);
         assert_eq!(request_signer.key_id, "https://social.example/actor#main-key");
     }
 }

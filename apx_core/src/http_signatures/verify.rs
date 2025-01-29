@@ -6,10 +6,9 @@ use regex::Regex;
 
 use crate::{
     base64,
-    crypto_rsa::{
-        verify_rsa_sha256_signature,
-        RsaPublicKey,
-    },
+    crypto::common::PublicKey,
+    crypto_eddsa::verify_eddsa_signature,
+    crypto_rsa::verify_rsa_sha256_signature,
     http_digest::{parse_digest_header, ContentDigest},
     http_url::HttpUrl,
     http_utils::remove_quotes,
@@ -165,7 +164,7 @@ pub fn parse_http_signature(
 
 pub fn verify_http_signature(
     signature_data: &HttpSignatureData,
-    signer_key: &RsaPublicKey,
+    signer_key: &PublicKey,
     content_digest: Option<ContentDigest>,
 ) -> Result<(), VerificationError> {
     if signature_data.expires_at < Utc::now() {
@@ -175,11 +174,25 @@ pub fn verify_http_signature(
         return Err(VerificationError::DigestMismatch);
     };
     let signature = base64::decode(&signature_data.signature)?;
-    verify_rsa_sha256_signature(
-        signer_key,
-        signature_data.message.as_bytes(),
-        &signature,
-    ).map_err(|_| VerificationError::InvalidSignature)?;
+    let is_valid_signature = match signer_key {
+        PublicKey::Ed25519(ed25519_key) => {
+            verify_eddsa_signature(
+                ed25519_key,
+                signature_data.message.as_bytes(),
+                &signature,
+            ).is_ok()
+        },
+        PublicKey::Rsa(rsa_key) => {
+            verify_rsa_sha256_signature(
+                rsa_key,
+                signature_data.message.as_bytes(),
+                &signature,
+            ).is_ok()
+        },
+    };
+    if !is_valid_signature {
+        return Err(VerificationError::InvalidSignature);
+    };
     Ok(())
 }
 
@@ -187,6 +200,8 @@ pub fn verify_http_signature(
 mod tests {
     use http::{HeaderName, HeaderValue};
     use crate::{
+        crypto::common::SecretKey,
+        crypto_eddsa::generate_weak_ed25519_key,
         crypto_rsa::generate_weak_rsa_key,
         http_signatures::create::create_http_signature,
     };
@@ -239,7 +254,7 @@ mod tests {
     fn test_create_and_verify_signature_get() {
         let request_method = Method::GET;
         let request_url = "https://example.org/inbox";
-        let signer_key = generate_weak_rsa_key().unwrap();
+        let signer_key = SecretKey::Rsa(generate_weak_rsa_key().unwrap());
         let signer_key_id = "https://myserver.org/actor#main-key";
         let signed_headers = create_http_signature(
             request_method.clone(),
@@ -270,7 +285,7 @@ mod tests {
         ).unwrap();
         assert_eq!(signature_data.content_digest.is_some(), false);
 
-        let signer_public_key = RsaPublicKey::from(signer_key);
+        let signer_public_key = signer_key.public_key();
         let result = verify_http_signature(
             &signature_data,
             &signer_public_key,
@@ -284,7 +299,7 @@ mod tests {
         let request_method = Method::POST;
         let request_url = "https://example.org/inbox";
         let request_body = "{}";
-        let signer_key = generate_weak_rsa_key().unwrap();
+        let signer_key = SecretKey::Rsa(generate_weak_rsa_key().unwrap());
         let signer_key_id = "https://myserver.org/actor#main-key";
         let signed_headers = create_http_signature(
             request_method.clone(),
@@ -319,7 +334,57 @@ mod tests {
         ).unwrap();
         assert_eq!(signature_data.content_digest.is_some(), true);
 
-        let signer_public_key = RsaPublicKey::from(signer_key);
+        let signer_public_key = signer_key.public_key();
+        let content_digest = ContentDigest::new(request_body.as_bytes());
+        let result = verify_http_signature(
+            &signature_data,
+            &signer_public_key,
+            Some(content_digest),
+        );
+        assert_eq!(result.is_ok(), true);
+    }
+
+    #[test]
+    fn test_create_and_verify_signature_post_eddsa() {
+        let request_method = Method::POST;
+        let request_url = "https://server.example/inbox";
+        let request_body = "{}";
+        let signer_key = SecretKey::Ed25519(generate_weak_ed25519_key());
+        let signer_key_id = "https://myserver.org/actor#ed25519-key";
+        let signed_headers = create_http_signature(
+            request_method.clone(),
+            request_url,
+            request_body.as_bytes(),
+            &signer_key,
+            signer_key_id,
+        ).unwrap();
+
+        let request_url = request_url.parse::<Uri>().unwrap();
+        let mut request_headers = HeaderMap::new();
+        request_headers.insert(
+            HeaderName::from_static("host"),
+            HeaderValue::from_str(&signed_headers.host).unwrap(),
+        );
+        request_headers.insert(
+            HeaderName::from_static("signature"),
+            HeaderValue::from_str(&signed_headers.signature).unwrap(),
+        );
+        request_headers.insert(
+            HeaderName::from_static("date"),
+            HeaderValue::from_str(&signed_headers.date).unwrap(),
+        );
+        request_headers.insert(
+            HeaderName::from_static("digest"),
+            HeaderValue::from_str(&signed_headers.digest.unwrap()).unwrap(),
+        );
+        let signature_data = parse_http_signature(
+            &request_method,
+            &request_url,
+            &request_headers,
+        ).unwrap();
+        assert_eq!(signature_data.content_digest.is_some(), true);
+
+        let signer_public_key = signer_key.public_key();
         let content_digest = ContentDigest::new(request_body.as_bytes());
         let result = verify_http_signature(
             &signature_data,

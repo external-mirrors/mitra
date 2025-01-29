@@ -3,15 +3,17 @@ use http::Method;
 
 use crate::{
     base64,
+    crypto::common::SecretKey,
+    crypto_eddsa::create_eddsa_signature,
     crypto_rsa::{
         create_rsa_sha256_signature,
         RsaError,
-        RsaSecretKey,
     },
     http_digest::get_digest_header,
 };
 
 const HTTP_SIGNATURE_ALGORITHM: &str = "rsa-sha256";
+const HTTP_SIGNATURE_ALGORITHM_HS2019: &str = "hs2019";
 // https://www.rfc-editor.org/rfc/rfc9110#http.date
 const HTTP_SIGNATURE_DATE_FORMAT: &str = "%a, %d %b %Y %T GMT";
 
@@ -31,13 +33,13 @@ pub enum HttpSignatureError {
     SigningError(#[from] RsaError),
 }
 
-/// Creates HTTP signature according to the old HTTP Signatures Spec:
-/// https://datatracker.ietf.org/doc/html/draft-cavage-http-signatures.
+/// Creates HTTP signature according to the old HTTP Signatures Spec
+/// <https://datatracker.ietf.org/doc/html/draft-cavage-http-signatures>
 pub fn create_http_signature(
     request_method: Method,
     request_url: &str,
     request_body: &[u8],
-    signer_key: &RsaSecretKey,
+    signer_key: &SecretKey,
     signer_key_id: &str,
 ) -> Result<HttpSignatureHeaders, HttpSignatureError> {
     let request_url_object = url::Url::parse(request_url)?;
@@ -75,15 +77,23 @@ pub fn create_http_signature(
         .map(|(name, _)| name.to_string())
         .collect::<Vec<String>>()
         .join(" ");
-    let signature = create_rsa_sha256_signature(
-        signer_key,
-        message.as_bytes(),
-    )?;
+    let (signature, algorithm) = match signer_key {
+        SecretKey::Ed25519(secret_key) => {
+            let signature =
+                create_eddsa_signature(secret_key, message.as_bytes()).to_vec();
+            (signature, HTTP_SIGNATURE_ALGORITHM_HS2019)
+        },
+        SecretKey::Rsa(secret_key) => {
+            let signature =
+                create_rsa_sha256_signature(secret_key, message.as_bytes())?;
+            (signature, HTTP_SIGNATURE_ALGORITHM)
+        },
+    };
     let signature_parameter = base64::encode(signature);
     let signature_header = format!(
         r#"keyId="{}",algorithm="{}",headers="{}",signature="{}""#,
         signer_key_id,
-        HTTP_SIGNATURE_ALGORITHM,
+        algorithm,
         headers_parameter,
         signature_parameter,
     );
@@ -104,7 +114,7 @@ mod tests {
     #[test]
     fn test_create_signature_get() {
         let request_url = "https://example.org/inbox";
-        let signer_key = generate_weak_rsa_key().unwrap();
+        let signer_key = SecretKey::Rsa(generate_weak_rsa_key().unwrap());
         let signer_key_id = "https://myserver.org/actor#main-key";
 
         let headers = create_http_signature(
@@ -133,7 +143,7 @@ mod tests {
     fn test_create_signature_post() {
         let request_url = "https://example.org/inbox";
         let request_body = "{}";
-        let signer_key = generate_weak_rsa_key().unwrap();
+        let signer_key = SecretKey::Rsa(generate_weak_rsa_key().unwrap());
         let signer_key_id = "https://myserver.org/actor#main-key";
 
         let result = create_http_signature(

@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+
+- Support EdDSA HTTP signatures.
+
 ### Changed
 
 - Include URL in unsafe URL error message.

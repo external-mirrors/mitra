@@ -1,10 +1,22 @@
 //! Agent is responsible for making requests to other nodes.
 
-use apx_core::crypto_rsa::RsaSecretKey;
+use apx_core::{
+    crypto::common::SecretKey,
+    crypto_rsa::RsaSecretKey,
+};
 
 pub struct RequestSigner {
-    pub key: RsaSecretKey,
+    pub key: SecretKey,
     pub key_id: String,
+}
+
+impl RequestSigner {
+    pub fn new_rsa(key: RsaSecretKey, key_id: String) -> Self {
+        Self {
+            key: SecretKey::Rsa(key),
+            key_id,
+        }
+    }
 }
 
 pub struct FederationAgent {
