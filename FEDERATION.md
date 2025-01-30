@@ -15,11 +15,11 @@ It also supports the following standards:
 - [FEP-67ff: FEDERATION.md](https://codeberg.org/silverpill/feps/src/branch/main/67ff/fep-67ff.md)
 - [FEP-f1d5: NodeInfo in Fediverse Software](https://codeberg.org/fediverse/fep/src/branch/main/fep/f1d5/fep-f1d5.md)
 - [FEP-e232: Object Links](https://codeberg.org/silverpill/feps/src/branch/main/e232/fep-e232.md)
-- [FEP-8b32: Object Integrity Proofs](https://codeberg.org/silverpill/feps/src/branch/main/8b32/fep-8b32.md)
 - [FEP-0ea0: Payment Links](https://codeberg.org/silverpill/feps/src/branch/main/0ea0/fep-0ea0.md)
 - [FEP-fb2a: Actor metadata](https://codeberg.org/fediverse/fep/src/branch/main/fep/fb2a/fep-fb2a.md)
   - Only for remote actors.
 - [FEP-521a: Representing actor's public keys](https://codeberg.org/silverpill/feps/src/branch/main/521a/fep-521a.md)
+- [FEP-8b32: Object Integrity Proofs](https://codeberg.org/silverpill/feps/src/branch/main/8b32/fep-8b32.md)
 - [FEP-c390: Identity Proofs](https://codeberg.org/silverpill/feps/src/branch/main/c390/fep-c390.md)
 - [FEP-0837: Federated Marketplace](https://codeberg.org/silverpill/feps/src/branch/main/0837/fep-0837.md)
 - [FEP-03c1: Actors without acct-URI](https://codeberg.org/fediverse/fep/src/branch/main/fep/03c1/fep-03c1.md)
@@ -36,6 +36,7 @@ It also supports the following standards:
 - [FEP-171b: Conversation Containers](https://codeberg.org/fediverse/fep/src/branch/main/fep/171b/fep-171b.md)
   - Can consume `Add(Activity)` activities.
   - Publishes `Add(Create(Note))` activities in followers-only and subscribers-only conversations.
+- [FEP-9967: Polls](https://codeberg.org/fediverse/fep/src/branch/main/fep/9967/fep-9967.md)
 
 ### FEPs that might be supported in the future
 
