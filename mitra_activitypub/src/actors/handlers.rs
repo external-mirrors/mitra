@@ -21,7 +21,7 @@ use apx_sdk::{
         parse_into_id_array,
     },
     fetch::fetch_file,
-    url::Url,
+    url::{is_same_origin, Url},
 };
 use mitra_config::MediaLimits;
 use mitra_models::{
@@ -384,6 +384,13 @@ fn parse_public_keys(
     keys.dedup_by_key(|item| item.id.clone());
     if keys.is_empty() {
         return Err(ValidationError("public keys not found"));
+    };
+    for key in keys.iter() {
+        if !is_same_origin(&key.id, &actor.id)
+            .map_err(|message| ValidationError(message.0))?
+        {
+            log::warn!("actor and actor key have different origins");
+        };
     };
     Ok(keys)
 }
