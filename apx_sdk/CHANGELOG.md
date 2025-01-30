@@ -20,6 +20,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Changed type of `message` argument in `create_rsa_sha256_signature` to `&[u8]`.
 - Changed return type of `verify_rsa_sha256_signature` to `Result`.
 - Changed type of `signature` argument in `verify_eddsa_signature` to `&[u8]`.
+- Removed `log` package from dependencies.
 
 ## Deprecated
 

@@ -423,7 +423,6 @@ dependencies = [
  "bytes",
  "futures-util",
  "hyper-util",
- "log",
  "regex",
  "reqwest",
  "serde",
