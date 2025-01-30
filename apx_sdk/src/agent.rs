@@ -1,3 +1,5 @@
+//! Agent is responsible for making requests to other nodes.
+
 use apx_core::crypto_rsa::RsaSecretKey;
 
 pub struct RequestSigner {
