@@ -148,8 +148,6 @@ pub fn verify_eddsa_json_signature(
     signature: &[u8],
 ) -> Result<(), VerificationError> {
     let hash_data = prepare_jcs_sha256_data(object, proof_config)?;
-    let signature: [u8; 64] = signature.try_into()
-        .map_err(|_| VerificationError::InvalidSignature)?;
     verify_eddsa_signature(
         signer_key,
         &hash_data,

@@ -133,7 +133,7 @@ pub(crate) enum VerificationError {
 fn verify_eddsa_blake2_signature(
     message: &str,
     signer: &Ed25519PublicKey,
-    signature: [u8; 64],
+    signature: &[u8],
 ) -> Result<(), VerificationError> {
     let mut hasher = Blake2b512::new();
     hasher.update(message);
@@ -148,14 +148,12 @@ pub(crate) fn verify_minisign_signature(
     signature: &[u8],
 ) -> Result<(), VerificationError> {
     let ed25519_key = signer.try_ed25519_key()?;
-    let ed25519_signature = signature.try_into()
-        .map_err(|_| ParseError::InvalidSignatureLength)?;
     // TODO: don't add newline
     let message = format!("{}\n", message);
     verify_eddsa_blake2_signature(
         &message,
         &ed25519_key,
-        ed25519_signature,
+        signature,
     )?;
     Ok(())
 }

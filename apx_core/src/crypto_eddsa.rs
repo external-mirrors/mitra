@@ -133,9 +133,9 @@ pub fn create_eddsa_signature(
 pub fn verify_eddsa_signature(
     public_key: &VerifyingKey,
     message: &[u8],
-    signature: [u8; 64],
+    signature: &[u8],
 ) -> Result<(), SignatureError> {
-    let signature = Signature::from_bytes(&signature);
+    let signature = Signature::try_from(signature)?;
     public_key.verify(message, &signature)?;
     Ok(())
 }
@@ -174,7 +174,7 @@ mod tests {
         let result = verify_eddsa_signature(
             &public_key,
             message.as_bytes(),
-            signature,
+            &signature,
         );
         assert_eq!(result.is_ok(), true);
     }
