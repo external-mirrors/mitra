@@ -693,7 +693,6 @@ pub enum WebfingerHostname {
     // Possible scenarios:
     // - portable user account is being created
     // - portable user account is being updated
-    // - failure to verify webfinger address of a portable actor
     Unknown,
 }
 
@@ -905,7 +904,6 @@ impl ProfileCreateData {
         } else {
             // Possible scenarios:
             // - portable user account is being created
-            // - portable actor without webfinger address
             WebfingerHostname::Unknown
         }
     }
@@ -956,7 +954,6 @@ impl ProfileUpdateData {
         } else {
             // Possible scenarios:
             // - portable user account is being updated
-            // - portable actor without webfinger address
             WebfingerHostname::Unknown
         }
     }

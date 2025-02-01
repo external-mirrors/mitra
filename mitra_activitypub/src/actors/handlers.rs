@@ -280,14 +280,10 @@ async fn get_webfinger_hostname(
                 if actor_id == actor.id {
                     Some(hostname)
                 } else {
-                    // TODO: return validation error
-                    log::warn!("unexpected actor ID in JRD: {actor_id}");
-                    None
+                    return Err(ValidationError("unexpected actor ID in JRD").into());
                 }
             } else {
-                // Invalid actor: at least one gateway must be specified
-                // TODO: return validation error
-                None
+                return Err(ValidationError("at least one gateway must be specified").into());
             }
         },
     };
