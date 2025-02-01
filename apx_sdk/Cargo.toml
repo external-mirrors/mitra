@@ -26,6 +26,8 @@ thiserror = "1.0.37"
 apx_core = { path = "../apx_core" }
 
 [dev-dependencies]
+# Actix server for examples
+actix-web = "4.4.1"
 # Async runtime for examples
 tokio = { version = "1.29.1", features = ["macros", "rt-multi-thread"] }
 

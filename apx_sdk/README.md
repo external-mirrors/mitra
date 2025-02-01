@@ -19,6 +19,7 @@ apx_sdk = { git = "https://codeberg.org/silverpill/mitra", rev = "apx-v0.7.0" }
 Examples:
 
 - [FEP-ae97 client](./examples/fep_ae97_client.rs)
+- [FEP-ae97 server](./examples/fep_ae97_server.rs)
 
 Used by:
 

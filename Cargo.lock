@@ -419,6 +419,7 @@ dependencies = [
 name = "apx_sdk"
 version = "0.7.0"
 dependencies = [
+ "actix-web",
  "apx_core",
  "bytes",
  "futures-util",
