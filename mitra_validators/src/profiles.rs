@@ -11,6 +11,7 @@ use mitra_models::profiles::types::{
     PaymentOption,
     ProfileCreateData,
     ProfileUpdateData,
+    WebfingerHostname,
 };
 use mitra_utils::{
     html::{clean_html, clean_html_all, clean_html_strict},
@@ -244,7 +245,7 @@ fn validate_profile_create_data(
     profile_data: &ProfileCreateData,
 ) -> Result<(), ValidationError> {
     validate_username(&profile_data.username)?;
-    if let Some(hostname) = &profile_data.hostname {
+    if let WebfingerHostname::Remote(ref hostname) = profile_data.hostname {
         validate_hostname(hostname)?;
     };
     if let Some(display_name) = &profile_data.display_name {
@@ -252,7 +253,7 @@ fn validate_profile_create_data(
     };
     let is_remote = if let Some(ref actor) = profile_data.actor_json {
         validate_actor_data(actor)?;
-        if !actor.is_portable() && profile_data.hostname.is_none() {
+        if !actor.is_portable() && profile_data.hostname.as_str().is_none() {
             return Err(ValidationError(
                 "non-portable remote profile should have hostname"));
         };
@@ -295,15 +296,18 @@ fn validate_profile_update_data(
     profile_data: &ProfileUpdateData,
 ) -> Result<(), ValidationError> {
     validate_username(&profile_data.username)?;
-    if let Some(hostname) = &profile_data.hostname {
+    if let WebfingerHostname::Remote(ref hostname) = profile_data.hostname {
         validate_hostname(hostname)?;
+    };
+    if let WebfingerHostname::Unknown = profile_data.hostname {
+        return Err(ValidationError("unknown hostname"));
     };
     if let Some(display_name) = &profile_data.display_name {
         validate_display_name(display_name)?;
     };
     let is_remote = if let Some(ref actor) = profile_data.actor_json {
         validate_actor_data(actor)?;
-        if !actor.is_portable() && profile_data.hostname.is_none() {
+        if !actor.is_portable() && profile_data.hostname.as_str().is_none() {
             return Err(ValidationError(
                 "non-portable remote profile should have hostname"));
         };
@@ -431,7 +435,7 @@ mod tests {
     fn test_clean_profile_create_data() {
         let mut profile_data = ProfileCreateData {
             username: "test".to_string(),
-            hostname: Some("social.example".to_string()),
+            hostname: WebfingerHostname::Remote("social.example".to_string()),
             display_name: Some("Test Test".to_string()),
             actor_json: Some(DbActor {
                 id: "https://social.example/test".to_string(),

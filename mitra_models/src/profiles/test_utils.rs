@@ -17,6 +17,7 @@ use super::{
         DbActorKey,
         DbActorProfile,
         ProfileCreateData,
+        WebfingerHostname,
     },
 };
 
@@ -41,9 +42,15 @@ pub async fn create_test_remote_profile(
     if is_ap_url(&db_actor.id) {
         db_actor.gateways.push(format!("https://{hostname}"));
     };
+    let hostname = if hostname.ends_with(".local") {
+        // Special case: creating unmanaged account
+        WebfingerHostname::Unknown
+    } else {
+        WebfingerHostname::Remote(hostname.to_string())
+    };
     let profile_data = ProfileCreateData {
         username: username.to_string(),
-        hostname: Some(hostname.to_string()),
+        hostname: hostname,
         public_keys: vec![DbActorKey::default()],
         actor_json: Some(db_actor),
         ..Default::default()

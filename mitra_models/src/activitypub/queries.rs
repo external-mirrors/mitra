@@ -357,7 +357,6 @@ mod tests {
         let user = create_test_portable_user(
             db_client,
             "test",
-            "social.example",
             canonical_actor_id,
         ).await;
         // Create activity

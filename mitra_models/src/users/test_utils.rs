@@ -28,13 +28,12 @@ pub async fn create_test_user(
 pub async fn create_test_portable_user(
     db_client: &mut impl DatabaseClient,
     username: &str,
-    hostname: &str,
     actor_id: &str,
 ) -> PortableUser {
     let profile = create_test_remote_profile(
         db_client,
         username,
-        hostname,
+        "server.local", // local webfinger
         actor_id,
     ).await;
     let invite_code = create_invite_code(db_client, None).await.unwrap();

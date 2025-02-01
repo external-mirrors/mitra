@@ -685,15 +685,25 @@ pub struct DbActorProfile {
 // actor RSA key: can be updated at any time by the instance admin
 // identity proofs: TBD (likely will do "Trust on first use" (TOFU))
 
+#[derive(Debug, Default, PartialEq)]
 pub enum WebfingerHostname {
     // Managed account or unmanaged primary account
+    #[default]
     Local,
     // No account or not a primary account
     Remote(String),
     // Possible scenarios:
     // - portable user account is being created
-    // - portable user account is being updated
     Unknown,
+}
+
+impl WebfingerHostname {
+    pub fn as_str(&self) -> Option<&str> {
+        match self {
+            Self::Local | Self::Unknown => None,
+            Self::Remote(ref hostname) => Some(hostname),
+        }
+    }
 }
 
 pub(crate) fn get_identity_key(secret_key: Ed25519SecretKey) -> String {
@@ -863,7 +873,7 @@ impl Default for DbActorProfile {
 #[cfg_attr(any(test, feature = "test-utils"), derive(Default))]
 pub struct ProfileCreateData {
     pub username: String,
-    pub hostname: Option<String>,
+    pub hostname: WebfingerHostname,
     pub display_name: Option<String>,
     pub bio: Option<String>,
     pub avatar: Option<ProfileImage>,
@@ -885,7 +895,7 @@ impl ProfileCreateData {
             .map(|actor| actor.check_consistency())
             .transpose()?
             .is_some();
-        if self.hostname.is_some() && !is_remote {
+        if self.hostname.as_str().is_some() && !is_remote {
             return Err(DatabaseTypeError);
         };
         check_public_keys(&self.public_keys, is_remote)?;
@@ -895,23 +905,11 @@ impl ProfileCreateData {
         // The list may contain duplicates or self-references.
         Ok(())
     }
-
-    pub(super) fn hostname(&self) -> WebfingerHostname {
-        if let Some(ref hostname) = self.hostname {
-            WebfingerHostname::Remote(hostname.to_string())
-        } else if self.actor_json.is_none() {
-            WebfingerHostname::Local
-        } else {
-            // Possible scenarios:
-            // - portable user account is being created
-            WebfingerHostname::Unknown
-        }
-    }
 }
 
 pub struct ProfileUpdateData {
     pub username: String,
-    pub hostname: Option<String>,
+    pub hostname: WebfingerHostname,
     pub display_name: Option<String>,
     pub bio: Option<String>,
     pub bio_source: Option<String>,
@@ -934,28 +932,13 @@ impl ProfileUpdateData {
             .map(|actor| actor.check_consistency())
             .transpose()?
             .is_some();
-        if self.hostname.is_some() && !is_remote {
+        if self.hostname.as_str().is_some() && !is_remote {
             return Err(DatabaseTypeError);
         };
         check_public_keys(&self.public_keys, is_remote)?;
         check_identity_proofs(&self.identity_proofs)?;
         check_payment_options(&self.payment_options, is_remote)?;
         Ok(())
-    }
-
-    pub(super) fn hostname(&self) -> WebfingerHostname {
-        // TODO: should return "Local" if portable actor
-        // with local account is updated
-        // and this instance is its primary gateway.
-        if let Some(ref hostname) = self.hostname {
-            WebfingerHostname::Remote(hostname.to_string())
-        } else if self.actor_json.is_none() {
-            WebfingerHostname::Local
-        } else {
-            // Possible scenarios:
-            // - portable user account is being updated
-            WebfingerHostname::Unknown
-        }
     }
 
     /// Adds new identity proof
@@ -978,9 +961,10 @@ impl ProfileUpdateData {
 impl From<&DbActorProfile> for ProfileUpdateData {
     fn from(profile: &DbActorProfile) -> Self {
         let profile = profile.clone();
+        let hostname = profile.hostname();
         Self {
             username: profile.username,
-            hostname: profile.hostname,
+            hostname: hostname,
             display_name: profile.display_name,
             bio: profile.bio,
             bio_source: profile.bio_source,

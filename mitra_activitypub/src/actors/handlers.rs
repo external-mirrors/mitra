@@ -41,6 +41,7 @@ use mitra_models::{
         ProfileImage,
         ProfileCreateData,
         ProfileUpdateData,
+        WebfingerHostname,
     },
 };
 use mitra_services::media::{MediaStorage, MediaStorageError};
@@ -249,16 +250,17 @@ async fn get_webfinger_hostname(
     agent: &FederationAgent,
     instance_hostname: &str,
     actor: &ValidatedActor,
-) -> Result<Option<String>, HandlerError> {
+    has_account: bool,
+) -> Result<WebfingerHostname, HandlerError> {
     let canonical_actor_id = Url::parse(&actor.id)
         .map_err(|_| ValidationError("invalid actor ID"))?;
-    let maybe_hostname = match canonical_actor_id {
+    let webfinger_hostname = match canonical_actor_id {
         Url::Http(http_url) => {
             // TODO: implement reverse webfinger lookup
             // https://swicg.github.io/activitypub-webfinger/#reverse-discovery
             let hostname = get_hostname(&http_url.to_string())
                 .map_err(|_| ValidationError("invalid actor ID"))?;
-            Some(hostname)
+            WebfingerHostname::Remote(hostname)
         },
         Url::Ap(_) => {
             if let Some(gateway) = actor.gateways.first() {
@@ -267,7 +269,11 @@ async fn get_webfinger_hostname(
                     .map_err(|_| ValidationError("invalid gateway URL"))?;
                 if hostname == instance_hostname {
                     // Portable actor with local account (unmanaged)
-                    return Ok(None);
+                    if has_account {
+                        return Ok(WebfingerHostname::Local);
+                    } else {
+                        return Ok(WebfingerHostname::Unknown);
+                    };
                 };
                 let webfinger_address = WebfingerAddress::new_unchecked(
                     &actor.preferred_username,
@@ -278,7 +284,7 @@ async fn get_webfinger_hostname(
                     &webfinger_address,
                 ).await?;
                 if actor_id == actor.id {
-                    Some(hostname)
+                    WebfingerHostname::Remote(hostname)
                 } else {
                     return Err(ValidationError("unexpected actor ID in JRD").into());
                 }
@@ -287,7 +293,7 @@ async fn get_webfinger_hostname(
             }
         },
     };
-    Ok(maybe_hostname)
+    Ok(webfinger_hostname)
 }
 
 async fn fetch_actor_image(
@@ -579,10 +585,11 @@ pub async fn create_remote_profile(
 ) -> Result<DbActorProfile, HandlerError> {
     let Actor { inner: actor, value: actor_json } = actor;
     let agent = build_federation_agent(&ap_client.instance, None);
-    let maybe_webfinger_hostname = get_webfinger_hostname(
+    let webfinger_hostname = get_webfinger_hostname(
         &agent,
         &ap_client.instance.hostname(),
         &actor,
+        false,
     ).await?;
     let actor_data = actor.to_db_actor()?;
     validate_actor_data(&actor_data)?;
@@ -618,7 +625,7 @@ pub async fn create_remote_profile(
     ).await?;
     let mut profile_data = ProfileCreateData {
         username: actor.preferred_username.clone(),
-        hostname: maybe_webfinger_hostname,
+        hostname: webfinger_hostname,
         display_name: actor.name.clone(),
         bio: actor.summary.clone(),
         avatar: maybe_avatar,
@@ -660,10 +667,11 @@ pub async fn update_remote_profile(
     let actor_data = actor.to_db_actor()?;
     assert_eq!(actor_data_old.id, actor_data.id, "actor ID shouldn't change");
     let agent = build_federation_agent(&ap_client.instance, None);
-    let maybe_webfinger_hostname = get_webfinger_hostname(
+    let webfinger_hostname = get_webfinger_hostname(
         &agent,
         &ap_client.instance.hostname(),
         &actor,
+        profile.has_account(),
     ).await?;
     validate_actor_data(&actor_data)?;
     let moderation_domain = get_moderation_domain(&actor_data)
@@ -698,7 +706,7 @@ pub async fn update_remote_profile(
     ).await?;
     let mut profile_data = ProfileUpdateData {
         username: actor.preferred_username.clone(),
-        hostname: maybe_webfinger_hostname,
+        hostname: webfinger_hostname,
         display_name: actor.name.clone(),
         bio: actor.summary.clone(),
         bio_source: actor.summary.clone(),
