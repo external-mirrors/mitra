@@ -303,6 +303,10 @@ fn validate_profile_update_data(
     };
     let is_remote = if let Some(ref actor) = profile_data.actor_json {
         validate_actor_data(actor)?;
+        if !actor.is_portable() && profile_data.hostname.is_none() {
+            return Err(ValidationError(
+                "non-portable remote profile should have hostname"));
+        };
         true
     } else {
         false

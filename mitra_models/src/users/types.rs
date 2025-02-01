@@ -146,7 +146,7 @@ pub struct DbUser {
     created_at: DateTime<Utc>,
 }
 
-// Represents local user
+// Represents local user (managed account)
 #[derive(Clone)]
 pub struct User {
     pub id: Uuid,
@@ -313,6 +313,7 @@ pub struct DbPortableUser {
     created_at: DateTime<Utc>,
 }
 
+// Represents portable (remote) actor with local account (unmanaged)
 pub struct PortableUser {
     pub id: Uuid,
     pub profile: DbActorProfile,

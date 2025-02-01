@@ -686,8 +686,14 @@ pub struct DbActorProfile {
 // identity proofs: TBD (likely will do "Trust on first use" (TOFU))
 
 pub enum WebfingerHostname {
+    // Managed account or unmanaged primary account
     Local,
+    // No account or not a primary account
     Remote(String),
+    // Possible scenarios:
+    // - portable user account is being created
+    // - portable user account is being updated
+    // - failure to verify webfinger address of a portable actor
     Unknown,
 }
 
@@ -880,6 +886,9 @@ impl ProfileCreateData {
             .map(|actor| actor.check_consistency())
             .transpose()?
             .is_some();
+        if self.hostname.is_some() && !is_remote {
+            return Err(DatabaseTypeError);
+        };
         check_public_keys(&self.public_keys, is_remote)?;
         check_identity_proofs(&self.identity_proofs)?;
         check_payment_options(&self.payment_options, is_remote)?;
@@ -894,7 +903,9 @@ impl ProfileCreateData {
         } else if self.actor_json.is_none() {
             WebfingerHostname::Local
         } else {
-            // Possible cause: portable user account is being created
+            // Possible scenarios:
+            // - portable user account is being created
+            // - portable actor without webfinger address
             WebfingerHostname::Unknown
         }
     }
@@ -925,6 +936,9 @@ impl ProfileUpdateData {
             .map(|actor| actor.check_consistency())
             .transpose()?
             .is_some();
+        if self.hostname.is_some() && !is_remote {
+            return Err(DatabaseTypeError);
+        };
         check_public_keys(&self.public_keys, is_remote)?;
         check_identity_proofs(&self.identity_proofs)?;
         check_payment_options(&self.payment_options, is_remote)?;
@@ -932,12 +946,17 @@ impl ProfileUpdateData {
     }
 
     pub(super) fn hostname(&self) -> WebfingerHostname {
+        // TODO: should return "Local" if portable actor
+        // with local account is updated
+        // and this instance is its primary gateway.
         if let Some(ref hostname) = self.hostname {
             WebfingerHostname::Remote(hostname.to_string())
         } else if self.actor_json.is_none() {
             WebfingerHostname::Local
         } else {
-            // Portable user without webfinger address
+            // Possible scenarios:
+            // - portable user account is being updated
+            // - portable actor without webfinger address
             WebfingerHostname::Unknown
         }
     }

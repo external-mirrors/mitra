@@ -635,7 +635,11 @@ mod tests {
     };
     use crate::{
         database::test_utils::create_test_database,
-        profiles::types::{DbActor, DbActorKey},
+        profiles::types::{
+            DbActor,
+            DbActorKey,
+            WebfingerHostname,
+        },
         users::types::Role,
     };
     use super::*;
@@ -777,6 +781,7 @@ mod tests {
         };
         let profile = create_profile(db_client, profile_data).await.unwrap();
         profile.check_consistency().unwrap();
+        assert!(matches!(profile.hostname(), WebfingerHostname::Unknown));
         let rsa_secret_key = generate_weak_rsa_key().unwrap();
         let ed25519_secret_key = generate_weak_ed25519_key();
         let invite_code =
@@ -791,5 +796,6 @@ mod tests {
         assert_eq!(user.id, profile.id);
         assert_eq!(user.rsa_secret_key, rsa_secret_key);
         assert_eq!(user.ed25519_secret_key, ed25519_secret_key);
+        assert!(matches!(user.profile.hostname(), WebfingerHostname::Local));
     }
 }

@@ -262,6 +262,7 @@ async fn get_webfinger_hostname(
         },
         Url::Ap(_) => {
             if let Some(gateway) = actor.gateways.first() {
+                // Primary gateway
                 let hostname = get_hostname(gateway)
                     .map_err(|_| ValidationError("invalid gateway URL"))?;
                 if hostname == instance_hostname {
@@ -279,11 +280,13 @@ async fn get_webfinger_hostname(
                 if actor_id == actor.id {
                     Some(hostname)
                 } else {
+                    // TODO: return validation error
                     log::warn!("unexpected actor ID in JRD: {actor_id}");
                     None
                 }
             } else {
-                // No webfinger address
+                // Invalid actor: at least one gateway must be specified
+                // TODO: return validation error
                 None
             }
         },
