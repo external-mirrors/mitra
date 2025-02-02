@@ -182,9 +182,12 @@ pub async fn fetch_object(
         };
         target_url = response.headers()
             .get(header::LOCATION)
+            .and_then(|location| location.to_str().ok())
+            .and_then(|location| {
+                // https://github.com/seanmonstar/reqwest/blob/37074368012ce42e61e5649c2fffcf8c8a979e1e/src/async_impl/client.rs#L2745
+                response.url().join(location).ok()
+            })
             .ok_or(FetchError::RedirectionError)?
-            .to_str()
-            .map_err(|_| FetchError::RedirectionError)?
             .to_string();
     };
 

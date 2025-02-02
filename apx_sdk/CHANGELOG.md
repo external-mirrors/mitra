@@ -10,6 +10,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Include URL in unsafe URL error message.
 
+### Fixed
+
+- Fixed redirection error when `Location` is a relative URL.
+
 ## [0.8.0] - 2025-02-01
 
 ### Added
