@@ -78,8 +78,16 @@ pub fn validate_hostname(hostname: &str) -> Result<(), ValidationError> {
     Ok(())
 }
 
-fn clean_display_name(display_name: &str) -> String {
+fn clean_display_name_html(display_name: &str) -> String {
     clean_html_all(display_name).replace("&nbsp;", " ")
+}
+
+fn clean_display_name(display_name: &str, is_remote: bool) -> String {
+    let mut text = clean_display_name_html(display_name);
+    if is_remote {
+        text = text.chars().take(DISPLAY_NAME_MAX_LENGTH).collect();
+    };
+    text
 }
 
 fn validate_display_name(display_name: &str)
@@ -88,7 +96,7 @@ fn validate_display_name(display_name: &str)
     if display_name.chars().count() > DISPLAY_NAME_MAX_LENGTH {
         return Err(ValidationError("display name is too long"));
     };
-    if display_name != clean_display_name(display_name) {
+    if display_name != clean_display_name_html(display_name) {
         return Err(ValidationError("display name has not been sanitized"));
     };
     Ok(())
@@ -279,7 +287,7 @@ pub fn clean_profile_create_data(
 ) -> Result<(), ValidationError> {
     let is_remote = profile_data.actor_json.is_some();
     if let Some(ref display_name) = profile_data.display_name {
-        let clean_name = clean_display_name(display_name);
+        let clean_name = clean_display_name(display_name, is_remote);
         profile_data.display_name = Some(clean_name);
     };
     if let Some(bio) = &profile_data.bio {
@@ -332,7 +340,7 @@ pub fn clean_profile_update_data(
 ) -> Result<(), ValidationError> {
     let is_remote = profile_data.actor_json.is_some();
     if let Some(ref display_name) = profile_data.display_name {
-        let clean_name = clean_display_name(display_name);
+        let clean_name = clean_display_name(display_name, is_remote);
         profile_data.display_name = Some(clean_name);
     };
     if let Some(bio) = &profile_data.bio {
@@ -387,14 +395,14 @@ mod tests {
     #[test]
     fn test_clean_display_name() {
         let name = "test <script>alert()</script>test :emoji:";
-        let output = clean_display_name(name);
+        let output = clean_display_name(name, true);
         assert_eq!(output, "test test :emoji:");
     }
 
     #[test]
     fn test_clean_display_name_whitespace() {
         let name = "ワフ   ⁰͡ ⌵ ⁰͡ ";
-        let output = clean_display_name(name);
+        let output = clean_display_name(name, true);
         assert_eq!(output, "ワフ   ⁰͡ ⌵ ⁰͡ ");
     }
 
