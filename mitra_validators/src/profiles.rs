@@ -98,16 +98,15 @@ fn clean_bio_html(bio: &str) -> String {
     clean_html_strict(bio, &BIO_ALLOWED_TAGS, vec![])
 }
 
-fn clean_bio(bio: &str, is_remote: bool) -> Result<String, ValidationError> {
-    let cleaned_bio = if is_remote {
+fn clean_bio(bio: &str, is_remote: bool) -> String {
+    if is_remote {
         // Remote profile
         let truncated_bio: String = bio.chars().take(BIO_MAX_LENGTH).collect();
         clean_html(&truncated_bio, vec![])
     } else {
         // Local profile
         clean_bio_html(bio)
-    };
-    Ok(cleaned_bio)
+    }
 }
 
 fn validate_bio(bio: &str) -> Result<(), ValidationError> {
@@ -284,8 +283,7 @@ pub fn clean_profile_create_data(
         profile_data.display_name = Some(clean_name);
     };
     if let Some(bio) = &profile_data.bio {
-        let clean_bio = clean_bio(bio, is_remote)?;
-        validate_bio(&clean_bio)?;
+        let clean_bio = clean_bio(bio, is_remote);
         profile_data.bio = Some(clean_bio);
     };
     validate_profile_create_data(profile_data)?;
@@ -338,8 +336,7 @@ pub fn clean_profile_update_data(
         profile_data.display_name = Some(clean_name);
     };
     if let Some(bio) = &profile_data.bio {
-        let clean_bio = clean_bio(bio, is_remote)?;
-        validate_bio(&clean_bio)?;
+        let clean_bio = clean_bio(bio, is_remote);
         profile_data.bio = Some(clean_bio);
     };
     validate_profile_update_data(profile_data)?;
@@ -413,7 +410,7 @@ mod tests {
     #[test]
     fn test_clean_bio() {
         let bio = "test\n<script>alert()</script>123";
-        let result = clean_bio(bio, true).unwrap();
+        let result = clean_bio(bio, true);
         assert_eq!(result, "test\n123");
     }
 
