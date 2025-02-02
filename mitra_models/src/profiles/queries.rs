@@ -458,7 +458,7 @@ pub async fn get_profiles_by_ids(
     let rows = db_client.query(
         "
         SELECT actor_profile
-        FROM unnest($1::uuid[]) WITH ORDINALITY AS profile_id(id, rank)
+        FROM unnest($1::uuid[]) WITH ORDINALITY AS ranked(id, rank)
         JOIN actor_profile USING (id)
         ORDER BY rank
         ",
@@ -480,8 +480,9 @@ pub async fn get_profiles_by_accts(
     let rows = db_client.query(
         "
         SELECT actor_profile
-        FROM actor_profile
-        WHERE acct = ANY($1)
+        FROM unnest($1::text[]) WITH ORDINALITY AS ranked(acct, rank)
+        JOIN actor_profile USING (acct)
+        ORDER BY rank
         ",
         &[&accts],
     ).await?;
