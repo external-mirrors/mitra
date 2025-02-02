@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Write warning to log if actor and actor key have different origins.
 - Reject portable actors without WebFinger address.
 - Truncate long display names instead of rejecting actor.
+- Include URL in unsafe URL error message.
 
 ## Fixed
 

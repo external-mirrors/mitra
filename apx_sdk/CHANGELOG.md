@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- Include URL in unsafe URL error message.
+
 ## [0.8.0] - 2025-02-01
 
 ### Added

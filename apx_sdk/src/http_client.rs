@@ -71,12 +71,12 @@ fn is_safe_url(url: &str) -> bool {
 }
 
 #[derive(Debug, Error)]
-#[error("unsafe URL")]
-pub struct UnsafeUrlError;
+#[error("unsafe URL: {0}")]
+pub struct UnsafeUrlError(String);
 
 pub fn require_safe_url(url: &str) -> Result<(), UnsafeUrlError> {
     if !is_safe_url(url) {
-        return Err(UnsafeUrlError);
+        return Err(UnsafeUrlError(url.to_string()));
     };
     Ok(())
 }
