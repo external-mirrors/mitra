@@ -7,7 +7,7 @@ const POLL_OPTION_COUNT_MIN: usize = 2;
 pub const POLL_OPTION_COUNT_MAX: usize = 10;
 pub const POLL_OPTION_NAME_LENGTH_MAX: usize = 1000;
 
-fn clean_poll_option_name(name: &str) -> String {
+pub fn clean_poll_option_name(name: &str) -> String {
     clean_html_all(name)
 }
 

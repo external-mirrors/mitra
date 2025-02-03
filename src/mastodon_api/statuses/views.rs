@@ -81,6 +81,7 @@ use mitra_services::{
 };
 use mitra_validators::{
     errors::ValidationError,
+    polls::clean_poll_option_name,
     posts::{
         validate_local_post_links,
         validate_local_reply,
@@ -220,7 +221,10 @@ async fn create_status(
             .ok_or(ValidationError("poll duration must be provided"))?
             .into();
         let results = status_data.poll_options.iter()
-            .map(|name| PollResult::new(name))
+            .map(|name| {
+                let name = clean_poll_option_name(name);
+                PollResult::new(&name)
+            })
             .collect();
         let poll_data = PollData {
             multiple_choices: status_data.poll_multiple.unwrap_or(false),
