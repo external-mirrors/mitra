@@ -47,7 +47,8 @@ pub async fn find_emojis(
     Ok(emoji_map)
 }
 
-pub fn replace_emojis(
+// Only replaces unicode emojis
+pub fn replace_emoji_shortcodes(
     text: &str,
     custom_emoji_map: &HashMap<String, DbEmoji>,
 ) -> String {
@@ -96,9 +97,10 @@ mod tests {
     }
 
     #[test]
-    fn test_replace_emojis() {
+    fn test_replace_emoji_shortcodes() {
         let custom_emoji_map = HashMap::new();
-        let result = replace_emojis(TEXT_WITH_EMOJIS, &custom_emoji_map);
+        let result =
+            replace_emoji_shortcodes(TEXT_WITH_EMOJIS, &custom_emoji_map);
         let expected_result = concat!(
             "@user1@server1 text :emoji_name: 🔤 ",
             "did:key:zXyvw (🔑) ",

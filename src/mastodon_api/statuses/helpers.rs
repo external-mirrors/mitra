@@ -25,7 +25,7 @@ use crate::mastodon_api::{
     errors::MastodonError,
     media_server::ClientMediaServer,
     microsyntax::{
-        emojis::{find_emojis, replace_emojis},
+        emojis::{find_emojis, replace_emoji_shortcodes},
         hashtags::{find_hashtags, replace_hashtags},
         links::{find_linked_posts, insert_quote, replace_object_links},
         mentions::{find_mentioned_profiles, replace_mentions},
@@ -95,7 +95,7 @@ async fn parse_microsyntaxes(
         db_client,
         &content,
     ).await?;
-    content = replace_emojis(&content, &custom_emoji_map);
+    content = replace_emoji_shortcodes(&content, &custom_emoji_map);
     let emojis = custom_emoji_map.into_values().collect();
     Ok(PostContent {
         content,
