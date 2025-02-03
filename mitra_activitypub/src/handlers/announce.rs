@@ -11,6 +11,7 @@ use mitra_models::{
     posts::queries::{
         create_post,
         delete_repost,
+        get_post_by_id,
         get_remote_post_by_object_id,
         get_remote_repost_by_activity_id,
         get_repost_by_author,
@@ -70,25 +71,27 @@ pub async fn handle_announce(
         db_client,
         &activity.actor,
     ).await?;
-    let post_id = match parse_local_object_id(
+    let post = match parse_local_object_id(
         &ap_client.instance.url(),
         &activity.object,
     ) {
-        Ok(post_id) => post_id,
+        Ok(post_id) => get_post_by_id(db_client, post_id).await?,
         Err(_) => {
             // Try to get remote post
-            let post = import_post(
+            import_post(
                 &ap_client,
                 db_client,
                 activity.object,
                 None,
-            ).await?;
-            post.id
+            ).await?
         },
+    };
+    if !post.is_public() {
+        return Err(DatabaseError::NotFound("post").into());
     };
     validate_object_id(&activity.id)?;
     let repost_data = PostCreateData::repost(
-        post_id,
+        post.id,
         Some(activity.id.clone()),
     );
     match create_post(db_client, author.id, repost_data).await {
