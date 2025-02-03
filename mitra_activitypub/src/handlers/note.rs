@@ -32,6 +32,7 @@ use mitra_models::{
     media::types::MediaInfo,
     polls::types::{PollData, PollResult},
     posts::{
+        helpers::can_link_post,
         queries::{create_post, update_post},
         types::{
             Post,
@@ -203,10 +204,10 @@ fn get_object_url(
 ) -> Result<Option<String>, ValidationError> {
     let maybe_object_url = match &object.url {
         Some(value) => {
-            let links = parse_into_href_array(value)
+            let urls = parse_into_href_array(value)
                 .map_err(|_| ValidationError("invalid object URL"))?;
             // TODO: select URL with text/html media type
-            links.into_iter().next()
+            urls.into_iter().next()
         },
         None => None,
     };
@@ -591,6 +592,10 @@ async fn get_object_tags(
                 &instance.url(),
                 &canonical_linked_id,
             ).await?;
+            if !can_link_post(&linked) {
+                log::warn!("post can not be linked");
+                continue;
+            };
             if !links.contains(&linked.id) {
                 links.push(linked.id);
             };
@@ -652,8 +657,12 @@ async fn get_object_tags(
             &instance.url(),
             &canonical_object_id,
         ).await?;
-        if links.len() < LINK_LIMIT && !links.contains(&linked.id) {
-            links.push(linked.id);
+        if can_link_post(&linked) {
+            if links.len() < LINK_LIMIT && !links.contains(&linked.id) {
+                links.push(linked.id);
+            };
+        } else {
+            log::warn!("post can not be linked");
         };
     };
 

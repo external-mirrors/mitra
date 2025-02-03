@@ -108,6 +108,7 @@ pub async fn add_user_actions(
     Ok(())
 }
 
+// Equivalent to build_visibility_filter
 pub async fn can_view_post(
     db_client: &impl DatabaseClient,
     maybe_viewer: Option<&DbActorProfile>,
@@ -170,6 +171,7 @@ pub fn can_create_post(
     user.role.has_permission(Permission::CreatePost)
 }
 
+// Equivalent to create_post_links
 pub fn can_link_post(post: &Post) -> bool {
     if post.repost_of_id.is_some() {
         // Can't reference reposts

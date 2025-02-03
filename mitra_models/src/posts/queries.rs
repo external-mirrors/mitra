@@ -137,10 +137,14 @@ async fn create_post_links(
     let links_rows = db_client.query(
         "
         INSERT INTO post_link (source_id, target_id)
-        SELECT $1, post.id FROM post WHERE id = ANY($2)
+        SELECT $1, post.id FROM post
+        WHERE
+            post.id = ANY($2)
+            AND post.repost_of_id IS NULL
+            AND post.visibility = $3
         RETURNING target_id
         ",
-        &[&post_id, &links],
+        &[&post_id, &links, &Visibility::Public],
     ).await?;
     if links_rows.len() != links.len() {
         return Err(DatabaseError::NotFound("post"));
