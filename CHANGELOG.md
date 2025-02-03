@@ -6,11 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
-## Added
+## [3.16.0] - 2025-02-03
+
+### Added
 
 - Allow to edit posts with polls.
 
-## Changed
+### Changed
 
 - Write warning to log when `content` of a vote is not null.
 - Changed MSRV to 1.68.2.
@@ -22,7 +24,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Sanitize HTML in poll options when creating poll.
 - Enable incoming queue worker by default.
 
-## Fixed
+### Fixed
 
 - Change poll max expiration time to avoid integer overflow in Mastodon clients.
 - Preserve order of mentions in local posts.
