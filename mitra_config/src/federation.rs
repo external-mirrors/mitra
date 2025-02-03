@@ -2,7 +2,7 @@ use serde::Deserialize;
 
 const fn default_federation_enabled() -> bool { true }
 const fn default_ssrf_protection_enabled() -> bool { true }
-const fn default_incoming_queue_worker_enabled() -> bool { false }
+const fn default_incoming_queue_worker_enabled() -> bool { true }
 const fn default_inbox_queue_batch_size() -> u32 { 20 }
 const fn default_fetcher_timeout() -> u64 { 60 }
 const fn default_deliverer_standalone() -> bool { true }

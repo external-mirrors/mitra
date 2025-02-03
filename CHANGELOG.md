@@ -20,6 +20,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Include URL in unsafe URL error message.
 - Reject poll options containing HTML.
 - Sanitize HTML in poll options when creating poll.
+- Enable incoming queue worker by default.
 
 ## Fixed
 
