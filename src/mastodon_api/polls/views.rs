@@ -1,4 +1,5 @@
 use actix_web::{
+    dev::ConnectionInfo,
     post,
     web,
     HttpResponse,
@@ -24,10 +25,15 @@ use mitra_models::{
 };
 use mitra_services::media::MediaServer;
 
-use crate::mastodon_api::{
-    auth::get_current_user,
-    errors::MastodonError,
+use crate::{
+    http::get_request_base_url,
+    mastodon_api::{
+        auth::get_current_user,
+        errors::MastodonError,
+        media_server::ClientMediaServer,
+    },
 };
+
 use super::types::{Poll, VoteData};
 
 // https://docs.joinmastodon.org/methods/polls/#vote
@@ -35,6 +41,7 @@ use super::types::{Poll, VoteData};
 async fn vote_view(
     auth: BearerAuth,
     config: web::Data<Config>,
+    connection_info: ConnectionInfo,
     db_pool: web::Data<DatabaseConnectionPool>,
     poll_id: web::Path<Uuid>,
     vote_data: web::Json<VoteData>,
@@ -98,8 +105,15 @@ async fn vote_view(
             config.federation.fep_e232_enabled,
         ).await?.save_and_enqueue(db_client).await?;
     };
+    let base_url = get_request_base_url(connection_info);
+    let media_server = ClientMediaServer::new(&config, &base_url);
     let choices = votes.into_iter().map(|vote| vote.choice).collect();
-    let poll = Poll::from_db(&poll_updated, Some(choices));
+    let poll = Poll::from_db(
+        &media_server,
+        &poll_updated,
+        post.emojis.clone(),
+        Some(choices),
+    );
     Ok(HttpResponse::Ok().json(poll))
 }
 

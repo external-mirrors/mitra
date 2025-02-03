@@ -4,9 +4,15 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use mitra_models::polls::types::{Poll as DbPoll};
+use mitra_models::{
+    emojis::types::DbEmoji,
+    polls::types::{Poll as DbPoll},
+};
 
-use crate::mastodon_api::custom_emojis::types::CustomEmoji;
+use crate::mastodon_api::{
+    custom_emojis::types::CustomEmoji,
+    media_server::ClientMediaServer,
+};
 
 #[derive(Serialize)]
 struct PollOption {
@@ -31,7 +37,12 @@ pub struct Poll {
 }
 
 impl Poll {
-    pub fn from_db(db_poll: &DbPoll, maybe_voted_for: Option<Vec<String>>) -> Self {
+    pub fn from_db(
+        media_server: &ClientMediaServer,
+        db_poll: &DbPoll,
+        emojis: Vec<DbEmoji>,
+        maybe_voted_for: Option<Vec<String>>,
+    ) -> Self {
         let mut options = vec![];
         let mut votes_count = 0;
         for result in db_poll.results.inner() {
@@ -61,7 +72,9 @@ impl Poll {
             votes_count: votes_count,
             voters_count: db_poll.multiple_choices.then_some(0),
             options: options,
-            emojis: vec![],
+            emojis: emojis.into_iter()
+                .map(|emoji| CustomEmoji::from_db(media_server, emoji))
+                .collect(),
             voted: maybe_own_votes.as_ref().map(|own_votes| !own_votes.is_empty()),
             own_votes: maybe_own_votes,
         }

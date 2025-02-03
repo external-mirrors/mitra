@@ -7,6 +7,7 @@ use mitra_config::Instance;
 use mitra_models::{
     database::{DatabaseClient, DatabaseError},
     emojis::types::DbEmoji,
+    polls::types::PollResult,
     posts::{
         queries::get_post_by_id,
         helpers::{add_related_posts, add_user_actions, can_link_post},
@@ -18,6 +19,7 @@ use mitra_models::{
 use mitra_utils::markdown::markdown_lite_to_html;
 use mitra_validators::{
     errors::ValidationError,
+    polls::clean_poll_option_name,
     posts::clean_local_content,
 };
 
@@ -150,6 +152,23 @@ pub async fn parse_content(
     };
     output.content = clean_local_content(&output.content)?;
     Ok(output)
+}
+
+pub async fn parse_poll_options(
+    db_client: &impl DatabaseClient,
+    poll_options: &[String],
+) -> Result<(Vec<PollResult>, Vec<DbEmoji>), DatabaseError> {
+    let custom_emoji_map =
+        find_emojis(db_client, &poll_options.join(" ")).await?;
+    let results = poll_options.iter()
+        .map(|name| {
+            let name = replace_emoji_shortcodes(name, &custom_emoji_map);
+            let name = clean_poll_option_name(&name);
+            PollResult::new(&name)
+        })
+        .collect();
+    let emojis = custom_emoji_map.into_values().collect();
+    Ok((results, emojis))
 }
 
 pub async fn prepare_mentions(

@@ -44,7 +44,7 @@ use mitra_models::{
         DatabaseConnectionPool,
         DatabaseError,
     },
-    polls::types::{PollData, PollResult},
+    polls::types::PollData,
     posts::helpers::{
         add_user_actions,
         can_create_post,
@@ -81,7 +81,6 @@ use mitra_services::{
 };
 use mitra_validators::{
     errors::ValidationError,
-    polls::clean_poll_option_name,
     posts::{
         validate_local_post_links,
         validate_local_reply,
@@ -104,6 +103,7 @@ use super::helpers::{
     build_status,
     build_status_list,
     parse_content,
+    parse_poll_options,
     prepare_mentions,
     PostContent,
 };
@@ -173,7 +173,7 @@ async fn create_status(
         },
     };
     // Parse content
-    let PostContent { content, content_source, mentions, hashtags, links, linked, emojis } =
+    let PostContent { content, content_source, mentions, hashtags, links, linked, mut emojis } =
         parse_content(
             db_client,
             &instance,
@@ -220,12 +220,15 @@ async fn create_status(
         let duration = status_data.poll_expires_in
             .ok_or(ValidationError("poll duration must be provided"))?
             .into();
-        let results = status_data.poll_options.iter()
-            .map(|name| {
-                let name = clean_poll_option_name(name);
-                PollResult::new(&name)
-            })
-            .collect();
+        let (results, poll_emojis) = parse_poll_options(
+            db_client,
+            &status_data.poll_options,
+        ).await?;
+        for poll_emoji in poll_emojis {
+            if !emojis.iter().any(|emoji| emoji.id == poll_emoji.id) {
+                emojis.push(poll_emoji);
+            };
+        };
         let poll_data = PollData {
             multiple_choices: status_data.poll_multiple.unwrap_or(false),
             ends_at: Utc::now() + Duration::from_secs(duration),

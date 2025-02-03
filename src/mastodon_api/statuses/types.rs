@@ -135,7 +135,12 @@ impl Status {
         let maybe_poll = if let Some(ref db_poll) = post.poll {
             let maybe_voted_for = post.actions.as_ref()
                 .map(|actions| actions.voted_for.clone());
-            let poll = Poll::from_db(db_poll, maybe_voted_for);
+            let poll = Poll::from_db(
+                media_server,
+                db_poll,
+                post.emojis.clone(),
+                maybe_voted_for,
+            );
             Some(poll)
         } else {
             None
