@@ -14,6 +14,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Reject portable actors without WebFinger address.
 - Truncate long display names instead of rejecting actor.
 - Include URL in unsafe URL error message.
+- Reject poll options containing HTML.
 
 ## Fixed
 
