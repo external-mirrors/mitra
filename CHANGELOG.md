@@ -28,6 +28,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Fixed violation of data integrity when portable account is updated.
 - Fixed redirection error when `Location` is a relative URL.
 - Verify that posts quoted by remote actors are public.
+- Fixed panic when voting on poll in reply.
 
 ## [3.15.0] - 2025-01-24
 

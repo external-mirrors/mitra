@@ -19,7 +19,7 @@ use mitra_models::{
         DatabaseError,
     },
     polls::queries::vote,
-    posts::helpers::get_post_by_id_for_view,
+    posts::helpers::{add_related_posts, get_post_by_id_for_view},
     users::queries::get_user_by_id,
 };
 use mitra_services::media::MediaServer;
@@ -88,6 +88,7 @@ async fn vote_view(
     } else {
         // Local poll
         let post_author = get_user_by_id(db_client, post.author.id).await?;
+        add_related_posts(db_client, vec![&mut post]).await?;
         prepare_update_note(
             db_client,
             &instance,
