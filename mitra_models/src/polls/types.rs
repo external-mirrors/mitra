@@ -58,6 +58,16 @@ pub struct PollData {
     pub results: Vec<PollResult>,
 }
 
+impl From<Poll> for PollData {
+    fn from(poll: Poll) -> Self {
+        Self {
+            multiple_choices: poll.multiple_choices,
+            ends_at: poll.ends_at,
+            results: poll.results.inner().to_vec(),
+        }
+    }
+}
+
 #[derive(Clone, FromSql)]
 #[postgres(name = "poll_vote")]
 pub struct PollVote {

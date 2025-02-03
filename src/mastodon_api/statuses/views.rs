@@ -420,9 +420,6 @@ async fn edit_status(
     if post.author.id != current_user.id {
         return Err(MastodonError::PermissionError);
     };
-    if post.poll.is_some() {
-        return Err(MastodonError::OperationError("poll can not be edited"));
-    };
     let maybe_in_reply_to = if let Some(in_reply_to_id) = post.in_reply_to_id {
         let in_reply_to = get_post_by_id(db_client, in_reply_to_id).await?;
         Some(in_reply_to)
@@ -453,7 +450,7 @@ async fn edit_status(
         content: content,
         content_source: content_source,
         is_sensitive: status_data.sensitive,
-        poll: None,
+        poll: post.poll.map(PollData::from),
         attachments: status_data.media_ids,
         mentions: mentions,
         tags: hashtags,
