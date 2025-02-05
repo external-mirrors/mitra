@@ -22,7 +22,7 @@ use crate::{
         post_object_id,
     },
     queues::OutgoingActivityJobData,
-    vocabulary::{DISLIKE, EMOJI_REACT, LIKE},
+    vocabulary::{DISLIKE, LIKE},
 };
 
 use super::emoji::{build_emoji, Emoji};
@@ -86,7 +86,7 @@ fn build_like(
 ) -> Like {
     let activity_type = match maybe_reaction_content.as_deref() {
         Some("👎") => DISLIKE,
-        Some(_) => EMOJI_REACT,
+        Some(_) => LIKE,
         None => LIKE,
     };
     let activity_id = local_like_activity_id(instance_url, reaction_id, false);
