@@ -1899,7 +1899,7 @@ mod tests {
         let post = create_post(db_client, author.id, post_data).await.unwrap();
         let post_data = PostUpdateData {
             content: "test update".to_string(),
-            updated_at: Utc::now(),
+            updated_at: Some(Utc::now()),
             ..Default::default()
         };
         let (post, deletion_queue) =

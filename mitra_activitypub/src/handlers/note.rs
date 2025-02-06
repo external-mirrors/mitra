@@ -975,7 +975,6 @@ pub async fn update_remote_post(
         &HashMap::new(),
     ).await?;
     let is_sensitive = object.sensitive.unwrap_or(false);
-    let updated_at = object.updated.unwrap_or(Utc::now());
 
     let mentions = filter_mentions(
         db_client,
@@ -987,6 +986,18 @@ pub async fn update_remote_post(
         !mentions.iter().any(|profile| profile.is_local())
     {
         log::warn!("direct message has no local recipients");
+    };
+
+    let is_edited = post.is_edited(
+        &content,
+        maybe_poll_data.as_ref(),
+        // TODO: attachments are always re-created
+        &attachments,
+    );
+    let updated_at = if is_edited {
+        Some(Utc::now())
+    } else {
+        post.updated_at
     };
 
     let post_data = PostUpdateData {

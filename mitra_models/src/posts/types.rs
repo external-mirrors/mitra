@@ -278,6 +278,35 @@ impl Post {
             .as_ref()
             .expect("conversation should not be null")
     }
+
+    pub fn is_edited(
+        &self,
+        new_content: &str,
+        new_poll_data: Option<&PollData>,
+        new_attachments: &[Uuid],
+    ) -> bool {
+        let current_content = &self.content;
+        let current_poll_options: Option<Vec<_>> = self.poll.as_ref()
+            .map(|poll| {
+                poll.results.inner().iter()
+                    .map(|result| &result.option_name)
+                    .collect()
+
+            });
+        let new_poll_options = new_poll_data
+            .map(|poll_data| {
+                poll_data.results.iter()
+                    .map(|result| &result.option_name)
+                    .collect()
+            });
+        let current_attachments: Vec<_> = self.attachments.iter()
+            .map(|attachment| attachment.id)
+            .collect();
+        let is_not_edited = current_content == new_content &&
+            current_poll_options == new_poll_options &&
+            current_attachments == new_attachments;
+        !is_not_edited
+    }
 }
 
 #[cfg(any(test, feature = "test-utils"))]
@@ -430,5 +459,5 @@ pub struct PostUpdateData {
     pub links: Vec<Uuid>,
     pub emojis: Vec<Uuid>,
     pub url: Option<String>,
-    pub updated_at: DateTime<Utc>,
+    pub updated_at: Option<DateTime<Utc>>,
 }

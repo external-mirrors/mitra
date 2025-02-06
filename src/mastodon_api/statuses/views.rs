@@ -460,7 +460,7 @@ async fn edit_status(
         links: links,
         emojis: emojis.iter().map(|emoji| emoji.id).collect(),
         url: None,
-        updated_at: Utc::now(),
+        updated_at: Some(Utc::now()),
     };
     validate_post_update_data(&post_data)?;
     validate_post_mentions(&post_data.mentions, post.visibility)?;
