@@ -45,11 +45,11 @@ pub async fn remove_filter_rule(
     Ok(())
 }
 
-/// Returns filter rules in the order of precedence
 pub async fn get_filter_rules(
     db_client: &impl DatabaseClient,
 ) -> Result<Vec<FilterRule>, DatabaseError> {
-    // Ordering: from less to more specific rules
+    // Ordering: from less to more specific rules.
+    // Wildcard rules are least specific.
     let rows = db_client.query(
         "
         SELECT filter_rule

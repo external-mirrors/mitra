@@ -70,6 +70,7 @@ impl FederationFilter {
         hostname: &str,
         action: FilterAction,
     ) -> bool {
+        // Rules are checked in order. The last matching rule wins.
         let mut is_required = false;
         // Blocklist and allowlist have lower priority than filter rules
         if action == FilterAction::Reject {

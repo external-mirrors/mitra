@@ -15,12 +15,12 @@ A filter rule consists of an action and a target. Supported actions:
 
 Target is a domain name or a wildcard pattern (e.g. `*.example.com`).
 
-Wildcard rules are applied first. For example, a ruleset for allowlist-based federation might look like this:
+Wildcard rules are applied last. For example, a ruleset for allowlist-based federation might look like this:
 
 ```
-reject *
 accept server1.example
 accept server2.example
+reject *
 ```
 
 ## Commands

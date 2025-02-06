@@ -138,7 +138,7 @@ impl ListFilterRules {
         db_client: &impl DatabaseClient,
     ) -> Result<(), Error> {
         let rules = get_filter_rules(db_client).await?;
-        for rule in rules {
+        for rule in rules.iter().rev() {
             let action = FilterAction::from_db_action(
                 rule.filter_action,
                 rule.is_reversed,
