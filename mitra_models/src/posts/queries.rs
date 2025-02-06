@@ -1580,6 +1580,12 @@ pub async fn find_extraneous_posts(
                 FROM bookmark
                 WHERE bookmark.post_id = ANY(context.posts)
             )
+            -- no votes to any poll in context
+            AND NOT EXISTS (
+                SELECT 1
+                FROM poll_vote
+                WHERE poll_vote.poll_id = ANY(context.posts)
+            )
         ",
         &[&updated_before],
     ).await?;
