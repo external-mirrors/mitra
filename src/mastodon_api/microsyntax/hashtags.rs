@@ -2,7 +2,7 @@ use regex::{Captures, Regex};
 
 use mitra_activitypub::identifiers::local_tag_collection;
 
-use super::parser::is_inside_code_block;
+use super::parser::{is_inside_code_block, is_inside_link};
 
 // See also: HASHTAG_NAME_RE in mitra_validators::tags
 const HASHTAG_RE: &str = r"(?m)(?P<before>^|\s|>|[\(])#(?P<tag>[^\s<]+)";
@@ -17,8 +17,10 @@ pub fn find_hashtags(text: &str) -> Vec<String> {
     let mut tags = vec![];
     for caps in hashtag_re.captures_iter(text) {
         let tag_match = caps.name("tag").expect("should have tag group");
-        if is_inside_code_block(&tag_match, text) {
-            // Ignore hashtags inside code blocks
+        if is_inside_code_block(&tag_match, text) ||
+            is_inside_link(&tag_match, text)
+        {
+            // Ignore hashtags inside code blocks and links
             continue;
         };
         if let Some(secondary_caps) = hashtag_secondary_re.captures(&caps["tag"]) {
@@ -39,8 +41,10 @@ pub fn replace_hashtags(instance_url: &str, text: &str, tags: &[String]) -> Stri
         .expect("regexp should be valid");
     let result = hashtag_re.replace_all(text, |caps: &Captures| {
         let tag_match = caps.name("tag").expect("should have tag group");
-        if is_inside_code_block(&tag_match, text) {
-            // Don't replace hashtags inside code blocks
+        if is_inside_code_block(&tag_match, text) ||
+            is_inside_link(&tag_match, text)
+        {
+            // Don't replace hashtags inside code blocks and links
             return caps[0].to_string();
         };
         if let Some(secondary_caps) = hashtag_secondary_re.captures(&caps["tag"]) {
@@ -99,6 +103,13 @@ mod tests {
     fn test_find_hashtags_multiple_characters_after() {
         let tags = find_hashtags("test (test #tag).");
         assert_eq!(tags, vec!["tag"]);
+    }
+
+    #[test]
+    fn test_find_hashtags_inside_link() {
+        let text = r#"test #111<a href="https://test">number #222</a>"#;
+        let tags = find_hashtags(text);
+        assert_eq!(tags, vec!["111"]);
     }
 
     #[test]
