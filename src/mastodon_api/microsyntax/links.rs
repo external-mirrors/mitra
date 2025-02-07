@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use regex::{Captures, Match, Regex};
+use regex::{Captures, Regex};
 
 use mitra_activitypub::{
     identifiers::{canonicalize_id, compatible_post_object_id},
@@ -15,17 +15,10 @@ use mitra_models::{
 };
 use mitra_validators::posts::LINK_LIMIT;
 
+use super::parser::is_inside_code_block;
+
 // MediaWiki-like syntax: [[url|text]]
 const OBJECT_LINK_SEARCH_RE: &str = r"(?m)\[\[(?P<url>[^\s\|]+)(\|(?P<text>.+?))?\]\]";
-
-pub fn is_inside_code_block(match_: &Match, text: &str) -> bool {
-    // TODO: remove workaround.
-    // Perform replacement only inside text nodes during markdown parsing
-    let text_before = &text[0..match_.start()];
-    let code_open = text_before.matches("<code>").count();
-    let code_closed = text_before.matches("</code>").count();
-    code_open > code_closed
-}
 
 /// Finds everything that looks like an object link
 fn find_object_links(text: &str) -> Vec<String> {
@@ -130,16 +123,6 @@ mod tests {
         "test link with [[https://example.org/1|text]] ",
         "test ([[https://example.org/2]])",
     );
-
-    #[test]
-    fn test_is_inside_code_block() {
-        let text = "abc<code>&&</code>xyz";
-        let regexp = Regex::new("&&").unwrap();
-        let mat = regexp.find(text).unwrap();
-        assert_eq!(mat.start(), 9);
-        let result = is_inside_code_block(&mat, text);
-        assert_eq!(result, true);
-    }
 
     #[test]
     fn test_find_object_links() {

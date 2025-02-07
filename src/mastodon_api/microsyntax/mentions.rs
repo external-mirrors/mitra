@@ -10,7 +10,7 @@ use mitra_models::{
     profiles::types::DbActorProfile,
 };
 
-use super::links::is_inside_code_block;
+use super::parser::is_inside_code_block;
 
 // See also: USERNAME_RE in mitra_validators::profiles
 const MENTION_SEARCH_RE: &str = r"(?m)(?P<before>^|\s|>|[\(])@(?P<mention>[^\s<]+)";

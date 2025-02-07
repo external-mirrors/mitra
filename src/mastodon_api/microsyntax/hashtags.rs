@@ -2,7 +2,7 @@ use regex::{Captures, Regex};
 
 use mitra_activitypub::identifiers::local_tag_collection;
 
-use super::links::is_inside_code_block;
+use super::parser::is_inside_code_block;
 
 // See also: HASHTAG_NAME_RE in mitra_validators::tags
 const HASHTAG_RE: &str = r"(?m)(?P<before>^|\s|>|[\(])#(?P<tag>[^\s<]+)";
