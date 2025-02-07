@@ -27,6 +27,7 @@ It also supports the following standards:
 - [FEP-fe34: Origin-based security model](https://codeberg.org/fediverse/fep/src/branch/main/fep/fe34/fep-fe34.md)
 - [FEP-d556: Server-Level Actor Discovery Using WebFinger](https://codeberg.org/fediverse/fep/src/branch/main/fep/d556/fep-d556.md)
 - [FEP-c0e0: Emoji reactions](https://codeberg.org/fediverse/fep/src/branch/main/fep/c0e0/fep-c0e0.md)
+  - `Like` with `content` activity is used.
 - [FEP-ef61: Portable Objects](https://codeberg.org/fediverse/fep/src/branch/main/fep/ef61/fep-ef61.md)
   - Supports portable actors hosted on remote servers and portable actors registered using [FEP-ae97 clients](#fep-ae97-c2s-api).
   - Only `did:key` identities are supported. Planned support for `did:web`.
