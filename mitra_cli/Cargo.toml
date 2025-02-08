@@ -14,7 +14,7 @@ path = "src/main.rs"
 # Used for catching errors
 anyhow = "1.0.58"
 # Used to build admin CLI tool
-clap = { version = "~4.2.7", default-features = false, features = ["std", "derive", "error-context", "help", "usage"] }
+clap = { version = "~4.3.24", default-features = false, features = ["std", "derive", "error-context", "help", "usage"] }
 # Used for logging
 log = "0.4.20"
 # Used for reading JSON
