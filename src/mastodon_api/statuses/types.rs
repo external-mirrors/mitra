@@ -196,7 +196,7 @@ impl Status {
             let reaction = PleromaEmojiReaction {
                 account_ids: reaction.authors,
                 count: reaction.count,
-                me: post.actions.as_ref().map_or(false, |actions| {
+                me: post.actions.as_ref().is_some_and(|actions| {
                     actions.reacted_with.contains(&content)
                 }),
                 // Emoji name or emoji symbol
@@ -231,9 +231,9 @@ impl Status {
             mentions: mentions,
             tags: tags,
             emojis: emojis,
-            favourited: post.actions.as_ref().map_or(false, |actions| actions.liked),
-            reblogged: post.actions.as_ref().map_or(false, |actions| actions.reposted),
-            bookmarked: post.actions.as_ref().map_or(false, |actions| actions.bookmarked),
+            favourited: post.actions.as_ref().is_some_and(|actions| actions.liked),
+            reblogged: post.actions.as_ref().is_some_and(|actions| actions.reposted),
+            bookmarked: post.actions.as_ref().is_some_and(|actions| actions.bookmarked),
             pleroma: PleromaData {
                 emoji_reactions,
                 in_reply_to_account_acct: post.in_reply_to

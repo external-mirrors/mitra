@@ -16,6 +16,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Don't prune posts that contain polls with local votes.
 - Reverse order of rules in `list-filter-rules` command output.
 - Don't allow hashtags inside links.
+- Changed MSRV to 1.70.0.
 
 ### Fixed
 
