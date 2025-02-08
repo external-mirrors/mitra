@@ -332,6 +332,8 @@ pub async fn update_profile(
         profile_data.emojis,
     ).await?;
     let profile = update_emoji_cache(&transaction, profile_id).await?;
+
+    profile.check_consistency()?;
     transaction.commit().await?;
 
     // Orphaned images should be deleted after update
@@ -1056,6 +1058,7 @@ mod tests {
         };
         let db_client = &mut create_test_database().await;
         let profile = create_profile(db_client, profile_data).await.unwrap();
+        profile.check_consistency().unwrap();
         assert_eq!(profile.username, "test");
         assert_eq!(profile.hostname.unwrap(), "example.com");
         assert_eq!(profile.acct.unwrap(), "test@example.com");
@@ -1145,11 +1148,7 @@ mod tests {
     #[serial]
     async fn test_update_profile() {
         let db_client = &mut create_test_database().await;
-        let profile_data = ProfileCreateData {
-            username: "test".to_string(),
-            ..Default::default()
-        };
-        let profile = create_profile(db_client, profile_data).await.unwrap();
+        let profile = create_test_local_profile(db_client, "test").await;
         let mut profile_data = ProfileUpdateData::from(&profile);
         let bio = "test bio";
         profile_data.bio = Some(bio.to_string());
