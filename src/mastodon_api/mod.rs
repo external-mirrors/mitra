@@ -108,6 +108,7 @@ pub fn mastodon_api_scope(
         .error_handler(validation_error_handler);
     let multipart_form_config = MultipartFormConfig::default()
         .total_limit(payload_size_limit)
+        .memory_limit(payload_size_limit)
         .error_handler(validation_error_handler);
     // Disable strict mode
     let qs_config = QsConfig::new(2, false);
