@@ -33,6 +33,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Removed spurious warnings about vote content being not null.
 - Don't mark post as edited unless content and attachments are changed.
+- Fixed processing of replies with narrowed down audience as DMs.
 
 ## [3.16.0] - 2025-02-03
 

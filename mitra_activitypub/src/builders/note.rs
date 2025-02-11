@@ -310,8 +310,9 @@ pub fn build_note(
             if post.visibility == Visibility::Conversation {
                 // Copy conversation audience
                 let conversation = in_reply_to.expect_conversation();
+                // Public conversations have empty audience.
                 // Conversations created by database migration
-                // will have empty audience
+                // will also have empty audience.
                 if let Some(ref audience) = conversation.audience {
                     if !primary_audience.contains(audience) {
                         primary_audience.push(audience.clone());

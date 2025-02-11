@@ -381,6 +381,7 @@ impl TryFrom<&Row> for Post {
 }
 
 pub enum PostContext {
+    // Audience is empty if top-level post is Public
     Top {
         audience: Option<String>,
     },

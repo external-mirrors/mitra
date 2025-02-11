@@ -697,6 +697,7 @@ fn get_object_visibility(
     audience: &[String],
     maybe_in_reply_to: Option<&Post>,
 ) -> (Visibility, PostContext) {
+    let actor = author.expect_actor_data();
     if let Some(in_reply_to) = maybe_in_reply_to {
         let conversation = in_reply_to.expect_conversation();
         let context = PostContext::Reply {
@@ -706,17 +707,20 @@ fn get_object_visibility(
         let visibility = if audience.iter().any(is_public) {
             Visibility::Public
         } else if let Some(ref conversation_audience) = conversation.audience {
+            // NOTE: Public conversations have empty audience
             if audience.contains(conversation_audience) {
                 Visibility::Conversation
             } else {
                 Visibility::Direct
             }
+        } else if audience.iter().any(|id| Some(id) == actor.followers.as_ref()) {
+            // Mastodon: narrowing down the scope from Public to Followers
+            Visibility::Followers
         } else {
             Visibility::Direct
         };
         (visibility, context)
     } else {
-        let actor = author.expect_actor_data();
         let mut conversation_audience = None;
         let visibility = if audience.iter().any(is_public) {
             Visibility::Public
