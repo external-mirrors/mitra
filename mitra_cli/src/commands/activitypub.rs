@@ -82,12 +82,8 @@ impl ImportObject {
         };
         let mut ap_client = ApClient::new(config, db_client).await?;
         ap_client.as_user = maybe_user;
-        let agent = build_federation_agent(
-            &ap_client.instance,
-            ap_client.as_user.as_ref(),
-        );
         let object: JsonValue =
-            fetch_any_object(&agent, &self.object_id).await?;
+            ap_client.fetch_object(&self.object_id).await?;
         let object_type = match self.object_type.as_str() {
             "object" => CoreType::Object,
             "actor" => CoreType::Actor,

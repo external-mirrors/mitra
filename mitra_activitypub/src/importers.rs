@@ -176,6 +176,28 @@ pub async fn fetch_any_object<T: DeserializeOwned>(
     ).await
 }
 
+impl ApClient {
+    pub async fn fetch_object<T: DeserializeOwned>(
+        &self,
+        object_id: &str,
+    ) -> Result<T, HandlerError> {
+        let agent = build_federation_agent(
+            &self.instance,
+            self.as_user.as_ref(),
+        );
+        let object_json: JsonValue =
+            fetch_any_object(&agent, object_id).await?;
+        let canonical_object_id = object_json["id"].as_str()
+            .and_then(|object_id| Url::parse(object_id).ok())
+            .ok_or(ValidationError("invalid object ID"))?;
+        if canonical_object_id.authority() == self.instance.hostname() {
+            return Err(HandlerError::LocalObject);
+        };
+        let object: T = serde_json::from_value(object_json)?;
+        Ok(object)
+    }
+}
+
 pub async fn get_profile_by_actor_id(
     db_client: &impl DatabaseClient,
     instance_url: &str,
