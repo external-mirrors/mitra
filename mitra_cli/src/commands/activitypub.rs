@@ -17,6 +17,7 @@ use mitra_activitypub::{
         import_activity,
         import_from_outbox,
         import_object,
+        import_profile,
         import_replies,
         ActorIdResolver,
         ApClient,
@@ -89,6 +90,7 @@ impl ImportObject {
             fetch_any_object(&agent, &self.object_id).await?;
         let object_type = match self.object_type.as_str() {
             "object" => CoreType::Object,
+            "actor" => CoreType::Actor,
             "activity" => CoreType::Activity,
             "any" => get_core_type(&object),
             _ => return Err(anyhow!("not supported")),
@@ -98,6 +100,10 @@ impl ImportObject {
                 // Take contentful object and save it to local cache
                 import_object(&ap_client, db_client, object).await?;
                 println!("post saved");
+            },
+            CoreType::Actor => {
+                import_profile(&ap_client, db_client, object).await?;
+                println!("profile saved");
             },
             CoreType::Activity => {
                 // Process activity

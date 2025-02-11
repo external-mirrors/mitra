@@ -194,13 +194,13 @@ pub async fn get_profile_by_actor_id(
     }
 }
 
-async fn import_profile(
+// Actor must be authenticated
+pub async fn import_profile(
     ap_client: &ApClient,
     db_client: &mut impl DatabaseClient,
-    actor_id: &str,
+    actor: JsonValue,
 ) -> Result<DbActorProfile, HandlerError> {
-    let agent = build_federation_agent(&ap_client.instance, None);
-    let actor: Actor = fetch_any_object(&agent, actor_id).await?;
+    let actor: Actor = serde_json::from_value(actor)?;
     if actor.is_local(&ap_client.instance.hostname())? {
         return Err(HandlerError::LocalObject);
     };
@@ -348,7 +348,9 @@ impl ActorIdResolver {
                 ).await?
             },
             Err(DatabaseError::NotFound(_)) => {
-                import_profile(ap_client, db_client, actor_id).await?
+                let agent = build_federation_agent(&ap_client.instance, None);
+                let actor: JsonValue = fetch_any_object(&agent, actor_id).await?;
+                import_profile(ap_client, db_client, actor).await?
             },
             Err(other_error) => return Err(other_error.into()),
         };
@@ -397,7 +399,8 @@ pub async fn import_profile_by_webfinger_address(
     };
     let agent = build_federation_agent(&ap_client.instance, None);
     let actor_id = perform_webfinger_query(&agent, webfinger_address).await?;
-    import_profile(ap_client, db_client, &actor_id).await
+    let actor: JsonValue = fetch_any_object(&agent, &actor_id).await?;
+    import_profile(ap_client, db_client, actor).await
 }
 
 // Works with local profiles

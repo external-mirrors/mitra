@@ -11,6 +11,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Parse custom emojis in poll options.
 - Support EdDSA HTTP signatures.
 - Add option to import activities with `import-object` command.
+- Add option to import actors with `import-object` command.
 
 ### Changed
 
@@ -24,6 +25,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Deprecated
 
 - Deprecated `import-activity` command.
+- Deprecated `import-actor` command.
 
 ### Fixed
 
