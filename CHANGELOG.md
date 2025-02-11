@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Parse custom emojis in poll options.
 - Support EdDSA HTTP signatures.
+- Add option to import activities with `import-object` command.
 
 ### Changed
 
@@ -19,6 +20,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Don't allow hashtags inside links.
 - Changed MSRV to 1.70.0.
 - Make multipart memory limit match total payload limit.
+
+### Deprecated
+
+- Deprecated `import-activity` command.
 
 ### Fixed
 

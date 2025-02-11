@@ -12,7 +12,8 @@ use apx_core::{
 
 use super::constants::AP_PUBLIC;
 
-enum CoreType {
+/// Core object type
+pub enum CoreType {
     Object,
     Link,
     Actor,
@@ -20,7 +21,9 @@ enum CoreType {
     Collection,
 }
 
-fn get_core_type(value: &JsonValue) -> CoreType {
+/// Determines the core type of an object.
+pub fn get_core_type(value: &JsonValue) -> CoreType {
+    // https://codeberg.org/fediverse/fep/src/branch/main/fep/2277/fep-2277.md
     if !value["inbox"].is_null() {
         // AP requires actor to have inbox and outbox,
         // but `outbox` property is not always present.

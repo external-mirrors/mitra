@@ -580,17 +580,13 @@ pub async fn import_post(
     Ok(initial_post)
 }
 
+// Object must be authenticated
 pub async fn import_object(
     ap_client: &ApClient,
     db_client: &mut impl DatabaseClient,
-    object_id: &str,
+    object: JsonValue,
 ) -> Result<(), HandlerError> {
-    let agent = build_federation_agent(
-        &ap_client.instance,
-        ap_client.as_user.as_ref(),
-    );
-    let object: AttributedObjectJson =
-        fetch_any_object(&agent, object_id).await?;
+    let object: AttributedObjectJson = serde_json::from_value(object)?;
     let canonical_object_id = canonicalize_id(object.id())?;
     match get_remote_post_by_object_id(
         db_client,
@@ -613,13 +609,12 @@ pub async fn import_object(
     }
 }
 
+// Activity must be authenticated
 pub async fn import_activity(
     config: &Config,
     db_client: &mut impl DatabaseClient,
-    activity_id: &str,
+    activity: JsonValue,
 ) -> Result<(), HandlerError> {
-    let agent = build_federation_agent(&config.instance(), None);
-    let activity: JsonValue = fetch_any_object(&agent, activity_id).await?;
     handle_activity(
         config,
         db_client,

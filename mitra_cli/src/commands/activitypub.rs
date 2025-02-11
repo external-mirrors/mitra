@@ -1,16 +1,18 @@
 use std::path::PathBuf;
 
-use anyhow::Error;
+use anyhow::{anyhow, Error};
 use clap::Parser;
 use serde_json::{Value as JsonValue};
 
 use apx_sdk::{
     authentication::verify_portable_object,
     fetch::FetchObjectOptions,
+    utils::{get_core_type, CoreType},
 };
 use mitra_activitypub::{
     agent::build_federation_agent,
     importers::{
+        fetch_any_object,
         fetch_any_object_with_context,
         import_activity,
         import_from_outbox,
@@ -54,12 +56,15 @@ impl ImportActor {
     }
 }
 
-/// Fetch contentful object and save it to local cache
+/// Fetch ActivityPub object and process it
 #[derive(Parser)]
 pub struct ImportObject {
-    id: String,
+    object_id: String,
     #[arg(long)]
     as_user: Option<String>,
+    /// Expected core object type
+    #[arg(long, default_value = "object")]
+    object_type: String,
 }
 
 impl ImportObject {
@@ -76,8 +81,31 @@ impl ImportObject {
         };
         let mut ap_client = ApClient::new(config, db_client).await?;
         ap_client.as_user = maybe_user;
-        import_object(&ap_client, db_client, &self.id).await?;
-        println!("post saved");
+        let agent = build_federation_agent(
+            &ap_client.instance,
+            ap_client.as_user.as_ref(),
+        );
+        let object: JsonValue =
+            fetch_any_object(&agent, &self.object_id).await?;
+        let object_type = match self.object_type.as_str() {
+            "object" => CoreType::Object,
+            "activity" => CoreType::Activity,
+            "any" => get_core_type(&object),
+            _ => return Err(anyhow!("not supported")),
+        };
+        match object_type {
+            CoreType::Object => {
+                // Take contentful object and save it to local cache
+                import_object(&ap_client, db_client, object).await?;
+                println!("post saved");
+            },
+            CoreType::Activity => {
+                // Process activity
+                import_activity(config, db_client, object).await?;
+                println!("activity processed");
+            },
+            _ => return Err(anyhow!("not supported")),
+        };
         Ok(())
     }
 }
@@ -95,7 +123,11 @@ impl ImportActivity {
         config: &Config,
         db_client: &mut impl DatabaseClient,
     ) -> Result<(), Error> {
-        import_activity(config, db_client, &self.id).await?;
+        let ap_client = ApClient::new(config, db_client).await?;
+        let agent = build_federation_agent(&ap_client.instance, None);
+        let activity: JsonValue =
+            fetch_any_object(&agent, &self.id).await?;
+        import_activity(config, db_client, activity).await?;
         println!("activity processed");
         Ok(())
     }
