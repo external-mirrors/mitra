@@ -12,6 +12,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Support EdDSA HTTP signatures.
 - Add option to import activities with `import-object` command.
 - Add option to import actors with `import-object` command.
+- Support remembering home timeline position via `/api/v1/markers`.
 
 ### Changed
 

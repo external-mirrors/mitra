@@ -7,7 +7,7 @@ pub async fn create_or_update_marker(
     db_client: &impl DatabaseClient,
     user_id: Uuid,
     timeline: Timeline,
-    last_read_id: String,
+    last_read_id: &str,
 ) -> Result<DbTimelineMarker, DatabaseError> {
     let row = db_client.query_one(
         "

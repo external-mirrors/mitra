@@ -26,8 +26,10 @@ impl MarkerQueryParams {
 
 #[derive(Deserialize)]
 pub struct MarkerCreateData {
+    #[serde(rename = "home[last_read_id]")]
+    pub home: Option<String>,
     #[serde(rename = "notifications[last_read_id]")]
-    pub notifications: String,
+    pub notifications: Option<String>,
 }
 
 /// https://docs.joinmastodon.org/entities/marker/
@@ -40,6 +42,8 @@ pub struct Marker {
 
 #[derive(Serialize)]
 pub struct Markers {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub home: Option<Marker>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub notifications: Option<Marker>,
 }

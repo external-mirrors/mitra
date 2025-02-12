@@ -1150,19 +1150,39 @@ paths:
                 description: Markers
                 type: object
                 properties:
+                  home:
+                    $ref: '#/components/schemas/Marker'
                   notifications:
-                    type: object
-                    properties:
-                      last_read_id:
-                        description: The ID of the most recently viewed entity.
-                        type: string
-                      version:
-                        description: An incrementing counter, used for locking to prevent write conflicts.
-                        type: number
-                      updated_at:
-                        description: The timestamp of when the marker was set.
-                        type: string
-                        format: dateTime
+                    $ref: '#/components/schemas/Marker'
+    post:
+      summary: Save current position in timeline.
+      security:
+        - tokenAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                'home[last_read_id]':
+                  description: ID of the last status read in the home timeline.
+                  type: string
+                'notifications[last_read_id]':
+                  description:  ID of the last notification read.
+                  type: string
+      responses:
+        200:
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                description: Markers
+                type: object
+                properties:
+                  home:
+                    $ref: '#/components/schemas/Marker'
+                  notifications:
+                    $ref: '#/components/schemas/Marker'
   /api/v1/media:
     post:
       summary: Create an attachment to be used with a new post.
@@ -3058,6 +3078,19 @@ components:
         exclusive:
           description: Are feed sources hidden from the home timeline?
           type: boolean
+    Marker:
+      type: object
+      properties:
+        last_read_id:
+          description: The ID of the most recently viewed entity.
+          type: string
+        version:
+          description: An incrementing counter, used for locking to prevent write conflicts.
+          type: number
+        updated_at:
+          description: The timestamp of when the marker was set.
+          type: string
+          format: dateTime
     Mention:
       type: object
       properties:
