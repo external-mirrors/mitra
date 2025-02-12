@@ -28,7 +28,7 @@ Matrix chat: [#mitra:unredacted.org](https://matrix.to/#/#mitra:unredacted.org)
 ## Instances
 
 - [Fediverse Observer](https://mitra.fediverse.observer/list)
-- [FediList](http://demo.fedilist.com/instance?software=mitra)
+- [FediDB](https://fedidb.org/software/mitra)
 
 Demo instance: https://public.mitra.social/ ([invite-only](https://public.mitra.social/about))
 
