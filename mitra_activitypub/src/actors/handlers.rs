@@ -595,6 +595,13 @@ pub async fn create_remote_profile(
     validate_actor_data(&actor_data)?;
     let moderation_domain = get_moderation_domain(&actor_data)
         .expect("actor data should be valid");
+    if ap_client.filter.is_action_required(
+        moderation_domain.as_str(),
+        FilterAction::RejectData,
+    ) {
+        let error_message = format!("actor rejected: {}", actor_data.id);
+        return Err(HandlerError::Filtered(error_message));
+    };
     let is_media_filter_enabled = ap_client.filter.is_action_required(
         moderation_domain.as_str(),
         FilterAction::RejectProfileImages,

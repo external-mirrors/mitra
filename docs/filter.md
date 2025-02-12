@@ -4,8 +4,10 @@ Federation filter is a firewall-like system for server-wide moderation. It opera
 
 A filter rule consists of an action and a target. Supported actions:
 
-- `reject`: reject all incoming messages.
-- `accept`: accept all incoming messages.
+- `reject`: reject incoming messages only.
+- `accept`: accept incoming messages.
+- `reject-data`: reject all profiles and posts.
+- `accept-data`: accept profiles and posts.
 - `reject-media-attachments`: remove media attachments from posts.
 - `accept-media-attachments`: allow media attachments.
 - `reject-profile-images`: remove profile images.

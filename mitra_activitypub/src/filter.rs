@@ -90,8 +90,9 @@ impl FederationFilter {
         is_required
     }
 
-    pub fn is_blocked(&self, hostname: &str) -> bool {
-        self.is_action_required(hostname, FilterAction::Reject)
+    pub fn is_incoming_blocked(&self, hostname: &str) -> bool {
+        self.is_action_required(hostname, FilterAction::Reject) ||
+        self.is_action_required(hostname, FilterAction::RejectData)
     }
 }
 
@@ -160,8 +161,8 @@ mod tests {
             allowlist: vec![target_3.to_string()], // overridden
             rules,
         };
-        assert_eq!(filter.is_blocked("one.example"), false);
-        assert_eq!(filter.is_blocked("two.example"), true);
-        assert_eq!(filter.is_blocked("any.example"), true);
+        assert_eq!(filter.is_incoming_blocked("one.example"), false);
+        assert_eq!(filter.is_incoming_blocked("two.example"), true);
+        assert_eq!(filter.is_incoming_blocked("any.example"), true);
     }
 }

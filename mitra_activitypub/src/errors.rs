@@ -26,8 +26,8 @@ pub enum HandlerError {
     #[error("{0}")]
     ServiceError(&'static str),
 
-    #[error("unsolicited message from {0}")]
-    UnsolicitedMessage(String),
+    #[error("{0}")]
+    Filtered(String),
 }
 
 impl From<DeserializationError> for HandlerError {

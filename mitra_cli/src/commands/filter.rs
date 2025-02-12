@@ -20,6 +20,8 @@ use mitra_validators::filter_rules::validate_rule_target;
 enum FilterAction {
     Reject,
     Accept,
+    RejectData,
+    AcceptData,
     RejectMedia,
     AcceptMedia,
     RejectMediaAttachments,
@@ -35,6 +37,8 @@ impl FilterAction {
         match self {
             Self::Reject => (DbFilterAction::Reject, false),
             Self::Accept => (DbFilterAction::Reject, true),
+            Self::RejectData => (DbFilterAction::RejectData, false),
+            Self::AcceptData => (DbFilterAction::RejectData, true),
             Self::RejectMedia =>
                 (DbFilterAction::RejectMediaAttachments, false),
             Self::AcceptMedia =>
@@ -61,6 +65,8 @@ impl FilterAction {
         match (action, is_reversed) {
             (DbFilterAction::Reject, false) => Self::Reject,
             (DbFilterAction::Reject, true) => Self::Accept,
+            (DbFilterAction::RejectData, false) => Self::RejectData,
+            (DbFilterAction::RejectData, true) => Self::AcceptData,
             (DbFilterAction::RejectMediaAttachments, false) => Self::RejectMediaAttachments,
             (DbFilterAction::RejectMediaAttachments, true) => Self::AcceptMediaAttachments,
             (DbFilterAction::RejectProfileImages, false) => Self::RejectProfileImages,

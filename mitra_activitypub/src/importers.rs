@@ -338,8 +338,9 @@ impl ActorIdResolver {
     // - DatabaseError(DatabaseError::NotFound(_)): local actor not found
     // - DatabaseError: other database errors
     // - StorageError: filesystem errors
+    // - Filtered: actor is blocked
     // N/A:
-    // - ServiceError, AuthError, UnsolicitedMessage
+    // - ServiceError
     pub async fn resolve(
         &self,
         ap_client: &ApClient,
@@ -380,13 +381,15 @@ impl ActorIdResolver {
     }
 }
 
-// Return true if error is not internal
+// Returns true if error is not internal (should be logged as warning)
 pub fn is_actor_importer_error(error: &HandlerError) -> bool {
     matches!(
         error,
         HandlerError::FetchError(_) |
             HandlerError::ValidationError(_) |
-            HandlerError::DatabaseError(DatabaseError::NotFound(_)))
+            HandlerError::DatabaseError(DatabaseError::NotFound(_)) |
+            HandlerError::Filtered(_)
+    )
 }
 
 pub(crate) async fn perform_webfinger_query(

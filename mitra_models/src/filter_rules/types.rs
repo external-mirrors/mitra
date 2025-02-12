@@ -11,6 +11,7 @@ pub enum FilterAction {
     RejectMediaAttachments,
     RejectProfileImages,
     RejectCustomEmojis,
+    RejectData,
 }
 
 impl From<FilterAction> for i16 {
@@ -20,6 +21,7 @@ impl From<FilterAction> for i16 {
             FilterAction::RejectMediaAttachments => 2,
             FilterAction::RejectProfileImages => 3,
             FilterAction::RejectCustomEmojis => 4,
+            FilterAction::RejectData => 5,
         }
     }
 }
@@ -33,6 +35,7 @@ impl TryFrom<i16> for FilterAction {
             2 => Self::RejectMediaAttachments,
             3 => Self::RejectProfileImages,
             4 => Self::RejectCustomEmojis,
+            5 => Self::RejectData,
             _ => return Err(DatabaseTypeError),
         };
         Ok(action)

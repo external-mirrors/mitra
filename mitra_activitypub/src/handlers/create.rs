@@ -79,7 +79,9 @@ async fn check_unsolicited_message(
         // Possible cause: a failure to process Undo(Follow)
         !author_has_followers;
     if is_unsolicited {
-        return Err(HandlerError::UnsolicitedMessage(canonical_author_id));
+        let error_message =
+            format!("unsolicited message from {canonical_author_id}");
+        return Err(HandlerError::Filtered(error_message));
     };
     Ok(())
 }

@@ -87,7 +87,7 @@ pub async fn receive_activity(
     let actor_hostname = get_hostname(&activity_actor)
         .map_err(|_| ValidationError("invalid actor ID"))?;
     let filter = FederationFilter::init(config, db_client).await?;
-    if filter.is_blocked(&actor_hostname) {
+    if filter.is_incoming_blocked(&actor_hostname) {
         log::info!("ignoring activity from blocked instance {actor_hostname}");
         return Ok(());
     };
@@ -170,7 +170,7 @@ pub async fn receive_activity(
     };
 
     let signer_hostname = get_moderation_domain(signer.expect_actor_data())?;
-    if filter.is_blocked(signer_hostname.as_str()) {
+    if filter.is_incoming_blocked(signer_hostname.as_str()) {
         log::info!("ignoring activity from blocked instance {signer_hostname}");
         return Ok(());
     };
