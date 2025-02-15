@@ -15,6 +15,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Include URL in unsafe URL error message.
 - Moved `RequestSigner` from `apx_sdk::agent` to `apx_core::http_signatures`.
+- Change priority of `Link` in `get_core_type` classifier.
 
 ### Fixed
 

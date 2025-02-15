@@ -24,7 +24,12 @@ pub enum CoreType {
 /// Determines the core type of an object.
 pub fn get_core_type(value: &JsonValue) -> CoreType {
     // https://codeberg.org/fediverse/fep/src/branch/main/fep/2277/fep-2277.md
-    if !value["inbox"].is_null() {
+    if !value["href"].is_null() {
+        // `href` may only appear in Link objects:
+        // https://www.w3.org/TR/activitystreams-vocabulary/#dfn-href
+        CoreType::Link
+    }
+    else if !value["inbox"].is_null() {
         // AP requires actor to have inbox and outbox,
         // but `outbox` property is not always present.
         // https://www.w3.org/TR/activitypub/#actor-objects
@@ -37,11 +42,6 @@ pub fn get_core_type(value: &JsonValue) -> CoreType {
         // https://git.pleroma.social/pleroma/pleroma/-/issues/3269
         // https://akkoma.dev/AkkomaGang/akkoma/issues/770
         CoreType::Activity
-    }
-    else if !value["href"].is_null() {
-        // `href` may only appear in Link objects:
-        // https://www.w3.org/TR/activitystreams-vocabulary/#dfn-href
-        CoreType::Link
     }
     else if
         !value["items"].is_null() ||
