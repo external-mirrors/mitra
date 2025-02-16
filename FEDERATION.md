@@ -38,6 +38,8 @@ It also supports the following standards:
   - Can consume `Add(Activity)` activities.
   - Publishes `Add(Create(Note))` activities in followers-only and subscribers-only conversations.
 - [FEP-9967: Polls](https://codeberg.org/fediverse/fep/src/branch/main/fep/9967/fep-9967.md)
+- [FEP-f228: Backfilling conversations](https://codeberg.org/silverpill/feps/src/branch/main/f228/fep-f228.md)
+  - Can consume `context` and `contextHistory`, but doesn't publish any context collections.
 
 ### FEPs that might be supported in the future
 

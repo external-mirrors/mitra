@@ -168,8 +168,6 @@ pub struct LoadReplies {
     limit: usize,
     #[arg(long)]
     use_context: bool,
-    #[arg(long)]
-    use_container: bool,
 }
 
 impl LoadReplies {
@@ -183,7 +181,6 @@ impl LoadReplies {
             db_client,
             &self.object_id,
             self.use_context,
-            self.use_container,
             self.limit,
         ).await?;
         Ok(())

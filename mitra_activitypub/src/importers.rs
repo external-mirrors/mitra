@@ -786,16 +786,19 @@ pub async fn import_from_outbox(
     Ok(())
 }
 
+// https://codeberg.org/silverpill/feps/src/branch/main/f228/fep-f228.md
 pub async fn import_replies(
     config: &Config,
     db_client: &mut impl DatabaseClient,
     object_id: &str,
     use_context: bool,
-    use_container: bool,
     limit: usize,
 ) -> Result<(), HandlerError> {
     #[derive(Deserialize)]
+    #[serde(rename_all = "camelCase")]
     struct ConversationItem {
+        #[serde(default, deserialize_with = "deserialize_into_object_id_opt")]
+        context_history: Option<String>,
         #[serde(default, deserialize_with = "deserialize_into_object_id_opt")]
         context: Option<String>,
         #[serde(default, deserialize_with = "deserialize_into_object_id_opt")]
@@ -806,8 +809,9 @@ pub async fn import_replies(
     let instance = config.instance();
     let agent = build_federation_agent(&instance, None);
     let object: ConversationItem = fetch_any_object(&agent, object_id).await?;
-    if use_container {
-        if let Some(ref collection_id) = object.context {
+    if use_context && object.context_history.is_some() {
+        if let Some(ref collection_id) = object.context_history {
+            log::info!("reading 'contextHistory' collection");
             // Converstion container
             let activities =
                 fetch_collection(&agent, collection_id, limit).await?;
@@ -829,12 +833,14 @@ pub async fn import_replies(
             };
             return Ok(());
         } else {
-            return Err(ValidationError("object doesn't have `context`").into());
+            return Err(ValidationError("object doesn't have `contextHistory`").into());
         };
     };
-    let maybe_collection_id = if use_context {
+    let maybe_collection_id = if use_context && object.context.is_some() {
+        log::info!("reading 'context' collection");
         object.context
     } else {
+        log::info!("reading 'replies' collection");
         object.replies
     };
     let collection_items = if let Some(collection_id) = maybe_collection_id {
