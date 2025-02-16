@@ -14,6 +14,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Removed `--use-container` option of `load-replies` command.
 
+### Fixed
+
+- Fixed incorrect processing of poll options with HTML special characters.
+
 ## [3.17.0] - 2025-02-13
 
 ### Added

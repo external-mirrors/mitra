@@ -51,7 +51,7 @@ use mitra_utils::{
 use mitra_validators::{
     errors::ValidationError,
     media::{validate_media_description, validate_media_url},
-    polls::validate_poll_data,
+    polls::{clean_poll_option_name, validate_poll_data},
     posts::{
         clean_title,
         content_allowed_classes,
@@ -773,7 +773,7 @@ fn parse_poll_results(
         let note: Note = serde_json::from_value(note_value.clone())
             .map_err(|_| ValidationError("invalid poll option"))?;
         let result = PollResult {
-            option_name: note.name,
+            option_name: clean_poll_option_name(&note.name),
             vote_count: note.replies.total_items,
         };
         results.push(result);
