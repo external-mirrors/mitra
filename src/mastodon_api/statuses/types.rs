@@ -20,6 +20,7 @@ use crate::mastodon_api::{
     media::types::Attachment,
     media_server::ClientMediaServer,
     polls::types::Poll,
+    serializers::{serialize_datetime, serialize_datetime_opt},
 };
 
 pub const POST_CONTENT_TYPE_HTML: &str = "text/html";
@@ -87,7 +88,9 @@ pub struct Status {
     pub id: Uuid,
     pub uri: String,
     url: String,
+    #[serde(serialize_with = "serialize_datetime")]
     pub created_at: DateTime<Utc>,
+    #[serde(serialize_with = "serialize_datetime_opt")]
     edited_at: Option<DateTime<Utc>>,
     pub account: Account,
     pub content: String,
@@ -360,4 +363,29 @@ pub struct StatusUpdateData {
 pub struct Context {
     pub ancestors: Vec<Status>,
     pub descendants: Vec<Status>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_status_from_post() {
+        let instance_url = "https://social.example";
+        let media_server = ClientMediaServer::for_test("/media");
+        let author = DbActorProfile::local_for_test("test");
+        let post = Post {
+            created_at: DateTime::parse_from_rfc3339("2023-02-24T23:36:38Z")
+                .unwrap()
+                .with_timezone(&Utc),
+            ..Post::local_for_test(&author)
+        };
+        let status = Status::from_post(instance_url, &media_server, post);
+        assert_eq!(status.content, "");
+        let status_json = serde_json::to_value(status).unwrap();
+        assert_eq!(
+            status_json["created_at"].as_str().unwrap(),
+            "2023-02-24T23:36:38.000Z",
+        );
+    }
 }

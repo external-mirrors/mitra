@@ -8,6 +8,7 @@ use crate::mastodon_api::{
     custom_emojis::types::CustomEmoji,
     media_server::ClientMediaServer,
     pagination::PageSize,
+    serializers::serialize_datetime,
     statuses::types::Status,
 };
 
@@ -45,6 +46,7 @@ pub struct ApiNotification {
     emoji: Option<String>,
     emoji_url: Option<String>,
 
+    #[serde(serialize_with = "serialize_datetime")]
     created_at: DateTime<Utc>,
 }
 

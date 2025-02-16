@@ -50,10 +50,14 @@ use mitra_validators::{
 
 use crate::mastodon_api::{
     custom_emojis::types::CustomEmoji,
-    deserializers::deserialize_boolean,
     errors::MastodonError,
     media_server::ClientMediaServer,
     pagination::PageSize,
+    serializers::{
+        deserialize_boolean,
+        serialize_datetime,
+        serialize_datetime_opt,
+    },
     uploads::{save_b64_file, UploadError},
 };
 
@@ -66,6 +70,7 @@ pub const AUTHENTICATION_METHOD_CAIP122_MONERO: &str = "caip122_monero";
 pub struct AccountField {
     pub name: String,
     pub value: String,
+    #[serde(serialize_with = "serialize_datetime_opt")]
     verified_at: Option<DateTime<Utc>>,
     is_legacy_proof: bool,
 }
@@ -142,6 +147,7 @@ pub struct Account {
     actor_id: String, // not part of Mastodon API
     pub url: String,
     pub display_name: Option<String>,
+    #[serde(serialize_with = "serialize_datetime")]
     pub created_at: DateTime<Utc>,
     pub note: String,
     pub avatar: String,
@@ -567,6 +573,7 @@ pub struct IdentityClaimQueryParams {
 pub struct IdentityClaim {
     pub did: Did,
     pub claim: String,
+    #[serde(serialize_with = "serialize_datetime")]
     pub created_at: DateTime<Utc>,
 }
 
@@ -575,6 +582,7 @@ pub struct IdentityProofData {
     pub proof_type: String,
     pub did: String,
     pub signature: String,
+    #[serde(serialize_with = "serialize_datetime")]
     pub created_at: DateTime<Utc>,
 }
 
@@ -739,6 +747,7 @@ pub struct SubscriptionListQueryParams {
 pub struct ApiSubscription {
     pub id: i32,
     pub sender: Account,
+    #[serde(serialize_with = "serialize_datetime")]
     pub expires_at: DateTime<Utc>,
 }
 

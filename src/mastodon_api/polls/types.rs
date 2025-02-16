@@ -12,6 +12,7 @@ use mitra_models::{
 use crate::mastodon_api::{
     custom_emojis::types::CustomEmoji,
     media_server::ClientMediaServer,
+    serializers::serialize_datetime,
 };
 
 #[derive(Serialize)]
@@ -24,6 +25,7 @@ struct PollOption {
 #[derive(Serialize)]
 pub struct Poll {
     id: Uuid,
+    #[serde(serialize_with = "serialize_datetime")]
     expires_at: DateTime<Utc>,
     expired: bool,
     multiple: bool,

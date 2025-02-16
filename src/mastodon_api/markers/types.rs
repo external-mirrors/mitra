@@ -4,6 +4,8 @@ use serde::{Deserialize, Serialize};
 use mitra_models::markers::types::{DbTimelineMarker, Timeline};
 use mitra_validators::errors::ValidationError;
 
+use crate::mastodon_api::serializers::serialize_datetime;
+
 #[derive(Deserialize)]
 pub struct MarkerQueryParams {
     pub timeline: Vec<String>,
@@ -37,6 +39,7 @@ pub struct MarkerCreateData {
 pub struct Marker {
     last_read_id: String,
     version: i32,
+    #[serde(serialize_with = "serialize_datetime")]
     updated_at: DateTime<Utc>,
 }
 

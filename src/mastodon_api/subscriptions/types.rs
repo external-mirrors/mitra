@@ -9,8 +9,10 @@ use mitra_models::{
     subscriptions::types::DbSubscription,
 };
 
-
-use crate::payments::monero::MONERO_INVOICE_TIMEOUT;
+use crate::{
+    mastodon_api::serializers::serialize_datetime,
+    payments::monero::MONERO_INVOICE_TIMEOUT,
+};
 
 #[derive(Deserialize)]
 pub struct SubscriberData {
@@ -35,7 +37,9 @@ pub struct Invoice {
     pub payment_address: Option<String>,
     pub amount: i64,
     pub status: String,
+    #[serde(serialize_with = "serialize_datetime")]
     pub created_at: DateTime<Utc>,
+    #[serde(serialize_with = "serialize_datetime")]
     pub expires_at: DateTime<Utc>,
 }
 
@@ -106,6 +110,7 @@ pub struct SubscriptionQueryParams {
 #[derive(Serialize)]
 pub struct SubscriptionDetails {
     pub id: i32,
+    #[serde(serialize_with = "serialize_datetime")]
     pub expires_at: DateTime<Utc>,
 }
 

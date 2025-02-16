@@ -1,8 +1,8 @@
 use serde::Deserialize;
 
 use crate::mastodon_api::{
-    deserializers::deserialize_boolean,
     pagination::PageSize,
+    serializers::deserialize_boolean,
 };
 
 fn default_page_size() -> PageSize { PageSize::new(40) }

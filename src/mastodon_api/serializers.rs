@@ -1,10 +1,38 @@
+use chrono::{DateTime, SecondsFormat, Utc};
 use serde::{
+    de::{Error as DeserializerError},
     Deserialize,
     Deserializer,
-    de::{Error as DeserializerError},
+    Serializer,
 };
 
-/// https://docs.joinmastodon.org/client/intro/#boolean
+// https://docs.joinmastodon.org/api/datetime-format/#datetime
+pub fn serialize_datetime<S>(
+    value: &DateTime<Utc>,
+    serializer: S,
+) -> Result<S::Ok, S::Error>
+    where S: Serializer,
+{
+    let datetime_str = value.to_rfc3339_opts(SecondsFormat::Millis, true);
+    serializer.serialize_str(&datetime_str)
+}
+
+pub fn serialize_datetime_opt<S>(
+    value: &Option<DateTime<Utc>>,
+    serializer: S,
+) -> Result<S::Ok, S::Error>
+    where S: Serializer,
+{
+    match *value {
+        Some(ref dt) => {
+            let datetime_str = dt.to_rfc3339_opts(SecondsFormat::Millis, true);
+            serializer.serialize_some(&datetime_str)
+        },
+        None => serializer.serialize_none(),
+    }
+}
+
+// https://docs.joinmastodon.org/client/intro/#boolean
 pub fn deserialize_boolean<'de, D>(
     deserializer: D,
 ) -> Result<bool, D::Error>

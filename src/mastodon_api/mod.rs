@@ -43,11 +43,11 @@ mod subscriptions;
 mod timelines;
 
 mod auth;
-mod deserializers;
 mod errors;
 mod media_server;
 mod microsyntax;
 mod pagination;
+mod serializers;
 mod uploads;
 
 const MASTODON_API_VERSION: &str = "4.0.0";
