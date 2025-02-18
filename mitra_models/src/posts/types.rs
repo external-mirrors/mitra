@@ -382,6 +382,7 @@ impl TryFrom<&Row> for Post {
 
 pub struct Repost {
     pub id: Uuid,
+    pub author_id: Uuid,
     pub repost_of_id: Uuid,
     pub has_deprecated_ap_id: bool,
 }
@@ -396,6 +397,7 @@ impl TryFrom<&Row> for Repost {
         };
         let repost = Self {
             id: db_post.id,
+            author_id: db_post.author_id,
             repost_of_id: repost_of_id,
             has_deprecated_ap_id: db_post.repost_has_deprecated_ap_id,
         };

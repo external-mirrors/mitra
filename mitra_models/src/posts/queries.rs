@@ -1525,6 +1525,28 @@ pub async fn find_reposted_by_user(
     Ok(reposted)
 }
 
+/// Returns Local reposts created before the specified date
+pub async fn find_expired_reposts(
+    db_client: &impl DatabaseClient,
+    created_before: DateTime<Utc>,
+) -> Result<Vec<Repost>, DatabaseError> {
+    let rows = db_client.query(
+        "
+        SELECT post
+        FROM post
+        WHERE
+            repost_of_id IS NOT NULL
+            AND object_id IS NULL
+            AND created_at < $1
+        ",
+        &[&created_before],
+    ).await?;
+    let reposts = rows.iter()
+        .map(Repost::try_from)
+        .collect::<Result<_, _>>()?;
+    Ok(reposts)
+}
+
 /// Finds all contexts (identified by top-level post)
 /// updated before the specified date
 /// that do not contain local posts, reposts, mentions, links or reactions.
@@ -2448,6 +2470,18 @@ mod tests {
             None,
         ).await.err().unwrap();
         assert_eq!(error.to_string(), "conversation not found");
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_find_expired_reposts() {
+        let db_client = &mut create_test_database().await;
+        let created_before = Utc::now() - Duration::days(1);
+        let reposts = find_expired_reposts(
+            db_client,
+            created_before,
+        ).await.unwrap();
+        assert_eq!(reposts.len(), 0);
     }
 
     #[tokio::test]

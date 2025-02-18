@@ -124,6 +124,7 @@ use crate::commands::{
         ReadOutbox,
     },
     filter::{AddFilterRule, ListFilterRules, RemoveFilterRule},
+    storage::PruneReposts,
 };
 
 /// Mitra admin CLI
@@ -163,6 +164,7 @@ pub enum SubCommand {
     ImportEmoji(ImportEmoji),
     DeleteEmoji(DeleteEmoji),
     DeleteExtraneousPosts(DeleteExtraneousPosts),
+    PruneReposts(PruneReposts),
     DeleteUnusedAttachments(DeleteUnusedAttachments),
     DeleteEmptyProfiles(DeleteEmptyProfiles),
     PruneRemoteEmojis(PruneRemoteEmojis),

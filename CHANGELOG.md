@@ -12,6 +12,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Added `http_socket_perms` configuration parameter.
 - Added `profile_image_local_size_limit` configuration parameter.
 - Implemented `context` collection.
+- Added `prune-reposts` command.
 
 ### Changed
 

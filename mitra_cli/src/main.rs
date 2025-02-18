@@ -61,6 +61,7 @@ async fn main() {
         SubCommand::ImportEmoji(cmd) => cmd.execute(&config, db_client).await.unwrap(),
         SubCommand::DeleteEmoji(cmd) => cmd.execute(&config, db_client).await.unwrap(),
         SubCommand::DeleteExtraneousPosts(cmd) => cmd.execute(&config, db_client).await.unwrap(),
+        SubCommand::PruneReposts(cmd) => cmd.execute(&config, db_client).await.unwrap(),
         SubCommand::DeleteUnusedAttachments(cmd) => cmd.execute(&config, db_client).await.unwrap(),
         SubCommand::DeleteEmptyProfiles(cmd) => cmd.execute(&config, db_client).await.unwrap(),
         SubCommand::PruneRemoteEmojis(cmd) => cmd.execute(&config, db_client).await.unwrap(),
