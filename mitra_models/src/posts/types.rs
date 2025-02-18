@@ -380,6 +380,29 @@ impl TryFrom<&Row> for Post {
     }
 }
 
+pub struct Repost {
+    pub id: Uuid,
+    pub repost_of_id: Uuid,
+    pub has_deprecated_ap_id: bool,
+}
+
+impl TryFrom<&Row> for Repost {
+    type Error = DatabaseError;
+
+    fn try_from(row: &Row) -> Result<Self, Self::Error> {
+        let db_post: DbPost = row.try_get("post")?;
+        let Some(repost_of_id) = db_post.repost_of_id else {
+            return Err(DatabaseTypeError.into());
+        };
+        let repost = Self {
+            id: db_post.id,
+            repost_of_id: repost_of_id,
+            has_deprecated_ap_id: db_post.repost_has_deprecated_ap_id,
+        };
+        Ok(repost)
+    }
+}
+
 pub enum PostContext {
     // Audience is empty if top-level post is Public
     Top {

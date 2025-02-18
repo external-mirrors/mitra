@@ -41,6 +41,7 @@ use super::types::{
     PostContext,
     PostCreateData,
     PostUpdateData,
+    Repost,
     Visibility,
 };
 
@@ -1487,19 +1488,18 @@ pub async fn get_repost_by_author(
     db_client: &impl DatabaseClient,
     post_id: Uuid,
     author_id: Uuid,
-) -> Result<(Uuid, bool), DatabaseError> {
+) -> Result<Repost, DatabaseError> {
     let maybe_row = db_client.query_opt(
         "
-        SELECT post.id, post.repost_has_deprecated_ap_id
+        SELECT post
         FROM post
         WHERE post.repost_of_id = $1 AND post.author_id = $2
         ",
         &[&post_id, &author_id],
     ).await?;
     let row = maybe_row.ok_or(DatabaseError::NotFound("post"))?;
-    let repost_id = row.try_get("id")?;
-    let repost_has_deprecated_ap_id = row.try_get("repost_has_deprecated_ap_id")?;
-    Ok((repost_id, repost_has_deprecated_ap_id))
+    let repost = Repost::try_from(&row)?;
+    Ok(repost)
 }
 
 /// Finds items reposted by user among given posts
@@ -1923,13 +1923,13 @@ mod tests {
         assert_eq!(repost.repost_of_id, Some(post.id));
         assert_eq!(repost.object_id, None);
 
-        let (repost_id, repost_has_deprecated_ap_id) = get_repost_by_author(
+        let repost_details = get_repost_by_author(
             db_client,
             post.id,
             author.id,
         ).await.unwrap();
-        assert_eq!(repost_id, repost.id);
-        assert_eq!(repost_has_deprecated_ap_id, false);
+        assert_eq!(repost_details.id, repost.id);
+        assert_eq!(repost_details.has_deprecated_ap_id, false);
     }
 
     #[tokio::test]

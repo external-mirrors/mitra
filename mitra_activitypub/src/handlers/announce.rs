@@ -185,8 +185,8 @@ async fn handle_fep_1b12_announce(
         // Don't delete post, only remove announcement
         // https://join-lemmy.org/docs/contributors/05-federation.html#delete-post-or-comment
         match get_repost_by_author(db_client, post_id, group.id).await {
-            Ok((repost_id, _)) => {
-                delete_repost(db_client, repost_id).await?;
+            Ok(repost) => {
+                delete_repost(db_client, repost.id).await?;
             },
             // Ignore Announce(Delete) if repost is not found
             Err(DatabaseError::NotFound(_)) => return Ok(None),

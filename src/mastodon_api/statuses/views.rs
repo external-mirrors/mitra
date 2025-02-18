@@ -788,12 +788,12 @@ async fn unreblog(
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &mut **get_database_client(&db_pool).await?;
     let current_user = get_current_user(db_client, auth.token()).await?;
-    let (repost_id, repost_has_deprecated_ap_id) = get_repost_by_author(
+    let repost = get_repost_by_author(
         db_client,
         *status_id,
         current_user.id,
     ).await?;
-    delete_repost(db_client, repost_id).await?;
+    delete_repost(db_client, repost.id).await?;
     let post = get_post_by_id(db_client, *status_id).await?;
 
     // Federate
@@ -802,8 +802,8 @@ async fn unreblog(
         &config.instance(),
         &current_user,
         &post,
-        repost_id,
-        repost_has_deprecated_ap_id,
+        repost.id,
+        repost.has_deprecated_ap_id,
     ).await?.save_and_enqueue(db_client).await?;
 
     let base_url = get_request_base_url(connection_info);
