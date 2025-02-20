@@ -573,7 +573,6 @@ pub struct IdentityClaimQueryParams {
 pub struct IdentityClaim {
     pub did: Did,
     pub claim: String,
-    #[serde(serialize_with = "serialize_datetime")]
     pub created_at: DateTime<Utc>,
 }
 
@@ -582,7 +581,6 @@ pub struct IdentityProofData {
     pub proof_type: String,
     pub did: String,
     pub signature: String,
-    #[serde(serialize_with = "serialize_datetime")]
     pub created_at: DateTime<Utc>,
 }
 
