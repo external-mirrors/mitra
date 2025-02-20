@@ -167,11 +167,19 @@ Upgrade to a `major` version requires special migration steps that are documente
 
 ### Debian package
 
+Install package:
+
 ```shell
 dpkg -i mitra_amd64.deb
 ```
 
-Do not overwrite existing configuration file.
+Do not overwrite existing configuration file if asked.
+
+Restart Mitra:
+
+```
+systemctl restart mitra
+```
 
 ## Configuration
 
