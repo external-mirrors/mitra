@@ -409,8 +409,11 @@ async fn create_identity_proof(
     let db_client = &mut **get_database_client(&db_pool).await?;
     let mut current_user = get_current_user(db_client, auth.token()).await?;
     let proof_type = match proof_data.proof_type.as_str() {
+        // MitraJcsEip191Signature2022
         "ethereum" => IdentityProofType::FepC390JcsEip191Proof,
+        // MitraJcsEd25519Signature2022
         "minisign" => IdentityProofType::FepC390JcsBlake2Ed25519Proof,
+        // jcs-eddsa-2022
         "minisign-unhashed" => IdentityProofType::FepC390LegacyJcsEddsaProof,
         _ => return Err(ValidationError("unknown proof type").into()),
     };
