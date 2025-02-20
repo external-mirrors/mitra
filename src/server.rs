@@ -1,5 +1,6 @@
 use std::str::FromStr;
 use std::net::SocketAddrV4;
+use std::path::Path;
 
 use actix_cors::Cors;
 use actix_web::{
@@ -27,6 +28,7 @@ use mitra_models::database::DatabaseConnectionPool;
 use mitra_services::{
     media::{MediaStorage, MEDIA_ROOT_URL},
 };
+use mitra_utils::files::set_file_permissions;
 
 use crate::activitypub::views as activitypub;
 use crate::atom::views::atom_scope;
@@ -49,6 +51,7 @@ pub async fn run_server(
     let app_state = web::Data::new(AppState::default());
     let num_workers = std::cmp::max(num_cpus::get(), 4);
     let http_socket_addr = config.http_socket();
+    let http_socket_perms = config.http_socket_perms;
 
     let http_server = HttpServer::new(move || {
         let cors_config = match config.environment {
@@ -157,7 +160,12 @@ pub async fn run_server(
         http_server.bind(addr)?
     } else {
         // Assume unix socket path
-        http_server.bind_uds(&http_socket_addr)?
+        let http_socket_path = Path::new(&http_socket_addr);
+        let http_server = http_server.bind_uds(http_socket_path)?;
+        if let Some(socket_perms) = http_socket_perms {
+            set_file_permissions(http_socket_path, socket_perms)?;
+        };
+        http_server
     };
     log::info!("listening on {}", http_socket_addr);
     http_server

@@ -61,6 +61,8 @@ pub struct Config {
     pub http_port: Option<u32>,
     // Overrides http_host and http_port
     pub http_socket: Option<String>,
+    // Unix socket permissions (example: 0o640)
+    pub http_socket_perms: Option<u32>,
 
     #[serde(default)]
     pub http_cors_allowlist: Vec<String>,

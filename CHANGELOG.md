@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Added
 
 - Support conversation backfilling via `contextHistory` property.
+- Added `http_socket_perms` configuration parameter.
 
 ### Removed
 
