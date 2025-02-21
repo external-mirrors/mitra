@@ -4,7 +4,6 @@ use serde_json::{Value as JsonValue};
 
 use apx_sdk::{
     deserialization::deserialize_into_object_id,
-    url::is_same_origin,
     utils::is_activity,
 };
 use mitra_config::Config;
@@ -35,7 +34,7 @@ use crate::{
     authentication::{verify_signed_activity, AuthenticationError},
     identifiers::parse_local_actor_id,
     importers::fetch_any_object,
-    ownership::verify_activity_owner,
+    ownership::{is_same_origin, get_object_id, verify_activity_owner},
     vocabulary::{CREATE, DISLIKE, EMOJI_REACT, LIKE, UPDATE},
 };
 
@@ -83,6 +82,11 @@ async fn handle_fep_171b_add(
         object: mut activity,
         target,
     } = serde_json::from_value(add)?;
+    let activity_id = get_object_id(&activity["id"])?;
+    if is_same_origin(activity_id, &config.instance_url())? {
+        // Ignore local activities
+        return Ok(None);
+    };
     // Authentication
     match verify_signed_activity(
         config,
@@ -93,12 +97,9 @@ async fn handle_fep_171b_add(
         Ok(_) => (),
         Err(AuthenticationError::NoJsonSignature) => {
             // Verify activity by fetching it from origin
-            let activity_id = activity["id"].as_str()
-                .ok_or(ValidationError("unexpected activity structure"))?
-                .to_owned();
             let instance = config.instance();
             let agent = build_federation_agent(&instance, None);
-            match fetch_any_object(&agent, &activity_id).await {
+            match fetch_any_object(&agent, activity_id).await {
                 Ok(activity_fetched) => {
                     log::info!("fetched activity {}", activity_id);
                     activity = activity_fetched
@@ -117,9 +118,7 @@ async fn handle_fep_171b_add(
         },
     };
     // Authorization
-    if !is_same_origin(&conversation_owner, &target)
-        .map_err(|_| ValidationError("invalid object ID"))?
-    {
+    if !is_same_origin(&conversation_owner, &target)? {
         return Err(ValidationError("actor is not allowed to modify target").into());
     };
     verify_activity_owner(&activity)?;

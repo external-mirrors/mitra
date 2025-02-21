@@ -7,12 +7,12 @@ use apx_sdk::{
 };
 use mitra_validators::errors::ValidationError;
 
-fn get_object_id(object: &JsonValue) -> Result<&str, ValidationError> {
+pub fn get_object_id(object: &JsonValue) -> Result<&str, ValidationError> {
     object["id"].as_str()
         .ok_or(ValidationError("'id' property is missing"))
 }
 
-fn is_same_origin(id_1: &str, id_2: &str) -> Result<bool, ValidationError> {
+pub fn is_same_origin(id_1: &str, id_2: &str) -> Result<bool, ValidationError> {
     apx_is_same_origin(id_1, id_2)
         .map_err(|error| ValidationError(error.0))
 }

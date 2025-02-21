@@ -15,6 +15,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Changed
 
 - Changed local profile image size limit to 2 MB.
+- Ignore local activities delivered via `Add` and `Announce`.
 
 ### Removed
 

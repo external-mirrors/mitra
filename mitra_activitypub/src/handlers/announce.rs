@@ -28,7 +28,11 @@ use crate::{
     agent::build_federation_agent,
     identifiers::parse_local_object_id,
     importers::{fetch_any_object, import_post, ActorIdResolver, ApClient},
-    ownership::{is_embedded_activity_trusted, verify_activity_owner},
+    ownership::{
+        is_embedded_activity_trusted,
+        is_same_origin,
+        verify_activity_owner,
+    },
     vocabulary::*,
 };
 
@@ -127,6 +131,10 @@ async fn handle_fep_1b12_announce(
     verify_activity_owner(&activity)?;
     let activity_id = activity["id"].as_str()
         .ok_or(ValidationError("unexpected activity structure"))?;
+    if is_same_origin(activity_id, &config.instance_url())? {
+        // Ignore local activities
+        return Ok(None);
+    };
     let activity_type = activity["type"].as_str()
         .ok_or(ValidationError("unexpected activity structure"))?;
     if activity_type != DELETE && !config.federation.fep_1b12_full_enabled {
