@@ -392,7 +392,7 @@ fn process_b64_image_field_value(
                     &b64_data,
                     &media_type,
                     media_storage,
-                    media_limits.profile_image_size_limit,
+                    media_limits.profile_image_local_size_limit,
                     &allowed_profile_image_media_types(&media_limits.supported_media_types()),
                 )?;
                 let image = ProfileImage::from(MediaInfo::local(file_info));
