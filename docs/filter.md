@@ -14,6 +14,7 @@ A filter rule consists of an action and a target. Supported actions:
 - `accept-profile-images`: allow profile images.
 - `reject-custom-emojis`: remove custom emojis from posts and profile descriptions.
 - `accept-custom-emojis`: allow custom emojis.
+- `mark-sensitive`: mark media attachments as sensitive.
 
 Target is a domain name or a wildcard pattern (e.g. `*.example.com`).
 

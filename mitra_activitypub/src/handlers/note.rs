@@ -808,7 +808,6 @@ pub async fn create_remote_post(
     {
         return Err(ValidationError("object attributed to actor from different server").into());
     };
-    let instance = &ap_client.instance;
     let author = ActorIdResolver::default().only_remote().resolve(
         ap_client,
         db_client,
@@ -817,6 +816,7 @@ pub async fn create_remote_post(
         log::warn!("failed to import {} ({})", author_id, err);
         err
     })?;
+    let author_hostname = get_moderation_domain(author.expect_actor_data())?;
 
     let mut content = get_object_content(&object)?;
     let maybe_poll_data = if object.object_type == QUESTION {
@@ -860,7 +860,7 @@ pub async fn create_remote_post(
             let canonical_in_reply_to_id = canonicalize_id(object_id)?;
             let in_reply_to = get_post_by_object_id(
                 db_client,
-                &instance.url(),
+                &ap_client.instance.url(),
                 &canonical_in_reply_to_id,
             ).await?;
             Some(in_reply_to)
@@ -882,7 +882,12 @@ pub async fn create_remote_post(
         &audience,
         maybe_in_reply_to.as_ref(),
     );
-    let is_sensitive = object.sensitive.unwrap_or(false);
+    let is_sensitive =
+        object.sensitive.unwrap_or(false) ||
+        ap_client.filter.is_action_required(
+            author_hostname.as_str(),
+            FilterAction::MarkSensitive,
+        );
     let created_at = object.published.unwrap_or(Utc::now());
 
     if visibility == Visibility::Direct &&
@@ -932,6 +937,8 @@ pub async fn update_remote_post(
     if canonical_author_id.to_string() != post.author.expect_remote_actor_id() {
         return Err(ValidationError("object owner can't be changed").into());
     };
+    let author_hostname = get_moderation_domain(post.author.expect_actor_data())?;
+
     let mut content = get_object_content(object)?;
     let maybe_poll_data = if object.object_type == QUESTION {
         match parse_poll_results(object) {
@@ -973,7 +980,12 @@ pub async fn update_remote_post(
         &post.author,
         &HashMap::new(),
     ).await?;
-    let is_sensitive = object.sensitive.unwrap_or(false);
+    let is_sensitive =
+        object.sensitive.unwrap_or(false) ||
+        ap_client.filter.is_action_required(
+            author_hostname.as_str(),
+            FilterAction::MarkSensitive,
+        );
 
     let mentions = filter_mentions(
         db_client,

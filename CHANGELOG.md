@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Added
 
 - Added collection support to `import-object` command.
+- Added `mark-sensitive` filter action.
 
 ### Changed
 

@@ -30,6 +30,7 @@ enum FilterAction {
     AcceptProfileImages,
     RejectCustomEmojis,
     AcceptCustomEmojis,
+    MarkSensitive,
 }
 
 impl FilterAction {
@@ -55,6 +56,8 @@ impl FilterAction {
                 (DbFilterAction::RejectCustomEmojis, false),
             Self::AcceptCustomEmojis =>
                 (DbFilterAction::RejectCustomEmojis, true),
+            Self::MarkSensitive =>
+                (DbFilterAction::MarkSensitive, false),
         }
     }
 
@@ -73,6 +76,7 @@ impl FilterAction {
             (DbFilterAction::RejectProfileImages, true) => Self::AcceptProfileImages,
             (DbFilterAction::RejectCustomEmojis, false) => Self::RejectCustomEmojis,
             (DbFilterAction::RejectCustomEmojis, true) => Self::AcceptCustomEmojis,
+            (DbFilterAction::MarkSensitive, _) => Self::MarkSensitive,
         }
     }
 }
