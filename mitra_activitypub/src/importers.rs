@@ -17,7 +17,7 @@ use apx_sdk::{
     addresses::WebfingerAddress,
     agent::FederationAgent,
     authentication::verify_portable_object,
-    deserialization::{deserialize_into_object_id_opt, get_object_id},
+    deserialization::{deserialize_into_object_id_opt, object_to_id},
     fetch::{
         fetch_json,
         fetch_object,
@@ -726,7 +726,7 @@ async fn fetch_collection(
 
     let mut authenticated = vec![];
     for item in items.into_iter().take(limit) {
-        let item_id = get_object_id(&item)
+        let item_id = object_to_id(&item)
             .map(|id| HttpUrl::parse(&id))
             .map_err(|_| ValidationError("invalid object ID"))?
             .map_err(|_| ValidationError("invalid object ID"))?;

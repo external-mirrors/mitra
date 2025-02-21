@@ -6,7 +6,7 @@ use apx_core::{
     http_types::{method_adapter, uri_adapter},
     urls::get_hostname,
 };
-use apx_sdk::deserialization::get_object_id;
+use apx_sdk::deserialization::object_to_id;
 use mitra_activitypub::{
     authentication::{
         verify_signed_activity,
@@ -81,7 +81,7 @@ pub async fn receive_activity(
         .ok_or(ValidationError("'id' property is missing"))?;
     let activity_type = activity["type"].as_str()
         .ok_or(ValidationError("'type' property is missing"))?;
-    let activity_actor = get_object_id(&activity["actor"])
+    let activity_actor = object_to_id(&activity["actor"])
         .map_err(|_| ValidationError("invalid 'actor' property"))?;
 
     let actor_hostname = get_hostname(&activity_actor)
@@ -102,7 +102,7 @@ pub async fn receive_activity(
     };
 
     let is_self_delete = if activity_type == DELETE {
-        let object_id = get_object_id(&activity["object"])
+        let object_id = object_to_id(&activity["object"])
             .map_err(|_| ValidationError("invalid activity object"))?;
         object_id == activity_actor
     } else { false };

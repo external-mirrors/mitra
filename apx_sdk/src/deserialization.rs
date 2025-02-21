@@ -14,7 +14,7 @@ use thiserror::Error;
 pub struct DeserializationError(&'static str);
 
 /// Parses object json value and returns its ID as string
-pub fn get_object_id(
+pub fn object_to_id(
     object: &Value,
 ) -> Result<String, DeserializationError> {
     let object_id = match object {
@@ -35,7 +35,7 @@ pub fn deserialize_into_object_id<'de, D>(
     where D: Deserializer<'de>
 {
     let value = Value::deserialize(deserializer)?;
-    let object_id = get_object_id(&value)
+    let object_id = object_to_id(&value)
         .map_err(DeserializerError::custom)?;
     Ok(object_id)
 }
@@ -47,7 +47,7 @@ pub fn deserialize_into_object_id_opt<'de, D>(
 {
     let maybe_value: Option<Value> = Option::deserialize(deserializer)?;
     let maybe_object_id = if let Some(value) = maybe_value {
-        let object_id = get_object_id(&value)
+        let object_id = object_to_id(&value)
             .map_err(DeserializerError::custom)?;
         Some(object_id)
     } else {
@@ -98,13 +98,13 @@ pub fn parse_into_id_array(
     let result = match value {
         Value::Null => vec![],
         Value::String(_) | Value::Object(_) => {
-            let object_id = get_object_id(value)?;
+            let object_id = object_to_id(value)?;
             vec![object_id]
         },
         Value::Array(array) => {
             let mut results = vec![];
             for value in array {
-                let object_id = get_object_id(value)?;
+                let object_id = object_to_id(value)?;
                 results.push(object_id);
             };
             results
@@ -124,7 +124,7 @@ pub fn deserialize_into_id_array<'de, D>(
 }
 
 /// Parses link object and returns its "href"
-fn get_link_href(
+fn link_to_href(
     link: &Value,
 ) -> Result<String, DeserializationError> {
     let href = match link {
@@ -145,13 +145,13 @@ pub fn parse_into_href_array(
 ) -> Result<Vec<String>, DeserializationError> {
     let result = match value {
         Value::String(_) | Value::Object(_) => {
-            let object_id = get_link_href(value)?;
+            let object_id = link_to_href(value)?;
             vec![object_id]
         },
         Value::Array(array) => {
             let mut results = vec![];
             for value in array {
-                let object_id = get_link_href(value)?;
+                let object_id = link_to_href(value)?;
                 results.push(object_id);
             };
             results
@@ -168,7 +168,7 @@ pub fn deserialize_into_link_href<'de, D>(
     where D: Deserializer<'de>
 {
     let value = Value::deserialize(deserializer)?;
-    let link_href = get_link_href(&value)
+    let link_href = link_to_href(&value)
         .map_err(DeserializerError::custom)?;
     Ok(link_href)
 }
@@ -211,22 +211,22 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_get_object_id_from_string() {
+    fn test_object_to_id_string() {
         let value = json!("test_id");
-        assert_eq!(get_object_id(&value).unwrap(), "test_id");
+        assert_eq!(object_to_id(&value).unwrap(), "test_id");
     }
 
     #[test]
-    fn test_get_object_id_from_object() {
+    fn test_object_to_id_object() {
         let value = json!({"id": "test_id", "type": "Note"});
-        assert_eq!(get_object_id(&value).unwrap(), "test_id");
+        assert_eq!(object_to_id(&value).unwrap(), "test_id");
     }
 
     #[test]
-    fn test_get_object_id_from_array() {
+    fn test_object_to_id_array() {
         let value = json!(["test_id"]);
         assert_eq!(
-            get_object_id(&value).err().unwrap().to_string(),
+            object_to_id(&value).err().unwrap().to_string(),
             "unexpected value type",
         );
     }
@@ -334,10 +334,10 @@ mod tests {
     }
 
     #[test]
-    fn test_get_link_href() {
+    fn test_link_to_href() {
         let link = json!({"name": "test", "href": "https://test.example"});
         assert_eq!(
-            get_link_href(&link).unwrap(),
+            link_to_href(&link).unwrap(),
             "https://test.example",
         );
     }

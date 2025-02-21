@@ -42,7 +42,7 @@ use apx_sdk::{
         verify_portable_object,
         AuthenticationError as PortableObjectAuthenticationError,
     },
-    deserialization::get_object_id,
+    deserialization::object_to_id,
     url::is_same_origin,
     utils::key_id_to_actor_id,
 };
@@ -258,7 +258,7 @@ pub async fn verify_signed_activity(
 ) -> Result<DbActorProfile, AuthenticationError> {
     match verify_portable_object(activity) {
         Ok(activity_id) => {
-            let actor_id = get_object_id(&activity["actor"])
+            let actor_id = object_to_id(&activity["actor"])
                 .map_err(|_| AuthenticationError::ActorError("unknown actor"))?;
             if !is_same_origin(&activity_id, &actor_id)
                 .map_err(|_| AuthenticationError::ActorError("invalid actor ID"))?
@@ -285,7 +285,7 @@ pub async fn verify_signed_activity(
     // Signed activities must have `actor` property, to avoid situations
     // where signer is identified by DID but there is no matching
     // identity proof in the local database.
-    let actor_id = get_object_id(&activity["actor"])
+    let actor_id = object_to_id(&activity["actor"])
         .map_err(|_| AuthenticationError::ActorError("unknown actor"))?;
     let actor_profile = get_signer(config, db_client, &actor_id, no_fetch).await?;
 

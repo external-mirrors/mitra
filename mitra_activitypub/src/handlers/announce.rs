@@ -2,7 +2,7 @@ use serde::Deserialize;
 use serde_json::{Value as JsonValue};
 
 use apx_sdk::{
-    deserialization::{deserialize_into_object_id, get_object_id},
+    deserialization::{deserialize_into_object_id, object_to_id},
     utils::is_activity,
 };
 use mitra_config::Config;
@@ -163,7 +163,7 @@ async fn handle_fep_1b12_announce(
             db_client,
             &group_id,
         ).await?;
-        let object_id = get_object_id(&activity["object"])
+        let object_id = object_to_id(&activity["object"])
             .map_err(|_| ValidationError("invalid activity object"))?;
         let post_id = match get_remote_post_by_object_id(
             db_client,

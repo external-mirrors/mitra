@@ -2,7 +2,7 @@
 use serde_json::{Value as JsonValue};
 
 use apx_sdk::{
-    deserialization::{get_object_id, parse_into_id_array},
+    deserialization::{object_to_id, parse_into_id_array},
     url::is_same_origin,
 };
 use mitra_validators::errors::ValidationError;
@@ -12,7 +12,7 @@ pub fn verify_activity_owner(
 ) -> Result<(), ValidationError> {
     let activity_id = activity["id"].as_str()
         .ok_or(ValidationError("'id' property is missing"))?;
-    let owner_id = get_object_id(&activity["actor"])
+    let owner_id = object_to_id(&activity["actor"])
         .map_err(|_| ValidationError("invalid 'actor' property"))?;
     let is_valid = is_same_origin(activity_id, &owner_id)
         .map_err(|error| ValidationError(error.0))?;
@@ -26,9 +26,9 @@ pub fn verify_activity_owner(
 pub fn is_embedded_activity_trusted(
     activity: &JsonValue,
 ) -> Result<bool, ValidationError> {
-    let owner_id = get_object_id(&activity["actor"])
+    let owner_id = object_to_id(&activity["actor"])
         .map_err(|_| ValidationError("invalid 'actor' property"))?;
-    let embedded_owner_id = get_object_id(&activity["object"]["actor"])
+    let embedded_owner_id = object_to_id(&activity["object"]["actor"])
         .map_err(|_| ValidationError("invalid 'object.actor' property"))?;
     let is_trusted = is_same_origin(&owner_id, &embedded_owner_id)
         .map_err(|error| ValidationError(error.0))?;

@@ -2,7 +2,7 @@ use std::fmt;
 
 use serde_json::{Value as JsonValue};
 
-use apx_sdk::deserialization::get_object_id;
+use apx_sdk::deserialization::object_to_id;
 use mitra_config::Config;
 use mitra_models::database::DatabaseClient;
 use mitra_validators::errors::ValidationError;
@@ -64,7 +64,7 @@ pub async fn handle_activity(
     let activity_type = activity["type"].as_str()
         .ok_or(ValidationError("type property is missing"))?
         .to_owned();
-    let activity_actor = get_object_id(&activity["actor"])
+    let activity_actor = object_to_id(&activity["actor"])
         .map_err(|_| ValidationError("invalid actor property"))?;
     let activity = activity.clone();
     let maybe_descriptor = match activity_type.as_str() {

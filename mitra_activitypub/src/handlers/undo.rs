@@ -2,7 +2,7 @@ use serde::Deserialize;
 use serde_json::Value;
 
 use apx_sdk::{
-    deserialization::{deserialize_into_object_id, get_object_id},
+    deserialization::{deserialize_into_object_id, object_to_id},
 };
 use mitra_config::Config;
 use mitra_models::{
@@ -52,7 +52,7 @@ async fn handle_undo_follow(
         &canonical_actor_id.to_string(),
     ).await?;
     // Use object because activity ID might not be present
-    let target_actor_id = get_object_id(&activity.object["object"])
+    let target_actor_id = object_to_id(&activity.object["object"])
         .map_err(|_| ValidationError("invalid follow activity object"))?;
     let target_username = parse_local_actor_id(
         &config.instance_url(),

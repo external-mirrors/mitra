@@ -22,7 +22,7 @@ use apx_core::{
 use apx_sdk::{
     authentication::verify_portable_object,
     constants::{AP_MEDIA_TYPE, AP_PUBLIC},
-    deserialization::get_object_id,
+    deserialization::object_to_id,
     http_server::is_activitypub_request,
     url::is_same_origin,
 };
@@ -852,7 +852,7 @@ async fn apgateway_outbox_push_view(
     let activity_id = activity["id"].as_str()
         .ok_or(ValidationError("'id' property is missing"))?;
     let canonical_activity_id = canonicalize_id(activity_id)?;
-    let activity_actor = get_object_id(&activity["actor"])
+    let activity_actor = object_to_id(&activity["actor"])
         .map_err(|_| ValidationError("invalid 'actor' property"))?;
     let canonical_actor_id = canonicalize_id(&activity_actor)?;
     if !is_same_origin(activity_id, &activity_actor)
