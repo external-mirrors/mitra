@@ -82,7 +82,6 @@ use mitra_models::{
         get_portable_user_by_actor_id,
         get_portable_user_by_inbox_id,
         get_portable_user_by_outbox_id,
-        get_user_by_id,
         get_user_by_name,
     },
 };
@@ -518,12 +517,7 @@ pub async fn object_view(
         return Ok(response);
     };
     add_related_posts(db_client, vec![&mut post]).await?;
-    let user = get_user_by_id(db_client, post.author.id).await?;
-    let authority = Authority::from_user(
-        &instance.url(),
-        &user,
-        false,
-    );
+    let authority = Authority::from(&instance);
     let media_server = MediaServer::new(&config);
     let object = build_note(
         &instance.hostname(),
@@ -532,7 +526,7 @@ pub async fn object_view(
         &media_server,
         &post,
         config.federation.fep_e232_enabled,
-        true,
+        true, // with_context
     );
     let response = HttpResponse::Ok()
         .content_type(AP_MEDIA_TYPE)

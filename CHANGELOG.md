@@ -18,6 +18,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Ignore local activities delivered via `Add` and `Announce`.
 - Require emoji shortcodes to have at least two characters.
 - Use compatible object IDs in `replies` collection.
+- Improved performance of `/objects/{post_id}` view.
 
 ### Removed
 

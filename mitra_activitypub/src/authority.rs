@@ -10,6 +10,7 @@ use apx_core::{
     did_key::DidKey,
 };
 use apx_sdk::url::GATEWAY_PATH_PREFIX;
+use mitra_config::Instance;
 use mitra_models::users::types::User;
 
 fn fep_ef61_identity(public_key: &Ed25519PublicKey) -> DidKey {
@@ -92,6 +93,12 @@ impl Authority {
                 Some(fep_ef61_identity(public_key))
             },
         }
+    }
+}
+
+impl From<&Instance> for Authority {
+    fn from(instance: &Instance) -> Self {
+        Self::server(&instance.url())
     }
 }
 
