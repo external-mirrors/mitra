@@ -105,8 +105,18 @@ pub fn local_tag_collection(instance_url: &str, tag_name: &str) -> String {
     format!("{}/collections/tags/{}", instance_url, url_encode(tag_name))
 }
 
-pub fn local_context_collection(instance_url: &str, conversation_id: Uuid) -> String {
-    format!("{}/collections/conversations/{}/context", instance_url, conversation_id)
+fn local_conversation_collection(instance_url: &str, conversation_id: Uuid) -> String {
+    format!("{}/collections/conversations/{}", instance_url, conversation_id)
+}
+
+pub fn local_conversation_history_collection(
+    instance_url: &str,
+    conversation_id: Uuid,
+) -> String {
+    format!(
+        "{}/history",
+        local_conversation_collection(instance_url, conversation_id),
+    )
 }
 
 pub fn local_activity_id(

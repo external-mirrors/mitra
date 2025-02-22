@@ -19,6 +19,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Require emoji shortcodes to have at least two characters.
 - Use compatible object IDs in `replies` collection.
 - Improved performance of `/objects/{post_id}` view.
+- Changed subpath of FEP-171b collection to `/history`.
 
 ### Removed
 

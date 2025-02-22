@@ -1,3 +1,4 @@
+// https://codeberg.org/fediverse/fep/src/branch/main/fep/171b/fep-171b.md
 use serde::Serialize;
 use serde_json::{Value as JsonValue};
 use uuid::Uuid;
@@ -15,7 +16,7 @@ use crate::{
     identifiers::{
         local_activity_id,
         local_actor_id,
-        local_context_collection,
+        local_conversation_history_collection,
     },
     queues::OutgoingActivityJobData,
     vocabulary::{ADD, ORDERED_COLLECTION},
@@ -57,7 +58,10 @@ fn build_add_context_activity(
 ) -> AddContextActivity {
     let actor_id = local_actor_id(instance_url, sender_username);
     let activity_id = local_activity_id(instance_url, ADD, generate_ulid());
-    let target_id = local_context_collection(instance_url, conversation_id);
+    let target_id = local_conversation_history_collection(
+        instance_url,
+        conversation_id,
+    );
     AddContextActivity {
         context: build_default_context(),
         activity_type: ADD.to_string(),
@@ -127,7 +131,7 @@ mod tests {
         assert_eq!(activity.object, conversation_activity);
         assert_eq!(
             activity.target.id,
-            format!("https://social.example/collections/conversations/{conversation_id}/context"),
+            format!("https://social.example/collections/conversations/{conversation_id}/history"),
         );
         assert_eq!(activity.target.attributed_to, activity.actor);
         assert_eq!(activity.to, vec![conversation_audience.to_string()]);
