@@ -11,6 +11,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Support conversation backfilling via `contextHistory` property.
 - Added `http_socket_perms` configuration parameter.
 - Added `profile_image_local_size_limit` configuration parameter.
+- Implemented `context` collection.
 
 ### Changed
 

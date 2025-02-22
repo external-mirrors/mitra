@@ -105,7 +105,7 @@ pub fn local_tag_collection(instance_url: &str, tag_name: &str) -> String {
     format!("{}/collections/tags/{}", instance_url, url_encode(tag_name))
 }
 
-fn local_conversation_collection(instance_url: &str, conversation_id: Uuid) -> String {
+pub fn local_conversation_collection(instance_url: &str, conversation_id: Uuid) -> String {
     format!("{}/collections/conversations/{}", instance_url, conversation_id)
 }
 

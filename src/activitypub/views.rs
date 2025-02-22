@@ -50,6 +50,7 @@ use mitra_activitypub::{
         canonicalize_id,
         compatible_post_object_id,
         local_actor_id,
+        local_conversation_collection,
         local_object_id,
         local_object_replies,
         LocalActorCollection,
@@ -76,7 +77,11 @@ use mitra_models::{
         add_related_posts,
         get_post_by_id_for_view,
     },
-    posts::queries::{get_posts_by_author, get_thread},
+    posts::queries::{
+        get_conversation_items,
+        get_posts_by_author,
+        get_thread,
+    },
     profiles::types::PaymentOption,
     users::queries::{
         get_portable_user_by_actor_id,
@@ -617,6 +622,55 @@ pub async fn tag_view(
     let response = HttpResponse::Found()
         .append_header((http_header::LOCATION, page_url))
         .finish();
+    Ok(response)
+}
+
+#[get("/collections/conversations/{conversation_id}")]
+pub async fn conversation_view(
+    config: web::Data<Config>,
+    db_pool: web::Data<DatabaseConnectionPool>,
+    conversation_id: web::Path<Uuid>,
+    query_params: web::Query<CollectionQueryParams>,
+) -> Result<HttpResponse, HttpError> {
+    let db_client = &**get_database_client(&db_pool).await?;
+    let (root, posts) = get_conversation_items(
+        db_client,
+        *conversation_id,
+        None, // viewing as guest
+    ).await?;
+    if !root.is_local() {
+        return Err(HttpError::NotFoundError("conversation"));
+    };
+    let instance = config.instance();
+    let collection_id =
+        local_conversation_collection(&instance.url(), *conversation_id);
+    let first_page_id = format!("{}?page=true", collection_id);
+    if query_params.page.is_none() {
+        let collection = OrderedCollection::new(
+            collection_id,
+            Some(first_page_id),
+            None,
+            false,
+        );
+        let response = HttpResponse::Ok()
+            .content_type(AP_MEDIA_TYPE)
+            .json(collection);
+        return Ok(response);
+    };
+    let objects = posts.iter()
+        .take(OrderedCollectionPage::DEFAULT_SIZE.into())
+        .map(|post| {
+            let object_id = compatible_post_object_id(&instance.url(), post);
+            serde_json::to_value(object_id)
+                .expect("string should be serializable")
+        }).collect();
+    let collection_page = OrderedCollectionPage::new(
+        first_page_id,
+        objects,
+    );
+    let response = HttpResponse::Ok()
+        .content_type(AP_MEDIA_TYPE)
+        .json(collection_page);
     Ok(response)
 }
 

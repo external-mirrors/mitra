@@ -1237,6 +1237,51 @@ pub async fn get_thread(
     Ok(posts)
 }
 
+/// Returns all posts in a conversation
+pub async fn get_conversation_items(
+    db_client: &impl DatabaseClient,
+    conversation_id: Uuid,
+    current_user_id: Option<Uuid>,
+) -> Result<(Post, Vec<Post>), DatabaseError> {
+    let statement = format!(
+        "
+        SELECT
+            post, actor_profile,
+            {post_subqueries}
+        FROM post
+        JOIN actor_profile ON post.author_id = actor_profile.id
+        WHERE
+            conversation_id = $conversation_id
+            AND {visibility_filter}
+        ORDER BY post.id
+        ",
+        post_subqueries=post_subqueries(),
+        visibility_filter=build_visibility_filter(),
+    );
+    let query = query!(
+        &statement,
+        conversation_id=conversation_id,
+        current_user_id=current_user_id,
+    )?;
+    let rows = db_client.query(query.sql(), query.parameters()).await?;
+    let posts: Vec<Post> = rows.iter()
+        .map(Post::try_from)
+        .collect::<Result<_, _>>()?;
+    let root = match &posts[..] {
+        [] => return Err(DatabaseError::NotFound("conversation")),
+        [root, ..] => {
+            if !root.conversation.as_ref()
+                .is_some_and(|conversation| conversation.root_id == root.id)
+            {
+                // Consistency check: unexpected root
+                return Err(DatabaseTypeError.into());
+            };
+            root
+        },
+    };
+    Ok((root.clone(), posts))
+}
+
 /// Returns actors participating in a conversation (a chain of replies)
 pub async fn get_conversation_participants(
     db_client: &impl DatabaseClient,
@@ -2289,26 +2334,52 @@ mod tests {
         let post_2 = create_post(db_client, user_2.id, post_data_2).await.unwrap();
         let post_data_3 = PostCreateData {
             context: PostContext::reply_to(&post_1),
+            content: "direct reply".to_string(),
+            visibility: Visibility::Direct,
+            mentions: vec![user_1.id],
+            ..Default::default()
+        };
+        let post_3 = create_post(db_client, user_2.id, post_data_3).await.unwrap();
+        let post_data_4 = PostCreateData {
+            context: PostContext::reply_to(&post_1),
             content: "hidden reply".to_string(),
             visibility: Visibility::Direct,
             ..Default::default()
         };
-        let post_3 = create_post(db_client, user_2.id, post_data_3).await.unwrap();
+        let post_4 = create_post(db_client, user_2.id, post_data_4).await.unwrap();
+
         let thread = get_thread(
             db_client,
             post_2.id,
             Some(user_1.id),
         ).await.unwrap();
-        assert_eq!(thread.len(), 2);
+        assert_eq!(thread.len(), 3);
         assert_eq!(thread[0].id, post_1.id);
         assert_eq!(thread[1].id, post_2.id);
+        assert_eq!(thread[2].id, post_3.id);
 
         let error = get_thread(
             db_client,
-            post_3.id,
+            post_4.id,
             Some(user_1.id),
         ).await.err().unwrap();
         assert_eq!(error.to_string(), "post not found");
+
+        let (root, thread) = get_conversation_items(
+            db_client,
+            post_1.expect_conversation().id,
+            Some(user_1.id),
+        ).await.unwrap();
+        assert_eq!(root.id, post_1.id);
+        assert_eq!(thread.len(), 3);
+
+        let (root, thread) = get_conversation_items(
+            db_client,
+            post_1.expect_conversation().id,
+            None,
+        ).await.unwrap();
+        assert_eq!(root.id, post_1.id);
+        assert_eq!(thread.len(), 2);
     }
 
     #[tokio::test]
@@ -2355,6 +2426,28 @@ mod tests {
             Some(user_3.id),
         ).await.err().unwrap();
         assert_eq!(error.to_string(), "post not found");
+
+        let error = get_thread(
+            db_client,
+            post_1.id,
+            None,
+        ).await.err().unwrap();
+        assert_eq!(error.to_string(), "post not found");
+
+        let (root, thread) = get_conversation_items(
+            db_client,
+            post_1.expect_conversation().id,
+            Some(user_1.id),
+        ).await.unwrap();
+        assert_eq!(root.id, post_1.id);
+        assert_eq!(thread.len(), 2);
+
+        let error = get_conversation_items(
+            db_client,
+            post_1.expect_conversation().id,
+            None,
+        ).await.err().unwrap();
+        assert_eq!(error.to_string(), "conversation not found");
     }
 
     #[tokio::test]

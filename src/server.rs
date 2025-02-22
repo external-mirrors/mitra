@@ -127,6 +127,7 @@ pub async fn run_server(
             .service(activitypub::replies_collection)
             .service(activitypub::emoji_view)
             .service(activitypub::tag_view)
+            .service(activitypub::conversation_view)
             .service(activitypub::activity_view)
             .service(activitypub::gateway_scope())
             .service(atom_scope())

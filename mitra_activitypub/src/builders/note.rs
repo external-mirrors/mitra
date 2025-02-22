@@ -29,6 +29,7 @@ use crate::{
         compatible_profile_actor_id,
         local_actor_id,
         local_actor_id_unified,
+        local_conversation_collection,
         local_object_id_unified,
         local_object_replies,
         local_tag_collection,
@@ -127,6 +128,9 @@ pub struct Note {
 
     #[serde(skip_serializing_if = "Option::is_none")]
     in_reply_to: Option<String>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    context: Option<String>,
 
     replies: String,
 
@@ -352,7 +356,17 @@ pub fn build_note(
         },
         None => None,
     };
+    let maybe_context_collection_id = if post.in_reply_to_id.is_none() {
+        let conversation = post.expect_conversation();
+        // TODO: FEP-EF61: use Authority
+        let context_collection_id =
+            local_conversation_collection(instance_url, conversation.id);
+        Some(context_collection_id)
+    } else {
+        None
+    };
     let replies_collection_id = local_object_replies(&object_id);
+
     Note {
         _context: with_context.then(build_default_context),
         id: object_id,
@@ -360,6 +374,7 @@ pub fn build_note(
         attachment: attachments,
         attributed_to: actor_id,
         in_reply_to: in_reply_to_object_id,
+        context: maybe_context_collection_id,
         replies: replies_collection_id,
         content: post.content.clone(),
         sensitive: post.is_sensitive,
@@ -421,6 +436,7 @@ mod tests {
     use serde_json::json;
     use uuid::uuid;
     use mitra_models::{
+        conversations::types::Conversation,
         polls::types::{Poll, PollResult, PollResults},
         profiles::types::DbActorProfile,
         users::types::User,
@@ -511,9 +527,14 @@ mod tests {
                 PollResult::new("option 2"),
             ]),
         };
+        let conversation = Conversation {
+            id: uuid!("837ffc24-dab2-414b-a9b8-fe47d0a463f2"),
+            ..Conversation::for_test(uuid!("11fa64ff-b5a3-47bf-b23d-22b360581c3f"))
+        };
         let post = Post {
-            id: uuid!("11fa64ff-b5a3-47bf-b23d-22b360581c3f"),
+            id: conversation.root_id,
             author,
+            conversation: Some(conversation),
             poll: Some(poll),
             created_at: DateTime::parse_from_rfc3339("2023-02-24T23:36:38Z")
                 .unwrap().with_timezone(&Utc),
@@ -549,6 +570,7 @@ mod tests {
             "attributedTo": "https://server.example/users/author",
             "content": "",
             "sensitive": false,
+            "context": "https://server.example/collections/conversations/837ffc24-dab2-414b-a9b8-fe47d0a463f2",
             "replies": "https://server.example/objects/11fa64ff-b5a3-47bf-b23d-22b360581c3f/replies",
             "oneOf": [
                 {
@@ -748,7 +770,13 @@ mod tests {
                 ..Default::default()
             },
         );
+        let conversation = Conversation {
+            id: uuid!("837ffc24-dab2-414b-a9b8-fe47d0a463f2"),
+            ..Conversation::for_test(Default::default())
+        };
         let parent = Post {
+            id: conversation.root_id,
+            conversation: Some(conversation),
             visibility: Visibility::Followers,
             ..Post::remote_for_test(
                 &parent_author,
@@ -817,9 +845,14 @@ mod tests {
     #[test]
     fn test_build_note_fep_ef61() {
         let author = User::default();
+        let conversation = Conversation {
+            id: uuid!("837ffc24-dab2-414b-a9b8-fe47d0a463f2"),
+            ..Conversation::for_test(uuid!("11fa64ff-b5a3-47bf-b23d-22b360581c3f"))
+        };
         let post = Post {
-            id: uuid!("11fa64ff-b5a3-47bf-b23d-22b360581c3f"),
+            id: conversation.root_id,
             author: author.profile.clone(),
+            conversation: Some(conversation),
             created_at: DateTime::parse_from_rfc3339("2023-02-24T23:36:38Z")
                 .unwrap().with_timezone(&Utc),
             ..Default::default()
@@ -853,6 +886,7 @@ mod tests {
             "attributedTo": "https://server.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor",
             "content": "",
             "sensitive": false,
+            "context": "https://server.example/collections/conversations/837ffc24-dab2-414b-a9b8-fe47d0a463f2",
             "replies": "https://server.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/objects/11fa64ff-b5a3-47bf-b23d-22b360581c3f/replies",
             "published": "2023-02-24T23:36:38Z",
             "to": [
