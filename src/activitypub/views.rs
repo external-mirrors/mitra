@@ -48,10 +48,10 @@ use mitra_activitypub::{
     forwarder::get_activity_remote_recipients,
     identifiers::{
         canonicalize_id,
+        compatible_post_object_id,
         local_actor_id,
         local_object_id,
         local_object_replies,
-        post_object_id,
         LocalActorCollection,
     },
     importers::register_portable_actor,
@@ -577,7 +577,7 @@ pub async fn replies_collection(
         .take(OrderedCollectionPage::DEFAULT_SIZE.into())
         .collect();
     let objects = replies.iter().map(|post| {
-        let object_id = post_object_id(&instance.url(), post);
+        let object_id = compatible_post_object_id(&instance.url(), post);
         serde_json::to_value(object_id)
             .expect("string should be serializable")
     }).collect();
