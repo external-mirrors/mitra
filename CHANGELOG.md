@@ -22,6 +22,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Use compatible object IDs in `replies` collection.
 - Improved performance of `/objects/{post_id}` view.
 - Changed subpath of FEP-171b collection to `/history`.
+- Write message to log when encountering unsupported tag on actor object.
 
 ### Removed
 
