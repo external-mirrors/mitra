@@ -81,6 +81,28 @@ pub async fn handle_emoji(
         log::warn!("invalid emoji name: {}", emoji_name);
         return Ok(None);
     };
+    let emoji_hostname = match get_hostname(&emoji_object_id)
+        .map_err(|_| ValidationError("invalid emoji ID"))
+        .and_then(|value| validate_hostname(&value).map(|()| value))
+    {
+        Ok(hostname) => hostname,
+        Err(error) => {
+            log::warn!("skipping emoji: {error}");
+            return Ok(None);
+        },
+    };
+    if let Err(error) = validate_media_url(&emoji.icon.url) {
+        log::warn!("invalid emoji URL ({error}): {}", emoji.icon.url);
+        return Ok(None);
+    };
+    let is_filter_enabled = ap_client.filter.is_action_required(
+        moderation_domain.as_str(),
+        FilterAction::RejectCustomEmojis,
+    );
+    if is_filter_enabled {
+        log::warn!("emoji removed by filter: {}", emoji_object_id);
+        return Ok(None);
+    };
     let maybe_emoji_id = match get_remote_emoji_by_object_id(
         db_client,
         &emoji_object_id,
@@ -99,19 +121,7 @@ pub async fn handle_emoji(
         Err(DatabaseError::NotFound("emoji")) => None,
         Err(other_error) => return Err(other_error.into()),
     };
-    if let Err(error) = validate_media_url(&emoji.icon.url) {
-        log::warn!("invalid emoji URL ({error}): {}", emoji.icon.url);
-        return Ok(None);
-    };
     let agent = build_federation_agent(&ap_client.instance, None);
-    let is_filter_enabled = ap_client.filter.is_action_required(
-        moderation_domain.as_str(),
-        FilterAction::RejectCustomEmojis,
-    );
-    if is_filter_enabled {
-        log::warn!("emoji removed by filter: {}", emoji.icon.url);
-        return Ok(None);
-    };
     let (file_data, media_type) = match fetch_file(
         &agent,
         &emoji.icon.url,
@@ -139,20 +149,10 @@ pub async fn handle_emoji(
         deletion_queue.into_job(db_client).await?;
         db_emoji
     } else {
-        let hostname = match get_hostname(&emoji_object_id)
-            .map_err(|_| ValidationError("invalid emoji ID"))
-            .and_then(|value| validate_hostname(&value).map(|()| value))
-        {
-            Ok(hostname) => hostname,
-            Err(error) => {
-                log::warn!("skipping emoji: {error}");
-                return Ok(None);
-            },
-        };
         match create_emoji(
             db_client,
             emoji_name,
-            Some(&hostname),
+            Some(&emoji_hostname),
             image,
             Some(&emoji_object_id),
             emoji.updated,
