@@ -124,6 +124,7 @@ use crate::commands::{
         ReadOutbox,
     },
     filter::{AddFilterRule, ListFilterRules, RemoveFilterRule},
+    post::CreatePost,
     storage::PruneReposts,
 };
 
@@ -159,6 +160,7 @@ pub enum SubCommand {
     FetchObject(FetchObject),
     LoadPortableObject(LoadPortableObject),
     DeleteUser(DeleteUser),
+    CreatePost(CreatePost),
     DeletePost(DeletePost),
     AddEmoji(AddEmoji),
     ImportEmoji(ImportEmoji),

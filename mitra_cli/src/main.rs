@@ -56,6 +56,7 @@ async fn main() {
         SubCommand::FetchObject(cmd) => cmd.execute(&config, db_client).await.unwrap(),
         SubCommand::LoadPortableObject(cmd) => cmd.execute(&config, db_client).await.unwrap(),
         SubCommand::DeleteUser(cmd) => cmd.execute(&config, db_client).await.unwrap(),
+        SubCommand::CreatePost(cmd) => cmd.execute(&config, db_client).await.unwrap(),
         SubCommand::DeletePost(cmd) => cmd.execute(&config, db_client).await.unwrap(),
         SubCommand::AddEmoji(cmd) => cmd.execute(&config, db_client).await.unwrap(),
         SubCommand::ImportEmoji(cmd) => cmd.execute(&config, db_client).await.unwrap(),
