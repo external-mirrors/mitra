@@ -4,7 +4,6 @@ use uuid::Uuid;
 use mitra_utils::id::generate_ulid;
 
 use crate::database::{
-    catch_unique_violation,
     DatabaseClient,
     DatabaseError,
 };
@@ -14,19 +13,33 @@ use crate::profiles::queries::update_emoji_caches;
 
 use super::types::{DbEmoji, EmojiImage};
 
-pub async fn create_emoji(
-    db_client: &impl DatabaseClient,
+/// Creates emoji or updates emoji with matching `emoji_name` and `hostname`.
+/// `object_id` is replaced on update.
+pub async fn create_or_update_remote_emoji(
+    db_client: &mut impl DatabaseClient,
     emoji_name: &str,
-    hostname: Option<&str>,
+    hostname: &str,
     image: EmojiImage,
-    object_id: Option<&str>,
+    object_id: &str,
     updated_at: DateTime<Utc>,
-) -> Result<DbEmoji, DatabaseError> {
-    let emoji_id = generate_ulid();
-    if let Some(hostname) = hostname {
-        create_instance(db_client, hostname).await?;
+) -> Result<(DbEmoji, DeletionQueue), DatabaseError> {
+    let transaction = db_client.transaction().await?;
+    let maybe_prev_image_row = transaction.query_opt(
+        "
+        SELECT image ->> 'file_name' AS file_name
+        FROM emoji WHERE emoji_name = $1 AND hostname = $2
+        FOR UPDATE
+        ",
+        &[&emoji_name, &hostname],
+    ).await?;
+    let maybe_prev_image = match maybe_prev_image_row {
+        Some(prev_image_row) => prev_image_row.try_get("file_name")?,
+        None => None,
     };
-    let row = db_client.query_one(
+    create_instance(&transaction, hostname).await?;
+    let emoji_id = generate_ulid();
+    // Not expecting conflict on object_id
+    let row = transaction.query_one(
         "
         INSERT INTO emoji (
             id,
@@ -37,6 +50,11 @@ pub async fn create_emoji(
             updated_at
         )
         VALUES ($1, $2, $3, $4, $5, $6)
+        ON CONFLICT (emoji_name, hostname)
+        DO UPDATE SET
+            image = $4,
+            object_id = $5,
+            updated_at = $6
         RETURNING emoji
         ",
         &[
@@ -47,9 +65,15 @@ pub async fn create_emoji(
             &object_id,
             &updated_at,
         ],
-    ).await.map_err(catch_unique_violation("emoji"))?;
-    let emoji = row.try_get("emoji")?;
-    Ok(emoji)
+    ).await?;
+    let emoji: DbEmoji = row.try_get("emoji")?;
+    update_emoji_caches(&transaction, emoji.id).await?;
+    transaction.commit().await?;
+    let deletion_queue = DeletionQueue {
+        files: maybe_prev_image.map(|name| vec![name]).unwrap_or_default(),
+        ipfs_objects: vec![],
+    };
+    Ok((emoji, deletion_queue))
 }
 
 pub async fn update_emoji(
@@ -289,21 +313,24 @@ mod tests {
 
     #[tokio::test]
     #[serial]
-    async fn test_create_emoji() {
-        let db_client = &create_test_database().await;
+    async fn test_create_remote_emoji() {
+        let db_client = &mut create_test_database().await;
         let emoji_name = "test";
         let hostname = "example.org";
         let image = EmojiImage::from(MediaInfo::png_for_test());
         let object_id = "https://example.org/emojis/test";
         let updated_at = Utc::now();
-        let DbEmoji { id: emoji_id, .. } = create_emoji(
+        let (emoji, deletion_queue) = create_or_update_remote_emoji(
             db_client,
             emoji_name,
-            Some(hostname),
-            image,
-            Some(object_id),
+            hostname,
+            image.clone(),
+            object_id,
             updated_at,
         ).await.unwrap();
+        assert_eq!(deletion_queue.files.len(), 0);
+
+        let emoji_id = emoji.id;
         let emoji = get_remote_emoji_by_object_id(
             db_client,
             object_id,
@@ -312,19 +339,34 @@ mod tests {
         assert_eq!(emoji.emoji_name, emoji_name);
         assert_eq!(emoji.hostname, Some(hostname.to_string()));
         assert_eq!(emoji.image.media_type, "image/png");
+        assert_eq!(emoji.object_id.unwrap(), object_id);
+
+        // New ID
+        let object_id = "https://example.org/emojis/test?hash=12345";
+        let (emoji, deletion_queue) = create_or_update_remote_emoji(
+            db_client,
+            emoji_name,
+            hostname,
+            image,
+            object_id,
+            updated_at,
+        ).await.unwrap();
+        assert_eq!(deletion_queue.files.len(), 1);
+        assert_eq!(emoji.id, emoji_id);
+        assert_eq!(emoji.object_id.unwrap(), object_id);
     }
 
     #[tokio::test]
     #[serial]
-    async fn test_update_emoji() {
+    async fn test_update_remote_emoji() {
         let db_client = &mut create_test_database().await;
         let image = EmojiImage::from(MediaInfo::png_for_test());
-        let emoji = create_emoji(
+        let (emoji, _) = create_or_update_remote_emoji(
             db_client,
             "test",
-            None,
+            "example.social",
             image.clone(),
-            None,
+            "https://example.social/emojis/test",
             Utc::now(),
         ).await.unwrap();
         let (updated_emoji, deletion_queue) = update_emoji(
@@ -363,15 +405,12 @@ mod tests {
     #[tokio::test]
     #[serial]
     async fn test_delete_emoji() {
-        let db_client = &create_test_database().await;
+        let db_client = &mut create_test_database().await;
         let image = EmojiImage::from(MediaInfo::png_for_test());
-        let emoji = create_emoji(
+        let (emoji, _) = create_or_update_local_emoji(
             db_client,
             "test",
-            None,
             image,
-            None,
-            Utc::now(),
         ).await.unwrap();
         let deletion_queue = delete_emoji(db_client, emoji.id).await.unwrap();
         assert_eq!(deletion_queue.files.len(), 1);

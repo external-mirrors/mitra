@@ -10,7 +10,7 @@ use apx_sdk::fetch::fetch_file;
 use mitra_models::{
     database::{DatabaseClient, DatabaseError},
     emojis::queries::{
-        create_emoji,
+        create_or_update_remote_emoji,
         get_remote_emoji_by_object_id,
         update_emoji,
     },
@@ -149,21 +149,17 @@ pub async fn handle_emoji(
         deletion_queue.into_job(db_client).await?;
         db_emoji
     } else {
-        match create_emoji(
+        // Handles emoji name conflicts
+        let (db_emoji, deletion_queue) = create_or_update_remote_emoji(
             db_client,
             emoji_name,
-            Some(&emoji_hostname),
+            &emoji_hostname,
             image,
-            Some(&emoji_object_id),
+            &emoji_object_id,
             emoji.updated,
-        ).await {
-            Ok(db_emoji) => db_emoji,
-            Err(DatabaseError::AlreadyExists(_)) => {
-                log::warn!("emoji name is not unique: {}", emoji_name);
-                return Ok(None);
-            },
-            Err(other_error) => return Err(other_error.into()),
-        }
+        ).await?;
+        deletion_queue.into_job(db_client).await?;
+        db_emoji
     };
     Ok(Some(db_emoji))
 }
