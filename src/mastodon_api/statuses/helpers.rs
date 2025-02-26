@@ -150,7 +150,7 @@ pub async fn parse_content(
             output.linked.insert(0, quote_of);
         };
     };
-    output.content = clean_local_content(&output.content)?;
+    output.content = clean_local_content(&output.content);
     Ok(output)
 }
 

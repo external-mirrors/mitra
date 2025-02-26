@@ -44,17 +44,14 @@ use mitra_models::{
     },
     profiles::types::DbActorProfile,
 };
-use mitra_utils::{
-    files::FileInfo,
-    html::clean_html,
-};
+use mitra_utils::files::FileInfo;
 use mitra_validators::{
     errors::ValidationError,
     media::{validate_media_description, validate_media_url},
     polls::{clean_poll_option_name, validate_poll_data},
     posts::{
+        clean_remote_content,
         clean_title,
-        content_allowed_classes,
         validate_content,
         validate_post_create_data,
         validate_post_mentions,
@@ -242,7 +239,7 @@ fn get_object_content(object: &AttributedObject) ->
         "".to_string()
     };
     let content = format!("{}{}", title, content);
-    let content_safe = clean_html(&content, content_allowed_classes());
+    let content_safe = clean_remote_content(&content);
     validate_content(&content_safe)?;
     Ok(content_safe)
 }

@@ -9,7 +9,7 @@ use mitra_models::{
         Visibility,
     },
 };
-use mitra_utils::html::{clean_html_strict, clean_html_all};
+use mitra_utils::html::{clean_html, clean_html_all, clean_html_strict};
 
 use super::{
     activitypub::validate_any_object_id,
@@ -39,7 +39,7 @@ const CONTENT_ALLOWED_TAGS: [&str; 10] = [
 ];
 const URL_LENGTH_MAX: usize = 2000;
 
-pub fn content_allowed_classes() -> Vec<(&'static str, Vec<&'static str>)> {
+fn content_allowed_classes() -> Vec<(&'static str, Vec<&'static str>)> {
     vec![
         ("a", vec!["hashtag", "mention", "u-url"]),
         ("span", vec!["h-card"]),
@@ -70,15 +70,18 @@ pub fn validate_content(content: &str) -> Result<(), ValidationError> {
 
 pub fn clean_local_content(
     content: &str,
-) -> Result<String, ValidationError> {
+) -> String {
     let content_safe = clean_html_strict(
         content,
         &CONTENT_ALLOWED_TAGS,
         content_allowed_classes(),
     );
     let content_trimmed = content_safe.trim();
-    validate_content(content_trimmed)?;
-    Ok(content_trimmed.to_string())
+    content_trimmed.to_string()
+}
+
+pub fn clean_remote_content(content: &str) -> String {
+    clean_html(content, content_allowed_classes())
 }
 
 fn validate_url(url: &str) -> Result<(), ValidationError> {
@@ -237,7 +240,7 @@ mod tests {
             r#"<img src="https://image.example/image.png"> "#,
             r#"<script>dangerous</script></p>"#,
         );
-        let cleaned_content = clean_local_content(content).unwrap();
+        let cleaned_content = clean_local_content(content);
         let expected_content = concat!(
             r#"<p><span class="h-card"><a href="https://social.example/user" class="u-url mention" rel="noopener">@user</a></span> test "#,
             r#"<a class="hashtag" href="https://social.example/collections/tags/tag1" rel="tag noopener">#tag1</a> "#,
@@ -251,14 +254,14 @@ mod tests {
     #[test]
     fn test_clean_local_content_empty() {
         let content = "  ";
-        let cleaned = clean_local_content(content).unwrap();
+        let cleaned = clean_local_content(content);
         assert_eq!(cleaned, "");
     }
 
     #[test]
     fn test_clean_local_content_trimming() {
         let content = "test ";
-        let cleaned = clean_local_content(content).unwrap();
+        let cleaned = clean_local_content(content);
         assert_eq!(cleaned, "test");
     }
 
