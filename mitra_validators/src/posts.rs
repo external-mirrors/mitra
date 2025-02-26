@@ -24,7 +24,7 @@ pub const LINK_LIMIT: usize = 10;
 pub const EMOJI_LIMIT: usize = 50;
 
 const TITLE_LENGTH_MAX: usize = 300;
-pub const CONTENT_MAX_SIZE: usize = 100000;
+const CONTENT_MAX_SIZE: usize = 100000;
 const CONTENT_ALLOWED_TAGS: [&str; 10] = [
     "a",
     "br",
@@ -59,20 +59,25 @@ pub fn clean_title(title: &str) -> String {
     }
 }
 
-pub fn clean_local_content(
-    content: &str,
-) -> Result<String, ValidationError> {
+pub fn validate_content(content: &str) -> Result<(), ValidationError> {
     // Check content size to not exceed the hard limit
     // Character limit from config is not enforced at the backend
     if content.len() > CONTENT_MAX_SIZE {
         return Err(ValidationError("post is too long"));
     };
+    Ok(())
+}
+
+pub fn clean_local_content(
+    content: &str,
+) -> Result<String, ValidationError> {
     let content_safe = clean_html_strict(
         content,
         &CONTENT_ALLOWED_TAGS,
         content_allowed_classes(),
     );
     let content_trimmed = content_safe.trim();
+    validate_content(content_trimmed)?;
     Ok(content_trimmed.to_string())
 }
 
@@ -91,6 +96,7 @@ pub fn validate_post_create_data(
             return Err(ValidationError("top-level post can't have conversation visibility"));
         };
     };
+    validate_content(&post_data.content)?;
     if post_data.content.is_empty() && post_data.attachments.is_empty() {
         return Err(ValidationError("post is empty"));
     };
@@ -124,6 +130,7 @@ pub fn validate_post_create_data(
 pub fn validate_post_update_data(
     post_data: &PostUpdateData,
 ) -> Result<(), ValidationError> {
+    validate_content(&post_data.content)?;
     if post_data.content.is_empty() && post_data.attachments.is_empty() {
         return Err(ValidationError("post can not be empty"));
     };

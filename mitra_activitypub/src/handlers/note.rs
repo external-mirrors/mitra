@@ -55,11 +55,11 @@ use mitra_validators::{
     posts::{
         clean_title,
         content_allowed_classes,
+        validate_content,
         validate_post_create_data,
         validate_post_mentions,
         validate_post_update_data,
         ATTACHMENT_LIMIT,
-        CONTENT_MAX_SIZE,
         EMOJI_LIMIT,
         HASHTAG_LIMIT,
         LINK_LIMIT,
@@ -242,10 +242,8 @@ fn get_object_content(object: &AttributedObject) ->
         "".to_string()
     };
     let content = format!("{}{}", title, content);
-    if content.len() > CONTENT_MAX_SIZE {
-        return Err(ValidationError("content is too long"));
-    };
     let content_safe = clean_html(&content, content_allowed_classes());
+    validate_content(&content_safe)?;
     Ok(content_safe)
 }
 
