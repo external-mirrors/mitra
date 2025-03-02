@@ -15,10 +15,6 @@ use apx_core::{
     media_type::sniff_media_type,
 };
 use apx_sdk::fetch::fetch_file;
-use mitra::payments::monero::{
-    get_payment_address,
-    reopen_local_invoice,
-};
 use mitra_activitypub::{
     agent::build_federation_agent,
     builders::{
@@ -29,6 +25,10 @@ use mitra_activitypub::{
 use mitra_adapters::{
     dynamic_config::{set_editable_property, EDITABLE_PROPERTIES},
     media::{delete_files, delete_orphaned_media},
+    payments::monero::{
+        get_payment_address,
+        reopen_local_invoice,
+    },
     roles::{
         from_default_role,
         role_from_str,

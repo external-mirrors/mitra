@@ -2123,6 +2123,7 @@ dependencies = [
  "mitra_validators",
  "serde_json",
  "serial_test",
+ "thiserror",
  "tokio",
  "uuid",
 ]
@@ -2137,7 +2138,6 @@ dependencies = [
  "chrono",
  "clap",
  "log",
- "mitra",
  "mitra_activitypub",
  "mitra_adapters",
  "mitra_config",

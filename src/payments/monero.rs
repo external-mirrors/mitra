@@ -1,32 +1,36 @@
 use chrono::Utc;
-use uuid::Uuid;
 
 use mitra_activitypub::builders::add_person::prepare_add_subscriber;
-use mitra_adapters::payments::subscriptions::create_or_update_local_subscription;
+use mitra_adapters::{
+    payments::{
+        monero::{
+            invoice_payment_address,
+            PaymentError,
+            MONERO_INVOICE_TIMEOUT,
+        },
+        subscriptions::create_or_update_local_subscription,
+    },
+};
 use mitra_config::{Instance, MoneroConfig};
 use mitra_models::{
     database::{
         get_database_client,
-        DatabaseClient,
         DatabaseConnectionPool,
         DatabaseError,
     },
     invoices::helpers::{local_invoice_forwarded, local_invoice_reopened},
     invoices::queries::{
-        create_local_invoice,
-        get_invoice_by_participants,
         get_invoices_by_status,
         get_local_invoice_by_address,
         get_local_invoices_by_status,
         set_invoice_status,
     },
-    invoices::types::{DbInvoice, InvoiceStatus},
+    invoices::types::InvoiceStatus,
     notifications::helpers::create_subscriber_payment_notification,
     profiles::queries::get_profile_by_id,
     users::queries::get_user_by_id,
 };
 use mitra_services::monero::wallet::{
-    create_monero_address,
     get_active_addresses,
     get_incoming_transfers,
     get_subaddress_balance,
@@ -39,14 +43,7 @@ use mitra_services::monero::wallet::{
     TransferCategory,
 };
 
-use super::errors::PaymentError;
-
-pub const MONERO_INVOICE_TIMEOUT: i64 = 3 * 60 * 60; // 3 hours
 const MONERO_CONFIRMATIONS_SAFE: u64 = 3;
-
-fn invoice_payment_address(invoice: &DbInvoice) -> Result<String, DatabaseError> {
-    invoice.try_payment_address().map_err(Into::into)
-}
 
 pub async fn check_monero_subscriptions(
     instance: &Instance,
@@ -340,78 +337,4 @@ pub async fn check_closed_invoices(
         local_invoice_reopened(db_client, invoice.id).await?;
     };
     Ok(())
-}
-
-pub async fn reopen_local_invoice(
-    config: &MoneroConfig,
-    db_client: &mut impl DatabaseClient,
-    invoice: &DbInvoice,
-) -> Result<(), PaymentError> {
-    if invoice.chain_id != config.chain_id {
-        return Err(MoneroError::OtherError("can't process invoice").into());
-    };
-    if !invoice.invoice_status.is_final() {
-        return Err(MoneroError::OtherError("invoice is already open").into());
-    };
-    let wallet_client = open_monero_wallet(config).await?;
-    let payment_address = invoice_payment_address(invoice)?;
-    let address_index = get_subaddress_index(
-        &wallet_client,
-        config.account_index,
-        &payment_address,
-    ).await?;
-
-    let transfers = get_incoming_transfers(
-        &wallet_client,
-        address_index.major,
-        vec![address_index.minor],
-    ).await?;
-    if transfers.is_empty() {
-        log::info!("no incoming transfers");
-    } else {
-        for transfer in transfers {
-            log::info!(
-                "received payment for invoice {} ({:?}): {}",
-                invoice.id,
-                invoice.invoice_status,
-                transfer.amount,
-            );
-        };
-        local_invoice_reopened(db_client, invoice.id).await?;
-    };
-    Ok(())
-}
-
-pub async fn get_payment_address(
-    config: &MoneroConfig,
-    db_client: &mut impl DatabaseClient,
-    sender_id: Uuid,
-    recipient_id: Uuid,
-) -> Result<String, PaymentError> {
-    let recipient = get_user_by_id(db_client, recipient_id).await?;
-    if recipient.profile.monero_subscription(&config.chain_id).is_none() {
-        return Err(MoneroError::OtherError("recipient can't accept payments").into());
-    };
-    let invoice = match get_invoice_by_participants(
-        db_client,
-        sender_id,
-        recipient_id,
-        &config.chain_id,
-    ).await {
-        Ok(invoice) => invoice, // invoice will be re-opened automatically on incoming payment
-        Err(DatabaseError::NotFound(_)) => {
-            let payment_address = create_monero_address(config).await?;
-            create_local_invoice(
-                db_client,
-                sender_id,
-                recipient_id,
-                &config.chain_id,
-                &payment_address.to_string(),
-                0, // any amount
-            ).await?
-        },
-        Err(other_error) => return Err(other_error.into()),
-    };
-    let payment_address = invoice_payment_address(&invoice)?;
-    Ok(payment_address)
 }

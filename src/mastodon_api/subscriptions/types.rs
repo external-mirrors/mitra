@@ -3,16 +3,14 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use apx_core::caip2::ChainId;
+use mitra_adapters::payments::monero::MONERO_INVOICE_TIMEOUT;
 use mitra_models::{
     invoices::types::{DbInvoice, InvoiceStatus},
     profiles::types::PaymentOption,
     subscriptions::types::DbSubscription,
 };
 
-use crate::{
-    mastodon_api::serializers::serialize_datetime,
-    payments::monero::MONERO_INVOICE_TIMEOUT,
-};
+use crate::mastodon_api::serializers::serialize_datetime;
 
 #[derive(Deserialize)]
 pub struct SubscriberData {
