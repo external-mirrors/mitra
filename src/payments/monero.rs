@@ -54,7 +54,6 @@ fn invoice_payment_address(invoice: &DbInvoice) -> Result<String, DatabaseError>
     invoice.try_payment_address().map_err(Into::into)
 }
 
-// Returns None on chain ID mismatch
 pub(crate) async fn create_or_update_monero_subscription(
     _config: &MoneroConfig,
     db_client: &mut impl DatabaseClient,
@@ -63,7 +62,7 @@ pub(crate) async fn create_or_update_monero_subscription(
     recipient: &User,
     duration_secs: i64,
     maybe_invoice_id: Option<Uuid>,
-) -> Result<Option<DbSubscription>, DatabaseError> {
+) -> Result<DbSubscription, DatabaseError> {
     let subscription = match get_subscription_by_participants(
         db_client,
         sender.id,
@@ -114,7 +113,7 @@ pub(crate) async fn create_or_update_monero_subscription(
         subscription.expires_at,
         maybe_invoice_id,
     ).await?;
-    Ok(Some(subscription))
+    Ok(subscription)
 }
 
 pub async fn check_monero_subscriptions(

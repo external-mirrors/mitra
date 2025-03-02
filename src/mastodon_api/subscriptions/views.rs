@@ -115,7 +115,7 @@ async fn create_subscription_view(
         &current_user, // recipient
         subscriber_data.duration.into(),
         None, // no invoice
-    ).await?.ok_or(MastodonError::InternalError)?;
+    ).await?;
     let details = SubscriptionDetails::from(subscription);
     Ok(HttpResponse::Ok().json(details))
 }
