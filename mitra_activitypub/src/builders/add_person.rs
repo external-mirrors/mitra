@@ -70,7 +70,7 @@ fn build_add_person(
     }
 }
 
-pub fn prepare_add_person(
+fn prepare_add_person(
     instance: &Instance,
     sender: &User,
     person: &DbActor,
@@ -92,6 +92,23 @@ pub fn prepare_add_person(
         sender,
         activity,
         recipients,
+    )
+}
+
+pub fn prepare_add_subscriber(
+    instance: &Instance,
+    subscription_sender: &DbActor,
+    subscription_recipient: &User,
+    subscription_expires_at: DateTime<Utc>,
+    maybe_invoice_id: Option<Uuid>,
+) -> OutgoingActivityJobData {
+    prepare_add_person(
+        instance,
+        subscription_recipient,
+        subscription_sender,
+        LocalActorCollection::Subscribers,
+        subscription_expires_at,
+        maybe_invoice_id,
     )
 }
 

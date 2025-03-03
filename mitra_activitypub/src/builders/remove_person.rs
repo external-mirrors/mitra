@@ -54,7 +54,7 @@ fn build_remove_person(
     }
 }
 
-pub fn prepare_remove_person(
+fn prepare_remove_person(
     instance: &Instance,
     sender: &User,
     person: &DbActor,
@@ -72,6 +72,19 @@ pub fn prepare_remove_person(
         sender,
         activity,
         recipients,
+    )
+}
+
+pub fn prepare_remove_subscriber(
+    instance: &Instance,
+    subscription_sender: &DbActor,
+    subscription_recipient: &User,
+) -> OutgoingActivityJobData {
+    prepare_remove_person(
+        instance,
+        subscription_recipient,
+        subscription_sender,
+        LocalActorCollection::Subscribers,
     )
 }
 

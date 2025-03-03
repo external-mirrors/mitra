@@ -1,7 +1,8 @@
-use chrono::{Duration, Utc};
+use chrono::Utc;
 use uuid::Uuid;
 
-use mitra_adapters::payments::subscriptions::create_or_update_subscription;
+use mitra_activitypub::builders::add_person::prepare_add_subscriber;
+use mitra_adapters::payments::subscriptions::create_or_update_local_subscription;
 use mitra_config::{Instance, MoneroConfig};
 use mitra_models::{
     database::{
@@ -20,11 +21,9 @@ use mitra_models::{
         set_invoice_status,
     },
     invoices::types::{DbInvoice, InvoiceStatus},
+    notifications::helpers::create_subscriber_payment_notification,
     profiles::queries::get_profile_by_id,
-    profiles::types::DbActorProfile,
-    subscriptions::types::DbSubscription,
     users::queries::get_user_by_id,
-    users::types::User,
 };
 use mitra_services::monero::wallet::{
     create_monero_address,
@@ -40,7 +39,6 @@ use mitra_services::monero::wallet::{
     TransferCategory,
 };
 
-use super::common::send_subscription_notifications;
 use super::errors::PaymentError;
 
 pub const MONERO_INVOICE_TIMEOUT: i64 = 3 * 60 * 60; // 3 hours
@@ -48,39 +46,6 @@ const MONERO_CONFIRMATIONS_SAFE: u64 = 3;
 
 fn invoice_payment_address(invoice: &DbInvoice) -> Result<String, DatabaseError> {
     invoice.try_payment_address().map_err(Into::into)
-}
-
-pub(crate) async fn create_or_update_monero_subscription(
-    _config: &MoneroConfig,
-    db_client: &mut impl DatabaseClient,
-    instance: &Instance,
-    sender: &DbActorProfile,
-    recipient: &User,
-    duration_secs: i64,
-    maybe_invoice_id: Option<Uuid>,
-) -> Result<DbSubscription, DatabaseError> {
-    let subscription = create_or_update_subscription(
-        db_client,
-        sender,
-        &recipient.profile,
-        |maybe_expires_at| {
-            if let Some(expires_at) = maybe_expires_at {
-                std::cmp::max(expires_at, Utc::now()) +
-                    Duration::seconds(duration_secs)
-            } else {
-                Utc::now() + Duration::seconds(duration_secs)
-            }
-        },
-    ).await?;
-    send_subscription_notifications(
-        db_client,
-        instance,
-        sender,
-        recipient,
-        subscription.expires_at,
-        maybe_invoice_id,
-    ).await?;
-    Ok(subscription)
 }
 
 pub async fn check_monero_subscriptions(
@@ -314,15 +279,26 @@ pub async fn check_monero_subscriptions(
         set_invoice_status(db_client, invoice.id, InvoiceStatus::Completed).await?;
         log::info!("payout transaction confirmed for invoice {}", invoice.id);
 
-        create_or_update_monero_subscription(
-            config,
+        let subscription = create_or_update_local_subscription(
             db_client,
-            instance,
             &sender,
             &recipient,
             duration_secs,
-            Some(invoice.id),
         ).await?;
+        create_subscriber_payment_notification(
+            db_client,
+            sender.id,
+            recipient.id,
+        ).await?;
+        if let Some(ref remote_sender) = sender.actor_json {
+            prepare_add_subscriber(
+                instance,
+                remote_sender,
+                &recipient,
+                subscription.expires_at,
+                Some(invoice.id),
+            ).save_and_enqueue(db_client).await?;
+        };
     };
     Ok(())
 }

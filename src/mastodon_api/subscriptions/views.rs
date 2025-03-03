@@ -14,10 +14,12 @@ use uuid::Uuid;
 
 use mitra_activitypub::{
     builders::{
+        add_person::prepare_add_subscriber,
         offer_agreement::prepare_offer_agreement,
         update_person::prepare_update_person,
     },
 };
+use mitra_adapters::payments::subscriptions::create_or_update_local_subscription;
 use mitra_config::Config;
 use mitra_models::{
     database::{get_database_client, DatabaseConnectionPool},
@@ -63,7 +65,6 @@ use crate::mastodon_api::{
     errors::MastodonError,
     media_server::ClientMediaServer,
 };
-use crate::payments::monero::create_or_update_monero_subscription;
 
 use super::types::{
     Invoice,
@@ -107,15 +108,21 @@ async fn create_subscription_view(
     if !is_follower && !is_subscriber {
         return Err(ValidationError("account should be either follower or subscriber").into());
     };
-    let subscription = create_or_update_monero_subscription(
-        monero_config,
+    let subscription = create_or_update_local_subscription(
         db_client,
-        &config.instance(),
         &subscriber, // sender
         &current_user, // recipient
         subscriber_data.duration.into(),
-        None, // no invoice
     ).await?;
+    if let Some(ref remote_subscriber) = subscriber.actor_json {
+        prepare_add_subscriber(
+            &config.instance(),
+            remote_subscriber,
+            &current_user,
+            subscription.expires_at,
+            None, // no invoice
+        ).save_and_enqueue(db_client).await?;
+    };
     let details = SubscriptionDetails::from(subscription);
     Ok(HttpResponse::Ok().json(details))
 }

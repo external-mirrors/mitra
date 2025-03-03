@@ -1,62 +1,22 @@
-use chrono::{DateTime, Utc};
-use uuid::Uuid;
-
 use mitra_activitypub::{
-    builders::{
-        add_person::prepare_add_person,
-        remove_person::prepare_remove_person,
-    },
-    identifiers::LocalActorCollection,
+    builders::remove_person::prepare_remove_subscriber,
 };
 use mitra_config::Instance;
 use mitra_models::{
     database::{
         get_database_client,
-        DatabaseClient,
         DatabaseConnectionPool,
         DatabaseError,
     },
     notifications::helpers::{
         create_subscriber_leaving_notification,
-        create_subscriber_payment_notification,
         create_subscription_expiration_notification,
     },
     profiles::queries::get_profile_by_id,
-    profiles::types::DbActorProfile,
     relationships::queries::unsubscribe,
     subscriptions::queries::get_expired_subscriptions,
     users::queries::get_user_by_id,
-    users::types::User,
 };
-
-pub async fn send_subscription_notifications(
-    db_client: &impl DatabaseClient,
-    instance: &Instance,
-    sender: &DbActorProfile,
-    recipient: &User,
-    subscription_expires_at: DateTime<Utc>,
-    maybe_invoice_id: Option<Uuid>,
-) -> Result<(), DatabaseError> {
-    if maybe_invoice_id.is_some() {
-        // Create notification only if payment was made
-        create_subscriber_payment_notification(
-            db_client,
-            sender.id,
-            recipient.id,
-        ).await?;
-    };
-    if let Some(ref remote_sender) = sender.actor_json {
-        prepare_add_person(
-            instance,
-            recipient,
-            remote_sender,
-            LocalActorCollection::Subscribers,
-            subscription_expires_at,
-            maybe_invoice_id,
-        ).save_and_enqueue(db_client).await?;
-    };
-    Ok(())
-}
 
 pub async fn update_expired_subscriptions(
     instance: &Instance,
@@ -74,11 +34,10 @@ pub async fn update_expired_subscriptions(
             recipient,
         );
         if let Some(ref remote_sender) = sender.actor_json {
-            prepare_remove_person(
+            prepare_remove_subscriber(
                 instance,
-                &recipient,
                 remote_sender,
-                LocalActorCollection::Subscribers,
+                &recipient,
             ).save_and_enqueue(db_client).await?;
         } else {
             create_subscription_expiration_notification(

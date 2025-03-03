@@ -1,4 +1,4 @@
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Duration, Utc};
 
 use mitra_models::{
     database::{DatabaseClient, DatabaseError},
@@ -9,6 +9,7 @@ use mitra_models::{
         update_subscription,
     },
     subscriptions::types::DbSubscription,
+    users::types::User,
 };
 
 pub async fn create_or_update_subscription(
@@ -58,4 +59,25 @@ pub async fn create_or_update_subscription(
         Err(other_error) => return Err(other_error),
     };
     Ok(subscription)
+}
+
+pub async fn create_or_update_local_subscription(
+    db_client: &mut impl DatabaseClient,
+    sender: &DbActorProfile,
+    recipient: &User,
+    duration_secs: i64,
+) -> Result<DbSubscription, DatabaseError> {
+    create_or_update_subscription(
+        db_client,
+        sender,
+        &recipient.profile,
+        |maybe_expires_at| {
+            if let Some(expires_at) = maybe_expires_at {
+                std::cmp::max(expires_at, Utc::now()) +
+                    Duration::seconds(duration_secs)
+            } else {
+                Utc::now() + Duration::seconds(duration_secs)
+            }
+        },
+    ).await
 }
