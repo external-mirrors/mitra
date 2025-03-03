@@ -33,6 +33,25 @@ license = "AGPL-3.0-only"
 edition = "2021"
 rust-version = "1.70.0"
 
+[workspace.lints.rust]
+# Lints from rust-2024-compatibility group
+boxed_slice_into_iter = "warn"
+dependency_on_unit_never_type_fallback = "warn"
+deprecated_safe_2024 = "warn"
+edition_2024_expr_fragment_specifier = "warn"
+#if_let_rescope = "warn"
+impl_trait_overcaptures = "warn"
+keyword_idents_2024 = "warn"
+#missing_unsafe_on_extern = "warn"
+never_type_fallback_flowing_into_unsafe = "warn"
+rust_2024_guarded_string_incompatible_syntax = "warn"
+#rust_2024_incompatible_pat = "warn"
+rust_2024_prelude_collisions = "warn"
+static_mut_refs = "warn"
+#tail_expr_drop_order = "warn"
+unsafe_attr_outside_unsafe = "warn"
+unsafe_op_in_unsafe_fn = "warn"
+
 [workspace.lints.clippy]
 unwrap_used = "warn"
 derive_partial_eq_without_eq = "allow"
