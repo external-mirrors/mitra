@@ -6,6 +6,7 @@ use apx_sdk::{
     deserialization::deserialize_into_object_id,
     utils::is_activity,
 };
+use mitra_adapters::payments::subscriptions::create_or_update_subscription;
 use mitra_config::Config;
 use mitra_models::{
     database::{DatabaseClient, DatabaseError},
@@ -20,11 +21,6 @@ use mitra_models::{
     },
     profiles::queries::get_remote_profile_by_actor_id,
     relationships::queries::subscribe_opt,
-    subscriptions::queries::{
-        create_subscription,
-        get_subscription_by_participants,
-        update_subscription,
-    },
     users::queries::get_user_by_name,
 };
 use mitra_validators::errors::ValidationError;
@@ -222,41 +218,12 @@ pub async fn handle_add(
             },
             _ => log::warn!("no agreement"),
         };
-
-        match get_subscription_by_participants(
+        create_or_update_subscription(
             db_client,
-            sender.id,
-            recipient.id,
-        ).await {
-            Ok(subscription) => {
-                update_subscription(
-                    db_client,
-                    subscription.id,
-                    subscription_expires_at,
-                    Utc::now(),
-                ).await?;
-                log::info!(
-                    "subscription updated: {0} to {1}",
-                    sender,
-                    recipient,
-                );
-            },
-            Err(DatabaseError::NotFound(_)) => {
-                create_subscription(
-                    db_client,
-                    sender.id,
-                    recipient.id,
-                    subscription_expires_at,
-                    Utc::now(),
-                ).await?;
-                log::info!(
-                    "subscription created: {0} to {1}",
-                    sender,
-                    recipient,
-                );
-            },
-            Err(other_error) => return Err(other_error.into()),
-        };
+            &sender.profile,
+            &recipient,
+            |_maybe_expires_at| subscription_expires_at,
+        ).await?;
         return Ok(Some(Descriptor::target("subscribers")));
     };
     if Some(activity.target.clone()) == actor.featured {

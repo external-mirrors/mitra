@@ -1,6 +1,7 @@
 use chrono::{Duration, Utc};
 use uuid::Uuid;
 
+use mitra_adapters::payments::subscriptions::create_or_update_subscription;
 use mitra_config::{Instance, MoneroConfig};
 use mitra_models::{
     database::{
@@ -21,11 +22,6 @@ use mitra_models::{
     invoices::types::{DbInvoice, InvoiceStatus},
     profiles::queries::get_profile_by_id,
     profiles::types::DbActorProfile,
-    subscriptions::queries::{
-        create_subscription,
-        get_subscription_by_participants,
-        update_subscription,
-    },
     subscriptions::types::DbSubscription,
     users::queries::get_user_by_id,
     users::types::User,
@@ -63,48 +59,19 @@ pub(crate) async fn create_or_update_monero_subscription(
     duration_secs: i64,
     maybe_invoice_id: Option<Uuid>,
 ) -> Result<DbSubscription, DatabaseError> {
-    let subscription = match get_subscription_by_participants(
+    let subscription = create_or_update_subscription(
         db_client,
-        sender.id,
-        recipient.id,
-    ).await {
-        Ok(subscription) => {
-            // Update subscription expiration date
-            let expires_at =
-                std::cmp::max(subscription.expires_at, Utc::now()) +
-                Duration::seconds(duration_secs);
-            let subscription = update_subscription(
-                db_client,
-                subscription.id,
-                expires_at,
-                Utc::now(),
-            ).await?;
-            log::info!(
-                "subscription updated: {0} to {1}",
-                sender,
-                recipient,
-            );
-            subscription
+        sender,
+        &recipient.profile,
+        |maybe_expires_at| {
+            if let Some(expires_at) = maybe_expires_at {
+                std::cmp::max(expires_at, Utc::now()) +
+                    Duration::seconds(duration_secs)
+            } else {
+                Utc::now() + Duration::seconds(duration_secs)
+            }
         },
-        Err(DatabaseError::NotFound(_)) => {
-            // New subscription
-            let expires_at = Utc::now() + Duration::seconds(duration_secs);
-            let subscription = create_subscription(
-                db_client,
-                sender.id,
-                recipient.id,
-                expires_at,
-                Utc::now(),
-            ).await?;
-            log::info!(
-                "subscription created: {0} to {1}",
-                sender,
-                recipient,
-            );
-            subscription
-        },
-        Err(other_error) => return Err(other_error),
-    };
+    ).await?;
     send_subscription_notifications(
         db_client,
         instance,
