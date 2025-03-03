@@ -887,7 +887,7 @@ impl GetPaymentAddress {
             self.sender_id,
             self.recipient_id,
         ).await?;
-        print!("payment address: {}", payment_address);
+        println!("payment address: {}", payment_address);
         Ok(())
     }
 }
