@@ -2054,7 +2054,6 @@ dependencies = [
  "actix-multipart",
  "actix-web",
  "actix-web-httpauth",
- "anyhow",
  "apx_core",
  "apx_sdk",
  "chrono",
@@ -2069,6 +2068,7 @@ dependencies = [
  "mitra_services",
  "mitra_utils",
  "mitra_validators",
+ "mitra_workers",
  "num_cpus",
  "regex",
  "serde",
@@ -2246,6 +2246,26 @@ dependencies = [
  "regex",
  "serde_json",
  "thiserror",
+ "uuid",
+]
+
+[[package]]
+name = "mitra_workers"
+version = "3.18.0"
+dependencies = [
+ "anyhow",
+ "apx_sdk",
+ "chrono",
+ "log",
+ "mitra_activitypub",
+ "mitra_adapters",
+ "mitra_config",
+ "mitra_models",
+ "mitra_services",
+ "mitra_utils",
+ "serde",
+ "serde_json",
+ "tokio",
  "uuid",
 ]
 

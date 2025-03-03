@@ -11,6 +11,7 @@ members = [
   "mitra_services",
   "mitra_utils",
   "mitra_validators",
+  "mitra_workers",
 ]
 default-members = [
   ".",
@@ -24,6 +25,7 @@ default-members = [
   "mitra_services",
   "mitra_utils",
   "mitra_validators",
+  "mitra_workers",
 ]
 
 [workspace.package]
@@ -86,8 +88,6 @@ actix-governor = "0.6.0"
 actix-multipart = { version = "0.6.1", default-features = false, features = ["derive"] }
 actix-web = "4.4.1"
 actix-web-httpauth = "0.8.1"
-# Used for catching errors
-anyhow = "1.0.58"
 # Used for working with dates
 chrono = { version = "0.4.31", default-features = false, features = ["std", "serde"] }
 # Used to parse emoji shortcodes
@@ -125,6 +125,7 @@ mitra_models = { path = "mitra_models" }
 mitra_services = { path = "mitra_services" }
 mitra_utils = { path = "mitra_utils" }
 mitra_validators = { path = "mitra_validators" }
+mitra_workers = { path = "mitra_workers" }
 
 [dev-dependencies]
 serial_test = "2.0.0"

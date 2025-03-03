@@ -48,9 +48,9 @@ use mitra_validators::{
     profiles::validate_aliases,
     users::validate_client_config_update,
 };
+use mitra_workers::importer::ImporterJobData;
 
 use crate::http::get_request_base_url;
-use crate::job_queue::importer::ImporterJobData;
 use crate::mastodon_api::{
     accounts::helpers::get_aliases,
     accounts::types::Account,

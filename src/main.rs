@@ -1,4 +1,3 @@
-use mitra::job_queue::scheduler;
 use mitra::server::run_server;
 use mitra_adapters::init::{
     apply_custom_migrations,
@@ -14,6 +13,7 @@ use mitra_models::{
     },
 };
 use mitra_services::media::MediaStorage;
+use mitra_workers::workers;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -50,20 +50,20 @@ async fn main() -> std::io::Result<()> {
 
     log::info!("instance URL {}", config.instance_url());
 
-    scheduler::start_worker(
+    workers::start_worker(
         config.clone(),
         db_pool.clone(),
     );
-    log::info!("scheduler started");
+    log::info!("background worker started");
     if config.federation.incoming_queue_worker_enabled {
-        scheduler::start_incoming_activity_queue_worker(
+        workers::start_incoming_activity_queue_worker(
             config.clone(),
             db_pool.clone(),
         );
         log::info!("incoming activity queue worker started");
     };
     if config.federation.deliverer_standalone {
-        scheduler::start_outgoing_activity_queue_worker(
+        workers::start_outgoing_activity_queue_worker(
             config.clone(),
             db_pool.clone(),
         );
