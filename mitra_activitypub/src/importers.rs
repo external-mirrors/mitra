@@ -865,67 +865,35 @@ pub async fn import_replies(
         replies: Option<String>,
     }
 
-    let ap_client = ApClient::new(config, db_client).await?;
     let instance = config.instance();
     let agent = build_federation_agent(&instance, None);
     let object: ConversationItem = fetch_any_object(&agent, object_id).await?;
-    if use_context && object.context_history.is_some() {
-        if let Some(ref collection_id) = object.context_history {
+    let (collection_id, item_type) = if use_context {
+        if let Some(collection_id) = object.context_history {
             log::info!("reading 'contextHistory' collection");
             // Converstion container
-            let activities =
-                fetch_collection(&agent, collection_id, limit).await?;
-            log::info!("fetched {} activities", activities.len());
-            for activity in activities {
-                handle_activity(
-                    config,
-                    db_client,
-                    &activity,
-                    true, // is authenticated
-                    true, // activity is being pulled (not a spam)
-                ).await.unwrap_or_else(|error| {
-                    log::warn!(
-                        "failed to process activity ({}): {}",
-                        error,
-                        activity,
-                    );
-                });
-            };
-            return Ok(());
+            (collection_id, CollectionItemType::Activity)
+        } else if let Some(collection_id) = object.context {
+            log::info!("reading 'context' collection");
+            (collection_id, CollectionItemType::Object)
         } else {
-            return Err(ValidationError("object doesn't have `contextHistory`").into());
-        };
-    };
-    let maybe_collection_id = if use_context && object.context.is_some() {
-        log::info!("reading 'context' collection");
-        object.context
-    } else {
+            return Err(ValidationError("object doesn't have context").into());
+        }
+    } else if let Some(collection_id) = object.replies {
         log::info!("reading 'replies' collection");
-        object.replies
-    };
-    let collection_items = if let Some(collection_id) = maybe_collection_id {
-        fetch_collection(&agent, &collection_id, limit).await?
+        (collection_id, CollectionItemType::Object)
     } else {
-        vec![] // no context, no replies
+        log::info!("object doesn't have replies");
+        return Ok(());
     };
-    log::info!("found {} items in conversation", collection_items.len());
-    for item in collection_items {
-        let object: AttributedObjectJson = serde_json::from_value(item)
-            .map_err(|_| ValidationError("invalid conversation item"))?;
-        let object_id = object.id().to_owned();
-        import_post(
-            &ap_client,
-            db_client,
-            object_id.clone(),
-            Some(object),
-        ).await.map_err(|error| {
-            log::warn!(
-                "failed to import post ({}): {}",
-                error,
-                object_id,
-            );
-        }).ok();
-    };
+    import_collection(
+        config,
+        db_client,
+        &collection_id,
+        Some(item_type),
+        CollectionOrder::Forward,
+        limit,
+    ).await?;
     Ok(())
 }
 
