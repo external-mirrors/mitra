@@ -15,12 +15,15 @@ use mitra_activitypub::{
         fetch_any_object,
         fetch_any_object_with_context,
         import_activity,
+        import_collection,
         import_from_outbox,
         import_object,
         import_profile,
         import_replies,
         ActorIdResolver,
         ApClient,
+        CollectionItemType,
+        CollectionOrder,
         FetcherContext,
     },
 };
@@ -66,6 +69,13 @@ pub struct ImportObject {
     /// Expected core object type
     #[arg(long, default_value = "object")]
     object_type: String,
+
+    #[arg(long, default_value = "any")]
+    collection_type: String,
+    #[arg(long, default_value = "forward")]
+    collection_order: String,
+    #[arg(long, default_value_t = 20)]
+    collection_limit: usize,
 }
 
 impl ImportObject {
@@ -88,8 +98,9 @@ impl ImportObject {
             "object" => CoreType::Object,
             "actor" => CoreType::Actor,
             "activity" => CoreType::Activity,
+            "collection" => CoreType::Collection,
             "any" => get_core_type(&object),
-            _ => return Err(anyhow!("not supported")),
+            _ => return Err(anyhow!("invalid object type")),
         };
         match object_type {
             CoreType::Object => {
@@ -106,7 +117,30 @@ impl ImportObject {
                 import_activity(config, db_client, object).await?;
                 println!("activity processed");
             },
-            _ => return Err(anyhow!("not supported")),
+            CoreType::Collection => {
+                let maybe_item_type = match self.collection_type.as_str() {
+                    "object" => Some(CollectionItemType::Object),
+                    "actor" => Some(CollectionItemType::Actor),
+                    "activity" => Some(CollectionItemType::Activity),
+                    "any" => None,
+                    _ => return Err(anyhow!("invalid collection item type")),
+                };
+                let order = match self.collection_order.as_str() {
+                    "forward" => CollectionOrder::Forward,
+                    "reverse" => CollectionOrder::Reverse,
+                    _ => return Err(anyhow!("invalid collection order type")),
+                };
+                import_collection(
+                    config,
+                    db_client,
+                    &self.object_id,
+                    maybe_item_type,
+                    order,
+                    self.collection_limit,
+                ).await?;
+                println!("collection processed");
+            },
+            _ => return Err(anyhow!("invalid object type")),
         };
         Ok(())
     }

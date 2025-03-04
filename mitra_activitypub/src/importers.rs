@@ -26,6 +26,7 @@ use apx_sdk::{
     },
     jrd::JsonResourceDescriptor,
     url::{parse_url, Url},
+    utils::{get_core_type, CoreType},
 };
 use mitra_config::{Config, Instance, MediaLimits};
 use mitra_models::{
@@ -75,7 +76,7 @@ use crate::{
         parse_local_actor_id,
         parse_local_object_id,
     },
-    ownership::verify_object_owner,
+    ownership::{get_object_id, verify_object_owner},
     vocabulary::GROUP,
 };
 
@@ -753,6 +754,75 @@ async fn fetch_collection(
         };
     };
     Ok(authenticated)
+}
+
+#[derive(Debug)]
+pub enum CollectionItemType {
+    Object,
+    Actor,
+    Activity,
+}
+pub enum CollectionOrder {
+    Forward,
+    Reverse,
+}
+
+pub async fn import_collection(
+    config: &Config,
+    db_client: &mut impl DatabaseClient,
+    collection_id: &str,
+    maybe_item_type: Option<CollectionItemType>,
+    order: CollectionOrder,
+    limit: usize,
+) -> Result<(), HandlerError> {
+    let ap_client = ApClient::new(config, db_client).await?;
+    let agent = ap_client.agent();
+    let items = fetch_collection(&agent, collection_id, limit).await?;
+    let item_type = match &items[..] {
+        [] => {
+            log::info!("collection is empty");
+            return Ok(());
+        },
+        [item, ..] => {
+            log::info!("fetched {} items", items.len());
+            if let Some(item_type) = maybe_item_type {
+                item_type
+            } else {
+                match get_core_type(item) {
+                    CoreType::Object => CollectionItemType::Object,
+                    CoreType::Actor => CollectionItemType::Actor,
+                    CoreType::Activity => CollectionItemType::Activity,
+                    _ => return Err(ValidationError("unexpected item type").into()),
+                }
+            }
+        },
+    };
+    log::info!("collection item type: {item_type:?}");
+    let items = match order {
+        CollectionOrder::Forward => items,
+        CollectionOrder::Reverse => items.into_iter().rev().collect(),
+    };
+    for item in items {
+        let item_id = get_object_id(&item)?.to_string();
+        let maybe_error = match item_type {
+            CollectionItemType::Object => {
+                log::info!("importing object {item_id}");
+                import_object(&ap_client, db_client, item).await.err()
+            },
+            CollectionItemType::Actor => {
+                log::info!("importing actor {item_id}");
+                import_profile(&ap_client, db_client, item).await.err()
+            },
+            CollectionItemType::Activity => {
+                log::info!("importing activity {item_id}");
+                import_activity(config, db_client, item).await.err()
+            },
+        };
+        if let Some(error) = maybe_error {
+            log::warn!("failed to process item ({error}): {item_id}");
+        };
+    };
+    Ok(())
 }
 
 pub async fn import_from_outbox(
