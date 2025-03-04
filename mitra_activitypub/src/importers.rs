@@ -831,32 +831,18 @@ pub async fn import_from_outbox(
     actor_id: &str,
     limit: usize,
 ) -> Result<(), HandlerError> {
-    let instance = config.instance();
-    let agent = build_federation_agent(&instance, None);
     let profile = get_remote_profile_by_actor_id(db_client, actor_id).await?;
     let actor_data = profile.expect_actor_data();
     let mut context = FetcherContext::from(actor_data);
     let outbox_url = context.prepare_object_id(&actor_data.outbox)?;
-    let activities =
-        fetch_collection(&agent, &outbox_url, limit).await?;
-    log::info!("fetched {} activities", activities.len());
-    // Outbox has reverse chronological order
-    let activities = activities.into_iter().rev();
-    for activity in activities {
-        handle_activity(
-            config,
-            db_client,
-            &activity,
-            true, // is authenticated
-            true, // activity is being pulled (not a spam)
-        ).await.unwrap_or_else(|error| {
-            log::warn!(
-                "failed to process activity ({}): {}",
-                error,
-                activity,
-            );
-        });
-    };
+    import_collection(
+        config,
+        db_client,
+        &outbox_url,
+        Some(CollectionItemType::Activity),
+        CollectionOrder::Reverse,
+        limit,
+    ).await?;
     Ok(())
 }
 
