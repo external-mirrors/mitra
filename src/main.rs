@@ -13,7 +13,7 @@ use mitra_models::{
     },
 };
 use mitra_services::media::MediaStorage;
-use mitra_workers::workers;
+use mitra_workers::workers::start_workers;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -50,25 +50,7 @@ async fn main() -> std::io::Result<()> {
 
     log::info!("instance URL {}", config.instance_url());
 
-    workers::start_worker(
-        config.clone(),
-        db_pool.clone(),
-    );
-    log::info!("background worker started");
-    if config.federation.incoming_queue_worker_enabled {
-        workers::start_incoming_activity_queue_worker(
-            config.clone(),
-            db_pool.clone(),
-        );
-        log::info!("incoming activity queue worker started");
-    };
-    if config.federation.deliverer_standalone {
-        workers::start_outgoing_activity_queue_worker(
-            config.clone(),
-            db_pool.clone(),
-        );
-        log::info!("outgoing activity queue worker started");
-    };
+    start_workers(config.clone(), db_pool.clone());
 
     run_server(config, db_pool, media_storage).await
 }

@@ -129,7 +129,7 @@ async fn run_worker(
     };
 }
 
-pub fn start_worker(
+fn start_main_worker(
     config: Config,
     db_pool: DatabaseConnectionPool,
 ) -> () {
@@ -164,7 +164,7 @@ pub fn start_worker(
     });
 }
 
-pub fn start_outgoing_activity_queue_worker(
+fn start_outgoing_activity_queue_worker(
     config: Config,
     db_pool: DatabaseConnectionPool,
 ) -> () {
@@ -175,7 +175,7 @@ pub fn start_outgoing_activity_queue_worker(
     });
 }
 
-pub fn start_incoming_activity_queue_worker(
+fn start_incoming_activity_queue_worker(
     config: Config,
     db_pool: DatabaseConnectionPool,
 ) -> () {
@@ -184,4 +184,31 @@ pub fn start_incoming_activity_queue_worker(
         let tasks = vec![PeriodicTask::IncomingActivityQueueExecutor];
         run_worker(config, db_pool, tasks).await
     });
+}
+
+pub fn start_workers(
+    config: Config,
+    db_pool: DatabaseConnectionPool,
+) -> () {
+    start_main_worker(
+        config.clone(),
+        db_pool.clone(),
+    );
+    log::info!("background worker started");
+
+    if config.federation.incoming_queue_worker_enabled {
+        start_incoming_activity_queue_worker(
+            config.clone(),
+            db_pool.clone(),
+        );
+        log::info!("incoming activity queue worker started");
+    };
+
+    if config.federation.deliverer_standalone {
+        start_outgoing_activity_queue_worker(
+            config.clone(),
+            db_pool.clone(),
+        );
+        log::info!("outgoing activity queue worker started");
+    };
 }
