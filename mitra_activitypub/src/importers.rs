@@ -177,14 +177,18 @@ pub async fn fetch_any_object<T: DeserializeOwned>(
 }
 
 impl ApClient {
+    fn agent(&self) -> FederationAgent {
+        build_federation_agent(
+            &self.instance,
+            self.as_user.as_ref(),
+        )
+    }
+
     pub async fn fetch_object<T: DeserializeOwned>(
         &self,
         object_id: &str,
     ) -> Result<T, HandlerError> {
-        let agent = build_federation_agent(
-            &self.instance,
-            self.as_user.as_ref(),
-        );
+        let agent = self.agent();
         let object_json: JsonValue =
             fetch_any_object(&agent, object_id).await?;
         let canonical_object_id = object_json["id"].as_str()
