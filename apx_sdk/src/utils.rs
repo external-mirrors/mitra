@@ -46,7 +46,8 @@ pub fn get_core_type(value: &JsonValue) -> CoreType {
     else if
         !value["items"].is_null() ||
         !value["orderedItems"].is_null() ||
-        !value["totalItems"].is_null()
+        !value["totalItems"].is_null() ||
+        !value["first"].is_null()
     {
         // `items` may only appear in Collection objects:
         // https://www.w3.org/TR/activitystreams-vocabulary/#dfn-items
