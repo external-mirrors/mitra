@@ -112,7 +112,7 @@ async fn update_emoji_cache(
     Ok(profile)
 }
 
-pub async fn update_emoji_caches(
+pub(crate) async fn update_emoji_caches(
     db_client: &impl DatabaseClient,
     emoji_id: Uuid,
 ) -> Result<(), DatabaseError> {

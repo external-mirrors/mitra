@@ -308,6 +308,10 @@ mod tests {
     use crate::{
         database::test_utils::create_test_database,
         media::types::MediaInfo,
+        profiles::{
+            queries::{create_profile, get_profile_by_id},
+            types::ProfileCreateData,
+        },
     };
     use super::*;
 
@@ -415,5 +419,30 @@ mod tests {
         let deletion_queue = delete_emoji(db_client, emoji.id).await.unwrap();
         assert_eq!(deletion_queue.files.len(), 1);
         assert_eq!(deletion_queue.ipfs_objects.len(), 0);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_delete_emoji_and_update_caches() {
+        let db_client = &mut create_test_database().await;
+        let image = EmojiImage::from(MediaInfo::png_for_test());
+        let (emoji, _) = create_or_update_local_emoji(
+            db_client,
+            "test",
+            image,
+        ).await.unwrap();
+        let profile_data = ProfileCreateData {
+            emojis: vec![emoji.id],
+            ..ProfileCreateData::remote_for_test(
+                "test",
+                "social.example",
+                "https://social.example/actor",
+            )
+        };
+        let profile = create_profile(db_client, profile_data).await.unwrap();
+        assert_eq!(profile.emojis.into_inner().len(), 1);
+        delete_emoji(db_client, emoji.id).await.unwrap();
+        let profile = get_profile_by_id(db_client, profile.id).await.unwrap();
+        assert_eq!(profile.emojis.into_inner().len(), 0);
     }
 }

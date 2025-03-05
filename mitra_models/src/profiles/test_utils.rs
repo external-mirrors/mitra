@@ -21,6 +21,35 @@ use super::{
     },
 };
 
+impl ProfileCreateData {
+    pub fn remote_for_test(
+        username: &str,
+        hostname: &str,
+        actor_id: &str,
+    ) -> Self {
+        let mut db_actor = DbActor {
+            id: actor_id.to_string(),
+            ..Default::default()
+        };
+        if is_ap_url(&db_actor.id) {
+            db_actor.gateways.push(format!("https://{hostname}"));
+        };
+        let hostname = if hostname.ends_with(".local") {
+            // Special case: creating unmanaged account
+            WebfingerHostname::Unknown
+        } else {
+            WebfingerHostname::Remote(hostname.to_string())
+        };
+        ProfileCreateData {
+            username: username.to_string(),
+            hostname: hostname,
+            public_keys: vec![DbActorKey::default()],
+            actor_json: Some(db_actor),
+            ..Default::default()
+        }
+    }
+}
+
 pub async fn create_test_local_profile(
     db_client: &mut impl DatabaseClient,
     username: &str,
@@ -35,26 +64,11 @@ pub async fn create_test_remote_profile(
     hostname: &str,
     actor_id: &str,
 ) -> DbActorProfile {
-    let mut db_actor = DbActor {
-        id: actor_id.to_string(),
-        ..Default::default()
-    };
-    if is_ap_url(&db_actor.id) {
-        db_actor.gateways.push(format!("https://{hostname}"));
-    };
-    let hostname = if hostname.ends_with(".local") {
-        // Special case: creating unmanaged account
-        WebfingerHostname::Unknown
-    } else {
-        WebfingerHostname::Remote(hostname.to_string())
-    };
-    let profile_data = ProfileCreateData {
-        username: username.to_string(),
-        hostname: hostname,
-        public_keys: vec![DbActorKey::default()],
-        actor_json: Some(db_actor),
-        ..Default::default()
-    };
+    let profile_data = ProfileCreateData::remote_for_test(
+        username,
+        hostname,
+        actor_id,
+    );
     let profile = create_profile(db_client, profile_data).await.unwrap();
     profile.check_consistency().unwrap();
     profile
