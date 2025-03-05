@@ -8,6 +8,8 @@ impl Conversation {
         Self {
             id: Uuid::new_v4(),
             root_id,
+            is_managed: true,
+            object_id: None,
             audience: Some(AP_PUBLIC.to_owned()),
         }
     }

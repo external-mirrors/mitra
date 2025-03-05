@@ -14,6 +14,11 @@ use crate::{
 pub struct Conversation {
     pub id: Uuid,
     pub root_id: Uuid,
+    // Conversation is managed when the root is managed
+    pub is_managed: bool,
+    // "object_id" is None when the conversation is managed (local),
+    // or when the ID is not known.
+    pub object_id: Option<String>,
     // "audience" is None when the conversation is direct,
     // or when it is limited and created by the database migration
     pub audience: Option<String>,

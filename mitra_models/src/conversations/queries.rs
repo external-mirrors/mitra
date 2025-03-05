@@ -17,6 +17,8 @@ use super::types::{Conversation, TrackingStatus};
 pub async fn create_conversation(
     db_client: &impl DatabaseClient,
     root_id: Uuid,
+    is_managed: bool,
+    object_id: Option<&str>,
     audience: Option<&str>,
 ) -> Result<Conversation, DatabaseError> {
     let conversation_id = generate_ulid();
@@ -25,14 +27,18 @@ pub async fn create_conversation(
         INSERT INTO conversation (
             id,
             root_id,
+            is_managed,
+            object_id,
             audience
         )
-        VALUES ($1, $2, $3)
+        VALUES ($1, $2, $3, $4, $5)
         RETURNING conversation
         ",
         &[
             &conversation_id,
             &root_id,
+            &is_managed,
+            &object_id,
             &audience,
         ],
     ).await.map_err(catch_unique_violation("conversation"))?;

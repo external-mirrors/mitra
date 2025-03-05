@@ -416,7 +416,13 @@ pub async fn get_object_ids(
         FROM post
         WHERE post.object_id IS NOT NULL
         UNION ALL
-        SELECT conversation.audience
+        SELECT unnest(array_remove(
+            ARRAY[
+                conversation.object_id,
+                conversation.audience
+            ],
+            NULL
+        ))
         FROM conversation
         WHERE conversation.audience IS NOT NULL
         UNION ALL

@@ -249,6 +249,8 @@ pub struct AttributedObject {
     #[serde(default, deserialize_with = "deserialize_into_object_id_opt")]
     pub in_reply_to: Option<String>,
 
+    context: Option<String>,
+
     #[serde(default, deserialize_with = "deserialize_into_id_array")]
     to: Vec<String>,
     #[serde(default, deserialize_with = "deserialize_into_id_array")]
@@ -838,6 +840,7 @@ pub(super) fn get_audience(
 
 fn get_object_visibility(
     author: &DbActorProfile,
+    context_id: Option<&str>,
     audience: &[String],
     maybe_in_reply_to: Option<&PostDetailed>,
 ) -> (Visibility, PostContext) {
@@ -895,6 +898,7 @@ fn get_object_visibility(
             Visibility::Direct
         };
         let context = PostContext::Top {
+            object_id: context_id.map(|id| id.to_owned()),
             audience: conversation_audience,
         };
         (visibility, context)
@@ -1045,6 +1049,7 @@ pub async fn create_remote_post(
     let audience = get_audience(&object)?;
     let (visibility, context) = get_object_visibility(
         &author,
+        object.context.as_deref(),
         &audience,
         maybe_in_reply_to.as_ref(),
     );
@@ -1371,14 +1376,17 @@ mod tests {
     fn test_get_object_visibility_public() {
         let author =
             DbActorProfile::remote_for_test("test", "https://social.example");
+        let context_id = "https://social.example/context";
         let audience = vec![AP_PUBLIC.to_string()];
         let (visibility, context) = get_object_visibility(
             &author,
+            Some(context_id),
             &audience,
             None,
         );
         assert_eq!(visibility, Visibility::Public);
-        let PostContext::Top { audience } = context else { unreachable!() };
+        let PostContext::Top { object_id, audience } = context else { unreachable!() };
+        assert_eq!(object_id.unwrap(), context_id);
         assert_eq!(audience.unwrap(), AP_PUBLIC);
     }
 
@@ -1391,6 +1399,7 @@ mod tests {
         let audience = vec![AP_PUBLIC.to_string()];
         let (visibility, context) = get_object_visibility(
             &author,
+            None,
             &audience,
             Some(&in_reply_to),
         );
@@ -1413,11 +1422,13 @@ mod tests {
         let audience = vec![author_followers.to_string()];
         let (visibility, context) = get_object_visibility(
             &author,
+            None,
             &audience,
             None,
         );
         assert_eq!(visibility, Visibility::Followers);
-        let PostContext::Top { audience } = context else { unreachable!() };
+        let PostContext::Top { object_id, audience } = context else { unreachable!() };
+        assert_eq!(object_id, None);
         assert_eq!(audience.unwrap(), author_followers);
     }
 
@@ -1438,6 +1449,7 @@ mod tests {
         let audience = vec![in_reply_to_followers.to_string()];
         let (visibility, context) = get_object_visibility(
             &author,
+            None,
             &audience,
             Some(&in_reply_to),
         );
@@ -1465,6 +1477,7 @@ mod tests {
         let audience = vec![author_followers];
         let (visibility, context) = get_object_visibility(
             &author,
+            None,
             &audience,
             Some(&in_reply_to),
         );
@@ -1489,11 +1502,13 @@ mod tests {
         let audience = vec![author_subscribers.to_string()];
         let (visibility, context) = get_object_visibility(
             &author,
+            None,
             &audience,
             None,
         );
         assert_eq!(visibility, Visibility::Subscribers);
-        let PostContext::Top { audience } = context else { unreachable!() };
+        let PostContext::Top { object_id, audience } = context else { unreachable!() };
+        assert_eq!(object_id, None);
         assert_eq!(audience.unwrap(), author_subscribers);
     }
 
@@ -1503,11 +1518,13 @@ mod tests {
         let audience = vec!["https://example.com/users/1".to_string()];
         let (visibility, context) = get_object_visibility(
             &author,
+            None,
             &audience,
             None,
         );
         assert_eq!(visibility, Visibility::Direct);
-        let PostContext::Top { audience } = context else { unreachable!() };
+        let PostContext::Top { object_id, audience } = context else { unreachable!() };
+        assert_eq!(object_id, None);
         assert!(audience.is_none());
     }
 }

@@ -365,14 +365,14 @@ pub fn build_note(
         },
         None => None,
     };
-    let maybe_context_collection_id = if post.in_reply_to_id.is_none() {
-        let conversation = post.expect_conversation();
+    let conversation = post.expect_conversation();
+    let maybe_context_id = if conversation.is_managed {
         // TODO: FEP-EF61: use Authority
         let context_collection_id =
             local_conversation_collection(instance_uri.as_str(), conversation.id);
         Some(context_collection_id)
     } else {
-        None
+        conversation.object_id.clone()
     };
     let replies_collection_id = local_object_replies(&object_id);
 
@@ -383,7 +383,7 @@ pub fn build_note(
         attachment: attachments,
         attributed_to: actor_id,
         in_reply_to: in_reply_to_object_id,
-        context: maybe_context_collection_id,
+        context: maybe_context_id,
         replies: replies_collection_id,
         content: post.content.clone(),
         content_map: post.language
@@ -516,6 +516,14 @@ mod tests {
             format!("{}/users/{}", INSTANCE_URI, post.author.username),
         );
         assert_eq!(note.in_reply_to.is_none(), true);
+        assert_eq!(
+            note.context.unwrap(),
+            format!(
+                "{}/collections/conversations/{}",
+                INSTANCE_URI,
+                post.expect_conversation().id,
+            ),
+        );
         assert_eq!(
             note.replies,
             format!("{}/objects/{}/replies", INSTANCE_URI, post.id),
@@ -748,11 +756,16 @@ mod tests {
         );
         let parent = PostDetailed {
             author: parent_author.clone(),
+            conversation: Some(Conversation {
+                is_managed: false,
+                ..Conversation::for_test(Default::default())
+            }),
             object_id: Some("https://test.net/obj/123".to_string()),
             ..Default::default()
         };
         let post = PostDetailed {
             in_reply_to_id: Some(parent.id),
+            conversation: parent.conversation.clone(),
             mentions: vec![parent_author],
             related_posts: Some(RelatedPosts {
                 in_reply_to: Some(Box::new(parent.clone())),
@@ -800,8 +813,11 @@ mod tests {
                 ..Default::default()
             },
         );
+        let parent_context_id = "https://social.example/contexts/1";
         let conversation = Conversation {
             id: uuid!("837ffc24-dab2-414b-a9b8-fe47d0a463f2"),
+            is_managed: false,
+            object_id: Some(parent_context_id.to_owned()),
             audience: Some(parent_author_followers.to_owned()),
             ..Conversation::for_test(Default::default())
         };
@@ -856,6 +872,7 @@ mod tests {
             "type": "Note",
             "attributedTo": "https://server.example/users/test",
             "inReplyTo": "https://social.example/obj/123",
+            "context": "https://social.example/contexts/1",
             "content": "",
             "sensitive": false,
             "tag": [

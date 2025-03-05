@@ -96,9 +96,12 @@ pub fn validate_post_create_data(
     post_data: &PostCreateData,
 ) -> Result<(), ValidationError> {
     match post_data.context {
-        PostContext::Top { ref audience } => {
+        PostContext::Top { ref object_id, ref audience } => {
             if post_data.visibility == Visibility::Conversation {
                 return Err(ValidationError("top-level post can't have conversation visibility"));
+            };
+            if let Some(object_id) = object_id {
+                validate_any_object_id(object_id)?;
             };
             if let Some(audience) = audience {
                 validate_any_object_id(audience)?;

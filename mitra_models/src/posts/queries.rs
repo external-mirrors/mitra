@@ -215,10 +215,12 @@ pub async fn create_post(
 
     // Create or find existing conversation
     let maybe_conversation = match post_data.context {
-        PostContext::Top { ref audience } => {
+        PostContext::Top { ref object_id, ref audience } => {
             let conversation = create_conversation(
                 &transaction,
                 post_id,
+                post_data.object_id.is_none(), // is_managed
+                object_id.as_deref(),
                 audience.as_deref(),
             ).await?;
             Some(conversation)
@@ -2622,7 +2624,10 @@ mod tests {
         let user_3 = create_test_user(db_client, "test_3").await;
         mute(db_client, user_1.id, user_3.id).await.unwrap();
         let post_data_1 = PostCreateData {
-            context: PostContext::new_public(),
+            context: PostContext::Top {
+                object_id: None,
+                audience: Some(AP_PUBLIC.to_owned()),
+            },
             content: "my post".to_string(),
             ..Default::default()
         };
@@ -2670,6 +2675,7 @@ mod tests {
         follow(db_client, user_3.id, user_2.id).await.unwrap();
         let post_data_1 = PostCreateData {
             context: PostContext::Top {
+                object_id: None,
                 audience: Some("https://local/test_1/followers".to_owned()),
             },
             content: "my post".to_string(),
