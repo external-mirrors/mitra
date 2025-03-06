@@ -134,7 +134,7 @@ pub async fn run_server(
             .service(nodeinfo::get_nodeinfo_jrd)
             .service(nodeinfo::get_nodeinfo_2_0)
             .service(nodeinfo::get_nodeinfo_2_1)
-            .service(web_client::profile_page_redirect())
+            .service(web_client::profile_page_overlay(&config))
             .service(web_client::post_page_overlay(&config))
             .service(
                 // Fallback for well-known paths

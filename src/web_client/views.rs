@@ -36,6 +36,11 @@ use super::urls::get_opengraph_image_url;
 const INDEX_FILE: &str = "index.html";
 const CUSTOM_CSS_PATH: &str = "/assets/custom.css";
 
+const INDEX_TITLE_ELEMENT: &str = "<title>Mitra - Federated social network</title>";
+// https://ogp.me/#types
+const OG_TYPE_ARTICLE: &str = "article";
+const OG_TYPE_PROFILE: &str = "profile";
+
 fn web_client_service(web_client_dir: &Path) -> Files {
     Files::new("/", web_client_dir)
         .index_file(INDEX_FILE)
@@ -103,10 +108,51 @@ async fn profile_page_redirect_view(
     Ok(response)
 }
 
-pub fn profile_page_redirect() -> Resource {
+async fn profile_page_opengraph_view(
+    config: web::Data<Config>,
+    db_pool: web::Data<DatabaseConnectionPool>,
+    acct: web::Path<String>,
+) -> Result<HttpResponse, HttpError> {
+    let db_client = &**get_database_client(&db_pool).await?;
+    let web_client_dir = config.web_client_dir.as_ref()
+        .ok_or(HttpError::InternalError)?;
+    let index_html = std::fs::read_to_string(web_client_dir.join(INDEX_FILE))
+        .map_err(|_| HttpError::InternalError)?;
+    let page = match get_profile_by_acct(db_client, &acct).await {
+        Ok(profile) => {
+            // Rewrite index.html and insert metadata
+            let title = format!("Profile - {}", profile.preferred_handle());
+            let metadata_block = format!(
+                include_str!("metadata_block.html"),
+                page_type=OG_TYPE_PROFILE,
+                instance_title=config.instance_title,
+                title_short=title,
+                title=title,
+                image_url=get_opengraph_image_url(&config.instance_url()),
+            );
+            index_html.replace(
+                INDEX_TITLE_ELEMENT,
+                &metadata_block,
+            )
+        },
+        Err(DatabaseError::NotFound(_)) => {
+            // Don't insert metadata if profile doesn't exist or not public
+            index_html
+        },
+        Err(other_error) => return Err(other_error.into()),
+    };
+    let response = HttpResponse::Ok()
+        .content_type("text/html")
+        .body(page);
+    Ok(response)
+}
+
+pub fn profile_page_overlay(config: &Config) -> Resource {
+    let with_opengraph = config.web_client_dir.is_some() && config.web_client_rewrite_index;
     web::resource("/@{acct}")
-        .guard(activitypub_guard())
-        .route(web::get().to(profile_page_redirect_view))
+        .guard(guard::Any(activitypub_guard()).or(opengraph_guard(with_opengraph)))
+        .route(web::get().guard(activitypub_guard()).to(profile_page_redirect_view))
+        .route(web::get().guard(opengraph_guard(with_opengraph)).to(profile_page_opengraph_view))
 }
 
 /// Redirect to ActivityPub representation
@@ -148,14 +194,14 @@ async fn post_page_opengraph_view(
             };
             let metadata_block = format!(
                 include_str!("metadata_block.html"),
-                page_type="article",
+                page_type=OG_TYPE_ARTICLE,
                 instance_title=config.instance_title,
                 title_short=title_short,
                 title=title,
                 image_url=get_opengraph_image_url(&config.instance_url()),
             );
             index_html.replace(
-                "<title>Mitra - Federated social network</title>",
+                INDEX_TITLE_ELEMENT,
                 &metadata_block,
             )
         },
