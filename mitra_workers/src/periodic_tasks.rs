@@ -29,6 +29,7 @@ use mitra_models::{
         find_empty_profiles,
         get_profile_by_id,
     },
+    tags::queries::{delete_tag, find_unused_tags},
 };
 use mitra_utils::datetime::days_before_now;
 
@@ -140,11 +141,24 @@ pub async fn delete_empty_profiles(
     Ok(())
 }
 
+pub async fn prune_tags(
+    _config: &Config,
+    db_pool: &DatabaseConnectionPool,
+) -> Result<(), Error> {
+    let db_client = &**get_database_client(db_pool).await?;
+    let tags = find_unused_tags(db_client).await?;
+    for tag_name in tags {
+        delete_tag(db_client, &tag_name).await?;
+        log::info!("deleted unused tag {tag_name}");
+    };
+    Ok(())
+}
+
 pub async fn prune_remote_emojis(
     config: &Config,
     db_pool: &DatabaseConnectionPool,
 ) -> Result<(), Error> {
-    let db_client = &mut **get_database_client(db_pool).await?;
+    let db_client = &**get_database_client(db_pool).await?;
     let emojis = find_unused_remote_emojis(db_client).await?;
     for emoji_id in emojis {
         let deletion_queue = delete_emoji(db_client, emoji_id).await?;

@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Added collection support to `import-object` command.
 - Added `mark-sensitive` filter action.
+- Automatically remove unused tags from database.
 
 ### Changed
 

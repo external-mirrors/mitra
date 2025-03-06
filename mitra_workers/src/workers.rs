@@ -17,6 +17,7 @@ enum PeriodicTask {
     FetcherQueueExecutor,
     DeleteExtraneousPosts,
     DeleteEmptyProfiles,
+    PruneTags,
     PruneRemoteEmojis,
     PruneUnusedAttachments,
     PruneActivityPubObjects,
@@ -37,6 +38,7 @@ impl PeriodicTask {
             Self::FetcherQueueExecutor => 10,
             Self::DeleteExtraneousPosts => 3600,
             Self::DeleteEmptyProfiles => 3600,
+            Self::PruneTags => 3600,
             Self::PruneRemoteEmojis => 3600,
             Self::PruneUnusedAttachments => 3600,
             Self::PruneActivityPubObjects => 3600,
@@ -93,6 +95,9 @@ async fn run_worker(
                 PeriodicTask::DeleteEmptyProfiles => {
                     delete_empty_profiles(&config, &db_pool).await
                 },
+                PeriodicTask::PruneTags => {
+                    prune_tags(&config, &db_pool).await
+                },
                 PeriodicTask::PruneRemoteEmojis => {
                     prune_remote_emojis(&config, &db_pool).await
                 },
@@ -136,6 +141,7 @@ fn start_main_worker(
     tokio::spawn(async move {
         let mut tasks = vec![
             PeriodicTask::FetcherQueueExecutor,
+            PeriodicTask::PruneTags,
             PeriodicTask::PruneRemoteEmojis,
             PeriodicTask::PruneUnusedAttachments,
             PeriodicTask::PruneActivityPubObjects,
