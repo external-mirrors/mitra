@@ -64,7 +64,7 @@ const fn default_profile_image_size_limit() -> usize { 5_000_000 } // 5 MB
 // https://github.com/mastodon/mastodon/blob/v4.3.3/app/models/concerns/account/avatar.rb
 const fn default_profile_image_local_size_limit() -> usize { 2_000_000 } // 2 MB
 
-const fn default_emoji_size_limit() -> usize { 500_000 } // 500 kB
+const fn default_emoji_size_limit() -> usize { 1_000_000 } // 1 MB
 // https://github.com/mastodon/mastodon/blob/v4.2.8/app/models/custom_emoji.rb#L27
 const fn default_emoji_local_size_limit() -> usize { 256_000 } // 256 kB
 
