@@ -5,6 +5,7 @@ use chrono::{Duration, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value as JsonValue};
 
+use apx_core::http_url::HttpUrl;
 use apx_sdk::{
     fetch::FetchError,
     url::Url,
@@ -28,6 +29,7 @@ use mitra_models::{
         DatabaseError,
         DatabaseTypeError,
     },
+    filter_rules::types::FilterAction,
     profiles::queries::{
         get_remote_profile_by_actor_id,
         set_reachability_status,
@@ -44,6 +46,7 @@ use crate::{
         Sender,
     },
     errors::HandlerError,
+    filter::FederationFilter,
     handlers::activity::handle_activity,
     identifiers::canonicalize_id,
     importers::{
@@ -364,6 +367,7 @@ pub async fn process_queued_outgoing_activities(
 ) -> Result<(), DatabaseError> {
     let db_client = get_database_client(db_pool).await?;
     let db_client_ref = &**db_client;
+    let filter = FederationFilter::init(config, db_client_ref).await?;
     let batch = get_job_batch(
         db_client_ref,
         JobType::OutgoingActivity,
@@ -401,6 +405,22 @@ pub async fn process_queued_outgoing_activities(
             job_data.activity,
         );
         drop(db_client);
+
+        // TODO: perform filtering in OutgoingActivityJobData::prepare_recipients
+        for recipient in recipients.iter_mut() {
+            if !recipient.is_finished() {
+                let recipient_hostname = HttpUrl::parse(&recipient.inbox)
+                    .map_err(|_| DatabaseTypeError)?
+                    .hostname();
+                if filter.is_action_required(
+                    recipient_hostname.as_str(),
+                    FilterAction::RejectData,
+                ) {
+                    log::warn!("delivery blocked: {}", recipient.inbox);
+                    recipient.is_unreachable = true;
+                };
+            }
+        };
 
         let start_time = Instant::now();
         let worker_result = deliver_activity_worker(
