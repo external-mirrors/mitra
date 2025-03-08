@@ -3,7 +3,6 @@ use uuid::Uuid;
 use mitra_utils::id::generate_ulid;
 
 use crate::database::{
-    catch_unique_violation,
     DatabaseClient,
     DatabaseError,
 };
@@ -32,11 +31,14 @@ pub async fn create_reaction(
             emoji_id,
             activity_id
         )
-        SELECT $1, $2, $3, $4, $5, $6
-        WHERE NOT EXISTS (
-            SELECT 1 FROM post
-            WHERE post.id = $3 AND post.repost_of_id IS NOT NULL
-        )
+        SELECT $1, $2, post.id, $4, $5, $6
+        FROM (
+            SELECT
+                CASE WHEN post.repost_of_id IS NULL THEN post.id ELSE NULL
+                END AS id
+            FROM post WHERE post.id = $3
+        ) AS post
+        ON CONFLICT DO NOTHING
         RETURNING post_reaction
         ",
         &[
@@ -47,8 +49,8 @@ pub async fn create_reaction(
             &reaction_data.emoji_id,
             &reaction_data.activity_id,
         ],
-    ).await.map_err(catch_unique_violation("reaction"))?;
-    let row = maybe_row.ok_or(DatabaseError::NotFound("post"))?;
+    ).await?;
+    let row = maybe_row.ok_or(DatabaseError::AlreadyExists("reaction"))?;
     let reaction: DbReaction = row.try_get("post_reaction")?;
     update_reaction_count(&transaction, reaction.post_id, 1).await?;
     let post_author = get_post_author(&transaction, reaction.post_id).await?;
