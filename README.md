@@ -205,6 +205,7 @@ See [guide](./docs/ipfs.md).
 - [Cache management](./docs/cache_management.md)
 - [Filter](./docs/filter.md)
 - [Relays](./docs/relays.md)
+- [Custom themes](./docs/custom_themes.md)
 
 ## CLI
 
