@@ -31,6 +31,7 @@ use apx_sdk::{
 use mitra_config::{Config, Instance, MediaLimits};
 use mitra_models::{
     database::{DatabaseClient, DatabaseError},
+    filter_rules::types::FilterAction,
     notifications::helpers::create_signup_notifications,
     posts::helpers::get_local_post_by_id,
     posts::queries::get_remote_post_by_object_id,
@@ -200,6 +201,23 @@ impl ApClient {
         };
         let object: T = serde_json::from_value(object_json)?;
         Ok(object)
+    }
+
+    async fn fetch_object_with_filter<T: DeserializeOwned>(
+        &self,
+        object_id: &str,
+    ) -> Result<T, HandlerError> {
+        let hostname = HttpUrl::parse(object_id)
+            .map_err(ValidationError)?
+            .hostname();
+        if self.filter.is_action_required(
+            hostname.as_str(),
+            FilterAction::RejectData,
+        ) {
+            let error_message = format!("request blocked: {}", object_id);
+            return Err(HandlerError::Filtered(error_message));
+        };
+        self.fetch_object(object_id).await
     }
 }
 
@@ -501,7 +519,6 @@ pub async fn import_post(
     object_received: Option<AttributedObjectJson>,
 ) -> Result<Post, HandlerError> {
     let instance = &ap_client.instance;
-    let agent = build_federation_agent(instance, None);
 
     let mut queue = vec![object_id]; // LIFO queue
     let mut fetch_count = 0;
@@ -562,7 +579,7 @@ pub async fn import_post(
                     return Err(FetchError::RecursionError.into());
                 };
                 let object: AttributedObjectJson =
-                    fetch_any_object(&agent, &object_id).await?;
+                    ap_client.fetch_object_with_filter(&object_id).await?;
                 verify_object_owner(&object.value)?;
                 log::info!("fetched object {}", object.id());
                 fetch_count +=  1;

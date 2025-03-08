@@ -21,6 +21,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Changed default value of `limits.media.emoji_size_limit` to 1 MB.
 - Reverted to allowing single character emoji shortcodes.
 - Don't pollute PostgreSQL log with `post_reaction` table constraint violation errors.
+- Don't import post when `reject-data` rule for target domain exists.
 
 ### Fixed
 
