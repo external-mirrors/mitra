@@ -12,6 +12,7 @@ pub mod test_utils;
 
 pub type DatabaseConnectionPool = deadpool_postgres::Pool;
 pub use tokio_postgres::{GenericClient as DatabaseClient};
+pub use tokio_postgres::{Client as BasicDatabaseClient};
 
 #[derive(thiserror::Error, Debug)]
 #[error("database type error")]

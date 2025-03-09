@@ -1,15 +1,12 @@
 use mitra::server::run_server;
 use mitra_adapters::init::{
-    apply_custom_migrations,
-    check_postgres_version,
     initialize_app,
-    prepare_instance_keys,
+    initialize_database,
 };
 use mitra_models::{
     database::{
         connect::create_pool,
         get_database_client,
-        migrate::apply_migrations,
     },
 };
 use mitra_services::media::MediaStorage;
@@ -30,14 +27,7 @@ async fn main() -> std::io::Result<()> {
     ).expect("failed to connect to database");
     let mut db_client = get_database_client(&db_pool).await
         .expect("failed to connect to database");
-    check_postgres_version(&**db_client).await
-        .expect("failed to verify PostgreSQL version");
-    apply_migrations(&mut db_client).await
-        .expect("failed to apply migrations");
-    apply_custom_migrations(&**db_client).await
-        .expect("failed to apply custom migrations");
-    prepare_instance_keys(&mut config, &**db_client).await
-        .expect("failed to prepare instance keys");
+    initialize_database(&mut config, &mut db_client).await;
 
     let media_storage = MediaStorage::new(&config);
     match media_storage {

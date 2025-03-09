@@ -1,14 +1,11 @@
 use clap::Parser;
 
 use mitra_adapters::init::{
-    apply_custom_migrations,
-    check_postgres_version,
     initialize_app,
-    prepare_instance_keys,
+    initialize_database,
 };
 use mitra_models::database::{
     connect::create_database_client,
-    migrate::apply_migrations,
 };
 
 mod cli;
@@ -26,14 +23,7 @@ async fn main() -> () {
         &db_config,
         config.database_tls_ca_file.as_deref(),
     ).await.expect("failed to connect to database");
-    check_postgres_version(db_client).await
-        .expect("failed to verify PostgreSQL version");
-    apply_migrations(db_client).await
-        .expect("failed to apply migrations");
-    apply_custom_migrations(db_client).await
-        .expect("failed to apply custom migrations");
-    prepare_instance_keys(&mut config, db_client).await
-        .expect("failed to prepare instance keys");
+    initialize_database(&mut config, db_client).await;
 
     let result = match opts.subcmd {
         SubCommand::UpdateConfig(cmd) => cmd.execute(db_client).await,

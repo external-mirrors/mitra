@@ -23,10 +23,12 @@ use mitra_config::{
 };
 use mitra_models::{
     database::{
+        migrate::apply_migrations,
+        utils::get_postgres_version,
+        BasicDatabaseClient,
         DatabaseClient,
         DatabaseError,
         DatabaseTypeError,
-        utils::get_postgres_version,
     },
     properties::constants::{
         INSTANCE_ED25519_SECRET_KEY,
@@ -60,7 +62,7 @@ pub fn initialize_app(
     config
 }
 
-pub async fn check_postgres_version(
+async fn check_postgres_version(
     db_client: &impl DatabaseClient,
 ) -> Result<(), DatabaseError> {
     let version = get_postgres_version(db_client).await?;
@@ -72,7 +74,7 @@ pub async fn check_postgres_version(
     Ok(())
 }
 
-pub async fn apply_custom_migrations(
+async fn apply_custom_migrations(
     db_client: &impl DatabaseClient,
 ) -> Result<(), DatabaseError> {
     // TODO: remove migration
@@ -138,7 +140,7 @@ async fn prepare_instance_ed25519_key(
     Ok(secret_key)
 }
 
-pub async fn prepare_instance_keys(
+async fn prepare_instance_keys(
     config: &mut Config,
     db_client: &impl DatabaseClient,
 ) -> Result<(), DatabaseError> {
@@ -156,6 +158,21 @@ pub async fn prepare_instance_keys(
     let instance_ed25519_key = prepare_instance_ed25519_key(db_client).await?;
     config.set_instance_ed25519_key(instance_ed25519_key);
     Ok(())
+}
+
+// Panics on errors
+pub async fn initialize_database(
+    config: &mut Config,
+    db_client: &mut BasicDatabaseClient,
+) -> () {
+    check_postgres_version(db_client).await
+        .expect("failed to verify PostgreSQL version");
+    apply_migrations(db_client).await
+        .expect("failed to apply migrations");
+    apply_custom_migrations(db_client).await
+        .expect("failed to apply custom migrations");
+    prepare_instance_keys(config, db_client).await
+        .expect("failed to prepare instance keys");
 }
 
 #[cfg(test)]
