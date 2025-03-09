@@ -141,6 +141,8 @@ pub struct Cli {
 
 #[derive(Parser)]
 pub enum SubCommand {
+    /// Start HTTP server
+    Server,
     UpdateConfig(UpdateConfig),
     AddFilterRule(AddFilterRule),
     RemoveFilterRule(RemoveFilterRule),

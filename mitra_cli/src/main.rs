@@ -1,11 +1,14 @@
 use clap::Parser;
 
+use mitra::server::run_server;
 use mitra_adapters::init::{
     create_database_client,
+    create_database_connection_pool,
     initialize_app,
     initialize_database,
     initialize_storage,
 };
+use mitra_workers::workers::start_workers;
 
 mod cli;
 mod commands;
@@ -15,13 +18,27 @@ use cli::{Cli, SubCommand};
 #[tokio::main]
 async fn main() -> () {
     let opts: Cli = Cli::parse();
-    let mut config = initialize_app(Some(opts.log_level));
-    let db_client = &mut create_database_client(&config).await;
+    let maybe_override_log_level = if let SubCommand::Server = opts.subcmd {
+        // Do not override log level when running server
+        None
+    } else {
+        Some(opts.log_level)
+    };
+    let mut config = initialize_app(maybe_override_log_level);
+    let mut db_client_value = create_database_client(&config).await;
+    let db_client = &mut db_client_value;
     initialize_database(&mut config, db_client).await;
     initialize_storage(&config);
     log::info!("instance URL {}", config.instance_url());
 
     let result = match opts.subcmd {
+        SubCommand::Server => {
+            std::mem::drop(db_client_value);
+            let db_pool = create_database_connection_pool(&config).await;
+            start_workers(config.clone(), db_pool.clone());
+            #[allow(clippy::unwrap_used)]
+            return run_server(config, db_pool).await.unwrap();
+        },
         SubCommand::UpdateConfig(cmd) => cmd.execute(db_client).await,
         SubCommand::AddFilterRule(cmd) => cmd.execute(db_client).await,
         SubCommand::RemoveFilterRule(cmd) => cmd.execute(db_client).await,
