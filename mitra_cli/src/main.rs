@@ -3,6 +3,7 @@ use clap::Parser;
 use mitra_adapters::init::{
     initialize_app,
     initialize_database,
+    initialize_storage,
 };
 use mitra_models::database::{
     connect::create_database_client,
@@ -24,6 +25,7 @@ async fn main() -> () {
         config.database_tls_ca_file.as_deref(),
     ).await.expect("failed to connect to database");
     initialize_database(&mut config, db_client).await;
+    initialize_storage(&config);
 
     let result = match opts.subcmd {
         SubCommand::UpdateConfig(cmd) => cmd.execute(db_client).await,

@@ -40,6 +40,7 @@ use mitra_models::{
     },
     users::helpers::add_ed25519_keys,
 };
+use mitra_services::media::MediaStorage;
 
 use crate::logger::configure_logger;
 
@@ -173,6 +174,18 @@ pub async fn initialize_database(
         .expect("failed to apply custom migrations");
     prepare_instance_keys(config, db_client).await
         .expect("failed to prepare instance keys");
+}
+
+// Panics on errors
+pub fn initialize_storage(
+    config: &Config,
+) -> () {
+    let media_storage = MediaStorage::new(config);
+    match media_storage {
+        MediaStorage::Filesystem(ref backend) => {
+            backend.init().expect("failed to create media directory");
+        },
+    };
 }
 
 #[cfg(test)]

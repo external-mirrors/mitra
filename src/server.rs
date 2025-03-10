@@ -46,9 +46,9 @@ use crate::web_client::views as web_client;
 pub async fn run_server(
     config: Config,
     db_pool: DatabaseConnectionPool,
-    media_storage: MediaStorage,
 ) -> std::io::Result<()> {
     let app_state = web::Data::new(AppState::default());
+    let media_storage = MediaStorage::new(&config);
     let num_workers = std::cmp::max(num_cpus::get(), 4);
     let http_socket_addr = config.http_socket();
     let http_socket_perms = config.http_socket_perms;

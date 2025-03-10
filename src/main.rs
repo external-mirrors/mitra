@@ -2,6 +2,7 @@ use mitra::server::run_server;
 use mitra_adapters::init::{
     initialize_app,
     initialize_database,
+    initialize_storage,
 };
 use mitra_models::{
     database::{
@@ -9,7 +10,6 @@ use mitra_models::{
         get_database_client,
     },
 };
-use mitra_services::media::MediaStorage;
 use mitra_workers::workers::start_workers;
 
 #[actix_web::main]
@@ -28,19 +28,12 @@ async fn main() -> std::io::Result<()> {
     let mut db_client = get_database_client(&db_pool).await
         .expect("failed to connect to database");
     initialize_database(&mut config, &mut db_client).await;
-
-    let media_storage = MediaStorage::new(&config);
-    match media_storage {
-        MediaStorage::Filesystem(ref backend) => {
-            backend.init().expect("failed to create media directory");
-        },
-    };
-
+    initialize_storage(&config);
     std::mem::drop(db_client);
 
     log::info!("instance URL {}", config.instance_url());
 
     start_workers(config.clone(), db_pool.clone());
 
-    run_server(config, db_pool, media_storage).await
+    run_server(config, db_pool).await
 }
