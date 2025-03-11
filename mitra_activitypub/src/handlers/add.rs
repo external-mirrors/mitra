@@ -78,7 +78,7 @@ async fn handle_fep_171b_add(
         object: mut activity,
         target,
     } = serde_json::from_value(add)?;
-    let activity_id = get_object_id(&activity["id"])?;
+    let activity_id = get_object_id(&activity)?;
     if is_same_origin(activity_id, &config.instance_url())? {
         // Ignore local activities
         return Ok(None);

@@ -16,6 +16,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Write instance URL to log when `mitractl` runs.
 - Mark `import-actor` and `import-activity` commands as deprecated.
 
+### Fixed
+
+- Fixed bug in processing of FEP-171b activities.
+
 ## [3.19.0] - 2025-03-09
 
 ### Added

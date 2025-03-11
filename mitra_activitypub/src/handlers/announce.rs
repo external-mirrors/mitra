@@ -29,6 +29,7 @@ use crate::{
     identifiers::parse_local_object_id,
     importers::{fetch_any_object, import_post, ActorIdResolver, ApClient},
     ownership::{
+        get_object_id,
         is_embedded_activity_trusted,
         is_same_origin,
         verify_activity_owner,
@@ -129,8 +130,7 @@ async fn handle_fep_1b12_announce(
     let GroupAnnounce { actor: group_id, object: activity } =
         serde_json::from_value(announce)?;
     verify_activity_owner(&activity)?;
-    let activity_id = activity["id"].as_str()
-        .ok_or(ValidationError("unexpected activity structure"))?;
+    let activity_id = get_object_id(&activity)?;
     if is_same_origin(activity_id, &config.instance_url())? {
         // Ignore local activities
         return Ok(None);
