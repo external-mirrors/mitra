@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Changed
 
 - Ensure media directory exists when `mitractl` runs.
+- Write instance URL to log when `mitractl` runs.
 
 ## [3.19.0] - 2025-03-09
 

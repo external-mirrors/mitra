@@ -29,11 +29,9 @@ async fn main() -> std::io::Result<()> {
         .expect("failed to connect to database");
     initialize_database(&mut config, &mut db_client).await;
     initialize_storage(&config);
+    log::info!("instance URL {}", config.instance_url());
     std::mem::drop(db_client);
 
-    log::info!("instance URL {}", config.instance_url());
-
     start_workers(config.clone(), db_pool.clone());
-
     run_server(config, db_pool).await
 }

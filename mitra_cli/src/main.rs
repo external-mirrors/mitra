@@ -26,6 +26,7 @@ async fn main() -> () {
     ).await.expect("failed to connect to database");
     initialize_database(&mut config, db_client).await;
     initialize_storage(&config);
+    log::info!("instance URL {}", config.instance_url());
 
     let result = match opts.subcmd {
         SubCommand::UpdateConfig(cmd) => cmd.execute(db_client).await,
