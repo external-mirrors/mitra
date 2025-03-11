@@ -33,7 +33,7 @@ use mitra_models::{
     users::queries::get_user_by_name,
 };
 
-/// (Re-)fetch actor and save it to local cache
+/// (Re-)fetch actor and save it to local cache (deprecated)
 #[derive(Parser)]
 #[command(visible_alias = "fetch-actor")]
 pub struct ImportActor {
@@ -146,7 +146,7 @@ impl ImportObject {
     }
 }
 
-/// Fetch activity and process it
+/// Fetch activity and process it (deprecated)
 #[derive(Parser)]
 #[command(visible_alias = "fetch-activity")]
 pub struct ImportActivity {
