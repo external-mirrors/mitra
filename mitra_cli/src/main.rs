@@ -1,12 +1,10 @@
 use clap::Parser;
 
 use mitra_adapters::init::{
+    create_database_client,
     initialize_app,
     initialize_database,
     initialize_storage,
-};
-use mitra_models::database::{
-    connect::create_database_client,
 };
 
 mod cli;
@@ -18,12 +16,7 @@ use cli::{Cli, SubCommand};
 async fn main() -> () {
     let opts: Cli = Cli::parse();
     let mut config = initialize_app(Some(opts.log_level));
-    let db_config = config.database_url.parse()
-        .expect("failed to parse database URL");
-    let db_client = &mut create_database_client(
-        &db_config,
-        config.database_tls_ca_file.as_deref(),
-    ).await.expect("failed to connect to database");
+    let db_client = &mut create_database_client(&config).await;
     initialize_database(&mut config, db_client).await;
     initialize_storage(&config);
     log::info!("instance URL {}", config.instance_url());

@@ -23,10 +23,12 @@ use mitra_config::{
 };
 use mitra_models::{
     database::{
+        connect,
         migrate::apply_migrations,
         utils::get_postgres_version,
         BasicDatabaseClient,
         DatabaseClient,
+        DatabaseConnectionPool,
         DatabaseError,
         DatabaseTypeError,
     },
@@ -61,6 +63,30 @@ pub fn initialize_app(
         log::warn!("{}", warning);
     };
     config
+}
+
+// Panics on errors
+pub async fn create_database_client(config: &Config) -> BasicDatabaseClient {
+    connect::create_database_client(
+        &config.database_url,
+        config.database_tls_ca_file.as_deref(),
+    ).await.expect("failed to connect to database")
+}
+
+// Panics on errors
+pub async fn create_database_connection_pool(config: &Config)
+    -> DatabaseConnectionPool
+{
+    // https://wiki.postgresql.org/wiki/Number_Of_Database_Connections
+    // https://docs.rs/deadpool/0.10.0/src/deadpool/managed/config.rs.html#54
+    let db_pool_size = num_cpus::get_physical() * 2;
+    log::info!("database connection pool size: {db_pool_size}");
+    let db_pool = connect::create_database_connection_pool(
+        &config.database_url,
+        config.database_tls_ca_file.as_deref(),
+        db_pool_size,
+    ).expect("failed to connect to database");
+    db_pool
 }
 
 async fn check_postgres_version(

@@ -2132,6 +2132,7 @@ dependencies = [
  "mitra_services",
  "mitra_utils",
  "mitra_validators",
+ "num_cpus",
  "serde_json",
  "serial_test",
  "thiserror",
