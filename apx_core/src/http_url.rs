@@ -57,6 +57,11 @@ impl HttpUrl {
         };
         let authority_components = uri.authority_components()
             .ok_or("invalid URL authority")?;
+        if authority_components.host().to_lowercase() !=
+            authority_components.host()
+        {
+            return Err("invalid URL host");
+        };
         authority_components.port()
             .map(parse_port_number)
             .transpose()?;
@@ -248,6 +253,13 @@ mod tests {
     }
 
     #[test]
+    fn test_http_url_host_uppercase() {
+        let url = "https://Social.Example/users/alice";
+        let error = HttpUrl::parse(url).err().unwrap();
+        assert_eq!(error, "invalid URL host");
+    }
+
+    #[test]
     fn test_http_url_ftp() {
         let url = "ftp://ftp.social.example/";
         let error = HttpUrl::parse(url).err().unwrap();
@@ -276,7 +288,7 @@ mod tests {
     }
 
     #[test]
-    fn test_http_url_hostname() {
+    fn test_hostname() {
         let http_url = HttpUrl::parse("https://social.example/test").unwrap();
         assert_eq!(http_url.hostname().as_str(), "social.example");
 
@@ -331,6 +343,14 @@ mod tests {
         let url = "https://zh.wikipedia.org/wiki/百分号编码";
         let output = normalize_http_url(url).unwrap();
         assert_eq!(output, "https://zh.wikipedia.org/wiki/%E7%99%BE%E5%88%86%E5%8F%B7%E7%BC%96%E7%A0%81");
+        assert!(HttpUrl::parse(&output).is_ok());
+    }
+
+    #[test]
+    fn test_normalize_http_url_uppercase() {
+        let url = "Https://Social.Example/Path";
+        let output = normalize_http_url(url).unwrap();
+        assert_eq!(output, "https://social.example/Path");
         assert!(HttpUrl::parse(&output).is_ok());
     }
 }

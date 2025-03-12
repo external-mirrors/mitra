@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Changed
 
 - Make `get_core_type` return `Collection` if `first` property is present.
+- Disallow uppercase letters in HTTP URL host component.
 
 ## [0.9.0] - 2025-02-26
 
