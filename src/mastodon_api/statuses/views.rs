@@ -20,6 +20,7 @@ use mitra_activitypub::{
     authority::Authority,
     builders::{
         announce::prepare_announce,
+        add_context_activity::sync_conversation,
         add_note::prepare_add_note,
         create_note::prepare_create_note,
         delete_note::prepare_delete_note,
@@ -311,14 +312,25 @@ async fn create_status(
     post.linked = linked;
     // Federate
     let media_server = MediaServer::new(&config);
-    prepare_create_note(
+    let create_note = prepare_create_note(
         db_client,
         &instance,
         &media_server,
         &current_user,
         &post,
         config.federation.fep_e232_enabled,
-    ).await?.save_and_enqueue(db_client).await?;
+    ).await?;
+    let create_note_json = create_note.activity().clone();
+    create_note.save_and_enqueue(db_client).await?;
+    if visibility == Visibility::Conversation {
+        let conversation = post.expect_conversation();
+        sync_conversation(
+            db_client,
+            &instance,
+            conversation,
+            create_note_json,
+        ).await?;
+    };
 
     let base_url = get_request_base_url(connection_info);
     let media_server = ClientMediaServer::new(&config, &base_url);

@@ -278,6 +278,10 @@ impl OutgoingActivityJobData {
         Some(job_data)
     }
 
+    pub fn activity(&self) -> &JsonValue {
+        &self.activity
+    }
+
     async fn save_activity(
         &mut self,
         db_client: &impl DatabaseClient,
@@ -419,7 +423,7 @@ pub async fn process_queued_outgoing_activities(
                     log::warn!("delivery blocked: {}", recipient.inbox);
                     recipient.is_unreachable = true;
                 };
-            }
+            };
         };
 
         let start_time = Instant::now();

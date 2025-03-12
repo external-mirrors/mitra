@@ -19,6 +19,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Fixed
 
 - Fixed bug in processing of FEP-171b activities.
+- Generate `Add` activity when conversation owner posts a reply.
 
 ## [3.19.0] - 2025-03-09
 

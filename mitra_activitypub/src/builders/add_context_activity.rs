@@ -5,9 +5,16 @@ use uuid::Uuid;
 
 use mitra_config::Instance;
 use mitra_models::{
+    conversations::types::Conversation,
     database::{DatabaseClient, DatabaseError},
-    posts::types::Post,
-    users::types::User,
+    posts::{
+        queries::get_post_by_id,
+        types::Post,
+    },
+    users::{
+        queries::get_user_by_id,
+        types::User,
+    },
 };
 use mitra_utils::id::generate_ulid;
 
@@ -77,7 +84,7 @@ fn build_add_context_activity(
     }
 }
 
-pub async fn prepare_add_context_activity(
+async fn prepare_add_context_activity(
     db_client: &impl DatabaseClient,
     instance: &Instance,
     conversation_owner: &User,
@@ -103,6 +110,38 @@ pub async fn prepare_add_context_activity(
         activity,
         recipients,
     ))
+}
+
+pub async fn sync_conversation(
+    db_client: &impl DatabaseClient,
+    instance: &Instance,
+    conversation: &Conversation,
+    activity: JsonValue,
+) -> Result<(), DatabaseError> {
+    if let Some(ref conversation_audience) = conversation.audience {
+        // Add activity to conversation
+        let root = get_post_by_id(db_client, conversation.root_id).await?;
+        match get_user_by_id(db_client, root.author.id).await {
+            Ok(conversation_owner) => {
+                // Conversation owner is local
+                prepare_add_context_activity(
+                    db_client,
+                    instance,
+                    &conversation_owner,
+                    conversation.id,
+                    &root,
+                    conversation_audience,
+                    activity,
+                ).await?.save_and_enqueue(db_client).await?;
+            },
+            // Conversation owner is remote
+            Err(DatabaseError::NotFound(_)) => (),
+            Err(other_error) => return Err(other_error),
+        };
+    } else {
+        log::warn!("conversation audience is not known");
+    };
+    Ok(())
 }
 
 #[cfg(test)]

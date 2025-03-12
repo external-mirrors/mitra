@@ -9,15 +9,13 @@ use apx_sdk::{
 use mitra_config::Config;
 use mitra_models::{
     database::{DatabaseClient, DatabaseError},
-    posts::queries::get_post_by_id,
     posts::types::Visibility,
     relationships::queries::has_local_followers,
-    users::queries::get_user_by_id,
 };
 use mitra_validators::errors::ValidationError;
 
 use crate::{
-    builders::add_context_activity::prepare_add_context_activity,
+    builders::add_context_activity::sync_conversation,
     identifiers::{
         canonicalize_id,
         parse_local_actor_id,
@@ -156,29 +154,12 @@ pub async fn handle_create(
     // NOTE: import_post always returns a post; activity will be re-distributed
     let conversation = post.expect_conversation();
     if post.visibility == Visibility::Conversation {
-        if let Some(ref conversation_audience) = conversation.audience {
-            // Add activity to conversation
-            let root = get_post_by_id(db_client, conversation.root_id).await?;
-            match get_user_by_id(db_client, root.author.id).await {
-                Ok(conversation_owner) => {
-                    // Conversation owner is local
-                    prepare_add_context_activity(
-                        db_client,
-                        &ap_client.instance,
-                        &conversation_owner,
-                        conversation.id,
-                        &root,
-                        conversation_audience,
-                        activity,
-                    ).await?.save_and_enqueue(db_client).await?;
-                },
-                // Conversation owner is remote
-                Err(DatabaseError::NotFound(_)) => (),
-                Err(other_error) => return Err(other_error.into()),
-            };
-        } else {
-            log::warn!("conversation audience is not known");
-        };
+        sync_conversation(
+            db_client,
+            &ap_client.instance,
+            conversation,
+            activity,
+        ).await?;
     };
     Ok(Some(Descriptor::object(object_type)))
 }
