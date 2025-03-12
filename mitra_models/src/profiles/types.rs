@@ -607,6 +607,7 @@ pub struct DbActor {
 
     pub id: String,
     pub inbox: String,
+    pub shared_inbox: Option<String>,
     pub outbox: String,
     pub followers: Option<String>,
     pub subscribers: Option<String>,

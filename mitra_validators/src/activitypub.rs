@@ -75,6 +75,12 @@ pub fn validate_origin(
     Ok(())
 }
 
+pub fn validate_endpoint_url(url: &str) -> Result<(), ValidationError> {
+    HttpUrl::parse(url)
+        .map_err(|_| ValidationError("invalid endpoint URL"))?;
+    Ok(())
+}
+
 pub fn validate_gateway_url(url: &str) -> Result<(), ValidationError> {
     let http_url = HttpUrl::parse(url)
         .map_err(|_| ValidationError("invalid gateway URL"))?;

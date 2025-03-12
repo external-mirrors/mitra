@@ -167,6 +167,12 @@ fn deserialize_url_opt<'de, D>(
 }
 
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct Endpoints {
+    shared_inbox: Option<String>,
+}
+
+#[derive(Deserialize)]
 #[cfg_attr(test, derive(Default))]
 #[serde(rename_all = "camelCase")]
 struct ValidatedActor {
@@ -183,6 +189,7 @@ struct ValidatedActor {
     followers: Option<String>,
     subscribers: Option<String>,
     featured: Option<String>,
+    endpoints: Option<Endpoints>,
 
     #[serde(default, deserialize_with = "deserialize_object_array")]
     assertion_method: Vec<Multikey>,
@@ -233,6 +240,8 @@ impl ValidatedActor {
             object_type: self.object_type.clone(),
             id: canonical_actor_id.to_string(),
             inbox: canonical_inbox.to_string(),
+            shared_inbox: self.endpoints.as_ref()
+                .and_then(|endpoints| endpoints.shared_inbox.clone()),
             outbox: canonical_outbox.to_string(),
             followers: maybe_canonical_followers.map(|id| id.to_string()),
             subscribers: maybe_canonical_subscribers.map(|id| id.to_string()),
@@ -482,7 +491,7 @@ fn parse_attachments(actor: &ValidatedActor) -> (
             continue;
         } else {
             extra_fields.push(field);
-        }
+        };
     };
     (identity_proofs, payment_options, proposals, extra_fields)
 }

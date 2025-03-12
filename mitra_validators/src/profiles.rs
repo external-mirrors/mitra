@@ -20,6 +20,7 @@ use mitra_utils::{
 use super::{
     activitypub::{
         validate_any_object_id,
+        validate_endpoint_url,
         validate_gateway_url,
         validate_origin,
     },
@@ -225,6 +226,9 @@ pub fn validate_actor_data(
 ) -> Result<(), ValidationError> {
     validate_any_object_id(&actor.id)?;
     validate_any_object_id(&actor.inbox)?;
+    if let Some(ref shared_inbox) = actor.shared_inbox {
+        validate_endpoint_url(shared_inbox)?;
+    };
     validate_any_object_id(&actor.outbox)?;
     if let Some(ref followers) = actor.followers {
         validate_any_object_id(followers)?;
