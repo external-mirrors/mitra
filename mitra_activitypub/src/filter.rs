@@ -1,7 +1,7 @@
 use wildmatch::WildMatch;
 
 use apx_core::{
-    http_url::{HttpUrl, Hostname},
+    http_url::Hostname,
 };
 use mitra_config::Config;
 use mitra_models::{
@@ -13,7 +13,9 @@ use mitra_models::{
     profiles::types::DbActor,
 };
 
-// Return DatabaseError if actor data is not valid
+use crate::utils::parse_http_url_from_db;
+
+// Returns DatabaseError if actor data is not valid
 // TODO: validation should happen during actor data deserialization
 pub fn get_moderation_domain(
     actor: &DbActor,
@@ -24,9 +26,7 @@ pub fn get_moderation_domain(
     } else {
         &actor.id
     };
-    let hostname = HttpUrl::parse(http_url)
-        .map_err(|_| DatabaseTypeError)?
-        .hostname();
+    let hostname = parse_http_url_from_db(http_url)?.hostname();
     Ok(hostname)
 }
 

@@ -5,10 +5,8 @@ use chrono::{Duration, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value as JsonValue};
 
-use apx_core::http_url::HttpUrl;
 use apx_sdk::{
     fetch::FetchError,
-    url::Url,
 };
 use mitra_config::Config;
 use mitra_models::{
@@ -54,6 +52,7 @@ use crate::{
         import_replies,
         is_actor_importer_error,
     },
+    utils::{db_url_to_http_url, parse_http_url_from_db},
 };
 
 const JOB_TIMEOUT: u32 = 3600; // 1 hour
@@ -186,9 +185,7 @@ impl OutgoingActivityJobData {
         for actor in recipients {
             if actor.is_portable() {
                 for gateway in actor.gateways {
-                    let http_actor_inbox = Url::parse(&actor.inbox)
-                        .expect("actor inbox URL should be valid")
-                        .to_http_url(Some(&gateway))
+                    let http_actor_inbox = db_url_to_http_url(&actor.inbox, &gateway)
                         .expect("actor inbox URL should be valid");
                     if !recipient_map.contains_key(&http_actor_inbox) {
                         let recipient = Recipient {
@@ -253,9 +250,7 @@ impl OutgoingActivityJobData {
                 // Already cached
                 continue;
             };
-            let http_actor_outbox = Url::parse(&actor_data.outbox)
-                .expect("actor outbox URL should be valid")
-                .to_http_url(Some(gateway_url))
+            let http_actor_outbox = db_url_to_http_url(&actor_data.outbox, gateway_url)
                 .expect("actor outbox URL should be valid");
             if !recipient_map.contains_key(&http_actor_outbox) {
                 let recipient = Recipient {
@@ -413,9 +408,8 @@ pub async fn process_queued_outgoing_activities(
         // TODO: perform filtering in OutgoingActivityJobData::prepare_recipients
         for recipient in recipients.iter_mut() {
             if !recipient.is_finished() {
-                let recipient_hostname = HttpUrl::parse(&recipient.inbox)
-                    .map_err(|_| DatabaseTypeError)?
-                    .hostname();
+                let recipient_hostname =
+                    parse_http_url_from_db(&recipient.inbox)?.hostname();
                 if filter.is_action_required(
                     recipient_hostname.as_str(),
                     FilterAction::RejectData,

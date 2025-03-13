@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+
+- Make `with_gateway` function public.
+
 ### Changed
 
 - Make `get_core_type` return `Collection` if `first` property is present.

@@ -36,7 +36,6 @@ use apx_core::{
 };
 use apx_sdk::{
     deliver::{send_object, DelivererError},
-    url::Url,
 };
 use mitra_config::Instance;
 use mitra_models::{
@@ -47,6 +46,7 @@ use mitra_models::{
 use crate::{
     agent::build_federation_agent_with_key,
     identifiers::{local_actor_id, local_actor_key_id},
+    utils::db_url_to_http_url,
 };
 
 fn deserialize_rsa_secret_key<'de, D>(
@@ -153,18 +153,14 @@ impl Sender {
         let rsa_key_id = &user.profile.public_keys
             .find_by_value(&rsa_public_key_der)?
             .id;
-        let http_rsa_key_id = Url::parse(rsa_key_id)
-            .expect("RSA key ID should be valid")
-            .to_http_url(Some(instance_url))
+        let http_rsa_key_id = db_url_to_http_url(rsa_key_id, instance_url)
             .expect("RSA key ID should be valid");
         let ed25519_public_key =
             ed25519_public_key_from_secret_key(&user.ed25519_secret_key);
         let ed25519_key_id = &user.profile.public_keys
             .find_by_value(ed25519_public_key.as_bytes())?
             .id;
-        let http_ed25519_key_id = Url::parse(ed25519_key_id)
-            .expect("RSA key ID should be valid")
-            .to_http_url(Some(instance_url))
+        let http_ed25519_key_id = db_url_to_http_url(ed25519_key_id, instance_url)
             .expect("RSA key ID should be valid");
         let sender = Self {
             username: user.profile.username.clone(),

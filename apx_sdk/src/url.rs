@@ -27,7 +27,7 @@ pub enum Url {
     Ap(ApUrl),
 }
 
-fn with_gateway(ap_url: &ApUrl, gateway_url: &str) -> String {
+pub fn with_gateway(ap_url: &ApUrl, gateway_url: &str) -> String {
     format!("{}{}{}", gateway_url, GATEWAY_PATH_PREFIX, ap_url.to_did_url())
 }
 

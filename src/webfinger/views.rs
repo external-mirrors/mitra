@@ -10,7 +10,6 @@ use apx_sdk::{
         Link,
         JRD_MEDIA_TYPE,
     },
-    url::Url,
 };
 use mitra_activitypub::{
     identifiers::{
@@ -18,6 +17,7 @@ use mitra_activitypub::{
         local_instance_actor_id,
         parse_local_actor_id,
     },
+    utils::db_url_to_http_url,
 };
 use mitra_config::{Config, Instance};
 use mitra_models::{
@@ -26,7 +26,6 @@ use mitra_models::{
         DatabaseClient,
         DatabaseConnectionPool,
         DatabaseError,
-        DatabaseTypeError,
     },
     users::queries::{
         get_portable_user_by_name,
@@ -112,10 +111,8 @@ async fn get_jrd(
             webfinger_address.username(),
         ).await?;
         let actor_id = user.profile.expect_remote_actor_id();
-        let compatible_actor_id = Url::parse(actor_id)
-            .map_err(|_| DatabaseError::from(DatabaseTypeError))?
-            .to_http_url(Some(&instance.url()))
-            .ok_or(DatabaseError::from(DatabaseTypeError))?;
+        let compatible_actor_id = db_url_to_http_url(actor_id, &instance.url())
+            .map_err(DatabaseError::from)?;
         let actor_link = Link::actor(&compatible_actor_id);
         vec![actor_link]
     };
