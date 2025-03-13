@@ -3,6 +3,7 @@ mod blockchain;
 mod config;
 mod environment;
 mod federation;
+mod instance;
 mod limits;
 mod loader;
 mod registration;

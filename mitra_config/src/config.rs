@@ -7,7 +7,7 @@ use serde::Deserialize;
 use apx_core::{
     crypto_eddsa::Ed25519SecretKey,
     crypto_rsa::RsaSecretKey,
-    urls::{get_hostname, normalize_origin, UrlError},
+    http_url::HttpUrl,
 };
 
 use super::authentication::{
@@ -22,6 +22,7 @@ use super::blockchain::{
 };
 use super::environment::Environment;
 use super::federation::FederationConfig;
+use super::instance::parse_instance_url;
 use super::limits::Limits;
 use super::registration::RegistrationConfig;
 use super::retention::RetentionConfig;
@@ -69,7 +70,7 @@ pub struct Config {
 
     // Domain name or <IP address>:<port>
     // URI scheme is optional
-    instance_uri: String,
+    pub(super) instance_uri: String,
 
     pub instance_title: String,
     pub instance_short_description: String,
@@ -151,13 +152,9 @@ impl Config {
         }
     }
 
-    pub(super) fn try_instance_url(&self) -> Result<String, UrlError> {
-        normalize_origin(&self.instance_uri)
-    }
-
     pub fn instance(&self) -> Instance {
         Instance {
-            _url: self.try_instance_url()
+            _url: parse_instance_url(&self.instance_uri)
                 .expect("instance URL should be already validated"),
             actor_ed25519_key: self.instance_ed25519_key
                 .expect("instance Ed25519 key should be already generated"),
@@ -212,7 +209,7 @@ impl Config {
 
 #[derive(Clone)]
 pub struct Instance {
-    _url: String,
+    _url: HttpUrl,
     // Instance actor keys
     pub actor_ed25519_key: Ed25519SecretKey,
     pub actor_rsa_key: RsaSecretKey,
@@ -231,14 +228,12 @@ pub struct Instance {
 
 impl Instance {
     pub fn url(&self) -> String {
-        self._url.clone()
+        self._url.to_string()
     }
 
     /// Returns instance host name (without port number)
     pub fn hostname(&self) -> String {
-        get_hostname(&self._url)
-            // URL is being validated at instantiation
-            .expect("instance URL should have hostname")
+        self._url.hostname().to_string()
     }
 
     pub fn agent(&self) -> String {
@@ -259,7 +254,7 @@ impl Instance {
             crypto_rsa::generate_weak_rsa_key,
         };
         Self {
-            _url: normalize_origin(url).unwrap(),
+            _url: parse_instance_url(url).unwrap(),
             actor_rsa_key: generate_weak_rsa_key().unwrap(),
             actor_ed25519_key: generate_weak_ed25519_key(),
             proxy_url: None,

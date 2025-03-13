@@ -12,6 +12,7 @@ use apx_core::{
 use super::blockchain::BlockchainConfig;
 use super::config::Config;
 use super::environment::Environment;
+use super::instance::parse_instance_url;
 
 struct EnvConfig {
     config_path: String,
@@ -106,7 +107,7 @@ pub fn parse_config() -> (Config, Vec<&'static str>) {
         };
     };
     config.http_socket();
-    config.try_instance_url().expect("invalid instance URI");
+    parse_instance_url(&config.instance_uri).expect("invalid instance URI");
     if config.authentication_methods.is_empty() {
         panic!("authentication_methods must not be empty");
     };
