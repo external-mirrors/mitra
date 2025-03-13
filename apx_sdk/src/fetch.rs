@@ -31,6 +31,7 @@ use super::{
         UnsafeUrlError,
         REDIRECT_LIMIT,
     },
+    url::is_same_origin,
     utils::{extract_media_type, is_same_hostname},
 };
 
@@ -126,6 +127,7 @@ fn fetcher_error_for_status(error: reqwest::Error) -> FetchError {
 
 #[derive(Default)]
 pub struct FetchObjectOptions {
+    /// Skip origin and content type checks?
     pub skip_verification: bool,
     pub allow_fep_ef61_noproof: bool,
 }
@@ -211,9 +213,9 @@ pub async fn fetch_object(
         },
         Err(AuthenticationError::NotPortable) => {
             // Verify authority if object is not portable
-            let is_same_origin = is_same_hostname(object_id, object_location)
+            let is_trusted = is_same_origin(object_id, object_location)
                 .unwrap_or(false);
-            if !is_same_origin {
+            if !is_trusted {
                 return Err(FetchError::UnexpectedObjectId(object_location.to_string()));
             };
         },
