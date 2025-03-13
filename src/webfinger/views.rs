@@ -112,7 +112,7 @@ async fn get_jrd(
             webfinger_address.username(),
         ).await?;
         let actor_id = user.profile.expect_remote_actor_id();
-        let compatible_actor_id = actor_id.parse::<Url>()
+        let compatible_actor_id = Url::parse(actor_id)
             .map_err(|_| DatabaseError::from(DatabaseTypeError))?
             .to_http_url(Some(&instance.url()))
             .ok_or(DatabaseError::from(DatabaseTypeError))?;

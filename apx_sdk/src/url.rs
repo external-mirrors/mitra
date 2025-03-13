@@ -122,7 +122,7 @@ impl<'de> Deserialize<'de> for Url {
         where D: Deserializer<'de>
     {
         let url_str: String = Deserialize::deserialize(deserializer)?;
-        url_str.parse().map_err(DeserializerError::custom)
+        Self::parse(&url_str).map_err(DeserializerError::custom)
     }
 }
 

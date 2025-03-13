@@ -75,7 +75,7 @@ pub fn is_object(value: &JsonValue) -> bool {
 }
 
 pub fn key_id_to_actor_id(key_id: &str) -> Result<String, &'static str> {
-    let key_url = key_id.parse::<HttpUrl>()?;
+    let key_url = HttpUrl::parse(key_id)?;
     let actor_id = if key_url.query().filter(|query| query.contains("id=")).is_some() {
         // Podcast Index compat
         // Strip fragment, keep query
