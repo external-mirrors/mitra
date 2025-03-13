@@ -1,5 +1,6 @@
 use chrono::Utc;
 use http::Method;
+use url::{Url, ParseError as UrlError};
 
 use crate::{
     base64,
@@ -52,7 +53,7 @@ pub struct HttpSignatureHeaders {
 #[derive(thiserror::Error, Debug)]
 pub enum HttpSignatureError {
     #[error("invalid request url")]
-    UrlError(#[from] url::ParseError),
+    UrlError(#[from] UrlError),
 
     #[error("signing error")]
     SigningError(#[from] RsaError),
@@ -66,7 +67,7 @@ pub fn create_http_signature(
     request_body: &[u8],
     signer: &HttpSigner,
 ) -> Result<HttpSignatureHeaders, HttpSignatureError> {
-    let request_url_object = url::Url::parse(request_url)?;
+    let request_url_object = Url::parse(request_url)?;
     let request_target = format!(
         "{} {}",
         request_method.as_str().to_lowercase(),
@@ -74,7 +75,7 @@ pub fn create_http_signature(
     );
     // TODO: Host header may contain port
     let host = request_url_object.host_str()
-        .ok_or(url::ParseError::EmptyHost)?
+        .ok_or(UrlError::EmptyHost)?
         .to_string();
     let date = Utc::now().format(HTTP_SIGNATURE_DATE_FORMAT).to_string();
     let maybe_digest = if request_body.is_empty() {
