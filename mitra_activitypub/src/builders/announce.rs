@@ -7,13 +7,13 @@ use mitra_config::Instance;
 use mitra_models::{
     database::{DatabaseClient, DatabaseError},
     posts::types::Post,
-    profiles::types::DbActor,
     relationships::queries::get_followers,
     users::types::User,
 };
 
 use crate::{
     contexts::{build_default_context, Context},
+    deliverer::Recipient,
     identifiers::{
         local_activity_id,
         local_actor_id,
@@ -83,17 +83,17 @@ pub async fn get_announce_recipients(
     instance_url: &str,
     current_user: &User,
     post: &Post,
-) -> Result<(Vec<DbActor>, String), DatabaseError> {
+) -> Result<(Vec<Recipient>, String), DatabaseError> {
     let followers = get_followers(db_client, current_user.id).await?;
     let mut recipients = vec![];
     for profile in followers {
         if let Some(remote_actor) = profile.actor_json {
-            recipients.push(remote_actor);
+            recipients.extend(Recipient::from_actor_data(&remote_actor));
         };
     };
     let primary_recipient = profile_actor_id(instance_url, &post.author);
     if let Some(remote_actor) = post.author.actor_json.as_ref() {
-        recipients.push(remote_actor.clone());
+        recipients.extend(Recipient::from_actor_data(remote_actor));
     };
     Ok((recipients, primary_recipient))
 }

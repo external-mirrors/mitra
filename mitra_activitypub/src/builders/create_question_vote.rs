@@ -12,6 +12,7 @@ use mitra_utils::id::generate_ulid;
 
 use crate::{
     contexts::{build_default_context, Context},
+    deliverer::Recipient,
     identifiers::{
         local_activity_id,
         local_actor_id,
@@ -99,7 +100,7 @@ pub fn prepare_create_question_vote(
         &question_owner.id,
         votes,
     );
-    let recipients = vec![question_owner.clone()];
+    let recipients = Recipient::from_actor_data(question_owner);
     Ok(OutgoingActivityJobData::new(
         &instance.url(),
         sender,

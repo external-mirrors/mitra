@@ -11,6 +11,7 @@ use mitra_utils::id::generate_ulid;
 
 use crate::{
     contexts::Context,
+    deliverer::Recipient,
     identifiers::{local_activity_id, local_actor_id},
     queues::OutgoingActivityJobData,
     vocabulary::ACCEPT,
@@ -79,7 +80,7 @@ pub fn prepare_accept_offer(
         &remote_actor.id,
         offer_activity_id,
     )?;
-    let recipients = vec![remote_actor.clone()];
+    let recipients = Recipient::from_actor_data(remote_actor);
     Ok(OutgoingActivityJobData::new(
         &instance.url(),
         sender,

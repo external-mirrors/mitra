@@ -7,13 +7,14 @@ use mitra_models::{
     database::{DatabaseClient, DatabaseError},
     emojis::types::DbEmoji,
     posts::types::{Post, Visibility},
-    profiles::types::{DbActor, DbActorProfile},
+    profiles::types::DbActorProfile,
     users::types::User,
 };
 use mitra_services::media::MediaServer;
 
 use crate::{
     contexts::{build_default_context, Context},
+    deliverer::Recipient,
     identifiers::{
         compatible_profile_actor_id,
         local_activity_id,
@@ -114,10 +115,10 @@ pub async fn get_like_recipients(
     _db_client: &impl DatabaseClient,
     _instance_url: &str,
     post: &Post,
-) -> Result<Vec<DbActor>, DatabaseError> {
+) -> Result<Vec<Recipient>, DatabaseError> {
     let mut recipients = vec![];
     if let Some(remote_actor) = post.author.actor_json.as_ref() {
-        recipients.push(remote_actor.clone());
+        recipients.extend(Recipient::from_actor_data(remote_actor));
     };
     Ok(recipients)
 }

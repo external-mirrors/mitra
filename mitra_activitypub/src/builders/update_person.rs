@@ -5,7 +5,6 @@ use mitra_config::Instance;
 use mitra_models::{
     database::{DatabaseClient, DatabaseError},
     profiles::helpers::find_declared_aliases,
-    profiles::types::DbActor,
     relationships::queries::get_followers,
     users::types::User,
 };
@@ -16,6 +15,7 @@ use crate::{
     actors::builders::{build_local_actor, Actor},
     authority::Authority,
     contexts::{build_default_context, Context},
+    deliverer::Recipient,
     identifiers::{
         local_activity_id,
         LocalActorCollection,
@@ -70,12 +70,12 @@ fn build_update_person(
 async fn get_update_person_recipients(
     db_client: &impl DatabaseClient,
     user: &User,
-) -> Result<Vec<DbActor>, DatabaseError> {
+) -> Result<Vec<Recipient>, DatabaseError> {
     let followers = get_followers(db_client, user.id).await?;
     let mut recipients = vec![];
     for profile in followers {
         if let Some(remote_actor) = profile.actor_json {
-            recipients.push(remote_actor);
+            recipients.extend(Recipient::from_actor_data(&remote_actor));
         };
     };
     // Remote aliases
@@ -84,7 +84,7 @@ async fn get_update_person_recipients(
         let maybe_remote_actor = maybe_profile
             .and_then(|profile| profile.actor_json);
         if let Some(remote_actor) = maybe_remote_actor {
-            recipients.push(remote_actor);
+            recipients.extend(Recipient::from_actor_data(&remote_actor));
         };
     };
     Ok(recipients)

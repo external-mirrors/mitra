@@ -9,6 +9,7 @@ use mitra_utils::id::generate_ulid;
 
 use crate::{
     contexts::{build_default_context, Context},
+    deliverer::Recipient,
     identifiers::{
         local_activity_id,
         local_actor_id,
@@ -66,7 +67,7 @@ fn prepare_remove_person(
         &person.id,
         collection,
     );
-    let recipients = vec![person.clone()];
+    let recipients = Recipient::from_actor_data(person);
     OutgoingActivityJobData::new(
         &instance.url(),
         sender,

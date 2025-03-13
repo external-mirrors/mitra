@@ -10,6 +10,7 @@ use mitra_models::{
 
 use crate::{
     contexts::{build_default_context, Context},
+    deliverer::Recipient,
     identifiers::{
         compatible_id,
         local_activity_id,
@@ -82,7 +83,7 @@ pub fn prepare_undo_follow(
         follow_request_id,
         follow_request_has_deprecated_ap_id,
     );
-    let recipients = vec![target_actor.clone()];
+    let recipients = Recipient::from_actor_data(target_actor);
     Ok(OutgoingActivityJobData::new(
         &instance.url(),
         sender,

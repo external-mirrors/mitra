@@ -12,6 +12,7 @@ use mitra_models::{
 
 use crate::{
     contexts::Context,
+    deliverer::Recipient,
     identifiers::{local_activity_id, local_actor_id},
     queues::OutgoingActivityJobData,
     vocabulary::{AGREEMENT, COMMITMENT, OFFER},
@@ -100,7 +101,7 @@ pub fn prepare_offer_agreement(
         invoice_id,
         invoice_amount,
     );
-    let recipients = vec![proposer_actor.clone()];
+    let recipients = Recipient::from_actor_data(proposer_actor);
     OutgoingActivityJobData::new(
         &instance.url(),
         sender,

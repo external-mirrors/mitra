@@ -221,9 +221,9 @@ impl OutgoingActivityJobData {
         instance_url: &str,
         sender: &User,
         activity: impl Serialize,
-        recipients: Vec<DbActor>,
+        mut recipients: Vec<Recipient>,
     ) -> Self {
-        let recipients = Self::prepare_recipients(instance_url, recipients);
+        Self::mark_local_recipients(instance_url, &mut recipients);
         let recipients = Self::sort_recipients(recipients);
         let activity = serde_json::to_value(activity)
             .expect("activity should be serializable");

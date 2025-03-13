@@ -15,7 +15,7 @@ use mitra_models::{
         queries::get_post_author,
         types::{Post, Visibility},
     },
-    profiles::types::{DbActor, WebfingerHostname},
+    profiles::types::WebfingerHostname,
     relationships::queries::{get_followers, get_subscribers},
 };
 use mitra_services::media::MediaServer;
@@ -23,6 +23,7 @@ use mitra_services::media::MediaServer;
 use crate::{
     authority::Authority,
     contexts::{build_default_context, Context},
+    deliverer::Recipient,
     identifiers::{
         compatible_id,
         compatible_post_object_id,
@@ -393,7 +394,7 @@ pub fn build_note(
 pub async fn get_note_recipients(
     db_client: &impl DatabaseClient,
     post: &Post,
-) -> Result<Vec<DbActor>, DatabaseError> {
+) -> Result<Vec<Recipient>, DatabaseError> {
     let mut audience = vec![];
     match post.visibility {
         Visibility::Public | Visibility::Followers => {
@@ -425,7 +426,7 @@ pub async fn get_note_recipients(
     let mut recipients = vec![];
     for profile in audience {
         if let Some(remote_actor) = profile.actor_json {
-            recipients.push(remote_actor);
+            recipients.extend(Recipient::from_actor_data(&remote_actor));
         };
     };
     Ok(recipients)
@@ -438,7 +439,7 @@ mod tests {
     use mitra_models::{
         conversations::types::Conversation,
         polls::types::{Poll, PollResult, PollResults},
-        profiles::types::DbActorProfile,
+        profiles::types::{DbActor, DbActorProfile},
         users::types::User,
     };
     use super::*;

@@ -10,6 +10,7 @@ use mitra_utils::id::generate_ulid;
 
 use crate::{
     contexts::{build_default_context, Context},
+    deliverer::Recipient,
     identifiers::{
         compatible_id,
         local_activity_id,
@@ -70,7 +71,7 @@ pub fn prepare_accept_follow(
         &source_actor_id,
         &follow_activity_id,
     );
-    let recipients = vec![source_actor.clone()];
+    let recipients = Recipient::from_actor_data(source_actor);
     Ok(OutgoingActivityJobData::new(
         &instance.url(),
         sender,

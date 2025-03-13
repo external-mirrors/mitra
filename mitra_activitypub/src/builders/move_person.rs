@@ -10,6 +10,7 @@ use mitra_utils::id::generate_ulid;
 
 use crate::{
     contexts::{build_default_context, Context},
+    deliverer::Recipient,
     identifiers::{
         local_activity_id,
         local_actor_id,
@@ -77,11 +78,14 @@ pub fn prepare_move_person(
         linked_actor_id,
         pull_mode,
     );
+    let recipients = followers.iter()
+        .flat_map(Recipient::from_actor_data)
+        .collect();
     OutgoingActivityJobData::new(
         &instance.url(),
         sender,
         activity,
-        followers,
+        recipients,
     )
 }
 

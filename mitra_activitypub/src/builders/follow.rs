@@ -15,6 +15,7 @@ use mitra_models::{
 
 use crate::{
     contexts::{build_default_context, Context},
+    deliverer::Recipient,
     identifiers::{
         compatible_id,
         local_activity_id,
@@ -79,7 +80,7 @@ fn prepare_follow(
         false, // don't use legacy activity IDs
         true, // with context
     );
-    let recipients = vec![target_actor.clone()];
+    let recipients = Recipient::from_actor_data(target_actor);
     Ok(OutgoingActivityJobData::new(
         &instance.url(),
         sender,

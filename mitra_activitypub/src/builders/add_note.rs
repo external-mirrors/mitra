@@ -5,7 +5,6 @@ use apx_sdk::constants::AP_PUBLIC;
 use mitra_config::Instance;
 use mitra_models::{
     database::{DatabaseClient, DatabaseError},
-    profiles::types::DbActor,
     relationships::queries::get_followers,
     users::types::User,
 };
@@ -13,6 +12,7 @@ use mitra_utils::id::generate_ulid;
 
 use crate::{
     contexts::{build_default_context, Context},
+    deliverer::Recipient,
     identifiers::{
         local_activity_id,
         local_actor_id,
@@ -65,12 +65,12 @@ fn build_add_note(
 pub(super) async fn get_add_note_recipients(
     db_client: &impl DatabaseClient,
     user_id: Uuid,
-) -> Result<Vec<DbActor>, DatabaseError> {
+) -> Result<Vec<Recipient>, DatabaseError> {
     let followers = get_followers(db_client, user_id).await?;
     let mut recipients = vec![];
     for profile in followers {
         if let Some(remote_actor) = profile.actor_json {
-            recipients.push(remote_actor);
+            recipients.extend(Recipient::from_actor_data(&remote_actor));
         };
     };
     Ok(recipients)
