@@ -4,10 +4,6 @@ use apx_core::{
     http_types::HeaderValue,
     http_url::HttpUrl,
     http_utils::remove_quotes,
-    urls::{
-        get_hostname,
-        UrlError,
-    },
 };
 
 use super::constants::AP_PUBLIC;
@@ -97,12 +93,6 @@ pub fn is_public(target_id: impl AsRef<str>) -> bool {
         "Public",
     ];
     PUBLIC_VARIANTS.contains(&target_id.as_ref())
-}
-
-pub fn is_same_hostname(id_1: &str, id_2: &str) -> Result<bool, UrlError> {
-    let hostname_1 = get_hostname(id_1)?;
-    let hostname_2 = get_hostname(id_2)?;
-    Ok(hostname_1 == hostname_2)
 }
 
 /// Extract media type from Content-Type or Accept header
@@ -229,18 +219,6 @@ mod tests {
         let key_id = "https://social.example#main-key";
         let actor_id = key_id_to_actor_id(key_id).unwrap();
         assert_eq!(actor_id, "https://social.example");
-    }
-
-    #[test]
-    fn test_is_same_hostname() {
-        let id_1 = "https://server.example/objects/1";
-        let id_2 = "https://server.example/actors/test";
-        let ret = is_same_hostname(id_1, id_2).unwrap();
-        assert_eq!(ret, true);
-
-        let id_3 = "https://other.example/objects/1";
-        let ret = is_same_hostname(id_1, id_3).unwrap();
-        assert_eq!(ret, false);
     }
 
     #[test]

@@ -9,12 +9,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Added
 
 - Make `with_gateway` function public.
+- Added `fep_ef61_trusted_origins` option for `fetch_object`.
 
 ### Changed
 
 - Make `get_core_type` return `Collection` if `first` property is present.
 - Disallow uppercase letters in HTTP URL host component.
 - Compare origins instead of hostnames when verifying fetched non-portable object.
+
+### Removed
+
+- Removed `allow_fep_ef61_noproof` option for `fetch_object`.
+- Removed `is_same_hostname` function.
 
 ## [0.9.0] - 2025-02-26
 

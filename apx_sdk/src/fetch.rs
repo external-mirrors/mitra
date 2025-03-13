@@ -32,7 +32,7 @@ use super::{
         REDIRECT_LIMIT,
     },
     url::is_same_origin,
-    utils::{extract_media_type, is_same_hostname},
+    utils::extract_media_type,
 };
 
 #[derive(thiserror::Error, Debug)]
@@ -129,7 +129,8 @@ fn fetcher_error_for_status(error: reqwest::Error) -> FetchError {
 pub struct FetchObjectOptions {
     /// Skip origin and content type checks?
     pub skip_verification: bool,
-    pub allow_fep_ef61_noproof: bool,
+    /// List of trusted origins for a FEP-ef61 collection
+    pub fep_ef61_trusted_origins: Vec<String>,
 }
 
 /// Sends GET request to fetch AP object
@@ -219,11 +220,13 @@ pub async fn fetch_object(
                 return Err(FetchError::UnexpectedObjectId(object_location.to_string()));
             };
         },
-        Err(AuthenticationError::NoProof) if options.allow_fep_ef61_noproof => {
-            // Fallback to authority check
-            let is_same_authority = is_same_hostname(object_id, object_location)
-                .unwrap_or(false);
-            if !is_same_authority {
+        Err(AuthenticationError::NoProof) => {
+            let is_trusted = options.fep_ef61_trusted_origins
+                .iter()
+                .any(|origin| {
+                    is_same_origin(object_location, origin).unwrap_or(false)
+                });
+            if !is_trusted {
                 return Err(FetchError::UnexpectedObjectId(object_location.to_string()));
             };
         },
