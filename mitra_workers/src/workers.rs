@@ -166,7 +166,7 @@ fn start_main_worker(
             tasks.push(PeriodicTask::MoneroPaymentMonitor);
             tasks.push(PeriodicTask::MoneroRecurrentPaymentMonitor);
         };
-        run_worker(config, db_pool, tasks).await
+        run_worker(config, db_pool, tasks).await;
     });
 }
 
@@ -177,7 +177,7 @@ fn start_outgoing_activity_queue_worker(
     assert!(config.federation.deliverer_standalone);
     tokio::spawn(async move {
         let tasks = vec![PeriodicTask::OutgoingActivityQueueExecutor];
-        run_worker(config, db_pool, tasks).await
+        run_worker(config, db_pool, tasks).await;
     });
 }
 
@@ -188,7 +188,7 @@ fn start_incoming_activity_queue_worker(
     assert!(config.federation.incoming_queue_worker_enabled);
     tokio::spawn(async move {
         let tasks = vec![PeriodicTask::IncomingActivityQueueExecutor];
-        run_worker(config, db_pool, tasks).await
+        run_worker(config, db_pool, tasks).await;
     });
 }
 

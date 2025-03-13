@@ -178,7 +178,7 @@ pub fn parse_into_array<T: DeserializeOwned>(
     value: &Value,
 ) -> Result<Vec<T>, DeserializationError> {
     let objects = match value {
-        Value::Array(array) => array.to_vec(),
+        Value::Array(array) => array.clone(),
         Value::Object(_) => vec![value.clone()],
         _ => return Err(DeserializationError("unexpected value type")),
     };

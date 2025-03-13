@@ -274,6 +274,7 @@ pub struct LoadPortableObject {
 }
 
 impl LoadPortableObject {
+    #[allow(clippy::unused_async)]
     pub async fn execute(
         &self,
         _config: &Config,

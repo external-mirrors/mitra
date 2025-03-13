@@ -98,7 +98,7 @@ async fn handle_fep_171b_add(
             match fetch_any_object(&agent, activity_id).await {
                 Ok(activity_fetched) => {
                     log::info!("fetched activity {}", activity_id);
-                    activity = activity_fetched
+                    activity = activity_fetched;
                 },
                 Err(error) => {
                     // Wrapped activities are not always available

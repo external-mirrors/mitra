@@ -62,7 +62,7 @@ pub fn parse_object_id<T: FromCaptures>(
     let path_caps = path_re.captures(&path)
         .ok_or(PathError("invalid path"))?;
     let value = T::from_captures(path_caps)?;
-    Ok((base_url.to_string(), value))
+    Ok((base_url, value))
 }
 
 #[cfg(test)]

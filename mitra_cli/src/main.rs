@@ -34,7 +34,7 @@ async fn main() -> () {
     let result = match opts.subcmd {
         SubCommand::Server => {
             std::mem::drop(db_client_value);
-            let db_pool = create_database_connection_pool(&config).await;
+            let db_pool = create_database_connection_pool(&config);
             start_workers(config.clone(), db_pool.clone());
             #[allow(clippy::unwrap_used)]
             return run_server(config, db_pool).await.unwrap();
@@ -80,5 +80,5 @@ async fn main() -> () {
         SubCommand::InstanceReport(cmd) => cmd.execute(&config, db_client).await,
     };
     #[allow(clippy::unwrap_used)]
-    result.unwrap()
+    result.unwrap();
 }

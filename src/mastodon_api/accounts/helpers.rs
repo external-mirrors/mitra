@@ -31,14 +31,14 @@ pub async fn parse_microsyntaxes(
             replace_emoji_shortcodes(display_name, &custom_emoji_map);
         profile_data.display_name = Some(display_name);
         profile_data.emojis
-            .extend(custom_emoji_map.into_values().map(|emoji| emoji.id))
+            .extend(custom_emoji_map.into_values().map(|emoji| emoji.id));
     };
     if let Some(ref bio) = profile_data.bio {
         let custom_emoji_map = find_emojis(db_client, bio).await?;
         let bio = replace_emoji_shortcodes(bio, &custom_emoji_map);
         profile_data.bio = Some(bio);
         profile_data.emojis
-            .extend(custom_emoji_map.into_values().map(|emoji| emoji.id))
+            .extend(custom_emoji_map.into_values().map(|emoji| emoji.id));
     };
     // Remove duplicates
     profile_data.emojis.sort();

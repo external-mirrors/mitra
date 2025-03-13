@@ -481,10 +481,10 @@ impl Serialize for PaymentOption {
         match self {
             Self::Link(link) => link.serialize(FlatMapSerializer(&mut map))?,
             Self::MoneroSubscription(payment_info) => {
-                payment_info.serialize(FlatMapSerializer(&mut map))?
+                payment_info.serialize(FlatMapSerializer(&mut map))?;
             },
             Self::RemoteMoneroSubscription(payment_info) => {
-                payment_info.serialize(FlatMapSerializer(&mut map))?
+                payment_info.serialize(FlatMapSerializer(&mut map))?;
             },
         };
         map.end()

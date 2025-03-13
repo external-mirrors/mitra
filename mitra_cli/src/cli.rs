@@ -647,7 +647,7 @@ impl PruneRemoteEmojis {
     pub async fn execute(
         &self,
         config: &Config,
-        db_client: &mut impl DatabaseClient,
+        db_client: &impl DatabaseClient,
     ) -> Result<(), Error> {
         let emojis = find_unused_remote_emojis(db_client).await?;
         for emoji_id in emojis {

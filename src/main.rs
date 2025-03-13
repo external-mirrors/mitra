@@ -17,7 +17,7 @@ async fn main() -> std::io::Result<()> {
     log::info!("instance URL {}", config.instance_url());
     std::mem::drop(db_client);
 
-    let db_pool = create_database_connection_pool(&config).await;
+    let db_pool = create_database_connection_pool(&config);
     start_workers(config.clone(), db_pool.clone());
     run_server(config, db_pool).await
 }

@@ -55,7 +55,6 @@ unsafe_attr_outside_unsafe = "warn"
 unsafe_op_in_unsafe_fn = "warn"
 
 [workspace.lints.clippy]
-unwrap_used = "warn"
 derive_partial_eq_without_eq = "allow"
 len_zero = "allow"
 let_and_return = "allow"
@@ -67,6 +66,13 @@ enum_variant_names = "allow"
 format_push_string = "allow"
 unwrap_or_default = "allow"
 large_enum_variant = "allow"
+
+implicit_clone = "warn"
+needless_pass_by_ref_mut = "warn"
+semicolon_if_nothing_returned = "warn"
+string_to_string = "warn"
+unused_async = "warn"
+unwrap_used = "warn"
 
 [package]
 name = "mitra"

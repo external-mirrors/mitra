@@ -74,7 +74,7 @@ pub async fn create_database_client(config: &Config) -> BasicDatabaseClient {
 }
 
 // Panics on errors
-pub async fn create_database_connection_pool(config: &Config)
+pub fn create_database_connection_pool(config: &Config)
     -> DatabaseConnectionPool
 {
     // https://wiki.postgresql.org/wiki/Number_Of_Database_Connections
