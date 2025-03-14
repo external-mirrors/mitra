@@ -1,15 +1,12 @@
-use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
+use std::net::IpAddr;
 
-use idna::{domain_to_ascii, Errors as IdnaError};
 use url::{Host, Url};
 
 pub use url::{
     ParseError as UrlError,
 };
 
-pub fn encode_hostname(hostname: &str) -> Result<String, IdnaError> {
-    domain_to_ascii(hostname)
-}
+use crate::url::hostname::guess_protocol;
 
 /// Returns URL host name (without port number)
 /// IDNs are converted into punycode
@@ -23,30 +20,6 @@ pub fn get_hostname(url: &str) -> Result<String, UrlError> {
         Host::Ipv6(addr) => addr.to_string(),
     };
     Ok(hostname)
-}
-
-pub fn guess_protocol(hostname: &str) -> &'static str {
-    if hostname == "localhost" {
-        return "http";
-    };
-    let maybe_ipv4_address = hostname.parse::<Ipv4Addr>();
-    if let Ok(_ipv4_address) = maybe_ipv4_address {
-        return "http";
-    };
-    let maybe_ipv6_address = hostname.parse::<Ipv6Addr>();
-    if let Ok(_ipv6_address) = maybe_ipv6_address {
-        return "http";
-    };
-    if hostname.ends_with(".onion") ||
-        hostname.ends_with(".i2p") ||
-        hostname.ends_with(".loki")
-    {
-        // Tor / I2P
-        "http"
-    } else {
-        // Use HTTPS by default
-        "https"
-    }
 }
 
 pub fn get_ip_address(url: &Url) -> Option<IpAddr> {
@@ -90,14 +63,8 @@ pub fn normalize_origin(url: &str) -> Result<String, UrlError> {
 
 #[cfg(test)]
 mod tests {
+    use std::net::{Ipv4Addr, Ipv6Addr};
     use super::*;
-
-    #[test]
-    fn test_encode_hostname() {
-        let hostname = "räksmörgås.josefsson.org";
-        let encoded = encode_hostname(hostname).unwrap();
-        assert_eq!(encoded, "xn--rksmrgs-5wao1o.josefsson.org");
-    }
 
     #[test]
     fn test_get_hostname() {
@@ -139,32 +106,6 @@ mod tests {
         let url = "mailto:user@example.org";
         let result = get_hostname(url);
         assert_eq!(result.is_err(), true);
-    }
-
-    #[test]
-    fn test_guess_protocol() {
-        assert_eq!(
-            guess_protocol("example.org"),
-            "https",
-        );
-        assert_eq!(
-            guess_protocol("2gzyxa5ihm7nsggfxnu52rck2vv4rvmdlkiu3zzui5du4xyclen53wid.onion"),
-            "http",
-        );
-        assert_eq!(
-            guess_protocol("zzz.i2p"),
-            "http",
-        );
-        // Yggdrasil
-        assert_eq!(
-            guess_protocol("319:3cf0:dd1d:47b9:20c:29ff:fe2c:39be"),
-            "http",
-        );
-        // localhost
-        assert_eq!(
-            guess_protocol("127.0.0.1"),
-            "http",
-        );
     }
 
     #[test]

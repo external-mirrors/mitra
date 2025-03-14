@@ -6,7 +6,7 @@ use apx_core::{
     ap_url::is_ap_url,
     did::Did,
     http_url::normalize_http_url,
-    urls::encode_hostname,
+    url::hostname::encode_hostname,
 };
 use apx_sdk::addresses::WebfingerAddress;
 use mitra_activitypub::{

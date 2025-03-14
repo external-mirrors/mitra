@@ -11,7 +11,7 @@ use apx_core::{
     crypto_eddsa::ed25519_secret_key_from_multikey,
     crypto_rsa::rsa_secret_key_from_multikey,
     http_url::HttpUrl,
-    urls::guess_protocol,
+    url::hostname::guess_protocol,
 };
 use apx_sdk::{
     addresses::WebfingerAddress,

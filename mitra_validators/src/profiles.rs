@@ -1,7 +1,7 @@
 use regex::Regex;
 
 use apx_core::{
-    urls::encode_hostname,
+    url::hostname::encode_hostname,
 };
 use mitra_models::profiles::types::{
     DbActor,

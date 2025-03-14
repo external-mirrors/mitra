@@ -1,7 +1,7 @@
 use indexmap::IndexMap;
 use regex::{Captures, Regex};
 
-use apx_core::urls::encode_hostname;
+use apx_core::url::hostname::encode_hostname;
 use apx_sdk::addresses::WebfingerAddress;
 use mitra_activitypub::identifiers::profile_actor_url;
 use mitra_models::{
