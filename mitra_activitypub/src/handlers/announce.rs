@@ -166,56 +166,62 @@ async fn handle_fep_1b12_announce(
         }
     };
     verify_activity_owner(&activity)?;
-    if activity_type == DELETE {
-        let group = get_remote_profile_by_actor_id(
-            db_client,
-            &group_id,
-        ).await?;
-        let object_id = object_to_id(&activity["object"])
-            .map_err(|_| ValidationError("invalid activity object"))?;
-        let post_id = match get_remote_post_by_object_id(
-            db_client,
-            &object_id,
-        ).await {
-            Ok(post) => post.id,
-            // Ignore Announce(Delete) if post is not found
-            Err(DatabaseError::NotFound(_)) => return Ok(None),
-            Err(other_error) => return Err(other_error.into()),
-        };
-        // Don't delete post, only remove announcement
-        // https://join-lemmy.org/docs/contributors/05-federation.html#delete-post-or-comment
-        match get_repost_by_author(db_client, post_id, group.id).await {
-            Ok(repost) => {
-                delete_repost(db_client, repost.id).await?;
-            },
-            // Ignore Announce(Delete) if repost is not found
-            Err(DatabaseError::NotFound(_)) => return Ok(None),
-            Err(other_error) => return Err(other_error.into()),
-        };
-        Ok(Some(Descriptor::object(activity_type)))
-    } else if activity_type == CREATE {
-        handle_create(
-            config,
-            db_client,
-            activity,
-            true, // authenticated (by embedding or fetched from origin)
-            true, // don't perform spam check
-        ).await?;
-        Ok(Some(Descriptor::object(activity_type)))
-    } else if activity_type == LIKE || activity_type == DISLIKE {
-        let maybe_type = handle_like(config, db_client, activity).await?;
-        Ok(maybe_type.map(|_| Descriptor::object(activity_type)))
-    } else if activity_type == UPDATE {
-        let maybe_type = handle_update(
-            config,
-            db_client,
-            activity,
-            true, // authenticated (by embedding or fetched from origin)
-        ).await?;
-        Ok(maybe_type.map(|_| Descriptor::object(activity_type)))
-    } else {
-        // Ignore other activities
-        Ok(None)
+    match activity_type {
+        DELETE => {
+            let group = get_remote_profile_by_actor_id(
+                db_client,
+                &group_id,
+            ).await?;
+            let object_id = object_to_id(&activity["object"])
+                .map_err(|_| ValidationError("invalid activity object"))?;
+            let post_id = match get_remote_post_by_object_id(
+                db_client,
+                &object_id,
+            ).await {
+                Ok(post) => post.id,
+                // Ignore Announce(Delete) if post is not found
+                Err(DatabaseError::NotFound(_)) => return Ok(None),
+                Err(other_error) => return Err(other_error.into()),
+            };
+            // Don't delete post, only remove announcement
+            // https://join-lemmy.org/docs/contributors/05-federation.html#delete-post-or-comment
+            match get_repost_by_author(db_client, post_id, group.id).await {
+                Ok(repost) => {
+                    delete_repost(db_client, repost.id).await?;
+                },
+                // Ignore Announce(Delete) if repost is not found
+                Err(DatabaseError::NotFound(_)) => return Ok(None),
+                Err(other_error) => return Err(other_error.into()),
+            };
+            Ok(Some(Descriptor::object(activity_type)))
+        },
+        CREATE => {
+            handle_create(
+                config,
+                db_client,
+                activity,
+                true, // authenticated (by embedding or fetched from origin)
+                true, // don't perform spam check
+            ).await?;
+            Ok(Some(Descriptor::object(activity_type)))
+        },
+        LIKE | DISLIKE => {
+            let maybe_type = handle_like(config, db_client, activity).await?;
+            Ok(maybe_type.map(|_| Descriptor::object(activity_type)))
+        },
+        UPDATE => {
+            let maybe_type = handle_update(
+                config,
+                db_client,
+                activity,
+                true, // authenticated (by embedding or fetched from origin)
+            ).await?;
+            Ok(maybe_type.map(|_| Descriptor::object(activity_type)))
+        },
+        _ => {
+            // Ignore other activities
+            Ok(None)
+        },
     }
 }
 
