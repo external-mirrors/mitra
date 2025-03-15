@@ -13,6 +13,7 @@ pub enum FilterAction {
     RejectCustomEmojis,
     RejectData,
     MarkSensitive,
+    RejectKeywords,
 }
 
 impl From<FilterAction> for i16 {
@@ -24,6 +25,7 @@ impl From<FilterAction> for i16 {
             FilterAction::RejectCustomEmojis => 4,
             FilterAction::RejectData => 5,
             FilterAction::MarkSensitive => 6,
+            FilterAction::RejectKeywords => 7,
         }
     }
 }
@@ -39,6 +41,7 @@ impl TryFrom<i16> for FilterAction {
             4 => Self::RejectCustomEmojis,
             5 => Self::RejectData,
             6 => Self::MarkSensitive,
+            7 => Self::RejectKeywords,
             _ => return Err(DatabaseTypeError),
         };
         Ok(action)

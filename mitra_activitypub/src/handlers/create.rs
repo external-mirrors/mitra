@@ -1,6 +1,7 @@
 use serde::Deserialize;
 use serde_json::{Value as JsonValue};
 
+use apx_core::http_url::HttpUrl;
 use apx_sdk::{
     authentication::{verify_portable_object, AuthenticationError},
     deserialization::deserialize_into_object_id,
@@ -9,7 +10,12 @@ use apx_sdk::{
 use mitra_config::Config;
 use mitra_models::{
     database::{DatabaseClient, DatabaseError},
+    filter_rules::types::FilterAction,
     posts::types::Visibility,
+    properties::{
+        constants::FILTER_KEYWORDS,
+        queries::get_internal_property,
+    },
     relationships::queries::has_local_followers,
 };
 use mitra_validators::errors::ValidationError;
@@ -32,6 +38,7 @@ use super::{
     note::{
         get_audience,
         get_object_attributed_to,
+        get_object_content,
         AttributedObject,
         AttributedObjectJson,
     },
@@ -112,12 +119,34 @@ pub async fn handle_create(
         return handle_question_vote(config, db_client, object).await;
     };
     let object: AttributedObjectJson = serde_json::from_value(object)?;
+    let ap_client = ApClient::new(config, db_client).await?;
     if !is_pulled {
         check_unsolicited_message(
             db_client,
             &config.instance_url(),
             &object.inner,
         ).await?;
+        // TODO: FEP-EF61: keyword filtering for portable messages
+        if let Ok(http_url) = HttpUrl::parse(&author_id) {
+            let author_hostname = http_url.hostname();
+            let content = get_object_content(&object.inner)?;
+            if ap_client.filter.is_action_required(
+                author_hostname.as_str(),
+                FilterAction::RejectKeywords,
+            ) {
+                let keywords: Vec<String> = get_internal_property(
+                    db_client,
+                    FILTER_KEYWORDS,
+                ).await?.unwrap_or_default();
+                for keyword in keywords {
+                    if !content.contains(&keyword) {
+                        continue;
+                    };
+                    let error_message = format!(r#"rejected keyword "{keyword}""#);
+                    return Err(HandlerError::Filtered(error_message));
+                };
+            };
+        };
     };
 
     // Authentication
@@ -144,7 +173,6 @@ pub async fn handle_create(
         // Most likely it's a forwarded reply.
         None
     };
-    let ap_client = ApClient::new(config, db_client).await?;
     let post = import_post(
         &ap_client,
         db_client,

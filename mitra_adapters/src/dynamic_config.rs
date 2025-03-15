@@ -1,6 +1,9 @@
 use mitra_models::{
     database::{DatabaseClient, DatabaseError, DatabaseTypeError},
-    properties::constants::FEDERATED_TIMELINE_RESTRICTED,
+    properties::constants::{
+        FEDERATED_TIMELINE_RESTRICTED,
+        FILTER_KEYWORDS,
+    },
     properties::queries::{
         get_internal_property,
         set_internal_property,
@@ -8,9 +11,11 @@ use mitra_models::{
 };
 
 // Dynamic configuration parameters
-pub const EDITABLE_PROPERTIES: [&str; 1] = [
+pub const EDITABLE_PROPERTIES: [&str; 2] = [
     // Make federated timeline visible only to moderators
     FEDERATED_TIMELINE_RESTRICTED,
+    // Keywords for `reject-keywords` filter action
+    FILTER_KEYWORDS,
 ];
 
 pub async fn set_editable_property(
@@ -22,6 +27,11 @@ pub async fn set_editable_property(
         FEDERATED_TIMELINE_RESTRICTED => {
             // TODO: return validation error
             let value_typed: bool = serde_json::from_str(value)
+                .map_err(|_| DatabaseTypeError)?;
+            serde_json::json!(value_typed)
+        },
+        FILTER_KEYWORDS => {
+            let value_typed: Vec<String> = serde_json::from_str(value)
                 .map_err(|_| DatabaseTypeError)?;
             serde_json::json!(value_typed)
         },

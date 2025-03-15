@@ -44,6 +44,10 @@ enum FilterAction {
     AcceptCustomEmojis,
     /// Mark media attachments as sensitive
     MarkSensitive,
+    /// Reject posts containing selected keywords
+    RejectKeywords,
+    /// Accept posts containing selected keywords
+    AcceptKeywords,
 }
 
 impl FilterAction {
@@ -71,6 +75,10 @@ impl FilterAction {
                 (DbFilterAction::RejectCustomEmojis, true),
             Self::MarkSensitive =>
                 (DbFilterAction::MarkSensitive, false),
+            Self::RejectKeywords =>
+                (DbFilterAction::RejectKeywords, false),
+            Self::AcceptKeywords =>
+                (DbFilterAction::RejectKeywords, true),
         }
     }
 
@@ -90,6 +98,8 @@ impl FilterAction {
             (DbFilterAction::RejectCustomEmojis, false) => Self::RejectCustomEmojis,
             (DbFilterAction::RejectCustomEmojis, true) => Self::AcceptCustomEmojis,
             (DbFilterAction::MarkSensitive, _) => Self::MarkSensitive,
+            (DbFilterAction::RejectKeywords, false) => Self::RejectKeywords,
+            (DbFilterAction::RejectKeywords, true) => Self::AcceptKeywords,
         }
     }
 }

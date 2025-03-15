@@ -212,7 +212,7 @@ fn get_object_url(
 }
 
 /// Get post content by concatenating name/summary and content
-fn get_object_content(object: &AttributedObject) ->
+pub(super) fn get_object_content(object: &AttributedObject) ->
     Result<String, ValidationError>
 {
     let title = if object.in_reply_to.is_none() {

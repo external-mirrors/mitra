@@ -15,6 +15,8 @@ A filter rule consists of an action and a target. Supported actions:
 - `reject-custom-emojis`: remove custom emojis from posts and profile descriptions.
 - `accept-custom-emojis`: allow custom emojis.
 - `mark-sensitive`: mark media attachments as sensitive.
+- `reject-keywords`: reject posts containing selected keywords.
+- `accept-keywords`: accept posts containing selected keywords.
 
 Target is a domain name or a wildcard pattern (e.g. `*.example.com`).
 
@@ -44,4 +46,10 @@ Remove rule:
 
 ```shell
 mitractl remove-filter-rule reject mastodon.social
+```
+
+Use `update-config` command to change the list of filtered keywords:
+
+```shell
+mitractl update-config filter_keywords '["foo", "bar"]'
 ```
