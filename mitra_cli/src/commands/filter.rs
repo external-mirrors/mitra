@@ -22,7 +22,9 @@ enum FilterAction {
     Accept,
     RejectData,
     AcceptData,
+    #[clap(hide = true)]
     RejectMedia,
+    #[clap(hide = true)]
     AcceptMedia,
     RejectMediaAttachments,
     AcceptMediaAttachments,
