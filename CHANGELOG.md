@@ -23,6 +23,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Store actor's shared inbox.
 - Hide deprecated filter actions from `add-filter-rule` help message.
 - Describe each filter action in `add-filter-rule` help message.
+- Improved formatting of `update-config` help message.
 
 ### Fixed
 

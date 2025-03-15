@@ -1,19 +1,36 @@
 use anyhow::Error;
-use clap::Parser;
+use clap::{Parser, ValueEnum};
 
 use mitra_adapters::dynamic_config::{
     set_editable_property,
     EDITABLE_PROPERTIES,
 };
-use mitra_models::database::DatabaseClient;
+use mitra_models::{
+    database::DatabaseClient,
+    properties::constants::FEDERATED_TIMELINE_RESTRICTED,
+};
+
+#[derive(Clone, ValueEnum)]
+enum ParameterName {
+    /// Make federated timeline visible only to moderators (true of false, default: false)
+    #[clap(name = FEDERATED_TIMELINE_RESTRICTED)]
+    FederatedTimelineRestricted,
+}
+
+impl ParameterName {
+    fn as_str(&self) -> &'static str {
+        let name_str = match self {
+            Self::FederatedTimelineRestricted => FEDERATED_TIMELINE_RESTRICTED,
+        };
+        assert!(EDITABLE_PROPERTIES.contains(&name_str));
+        name_str
+    }
+}
 
 /// Change value of a dynamic configuration parameter
-///
-/// - federated_timeline_restricted (true of false, default: false): make federated timeline visible only to moderators.
 #[derive(Parser)]
 pub struct UpdateConfig {
-    #[arg(value_parser = EDITABLE_PROPERTIES)]
-    name: String,
+    name: ParameterName,
     value: String,
 }
 
@@ -22,7 +39,7 @@ impl UpdateConfig {
         &self,
         db_client: &impl DatabaseClient,
     ) -> Result<(), Error> {
-        set_editable_property(db_client, &self.name, &self.value).await?;
+        set_editable_property(db_client, self.name.as_str(), &self.value).await?;
         println!("configuration updated");
         Ok(())
     }
