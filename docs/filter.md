@@ -6,7 +6,7 @@ A filter rule consists of an action and a target. Supported actions:
 
 - `reject`: reject incoming messages only.
 - `accept`: accept incoming messages.
-- `reject-data`: reject all profiles and posts.
+- `reject-data`: reject all profiles and posts, block deliveries.
 - `accept-data`: accept profiles and posts.
 - `reject-media-attachments`: remove media attachments from posts.
 - `accept-media-attachments`: allow media attachments.

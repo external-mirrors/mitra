@@ -18,20 +18,31 @@ use mitra_validators::filter_rules::validate_rule_target;
 
 #[derive(Clone, ValueEnum)]
 enum FilterAction {
+    /// Reject incoming messages only
     Reject,
+    /// Accept incoming messages
     Accept,
+    /// Reject all profiles and posts, block deliveries.
     RejectData,
+    /// Accept profiles and posts
     AcceptData,
     #[clap(hide = true)]
     RejectMedia,
     #[clap(hide = true)]
     AcceptMedia,
+    /// Remove media attachments from posts
     RejectMediaAttachments,
+    /// Allow media attachments
     AcceptMediaAttachments,
+    /// Remove profile images
     RejectProfileImages,
+    /// Allow profile images
     AcceptProfileImages,
+    /// Remove custom emojis from posts and profile descriptions
     RejectCustomEmojis,
+    /// Allow custom emojis
     AcceptCustomEmojis,
+    /// Mark media attachments as sensitive
     MarkSensitive,
 }
 
@@ -94,6 +105,7 @@ impl fmt::Display for FilterAction {
 /// Add federation filter rule
 #[derive(Parser)]
 pub struct AddFilterRule {
+    /// Action to perform
     action: FilterAction,
     /// Domain name or IP address. Wildcard patterns are supported.
     target: String,

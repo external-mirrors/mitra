@@ -22,6 +22,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Make validation of `instance_uri` configuration parameter more strict.
 - Store actor's shared inbox.
 - Hide deprecated filter actions from `add-filter-rule` help message.
+- Describe each filter action in `add-filter-rule` help message.
 
 ### Fixed
 
