@@ -183,8 +183,8 @@ mod tests {
     }
 
     #[test]
-    fn test_create_and_verify_identity_proof() {
-        // jcs-eddsa-2022; no context injection
+    fn test_create_and_verify_identity_proof_legacy() {
+        // jcs-eddsa-2022 (minisign-unhashed); no context injection
         let did_str = "did:key:z6MkrJVnaZkeFzdQyMZu1cgjg7k1pZZ6pvBQ7XJPt4swbTQ2";
         let did = did_str.parse().unwrap();
         let secret_key_multibase = "z3u2en7t5LR2WtQH5PfFqMqwVHBeXouLzo6haApm8XHqvjxq";
@@ -195,7 +195,7 @@ mod tests {
         let (claim, _) = create_identity_claim_fep_c390(
             actor_id,
             &did,
-            &IdentityProofType::FepC390JcsBlake2Ed25519Proof,
+            &IdentityProofType::FepC390LegacyJcsEddsaProof,
             created_at,
         ).unwrap();
         let claim_value = serde_json::to_value(claim).unwrap();
@@ -204,7 +204,7 @@ mod tests {
             &did.to_string(),
             &claim_value,
             Some(created_at),
-            true,
+            true, // legacy cryptosuite
             false, // no proof context
             false, // context injection not required
         ).unwrap();
@@ -227,6 +227,62 @@ mod tests {
         assert_eq!(
             signature_data.proof_type,
             ProofType::JcsEddsaSignature,
+        );
+        let public_key = did.as_did_key().unwrap()
+            .try_ed25519_key().unwrap();
+        let result = verify_eddsa_json_signature(
+            &public_key,
+            &signature_data.object,
+            &signature_data.proof_config,
+            &signature_data.signature,
+        );
+        assert_eq!(result.is_ok(), true);
+    }
+
+    #[test]
+    fn test_create_and_verify_identity_proof() {
+        let did_str = "did:key:z6MkrJVnaZkeFzdQyMZu1cgjg7k1pZZ6pvBQ7XJPt4swbTQ2";
+        let did = did_str.parse().unwrap();
+        let secret_key_multibase = "z3u2en7t5LR2WtQH5PfFqMqwVHBeXouLzo6haApm8XHqvjxq";
+        let secret_key = ed25519_secret_key_from_multikey(secret_key_multibase).unwrap();
+        let actor_id = "https://server.example/users/alice";
+        let created_at = DateTime::parse_from_rfc3339("2023-02-24T23:36:38Z")
+            .unwrap().with_timezone(&Utc);
+        let (claim, _) = create_identity_claim_fep_c390(
+            actor_id,
+            &did,
+            &IdentityProofType::FepC390EddsaJcsNoCiProof,
+            created_at,
+        ).unwrap();
+        let claim_value = serde_json::to_value(claim).unwrap();
+        let identity_proof = sign_object_eddsa(
+            &secret_key,
+            &did.to_string(),
+            &claim_value,
+            Some(created_at),
+            false,
+            true, // copy context
+            false, // context injection not required
+        ).unwrap();
+        let expected_result = json!({
+            "type": "VerifiableIdentityStatement",
+            "subject": "did:key:z6MkrJVnaZkeFzdQyMZu1cgjg7k1pZZ6pvBQ7XJPt4swbTQ2",
+            "alsoKnownAs": "https://server.example/users/alice",
+            "proof": {
+                "type": "DataIntegrityProof",
+                "cryptosuite": "eddsa-jcs-2022",
+                "verificationMethod": "did:key:z6MkrJVnaZkeFzdQyMZu1cgjg7k1pZZ6pvBQ7XJPt4swbTQ2",
+                "proofPurpose": "assertionMethod",
+                "proofValue": "z26W7TfJYD9DrGqnem245zNbeCbTwjb8avpduzi1JPhFrwML99CpP6gGXSKSXAcQdpGFBXF4kx7VwtXKhu7VDZJ54",
+                "created": "2023-02-24T23:36:38Z",
+            },
+        });
+        assert_eq!(identity_proof, expected_result);
+
+        let signature_data = get_json_signature(&identity_proof).unwrap();
+        assert_eq!(
+            signature_data.proof_type,
+            ProofType::EddsaJcsSignature,
         );
         let public_key = did.as_did_key().unwrap()
             .try_ed25519_key().unwrap();

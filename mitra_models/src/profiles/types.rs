@@ -189,7 +189,7 @@ pub enum IdentityProofType {
     FepC390JcsBlake2Ed25519Proof, // MitraJcsEd25519Signature2022
     FepC390JcsEip191Proof, // MitraJcsEip191Signature2022
     FepC390LegacyJcsEddsaProof, // jcs-eddsa-2022
-    FepC390EddsaJcsNoCiProof, // was used for incorrect eddsa-jcs-2022 proofs
+    FepC390EddsaJcsNoCiProof, // eddsa-jcs-2022 (no injected context)
 }
 
 impl IdentityProofType {
