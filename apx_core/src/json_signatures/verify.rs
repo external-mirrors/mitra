@@ -292,6 +292,7 @@ mod tests {
             None,
             true,
             false,
+            false,
         ).unwrap();
 
         let signature_data = get_json_signature(&signed_object).unwrap();
@@ -384,6 +385,7 @@ mod tests {
             Some(created_at),
             false,
             false,
+            false,
         ).unwrap();
 
         let expected_result = json!({
@@ -455,6 +457,7 @@ mod tests {
             Some(created_at),
             false,
             true, // with proof context
+            true, // context injection required
         ).unwrap();
 
         let expected_result = json!({

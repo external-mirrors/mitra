@@ -206,6 +206,7 @@ mod tests {
             Some(created_at),
             true,
             false, // no proof context
+            false, // context injection not required
         ).unwrap();
         let expected_result = json!({
             "type": "VerifiableIdentityStatement",

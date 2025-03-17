@@ -232,6 +232,7 @@ pub fn sign_object_eddsa(
     current_time: Option<DateTime<Utc>>,
     use_legacy_cryptosuite: bool,
     use_proof_context: bool,
+    require_context: bool,
 ) -> Result<JsonValue, JsonSignatureError> {
     let signature_created_at = current_time.unwrap_or(Utc::now());
     let proof_config = if use_legacy_cryptosuite {
@@ -241,13 +242,22 @@ pub fn sign_object_eddsa(
             signature_created_at,
         )
     } else {
-        // eddsa-jcs-2022 (requires context injection)
-        let context = object.get("@context")
-            .ok_or(JsonSignatureError::ContextRequired)?;
+        // eddsa-jcs-2022
+        let maybe_context = if use_proof_context {
+            // @context SHOULD be injected
+            // https://www.w3.org/TR/vc-data-integrity/#context-injection
+            let maybe_context = object.get("@context");
+            if require_context && maybe_context.is_none() {
+                return Err(JsonSignatureError::ContextRequired);
+            };
+            maybe_context
+        } else {
+            None
+        };
         IntegrityProofConfig::jcs_eddsa(
             signer_key_id,
             signature_created_at,
-            use_proof_context.then_some(context.clone()),
+            maybe_context.cloned(),
         )
     };
     let hash_data = prepare_jcs_sha256_data(object, &proof_config)?;
@@ -272,6 +282,7 @@ pub fn sign_object(
         None,
         false, // use eddsa-jcs-2022
         false, // no proof context
+        false, // context injection not required
     )
 }
 
@@ -367,6 +378,7 @@ mod tests {
             Some(created_at),
             false,
             false, // no proof context
+            false, // context injection not required
         ).unwrap();
 
         let expected_result = json!({
@@ -392,5 +404,27 @@ mod tests {
             },
         });
         assert_eq!(result, expected_result);
+    }
+
+    #[test]
+    fn test_sign_object_eddsa_context_required() {
+        let signer_key = generate_weak_ed25519_key();
+        let signer_key_id = "https://example.org/users/test#main-key";
+        let object = json!({
+            "type": "Object",
+            "id": "https://example.org/objects/1",
+        });
+        let created_at = DateTime::parse_from_rfc3339("2023-02-24T23:36:38Z")
+            .unwrap().with_timezone(&Utc);
+        let error = sign_object_eddsa(
+            &signer_key,
+            signer_key_id,
+            &object,
+            Some(created_at),
+            false,
+            true, // copy context
+            true, // context injection required
+        ).err().unwrap();
+        assert!(matches!(error, JsonSignatureError::ContextRequired));
     }
 }

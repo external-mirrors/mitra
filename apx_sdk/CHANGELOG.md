@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- Allow using `eddsa-jcs-2022` cryptosuite without context injection.
+
 ## [0.10.0] - 2025-03-15
 
 ### Added
