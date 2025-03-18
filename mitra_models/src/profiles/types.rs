@@ -189,7 +189,7 @@ pub enum IdentityProofType {
     FepC390JcsBlake2Ed25519Proof, // MitraJcsEd25519Signature2022
     FepC390JcsEip191Proof, // MitraJcsEip191Signature2022
     FepC390LegacyJcsEddsaProof, // jcs-eddsa-2022
-    FepC390EddsaJcsNoCiProof, // eddsa-jcs-2022 (no injected context)
+    FepC390EddsaJcsProof, // eddsa-jcs-2022
 }
 
 impl IdentityProofType {
@@ -210,7 +210,7 @@ impl From<&IdentityProofType> for i16 {
             IdentityProofType::FepC390JcsBlake2Ed25519Proof => 3,
             IdentityProofType::FepC390JcsEip191Proof => 4,
             IdentityProofType::FepC390LegacyJcsEddsaProof => 5,
-            IdentityProofType::FepC390EddsaJcsNoCiProof => 6,
+            IdentityProofType::FepC390EddsaJcsProof => 6,
         }
     }
 }
@@ -225,7 +225,7 @@ impl TryFrom<i16> for IdentityProofType {
             3 => Self::FepC390JcsBlake2Ed25519Proof,
             4 => Self::FepC390JcsEip191Proof,
             5 => Self::FepC390LegacyJcsEddsaProof,
-            6 => Self::FepC390EddsaJcsNoCiProof,
+            6 => Self::FepC390EddsaJcsProof,
             _ => return Err(DatabaseTypeError),
         };
         Ok(proof_type)

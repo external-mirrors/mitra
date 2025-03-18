@@ -68,12 +68,12 @@ pub fn create_identity_claim_fep_c390(
             let hash_data = prepare_jcs_sha256_data(&claim, &proof_config)?;
             hex::encode(hash_data)
         },
-        IdentityProofType::FepC390EddsaJcsNoCiProof => {
+        IdentityProofType::FepC390EddsaJcsProof => {
             subject.as_did_key().expect("did:key should be used");
             let proof_config = IntegrityProofConfig::jcs_eddsa(
                 &subject.to_string(),
                 proof_created_at,
-                None,
+                None, // statement doesn't have @context
             );
             let hash_data = prepare_jcs_sha256_data(&claim, &proof_config)?;
             hex::encode(hash_data)
@@ -97,6 +97,7 @@ pub fn create_identity_proof_fep_c390(
     proof_created_at: DateTime<Utc>,
     signature_bin: &[u8],
 ) -> DbIdentityProof {
+    let statement = VerifiableIdentityStatement::new(subject, actor_id);
     let integrity_proof = match proof_type {
         IdentityProofType::LegacyEip191IdentityProof
             | IdentityProofType::LegacyMinisignIdentityProof
@@ -120,19 +121,19 @@ pub fn create_identity_proof_fep_c390(
             );
             IntegrityProof::new(proof_config, signature_bin)
         },
-        IdentityProofType::FepC390EddsaJcsNoCiProof => {
+        IdentityProofType::FepC390EddsaJcsProof => {
             let did_key = subject.as_did_key()
                 .expect("did:key should be used");
             let proof_config = IntegrityProofConfig::jcs_eddsa(
                 &did_key.to_string(),
                 proof_created_at,
-                None,
+                None, // statement doesn't have @context
             );
             IntegrityProof::new(proof_config, signature_bin)
         },
     };
     let identity_proof = IdentityProof {
-        statement: VerifiableIdentityStatement::new(subject, actor_id),
+        statement: statement,
         proof: integrity_proof,
     };
     let proof_value = serde_json::to_value(&identity_proof)
@@ -251,7 +252,7 @@ mod tests {
         let (claim, _) = create_identity_claim_fep_c390(
             actor_id,
             &did,
-            &IdentityProofType::FepC390EddsaJcsNoCiProof,
+            &IdentityProofType::FepC390EddsaJcsProof,
             created_at,
         ).unwrap();
         let claim_value = serde_json::to_value(claim).unwrap();

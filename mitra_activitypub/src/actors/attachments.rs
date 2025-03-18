@@ -111,8 +111,17 @@ pub fn parse_identity_proof_fep_c390(
             IdentityProofType::FepC390LegacyJcsEddsaProof
         },
         ProofType::EddsaJcsSignature => {
-            // eddsa-jcs-2022 identity proofs are temporarily rejected
-            return Err(ValidationError("eddsa-jcs-2022 cryptosuite is not supported"));
+            let did_key = signer.as_did_key()
+                .ok_or(ValidationError("unexpected DID type"))?;
+            let ed25519_key = did_key.try_ed25519_key()
+                .map_err(|_| ValidationError("invalid public key"))?;
+            verify_eddsa_json_signature(
+                &ed25519_key,
+                &signature_data.object,
+                &signature_data.proof_config,
+                &signature_data.signature,
+            ).map_err(|_| ValidationError("invalid identity proof"))?;
+            IdentityProofType::FepC390EddsaJcsProof
         },
         _ => return Err(ValidationError("unsupported signature type")),
     };
