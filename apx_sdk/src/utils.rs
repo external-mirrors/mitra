@@ -43,7 +43,12 @@ pub fn get_core_type(value: &JsonValue) -> CoreType {
         !value["items"].is_null() ||
         !value["orderedItems"].is_null() ||
         !value["totalItems"].is_null() ||
-        !value["first"].is_null()
+        !value["partOf"].is_null() ||
+        !value["first"].is_null() ||
+        !value["last"].is_null() ||
+        !value["next"].is_null() ||
+        !value["prev"].is_null() ||
+        !value["current"].is_null()
     {
         // `items` may only appear in Collection objects:
         // https://www.w3.org/TR/activitystreams-vocabulary/#dfn-items

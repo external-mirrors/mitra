@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Changed
 
 - Allow using `eddsa-jcs-2022` cryptosuite without context injection.
+- Added `partOf`, `last`, `next`, `prev` and `current` to the list of collection indicators.
 
 ## [0.10.0] - 2025-03-15
 
