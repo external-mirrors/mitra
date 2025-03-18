@@ -43,7 +43,6 @@ use apx_sdk::{
         AuthenticationError as PortableObjectAuthenticationError,
     },
     deserialization::object_to_id,
-    url::is_same_origin,
     utils::key_id_to_actor_id,
 };
 use mitra_config::Config;
@@ -55,11 +54,13 @@ use mitra_models::{
         PublicKeyType,
     },
 };
+use mitra_validators::errors::ValidationError;
 
 use crate::{
     errors::HandlerError,
     identifiers::canonicalize_id,
     importers::{ActorIdResolver, ApClient},
+    ownership::{get_object_id, is_same_origin},
 };
 
 const AUTHENTICATION_FETCHER_TIMEOUT: u64 = 10;
@@ -87,6 +88,9 @@ pub enum AuthenticationError {
     #[error(transparent)]
     DatabaseError(#[from] DatabaseError),
 
+    #[error(transparent)]
+    ValidationError(#[from] ValidationError),
+
     #[error("{0}")]
     ImportError(String),
 
@@ -104,6 +108,9 @@ pub enum AuthenticationError {
 
     #[error("actor and object signer do not match")]
     UnexpectedObjectSigner,
+
+    #[error("object ID and verification method have different origins")]
+    UnexpectedKeyOrigin,
 
     #[error("invalid portable activity: {0}")]
     InvalidPortableActivity(#[from] PortableObjectAuthenticationError),
@@ -249,7 +256,7 @@ pub async fn verify_signed_request(
     Ok(signer)
 }
 
-/// Verifies JSON signature and returns signer
+/// Verifies JSON signature on activity and returns actor
 pub async fn verify_signed_activity(
     config: &Config,
     db_client: &mut impl DatabaseClient,
@@ -260,9 +267,7 @@ pub async fn verify_signed_activity(
         Ok(activity_id) => {
             let actor_id = object_to_id(&activity["actor"])
                 .map_err(|_| AuthenticationError::ActorError("unknown actor"))?;
-            if !is_same_origin(&activity_id, &actor_id)
-                .map_err(|_| AuthenticationError::ActorError("invalid actor ID"))?
-            {
+            if !is_same_origin(&activity_id, &actor_id)? {
                 return Err(AuthenticationError::UnexpectedObjectSigner);
             };
             let actor_profile = get_signer(config, db_client, &actor_id, no_fetch).await?;
@@ -275,6 +280,8 @@ pub async fn verify_signed_activity(
         },
         Err(other_error) => return Err(other_error.into()),
     };
+
+    let activity_id = get_object_id(activity)?;
     let signature_data = match get_json_signature(activity) {
         Ok(signature_data) => signature_data,
         Err(JsonSignatureError::NoProof) => {
@@ -282,15 +289,17 @@ pub async fn verify_signed_activity(
         },
         Err(other_error) => return Err(other_error.into()),
     };
-    // Signed activities must have `actor` property, to avoid situations
-    // where signer is identified by DID but there is no matching
-    // identity proof in the local database.
     let actor_id = object_to_id(&activity["actor"])
         .map_err(|_| AuthenticationError::ActorError("unknown actor"))?;
     let actor_profile = get_signer(config, db_client, &actor_id, no_fetch).await?;
 
     match signature_data.verification_method {
         VerificationMethod::HttpUrl(key_id) => {
+            // Can this activity be signed with this key?
+            if !is_same_origin(activity_id, key_id.as_str())? {
+                return Err(AuthenticationError::UnexpectedKeyOrigin);
+            };
+            // Can this actor perform this activity?
             let signer_id = key_id_to_actor_id(key_id.as_str())
                 .map_err(|_| AuthenticationError::InvalidKeyId)?;
             if signer_id != actor_id {
@@ -309,8 +318,6 @@ pub async fn verify_signed_activity(
                     )?;
                 },
                 ProofType::JcsEddsaSignature | ProofType::EddsaJcsSignature => {
-                    // Treat eddsa-jcs-2022 as a temporary alias
-                    // for jcs-eddsa-2022 (no context injection)
                     let signer_key = get_signer_ed25519_key(
                         &actor_profile,
                         key_id.as_str(),

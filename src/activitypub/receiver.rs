@@ -51,7 +51,8 @@ pub enum InboxError {
 impl From<AuthenticationError> for InboxError {
     fn from(error: AuthenticationError) -> Self {
         match error {
-            AuthenticationError::DatabaseError(db_error) => db_error.into(),
+            AuthenticationError::ValidationError(inner) => inner.into(),
+            AuthenticationError::DatabaseError(inner) => inner.into(),
             _ => Self::AuthError(error),
         }
     }
