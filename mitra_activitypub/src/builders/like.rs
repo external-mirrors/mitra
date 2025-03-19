@@ -22,7 +22,7 @@ use crate::{
         post_object_id,
     },
     queues::OutgoingActivityJobData,
-    vocabulary::{DISLIKE, LIKE},
+    vocabulary::{DISLIKE, EMOJI_REACT, LIKE},
 };
 
 use super::emoji::{build_emoji, Emoji};
@@ -83,9 +83,11 @@ fn build_like(
     maybe_custom_emoji: Option<&DbEmoji>,
     post_author_id: &str,
     post_visibility: Visibility,
+    fep_c0e0_emoji_react_enabled: bool,
 ) -> Like {
     let activity_type = match maybe_reaction_content.as_deref() {
         Some("👎") => DISLIKE,
+        Some(_) if fep_c0e0_emoji_react_enabled => EMOJI_REACT,
         Some(_) => LIKE,
         None => LIKE,
     };
@@ -149,6 +151,7 @@ pub async fn prepare_like(
         maybe_custom_emoji,
         &post_author_id,
         post.visibility,
+        instance.federation.fep_c0e0_emoji_react_enabled,
     );
     Ok(OutgoingActivityJobData::new(
         &instance.url(),
@@ -182,11 +185,13 @@ mod tests {
             None,
             post_author_id,
             Visibility::Public,
+            false,
         );
         assert_eq!(
             activity.id,
             format!("{}/activities/like/{}", INSTANCE_URL, reaction_id),
         );
+        assert_eq!(activity.activity_type, "Like");
         assert_eq!(activity.object, post_id);
         assert_eq!(activity.content.is_none(), true);
         assert_eq!(activity.tag.is_empty(), true);

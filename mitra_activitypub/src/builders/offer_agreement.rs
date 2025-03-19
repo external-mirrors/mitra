@@ -150,6 +150,8 @@ mod tests {
                     "sensitive": "as:sensitive",
                     "toot": "http://joinmastodon.org/ns#",
                     "Emoji": "toot:Emoji",
+                    "litepub": "http://litepub.social/ns#",
+                    "EmojiReact": "litepub:EmojiReact",
                     "vf": "https://w3id.org/valueflows/ont/vf#",
                     "om2": "http://www.ontology-of-units-of-measure.org/resource/om-2/",
                     "Proposal": "vf:Proposal",
