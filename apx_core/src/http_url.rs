@@ -181,6 +181,16 @@ pub fn normalize_http_url(url: &str) -> Result<String, &'static str> {
     Ok(url.to_string())
 }
 
+pub fn is_same_http_origin(
+    url_1: &str,
+    url_2: &str,
+) -> Result<bool, &'static str> {
+    let url_1 = HttpUrl::parse(url_1)?;
+    let url_2 = HttpUrl::parse(url_2)?;
+    let is_same = url_1.origin() == url_2.origin();
+    Ok(is_same)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -13,6 +13,7 @@ use apx_core::{
         HttpSignatureError,
     },
     http_types::{Method as HttpMethod},
+    http_url::is_same_http_origin,
     media_type::sniff_media_type,
 };
 
@@ -224,7 +225,7 @@ pub async fn fetch_object(
             let is_trusted = options.fep_ef61_trusted_origins
                 .iter()
                 .any(|origin| {
-                    is_same_origin(object_location, origin).unwrap_or(false)
+                    is_same_http_origin(object_location, origin).unwrap_or(false)
                 });
             if !is_trusted {
                 return Err(FetchError::UnexpectedObjectId(object_location.to_string()));
