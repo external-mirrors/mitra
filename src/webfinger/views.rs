@@ -39,6 +39,8 @@ use crate::web_client::urls::get_search_page_url;
 
 const WEBFINGER_PROFILE_RELATION_TYPE: &str = "http://webfinger.net/rel/profile-page";
 const REMOTE_INTERACTION_RELATION_TYPE: &str = "http://ostatus.org/schema/1.0/subscribe";
+// https://codeberg.org/fediverse/fep/src/commit/78a31a92cb264ca603af24b4fcaae944b62edb9b/fep/3b86/fep-3b86.md#5-1-object-intent
+const FEP_3B86_OBJECT_INTENT_RELATION_TYPE: &str = "https://w3id.org/fep/3b86/Object";
 // Relation type used by Friendica
 const FEED_RELATION_TYPE: &str = "http://schemas.google.com/g/2010#updates-from";
 
@@ -104,7 +106,15 @@ async fn get_jrd(
         );
         let remote_interaction_link = Link::new(REMOTE_INTERACTION_RELATION_TYPE)
             .with_template(&remote_interaction_template);
-        vec![profile_link, actor_link, feed_link, remote_interaction_link]
+        let remote_interaction_fep_3b86_link = Link::new(FEP_3B86_OBJECT_INTENT_RELATION_TYPE)
+            .with_template(&remote_interaction_template);
+        vec![
+            profile_link,
+            actor_link,
+            feed_link,
+            remote_interaction_link,
+            remote_interaction_fep_3b86_link,
+        ]
     } else {
         let user = get_portable_user_by_name(
             db_client,
@@ -186,7 +196,11 @@ mod tests {
                 {
                     "rel": "http://ostatus.org/schema/1.0/subscribe",
                     "template": "https://social.example/search?q={uri}"
-                }
+                },
+                {
+                    "rel": "https://w3id.org/fep/3b86/Object",
+                    "template": "https://social.example/search?q={uri}"
+                },
             ]
         });
         assert_eq!(jrd_value, expected_jrd_value);

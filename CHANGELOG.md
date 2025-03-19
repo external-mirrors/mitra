@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Added
 
 - Accept remote identity proofs created using `eddsa-jcs-2022` cryptosuite.
+- Added FEP-3b86 `Object` intent to WebFinger links.
 
 ### Changed
 

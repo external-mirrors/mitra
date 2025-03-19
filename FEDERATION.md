@@ -41,13 +41,14 @@ It also supports the following standards:
 - [FEP-f228: Backfilling conversations](https://codeberg.org/silverpill/feps/src/branch/main/f228/fep-f228.md)
   - Publishes collection of posts.
   - Can consume `context` and `contextHistory`.
+- [FEP-3b86: Activity Intents](https://codeberg.org/fediverse/fep/src/branch/main/fep/3b86/fep-3b86.md)
+  - Only `Object` intent is supported.
 
 ### FEPs that might be supported in the future
 
 - [FEP-8fcf: Followers collection synchronization across servers](https://codeberg.org/fediverse/fep/src/branch/main/fep/8fcf/fep-8fcf.md)
 - [FEP-7502: Limiting visibility to authenticated actors](https://codeberg.org/fediverse/fep/src/branch/main/fep/7502/fep-7502.md)
 - [FEP-0499: Delivering to multiple inboxes with a multibox endpoint](https://codeberg.org/fediverse/fep/src/branch/main/fep/0499/fep-0499.md)
-- [FEP-3b86: Activity Intents](https://codeberg.org/fediverse/fep/src/branch/main/fep/3b86/fep-3b86.md)
 
 ## ActivityPub
 
