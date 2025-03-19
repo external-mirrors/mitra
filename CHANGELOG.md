@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Changed
 
 - Check origin of verification method when verifying activity signature.
+- Write message to log when server stops.
 
 ## [3.20.0] - 2025-03-15
 

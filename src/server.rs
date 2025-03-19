@@ -172,5 +172,7 @@ pub async fn run_server(
     http_server
         .workers(num_workers)
         .run()
-        .await
+        .await?;
+    log::info!("server terminated");
+    Ok(())
 }
