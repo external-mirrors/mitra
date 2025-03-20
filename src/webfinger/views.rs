@@ -203,7 +203,7 @@ mod tests {
                 },
                 {
                     "rel": "https://w3id.org/fep/3b86/Object",
-                    "template": "https://social.example/search?q={uri}"
+                    "template": "https://social.example/search?q={object}"
                 },
             ]
         });
