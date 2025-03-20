@@ -14,8 +14,9 @@ pub use blockchain::{
     BlockchainConfig,
     MoneroConfig,
 };
-pub use config::{Config, Instance};
+pub use config::Config;
 pub use environment::Environment;
+pub use instance::Instance;
 pub use limits::MediaLimits;
 pub use loader::parse_config;
 pub use registration::{DefaultRole, RegistrationType};
