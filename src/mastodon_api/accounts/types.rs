@@ -99,6 +99,8 @@ pub struct ApiRole {
     pub id: i32,
     pub name: String,
     pub permissions: Vec<String>,
+    pub permissions_names: Vec<String>,
+    pub permissions_bitmask: String,
 }
 
 impl ApiRole {
@@ -109,23 +111,34 @@ impl ApiRole {
             Role::Admin => "admin",
             Role::ReadOnlyUser => "read_only_user",
         };
+        let mut permissions = vec![];
         // Mastodon 4.0 uses bitmask
-        let permissions = role.get_permissions().iter()
-            .map(|permission| {
-                match permission {
-                    Permission::CreateFollowRequest => "create_follow_request",
-                    Permission::CreatePost => "create_post",
-                    Permission::DeleteAnyPost => "delete_any_post",
-                    Permission::DeleteAnyProfile => "delete_any_profile",
-                    Permission::ManageSubscriptionOptions =>
-                        "manage_subscription_options",
-                }.to_string()
-            })
-            .collect();
+        // https://docs.joinmastodon.org/entities/Role/#permissions
+        let mut bitmask = 0;
+        for permission in role.get_permissions() {
+            let (name, bit) = match permission {
+                Permission::CreateFollowRequest =>
+                    ("create_follow_request", 0x0),
+                Permission::CreatePost =>
+                    ("create_post", 0x0),
+                Permission::DeleteAnyPost =>
+                    ("delete_any_post", 0x1),
+                Permission::DeleteAnyProfile =>
+                    ("delete_any_profile", 0x1),
+                Permission::ManageSubscriptionOptions =>
+                    ("manage_subscription_options", 0x0),
+            };
+            permissions.push(name.to_owned());
+            if bitmask & bit == 0 {
+                bitmask += bit;
+            };
+        };
         Self {
             id: i16::from(role).into(),
             name: role_name.to_string(),
-            permissions: permissions,
+            permissions: permissions.clone(),
+            permissions_names: permissions,
+            permissions_bitmask: bitmask.to_string(),
         }
     }
 }
