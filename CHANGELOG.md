@@ -22,6 +22,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Optimized profile timeline, featured collection and conversation context queries.
 - Replace actor key ownership validation warnings with errors.
 
+### Fixed
+
+- Try to fix application hang on shutdown.
+
 ## [3.20.0] - 2025-03-15
 
 ### Added
