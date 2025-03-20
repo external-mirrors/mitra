@@ -106,14 +106,18 @@ async fn get_jrd(
         );
         let remote_interaction_link = Link::new(REMOTE_INTERACTION_RELATION_TYPE)
             .with_template(&remote_interaction_template);
-        let remote_interaction_fep_3b86_link = Link::new(FEP_3B86_OBJECT_INTENT_RELATION_TYPE)
-            .with_template(&remote_interaction_template);
+        let fep_3b86_object_intent_template = get_search_page_url(
+            &instance.url(),
+            "{object}",
+        );
+        let fep_3b86_object_intent_link = Link::new(FEP_3B86_OBJECT_INTENT_RELATION_TYPE)
+            .with_template(&fep_3b86_object_intent_template);
         vec![
             profile_link,
             actor_link,
             feed_link,
             remote_interaction_link,
-            remote_interaction_fep_3b86_link,
+            fep_3b86_object_intent_link,
         ]
     } else {
         let user = get_portable_user_by_name(
