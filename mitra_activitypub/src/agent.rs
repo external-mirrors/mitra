@@ -24,27 +24,27 @@ pub(super) fn build_federation_agent_with_key(
     signer_key_id: String,
 ) -> FederationAgent {
     // Public instances should set User-Agent header
-    let maybe_user_agent = if instance.is_private {
-        None
-    } else {
+    let maybe_user_agent = if instance.federation.enabled {
         Some(instance.agent())
+    } else {
+        None
     };
     // Public instances should sign requests
-    let maybe_signer = if instance.is_private {
-        None
-    } else {
+    let maybe_signer = if instance.federation.enabled {
         let signer = HttpSigner::new_rsa(signer_key, signer_key_id);
         Some(signer)
+    } else {
+        None
     };
     FederationAgent {
         user_agent: maybe_user_agent,
-        ssrf_protection_enabled: instance.ssrf_protection_enabled,
+        ssrf_protection_enabled: instance.federation.ssrf_protection_enabled,
         response_size_limit: RESPONSE_SIZE_LIMIT,
-        fetcher_timeout: instance.fetcher_timeout,
-        deliverer_timeout: instance.deliverer_timeout,
-        proxy_url: instance.proxy_url.clone(),
-        onion_proxy_url: instance.onion_proxy_url.clone(),
-        i2p_proxy_url: instance.i2p_proxy_url.clone(),
+        fetcher_timeout: instance.federation.fetcher_timeout,
+        deliverer_timeout: instance.federation.deliverer_timeout,
+        proxy_url: instance.federation.proxy_url.clone(),
+        onion_proxy_url: instance.federation.onion_proxy_url.clone(),
+        i2p_proxy_url: instance.federation.i2p_proxy_url.clone(),
         signer: maybe_signer,
     }
 }
@@ -90,7 +90,7 @@ mod tests {
     fn test_build_federation_agent() {
         let instance_url = "https://social.example";
         let mut instance = Instance::for_test(instance_url);
-        instance.is_private = false;
+        instance.federation.enabled = true;
         let agent = build_federation_agent(&instance, None);
         assert_eq!(agent.user_agent.unwrap().ends_with(instance_url), true);
         assert_eq!(agent.ssrf_protection_enabled, true);

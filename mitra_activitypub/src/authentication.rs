@@ -132,7 +132,7 @@ async fn get_signer(
         ).await?
     } else {
         let mut ap_client = ApClient::new(config, db_client).await?;
-        ap_client.instance.fetcher_timeout = AUTHENTICATION_FETCHER_TIMEOUT;
+        ap_client.instance.federation.fetcher_timeout = AUTHENTICATION_FETCHER_TIMEOUT;
         match ActorIdResolver::default().only_remote().resolve(
             &ap_client,
             db_client,

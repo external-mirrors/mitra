@@ -8,6 +8,7 @@ use apx_core::{
 use super::{
     config::Config,
     environment::Environment,
+    federation::FederationConfig,
     SOFTWARE_NAME,
     SOFTWARE_VERSION,
 };
@@ -21,43 +22,27 @@ pub fn parse_instance_url(url: &str) -> Result<HttpUrl, &'static str> {
 #[derive(Clone)]
 pub struct Instance {
     _url: HttpUrl,
+    pub federation: FederationConfig,
     // Instance actor keys
     pub actor_ed25519_key: Ed25519SecretKey,
     pub actor_rsa_key: RsaSecretKey,
-    // Proxy for outgoing requests
-    pub proxy_url: Option<String>,
-    pub onion_proxy_url: Option<String>,
-    pub i2p_proxy_url: Option<String>,
-    // Private instance won't send signed HTTP requests
-    pub is_private: bool,
-    pub ssrf_protection_enabled: bool,
-    pub fetcher_timeout: u64,
-    pub deliverer_timeout: u64,
-    pub deliverer_log_response_length: usize,
-    pub deliverer_pool_size: usize,
 }
 
 impl Instance {
     pub(crate) fn from_config(config: &Config) -> Self {
+        let mut federation_config = config.federation.clone();
+        if matches!(config.environment, Environment::Development) {
+            // Private instance doesn't send activities and sign requests
+            federation_config.enabled = false;
+        };
         Self {
             _url: parse_instance_url(&config.instance_uri)
                 .expect("instance URL should be already validated"),
+            federation: federation_config,
             actor_ed25519_key: config.instance_ed25519_key
                 .expect("instance Ed25519 key should be already generated"),
             actor_rsa_key: config.instance_rsa_key.clone()
                 .expect("instance RSA key should be already generated"),
-            proxy_url: config.federation.proxy_url.clone(),
-            onion_proxy_url: config.federation.onion_proxy_url.clone(),
-            i2p_proxy_url: config.federation.i2p_proxy_url.clone(),
-            // Private instance doesn't send activities and sign requests
-            is_private:
-                !config.federation.enabled ||
-                matches!(config.environment, Environment::Development),
-            ssrf_protection_enabled: config.federation.ssrf_protection_enabled,
-            fetcher_timeout: config.federation.fetcher_timeout,
-            deliverer_timeout: config.federation.deliverer_timeout,
-            deliverer_log_response_length: config.federation.deliverer_log_response_length,
-            deliverer_pool_size: config.federation.deliverer_pool_size,
         }
     }
 
@@ -89,17 +74,12 @@ impl Instance {
         };
         Self {
             _url: parse_instance_url(url).unwrap(),
+            federation: FederationConfig {
+                enabled: false,
+                ..Default::default()
+            },
             actor_rsa_key: generate_weak_rsa_key().unwrap(),
             actor_ed25519_key: generate_weak_ed25519_key(),
-            proxy_url: None,
-            onion_proxy_url: None,
-            i2p_proxy_url: None,
-            is_private: true,
-            ssrf_protection_enabled: true,
-            fetcher_timeout: 0,
-            deliverer_timeout: 0,
-            deliverer_log_response_length: 0,
-            deliverer_pool_size: 0,
         }
     }
 }
@@ -120,7 +100,7 @@ mod tests {
             format!("Mitra {}; https://example.com", SOFTWARE_VERSION),
         );
         // Test instance is private
-        assert!(instance.is_private);
+        assert!(!instance.federation.enabled);
     }
 
     #[test]

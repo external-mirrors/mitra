@@ -235,7 +235,7 @@ pub(super) async fn deliver_activity_worker(
     activity: JsonValue,
     recipients: &mut [Recipient],
 ) -> Result<(), DelivererError> {
-    assert!(!instance.is_private);
+    assert!(instance.federation.enabled);
     let rsa_secret_key = sender.rsa_secret_key;
     let rsa_key_id = if let Some(rsa_key_id) = sender.rsa_key_id {
         rsa_key_id
@@ -271,7 +271,7 @@ pub(super) async fn deliver_activity_worker(
     loop {
         for (index, hostname, ref inbox) in deliveries.iter() {
             // Add deliveries to the pool until it is full
-            if delivery_pool_state.len() == instance.deliverer_pool_size {
+            if delivery_pool_state.len() == instance.federation.deliverer_pool_size {
                 break;
             };
             if sent.contains(index) {
@@ -309,7 +309,7 @@ pub(super) async fn deliver_activity_worker(
                     assert!(response.status.is_success());
                     let response_text = truncate_response(
                         &response.body,
-                        instance.deliverer_log_response_length,
+                        instance.federation.deliverer_log_response_length,
                     );
                     log::info!(
                         "response from {}: [{}] {}",
@@ -320,7 +320,6 @@ pub(super) async fn deliver_activity_worker(
                     recipient.is_delivered = true;
                 },
                 Ok(None) => {
-                    assert!(instance.is_private);
                     recipient.is_delivered = true;
                 },
                 Err(error) => {
@@ -328,7 +327,7 @@ pub(super) async fn deliver_activity_worker(
                         DelivererError::HttpError(ref response) => {
                             let response_text = truncate_response(
                                 &response.body,
-                                instance.deliverer_log_response_length,
+                                instance.federation.deliverer_log_response_length,
                             );
                             format!(
                                 "{}: [{}] {}",

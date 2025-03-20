@@ -261,7 +261,7 @@ pub async fn search(
     let mut posts = vec![];
     let mut tags = vec![];
     let mut ap_client = ApClient::new(config, db_client).await?;
-    ap_client.instance.fetcher_timeout = SEARCH_FETCHER_TIMEOUT;
+    ap_client.instance.federation.fetcher_timeout = SEARCH_FETCHER_TIMEOUT;
     match parse_search_query(search_query) {
         SearchQuery::Text(text) => {
             posts = search_posts(
@@ -349,7 +349,7 @@ pub async fn search_profiles_only(
         Err(_) => return Ok(vec![]),
     };
     let mut ap_client = ApClient::new(config, db_client).await?;
-    ap_client.instance.fetcher_timeout = SEARCH_FETCHER_TIMEOUT;
+    ap_client.instance.federation.fetcher_timeout = SEARCH_FETCHER_TIMEOUT;
     let profiles = search_profiles_or_import(
         &ap_client,
         db_client,

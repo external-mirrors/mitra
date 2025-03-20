@@ -389,7 +389,7 @@ pub async fn process_queued_outgoing_activities(
             continue;
         };
         let mut recipients = job_data.recipients;
-        if instance.is_private {
+        if !instance.federation.enabled {
             log::info!(
                 "(private mode) not delivering activity to {} inboxes: {}",
                 recipients.len(),

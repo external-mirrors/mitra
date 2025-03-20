@@ -28,19 +28,20 @@ pub struct FederationConfig {
     pub incoming_queue_worker_enabled: bool,
 
     #[serde(default = "default_fetcher_timeout")]
-    pub(super) fetcher_timeout: u64,
+    pub fetcher_timeout: u64,
     #[serde(default = "default_deliverer_timeout")]
-    pub(super) deliverer_timeout: u64,
+    pub deliverer_timeout: u64,
     #[serde(default = "default_deliverer_log_response_length")]
-    pub(super) deliverer_log_response_length: usize,
+    pub deliverer_log_response_length: usize,
     #[serde(default = "default_deliverer_standalone")]
     pub deliverer_standalone: bool,
     #[serde(default = "default_deliverer_pool_size")]
     pub deliverer_pool_size: usize,
 
-    pub(super) proxy_url: Option<String>,
-    pub(super) onion_proxy_url: Option<String>,
-    pub(super) i2p_proxy_url: Option<String>,
+    // Proxy for outgoing requests
+    pub proxy_url: Option<String>,
+    pub onion_proxy_url: Option<String>,
+    pub i2p_proxy_url: Option<String>,
 
     #[serde(default = "default_fep_e232_enabled")]
     pub fep_e232_enabled: bool,
