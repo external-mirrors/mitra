@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Added `get-config` command.
 - Allow blockquotes in posts.
+- Remove follow relationships when receiving `Block` activity.
 
 ### Changed
 

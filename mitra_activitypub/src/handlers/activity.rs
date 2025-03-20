@@ -26,6 +26,7 @@ use super::{
     accept::handle_accept,
     add::handle_add,
     announce::handle_announce,
+    block::handle_block,
     create::handle_create,
     delete::handle_delete,
     follow::handle_follow,
@@ -94,6 +95,9 @@ pub async fn handle_activity(
         },
         ANNOUNCE => {
             handle_announce(config, db_client, activity).await?
+        },
+        BLOCK => {
+            handle_block(config, db_client, activity).await?
         },
         CREATE => {
             handle_create(

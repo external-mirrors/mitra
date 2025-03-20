@@ -3,6 +3,7 @@ pub mod activity;
 mod add;
 mod agreement;
 mod announce;
+mod block;
 mod create;
 mod delete;
 pub mod emoji;
