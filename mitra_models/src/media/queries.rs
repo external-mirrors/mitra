@@ -45,6 +45,7 @@ pub async fn find_orphaned_files(
     db_client: &impl DatabaseClient,
     files: Vec<String>,
 ) -> Result<Vec<String>, DatabaseError> {
+    // Left join works best when number of files is large
     let rows = db_client.query(
         "
         SELECT DISTINCT storage_file_name
@@ -52,13 +53,12 @@ pub async fn find_orphaned_files(
         LEFT OUTER JOIN (
             SELECT file_name FROM media_attachment
             UNION ALL
-            SELECT unnest(array_remove(
+            SELECT unnest(
                 ARRAY[
                     avatar ->> 'file_name',
                     banner ->> 'file_name'
-                ],
-                NULL
-            )) AS file_name FROM actor_profile
+                ]
+            ) AS file_name FROM actor_profile
             UNION ALL
             SELECT image ->> 'file_name' FROM emoji
         ) AS db_media
@@ -131,4 +131,19 @@ pub async fn get_local_files(
         .map(|row| row.try_get("file_name"))
         .collect::<Result<_, _>>()?;
     Ok(filenames)
+}
+
+#[cfg(test)]
+mod tests {
+    use serial_test::serial;
+    use crate::database::test_utils::create_test_database;
+    use super::*;
+
+    #[tokio::test]
+    #[serial]
+    async fn test_find_orphaned_files() {
+        let db_client = &create_test_database().await;
+        let files = vec!["file1.jpg".to_owned(), "file2.jpg".to_owned()];
+        find_orphaned_files(db_client, files).await.unwrap();
+    }
 }
