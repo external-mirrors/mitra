@@ -116,6 +116,7 @@ pub(crate) async fn update_emoji_caches(
     db_client: &impl DatabaseClient,
     emoji_id: Uuid,
 ) -> Result<(), DatabaseError> {
+    // TODO: create GIN index on actor_profile.emojis
     db_client.execute(
         "
         WITH profile_emojis AS (
@@ -126,10 +127,9 @@ pub(crate) async fn update_emoji_caches(
                     '[]'
                 ) AS emojis
             FROM actor_profile
-            CROSS JOIN jsonb_array_elements(actor_profile.emojis) AS cached_emoji
             LEFT JOIN profile_emoji ON (profile_emoji.profile_id = actor_profile.id)
             LEFT JOIN emoji ON (emoji.id = profile_emoji.emoji_id)
-            WHERE CAST(cached_emoji ->> 'id' AS UUID) = $1
+            WHERE actor_profile.emojis @> jsonb_build_array(jsonb_build_object('id', $1::uuid))
             GROUP BY actor_profile.id
         )
         UPDATE actor_profile
