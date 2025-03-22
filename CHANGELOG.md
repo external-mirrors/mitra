@@ -11,6 +11,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Accept remote identity proofs created using `eddsa-jcs-2022` cryptosuite.
 - Added FEP-3b86 `Object` intent to WebFinger links.
 - Added `federation.fep_c0e0_emoji_react_enabled` configuration option.
+- Added OpenMetrics endpoint for monitoring queue sizes.
 
 ### Changed
 

@@ -6,6 +6,7 @@ mod federation;
 mod instance;
 mod limits;
 mod loader;
+mod metrics;
 mod registration;
 mod retention;
 

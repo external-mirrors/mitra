@@ -23,6 +23,7 @@ use super::environment::Environment;
 use super::federation::FederationConfig;
 use super::instance::Instance;
 use super::limits::Limits;
+use super::metrics::Metrics;
 use super::registration::RegistrationConfig;
 use super::retention::RetentionConfig;
 
@@ -109,6 +110,8 @@ pub struct Config {
     pub blocked_instances: Vec<String>,
     #[serde(default)]
     pub allowed_instances: Vec<String>,
+
+    pub metrics: Option<Metrics>,
 
     // Blockchain integrations
     #[serde(default)]

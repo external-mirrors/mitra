@@ -3,6 +3,7 @@ mod atom;
 mod errors;
 mod http;
 mod mastodon_api;
+mod metrics;
 mod nodeinfo;
 pub mod server;
 mod state;

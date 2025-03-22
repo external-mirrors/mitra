@@ -38,6 +38,7 @@ use crate::http::{
     log_response_error,
 };
 use crate::mastodon_api::{mastodon_api_scope, oauth_api_scope};
+use crate::metrics::views::metrics_api_scope;
 use crate::nodeinfo::views as nodeinfo;
 use crate::state::AppState;
 use crate::webfinger::views as webfinger;
@@ -120,6 +121,7 @@ pub async fn run_server(
             .app_data(web::Data::clone(&app_state))
             .service(oauth_api_scope())
             .service(mastodon_api_scope(payload_size_limit))
+            .service(metrics_api_scope(config.metrics.is_some()))
             .service(webfinger::webfinger_view)
             .service(activitypub::actor_scope())
             .service(activitypub::instance_actor_scope())
