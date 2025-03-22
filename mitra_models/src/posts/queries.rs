@@ -914,6 +914,7 @@ pub async fn get_related_posts(
 ) -> Result<Vec<Post>, DatabaseError> {
     let statement = format!(
         "
+        WITH post_ids AS (SELECT unnest($1::uuid[]) AS post_id)
         SELECT
             post, actor_profile,
             {post_subqueries}
@@ -921,21 +922,21 @@ pub async fn get_related_posts(
         JOIN actor_profile ON post.author_id = actor_profile.id
         WHERE post.id IN (
             SELECT post.in_reply_to_id
-            FROM post WHERE post.id = ANY($1)
+            FROM post WHERE post.id = ANY(SELECT post_id FROM post_ids)
             UNION ALL
             SELECT post.repost_of_id
-            FROM post WHERE post.id = ANY($1)
+            FROM post WHERE post.id = ANY(SELECT post_id FROM post_ids)
             UNION ALL
             SELECT post_link.target_id
-            FROM post_link WHERE post_link.source_id = ANY($1)
+            FROM post_link WHERE post_link.source_id = ANY(SELECT post_id FROM post_ids)
             UNION ALL
             SELECT repost_of.in_reply_to_id
             FROM post AS repost_of JOIN post ON (post.repost_of_id = repost_of.id)
-            WHERE post.id = ANY($1)
+            WHERE post.id = ANY(SELECT post_id FROM post_ids)
             UNION ALL
             SELECT post_link.target_id
             FROM post_link JOIN post ON (post.repost_of_id = post_link.source_id)
-            WHERE post.id = ANY($1)
+            WHERE post.id = ANY(SELECT post_id FROM post_ids)
         )
         ",
         post_subqueries=post_subqueries(),
