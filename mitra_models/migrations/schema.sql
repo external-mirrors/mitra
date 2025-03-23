@@ -180,6 +180,9 @@ CREATE TABLE post (
 
 CREATE INDEX post_in_reply_to_id_btree ON post (in_reply_to_id);
 CREATE INDEX post_repost_of_id_btree ON post (repost_of_id);
+CREATE INDEX post_id_author_id_btree ON post (id, author_id);
+CREATE INDEX post_author_id_is_pinned_btree ON post (author_id, is_pinned);
+CREATE INDEX post_conversation_id_btree ON post (conversation_id);
 
 CREATE TABLE conversation (
     id UUID PRIMARY KEY,
