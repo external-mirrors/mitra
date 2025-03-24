@@ -1,4 +1,4 @@
 # TYPE incoming_activity_queue_size gauge
-incoming_activity_queue_size {incoming_activity_queue_size}
+mitra_incoming_activity_queue_size {incoming_activity_queue_size}
 # TYPE outgoing_activity_queue_size gauge
-outgoing_activity_queue_size {outgoing_activity_queue_size}
+mitra_outgoing_activity_queue_size {outgoing_activity_queue_size}
