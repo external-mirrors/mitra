@@ -20,6 +20,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Copy `role.permissions` to `role.permissions_names` in `Account` Mastodon API entity.
 - Optimized related posts query.
 - Optimized profile timeline, featured collection and conversation context queries.
+- Replace actor key ownership validation warnings with errors.
 
 ## [3.20.0] - 2025-03-15
 

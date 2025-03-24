@@ -381,7 +381,7 @@ fn parse_public_keys(
 ) -> Result<Vec<DbActorKey>, ValidationError> {
     let mut keys = vec![];
     if actor.public_key.owner != actor.id {
-        log::warn!("public key does not belong to actor");
+        return Err(ValidationError("public key is not owned by actor"));
     };
     let db_key = actor.public_key.to_db_key()?;
     keys.push(db_key);
@@ -391,7 +391,7 @@ fn parse_public_keys(
             let db_key = multikey.to_db_key()?;
             keys.push(db_key);
         } else {
-            log::warn!("verification method does not belong to actor");
+            return Err(ValidationError("verification method is not owned by actor"));
         };
     };
     keys.sort_by_key(|item| item.id.clone());
@@ -403,7 +403,10 @@ fn parse_public_keys(
         if !is_same_origin(&key.id, &actor.id)
             .map_err(|message| ValidationError(message.0))?
         {
-            log::warn!("actor and actor key have different origins");
+            // Cross-origin relationships are possible in origin-based security model,
+            // but we don't allow them yet.
+            // https://codeberg.org/fediverse/fep/src/branch/main/fep/fe34/fep-fe34.md
+            return Err(ValidationError("actor and actor key have different origins"));
         };
     };
     Ok(keys)
