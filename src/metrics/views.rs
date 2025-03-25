@@ -18,7 +18,7 @@ use mitra_models::{
 
 use crate::errors::HttpError;
 
-const OPENMETRICS_MEDIA_TYPE: &str = "application/openmetrics-text";
+const OPENMETRICS_MEDIA_TYPE: &str = "application/openmetrics-text; charset=utf-8";
 
 #[get("")]
 async fn metrics_view(

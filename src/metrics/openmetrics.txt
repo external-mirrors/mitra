@@ -1,4 +1,4 @@
-# TYPE incoming_activity_queue_size gauge
+# TYPE mitra_incoming_activity_queue_size gauge
 mitra_incoming_activity_queue_size {incoming_activity_queue_size}
-# TYPE outgoing_activity_queue_size gauge
+# TYPE mitra_outgoing_activity_queue_size gauge
 mitra_outgoing_activity_queue_size {outgoing_activity_queue_size}
