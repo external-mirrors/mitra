@@ -12,7 +12,7 @@ use mitra_models::{
 use mitra_validators::errors::ValidationError;
 
 use crate::{
-    http::MultiQuery,
+    http::{FormOrJson, MultiQuery},
     mastodon_api::{
         auth::get_current_user,
         errors::MastodonError,
@@ -56,10 +56,11 @@ async fn get_marker_view(
 async fn update_marker_view(
     auth: BearerAuth,
     db_pool: web::Data<DatabaseConnectionPool>,
-    marker_data: web::Json<MarkerCreateData>,
+    marker_data: FormOrJson<MarkerCreateData>,
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &**get_database_client(&db_pool).await?;
     let current_user = get_current_user(db_client, auth.token()).await?;
+    let marker_data = marker_data.into_inner();
     let (timeline, last_read_id) = if let Some(ref last_read_id) = marker_data.home {
         (Timeline::Home, last_read_id)
     } else if let Some(ref last_read_id) = marker_data.notifications {

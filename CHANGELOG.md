@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Changed
 
 - Changed the value of `Role.permissions` to bitmask as specified in Mastodon documentation.
+- Allow POSTing form-encoded data to `/api/v1/markers`.
 
 ### Fixed
 
