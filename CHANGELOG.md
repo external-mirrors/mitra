@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+
+- Added `/api/v2/filters` API endpoint returning empty array.
+
 ### Fixed
 
 - Changed encoding of OpenMetrics data to UTF-8.

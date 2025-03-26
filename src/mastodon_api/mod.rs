@@ -26,6 +26,7 @@ mod apps;
 mod bookmarks;
 mod custom_emojis;
 mod directory;
+mod filters;
 mod follow_requests;
 mod instance;
 mod lists;
@@ -128,6 +129,7 @@ pub fn mastodon_api_scope(
         .service(bookmarks::views::bookmark_api_scope())
         .service(custom_emojis::views::custom_emoji_api_scope())
         .service(directory::views::directory_api_scope())
+        .service(filters::views::filter_api_scope())
         .service(follow_requests::views::follow_request_api_scope())
         .service(instance::views::instance_api_v1_scope())
         .service(instance::views::instance_api_v2_scope())
