@@ -19,7 +19,7 @@ serde_json = "1.0.89"
 # Used for creating error types
 thiserror = "1.0.37"
 # Async runtime
-tokio = { version = "1.30.0", features = ["macros"] }
+tokio = { version = "1.32.0", features = ["macros"] }
 # Used to work with UUIDs
 uuid = "1.1.2"
 

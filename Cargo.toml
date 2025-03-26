@@ -116,7 +116,7 @@ serde_qs = { version = "0.13", features = ["actix4"] }
 # Used for creating error types
 thiserror = "1.0.37"
 # Async runtime
-tokio = { version = "~1.30.0", features = ["macros"] }
+tokio = { version = "~1.32.0", features = ["macros"] }
 # Used to work with URLs
 url = "2.4.1"
 # Used to work with UUIDs

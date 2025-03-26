@@ -29,7 +29,7 @@ apx_core = { path = "../apx_core" }
 # Actix server for examples
 actix-web = "4.4.1"
 # Async runtime for examples
-tokio = { version = "1.30.0", features = ["macros", "rt-multi-thread"] }
+tokio = { version = "1.32.0", features = ["macros", "rt-multi-thread"] }
 
 [features]
 default = ["rustls-tls"]
