@@ -3290,16 +3290,9 @@ components:
             - admin
             - read_only_user
         permissions:
-          description: A list of all permissions granted to the role.
-          type: array
-          items:
-            type: string
-            enum:
-              - create_follow_request
-              - create_post
-              - delete_any_post
-              - delete_any_profile
-              - manage_subscription_options
+          description: A bitmask that represents the sum of all permissions granted to the role.
+          type: string
+          example: '0'
         permissions_names:
           description: A list of all permissions granted to the role.
           type: array

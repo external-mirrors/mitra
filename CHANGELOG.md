@@ -10,6 +10,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Added `/api/v2/filters` API endpoint returning empty array.
 
+### Changed
+
+- Changed the value of `Role.permissions` to bitmask as specified in Mastodon documentation.
+
 ### Fixed
 
 - Changed encoding of OpenMetrics data to UTF-8.

@@ -98,9 +98,8 @@ pub struct Source {
 pub struct ApiRole {
     pub id: i32,
     pub name: String,
-    pub permissions: Vec<String>,
+    pub permissions: String,
     pub permissions_names: Vec<String>,
-    pub permissions_bitmask: String,
 }
 
 impl ApiRole {
@@ -112,7 +111,7 @@ impl ApiRole {
             Role::ReadOnlyUser => "read_only_user",
         };
         let mut permissions = vec![];
-        // Mastodon 4.0 uses bitmask
+        // Mastodon uses bitmask
         // https://docs.joinmastodon.org/entities/Role/#permissions
         let mut bitmask = 0;
         for permission in role.get_permissions() {
@@ -136,9 +135,8 @@ impl ApiRole {
         Self {
             id: i16::from(role).into(),
             name: role_name.to_string(),
-            permissions: permissions.clone(),
+            permissions: bitmask.to_string(),
             permissions_names: permissions,
-            permissions_bitmask: bitmask.to_string(),
         }
     }
 }
