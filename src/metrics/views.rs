@@ -1,4 +1,4 @@
-// https://github.com/prometheus/OpenMetrics/blob/main/specification/OpenMetrics.md
+// https://prometheus.io/docs/specs/om/open_metrics_spec/
 use actix_web::{
     get,
     web,
@@ -18,7 +18,7 @@ use mitra_models::{
 
 use crate::errors::HttpError;
 
-const OPENMETRICS_MEDIA_TYPE: &str = "application/openmetrics-text; charset=utf-8";
+const OPENMETRICS_MEDIA_TYPE: &str = "application/openmetrics-text; version=1.0.0; charset=utf-8";
 
 #[get("")]
 async fn metrics_view(

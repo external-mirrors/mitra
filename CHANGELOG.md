@@ -9,7 +9,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Fixed
 
 - Changed encoding of OpenMetrics data to UTF-8.
-- Fixed comments in OpenMetrics report.
+- Fixed metadata in OpenMetrics exposition.
+- Added EOF to OpenMetrics exposition.
 
 ## [3.21.0] - 2025-03-24
 
