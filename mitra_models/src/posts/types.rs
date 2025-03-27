@@ -444,6 +444,7 @@ impl Default for PostContext {
 
 #[derive(Default)]
 pub struct PostCreateData {
+    pub id: Option<Uuid>,
     pub context: PostContext,
     pub content: String,
     pub content_source: Option<String>,

@@ -208,7 +208,7 @@ pub async fn create_post(
     post_data: PostCreateData,
 ) -> Result<Post, DatabaseError> {
     let transaction = db_client.transaction().await?;
-    let post_id = generate_ulid();
+    let post_id = post_data.id.unwrap_or_else(generate_ulid);
 
     // Create or find existing conversation
     let maybe_conversation = match post_data.context {

@@ -17,7 +17,10 @@ use mitra_models::{
     profiles::helpers::get_profile_by_id_or_acct,
 };
 use mitra_services::media::MediaStorage;
-use mitra_utils::files::FileSize;
+use mitra_utils::{
+    files::FileSize,
+    id::datetime_to_ulid,
+};
 use mitra_validators::{
     posts::{
         clean_remote_content,
@@ -68,6 +71,7 @@ impl CreatePost {
             attachments.push(attachment.id);
         };
         let post_data = PostCreateData {
+            id: Some(datetime_to_ulid(self.created_at)),
             context: PostContext::Top { audience: None },
             content: content,
             content_source: None,

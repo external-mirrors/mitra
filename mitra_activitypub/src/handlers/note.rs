@@ -897,6 +897,7 @@ pub async fn create_remote_post(
     };
 
     let post_data = PostCreateData {
+        id: None,
         context: context,
         content: content,
         content_source: None,

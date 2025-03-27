@@ -240,6 +240,7 @@ async fn create_status(
 
     // Validate post data
     let post_data = PostCreateData {
+        id: None,
         context: context,
         content: content,
         content_source: content_source,
