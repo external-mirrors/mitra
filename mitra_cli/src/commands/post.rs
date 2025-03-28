@@ -28,11 +28,16 @@ use mitra_validators::{
     },
 };
 
+/// Create a post with the specified timestamp
 #[derive(Parser)]
 pub struct CreatePost {
+    /// Author (username or ID)
     author: String,
+    /// HTML content
     content: String,
+    /// Date
     created_at: DateTime<Utc>,
+    /// Media attachment(s)
     #[arg(long)]
     attachment: Vec<PathBuf>,
 }
