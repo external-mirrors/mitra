@@ -105,6 +105,20 @@ pub async fn get_notifications(
     Ok(notifications)
 }
 
+pub async fn delete_notifications(
+    db_client: &impl DatabaseClient,
+    recipient_id: Uuid,
+) -> Result<(), DatabaseError> {
+    db_client.execute(
+        "
+        DELETE FROM notification
+        WHERE recipient_id = $1
+        ",
+        &[&recipient_id],
+    ).await?;
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use serial_test::serial;
@@ -141,5 +155,30 @@ mod tests {
         assert_eq!(notifications[0].event_type, EventType::Reaction);
         assert_eq!(notifications[0].reaction_content, Some("❤️".to_string()));
         assert_eq!(notifications[0].reaction_emoji.is_none(), true);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_delete_notifications() {
+        let db_client = &mut create_test_database().await;
+        let user_1 = create_test_user(db_client, "test1").await;
+        let user_2 = create_test_user(db_client, "test2").await;
+        let post = create_test_local_post(db_client, user_1.id, "test").await;
+        create_test_local_reaction(db_client, user_2.id, post.id, None).await;
+        let notifications = get_notifications(
+            db_client,
+            user_1.id,
+            None,
+            5,
+        ).await.unwrap();
+        assert_eq!(notifications.len(), 1);
+        delete_notifications(db_client, user_1.id).await.unwrap();
+        let notifications = get_notifications(
+            db_client,
+            user_1.id,
+            None,
+            5,
+        ).await.unwrap();
+        assert_eq!(notifications.len(), 0);
     }
 }

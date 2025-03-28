@@ -23,8 +23,8 @@ async fn filters_view(
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &**get_database_client(&db_pool).await?;
     get_current_user(db_client, auth.token()).await?;
-    let data = serde_json::json!([]);
-    Ok(HttpResponse::Ok().json(data))
+    let empty = serde_json::json!([]);
+    Ok(HttpResponse::Ok().json(empty))
 }
 
 pub fn filter_api_scope() -> Scope {

@@ -283,8 +283,8 @@ async fn revoke_token_view(
         Err(DatabaseError::NotFound(_)) => return Err(MastodonError::PermissionError),
         Err(other_error) => return Err(other_error.into()),
     };
-    let response = serde_json::json!({});
-    Ok(HttpResponse::Ok().json(response))
+    let empty = serde_json::json!({});
+    Ok(HttpResponse::Ok().json(empty))
 }
 
 pub fn oauth_api_scope() -> ActixScope<impl ServiceFactory<

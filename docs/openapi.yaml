@@ -234,6 +234,8 @@ paths:
   /api/v1/accounts/identity_proof:
     get:
       summary: Get unsigned data for identity proof.
+      security:
+        - tokenAuth: []
       parameters:
         - name: proof_type
           in: query
@@ -277,6 +279,8 @@ paths:
           description: Invalid request parameters
     post:
       summary: Submit identity proof.
+      security:
+        - tokenAuth: []
       requestBody:
         content:
           application/json:
@@ -1321,6 +1325,8 @@ paths:
   /api/v1/notifications:
     get:
       summary: Notifications concerning the user.
+      security:
+        - tokenAuth: []
       parameters:
         - name: max_id
           in: query
@@ -1351,6 +1357,19 @@ paths:
               schema:
                 type: string
                 example: '<https://social.example/api/v1/notification?limit=20&max_id=5339>; rel="next"'
+  /api/v1/notifications/clear:
+    post:
+      summary: Clear all notifications from the server.
+      security:
+        - tokenAuth: []
+      responses:
+        200:
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                example: {}
   /api/v1/polls/{poll_id}/votes:
     post:
       summary: Vote on a poll attached to a post.
@@ -1966,6 +1985,8 @@ paths:
   /api/v1/statuses/{status_id}/pin:
     post:
       summary: Pin post to profile.
+      security:
+        - tokenAuth: []
       parameters:
         - $ref: '#/components/parameters/status_id'
       responses:
@@ -1982,6 +2003,8 @@ paths:
   /api/v1/statuses/{status_id}/unpin:
     post:
       summary: Unpin post from profile.
+      security:
+        - tokenAuth: []
       parameters:
         - $ref: '#/components/parameters/status_id'
       responses:
@@ -2457,6 +2480,8 @@ paths:
   /api/v1/pleroma/statuses/{status_id}/reactions/{content}:
     put:
       summary: Add emoji reaction.
+      security:
+        - tokenAuth: []
       parameters:
         - $ref: '#/components/parameters/status_id'
         - name: content
@@ -2476,6 +2501,8 @@ paths:
           description: Post or custom emoji does not exist.
     delete:
       summary: Remove emoji reaction.
+      security:
+        - tokenAuth: []
       parameters:
         - $ref: '#/components/parameters/status_id'
         - name: content
