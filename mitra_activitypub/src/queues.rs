@@ -181,6 +181,8 @@ impl OutgoingActivityJobData {
         recipients: Vec<DbActor>,
     ) -> BTreeMap<String, Recipient> {
         // Sort and de-duplicate recipients
+        // Keys are inboxes, not actor IDs, because one actor
+        // can have multiple inboxes.
         let mut recipient_map = BTreeMap::new();
         for actor in recipients {
             if actor.is_portable() {
@@ -487,12 +489,27 @@ pub async fn process_queued_outgoing_activities(
             job_data.into_job(db_client, retry_after).await?;
             log::info!("delivery job re-queued");
         } else {
-            // Update inbox status if all deliveries are successful
+            // Update reachability statuses if all deliveries are successful
             // or if retry limit is reached
-            let statuses = recipients.into_iter()
-                .map(|recipient| (recipient.id, !recipient.is_delivered))
+            // TODO: track reachability status of servers, not actors
+            let statuses = recipients
+                .into_iter()
+                // Group by actor ID (could have many inboxes)
+                .fold(BTreeMap::new(), |mut map: BTreeMap<_, Vec<_>>, recipient| {
+                    let inboxes = map.entry(recipient.id.clone()).or_insert(vec![]);
+                    inboxes.push(recipient);
+                    map
+                })
+                .into_iter()
+                .map(|(actor_id, inboxes)| {
+                    // Single successful delivery is enough
+                    let is_reachable = inboxes.iter()
+                        .any(|inbox| inbox.is_delivered);
+                    (actor_id, !is_reachable)
+                })
                 .collect();
             set_reachability_status(db_client, statuses).await?;
+            log::info!("reachability statuses updated");
         };
         delete_job_from_queue(db_client, job.id).await?;
     };
