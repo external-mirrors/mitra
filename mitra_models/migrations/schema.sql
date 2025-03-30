@@ -36,6 +36,7 @@ CREATE TABLE actor_profile (
     bio_source TEXT,
     avatar JSONB,
     banner JSONB,
+    is_automated BOOLEAN NOT NULL,
     manually_approves_followers BOOLEAN NOT NULL,
     mention_policy SMALLINT NOT NULL,
     public_keys JSONB NOT NULL DEFAULT '[]',

@@ -70,11 +70,13 @@ use crate::{
     identifiers::canonicalize_id,
     importers::{fetch_any_object, perform_webfinger_query, ApClient},
     vocabulary::{
+        APPLICATION,
         EMOJI,
         HASHTAG,
         LINK,
         NOTE,
         PROPERTY_VALUE,
+        SERVICE,
         VERIFIABLE_IDENTITY_STATEMENT,
     },
 };
@@ -223,6 +225,10 @@ struct ValidatedActor {
 }
 
 impl ValidatedActor {
+    fn is_automated(&self) -> bool {
+        [APPLICATION, SERVICE].contains(&self.object_type.as_str())
+    }
+
     fn to_db_actor(&self) -> Result<DbActor, ValidationError> {
         let canonical_actor_id = canonicalize_id(&self.id)?;
         let canonical_inbox = canonicalize_id(&self.inbox)?;
@@ -651,6 +657,7 @@ pub async fn create_remote_profile(
         bio: actor.summary.clone(),
         avatar: maybe_avatar,
         banner: maybe_banner,
+        is_automated: actor.is_automated(),
         manually_approves_followers: actor.manually_approves_followers,
         mention_policy: MentionPolicy::None,
         public_keys,
@@ -733,6 +740,7 @@ pub async fn update_remote_profile(
         bio_source: actor.summary.clone(),
         avatar: maybe_avatar,
         banner: maybe_banner,
+        is_automated: actor.is_automated(),
         manually_approves_followers: actor.manually_approves_followers,
         mention_policy: MentionPolicy::None,
         public_keys,

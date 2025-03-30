@@ -182,9 +182,15 @@ paths:
                   description: The media type of header image.
                   type: string
                   nullable: true
+                bot:
+                  description: Whether the account has a bot flag.
+                  type: boolean
+                  default: false
+                  nullable: true
                 locked:
                   description: Whether manual approval of follow requests is required.
                   type: boolean
+                  default: false
                   nullable: true
                 fields_attributes:
                   description: The profile fields to be set.

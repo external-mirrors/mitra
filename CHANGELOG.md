@@ -11,6 +11,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Added `/api/v2/filters` API endpoint returning empty array.
 - Support ~~strikethrough~~ text in posts.
 - Added `/api/v1/notifications/clear` API endpoint.
+- Allow adding "automated" flag to account.
 
 ### Changed
 

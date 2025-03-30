@@ -657,6 +657,7 @@ pub struct DbActorProfile {
     pub bio_source: Option<String>, // plaintext or markdown
     pub avatar: Option<ProfileImage>,
     pub banner: Option<ProfileImage>,
+    pub is_automated: bool,
     pub manually_approves_followers: bool,
     pub mention_policy: MentionPolicy,
     pub public_keys: PublicKeys,
@@ -777,16 +778,6 @@ impl DbActorProfile {
         self.actor_json.is_none()
     }
 
-    pub fn is_automated(&self) -> bool {
-        match self.actor_json {
-            Some(ref db_actor) => {
-                ["Service", "Application"]
-                    .contains(&db_actor.object_type.as_str())
-            },
-            None => false,
-        }
-    }
-
     pub fn is_portable(&self) -> bool {
         if let Some(ref db_actor) = self.actor_json {
             db_actor.is_portable()
@@ -849,6 +840,7 @@ impl Default for DbActorProfile {
             bio_source: None,
             avatar: None,
             banner: None,
+            is_automated: false,
             manually_approves_followers: false,
             mention_policy: MentionPolicy::default(),
             public_keys: PublicKeys(vec![]),
@@ -879,6 +871,7 @@ pub struct ProfileCreateData {
     pub bio: Option<String>,
     pub avatar: Option<ProfileImage>,
     pub banner: Option<ProfileImage>,
+    pub is_automated: bool,
     pub manually_approves_followers: bool,
     pub mention_policy: MentionPolicy,
     pub public_keys: Vec<DbActorKey>,
@@ -916,6 +909,7 @@ pub struct ProfileUpdateData {
     pub bio_source: Option<String>,
     pub avatar: Option<ProfileImage>,
     pub banner: Option<ProfileImage>,
+    pub is_automated: bool,
     pub manually_approves_followers: bool,
     pub mention_policy: MentionPolicy,
     pub public_keys: Vec<DbActorKey>,
@@ -971,6 +965,7 @@ impl From<&DbActorProfile> for ProfileUpdateData {
             bio_source: profile.bio_source,
             avatar: profile.avatar,
             banner: profile.banner,
+            is_automated: profile.is_automated,
             manually_approves_followers: profile.manually_approves_followers,
             mention_policy: profile.mention_policy,
             public_keys: profile.public_keys.into_inner(),

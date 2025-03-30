@@ -23,6 +23,7 @@ pub const UPDATE: &str = "Update";
 pub const APPLICATION: &str = "Application";
 pub const GROUP: &str = "Group";
 pub const PERSON: &str = "Person";
+pub const SERVICE: &str = "Service";
 
 // Object types
 pub const AUDIO: &str = "Audio";

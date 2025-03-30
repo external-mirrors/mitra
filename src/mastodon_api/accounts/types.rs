@@ -192,7 +192,6 @@ impl Account {
         let profile_url = profile_actor_url(instance_url, &profile);
         let preferred_handle = profile.preferred_handle().to_owned();
         let mention_policy = mention_policy_to_str(profile.mention_policy);
-        let is_automated = profile.is_automated();
 
         let avatar_url = profile.avatar
             .map(|image| media_server.url_for(&image.file_name))
@@ -286,7 +285,7 @@ impl Account {
             header: header_url,
             locked: profile.manually_approves_followers,
             mention_policy: mention_policy.to_string(),
-            bot: is_automated,
+            bot: profile.is_automated,
             identity_proofs,
             payment_options,
             fields: extra_fields,
@@ -376,6 +375,8 @@ pub struct AccountUpdateData {
     header: Option<String>,
     header_media_type: Option<String>,
     #[serde(default)]
+    bot: bool,
+    #[serde(default)]
     locked: bool,
     fields_attributes: Option<Vec<AccountFieldSource>>,
 
@@ -449,6 +450,7 @@ impl AccountUpdateData {
             media_limits,
             media_storage,
         )?;
+        profile_data.is_automated = self.bot;
         profile_data.manually_approves_followers = self.locked;
         if let Some(mention_policy) = self.mention_policy {
             // Update only if value was provided by client
@@ -486,6 +488,7 @@ pub struct AccountUpdateMultipartForm {
     note: Option<Text<String>>,
     avatar: Option<Bytes>,
     header: Option<Bytes>,
+    bot: Option<Text<bool>>,
     locked: Option<Text<bool>>,
 
     // 4 fields max
@@ -546,6 +549,9 @@ impl From<AccountUpdateMultipartForm> for AccountUpdateData {
                 file.content_type
                     .map(|media_type| media_type.essence_str().to_string())
             }),
+            bot: form.bot
+                .map(|value| value.into_inner())
+                .unwrap_or_default(),
             locked: form.locked
                 .map(|value| value.into_inner())
                 .unwrap_or_default(),

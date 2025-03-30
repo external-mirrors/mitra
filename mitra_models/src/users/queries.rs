@@ -151,6 +151,7 @@ pub async fn create_user(
         bio: None,
         avatar: None,
         banner: None,
+        is_automated: false,
         manually_approves_followers: false,
         mention_policy: MentionPolicy::None,
         public_keys: vec![],

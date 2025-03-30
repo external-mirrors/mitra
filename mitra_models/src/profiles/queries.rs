@@ -178,6 +178,7 @@ pub async fn create_profile(
             bio,
             avatar,
             banner,
+            is_automated,
             manually_approves_followers,
             mention_policy,
             public_keys,
@@ -187,7 +188,7 @@ pub async fn create_profile(
             aliases,
             actor_json
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
         RETURNING actor_profile
         ",
         &[
@@ -199,6 +200,7 @@ pub async fn create_profile(
             &profile_data.bio,
             &profile_data.avatar,
             &profile_data.banner,
+            &profile_data.is_automated,
             &profile_data.manually_approves_followers,
             &profile_data.mention_policy,
             &PublicKeys(profile_data.public_keys),
@@ -285,17 +287,18 @@ pub async fn update_profile(
             bio_source = $6,
             avatar = $7,
             banner = $8,
-            manually_approves_followers = $9,
-            mention_policy = $10,
-            public_keys = $11,
-            identity_proofs = $12,
-            payment_options = $13,
-            extra_fields = $14,
-            aliases = $15,
-            actor_json = $16,
+            is_automated = $9,
+            manually_approves_followers = $10,
+            mention_policy = $11,
+            public_keys = $12,
+            identity_proofs = $13,
+            payment_options = $14,
+            extra_fields = $15,
+            aliases = $16,
+            actor_json = $17,
             updated_at = CURRENT_TIMESTAMP,
             unreachable_since = NULL
-        WHERE id = $17
+        WHERE id = $18
         ",
         &[
             &profile_data.username,
@@ -306,6 +309,7 @@ pub async fn update_profile(
             &profile_data.bio_source,
             &profile_data.avatar,
             &profile_data.banner,
+            &profile_data.is_automated,
             &profile_data.manually_approves_followers,
             &profile_data.mention_policy,
             &PublicKeys(profile_data.public_keys),
