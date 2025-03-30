@@ -76,7 +76,7 @@ pub async fn send_object(
     object_json: &str,
     inbox_url: &str,
     extra_headers: &[(&str, &str)],
-) -> Result<Option<Response>, DelivererError> {
+) -> Result<Response, DelivererError> {
     if agent.ssrf_protection_enabled {
         require_safe_url(inbox_url)?;
     };
@@ -121,7 +121,7 @@ pub async fn send_object(
     let response = Response { status: response_status, body: response_text };
     // https://www.w3.org/wiki/ActivityPub/Primer/HTTP_status_codes_for_delivery
     if response_status.is_success() {
-        Ok(Some(response))
+        Ok(response)
     } else {
         Err(DelivererError::HttpError(response))
     }

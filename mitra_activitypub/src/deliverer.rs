@@ -305,7 +305,7 @@ pub(super) async fn deliver_activity_worker(
             let recipient = recipients.get_mut(index)
                 .expect("index should not be out of bounds");
             match result {
-                Ok(Some(response)) => {
+                Ok(response) => {
                     assert!(response.status.is_success());
                     let response_text = truncate_response(
                         &response.body,
@@ -317,9 +317,6 @@ pub(super) async fn deliver_activity_worker(
                         response.status.as_str(),
                         response_text,
                     );
-                    recipient.is_delivered = true;
-                },
-                Ok(None) => {
                     recipient.is_delivered = true;
                 },
                 Err(error) => {
