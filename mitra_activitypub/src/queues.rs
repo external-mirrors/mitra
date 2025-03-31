@@ -5,6 +5,7 @@ use chrono::{Duration, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value as JsonValue};
 
+use apx_core::http_url::HttpUrl;
 use apx_sdk::{
     fetch::FetchError,
 };
@@ -196,7 +197,7 @@ impl OutgoingActivityJobData {
                             is_delivered: false,
                             is_unreachable: false,
                             is_gone: false,
-                            is_local: gateway == instance_url,
+                            is_local: false,
                         };
                         recipient_map.insert(http_actor_inbox, recipient);
                     };
@@ -214,6 +215,15 @@ impl OutgoingActivityJobData {
                 };
                 recipient_map.insert(actor.inbox, recipient);
             };
+        };
+        // If portable actor has local account,
+        // activity will be simply added to its inbox
+        let instance_url = HttpUrl::parse(instance_url)
+            .expect("instance URL should be valid");
+        for (_, recipient) in recipient_map.iter_mut() {
+            let recipient_inbox = parse_http_url_from_db(&recipient.inbox)
+                .expect("actor inbox URL should be valid");
+            recipient.is_local = recipient_inbox.origin() == instance_url.origin();
         };
         recipient_map
     }
