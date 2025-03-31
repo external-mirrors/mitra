@@ -204,17 +204,16 @@ impl OutgoingActivityJobData {
         };
     }
 
-    fn sort_recipients(recipients: Vec<Recipient>) -> Vec<Recipient> {
+    fn sort_recipients(mut recipients: Vec<Recipient>) -> Vec<Recipient> {
         // Sort and de-duplicate recipients
+        recipients.sort_by_key(|recipient| {
+            // Primary recipients are first
+            (!recipient.is_primary, recipient.inbox.clone())
+        });
         // Keys are inboxes, not actor IDs, because one actor
         // can have multiple inboxes.
-        let mut recipient_map = BTreeMap::new();
-        for recipient in recipients {
-            if !recipient_map.contains_key(&recipient.inbox) {
-                recipient_map.insert(recipient.inbox.clone(), recipient);
-            };
-        };
-        recipient_map.into_values().collect()
+        recipients.dedup_by_key(|recipient| recipient.inbox.clone());
+        recipients
     }
 
     pub(super) fn new(

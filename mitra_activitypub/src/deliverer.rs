@@ -181,6 +181,9 @@ pub struct Recipient {
     pub id: String,
     pub(super) inbox: String,
 
+    #[serde(default)]
+    pub is_primary: bool,
+
     pub is_delivered: bool,
 
     // This flag is set after first failed delivery attempt
@@ -201,6 +204,7 @@ impl Recipient {
         Self {
             id: actor_id.to_owned(),
             inbox: inbox.to_owned(),
+            is_primary: false,
             is_delivered: false,
             is_unreachable: false,
             is_gone: false,

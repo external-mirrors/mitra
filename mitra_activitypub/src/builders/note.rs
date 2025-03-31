@@ -395,36 +395,45 @@ pub async fn get_note_recipients(
     db_client: &impl DatabaseClient,
     post: &Post,
 ) -> Result<Vec<Recipient>, DatabaseError> {
-    let mut audience = vec![];
+    let mut primary_audience = vec![];
+    let mut secondary_audience = vec![];
     match post.visibility {
         Visibility::Public | Visibility::Followers => {
             let followers = get_followers(db_client, post.author.id).await?;
-            audience.extend(followers);
+            secondary_audience.extend(followers);
         },
         Visibility::Subscribers => {
             let subscribers = get_subscribers(db_client, post.author.id).await?;
-            audience.extend(subscribers);
+            secondary_audience.extend(subscribers);
         },
         Visibility::Conversation => {
             let conversation = post.expect_conversation();
             let owner = get_post_author(db_client, conversation.root_id).await?;
-            audience.push(owner);
+            primary_audience.push(owner);
         },
         Visibility::Direct => (),
     };
     if let Some(in_reply_to_id) = post.in_reply_to_id {
         // TODO: use post.in_reply_to ?
         let in_reply_to_author = get_post_author(db_client, in_reply_to_id).await?;
-        audience.push(in_reply_to_author);
+        primary_audience.push(in_reply_to_author);
     };
-    audience.extend(post.mentions.clone());
+    primary_audience.extend(post.mentions.clone());
     if let Some(ref poll) = post.poll {
         let voters = get_voters(db_client, poll.id).await?;
-        audience.extend(voters);
+        secondary_audience.extend(voters);
     };
 
     let mut recipients = vec![];
-    for profile in audience {
+    for profile in primary_audience {
+        if let Some(remote_actor) = profile.actor_json {
+            for mut recipient in Recipient::from_actor_data(&remote_actor) {
+                recipient.is_primary = true;
+                recipients.push(recipient);
+            };
+        };
+    };
+    for profile in secondary_audience {
         if let Some(remote_actor) = profile.actor_json {
             recipients.extend(Recipient::from_actor_data(&remote_actor));
         };
