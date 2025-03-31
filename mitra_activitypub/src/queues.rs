@@ -179,39 +179,45 @@ pub struct OutgoingActivityJobData {
 impl OutgoingActivityJobData {
     fn prepare_recipients(
         instance_url: &str,
-        recipients: Vec<DbActor>,
-    ) -> BTreeMap<String, Recipient> {
-        // Sort and de-duplicate recipients
-        // Keys are inboxes, not actor IDs, because one actor
-        // can have multiple inboxes.
-        let mut recipient_map = BTreeMap::new();
-        for actor in recipients {
+        actors: Vec<DbActor>,
+    ) -> Vec<Recipient> {
+        let mut recipients = vec![];
+        for actor in actors {
             if actor.is_portable() {
                 for gateway in actor.gateways {
                     let http_actor_inbox = db_url_to_http_url(&actor.inbox, &gateway)
                         .expect("actor inbox URL should be valid");
-                    if !recipient_map.contains_key(&http_actor_inbox) {
-                        let recipient = Recipient::new(&actor.id, &http_actor_inbox);
-                        recipient_map.insert(http_actor_inbox, recipient);
-                    };
+                    let recipient = Recipient::new(&actor.id, &http_actor_inbox);
+                    recipients.push(recipient);
                 };
                 continue;
             };
-            if !recipient_map.contains_key(&actor.inbox) {
-                let recipient = Recipient::new(&actor.id, &actor.inbox);
-                recipient_map.insert(actor.inbox, recipient);
-            };
+            let recipient = Recipient::new(&actor.id, &actor.inbox);
+            recipients.push(recipient);
         };
         // If portable actor has local account,
         // activity will be simply added to its inbox
         let instance_url = HttpUrl::parse(instance_url)
             .expect("instance URL should be valid");
-        for (_, recipient) in recipient_map.iter_mut() {
+        for recipient in recipients.iter_mut() {
             let recipient_inbox = parse_http_url_from_db(&recipient.inbox)
                 .expect("actor inbox URL should be valid");
             recipient.is_local = recipient_inbox.origin() == instance_url.origin();
         };
-        recipient_map
+        recipients
+    }
+
+    fn sort_recipients(recipients: Vec<Recipient>) -> Vec<Recipient> {
+        // Sort and de-duplicate recipients
+        // Keys are inboxes, not actor IDs, because one actor
+        // can have multiple inboxes.
+        let mut recipient_map = BTreeMap::new();
+        for recipient in recipients {
+            if !recipient_map.contains_key(&recipient.inbox) {
+                recipient_map.insert(recipient.inbox.clone(), recipient);
+            };
+        };
+        recipient_map.into_values().collect()
     }
 
     pub(super) fn new(
@@ -220,7 +226,8 @@ impl OutgoingActivityJobData {
         activity: impl Serialize,
         recipients: Vec<DbActor>,
     ) -> Self {
-        let recipient_map = Self::prepare_recipients(instance_url, recipients);
+        let recipients = Self::prepare_recipients(instance_url, recipients);
+        let recipients = Self::sort_recipients(recipients);
         let activity = serde_json::to_value(activity)
             .expect("activity should be serializable");
         let activity_signed = sign_activity(
@@ -231,7 +238,7 @@ impl OutgoingActivityJobData {
         Self {
             activity: activity_signed,
             sender: Some(Sender::from_user(instance_url, sender)),
-            recipients: recipient_map.into_values().collect(),
+            recipients: recipients,
             failure_count: 0,
         }
     }
@@ -242,7 +249,7 @@ impl OutgoingActivityJobData {
         activity: &JsonValue,
         recipients: Vec<DbActor>,
     ) -> Option<Self> {
-        let mut recipient_map = Self::prepare_recipients(instance_url, recipients);
+        let mut recipients = Self::prepare_recipients(instance_url, recipients);
         let actor_data = sender.profile.expect_actor_data();
         // Deliver to actor's clones
         for gateway_url in &actor_data.gateways {
@@ -252,16 +259,15 @@ impl OutgoingActivityJobData {
             };
             let http_actor_outbox = db_url_to_http_url(&actor_data.outbox, gateway_url)
                 .expect("actor outbox URL should be valid");
-            if !recipient_map.contains_key(&http_actor_outbox) {
-                let recipient = Recipient::new(&actor_data.id, &http_actor_outbox);
-                recipient_map.insert(http_actor_outbox, recipient);
-            };
+            let recipient = Recipient::new(&actor_data.id, &http_actor_outbox);
+            recipients.push(recipient);
         };
+        let recipients = Self::sort_recipients(recipients);
         let sender = Sender::from_portable_user(instance_url, sender)?;
         let job_data = Self {
             activity: activity.clone(),
             sender: Some(sender),
-            recipients: recipient_map.into_values().collect(),
+            recipients: recipients,
             failure_count: 0,
         };
         Some(job_data)
