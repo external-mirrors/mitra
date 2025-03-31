@@ -183,18 +183,16 @@ impl OutgoingActivityJobData {
     ) -> Vec<Recipient> {
         let mut recipients = vec![];
         for actor in actors {
-            if actor.is_portable() {
-                for gateway in actor.gateways {
-                    let http_actor_inbox = db_url_to_http_url(&actor.inbox, &gateway)
-                        .expect("actor inbox URL should be valid");
-                    let recipient = Recipient::new(&actor.id, &http_actor_inbox);
-                    recipients.push(recipient);
-                };
-                continue;
-            };
-            let recipient = Recipient::new(&actor.id, &actor.inbox);
-            recipients.push(recipient);
+            recipients.extend(Recipient::from_actor_data(&actor));
         };
+        Self::mark_local_recipients(instance_url, &mut recipients);
+        recipients
+    }
+
+    fn mark_local_recipients(
+        instance_url: &str,
+        recipients: &mut [Recipient],
+    ) -> () {
         // If portable actor has local account,
         // activity will be simply added to its inbox
         let instance_url = HttpUrl::parse(instance_url)
@@ -204,7 +202,6 @@ impl OutgoingActivityJobData {
                 .expect("actor inbox URL should be valid");
             recipient.is_local = recipient_inbox.origin() == instance_url.origin();
         };
-        recipients
     }
 
     fn sort_recipients(recipients: Vec<Recipient>) -> Vec<Recipient> {

@@ -39,7 +39,7 @@ use apx_sdk::{
 };
 use mitra_config::Instance;
 use mitra_models::{
-    profiles::types::PublicKeyType,
+    profiles::types::{DbActor, PublicKeyType},
     users::types::{PortableUser, User},
 };
 
@@ -206,6 +206,22 @@ impl Recipient {
             is_gone: false,
             is_local: false,
         }
+    }
+
+    pub fn from_actor_data(actor: &DbActor) -> Vec<Self> {
+        let mut recipients = vec![];
+        if actor.is_portable() {
+            for gateway in &actor.gateways {
+                let http_actor_inbox = db_url_to_http_url(&actor.inbox, gateway)
+                    .expect("actor inbox URL should be valid");
+                let recipient = Self::new(&actor.id, &http_actor_inbox);
+                recipients.push(recipient);
+            };
+        } else {
+            let recipient = Self::new(&actor.id, &actor.inbox);
+            recipients.push(recipient);
+        };
+        recipients
     }
 
     pub fn is_finished(&self) -> bool {
