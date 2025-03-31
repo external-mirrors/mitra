@@ -191,28 +191,14 @@ impl OutgoingActivityJobData {
                     let http_actor_inbox = db_url_to_http_url(&actor.inbox, &gateway)
                         .expect("actor inbox URL should be valid");
                     if !recipient_map.contains_key(&http_actor_inbox) {
-                        let recipient = Recipient {
-                            id: actor.id.clone(),
-                            inbox: http_actor_inbox.clone(),
-                            is_delivered: false,
-                            is_unreachable: false,
-                            is_gone: false,
-                            is_local: false,
-                        };
+                        let recipient = Recipient::new(&actor.id, &http_actor_inbox);
                         recipient_map.insert(http_actor_inbox, recipient);
                     };
                 };
                 continue;
             };
             if !recipient_map.contains_key(&actor.inbox) {
-                let recipient = Recipient {
-                    id: actor.id.clone(),
-                    inbox: actor.inbox.clone(),
-                    is_delivered: false,
-                    is_unreachable: false,
-                    is_gone: false,
-                    is_local: false,
-                };
+                let recipient = Recipient::new(&actor.id, &actor.inbox);
                 recipient_map.insert(actor.inbox, recipient);
             };
         };
@@ -267,14 +253,7 @@ impl OutgoingActivityJobData {
             let http_actor_outbox = db_url_to_http_url(&actor_data.outbox, gateway_url)
                 .expect("actor outbox URL should be valid");
             if !recipient_map.contains_key(&http_actor_outbox) {
-                let recipient = Recipient {
-                    id: actor_data.id.clone(),
-                    inbox: http_actor_outbox.clone(),
-                    is_delivered: false,
-                    is_unreachable: false,
-                    is_gone: false,
-                    is_local: false, // activity from outbox, don't put it in inbox
-                };
+                let recipient = Recipient::new(&actor_data.id, &http_actor_outbox);
                 recipient_map.insert(http_actor_outbox, recipient);
             };
         };

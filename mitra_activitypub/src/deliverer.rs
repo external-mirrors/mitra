@@ -197,6 +197,17 @@ pub struct Recipient {
 }
 
 impl Recipient {
+    pub fn new(actor_id: &str, inbox: &str) -> Self {
+        Self {
+            id: actor_id.to_owned(),
+            inbox: inbox.to_owned(),
+            is_delivered: false,
+            is_unreachable: false,
+            is_gone: false,
+            is_local: false,
+        }
+    }
+
     pub fn is_finished(&self) -> bool {
         self.is_delivered || self.is_unreachable
     }
