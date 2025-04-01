@@ -2681,6 +2681,19 @@ components:
                 note:
                   description: Profile bio.
                   type: string
+                fields:
+                  description: Metadata about the account.
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/Field'
+                privacy:
+                  description: The default post privacy to be used for new posts.
+                  type: string
+                  example: public
+                sensitive:
+                  description: Whether new posts should be marked sensitive by default.
+                  type: boolean
+                  example: false
             role:
               description: The role assigned to the currently authorized user.
               $ref: '#/components/schemas/Role'

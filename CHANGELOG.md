@@ -21,6 +21,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Mark portable actor as reachable if at least one inbox is reachable.
 - Don't retry delivery if status is `410 Gone`.
 - Prioritize primary recipients when delivering posts.
+- Add `privacy` and `sensitive` properties to `Account.source`.
 
 ### Fixed
 

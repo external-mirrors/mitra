@@ -86,11 +86,14 @@ pub enum AccountPaymentOption {
         object_id: Option<String>,
     },
 }
-/// https://docs.joinmastodon.org/entities/source/
+
+// https://docs.joinmastodon.org/entities/Account/#source
 #[derive(Serialize)]
 pub struct Source {
     pub note: Option<String>,
     pub fields: Vec<AccountField>,
+    privacy: String,
+    sensitive: bool,
 }
 
 /// https://docs.joinmastodon.org/entities/Role/
@@ -318,6 +321,8 @@ impl Account {
         let source = Source {
             note: user.profile.bio_source.clone(),
             fields: fields_sources,
+            privacy: "public".to_string(),
+            sensitive: false,
         };
         let role = ApiRole::from_db(user.role);
         let mut authentication_methods = vec![];
