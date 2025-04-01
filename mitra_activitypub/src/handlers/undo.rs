@@ -28,6 +28,7 @@ use mitra_validators::errors::ValidationError;
 
 use crate::{
     identifiers::{canonicalize_id, parse_local_actor_id},
+    importers::{ActorIdResolver, ApClient},
     vocabulary::{ANNOUNCE, FOLLOW, LIKE},
 };
 
@@ -86,10 +87,11 @@ pub async fn handle_undo(
     };
 
     let activity: Undo = serde_json::from_value(activity)?;
-    let canonical_actor_id = canonicalize_id(&activity.actor)?;
-    let actor_profile = get_remote_profile_by_actor_id(
+    let ap_client = ApClient::new(config, db_client).await?;
+    let actor_profile = ActorIdResolver::default().only_remote().resolve(
+        &ap_client,
         db_client,
-        &canonical_actor_id.to_string(),
+        &activity.actor,
     ).await?;
     let canonical_object_id = canonicalize_id(&activity.object)?;
 

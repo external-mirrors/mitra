@@ -29,6 +29,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Fixed metadata in OpenMetrics exposition.
 - Added EOF to OpenMetrics exposition.
 - Fixed incorrect sorting of backdated posts.
+- Fixed `profile not found` when processing `Announce(Undo)`.
 
 ## [3.21.0] - 2025-03-24
 
