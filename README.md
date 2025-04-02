@@ -39,6 +39,7 @@ Demo instance: https://public.mitra.social/ ([invite-only](https://public.mitra.
 - [Phanpy](https://github.com/cheeaun/phanpy) (Web)
 - [pl-fe](https://github.com/mkljczk/pl-fe) (Web)
 - [Husky](https://github.com/captainepoch/husky) (Android)
+- [Fedilab](https://codeberg.org/tom79/Fedilab) (Android)
 - [Fedicat](https://codeberg.org/technicat/fedicat) (iOS)
 - [toot](https://github.com/ihabunek/toot) (CLI)
 
