@@ -186,7 +186,7 @@ impl ApClient {
         )
     }
 
-    pub async fn fetch_object<T: DeserializeOwned>(
+    async fn _fetch_object<T: DeserializeOwned>(
         &self,
         object_id: &str,
     ) -> Result<T, HandlerError> {
@@ -203,7 +203,8 @@ impl ApClient {
         Ok(object)
     }
 
-    pub async fn fetch_object_with_filter<T: DeserializeOwned>(
+    // Peforms filtering before fetching
+    pub async fn fetch_object<T: DeserializeOwned>(
         &self,
         object_id: &str,
     ) -> Result<T, HandlerError> {
@@ -217,7 +218,7 @@ impl ApClient {
             let error_message = format!("request blocked: {}", object_id);
             return Err(HandlerError::Filtered(error_message));
         };
-        self.fetch_object(object_id).await
+        self._fetch_object(object_id).await
     }
 }
 
@@ -394,7 +395,7 @@ impl ActorIdResolver {
                 ).await?
             },
             Err(DatabaseError::NotFound(_)) => {
-                let actor: JsonValue = ap_client.fetch_object_with_filter(actor_id).await?;
+                let actor: JsonValue = ap_client.fetch_object(actor_id).await?;
                 import_profile(ap_client, db_client, actor).await?
             },
             Err(other_error) => return Err(other_error.into()),
@@ -578,7 +579,7 @@ pub async fn import_post(
                     return Err(FetchError::RecursionError.into());
                 };
                 let object: AttributedObjectJson =
-                    ap_client.fetch_object_with_filter(&object_id).await?;
+                    ap_client.fetch_object(&object_id).await?;
                 verify_object_owner(&object.value)?;
                 log::info!("fetched object {}", object.id());
                 fetch_count +=  1;

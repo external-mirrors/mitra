@@ -93,7 +93,7 @@ async fn handle_fep_171b_add(
         Err(AuthenticationError::NoJsonSignature) => {
             // Verify activity by fetching it from origin
             let ap_client = ApClient::new(config, db_client).await?;
-            match ap_client.fetch_object_with_filter(activity_id).await {
+            match ap_client.fetch_object(activity_id).await {
                 Ok(activity_fetched) => {
                     log::info!("fetched activity {}", activity_id);
                     activity = activity_fetched;

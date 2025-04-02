@@ -152,7 +152,7 @@ async fn handle_fep_1b12_announce(
         activity.clone()
     } else {
         let ap_client = ApClient::new(config, db_client).await?;
-        match ap_client.fetch_object_with_filter(activity_id).await {
+        match ap_client.fetch_object(activity_id).await {
             Ok(activity) => {
                 log::info!("fetched activity {}", activity_id);
                 activity
