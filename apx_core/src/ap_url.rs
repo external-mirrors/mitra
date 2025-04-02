@@ -24,7 +24,7 @@ pub fn with_ap_prefix(did_url: &str) -> String {
     format!("{}{}", AP_URL_PREFIX, did_url)
 }
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub struct ApUrl {
     authority: Did,
     location: UriRelativeString,

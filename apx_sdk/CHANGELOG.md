@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+
+- Implemented `PartialEq` on `apx_core::ap_url::ApUrl`.
+- Implemented `PartialEq` on `apx_sdk::url::Url`.
+
 ### Changed
 
 - Return `Response` from `send_object` instead of `Option<Response>`.
