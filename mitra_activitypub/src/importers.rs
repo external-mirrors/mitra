@@ -394,8 +394,7 @@ impl ActorIdResolver {
                 ).await?
             },
             Err(DatabaseError::NotFound(_)) => {
-                let agent = build_federation_agent(&ap_client.instance, None);
-                let actor: JsonValue = fetch_any_object(&agent, actor_id).await?;
+                let actor: JsonValue = ap_client.fetch_object_with_filter(actor_id).await?;
                 import_profile(ap_client, db_client, actor).await?
             },
             Err(other_error) => return Err(other_error.into()),
