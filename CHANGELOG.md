@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [3.22.0] - 2025-04-02
+
 ### Added
 
 - Added `/api/v2/filters` API endpoint returning empty array.
