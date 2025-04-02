@@ -33,7 +33,7 @@ use crate::{
         local_instance_actor_id,
         LocalActorCollection,
     },
-    vocabulary::{APPLICATION, IMAGE, PERSON},
+    vocabulary::{APPLICATION, IMAGE, PERSON, SERVICE},
 };
 
 use super::attachments::{
@@ -162,6 +162,11 @@ pub fn build_local_actor(
     assert_eq!(authority.server_url(), instance_url);
     let username = &user.profile.username;
     let actor_id = local_actor_id_unified(authority, username);
+    let actor_type = if user.profile.is_automated {
+        SERVICE
+    } else {
+        PERSON
+    };
     let inbox = LocalActorCollection::Inbox.of(&actor_id);
     let outbox = LocalActorCollection::Outbox.of(&actor_id);
     let followers = LocalActorCollection::Followers.of(&actor_id);
@@ -243,7 +248,7 @@ pub fn build_local_actor(
     let actor = Actor {
         _context: build_actor_context(),
         id: actor_id.clone(),
-        object_type: PERSON.to_string(),
+        object_type: actor_type.to_string(),
         name: user.profile.display_name.clone(),
         preferred_username: username.to_string(),
         inbox,
