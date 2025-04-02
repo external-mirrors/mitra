@@ -24,6 +24,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Add `privacy` and `sensitive` properties to `Account.source`.
 - Don't make requests to blocked instances when verifying FEP-1b12 and FEP-171b activities.
 - Compare canonical IDs when verifying FEP-c390 proof.
+- Speed up full text search.
 
 ### Fixed
 

@@ -1786,7 +1786,7 @@ pub async fn search_posts(
         JOIN actor_profile ON post.author_id = actor_profile.id
         WHERE
             -- can parse HTML documents
-            to_tsvector(post.content) @@ plainto_tsquery($1)
+            to_tsvector('simple', post.content) @@ plainto_tsquery('simple', $1)
             AND repost_of_id IS NULL
             AND (
                 -- posts published by the current user
