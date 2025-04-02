@@ -203,7 +203,7 @@ impl ApClient {
         Ok(object)
     }
 
-    async fn fetch_object_with_filter<T: DeserializeOwned>(
+    pub async fn fetch_object_with_filter<T: DeserializeOwned>(
         &self,
         object_id: &str,
     ) -> Result<T, HandlerError> {

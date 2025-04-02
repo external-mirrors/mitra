@@ -26,10 +26,9 @@ use mitra_models::{
 use mitra_validators::errors::ValidationError;
 
 use crate::{
-    agent::build_federation_agent,
     authentication::{verify_signed_activity, AuthenticationError},
     identifiers::parse_local_actor_id,
-    importers::fetch_any_object,
+    importers::ApClient,
     ownership::{is_same_origin, get_object_id, verify_activity_owner},
     vocabulary::{CREATE, DISLIKE, EMOJI_REACT, LIKE, UPDATE},
 };
@@ -93,9 +92,8 @@ async fn handle_fep_171b_add(
         Ok(_) => (),
         Err(AuthenticationError::NoJsonSignature) => {
             // Verify activity by fetching it from origin
-            let instance = config.instance();
-            let agent = build_federation_agent(&instance, None);
-            match fetch_any_object(&agent, activity_id).await {
+            let ap_client = ApClient::new(config, db_client).await?;
+            match ap_client.fetch_object_with_filter(activity_id).await {
                 Ok(activity_fetched) => {
                     log::info!("fetched activity {}", activity_id);
                     activity = activity_fetched;

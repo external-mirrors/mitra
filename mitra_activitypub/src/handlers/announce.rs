@@ -25,9 +25,8 @@ use mitra_validators::{
 };
 
 use crate::{
-    agent::build_federation_agent,
     identifiers::parse_local_object_id,
-    importers::{fetch_any_object, import_post, ActorIdResolver, ApClient},
+    importers::{import_post, ActorIdResolver, ApClient},
     ownership::{
         get_object_id,
         is_embedded_activity_trusted,
@@ -152,9 +151,8 @@ async fn handle_fep_1b12_announce(
         // Don't fetch
         activity.clone()
     } else {
-        let instance = config.instance();
-        let agent = build_federation_agent(&instance, None);
-        match fetch_any_object(&agent, activity_id).await {
+        let ap_client = ApClient::new(config, db_client).await?;
+        match ap_client.fetch_object_with_filter(activity_id).await {
             Ok(activity) => {
                 log::info!("fetched activity {}", activity_id);
                 activity

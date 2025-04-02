@@ -22,6 +22,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Don't retry delivery if status is `410 Gone`.
 - Prioritize primary recipients when delivering posts.
 - Add `privacy` and `sensitive` properties to `Account.source`.
+- Don't make requests to blocked instances when verifying FEP-1b12 and FEP-171b activities.
 
 ### Fixed
 
