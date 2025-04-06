@@ -14,7 +14,7 @@ use apx_sdk::{
 };
 use serde_json::json;
 
-#[tokio::main]
+#[tokio::main(flavor = "current_thread")]
 async fn main() -> () {
     let identity_key = generate_ed25519_key();
     let identity_public_key = ed25519_public_key_from_secret_key(&identity_key);
