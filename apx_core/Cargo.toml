@@ -25,9 +25,6 @@ http_0_2 = { package = "http", version = "0.2.9" }
 http = "1.1.0"
 # Used for working with IDNs
 idna = "1.0.0"
-# Choose unicode backend for idna
-# https://github.com/hsivonen/idna_adapter
-idna_adapter = "=1.1.0"
 # Used to guess media type of a file
 infer = "0.13.0"
 # Used for working with URIs

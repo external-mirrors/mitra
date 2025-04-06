@@ -14,6 +14,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Changed
 
 - Return `Response` from `send_object` instead of `Option<Response>`.
+- Allow choosing backend for `idna`.
 
 ## [0.11.0] - 2025-03-19
 
