@@ -11,6 +11,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Implemented `PartialEq` on `apx_core::ap_url::ApUrl`.
 - Implemented `PartialEq` on `apx_sdk::url::Url`.
 - Added support for fragment resolution to `fetch_object`.
+- Added `DidUrl` type.
 
 ### Changed
 
@@ -21,6 +22,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Removed
 
 - Dropped support for `mitra-jcs-rsa-2022` cryptosuite.
+- Removed `Did::parse_url` method.
 
 ## [0.11.0] - 2025-03-19
 

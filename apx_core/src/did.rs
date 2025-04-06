@@ -4,7 +4,6 @@
 use std::fmt;
 use std::str::FromStr;
 
-use iri_string::types::UriRelativeString;
 use regex::Regex;
 use serde::{
     Deserialize, Deserializer, Serialize, Serializer,
@@ -19,7 +18,7 @@ use crate::{
 // https://www.w3.org/TR/did-core/#did-syntax
 const DID_RE: &str = r"^did:(?P<method>[[:alpha:]]+):[A-Za-z0-9._:-]+$";
 // https://www.w3.org/TR/did-core/#did-url-syntax
-const DID_URL_RE: &str = r"^(?P<did>did:[[:alpha:]]+:[A-Za-z0-9._:-]+)(?P<resource>.*)$";
+pub(crate) const DID_URL_RE: &str = r"^(?P<did>did:[[:alpha:]]+:[A-Za-z0-9._:-]+)(?P<resource>.*)$";
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Did {
@@ -32,18 +31,6 @@ pub enum Did {
 pub struct DidParseError;
 
 impl Did {
-    /// Parse DID URL
-    pub fn parse_url(url: &str) -> Result<(Self, UriRelativeString), DidParseError> {
-        let url_re = Regex::new(DID_URL_RE)
-            .expect("regexp should be valid");
-        let captures = url_re.captures(url).ok_or(DidParseError)?;
-        let did = Did::from_str(&captures["did"])
-            .map_err(|_| DidParseError)?;
-        let resource = UriRelativeString::from_str(&captures["resource"])
-            .map_err(|_| DidParseError)?;
-        Ok((did, resource))
-    }
-
     pub fn method(&self) -> &'static str {
         match self {
             Did::Key(_) => DidKey::METHOD,
@@ -151,19 +138,5 @@ mod tests {
         let value = "https://social.example/resolver/did:key:z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK";
         let result = value.parse::<Did>();
         assert!(result.is_err());
-    }
-
-    #[test]
-    fn test_parse_did_url() {
-        let did_url_str = "did:key:z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK#z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK";
-        let (did, resource) = Did::parse_url(did_url_str).unwrap();
-        assert_eq!(did.method(), "key");
-        assert_eq!(did.identifier(), "z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK");
-        assert_eq!(resource.path_str(), "");
-        assert_eq!(resource.query_str(), None);
-        assert_eq!(
-            resource.fragment_str(),
-            Some("z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK"),
-        );
     }
 }

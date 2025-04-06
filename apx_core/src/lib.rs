@@ -12,6 +12,7 @@ pub mod crypto_rsa;
 pub mod did;
 pub mod did_key;
 pub mod did_pkh;
+pub mod did_url;
 pub mod eip191;
 pub mod hashes;
 pub mod http_digest;

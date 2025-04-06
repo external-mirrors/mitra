@@ -7,6 +7,7 @@ use crate::{
     did::Did,
     did_key::DidKey,
     did_pkh::DidPkh,
+    did_url::DidUrl,
     eip191::verify_eip191_signature,
     http_url::HttpUrl,
     jcs::{
@@ -107,11 +108,11 @@ pub fn get_json_signature(
             .map_err(|_| VerificationError::InvalidProof("unsupported proof type"))?
     };
     let verification_method = if
-        let Ok((did, _)) = Did::parse_url(&proof_config.verification_method)
+        let Ok(did_url) = DidUrl::parse(&proof_config.verification_method)
     {
         // Fragment is ignored because supported DIDs
         // can't have more than one verification method
-        VerificationMethod::DidUrl(did)
+        VerificationMethod::DidUrl(did_url.did().clone())
     } else if let Ok(http_url) = HttpUrl::parse(&proof_config.verification_method) {
         VerificationMethod::HttpUrl(http_url)
     } else {
