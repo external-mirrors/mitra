@@ -12,6 +12,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Implemented `PartialEq` on `apx_sdk::url::Url`.
 - Added support for fragment resolution to `fetch_object`.
 - Added `DidUrl` type.
+- Implemented `parse` method on `VerificationMethod`.
+- Implemented `origin` method on `VerificationMethod`.
+- Implemented `Display` on `VerificationMethod`.
+- Support verification of HTTP signatures created by DID authorities.
 
 ### Changed
 

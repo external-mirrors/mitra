@@ -78,10 +78,9 @@ impl ApUrl {
         format!("{}{}", self.authority(), self.relative_url())
     }
 
-    // https://www.rfc-editor.org/rfc/rfc6454.html
+    /// Returns origin tuple for this URL
     pub fn origin(&self) -> Origin {
-        // Default port is 0
-        Origin::new("ap", &self.authority.to_string(), 0)
+        self.authority.origin()
     }
 }
 

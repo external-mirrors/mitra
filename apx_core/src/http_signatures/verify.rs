@@ -11,8 +11,8 @@ use crate::{
     crypto_eddsa::verify_eddsa_signature,
     crypto_rsa::verify_rsa_sha256_signature,
     http_digest::{parse_digest_header, ContentDigest},
-    http_url::HttpUrl,
     http_utils::remove_quotes,
+    json_signatures::verify::VerificationMethod,
 };
 
 const SIGNATURE_PARAMETER_RE: &str = r#"^(?P<key>[a-zA-Z]+)=(?P<value>.+)$"#;
@@ -49,7 +49,7 @@ pub enum HttpSignatureVerificationError {
 type VerificationError = HttpSignatureVerificationError;
 
 pub struct HttpSignatureData {
-    pub key_id: HttpUrl,
+    pub key_id: VerificationMethod,
     pub message: String, // reconstructed message
     pub signature: String, // base64-encoded signature
     pub expires_at: DateTime<Utc>,
@@ -95,7 +95,7 @@ pub fn parse_http_signature(
 
     let key_id_str = signature_parameters.get("keyId")
         .ok_or(VerificationError::ParseError("keyId parameter is missing"))?;
-    let key_id = HttpUrl::parse(key_id_str)
+    let key_id = VerificationMethod::parse(key_id_str)
         .map_err(|_| VerificationError::ParseError("invalid key ID"))?;
     let headers_parameter = signature_parameters.get("headers")
         .ok_or(VerificationError::ParseError("headers parameter is missing"))?
@@ -241,7 +241,7 @@ mod tests {
             &request_headers,
         ).unwrap();
         assert_eq!(
-            signature_data.key_id.as_str(),
+            signature_data.key_id.to_string(),
             "https://myserver.org/actor#main-key",
         );
         assert_eq!(

@@ -821,7 +821,7 @@ async fn apgateway_inbox_pull_view(
     request: HttpRequest,
 ) -> Result<HttpResponse, HttpError> {
     let db_client = &mut **get_database_client(&db_pool).await?;
-    let (_key_id, maybe_signer) = verify_signed_request(
+    let (signing_key_id, _) = verify_signed_request(
         &config,
         db_client,
         method_adapter(request.method()),
@@ -834,7 +834,6 @@ async fn apgateway_inbox_pull_view(
         log::warn!("C2S authentication error (GET {request_path}): {error}");
         HttpError::PermissionError
     })?;
-    let signer = maybe_signer.expect("signer should be returned");
     let collection_id = format!(
         "{}{}",
         config.instance_url(),
@@ -845,7 +844,9 @@ async fn apgateway_inbox_pull_view(
         db_client,
         &canonical_collection_id.to_string(),
     ).await?;
-    if collection_owner.id != signer.id {
+    let canonical_owner_id =
+        canonicalize_id(collection_owner.profile.expect_remote_actor_id())?;
+    if canonical_owner_id.origin() != signing_key_id.origin() {
         return Err(HttpError::PermissionError);
     };
     const LIMIT: u32 = 20;
@@ -964,7 +965,7 @@ async fn apgateway_outbox_pull_view(
     request: HttpRequest,
 ) -> Result<HttpResponse, HttpError> {
     let db_client = &mut **get_database_client(&db_pool).await?;
-    let (_key_id, maybe_signer) = verify_signed_request(
+    let (signing_key_id, _) = verify_signed_request(
         &config,
         db_client,
         method_adapter(request.method()),
@@ -977,7 +978,6 @@ async fn apgateway_outbox_pull_view(
         log::warn!("C2S authentication error (GET {request_path}): {error}");
         HttpError::PermissionError
     })?;
-    let signer = maybe_signer.expect("signer should be returned");
     let collection_id = format!(
         "{}{}",
         config.instance_url(),
@@ -988,7 +988,9 @@ async fn apgateway_outbox_pull_view(
         db_client,
         &canonical_collection_id.to_string(),
     ).await?;
-    if collection_owner.id != signer.id {
+    let canonical_owner_id =
+        canonicalize_id(collection_owner.profile.expect_remote_actor_id())?;
+    if canonical_owner_id.origin() != signing_key_id.origin() {
         return Err(HttpError::PermissionError);
     };
     const LIMIT: u32 = 20;

@@ -26,7 +26,6 @@ use apx_core::{
         Method,
         Uri,
     },
-    http_url::HttpUrl,
     json_signatures::{
         proofs::ProofType,
         verify::{
@@ -268,7 +267,7 @@ pub async fn verify_signed_request(
     maybe_content_digest: Option<ContentDigest>,
     no_fetch: bool,
     only_key: bool,
-) -> Result<(HttpUrl, Option<DbActorProfile>), AuthenticationError> {
+) -> Result<(VerificationMethod, Option<DbActorProfile>), AuthenticationError> {
     let signature_data = match parse_http_signature(
         &request_method,
         &request_uri,
@@ -281,20 +280,37 @@ pub async fn verify_signed_request(
         Err(other_error) => return Err(other_error.into()),
     };
     let (public_key, maybe_signer) = if only_key {
-        let public_key = get_signing_key(
-            config,
-            db_client,
-            signature_data.key_id.as_str(),
-        ).await?;
+        let public_key = match signature_data.key_id {
+            VerificationMethod::HttpUrl(ref key_id) => {
+                // Resolve HTTP URL
+                get_signing_key(
+                    config,
+                    db_client,
+                    key_id.as_str(),
+                ).await?
+            },
+            VerificationMethod::DidUrl(ref did_url) => {
+                // Resolve DID URL
+                let public_key = did_url.did().as_did_key()
+                    .ok_or(AuthenticationError::InvalidKeyId)?
+                    .try_ed25519_key()
+                    .map_err(|_| AuthenticationError::InvalidKeyId)?;
+                PublicKey::Ed25519(public_key)
+            },
+        };
         (public_key, None)
     } else {
+        let key_id = match signature_data.key_id {
+            VerificationMethod::HttpUrl(ref key_id) => key_id,
+            _ => return Err(AuthenticationError::InvalidKeyId),
+        };
         // TODO: FEP-EF61: support 'ap' URLs
-        let signer_id = key_id_to_actor_id(signature_data.key_id.as_str())
+        let signer_id = key_id_to_actor_id(key_id.as_str())
             .map_err(|_| AuthenticationError::InvalidKeyId)?;
         let signer = get_signer(config, db_client, &signer_id, no_fetch).await?;
         let signer_key = get_signer_key(
             &signer,
-            signature_data.key_id.as_str(),
+            key_id.as_str(),
         )?;
         (signer_key, Some(signer))
     };

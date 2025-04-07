@@ -13,6 +13,7 @@ use serde::{
 use crate::{
     did_key::DidKey,
     did_pkh::DidPkh,
+    url::common::Origin,
 };
 
 // https://www.w3.org/TR/did-core/#did-syntax
@@ -43,6 +44,12 @@ impl Did {
             Did::Key(did_key) => did_key.key_multibase(),
             Did::Pkh(did_pkh) => did_pkh.account_id().to_string(),
         }
+    }
+
+    // https://codeberg.org/fediverse/fep/src/commit/136d6c14b6fb59ab0e6fc37febd01b13982d2d47/fep/ef61/fep-ef61.md#authentication-and-authorization
+    pub(crate) fn origin(&self) -> Origin {
+        // Default port is 0
+        Origin::new("ap", &self.to_string(), 0)
     }
 
     pub fn as_did_key(&self) -> Option<&DidKey> {

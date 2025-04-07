@@ -1,4 +1,6 @@
 //! Verify JSON signatures
+use std::fmt;
+
 use serde_json::{Value as JsonValue};
 
 use crate::{
@@ -15,6 +17,7 @@ use crate::{
     },
     minisign::verify_minisign_signature,
     multibase::{decode_multibase_base58btc, MultibaseError},
+    url::common::Origin,
 };
 
 use super::create::{
@@ -34,6 +37,37 @@ const PROOF_VALUE_KEY: &str = "proofValue";
 pub enum VerificationMethod {
     HttpUrl(HttpUrl),
     DidUrl(DidUrl),
+}
+
+impl VerificationMethod {
+    /// Parses verification method ID
+    pub(crate) fn parse(url: &str) -> Result<Self, &'static str> {
+        let method = if let Ok(did_url) = DidUrl::parse(url) {
+            Self::DidUrl(did_url)
+        } else if let Ok(http_url) = HttpUrl::parse(url) {
+            Self::HttpUrl(http_url)
+        } else {
+            return Err("invalid URL");
+        };
+        Ok(method)
+    }
+
+    /// Returns origin tuple for this verification method
+    pub fn origin(&self) -> Origin {
+        match self {
+            Self::HttpUrl(http_url) => http_url.origin(),
+            Self::DidUrl(did_url) => did_url.origin(),
+        }
+    }
+}
+
+impl fmt::Display for VerificationMethod {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::HttpUrl(http_url) => write!(formatter, "{}", http_url),
+            Self::DidUrl(did_url) => write!(formatter, "{}", did_url),
+        }
+    }
 }
 
 pub struct JsonSignatureData {
@@ -107,15 +141,8 @@ pub fn get_json_signature(
         proof_config.proof_type.parse()
             .map_err(|_| VerificationError::InvalidProof("unsupported proof type"))?
     };
-    let verification_method = if
-        let Ok(did_url) = DidUrl::parse(&proof_config.verification_method)
-    {
-        VerificationMethod::DidUrl(did_url)
-    } else if let Ok(http_url) = HttpUrl::parse(&proof_config.verification_method) {
-        VerificationMethod::HttpUrl(http_url)
-    } else {
-        return Err(VerificationError::InvalidProof("unsupported verification method"));
-    };
+    let verification_method = VerificationMethod::parse(&proof_config.verification_method)
+        .map_err(|_| VerificationError::InvalidProof("invalid verification method"))?;
     let signature = decode_multibase_base58btc(&proof_value)?;
     let signature_data = JsonSignatureData {
         proof_type,

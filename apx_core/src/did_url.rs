@@ -5,7 +5,10 @@ use std::str::FromStr;
 use iri_string::types::UriRelativeString;
 use regex::Regex;
 
-use super::did::{Did, DID_URL_RE};
+use super::{
+    did::{Did, DID_URL_RE},
+    url::common::Origin,
+};
 
 /// DID URL
 #[derive(Debug, PartialEq)]
@@ -36,6 +39,11 @@ impl DidUrl {
     /// Returns relative resource identifier
     pub fn resource(&self) -> &str {
         self.resource.as_str()
+    }
+
+    /// Returns origin tuple for this URL
+    pub fn origin(&self) -> Origin {
+        self.did.origin()
     }
 }
 
