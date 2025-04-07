@@ -1,4 +1,6 @@
-/// https://w3c-ccg.github.io/did-method-key/
+//! did:key method
+//!
+//! <https://w3c-ccg.github.io/did-key-spec/>
 use std::fmt;
 use std::str::FromStr;
 

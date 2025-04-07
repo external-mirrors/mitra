@@ -1,3 +1,4 @@
+//! Retrieve objects or media
 use reqwest::{
     header,
     Client,

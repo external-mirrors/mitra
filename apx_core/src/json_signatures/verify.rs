@@ -1,3 +1,4 @@
+//! Verify JSON signatures
 use serde_json::{Value as JsonValue};
 
 use crate::{

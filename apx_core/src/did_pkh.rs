@@ -1,4 +1,6 @@
-/// https://github.com/w3c-ccg/did-pkh/blob/main/did-pkh-method-draft.md
+//! did:pkh method
+//!
+//! <https://github.com/w3c-ccg/did-pkh/blob/main/did-pkh-method-draft.md>
 use std::fmt;
 use std::str::FromStr;
 

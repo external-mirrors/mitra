@@ -1,5 +1,7 @@
-/// https://github.com/multiformats/multicodec
-/// https://github.com/multiformats/unsigned-varint
+//! Multicodecs
+//!
+//! <https://github.com/multiformats/multicodec>  
+//! <https://github.com/multiformats/unsigned-varint>
 use unsigned_varint;
 
 #[derive(thiserror::Error, Debug)]

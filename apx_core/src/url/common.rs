@@ -17,7 +17,7 @@ impl Origin {
 }
 
 /// Encode URI path component (RFC-3986).
-/// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/encodeURIComponent#encoding_for_rfc3986
+/// <https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/encodeURIComponent#encoding_for_rfc3986>
 pub fn url_encode(input: &str) -> String {
     PercentEncodedForUri::unreserve(input).to_string()
 }

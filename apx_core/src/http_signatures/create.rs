@@ -1,3 +1,4 @@
+//! Create HTTP signatures
 use chrono::Utc;
 use http::Method;
 use url::{Url, ParseError as UrlError};

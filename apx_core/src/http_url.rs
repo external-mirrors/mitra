@@ -1,3 +1,4 @@
+//! HTTP(S) URLs
 use std::fmt;
 use std::str::FromStr;
 

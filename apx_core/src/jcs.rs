@@ -1,10 +1,13 @@
+//! JSON Canonicalization Scheme (JCS)
+//!
+//! <https://www.rfc-editor.org/rfc/rfc8785>
 use serde::Serialize;
 
 #[derive(thiserror::Error, Debug)]
 #[error("canonicalization error")]
 pub struct CanonicalizationError;
 
-/// JCS: https://www.rfc-editor.org/rfc/rfc8785
+/// Performs JCS canonicalization
 pub fn canonicalize_object(
     object: &impl Serialize,
 ) -> Result<String, CanonicalizationError> {

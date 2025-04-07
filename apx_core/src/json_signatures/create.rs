@@ -1,4 +1,6 @@
-/// https://w3c.github.io/vc-data-integrity/
+//! Create JSON signatures
+//!
+//! <https://www.w3.org/TR/vc-data-integrity/>
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value as JsonValue};

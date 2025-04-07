@@ -1,3 +1,4 @@
+//! EdDSA utilities
 use ed25519_dalek::{
     pkcs8::{
         DecodePublicKey,

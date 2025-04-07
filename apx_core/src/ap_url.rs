@@ -1,4 +1,6 @@
-/// https://codeberg.org/fediverse/fep/src/branch/main/fep/ef61/fep-ef61.md
+//! 'ap' URLs
+//!
+//! <https://codeberg.org/fediverse/fep/src/branch/main/fep/ef61/fep-ef61.md>
 use std::fmt;
 use std::str::FromStr;
 

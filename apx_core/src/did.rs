@@ -1,4 +1,6 @@
-/// https://www.w3.org/TR/did-core/
+//! DIDs
+//!
+//! <https://www.w3.org/TR/did-1.0/>
 use std::fmt;
 use std::str::FromStr;
 

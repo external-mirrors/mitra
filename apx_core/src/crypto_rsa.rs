@@ -1,3 +1,4 @@
+//! RSA utilities
 use rsa::{
     pkcs1::{
         DecodeRsaPrivateKey,

@@ -1,3 +1,4 @@
+//! Verify HTTP signatures
 use std::collections::HashMap;
 
 use chrono::{DateTime, Duration, TimeZone, Utc};

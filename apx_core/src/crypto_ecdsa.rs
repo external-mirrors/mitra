@@ -1,3 +1,4 @@
+//! ECDSA utilities
 use k256::{
     ecdsa::{
         Error,
