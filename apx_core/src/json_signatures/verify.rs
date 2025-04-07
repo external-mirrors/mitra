@@ -4,7 +4,6 @@ use serde_json::{Value as JsonValue};
 use crate::{
     crypto_eddsa::{verify_eddsa_signature, Ed25519PublicKey},
     crypto_rsa::{verify_rsa_sha256_signature, RsaPublicKey},
-    did::Did,
     did_key::DidKey,
     did_pkh::DidPkh,
     did_url::DidUrl,
@@ -30,10 +29,11 @@ use super::proofs::{ProofType, DATA_INTEGRITY_PROOF};
 
 const PROOF_VALUE_KEY: &str = "proofValue";
 
+/// Signature verification method
 #[derive(Debug, PartialEq)]
 pub enum VerificationMethod {
     HttpUrl(HttpUrl),
-    DidUrl(Did),
+    DidUrl(DidUrl),
 }
 
 pub struct JsonSignatureData {
@@ -110,9 +110,7 @@ pub fn get_json_signature(
     let verification_method = if
         let Ok(did_url) = DidUrl::parse(&proof_config.verification_method)
     {
-        // Fragment is ignored because supported DIDs
-        // can't have more than one verification method
-        VerificationMethod::DidUrl(did_url.did().clone())
+        VerificationMethod::DidUrl(did_url)
     } else if let Ok(http_url) = HttpUrl::parse(&proof_config.verification_method) {
         VerificationMethod::HttpUrl(http_url)
     } else {
@@ -190,6 +188,7 @@ mod tests {
             ed25519_secret_key_from_multikey,
         },
         crypto_rsa::generate_weak_rsa_key,
+        did::Did,
         json_signatures::create::{
             sign_object,
             sign_object_eddsa,
@@ -218,12 +217,13 @@ mod tests {
             signature_data.proof_type,
             ProofType::JcsEip191Signature,
         );
-        let expected_vm = VerificationMethod::DidUrl(Did::Pkh(
-            DidPkh::from_ethereum_address(
-                "0xb9c5714089478a327f09197987f16f9e5d936e8a",
-            ),
-        ));
-        assert_eq!(signature_data.verification_method, expected_vm);
+        let expected_did = Did::Pkh(DidPkh::from_ethereum_address(
+            "0xb9c5714089478a327f09197987f16f9e5d936e8a"));
+        let did_url = match signature_data.verification_method {
+            VerificationMethod::DidUrl(did_url) => did_url,
+            _ => panic!("unexpected verification method"),
+        };
+        assert_eq!(did_url.did(), &expected_did);
         assert_eq!(signature_data.signature, [171, 205]);
     }
 

@@ -8,6 +8,7 @@ use regex::Regex;
 use super::did::{Did, DID_URL_RE};
 
 /// DID URL
+#[derive(Debug, PartialEq)]
 pub struct DidUrl {
     did: Did,
     resource: UriRelativeString,

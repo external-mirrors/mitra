@@ -59,11 +59,14 @@ pub fn verify_portable_object(
     match signature_data.verification_method {
         VerificationMethod::HttpUrl(_) =>
             return Err(AuthenticationError::InvalidVerificationMethod),
-        VerificationMethod::DidUrl(ref did) => {
+        VerificationMethod::DidUrl(did_url) => {
             // Object must be signed by its owner
-            if did != canonical_object_id.authority() {
+            if did_url.did() != canonical_object_id.authority() {
                 return Err(AuthenticationError::UnexpectedSigner);
             };
+            // DID URL fragment is ignored because supported DIDs
+            // can't have more than one verification method
+            let did = did_url.did();
             match signature_data.proof_type {
                 ProofType::EddsaJcsSignature => {
                     let signer_key = did.as_did_key()

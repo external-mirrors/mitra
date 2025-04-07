@@ -384,8 +384,8 @@ pub async fn verify_signed_activity(
                 _ => return Err(AuthenticationError::InvalidJsonSignatureType),
             };
         },
-        VerificationMethod::DidUrl(did) => {
-            log::warn!("activity signed by {did}");
+        VerificationMethod::DidUrl(did_url) => {
+            log::warn!("activity signed by {}", did_url.did());
             return Err(AuthenticationError::InvalidJsonSignatureType);
         },
     };
