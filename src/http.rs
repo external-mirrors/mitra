@@ -7,6 +7,7 @@ use actix_governor::{
     PeerIpKeyExtractor,
 };
 use actix_web::{
+    body::MessageBody,
     dev::{ConnectionInfo, ServiceResponse},
     error::{Error, JsonPayloadError},
     http::{
@@ -103,19 +104,24 @@ pub fn create_default_headers_middleware() -> DefaultHeaders {
         .add((http_header::X_CONTENT_TYPE_OPTIONS, "nosniff"))
 }
 
-pub fn log_response_error<B>(
+pub fn log_response_error<B: MessageBody>(
     level: Level,
     response: &ServiceResponse<B>,
 ) -> () {
-    if let Some(error) = response.response().error() {
-        log::log!(
-            level,
-            "{} {} : {}",
-            response.request().method(),
-            response.request().path(),
-            error,
-        );
+    let error_message = if let Some(error) = response.response().error() {
+        // Actix error
+        error.to_string()
+    } else {
+        // Middleware error
+        "unknown internal error".to_owned()
     };
+    log::log!(
+        level,
+        "{} {} : {}",
+        response.request().method(),
+        response.request().path(),
+        error_message,
+    );
 }
 
 /// Convert JSON payload deserialization errors into validation errors

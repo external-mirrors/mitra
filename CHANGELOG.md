@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- Log HTTP server errors where error source is unknown.
+
 ## [3.22.0] - 2025-04-02
 
 ### Added
