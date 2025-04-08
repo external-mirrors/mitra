@@ -4,7 +4,6 @@ use actix_governor::{
     governor::middleware::NoOpMiddleware,
     GovernorConfig,
     GovernorConfigBuilder,
-    PeerIpKeyExtractor,
 };
 use actix_web::{
     body::MessageBody,
@@ -24,7 +23,10 @@ use serde_qs::actix::{QsForm, QsQuery};
 
 use apx_core::http_types::{header_map_adapter, HeaderMap};
 
-use crate::errors::HttpError;
+use crate::{
+    errors::HttpError,
+    ratelimit::RealIpKeyExtractor,
+};
 
 pub fn actix_header_map_adapter(header_map: &ActixHeaderMap) -> HeaderMap {
     header_map_adapter(header_map)
@@ -37,7 +39,7 @@ pub type QsFormOrJson<T> = Either<QsForm<T>, Json<T>>;
 // https://github.com/actix/actix-web/issues/2044
 pub type MultiQuery<T> = QsQuery<T>;
 
-pub type RatelimitConfig = GovernorConfig<PeerIpKeyExtractor, NoOpMiddleware>;
+pub type RatelimitConfig = GovernorConfig<RealIpKeyExtractor, NoOpMiddleware>;
 
 pub fn ratelimit_config(
     num_requests: u32,
@@ -45,6 +47,7 @@ pub fn ratelimit_config(
     permissive: bool,
 ) -> RatelimitConfig {
     GovernorConfigBuilder::default()
+        .key_extractor(RealIpKeyExtractor)
         .burst_size(num_requests)
         .seconds_per_request(period)
         .permissive(permissive)

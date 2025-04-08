@@ -1,4 +1,4 @@
-use actix_governor::{Governor, GovernorConfigBuilder};
+use actix_governor::Governor;
 use actix_multipart::form::MultipartForm;
 use actix_web::{
     body::{BoxBody, EitherBody},
@@ -44,14 +44,17 @@ use mitra_services::{
 use mitra_utils::passwords::verify_password;
 use mitra_validators::errors::ValidationError;
 
-use crate::http::{
-    log_response_error,
-    ContentSecurityPolicy,
-    FormOrJson,
-};
-use crate::mastodon_api::{
-    auth::get_current_user,
-    errors::MastodonError,
+use crate::{
+    http::{
+        log_response_error,
+        ratelimit_config,
+        ContentSecurityPolicy,
+        FormOrJson,
+    },
+    mastodon_api::{
+        auth::get_current_user,
+        errors::MastodonError,
+    },
 };
 
 use super::types::{
@@ -294,11 +297,7 @@ pub fn oauth_api_scope() -> ActixScope<impl ServiceFactory<
     Error = ActixError,
     InitError = (),
 >> {
-    let token_limit = GovernorConfigBuilder::default()
-        .burst_size(5)
-        .seconds_per_request(120)
-        .finish()
-        .expect("configuration should be valid");
+    let token_limit = ratelimit_config(5, 120, false);
     let token_view_limited = web::resource("/token").route(
         web::post()
             .to(token_view)

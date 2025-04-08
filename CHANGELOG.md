@@ -10,6 +10,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Log HTTP server errors where error source is unknown.
 
+### Fixed
+
+- Fixed internal server error when acessing rate-limited endpoints via unix socket.
+- Fixed incorrect rate limiter IP address check.
+
 ## [3.22.0] - 2025-04-02
 
 ### Added
