@@ -60,8 +60,7 @@ dependencies = [
 [[package]]
 name = "actix-governor"
 version = "0.7.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "072a3d7907b945b0956f9721e01c117ad5765ce5be2fd9bb1e44a117c669de22"
+source = "git+https://github.com/silverpill/actix-governor?rev=3c3b2fd6325454fc9de74d9acc22b9cdbfcfabc8#3c3b2fd6325454fc9de74d9acc22b9cdbfcfabc8"
 dependencies = [
  "actix-http",
  "actix-web",
