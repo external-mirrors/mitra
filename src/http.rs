@@ -112,8 +112,10 @@ pub fn log_response_error<B: MessageBody>(
         // Actix error
         error.to_string()
     } else {
-        // Middleware error
-        "unknown internal error".to_owned()
+        response.response()
+            .status().canonical_reason()
+            .unwrap_or("unknown error")
+            .to_owned()
     };
     log::log!(
         level,
