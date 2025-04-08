@@ -8,8 +8,8 @@ rust-version.workspace = true
 
 [dependencies]
 # Used for HTML sanitization
-ammonia = "3.2.0"
-html5ever = "0.26.0"
+ammonia = "4.0.0"
+html5ever = "0.27.0"
 # Used to generate identicons
 eth-blockies = "1.1.0"
 # Used for working with dates
@@ -17,7 +17,7 @@ chrono = { version = "0.4.31", default-features = false, features = ["std", "clo
 # Used for parsing markdown
 comrak = { version = "=0.30.0", default-features = false }
 # Used for extracting text from HTML
-html2text = "=0.12.4"
+html2text = "0.12.6"
 # Used to gather disk info
 lfs-core = "=0.11.1"
 # Used to determine file extension
