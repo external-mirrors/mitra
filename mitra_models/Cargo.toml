@@ -43,7 +43,7 @@ apx_core = { path = "../apx_core" }
 mitra_utils = { path = "../mitra_utils" }
 
 [dev-dependencies]
-serial_test = "2.0.0"
+serial_test = "3.0.0"
 
 apx_core = { path = "../apx_core", features = ["test-utils"] }
 
