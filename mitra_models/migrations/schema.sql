@@ -114,11 +114,9 @@ CREATE TABLE oauth_authorization (
 CREATE TABLE oauth_token (
     id SERIAL PRIMARY KEY,
     owner_id UUID NOT NULL REFERENCES user_account (id) ON DELETE CASCADE,
-    token VARCHAR(100) UNIQUE,
-    token_digest BYTEA UNIQUE,
+    token_digest BYTEA UNIQUE NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL,
-    expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
-    CHECK (token IS NOT NULL OR token_digest IS NOT NULL)
+    expires_at TIMESTAMP WITH TIME ZONE NOT NULL
 );
 
 CREATE TABLE portable_user_account (

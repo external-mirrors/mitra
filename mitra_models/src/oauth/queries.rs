@@ -150,10 +150,10 @@ pub async fn delete_oauth_token(
     let maybe_row = transaction.query_opt(
         "
         SELECT owner_id FROM oauth_token
-        WHERE token = $1 OR token_digest = $2
+        WHERE token_digest = $1
         FOR UPDATE
         ",
-        &[&token, &token_digest],
+        &[&token_digest],
     ).await?;
     if let Some(row) = maybe_row {
         let owner_id: Uuid = row.try_get("owner_id")?;
@@ -164,9 +164,9 @@ pub async fn delete_oauth_token(
             transaction.execute(
                 "
                 DELETE FROM oauth_token
-                WHERE token = $1 OR token_digest = $2
+                WHERE token_digest = $1
                 ",
-                &[&token, &token_digest],
+                &[&token_digest],
             ).await?;
         };
     };
@@ -197,10 +197,10 @@ pub async fn get_user_by_oauth_token(
         JOIN user_account ON oauth_token.owner_id = user_account.id
         JOIN actor_profile ON user_account.id = actor_profile.id
         WHERE
-            (oauth_token.token = $1 OR oauth_token.token_digest = $2)
+            oauth_token.token_digest = $1
             AND oauth_token.expires_at > CURRENT_TIMESTAMP
         ",
-        &[&token, &token_digest],
+        &[&token_digest],
     ).await?;
     let row = maybe_row.ok_or(DatabaseError::NotFound("user"))?;
     let db_user: DbUser = row.try_get("user_account")?;

@@ -11,6 +11,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Set minimum migration version to 72.
 - Disabled custom migration that generates Ed25519 keys for accounts.
 - Treat scheduled outgoing activities where sender is not specified as invalid.
+- Removed unhashed OAuth tokens from database.
 
 ## [3.23.0] - 2025-04-15
 
