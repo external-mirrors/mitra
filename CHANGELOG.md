@@ -15,6 +15,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Deprecated `prune-remote-emojis` command.
 
+### Removed
+
+- Dropped support for `mitra-jcs-rsa-2022` cryptosuite.
+
 ### Fixed
 
 - Fixed internal server error when acessing rate-limited endpoints via unix socket.

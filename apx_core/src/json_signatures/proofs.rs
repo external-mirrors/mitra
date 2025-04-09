@@ -9,7 +9,6 @@ pub(super) const DATA_INTEGRITY_PROOF: &str = "DataIntegrityProof";
 // - Digest algorithm: SHA-256
 // - Signature algorithm: RSASSA-PKCS1-v1_5
 pub(super) const PROOF_TYPE_JCS_RSA: &str = "MitraJcsRsaSignature2022";
-pub(super) const CRYPTOSUITE_JCS_RSA: &str = "mitra-jcs-rsa-2022";
 
 // Similar to EthereumPersonalSignature2021 but with JCS
 pub(super) const PROOF_TYPE_JCS_EIP191: &str = "MitraJcsEip191Signature2022";
@@ -57,7 +56,6 @@ impl FromStr for ProofType {
 impl ProofType {
     pub fn from_cryptosuite(value: &str) -> Result<Self, UnsupportedProofType> {
         let proof_type = match value {
-            CRYPTOSUITE_JCS_RSA => Self::JcsRsaSignature,
             CRYPTOSUITE_JCS_EDDSA_LEGACY => Self::JcsEddsaSignature,
             CRYPTOSUITE_JCS_EDDSA => Self::EddsaJcsSignature,
             _ => return Err(UnsupportedProofType),
