@@ -618,7 +618,7 @@ impl DeleteEmptyProfiles {
     }
 }
 
-/// Delete unused remote emojis
+/// Delete unused remote emojis (deprecated)
 #[derive(Parser)]
 pub struct PruneRemoteEmojis;
 
