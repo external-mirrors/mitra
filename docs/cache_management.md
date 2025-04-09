@@ -7,7 +7,7 @@ retention:
   # Remote posts with which local accounts didn't interact
   extraneous_posts: 15
   # Remote accounts without posts
-  empty_profiles: 60
+  empty_profiles: 30
 ```
 
 ## Manual removal
@@ -21,7 +21,7 @@ mitractl delete-extraneous-posts 15
 Profiles:
 
 ```shell
-mitractl delete-empty-profiles 60
+mitractl delete-empty-profiles 30
 ```
 
 Delete attachments that don't belong to any post:
