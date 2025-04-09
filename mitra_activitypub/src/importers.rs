@@ -148,6 +148,7 @@ impl FetcherContext {
     }
 }
 
+// Only used in fetch-object command
 pub async fn fetch_any_object_with_context<T: DeserializeOwned>(
     agent: &FederationAgent,
     context: &mut FetcherContext,
@@ -191,8 +192,11 @@ impl ApClient {
         object_id: &str,
     ) -> Result<T, HandlerError> {
         let agent = self.agent();
-        let object_json: JsonValue =
-            fetch_any_object(&agent, object_id).await?;
+        let object_json = fetch_object(
+            &agent,
+            object_id,
+            FetchObjectOptions::default(),
+        ).await?;
         let canonical_object_id = object_json["id"].as_str()
             .and_then(|object_id| Url::parse(object_id).ok())
             .ok_or(ValidationError("invalid object ID"))?;
@@ -285,7 +289,6 @@ async fn refresh_remote_profile(
     profile: DbActorProfile,
     force: bool,
 ) -> Result<DbActorProfile, HandlerError> {
-    let agent = build_federation_agent(&ap_client.instance, None);
     let profile = if force ||
         profile.updated_at < Utc::now() - Duration::days(1)
     {
@@ -298,12 +301,8 @@ async fn refresh_remote_profile(
         let mut context = FetcherContext::from(actor_data);
         // Don't re-fetch from local gateway
         context.remove_gateway(&ap_client.instance.url());
-        match fetch_any_object_with_context::<Actor>(
-            &agent,
-            &mut context,
-            &actor_data.id,
-            FetchObjectOptions::default(),
-        ).await {
+        let actor_http_url = context.prepare_object_id(&actor_data.id)?;
+        match ap_client.fetch_object::<Actor>(&actor_http_url).await {
             Ok(actor) => {
                 if canonicalize_id(actor.id())?.to_string() != actor_data.id {
                     log::warn!(
