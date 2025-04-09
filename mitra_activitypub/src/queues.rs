@@ -600,11 +600,59 @@ pub async fn fetcher_queue_executor(
 
 #[cfg(test)]
 mod tests {
+    use serde_json::json;
     use super::*;
 
     #[test]
     fn test_outgoing_queue_backoff() {
         assert_eq!(outgoing_queue_backoff(1), 600);
         assert_eq!(outgoing_queue_backoff(2), 3300);
+    }
+
+    #[test]
+    fn test_outgoing_queue_sort_recipients() {
+        let instance_url = "https://local.example";
+        let sender = User::default();
+        let activity = json!({});
+        let recipient_1 =
+            Recipient::new("https://b.example/actor", "https://b.example/inbox");
+        let recipient_2 =
+            Recipient::new("https://a.example/actor", "https://a.example/inbox");
+        let recipient_3 =
+            Recipient::new("https://c.example/actor", "https://c.example/inbox");
+        let recipient_4 =
+            Recipient::new("https://d.example/actor", "https://d.example/inbox");
+        let recipients = vec![
+            recipient_3,
+            recipient_1,
+            recipient_2.clone(),
+            {
+                let mut recipient = recipient_2;
+                recipient.is_primary = true;
+                recipient
+            },
+            {
+                let mut recipient = recipient_4;
+                recipient.is_primary = true;
+                recipient
+            },
+        ];
+        let job_data = OutgoingActivityJobData::new(
+            instance_url,
+            &sender,
+            activity,
+            recipients,
+        );
+        assert_eq!(job_data.recipients.len(), 5);
+        assert_eq!(job_data.recipients[0].id, "https://a.example/actor");
+        assert_eq!(job_data.recipients[0].is_primary, true);
+        assert_eq!(job_data.recipients[1].id, "https://d.example/actor");
+        assert_eq!(job_data.recipients[1].is_primary, true);
+        assert_eq!(job_data.recipients[2].id, "https://a.example/actor");
+        assert_eq!(job_data.recipients[2].is_primary, false);
+        assert_eq!(job_data.recipients[3].id, "https://b.example/actor");
+        assert_eq!(job_data.recipients[3].is_primary, false);
+        assert_eq!(job_data.recipients[4].id, "https://c.example/actor");
+        assert_eq!(job_data.recipients[4].is_primary, false);
     }
 }

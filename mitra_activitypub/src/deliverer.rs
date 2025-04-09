@@ -176,7 +176,7 @@ impl Sender {
 }
 
 /// Represents delivery to a single inbox
-#[derive(Deserialize, Serialize)]
+#[derive(Clone, Deserialize, Serialize)]
 pub struct Recipient {
     pub id: String,
     pub(super) inbox: String,
