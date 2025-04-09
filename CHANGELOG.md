@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Log HTTP server errors where error source is unknown.
 - Don't make requests to blocked instances when `import-object` command is used.
+- Use `https://w3id.org/valueflows/ont/vf#Proposal` relation type for subscription payment links.
 
 ### Deprecated
 

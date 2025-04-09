@@ -177,7 +177,7 @@ pub fn attach_payment_option(
                 &actor_id,
                 &payment_info.chain_id,
             );
-            rel.push(valueflows_proposal_rel_legacy());
+            rel.push(valueflows_proposal_rel());
             (name, href)
         },
         PaymentOption::RemoteMoneroSubscription(_) => unimplemented!(),
@@ -393,7 +393,7 @@ mod tests {
         assert_eq!(attachment.href, subscription_page_url);
         assert_eq!(attachment.rel.len(), 2);
         assert_eq!(attachment.rel[0], "payment");
-        assert_eq!(attachment.rel[1], "https://w3id.org/valueflows/Proposal");
+        assert_eq!(attachment.rel[1], "https://w3id.org/valueflows/ont/vf#Proposal");
 
         let attachment_value = serde_json::to_value(attachment).unwrap();
         let attachment = parse_link(&attachment_value).unwrap();
