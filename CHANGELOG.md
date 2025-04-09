@@ -14,6 +14,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Removed unhashed OAuth tokens from database.
 - Don't change default config file path when `production` feature is enabled.
 - Changed default data retention parameters.
+- Changed default fetcher and deliverer timeouts.
 
 ### Removed
 

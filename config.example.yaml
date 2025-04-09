@@ -96,6 +96,9 @@ registration:
 #  #onion_proxy_url: 'socks5h://127.0.0.1:9050'
 #  # Proxy for outgoing requests to .i2p targets
 #  #i2p_proxy_url: 'socks5h://127.0.0.1:4447'
+#  # Timeouts (seconds)
+#  #fetcher_timeout: 30
+#  #deliverer_timeout: 10
 
 # Lists of blocked and allowed domains (allowlist has higher priority).
 # Wildcard patterns are supported. Example: *.domain.example

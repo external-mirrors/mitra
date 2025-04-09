@@ -4,10 +4,10 @@ const fn default_federation_enabled() -> bool { true }
 const fn default_ssrf_protection_enabled() -> bool { true }
 const fn default_incoming_queue_worker_enabled() -> bool { true }
 const fn default_inbox_queue_batch_size() -> u32 { 20 }
-const fn default_fetcher_timeout() -> u64 { 60 }
+const fn default_fetcher_timeout() -> u64 { 30 }
 const fn default_deliverer_standalone() -> bool { true }
 const fn default_deliverer_pool_size() -> usize { 10 }
-const fn default_deliverer_timeout() -> u64 { 30 }
+const fn default_deliverer_timeout() -> u64 { 10 }
 const fn default_deliverer_log_response_length() -> usize { 75 }
 const fn default_fep_e232_enabled() -> bool { true }
 const fn default_fep_1b12_full_enabled() -> bool { true }
