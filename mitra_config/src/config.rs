@@ -106,10 +106,8 @@ pub struct Config {
     #[serde(default)]
     pub federation: FederationConfig,
 
-    #[serde(default)]
-    pub blocked_instances: Vec<String>,
-    #[serde(default)]
-    pub allowed_instances: Vec<String>,
+    pub blocked_instances: Option<Vec<String>>,
+    pub allowed_instances: Option<Vec<String>>,
 
     pub metrics: Option<Metrics>,
 

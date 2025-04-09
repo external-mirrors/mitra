@@ -16,6 +16,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Changed default data retention parameters.
 - Changed default fetcher and deliverer timeouts.
 
+### Deprecated
+
+- Deprecated `blocked_instances` and `allowed_instances` configuration parameters.
+
 ### Removed
 
 - Don't read instance key from `instance_rsa_key` file.

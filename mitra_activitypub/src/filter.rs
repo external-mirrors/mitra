@@ -59,8 +59,8 @@ impl FederationFilter {
     ) -> Result<Self, DatabaseError> {
         let rules = get_filter_rules(db_client).await?;
         Ok(Self {
-            blocklist: config.blocked_instances.clone(),
-            allowlist: config.allowed_instances.clone(),
+            blocklist: config.blocked_instances.clone().unwrap_or_default(),
+            allowlist: config.allowed_instances.clone().unwrap_or_default(),
             rules,
         })
     }
