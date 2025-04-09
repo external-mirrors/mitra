@@ -8,6 +8,10 @@ If you're using Mitra 2.x, read the [Mitra 3.0 migration guide](./mitra_3_0.md).
 
 - Removed unhashed OAuth tokens from the database. Some users might be logged out as a result.
 
+## Configuration
+
+- Not reading instance RSA key from `instance_rsa_key` file.
+
 ## Web client
 
 - Minimum supported version of NodeJS is 20.

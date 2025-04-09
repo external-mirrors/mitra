@@ -131,10 +131,6 @@ impl Config {
         self.instance_ed25519_key = Some(secret_key);
     }
 
-    pub fn get_instance_rsa_key(&self) -> Option<&RsaSecretKey> {
-        self.instance_rsa_key.as_ref()
-    }
-
     pub fn set_instance_rsa_key(&mut self, secret_key: RsaSecretKey) -> () {
         assert!(
             self.instance_rsa_key.is_none(),

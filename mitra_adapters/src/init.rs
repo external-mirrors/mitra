@@ -1,5 +1,3 @@
-use std::fs::remove_file;
-
 use log::Level;
 
 use apx_core::{
@@ -159,17 +157,8 @@ async fn prepare_instance_keys(
     config: &mut Config,
     db_client: &impl DatabaseClient,
 ) -> Result<(), DatabaseError> {
-    if let Some(instance_rsa_key) = config.get_instance_rsa_key() {
-        save_instance_rsa_key(db_client, instance_rsa_key).await?;
-        log::warn!("instance RSA key copied from file");
-        let secret_key_path = config.storage_dir.join("instance_rsa_key");
-        remove_file(secret_key_path)
-            .expect("can't delete instance_rsa_key file");
-        log::warn!("instance_rsa_key file deleted");
-    } else {
-        let instance_rsa_key = prepare_instance_rsa_key(db_client).await?;
-        config.set_instance_rsa_key(instance_rsa_key);
-    };
+    let instance_rsa_key = prepare_instance_rsa_key(db_client).await?;
+    config.set_instance_rsa_key(instance_rsa_key);
     let instance_ed25519_key = prepare_instance_ed25519_key(db_client).await?;
     config.set_instance_ed25519_key(instance_ed25519_key);
     Ok(())

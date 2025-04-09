@@ -2,13 +2,6 @@ use std::os::unix::fs::MetadataExt;
 use std::path::Path;
 use std::str::FromStr;
 
-use apx_core::{
-    crypto_rsa::{
-        rsa_secret_key_from_pkcs8_pem,
-        RsaSecretKey,
-    },
-};
-
 use super::blockchain::BlockchainConfig;
 use super::config::Config;
 use super::environment::Environment;
@@ -69,20 +62,6 @@ fn check_directory_owner(path: &Path) -> () {
     };
 }
 
-/// Read secret key from instance_rsa_key file
-fn read_instance_rsa_key(storage_dir: &Path) -> Option<RsaSecretKey> {
-    let secret_key_path = storage_dir.join("instance_rsa_key");
-    if secret_key_path.exists() {
-        let secret_key_str = std::fs::read_to_string(&secret_key_path)
-            .expect("failed to read instance RSA key");
-        let secret_key = rsa_secret_key_from_pkcs8_pem(&secret_key_str)
-            .expect("failed to read instance RSA key");
-        Some(secret_key)
-    } else {
-        None
-    }
-}
-
 pub fn parse_config() -> (Config, Vec<&'static str>) {
     let env = parse_env();
     let config_yaml = std::fs::read_to_string(&env.config_path)
@@ -137,11 +116,6 @@ pub fn parse_config() -> (Config, Vec<&'static str>) {
     };
     if config.ipfs_api_url.is_some() != config.ipfs_gateway_url.is_some() {
         panic!("both ipfs_api_url and ipfs_gateway_url must be set");
-    };
-
-    // Insert instance RSA key
-    if let Some(instance_rsa_key) = read_instance_rsa_key(&config.storage_dir) {
-        config.instance_rsa_key = Some(instance_rsa_key);
     };
 
     (config, warnings)
