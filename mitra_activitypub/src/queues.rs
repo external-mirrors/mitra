@@ -205,14 +205,18 @@ impl OutgoingActivityJobData {
     }
 
     fn sort_recipients(mut recipients: Vec<Recipient>) -> Vec<Recipient> {
-        // Sort and de-duplicate recipients
+        // De-duplicate recipients.
+        // Keys are inboxes, not actor IDs, because one actor
+        // can have multiple inboxes.
+        recipients.sort_by_key(|recipient| {
+            (recipient.inbox.clone(), !recipient.is_primary)
+        });
+        recipients.dedup_by_key(|recipient| recipient.inbox.clone());
+        // Sort recipients
         recipients.sort_by_key(|recipient| {
             // Primary recipients are first
             (!recipient.is_primary, recipient.inbox.clone())
         });
-        // Keys are inboxes, not actor IDs, because one actor
-        // can have multiple inboxes.
-        recipients.dedup_by_key(|recipient| recipient.inbox.clone());
         recipients
     }
 
@@ -643,16 +647,14 @@ mod tests {
             activity,
             recipients,
         );
-        assert_eq!(job_data.recipients.len(), 5);
+        assert_eq!(job_data.recipients.len(), 4);
         assert_eq!(job_data.recipients[0].id, "https://a.example/actor");
         assert_eq!(job_data.recipients[0].is_primary, true);
         assert_eq!(job_data.recipients[1].id, "https://d.example/actor");
         assert_eq!(job_data.recipients[1].is_primary, true);
-        assert_eq!(job_data.recipients[2].id, "https://a.example/actor");
+        assert_eq!(job_data.recipients[2].id, "https://b.example/actor");
         assert_eq!(job_data.recipients[2].is_primary, false);
-        assert_eq!(job_data.recipients[3].id, "https://b.example/actor");
+        assert_eq!(job_data.recipients[3].id, "https://c.example/actor");
         assert_eq!(job_data.recipients[3].is_primary, false);
-        assert_eq!(job_data.recipients[4].id, "https://c.example/actor");
-        assert_eq!(job_data.recipients[4].is_primary, false);
     }
 }
