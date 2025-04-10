@@ -6,6 +6,7 @@ set -x
 VERSION=$(cargo metadata --quiet --no-deps --offline | jq -r ".packages[0].version")
 ARCH=$(dpkg --print-architecture)
 
+# Package contents will appear in target/debian/tmp/debian/mitra/
 PACKAGE_DIR="target/debian/tmp"
 WEB_DIR="$1"
 

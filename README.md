@@ -174,12 +174,12 @@ Install package:
 dpkg -i mitra_amd64.deb
 ```
 
-Do not overwrite existing configuration file if asked.
+The server will be stopped automatically during installation. Do not overwrite existing configuration file if asked.
 
-Restart Mitra:
+Start Mitra again when the installation is complete:
 
 ```
-systemctl restart mitra
+systemctl start mitra
 ```
 
 ## Configuration
