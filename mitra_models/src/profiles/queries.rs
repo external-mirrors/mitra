@@ -680,6 +680,7 @@ pub async fn search_profiles(
         },
     };
     // Showing local accounts first
+    // Showing recently updated profiles first
     let rows = db_client.query(
         "
         SELECT actor_profile
@@ -687,7 +688,8 @@ pub async fn search_profiles(
         WHERE acct ILIKE $1
         ORDER BY
             user_id IS NOT NULL DESC,
-            portable_user_id IS NOT NULL DESC
+            portable_user_id IS NOT NULL DESC,
+            updated_at DESC
         LIMIT $2 OFFSET $3
         ",
         &[
