@@ -17,6 +17,10 @@ If you're using Mitra 2.x, read the [Mitra 3.0 migration guide](./mitra_3_0.md).
 - Changed default value of `federation.deliverer_timeout` to `10`.
 - Deprecated `blocked_instances` and `allowed_instances` configuration parameters. Use [federation filter](./filter.md) instead.
 
+## CLI
+
+- Renamed `reject` filter action to `reject-incoming`, rename `reject-data` filter action to `reject`.
+
 ## Web client
 
 - Minimum supported version of NodeJS is 20.

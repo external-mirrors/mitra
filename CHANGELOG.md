@@ -15,6 +15,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Don't change default config file path when `production` feature is enabled.
 - Changed default data retention parameters.
 - Changed default fetcher and deliverer timeouts.
+- Renamed `reject` filter action to `reject-incoming`.
+- Renamed `reject-data` filter action to `reject`.
 
 ### Deprecated
 

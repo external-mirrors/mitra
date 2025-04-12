@@ -19,17 +19,13 @@ use mitra_validators::filter_rules::validate_rule_target;
 #[derive(Clone, ValueEnum)]
 enum FilterAction {
     /// Reject incoming messages only
-    Reject,
-    /// Accept incoming messages
-    Accept,
-    #[clap(hide = true)]
     RejectIncoming,
-    #[clap(hide = true)]
+    /// Accept incoming messages
     AcceptIncoming,
     /// Reject all profiles and posts, block deliveries.
-    RejectData,
+    Reject,
     /// Accept profiles and posts
-    AcceptData,
+    Accept,
     #[clap(hide = true)]
     RejectMedia,
     #[clap(hide = true)]
@@ -57,12 +53,10 @@ enum FilterAction {
 impl FilterAction {
     fn to_db_action(&self) -> (DbFilterAction, bool) {
         match self {
-            Self::Reject => (DbFilterAction::RejectIncoming, false),
-            Self::Accept => (DbFilterAction::RejectIncoming, true),
             Self::RejectIncoming => (DbFilterAction::RejectIncoming, false),
             Self::AcceptIncoming => (DbFilterAction::RejectIncoming, true),
-            Self::RejectData => (DbFilterAction::Reject, false),
-            Self::AcceptData => (DbFilterAction::Reject, true),
+            Self::Reject => (DbFilterAction::Reject, false),
+            Self::Accept => (DbFilterAction::Reject, true),
             Self::RejectMedia =>
                 (DbFilterAction::RejectMediaAttachments, false),
             Self::AcceptMedia =>
@@ -93,10 +87,10 @@ impl FilterAction {
         is_reversed: bool,
     ) -> Self {
         match (action, is_reversed) {
-            (DbFilterAction::RejectIncoming, false) => Self::Reject,
-            (DbFilterAction::RejectIncoming, true) => Self::Accept,
-            (DbFilterAction::Reject, false) => Self::RejectData,
-            (DbFilterAction::Reject, true) => Self::AcceptData,
+            (DbFilterAction::RejectIncoming, false) => Self::RejectIncoming,
+            (DbFilterAction::RejectIncoming, true) => Self::AcceptIncoming,
+            (DbFilterAction::Reject, false) => Self::Reject,
+            (DbFilterAction::Reject, true) => Self::Accept,
             (DbFilterAction::RejectMediaAttachments, false) => Self::RejectMediaAttachments,
             (DbFilterAction::RejectMediaAttachments, true) => Self::AcceptMediaAttachments,
             (DbFilterAction::RejectProfileImages, false) => Self::RejectProfileImages,
