@@ -1,3 +1,4 @@
+use anyhow::Error;
 use clap::Parser;
 
 use mitra_adapters::init::{
@@ -16,7 +17,7 @@ mod commands;
 use cli::{Cli, SubCommand};
 
 #[tokio::main]
-async fn main() -> () {
+async fn main() -> Result<(), Error> {
     let opts: Cli = Cli::parse();
     let maybe_override_log_level = if let SubCommand::Server = opts.subcmd {
         // Do not override log level when running server
@@ -36,8 +37,8 @@ async fn main() -> () {
             std::mem::drop(db_client_value);
             let db_pool = create_database_connection_pool(&config);
             start_workers(config.clone(), db_pool.clone());
-            #[allow(clippy::unwrap_used)]
-            return run_server(config, db_pool).await.unwrap();
+            let result = run_server(config, db_pool).await;
+            result.map_err(Into::into)
         },
         SubCommand::UpdateConfig(cmd) => cmd.execute(db_client).await,
         SubCommand::AddFilterRule(cmd) => cmd.execute(db_client).await,
@@ -79,6 +80,5 @@ async fn main() -> () {
         SubCommand::GetPaymentAddress(cmd) => cmd.execute(&config, db_client).await,
         SubCommand::InstanceReport(cmd) => cmd.execute(&config, db_client).await,
     };
-    #[allow(clippy::unwrap_used)]
-    result.unwrap();
+    result
 }

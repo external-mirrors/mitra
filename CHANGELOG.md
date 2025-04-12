@@ -26,6 +26,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Don't read instance key from `instance_rsa_key` file.
 
+### Fixed
+
+- Don't panic on non-critical errors when executing commands.
+
 ## [3.23.0] - 2025-04-15
 
 ### Added
