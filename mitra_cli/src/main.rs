@@ -1,6 +1,5 @@
 use clap::Parser;
 
-use mitra::server::run_server;
 use mitra_adapters::init::{
     create_database_client,
     create_database_connection_pool,
@@ -8,6 +7,7 @@ use mitra_adapters::init::{
     initialize_database,
     initialize_storage,
 };
+use mitra_api::server::run_server;
 use mitra_workers::workers::start_workers;
 
 mod cli;

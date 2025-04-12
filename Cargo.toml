@@ -75,7 +75,7 @@ unused_async = "warn"
 unwrap_used = "warn"
 
 [package]
-name = "mitra"
+name = "mitra_api"
 description = "Federated micro-blogging platform and content subscription service"
 version.workspace = true
 license.workspace = true
@@ -85,6 +85,10 @@ rust-version.workspace = true
 
 publish = false
 default-run = "mitra"
+
+[[bin]]
+name = "mitra"
+path = "src/main.rs"
 
 [dependencies]
 # Used to handle incoming HTTP requests

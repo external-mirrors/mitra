@@ -2071,37 +2071,23 @@ dependencies = [
 name = "mitra"
 version = "3.22.0"
 dependencies = [
- "actix-cors",
- "actix-files",
- "actix-governor",
- "actix-multipart",
- "actix-web",
- "actix-web-httpauth",
+ "anyhow",
  "apx_core",
  "apx_sdk",
  "chrono",
- "emojis",
- "hex",
- "idna_adapter",
- "indexmap",
+ "clap",
  "log",
  "mitra_activitypub",
  "mitra_adapters",
+ "mitra_api",
  "mitra_config",
  "mitra_models",
  "mitra_services",
  "mitra_utils",
  "mitra_validators",
  "mitra_workers",
- "num_cpus",
- "regex",
- "serde",
  "serde_json",
- "serde_qs",
- "serial_test",
- "thiserror",
  "tokio",
- "url",
  "uuid",
 ]
 
@@ -2154,16 +2140,23 @@ dependencies = [
 ]
 
 [[package]]
-name = "mitra_cli"
+name = "mitra_api"
 version = "3.22.0"
 dependencies = [
- "anyhow",
+ "actix-cors",
+ "actix-files",
+ "actix-governor",
+ "actix-multipart",
+ "actix-web",
+ "actix-web-httpauth",
  "apx_core",
  "apx_sdk",
  "chrono",
- "clap",
+ "emojis",
+ "hex",
+ "idna_adapter",
+ "indexmap",
  "log",
- "mitra",
  "mitra_activitypub",
  "mitra_adapters",
  "mitra_config",
@@ -2172,8 +2165,15 @@ dependencies = [
  "mitra_utils",
  "mitra_validators",
  "mitra_workers",
+ "num_cpus",
+ "regex",
+ "serde",
  "serde_json",
+ "serde_qs",
+ "serial_test",
+ "thiserror",
  "tokio",
+ "url",
  "uuid",
 ]
 
