@@ -19,7 +19,7 @@ blockchains:
 Create a wallet for your instance:
 
 ```
-mitractl create-monero-wallet "mitra-wallet" "passw0rd"
+mitra create-monero-wallet "mitra-wallet" "passw0rd"
 ```
 
 Set `wallet_name` and `wallet_password` parameters in your configuration:

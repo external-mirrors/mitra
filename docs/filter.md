@@ -33,23 +33,23 @@ reject *
 List rules:
 
 ```shell
-mitractl list-filter-rules
+mitra list-filter-rules
 ```
 
 Add rule:
 
 ```shell
-mitractl add-filter-rule reject mastodon.social
+mitra add-filter-rule reject mastodon.social
 ```
 
 Remove rule:
 
 ```shell
-mitractl remove-filter-rule reject mastodon.social
+mitra remove-filter-rule reject mastodon.social
 ```
 
 Use `update-config` command to change the list of filtered keywords:
 
 ```shell
-mitractl update-config filter_keywords '["foo", "bar"]'
+mitra update-config filter_keywords '["foo", "bar"]'
 ```

@@ -6,6 +6,7 @@ If you're using Mitra 2.x, read the [Mitra 3.0 migration guide](./mitra_3_0.md).
 
 ## General
 
+- The `mitractl` binary was renamed to `mitra`. HTTP server can be started with `mitra server`.
 - Removed unhashed OAuth tokens from the database. Some users might be logged out as a result.
 
 ## Configuration

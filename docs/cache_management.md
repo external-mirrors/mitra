@@ -15,17 +15,17 @@ retention:
 Posts:
 
 ```shell
-mitractl delete-extraneous-posts 15
+mitra delete-extraneous-posts 15
 ```
 
 Profiles:
 
 ```shell
-mitractl delete-empty-profiles 30
+mitra delete-empty-profiles 30
 ```
 
 Delete attachments that don't belong to any post:
 
 ```shell
-mitractl delete-unused-attachments 5
+mitra delete-unused-attachments 5
 ```

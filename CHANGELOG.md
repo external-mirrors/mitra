@@ -18,6 +18,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Renamed `reject` filter action to `reject-incoming`.
 - Renamed `reject-data` filter action to `reject`.
 - Changed default value of `object-type` parameter of `import-object` command to `any`.
+- Renamed `mitractl` binary to `mitra`.
 
 ### Deprecated
 

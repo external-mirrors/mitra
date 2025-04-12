@@ -99,10 +99,10 @@ pub fn parse_config() -> (Config, Vec<&'static str>) {
         warnings.push("federation.fep_1b12_full_enabled parameter is deprecated");
     };
     if config.blocked_instances.is_some() {
-        warnings.push("blocked_instances parameter is deprecated (use `mitractl add-filter-rule`)");
+        warnings.push("blocked_instances parameter is deprecated (use `mitra add-filter-rule`)");
     };
     if config.allowed_instances.is_some() {
-        warnings.push("allowed_instances parameter is deprecated (use `mitractl add-filter-rule`)");
+        warnings.push("allowed_instances parameter is deprecated (use `mitra add-filter-rule`)");
     };
     if config.blockchains().len() > 1 {
         warnings.push("multichain deployments are not recommended");

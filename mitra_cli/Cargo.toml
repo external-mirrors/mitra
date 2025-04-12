@@ -6,10 +6,6 @@ license.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 
-[[bin]]
-name = "mitractl"
-path = "src/main.rs"
-
 [dependencies]
 # Used for catching errors
 anyhow = "1.0.58"

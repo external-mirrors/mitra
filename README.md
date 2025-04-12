@@ -78,7 +78,7 @@ Open configuration file `/etc/mitra/config.yaml` and configure the instance.
 Create admin account:
 
 ```shell
-su mitra -s $SHELL -c "mitractl create-account <username> <password> admin"
+su mitra -s $SHELL -c "mitra create-account <username> <password> admin"
 ```
 
 Start Mitra:
@@ -99,7 +99,7 @@ Install `cargo`. Then run:
 cargo build --release --features production
 ```
 
-This command will produce two binaries in `target/release` directory, `mitra` and `mitractl`.
+This command will produce a `mitra` binary in `target/release` directory.
 
 Install PostgreSQL, then create the database:
 
@@ -115,13 +115,13 @@ Put any static files into the directory specified in the configuration file. Bui
 Create admin account:
 
 ```shell
-./mitractl create-account <username> <password> admin
+./mitra create-account <username> <password> admin
 ```
 
 Start Mitra:
 
 ```shell
-./mitra
+./mitra server
 ```
 
 An HTTP server will be needed to handle HTTPS requests. See examples of [Nginx](./contrib/mitra.nginx) and [Caddy](./docs/reverse_proxy.md#caddy) configuration files.
@@ -210,8 +210,6 @@ See [guide](./docs/ipfs.md).
 
 ## CLI
 
-`mitractl` is a command-line tool for performing instance maintenance.
-
 [Documentation](./docs/mitractl.md)
 
 ## Client API
@@ -261,13 +259,13 @@ cp config_dev.example.yaml config.yaml
 Compile and run service:
 
 ```shell
-cargo run
+cargo run server
 ```
 
 ### Run CLI
 
 ```shell
-cargo run --bin mitractl
+cargo run
 ```
 
 ### Run linter

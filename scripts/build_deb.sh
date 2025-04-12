@@ -36,7 +36,6 @@ else
 fi
 mkdir -p $PACKAGE_DIR/usr/bin
 cp $TARGET_DIR/mitra $PACKAGE_DIR/usr/bin/mitra
-cp $TARGET_DIR/mitractl $PACKAGE_DIR/usr/bin/mitractl
 
 # Webapp
 mkdir -p $PACKAGE_DIR/usr/share/mitra

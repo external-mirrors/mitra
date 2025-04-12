@@ -4,7 +4,7 @@ After=postgresql.service
 Requires=postgresql.service
 
 [Service]
-ExecStart=/usr/bin/mitra
+ExecStart=/usr/bin/mitra server
 WorkingDirectory=/var/lib/mitra
 User=mitra
 Group=mitra

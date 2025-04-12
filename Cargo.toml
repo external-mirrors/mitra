@@ -84,11 +84,6 @@ edition.workspace = true
 rust-version.workspace = true
 
 publish = false
-default-run = "mitra"
-
-[[bin]]
-name = "mitra"
-path = "src/main.rs"
 
 [dependencies]
 # Used to handle incoming HTTP requests
