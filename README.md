@@ -108,9 +108,9 @@ CREATE USER mitra WITH PASSWORD 'mitra';
 CREATE DATABASE mitra OWNER mitra ENCODING 'UTF8';
 ```
 
-Create configuration file by copying [`config.example.yaml`](./config.example.yaml) and configure the instance. Default config file path is `/etc/mitra/config.yaml`, but it can be changed using `CONFIG_PATH` environment variable.
+Create configuration file by copying [`config.example.yaml`](./config.example.yaml) and configure the instance. Default config file path is `config.yaml`, but it can be changed using `CONFIG_PATH` environment variable.
 
-Put any static files into the directory specified in configuration file. Building instructions for `mitra-web` frontend can be found at https://codeberg.org/silverpill/mitra-web#project-setup.
+Put any static files into the directory specified in the configuration file. Building instructions for `mitra-web` frontend can be found at https://codeberg.org/silverpill/mitra-web#project-setup.
 
 Create admin account:
 

@@ -6,9 +6,7 @@ Commands must be run as the same user as the web service:
 su mitra -s $SHELL -c "mitractl instance-report"
 ```
 
-Default config file path is `/etc/mitra/config.yaml`, but it can be changed using `CONFIG_PATH` environment variable.
-
----
+## Basic commands
 
 Print version:
 

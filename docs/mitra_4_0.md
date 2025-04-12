@@ -11,6 +11,7 @@ If you're using Mitra 2.x, read the [Mitra 3.0 migration guide](./mitra_3_0.md).
 ## Configuration
 
 - Not reading instance RSA key from `instance_rsa_key` file.
+- Default configuration file path doesn't depend on `production` compilation flag anymore. The path is `config.yaml` (relative to current directory), but can be changed with `DEFAULT_CONFIG_PATH` environment variable at compile time. Debian package still installs configuration file to `/etc/mitra/config.yaml`.
 
 ## Web client
 
