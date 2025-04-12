@@ -17,7 +17,6 @@ use mitra_models::{
         get_repost_by_author,
     },
     posts::types::PostCreateData,
-    profiles::queries::get_remote_profile_by_actor_id,
 };
 use mitra_validators::{
     activitypub::validate_object_id,
@@ -146,11 +145,11 @@ async fn handle_fep_1b12_announce(
             return Ok(None);
         },
     };
+    let ap_client = ApClient::new(config, db_client).await?;
     let activity = if is_same_origin(&announce_id, activity_id)? {
         // Embedded activity can be trusted; don't fetch
         activity.clone()
     } else {
-        let ap_client = ApClient::new(config, db_client).await?;
         match ap_client.fetch_object(activity_id).await {
             Ok(activity) => {
                 log::info!("fetched activity {}", activity_id);
@@ -164,12 +163,13 @@ async fn handle_fep_1b12_announce(
         }
     };
     verify_activity_owner(&activity)?;
+    let group = ActorIdResolver::default().only_remote().resolve(
+        &ap_client,
+        db_client,
+        &group_id,
+    ).await?;
     match activity_type {
         DELETE => {
-            let group = get_remote_profile_by_actor_id(
-                db_client,
-                &group_id,
-            ).await?;
             let object_id = object_to_id(&activity["object"])
                 .map_err(|_| ValidationError("invalid activity object"))?;
             let post_id = match get_remote_post_by_object_id(
@@ -194,13 +194,37 @@ async fn handle_fep_1b12_announce(
             Ok(Some(Descriptor::object(activity_type)))
         },
         CREATE => {
-            handle_create(
+            let maybe_object_type = handle_create(
                 config,
                 db_client,
-                activity,
+                activity.clone(),
                 true, // authenticated (by embedding or fetched from origin)
                 true, // don't perform spam check
-            ).await?;
+            )
+                .await?
+                .map(|desc| desc.to_string());
+            if let Some(NOTE | PAGE) = maybe_object_type.as_deref() {
+                // Create repost
+                let object_id = object_to_id(&activity["object"])
+                    .map_err(|_| ValidationError("invalid activity object"))?;
+                let post = get_remote_post_by_object_id(
+                    db_client,
+                    &object_id,
+                ).await?;
+                if post.in_reply_to_id.is_none() {
+                    let repost_data = PostCreateData::repost(
+                        post.id,
+                        Some(announce_id),
+                    );
+                    match create_post(db_client, group.id, repost_data).await {
+                        Ok(_) => (),
+                        // Announce(Note) was sent too
+                        Err(DatabaseError::AlreadyExists("post")) => (),
+                        // May return "post not found" error if post is not public
+                        Err(other_error) => return Err(other_error.into()),
+                    };
+                };
+            };
             Ok(Some(Descriptor::object(activity_type)))
         },
         LIKE | DISLIKE => {

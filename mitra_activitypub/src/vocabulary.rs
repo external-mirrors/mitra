@@ -31,6 +31,7 @@ pub const DOCUMENT: &str = "Document";
 pub const IMAGE: &str = "Image";
 pub const NOTE: &str = "Note";
 pub const QUESTION: &str = "Question";
+pub const PAGE: &str = "Page";
 pub const TOMBSTONE: &str = "Tombstone";
 pub const VIDEO: &str = "Video";
 
