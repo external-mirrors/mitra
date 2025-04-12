@@ -73,7 +73,7 @@ impl FederationFilter {
         // Rules are checked in order. The last matching rule wins.
         let mut is_required = false;
         // Blocklist and allowlist have lower priority than filter rules
-        if action == FilterAction::Reject {
+        if action == FilterAction::RejectIncoming {
             is_required = !is_hostname_allowed(
                 &self.blocklist,
                 &self.allowlist,
@@ -91,8 +91,8 @@ impl FederationFilter {
     }
 
     pub fn is_incoming_blocked(&self, hostname: &str) -> bool {
-        self.is_action_required(hostname, FilterAction::Reject) ||
-        self.is_action_required(hostname, FilterAction::RejectData)
+        self.is_action_required(hostname, FilterAction::RejectIncoming) ||
+        self.is_action_required(hostname, FilterAction::Reject)
     }
 }
 
@@ -145,13 +145,13 @@ mod tests {
         add_filter_rule(
             db_client,
             target_1,
-            FilterAction::Reject,
+            FilterAction::RejectIncoming,
             false, // block
         ).await.unwrap();
         add_filter_rule(
             db_client,
             target_2,
-            FilterAction::Reject,
+            FilterAction::RejectIncoming,
             true, // allow
         ).await.unwrap();
         let rules = get_filter_rules(db_client).await.unwrap();

@@ -12,6 +12,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Don't make requests to blocked instances when `import-object` command is used.
 - Use `https://w3id.org/valueflows/ont/vf#Proposal` relation type for subscription payment links.
 - Show recently updated profiles first in search results.
+- Added `reject-incoming` alias for `reject` filter action.
 
 ### Deprecated
 

@@ -217,7 +217,7 @@ impl ApClient {
             .hostname();
         if self.filter.is_action_required(
             hostname.as_str(),
-            FilterAction::RejectData,
+            FilterAction::Reject,
         ) {
             let error_message = format!("request blocked: {}", object_id);
             return Err(HandlerError::Filtered(error_message));

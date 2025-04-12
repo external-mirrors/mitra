@@ -7,11 +7,11 @@ use crate::database::{
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum FilterAction {
-    Reject,
+    RejectIncoming,
     RejectMediaAttachments,
     RejectProfileImages,
     RejectCustomEmojis,
-    RejectData,
+    Reject,
     MarkSensitive,
     RejectKeywords,
 }
@@ -19,11 +19,11 @@ pub enum FilterAction {
 impl From<FilterAction> for i16 {
     fn from(value: FilterAction) -> i16 {
         match value {
-            FilterAction::Reject => 1,
+            FilterAction::RejectIncoming => 1,
             FilterAction::RejectMediaAttachments => 2,
             FilterAction::RejectProfileImages => 3,
             FilterAction::RejectCustomEmojis => 4,
-            FilterAction::RejectData => 5,
+            FilterAction::Reject => 5,
             FilterAction::MarkSensitive => 6,
             FilterAction::RejectKeywords => 7,
         }
@@ -35,11 +35,11 @@ impl TryFrom<i16> for FilterAction {
 
     fn try_from(value: i16) -> Result<Self, Self::Error> {
         let action = match value {
-            1 => Self::Reject,
+            1 => Self::RejectIncoming,
             2 => Self::RejectMediaAttachments,
             3 => Self::RejectProfileImages,
             4 => Self::RejectCustomEmojis,
-            5 => Self::RejectData,
+            5 => Self::Reject,
             6 => Self::MarkSensitive,
             7 => Self::RejectKeywords,
             _ => return Err(DatabaseTypeError),

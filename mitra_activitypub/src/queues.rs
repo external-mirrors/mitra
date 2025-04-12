@@ -412,7 +412,7 @@ pub async fn process_queued_outgoing_activities(
                     parse_http_url_from_db(&recipient.inbox)?.hostname();
                 if filter.is_action_required(
                     recipient_hostname.as_str(),
-                    FilterAction::RejectData,
+                    FilterAction::Reject,
                 ) {
                     log::warn!("delivery blocked: {}", recipient.inbox);
                     recipient.is_unreachable = true;

@@ -79,7 +79,7 @@ mod tests {
     async fn test_add_remove_filter_rule() {
         let db_client = &create_test_database().await;
         let hostname = "bad.example";
-        let action = FilterAction::Reject;
+        let action = FilterAction::RejectIncoming;
 
         add_filter_rule(
             db_client,
@@ -118,25 +118,25 @@ mod tests {
         add_filter_rule(
             db_client,
             "*",
-            FilterAction::Reject,
+            FilterAction::RejectIncoming,
             false,
         ).await.unwrap();
         add_filter_rule(
             db_client,
             "blocked.example",
-            FilterAction::Reject,
+            FilterAction::RejectIncoming,
             false,
         ).await.unwrap();
         add_filter_rule(
             db_client,
             "lain.com",
-            FilterAction::Reject,
+            FilterAction::RejectIncoming,
             true, // reversed
         ).await.unwrap();
         add_filter_rule(
             db_client,
             "*.example",
-            FilterAction::Reject,
+            FilterAction::RejectIncoming,
             true, // reversed
         ).await.unwrap();
         add_filter_rule(

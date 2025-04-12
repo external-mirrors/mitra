@@ -617,7 +617,7 @@ pub async fn create_remote_profile(
         .expect("actor data should be valid");
     if ap_client.filter.is_action_required(
         moderation_domain.as_str(),
-        FilterAction::RejectData,
+        FilterAction::Reject,
     ) {
         let error_message = format!("actor rejected: {}", actor_data.id);
         return Err(HandlerError::Filtered(error_message));
