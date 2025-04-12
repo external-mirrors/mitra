@@ -14,22 +14,29 @@ use super::config::Config;
 use super::environment::Environment;
 use super::instance::parse_instance_url;
 
+const DEFAULT_CONFIG_PATH: &str = "config.yaml";
+const DEFAULT_CONFIG_PATH_DEBIAN: &str = "/etc/mitra/config.yaml";
+
+fn default_config_path() -> &'static str {
+    if cfg!(feature = "production") {
+        let maybe_path = option_env!("DEFAULT_CONFIG_PATH");
+        maybe_path.unwrap_or(DEFAULT_CONFIG_PATH_DEBIAN)
+    } else {
+        DEFAULT_CONFIG_PATH
+    }
+}
+
 struct EnvConfig {
     config_path: String,
     environment: Environment,
     http_port: Option<u32>,
 }
 
-#[cfg(feature = "production")]
-const DEFAULT_CONFIG_PATH: &str = "/etc/mitra/config.yaml";
-#[cfg(not(feature = "production"))]
-const DEFAULT_CONFIG_PATH: &str = "config.yaml";
-
 fn parse_env() -> EnvConfig {
     dotenvy::from_filename(".env.local").ok();
     dotenvy::dotenv().ok();
     let config_path = std::env::var("CONFIG_PATH")
-        .unwrap_or(DEFAULT_CONFIG_PATH.to_string());
+        .unwrap_or(default_config_path().to_string());
     let environment = std::env::var("ENVIRONMENT").ok()
         .map(|val| Environment::from_str(&val).expect("invalid environment type"))
         // Default depends on "production" feature flag
