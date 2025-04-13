@@ -35,6 +35,7 @@ use crate::profiles::{
 use crate::relationships::types::RelationshipType;
 
 use super::types::{
+    DbLanguage,
     DbPost,
     DbPostReactions,
     Post,
@@ -236,6 +237,7 @@ pub async fn create_post(
             author_id,
             content,
             content_source,
+            language,
             conversation_id,
             in_reply_to_id,
             repost_of_id,
@@ -245,17 +247,17 @@ pub async fn create_post(
             object_id,
             created_at
         )
-        SELECT $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12
+        SELECT $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13
         WHERE
         -- don't allow replies to reposts
         NOT EXISTS (
             SELECT 1 FROM post
-            WHERE post.id = $6 AND post.repost_of_id IS NOT NULL
+            WHERE post.id = $7 AND post.repost_of_id IS NOT NULL
         )
         -- don't allow reposts of non-public posts
         AND NOT EXISTS (
             SELECT 1 FROM post
-            WHERE post.id = $7 AND (
+            WHERE post.id = $8 AND (
                 post.repost_of_id IS NOT NULL
                 OR post.visibility != {visibility_public}
             )
@@ -271,6 +273,7 @@ pub async fn create_post(
             &author_id,
             &post_data.content,
             &post_data.content_source,
+            &post_data.language.map(DbLanguage::new),
             &maybe_conversation.as_ref().map(|conversation| conversation.id),
             &post_data.context.in_reply_to_id(),
             &post_data.context.repost_of_id(),
@@ -405,10 +408,11 @@ pub async fn update_post(
         SET
             content = $1,
             content_source = $2,
-            is_sensitive = $3,
-            url = $4,
-            updated_at = $5
-        WHERE id = $6
+            language = $3,
+            is_sensitive = $4,
+            url = $5,
+            updated_at = $6
+        WHERE id = $7
             AND repost_of_id IS NULL
             AND ipfs_cid IS NULL
         RETURNING post
@@ -416,6 +420,7 @@ pub async fn update_post(
         &[
             &post_data.content,
             &post_data.content_source,
+            &post_data.language.map(DbLanguage::new),
             &post_data.is_sensitive,
             &post_data.url,
             &post_data.updated_at,

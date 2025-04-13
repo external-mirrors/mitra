@@ -1,8 +1,19 @@
 use chrono::{DateTime, Utc};
-use postgres_types::FromSql;
+use postgres_protocol::types::{text_from_sql, text_to_sql};
+use postgres_types::{
+    accepts,
+    private::BytesMut,
+    to_sql_checked,
+    FromSql,
+    IsNull,
+    ToSql,
+    Type,
+};
 use serde::Deserialize;
 use tokio_postgres::Row;
 use uuid::Uuid;
+
+use mitra_utils::languages::Language;
 
 use crate::attachments::types::DbMediaAttachment;
 use crate::conversations::types::Conversation;
@@ -15,6 +26,48 @@ use crate::database::{
 use crate::emojis::types::DbEmoji;
 use crate::polls::types::{Poll, PollData};
 use crate::profiles::types::DbActorProfile;
+
+#[derive(Clone, Debug)]
+pub struct DbLanguage(Language);
+
+impl DbLanguage {
+    pub fn new(language: Language) -> Self {
+        Self(language)
+    }
+
+    pub fn inner(&self) -> Language {
+        self.0
+    }
+}
+
+impl<'a> FromSql<'a> for DbLanguage {
+    fn from_sql(
+        _: &Type,
+        raw: &'a [u8],
+    ) -> Result<Self, Box<dyn std::error::Error + Sync + Send>> {
+        let language_code = text_from_sql(raw)?;
+        let language = Language::from_639_3(language_code)
+            .ok_or(DatabaseTypeError)?;
+        Ok(DbLanguage(language))
+    }
+
+    accepts!(BPCHAR);
+}
+
+impl ToSql for DbLanguage {
+    fn to_sql(
+        &self,
+        _: &Type,
+        out: &mut BytesMut,
+    ) -> Result<IsNull, Box<dyn std::error::Error + Sync + Send>> {
+        let language_code = self.inner().to_639_3();
+        text_to_sql(language_code, out);
+        Ok(IsNull::No)
+    }
+
+    accepts!(BPCHAR);
+    to_sql_checked!();
+}
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Visibility {
@@ -101,6 +154,7 @@ pub struct DbPost {
     pub author_id: Uuid,
     pub content: String,
     pub content_source: Option<String>,
+    pub language: Option<DbLanguage>,
     pub conversation_id: Option<Uuid>,
     pub in_reply_to_id: Option<Uuid>,
     pub repost_of_id: Option<Uuid>,
@@ -145,6 +199,7 @@ pub struct Post {
     pub author: DbActorProfile,
     pub content: String,
     pub content_source: Option<String>,
+    pub language: Option<Language>,
     pub conversation: Option<Conversation>,
     pub in_reply_to_id: Option<Uuid>,
     pub repost_of_id: Option<Uuid>,
@@ -204,6 +259,7 @@ impl Post {
         if db_post.repost_of_id.is_some() && (
             db_post.content.len() != 0 ||
             db_post.content_source.is_some() ||
+            db_post.language.is_some() ||
             db_post.conversation_id.is_some() ||
             db_post.is_sensitive ||
             db_post.is_pinned ||
@@ -235,6 +291,7 @@ impl Post {
             author: db_author,
             content: db_post.content,
             content_source: db_post.content_source,
+            language: db_post.language.map(|db_lang| db_lang.inner()),
             conversation: db_conversation,
             in_reply_to_id: db_post.in_reply_to_id,
             repost_of_id: db_post.repost_of_id,
@@ -320,6 +377,7 @@ impl Default for Post {
             author: DbActorProfile::default(),
             content: "".to_string(),
             content_source: None,
+            language: None,
             conversation: Some(Conversation::for_test(post_id)),
             in_reply_to_id: None,
             repost_of_id: None,
@@ -448,6 +506,7 @@ pub struct PostCreateData {
     pub context: PostContext,
     pub content: String,
     pub content_source: Option<String>,
+    pub language: Option<Language>,
     pub visibility: Visibility,
     pub is_sensitive: bool,
     pub poll: Option<PollData>,
@@ -479,6 +538,7 @@ impl PostCreateData {
 pub struct PostUpdateData {
     pub content: String,
     pub content_source: Option<String>,
+    pub language: Option<Language>,
     pub is_sensitive: bool,
     pub poll: Option<PollData>,
     pub attachments: Vec<Uuid>,

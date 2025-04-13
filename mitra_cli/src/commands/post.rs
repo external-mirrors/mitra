@@ -80,6 +80,7 @@ impl CreatePost {
             context: PostContext::Top { audience: None },
             content: content,
             content_source: None,
+            language: None,
             visibility: Visibility::Public,
             is_sensitive: false,
             poll: None,

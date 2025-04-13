@@ -18,6 +18,8 @@ chrono = { version = "0.4.31", default-features = false, features = ["std", "clo
 comrak = { version = "=0.30.0", default-features = false }
 # Used for extracting text from HTML
 html2text = "0.12.6"
+# ISO 639 language codes
+isolang = { version = "2.4.0", default-features = false }
 # Used to gather disk info
 lfs-core = "=0.11.1"
 # Used to determine file extension

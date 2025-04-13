@@ -13,6 +13,7 @@ use mitra_models::{
     posts::types::{Post, Visibility},
     profiles::types::DbActorProfile,
 };
+use mitra_utils::languages::Language;
 
 use crate::mastodon_api::{
     accounts::types::Account,
@@ -20,7 +21,11 @@ use crate::mastodon_api::{
     media::types::Attachment,
     media_server::ClientMediaServer,
     polls::types::Poll,
-    serializers::{serialize_datetime, serialize_datetime_opt},
+    serializers::{
+        deserialize_language_code_opt,
+        serialize_datetime,
+        serialize_datetime_opt,
+    },
 };
 
 pub const POST_CONTENT_TYPE_HTML: &str = "text/html";
@@ -94,6 +99,7 @@ pub struct Status {
     edited_at: Option<DateTime<Utc>>,
     pub account: Account,
     pub content: String,
+    language: Option<String>,
     pub in_reply_to_id: Option<Uuid>,
     in_reply_to_account_id: Option<Uuid>,
     pub reblog: Option<Box<Status>>,
@@ -218,6 +224,9 @@ impl Status {
             edited_at: post.updated_at,
             account: account,
             content: post.content,
+            language: post.language
+                .and_then(|language| language.to_639_1())
+                .map(|code| code.to_owned()),
             in_reply_to_id: post.in_reply_to_id,
             in_reply_to_account_id: post.in_reply_to.as_ref()
                 .map(|post| post.author.id),
@@ -264,6 +273,9 @@ fn default_post_content_type() -> String { POST_CONTENT_TYPE_MARKDOWN.to_string(
 #[derive(Debug, Deserialize)]
 pub struct StatusData {
     pub status: String,
+
+    #[serde(default, deserialize_with = "deserialize_language_code_opt")]
+    pub language: Option<Language>,
 
     #[serde(default, alias = "media_ids[]")]
     pub media_ids: Vec<Uuid>,
@@ -345,6 +357,9 @@ impl StatusSource {
 #[derive(Deserialize)]
 pub struct StatusUpdateData {
     pub status: String,
+
+    #[serde(default, deserialize_with = "deserialize_language_code_opt")]
+    pub language: Option<Language>,
 
     #[serde(default, alias = "media_ids[]")]
     pub media_ids: Vec<Uuid>,

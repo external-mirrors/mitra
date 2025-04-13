@@ -1641,6 +1641,11 @@ paths:
                   enum:
                     - text/html
                     - text/markdown
+                language:
+                  description: ISO 639 language code for this post.
+                  type: string
+                  nullable: true
+                  example: null
                 'media_ids[]':
                   description: Array of Attachment ids to be attached as media.
                   type: array
@@ -1764,6 +1769,11 @@ paths:
                   enum:
                     - text/html
                     - text/markdown
+                language:
+                  description: ISO 639 language code for this post.
+                  type: string
+                  nullable: true
+                  example: null
                 'media_ids[]':
                   description: Array of Attachment ids to be attached as media.
                   type: array
@@ -3377,6 +3387,10 @@ components:
         content:
           description: HTML-encoded post content.
           type: string
+        language:
+          description: Primary language of this post (ISO 639 Part 1 two-letter language code).
+          type: string
+          nullable: true
         visibility:
           description: Visibility of this post.
           $ref: '#/components/schemas/Visibility'

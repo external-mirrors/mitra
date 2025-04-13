@@ -6,6 +6,8 @@ use serde::{
     Serializer,
 };
 
+use mitra_utils::languages::Language;
+
 // https://docs.joinmastodon.org/api/datetime-format/#datetime
 pub fn serialize_datetime<S>(
     value: &DateTime<Utc>,
@@ -45,6 +47,20 @@ pub fn deserialize_boolean<'de, D>(
         _ => return Err(DeserializerError::custom("provided string is not a boolean flag")),
     };
     Ok(boolean)
+}
+
+pub fn deserialize_language_code_opt<'de, D>(
+    deserializer: D,
+) -> Result<Option<Language>, D::Error>
+    where D: Deserializer<'de>
+{
+    let maybe_value: Option<String> = Option::deserialize(deserializer)?;
+    let Some(value) = maybe_value else {
+        return Ok(None);
+    };
+    let language = Language::from_639_1(&value)
+        .ok_or(DeserializerError::custom("invalid ISO 639-1 code"))?;
+    Ok(Some(language))
 }
 
 #[cfg(test)]

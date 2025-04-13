@@ -44,7 +44,10 @@ use mitra_models::{
     },
     profiles::types::DbActorProfile,
 };
-use mitra_utils::files::FileInfo;
+use mitra_utils::{
+    files::FileInfo,
+    languages::{parse_language_tag, Language},
+};
 use mitra_validators::{
     errors::ValidationError,
     media::{validate_media_description, validate_media_url},
@@ -105,6 +108,7 @@ pub struct AttributedObject {
 
     name: Option<String>,
     content: Option<String>,
+    content_map: Option<HashMap<String, String>>,
     media_type: Option<String>,
     pub sensitive: Option<bool>,
     summary: Option<String>,
@@ -157,6 +161,24 @@ impl AttributedObject {
             return Err(ValidationError("object is actor"));
         };
         Ok(())
+    }
+
+    fn language(&self) -> Option<Language> {
+        let language_tag = self.content_map
+            .as_ref()
+            .and_then(|content_map| {
+                content_map.iter()
+                    .find(|(_, content)| self.content.as_ref() == Some(content))
+                    .map(|(language_tag, _)| language_tag)
+                    .or_else(|| {
+                        log::warn!("content is not found in contentMap");
+                        None
+                    })
+            })?;
+        parse_language_tag(language_tag).or_else(|| {
+            log::warn!("invalid language tag: {language_tag}");
+            None
+        })
     }
 }
 
@@ -901,6 +923,7 @@ pub async fn create_remote_post(
         context: context,
         content: content,
         content_source: None,
+        language: object.language(),
         visibility,
         is_sensitive,
         poll: maybe_poll_data,
@@ -1015,6 +1038,7 @@ pub async fn update_remote_post(
     let post_data = PostUpdateData {
         content,
         content_source: None,
+        language: object.language(),
         is_sensitive,
         poll: maybe_poll_data,
         attachments,

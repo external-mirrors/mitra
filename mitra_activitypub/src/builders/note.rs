@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
@@ -136,6 +138,10 @@ pub struct Note {
     replies: String,
 
     content: String,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    content_map: Option<HashMap<String, String>>,
+
     sensitive: bool,
 
     #[serde(skip_serializing_if = "Vec::is_empty")]
@@ -378,6 +384,11 @@ pub fn build_note(
         context: maybe_context_collection_id,
         replies: replies_collection_id,
         content: post.content.clone(),
+        content_map: post.language
+            .and_then(|language| language.to_639_1())
+            .map(|code| {
+                HashMap::from([(code.to_owned(), post.content.clone())])
+            }),
         sensitive: post.is_sensitive,
         tag: tags,
         one_of: one_of,

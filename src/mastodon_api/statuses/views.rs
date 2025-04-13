@@ -244,6 +244,7 @@ async fn create_status(
         context: context,
         content: content,
         content_source: content_source,
+        language: status_data.language,
         visibility: visibility,
         is_sensitive: status_data.sensitive,
         poll: maybe_poll_data,
@@ -465,6 +466,7 @@ async fn edit_status(
     let post_data = PostUpdateData {
         content: content,
         content_source: content_source,
+        language: status_data.language,
         is_sensitive: status_data.sensitive,
         poll: post.poll.map(PollData::from),
         attachments: status_data.media_ids,

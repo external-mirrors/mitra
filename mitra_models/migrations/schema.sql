@@ -160,6 +160,7 @@ CREATE TABLE post (
     author_id UUID NOT NULL REFERENCES actor_profile (id) ON DELETE CASCADE,
     content TEXT NOT NULL,
     content_source TEXT,
+    language CHAR(3),
     conversation_id UUID, -- FK is added later
     in_reply_to_id UUID REFERENCES post (id) ON DELETE CASCADE,
     repost_of_id UUID REFERENCES post (id) ON DELETE CASCADE,
