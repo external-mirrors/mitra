@@ -1,5 +1,4 @@
-/// http://nodeinfo.diaspora.software/protocol.html
-
+// http://nodeinfo.diaspora.software/protocol.html
 use actix_web::{get, web, HttpResponse};
 
 use apx_sdk::jrd::{JsonResourceDescriptor, Link};
