@@ -17,6 +17,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Use `https://w3id.org/valueflows/ont/vf#Proposal` relation type for subscription payment links.
 - Show recently updated profiles first in search results.
 - Added `reject-incoming` alias for `reject` filter action.
+- Compare identifiers instead of actors when verifying wrapped FEP-1b12 activities.
 
 ### Deprecated
 

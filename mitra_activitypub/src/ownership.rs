@@ -30,18 +30,6 @@ pub fn verify_activity_owner(
     Ok(())
 }
 
-// Can be used for verifying FEP-1b12 activities
-pub fn is_embedded_activity_trusted(
-    activity: &JsonValue,
-) -> Result<bool, ValidationError> {
-    let owner_id = object_to_id(&activity["actor"])
-        .map_err(|_| ValidationError("invalid 'actor' property"))?;
-    let embedded_owner_id = object_to_id(&activity["object"]["actor"])
-        .map_err(|_| ValidationError("invalid 'object.actor' property"))?;
-    let is_trusted = is_same_origin(&owner_id, &embedded_owner_id)?;
-    Ok(is_trusted)
-}
-
 pub fn parse_attributed_to(
     attributed_to: &JsonValue,
 ) -> Result<String, ValidationError> {
@@ -69,28 +57,6 @@ pub fn verify_object_owner(
 mod tests {
     use serde_json::json;
     use super::*;
-
-    #[test]
-    fn test_is_embedded_activity_trusted() {
-        let activity = json!({
-            "@context": ["https://join-lemmy.org/context.json","https://www.w3.org/ns/activitystreams"],
-            "actor": "https://lemmy.example/c/test",
-            "cc": ["https://lemmy.example/c/test/followers"],
-            "id": "https://lemmy.example/activities/announce/like/7876c523-64c1-4c95-be5f-66b1f79f3186",
-            "object":{
-                "@context":["https://join-lemmy.org/context.json","https://www.w3.org/ns/activitystreams"],
-                "actor":"https://lemmy-user.example/u/test",
-                "audience":"https://lemmy.example/c/test",
-                "id": "https://lemmy-user.example/activities/like/986c14db-1a8c-4ab6-b67d-14423e52c169",
-                "object":"https://lemmy.example/post/18537913",
-                "type": "Like",
-            },
-            "to": ["https://www.w3.org/ns/activitystreams#Public"],
-            "type":"Announce",
-        });
-        let is_trusted = is_embedded_activity_trusted(&activity).unwrap();
-        assert_eq!(is_trusted, false);
-    }
 
     #[test]
     fn test_verify_object_owner() {

@@ -29,7 +29,6 @@ use crate::{
     importers::{import_post, ActorIdResolver, ApClient},
     ownership::{
         get_object_id,
-        is_embedded_activity_trusted,
         is_same_origin,
         verify_activity_owner,
     },
@@ -116,6 +115,7 @@ pub async fn handle_announce(
 /// https://codeberg.org/fediverse/fep/src/branch/main/fep/1b12/fep-1b12.md
 #[derive(Deserialize)]
 struct GroupAnnounce {
+    id: String,
     #[serde(deserialize_with = "deserialize_into_object_id")]
     actor: String,
     object: JsonValue,
@@ -126,8 +126,7 @@ async fn handle_fep_1b12_announce(
     db_client: &mut impl DatabaseClient,
     announce: JsonValue,
 ) -> HandlerResult {
-    let is_embedded_trusted = is_embedded_activity_trusted(&announce)?;
-    let GroupAnnounce { actor: group_id, object: activity } =
+    let GroupAnnounce { id: announce_id, actor: group_id, object: activity } =
         serde_json::from_value(announce)?;
     verify_activity_owner(&activity)?;
     let activity_id = get_object_id(&activity)?;
@@ -147,8 +146,8 @@ async fn handle_fep_1b12_announce(
             return Ok(None);
         },
     };
-    let activity = if is_embedded_trusted {
-        // Don't fetch
+    let activity = if is_same_origin(&announce_id, activity_id)? {
+        // Embedded activity can be trusted; don't fetch
         activity.clone()
     } else {
         let ap_client = ApClient::new(config, db_client).await?;
