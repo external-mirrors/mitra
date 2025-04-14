@@ -37,9 +37,9 @@ impl From<AttachmentDataMultipartForm> for AttachmentData {
         let media_type = form.file.content_type
             .map(|mime| mime.essence_str().to_string())
             // Ignore if content type is application/octet-stream
-            .filter(|media_type| media_type == APPLICATION_OCTET_STREAM)
+            .filter(|media_type| media_type != APPLICATION_OCTET_STREAM)
             // Workaround for clients that don't provide content type
-            .or(sniff_media_type(&form.file.data))
+            .or_else(|| sniff_media_type(&form.file.data))
             .unwrap_or(APPLICATION_OCTET_STREAM.to_string());
         Self {
             file: base64::encode(form.file.data),
