@@ -5,7 +5,6 @@ use uuid::Uuid;
 use apx_core::{
     caip2::{Namespace as ChainNamespace},
     caip10::{AccountId as ChainAccountId},
-    crypto_eddsa::Ed25519SecretKey,
     crypto_rsa::rsa_secret_key_to_pkcs1_der,
     did::Did,
 };
@@ -218,24 +217,6 @@ pub async fn set_user_password(
         WHERE id = $2
         ",
         &[&password_digest, &user_id],
-    ).await?;
-    if updated_count == 0 {
-        return Err(DatabaseError::NotFound("user"));
-    };
-    Ok(())
-}
-
-pub(super) async fn set_user_ed25519_secret_key(
-    db_client: &impl DatabaseClient,
-    user_id: Uuid,
-    secret_key: Ed25519SecretKey,
-) -> Result<(), DatabaseError> {
-    let updated_count = db_client.execute(
-        "
-        UPDATE user_account SET ed25519_private_key = $1
-        WHERE id = $2
-        ",
-        &[&secret_key.to_vec(), &user_id],
     ).await?;
     if updated_count == 0 {
         return Err(DatabaseError::NotFound("user"));
@@ -689,26 +670,6 @@ mod tests {
         };
         let result = create_user(db_client, another_user_data).await;
         assert!(matches!(result, Err(DatabaseError::AlreadyExists("user"))));
-    }
-
-    #[tokio::test]
-    #[serial]
-    async fn test_set_user_ed25519_secret_key() {
-        let db_client = &mut create_test_database().await;
-        let user_data = UserCreateData {
-            username: "test".to_string(),
-            password_digest: Some("test".to_string()),
-            ..Default::default()
-        };
-        let user = create_user(db_client, user_data).await.unwrap();
-        let secret_key = [9; 32];
-        set_user_ed25519_secret_key(
-            db_client,
-            user.id,
-            secret_key,
-        ).await.unwrap();
-        let user = get_user_by_id(db_client, user.id).await.unwrap();
-        assert_eq!(user.ed25519_secret_key, secret_key);
     }
 
     #[tokio::test]

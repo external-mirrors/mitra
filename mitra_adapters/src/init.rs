@@ -40,7 +40,6 @@ use mitra_models::{
         get_internal_property,
         set_internal_property,
     },
-    users::helpers::add_ed25519_keys,
 };
 use mitra_services::media::MediaStorage;
 
@@ -97,17 +96,6 @@ async fn check_postgres_version(
         log::error!("unsupported PostgreSQL version: {version}");
     } else {
         log::info!("PostgreSQL version: {version}");
-    };
-    Ok(())
-}
-
-async fn apply_custom_migrations(
-    db_client: &impl DatabaseClient,
-) -> Result<(), DatabaseError> {
-    // TODO: remove migration
-    let updated_count = add_ed25519_keys(db_client).await?;
-    if updated_count > 0 {
-        log::info!("generated ed25519 keys for {updated_count} users");
     };
     Ok(())
 }
@@ -196,8 +184,6 @@ pub async fn initialize_database(
         .expect("failed to verify PostgreSQL version");
     apply_migrations(db_client).await
         .expect("failed to apply migrations");
-    apply_custom_migrations(db_client).await
-        .expect("failed to apply custom migrations");
     prepare_instance_keys(config, db_client).await
         .expect("failed to prepare instance keys");
 }

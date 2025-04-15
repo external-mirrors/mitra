@@ -72,7 +72,7 @@ CREATE TABLE user_account (
     login_address_ethereum VARCHAR(500) UNIQUE,
     login_address_monero VARCHAR(500) UNIQUE,
     rsa_private_key TEXT NOT NULL,
-    ed25519_private_key BYTEA,
+    ed25519_private_key BYTEA NOT NULL,
     invite_code VARCHAR(100) UNIQUE REFERENCES user_invite_code (code) ON DELETE SET NULL,
     user_role SMALLINT NOT NULL,
     client_config JSONB NOT NULL DEFAULT '{}',
