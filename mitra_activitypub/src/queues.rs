@@ -171,7 +171,7 @@ pub async fn process_queued_incoming_activities(
 #[derive(Deserialize, Serialize)]
 pub struct OutgoingActivityJobData {
     activity: JsonValue,
-    sender: Option<Sender>,
+    sender: Sender,
     recipients: Vec<Recipient>,
     failure_count: u32,
 }
@@ -237,7 +237,7 @@ impl OutgoingActivityJobData {
         ).expect("activity should be valid");
         Self {
             activity: activity_signed,
-            sender: Some(Sender::from_user(instance_url, sender)),
+            sender: Sender::from_user(instance_url, sender),
             recipients: recipients,
             failure_count: 0,
         }
@@ -266,7 +266,7 @@ impl OutgoingActivityJobData {
         let sender = Sender::from_portable_user(instance_url, sender)?;
         let job_data = Self {
             activity: activity.clone(),
-            sender: Some(sender),
+            sender: sender,
             recipients: recipients,
             failure_count: 0,
         };
@@ -381,13 +381,6 @@ pub async fn process_queued_outgoing_activities(
         let mut job_data: OutgoingActivityJobData =
             serde_json::from_value(job.job_data)
                 .map_err(|_| DatabaseTypeError)?;
-        let sender = if let Some(ref sender) = job_data.sender {
-            sender.clone()
-        } else {
-            log::error!("signing keys can not be found");
-            delete_job_from_queue(db_client_ref, job.id).await?;
-            continue;
-        };
         let mut recipients = job_data.recipients;
         if !instance.federation.enabled {
             log::info!(
@@ -423,7 +416,7 @@ pub async fn process_queued_outgoing_activities(
         let start_time = Instant::now();
         let worker_result = deliver_activity_worker(
             instance.clone(),
-            sender,
+            job_data.sender.clone(),
             job_data.activity.clone(),
             &mut recipients,
         ).await;
