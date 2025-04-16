@@ -29,9 +29,3 @@ Delete attachments that don't belong to any post:
 ```shell
 mitractl delete-unused-attachments 5
 ```
-
-Delete unused remote emojis:
-
-```shell
-mitractl prune-remote-emojis
-```

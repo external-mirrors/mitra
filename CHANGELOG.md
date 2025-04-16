@@ -26,6 +26,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Removed
 
 - Don't read instance key from `instance_rsa_key` file.
+- Removed `import-actor`, `import-activity` and `prune-remote-emojis` commands.
 
 ### Fixed
 

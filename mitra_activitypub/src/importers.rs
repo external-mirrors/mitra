@@ -166,7 +166,7 @@ pub async fn fetch_any_object_with_context<T: DeserializeOwned>(
     Ok(object)
 }
 
-pub async fn fetch_any_object<T: DeserializeOwned>(
+pub(crate) async fn fetch_any_object<T: DeserializeOwned>(
     agent: &FederationAgent,
     object_id: &str,
 ) -> Result<T, FetchError> {

@@ -45,7 +45,6 @@ use mitra_models::{
     emojis::queries::{
         create_or_update_local_emoji,
         delete_emoji,
-        find_unused_remote_emojis,
         get_emoji_by_name_and_hostname,
     },
     emojis::types::EmojiImage,
@@ -115,8 +114,6 @@ use crate::commands::{
     account::RevokeOauthTokens,
     activitypub::{
         FetchObject,
-        ImportActivity,
-        ImportActor,
         ImportObject,
         LoadPortableObject,
         LoadReplies,
@@ -154,9 +151,7 @@ pub enum SubCommand {
     SetPassword(SetPassword),
     SetRole(SetRole),
     RevokeOauthTokens(RevokeOauthTokens),
-    ImportActor(ImportActor),
     ImportObject(ImportObject),
-    ImportActivity(ImportActivity),
     ReadOutbox(ReadOutbox),
     LoadReplies(LoadReplies),
     FetchObject(FetchObject),
@@ -171,7 +166,6 @@ pub enum SubCommand {
     PruneReposts(PruneReposts),
     DeleteUnusedAttachments(DeleteUnusedAttachments),
     DeleteEmptyProfiles(DeleteEmptyProfiles),
-    PruneRemoteEmojis(PruneRemoteEmojis),
     ListLocalFiles(ListLocalFiles),
     DeleteOrphanedFiles(DeleteOrphanedFiles),
     ListUnreachableActors(ListUnreachableActors),
@@ -613,26 +607,6 @@ impl DeleteEmptyProfiles {
             let deletion_queue = delete_profile(db_client, profile.id).await?;
             delete_orphaned_media(config, db_client, deletion_queue).await?;
             println!("profile deleted: {}", profile.expect_remote_actor_id());
-        };
-        Ok(())
-    }
-}
-
-/// Delete unused remote emojis (deprecated)
-#[derive(Parser)]
-pub struct PruneRemoteEmojis;
-
-impl PruneRemoteEmojis {
-    pub async fn execute(
-        &self,
-        config: &Config,
-        db_client: &impl DatabaseClient,
-    ) -> Result<(), Error> {
-        let emojis = find_unused_remote_emojis(db_client).await?;
-        for emoji_id in emojis {
-            let deletion_queue = delete_emoji(db_client, emoji_id).await?;
-            delete_orphaned_media(config, db_client, deletion_queue).await?;
-            println!("emoji {} deleted", emoji_id);
         };
         Ok(())
     }

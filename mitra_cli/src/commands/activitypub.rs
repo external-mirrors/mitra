@@ -12,7 +12,6 @@ use apx_sdk::{
 use mitra_activitypub::{
     agent::build_federation_agent,
     importers::{
-        fetch_any_object,
         fetch_any_object_with_context,
         import_activity,
         import_collection,
@@ -20,7 +19,6 @@ use mitra_activitypub::{
         import_object,
         import_profile,
         import_replies,
-        ActorIdResolver,
         ApClient,
         CollectionItemType,
         CollectionOrder,
@@ -32,33 +30,6 @@ use mitra_models::{
     database::DatabaseClient,
     users::queries::get_user_by_name,
 };
-
-/// (Re-)fetch actor and save it to local cache (deprecated)
-#[derive(Parser)]
-#[command(visible_alias = "fetch-actor")]
-pub struct ImportActor {
-    id: String,
-}
-
-impl ImportActor {
-    pub async fn execute(
-        &self,
-        config: &Config,
-        db_client: &mut impl DatabaseClient,
-    ) -> Result<(), Error> {
-        let ap_client = ApClient::new(config, db_client).await?;
-        let resolver = ActorIdResolver::default()
-            .only_remote()
-            .force_refetch();
-        resolver.resolve(
-            &ap_client,
-            db_client,
-            &self.id,
-        ).await?;
-        println!("profile saved");
-        Ok(())
-    }
-}
 
 /// Fetch ActivityPub object and process it
 #[derive(Parser)]
@@ -142,29 +113,6 @@ impl ImportObject {
             },
             _ => return Err(anyhow!("invalid object type")),
         };
-        Ok(())
-    }
-}
-
-/// Fetch activity and process it (deprecated)
-#[derive(Parser)]
-#[command(visible_alias = "fetch-activity")]
-pub struct ImportActivity {
-    id: String,
-}
-
-impl ImportActivity {
-    pub async fn execute(
-        &self,
-        config: &Config,
-        db_client: &mut impl DatabaseClient,
-    ) -> Result<(), Error> {
-        let ap_client = ApClient::new(config, db_client).await?;
-        let agent = build_federation_agent(&ap_client.instance, None);
-        let activity: JsonValue =
-            fetch_any_object(&agent, &self.id).await?;
-        import_activity(config, db_client, activity).await?;
-        println!("activity processed");
         Ok(())
     }
 }
