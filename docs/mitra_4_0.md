@@ -21,6 +21,7 @@ If you're using Mitra 2.x, read the [Mitra 3.0 migration guide](./mitra_3_0.md).
 
 - Command don't panic on non-critical errors anymore. Exit code changed from `101` to `1`.
 - Renamed `reject` filter action to `reject-incoming`, rename `reject-data` filter action to `reject`.
+- Changed default value of `object-type` parameter of `import-object` command to `any`.
 
 ## Web client
 

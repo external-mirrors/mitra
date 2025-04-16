@@ -67,7 +67,7 @@ pub struct ImportObject {
     #[arg(long)]
     as_user: Option<String>,
     /// Expected core object type
-    #[arg(long, default_value = "object")]
+    #[arg(long, default_value = "any")]
     object_type: String,
 
     #[arg(long, default_value = "any")]
