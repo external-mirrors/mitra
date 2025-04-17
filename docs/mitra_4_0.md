@@ -21,7 +21,7 @@ If you're using Mitra 2.x, read the [Mitra 3.0 migration guide](./mitra_3_0.md).
 ## CLI
 
 - Commands don't panic on non-critical errors anymore. Exit code changed from `101` to `1`.
-- Renamed `reject` filter action to `reject-incoming`, rename `reject-data` filter action to `reject`.
+- Renamed `reject` filter action to `reject-incoming`, renamed `reject-data` filter action to `reject`.
 - Removed `import-actor` and `import-activity` commands. Use `import-object` instead.
 - Changed default value of `object-type` parameter of `import-object` command to `any`.
 - Removed `prune-remote-emojis` command.

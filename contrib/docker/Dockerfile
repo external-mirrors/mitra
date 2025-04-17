@@ -1,4 +1,4 @@
-FROM alpine:3.18 as builder
+FROM alpine:3.18 AS builder
 
 RUN apk update && apk add --no-cache curl gcc musl-dev rust cargo
 
@@ -6,9 +6,11 @@ WORKDIR /app
 
 COPY ./mitra ./
 
+ENV DEFAULT_CONFIG_PATH=/etc/mitra/config.yaml
+
 RUN cargo build --release --features production
 
-# --------------
+#--------------
 FROM alpine:3.18
 
 RUN apk add --no-cache ca-certificates gcc
@@ -22,6 +24,6 @@ RUN cp -n /usr/share/mitra/examples/config.example.yaml /etc/mitra/config.yaml
 
 COPY ./dist /usr/share/mitra/www
 
-COPY --from=builder /app/target/release/mitra /app/target/release/mitractl .
+COPY --from=builder /app/target/release/mitra .
 
-CMD mitra
+CMD [ "mitra", "server" ]
