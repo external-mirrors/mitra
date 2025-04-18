@@ -210,6 +210,8 @@ See [guide](./docs/ipfs.md).
 
 ## CLI
 
+CLI is stable and breaking changes don't happen in minor releases.
+
 [Documentation](./docs/mitra_cli.md)
 
 ## Client API
