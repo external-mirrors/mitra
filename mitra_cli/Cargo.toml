@@ -26,7 +26,7 @@ apx_core = { path = "../apx_core" }
 apx_sdk = { path = "../apx_sdk" }
 mitra_activitypub = { path = "../mitra_activitypub" }
 mitra_adapters = { path = "../mitra_adapters" }
-mitra_api = { path = ".." }
+mitra_api = { path = "../mitra_api" }
 mitra_config = { path = "../mitra_config" }
 mitra_models = { path = "../mitra_models" }
 mitra_services = { path = "../mitra_services" }
