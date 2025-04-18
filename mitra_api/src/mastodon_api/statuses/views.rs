@@ -215,15 +215,11 @@ async fn create_status(
     };
 
     // Prepare poll data
-    let maybe_poll_data = if status_data.poll_options.is_empty() {
-        None
-    } else {
-        let duration = status_data.poll_expires_in
-            .ok_or(ValidationError("poll duration must be provided"))?
-            .into();
+    let maybe_poll_data = if let Some(poll_params) = status_data.poll_params()? {
+        let duration = poll_params.expires_in.into();
         let (results, poll_emojis) = parse_poll_options(
             db_client,
-            &status_data.poll_options,
+            &poll_params.options,
         ).await?;
         for poll_emoji in poll_emojis {
             if !emojis.iter().any(|emoji| emoji.id == poll_emoji.id) {
@@ -231,11 +227,13 @@ async fn create_status(
             };
         };
         let poll_data = PollData {
-            multiple_choices: status_data.poll_multiple.unwrap_or(false),
+            multiple_choices: poll_params.multiple.unwrap_or(false),
             ends_at: Utc::now() + Duration::from_secs(duration),
             results: results,
         };
         Some(poll_data)
+    } else {
+        None
     };
 
     // Validate post data

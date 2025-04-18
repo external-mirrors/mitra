@@ -14,6 +14,7 @@ use mitra_models::{
     profiles::types::DbActorProfile,
 };
 use mitra_utils::languages::Language;
+use mitra_validators::errors::ValidationError;
 
 use crate::mastodon_api::{
     accounts::types::Account,
@@ -269,7 +270,14 @@ pub struct StatusTombstone {
 
 fn default_post_content_type() -> String { POST_CONTENT_TYPE_MARKDOWN.to_string() }
 
-/// https://docs.joinmastodon.org/methods/statuses/
+#[derive(Clone, Debug, Deserialize)]
+pub struct PollParams {
+    pub options: Vec<String>,
+    pub expires_in: u32,
+    pub multiple: Option<bool>,
+}
+
+// https://docs.joinmastodon.org/methods/statuses/
 #[derive(Debug, Deserialize)]
 pub struct StatusData {
     pub status: String,
@@ -286,6 +294,10 @@ pub struct StatusData {
     #[serde(default)]
     pub sensitive: bool,
 
+    // Poll parameters: JSON
+    pub poll: Option<PollParams>,
+
+    // Poll parameters: form data
     #[serde(default, rename = "poll[options][]")]
     pub poll_options: Vec<String>,
 
@@ -300,6 +312,26 @@ pub struct StatusData {
     pub content_type: String,
 
     pub quote_id: Option<Uuid>,
+}
+
+impl StatusData {
+    pub fn poll_params(&self) -> Result<Option<PollParams>, ValidationError> {
+        let maybe_poll_params = if let Some(ref poll_params) = self.poll {
+            Some(poll_params.clone())
+        } else if !self.poll_options.is_empty() {
+            let expires_in = self.poll_expires_in
+                .ok_or(ValidationError("poll duration must be provided"))?;
+            let poll_params = PollParams {
+                options: self.poll_options.clone(),
+                expires_in,
+                multiple: self.poll_multiple,
+            };
+            Some(poll_params)
+        } else {
+            None
+        };
+        Ok(maybe_poll_params)
+    }
 }
 
 #[derive(Deserialize)]
