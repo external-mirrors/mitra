@@ -210,7 +210,7 @@ See [guide](./docs/ipfs.md).
 
 ## CLI
 
-[Documentation](./docs/mitractl.md)
+[Documentation](./docs/mitra_cli.md)
 
 ## Client API
 
