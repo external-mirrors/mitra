@@ -3,7 +3,7 @@
 set -e
 set -x
 
-VERSION=$(cargo metadata --quiet --no-deps --offline | jq -r ".packages[0].version")
+VERSION=$(cargo metadata --quiet --no-deps --offline | jq -r '.packages[] | select(.name == "mitra") | .version')
 ARCH=$(dpkg --print-architecture)
 
 # Package contents will appear in target/debian/tmp/debian/mitra/
