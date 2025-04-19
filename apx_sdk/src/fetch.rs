@@ -5,6 +5,7 @@ use reqwest::{
     Method,
     RequestBuilder,
     StatusCode,
+    Url,
 };
 use serde_json::{Value as JsonValue};
 
@@ -127,6 +128,39 @@ fn fetcher_error_for_status(error: reqwest::Error) -> FetchError {
     }
 }
 
+/// Returns next URL in redirection chain
+fn get_target_url(
+    current_url: &Url,
+    location: &str, // "Location" header value
+) -> Result<Url, String> {
+    // https://github.com/seanmonstar/reqwest/blob/37074368012ce42e61e5649c2fffcf8c8a979e1e/src/async_impl/client.rs#L2745
+    let mut next_url = current_url.join(location)
+        .map_err(|error| error.to_string())?;
+    if next_url.fragment().is_none() {
+        // Redirection inherits the original reference's fragment, if any
+        // https://www.rfc-editor.org/rfc/rfc9110#section-10.2.2
+        next_url.set_fragment(current_url.fragment());
+    };
+    Ok(next_url)
+}
+
+fn extract_fragment(
+    document: &JsonValue,
+    fragment_id: &str, // fully qualified fragment ID
+) -> Option<JsonValue> {
+    if let Some(map) = document.as_object() {
+        for (key, value) in map.iter() {
+            if key == "id" && value.as_str() == Some(fragment_id) {
+                return Some(document.clone());
+            };
+            if let Some(fragment) = extract_fragment(value, fragment_id) {
+                return Some(fragment);
+            };
+        };
+    };
+    None
+}
+
 #[derive(Default)]
 pub struct FetchObjectOptions {
     /// Skip origin and content type checks?
@@ -135,7 +169,7 @@ pub struct FetchObjectOptions {
     pub fep_ef61_trusted_origins: Vec<String>,
 }
 
-/// Sends GET request to fetch AP object
+/// Sends GET request to fetch ActivityPub object. Supports fragment resolution.
 pub async fn fetch_object(
     agent: &FederationAgent,
     object_id: &str,
@@ -150,7 +184,7 @@ pub async fn fetch_object(
     )?;
 
     let mut redirect_count = 0;
-    let mut target_url = object_id.to_string();
+    let mut target_url = object_id.to_owned();
     let mut response = loop {
         if agent.ssrf_protection_enabled {
             require_safe_url(&target_url)?;
@@ -187,10 +221,7 @@ pub async fn fetch_object(
         target_url = response.headers()
             .get(header::LOCATION)
             .and_then(|location| location.to_str().ok())
-            .and_then(|location| {
-                // https://github.com/seanmonstar/reqwest/blob/37074368012ce42e61e5649c2fffcf8c8a979e1e/src/async_impl/client.rs#L2745
-                response.url().join(location).ok()
-            })
+            .and_then(|location| get_target_url(response.url(), location).ok())
             .ok_or(FetchError::RedirectionError)?
             .to_string();
     };
@@ -199,16 +230,26 @@ pub async fn fetch_object(
         .await?
         .ok_or(FetchError::ResponseTooLarge)?;
 
+    let object_location = response.url();
     let object_json: JsonValue = serde_json::from_slice(&data)?;
+    let object_id = object_json["id"].as_str()
+        .ok_or(FetchError::NoObjectId(object_location.to_string()))?
+        .to_string();
+    let object_json = if let Some(fragment_id) = object_location.fragment() {
+        // Resolve fragment
+        // https://www.w3.org/TR/cid/#fragment-resolution
+        let fully_qualified_fragment_id = format!("{object_id}#{fragment_id}");
+        extract_fragment(&object_json, &fully_qualified_fragment_id)
+            .ok_or(FetchError::NotFound(object_location.to_string()))?
+    } else {
+        object_json
+    };
+
     if options.skip_verification {
         return Ok(object_json);
     };
 
     // Perform authentication
-    let object_location = response.url().as_str();
-    let object_id = object_json["id"].as_str()
-        .ok_or(FetchError::NoObjectId(object_location.to_string()))?;
-
     match verify_portable_object(&object_json) {
         Ok(_) => (),
         Err(AuthenticationError::InvalidObjectID(_)) => {
@@ -216,7 +257,7 @@ pub async fn fetch_object(
         },
         Err(AuthenticationError::NotPortable) => {
             // Verify authority if object is not portable
-            let is_trusted = is_same_origin(object_id, object_location)
+            let is_trusted = is_same_origin(object_location.as_str(), &object_id)
                 .unwrap_or(false);
             if !is_trusted {
                 return Err(FetchError::UnexpectedObjectId(object_location.to_string()));
@@ -226,7 +267,8 @@ pub async fn fetch_object(
             let is_trusted = options.fep_ef61_trusted_origins
                 .iter()
                 .any(|origin| {
-                    is_same_http_origin(object_location, origin).unwrap_or(false)
+                    is_same_http_origin(object_location.as_str(), origin)
+                        .unwrap_or(false)
                 });
             if !is_trusted {
                 return Err(FetchError::UnexpectedObjectId(object_location.to_string()));
@@ -331,4 +373,71 @@ pub async fn fetch_json(
         .ok_or(FetchError::ResponseTooLarge)?;
     let object_json = serde_json::from_slice(&data)?;
     Ok(object_json)
+}
+
+#[cfg(test)]
+mod tests {
+    use serde_json::json;
+    use super::*;
+
+    #[test]
+    fn test_get_target_url() {
+        let current_url = Url::parse("https://social.example/users/1").unwrap();
+        let location = "https://social.example/actors/1";
+        let target_url = get_target_url(&current_url, location).unwrap();
+        assert_eq!(
+            target_url.to_string(),
+            "https://social.example/actors/1",
+        );
+    }
+
+    #[test]
+    fn test_get_target_url_inherit_fragment() {
+        let current_url = Url::parse("https://social.example/users/1#main-key").unwrap();
+        let location = "/actors/1";
+        let target_url = get_target_url(&current_url, location).unwrap();
+        assert_eq!(
+            target_url.to_string(),
+            "https://social.example/actors/1#main-key",
+        );
+    }
+
+    #[test]
+    fn test_extract_fragment() {
+        let document = json!({
+            "id": "https://social.example/users/1",
+            "preferredUsername": "test",
+            "publicKey": {
+                "id": "https://social.example/users/1#main-key",
+                "owner": "https://social.example/users/1",
+            },
+        });
+        let maybe_fragment = extract_fragment(
+            &document,
+            "https://social.example/users/1#main-key",
+        );
+        assert_eq!(
+            maybe_fragment.unwrap(),
+            json!({
+                "id": "https://social.example/users/1#main-key",
+                "owner": "https://social.example/users/1",
+            }),
+        );
+    }
+
+    #[test]
+    fn test_extract_fragment_not_found() {
+        let document = json!({
+            "id": "https://social.example/users/1",
+            "preferredUsername": "test",
+            "publicKey": {
+                "id": "https://social.example/users/1#main-key",
+            },
+        });
+        let maybe_fragment = extract_fragment(
+            &document,
+            "https://social.example/users/1#secondary-key",
+        );
+        assert_eq!(maybe_fragment.is_none(), true);
+    }
 }
