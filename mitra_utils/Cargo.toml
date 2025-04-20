@@ -20,8 +20,6 @@ comrak = { version = "=0.30.0", default-features = false }
 html2text = "0.12.6"
 # ISO 639 language codes
 isolang = { version = "2.4.0", default-features = false }
-# Used to gather disk info
-lfs-core = "=0.11.1"
 # Used to determine file extension
 mime_guess = "2.0.5"
 # Used to generate random numbers
@@ -30,6 +28,8 @@ rand = "0.8.4"
 regex = "1.10.6"
 # Used for hashing passwords
 rust-argon2 = "2.1.0"
+# Used to gather disk info
+sysinfo = { version = "0.30.13", default-features = false }
 # Used for creating error types
 thiserror = "1.0.37"
 # Used to generate lexicographically sortable IDs

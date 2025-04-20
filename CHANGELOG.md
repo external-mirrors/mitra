@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+
+- Make available space indication work on FreeBSD.
+
 ### Changed
 
 - Accept poll options formatted as JSON object at `/api/v1/statuses`.
