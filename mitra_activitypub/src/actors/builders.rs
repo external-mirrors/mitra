@@ -40,7 +40,7 @@ use super::attachments::{
     attach_extra_field,
     attach_payment_option,
 };
-use super::keys::{Multikey, PublicKey};
+use super::keys::{Multikey, PublicKeyPem};
 
 type Context = (
     &'static str,
@@ -119,7 +119,7 @@ pub struct Actor {
     #[serde(skip_serializing_if = "Vec::is_empty")]
     assertion_method: Vec<Multikey>,
 
-    public_key: PublicKey,
+    public_key: PublicKeyPem,
 
     #[serde(skip_serializing_if = "Option::is_none")]
     icon: Option<ActorImage>,
@@ -174,7 +174,7 @@ pub fn build_local_actor(
     let subscribers = LocalActorCollection::Subscribers.of(&actor_id);
     let featured = LocalActorCollection::Featured.of(&actor_id);
 
-    let public_key = PublicKey::build(&actor_id, &user.rsa_secret_key)
+    let public_key = PublicKeyPem::build(&actor_id, &user.rsa_secret_key)
         .map_err(|_| DatabaseTypeError)?;
     let verification_methods = vec![
         Multikey::build_rsa(&actor_id, &user.rsa_secret_key)
@@ -280,7 +280,7 @@ pub fn build_instance_actor(
     let actor_id = local_instance_actor_id(&instance.url());
     let actor_inbox = LocalActorCollection::Inbox.of(&actor_id);
     let actor_outbox = LocalActorCollection::Outbox.of(&actor_id);
-    let public_key = PublicKey::build(&actor_id, &instance.actor_rsa_key)?;
+    let public_key = PublicKeyPem::build(&actor_id, &instance.actor_rsa_key)?;
     let verification_methods = vec![
         Multikey::build_rsa(&actor_id, &instance.actor_rsa_key)?,
         Multikey::build_ed25519(&actor_id, &instance.actor_ed25519_key),

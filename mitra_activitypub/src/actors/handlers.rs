@@ -90,7 +90,7 @@ use super::{
         LinkAttachment,
     },
     builders::ActorImage,
-    keys::{Multikey, PublicKey},
+    keys::{Multikey, PublicKeyPem},
 };
 
 pub struct Actor {
@@ -196,7 +196,7 @@ struct ValidatedActor {
     #[serde(default, deserialize_with = "deserialize_object_array")]
     assertion_method: Vec<Multikey>,
 
-    public_key: PublicKey,
+    public_key: PublicKeyPem,
 
     #[serde(default, deserialize_with = "deserialize_image_opt")]
     icon: Option<ActorImage>,
@@ -780,7 +780,7 @@ mod tests {
         },
     };
     use mitra_models::profiles::types::PublicKeyType;
-    use crate::actors::keys::{Multikey, PublicKey};
+    use crate::actors::keys::{Multikey, PublicKeyPem};
     use super::*;
 
     #[test]
@@ -836,7 +836,7 @@ mod tests {
         let rsa_secret_key = generate_weak_rsa_key().unwrap();
         let ed25519_secret_key = generate_ed25519_key();
         let actor_public_key =
-            PublicKey::build(actor_id, &rsa_secret_key).unwrap();
+            PublicKeyPem::build(actor_id, &rsa_secret_key).unwrap();
         let actor_auth_key_1 =
             Multikey::build_rsa(actor_id, &rsa_secret_key).unwrap();
         let actor_auth_key_2 =

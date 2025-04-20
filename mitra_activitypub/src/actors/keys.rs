@@ -35,13 +35,13 @@ use crate::{
 #[derive(Deserialize, Serialize)]
 #[cfg_attr(test, derive(Default))]
 #[serde(rename_all = "camelCase")]
-pub struct PublicKey {
+pub struct PublicKeyPem {
     pub id: String,
     pub owner: String,
     pub public_key_pem: String,
 }
 
-impl PublicKey {
+impl PublicKeyPem {
     pub fn build(
         actor_id: &str,
         secret_key: &RsaSecretKey,
@@ -152,15 +152,37 @@ impl Multikey {
 
 #[cfg(test)]
 mod tests {
-    use apx_core::crypto_eddsa::generate_ed25519_key;
+    use apx_core::{
+        crypto_eddsa::generate_ed25519_key,
+        crypto_rsa::generate_weak_rsa_key,
+    };
     use super::*;
 
     #[test]
-    fn test_build_ed25519_multikey() {
+    fn test_public_key_pem() {
+        let actor_id = "https://test.example/users/1";
+        let secret_key = generate_weak_rsa_key().unwrap();
+        let public_key_pem = PublicKeyPem::build(actor_id, &secret_key).unwrap();
+        assert_eq!(public_key_pem.id, "https://test.example/users/1#main-key");
+        assert_eq!(public_key_pem.owner, actor_id);
+        let db_key = public_key_pem.to_db_key().unwrap();
+        assert_eq!(db_key.id, public_key_pem.id);
+        assert_eq!(db_key.key_type, PublicKeyType::RsaPkcs1);
+        let public_key = rsa_public_key_from_pkcs1_der(&db_key.key_data).unwrap();
+        assert_eq!(public_key, RsaPublicKey::from(secret_key));
+    }
+
+    #[test]
+    fn test_multikey_ed25519() {
         let actor_id = "https://test.example/users/1";
         let secret_key = generate_ed25519_key();
         let multikey = Multikey::build_ed25519(actor_id, &secret_key);
         assert_eq!(multikey.id, "https://test.example/users/1#ed25519-key");
         assert_eq!(multikey.controller, actor_id);
+        let db_key = multikey.to_db_key().unwrap();
+        assert_eq!(db_key.id, multikey.id);
+        assert_eq!(db_key.key_type, PublicKeyType::Ed25519);
+        let public_key = ed25519_public_key_from_bytes(&db_key.key_data).unwrap();
+        assert_eq!(public_key, ed25519_public_key_from_secret_key(&secret_key));
     }
 }
