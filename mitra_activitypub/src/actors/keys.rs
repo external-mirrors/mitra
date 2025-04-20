@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use apx_core::{
+    crypto::common::PublicKey,
     crypto_eddsa::{
         ed25519_public_key_from_bytes,
         ed25519_public_key_from_pkcs8_pem,
@@ -32,13 +33,33 @@ use crate::{
     vocabulary::MULTIKEY,
 };
 
+fn to_db_key(key_id: &str, public_key: PublicKey) -> Result<DbActorKey, ValidationError> {
+    let key_id = canonicalize_id(key_id)?;
+    let (key_type, key_data) = match public_key {
+        PublicKey::Rsa(public_key) => {
+            let public_key_der = rsa_public_key_to_pkcs1_der(&public_key)
+                .map_err(|_| ValidationError("invalid public key"))?;
+            (PublicKeyType::RsaPkcs1, public_key_der)
+        },
+        PublicKey::Ed25519(public_key) => {
+            (PublicKeyType::Ed25519, public_key.to_bytes().to_vec())
+        },
+    };
+    let db_key = DbActorKey {
+        id: key_id.to_string(),
+        key_type,
+        key_data,
+    };
+    Ok(db_key)
+}
+
 #[derive(Deserialize, Serialize)]
 #[cfg_attr(test, derive(Default))]
 #[serde(rename_all = "camelCase")]
 pub struct PublicKeyPem {
     pub id: String,
     pub owner: String,
-    pub public_key_pem: String,
+    public_key_pem: String,
 }
 
 impl PublicKeyPem {
@@ -56,26 +77,20 @@ impl PublicKeyPem {
         Ok(public_key_obj)
     }
 
-    pub fn to_db_key(&self) -> Result<DbActorKey, ValidationError> {
-        let key_id = canonicalize_id(&self.id)?;
-        let (key_type, key_data) = match deserialize_rsa_public_key(&self.public_key_pem) {
-            Ok(public_key) => {
-                let public_key_der = rsa_public_key_to_pkcs1_der(&public_key)
-                    .map_err(|_| ValidationError("invalid public key"))?;
-                (PublicKeyType::RsaPkcs1, public_key_der)
-            },
+    fn public_key(&self) -> Result<PublicKey, ValidationError> {
+        let public_key = match deserialize_rsa_public_key(&self.public_key_pem) {
+            Ok(public_key) => PublicKey::Rsa(public_key),
             Err(_) => {
                 let public_key = ed25519_public_key_from_pkcs8_pem(&self.public_key_pem)
                     .map_err(|_| ValidationError("unexpected key type"))?;
-                (PublicKeyType::Ed25519, public_key.to_bytes().to_vec())
+                PublicKey::Ed25519(public_key)
             },
         };
-        let db_key = DbActorKey {
-            id: key_id.to_string(),
-            key_type,
-            key_data,
-        };
-        Ok(db_key)
+        Ok(public_key)
+    }
+
+    pub fn to_db_key(&self) -> Result<DbActorKey, ValidationError> {
+        to_db_key(&self.id, self.public_key()?)
     }
 }
 
@@ -120,33 +135,31 @@ impl Multikey {
         Ok(multikey)
     }
 
-    pub fn to_db_key(&self) -> Result<DbActorKey, ValidationError> {
-        let key_id = canonicalize_id(&self.id)?;
+    fn public_key(&self) -> Result<PublicKey, ValidationError> {
         let public_key_multicode = decode_multibase_base58btc(&self.public_key_multibase)
             .map_err(|_| ValidationError("invalid key encoding"))?;
         let public_key_decoded = Multicodec::decode(&public_key_multicode)
             .map_err(|_| ValidationError("unexpected key type"))?;
-        let (key_type, key_data) = match public_key_decoded {
+        let public_key = match public_key_decoded {
             (Multicodec::RsaPub, public_key_der) => {
                 // Validate RSA key
-                rsa_public_key_from_pkcs1_der(&public_key_der)
+                let public_key = rsa_public_key_from_pkcs1_der(&public_key_der)
                     .map_err(|_| ValidationError("invalid key encoding"))?;
-                (PublicKeyType::RsaPkcs1, public_key_der)
+                PublicKey::Rsa(public_key)
             },
             (Multicodec::Ed25519Pub, public_key_bytes) => {
                 // Validate Ed25519 key
-                ed25519_public_key_from_bytes(&public_key_bytes)
+                let public_key = ed25519_public_key_from_bytes(&public_key_bytes)
                     .map_err(|_| ValidationError("invalid key encoding"))?;
-                (PublicKeyType::Ed25519, public_key_bytes)
+                PublicKey::Ed25519(public_key)
             },
             _ => return Err(ValidationError("unexpected key type")),
         };
-        let db_key = DbActorKey {
-            id: key_id.to_string(),
-            key_type,
-            key_data,
-        };
-        Ok(db_key)
+        Ok(public_key)
+    }
+
+    pub fn to_db_key(&self) -> Result<DbActorKey, ValidationError> {
+        to_db_key(&self.id, self.public_key()?)
     }
 }
 
