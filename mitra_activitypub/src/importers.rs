@@ -8,8 +8,8 @@ use serde::{
 use serde_json::{Value as JsonValue};
 
 use apx_core::{
-    crypto_eddsa::ed25519_secret_key_from_multikey,
-    crypto_rsa::rsa_secret_key_from_multikey,
+    crypto_eddsa::generate_ed25519_key,
+    crypto_rsa::generate_rsa_key,
     http_url::HttpUrl,
     url::hostname::guess_protocol,
 };
@@ -30,7 +30,7 @@ use apx_sdk::{
 };
 use mitra_config::{Config, Instance, MediaLimits};
 use mitra_models::{
-    database::{DatabaseClient, DatabaseError},
+    database::{DatabaseClient, DatabaseError, DatabaseTypeError},
     filter_rules::types::FilterAction,
     notifications::helpers::create_signup_notifications,
     posts::helpers::get_local_post_by_id,
@@ -52,7 +52,6 @@ use mitra_models::{
 use mitra_services::media::MediaStorage;
 use mitra_validators::{
     errors::ValidationError,
-    users::validate_portable_user_data,
 };
 
 use crate::{
@@ -917,14 +916,8 @@ pub async fn register_portable_actor(
     config: &Config,
     db_client: &mut impl DatabaseClient,
     actor_json: JsonValue,
-    rsa_secret_key_multibase: &str,
-    ed25519_secret_key_multibase: &str,
     invite_code: &str,
 ) -> Result<PortableUser, HandlerError> {
-    let rsa_secret_key = rsa_secret_key_from_multikey(rsa_secret_key_multibase)
-        .map_err(|_| ValidationError("invalid RSA key"))?;
-    let ed25519_secret_key = ed25519_secret_key_from_multikey(ed25519_secret_key_multibase)
-        .map_err(|_| ValidationError("invalid Ed25519 key"))?;
     verify_portable_object(&actor_json)
         .map_err(|error| {
             log::warn!("{error}");
@@ -965,13 +958,15 @@ pub async fn register_portable_actor(
         Err(other_error) => return Err(other_error.into()),
     };
     // Create user
+    let rsa_secret_key = generate_rsa_key()
+        .map_err(|_| DatabaseError::from(DatabaseTypeError))?;
+    let ed25519_secret_key = generate_ed25519_key();
     let user_data = PortableUserData {
         profile_id: profile.id,
         rsa_secret_key: rsa_secret_key,
         ed25519_secret_key: ed25519_secret_key,
         invite_code: invite_code.to_string(),
     };
-    validate_portable_user_data(&user_data, &profile)?;
     let user = create_portable_user(db_client, user_data).await?;
     create_signup_notifications(db_client, user.id).await?;
     Ok(user)

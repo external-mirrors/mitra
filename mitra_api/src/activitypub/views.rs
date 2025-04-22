@@ -104,7 +104,10 @@ use crate::{
     },
 };
 
-use super::receiver::{receive_activity, InboxError};
+use super::{
+    receiver::{receive_activity, InboxError},
+    types::PortableActorKeys,
+};
 
 #[get("")]
 async fn actor_view(
@@ -704,14 +707,6 @@ async fn apgateway_create_actor_view(
     request: HttpRequest,
     actor: web::Json<JsonValue>,
 ) -> Result<HttpResponse, HttpError> {
-    let rsa_secret_key = request.headers()
-        .get("X-Rsa-Secret-Key")
-        .and_then(|value| value.to_str().ok())
-        .ok_or(ValidationError("RSA secret key is required"))?;
-    let ed25519_secret_key = request.headers()
-       .get("X-Ed25519-Secret-Key")
-       .and_then(|value| value.to_str().ok())
-       .ok_or(ValidationError("Ed25519 secret key is required"))?;
     let invite_code = request.headers()
         .get("X-Invite-Code")
         .and_then(|value| value.to_str().ok())
@@ -721,8 +716,6 @@ async fn apgateway_create_actor_view(
         &config,
         db_client,
         actor.into_inner(),
-        rsa_secret_key,
-        ed25519_secret_key,
         invite_code,
     ).await.map_err(|error| {
         log::warn!("failed to register portable actor ({error})");
@@ -734,7 +727,8 @@ async fn apgateway_create_actor_view(
         }
     })?;
     log::warn!("created portable account {}", user);
-    Ok(HttpResponse::Created().finish())
+    let keys = PortableActorKeys::new(user);
+    Ok(HttpResponse::Created().json(keys))
 }
 
 #[get("/{url:.*}")]
@@ -953,6 +947,8 @@ async fn apgateway_outbox_push_view(
     ) {
         // Activity has already been saved
         job_data.enqueue(db_client).await?;
+    } else {
+        log::warn!("signing keys are not found in actor document");
     };
     Ok(HttpResponse::Accepted().finish())
 }

@@ -1,15 +1,7 @@
 use regex::Regex;
 
-use apx_core::{
-    crypto_eddsa::ed25519_public_key_from_secret_key,
-    crypto_rsa::{
-        rsa_public_key_to_pkcs1_der,
-        RsaPublicKey,
-    },
-};
 use mitra_models::{
-    profiles::types::DbActorProfile,
-    users::types::{ClientConfig, PortableUserData},
+    users::types::ClientConfig,
 };
 
 use super::errors::ValidationError;
@@ -52,25 +44,6 @@ pub fn validate_client_config_update(
         client_config_size(config) + client_config_size(update);
     if expected_config_size > CLIENT_CONFIG_SIZE_MAX {
         return Err(ValidationError("client config size exceeds limit"));
-    };
-    Ok(())
-}
-
-pub fn validate_portable_user_data(
-    user_data: &PortableUserData,
-    profile: &DbActorProfile,
-) -> Result<(), ValidationError> {
-    assert_eq!(profile.id, user_data.profile_id);
-    let rsa_public_key = RsaPublicKey::from(&user_data.rsa_secret_key);
-    let rsa_public_key_der = rsa_public_key_to_pkcs1_der(&rsa_public_key)
-        .map_err(|_| ValidationError("invalid RSA key"))?;
-    if profile.public_keys.find_by_value(&rsa_public_key_der).is_none() {
-        return Err(ValidationError("RSA key is not linked to actor"));
-    };
-    let ed25519_public_key =
-        ed25519_public_key_from_secret_key(&user_data.ed25519_secret_key);
-    if profile.public_keys.find_by_value(ed25519_public_key.as_bytes()).is_none() {
-        return Err(ValidationError("Ed25519 key is not linked to actor"));
     };
     Ok(())
 }
