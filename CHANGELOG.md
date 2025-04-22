@@ -16,6 +16,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Accept poll options formatted as JSON object at `/api/v1/statuses`.
 - Require GET requests to portable inboxes and outboxes to be signed with DIDs.
 - Generate HTTP signature keys when registering portable actor.
+- Log internal profile ID of portable actor if it existed before registration.
 
 ## [4.0.0] - 2025-04-17
 

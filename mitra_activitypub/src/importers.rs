@@ -939,6 +939,10 @@ pub async fn register_portable_actor(
         &canonical_actor_id.to_string(),
     ).await {
         Ok(profile) => {
+            log::warn!(
+                "profile of portable actor already exists: {}",
+                profile.id,
+            );
             let profile_updated = update_remote_profile(
                 &ap_client,
                 db_client,

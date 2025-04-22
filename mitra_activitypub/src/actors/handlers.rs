@@ -287,6 +287,7 @@ async fn get_webfinger_hostname(
                     if has_account {
                         return Ok(WebfingerHostname::Local);
                     } else {
+                        // WARNING: only allowed when profile is being created
                         return Ok(WebfingerHostname::Unknown);
                     };
                 };
