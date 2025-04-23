@@ -16,7 +16,7 @@ use mitra_models::{
         constants::FILTER_KEYWORDS,
         queries::get_internal_property,
     },
-    relationships::queries::has_local_followers,
+    relationships::queries::is_local_or_followed,
 };
 use mitra_validators::errors::ValidationError;
 
@@ -55,8 +55,9 @@ async fn check_unsolicited_message(
 ) -> Result<(), HandlerError> {
     let author_id = get_object_attributed_to(object)?;
     let canonical_author_id = canonicalize_id(&author_id)?.to_string();
+    // is_local_or_followed returns true if actor has local account
     let author_has_followers =
-        has_local_followers(db_client, &canonical_author_id).await?;
+        is_local_or_followed(db_client, &canonical_author_id).await?;
     let audience = get_audience(object);
     // TODO: FEP-EF61: find portable local recipients
     let has_local_recipients = audience.iter().any(|actor_id| {

@@ -467,22 +467,30 @@ pub async fn get_followers_paginated(
     ).await
 }
 
-/// Returns true if actor has local followers or follow requests
-pub async fn has_local_followers(
+/// Returns true if actor has an account,
+/// or has local followers or follow requests
+pub async fn is_local_or_followed(
     db_client: &impl DatabaseClient,
     actor_id: &str,
 ) -> Result<bool, DatabaseError> {
     let maybe_row = db_client.query_opt(
         "
         SELECT 1
-        FROM (
-            SELECT target_id FROM relationship WHERE relationship_type = $2
-            UNION ALL
-            SELECT target_id FROM follow_request
-        ) AS follow
-        JOIN actor_profile ON (follow.target_id = actor_profile.id)
-        WHERE actor_profile.actor_id = $1
-        LIMIT 1
+        FROM actor_profile
+        WHERE
+            actor_profile.actor_id = $1
+            AND (
+                EXISTS (
+                    SELECT 1 FROM relationship
+                    WHERE target_id = actor_profile.id AND relationship_type = $2
+                )
+                OR EXISTS (
+                    SELECT 1 FROM follow_request
+                    WHERE target_id = actor_profile.id
+                )
+                OR actor_profile.user_id IS NOT NULL
+                OR actor_profile.portable_user_id IS NOT NULL
+            )
         ",
         &[&actor_id, &RelationshipType::Follow]
     ).await?;
@@ -847,7 +855,7 @@ mod tests {
         let following = get_following(db_client, source.id).await.unwrap();
         assert_eq!(following[0].id, target.id);
         let target_has_followers =
-            has_local_followers(db_client, target_actor_id).await.unwrap();
+            is_local_or_followed(db_client, target_actor_id).await.unwrap();
         assert_eq!(target_has_followers, true);
 
         // Unfollow
@@ -1023,5 +1031,29 @@ mod tests {
                 RelationshipType::Mute
             ).await.unwrap()
         );
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_is_local_or_followed() {
+        let db_client = &mut create_test_database().await;
+        let actor_id = "https://social.example/1";
+        let target = create_test_remote_profile(
+            db_client,
+            "target",
+            "social.example",
+            actor_id,
+        ).await;
+        let result = is_local_or_followed(db_client, actor_id).await.unwrap();
+        assert_eq!(result, false);
+
+        let source = create_test_user(db_client, "source").await;
+        create_follow_request_unchecked(
+            db_client,
+            source.id,
+            target.id,
+        ).await.unwrap();
+        let result = is_local_or_followed(db_client, actor_id).await.unwrap();
+        assert_eq!(result, true);
     }
 }

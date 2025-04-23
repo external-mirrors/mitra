@@ -18,6 +18,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Generate HTTP signature keys when registering portable actor.
 - Log internal profile ID of portable actor if it existed before registration.
 
+### Fixed
+
+- Don't reject public posts from portable users as spam.
+
 ## [4.0.0] - 2025-04-17
 
 ### Changed
