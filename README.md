@@ -214,9 +214,9 @@ CLI is stable and breaking changes don't happen in minor releases.
 
 [Documentation](./docs/mitra_cli.md)
 
-## Client API
+## REST API
 
-The majority of endpoints imitate Mastodon API. Some Pleroma extensions are supported as well. A number of additional endpoints exist for features that are unique to Mitra.
+The majority of endpoints imitate [Mastodon API](https://docs.joinmastodon.org/client/intro/). Some [Pleroma](https://docs.pleroma.social/backend/development/API/differences_in_mastoapi_responses/) extensions are supported as well. A number of additional endpoints exist for features that are unique to Mitra.
 
 Client API is not stable and may change in minor releases.
 
@@ -225,6 +225,12 @@ Client API is not stable and may change in minor releases.
 ## Federation
 
 See [FEDERATION.md](./FEDERATION.md)
+
+## ActivityPub Client API
+
+[FEP-ae97](https://codeberg.org/fediverse/fep/src/branch/main/fep/ae97/fep-ae97.md) clients can register and publish activities.
+
+This API is not stable and may be removed in the future.
 
 ## Development
 
