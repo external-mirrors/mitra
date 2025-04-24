@@ -16,6 +16,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Implemented `origin` method on `VerificationMethod`.
 - Implemented `Display` on `VerificationMethod`.
 - Support verification of HTTP signatures created by DID authorities.
+- Added `from_multikey` method to `PublicKey` type.
 
 ### Changed
 

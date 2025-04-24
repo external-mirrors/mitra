@@ -3,7 +3,6 @@ use serde::{Deserialize, Serialize};
 use apx_core::{
     crypto::common::PublicKey,
     crypto_eddsa::{
-        ed25519_public_key_from_bytes,
         ed25519_public_key_from_pkcs8_pem,
         ed25519_public_key_from_secret_key,
         ed25519_public_key_to_multikey,
@@ -11,7 +10,6 @@ use apx_core::{
     },
     crypto_rsa::{
         deserialize_rsa_public_key,
-        rsa_public_key_from_pkcs1_der,
         rsa_public_key_to_multikey,
         rsa_public_key_to_pkcs1_der,
         rsa_public_key_to_pkcs8_pem,
@@ -19,8 +17,6 @@ use apx_core::{
         RsaSecretKey,
         RsaSerializationError,
     },
-    multibase::decode_multibase_base58btc,
-    multicodec::Multicodec,
 };
 
 use mitra_models::profiles::types::{DbActorKey, PublicKeyType};
@@ -136,25 +132,8 @@ impl Multikey {
     }
 
     pub fn public_key(&self) -> Result<PublicKey, ValidationError> {
-        let public_key_multicode = decode_multibase_base58btc(&self.public_key_multibase)
-            .map_err(|_| ValidationError("invalid key encoding"))?;
-        let public_key_decoded = Multicodec::decode(&public_key_multicode)
-            .map_err(|_| ValidationError("unexpected key type"))?;
-        let public_key = match public_key_decoded {
-            (Multicodec::RsaPub, public_key_der) => {
-                // Validate RSA key
-                let public_key = rsa_public_key_from_pkcs1_der(&public_key_der)
-                    .map_err(|_| ValidationError("invalid key encoding"))?;
-                PublicKey::Rsa(public_key)
-            },
-            (Multicodec::Ed25519Pub, public_key_bytes) => {
-                // Validate Ed25519 key
-                let public_key = ed25519_public_key_from_bytes(&public_key_bytes)
-                    .map_err(|_| ValidationError("invalid key encoding"))?;
-                PublicKey::Ed25519(public_key)
-            },
-            _ => return Err(ValidationError("unexpected key type")),
-        };
+        let public_key = PublicKey::from_multikey(&self.public_key_multibase)
+            .map_err(ValidationError)?;
         Ok(public_key)
     }
 
@@ -166,8 +145,14 @@ impl Multikey {
 #[cfg(test)]
 mod tests {
     use apx_core::{
-        crypto_eddsa::generate_ed25519_key,
-        crypto_rsa::generate_weak_rsa_key,
+        crypto_eddsa::{
+            ed25519_public_key_from_bytes,
+            generate_ed25519_key,
+        },
+        crypto_rsa::{
+            generate_weak_rsa_key,
+            rsa_public_key_from_pkcs1_der,
+        },
     };
     use super::*;
 
