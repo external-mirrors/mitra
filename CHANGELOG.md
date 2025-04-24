@@ -17,6 +17,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Require GET requests to portable inboxes and outboxes to be signed with DIDs.
 - Generate HTTP signature keys when registering portable actor.
 - Log internal profile ID of portable actor if it existed before registration.
+- Log emoji alternate name when it is present.
 
 ### Fixed
 

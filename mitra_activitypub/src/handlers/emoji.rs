@@ -49,6 +49,7 @@ struct EmojiImage {
 struct Emoji {
     id: Option<String>,
     name: String,
+    alternate_name: Option<String>,
     icon: EmojiImage,
     #[serde(default)]
     updated: DateTime<Utc>,
@@ -80,6 +81,9 @@ pub async fn handle_emoji(
     if validate_emoji_name(emoji_name).is_err() {
         log::warn!("invalid emoji name: {}", emoji_name);
         return Ok(None);
+    };
+    if let Some(alternate_name) = emoji.alternate_name {
+        log::warn!("alternate name for {emoji_name}:  {alternate_name}");
     };
     let emoji_hostname = match get_hostname(&emoji_object_id)
         .map_err(|_| ValidationError("invalid emoji ID"))
