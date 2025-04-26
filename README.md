@@ -18,7 +18,7 @@ Features:
 - Mastodon API.
 - Content subscription service. Subscriptions provide a way to receive monthly payments from subscribers and to publish private content made exclusively for them.
   - Supported payment methods: [Monero](https://www.getmonero.org/get-started/what-is-monero/), a peer to peer digital cash system where transactions are private by default.
-- Account migrations (from one server to another). Identity can be detached from the server.
+- Account [migrations](./docs/migrations.md) (from one server to another). Identity can be detached from the server.
 - Federation over Tor and/or I2P.
 
 Follow: [@mitra@mitra.social](https://mitra.social/@mitra)
