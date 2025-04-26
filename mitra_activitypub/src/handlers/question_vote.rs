@@ -5,7 +5,11 @@ use mitra_config::Config;
 use mitra_models::{
     database::{DatabaseClient, DatabaseError},
     polls::queries::vote_one,
-    posts::helpers::{can_view_post, get_local_post_by_id},
+    posts::helpers::{
+        add_related_posts,
+        can_view_post,
+        get_local_post_by_id,
+    },
     users::queries::get_user_by_id,
 };
 use mitra_services::media::MediaServer;
@@ -90,6 +94,7 @@ pub async fn handle_question_vote(
     };
     // Notify poll audience about results
     post.poll = Some(poll_updated);
+    add_related_posts(db_client, vec![&mut post]).await?;
     let post_author = get_user_by_id(db_client, post.author.id).await?;
     prepare_update_note(
         db_client,

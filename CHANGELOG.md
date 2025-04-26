@@ -22,6 +22,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Fixed
 
 - Don't reject public posts from portable users as spam.
+- Fixed panic in remote vote handler.
 
 ## [4.0.0] - 2025-04-17
 
