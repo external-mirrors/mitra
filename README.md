@@ -146,6 +146,10 @@ apk update
 apk add -vi mitra@testing
 ```
 
+#### Nix
+
+https://github.com/NixOS/nixpkgs/blob/nixos-unstable/pkgs/by-name/mi/mitra/package.nix
+
 #### YunoHost
 
 https://apps.yunohost.org/app/mitra
