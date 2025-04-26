@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+
+- Added `federation.fep_ef61_gateway_enabled` configuration option.
+
+### Changed
+
+- Disabled FEP-ef61 gateway by default.
+
 ## [4.1.0] - 2025-04-26
 
 ### Added
