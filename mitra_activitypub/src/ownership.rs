@@ -4,6 +4,7 @@ use serde_json::{Value as JsonValue};
 use apx_sdk::{
     deserialization::{object_to_id, parse_into_id_array},
     url::{is_same_origin as apx_is_same_origin},
+    utils::CoreType,
 };
 use mitra_validators::errors::ValidationError;
 
@@ -17,12 +18,34 @@ pub fn is_same_origin(id_1: &str, id_2: &str) -> Result<bool, ValidationError> {
         .map_err(|error| ValidationError(error.0))
 }
 
+fn get_owner(
+    object: &JsonValue,
+    core_type: CoreType,
+) -> Result<String, ValidationError> {
+    match core_type {
+        CoreType::Object | CoreType::Collection => {
+            parse_attributed_to(&object["attributedTo"])
+        },
+        CoreType::Link => Err(ValidationError("link doesn't have an owner")),
+        CoreType::Actor => get_object_id(object).map(|id| id.to_owned()),
+        CoreType::Activity => {
+            object_to_id(&object["actor"])
+                .map_err(|_| ValidationError("invalid 'actor' property"))
+        },
+        CoreType::VerificationMethod => {
+            object["controller"].as_str()
+                .or(object["owner"].as_str())
+                .map(|id| id.to_owned())
+                .ok_or(ValidationError("verification method without owner"))
+        },
+    }
+}
+
 pub fn verify_activity_owner(
     activity: &JsonValue,
 ) -> Result<(), ValidationError> {
     let activity_id = get_object_id(activity)?;
-    let owner_id = object_to_id(&activity["actor"])
-        .map_err(|_| ValidationError("invalid 'actor' property"))?;
+    let owner_id = get_owner(activity, CoreType::Activity)?;
     let is_valid = is_same_origin(activity_id, &owner_id)?;
     if !is_valid {
         return Err(ValidationError("owner has different origin"));
@@ -45,7 +68,7 @@ pub fn verify_object_owner(
     object: &JsonValue,
 ) -> Result<(), ValidationError> {
     let object_id = get_object_id(object)?;
-    let owner_id = parse_attributed_to(&object["attributedTo"])?;
+    let owner_id = get_owner(object, CoreType::Object)?;
     let is_valid = is_same_origin(object_id, &owner_id)?;
     if !is_valid {
         return Err(ValidationError("owner has different origin"));
@@ -59,12 +82,25 @@ mod tests {
     use super::*;
 
     #[test]
+    fn test_verify_activity_owner() {
+        let activity = json!({
+            "@context": ["https://www.w3.org/ns/activitystreams"],
+            "id": "https://social.example/activities/123",
+            "type": "Announce",
+            "actor": "https://social.example/actor",
+            "object": "https://social.example/objects/876",
+        });
+        let result = verify_activity_owner(&activity);
+        assert_eq!(result.is_ok(), true);
+    }
+
+    #[test]
     fn test_verify_object_owner() {
         let object = json!({
             "@context": ["https://www.w3.org/ns/activitystreams"],
             "attributedTo": "https://social.example/actor",
             "id": "https://social.example/objects/123",
-            "type":"Note",
+            "type": "Note",
         });
         let result = verify_object_owner(&object);
         assert_eq!(result.is_ok(), true);
