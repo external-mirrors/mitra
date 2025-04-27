@@ -4,6 +4,7 @@ use serde_json::{Value as JsonValue};
 use apx_core::{
     http_digest::ContentDigest,
     http_types::{method_adapter, uri_adapter},
+    http_url::HttpUrl,
     urls::get_hostname,
 };
 use apx_sdk::deserialization::object_to_id;
@@ -96,10 +97,15 @@ pub async fn receive_activity(
     let canonical_activity_id = canonicalize_id(activity_id)?;
     let canonical_actor_id = canonicalize_id(&activity_actor)?;
 
-    if canonical_activity_id.authority() == config.instance().hostname() {
-        // Ignore forwarded activities
-        log::warn!("ignoring local activity: {canonical_activity_id}");
-        return Ok(());
+    if let Ok(http_activity_id) = HttpUrl::parse(activity_id) {
+        if http_activity_id.hostname() == config.instance().url_ref().hostname() {
+            // Ignore forwarded activities
+            // and portable activities with local compatible ID.
+            // Without this invalid activity might be saved and
+            // served by the gateway.
+            log::warn!("ignoring local activity: {activity_id}");
+            return Ok(());
+        };
     };
 
     let is_self_delete = if activity_type == DELETE {
@@ -206,6 +212,7 @@ pub async fn receive_activity(
 
     // Save authenticated activities to database
     if is_authenticated {
+        // TODO: save activity after processing it
         let is_new = save_activity(
             db_client,
             &canonical_activity_id.to_string(),

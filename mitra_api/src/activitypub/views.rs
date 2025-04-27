@@ -928,6 +928,7 @@ async fn apgateway_outbox_push_view(
     if signer.id != collection_owner.id {
         return Err(HttpError::PermissionError);
     };
+    // TODO: save activity after processing it
     let is_new_activity = save_activity(
         db_client,
         &canonical_activity_id.to_string(),

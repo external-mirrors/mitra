@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Added
 
 - Added `VerificationMethod` to `CoreType` enum.
+- Implemented `PartialEq` for `Hostname` type.
 
 ## [0.12.0] - 2025-04-24
 

@@ -50,6 +50,10 @@ impl Instance {
         self._url.to_string()
     }
 
+    pub fn url_ref(&self) -> &HttpUrl {
+        &self._url
+    }
+
     /// Returns instance host name (without port number)
     pub fn hostname(&self) -> String {
         self._url.hostname().to_string()

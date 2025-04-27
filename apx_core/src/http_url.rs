@@ -7,6 +7,7 @@ use url::Url;
 
 use crate::url::common::Origin;
 
+#[derive(PartialEq)]
 pub struct Hostname(String);
 
 impl Hostname {
