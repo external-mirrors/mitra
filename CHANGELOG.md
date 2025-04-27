@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Changed
 
 - Disabled FEP-ef61 gateway by default.
+- Treat verification methods as separate core type.
 
 ## [4.1.0] - 2025-04-26
 

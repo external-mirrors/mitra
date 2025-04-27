@@ -15,6 +15,7 @@ pub enum CoreType {
     Actor,
     Activity,
     Collection,
+    VerificationMethod,
 }
 
 /// Determines the core type of an object.
@@ -24,6 +25,12 @@ pub fn get_core_type(value: &JsonValue) -> CoreType {
         // `href` may only appear in Link objects:
         // https://www.w3.org/TR/activitystreams-vocabulary/#dfn-href
         CoreType::Link
+    }
+    else if
+        !value["publicKeyPem"].is_null() ||
+        !value["publicKeyMultibase"].is_null()
+    {
+        CoreType::VerificationMethod
     }
     else if !value["inbox"].is_null() {
         // AP requires actor to have inbox and outbox,
@@ -130,6 +137,17 @@ pub fn extract_media_type(header_value: &HeaderValue) -> Option<String> {
 mod tests {
     use serde_json::json;
     use super::*;
+
+    #[test]
+    fn test_get_core_type_verification_method() {
+        let public_key = json!({
+            "id": "https://social/example/actors/1#main-key",
+            "owner": "https://social.example/actors/1",
+            "publicKeyPem": "-----BEGIN PUBLIC KEY-----\ntest\n-----END PUBLIC KEY-----\n\n",
+        });
+        let core_type = get_core_type(&public_key);
+        assert!(matches!(core_type, CoreType::VerificationMethod));
+    }
 
     #[test]
     fn test_is_actor() {
