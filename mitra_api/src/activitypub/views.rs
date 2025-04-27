@@ -25,6 +25,7 @@ use apx_sdk::{
     deserialization::object_to_id,
     http_server::is_activitypub_request,
     url::is_same_origin,
+    utils::get_core_type,
 };
 use mitra_activitypub::{
     actors::builders::{
@@ -56,6 +57,7 @@ use mitra_activitypub::{
         LocalActorCollection,
     },
     importers::register_portable_actor,
+    ownership::get_owner,
     queues::{IncomingActivityJobData, OutgoingActivityJobData},
 };
 use mitra_config::Config;
@@ -82,7 +84,10 @@ use mitra_models::{
         get_posts_by_author,
         get_thread,
     },
-    profiles::types::PaymentOption,
+    profiles::{
+        queries::get_remote_profile_by_actor_id,
+        types::PaymentOption,
+    },
     users::queries::{
         get_portable_user_by_actor_id,
         get_portable_user_by_inbox_id,
@@ -748,6 +753,17 @@ async fn apgateway_view(
             ).await?
         },
         Err(other_error) => return Err(other_error.into()),
+    };
+    let core_type = get_core_type(&object_value);
+    let owner_id = get_owner(&object_value, core_type)
+        .map_err(|_| HttpError::NotFoundError("object"))?;
+    let canonical_owner_id = canonicalize_id(&owner_id)?;
+    let owner = get_remote_profile_by_actor_id(
+        db_client,
+        &canonical_owner_id.to_string(),
+    ).await?;
+    if !owner.has_account() {
+        return Err(HttpError::NotFoundError("object"));
     };
     let response = HttpResponse::Ok()
         .content_type(AP_MEDIA_TYPE)

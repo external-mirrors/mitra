@@ -18,7 +18,7 @@ pub fn is_same_origin(id_1: &str, id_2: &str) -> Result<bool, ValidationError> {
         .map_err(|error| ValidationError(error.0))
 }
 
-fn get_owner(
+pub fn get_owner(
     object: &JsonValue,
     core_type: CoreType,
 ) -> Result<String, ValidationError> {

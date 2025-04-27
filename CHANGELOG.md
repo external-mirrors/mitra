@@ -15,6 +15,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Disabled FEP-ef61 gateway by default.
 - Treat verification methods as separate core type.
 
+### Security
+
+- Don't serve portable objects that are not owned by actors with local accounts.
+
 ## [4.1.0] - 2025-04-26
 
 ### Added
