@@ -383,6 +383,26 @@ mod tests {
     }
 
     #[test]
+    fn test_markdown_lite_to_html_greentext_with_special_characters() {
+        let text = "> blockquote! test[]";
+        let html = markdown_lite_to_html(text).unwrap();
+        assert_eq!(
+            html,
+            r#"<p>&gt;blockquote\! test\[\]</p>"#,
+        );
+    }
+
+    #[test]
+    fn test_markdown_lite_to_html_lt_gt_in_codeblocks() {
+        let text = "```\n<\n> test\n```";
+        let html = markdown_lite_to_html(text).unwrap();
+        assert_eq!(
+            html,
+            "<pre><code>&lt;\n&gt; test\n</code></pre>",
+        );
+    }
+
+    #[test]
     fn test_markdown_lite_to_html_strikethrough() {
         let text = "test ~~strikethrough~~\n~test~ end.";
         let html = markdown_lite_to_html(text).unwrap();
@@ -444,16 +464,6 @@ mod tests {
         let text = "test x://a";
         let html = markdown_lite_to_html(text).unwrap();
         assert_eq!(html, r#"<p>test x://a</p>"#);
-    }
-
-    #[test]
-    fn test_markdown_lite_to_html_lt_gt_in_codeblocks() {
-        let text = "```\n<\n> test\n```";
-        let html = markdown_lite_to_html(text).unwrap();
-        assert_eq!(
-            html,
-            "<pre><code>&lt;\n&gt; test\n</code></pre>",
-        );
     }
 
     #[test]
