@@ -1023,8 +1023,12 @@ async fn apgateway_outbox_pull_view(
     Ok(response)
 }
 
-pub fn gateway_scope() -> Scope {
-    web::scope("/.well-known/apgateway")
+pub fn gateway_scope(gateway_enabled: bool) -> Scope {
+    let scope = web::scope("/.well-known/apgateway");
+    if !gateway_enabled {
+        return scope;
+    };
+    scope
         .service(apgateway_create_actor_view)
         // Inbox and outbox services go before generic gateway service
         .service(apgateway_inbox_push_view)

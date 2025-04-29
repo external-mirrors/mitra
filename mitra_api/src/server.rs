@@ -131,6 +131,7 @@ pub async fn run_server(
             .service(activitypub::tag_view)
             .service(activitypub::conversation_view)
             .service(activitypub::activity_view)
+            .service(activitypub::gateway_scope(config.federation.fep_ef61_gateway_enabled))
             .service(atom_scope())
             .service(nodeinfo::get_nodeinfo_jrd)
             .service(nodeinfo::get_nodeinfo_2_0)
@@ -142,9 +143,6 @@ pub async fn run_server(
                 web::resource("/.well-known/{path}")
                     .to(HttpResponse::NotFound)
             );
-        if config.federation.fep_ef61_gateway_enabled {
-            app = app.service(activitypub::gateway_scope());
-        };
         #[allow(irrefutable_let_patterns)]
         if let MediaStorage::Filesystem(ref backend) = media_storage {
             app = app.service(actix_files::Files::new(
