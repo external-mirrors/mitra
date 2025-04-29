@@ -193,6 +193,13 @@ pub struct PostActions {
     pub voted_for: Vec<String>,
 }
 
+#[derive(Clone, Default)]
+pub struct RelatedPosts {
+    pub in_reply_to: Option<Box<Post>>,
+    pub repost_of: Option<Box<Post>>,
+    pub linked: Vec<Post>,
+}
+
 #[derive(Clone)]
 pub struct Post {
     pub id: Uuid,
@@ -225,9 +232,7 @@ pub struct Post {
     // These fields are not populated automatically
     // by functions in posts::queries module
     pub actions: Option<PostActions>,
-    pub in_reply_to: Option<Box<Post>>,
-    pub repost_of: Option<Box<Post>>,
-    pub linked: Vec<Post>,
+    pub related_posts: Option<RelatedPosts>,
     // Might be set in get_thread
     pub parent_visible: bool,
 }
@@ -314,9 +319,7 @@ impl Post {
             created_at: db_post.created_at,
             updated_at: db_post.updated_at,
             actions: None,
-            in_reply_to: None,
-            repost_of: None,
-            linked: vec![],
+            related_posts: None,
             parent_visible: true,
         };
         Ok(post)
@@ -365,6 +368,11 @@ impl Post {
             current_attachments == new_attachments;
         !is_not_edited
     }
+
+    pub fn expect_related_posts(&self) -> &RelatedPosts {
+        self.related_posts.as_ref()
+            .expect("related_posts field should be populated")
+    }
 }
 
 #[cfg(any(test, feature = "test-utils"))]
@@ -400,9 +408,7 @@ impl Default for Post {
             created_at: Utc::now(),
             updated_at: None,
             actions: None,
-            in_reply_to: None,
-            repost_of: None,
-            linked: vec![],
+            related_posts: None,
             parent_visible: true,
         }
     }

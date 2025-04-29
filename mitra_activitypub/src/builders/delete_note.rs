@@ -112,7 +112,10 @@ pub async fn prepare_delete_note(
 #[cfg(test)]
 mod tests {
     use apx_sdk::constants::AP_PUBLIC;
-    use mitra_models::profiles::types::DbActorProfile;
+    use mitra_models::{
+        posts::types::RelatedPosts,
+        profiles::types::DbActorProfile,
+    };
     use super::*;
 
     const INSTANCE_HOSTNAME: &str = "example.com";
@@ -122,7 +125,11 @@ mod tests {
     fn test_build_delete_note() {
         let media_server = MediaServer::for_test(INSTANCE_URL);
         let author = DbActorProfile::local_for_test("author");
-        let post = Post { author, ..Default::default() };
+        let post = Post {
+            author,
+            related_posts: Some(RelatedPosts::default()),
+            ..Default::default()
+        };
         let activity = build_delete_note(
             INSTANCE_HOSTNAME,
             INSTANCE_URL,

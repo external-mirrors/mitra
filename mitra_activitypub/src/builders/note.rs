@@ -175,6 +175,7 @@ pub fn build_note(
     fep_e232_enabled: bool,
     with_context: bool,
 ) -> Note {
+    let related_posts = post.expect_related_posts();
     assert_eq!(authority.server_url(), instance_url);
     let object_id = local_object_id_unified(authority, post.id);
     let mut object_type = NOTE;
@@ -272,8 +273,7 @@ pub fn build_note(
         tags.push(Tag::SimpleTag(tag));
     };
 
-    assert_eq!(post.links.len(), post.linked.len());
-    for (index, linked) in post.linked.iter().enumerate() {
+    for (index, linked) in related_posts.linked.iter().enumerate() {
         // Build FEP-e232 object link
         // https://codeberg.org/silverpill/feps/src/branch/main/e232/fep-e232.md
         let link_href = compatible_post_object_id(instance_url, linked);
@@ -295,7 +295,8 @@ pub fn build_note(
         };
     };
     // Present first link as a quote
-    let maybe_quote_url = post.linked.first()
+    let maybe_quote_url = related_posts
+        .linked.first()
         .map(|linked| compatible_post_object_id(instance_url, linked));
 
     for emoji in &post.emojis {
@@ -305,7 +306,8 @@ pub fn build_note(
 
     let in_reply_to_object_id = match post.in_reply_to_id {
         Some(in_reply_to_id) => {
-            let in_reply_to = post.in_reply_to.as_ref()
+            let in_reply_to = related_posts
+                .in_reply_to.as_ref()
                 .expect("in_reply_to should be populated");
             assert_eq!(in_reply_to.id, in_reply_to_id);
             if post.author.id != in_reply_to.author.id {
@@ -459,6 +461,7 @@ mod tests {
     use mitra_models::{
         conversations::types::Conversation,
         polls::types::{Poll, PollResult, PollResults},
+        posts::types::RelatedPosts,
         profiles::types::{DbActor, DbActorProfile},
         users::types::User,
     };
@@ -489,6 +492,7 @@ mod tests {
         let post = Post {
             author,
             tags: vec!["test".to_string()],
+            related_posts: Some(RelatedPosts::default()),
             ..Default::default()
         };
         let authority = Authority::server(INSTANCE_URL);
@@ -559,6 +563,7 @@ mod tests {
             poll: Some(poll),
             created_at: DateTime::parse_from_rfc3339("2023-02-24T23:36:38Z")
                 .unwrap().with_timezone(&Utc),
+            related_posts: Some(RelatedPosts::default()),
             ..Default::default()
         };
         let authority = Authority::server(INSTANCE_URL);
@@ -619,6 +624,7 @@ mod tests {
     fn test_build_note_followers_only() {
         let post = Post {
             visibility: Visibility::Followers,
+            related_posts: Some(RelatedPosts::default()),
             ..Default::default()
         };
         let authority = Authority::server(INSTANCE_URL);
@@ -649,6 +655,7 @@ mod tests {
         let post = Post {
             visibility: Visibility::Subscribers,
             mentions: vec![subscriber],
+            related_posts: Some(RelatedPosts::default()),
             ..Default::default()
         };
         let authority = Authority::server(INSTANCE_URL);
@@ -680,6 +687,7 @@ mod tests {
         let post = Post {
             visibility: Visibility::Direct,
             mentions: vec![mentioned],
+            related_posts: Some(RelatedPosts::default()),
             ..Default::default()
         };
         let authority = Authority::server(INSTANCE_URL);
@@ -703,7 +711,10 @@ mod tests {
         let parent = Post::default();
         let post = Post {
             in_reply_to_id: Some(parent.id),
-            in_reply_to: Some(Box::new(parent.clone())),
+            related_posts: Some(RelatedPosts {
+                in_reply_to: Some(Box::new(parent.clone())),
+                ..Default::default()
+            }),
             ..Default::default()
         };
         let authority = Authority::server(INSTANCE_URL);
@@ -748,8 +759,11 @@ mod tests {
         };
         let post = Post {
             in_reply_to_id: Some(parent.id),
-            in_reply_to: Some(Box::new(parent.clone())),
             mentions: vec![parent_author],
+            related_posts: Some(RelatedPosts {
+                in_reply_to: Some(Box::new(parent.clone())),
+                ..Default::default()
+            }),
             ..Default::default()
         };
         let authority = Authority::server(INSTANCE_URL);
@@ -810,11 +824,14 @@ mod tests {
             id: uuid!("11fa64ff-b5a3-47bf-b23d-22b360581c3f"),
             conversation: parent.conversation.clone(),
             in_reply_to_id: Some(parent.id),
-            in_reply_to: Some(Box::new(parent.clone())),
             visibility: Visibility::Conversation,
             mentions: vec![parent_author],
             created_at: DateTime::parse_from_rfc3339("2023-02-24T23:36:38Z")
                 .unwrap().with_timezone(&Utc),
+            related_posts: Some(RelatedPosts {
+                in_reply_to: Some(Box::new(parent.clone())),
+                ..Default::default()
+            }),
             ..Default::default()
         };
         let authority = Authority::server(INSTANCE_URL);
@@ -880,6 +897,7 @@ mod tests {
             conversation: Some(conversation),
             created_at: DateTime::parse_from_rfc3339("2023-02-24T23:36:38Z")
                 .unwrap().with_timezone(&Utc),
+            related_posts: Some(RelatedPosts::default()),
             ..Default::default()
         };
         let authority = Authority::from_user(INSTANCE_URL, &author, true);

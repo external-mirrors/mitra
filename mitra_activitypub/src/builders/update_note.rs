@@ -96,7 +96,10 @@ pub async fn prepare_update_note(
 mod tests {
     use chrono::Utc;
     use apx_sdk::constants::AP_PUBLIC;
-    use mitra_models::profiles::types::DbActorProfile;
+    use mitra_models::{
+        posts::types::RelatedPosts,
+        profiles::types::DbActorProfile,
+    };
     use super::*;
 
     #[test]
@@ -109,6 +112,7 @@ mod tests {
         let post = Post {
             author,
             updated_at: Some(Utc::now()),
+            related_posts: Some(RelatedPosts::default()),
             ..Default::default()
         };
         let activity = build_update_note(

@@ -60,7 +60,9 @@ pub fn build_announce(
     repost: &Post,
 ) -> Announce {
     let actor_id = local_actor_id(instance_url, &repost.author.username);
-    let post = repost.repost_of.as_ref()
+    let post = repost
+        .expect_related_posts()
+        .repost_of.as_ref()
         .expect("repost_of field should be populated");
     let object_id = post_object_id(instance_url, post);
     let activity_id = local_announce_activity_id(instance_url, repost.id, false);
@@ -105,7 +107,9 @@ pub async fn prepare_announce(
     repost: &Post,
 ) -> Result<OutgoingActivityJobData, DatabaseError> {
     assert_eq!(sender.id, repost.author.id);
-    let post = repost.repost_of.as_ref()
+    let post = repost
+        .expect_related_posts()
+        .repost_of.as_ref()
         .expect("repost_of field should be populated");
     let (recipients, _) = get_announce_recipients(
         db_client,
@@ -127,7 +131,10 @@ pub async fn prepare_announce(
 
 #[cfg(test)]
 mod tests {
-    use mitra_models::profiles::types::DbActorProfile;
+    use mitra_models::{
+        profiles::types::DbActorProfile,
+        posts::types::RelatedPosts,
+    };
     use super::*;
 
     const INSTANCE_URL: &str = "https://example.com";
@@ -149,7 +156,10 @@ mod tests {
         let repost = Post {
             author: repost_author,
             repost_of_id: Some(post.id),
-            repost_of: Some(Box::new(post)),
+            related_posts: Some(RelatedPosts {
+                repost_of: Some(Box::new(post)),
+                ..Default::default()
+            }),
             ..Default::default()
         };
         let activity = build_announce(

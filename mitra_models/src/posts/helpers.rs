@@ -19,7 +19,7 @@ use super::queries::{
     get_related_posts,
     find_reposted_by_user,
 };
-use super::types::{Post, PostActions, Visibility};
+use super::types::{Post, PostActions, RelatedPosts, Visibility};
 
 pub async fn add_related_posts(
     db_client: &impl DatabaseClient,
@@ -35,26 +35,30 @@ pub async fn add_related_posts(
         Ok(post)
     };
     for post in posts {
+        let mut related_posts = RelatedPosts::default();
         if let Some(in_reply_to_id) = post.in_reply_to_id {
             let in_reply_to = get_post(in_reply_to_id)?;
-            post.in_reply_to = Some(Box::new(in_reply_to));
+            related_posts.in_reply_to = Some(Box::new(in_reply_to));
         };
         for linked_id in post.links.clone() {
             let linked = get_post(linked_id)?;
-            post.linked.push(linked);
+            related_posts.linked.push(linked);
         };
         if let Some(repost_of_id) = post.repost_of_id {
             let mut repost_of = get_post(repost_of_id)?;
+            let mut repost_of_related_posts = RelatedPosts::default();
             if let Some(in_reply_to_id) = repost_of.in_reply_to_id {
                 let in_reply_to = get_post(in_reply_to_id)?;
-                repost_of.in_reply_to = Some(Box::new(in_reply_to));
+                repost_of_related_posts.in_reply_to = Some(Box::new(in_reply_to));
             };
             for linked_id in repost_of.links.clone() {
                 let linked = get_post(linked_id)?;
-                repost_of.linked.push(linked);
+                repost_of_related_posts.linked.push(linked);
             };
-            post.repost_of = Some(Box::new(repost_of));
+            repost_of.related_posts = Some(repost_of_related_posts);
+            related_posts.repost_of = Some(Box::new(repost_of));
         };
+        post.related_posts = Some(related_posts);
     };
     Ok(())
 }
@@ -64,11 +68,15 @@ pub async fn add_user_actions(
     user_id: Uuid,
     posts: Vec<&mut Post>,
 ) -> Result<(), DatabaseError> {
+    // This function can be used without add_related_posts
     let posts_ids: Vec<Uuid> = posts.iter()
         .map(|post| post.id)
         .chain(
             posts.iter()
-                .filter_map(|post| post.repost_of.as_ref())
+                .filter_map(|post| {
+                    post.related_posts.as_ref()
+                        .and_then(|related_posts| related_posts.repost_of.as_ref())
+                })
                 .map(|post| post.id)
         )
         .collect();
@@ -98,7 +106,10 @@ pub async fn add_user_actions(
         }
     };
     for post in posts {
-        if let Some(ref mut repost_of) = post.repost_of {
+        if let Some(repost_of) = post
+            .related_posts.as_mut()
+            .and_then(|related_posts| related_posts.repost_of.as_mut())
+        {
             let actions = get_actions(repost_of);
             repost_of.actions = Some(actions);
         };
@@ -244,9 +255,10 @@ mod tests {
         };
         let mut reply = create_post(db_client, author.id, reply_data).await.unwrap();
         add_related_posts(db_client, vec![&mut reply]).await.unwrap();
-        assert_eq!(reply.in_reply_to.unwrap().id, post.id);
-        assert_eq!(reply.linked.is_empty(), true);
-        assert_eq!(reply.repost_of.is_none(), true);
+        let related_posts = reply.related_posts.unwrap();
+        assert_eq!(related_posts.in_reply_to.unwrap().id, post.id);
+        assert_eq!(related_posts.linked.is_empty(), true);
+        assert_eq!(related_posts.repost_of.is_none(), true);
     }
 
     #[tokio::test]
@@ -268,14 +280,13 @@ mod tests {
         let repost_data = PostCreateData::repost(reply.id, None);
         let mut repost = create_post(db_client, author.id, repost_data).await.unwrap();
         add_related_posts(db_client, vec![&mut repost]).await.unwrap();
-        assert_eq!(repost.in_reply_to.is_none(), true);
-        assert_eq!(repost.linked.is_empty(), true);
+        let related_posts = repost.related_posts.unwrap();
+        assert_eq!(related_posts.in_reply_to.is_none(), true);
+        assert_eq!(related_posts.linked.is_empty(), true);
+        let repost_of = related_posts.repost_of.unwrap();
+        assert_eq!(repost_of.id, reply.id);
         assert_eq!(
-            repost.repost_of.as_ref().unwrap().id,
-            reply.id,
-        );
-        assert_eq!(
-            repost.repost_of.unwrap().in_reply_to.unwrap().id,
+            repost_of.related_posts.unwrap().in_reply_to.unwrap().id,
             post.id,
         );
     }

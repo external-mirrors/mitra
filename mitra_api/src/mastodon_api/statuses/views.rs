@@ -67,6 +67,7 @@ use mitra_models::{
         PostContext,
         PostCreateData,
         PostUpdateData,
+        RelatedPosts,
         Visibility,
     },
     reactions::queries::{
@@ -305,11 +306,14 @@ async fn create_status(
     drop(post_id_cache); // release lock
 
     // Same as add_related_posts
-    post.in_reply_to = maybe_in_reply_to.map(|mut in_reply_to| {
-        in_reply_to.reply_count += 1;
-        Box::new(in_reply_to)
+    post.related_posts = Some(RelatedPosts {
+        in_reply_to: maybe_in_reply_to.map(|mut in_reply_to| {
+            in_reply_to.reply_count += 1;
+            Box::new(in_reply_to)
+        }),
+        repost_of: None,
+        linked: linked,
     });
-    post.linked = linked;
     // Federate
     let media_server = MediaServer::new(&config);
     let create_note = prepare_create_note(
@@ -490,8 +494,11 @@ async fn edit_status(
         update_post(db_client, post.id, post_data).await?;
     deletion_queue.into_job(db_client).await?;
     // Same as add_related_posts
-    post.in_reply_to = maybe_in_reply_to.map(Box::new);
-    post.linked = linked;
+    post.related_posts = Some(RelatedPosts {
+        in_reply_to: maybe_in_reply_to.map(Box::new),
+        repost_of: None,
+        linked: linked,
+    });
     add_user_actions(db_client, current_user.id, vec![&mut post]).await?;
 
     // Federate
@@ -769,7 +776,10 @@ async fn reblog(
     let repost_data = PostCreateData::repost(status_id.into_inner(), None);
     let mut repost = create_post(db_client, current_user.id, repost_data).await?;
     post.repost_count += 1;
-    repost.repost_of = Some(Box::new(post));
+    repost.related_posts = Some(RelatedPosts {
+        repost_of: Some(Box::new(post)),
+        ..Default::default()
+    });
 
     // Federate
     prepare_announce(

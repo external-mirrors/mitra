@@ -172,17 +172,19 @@ impl Status {
             media_server,
             post.author,
         );
-        let reblog = if let Some(repost_of) = post.repost_of {
+        // Nested Status entities may be built without related_posts
+        let related_posts = post.related_posts.unwrap_or_default();
+        let reblog = if let Some(repost_of) = related_posts.repost_of {
             let status = Status::from_post(instance_url, media_server, *repost_of);
             Some(Box::new(status))
         } else {
             None
         };
-        let maybe_quote = post.linked.first().cloned().map(|post| {
+        let maybe_quote = related_posts.linked.first().cloned().map(|post| {
             let status = Status::from_post(instance_url, media_server, post);
             Box::new(status)
         });
-        let links: Vec<Status> = post.linked.into_iter().map(|post| {
+        let links: Vec<Status> = related_posts.linked.into_iter().map(|post| {
             Status::from_post(instance_url, media_server, post)
         }).collect();
         let visibility = match post.visibility {
@@ -229,7 +231,8 @@ impl Status {
                 .and_then(|language| language.to_639_1())
                 .map(|code| code.to_owned()),
             in_reply_to_id: post.in_reply_to_id,
-            in_reply_to_account_id: post.in_reply_to.as_ref()
+            in_reply_to_account_id: related_posts
+                .in_reply_to.as_ref()
                 .map(|post| post.author.id),
             reblog: reblog,
             visibility: visibility.to_string(),
@@ -249,7 +252,8 @@ impl Status {
             bookmarked: post.actions.as_ref().is_some_and(|actions| actions.bookmarked),
             pleroma: PleromaData {
                 emoji_reactions,
-                in_reply_to_account_acct: post.in_reply_to
+                in_reply_to_account_acct: related_posts
+                    .in_reply_to
                     .map(|post| post.author.preferred_handle().to_owned()),
                 parent_visible: post.parent_visible,
                 quote_visible: maybe_quote.is_some(),
