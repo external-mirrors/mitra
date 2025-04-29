@@ -27,29 +27,29 @@ pub async fn add_related_posts(
 ) -> Result<(), DatabaseError> {
     let posts_ids = posts.iter().map(|post| post.id).collect();
     let related = get_related_posts(db_client, posts_ids).await?;
-    let get_post = |post_id: &Uuid| -> Result<Post, DatabaseError> {
+    let get_post = |post_id: Uuid| -> Result<Post, DatabaseError> {
         let post = related.iter()
-            .find(|post| post.id == *post_id)
+            .find(|post| post.id == post_id)
             .ok_or(DatabaseError::NotFound("post"))?
             .clone();
         Ok(post)
     };
     for post in posts {
-        if let Some(ref in_reply_to_id) = post.in_reply_to_id {
+        if let Some(in_reply_to_id) = post.in_reply_to_id {
             let in_reply_to = get_post(in_reply_to_id)?;
             post.in_reply_to = Some(Box::new(in_reply_to));
         };
-        for linked_id in post.links.iter() {
+        for linked_id in post.links.clone() {
             let linked = get_post(linked_id)?;
             post.linked.push(linked);
         };
-        if let Some(ref repost_of_id) = post.repost_of_id {
+        if let Some(repost_of_id) = post.repost_of_id {
             let mut repost_of = get_post(repost_of_id)?;
-            if let Some(ref in_reply_to_id) = repost_of.in_reply_to_id {
+            if let Some(in_reply_to_id) = repost_of.in_reply_to_id {
                 let in_reply_to = get_post(in_reply_to_id)?;
                 repost_of.in_reply_to = Some(Box::new(in_reply_to));
             };
-            for linked_id in repost_of.links.iter() {
+            for linked_id in repost_of.links.clone() {
                 let linked = get_post(linked_id)?;
                 repost_of.linked.push(linked);
             };
