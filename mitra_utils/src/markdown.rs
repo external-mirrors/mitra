@@ -29,6 +29,7 @@ fn build_comrak_options() -> Options {
         extension: ExtensionOptions::builder()
             .autolink(true)
             .strikethrough(true)
+            .greentext(true)
             .build(),
         parse: ParseOptions::builder()
             .relaxed_autolinks(true)
@@ -39,13 +40,6 @@ fn build_comrak_options() -> Options {
             .ol_width(4)
             .build(),
     }
-}
-
-/// Prevents greentext from being parsed as blockquotes
-fn protect_greentext(text: &str) -> Cow<str> {
-    let greentext_re = Regex::new("(?m)^(>)(.+)")
-        .expect("regexp should be valid");
-    greentext_re.replace_all(text, "&gt;$2")
 }
 
 /// Prevents underscores in mentions from being parsed as emphasis markers
@@ -173,8 +167,7 @@ pub fn markdown_lite_to_html(text: &str) -> Result<String, MarkdownError> {
     };
     let arena = Arena::new();
 
-    let text = protect_greentext(text);
-    let text = protect_mentions(&text);
+    let text = protect_mentions(text);
     let root = parse_document(
         &arena,
         &text,
@@ -451,6 +444,16 @@ mod tests {
         let text = "test x://a";
         let html = markdown_lite_to_html(text).unwrap();
         assert_eq!(html, r#"<p>test x://a</p>"#);
+    }
+
+    #[test]
+    fn test_markdown_lite_to_html_lt_gt_in_codeblocks() {
+        let text = "```\n<\n> test\n```";
+        let html = markdown_lite_to_html(text).unwrap();
+        assert_eq!(
+            html,
+            "<pre><code>&lt;\n&gt; test\n</code></pre>",
+        );
     }
 
     #[test]
