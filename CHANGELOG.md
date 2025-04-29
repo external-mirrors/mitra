@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Fixed
 
 - Fixed display of ">" in code blocks ([#134](https://codeberg.org/silverpill/mitra/pulls/134)).
+- Fixed backslashes appearing near exclamation marks.
 
 ## [4.1.1] - 2025-04-27
 

@@ -24,7 +24,7 @@ pub enum MarkdownError {
     Utf8Error(#[from] std::string::FromUtf8Error),
 }
 
-fn build_comrak_options() -> Options {
+fn build_comrak_options<'cb>() -> Options<'cb> {
     Options {
         extension: ExtensionOptions::builder()
             .autolink(true)
@@ -38,6 +38,7 @@ fn build_comrak_options() -> Options {
             .hardbreaks(true)
             .escape(true)
             .ol_width(4)
+            .experimental_minimize_commonmark(true)
             .build(),
     }
 }
@@ -352,9 +353,9 @@ mod tests {
 
     #[test]
     fn test_markdown_lite_to_html_headings() {
-        let text = "# heading1\n\n## heading2\n\ntext";
+        let text = "# heading1\n\n## heading2!\n\ntext";
         let html = markdown_lite_to_html(text).unwrap();
-        let expected_html = r#"<h1>heading1</h1><p>## heading2</p><p>text</p>"#;
+        let expected_html = r#"<h1>heading1</h1><p>## heading2!</p><p>text</p>"#;
         assert_eq!(html, expected_html);
     }
 
@@ -384,11 +385,12 @@ mod tests {
 
     #[test]
     fn test_markdown_lite_to_html_greentext_with_special_characters() {
+        // Depends on experimental_minimize_commonmark flag
         let text = "> blockquote! test[]";
         let html = markdown_lite_to_html(text).unwrap();
         assert_eq!(
             html,
-            r#"<p>&gt;blockquote\! test\[\]</p>"#,
+            r#"<p>&gt;blockquote! test[]</p>"#,
         );
     }
 
