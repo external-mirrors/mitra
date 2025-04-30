@@ -10,6 +10,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Always validate activity audience.
 - Ensure filtering is performed whenever object is fetched.
+- Save activities to database only after processing them.
+- Forward portable activities only after processing them.
+- Don't ignore repeated activities.
 
 ### Fixed
 
@@ -20,6 +23,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Security
 
 - Don't save fetched portable objects with local compatible IDs.
+- Don't serve portable activities if they are not validated.
 
 ## [4.1.1] - 2025-04-27
 

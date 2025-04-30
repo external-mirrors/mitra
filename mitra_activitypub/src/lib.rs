@@ -8,7 +8,7 @@ mod contexts;
 mod deliverer;
 pub mod errors;
 pub mod filter;
-pub mod forwarder;
+mod forwarder;
 mod handlers;
 pub mod identifiers;
 pub mod identity;

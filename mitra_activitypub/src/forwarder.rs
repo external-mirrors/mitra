@@ -8,16 +8,13 @@ use apx_sdk::{
 };
 use mitra_models::{
     database::{DatabaseClient, DatabaseError},
-    profiles::{
-        queries::get_remote_profile_by_actor_id,
-        types::DbActor,
-    },
+    profiles::types::DbActorProfile,
 };
 use mitra_validators::errors::ValidationError;
 
 use crate::{
-    errors::HandlerError,
     identifiers::canonicalize_id,
+    importers::get_profile_by_actor_id,
 };
 
 #[derive(Deserialize)]
@@ -41,26 +38,26 @@ pub fn get_activity_audience(
     Ok(audience)
 }
 
-pub async fn get_activity_remote_recipients(
+pub async fn get_activity_recipients(
     db_client: &impl DatabaseClient,
-    activity: &JsonValue,
-) -> Result<Vec<DbActor>, HandlerError> {
-    let audience = get_activity_audience(activity)?;
-    let mut recipients = vec![];
+    instance_url: &str,
+    audience: &[Url],
+) -> Result<Vec<DbActorProfile>, DatabaseError> {
+    let mut targets = vec![];
     for target_id in audience {
-        // TODO: FEP-EF61: followers collections
-        let profile = match get_remote_profile_by_actor_id(
+        // TODO: expand collections
+        let target = match get_profile_by_actor_id(
             db_client,
+            instance_url,
             &target_id.to_string(),
         ).await {
             Ok(profile) => profile,
             Err(DatabaseError::NotFound(_)) => continue,
-            Err(other_error) => return Err(other_error.into()),
+            Err(other_error) => return Err(other_error),
         };
-        let actor_data = profile.expect_actor_data();
-        recipients.push(actor_data.clone());
+        targets.push(target);
     };
-    Ok(recipients)
+    Ok(targets)
 }
 
 #[cfg(test)]

@@ -17,16 +17,11 @@ use mitra_activitypub::{
     identifiers::canonicalize_id,
     ownership::is_local_origin,
     queues::IncomingActivityJobData,
-    vocabulary::{ANNOUNCE, CREATE, DELETE, EMOJI_REACT, LIKE, UPDATE},
+    vocabulary::{CREATE, DELETE, EMOJI_REACT, LIKE, UPDATE},
 };
 use mitra_config::Config;
 use mitra_models::{
-    activitypub::queries::{
-        add_object_to_collection,
-        save_activity,
-    },
     database::{DatabaseClient, DatabaseError},
-    users::types::PortableUser,
 };
 use mitra_validators::{
     errors::ValidationError,
@@ -74,7 +69,6 @@ impl From<InboxError> for HttpError {
 pub async fn receive_activity(
     config: &Config,
     db_client: &mut impl DatabaseClient,
-    maybe_fep_ef61_recipient: Option<&PortableUser>,
     request: &HttpRequest,
     activity: &JsonValue,
     activity_digest: ContentDigest,
@@ -94,7 +88,7 @@ pub async fn receive_activity(
         return Ok(());
     };
     // Validates URIs; should be performed after filtering
-    let canonical_activity_id = canonicalize_id(activity_id)?;
+    let _canonical_activity_id = canonicalize_id(activity_id)?;
     let canonical_actor_id = canonicalize_id(&activity_actor)?;
 
     if is_local_origin(&config.instance(), activity_id) {
@@ -205,35 +199,6 @@ pub async fn receive_activity(
                 );
                 return Err(AuthenticationError::UnexpectedRequestSigner.into());
             },
-        };
-    };
-
-    // Save authenticated activities to database
-    if is_authenticated {
-        // TODO: save activity after processing it
-        let is_new = save_activity(
-            db_client,
-            &canonical_activity_id.to_string(),
-            activity,
-        ).await?;
-        if let Some(recipient) = maybe_fep_ef61_recipient {
-            add_object_to_collection(
-                db_client,
-                recipient.id,
-                &recipient.profile.expect_actor_data().inbox,
-                &canonical_activity_id.to_string(),
-            ).await?;
-        };
-        if !is_new {
-            if activity_type == ANNOUNCE {
-                // Optimization for FEP-1b12.
-                // Activity will be processed only once,
-                // even if submitted to multiple inboxes
-                log::warn!("skipping repeated activity: {canonical_activity_id}");
-                return Ok(());
-            } else {
-                log::info!("repeated activity: {canonical_activity_id}");
-            };
         };
     };
 

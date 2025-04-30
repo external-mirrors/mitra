@@ -24,7 +24,6 @@ use apx_sdk::{
     constants::{AP_MEDIA_TYPE, AP_PUBLIC},
     deserialization::object_to_id,
     http_server::is_activitypub_request,
-    url::is_same_origin,
     utils::get_core_type,
 };
 use mitra_activitypub::{
@@ -46,7 +45,6 @@ use mitra_activitypub::{
         proposal::build_proposal,
     },
     errors::HandlerError,
-    forwarder::get_activity_remote_recipients,
     identifiers::{
         canonicalize_id,
         compatible_post_object_id,
@@ -58,16 +56,14 @@ use mitra_activitypub::{
     },
     importers::register_portable_actor,
     ownership::get_owner,
-    queues::{IncomingActivityJobData, OutgoingActivityJobData},
+    queues::IncomingActivityJobData,
 };
 use mitra_config::Config;
 use mitra_models::{
     activitypub::queries::{
-        add_object_to_collection,
         get_actor,
         get_collection_items,
         get_object_as_target,
-        save_activity,
     },
     database::{
         get_database_client,
@@ -176,7 +172,6 @@ async fn inbox(
     receive_activity(
         &config,
         db_client,
-        None,
         &request,
         &activity,
         activity_digest,
@@ -798,7 +793,7 @@ async fn apgateway_inbox_push_view(
     );
     let canonical_collection_id = canonicalize_id(&collection_id)?;
     let db_client = &mut **get_database_client(&db_pool).await?;
-    let recipient = get_portable_user_by_inbox_id(
+    let _portable_user = get_portable_user_by_inbox_id(
         db_client,
         &canonical_collection_id.to_string(),
     ).await?;
@@ -806,7 +801,6 @@ async fn apgateway_inbox_push_view(
     receive_activity(
         &config,
         db_client,
-        Some(&recipient),
         &request,
         &activity,
         activity_digest,
@@ -911,17 +905,9 @@ async fn apgateway_outbox_push_view(
         log::warn!("C2S authentication error (POST {request_path}): {error}");
         HttpError::PermissionError
     })?;
-    let activity_id = activity["id"].as_str()
-        .ok_or(ValidationError("'id' property is missing"))?;
-    let canonical_activity_id = canonicalize_id(activity_id)?;
     let activity_actor = object_to_id(&activity["actor"])
         .map_err(|_| ValidationError("invalid 'actor' property"))?;
     let canonical_actor_id = canonicalize_id(&activity_actor)?;
-    if !is_same_origin(activity_id, &activity_actor)
-        .map_err(|error| ValidationError(error.0))?
-    {
-        return Err(ValidationError("actor and activity authorities do not match").into());
-    };
     let signer = get_portable_user_by_actor_id(
         db_client,
         &canonical_actor_id.to_string(),
@@ -929,45 +915,9 @@ async fn apgateway_outbox_push_view(
     if signer.id != collection_owner.id {
         return Err(HttpError::PermissionError);
     };
-    // TODO: save activity after processing it
-    let is_new_activity = save_activity(
-        db_client,
-        &canonical_activity_id.to_string(),
-        &activity,
-    ).await?;
-    if !is_new_activity {
-        // Already processed
-        return Ok(HttpResponse::Accepted().finish());
-    };
-    add_object_to_collection(
-        db_client,
-        signer.id,
-        &canonical_collection_id.to_string(),
-        &canonical_activity_id.to_string(),
-    ).await?;
     IncomingActivityJobData::new(&activity, true)
         .into_job(db_client, 0)
         .await?;
-    let recipients = get_activity_remote_recipients(db_client, &activity)
-        .await
-        .map_err(|error| match error {
-            HandlerError::ValidationError(error) =>
-                HttpError::ValidationError(error),
-            HandlerError::DatabaseError(error) => error.into(),
-            _ => HttpError::InternalError,
-        })?;
-    // Forward only if HTTP signature can be created
-    if let Some(job_data) = OutgoingActivityJobData::new_forwarded(
-        &instance.url(),
-        &signer,
-        &activity,
-        recipients,
-    ) {
-        // Activity has already been saved
-        job_data.enqueue(db_client).await?;
-    } else {
-        log::warn!("signing keys are not found in actor document");
-    };
     Ok(HttpResponse::Accepted().finish())
 }
 
