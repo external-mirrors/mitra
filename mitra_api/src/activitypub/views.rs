@@ -754,6 +754,7 @@ async fn apgateway_view(
         },
         Err(other_error) => return Err(other_error.into()),
     };
+    // Serve object only if its owner has local account
     let core_type = get_core_type(&object_value);
     let owner_id = get_owner(&object_value, core_type)
         .map_err(|_| HttpError::NotFoundError("object"))?;

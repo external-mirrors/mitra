@@ -8,6 +8,7 @@ use mitra_models::database::DatabaseClient;
 use mitra_validators::errors::ValidationError;
 
 use crate::{
+    forwarder::get_activity_audience,
     ownership::verify_activity_owner,
     vocabulary::*,
 };
@@ -60,12 +61,15 @@ pub async fn handle_activity(
     is_authenticated: bool,
     is_pulled: bool,
 ) -> Result<(), HandlerError> {
+    // Validate common activity attributes
     verify_activity_owner(activity)?;
     let activity_type = activity["type"].as_str()
         .ok_or(ValidationError("type property is missing"))?
         .to_owned();
     let activity_actor = object_to_id(&activity["actor"])
         .map_err(|_| ValidationError("invalid actor property"))?;
+    let _audience = get_activity_audience(activity)?;
+
     let activity = activity.clone();
     let maybe_descriptor = match activity_type.as_str() {
         ACCEPT => {

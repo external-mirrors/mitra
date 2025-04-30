@@ -3,6 +3,8 @@ use serde_json::{Value as JsonValue};
 
 use apx_sdk::{
     deserialization::deserialize_into_id_array,
+    url::Url,
+    utils::is_public,
 };
 use mitra_models::{
     database::{DatabaseClient, DatabaseError},
@@ -26,20 +28,30 @@ struct ActivityAudience {
     cc: Vec<String>,
 }
 
+pub fn get_activity_audience(
+    activity: &JsonValue,
+) -> Result<Vec<Url>, ValidationError> {
+    let activity: ActivityAudience = serde_json::from_value(activity.clone())
+        .map_err(|_| ValidationError("invalid audience"))?;
+    let audience = [activity.to, activity.cc].concat()
+        .iter()
+        .filter(|target_id| !is_public(target_id))
+        .map(|id| canonicalize_id(id))
+        .collect::<Result<_, _>>()?;
+    Ok(audience)
+}
+
 pub async fn get_activity_remote_recipients(
     db_client: &impl DatabaseClient,
     activity: &JsonValue,
 ) -> Result<Vec<DbActor>, HandlerError> {
-    let activity: ActivityAudience = serde_json::from_value(activity.clone())
-        .map_err(|_| ValidationError("invalid audience"))?;
-    let audience = [activity.to, activity.cc].concat();
+    let audience = get_activity_audience(activity)?;
     let mut recipients = vec![];
     for target_id in audience {
         // TODO: FEP-EF61: followers collections
-        let canonical_target_id = canonicalize_id(&target_id)?;
         let profile = match get_remote_profile_by_actor_id(
             db_client,
-            &canonical_target_id.to_string(),
+            &target_id.to_string(),
         ).await {
             Ok(profile) => profile,
             Err(DatabaseError::NotFound(_)) => continue,
@@ -49,4 +61,28 @@ pub async fn get_activity_remote_recipients(
         recipients.push(actor_data.clone());
     };
     Ok(recipients)
+}
+
+#[cfg(test)]
+mod tests {
+    use serde_json::json;
+    use super::*;
+
+    #[test]
+    fn test_get_activity_audience() {
+        let activity = json!({
+            "id": "https://social.example/activities/123",
+            "type": "Announce",
+            "actor": "https://social.example/users/1",
+            "object": "https://social.example/objects/321",
+            "to": "as:Public",
+            "cc": "https://social.example/users/1/followers",
+        });
+        let audience = get_activity_audience(&activity).unwrap();
+        assert_eq!(audience.len(), 1);
+        assert_eq!(
+            audience[0].to_string(),
+            "https://social.example/users/1/followers",
+        );
+    }
 }
