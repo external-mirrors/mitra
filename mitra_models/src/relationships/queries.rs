@@ -394,7 +394,7 @@ pub async fn get_follow_request_by_id(
     Ok(request)
 }
 
-pub async fn get_follow_request_by_activity_id(
+pub async fn get_follow_request_by_remote_activity_id(
     db_client: &impl DatabaseClient,
     activity_id: &str,
 ) -> Result<DbFollowRequest, DatabaseError> {

@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Save activities to database only after processing them.
 - Forward portable activities only after processing them.
 - Don't ignore repeated activities.
+- Track follow requests made by portable accounts.
 
 ### Fixed
 

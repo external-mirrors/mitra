@@ -5,15 +5,18 @@ use apx_core::caip10::AccountId;
 use apx_sdk::deserialization::deserialize_into_object_id;
 use mitra_config::Config;
 use mitra_models::{
-    database::DatabaseClient,
+    database::{DatabaseClient, DatabaseError},
     invoices::helpers::remote_invoice_opened,
     invoices::queries::get_invoice_by_id,
     profiles::queries::get_remote_profile_by_actor_id,
-    relationships::queries::{
-        follow_request_accepted,
-        get_follow_request_by_id,
+    relationships::{
+        queries::{
+            follow_request_accepted,
+            get_follow_request_by_id,
+            get_follow_request_by_remote_activity_id,
+        },
+        types::{DbFollowRequest, FollowRequestStatus},
     },
-    relationships::types::FollowRequestStatus,
 };
 use mitra_validators::{
     activitypub::validate_object_id,
@@ -30,6 +33,24 @@ use super::{
     Descriptor,
     HandlerResult,
 };
+
+pub async fn get_follow_request_by_activity_id(
+    db_client: &impl DatabaseClient,
+    instance_url: &str,
+    activity_id: &str,
+) -> Result<DbFollowRequest, DatabaseError> {
+    match parse_local_activity_id(
+        instance_url,
+        activity_id,
+    ) {
+        Ok(follow_request_id) => {
+            get_follow_request_by_id(db_client, follow_request_id).await
+        },
+        Err(_) => {
+            get_follow_request_by_remote_activity_id(db_client, activity_id).await
+        },
+    }
+}
 
 #[derive(Deserialize)]
 struct Accept {
@@ -56,11 +77,12 @@ pub async fn handle_accept(
         db_client,
         &canonical_actor_id.to_string(),
     ).await?;
-    let follow_request_id = parse_local_activity_id(
+    let canonical_object_id = canonicalize_id(&activity.object)?;
+    let follow_request = get_follow_request_by_activity_id(
+        db_client,
         &config.instance_url(),
-        &activity.object,
-    )?;
-    let follow_request = get_follow_request_by_id(db_client, follow_request_id).await?;
+        &canonical_object_id.to_string(),
+    ).await?;
     if follow_request.target_id != actor_profile.id {
         return Err(ValidationError("actor is not a target").into());
     };

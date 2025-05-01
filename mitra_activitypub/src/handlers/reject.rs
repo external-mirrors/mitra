@@ -8,18 +8,21 @@ use mitra_models::{
     profiles::queries::get_remote_profile_by_actor_id,
     relationships::queries::{
         follow_request_rejected,
-        get_follow_request_by_id,
         unfollow,
     },
 };
 use mitra_validators::errors::ValidationError;
 
 use crate::{
-    identifiers::parse_local_activity_id,
+    identifiers::canonicalize_id,
     vocabulary::FOLLOW,
 };
 
-use super::{Descriptor, HandlerResult};
+use super::{
+    accept::get_follow_request_by_activity_id,
+    Descriptor,
+    HandlerResult,
+};
 
 #[derive(Deserialize)]
 struct Reject {
@@ -39,13 +42,11 @@ pub async fn handle_reject(
         db_client,
         &activity.actor,
     ).await?;
-    let follow_request_id = parse_local_activity_id(
-        &config.instance_url(),
-        &activity.object,
-    )?;
-    let follow_request = match get_follow_request_by_id(
+    let canonical_object_id = canonicalize_id(&activity.object)?;
+    let follow_request = match get_follow_request_by_activity_id(
         db_client,
-        follow_request_id,
+        &config.instance_url(),
+        &canonical_object_id.to_string(),
     ).await {
         Ok(follow_request) => follow_request,
         Err(DatabaseError::NotFound(_)) => {

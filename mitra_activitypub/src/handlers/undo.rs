@@ -19,7 +19,7 @@ use mitra_models::{
         get_remote_reaction_by_activity_id,
     },
     relationships::queries::{
-        get_follow_request_by_activity_id,
+        get_follow_request_by_remote_activity_id,
         unfollow,
     },
     users::queries::get_user_by_name,
@@ -95,7 +95,7 @@ pub async fn handle_undo(
     ).await?;
     let canonical_object_id = canonicalize_id(&activity.object)?;
 
-    match get_follow_request_by_activity_id(
+    match get_follow_request_by_remote_activity_id(
         db_client,
         &canonical_object_id.to_string(),
     ).await {
