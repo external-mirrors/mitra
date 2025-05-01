@@ -97,8 +97,10 @@ pub fn key_id_to_actor_id(key_id: &str) -> Result<String, &'static str> {
     Ok(actor_id.to_string())
 }
 
+/// Returns `true` if the given string is a representation of the `Public` collection
 pub fn is_public(target_id: impl AsRef<str>) -> bool {
-    // Some servers (e.g. Takahe) use "as" namespace
+    // Some servers use "as" namespace
+    // https://www.w3.org/TR/activitypub/#public-addressing
     const PUBLIC_VARIANTS: [&str; 3] = [
         AP_PUBLIC,
         "as:Public",
