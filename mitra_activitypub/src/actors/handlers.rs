@@ -68,7 +68,7 @@ use crate::{
         proposal::{parse_proposal, Proposal},
     },
     identifiers::canonicalize_id,
-    importers::{fetch_any_object, perform_webfinger_query, ApClient},
+    importers::{perform_webfinger_query, ApClient},
     vocabulary::{
         APPLICATION,
         EMOJI,
@@ -507,13 +507,13 @@ fn parse_attachments(actor: &ValidatedActor) -> (
 }
 
 async fn fetch_proposals(
-    agent: &FederationAgent,
+    ap_client: &ApClient,
     proposals: Vec<String>,
 ) -> Vec<PaymentOption> {
     let mut payment_options = vec![];
     for proposal_id in proposals {
         // TODO: FEP-EF61: 'ap' URLs are not supported
-        let proposal: Proposal = match fetch_any_object(agent, &proposal_id).await {
+        let proposal: Proposal = match ap_client.fetch_object(&proposal_id).await {
             Ok(proposal) => proposal,
             Err(error) => {
                 log::warn!("invalid proposal: {}", error);
@@ -640,7 +640,7 @@ pub async fn create_remote_profile(
     let (identity_proofs, mut payment_options, proposals, extra_fields) =
         parse_attachments(&actor);
     let subscription_options = fetch_proposals(
-        &agent,
+        ap_client,
         proposals,
     ).await;
     payment_options.extend(subscription_options);
@@ -722,7 +722,7 @@ pub async fn update_remote_profile(
     let (identity_proofs, mut payment_options, proposals, extra_fields) =
         parse_attachments(&actor);
     let subscription_options = fetch_proposals(
-        &agent,
+        ap_client,
         proposals,
     ).await;
     payment_options.extend(subscription_options);

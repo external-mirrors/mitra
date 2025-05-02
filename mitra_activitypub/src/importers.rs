@@ -165,19 +165,6 @@ pub async fn fetch_any_object_with_context<T: DeserializeOwned>(
     Ok(object)
 }
 
-pub(crate) async fn fetch_any_object<T: DeserializeOwned>(
-    agent: &FederationAgent,
-    object_id: &str,
-) -> Result<T, FetchError> {
-    let mut context = FetcherContext { gateways: vec![] };
-    fetch_any_object_with_context(
-        agent,
-        &mut context,
-        object_id,
-        FetchObjectOptions::default(),
-    ).await
-}
-
 impl ApClient {
     fn agent(&self) -> FederationAgent {
         build_federation_agent(
@@ -443,9 +430,9 @@ pub async fn import_profile_by_webfinger_address(
     if webfinger_address.hostname() == ap_client.instance.hostname() {
         return Err(HandlerError::LocalObject);
     };
-    let agent = build_federation_agent(&ap_client.instance, None);
+    let agent = ap_client.agent();
     let actor_id = perform_webfinger_query(&agent, webfinger_address).await?;
-    let actor: JsonValue = fetch_any_object(&agent, &actor_id).await?;
+    let actor: JsonValue = ap_client.fetch_object(&actor_id).await?;
     import_profile(ap_client, db_client, actor).await
 }
 
@@ -674,7 +661,7 @@ pub async fn import_activity(
 }
 
 async fn fetch_collection(
-    agent: &FederationAgent,
+    ap_client: &ApClient,
     collection_id: &str,
     limit: usize,
 ) -> Result<Vec<JsonValue>, HandlerError> {
@@ -700,8 +687,7 @@ async fn fetch_collection(
         ordered_items: Vec<JsonValue>,
     }
 
-    let collection: Collection =
-        fetch_any_object(agent, collection_id).await?;
+    let collection: Collection = ap_client.fetch_object(collection_id).await?;
     log::info!("fetched collection: {collection_id}");
     let mut items = [collection.items, collection.ordered_items].concat();
 
@@ -716,7 +702,7 @@ async fn fetch_collection(
             let page = match maybe_page_id {
                 Some(page_id) => {
                     let page: CollectionPage =
-                        fetch_any_object(agent, &page_id).await?;
+                        ap_client.fetch_object(&page_id).await?;
                     log::info!(
                         "fetched collection page #{}: {}",
                         page_count + 1,
@@ -760,7 +746,7 @@ async fn fetch_collection(
                 };
             },
         };
-        match fetch_any_object(agent, item_id.as_str()).await {
+        match ap_client.fetch_object(item_id.as_str()).await {
             Ok(item) => authenticated.push(item),
             Err(error) => {
                 log::warn!("failed to fetch item ({error}): {item_id}");
@@ -791,8 +777,7 @@ pub async fn import_collection(
     limit: usize,
 ) -> Result<(), HandlerError> {
     let ap_client = ApClient::new(config, db_client).await?;
-    let agent = ap_client.agent();
-    let items = fetch_collection(&agent, collection_id, limit).await?;
+    let items = fetch_collection(&ap_client, collection_id, limit).await?;
     let item_type = match &items[..] {
         [] => {
             log::info!("collection is empty");
@@ -880,9 +865,8 @@ pub async fn import_replies(
         replies: Option<String>,
     }
 
-    let instance = config.instance();
-    let agent = build_federation_agent(&instance, None);
-    let object: ConversationItem = fetch_any_object(&agent, object_id).await?;
+    let ap_client = ApClient::new(config, db_client).await?;
+    let object: ConversationItem = ap_client.fetch_object(object_id).await?;
     let (collection_id, item_type) = if use_context {
         if let Some(collection_id) = object.context_history {
             log::info!("reading 'contextHistory' collection");

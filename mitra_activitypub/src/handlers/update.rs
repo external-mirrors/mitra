@@ -19,9 +19,8 @@ use mitra_validators::errors::ValidationError;
 
 use crate::{
     actors::handlers::{update_remote_profile, Actor},
-    agent::build_federation_agent,
     identifiers::canonicalize_id,
-    importers::{fetch_any_object, ApClient},
+    importers::ApClient,
     ownership::verify_object_owner,
 };
 
@@ -115,8 +114,8 @@ pub async fn handle_update(
         // Fetch object if it is not embedded or if activity is forwarded
         let object_id = object_to_id(&activity["object"])
             .map_err(|_| ValidationError("invalid activity object"))?;
-        let agent = build_federation_agent(&config.instance(), None);
-        activity["object"] = fetch_any_object(&agent, &object_id).await?;
+        let ap_client = ApClient::new(config, db_client).await?;
+        activity["object"] = ap_client.fetch_object(&object_id).await?;
         log::info!("fetched object {}", object_id);
     };
     match verify_portable_object(&activity["object"]) {
