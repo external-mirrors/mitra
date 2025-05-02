@@ -29,7 +29,7 @@ use crate::{
     authentication::{verify_signed_activity, AuthenticationError},
     identifiers::parse_local_actor_id,
     importers::ApClient,
-    ownership::{is_same_origin, get_object_id, verify_activity_owner},
+    ownership::{is_local_origin, is_same_origin, get_object_id, verify_activity_owner},
     vocabulary::{CREATE, DISLIKE, EMOJI_REACT, LIKE, UPDATE},
 };
 
@@ -78,7 +78,7 @@ async fn handle_fep_171b_add(
         target,
     } = serde_json::from_value(add)?;
     let activity_id = get_object_id(&activity)?;
-    if is_same_origin(activity_id, &config.instance_url())? {
+    if is_local_origin(&config.instance(), activity_id) {
         // Ignore local activities
         return Ok(None);
     };

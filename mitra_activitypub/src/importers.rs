@@ -76,7 +76,7 @@ use crate::{
         parse_local_actor_id,
         parse_local_object_id,
     },
-    ownership::{get_object_id, verify_object_owner},
+    ownership::{get_object_id, is_local_origin, verify_object_owner},
     vocabulary::GROUP,
 };
 
@@ -183,10 +183,8 @@ impl ApClient {
             object_id,
             FetchObjectOptions::default(),
         ).await?;
-        let canonical_object_id = object_json["id"].as_str()
-            .and_then(|object_id| Url::parse(object_id).ok())
-            .ok_or(ValidationError("invalid object ID"))?;
-        if canonical_object_id.authority() == self.instance.hostname() {
+        let object_id = get_object_id(&object_json)?;
+        if is_local_origin(&self.instance, object_id) {
             return Err(HandlerError::LocalObject);
         };
         let object: T = serde_json::from_value(object_json)?;

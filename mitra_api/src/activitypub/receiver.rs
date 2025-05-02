@@ -4,7 +4,6 @@ use serde_json::{Value as JsonValue};
 use apx_core::{
     http_digest::ContentDigest,
     http_types::{method_adapter, uri_adapter},
-    http_url::HttpUrl,
     urls::get_hostname,
 };
 use apx_sdk::deserialization::object_to_id;
@@ -16,6 +15,7 @@ use mitra_activitypub::{
     },
     filter::{get_moderation_domain, FederationFilter},
     identifiers::canonicalize_id,
+    ownership::is_local_origin,
     queues::IncomingActivityJobData,
     vocabulary::{ANNOUNCE, CREATE, DELETE, EMOJI_REACT, LIKE, UPDATE},
 };
@@ -97,15 +97,13 @@ pub async fn receive_activity(
     let canonical_activity_id = canonicalize_id(activity_id)?;
     let canonical_actor_id = canonicalize_id(&activity_actor)?;
 
-    if let Ok(http_activity_id) = HttpUrl::parse(activity_id) {
-        if http_activity_id.hostname() == config.instance().url_ref().hostname() {
-            // Ignore forwarded activities
-            // and portable activities with local compatible ID.
-            // Without this invalid activity might be saved and
-            // served by the gateway.
-            log::warn!("ignoring local activity: {activity_id}");
-            return Ok(());
-        };
+    if is_local_origin(&config.instance(), activity_id) {
+        // Ignore activities with local IDs
+        // and portable activities with local compatible ID.
+        // Without this invalid activity might be saved and
+        // served by the gateway.
+        log::warn!("ignoring local activity: {activity_id}");
+        return Ok(());
     };
 
     let is_self_delete = if activity_type == DELETE {

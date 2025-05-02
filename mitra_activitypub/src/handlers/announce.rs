@@ -28,6 +28,7 @@ use crate::{
     importers::{import_post, ActorIdResolver, ApClient},
     ownership::{
         get_object_id,
+        is_local_origin,
         is_same_origin,
         verify_activity_owner,
     },
@@ -129,7 +130,7 @@ async fn handle_fep_1b12_announce(
         serde_json::from_value(announce)?;
     verify_activity_owner(&activity)?;
     let activity_id = get_object_id(&activity)?;
-    if is_same_origin(activity_id, &config.instance_url())? {
+    if is_local_origin(&config.instance(), activity_id) {
         // Ignore local activities
         return Ok(None);
     };

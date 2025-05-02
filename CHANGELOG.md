@@ -17,6 +17,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Fixed backslashes appearing near exclamation marks.
 - Fixed broken portable actor registration endpoint.
 
+### Security
+
+- Don't save fetched portable objects with local compatible IDs.
+
 ## [4.1.1] - 2025-04-27
 
 ### Added

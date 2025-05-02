@@ -2,10 +2,12 @@
 use serde_json::{Value as JsonValue};
 
 use apx_sdk::{
+    core::http_url::HttpUrl,
     deserialization::{object_to_id, parse_into_id_array},
     url::{is_same_origin as apx_is_same_origin},
     utils::CoreType,
 };
+use mitra_config::Instance;
 use mitra_validators::errors::ValidationError;
 
 pub fn get_object_id(object: &JsonValue) -> Result<&str, ValidationError> {
@@ -76,6 +78,24 @@ pub fn verify_object_owner(
     Ok(())
 }
 
+// Local objects must be rejected when they enter the system via:
+// 1. Fetcher
+// 2. Inboxes (regular and portable)
+// 3. Embedded signed objects
+// Local activities are only permitted in portable outboxes,
+// where they should be validated.
+pub fn is_local_origin(
+    instance: &Instance,
+    object_id: &str,
+) -> bool {
+    if let Ok(http_object_id) = HttpUrl::parse(object_id) {
+        if http_object_id.hostname() == instance.url_ref().hostname() {
+            return true;
+        };
+    };
+    false
+}
+
 #[cfg(test)]
 mod tests {
     use serde_json::json;
@@ -104,5 +124,14 @@ mod tests {
         });
         let result = verify_object_owner(&object);
         assert_eq!(result.is_ok(), true);
+    }
+
+    #[test]
+    fn test_is_local_origin() {
+        let instance = Instance::for_test("https://local.example");
+        let object_id = "https://local.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/objects/1";
+        assert_eq!(is_local_origin(&instance, object_id), true);
+        let object_id = "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/objects/1";
+        assert_eq!(is_local_origin(&instance, object_id), false);
     }
 }
