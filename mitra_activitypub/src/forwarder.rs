@@ -2,20 +2,87 @@ use serde::Deserialize;
 use serde_json::{Value as JsonValue};
 
 use apx_sdk::{
+    core::{
+        crypto::common::PublicKey,
+        crypto_eddsa::ed25519_public_key_from_secret_key,
+        crypto_rsa::RsaPublicKey,
+    },
     deserialization::deserialize_into_id_array,
     url::Url,
-    utils::is_public,
+    utils::{is_public, is_verification_method},
 };
+use mitra_config::Instance;
 use mitra_models::{
     database::{DatabaseClient, DatabaseError},
     profiles::types::DbActorProfile,
+    users::types::PortableUser,
 };
 use mitra_validators::errors::ValidationError;
 
 use crate::{
+    actors::keys::verification_method_to_public_key,
     identifiers::canonicalize_id,
     importers::get_profile_by_actor_id,
+    ownership::is_local_origin,
 };
+
+fn find_objects(object: &JsonValue) -> Vec<JsonValue> {
+    let mut objects = vec![];
+    match object {
+        JsonValue::Object(map) => {
+            objects.push(object.clone());
+            for (_key, value) in map {
+                let embedded = find_objects(value);
+                objects.extend(embedded);
+            };
+        },
+        JsonValue::Array(array) => {
+            for value in array {
+                let embedded = find_objects(value);
+                objects.extend(embedded);
+            };
+        },
+        _ => (),
+    };
+    objects
+}
+
+pub fn validate_public_keys(
+    instance: &Instance,
+    maybe_account: Option<&PortableUser>,
+    object: &JsonValue,
+) -> Result<(), ValidationError> {
+    let objects = find_objects(object);
+    for object in objects {
+        if !is_verification_method(&object) {
+            continue;
+        };
+        let Some(object_id) = object["id"].as_str() else {
+            continue;
+        };
+        if !is_local_origin(instance, object_id) {
+            continue;
+        };
+        let public_key = verification_method_to_public_key(object)?;
+        // Local public keys must be known to the server
+        let is_known = match public_key {
+            PublicKey::Ed25519(ed25519_public_key) => {
+                maybe_account
+                    .map(|account| ed25519_public_key_from_secret_key(&account.ed25519_secret_key))
+                    .is_some_and(|key| key == ed25519_public_key)
+            },
+            PublicKey::Rsa(rsa_public_key) => {
+                maybe_account
+                    .map(|account| RsaPublicKey::from(&account.rsa_secret_key))
+                    .is_some_and(|key| key == rsa_public_key)
+            },
+        };
+        if !is_known {
+            return Err(ValidationError("unexpected public key"));
+        };
+    };
+    Ok(())
+}
 
 #[derive(Deserialize)]
 struct ActivityAudience {
@@ -64,6 +131,39 @@ pub async fn get_activity_recipients(
 mod tests {
     use serde_json::json;
     use super::*;
+
+    #[test]
+    fn test_find_objects() {
+        let activity = json!({
+            "id": "https://social.example/activities/123",
+            "type": "Update",
+            "actor": "https://social.example/actors/1",
+            "object": {
+                "id": "https://social.example/actors/1",
+                "type": "Person",
+                "publicKey": {
+                    "id": "https://social.example/actors/1#main-key",
+                    "publicKeyPem": "",
+                },
+                "assertionMethod": [
+                    {
+                        "id": "https://social.example/actors/1#main-key",
+                        "publicKeyMultibase": "",
+                    },
+                ],
+            },
+        });
+        let objects = find_objects(&activity);
+        let objects_ids: Vec<_> = objects.iter()
+            .filter_map(|object| object["id"].as_str())
+            .collect();
+        assert_eq!(objects_ids, [
+            "https://social.example/activities/123",
+            "https://social.example/actors/1",
+            "https://social.example/actors/1#main-key",
+            "https://social.example/actors/1#main-key",
+        ]);
+    }
 
     #[test]
     fn test_get_activity_audience() {

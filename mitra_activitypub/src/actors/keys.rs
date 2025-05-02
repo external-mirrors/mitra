@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use serde_json::{Value as JsonValue};
 
 use apx_core::{
     crypto::common::PublicKey,
@@ -139,6 +140,20 @@ impl Multikey {
 
     pub fn to_db_key(&self) -> Result<DbActorKey, ValidationError> {
         to_db_key(&self.id, self.public_key()?)
+    }
+}
+
+pub fn verification_method_to_public_key(
+    verification_method: JsonValue,
+) -> Result<PublicKey, ValidationError> {
+    if verification_method["type"].as_str() == Some(MULTIKEY) {
+        let key: Multikey = serde_json::from_value(verification_method)
+            .map_err(|_| ValidationError("invalid verification method"))?;
+        key.public_key()
+    } else {
+        let key: PublicKeyPem = serde_json::from_value(verification_method)
+            .map_err(|_| ValidationError("invalid verification method"))?;
+        key.public_key()
     }
 }
 

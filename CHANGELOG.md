@@ -24,6 +24,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Don't save fetched portable objects with local compatible IDs.
 - Don't serve portable activities if they are not validated.
+- Prevent FEP-ae97 clients from creating keys that are not known to server.
 
 ## [4.1.1] - 2025-04-27
 

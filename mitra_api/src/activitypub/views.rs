@@ -45,6 +45,7 @@ use mitra_activitypub::{
         proposal::build_proposal,
     },
     errors::HandlerError,
+    forwarder::validate_public_keys,
     identifiers::{
         canonicalize_id,
         compatible_post_object_id,
@@ -711,6 +712,11 @@ async fn apgateway_create_actor_view(
         .get("X-Invite-Code")
         .and_then(|value| value.to_str().ok())
         .ok_or(ValidationError("invite code is required"))?;
+    validate_public_keys(
+        &config.instance(),
+        None,
+        &actor,
+    )?;
     let db_client = &mut **get_database_client(&db_pool).await?;
     let user = register_portable_actor(
         &config,
@@ -915,6 +921,11 @@ async fn apgateway_outbox_push_view(
     if signer.id != collection_owner.id {
         return Err(HttpError::PermissionError);
     };
+    validate_public_keys(
+        &config.instance(),
+        Some(&collection_owner),
+        &activity,
+    )?;
     IncomingActivityJobData::new(&activity, true)
         .into_job(db_client, 0)
         .await?;

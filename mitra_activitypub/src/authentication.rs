@@ -57,12 +57,11 @@ use mitra_models::{
 use mitra_validators::errors::ValidationError;
 
 use crate::{
-    actors::keys::{Multikey, PublicKeyPem},
+    actors::keys::verification_method_to_public_key,
     errors::HandlerError,
     identifiers::canonicalize_id,
     importers::{ActorIdResolver, ApClient},
     ownership::{get_object_id, is_same_origin},
-    vocabulary::MULTIKEY,
 };
 
 const AUTHENTICATION_FETCHER_TIMEOUT: u64 = 10;
@@ -241,15 +240,8 @@ async fn get_signing_key(
             ap_client.instance.federation.fetcher_timeout = AUTHENTICATION_FETCHER_TIMEOUT;
             let key_value: JsonValue = ap_client.fetch_object(key_id).await
                 .map_err(|_| AuthenticationError::KeyRetrievalError("can't fetch key"))?;
-            if key_value["type"].as_str() == Some(MULTIKEY) {
-                let key: Multikey = serde_json::from_value(key_value)
-                    .map_err(|_| AuthenticationError::KeyRetrievalError("invalid key document"))?;
-                key.public_key()?
-            } else {
-                let key: PublicKeyPem = serde_json::from_value(key_value)
-                    .map_err(|_| AuthenticationError::KeyRetrievalError("invalid key document"))?;
-                key.public_key()?
-            }
+            verification_method_to_public_key(key_value)
+                .map_err(|_| AuthenticationError::KeyRetrievalError("invalid key document"))?
         },
         Err(other_error) => return Err(other_error.into()),
     };

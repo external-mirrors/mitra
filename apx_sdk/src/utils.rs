@@ -21,16 +21,16 @@ pub enum CoreType {
 /// Determines the core type of an object.
 pub fn get_core_type(value: &JsonValue) -> CoreType {
     // https://codeberg.org/fediverse/fep/src/branch/main/fep/2277/fep-2277.md
-    if !value["href"].is_null() {
-        // `href` may only appear in Link objects:
-        // https://www.w3.org/TR/activitystreams-vocabulary/#dfn-href
-        CoreType::Link
-    }
-    else if
+    if
         !value["publicKeyPem"].is_null() ||
         !value["publicKeyMultibase"].is_null()
     {
         CoreType::VerificationMethod
+    }
+    else if !value["href"].is_null() {
+        // `href` may only appear in Link objects:
+        // https://www.w3.org/TR/activitystreams-vocabulary/#dfn-href
+        CoreType::Link
     }
     else if !value["inbox"].is_null() {
         // AP requires actor to have inbox and outbox,
@@ -64,6 +64,10 @@ pub fn get_core_type(value: &JsonValue) -> CoreType {
     else {
         CoreType::Object
     }
+}
+
+pub fn is_verification_method(value: &JsonValue) -> bool {
+    matches!(get_core_type(value), CoreType::VerificationMethod)
 }
 
 pub fn is_actor(value: &JsonValue) -> bool {
