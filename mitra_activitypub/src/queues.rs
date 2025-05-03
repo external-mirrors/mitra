@@ -49,6 +49,7 @@ use crate::{
     handlers::activity::handle_activity,
     identifiers::canonicalize_id,
     importers::{
+        import_featured,
         import_from_outbox,
         import_replies,
         is_actor_importer_error,
@@ -523,6 +524,7 @@ pub async fn process_queued_outgoing_activities(
 #[serde(tag = "type")]
 pub enum FetcherJobData {
     Outbox { actor_id: String },
+    Featured { actor_id: String },
     Context { object_id: String },
 }
 
@@ -569,6 +571,15 @@ pub async fn fetcher_queue_executor(
                     db_client,
                     &actor_id,
                     ACTIVITY_LIMIT,
+                ).await
+            },
+            FetcherJobData::Featured { actor_id } => {
+                const LIMIT: usize = 20;
+                import_featured(
+                    config,
+                    db_client,
+                    &actor_id,
+                    LIMIT,
                 ).await
             },
             FetcherJobData::Context { object_id } => {

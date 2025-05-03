@@ -803,6 +803,16 @@ pub struct Aliases {
     pub verified: Vec<Account>,
 }
 
+fn default_actor_collection() -> String {
+    "outbox".to_owned()
+}
+
+#[derive(Deserialize)]
+pub struct LoadActivitiesParams {
+    #[serde(default = "default_actor_collection")]
+    pub collection: String,
+}
+
 #[cfg(test)]
 mod tests {
     use mitra_models::{

@@ -744,11 +744,24 @@ paths:
           description: User not found
   /api/v1/accounts/{account_id}/load_activities:
     post:
-      summary: Load latest activities from outbox.
+      summary: Load remote user's posts.
       security:
         - tokenAuth: []
       parameters:
         - $ref: '#/components/parameters/account_id'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                collection:
+                  description: The source of data.
+                  type: string
+                  enum:
+                    - outbox
+                    - featured
+                  default: outbox
       responses:
         204:
           description: Successful operation

@@ -34,7 +34,10 @@ use mitra_models::{
     filter_rules::types::FilterAction,
     notifications::helpers::create_signup_notifications,
     posts::helpers::get_local_post_by_id,
-    posts::queries::get_remote_post_by_object_id,
+    posts::queries::{
+        get_remote_post_by_object_id,
+        set_pinned_flag,
+    },
     posts::types::Post,
     profiles::queries::{
         get_profile_by_acct,
@@ -847,6 +850,40 @@ pub async fn import_from_outbox(
         CollectionOrder::Reverse,
         limit,
     ).await?;
+    Ok(())
+}
+
+pub async fn import_featured(
+    config: &Config,
+    db_client: &mut impl DatabaseClient,
+    actor_id: &str,
+    limit: usize,
+) -> Result<(), HandlerError> {
+    let profile = get_remote_profile_by_actor_id(db_client, actor_id).await?;
+    let actor_data = profile.expect_actor_data();
+    let Some(featured_id) = actor_data.featured.as_ref() else {
+        log::warn!("actor doesn't have 'featured' collection");
+        return Ok(());
+    };
+    let mut context = FetcherContext::from(actor_data);
+    let featured_url = context.prepare_object_id(featured_id)?;
+    let imported = import_collection(
+        config,
+        db_client,
+        &featured_url,
+        Some(CollectionItemType::Object),
+        CollectionOrder::Forward,
+        limit,
+    ).await?;
+    for object_id in imported {
+        match get_remote_post_by_object_id(db_client, &object_id).await {
+            Ok(post) => {
+                set_pinned_flag(db_client, post.id, true).await?;
+            },
+            Err(DatabaseError::NotFound(_)) => (),
+            Err(other_error) => return Err(other_error.into()),
+        };
+    };
     Ok(())
 }
 

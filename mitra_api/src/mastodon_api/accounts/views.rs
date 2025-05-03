@@ -153,6 +153,7 @@ use super::types::{
     IdentityClaim,
     IdentityClaimQueryParams,
     IdentityProofData,
+    LoadActivitiesParams,
     LookupAcctQueryParams,
     RelationshipQueryParams,
     SearchAcctQueryParams,
@@ -1079,6 +1080,7 @@ async fn load_activities(
     auth: BearerAuth,
     db_pool: web::Data<DatabaseConnectionPool>,
     account_id: web::Path<Uuid>,
+    request_params: web::Json<LoadActivitiesParams>,
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &**get_database_client(&db_pool).await?;
     let current_user = get_current_user(db_client, auth.token()).await?;
@@ -1086,11 +1088,14 @@ async fn load_activities(
         return Err(MastodonError::PermissionError);
     };
     let profile = get_profile_by_id(db_client, *account_id).await?;
-    let job_data = if let Some(ref remote_actor) = profile.actor_json {
-        FetcherJobData::Outbox { actor_id: remote_actor.id.clone() }
-    } else {
+    let Some(remote_actor) = profile.actor_json.as_ref() else {
         // Local profile
         return Err(MastodonError::NotFoundError("profile"));
+    };
+    let job_data = match request_params.collection.as_str() {
+        "outbox" => FetcherJobData::Outbox { actor_id: remote_actor.id.clone() },
+        "featured" => FetcherJobData::Featured { actor_id: remote_actor.id.clone() },
+        _ => return Err(ValidationError("invalid collection type").into()),
     };
     job_data.into_job(db_client).await?;
     Ok(HttpResponse::NoContent().finish())
