@@ -69,7 +69,7 @@ pub async fn handle_activity(
     activity: &JsonValue,
     is_authenticated: bool,
     is_pulled: bool,
-) -> Result<(), HandlerError> {
+) -> Result<String, HandlerError> {
     // Validate common activity attributes
     verify_activity_owner(activity)?;
     let activity_id = get_object_id(activity)?;
@@ -199,5 +199,5 @@ pub async fn handle_activity(
             activity_actor,
         );
     };
-    Ok(())
+    Ok(canonical_activity_id.to_string())
 }

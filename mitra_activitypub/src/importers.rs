@@ -618,7 +618,7 @@ pub async fn import_object(
     ap_client: &ApClient,
     db_client: &mut impl DatabaseClient,
     object: JsonValue,
-) -> Result<(), HandlerError> {
+) -> Result<Post, HandlerError> {
     let object: AttributedObjectJson = serde_json::from_value(object)?;
     let canonical_object_id = canonicalize_id(object.id())?;
     match get_remote_post_by_object_id(
@@ -626,8 +626,7 @@ pub async fn import_object(
         &canonical_object_id.to_string(),
     ).await {
         Ok(post) => {
-            update_remote_post(ap_client, db_client, post, &object).await?;
-            Ok(())
+            update_remote_post(ap_client, db_client, post, &object).await
         },
         Err(DatabaseError::NotFound(_)) => {
             import_post(
@@ -635,8 +634,7 @@ pub async fn import_object(
                 db_client,
                 object.id().to_owned(),
                 Some(object),
-            ).await?;
-            Ok(())
+            ).await
         },
         Err(other_error) => Err(other_error.into())
     }
@@ -647,15 +645,14 @@ pub async fn import_activity(
     config: &Config,
     db_client: &mut impl DatabaseClient,
     activity: JsonValue,
-) -> Result<(), HandlerError> {
+) -> Result<String, HandlerError> {
     handle_activity(
         config,
         db_client,
         &activity,
         true, // is authenticated
         true, // activity is being pulled (not a spam)
-    ).await?;
-    Ok(())
+    ).await
 }
 
 async fn fetch_collection(
@@ -773,13 +770,14 @@ pub async fn import_collection(
     maybe_item_type: Option<CollectionItemType>,
     order: CollectionOrder,
     limit: usize,
-) -> Result<(), HandlerError> {
+) -> Result<Vec<String>, HandlerError> {
+    let mut imported = vec![];
     let ap_client = ApClient::new(config, db_client).await?;
     let items = fetch_collection(&ap_client, collection_id, limit).await?;
     let item_type = match &items[..] {
         [] => {
             log::info!("collection is empty");
-            return Ok(());
+            return Ok(imported);
         },
         [item, ..] => {
             log::info!("fetched {} items", items.len());
@@ -802,25 +800,33 @@ pub async fn import_collection(
     };
     for item in items {
         let item_id = get_object_id(&item)?.to_string();
-        let maybe_error = match item_type {
+        let result = match item_type {
             CollectionItemType::Object => {
                 log::info!("importing object {item_id}");
-                import_object(&ap_client, db_client, item).await.err()
+                import_object(&ap_client, db_client, item).await
+                    .map(|post| post.expect_remote_object_id().to_owned())
             },
             CollectionItemType::Actor => {
                 log::info!("importing actor {item_id}");
-                import_profile(&ap_client, db_client, item).await.err()
+                import_profile(&ap_client, db_client, item).await
+                    .map(|profile| profile.expect_remote_actor_id().to_owned())
             },
             CollectionItemType::Activity => {
                 log::info!("importing activity {item_id}");
-                import_activity(config, db_client, item).await.err()
+                import_activity(config, db_client, item).await
             },
         };
-        if let Some(error) = maybe_error {
-            log::warn!("failed to process item ({error}): {item_id}");
+        match result {
+            Ok(imported_item_id) => {
+                // Canonical ID is returned
+                imported.push(imported_item_id);
+            },
+            Err(error) => {
+                log::warn!("failed to process item ({error}): {item_id}");
+            },
         };
     };
-    Ok(())
+    Ok(imported)
 }
 
 pub async fn import_from_outbox(

@@ -953,7 +953,7 @@ pub async fn update_remote_post(
     db_client: &mut impl DatabaseClient,
     post: Post,
     object: &AttributedObjectJson,
-) -> Result<(), HandlerError> {
+) -> Result<Post, HandlerError> {
     assert!(!post.is_local());
     let AttributedObjectJson { inner: object, value: object_json } = object;
     let author_id = get_object_attributed_to(object)?;
@@ -1051,16 +1051,16 @@ pub async fn update_remote_post(
     };
     validate_post_update_data(&post_data)?;
     validate_post_mentions(&post_data.mentions, post.visibility)?;
-    let (_, deletion_queue) =
+    let (post, deletion_queue) =
         update_post(db_client, post.id, post_data).await?;
     deletion_queue.into_job(db_client).await?;
     save_attributed_object(
         db_client,
-        &post.object_id.expect("object ID should be present"),
+        post.expect_remote_object_id(),
         object_json,
         post.id,
     ).await?;
-    Ok(())
+    Ok(post)
 }
 
 #[cfg(test)]

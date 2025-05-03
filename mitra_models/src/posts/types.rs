@@ -369,6 +369,10 @@ impl Post {
         !is_not_edited
     }
 
+    pub fn expect_remote_object_id(&self) -> &str {
+        self.object_id.as_ref().expect("object ID should be present")
+    }
+
     pub fn expect_related_posts(&self) -> &RelatedPosts {
         self.related_posts.as_ref()
             .expect("related_posts field should be populated")
