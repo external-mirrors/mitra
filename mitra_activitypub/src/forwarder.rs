@@ -111,7 +111,9 @@ pub async fn get_activity_recipients(
     audience: &[Url],
 ) -> Result<Vec<DbActorProfile>, DatabaseError> {
     let mut targets = vec![];
-    for target_id in audience {
+    const RECIPIENT_LIMIT: usize = 50;
+    // TODO: single database query
+    for target_id in audience.iter().take(RECIPIENT_LIMIT) {
         // TODO: expand collections
         let target = match get_profile_by_actor_id(
             db_client,
