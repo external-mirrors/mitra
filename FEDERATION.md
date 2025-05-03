@@ -191,10 +191,7 @@ Where `object` is an ID of old account and `target` is an ID of new account. Act
 <a name="fep-ae97-c2s-api"></a>
 ## FEP-ae97 C2S API
 
-In addition to `X-Rsa-Secret-Key` header specified in the FEP, the following headers are required for registration of portable actors:
-
-- `X-Ed25519-Secret-Key`: multibase encoded Ed25519 key.
-- `X-Invite-Code`: invite code.
+The `X-Invite-Code` HTTP header is required for registration of portable actors.
 
 ## Subscriptions
 

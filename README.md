@@ -233,9 +233,9 @@ See [FEDERATION.md](./FEDERATION.md)
 
 ## ActivityPub Client API
 
-[FEP-ae97](https://codeberg.org/fediverse/fep/src/branch/main/fep/ae97/fep-ae97.md) clients can register and publish activities.
-
 This API is not stable and may be removed in the future.
+
+[Documentation](./docs/c2s.md)
 
 ## Development
 
