@@ -1,3 +1,4 @@
+# This compose file is used for development
 services:
   database:
     image: postgres:13-bullseye
@@ -15,7 +16,7 @@ services:
   monerod:
     profiles:
       - monero
-    image: ghcr.io/sethforprivacy/simple-monerod:v0.18.3.4
+    image: ghcr.io/sethforprivacy/simple-monerod:v0.18.4.0
     ports:
       - "58081:18081"
     command:
@@ -32,7 +33,7 @@ services:
   monero-wallet-rpc:
     profiles:
       - monero
-    image: ghcr.io/sethforprivacy/simple-monero-wallet-rpc:v0.18.3.4
+    image: ghcr.io/sethforprivacy/simple-monero-wallet-rpc:v0.18.4.0
     depends_on:
       - "monerod"
     ports:
