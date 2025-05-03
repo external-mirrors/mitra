@@ -349,7 +349,7 @@ impl SetRole {
 
 /// Delete user
 #[derive(Parser)]
-#[command(visible_alias = "delete-profile")]
+#[command(visible_alias = "delete-account", alias = "delete-profile")]
 pub struct DeleteUser {
     id_or_name: String,
 }

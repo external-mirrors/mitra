@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+
+- Added `delete-account` alias for `delete-user` command.
+
 ### Changed
 
 - Always validate activity audience.
@@ -14,6 +18,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Forward portable activities only after processing them.
 - Don't ignore repeated activities.
 - Track follow requests made by portable accounts.
+
+### Deprecated
+
+- Deprecated `delete-profile` alias of `delete-user` command.
 
 ### Fixed
 
