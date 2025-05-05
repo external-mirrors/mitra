@@ -16,6 +16,11 @@ use mitra_models::{
 };
 use mitra_validators::errors::ValidationError;
 
+use crate::{
+    builders::add_context_activity::sync_conversation,
+    importers::ApClient,
+};
+
 use super::{Descriptor, HandlerResult};
 
 #[derive(Deserialize)]
@@ -27,11 +32,12 @@ struct Delete {
 }
 
 pub async fn handle_delete(
-    _config: &Config,
+    config: &Config,
     db_client: &mut impl DatabaseClient,
     activity: JsonValue,
 ) -> HandlerResult {
-    let delete: Delete = serde_json::from_value(activity)?;
+    let delete: Delete = serde_json::from_value(activity.clone())?;
+    let ap_client = ApClient::new(config, db_client).await?;
     if delete.object == delete.actor {
         // Self-delete
         let profile = match get_remote_profile_by_actor_id(
@@ -67,5 +73,12 @@ pub async fn handle_delete(
     };
     let deletion_queue = delete_post(db_client, post.id).await?;
     deletion_queue.into_job(db_client).await?;
+    sync_conversation(
+        db_client,
+        &ap_client.instance,
+        post.expect_conversation(),
+        activity,
+        post.visibility,
+    ).await?;
     Ok(Some(Descriptor::object("Object")))
 }

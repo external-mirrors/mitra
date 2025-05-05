@@ -19,6 +19,7 @@ use mitra_validators::errors::ValidationError;
 
 use crate::{
     actors::handlers::{update_remote_profile, Actor},
+    builders::add_context_activity::sync_conversation,
     identifiers::canonicalize_id,
     importers::ApClient,
     ownership::verify_object_owner,
@@ -46,7 +47,7 @@ async fn handle_update_note(
     db_client: &mut impl DatabaseClient,
     activity: JsonValue,
 ) -> HandlerResult {
-    let update: UpdateNote = serde_json::from_value(activity)?;
+    let update: UpdateNote = serde_json::from_value(activity.clone())?;
     let object = update.object;
     let canonical_object_id = canonicalize_id(object.id())?;
     let author_id = get_object_attributed_to(&object.inner)?;
@@ -63,7 +64,19 @@ async fn handle_update_note(
         Err(other_error) => return Err(other_error.into()),
     };
     let ap_client = ApClient::new(config, db_client).await?;
-    update_remote_post(&ap_client, db_client, post, &object).await?;
+    let post = update_remote_post(
+        &ap_client,
+        db_client,
+        post,
+        &object,
+    ).await?;
+    sync_conversation(
+        db_client,
+        &ap_client.instance,
+        post.expect_conversation(),
+        activity,
+        post.visibility,
+    ).await?;
     Ok(Some(Descriptor::object(object.inner.object_type)))
 }
 

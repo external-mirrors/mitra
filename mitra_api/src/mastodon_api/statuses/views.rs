@@ -502,14 +502,23 @@ async fn edit_status(
 
     // Federate
     let media_server = MediaServer::new(&config);
-    prepare_update_note(
+    let update_note = prepare_update_note(
         db_client,
         &instance,
         &media_server,
         &current_user,
         &post,
         config.federation.fep_e232_enabled,
-    ).await?.save_and_enqueue(db_client).await?;
+    ).await?;
+    let update_note_json = update_note.activity().clone();
+    update_note.save_and_enqueue(db_client).await?;
+    sync_conversation(
+        db_client,
+        &instance,
+        post.expect_conversation(),
+        update_note_json,
+        post.visibility,
+    ).await?;
 
     let base_url = get_request_base_url(connection_info);
     let media_server = ClientMediaServer::new(&config, &base_url);
@@ -547,7 +556,15 @@ async fn delete_status(
     ).await?;
     let deletion_queue = delete_post(db_client, *status_id).await?;
     deletion_queue.into_job(db_client).await?;
+    let delete_note_json = delete_note.activity().clone();
     delete_note.save_and_enqueue(db_client).await?;
+    sync_conversation(
+        db_client,
+        &instance,
+        post.expect_conversation(),
+        delete_note_json,
+        post.visibility,
+    ).await?;
 
     let content_source = post.content_source.clone().unwrap_or_default();
     let base_url = get_request_base_url(connection_info);
