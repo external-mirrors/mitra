@@ -371,6 +371,7 @@ struct AccountFieldSource {
     value: String,
 }
 
+// Supports partial updates
 #[derive(Deserialize)]
 pub struct AccountUpdateData {
     display_name: Option<String>,
@@ -379,10 +380,8 @@ pub struct AccountUpdateData {
     avatar_media_type: Option<String>,
     header: Option<String>,
     header_media_type: Option<String>,
-    #[serde(default)]
-    bot: bool,
-    #[serde(default)]
-    locked: bool,
+    bot: Option<bool>,
+    locked: Option<bool>,
     fields_attributes: Option<Vec<AccountFieldSource>>,
 
     // Not supported by Mastodon API clients
@@ -431,16 +430,15 @@ impl AccountUpdateData {
     ) -> Result<ProfileUpdateData, MastodonError> {
         assert!(profile.is_local());
         let mut profile_data = ProfileUpdateData::from(profile);
-
-        profile_data.display_name = self.display_name;
-        profile_data.bio = if let Some(ref bio_source) = self.note {
-            let bio = markdown_basic_to_html(bio_source)
-                .map_err(|_| ValidationError("invalid markdown"))?;
-            Some(bio)
-        } else {
-            None
+        if let Some(display_name) = self.display_name {
+            profile_data.display_name = Some(display_name);
         };
-        profile_data.bio_source = self.note;
+        if let Some(bio_source) = self.note {
+            let bio = markdown_basic_to_html(&bio_source)
+                .map_err(|_| ValidationError("invalid markdown"))?;
+            profile_data.bio = Some(bio);
+            profile_data.bio_source = Some(bio_source);
+        };
         profile_data.avatar = process_b64_image_field_value(
             self.avatar,
             self.avatar_media_type,
@@ -455,10 +453,13 @@ impl AccountUpdateData {
             media_limits,
             media_storage,
         )?;
-        profile_data.is_automated = self.bot;
-        profile_data.manually_approves_followers = self.locked;
+        if let Some(bot) = self.bot {
+            profile_data.is_automated = bot;
+        };
+        if let Some(locked) = self.locked {
+            profile_data.manually_approves_followers = locked;
+        };
         if let Some(mention_policy) = self.mention_policy {
-            // Update only if value was provided by client
             profile_data.mention_policy = match mention_policy.as_str() {
                 "none" => MentionPolicy::None,
                 "only_known" => MentionPolicy::OnlyKnown,
@@ -467,22 +468,24 @@ impl AccountUpdateData {
             };
         };
 
-        let mut extra_fields = vec![];
-        for field_source in self.fields_attributes.unwrap_or(vec![]) {
-            if field_source.name.trim().is_empty() {
-                continue;
+        if let Some(fields_attributes) = self.fields_attributes {
+            let mut extra_fields = vec![];
+            for field_source in fields_attributes {
+                if field_source.name.trim().is_empty() {
+                    continue;
+                };
+                let value = markdown_basic_to_html(&field_source.value)
+                    .map_err(|_| ValidationError("invalid markdown"))?;
+                let mut extra_field = ExtraField {
+                    name: field_source.name,
+                    value: value,
+                    value_source: Some(field_source.value),
+                };
+                clean_extra_field(&mut extra_field);
+                extra_fields.push(extra_field);
             };
-            let value = markdown_basic_to_html(&field_source.value)
-                .map_err(|_| ValidationError("invalid markdown"))?;
-            let mut extra_field = ExtraField {
-                name: field_source.name,
-                value: value,
-                value_source: Some(field_source.value),
-            };
-            clean_extra_field(&mut extra_field);
-            extra_fields.push(extra_field);
+            profile_data.extra_fields = extra_fields;
         };
-        profile_data.extra_fields = extra_fields;
         Ok(profile_data)
     }
 }
@@ -555,11 +558,9 @@ impl From<AccountUpdateMultipartForm> for AccountUpdateData {
                     .map(|media_type| media_type.essence_str().to_string())
             }),
             bot: form.bot
-                .map(|value| value.into_inner())
-                .unwrap_or_default(),
+                .map(|value| value.into_inner()),
             locked: form.locked
-                .map(|value| value.into_inner())
-                .unwrap_or_default(),
+                .map(|value| value.into_inner()),
             fields_attributes: Some(fields_attributes),
             mention_policy: None,
         }
