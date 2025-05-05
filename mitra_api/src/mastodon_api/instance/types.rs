@@ -16,7 +16,6 @@ use mitra_models::users::types::User;
 use mitra_utils::markdown::markdown_to_html;
 use mitra_validators::{
     polls::{POLL_OPTION_COUNT_MAX, POLL_OPTION_NAME_LENGTH_MAX},
-    posts::ATTACHMENT_LIMIT,
     profiles::{
         FIELD_LOCAL_LIMIT,
         FIELD_NAME_LENGTH_MAX,
@@ -231,7 +230,7 @@ impl InstanceInfo {
             configuration: Configuration {
                 statuses: StatusLimits {
                     max_characters: config.limits.posts.character_limit,
-                    max_media_attachments: ATTACHMENT_LIMIT,
+                    max_media_attachments: config.limits.posts.attachment_limit,
                 },
                 media_attachments: MediaLimits {
                     supported_mime_types: config.limits.media
@@ -339,7 +338,7 @@ impl InstanceInfoV2 {
             configuration: ConfigurationV2 {
                 statuses: StatusLimits {
                     max_characters: config.limits.posts.character_limit,
-                    max_media_attachments: ATTACHMENT_LIMIT,
+                    max_media_attachments: config.limits.posts.attachment_limit,
                 },
                 media_attachments: MediaLimits {
                     supported_mime_types: config.limits.media

@@ -17,7 +17,6 @@ use super::{
     polls::validate_poll_data,
 };
 
-pub const ATTACHMENT_LIMIT: usize = 15;
 pub const MENTION_LIMIT: usize = 50;
 pub const HASHTAG_LIMIT: usize = 100;
 pub const LINK_LIMIT: usize = 10;
@@ -107,9 +106,6 @@ pub fn validate_post_create_data(
     if let Some(ref poll_data) = post_data.poll {
         validate_poll_data(poll_data)?;
     };
-    if post_data.attachments.len() > ATTACHMENT_LIMIT {
-        return Err(ValidationError("too many attachments"));
-    };
     if post_data.mentions.len() > MENTION_LIMIT {
         return Err(ValidationError("too many mentions"));
     };
@@ -140,9 +136,6 @@ pub fn validate_post_update_data(
     };
     if let Some(ref poll_data) = post_data.poll {
         validate_poll_data(poll_data)?;
-    };
-    if post_data.attachments.len() > ATTACHMENT_LIMIT {
-        return Err(ValidationError("too many attachments"));
     };
     if post_data.mentions.len() > MENTION_LIMIT {
         return Err(ValidationError("too many mentions"));

@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Added `delete-account` alias for `delete-user` command.
 - Support loading featured posts using `/api/v1/accounts/{account_id}/load_activities` API endpoint.
+- Added `limits.posts.attachment_limit` configuration parameter.
 
 ### Changed
 
@@ -21,6 +22,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Track follow requests made by portable accounts.
 - Support partial updates with `/api/v1/accounts/update_credentials`.
 - Append attachment URLs to post when attachment limit is exceeded.
+- Changed default attachment limit to 16.
 
 ### Deprecated
 

@@ -630,7 +630,7 @@ pub async fn create_remote_profile(
     let (maybe_avatar, maybe_banner) = fetch_actor_images(
         &agent,
         is_media_filter_enabled,
-        &ap_client.media_limits,
+        &ap_client.limits.media,
         &ap_client.media_storage,
         &actor,
         None,
@@ -712,7 +712,7 @@ pub async fn update_remote_profile(
     let (maybe_avatar, maybe_banner) = fetch_actor_images(
         &agent,
         is_media_filter_enabled,
-        &ap_client.media_limits,
+        &ap_client.limits.media,
         &ap_client.media_storage,
         &actor,
         profile.avatar,

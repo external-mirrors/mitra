@@ -37,6 +37,7 @@ use mitra_activitypub::{
     },
     queues::FetcherJobData,
 };
+use mitra_adapters::posts::check_post_limits;
 use mitra_config::Config;
 use mitra_models::{
     bookmarks::queries::{create_bookmark, delete_bookmark},
@@ -267,6 +268,7 @@ async fn create_status(
             &post_data.mentions,
         )?;
     };
+    check_post_limits(&config.limits.posts, &post_data.attachments)?;
 
     // Check idempotency key
     // https://datatracker.ietf.org/doc/draft-ietf-httpapi-idempotency-key-header/
@@ -490,6 +492,7 @@ async fn edit_status(
             &post_data.mentions,
         )?;
     };
+    check_post_limits(&config.limits.posts, &post_data.attachments)?;
     let (mut post, deletion_queue) =
         update_post(db_client, post.id, post_data).await?;
     deletion_queue.into_job(db_client).await?;

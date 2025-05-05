@@ -131,7 +131,7 @@ pub async fn handle_emoji(
         &emoji.icon.url,
         emoji.icon.media_type.as_deref(),
         &EMOJI_MEDIA_TYPES,
-        ap_client.media_limits.emoji_size_limit,
+        ap_client.limits.media.emoji_size_limit,
     ).await {
         Ok(file) => file,
         Err(error) => {

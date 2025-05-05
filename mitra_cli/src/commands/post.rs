@@ -5,6 +5,7 @@ use chrono::{DateTime, Utc};
 use clap::Parser;
 
 use apx_core::media_type::sniff_media_type;
+use mitra_adapters::posts::check_post_limits;
 use mitra_config::Config;
 use mitra_models::{
     attachments::queries::create_attachment,
@@ -94,6 +95,7 @@ impl CreatePost {
             created_at: self.created_at,
         };
         validate_post_create_data(&post_data)?;
+        check_post_limits(&config.limits.posts, &post_data.attachments)?;
         let post = create_post(db_client, author.id, post_data).await?;
         println!("post created: {}", post.id);
         Ok(())

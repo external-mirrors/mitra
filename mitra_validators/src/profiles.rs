@@ -46,6 +46,7 @@ pub const FIELD_NAME_LENGTH_MAX: usize = 500;
 pub const FIELD_VALUE_LENGTH_MAX: usize = 5000;
 const FIELD_ALLOWED_TAGS: [&str; 1] = ["a"];
 pub const ALIAS_LIMIT: usize = 10;
+const IDENTITY_PROOF_LIMIT: usize = 10;
 
 pub fn validate_username(username: &str) -> Result<(), ValidationError> {
     if username.is_empty() {
@@ -150,7 +151,7 @@ fn validate_public_keys(
 pub fn validate_identity_proofs(
     identity_proofs: &[IdentityProof],
 ) -> Result<(), ValidationError> {
-    if identity_proofs.len() > 10 {
+    if identity_proofs.len() > IDENTITY_PROOF_LIMIT {
         return Err(ValidationError("at most 10 identity proofs are allowed"));
     };
     Ok(())

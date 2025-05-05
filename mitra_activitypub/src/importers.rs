@@ -28,7 +28,7 @@ use apx_sdk::{
     url::{parse_url, Url},
     utils::{get_core_type, CoreType},
 };
-use mitra_config::{Config, Instance, MediaLimits};
+use mitra_config::{Config, Instance, Limits};
 use mitra_models::{
     database::{DatabaseClient, DatabaseError, DatabaseTypeError},
     filter_rules::types::FilterAction,
@@ -86,7 +86,7 @@ use crate::{
 pub struct ApClient {
     pub instance: Instance,
     pub filter: FederationFilter,
-    pub media_limits: MediaLimits,
+    pub limits: Limits,
     pub media_storage: MediaStorage,
     pub as_user: Option<User>,
 }
@@ -99,7 +99,7 @@ impl ApClient {
         let ap_client = Self {
             instance: config.instance(),
             filter: FederationFilter::init(config, db_client).await?,
-            media_limits: config.limits.media.clone(),
+            limits: config.limits.clone(),
             media_storage: MediaStorage::new(config),
             as_user: None,
         };

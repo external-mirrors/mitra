@@ -18,7 +18,7 @@ pub use blockchain::{
 pub use config::Config;
 pub use environment::Environment;
 pub use instance::Instance;
-pub use limits::MediaLimits;
+pub use limits::{Limits, MediaLimits, PostLimits};
 pub use loader::parse_config;
 pub use registration::{DefaultRole, RegistrationType};
 

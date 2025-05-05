@@ -128,17 +128,21 @@ impl MediaLimits {
 }
 
 const fn default_post_character_limit() -> usize { 5000 }
+const fn default_attachment_limit() -> usize { 16 }
 
 #[derive(Clone, Deserialize)]
 pub struct PostLimits {
     #[serde(default = "default_post_character_limit")]
     pub character_limit: usize,
+    #[serde(default = "default_attachment_limit")]
+    pub attachment_limit: usize,
 }
 
 impl Default for PostLimits {
     fn default() -> Self {
         Self {
             character_limit: default_post_character_limit(),
+            attachment_limit: default_attachment_limit(),
         }
     }
 }

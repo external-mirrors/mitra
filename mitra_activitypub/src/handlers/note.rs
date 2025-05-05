@@ -23,7 +23,10 @@ use apx_sdk::{
     url::is_same_origin,
     utils::is_public,
 };
-use mitra_adapters::permissions::filter_mentions;
+use mitra_adapters::{
+    permissions::filter_mentions,
+    posts::check_post_limits,
+};
 use mitra_models::{
     activitypub::queries::save_attributed_object,
     attachments::queries::create_attachment,
@@ -59,7 +62,6 @@ use mitra_validators::{
         validate_post_create_data,
         validate_post_mentions,
         validate_post_update_data,
-        ATTACHMENT_LIMIT,
         EMOJI_LIMIT,
         HASHTAG_LIMIT,
         LINK_LIMIT,
@@ -384,7 +386,7 @@ async fn get_object_attachments(
             unprocessed.push(attachment_url);
             continue;
         };
-        if downloaded.len() >= ATTACHMENT_LIMIT {
+        if downloaded.len() >= ap_client.limits.posts.attachment_limit {
             // Stop downloading if limit is reached
             log::warn!("too many attachments");
             unprocessed.push(attachment_url);
@@ -394,8 +396,8 @@ async fn get_object_attachments(
             &agent,
             &attachment_url,
             attachment.media_type.as_deref(),
-            &ap_client.media_limits.supported_media_types(),
-            ap_client.media_limits.file_size_limit,
+            &ap_client.limits.media.supported_media_types(),
+            ap_client.limits.media.file_size_limit,
         ).await {
             Ok(file) => file,
             Err(error) => {
@@ -939,6 +941,7 @@ pub async fn create_remote_post(
     };
     validate_post_create_data(&post_data)?;
     validate_post_mentions(&post_data.mentions, post_data.visibility)?;
+    check_post_limits(&ap_client.limits.posts, &post_data.attachments)?;
     let post = create_post(db_client, author.id, post_data).await?;
     save_attributed_object(
         db_client,
@@ -1052,6 +1055,7 @@ pub async fn update_remote_post(
     };
     validate_post_update_data(&post_data)?;
     validate_post_mentions(&post_data.mentions, post.visibility)?;
+    check_post_limits(&ap_client.limits.posts, &post_data.attachments)?;
     let (post, deletion_queue) =
         update_post(db_client, post.id, post_data).await?;
     deletion_queue.into_job(db_client).await?;
