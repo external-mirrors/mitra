@@ -941,7 +941,7 @@ pub async fn create_remote_post(
     };
     validate_post_create_data(&post_data)?;
     validate_post_mentions(&post_data.mentions, post_data.visibility)?;
-    check_post_limits(&ap_client.limits.posts, &post_data.attachments)?;
+    check_post_limits(&ap_client.limits.posts, &post_data.attachments, false)?;
     let post = create_post(db_client, author.id, post_data).await?;
     save_attributed_object(
         db_client,
@@ -1055,7 +1055,7 @@ pub async fn update_remote_post(
     };
     validate_post_update_data(&post_data)?;
     validate_post_mentions(&post_data.mentions, post.visibility)?;
-    check_post_limits(&ap_client.limits.posts, &post_data.attachments)?;
+    check_post_limits(&ap_client.limits.posts, &post_data.attachments, false)?;
     let (post, deletion_queue) =
         update_post(db_client, post.id, post_data).await?;
     deletion_queue.into_job(db_client).await?;

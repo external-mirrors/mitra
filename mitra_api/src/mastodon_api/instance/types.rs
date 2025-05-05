@@ -230,7 +230,7 @@ impl InstanceInfo {
             configuration: Configuration {
                 statuses: StatusLimits {
                     max_characters: config.limits.posts.character_limit,
-                    max_media_attachments: config.limits.posts.attachment_limit,
+                    max_media_attachments: config.limits.posts.attachment_local_limit,
                 },
                 media_attachments: MediaLimits {
                     supported_mime_types: config.limits.media
@@ -338,7 +338,7 @@ impl InstanceInfoV2 {
             configuration: ConfigurationV2 {
                 statuses: StatusLimits {
                     max_characters: config.limits.posts.character_limit,
-                    max_media_attachments: config.limits.posts.attachment_limit,
+                    max_media_attachments: config.limits.posts.attachment_local_limit,
                 },
                 media_attachments: MediaLimits {
                     supported_mime_types: config.limits.media

@@ -95,7 +95,7 @@ impl CreatePost {
             created_at: self.created_at,
         };
         validate_post_create_data(&post_data)?;
-        check_post_limits(&config.limits.posts, &post_data.attachments)?;
+        check_post_limits(&config.limits.posts, &post_data.attachments, true)?;
         let post = create_post(db_client, author.id, post_data).await?;
         println!("post created: {}", post.id);
         Ok(())

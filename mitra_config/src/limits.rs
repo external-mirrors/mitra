@@ -129,6 +129,9 @@ impl MediaLimits {
 
 const fn default_post_character_limit() -> usize { 5000 }
 const fn default_attachment_limit() -> usize { 16 }
+// Mastodon's limit is 4
+// https://github.com/mastodon/mastodon/blob/v4.3.7/app/models/status.rb#L42
+const fn default_attachment_local_limit() -> usize { default_attachment_limit() }
 
 #[derive(Clone, Deserialize)]
 pub struct PostLimits {
@@ -136,6 +139,8 @@ pub struct PostLimits {
     pub character_limit: usize,
     #[serde(default = "default_attachment_limit")]
     pub attachment_limit: usize,
+    #[serde(default = "default_attachment_local_limit")]
+    pub attachment_local_limit: usize,
 }
 
 impl Default for PostLimits {
@@ -143,6 +148,7 @@ impl Default for PostLimits {
         Self {
             character_limit: default_post_character_limit(),
             attachment_limit: default_attachment_limit(),
+            attachment_local_limit: default_attachment_local_limit(),
         }
     }
 }
