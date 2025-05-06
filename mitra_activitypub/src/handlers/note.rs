@@ -322,11 +322,6 @@ async fn get_object_attachments(
     let mut unprocessed = vec![];
     let mut downloaded: Vec<(String, FileInfo, Option<String>)> = vec![];
     for attachment_value in values {
-        // Stop downloading if limit is reached
-        if downloaded.len() >= ATTACHMENT_LIMIT {
-            log::warn!("too many attachments");
-            break;
-        };
         match attachment_value["type"].as_str() {
             Some(AUDIO | DOCUMENT | IMAGE | VIDEO) => (),
             Some(LINK) => {
@@ -386,6 +381,12 @@ async fn get_object_attachments(
         if is_filter_enabled {
             // Do not download
             log::warn!("attachment removed by filter: {attachment_url}");
+            unprocessed.push(attachment_url);
+            continue;
+        };
+        if downloaded.len() >= ATTACHMENT_LIMIT {
+            // Stop downloading if limit is reached
+            log::warn!("too many attachments");
             unprocessed.push(attachment_url);
             continue;
         };

@@ -20,6 +20,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Don't ignore repeated activities.
 - Track follow requests made by portable accounts.
 - Support partial updates with `/api/v1/accounts/update_credentials`.
+- Append attachment URLs to post when attachment limit is exceeded.
 
 ### Deprecated
 
