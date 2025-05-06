@@ -12,4 +12,4 @@ This type of account migration is only supported by Mitra. It can be initiated f
 
 ## Portable accounts
 
-An implementation of [FEP-ef61](https://codeberg.org/silverpill/feps/src/branch/main/ef61/fep-ef61.md), this feature is still experimental and requires a specialized [client](../c2s.md).
+An implementation of [FEP-ef61](https://codeberg.org/silverpill/feps/src/branch/main/ef61/fep-ef61.md), this feature is still experimental and requires a specialized [client](./c2s.md).
