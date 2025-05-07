@@ -139,7 +139,7 @@ pub async fn handle_activity(
         },
     };
     if let Some(descriptor) = maybe_descriptor {
-        save_activity(
+        let is_new_activity = save_activity(
             db_client,
             &canonical_activity_id.to_string(),
             &activity_clone,
@@ -164,7 +164,7 @@ pub async fn handle_activity(
             db_client,
             &canonical_actor_id.to_string(),
         ).await {
-            Ok(actor) => {
+            Ok(actor) if is_new_activity => {
                 // Activity has been performed by a local actor:
                 // add to outbox and forward
                 add_object_to_collection(
@@ -188,6 +188,9 @@ pub async fn handle_activity(
                 } else {
                     log::warn!("signing keys are not found in actor document");
                 };
+            },
+            Ok(_) => {
+                log::warn!("activity has already been forwarded");
             },
             Err(DatabaseError::NotFound(_)) => (),
             Err(other_error) => return Err(other_error.into()),
