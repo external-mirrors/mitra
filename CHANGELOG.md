@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- Don't reject portable actor objects without public keys.
+
 ### Fixed
 
 - Prevent infinite loop when forwarding portable activities.

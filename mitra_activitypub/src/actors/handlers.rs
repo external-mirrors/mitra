@@ -196,7 +196,7 @@ struct ValidatedActor {
     #[serde(default, deserialize_with = "deserialize_object_array")]
     assertion_method: Vec<Multikey>,
 
-    public_key: PublicKeyPem,
+    public_key: Option<PublicKeyPem>,
 
     #[serde(default, deserialize_with = "deserialize_image_opt")]
     icon: Option<ActorImage>,
@@ -387,11 +387,13 @@ fn parse_public_keys(
     actor: &ValidatedActor,
 ) -> Result<Vec<DbActorKey>, ValidationError> {
     let mut keys = vec![];
-    if actor.public_key.owner != actor.id {
-        return Err(ValidationError("public key is not owned by actor"));
+    if let Some(public_key) = actor.public_key.as_ref() {
+        if public_key.owner != actor.id {
+            return Err(ValidationError("public key is not owned by actor"));
+        };
+        let db_key = public_key.to_db_key()?;
+        keys.push(db_key);
     };
-    let db_key = actor.public_key.to_db_key()?;
-    keys.push(db_key);
     let verification_methods = &actor.assertion_method;
     for multikey in verification_methods {
         if multikey.controller == actor.id {
@@ -404,7 +406,13 @@ fn parse_public_keys(
     keys.sort_by_key(|item| item.id.clone());
     keys.dedup_by_key(|item| item.id.clone());
     if keys.is_empty() {
-        return Err(ValidationError("public keys not found"));
+        let canonical_actor_id = Url::parse(&actor.id)
+            .map_err(|_| ValidationError("invalid actor ID"))?;
+        if matches!(canonical_actor_id, Url::Ap(_)) {
+            log::warn!("public keys not found in portable actor object");
+        } else {
+            return Err(ValidationError("public keys not found"));
+        };
     };
     for key in keys.iter() {
         if !is_same_origin(&key.id, &actor.id)
@@ -844,7 +852,7 @@ mod tests {
             Multikey::build_ed25519(actor_id, &ed25519_secret_key);
         let actor = ValidatedActor {
             id: actor_id.to_string(),
-            public_key: actor_public_key,
+            public_key: Some(actor_public_key),
             assertion_method: vec![actor_auth_key_1, actor_auth_key_2],
             ..Default::default()
         };
