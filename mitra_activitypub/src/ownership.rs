@@ -2,9 +2,11 @@
 use serde_json::{Value as JsonValue};
 
 use apx_sdk::{
-    core::http_url::HttpUrl,
+    core::{
+        http_url::HttpUrl,
+        url::canonical::{is_same_origin as apx_is_same_origin},
+    },
     deserialization::{object_to_id, parse_into_id_array},
-    url::{is_same_origin as apx_is_same_origin},
     utils::CoreType,
 };
 use mitra_config::Instance;

@@ -8,6 +8,7 @@ use uuid::Uuid;
 
 use apx_core::{
     http_url::Hostname,
+    url::canonical::{is_same_origin, Url},
     urls::get_hostname,
 };
 use apx_sdk::{
@@ -21,7 +22,6 @@ use apx_sdk::{
         parse_into_id_array,
     },
     fetch::fetch_file,
-    url::{is_same_origin, Url},
 };
 use mitra_config::MediaLimits;
 use mitra_models::{

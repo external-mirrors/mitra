@@ -1,14 +1,12 @@
 use apx_core::{
     ap_url::{is_ap_url, ApUrl},
     http_url::HttpUrl,
+    url::canonical::GATEWAY_PATH_PREFIX,
 };
 
 use super::errors::ValidationError;
 
 const OBJECT_ID_SIZE_MAX: usize = 2000;
-
-// TODO: FEP-EF61: import from apx_sdk?
-const GATEWAY_PATH_PREFIX: &str = "/.well-known/apgateway/";
 
 // Object ID is an URI
 // https://www.w3.org/TR/activitypub/#obj-id

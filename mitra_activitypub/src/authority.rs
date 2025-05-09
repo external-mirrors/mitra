@@ -8,8 +8,8 @@ use apx_core::{
         Ed25519PublicKey,
     },
     did_key::DidKey,
+    url::canonical::GATEWAY_PATH_PREFIX,
 };
-use apx_sdk::url::GATEWAY_PATH_PREFIX;
 use mitra_config::Instance;
 use mitra_models::users::types::User;
 

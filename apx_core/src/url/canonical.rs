@@ -1,3 +1,5 @@
+//! Canonical URL
+
 use std::fmt;
 use std::str::FromStr;
 
@@ -8,7 +10,7 @@ use serde::{
 };
 use thiserror::Error;
 
-use apx_core::{
+use crate::{
     ap_url::{is_ap_url, ApUrl},
     http_url::HttpUrl,
     url::common::Origin,

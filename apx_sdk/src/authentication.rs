@@ -11,9 +11,8 @@ use apx_core::{
             VerificationMethod,
         },
     },
+    url::canonical::Url,
 };
-
-use super::url::Url;
 
 #[derive(Debug, Error)]
 pub enum AuthenticationError {

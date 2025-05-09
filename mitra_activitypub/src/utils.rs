@@ -1,8 +1,8 @@
 use apx_core::{
     ap_url::{is_ap_url, ApUrl},
     http_url::{normalize_http_url, HttpUrl},
+    url::canonical::with_gateway,
 };
-use apx_sdk::url::with_gateway;
 
 use mitra_models::database::DatabaseTypeError;
 

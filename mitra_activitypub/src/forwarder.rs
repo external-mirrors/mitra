@@ -6,9 +6,9 @@ use apx_sdk::{
         crypto::common::PublicKey,
         crypto_eddsa::ed25519_public_key_from_secret_key,
         crypto_rsa::RsaPublicKey,
+        url::canonical::Url,
     },
     deserialization::deserialize_into_id_array,
-    url::Url,
     utils::{is_public, is_verification_method},
 };
 use mitra_config::Instance;

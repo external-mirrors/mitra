@@ -12,6 +12,7 @@ use uuid::Uuid;
 use apx_sdk::{
     addresses::WebfingerAddress,
     constants::{AP_MEDIA_TYPE, AS_MEDIA_TYPE},
+    core::url::canonical::is_same_origin,
     deserialization::{
         deserialize_into_id_array,
         deserialize_into_link_href,
@@ -20,7 +21,6 @@ use apx_sdk::{
         parse_into_href_array,
     },
     fetch::fetch_file,
-    url::is_same_origin,
     utils::is_public,
 };
 use mitra_adapters::{

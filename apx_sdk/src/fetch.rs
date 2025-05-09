@@ -17,6 +17,7 @@ use apx_core::{
     http_types::{Method as HttpMethod},
     http_url::is_same_http_origin,
     media_type::sniff_media_type,
+    url::canonical::is_same_origin,
 };
 
 use super::{
@@ -34,7 +35,6 @@ use super::{
         UnsafeUrlError,
         REDIRECT_LIMIT,
     },
-    url::is_same_origin,
     utils::extract_media_type,
 };
 

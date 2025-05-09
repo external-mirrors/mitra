@@ -3,11 +3,13 @@ use uuid::Uuid;
 
 use apx_core::{
     caip2::ChainId,
-    url::common::url_encode,
+    url::{
+        canonical::{parse_url, Url},
+        common::url_encode,
+    },
 };
 use apx_sdk::{
     identifiers::parse_object_id,
-    url::{parse_url, Url},
 };
 use mitra_models::{
     database::DatabaseTypeError,

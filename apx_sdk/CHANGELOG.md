@@ -12,6 +12,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Added `is_verification_method` function.
 - Implemented `PartialEq` for `Hostname` type.
 
+### Changed
+
+- Moved `Url` type from `apx_sdk` to `apx_core` package.
+
 ## [0.12.0] - 2025-04-24
 
 ### Added

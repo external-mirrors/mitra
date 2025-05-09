@@ -11,7 +11,10 @@ use apx_core::{
     crypto_eddsa::generate_ed25519_key,
     crypto_rsa::generate_rsa_key,
     http_url::HttpUrl,
-    url::hostname::guess_protocol,
+    url::{
+        canonical::{parse_url, Url},
+        hostname::guess_protocol,
+    },
 };
 use apx_sdk::{
     addresses::WebfingerAddress,
@@ -25,7 +28,6 @@ use apx_sdk::{
         FetchObjectOptions,
     },
     jrd::JsonResourceDescriptor,
-    url::{parse_url, Url},
     utils::{get_core_type, CoreType},
 };
 use mitra_config::{Config, Instance, Limits};
