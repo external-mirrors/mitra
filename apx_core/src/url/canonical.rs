@@ -38,6 +38,14 @@ impl Url {
         Ok(url)
     }
 
+    pub fn parse_canonical(value: &str) -> Result<Self, ObjectIdError> {
+        let (url, maybe_gateway) = parse_url(value)?;
+        if maybe_gateway.is_some() {
+            return Err(ObjectIdError("URL is not canonical"));
+        };
+        Ok(url)
+    }
+
     pub fn authority(&self) -> String {
         match self {
             Self::Http(http_url) => http_url.authority().to_string(),

@@ -11,6 +11,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Added `VerificationMethod` to `CoreType` enum.
 - Added `is_verification_method` function.
 - Implemented `PartialEq` for `Hostname` type.
+- Added `parse_canonical` method to `Url` type.
 
 ### Changed
 
