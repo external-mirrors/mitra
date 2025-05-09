@@ -213,7 +213,7 @@ impl ApClient {
     }
 }
 
-pub async fn get_profile_by_actor_id(
+pub(crate) async fn get_profile_by_actor_id(
     db_client: &impl DatabaseClient,
     instance_url: &str,
     actor_id: &str,

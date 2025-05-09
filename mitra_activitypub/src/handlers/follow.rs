@@ -21,7 +21,7 @@ use mitra_validators::{
 use crate::{
     builders::accept_follow::prepare_accept_follow,
     identifiers::canonicalize_id,
-    importers::{get_profile_by_actor_id, ActorIdResolver, ApClient},
+    importers::{ActorIdResolver, ApClient},
 };
 
 use super::{Descriptor, HandlerResult};
@@ -50,11 +50,10 @@ pub async fn handle_follow(
     ).await?;
     let source_actor = source_profile.actor_json
         .expect("actor data should be present");
-    let canonical_object_id = canonicalize_id(&activity.object)?;
-    let target_profile = get_profile_by_actor_id(
+    let target_profile = ActorIdResolver::default().resolve(
+        &ap_client,
         db_client,
-        &config.instance_url(),
-        &canonical_object_id.to_string(),
+        &activity.object,
     ).await?;
     // Create new follow request or update activity ID on existing one,
     // because latest activity ID might be needed to process Undo(Follow)
