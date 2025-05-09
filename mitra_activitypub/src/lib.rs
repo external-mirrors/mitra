@@ -13,6 +13,7 @@ mod handlers;
 pub mod identifiers;
 pub mod identity;
 pub mod importers;
+pub mod keys;
 pub mod ownership;
 pub mod queues;
 pub mod utils;

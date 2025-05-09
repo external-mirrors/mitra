@@ -20,9 +20,9 @@ use mitra_models::{
 use mitra_validators::errors::ValidationError;
 
 use crate::{
-    actors::keys::verification_method_to_public_key,
     identifiers::canonicalize_id,
     importers::get_profile_by_actor_id,
+    keys::verification_method_to_public_key,
     ownership::is_local_origin,
 };
 

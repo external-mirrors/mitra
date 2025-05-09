@@ -1,6 +1,6 @@
 use serde::Serialize;
 
-use mitra_activitypub::actors::keys::Multikey;
+use mitra_activitypub::keys::Multikey;
 use mitra_models::users::types::PortableUser;
 
 #[derive(Serialize)]

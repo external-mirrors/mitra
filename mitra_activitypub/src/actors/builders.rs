@@ -33,6 +33,7 @@ use crate::{
         local_instance_actor_id,
         LocalActorCollection,
     },
+    keys::{Multikey, PublicKeyPem},
     vocabulary::{APPLICATION, IMAGE, PERSON, SERVICE},
 };
 
@@ -40,7 +41,6 @@ use super::attachments::{
     attach_extra_field,
     attach_payment_option,
 };
-use super::keys::{Multikey, PublicKeyPem};
 
 type Context = (
     &'static str,

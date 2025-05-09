@@ -69,6 +69,7 @@ use crate::{
     },
     identifiers::canonicalize_id,
     importers::{perform_webfinger_query, ApClient},
+    keys::{Multikey, PublicKeyPem},
     vocabulary::{
         APPLICATION,
         EMOJI,
@@ -90,7 +91,6 @@ use super::{
         LinkAttachment,
     },
     builders::ActorImage,
-    keys::{Multikey, PublicKeyPem},
 };
 
 pub struct Actor {
@@ -789,7 +789,6 @@ mod tests {
         },
     };
     use mitra_models::profiles::types::PublicKeyType;
-    use crate::actors::keys::{Multikey, PublicKeyPem};
     use super::*;
 
     #[test]

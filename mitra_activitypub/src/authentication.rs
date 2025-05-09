@@ -57,10 +57,10 @@ use mitra_models::{
 use mitra_validators::errors::ValidationError;
 
 use crate::{
-    actors::keys::verification_method_to_public_key,
     errors::HandlerError,
     identifiers::canonicalize_id,
     importers::{ActorIdResolver, ApClient},
+    keys::verification_method_to_public_key,
     ownership::{get_object_id, is_same_origin},
 };
 
