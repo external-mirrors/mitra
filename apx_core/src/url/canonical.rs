@@ -1,7 +1,6 @@
 //! Canonical URL
 
 use std::fmt;
-use std::str::FromStr;
 
 use serde::{
     Deserialize,
@@ -109,14 +108,6 @@ pub fn parse_url(
         }
     };
     Ok((url, maybe_gateway))
-}
-
-impl FromStr for Url {
-    type Err = ObjectIdError;
-
-    fn from_str(value: &str) -> Result<Self, Self::Err> {
-        Self::parse(value)
-    }
 }
 
 impl<'de> Deserialize<'de> for Url {
