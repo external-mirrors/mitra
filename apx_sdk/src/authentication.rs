@@ -2,6 +2,7 @@ use serde_json::{Value as JsonValue};
 use thiserror::Error;
 
 use apx_core::{
+    ap_url::ApUrl,
     json_signatures::{
         proofs::ProofType,
         verify::{
@@ -40,7 +41,7 @@ pub enum AuthenticationError {
 
 pub fn verify_portable_object(
     object: &JsonValue,
-) -> Result<String, AuthenticationError> {
+) -> Result<ApUrl, AuthenticationError> {
     let object_id = object["id"].as_str()
         .ok_or(AuthenticationError::InvalidObjectID("'id' property not found"))?;
     let canonical_object_id = Url::parse(object_id)
@@ -83,7 +84,7 @@ pub fn verify_portable_object(
             };
         },
     };
-    Ok(object_id.to_string())
+    Ok(canonical_object_id)
 }
 
 #[cfg(test)]

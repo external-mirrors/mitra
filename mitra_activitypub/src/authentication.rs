@@ -324,13 +324,17 @@ pub async fn verify_signed_activity(
     no_fetch: bool,
 ) -> Result<DbActorProfile, AuthenticationError> {
     match verify_portable_object(activity) {
-        Ok(activity_id) => {
+        Ok(canonical_activity_id) => {
+            // Using actor-based verification because
+            // an actor profile needs to be returned
             let actor_id = object_to_id(&activity["actor"])
                 .map_err(|_| AuthenticationError::ActorError("unknown actor"))?;
-            if !is_same_origin(&activity_id, &actor_id)? {
+            let actor_profile = get_signer(config, db_client, &actor_id, no_fetch).await?;
+            let canonical_actor_id =
+                canonicalize_id(actor_profile.expect_remote_actor_id())?;
+            if canonical_activity_id.origin() != canonical_actor_id.origin() {
                 return Err(AuthenticationError::UnexpectedObjectSigner);
             };
-            let actor_profile = get_signer(config, db_client, &actor_id, no_fetch).await?;
             return Ok(actor_profile);
         },
         // Continue verification if activity is not portable

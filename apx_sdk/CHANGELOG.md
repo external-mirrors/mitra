@@ -17,6 +17,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Changed
 
 - Moved `Url` type from `apx_sdk` to `apx_core` package.
+- Return `ApUrl` from `verify_portable_object`.
 
 ### Removed
 
