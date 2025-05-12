@@ -657,6 +657,7 @@ pub async fn import_activity(
         &activity,
         true, // is authenticated
         true, // activity is being pulled (not a spam)
+        None, // no inbox
     ).await
 }
 

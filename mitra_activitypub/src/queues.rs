@@ -62,14 +62,21 @@ const JOB_TIMEOUT: u32 = 3600; // 1 hour
 #[derive(Deserialize, Serialize)]
 pub struct IncomingActivityJobData {
     activity: JsonValue,
+    recipient_id: Option<String>,
     is_authenticated: bool,
     failure_count: u32,
 }
 
 impl IncomingActivityJobData {
-    pub fn new(activity: &JsonValue, is_authenticated: bool) -> Self {
+    pub fn new(
+        activity: &JsonValue,
+        maybe_recipient_id: Option<&str>,
+        is_authenticated: bool,
+    ) -> Self {
         Self {
             activity: activity.clone(),
+            recipient_id: maybe_recipient_id
+                .map(|recipient_id| recipient_id.to_owned()),
             is_authenticated,
             failure_count: 0,
         }
@@ -121,6 +128,7 @@ pub async fn process_queued_incoming_activities(
             &job_data.activity,
             job_data.is_authenticated,
             false, // activity was pushed
+            job_data.recipient_id.as_deref(),
         );
         let handler_result = match tokio::time::timeout(
             duration_max,

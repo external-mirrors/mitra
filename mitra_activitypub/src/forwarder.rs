@@ -94,10 +94,18 @@ struct ActivityAudience {
 
 pub fn get_activity_audience(
     activity: &JsonValue,
+    maybe_recipient_id: Option<&str>,
 ) -> Result<Vec<Url>, ValidationError> {
     let activity: ActivityAudience = serde_json::from_value(activity.clone())
         .map_err(|_| ValidationError("invalid audience"))?;
-    let audience = [activity.to, activity.cc].concat()
+    let mut audience = [activity.to, activity.cc].concat();
+    if let Some(recipient_id) = maybe_recipient_id {
+        audience.push(recipient_id.to_owned());
+    };
+    if audience.is_empty() {
+        log::warn!("activity audience is not known");
+    };
+    let audience: Vec<_> = audience
         .iter()
         .filter(|target_id| !is_public(target_id))
         .map(|id| canonicalize_id(id))
@@ -177,7 +185,7 @@ mod tests {
             "to": "as:Public",
             "cc": "https://social.example/users/1/followers",
         });
-        let audience = get_activity_audience(&activity).unwrap();
+        let audience = get_activity_audience(&activity, None).unwrap();
         assert_eq!(audience.len(), 1);
         assert_eq!(
             audience[0].to_string(),

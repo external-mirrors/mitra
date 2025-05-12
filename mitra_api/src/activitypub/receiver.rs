@@ -72,6 +72,7 @@ pub async fn receive_activity(
     request: &HttpRequest,
     activity: &JsonValue,
     activity_digest: ContentDigest,
+    recipient_id: &str,
 ) -> Result<(), InboxError> {
     let activity_id = activity["id"].as_str()
         .ok_or(ValidationError("'id' property is missing"))?;
@@ -202,8 +203,7 @@ pub async fn receive_activity(
         };
     };
 
-    // Add activity to job queue and release lock
-    IncomingActivityJobData::new(activity, is_authenticated)
+    IncomingActivityJobData::new(activity, Some(recipient_id), is_authenticated)
         .into_job(db_client, 0)
         .await?;
     log::debug!("activity added to the queue: {}", activity_type);

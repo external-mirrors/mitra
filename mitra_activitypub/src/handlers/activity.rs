@@ -69,6 +69,7 @@ pub async fn handle_activity(
     activity: &JsonValue,
     is_authenticated: bool,
     is_pulled: bool,
+    maybe_recipient_id: Option<&str>,
 ) -> Result<String, HandlerError> {
     // Validate common activity attributes
     verify_activity_owner(activity)?;
@@ -80,7 +81,7 @@ pub async fn handle_activity(
     let activity_actor = object_to_id(&activity["actor"])
         .map_err(|_| ValidationError("invalid actor property"))?;
     let canonical_actor_id = canonicalize_id(&activity_actor)?;
-    let audience = get_activity_audience(activity)?;
+    let audience = get_activity_audience(activity, maybe_recipient_id)?;
 
     let activity = activity.clone();
     let activity_clone = activity.clone();

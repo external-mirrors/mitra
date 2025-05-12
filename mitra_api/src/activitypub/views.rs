@@ -168,13 +168,18 @@ async fn inbox(
     drop(request_body);
 
     let db_client = &mut **get_database_client(&db_pool).await?;
-    let _user = get_user_by_name(db_client, &username).await?;
+    let recipient = get_user_by_name(db_client, &username).await?;
+    let recipient_id = local_actor_id(
+        &config.instance_url(),
+        &recipient.profile.username,
+    );
     receive_activity(
         &config,
         db_client,
         &request,
         &activity,
         activity_digest,
+        &recipient_id,
     ).await
         .map_err(|error| {
             let log_level = match error {
@@ -798,17 +803,18 @@ async fn apgateway_inbox_push_view(
     );
     let canonical_collection_id = canonicalize_id(&collection_id)?;
     let db_client = &mut **get_database_client(&db_pool).await?;
-    let _portable_user = get_portable_user_by_inbox_id(
+    let recipient = get_portable_user_by_inbox_id(
         db_client,
         &canonical_collection_id.to_string(),
     ).await?;
-
+    let recipient_id = recipient.profile.expect_remote_actor_id();
     receive_activity(
         &config,
         db_client,
         &request,
         &activity,
         activity_digest,
+        recipient_id,
     ).await
         .map_err(|error| {
             log::warn!(
@@ -923,7 +929,7 @@ async fn apgateway_outbox_push_view(
         Some(&collection_owner),
         &activity,
     )?;
-    IncomingActivityJobData::new(&activity, true)
+    IncomingActivityJobData::new(&activity, None, true)
         .into_job(db_client, 0)
         .await?;
     Ok(HttpResponse::Accepted().finish())
