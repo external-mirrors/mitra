@@ -1108,7 +1108,7 @@ paths:
             schema:
               type: object
               properties:
-                'account_ids[]':
+                account_ids:
                   description: The users that should be added to the custom feed.
                   type: array
                   items:
@@ -1409,7 +1409,7 @@ paths:
             schema:
               type: object
               properties:
-                'choices[]':
+                choices:
                   description: Provide your own votes as an index for each option (starting from 0).
                   type: array
                   items:
@@ -1660,24 +1660,28 @@ paths:
                   type: string
                   nullable: true
                   example: null
-                'media_ids[]':
+                media_ids:
                   description: Array of Attachment ids to be attached as media.
                   type: array
                   items:
                     type: string
                     format: uuid
-                'poll[options][]':
-                  description: Possible answers to the poll.
-                  type: array
-                  items:
-                    type: string
-                'poll[expires_in]':
-                  description: Duration that the poll should be open, in seconds.
-                  type: integer
-                'poll[multiple]':
-                  description: Allow multiple choices?
-                  type: boolean
-                  default: false
+                poll:
+                  description: Poll options
+                  type: object
+                  properties:
+                    options:
+                      description: Possible answers to the poll.
+                      type: array
+                      items:
+                        type: string
+                    expires_in:
+                      description: Duration that the poll should be open, in seconds.
+                      type: integer
+                    multiple:
+                      description: Allow multiple choices?
+                      type: boolean
+                      default: false
                 in_reply_to_id:
                   description: ID of the post being replied to, if post is a reply.
                   type: string
@@ -1788,7 +1792,7 @@ paths:
                   type: string
                   nullable: true
                   example: null
-                'media_ids[]':
+                media_ids:
                   description: Array of Attachment ids to be attached as media.
                   type: array
                   items:
