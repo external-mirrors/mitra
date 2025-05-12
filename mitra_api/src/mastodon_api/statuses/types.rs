@@ -299,6 +299,7 @@ pub struct StatusData {
     pub sensitive: bool,
 
     // Poll parameters: JSON
+    // https://docs.joinmastodon.org/client/intro/#hash
     pub poll: Option<PollParams>,
 
     // Poll parameters: form data

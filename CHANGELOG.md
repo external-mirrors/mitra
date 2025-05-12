@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Changed
 
 - Changed activity limit of outbox fetcher to 20.
+- Accept marker options formatted as JSON objects at `/api/v1/markers`.
 
 ### Fixed
 

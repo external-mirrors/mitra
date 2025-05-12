@@ -61,9 +61,9 @@ async fn update_marker_view(
     let db_client = &**get_database_client(&db_pool).await?;
     let current_user = get_current_user(db_client, auth.token()).await?;
     let marker_data = marker_data.into_inner();
-    let (timeline, last_read_id) = if let Some(ref last_read_id) = marker_data.home {
+    let (timeline, last_read_id) = if let Some(last_read_id) = marker_data.home_last_read_id() {
         (Timeline::Home, last_read_id)
-    } else if let Some(ref last_read_id) = marker_data.notifications {
+    } else if let Some(last_read_id) = marker_data.notifications_last_read_id() {
         (Timeline::Notifications, last_read_id)
     } else {
         return Err(ValidationError("marker data is missing").into());

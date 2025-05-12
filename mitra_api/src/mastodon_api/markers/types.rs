@@ -27,11 +27,36 @@ impl MarkerQueryParams {
 }
 
 #[derive(Deserialize)]
+pub struct MarkerData {
+    last_read_id: String,
+}
+
+#[derive(Deserialize)]
 pub struct MarkerCreateData {
+    // JSON
+    // https://docs.joinmastodon.org/client/intro/#hash
+    home: Option<MarkerData>,
+    notifications: Option<MarkerData>,
+
+    // Form data
     #[serde(rename = "home[last_read_id]")]
-    pub home: Option<String>,
+    pub home_last_read_id: Option<String>,
     #[serde(rename = "notifications[last_read_id]")]
-    pub notifications: Option<String>,
+    pub notifications_last_read_id: Option<String>,
+}
+
+impl MarkerCreateData {
+    pub fn home_last_read_id(&self) -> Option<&String> {
+        self.home.as_ref()
+            .map(|marker| &marker.last_read_id)
+            .or(self.home_last_read_id.as_ref())
+    }
+
+    pub fn notifications_last_read_id(&self) -> Option<&String> {
+        self.notifications.as_ref()
+            .map(|marker| &marker.last_read_id)
+            .or(self.notifications_last_read_id.as_ref())
+    }
 }
 
 /// https://docs.joinmastodon.org/entities/marker/
