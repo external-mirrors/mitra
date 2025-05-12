@@ -552,6 +552,7 @@ pub async fn fetcher_queue_executor(
     const BATCH_SIZE: u32 = 1;
     // Re-queue running (failed) jobs after 1 hour
     const JOB_TIMEOUT: u32 = 3600;
+    const COLLECTION_LIMIT: usize = 20;
     let db_client = &mut **get_database_client(db_pool).await?;
     let batch = get_job_batch(
         db_client,
@@ -565,31 +566,28 @@ pub async fn fetcher_queue_executor(
                 .map_err(|_| DatabaseTypeError)?;
         let result = match job_data {
             FetcherJobData::Outbox { actor_id } => {
-                const ACTIVITY_LIMIT: usize = 10;
                 import_from_outbox(
                     config,
                     db_client,
                     &actor_id,
-                    ACTIVITY_LIMIT,
+                    COLLECTION_LIMIT,
                 ).await
             },
             FetcherJobData::Featured { actor_id } => {
-                const LIMIT: usize = 20;
                 import_featured(
                     config,
                     db_client,
                     &actor_id,
-                    LIMIT,
+                    COLLECTION_LIMIT,
                 ).await
             },
             FetcherJobData::Context { object_id } => {
-                const LIMIT: usize = 20;
                 import_replies(
                     config,
                     db_client,
                     &object_id,
                     false, // don't use context
-                    LIMIT,
+                    COLLECTION_LIMIT,
                 ).await
             },
         };

@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- Changed activity limit of outbox fetcher to 20.
+
 ### Fixed
 
 - Fetch target actor when processing portable `Follow` activity.
