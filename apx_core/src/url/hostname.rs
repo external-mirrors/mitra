@@ -6,6 +6,14 @@ pub fn encode_hostname(hostname: &str) -> Result<String, IdnaError> {
     domain_to_ascii(hostname)
 }
 
+pub fn is_onion(hostname: &str) -> bool {
+    hostname.ends_with(".onion")
+}
+
+pub fn is_i2p(hostname: &str) -> bool {
+    hostname.ends_with(".i2p")
+}
+
 pub fn guess_protocol(hostname: &str) -> &'static str {
     if hostname == "localhost" {
         return "http";

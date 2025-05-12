@@ -14,6 +14,7 @@ use thiserror::Error;
 
 use apx_core::{
     http_url::parse_http_url_whatwg,
+    url::hostname::{is_i2p, is_onion},
     urls::{
         get_hostname,
         get_ip_address,
@@ -36,9 +37,9 @@ pub fn get_network_type(request_url: &str) ->
     Result<Network, UrlError>
 {
     let hostname = get_hostname(request_url)?;
-    let network = if hostname.ends_with(".onion") {
+    let network = if is_onion(&hostname) {
         Network::Tor
-    } else if hostname.ends_with(".i2p") {
+    } else if is_i2p(&hostname) {
         Network::I2p
     } else {
         Network::Default

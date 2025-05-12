@@ -32,6 +32,7 @@ use apx_core::{
         sign_object,
         JsonSignatureError,
     },
+    url::hostname::is_onion,
     urls::get_hostname,
 };
 use apx_sdk::{
@@ -303,7 +304,7 @@ pub(super) async fn deliver_activity_worker(
         rsa_key_id,
     );
     let mut delivery_pool = FuturesUnordered::new();
-    let mut delivery_pool_state = HashMap::new();
+    let mut delivery_pool_state: HashMap<usize, &String> = HashMap::new();
 
     loop {
         for (index, hostname, ref inbox) in deliveries.iter() {
@@ -321,6 +322,13 @@ pub(super) async fn deliver_activity_worker(
                 // Another delivery to instance is in progress
                 continue;
             };
+            if is_onion(hostname) && delivery_pool_state.values()
+                .any(|current_hostname| is_onion(current_hostname))
+            {
+                // Don't deliver to more than one onion at a time.
+                // Simultanous requests frequently fail.
+                continue;
+            };
             // Deliver activities concurrently
             let future = async {
                 let result = send_object(
@@ -332,7 +340,7 @@ pub(super) async fn deliver_activity_worker(
                 (*index, result)
             };
             delivery_pool.push(future);
-            delivery_pool_state.insert(index, hostname);
+            delivery_pool_state.insert(*index, hostname);
             sent.push(*index);
         };
         // Await one delivery at a time
