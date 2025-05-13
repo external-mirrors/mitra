@@ -11,6 +11,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Changed activity limit of outbox fetcher to 20.
 - Accept marker options formatted as JSON objects at `/api/v1/markers`.
 - Deliver activities to one onion server at a time.
+- Removed unnecessary database query in portable outbox handler.
 
 ### Fixed
 

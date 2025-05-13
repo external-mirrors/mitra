@@ -86,7 +86,6 @@ use mitra_models::{
         types::PaymentOption,
     },
     users::queries::{
-        get_portable_user_by_actor_id,
         get_portable_user_by_inbox_id,
         get_portable_user_by_outbox_id,
         get_user_by_name,
@@ -906,6 +905,8 @@ async fn apgateway_outbox_push_view(
         },
         Err(other_error) => return Err(other_error.into()),
     };
+    let canonical_owner_id =
+        canonicalize_id(collection_owner.profile.expect_remote_actor_id())?;
     // Verify activity
     verify_portable_object(&activity).map_err(|error| {
         log::warn!("C2S authentication error (POST {request_path}): {error}");
@@ -914,11 +915,7 @@ async fn apgateway_outbox_push_view(
     let activity_actor = object_to_id(&activity["actor"])
         .map_err(|_| ValidationError("invalid 'actor' property"))?;
     let canonical_actor_id = canonicalize_id(&activity_actor)?;
-    let signer = get_portable_user_by_actor_id(
-        db_client,
-        &canonical_actor_id.to_string(),
-    ).await?;
-    if signer.id != collection_owner.id {
+    if canonical_actor_id != canonical_owner_id {
         return Err(HttpError::PermissionError);
     };
     validate_public_keys(
