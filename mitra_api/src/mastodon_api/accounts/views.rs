@@ -102,6 +102,7 @@ use mitra_models::{
         create_user,
         get_user_by_did,
         is_valid_invite_code,
+        set_shared_client_config,
     },
     users::types::{Permission, UserCreateData},
 };
@@ -323,6 +324,13 @@ async fn update_credentials(
         Either::Left(form) => form.into_inner().into(),
         Either::Right(data) => data.into_inner(),
     };
+    let maybe_client_config = if let Some(ref source) = account_data.source {
+        let client_config = source
+            .update_shared_client_config(&current_user.shared_client_config)?;
+        Some(client_config)
+    } else {
+        None
+    };
     let media_storage = MediaStorage::new(&config);
     let mut profile_data = account_data.into_profile_data(
         &current_user.profile,
@@ -331,6 +339,8 @@ async fn update_credentials(
     )?;
     parse_microsyntaxes(db_client, &mut profile_data).await?;
     clean_profile_update_data(&mut profile_data)?;
+
+    // Update profile
     let (updated_profile, deletion_queue) = update_profile(
         db_client,
         current_user.id,
@@ -339,6 +349,15 @@ async fn update_credentials(
     current_user.profile = updated_profile;
     // Delete orphaned images after update
     deletion_queue.into_job(db_client).await?;
+
+    // Update account
+    if let Some(client_config) = maybe_client_config {
+        current_user.shared_client_config = set_shared_client_config(
+            db_client,
+            current_user.id,
+            client_config,
+        ).await?;
+    };
 
     // Federate
     let media_server = MediaServer::new(&config);

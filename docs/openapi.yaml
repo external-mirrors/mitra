@@ -217,6 +217,15 @@ paths:
                       value:
                         description: Value of the field (markdown).
                         type: string
+                source:
+                  description: Preferences.
+                  type: object
+                  properties:
+                    privacy:
+                      allOf:
+                        - $ref: '#/components/schemas/DefaultVisibility'
+                        - description: Default post visibility.
+                          nullable: true
                 mention_policy:
                   description: Mention policy.
                   type: string
@@ -1535,6 +1544,23 @@ paths:
           description: The poll doesn't exist.
         422:
           description: Invalid request data.
+  /api/v1/preferences:
+    get:
+      summary: Preferences defined by the user in their account settings.
+      security:
+        - tokenAuth: []
+      responses:
+        200:
+          description: Successful operation.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  'posting:default:visibility':
+                    allOf:
+                      - $ref: '#/components/schemas/DefaultVisibility'
+                      - description: Default visibility of a post
   /api/v1/settings/client_config:
     post:
       summary: Update client configuration.
@@ -3068,9 +3094,9 @@ components:
                   items:
                     $ref: '#/components/schemas/Field'
                 privacy:
-                  description: The default post privacy to be used for new posts.
-                  type: string
-                  example: public
+                  allOf:
+                    - $ref: '#/components/schemas/DefaultVisibility'
+                    - description: Default visibility of a post
                 sensitive:
                   description: Whether new posts should be marked sensitive by default.
                   type: boolean
@@ -4131,3 +4157,9 @@ components:
         - subscribers
         - conversation
         - direct
+    DefaultVisibility:
+      type: string
+      enum:
+        - public
+        - private
+        - subscribers

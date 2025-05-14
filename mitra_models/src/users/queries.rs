@@ -8,19 +8,21 @@ use chrono::{DateTime, Utc};
 use serde_json::{Value as JsonValue};
 use uuid::Uuid;
 
-use crate::database::{
-    catch_unique_violation,
-    DatabaseClient,
-    DatabaseError,
-    DatabaseTypeError,
-};
-use crate::profiles::{
-    queries::create_profile,
-    types::{
-        DbActorProfile,
-        MentionPolicy,
-        ProfileCreateData,
-        WebfingerHostname,
+use crate::{
+    database::{
+        catch_unique_violation,
+        DatabaseClient,
+        DatabaseError,
+        DatabaseTypeError,
+    },
+    profiles::{
+        queries::create_profile,
+        types::{
+            DbActorProfile,
+            MentionPolicy,
+            ProfileCreateData,
+            WebfingerHostname,
+        },
     },
 };
 
@@ -34,6 +36,7 @@ use super::types::{
     PortableUser,
     PortableUserData,
     Role,
+    SharedClientConfig,
     User,
     UserCreateData,
 };
@@ -259,6 +262,25 @@ pub async fn update_client_config(
     let row = maybe_row.ok_or(DatabaseError::NotFound("user"))?;
     let client_config: DbClientConfig = row.try_get("client_config")?;
     Ok(client_config.into_inner())
+}
+
+pub async fn set_shared_client_config(
+    db_client: &impl DatabaseClient,
+    account_id: Uuid,
+    client_config: SharedClientConfig,
+) -> Result<SharedClientConfig, DatabaseError> {
+    let maybe_row = db_client.query_opt(
+        "
+        UPDATE user_account
+        SET shared_client_config = $2
+        WHERE id = $1
+        RETURNING shared_client_config
+        ",
+        &[&account_id, &client_config],
+    ).await?;
+    let row = maybe_row.ok_or(DatabaseError::NotFound("user account"))?;
+    let client_config = row.try_get("shared_client_config")?;
+    Ok(client_config)
 }
 
 pub async fn get_user_by_id(
@@ -644,13 +666,14 @@ mod tests {
     use serial_test::serial;
     use crate::{
         database::test_utils::create_test_database,
+        posts::types::Visibility,
         profiles::types::{
             DbActor,
             DbActorKey,
             WebfingerHostname,
         },
         users::{
-            test_utils::create_test_portable_user,
+            test_utils::{create_test_user, create_test_portable_user},
             types::Role,
         },
     };
@@ -676,6 +699,8 @@ mod tests {
         let user = create_user(db_client, user_data).await.unwrap();
         assert_eq!(user.profile.username, "myname");
         assert_eq!(user.role, Role::NormalUser);
+        assert_eq!(user.client_config, ClientConfig::default());
+        assert_eq!(user.shared_client_config, SharedClientConfig::default());
     }
 
     #[tokio::test]
@@ -735,6 +760,25 @@ mod tests {
         assert_eq!(
             client_config.get(client_name).unwrap(),
             &client_config_value,
+        );
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_set_shared_client_config() {
+        let db_client = &mut create_test_database().await;
+        let user = create_test_user(db_client, "test").await;
+        let mut client_config = user.shared_client_config.clone();
+        client_config.default_post_visibility = Visibility::Followers;
+        set_shared_client_config(
+            db_client,
+            user.id,
+            client_config,
+        ).await.unwrap();
+        let user = get_user_by_id(db_client, user.id).await.unwrap();
+        assert_eq!(
+            user.shared_client_config.default_post_visibility,
+            Visibility::Followers,
         );
     }
 

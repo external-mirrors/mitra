@@ -11,6 +11,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Added support for configuration files in TOML format.
 - Indicate restricted access to public timeline in `configuration.timelines_access` mapping ([#139](https://codeberg.org/silverpill/mitra/issues/139)).
 - Added `/api/v1/favourites` API endpoint.
+- Added `/api/v1/preferences` API endpoint.
+- Added shared default post visibility setting.
 
 ### Changed
 

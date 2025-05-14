@@ -17,7 +17,13 @@ use apx_core::{
 };
 use chrono::{DateTime, Utc};
 use postgres_types::FromSql;
-use serde::Deserialize;
+use serde::{
+    Deserialize,
+    Deserializer,
+    Serialize,
+    Serializer,
+    de::Error as DeserializerError,
+};
 use serde_json::{Value as JsonValue};
 use tokio_postgres::Row;
 use uuid::Uuid;
@@ -25,10 +31,11 @@ use uuid::Uuid;
 use crate::{
     database::{
         int_enum::{int_enum_from_sql, int_enum_to_sql},
-        json_macro::json_from_sql,
+        json_macro::{json_from_sql, json_to_sql},
         DatabaseError,
         DatabaseTypeError,
     },
+    posts::types::Visibility,
     profiles::types::{get_identity_key, DbActorProfile},
 };
 
@@ -133,6 +140,43 @@ impl DbClientConfig {
 
 json_from_sql!(DbClientConfig);
 
+impl<'de> Deserialize<'de> for Visibility {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where D: Deserializer<'de>
+    {
+        i16::deserialize(deserializer)?
+            .try_into().map_err(DeserializerError::custom)
+    }
+}
+
+impl Serialize for Visibility {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where S: Serializer
+    {
+        serializer.serialize_i16(i16::from(*self))
+    }
+}
+
+fn default_default_post_visibility() -> Visibility { Visibility::Public }
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct SharedClientConfig {
+    #[serde(default = "default_default_post_visibility")]
+    pub default_post_visibility: Visibility,
+}
+
+impl Default for SharedClientConfig {
+    fn default() -> Self {
+        Self {
+            default_post_visibility: default_default_post_visibility(),
+        }
+    }
+}
+
+json_from_sql!(SharedClientConfig);
+json_to_sql!(SharedClientConfig);
+
 #[allow(dead_code)]
 #[derive(FromSql)]
 #[postgres(name = "user_account")]
@@ -146,6 +190,7 @@ pub struct DbUser {
     invite_code: Option<String>,
     user_role: Role,
     client_config: DbClientConfig,
+    shared_client_config: SharedClientConfig,
     created_at: DateTime<Utc>,
 }
 
@@ -160,6 +205,7 @@ pub struct User {
     pub ed25519_secret_key: Ed25519SecretKey,
     pub role: Role,
     pub client_config: ClientConfig,
+    pub shared_client_config: SharedClientConfig,
     pub profile: DbActorProfile,
 }
 
@@ -188,6 +234,7 @@ impl Default for User {
             ed25519_secret_key: generate_weak_ed25519_key(),
             role: Role::default(),
             client_config: ClientConfig::default(),
+            shared_client_config: SharedClientConfig::default(),
             profile: DbActorProfile {
                 id: id,
                 ..Default::default()
@@ -231,6 +278,7 @@ impl User {
             ed25519_secret_key: ed25519_secret_key,
             role: db_user.user_role,
             client_config: db_user.client_config.into_inner(),
+            shared_client_config: db_user.shared_client_config,
             profile: db_profile,
         };
         Ok(user)

@@ -144,6 +144,16 @@ pub struct Status {
     links: Vec<Status>,
 }
 
+pub fn visibility_to_str(visibility: Visibility) -> &'static str {
+    match visibility {
+        Visibility::Public => "public",
+        Visibility::Direct => "direct",
+        Visibility::Followers => "private",
+        Visibility::Subscribers => "subscribers",
+        Visibility::Conversation => "conversation",
+    }
+}
+
 impl Status {
     pub fn from_post(
         instance_uri: &str,
@@ -206,13 +216,7 @@ impl Status {
         let links: Vec<Status> = related_posts.linked.into_iter().map(|post| {
             Status::from_post(instance_uri, media_server, post)
         }).collect();
-        let visibility = match post.visibility {
-            Visibility::Public => "public",
-            Visibility::Direct => "direct",
-            Visibility::Followers => "private",
-            Visibility::Subscribers => "subscribers",
-            Visibility::Conversation => "conversation",
-        };
+        let visibility = visibility_to_str(post.visibility);
         let mut emoji_reactions = vec![];
         let mut favourites_count = 0;
         for reaction in post.reactions {
@@ -498,6 +502,15 @@ impl ConversationTrackingData {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_visibility() {
+        let visibility = Visibility::Followers;
+        let visibility_str = visibility_to_str(visibility);
+        assert_eq!(visibility_str, "private");
+        let result = visibility_from_str(visibility_str);
+        assert_eq!(result.unwrap(), visibility);
+    }
 
     #[test]
     fn test_status_from_post() {

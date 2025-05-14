@@ -22,6 +22,7 @@ use mitra_adapters::payments::subscriptions::MONERO_PAYMENT_AMOUNT_MIN;
 use mitra_config::MediaLimits;
 use mitra_models::{
     media::types::{MediaInfo, PartialMediaInfo},
+    posts::types::Visibility,
     profiles::types::{
         DbActorProfile,
         ExtraField,
@@ -34,6 +35,7 @@ use mitra_models::{
         ClientConfig,
         Permission,
         Role as DbRole,
+        SharedClientConfig,
         User,
     },
 };
@@ -60,6 +62,7 @@ use crate::mastodon_api::{
         serialize_datetime,
         serialize_datetime_opt,
     },
+    statuses::types::{visibility_from_str, visibility_to_str},
     uploads::{save_b64_file, UploadError},
 };
 
@@ -95,7 +98,7 @@ pub enum AccountPaymentOption {
 pub struct AccountSource {
     pub note: Option<String>,
     pub fields: Vec<AccountField>,
-    privacy: String,
+    privacy: &'static str,
     sensitive: bool,
 }
 
@@ -329,7 +332,7 @@ impl Account {
         let source = AccountSource {
             note: user.profile.bio_source.clone(),
             fields: fields_sources,
-            privacy: "public".to_string(),
+            privacy: visibility_to_str(user.shared_client_config.default_post_visibility),
             sensitive: false,
         };
         let role = Role::from_db(user.role);
@@ -381,6 +384,32 @@ struct AccountFieldSource {
 
 // Supports partial updates
 #[derive(Deserialize)]
+pub struct AccountSourceData {
+    privacy: Option<String>,
+}
+
+impl AccountSourceData {
+    pub fn update_shared_client_config(
+        &self,
+        client_config: &SharedClientConfig,
+    ) -> Result<SharedClientConfig, ValidationError> {
+        let mut client_config = client_config.clone();
+        if let Some(ref privacy) = self.privacy {
+            let visibility = visibility_from_str(privacy)?;
+            if !matches!(
+                visibility,
+                Visibility::Public | Visibility::Followers | Visibility::Subscribers,
+            ) {
+                return Err(ValidationError("invalid default visibility"));
+            };
+            client_config.default_post_visibility = visibility;
+        };
+        Ok(client_config)
+    }
+}
+
+// Supports partial updates
+#[derive(Deserialize)]
 pub struct AccountUpdateData {
     display_name: Option<String>,
     note: Option<String>,
@@ -391,6 +420,7 @@ pub struct AccountUpdateData {
     bot: Option<bool>,
     locked: Option<bool>,
     fields_attributes: Option<Vec<AccountFieldSource>>,
+    pub source: Option<AccountSourceData>,
 
     // Not supported by Mastodon API clients
     mention_policy: Option<String>,
@@ -524,6 +554,9 @@ pub struct AccountUpdateMultipartForm {
     fields_attributes_3_name: Option<Text<String>>,
     #[multipart(rename = "fields_attributes[3][value]")]
     fields_attributes_3_value: Option<Text<String>>,
+
+    #[multipart(rename = "source[privacy]")]
+    source_privacy: Option<Text<String>>,
 }
 
 impl From<AccountUpdateMultipartForm> for AccountUpdateData {
@@ -548,6 +581,9 @@ impl From<AccountUpdateMultipartForm> for AccountUpdateData {
                 }
             })
             .collect();
+        let source_data = AccountSourceData {
+            privacy: form.source_privacy.map(|value| value.into_inner()),
+        };
         Self {
             display_name: form.display_name
                 .map(|value| value.into_inner()),
@@ -573,6 +609,7 @@ impl From<AccountUpdateMultipartForm> for AccountUpdateData {
                 .is_empty()
                 .not()
                 .then_some(fields_attributes),
+            source: Some(source_data),
             mention_policy: None,
         }
     }
