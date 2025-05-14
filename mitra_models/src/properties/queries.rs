@@ -29,10 +29,10 @@ pub async fn set_internal_property(
     Ok(())
 }
 
-pub async fn get_internal_property<T: DeserializeOwned>(
+pub async fn get_internal_property_json(
     db_client: &impl DatabaseClient,
     name: &str,
-) -> Result<Option<T>, DatabaseError> {
+) -> Result<Option<JsonValue>, DatabaseError> {
     let maybe_row = db_client.query_opt(
         "
         SELECT property_value
@@ -41,9 +41,20 @@ pub async fn get_internal_property<T: DeserializeOwned>(
         ",
         &[&name],
     ).await?;
-    let maybe_value = match maybe_row {
-        Some(row) => {
-            let value_json: JsonValue = row.try_get("property_value")?;
+    let maybe_value = maybe_row
+        .map(|row| row.try_get("property_value"))
+        .transpose()?;
+    Ok(maybe_value)
+}
+
+pub async fn get_internal_property<T: DeserializeOwned>(
+    db_client: &impl DatabaseClient,
+    name: &str,
+) -> Result<Option<T>, DatabaseError> {
+    let maybe_value = match
+        get_internal_property_json(db_client, name).await?
+    {
+        Some(value_json) => {
             let value: T = serde_json::from_value(value_json)
                 .map_err(|_| DatabaseTypeError)?;
             Some(value)

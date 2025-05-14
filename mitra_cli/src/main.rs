@@ -40,6 +40,7 @@ async fn main() -> Result<(), Error> {
             let result = run_server(config, db_pool).await;
             result.map_err(Into::into)
         },
+        SubCommand::GetConfig(cmd) => cmd.execute(db_client).await,
         SubCommand::UpdateConfig(cmd) => cmd.execute(db_client).await,
         SubCommand::AddFilterRule(cmd) => cmd.execute(db_client).await,
         SubCommand::RemoveFilterRule(cmd) => cmd.execute(db_client).await,

@@ -7,9 +7,12 @@ use mitra_adapters::dynamic_config::{
 };
 use mitra_models::{
     database::DatabaseClient,
-    properties::constants::{
-        FEDERATED_TIMELINE_RESTRICTED,
-        FILTER_KEYWORDS,
+    properties::{
+        constants::{
+            FEDERATED_TIMELINE_RESTRICTED,
+            FILTER_KEYWORDS,
+        },
+        queries::get_internal_property_json,
     },
 };
 
@@ -31,6 +34,29 @@ impl ParameterName {
         };
         assert!(EDITABLE_PROPERTIES.contains(&name_str));
         name_str
+    }
+}
+
+/// Get value of a dynamic configuration parameter
+#[derive(Parser)]
+pub struct GetConfig {
+    name: ParameterName,
+}
+
+impl GetConfig {
+    pub async fn execute(
+        &self,
+        db_client: &impl DatabaseClient,
+    ) -> Result<(), Error> {
+        let maybe_value = get_internal_property_json(
+            db_client,
+            self.name.as_str(),
+        ).await?;
+        let Some(value) = maybe_value else {
+            return Err(Error::msg("value is not set"));
+        };
+        println!("{value}");
+        Ok(())
     }
 }
 

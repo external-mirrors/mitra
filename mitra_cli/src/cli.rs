@@ -119,7 +119,7 @@ use crate::commands::{
         LoadReplies,
         ReadOutbox,
     },
-    config::UpdateConfig,
+    config::{GetConfig, UpdateConfig},
     filter::{AddFilterRule, ListFilterRules, RemoveFilterRule},
     post::CreatePost,
     storage::PruneReposts,
@@ -140,6 +140,7 @@ pub struct Cli {
 pub enum SubCommand {
     /// Start HTTP server
     Server,
+    GetConfig(GetConfig),
     UpdateConfig(UpdateConfig),
     AddFilterRule(AddFilterRule),
     RemoveFilterRule(RemoveFilterRule),
