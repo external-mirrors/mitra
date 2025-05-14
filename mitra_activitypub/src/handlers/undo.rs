@@ -22,12 +22,11 @@ use mitra_models::{
         get_follow_request_by_remote_activity_id,
         unfollow,
     },
-    users::queries::get_user_by_name,
 };
 use mitra_validators::errors::ValidationError;
 
 use crate::{
-    identifiers::{canonicalize_id, parse_local_actor_id},
+    identifiers::canonicalize_id,
     importers::{ActorIdResolver, ApClient},
     vocabulary::{ANNOUNCE, FOLLOW, LIKE},
 };
@@ -42,7 +41,7 @@ struct UndoFollow {
 
 /// Special handler for Undo with embedded Follow
 async fn handle_undo_follow(
-    config: &Config,
+    ap_client: &ApClient,
     db_client: &mut impl DatabaseClient,
     activity: Value,
 ) -> HandlerResult {
@@ -55,12 +54,12 @@ async fn handle_undo_follow(
     // Use object because activity ID might not be present
     let target_actor_id = object_to_id(&activity.object["object"])
         .map_err(|_| ValidationError("invalid follow activity object"))?;
-    let target_username = parse_local_actor_id(
-        &config.instance_url(),
+    let target_profile = ActorIdResolver::default().resolve(
+        ap_client,
+        db_client,
         &target_actor_id,
-    )?;
-    let target_user = get_user_by_name(db_client, &target_username).await?;
-    match unfollow(db_client, source_profile.id, target_user.id).await {
+    ).await?;
+    match unfollow(db_client, source_profile.id, target_profile.id).await {
         Ok(_) => (),
         // Ignore Undo if relationship doesn't exist
         Err(DatabaseError::NotFound(_)) => return Ok(None),
@@ -81,13 +80,13 @@ pub async fn handle_undo(
     db_client: &mut impl DatabaseClient,
     activity: Value,
 ) -> HandlerResult {
+    let ap_client = ApClient::new(config, db_client).await?;
     if let Some(FOLLOW) = activity["object"]["type"].as_str() {
         // Undo() with nested follow activity
-        return handle_undo_follow(config, db_client, activity).await;
+        return handle_undo_follow(&ap_client, db_client, activity).await;
     };
 
     let activity: Undo = serde_json::from_value(activity)?;
-    let ap_client = ApClient::new(config, db_client).await?;
     let actor_profile = ActorIdResolver::default().only_remote().resolve(
         &ap_client,
         db_client,
