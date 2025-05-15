@@ -1843,8 +1843,14 @@ pub async fn get_post_count(
     db_client: &impl DatabaseClient,
     only_local: bool,
 ) -> Result<i64, DatabaseError> {
-    let mut condition =
-        "post.in_reply_to_id IS NULL AND post.repost_of_id IS NULL".to_string();
+    let mut condition = format!(
+        "
+        post.in_reply_to_id IS NULL
+        AND post.repost_of_id IS NULL
+        AND post.visibility != {visibility_direct}
+        ",
+        visibility_direct=i16::from(Visibility::Direct),
+    );
     if only_local {
         condition.push_str(" AND (
             actor_profile.user_id IS NOT NULL
