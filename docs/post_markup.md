@@ -6,6 +6,7 @@ Mitra supports a subset of [CommonMark](http://commonmark.org/) spec:
 - `inline code` and code blocks
 - Links
 - Headings (level 1 only)
+- Blockquotes (space after `>` is required).
 
 And the following extensions and microsyntaxes:
 

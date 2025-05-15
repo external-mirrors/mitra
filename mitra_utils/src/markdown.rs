@@ -153,6 +153,7 @@ fn fix_linebreaks(html: &str) -> String {
 ///
 /// Supported features:
 /// - headings (level 1 only)
+/// - blockquotes
 /// - bold and italic
 /// - links and autolinks
 /// - inline code and code blocks
@@ -175,7 +176,7 @@ pub fn markdown_lite_to_html(text: &str) -> Result<String, MarkdownError> {
         &options,
     );
 
-    // Re-render blockquotes, headings, HRs and lists
+    // Re-render headings, HRs and lists
     // Replace images with links
     // TODO: disable parser rules https://github.com/kivikakk/comrak/issues/244
     iter_nodes(root, &|node| {
@@ -186,14 +187,9 @@ pub fn markdown_lite_to_html(text: &str) -> Result<String, MarkdownError> {
             // https://git.pleroma.social/pleroma/pleroma/-/issues/2413
             NodeValue::Heading(heading) if heading.level == 1 => (),
             // Blocks
-            // TODO: don't re-render blockquotes?
-            NodeValue::BlockQuote | NodeValue::Heading(_) | NodeValue::ThematicBreak => {
+            NodeValue::Heading(_) | NodeValue::ThematicBreak => {
                 // Replace children with paragraph containing markdown
-                let mut markdown = node_to_markdown(node, &options)?;
-                if matches!(node_value, NodeValue::BlockQuote) {
-                    // Fix greentext
-                    markdown = markdown.replace("> ", ">");
-                };
+                let markdown = node_to_markdown(node, &options)?;
                 for child in node.children() {
                     child.detach();
                 };
@@ -353,9 +349,18 @@ mod tests {
 
     #[test]
     fn test_markdown_lite_to_html_headings() {
+        // Level 2: depends on experimental_minimize_commonmark flag
         let text = "# heading1\n\n## heading2!\n\ntext";
         let html = markdown_lite_to_html(text).unwrap();
         let expected_html = r#"<h1>heading1</h1><p>## heading2!</p><p>text</p>"#;
+        assert_eq!(html, expected_html);
+    }
+
+    #[test]
+    fn test_markdown_lite_to_html_with_blockquote() {
+        let text = "> one\n> two\n>three\n";
+        let html = markdown_lite_to_html(text).unwrap();
+        let expected_html = r#"<blockquote><p>one<br>two</p></blockquote><p>&gt;three</p>"#;
         assert_eq!(html, expected_html);
     }
 
@@ -381,17 +386,6 @@ mod tests {
         let html = markdown_lite_to_html(text).unwrap();
         let expected_html = r#"<p>&gt;one<br>&gt;two<br>&gt;three</p><p>test</p>"#;
         assert_eq!(html, expected_html);
-    }
-
-    #[test]
-    fn test_markdown_lite_to_html_greentext_with_special_characters() {
-        // Depends on experimental_minimize_commonmark flag
-        let text = "> blockquote! test[]";
-        let html = markdown_lite_to_html(text).unwrap();
-        assert_eq!(
-            html,
-            r#"<p>&gt;blockquote! test[]</p>"#,
-        );
     }
 
     #[test]
