@@ -58,7 +58,7 @@ async fn check_unsolicited_message(
     // is_local_or_followed returns true if actor has local account
     let author_has_followers =
         is_local_or_followed(db_client, &canonical_author_id).await?;
-    let audience = get_audience(object);
+    let audience = get_audience(object)?;
     // TODO: FEP-EF61: find portable local recipients
     let has_local_recipients = audience.iter().any(|actor_id| {
         parse_local_actor_id(instance_url, actor_id).is_ok()

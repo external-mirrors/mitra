@@ -11,8 +11,8 @@ use uuid::Uuid;
 
 use apx_sdk::{
     addresses::WebfingerAddress,
-    constants::{AP_MEDIA_TYPE, AS_MEDIA_TYPE},
-    core::url::canonical::is_same_origin,
+    constants::{AP_MEDIA_TYPE, AP_PUBLIC, AS_MEDIA_TYPE},
+    core::url::canonical::{is_same_origin, Url},
     deserialization::{
         deserialize_into_id_array,
         deserialize_into_link_href,
@@ -164,6 +164,10 @@ impl AttributedObject {
             return Err(ValidationError("object is actor"));
         };
         Ok(())
+    }
+
+    fn audience(&self) -> Vec<&String> {
+        self.to.iter().chain(self.cc.iter()).collect()
     }
 
     fn language(&self) -> Option<Language> {
@@ -644,7 +648,7 @@ async fn get_object_tags(
     };
 
     // Create mentions for known actors in "to" and "cc" fields
-    let audience = get_audience(object);
+    let audience = get_audience(object)?;
     for target_id in audience {
         if is_public(&target_id) {
             continue;
@@ -702,15 +706,33 @@ async fn get_object_tags(
     Ok((mentions, hashtags, links, emojis))
 }
 
-pub(super) fn get_audience(object: &AttributedObject) -> Vec<String> {
+pub fn normalize_audience(
+    audience: &[impl AsRef<str>],
+) -> Result<Vec<Url>, ValidationError> {
+    let mut normalized_audience = audience.iter()
+        .map(|target_id| {
+            let normalized_target_id = if is_public(target_id) {
+                AP_PUBLIC
+            } else {
+                target_id.as_ref()
+            };
+            canonicalize_id(normalized_target_id)
+                .map_err(|_| ValidationError("invalid target ID"))
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+    normalized_audience.sort_by_key(|id| id.to_string());
+    normalized_audience.dedup_by_key(|id| id.to_string());
+    Ok(normalized_audience)
+}
+
+pub(super) fn get_audience(
+    object: &AttributedObject,
+) -> Result<Vec<String>, ValidationError> {
     let mut audience = vec![];
-    for target_id in object.to.iter().chain(object.cc.iter()) {
-        match canonicalize_id(target_id) {
-            Ok(canonical_target_id) => audience.push(canonical_target_id.to_string()),
-            Err(_) => audience.push(target_id.to_string()),
-        };
+    for target_id in normalize_audience(&object.audience())? {
+        audience.push(target_id.to_string());
     };
-    audience
+    Ok(audience)
 }
 
 fn get_object_visibility(
@@ -902,7 +924,7 @@ pub async fn create_remote_post(
         maybe_in_reply_to.as_ref().map(|post| post.id),
     ).await?;
 
-    let audience = get_audience(&object);
+    let audience = get_audience(&object)?;
     let (visibility, context) = get_object_visibility(
         &author,
         &audience,
@@ -1182,6 +1204,25 @@ mod tests {
         let output = normalize_hashtag(tag).unwrap();
 
         assert_eq!(output, "activitypub");
+    }
+
+    #[test]
+    fn test_normalize_audience() {
+        let audience = vec![
+            "https://social.example/actors/1/followers".to_owned(),
+            "as:Public".to_owned(),
+            "https://social.example/actors/1/followers".to_owned(),
+        ];
+        let normalized_audience = normalize_audience(&audience).unwrap();
+        assert_eq!(normalized_audience.len(), 2);
+        assert_eq!(
+            normalized_audience[0].to_string(),
+            "https://social.example/actors/1/followers",
+        );
+        assert_eq!(
+            normalized_audience[1].to_string(),
+            "https://www.w3.org/ns/activitystreams#Public",
+        );
     }
 
     #[test]

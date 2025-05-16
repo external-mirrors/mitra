@@ -24,6 +24,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Create reposts for `Article` objects addressed to FEP-1b12 groups.
 - Reject `Update(Object)` activity if `inReplyTo` has changed.
 - Write warning to log if scope widening happens in a remote reply.
+- Reject objects with invalid audience.
 
 ### Fixed
 

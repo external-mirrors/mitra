@@ -177,6 +177,15 @@ mod tests {
     }
 
     #[test]
+    fn test_parse_url_https_with_fragment() {
+        let url_str = "https://www.w3.org/ns/activitystreams#Public";
+        let (url, maybe_gateway) = parse_url(url_str).unwrap();
+        assert!(matches!(url, Url::Http(_)));
+        assert_eq!(maybe_gateway, None);
+        assert_eq!(url.to_string(), url_str);
+    }
+
+    #[test]
     fn test_parse_url_i2p() {
         let url_str = "http://social.example.i2p/users/test";
         let (url, maybe_gateway) = parse_url(url_str).unwrap();

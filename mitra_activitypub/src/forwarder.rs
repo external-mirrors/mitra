@@ -2,6 +2,7 @@ use serde::Deserialize;
 use serde_json::{Value as JsonValue};
 
 use apx_sdk::{
+    constants::AP_PUBLIC,
     core::{
         crypto::common::PublicKey,
         crypto_eddsa::ed25519_public_key_from_secret_key,
@@ -9,7 +10,7 @@ use apx_sdk::{
         url::canonical::Url,
     },
     deserialization::deserialize_into_id_array,
-    utils::{is_public, is_verification_method},
+    utils::is_verification_method,
 };
 use mitra_config::Instance;
 use mitra_models::{
@@ -20,7 +21,7 @@ use mitra_models::{
 use mitra_validators::errors::ValidationError;
 
 use crate::{
-    identifiers::canonicalize_id,
+    handlers::note::normalize_audience,
     importers::get_profile_by_actor_id,
     keys::verification_method_to_public_key,
     ownership::is_local_origin,
@@ -105,11 +106,10 @@ pub fn get_activity_audience(
     if audience.is_empty() {
         log::warn!("activity audience is not known");
     };
-    let audience: Vec<_> = audience
-        .iter()
-        .filter(|target_id| !is_public(target_id))
-        .map(|id| canonicalize_id(id))
-        .collect::<Result<_, _>>()?;
+    let audience = normalize_audience(&audience)?
+        .into_iter()
+        .filter(|target_id| target_id.to_string() != AP_PUBLIC)
+        .collect();
     Ok(audience)
 }
 
