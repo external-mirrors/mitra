@@ -19,6 +19,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Deliver activities to one onion server at a time.
 - Removed unnecessary database query in portable outbox handler.
 - Don't include DMs in post count.
+- Ignore actor's public keys that have different owner.
 
 ### Fixed
 

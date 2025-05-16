@@ -389,19 +389,20 @@ fn parse_public_keys(
     let mut keys = vec![];
     if let Some(public_key) = actor.public_key.as_ref() {
         if public_key.owner != actor.id {
-            return Err(ValidationError("public key is not owned by actor"));
+            log::warn!("public key is not owned by actor");
+        } else {
+            let db_key = public_key.to_db_key()?;
+            keys.push(db_key);
         };
-        let db_key = public_key.to_db_key()?;
-        keys.push(db_key);
     };
     let verification_methods = &actor.assertion_method;
     for multikey in verification_methods {
-        if multikey.controller == actor.id {
-            let db_key = multikey.to_db_key()?;
-            keys.push(db_key);
-        } else {
-            return Err(ValidationError("verification method is not owned by actor"));
+        if multikey.controller != actor.id {
+            log::warn!("verification method is not owned by actor");
+            continue;
         };
+        let db_key = multikey.to_db_key()?;
+        keys.push(db_key);
     };
     keys.sort_by_key(|item| item.id.clone());
     keys.dedup_by_key(|item| item.id.clone());
@@ -409,7 +410,7 @@ fn parse_public_keys(
         let canonical_actor_id = Url::parse(&actor.id)
             .map_err(|_| ValidationError("invalid actor ID"))?;
         if matches!(canonical_actor_id, Url::Ap(_)) {
-            log::warn!("public keys not found in portable actor object");
+            log::warn!("public keys are not found in portable actor object");
         } else {
             return Err(ValidationError("public keys not found"));
         };
