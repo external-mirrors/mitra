@@ -1,3 +1,5 @@
+use std::ops::Not;
+
 use actix_multipart::form::{
     bytes::Bytes,
     text::Text,
@@ -520,7 +522,7 @@ pub struct AccountUpdateMultipartForm {
 
 impl From<AccountUpdateMultipartForm> for AccountUpdateData {
     fn from(form: AccountUpdateMultipartForm) -> Self {
-        let fields_attributes = [
+        let fields_attributes: Vec<_> = [
             (form.fields_attributes_0_name, form.fields_attributes_0_value),
             (form.fields_attributes_1_name, form.fields_attributes_1_value),
             (form.fields_attributes_2_name, form.fields_attributes_2_value),
@@ -561,7 +563,10 @@ impl From<AccountUpdateMultipartForm> for AccountUpdateData {
                 .map(|value| value.into_inner()),
             locked: form.locked
                 .map(|value| value.into_inner()),
-            fields_attributes: Some(fields_attributes),
+            fields_attributes: fields_attributes
+                .is_empty()
+                .not()
+                .then_some(fields_attributes),
             mention_policy: None,
         }
     }

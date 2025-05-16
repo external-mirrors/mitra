@@ -25,6 +25,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Fetch target actor when processing portable `Follow` activity.
 - Add incoming activities to portable actor's inbox even if audience is not specified.
 - Fixed error during processing of `Undo(Follow)` activity targeting portable actor.
+- Don't clear extra fields when performing partial profile update with `multipart/form-data`.
 
 ## [4.2.1] - 2025-05-08
 
