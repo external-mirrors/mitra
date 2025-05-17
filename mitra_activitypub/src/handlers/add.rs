@@ -30,11 +30,12 @@ use crate::{
     identifiers::parse_local_actor_id,
     importers::ApClient,
     ownership::{is_local_origin, is_same_origin, get_object_id, verify_activity_owner},
-    vocabulary::{CREATE, DISLIKE, EMOJI_REACT, LIKE, UPDATE},
+    vocabulary::{CREATE, DELETE, DISLIKE, EMOJI_REACT, LIKE, UPDATE},
 };
 
 use super::{
     create::handle_create,
+    delete::handle_delete,
     like::handle_like,
     update::handle_update,
     Descriptor,
@@ -137,6 +138,14 @@ async fn handle_fep_171b_add(
                 true, // don't perform spam check
             ).await?;
             Ok(Some(Descriptor::object(activity_type)))
+        },
+        DELETE => {
+            let maybe_type = handle_delete(
+                config,
+                db_client,
+                activity,
+            ).await?;
+            Ok(maybe_type.map(|_| Descriptor::object(activity_type)))
         },
         UPDATE => {
             let maybe_type = handle_update(
