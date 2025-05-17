@@ -112,7 +112,9 @@ use super::helpers::{
     PostContent,
 };
 use super::types::{
+    visibility_from_str,
     Context,
+    ReblogParams,
     Status,
     StatusData,
     StatusPreview,
@@ -160,12 +162,7 @@ async fn create_status(
         None
     };
     let visibility = match status_data.visibility.as_deref() {
-        Some("public" | "unlisted") => Visibility::Public,
-        Some("direct") => Visibility::Direct,
-        Some("private") => Visibility::Followers,
-        Some("subscribers") => Visibility::Subscribers,
-        Some("conversation") => Visibility::Conversation,
-        Some(_) => return Err(ValidationError("invalid visibility parameter").into()),
+        Some(visibility_str) => visibility_from_str(visibility_str)?,
         None => {
             // Default visibility
             maybe_in_reply_to.as_ref()
@@ -760,6 +757,7 @@ async fn unfavourite(
     Ok(HttpResponse::Ok().json(status))
 }
 
+// https://docs.joinmastodon.org/methods/statuses/#boost
 #[post("/{status_id}/reblog")]
 async fn reblog(
     auth: BearerAuth,
@@ -767,6 +765,7 @@ async fn reblog(
     connection_info: ConnectionInfo,
     db_pool: web::Data<DatabaseConnectionPool>,
     status_id: web::Path<Uuid>,
+    reblog_params: web::Json<ReblogParams>,
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &mut **get_database_client(&db_pool).await?;
     let current_user = get_current_user(db_client, auth.token()).await?;
@@ -777,7 +776,15 @@ async fn reblog(
     if !post.is_public() {
         return Err(MastodonError::NotFoundError("post"));
     };
-    let repost_data = PostCreateData::repost(status_id.into_inner(), None);
+    let visibility = match reblog_params.visibility.as_deref() {
+        Some(visibility_str) => visibility_from_str(visibility_str)?,
+        None => Visibility::Public,
+    };
+    let repost_data = PostCreateData::repost(
+        status_id.into_inner(),
+        visibility,
+        None,
+    );
     validate_repost_data(&repost_data)?;
     let mut repost = create_post(db_client, current_user.id, repost_data).await?;
     post.repost_count += 1;
@@ -830,8 +837,7 @@ async fn unreblog(
         &config.instance(),
         &current_user,
         &post,
-        repost.id,
-        repost.has_deprecated_ap_id,
+        &repost,
     ).await?.save_and_enqueue(db_client).await?;
 
     let base_url = get_request_base_url(connection_info);

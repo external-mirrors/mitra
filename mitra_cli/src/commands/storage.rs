@@ -40,8 +40,7 @@ impl PruneReposts {
                 &config.instance(),
                 &author,
                 &post,
-                repost.id,
-                repost.has_deprecated_ap_id,
+                &repost,
             ).await?.save_and_enqueue(db_client).await?;
             println!("deleted repost of post {}", post.id);
         };

@@ -215,7 +215,10 @@ pub fn validate_repost_data(
     if !matches!(repost_data.context, PostContext::Repost { .. }) {
         panic!("incorrect context");
     };
-    if repost_data.visibility != Visibility::Public {
+    if !matches!(
+        repost_data.visibility,
+        Visibility::Public | Visibility::Followers,
+    ) {
         return Err(ValidationError("invalid repost visibility"));
     };
     if let Some(ref object_id) = repost_data.object_id {

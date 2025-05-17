@@ -277,7 +277,11 @@ mod tests {
             ..Default::default()
         };
         let reply = create_post(db_client, author.id, reply_data).await.unwrap();
-        let repost_data = PostCreateData::repost(reply.id, None);
+        let repost_data = PostCreateData::repost(
+            reply.id,
+            Visibility::Public,
+            None,
+        );
         let mut repost = create_post(db_client, author.id, repost_data).await.unwrap();
         add_related_posts(db_client, vec![&mut repost]).await.unwrap();
         let related_posts = repost.related_posts.unwrap();

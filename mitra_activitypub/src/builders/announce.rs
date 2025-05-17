@@ -6,7 +6,7 @@ use apx_sdk::constants::AP_PUBLIC;
 use mitra_config::Instance;
 use mitra_models::{
     database::{DatabaseClient, DatabaseError},
-    posts::types::Post,
+    posts::types::{Post, Visibility},
     relationships::queries::get_followers,
     users::types::User,
 };
@@ -56,14 +56,23 @@ pub(super) fn local_announce_activity_id(
 }
 
 pub(super) fn get_announce_audience(
+    visibility: Visibility,
     actor_id: &str,
     recipient_id: &str,
 ) -> (Vec<String>, Vec<String>) {
     let mut primary_audience = vec![];
     let mut secondary_audience = vec![];
     let actor_followers = LocalActorCollection::Followers.of(actor_id);
-    primary_audience.push(AP_PUBLIC.to_owned());
-    secondary_audience.push(actor_followers);
+    match visibility {
+        Visibility::Public => {
+            primary_audience.push(AP_PUBLIC.to_owned());
+            secondary_audience.push(actor_followers);
+        },
+        Visibility::Followers => {
+            primary_audience.push(actor_followers);
+        },
+        _ => (),
+    };
     primary_audience.push(recipient_id.to_owned());
     (primary_audience, secondary_audience)
 }
@@ -81,6 +90,7 @@ pub fn build_announce(
     let activity_id = local_announce_activity_id(instance_url, repost.id, false);
     let recipient_id = profile_actor_id(instance_url, &post.author);
     let (primary_audience, secondary_audience) = get_announce_audience(
+        repost.visibility,
         &actor_id,
         &recipient_id,
     );
@@ -99,14 +109,20 @@ pub fn build_announce(
 pub async fn get_announce_recipients(
     db_client: &impl DatabaseClient,
     current_user: &User,
+    repost_visibility: Visibility,
     post: &Post,
 ) -> Result<Vec<Recipient>, DatabaseError> {
-    let followers = get_followers(db_client, current_user.id).await?;
     let mut recipients = vec![];
-    for profile in followers {
-        if let Some(remote_actor) = profile.actor_json {
-            recipients.extend(Recipient::from_actor_data(&remote_actor));
-        };
+    match repost_visibility {
+        Visibility::Public | Visibility::Followers => {
+            let followers = get_followers(db_client, current_user.id).await?;
+            for profile in followers {
+                if let Some(remote_actor) = profile.actor_json {
+                    recipients.extend(Recipient::from_actor_data(&remote_actor));
+                };
+            };
+        },
+        _ => (),
     };
     if let Some(remote_actor) = post.author.actor_json.as_ref() {
         recipients.extend(Recipient::from_actor_data(remote_actor));
@@ -128,6 +144,7 @@ pub async fn prepare_announce(
     let recipients = get_announce_recipients(
         db_client,
         sender,
+        repost.visibility,
         post,
     ).await?;
     let activity = build_announce(

@@ -281,6 +281,18 @@ pub struct PollParams {
     pub multiple: Option<bool>,
 }
 
+pub fn visibility_from_str(value: &str) -> Result<Visibility, ValidationError> {
+    let visibility = match value {
+        "public" | "unlisted" => Visibility::Public,
+        "direct" => Visibility::Direct,
+        "private" => Visibility::Followers,
+        "subscribers" => Visibility::Subscribers,
+        "conversation" => Visibility::Conversation,
+        _ => return Err(ValidationError("invalid visibility parameter")),
+    };
+    Ok(visibility)
+}
+
 // https://docs.joinmastodon.org/methods/statuses/
 #[derive(Debug, Deserialize)]
 pub struct StatusData {
@@ -415,6 +427,11 @@ pub struct StatusUpdateData {
 pub struct Context {
     pub ancestors: Vec<Status>,
     pub descendants: Vec<Status>,
+}
+
+#[derive(Deserialize)]
+pub struct ReblogParams {
+    pub visibility: Option<String>,
 }
 
 #[cfg(test)]

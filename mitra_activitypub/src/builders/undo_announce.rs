@@ -4,7 +4,7 @@ use uuid::Uuid;
 use mitra_config::Instance;
 use mitra_models::{
     database::{DatabaseClient, DatabaseError},
-    posts::types::Post,
+    posts::types::{Post, Repost, Visibility},
     profiles::types::DbActorProfile,
     users::types::User,
 };
@@ -46,6 +46,7 @@ fn build_undo_announce(
     actor_profile: &DbActorProfile,
     repost_id: Uuid,
     repost_has_deprecated_ap_id: bool,
+    repost_visibility: Visibility,
     post_author: &DbActorProfile,
 ) -> UndoAnnounce {
     let object_id = local_announce_activity_id(
@@ -57,6 +58,7 @@ fn build_undo_announce(
     let actor_id = local_actor_id(instance_url, &actor_profile.username);
     let recipient_id = profile_actor_id(instance_url, post_author);
     let (primary_audience, secondary_audience) = get_announce_audience(
+        repost_visibility,
         &actor_id,
         &recipient_id,
     );
@@ -76,20 +78,21 @@ pub async fn prepare_undo_announce(
     instance: &Instance,
     sender: &User,
     post: &Post,
-    repost_id: Uuid,
-    repost_has_deprecated_ap_id: bool,
+    repost: &Repost,
 ) -> Result<OutgoingActivityJobData, DatabaseError> {
-    assert_ne!(post.id, repost_id);
+    assert_ne!(post.id, repost.id);
     let recipients = get_announce_recipients(
         db_client,
         sender,
+        repost.visibility,
         post,
     ).await?;
     let activity = build_undo_announce(
         &instance.url(),
         &sender.profile,
-        repost_id,
-        repost_has_deprecated_ap_id,
+        repost.id,
+        repost.has_deprecated_ap_id,
+        repost.visibility,
         &post.author,
     );
     Ok(OutgoingActivityJobData::new(
@@ -122,6 +125,7 @@ mod tests {
             &announcer,
             repost_id,
             true, // legacy activity ID
+            Visibility::Public,
             &post_author,
         );
         assert_eq!(
@@ -142,6 +146,7 @@ mod tests {
             &announcer,
             repost_id,
             false, // no legacy activity ID
+            Visibility::Public,
             &post_author,
         );
         assert_eq!(

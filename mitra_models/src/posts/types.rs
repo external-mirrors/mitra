@@ -454,6 +454,7 @@ pub struct Repost {
     pub author_id: Uuid,
     pub repost_of_id: Uuid,
     pub has_deprecated_ap_id: bool,
+    pub visibility: Visibility,
 }
 
 impl TryFrom<&Row> for Repost {
@@ -469,6 +470,7 @@ impl TryFrom<&Row> for Repost {
             author_id: db_post.author_id,
             repost_of_id: repost_of_id,
             has_deprecated_ap_id: db_post.repost_has_deprecated_ap_id,
+            visibility: db_post.visibility,
         };
         Ok(repost)
     }
@@ -533,10 +535,12 @@ pub struct PostCreateData {
 impl PostCreateData {
     pub fn repost(
         repost_of_id: Uuid,
+        visibility: Visibility,
         object_id: Option<String>,
     ) -> Self {
         Self {
             context: PostContext::Repost { repost_of_id },
+            visibility: visibility,
             object_id: object_id,
             created_at: Utc::now(),
             ..Default::default()

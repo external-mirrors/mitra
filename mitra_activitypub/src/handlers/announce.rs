@@ -2,7 +2,12 @@ use serde::Deserialize;
 use serde_json::{Value as JsonValue};
 
 use apx_sdk::{
-    deserialization::{deserialize_into_object_id, object_to_id},
+    constants::AP_PUBLIC,
+    deserialization::{
+        deserialize_into_id_array,
+        deserialize_into_object_id,
+        object_to_id,
+    },
     utils::is_activity,
 };
 use mitra_config::Config;
@@ -16,7 +21,8 @@ use mitra_models::{
         get_remote_repost_by_activity_id,
         get_repost_by_author,
     },
-    posts::types::PostCreateData,
+    posts::types::{PostCreateData, Visibility},
+    profiles::types::DbActor,
 };
 use mitra_validators::{
     errors::ValidationError,
@@ -38,6 +44,7 @@ use crate::{
 use super::{
     create::handle_create,
     like::handle_like,
+    note::normalize_audience,
     undo::handle_undo,
     update::handle_update,
     Descriptor,
@@ -48,8 +55,34 @@ use super::{
 struct Announce {
     id: String,
     actor: String,
+
     #[serde(deserialize_with = "deserialize_into_object_id")]
     object: String,
+
+    #[serde(default, deserialize_with = "deserialize_into_id_array")]
+    to: Vec<String>,
+    #[serde(default, deserialize_with = "deserialize_into_id_array")]
+    cc: Vec<String>,
+}
+
+fn get_repost_visibility(
+    actor: &DbActor,
+    audience: &[String],
+) -> Result<Visibility, ValidationError> {
+    let normalized_audience = normalize_audience(audience)?;
+    let visibility = if normalized_audience.iter()
+        .any(|target_id| target_id.to_string() == AP_PUBLIC)
+    {
+        Visibility::Public
+    } else if normalized_audience.iter()
+        .any(|target_id| Some(target_id.to_string()) == actor.followers)
+    {
+        log::warn!("repost is not public");
+        Visibility::Followers
+    } else {
+        return Err(ValidationError("invalid repost visibility"));
+    };
+    Ok(visibility)
 }
 
 pub async fn handle_announce(
@@ -93,8 +126,13 @@ pub async fn handle_announce(
     if !post.is_public() {
         return Err(DatabaseError::NotFound("post").into());
     };
+    let visibility = get_repost_visibility(
+        author.expect_actor_data(),
+        &[announce.to.clone(), announce.cc.clone()].concat(),
+    )?;
     let repost_data = PostCreateData::repost(
         post.id,
+        visibility,
         Some(announce.id.clone()),
     );
     validate_repost_data(&repost_data)?;
@@ -215,6 +253,7 @@ async fn handle_fep_1b12_announce(
                 if post.is_public() && post.in_reply_to_id.is_none() {
                     let repost_data = PostCreateData::repost(
                         post.id,
+                        Visibility::Public,
                         Some(announce_id),
                     );
                     validate_repost_data(&repost_data)?;

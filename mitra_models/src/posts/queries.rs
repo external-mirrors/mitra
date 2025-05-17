@@ -1885,7 +1885,10 @@ mod tests {
             create_custom_feed,
         },
         database::test_utils::create_test_database,
-        posts::test_utils::create_test_local_post,
+        posts::test_utils::{
+            create_test_local_post,
+            create_test_remote_post,
+        },
         profiles::test_utils::{
             create_test_remote_profile,
         },
@@ -1951,7 +1954,11 @@ mod tests {
             ..Default::default()
         };
         let post = create_post(db_client, author.id, post_data).await.unwrap();
-        let repost_data = PostCreateData::repost(post.id, None);
+        let repost_data = PostCreateData::repost(
+            post.id,
+            Visibility::Public,
+            None,
+        );
         let repost = create_post(
             db_client,
             author.id,
@@ -2015,7 +2022,11 @@ mod tests {
         let db_client = &mut create_test_database().await;
         let author = create_test_user(db_client, "test").await;
         let post = create_test_local_post(db_client, author.id, "test").await;
-        let repost_data = PostCreateData::repost(post.id, None);
+        let repost_data = PostCreateData::repost(
+            post.id,
+            Visibility::Public,
+            None,
+        );
         let repost = create_post(
             db_client,
             author.id,
@@ -2076,7 +2087,11 @@ mod tests {
         };
         let post_6 = create_post(db_client, user_2.id, post_data_6).await.unwrap();
         // Followed user's repost
-        let post_data_7 = PostCreateData::repost(post_3.id, None);
+        let post_data_7 = PostCreateData::repost(
+            post_3.id,
+            Visibility::Public,
+            None,
+        );
         let post_7 = create_post(db_client, user_2.id, post_data_7).await.unwrap();
         // Direct message from followed user sent to another user
         let post_data_8 = PostCreateData {
@@ -2121,7 +2136,11 @@ mod tests {
         let user_4 = create_test_user(db_client, "hide reposts").await;
         follow(db_client, current_user.id, user_4.id).await.unwrap();
         hide_reposts(db_client, current_user.id, user_4.id).await.unwrap();
-        let post_data_13 = PostCreateData::repost(post_3.id, None);
+        let post_data_13 = PostCreateData::repost(
+            post_3.id,
+            Visibility::Public,
+            None,
+        );
         let post_13 = create_post(db_client, user_4.id, post_data_13).await.unwrap();
         // Post from followed user if muted
         let user_5 = create_test_user(db_client, "muted").await;
@@ -2256,6 +2275,12 @@ mod tests {
     async fn test_profile_timeline_guest() {
         let db_client = &mut create_test_database().await;
         let user = create_test_user(db_client, "test").await;
+        let another_user = create_test_remote_profile(
+            db_client,
+            "test",
+            "social.example",
+            "https://social.example/users/1",
+        ).await;
         // Public post
         let post_data_1 = PostCreateData {
             content: "my post".to_string(),
@@ -2291,8 +2316,31 @@ mod tests {
         };
         let reply = create_post(db_client, user.id, reply_data).await.unwrap();
         // Repost
-        let repost_data = PostCreateData::repost(reply.id, None);
-        let repost = create_post(db_client, user.id, repost_data).await.unwrap();
+        let another_user_post_1 = create_test_remote_post(
+            db_client,
+            another_user.id,
+            "public post 1",
+            "https://social.example/posts/1",
+        ).await;
+        let repost_data_1 = PostCreateData::repost(
+            another_user_post_1.id,
+            Visibility::Public,
+            None,
+        );
+        let repost_1 = create_post(db_client, user.id, repost_data_1).await.unwrap();
+        // Followers only repost
+        let another_user_post_2 = create_test_remote_post(
+            db_client,
+            another_user.id,
+            "public post 2",
+            "https://social.example/posts/2",
+        ).await;
+        let repost_data_2 = PostCreateData::repost(
+            another_user_post_2.id,
+            Visibility::Followers,
+            None,
+        );
+        let repost_2 = create_post(db_client, user.id, repost_data_2).await.unwrap();
 
         // Anonymous viewer
         let timeline = get_posts_by_author(
@@ -2312,7 +2360,8 @@ mod tests {
         assert_eq!(timeline.iter().any(|post| post.id == post_3.id), false);
         assert_eq!(timeline.iter().any(|post| post.id == post_4.id), false);
         assert_eq!(timeline.iter().any(|post| post.id == reply.id), false);
-        assert_eq!(timeline.iter().any(|post| post.id == repost.id), true);
+        assert_eq!(timeline.iter().any(|post| post.id == repost_1.id), true);
+        assert_eq!(timeline.iter().any(|post| post.id == repost_2.id), false);
     }
 
     #[tokio::test]

@@ -1955,6 +1955,19 @@ paths:
         - tokenAuth: []
       parameters:
         - $ref: '#/components/parameters/status_id'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                visibility:
+                  description: Visibility of the repost.
+                  type: string
+                  enum:
+                    - public
+                    - private
+                  default: public
       responses:
         200:
           description: Successful operation. Returns repost info.
