@@ -111,7 +111,7 @@ pub async fn delete_reaction(
 }
 
 /// Finds posts with reactions among given posts and returns their IDs.
-pub async fn find_reacted_by_user(
+pub(crate) async fn find_reacted_by_user(
     db_client: &impl DatabaseClient,
     user_id: Uuid,
     posts_ids: &[Uuid],

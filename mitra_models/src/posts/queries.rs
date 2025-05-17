@@ -913,10 +913,15 @@ pub async fn get_direct_timeline(
     Ok(posts)
 }
 
-pub async fn get_related_posts(
+pub(super) async fn get_related_posts(
     db_client: &impl DatabaseClient,
     posts_ids: Vec<Uuid>,
 ) -> Result<Vec<Post>, DatabaseError> {
+    // WARNING: read permissions are not checked here.
+    // Replies: scope widening is not allowed for local posts,
+    // but allowed for remote posts.
+    // Reposts: reposts of non-public posts are not allowed.
+    // Links: links to non-public posts are not allowed.
     let statement = format!(
         "
         WITH post_ids AS (SELECT unnest($1::uuid[]) AS post_id)
@@ -1509,7 +1514,7 @@ pub async fn get_repost_by_author(
 }
 
 /// Finds items reposted by user among given posts
-pub async fn find_reposted_by_user(
+pub(super) async fn find_reposted_by_user(
     db_client: &impl DatabaseClient,
     user_id: Uuid,
     posts_ids: &[Uuid],

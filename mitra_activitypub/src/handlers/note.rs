@@ -62,6 +62,7 @@ use mitra_validators::{
         validate_post_create_data,
         validate_post_mentions,
         validate_post_update_data,
+        validate_reply,
         EMOJI_LIMIT,
         HASHTAG_LIMIT,
         LINK_LIMIT,
@@ -941,6 +942,15 @@ pub async fn create_remote_post(
     };
     validate_post_create_data(&post_data)?;
     validate_post_mentions(&post_data.mentions, post_data.visibility)?;
+    if let Some(in_reply_to) = maybe_in_reply_to {
+        // TODO: disallow scope widening (see also: get_related_posts)
+        validate_reply(
+            &in_reply_to,
+            author.id,
+            post_data.visibility,
+            &post_data.mentions,
+        ).unwrap_or_else(|error| log::warn!("{error}"));
+    };
     check_post_limits(&ap_client.limits.posts, &post_data.attachments, false)?;
     let post = create_post(db_client, author.id, post_data).await?;
     save_attributed_object(
@@ -1071,6 +1081,15 @@ pub async fn update_remote_post(
     };
     validate_post_update_data(&post_data)?;
     validate_post_mentions(&post_data.mentions, post.visibility)?;
+    if let Some(in_reply_to) = maybe_in_reply_to {
+        // TODO: disallow scope widening (see also: get_related_posts)
+        validate_reply(
+            &in_reply_to,
+            post.author.id,
+            post.visibility,
+            &post_data.mentions,
+        ).unwrap_or_else(|error| log::warn!("{error}"));
+    };
     check_post_limits(&ap_client.limits.posts, &post_data.attachments, false)?;
     let (post, deletion_queue) =
         update_post(db_client, post.id, post_data).await?;

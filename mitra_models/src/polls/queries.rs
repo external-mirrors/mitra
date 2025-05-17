@@ -310,7 +310,7 @@ pub async fn get_voters(
     Ok(profiles)
 }
 
-pub async fn find_votes_by_user(
+pub(crate) async fn find_votes_by_user(
     db_client: &impl DatabaseClient,
     user_id: Uuid,
     post_ids: &[Uuid],

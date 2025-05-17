@@ -176,7 +176,7 @@ pub fn validate_local_post_links(
     Ok(())
 }
 
-pub fn validate_local_reply(
+pub fn validate_reply(
     in_reply_to: &Post,
     author_id: Uuid,
     visibility: Visibility,
@@ -261,7 +261,7 @@ mod tests {
     }
 
     #[test]
-    fn test_validate_local_reply_wrong_visibility() {
+    fn test_validate_reply_wrong_visibility() {
         let author = DbActorProfile::local_for_test("author");
         let reply_author = DbActorProfile::local_for_test("author");
         let in_reply_to = Post {
@@ -270,7 +270,7 @@ mod tests {
             mentions: vec![author.clone()],
             ..Default::default()
         };
-        let error = validate_local_reply(
+        let error = validate_reply(
             &in_reply_to,
             reply_author.id,
             Visibility::Public,
@@ -280,7 +280,7 @@ mod tests {
     }
 
     #[test]
-    fn test_validate_local_reply_adding_recipients() {
+    fn test_validate_reply_adding_recipients() {
         let profile_1 = DbActorProfile::local_for_test("1");
         let profile_2 = DbActorProfile::local_for_test("2");
         let profile_3 = DbActorProfile::local_for_test("3");
@@ -293,7 +293,7 @@ mod tests {
             ],
             ..Default::default()
         };
-        let error = validate_local_reply(
+        let error = validate_reply(
             &in_reply_to,
             profile_4.id,
             Visibility::Direct,
