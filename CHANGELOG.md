@@ -22,6 +22,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Don't include DMs in post count.
 - Ignore actor's public keys that have different owner.
 - Create reposts for `Article` objects addressed to FEP-1b12 groups.
+- Reject `Update(Object)` activity if `inReplyTo` has changed.
 
 ### Fixed
 

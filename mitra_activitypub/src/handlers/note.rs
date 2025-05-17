@@ -843,6 +843,20 @@ pub async fn create_remote_post(
     })?;
     let author_hostname = get_moderation_domain(author.expect_actor_data())?;
 
+    let maybe_in_reply_to = match object.in_reply_to {
+        Some(ref object_id) => {
+            let object_id = redirects.get(object_id).unwrap_or(object_id);
+            let canonical_object_id = canonicalize_id(object_id)?;
+            let in_reply_to = get_post_by_object_id(
+                db_client,
+                &ap_client.instance.url(),
+                &canonical_object_id,
+            ).await?;
+            Some(in_reply_to)
+        },
+        None => None,
+    };
+
     let mut content = get_object_content(&object)?;
     let maybe_poll_data = if object.object_type == QUESTION {
         match parse_poll_results(&object) {
@@ -878,20 +892,6 @@ pub async fn create_remote_post(
         &author,
         redirects,
     ).await?;
-
-    let maybe_in_reply_to = match object.in_reply_to {
-        Some(ref object_id) => {
-            let object_id = redirects.get(object_id).unwrap_or(object_id);
-            let canonical_in_reply_to_id = canonicalize_id(object_id)?;
-            let in_reply_to = get_post_by_object_id(
-                db_client,
-                &ap_client.instance.url(),
-                &canonical_in_reply_to_id,
-            ).await?;
-            Some(in_reply_to)
-        },
-        None => None,
-    };
 
     // TODO: use on local posts too
     let mentions = filter_mentions(
@@ -966,6 +966,22 @@ pub async fn update_remote_post(
         return Err(ValidationError("object owner can't be changed").into());
     };
     let author_hostname = get_moderation_domain(post.author.expect_actor_data())?;
+
+    let maybe_in_reply_to = match object.in_reply_to {
+        Some(ref object_id) => {
+            let canonical_object_id = canonicalize_id(object_id)?;
+            let in_reply_to = get_post_by_object_id(
+                db_client,
+                &ap_client.instance.url(),
+                &canonical_object_id,
+            ).await?;
+            Some(in_reply_to)
+        },
+        None => None,
+    };
+    if maybe_in_reply_to.as_ref().map(|in_reply_to| in_reply_to.id) != post.in_reply_to_id {
+        return Err(ValidationError("inReplyTo can't be changed").into());
+    };
 
     let mut content = get_object_content(object)?;
     let maybe_poll_data = if object.object_type == QUESTION {
