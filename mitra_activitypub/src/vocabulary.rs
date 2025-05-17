@@ -26,6 +26,7 @@ pub const PERSON: &str = "Person";
 pub const SERVICE: &str = "Service";
 
 // Object types
+pub const ARTICLE: &str = "Article";
 pub const AUDIO: &str = "Audio";
 pub const DOCUMENT: &str = "Document";
 pub const IMAGE: &str = "Image";

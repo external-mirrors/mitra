@@ -204,7 +204,7 @@ async fn handle_fep_1b12_announce(
             )
                 .await?
                 .map(|desc| desc.to_string());
-            if let Some(NOTE | PAGE) = maybe_object_type.as_deref() {
+            if let Some(ARTICLE | NOTE | PAGE) = maybe_object_type.as_deref() {
                 // Create repost
                 let object_id = object_to_id(&activity["object"])
                     .map_err(|_| ValidationError("invalid activity object"))?;
@@ -212,7 +212,7 @@ async fn handle_fep_1b12_announce(
                     db_client,
                     &object_id,
                 ).await?;
-                if post.in_reply_to_id.is_none() {
+                if post.is_public() && post.in_reply_to_id.is_none() {
                     let repost_data = PostCreateData::repost(
                         post.id,
                         Some(announce_id),
@@ -221,7 +221,6 @@ async fn handle_fep_1b12_announce(
                         Ok(_) => (),
                         // Announce(Note) was sent too
                         Err(DatabaseError::AlreadyExists("post")) => (),
-                        // May return "post not found" error if post is not public
                         Err(other_error) => return Err(other_error.into()),
                     };
                 };
