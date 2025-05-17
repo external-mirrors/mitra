@@ -90,6 +90,7 @@ use mitra_validators::{
         validate_post_mentions,
         validate_post_update_data,
         validate_reply,
+        validate_repost_data,
     },
     reactions::validate_reaction_data,
 };
@@ -777,6 +778,7 @@ async fn reblog(
         return Err(MastodonError::NotFoundError("post"));
     };
     let repost_data = PostCreateData::repost(status_id.into_inner(), None);
+    validate_repost_data(&repost_data)?;
     let mut repost = create_post(db_client, current_user.id, repost_data).await?;
     post.repost_count += 1;
     repost.related_posts = Some(RelatedPosts {

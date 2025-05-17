@@ -12,7 +12,7 @@ use mitra_models::{
 use mitra_utils::html::{clean_html, clean_html_all, clean_html_strict};
 
 use super::{
-    activitypub::validate_any_object_id,
+    activitypub::{validate_any_object_id, validate_object_id},
     errors::ValidationError,
     polls::validate_poll_data,
 };
@@ -95,10 +95,16 @@ fn validate_url(url: &str) -> Result<(), ValidationError> {
 pub fn validate_post_create_data(
     post_data: &PostCreateData,
 ) -> Result<(), ValidationError> {
-    if let PostContext::Top { .. } = post_data.context {
-        if post_data.visibility == Visibility::Conversation {
-            return Err(ValidationError("top-level post can't have conversation visibility"));
-        };
+    match post_data.context {
+        PostContext::Top { .. } => {
+            if post_data.visibility == Visibility::Conversation {
+                return Err(ValidationError("top-level post can't have conversation visibility"));
+            };
+        },
+        PostContext::Repost { .. } => {
+            panic!("incorrect context");
+        },
+        _ => (),
     };
     validate_content(&post_data.content)?;
     if post_data.content.is_empty() && post_data.attachments.is_empty() {
@@ -199,6 +205,21 @@ pub fn validate_reply(
             // Audience can't be expanded
             return Err(ValidationError("can't add more recipients"));
         };
+    };
+    Ok(())
+}
+
+pub fn validate_repost_data(
+    repost_data: &PostCreateData,
+) -> Result<(), ValidationError> {
+    if !matches!(repost_data.context, PostContext::Repost { .. }) {
+        panic!("incorrect context");
+    };
+    if repost_data.visibility != Visibility::Public {
+        return Err(ValidationError("invalid repost visibility"));
+    };
+    if let Some(ref object_id) = repost_data.object_id {
+        validate_object_id(object_id)?;
     };
     Ok(())
 }

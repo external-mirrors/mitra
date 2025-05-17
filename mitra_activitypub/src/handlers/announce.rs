@@ -19,8 +19,8 @@ use mitra_models::{
     posts::types::PostCreateData,
 };
 use mitra_validators::{
-    activitypub::validate_object_id,
     errors::ValidationError,
+    posts::validate_repost_data,
 };
 
 use crate::{
@@ -93,11 +93,11 @@ pub async fn handle_announce(
     if !post.is_public() {
         return Err(DatabaseError::NotFound("post").into());
     };
-    validate_object_id(&announce.id)?;
     let repost_data = PostCreateData::repost(
         post.id,
         Some(announce.id.clone()),
     );
+    validate_repost_data(&repost_data)?;
     match create_post(db_client, author.id, repost_data).await {
         Ok(_) => Ok(Some(Descriptor::object("Object"))),
         Err(DatabaseError::AlreadyExists("post")) => {
@@ -217,6 +217,7 @@ async fn handle_fep_1b12_announce(
                         post.id,
                         Some(announce_id),
                     );
+                    validate_repost_data(&repost_data)?;
                     match create_post(db_client, group.id, repost_data).await {
                         Ok(_) => (),
                         // Announce(Note) was sent too
