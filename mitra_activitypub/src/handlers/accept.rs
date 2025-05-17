@@ -66,18 +66,18 @@ pub async fn handle_accept(
     db_client: &mut impl DatabaseClient,
     activity: JsonValue,
 ) -> HandlerResult {
-    let activity: Accept = serde_json::from_value(activity)?;
-    if activity.result.is_some() {
+    let accept: Accept = serde_json::from_value(activity)?;
+    if accept.result.is_some() {
         // Accept(Offer)
-        return handle_accept_offer(config, db_client, activity).await;
+        return handle_accept_offer(config, db_client, accept).await;
     };
     // Accept(Follow)
-    let canonical_actor_id = canonicalize_id(&activity.actor)?;
+    let canonical_actor_id = canonicalize_id(&accept.actor)?;
     let actor_profile = get_remote_profile_by_actor_id(
         db_client,
         &canonical_actor_id.to_string(),
     ).await?;
-    let canonical_object_id = canonicalize_id(&activity.object)?;
+    let canonical_object_id = canonicalize_id(&accept.object)?;
     let follow_request = get_follow_request_by_activity_id(
         db_client,
         &config.instance_url(),
@@ -97,21 +97,21 @@ pub async fn handle_accept(
 async fn handle_accept_offer(
     config: &Config,
     db_client: &mut impl DatabaseClient,
-    activity: Accept,
+    accept: Accept,
 ) -> HandlerResult {
     let actor_profile = get_remote_profile_by_actor_id(
         db_client,
-        &activity.actor,
+        &accept.actor,
     ).await?;
     let invoice_id = parse_local_activity_id(
         &config.instance_url(),
-        &activity.object,
+        &accept.object,
     )?;
     let invoice = get_invoice_by_id(db_client, invoice_id).await?;
     if invoice.recipient_id != actor_profile.id {
         return Err(ValidationError("actor is not a recipient").into());
     };
-    let agreement_value = activity.result.expect("result should be present");
+    let agreement_value = accept.result.expect("result should be present");
     let agreement: Agreement = serde_json::from_value(agreement_value)?;
     let agreement_id = agreement.id.as_ref()
         .ok_or(ValidationError("missing 'id' field"))?;

@@ -46,11 +46,11 @@ async fn handle_update_note(
     db_client: &mut impl DatabaseClient,
     activity: JsonValue,
 ) -> HandlerResult {
-    let activity: UpdateNote = serde_json::from_value(activity)?;
-    let object = activity.object;
+    let update: UpdateNote = serde_json::from_value(activity)?;
+    let object = update.object;
     let canonical_object_id = canonicalize_id(object.id())?;
     let author_id = get_object_attributed_to(&object.inner)?;
-    if author_id != activity.actor {
+    if author_id != update.actor {
         return Err(ValidationError("attributedTo value doesn't match actor").into());
     };
     let post = match get_remote_post_by_object_id(
@@ -78,11 +78,11 @@ async fn handle_update_person(
     db_client: &mut impl DatabaseClient,
     activity: JsonValue,
 ) -> HandlerResult {
-    let activity: UpdatePerson = serde_json::from_value(activity)?;
-    if activity.object.id() != activity.actor {
+    let update: UpdatePerson = serde_json::from_value(activity)?;
+    if update.object.id() != update.actor {
         return Err(ValidationError("actor ID mismatch").into());
     };
-    let canonical_actor_id = canonicalize_id(activity.object.id())?;
+    let canonical_actor_id = canonicalize_id(update.object.id())?;
     let profile = match get_remote_profile_by_actor_id(
         db_client,
         &canonical_actor_id.to_string(),
@@ -97,7 +97,7 @@ async fn handle_update_person(
         &ap_client,
         db_client,
         profile,
-        activity.object,
+        update.object,
     ).await?;
     let actor_type = &profile.expect_actor_data().object_type;
     Ok(Some(Descriptor::object(actor_type)))

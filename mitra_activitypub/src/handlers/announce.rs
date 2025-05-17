@@ -60,10 +60,10 @@ pub async fn handle_announce(
     if is_activity(&activity["object"]) {
         return handle_fep_1b12_announce(config, db_client, activity).await;
     };
-    let activity: Announce = serde_json::from_value(activity)?;
+    let announce: Announce = serde_json::from_value(activity)?;
     match get_remote_repost_by_activity_id(
         db_client,
-        &activity.id,
+        &announce.id,
     ).await {
         Ok(_) => return Ok(None), // Ignore if repost already exists
         Err(DatabaseError::NotFound(_)) => (),
@@ -73,11 +73,11 @@ pub async fn handle_announce(
     let author = ActorIdResolver::default().only_remote().resolve(
         &ap_client,
         db_client,
-        &activity.actor,
+        &announce.actor,
     ).await?;
     let post = match parse_local_object_id(
         &ap_client.instance.url(),
-        &activity.object,
+        &announce.object,
     ) {
         Ok(post_id) => get_post_by_id(db_client, post_id).await?,
         Err(_) => {
@@ -85,7 +85,7 @@ pub async fn handle_announce(
             import_post(
                 &ap_client,
                 db_client,
-                activity.object,
+                announce.object,
                 None,
             ).await?
         },
@@ -93,17 +93,17 @@ pub async fn handle_announce(
     if !post.is_public() {
         return Err(DatabaseError::NotFound("post").into());
     };
-    validate_object_id(&activity.id)?;
+    validate_object_id(&announce.id)?;
     let repost_data = PostCreateData::repost(
         post.id,
-        Some(activity.id.clone()),
+        Some(announce.id.clone()),
     );
     match create_post(db_client, author.id, repost_data).await {
         Ok(_) => Ok(Some(Descriptor::object("Object"))),
         Err(DatabaseError::AlreadyExists("post")) => {
             // Ignore activity if repost already exists (with a different
             // activity ID, or due to race condition in a handler).
-            log::warn!("repost already exists: {}", activity.id);
+            log::warn!("repost already exists: {}", announce.id);
             Ok(None)
         },
         // May return "post not found" error if post is not public
@@ -264,8 +264,8 @@ mod tests {
             "actor": "https://example.com/users/1",
             "object": "https://test.org/objects/999",
         });
-        let activity: Announce = serde_json::from_value(activity_raw).unwrap();
-        assert_eq!(activity.object, "https://test.org/objects/999");
+        let announce: Announce = serde_json::from_value(activity_raw).unwrap();
+        assert_eq!(announce.object, "https://test.org/objects/999");
     }
 
     #[test]
@@ -279,7 +279,7 @@ mod tests {
                 "id": "https://test.org/objects/999",
             },
         });
-        let activity: Announce = serde_json::from_value(activity_raw).unwrap();
-        assert_eq!(activity.object, "https://test.org/objects/999");
+        let announce: Announce = serde_json::from_value(activity_raw).unwrap();
+        assert_eq!(announce.object, "https://test.org/objects/999");
     }
 }

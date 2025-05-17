@@ -166,27 +166,27 @@ pub async fn handle_add(
     if is_activity(&activity["object"]) {
         return handle_fep_171b_add(config, db_client, activity).await;
     };
-    let activity: Add = serde_json::from_value(activity)?;
+    let add: Add = serde_json::from_value(activity)?;
     let actor_profile = get_remote_profile_by_actor_id(
         db_client,
-        &activity.actor,
+        &add.actor,
     ).await?;
     let actor = actor_profile.actor_json.as_ref()
         .expect("actor data should be present");
-    if Some(activity.target.clone()) == actor.subscribers {
+    if Some(add.target.clone()) == actor.subscribers {
         // Adding to subscribers
         let username = parse_local_actor_id(
             &config.instance_url(),
-            &activity.object,
+            &add.object,
         )?;
         let sender = get_user_by_name(db_client, &username).await?;
         let recipient = actor_profile;
         subscribe_opt(db_client, sender.id, recipient.id).await?;
 
         // FEP-0837 confirmation
-        let subscription_expires_at = activity.end_time
+        let subscription_expires_at = add.end_time
             .ok_or(ValidationError("'endTime' property is missing"))?;
-        match activity.context {
+        match add.context {
             Some(ref agreement_id) => {
                 match get_remote_invoice_by_object_id(
                     db_client,
@@ -224,11 +224,11 @@ pub async fn handle_add(
         ).await?;
         return Ok(Some(Descriptor::target("subscribers")));
     };
-    if Some(activity.target.clone()) == actor.featured {
+    if Some(add.target.clone()) == actor.featured {
         // Add to featured
         let post = match get_remote_post_by_object_id(
             db_client,
-            &activity.object,
+            &add.object,
         ).await {
             Ok(post) => post,
             Err(DatabaseError::NotFound(_)) => return Ok(None),
@@ -237,6 +237,6 @@ pub async fn handle_add(
         set_pinned_flag(db_client, post.id, true).await?;
         return Ok(Some(Descriptor::target("featured")));
     };
-    log::warn!("unknown target: {}", activity.target);
+    log::warn!("unknown target: {}", add.target);
     Ok(None)
 }

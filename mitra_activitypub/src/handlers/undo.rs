@@ -1,5 +1,5 @@
 use serde::Deserialize;
-use serde_json::Value;
+use serde_json::{Value as JsonValue};
 
 use apx_sdk::{
     deserialization::{deserialize_into_object_id, object_to_id},
@@ -36,23 +36,23 @@ use super::{Descriptor, HandlerResult};
 #[derive(Deserialize)]
 struct UndoFollow {
     actor: String,
-    object: Value,
+    object: JsonValue,
 }
 
 /// Special handler for Undo with embedded Follow
 async fn handle_undo_follow(
     ap_client: &ApClient,
     db_client: &mut impl DatabaseClient,
-    activity: Value,
+    activity: JsonValue,
 ) -> HandlerResult {
-    let activity: UndoFollow = serde_json::from_value(activity)?;
-    let canonical_actor_id = canonicalize_id(&activity.actor)?;
+    let undo: UndoFollow = serde_json::from_value(activity)?;
+    let canonical_actor_id = canonicalize_id(&undo.actor)?;
     let source_profile = get_remote_profile_by_actor_id(
         db_client,
         &canonical_actor_id.to_string(),
     ).await?;
     // Use object because activity ID might not be present
-    let target_actor_id = object_to_id(&activity.object["object"])
+    let target_actor_id = object_to_id(&undo.object["object"])
         .map_err(|_| ValidationError("invalid follow activity object"))?;
     let target_profile = ActorIdResolver::default().resolve(
         ap_client,
@@ -78,7 +78,7 @@ struct Undo {
 pub async fn handle_undo(
     config: &Config,
     db_client: &mut impl DatabaseClient,
-    activity: Value,
+    activity: JsonValue,
 ) -> HandlerResult {
     let ap_client = ApClient::new(config, db_client).await?;
     if let Some(FOLLOW) = activity["object"]["type"].as_str() {
@@ -86,13 +86,13 @@ pub async fn handle_undo(
         return handle_undo_follow(&ap_client, db_client, activity).await;
     };
 
-    let activity: Undo = serde_json::from_value(activity)?;
+    let undo: Undo = serde_json::from_value(activity)?;
     let actor_profile = ActorIdResolver::default().only_remote().resolve(
         &ap_client,
         db_client,
-        &activity.actor,
+        &undo.actor,
     ).await?;
-    let canonical_object_id = canonicalize_id(&activity.object)?;
+    let canonical_object_id = canonicalize_id(&undo.object)?;
 
     match get_follow_request_by_remote_activity_id(
         db_client,

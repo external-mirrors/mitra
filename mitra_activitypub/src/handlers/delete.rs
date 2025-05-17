@@ -1,5 +1,5 @@
 use serde::Deserialize;
-use serde_json::Value;
+use serde_json::{Value as JsonValue};
 
 use apx_sdk::deserialization::deserialize_into_object_id;
 use mitra_config::Config;
@@ -29,14 +29,14 @@ struct Delete {
 pub async fn handle_delete(
     _config: &Config,
     db_client: &mut impl DatabaseClient,
-    activity: Value,
+    activity: JsonValue,
 ) -> HandlerResult {
-    let activity: Delete = serde_json::from_value(activity)?;
-    if activity.object == activity.actor {
+    let delete: Delete = serde_json::from_value(activity)?;
+    if delete.object == delete.actor {
         // Self-delete
         let profile = match get_remote_profile_by_actor_id(
             db_client,
-            &activity.object,
+            &delete.object,
         ).await {
             Ok(profile) => profile,
             // Ignore Delete(Person) if profile is not found
@@ -45,12 +45,13 @@ pub async fn handle_delete(
         };
         let deletion_queue = delete_profile(db_client, profile.id).await?;
         deletion_queue.into_job(db_client).await?;
-        log::info!("deleted remote actor {}", activity.object);
+        log::info!("deleted remote actor {}", delete.object);
         return Ok(Some(Descriptor::object("Actor")));
     };
+    // Delete(Note)
     let post = match get_remote_post_by_object_id(
         db_client,
-        &activity.object,
+        &delete.object,
     ).await {
         Ok(post) => post,
         // Ignore Delete(Note) if post is not found
@@ -59,7 +60,7 @@ pub async fn handle_delete(
     };
     let actor_profile = get_remote_profile_by_actor_id(
         db_client,
-        &activity.actor,
+        &delete.actor,
     ).await?;
     if post.author.id != actor_profile.id {
         return Err(ValidationError("actor is not an author").into());

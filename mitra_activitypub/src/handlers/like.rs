@@ -59,17 +59,17 @@ struct Like {
 pub async fn handle_like(
     config: &Config,
     db_client: &mut impl DatabaseClient,
-    activity_value: JsonValue,
+    activity: JsonValue,
 ) -> HandlerResult {
-    let activity: Like = serde_json::from_value(activity_value)?;
+    let like: Like = serde_json::from_value(activity)?;
     let ap_client = ApClient::new(config, db_client).await?;
     let instance = &ap_client.instance;
     let author = ActorIdResolver::default().only_remote().resolve(
         &ap_client,
         db_client,
-        &activity.actor,
+        &like.actor,
     ).await?;
-    let canonical_object_id = canonicalize_id(&activity.object)?;
+    let canonical_object_id = canonicalize_id(&like.object)?;
     let post_id = match get_post_by_object_id(
         db_client,
         &instance.url(),
@@ -80,12 +80,12 @@ pub async fn handle_like(
         Err(DatabaseError::NotFound(_)) => return Ok(None),
         Err(other_error) => return Err(other_error.into()),
     };
-    let (maybe_content, maybe_emoji_id) = match activity.content {
+    let (maybe_content, maybe_emoji_id) = match like.content {
         Some(content) if is_single_character(&content) => {
             (Some(content), None)
         },
         Some(content) => {
-            let maybe_db_emoji = if let Some(emoji_value) = activity.tag.first() {
+            let maybe_db_emoji = if let Some(emoji_value) = like.tag.first() {
                 let moderation_domain =
                     get_moderation_domain(author.expect_actor_data())?;
                 let maybe_db_emoji = handle_emoji(
@@ -108,7 +108,7 @@ pub async fn handle_like(
             }
         },
         None => {
-            if activity.activity_type == DISLIKE {
+            if like.activity_type == DISLIKE {
                 // Transform Dislike activity into emoji reaction
                 (Some("👎".to_string()), None)
             } else {
@@ -116,7 +116,7 @@ pub async fn handle_like(
             }
         },
     };
-    let canonical_activity_id = canonicalize_id(&activity.id)?;
+    let canonical_activity_id = canonicalize_id(&like.id)?;
     let reaction_data = ReactionData {
         author_id: author.id,
         post_id: post_id,

@@ -37,12 +37,12 @@ pub async fn handle_reject(
     activity: Value,
 ) -> HandlerResult {
     // Reject(Follow)
-    let activity: Reject = serde_json::from_value(activity)?;
+    let reject: Reject = serde_json::from_value(activity)?;
     let actor_profile = get_remote_profile_by_actor_id(
         db_client,
-        &activity.actor,
+        &reject.actor,
     ).await?;
-    let canonical_object_id = canonicalize_id(&activity.object)?;
+    let canonical_object_id = canonicalize_id(&reject.object)?;
     let follow_request = match get_follow_request_by_activity_id(
         db_client,
         &config.instance_url(),
