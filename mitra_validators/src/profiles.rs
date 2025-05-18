@@ -31,7 +31,7 @@ use super::{
 // See also: WEBFINGER_ADDRESS_RE in apx_sdk::addresses
 const USERNAME_RE: &str = r"^[A-Za-z0-9\-\._]+$";
 const USERNAME_LENGTH_MAX: usize = 100;
-const HOSTNAME_RE: &str = r"^[a-z0-9\.-]+$";
+const HOSTNAME_RE: &str = r"^([a-z0-9\.-]+|[0-9\.]+|\[[0-9a-f:]+\])$";
 const HOSTNAME_LENGTH_MAX: usize = 100;
 const DISPLAY_NAME_MAX_LENGTH: usize = 200;
 const BIO_MAX_LENGTH: usize = 10000;
@@ -387,6 +387,13 @@ mod tests {
 
         let normalized_hostname = "xn--jxalpdlp.example";
         let result = validate_hostname(normalized_hostname);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_validate_hostname_ipv6() {
+        let hostname = "[319:3cf0:dd1d:47b9:20c:29ff:fe2c:39be]";
+        let result = validate_hostname(hostname);
         assert!(result.is_ok());
     }
 

@@ -13,11 +13,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Implemented `PartialEq` for `Hostname` type.
 - Added `parse_canonical` method to `Url` type.
 - Added `is_onion` and `is_i2p` methods to `apx_core::url::hostname` module.
+- Support WebFinger addresses with IPv6 hostnames.
 
 ### Changed
 
 - Moved `Url` type from `apx_sdk` to `apx_core` package.
 - Return `ApUrl` from `verify_portable_object`.
+- Update `HttpUrl::hostname` and `get_hostname` to return IPv6 addresses with square brackets.
 
 ### Removed
 

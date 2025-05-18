@@ -11,14 +11,10 @@ use crate::url::hostname::guess_protocol;
 /// Returns URL host name (without port number)
 /// IDNs are converted into punycode
 pub fn get_hostname(url: &str) -> Result<String, UrlError> {
-    let hostname = match Url::parse(url)?
+    let hostname = Url::parse(url)?
         .host()
         .ok_or(UrlError::EmptyHost)?
-    {
-        Host::Domain(domain) => domain.to_string(),
-        Host::Ipv4(addr) => addr.to_string(),
-        Host::Ipv6(addr) => addr.to_string(),
-    };
+        .to_string();
     Ok(hostname)
 }
 
@@ -91,7 +87,7 @@ mod tests {
     fn test_get_hostname_yggdrasil() {
         let url = "http://[319:3cf0:dd1d:47b9:20c:29ff:fe2c:39be]/objects/1";
         let hostname = get_hostname(url).unwrap();
-        assert_eq!(hostname, "319:3cf0:dd1d:47b9:20c:29ff:fe2c:39be");
+        assert_eq!(hostname, "[319:3cf0:dd1d:47b9:20c:29ff:fe2c:39be]");
     }
 
     #[test]

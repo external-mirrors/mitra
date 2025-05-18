@@ -12,9 +12,10 @@ use mitra_models::{
 
 use super::parser::is_inside_code_block;
 
+// IDNs are allowed, but encoded during parsing.
 // See also: USERNAME_RE in mitra_validators::profiles
 const MENTION_SEARCH_RE: &str = r"(?m)(?P<before>^|\s|>|[\(])@(?P<mention>[^\s<]+)";
-const MENTION_SEARCH_SECONDARY_RE: &str = r"^(?P<username>[A-Za-z0-9\-\._]+)(@(?P<hostname>[\w\.-]+\w))?(?P<after>[\.,:;?!\)']*)$";
+const MENTION_SEARCH_SECONDARY_RE: &str = r"^(?P<username>[A-Za-z0-9\-\._]+)(@(?P<hostname>[\w\.-]+\w|[0-9\.]+|\[[0-9a-f:]+\]))?(?P<after>[\.,:;?!\)']*)$";
 
 fn caps_to_acct(instance_hostname: &str, caps: &Captures) -> Option<String> {
     let username = &caps["username"];
@@ -163,6 +164,16 @@ mod tests {
             "test (test @user@server.example).",
         );
         assert_eq!(mentions, vec!["user@server.example"]);
+    }
+
+    #[test]
+    fn test_find_mentions_ipv6_hostname() {
+        let text = "Hey @user@[319:3cf0:dd1d:47b9:20c:29ff:fe2c:39be]!";
+        let mentions = find_mentions(INSTANCE_HOSTNAME, text);
+        assert_eq!(
+            mentions,
+            vec!["user@[319:3cf0:dd1d:47b9:20c:29ff:fe2c:39be]"],
+        );
     }
 
     #[test]

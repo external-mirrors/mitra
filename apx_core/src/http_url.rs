@@ -131,15 +131,13 @@ impl HttpUrl {
         )
     }
 
+    /// Returns host name of this URL
     pub fn hostname(&self) -> Hostname {
+        // Similar to urls::get_hostname
         let authority_components = self.0.authority_components()
             .expect("authority should be present");
         let hostname = authority_components.host();
-        if hostname.starts_with('[') && hostname.ends_with(']') {
-            Hostname::new_unchecked(&hostname[1 .. hostname.len() - 1])
-        } else {
-            Hostname::new_unchecked(hostname)
-        }
+        Hostname::new_unchecked(hostname)
     }
 
     // https://www.rfc-editor.org/rfc/rfc6454.html
@@ -308,7 +306,7 @@ mod tests {
         assert_eq!(http_url.hostname().as_str(), "127.0.0.1");
 
         let http_url = HttpUrl::parse("http://[319:3cf0:dd1d:47b9:20c:29ff:fe2c:39be]/test").unwrap();
-        assert_eq!(http_url.hostname().as_str(), "319:3cf0:dd1d:47b9:20c:29ff:fe2c:39be");
+        assert_eq!(http_url.hostname().as_str(), "[319:3cf0:dd1d:47b9:20c:29ff:fe2c:39be]");
     }
 
     #[test]

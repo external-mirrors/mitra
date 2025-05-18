@@ -6,8 +6,9 @@ use thiserror::Error;
 
 // https://swicg.github.io/activitypub-webfinger/#names
 // username: RFC-3986 unreserved plus % for percent encoding; case-sensitive
-// hostname: normalized (ASCII)
-const WEBFINGER_ADDRESS_RE: &str = r"^(?P<username>[A-Za-z0-9\-\._~%]+)@(?P<hostname>[a-z0-9\.-]+)$";
+// hostname: normalized (ASCII) or IP literals
+//   https://datatracker.ietf.org/doc/html/rfc3986#section-3.2.2
+const WEBFINGER_ADDRESS_RE: &str = r"^(?P<username>[A-Za-z0-9\-\._~%]+)@(?P<hostname>[a-z0-9\.-]+|[0-9\.]+|\[[0-9a-f:]+\])$";
 
 #[derive(Debug, Error)]
 #[error("{0}")]
@@ -158,6 +159,24 @@ mod tests {
     }
 
     #[test]
+    fn test_address_parse_ipv4() {
+        let value = "admin@127.0.0.1";
+        let address = value.parse::<WebfingerAddress>().unwrap();
+        assert_eq!(address.username, "admin");
+        assert_eq!(address.hostname, "127.0.0.1");
+        assert_eq!(address.to_string(), value);
+    }
+
+    #[test]
+    fn test_address_parse_ipv6() {
+        let value = "admin@[319:3cf0:dd1d:47b9:20c:29ff:fe2c:39be]";
+        let address = value.parse::<WebfingerAddress>().unwrap();
+        assert_eq!(address.username, "admin");
+        assert_eq!(address.hostname, "[319:3cf0:dd1d:47b9:20c:29ff:fe2c:39be]");
+        assert_eq!(address.to_string(), value);
+    }
+
+    #[test]
     fn test_parse_unicode_username() {
         let value = "δοκιμή@social.example";
         let error = value.parse::<WebfingerAddress>().err().unwrap();
@@ -167,6 +186,20 @@ mod tests {
     #[test]
     fn test_address_parse_idn() {
         let value = "user_1@bücher.example";
+        let error = value.parse::<WebfingerAddress>().err().unwrap();
+        assert_eq!(error.0, "invalid webfinger address");
+    }
+
+    #[test]
+    fn test_address_parse_ipv4_with_port() {
+        let value = "admin@127.0.0.1:8000";
+        let error = value.parse::<WebfingerAddress>().err().unwrap();
+        assert_eq!(error.0, "invalid webfinger address");
+    }
+
+    #[test]
+    fn test_address_parse_ipv6_no_brackets() {
+        let value = "admin@319:3cf0:dd1d:47b9:20c:29ff:fe2c:39be";
         let error = value.parse::<WebfingerAddress>().err().unwrap();
         assert_eq!(error.0, "invalid webfinger address");
     }
