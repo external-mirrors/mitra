@@ -1,7 +1,6 @@
 use serde::Serialize;
 use uuid::Uuid;
 
-use apx_sdk::constants::AP_PUBLIC;
 use mitra_config::Instance;
 use mitra_models::{
     database::{DatabaseClient, DatabaseError},
@@ -15,12 +14,13 @@ use crate::{
     identifiers::{
         local_activity_id,
         local_actor_id,
-        LocalActorCollection,
+        profile_actor_id,
     },
     queues::OutgoingActivityJobData,
     vocabulary::UNDO,
 };
 use super::announce::{
+    get_announce_audience,
     get_announce_recipients,
     local_announce_activity_id,
 };
@@ -46,7 +46,7 @@ fn build_undo_announce(
     actor_profile: &DbActorProfile,
     repost_id: Uuid,
     repost_has_deprecated_ap_id: bool,
-    recipient_id: &str,
+    post_author: &DbActorProfile,
 ) -> UndoAnnounce {
     let object_id = local_announce_activity_id(
         instance_url,
@@ -55,13 +55,11 @@ fn build_undo_announce(
     );
     let activity_id = local_activity_id(instance_url, UNDO, repost_id);
     let actor_id = local_actor_id(instance_url, &actor_profile.username);
-    let primary_audience = vec![
-        AP_PUBLIC.to_string(),
-        recipient_id.to_string(),
-    ];
-    let secondary_audience = vec![
-        LocalActorCollection::Followers.of(&actor_id),
-    ];
+    let recipient_id = profile_actor_id(instance_url, post_author);
+    let (primary_audience, secondary_audience) = get_announce_audience(
+        &actor_id,
+        &recipient_id,
+    );
     UndoAnnounce {
         context: build_default_context(),
         activity_type: UNDO.to_string(),
@@ -82,9 +80,8 @@ pub async fn prepare_undo_announce(
     repost_has_deprecated_ap_id: bool,
 ) -> Result<OutgoingActivityJobData, DatabaseError> {
     assert_ne!(post.id, repost_id);
-    let (recipients, primary_recipient) = get_announce_recipients(
+    let recipients = get_announce_recipients(
         db_client,
-        &instance.url(),
         sender,
         post,
     ).await?;
@@ -93,7 +90,7 @@ pub async fn prepare_undo_announce(
         &sender.profile,
         repost_id,
         repost_has_deprecated_ap_id,
-        &primary_recipient,
+        &post.author,
     );
     Ok(OutgoingActivityJobData::new(
         &instance.url(),
@@ -105,6 +102,7 @@ pub async fn prepare_undo_announce(
 
 #[cfg(test)]
 mod tests {
+    use apx_sdk::constants::AP_PUBLIC;
     use mitra_utils::id::generate_ulid;
     use super::*;
 
@@ -113,14 +111,18 @@ mod tests {
     #[test]
     fn test_build_undo_announce() {
         let announcer = DbActorProfile::default();
-        let post_author_id = "https://example.com/users/test";
+        let post_author_id = "https://social.example/users/test";
+        let post_author = DbActorProfile::remote_for_test(
+            "author",
+            post_author_id,
+        );
         let repost_id = generate_ulid();
         let activity = build_undo_announce(
             INSTANCE_URL,
             &announcer,
             repost_id,
             true, // legacy activity ID
-            post_author_id,
+            &post_author,
         );
         assert_eq!(
             activity.id,
@@ -140,7 +142,7 @@ mod tests {
             &announcer,
             repost_id,
             false, // no legacy activity ID
-            post_author_id,
+            &post_author,
         );
         assert_eq!(
             activity.object,

@@ -55,6 +55,19 @@ pub(super) fn local_announce_activity_id(
     }
 }
 
+pub(super) fn get_announce_audience(
+    actor_id: &str,
+    recipient_id: &str,
+) -> (Vec<String>, Vec<String>) {
+    let mut primary_audience = vec![];
+    let mut secondary_audience = vec![];
+    let actor_followers = LocalActorCollection::Followers.of(actor_id);
+    primary_audience.push(AP_PUBLIC.to_owned());
+    secondary_audience.push(actor_followers);
+    primary_audience.push(recipient_id.to_owned());
+    (primary_audience, secondary_audience)
+}
+
 pub fn build_announce(
     instance_url: &str,
     repost: &Post,
@@ -67,7 +80,10 @@ pub fn build_announce(
     let object_id = post_object_id(instance_url, post);
     let activity_id = local_announce_activity_id(instance_url, repost.id, false);
     let recipient_id = profile_actor_id(instance_url, &post.author);
-    let followers = LocalActorCollection::Followers.of(&actor_id);
+    let (primary_audience, secondary_audience) = get_announce_audience(
+        &actor_id,
+        &recipient_id,
+    );
     Announce {
         context: build_default_context(),
         activity_type: ANNOUNCE.to_string(),
@@ -75,17 +91,16 @@ pub fn build_announce(
         id: activity_id,
         object: object_id,
         published: repost.created_at,
-        to: vec![AP_PUBLIC.to_string(), recipient_id],
-        cc: vec![followers],
+        to: primary_audience,
+        cc: secondary_audience,
     }
 }
 
 pub async fn get_announce_recipients(
     db_client: &impl DatabaseClient,
-    instance_url: &str,
     current_user: &User,
     post: &Post,
-) -> Result<(Vec<Recipient>, String), DatabaseError> {
+) -> Result<Vec<Recipient>, DatabaseError> {
     let followers = get_followers(db_client, current_user.id).await?;
     let mut recipients = vec![];
     for profile in followers {
@@ -93,11 +108,10 @@ pub async fn get_announce_recipients(
             recipients.extend(Recipient::from_actor_data(&remote_actor));
         };
     };
-    let primary_recipient = profile_actor_id(instance_url, &post.author);
     if let Some(remote_actor) = post.author.actor_json.as_ref() {
         recipients.extend(Recipient::from_actor_data(remote_actor));
     };
-    Ok((recipients, primary_recipient))
+    Ok(recipients)
 }
 
 pub async fn prepare_announce(
@@ -111,9 +125,8 @@ pub async fn prepare_announce(
         .expect_related_posts()
         .repost_of.as_ref()
         .expect("repost_of field should be populated");
-    let (recipients, _) = get_announce_recipients(
+    let recipients = get_announce_recipients(
         db_client,
-        &instance.url(),
         sender,
         post,
     ).await?;
