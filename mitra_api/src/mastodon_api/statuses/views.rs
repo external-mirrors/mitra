@@ -765,7 +765,7 @@ async fn reblog(
     connection_info: ConnectionInfo,
     db_pool: web::Data<DatabaseConnectionPool>,
     status_id: web::Path<Uuid>,
-    reblog_params: web::Json<ReblogParams>,
+    reblog_params: Option<web::Json<ReblogParams>>,
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &mut **get_database_client(&db_pool).await?;
     let current_user = get_current_user(db_client, auth.token()).await?;
@@ -776,7 +776,9 @@ async fn reblog(
     if !post.is_public() {
         return Err(MastodonError::NotFoundError("post"));
     };
-    let visibility = match reblog_params.visibility.as_deref() {
+    let visibility = match reblog_params.as_ref()
+        .and_then(|params| params.visibility.as_ref())
+    {
         Some(visibility_str) => visibility_from_str(visibility_str)?,
         None => Visibility::Public,
     };
