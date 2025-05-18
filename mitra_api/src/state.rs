@@ -29,7 +29,7 @@ impl TimedCache {
             let latest: Vec<_> = sorted.into_iter()
                 .rev()
                 .take(self.size)
-                .map(|(key, _t)| key.to_string())
+                .map(|(key, _t)| key.clone())
                 .collect();
             self.store.retain(|key, (_t, _val)| latest.contains(key));
         };

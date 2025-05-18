@@ -88,7 +88,7 @@ impl JsonResourceDescriptor {
         if maybe_actor_link.is_none() {
             maybe_actor_link = links.first();
         };
-        let actor_id = maybe_actor_link?.href.as_ref()?.to_string();
+        let actor_id = maybe_actor_link?.href.as_ref()?.clone();
         Some(actor_id)
     }
 }

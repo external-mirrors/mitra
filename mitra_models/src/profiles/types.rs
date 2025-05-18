@@ -760,7 +760,7 @@ impl DbActorProfile {
 
     pub fn hostname(&self) -> WebfingerHostname {
         if let Some(ref hostname) = self.hostname {
-            WebfingerHostname::Remote(hostname.to_string())
+            WebfingerHostname::Remote(hostname.clone())
         } else if self.actor_json.is_none() || self.portable_user_id.is_some() {
             WebfingerHostname::Local
         } else {

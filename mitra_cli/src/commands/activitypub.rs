@@ -198,7 +198,7 @@ impl FetchObject {
             maybe_user.as_ref(),
         );
         let gateways = self.gateway.as_ref()
-            .map(|gateway| vec![gateway.to_string()])
+            .map(|gateway| vec![gateway.clone()])
             .unwrap_or_default();
         let mut context = FetcherContext::from(gateways);
         let options = FetchObjectOptions {

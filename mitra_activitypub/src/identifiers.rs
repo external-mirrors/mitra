@@ -203,7 +203,7 @@ pub fn parse_local_activity_id(
 
 pub fn post_object_id(instance_url: &str, post: &Post) -> String {
     match post.object_id {
-        Some(ref object_id) => object_id.to_string(),
+        Some(ref object_id) => object_id.clone(),
         None => local_object_id(instance_url, post.id),
     }
 }
@@ -218,7 +218,7 @@ pub fn profile_actor_id(instance_url: &str, profile: &DbActorProfile) -> String 
 pub fn profile_actor_url(instance_url: &str, profile: &DbActorProfile) -> String {
     if let Some(ref actor) = profile.actor_json {
         if let Some(ref actor_url) = actor.url {
-            return actor_url.to_string();
+            return actor_url.clone();
         };
         if actor.is_portable() {
             // Use compatible ID as 'url'
@@ -283,7 +283,7 @@ pub fn compatible_post_object_id(instance_url: &str, post: &Post) -> String {
                 compatible_id(actor_data, object_id)
                     .expect("object ID should be valid")
             } else {
-                object_id.to_string()
+                object_id.clone()
             }
         },
         None => local_object_id(instance_url, post.id),

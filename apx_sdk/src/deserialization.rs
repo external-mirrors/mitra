@@ -61,7 +61,7 @@ fn parse_string_array(
     value: &Value,
 ) -> Result<Vec<String>, DeserializationError> {
     let result = match value {
-        Value::String(string) => vec![string.to_string()],
+        Value::String(string) => vec![string.clone()],
         Value::Array(array) => {
             let mut items = vec![];
             for value in array {

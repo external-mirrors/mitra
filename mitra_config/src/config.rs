@@ -139,7 +139,7 @@ impl Config {
 
     pub fn http_socket(&self) -> String {
         match (&self.http_socket, &self.http_host, self.http_port) {
-            (Some(http_socket), _, _) => http_socket.to_string(),
+            (Some(http_socket), _, _) => http_socket.clone(),
             (None, Some(http_host), Some(http_port)) => {
                 format!("{http_host}:{http_port}")
             },

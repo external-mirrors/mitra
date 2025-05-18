@@ -64,7 +64,7 @@ pub fn parse_attributed_to(
         .map_err(|_| ValidationError("invalid 'attributedTo' property"))?
         .first()
         .ok_or(ValidationError("invalid 'attributedTo' property"))?
-        .to_string();
+        .clone();
     Ok(owner_id)
 }
 

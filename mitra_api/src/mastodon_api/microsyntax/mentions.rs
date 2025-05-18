@@ -76,7 +76,7 @@ pub async fn find_mentioned_profiles(
     for profile in profiles {
         let acct = profile.acct.as_ref()
             .expect("acct should be present")
-            .to_string();
+            .clone();
         mention_map.insert(acct, profile);
     };
     Ok(mention_map)

@@ -250,7 +250,7 @@ pub fn build_local_actor(
         id: actor_id.clone(),
         object_type: actor_type.to_string(),
         name: user.profile.display_name.clone(),
-        preferred_username: username.to_string(),
+        preferred_username: username.clone(),
         inbox,
         outbox,
         followers: Some(followers),

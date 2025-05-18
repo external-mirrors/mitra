@@ -262,7 +262,7 @@ pub(super) fn get_object_content(object: &AttributedObject) ->
             format!("<p>{}</p>", content)
         } else {
             // HTML
-            content.to_string()
+            content.clone()
         }
     } else {
         "".to_string()

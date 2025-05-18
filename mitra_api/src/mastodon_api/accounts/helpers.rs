@@ -147,7 +147,7 @@ pub async fn get_aliases(
                     media_server,
                     profile.clone(),
                 ));
-            Alias { id: actor_id.to_string(), account: maybe_account }
+            Alias { id: actor_id.clone(), account: maybe_account }
         })
         .collect();
     let declared = declared_db.iter()
