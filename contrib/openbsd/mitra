@@ -1,6 +1,7 @@
 #!/bin/ksh
 
-daemon="/usr/local/bin/mitra server"
+daemon="/usr/local/bin/mitra"
+daemon_flags="server"
 daemon_user="mitra"
 
 . /etc/rc.d/rc.subr
