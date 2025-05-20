@@ -3,6 +3,11 @@ use std::fmt;
 use std::str::FromStr;
 
 use iri_string::types::UriString;
+use serde::{
+    de::{Error as DeserializerError},
+    Deserialize,
+    Deserializer,
+};
 use url::Url;
 
 use crate::url::common::Origin;
@@ -170,6 +175,15 @@ impl FromStr for HttpUrl {
 
     fn from_str(value: &str) -> Result<Self, Self::Err> {
         Self::parse(value)
+    }
+}
+
+impl<'de> Deserialize<'de> for HttpUrl {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where D: Deserializer<'de>
+    {
+        let value: String = Deserialize::deserialize(deserializer)?;
+        Self::parse(&value).map_err(DeserializerError::custom)
     }
 }
 

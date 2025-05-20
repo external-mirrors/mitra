@@ -14,6 +14,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Added `parse_canonical` method to `Url` type.
 - Added `is_onion` and `is_i2p` methods to `apx_core::url::hostname` module.
 - Support WebFinger addresses with IPv6 hostnames.
+- Implemented `Deserialize` for `HttpUrl` type.
 
 ### Changed
 
