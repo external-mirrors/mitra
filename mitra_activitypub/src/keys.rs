@@ -4,13 +4,11 @@ use serde_json::{Value as JsonValue};
 use apx_core::{
     crypto::common::PublicKey,
     crypto_eddsa::{
-        ed25519_public_key_from_pkcs8_pem,
         ed25519_public_key_from_secret_key,
         ed25519_public_key_to_multikey,
         Ed25519SecretKey,
     },
     crypto_rsa::{
-        deserialize_rsa_public_key,
         rsa_public_key_to_multikey,
         rsa_public_key_to_pkcs1_der,
         rsa_public_key_to_pkcs8_pem,
@@ -75,14 +73,8 @@ impl PublicKeyPem {
     }
 
     pub fn public_key(&self) -> Result<PublicKey, ValidationError> {
-        let public_key = match deserialize_rsa_public_key(&self.public_key_pem) {
-            Ok(public_key) => PublicKey::Rsa(public_key),
-            Err(_) => {
-                let public_key = ed25519_public_key_from_pkcs8_pem(&self.public_key_pem)
-                    .map_err(|_| ValidationError("unexpected key type"))?;
-                PublicKey::Ed25519(public_key)
-            },
-        };
+        let public_key = PublicKey::from_pem(&self.public_key_pem)
+            .map_err(ValidationError)?;
         Ok(public_key)
     }
 

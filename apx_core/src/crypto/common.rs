@@ -3,11 +3,13 @@
 use crate::{
     crypto_eddsa::{
         ed25519_public_key_from_bytes,
+        ed25519_public_key_from_pkcs8_pem,
         ed25519_public_key_from_secret_key,
         Ed25519PublicKey,
         Ed25519SecretKey,
     },
     crypto_rsa::{
+        deserialize_rsa_public_key,
         rsa_public_key_from_pkcs1_der,
         RsaPublicKey,
         RsaSecretKey,
@@ -42,6 +44,19 @@ impl PublicKey {
                 PublicKey::Ed25519(public_key)
             },
             _ => return Err("unexpected key type"),
+        };
+        Ok(public_key)
+    }
+
+    /// Parses public key in PEM format
+    pub fn from_pem(public_key_pem: &str) -> Result<Self, &'static str> {
+        let public_key = match deserialize_rsa_public_key(public_key_pem) {
+            Ok(public_key) => PublicKey::Rsa(public_key),
+            Err(_) => {
+                let public_key = ed25519_public_key_from_pkcs8_pem(public_key_pem)
+                    .map_err(|_| "unexpected key type")?;
+                PublicKey::Ed25519(public_key)
+            },
         };
         Ok(public_key)
     }
