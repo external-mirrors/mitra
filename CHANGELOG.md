@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- Improved handling of database errors during OAuth token verification.
+
 ## [4.3.1] - 2025-05-18
 
 ### Fixed

@@ -10,13 +10,12 @@ pub async fn get_current_user(
     db_client: &impl DatabaseClient,
     token: &str,
 ) -> Result<User, MastodonError> {
-    let user = get_user_by_oauth_token(db_client, token).await.map_err(|err| {
-        match err {
-            DatabaseError::NotFound(_) => {
-                MastodonError::AuthError("access token is invalid")
-            },
-            _ => MastodonError::InternalError,
-        }
-    })?;
+    let user = match get_user_by_oauth_token(db_client, token).await {
+        Ok(user) => user,
+        Err(DatabaseError::NotFound(_)) => {
+            return Err(MastodonError::AuthError("access token is invalid"));
+        },
+        Err(other_error) => return Err(other_error.into()),
+    };
     Ok(user)
 }
