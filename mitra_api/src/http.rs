@@ -9,10 +9,7 @@ use actix_web::{
     body::MessageBody,
     dev::{ConnectionInfo, ServiceResponse},
     error::{Error, JsonPayloadError},
-    http::{
-        header as http_header,
-        header::HeaderMap as ActixHeaderMap,
-    },
+    http::{header as http_header},
     middleware::DefaultHeaders,
     web::{Form, Json},
     Either,
@@ -21,16 +18,10 @@ use actix_web::{
 use log::Level;
 use serde_qs::actix::{QsForm, QsQuery};
 
-use apx_core::http_types::{header_map_adapter, HeaderMap};
-
 use crate::{
     errors::HttpError,
     ratelimit::RealIpKeyExtractor,
 };
-
-pub fn actix_header_map_adapter(header_map: &ActixHeaderMap) -> HeaderMap {
-    header_map_adapter(header_map)
-}
 
 pub type FormOrJson<T> = Either<Form<T>, Json<T>>;
 pub type QsFormOrJson<T> = Either<QsForm<T>, Json<T>>;

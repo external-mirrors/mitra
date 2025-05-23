@@ -3,7 +3,7 @@ use serde_json::{Value as JsonValue};
 
 use apx_core::{
     http_digest::ContentDigest,
-    http_types::{method_adapter, uri_adapter},
+    http_types::{header_map_adapter, method_adapter, uri_adapter},
     urls::get_hostname,
 };
 use apx_sdk::deserialization::object_to_id;
@@ -29,7 +29,6 @@ use mitra_validators::{
 
 use crate::{
     errors::HttpError,
-    http::actix_header_map_adapter,
 };
 
 #[derive(thiserror::Error, Debug)]
@@ -113,7 +112,7 @@ pub async fn receive_activity(
         db_client,
         method_adapter(request.method()),
         uri_adapter(request.uri()),
-        actix_header_map_adapter(request.headers()),
+        header_map_adapter(request.headers()),
         Some(activity_digest),
         // Don't fetch signer if this is Delete(Person) activity
         is_self_delete,
