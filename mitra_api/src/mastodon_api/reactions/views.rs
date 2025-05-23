@@ -1,4 +1,3 @@
-/// Undocumented Pleroma API
 use actix_web::{
     delete,
     dev::ConnectionInfo,
@@ -51,6 +50,8 @@ fn emoji_shortcode(emoji_name: &str) -> String {
     format!(":{emoji_name}:")
 }
 
+// Pleroma API
+// Documentation: https://git.pleroma.social/-/snippets/1945
 #[put("/{status_id}/reactions/{content}")]
 async fn create_reaction_view(
     auth: BearerAuth,
