@@ -6,7 +6,6 @@ use actix_web::{
     HttpResponse,
     HttpResponseBuilder,
 };
-use serde::Serialize;
 use thiserror::Error;
 
 use mitra_models::database::DatabaseError;
@@ -66,16 +65,10 @@ impl From<ValidationError> for HttpError {
     }
 }
 
-#[derive(Serialize)]
-struct ErrorInfo {
-    message: String,
-}
-
 impl ResponseError for HttpError {
     fn error_response(&self) -> HttpResponse {
         let error_message = self.error_message();
-        let err = ErrorInfo { message: error_message };
-        HttpResponseBuilder::new(self.status_code()).json(err)
+        HttpResponseBuilder::new(self.status_code()).body(error_message)
     }
 
     fn status_code(&self) -> StatusCode {
