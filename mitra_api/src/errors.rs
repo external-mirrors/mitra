@@ -11,7 +11,7 @@ use mitra_validators::errors::ValidationError;
 
 #[derive(thiserror::Error, Debug)]
 pub enum HttpError {
-    #[error("database error")]
+    #[error("database error: {0}")]
     DatabaseError(#[source] DatabaseError),
 
     #[error("{0}")]
@@ -28,6 +28,16 @@ pub enum HttpError {
 
     #[error("internal error")]
     InternalError,
+}
+
+impl HttpError {
+    fn error_message(&self) -> String {
+        match self {
+            // Don't expose internal error details
+            HttpError::DatabaseError(_) => "database error".to_owned(),
+            other_error => other_error.to_string(),
+        }
+    }
 }
 
 impl From<DatabaseError> for HttpError {
@@ -55,7 +65,8 @@ struct ErrorInfo {
 
 impl ResponseError for HttpError {
     fn error_response(&self) -> HttpResponse {
-        let err = ErrorInfo { message: self.to_string() };
+        let error_message = self.error_message();
+        let err = ErrorInfo { message: error_message };
         HttpResponseBuilder::new(self.status_code()).json(err)
     }
 
@@ -67,5 +78,18 @@ impl ResponseError for HttpError {
             HttpError::NotFoundError(_) => StatusCode::NOT_FOUND,
             _ => StatusCode::INTERNAL_SERVER_ERROR,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_error_message() {
+        let db_error = DatabaseError::type_error();
+        let error = HttpError::from(db_error);
+        assert_eq!(error.to_string(), "database error: database type error");
+        assert_eq!(error.error_message(), "database error");
     }
 }

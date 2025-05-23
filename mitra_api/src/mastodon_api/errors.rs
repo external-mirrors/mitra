@@ -7,13 +7,14 @@ use actix_web::{
     HttpResponseBuilder,
 };
 use serde::Serialize;
+use thiserror::Error;
 
 use mitra_models::database::DatabaseError;
 use mitra_validators::errors::ValidationError;
 
-#[derive(thiserror::Error, Debug)]
+#[derive(Debug, Error)]
 pub enum MastodonError {
-    #[error("database error")]
+    #[error("database error: {0}")]
     DatabaseError(#[source] DatabaseError),
 
     #[error("{0}")]
@@ -39,6 +40,16 @@ pub enum MastodonError {
 
     #[error("internal error")]
     InternalError,
+}
+
+impl MastodonError {
+    fn error_message(&self) -> String {
+        match self {
+            // Don't expose internal error details
+            MastodonError::DatabaseError(_) => "database error".to_owned(),
+            other_error => other_error.to_string(),
+        }
+    }
 }
 
 impl From<DatabaseError> for MastodonError {
@@ -77,9 +88,10 @@ impl MastodonErrorData {
 
 impl ResponseError for MastodonError {
     fn error_response(&self) -> HttpResponse {
+        let error_message = self.error_message();
         let error_data = MastodonErrorData {
-            error: self.to_string(),
-            error_description: Some(self.to_string()),
+            error: error_message.clone(),
+            error_description: Some(error_message),
         };
         HttpResponseBuilder::new(self.status_code()).json(error_data)
     }
@@ -95,5 +107,18 @@ impl ResponseError for MastodonError {
             Self::RateLimit(_) => StatusCode::TOO_MANY_REQUESTS,
             _ => StatusCode::INTERNAL_SERVER_ERROR,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_error_message() {
+        let db_error = DatabaseError::type_error();
+        let error = MastodonError::from(db_error);
+        assert_eq!(error.to_string(), "database error: database type error");
+        assert_eq!(error.error_message(), "database error");
     }
 }

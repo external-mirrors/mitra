@@ -24,3 +24,9 @@ pub enum DatabaseError {
     #[error("{0} already exists")]
     AlreadyExists(&'static str), // object type
 }
+
+impl DatabaseError {
+    pub fn type_error() -> Self {
+        Self::from(DatabaseTypeError)
+    }
+}
