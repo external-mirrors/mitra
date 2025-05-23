@@ -12,8 +12,9 @@ use crate::{
     crypto_rsa::verify_rsa_sha256_signature,
     http_digest::{parse_digest_header, ContentDigest},
     http_utils::remove_quotes,
-    json_signatures::verify::VerificationMethod,
 };
+
+pub use crate::json_signatures::verify::VerificationMethod;
 
 const SIGNATURE_PARAMETER_RE: &str = r#"^(?P<key>[a-zA-Z]+)=(?P<value>.+)$"#;
 

@@ -16,6 +16,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Support WebFinger addresses with IPv6 hostnames.
 - Implemented `Deserialize` for `HttpUrl` type.
 - Added `from_pem` method to `PublicKey` type.
+- Re-export `VerificationMethod` in `http_signatures::verify`.
 
 ### Changed
 
