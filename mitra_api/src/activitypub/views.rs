@@ -442,7 +442,7 @@ async fn proposal_view(
                 .finish();
             return Ok(response);
         },
-        _ => return Err(HttpError::InternalError),
+        _ => unreachable!("local payment option should not be link"),
     };
     let proposal = build_proposal(
         &config.instance_url(),
@@ -473,7 +473,7 @@ async fn instance_actor_view(
     config: web::Data<Config>,
 ) -> Result<HttpResponse, HttpError> {
     let actor = build_instance_actor(&config.instance())
-        .map_err(|_| HttpError::InternalError)?;
+        .map_err(HttpError::from_internal)?;
     let response = HttpResponse::Ok()
         .content_type(AP_MEDIA_TYPE)
         .json(actor);
@@ -732,7 +732,7 @@ async fn apgateway_create_actor_view(
             HandlerError::ValidationError(error) =>
                 HttpError::ValidationError(error),
             HandlerError::DatabaseError(error) => error.into(),
-            _ => HttpError::InternalError,
+            other_error => HttpError::from_internal(other_error),
         }
     })?;
     log::warn!("created portable account {}", user);

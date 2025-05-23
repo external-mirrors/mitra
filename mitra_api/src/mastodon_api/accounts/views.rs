@@ -196,7 +196,7 @@ pub async fn create_account(
         let password = account_data.password.as_ref()
             .ok_or(ValidationError("password is required"))?;
         let password_digest = hash_password(password)
-            .map_err(|_| MastodonError::InternalError)?;
+            .map_err(MastodonError::from_internal)?;
         Some(password_digest)
     } else {
         None
@@ -240,10 +240,11 @@ pub async fn create_account(
     // Generate RSA private key for actor
     let rsa_secret_key = match web::block(generate_rsa_key).await {
         Ok(Ok(secret_key)) => secret_key,
-        _ => return Err(MastodonError::InternalError),
+        Ok(Err(error)) => return Err(MastodonError::from_internal(error)),
+        Err(error) => return Err(MastodonError::from_internal(error)),
     };
     let rsa_secret_key_pem = rsa_secret_key_to_pkcs8_pem(&rsa_secret_key)
-        .map_err(|_| MastodonError::InternalError)?;
+        .map_err(MastodonError::from_internal)?;
     let ed25519_secret_key = generate_ed25519_key();
 
     let AccountCreateData { username, invite_code, .. } =
@@ -394,7 +395,7 @@ async fn get_identity_claim(
         &did,
         &proof_type,
         created_at,
-    ).map_err(|_| MastodonError::InternalError)?;
+    ).map_err(MastodonError::from_internal)?;
     let response = IdentityClaim { did, claim: message, created_at };
     Ok(HttpResponse::Ok().json(response))
 }
@@ -440,7 +441,7 @@ async fn create_identity_proof(
         &did,
         &proof_type,
         proof_data.created_at,
-    ).map_err(|_| MastodonError::InternalError)?;
+    ).map_err(MastodonError::from_internal)?;
     let claim_value = serde_json::to_value(&claim)
         .expect("claim should be serializable");
 
@@ -604,7 +605,7 @@ async fn search_by_acct(
                 // Webfinger queries from unauthenticated users
                 // are rate-limited
                 if let Some(wait) = governor_result.0.check()
-                    .map_err(|_| MastodonError::InternalError)?
+                    .map_err(MastodonError::from_internal)?
                     .map(Duration::from_millis)
                 {
                     return Err(MastodonError::RateLimit(wait));
@@ -753,7 +754,7 @@ async fn unfollow_account(
                     follow_request_id,
                     follow_request_has_deprecated_ap_id,
                 ) = maybe_follow_request_deleted
-                    .ok_or(MastodonError::InternalError)?;
+                    .ok_or(DatabaseError::type_error())?;
                 prepare_undo_follow(
                     &config.instance(),
                     &current_user,

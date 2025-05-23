@@ -246,7 +246,7 @@ async fn create_invoice_view(
             .find_subscription_option(&invoice_data.chain_id)
             .ok_or(ValidationError("recipient can't accept payment"))?;
         let payment_address = create_monero_address(monero_config).await
-            .map_err(|_| MastodonError::InternalError)?
+            .map_err(MastodonError::from_internal)?
             .to_string();
         create_local_invoice(
             db_client,

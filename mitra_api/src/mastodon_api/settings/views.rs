@@ -118,7 +118,7 @@ async fn change_password_view(
     let db_client = &**get_database_client(&db_pool).await?;
     let mut current_user = get_current_user(db_client, auth.token()).await?;
     let password_digest = hash_password(&request_data.new_password)
-        .map_err(|_| MastodonError::InternalError)?;
+        .map_err(MastodonError::from_internal)?;
     set_user_password(db_client, current_user.id, &password_digest).await?;
     current_user.password_digest = Some(password_digest);
     let base_url = get_request_base_url(connection_info);

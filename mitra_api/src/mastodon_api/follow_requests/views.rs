@@ -19,7 +19,11 @@ use mitra_activitypub::{
 };
 use mitra_config::Config;
 use mitra_models::{
-    database::{get_database_client, DatabaseConnectionPool},
+    database::{
+        get_database_client,
+        DatabaseConnectionPool,
+        DatabaseError,
+    },
     profiles::queries::get_profile_by_id,
     relationships::queries::{
         follow_request_accepted,
@@ -100,7 +104,7 @@ async fn accept_follow_request_view(
     if let Some(remote_actor) = source_profile.actor_json {
         // Activity ID should be known
         let activity_id = follow_request.activity_id
-            .ok_or(MastodonError::InternalError)?;
+            .ok_or(DatabaseError::type_error())?;
         prepare_accept_follow(
             &config.instance(),
             &current_user,
@@ -134,7 +138,7 @@ async fn reject_follow_request_view(
     follow_request_rejected(db_client, follow_request.id).await?;
     if let Some(remote_actor) = source.actor_json {
         let activity_id = follow_request.activity_id
-            .ok_or(MastodonError::InternalError)?;
+            .ok_or(DatabaseError::type_error())?;
         prepare_reject_follow(
             &config.instance(),
             &current_user,

@@ -60,7 +60,7 @@ dependencies = [
 [[package]]
 name = "actix-governor"
 version = "0.7.0"
-source = "git+https://github.com/silverpill/actix-governor?rev=3c3b2fd6325454fc9de74d9acc22b9cdbfcfabc8#3c3b2fd6325454fc9de74d9acc22b9cdbfcfabc8"
+source = "git+https://github.com/silverpill/actix-governor?rev=4b8f9995d5bf172ac6373214b78480061ed4abf0#4b8f9995d5bf172ac6373214b78480061ed4abf0"
 dependencies = [
  "actix-http",
  "actix-web",

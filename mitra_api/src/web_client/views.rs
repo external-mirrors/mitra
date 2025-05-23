@@ -117,9 +117,9 @@ async fn profile_page_opengraph_view(
 ) -> Result<HttpResponse, HttpError> {
     let db_client = &**get_database_client(&db_pool).await?;
     let web_client_dir = config.web_client_dir.as_ref()
-        .ok_or(HttpError::InternalError)?;
+        .expect("web_client_dir should be defined");
     let index_html = std::fs::read_to_string(web_client_dir.join(INDEX_FILE))
-        .map_err(|_| HttpError::InternalError)?;
+        .map_err(HttpError::from_internal)?;
     let page = match get_profile_by_acct(db_client, &acct).await {
         Ok(profile) => {
             // Rewrite index.html and insert metadata
@@ -179,9 +179,9 @@ async fn post_page_opengraph_view(
 ) -> Result<HttpResponse, HttpError> {
     let db_client = &**get_database_client(&db_pool).await?;
     let web_client_dir = config.web_client_dir.as_ref()
-        .ok_or(HttpError::InternalError)?;
+        .expect("web_client_dir should be defined");
     let index_html = std::fs::read_to_string(web_client_dir.join(INDEX_FILE))
-        .map_err(|_| HttpError::InternalError)?;
+        .map_err(HttpError::from_internal)?;
     let page = match get_post_by_id(db_client, *post_id).await {
         Ok(post) if post.is_public() => {
             // Rewrite index.html and insert metadata

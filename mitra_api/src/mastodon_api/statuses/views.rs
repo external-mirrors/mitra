@@ -280,7 +280,7 @@ async fn create_status(
             log::warn!("idempotency key re-used: {idempotency_key}");
             // TODO: store Uuid in cache
             let post_id = Uuid::parse_str(post_id)
-                .map_err(|_| MastodonError::InternalError)?;
+                .map_err(MastodonError::from_internal)?;
             let post = get_post_by_id(db_client, post_id).await?;
             if post.author.id != current_user.id {
                 return Err(MastodonError::PermissionError);
@@ -1018,9 +1018,9 @@ async fn make_permanent(
     for attachment in post.attachments.iter_mut() {
         // Add attachment to IPFS
         let image_data = media_storage.read_file(&attachment.file_name)
-            .map_err(|_| MastodonError::InternalError)?;
+            .map_err(MastodonError::from_internal)?;
         let image_cid = ipfs_store::add(ipfs_api_url, image_data).await
-            .map_err(|_| MastodonError::InternalError)?;
+            .map_err(MastodonError::from_internal)?;
         attachment.ipfs_cid = Some(image_cid.clone());
         attachments.push((attachment.id, image_cid));
     };
@@ -1038,10 +1038,10 @@ async fn make_permanent(
         true,
     );
     let post_metadata = serde_json::to_value(note)
-        .map_err(|_| MastodonError::InternalError)?;
+        .expect("object should be serializable");
     let post_metadata_json = post_metadata.to_string().as_bytes().to_vec();
     let post_metadata_cid = ipfs_store::add(ipfs_api_url, post_metadata_json).await
-        .map_err(|_| MastodonError::InternalError)?;
+        .map_err(MastodonError::from_internal)?;
 
     set_post_ipfs_cid(db_client, post.id, &post_metadata_cid, attachments).await?;
     post.ipfs_cid = Some(post_metadata_cid);

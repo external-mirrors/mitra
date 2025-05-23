@@ -1,3 +1,5 @@
+use std::error::{Error as StdError};
+
 use actix_web::{
     error::ResponseError,
     http::StatusCode,
@@ -5,11 +7,12 @@ use actix_web::{
     HttpResponseBuilder,
 };
 use serde::Serialize;
+use thiserror::Error;
 
 use mitra_models::database::DatabaseError;
 use mitra_validators::errors::ValidationError;
 
-#[derive(thiserror::Error, Debug)]
+#[derive(Debug, Error)]
 pub enum HttpError {
     #[error("database error: {0}")]
     DatabaseError(#[source] DatabaseError),
@@ -26,15 +29,20 @@ pub enum HttpError {
     #[error("{0} not found")]
     NotFoundError(&'static str),
 
-    #[error("internal error")]
-    InternalError,
+    #[error("internal error: {0}")]
+    InternalError(String),
 }
 
 impl HttpError {
+    pub fn from_internal(error: impl StdError) -> Self {
+        Self::InternalError(error.to_string())
+    }
+
     fn error_message(&self) -> String {
         match self {
             // Don't expose internal error details
             HttpError::DatabaseError(_) => "database error".to_owned(),
+            HttpError::InternalError(_) => "internal error".to_owned(),
             other_error => other_error.to_string(),
         }
     }

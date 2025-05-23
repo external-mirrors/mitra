@@ -28,7 +28,9 @@ pub enum UploadError {
 impl From<UploadError> for MastodonError {
     fn from(error: UploadError) -> Self {
         match error {
-            UploadError::WriteError(_) => MastodonError::InternalError,
+            UploadError::WriteError(error) => {
+                MastodonError::from_internal(error)
+            },
             other_error => {
                 MastodonError::ValidationError(other_error.to_string())
             },

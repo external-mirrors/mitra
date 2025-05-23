@@ -96,7 +96,7 @@ async fn authorize_view(
     let password_correct = verify_password(
         password_digest,
         &form_data.password,
-    ).map_err(|_| MastodonError::InternalError)?;
+    ).map_err(MastodonError::from_internal)?;
     if !password_correct {
         return Err(ValidationError("incorrect password").into());
     };
@@ -245,7 +245,7 @@ async fn token_view(
         let password_correct = verify_password(
             password_digest,
             password,
-        ).map_err(|_| MastodonError::InternalError)?;
+        ).map_err(MastodonError::from_internal)?;
         if !password_correct {
             return Err(ValidationError("incorrect password").into());
         };

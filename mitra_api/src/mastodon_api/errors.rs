@@ -1,3 +1,4 @@
+use std::error::{Error as StdError};
 use std::time::Duration;
 
 use actix_web::{
@@ -38,15 +39,20 @@ pub enum MastodonError {
     #[error("retry in {0:.2?}")]
     RateLimit(Duration),
 
-    #[error("internal error")]
-    InternalError,
+    #[error("internal error: {0}")]
+    InternalError(String),
 }
 
 impl MastodonError {
+    pub fn from_internal(error: impl StdError) -> Self {
+        Self::InternalError(error.to_string())
+    }
+
     fn error_message(&self) -> String {
         match self {
             // Don't expose internal error details
             MastodonError::DatabaseError(_) => "database error".to_owned(),
+            MastodonError::InternalError(_) => "internal error".to_owned(),
             other_error => other_error.to_string(),
         }
     }
