@@ -36,7 +36,7 @@ version = "4.3.1"
 license = "AGPL-3.0-only"
 
 edition = "2021"
-rust-version = "1.70.0"
+rust-version = "1.72.1"
 
 [workspace.lints.rust]
 # Lints from rust-2024-compatibility group
