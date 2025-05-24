@@ -89,10 +89,11 @@ fn activitypub_guard() -> impl guard::Guard {
     })
 }
 
-fn opengraph_guard(with_opengraph: bool) -> impl guard::Guard {
-    guard::fn_guard(move |_ctx| {
-        // TODO: use .app_data (actix-web 4.7.0)
-        with_opengraph
+fn opengraph_guard() -> impl guard::Guard {
+    guard::fn_guard(|ctx| {
+        let config = ctx.app_data::<web::Data<Config>>()
+            .expect("app data should contain config");
+        config.web_client_dir.is_some() && config.web_client_rewrite_index
     })
 }
 
@@ -149,12 +150,11 @@ async fn profile_page_opengraph_view(
     Ok(response)
 }
 
-pub fn profile_page_overlay(config: &Config) -> Resource {
-    let with_opengraph = config.web_client_dir.is_some() && config.web_client_rewrite_index;
+pub fn profile_page_overlay() -> Resource {
     web::resource("/@{acct}")
-        .guard(guard::Any(activitypub_guard()).or(opengraph_guard(with_opengraph)))
+        .guard(guard::Any(activitypub_guard()).or(opengraph_guard()))
         .route(web::get().guard(activitypub_guard()).to(profile_page_redirect_view))
-        .route(web::get().guard(opengraph_guard(with_opengraph)).to(profile_page_opengraph_view))
+        .route(web::get().guard(opengraph_guard()).to(profile_page_opengraph_view))
 }
 
 /// Redirect to ActivityPub representation
@@ -219,10 +219,9 @@ async fn post_page_opengraph_view(
     Ok(response)
 }
 
-pub fn post_page_overlay(config: &Config) -> Resource {
-    let with_opengraph = config.web_client_dir.is_some() && config.web_client_rewrite_index;
+pub fn post_page_overlay() -> Resource {
     web::resource("/post/{object_id}")
-        .guard(guard::Any(activitypub_guard()).or(opengraph_guard(with_opengraph)))
+        .guard(guard::Any(activitypub_guard()).or(opengraph_guard()))
         .route(web::get().guard(activitypub_guard()).to(post_page_redirect_view))
-        .route(web::get().guard(opengraph_guard(with_opengraph)).to(post_page_opengraph_view))
+        .route(web::get().guard(opengraph_guard()).to(post_page_opengraph_view))
 }

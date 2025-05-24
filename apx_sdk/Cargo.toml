@@ -27,7 +27,7 @@ apx_core = { path = "../apx_core" }
 
 [dev-dependencies]
 # Actix server for examples
-actix-web = "4.5.1"
+actix-web = "4.7.0"
 # Async runtime for examples
 tokio = { version = "1.38.0", features = ["macros", "rt"] }
 
