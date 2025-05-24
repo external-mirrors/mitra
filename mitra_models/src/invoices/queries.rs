@@ -393,6 +393,6 @@ mod tests {
             invoice.id,
             InvoiceStatus::Cancelled,
         ).await.err().unwrap();
-        assert!(matches!(error, DatabaseError::DatabaseTypeError(_)));
+        assert!(matches!(error, DatabaseError::TypeError(_)));
     }
 }
