@@ -1,6 +1,7 @@
 use serde_json::{Value as JsonValue};
 
 use apx_core::{
+    ap_url::ApUrl,
     crypto::common::PublicKey,
     crypto_eddsa::{
         ed25519_public_key_from_bytes,
@@ -26,6 +27,7 @@ use apx_core::{
         Method,
         Uri,
     },
+    http_url::HttpUrl,
     json_signatures::{
         proofs::ProofType,
         verify::{
@@ -224,15 +226,15 @@ fn get_signer_rsa_key(
 async fn get_signing_key(
     config: &Config,
     db_client: &impl DatabaseClient,
-    key_id: &str,
+    key_id: &HttpUrl,
 ) -> Result<PublicKey, AuthenticationError> {
+    let key_id = key_id.as_str();
     let signer_id = key_id_to_actor_id(key_id)
         .map_err(|_| AuthenticationError::InvalidKeyId)?;
-    let canonical_signer_id = canonicalize_id(&signer_id)
-        .map_err(|_| AuthenticationError::ActorError("invalid actor ID"))?;
+    // Not canonicalizing, assuming regular HTTP URL
     let public_key = match get_remote_profile_by_actor_id(
         db_client,
-        &canonical_signer_id.to_string(),
+        &signer_id,
     ).await {
         Ok(profile) => get_signer_key(&profile, key_id)?,
         Err(DatabaseError::NotFound(_)) => {
@@ -247,6 +249,26 @@ async fn get_signing_key(
     };
     Ok(public_key)
 }
+
+async fn get_signing_key_ap_url(
+    _config: &Config,
+    db_client: &impl DatabaseClient,
+    key_id: &ApUrl,
+) -> Result<PublicKey, AuthenticationError> {
+    let signer_id = key_id.without_fragment();
+    let public_key = match get_remote_profile_by_actor_id(
+        db_client,
+        &signer_id.to_string(),
+    ).await {
+        Ok(profile) => get_signer_key(&profile, &key_id.to_string())?,
+        Err(DatabaseError::NotFound(_)) => {
+            return Err(AuthenticationError::KeyRetrievalError("can't fetch key"));
+        },
+        Err(other_error) => return Err(other_error.into()),
+    };
+    Ok(public_key)
+}
+
 
 /// Verifies HTTP signature and returns signer
 #[allow(clippy::too_many_arguments)]
@@ -278,10 +300,19 @@ pub async fn verify_signed_request(
                 get_signing_key(
                     config,
                     db_client,
-                    key_id.as_str(),
+                    key_id,
+                ).await?
+            },
+            VerificationMethod::ApUrl(ref key_id) => {
+                log::info!("request signed with {key_id}");
+                get_signing_key_ap_url(
+                    config,
+                    db_client,
+                    key_id,
                 ).await?
             },
             VerificationMethod::DidUrl(ref did_url) => {
+                log::info!("request signed with {did_url}");
                 // Resolve DID URL
                 let public_key = did_url.did().as_did_key()
                     .ok_or(AuthenticationError::InvalidKeyId)?
@@ -395,6 +426,10 @@ pub async fn verify_signed_activity(
                 },
                 _ => return Err(AuthenticationError::InvalidJsonSignatureType),
             };
+        },
+        VerificationMethod::ApUrl(ap_url) => {
+            log::warn!("activity signed by {}", ap_url);
+            return Err(AuthenticationError::InvalidJsonSignatureType);
         },
         VerificationMethod::DidUrl(did_url) => {
             log::warn!("activity signed by {}", did_url.did());

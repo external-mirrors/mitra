@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+
+- Allow requests to portable inboxes/outboxes signed with keys identified by 'ap' URLs.
+
 ### Changed
 
 - Improved handling of database errors during OAuth token verification.

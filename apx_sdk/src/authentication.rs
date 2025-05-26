@@ -57,8 +57,9 @@ pub fn verify_portable_object(
         Err(other_error) => return Err(other_error.into()),
     };
     match signature_data.verification_method {
-        VerificationMethod::HttpUrl(_) =>
-            return Err(AuthenticationError::InvalidVerificationMethod),
+        VerificationMethod::HttpUrl(_) | VerificationMethod::ApUrl(_) => {
+            return Err(AuthenticationError::InvalidVerificationMethod);
+        },
         VerificationMethod::DidUrl(did_url) => {
             // Object must be signed by its owner
             if did_url.did() != canonical_object_id.authority() {

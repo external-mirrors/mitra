@@ -4,6 +4,7 @@ use std::fmt;
 use serde_json::{Value as JsonValue};
 
 use crate::{
+    ap_url::{is_ap_url, ApUrl},
     crypto_eddsa::{verify_eddsa_signature, Ed25519PublicKey},
     crypto_rsa::{verify_rsa_sha256_signature, RsaPublicKey},
     did_key::DidKey,
@@ -36,13 +37,18 @@ const PROOF_VALUE_KEY: &str = "proofValue";
 #[derive(Debug, PartialEq)]
 pub enum VerificationMethod {
     HttpUrl(HttpUrl),
+    ApUrl(ApUrl),
     DidUrl(DidUrl),
 }
 
 impl VerificationMethod {
     /// Parses verification method ID
     pub(crate) fn parse(url: &str) -> Result<Self, &'static str> {
-        let method = if let Ok(did_url) = DidUrl::parse(url) {
+        // TODO: support compatible 'ap' URLs
+        let method = if is_ap_url(url) {
+            let ap_url = ApUrl::parse(url)?;
+            Self::ApUrl(ap_url)
+        } else if let Ok(did_url) = DidUrl::parse(url) {
             Self::DidUrl(did_url)
         } else if let Ok(http_url) = HttpUrl::parse(url) {
             Self::HttpUrl(http_url)
@@ -56,6 +62,7 @@ impl VerificationMethod {
     pub fn origin(&self) -> Origin {
         match self {
             Self::HttpUrl(http_url) => http_url.origin(),
+            Self::ApUrl(ap_url) => ap_url.origin(),
             Self::DidUrl(did_url) => did_url.origin(),
         }
     }
@@ -65,6 +72,7 @@ impl fmt::Display for VerificationMethod {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::HttpUrl(http_url) => write!(formatter, "{}", http_url),
+            Self::ApUrl(ap_url) => write!(formatter, "{}", ap_url),
             Self::DidUrl(did_url) => write!(formatter, "{}", did_url),
         }
     }
@@ -225,6 +233,25 @@ mod tests {
 
     #[allow(deprecated)]
     use crate::json_signatures::create::sign_object_rsa;
+
+    #[test]
+    fn test_verification_method_parse() {
+        let url = "http://social.example/actors/1#main-key";
+        let vm_id = VerificationMethod::parse(url).unwrap();
+        assert!(matches!(vm_id, VerificationMethod::HttpUrl(_)));
+
+        let url = "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor#main-key";
+        let vm_id = VerificationMethod::parse(url).unwrap();
+        assert!(matches!(vm_id, VerificationMethod::ApUrl(_)));
+
+        let url = "https://gateway.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor#main-key";
+        let vm_id = VerificationMethod::parse(url).unwrap();
+        assert!(matches!(vm_id, VerificationMethod::HttpUrl(_)));
+
+        let url = "did:key:z6MkrJVnaZkeFzdQyMZu1cgjg7k1pZZ6pvBQ7XJPt4swbTQ2#z6MkrJVnaZkeFzdQyMZu1cgjg7k1pZZ6pvBQ7XJPt4swbTQ2";
+        let vm_id = VerificationMethod::parse(url).unwrap();
+        assert!(matches!(vm_id, VerificationMethod::DidUrl(_)));
+    }
 
     #[test]
     fn test_get_json_signature_eip191() {

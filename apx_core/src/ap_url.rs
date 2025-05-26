@@ -26,7 +26,8 @@ pub fn with_ap_prefix(did_url: &str) -> String {
     format!("{}{}", AP_URL_PREFIX, did_url)
 }
 
-#[derive(Clone, PartialEq)]
+/// FEP-ef61 'ap' URL
+#[derive(Clone, Debug, PartialEq)]
 pub struct ApUrl {
     authority: Did,
     location: UriRelativeString,
@@ -81,6 +82,13 @@ impl ApUrl {
     /// Returns origin tuple for this URL
     pub fn origin(&self) -> Origin {
         self.authority.origin()
+    }
+
+    /// Returns URL without the fragment part
+    pub fn without_fragment(&self) -> Self {
+        let mut cloned = self.clone();
+        cloned.location.set_fragment(None);
+        cloned
     }
 }
 
@@ -163,5 +171,14 @@ mod tests {
     fn test_origin() {
         let ap_url = ApUrl::parse("ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor").unwrap();
         assert_eq!(ap_url.origin(), Origin::new("ap", "did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6", 0));
+    }
+
+    #[test]
+    fn test_without_fragment() {
+        let ap_url = ApUrl::parse("ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor#main-key").unwrap();
+        assert_eq!(
+            ap_url.without_fragment().to_string(),
+            "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor",
+        );
     }
 }

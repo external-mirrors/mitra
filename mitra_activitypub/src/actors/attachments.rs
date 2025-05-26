@@ -70,8 +70,9 @@ pub fn parse_identity_proof_fep_c390(
     let signature_data = get_json_signature(attachment)
         .map_err(|_| ValidationError("invalid proof"))?;
     let signer = match signature_data.verification_method {
-        VerificationMethod::HttpUrl(_) =>
-            return Err(ValidationError("unsupported verification method")),
+        VerificationMethod::HttpUrl(_) | VerificationMethod::ApUrl(_) => {
+            return Err(ValidationError("unsupported verification method"));
+        },
         // Fragment is ignored because supported DIDs
         // can't have more than one verification method
         VerificationMethod::DidUrl(did_url) => did_url.did().clone(),

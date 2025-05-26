@@ -17,6 +17,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Implemented `Deserialize` for `HttpUrl` type.
 - Added `from_pem` method to `PublicKey` type.
 - Re-export `VerificationMethod` in `http_signatures::verify`.
+- Implemented `Debug` for `ApUrl` type.
+- Added `ApUrl` variant to `VerificationMethod` enum.
+- Added `without_fragment` method to `ApUrl` type.
 
 ### Changed
 
