@@ -12,6 +12,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Write details of database errors and internal errors to log when processing requests.
 - Return plain text errors for routes other than Mastodon API.
 - Changed MSRV to 1.72.1.
+- Don't reject actor if associated public key has different origin.
 
 ## [4.3.1] - 2025-05-18
 

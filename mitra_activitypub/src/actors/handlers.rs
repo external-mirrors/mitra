@@ -8,7 +8,7 @@ use uuid::Uuid;
 
 use apx_core::{
     http_url::Hostname,
-    url::canonical::{is_same_origin, CanonicalUrl},
+    url::canonical::CanonicalUrl,
     urls::get_hostname,
 };
 use apx_sdk::{
@@ -70,6 +70,7 @@ use crate::{
     identifiers::canonicalize_id,
     importers::{perform_webfinger_query, ApClient},
     keys::{Multikey, PublicKeyPem},
+    ownership::is_same_origin,
     vocabulary::{
         APPLICATION,
         EMOJI,
@@ -390,6 +391,9 @@ fn parse_public_keys(
     if let Some(public_key) = actor.public_key.as_ref() {
         if public_key.owner != actor.id {
             log::warn!("public key is not owned by actor");
+        } else if !is_same_origin(&public_key.id, &public_key.owner)? {
+            // Not supported (the key must be fetched from its origin)
+            log::warn!("key and key owner have different origins");
         } else {
             let db_key = public_key.to_db_key()?;
             keys.push(db_key);
@@ -399,6 +403,10 @@ fn parse_public_keys(
     for multikey in verification_methods {
         if multikey.controller != actor.id {
             log::warn!("verification method is not owned by actor");
+            continue;
+        };
+        if !is_same_origin(&multikey.id, &multikey.controller)? {
+            log::warn!("key and key owner have different origins");
             continue;
         };
         let db_key = multikey.to_db_key()?;
@@ -413,16 +421,6 @@ fn parse_public_keys(
             log::warn!("public keys are not found in portable actor object");
         } else {
             return Err(ValidationError("public keys not found"));
-        };
-    };
-    for key in keys.iter() {
-        if !is_same_origin(&key.id, &actor.id)
-            .map_err(|message| ValidationError(message.0))?
-        {
-            // Cross-origin relationships are possible in origin-based security model,
-            // but we don't allow them yet.
-            // https://codeberg.org/fediverse/fep/src/branch/main/fep/fe34/fep-fe34.md
-            return Err(ValidationError("actor and actor key have different origins"));
         };
     };
     Ok(keys)

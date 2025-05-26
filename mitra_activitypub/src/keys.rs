@@ -86,7 +86,7 @@ impl PublicKeyPem {
 #[derive(Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Multikey {
-    id: String,
+    pub id: String,
     #[serde(rename = "type")]
     object_type: String,
     pub controller: String,
