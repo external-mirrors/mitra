@@ -12,7 +12,7 @@ use apx_core::{
     crypto_rsa::generate_rsa_key,
     http_url::HttpUrl,
     url::{
-        canonical::{parse_url, Url},
+        canonical::{parse_url, CanonicalUrl},
         hostname::guess_protocol,
     },
 };
@@ -481,7 +481,7 @@ pub async fn get_or_import_profile_by_webfinger_address(
 pub async fn get_post_by_object_id(
     db_client: &impl DatabaseClient,
     instance_url: &str,
-    object_id: &Url,
+    object_id: &CanonicalUrl,
 ) -> Result<Post, DatabaseError> {
     let object_id = object_id.to_string();
     match parse_local_object_id(instance_url, &object_id) {
@@ -670,7 +670,7 @@ async fn fetch_collection(
     #[derive(Deserialize)]
     #[serde(rename_all = "camelCase")]
     struct Collection {
-        id: Url,
+        id: CanonicalUrl,
         first: Option<JsonValue>, // page can be embedded
         #[serde(default)]
         items: Vec<JsonValue>,
@@ -680,7 +680,7 @@ async fn fetch_collection(
     #[derive(Deserialize)]
     #[serde(rename_all = "camelCase")]
     struct CollectionPage {
-        id: Url,
+        id: CanonicalUrl,
         next: Option<String>,
         #[serde(default)]
         items: Vec<JsonValue>,

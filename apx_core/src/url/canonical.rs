@@ -19,11 +19,10 @@ pub const GATEWAY_PATH_PREFIX: &str = "/.well-known/apgateway/";
 
 #[derive(Debug, Error)]
 #[error("{0}")]
-pub struct ObjectIdError(pub &'static str);
+pub struct CanonicalUrlError(pub &'static str);
 
-// TODO: FEP-EF61: rename to CanonicalUrl
 #[derive(Clone, PartialEq)]
-pub enum Url {
+pub enum CanonicalUrl {
     Http(HttpUrl),
     Ap(ApUrl),
 }
@@ -32,16 +31,16 @@ pub fn with_gateway(ap_url: &ApUrl, gateway_url: &str) -> String {
     format!("{}{}{}", gateway_url, GATEWAY_PATH_PREFIX, ap_url.to_did_url())
 }
 
-impl Url {
-    pub fn parse(value: &str) -> Result<Self, ObjectIdError> {
+impl CanonicalUrl {
+    pub fn parse(value: &str) -> Result<Self, CanonicalUrlError> {
         let (url, _) = parse_url(value)?;
         Ok(url)
     }
 
-    pub fn parse_canonical(value: &str) -> Result<Self, ObjectIdError> {
+    pub fn parse_canonical(value: &str) -> Result<Self, CanonicalUrlError> {
         let (url, maybe_gateway) = parse_url(value)?;
         if maybe_gateway.is_some() {
-            return Err(ObjectIdError("URL is not canonical"));
+            return Err(CanonicalUrlError("URL is not canonical"));
         };
         Ok(url)
     }
@@ -76,7 +75,7 @@ impl Url {
     }
 }
 
-impl fmt::Display for Url {
+impl fmt::Display for CanonicalUrl {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Http(http_url) => write!(formatter, "{}", http_url),
@@ -87,38 +86,38 @@ impl fmt::Display for Url {
 
 fn get_canonical_ap_url(
     http_url: HttpUrl,
-) -> Result<(ApUrl, String), ObjectIdError> {
+) -> Result<(ApUrl, String), CanonicalUrlError> {
     let relative_http_url = http_url.to_relative();
     let did_url = relative_http_url
         .strip_prefix(GATEWAY_PATH_PREFIX)
-        .ok_or(ObjectIdError("invalid gateway URL"))?;
+        .ok_or(CanonicalUrlError("invalid gateway URL"))?;
     let ap_url = ApUrl::from_did_url(did_url)
-        .map_err(ObjectIdError)?;
+        .map_err(CanonicalUrlError)?;
     let gateway = http_url.base();
     Ok((ap_url, gateway))
 }
 
 pub fn parse_url(
     value: &str,
-) -> Result<(Url, Option<String>), ObjectIdError> {
+) -> Result<(CanonicalUrl, Option<String>), CanonicalUrlError> {
     let mut maybe_gateway = None;
     let url = if is_ap_url(value) {
-        let ap_url = ApUrl::parse(value).map_err(ObjectIdError)?;
-        Url::Ap(ap_url)
+        let ap_url = ApUrl::parse(value).map_err(CanonicalUrlError)?;
+        CanonicalUrl::Ap(ap_url)
     } else {
-        let http_url = HttpUrl::parse(value).map_err(ObjectIdError)?;
+        let http_url = HttpUrl::parse(value).map_err(CanonicalUrlError)?;
         if http_url.path().starts_with(GATEWAY_PATH_PREFIX) {
             let (ap_url, gateway) = get_canonical_ap_url(http_url)?;
             maybe_gateway = Some(gateway);
-            Url::Ap(ap_url)
+            CanonicalUrl::Ap(ap_url)
         } else {
-            Url::Http(http_url)
+            CanonicalUrl::Http(http_url)
         }
     };
     Ok((url, maybe_gateway))
 }
 
-impl<'de> Deserialize<'de> for Url {
+impl<'de> Deserialize<'de> for CanonicalUrl {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
         where D: Deserializer<'de>
     {
@@ -127,9 +126,9 @@ impl<'de> Deserialize<'de> for Url {
     }
 }
 
-pub fn is_same_origin(id_1: &str, id_2: &str) -> Result<bool, ObjectIdError> {
-    let id_1 = Url::parse(id_1)?;
-    let id_2 = Url::parse(id_2)?;
+pub fn is_same_origin(id_1: &str, id_2: &str) -> Result<bool, CanonicalUrlError> {
+    let id_1 = CanonicalUrl::parse(id_1)?;
+    let id_2 = CanonicalUrl::parse(id_2)?;
     let is_same = id_1.origin() == id_2.origin();
     Ok(is_same)
 }
@@ -142,7 +141,7 @@ mod tests {
     fn test_http_url_from_http_url() {
         let url_str = "https://social.example/users/test";
         let http_url = HttpUrl::parse(url_str).unwrap();
-        let url = Url::Http(http_url);
+        let url = CanonicalUrl::Http(http_url);
         let output = url.to_http_url(None).unwrap();
         assert_eq!(output, url_str);
     }
@@ -151,7 +150,7 @@ mod tests {
     fn test_http_url_from_ap_url() {
         let url_str = "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor";
         let ap_url = ApUrl::parse(url_str).unwrap();
-        let url = Url::Ap(ap_url);
+        let url = CanonicalUrl::Ap(ap_url);
         let gateway = "https://gateway.example";
         let output = url.to_http_url(Some(gateway)).unwrap();
         let expected_output = "https://gateway.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor";
@@ -162,7 +161,7 @@ mod tests {
     fn test_http_url_from_ap_url_no_gateway() {
         let url_str = "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor";
         let ap_url = ApUrl::parse(url_str).unwrap();
-        let url = Url::Ap(ap_url);
+        let url = CanonicalUrl::Ap(ap_url);
         let maybe_output = url.to_http_url(None);
         assert!(maybe_output.is_none());
     }
@@ -171,7 +170,7 @@ mod tests {
     fn test_parse_url_https() {
         let url_str = "https://social.example/users/test";
         let (url, maybe_gateway) = parse_url(url_str).unwrap();
-        assert!(matches!(url, Url::Http(_)));
+        assert!(matches!(url, CanonicalUrl::Http(_)));
         assert_eq!(maybe_gateway, None);
         assert_eq!(url.to_string(), url_str);
     }
@@ -180,7 +179,7 @@ mod tests {
     fn test_parse_url_https_with_fragment() {
         let url_str = "https://www.w3.org/ns/activitystreams#Public";
         let (url, maybe_gateway) = parse_url(url_str).unwrap();
-        assert!(matches!(url, Url::Http(_)));
+        assert!(matches!(url, CanonicalUrl::Http(_)));
         assert_eq!(maybe_gateway, None);
         assert_eq!(url.to_string(), url_str);
     }
@@ -189,7 +188,7 @@ mod tests {
     fn test_parse_url_i2p() {
         let url_str = "http://social.example.i2p/users/test";
         let (url, maybe_gateway) = parse_url(url_str).unwrap();
-        assert!(matches!(url, Url::Http(_)));
+        assert!(matches!(url, CanonicalUrl::Http(_)));
         assert_eq!(maybe_gateway, None);
         assert_eq!(url.to_string(), url_str);
     }
@@ -198,7 +197,7 @@ mod tests {
     fn test_parse_url_localhost() {
         let url_str = "http://127.0.0.1:8380/users/test";
         let (url, maybe_gateway) = parse_url(url_str).unwrap();
-        assert!(matches!(url, Url::Http(_)));
+        assert!(matches!(url, CanonicalUrl::Http(_)));
         assert_eq!(maybe_gateway, None);
         assert_eq!(url.to_string(), url_str);
     }
@@ -207,7 +206,7 @@ mod tests {
     fn test_parse_url_ap() {
         let url_str = "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor";
         let (url, maybe_gateway) = parse_url(url_str).unwrap();
-        assert!(matches!(url, Url::Ap(_)));
+        assert!(matches!(url, CanonicalUrl::Ap(_)));
         assert_eq!(maybe_gateway, None);
         assert_eq!(url.to_string(), url_str);
     }
@@ -216,7 +215,7 @@ mod tests {
     fn test_parse_url_ap_with_gateway() {
         let url_str = "https://social.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor";
         let (url, maybe_gateway) = parse_url(url_str).unwrap();
-        assert!(matches!(url, Url::Ap(_)));
+        assert!(matches!(url, CanonicalUrl::Ap(_)));
         assert_eq!(maybe_gateway.as_deref(), Some("https://social.example"));
         let expected_canonical_url = "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor";
         assert_eq!(url.to_string(), expected_canonical_url);

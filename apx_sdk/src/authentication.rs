@@ -12,7 +12,7 @@ use apx_core::{
             VerificationMethod,
         },
     },
-    url::canonical::Url,
+    url::canonical::CanonicalUrl,
 };
 
 #[derive(Debug, Error)]
@@ -44,12 +44,12 @@ pub fn verify_portable_object(
 ) -> Result<ApUrl, AuthenticationError> {
     let object_id = object["id"].as_str()
         .ok_or(AuthenticationError::InvalidObjectID("'id' property not found"))?;
-    let canonical_object_id = Url::parse(object_id)
+    let canonical_object_id = CanonicalUrl::parse(object_id)
         .map_err(|error| AuthenticationError::InvalidObjectID(error.0))?;
     let canonical_object_id = match canonical_object_id {
         // Only portable objects must have an integrity proof
-        Url::Http(_) => return Err(AuthenticationError::NotPortable),
-        Url::Ap(ap_url) => ap_url,
+        CanonicalUrl::Http(_) => return Err(AuthenticationError::NotPortable),
+        CanonicalUrl::Ap(ap_url) => ap_url,
     };
     let signature_data = match get_json_signature(object) {
         Ok(signature_data) => signature_data,

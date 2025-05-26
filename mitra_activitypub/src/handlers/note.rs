@@ -12,7 +12,7 @@ use uuid::Uuid;
 use apx_sdk::{
     addresses::WebfingerAddress,
     constants::{AP_MEDIA_TYPE, AP_PUBLIC, AS_MEDIA_TYPE},
-    core::url::canonical::{is_same_origin, Url},
+    core::url::canonical::{is_same_origin, CanonicalUrl},
     deserialization::{
         deserialize_into_id_array,
         deserialize_into_link_href,
@@ -708,7 +708,7 @@ async fn get_object_tags(
 
 pub fn normalize_audience(
     audience: &[impl AsRef<str>],
-) -> Result<Vec<Url>, ValidationError> {
+) -> Result<Vec<CanonicalUrl>, ValidationError> {
     let mut normalized_audience = audience.iter()
         .map(|target_id| {
             let normalized_target_id = if is_public(target_id) {

@@ -4,7 +4,7 @@ use uuid::Uuid;
 use apx_core::{
     caip2::ChainId,
     url::{
-        canonical::{parse_url, Url},
+        canonical::{parse_url, CanonicalUrl},
         common::url_encode,
     },
 };
@@ -290,8 +290,9 @@ pub fn compatible_post_object_id(instance_url: &str, post: &Post) -> String {
     }
 }
 
-pub fn canonicalize_id(url: &str) -> Result<Url, ValidationError> {
-    let url = Url::parse(url).map_err(|error| ValidationError(error.0))?;
+pub fn canonicalize_id(url: &str) -> Result<CanonicalUrl, ValidationError> {
+    let url = CanonicalUrl::parse(url)
+        .map_err(|error| ValidationError(error.0))?;
     Ok(url)
 }
 

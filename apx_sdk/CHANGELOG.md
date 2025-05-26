@@ -23,6 +23,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Moved `Url` type from `apx_sdk` to `apx_core` package.
 - Return `ApUrl` from `verify_portable_object`.
 - Update `HttpUrl::hostname` and `get_hostname` to return IPv6 addresses with square brackets.
+- Renamed `Url` type to `CanonicalUrl`.
 
 ### Removed
 
