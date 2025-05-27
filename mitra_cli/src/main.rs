@@ -56,6 +56,7 @@ async fn main() -> Result<(), Error> {
         SubCommand::ReadOutbox(cmd) => cmd.execute(&config, db_client).await,
         SubCommand::LoadReplies(cmd) => cmd.execute(&config, db_client).await,
         SubCommand::FetchObject(cmd) => cmd.execute(&config, db_client).await,
+        SubCommand::Webfinger(cmd) => cmd.execute(&config, db_client).await,
         SubCommand::LoadPortableObject(cmd) => cmd.execute(&config, db_client).await,
         SubCommand::DeleteUser(cmd) => cmd.execute(&config, db_client).await,
         SubCommand::CreatePost(cmd) => cmd.execute(&config, db_client).await,

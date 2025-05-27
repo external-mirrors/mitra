@@ -20,6 +20,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Implemented `Debug` for `ApUrl` type.
 - Added `ApUrl` variant to `VerificationMethod` enum.
 - Added `without_fragment` method to `ApUrl` type.
+- Added `endpoint_uri` method to `WebfingerAddress` type.
 
 ### Changed
 

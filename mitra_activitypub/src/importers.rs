@@ -13,7 +13,6 @@ use apx_core::{
     http_url::HttpUrl,
     url::{
         canonical::{parse_url, CanonicalUrl},
-        hostname::guess_protocol,
     },
 };
 use apx_sdk::{
@@ -408,14 +407,10 @@ pub(crate) async fn perform_webfinger_query(
     webfinger_address: &WebfingerAddress,
 ) -> Result<String, HandlerError> {
     let webfinger_resource = webfinger_address.to_acct_uri();
-    let webfinger_url = format!(
-        "{}://{}/.well-known/webfinger",
-        guess_protocol(webfinger_address.hostname()),
-        webfinger_address.hostname(),
-    );
+    let webfinger_uri = webfinger_address.endpoint_uri();
     let jrd_value = fetch_json(
         agent,
-        &webfinger_url,
+        &webfinger_uri,
         &[("resource", &webfinger_resource)],
     ).await?;
     let jrd: JsonResourceDescriptor = serde_json::from_value(jrd_value)?;

@@ -1,4 +1,4 @@
-/// https://webfinger.net/
+// https://webfinger.net/
 use actix_web::{get, web, HttpResponse};
 use serde::Deserialize;
 

@@ -5,8 +5,9 @@ use clap::Parser;
 use serde_json::{Value as JsonValue};
 
 use apx_sdk::{
+    addresses::WebfingerAddress,
     authentication::verify_portable_object,
-    fetch::FetchObjectOptions,
+    fetch::{fetch_json, FetchObjectOptions},
     utils::{get_core_type, CoreType},
 };
 use mitra_activitypub::{
@@ -212,6 +213,32 @@ impl FetchObject {
             options,
         ).await?;
         println!("{}", object);
+        Ok(())
+    }
+}
+
+/// Perform WebFinger query and print JRD to stdout
+#[derive(Parser)]
+pub struct Webfinger {
+    handle: String,
+}
+
+impl Webfinger {
+    pub async fn execute(
+        &self,
+        config: &Config,
+        _db_client: &impl DatabaseClient,
+    ) -> Result<(), Error> {
+        let agent = build_federation_agent(&config.instance(), None);
+        let webfinger_address = WebfingerAddress::from_handle(&self.handle)?;
+        let webfinger_uri = webfinger_address.endpoint_uri();
+        let webfinger_resource = webfinger_address.to_acct_uri();
+        let jrd = fetch_json(
+            &agent,
+            &webfinger_uri,
+            &[("resource", &webfinger_resource)],
+        ).await?;
+        println!("{}", jrd);
         Ok(())
     }
 }

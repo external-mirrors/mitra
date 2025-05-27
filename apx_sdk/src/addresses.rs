@@ -4,6 +4,8 @@ use std::{fmt, str::FromStr};
 use regex::Regex;
 use thiserror::Error;
 
+use apx_core::url::hostname::guess_protocol;
+
 // https://swicg.github.io/activitypub-webfinger/#names
 // username: RFC-3986 unreserved plus % for percent encoding; case-sensitive
 // hostname: normalized (ASCII) or IP literals
@@ -77,6 +79,16 @@ impl WebfingerAddress {
             .ok_or(WebfingerAddressError("invalid acct: URI"))?
             .parse()?;
         Ok(address)
+    }
+
+    /// Returns WebFinger endpoint URI  
+    /// <https://datatracker.ietf.org/doc/html/rfc7033#section-4>
+    pub fn endpoint_uri(&self) -> String {
+        format!(
+            "{}://{}/.well-known/webfinger",
+            guess_protocol(self.hostname()),
+            self.hostname(),
+        )
     }
 }
 
@@ -246,5 +258,16 @@ mod tests {
         let uri = "acct:user_1@δοκιμή.example";
         let error = WebfingerAddress::from_acct_uri(uri).err().unwrap();
         assert_eq!(error.0, "invalid webfinger address");
+    }
+
+    #[test]
+    fn test_address_endpoint_uri() {
+        let value = "user_1@social.example";
+        let address: WebfingerAddress = value.parse().unwrap();
+        let endpoint_uri = address.endpoint_uri();
+        assert_eq!(
+            endpoint_uri,
+            "https://social.example/.well-known/webfinger",
+        );
     }
 }
