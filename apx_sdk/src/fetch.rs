@@ -355,7 +355,9 @@ pub async fn fetch_json(
     agent: &FederationAgent,
     url: &str,
     query: &[(&str, &str)],
+    accept: Option<&str>,
 ) -> Result<JsonValue, FetchError> {
+    const APPLICATION_JSON: &str = "application/json";
     if agent.ssrf_protection_enabled {
         require_safe_url(url)?;
     };
@@ -365,6 +367,7 @@ pub async fn fetch_json(
         build_request(agent, &http_client, Method::GET, url);
     let mut response = request_builder
         .query(query)
+        .header(header::ACCEPT, accept.unwrap_or(APPLICATION_JSON))
         .send()
         .await?
         .error_for_status()?;

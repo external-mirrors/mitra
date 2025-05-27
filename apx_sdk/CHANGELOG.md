@@ -21,6 +21,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Added `ApUrl` variant to `VerificationMethod` enum.
 - Added `without_fragment` method to `ApUrl` type.
 - Added `endpoint_uri` method to `WebfingerAddress` type.
+- Allow to set `Accept` header when making a request with `fetch_json`.
 
 ### Changed
 

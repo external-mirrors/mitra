@@ -8,6 +8,7 @@ use apx_sdk::{
     addresses::WebfingerAddress,
     authentication::verify_portable_object,
     fetch::{fetch_json, FetchObjectOptions},
+    jrd::JRD_MEDIA_TYPE,
     utils::{get_core_type, CoreType},
 };
 use mitra_activitypub::{
@@ -237,6 +238,7 @@ impl Webfinger {
             &agent,
             &webfinger_uri,
             &[("resource", &webfinger_resource)],
+            Some(JRD_MEDIA_TYPE),
         ).await?;
         println!("{}", jrd);
         Ok(())

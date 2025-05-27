@@ -26,7 +26,7 @@ use apx_sdk::{
         FetchError,
         FetchObjectOptions,
     },
-    jrd::JsonResourceDescriptor,
+    jrd::{JsonResourceDescriptor, JRD_MEDIA_TYPE},
     utils::{get_core_type, CoreType},
 };
 use mitra_config::{Config, Instance, Limits};
@@ -412,6 +412,7 @@ pub(crate) async fn perform_webfinger_query(
         agent,
         &webfinger_uri,
         &[("resource", &webfinger_resource)],
+        Some(JRD_MEDIA_TYPE),
     ).await?;
     let jrd: JsonResourceDescriptor = serde_json::from_value(jrd_value)?;
     // Prefer Group actor if webfinger results are ambiguous
