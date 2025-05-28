@@ -57,13 +57,14 @@ The following activities and object types are supported:
 
 - `Follow(Actor)`, `Accept(Follow)`, `Reject(Follow)`, `Undo(Follow)`.
 - `Create(Note)`, `Update(Note)`, `Delete(Note)`.
+- `Add(Note, target: featured)`, `Remove(Note, target: featured)`.
 - `Like()`, `EmojiReact()`, `Dislike()`, `Undo(Like)`.
 - `Announce(Note)`, `Undo(Announce)`.
 - `Update(Actor)`, `Move(Actor)`, `Delete(Actor)`.
 - `Offer(Agreement)`, `Accept(Agreement)`.
-- `Add(Actor)`, `Remove(Actor)`.
-- `Announce(Create)`, `Announce(Update)`, `Announce(Delete)`, `Announce(Like)`, `Announce(Dislike)`.
-- `Add(Like)`, `Add(Dislike)`.
+- `Add(Actor, target: subscribers)`, `Remove(Actor, target: subscribers)`.
+- `Announce(Create | Update | Delete | Like | Dislike)`.
+- `Add(Create | Update | Delete | Like | Dislike)`.
 
 Activities are implemented in way that is compatible with Pleroma, Mastodon and other popular ActivityPub servers.
 
@@ -75,6 +76,7 @@ Objects with type other than `Note` are converted and stored in the same way as 
 - The value of `Accept` header in outgoing requests is set to `application/ld+json; profile="https://www.w3.org/ns/activitystreams"`, [as required by the ActivityPub specification](https://www.w3.org/TR/activitypub/#retrieving-objects).
 - The `self` link in WebFinger JRD has `application/ld+json; profile="https://www.w3.org/ns/activitystreams"` type.
 - The object of `Accept(Follow)` activity is ID of the `Follow` activity.
+- Replies to followers-only posts inherit the audience from their parents.
 
 ## HTML
 
@@ -84,6 +86,12 @@ Microsyntaxes:
 
 - Hashtags should have `rel="tag"` attribute or `.hashtag` class.
 - Mentions should have `.mention` class.
+
+## Conversations
+
+The implementation of Followers-only and subscribers-only conversations is based on [FEP-171b: Conversation Containers](https://codeberg.org/fediverse/fep/src/branch/main/fep/171b/fep-171b.md).
+
+This means the audience is copied from the parent post when a reply is created. Scope widening is not allowed and incomplete conversations are not displayed.
 
 ## Object integrity proofs
 
