@@ -76,7 +76,7 @@ Objects with type other than `Note` are converted and stored in the same way as 
 - The value of `Accept` header in outgoing requests is set to `application/ld+json; profile="https://www.w3.org/ns/activitystreams"`, [as required by the ActivityPub specification](https://www.w3.org/TR/activitypub/#retrieving-objects).
 - The `self` link in WebFinger JRD has `application/ld+json; profile="https://www.w3.org/ns/activitystreams"` type.
 - The object of `Accept(Follow)` activity is ID of the `Follow` activity.
-- Replies to followers-only posts inherit the audience from their parents.
+- Replies to followers-only posts [inherit](#conversations) the audience from their parents.
 
 ## HTML
 
@@ -89,7 +89,7 @@ Microsyntaxes:
 
 ## Conversations
 
-The implementation of Followers-only and subscribers-only conversations is based on [FEP-171b: Conversation Containers](https://codeberg.org/fediverse/fep/src/branch/main/fep/171b/fep-171b.md).
+The implementation of followers-only and subscribers-only conversations is based on [FEP-171b: Conversation Containers](https://codeberg.org/fediverse/fep/src/branch/main/fep/171b/fep-171b.md).
 
 This means the audience is copied from the parent post when a reply is created. Scope widening is not allowed and incomplete conversations are not displayed.
 
