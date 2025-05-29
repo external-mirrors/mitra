@@ -3,7 +3,15 @@ use std::collections::HashMap;
 
 use chrono::{DateTime, Duration, TimeZone, Utc};
 use http::{HeaderMap, Method, Uri};
+use indexmap::IndexMap;
 use regex::Regex;
+use sfv::{
+    BareItem,
+    Item,
+    ListEntry,
+    Parser,
+    SerializeValue,
+};
 
 use crate::{
     base64,
@@ -209,6 +217,149 @@ pub fn parse_http_signature_cavage(
     Ok(signature_data)
 }
 
+/// Parses RFC-9421 HTTP message signature  
+/// <https://datatracker.ietf.org/doc/html/rfc9421>
+pub fn parse_http_signature_rfc9421(
+    request_method: &Method,
+    request_uri: &Uri,
+    request_headers: &HeaderMap,
+) -> Result<HttpSignatureData, VerificationError> {
+    // Parse Signature header
+    let signature_header = request_headers.get("Signature")
+        .ok_or(VerificationError::NoSignature)?
+        .to_str()
+        .map_err(|_| VerificationError::header_value("Signature"))?;
+    let signature_dict = Parser::parse_dictionary(signature_header.as_bytes())
+        .map_err(|_| VerificationError::ParseError("invalid 'signature' dictionary"))?;
+    let (signature_label, signature_value_item) = signature_dict.first()
+        .ok_or(VerificationError::ParseError("invalid 'signature' dictionary"))?;
+    let signature_value = match signature_value_item {
+        ListEntry::Item(Item { bare_item: BareItem::ByteSeq(value), .. }) => {
+            value.clone()
+        },
+        _ => return Err(VerificationError::ParseError("invalid signature value")),
+    };
+
+    // Parse Signature-Input header
+    let signature_input_header = request_headers.get("Signature-Input")
+        .ok_or(VerificationError::NoSignature)?
+        .to_str()
+        .map_err(|_| VerificationError::header_value("Signature-Input"))?;
+    let signature_input_dict = Parser::parse_dictionary(signature_input_header.as_bytes())
+        .map_err(|_| VerificationError::ParseError("invalid 'signature-input' dictionary"))?;
+    let signature_param_list = signature_input_dict.get(signature_label)
+        .ok_or(VerificationError::ParseError("signature parameters not found"))?;
+    let signature_params = vec![signature_param_list.clone()]
+        .serialize_value()
+        .map_err(|_| VerificationError::ParseError("serialization error"))?;
+    let ListEntry::InnerList(signature_param_list) = signature_param_list else {
+        return Err(VerificationError::ParseError("invalid encoding of signature parameters"));
+    };
+    let key_id = signature_param_list.params.get("keyid")
+        .ok_or(VerificationError::ParseError("parameter 'keyid' not found"))?
+        .as_str()
+        .ok_or(VerificationError::ParseError("invalid encoding of 'keyid'"))?
+        .to_owned();
+    let key_id = VerificationMethod::parse(&key_id)
+        .map_err(|_| VerificationError::ParseError("invalid key ID"))?;
+    let expires_at = if let Some(expires_item) = signature_param_list.params.get("expires") {
+        let expires = expires_item.as_int()
+            .ok_or(VerificationError::ParseError("invalid encoding of 'expires'"))?;
+        Utc.timestamp_opt(expires, 0).single()
+            .ok_or(VerificationError::ParseError("invalid timestamp"))?
+    } else {
+        let created = signature_param_list.params.get("created")
+            .ok_or(VerificationError::ParseError("parameter 'created' not found"))?
+            .as_int()
+            .ok_or(VerificationError::ParseError("invalid encoding of 'created'"))?;
+        let created_at = Utc.timestamp_opt(created, 0).single()
+            .ok_or(VerificationError::ParseError("invalid timestamp"))?;
+        created_at + Duration::hours(SIGNATURE_EXPIRES_IN)
+    };
+    let mut components = vec![];
+    for list_item in &signature_param_list.items {
+        let component_id = list_item.bare_item.as_str()
+            .ok_or(VerificationError::ParseError("invalid encoding of signature parameter"))?
+            .to_owned();
+        components.push(component_id);
+    };
+
+    // Recreate signature base
+    let request_uri_string = request_uri.to_string();
+    let mut signature_base_entries = IndexMap::new();
+    for component_id in components.iter() {
+        if signature_base_entries.contains_key(component_id.as_str()) {
+            return Err(VerificationError::ParseError("duplicate component"));
+        };
+        let component_value = match component_id.as_str() {
+            "@method" => {
+                request_method.as_str()
+            },
+            "@path" => {
+                request_uri.path()
+            },
+            "@authority" => {
+                request_headers.get("host")
+                    .ok_or(VerificationError::header_missing("Host"))?
+                    .to_str()
+                    .map_err(|_| VerificationError::header_value("Host"))?
+            },
+            "@target-uri" => {
+                request_uri_string.as_str()
+            },
+            id if id.starts_with('@') => {
+                return Err(VerificationError::ParseError("unsupported component ID"));
+            },
+            _ => {
+                request_headers.get(component_id)
+                    .ok_or(VerificationError::header_missing(component_id))?
+                    .to_str()
+                    .map_err(|_| VerificationError::header_value(component_id))?
+            },
+        };
+        signature_base_entries.insert(component_id.as_str(), component_value);
+    };
+    signature_base_entries.insert("@signature-params", &signature_params);
+    let signature_base = signature_base_entries
+        .into_iter()
+        .map(|(id, value)| format!(r#""{id}": {value}"#))
+        .collect::<Vec<_>>()
+        .join("\n");
+
+    // Parse Digest header
+    let maybe_digest = match *request_method {
+        Method::GET => None,
+        Method::POST => {
+            let digest = get_content_digest(request_headers)?
+                .ok_or(VerificationError::NoDigest)?;
+            Some(digest)
+        },
+        _ => return Err(VerificationError::MethodNotSupported),
+    };
+
+    let signature_data = HttpSignatureData {
+        key_id,
+        base: signature_base,
+        signature: signature_value,
+        expires_at,
+        content_digest: maybe_digest,
+    };
+    Ok(signature_data)
+}
+
+/// Parses Draft-Cavage HTTP signature or RFC-9421 HTTP message signature
+pub fn parse_http_signature(
+    method: &Method,
+    uri: &Uri,
+    headers: &HeaderMap,
+) -> Result<HttpSignatureData, VerificationError> {
+    if headers.get("Signature-Input").is_some() {
+        parse_http_signature_rfc9421(method, uri, headers)
+    } else {
+        parse_http_signature_cavage(method, uri, headers)
+    }
+}
+
 /// Verifies HTTP signature
 pub fn verify_http_signature(
     signature_data: &HttpSignatureData,
@@ -297,6 +448,59 @@ mod tests {
         assert_eq!(signature_data.signature, [181, 235, 45]);
         assert!(signature_data.expires_at < Utc::now());
         assert!(signature_data.content_digest.is_none());
+    }
+
+    #[test]
+    fn test_parse_http_signature_rfc9421() {
+        // https://datatracker.ietf.org/doc/html/rfc9421#name-signing-a-request-using-ed2
+        let request_method = Method::POST;
+        let request_uri = "/foo?param=Value&Pet=dog".parse::<Uri>().unwrap();
+        let mut request_headers = HeaderMap::new();
+        request_headers.insert(
+            HeaderName::from_static("host"),
+            HeaderValue::from_static("example.com"),
+        );
+        request_headers.insert(
+            HeaderName::from_static("date"),
+            HeaderValue::from_static("Tue, 20 Apr 2021 02:07:55 GMT"),
+        );
+        request_headers.insert(
+            HeaderName::from_static("content-type"),
+            HeaderValue::from_static("application/json"),
+        );
+        request_headers.insert(
+            HeaderName::from_static("content-digest"),
+            HeaderValue::from_static("sha-512=:WZDPaVn/7XgHaAy8pmojAkGWoRx2UFChF41A2svX+TaPm+AbwAgBWnrIiYllu7BNNyealdVLvRwEmTHWXvJwew==:"),
+        );
+        request_headers.insert(
+            HeaderName::from_static("content-length"),
+            HeaderValue::from_static("18"),
+        );
+        // Key ID is different from the RFC test vector
+        request_headers.insert(
+            HeaderName::from_static("signature-input"),
+            HeaderValue::from_static(r#"sig-b26=("date" "@method" "@path" "@authority" "content-type" "content-length");created=1618884473;keyid="https://example.com/actor#test-key-ed25519""#),
+        );
+        request_headers.insert(
+            HeaderName::from_static("signature"),
+            HeaderValue::from_static("sig-b26=:wqcAqbmYJ2ji2glfAMaRy4gruYYnx2nEFN2HN6jrnDnQCK1u02Gb04v9EDgwUPiu4A0w6vuQv5lIp5WPpBKRCw==:"),
+        );
+        let signature_data = parse_http_signature_rfc9421(
+            &request_method,
+            &request_uri,
+            &request_headers,
+        ).unwrap();
+
+        let expected_signature_base =
+r#""date": Tue, 20 Apr 2021 02:07:55 GMT
+"@method": POST
+"@path": /foo
+"@authority": example.com
+"content-type": application/json
+"content-length": 18
+"@signature-params": ("date" "@method" "@path" "@authority" "content-type" "content-length");created=1618884473;keyid="https://example.com/actor#test-key-ed25519""#;
+        assert_eq!(signature_data.base, expected_signature_base);
+        assert_eq!(signature_data.content_digest.is_some(), true);
     }
 
     #[test]

@@ -25,6 +25,8 @@ http_0_2 = { package = "http", version = "0.2.9" }
 http = "1.1.0"
 # Used for working with IDNs
 idna = "1.0.3"
+# Order-preserving hashmap
+indexmap = "2.2.3"
 # Used to guess media type of a file
 infer = "0.13.0"
 # Used for working with URIs

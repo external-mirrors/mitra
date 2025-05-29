@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Sync `Update` and `Delete` activities in FEP-171b conversations.
 - Support SHA-512 content digests.
 - Support verification of signed requests with `Content-Digest` header.
+- Verify RFC-9421 signatures.
 
 ### Changed
 

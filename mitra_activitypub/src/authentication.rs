@@ -17,7 +17,7 @@ use apx_core::{
     http_digest::ContentDigest,
     http_signatures::{
         verify::{
-            parse_http_signature_cavage,
+            parse_http_signature,
             verify_http_signature,
             HttpSignatureVerificationError as HttpSignatureError,
         },
@@ -282,7 +282,7 @@ pub async fn verify_signed_request(
     no_fetch: bool,
     only_key: bool,
 ) -> Result<(VerificationMethod, Option<DbActorProfile>), AuthenticationError> {
-    let signature_data = match parse_http_signature_cavage(
+    let signature_data = match parse_http_signature(
         &request_method,
         &request_uri,
         &request_headers,
