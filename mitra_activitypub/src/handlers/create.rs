@@ -11,7 +11,6 @@ use mitra_config::Config;
 use mitra_models::{
     database::{DatabaseClient, DatabaseError},
     filter_rules::types::FilterAction,
-    posts::types::Visibility,
     properties::{
         constants::FILTER_KEYWORDS,
         queries::get_internal_property,
@@ -181,14 +180,12 @@ pub async fn handle_create(
         object_received,
     ).await?;
     // NOTE: import_post always returns a post; activity will be re-distributed
-    let conversation = post.expect_conversation();
-    if post.visibility == Visibility::Conversation {
-        sync_conversation(
-            db_client,
-            &ap_client.instance,
-            conversation,
-            activity,
-        ).await?;
-    };
+    sync_conversation(
+        db_client,
+        &ap_client.instance,
+        post.expect_conversation(),
+        activity,
+        post.visibility,
+    ).await?;
     Ok(Some(Descriptor::object(object_type)))
 }

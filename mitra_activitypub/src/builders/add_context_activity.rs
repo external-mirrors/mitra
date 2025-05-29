@@ -9,7 +9,7 @@ use mitra_models::{
     database::{DatabaseClient, DatabaseError},
     posts::{
         queries::get_post_by_id,
-        types::Post,
+        types::{Post, Visibility},
     },
     users::{
         queries::get_user_by_id,
@@ -112,14 +112,22 @@ async fn prepare_add_context_activity(
     ))
 }
 
+/// Distributes activity to conversation participants if the owner is local
 pub async fn sync_conversation(
     db_client: &impl DatabaseClient,
     instance: &Instance,
     conversation: &Conversation,
     activity: JsonValue,
+    activity_visibility: Visibility,
 ) -> Result<(), DatabaseError> {
+    if activity_visibility != Visibility::Conversation {
+        // Public activities are not synced.
+        // Replies that don't conform to FEP-171b are not synced.
+        // DMs are not synced.
+        // Top-level `Create(Note)` activities are not synced
+        return Ok(());
+    };
     if let Some(ref conversation_audience) = conversation.audience {
-        // Add activity to conversation
         let root = get_post_by_id(db_client, conversation.root_id).await?;
         match get_user_by_id(db_client, root.author.id).await {
             Ok(conversation_owner) => {

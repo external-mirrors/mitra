@@ -326,15 +326,13 @@ async fn create_status(
     ).await?;
     let create_note_json = create_note.activity().clone();
     create_note.save_and_enqueue(db_client).await?;
-    if visibility == Visibility::Conversation {
-        let conversation = post.expect_conversation();
-        sync_conversation(
-            db_client,
-            &instance,
-            conversation,
-            create_note_json,
-        ).await?;
-    };
+    sync_conversation(
+        db_client,
+        &instance,
+        post.expect_conversation(),
+        create_note_json,
+        post.visibility,
+    ).await?;
 
     let base_url = get_request_base_url(connection_info);
     let media_server = ClientMediaServer::new(&config, &base_url);
