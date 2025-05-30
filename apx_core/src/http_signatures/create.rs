@@ -15,7 +15,7 @@ use crate::{
         RsaError,
         RsaSecretKey,
     },
-    http_digest::get_digest_header,
+    http_digest::{get_digest_header, ContentDigest},
 };
 
 const HTTP_SIGNATURE_ALGORITHM: &str = "rsa-sha256";
@@ -79,11 +79,12 @@ pub fn create_http_signature(
         .ok_or(UrlError::EmptyHost)?
         .to_string();
     let date = Utc::now().format(HTTP_SIGNATURE_DATE_FORMAT).to_string();
-    let maybe_digest = if request_body.is_empty() {
+    let maybe_digest_header = if request_body.is_empty() {
         None
     } else {
-        let digest = get_digest_header(request_body);
-        Some(digest)
+        let digest = ContentDigest::new(request_body);
+        let digest_header = get_digest_header(&digest);
+        Some(digest_header)
     };
 
     let mut headers = vec![
@@ -91,8 +92,8 @@ pub fn create_http_signature(
         ("host", &host),
         ("date", &date),
     ];
-    if let Some(ref digest) = maybe_digest {
-        headers.push(("digest", digest));
+    if let Some(digest_header) = maybe_digest_header.as_ref() {
+        headers.push(("digest", digest_header));
     };
 
     let message = headers.iter()
@@ -126,7 +127,7 @@ pub fn create_http_signature(
     let headers = HttpSignatureHeaders {
         host,
         date,
-        digest: maybe_digest,
+        digest: maybe_digest_header,
         signature: signature_header,
     };
     Ok(headers)
