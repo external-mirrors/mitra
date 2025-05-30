@@ -87,7 +87,9 @@ fn get_content_digest(
     Ok(maybe_digest)
 }
 
-pub fn parse_http_signature(
+/// Parses Draft-Cavage HTTP signature  
+/// <https://datatracker.ietf.org/doc/html/draft-cavage-http-signatures>
+pub fn parse_http_signature_cavage(
     request_method: &Method,
     request_uri: &Uri,
     request_headers: &HeaderMap,
@@ -190,6 +192,7 @@ pub fn parse_http_signature(
     Ok(signature_data)
 }
 
+/// Verifies HTTP signature
 pub fn verify_http_signature(
     signature_data: &HttpSignatureData,
     signer_key: &PublicKey,
@@ -231,14 +234,14 @@ mod tests {
         crypto_eddsa::generate_weak_ed25519_key,
         crypto_rsa::generate_weak_rsa_key,
         http_signatures::create::{
-            create_http_signature,
+            create_http_signature_cavage,
             HttpSigner,
         },
     };
     use super::*;
 
     #[test]
-    fn test_parse_signature_get() {
+    fn test_parse_http_signature_cavage() {
         let request_method = Method::GET;
         let request_uri = "/user/123/inbox".parse::<Uri>().unwrap();
         let date = "20 Oct 2022 20:00:00 GMT";
@@ -262,7 +265,7 @@ mod tests {
             HeaderValue::from_static(signature_header),
         );
 
-        let signature_data = parse_http_signature(
+        let signature_data = parse_http_signature_cavage(
             &request_method,
             &request_uri,
             &request_headers,
@@ -281,13 +284,13 @@ mod tests {
     }
 
     #[test]
-    fn test_create_and_verify_signature_get() {
+    fn test_create_and_verify_signature_cavage_get() {
         let request_method = Method::GET;
         let request_url = "https://example.org/inbox";
         let signer_key = generate_weak_rsa_key().unwrap();
         let signer_key_id = "https://myserver.org/actor#main-key".to_string();
         let signer = HttpSigner::new_rsa(signer_key, signer_key_id);
-        let signed_headers = create_http_signature(
+        let signed_headers = create_http_signature_cavage(
             request_method.clone(),
             request_url,
             b"",
@@ -308,7 +311,7 @@ mod tests {
             HeaderName::from_static("date"),
             HeaderValue::from_str(&signed_headers.date).unwrap(),
         );
-        let signature_data = parse_http_signature(
+        let signature_data = parse_http_signature_cavage(
             &request_method,
             &request_url,
             &request_headers,
@@ -325,14 +328,14 @@ mod tests {
     }
 
     #[test]
-    fn test_create_and_verify_signature_post() {
+    fn test_create_and_verify_signature_cavage_post() {
         let request_method = Method::POST;
         let request_url = "https://example.org/inbox";
         let request_body = "{}";
         let signer_key = generate_weak_rsa_key().unwrap();
         let signer_key_id = "https://myserver.org/actor#main-key".to_string();
         let signer = HttpSigner::new_rsa(signer_key, signer_key_id);
-        let signed_headers = create_http_signature(
+        let signed_headers = create_http_signature_cavage(
             request_method.clone(),
             request_url,
             request_body.as_bytes(),
@@ -357,7 +360,7 @@ mod tests {
             HeaderName::from_static("digest"),
             HeaderValue::from_str(&signed_headers.digest.unwrap()).unwrap(),
         );
-        let signature_data = parse_http_signature(
+        let signature_data = parse_http_signature_cavage(
             &request_method,
             &request_url,
             &request_headers,
@@ -375,14 +378,14 @@ mod tests {
     }
 
     #[test]
-    fn test_create_and_verify_signature_post_eddsa() {
+    fn test_create_and_verify_signature_cavage_post_eddsa() {
         let request_method = Method::POST;
         let request_url = "https://server.example/inbox";
         let request_body = "{}";
         let signer_key = generate_weak_ed25519_key();
         let signer_key_id = "https://myserver.org/actor#ed25519-key".to_string();
         let signer = HttpSigner::new_ed25519(signer_key, signer_key_id);
-        let signed_headers = create_http_signature(
+        let signed_headers = create_http_signature_cavage(
             request_method.clone(),
             request_url,
             request_body.as_bytes(),
@@ -407,7 +410,7 @@ mod tests {
             HeaderName::from_static("digest"),
             HeaderValue::from_str(&signed_headers.digest.unwrap()).unwrap(),
         );
-        let signature_data = parse_http_signature(
+        let signature_data = parse_http_signature_cavage(
             &request_method,
             &request_url,
             &request_headers,

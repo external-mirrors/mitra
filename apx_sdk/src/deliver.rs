@@ -4,7 +4,7 @@ use thiserror::Error;
 
 use apx_core::{
     http_signatures::create::{
-        create_http_signature,
+        create_http_signature_cavage,
         HttpSignatureError,
     },
     http_types::Method,
@@ -90,7 +90,7 @@ pub async fn send_object(
             .header(header::USER_AGENT, user_agent);
     };
     if let Some(ref signer) = agent.signer {
-         let headers = create_http_signature(
+         let headers = create_http_signature_cavage(
             Method::POST,
             inbox_url,
             object_json.as_bytes(),

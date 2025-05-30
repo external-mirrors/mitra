@@ -11,7 +11,7 @@ use serde_json::{Value as JsonValue};
 
 use apx_core::{
     http_signatures::create::{
-        create_http_signature,
+        create_http_signature_cavage,
         HttpSignatureError,
     },
     http_types::{Method as HttpMethod},
@@ -195,7 +195,7 @@ pub async fn fetch_object(
 
         if let Some(ref signer) = agent.signer {
             // Only public instances can send signed requests
-            let headers = create_http_signature(
+            let headers = create_http_signature_cavage(
                 HttpMethod::GET,
                 &target_url,
                 b"",

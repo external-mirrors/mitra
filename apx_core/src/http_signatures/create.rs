@@ -62,7 +62,7 @@ pub enum HttpSignatureError {
 
 /// Creates HTTP signature according to the old HTTP Signatures Spec
 /// <https://datatracker.ietf.org/doc/html/draft-cavage-http-signatures>
-pub fn create_http_signature(
+pub fn create_http_signature_cavage(
     request_method: Method,
     request_url: &str,
     request_body: &[u8],
@@ -139,13 +139,13 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_create_signature_get() {
+    fn test_create_signature_cavage_get() {
         let request_url = "https://example.org/inbox";
         let signer_key = generate_weak_rsa_key().unwrap();
         let signer_key_id = "https://myserver.org/actor#main-key".to_string();
         let signer = HttpSigner::new_rsa(signer_key, signer_key_id);
 
-        let headers = create_http_signature(
+        let headers = create_http_signature_cavage(
             Method::GET,
             request_url,
             b"",
@@ -167,14 +167,14 @@ mod tests {
     }
 
     #[test]
-    fn test_create_signature_post() {
+    fn test_create_signature_cavage_post() {
         let request_url = "https://example.org/inbox";
         let request_body = "{}";
         let signer_key = generate_weak_rsa_key().unwrap();
         let signer_key_id = "https://myserver.org/actor#main-key".to_string();
         let signer = HttpSigner::new_rsa(signer_key, signer_key_id);
 
-        let result = create_http_signature(
+        let result = create_http_signature_cavage(
             Method::POST,
             request_url,
             request_body.as_bytes(),
