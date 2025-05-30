@@ -17,6 +17,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Return error if hostname passed to `encode_hostname` contains invalid characters.
 - Renamed `create_http_signature` to `create_http_signature_cavage`.
 - Renamed `parse_http_signature` to `parse_http_signature_cavage`.
+- Return decoded signature string from `parse_http_signature`.
 
 ### Fixed
 

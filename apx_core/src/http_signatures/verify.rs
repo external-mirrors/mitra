@@ -59,7 +59,7 @@ type VerificationError = HttpSignatureVerificationError;
 pub struct HttpSignatureData {
     pub key_id: VerificationMethod,
     pub message: String, // reconstructed message
-    pub signature: String, // base64-encoded signature
+    pub signature: Vec<u8>,
     pub expires_at: DateTime<Utc>,
     pub content_digest: Option<ContentDigest>,
 }
@@ -129,9 +129,9 @@ pub fn parse_http_signature_cavage(
     let headers_parameter = signature_parameters.get("headers")
         .ok_or(VerificationError::ParseError("headers parameter is missing"))?
         .to_owned();
-    let signature = signature_parameters.get("signature")
-        .ok_or(VerificationError::ParseError("signature is missing"))?
-        .to_owned();
+    let signature_b64 = signature_parameters.get("signature")
+        .ok_or(VerificationError::ParseError("signature is missing"))?;
+    let signature = base64::decode(signature_b64)?;
     let created_at = if let Some(created_at) = signature_parameters.get("created") {
         let create_at_timestamp = created_at.parse()
             .map_err(|_| VerificationError::ParseError("invalid timestamp"))?;
@@ -204,20 +204,19 @@ pub fn verify_http_signature(
     if signature_data.content_digest != content_digest {
         return Err(VerificationError::DigestMismatch);
     };
-    let signature = base64::decode(&signature_data.signature)?;
     let is_valid_signature = match signer_key {
         PublicKey::Ed25519(ed25519_key) => {
             verify_eddsa_signature(
                 ed25519_key,
                 signature_data.message.as_bytes(),
-                &signature,
+                &signature_data.signature,
             ).is_ok()
         },
         PublicKey::Rsa(rsa_key) => {
             verify_rsa_sha256_signature(
                 rsa_key,
                 signature_data.message.as_bytes(),
-                &signature,
+                &signature_data.signature,
             ).is_ok()
         },
     };
@@ -278,7 +277,7 @@ mod tests {
             signature_data.message,
             "(request-target): get /user/123/inbox\nhost: example.com\ndate: 20 Oct 2022 20:00:00 GMT",
         );
-        assert_eq!(signature_data.signature, "test");
+        assert_eq!(signature_data.signature, [181, 235, 45]);
         assert!(signature_data.expires_at < Utc::now());
         assert!(signature_data.content_digest.is_none());
     }
