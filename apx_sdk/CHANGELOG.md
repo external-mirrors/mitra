@@ -18,6 +18,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Renamed `create_http_signature` to `create_http_signature_cavage`.
 - Renamed `parse_http_signature` to `parse_http_signature_cavage`.
 - Return decoded signature string from `parse_http_signature`.
+- Renamed `HttpSignatureData.message` field to `base`.
 
 ### Fixed
 

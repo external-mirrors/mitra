@@ -58,7 +58,7 @@ type VerificationError = HttpSignatureVerificationError;
 
 pub struct HttpSignatureData {
     pub key_id: VerificationMethod,
-    pub message: String, // reconstructed message
+    pub base: String, // recreated signature base
     pub signature: Vec<u8>,
     pub expires_at: DateTime<Utc>,
     pub content_digest: Option<ContentDigest>,
@@ -155,6 +155,7 @@ pub fn parse_http_signature_cavage(
         created_at + Duration::hours(SIGNATURE_EXPIRES_IN)
     };
 
+    // Recreate signature base
     let mut message_parts = vec![];
     for header in headers_parameter.split(' ') {
         let message_part = if header == "(request-target)" {
@@ -180,11 +181,11 @@ pub fn parse_http_signature_cavage(
         };
         message_parts.push(message_part);
     };
-    let message = message_parts.join("\n");
+    let signature_base = message_parts.join("\n");
 
     let signature_data = HttpSignatureData {
         key_id,
-        message,
+        base: signature_base,
         signature,
         expires_at,
         content_digest: maybe_digest,
@@ -208,14 +209,14 @@ pub fn verify_http_signature(
         PublicKey::Ed25519(ed25519_key) => {
             verify_eddsa_signature(
                 ed25519_key,
-                signature_data.message.as_bytes(),
+                signature_data.base.as_bytes(),
                 &signature_data.signature,
             ).is_ok()
         },
         PublicKey::Rsa(rsa_key) => {
             verify_rsa_sha256_signature(
                 rsa_key,
-                signature_data.message.as_bytes(),
+                signature_data.base.as_bytes(),
                 &signature_data.signature,
             ).is_ok()
         },
@@ -274,7 +275,7 @@ mod tests {
             "https://myserver.org/actor#main-key",
         );
         assert_eq!(
-            signature_data.message,
+            signature_data.base,
             "(request-target): get /user/123/inbox\nhost: example.com\ndate: 20 Oct 2022 20:00:00 GMT",
         );
         assert_eq!(signature_data.signature, [181, 235, 45]);
