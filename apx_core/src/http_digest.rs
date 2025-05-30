@@ -1,5 +1,11 @@
 //! HTTP content digest
 use regex::Regex;
+use sfv::{
+    BareItem,
+    Item,
+    ListEntry,
+    Parser,
+};
 
 use crate::{
     base64,
@@ -63,6 +69,28 @@ pub(crate) fn parse_digest_header(
     Ok(ContentDigest { algorithm, digest })
 }
 
+/// <https://datatracker.ietf.org/doc/html/rfc9530#section-2>
+pub(crate) fn parse_content_digest_header(
+    header_value: &str,
+) -> Result<ContentDigest, &'static str> {
+    let dict = Parser::parse_dictionary(header_value.as_bytes())
+        .map_err(|_| "invalid content-digest header")?;
+    let (label, list_item) = dict.first()
+        .ok_or("invalid content-digest header")?;
+    let algorithm = match label.as_str() {
+        "sha-256" => Algorithm::Sha256,
+        "sha-512" => Algorithm::Sha512,
+        _ => return Err("unexpected digest algorithm"),
+    };
+    let digest = match list_item {
+        ListEntry::Item(Item { bare_item: BareItem::ByteSeq(value), .. }) => {
+            value.clone()
+        },
+        _ => return Err("invalid digest encoding"),
+    };
+    Ok(ContentDigest { algorithm, digest })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -93,5 +121,15 @@ mod tests {
         let header_value = format!("sha-256={digest_b64},unixsum=30637");
         let parsed = parse_digest_header(&header_value).unwrap();
         assert_eq!(parsed, digest);
+    }
+
+    #[test]
+    fn test_parse_content_digest_header() {
+        // https://datatracker.ietf.org/doc/html/rfc9530#name-sample-digest-values
+        let request_body = r#"{"hello": "world"}"#;
+        let expected_digest = ContentDigest::new_sha512(request_body.as_bytes());
+        let header_value = "sha-512=:WZDPaVn/7XgHaAy8pmojAkGWoRx2UFChF41A2svX+TaPm+AbwAgBWnrIiYllu7BNNyealdVLvRwEmTHWXvJwew==:";
+        let digest = parse_content_digest_header(header_value).unwrap();
+        assert_eq!(digest, expected_digest);
     }
 }

@@ -10,7 +10,11 @@ use crate::{
     crypto::common::PublicKey,
     crypto_eddsa::verify_eddsa_signature,
     crypto_rsa::verify_rsa_sha256_signature,
-    http_digest::{parse_digest_header, ContentDigest},
+    http_digest::{
+        parse_digest_header,
+        parse_content_digest_header,
+        ContentDigest,
+    },
     http_utils::remove_quotes,
 };
 
@@ -40,6 +44,9 @@ pub enum HttpSignatureVerificationError {
     #[error("signature has expired")]
     Expired,
 
+    #[error("missing content digest")]
+    NoDigest,
+
     #[error("digest mismatch")]
     DigestMismatch,
 
@@ -57,6 +64,29 @@ pub struct HttpSignatureData {
     pub content_digest: Option<ContentDigest>,
 }
 
+fn get_content_digest(
+    headers: &HeaderMap,
+) -> Result<Option<ContentDigest>, VerificationError> {
+    let maybe_digest = if let Some(header_value) = headers.get("Content-Digest") {
+        let header_value = header_value
+            .to_str()
+            .map_err(|_| VerificationError::HeaderError("invalid header value"))?;
+        let content_digest = parse_content_digest_header(header_value)
+            .map_err(VerificationError::HeaderError)?;
+        Some(content_digest)
+    } else if let Some(header_value) = headers.get("Digest") {
+        let header_value = header_value
+            .to_str()
+            .map_err(|_| VerificationError::HeaderError("invalid header value"))?;
+        let content_digest = parse_digest_header(header_value)
+            .map_err(VerificationError::HeaderError)?;
+        Some(content_digest)
+    } else {
+        None
+    };
+    Ok(maybe_digest)
+}
+
 pub fn parse_http_signature(
     request_method: &Method,
     request_uri: &Uri,
@@ -66,12 +96,8 @@ pub fn parse_http_signature(
     let maybe_digest = match *request_method {
         Method::GET => None,
         Method::POST => {
-            let digest_header = request_headers.get("digest")
-                .ok_or(VerificationError::HeaderError("missing 'digest' header"))?
-                .to_str()
-                .map_err(|_| VerificationError::HeaderError("invalid 'digest' header"))?;
-            let digest = parse_digest_header(digest_header)
-                .map_err(VerificationError::HeaderError)?;
+            let digest = get_content_digest(request_headers)?
+                .ok_or(VerificationError::NoDigest)?;
             Some(digest)
         },
         _ => return Err(VerificationError::MethodNotSupported),
