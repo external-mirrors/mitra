@@ -76,6 +76,7 @@ use mitra_models::{
     reactions::queries::{
         create_reaction,
         delete_reaction,
+        get_reactions,
     },
     reactions::types::ReactionData,
     users::types::Permission,
@@ -120,6 +121,7 @@ use super::helpers::{
 use super::types::{
     visibility_from_str,
     Context,
+    FavouritedByQueryParams,
     ReblogParams,
     RebloggedByQueryParams,
     Status,
@@ -777,6 +779,67 @@ async fn unfavourite(
     Ok(HttpResponse::Ok().json(status))
 }
 
+// https://docs.joinmastodon.org/methods/statuses/#favourited_by
+#[get("/{status_id}/favourited_by")]
+async fn get_favourited_by(
+    maybe_auth: Option<BearerAuth>,
+    config: web::Data<Config>,
+    connection_info: ConnectionInfo,
+    db_pool: web::Data<DatabaseConnectionPool>,
+    request_uri: Uri,
+    status_id: web::Path<Uuid>,
+    params: web::Query<FavouritedByQueryParams>,
+) -> Result<HttpResponse, MastodonError> {
+    let db_client = &**get_database_client(&db_pool).await?;
+    let maybe_current_user = if let Some(auth) = maybe_auth {
+        let current_user = get_current_user(db_client, auth.token()).await?;
+        Some(current_user)
+    } else {
+        None
+    };
+    let post = get_post_by_id_for_view(
+        db_client,
+        maybe_current_user.as_ref().map(|user| &user.profile),
+        *status_id,
+    ).await?;
+    let reactions: Vec<_> = if let Some(current_user) = maybe_current_user {
+        get_reactions(
+            db_client,
+            post.id,
+            Some(current_user.id),
+            params.max_id,
+            Some(params.limit.inner()),
+        )
+            .await?
+            .into_iter()
+            // Only favourites
+            .filter(|reaction| reaction.content.is_none())
+            .collect()
+    } else {
+        // Never show reactions to unauthenticated users
+        vec![]
+    };
+    let maybe_last_id = get_last_item(&reactions, &params.limit)
+        .map(|reaction| reaction.id);
+    let base_url = get_request_base_url(connection_info);
+    let media_server = ClientMediaServer::new(&config, &base_url);
+    let instance_url = config.instance().url();
+    let accounts: Vec<Account> = reactions.into_iter()
+        .map(|reaction| Account::from_profile(
+            &instance_url,
+            &media_server,
+            reaction.author,
+        ))
+        .collect();
+    let response = get_paginated_response(
+        &base_url,
+        &request_uri,
+        accounts,
+        maybe_last_id,
+    );
+    Ok(response)
+}
+
 // https://docs.joinmastodon.org/methods/statuses/#boost
 #[post("/{status_id}/reblog")]
 async fn reblog(
@@ -1173,6 +1236,7 @@ pub fn status_api_scope() -> Scope {
         .service(get_thread_view)
         .service(favourite)
         .service(unfavourite)
+        .service(get_favourited_by)
         .service(reblog)
         .service(unreblog)
         .service(get_reblogged_by)

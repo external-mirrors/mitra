@@ -2,17 +2,22 @@ use uuid::Uuid;
 
 use mitra_utils::id::generate_ulid;
 
-use crate::database::{
-    DatabaseClient,
-    DatabaseError,
-};
-use crate::notifications::helpers::create_reaction_notification;
-use crate::posts::queries::{
-    update_reaction_count,
-    get_post_author,
+use crate::{
+    database::{
+        DatabaseClient,
+        DatabaseError,
+    },
+    notifications::helpers::create_reaction_notification,
+    posts::{
+        queries::{
+            update_reaction_count,
+            get_post_author,
+        },
+        types::Visibility,
+    },
 };
 
-use super::types::{DbReaction, ReactionData};
+use super::types::{DbReaction, Reaction, ReactionData};
 
 pub async fn create_reaction(
     db_client: &mut impl DatabaseClient,
@@ -110,6 +115,51 @@ pub async fn delete_reaction(
     update_reaction_count(&transaction, post_id, -1).await?;
     transaction.commit().await?;
     Ok((reaction_id, reaction_has_deprecated_ap_id))
+}
+
+pub async fn get_reactions(
+    db_client: &impl DatabaseClient,
+    post_id: Uuid,
+    current_user_id: Option<Uuid>,
+    max_reaction_id: Option<Uuid>,
+    limit: Option<u16>,
+) -> Result<Vec<Reaction>, DatabaseError> {
+    let statement = format!(
+        "
+        SELECT
+            post_reaction.id,
+            actor_profile AS author,
+            post_reaction.content,
+            emoji
+        FROM post_reaction
+        JOIN post ON post_reaction.post_id = post.id
+        JOIN actor_profile ON post_reaction.author_id = actor_profile.id
+        LEFT JOIN emoji ON post_reaction.emoji_id = emoji.id
+        WHERE
+            post_reaction.post_id = $1
+            AND (
+                post_reaction.visibility = {visibility_public}
+                OR post.author_id = $2
+            )
+            AND ($3::uuid IS NULL OR post_reaction.id < $3)
+        ORDER BY post_reaction.id DESC
+        {limit}
+        ",
+        visibility_public=i16::from(Visibility::Public),
+        limit=limit.map(|n| format!("LIMIT {n}")).unwrap_or("".to_owned()),
+    );
+    let rows = db_client.query(
+        &statement,
+        &[
+            &post_id,
+            &current_user_id,
+            &max_reaction_id,
+        ],
+    ).await?;
+    let reactions = rows.iter()
+        .map(Reaction::try_from)
+        .collect::<Result<_, _>>()?;
+    Ok(reactions)
 }
 
 /// Finds posts with reactions among given posts and returns their IDs.
@@ -243,5 +293,46 @@ mod tests {
         ).await.unwrap();
         assert_eq!(reaction_id, reaction.id);
         assert_eq!(reaction_has_deprecated_ap_id, false);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_get_reactions() {
+        let db_client = &mut create_test_database().await;
+        let user_1 = create_test_user(db_client, "test1").await;
+        let user_2 = create_test_user(db_client, "test2").await;
+        let user_3 = create_test_user(db_client, "test3").await;
+        let post_data = PostCreateData {
+            content: "my post".to_string(),
+            ..Default::default()
+        };
+        let post = create_post(db_client, user_1.id, post_data).await.unwrap();
+        let reaction_data_1 = ReactionData {
+            author_id: user_2.id,
+            post_id: post.id,
+            content: None,
+            emoji_id: None,
+            visibility: Visibility::Direct,
+            activity_id: None,
+        };
+        let _reaction_1 = create_reaction(db_client, reaction_data_1).await.unwrap();
+        let reaction_data_2 = ReactionData {
+            author_id: user_3.id,
+            post_id: post.id,
+            content: None,
+            emoji_id: None,
+            visibility: Visibility::Public,
+            activity_id: None,
+        };
+        let reaction_2 = create_reaction(db_client, reaction_data_2).await.unwrap();
+        let reactions = get_reactions(
+            db_client,
+            post.id,
+            None, // guest
+            None,
+            None,
+        ).await.unwrap();
+        assert_eq!(reactions.len(), 1);
+        assert_eq!(reactions[0].id, reaction_2.id);
     }
 }

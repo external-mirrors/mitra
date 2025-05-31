@@ -1,6 +1,7 @@
 use actix_web::{
     delete,
     dev::ConnectionInfo,
+    get,
     put,
     web,
     HttpResponse,
@@ -31,6 +32,7 @@ use mitra_models::{
         queries::{
             create_reaction,
             delete_reaction,
+            get_reactions,
         },
         types::ReactionData,
     },
@@ -44,11 +46,15 @@ use mitra_validators::{
 
 use crate::http::get_request_base_url;
 use crate::mastodon_api::{
+    accounts::types::Account,
     auth::get_current_user,
+    custom_emojis::types::CustomEmoji,
     errors::MastodonError,
     media_server::ClientMediaServer,
     statuses::helpers::build_status,
 };
+
+use super::types::PleromaEmojiReaction;
 
 fn emoji_shortcode(emoji_name: &str) -> String {
     format!(":{emoji_name}:")
@@ -183,8 +189,73 @@ async fn delete_reaction_view(
     Ok(HttpResponse::Ok().json(status))
 }
 
+#[get("/{status_id}/reactions")]
+async fn get_reactions_view(
+    auth: BearerAuth,
+    config: web::Data<Config>,
+    connection_info: ConnectionInfo,
+    db_pool: web::Data<DatabaseConnectionPool>,
+    status_id: web::Path<Uuid>,
+) -> Result<HttpResponse, MastodonError> {
+    let db_client = &**get_database_client(&db_pool).await?;
+    let current_user = get_current_user(db_client, auth.token()).await?;
+    let post = get_post_by_id_for_view(
+        db_client,
+        Some(&current_user.profile),
+        *status_id,
+    ).await?;
+    let reactions = get_reactions(
+        db_client,
+        post.id,
+        Some(current_user.id),
+        None,
+        None, // get all reactions
+    ).await?;
+    let base_url = get_request_base_url(connection_info);
+    let media_server = ClientMediaServer::new(&config, &base_url);
+    let mut pleroma_reactions: Vec<PleromaEmojiReaction> = vec![];
+    for reaction in reactions {
+        let Some(content) = reaction.content else {
+            // "Favourite"
+            continue;
+        };
+        let maybe_custom_emoji = reaction.emoji
+            .map(|emoji| CustomEmoji::from_db(&media_server, emoji));
+        let name = maybe_custom_emoji.as_ref()
+            .map(|emoji| emoji.shortcode.clone())
+            .unwrap_or(content);
+        let account = Account::from_profile(
+            &config.instance_url(),
+            &media_server,
+            reaction.author.clone(),
+        );
+        let reacted = reaction.author.id == current_user.id;
+        if let Some(item) = pleroma_reactions
+            .iter_mut()
+            .find(|item| item.name == name)
+        {
+            item.count += 1;
+            item.accounts.push(account);
+            if reacted {
+                item.me = true;
+            };
+        } else {
+            let item = PleromaEmojiReaction {
+                name: name,
+                url: maybe_custom_emoji.map(|emoji| emoji.url),
+                count: 1,
+                accounts: vec![account],
+                me: reacted,
+            };
+            pleroma_reactions.push(item);
+        };
+    };
+    Ok(HttpResponse::Ok().json(pleroma_reactions))
+}
+
 pub fn reaction_api_scope() -> Scope {
     web::scope("/v1/pleroma/statuses")
         .service(create_reaction_view)
         .service(delete_reaction_view)
+        .service(get_reactions_view)
 }

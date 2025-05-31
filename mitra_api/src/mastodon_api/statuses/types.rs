@@ -23,6 +23,7 @@ use crate::mastodon_api::{
     media_server::ClientMediaServer,
     pagination::PageSize,
     polls::types::Poll,
+    reactions::types::PleromaEmojiReaction,
     serializers::{
         deserialize_language_code_opt,
         serialize_datetime,
@@ -68,14 +69,6 @@ impl Tag {
             url: tag_url,
         }
     }
-}
-
-#[derive(Serialize)]
-struct PleromaEmojiReaction {
-    name: String,
-    url: Option<String>,
-    count: i32,
-    me: bool,
 }
 
 /// https://docs-develop.pleroma.social/backend/development/API/differences_in_mastoapi_responses/#statuses
@@ -214,6 +207,7 @@ impl Status {
                     .unwrap_or(content),
                 url: maybe_custom_emoji.map(|emoji| emoji.url),
                 count: reaction.count,
+                accounts: vec![],
                 me: reacted,
             };
             emoji_reactions.push(reaction);
@@ -426,6 +420,16 @@ pub struct StatusUpdateData {
 pub struct Context {
     pub ancestors: Vec<Status>,
     pub descendants: Vec<Status>,
+}
+
+fn default_favourite_list_page_size() -> PageSize { PageSize::new(40) }
+
+#[derive(Deserialize)]
+pub struct FavouritedByQueryParams {
+    pub max_id: Option<Uuid>,
+
+    #[serde(default = "default_favourite_list_page_size")]
+    pub limit: PageSize,
 }
 
 #[derive(Deserialize)]

@@ -1964,6 +1964,47 @@ paths:
                 $ref: '#/components/schemas/Status'
         404:
           description: Post does not exist
+  /api/v1/statuses/{status_id}/favourited_by:
+    get:
+      summary: View who liked a given post.
+      security:
+        - tokenAuth: []
+      parameters:
+        - $ref: '#/components/parameters/status_id'
+        - name: max_id
+          in: query
+          description: Return results with repost ID older than this value.
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - name: limit
+          in: query
+          description: Maximum number of results to return.
+          required: false
+          schema:
+            type: integer
+            default: 40
+      responses:
+        200:
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                description: Profile list
+                type: array
+                items:
+                  $ref: '#/components/schemas/Account'
+          headers:
+            Link:
+              description: Link to the next page
+              schema:
+                type: string
+                example: '<https://social.example/api/v1/statuses/123/favourited_by?limit=40&max_id=345>; rel="next"'
+        400:
+          description: Invalid query parameters.
+        404:
+          description: Post does not exist.
   /api/v1/statuses/{status_id}/reblog:
     post:
       summary: Repost a post
@@ -2577,6 +2618,30 @@ paths:
                     type: array
                     items:
                       $ref: '#/components/schemas/Tag'
+  /api/v1/pleroma/statuses/{status_id}/reactions:
+    get:
+      summary: View who reacted to the given post.
+      security:
+        - tokenAuth: []
+      parameters:
+        - $ref: '#/components/parameters/status_id'
+      responses:
+        200:
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/EmojiReaction'
+                  - type: object
+                    properties:
+                      accounts:
+                        description: Users who reacted with this emoji.
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Account'
+        404:
+          description: Post does not exist.
   /api/v1/pleroma/statuses/{status_id}/reactions/{content}:
     put:
       summary: Add emoji reaction.
@@ -2889,6 +2954,24 @@ components:
           type: string
         visible_in_picker:
           description: Whether this Emoji should be visible in the picker or unlisted.
+          type: boolean
+    EmojiReaction:
+      description: Emoji reaction.
+      type: object
+      properties:
+        name:
+          description: The emoji name.
+          type: string
+        url:
+          description: A link to the custom emoji.
+          type: string
+          nullable: true
+        count:
+          description: The total number of reactions of this type.
+          type: number
+          example: 1
+        me:
+          description: Has current user reacted with this emoji?
           type: boolean
     Field:
       type: object
@@ -3575,22 +3658,7 @@ components:
               description: The list of emoji reactions.
               type: array
               items:
-                description: Emoji reaction.
-                type: object
-                properties:
-                  name:
-                    description: The emoji name.
-                    type: string
-                  url:
-                    description: A link to the custom emoji.
-                    type: string
-                    nullable: true
-                  count:
-                    description: The total number of reactions of this type.
-                    type: number
-                  me:
-                    description: Has current user reacted with this emoji?
-                    type: boolean
+                $ref: '#/components/schemas/EmojiReaction'
               example: []
             in_reply_to_account_acct:
               description: The acct attribute of the user that authored the post being replied to.
