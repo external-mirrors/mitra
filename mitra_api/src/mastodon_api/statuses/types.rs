@@ -21,6 +21,7 @@ use crate::mastodon_api::{
     custom_emojis::types::CustomEmoji,
     media::types::Attachment,
     media_server::ClientMediaServer,
+    pagination::PageSize,
     polls::types::Poll,
     serializers::{
         deserialize_language_code_opt,
@@ -432,6 +433,16 @@ pub struct Context {
 #[derive(Deserialize)]
 pub struct ReblogParams {
     pub visibility: Option<String>,
+}
+
+fn default_repost_list_page_size() -> PageSize { PageSize::new(40) }
+
+#[derive(Deserialize)]
+pub struct RebloggedByQueryParams {
+    pub max_id: Option<Uuid>,
+
+    #[serde(default = "default_repost_list_page_size")]
+    pub limit: PageSize,
 }
 
 #[cfg(test)]

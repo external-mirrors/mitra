@@ -4,6 +4,7 @@ use actix_web::{
     delete,
     dev::ConnectionInfo,
     get,
+    http::Uri,
     post,
     put,
     web,
@@ -58,6 +59,7 @@ use mitra_models::{
         delete_repost,
         get_post_by_id,
         get_post_reactions,
+        get_post_reposts,
         get_repost_by_author,
         get_thread,
         set_pinned_flag,
@@ -95,13 +97,17 @@ use mitra_validators::{
     reactions::validate_reaction_data,
 };
 
-use crate::http::{get_request_base_url, QsFormOrJson};
-use crate::mastodon_api::{
-    auth::get_current_user,
-    errors::MastodonError,
-    media_server::ClientMediaServer,
+use crate::{
+    http::{get_request_base_url, QsFormOrJson},
+    mastodon_api::{
+        accounts::types::Account,
+        auth::get_current_user,
+        errors::MastodonError,
+        media_server::ClientMediaServer,
+        pagination::{get_last_item, get_paginated_response},
+    },
+    state::AppState,
 };
-use crate::state::AppState;
 
 use super::helpers::{
     build_status,
@@ -115,6 +121,7 @@ use super::types::{
     visibility_from_str,
     Context,
     ReblogParams,
+    RebloggedByQueryParams,
     Status,
     StatusData,
     StatusPreview,
@@ -869,6 +876,56 @@ async fn unreblog(
     Ok(HttpResponse::Ok().json(status))
 }
 
+// https://docs.joinmastodon.org/methods/statuses/#reblogged_by
+#[get("/{status_id}/reblogged_by")]
+async fn get_reblogged_by(
+    auth: BearerAuth,
+    config: web::Data<Config>,
+    connection_info: ConnectionInfo,
+    db_pool: web::Data<DatabaseConnectionPool>,
+    request_uri: Uri,
+    status_id: web::Path<Uuid>,
+    params: web::Query<RebloggedByQueryParams>,
+) -> Result<HttpResponse, MastodonError> {
+    let db_client = &**get_database_client(&db_pool).await?;
+    let current_user = get_current_user(db_client, auth.token()).await?;
+    let post = get_post_by_id_for_view(
+        db_client,
+        Some(&current_user.profile),
+        *status_id,
+    ).await?;
+    let reposts = if post.author.id == current_user.id {
+        get_post_reposts(
+            db_client,
+            post.id,
+            Some(current_user.id),
+            params.max_id,
+            params.limit.inner(),
+        ).await?
+    } else {
+        vec![]
+    };
+    let maybe_last_id = get_last_item(&reposts, &params.limit)
+        .map(|(repost_id, _)| *repost_id);
+    let base_url = get_request_base_url(connection_info);
+    let media_server = ClientMediaServer::new(&config, &base_url);
+    let instance_url = config.instance().url();
+    let accounts: Vec<Account> = reposts.into_iter()
+        .map(|(_, author)| Account::from_profile(
+            &instance_url,
+            &media_server,
+            author,
+        ))
+        .collect();
+    let response = get_paginated_response(
+        &base_url,
+        &request_uri,
+        accounts,
+        maybe_last_id,
+    );
+    Ok(response)
+}
+
 /// https://docs.joinmastodon.org/methods/statuses/#bookmark
 #[post("/{status_id}/bookmark")]
 async fn bookmark_view(
@@ -1115,6 +1172,7 @@ pub fn status_api_scope() -> Scope {
         .service(unfavourite)
         .service(reblog)
         .service(unreblog)
+        .service(get_reblogged_by)
         .service(pin)
         .service(unpin)
         .service(bookmark_view)

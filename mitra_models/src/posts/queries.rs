@@ -1519,6 +1519,49 @@ pub async fn get_repost_by_author(
     Ok(repost)
 }
 
+/// Returns reposts of a given post
+pub async fn get_post_reposts(
+    db_client: &impl DatabaseClient,
+    post_id: Uuid,
+    current_user_id: Option<Uuid>,
+    max_repost_id: Option<Uuid>,
+    limit: u16,
+) -> Result<Vec<(Uuid, DbActorProfile)>, DatabaseError> {
+    let statement = format!(
+        "
+        SELECT repost.id, actor_profile
+        FROM (
+            SELECT * FROM post
+            WHERE {visibility_filter}
+        ) AS repost
+        JOIN actor_profile ON repost.author_id = actor_profile.id
+        WHERE
+            repost.repost_of_id = $post_id
+            AND ($max_repost_id::uuid IS NULL OR repost.id < $max_repost_id)
+        ORDER BY repost.id DESC
+        LIMIT $limit
+        ",
+        visibility_filter=build_visibility_filter(),
+    );
+    let limit = i64::from(limit);
+    let query = query!(
+        &statement,
+        post_id=post_id,
+        current_user_id=current_user_id,
+        max_repost_id=max_repost_id,
+        limit=limit,
+    )?;
+    let rows = db_client.query(query.sql(), query.parameters()).await?;
+    let reposts = rows.iter()
+        .map(|row| {
+            let id = row.try_get("id")?;
+            let author = row.try_get("actor_profile")?;
+            Ok((id, author))
+        })
+        .collect::<Result<_, DatabaseError>>()?;
+    Ok(reposts)
+}
+
 /// Finds items reposted by user among given posts
 pub(super) async fn find_reposted_by_user(
     db_client: &impl DatabaseClient,
@@ -2575,6 +2618,71 @@ mod tests {
             None,
         ).await.err().unwrap();
         assert_eq!(error.to_string(), "conversation not found");
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_get_post_reposts() {
+        let db_client = &mut create_test_database().await;
+        let user = create_test_user(db_client, "test").await;
+        let remote_user_1 = create_test_remote_profile(
+            db_client,
+            "test1",
+            "social.example",
+            "https://social.example/users/1",
+        ).await;
+        let remote_user_2 = create_test_remote_profile(
+            db_client,
+            "test2",
+            "social.example",
+            "https://social.example/users/2",
+        ).await;
+        let post = create_test_local_post(
+            db_client,
+            user.id,
+            "test post",
+        ).await;
+        // Public repost
+        let repost_data_1 = PostCreateData::repost(
+            post.id,
+            Visibility::Public,
+            Some("https://social.example/activity1".to_owned()),
+        );
+        let repost_1 = create_post(
+            db_client,
+            remote_user_1.id,
+            repost_data_1,
+        ).await.unwrap();
+        // Followers only repost
+        let repost_data_2 = PostCreateData::repost(
+            post.id,
+            Visibility::Followers,
+            Some("https://social.example/activity2".to_owned()),
+        );
+        let repost_2 = create_post(
+            db_client,
+            remote_user_2.id,
+            repost_data_2,
+        ).await.unwrap();
+
+        let reposts = get_post_reposts(
+            db_client,
+            post.id,
+            None,
+            None,
+            10,
+        ).await.unwrap();
+        assert_eq!(reposts.len(), 1);
+        assert_eq!(reposts.iter().any(|(repost_id, _)| *repost_id == repost_1.id), true);
+        assert_eq!(reposts.iter().any(|(repost_id, _)| *repost_id == repost_2.id), false);
+        let reposts = get_post_reposts(
+            db_client,
+            post.id,
+            Some(user.id),
+            None,
+            10,
+        ).await.unwrap();
+        assert_eq!(reposts.len(), 2);
     }
 
     #[tokio::test]

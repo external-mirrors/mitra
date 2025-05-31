@@ -14,6 +14,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Support SHA-512 content digests.
 - Support verification of signed requests with `Content-Digest` header.
 - Verify RFC-9421 signatures.
+- Implemented `/api/v1/{status_id}/reblogged_by` API endpoint.
 
 ### Changed
 
