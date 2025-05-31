@@ -32,8 +32,8 @@ pub enum HttpSignatureVerificationError {
     #[error("missing signature header")]
     NoSignature,
 
-    #[error("{0}")]
-    HeaderError(&'static str),
+    #[error("{1}: {0}")]
+    HeaderError(String, &'static str),
 
     #[error("{0}")]
     ParseError(&'static str),
@@ -54,6 +54,16 @@ pub enum HttpSignatureVerificationError {
     InvalidSignature,
 }
 
+impl HttpSignatureVerificationError {
+    fn header_missing(header_name: &str) -> Self {
+        Self::HeaderError(header_name.to_owned(), "missing header")
+    }
+
+    fn header_value(header_name: &str) -> Self {
+        Self::HeaderError(header_name.to_owned(), "invalid header value")
+    }
+}
+
 type VerificationError = HttpSignatureVerificationError;
 
 pub struct HttpSignatureData {
@@ -70,16 +80,22 @@ fn get_content_digest(
     let maybe_digest = if let Some(header_value) = headers.get("Content-Digest") {
         let header_value = header_value
             .to_str()
-            .map_err(|_| VerificationError::HeaderError("invalid header value"))?;
+            .map_err(|_| VerificationError::header_value("Content-Digest"))?;
         let content_digest = parse_content_digest_header(header_value)
-            .map_err(VerificationError::HeaderError)?;
+            .map_err(|error| VerificationError::HeaderError(
+                "Content-Digest".to_owned(),
+                error,
+            ))?;
         Some(content_digest)
     } else if let Some(header_value) = headers.get("Digest") {
         let header_value = header_value
             .to_str()
-            .map_err(|_| VerificationError::HeaderError("invalid header value"))?;
+            .map_err(|_| VerificationError::header_value("Digest"))?;
         let content_digest = parse_digest_header(header_value)
-            .map_err(VerificationError::HeaderError)?;
+            .map_err(|error| VerificationError::HeaderError(
+                "Digest".to_owned(),
+                error,
+            ))?;
         Some(content_digest)
     } else {
         None
@@ -109,14 +125,14 @@ pub fn parse_http_signature_cavage(
     let signature_header = request_headers.get("signature")
         .ok_or(VerificationError::NoSignature)?
         .to_str()
-        .map_err(|_| VerificationError::HeaderError("invalid signature header"))?;
+        .map_err(|_| VerificationError::header_value("Signature"))?;
 
     let signature_parameter_re = Regex::new(SIGNATURE_PARAMETER_RE)
         .expect("regexp should be valid");
     let mut signature_parameters = HashMap::new();
     for item in signature_header.split(',') {
         let caps = signature_parameter_re.captures(item)
-            .ok_or(VerificationError::HeaderError("invalid signature header"))?;
+            .ok_or(VerificationError::header_value("Signature"))?;
         let key = caps["key"].to_string();
         let value = remove_quotes(&caps["value"]);
         signature_parameters.insert(key, value);
@@ -139,11 +155,11 @@ pub fn parse_http_signature_cavage(
             .ok_or(VerificationError::ParseError("invalid timestamp"))?
     } else {
         let date_str = request_headers.get("date")
-            .ok_or(VerificationError::HeaderError("missing date"))?
+            .ok_or(VerificationError::header_missing("Date"))?
             .to_str()
-            .map_err(|_| VerificationError::HeaderError("invalid date header"))?;
+            .map_err(|_| VerificationError::header_value("Date"))?;
         let date = DateTime::parse_from_rfc2822(date_str)
-            .map_err(|_| VerificationError::HeaderError("invalid date"))?;
+            .map_err(|_| VerificationError::header_value("Date"))?;
         date.with_timezone(&Utc)
     };
     let expires_at = if let Some(expires_at) = signature_parameters.get("expires") {
@@ -174,9 +190,9 @@ pub fn parse_http_signature_cavage(
             format!("(expires): {}", expires)
         } else {
             let header_value = request_headers.get(header)
-                .ok_or(VerificationError::HeaderError("missing header"))?
+                .ok_or(VerificationError::header_missing(header))?
                 .to_str()
-                .map_err(|_| VerificationError::HeaderError("invalid header value"))?;
+                .map_err(|_| VerificationError::header_value(header))?;
             format!("{}: {}", header, header_value)
         };
         message_parts.push(message_part);
