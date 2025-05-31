@@ -217,6 +217,7 @@ CREATE TABLE post_reaction (
     post_id UUID NOT NULL REFERENCES post (id) ON DELETE CASCADE,
     content VARCHAR(102),
     emoji_id UUID REFERENCES emoji (id) ON DELETE CASCADE,
+    visibility SMALLINT NOT NULL,
     activity_id VARCHAR(2000) UNIQUE,
     has_deprecated_ap_id BOOLEAN NOT NULL DEFAULT FALSE,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),

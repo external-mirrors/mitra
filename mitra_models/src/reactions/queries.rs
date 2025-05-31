@@ -29,9 +29,10 @@ pub async fn create_reaction(
             post_id,
             content,
             emoji_id,
+            visibility,
             activity_id
         )
-        SELECT $1, $2, post.id, $4, $5, $6
+        SELECT $1, $2, post.id, $4, $5, $6, $7
         FROM (
             SELECT
                 CASE WHEN post.repost_of_id IS NULL THEN post.id ELSE NULL
@@ -47,6 +48,7 @@ pub async fn create_reaction(
             &reaction_data.post_id,
             &reaction_data.content,
             &reaction_data.emoji_id,
+            &reaction_data.visibility,
             &reaction_data.activity_id,
         ],
     ).await?;
@@ -141,7 +143,7 @@ mod tests {
         database::test_utils::create_test_database,
         posts::{
             queries::{create_post, get_post_by_id},
-            types::PostCreateData,
+            types::{PostCreateData, Visibility},
         },
         users::test_utils::create_test_user,
     };
@@ -164,6 +166,7 @@ mod tests {
             post_id: post.id,
             content: Some(content.to_string()),
             emoji_id: None,
+            visibility: Visibility::Direct,
             activity_id: None,
         };
         let reaction = create_reaction(db_client, reaction_data).await.unwrap();
@@ -172,6 +175,7 @@ mod tests {
         assert_eq!(reaction.post_id, post.id);
         assert_eq!(reaction.content.unwrap(), content);
         assert_eq!(reaction.emoji_id.is_none(), true);
+        assert_eq!(reaction.visibility, Visibility::Direct);
         assert_eq!(reaction.activity_id.is_none(), true);
 
         let post = get_post_by_id(db_client, post.id).await.unwrap();
@@ -194,6 +198,7 @@ mod tests {
             post_id: post.id,
             content: None,
             emoji_id: None,
+            visibility: Visibility::Direct,
             activity_id: None,
         };
         create_reaction(db_client, reaction_data_1).await.unwrap();
@@ -202,6 +207,7 @@ mod tests {
             post_id: post.id,
             content: Some("❤️".to_string()),
             emoji_id: None,
+            visibility: Visibility::Direct,
             activity_id: None,
         };
         create_reaction(db_client, reaction_data_2.clone()).await.unwrap();
@@ -225,6 +231,7 @@ mod tests {
             post_id: post.id,
             content: None,
             emoji_id: None,
+            visibility: Visibility::Direct,
             activity_id: None,
         };
         let reaction = create_reaction(db_client, reaction_data).await.unwrap();

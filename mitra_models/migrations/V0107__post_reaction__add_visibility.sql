@@ -1,0 +1,2 @@
+ALTER TABLE post_reaction ADD COLUMN visibility SMALLINT NOT NULL DEFAULT 2;
+ALTER TABLE post_reaction ALTER COLUMN visibility DROP DEFAULT;

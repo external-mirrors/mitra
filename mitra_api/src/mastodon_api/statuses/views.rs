@@ -683,6 +683,7 @@ async fn favourite(
         post_id: status_id.into_inner(),
         content: None,
         emoji_id: None,
+        visibility: Visibility::Direct,
         activity_id: None,
     };
     validate_reaction_data(&reaction_data)?;

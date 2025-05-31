@@ -22,14 +22,18 @@ use mitra_models::{
         DatabaseConnectionPool,
     },
     emojis::queries::get_local_emoji_by_name,
-    posts::helpers::get_post_by_id_for_view,
-    posts::queries::get_post_reactions,
-    posts::types::DbPostReactions,
-    reactions::queries::{
-        create_reaction,
-        delete_reaction,
+    posts::{
+        helpers::get_post_by_id_for_view,
+        queries::get_post_reactions,
+        types::{DbPostReactions, Visibility},
     },
-    reactions::types::ReactionData,
+    reactions::{
+        queries::{
+            create_reaction,
+            delete_reaction,
+        },
+        types::ReactionData,
+    },
 };
 use mitra_services::media::MediaServer;
 use mitra_utils::unicode::is_single_character;
@@ -96,6 +100,7 @@ async fn create_reaction_view(
         post_id: status_id,
         content: Some(content),
         emoji_id: maybe_emoji.as_ref().map(|db_emoji| db_emoji.id),
+        visibility: Visibility::Direct,
         activity_id: None,
     };
     validate_reaction_data(&reaction_data)?;

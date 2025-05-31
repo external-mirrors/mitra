@@ -1,4 +1,7 @@
-use mitra_models::reactions::types::ReactionData;
+use mitra_models::{
+    posts::types::Visibility,
+    reactions::types::ReactionData,
+};
 use mitra_utils::unicode::is_single_character;
 
 use super::{
@@ -34,6 +37,12 @@ pub fn validate_reaction_data(
             return Err(ValidationError("custom emoji reaction without content"));
         };
     };
+    if !matches!(
+        reaction_data.visibility,
+        Visibility::Public | Visibility::Direct,
+    ) {
+        return Err(ValidationError("invalid reaction visibility"));
+    };
     if let Some(ref activity_id) = reaction_data.activity_id {
         validate_any_object_id(activity_id)?;
     };
@@ -54,6 +63,7 @@ mod tests {
             post_id: post_id,
             content: None,
             emoji_id: None,
+            visibility: Visibility::Direct,
             activity_id: None,
         };
         let result = validate_reaction_data(&reaction_data);
@@ -69,6 +79,7 @@ mod tests {
             post_id: post_id,
             content: Some("❤️".to_string()),
             emoji_id: None,
+            visibility: Visibility::Direct,
             activity_id: None,
         };
         let result = validate_reaction_data(&reaction_data);
@@ -85,6 +96,7 @@ mod tests {
             post_id: post_id,
             content: Some(":blobcat:".to_string()),
             emoji_id: Some(emoji_id),
+            visibility: Visibility::Direct,
             activity_id: None,
         };
         let result = validate_reaction_data(&reaction_data);

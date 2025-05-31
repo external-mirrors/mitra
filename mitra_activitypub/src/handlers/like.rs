@@ -2,7 +2,9 @@ use serde::Deserialize;
 use serde_json::{Value as JsonValue};
 
 use apx_sdk::{
+    constants::AP_PUBLIC,
     deserialization::{
+        deserialize_into_id_array,
         deserialize_into_object_id,
         deserialize_object_array,
     },
@@ -10,6 +12,8 @@ use apx_sdk::{
 use mitra_config::Config;
 use mitra_models::{
     database::{DatabaseClient, DatabaseError},
+    posts::types::Visibility,
+    profiles::types::DbActor,
     reactions::{
         queries::create_reaction,
         types::ReactionData,
@@ -17,6 +21,7 @@ use mitra_models::{
 };
 use mitra_utils::unicode::is_single_character;
 use mitra_validators::{
+    errors::ValidationError,
     reactions::validate_reaction_data,
 };
 
@@ -33,6 +38,7 @@ use crate::{
 
 use super::{
     emoji::handle_emoji,
+    note::normalize_audience,
     Descriptor,
     HandlerResult,
 };
@@ -54,6 +60,28 @@ struct Like {
 
     #[serde(default, deserialize_with = "deserialize_object_array")]
     tag: Vec<JsonValue>,
+
+    #[serde(default, deserialize_with = "deserialize_into_id_array")]
+    to: Vec<String>,
+    #[serde(default, deserialize_with = "deserialize_into_id_array")]
+    cc: Vec<String>,
+}
+
+fn get_visibility(
+    _actor: &DbActor,
+    to: &[String],
+    cc: &[String],
+) -> Result<Visibility, ValidationError> {
+    let audience = [to, cc].concat();
+    let normalized_audience = normalize_audience(&audience)?;
+    let visibility = if normalized_audience.iter()
+        .any(|target_id| target_id.to_string() == AP_PUBLIC)
+    {
+        Visibility::Public
+    } else {
+        Visibility::Direct
+    };
+    Ok(visibility)
 }
 
 pub async fn handle_like(
@@ -80,6 +108,11 @@ pub async fn handle_like(
         Err(DatabaseError::NotFound(_)) => return Ok(None),
         Err(other_error) => return Err(other_error.into()),
     };
+    let visibility = get_visibility(
+        author.expect_actor_data(),
+        &like.to,
+        &like.cc,
+    )?;
     let (maybe_content, maybe_emoji_id) = match like.content {
         Some(content) if is_single_character(&content) => {
             (Some(content), None)
@@ -122,6 +155,7 @@ pub async fn handle_like(
         post_id: post_id,
         content: maybe_content,
         emoji_id: maybe_emoji_id,
+        visibility: visibility,
         activity_id: Some(canonical_activity_id.to_string()),
     };
     validate_reaction_data(&reaction_data)?;
