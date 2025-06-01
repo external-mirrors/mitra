@@ -647,6 +647,12 @@ fn build_visibility_filter() -> String {
                 WHERE post_id = post.id AND profile_id = $current_user_id
             )
             OR EXISTS (
+                SELECT 1 FROM post AS repost_of
+                WHERE
+                    post.repost_of_id = repost_of.id
+                    AND repost_of.author_id = $current_user_id
+            )
+            OR EXISTS (
                 SELECT 1 FROM relationship
                 WHERE
                     source_id = $current_user_id
@@ -2362,6 +2368,39 @@ mod tests {
         assert_eq!(timeline.iter().any(|post| post.id == reply.id), false);
         assert_eq!(timeline.iter().any(|post| post.id == repost_1.id), true);
         assert_eq!(timeline.iter().any(|post| post.id == repost_2.id), false);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_profile_timeline_private_repost() {
+        let db_client = &mut create_test_database().await;
+        let user_1 = create_test_user(db_client, "test1").await;
+        let post_data = PostCreateData {
+            content: "my post".to_string(),
+            ..Default::default()
+        };
+        let post = create_post(db_client, user_1.id, post_data).await.unwrap();
+        let user_2 = create_test_user(db_client, "test2").await;
+        let repost_data = PostCreateData::repost(
+            post.id,
+            Visibility::Followers,
+            None,
+        );
+        let repost = create_post(db_client, user_2.id, repost_data).await.unwrap();
+
+        let timeline = get_posts_by_author(
+            db_client,
+            user_2.id,
+            Some(user_1.id),
+            false, // don't include replies
+            true, // include reposts
+            false, // not only pinned
+            false, // not only media
+            None,
+            10,
+        ).await.unwrap();
+        assert_eq!(timeline.len(), 1);
+        assert_eq!(timeline.iter().any(|item| item.id == repost.id), true);
     }
 
     #[tokio::test]
