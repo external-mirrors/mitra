@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Fixed
+
+- Return `http` when using `guess_protocol` on an IPv6 hostname.
+- Fix incorrect URI scheme returned by `WebfingerAddress::endpoint_uri` when hostname is IPv6 address.
+
 ## [0.13.0] - 2025-05-27
 
 ### Added

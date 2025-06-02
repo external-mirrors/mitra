@@ -2,6 +2,12 @@ use std::net::{Ipv4Addr, Ipv6Addr};
 
 use idna::{domain_to_ascii, Errors as IdnaError};
 
+pub(crate) fn is_ipv6_hostname(hostname: &str) -> bool {
+    hostname.strip_prefix('[')
+        .and_then(|value| value.strip_suffix(']'))
+        .is_some_and(|address| address.parse::<Ipv6Addr>().is_ok())
+}
+
 pub fn encode_hostname(hostname: &str) -> Result<String, IdnaError> {
     domain_to_ascii(hostname)
 }
@@ -14,6 +20,7 @@ pub fn is_i2p(hostname: &str) -> bool {
     hostname.ends_with(".i2p")
 }
 
+/// Attempts to guess the URI scheme (http or https) for the given hostname
 pub fn guess_protocol(hostname: &str) -> &'static str {
     if hostname == "localhost" {
         return "http";
@@ -21,7 +28,7 @@ pub fn guess_protocol(hostname: &str) -> &'static str {
     if hostname.parse::<Ipv4Addr>().is_ok() {
         return "http";
     };
-    if hostname.parse::<Ipv6Addr>().is_ok() {
+    if is_ipv6_hostname(hostname) {
         return "http";
     };
     if hostname.ends_with(".onion") ||
@@ -39,6 +46,13 @@ pub fn guess_protocol(hostname: &str) -> &'static str {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_is_ipv6_hostname() {
+        assert!(is_ipv6_hostname("[319:3cf0:dd1d:47b9:20c:29ff:fe2c:39be]"));
+        assert!(!is_ipv6_hostname("319:3cf0:dd1d:47b9:20c:29ff:fe2c:39be"));
+        assert!(!is_ipv6_hostname(""));
+    }
 
     #[test]
     fn test_encode_hostname() {
@@ -63,7 +77,7 @@ mod tests {
         );
         // Yggdrasil
         assert_eq!(
-            guess_protocol("319:3cf0:dd1d:47b9:20c:29ff:fe2c:39be"),
+            guess_protocol("[319:3cf0:dd1d:47b9:20c:29ff:fe2c:39be]"),
             "http",
         );
         // localhost

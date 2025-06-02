@@ -6,7 +6,7 @@ pub use url::{
     ParseError as UrlError,
 };
 
-use crate::url::hostname::guess_protocol;
+use crate::url::hostname::{guess_protocol, is_ipv6_hostname};
 
 /// Returns URL host name (without port number)
 /// IDNs are converted into punycode
@@ -38,8 +38,9 @@ pub fn normalize_origin(url: &str) -> Result<String, UrlError> {
         url.to_string()
     } else {
         // Add scheme
-        // Doesn't work for IPv6
-        let hostname = if let Some((hostname, _port)) = url.split_once(':') {
+        let hostname = if is_ipv6_hostname(url) {
+            url
+        } else if let Some((hostname, _port)) = url.rsplit_once(':') {
             hostname
         } else {
             url
@@ -141,9 +142,12 @@ mod tests {
         // IDN
         let output = normalize_origin("嘟文.com").unwrap();
         assert_eq!(output, "https://xn--j5r817a.com");
-        // IP address
+        // IPv4 address
         let output = normalize_origin("127.0.0.1:8380").unwrap();
         assert_eq!(output, "http://127.0.0.1:8380");
+        // Yggdrasil (IPv6) address
+        let output = normalize_origin("[319:3cf0:dd1d:47b9:20c:29ff:fe2c:39be]").unwrap();
+        assert_eq!(output, "http://[319:3cf0:dd1d:47b9:20c:29ff:fe2c:39be]");
         // Onion
         let output = normalize_origin("xyz.onion").unwrap();
         assert_eq!(output, "http://xyz.onion");

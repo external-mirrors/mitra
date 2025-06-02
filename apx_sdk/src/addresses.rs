@@ -270,4 +270,15 @@ mod tests {
             "https://social.example/.well-known/webfinger",
         );
     }
+
+    #[test]
+    fn test_address_endpoint_uri_yggdrasil() {
+        let value = "admin@[319:3cf0:dd1d:47b9:20c:29ff:fe2c:39be]";
+        let address = value.parse::<WebfingerAddress>().unwrap();
+        let endpoint_uri = address.endpoint_uri();
+        assert_eq!(
+            endpoint_uri,
+            "http://[319:3cf0:dd1d:47b9:20c:29ff:fe2c:39be]/.well-known/webfinger",
+        );
+    }
 }
