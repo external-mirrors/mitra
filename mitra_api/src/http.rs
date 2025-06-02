@@ -9,7 +9,10 @@ use actix_web::{
     body::MessageBody,
     dev::{ConnectionInfo, ServiceResponse},
     error::{Error, JsonPayloadError},
-    http::{header as http_header},
+    http::{
+        header as http_header,
+        Uri,
+    },
     middleware::DefaultHeaders,
     web::{Form, Json},
     Either,
@@ -17,6 +20,8 @@ use actix_web::{
 };
 use log::Level;
 use serde_qs::actix::{QsForm, QsQuery};
+
+use apx_core::url::hostname::encode_hostname;
 
 use crate::{
     errors::HttpError,
@@ -139,6 +144,45 @@ pub fn get_request_base_url(connection_info: ConnectionInfo) -> String {
     format!("{}://{}", scheme, host)
 }
 
+fn _get_request_full_uri(
+    connection_scheme: &str,
+    connection_host: &str,
+    request_uri: &Uri,
+) -> Option<Uri> {
+    let scheme_normalized = connection_scheme.to_lowercase();
+    let host_normalized = encode_hostname(connection_host).ok()?;
+    let path_and_query = request_uri.path_and_query()
+        .map(|paq| paq.as_str())
+        .unwrap_or("/");
+    let uri = Uri::builder()
+        .scheme(scheme_normalized.as_str())
+        .authority(host_normalized)
+        .path_and_query(path_and_query)
+        .build()
+        .ok()?;
+    Some(uri)
+}
+
+// Similar to HttpRequest::full_url, but returns Uri
+// https://docs.rs/actix-web/4.8.0/actix_web/struct.HttpRequest.html#method.full_url
+pub fn get_request_full_uri(
+    connection_info: &ConnectionInfo,
+    request_uri: &Uri,
+) -> Uri {
+    let scheme = connection_info.scheme();
+    let host = connection_info.host();
+    _get_request_full_uri(scheme, host, request_uri)
+        .unwrap_or_else(|| {
+            log::error!(
+                "can't construct full URI from {} {} and {}",
+                scheme,
+                host,
+                request_uri,
+            );
+            request_uri.clone()
+        })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -150,5 +194,18 @@ mod tests {
             csp.into_string(),
             "base-uri 'self'; connect-src 'self'; default-src 'none'; frame-ancestors 'none'; img-src 'self' data:; manifest-src 'self'; media-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self'",
         );
+    }
+
+    #[test]
+    fn test_get_request_full_uri() {
+        let connection_scheme = "HTTPS";
+        let connection_host = "SOCIAL.EXAMPLE";
+        let request_uri = Uri::from_static("/inbox");
+        let full_uri = _get_request_full_uri(
+            connection_scheme,
+            connection_host,
+            &request_uri,
+        ).unwrap();
+        assert_eq!(full_uri.to_string(), "https://social.example/inbox");
     }
 }

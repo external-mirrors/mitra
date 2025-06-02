@@ -1,4 +1,7 @@
-use actix_web::HttpRequest;
+use actix_web::{
+    http::Uri,
+    HttpRequest,
+};
 use serde_json::{Value as JsonValue};
 
 use apx_core::{
@@ -69,6 +72,7 @@ pub async fn receive_activity(
     config: &Config,
     db_client: &mut impl DatabaseClient,
     request: &HttpRequest,
+    request_full_uri: &Uri,
     activity: &JsonValue,
     activity_digest: ContentDigest,
     recipient_id: &str,
@@ -111,7 +115,7 @@ pub async fn receive_activity(
         config,
         db_client,
         method_adapter(request.method()),
-        uri_adapter(request.uri()),
+        uri_adapter(request_full_uri),
         header_map_adapter(request.headers()),
         Some(activity_digest),
         // Don't fetch signer if this is Delete(Person) activity

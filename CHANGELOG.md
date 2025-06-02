@@ -22,6 +22,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Changed MSRV to 1.72.1.
 - Don't reject actor if associated public key has different origin.
 - Set `Accept` header value to `application/jrd+json` when performing WebFinger query.
+- Log error if full request URI can't be obtained during HTTP signature verification.
 
 ### Fixed
 

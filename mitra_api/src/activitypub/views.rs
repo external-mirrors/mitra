@@ -1,4 +1,5 @@
 use actix_web::{
+    dev::ConnectionInfo,
     get,
     post,
     web,
@@ -96,6 +97,7 @@ use mitra_validators::errors::ValidationError;
 
 use crate::{
     errors::HttpError,
+    http::get_request_full_uri,
     web_client::urls::{
         get_post_page_url,
         get_profile_page_url,
@@ -149,6 +151,7 @@ async fn actor_view(
 #[post("/inbox")]
 async fn inbox(
     config: web::Data<Config>,
+    connection_info: ConnectionInfo,
     db_pool: web::Data<DatabaseConnectionPool>,
     username: web::Path<String>,
     request: HttpRequest,
@@ -157,6 +160,7 @@ async fn inbox(
     if !config.federation.enabled {
         return Err(HttpError::PermissionError);
     };
+    let request_full_uri = get_request_full_uri(&connection_info, request.uri());
     let activity: JsonValue = serde_json::from_slice(&request_body)
         .map_err(|_| ValidationError("invalid activity"))?;
     let activity_type = activity["type"].as_str().unwrap_or("Unknown");
@@ -176,6 +180,7 @@ async fn inbox(
         &config,
         db_client,
         &request,
+        &request_full_uri,
         &activity,
         activity_digest,
         &recipient_id,
@@ -779,6 +784,7 @@ async fn apgateway_view(
 #[post("/{url:.*}/inbox")]
 async fn apgateway_inbox_push_view(
     config: web::Data<Config>,
+    connection_info: ConnectionInfo,
     db_pool: web::Data<DatabaseConnectionPool>,
     request: HttpRequest,
     request_path: Uri,
@@ -787,6 +793,7 @@ async fn apgateway_inbox_push_view(
     if !config.federation.enabled {
         return Err(HttpError::PermissionError);
     };
+    let request_full_uri = get_request_full_uri(&connection_info, request.uri());
     let activity: JsonValue = serde_json::from_slice(&request_body)
         .map_err(|_| ValidationError("invalid activity"))?;
     let activity_type = activity["type"].as_str().unwrap_or("Unknown");
@@ -811,6 +818,7 @@ async fn apgateway_inbox_push_view(
         &config,
         db_client,
         &request,
+        &request_full_uri,
         &activity,
         activity_digest,
         recipient_id,
@@ -831,16 +839,18 @@ async fn apgateway_inbox_push_view(
 #[get("/{url:.*}/inbox")]
 async fn apgateway_inbox_pull_view(
     config: web::Data<Config>,
+    connection_info: ConnectionInfo,
     db_pool: web::Data<DatabaseConnectionPool>,
     request_path: Uri,
     request: HttpRequest,
 ) -> Result<HttpResponse, HttpError> {
+    let request_full_uri = get_request_full_uri(&connection_info, request.uri());
     let db_client = &mut **get_database_client(&db_pool).await?;
     let (signing_key_id, _) = verify_signed_request(
         &config,
         db_client,
         method_adapter(request.method()),
-        uri_adapter(request.uri()),
+        uri_adapter(&request_full_uri),
         header_map_adapter(request.headers()),
         None, // GET request has no content
         true, // don't fetch actor
@@ -937,16 +947,18 @@ async fn apgateway_outbox_push_view(
 #[get("/{url:.*}/outbox")]
 async fn apgateway_outbox_pull_view(
     config: web::Data<Config>,
+    connection_info: ConnectionInfo,
     db_pool: web::Data<DatabaseConnectionPool>,
     request_path: Uri,
     request: HttpRequest,
 ) -> Result<HttpResponse, HttpError> {
+    let request_full_uri = get_request_full_uri(&connection_info, request.uri());
     let db_client = &mut **get_database_client(&db_pool).await?;
     let (signing_key_id, _) = verify_signed_request(
         &config,
         db_client,
         method_adapter(request.method()),
-        uri_adapter(request.uri()),
+        uri_adapter(&request_full_uri),
         header_map_adapter(request.headers()),
         None, // GET request has no content
         true, // don't fetch actor
