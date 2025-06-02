@@ -441,7 +441,7 @@ mod tests {
     fn test_parse_profile_query_invalid_hostname() {
         let query = "@user_01@social%example";
         let error = parse_profile_query(query).unwrap_err();
-        assert_eq!(error.to_string(), "invalid hostname");
+        assert_eq!(error.to_string(), "invalid domain name");
     }
 
     #[test]

@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- Return error if hostname passed to `encode_hostname` contains invalid characters.
+
 ### Fixed
 
 - Return `http` when using `guess_protocol` on an IPv6 hostname.

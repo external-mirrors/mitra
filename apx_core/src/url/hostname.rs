@@ -1,6 +1,6 @@
 use std::net::{Ipv4Addr, Ipv6Addr};
 
-use idna::{domain_to_ascii, Errors as IdnaError};
+use idna::{domain_to_ascii_cow, AsciiDenyList, Errors as IdnaError};
 
 pub(crate) fn is_ipv6_hostname(hostname: &str) -> bool {
     hostname.strip_prefix('[')
@@ -8,8 +8,14 @@ pub(crate) fn is_ipv6_hostname(hostname: &str) -> bool {
         .is_some_and(|address| address.parse::<Ipv6Addr>().is_ok())
 }
 
+/// Returns the ASCII representation of a host name
 pub fn encode_hostname(hostname: &str) -> Result<String, IdnaError> {
-    domain_to_ascii(hostname)
+    if is_ipv6_hostname(hostname) {
+        Ok(hostname.to_string())
+    } else {
+        domain_to_ascii_cow(hostname.as_bytes(), AsciiDenyList::URL)
+            .map(|output| output.to_string())
+    }
 }
 
 pub fn is_onion(hostname: &str) -> bool {
@@ -59,6 +65,23 @@ mod tests {
         let hostname = "räksmörgås.josefsson.org";
         let encoded = encode_hostname(hostname).unwrap();
         assert_eq!(encoded, "xn--rksmrgs-5wao1o.josefsson.org");
+
+        let reencoded = encode_hostname(&encoded).unwrap();
+        assert_eq!(reencoded, encoded);
+    }
+
+    #[test]
+    fn test_encode_hostname_ipv4() {
+        let hostname = "127.0.0.1";
+        let encoded = encode_hostname(hostname).unwrap();
+        assert_eq!(encoded, hostname);
+    }
+
+    #[test]
+    fn test_encode_hostname_ipv6() {
+        let hostname = "[319:3cf0:dd1d:47b9:20c:29ff:fe2c:39be]";
+        let encoded = encode_hostname(hostname).unwrap();
+        assert_eq!(encoded, hostname);
     }
 
     #[test]
