@@ -3,9 +3,11 @@ use std::net::IpAddr;
 use std::sync::Arc;
 use std::time::Duration;
 
-use bytes::{BufMut, Bytes, BytesMut};
+use bytes::Bytes;
+use http_body_util::{BodyExt, Limited};
 use reqwest::{
     redirect::{Policy as RedirectPolicy},
+    Body,
     Client,
     Proxy,
     Response,
@@ -175,20 +177,15 @@ pub fn build_http_client(
         .build()
 }
 
-// Workaround for https://github.com/seanmonstar/reqwest/issues/1234
 pub async fn limited_response(
-    response: &mut Response,
+    response: Response,
     limit: usize,
-) -> Result<Option<Bytes>, reqwest::Error> {
-    let mut bytes = BytesMut::new();
-    while let Some(chunk) = response.chunk().await? {
-        let len = bytes.len() + chunk.len();
-        if len > limit {
-            return Ok(None);
-        }
-        bytes.put(chunk);
-    };
-    Ok(Some(bytes.freeze()))
+) -> Option<Bytes> {
+    Limited::new(Body::from(response), limit)
+        .collect()
+        .await
+        .ok()
+        .map(|collected| collected.to_bytes())
 }
 
 #[cfg(test)]

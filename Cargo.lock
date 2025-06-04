@@ -432,6 +432,7 @@ dependencies = [
  "apx_core",
  "bytes",
  "futures-util",
+ "http-body-util",
  "hyper-util",
  "regex",
  "reqwest",

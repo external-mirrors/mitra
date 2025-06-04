@@ -185,7 +185,7 @@ pub async fn fetch_object(
 
     let mut redirect_count = 0;
     let mut target_url = object_id.to_owned();
-    let mut response = loop {
+    let response = loop {
         if agent.ssrf_protection_enabled {
             require_safe_url(&target_url)?;
         };
@@ -226,12 +226,16 @@ pub async fn fetch_object(
             .to_string();
     };
 
-    let data = limited_response(&mut response, agent.response_size_limit)
-        .await?
-        .ok_or(FetchError::ResponseTooLarge)?;
+    let object_location = response.url().clone();
+    let content_type = response.headers()
+        .get(header::CONTENT_TYPE)
+        .and_then(extract_media_type)
+        .unwrap_or_default();
 
-    let object_location = response.url();
-    let object_json: JsonValue = serde_json::from_slice(&data)?;
+    let object_bytes = limited_response(response, agent.response_size_limit)
+        .await
+        .ok_or(FetchError::ResponseTooLarge)?;
+    let object_json: JsonValue = serde_json::from_slice(&object_bytes)?;
     let object_id = object_json["id"].as_str()
         .ok_or(FetchError::NoObjectId(object_location.to_string()))?
         .to_string();
@@ -278,10 +282,6 @@ pub async fn fetch_object(
     };
 
     // Verify object is not a malicious upload
-    let content_type = response.headers()
-        .get(header::CONTENT_TYPE)
-        .and_then(extract_media_type)
-        .unwrap_or_default();
     const ALLOWED_TYPES: [&str; 3] = [
         AP_MEDIA_TYPE,
         AS_MEDIA_TYPE,
@@ -310,6 +310,8 @@ fn get_media_type(
         .unwrap_or(APPLICATION_OCTET_STREAM.to_string())
 }
 
+
+
 pub async fn fetch_file(
     agent: &FederationAgent,
     url: &str,
@@ -324,7 +326,7 @@ pub async fn fetch_file(
     let http_client = build_fetcher_client(agent, url, false)?;
     let request_builder =
         build_request(agent, &http_client, Method::GET, url);
-    let mut response = request_builder.send().await?.error_for_status()?;
+    let response = request_builder.send().await?.error_for_status()?;
     if let Some(file_size) = response.content_length() {
         let file_size: usize = file_size.try_into()
             .map_err(|_| FetchError::ResponseTooLarge)?;
@@ -335,8 +337,8 @@ pub async fn fetch_file(
     let maybe_content_type_header = response.headers()
         .get(header::CONTENT_TYPE)
         .and_then(extract_media_type);
-    let file_data = limited_response(&mut response, file_size_limit)
-        .await?
+    let file_data = limited_response(response, file_size_limit)
+        .await
         .ok_or(FetchError::ResponseTooLarge)?;
     // Content-Type header has the highest priority
     let media_type = get_media_type(
@@ -365,14 +367,14 @@ pub async fn fetch_json(
     let http_client = build_fetcher_client(agent, url, false)?;
     let request_builder =
         build_request(agent, &http_client, Method::GET, url);
-    let mut response = request_builder
+    let response = request_builder
         .query(query)
         .header(header::ACCEPT, accept.unwrap_or(APPLICATION_JSON))
         .send()
         .await?
         .error_for_status()?;
-    let data = limited_response(&mut response, agent.response_size_limit)
-        .await?
+    let data = limited_response(response, agent.response_size_limit)
+        .await
         .ok_or(FetchError::ResponseTooLarge)?;
     let object_json = serde_json::from_slice(&data)?;
     Ok(object_json)

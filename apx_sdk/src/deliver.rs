@@ -108,13 +108,13 @@ pub async fn send_object(
         request_builder = request_builder.header(*name, *value);
     };
 
-    let mut response = request_builder
+    let response = request_builder
         .body(object_json.to_owned())
         .send()
         .await?;
     let response_status = response.status();
-    let response_data = limited_response(&mut response, agent.response_size_limit)
-        .await?
+    let response_data = limited_response(response, agent.response_size_limit)
+        .await
         .ok_or(DelivererError::ResponseTooLarge)?;
     let response_text = String::from_utf8(response_data.to_vec())
         // Replace non-UTF8 responses with empty string
