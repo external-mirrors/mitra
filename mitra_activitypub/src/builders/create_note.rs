@@ -39,7 +39,6 @@ pub fn build_create_note(
     instance_url: &str,
     media_server: &MediaServer,
     post: &Post,
-    fep_e232_enabled: bool,
 ) -> CreateNote {
     let authority = Authority::server(instance_url);
     let object = build_note(
@@ -48,7 +47,6 @@ pub fn build_create_note(
         &authority,
         media_server,
         post,
-        fep_e232_enabled,
         false,
     );
     let primary_audience = object.to.clone();
@@ -71,7 +69,6 @@ pub async fn prepare_create_note(
     media_server: &MediaServer,
     author: &User,
     post: &Post,
-    fep_e232_enabled: bool,
 ) -> Result<OutgoingActivityJobData, DatabaseError> {
     assert_eq!(author.id, post.author.id);
     let activity = build_create_note(
@@ -79,7 +76,6 @@ pub async fn prepare_create_note(
         &instance.url(),
         media_server,
         post,
-        fep_e232_enabled,
     );
     let recipients = get_note_recipients(db_client, post).await?;
     Ok(OutgoingActivityJobData::new(
@@ -117,7 +113,6 @@ mod tests {
             INSTANCE_URL,
             &media_server,
             &post,
-            false,
         );
 
         assert_eq!(

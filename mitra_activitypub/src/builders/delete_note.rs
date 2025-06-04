@@ -51,7 +51,6 @@ fn build_delete_note(
     instance_url: &str,
     media_server: &MediaServer,
     post: &Post,
-    fep_e232_enabled: bool,
 ) -> DeleteNote {
     assert!(post.is_local());
     let object_id = local_object_id(instance_url, post.id);
@@ -64,7 +63,6 @@ fn build_delete_note(
         &authority,
         media_server,
         post,
-        fep_e232_enabled,
         false,
     );
     DeleteNote {
@@ -88,7 +86,6 @@ pub async fn prepare_delete_note(
     media_server: &MediaServer,
     author: &User,
     post: &Post,
-    fep_e232_enabled: bool,
 ) -> Result<OutgoingActivityJobData, DatabaseError> {
     assert_eq!(author.id, post.author.id);
     let mut post = post.clone();
@@ -98,7 +95,6 @@ pub async fn prepare_delete_note(
         &instance.url(),
         media_server,
         &post,
-        fep_e232_enabled,
     );
     let recipients = get_note_recipients(db_client, &post).await?;
     Ok(OutgoingActivityJobData::new(
@@ -135,7 +131,6 @@ mod tests {
             INSTANCE_URL,
             &media_server,
             &post,
-            false,
         );
 
         assert_eq!(

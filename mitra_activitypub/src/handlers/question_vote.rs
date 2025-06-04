@@ -102,7 +102,6 @@ pub async fn handle_question_vote(
         &media_server,
         &post_author,
         &post,
-        config.federation.fep_e232_enabled,
     ).await?.save_and_enqueue(db_client).await?;
     Ok(Some(Descriptor::object("Vote")))
 }

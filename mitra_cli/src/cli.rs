@@ -408,7 +408,6 @@ impl DeletePost {
                 &media_server,
                 &author,
                 &post,
-                config.federation.fep_e232_enabled,
             ).await?;
             maybe_delete_note = Some(activity);
         };

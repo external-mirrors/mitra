@@ -172,7 +172,6 @@ pub fn build_note(
     authority: &Authority,
     media_server: &MediaServer,
     post: &Post,
-    fep_e232_enabled: bool,
     with_context: bool,
 ) -> Note {
     let related_posts = post.expect_related_posts();
@@ -290,9 +289,7 @@ pub fn build_note(
             media_type: AP_MEDIA_TYPE.to_string(),
             rel: link_rel,
         };
-        if fep_e232_enabled {
-            tags.push(Tag::LinkTag(tag));
-        };
+        tags.push(Tag::LinkTag(tag));
     };
     // Present first link as a quote
     let maybe_quote_url = related_posts
@@ -503,7 +500,6 @@ mod tests {
             &authority,
             &media_server,
             &post,
-            false,
             true,
         );
 
@@ -575,7 +571,6 @@ mod tests {
             &media_server,
             &post,
             true,
-            true,
         );
 
         let value = serde_json::to_value(question).unwrap();
@@ -635,7 +630,6 @@ mod tests {
             &authority,
             &media_server,
             &post,
-            false,
             true,
         );
 
@@ -666,7 +660,6 @@ mod tests {
             &authority,
             &media_server,
             &post,
-            false,
             true,
         );
 
@@ -698,7 +691,6 @@ mod tests {
             &authority,
             &media_server,
             &post,
-            false,
             true,
         );
 
@@ -725,7 +717,6 @@ mod tests {
             &authority,
             &media_server,
             &post,
-            false,
             true,
         );
 
@@ -774,7 +765,6 @@ mod tests {
             &authority,
             &media_server,
             &post,
-            false,
             true,
         );
 
@@ -842,7 +832,6 @@ mod tests {
             &authority,
             &media_server,
             &post,
-            false,
             true,
         );
         let value = serde_json::to_value(note).unwrap();
@@ -908,7 +897,6 @@ mod tests {
             &authority,
             &media_server,
             &post,
-            true,
             true,
         );
         let value = serde_json::to_value(note).unwrap();

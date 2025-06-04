@@ -30,6 +30,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Removed
 
 - Removed `account_ids` property in `Status.pleroma.emoji_reactions` items.
+- Removed `federation.fep_e232_enabled` configuration parameter.
 
 ### Fixed
 

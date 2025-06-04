@@ -329,7 +329,6 @@ async fn create_status(
         &media_server,
         &current_user,
         &post,
-        config.federation.fep_e232_enabled,
     ).await?;
     let create_note_json = create_note.activity().clone();
     create_note.save_and_enqueue(db_client).await?;
@@ -515,7 +514,6 @@ async fn edit_status(
         &media_server,
         &current_user,
         &post,
-        config.federation.fep_e232_enabled,
     ).await?;
     let update_note_json = update_note.activity().clone();
     update_note.save_and_enqueue(db_client).await?;
@@ -559,7 +557,6 @@ async fn delete_status(
         &media_server,
         &current_user,
         &post,
-        config.federation.fep_e232_enabled,
     ).await?;
     let deletion_queue = delete_post(db_client, *status_id).await?;
     deletion_queue.into_job(db_client).await?;
@@ -1107,7 +1104,6 @@ async fn make_permanent(
         &authority,
         &media_server,
         &post,
-        config.federation.fep_e232_enabled,
         true,
     );
     let post_metadata = serde_json::to_value(note)

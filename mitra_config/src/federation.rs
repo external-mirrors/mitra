@@ -9,7 +9,6 @@ const fn default_deliverer_standalone() -> bool { true }
 const fn default_deliverer_pool_size() -> usize { 10 }
 const fn default_deliverer_timeout() -> u64 { 10 }
 const fn default_deliverer_log_response_length() -> usize { 75 }
-const fn default_fep_e232_enabled() -> bool { true }
 const fn default_fep_1b12_full_enabled() -> bool { true }
 const fn default_fep_c0e0_emoji_react_enabled() -> bool { false }
 const fn default_fep_ef61_gateway_enabled() -> bool { false }
@@ -45,8 +44,6 @@ pub struct FederationConfig {
     pub onion_proxy_url: Option<String>,
     pub i2p_proxy_url: Option<String>,
 
-    #[serde(default = "default_fep_e232_enabled")]
-    pub fep_e232_enabled: bool,
     #[serde(
         alias = "announce_like_enabled",
         default = "default_fep_1b12_full_enabled",
@@ -75,7 +72,6 @@ impl Default for FederationConfig {
             proxy_url: None,
             onion_proxy_url: None,
             i2p_proxy_url: None,
-            fep_e232_enabled: default_fep_e232_enabled(),
             fep_1b12_full_enabled: default_fep_1b12_full_enabled(),
             fep_c0e0_emoji_react_enabled: default_fep_c0e0_emoji_react_enabled(),
             fep_ef61_gateway_enabled: default_fep_ef61_gateway_enabled(),

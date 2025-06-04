@@ -256,7 +256,6 @@ async fn outbox(
                 &instance.url(),
                 &media_server,
                 post,
-                config.federation.fep_e232_enabled,
             );
             serde_json::to_value(activity)
                 .expect("activity should be serializable")
@@ -404,7 +403,6 @@ async fn featured_collection(
             &authority,
             &media_server,
             post,
-            config.federation.fep_e232_enabled,
             false,
         );
         serde_json::to_value(note)
@@ -542,7 +540,6 @@ pub async fn object_view(
         &authority,
         &media_server,
         &post,
-        config.federation.fep_e232_enabled,
         true, // with_context
     );
     let response = HttpResponse::Ok()

@@ -102,7 +102,6 @@ async fn vote_view(
             &media_server,
             &post_author,
             &post,
-            config.federation.fep_e232_enabled,
         ).await?.save_and_enqueue(db_client).await?;
     };
     let base_url = get_request_base_url(connection_info);
