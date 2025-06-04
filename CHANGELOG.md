@@ -27,6 +27,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Log error if full request URI can't be obtained during HTTP signature verification.
 - Store visibility of post reactions in database.
 
+### Removed
+
+- Removed `account_ids` property in `Status.pleroma.emoji_reactions` items.
+
 ### Fixed
 
 - Fixed WebFinger lookup not working on Yggdrasil addresses.

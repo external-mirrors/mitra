@@ -3506,12 +3506,6 @@ components:
                 description: Emoji reaction.
                 type: object
                 properties:
-                  account_ids:
-                    description: The list of users who sent this reaction.
-                    type: array
-                    items:
-                      type: string
-                      format: uuid
                   me:
                     description: Has current user reacted with this emoji?
                     type: boolean

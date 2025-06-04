@@ -72,7 +72,6 @@ impl Tag {
 
 #[derive(Serialize)]
 struct PleromaEmojiReaction {
-    account_ids: Vec<Uuid>,
     count: i32,
     me: bool,
     name: String,
@@ -207,7 +206,6 @@ impl Status {
             let maybe_custom_emoji = reaction.emoji
                 .map(|emoji| CustomEmoji::from_db(media_server, emoji));
             let reaction = PleromaEmojiReaction {
-                account_ids: reaction.authors,
                 count: reaction.count,
                 me: post.actions.as_ref().is_some_and(|actions| {
                     actions.reacted_with.contains(&content)
