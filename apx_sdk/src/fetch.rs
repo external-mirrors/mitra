@@ -1,7 +1,14 @@
 //! Retrieving objects or media.
 
+use http_body_util::{
+    combinators::MapErr,
+    BodyDataStream,
+    BodyExt,
+    Limited,
+};
 use reqwest::{
     header,
+    Body,
     Client,
     Method,
     RequestBuilder,
@@ -39,6 +46,8 @@ use super::{
     utils::extract_media_type,
 };
 
+const APPLICATION_OCTET_STREAM: &str = "application/octet-stream";
+
 #[derive(thiserror::Error, Debug)]
 pub enum FetchError {
     #[error(transparent)]
@@ -52,6 +61,9 @@ pub enum FetchError {
 
     #[error(transparent)]
     RequestError(#[from] reqwest::Error),
+
+    #[error("stream error: {0}")]
+    StreamError(String),
 
     #[error("access denied: {0}")]
     Forbidden(String),
@@ -300,7 +312,6 @@ fn get_media_type(
     maybe_media_type: Option<&str>,
     default_media_type: Option<&str>,
 ) -> String {
-    const APPLICATION_OCTET_STREAM: &str = "application/octet-stream";
     maybe_media_type
         .or(default_media_type)
         .map(|media_type| media_type.to_string())
@@ -349,6 +360,42 @@ pub async fn fetch_file(
         return Err(FetchError::UnexpectedContentType(media_type));
     };
     Ok((file_data.into(), media_type))
+}
+
+#[allow(impl_trait_overcaptures)]
+pub async fn fetch_file_streaming(
+    agent: &FederationAgent,
+    url: &str,
+    allowed_media_types: &[&str],
+    file_size_limit: usize,
+) ->
+    Result<
+        (BodyDataStream<MapErr<
+            Limited<Body>,
+            impl FnMut(<Limited<Body> as http_body::Body>::Error) -> FetchError
+        >>, String),
+        FetchError
+    >
+{
+    if agent.ssrf_protection_enabled {
+        require_safe_url(url)?;
+    };
+    // Redirects are allowed
+    let http_client = build_fetcher_client(agent, url, false)?;
+    let request_builder =
+        build_request(agent, &http_client, Method::GET, url);
+    let response = request_builder.send().await?.error_for_status()?;
+    let media_type = response.headers()
+        .get(header::CONTENT_TYPE)
+        .and_then(extract_media_type)
+        .unwrap_or(APPLICATION_OCTET_STREAM.to_owned());
+    if !allowed_media_types.contains(&media_type.as_str()) {
+        return Err(FetchError::UnexpectedContentType(media_type));
+    };
+    let stream = Limited::new(Body::from(response), file_size_limit)
+        .map_err(|error| FetchError::StreamError(error.to_string()))
+        .into_data_stream();
+    Ok((stream, media_type))
 }
 
 /// Fetches arbitrary JSON data (unsigned request)

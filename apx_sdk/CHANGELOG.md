@@ -11,6 +11,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Added `is_rfc9421` field to `HttpSignatureData` struct.
 - Added `parse` method to `WebfingerAddress` type.
 - Added support for `@query` RFC-9421 component.
+- Added `fetch_file_streaming` function.
 
 ## [0.14.1] - 2025-06-08
 

@@ -14,9 +14,11 @@ use apx_sdk::{
 };
 use uuid::Uuid;
 
-use mitra_activitypub::identifiers::{
-    compatible_post_object_id,
-    compatible_profile_actor_id,
+use mitra_activitypub::{
+    identifiers::{
+        compatible_post_object_id,
+        compatible_profile_actor_id,
+    },
 };
 use mitra_config::Config;
 use mitra_models::{

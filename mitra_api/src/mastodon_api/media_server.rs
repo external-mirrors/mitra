@@ -1,3 +1,5 @@
+use apx_core::url::common::url_encode;
+
 use mitra_config::Config;
 use mitra_models::media::types::PartialMediaInfo;
 use mitra_services::media::MediaServer;
@@ -31,8 +33,13 @@ impl ClientMediaServer {
     pub fn url_for(&self, media_info: &PartialMediaInfo) -> String {
         let file_name = match media_info {
             PartialMediaInfo::File { file_info, .. } => &file_info.file_name,
-            // TODO: use media proxy
-            PartialMediaInfo::Link { url, .. } => return url.to_owned(),
+            PartialMediaInfo::Link { url, .. } => {
+                return format!(
+                    "{}/api/media_proxy/{}",
+                    self.base_url,
+                    url_encode(url),
+                );
+            },
         };
         match &self.media_server {
             MediaServer::Filesystem(backend) => {
