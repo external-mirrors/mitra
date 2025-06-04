@@ -30,6 +30,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Fixed WebFinger lookup not working on Yggdrasil addresses.
 - Display followers-only reposts of viewer's posts in profile timeline.
+- Don't add `Public` to `Like` activity audience.
 
 ## [4.3.1] - 2025-05-18
 

@@ -103,7 +103,6 @@ pub async fn prepare_undo_like(
 
 #[cfg(test)]
 mod tests {
-    use apx_sdk::constants::AP_PUBLIC;
     use mitra_utils::id::generate_ulid;
     use super::*;
 
@@ -130,7 +129,7 @@ mod tests {
             activity.object,
             format!("{}/objects/{}", INSTANCE_URL, reaction_id),
         );
-        assert_eq!(activity.to, vec![post_author_id, AP_PUBLIC]);
+        assert_eq!(activity.to, vec![post_author_id]);
         assert_eq!(activity.cc.is_empty(), true);
 
         let activity = build_undo_like(

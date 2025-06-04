@@ -1,7 +1,6 @@
 use serde::Serialize;
 use uuid::Uuid;
 
-use apx_sdk::constants::AP_PUBLIC;
 use mitra_config::Instance;
 use mitra_models::{
     database::{DatabaseClient, DatabaseError},
@@ -63,12 +62,9 @@ pub(super) fn local_like_activity_id(
 
 pub(super) fn get_like_audience(
     note_author_id: &str,
-    note_visibility: Visibility,
+    _note_visibility: Visibility,
 ) -> (Vec<String>, Vec<String>) {
-    let mut primary_audience = vec![note_author_id.to_string()];
-    if matches!(note_visibility, Visibility::Public) {
-        primary_audience.push(AP_PUBLIC.to_string());
-    };
+    let primary_audience = vec![note_author_id.to_string()];
     let secondary_audience = vec![];
     (primary_audience, secondary_audience)
 }
@@ -196,7 +192,7 @@ mod tests {
         assert_eq!(activity.object, post_id);
         assert_eq!(activity.content.is_none(), true);
         assert_eq!(activity.tag.is_empty(), true);
-        assert_eq!(activity.to, vec![post_author_id, AP_PUBLIC]);
+        assert_eq!(activity.to, vec![post_author_id]);
         assert_eq!(activity.cc.is_empty(), true);
     }
 }
