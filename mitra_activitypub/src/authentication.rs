@@ -85,8 +85,8 @@ pub enum AuthenticationError {
     #[error("invalid JSON signature type")]
     InvalidJsonSignatureType,
 
-    #[error("invalid key ID")]
-    InvalidKeyId,
+    #[error("unsupported verification method")]
+    UnsupportedVerificationMethod,
 
     #[error(transparent)]
     DatabaseError(#[from] DatabaseError),
@@ -131,7 +131,7 @@ async fn get_signer(
     let signer = if no_fetch {
         // Avoid fetching (e.g. if signer was deleted)
         let canonical_signer_id = canonicalize_id(signer_id)
-            .map_err(|_| AuthenticationError::ActorError("invalid actor ID"))?;
+            .map_err(|_| ValidationError("invalid actor ID"))?;
         get_remote_profile_by_actor_id(
             db_client,
             &canonical_signer_id.to_string(),
@@ -164,7 +164,7 @@ fn get_signer_key(
     key_id: &str,
 ) -> Result<PublicKey, AuthenticationError> {
     let canonical_key_id = canonicalize_id(key_id)
-        .map_err(|_| AuthenticationError::ActorError("invalid key ID"))?;
+        .map_err(|_| ValidationError("invalid key ID"))?;
     let maybe_actor_key = profile.public_keys
         .inner().iter()
         .find(|key| {
@@ -230,7 +230,7 @@ async fn get_signing_key(
 ) -> Result<PublicKey, AuthenticationError> {
     let key_id = key_id.as_str();
     let signer_id = key_id_to_actor_id(key_id)
-        .map_err(|_| AuthenticationError::InvalidKeyId)?;
+        .map_err(|_| ValidationError("invalid key ID"))?;
     // Not canonicalizing, assuming regular HTTP URL
     let public_key = match get_remote_profile_by_actor_id(
         db_client,
@@ -315,9 +315,9 @@ pub async fn verify_signed_request(
                 log::info!("request signed with {did_url}");
                 // Resolve DID URL
                 let public_key = did_url.did().as_did_key()
-                    .ok_or(AuthenticationError::InvalidKeyId)?
+                    .ok_or(AuthenticationError::UnsupportedVerificationMethod)?
                     .try_ed25519_key()
-                    .map_err(|_| AuthenticationError::InvalidKeyId)?;
+                    .map_err(|_| AuthenticationError::UnsupportedVerificationMethod)?;
                 PublicKey::Ed25519(public_key)
             },
         };
@@ -325,11 +325,11 @@ pub async fn verify_signed_request(
     } else {
         let key_id = match signature_data.key_id {
             VerificationMethod::HttpUrl(ref key_id) => key_id,
-            _ => return Err(AuthenticationError::InvalidKeyId),
+            _ => return Err(AuthenticationError::UnsupportedVerificationMethod),
         };
         // TODO: FEP-EF61: support 'ap' URLs
         let signer_id = key_id_to_actor_id(key_id.as_str())
-            .map_err(|_| AuthenticationError::InvalidKeyId)?;
+            .map_err(|_| ValidationError("invalid key ID"))?;
         let signer = get_signer(config, db_client, &signer_id, no_fetch).await?;
         let signer_key = get_signer_key(
             &signer,
@@ -359,7 +359,7 @@ pub async fn verify_signed_activity(
             // Using actor-based verification because
             // an actor profile needs to be returned
             let actor_id = object_to_id(&activity["actor"])
-                .map_err(|_| AuthenticationError::ActorError("unknown actor"))?;
+                .map_err(|_| ValidationError("unknown actor"))?;
             let actor_profile = get_signer(config, db_client, &actor_id, no_fetch).await?;
             let canonical_actor_id =
                 canonicalize_id(actor_profile.expect_remote_actor_id())?;
@@ -371,7 +371,7 @@ pub async fn verify_signed_activity(
         // Continue verification if activity is not portable
         Err(PortableObjectAuthenticationError::NotPortable) => (),
         Err(PortableObjectAuthenticationError::InvalidObjectID(message)) => {
-            return Err(AuthenticationError::ActorError(message));
+            return Err(ValidationError(message).into());
         },
         Err(other_error) => return Err(other_error.into()),
     };
@@ -385,7 +385,7 @@ pub async fn verify_signed_activity(
         Err(other_error) => return Err(other_error.into()),
     };
     let actor_id = object_to_id(&activity["actor"])
-        .map_err(|_| AuthenticationError::ActorError("unknown actor"))?;
+        .map_err(|_| ValidationError("unknown actor"))?;
     let actor_profile = get_signer(config, db_client, &actor_id, no_fetch).await?;
 
     match signature_data.verification_method {
@@ -396,7 +396,7 @@ pub async fn verify_signed_activity(
             };
             // Can this actor perform this activity?
             let signer_id = key_id_to_actor_id(key_id.as_str())
-                .map_err(|_| AuthenticationError::InvalidKeyId)?;
+                .map_err(|_| ValidationError("invalid key ID"))?;
             if signer_id != actor_id {
                 return Err(AuthenticationError::UnexpectedObjectSigner);
             };
@@ -429,11 +429,11 @@ pub async fn verify_signed_activity(
         },
         VerificationMethod::ApUrl(ap_url) => {
             log::warn!("activity signed by {}", ap_url);
-            return Err(AuthenticationError::InvalidJsonSignatureType);
+            return Err(AuthenticationError::UnsupportedVerificationMethod);
         },
         VerificationMethod::DidUrl(did_url) => {
             log::warn!("activity signed by {}", did_url.did());
-            return Err(AuthenticationError::InvalidJsonSignatureType);
+            return Err(AuthenticationError::UnsupportedVerificationMethod);
         },
     };
     // Signer is actor
