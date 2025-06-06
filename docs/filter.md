@@ -42,6 +42,12 @@ Add rule:
 mitra add-filter-rule reject mastodon.social
 ```
 
+Add wildcard rule:
+
+```shell
+mitra add-filter-rule reject '*'
+```
+
 Remove rule:
 
 ```shell
