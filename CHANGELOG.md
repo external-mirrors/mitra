@@ -11,6 +11,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Raise database error in inbox/outbox views if stored actor ID is not canonical.
 - Improved descriptions of authentication errors.
 
+### Removed
+
+- Don't accept requests signed with DIDs.
+
 ## [4.4.0] - 2025-06-05
 
 ### Added

@@ -1,7 +1,6 @@
 use serde_json::{Value as JsonValue};
 
 use apx_core::{
-    ap_url::ApUrl,
     crypto::common::PublicKey,
     crypto_eddsa::{
         ed25519_public_key_from_bytes,
@@ -27,7 +26,6 @@ use apx_core::{
         Method,
         Uri,
     },
-    http_url::HttpUrl,
     json_signatures::{
         proofs::ProofType,
         verify::{
@@ -62,7 +60,6 @@ use crate::{
     errors::HandlerError,
     identifiers::canonicalize_id,
     importers::{ActorIdResolver, ApClient},
-    keys::verification_method_to_public_key,
     ownership::{get_object_id, is_same_origin},
 };
 
@@ -223,53 +220,6 @@ fn get_signer_rsa_key(
     Ok(rsa_public_key)
 }
 
-async fn get_signing_key(
-    config: &Config,
-    db_client: &impl DatabaseClient,
-    key_id: &HttpUrl,
-) -> Result<PublicKey, AuthenticationError> {
-    let key_id = key_id.as_str();
-    let signer_id = key_id_to_actor_id(key_id)
-        .map_err(|_| ValidationError("invalid key ID"))?;
-    // Not canonicalizing, assuming regular HTTP URL
-    let public_key = match get_remote_profile_by_actor_id(
-        db_client,
-        &signer_id,
-    ).await {
-        Ok(profile) => get_signer_key(&profile, key_id)?,
-        Err(DatabaseError::NotFound(_)) => {
-            let mut ap_client = ApClient::new(config, db_client).await?;
-            ap_client.instance.federation.fetcher_timeout = AUTHENTICATION_FETCHER_TIMEOUT;
-            let key_value: JsonValue = ap_client.fetch_object(key_id).await
-                .map_err(|_| AuthenticationError::KeyRetrievalError("can't fetch key"))?;
-            verification_method_to_public_key(key_value)
-                .map_err(|_| AuthenticationError::KeyRetrievalError("invalid key document"))?
-        },
-        Err(other_error) => return Err(other_error.into()),
-    };
-    Ok(public_key)
-}
-
-async fn get_signing_key_ap_url(
-    _config: &Config,
-    db_client: &impl DatabaseClient,
-    key_id: &ApUrl,
-) -> Result<PublicKey, AuthenticationError> {
-    let signer_id = key_id.without_fragment();
-    let public_key = match get_remote_profile_by_actor_id(
-        db_client,
-        &signer_id.to_string(),
-    ).await {
-        Ok(profile) => get_signer_key(&profile, &key_id.to_string())?,
-        Err(DatabaseError::NotFound(_)) => {
-            return Err(AuthenticationError::KeyRetrievalError("can't fetch key"));
-        },
-        Err(other_error) => return Err(other_error.into()),
-    };
-    Ok(public_key)
-}
-
-
 /// Verifies HTTP signature and returns signer
 #[allow(clippy::too_many_arguments)]
 pub async fn verify_signed_request(
@@ -281,7 +231,7 @@ pub async fn verify_signed_request(
     maybe_content_digest: Option<ContentDigest>,
     no_fetch: bool,
     only_key: bool,
-) -> Result<(VerificationMethod, Option<DbActorProfile>), AuthenticationError> {
+) -> Result<(VerificationMethod, DbActorProfile), AuthenticationError> {
     let signature_data = match parse_http_signature(
         &request_method,
         &request_uri,
@@ -293,49 +243,27 @@ pub async fn verify_signed_request(
         },
         Err(other_error) => return Err(other_error.into()),
     };
-    let (public_key, maybe_signer) = if only_key {
-        let public_key = match signature_data.key_id {
+    let (public_key, signer) = if only_key {
+        unimplemented!();
+    } else {
+        let signer_id = match signature_data.key_id {
             VerificationMethod::HttpUrl(ref key_id) => {
-                // Resolve HTTP URL
-                get_signing_key(
-                    config,
-                    db_client,
-                    key_id,
-                ).await?
+                key_id_to_actor_id(key_id.as_str())
+                    .map_err(|_| ValidationError("invalid key ID"))?
             },
             VerificationMethod::ApUrl(ref key_id) => {
                 log::info!("request signed with {key_id}");
-                get_signing_key_ap_url(
-                    config,
-                    db_client,
-                    key_id,
-                ).await?
+                key_id.without_fragment().to_string()
             },
-            VerificationMethod::DidUrl(ref did_url) => {
-                log::info!("request signed with {did_url}");
-                // Resolve DID URL
-                let public_key = did_url.did().as_did_key()
-                    .ok_or(AuthenticationError::UnsupportedVerificationMethod)?
-                    .try_ed25519_key()
-                    .map_err(|_| AuthenticationError::UnsupportedVerificationMethod)?;
-                PublicKey::Ed25519(public_key)
-            },
-        };
-        (public_key, None)
-    } else {
-        let key_id = match signature_data.key_id {
-            VerificationMethod::HttpUrl(ref key_id) => key_id,
             _ => return Err(AuthenticationError::UnsupportedVerificationMethod),
         };
-        // TODO: FEP-EF61: support 'ap' URLs
-        let signer_id = key_id_to_actor_id(key_id.as_str())
-            .map_err(|_| ValidationError("invalid key ID"))?;
         let signer = get_signer(config, db_client, &signer_id, no_fetch).await?;
+        let key_id = signature_data.key_id.to_string();
         let signer_key = get_signer_key(
             &signer,
             key_id.as_str(),
         )?;
-        (signer_key, Some(signer))
+        (signer_key, signer)
     };
 
     verify_http_signature(
@@ -344,7 +272,7 @@ pub async fn verify_signed_request(
         maybe_content_digest,
     )?;
 
-    Ok((signature_data.key_id, maybe_signer))
+    Ok((signature_data.key_id, signer))
 }
 
 /// Verifies JSON signature on activity and returns actor
