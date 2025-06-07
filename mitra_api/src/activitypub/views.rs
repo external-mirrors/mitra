@@ -59,6 +59,7 @@ use mitra_activitypub::{
     importers::register_portable_actor,
     ownership::get_owner,
     queues::IncomingActivityJobData,
+    utils::parse_id_from_db,
 };
 use mitra_config::Config;
 use mitra_models::{
@@ -867,7 +868,7 @@ async fn apgateway_inbox_pull_view(
         &canonical_collection_id.to_string(),
     ).await?;
     let canonical_owner_id =
-        canonicalize_id(collection_owner.profile.expect_remote_actor_id())?;
+        parse_id_from_db(collection_owner.profile.expect_remote_actor_id())?;
     if canonical_owner_id.origin() != signing_key_id.origin() {
         return Err(HttpError::PermissionError);
     };
@@ -918,7 +919,7 @@ async fn apgateway_outbox_push_view(
         Err(other_error) => return Err(other_error.into()),
     };
     let canonical_owner_id =
-        canonicalize_id(collection_owner.profile.expect_remote_actor_id())?;
+        parse_id_from_db(collection_owner.profile.expect_remote_actor_id())?;
     // Verify activity
     verify_portable_object(&activity).map_err(|error| {
         log::warn!("C2S authentication error (POST {request_path}): {error}");
@@ -975,7 +976,7 @@ async fn apgateway_outbox_pull_view(
         &canonical_collection_id.to_string(),
     ).await?;
     let canonical_owner_id =
-        canonicalize_id(collection_owner.profile.expect_remote_actor_id())?;
+        parse_id_from_db(collection_owner.profile.expect_remote_actor_id())?;
     if canonical_owner_id.origin() != signing_key_id.origin() {
         return Err(HttpError::PermissionError);
     };

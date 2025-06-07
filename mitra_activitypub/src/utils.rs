@@ -1,10 +1,10 @@
 use apx_core::{
     ap_url::{is_ap_url, ApUrl},
     http_url::{normalize_http_url, HttpUrl},
-    url::canonical::with_gateway,
+    url::canonical::{with_gateway, CanonicalUrl},
 };
 
-use mitra_models::database::DatabaseTypeError;
+use mitra_models::database::{DatabaseError, DatabaseTypeError};
 
 // TODO: validation should happen during actor data deserialization
 
@@ -20,6 +20,16 @@ pub fn parse_http_url_from_db(
     let http_url = HttpUrl::parse(&normalized_url)
         .map_err(|_| DatabaseTypeError)?;
     Ok(http_url)
+}
+
+pub fn parse_id_from_db(
+    url: &str,
+) -> Result<CanonicalUrl, DatabaseError> {
+    // WARNING: returns error if stored URI is not canonical
+    // WARNING: returns error if stored HTTP URI is not valid
+    let canonical_url = CanonicalUrl::parse_canonical(url)
+        .map_err(|_| DatabaseTypeError)?;
+    Ok(canonical_url)
 }
 
 // URLs associated with portable actors in database
