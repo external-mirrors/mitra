@@ -31,7 +31,7 @@ uuid = { version = "1.1.2" }
 # User for working with block/allow lists
 wildmatch = "2.1.1"
 
-apx_core = { path = "../apx_core" }
+apx_core = { path = "../apx_core", features = ["experiments"] }
 apx_sdk = { path = "../apx_sdk" }
 mitra_adapters = { path = "../mitra_adapters" }
 mitra_config = { path = "../mitra_config" }
@@ -43,7 +43,7 @@ mitra_validators = { path = "../mitra_validators" }
 [dev-dependencies]
 serial_test = "3.0.0"
 
-apx_core = { path = "../apx_core", features = ["test-utils"] }
+apx_core = { path = "../apx_core", features = ["experiments", "test-utils"] }
 mitra_config = { path = "../mitra_config", features = ["test-utils"] }
 mitra_models = { path = "../mitra_models", features = ["test-utils"] }
 mitra_services = { path = "../mitra_services", features = ["test-utils"] }

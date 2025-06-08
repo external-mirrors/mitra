@@ -23,6 +23,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Renamed `HttpSignatureData.message` field to `base`.
 - Add header name to `HttpSignatureVerificationError::HeaderError` messages.
 - Renamed `apx_core::urls` module to `http_url_whatwg`.
+- Disabled optional crate features by default (`caip`, `didpkh`, `eip191`, `minisign`).
 
 ### Removed
 

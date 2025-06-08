@@ -11,7 +11,7 @@ rust-version.workspace = true
 # Used for working with RSA keys, HTTP signatures
 base64_ext = { package = "base64", version = "0.21.4" }
 # Used to verify minisign signatures
-blake2 = "0.10.5"
+blake2 = { version = "0.10.5", optional = true }
 # Used to decode base58btc
 bs58 = "0.4.0"
 # Used for working with dates
@@ -60,6 +60,13 @@ url = "2.5.0"
 percent-encoding = "*"
 
 [features]
+caip = []
+did-pkh = ["caip"]
+eip191 = ["did-pkh"]
+minisign = ["blake2"]
+
+experiments = ["caip", "did-pkh", "eip191", "minisign"]
+
 test-utils = ["rand/small_rng"]
 
 [lints]

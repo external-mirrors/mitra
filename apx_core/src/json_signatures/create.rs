@@ -17,8 +17,6 @@ use crate::{
         RsaError,
         RsaSecretKey,
     },
-    did_key::DidKey,
-    did_pkh::DidPkh,
     jcs::{
         canonicalize_object,
         CanonicalizationError,
@@ -30,10 +28,19 @@ use super::proofs::{
     CRYPTOSUITE_JCS_EDDSA,
     CRYPTOSUITE_JCS_EDDSA_LEGACY,
     DATA_INTEGRITY_PROOF,
-    PROOF_TYPE_JCS_BLAKE2_ED25519,
-    PROOF_TYPE_JCS_EIP191,
+
     PROOF_TYPE_JCS_RSA,
 };
+
+#[cfg(feature = "eip191")]
+use crate::did_pkh::DidPkh;
+#[cfg(feature = "eip191")]
+use super::proofs::PROOF_TYPE_JCS_EIP191;
+
+#[cfg(feature = "minisign")]
+use crate::did_key::DidKey;
+#[cfg(feature = "minisign")]
+use super::proofs::PROOF_TYPE_JCS_BLAKE2_ED25519;
 
 pub(super) const PROOF_KEY: &str = "proof";
 pub(super) const LD_SIGNATURE_KEY: &str = "signature";
@@ -120,6 +127,7 @@ impl IntegrityProof {
         Self::new(proof_config, signature)
     }
 
+    #[cfg(feature = "eip191")]
     pub fn jcs_eip191(
         signer: &DidPkh,
         signature: &[u8],
@@ -135,6 +143,7 @@ impl IntegrityProof {
         Self::new(proof_config, signature)
     }
 
+    #[cfg(feature = "minisign")]
     pub fn jcs_blake2_ed25519(
         signer: &DidKey,
         signature: &[u8],

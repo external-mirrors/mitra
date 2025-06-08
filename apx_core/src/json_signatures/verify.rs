@@ -7,16 +7,12 @@ use crate::{
     ap_url::{is_ap_url, ApUrl},
     crypto_eddsa::{verify_eddsa_signature, Ed25519PublicKey},
     crypto_rsa::{verify_rsa_sha256_signature, RsaPublicKey},
-    did_key::DidKey,
-    did_pkh::DidPkh,
     did_url::DidUrl,
-    eip191::verify_eip191_signature,
     http_url::HttpUrl,
     jcs::{
         canonicalize_object,
         CanonicalizationError,
     },
-    minisign::verify_minisign_signature,
     multibase::{decode_multibase_base58btc, MultibaseError},
     url::common::Origin,
 };
@@ -30,6 +26,18 @@ use super::create::{
     PURPOSE_AUTHENTICATION,
 };
 use super::proofs::{ProofType, DATA_INTEGRITY_PROOF};
+
+#[cfg(feature = "eip191")]
+use crate::{
+    did_pkh::DidPkh,
+    eip191::verify_eip191_signature,
+};
+
+#[cfg(feature = "minisign")]
+use crate::{
+    did_key::DidKey,
+    minisign::verify_minisign_signature,
+};
 
 const PROOF_VALUE_KEY: &str = "proofValue";
 
@@ -191,6 +199,7 @@ pub fn verify_eddsa_json_signature(
     Ok(())
 }
 
+#[cfg(feature = "eip191")]
 pub fn verify_eip191_json_signature(
     signer: &DidPkh,
     object: &JsonValue,
@@ -201,6 +210,7 @@ pub fn verify_eip191_json_signature(
         .map_err(|_| VerificationError::InvalidSignature)
 }
 
+#[cfg(feature = "minisign")]
 pub fn verify_blake2_ed25519_json_signature(
     signer: &DidKey,
     object: &JsonValue,
@@ -223,7 +233,6 @@ mod tests {
             ed25519_secret_key_from_multikey,
         },
         crypto_rsa::generate_weak_rsa_key,
-        did::Did,
         json_signatures::create::{
             sign_object,
             sign_object_eddsa,
@@ -233,6 +242,9 @@ mod tests {
 
     #[allow(deprecated)]
     use crate::json_signatures::create::sign_object_rsa;
+
+    #[cfg(feature = "eip191")]
+    use crate::did::Did;
 
     #[test]
     fn test_verification_method_parse() {
@@ -253,6 +265,7 @@ mod tests {
         assert!(matches!(vm_id, VerificationMethod::DidUrl(_)));
     }
 
+    #[cfg(feature = "eip191")]
     #[test]
     fn test_get_json_signature_eip191() {
         let signed_object = json!({
