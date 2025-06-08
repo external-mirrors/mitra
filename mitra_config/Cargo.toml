@@ -6,6 +6,8 @@ license.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 
+publish.workspace = true
+
 [dependencies]
 # Used to read .env files
 dotenvy = ">=0.15.0, <0.15.7"

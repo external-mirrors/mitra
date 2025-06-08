@@ -6,6 +6,8 @@ license.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 
+publish.workspace = true
+
 [dependencies]
 # Used for HTML sanitization
 ammonia = "4.0.0"

@@ -38,6 +38,8 @@ license = "AGPL-3.0-only"
 edition = "2021"
 rust-version = "1.72.1"
 
+publish = false
+
 [workspace.lints.rust]
 # Lints from rust-2024-compatibility group
 boxed_slice_into_iter = "warn"

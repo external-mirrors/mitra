@@ -6,6 +6,8 @@ license.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 
+publish.workspace = true
+
 [dependencies]
 # Used for working with dates
 chrono = { version = "0.4.31", default-features = false, features = ["std", "serde"] }
