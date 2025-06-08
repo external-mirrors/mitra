@@ -6,8 +6,6 @@ pub use url::{
     ParseError as UrlError,
 };
 
-use crate::url::hostname::{guess_protocol, is_ipv6_hostname};
-
 /// Returns URL host name (without port number)
 /// IDNs are converted into punycode
 pub fn get_hostname(url: &str) -> Result<String, UrlError> {
@@ -25,37 +23,6 @@ pub fn get_ip_address(url: &Url) -> Option<IpAddr> {
         Host::Ipv4(addr) => Some(IpAddr::V4(addr)),
         Host::Ipv6(addr) => Some(IpAddr::V6(addr)),
     }
-}
-
-// Normalize HTTP origin:
-// - add a scheme if it's missing
-// - convert IDN to punycode
-pub fn normalize_origin(url: &str) -> Result<String, UrlError> {
-    let normalized_url = if
-        url.starts_with("http://") ||
-        url.starts_with("https://")
-    {
-        url.to_string()
-    } else {
-        // Add scheme
-        let hostname = if is_ipv6_hostname(url) {
-            url
-        } else if let Some((hostname, _port)) = url.rsplit_once(':') {
-            hostname
-        } else {
-            url
-        };
-        let url_scheme = guess_protocol(hostname);
-        format!(
-            "{}://{}",
-            url_scheme,
-            url,
-        )
-    };
-    let url = Url::parse(&normalized_url)?;
-    url.host().ok_or(UrlError::EmptyHost)?; // validates URL
-    let origin = url.origin().ascii_serialization();
-    Ok(origin)
 }
 
 #[cfg(test)]
@@ -131,31 +98,5 @@ mod tests {
             get_ip_address(&url),
             Some(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 127))),
         );
-    }
-
-    #[test]
-    fn test_normalize_origin() {
-        let output = normalize_origin("https://social.example").unwrap();
-        assert_eq!(output, "https://social.example");
-        let output = normalize_origin("social.example").unwrap();
-        assert_eq!(output, "https://social.example");
-        // IDN
-        let output = normalize_origin("嘟文.com").unwrap();
-        assert_eq!(output, "https://xn--j5r817a.com");
-        // IPv4 address
-        let output = normalize_origin("127.0.0.1:8380").unwrap();
-        assert_eq!(output, "http://127.0.0.1:8380");
-        // Yggdrasil (IPv6) address
-        let output = normalize_origin("[319:3cf0:dd1d:47b9:20c:29ff:fe2c:39be]").unwrap();
-        assert_eq!(output, "http://[319:3cf0:dd1d:47b9:20c:29ff:fe2c:39be]");
-        // Onion
-        let output = normalize_origin("xyz.onion").unwrap();
-        assert_eq!(output, "http://xyz.onion");
-        // I2P
-        let output = normalize_origin("http://xyz.i2p").unwrap();
-        assert_eq!(output, "http://xyz.i2p");
-        // I2P (no scheme)
-        let output = normalize_origin("xyz.i2p").unwrap();
-        assert_eq!(output, "http://xyz.i2p");
     }
 }

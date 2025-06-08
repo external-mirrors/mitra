@@ -12,6 +12,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Support verification of signed requests with `Content-Digest` header.
 - Added `NoDigest` variant to `HttpSignatureVerificationError` enum.
 - Support verification of RFC-9421 signatures.
+- Made `is_ipv6_hostname` function public in `core::url::hostname`.
 
 ### Changed
 
@@ -21,6 +22,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Return decoded signature string from `parse_http_signature`.
 - Renamed `HttpSignatureData.message` field to `base`.
 - Add header name to `HttpSignatureVerificationError::HeaderError` messages.
+
+### Removed
+
+- Removed `normalize_origin` function.
 
 ### Fixed
 

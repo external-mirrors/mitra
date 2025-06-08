@@ -2,7 +2,8 @@ use std::net::{Ipv4Addr, Ipv6Addr};
 
 use idna::{domain_to_ascii_cow, AsciiDenyList, Errors as IdnaError};
 
-pub(crate) fn is_ipv6_hostname(hostname: &str) -> bool {
+/// Returns `true` if hostname is an IPv6 literal (enclosed in square brackets)
+pub fn is_ipv6_hostname(hostname: &str) -> bool {
     hostname.strip_prefix('[')
         .and_then(|value| value.strip_suffix(']'))
         .is_some_and(|address| address.parse::<Ipv6Addr>().is_ok())

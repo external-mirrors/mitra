@@ -1,8 +1,8 @@
 use apx_core::{
     crypto_eddsa::Ed25519SecretKey,
     crypto_rsa::RsaSecretKey,
-    http_url::HttpUrl,
-    urls::normalize_origin,
+    http_url::{parse_http_url_whatwg, HttpUrl},
+    url::hostname::{guess_protocol, is_ipv6_hostname},
 };
 
 use super::{
@@ -13,8 +13,38 @@ use super::{
     SOFTWARE_VERSION,
 };
 
+// Normalize HTTP origin:
+// - add a scheme if it's missing
+// - convert IDN to punycode
+fn normalize_origin(url: &str) -> Result<String, &'static str> {
+    let normalized_url = if
+        url.starts_with("http://") ||
+        url.starts_with("https://")
+    {
+        url.to_string()
+    } else {
+        // Add scheme
+        let hostname = if is_ipv6_hostname(url) {
+            url
+        } else if let Some((hostname, _port)) = url.rsplit_once(':') {
+            hostname
+        } else {
+            url
+        };
+        let url_scheme = guess_protocol(hostname);
+        format!(
+            "{}://{}",
+            url_scheme,
+            url,
+        )
+    };
+    let url = parse_http_url_whatwg(&normalized_url)?;
+    let origin = url.origin().ascii_serialization();
+    Ok(origin)
+}
+
 pub fn parse_instance_url(url: &str) -> Result<HttpUrl, &'static str> {
-    let origin = normalize_origin(url).map_err(|_| "invalid URL")?;
+    let origin = normalize_origin(url)?;
     let http_url = HttpUrl::parse(&origin)?;
     Ok(http_url)
 }
@@ -91,6 +121,32 @@ impl Instance {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_normalize_origin() {
+        let output = normalize_origin("https://social.example").unwrap();
+        assert_eq!(output, "https://social.example");
+        let output = normalize_origin("social.example").unwrap();
+        assert_eq!(output, "https://social.example");
+        // IDN
+        let output = normalize_origin("嘟文.com").unwrap();
+        assert_eq!(output, "https://xn--j5r817a.com");
+        // IPv4 address
+        let output = normalize_origin("127.0.0.1:8380").unwrap();
+        assert_eq!(output, "http://127.0.0.1:8380");
+        // Yggdrasil (IPv6) address
+        let output = normalize_origin("[319:3cf0:dd1d:47b9:20c:29ff:fe2c:39be]").unwrap();
+        assert_eq!(output, "http://[319:3cf0:dd1d:47b9:20c:29ff:fe2c:39be]");
+        // Onion
+        let output = normalize_origin("xyz.onion").unwrap();
+        assert_eq!(output, "http://xyz.onion");
+        // I2P
+        let output = normalize_origin("http://xyz.i2p").unwrap();
+        assert_eq!(output, "http://xyz.i2p");
+        // I2P (no scheme)
+        let output = normalize_origin("xyz.i2p").unwrap();
+        assert_eq!(output, "http://xyz.i2p");
+    }
 
     #[test]
     fn test_instance_url_https_dns() {
