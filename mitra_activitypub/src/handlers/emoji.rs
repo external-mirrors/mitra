@@ -4,7 +4,7 @@ use serde_json::{Value as JsonValue};
 
 use apx_core::{
     http_url::Hostname,
-    urls::get_hostname,
+    http_url_whatwg::get_hostname,
 };
 use apx_sdk::fetch::fetch_file;
 use mitra_models::{

@@ -2,7 +2,7 @@ use uuid::Uuid;
 
 use apx_core::{
     ap_url::is_ap_url,
-    urls::get_hostname,
+    http_url_whatwg::get_hostname,
 };
 
 use crate::{

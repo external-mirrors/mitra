@@ -16,12 +16,12 @@ use thiserror::Error;
 
 use apx_core::{
     http_url::parse_http_url_whatwg,
-    url::hostname::{is_i2p, is_onion},
-    urls::{
+    http_url_whatwg::{
         get_hostname,
         get_ip_address,
         UrlError,
     },
+    url::hostname::{is_i2p, is_onion},
 };
 
 use super::agent::FederationAgent;

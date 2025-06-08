@@ -8,8 +8,8 @@ use apx_core::{
         HttpSignatureError,
     },
     http_types::Method,
+    http_url_whatwg::UrlError,
     json_signatures::create::JsonSignatureError,
-    urls::UrlError,
 };
 
 use crate::{

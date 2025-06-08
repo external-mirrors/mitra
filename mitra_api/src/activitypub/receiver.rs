@@ -7,7 +7,7 @@ use serde_json::{Value as JsonValue};
 use apx_core::{
     http_digest::ContentDigest,
     http_types::{header_map_adapter, method_adapter, uri_adapter},
-    urls::get_hostname,
+    http_url_whatwg::get_hostname,
 };
 use apx_sdk::deserialization::object_to_id;
 use mitra_activitypub::{
