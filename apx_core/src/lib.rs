@@ -25,7 +25,9 @@ pub mod url;
 
 #[cfg(feature = "caip")]
 pub mod caip10;
+#[cfg(feature = "caip")]
 pub mod caip19;
+#[cfg(feature = "caip")]
 pub mod caip2;
 
 #[cfg(feature = "did-pkh")]
