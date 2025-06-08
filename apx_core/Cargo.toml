@@ -3,6 +3,7 @@ name = "apx_core"
 description = "APx core primitives"
 version = "0.14.0"
 license.workspace = true
+repository = "https://codeberg.org/silverpill/mitra/src/branch/main/apx_core"
 
 edition.workspace = true
 rust-version.workspace = true

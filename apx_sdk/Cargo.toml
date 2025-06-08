@@ -3,9 +3,12 @@ name = "apx_sdk"
 description = "Minimalistic ActivityPub toolkit"
 version = "0.14.0"
 license.workspace = true
+repository = "https://codeberg.org/silverpill/mitra/src/branch/main/apx_sdk"
 
 edition.workspace = true
 rust-version.workspace = true
+
+categories = ["web-programming"]
 
 [dependencies]
 # Used for implementing custom DNS resolver
