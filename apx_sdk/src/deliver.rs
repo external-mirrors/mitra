@@ -1,4 +1,5 @@
-//! Deliver activities
+//! Delivering activities.
+
 use reqwest::{header, Client, StatusCode};
 use thiserror::Error;
 

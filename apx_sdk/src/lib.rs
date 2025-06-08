@@ -1,4 +1,23 @@
-//! # APx: Minimalistic ActivityPub toolkit
+//! Minimalistic [ActivityPub](https://www.w3.org/TR/activitypub/) toolkit written in Rust.
+//!
+//! Features:
+//!
+//! - Networking.
+//! - Authentication (HTTP signatures, object integrity proofs).
+//! - WebFinger.
+//! - Nomadic identity.
+//!
+//! Using in a Cargo Project:
+//!
+//! ```toml
+//! [dependencies]
+//! apx_sdk = "0.14.0"
+//! ```
+//!
+//! Examples:
+//!
+//! - [FEP-ae97 client](https://codeberg.org/silverpill/mitra/src/branch/main/apx_sdk/examples/fep_ae97_client.rs)
+//! - [FEP-ae97 server](https://codeberg.org/silverpill/mitra/src/branch/main/apx_sdk/examples/fep_ae97_server.rs)
 
 pub mod addresses;
 pub mod agent;

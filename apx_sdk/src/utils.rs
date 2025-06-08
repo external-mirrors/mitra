@@ -1,3 +1,5 @@
+//! Miscellaneous utilities.
+
 use serde_json::{Value as JsonValue};
 
 use apx_core::{

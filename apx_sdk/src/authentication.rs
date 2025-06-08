@@ -1,3 +1,5 @@
+//! Verifying the authenticity of a portable object.
+
 use serde_json::{Value as JsonValue};
 use thiserror::Error;
 

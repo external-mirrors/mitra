@@ -1,4 +1,4 @@
-//! WebFinger addresses
+//! WebFinger addresses.
 use std::{fmt, str::FromStr};
 
 use regex::Regex;

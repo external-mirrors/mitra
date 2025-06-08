@@ -1,3 +1,5 @@
+//! Creating and parsing JSON Resource Descriptors.
+
 use std::collections::HashMap;
 
 use serde::{Serialize, Deserialize};

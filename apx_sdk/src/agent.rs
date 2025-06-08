@@ -1,4 +1,4 @@
-//! Agent is responsible for making requests to other nodes.
+//! Agent: responsible for making requests to other nodes.
 
 pub use apx_core::http_signatures::create::HttpSigner;
 

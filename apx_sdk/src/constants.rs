@@ -1,3 +1,5 @@
+//! Commonly used constants.
+
 // https://www.w3.org/TR/activitystreams-vocabulary/
 pub const AP_CONTEXT: &str = "https://www.w3.org/ns/activitystreams";
 

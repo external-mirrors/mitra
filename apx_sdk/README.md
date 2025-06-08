@@ -9,12 +9,7 @@ Features:
 - WebFinger.
 - Nomadic identity.
 
-Using in a Cargo Project:
-
-```toml
-[dependencies]
-apx_sdk = "0.14.0"
-```
+Documentation: https://docs.rs/apx_sdk/latest/apx_sdk/
 
 Examples:
 

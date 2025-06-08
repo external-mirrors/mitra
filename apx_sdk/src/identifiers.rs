@@ -1,3 +1,5 @@
+//! Parsing object identifiers.
+
 use std::str::FromStr;
 
 use regex::{Captures, Regex};

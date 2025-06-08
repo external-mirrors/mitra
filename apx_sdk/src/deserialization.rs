@@ -1,3 +1,5 @@
+//! Deserializing objects.
+
 use serde::{
     Deserialize,
     Deserializer,
