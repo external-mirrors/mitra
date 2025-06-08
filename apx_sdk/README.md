@@ -1,6 +1,6 @@
 # APx
 
-Minimalistic ActivityPub toolkit written in Rust.
+Minimalistic [ActivityPub](https://www.w3.org/TR/activitypub/) toolkit written in Rust.
 
 Features:
 
@@ -13,7 +13,7 @@ Using in a Cargo Project:
 
 ```toml
 [dependencies]
-apx_sdk = { git = "https://codeberg.org/silverpill/mitra", rev = "apx-v0.14.0" }
+apx_sdk = "0.14.0"
 ```
 
 Examples:
