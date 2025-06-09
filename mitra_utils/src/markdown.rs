@@ -110,18 +110,18 @@ fn unlink<'a>(node: &'a AstNode<'a>) -> () {
     replace_node_value(node, text);
 }
 
-fn fix_microsyntaxes<'a>(
+fn is_microsyntax<'a>(
     node: &'a AstNode<'a>,
-) -> Result<(), MarkdownError> {
+) -> Result<bool, MarkdownError> {
     if let Some(prev) = node.previous_sibling() {
         if let NodeValue::Text(ref prev_text) = prev.data.borrow().value {
             // Remove autolink if mention or object link syntax is found
             if prev_text.ends_with('@') || prev_text.ends_with("[[") {
-                unlink(node);
+                return Ok(true);
             };
         };
     };
-    Ok(())
+    Ok(false)
 }
 
 fn is_uri_scheme_allowed(uri: &str) -> bool {
@@ -243,7 +243,9 @@ pub fn markdown_lite_to_html(text: &str) -> Result<String, MarkdownError> {
                 replace_node_value(node, NodeValue::Paragraph);
             },
             NodeValue::Link(link) => {
-                fix_microsyntaxes(node)?;
+                if is_microsyntax(node)? {
+                    unlink(node);
+                };
                 if !is_uri_scheme_allowed(&link.url) {
                     unlink(node);
                 };
@@ -278,7 +280,9 @@ pub fn markdown_basic_to_html(text: &str) -> Result<String, MarkdownError> {
             NodeValue::LineBreak
                 => (),
             NodeValue::Link(link) => {
-                fix_microsyntaxes(node)?;
+                if is_microsyntax(node)? {
+                    unlink(node);
+                };
                 if !is_uri_scheme_allowed(&link.url) {
                     unlink(node);
                 };
