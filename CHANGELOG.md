@@ -11,6 +11,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Raise database error in inbox/outbox views if stored actor ID is not canonical.
 - Improved descriptions of authentication errors.
 - Use same-actor policy when verifying inbox/outbox read permission.
+- Improved documentation of `create-post` command.
 
 ### Removed
 

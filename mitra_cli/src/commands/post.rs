@@ -36,7 +36,7 @@ pub struct CreatePost {
     author: String,
     /// HTML content
     content: String,
-    /// Date
+    /// Date (YYYY-MM-DDThh:mm:ss±hh:mm)
     created_at: DateTime<Utc>,
     /// Media attachment(s)
     #[arg(long)]
