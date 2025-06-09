@@ -6,7 +6,7 @@ use actix_web::{
     post,
     web,
     HttpResponse,
-    Scope as ActixScope,
+    Scope,
 };
 use actix_web_httpauth::extractors::bearer::BearerAuth;
 
@@ -26,7 +26,11 @@ use crate::mastodon_api::{
     media_server::ClientMediaServer,
     pagination::{get_last_item, get_paginated_response},
 };
-use super::types::{ApiNotification, NotificationQueryParams};
+use super::types::{
+    ApiNotification,
+    NotificationQueryParams,
+    NotificationPolicy,
+};
 
 #[get("")]
 async fn get_notifications_view(
@@ -79,8 +83,25 @@ async fn clear_notifications_view(
     Ok(HttpResponse::Ok().json(empty))
 }
 
-pub fn notification_api_scope() -> ActixScope {
+// https://docs.joinmastodon.org/methods/notifications/#get-policy
+#[get("/policy")]
+async fn notification_policy_view(
+    auth: BearerAuth,
+    db_pool: web::Data<DatabaseConnectionPool>,
+) -> Result<HttpResponse, MastodonError> {
+    let db_client = &**get_database_client(&db_pool).await?;
+    let current_user = get_current_user(db_client, auth.token()).await?;
+    let policy = NotificationPolicy::from_user(&current_user);
+    Ok(HttpResponse::Ok().json(policy))
+}
+
+pub fn notification_api_v1_scope() -> Scope {
     web::scope("/v1/notifications")
         .service(get_notifications_view)
         .service(clear_notifications_view)
+}
+
+pub fn notification_api_v2_scope() -> Scope {
+    web::scope("/v2/notifications")
+        .service(notification_policy_view)
 }

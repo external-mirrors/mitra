@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+
+- Implemented `/api/v2/notifications/policy` API endpoint.
+
 ### Changed
 
 - Raise database error in inbox/outbox views if stored actor ID is not canonical.

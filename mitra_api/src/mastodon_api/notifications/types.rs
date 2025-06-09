@@ -1,7 +1,11 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-use mitra_models::notifications::types::{EventType, Notification};
+use mitra_models::{
+    notifications::types::{EventType, Notification},
+    profiles::types::MentionPolicy,
+    users::types::User,
+};
 
 use crate::mastodon_api::{
     accounts::types::Account,
@@ -110,6 +114,48 @@ impl ApiNotification {
             emoji: maybe_emoji_content,
             emoji_url: maybe_emoji_url,
             created_at: notification.created_at,
+        }
+    }
+}
+
+// https://docs.joinmastodon.org/entities/NotificationPolicy/
+#[derive(Serialize)]
+struct NotificationSummary {
+    pending_requests_count: u32,
+    pending_notifications_count: u32,
+}
+
+#[derive(Serialize)]
+pub struct NotificationPolicy {
+    for_not_following: &'static str,
+    for_not_followers: &'static str,
+    for_new_accounts: &'static str,
+    for_private_mentions: &'static str,
+    for_limited_accounts: &'static str,
+    summary: NotificationSummary,
+}
+
+impl NotificationPolicy {
+    pub fn from_user(user: &User) -> Self {
+        const ACCEPT: &str = "accept";
+        const DROP: &str = "drop";
+        let mention_policy = user.profile.mention_policy;
+        Self {
+            for_not_following:
+                if mention_policy == MentionPolicy::OnlyContacts
+                { DROP } else { ACCEPT },
+            for_not_followers:
+                if mention_policy == MentionPolicy::OnlyContacts
+                { DROP } else { ACCEPT },
+            for_new_accounts:
+                if mention_policy == MentionPolicy::OnlyKnown
+                { DROP } else { ACCEPT },
+            for_private_mentions: ACCEPT,
+            for_limited_accounts: ACCEPT,
+            summary: NotificationSummary {
+                pending_requests_count: 0,
+                pending_notifications_count: 0,
+            },
         }
     }
 }

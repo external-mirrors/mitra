@@ -1390,6 +1390,18 @@ paths:
               schema:
                 type: object
                 example: {}
+  /api/v2/notifications/policy:
+    get:
+      summary: Get the filtering policy for notifications.
+      security:
+        - tokenAuth: []
+      responses:
+        200:
+          description: Successful operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationPolicy'
   /api/v1/polls/{poll_id}/votes:
     post:
       summary: Vote on a poll attached to a post.
@@ -3290,6 +3302,25 @@ components:
           description: The timestamp of the notification.
           type: string
           format: date-time
+    NotificationPolicy:
+      type: object
+      properties:
+        for_not_following:
+          description: Whether to accept or drop notifications from accounts the user is not following.
+          type: string
+          example: accept
+        for_not_followers:
+          description: Whether to accept or drop notifications from accounts that are not following the user.
+          type: string
+          example: accept
+        for_new_accounts:
+          description: Whether to accept or drop notifications from accounts created in the past 30 days.
+          type: string
+          example: accept
+        for_private_mentions:
+          description: Whether to accept or drop notifications from direct messages.
+          type: string
+          example: accept
     Poll:
       type: object
       properties:

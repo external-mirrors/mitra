@@ -61,7 +61,7 @@ impl From<MediaInfo> for ProfileImage {
 json_from_sql!(ProfileImage);
 json_to_sql!(ProfileImage);
 
-#[derive(Clone, Copy, Debug, Default)]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub enum MentionPolicy {
     #[default]
     None,
