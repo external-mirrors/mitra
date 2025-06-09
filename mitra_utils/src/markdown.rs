@@ -335,12 +335,11 @@ mod tests {
 
     #[test]
     fn test_markdown_lite_to_html() {
-        let text = "# heading\n\ntest **bold** test *italic* test ~~strike~~ with `code`, <span>html</span> and https://example.com and admin@email.example\nnew line\n\ntwo new lines and a list:\n- item 1\n- item 2\n\n>greentext\n\n---\n\nimage: ![logo](logo.png)\n\ncode block:\n```\nlet test\ntest = 1\n```";
+        let text = "# heading\n\ntest **bold** test *italic* test ~~strike~~ with `code`, <span>html</span> and https://example.com\nnew line\n\ntwo new lines and a list:\n- item 1\n- item 2\n\n>greentext\n\n---\n\nimage: ![logo](logo.png)\n\ncode block:\n```\nlet test\ntest = 1\n```";
         let html = markdown_lite_to_html(text).unwrap();
         let expected_html = concat!(
             r#"<h1>heading</h1><p>test <strong>bold</strong> test <em>italic</em> test <del>strike</del> with <code>code</code>, &lt;span&gt;html&lt;/span&gt;"#,
             r#" and <a href="https://example.com">https://example.com</a>"#,
-            r#" and <a href="mailto:admin@email.example">admin@email.example</a>"#,
             r#"<br>new line</p><p>two new lines and a list:</p><p>- item 1<br>- item 2</p><p>&gt;greentext</p><p>-----</p><p>image: ![logo](logo.png)</p><p>code block:</p>"#,
             "<pre><code>let test\ntest = 1\n</code></pre>",
         );
@@ -442,7 +441,16 @@ mod tests {
     }
 
     #[test]
+    fn test_markdown_lite_to_html_email_autolink() {
+        // TODO: disable autolinking
+        let text = "test hello@gmail.com test";
+        let html = markdown_lite_to_html(text).unwrap();
+        assert_eq!(html, r#"<p>test <a href="mailto:hello@gmail.com">hello@gmail.com</a> test</p>"#);
+    }
+
+    #[test]
     fn test_markdown_lite_to_html_bitcoin_autolink() {
+        // Bitcoin URI doesn't include ://
         let text = "test bitcoin:175tWpb8K1S7NmH4Zx6rewF9WQrcZv245W.";
         let html = markdown_lite_to_html(text).unwrap();
         assert_eq!(html, r#"<p>test bitcoin:175tWpb8K1S7NmH4Zx6rewF9WQrcZv245W.</p>"#);
