@@ -6,7 +6,7 @@ use super::parser::{is_inside_code_block, is_inside_link};
 
 // See also: HASHTAG_NAME_RE in mitra_validators::tags
 const HASHTAG_RE: &str = r"(?m)(?P<before>^|\s|>|[\(])#(?P<tag>[^\s<]+)";
-const HASHTAG_SECONDARY_RE: &str = r"^(?P<tag>[\p{Alphabetic}\d_]+)(?P<after>[\.,:;?!\)']*)$";
+const HASHTAG_SECONDARY_RE: &str = r"^(?P<tag>\p{Alphabetic}|[\p{Alphabetic}\d_]{2,})(?P<after>[\.,:;?!\)']*)$";
 
 /// Finds anything that looks like a hashtag
 pub fn find_hashtags(text: &str) -> Vec<String> {
@@ -97,6 +97,24 @@ mod tests {
             "tag4",
             "tag5",
         ]);
+    }
+
+    #[test]
+    fn test_find_hashtags_single_letter() {
+        let tags = find_hashtags("test #a");
+        assert_eq!(tags, vec!["a"]);
+    }
+
+    #[test]
+    fn test_find_hashtags_single_digit() {
+        let tags = find_hashtags("test #1");
+        assert_eq!(tags.is_empty(), true);
+    }
+
+    #[test]
+    fn test_find_hashtags_single_underscore() {
+        let tags = find_hashtags("test #_");
+        assert_eq!(tags.is_empty(), true);
     }
 
     #[test]
