@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Use same-actor policy when verifying inbox/outbox read permission.
 - Improved documentation of `create-post` command.
 - Disabled autolinking of email / webfinger addresses.
+- Write detailed error message to log when verification of embedded portable object fails.
 
 ### Removed
 

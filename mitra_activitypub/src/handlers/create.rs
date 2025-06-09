@@ -158,7 +158,8 @@ pub async fn handle_create(
             return Err(ValidationError(message).into());
         },
         Err(AuthenticationError::NotPortable) => (),
-        Err(_) => {
+        Err(other_error) => {
+            log::warn!("{other_error}");
             return Err(ValidationError("invalid portable object").into());
         },
     };
