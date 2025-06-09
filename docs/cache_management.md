@@ -4,9 +4,9 @@ Content from other servers is deleted automatically after some time (both databa
 
 ```yaml
 retention:
-  # Remote posts with which local accounts didn't interact
+  # Keep remote posts with which local accounts didn't interact for 15 days
   extraneous_posts: 15
-  # Remote accounts without posts
+  # Keep remote accounts without posts for 30 days
   empty_profiles: 30
 ```
 
