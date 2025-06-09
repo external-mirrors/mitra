@@ -1,4 +1,6 @@
-//! Minimalistic [ActivityPub](https://www.w3.org/TR/activitypub/) toolkit written in Rust.
+//! # APx
+//!
+//! A minimalistic [ActivityPub](https://www.w3.org/TR/activitypub/) toolkit written in Rust.
 //!
 //! Features:
 //!
