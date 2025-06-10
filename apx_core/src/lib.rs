@@ -1,4 +1,10 @@
 //! # APx core primitives
+//!
+//! - URIs
+//! - DIDs
+//! - Keys and signatures (Ed25519 and RSA)
+//! - HTTP signatures
+//! - Data integrity proofs (FEP-8b32)
 
 pub mod ap_url;
 pub mod base64;
