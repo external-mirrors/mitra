@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+
+- Added `is_rfc9421` field to `HttpSignatureData` struct.
+
 ## [0.14.1] - 2025-06-08
 
 ### Changed

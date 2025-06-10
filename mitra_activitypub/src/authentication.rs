@@ -243,6 +243,9 @@ pub async fn verify_signed_request(
         },
         Err(other_error) => return Err(other_error.into()),
     };
+    if signature_data.is_rfc9421 {
+        log::info!("RFC-9421 signature found");
+    };
     let (public_key, signer) = if only_key {
         unimplemented!();
     } else {

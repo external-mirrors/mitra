@@ -75,6 +75,7 @@ impl HttpSignatureVerificationError {
 type VerificationError = HttpSignatureVerificationError;
 
 pub struct HttpSignatureData {
+    pub is_rfc9421: bool,
     pub key_id: VerificationMethod,
     pub base: String, // recreated signature base
     pub signature: Vec<u8>,
@@ -213,6 +214,7 @@ pub fn parse_http_signature_cavage(
         signature,
         expires_at,
         content_digest: maybe_digest,
+        is_rfc9421: false,
     };
     Ok(signature_data)
 }
@@ -343,6 +345,7 @@ pub fn parse_http_signature_rfc9421(
         signature: signature_value,
         expires_at,
         content_digest: maybe_digest,
+        is_rfc9421: true,
     };
     Ok(signature_data)
 }
@@ -437,6 +440,7 @@ mod tests {
             &request_uri,
             &request_headers,
         ).unwrap();
+        assert_eq!(signature_data.is_rfc9421, false);
         assert_eq!(
             signature_data.key_id.to_string(),
             "https://myserver.org/actor#main-key",
@@ -499,6 +503,7 @@ r#""date": Tue, 20 Apr 2021 02:07:55 GMT
 "content-type": application/json
 "content-length": 18
 "@signature-params": ("date" "@method" "@path" "@authority" "content-type" "content-length");created=1618884473;keyid="https://example.com/actor#test-key-ed25519""#;
+        assert_eq!(signature_data.is_rfc9421, true);
         assert_eq!(signature_data.base, expected_signature_base);
         assert_eq!(signature_data.content_digest.is_some(), true);
     }
