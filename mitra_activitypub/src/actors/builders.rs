@@ -22,9 +22,8 @@ use crate::{
         MASTODON_CONTEXT,
         MITRA_CONTEXT,
         SCHEMA_ORG_CONTEXT,
-        W3C_DID_CONTEXT,
+        W3C_CID_CONTEXT,
         W3ID_DATA_INTEGRITY_CONTEXT,
-        W3ID_MULTIKEY_CONTEXT,
         W3ID_SECURITY_CONTEXT,
     },
     identifiers::{
@@ -47,17 +46,15 @@ type Context = (
     &'static str,
     &'static str,
     &'static str,
-    &'static str,
     IndexMap<&'static str, &'static str>,
 );
 
 fn build_actor_context() -> Context {
     (
         AP_CONTEXT,
-        W3C_DID_CONTEXT,
+        W3C_CID_CONTEXT,
         W3ID_SECURITY_CONTEXT,
         W3ID_DATA_INTEGRITY_CONTEXT,
-        W3ID_MULTIKEY_CONTEXT,
         IndexMap::from([
             ("manuallyApprovesFollowers", "as:manuallyApprovesFollowers"),
             ("schema", SCHEMA_ORG_CONTEXT),
@@ -343,10 +340,9 @@ mod tests {
         let expected_value = json!({
             "@context": [
                 "https://www.w3.org/ns/activitystreams",
-                "https://www.w3.org/ns/did/v1",
+                "https://www.w3.org/ns/cid/v1",
                 "https://w3id.org/security/v1",
                 "https://w3id.org/security/data-integrity/v1",
-                "https://w3id.org/security/multikey/v1",
                 {
                     "manuallyApprovesFollowers": "as:manuallyApprovesFollowers",
                     "schema": "http://schema.org/",
@@ -423,10 +419,9 @@ mod tests {
         let expected_value = json!({
             "@context": [
                 "https://www.w3.org/ns/activitystreams",
-                "https://www.w3.org/ns/did/v1",
+                "https://www.w3.org/ns/cid/v1",
                 "https://w3id.org/security/v1",
                 "https://w3id.org/security/data-integrity/v1",
-                "https://w3id.org/security/multikey/v1",
                 {
                     "manuallyApprovesFollowers": "as:manuallyApprovesFollowers",
                     "schema": "http://schema.org/",
@@ -494,10 +489,9 @@ mod tests {
         let expected_value = json!({
             "@context": [
                 "https://www.w3.org/ns/activitystreams",
-                "https://www.w3.org/ns/did/v1",
+                "https://www.w3.org/ns/cid/v1",
                 "https://w3id.org/security/v1",
                 "https://w3id.org/security/data-integrity/v1",
-                "https://w3id.org/security/multikey/v1",
                 {
                     "manuallyApprovesFollowers": "as:manuallyApprovesFollowers",
                     "schema": "http://schema.org/",

@@ -20,6 +20,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Write detailed error message to log when verification of embedded portable object fails.
 - Write message to log when incoming request contains RFC-9421 signature.
 - Include file size limit in error message when uploaded file is too big.
+- Replaced DID context with CID context in actor objects.
 
 ### Removed
 
