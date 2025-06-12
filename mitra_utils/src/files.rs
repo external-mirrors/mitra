@@ -35,6 +35,7 @@ pub fn set_file_permissions(file_path: &Path, mode: u32) -> Result<(), Error> {
     Ok(())
 }
 
+#[derive(Debug)]
 pub struct FileSize(usize);
 
 impl FileSize {

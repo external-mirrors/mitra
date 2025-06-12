@@ -3,7 +3,7 @@ use mitra_services::media::{
     MediaStorage,
     MediaStorageError,
 };
-use mitra_utils::files::FileInfo;
+use mitra_utils::files::{FileInfo, FileSize};
 
 use super::errors::MastodonError;
 
@@ -15,8 +15,8 @@ pub enum UploadError {
     #[error("base64 decoding error")]
     Base64DecodingError(#[from] base64::DecodeError),
 
-    #[error("file is too large")]
-    TooLarge,
+    #[error("file size must be less than {limit}")]
+    TooLarge { limit: FileSize },
 
     #[error("no media type")]
     NoMediaType,
@@ -47,7 +47,9 @@ pub fn save_b64_file(
 ) -> Result<FileInfo, UploadError> {
     let file_data = base64::decode(b64data)?;
     if file_data.len() > file_size_limit {
-        return Err(UploadError::TooLarge);
+        return Err(UploadError::TooLarge {
+            limit: FileSize::new(file_size_limit),
+        });
     };
     let media_type = media_type.to_string();
     if !allowed_media_types.contains(&media_type.as_str()) {
