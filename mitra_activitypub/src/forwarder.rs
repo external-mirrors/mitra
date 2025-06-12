@@ -14,15 +14,18 @@ use serde_json::{Value as JsonValue};
 
 use mitra_config::Instance;
 use mitra_models::{
+    activitypub::queries::expand_collections,
     database::{DatabaseClient, DatabaseError},
-    profiles::types::DbActorProfile,
+    profiles::{
+        queries::get_remote_profiles_by_actor_ids,
+        types::DbActorProfile,
+    },
     users::types::PortableUser,
 };
 use mitra_validators::errors::ValidationError;
 
 use crate::{
     handlers::note::normalize_audience,
-    importers::get_profile_by_actor_id,
     keys::verification_method_to_public_key,
     ownership::is_local_origin,
 };
@@ -113,28 +116,25 @@ pub fn get_activity_audience(
     Ok(audience)
 }
 
+/// Returns remote recipients of the activity
 pub async fn get_activity_recipients(
     db_client: &impl DatabaseClient,
-    instance_url: &str,
     audience: &[CanonicalUrl],
 ) -> Result<Vec<DbActorProfile>, DatabaseError> {
-    let mut targets = vec![];
     const RECIPIENT_LIMIT: usize = 50;
-    // TODO: single database query
-    for target_id in audience.iter().take(RECIPIENT_LIMIT) {
-        // TODO: expand collections
-        let target = match get_profile_by_actor_id(
-            db_client,
-            instance_url,
-            &target_id.to_string(),
-        ).await {
-            Ok(profile) => profile,
-            Err(DatabaseError::NotFound(_)) => continue,
-            Err(other_error) => return Err(other_error),
-        };
-        targets.push(target);
-    };
-    Ok(targets)
+    let expanded_audience = expand_collections(
+        db_client,
+        audience,
+    ).await?;
+    let recipients = get_remote_profiles_by_actor_ids(
+        db_client,
+        &expanded_audience,
+    )
+        .await?
+        .into_iter()
+        .take(RECIPIENT_LIMIT)
+        .collect();
+    Ok(recipients)
 }
 
 #[cfg(test)]

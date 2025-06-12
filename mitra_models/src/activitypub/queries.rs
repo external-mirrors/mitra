@@ -159,6 +159,21 @@ pub async fn add_object_to_collection(
     Ok(())
 }
 
+pub async fn remove_object_from_collection(
+    db_client: &impl DatabaseClient,
+    collection_id: &str,
+    object_id: &str,
+) -> Result<(), DatabaseError> {
+    db_client.execute(
+        "
+        DELETE FROM activitypub_collection_item
+        WHERE collection_id = $1 AND object_id = $2
+        ",
+        &[&collection_id, &object_id],
+    ).await?;
+    Ok(())
+}
+
 pub async fn get_collection_items(
     db_client: &impl DatabaseClient,
     collection_id: &str,
@@ -201,6 +216,45 @@ pub async fn delete_collection_items(
         &[&created_before],
     ).await?;
     Ok(deleted_count)
+}
+
+pub async fn expand_collections(
+    db_client: &impl DatabaseClient,
+    audience: &[CanonicalUrl],
+) -> Result<Vec<String>, DatabaseError> {
+    let audience: Vec<_> = audience.iter()
+        .map(|target_id| target_id.to_string())
+        .collect();
+    let items_rows = db_client.query(
+        "
+        SELECT collection_id, object_id
+        FROM activitypub_collection_item
+        WHERE collection_id = ANY($1)
+        ",
+        &[&audience],
+    ).await?;
+    let items = items_rows.into_iter()
+        .map(|row| {
+            let collection_id: String = row.try_get("collection_id")?;
+            let object_id: String = row.try_get("object_id")?;
+            Ok((collection_id, object_id))
+        })
+        .collect::<Result<Vec<_>, DatabaseError>>()?;
+    let mut expanded_audience = vec![];
+    for target_id in audience {
+        let collection_items: Vec<_> = items.iter()
+            .filter(|(collection_id, _)| *collection_id == target_id)
+            .map(|(_, object_id)| object_id.clone())
+            .collect();
+        if collection_items.len() > 0 {
+            // Collection
+            expanded_audience.extend(collection_items);
+        } else {
+            // Object or empty collection
+            expanded_audience.push(target_id);
+        };
+    };
+    Ok(expanded_audience)
 }
 
 #[cfg(test)]
@@ -376,6 +430,7 @@ mod tests {
             "object": "https://social.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/objects/321",
         });
         save_activity(db_client, &canonical_activity_id, &activity).await.unwrap();
+
         // Add to collection
         let canonical_collection_id = "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor/outbox";
         add_object_to_collection(
@@ -399,5 +454,34 @@ mod tests {
         ).await.unwrap();
         assert_eq!(items.len(), 1);
         assert_eq!(items[0], activity);
+
+        // Remove from collection
+        remove_object_from_collection(
+            db_client,
+            canonical_collection_id,
+            &canonical_activity_id.to_string(),
+        ).await.unwrap();
+        let items = get_collection_items(
+            db_client,
+            canonical_collection_id,
+            10,
+        ).await.unwrap();
+        assert_eq!(items.len(), 0);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_expand_collections() {
+        let db_client = &create_test_database().await;
+        let actor_id = "https://social.example/actor";
+        let audience = vec![
+            CanonicalUrl::parse_canonical(actor_id).unwrap(),
+        ];
+        let expanded_audience = expand_collections(
+            db_client,
+            &audience,
+        ).await.unwrap();
+        assert_eq!(expanded_audience.len(), 1);
+        assert_eq!(expanded_audience[0], actor_id);
     }
 }

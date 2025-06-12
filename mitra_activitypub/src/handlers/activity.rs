@@ -149,9 +149,9 @@ pub async fn handle_activity(
             &canonical_activity_id,
             &activity_clone,
         ).await?;
+        // Remote recipients
         let recipients = get_activity_recipients(
             db_client,
-            &config.instance_url(),
             &audience,
         ).await?;
         for recipient in recipients.iter() {

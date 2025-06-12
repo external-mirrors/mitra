@@ -12,6 +12,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Advertise RFC-9421 support using FEP-844e mechanism.
 - Implemented `/api/v1/statuses/{status_id}/favourited_by` API endpoint.
 - Implemented `/api/v1/pleroma/statuses/{status_id}/reactions` API endpoint.
+- Support delivering portable activities to followers.
 
 ### Changed
 

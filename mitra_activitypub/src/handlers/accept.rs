@@ -8,7 +8,10 @@ use mitra_models::{
     database::{DatabaseClient, DatabaseError},
     invoices::helpers::remote_invoice_opened,
     invoices::queries::get_invoice_by_id,
-    profiles::queries::get_remote_profile_by_actor_id,
+    profiles::queries::{
+        get_profile_by_id,
+        get_remote_profile_by_actor_id,
+    },
     relationships::{
         queries::{
             follow_request_accepted,
@@ -24,6 +27,7 @@ use mitra_validators::{
 };
 
 use crate::{
+    c2s::followers::add_follower,
     identifiers::{canonicalize_id, parse_local_activity_id},
     vocabulary::{FOLLOW, OFFER},
 };
@@ -91,6 +95,10 @@ pub async fn handle_accept(
         return Ok(None);
     };
     follow_request_accepted(db_client, follow_request.id).await?;
+    if actor_profile.has_portable_account() {
+        let source = get_profile_by_id(db_client, follow_request.source_id).await?;
+        add_follower(db_client, &source, &actor_profile).await?;
+    };
     Ok(Some(Descriptor::object(FOLLOW)))
 }
 

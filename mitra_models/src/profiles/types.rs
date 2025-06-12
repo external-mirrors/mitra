@@ -774,6 +774,10 @@ impl DbActorProfile {
         self.user_id.is_some() || self.portable_user_id.is_some()
     }
 
+    pub fn has_portable_account(&self) -> bool {
+        self.portable_user_id.is_some()
+    }
+
     /// Is actor local (managed)?
     pub fn is_local(&self) -> bool {
         self.actor_json.is_none()

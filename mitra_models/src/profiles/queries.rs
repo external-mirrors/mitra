@@ -499,6 +499,24 @@ pub async fn get_profiles_by_accts(
     Ok(profiles)
 }
 
+pub async fn get_remote_profiles_by_actor_ids(
+    db_client: &impl DatabaseClient,
+    actors_ids: &[String],
+) -> Result<Vec<DbActorProfile>, DatabaseError> {
+    let rows = db_client.query(
+        "
+        SELECT actor_profile
+        FROM actor_profile
+        WHERE actor_id = ANY($1)
+        ",
+        &[&actors_ids],
+    ).await?;
+    let profiles = rows.iter()
+        .map(|row| row.try_get("actor_profile"))
+        .collect::<Result<_, _>>()?;
+    Ok(profiles)
+}
+
 /// Deletes profile from database and returns collection of orphaned objects.
 pub async fn delete_profile(
     db_client: &mut impl DatabaseClient,

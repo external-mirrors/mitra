@@ -12,6 +12,7 @@ use mitra_models::{
         get_remote_repost_by_activity_id,
     },
     profiles::queries::{
+        get_profile_by_id,
         get_remote_profile_by_actor_id,
     },
     reactions::queries::{
@@ -26,6 +27,7 @@ use mitra_models::{
 use mitra_validators::errors::ValidationError;
 
 use crate::{
+    c2s::followers::remove_follower,
     identifiers::canonicalize_id,
     importers::{ActorIdResolver, ApClient},
     vocabulary::{ANNOUNCE, FOLLOW, LIKE},
@@ -60,7 +62,11 @@ async fn handle_undo_follow(
         &target_actor_id,
     ).await?;
     match unfollow(db_client, source_profile.id, target_profile.id).await {
-        Ok(_) => (),
+        Ok(_) => {
+            if target_profile.has_portable_account() {
+                remove_follower(db_client, &source_profile, &target_profile).await?;
+            };
+        },
         // Ignore Undo if relationship doesn't exist
         Err(DatabaseError::NotFound(_)) => return Ok(None),
         Err(other_error) => return Err(other_error.into()),
@@ -87,10 +93,11 @@ pub async fn handle_undo(
     };
 
     let undo: Undo = serde_json::from_value(activity)?;
+    let canonical_actor_id = canonicalize_id(&undo.actor)?;
     let actor_profile = ActorIdResolver::default().only_remote().resolve(
         &ap_client,
         db_client,
-        &undo.actor,
+        &canonical_actor_id.to_string(),
     ).await?;
     let canonical_object_id = canonicalize_id(&undo.object)?;
 
@@ -108,6 +115,10 @@ pub async fn handle_undo(
                 follow_request.source_id,
                 follow_request.target_id,
             ).await?;
+            let target = get_profile_by_id(db_client, follow_request.target_id).await?;
+            if target.has_portable_account() {
+                remove_follower(db_client, &actor_profile, &target).await?;
+            };
             return Ok(Some(Descriptor::object(FOLLOW)));
         },
         Err(DatabaseError::NotFound(_)) => (), // try other object types
