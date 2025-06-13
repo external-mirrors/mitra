@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Added
 
 - Implemented `/api/v2/notifications/policy` API endpoint.
+- Advertise RFC-9421 support using FEP-844e mechanism.
 
 ### Changed
 

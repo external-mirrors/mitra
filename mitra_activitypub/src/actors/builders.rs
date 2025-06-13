@@ -68,6 +68,7 @@ fn build_actor_context() -> Context {
             ("VerifiableIdentityStatement", "mitra:VerifiableIdentityStatement"),
             ("MitraJcsEip191Signature2022", "mitra:MitraJcsEip191Signature2022"),
             ("gateways", "mitra:gateways"),
+            ("implements", "mitra:implements"),
             // Workarounds for MitraJcsEip191Signature2022
             // (not required for DataIntegrityProof)
             ("proofValue", "sec:proofValue"),
@@ -86,6 +87,32 @@ pub struct ActorImage {
     pub object_type: String,
     pub url: String,
     pub media_type: Option<String>,
+}
+
+#[derive(Serialize)]
+struct ApplicationFeature {
+    name: &'static str,
+    href: &'static str,
+}
+
+#[derive(Serialize)]
+struct Application {
+    #[serde(rename = "type")]
+    object_type: &'static str,
+    implements: Vec<ApplicationFeature>,
+}
+
+impl Application {
+    fn new() -> Self {
+        let rfc9421 = ApplicationFeature {
+            name: "RFC-9421: HTTP Message Signatures",
+            href: "https://datatracker.ietf.org/doc/html/rfc9421",
+        };
+        Self {
+            object_type: APPLICATION,
+            implements: vec![rfc9421],
+        }
+    }
 }
 
 #[derive(Serialize)]
@@ -117,6 +144,11 @@ pub struct Actor {
     assertion_method: Vec<Multikey>,
 
     public_key: PublicKeyPem,
+
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    implements: Vec<ApplicationFeature>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    generator: Option<Application>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
     icon: Option<ActorImage>,
@@ -256,6 +288,8 @@ pub fn build_local_actor(
         featured: Some(featured),
         assertion_method: verification_methods,
         public_key,
+        implements: vec![],
+        generator: Some(Application::new()),
         icon: avatar,
         image: banner,
         summary: user.profile.bio.clone(),
@@ -296,6 +330,8 @@ pub fn build_instance_actor(
         featured: None,
         assertion_method: verification_methods,
         public_key,
+        implements: Application::new().implements,
+        generator: None,
         icon: None,
         image: None,
         summary: None,
@@ -356,6 +392,7 @@ mod tests {
                     "VerifiableIdentityStatement": "mitra:VerifiableIdentityStatement",
                     "MitraJcsEip191Signature2022": "mitra:MitraJcsEip191Signature2022",
                     "gateways": "mitra:gateways",
+                    "implements": "mitra:implements",
                     "proofValue": "sec:proofValue",
                     "proofPurpose": "sec:proofPurpose",
                 },
@@ -388,6 +425,13 @@ mod tests {
                 "id": "https://server.example/users/testuser#main-key",
                 "owner": "https://server.example/users/testuser",
                 "publicKeyPem": "-----BEGIN PUBLIC KEY-----\nMFwwDQYJKoZIhvcNAQEBBQADSwAwSAJBAOIh58ZQbo45MuZvv1nMWAzTzN9oghNC\nbxJkFEFD1Y49LEeNHMk6GrPByUz8kn4y8Hf6brb+DVm7ZW4cdhOx1TsCAwEAAQ==\n-----END PUBLIC KEY-----\n",
+            },
+            "generator": {
+                "type": "Application",
+                "implements": [{
+                    "name": "RFC-9421: HTTP Message Signatures",
+                    "href": "https://datatracker.ietf.org/doc/html/rfc9421",
+                }],
             },
             "summary": "testbio",
             "manuallyApprovesFollowers": false,
@@ -435,6 +479,7 @@ mod tests {
                     "VerifiableIdentityStatement": "mitra:VerifiableIdentityStatement",
                     "MitraJcsEip191Signature2022": "mitra:MitraJcsEip191Signature2022",
                     "gateways": "mitra:gateways",
+                    "implements": "mitra:implements",
                     "proofValue": "sec:proofValue",
                     "proofPurpose": "sec:proofPurpose",
                 },
@@ -467,6 +512,13 @@ mod tests {
                 "id": "https://server.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor#main-key",
                 "owner": "https://server.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor",
                 "publicKeyPem": "-----BEGIN PUBLIC KEY-----\nMFwwDQYJKoZIhvcNAQEBBQADSwAwSAJBAOIh58ZQbo45MuZvv1nMWAzTzN9oghNC\nbxJkFEFD1Y49LEeNHMk6GrPByUz8kn4y8Hf6brb+DVm7ZW4cdhOx1TsCAwEAAQ==\n-----END PUBLIC KEY-----\n",
+            },
+            "generator": {
+                "type": "Application",
+                "implements": [{
+                    "name": "RFC-9421: HTTP Message Signatures",
+                    "href": "https://datatracker.ietf.org/doc/html/rfc9421",
+                }],
             },
             "summary": "testbio",
             "manuallyApprovesFollowers": false,
@@ -505,6 +557,7 @@ mod tests {
                     "VerifiableIdentityStatement": "mitra:VerifiableIdentityStatement",
                     "MitraJcsEip191Signature2022": "mitra:MitraJcsEip191Signature2022",
                     "gateways": "mitra:gateways",
+                    "implements": "mitra:implements",
                     "proofValue": "sec:proofValue",
                     "proofPurpose": "sec:proofPurpose",
                 },
@@ -534,6 +587,10 @@ mod tests {
                 "owner": "https://server.example/actor",
                 "publicKeyPem": "-----BEGIN PUBLIC KEY-----\nMFwwDQYJKoZIhvcNAQEBBQADSwAwSAJBAOIh58ZQbo45MuZvv1nMWAzTzN9oghNC\nbxJkFEFD1Y49LEeNHMk6GrPByUz8kn4y8Hf6brb+DVm7ZW4cdhOx1TsCAwEAAQ==\n-----END PUBLIC KEY-----\n",
             },
+            "implements": [{
+                "name": "RFC-9421: HTTP Message Signatures",
+                "href": "https://datatracker.ietf.org/doc/html/rfc9421",
+            }],
             "manuallyApprovesFollowers": false,
         });
         assert_eq!(value, expected_value);

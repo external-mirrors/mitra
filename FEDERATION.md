@@ -43,6 +43,8 @@ It also supports the following standards:
   - Can consume `context` and `contextHistory`.
 - [FEP-3b86: Activity Intents](https://codeberg.org/fediverse/fep/src/branch/main/fep/3b86/fep-3b86.md)
   - Only `Object` intent is supported.
+- [FEP-844e: Capability discovery](https://codeberg.org/silverpill/feps/src/branch/main/844e/fep-844e.md)
+  - The `implements` property is used to signal RFC-9421 support.
 
 ### FEPs that might be supported in the future
 
