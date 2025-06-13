@@ -1,4 +1,5 @@
 use anyhow::Error;
+use apx_core::url::canonical::CanonicalUrl;
 use clap::Parser;
 
 use mitra_activitypub::{
@@ -6,6 +7,7 @@ use mitra_activitypub::{
 };
 use mitra_config::Config;
 use mitra_models::{
+    activitypub::helpers::get_object_ids,
     database::DatabaseClient,
     posts::queries::{
         delete_repost,
@@ -43,6 +45,25 @@ impl PruneReposts {
                 &repost,
             ).await?.save_and_enqueue(db_client).await?;
             println!("deleted repost of post {}", post.id);
+        };
+        Ok(())
+    }
+}
+
+#[derive(Parser)]
+pub struct CheckUris;
+
+impl CheckUris {
+    pub async fn execute(
+        &self,
+        _config: &Config,
+        db_client: &impl DatabaseClient,
+    ) -> Result<(), Error> {
+        let object_ids = get_object_ids(db_client).await?;
+        for object_id in object_ids {
+            if let Err(error) = CanonicalUrl::parse_canonical(&object_id) {
+                println!("invalid URI {object_id}: {error}");
+            };
         };
         Ok(())
     }

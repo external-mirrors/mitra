@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Implemented `/api/v1/statuses/{status_id}/favourited_by` API endpoint.
 - Implemented `/api/v1/pleroma/statuses/{status_id}/reactions` API endpoint.
 - Support delivering portable activities to followers.
+- Added `check-uris` command.
 
 ### Changed
 

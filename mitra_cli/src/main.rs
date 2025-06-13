@@ -71,6 +71,7 @@ async fn main() -> Result<(), Error> {
         SubCommand::ListLocalFiles(cmd) => cmd.execute(&config, db_client).await,
         SubCommand::DeleteOrphanedFiles(cmd) => cmd.execute(&config, db_client).await,
         SubCommand::ListUnreachableActors(cmd) => cmd.execute(&config, db_client).await,
+        SubCommand::CheckUris(cmd) => cmd.execute(&config, db_client).await,
         SubCommand::CreateMoneroWallet(cmd) => cmd.execute(&config).await,
         SubCommand::CreateMoneroSignature(cmd) => cmd.execute(&config).await,
         SubCommand::VerifyMoneroSignature(cmd) => cmd.execute(&config).await,

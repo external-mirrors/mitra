@@ -123,7 +123,7 @@ use crate::commands::{
     config::{GetConfig, UpdateConfig},
     filter::{AddFilterRule, ListFilterRules, RemoveFilterRule},
     post::CreatePost,
-    storage::PruneReposts,
+    storage::{CheckUris, PruneReposts},
 };
 
 /// Mitra admin CLI
@@ -172,6 +172,7 @@ pub enum SubCommand {
     ListLocalFiles(ListLocalFiles),
     DeleteOrphanedFiles(DeleteOrphanedFiles),
     ListUnreachableActors(ListUnreachableActors),
+    CheckUris(CheckUris),
     CreateMoneroWallet(CreateMoneroWallet),
     CreateMoneroSignature(CreateMoneroSignature),
     VerifyMoneroSignature(VerifyMoneroSignature),
