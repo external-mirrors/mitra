@@ -1,19 +1,5 @@
 use std::collections::HashMap;
 
-use futures::{
-    stream::FuturesUnordered,
-    StreamExt,
-};
-use serde::{
-    Deserialize,
-    Deserializer,
-    Serialize,
-    Serializer,
-    de::{Error as DeserializerError},
-    ser::{Error as _},
-};
-use serde_json::{Value as JsonValue};
-
 use apx_core::{
     crypto_eddsa::{
         ed25519_public_key_from_secret_key,
@@ -35,9 +21,21 @@ use apx_core::{
     },
     url::hostname::is_onion,
 };
-use apx_sdk::{
-    deliver::{send_object, DelivererError},
+use apx_sdk::deliver::{send_object, DelivererError};
+use futures::{
+    stream::FuturesUnordered,
+    StreamExt,
 };
+use serde::{
+    Deserialize,
+    Deserializer,
+    Serialize,
+    Serializer,
+    de::{Error as DeserializerError},
+    ser::{Error as _},
+};
+use serde_json::{Value as JsonValue};
+
 use mitra_config::Instance;
 use mitra_models::{
     profiles::types::{DbActor, PublicKeyType},

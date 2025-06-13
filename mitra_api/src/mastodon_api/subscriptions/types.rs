@@ -1,8 +1,8 @@
+use apx_core::caip2::ChainId;
 use chrono::{DateTime, Duration, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use apx_core::caip2::ChainId;
 use mitra_adapters::payments::monero::MONERO_INVOICE_TIMEOUT;
 use mitra_models::{
     invoices::types::{DbInvoice, InvoiceStatus},

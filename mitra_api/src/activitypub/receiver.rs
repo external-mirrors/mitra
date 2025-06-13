@@ -2,14 +2,14 @@ use actix_web::{
     http::Uri,
     HttpRequest,
 };
-use serde_json::{Value as JsonValue};
-
 use apx_core::{
     http_digest::ContentDigest,
     http_types::{header_map_adapter, method_adapter, uri_adapter},
     http_url_whatwg::get_hostname,
 };
 use apx_sdk::deserialization::object_to_id;
+use serde_json::{Value as JsonValue};
+
 use mitra_activitypub::{
     authentication::{
         verify_signed_activity,

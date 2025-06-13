@@ -9,11 +9,6 @@ use actix_web::{
     HttpResponse,
     Scope,
 };
-use log::Level;
-use serde::Deserialize;
-use serde_json::{Value as JsonValue};
-use uuid::Uuid;
-
 use apx_core::{
     ap_url::with_ap_prefix,
     caip2::ChainId,
@@ -27,6 +22,11 @@ use apx_sdk::{
     http_server::is_activitypub_request,
     utils::get_core_type,
 };
+use log::Level;
+use serde::Deserialize;
+use serde_json::{Value as JsonValue};
+use uuid::Uuid;
+
 use mitra_activitypub::{
     actors::builders::{
         build_instance_actor,

@@ -1,9 +1,8 @@
-use uuid::Uuid;
-
 use apx_core::{
     ap_url::is_ap_url,
     http_url_whatwg::get_hostname,
 };
+use uuid::Uuid;
 
 use crate::{
     database::DatabaseClient,

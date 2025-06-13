@@ -1,6 +1,16 @@
 use std::fmt;
 use std::num::NonZeroU64;
 
+use apx_core::{
+    ap_url::{is_ap_url, ApUrl},
+    caip2::ChainId,
+    crypto_eddsa::{
+        ed25519_public_key_from_secret_key,
+        Ed25519SecretKey,
+    },
+    did::Did,
+    did_key::DidKey,
+};
 use chrono::{DateTime, Utc};
 use postgres_types::FromSql;
 use serde::{
@@ -12,24 +22,15 @@ use serde::{
 use serde_json::{Value as JsonValue};
 use uuid::Uuid;
 
-use apx_core::{
-    ap_url::{is_ap_url, ApUrl},
-    caip2::ChainId,
-    crypto_eddsa::{
-        ed25519_public_key_from_secret_key,
-        Ed25519SecretKey,
+use crate::{
+    database::{
+        int_enum::{int_enum_from_sql, int_enum_to_sql},
+        json_macro::{json_from_sql, json_to_sql},
+        DatabaseTypeError,
     },
-    did::Did,
-    did_key::DidKey,
+    emojis::types::DbEmoji,
+    media::types::MediaInfo,
 };
-
-use crate::database::{
-    int_enum::{int_enum_from_sql, int_enum_to_sql},
-    json_macro::{json_from_sql, json_to_sql},
-    DatabaseTypeError,
-};
-use crate::emojis::types::DbEmoji;
-use crate::media::types::MediaInfo;
 
 use super::checks::{
     check_identity_proofs,

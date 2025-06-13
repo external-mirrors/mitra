@@ -1,6 +1,3 @@
-use serde::{Deserialize, Serialize};
-use serde_json::{Value as JsonValue};
-
 use apx_core::{
     crypto::common::PublicKey,
     crypto_eddsa::{
@@ -17,6 +14,8 @@ use apx_core::{
         RsaSerializationError,
     },
 };
+use serde::{Deserialize, Serialize};
+use serde_json::{Value as JsonValue};
 
 use mitra_models::profiles::types::{DbActorKey, PublicKeyType};
 use mitra_validators::{

@@ -1,8 +1,8 @@
+use apx_sdk::addresses::WebfingerAddress;
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use apx_sdk::addresses::WebfingerAddress;
 use mitra_activitypub::{
     builders::{
         follow::follow_or_create_request,

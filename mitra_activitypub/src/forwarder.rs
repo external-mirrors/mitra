@@ -1,6 +1,3 @@
-use serde::Deserialize;
-use serde_json::{Value as JsonValue};
-
 use apx_sdk::{
     constants::AP_PUBLIC,
     core::{
@@ -12,6 +9,9 @@ use apx_sdk::{
     deserialization::deserialize_into_id_array,
     utils::is_verification_method,
 };
+use serde::Deserialize;
+use serde_json::{Value as JsonValue};
+
 use mitra_config::Instance;
 use mitra_models::{
     database::{DatabaseClient, DatabaseError},

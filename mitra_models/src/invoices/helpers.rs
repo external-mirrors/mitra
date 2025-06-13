@@ -75,8 +75,8 @@ pub async fn remote_invoice_opened(
 
 #[cfg(test)]
 mod tests {
-    use serial_test::serial;
     use apx_core::caip2::ChainId;
+    use serial_test::serial;
     use crate::{
         database::test_utils::create_test_database,
         invoices::queries::{create_local_invoice, create_remote_invoice},

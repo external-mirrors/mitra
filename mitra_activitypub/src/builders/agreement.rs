@@ -1,6 +1,6 @@
+use apx_core::caip10::AccountId;
 use serde::Serialize;
 
-use apx_core::caip10::AccountId;
 use mitra_models::{
     database::DatabaseTypeError,
     invoices::types::DbInvoice,
@@ -113,8 +113,8 @@ pub fn build_agreement(
 #[cfg(test)]
 mod tests {
     use std::num::NonZeroU64;
-    use serde_json::json;
     use apx_core::caip2::ChainId;
+    use serde_json::json;
     use mitra_models::invoices::types::DbChainId;
     use super::*;
 

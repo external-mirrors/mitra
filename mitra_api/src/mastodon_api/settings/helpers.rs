@@ -1,6 +1,6 @@
+use apx_sdk::addresses::WebfingerAddress;
 use uuid::Uuid;
 
-use apx_sdk::addresses::WebfingerAddress;
 use mitra_models::{
     database::{
         DatabaseClient,

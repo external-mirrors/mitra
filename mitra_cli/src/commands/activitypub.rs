@@ -1,9 +1,6 @@
 use std::path::PathBuf;
 
 use anyhow::{anyhow, Error};
-use clap::Parser;
-use serde_json::{Value as JsonValue};
-
 use apx_sdk::{
     addresses::WebfingerAddress,
     authentication::verify_portable_object,
@@ -11,6 +8,9 @@ use apx_sdk::{
     jrd::JRD_MEDIA_TYPE,
     utils::{get_core_type, CoreType},
 };
+use clap::Parser;
+use serde_json::{Value as JsonValue};
+
 use mitra_activitypub::{
     agent::build_federation_agent,
     importers::{

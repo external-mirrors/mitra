@@ -1,6 +1,3 @@
-use serde::{Deserialize, Serialize};
-use serde_json::{Value as JsonValue};
-
 use apx_core::{
     json_signatures::{
         proofs::{
@@ -19,6 +16,9 @@ use apx_sdk::{
     constants::AP_MEDIA_TYPE,
     deserialization::deserialize_string_array,
 };
+use serde::{Deserialize, Serialize};
+use serde_json::{Value as JsonValue};
+
 use mitra_models::{
     profiles::types::{
         ExtraField,
@@ -305,8 +305,6 @@ pub fn parse_metadata_field(
 #[cfg(test)]
 mod tests {
     use std::num::NonZeroU64;
-    use chrono::Utc;
-    use serde_json::json;
     use apx_core::{
         caip2::ChainId,
         crypto_ecdsa::generate_ecdsa_key,
@@ -314,6 +312,8 @@ mod tests {
         did_pkh::DidPkh,
         eip191::{create_eip191_signature, ecdsa_public_key_to_address_hex},
     };
+    use chrono::Utc;
+    use serde_json::json;
     use crate::identity::{
         create_identity_claim_fep_c390,
         create_identity_proof_fep_c390,

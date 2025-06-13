@@ -1,8 +1,6 @@
+use apx_core::http_url::Hostname;
 use wildmatch::WildMatch;
 
-use apx_core::{
-    http_url::Hostname,
-};
 use mitra_config::Config;
 use mitra_models::{
     database::{DatabaseClient, DatabaseError, DatabaseTypeError},

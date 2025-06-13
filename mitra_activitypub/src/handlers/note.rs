@@ -1,14 +1,5 @@
 use std::collections::HashMap;
 
-use chrono::{DateTime, Utc};
-use serde::{
-    Deserialize,
-    Deserializer,
-    de::{Error as DeserializerError},
-};
-use serde_json::{Value as JsonValue};
-use uuid::Uuid;
-
 use apx_sdk::{
     addresses::WebfingerAddress,
     constants::{AP_MEDIA_TYPE, AP_PUBLIC, AS_MEDIA_TYPE},
@@ -23,6 +14,15 @@ use apx_sdk::{
     fetch::fetch_file,
     utils::is_public,
 };
+use chrono::{DateTime, Utc};
+use serde::{
+    Deserialize,
+    Deserializer,
+    de::{Error as DeserializerError},
+};
+use serde_json::{Value as JsonValue};
+use uuid::Uuid;
+
 use mitra_adapters::{
     permissions::filter_mentions,
     posts::check_post_limits,
@@ -1127,8 +1127,8 @@ pub async fn update_remote_post(
 
 #[cfg(test)]
 mod tests {
-    use serde_json::json;
     use apx_sdk::constants::AP_PUBLIC;
+    use serde_json::json;
     use mitra_models::profiles::types::DbActor;
     use super::*;
 

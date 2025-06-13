@@ -20,9 +20,9 @@ use actix_web::{
     HttpResponse,
     HttpServer,
 };
+use apx_core::http_url_whatwg::get_hostname;
 use log::Level;
 
-use apx_core::http_url_whatwg::get_hostname;
 use mitra_config::{Config, Environment};
 use mitra_models::database::DatabaseConnectionPool;
 use mitra_services::{

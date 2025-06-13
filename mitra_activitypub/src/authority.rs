@@ -10,6 +10,7 @@ use apx_core::{
     did_key::DidKey,
     url::canonical::GATEWAY_PATH_PREFIX,
 };
+
 use mitra_config::Instance;
 use mitra_models::users::types::User;
 

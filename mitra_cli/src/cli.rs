@@ -1,10 +1,6 @@
 use std::str::FromStr;
 
 use anyhow::{anyhow, Error};
-use clap::Parser;
-use log::Level;
-use uuid::Uuid;
-
 use apx_core::{
     crypto_eddsa::generate_ed25519_key,
     crypto_rsa::{
@@ -15,6 +11,10 @@ use apx_core::{
     media_type::sniff_media_type,
 };
 use apx_sdk::fetch::fetch_file;
+use clap::Parser;
+use log::Level;
+use uuid::Uuid;
+
 use mitra_activitypub::{
     agent::build_federation_agent,
     builders::{

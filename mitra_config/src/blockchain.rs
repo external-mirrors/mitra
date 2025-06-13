@@ -1,6 +1,5 @@
-use serde::{Deserialize, Serialize};
-
 use apx_core::caip2::ChainId;
+use serde::{Deserialize, Serialize};
 
 fn default_wallet_account_index() -> u32 { 0 }
 

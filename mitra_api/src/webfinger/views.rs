@@ -1,7 +1,5 @@
 // https://webfinger.net/
 use actix_web::{get, web, HttpResponse};
-use serde::Deserialize;
-
 use apx_sdk::{
     addresses::WebfingerAddress,
     core::url::common::Uri,
@@ -11,6 +9,8 @@ use apx_sdk::{
         JRD_MEDIA_TYPE,
     },
 };
+use serde::Deserialize;
+
 use mitra_activitypub::{
     identifiers::{
         local_actor_id,

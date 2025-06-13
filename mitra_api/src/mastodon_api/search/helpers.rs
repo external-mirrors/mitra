@@ -1,7 +1,5 @@
 use std::str::FromStr;
 
-use regex::Regex;
-
 use apx_core::{
     ap_url::is_ap_url,
     did::Did,
@@ -9,6 +7,8 @@ use apx_core::{
     url::hostname::encode_hostname,
 };
 use apx_sdk::addresses::WebfingerAddress;
+use regex::Regex;
+
 use mitra_activitypub::{
     errors::HandlerError,
     identifiers::parse_local_object_id,

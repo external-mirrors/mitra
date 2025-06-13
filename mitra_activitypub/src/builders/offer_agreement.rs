@@ -113,9 +113,9 @@ pub fn prepare_offer_agreement(
 #[cfg(test)]
 mod tests {
     use std::num::NonZeroU64;
+    use apx_core::caip2::ChainId;
     use serde_json::json;
     use uuid::uuid;
-    use apx_core::caip2::ChainId;
     use super::*;
 
     #[test]

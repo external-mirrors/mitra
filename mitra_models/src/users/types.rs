@@ -1,13 +1,6 @@
 use std::collections::HashMap;
 use std::fmt;
 
-use chrono::{DateTime, Utc};
-use postgres_types::FromSql;
-use serde::Deserialize;
-use serde_json::{Value as JsonValue};
-use tokio_postgres::Row;
-use uuid::Uuid;
-
 use apx_core::{
     crypto_eddsa::{
         ed25519_secret_key_from_bytes,
@@ -20,14 +13,22 @@ use apx_core::{
     },
     did::Did,
 };
+use chrono::{DateTime, Utc};
+use postgres_types::FromSql;
+use serde::Deserialize;
+use serde_json::{Value as JsonValue};
+use tokio_postgres::Row;
+use uuid::Uuid;
 
-use crate::database::{
-    int_enum::{int_enum_from_sql, int_enum_to_sql},
-    json_macro::json_from_sql,
-    DatabaseError,
-    DatabaseTypeError,
+use crate::{
+    database::{
+        int_enum::{int_enum_from_sql, int_enum_to_sql},
+        json_macro::json_from_sql,
+        DatabaseError,
+        DatabaseTypeError,
+    },
+    profiles::types::{get_identity_key, DbActorProfile},
 };
-use crate::profiles::types::{get_identity_key, DbActorProfile};
 
 #[allow(dead_code)]
 #[derive(FromSql)]

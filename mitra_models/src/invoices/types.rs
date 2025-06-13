@@ -1,3 +1,4 @@
+use apx_core::caip2::ChainId;
 use chrono::{DateTime, Utc};
 use postgres_protocol::types::{text_from_sql, text_to_sql};
 use postgres_types::{
@@ -10,8 +11,6 @@ use postgres_types::{
     Type,
 };
 use uuid::Uuid;
-
-use apx_core::caip2::ChainId;
 
 use crate::database::{
     int_enum::{int_enum_from_sql, int_enum_to_sql},

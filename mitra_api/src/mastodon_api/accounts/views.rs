@@ -17,9 +17,6 @@ use actix_web::{
     Scope,
 };
 use actix_web_httpauth::extractors::bearer::BearerAuth;
-use chrono::Utc;
-use uuid::Uuid;
-
 use apx_core::{
     caip2::ChainId,
     crypto_eddsa::generate_ed25519_key,
@@ -42,6 +39,9 @@ use apx_core::{
         parse_minisign_signature_file,
     },
 };
+use chrono::Utc;
+use uuid::Uuid;
+
 use mitra_activitypub::{
     builders::{
         follow::follow_or_create_request,

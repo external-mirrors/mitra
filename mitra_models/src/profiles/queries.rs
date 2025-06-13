@@ -1,28 +1,29 @@
-use chrono::{DateTime, Utc};
-use uuid::Uuid;
-
 use apx_core::{
     crypto_eddsa::Ed25519SecretKey,
     did::Did,
     did_pkh::DidPkh,
 };
+use chrono::{DateTime, Utc};
+use uuid::Uuid;
 
 use mitra_utils::{
     currencies::Currency,
     id::generate_ulid,
 };
 
-use crate::database::{
-    catch_unique_violation,
-    query_macro::query,
-    DatabaseClient,
-    DatabaseError,
-    DatabaseTypeError,
+use crate::{
+    database::{
+        catch_unique_violation,
+        query_macro::query,
+        DatabaseClient,
+        DatabaseError,
+        DatabaseTypeError,
+    },
+    emojis::types::DbEmoji,
+    instances::queries::create_instance,
+    media::types::DeletionQueue,
+    relationships::types::RelationshipType,
 };
-use crate::emojis::types::DbEmoji;
-use crate::instances::queries::create_instance;
-use crate::media::types::DeletionQueue;
-use crate::relationships::types::RelationshipType;
 
 use super::types::{
     get_identity_key,
@@ -994,12 +995,12 @@ pub async fn find_empty_profiles(
 
 #[cfg(test)]
 mod tests {
-    use serde_json::json;
-    use serial_test::serial;
     use apx_core::{
         caip2::ChainId,
         crypto_eddsa::generate_weak_ed25519_key,
     };
+    use serde_json::json;
+    use serial_test::serial;
     use crate::database::test_utils::create_test_database;
     use crate::emojis::{
         queries::create_or_update_local_emoji,

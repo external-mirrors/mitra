@@ -1,11 +1,3 @@
-use serde::{
-    Deserialize,
-    Deserializer,
-    de::{Error as DeserializerError},
-};
-use serde_json::{Value as JsonValue};
-use uuid::Uuid;
-
 use apx_core::{
     http_url::Hostname,
     http_url_whatwg::get_hostname,
@@ -23,6 +15,14 @@ use apx_sdk::{
     },
     fetch::fetch_file,
 };
+use serde::{
+    Deserialize,
+    Deserializer,
+    de::{Error as DeserializerError},
+};
+use serde_json::{Value as JsonValue};
+use uuid::Uuid;
+
 use mitra_config::MediaLimits;
 use mitra_models::{
     activitypub::queries::save_actor,

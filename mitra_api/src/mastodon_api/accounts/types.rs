@@ -5,15 +5,15 @@ use actix_multipart::form::{
     text::Text,
     MultipartForm,
 };
-use chrono::{DateTime, Utc};
-use serde::{Deserialize, Serialize};
-use uuid::Uuid;
-
 use apx_core::{
     base64,
     caip2::ChainId,
     did::Did,
 };
+use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
+use uuid::Uuid;
+
 use mitra_activitypub::identifiers::{
     profile_actor_id,
     profile_actor_url,

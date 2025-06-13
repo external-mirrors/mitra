@@ -1,6 +1,4 @@
 // https://codeberg.org/fediverse/fep/src/branch/main/fep/fe34/fep-fe34.md
-use serde_json::{Value as JsonValue};
-
 use apx_sdk::{
     core::{
         http_url::HttpUrl,
@@ -9,6 +7,8 @@ use apx_sdk::{
     deserialization::{object_to_id, parse_into_id_array},
     utils::CoreType,
 };
+use serde_json::{Value as JsonValue};
+
 use mitra_config::Instance;
 use mitra_validators::errors::ValidationError;
 

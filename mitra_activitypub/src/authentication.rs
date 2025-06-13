@@ -1,5 +1,3 @@
-use serde_json::{Value as JsonValue};
-
 use apx_core::{
     crypto::common::PublicKey,
     crypto_eddsa::{
@@ -45,6 +43,8 @@ use apx_sdk::{
     deserialization::object_to_id,
     utils::key_id_to_actor_id,
 };
+use serde_json::{Value as JsonValue};
+
 use mitra_config::Config;
 use mitra_models::{
     database::{DatabaseClient, DatabaseError},

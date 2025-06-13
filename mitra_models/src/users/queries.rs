@@ -1,13 +1,12 @@
-use chrono::{DateTime, Utc};
-use serde_json::{Value as JsonValue};
-use uuid::Uuid;
-
 use apx_core::{
     caip2::{Namespace as ChainNamespace},
     caip10::{AccountId as ChainAccountId},
     crypto_rsa::rsa_secret_key_to_pkcs1_der,
     did::Did,
 };
+use chrono::{DateTime, Utc};
+use serde_json::{Value as JsonValue};
+use uuid::Uuid;
 
 use crate::database::{
     catch_unique_violation,
@@ -614,12 +613,12 @@ pub async fn get_portable_user_by_outbox_id(
 
 #[cfg(test)]
 mod tests {
-    use serde_json::json;
-    use serial_test::serial;
     use apx_core::{
         crypto_eddsa::generate_weak_ed25519_key,
         crypto_rsa::generate_weak_rsa_key,
     };
+    use serde_json::json;
+    use serial_test::serial;
     use crate::{
         database::test_utils::create_test_database,
         profiles::types::{

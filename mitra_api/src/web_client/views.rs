@@ -8,12 +8,12 @@ use actix_web::{
     HttpResponse,
     Resource,
 };
-use uuid::Uuid;
-
 use apx_sdk::{
     core::http_types::header_map_adapter,
     http_server::is_activitypub_request,
 };
+use uuid::Uuid;
+
 use mitra_activitypub::identifiers::{post_object_id, profile_actor_id};
 use mitra_config::Config;
 use mitra_models::{

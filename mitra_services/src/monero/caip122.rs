@@ -1,16 +1,16 @@
 /// https://github.com/ChainAgnostic/CAIPs/blob/master/CAIPs/caip-122.md
 use std::str::FromStr;
 
+use apx_core::{
+    caip2::{ChainId, MoneroNetwork},
+    caip10::AccountId,
+};
 use chrono::{DateTime, Utc};
 use monero_rpc::monero::{
     network::Network,
     util::address::Error as AddressError,
 };
 
-use apx_core::{
-    caip2::{ChainId, MoneroNetwork},
-    caip10::AccountId,
-};
 use mitra_config::MoneroConfig;
 
 use super::utils::parse_monero_address;

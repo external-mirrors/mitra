@@ -1,5 +1,3 @@
-use log::Level;
-
 use apx_core::{
     crypto_eddsa::{
         ed25519_secret_key_from_bytes,
@@ -13,6 +11,8 @@ use apx_core::{
         RsaSecretKey,
     },
 };
+use log::Level;
+
 use mitra_config::{
     parse_config,
     Config,

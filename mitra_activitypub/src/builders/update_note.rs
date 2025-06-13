@@ -90,8 +90,8 @@ pub async fn prepare_update_note(
 
 #[cfg(test)]
 mod tests {
-    use chrono::Utc;
     use apx_sdk::constants::AP_PUBLIC;
+    use chrono::Utc;
     use mitra_models::{
         posts::types::RelatedPosts,
         profiles::types::DbActorProfile,

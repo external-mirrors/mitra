@@ -1,10 +1,10 @@
 use std::path::PathBuf;
 
 use anyhow::{anyhow, Error};
+use apx_core::media_type::sniff_media_type;
 use chrono::{DateTime, Utc};
 use clap::Parser;
 
-use apx_core::media_type::sniff_media_type;
 use mitra_adapters::posts::check_post_limits;
 use mitra_config::Config;
 use mitra_models::{

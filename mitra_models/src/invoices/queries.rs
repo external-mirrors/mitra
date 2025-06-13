@@ -1,6 +1,6 @@
+use apx_core::caip2::ChainId;
 use uuid::Uuid;
 
-use apx_core::caip2::ChainId;
 use mitra_utils::id::generate_ulid;
 
 use crate::database::{

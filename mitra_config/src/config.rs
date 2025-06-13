@@ -1,13 +1,12 @@
 use std::collections::HashMap;
 use std::path::PathBuf;
 
-use log::{Level as LogLevel};
-use serde::Deserialize;
-
 use apx_core::{
     crypto_eddsa::Ed25519SecretKey,
     crypto_rsa::RsaSecretKey,
 };
+use log::{Level as LogLevel};
+use serde::Deserialize;
 
 use super::authentication::{
     default_authentication_methods,

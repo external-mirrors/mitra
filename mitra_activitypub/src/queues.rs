@@ -1,14 +1,12 @@
 use std::collections::BTreeMap;
 use std::time::{Duration as StdDuration, Instant};
 
+use apx_core::http_url::HttpUrl;
+use apx_sdk::fetch::FetchError;
 use chrono::{Duration, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value as JsonValue};
 
-use apx_core::http_url::HttpUrl;
-use apx_sdk::{
-    fetch::FetchError,
-};
 use mitra_config::Config;
 use mitra_models::{
     activitypub::queries::{

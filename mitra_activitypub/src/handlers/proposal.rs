@@ -1,8 +1,8 @@
 use std::str::FromStr;
 
+use apx_core::caip19::AssetType;
 use serde::Deserialize;
 
-use apx_core::caip19::AssetType;
 use mitra_models::{
     profiles::types::PaymentOption,
 };
@@ -115,8 +115,8 @@ pub fn parse_proposal(
 
 #[cfg(test)]
 mod tests {
-    use serde_json::json;
     use apx_core::caip2::ChainId;
+    use serde_json::json;
     use super::*;
 
     #[test]

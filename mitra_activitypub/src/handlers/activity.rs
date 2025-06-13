@@ -1,8 +1,8 @@
 use std::fmt;
 
+use apx_sdk::deserialization::object_to_id;
 use serde_json::{Value as JsonValue};
 
-use apx_sdk::deserialization::object_to_id;
 use mitra_config::Config;
 use mitra_models::{
     activitypub::queries::{

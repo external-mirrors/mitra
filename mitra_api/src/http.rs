@@ -18,10 +18,9 @@ use actix_web::{
     Either,
     HttpRequest,
 };
+use apx_core::url::hostname::encode_hostname;
 use log::Level;
 use serde_qs::actix::{QsForm, QsQuery};
-
-use apx_core::url::hostname::encode_hostname;
 
 use crate::{
     errors::HttpError,

@@ -1,6 +1,3 @@
-use regex::Regex;
-use uuid::Uuid;
-
 use apx_core::{
     caip2::ChainId,
     url::{
@@ -8,9 +5,10 @@ use apx_core::{
         common::url_encode,
     },
 };
-use apx_sdk::{
-    identifiers::parse_object_id,
-};
+use apx_sdk::identifiers::parse_object_id;
+use regex::Regex;
+use uuid::Uuid;
+
 use mitra_models::{
     database::DatabaseTypeError,
     posts::types::Post,
