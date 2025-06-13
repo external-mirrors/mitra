@@ -9,7 +9,7 @@
 //! - WebFinger.
 //! - Nomadic identity.
 //!
-//! Using in a Cargo Project:
+//! Using in a Cargo project:
 //!
 //! ```toml
 //! [dependencies]
