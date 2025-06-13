@@ -617,6 +617,7 @@ pub struct RelationshipQueryParams {
     pub id: Vec<Uuid>,
 }
 
+// https://docs.joinmastodon.org/entities/Relationship/
 #[derive(Serialize)]
 pub struct RelationshipMap {
     pub id: Uuid, // target ID
@@ -633,6 +634,11 @@ pub struct RelationshipMap {
     pub muting_notifications: bool,
     pub blocking: bool,
     pub blocked_by: bool,
+    pub domain_blocking: bool,
+    pub notifying: bool,
+    pub endorsed: bool,
+    pub languages: Vec<String>,
+    pub note: String,
 }
 
 fn default_showing_reblogs() -> bool { true }
@@ -656,6 +662,11 @@ impl Default for RelationshipMap {
             muting_notifications: false,
             blocking: false,
             blocked_by: false,
+            domain_blocking: false,
+            notifying: false,
+            endorsed: false,
+            languages: vec![],
+            note: "".to_owned(),
         }
     }
 }
