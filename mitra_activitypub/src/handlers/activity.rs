@@ -146,7 +146,7 @@ pub async fn handle_activity(
     if let Some(descriptor) = maybe_descriptor {
         let is_new_activity = save_activity(
             db_client,
-            &canonical_activity_id.to_string(),
+            &canonical_activity_id,
             &activity_clone,
         ).await?;
         let recipients = get_activity_recipients(

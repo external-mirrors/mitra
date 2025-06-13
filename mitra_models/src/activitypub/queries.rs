@@ -1,3 +1,4 @@
+use apx_core::url::canonical::CanonicalUrl;
 use chrono::{DateTime, Utc};
 use serde_json::{Value as JsonValue};
 use uuid::Uuid;
@@ -9,7 +10,7 @@ use crate::database::{
 
 pub async fn save_activity(
     db_client: &impl DatabaseClient,
-    activity_id: &str,
+    activity_id: &CanonicalUrl,
     activity: &JsonValue,
 ) -> Result<bool, DatabaseError> {
     // Never overwrite existing object
@@ -24,7 +25,7 @@ pub async fn save_activity(
         ON CONFLICT (object_id)
         DO NOTHING
         ",
-        &[&activity_id, &activity],
+        &[&activity_id.to_string(), &activity],
     ).await?;
     let is_new = inserted_count > 0;
     Ok(is_new)
@@ -218,7 +219,8 @@ mod tests {
     #[serial]
     async fn test_save_activity() {
         let db_client = &create_test_database().await;
-        let canonical_id = "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/activities/1";
+        let activity_id = "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/activities/1";
+        let canonical_activity_id = CanonicalUrl::parse_canonical(activity_id).unwrap();
         let activity = json!({
             "id": "https://social.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/activities/1",
             "actor": "https://social.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor",
@@ -228,14 +230,14 @@ mod tests {
         // Create
         let is_new = save_activity(
             db_client,
-            canonical_id,
+            &canonical_activity_id,
             &activity,
         ).await.unwrap();
         assert!(is_new);
         // Update
         let is_new = save_activity(
             db_client,
-            canonical_id,
+            &canonical_activity_id,
             &activity,
         ).await.unwrap();
         assert!(!is_new);
@@ -326,6 +328,7 @@ mod tests {
     async fn test_get_object_as_target() {
         let db_client = &create_test_database().await;
         let activity_id = "https://social.example/activities/123";
+        let canonical_activity_id = CanonicalUrl::parse_canonical(activity_id).unwrap();
         let target_id = "https://social.example/users/2";
         let activity = json!({
             "id": activity_id,
@@ -334,7 +337,11 @@ mod tests {
             "object": "https://social.example/objects/321",
             "to": [target_id],
         });
-        save_activity(db_client, activity_id, &activity).await.unwrap();
+        save_activity(
+            db_client,
+            &canonical_activity_id,
+            &activity,
+        ).await.unwrap();
         let activity_found = get_object_as_target(
             db_client,
             activity_id,
@@ -360,28 +367,29 @@ mod tests {
             canonical_actor_id,
         ).await;
         // Create activity
-        let canonical_activity_id = "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/activities/321";
+        let activity_id = "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/activities/321";
+        let canonical_activity_id = CanonicalUrl::parse_canonical(activity_id).unwrap();
         let activity = json!({
             "id": "https://social.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/activities/321",
             "type": "Create",
             "actor": "https://social.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor",
             "object": "https://social.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/objects/321",
         });
-        save_activity(db_client, canonical_activity_id, &activity).await.unwrap();
+        save_activity(db_client, &canonical_activity_id, &activity).await.unwrap();
         // Add to collection
         let canonical_collection_id = "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor/outbox";
         add_object_to_collection(
             db_client,
             user.id,
             canonical_collection_id,
-            canonical_activity_id,
+            &canonical_activity_id.to_string(),
         ).await.unwrap();
         // Re-add
         add_object_to_collection(
             db_client,
             user.id,
             canonical_collection_id,
-            canonical_activity_id,
+            &canonical_activity_id.to_string(),
         ).await.unwrap();
         // Read collection
         let items = get_collection_items(

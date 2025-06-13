@@ -295,7 +295,7 @@ impl OutgoingActivityJobData {
             .map_err(|_| DatabaseTypeError)?;
         save_activity(
             db_client,
-            &canonical_activity_id.to_string(),
+            &canonical_activity_id,
             &self.activity,
         ).await?;
         // Immediately put into inbox if recipient is local
