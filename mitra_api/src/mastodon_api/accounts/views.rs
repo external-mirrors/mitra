@@ -39,6 +39,7 @@ use apx_core::{
         parse_minisign_signature_file,
     },
 };
+use apx_sdk::addresses::WebfingerAddress;
 use chrono::Utc;
 use uuid::Uuid;
 
@@ -576,7 +577,16 @@ async fn lookup_acct(
     query_params: web::Query<LookupAcctQueryParams>,
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &**get_database_client(&db_pool).await?;
-    let profile = get_profile_by_acct(db_client, &query_params.acct).await?;
+    let local_hostname = config.instance().hostname();
+    let address =  if query_params.acct.contains('@') {
+        query_params.acct.clone()
+    } else {
+        format!("{}@{}", query_params.acct, local_hostname)
+    };
+    let acct = WebfingerAddress::parse(&address)
+        .map_err(|error| ValidationError(error.message()))?
+        .acct(&local_hostname);
+    let profile = get_profile_by_acct(db_client, &acct).await?;
     let base_url = get_request_base_url(connection_info);
     let media_server = ClientMediaServer::new(&config, &base_url);
     let account = Account::from_profile(

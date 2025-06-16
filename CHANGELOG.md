@@ -23,6 +23,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Include file size limit in error message when uploaded file is too big.
 - Replaced DID context with CID context in actor objects.
 - Increased maximum number of poll options to 15.
+- Support calling `/api/v1/accounts/lookup` with full local address.
 
 ### Removed
 
