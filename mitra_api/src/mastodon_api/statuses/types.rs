@@ -72,10 +72,10 @@ impl Tag {
 
 #[derive(Serialize)]
 struct PleromaEmojiReaction {
-    count: i32,
-    me: bool,
     name: String,
     url: Option<String>,
+    count: i32,
+    me: bool,
 }
 
 /// https://docs-develop.pleroma.social/backend/development/API/differences_in_mastoapi_responses/#statuses
@@ -205,16 +205,16 @@ impl Status {
             };
             let maybe_custom_emoji = reaction.emoji
                 .map(|emoji| CustomEmoji::from_db(media_server, emoji));
+            let reacted = post.actions.as_ref()
+                .is_some_and(|actions| actions.reacted_with.contains(&content));
             let reaction = PleromaEmojiReaction {
-                count: reaction.count,
-                me: post.actions.as_ref().is_some_and(|actions| {
-                    actions.reacted_with.contains(&content)
-                }),
                 // Emoji name or emoji symbol
                 name: maybe_custom_emoji.as_ref()
                     .map(|emoji| emoji.shortcode.clone())
                     .unwrap_or(content),
                 url: maybe_custom_emoji.map(|emoji| emoji.url),
+                count: reaction.count,
+                me: reacted,
             };
             emoji_reactions.push(reaction);
         };

@@ -37,10 +37,10 @@ use crate::relationships::types::RelationshipType;
 use super::types::{
     DbLanguage,
     DbPost,
-    DbPostReactions,
     Post,
     PostContext,
     PostCreateData,
+    PostReaction,
     PostUpdateData,
     Repost,
     Visibility,
@@ -185,7 +185,7 @@ async fn create_post_emojis(
 pub async fn get_post_reactions(
     db_client: &impl DatabaseClient,
     post_id: Uuid,
-) -> Result<Vec<DbPostReactions>, DatabaseError> {
+) -> Result<Vec<PostReaction>, DatabaseError> {
     let statement = format!(
         "
         SELECT {related_reactions}
@@ -199,7 +199,7 @@ pub async fn get_post_reactions(
         &[&post_id],
     ).await?;
     let row = maybe_row.ok_or(DatabaseError::NotFound("post"))?;
-    let reactions: Vec<DbPostReactions> = row.try_get("reactions")?;
+    let reactions: Vec<PostReaction> = row.try_get("reactions")?;
     Ok(reactions)
 }
 
@@ -611,10 +611,9 @@ const RELATED_REACTIONS: &str = "
     ARRAY(
         SELECT
             json_build_object(
-                'authors', array_agg(post_reaction.author_id),
-                'count', count(post_reaction),
                 'content', post_reaction.content,
-                'emoji', (array_agg(emoji))[1]
+                'emoji', (array_agg(emoji))[1],
+                'count', count(post_reaction)
             )
         FROM post_reaction
         LEFT JOIN emoji

@@ -174,14 +174,13 @@ pub struct DbPost {
 }
 
 #[derive(Clone, Deserialize)]
-pub struct DbPostReactions {
-    pub authors: Vec<Uuid>,
-    pub count: i32,
+pub struct PostReaction {
     pub content: Option<String>,
     pub emoji: Option<DbEmoji>,
+    pub count: i32,
 }
 
-json_from_sql!(DbPostReactions);
+json_from_sql!(PostReaction);
 
 // List of user's actions
 #[derive(Clone)]
@@ -222,7 +221,7 @@ pub struct Post {
     pub tags: Vec<String>,
     pub links: Vec<Uuid>,
     pub emojis: Vec<DbEmoji>,
-    pub reactions: Vec<DbPostReactions>,
+    pub reactions: Vec<PostReaction>,
     pub url: Option<String>,
     pub object_id: Option<String>,
     pub ipfs_cid: Option<String>,
@@ -249,7 +248,7 @@ impl Post {
         db_tags: Vec<String>,
         db_links: Vec<Uuid>,
         db_emojis: Vec<DbEmoji>,
-        db_reactions: Vec<DbPostReactions>,
+        db_reactions: Vec<PostReaction>,
     ) -> Result<Self, DatabaseTypeError> {
         // Consistency checks
         if db_post.author_id != db_author.id {
@@ -432,7 +431,7 @@ impl TryFrom<&Row> for Post {
         let db_tags: Vec<String> = row.try_get("tags")?;
         let db_links: Vec<Uuid> = row.try_get("links")?;
         let db_emojis: Vec<DbEmoji> = row.try_get("emojis")?;
-        let db_reactions: Vec<DbPostReactions> = row.try_get("reactions")?;
+        let db_reactions: Vec<PostReaction> = row.try_get("reactions")?;
         let post = Self::new(
             db_post,
             db_profile,

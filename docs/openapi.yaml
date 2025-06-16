@@ -3578,12 +3578,6 @@ components:
                 description: Emoji reaction.
                 type: object
                 properties:
-                  me:
-                    description: Has current user reacted with this emoji?
-                    type: boolean
-                  count:
-                    description: The total number of reactions of this type.
-                    type: number
                   name:
                     description: The emoji name.
                     type: string
@@ -3591,6 +3585,12 @@ components:
                     description: A link to the custom emoji.
                     type: string
                     nullable: true
+                  count:
+                    description: The total number of reactions of this type.
+                    type: number
+                  me:
+                    description: Has current user reacted with this emoji?
+                    type: boolean
               example: []
             in_reply_to_account_acct:
               description: The acct attribute of the user that authored the post being replied to.

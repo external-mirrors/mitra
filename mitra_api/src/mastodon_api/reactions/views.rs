@@ -25,7 +25,7 @@ use mitra_models::{
     posts::{
         helpers::get_post_by_id_for_view,
         queries::get_post_reactions,
-        types::{DbPostReactions, Visibility},
+        types::{PostReaction, Visibility},
     },
     reactions::{
         queries::{
@@ -78,7 +78,7 @@ async fn create_reaction_view(
         let emoji_name = clean_emoji_name(&content);
         // Find most popular reaction with matching content
         let maybe_emoji = post.reactions.iter()
-            .fold(None, |result: Option<&DbPostReactions>, item| {
+            .fold(None, |result: Option<&PostReaction>, item| {
                 if item.content == Some(emoji_shortcode(emoji_name)) &&
                     (result.is_none() || item.count > result.map_or(0, |val| val.count))
                 {
