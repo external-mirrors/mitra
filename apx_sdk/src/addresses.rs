@@ -35,6 +35,19 @@ impl WebfingerAddress {
         }
     }
 
+    /// Parses WebFinger address
+    pub fn parse(value: &str) -> Result<Self, WebfingerAddressError> {
+         let address_re = Regex::new(WEBFINGER_ADDRESS_RE)
+            .expect("regexp should be valid");
+        let caps = address_re.captures(value)
+            .ok_or(WebfingerAddressError("invalid webfinger address"))?;
+        let address = Self::new_unchecked(
+            &caps["username"],
+            &caps["hostname"],
+        );
+        Ok(address)
+    }
+
     pub fn username(&self) -> &str {
         &self.username
     }
@@ -96,15 +109,7 @@ impl FromStr for WebfingerAddress {
     type Err = WebfingerAddressError;
 
     fn from_str(value: &str) -> Result<Self, Self::Err> {
-        let address_re = Regex::new(WEBFINGER_ADDRESS_RE)
-            .expect("regexp should be valid");
-        let caps = address_re.captures(value)
-            .ok_or(WebfingerAddressError("invalid webfinger address"))?;
-        let address = Self::new_unchecked(
-            &caps["username"],
-            &caps["hostname"],
-        );
-        Ok(address)
+        Self::parse(value)
     }
 }
 
@@ -155,7 +160,7 @@ mod tests {
     #[test]
     fn test_address_parse() {
         let value = "user_1@example.com";
-        let address = value.parse::<WebfingerAddress>().unwrap();
+        let address = WebfingerAddress::parse(value).unwrap();
         assert_eq!(address.username, "user_1");
         assert_eq!(address.hostname, "example.com");
         assert_eq!(address.to_string(), value);
@@ -164,7 +169,7 @@ mod tests {
     #[test]
     fn test_address_parse_percent_encoded() {
         let value = "did%3Aexample%3A12-34@social.example";
-        let address = value.parse::<WebfingerAddress>().unwrap();
+        let address = WebfingerAddress::parse(value).unwrap();
         assert_eq!(address.username, "did%3Aexample%3A12-34");
         assert_eq!(address.hostname, "social.example");
         assert_eq!(address.to_string(), value);
@@ -173,7 +178,7 @@ mod tests {
     #[test]
     fn test_address_parse_ipv4() {
         let value = "admin@127.0.0.1";
-        let address = value.parse::<WebfingerAddress>().unwrap();
+        let address = WebfingerAddress::parse(value).unwrap();
         assert_eq!(address.username, "admin");
         assert_eq!(address.hostname, "127.0.0.1");
         assert_eq!(address.to_string(), value);
@@ -182,7 +187,7 @@ mod tests {
     #[test]
     fn test_address_parse_ipv6() {
         let value = "admin@[319:3cf0:dd1d:47b9:20c:29ff:fe2c:39be]";
-        let address = value.parse::<WebfingerAddress>().unwrap();
+        let address = WebfingerAddress::parse(value).unwrap();
         assert_eq!(address.username, "admin");
         assert_eq!(address.hostname, "[319:3cf0:dd1d:47b9:20c:29ff:fe2c:39be]");
         assert_eq!(address.to_string(), value);
@@ -191,35 +196,35 @@ mod tests {
     #[test]
     fn test_parse_unicode_username() {
         let value = "δοκιμή@social.example";
-        let error = value.parse::<WebfingerAddress>().err().unwrap();
+        let error = WebfingerAddress::parse(value).err().unwrap();
         assert_eq!(error.0, "invalid webfinger address");
     }
 
     #[test]
     fn test_address_parse_idn() {
         let value = "user_1@bücher.example";
-        let error = value.parse::<WebfingerAddress>().err().unwrap();
+        let error = WebfingerAddress::parse(value).err().unwrap();
         assert_eq!(error.0, "invalid webfinger address");
     }
 
     #[test]
     fn test_address_parse_ipv4_with_port() {
         let value = "admin@127.0.0.1:8000";
-        let error = value.parse::<WebfingerAddress>().err().unwrap();
+        let error = WebfingerAddress::parse(value).err().unwrap();
         assert_eq!(error.0, "invalid webfinger address");
     }
 
     #[test]
     fn test_address_parse_ipv6_no_brackets() {
         let value = "admin@319:3cf0:dd1d:47b9:20c:29ff:fe2c:39be";
-        let error = value.parse::<WebfingerAddress>().err().unwrap();
+        let error = WebfingerAddress::parse(value).err().unwrap();
         assert_eq!(error.0, "invalid webfinger address");
     }
 
     #[test]
     fn test_address_parse_handle() {
         let handle = "@user_1@example.com";
-        let result = handle.parse::<WebfingerAddress>();
+        let result = WebfingerAddress::parse(handle);
         assert_eq!(result.is_err(), true);
     }
 
@@ -263,7 +268,7 @@ mod tests {
     #[test]
     fn test_address_endpoint_uri() {
         let value = "user_1@social.example";
-        let address: WebfingerAddress = value.parse().unwrap();
+        let address = WebfingerAddress::parse(value).unwrap();
         let endpoint_uri = address.endpoint_uri();
         assert_eq!(
             endpoint_uri,
@@ -274,7 +279,7 @@ mod tests {
     #[test]
     fn test_address_endpoint_uri_yggdrasil() {
         let value = "admin@[319:3cf0:dd1d:47b9:20c:29ff:fe2c:39be]";
-        let address = value.parse::<WebfingerAddress>().unwrap();
+        let address = WebfingerAddress::parse(value).unwrap();
         let endpoint_uri = address.endpoint_uri();
         assert_eq!(
             endpoint_uri,
