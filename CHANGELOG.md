@@ -24,6 +24,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Replaced DID context with CID context in actor objects.
 - Increased maximum number of poll options to 15.
 - Support calling `/api/v1/accounts/lookup` with full local address.
+- Return empty array to unauthenticated users when they call `/api/v1/statuses/{status_id}/reblogged_by`.
+- Allow authenticated users to access reposts using `/api/v1/statuses/{status_id}/reblogged_by`.
 
 ### Removed
 
@@ -44,7 +46,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Support SHA-512 content digests.
 - Support verification of signed requests with `Content-Digest` header.
 - Verify RFC-9421 signatures.
-- Implemented `/api/v1/{status_id}/reblogged_by` API endpoint.
+- Implemented `/api/v1/statuses/{status_id}/reblogged_by` API endpoint.
 
 ### Changed
 

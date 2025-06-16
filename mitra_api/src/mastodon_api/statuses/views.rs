@@ -877,7 +877,7 @@ async fn unreblog(
 // https://docs.joinmastodon.org/methods/statuses/#reblogged_by
 #[get("/{status_id}/reblogged_by")]
 async fn get_reblogged_by(
-    auth: BearerAuth,
+    maybe_auth: Option<BearerAuth>,
     config: web::Data<Config>,
     connection_info: ConnectionInfo,
     db_pool: web::Data<DatabaseConnectionPool>,
@@ -886,13 +886,18 @@ async fn get_reblogged_by(
     params: web::Query<RebloggedByQueryParams>,
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &**get_database_client(&db_pool).await?;
-    let current_user = get_current_user(db_client, auth.token()).await?;
+    let maybe_current_user = if let Some(auth) = maybe_auth {
+        let current_user = get_current_user(db_client, auth.token()).await?;
+        Some(current_user)
+    } else {
+        None
+    };
     let post = get_post_by_id_for_view(
         db_client,
-        Some(&current_user.profile),
+        maybe_current_user.as_ref().map(|user| &user.profile),
         *status_id,
     ).await?;
-    let reposts = if post.author.id == current_user.id {
+    let reposts = if let Some(current_user) = maybe_current_user {
         get_post_reposts(
             db_client,
             post.id,
@@ -901,6 +906,7 @@ async fn get_reblogged_by(
             params.limit.inner(),
         ).await?
     } else {
+        // Never show reposts to unauthenticated users
         vec![]
     };
     let maybe_last_id = get_last_item(&reposts, &params.limit)
