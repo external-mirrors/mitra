@@ -15,11 +15,11 @@ use crate::{
     contexts::{build_default_context, Context},
     deliverer::Recipient,
     identifiers::{
+        compatible_post_object_id,
         compatible_profile_actor_id,
         local_activity_id,
         local_actor_id,
         local_object_id,
-        post_object_id,
     },
     queues::OutgoingActivityJobData,
     vocabulary::{DISLIKE, EMOJI_REACT, LIKE},
@@ -135,7 +135,7 @@ pub async fn prepare_like(
         &instance.url(),
         post,
     ).await?;
-    let object_id = post_object_id(&instance.url(), post);
+    let object_id = compatible_post_object_id(&instance.url(), post);
     let post_author_id =
         compatible_profile_actor_id(&instance.url(), &post.author);
     let activity = build_like(

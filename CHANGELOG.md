@@ -37,6 +37,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Don't parse `#1` as a hashtag.
 - Added missing attributes to Mastodon API `Relationship` entity.
+- Use compatible `object` ID when generating `Like` activity for portable object.
 
 ## [4.4.0] - 2025-06-05
 
