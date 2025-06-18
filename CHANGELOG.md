@@ -29,6 +29,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Support calling `/api/v1/accounts/lookup` with full local address.
 - Return empty array to unauthenticated users when they call `/api/v1/statuses/{status_id}/reblogged_by`.
 - Allow authenticated users to access reposts using `/api/v1/statuses/{status_id}/reblogged_by`.
+- Make `/oauth/revoke` API endpoint accept form data.
 
 ### Removed
 

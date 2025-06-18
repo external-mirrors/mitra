@@ -273,14 +273,14 @@ async fn token_view(
 async fn revoke_token_view(
     auth: BearerAuth,
     db_pool: web::Data<DatabaseConnectionPool>,
-    request_data: web::Json<RevocationRequest>,
+    request_data: FormOrJson<RevocationRequest>,
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &mut **get_database_client(&db_pool).await?;
     let current_user = get_current_user(db_client, auth.token()).await?;
     match delete_oauth_token(
         db_client,
         current_user.id,
-        &request_data.token,
+        &request_data.into_inner().token,
     ).await {
         Ok(_) => (),
         Err(DatabaseError::NotFound(_)) => return Err(MastodonError::PermissionError),
