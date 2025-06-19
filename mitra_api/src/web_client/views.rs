@@ -14,7 +14,10 @@ use apx_sdk::{
 };
 use uuid::Uuid;
 
-use mitra_activitypub::identifiers::{post_object_id, profile_actor_id};
+use mitra_activitypub::identifiers::{
+    compatible_post_object_id,
+    compatible_profile_actor_id,
+};
 use mitra_config::Config;
 use mitra_models::{
     database::{
@@ -104,7 +107,7 @@ async fn profile_page_redirect_view(
 ) -> Result<HttpResponse, HttpError> {
     let db_client = &**get_database_client(&db_pool).await?;
     let profile = get_profile_by_acct(db_client, &acct).await?;
-    let actor_id = profile_actor_id(&config.instance_url(), &profile);
+    let actor_id = compatible_profile_actor_id(&config.instance_url(), &profile);
     let response = HttpResponse::Found()
         .append_header(("Location", actor_id))
         .finish();
@@ -165,7 +168,7 @@ async fn post_page_redirect_view(
 ) -> Result<HttpResponse, HttpError> {
     let db_client = &**get_database_client(&db_pool).await?;
     let post = get_post_by_id(db_client, *post_id).await?;
-    let object_id = post_object_id(&config.instance_url(), &post);
+    let object_id = compatible_post_object_id(&config.instance_url(), &post);
     let response = HttpResponse::Found()
         .append_header(("Location", object_id))
         .finish();
