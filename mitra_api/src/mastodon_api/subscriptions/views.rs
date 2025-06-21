@@ -19,7 +19,10 @@ use mitra_activitypub::{
         update_person::prepare_update_person,
     },
 };
-use mitra_adapters::payments::subscriptions::create_or_update_local_subscription;
+use mitra_adapters::payments::subscriptions::{
+    create_or_update_local_subscription,
+    validate_subscription_price,
+};
 use mitra_config::Config;
 use mitra_models::{
     database::{get_database_client, DatabaseConnectionPool},
@@ -164,6 +167,7 @@ async fn register_subscription_option(
             };
             let price: NonZeroU64 = price.try_into()
                 .map_err(|_| ValidationError("price must be greater than 0"))?;
+            validate_subscription_price(price)?;
             validate_monero_address(&payout_address)
                 .map_err(|_| ValidationError("invalid monero address"))?;
             let payment_option = PaymentOption::monero_subscription(
