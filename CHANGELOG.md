@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+
+- Add `payment_amount_min` parameter to `chain_metadata` entity in `/api/v1/instance` response.
+
 ### Changed
 
 - Write message to log before forwarding payment.

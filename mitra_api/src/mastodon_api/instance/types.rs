@@ -1,7 +1,10 @@
 use serde::Serialize;
-use serde_json::{json, Value};
+use serde_json::{to_value, Value as JsonValue};
 
-use mitra_adapters::dynamic_config::DynamicConfig;
+use mitra_adapters::{
+    dynamic_config::DynamicConfig,
+    payments::subscriptions::MONERO_PAYMENT_AMOUNT_MIN,
+};
 use mitra_config::{
     AuthenticationMethod,
     BlockchainConfig,
@@ -91,6 +94,12 @@ struct AllowUnauthenticated {
 }
 
 #[derive(Serialize)]
+struct MoneroInfo {
+    description: Option<String>,
+    payment_amount_min: u64,
+}
+
+#[derive(Serialize)]
 struct BlockchainFeatures {
     subscriptions: bool,
 }
@@ -98,7 +107,7 @@ struct BlockchainFeatures {
 #[derive(Serialize)]
 struct BlockchainInfo {
     chain_id: String,
-    chain_metadata: Option<Value>,
+    chain_metadata: Option<JsonValue>,
     features: BlockchainFeatures,
 }
 
@@ -199,9 +208,14 @@ impl InstanceInfo {
                 };
                 let maybe_chain_metadata = monero_config
                     .chain_metadata.as_ref()
-                    .and_then(|metadata| metadata.description.as_ref())
-                    .map(|text| markdown_to_html(text))
-                    .map(|html| json!({"description": html}));
+                    .map(|metadata| {
+                        let monero_info = MoneroInfo {
+                            description: metadata.description.as_ref()
+                                .map(|text| markdown_to_html(text)),
+                            payment_amount_min: MONERO_PAYMENT_AMOUNT_MIN,
+                        };
+                        to_value(monero_info).expect("should be serializable")
+                    });
                 BlockchainInfo {
                     chain_id: monero_config.chain_id.to_string(),
                     chain_metadata: maybe_chain_metadata,
