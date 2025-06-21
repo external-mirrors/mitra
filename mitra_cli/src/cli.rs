@@ -426,7 +426,7 @@ impl DeletePost {
 /// Add custom emoji to local collection
 #[derive(Parser)]
 pub struct AddEmoji {
-    name: String,
+    emoji_name: String,
     /// File path or URL
     location: String,
 }
@@ -437,7 +437,7 @@ impl AddEmoji {
         config: &Config,
         db_client: &mut impl DatabaseClient,
     ) -> Result<(), Error> {
-        if validate_emoji_name(&self.name).is_err() {
+        if validate_emoji_name(&self.emoji_name).is_err() {
             println!("invalid emoji name");
             return Ok(());
         };
@@ -474,7 +474,7 @@ impl AddEmoji {
         let image = EmojiImage::from(MediaInfo::local(file_info));
         let (_, deletion_queue) = create_or_update_local_emoji(
             db_client,
-            &self.name,
+            &self.emoji_name,
             image,
         ).await?;
         deletion_queue.into_job(db_client).await?;
@@ -483,7 +483,7 @@ impl AddEmoji {
     }
 }
 
-/// Import custom emoji from another instance
+/// Copy cached custom emoji to local collection
 #[derive(Parser)]
 pub struct ImportEmoji {
     emoji_name: String,

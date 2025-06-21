@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Fixed
 
 - Use compatible object IDs for web client redirections.
+- Fixed description of `import-emoji` command.
 
 ## [4.5.0] - 2025-06-18
 
