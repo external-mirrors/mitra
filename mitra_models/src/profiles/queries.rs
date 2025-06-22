@@ -429,24 +429,45 @@ pub async fn get_profile_by_acct(
     Ok(profile)
 }
 
+pub enum ProfileOrder {
+    Active,
+    Username,
+}
+
 pub async fn get_profiles_paginated(
     db_client: &impl DatabaseClient,
     only_local: bool,
+    order: ProfileOrder,
     offset: u16,
     limit: u16,
 ) -> Result<Vec<DbActorProfile>, DatabaseError> {
-    let condition = if only_local {
-        "WHERE (user_id IS NOT NULL OR portable_user_id IS NOT NULL)"
-    } else { "" };
+    let mut join = "".to_owned();
+    let mut condition = "".to_owned();
+    let mut order_by = "".to_owned();
+    if only_local {
+        condition += "WHERE (user_id IS NOT NULL OR portable_user_id IS NOT NULL)";
+    };
+    match order {
+        ProfileOrder::Active => {
+            join += "LEFT JOIN latest_post ON latest_post.author_id = actor_profile.id";
+            order_by += "ORDER BY latest_post.created_at DESC NULLS LAST";
+        },
+        ProfileOrder::Username => {
+            order_by += "ORDER BY username ASC";
+        },
+    };
     let statement = format!(
         "
         SELECT actor_profile
         FROM actor_profile
+        {join}
         {condition}
-        ORDER BY username
+        {order_by}
         LIMIT $1 OFFSET $2
         ",
+        join=join,
         condition=condition,
+        order_by=order_by,
     );
     let rows = db_client.query(
         &statement,
@@ -1235,6 +1256,23 @@ mod tests {
         let deletion_queue = delete_profile(db_client, profile.id).await.unwrap();
         assert_eq!(deletion_queue.files.len(), 0);
         assert_eq!(deletion_queue.ipfs_objects.len(), 0);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_get_profiles_paginated() {
+        let db_client = &mut create_test_database().await;
+        let profile = create_test_local_profile(db_client, "test").await;
+        let profiles = get_profiles_paginated(
+            db_client,
+            false, // not only local
+            ProfileOrder::Active,
+            0, // no offset
+            40,
+        ).await.unwrap();
+
+        assert_eq!(profiles.len(), 1);
+        assert_eq!(profiles[0].id, profile.id);
     }
 
     #[tokio::test]

@@ -880,6 +880,16 @@ paths:
           schema:
             type: integer
             default: 40
+        - name: order
+          in: query
+          description: How to sort profiles.
+          required: false
+          schema:
+            type: string
+            enum:
+              - active
+              - username
+            default: active
         - name: local
           in: query
           description: Only return local profiles.

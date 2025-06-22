@@ -23,6 +23,7 @@ pub enum PeriodicTask {
     PruneActivityPubObjects,
     PruneActivityPubCollectionItems,
     MediaCleanupQueueExecutor,
+    RefreshMaterializedViews,
     ImporterQueueExecutor,
     SubscriptionExpirationMonitor,
     MoneroPaymentMonitor,
@@ -44,6 +45,7 @@ impl PeriodicTask {
             Self::PruneActivityPubObjects => 3600,
             Self::PruneActivityPubCollectionItems => 3600,
             Self::MediaCleanupQueueExecutor => 10,
+            Self::RefreshMaterializedViews => 600,
             Self::ImporterQueueExecutor => 60,
             Self::SubscriptionExpirationMonitor => 300,
             Self::MoneroPaymentMonitor => 30,
@@ -113,6 +115,9 @@ pub async fn run_worker(
                 PeriodicTask::MediaCleanupQueueExecutor => {
                     media_cleanup_queue_executor(&config, &db_pool).await
                 },
+                PeriodicTask::RefreshMaterializedViews => {
+                    refresh_materialized_views(&db_pool).await
+                },
                 PeriodicTask::ImporterQueueExecutor => {
                     importer_queue_executor(&config, &db_pool).await
                 },
@@ -147,6 +152,7 @@ fn start_main_worker(
             PeriodicTask::PruneActivityPubObjects,
             PeriodicTask::PruneActivityPubCollectionItems,
             PeriodicTask::MediaCleanupQueueExecutor,
+            PeriodicTask::RefreshMaterializedViews,
             PeriodicTask::ImporterQueueExecutor,
             PeriodicTask::SubscriptionExpirationMonitor,
         ];

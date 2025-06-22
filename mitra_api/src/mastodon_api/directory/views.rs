@@ -36,6 +36,7 @@ async fn profile_directory(
     let profiles = get_profiles_paginated(
         db_client,
         query_params.local,
+        query_params.db_order(),
         query_params.offset,
         query_params.limit.inner(),
     ).await?;

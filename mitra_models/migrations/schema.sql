@@ -375,3 +375,10 @@ CREATE TABLE activitypub_collection_item (
     object_id VARCHAR(2000) NOT NULL REFERENCES activitypub_object (object_id) ON DELETE CASCADE,
     UNIQUE (collection_id, object_id)
 );
+
+CREATE MATERIALIZED VIEW latest_post AS
+    SELECT
+        author_id,
+        max(created_at) AS created_at
+    FROM post
+    GROUP BY author_id;

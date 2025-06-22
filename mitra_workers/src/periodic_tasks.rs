@@ -23,7 +23,10 @@ use mitra_models::{
         find_unused_remote_emojis,
     },
     media::types::DeletionQueue,
-    posts::queries::{delete_post, find_extraneous_posts},
+    posts::{
+        queries::{delete_post, find_extraneous_posts},
+        views::refresh_latest_post_view,
+    },
     profiles::queries::{
         delete_profile,
         find_empty_profiles,
@@ -234,6 +237,13 @@ pub async fn media_cleanup_queue_executor(
         delete_orphaned_media(config, db_client, job_data).await?;
         delete_job_from_queue(db_client, job.id).await?;
     };
+    Ok(())
+}
+
+pub async fn refresh_materialized_views(
+    db_pool: &DatabaseConnectionPool,
+) -> Result<(), Error> {
+    refresh_latest_post_view(db_pool).await?;
     Ok(())
 }
 

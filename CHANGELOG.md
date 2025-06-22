@@ -26,6 +26,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Remove zero-width characters from display names.
 - Add `hidden` flag to `Status` entities in `links` array if the author is muted.
 - Changed CSP to allow external connections.
+- Sort profiles in profile directory by the date of the latest post.
 
 ### Fixed
 
