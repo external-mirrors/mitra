@@ -11,6 +11,10 @@ services:
       - "55432:5432"
     volumes:
       - postgres_database:/var/lib/postgresql/data
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
 
   # https://github.com/sethforprivacy/simple-monerod-docker
   monerod:
