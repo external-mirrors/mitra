@@ -150,6 +150,11 @@ pub async fn check_monero_subscriptions(
             log::info!("invoice {}: waiting for unlock", invoice.id);
             continue;
         };
+        log::info!(
+            "invoice {}: forwarding {}",
+            invoice.id,
+            balance_data.unlocked_balance,
+        );
         let recipient = get_user_by_id(db_client, invoice.recipient_id).await?;
         let maybe_payment_info = recipient.profile.monero_subscription(&config.chain_id);
         let payment_info = if let Some(payment_info) = maybe_payment_info {

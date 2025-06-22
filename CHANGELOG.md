@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- Write message to log before forwarding payment.
+
 ### Fixed
 
 - Use compatible object IDs for web client redirections.
