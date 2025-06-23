@@ -3,6 +3,7 @@ use std::time::Duration;
 
 use monero_rpc::{
     GetTransfersCategory,
+    GetTransfersSelector,
     GotTransfer,
     HashString,
     IncomingTransfer,
@@ -222,6 +223,27 @@ pub async fn get_incoming_transfers(
         transfers.push(transfer);
     };
     Ok(transfers)
+}
+
+// https://docs.getmonero.org/rpc-library/wallet-rpc/#get_transfers
+pub async fn get_outgoing_transfers(
+    wallet_client: &WalletClient,
+    account_index: u32,
+    address_index: u32,
+) -> Result<Vec<GotTransfer>, MoneroError> {
+    let selector = GetTransfersSelector {
+        category_selector: HashMap::from([
+            (GetTransfersCategory::Out, true),
+        ]),
+        account_index: Some(account_index),
+        subaddr_indices: Some(vec![address_index]),
+        block_height_filter: None,
+    };
+    let outgoing_transfers = wallet_client.get_transfers(selector)
+        .await?
+        .remove(&GetTransfersCategory::Out)
+        .unwrap_or_default();
+    Ok(outgoing_transfers)
 }
 
 // https://docs.getmonero.org/rpc-library/wallet-rpc/#sweep_all

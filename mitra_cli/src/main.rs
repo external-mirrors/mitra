@@ -76,6 +76,7 @@ async fn main() -> Result<(), Error> {
         SubCommand::CreateMoneroSignature(cmd) => cmd.execute(&config).await,
         SubCommand::VerifyMoneroSignature(cmd) => cmd.execute(&config).await,
         SubCommand::ReopenInvoice(cmd) => cmd.execute(&config, db_client).await,
+        SubCommand::RepairInvoice(cmd) => cmd.execute(&config, db_client).await,
         SubCommand::ListActiveAddresses(cmd) => cmd.execute(&config).await,
         SubCommand::GetPaymentAddress(cmd) => cmd.execute(&config, db_client).await,
         SubCommand::InstanceReport(cmd) => cmd.execute(&config, db_client).await,

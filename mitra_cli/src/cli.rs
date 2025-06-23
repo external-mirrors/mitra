@@ -129,6 +129,7 @@ use crate::commands::{
     },
     config::{GetConfig, UpdateConfig},
     filter::{AddFilterRule, ListFilterRules, RemoveFilterRule},
+    invoice::RepairInvoice,
     post::CreatePost,
     storage::{CheckUris, PruneReposts},
 };
@@ -184,6 +185,7 @@ pub enum SubCommand {
     CreateMoneroSignature(CreateMoneroSignature),
     VerifyMoneroSignature(VerifyMoneroSignature),
     ReopenInvoice(ReopenInvoice),
+    RepairInvoice(RepairInvoice),
     ListActiveAddresses(ListActiveAddresses),
     GetPaymentAddress(GetPaymentAddress),
     InstanceReport(InstanceReport),

@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Add `payment_amount_min` parameter to `chain_metadata` entity in `/api/v1/instance` response.
 - Add information about pending invoices to instance report.
+- Added `repair-invoice` command.
 
 ### Changed
 
