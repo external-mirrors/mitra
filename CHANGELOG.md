@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [4.5.1] - 2025-06-23
+
 ### Added
 
 - Add `payment_amount_min` parameter to `chain_metadata` entity in `/api/v1/instance` response.
