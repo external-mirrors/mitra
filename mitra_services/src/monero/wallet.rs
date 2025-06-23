@@ -77,7 +77,7 @@ fn build_wallet_client(config: &MoneroConfig)
     Ok(wallet_client)
 }
 
-/// https://www.getmonero.org/resources/developer-guides/wallet-rpc.html#create_wallet
+// https://docs.getmonero.org/rpc-library/wallet-rpc/#create_wallet
 pub async fn create_monero_wallet(
     config: &MoneroConfig,
     name: String,
@@ -89,7 +89,7 @@ pub async fn create_monero_wallet(
     Ok(())
 }
 
-/// https://www.getmonero.org/resources/developer-guides/wallet-rpc.html#open_wallet
+// https://docs.getmonero.org/rpc-library/wallet-rpc/#open_wallet
 pub async fn open_monero_wallet(
     config: &MoneroConfig,
 ) -> Result<WalletClient, MoneroError> {
@@ -119,6 +119,7 @@ pub async fn open_monero_wallet(
     Ok(wallet_client)
 }
 
+// https://docs.getmonero.org/rpc-library/wallet-rpc/#create_address
 pub async fn create_monero_address(
     config: &MoneroConfig,
 ) -> Result<Address, MoneroError> {
@@ -165,7 +166,7 @@ pub async fn get_subaddress_by_index(
     Ok(subaddress_data.address)
 }
 
-/// https://www.getmonero.org/resources/developer-guides/wallet-rpc.html#get_balance
+// https://docs.getmonero.org/rpc-library/wallet-rpc/#get_balance
 pub async fn get_subaddress_balance(
     wallet_client: &WalletClient,
     subaddress_index: &Index,
@@ -199,7 +200,7 @@ pub async fn get_active_addresses(
     Ok(addresses)
 }
 
-/// https://www.getmonero.org/resources/developer-guides/wallet-rpc.html#incoming_transfers
+// https://docs.getmonero.org/rpc-library/wallet-rpc/#incoming_transfers
 pub async fn get_incoming_transfers(
     wallet_client: &WalletClient,
     account_index: u32,
@@ -223,7 +224,7 @@ pub async fn get_incoming_transfers(
     Ok(transfers)
 }
 
-/// https://www.getmonero.org/resources/developer-guides/wallet-rpc.html#sweep_all
+// https://docs.getmonero.org/rpc-library/wallet-rpc/#sweep_all
 pub async fn send_monero(
     wallet_client: &WalletClient,
     from_account: u32,
@@ -273,7 +274,7 @@ pub async fn send_monero(
     Ok((format!("{:x}", tx_hash), amount))
 }
 
-/// https://www.getmonero.org/resources/developer-guides/wallet-rpc.html#get_transfer_by_txid
+// https://docs.getmonero.org/rpc-library/wallet-rpc/#get_transfer_by_txid
 pub async fn get_transaction_by_id(
     wallet_client: &WalletClient,
     account_index: u32,
@@ -313,7 +314,7 @@ pub async fn get_address_count(
     Ok(address_data.addresses.len())
 }
 
-/// https://www.getmonero.org/resources/developer-guides/wallet-rpc.html#sign
+// https://docs.getmonero.org/rpc-library/wallet-rpc/#sign
 pub async fn create_monero_signature(
     config: &MoneroConfig,
     message: &str,
@@ -328,7 +329,7 @@ pub async fn create_monero_signature(
     Ok((address, signature))
 }
 
-/// https://www.getmonero.org/resources/developer-guides/wallet-rpc.html#verify
+// https://docs.getmonero.org/rpc-library/wallet-rpc/#verify
 pub async fn verify_monero_signature(
     config: &MoneroConfig,
     address: &str,
