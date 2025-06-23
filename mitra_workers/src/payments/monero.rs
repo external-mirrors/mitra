@@ -31,6 +31,7 @@ use mitra_models::{
     users::queries::get_user_by_id,
 };
 use mitra_services::monero::wallet::{
+    build_wallet_client,
     get_active_addresses,
     get_incoming_transfers,
     get_subaddress_balance,
@@ -44,6 +45,7 @@ use mitra_services::monero::wallet::{
 };
 
 const MONERO_CONFIRMATIONS_SAFE: u64 = 3;
+const MONERO_SEND_TIMEOUT: u64 = 120;
 
 pub async fn check_monero_subscriptions(
     instance: &Instance,
@@ -52,6 +54,8 @@ pub async fn check_monero_subscriptions(
 ) -> Result<(), PaymentError> {
     let db_client = &mut **get_database_client(db_pool).await?;
     let wallet_client = open_monero_wallet(config).await?;
+    let wallet_client_delay_tolerant =
+        build_wallet_client(config, MONERO_SEND_TIMEOUT)?;
 
     // Invoices waiting for payment
     let mut address_waitlist = vec![];
@@ -169,7 +173,7 @@ pub async fn check_monero_subscriptions(
         };
         // Send all available balance to payout address
         let (payout_tx_id, _) = match send_monero(
-            &wallet_client,
+            &wallet_client_delay_tolerant,
             address_index.major,
             address_index.minor,
             &payment_info.payout_address,

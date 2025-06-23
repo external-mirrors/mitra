@@ -57,9 +57,10 @@ pub enum MoneroError {
     OtherError(&'static str),
 }
 
-fn build_wallet_client(config: &MoneroConfig)
-    -> Result<WalletClient, MoneroError>
-{
+pub fn build_wallet_client(
+    config: &MoneroConfig,
+    timeout: u64,
+) -> Result<WalletClient, MoneroError> {
     let rpc_authentication = match config.wallet_rpc_username {
         Some(ref username) => {
             RpcAuthentication::Credentials {
@@ -72,10 +73,16 @@ fn build_wallet_client(config: &MoneroConfig)
     };
     let wallet_client = RpcClientBuilder::new()
         .rpc_authentication(rpc_authentication)
-        .timeout(Duration::from_secs(MONERO_RPC_TIMEOUT))
+        .timeout(Duration::from_secs(timeout))
         .build(config.wallet_rpc_url.clone())?
         .wallet();
     Ok(wallet_client)
+}
+
+fn build_default_wallet_client(
+    config: &MoneroConfig,
+) -> Result<WalletClient, MoneroError> {
+    build_wallet_client(config, MONERO_RPC_TIMEOUT)
 }
 
 // https://docs.getmonero.org/rpc-library/wallet-rpc/#create_wallet
@@ -84,7 +91,7 @@ pub async fn create_monero_wallet(
     name: String,
     password: Option<String>,
 ) -> Result<(), MoneroError> {
-    let wallet_client = build_wallet_client(config)?;
+    let wallet_client = build_default_wallet_client(config)?;
     let language = "English".to_string();
     wallet_client.create_wallet(name, password, language).await?;
     Ok(())
@@ -94,7 +101,7 @@ pub async fn create_monero_wallet(
 pub async fn open_monero_wallet(
     config: &MoneroConfig,
 ) -> Result<WalletClient, MoneroError> {
-    let wallet_client = build_wallet_client(config)?;
+    let wallet_client = build_default_wallet_client(config)?;
     if let Err(error) = wallet_client.refresh(None).await {
         if error.to_string() == "Server error: No wallet file" {
             // Try to open wallet
