@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use apx_core::caip2::ChainId;
 use uuid::Uuid;
 
@@ -289,6 +291,28 @@ pub(super) async fn set_remote_invoice_data(
         return Err(DatabaseError::NotFound("invoice"));
     };
     Ok(())
+}
+
+pub async fn get_invoice_summary(
+    db_client: &impl DatabaseClient,
+) -> Result<HashMap<InvoiceStatus, i64>, DatabaseError> {
+    let rows = db_client.query(
+        "
+        SELECT invoice_status, count(invoice)
+        FROM invoice
+        GROUP BY invoice_status
+        ",
+        &[],
+    ).await?;
+    let summary = rows
+        .into_iter()
+        .map(|row| {
+            let status: InvoiceStatus = row.try_get("invoice_status")?;
+            let count: i64 = row.try_get("count")?;
+            Ok((status, count))
+        })
+        .collect::<Result<_, DatabaseError>>()?;
+    Ok(summary)
 }
 
 #[cfg(test)]

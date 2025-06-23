@@ -48,7 +48,14 @@ use mitra_models::{
         get_emoji_by_name_and_hostname,
     },
     emojis::types::EmojiImage,
-    invoices::queries::{get_local_invoice_by_address, get_invoice_by_id},
+    invoices::{
+        queries::{
+            get_local_invoice_by_address,
+            get_invoice_by_id,
+            get_invoice_summary,
+        },
+        types::InvoiceStatus,
+    },
     media::{
         queries::{find_orphaned_files, get_local_files},
         types::MediaInfo,
@@ -878,6 +885,21 @@ impl InstanceReport {
         println!("outgoing activity queue: {outgoing_activities}");
         println!("data import queue: {data_import_queue_size}");
         println!("fetcher queue: {fetcher_queue_size}");
+        // Invoices
+        let invoice_summary = get_invoice_summary(db_client).await?;
+        for invoice_status in [
+            InvoiceStatus::Open,
+            InvoiceStatus::Paid,
+            InvoiceStatus::Underpaid,
+            InvoiceStatus::Forwarded,
+            InvoiceStatus::Failed,
+        ] {
+            let status_str = format!("{invoice_status:?}").to_lowercase();
+            let count = invoice_summary
+                .get(&invoice_status)
+                .unwrap_or(&0);
+            println!("{status_str} invoices: {count}");
+        };
         // Subscriptions
         let active_subscriptions =
             get_active_subscription_count(db_client).await?;

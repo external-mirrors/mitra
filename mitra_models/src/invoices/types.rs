@@ -70,7 +70,7 @@ impl ToSql for DbChainId {
     to_sql_checked!();
 }
 
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, Hash, PartialEq, Eq)]
 pub enum InvoiceStatus {
     Open,
     Paid,
