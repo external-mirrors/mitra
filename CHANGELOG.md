@@ -14,6 +14,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Write message to log before forwarding payment.
 - Require subscription price to be greater than minimum payment amount.
+- Write message to log when invoice status is changed to "timeout".
 
 ### Fixed
 

@@ -64,6 +64,7 @@ pub async fn check_monero_subscriptions(
     for invoice in open_invoices {
         let invoice_age = Utc::now() - invoice.created_at;
         if invoice_age.num_seconds() >= MONERO_INVOICE_TIMEOUT {
+            log::info!("invoice {}: timed out", invoice.id);
             set_invoice_status(
                 db_client,
                 invoice.id,
