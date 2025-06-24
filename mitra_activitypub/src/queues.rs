@@ -13,12 +13,15 @@ use mitra_models::{
         save_activity,
         add_object_to_collection,
     },
-    background_jobs::queries::{
-        enqueue_job,
-        get_job_batch,
-        delete_job_from_queue,
+    background_jobs::{
+        helpers::get_job_batch_with_pool,
+        queries::{
+            enqueue_job,
+            get_job_batch,
+            delete_job_from_queue,
+        },
+        types::JobType,
     },
-    background_jobs::types::JobType,
     database::{
         get_database_client,
         DatabaseClient,
@@ -106,10 +109,10 @@ const fn incoming_queue_backoff(_failure_count: u32) -> u32 {
 
 pub async fn process_queued_incoming_activities(
     config: &Config,
-    db_client: &mut impl DatabaseClient,
+    db_pool: &DatabaseConnectionPool,
 ) -> Result<(), DatabaseError> {
-    let batch = get_job_batch(
-        db_client,
+    let batch = get_job_batch_with_pool(
+        db_pool,
         JobType::IncomingActivity,
         config.federation.inbox_queue_batch_size,
         JOB_TIMEOUT,
@@ -120,6 +123,7 @@ pub async fn process_queued_incoming_activities(
                 .map_err(|_| DatabaseTypeError)?;
         let duration_max =
             StdDuration::from_secs((JOB_TIMEOUT / 6).into());
+        let db_client = &mut **get_database_client(db_pool).await?;
         let handler_future = handle_activity(
             config,
             db_client,

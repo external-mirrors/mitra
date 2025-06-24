@@ -89,8 +89,7 @@ pub async fn incoming_activity_queue_executor(
     config: &Config,
     db_pool: &DatabaseConnectionPool,
 ) -> Result<(), Error> {
-    let db_client = &mut **get_database_client(db_pool).await?;
-    process_queued_incoming_activities(config, db_client).await?;
+    process_queued_incoming_activities(config, db_pool).await?;
     Ok(())
 }
 
