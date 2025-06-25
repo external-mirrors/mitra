@@ -29,7 +29,7 @@ use mitra_activitypub::{
 };
 use mitra_config::Config;
 use mitra_models::{
-    database::DatabaseClient,
+    database::{get_database_client, DatabaseConnectionPool},
     users::queries::get_user_by_name,
 };
 
@@ -55,8 +55,9 @@ impl ImportObject {
     pub async fn execute(
         &self,
         config: &Config,
-        db_client: &mut impl DatabaseClient,
+        db_pool: &DatabaseConnectionPool,
     ) -> Result<(), Error> {
+        let db_client = &mut **get_database_client(db_pool).await?;
         let maybe_user = if let Some(ref username) = self.as_user {
             let user = get_user_by_name(db_client, username).await?;
             Some(user)
@@ -131,8 +132,9 @@ impl ReadOutbox {
     pub async fn execute(
         &self,
         config: &Config,
-        db_client: &mut impl DatabaseClient,
+        db_pool: &DatabaseConnectionPool,
     ) -> Result<(), Error> {
+        let db_client = &mut **get_database_client(db_pool).await?;
         import_from_outbox(
             config,
             db_client,
@@ -158,8 +160,9 @@ impl LoadReplies {
     pub async fn execute(
         &self,
         config: &Config,
-        db_client: &mut impl DatabaseClient,
+        db_pool: &DatabaseConnectionPool,
     ) -> Result<(), Error> {
+        let db_client = &mut **get_database_client(db_pool).await?;
         import_replies(
             config,
             db_client,
@@ -187,8 +190,9 @@ impl FetchObject {
     pub async fn execute(
         &self,
         config: &Config,
-        db_client: &impl DatabaseClient,
+        db_pool: &DatabaseConnectionPool,
     ) -> Result<(), Error> {
+        let db_client = &**get_database_client(db_pool).await?;
         let maybe_user = if let Some(ref username) = self.as_user {
             let user = get_user_by_name(db_client, username).await?;
             Some(user)
@@ -228,7 +232,7 @@ impl Webfinger {
     pub async fn execute(
         &self,
         config: &Config,
-        _db_client: &impl DatabaseClient,
+        _db_pool: &DatabaseConnectionPool,
     ) -> Result<(), Error> {
         let agent = build_federation_agent(&config.instance(), None);
         let webfinger_address = WebfingerAddress::from_handle(&self.handle)?;
@@ -255,7 +259,7 @@ impl LoadPortableObject {
     pub async fn execute(
         &self,
         _config: &Config,
-        _db_client: &impl DatabaseClient,
+        _db_pool: &DatabaseConnectionPool,
     ) -> Result<(), Error> {
         let file_data = std::fs::read(&self.path)?;
         let object_json: JsonValue = serde_json::from_slice(&file_data)?;

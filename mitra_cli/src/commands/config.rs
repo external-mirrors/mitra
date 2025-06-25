@@ -6,7 +6,7 @@ use mitra_adapters::dynamic_config::{
     EDITABLE_PROPERTIES,
 };
 use mitra_models::{
-    database::DatabaseClient,
+    database::{get_database_client, DatabaseConnectionPool},
     properties::{
         constants::{
             FEDERATED_TIMELINE_RESTRICTED,
@@ -46,8 +46,9 @@ pub struct GetConfig {
 impl GetConfig {
     pub async fn execute(
         &self,
-        db_client: &impl DatabaseClient,
+        db_pool: &DatabaseConnectionPool,
     ) -> Result<(), Error> {
+        let db_client = &**get_database_client(db_pool).await?;
         let maybe_value = get_internal_property_json(
             db_client,
             self.name.as_str(),
@@ -70,8 +71,9 @@ pub struct UpdateConfig {
 impl UpdateConfig {
     pub async fn execute(
         &self,
-        db_client: &impl DatabaseClient,
+        db_pool: &DatabaseConnectionPool,
     ) -> Result<(), Error> {
+        let db_client = &**get_database_client(db_pool).await?;
         set_editable_property(db_client, self.name.as_str(), &self.value).await?;
         println!("configuration updated");
         Ok(())

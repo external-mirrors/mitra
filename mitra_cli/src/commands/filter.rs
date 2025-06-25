@@ -4,7 +4,7 @@ use anyhow::Error;
 use clap::{Parser, ValueEnum};
 
 use mitra_models::{
-    database::DatabaseClient,
+    database::{get_database_client, DatabaseConnectionPool},
     filter_rules::{
         queries::{
             add_filter_rule,
@@ -124,8 +124,9 @@ pub struct AddFilterRule {
 impl AddFilterRule {
     pub async fn execute(
         &self,
-        db_client: &impl DatabaseClient,
+        db_pool: &DatabaseConnectionPool,
     ) -> Result<(), Error> {
+        let db_client = &**get_database_client(db_pool).await?;
         validate_rule_target(&self.target)?;
         let (action, is_reversed) = self.action.to_db_action();
         add_filter_rule(
@@ -149,8 +150,9 @@ pub struct RemoveFilterRule {
 impl RemoveFilterRule {
     pub async fn execute(
         &self,
-        db_client: &impl DatabaseClient,
+        db_pool: &DatabaseConnectionPool,
     ) -> Result<(), Error> {
+        let db_client = &**get_database_client(db_pool).await?;
         let (action, _) = self.action.to_db_action();
         remove_filter_rule(
             db_client,
@@ -169,8 +171,9 @@ pub struct ListFilterRules;
 impl ListFilterRules {
     pub async fn execute(
         &self,
-        db_client: &impl DatabaseClient,
+        db_pool: &DatabaseConnectionPool,
     ) -> Result<(), Error> {
+        let db_client = &**get_database_client(db_pool).await?;
         let rules = get_filter_rules(db_client).await?;
         for rule in rules.iter().rev() {
             let action = FilterAction::from_db_action(

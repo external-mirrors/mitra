@@ -9,7 +9,7 @@ use mitra_adapters::posts::check_post_limits;
 use mitra_config::Config;
 use mitra_models::{
     attachments::queries::create_attachment,
-    database::DatabaseClient,
+    database::{get_database_client, DatabaseConnectionPool},
     media::types::MediaInfo,
     posts::{
         queries::create_post,
@@ -47,8 +47,9 @@ impl CreatePost {
     pub async fn execute(
         &self,
         config: &Config,
-        db_client: &mut impl DatabaseClient,
+        db_pool: &DatabaseConnectionPool,
     ) -> Result<(), Error> {
+        let db_client = &mut **get_database_client(db_pool).await?;
         let author = get_profile_by_id_or_acct(db_client, &self.author).await?;
         if !author.is_local() {
             return Err(anyhow!("author must be local"));

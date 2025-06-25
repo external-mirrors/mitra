@@ -8,7 +8,7 @@ use mitra_activitypub::{
 use mitra_config::Config;
 use mitra_models::{
     activitypub::helpers::get_object_ids,
-    database::DatabaseClient,
+    database::{get_database_client, DatabaseConnectionPool},
     posts::queries::{
         delete_repost,
         find_expired_reposts,
@@ -29,8 +29,9 @@ impl PruneReposts {
     pub async fn execute(
         &self,
         config: &Config,
-        db_client: &mut impl DatabaseClient,
+        db_pool: &DatabaseConnectionPool,
     ) -> Result<(), Error> {
+        let db_client = &mut **get_database_client(db_pool).await?;
         let updated_before = days_before_now(self.days);
         let reposts = find_expired_reposts(db_client, updated_before).await?;
         for repost in reposts {
@@ -57,8 +58,9 @@ impl CheckUris {
     pub async fn execute(
         &self,
         _config: &Config,
-        db_client: &impl DatabaseClient,
+        db_pool: &DatabaseConnectionPool,
     ) -> Result<(), Error> {
+        let db_client = &**get_database_client(db_pool).await?;
         let object_ids = get_object_ids(db_client).await?;
         for object_id in object_ids {
             if let Err(error) = CanonicalUrl::parse_canonical(&object_id) {

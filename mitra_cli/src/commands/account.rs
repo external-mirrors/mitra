@@ -2,7 +2,7 @@ use anyhow::Error;
 use clap::Parser;
 
 use mitra_models::{
-    database::DatabaseClient,
+    database::{get_database_client, DatabaseConnectionPool},
     oauth::queries::delete_oauth_tokens,
     profiles::helpers::get_profile_by_id_or_acct,
 };
@@ -16,8 +16,9 @@ pub struct RevokeOauthTokens {
 impl RevokeOauthTokens {
     pub async fn execute(
         &self,
-        db_client: &impl DatabaseClient,
+        db_pool: &DatabaseConnectionPool,
     ) -> Result<(), Error> {
+        let db_client = &**get_database_client(db_pool).await?;
         let profile = get_profile_by_id_or_acct(
             db_client,
             &self.id_or_name,

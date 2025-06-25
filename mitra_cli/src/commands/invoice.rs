@@ -5,7 +5,7 @@ use uuid::Uuid;
 use mitra_adapters::payments::monero::invoice_payment_address;
 use mitra_config::Config;
 use mitra_models::{
-    database::DatabaseClient,
+    database::{get_database_client, DatabaseConnectionPool},
     invoices::{
         helpers::local_invoice_forwarded,
         queries::get_invoice_by_id,
@@ -28,8 +28,9 @@ impl RepairInvoice {
     pub async fn execute(
         &self,
         config: &Config,
-        db_client: &mut impl DatabaseClient,
+        db_pool: &DatabaseConnectionPool,
     ) -> Result<(), Error> {
+        let db_client = &mut **get_database_client(db_pool).await?;
         let monero_config = config.monero_config()
             .ok_or(Error::msg("monero configuration not found"))?;
         let wallet_client = open_monero_wallet(monero_config).await?;

@@ -40,7 +40,7 @@ use mitra_models::{
     attachments::queries::delete_unused_attachments,
     background_jobs::queries::get_job_count,
     background_jobs::types::JobType,
-    database::DatabaseClient,
+    database::{get_database_client, DatabaseConnectionPool},
     emojis::helpers::get_emoji_by_name,
     emojis::queries::{
         create_or_update_local_emoji,
@@ -200,8 +200,9 @@ pub struct GenerateInviteCode {
 impl GenerateInviteCode {
     pub async fn execute(
         &self,
-        db_client: &impl DatabaseClient,
+        db_pool: &DatabaseConnectionPool,
     ) -> Result<(), Error> {
+        let db_client = &**get_database_client(db_pool).await?;
         let invite_code = create_invite_code(
             db_client,
             self.note.as_deref(),
@@ -218,8 +219,9 @@ pub struct ListInviteCodes;
 impl ListInviteCodes {
     pub async fn execute(
         &self,
-        db_client: &impl DatabaseClient,
+        db_pool: &DatabaseConnectionPool,
     ) -> Result<(), Error> {
+        let db_client = &**get_database_client(db_pool).await?;
         let invite_codes = get_invite_codes(db_client).await?;
         if invite_codes.is_empty() {
             println!("no invite codes found");
@@ -250,8 +252,9 @@ impl CreateAccount {
     pub async fn execute(
         &self,
         config: &Config,
-        db_client: &mut impl DatabaseClient,
+        db_pool: &DatabaseConnectionPool,
     ) -> Result<(), Error> {
+        let db_client = &mut **get_database_client(db_pool).await?;
         validate_local_username(&self.username)?;
         let password_digest = hash_password(&self.password)?;
         let rsa_secret_key = generate_rsa_key()?;
@@ -286,8 +289,9 @@ pub struct ListAccounts;
 impl ListAccounts {
     pub async fn execute(
         &self,
-        db_client: &impl DatabaseClient,
+        db_pool: &DatabaseConnectionPool,
     ) -> Result<(), Error> {
+        let db_client = &**get_database_client(db_pool).await?;
         let accounts = get_accounts_for_admin(db_client).await?;
         println!(
             "{0: <40} | {1: <35} | {2: <20} | {3: <35} | {4: <35}",
@@ -321,8 +325,9 @@ pub struct SetPassword {
 impl SetPassword {
     pub async fn execute(
         &self,
-        db_client: &impl DatabaseClient,
+        db_pool: &DatabaseConnectionPool,
     ) -> Result<(), Error> {
+        let db_client = &**get_database_client(db_pool).await?;
         let profile = get_profile_by_id_or_acct(
             db_client,
             &self.id_or_name,
@@ -347,8 +352,9 @@ pub struct SetRole {
 impl SetRole {
     pub async fn execute(
         &self,
-        db_client: &impl DatabaseClient,
+        db_pool: &DatabaseConnectionPool,
     ) -> Result<(), Error> {
+        let db_client = &**get_database_client(db_pool).await?;
         let profile = get_profile_by_id_or_acct(
             db_client,
             &self.id_or_name,
@@ -371,8 +377,9 @@ impl DeleteUser {
     pub async fn execute(
         &self,
         config: &Config,
-        db_client: &mut impl DatabaseClient,
+        db_pool: &DatabaseConnectionPool,
     ) -> Result<(), Error> {
+        let db_client = &mut **get_database_client(db_pool).await?;
         let profile = get_profile_by_id_or_acct(
             db_client,
             &self.id_or_name,
@@ -405,8 +412,9 @@ impl DeletePost {
     pub async fn execute(
         &self,
         config: &Config,
-        db_client: &mut impl DatabaseClient,
+        db_pool: &DatabaseConnectionPool,
     ) -> Result<(), Error> {
+        let db_client = &mut **get_database_client(db_pool).await?;
         let post = get_post_by_id(db_client, self.id).await?;
         let mut maybe_delete_note = None;
         if post.author.is_local() {
@@ -444,8 +452,9 @@ impl AddEmoji {
     pub async fn execute(
         &self,
         config: &Config,
-        db_client: &mut impl DatabaseClient,
+        db_pool: &DatabaseConnectionPool,
     ) -> Result<(), Error> {
+        let db_client = &mut **get_database_client(db_pool).await?;
         if validate_emoji_name(&self.emoji_name).is_err() {
             println!("invalid emoji name");
             return Ok(());
@@ -503,8 +512,9 @@ impl ImportEmoji {
     pub async fn execute(
         &self,
         config: &Config,
-        db_client: &mut impl DatabaseClient,
+        db_pool: &DatabaseConnectionPool,
     ) -> Result<(), Error> {
+        let db_client = &mut **get_database_client(db_pool).await?;
         let emoji_name = clean_emoji_name(&self.emoji_name);
         let emoji = get_emoji_by_name_and_hostname(
             db_client,
@@ -540,8 +550,9 @@ impl DeleteEmoji {
     pub async fn execute(
         &self,
         config: &Config,
-        db_client: &impl DatabaseClient,
+        db_pool: &DatabaseConnectionPool,
     ) -> Result<(), Error> {
+        let db_client = &**get_database_client(db_pool).await?;
         let emoji = get_emoji_by_name(
             db_client,
             &self.emoji_name,
@@ -564,8 +575,9 @@ impl DeleteExtraneousPosts {
     pub async fn execute(
         &self,
         config: &Config,
-        db_client: &mut impl DatabaseClient,
+        db_pool: &DatabaseConnectionPool,
     ) -> Result<(), Error> {
+        let db_client = &mut **get_database_client(db_pool).await?;
         let updated_before = days_before_now(self.days);
         let posts = find_extraneous_posts(db_client, updated_before).await?;
         for post_id in posts {
@@ -587,8 +599,9 @@ impl DeleteUnusedAttachments {
     pub async fn execute(
         &self,
         config: &Config,
-        db_client: &impl DatabaseClient,
+        db_pool: &DatabaseConnectionPool,
     ) -> Result<(), Error> {
+        let db_client = &**get_database_client(db_pool).await?;
         let created_before = days_before_now(self.days);
         let (deleted_count, deletion_queue) = delete_unused_attachments(
             db_client,
@@ -610,8 +623,9 @@ impl DeleteEmptyProfiles {
     pub async fn execute(
         &self,
         config: &Config,
-        db_client: &mut impl DatabaseClient,
+        db_pool: &DatabaseConnectionPool,
     ) -> Result<(), Error> {
+        let db_client = &mut **get_database_client(db_pool).await?;
         let updated_before = days_before_now(self.days);
         let profiles = find_empty_profiles(db_client, updated_before).await?;
         for profile_id in profiles {
@@ -632,8 +646,9 @@ impl ListLocalFiles {
     pub async fn execute(
         &self,
         _config: &Config,
-        db_client: &impl DatabaseClient,
+        db_pool: &DatabaseConnectionPool,
     ) -> Result<(), Error> {
+        let db_client = &**get_database_client(db_pool).await?;
         let filenames = get_local_files(db_client).await?;
         for file_name in filenames {
             println!("{file_name}");
@@ -654,8 +669,9 @@ impl DeleteOrphanedFiles {
     pub async fn execute(
         &self,
         config: &Config,
-        db_client: &impl DatabaseClient,
+        db_pool: &DatabaseConnectionPool,
     ) -> Result<(), Error> {
+        let db_client = &**get_database_client(db_pool).await?;
         let media_storage = MediaStorage::new(config);
         let files = media_storage.list_files()?;
         let orphaned = find_orphaned_files(db_client, files).await?;
@@ -685,8 +701,9 @@ impl ListUnreachableActors {
     pub async fn execute(
         &self,
         _config: &Config,
-        db_client: &impl DatabaseClient,
+        db_pool: &DatabaseConnectionPool,
     ) -> Result<(), Error> {
+        let db_client = &**get_database_client(db_pool).await?;
         let unreachable_since = days_before_now(self.days);
         let profiles = find_unreachable(db_client, unreachable_since).await?;
         println!(
@@ -789,8 +806,9 @@ impl ReopenInvoice {
     pub async fn execute(
         &self,
         config: &Config,
-        db_client: &mut impl DatabaseClient,
+        db_pool: &DatabaseConnectionPool,
     ) -> Result<(), Error> {
+        let db_client = &mut **get_database_client(db_pool).await?;
         let monero_config = config.monero_config()
             .ok_or(anyhow!("monero configuration not found"))?;
         let invoice = if let Ok(invoice_id) = Uuid::from_str(&self.id_or_address) {
@@ -844,8 +862,9 @@ impl GetPaymentAddress {
     pub async fn execute(
         &self,
         config: &Config,
-        db_client: &mut impl DatabaseClient,
+        db_pool: &DatabaseConnectionPool,
     ) -> Result<(), Error> {
+        let db_client = &mut **get_database_client(db_pool).await?;
         let monero_config = config.monero_config()
             .ok_or(anyhow!("monero configuration not found"))?;
         let payment_address = get_payment_address(
@@ -867,8 +886,9 @@ impl InstanceReport {
     pub async fn execute(
         &self,
         config: &Config,
-        db_client: &impl DatabaseClient,
+        db_pool: &DatabaseConnectionPool,
     ) -> Result<(), Error> {
+        let db_client = &**get_database_client(db_pool).await?;
         // General info
         let users = get_user_count(db_client).await?;
         let posts = get_post_count(db_client, false).await?;
