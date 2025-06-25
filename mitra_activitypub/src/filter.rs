@@ -3,7 +3,13 @@ use wildmatch::WildMatch;
 
 use mitra_config::Config;
 use mitra_models::{
-    database::{DatabaseClient, DatabaseError, DatabaseTypeError},
+    database::{
+        get_database_client,
+        DatabaseClient,
+        DatabaseConnectionPool,
+        DatabaseError,
+        DatabaseTypeError,
+    },
     filter_rules::{
         queries::get_filter_rules,
         types::{FilterRule, FilterAction},
@@ -61,6 +67,14 @@ impl FederationFilter {
             allowlist: config.allowed_instances.clone().unwrap_or_default(),
             rules,
         })
+    }
+
+    pub async fn init_with_pool(
+        config: &Config,
+        db_pool: &DatabaseConnectionPool,
+    ) -> Result<Self, DatabaseError> {
+        let db_client = &**get_database_client(db_pool).await?;
+        Self::init(config, db_client).await
     }
 
     pub fn is_action_required(

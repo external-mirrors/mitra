@@ -26,6 +26,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Sort custom feeds by name.
 - Improved descriptions of request errors produced by fetcher and deliverer.
 - Reduced database lock time during processing of incoming activities.
+- Reduced database lock time during verification of HTTP signatures.
 
 ### Fixed
 

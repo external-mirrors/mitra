@@ -91,6 +91,7 @@ use mitra_models::{
         get_portable_user_by_inbox_id,
         get_portable_user_by_outbox_id,
         get_user_by_name,
+        get_user_by_name_with_pool,
     },
 };
 use mitra_services::media::MediaServer;
@@ -168,15 +169,14 @@ async fn inbox(
     let activity_digest = ContentDigest::new(&request_body);
     drop(request_body);
 
-    let db_client = &mut **get_database_client(&db_pool).await?;
-    let recipient = get_user_by_name(db_client, &username).await?;
+    let recipient = get_user_by_name_with_pool(&db_pool, &username).await?;
     let recipient_id = local_actor_id(
         &config.instance_url(),
         &recipient.profile.username,
     );
     receive_activity(
         &config,
-        db_client,
+        &db_pool,
         &request,
         &request_full_uri,
         &activity,
@@ -800,15 +800,17 @@ async fn apgateway_inbox_push_view(
         request_path,
     );
     let canonical_collection_id = canonicalize_id(&collection_id)?;
-    let db_client = &mut **get_database_client(&db_pool).await?;
-    let recipient = get_portable_user_by_inbox_id(
-        db_client,
-        &canonical_collection_id.to_string(),
-    ).await?;
+    let recipient = {
+        let db_client = &**get_database_client(&db_pool).await?;
+        get_portable_user_by_inbox_id(
+            db_client,
+            &canonical_collection_id.to_string(),
+        ).await?
+    };
     let recipient_id = recipient.profile.expect_remote_actor_id();
     receive_activity(
         &config,
-        db_client,
+        &db_pool,
         &request,
         &request_full_uri,
         &activity,
@@ -837,10 +839,9 @@ async fn apgateway_inbox_pull_view(
     request: HttpRequest,
 ) -> Result<HttpResponse, HttpError> {
     let request_full_uri = get_request_full_uri(&connection_info, request.uri());
-    let db_client = &mut **get_database_client(&db_pool).await?;
     let (_, signer) = verify_signed_request(
         &config,
-        db_client,
+        &db_pool,
         method_adapter(request.method()),
         uri_adapter(&request_full_uri),
         header_map_adapter(request.headers()),
@@ -857,6 +858,7 @@ async fn apgateway_inbox_pull_view(
         request_path,
     );
     let canonical_collection_id = canonicalize_id(&collection_id)?;
+    let db_client = &**get_database_client(&db_pool).await?;
     let collection_owner = get_portable_user_by_inbox_id(
         db_client,
         &canonical_collection_id.to_string(),
@@ -949,10 +951,9 @@ async fn apgateway_outbox_pull_view(
     request: HttpRequest,
 ) -> Result<HttpResponse, HttpError> {
     let request_full_uri = get_request_full_uri(&connection_info, request.uri());
-    let db_client = &mut **get_database_client(&db_pool).await?;
     let (_, signer) = verify_signed_request(
         &config,
-        db_client,
+        &db_pool,
         method_adapter(request.method()),
         uri_adapter(&request_full_uri),
         header_map_adapter(request.headers()),
@@ -969,6 +970,7 @@ async fn apgateway_outbox_pull_view(
         request_path,
     );
     let canonical_collection_id = canonicalize_id(&collection_id)?;
+    let db_client = &**get_database_client(&db_pool).await?;
     let collection_owner = get_portable_user_by_outbox_id(
         db_client,
         &canonical_collection_id.to_string(),

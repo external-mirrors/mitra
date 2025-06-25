@@ -24,7 +24,11 @@ use mitra_activitypub::{
 };
 use mitra_config::Config;
 use mitra_models::{
-    database::{DatabaseClient, DatabaseError},
+    database::{
+        get_database_client,
+        DatabaseConnectionPool,
+        DatabaseError,
+    },
 };
 use mitra_validators::{
     errors::ValidationError,
@@ -70,7 +74,7 @@ impl From<InboxError> for HttpError {
 
 pub async fn receive_activity(
     config: &Config,
-    db_client: &mut impl DatabaseClient,
+    db_pool: &DatabaseConnectionPool,
     request: &HttpRequest,
     request_full_uri: &Uri,
     activity: &JsonValue,
@@ -86,7 +90,7 @@ pub async fn receive_activity(
 
     let actor_hostname = get_hostname(&activity_actor)
         .map_err(|_| ValidationError("invalid actor ID"))?;
-    let filter = FederationFilter::init(config, db_client).await?;
+    let filter = FederationFilter::init_with_pool(config, db_pool).await?;
     if filter.is_incoming_blocked(&actor_hostname) {
         log::info!("ignoring activity from blocked instance {actor_hostname}");
         return Ok(());
@@ -113,7 +117,7 @@ pub async fn receive_activity(
     // HTTP signature is required
     let mut signer = match verify_signed_request(
         config,
-        db_client,
+        db_pool,
         method_adapter(request.method()),
         uri_adapter(request_full_uri),
         header_map_adapter(request.headers()),
@@ -145,7 +149,7 @@ pub async fn receive_activity(
     // (unless the activity is portable)
     match verify_signed_activity(
         config,
-        db_client,
+        db_pool,
         activity,
         // Don't fetch actor if this is Delete(Person) activity
         is_self_delete,
@@ -188,6 +192,7 @@ pub async fn receive_activity(
         log::info!("processing forwarded {activity_type} from {signer_id}");
     };
 
+    let db_client = &**get_database_client(db_pool).await?;
     IncomingActivityJobData::new(
         activity,
         Some((recipient_id, signer_id)),

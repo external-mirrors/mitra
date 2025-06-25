@@ -30,7 +30,7 @@ use mitra_models::{
 use mitra_validators::errors::ValidationError;
 
 use crate::{
-    authentication::{verify_signed_activity_with_pool, AuthenticationError},
+    authentication::{verify_signed_activity, AuthenticationError},
     identifiers::parse_local_actor_id,
     importers::ApClient,
     ownership::{is_local_origin, is_same_origin, get_object_id, verify_activity_owner},
@@ -88,7 +88,7 @@ async fn handle_fep_171b_add(
         return Ok(None);
     };
     // Authentication
-    match verify_signed_activity_with_pool(
+    match verify_signed_activity(
         config,
         db_pool,
         &activity,

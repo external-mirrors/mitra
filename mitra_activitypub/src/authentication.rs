@@ -49,7 +49,6 @@ use mitra_config::Config;
 use mitra_models::{
     database::{
         get_database_client,
-        DatabaseClient,
         DatabaseConnectionPool,
         DatabaseError,
     },
@@ -126,10 +125,11 @@ pub enum AuthenticationError {
 
 async fn get_signer(
     config: &Config,
-    db_client: &mut impl DatabaseClient,
+    db_pool: &DatabaseConnectionPool,
     signer_id: &str,
     no_fetch: bool,
 ) -> Result<DbActorProfile, AuthenticationError> {
+    let db_client = &mut **get_database_client(db_pool).await?;
     let signer = if no_fetch {
         // Avoid fetching (e.g. if signer was deleted)
         let canonical_signer_id = canonicalize_id(signer_id)
@@ -228,7 +228,7 @@ fn get_signer_rsa_key(
 /// Verifies HTTP signature and returns signer
 pub async fn verify_signed_request(
     config: &Config,
-    db_client: &mut impl DatabaseClient,
+    db_pool: &DatabaseConnectionPool,
     request_method: Method,
     request_uri: Uri,
     request_headers: HeaderMap,
@@ -262,7 +262,7 @@ pub async fn verify_signed_request(
         },
         _ => return Err(AuthenticationError::UnsupportedVerificationMethod),
     };
-    let signer = get_signer(config, db_client, &signer_id, no_fetch).await?;
+    let signer = get_signer(config, db_pool, &signer_id, no_fetch).await?;
     let key_id = signature_data.key_id.to_string();
     let public_key = get_signer_key(
         &signer,
@@ -284,7 +284,7 @@ pub async fn verify_signed_request(
 /// Verifies JSON signature on activity and returns actor
 pub async fn verify_signed_activity(
     config: &Config,
-    db_client: &mut impl DatabaseClient,
+    db_pool: &DatabaseConnectionPool,
     activity: &JsonValue,
     no_fetch: bool,
 ) -> Result<DbActorProfile, AuthenticationError> {
@@ -294,7 +294,7 @@ pub async fn verify_signed_activity(
             // an actor profile needs to be returned
             let actor_id = object_to_id(&activity["actor"])
                 .map_err(|_| ValidationError("unknown actor"))?;
-            let actor_profile = get_signer(config, db_client, &actor_id, no_fetch).await?;
+            let actor_profile = get_signer(config, db_pool, &actor_id, no_fetch).await?;
             let canonical_actor_id =
                 canonicalize_id(actor_profile.expect_remote_actor_id())?;
             if canonical_activity_id.origin() != canonical_actor_id.origin() {
@@ -320,7 +320,7 @@ pub async fn verify_signed_activity(
     };
     let actor_id = object_to_id(&activity["actor"])
         .map_err(|_| ValidationError("unknown actor"))?;
-    let actor_profile = get_signer(config, db_client, &actor_id, no_fetch).await?;
+    let actor_profile = get_signer(config, db_pool, &actor_id, no_fetch).await?;
 
     match signature_data.verification_method {
         VerificationMethod::HttpUrl(key_id) => {
@@ -372,19 +372,4 @@ pub async fn verify_signed_activity(
     };
     // Signer is actor
     Ok(actor_profile)
-}
-
-pub async fn verify_signed_activity_with_pool(
-    config: &Config,
-    db_pool: &DatabaseConnectionPool,
-    activity: &JsonValue,
-    no_fetch: bool,
-) -> Result<DbActorProfile, AuthenticationError> {
-    let db_client = &mut **get_database_client(db_pool).await?;
-    verify_signed_activity(
-        config,
-        db_client,
-        activity,
-        no_fetch,
-    ).await
 }
