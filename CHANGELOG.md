@@ -8,7 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Changed
 
-- Reduced database connection lock time in incoming activity queue executor.
+- Reduced database connection lock time in incoming activity queue executor and fetcher queue executor.
 
 ## [4.5.1] - 2025-06-23
 

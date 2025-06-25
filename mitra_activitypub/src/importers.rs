@@ -31,7 +31,13 @@ use serde_json::{Value as JsonValue};
 
 use mitra_config::{Config, Instance, Limits};
 use mitra_models::{
-    database::{DatabaseClient, DatabaseError, DatabaseTypeError},
+    database::{
+        get_database_client,
+        DatabaseClient,
+        DatabaseConnectionPool,
+        DatabaseError,
+        DatabaseTypeError,
+    },
     filter_rules::types::FilterAction,
     notifications::helpers::create_signup_notifications,
     posts::helpers::get_local_post_by_id,
@@ -833,10 +839,11 @@ pub async fn import_collection(
 
 pub async fn import_from_outbox(
     config: &Config,
-    db_client: &mut impl DatabaseClient,
+    db_pool: &DatabaseConnectionPool,
     actor_id: &str,
     limit: usize,
 ) -> Result<(), HandlerError> {
+    let db_client = &mut **get_database_client(db_pool).await?;
     let profile = get_remote_profile_by_actor_id(db_client, actor_id).await?;
     let actor_data = profile.expect_actor_data();
     let mut context = FetcherContext::from(actor_data);
@@ -854,10 +861,11 @@ pub async fn import_from_outbox(
 
 pub async fn import_featured(
     config: &Config,
-    db_client: &mut impl DatabaseClient,
+    db_pool: &DatabaseConnectionPool,
     actor_id: &str,
     limit: usize,
 ) -> Result<(), HandlerError> {
+    let db_client = &mut **get_database_client(db_pool).await?;
     let profile = get_remote_profile_by_actor_id(db_client, actor_id).await?;
     let actor_data = profile.expect_actor_data();
     let Some(featured_id) = actor_data.featured.as_ref() else {
@@ -889,7 +897,7 @@ pub async fn import_featured(
 // https://codeberg.org/silverpill/feps/src/branch/main/f228/fep-f228.md
 pub async fn import_replies(
     config: &Config,
-    db_client: &mut impl DatabaseClient,
+    db_pool: &DatabaseConnectionPool,
     object_id: &str,
     use_context: bool,
     limit: usize,
@@ -905,6 +913,7 @@ pub async fn import_replies(
         replies: Option<String>,
     }
 
+    let db_client = &mut **get_database_client(db_pool).await?;
     let ap_client = ApClient::new(config, db_client).await?;
     let object: ConversationItem = ap_client.fetch_object(object_id).await?;
     let (collection_id, item_type) = if use_context {

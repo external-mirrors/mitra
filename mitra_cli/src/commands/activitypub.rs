@@ -137,10 +137,9 @@ impl ReadOutbox {
         config: &Config,
         db_pool: &DatabaseConnectionPool,
     ) -> Result<(), Error> {
-        let db_client = &mut **get_database_client(db_pool).await?;
         import_from_outbox(
             config,
-            db_client,
+            db_pool,
             &self.actor_id,
             self.limit,
         ).await?;
@@ -165,10 +164,9 @@ impl LoadReplies {
         config: &Config,
         db_pool: &DatabaseConnectionPool,
     ) -> Result<(), Error> {
-        let db_client = &mut **get_database_client(db_pool).await?;
         import_replies(
             config,
-            db_client,
+            db_pool,
             &self.object_id,
             self.use_context,
             self.limit,

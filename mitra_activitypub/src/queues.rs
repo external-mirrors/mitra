@@ -14,7 +14,10 @@ use mitra_models::{
         add_object_to_collection,
     },
     background_jobs::{
-        helpers::get_job_batch_with_pool,
+        helpers::{
+            delete_job_from_queue_with_pool,
+            get_job_batch_with_pool,
+        },
         queries::{
             enqueue_job,
             get_job_batch,
@@ -563,9 +566,8 @@ pub async fn fetcher_queue_executor(
     // Re-queue running (failed) jobs after 1 hour
     const JOB_TIMEOUT: u32 = 3600;
     const COLLECTION_LIMIT: usize = 20;
-    let db_client = &mut **get_database_client(db_pool).await?;
-    let batch = get_job_batch(
-        db_client,
+    let batch = get_job_batch_with_pool(
+        db_pool,
         JobType::Fetcher,
         BATCH_SIZE,
         JOB_TIMEOUT,
@@ -578,7 +580,7 @@ pub async fn fetcher_queue_executor(
             FetcherJobData::Outbox { actor_id } => {
                 import_from_outbox(
                     config,
-                    db_client,
+                    db_pool,
                     &actor_id,
                     COLLECTION_LIMIT,
                 ).await
@@ -586,7 +588,7 @@ pub async fn fetcher_queue_executor(
             FetcherJobData::Featured { actor_id } => {
                 import_featured(
                     config,
-                    db_client,
+                    db_pool,
                     &actor_id,
                     COLLECTION_LIMIT,
                 ).await
@@ -594,7 +596,7 @@ pub async fn fetcher_queue_executor(
             FetcherJobData::Context { object_id } => {
                 import_replies(
                     config,
-                    db_client,
+                    db_pool,
                     &object_id,
                     false, // don't use context
                     COLLECTION_LIMIT,
@@ -609,7 +611,7 @@ pub async fn fetcher_queue_executor(
             };
             log::log!(level, "background fetcher: {}", error);
         });
-        delete_job_from_queue(db_client, job.id).await?;
+        delete_job_from_queue_with_pool(db_pool, job.id).await?;
     };
     Ok(())
 }
