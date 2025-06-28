@@ -188,7 +188,14 @@ pub async fn check_monero_subscriptions(
                 ).await?;
                 continue;
             },
-            Err(other_error) => return Err(other_error.into()),
+            Err(other_error) => {
+                log::error!(
+                    "invoice {}: forwarding failed ({})",
+                    invoice.id,
+                    other_error,
+                );
+                return Err(other_error.into());
+            },
         };
 
         local_invoice_forwarded(
