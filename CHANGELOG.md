@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+
+- Enabled autolinking for `nex://` URIs.
+
 ### Changed
 
 - Reduced database connection lock time in incoming activity queue executor and fetcher queue executor.

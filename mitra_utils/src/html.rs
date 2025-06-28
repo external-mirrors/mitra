@@ -17,7 +17,7 @@ use html5ever::serialize::{serialize, SerializeOpts};
 
 pub use ammonia::{clean_text as escape_html};
 
-pub(crate) const URI_SCHEMES: [&str; 10] = [
+pub(crate) const URI_SCHEMES: [&str; 11] = [
     // https://docs.rs/ammonia/3.3.0/ammonia/struct.Builder.html#method.url_schemes
     "bitcoin",
     "http",
@@ -30,6 +30,8 @@ pub(crate) const URI_SCHEMES: [&str; 10] = [
     "gemini",
     "monero",
     "mumble",
+    // Experimental (could be removed in the future)
+    "nex", // https://nex.nightfall.city/nex/info/
 ];
 
 fn document_to_node(document: &Document) -> Handle {
@@ -305,6 +307,17 @@ mod tests {
     fn test_clean_html_with_hashtag() {
         let unsafe_html = r#"<p>test <a href="https://server.example/tag" rel="tag">#tag</a></p>"#;
         let expected_safe_html = r#"<p>test <a href="https://server.example/tag" rel="tag noopener">#tag</a></p>"#;
+        let safe_html = clean_html(
+            unsafe_html,
+            allowed_classes(),
+        );
+        assert_eq!(safe_html, expected_safe_html);
+    }
+
+    #[test]
+    fn test_clean_html_gemini_link() {
+        let unsafe_html = r#"<p>test <a href="gemini://geminispace.info">gemini://geminispace.info</a>.</p>"#;
+        let expected_safe_html = r#"<p>test <a href="gemini://geminispace.info" rel="noopener">gemini://geminispace.info</a>.</p>"#;
         let safe_html = clean_html(
             unsafe_html,
             allowed_classes(),
