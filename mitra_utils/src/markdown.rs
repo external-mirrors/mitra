@@ -28,6 +28,7 @@ fn build_comrak_options<'cb>() -> Options<'cb> {
     Options {
         extension: ExtensionOptions::builder()
             .autolink(true)
+            .underline(true)
             .strikethrough(true)
             .greentext(true)
             .build(),
@@ -198,11 +199,7 @@ fn fix_linebreaks(html: &str) -> String {
 /// The output should be displayed correctly on all popular platforms:
 /// https://funfedi.dev/support_tables/generated/html_tags/
 pub fn markdown_lite_to_html(text: &str) -> Result<String, MarkdownError> {
-    let options = {
-        let mut options = build_comrak_options();
-        options.extension.underline = true;
-        options
-    };
+    let options = build_comrak_options();
     let arena = Arena::new();
 
     let text = protect_mentions(text);
@@ -300,7 +297,12 @@ pub fn markdown_lite_to_html(text: &str) -> Result<String, MarkdownError> {
 /// Markdown Basic
 /// Supported features: links, linebreaks
 pub fn markdown_basic_to_html(text: &str) -> Result<String, MarkdownError> {
-    let options = build_comrak_options();
+    let options = {
+        let mut options = build_comrak_options();
+        options.extension.underline = false;
+        options.extension.strikethrough = false;
+        options
+    };
     let arena = Arena::new();
     let root = parse_document(
         &arena,
@@ -510,6 +512,13 @@ mod tests {
             "<p>another line</p>",
         );
         assert_eq!(html, expected_html);
+    }
+
+    #[test]
+    fn test_markdown_basic_to_html_strikethrough() {
+        let text = "test ~~strikethrough~~";
+        let html = markdown_basic_to_html(text).unwrap();
+        assert_eq!(html, format!("<p>{}</p>", text));
     }
 
     #[test]

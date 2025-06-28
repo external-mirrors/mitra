@@ -14,6 +14,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Reduced database connection lock time in incoming activity queue executor and fetcher queue executor.
 - Write detailed error message to log when payment forwarding fails.
+- Enabled rendering of underlined text in instance descriptions.
+- Disabled rendering of strikethrough text in bio.
 
 ## [4.5.1] - 2025-06-23
 
