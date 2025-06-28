@@ -500,6 +500,20 @@ mod tests {
     }
 
     #[test]
+    fn test_markdown_lite_to_html_ipv6_autolink() {
+        let text = "test http://[319:3cf0:dd1d:47b9:20c:29ff:fe2c:39be]/test";
+        let html = markdown_lite_to_html(text).unwrap();
+        assert_eq!(html, r#"<p>test <a href="http://[319:3cf0:dd1d:47b9:20c:29ff:fe2c:39be]/test">http://[319:3cf0:dd1d:47b9:20c:29ff:fe2c:39be]/test</a></p>"#);
+    }
+
+    #[test]
+    fn test_markdown_lite_to_html_ipv6_autolink_nex() {
+        let text = "test nex://[319:3cf0:dd1d:47b9:20c:29ff:fe2c:39be]/test";
+        let html = markdown_lite_to_html(text).unwrap();
+        assert_eq!(html, r#"<p>test <a href="nex://[319:3cf0:dd1d:47b9:20c:29ff:fe2c:39be]/test">nex://[319:3cf0:dd1d:47b9:20c:29ff:fe2c:39be]/test</a></p>"#);
+    }
+
+    #[test]
     fn test_markdown_basic_to_html() {
         let text = "test **bold** test *italic* test ~~strike~~ with `code`, <span>html</span> and https://example.com and admin@email.example\nnew line\n\nanother line";
         let html = markdown_basic_to_html(text).unwrap();

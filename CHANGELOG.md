@@ -17,6 +17,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Enabled rendering of underlined text in instance descriptions.
 - Disabled rendering of strikethrough text in bio.
 
+### Fixed
+
+- Fixed autolinking of URLs with IPv6 hostnames.
+
 ## [4.5.1] - 2025-06-23
 
 ### Added
