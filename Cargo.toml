@@ -70,6 +70,7 @@ unused_unit = "allow"
 enum_variant_names = "allow"
 format_push_string = "allow"
 unwrap_or_default = "allow"
+uninlined_format_args = "allow"
 large_enum_variant = "allow"
 
 implicit_clone = "warn"
