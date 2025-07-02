@@ -674,8 +674,8 @@ async fn get_object_tags(
     };
 
     // Parse quoteUrl as an object link
-    if let Some(ref object_id) = object.quote_url {
-        let object_id = redirects.get(object_id).unwrap_or(object_id);
+    if let Some(ref quote_url) = object.quote_url {
+        let object_id = redirects.get(quote_url).unwrap_or(quote_url);
         let canonical_object_id = canonicalize_id(object_id)?;
         let linked = get_post_by_object_id(
             db_client,

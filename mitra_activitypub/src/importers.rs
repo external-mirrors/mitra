@@ -526,6 +526,7 @@ pub async fn import_post(
                 if objects.iter().any(|object| object.id() == object_id) {
                     // Can happen due to redirections
                     log::warn!("loop detected");
+                    maybe_object = None;
                     continue;
                 };
                 if let Ok(post_id) = parse_local_object_id(&instance.url(), &object_id) {
@@ -549,6 +550,7 @@ pub async fn import_post(
                             // Return post corresponding to initial object ID
                             return Ok(post);
                         };
+                        maybe_object = None;
                         continue;
                     },
                     Err(DatabaseError::NotFound(_)) => (),
@@ -562,7 +564,10 @@ pub async fn import_post(
             },
         };
         let object = match maybe_object {
-            Some(object) => object,
+            Some(object) => {
+                log::info!("object already fetched: {}", object.id());
+                object
+            },
             None => {
                 if fetch_count >= RECURSION_DEPTH_MAX {
                     // TODO: create tombstone
