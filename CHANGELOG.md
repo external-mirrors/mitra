@@ -16,6 +16,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Write detailed error message to log when payment forwarding fails.
 - Enabled rendering of underlined text in instance descriptions.
 - Disabled rendering of strikethrough text in bio.
+- Allow anonymous collection pages.
 
 ### Fixed
 

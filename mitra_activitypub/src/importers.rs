@@ -687,8 +687,8 @@ async fn fetch_collection(
     #[derive(Deserialize)]
     #[serde(rename_all = "camelCase")]
     struct CollectionPage {
-        id: CanonicalUrl,
-        next: Option<String>,
+        id: Option<CanonicalUrl>,
+        next: Option<JsonValue>,
         #[serde(default)]
         items: Vec<JsonValue>,
         #[serde(default)]
@@ -700,15 +700,13 @@ async fn fetch_collection(
     let mut items = [collection.items, collection.ordered_items].concat();
 
     let mut page_count = 0;
-    if let Some(first_page_value) = collection.first {
+    if let Some(mut page_value) = collection.first {
         // Mastodon replies collection:
         // - First page contains self-replies
         // - Next page contains replies from others
-        let mut maybe_page_id = first_page_value.as_str()
-            .map(|page_id| page_id.to_string());
         while items.len() < limit && page_count < 3 {
-            let page = match maybe_page_id {
-                Some(page_id) => {
+            let page = match page_value {
+                JsonValue::String(page_id) => {
                     let page: CollectionPage =
                         ap_client.fetch_object(&page_id).await?;
                     log::info!(
@@ -718,15 +716,16 @@ async fn fetch_collection(
                     );
                     page
                 },
-                None if page_count == 0 => {
+                _ => {
                     let page: CollectionPage =
-                        serde_json::from_value(first_page_value.clone())?;
-                    log::info!("first collection page is embedded");
+                        serde_json::from_value(page_value.clone())?;
+                    log::info!("collection page is embedded");
                     page
                 },
-                None => break,
             };
-            if page.id.origin() != collection.id.origin() {
+            if page.id.is_some_and(|page_id| {
+                page_id.origin() != collection.id.origin()
+            }) {
                 let error =
                     ValidationError("collection page has different origin");
                 return Err(error.into());
@@ -734,7 +733,12 @@ async fn fetch_collection(
             items.extend(page.items);
             items.extend(page.ordered_items);
             page_count += 1;
-            maybe_page_id = page.next;
+            if let Some(next_page_value) = page.next {
+                page_value = next_page_value;
+            } else {
+                // No next page
+                break;
+            };
         };
     };
 
