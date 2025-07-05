@@ -356,6 +356,13 @@ mod tests {
     }
 
     #[test]
+    fn test_clean_html_all_reserved_chars() {
+        let html = r#"<p>test&!?</p>"#;
+        let text = clean_html_all(html);
+        assert_eq!(text, "test&amp;!?");
+    }
+
+    #[test]
     fn test_html_to_text() {
         let html = r#"<h1>heading</h1><p>next line</p>"#;
         let text = html_to_text(html);

@@ -17,6 +17,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Enabled rendering of underlined text in instance descriptions.
 - Disabled rendering of strikethrough text in bio.
 - Allow anonymous collection pages.
+- Don't escape HTML special characters in display name.
 
 ### Fixed
 

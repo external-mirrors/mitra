@@ -14,7 +14,7 @@ use mitra_models::profiles::types::{
     WebfingerHostname,
 };
 use mitra_utils::{
-    html::{clean_html, clean_html_all, clean_html_strict},
+    html::{clean_html, clean_html_strict},
 };
 
 use super::{
@@ -80,12 +80,10 @@ pub fn validate_hostname(hostname: &str) -> Result<(), ValidationError> {
     Ok(())
 }
 
-fn clean_display_name_html(display_name: &str) -> String {
-    clean_html_all(display_name).replace("&nbsp;", " ")
-}
-
 fn clean_display_name(display_name: &str, is_remote: bool) -> String {
-    let mut text = clean_display_name_html(display_name);
+    // Sanitization is not needed because `name` is a plain-text field
+    // https://www.w3.org/TR/activitystreams-vocabulary/#dfn-name
+    let mut text = display_name.to_owned();
     if is_remote {
         text = text.chars().take(DISPLAY_NAME_MAX_LENGTH).collect();
     };
@@ -97,9 +95,6 @@ fn validate_display_name(display_name: &str)
 {
     if display_name.chars().count() > DISPLAY_NAME_MAX_LENGTH {
         return Err(ValidationError("display name is too long"));
-    };
-    if display_name != clean_display_name_html(display_name) {
-        return Err(ValidationError("display name has not been sanitized"));
     };
     Ok(())
 }
@@ -408,14 +403,7 @@ mod tests {
     fn test_clean_display_name() {
         let name = "test <script>alert()</script>test :emoji:";
         let output = clean_display_name(name, true);
-        assert_eq!(output, "test test :emoji:");
-    }
-
-    #[test]
-    fn test_clean_display_name_whitespace() {
-        let name = "ワフ   ⁰͡ ⌵ ⁰͡ ";
-        let output = clean_display_name(name, true);
-        assert_eq!(output, "ワフ   ⁰͡ ⌵ ⁰͡ ");
+        assert_eq!(output, "test <script>alert()</script>test :emoji:");
     }
 
     #[test]

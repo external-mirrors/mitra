@@ -2746,8 +2746,12 @@ components:
           description: The location of the user's profile page.
           type: string
           example: https://social.example/@user
+        display_name:
+          description: The profile’s display name (plain text).
+          type: string
+          nullable: true
         note:
-          description: The profile’s bio or description.
+          description: The profile’s bio or description (HTML).
           type: string
         avatar:
           description: An image icon that is shown next to posts and in the profile.
