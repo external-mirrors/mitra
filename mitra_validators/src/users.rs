@@ -7,7 +7,7 @@ use mitra_models::{
 use super::errors::ValidationError;
 use super::profiles::validate_username;
 
-const USERNAME_RE: &str = r"^[a-z0-9_]+$";
+const USERNAME_RE: &str = r"^[A-Za-z0-9_\-]+$";
 // Same as Mastodon's limit
 // https://github.com/mastodon/mastodon/blob/4b9e4f6398760cc04f9fde2c659f30ffea216e12/app/models/account.rb#L91
 const USERNAME_LENGTH_MAX: usize = 30;
@@ -19,7 +19,7 @@ pub fn validate_local_username(username: &str) -> Result<(), ValidationError> {
     let username_regexp = Regex::new(USERNAME_RE)
         .expect("regexp should be valid");
     if !username_regexp.is_match(username) {
-        return Err(ValidationError("invalid username"));
+        return Err(ValidationError("only letters, numbers, hyphens, and underscores are allowed in usernames"));
     };
     if username.len() > USERNAME_LENGTH_MAX {
         return Err(ValidationError("username is too long"));
