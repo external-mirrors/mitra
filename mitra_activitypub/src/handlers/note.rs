@@ -152,6 +152,7 @@ pub struct AttributedObject {
     end_time: Option<DateTime<Utc>>,
     closed: Option<DateTime<Utc>>,
 
+    quote: Option<String>,
     quote_url: Option<String>,
 
     // TODO: Use is_object?
@@ -186,6 +187,10 @@ impl AttributedObject {
             log::warn!("invalid language tag: {language_tag}");
             None
         })
+    }
+
+    fn quote(&self) -> Option<&String> {
+        self.quote.as_ref().or(self.quote_url.as_ref())
     }
 }
 
@@ -469,7 +474,7 @@ fn get_object_links(
             };
         };
     };
-    if let Some(ref object_id) = object.quote_url {
+    if let Some(object_id) = object.quote() {
         if !links.contains(object_id) {
             links.push(object_id.to_owned());
         };
@@ -674,8 +679,8 @@ async fn get_object_tags(
     };
 
     // Parse quoteUrl as an object link
-    if let Some(ref quote_url) = object.quote_url {
-        let object_id = redirects.get(quote_url).unwrap_or(quote_url);
+    if let Some(quote_id) = object.quote() {
+        let object_id = redirects.get(quote_id).unwrap_or(quote_id);
         let canonical_object_id = canonicalize_id(object_id)?;
         let linked = get_post_by_object_id(
             db_client,

@@ -46,6 +46,8 @@ It also supports the following standards:
   - Only `Object` intent is supported.
 - [FEP-844e: Capability discovery](https://codeberg.org/silverpill/feps/src/branch/main/844e/fep-844e.md)
   - The `implements` property is used to signal RFC-9421 support.
+- [FEP-044f: Consent-respecting quote posts](https://codeberg.org/fediverse/fep/src/branch/main/fep/044f/fep-044f.md)
+  - "Consent-respecting" quotes are processed in the same way as regular quotes.
 
 ### FEPs that might be supported in the future
 
