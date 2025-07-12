@@ -108,9 +108,13 @@ impl Application {
             name: "RFC-9421: HTTP Message Signatures",
             href: "https://datatracker.ietf.org/doc/html/rfc9421",
         };
+        let rfc9421_ed25519 = ApplicationFeature {
+            name: "RFC-9421 signatures using the Ed25519 algorithm",
+            href: "https://datatracker.ietf.org/doc/html/rfc9421#name-eddsa-using-curve-edwards25",
+        };
         Self {
             object_type: APPLICATION,
-            implements: vec![rfc9421],
+            implements: vec![rfc9421, rfc9421_ed25519],
         }
     }
 }
@@ -428,10 +432,16 @@ mod tests {
             },
             "generator": {
                 "type": "Application",
-                "implements": [{
-                    "name": "RFC-9421: HTTP Message Signatures",
-                    "href": "https://datatracker.ietf.org/doc/html/rfc9421",
-                }],
+                "implements": [
+                    {
+                        "name": "RFC-9421: HTTP Message Signatures",
+                        "href": "https://datatracker.ietf.org/doc/html/rfc9421",
+                    },
+                    {
+                        "name": "RFC-9421 signatures using the Ed25519 algorithm",
+                        "href": "https://datatracker.ietf.org/doc/html/rfc9421#name-eddsa-using-curve-edwards25",
+                    },
+                ],
             },
             "summary": "testbio",
             "manuallyApprovesFollowers": false,
@@ -515,10 +525,16 @@ mod tests {
             },
             "generator": {
                 "type": "Application",
-                "implements": [{
-                    "name": "RFC-9421: HTTP Message Signatures",
-                    "href": "https://datatracker.ietf.org/doc/html/rfc9421",
-                }],
+                "implements": [
+                    {
+                        "name": "RFC-9421: HTTP Message Signatures",
+                        "href": "https://datatracker.ietf.org/doc/html/rfc9421",
+                    },
+                    {
+                        "name": "RFC-9421 signatures using the Ed25519 algorithm",
+                        "href": "https://datatracker.ietf.org/doc/html/rfc9421#name-eddsa-using-curve-edwards25",
+                    },
+                ],
             },
             "summary": "testbio",
             "manuallyApprovesFollowers": false,
@@ -587,10 +603,16 @@ mod tests {
                 "owner": "https://server.example/actor",
                 "publicKeyPem": "-----BEGIN PUBLIC KEY-----\nMFwwDQYJKoZIhvcNAQEBBQADSwAwSAJBAOIh58ZQbo45MuZvv1nMWAzTzN9oghNC\nbxJkFEFD1Y49LEeNHMk6GrPByUz8kn4y8Hf6brb+DVm7ZW4cdhOx1TsCAwEAAQ==\n-----END PUBLIC KEY-----\n",
             },
-            "implements": [{
-                "name": "RFC-9421: HTTP Message Signatures",
-                "href": "https://datatracker.ietf.org/doc/html/rfc9421",
-            }],
+            "implements": [
+                {
+                    "name": "RFC-9421: HTTP Message Signatures",
+                    "href": "https://datatracker.ietf.org/doc/html/rfc9421",
+                },
+                {
+                    "name": "RFC-9421 signatures using the Ed25519 algorithm",
+                    "href": "https://datatracker.ietf.org/doc/html/rfc9421#name-eddsa-using-curve-edwards25",
+                },
+            ],
             "manuallyApprovesFollowers": false,
         });
         assert_eq!(value, expected_value);
