@@ -268,6 +268,9 @@ pub async fn verify_signed_request(
         )?;
         (signer_key, signer)
     };
+    if matches!(public_key, PublicKey::Ed25519(_)) {
+        log::info!("Ed25519 key found");
+    };
 
     verify_http_signature(
         &signature_data,
