@@ -17,6 +17,7 @@ use crate::{
 use super::queries::{
     get_post_by_id,
     get_related_posts,
+    find_posts_hidden_by_user,
     find_reposted_by_user,
 };
 use super::types::{Post, PostActions, RelatedPosts, Visibility};
@@ -73,10 +74,8 @@ pub async fn add_user_actions(
         .map(|post| post.id)
         .chain(
             posts.iter()
-                .filter_map(|post| {
-                    post.related_posts.as_ref()
-                        .and_then(|related_posts| related_posts.repost_of.as_ref())
-                })
+                .filter_map(|post| post.related_posts.as_ref())
+                .flat_map(|related_posts| related_posts.as_vec())
                 .map(|post| post.id)
         )
         .collect();
@@ -84,6 +83,7 @@ pub async fn add_user_actions(
     let reposts = find_reposted_by_user(db_client, user_id, &posts_ids).await?;
     let bookmarks = find_bookmarked_by_user(db_client, user_id, &posts_ids).await?;
     let votes = find_votes_by_user(db_client, user_id, &posts_ids).await?;
+    let hidden_posts = find_posts_hidden_by_user(db_client, user_id, &posts_ids).await?;
     let get_actions = |post: &Post| -> PostActions {
         let liked = reactions.iter()
             .any(|(post_id, content)| *post_id == post.id && content.is_none());
@@ -97,21 +97,25 @@ pub async fn add_user_actions(
             .find(|(post_id, _)| *post_id == post.id)
             .map(|(_, votes)| votes.clone())
             .unwrap_or_default();
+        let hidden = hidden_posts.contains(&post.id);
         PostActions {
             liked: liked,
             reacted_with: reacted_with,
             reposted: reposted,
             bookmarked: bookmarked,
             voted_for: voted_for,
+            hidden: hidden,
         }
     };
     for post in posts {
-        if let Some(repost_of) = post
+        if let Some(related_posts) = post
             .related_posts.as_mut()
-            .and_then(|related_posts| related_posts.repost_of.as_mut())
+            .map(|related_posts| related_posts.as_vec_mut())
         {
-            let actions = get_actions(repost_of);
-            repost_of.actions = Some(actions);
+            for related_post in related_posts {
+                let actions = get_actions(related_post);
+                related_post.actions = Some(actions);
+            };
         };
         let actions = get_actions(post);
         post.actions = Some(actions);

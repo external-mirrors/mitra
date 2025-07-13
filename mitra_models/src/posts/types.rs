@@ -190,6 +190,7 @@ pub struct PostActions {
     pub reposted: bool,
     pub bookmarked: bool,
     pub voted_for: Vec<String>,
+    pub hidden: bool,
 }
 
 #[derive(Clone, Default)]
@@ -197,6 +198,32 @@ pub struct RelatedPosts {
     pub in_reply_to: Option<Box<Post>>,
     pub repost_of: Option<Box<Post>>,
     pub linked: Vec<Post>,
+}
+
+impl RelatedPosts {
+    pub fn as_vec(&self) -> Vec<&Post> {
+        let mut posts = vec![];
+        if let Some(in_reply_to) = self.in_reply_to.as_deref() {
+            posts.push(in_reply_to);
+        };
+        if let Some(repost_of) = self.repost_of.as_deref() {
+            posts.push(repost_of);
+        };
+        posts.extend(&self.linked);
+        posts
+    }
+
+    pub fn as_vec_mut(&mut self) -> Vec<&mut Post> {
+        let mut posts = vec![];
+        if let Some(in_reply_to) = self.in_reply_to.as_deref_mut() {
+            posts.push(in_reply_to);
+        };
+        if let Some(repost_of) = self.repost_of.as_deref_mut() {
+            posts.push(repost_of);
+        };
+        posts.extend(&mut self.linked);
+        posts
+    }
 }
 
 #[derive(Clone)]

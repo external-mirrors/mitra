@@ -3654,6 +3654,10 @@ components:
           description: Have you bookmarked this post?
           type: boolean
           example: false
+        hidden:
+          description: Is this post hidden? A linked (quoted) post can be hidden if its author is muted.
+          type: boolean
+          example: false
         pleroma:
           description: Additional Pleroma API attributes.
           type: object

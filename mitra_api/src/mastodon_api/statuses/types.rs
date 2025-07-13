@@ -119,6 +119,7 @@ pub struct Status {
     pleroma: PleromaData,
 
     // Extra fields
+    hidden: bool,
     pub ipfs_cid: Option<String>,
     links: Vec<Status>,
 }
@@ -249,9 +250,12 @@ impl Status {
                     .in_reply_to
                     .map(|post| post.author.preferred_handle().to_owned()),
                 parent_visible: post.parent_visible,
-                quote_visible: maybe_quote.is_some(),
+                quote_visible: maybe_quote.as_ref()
+                    .map(|status| !status.hidden)
+                    .unwrap_or(true),
                 quote: maybe_quote,
             },
+            hidden: post.actions.is_some_and(|actions| actions.hidden),
             ipfs_cid: post.ipfs_cid,
             links: links,
         }

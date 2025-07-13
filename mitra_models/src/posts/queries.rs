@@ -1606,6 +1606,36 @@ pub async fn find_expired_reposts(
     Ok(reposts)
 }
 
+/// Finds items hidden by user among given posts
+pub(super) async fn find_posts_hidden_by_user(
+    db_client: &impl DatabaseClient,
+    user_id: Uuid,
+    posts_ids: &[Uuid],
+) -> Result<Vec<Uuid>, DatabaseError> {
+    let statement = format!(
+        "
+        SELECT post.id
+        FROM post
+        WHERE post.id = ANY($2) AND EXISTS (
+            SELECT 1 FROM relationship
+            WHERE
+                relationship.source_id = $1
+                AND relationship.target_id = post.author_id
+                AND relationship.relationship_type = {relationship_mute}
+        )
+        ",
+        relationship_mute=i16::from(RelationshipType::Mute),
+    );
+    let rows = db_client.query(
+        &statement,
+        &[&user_id, &posts_ids],
+    ).await?;
+    let hidden = rows.iter()
+        .map(|row| row.try_get("id"))
+        .collect::<Result<_, _>>()?;
+    Ok(hidden)
+}
+
 /// Finds all contexts (identified by top-level post)
 /// updated before the specified date
 /// that do not contain local posts, reposts, mentions, links or reactions.
