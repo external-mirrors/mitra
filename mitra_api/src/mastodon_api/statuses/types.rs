@@ -34,6 +34,13 @@ use crate::mastodon_api::{
 pub const POST_CONTENT_TYPE_HTML: &str = "text/html";
 pub const POST_CONTENT_TYPE_MARKDOWN: &str = "text/markdown";
 
+/// https://docs.joinmastodon.org/entities/Quote/
+#[derive(Serialize)]
+struct Quote {
+    state: &'static str,
+    quoted_status: Box<Status>,
+}
+
 /// https://docs.joinmastodon.org/entities/mention/
 #[derive(Serialize)]
 pub struct Mention {
@@ -106,6 +113,7 @@ pub struct Status {
     pub reblogs_count: i32,
     poll: Option<Poll>,
     pub media_attachments: Vec<Attachment>,
+    quote: Option<Quote>,
     mentions: Vec<Mention>,
     tags: Vec<Tag>,
     emojis: Vec<CustomEmoji>,
@@ -174,9 +182,14 @@ impl Status {
         } else {
             None
         };
-        let maybe_quote = related_posts.linked.first().cloned().map(|post| {
+        let maybe_first_link = related_posts.linked.first();
+        let maybe_quoted_status = maybe_first_link.cloned().map(|post| {
             let status = Status::from_post(instance_url, media_server, post);
             Box::new(status)
+        });
+        let maybe_quote = maybe_first_link.cloned().map(|post| {
+            let status = Status::from_post(instance_url, media_server, post);
+            Quote { state: "accepted", quoted_status: Box::new(status) }
         });
         let links: Vec<Status> = related_posts.linked.into_iter().map(|post| {
             Status::from_post(instance_url, media_server, post)
@@ -238,6 +251,7 @@ impl Status {
             reblogs_count: post.repost_count,
             poll: maybe_poll,
             media_attachments: attachments,
+            quote: maybe_quote,
             mentions: mentions,
             tags: tags,
             emojis: emojis,
@@ -250,10 +264,10 @@ impl Status {
                     .in_reply_to
                     .map(|post| post.author.preferred_handle().to_owned()),
                 parent_visible: post.parent_visible,
-                quote_visible: maybe_quote.as_ref()
+                quote_visible: maybe_quoted_status.as_ref()
                     .map(|status| !status.hidden)
                     .unwrap_or(true),
-                quote: maybe_quote,
+                quote: maybe_quoted_status,
             },
             hidden: post.actions.is_some_and(|actions| actions.hidden),
             ipfs_cid: post.ipfs_cid,

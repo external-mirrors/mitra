@@ -3605,6 +3605,21 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Attachment'
+        quote:
+          description: Information about the post being quoted, if any.
+          type: object
+          properties:
+            state:
+              description: The state of the quote.
+              type: string
+              enum:
+                - accepted
+            quoted_status:
+              allOf:
+                - $ref: '#/components/schemas/Status'
+                - description: The post being quoted.
+          nullable: true
+          example: null
         mentions:
           description: Mentions of users within the post.
           type: array
