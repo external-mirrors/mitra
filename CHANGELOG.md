@@ -21,6 +21,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Allow anonymous collection pages.
 - Don't escape HTML special characters in display name.
 - Write message to log when Ed25519 key is used for HTTP signature.
+- Remove zero-width characters from display names.
 
 ### Fixed
 

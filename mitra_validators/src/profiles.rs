@@ -15,6 +15,7 @@ use mitra_models::profiles::types::{
 };
 use mitra_utils::{
     html::{clean_html, clean_html_strict},
+    unicode::trim_invisible,
 };
 
 use super::{
@@ -80,19 +81,26 @@ pub fn validate_hostname(hostname: &str) -> Result<(), ValidationError> {
     Ok(())
 }
 
-fn clean_display_name(display_name: &str, is_remote: bool) -> String {
+fn clean_display_name(display_name: &str, is_remote: bool) -> Option<String> {
     // Sanitization is not needed because `name` is a plain-text field
     // https://www.w3.org/TR/activitystreams-vocabulary/#dfn-name
-    let mut text = display_name.to_owned();
+    let mut text = trim_invisible(display_name).to_owned();
     if is_remote {
         text = text.chars().take(DISPLAY_NAME_MAX_LENGTH).collect();
     };
-    text
+    if text.is_empty() {
+        None
+    } else {
+        Some(text)
+    }
 }
 
 fn validate_display_name(display_name: &str)
     -> Result<(), ValidationError>
 {
+    if trim_invisible(display_name).is_empty() {
+        return Err(ValidationError("display name is empty"));
+    };
     if display_name.chars().count() > DISPLAY_NAME_MAX_LENGTH {
         return Err(ValidationError("display name is too long"));
     };
@@ -287,8 +295,8 @@ pub fn clean_profile_create_data(
 ) -> Result<(), ValidationError> {
     let is_remote = profile_data.actor_json.is_some();
     if let Some(ref display_name) = profile_data.display_name {
-        let clean_name = clean_display_name(display_name, is_remote);
-        profile_data.display_name = Some(clean_name);
+        profile_data.display_name =
+            clean_display_name(display_name, is_remote);
     };
     if let Some(bio) = &profile_data.bio {
         let clean_bio = clean_bio(bio, is_remote);
@@ -340,8 +348,8 @@ pub fn clean_profile_update_data(
 ) -> Result<(), ValidationError> {
     let is_remote = profile_data.actor_json.is_some();
     if let Some(ref display_name) = profile_data.display_name {
-        let clean_name = clean_display_name(display_name, is_remote);
-        profile_data.display_name = Some(clean_name);
+        profile_data.display_name =
+            clean_display_name(display_name, is_remote);
     };
     if let Some(bio) = &profile_data.bio {
         let clean_bio = clean_bio(bio, is_remote);
@@ -402,8 +410,15 @@ mod tests {
     #[test]
     fn test_clean_display_name() {
         let name = "test <script>alert()</script>test :emoji:";
-        let output = clean_display_name(name, true);
+        let output = clean_display_name(name, true).unwrap();
         assert_eq!(output, "test <script>alert()</script>test :emoji:");
+    }
+
+    #[test]
+    fn test_clean_display_name_zerowidth() {
+        let name = " ​";
+        let output = clean_display_name(name, true);
+        assert_eq!(output, None);
     }
 
     #[test]
