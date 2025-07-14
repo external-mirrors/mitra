@@ -18,7 +18,7 @@ use mitra_validators::posts::LINK_LIMIT;
 use super::parser::is_inside_code_block;
 
 // MediaWiki-like syntax: [[url|text]]
-const OBJECT_LINK_SEARCH_RE: &str = r"(?m)\[\[(?P<url>[^\s\|]+)(\|(?P<text>.+?))?\]\]";
+const OBJECT_LINK_SEARCH_RE: &str = r"(?m)\[\[(?P<url>[^\s\|]+?)(\|(?P<text>.+?))?\]\]";
 
 /// Finds everything that looks like an object link
 fn find_object_links(text: &str) -> Vec<String> {

@@ -30,6 +30,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Fixed autolinking of URLs with IPv6 hostnames.
 - Fixed post import failure when `quoteUrl` is not a canonical ID.
+- Fixed parsing of consecutive `[[..]]` links.
 
 ## [4.5.1] - 2025-06-23
 
