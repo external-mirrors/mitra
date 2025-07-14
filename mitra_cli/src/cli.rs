@@ -131,6 +131,7 @@ use crate::commands::{
     filter::{AddFilterRule, ListFilterRules, RemoveFilterRule},
     invoice::RepairInvoice,
     post::CreatePost,
+    process::Worker,
     storage::{CheckUris, PruneReposts},
 };
 
@@ -149,6 +150,7 @@ pub struct Cli {
 pub enum SubCommand {
     /// Start HTTP server
     Server,
+    Worker(Worker),
     GetConfig(GetConfig),
     UpdateConfig(UpdateConfig),
     AddFilterRule(AddFilterRule),

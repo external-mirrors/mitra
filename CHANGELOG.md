@@ -12,6 +12,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Display FEP-044f quotes.
 - Signal support for RFC9421+Ed25519.
 - Added `quote` property to Mastodon API `Status` entity.
+- Added command that runs standalone queue workers.
 
 ### Changed
 

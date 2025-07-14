@@ -11,7 +11,7 @@ use super::periodic_tasks::*;
 const WORKER_DELAY: u64 = 500;
 
 #[derive(Debug, Eq, Hash, PartialEq)]
-enum PeriodicTask {
+pub enum PeriodicTask {
     IncomingActivityQueueExecutor,
     OutgoingActivityQueueExecutor,
     FetcherQueueExecutor,
@@ -62,7 +62,7 @@ impl PeriodicTask {
     }
 }
 
-async fn run_worker(
+pub async fn run_worker(
     config: Config,
     db_pool: DatabaseConnectionPool,
     tasks: Vec<PeriodicTask>,

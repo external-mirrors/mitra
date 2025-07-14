@@ -19,11 +19,14 @@ use cli::{Cli, SubCommand};
 #[tokio::main]
 async fn main() -> Result<(), Error> {
     let opts: Cli = Cli::parse();
-    let maybe_override_log_level = if let SubCommand::Server = opts.subcmd {
-        // Do not override log level when running server
-        None
-    } else {
-        Some(opts.log_level)
+    let maybe_override_log_level = match opts.subcmd {
+        SubCommand::Server | SubCommand::Worker(_) => {
+            // Do not override log level when running a process
+            None
+        },
+        _ => {
+            Some(opts.log_level)
+        },
     };
     let mut config = initialize_app(maybe_override_log_level);
     let mut db_client_value = create_database_client(&config).await;
@@ -40,6 +43,7 @@ async fn main() -> Result<(), Error> {
             let result = run_server(config, db_pool).await;
             result.map_err(Into::into)
         },
+        SubCommand::Worker(cmd) => cmd.execute(config, db_pool).await,
         SubCommand::GetConfig(cmd) => cmd.execute(&db_pool).await,
         SubCommand::UpdateConfig(cmd) => cmd.execute(&db_pool).await,
         SubCommand::AddFilterRule(cmd) => cmd.execute(&db_pool).await,
