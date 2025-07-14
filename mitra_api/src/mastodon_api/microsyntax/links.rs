@@ -1,5 +1,4 @@
-use std::collections::HashMap;
-
+use indexmap::IndexMap;
 use regex::{Captures, Regex};
 
 use mitra_activitypub::{
@@ -43,9 +42,9 @@ pub async fn find_linked_posts(
     db_client: &impl DatabaseClient,
     instance_url: &str,
     text: &str,
-) -> Result<HashMap<String, Post>, DatabaseError> {
+) -> Result<IndexMap<String, Post>, DatabaseError> {
     let links = find_object_links(text);
-    let mut link_map: HashMap<String, Post> = HashMap::new();
+    let mut link_map: IndexMap<String, Post> = IndexMap::new();
     let mut counter = 0;
     for url in links {
         if counter > LINK_LIMIT {
@@ -78,7 +77,7 @@ pub async fn find_linked_posts(
 }
 
 pub fn replace_object_links(
-    link_map: &HashMap<String, Post>,
+    link_map: &IndexMap<String, Post>,
     text: &str,
 ) -> String {
     let mention_re = Regex::new(OBJECT_LINK_SEARCH_RE)
