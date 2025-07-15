@@ -82,6 +82,7 @@ Objects with type other than `Note` are converted and stored in the same way as 
 - The `self` link in WebFinger JRD has `application/ld+json; profile="https://www.w3.org/ns/activitystreams"` type.
 - The object of `Accept(Follow)` activity is ID of the `Follow` activity.
 - Replies to followers-only posts [inherit](#conversations) the audience from their parents.
+- [`summary`](https://www.w3.org/TR/activitystreams-vocabulary/#dfn-summary) is displayed as summary and not used as a "content warning".
 
 ## HTML
 
