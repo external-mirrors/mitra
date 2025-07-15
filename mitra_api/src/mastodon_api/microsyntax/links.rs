@@ -134,7 +134,7 @@ mod tests {
 
     #[test]
     fn test_replace_object_links() {
-        let mut link_map = HashMap::new();
+        let mut link_map = IndexMap::new();
         link_map.insert("https://example.org/1".to_string(), Post::default());
         link_map.insert("https://example.org/2".to_string(), Post::default());
         let result = replace_object_links(&link_map, TEXT_WITH_OBJECT_LINKS);

@@ -192,7 +192,7 @@ mod tests {
         let csp = ContentSecurityPolicy::default();
         assert_eq!(
             csp.into_string(),
-            "base-uri 'self'; connect-src 'self'; default-src 'none'; frame-ancestors 'none'; img-src 'self' data:; manifest-src 'self'; media-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self'",
+            "base-uri 'self'; connect-src 'self' *; default-src 'none'; frame-ancestors 'none'; img-src 'self' data:; manifest-src 'self'; media-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self'",
         );
     }
 
