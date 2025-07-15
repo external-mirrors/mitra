@@ -25,6 +25,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Write message to log when Ed25519 key is used for HTTP signature.
 - Remove zero-width characters from display names.
 - Add `hidden` flag to `Status` entities in `links` array if the author is muted.
+- Changed CSP to allow external connections.
 
 ### Fixed
 

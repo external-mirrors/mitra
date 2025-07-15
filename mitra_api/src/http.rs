@@ -72,7 +72,8 @@ impl Default for ContentSecurityPolicy {
     fn default() -> Self {
         let defaults = [
             ("default-src", "'none'"),
-            ("connect-src", "'self'"),
+            // External connections are required for "attach from URL" feature
+            ("connect-src", "'self' *"),
             ("img-src", "'self' data:"),
             ("media-src", "'self'"),
             // script-src unsafe-inline required by MetaMask
