@@ -205,7 +205,11 @@ pub async fn receive_activity(
         };
     };
 
-    IncomingActivityJobData::new(activity, Some(recipient_id), is_authenticated)
+    IncomingActivityJobData::new(
+        activity,
+        Some((recipient_id, signer_id)),
+        is_authenticated,
+    )
         .into_job(db_client, 0)
         .await?;
     log::debug!("activity added to the queue: {}", activity_type);

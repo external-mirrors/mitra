@@ -134,8 +134,8 @@ async fn handle_fep_171b_add(
                 config,
                 db_client,
                 activity,
+                None, // no sender (spam check will not be performed)
                 true, // authenticated (FEP-8b32 or fetched from origin)
-                true, // don't perform spam check
             ).await?;
             Ok(Some(Descriptor::object(activity_type)))
         },

@@ -69,8 +69,8 @@ pub async fn handle_activity(
     db_client: &mut impl DatabaseClient,
     activity: &JsonValue,
     is_authenticated: bool,
-    is_pulled: bool,
     maybe_recipient_id: Option<&str>,
+    maybe_sender_id: Option<&str>,
 ) -> Result<String, HandlerError> {
     // Validate common activity attributes
     verify_activity_owner(activity)?;
@@ -104,8 +104,8 @@ pub async fn handle_activity(
                 config,
                 db_client,
                 activity,
+                maybe_sender_id,
                 is_authenticated,
-                is_pulled,
             ).await?
         },
         DELETE => {

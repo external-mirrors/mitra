@@ -937,7 +937,11 @@ async fn apgateway_outbox_push_view(
         Some(&collection_owner),
         &activity,
     )?;
-    IncomingActivityJobData::new(&activity, None, true)
+    IncomingActivityJobData::new(
+        &activity,
+        None, // no inbox
+        true, // activity has been authenticated
+    )
         .into_job(db_client, 0)
         .await?;
     Ok(HttpResponse::Accepted().finish())

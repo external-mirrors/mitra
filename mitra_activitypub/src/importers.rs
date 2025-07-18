@@ -663,8 +663,8 @@ pub async fn import_activity(
         db_client,
         &activity,
         true, // is authenticated
-        true, // activity is being pulled (not a spam)
-        None, // no inbox
+        None, // no recipient
+        None, // no sender (activity was pulled)
     ).await
 }
 

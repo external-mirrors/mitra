@@ -237,8 +237,8 @@ async fn handle_fep_1b12_announce(
                 config,
                 db_client,
                 activity.clone(),
+                None, // no sender (spam check will not be performed)
                 true, // authenticated (by embedding or fetched from origin)
-                true, // don't perform spam check
             )
                 .await?
                 .map(|desc| desc.to_string());

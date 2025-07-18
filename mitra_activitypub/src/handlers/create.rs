@@ -36,7 +36,6 @@ use crate::{
 use super::{
     note::{
         get_audience,
-        get_object_attributed_to,
         get_object_content,
         AttributedObject,
         AttributedObjectJson,
@@ -51,12 +50,12 @@ async fn check_unsolicited_message(
     db_client: &impl DatabaseClient,
     instance_url: &str,
     object: &AttributedObject,
+    sender_id: &str,
 ) -> Result<(), HandlerError> {
-    let author_id = get_object_attributed_to(object)?;
-    let canonical_author_id = canonicalize_id(&author_id)?.to_string();
+    let canonical_sender_id = canonicalize_id(sender_id)?.to_string();
     // is_local_or_followed returns true if actor has local account
-    let author_has_followers =
-        is_local_or_followed(db_client, &canonical_author_id).await?;
+    let sender_has_followers =
+        is_local_or_followed(db_client, &canonical_sender_id).await?;
     let audience = get_audience(object)?;
     // TODO: FEP-EF61: find portable local recipients
     let has_local_recipients = audience.iter().any(|actor_id| {
@@ -82,10 +81,10 @@ async fn check_unsolicited_message(
         audience.iter().any(is_public) &&
         !has_local_recipients &&
         // Possible cause: a failure to process Undo(Follow)
-        !author_has_followers;
+        !sender_has_followers;
     if is_unsolicited {
         let error_message =
-            format!("unsolicited message from {canonical_author_id}");
+            format!("unsolicited message from {canonical_sender_id}");
         return Err(HandlerError::Filtered(error_message));
     };
     Ok(())
@@ -102,8 +101,8 @@ pub async fn handle_create(
     config: &Config,
     db_client: &mut impl DatabaseClient,
     activity: JsonValue,
+    maybe_sender_id: Option<&str>,
     mut is_authenticated: bool,
-    is_pulled: bool,
 ) -> HandlerResult {
     let CreateNote {
         actor: activity_actor,
@@ -120,11 +119,12 @@ pub async fn handle_create(
     };
     let object: AttributedObjectJson = serde_json::from_value(object)?;
     let ap_client = ApClient::new(config, db_client).await?;
-    if !is_pulled {
+    if let Some(sender_id) = maybe_sender_id {
         check_unsolicited_message(
             db_client,
             &config.instance_url(),
             &object.inner,
+            sender_id,
         ).await?;
         // TODO: FEP-EF61: keyword filtering for portable messages
         if let Ok(http_url) = HttpUrl::parse(&author_id) {

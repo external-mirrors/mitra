@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- Verify activity sender instead of actor when filtering spam.
+
 ## [4.6.0] - 2025-07-16
 
 ### Added
