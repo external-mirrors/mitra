@@ -181,32 +181,36 @@ pub fn parse_http_signature_cavage(
     };
 
     // Recreate signature base
-    let mut message_parts = vec![];
+    let mut signature_base_entries = IndexMap::new();
     for header in headers_parameter.split(' ') {
-        let message_part = if header == "(request-target)" {
+        let header_value = if header == "(request-target)" {
             format!(
-                "(request-target): {} {}",
+                "{} {}",
                 request_method.as_str().to_lowercase(),
                 request_uri.path(),
             )
         } else if header == "(created)" {
-            let created = signature_parameters.get("created")
-                .ok_or(VerificationError::ParseError("created parameter is missing"))?;
-            format!("(created): {}", created)
+            signature_parameters.get("created")
+                .ok_or(VerificationError::ParseError("created parameter is missing"))?
+                .clone()
         } else if header == "(expires)" {
-            let expires = signature_parameters.get("expires")
-                .ok_or(VerificationError::ParseError("expires parameter is missing"))?;
-            format!("(expires): {}", expires)
+            signature_parameters.get("expires")
+                .ok_or(VerificationError::ParseError("expires parameter is missing"))?
+                .clone()
         } else {
-            let header_value = request_headers.get(header)
+            request_headers.get(header)
                 .ok_or(VerificationError::header_missing(header))?
                 .to_str()
-                .map_err(|_| VerificationError::header_value(header))?;
-            format!("{}: {}", header, header_value)
+                .map_err(|_| VerificationError::header_value(header))?
+                .to_owned()
         };
-        message_parts.push(message_part);
+        signature_base_entries.insert(header, header_value);
     };
-    let signature_base = message_parts.join("\n");
+    let signature_base = signature_base_entries
+        .into_iter()
+        .map(|(id, value)| format!("{id}: {value}"))
+        .collect::<Vec<_>>()
+        .join("\n");
 
     let signature_data = HttpSignatureData {
         key_id,
