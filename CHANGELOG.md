@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+
+- Added support for `Create` activities without embedded object.
+
 ### Changed
 
 - Verify activity sender instead of actor when filtering spam.

@@ -1,7 +1,7 @@
 use apx_core::http_url::HttpUrl;
 use apx_sdk::{
     authentication::{verify_portable_object, AuthenticationError},
-    deserialization::deserialize_into_object_id,
+    deserialization::{deserialize_into_object_id, object_to_id},
     utils::is_public,
 };
 use serde::Deserialize;
@@ -102,23 +102,45 @@ pub async fn handle_create(
     db_client: &mut impl DatabaseClient,
     activity: JsonValue,
     maybe_sender_id: Option<&str>,
-    mut is_authenticated: bool,
+    is_authenticated: bool,
 ) -> HandlerResult {
     let CreateNote {
         actor: activity_actor,
-        object,
+        mut object,
     } = serde_json::from_value(activity.clone())?;
 
+    let ap_client = ApClient::new(config, db_client).await?;
+    // Authentication
+    let is_not_embedded = object.as_str().is_some();
+    if is_not_embedded || !is_authenticated {
+        // Fetch object if it is not embedded or if activity is forwarded
+        let object_id = object_to_id(&activity["object"])
+            .map_err(|_| ValidationError("invalid activity object"))?;
+        object = ap_client.fetch_object(&object_id).await?;
+        log::info!("fetched object {}", object_id);
+    };
+    match verify_portable_object(&object) {
+        Ok(_) => (),
+        Err(AuthenticationError::InvalidObjectID(message)) => {
+            return Err(ValidationError(message).into());
+        },
+        Err(AuthenticationError::NotPortable) => (),
+        Err(other_error) => {
+            log::warn!("{other_error}");
+            return Err(ValidationError("invalid portable object").into());
+        },
+    };
+    // Authorization
     let author_id = parse_attributed_to(&object["attributedTo"])?;
     if author_id != activity_actor {
         return Err(ValidationError("actor is not authorized to create object").into());
     };
+    verify_object_owner(&object)?;
 
-    if is_question_vote(&object) && is_authenticated {
+    if is_question_vote(&object) {
         return handle_question_vote(config, db_client, object).await;
     };
     let object: AttributedObjectJson = serde_json::from_value(object)?;
-    let ap_client = ApClient::new(config, db_client).await?;
     if let Some(sender_id) = maybe_sender_id {
         check_unsolicited_message(
             db_client,
@@ -149,36 +171,13 @@ pub async fn handle_create(
         };
     };
 
-    // Authentication
-    match verify_portable_object(&object.value) {
-        Ok(_) => {
-            is_authenticated = true;
-        },
-        Err(AuthenticationError::InvalidObjectID(message)) => {
-            return Err(ValidationError(message).into());
-        },
-        Err(AuthenticationError::NotPortable) => (),
-        Err(other_error) => {
-            log::warn!("{other_error}");
-            return Err(ValidationError("invalid portable object").into());
-        },
-    };
-    verify_object_owner(&object.value)?;
-
     let object_id = object.id().to_owned();
     let object_type = object.inner.object_type.clone();
-    let object_received = if is_authenticated {
-        Some(object)
-    } else {
-        // Fetch object, don't trust the sender.
-        // Most likely it's a forwarded reply.
-        None
-    };
     let post = import_post(
         &ap_client,
         db_client,
         object_id,
-        object_received,
+        Some(object),
     ).await?;
     // NOTE: import_post always returns a post; activity will be re-distributed
     sync_conversation(
