@@ -43,7 +43,7 @@ struct UpdateNote {
 }
 
 async fn handle_update_note(
-    config: &Config,
+    ap_client: &ApClient,
     db_client: &mut impl DatabaseClient,
     activity: JsonValue,
 ) -> HandlerResult {
@@ -63,9 +63,8 @@ async fn handle_update_note(
         Err(DatabaseError::NotFound(_)) => return Ok(None),
         Err(other_error) => return Err(other_error.into()),
     };
-    let ap_client = ApClient::new(config, db_client).await?;
     let post = update_remote_post(
-        &ap_client,
+        ap_client,
         db_client,
         post,
         &object,
@@ -87,7 +86,7 @@ struct UpdatePerson {
 }
 
 async fn handle_update_person(
-    config: &Config,
+    ap_client: &ApClient,
     db_client: &mut impl DatabaseClient,
     activity: JsonValue,
 ) -> HandlerResult {
@@ -105,9 +104,8 @@ async fn handle_update_person(
         Err(DatabaseError::NotFound(_)) => return Ok(None),
         Err(other_error) => return Err(other_error.into()),
     };
-    let ap_client = ApClient::new(config, db_client).await?;
     let profile = update_remote_profile(
-        &ap_client,
+        ap_client,
         db_client,
         profile,
         update.object,
@@ -122,12 +120,12 @@ pub async fn handle_update(
     mut activity: JsonValue,
     is_authenticated: bool,
 ) -> HandlerResult {
+    let ap_client = ApClient::new(config, db_client).await?;
     let is_not_embedded = activity["object"].as_str().is_some();
     if is_not_embedded || !is_authenticated {
         // Fetch object if it is not embedded or if activity is forwarded
         let object_id = object_to_id(&activity["object"])
             .map_err(|_| ValidationError("invalid activity object"))?;
-        let ap_client = ApClient::new(config, db_client).await?;
         activity["object"] = ap_client.fetch_object(&object_id).await?;
         log::info!("fetched object {}", object_id);
     };
@@ -143,10 +141,10 @@ pub async fn handle_update(
         },
     };
     if is_actor(&activity["object"]) {
-        handle_update_person(config, db_client, activity).await
+        handle_update_person(&ap_client, db_client, activity).await
     } else if is_object(&activity["object"]) {
         verify_object_owner(&activity["object"])?;
-        handle_update_note(config, db_client, activity).await
+        handle_update_note(&ap_client, db_client, activity).await
     } else {
         log::warn!("unexpected object structure: {}", activity["object"]);
         Ok(None)
