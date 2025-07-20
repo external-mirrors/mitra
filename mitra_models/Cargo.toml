@@ -10,7 +10,7 @@ publish.workspace = true
 
 [dependencies]
 # Used for working with dates
-chrono = { version = "0.4.31", default-features = false, features = ["std", "serde"] }
+chrono = { version = "0.4.34", default-features = false, features = ["std", "serde"] }
 # Used for pooling database connections
 deadpool-postgres = { version = "0.11.0", default-features = false }
 deadpool = "*"

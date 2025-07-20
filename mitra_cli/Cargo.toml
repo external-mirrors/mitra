@@ -12,7 +12,7 @@ publish.workspace = true
 # Used for catching errors
 anyhow = "1.0.58"
 # Used for working with dates
-chrono = { version = "0.4.31", default-features = false }
+chrono = { version = "0.4.34", default-features = false }
 # Used to build admin CLI tool
 clap = { version = "~4.3.24", default-features = false, features = ["std", "derive", "error-context", "help", "usage"] }
 # Used for logging

@@ -1955,7 +1955,7 @@ pub async fn get_post_count(
 
 #[cfg(test)]
 mod tests {
-    use chrono::Duration;
+    use chrono::TimeDelta;
     use serial_test::serial;
     use crate::{
         custom_feeds::queries::{
@@ -2718,7 +2718,7 @@ mod tests {
     #[serial]
     async fn test_find_expired_reposts() {
         let db_client = &mut create_test_database().await;
-        let created_before = Utc::now() - Duration::days(1);
+        let created_before = Utc::now() - TimeDelta::days(1);
         let reposts = find_expired_reposts(
             db_client,
             created_before,
@@ -2750,7 +2750,7 @@ mod tests {
         let post_data_2 = PostCreateData {
             content: "test post".to_string(),
             object_id: Some("https://social.example/objects/2".to_string()),
-            created_at: Utc::now() - Duration::days(7),
+            created_at: Utc::now() - TimeDelta::days(7),
             ..Default::default()
         };
         let post_2 = create_post(
@@ -2759,7 +2759,7 @@ mod tests {
             post_data_2,
         ).await.unwrap();
 
-        let updated_before = Utc::now() - Duration::days(1);
+        let updated_before = Utc::now() - TimeDelta::days(1);
         let result = find_extraneous_posts(
             db_client,
             updated_before,

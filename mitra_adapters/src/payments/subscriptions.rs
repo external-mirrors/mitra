@@ -1,6 +1,6 @@
 use std::num::NonZeroU64;
 
-use chrono::{DateTime, Duration, Utc};
+use chrono::{DateTime, TimeDelta, Utc};
 
 use mitra_models::{
     database::{DatabaseClient, DatabaseError},
@@ -94,9 +94,9 @@ pub async fn create_or_update_local_subscription(
         |maybe_expires_at| {
             if let Some(expires_at) = maybe_expires_at {
                 std::cmp::max(expires_at, Utc::now()) +
-                    Duration::seconds(duration_secs)
+                    TimeDelta::seconds(duration_secs)
             } else {
-                Utc::now() + Duration::seconds(duration_secs)
+                Utc::now() + TimeDelta::seconds(duration_secs)
             }
         },
     ).await

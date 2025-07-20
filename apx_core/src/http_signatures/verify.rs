@@ -1,7 +1,7 @@
 //! Verify HTTP signatures
 use std::collections::HashMap;
 
-use chrono::{DateTime, Duration, TimeZone, Utc};
+use chrono::{DateTime, TimeDelta, TimeZone, Utc};
 use http::{HeaderMap, Method, Uri};
 use indexmap::IndexMap;
 use regex::Regex;
@@ -177,7 +177,7 @@ pub fn parse_http_signature_cavage(
         Utc.timestamp_opt(expires_at_timestamp, 0).single()
             .ok_or(VerificationError::ParseError("invalid timestamp"))?
     } else {
-        created_at + Duration::hours(SIGNATURE_EXPIRES_IN)
+        created_at + TimeDelta::hours(SIGNATURE_EXPIRES_IN)
     };
 
     // Recreate signature base
@@ -276,7 +276,7 @@ pub fn parse_http_signature_rfc9421(
             .ok_or(VerificationError::ParseError("invalid encoding of 'created'"))?;
         let created_at = Utc.timestamp_opt(created, 0).single()
             .ok_or(VerificationError::ParseError("invalid timestamp"))?;
-        created_at + Duration::hours(SIGNATURE_EXPIRES_IN)
+        created_at + TimeDelta::hours(SIGNATURE_EXPIRES_IN)
     };
     let mut components = vec![];
     for list_item in &signature_param_list.items {

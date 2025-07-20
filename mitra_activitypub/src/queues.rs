@@ -1,9 +1,9 @@
 use std::collections::BTreeMap;
-use std::time::{Duration as StdDuration, Instant};
+use std::time::{Duration, Instant};
 
 use apx_core::http_url::HttpUrl;
 use apx_sdk::fetch::FetchError;
-use chrono::{Duration, Utc};
+use chrono::{TimeDelta, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value as JsonValue};
 
@@ -96,7 +96,7 @@ impl IncomingActivityJobData {
     ) -> Result<(), DatabaseError> {
         let job_data = serde_json::to_value(self)
             .expect("activity should be serializable");
-        let scheduled_for = Utc::now() + Duration::seconds(delay.into());
+        let scheduled_for = Utc::now() + TimeDelta::seconds(delay.into());
         enqueue_job(
             db_client,
             JobType::IncomingActivity,
@@ -128,7 +128,7 @@ pub async fn process_queued_incoming_activities(
             serde_json::from_value(job.job_data)
                 .map_err(|_| DatabaseTypeError)?;
         let duration_max =
-            StdDuration::from_secs((JOB_TIMEOUT / 6).into());
+            Duration::from_secs((JOB_TIMEOUT / 6).into());
         let db_client = &mut **get_database_client(db_pool).await?;
         let handler_future = handle_activity(
             config,
@@ -342,7 +342,7 @@ impl OutgoingActivityJobData {
         };
         let job_data = serde_json::to_value(self)
             .expect("activity should be serializable");
-        let scheduled_for = Utc::now() + Duration::seconds(delay.into());
+        let scheduled_for = Utc::now() + TimeDelta::seconds(delay.into());
         enqueue_job(
             db_client,
             JobType::OutgoingActivity,
@@ -484,7 +484,7 @@ pub async fn process_queued_outgoing_activities(
                     };
                     if let Some(unreachable_since) = profile.unreachable_since {
                         let noretry_after = unreachable_since +
-                            Duration::seconds(OUTGOING_QUEUE_UNREACHABLE_NORETRY);
+                            TimeDelta::seconds(OUTGOING_QUEUE_UNREACHABLE_NORETRY);
                         if noretry_after < Utc::now() {
                             recipient.is_unreachable = true;
                         };

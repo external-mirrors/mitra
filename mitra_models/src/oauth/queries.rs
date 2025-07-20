@@ -211,7 +211,7 @@ pub async fn get_user_by_oauth_token(
 
 #[cfg(test)]
 mod tests {
-    use chrono::Duration;
+    use chrono::TimeDelta;
     use serial_test::serial;
     use crate::{
         database::test_utils::create_test_database,
@@ -248,7 +248,7 @@ mod tests {
             app.id,
             "read write",
             Utc::now(),
-            Utc::now() + Duration::days(7),
+            Utc::now() + TimeDelta::days(7),
         ).await.unwrap();
     }
 
@@ -263,7 +263,7 @@ mod tests {
             user.id,
             token,
             Utc::now(),
-            Utc::now() + Duration::days(7),
+            Utc::now() + TimeDelta::days(7),
         ).await.unwrap();
         let authenticated_user = get_user_by_oauth_token(
             db_client,

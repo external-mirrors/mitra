@@ -12,7 +12,7 @@ publish.workspace = true
 # Used for catching errors
 anyhow = "1.0.58"
 # Used for working with dates
-chrono = { version = "0.4.31", default-features = false, features = ["std"] }
+chrono = { version = "0.4.34", default-features = false, features = ["std"] }
 # Used for working with ethereum addresses
 ethereum-types = { version = "0.15.1", default-features = false }
 # Used to work with hexadecimal strings

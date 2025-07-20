@@ -14,7 +14,7 @@ use actix_web::{
     Scope as ActixScope,
 };
 use actix_web_httpauth::extractors::bearer::BearerAuth;
-use chrono::{Duration, Utc};
+use chrono::{TimeDelta, Utc};
 use log::Level;
 
 use mitra_config::Config;
@@ -113,7 +113,7 @@ async fn authorize_view(
 
     let authorization_code = generate_oauth_token();
     let created_at = Utc::now();
-    let expires_at = created_at + Duration::seconds(AUTHORIZATION_CODE_LIFETIME);
+    let expires_at = created_at + TimeDelta::seconds(AUTHORIZATION_CODE_LIFETIME);
     create_oauth_authorization(
         db_client,
         &authorization_code,
@@ -253,7 +253,7 @@ async fn token_view(
     let access_token = generate_oauth_token();
     let created_at = Utc::now();
     let expires_at = created_at +
-        Duration::seconds(config.authentication_token_lifetime.into());
+        TimeDelta::seconds(config.authentication_token_lifetime.into());
     save_oauth_token(
         db_client,
         user.id,

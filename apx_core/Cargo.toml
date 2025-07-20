@@ -16,7 +16,7 @@ blake2 = { version = "0.10.5", optional = true }
 # Used to decode base58btc
 bs58 = "0.4.0"
 # Used for working with dates
-chrono = { version = "0.4.31", default-features = false, features = ["std", "serde", "clock"] }
+chrono = { version = "0.4.34", default-features = false, features = ["std", "serde", "clock"] }
 # Used for working with EdDSA signatures
 ed25519-dalek = { version = "2.0.0", features = ["pem", "pkcs8", "rand_core"] }
 # Used to work with hexadecimal strings

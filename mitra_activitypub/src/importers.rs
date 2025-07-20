@@ -22,7 +22,7 @@ use apx_sdk::{
     jrd::{JsonResourceDescriptor, JRD_MEDIA_TYPE},
     utils::{get_core_type, CoreType},
 };
-use chrono::{Duration, Utc};
+use chrono::{TimeDelta, Utc};
 use serde::{
     Deserialize,
     de::DeserializeOwned,
@@ -284,7 +284,7 @@ async fn refresh_remote_profile(
     force: bool,
 ) -> Result<DbActorProfile, HandlerError> {
     let profile = if force ||
-        profile.updated_at < Utc::now() - Duration::days(1)
+        profile.updated_at < Utc::now() - TimeDelta::days(1)
     {
         if profile.has_account() {
             // Local nomadic accounts should not be refreshed

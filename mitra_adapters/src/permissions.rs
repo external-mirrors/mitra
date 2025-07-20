@@ -1,4 +1,4 @@
-use chrono::{Duration, Utc};
+use chrono::{TimeDelta, Utc};
 use uuid::Uuid;
 
 use mitra_models::{
@@ -66,7 +66,7 @@ pub async fn filter_mentions(
                 is_participant(profile.id) ||
                 // Mentions from connections are always accepted
                 is_connected(db_client, author.id, profile.id).await? ||
-                    age >= Duration::minutes(ACTOR_PROFILE_AGE_MIN)
+                    age >= TimeDelta::minutes(ACTOR_PROFILE_AGE_MIN)
             },
             MentionPolicy::OnlyContacts => {
                 is_participant(profile.id) ||

@@ -10,7 +10,7 @@ publish.workspace = true
 
 [dependencies]
 # Used for working with dates
-chrono = { version = "0.4.31", default-features = false }
+chrono = { version = "0.4.34", default-features = false }
 # Used for logging
 log = "0.4.20"
 env_logger = { version = "~0.10.2", default-features = false }
