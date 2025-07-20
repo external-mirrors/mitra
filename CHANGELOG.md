@@ -12,6 +12,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Added support for media attachments to `import-posts` command.
 - Added `--id` argument to `create-post` command.
 - Add Atom feed link to `<head>` of the profile page.
+- Added FEP-ae97 API endpoints for uploading media.
 
 ### Changed
 

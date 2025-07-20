@@ -572,6 +572,9 @@ pub async fn delete_profile(
         UNION ALL
         SELECT media
         FROM media_attachment WHERE post_id = ANY($2)
+        UNION ALL
+        SELECT media
+        FROM activitypub_media WHERE owner_id = $1
         ",
         &[&profile_id, &posts],
     ).await?;

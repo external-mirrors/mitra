@@ -1,10 +1,15 @@
 use chrono::Utc;
 
-use crate::background_jobs::{
-    queries::enqueue_job,
-    types::JobType,
+use crate::{
+    background_jobs::{
+        queries::enqueue_job,
+        types::JobType,
+    },
+    database::{
+        DatabaseClient,
+        DatabaseError,
+    },
 };
-use crate::database::{DatabaseClient, DatabaseError};
 
 use super::types::DeletionQueue;
 
@@ -62,6 +67,8 @@ pub async fn find_orphaned_files(
             ) AS file_name FROM actor_profile
             UNION ALL
             SELECT image ->> 'file_name' FROM emoji
+            UNION ALL
+            SELECT media ->> 'file_name' FROM activitypub_media
         ) AS db_media
         ON (storage_file_name = db_media.file_name)
         WHERE db_media.file_name IS NULL
@@ -125,6 +132,9 @@ pub async fn get_local_files(
         SELECT image ->> 'file_name' AS file_name
         FROM emoji
         WHERE hostname IS NULL
+        UNION
+        SELECT media ->> 'file_name' AS file_name
+        FROM activitypub_media
         ",
         &[],
     ).await?;

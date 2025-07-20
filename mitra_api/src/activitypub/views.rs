@@ -12,6 +12,7 @@ use actix_web::{
 use apx_core::{
     ap_url::with_ap_prefix,
     caip2::ChainId,
+    hashlink::Hashlink,
     http_digest::ContentDigest,
     http_types::{header_map_adapter, method_adapter, uri_adapter},
 };
@@ -64,6 +65,8 @@ use mitra_activitypub::{
 use mitra_config::Config;
 use mitra_models::{
     activitypub::queries::{
+        create_activitypub_media,
+        get_activitypub_media_by_digest,
         get_actor,
         get_collection_items,
         get_object_as_target,
@@ -88,13 +91,14 @@ use mitra_models::{
         types::PaymentOption,
     },
     users::queries::{
+        get_portable_user_by_id,
         get_portable_user_by_inbox_id,
         get_portable_user_by_outbox_id,
         get_user_by_name,
         get_user_by_name_with_pool,
     },
 };
-use mitra_services::media::MediaServer;
+use mitra_services::media::{MediaServer, MediaStorage};
 use mitra_validators::errors::ValidationError;
 
 use crate::{
@@ -110,7 +114,7 @@ use crate::{
 
 use super::{
     receiver::{receive_activity, InboxError},
-    types::PortableActorKeys,
+    types::{PortableActorKeys, PortableMedia},
 };
 
 #[get("")]
@@ -1010,4 +1014,101 @@ pub fn gateway_scope(gateway_enabled: bool) -> Scope {
         .service(apgateway_outbox_push_view)
         .service(apgateway_outbox_pull_view)
         .service(apgateway_view)
+}
+
+#[post("")]
+async fn apgateway_media_upload_view(
+    config: web::Data<Config>,
+    connection_info: ConnectionInfo,
+    db_pool: web::Data<DatabaseConnectionPool>,
+    request: HttpRequest,
+    request_body: web::Bytes,
+) -> Result<HttpResponse, HttpError> {
+    let request_full_uri =
+        get_request_full_uri(&connection_info, request.uri());
+    let body_digest = ContentDigest::new(&request_body);
+    let (_, signer) = verify_signed_request(
+        &config,
+        &db_pool,
+        method_adapter(request.method()),
+        uri_adapter(&request_full_uri),
+        header_map_adapter(request.headers()),
+        Some(body_digest),
+        true, // don't fetch actor
+    ).await.map_err(|error| {
+        log::warn!("C2S authentication error (POST {request_full_uri}): {error}");
+        HttpError::AuthError("invalid signature")
+    })?;
+    let db_client = &**get_database_client(&db_pool).await?;
+    let signer = match get_portable_user_by_id(
+        db_client,
+        signer.id,
+    ).await {
+        Ok(signer) => signer,
+        Err(DatabaseError::NotFound(_)) => {
+            // Only local portable users can upload media
+            return Ok(HttpResponse::MethodNotAllowed().finish());
+        },
+        Err(other_error) => return Err(other_error.into()),
+    };
+
+    let storage = MediaStorage::new(&config);
+    const APPLICATION_OCTET_STREAM: &str = "application/octet-stream";
+    let media_type = request.headers()
+        .get(http_header::CONTENT_TYPE)
+        .and_then(|value| value.to_str().ok())
+        .unwrap_or(APPLICATION_OCTET_STREAM);
+    let file_data = request_body.to_vec();
+    if file_data.len() > config.limits.media.file_size_limit {
+        return Err(ValidationError("file too large").into());
+    };
+    if !config.limits.media.supported_media_types().contains(&media_type) {
+        return Err(ValidationError("invalid media type").into());
+    };
+    let file_info = storage.save_file(file_data, media_type)
+        .map_err(HttpError::from_internal)?;
+    create_activitypub_media(
+        db_client,
+        signer.id,
+        file_info.clone(),
+    ).await?;
+
+    let hashlink = Hashlink::new(file_info.digest);
+    let media_data = PortableMedia {
+        url: hashlink.to_string(),
+    };
+    let response = HttpResponse::Created()
+        .content_type(AP_MEDIA_TYPE)
+        .json(media_data);
+    Ok(response)
+}
+
+#[get("/{hashlink:.*}")]
+async fn apgateway_media_view(
+    config: web::Data<Config>,
+    db_pool: web::Data<DatabaseConnectionPool>,
+    hashlink: web::Path<String>,
+) -> Result<HttpResponse, HttpError> {
+    let digest = Hashlink::parse(&hashlink)
+        .map_err(|_| ValidationError("invalid hashlink"))?
+        .digest();
+    // TODO: FEP-ef61: check object ID, HTTP signature & permission
+    let db_client = &**get_database_client(&db_pool).await?;
+    let file_info = get_activitypub_media_by_digest(db_client, digest).await?;
+    let media_server = MediaServer::new(&config);
+    let media_url = media_server.url_for(&file_info.file_name);
+    let response = HttpResponse::Found()
+        .append_header((http_header::LOCATION, media_url))
+        .finish();
+    Ok(response)
+}
+
+pub fn media_gateway_scope(gateway_enabled: bool) -> Scope {
+    let scope = web::scope("/.well-known/apgateway-media");
+    if !gateway_enabled {
+        return scope;
+    };
+    scope
+        .service(apgateway_media_view)
+        .service(apgateway_media_upload_view)
 }

@@ -3,9 +3,15 @@ use chrono::{DateTime, Utc};
 use serde_json::{Value as JsonValue};
 use uuid::Uuid;
 
-use crate::database::{
-    DatabaseClient,
-    DatabaseError,
+use mitra_utils::files::FileInfo;
+
+use crate::{
+    database::{
+        DatabaseClient,
+        DatabaseError,
+        DatabaseTypeError,
+    },
+    media::types::MediaInfo,
 };
 
 pub async fn save_activity(
@@ -257,6 +263,50 @@ pub async fn expand_collections(
     Ok(expanded_audience)
 }
 
+pub async fn create_activitypub_media(
+    db_client: &impl DatabaseClient,
+    owner_id: Uuid,
+    file_info: FileInfo,
+) -> Result<(), DatabaseError> {
+    let media_info = MediaInfo::local(file_info);
+    db_client.execute(
+        "
+        INSERT INTO activitypub_media (
+            owner_id,
+            media
+        )
+        VALUES ($1, $2)
+        ON CONFLICT (owner_id, digest) DO NOTHING
+        ",
+        &[&owner_id, &media_info],
+    ).await?;
+    Ok(())
+}
+
+pub async fn get_activitypub_media_by_digest(
+    db_client: &impl DatabaseClient,
+    digest: [u8; 32],
+) -> Result<FileInfo, DatabaseError> {
+    // Not checking owner
+    let digest_array_string = format!("{digest:?}");
+    let maybe_row = db_client.query_opt(
+        "
+        SELECT media
+        FROM activitypub_media
+        WHERE digest = $1
+        LIMIT 1
+        ",
+        &[&digest_array_string],
+    ).await?;
+    let row = maybe_row.ok_or(DatabaseError::NotFound("media"))?;
+    let media_info = row.try_get("media")?;
+    let file_info = match media_info {
+        MediaInfo::File { file_info, .. } => file_info,
+        _ => return Err(DatabaseTypeError.into()),
+    };
+    Ok(file_info)
+}
+
 #[cfg(test)]
 mod tests {
     use serde_json::json;
@@ -483,5 +533,31 @@ mod tests {
         ).await.unwrap();
         assert_eq!(expanded_audience.len(), 1);
         assert_eq!(expanded_audience[0], actor_id);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_create_activitypub_media() {
+        let db_client = &mut create_test_database().await;
+        let canonical_actor_id = "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor";
+        let user = create_test_portable_user(
+            db_client,
+            "test",
+            canonical_actor_id,
+        ).await;
+        let media_info = MediaInfo::png_for_test();
+        let MediaInfo::File { file_info, .. } = &media_info else {
+            unreachable!();
+        };
+        create_activitypub_media(
+            db_client,
+            user.id,
+            file_info.clone(),
+        ).await.unwrap();
+        let db_file_info = get_activitypub_media_by_digest(
+            db_client,
+            file_info.digest,
+        ).await.unwrap();
+        assert_eq!(db_file_info.file_name, file_info.file_name);
     }
 }

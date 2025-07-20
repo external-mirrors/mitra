@@ -20,3 +20,8 @@ impl PortableActorKeys {
         Self { assertion_method }
     }
 }
+
+#[derive(Serialize)]
+pub struct PortableMedia {
+    pub url: String,
+}
