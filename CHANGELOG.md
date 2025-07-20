@@ -16,6 +16,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Ignore forwarded `Announce` activities.
 - Optimized `Update` activity handler.
 - Changed MSRV to 1.74.1.
+- Added support for `@query` RFC-9421 component.
 
 ## [4.6.0] - 2025-07-16
 

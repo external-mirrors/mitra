@@ -287,7 +287,6 @@ pub fn parse_http_signature_rfc9421(
     };
 
     // Recreate signature base
-    let request_uri_string = request_uri.to_string();
     let mut signature_base_entries = IndexMap::new();
     for component_id in components.iter() {
         if signature_base_entries.contains_key(component_id.as_str()) {
@@ -295,19 +294,25 @@ pub fn parse_http_signature_rfc9421(
         };
         let component_value = match component_id.as_str() {
             "@method" => {
-                request_method.as_str()
+                request_method.to_string()
+            },
+            "@target-uri" => {
+                request_uri.to_string()
             },
             "@path" => {
-                request_uri.path()
+                request_uri.path().to_owned()
+            },
+            "@query" => {
+                // https://datatracker.ietf.org/doc/html/rfc9421#name-query
+                let query = request_uri.query().unwrap_or_default();
+                format!("?{query}")
             },
             "@authority" => {
                 request_headers.get("host")
                     .ok_or(VerificationError::header_missing("Host"))?
                     .to_str()
                     .map_err(|_| VerificationError::header_value("Host"))?
-            },
-            "@target-uri" => {
-                request_uri_string.as_str()
+                    .to_owned()
             },
             id if id.starts_with('@') => {
                 return Err(VerificationError::ParseError("unsupported component ID"));
@@ -317,11 +322,12 @@ pub fn parse_http_signature_rfc9421(
                     .ok_or(VerificationError::header_missing(component_id))?
                     .to_str()
                     .map_err(|_| VerificationError::header_value(component_id))?
+                    .to_owned()
             },
         };
         signature_base_entries.insert(component_id.as_str(), component_value);
     };
-    signature_base_entries.insert("@signature-params", &signature_params);
+    signature_base_entries.insert("@signature-params", signature_params);
     let signature_base = signature_base_entries
         .into_iter()
         .map(|(id, value)| format!(r#""{id}": {value}"#))
