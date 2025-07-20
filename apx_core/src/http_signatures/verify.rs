@@ -32,6 +32,9 @@ const SIGNATURE_PARAMETER_RE: &str = r#"^(?P<key>[a-zA-Z]+)=(?P<value>.+)$"#;
 
 const SIGNATURE_EXPIRES_IN: i64 = 12; // 12 hours
 
+const REQUIRED_COMPONENTS_CAVAGE: [&str; 2] = ["(request-target)", "host"];
+const REQUIRED_COMPONENTS_RFC9421: [&str; 2] = ["@method", "@target-uri"];
+
 #[derive(thiserror::Error, Debug)]
 pub enum HttpSignatureVerificationError {
     #[error("HTTP method not supported")]
@@ -45,6 +48,9 @@ pub enum HttpSignatureVerificationError {
 
     #[error("{0}")]
     ParseError(&'static str),
+
+    #[error("missing component {0}")]
+    MissingComponent(&'static str),
 
     #[error("invalid encoding")]
     InvalidEncoding(#[from] base64::DecodeError),
@@ -110,6 +116,18 @@ fn get_content_digest(
         None
     };
     Ok(maybe_digest)
+}
+
+fn check_required_components(
+    entries: &IndexMap<&str, String>,
+    required: &[&'static str],
+) -> Result<(), VerificationError> {
+    for component_id in required {
+        if !entries.contains_key(component_id) {
+            return Err(VerificationError::MissingComponent(component_id));
+        };
+    };
+    Ok(())
 }
 
 /// Parses Draft-Cavage HTTP signature  
@@ -206,6 +224,10 @@ pub fn parse_http_signature_cavage(
         };
         signature_base_entries.insert(header, header_value);
     };
+    check_required_components(
+        &signature_base_entries,
+        &REQUIRED_COMPONENTS_CAVAGE,
+    )?;
     let signature_base = signature_base_entries
         .into_iter()
         .map(|(id, value)| format!("{id}: {value}"))
@@ -229,6 +251,7 @@ pub fn parse_http_signature_rfc9421(
     request_method: &Method,
     request_uri: &Uri,
     request_headers: &HeaderMap,
+    required_components: &[&'static str],
 ) -> Result<HttpSignatureData, VerificationError> {
     // Parse Signature header
     let signature_header = request_headers.get("Signature")
@@ -331,6 +354,7 @@ pub fn parse_http_signature_rfc9421(
         };
         signature_base_entries.insert(component_id.as_str(), component_value);
     };
+    check_required_components(&signature_base_entries, required_components)?;
     signature_base_entries.insert("@signature-params", signature_params);
     let signature_base = signature_base_entries
         .into_iter()
@@ -367,7 +391,10 @@ pub fn parse_http_signature(
     headers: &HeaderMap,
 ) -> Result<HttpSignatureData, VerificationError> {
     if headers.get("Signature-Input").is_some() {
-        parse_http_signature_rfc9421(method, uri, headers)
+        parse_http_signature_rfc9421(
+            method, uri, headers,
+            &REQUIRED_COMPONENTS_RFC9421,
+        )
     } else {
         parse_http_signature_cavage(method, uri, headers)
     }
@@ -503,6 +530,7 @@ mod tests {
             &request_method,
             &request_uri,
             &request_headers,
+            &[],
         ).unwrap();
 
         let expected_signature_base =

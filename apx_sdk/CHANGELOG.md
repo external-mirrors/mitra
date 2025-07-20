@@ -13,6 +13,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Added support for `@query` RFC-9421 component.
 - Added `fetch_file_streaming` function.
 
+### Security
+
+- Require HTTP signatures to cover request method and target URI.
+
 ## [0.14.1] - 2025-06-08
 
 ### Changed

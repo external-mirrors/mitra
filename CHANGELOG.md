@@ -32,6 +32,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Use correct file size limit when adding custom emoji by URL.
 - Don't copy media attributes when stealing remote emoji.
 
+### Security
+
+- Require HTTP signatures to cover request method and target URI.
+
 ## [4.6.0] - 2025-07-16
 
 ### Added
