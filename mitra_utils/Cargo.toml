@@ -31,7 +31,7 @@ regex = "1.10.6"
 # Used for hashing passwords
 rust-argon2 = "2.1.0"
 # Used to gather disk info
-sysinfo = { version = "0.30.13", default-features = false }
+sysinfo = { version = "0.32.1", default-features = false, features = ["disk"] }
 # Used for creating error types
 thiserror = "1.0.37"
 # Used to generate lexicographically sortable IDs
