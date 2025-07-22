@@ -1,4 +1,4 @@
-FROM alpine:3.18 AS builder
+FROM alpine:3.22 AS builder
 
 RUN apk update && apk add --no-cache curl gcc musl-dev rust cargo
 
@@ -11,7 +11,7 @@ ENV DEFAULT_CONFIG_PATH=/etc/mitra/config.yaml
 RUN cargo build --release --features production
 
 #--------------
-FROM alpine:3.18
+FROM alpine:3.22
 
 RUN apk add --no-cache ca-certificates gcc
 
