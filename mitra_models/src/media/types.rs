@@ -16,8 +16,8 @@ pub struct MediaInfo {
 impl MediaInfo {
     pub fn local(file_info: FileInfo) -> Self {
         Self {
-            file_name: file_info.name,
-            file_size: file_info.size,
+            file_name: file_info.file_name,
+            file_size: file_info.file_size,
             digest: file_info.digest,
             media_type: file_info.media_type,
             url: None,
