@@ -58,13 +58,7 @@ mod tests {
     fn test_build_emoji() {
         let instance_url = "https://social.example";
         let media_server = MediaServer::for_test(instance_url);
-        let updated_at = DateTime::parse_from_rfc3339("2023-02-24T23:36:38Z")
-            .unwrap().with_timezone(&Utc);
-        let db_emoji = DbEmoji {
-            emoji_name: "test".to_string(),
-            updated_at,
-            ..Default::default()
-        };
+        let db_emoji = DbEmoji::local_for_test("test");
         let emoji = build_emoji(instance_url, &media_server, &db_emoji);
         let emoji_value = serde_json::to_value(emoji).unwrap();
         let expected_value = json!({
@@ -74,10 +68,10 @@ mod tests {
             "attributedTo": "https://social.example/actor",
             "icon": {
                 "type": "Image",
-                "url": "https://social.example/media/",
-                "mediaType": "",
+                "url": "https://social.example/media/test.png",
+                "mediaType": "image/png",
             },
-            "updated": "2023-02-24T23:36:38Z",
+            "updated": "1970-01-01T00:00:00Z",
         });
         assert_eq!(emoji_value, expected_value);
     }

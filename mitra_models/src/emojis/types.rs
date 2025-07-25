@@ -12,7 +12,6 @@ use crate::{
 fn default_emoji_file_size() -> usize { 250 * 1000 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
-#[cfg_attr(any(test, feature = "test-utils"), derive(Default))]
 pub struct EmojiImage {
     pub file_name: String,
     #[serde(default = "default_emoji_file_size")]
@@ -38,7 +37,6 @@ json_from_sql!(EmojiImage);
 json_to_sql!(EmojiImage);
 
 #[derive(Clone, Deserialize, FromSql)]
-#[cfg_attr(feature = "test-utils", derive(Default))]
 #[postgres(name = "emoji")]
 pub struct DbEmoji {
     pub id: Uuid,
