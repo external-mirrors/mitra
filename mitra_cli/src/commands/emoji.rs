@@ -18,9 +18,8 @@ use mitra_models::{
             delete_emoji,
             get_emoji_by_name_and_hostname,
         },
-        types::EmojiImage,
     },
-    media::types::MediaInfo,
+    media::types::{MediaInfo, PartialMediaInfo},
 };
 use mitra_services::media::MediaStorage;
 use mitra_utils::files::FileSize;
@@ -88,7 +87,7 @@ impl AddEmoji {
         validate_local_emoji_data(config, &self.emoji_name, &file_data, &media_type)?;
         let media_storage = MediaStorage::new(config);
         let file_info = media_storage.save_file(file_data, &media_type)?;
-        let image = EmojiImage::from(MediaInfo::local(file_info));
+        let image = PartialMediaInfo::from(MediaInfo::local(file_info));
         let (_, deletion_queue) = create_or_update_local_emoji(
             db_client,
             &self.emoji_name,
@@ -127,7 +126,7 @@ impl ImportEmoji {
             .ok_or(anyhow!("unknown media type"))?;
         validate_local_emoji_data(config, &emoji.emoji_name, &file_data, &media_type)?;
         let file_info = media_storage.save_file(file_data, &media_type)?;
-        let image = EmojiImage::from(MediaInfo::local(file_info));
+        let image = PartialMediaInfo::from(MediaInfo::local(file_info));
         let (_, deletion_queue) = create_or_update_local_emoji(
             db_client,
             &emoji.emoji_name,

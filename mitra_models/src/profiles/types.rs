@@ -31,7 +31,7 @@ use crate::{
         DatabaseTypeError,
     },
     emojis::types::DbEmoji,
-    media::types::MediaInfo,
+    media::types::PartialMediaInfo,
 };
 
 use super::checks::{
@@ -39,30 +39,6 @@ use super::checks::{
     check_payment_options,
     check_public_keys,
 };
-
-#[derive(Clone, Debug, Deserialize, Serialize)]
-pub struct ProfileImage {
-    pub file_name: String,
-    pub file_size: Option<usize>,
-    digest: Option<[u8; 32]>,
-    pub media_type: Option<String>,
-    url: Option<String>,
-}
-
-impl From<MediaInfo> for ProfileImage {
-    fn from(media_info: MediaInfo) -> Self {
-        Self {
-            file_name: media_info.file_name,
-            file_size: Some(media_info.file_size),
-            digest: Some(media_info.digest),
-            media_type: Some(media_info.media_type),
-            url: media_info.url,
-        }
-    }
-}
-
-json_from_sql!(ProfileImage);
-json_to_sql!(ProfileImage);
 
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub enum MentionPolicy {
@@ -658,8 +634,8 @@ pub struct DbActorProfile {
     pub display_name: Option<String>,
     pub bio: Option<String>, // html
     pub bio_source: Option<String>, // plaintext or markdown
-    pub avatar: Option<ProfileImage>,
-    pub banner: Option<ProfileImage>,
+    pub avatar: Option<PartialMediaInfo>,
+    pub banner: Option<PartialMediaInfo>,
     pub is_automated: bool,
     pub manually_approves_followers: bool,
     pub mention_policy: MentionPolicy,
@@ -886,8 +862,8 @@ pub struct ProfileCreateData {
     pub hostname: WebfingerHostname,
     pub display_name: Option<String>,
     pub bio: Option<String>,
-    pub avatar: Option<ProfileImage>,
-    pub banner: Option<ProfileImage>,
+    pub avatar: Option<PartialMediaInfo>,
+    pub banner: Option<PartialMediaInfo>,
     pub is_automated: bool,
     pub manually_approves_followers: bool,
     pub mention_policy: MentionPolicy,
@@ -924,8 +900,8 @@ pub struct ProfileUpdateData {
     pub display_name: Option<String>,
     pub bio: Option<String>,
     pub bio_source: Option<String>,
-    pub avatar: Option<ProfileImage>,
-    pub banner: Option<ProfileImage>,
+    pub avatar: Option<PartialMediaInfo>,
+    pub banner: Option<PartialMediaInfo>,
     pub is_automated: bool,
     pub manually_approves_followers: bool,
     pub mention_policy: MentionPolicy,

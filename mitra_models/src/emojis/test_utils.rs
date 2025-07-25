@@ -1,6 +1,6 @@
-use crate::media::types::MediaInfo;
+use crate::media::types::{MediaInfo, PartialMediaInfo};
 
-use super::types::{DbEmoji, EmojiImage};
+use super::types::DbEmoji;
 
 impl DbEmoji {
     pub fn local_for_test(name: &str) -> Self {
@@ -8,7 +8,7 @@ impl DbEmoji {
             id: Default::default(),
             emoji_name: name.to_owned(),
             hostname: None,
-            image: EmojiImage::from(MediaInfo::png_for_test()),
+            image: PartialMediaInfo::from(MediaInfo::png_for_test()),
             object_id: None,
             updated_at: Default::default(),
         }
@@ -24,7 +24,7 @@ impl DbEmoji {
             id: Default::default(),
             emoji_name: name.to_owned(),
             hostname: Some(hostname.to_owned()),
-            image: EmojiImage::from(media_info),
+            image: PartialMediaInfo::from(media_info),
             object_id: Some(url),
             updated_at: Default::default(),
         }

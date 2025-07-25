@@ -2,7 +2,8 @@ use serde::{Deserialize, Serialize};
 
 use mitra_utils::files::FileInfo;
 
-// Same field names in ProfileImage and EmojiImage
+use crate::database::json_macro::{json_from_sql, json_to_sql};
+
 #[derive(Clone)]
 pub struct MediaInfo {
     pub file_name: String,
@@ -30,6 +31,31 @@ impl MediaInfo {
         }
     }
 }
+
+// Same field names in database
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct PartialMediaInfo {
+    pub file_name: String,
+    pub file_size: Option<usize>,
+    pub digest: Option<[u8; 32]>,
+    pub media_type: Option<String>,
+    pub url: Option<String>,
+}
+
+impl From<MediaInfo> for PartialMediaInfo {
+    fn from(media_info: MediaInfo) -> Self {
+        Self {
+            file_name: media_info.file_name,
+            file_size: Some(media_info.file_size),
+            digest: Some(media_info.digest),
+            media_type: Some(media_info.media_type),
+            url: media_info.url,
+        }
+    }
+}
+
+json_from_sql!(PartialMediaInfo);
+json_to_sql!(PartialMediaInfo);
 
 #[derive(Deserialize, Serialize)]
 pub struct DeletionQueue {

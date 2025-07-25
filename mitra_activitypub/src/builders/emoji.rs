@@ -15,7 +15,8 @@ struct EmojiImage {
     #[serde(rename = "type")]
     object_type: String,
     url: String,
-    media_type: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    media_type: Option<String>,
 }
 
 #[derive(Serialize)]

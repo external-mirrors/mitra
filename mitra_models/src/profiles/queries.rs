@@ -1043,9 +1043,8 @@ mod tests {
     use crate::database::test_utils::create_test_database;
     use crate::emojis::{
         queries::create_or_update_local_emoji,
-        types::EmojiImage,
     };
-    use crate::media::types::MediaInfo;
+    use crate::media::types::{MediaInfo, PartialMediaInfo};
     use crate::profiles::{
         test_utils::create_test_local_profile,
         types::{
@@ -1117,7 +1116,7 @@ mod tests {
     #[serial]
     async fn test_create_profile_with_emoji() {
         let db_client = &mut create_test_database().await;
-        let image = EmojiImage::from(MediaInfo::png_for_test());
+        let image = PartialMediaInfo::from(MediaInfo::png_for_test());
         let (emoji, _) = create_or_update_local_emoji(
             db_client,
             "testemoji",

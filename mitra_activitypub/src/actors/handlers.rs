@@ -27,7 +27,7 @@ use mitra_models::{
     activitypub::queries::save_actor,
     database::DatabaseClient,
     filter_rules::types::FilterAction,
-    media::types::MediaInfo,
+    media::types::{MediaInfo, PartialMediaInfo},
     profiles::queries::{create_profile, update_profile},
     profiles::types::{
         DbActor,
@@ -37,7 +37,6 @@ use mitra_models::{
         IdentityProof,
         MentionPolicy,
         PaymentOption,
-        ProfileImage,
         ProfileCreateData,
         ProfileUpdateData,
         WebfingerHostname,
@@ -315,8 +314,8 @@ async fn fetch_actor_image(
     ap_client: &ApClient,
     moderation_domain: &Hostname,
     actor_image: &Option<ActorImage>,
-    default: Option<ProfileImage>,
-) -> Result<Option<ProfileImage>, MediaStorageError> {
+    default: Option<PartialMediaInfo>,
+) -> Result<Option<PartialMediaInfo>, MediaStorageError> {
     let media_limits = &ap_client.limits.media;
     let is_filter_enabled = ap_client.filter.is_action_required(
         moderation_domain.as_str(),
@@ -341,7 +340,7 @@ async fn fetch_actor_image(
             Ok((file_data, media_type)) => {
                 let file_info = ap_client.media_storage
                     .save_file(file_data, &media_type)?;
-                let image = ProfileImage::from(MediaInfo::remote(
+                let image = PartialMediaInfo::from(MediaInfo::remote(
                     file_info,
                     actor_image.url.clone(),
                 ));
@@ -362,9 +361,9 @@ async fn fetch_actor_images(
     ap_client: &ApClient,
     moderation_domain: &Hostname,
     actor: &ValidatedActor,
-    default_avatar: Option<ProfileImage>,
-    default_banner: Option<ProfileImage>,
-) -> Result<(Option<ProfileImage>, Option<ProfileImage>), MediaStorageError> {
+    default_avatar: Option<PartialMediaInfo>,
+    default_banner: Option<PartialMediaInfo>,
+) -> Result<(Option<PartialMediaInfo>, Option<PartialMediaInfo>), MediaStorageError> {
     let maybe_avatar = fetch_actor_image(
         ap_client,
         moderation_domain,

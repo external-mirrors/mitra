@@ -3,15 +3,17 @@ use uuid::Uuid;
 
 use mitra_utils::id::generate_ulid;
 
-use crate::database::{
-    DatabaseClient,
-    DatabaseError,
+use crate::{
+    database::{
+        DatabaseClient,
+        DatabaseError,
+    },
+    instances::queries::create_instance,
+    media::types::{DeletionQueue, PartialMediaInfo},
+    profiles::queries::update_emoji_caches,
 };
-use crate::instances::queries::create_instance;
-use crate::media::types::DeletionQueue;
-use crate::profiles::queries::update_emoji_caches;
 
-use super::types::{DbEmoji, EmojiImage};
+use super::types::DbEmoji;
 
 /// Creates emoji or updates emoji with matching `emoji_name` and `hostname`.
 /// `object_id` is replaced on update.
@@ -19,7 +21,7 @@ pub async fn create_or_update_remote_emoji(
     db_client: &mut impl DatabaseClient,
     emoji_name: &str,
     hostname: &str,
-    image: EmojiImage,
+    image: PartialMediaInfo,
     object_id: &str,
     updated_at: DateTime<Utc>,
 ) -> Result<(DbEmoji, DeletionQueue), DatabaseError> {
@@ -79,7 +81,7 @@ pub async fn create_or_update_remote_emoji(
 pub async fn update_emoji(
     db_client: &mut impl DatabaseClient,
     emoji_id: Uuid,
-    image: EmojiImage,
+    image: PartialMediaInfo,
     updated_at: DateTime<Utc>,
 ) -> Result<(DbEmoji, DeletionQueue), DatabaseError> {
     let transaction = db_client.transaction().await?;
@@ -120,7 +122,7 @@ pub async fn update_emoji(
 pub async fn create_or_update_local_emoji(
     db_client: &mut impl DatabaseClient,
     emoji_name: &str,
-    image: EmojiImage,
+    image: PartialMediaInfo,
 ) -> Result<(DbEmoji, DeletionQueue), DatabaseError> {
     let transaction = db_client.transaction().await?;
     let maybe_prev_image_row = transaction.query_opt(
@@ -321,7 +323,7 @@ mod tests {
         let db_client = &mut create_test_database().await;
         let emoji_name = "test";
         let hostname = "example.org";
-        let image = EmojiImage::from(MediaInfo::png_for_test());
+        let image = PartialMediaInfo::from(MediaInfo::png_for_test());
         let object_id = "https://example.org/emojis/test";
         let updated_at = Utc::now();
         let (emoji, deletion_queue) = create_or_update_remote_emoji(
@@ -342,7 +344,7 @@ mod tests {
         assert_eq!(emoji.id, emoji_id);
         assert_eq!(emoji.emoji_name, emoji_name);
         assert_eq!(emoji.hostname, Some(hostname.to_string()));
-        assert_eq!(emoji.image.media_type, "image/png");
+        assert_eq!(emoji.image, image);
         assert_eq!(emoji.object_id.unwrap(), object_id);
 
         // New ID
@@ -364,7 +366,7 @@ mod tests {
     #[serial]
     async fn test_update_remote_emoji() {
         let db_client = &mut create_test_database().await;
-        let image = EmojiImage::from(MediaInfo::png_for_test());
+        let image = PartialMediaInfo::from(MediaInfo::png_for_test());
         let (emoji, _) = create_or_update_remote_emoji(
             db_client,
             "test",
@@ -387,7 +389,7 @@ mod tests {
     #[serial]
     async fn test_create_or_update_local_emoji() {
         let db_client = &mut create_test_database().await;
-        let image = EmojiImage::from(MediaInfo::png_for_test());
+        let image = PartialMediaInfo::from(MediaInfo::png_for_test());
         let (emoji, deletion_queue) = create_or_update_local_emoji(
             db_client,
             "local",
@@ -410,7 +412,7 @@ mod tests {
     #[serial]
     async fn test_delete_emoji() {
         let db_client = &mut create_test_database().await;
-        let image = EmojiImage::from(MediaInfo::png_for_test());
+        let image = PartialMediaInfo::from(MediaInfo::png_for_test());
         let (emoji, _) = create_or_update_local_emoji(
             db_client,
             "test",
@@ -425,7 +427,7 @@ mod tests {
     #[serial]
     async fn test_delete_emoji_and_update_caches() {
         let db_client = &mut create_test_database().await;
-        let image = EmojiImage::from(MediaInfo::png_for_test());
+        let image = PartialMediaInfo::from(MediaInfo::png_for_test());
         let (emoji, _) = create_or_update_local_emoji(
             db_client,
             "test",

@@ -20,13 +20,12 @@ use mitra_activitypub::identifiers::{
 };
 use mitra_config::MediaLimits;
 use mitra_models::{
-    media::types::MediaInfo,
+    media::types::{MediaInfo, PartialMediaInfo},
     profiles::types::{
         DbActorProfile,
         ExtraField,
         MentionPolicy,
         PaymentOption,
-        ProfileImage,
         ProfileUpdateData,
     },
     subscriptions::types::Subscription,
@@ -393,10 +392,10 @@ pub struct AccountUpdateData {
 fn process_b64_image_field_value(
     form_value: Option<String>,
     form_media_type: Option<String>,
-    db_value: Option<ProfileImage>,
+    db_value: Option<PartialMediaInfo>,
     media_limits: &MediaLimits,
     media_storage: &MediaStorage,
-) -> Result<Option<ProfileImage>, UploadError> {
+) -> Result<Option<PartialMediaInfo>, UploadError> {
     let maybe_file_name = match form_value {
         Some(b64_data) => {
             if b64_data.is_empty() {
@@ -413,7 +412,7 @@ fn process_b64_image_field_value(
                     media_limits.profile_image_local_size_limit,
                     &allowed_profile_image_media_types(&media_limits.supported_media_types()),
                 )?;
-                let image = ProfileImage::from(MediaInfo::local(file_info));
+                let image = PartialMediaInfo::from(MediaInfo::local(file_info));
                 Some(image)
             }
         },
@@ -833,8 +832,7 @@ pub struct LoadActivitiesParams {
 #[cfg(test)]
 mod tests {
     use mitra_models::{
-        media::types::MediaInfo,
-        profiles::types::ProfileImage,
+        media::types::{MediaInfo, PartialMediaInfo},
     };
     use super::*;
 
@@ -844,7 +842,7 @@ mod tests {
     fn test_create_account_from_profile() {
         let media_server = ClientMediaServer::for_test(INSTANCE_URL);
         let mut profile = DbActorProfile::local_for_test("test");
-        profile.avatar = Some(ProfileImage::from(MediaInfo::png_for_test()));
+        profile.avatar = Some(PartialMediaInfo::from(MediaInfo::png_for_test()));
         let account = Account::from_profile(
             INSTANCE_URL,
             &media_server,

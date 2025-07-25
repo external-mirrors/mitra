@@ -14,9 +14,9 @@ use mitra_models::{
         get_remote_emoji_by_object_id,
         update_emoji,
     },
-    emojis::types::{DbEmoji, EmojiImage as DbEmojiImage},
+    emojis::types::DbEmoji,
     filter_rules::types::FilterAction,
-    media::types::MediaInfo,
+    media::types::{MediaInfo, PartialMediaInfo},
 };
 use mitra_validators::{
     activitypub::validate_object_id,
@@ -140,7 +140,7 @@ pub async fn handle_emoji(
     let file_info = ap_client.media_storage
         .save_file(file_data, &media_type)?;
     log::info!("downloaded emoji {}", emoji.icon.url);
-    let image = DbEmojiImage::from(MediaInfo::remote(file_info, emoji.icon.url));
+    let image = PartialMediaInfo::from(MediaInfo::remote(file_info, emoji.icon.url));
     let db_emoji = if let Some(emoji_id) = maybe_emoji_id {
         let (db_emoji, deletion_queue) = update_emoji(
             db_client,
