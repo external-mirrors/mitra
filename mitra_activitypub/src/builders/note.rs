@@ -180,7 +180,7 @@ pub fn build_note(
     let mut object_type = NOTE;
     let actor_id = local_actor_id_unified(authority, &post.author.username);
     let attachments: Vec<_> = post.attachments.iter().map(|db_item| {
-        let url = media_server.url_for(&db_item.file_name);
+        let url = media_server.url_for(&db_item.media.file_name);
         let object_type = match db_item.attachment_type() {
             AttachmentType::Image => IMAGE,
             _ => DOCUMENT,
@@ -188,8 +188,8 @@ pub fn build_note(
         MediaAttachment {
             attachment_type: object_type.to_string(),
             name: db_item.description.clone(),
-            media_type: db_item.media_type.clone(),
-            digest_multibase: db_item.digest.as_ref()
+            media_type: db_item.media.media_type.clone(),
+            digest_multibase: db_item.media.digest.as_ref()
                 .map(|digest| sha256_multibase(digest)),
             url,
         }

@@ -1157,7 +1157,8 @@ async fn make_permanent(
     let mut attachments = vec![];
     for attachment in post.attachments.iter_mut() {
         // Add attachment to IPFS
-        let image_data = media_storage.read_file(&attachment.file_name)
+        let image_data = media_storage
+            .read_file(&attachment.media.file_name)
             .map_err(MastodonError::from_internal)?;
         let image_cid = ipfs_store::add(ipfs_api_url, image_data).await
             .map_err(MastodonError::from_internal)?;

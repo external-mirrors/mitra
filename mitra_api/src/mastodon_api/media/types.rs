@@ -78,7 +78,7 @@ impl Attachment {
             AttachmentType::Video => "video",
             AttachmentType::Audio => "audio",
         };
-        let attachment_url = media_server.url_for(&db_attachment.file_name);
+        let attachment_url = media_server.url_for(&db_attachment.media.file_name);
         Self {
             id: db_attachment.id,
             attachment_type: attachment_type_mastodon.to_string(),

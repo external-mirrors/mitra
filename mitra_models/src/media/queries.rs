@@ -51,7 +51,8 @@ pub async fn find_orphaned_files(
         SELECT DISTINCT storage_file_name
         FROM unnest($1::text[]) AS storage_file_name
         LEFT OUTER JOIN (
-            SELECT file_name FROM media_attachment
+            SELECT media ->> 'file_name' AS file_name
+            FROM media_attachment
             UNION ALL
             SELECT unnest(
                 ARRAY[
@@ -115,7 +116,7 @@ pub async fn get_local_files(
             user_id IS NOT NULL
             OR portable_user_id IS NOT NULL
         UNION
-        SELECT file_name FROM media_attachment
+        SELECT media ->> 'file_name' FROM media_attachment
         JOIN actor_profile ON (media_attachment.owner_id = actor_profile.id)
         WHERE
             actor_profile.user_id IS NOT NULL
@@ -145,5 +146,12 @@ mod tests {
         let db_client = &create_test_database().await;
         let files = vec!["file1.jpg".to_owned(), "file2.jpg".to_owned()];
         find_orphaned_files(db_client, files).await.unwrap();
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_get_local_files() {
+        let db_client = &create_test_database().await;
+        get_local_files(db_client).await.unwrap();
     }
 }

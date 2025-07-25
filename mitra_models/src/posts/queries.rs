@@ -441,7 +441,7 @@ pub async fn update_post(
         "
         DELETE FROM media_attachment
         WHERE post_id = $1 AND id <> ALL($2)
-        RETURNING file_name, ipfs_cid
+        RETURNING media ->> 'file_name' AS file_name, ipfs_cid
         ",
         &[&db_post.id, &post_data.attachments],
     ).await?;
@@ -1781,7 +1781,7 @@ pub async fn delete_post(
     // Get list of attached files
     let files_rows = transaction.query(
         "
-        SELECT file_name
+        SELECT media ->> 'file_name' AS file_name
         FROM media_attachment WHERE post_id = ANY($1)
         ",
         &[&posts],

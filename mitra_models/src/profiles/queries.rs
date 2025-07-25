@@ -577,7 +577,7 @@ pub async fn delete_profile(
         )) AS file_name
         FROM actor_profile WHERE id = $1
         UNION ALL
-        SELECT file_name
+        SELECT media ->> 'file_name'
         FROM media_attachment WHERE post_id = ANY($2)
         ",
         &[&profile_id, &posts],

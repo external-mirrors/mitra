@@ -232,11 +232,7 @@ CREATE UNIQUE INDEX post_reaction_author_id_post_id_content_null_idx ON post_rea
 CREATE TABLE media_attachment (
     id UUID PRIMARY KEY,
     owner_id UUID NOT NULL REFERENCES actor_profile (id) ON DELETE CASCADE,
-    file_name VARCHAR(200) NOT NULL,
-    file_size INTEGER,
-    digest BYTEA,
-    media_type VARCHAR(50),
-    url VARCHAR(2000),
+    media JSONB NOT NULL,
     description TEXT,
     ipfs_cid VARCHAR(200),
     post_id UUID REFERENCES post (id) ON DELETE CASCADE,

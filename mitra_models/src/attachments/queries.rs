@@ -4,7 +4,7 @@ use uuid::Uuid;
 use mitra_utils::id::generate_ulid;
 
 use crate::database::{DatabaseClient, DatabaseError};
-use crate::media::types::{DeletionQueue, MediaInfo};
+use crate::media::types::{DeletionQueue, MediaInfo, PartialMediaInfo};
 
 use super::types::DbMediaAttachment;
 
@@ -15,31 +15,21 @@ pub async fn create_attachment(
     description: Option<&str>,
 ) -> Result<DbMediaAttachment, DatabaseError> {
     let attachment_id = generate_ulid();
-    let file_size: i32 = media_info.file_size.try_into()
-        .expect("value should be within bounds");
     let inserted_row = db_client.query_one(
         "
         INSERT INTO media_attachment (
             id,
             owner_id,
-            file_name,
-            file_size,
-            digest,
-            media_type,
-            url,
+            media,
             description
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        VALUES ($1, $2, $3, $4)
         RETURNING media_attachment
         ",
         &[
             &attachment_id,
             &owner_id,
-            &media_info.file_name,
-            &file_size,
-            &media_info.digest,
-            &media_info.media_type,
-            &media_info.url,
+            &PartialMediaInfo::from(media_info),
             &description,
         ],
     ).await?;
@@ -112,7 +102,7 @@ pub async fn delete_unused_attachments(
         "
         DELETE FROM media_attachment
         WHERE post_id IS NULL AND created_at < $1
-        RETURNING file_name, ipfs_cid
+        RETURNING media ->> 'file_name' AS file_name, ipfs_cid
         ",
         &[&created_before],
     ).await?;
@@ -157,11 +147,7 @@ mod tests {
             Some(description),
         ).await.unwrap();
         assert_eq!(attachment.owner_id, profile.id);
-        assert_eq!(attachment.file_name, image_info.file_name);
-        assert_eq!(attachment.file_size.unwrap(), image_info.file_size as i32);
-        assert_eq!(attachment.digest.unwrap(), image_info.digest);
-        assert_eq!(attachment.media_type.unwrap(), image_info.media_type);
-        assert_eq!(attachment.url, None);
+        assert_eq!(attachment.media, PartialMediaInfo::from(image_info));
         assert_eq!(attachment.description.unwrap(), description);
         assert_eq!(attachment.ipfs_cid.is_none(), true);
         assert_eq!(attachment.post_id.is_none(), true);
@@ -196,7 +182,7 @@ mod tests {
             profile_1.id,
             attachment_id,
         ).await.unwrap();
-        assert_eq!(attachment.file_name, image_info.file_name);
+        assert_eq!(attachment.media, PartialMediaInfo::from(image_info));
 
         let error = get_attachment(
             db_client,
@@ -231,7 +217,7 @@ mod tests {
             attachment.id,
             None,
         ).await.unwrap();
-        assert_eq!(attachment_updated.file_name, attachment.file_name);
+        assert_eq!(attachment_updated.media, attachment.media);
         assert_eq!(attachment_updated.description, None);
     }
 }
