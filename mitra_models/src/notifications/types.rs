@@ -144,6 +144,7 @@ impl TryFrom<&Row> for Notification {
             event_type: db_notification.event_type,
             created_at: db_notification.created_at,
         };
+        notification.sender.check_consistency()?;
         Ok(notification)
     }
 }

@@ -382,7 +382,9 @@ impl TryFrom<&Row> for AccountAdminInfo {
         let is_portable = row.try_get("is_portable")?;
         let role = row.try_get("role")?;
         let last_login = row.try_get("last_login")?;
-        Ok(Self { profile, is_portable, role, last_login })
+        let user = Self { profile, is_portable, role, last_login };
+        user.profile.check_consistency()?;
+        Ok(user)
     }
 }
 

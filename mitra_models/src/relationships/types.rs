@@ -125,7 +125,9 @@ impl<T> TryFrom<&Row> for RelatedActorProfile<T>
     fn try_from(row: &Row) -> Result<Self, Self::Error> {
         let related_id: T = row.try_get("id")?;
         let profile = row.try_get("actor_profile")?;
-        Ok(Self { related_id, profile })
+        let related_profile = Self { related_id, profile };
+        related_profile.profile.check_consistency()?;
+        Ok(related_profile)
     }
 }
 

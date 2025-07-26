@@ -96,7 +96,7 @@ async fn create_post_mentions(
         return Err(DatabaseError::NotFound("profile"));
     };
     let profiles = mentions_rows.iter()
-        .map(|row| row.try_get("actor_profile"))
+        .map(DbActorProfile::try_from)
         .collect::<Result<_, _>>()?;
     Ok(profiles)
 }
@@ -1321,8 +1321,8 @@ pub async fn get_conversation_participants(
         ",
         &[&post_id],
     ).await?;
-    let profiles: Vec<DbActorProfile> = rows.iter()
-        .map(|row| row.try_get("actor_profile"))
+    let profiles: Vec<_> = rows.iter()
+        .map(DbActorProfile::try_from)
         .collect::<Result<_, _>>()?;
     if profiles.is_empty() {
         return Err(DatabaseError::NotFound("post"));
@@ -1495,7 +1495,7 @@ pub async fn get_post_author(
         &[&post_id],
     ).await?;
     let row = maybe_row.ok_or(DatabaseError::NotFound("post"))?;
-    let author: DbActorProfile = row.try_get("actor_profile")?;
+    let author = DbActorProfile::try_from(&row)?;
     Ok(author)
 }
 

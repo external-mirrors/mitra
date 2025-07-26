@@ -33,6 +33,7 @@ use super::types::{
     IdentityProofs,
     PaymentOptions,
     ProfileCreateData,
+    ProfileEmojis,
     ProfileUpdateData,
     PublicKeys,
     WebfingerHostname,
@@ -84,7 +85,7 @@ async fn create_profile_emojis(
 async fn update_emoji_cache(
     db_client: &impl DatabaseClient,
     profile_id: Uuid,
-) -> Result<DbActorProfile, DatabaseError> {
+) -> Result<ProfileEmojis, DatabaseError> {
     let maybe_row = db_client.query_opt(
         "
         WITH profile_emojis AS (
@@ -110,7 +111,7 @@ async fn update_emoji_cache(
     ).await?;
     let row = maybe_row.ok_or(DatabaseError::NotFound("profile"))?;
     let profile: DbActorProfile = row.try_get("actor_profile")?;
-    Ok(profile)
+    Ok(profile.emojis)
 }
 
 pub(crate) async fn update_emoji_caches(
@@ -168,7 +169,7 @@ pub async fn create_profile(
         },
         WebfingerHostname::Unknown => None,
     };
-    transaction.execute(
+    let row = transaction.query_one(
         "
         INSERT INTO actor_profile (
             id,
@@ -212,6 +213,7 @@ pub async fn create_profile(
             &profile_data.actor_json,
         ],
     ).await.map_err(catch_unique_violation("profile"))?;
+    let mut profile: DbActorProfile = row.try_get("actor_profile")?;
 
     // Create related objects
     create_profile_emojis(
@@ -219,8 +221,10 @@ pub async fn create_profile(
         profile_id,
         profile_data.emojis,
     ).await?;
-    let profile = update_emoji_cache(&transaction, profile_id).await?;
-
+    profile.emojis = update_emoji_cache(&transaction, profile_id).await?;
+    if !profile.is_local() {
+        profile.check_consistency()?;
+    };
     transaction.commit().await?;
     Ok(profile)
 }
@@ -276,7 +280,7 @@ pub async fn update_profile(
         },
         WebfingerHostname::Unknown => return Err(DatabaseTypeError.into()),
     };
-    let updated_count = transaction.execute(
+    let maybe_row = transaction.query_opt(
         "
         UPDATE actor_profile
         SET
@@ -300,6 +304,7 @@ pub async fn update_profile(
             updated_at = CURRENT_TIMESTAMP,
             unreachable_since = NULL
         WHERE id = $18
+        RETURNING actor_profile
         ",
         &[
             &profile_data.username,
@@ -322,9 +327,8 @@ pub async fn update_profile(
             &profile_id,
         ],
     ).await?;
-    if updated_count == 0 {
-        return Err(DatabaseError::NotFound("profile"));
-    };
+    let row = maybe_row.ok_or(DatabaseError::NotFound("profile"))?;
+    let mut profile: DbActorProfile = row.try_get("actor_profile")?;
 
     // Delete and re-create related objects
     transaction.execute(
@@ -336,7 +340,7 @@ pub async fn update_profile(
         profile_id,
         profile_data.emojis,
     ).await?;
-    let profile = update_emoji_cache(&transaction, profile_id).await?;
+    profile.emojis = update_emoji_cache(&transaction, profile_id).await?;
 
     profile.check_consistency()?;
     transaction.commit().await?;
@@ -368,8 +372,7 @@ pub async fn set_profile_identity_key(
         &[&profile_id, &identity_key],
     ).await?;
     let row = maybe_row.ok_or(DatabaseError::NotFound("profile"))?;
-    let profile: DbActorProfile = row.try_get("actor_profile")?;
-    profile.check_consistency()?;
+    let profile = DbActorProfile::try_from(&row)?;
     transaction.commit().await?;
     Ok(profile)
 }
@@ -387,8 +390,7 @@ pub async fn get_profile_by_id(
         &[&profile_id],
     ).await?;
     let row = maybe_row.ok_or(DatabaseError::NotFound("profile"))?;
-    let profile: DbActorProfile = row.try_get("actor_profile")?;
-    profile.check_consistency()?;
+    let profile = DbActorProfile::try_from(&row)?;
     Ok(profile)
 }
 
@@ -405,8 +407,7 @@ pub async fn get_remote_profile_by_actor_id(
         &[&actor_id],
     ).await?;
     let row = maybe_row.ok_or(DatabaseError::NotFound("profile"))?;
-    let profile: DbActorProfile = row.try_get("actor_profile")?;
-    profile.check_consistency()?;
+    let profile = DbActorProfile::try_from(&row)?;
     Ok(profile)
 }
 
@@ -424,8 +425,7 @@ pub async fn get_profile_by_acct(
         &[&acct],
     ).await?;
     let row = maybe_row.ok_or(DatabaseError::NotFound("profile"))?;
-    let profile: DbActorProfile = row.try_get("actor_profile")?;
-    profile.check_consistency()?;
+    let profile = DbActorProfile::try_from(&row)?;
     Ok(profile)
 }
 
@@ -474,7 +474,7 @@ pub async fn get_profiles_paginated(
         &[&i64::from(limit), &i64::from(offset)],
     ).await?;
     let profiles = rows.iter()
-        .map(|row| row.try_get("actor_profile"))
+        .map(DbActorProfile::try_from)
         .collect::<Result<_, _>>()?;
     Ok(profiles)
 }
@@ -493,7 +493,7 @@ pub async fn get_profiles_by_ids(
         &[&profiles_ids],
     ).await?;
     let profiles: Vec<_> = rows.iter()
-        .map(|row| row.try_get("actor_profile"))
+        .map(DbActorProfile::try_from)
         .collect::<Result<_, _>>()?;
     if profiles.len() != profiles_ids.len() {
         return Err(DatabaseError::NotFound("profile"));
@@ -515,7 +515,7 @@ pub async fn get_profiles_by_accts(
         &[&accts],
     ).await?;
     let profiles = rows.iter()
-        .map(|row| row.try_get("actor_profile"))
+        .map(DbActorProfile::try_from)
         .collect::<Result<_, _>>()?;
     Ok(profiles)
 }
@@ -533,7 +533,7 @@ pub async fn get_remote_profiles_by_actor_ids(
         &[&actors_ids],
     ).await?;
     let profiles = rows.iter()
-        .map(|row| row.try_get("actor_profile"))
+        .map(DbActorProfile::try_from)
         .collect::<Result<_, _>>()?;
     Ok(profiles)
 }
@@ -738,8 +738,8 @@ pub async fn search_profiles(
             &i64::from(offset),
         ],
     ).await?;
-    let profiles: Vec<DbActorProfile> = rows.iter()
-        .map(|row| row.try_get("actor_profile"))
+    let profiles = rows.iter()
+        .map(DbActorProfile::try_from)
         .collect::<Result<_, _>>()?;
     Ok(profiles)
 }
@@ -761,8 +761,8 @@ pub async fn search_profiles_by_did_only(
         ",
         &[&did.to_string()],
     ).await?;
-    let profiles: Vec<DbActorProfile> = rows.iter()
-        .map(|row| row.try_get("actor_profile"))
+    let profiles = rows.iter()
+        .map(DbActorProfile::try_from)
         .collect::<Result<_, _>>()?;
     Ok(profiles)
 }
@@ -810,8 +810,8 @@ pub async fn search_profiles_by_did(
         )?;
         let rows = db_client.query(query.sql(), query.parameters()).await?;
         let unverified = rows.iter()
-            .map(|row| row.try_get("actor_profile"))
-            .collect::<Result<Vec<DbActorProfile>, _>>()?
+            .map(DbActorProfile::try_from)
+            .collect::<Result<Vec<_>, _>>()?
             .into_iter()
             // Exclude verified
             .filter(|profile| !verified.iter().any(|item| item.id == profile.id))
@@ -853,7 +853,7 @@ pub async fn update_follower_count(
         &[&change, &profile_id],
     ).await?;
     let row = maybe_row.ok_or(DatabaseError::NotFound("profile"))?;
-    let profile = row.try_get("actor_profile")?;
+    let profile = DbActorProfile::try_from(&row)?;
     Ok(profile)
 }
 
@@ -872,7 +872,7 @@ pub async fn update_following_count(
         &[&change, &profile_id],
     ).await?;
     let row = maybe_row.ok_or(DatabaseError::NotFound("profile"))?;
-    let profile = row.try_get("actor_profile")?;
+    let profile = DbActorProfile::try_from(&row)?;
     Ok(profile)
 }
 
@@ -891,7 +891,7 @@ pub async fn update_subscriber_count(
         &[&change, &profile_id],
     ).await?;
     let row = maybe_row.ok_or(DatabaseError::NotFound("profile"))?;
-    let profile = row.try_get("actor_profile")?;
+    let profile = DbActorProfile::try_from(&row)?;
     Ok(profile)
 }
 
@@ -910,7 +910,7 @@ pub async fn update_post_count(
         &[&change, &profile_id],
     ).await?;
     let row = maybe_row.ok_or(DatabaseError::NotFound("profile"))?;
-    let profile = row.try_get("actor_profile")?;
+    let profile = DbActorProfile::try_from(&row)?;
     Ok(profile)
 }
 
@@ -959,7 +959,7 @@ pub async fn find_unreachable(
         &[&unreachable_since],
     ).await?;
     let profiles = rows.iter()
-        .map(|row| row.try_get("actor_profile"))
+        .map(DbActorProfile::try_from)
         .collect::<Result<_, _>>()?;
     Ok(profiles)
 }
@@ -1047,7 +1047,6 @@ mod tests {
     };
     use crate::media::types::MediaInfo;
     use crate::profiles::{
-        queries::create_profile,
         test_utils::create_test_local_profile,
         types::{
             DbActor,
@@ -1323,7 +1322,11 @@ mod tests {
         };
         let profile_data = ProfileCreateData {
             extra_fields: vec![extra_field],
-            ..Default::default()
+            ..ProfileCreateData::remote_for_test(
+                "test",
+                "social.example",
+                "https://social.example",
+            )
         };
         let profile = create_profile(db_client, profile_data).await.unwrap();
         let profiles = search_profiles_by_ethereum_address(
@@ -1347,7 +1350,11 @@ mod tests {
         };
         let profile_data = ProfileCreateData {
             identity_proofs: vec![identity_proof],
-            ..Default::default()
+            ..ProfileCreateData::remote_for_test(
+                "test",
+                "social.example",
+                "https://social.example",
+            )
         };
         let profile = create_profile(db_client, profile_data).await.unwrap();
         let profiles = search_profiles_by_ethereum_address(

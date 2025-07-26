@@ -49,6 +49,7 @@ impl Reaction {
         maybe_db_emoji: Option<DbEmoji>,
     ) -> Result<Self, DatabaseTypeError> {
         // Consistency checks
+        db_author.check_consistency()?;
         if db_reaction.author_id != db_author.id {
             return Err(DatabaseTypeError);
         };

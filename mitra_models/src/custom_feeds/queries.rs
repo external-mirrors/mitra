@@ -153,7 +153,7 @@ pub async fn get_custom_feed_sources(
         &[&feed_id, &max_source_id, &i64::from(limit)],
     ).await?;
     let sources = rows.iter()
-        .map(|row| row.try_get("actor_profile"))
+        .map(DbActorProfile::try_from)
         .collect::<Result<_, _>>()?;
     Ok(sources)
 }

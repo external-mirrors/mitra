@@ -29,10 +29,12 @@ impl TryFrom<&Row> for Subscription {
     fn try_from(row: &Row) -> Result<Self, Self::Error> {
         let db_subscription: DbSubscription = row.try_get("subscription")?;
         let db_sender: DbActorProfile = row.try_get("sender")?;
-        Ok(Self {
+        let subscription = Self {
             id: db_subscription.id,
             sender: db_sender,
             expires_at: db_subscription.expires_at,
-        })
+        };
+        subscription.sender.check_consistency()?;
+        Ok(subscription)
     }
 }

@@ -278,6 +278,7 @@ impl Post {
         db_reactions: Vec<PostReaction>,
     ) -> Result<Self, DatabaseTypeError> {
         // Consistency checks
+        db_author.check_consistency()?;
         if db_post.author_id != db_author.id {
             return Err(DatabaseTypeError);
         };

@@ -305,7 +305,7 @@ pub async fn get_voters(
         &[&poll_id],
     ).await?;
     let profiles = rows.iter()
-        .map(|row| row.try_get("actor_profile"))
+        .map(DbActorProfile::try_from)
         .collect::<Result<_, _>>()?;
     Ok(profiles)
 }

@@ -446,7 +446,7 @@ pub async fn get_followers(
         &[&profile_id, &RelationshipType::Follow],
     ).await?;
     let profiles = rows.iter()
-        .map(|row| row.try_get("actor_profile"))
+        .map(DbActorProfile::try_from)
         .collect::<Result<_, _>>()?;
     Ok(profiles)
 }
@@ -514,7 +514,7 @@ pub async fn get_following(
         &[&profile_id, &RelationshipType::Follow],
     ).await?;
     let profiles = rows.iter()
-        .map(|row| row.try_get("actor_profile"))
+        .map(DbActorProfile::try_from)
         .collect::<Result<_, _>>()?;
     Ok(profiles)
 }
@@ -648,7 +648,7 @@ pub async fn get_subscribers(
         &[&profile_id, &RelationshipType::Subscription],
     ).await?;
     let profiles = rows.iter()
-        .map(|row| row.try_get("actor_profile"))
+        .map(DbActorProfile::try_from)
         .collect::<Result<_, _>>()?;
     Ok(profiles)
 }

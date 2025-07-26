@@ -92,8 +92,12 @@ mod tests {
     use mitra_models::{
         database::test_utils::create_test_database,
         profiles::{
-            queries::create_profile,
-            types::{MentionPolicy, ProfileCreateData},
+            queries::update_profile,
+            types::{MentionPolicy, ProfileUpdateData},
+            test_utils::{
+                create_test_local_profile,
+                create_test_remote_profile,
+            },
         },
     };
     use super::*;
@@ -102,23 +106,22 @@ mod tests {
     #[serial]
     async fn test_filter_mentions_none() {
         let db_client = &mut create_test_database().await;
-        let profile_data = ProfileCreateData {
-            username: "test".to_string(),
+        let profile = create_test_local_profile(db_client, "test").await;
+        let profile_data = ProfileUpdateData {
             mention_policy: MentionPolicy::None,
-            ..Default::default()
+            ..ProfileUpdateData::from(&profile)
         };
-        let profile = create_profile(
+        let (profile, _) = update_profile(
             db_client,
+            profile.id,
             profile_data,
         ).await.unwrap();
-        let author_data = ProfileCreateData {
-            username: "author".to_string(),
-            ..Default::default()
-        };
-        let author = create_profile(
+        let author = create_test_remote_profile(
             db_client,
-            author_data,
-        ).await.unwrap();
+            "author",
+            "social.example",
+            "https://social.example/actor",
+        ).await;
 
         let filtered = filter_mentions(
             db_client,
@@ -134,24 +137,23 @@ mod tests {
     #[serial]
     async fn test_filter_mentions_only_known() {
         let db_client = &mut create_test_database().await;
-        let profile_data = ProfileCreateData {
-            username: "test".to_string(),
+        let profile = create_test_local_profile(db_client, "test").await;
+        let profile_data = ProfileUpdateData {
             mention_policy: MentionPolicy::OnlyKnown,
-            ..Default::default()
+            ..ProfileUpdateData::from(&profile)
         };
-        let profile = create_profile(
+        let (profile, _) = update_profile(
             db_client,
+            profile.id,
             profile_data,
         ).await.unwrap();
         // New profile, no relationships
-        let author_data = ProfileCreateData {
-            username: "author".to_string(),
-            ..Default::default()
-        };
-        let author = create_profile(
+        let author = create_test_remote_profile(
             db_client,
-            author_data,
-        ).await.unwrap();
+            "author",
+            "social.example",
+            "https://social.example/actor",
+        ).await;
 
         let filtered = filter_mentions(
             db_client,

@@ -20,12 +20,14 @@ use serde::{
     __private::ser::FlatMapSerializer,
 };
 use serde_json::{Value as JsonValue};
+use tokio_postgres::Row;
 use uuid::Uuid;
 
 use crate::{
     database::{
         int_enum::{int_enum_from_sql, int_enum_to_sql},
         json_macro::{json_from_sql, json_to_sql},
+        DatabaseError,
         DatabaseTypeError,
     },
     emojis::types::DbEmoji,
@@ -816,6 +818,16 @@ impl DbActorProfile {
     ) -> Option<MoneroSubscription> {
         assert!(chain_id.is_monero());
         self.payment_options.find_subscription_option(chain_id)
+    }
+}
+
+impl TryFrom<&Row> for DbActorProfile {
+    type Error = DatabaseError;
+
+    fn try_from(row: &Row) -> Result<Self, Self::Error> {
+        let profile: Self = row.try_get("actor_profile")?;
+        profile.check_consistency()?;
+        Ok(profile)
     }
 }
 
