@@ -22,6 +22,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Removed `attributedTo` property from `Emoji` objects.
 
+### Fixed
+
+- Use original emoji `id` when generating `Like` / `EmojiReact` activity with remote emoji.
+
 ## [4.6.0] - 2025-07-16
 
 ### Added

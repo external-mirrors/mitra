@@ -18,7 +18,7 @@ pub struct EmojiImage {
     pub file_size: usize,
     digest: Option<[u8; 32]>,
     pub media_type: String,
-    url: Option<String>,
+    pub url: Option<String>,
 }
 
 impl From<MediaInfo> for EmojiImage {
