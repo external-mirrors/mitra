@@ -18,6 +18,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Changed MSRV to 1.74.1.
 - Added support for `@query` RFC-9421 component.
 
+### Removed
+
+- Removed `attributedTo` property from `Emoji` objects.
+
 ## [4.6.0] - 2025-07-16
 
 ### Added

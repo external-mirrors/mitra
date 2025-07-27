@@ -5,7 +5,7 @@ use mitra_models::emojis::types::DbEmoji;
 use mitra_services::media::MediaServer;
 
 use crate::{
-    identifiers::{local_emoji_id, local_instance_actor_id},
+    identifiers::local_emoji_id,
     vocabulary::{EMOJI, IMAGE},
 };
 
@@ -25,7 +25,6 @@ pub struct Emoji {
     object_type: String,
     id: String,
     name: String,
-    attributed_to: String,
     icon: EmojiImage,
     updated: DateTime<Utc>,
 }
@@ -39,7 +38,6 @@ pub fn build_emoji(
         object_type: EMOJI.to_string(),
         id: local_emoji_id(instance_url, &db_emoji.emoji_name),
         name: db_emoji.shortcode(),
-        attributed_to: local_instance_actor_id(instance_url),
         icon: EmojiImage {
             object_type: IMAGE.to_string(),
             url: media_server.url_for(&db_emoji.image.file_name),
@@ -65,7 +63,6 @@ mod tests {
             "type": "Emoji",
             "id": "https://social.example/objects/emojis/test",
             "name": ":test:",
-            "attributedTo": "https://social.example/actor",
             "icon": {
                 "type": "Image",
                 "url": "https://social.example/media/test.png",
