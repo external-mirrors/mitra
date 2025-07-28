@@ -1,6 +1,7 @@
 pub mod account;
 pub mod activitypub;
 pub mod config;
+pub mod emoji;
 pub mod filter;
 pub mod invoice;
 pub mod post;

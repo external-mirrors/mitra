@@ -311,8 +311,6 @@ fn get_media_type(
         .unwrap_or(APPLICATION_OCTET_STREAM.to_string())
 }
 
-
-
 pub async fn fetch_file(
     agent: &FederationAgent,
     url: &str,
