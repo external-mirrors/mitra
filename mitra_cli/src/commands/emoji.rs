@@ -102,6 +102,7 @@ impl AddEmoji {
 
 /// Copy cached custom emoji to local collection
 #[derive(Parser)]
+#[command(visible_alias = "steal-emoji")]
 pub struct ImportEmoji {
     emoji_name: String,
     hostname: String,
