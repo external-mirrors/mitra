@@ -60,24 +60,24 @@ impl AddEmoji {
                 &self.location,
                 None, // no expectations
                 &EMOJI_MEDIA_TYPES,
-                config.limits.media.emoji_size_limit,
+                config.limits.media.file_size_limit, // size will be checked later
             ).await?
         } else {
             let file_data = std::fs::read(&self.location)?;
             let media_type = sniff_media_type(&file_data)
                 .ok_or(anyhow!("unknown media type"))?;
-            if !EMOJI_MEDIA_TYPES.contains(&media_type.as_str()) {
-                println!("media type {} is not supported", media_type);
-                return Ok(());
-            };
-            if file_data.len() > config.limits.media.emoji_local_size_limit {
-                println!(
-                    "emoji file size must be less than {}",
-                    FileSize::new(config.limits.media.emoji_local_size_limit),
-                );
-                return Ok(());
-            };
             (file_data, media_type)
+        };
+        if !EMOJI_MEDIA_TYPES.contains(&media_type.as_str()) {
+            println!("media type {} is not supported", media_type);
+            return Ok(());
+        };
+        if file_data.len() > config.limits.media.emoji_local_size_limit {
+            println!(
+                "emoji file size must be less than {}",
+                FileSize::new(config.limits.media.emoji_local_size_limit),
+            );
+            return Ok(());
         };
         let media_storage = MediaStorage::new(config);
         let file_info = media_storage.save_file(file_data, &media_type)?;
