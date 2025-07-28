@@ -32,6 +32,27 @@ use mitra_validators::{
     },
 };
 
+fn validate_local_emoji_data(
+    config: &Config,
+    emoji_name: &str,
+    file_data: &[u8],
+    media_type: &str,
+) -> Result<(), Error> {
+    if validate_emoji_name(emoji_name).is_err() {
+        return Err(anyhow!("invalid emoji name"));
+    };
+    if !EMOJI_MEDIA_TYPES.contains(&media_type) {
+        return Err(anyhow!("media type {media_type} is not supported"));
+    };
+    if file_data.len() > config.limits.media.emoji_local_size_limit {
+        return Err(anyhow!(
+            "emoji file size must be less than {}",
+            FileSize::new(config.limits.media.emoji_local_size_limit),
+        ));
+    };
+    Ok(())
+}
+
 /// Add custom emoji to local collection
 #[derive(Parser)]
 pub struct AddEmoji {
@@ -47,9 +68,6 @@ impl AddEmoji {
         db_pool: &DatabaseConnectionPool,
     ) -> Result<(), Error> {
         let db_client = &mut **get_database_client(db_pool).await?;
-        if validate_emoji_name(&self.emoji_name).is_err() {
-            return Err(anyhow!("invalid emoji name"));
-        };
         let (file_data, media_type) = if
             HttpUrl::parse(&self.location).is_ok()
         {
@@ -67,15 +85,7 @@ impl AddEmoji {
                 .ok_or(anyhow!("unknown media type"))?;
             (file_data, media_type)
         };
-        if !EMOJI_MEDIA_TYPES.contains(&media_type.as_str()) {
-            return Err(anyhow!("media type {media_type} is not supported"));
-        };
-        if file_data.len() > config.limits.media.emoji_local_size_limit {
-            return Err(anyhow!(
-                "emoji file size must be less than {}",
-                FileSize::new(config.limits.media.emoji_local_size_limit),
-            ));
-        };
+        validate_local_emoji_data(config, &self.emoji_name, &file_data, &media_type)?;
         let media_storage = MediaStorage::new(config);
         let file_info = media_storage.save_file(file_data, &media_type)?;
         let image = EmojiImage::from(MediaInfo::local(file_info));
@@ -110,16 +120,17 @@ impl ImportEmoji {
             emoji_name,
             &self.hostname,
         ).await?;
-        if emoji.image.file_size > config.limits.media.emoji_local_size_limit {
-            return Err(anyhow!(
-                "emoji file size must be less than {}",
-                FileSize::new(config.limits.media.emoji_local_size_limit),
-            ));
-        };
+        let media_storage = MediaStorage::new(config);
+        let file_data = media_storage.read_file(&emoji.image.file_name)?;
+        let media_type = sniff_media_type(&file_data)
+            .ok_or(anyhow!("unknown media type"))?;
+        validate_local_emoji_data(config, &emoji.emoji_name, &file_data, &media_type)?;
+        let file_info = media_storage.save_file(file_data, &media_type)?;
+        let image = EmojiImage::from(MediaInfo::local(file_info));
         let (_, deletion_queue) = create_or_update_local_emoji(
             db_client,
             &emoji.emoji_name,
-            emoji.image,
+            image,
         ).await?;
         deletion_queue.into_job(db_client).await?;
         println!("added emoji to local collection");
