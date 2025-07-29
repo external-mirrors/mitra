@@ -21,7 +21,7 @@ use crate::database::{
     DatabaseTypeError,
 };
 use crate::emojis::types::DbEmoji;
-use crate::media::types::DeletionQueue;
+use crate::media::types::{DeletionQueue, PartialMediaInfo};
 use crate::notifications::helpers::{
     create_mention_notification,
     create_reply_notification,
@@ -441,15 +441,15 @@ pub async fn update_post(
         "
         DELETE FROM media_attachment
         WHERE post_id = $1 AND id <> ALL($2)
-        RETURNING media ->> 'file_name' AS file_name, ipfs_cid
+        RETURNING media, ipfs_cid
         ",
         &[&db_post.id, &post_data.attachments],
     ).await?;
     let mut detached_files = vec![];
     let mut detached_ipfs_objects = vec![];
     for row in detached_media_rows {
-        let file_name = row.try_get("file_name")?;
-        detached_files.push(file_name);
+        let media: PartialMediaInfo = row.try_get("media")?;
+        detached_files.push(media.file_name);
         let maybe_ipfs_cid: Option<String> = row.try_get("ipfs_cid")?;
         if let Some(ipfs_cid) = maybe_ipfs_cid {
             detached_ipfs_objects.push(ipfs_cid);
@@ -1779,16 +1779,19 @@ pub async fn delete_post(
         .map(|row| row.try_get("post_id"))
         .collect::<Result<_, _>>()?;
     // Get list of attached files
-    let files_rows = transaction.query(
+    let media_rows = transaction.query(
         "
-        SELECT media ->> 'file_name' AS file_name
+        SELECT media
         FROM media_attachment WHERE post_id = ANY($1)
         ",
         &[&posts],
     ).await?;
-    let files: Vec<String> = files_rows.iter()
-        .map(|row| row.try_get("file_name"))
-        .collect::<Result<_, _>>()?;
+    let detached_files = media_rows.into_iter()
+        .map(|row| row.try_get("media"))
+        .collect::<Result<Vec<PartialMediaInfo>, _>>()?
+        .into_iter()
+        .map(|media| media.file_name)
+        .collect();
     // Get list of linked IPFS objects
     let ipfs_objects_rows = transaction.query(
         "
@@ -1834,7 +1837,11 @@ pub async fn delete_post(
         update_reply_count(&transaction, parent_id, -1).await?;
     };
     transaction.commit().await?;
-    Ok(DeletionQueue { files, ipfs_objects })
+    let deletion_queue = DeletionQueue {
+        files: detached_files,
+        ipfs_objects,
+    };
+    Ok(deletion_queue)
 }
 
 pub async fn delete_repost(

@@ -21,7 +21,7 @@ use crate::{
     },
     emojis::types::DbEmoji,
     instances::queries::create_instance,
-    media::types::DeletionQueue,
+    media::types::{DeletionQueue, PartialMediaInfo},
     relationships::types::RelationshipType,
 };
 
@@ -239,15 +239,7 @@ pub async fn update_profile(
      // Get hostname and currently used images
     let maybe_row = transaction.query_opt(
         "
-        SELECT
-            actor_profile,
-            array_remove(
-                ARRAY[
-                    avatar ->> 'file_name',
-                    banner ->> 'file_name'
-                ],
-                NULL
-            ) AS images
+        SELECT actor_profile
         FROM actor_profile WHERE id = $1
         FOR UPDATE
         ",
@@ -255,7 +247,11 @@ pub async fn update_profile(
     ).await?;
     let row = maybe_row.ok_or(DatabaseError::NotFound("profile"))?;
     let profile: DbActorProfile = row.try_get("actor_profile")?;
-    let images = row.try_get("images")?;
+    let detached_files = [&profile.avatar, &profile.banner]
+        .into_iter()
+        .flatten()
+        .map(|image| image.file_name.clone())
+        .collect();
     if profile_data.hostname.as_str() != profile.hostname.as_deref() &&
         !profile.is_portable()
     {
@@ -347,7 +343,7 @@ pub async fn update_profile(
 
     // Orphaned images should be deleted after update
     let deletion_queue = DeletionQueue {
-        files: images,
+        files: detached_files,
         ipfs_objects: vec![],
     };
     Ok((profile, deletion_queue))
@@ -566,25 +562,25 @@ pub async fn delete_profile(
         .map(|row| row.try_get("post_id"))
         .collect::<Result<_, _>>()?;
     // Get list of media files
-    let files_rows = transaction.query(
+    let media_rows = transaction.query(
         "
         SELECT unnest(array_remove(
-            ARRAY[
-                avatar ->> 'file_name',
-                banner ->> 'file_name'
-            ],
+            ARRAY[avatar, banner],
             NULL
-        )) AS file_name
+        )) AS media
         FROM actor_profile WHERE id = $1
         UNION ALL
-        SELECT media ->> 'file_name'
+        SELECT media
         FROM media_attachment WHERE post_id = ANY($2)
         ",
         &[&profile_id, &posts],
     ).await?;
-    let files: Vec<String> = files_rows.iter()
-        .map(|row| row.try_get("file_name"))
-        .collect::<Result<_, _>>()?;
+    let detached_files = media_rows.into_iter()
+        .map(|row| row.try_get("media"))
+        .collect::<Result<Vec<PartialMediaInfo>, _>>()?
+        .into_iter()
+        .map(|media| media.file_name)
+        .collect();
     // Get list of IPFS objects
     let ipfs_objects_rows = transaction.query(
         "
@@ -699,7 +695,7 @@ pub async fn delete_profile(
         return Err(DatabaseError::NotFound("profile"));
     };
     transaction.commit().await?;
-    Ok(DeletionQueue { files, ipfs_objects })
+    Ok(DeletionQueue { files: detached_files, ipfs_objects })
 }
 
 pub async fn search_profiles(

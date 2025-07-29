@@ -26,18 +26,20 @@ pub async fn create_or_update_remote_emoji(
     updated_at: DateTime<Utc>,
 ) -> Result<(DbEmoji, DeletionQueue), DatabaseError> {
     let transaction = db_client.transaction().await?;
-    let maybe_prev_image_row = transaction.query_opt(
+    let maybe_detached_image_row = transaction.query_opt(
         "
-        SELECT image ->> 'file_name' AS file_name
+        SELECT image
         FROM emoji WHERE emoji_name = $1 AND hostname = $2
         FOR UPDATE
         ",
         &[&emoji_name, &hostname],
     ).await?;
-    let maybe_prev_image = match maybe_prev_image_row {
-        Some(prev_image_row) => prev_image_row.try_get("file_name")?,
-        None => None,
-    };
+    let detached_files = maybe_detached_image_row
+        .map(|row| row.try_get("image"))
+        .transpose()?
+        .into_iter()
+        .map(|image: PartialMediaInfo| image.file_name)
+        .collect();
     create_instance(&transaction, hostname).await?;
     let emoji_id = generate_ulid();
     // Not expecting conflict on object_id
@@ -72,7 +74,7 @@ pub async fn create_or_update_remote_emoji(
     update_emoji_caches(&transaction, emoji.id).await?;
     transaction.commit().await?;
     let deletion_queue = DeletionQueue {
-        files: maybe_prev_image.map(|name| vec![name]).unwrap_or_default(),
+        files: detached_files,
         ipfs_objects: vec![],
     };
     Ok((emoji, deletion_queue))
@@ -85,15 +87,17 @@ pub async fn update_emoji(
     updated_at: DateTime<Utc>,
 ) -> Result<(DbEmoji, DeletionQueue), DatabaseError> {
     let transaction = db_client.transaction().await?;
-    let prev_image_row = transaction.query_one(
+    let detached_image_row = transaction.query_one(
         "
-        SELECT image ->> 'file_name' AS file_name
+        SELECT image
         FROM emoji WHERE id = $1
         FOR UPDATE
         ",
         &[&emoji_id],
     ).await?;
-    let prev_image = prev_image_row.try_get("file_name")?;
+    let detached_files = detached_image_row
+        .try_get("image")
+        .map(|media: PartialMediaInfo| vec![media.file_name])?;
     let row = transaction.query_one(
         "
         UPDATE emoji
@@ -113,7 +117,7 @@ pub async fn update_emoji(
     update_emoji_caches(&transaction, emoji.id).await?;
     transaction.commit().await?;
     let deletion_queue = DeletionQueue {
-        files: vec![prev_image],
+        files: detached_files,
         ipfs_objects: vec![],
     };
     Ok((emoji, deletion_queue))
@@ -125,18 +129,20 @@ pub async fn create_or_update_local_emoji(
     image: PartialMediaInfo,
 ) -> Result<(DbEmoji, DeletionQueue), DatabaseError> {
     let transaction = db_client.transaction().await?;
-    let maybe_prev_image_row = transaction.query_opt(
+    let maybe_detached_image_row = transaction.query_opt(
         "
-        SELECT image ->> 'file_name' AS file_name
+        SELECT image
         FROM emoji WHERE emoji_name = $1 AND hostname IS NULL
         FOR UPDATE
         ",
         &[&emoji_name],
     ).await?;
-    let maybe_prev_image = match maybe_prev_image_row {
-        Some(prev_image_row) => prev_image_row.try_get("file_name")?,
-        None => None,
-    };
+    let detached_files = maybe_detached_image_row
+        .map(|row| row.try_get("image"))
+        .transpose()?
+        .into_iter()
+        .map(|image: PartialMediaInfo| image.file_name)
+        .collect();
     let emoji_id = generate_ulid();
     // Partial index on emoji_name is used
     // UNIQUE NULLS NOT DISTINCT requires Postgresql 15+
@@ -159,7 +165,7 @@ pub async fn create_or_update_local_emoji(
     update_emoji_caches(&transaction, emoji.id).await?;
     transaction.commit().await?;
     let deletion_queue = DeletionQueue {
-        files: maybe_prev_image.map(|name| vec![name]).unwrap_or_default(),
+        files: detached_files,
         ipfs_objects: vec![],
     };
     Ok((emoji, deletion_queue))
@@ -265,8 +271,9 @@ pub async fn delete_emoji(
     let row = maybe_row.ok_or(DatabaseError::NotFound("emoji"))?;
     let emoji: DbEmoji = row.try_get("emoji")?;
     update_emoji_caches(db_client, emoji.id).await?;
+    let detached_files = vec![emoji.image.file_name];
     Ok(DeletionQueue {
-        files: vec![emoji.image.file_name],
+        files: detached_files,
         ipfs_objects: vec![],
     })
 }
