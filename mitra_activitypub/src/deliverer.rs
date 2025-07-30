@@ -305,7 +305,7 @@ pub(super) async fn deliver_activity_worker(
     let mut delivery_pool_state: HashMap<usize, &String> = HashMap::new();
 
     loop {
-        for (index, hostname, ref inbox) in deliveries.iter() {
+        for (index, hostname, inbox) in deliveries.iter() {
             // Add deliveries to the pool until it is full
             if delivery_pool_state.len() == instance.federation.deliverer_pool_size {
                 break;

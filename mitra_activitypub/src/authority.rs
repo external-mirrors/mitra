@@ -28,7 +28,7 @@ pub enum Authority {
 impl fmt::Display for Authority {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         let authority_str = match self {
-            Self::Server(ref server_url) => server_url.to_owned(),
+            Self::Server(server_url) => server_url.to_owned(),
             Self::Key((_, public_key)) => {
                 let did = fep_ef61_identity(public_key);
                 with_ap_prefix(&did.to_string())
@@ -81,9 +81,9 @@ impl Authority {
 
     pub fn server_url(&self) -> &str {
         match self {
-            Self::Server(ref server_url) => server_url,
-            Self::Key((ref server_url, _)) => server_url,
-            Self::KeyWithGateway((ref server_url, _)) => server_url,
+            Self::Server(server_url) => server_url,
+            Self::Key((server_url, _)) => server_url,
+            Self::KeyWithGateway((server_url, _)) => server_url,
         }
     }
 

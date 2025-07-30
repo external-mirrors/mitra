@@ -704,7 +704,7 @@ impl WebfingerHostname {
     pub fn as_str(&self) -> Option<&str> {
         match self {
             Self::Local | Self::Unknown => None,
-            Self::Remote(ref hostname) => Some(hostname),
+            Self::Remote(hostname) => Some(hostname),
         }
     }
 }
