@@ -78,7 +78,7 @@ use mitra_models::{
         delete_reaction,
         get_reactions,
     },
-    reactions::types::ReactionData,
+    reactions::types::{Reaction, ReactionData},
     users::types::Permission,
 };
 use mitra_services::{
@@ -690,6 +690,9 @@ async fn favourite(
         db_client, reaction_data,
     ).await {
         Ok(reaction) => {
+            let reaction = Reaction
+                ::new(reaction, current_user.profile.clone(), None)
+                .map_err(DatabaseError::from)?;
             post.reaction_count += 1;
             post.reactions = get_post_reactions(db_client, post.id).await?;
             Some(reaction)
@@ -707,9 +710,7 @@ async fn favourite(
             &media_server,
             &current_user,
             &post,
-            reaction.id,
-            None,
-            None,
+            &reaction,
         ).await?.save_and_enqueue(db_client).await?;
     };
 

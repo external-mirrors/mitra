@@ -7,6 +7,7 @@ use mitra_models::{
     emojis::types::DbEmoji,
     posts::types::{Post, Visibility},
     profiles::types::DbActorProfile,
+    reactions::types::Reaction,
     users::types::User,
 };
 use mitra_services::media::MediaServer;
@@ -119,16 +120,13 @@ pub async fn get_like_recipients(
     Ok(recipients)
 }
 
-#[allow(clippy::too_many_arguments)]
 pub async fn prepare_like(
     db_client: &impl DatabaseClient,
     instance: &Instance,
     media_server: &MediaServer,
     sender: &User,
     post: &Post,
-    reaction_id: Uuid,
-    maybe_reaction_content: Option<String>,
-    maybe_custom_emoji: Option<&DbEmoji>,
+    reaction: &Reaction,
 ) -> Result<OutgoingActivityJobData, DatabaseError> {
     let recipients = get_like_recipients(
         db_client,
@@ -143,9 +141,9 @@ pub async fn prepare_like(
         media_server,
         &sender.profile,
         &object_id,
-        reaction_id,
-        maybe_reaction_content,
-        maybe_custom_emoji,
+        reaction.id,
+        reaction.content.clone(),
+        reaction.emoji.as_ref(),
         &post_author_id,
         post.visibility,
         instance.federation.fep_c0e0_emoji_react_enabled,

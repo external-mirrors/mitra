@@ -21,6 +21,7 @@ use mitra_models::{
     database::{
         get_database_client,
         DatabaseConnectionPool,
+        DatabaseError,
     },
     emojis::queries::get_local_emoji_by_name,
     posts::{
@@ -34,7 +35,7 @@ use mitra_models::{
             delete_reaction,
             get_reactions,
         },
-        types::ReactionData,
+        types::{Reaction, ReactionData},
     },
 };
 use mitra_services::media::MediaServer;
@@ -111,6 +112,9 @@ async fn create_reaction_view(
     };
     validate_reaction_data(&reaction_data)?;
     let reaction = create_reaction(db_client, reaction_data).await?;
+    let reaction = Reaction
+        ::new(reaction, current_user.profile.clone(), maybe_emoji)
+        .map_err(DatabaseError::from)?;
     post.reaction_count += 1;
     post.reactions = get_post_reactions(db_client, post.id).await?;
     let media_server = MediaServer::new(&config);
@@ -120,9 +124,7 @@ async fn create_reaction_view(
         &media_server,
         &current_user,
         &post,
-        reaction.id,
-        reaction.content.clone(),
-        maybe_emoji.as_ref(),
+        &reaction,
     ).await?.save_and_enqueue(db_client).await?;
 
     let base_url = get_request_base_url(connection_info);
