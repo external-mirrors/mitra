@@ -127,9 +127,8 @@ pub async fn get_reactions(
     let statement = format!(
         "
         SELECT
-            post_reaction.id,
+            post_reaction,
             actor_profile AS author,
-            post_reaction.content,
             emoji
         FROM post_reaction
         JOIN post ON post_reaction.post_id = post.id

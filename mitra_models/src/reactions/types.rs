@@ -4,7 +4,7 @@ use tokio_postgres::Row;
 use uuid::Uuid;
 
 use crate::{
-    database::errors::DatabaseError,
+    database::errors::{DatabaseError, DatabaseTypeError},
     emojis::types::DbEmoji,
     posts::types::Visibility,
     profiles::types::DbActorProfile,
@@ -42,15 +42,40 @@ pub struct Reaction {
     pub emoji: Option<DbEmoji>,
 }
 
+impl Reaction {
+    pub fn new(
+        db_reaction: DbReaction,
+        db_author: DbActorProfile,
+        maybe_db_emoji: Option<DbEmoji>,
+    ) -> Result<Self, DatabaseTypeError> {
+        // Consistency checks
+        if db_reaction.author_id != db_author.id {
+            return Err(DatabaseTypeError);
+        };
+        if db_reaction.emoji_id != maybe_db_emoji.as_ref().map(|db_emoji| db_emoji.id) {
+            return Err(DatabaseTypeError);
+        };
+        if db_reaction.emoji_id.is_some() && db_reaction.content.is_none() {
+            return Err(DatabaseTypeError);
+        };
+        let reaction = Self {
+            id: db_reaction.id,
+            author: db_author,
+            content: db_reaction.content,
+            emoji: maybe_db_emoji,
+        };
+        Ok(reaction)
+    }
+}
+
 impl TryFrom<&Row> for Reaction {
     type Error = DatabaseError;
 
     fn try_from(row: &Row) -> Result<Self, Self::Error> {
-        let id = row.try_get("id")?;
-        let author = row.try_get("author")?;
-        let content = row.try_get("content")?;
-        let emoji = row.try_get("emoji")?;
-        let reaction = Self { id, author, content, emoji };
+        let db_reaction = row.try_get("post_reaction")?;
+        let db_author = row.try_get("author")?;
+        let db_emoji = row.try_get("emoji")?;
+        let reaction = Self::new(db_reaction, db_author, db_emoji)?;
         Ok(reaction)
     }
 }
