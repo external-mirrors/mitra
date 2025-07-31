@@ -176,7 +176,7 @@ pub async fn fetch_any_object_with_context<T: DeserializeOwned>(
 }
 
 impl ApClient {
-    fn agent(&self) -> FederationAgent {
+    pub fn agent(&self) -> FederationAgent {
         build_federation_agent(
             &self.instance,
             self.as_user.as_ref(),

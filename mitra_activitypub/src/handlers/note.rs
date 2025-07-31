@@ -72,7 +72,6 @@ use mitra_validators::{
 };
 
 use crate::{
-    agent::build_federation_agent,
     builders::note::LinkTag,
     filter::get_moderation_domain,
     identifiers::{
@@ -318,7 +317,7 @@ async fn get_object_attachments(
     object: &AttributedObject,
     author: &DbActorProfile,
 ) -> Result<(Vec<Uuid>, Vec<String>), HandlerError> {
-    let agent = build_federation_agent(&ap_client.instance, None);
+    let agent = ap_client.agent();
     let author_hostname = get_moderation_domain(author.expect_actor_data())?;
     let is_filter_enabled = ap_client.filter.is_action_required(
         author_hostname.as_str(),

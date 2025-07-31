@@ -31,7 +31,6 @@ use mitra_validators::{
 };
 
 use crate::{
-    agent::build_federation_agent,
     importers::ApClient,
 };
 
@@ -125,9 +124,8 @@ pub async fn handle_emoji(
         Err(DatabaseError::NotFound("emoji")) => None,
         Err(other_error) => return Err(other_error.into()),
     };
-    let agent = build_federation_agent(&ap_client.instance, None);
     let (file_data, media_type) = match fetch_file(
-        &agent,
+        &ap_client.agent(),
         &emoji.icon.url,
         emoji.icon.media_type.as_deref(),
         &EMOJI_MEDIA_TYPES,
