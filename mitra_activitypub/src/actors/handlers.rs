@@ -338,12 +338,20 @@ async fn fetch_actor_image(
             media_limits.profile_image_size_limit,
         ).await {
             Ok((file_data, media_type)) => {
-                let file_info = ap_client.media_storage
-                    .save_file(file_data, &media_type)?;
-                let image = PartialMediaInfo::from(MediaInfo::remote(
-                    file_info,
-                    actor_image.url.clone(),
-                ));
+                let is_proxy_enabled = ap_client.filter.is_action_required(
+                    moderation_domain.as_str(),
+                    FilterAction::ProxyMedia,
+                );
+                let media_info = if is_proxy_enabled {
+                    log::info!("linked actor image {}", actor_image.url);
+                    MediaInfo::link(media_type, actor_image.url.clone())
+                } else {
+                    let file_info = ap_client.media_storage
+                        .save_file(file_data, &media_type)?;
+                    log::info!("downloaded actor image {}", actor_image.url);
+                    MediaInfo::remote(file_info, actor_image.url.clone())
+                };
+                let image = PartialMediaInfo::from(media_info);
                 Some(image)
             },
             Err(error) => {

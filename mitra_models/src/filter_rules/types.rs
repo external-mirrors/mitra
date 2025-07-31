@@ -14,6 +14,7 @@ pub enum FilterAction {
     Reject,
     MarkSensitive,
     RejectKeywords,
+    ProxyMedia,
 }
 
 impl From<FilterAction> for i16 {
@@ -26,6 +27,7 @@ impl From<FilterAction> for i16 {
             FilterAction::Reject => 5,
             FilterAction::MarkSensitive => 6,
             FilterAction::RejectKeywords => 7,
+            FilterAction::ProxyMedia => 8,
         }
     }
 }
@@ -42,6 +44,7 @@ impl TryFrom<i16> for FilterAction {
             5 => Self::Reject,
             6 => Self::MarkSensitive,
             7 => Self::RejectKeywords,
+            8 => Self::ProxyMedia,
             _ => return Err(DatabaseTypeError),
         };
         Ok(action)

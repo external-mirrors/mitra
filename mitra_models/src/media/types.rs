@@ -28,6 +28,13 @@ impl MediaInfo {
     pub fn link(media_type: String, url: String) -> Self {
         Self::Link { media_type, url }
     }
+
+    pub fn url(&self) -> Option<&String> {
+        match self {
+            Self::File { url, .. } => url.as_ref(),
+            Self::Link { url, .. } => Some(url),
+        }
+    }
 }
 
 // Same field names in database

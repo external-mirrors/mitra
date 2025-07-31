@@ -137,10 +137,20 @@ pub async fn handle_emoji(
             return Ok(None);
         },
     };
-    let file_info = ap_client.media_storage
-        .save_file(file_data, &media_type)?;
-    log::info!("downloaded emoji {}", emoji.icon.url);
-    let image = PartialMediaInfo::from(MediaInfo::remote(file_info, emoji.icon.url));
+    let is_proxy_enabled = ap_client.filter.is_action_required(
+        moderation_domain.as_str(),
+        FilterAction::ProxyMedia,
+    );
+    let media_info = if is_proxy_enabled {
+        log::info!("linked emoji {}", emoji.icon.url);
+        MediaInfo::link(media_type, emoji.icon.url)
+    } else {
+        let file_info = ap_client.media_storage
+            .save_file(file_data, &media_type)?;
+        log::info!("downloaded emoji {}", emoji.icon.url);
+        MediaInfo::remote(file_info, emoji.icon.url)
+    };
+    let image = PartialMediaInfo::from(media_info);
     let db_emoji = if let Some(emoji_id) = maybe_emoji_id {
         let (db_emoji, deletion_queue) = update_emoji(
             db_client,

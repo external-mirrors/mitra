@@ -15,6 +15,8 @@ A filter rule consists of an action and a target. Supported actions:
 - `reject-custom-emojis`: remove custom emojis from posts and profile descriptions.
 - `accept-custom-emojis`: allow custom emojis.
 - `mark-sensitive`: mark media attachments as sensitive.
+- `proxy-media`: use media proxy (do not download remote media).
+- `cache-media`: don't use media proxy.
 - `reject-keywords`: reject posts containing selected keywords.
 - `accept-keywords`: accept posts containing selected keywords.
 

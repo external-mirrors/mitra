@@ -48,6 +48,10 @@ enum FilterAction {
     RejectKeywords,
     /// Accept posts containing selected keywords
     AcceptKeywords,
+    /// Proxy all media
+    ProxyMedia,
+    /// Cache all media
+    CacheMedia,
 }
 
 impl FilterAction {
@@ -79,6 +83,10 @@ impl FilterAction {
                 (DbFilterAction::RejectKeywords, false),
             Self::AcceptKeywords =>
                 (DbFilterAction::RejectKeywords, true),
+            Self::ProxyMedia =>
+                (DbFilterAction::ProxyMedia, false),
+            Self::CacheMedia =>
+                (DbFilterAction::ProxyMedia, true),
         }
     }
 
@@ -100,6 +108,8 @@ impl FilterAction {
             (DbFilterAction::MarkSensitive, _) => Self::MarkSensitive,
             (DbFilterAction::RejectKeywords, false) => Self::RejectKeywords,
             (DbFilterAction::RejectKeywords, true) => Self::AcceptKeywords,
+            (DbFilterAction::ProxyMedia, false) => Self::ProxyMedia,
+            (DbFilterAction::ProxyMedia, true) => Self::CacheMedia,
         }
     }
 }

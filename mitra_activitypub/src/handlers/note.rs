@@ -48,7 +48,6 @@ use mitra_models::{
     profiles::types::DbActorProfile,
 };
 use mitra_utils::{
-    files::FileInfo,
     languages::{parse_language_tag, Language},
 };
 use mitra_validators::{
@@ -323,6 +322,10 @@ async fn get_object_attachments(
         author_hostname.as_str(),
         FilterAction::RejectMediaAttachments,
     );
+    let is_proxy_enabled = ap_client.filter.is_action_required(
+        author_hostname.as_str(),
+        FilterAction::ProxyMedia,
+    );
 
     let mut values = object.attachment.clone();
     if object.object_type == VIDEO {
@@ -331,7 +334,7 @@ async fn get_object_attachments(
     };
     let mut attachments = vec![];
     let mut unprocessed = vec![];
-    let mut downloaded: Vec<(String, FileInfo, Option<String>)> = vec![];
+    let mut downloaded: Vec<(MediaInfo, Option<String>)> = vec![];
     for attachment_value in values {
         match attachment_value["type"].as_str() {
             Some(AUDIO | DOCUMENT | IMAGE | VIDEO) => (),
@@ -379,7 +382,7 @@ async fn get_object_attachments(
             log::warn!("invalid attachment URL ({error}): {attachment_url}");
             continue;
         };
-        if downloaded.iter().any(|(url, ..)| *url == attachment_url) {
+        if downloaded.iter().any(|(media, ..)| media.url() == Some(&attachment_url)) {
             // Already downloaded
             log::warn!("skipping duplicate attachment: {attachment_url}");
             continue;
@@ -419,16 +422,22 @@ async fn get_object_attachments(
                 continue;
             },
         };
-        let file_info =
-            ap_client.media_storage.save_file(file_data, &media_type)?;
-        log::info!("downloaded attachment {}", attachment_url);
-        downloaded.push((attachment_url, file_info, maybe_description));
+        let media_info = if is_proxy_enabled {
+            log::info!("linked attachment {}", attachment_url);
+            MediaInfo::link(media_type, attachment_url)
+        } else {
+            let file_info = ap_client.media_storage
+                .save_file(file_data, &media_type)?;
+            log::info!("downloaded attachment {}", attachment_url);
+            MediaInfo::remote(file_info, attachment_url)
+        };
+        downloaded.push((media_info, maybe_description));
     };
-    for (attachment_url, file_info, description) in downloaded {
+    for (media_info, description) in downloaded {
         let db_attachment = create_attachment(
             db_client,
             author.id,
-            MediaInfo::remote(file_info, attachment_url),
+            media_info,
             description.as_deref(),
         ).await?;
         attachments.push(db_attachment.id);

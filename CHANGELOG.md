@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Added support for `Create` activities without embedded object.
 - Added `steal-emoji` alias for `import-emoji` command.
+- Added `proxy-media` filter action.
 
 ### Changed
 
