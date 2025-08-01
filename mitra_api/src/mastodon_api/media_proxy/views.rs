@@ -19,6 +19,9 @@ async fn media_proxy_view(
     config: web::Data<Config>,
     url_encoded: web::Path<String>,
 ) -> Result<HttpResponse, HttpError> {
+    if !config.media_proxy_enabled {
+        return Err(HttpError::NotFoundError("media"));
+    };
     let url = url_decode(&url_encoded);
     let agent = build_federation_agent(&config.instance(), None);
     let (stream, content_type) = fetch_file_streaming(

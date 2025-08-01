@@ -29,6 +29,7 @@ use super::retention::RetentionConfig;
 fn default_log_level() -> LogLevel { LogLevel::Info }
 
 const fn default_web_client_rewrite_index() -> bool { true }
+const fn default_media_proxy_enabled() -> bool { false }
 
 const fn default_instance_staff_public() -> bool { true }
 
@@ -55,6 +56,8 @@ pub struct Config {
     pub web_client_theme_dir: Option<PathBuf>,
     #[serde(default = "default_web_client_rewrite_index")]
     pub web_client_rewrite_index: bool,
+    #[serde(default = "default_media_proxy_enabled")]
+    pub media_proxy_enabled: bool,
 
     pub http_host: Option<String>,
     pub http_port: Option<u32>,
