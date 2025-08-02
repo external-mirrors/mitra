@@ -53,6 +53,9 @@ pub async fn run_server(
     let num_workers = std::cmp::max(num_cpus::get(), 4);
     let http_socket_addr = config.http_socket();
     let http_socket_perms = config.http_socket_perms;
+    if config.media_proxy_enabled {
+        log::info!("media proxy enabled");
+    };
 
     let http_server = HttpServer::new(move || {
         let cors_config = match config.environment {
