@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+
+- Allow local usernames containing uppercase letters and hyphens ([#157](https://codeberg.org/silverpill/mitra/pulls/157)).
+
 ### Changed
 
 - Write message to log if media proxy is enabled.

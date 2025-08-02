@@ -334,7 +334,7 @@ mod tests {
     fn test_parse_local_actor_id_invalid_username() {
         let error = parse_local_actor_id(
             INSTANCE_URL,
-            "https://social.example/users/tes-t",
+            "https://social.example/users/tes~t",
         ).unwrap_err();
         assert_eq!(error.to_string(), "invalid local actor ID");
     }
