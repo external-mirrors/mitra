@@ -137,7 +137,7 @@ pub fn parse_local_actor_id(
     actor_id: &str,
 ) -> Result<String, ValidationError> {
     // See also: mitra_validators::users::USERNAME_RE
-    let path_re = Regex::new("^/users/(?P<username>[0-9a-z_]+)$")
+    let path_re = Regex::new(r"^/users/(?P<username>[0-9A-Za-z_\-]+)$")
         .expect("regexp should be valid");
     let (base_url, (username,)) = parse_object_id(actor_id, path_re)
         .map_err(|_| ValidationError("invalid local actor ID"))?;

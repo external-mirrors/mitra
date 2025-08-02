@@ -74,7 +74,7 @@ mod tests {
     #[test]
     fn test_parse_object_id() {
         let actor_id = "https://social.example/users/test";
-        let path_re = Regex::new("^/users/(?P<username>[0-9a-z_]+)$").unwrap();
+        let path_re = Regex::new(r"^/users/(?P<username>[0-9A-Za-z_\-]+)$").unwrap();
         let (base_url, (username,)) = parse_object_id::<(String,)>(
             actor_id,
             path_re,
