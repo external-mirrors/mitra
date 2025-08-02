@@ -11,11 +11,6 @@ Features:
 
 Documentation: https://docs.rs/apx_sdk/latest/apx_sdk/
 
-Examples:
-
-- [FEP-ae97 client](./examples/fep_ae97_client.rs)
-- [FEP-ae97 server](./examples/fep_ae97_server.rs)
-
 Used by:
 
 - [Mitra](https://codeberg.org/silverpill/mitra)
