@@ -20,6 +20,7 @@ use mitra_models::{
 };
 use mitra_validators::{
     activitypub::validate_object_id,
+    common::Origin::Remote,
     emojis::{
         clean_emoji_name,
         validate_emoji_name,
@@ -77,7 +78,7 @@ pub async fn handle_emoji(
         return Ok(None);
     };
     let emoji_name = clean_emoji_name(&emoji.name);
-    if validate_emoji_name(emoji_name).is_err() {
+    if validate_emoji_name(emoji_name, Remote).is_err() {
         log::warn!("invalid emoji name: {}", emoji_name);
         return Ok(None);
     };

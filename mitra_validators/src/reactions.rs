@@ -6,6 +6,7 @@ use mitra_utils::unicode::is_single_character;
 
 use super::{
     activitypub::validate_any_object_id,
+    common::Origin::Remote,
     emojis::{
         parse_emoji_shortcode,
         validate_emoji_name,
@@ -30,7 +31,8 @@ pub fn validate_reaction_data(
             };
             let emoji_name = parse_emoji_shortcode(content)
                 .ok_or(ValidationError("invalid emoji shortcode"))?;
-            validate_emoji_name(emoji_name)?;
+            // Assuming that emoji is remote
+            validate_emoji_name(emoji_name, Remote)?;
         };
     } else {
         if reaction_data.emoji_id.is_some() {

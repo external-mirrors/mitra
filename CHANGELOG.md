@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Changed
 
 - Write message to log if media proxy is enabled.
+- Don't allow `.+-` in names of local custom emojis.
 
 ## [4.7.0] - 2025-08-01
 

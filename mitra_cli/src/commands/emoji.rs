@@ -24,6 +24,7 @@ use mitra_models::{
 use mitra_services::media::MediaStorage;
 use mitra_utils::files::FileSize;
 use mitra_validators::{
+    common::Origin::Local,
     emojis::{
         clean_emoji_name,
         validate_emoji_name,
@@ -37,7 +38,7 @@ fn validate_local_emoji_data(
     file_data: &[u8],
     media_type: &str,
 ) -> Result<(), Error> {
-    if validate_emoji_name(emoji_name).is_err() {
+    if validate_emoji_name(emoji_name, Local).is_err() {
         return Err(anyhow!("invalid emoji name"));
     };
     if !EMOJI_MEDIA_TYPES.contains(&media_type) {

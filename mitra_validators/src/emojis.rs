@@ -1,8 +1,13 @@
 use regex::Regex;
 
-use super::errors::ValidationError;
+use super::{
+    common::Origin,
+    errors::ValidationError,
+};
 
-const EMOJI_NAME_RE: &str = r"^[a-zA-Z0-9._+-]+$";
+// https://github.com/mastodon/mastodon/blob/v4.3.7/app/models/custom_emoji.rb#L30
+const EMOJI_LOCAL_NAME_RE: &str = r"^[a-zA-Z0-9_]{2,}$";
+const EMOJI_REMOTE_NAME_RE: &str = r"^[a-zA-Z0-9._+-]+$";
 pub(super) const EMOJI_NAME_SIZE_MAX: usize = 100; // database column limit
 pub const EMOJI_MEDIA_TYPES: [&str; 4] = [
     "image/apng",
@@ -11,9 +16,16 @@ pub const EMOJI_MEDIA_TYPES: [&str; 4] = [
     "image/webp",
 ];
 
-pub fn validate_emoji_name(emoji_name: &str) -> Result<(), ValidationError> {
-    let name_re = Regex::new(EMOJI_NAME_RE)
-        .expect("regexp should be valid");
+pub fn validate_emoji_name(
+    emoji_name: &str,
+    origin: Origin,
+) -> Result<(), ValidationError> {
+    let name_re = match origin {
+        Origin::Local => Regex::new(EMOJI_LOCAL_NAME_RE)
+            .expect("regexp should be valid"),
+        Origin::Remote => Regex::new(EMOJI_REMOTE_NAME_RE)
+            .expect("regexp should be valid"),
+    };
     if !name_re.is_match(emoji_name) {
         return Err(ValidationError("invalid emoji name"));
     };
@@ -41,17 +53,28 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_validate_emoji_name() {
+    fn test_validate_emoji_name_local() {
         let valid_name = "emoji_name";
-        let result = validate_emoji_name(valid_name);
+        let result = validate_emoji_name(valid_name, Origin::Local);
         assert!(result.is_ok());
 
         let valid_name = "01-emoji-name";
-        let result = validate_emoji_name(valid_name);
+        let result = validate_emoji_name(valid_name, Origin::Local);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_validate_emoji_name_remote() {
+        let valid_name = "emoji_name";
+        let result = validate_emoji_name(valid_name, Origin::Remote);
+        assert!(result.is_ok());
+
+        let valid_name = "01-emoji-name";
+        let result = validate_emoji_name(valid_name, Origin::Remote);
         assert!(result.is_ok());
 
         let invalid_name = "emoji\"<script>";
-        let result = validate_emoji_name(invalid_name);
+        let result = validate_emoji_name(invalid_name, Origin::Remote);
         assert!(result.is_err());
     }
 

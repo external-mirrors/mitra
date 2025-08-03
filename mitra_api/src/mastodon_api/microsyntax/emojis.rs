@@ -11,7 +11,7 @@ use mitra_models::{
 
 use super::parser::is_inside_code_block;
 
-// See also: EMOJI_NAME_RE in mitra_validators::emojis
+// See also: EMOJI_REMOTE_NAME_RE in mitra_validators::emojis
 const SHORTCODE_SEARCH_RE: &str = r"(?m):(?P<name>[a-zA-Z0-9._+-]+):(?P<after>\s|$|\)|<)";
 
 /// Finds emoji shortcodes in text
