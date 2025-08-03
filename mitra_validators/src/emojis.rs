@@ -8,10 +8,19 @@ use super::{
 // https://github.com/mastodon/mastodon/blob/v4.3.7/app/models/custom_emoji.rb#L30
 const EMOJI_LOCAL_NAME_RE: &str = r"^[a-zA-Z0-9_]{2,}$";
 const EMOJI_REMOTE_NAME_RE: &str = r"^[a-zA-Z0-9._+-]+$";
-pub(super) const EMOJI_NAME_SIZE_MAX: usize = 100; // database column limit
-pub const EMOJI_MEDIA_TYPES: [&str; 4] = [
-    "image/apng",
+pub (super) const EMOJI_NAME_SIZE_MAX: usize = 100; // database column limit
+
+// https://github.com/mastodon/mastodon/blob/v4.4.2/app/models/custom_emoji.rb#L37
+pub const EMOJI_LOCAL_MEDIA_TYPES: [&str; 3] = [
     "image/gif",
+    "image/png",
+    "image/webp",
+];
+pub const EMOJI_REMOTE_MEDIA_TYPES: [&str; 6] = [
+    "image/apng",
+    "image/avif",
+    "image/gif",
+    "image/jpeg",
     "image/png",
     "image/webp",
 ];

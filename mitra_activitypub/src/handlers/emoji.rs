@@ -24,7 +24,7 @@ use mitra_validators::{
     emojis::{
         clean_emoji_name,
         validate_emoji_name,
-        EMOJI_MEDIA_TYPES,
+        EMOJI_REMOTE_MEDIA_TYPES,
     },
     media::validate_media_url,
     profiles::validate_hostname,
@@ -129,7 +129,7 @@ pub async fn handle_emoji(
         &ap_client.agent(),
         &emoji.icon.url,
         emoji.icon.media_type.as_deref(),
-        &EMOJI_MEDIA_TYPES,
+        &EMOJI_REMOTE_MEDIA_TYPES,
         ap_client.limits.media.emoji_size_limit,
     ).await {
         Ok(file) => file,

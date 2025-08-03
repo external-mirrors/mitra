@@ -28,7 +28,8 @@ use mitra_validators::{
     emojis::{
         clean_emoji_name,
         validate_emoji_name,
-        EMOJI_MEDIA_TYPES,
+        EMOJI_LOCAL_MEDIA_TYPES,
+        EMOJI_REMOTE_MEDIA_TYPES,
     },
 };
 
@@ -41,7 +42,7 @@ fn validate_local_emoji_data(
     if validate_emoji_name(emoji_name, Local).is_err() {
         return Err(anyhow!("invalid emoji name"));
     };
-    if !EMOJI_MEDIA_TYPES.contains(&media_type) {
+    if !EMOJI_LOCAL_MEDIA_TYPES.contains(&media_type) {
         return Err(anyhow!("media type {media_type} is not supported"));
     };
     if file_data.len() > config.limits.media.emoji_local_size_limit {
@@ -76,7 +77,7 @@ impl AddEmoji {
                 &agent,
                 &self.location,
                 None, // no expectations
-                &EMOJI_MEDIA_TYPES,
+                &EMOJI_REMOTE_MEDIA_TYPES, // media type will be checked later
                 config.limits.media.file_size_limit, // size will be checked later
             ).await?
         } else {
@@ -135,7 +136,7 @@ impl ImportEmoji {
                     &agent,
                     &url,
                     None, // no expected type
-                    &EMOJI_MEDIA_TYPES,
+                    &EMOJI_REMOTE_MEDIA_TYPES, // media type will be checked later
                     config.limits.media.file_size_limit, // size will be checked later
                 ).await?
             },
