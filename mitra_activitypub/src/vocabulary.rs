@@ -51,6 +51,7 @@ pub const INTENT: &str = "Intent";
 pub const PROPOSAL: &str = "Proposal";
 
 // Misc
+pub const CHAT_MESSAGE: &str = "ChatMessage"; // Pleroma
 pub const EMOJI: &str = "Emoji";
 pub const HASHTAG: &str = "Hashtag";
 pub const LOCK: &str = "Lock"; // Lemmy

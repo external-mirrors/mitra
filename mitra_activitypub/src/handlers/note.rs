@@ -165,6 +165,10 @@ impl AttributedObject {
         Ok(())
     }
 
+    fn is_converted(&self) -> bool {
+        ![NOTE, QUESTION, CHAT_MESSAGE].contains(&self.object_type.as_str())
+    }
+
     fn audience(&self) -> Vec<&String> {
         self.to.iter().chain(self.cc.iter()).collect()
     }
@@ -857,7 +861,7 @@ pub async fn create_remote_post(
     let canonical_object_id = canonicalize_id(&object.id)?;
 
     object.check_not_actor()?;
-    if object.object_type != NOTE && object.object_type != QUESTION {
+    if object.is_converted() {
         // Attempting to convert any object that has attributedTo property
         // into post
         log::info!("processing object of type {}", object.object_type);
@@ -906,7 +910,7 @@ pub async fn create_remote_post(
         None
     };
     let maybe_object_url = get_object_url(&object)?;
-    if object.object_type != NOTE && object.object_type != QUESTION {
+    if object.is_converted() {
         // Append link to object
         let url = maybe_object_url.as_ref().unwrap_or(&object.id);
         content += &create_content_link(url);
@@ -1048,7 +1052,7 @@ pub async fn update_remote_post(
         None
     };
     let maybe_object_url = get_object_url(object)?;
-    if object.object_type != NOTE && object.object_type != QUESTION {
+    if object.is_converted() {
         // Append link to object
         let url = maybe_object_url.as_ref().unwrap_or(&object.id);
         content += &create_content_link(url);

@@ -16,6 +16,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Don't allow `.+-` in names of local custom emojis.
 - Don't allow local custom emojis with `image/apng` media type.
 - Allow remote custom emojis with `image/avif` and `image/jpeg` media types.
+- Don't insert URL into post if type is `ChatMessage`.
 
 ## [4.7.0] - 2025-08-01
 
