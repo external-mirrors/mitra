@@ -180,6 +180,12 @@ pub async fn prepare_mentions(
 ) -> Result<Vec<Uuid>, DatabaseError> {
     // Extend mentions
     if let Some(in_reply_to) = maybe_in_reply_to {
+        if let Some(group) = in_reply_to.mentions
+            .iter()
+            .find(|profile| profile.is_group())
+        {
+            mentions.insert(0, group.id);
+        };
         if in_reply_to.author.id != author_id {
             // Mention the author of the parent post
             mentions.insert(0, in_reply_to.author.id);

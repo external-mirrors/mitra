@@ -791,6 +791,14 @@ impl DbActorProfile {
         }
     }
 
+    pub fn is_group(&self) -> bool {
+        if let Some(ref actor_data) = self.actor_json {
+            actor_data.object_type == "Group"
+        } else {
+            false
+        }
+    }
+
     pub fn expect_actor_data(&self) -> &DbActor {
         self.actor_json.as_ref()
             .expect("actor data should be present")
