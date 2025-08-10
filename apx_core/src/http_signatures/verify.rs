@@ -442,6 +442,7 @@ mod tests {
         crypto_rsa::generate_weak_rsa_key,
         http_signatures::create::{
             create_http_signature_cavage,
+            create_http_signature_rfc9421,
             HttpSigner,
         },
     };
@@ -677,6 +678,52 @@ r#""date": Tue, 20 Apr 2021 02:07:55 GMT
             &request_method,
             &request_url,
             &request_headers,
+        ).unwrap();
+        assert_eq!(signature_data.content_digest.is_some(), true);
+
+        let signer_public_key = signer.key.public_key();
+        let content_digest = ContentDigest::new(request_body.as_bytes());
+        let result = verify_http_signature(
+            &signature_data,
+            &signer_public_key,
+            Some(content_digest),
+        );
+        assert_eq!(result.is_ok(), true);
+    }
+
+    #[test]
+    fn test_create_and_verify_signature_rfc9421_post() {
+        let request_method = Method::POST;
+        let request_uri = Uri::from_static("https://verifier.example/inbox");
+        let request_body = "{}";
+        let signer_key = generate_weak_ed25519_key();
+        let signer_key_id = "https://signer.example/actor#main-key".to_string();
+        let signer = HttpSigner::new_ed25519(signer_key, signer_key_id);
+        let signed_headers = create_http_signature_rfc9421(
+            request_method.clone(),
+            &request_uri,
+            request_body.as_bytes(),
+            &signer,
+        ).unwrap();
+
+        let mut request_headers = HeaderMap::new();
+        request_headers.insert(
+            HeaderName::from_static("content-digest"),
+            HeaderValue::from_str(&signed_headers.content_digest.unwrap()).unwrap(),
+        );
+        request_headers.insert(
+            HeaderName::from_static("signature-input"),
+            HeaderValue::from_str(&signed_headers.signature_input).unwrap(),
+        );
+        request_headers.insert(
+            HeaderName::from_static("signature"),
+            HeaderValue::from_str(&signed_headers.signature).unwrap(),
+        );
+        let signature_data = parse_http_signature_rfc9421(
+            &request_method,
+            &request_uri,
+            &request_headers,
+            &REQUIRED_COMPONENTS_RFC9421,
         ).unwrap();
         assert_eq!(signature_data.content_digest.is_some(), true);
 

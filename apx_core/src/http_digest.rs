@@ -84,7 +84,6 @@ pub(crate) fn parse_digest_header(
     Ok(ContentDigest { algorithm, digest })
 }
 
-#[allow(dead_code)]
 pub(crate) fn create_content_digest_header(
     digest: &ContentDigest,
 ) -> Result<String, &'static str> {
