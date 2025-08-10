@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+
+- Support `wasm32-unknown-unknown` compilation target in `apx_core`.
+
 ## [0.15.0] - 2025-08-02
 
 ### Added

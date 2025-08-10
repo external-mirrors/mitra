@@ -60,6 +60,10 @@ unsigned-varint = "0.7.1"
 url = "2.5.0"
 percent-encoding = "2.3.1"
 
+[target.wasm32-unknown-unknown.dependencies]
+# https://docs.rs/getrandom/#webassembly-support
+getrandom =  { version = "*", features = ["js"] }
+
 [features]
 caip = []
 did-pkh = ["caip"]
