@@ -2,9 +2,11 @@
 use regex::Regex;
 use sfv::{
     BareItem,
+    Dictionary,
     Item,
     ListEntry,
     Parser,
+    SerializeValue,
 };
 
 use crate::{
@@ -82,6 +84,20 @@ pub(crate) fn parse_digest_header(
     Ok(ContentDigest { algorithm, digest })
 }
 
+#[allow(dead_code)]
+pub(crate) fn create_content_digest_header(
+    digest: &ContentDigest,
+) -> Result<String, &'static str> {
+    let digest_item = Item::new(BareItem::ByteSeq(digest.digest.clone()));
+    let mut digest_dict = Dictionary::new();
+    digest_dict.insert(
+        digest.algorithm.to_str().to_owned(),
+        ListEntry::Item(digest_item),
+    );
+    let digest_header = digest_dict.serialize_value()?;
+    Ok(digest_header)
+}
+
 /// <https://datatracker.ietf.org/doc/html/rfc9530#section-2>
 pub(crate) fn parse_content_digest_header(
     header_value: &str,
@@ -134,7 +150,16 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_content_digest_header() {
+    fn test_create_and_parse_content_digest_header() {
+        let request_body = "test*123";
+        let digest = ContentDigest::new(request_body.as_bytes());
+        let header_value = create_content_digest_header(&digest).unwrap();
+        let parsed = parse_content_digest_header(&header_value).unwrap();
+        assert_eq!(parsed, digest);
+    }
+
+    #[test]
+    fn test_parse_content_digest_header_sample() {
         // https://datatracker.ietf.org/doc/html/rfc9530#name-sample-digest-values
         let request_body = r#"{"hello": "world"}"#;
         let expected_digest = ContentDigest::new_sha512(request_body.as_bytes());
