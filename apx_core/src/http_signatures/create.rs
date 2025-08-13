@@ -1,6 +1,7 @@
 //! Create HTTP signatures
 use chrono::Utc;
 use http::Method;
+use thiserror::Error;
 use url::{Url, ParseError as UrlError};
 
 use crate::{
@@ -23,6 +24,7 @@ const HTTP_SIGNATURE_ALGORITHM_HS2019: &str = "hs2019";
 // https://www.rfc-editor.org/rfc/rfc9110#http.date
 const HTTP_SIGNATURE_DATE_FORMAT: &str = "%a, %d %b %Y %T GMT";
 
+/// Entity that creates an HTTP signature
 pub struct HttpSigner {
     pub key: SecretKey,
     pub key_id: String,
@@ -44,6 +46,7 @@ impl HttpSigner {
     }
 }
 
+/// HTTP headers for signed request (Draft-Cavage)
 pub struct HttpSignatureHeaders {
     pub host: String,
     pub date: String,
@@ -51,7 +54,7 @@ pub struct HttpSignatureHeaders {
     pub signature: String,
 }
 
-#[derive(thiserror::Error, Debug)]
+#[derive(Debug, Error)]
 pub enum HttpSignatureError {
     #[error("invalid request url")]
     UrlError(#[from] UrlError),
@@ -68,6 +71,7 @@ pub fn create_http_signature_cavage(
     request_body: &[u8],
     signer: &HttpSigner,
 ) -> Result<HttpSignatureHeaders, HttpSignatureError> {
+    // URL is normalized
     let request_url_object = Url::parse(request_url)?;
     let request_target = format!(
         "{} {}",
@@ -96,7 +100,7 @@ pub fn create_http_signature_cavage(
         headers.push(("digest", digest_header));
     };
 
-    let message = headers.iter()
+    let signature_base = headers.iter()
         .map(|(name, value)| format!("{}: {}", name, value))
         .collect::<Vec<String>>()
         .join("\n");
@@ -106,13 +110,17 @@ pub fn create_http_signature_cavage(
         .join(" ");
     let (signature, algorithm) = match signer.key {
         SecretKey::Ed25519(ref secret_key) => {
-            let signature =
-                create_eddsa_signature(secret_key, message.as_bytes()).to_vec();
-            (signature, HTTP_SIGNATURE_ALGORITHM_HS2019)
+            let signature = create_eddsa_signature(
+                secret_key,
+                signature_base.as_bytes(),
+            );
+            (signature.to_vec(), HTTP_SIGNATURE_ALGORITHM_HS2019)
         },
         SecretKey::Rsa(ref secret_key) => {
-            let signature =
-                create_rsa_sha256_signature(secret_key, message.as_bytes())?;
+            let signature = create_rsa_sha256_signature(
+                secret_key,
+                signature_base.as_bytes(),
+            )?;
             (signature, HTTP_SIGNATURE_ALGORITHM)
         },
     };
@@ -139,10 +147,10 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_create_signature_cavage_get() {
-        let request_url = "https://example.org/inbox";
+    fn test_create_http_signature_cavage_get() {
+        let request_url = "https://verifier.example/private-object";
         let signer_key = generate_weak_rsa_key().unwrap();
-        let signer_key_id = "https://myserver.org/actor#main-key".to_string();
+        let signer_key_id = "https://signer.example/actor#main-key".to_string();
         let signer = HttpSigner::new_rsa(signer_key, signer_key_id);
 
         let headers = create_http_signature_cavage(
@@ -152,10 +160,10 @@ mod tests {
             &signer,
         ).unwrap();
 
-        assert_eq!(headers.host, "example.org");
+        assert_eq!(headers.host, "verifier.example");
         assert_eq!(headers.digest, None);
         let expected_signature_header = concat!(
-            r#"keyId="https://myserver.org/actor#main-key","#,
+            r#"keyId="https://signer.example/actor#main-key","#,
             r#"algorithm="rsa-sha256","#,
             r#"headers="(request-target) host date","#,
             r#"signature=""#,
@@ -167,11 +175,11 @@ mod tests {
     }
 
     #[test]
-    fn test_create_signature_cavage_post() {
-        let request_url = "https://example.org/inbox";
+    fn test_create_http_signature_cavage_post() {
+        let request_url = "https://verifier.example/inbox";
         let request_body = "{}";
         let signer_key = generate_weak_rsa_key().unwrap();
-        let signer_key_id = "https://myserver.org/actor#main-key".to_string();
+        let signer_key_id = "https://signer.example/actor#main-key".to_string();
         let signer = HttpSigner::new_rsa(signer_key, signer_key_id);
 
         let result = create_http_signature_cavage(
@@ -183,13 +191,13 @@ mod tests {
         assert_eq!(result.is_ok(), true);
 
         let headers = result.unwrap();
-        assert_eq!(headers.host, "example.org");
+        assert_eq!(headers.host, "verifier.example");
         assert_eq!(
             headers.digest.unwrap(),
             "SHA-256=RBNvo1WzZ4oRRq0W9+hknpT7T8If536DEMBg9hyq/4o=",
         );
         let expected_signature_header = concat!(
-            r#"keyId="https://myserver.org/actor#main-key","#,
+            r#"keyId="https://signer.example/actor#main-key","#,
             r#"algorithm="rsa-sha256","#,
             r#"headers="(request-target) host date digest","#,
             r#"signature=""#,

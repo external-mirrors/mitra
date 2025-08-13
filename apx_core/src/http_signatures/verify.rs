@@ -455,14 +455,14 @@ mod tests {
         let mut request_headers = HeaderMap::new();
         request_headers.insert(
             HeaderName::from_static("host"),
-            HeaderValue::from_static("example.com"),
+            HeaderValue::from_static("verifier.example"),
         );
         request_headers.insert(
             HeaderName::from_static("date"),
             HeaderValue::from_str(&date).unwrap(),
         );
         let signature_header = concat!(
-            r#"keyId="https://myserver.org/actor#main-key","#,
+            r#"keyId="https://signer.example/actor#main-key","#,
             r#"algorithm=hs2019,"#,
             r#"headers="(request-target) host date","#,
             r#"signature="test""#,
@@ -480,11 +480,11 @@ mod tests {
         assert_eq!(signature_data.is_rfc9421, false);
         assert_eq!(
             signature_data.key_id.to_string(),
-            "https://myserver.org/actor#main-key",
+            "https://signer.example/actor#main-key",
         );
         assert_eq!(
             signature_data.base,
-            "(request-target): get /user/123/inbox\nhost: example.com\ndate: 20 Oct 2022 20:00:00 GMT",
+            "(request-target): get /user/123/inbox\nhost: verifier.example\ndate: 20 Oct 2022 20:00:00 GMT",
         );
         assert_eq!(signature_data.signature, [181, 235, 45]);
         assert!(signature_data.expires_at < Utc::now());
@@ -549,9 +549,9 @@ r#""date": Tue, 20 Apr 2021 02:07:55 GMT
     #[test]
     fn test_create_and_verify_signature_cavage_get() {
         let request_method = Method::GET;
-        let request_url = "https://example.org/inbox";
+        let request_url = "https://verifier.example/private/object";
         let signer_key = generate_weak_rsa_key().unwrap();
-        let signer_key_id = "https://myserver.org/actor#main-key".to_string();
+        let signer_key_id = "https://signer.example/actor#main-key".to_string();
         let signer = HttpSigner::new_rsa(signer_key, signer_key_id);
         let signed_headers = create_http_signature_cavage(
             request_method.clone(),
@@ -560,7 +560,7 @@ r#""date": Tue, 20 Apr 2021 02:07:55 GMT
             &signer,
         ).unwrap();
 
-        let request_url = request_url.parse::<Uri>().unwrap();
+        let request_uri = request_url.parse::<Uri>().unwrap();
         let mut request_headers = HeaderMap::new();
         request_headers.insert(
             HeaderName::from_static("host"),
@@ -576,7 +576,7 @@ r#""date": Tue, 20 Apr 2021 02:07:55 GMT
         );
         let signature_data = parse_http_signature_cavage(
             &request_method,
-            &request_url,
+            &request_uri,
             &request_headers,
         ).unwrap();
         assert_eq!(signature_data.content_digest.is_some(), false);
@@ -593,10 +593,10 @@ r#""date": Tue, 20 Apr 2021 02:07:55 GMT
     #[test]
     fn test_create_and_verify_signature_cavage_post() {
         let request_method = Method::POST;
-        let request_url = "https://example.org/inbox";
+        let request_url = "https://verifier.example/inbox";
         let request_body = "{}";
         let signer_key = generate_weak_rsa_key().unwrap();
-        let signer_key_id = "https://myserver.org/actor#main-key".to_string();
+        let signer_key_id = "https://signer.example/actor#main-key".to_string();
         let signer = HttpSigner::new_rsa(signer_key, signer_key_id);
         let signed_headers = create_http_signature_cavage(
             request_method.clone(),
@@ -605,7 +605,7 @@ r#""date": Tue, 20 Apr 2021 02:07:55 GMT
             &signer,
         ).unwrap();
 
-        let request_url = request_url.parse::<Uri>().unwrap();
+        let request_uri = request_url.parse::<Uri>().unwrap();
         let mut request_headers = HeaderMap::new();
         request_headers.insert(
             HeaderName::from_static("host"),
@@ -625,7 +625,7 @@ r#""date": Tue, 20 Apr 2021 02:07:55 GMT
         );
         let signature_data = parse_http_signature_cavage(
             &request_method,
-            &request_url,
+            &request_uri,
             &request_headers,
         ).unwrap();
         assert_eq!(signature_data.content_digest.is_some(), true);
@@ -643,10 +643,10 @@ r#""date": Tue, 20 Apr 2021 02:07:55 GMT
     #[test]
     fn test_create_and_verify_signature_cavage_post_eddsa() {
         let request_method = Method::POST;
-        let request_url = "https://server.example/inbox";
+        let request_url = "https://verifier.example/inbox";
         let request_body = "{}";
         let signer_key = generate_weak_ed25519_key();
-        let signer_key_id = "https://myserver.org/actor#ed25519-key".to_string();
+        let signer_key_id = "https://signer.example/actor#ed25519-key".to_string();
         let signer = HttpSigner::new_ed25519(signer_key, signer_key_id);
         let signed_headers = create_http_signature_cavage(
             request_method.clone(),
