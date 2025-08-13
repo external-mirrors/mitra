@@ -21,6 +21,25 @@ enum Algorithm {
     Sha512,
 }
 
+impl Algorithm {
+    fn parse(algorithm_key: &str) -> Option<Self> {
+        // https://www.iana.org/assignments/http-digest-hash-alg/http-digest-hash-alg.xhtml
+        let algorithm = match algorithm_key {
+            "sha-256" => Self::Sha256,
+            "sha-512" => Self::Sha512,
+            _ => return None,
+        };
+        Some(algorithm)
+    }
+
+    fn to_str(self) -> &'static str {
+        match self {
+            Self::Sha256 => "sha-256",
+            Self::Sha512 => "sha-512",
+        }
+    }
+}
+
 /// HTTP content digest
 #[derive(Clone, Debug, PartialEq)]
 pub struct ContentDigest {
@@ -42,11 +61,8 @@ impl ContentDigest {
     }
 }
 
-pub(crate) fn get_digest_header(digest: &ContentDigest) -> String {
-    let algorithm = match digest.algorithm {
-        Algorithm::Sha256 => "SHA-256",
-        Algorithm::Sha512 => "SHA-512",
-    };
+pub(crate) fn create_digest_header(digest: &ContentDigest) -> String {
+    let algorithm = digest.algorithm.to_str().to_uppercase();
     let digest_b64 = base64::encode(&digest.digest);
     format!("{algorithm}={digest_b64}")
 }
@@ -58,11 +74,8 @@ pub(crate) fn parse_digest_header(
     let caps = digest_re.captures(header_value)
         .ok_or("invalid digest header value")?;
     // RFC-3230: digest-algorithm values are case-insensitive
-    let algorithm = match caps["algorithm"].to_uppercase().as_str() {
-        "SHA-256" => Algorithm::Sha256,
-        "SHA-512" => Algorithm::Sha512,
-        _ => return Err("unexpected digest algorithm"),
-    };
+    let algorithm = Algorithm::parse(&caps["algorithm"].to_lowercase())
+        .ok_or("unexpected digest algorithm")?;
     let digest_b64 = &caps["digest"];
     let digest = base64::decode(digest_b64)
         .map_err(|_| "invalid digest encoding")?;
@@ -77,11 +90,8 @@ pub(crate) fn parse_content_digest_header(
         .map_err(|_| "invalid content-digest header")?;
     let (label, list_item) = dict.first()
         .ok_or("invalid content-digest header")?;
-    let algorithm = match label.as_str() {
-        "sha-256" => Algorithm::Sha256,
-        "sha-512" => Algorithm::Sha512,
-        _ => return Err("unexpected digest algorithm"),
-    };
+    let algorithm = Algorithm::parse(label)
+        .ok_or("unexpected digest algorithm")?;
     let digest = match list_item {
         ListEntry::Item(Item { bare_item: BareItem::ByteSeq(value), .. }) => {
             value.clone()
@@ -96,19 +106,19 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_parse_digest_header() {
+    fn test_create_and_parse_digest_header() {
         let request_body = "test*123";
         let digest = ContentDigest::new(request_body.as_bytes());
-        let header_value = get_digest_header(&digest);
+        let header_value = create_digest_header(&digest);
         let parsed = parse_digest_header(&header_value).unwrap();
         assert_eq!(parsed, digest);
     }
 
     #[test]
-    fn test_parse_digest_header_sha512() {
+    fn test_create_and_parse_digest_header_sha512() {
         let request_body = "test*123";
         let digest_sha512 = ContentDigest::new_sha512(request_body.as_bytes());
-        let header_value = get_digest_header(&digest_sha512);
+        let header_value = create_digest_header(&digest_sha512);
         let parsed = parse_digest_header(&header_value).unwrap();
         assert_eq!(parsed, digest_sha512);
     }

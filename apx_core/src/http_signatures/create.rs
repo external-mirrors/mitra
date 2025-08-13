@@ -15,7 +15,7 @@ use crate::{
         RsaError,
         RsaSecretKey,
     },
-    http_digest::{get_digest_header, ContentDigest},
+    http_digest::{create_digest_header, ContentDigest},
 };
 
 const HTTP_SIGNATURE_ALGORITHM: &str = "rsa-sha256";
@@ -83,7 +83,7 @@ pub fn create_http_signature_cavage(
         None
     } else {
         let digest = ContentDigest::new(request_body);
-        let digest_header = get_digest_header(&digest);
+        let digest_header = create_digest_header(&digest);
         Some(digest_header)
     };
 
