@@ -107,8 +107,11 @@ pub fn validate_post_create_data(
         _ => (),
     };
     validate_content(&post_data.content)?;
-    if post_data.content.is_empty() && post_data.attachments.is_empty() {
-        return Err(ValidationError("post is empty"));
+    if post_data.content.is_empty()
+        && post_data.attachments.is_empty()
+        && post_data.links.is_empty()
+    {
+        return Err(ValidationError("post can not be empty"));
     };
     if let Some(ref poll_data) = post_data.poll {
         validate_poll_data(poll_data)?;
@@ -138,7 +141,10 @@ pub fn validate_post_update_data(
     post_data: &PostUpdateData,
 ) -> Result<(), ValidationError> {
     validate_content(&post_data.content)?;
-    if post_data.content.is_empty() && post_data.attachments.is_empty() {
+    if post_data.content.is_empty()
+        && post_data.attachments.is_empty()
+        && post_data.links.is_empty()
+    {
         return Err(ValidationError("post can not be empty"));
     };
     if let Some(ref poll_data) = post_data.poll {

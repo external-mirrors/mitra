@@ -18,6 +18,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Allow remote custom emojis with `image/avif` and `image/jpeg` media types.
 - Don't insert URL into post if type is `ChatMessage`.
 - Always add group to reply audience when replying to post in group.
+- Don't reject remote posts with a quote and no content.
 
 ## [4.7.0] - 2025-08-01
 
