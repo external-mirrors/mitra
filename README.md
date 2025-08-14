@@ -111,7 +111,9 @@ CREATE DATABASE mitra OWNER mitra ENCODING 'UTF8';
 
 Create configuration file by copying [`config.example.yaml`](./config.example.yaml) and configure the instance. Default config file path is `config.yaml`, but it can be changed using `CONFIG_PATH` environment variable.
 
-Put any static files into the directory specified in the configuration file. Building instructions for `mitra-web` frontend can be found at https://codeberg.org/silverpill/mitra-web#project-setup.
+Create data and web client directories at locations specified in the configuration file (`storage_dir` and `web_client_dir` parameters).
+
+Put any static files into the web client directory. Building instructions for `mitra-web` frontend can be found at https://codeberg.org/silverpill/mitra-web#project-setup.
 
 Create admin account:
 
