@@ -1,7 +1,7 @@
 [package]
 name = "apx_core"
 description = "APx core primitives"
-version = "0.15.0"
+version = "0.16.0"
 license.workspace = true
 repository = "https://codeberg.org/silverpill/mitra/src/branch/main/apx_core"
 
