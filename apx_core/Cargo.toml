@@ -62,7 +62,7 @@ percent-encoding = "2.3.1"
 
 [target.wasm32-unknown-unknown.dependencies]
 # https://docs.rs/getrandom/#webassembly-support
-getrandom =  { version = "*", features = ["js"] }
+getrandom =  { version = "0.2", features = ["js"] }
 
 [features]
 caip = []
