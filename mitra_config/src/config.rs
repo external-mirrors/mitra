@@ -29,7 +29,7 @@ use super::retention::RetentionConfig;
 fn default_log_level() -> LogLevel { LogLevel::Info }
 
 const fn default_web_client_rewrite_index() -> bool { true }
-const fn default_media_proxy_enabled() -> bool { false }
+const fn default_media_proxy_enabled() -> bool { true }
 
 const fn default_instance_staff_public() -> bool { true }
 
