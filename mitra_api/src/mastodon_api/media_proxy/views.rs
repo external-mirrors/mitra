@@ -4,6 +4,12 @@ use actix_web::{
     HttpResponse,
     Scope,
 };
+use apx_core::{
+    crypto_eddsa::{
+        ed25519_public_key_from_secret_key,
+        verify_eddsa_signature,
+    },
+};
 use apx_sdk::{
     core::url::common::url_decode,
     fetch::fetch_file_streaming,
@@ -14,15 +20,20 @@ use mitra_config::Config;
 
 use crate::errors::HttpError;
 
+use super::types::MediaProxyParams;
+
 #[get("/{url_encoded}")]
 async fn media_proxy_view(
     config: web::Data<Config>,
     url_encoded: web::Path<String>,
+    params: web::Query<MediaProxyParams>,
 ) -> Result<HttpResponse, HttpError> {
-    if !config.media_proxy_enabled {
-        return Err(HttpError::NotFoundError("media"));
-    };
     let url = url_decode(&url_encoded);
+    let signature_base = url.as_bytes();
+    let secret_key = config.instance().ed25519_secret_key;
+    let public_key = ed25519_public_key_from_secret_key(&secret_key);
+    verify_eddsa_signature(&public_key, signature_base, &params.signature)
+        .map_err(|_| HttpError::PermissionError)?;
     let agent = build_federation_agent(&config.instance(), None);
     let (stream, content_type) = fetch_file_streaming(
         &agent,

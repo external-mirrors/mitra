@@ -318,10 +318,10 @@ pub fn build_instance_actor(
     let actor_id = local_instance_actor_id(&instance.url());
     let actor_inbox = LocalActorCollection::Inbox.of(&actor_id);
     let actor_outbox = LocalActorCollection::Outbox.of(&actor_id);
-    let public_key = PublicKeyPem::build(&actor_id, &instance.actor_rsa_key)?;
+    let public_key = PublicKeyPem::build(&actor_id, &instance.rsa_secret_key)?;
     let verification_methods = vec![
-        Multikey::build_rsa(&actor_id, &instance.actor_rsa_key)?,
-        Multikey::build_ed25519(&actor_id, &instance.actor_ed25519_key),
+        Multikey::build_rsa(&actor_id, &instance.rsa_secret_key)?,
+        Multikey::build_ed25519(&actor_id, &instance.ed25519_secret_key),
     ];
     let actor = Actor {
         _context: build_actor_context(),

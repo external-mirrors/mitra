@@ -53,9 +53,8 @@ pub fn parse_instance_url(url: &str) -> Result<HttpUrl, &'static str> {
 pub struct Instance {
     _url: HttpUrl,
     pub federation: FederationConfig,
-    // Instance actor keys
-    pub actor_ed25519_key: Ed25519SecretKey,
-    pub actor_rsa_key: RsaSecretKey,
+    pub ed25519_secret_key: Ed25519SecretKey,
+    pub rsa_secret_key: RsaSecretKey,
 }
 
 impl Instance {
@@ -69,9 +68,9 @@ impl Instance {
             _url: parse_instance_url(&config.instance_uri)
                 .expect("instance URL should be already validated"),
             federation: federation_config,
-            actor_ed25519_key: config.instance_ed25519_key
+            ed25519_secret_key: config.instance_ed25519_key
                 .expect("instance Ed25519 key should be already generated"),
-            actor_rsa_key: config.instance_rsa_key.clone()
+            rsa_secret_key: config.instance_rsa_key.clone()
                 .expect("instance RSA key should be already generated"),
         }
     }
@@ -112,8 +111,8 @@ impl Instance {
                 enabled: false,
                 ..Default::default()
             },
-            actor_rsa_key: generate_weak_rsa_key().unwrap(),
-            actor_ed25519_key: generate_weak_ed25519_key(),
+            rsa_secret_key: generate_weak_rsa_key().unwrap(),
+            ed25519_secret_key: generate_weak_ed25519_key(),
         }
     }
 }

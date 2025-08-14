@@ -65,7 +65,7 @@ pub fn build_federation_agent(
             &instance_actor_id,
             PublicKeyType::RsaPkcs1,
         );
-        let instance_actor_key = instance.actor_rsa_key.clone();
+        let instance_actor_key = instance.rsa_secret_key.clone();
         (instance_actor_key, instance_actor_key_id)
     };
     build_federation_agent_with_key(instance, signer_key, signer_key_id)
@@ -100,7 +100,7 @@ mod tests {
         let SecretKey::Rsa(secret_key) = request_signer.key else {
             panic!("unexpected key type");
         };
-        assert_eq!(secret_key, instance.actor_rsa_key);
+        assert_eq!(secret_key, instance.rsa_secret_key);
         assert_eq!(request_signer.key_id, "https://social.example/actor#main-key");
     }
 }

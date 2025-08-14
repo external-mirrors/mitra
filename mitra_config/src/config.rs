@@ -81,11 +81,6 @@ pub struct Config {
     #[serde(default)]
     pub instance_timeline_public: bool,
 
-    #[serde(skip)]
-    pub(super) instance_ed25519_key: Option<Ed25519SecretKey>,
-    #[serde(skip)]
-    pub(super) instance_rsa_key: Option<RsaSecretKey>,
-
     #[serde(default)]
     pub registration: RegistrationConfig,
 
@@ -120,6 +115,12 @@ pub struct Config {
     // IPFS
     pub ipfs_api_url: Option<String>,
     pub ipfs_gateway_url: Option<String>,
+
+    // Fields that are populated during init phase
+    #[serde(skip)]
+    pub(super) instance_ed25519_key: Option<Ed25519SecretKey>,
+    #[serde(skip)]
+    pub(super) instance_rsa_key: Option<RsaSecretKey>,
 }
 
 impl Config {
