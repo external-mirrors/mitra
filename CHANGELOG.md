@@ -21,6 +21,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Always add group to reply audience when replying to post in group.
 - Don't reject remote posts with a quote and no content.
 - Enabled media proxy endpoint by default.
+- Return at most 2 results when searching for a user as a guest.
 
 ## [4.7.0] - 2025-08-01
 

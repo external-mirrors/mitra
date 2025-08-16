@@ -569,6 +569,7 @@ async fn get_relationships_view(
     Ok(HttpResponse::Ok().json(relationships))
 }
 
+// https://docs.joinmastodon.org/methods/accounts/#lookup
 #[get("/lookup")]
 async fn lookup_acct(
     config: web::Data<Config>,
@@ -597,6 +598,7 @@ async fn lookup_acct(
     Ok(HttpResponse::Ok().json(account))
 }
 
+// https://docs.joinmastodon.org/methods/accounts/#search
 async fn search_by_acct(
     auth: Option<BearerAuth>,
     config: web::Data<Config>,
@@ -606,6 +608,7 @@ async fn search_by_acct(
     governor_result: GovernorExtractor,
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &mut **get_database_client(&db_pool).await?;
+    let mut limit = query_params.limit.inner();
     match auth {
         Some(auth) => {
             get_current_user(db_client, auth.token()).await?;
@@ -621,6 +624,9 @@ async fn search_by_acct(
                     return Err(MastodonError::RateLimit(wait));
                 };
             };
+            if limit > 2 {
+                limit = 2;
+            };
         },
     };
     let profiles = search_profiles_only(
@@ -628,7 +634,7 @@ async fn search_by_acct(
         db_client,
         &query_params.q,
         query_params.resolve,
-        query_params.limit.inner(),
+        limit,
         query_params.offset,
     ).await?;
     let base_url = get_request_base_url(connection_info);
