@@ -383,13 +383,6 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_parse_text_query() {
-        let query = ">some text";
-        let text = parse_text_query(query).unwrap();
-        assert_eq!(text, "some text");
-    }
-
-    #[test]
     fn test_parse_profile_query() {
         let query = "@user";
         let (username, maybe_hostname) = parse_profile_query(query).unwrap();
@@ -453,6 +446,13 @@ mod tests {
     }
 
     #[test]
+    fn test_parse_text_query() {
+        let query = ">some text";
+        let text = parse_text_query(query).unwrap();
+        assert_eq!(text, "some text");
+    }
+
+    #[test]
     fn test_parse_search_query_single_word() {
         let query = "string";
         let result = parse_search_query(query);
@@ -464,5 +464,12 @@ mod tests {
         let query = "some text";
         let result = parse_search_query(query);
         assert!(matches!(result, SearchQuery::Unknown));
+    }
+
+    #[test]
+    fn test_parse_search_query_url() {
+        let query = "https://social.example/notes/1";
+        let result = parse_search_query(query);
+        assert!(matches!(result, SearchQuery::Url(_)));
     }
 }
