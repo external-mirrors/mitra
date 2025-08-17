@@ -45,7 +45,7 @@ fn build_comrak_options<'cb>() -> Options<'cb> {
 }
 
 /// Prevents underscores in mentions from being parsed as emphasis markers
-fn protect_mentions(text: &str) -> Cow<str> {
+fn protect_mentions(text: &str) -> Cow<'_, str> {
     let mention_re = Regex::new(r#"(?m)@([\w]+)@"#)
         .expect("regexp should be valid");
     mention_re.replace_all(text, |caps: &Captures| -> String {

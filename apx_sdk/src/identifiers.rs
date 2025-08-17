@@ -16,7 +16,7 @@ pub trait FromCaptures {
         where Self: Sized;
 }
 
-fn extract(caps: Captures) -> Result<Vec<&str>, PathError> {
+fn extract(caps: Captures<'_>) -> Result<Vec<&str>, PathError> {
     let substrings = caps.iter().skip(1)
         .map(|maybe_match| {
             maybe_match
