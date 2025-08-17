@@ -87,7 +87,7 @@ fn prepare_add_person(
         end_time,
         maybe_invoice_id,
     );
-    let recipients = Recipient::from_actor_data(person);
+    let recipients = Recipient::for_inbox(person);
     OutgoingActivityJobData::new(
         &instance.url(),
         sender,

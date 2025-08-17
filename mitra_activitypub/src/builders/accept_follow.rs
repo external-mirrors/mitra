@@ -71,7 +71,7 @@ pub fn prepare_accept_follow(
         &source_actor_id,
         &follow_activity_id,
     );
-    let recipients = Recipient::from_actor_data(source_actor);
+    let recipients = Recipient::for_inbox(source_actor);
     Ok(OutgoingActivityJobData::new(
         &instance.url(),
         sender,

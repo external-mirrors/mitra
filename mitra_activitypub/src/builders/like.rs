@@ -115,7 +115,7 @@ pub async fn get_like_recipients(
 ) -> Result<Vec<Recipient>, DatabaseError> {
     let mut recipients = vec![];
     if let Some(remote_actor) = post.author.actor_json.as_ref() {
-        recipients.extend(Recipient::from_actor_data(remote_actor));
+        recipients.extend(Recipient::for_inbox(remote_actor));
     };
     Ok(recipients)
 }

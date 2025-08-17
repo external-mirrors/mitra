@@ -101,7 +101,7 @@ pub fn prepare_offer_agreement(
         invoice_id,
         invoice_amount,
     );
-    let recipients = Recipient::from_actor_data(proposer_actor);
+    let recipients = Recipient::for_inbox(proposer_actor);
     OutgoingActivityJobData::new(
         &instance.url(),
         sender,

@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Allow local usernames containing uppercase letters and hyphens ([#157](https://codeberg.org/silverpill/mitra/pulls/157)).
 - Protected media proxy by requiring server's signature.
+- Forward activities from a portable inbox to other gateways.
 
 ### Changed
 

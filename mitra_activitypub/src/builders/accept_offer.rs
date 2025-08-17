@@ -80,7 +80,7 @@ pub fn prepare_accept_offer(
         &remote_actor.id,
         offer_activity_id,
     )?;
-    let recipients = Recipient::from_actor_data(remote_actor);
+    let recipients = Recipient::for_inbox(remote_actor);
     Ok(OutgoingActivityJobData::new(
         &instance.url(),
         sender,

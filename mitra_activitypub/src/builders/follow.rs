@@ -80,7 +80,7 @@ fn prepare_follow(
         false, // don't use legacy activity IDs
         true, // with context
     );
-    let recipients = Recipient::from_actor_data(target_actor);
+    let recipients = Recipient::for_inbox(target_actor);
     Ok(OutgoingActivityJobData::new(
         &instance.url(),
         sender,

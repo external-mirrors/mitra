@@ -439,7 +439,7 @@ pub async fn get_note_recipients(
     let mut recipients = vec![];
     for profile in primary_audience {
         if let Some(remote_actor) = profile.actor_json {
-            for mut recipient in Recipient::from_actor_data(&remote_actor) {
+            for mut recipient in Recipient::for_inbox(&remote_actor) {
                 recipient.is_primary = true;
                 recipients.push(recipient);
             };
@@ -447,7 +447,7 @@ pub async fn get_note_recipients(
     };
     for profile in secondary_audience {
         if let Some(remote_actor) = profile.actor_json {
-            recipients.extend(Recipient::from_actor_data(&remote_actor));
+            recipients.extend(Recipient::for_inbox(&remote_actor));
         };
     };
     Ok(recipients)

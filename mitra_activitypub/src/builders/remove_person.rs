@@ -67,7 +67,7 @@ fn prepare_remove_person(
         &person.id,
         collection,
     );
-    let recipients = Recipient::from_actor_data(person);
+    let recipients = Recipient::for_inbox(person);
     OutgoingActivityJobData::new(
         &instance.url(),
         sender,

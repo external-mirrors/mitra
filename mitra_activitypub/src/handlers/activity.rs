@@ -10,12 +10,19 @@ use mitra_models::{
         save_activity,
     },
     database::{DatabaseClient, DatabaseError},
-    users::queries::get_portable_user_by_actor_id,
+    users::queries::{
+        get_portable_user_by_actor_id,
+        get_portable_user_by_id,
+    },
 };
 use mitra_validators::errors::ValidationError;
 
 use crate::{
-    forwarder::{get_activity_audience, get_activity_recipients},
+    forwarder::{
+        get_activity_audience,
+        get_activity_recipients,
+        EndpointType,
+    },
     identifiers::canonicalize_id,
     ownership::{get_object_id, verify_activity_owner},
     queues::OutgoingActivityJobData,
@@ -156,13 +163,37 @@ pub async fn handle_activity(
         ).await?;
         for recipient in recipients.iter() {
             // Recipient is a local actor: add activity to its inbox
+            // and forward to other gateways
             if recipient.has_account() && recipient.is_portable() {
+                if !is_new_activity {
+                    log::warn!("activity has already been forwarded from inbox");
+                    continue;
+                };
+                let recipient = get_portable_user_by_id(
+                    db_client,
+                    recipient.id,
+                ).await?;
+                let recipient_actor_data =
+                    recipient.profile.expect_actor_data();
                 add_object_to_collection(
                     db_client,
                     recipient.id,
-                    &recipient.expect_actor_data().inbox,
+                    &recipient_actor_data.inbox,
                     &canonical_activity_id.to_string(),
                 ).await?;
+                // Forward
+                if let Some(job_data) = OutgoingActivityJobData::new_forwarded(
+                    &config.instance_url(),
+                    &recipient,
+                    &activity_clone,
+                    vec![],
+                    EndpointType::Inbox,
+                ) {
+                    // Activity has already been saved
+                    job_data.enqueue(db_client).await?;
+                } else {
+                    log::warn!("signing keys are not found in actor document");
+                };
             };
         };
         match get_portable_user_by_actor_id(
@@ -187,6 +218,7 @@ pub async fn handle_activity(
                     &actor,
                     &activity_clone,
                     remote_recipients,
+                    EndpointType::Outbox,
                 ) {
                     // Activity has already been saved
                     job_data.enqueue(db_client).await?;
@@ -195,7 +227,7 @@ pub async fn handle_activity(
                 };
             },
             Ok(_) => {
-                log::warn!("activity has already been forwarded");
+                log::warn!("activity has already been added to outbox");
             },
             Err(DatabaseError::NotFound(_)) => (),
             Err(other_error) => return Err(other_error.into()),

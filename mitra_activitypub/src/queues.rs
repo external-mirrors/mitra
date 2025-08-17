@@ -50,6 +50,7 @@ use crate::{
     },
     errors::HandlerError,
     filter::FederationFilter,
+    forwarder::EndpointType,
     handlers::activity::handle_activity,
     identifiers::canonicalize_id,
     importers::{
@@ -253,11 +254,13 @@ impl OutgoingActivityJobData {
         sender: &PortableUser,
         activity: &JsonValue,
         recipients_actors: Vec<DbActor>,
+        endpoint_type: EndpointType,
     ) -> Option<Self> {
         // Deliver to recipients
         let mut recipients = vec![];
         for recipient in recipients_actors {
-            recipients.extend(Recipient::from_actor_data(&recipient));
+            assert!(matches!(endpoint_type, EndpointType::Outbox));
+            recipients.extend(Recipient::for_inbox(&recipient));
         };
         Self::mark_local_recipients(instance_url, &mut recipients);
         // Deliver to actor's clones
@@ -267,9 +270,13 @@ impl OutgoingActivityJobData {
                 // Already cached
                 continue;
             };
-            let http_actor_outbox = db_url_to_http_url(&actor_data.outbox, gateway_url)
-                .expect("actor outbox URL should be valid");
-            let recipient = Recipient::new(&actor_data.id, &http_actor_outbox);
+            let collection_id = match endpoint_type {
+                EndpointType::Inbox => &actor_data.inbox,
+                EndpointType::Outbox => &actor_data.outbox,
+            };
+            let http_endpoint = db_url_to_http_url(collection_id, gateway_url)
+                .expect("collection ID should be valid");
+            let recipient = Recipient::new(&actor_data.id, &http_endpoint);
             recipients.push(recipient);
         };
         let recipients = Self::sort_recipients(recipients);

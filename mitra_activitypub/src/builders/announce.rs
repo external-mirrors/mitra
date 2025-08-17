@@ -118,14 +118,14 @@ pub async fn get_announce_recipients(
             let followers = get_followers(db_client, current_user.id).await?;
             for profile in followers {
                 if let Some(remote_actor) = profile.actor_json {
-                    recipients.extend(Recipient::from_actor_data(&remote_actor));
+                    recipients.extend(Recipient::for_inbox(&remote_actor));
                 };
             };
         },
         _ => (),
     };
     if let Some(remote_actor) = post.author.actor_json.as_ref() {
-        recipients.extend(Recipient::from_actor_data(remote_actor));
+        recipients.extend(Recipient::for_inbox(remote_actor));
     };
     Ok(recipients)
 }

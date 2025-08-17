@@ -79,7 +79,7 @@ pub fn prepare_move_person(
         pull_mode,
     );
     let recipients = followers.iter()
-        .flat_map(Recipient::from_actor_data)
+        .flat_map(Recipient::for_inbox)
         .collect();
     OutgoingActivityJobData::new(
         &instance.url(),

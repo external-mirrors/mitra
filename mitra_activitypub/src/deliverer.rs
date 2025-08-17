@@ -211,7 +211,7 @@ impl Recipient {
         }
     }
 
-    pub fn from_actor_data(actor: &DbActor) -> Vec<Self> {
+    pub fn for_inbox(actor: &DbActor) -> Vec<Self> {
         let mut recipients = vec![];
         if actor.is_portable() {
             for gateway in &actor.gateways {

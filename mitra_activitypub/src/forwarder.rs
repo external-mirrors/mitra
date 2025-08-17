@@ -137,6 +137,11 @@ pub async fn get_activity_recipients(
     Ok(recipients)
 }
 
+pub enum EndpointType {
+    Inbox,
+    Outbox,
+}
+
 #[cfg(test)]
 mod tests {
     use serde_json::json;

@@ -100,7 +100,7 @@ pub fn prepare_create_question_vote(
         &question_owner.id,
         votes,
     );
-    let recipients = Recipient::from_actor_data(question_owner);
+    let recipients = Recipient::for_inbox(question_owner);
     Ok(OutgoingActivityJobData::new(
         &instance.url(),
         sender,

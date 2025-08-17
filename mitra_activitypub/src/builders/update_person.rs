@@ -75,7 +75,7 @@ async fn get_update_person_recipients(
     let mut recipients = vec![];
     for profile in followers {
         if let Some(remote_actor) = profile.actor_json {
-            recipients.extend(Recipient::from_actor_data(&remote_actor));
+            recipients.extend(Recipient::for_inbox(&remote_actor));
         };
     };
     // Remote aliases
@@ -84,7 +84,7 @@ async fn get_update_person_recipients(
         let maybe_remote_actor = maybe_profile
             .and_then(|profile| profile.actor_json);
         if let Some(remote_actor) = maybe_remote_actor {
-            recipients.extend(Recipient::from_actor_data(&remote_actor));
+            recipients.extend(Recipient::for_inbox(&remote_actor));
         };
     };
     Ok(recipients)

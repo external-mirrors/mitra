@@ -535,6 +535,25 @@ pub async fn create_portable_user(
     Ok(user)
 }
 
+pub async fn get_portable_user_by_id(
+    db_client: &impl DatabaseClient,
+    user_id: Uuid,
+) -> Result<PortableUser, DatabaseError> {
+    let maybe_row = db_client.query_opt(
+        "
+        SELECT portable_user_account, actor_profile
+        FROM portable_user_account JOIN actor_profile USING (id)
+        WHERE id = $1
+        ",
+        &[&user_id],
+    ).await?;
+    let row = maybe_row.ok_or(DatabaseError::NotFound("user"))?;
+    let db_user: DbPortableUser = row.try_get("portable_user_account")?;
+    let db_profile: DbActorProfile = row.try_get("actor_profile")?;
+    let user = PortableUser::new(db_user, db_profile)?;
+    Ok(user)
+}
+
 pub async fn get_portable_user_by_name(
     db_client: &impl DatabaseClient,
     username: &str,
@@ -626,7 +645,10 @@ mod tests {
             DbActorKey,
             WebfingerHostname,
         },
-        users::types::Role,
+        users::{
+            test_utils::create_test_portable_user,
+            types::Role,
+        },
     };
     use super::*;
 
@@ -763,5 +785,26 @@ mod tests {
         assert_eq!(user.rsa_secret_key, rsa_secret_key);
         assert_eq!(user.ed25519_secret_key, ed25519_secret_key);
         assert!(matches!(user.profile.hostname(), WebfingerHostname::Local));
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_get_portable_user_by() {
+        let db_client = &mut create_test_database().await;
+        let user = create_test_portable_user(
+            db_client,
+            "test",
+            "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor",
+        ).await;
+        let user_id = user.id;
+
+        let user = get_portable_user_by_id(db_client, user_id).await.unwrap();
+        assert_eq!(user.id, user_id);
+
+        let user = get_portable_user_by_actor_id(
+            db_client,
+            &user.profile.expect_actor_data().id,
+        ).await.unwrap();
+        assert_eq!(user.id, user_id);
     }
 }
