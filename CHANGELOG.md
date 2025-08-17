@@ -22,6 +22,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Don't reject remote posts with a quote and no content.
 - Enabled media proxy endpoint by default.
 - Return at most 2 results when searching for a user as a guest.
+- Respond with status code 404 if media can't be proxied.
 
 ## [4.7.0] - 2025-08-01
 

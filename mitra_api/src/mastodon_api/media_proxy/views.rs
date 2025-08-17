@@ -41,7 +41,11 @@ async fn media_proxy_view(
         &config.limits.media.supported_media_types(),
         config.limits.media.file_size_limit,
     ).await
-        .map_err(HttpError::from_internal)?;
+        .map_err(|error| {
+            log::warn!("{error}");
+            // Resource can't be served at the moment
+            HttpError::NotFound("media")
+        })?;
     let response = HttpResponse::Ok()
         .content_type(content_type)
         .streaming(stream);
