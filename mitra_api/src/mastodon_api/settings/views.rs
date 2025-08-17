@@ -197,7 +197,7 @@ async fn remove_alias_view(
     if profile_data.aliases.contains(&request_data.actor_id) {
         profile_data.aliases.retain(|alias| alias != &request_data.actor_id);
     } else {
-        return Err(MastodonError::NotFoundError("alias"));
+        return Err(MastodonError::NotFound("alias"));
     };
     // Media cleanup is not needed
     let (updated_profile, _) = update_profile(

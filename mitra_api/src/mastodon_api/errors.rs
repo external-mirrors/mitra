@@ -28,7 +28,7 @@ pub enum MastodonError {
     PermissionError,
 
     #[error("{0} not found")]
-    NotFoundError(&'static str),
+    NotFound(&'static str),
 
     #[error("operation not supported")]
     NotSupported,
@@ -61,7 +61,7 @@ impl MastodonError {
 impl From<DatabaseError> for MastodonError {
     fn from(error: DatabaseError) -> Self {
         match error {
-            DatabaseError::NotFound(name) => Self::NotFoundError(name),
+            DatabaseError::NotFound(name) => Self::NotFound(name),
             DatabaseError::AlreadyExists(name) => Self::ValidationError(
                 format!("{} already exists", name),
             ),
@@ -107,7 +107,7 @@ impl ResponseError for MastodonError {
             Self::ValidationError(_) => StatusCode::BAD_REQUEST,
             Self::AuthError(_) => StatusCode::UNAUTHORIZED,
             Self::PermissionError => StatusCode::FORBIDDEN,
-            Self::NotFoundError(_) => StatusCode::NOT_FOUND,
+            Self::NotFound(_) => StatusCode::NOT_FOUND,
             Self::NotSupported => StatusCode::IM_A_TEAPOT,
             Self::OperationError(_) => StatusCode::UNPROCESSABLE_ENTITY,
             Self::RateLimit(_) => StatusCode::TOO_MANY_REQUESTS,

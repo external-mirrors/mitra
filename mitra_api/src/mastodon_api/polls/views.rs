@@ -53,7 +53,7 @@ async fn vote_view(
         Some(&current_user.profile),
         *poll_id,
     ).await?;
-    let poll = post.poll.ok_or(MastodonError::NotFoundError("poll"))?;
+    let poll = post.poll.ok_or(MastodonError::NotFound("poll"))?;
     if poll.ended() {
         return Err(MastodonError::OperationError("poll has already ended"));
     };

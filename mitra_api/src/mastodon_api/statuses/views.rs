@@ -858,7 +858,7 @@ async fn reblog(
     };
     let mut post = get_post_by_id(db_client, *status_id).await?;
     if !post.is_public() {
-        return Err(MastodonError::NotFoundError("post"));
+        return Err(MastodonError::NotFound("post"));
     };
     let visibility = match reblog_params.as_ref()
         .and_then(|params| params.visibility.as_ref())
@@ -1218,7 +1218,7 @@ async fn load_conversation(
         FetcherJobData::Context { object_id }
     } else {
         // Local posts
-        return Err(MastodonError::NotFoundError("post"));
+        return Err(MastodonError::NotFound("post"));
     };
     job_data.into_job(db_client).await?;
     Ok(HttpResponse::NoContent().finish())

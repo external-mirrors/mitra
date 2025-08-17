@@ -432,7 +432,7 @@ async fn proposal_view(
     let payment_option = user.profile.payment_options
         .inner().iter()
         .find(|option| option.chain_id() == Some(&chain_id))
-        .ok_or(HttpError::NotFoundError("proposal"))?;
+        .ok_or(HttpError::NotFound("proposal"))?;
     let payment_info = match payment_option {
         PaymentOption::MoneroSubscription(payment_info)
             if is_activitypub_request(&header_map_adapter(request.headers())) => payment_info,
@@ -523,7 +523,7 @@ pub async fn object_view(
         internal_object_id,
     ).await?;
     if !post.is_local() {
-        return Err(HttpError::NotFoundError("post"));
+        return Err(HttpError::NotFound("post"));
     };
     if !is_activitypub_request(&header_map_adapter(request.headers())) {
         let page_url = get_post_page_url(&instance.url(), post.id);
@@ -563,7 +563,7 @@ pub async fn replies_collection(
         .expect("get_thread return value should contain target post");
     // Visibility check is done in get_thread
     if !post.is_local() {
-        return Err(HttpError::NotFoundError("post"));
+        return Err(HttpError::NotFound("post"));
     };
     let instance = config.instance();
     let object_id = local_object_id(&instance.url(), internal_object_id);
@@ -649,7 +649,7 @@ pub async fn conversation_view(
         None, // viewing as guest
     ).await?;
     if !root.is_local() {
-        return Err(HttpError::NotFoundError("conversation"));
+        return Err(HttpError::NotFound("conversation"));
     };
     let instance = config.instance();
     let collection_id =
@@ -764,14 +764,14 @@ async fn apgateway_view(
     // Serve object only if its owner has local account
     let core_type = get_core_type(&object_value);
     let owner_id = get_owner(&object_value, core_type)
-        .map_err(|_| HttpError::NotFoundError("object"))?;
+        .map_err(|_| HttpError::NotFound("object"))?;
     let canonical_owner_id = canonicalize_id(&owner_id)?;
     let owner = get_remote_profile_by_actor_id(
         db_client,
         &canonical_owner_id.to_string(),
     ).await?;
     if !owner.has_account() {
-        return Err(HttpError::NotFoundError("object"));
+        return Err(HttpError::NotFound("object"));
     };
     let response = HttpResponse::Ok()
         .content_type(AP_MEDIA_TYPE)

@@ -1107,7 +1107,7 @@ async fn load_activities(
     let profile = get_profile_by_id(db_client, *account_id).await?;
     let Some(remote_actor) = profile.actor_json.as_ref() else {
         // Local profile
-        return Err(MastodonError::NotFoundError("profile"));
+        return Err(MastodonError::NotFound("profile"));
     };
     let job_data = match request_params.collection.as_str() {
         "outbox" => FetcherJobData::Outbox { actor_id: remote_actor.id.clone() },

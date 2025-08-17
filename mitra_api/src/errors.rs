@@ -26,7 +26,7 @@ pub enum HttpError {
     PermissionError,
 
     #[error("{0} not found")]
-    NotFoundError(&'static str),
+    NotFound(&'static str),
 
     #[error("internal error: {0}")]
     InternalError(String),
@@ -50,7 +50,7 @@ impl HttpError {
 impl From<DatabaseError> for HttpError {
     fn from(err: DatabaseError) -> Self {
         match err {
-            DatabaseError::NotFound(name) => HttpError::NotFoundError(name),
+            DatabaseError::NotFound(name) => HttpError::NotFound(name),
             DatabaseError::AlreadyExists(name) => HttpError::ValidationError(
                 format!("{} already exists", name),
             ),
@@ -76,7 +76,7 @@ impl ResponseError for HttpError {
             HttpError::ValidationError(_) => StatusCode::BAD_REQUEST,
             HttpError::AuthError(_) => StatusCode::UNAUTHORIZED,
             HttpError::PermissionError => StatusCode::FORBIDDEN,
-            HttpError::NotFoundError(_) => StatusCode::NOT_FOUND,
+            HttpError::NotFound(_) => StatusCode::NOT_FOUND,
             _ => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }

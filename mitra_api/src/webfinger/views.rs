@@ -61,13 +61,13 @@ async fn get_jrd(
             instance.hostname()
         } else {
             parse_local_actor_id(&instance.url(), resource)
-                .map_err(|_| HttpError::NotFoundError("user"))?
+                .map_err(|_| HttpError::NotFound("user"))?
         };
         WebfingerAddress::new_unchecked(&username, &instance.hostname())
     };
     if webfinger_address.hostname() != instance.hostname() {
         // Wrong instance
-        return Err(HttpError::NotFoundError("user"));
+        return Err(HttpError::NotFound("user"));
     };
     let links = if webfinger_address.username() == instance.hostname() {
         let actor_id = local_instance_actor_id(&instance.url());
