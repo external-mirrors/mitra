@@ -194,18 +194,6 @@ pub struct OutgoingActivityJobData {
 }
 
 impl OutgoingActivityJobData {
-    fn prepare_recipients(
-        instance_url: &str,
-        actors: Vec<DbActor>,
-    ) -> Vec<Recipient> {
-        let mut recipients = vec![];
-        for actor in actors {
-            recipients.extend(Recipient::from_actor_data(&actor));
-        };
-        Self::mark_local_recipients(instance_url, &mut recipients);
-        recipients
-    }
-
     fn mark_local_recipients(
         instance_url: &str,
         recipients: &mut [Recipient],
@@ -264,11 +252,16 @@ impl OutgoingActivityJobData {
         instance_url: &str,
         sender: &PortableUser,
         activity: &JsonValue,
-        recipients: Vec<DbActor>,
+        recipients_actors: Vec<DbActor>,
     ) -> Option<Self> {
-        let mut recipients = Self::prepare_recipients(instance_url, recipients);
-        let actor_data = sender.profile.expect_actor_data();
+        // Deliver to recipients
+        let mut recipients = vec![];
+        for recipient in recipients_actors {
+            recipients.extend(Recipient::from_actor_data(&recipient));
+        };
+        Self::mark_local_recipients(instance_url, &mut recipients);
         // Deliver to actor's clones
+        let actor_data = sender.profile.expect_actor_data();
         for gateway_url in &actor_data.gateways {
             if gateway_url == instance_url {
                 // Already cached
