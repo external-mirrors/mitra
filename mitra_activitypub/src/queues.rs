@@ -323,6 +323,7 @@ impl OutgoingActivityJobData {
                         &profile.expect_actor_data().inbox,
                         &canonical_activity_id.to_string(),
                     ).await?;
+                    log::info!("added activity to inbox collection");
                 } else {
                     log::warn!("local inbox doesn't exist: {}", recipient.inbox);
                 };
