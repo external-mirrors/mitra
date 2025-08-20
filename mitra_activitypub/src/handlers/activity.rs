@@ -24,6 +24,7 @@ use crate::{
         EndpointType,
     },
     identifiers::canonicalize_id,
+    importers::ApClient,
     ownership::{get_object_id, verify_activity_owner},
     queues::OutgoingActivityJobData,
     vocabulary::*,
@@ -79,9 +80,30 @@ pub async fn handle_activity(
     maybe_recipient_id: Option<&str>,
     maybe_sender_id: Option<&str>,
 ) -> Result<String, HandlerError> {
+    let ap_client = ApClient::new(config, db_client).await?;
+    let activity = if is_authenticated {
+        activity.clone()
+    } else {
+        let activity_id = get_object_id(activity)?;
+        let activity_type = activity["type"].as_str()
+            .ok_or(ValidationError("'type' property is missing"))?;
+        match activity_type {
+            CREATE | DELETE => {
+                // Object will be fetched in the handler
+                activity.clone()
+            },
+            _ => {
+                // Fetch activity
+                let activity_fetched = ap_client.fetch_object(activity_id).await?;
+                log::info!("fetched activity {activity_id}");
+                activity_fetched
+            },
+        }
+    };
+
     // Validate common activity attributes
-    verify_activity_owner(activity)?;
-    let activity_id = get_object_id(activity)?;
+    verify_activity_owner(&activity)?;
+    let activity_id = get_object_id(&activity)?;
     let canonical_activity_id = canonicalize_id(activity_id)?;
     let activity_type = activity["type"].as_str()
         .ok_or(ValidationError("type property is missing"))?
@@ -89,9 +111,8 @@ pub async fn handle_activity(
     let activity_actor = object_to_id(&activity["actor"])
         .map_err(|_| ValidationError("invalid actor property"))?;
     let canonical_actor_id = canonicalize_id(&activity_actor)?;
-    let audience = get_activity_audience(activity, maybe_recipient_id)?;
+    let audience = get_activity_audience(&activity, maybe_recipient_id)?;
 
-    let activity = activity.clone();
     let activity_clone = activity.clone();
     let maybe_descriptor = match activity_type.as_str() {
         ACCEPT => {

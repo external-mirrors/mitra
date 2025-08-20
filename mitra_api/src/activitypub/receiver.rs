@@ -20,7 +20,7 @@ use mitra_activitypub::{
     identifiers::canonicalize_id,
     ownership::is_local_origin,
     queues::IncomingActivityJobData,
-    vocabulary::{ANNOUNCE, CREATE, DELETE, EMOJI_REACT, LIKE, UPDATE},
+    vocabulary::DELETE,
 };
 use mitra_config::Config;
 use mitra_models::{
@@ -182,26 +182,7 @@ pub async fn receive_activity(
     let signer_id = signer.expect_remote_actor_id();
     let is_authenticated = canonical_actor_id.to_string() == signer_id;
     if !is_authenticated {
-        match activity_type {
-            CREATE | UPDATE => {
-                // Accept forwarded Create() and Update() activities,
-                // but re-authenticate object in handler
-                log::info!("processing forwarded {activity_type} activity");
-            },
-            ANNOUNCE | DELETE | EMOJI_REACT | LIKE => {
-                // Ignore forwarded activities if they are not signed
-                return Ok(());
-            },
-            _ => {
-                // Reject other types
-                log::warn!(
-                    "request signer {} does not match actor {}",
-                    signer_id,
-                    activity_actor,
-                );
-                return Err(AuthenticationError::UnexpectedRequestSigner.into());
-            },
-        };
+        log::info!("processing forwarded {activity_type} activity");
     };
 
     IncomingActivityJobData::new(
