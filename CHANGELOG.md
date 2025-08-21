@@ -14,6 +14,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Changed
 
 - Write message to log when activity is added to portable actor's inbox.
+- Reduced database lock time during collection import.
 
 ## [4.8.0] - 2025-08-18
 

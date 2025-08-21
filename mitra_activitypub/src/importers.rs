@@ -176,6 +176,14 @@ pub async fn fetch_any_object_with_context<T: DeserializeOwned>(
 }
 
 impl ApClient {
+    pub async fn new_with_pool(
+        config: &Config,
+        db_pool: &DatabaseConnectionPool,
+    ) -> Result<Self, DatabaseError> {
+        let db_client = &**get_database_client(db_pool).await?;
+        Self::new(config, db_client).await
+    }
+
     pub fn agent(&self) -> FederationAgent {
         build_federation_agent(
             &self.instance,
@@ -628,9 +636,10 @@ pub async fn import_post(
 // Object must be authenticated
 pub async fn import_object(
     ap_client: &ApClient,
-    db_client: &mut impl DatabaseClient,
+    db_pool: &DatabaseConnectionPool,
     object: JsonValue,
 ) -> Result<Post, HandlerError> {
+    let db_client = &mut **get_database_client(db_pool).await?;
     let object: AttributedObjectJson = serde_json::from_value(object)?;
     let canonical_object_id = canonicalize_id(object.id())?;
     match get_remote_post_by_object_id(
@@ -655,9 +664,10 @@ pub async fn import_object(
 // Activity must be authenticated
 pub async fn import_activity(
     config: &Config,
-    db_client: &mut impl DatabaseClient,
+    db_pool: &DatabaseConnectionPool,
     activity: JsonValue,
 ) -> Result<String, HandlerError> {
+    let db_client = &mut **get_database_client(db_pool).await?;
     handle_activity(
         config,
         db_client,
@@ -782,14 +792,14 @@ pub enum CollectionOrder {
 
 pub async fn import_collection(
     config: &Config,
-    db_client: &mut impl DatabaseClient,
+    db_pool: &DatabaseConnectionPool,
     collection_id: &str,
     maybe_item_type: Option<CollectionItemType>,
     order: CollectionOrder,
     limit: usize,
 ) -> Result<Vec<String>, HandlerError> {
     let mut imported = vec![];
-    let ap_client = ApClient::new(config, db_client).await?;
+    let ap_client = ApClient::new_with_pool(config, db_pool).await?;
     let items = fetch_collection(&ap_client, collection_id, limit).await?;
     let item_type = match &items[..] {
         [] => {
@@ -820,17 +830,18 @@ pub async fn import_collection(
         let result = match item_type {
             CollectionItemType::Object => {
                 log::info!("importing object {item_id}");
-                import_object(&ap_client, db_client, item).await
+                import_object(&ap_client, db_pool, item).await
                     .map(|post| post.expect_remote_object_id().to_owned())
             },
             CollectionItemType::Actor => {
                 log::info!("importing actor {item_id}");
+                let db_client = &mut **get_database_client(db_pool).await?;
                 import_profile(&ap_client, db_client, item).await
                     .map(|profile| profile.expect_remote_actor_id().to_owned())
             },
             CollectionItemType::Activity => {
                 log::info!("importing activity {item_id}");
-                import_activity(config, db_client, item).await
+                import_activity(config, db_pool, item).await
             },
         };
         match result {
@@ -852,14 +863,16 @@ pub async fn import_from_outbox(
     actor_id: &str,
     limit: usize,
 ) -> Result<(), HandlerError> {
-    let db_client = &mut **get_database_client(db_pool).await?;
-    let profile = get_remote_profile_by_actor_id(db_client, actor_id).await?;
+    let profile = {
+        let db_client = &**get_database_client(db_pool).await?;
+        get_remote_profile_by_actor_id(db_client, actor_id).await?
+    };
     let actor_data = profile.expect_actor_data();
     let mut context = FetcherContext::from(actor_data);
     let outbox_url = context.prepare_object_id(&actor_data.outbox)?;
     import_collection(
         config,
-        db_client,
+        db_pool,
         &outbox_url,
         Some(CollectionItemType::Activity),
         CollectionOrder::Reverse,
@@ -874,8 +887,10 @@ pub async fn import_featured(
     actor_id: &str,
     limit: usize,
 ) -> Result<(), HandlerError> {
-    let db_client = &mut **get_database_client(db_pool).await?;
-    let profile = get_remote_profile_by_actor_id(db_client, actor_id).await?;
+    let profile = {
+        let db_client = &**get_database_client(db_pool).await?;
+        get_remote_profile_by_actor_id(db_client, actor_id).await?
+    };
     let actor_data = profile.expect_actor_data();
     let Some(featured_id) = actor_data.featured.as_ref() else {
         log::warn!("actor doesn't have 'featured' collection");
@@ -885,12 +900,13 @@ pub async fn import_featured(
     let featured_url = context.prepare_object_id(featured_id)?;
     let imported = import_collection(
         config,
-        db_client,
+        db_pool,
         &featured_url,
         Some(CollectionItemType::Object),
         CollectionOrder::Forward,
         limit,
     ).await?;
+    let db_client = &**get_database_client(db_pool).await?;
     for object_id in imported {
         match get_remote_post_by_object_id(db_client, &object_id).await {
             Ok(post) => {
@@ -922,8 +938,7 @@ pub async fn import_replies(
         replies: Option<String>,
     }
 
-    let db_client = &mut **get_database_client(db_pool).await?;
-    let ap_client = ApClient::new(config, db_client).await?;
+    let ap_client = ApClient::new_with_pool(config, db_pool).await?;
     let object: ConversationItem = ap_client.fetch_object(object_id).await?;
     let (collection_id, item_type) = if use_context {
         if let Some(collection_id) = object.context_history {
@@ -945,7 +960,7 @@ pub async fn import_replies(
     };
     import_collection(
         config,
-        db_client,
+        db_pool,
         &collection_id,
         Some(item_type),
         CollectionOrder::Forward,

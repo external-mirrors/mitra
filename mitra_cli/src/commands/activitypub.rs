@@ -62,14 +62,14 @@ impl ImportObject {
         config: &Config,
         db_pool: &DatabaseConnectionPool,
     ) -> Result<(), Error> {
-        let db_client = &mut **get_database_client(db_pool).await?;
         let maybe_user = if let Some(ref username) = self.as_user {
+            let db_client = &**get_database_client(db_pool).await?;
             let user = get_user_by_name(db_client, username).await?;
             Some(user)
         } else {
             None
         };
-        let mut ap_client = ApClient::new(config, db_client).await?;
+        let mut ap_client = ApClient::new_with_pool(config, db_pool).await?;
         ap_client.as_user = maybe_user;
         let object: JsonValue =
             ap_client.fetch_object(&self.object_id).await?;
@@ -84,16 +84,17 @@ impl ImportObject {
         match object_type {
             CoreType::Object => {
                 // Take contentful object and save it to local cache
-                import_object(&ap_client, db_client, object).await?;
+                import_object(&ap_client, db_pool, object).await?;
                 println!("post saved");
             },
             CoreType::Actor => {
+                let db_client = &mut **get_database_client(db_pool).await?;
                 import_profile(&ap_client, db_client, object).await?;
                 println!("profile saved");
             },
             CoreType::Activity => {
                 // Process activity
-                import_activity(config, db_client, object).await?;
+                import_activity(config, db_pool, object).await?;
                 println!("activity processed");
             },
             CoreType::Collection => {
@@ -111,7 +112,7 @@ impl ImportObject {
                 };
                 import_collection(
                     config,
-                    db_client,
+                    db_pool,
                     &self.object_id,
                     maybe_item_type,
                     order,
