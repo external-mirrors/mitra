@@ -182,6 +182,10 @@ pub async fn receive_activity(
     let signer_id = signer.expect_remote_actor_id();
     let is_authenticated = canonical_actor_id.to_string() == signer_id;
     if !is_authenticated {
+        if is_self_delete {
+            // Ignore forwarded Delete(Person) activities from Mastodon
+            return Ok(());
+        };
         log::info!("processing forwarded {activity_type} activity");
     };
 
