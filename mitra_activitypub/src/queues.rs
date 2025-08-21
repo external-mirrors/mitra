@@ -14,14 +14,12 @@ use mitra_models::{
         add_object_to_collection,
     },
     background_jobs::{
-        helpers::{
-            delete_job_from_queue_with_pool,
-            get_job_batch_with_pool,
-        },
         queries::{
             enqueue_job,
             get_job_batch,
+            get_job_batch_with_pool,
             delete_job_from_queue,
+            delete_job_from_queue_with_pool,
         },
         types::JobType,
     },

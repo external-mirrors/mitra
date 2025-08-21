@@ -31,8 +31,10 @@ use mitra_config::Config;
 use mitra_models::{
     database::{get_database_client, DatabaseConnectionPool},
     users::{
-        helpers::get_user_by_name_with_pool,
-        queries::get_user_by_name,
+        queries::{
+            get_user_by_name,
+            get_user_by_name_with_pool,
+        },
     },
 };
 

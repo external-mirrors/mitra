@@ -10,7 +10,9 @@ use uuid::Uuid;
 
 use crate::database::{
     catch_unique_violation,
+    get_database_client,
     DatabaseClient,
+    DatabaseConnectionPool,
     DatabaseError,
     DatabaseTypeError,
 };
@@ -297,6 +299,14 @@ pub async fn get_user_by_name(
     let db_profile: DbActorProfile = row.try_get("actor_profile")?;
     let user = User::new(db_user, db_profile)?;
     Ok(user)
+}
+
+pub async fn get_user_by_name_with_pool(
+    db_pool: &DatabaseConnectionPool,
+    username: &str,
+) -> Result<User, DatabaseError> {
+    let db_client = &**get_database_client(db_pool).await?;
+    get_user_by_name(db_client, username).await
 }
 
 pub async fn is_registered_user(
