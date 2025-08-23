@@ -89,8 +89,8 @@ pub enum FetchError {
     #[error("unexpected object ID at {0}")]
     UnexpectedObjectId(String),
 
-    #[error("invalid proof")]
-    InvalidProof,
+    #[error("invalid integrity proof: {0}")]
+    InvalidProof(AuthenticationError),
 
     #[error("too many objects")]
     RecursionError,
@@ -291,7 +291,7 @@ pub async fn fetch_object(
                 return Err(FetchError::UnexpectedObjectId(object_location.to_string()));
             };
         },
-        Err(_) => return Err(FetchError::InvalidProof),
+        Err(other_error) => return Err(FetchError::InvalidProof(other_error)),
     };
 
     // Verify object is not a malicious upload
