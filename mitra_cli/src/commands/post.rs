@@ -1,9 +1,14 @@
 use std::path::PathBuf;
 
 use anyhow::{anyhow, Error};
-use apx_core::media_type::sniff_media_type;
+use apx_sdk::{
+    core::media_type::sniff_media_type,
+    deserialization::parse_into_id_array,
+    utils::is_public,
+};
 use chrono::{DateTime, Utc};
 use clap::Parser;
+use serde_json::{Value as JsonValue};
 
 use mitra_adapters::posts::check_post_limits;
 use mitra_config::Config;
@@ -99,6 +104,57 @@ impl CreatePost {
         check_post_limits(&config.limits.posts, &post_data.attachments, true)?;
         let post = create_post(db_client, author.id, post_data).await?;
         println!("post created: {}", post.id);
+        Ok(())
+    }
+}
+
+/// Import posts from outbox
+#[derive(Parser)]
+pub struct ImportPosts {
+    /// Author (username or ID)
+    author: String,
+    /// Path to outbox.json
+    outbox_path: PathBuf,
+}
+
+impl ImportPosts {
+    pub async fn execute(
+        &self,
+        config: &Config,
+        db_pool: &DatabaseConnectionPool,
+    ) -> Result<(), Error> {
+        let outbox_data = std::fs::read_to_string(&self.outbox_path)?;
+        let outbox: JsonValue = serde_json::from_str(&outbox_data)?;
+        let activities = outbox["orderedItems"].as_array()
+            .ok_or(anyhow!("'orderedItems' not found"))?;
+        for activity in activities {
+            // Only public top-level posts
+            if activity["type"].as_str() != Some("Create") {
+                continue;
+            };
+            let object = &activity["object"];
+            if !object["inReplyTo"].is_null() {
+                continue;
+            };
+            let Ok(audience) = parse_into_id_array(&object["to"]) else {
+                continue;
+            };
+            if !audience.iter().any(is_public) {
+                continue;
+            };
+            let content = object["content"].as_str()
+                .ok_or(anyhow!("'content' not found"))?;
+            let published = object["published"].as_str()
+                .ok_or(anyhow!("'published' not found"))?;
+            let created_at = DateTime::parse_from_rfc3339(published)?;
+            let command = CreatePost {
+                author: self.author.clone(),
+                content: content.to_string(),
+                created_at: created_at.into(),
+                attachment: vec![],
+            };
+            command.execute(config, db_pool).await?;
+        };
         Ok(())
     }
 }

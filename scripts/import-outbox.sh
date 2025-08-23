@@ -1,5 +1,7 @@
 #!/bin/sh
 
+# This script is deprecated, use `mitra import-posts`.
+
 set -e
 
 FILENAME="$1"

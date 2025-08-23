@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+
+- Added `import-posts` command for importing archived posts.
+
 ### Changed
 
 - Write message to log when activity is added to portable actor's inbox.

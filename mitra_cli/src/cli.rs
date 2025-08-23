@@ -109,7 +109,7 @@ use crate::commands::{
     emoji::{AddEmoji, DeleteEmoji, ImportEmoji},
     filter::{AddFilterRule, ListFilterRules, RemoveFilterRule},
     invoice::RepairInvoice,
-    post::CreatePost,
+    post::{CreatePost, ImportPosts},
     process::Worker,
     storage::{CheckUris, PruneReposts},
 };
@@ -150,6 +150,7 @@ pub enum SubCommand {
     LoadPortableObject(LoadPortableObject),
     DeleteUser(DeleteUser),
     CreatePost(CreatePost),
+    ImportPosts(ImportPosts),
     DeletePost(DeletePost),
     AddEmoji(AddEmoji),
     ImportEmoji(ImportEmoji),
