@@ -9,7 +9,11 @@ use mitra_models::{
         add_object_to_collection,
         save_activity,
     },
-    database::{DatabaseClient, DatabaseError},
+    database::{
+        get_database_client,
+        DatabaseConnectionPool,
+        DatabaseError,
+    },
     users::queries::{
         get_portable_user_by_actor_id,
         get_portable_user_by_id,
@@ -74,13 +78,13 @@ impl fmt::Display for Descriptor {
 
 pub async fn handle_activity(
     config: &Config,
-    db_client: &mut impl DatabaseClient,
+    db_pool: &DatabaseConnectionPool,
     activity: &JsonValue,
     is_authenticated: bool,
     maybe_recipient_id: Option<&str>,
     maybe_sender_id: Option<&str>,
 ) -> Result<String, HandlerError> {
-    let ap_client = ApClient::new(config, db_client).await?;
+    let ap_client = ApClient::new_with_pool(config, db_pool).await?;
     let activity = if is_authenticated {
         activity.clone()
     } else {
@@ -114,6 +118,7 @@ pub async fn handle_activity(
     let audience = get_activity_audience(&activity, maybe_recipient_id)?;
 
     let activity_clone = activity.clone();
+    let db_client = &mut **get_database_client(db_pool).await?;
     let maybe_descriptor = match activity_type.as_str() {
         ACCEPT => {
             handle_accept(config, db_client, activity).await?

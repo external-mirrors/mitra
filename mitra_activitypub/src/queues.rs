@@ -128,10 +128,9 @@ pub async fn process_queued_incoming_activities(
                 .map_err(|_| DatabaseTypeError)?;
         let duration_max =
             Duration::from_secs((JOB_TIMEOUT / 6).into());
-        let db_client = &mut **get_database_client(db_pool).await?;
         let handler_future = handle_activity(
             config,
-            db_client,
+            db_pool,
             &job_data.activity,
             job_data.is_authenticated,
             job_data.recipient_id.as_deref(),
@@ -147,10 +146,11 @@ pub async fn process_queued_incoming_activities(
                     "failed to process activity (timeout): {}",
                     job_data.activity,
                 );
-                delete_job_from_queue(db_client, job.id).await?;
+                delete_job_from_queue_with_pool(db_pool, job.id).await?;
                 continue;
             },
         };
+        let db_client = &**get_database_client(db_pool).await?;
         if let Err(error) = handler_result {
             if !matches!(
                 error,
@@ -162,7 +162,7 @@ pub async fn process_queued_incoming_activities(
                     error,
                     job_data.activity,
                 );
-                delete_job_from_queue(db_client, job.id).await?;
+                delete_job_from_queue_with_pool(db_pool, job.id).await?;
                 continue;
             };
             job_data.failure_count += 1;

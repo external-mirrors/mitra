@@ -667,10 +667,9 @@ pub async fn import_activity(
     db_pool: &DatabaseConnectionPool,
     activity: JsonValue,
 ) -> Result<String, HandlerError> {
-    let db_client = &mut **get_database_client(db_pool).await?;
     handle_activity(
         config,
-        db_client,
+        db_pool,
         &activity,
         true, // is authenticated
         None, // no recipient
