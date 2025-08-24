@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Added `import-posts` command for importing archived posts.
 - Fetch activities from origin if signer doesn't match actor.
+- Added `/api/v1/admin/posts/{status_id}` API endpoint.
 
 ### Changed
 
