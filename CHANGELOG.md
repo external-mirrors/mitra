@@ -16,6 +16,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Write message to log when activity is added to portable actor's inbox.
 - Reduced database lock time during collection import.
 - Display detailed error message when portable object has invalid integrity proof.
+- Generate FEP-171b activity when local post is deleted with `delete-post` command.
 
 ## [4.8.0] - 2025-08-18
 

@@ -1,4 +1,5 @@
 pub mod actors;
+pub mod adapters;
 pub mod agent;
 pub mod authentication;
 pub mod authority;

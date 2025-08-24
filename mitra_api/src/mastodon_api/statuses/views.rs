@@ -18,13 +18,13 @@ use chrono::Utc;
 use uuid::Uuid;
 
 use mitra_activitypub::{
+    adapters::posts::delete_local_post,
     authority::Authority,
     builders::{
         announce::prepare_announce,
         add_context_activity::sync_conversation,
         add_note::prepare_add_note,
         create_note::prepare_create_note,
-        delete_note::prepare_delete_note,
         like::prepare_like,
         note::build_note,
         remove_note::prepare_remove_note,
@@ -55,7 +55,6 @@ use mitra_models::{
     },
     posts::queries::{
         create_post,
-        delete_post,
         delete_repost,
         get_post_by_id,
         get_post_reactions,
@@ -551,32 +550,17 @@ async fn delete_status(
     if post.author.id != current_user.id {
         return Err(MastodonError::PermissionError);
     };
-    let instance = config.instance();
-    let media_server = MediaServer::new(&config);
-    let delete_note = prepare_delete_note(
+    delete_local_post(
+        &config,
         db_client,
-        &instance,
-        &media_server,
-        &current_user,
         &post,
-    ).await?;
-    let deletion_queue = delete_post(db_client, *status_id).await?;
-    deletion_queue.into_job(db_client).await?;
-    let delete_note_json = delete_note.activity().clone();
-    delete_note.save_and_enqueue(db_client).await?;
-    sync_conversation(
-        db_client,
-        &instance,
-        post.expect_conversation(),
-        delete_note_json,
-        post.visibility,
     ).await?;
 
     let content_source = post.content_source.clone().unwrap_or_default();
     let base_url = get_request_base_url(connection_info);
     let media_server = ClientMediaServer::new(&config, &base_url);
     let status = Status::from_post(
-        &instance.url(),
+        &config.instance_url(),
         &media_server,
         post,
     );
