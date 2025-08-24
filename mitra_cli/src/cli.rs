@@ -14,7 +14,6 @@ use uuid::Uuid;
 
 use mitra_activitypub::{
     builders::{
-        delete_note::prepare_delete_note,
         delete_person::prepare_delete_person,
     },
 };
@@ -50,7 +49,6 @@ use mitra_models::{
     posts::queries::{
         delete_post,
         find_extraneous_posts,
-        get_post_by_id,
         get_post_count,
     },
     profiles::helpers::get_profile_by_id_or_acct,
@@ -77,7 +75,7 @@ use mitra_models::{
     users::types::UserCreateData,
 };
 use mitra_services::{
-    media::{MediaServer, MediaStorage},
+    media::MediaStorage,
     monero::{
         wallet::{
             create_monero_signature,
@@ -109,7 +107,7 @@ use crate::commands::{
     emoji::{AddEmoji, DeleteEmoji, ImportEmoji},
     filter::{AddFilterRule, ListFilterRules, RemoveFilterRule},
     invoice::RepairInvoice,
-    post::{CreatePost, ImportPosts},
+    post::{CreatePost, DeletePost, ImportPosts},
     process::Worker,
     storage::{CheckUris, PruneReposts},
 };
@@ -380,44 +378,6 @@ impl DeleteUser {
             activity.save_and_enqueue(db_client).await?;
         };
         println!("user deleted");
-        Ok(())
-    }
-}
-
-/// Delete post
-#[derive(Parser)]
-pub struct DeletePost {
-    id: Uuid,
-}
-
-impl DeletePost {
-    pub async fn execute(
-        &self,
-        config: &Config,
-        db_pool: &DatabaseConnectionPool,
-    ) -> Result<(), Error> {
-        let db_client = &mut **get_database_client(db_pool).await?;
-        let post = get_post_by_id(db_client, self.id).await?;
-        let mut maybe_delete_note = None;
-        if post.author.is_local() {
-            let author = get_user_by_id(db_client, post.author.id).await?;
-            let media_server = MediaServer::new(config);
-            let activity = prepare_delete_note(
-                db_client,
-                &config.instance(),
-                &media_server,
-                &author,
-                &post,
-            ).await?;
-            maybe_delete_note = Some(activity);
-        };
-        let deletion_queue = delete_post(db_client, post.id).await?;
-        delete_orphaned_media(config, db_client, deletion_queue).await?;
-        // Send Delete(Note) activity
-        if let Some(activity) = maybe_delete_note {
-            activity.save_and_enqueue(db_client).await?;
-        };
-        println!("post deleted");
         Ok(())
     }
 }

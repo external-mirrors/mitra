@@ -9,20 +9,28 @@ use apx_sdk::{
 use chrono::{DateTime, Utc};
 use clap::Parser;
 use serde_json::{Value as JsonValue};
+use uuid::Uuid;
 
-use mitra_adapters::posts::check_post_limits;
+use mitra_activitypub::{
+    builders::delete_note::prepare_delete_note,
+};
+use mitra_adapters::{
+    media::delete_orphaned_media,
+    posts::check_post_limits,
+};
 use mitra_config::Config;
 use mitra_models::{
     attachments::queries::create_attachment,
     database::{get_database_client, DatabaseConnectionPool},
     media::types::MediaInfo,
     posts::{
-        queries::create_post,
+        queries::{create_post, delete_post, get_post_by_id},
         types::{PostContext, PostCreateData, Visibility},
     },
     profiles::helpers::get_profile_by_id_or_acct,
+    users::queries::get_user_by_id,
 };
-use mitra_services::media::MediaStorage;
+use mitra_services::media::{MediaStorage, MediaServer};
 use mitra_utils::{
     files::FileSize,
     id::datetime_to_ulid,
@@ -155,6 +163,44 @@ impl ImportPosts {
             };
             command.execute(config, db_pool).await?;
         };
+        Ok(())
+    }
+}
+
+/// Delete post
+#[derive(Parser)]
+pub struct DeletePost {
+    id: Uuid,
+}
+
+impl DeletePost {
+    pub async fn execute(
+        &self,
+        config: &Config,
+        db_pool: &DatabaseConnectionPool,
+    ) -> Result<(), Error> {
+        let db_client = &mut **get_database_client(db_pool).await?;
+        let post = get_post_by_id(db_client, self.id).await?;
+        let mut maybe_delete_note = None;
+        if post.author.is_local() {
+            let author = get_user_by_id(db_client, post.author.id).await?;
+            let media_server = MediaServer::new(config);
+            let activity = prepare_delete_note(
+                db_client,
+                &config.instance(),
+                &media_server,
+                &author,
+                &post,
+            ).await?;
+            maybe_delete_note = Some(activity);
+        };
+        let deletion_queue = delete_post(db_client, post.id).await?;
+        delete_orphaned_media(config, db_client, deletion_queue).await?;
+        // Send Delete(Note) activity
+        if let Some(activity) = maybe_delete_note {
+            activity.save_and_enqueue(db_client).await?;
+        };
+        println!("post deleted");
         Ok(())
     }
 }
