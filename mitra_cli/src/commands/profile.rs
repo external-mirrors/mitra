@@ -2,10 +2,7 @@ use anyhow::Error;
 use clap::Parser;
 
 use mitra_activitypub::{
-    builders::delete_person::prepare_delete_person,
-};
-use mitra_adapters::{
-    media::delete_orphaned_media,
+    adapters::users::delete_user,
 };
 use mitra_config::Config;
 use mitra_models::{
@@ -38,18 +35,12 @@ impl DeleteUser {
             db_client,
             &self.id_or_name,
         ).await?;
-        let mut maybe_delete_person = None;
         if profile.is_local() {
             let user = get_user_by_id(db_client, profile.id).await?;
-            let activity =
-                prepare_delete_person(db_client, &config.instance(), &user).await?;
-            maybe_delete_person = Some(activity);
-        };
-        let deletion_queue = delete_profile(db_client, profile.id).await?;
-        delete_orphaned_media(config, db_client, deletion_queue).await?;
-        // Send Delete(Person) activities
-        if let Some(activity) = maybe_delete_person {
-            activity.save_and_enqueue(db_client).await?;
+            delete_user(config, db_client, &user).await?;
+        } else {
+            let deletion_queue = delete_profile(db_client, profile.id).await?;
+            deletion_queue.into_job(db_client).await?;
         };
         println!("user deleted");
         Ok(())

@@ -9,8 +9,8 @@ use actix_web::{
 use actix_web_httpauth::extractors::bearer::BearerAuth;
 
 use mitra_activitypub::{
+    adapters::users::delete_user,
     builders::{
-        delete_person::prepare_delete_person,
         follow::follow_or_create_request,
         move_person::prepare_move_person,
         update_person::prepare_update_person,
@@ -27,7 +27,6 @@ use mitra_models::{
     notifications::helpers::create_move_notification,
     profiles::helpers::find_verified_aliases,
     profiles::queries::{
-        delete_profile,
         get_profile_by_acct,
         get_remote_profile_by_actor_id,
         update_profile,
@@ -408,21 +407,14 @@ async fn move_followers_view(
 }
 
 #[post("/delete_account")]
-async fn delete_account(
+async fn delete_account_view(
     auth: BearerAuth,
     config: web::Data<Config>,
     db_pool: web::Data<DatabaseConnectionPool>,
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &mut **get_database_client(&db_pool).await?;
     let current_user = get_current_user(db_client, auth.token()).await?;
-    let activity = prepare_delete_person(
-        db_client,
-        &config.instance(),
-        &current_user,
-    ).await?;
-    let deletion_queue = delete_profile(db_client, current_user.id).await?;
-    deletion_queue.into_job(db_client).await?;
-    activity.save_and_enqueue(db_client).await?;
+    delete_user(&config, db_client, &current_user).await?;
     Ok(HttpResponse::NoContent().finish())
 }
 
@@ -437,5 +429,5 @@ pub fn settings_api_scope() -> Scope {
         .service(import_follows_view)
         .service(import_followers_view)
         .service(move_followers_view)
-        .service(delete_account)
+        .service(delete_account_view)
 }

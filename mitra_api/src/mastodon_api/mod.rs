@@ -128,6 +128,7 @@ pub fn mastodon_api_scope(
         .wrap(create_error_handlers())
         .service(accounts::views::account_api_scope())
         .service(admin::posts::views::admin_post_api_scope())
+        .service(admin::accounts::views::admin_account_api_scope())
         .service(apps::views::application_api_scope())
         .service(bookmarks::views::bookmark_api_scope())
         .service(custom_emojis::views::custom_emoji_api_scope())

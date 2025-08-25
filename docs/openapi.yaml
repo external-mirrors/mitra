@@ -2695,6 +2695,25 @@ paths:
                 $ref: '#/components/schemas/Status'
         404:
           description: Post or custom emoji does not exist.
+  /api/v1/admin/accounts/{account_id}:
+    delete:
+      summary: Delete user.
+      security:
+        - tokenAuth: []
+      parameters:
+        - $ref: '#/components/parameters/account_id'
+      responses:
+        204:
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                example: {}
+        403:
+          description: The current user doesn't have a permission to delete other users.
+        404:
+          description: The user doesn't exist.
   /api/v1/admin/posts/{status_id}:
     delete:
       summary: Delete post.

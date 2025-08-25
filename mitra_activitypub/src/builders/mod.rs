@@ -9,7 +9,7 @@ pub mod collection;
 pub mod create_note;
 pub mod create_question_vote;
 pub(crate) mod delete_note;
-pub mod delete_person;
+pub(crate) mod delete_person;
 pub mod emoji;
 pub mod follow;
 pub mod like;
