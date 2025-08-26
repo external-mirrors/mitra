@@ -12,11 +12,6 @@ use clap::Parser;
 use log::Level;
 use uuid::Uuid;
 
-use mitra_activitypub::{
-    builders::{
-        delete_person::prepare_delete_person,
-    },
-};
 use mitra_adapters::{
     media::{delete_files, delete_orphaned_media},
     payments::monero::{
@@ -68,7 +63,6 @@ use mitra_models::{
         get_accounts_for_admin,
         get_invite_codes,
         get_user_count,
-        get_user_by_id,
         set_user_password,
         set_user_role,
     },
@@ -109,6 +103,7 @@ use crate::commands::{
     invoice::RepairInvoice,
     post::{CreatePost, DeletePost, ImportPosts},
     process::Worker,
+    profile::DeleteUser,
     storage::{CheckUris, PruneReposts},
 };
 
@@ -342,42 +337,6 @@ impl SetRole {
         let role = role_from_str(&self.role)?;
         set_user_role(db_client, profile.id, role).await?;
         println!("role changed");
-        Ok(())
-    }
-}
-
-/// Delete user
-#[derive(Parser)]
-#[command(visible_alias = "delete-account", alias = "delete-profile")]
-pub struct DeleteUser {
-    id_or_name: String,
-}
-
-impl DeleteUser {
-    pub async fn execute(
-        &self,
-        config: &Config,
-        db_pool: &DatabaseConnectionPool,
-    ) -> Result<(), Error> {
-        let db_client = &mut **get_database_client(db_pool).await?;
-        let profile = get_profile_by_id_or_acct(
-            db_client,
-            &self.id_or_name,
-        ).await?;
-        let mut maybe_delete_person = None;
-        if profile.is_local() {
-            let user = get_user_by_id(db_client, profile.id).await?;
-            let activity =
-                prepare_delete_person(db_client, &config.instance(), &user).await?;
-            maybe_delete_person = Some(activity);
-        };
-        let deletion_queue = delete_profile(db_client, profile.id).await?;
-        delete_orphaned_media(config, db_client, deletion_queue).await?;
-        // Send Delete(Person) activities
-        if let Some(activity) = maybe_delete_person {
-            activity.save_and_enqueue(db_client).await?;
-        };
-        println!("user deleted");
         Ok(())
     }
 }
