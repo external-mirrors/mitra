@@ -10,6 +10,6 @@ This type of account migration is widely supported in Fediverse. Migration is in
 
 This type of account migration is only supported by Mitra. It can be initiated from any server and works even if the current server is offline. It relies on identity proofs ([FEP-c390](https://codeberg.org/silverpill/feps/src/branch/main/c390/fep-c390.md)).
 
-## Portable accounts
+## Portable accounts / nomadic identity
 
-An implementation of [FEP-ef61](https://codeberg.org/silverpill/feps/src/branch/main/ef61/fep-ef61.md), this feature is still experimental and requires a specialized [client](./c2s.md).
+An implementation of [FEP-ef61](https://codeberg.org/silverpill/feps/src/branch/main/ef61/fep-ef61.md), this [feature](https://codeberg.org/ap-next/ap-next/src/branch/main/nomadpub.md) is still experimental and requires a specialized [client](./c2s.md).
