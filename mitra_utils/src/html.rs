@@ -4,6 +4,7 @@ use std::iter::FromIterator;
 use std::rc::Rc;
 
 use ammonia::{
+    clean_text,
     rcdom::{Handle, NodeData, SerializableHandle},
     Builder,
     Document,
@@ -230,8 +231,8 @@ pub fn extract_title(html: &str, length: usize) -> String {
         .lines()
         .map(|line| line.trim())
         .find(|line| !line.is_empty())
-        .map(|line| line.to_string())
-        .unwrap_or("-".to_string());
+        .map(clean_text)
+        .unwrap_or("-".to_owned());
     let mut title: String = first_line
         .chars()
         .take(length)
@@ -367,5 +368,12 @@ mod tests {
         let html = r#"<h1>heading</h1><p>next line</p>"#;
         let text = html_to_text(html);
         assert_eq!(text, "heading\n\nnext line\n");
+    }
+
+    #[test]
+    fn test_extract_title_with_html_special_characters() {
+        let html = r#"<p>test"&gt;&lt;script&gt;alert("wow");&lt;/script&gt;</p>"#;
+        let title = extract_title(html, 75);
+        assert_eq!(title, r#"test&quot;&gt;&lt;script&gt;alert(&quot;wow&quot;);&lt;&#47;script&gt;"#);
     }
 }

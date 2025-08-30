@@ -20,6 +20,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Display detailed error message when portable object has invalid integrity proof.
 - Generate FEP-171b activity when local post is deleted with `delete-post` command.
 
+### Security
+
+- Escape post title before inserting into page `<head>`.
+
 ## [4.8.0] - 2025-08-18
 
 ### Added
