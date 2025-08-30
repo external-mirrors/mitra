@@ -496,7 +496,7 @@ mod tests {
             related_posts: Some(RelatedPosts::default()),
             ..Default::default()
         };
-        let authority = Authority::server(INSTANCE_URL);
+        let authority = Authority::server(&instance_url);
         let media_server = MediaServer::for_test(INSTANCE_URL);
         let note = build_note(
             &instance_url,
@@ -566,7 +566,7 @@ mod tests {
             related_posts: Some(RelatedPosts::default()),
             ..Default::default()
         };
-        let authority = Authority::server(INSTANCE_URL);
+        let authority = Authority::server(&instance_url);
         let media_server = MediaServer::for_test(INSTANCE_URL);
         let question = build_note(
             &instance_url,
@@ -626,7 +626,7 @@ mod tests {
             related_posts: Some(RelatedPosts::default()),
             ..Default::default()
         };
-        let authority = Authority::server(INSTANCE_URL);
+        let authority = Authority::server(&instance_url);
         let media_server = MediaServer::for_test(INSTANCE_URL);
         let note = build_note(
             &instance_url,
@@ -656,7 +656,7 @@ mod tests {
             related_posts: Some(RelatedPosts::default()),
             ..Default::default()
         };
-        let authority = Authority::server(INSTANCE_URL);
+        let authority = Authority::server(&instance_url);
         let media_server = MediaServer::for_test(INSTANCE_URL);
         let note = build_note(
             &instance_url,
@@ -687,7 +687,7 @@ mod tests {
             related_posts: Some(RelatedPosts::default()),
             ..Default::default()
         };
-        let authority = Authority::server(INSTANCE_URL);
+        let authority = Authority::server(&instance_url);
         let media_server = MediaServer::for_test(INSTANCE_URL);
         let note = build_note(
             &instance_url,
@@ -713,7 +713,7 @@ mod tests {
             }),
             ..Default::default()
         };
-        let authority = Authority::server(INSTANCE_URL);
+        let authority = Authority::server(&instance_url);
         let media_server = MediaServer::for_test(INSTANCE_URL);
         let note = build_note(
             &instance_url,
@@ -761,7 +761,7 @@ mod tests {
             }),
             ..Default::default()
         };
-        let authority = Authority::server(INSTANCE_URL);
+        let authority = Authority::server(&instance_url);
         let media_server = MediaServer::for_test(INSTANCE_URL);
         let note = build_note(
             &instance_url,
@@ -828,7 +828,7 @@ mod tests {
             }),
             ..Default::default()
         };
-        let authority = Authority::server(INSTANCE_URL);
+        let authority = Authority::server(&instance_url);
         let media_server = MediaServer::for_test(INSTANCE_URL);
         let note = build_note(
             &instance_url,
@@ -894,7 +894,7 @@ mod tests {
             ..Default::default()
         };
         let authority = Authority::key_with_gateway(
-            INSTANCE_URL,
+            &instance_url,
             &author.ed25519_secret_key,
         );
         let media_server = MediaServer::for_test(INSTANCE_URL);

@@ -373,7 +373,7 @@ mod tests {
             .with_timezone(&Utc);
         profile.updated_at = profile.created_at;
         let user = User { profile, ..Default::default() };
-        let authority = Authority::server(INSTANCE_URL);
+        let authority = Authority::server(&instance_url);
         let media_server = MediaServer::for_test(INSTANCE_URL);
         let actor = build_local_actor(
             &instance_url,
@@ -468,7 +468,7 @@ mod tests {
         profile.updated_at = profile.created_at;
         let user = User { profile, ..Default::default() };
         let authority = Authority::key_with_gateway(
-            INSTANCE_URL,
+            &instance_url,
             &user.ed25519_secret_key,
         );
         let media_server = MediaServer::for_test(INSTANCE_URL);

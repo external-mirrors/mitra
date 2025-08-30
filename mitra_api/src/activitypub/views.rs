@@ -132,7 +132,7 @@ async fn actor_view(
             .finish();
         return Ok(response);
     };
-    let authority = Authority::server(&instance.url());
+    let authority = Authority::server(instance.url_ref());
     let media_server = MediaServer::new(&config);
     let actor = build_local_actor(
         instance.url_ref(),
@@ -391,7 +391,7 @@ async fn featured_collection(
         OrderedCollectionPage::DEFAULT_SIZE,
     ).await?;
     add_related_posts(db_client, posts.iter_mut().collect()).await?;
-    let authority = Authority::server(&instance.url());
+    let authority = Authority::server(instance.url_ref());
     let media_server = MediaServer::new(&config);
     let objects = posts.iter().map(|post| {
         let note = build_note(

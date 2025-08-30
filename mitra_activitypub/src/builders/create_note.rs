@@ -40,7 +40,7 @@ pub fn build_create_note(
     media_server: &MediaServer,
     post: &Post,
 ) -> CreateNote {
-    let authority = Authority::server(instance_url.as_str());
+    let authority = Authority::server(instance_url);
     let object = build_note(
         instance_url,
         &authority,

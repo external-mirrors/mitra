@@ -41,7 +41,7 @@ fn build_update_note(
     media_server: &MediaServer,
     post: &Post,
 ) -> UpdateNote {
-    let authority = Authority::server(instance_url.as_str());
+    let authority = Authority::server(instance_url);
     let object = build_note(
         instance_url,
         &authority,

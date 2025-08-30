@@ -63,7 +63,7 @@ fn build_delete_note(
         instance_url.as_str(),
         &post.author.username,
     );
-    let authority = Authority::server(instance_url.as_str());
+    let authority = Authority::server(instance_url);
     let Note { to, cc, .. } = build_note(
         instance_url,
         &authority,

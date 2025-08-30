@@ -311,6 +311,7 @@ mod tests {
         did::Did,
         did_pkh::DidPkh,
         eip191::{create_eip191_signature, ecdsa_public_key_to_address_hex},
+        http_url::HttpUrl,
     };
     use chrono::Utc;
     use serde_json::json;
@@ -375,7 +376,8 @@ mod tests {
 
     #[test]
     fn test_payment_option() {
-        let authority = Authority::server(INSTANCE_URL);
+        let instance_url = HttpUrl::parse(INSTANCE_URL).unwrap();
+        let authority = Authority::server(&instance_url);
         let username = "testuser";
         let price = NonZeroU64::new(240000).unwrap();
         let payout_address = "test";

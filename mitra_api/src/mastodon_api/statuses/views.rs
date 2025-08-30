@@ -1151,7 +1151,7 @@ async fn make_permanent(
     };
     assert!(post.is_local());
     let instance = config.instance();
-    let authority = Authority::server(&instance.url());
+    let authority = Authority::server(instance.url_ref());
     let media_server = MediaServer::new(&config);
     let note = build_note(
         instance.url_ref(),
