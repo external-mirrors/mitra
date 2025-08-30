@@ -1,4 +1,7 @@
-use apx_sdk::constants::AP_PUBLIC;
+use apx_sdk::{
+    constants::AP_PUBLIC,
+    core::http_url::HttpUrl,
+};
 use serde::Serialize;
 
 use mitra_config::Instance;
@@ -41,11 +44,11 @@ struct UpdatePerson {
 }
 
 fn build_update_person(
-    instance_url: &str,
+    instance_url: &HttpUrl,
     media_server: &MediaServer,
     user: &User,
 ) -> Result<UpdatePerson, DatabaseError> {
-    let authority = Authority::server(instance_url);
+    let authority = Authority::server(instance_url.as_str());
     let actor = build_local_actor(
         instance_url,
         &authority,
@@ -54,7 +57,11 @@ fn build_update_person(
     )?;
     let followers = LocalActorCollection::Followers.of(&actor.id);
     // Update(Person) is idempotent so its ID can be random
-    let activity_id = local_activity_id(instance_url, UPDATE, generate_ulid());
+    let activity_id = local_activity_id(
+        instance_url.as_str(),
+        UPDATE,
+        generate_ulid(),
+    );
     let activity = UpdatePerson {
         context: build_default_context(),
         activity_type: UPDATE.to_string(),
@@ -97,7 +104,7 @@ pub async fn prepare_update_person(
     user: &User,
 ) -> Result<OutgoingActivityJobData, DatabaseError> {
     let activity = build_update_person(
-        &instance.url(),
+        instance.url_ref(),
         media_server,
         user,
     )?;
@@ -119,25 +126,26 @@ mod tests {
 
     #[test]
     fn test_build_update_person() {
-        let media_server = MediaServer::for_test(INSTANCE_URL);
+        let instance_url = HttpUrl::parse(INSTANCE_URL).unwrap();
+        let media_server = MediaServer::for_test(instance_url.as_str());
         let user = User {
             profile: DbActorProfile::local_for_test("testuser"),
             ..Default::default()
         };
         let activity = build_update_person(
-            INSTANCE_URL,
+            &instance_url,
             &media_server,
             &user,
         ).unwrap();
         assert_eq!(activity.actor, activity.object.id);
         assert_eq!(
             activity.object.id,
-            format!("{}/users/testuser", INSTANCE_URL),
+            format!("{}/users/testuser", instance_url),
         );
         assert_eq!(activity.to, vec![AP_PUBLIC.to_string()]);
         assert_eq!(
             activity.cc,
-            vec![format!("{}/users/testuser/followers", INSTANCE_URL)],
+            vec![format!("{}/users/testuser/followers", instance_url)],
         );
     }
 }

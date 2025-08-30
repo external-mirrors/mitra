@@ -1,5 +1,6 @@
 use apx_core::{
     crypto_rsa::RsaSerializationError,
+    http_url::HttpUrl,
 };
 use chrono::{DateTime, Utc};
 use indexmap::IndexMap;
@@ -187,12 +188,12 @@ pub struct Actor {
 }
 
 pub fn build_local_actor(
-    instance_url: &str,
+    instance_url: &HttpUrl,
     authority: &Authority,
     media_server: &MediaServer,
     user: &User,
 ) -> Result<Actor, DatabaseError> {
-    assert_eq!(authority.server_url(), Some(instance_url), "authority should be anchored");
+    assert_eq!(authority.server_url(), Some(instance_url.as_str()), "authority should be anchored");
     let username = &user.profile.username;
     let actor_id = local_actor_id_unified(authority, username);
     let actor_type = if user.profile.is_automated {
@@ -270,13 +271,13 @@ pub fn build_local_actor(
     };
     let mut emojis = vec![];
     for db_emoji in user.profile.emojis.inner() {
-        let emoji = build_emoji(instance_url, media_server, db_emoji);
+        let emoji = build_emoji(instance_url.as_str(), media_server, db_emoji);
         emojis.push(emoji);
     };
     let aliases = user.profile.aliases.clone().into_actor_ids();
     // HTML representation
     // TODO: portable actors should point to a primary server
-    let profile_url = local_actor_id(instance_url, username);
+    let profile_url = local_actor_id(instance_url.as_str(), username);
 
     let gateways = authority.is_fep_ef61()
         .then_some(vec![instance_url.to_string()])
@@ -364,6 +365,7 @@ mod tests {
 
     #[test]
     fn test_build_local_actor() {
+        let instance_url = HttpUrl::parse(INSTANCE_URL).unwrap();
         let mut profile = DbActorProfile::local_for_test("testuser");
         profile.bio = Some("testbio".to_string());
         profile.created_at = DateTime::parse_from_rfc3339("2023-02-24T23:36:38Z")
@@ -374,7 +376,7 @@ mod tests {
         let authority = Authority::server(INSTANCE_URL);
         let media_server = MediaServer::for_test(INSTANCE_URL);
         let actor = build_local_actor(
-            INSTANCE_URL,
+            &instance_url,
             &authority,
             &media_server,
             &user,
@@ -457,6 +459,7 @@ mod tests {
 
     #[test]
     fn test_build_local_actor_fep_ef61() {
+        let instance_url = HttpUrl::parse(INSTANCE_URL).unwrap();
         let mut profile = DbActorProfile::local_for_test("testuser");
         profile.bio = Some("testbio".to_string());
         profile.created_at = DateTime::parse_from_rfc3339("2023-02-24T23:36:38Z")
@@ -470,7 +473,7 @@ mod tests {
         );
         let media_server = MediaServer::for_test(INSTANCE_URL);
         let actor = build_local_actor(
-            INSTANCE_URL,
+            &instance_url,
             &authority,
             &media_server,
             &user,

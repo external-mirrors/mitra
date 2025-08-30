@@ -121,9 +121,10 @@ async fn actor_view(
 ) -> Result<HttpResponse, HttpError> {
     let db_client = &**get_database_client(&db_pool).await?;
     let user = get_user_by_name(db_client, &username).await?;
+    let instance = config.instance();
     if !is_activitypub_request(&header_map_adapter(request.headers())) {
         let page_url = get_profile_page_url(
-            &config.instance_url(),
+            &instance.url(),
             &user.profile.username,
         );
         let response = HttpResponse::Found()
@@ -131,10 +132,10 @@ async fn actor_view(
             .finish();
         return Ok(response);
     };
-    let authority = Authority::server(&config.instance_url());
+    let authority = Authority::server(&instance.url());
     let media_server = MediaServer::new(&config);
     let actor = build_local_actor(
-        &config.instance_url(),
+        instance.url_ref(),
         &authority,
         &media_server,
         &user,
