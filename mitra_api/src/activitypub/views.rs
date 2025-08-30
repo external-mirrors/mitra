@@ -131,11 +131,7 @@ async fn actor_view(
             .finish();
         return Ok(response);
     };
-    let authority = Authority::from_user(
-        &config.instance_url(),
-        &user,
-        false,
-    );
+    let authority = Authority::server(&config.instance_url());
     let media_server = MediaServer::new(&config);
     let actor = build_local_actor(
         &config.instance_url(),

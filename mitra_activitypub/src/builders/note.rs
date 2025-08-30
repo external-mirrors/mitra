@@ -891,7 +891,10 @@ mod tests {
             related_posts: Some(RelatedPosts::default()),
             ..Default::default()
         };
-        let authority = Authority::from_user(INSTANCE_URL, &author, true);
+        let authority = Authority::key_with_gateway(
+            INSTANCE_URL,
+            &author.ed25519_secret_key,
+        );
         let media_server = MediaServer::for_test(INSTANCE_URL);
         let note = build_note(
             INSTANCE_HOSTNAME,

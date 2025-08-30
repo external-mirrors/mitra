@@ -12,7 +12,6 @@ use apx_core::{
 };
 
 use mitra_config::Instance;
-use mitra_models::users::types::User;
 
 fn fep_ef61_identity(public_key: &Ed25519PublicKey) -> DidKey {
     DidKey::from_ed25519_key(public_key)
@@ -57,21 +56,9 @@ impl Authority {
         Self::Key(public_key)
     }
 
-    fn key_with_gateway(server_url: &str, secret_key: &Ed25519SecretKey) -> Self {
+    pub fn key_with_gateway(server_url: &str, secret_key: &Ed25519SecretKey) -> Self {
         let public_key = ed25519_public_key_from_secret_key(secret_key);
         Self::KeyWithGateway((server_url.to_owned(), public_key))
-    }
-
-    pub fn from_user(
-        server_url: &str,
-        user: &User,
-        fep_ef61_enabled: bool,
-    ) -> Self {
-        if fep_ef61_enabled {
-            Self::key_with_gateway(server_url, &user.ed25519_secret_key)
-        } else {
-            Self::server(server_url)
-        }
     }
 
     pub fn is_fep_ef61(&self) -> bool {
