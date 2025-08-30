@@ -1,3 +1,4 @@
+use apx_core::http_url::HttpUrl;
 use serde::Serialize;
 
 use mitra_config::Instance;
@@ -35,14 +36,12 @@ pub struct CreateNote {
 }
 
 pub fn build_create_note(
-    instance_hostname: &str,
-    instance_url: &str,
+    instance_url: &HttpUrl,
     media_server: &MediaServer,
     post: &Post,
 ) -> CreateNote {
-    let authority = Authority::server(instance_url);
+    let authority = Authority::server(instance_url.as_str());
     let object = build_note(
-        instance_hostname,
         instance_url,
         &authority,
         media_server,
@@ -51,7 +50,11 @@ pub fn build_create_note(
     );
     let primary_audience = object.to.clone();
     let secondary_audience = object.cc.clone();
-    let activity_id = local_activity_id(instance_url, CREATE, post.id);
+    let activity_id = local_activity_id(
+        instance_url.as_str(),
+        CREATE,
+        post.id,
+    );
     CreateNote {
         _context: build_default_context(),
         activity_type: CREATE.to_string(),
@@ -72,8 +75,7 @@ pub async fn prepare_create_note(
 ) -> Result<OutgoingActivityJobData, DatabaseError> {
     assert_eq!(author.id, post.author.id);
     let activity = build_create_note(
-        &instance.hostname(),
-        &instance.url(),
+        instance.url_ref(),
         media_server,
         post,
     );
@@ -95,11 +97,11 @@ mod tests {
     };
     use super::*;
 
-    const INSTANCE_HOSTNAME: &str = "example.com";
     const INSTANCE_URL: &str = "https://example.com";
 
     #[test]
     fn test_build_create_note() {
+        let instance_url = HttpUrl::parse(INSTANCE_URL).unwrap();
         let media_server = MediaServer::for_test(INSTANCE_URL);
         let author_username = "author";
         let author = DbActorProfile::local_for_test(author_username);
@@ -109,8 +111,7 @@ mod tests {
             ..Default::default()
         };
         let activity = build_create_note(
-            INSTANCE_HOSTNAME,
-            INSTANCE_URL,
+            &instance_url,
             &media_server,
             &post,
         );

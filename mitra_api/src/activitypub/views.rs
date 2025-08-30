@@ -250,8 +250,7 @@ async fn outbox(
                 .expect("activity should be serializable")
         } else {
             let activity = build_create_note(
-                &instance.hostname(),
-                &instance.url(),
+                instance.url_ref(),
                 &media_server,
                 post,
             );
@@ -396,8 +395,7 @@ async fn featured_collection(
     let media_server = MediaServer::new(&config);
     let objects = posts.iter().map(|post| {
         let note = build_note(
-            &instance.hostname(),
-            &instance.url(),
+            instance.url_ref(),
             &authority,
             &media_server,
             post,
@@ -533,8 +531,7 @@ pub async fn object_view(
     let authority = Authority::from(&instance);
     let media_server = MediaServer::new(&config);
     let object = build_note(
-        &instance.hostname(),
-        &instance.url(),
+        instance.url_ref(),
         &authority,
         &media_server,
         &post,

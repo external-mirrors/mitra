@@ -1154,8 +1154,7 @@ async fn make_permanent(
     let authority = Authority::server(&instance.url());
     let media_server = MediaServer::new(&config);
     let note = build_note(
-        &instance.hostname(),
-        &instance.url(),
+        instance.url_ref(),
         &authority,
         &media_server,
         &post,

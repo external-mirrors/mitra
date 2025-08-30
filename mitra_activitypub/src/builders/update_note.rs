@@ -1,3 +1,4 @@
+use apx_core::http_url::HttpUrl;
 use serde::Serialize;
 
 use mitra_config::Instance;
@@ -36,14 +37,12 @@ struct UpdateNote {
 }
 
 fn build_update_note(
-    instance_hostname: &str,
-    instance_url: &str,
+    instance_url: &HttpUrl,
     media_server: &MediaServer,
     post: &Post,
 ) -> UpdateNote {
-    let authority = Authority::server(instance_url);
+    let authority = Authority::server(instance_url.as_str());
     let object = build_note(
-        instance_hostname,
         instance_url,
         &authority,
         media_server,
@@ -53,7 +52,11 @@ fn build_update_note(
     let primary_audience = object.to.clone();
     let secondary_audience = object.cc.clone();
     // Update(Note) is idempotent so its ID can be random
-    let activity_id = local_activity_id(instance_url, UPDATE, generate_ulid());
+    let activity_id = local_activity_id(
+        instance_url.as_str(),
+        UPDATE,
+        generate_ulid(),
+    );
     UpdateNote {
         _context: build_default_context(),
         activity_type: UPDATE.to_string(),
@@ -74,8 +77,7 @@ pub async fn prepare_update_note(
 ) -> Result<OutgoingActivityJobData, DatabaseError> {
     assert_eq!(author.id, post.author.id);
     let activity = build_update_note(
-        &instance.hostname(),
-        &instance.url(),
+        instance.url_ref(),
         media_server,
         post,
     );
@@ -98,11 +100,12 @@ mod tests {
     };
     use super::*;
 
+    const INSTANCE_URL: &str = "https://social.example";
+
     #[test]
     fn test_build_update_note() {
-        let instance_hostname = "social.example";
-        let instance_url = "https://social.com";
-        let media_server = MediaServer::for_test(instance_url);
+        let instance_url = HttpUrl::parse(INSTANCE_URL).unwrap();
+        let media_server = MediaServer::for_test(INSTANCE_URL);
         let author_username = "author";
         let author = DbActorProfile::local_for_test(author_username);
         let post = Post {
@@ -112,17 +115,16 @@ mod tests {
             ..Default::default()
         };
         let activity = build_update_note(
-            instance_hostname,
-            instance_url,
+            &instance_url,
             &media_server,
             &post,
         );
 
-        assert_eq!(activity.id.starts_with(instance_url), true);
+        assert_eq!(activity.id.starts_with(INSTANCE_URL), true);
         assert_eq!(activity.activity_type, UPDATE);
         assert_eq!(
             activity.actor,
-            format!("{}/users/{}", instance_url, author_username),
+            format!("{}/users/{}", INSTANCE_URL, author_username),
         );
         assert_eq!(activity.to, vec![AP_PUBLIC]);
         assert_eq!(activity.object._context, None);

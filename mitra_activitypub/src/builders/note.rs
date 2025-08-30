@@ -3,7 +3,10 @@ use std::collections::HashMap;
 use apx_sdk::{
     addresses::WebfingerAddress,
     constants::{AP_MEDIA_TYPE, AP_PUBLIC},
-    core::hashes::sha256_multibase,
+    core::{
+        hashes::sha256_multibase,
+        http_url::HttpUrl,
+    },
     deserialization::deserialize_string_array,
 };
 use chrono::{DateTime, Utc};
@@ -167,15 +170,14 @@ pub struct Note {
 }
 
 pub fn build_note(
-    instance_hostname: &str,
-    instance_url: &str,
+    instance_url: &HttpUrl,
     authority: &Authority,
     media_server: &MediaServer,
     post: &Post,
     with_context: bool,
 ) -> Note {
     let related_posts = post.expect_related_posts();
-    assert_eq!(authority.server_url(), Some(instance_url), "authority should be anchored");
+    assert_eq!(authority.server_url(), Some(instance_url.as_str()), "authority should be anchored");
     let object_id = local_object_id_unified(authority, post.id);
     let mut object_type = NOTE;
     let actor_id = local_actor_id_unified(authority, &post.author.username);
@@ -245,7 +247,7 @@ pub fn build_note(
         let tag_name = match profile.hostname() {
             WebfingerHostname::Local => {
                 WebfingerAddress::new_unchecked(
-                    &profile.username, instance_hostname).handle()
+                    &profile.username, instance_url.hostname().as_str()).handle()
             },
             WebfingerHostname::Remote(hostname) => {
                 WebfingerAddress::new_unchecked(
@@ -253,7 +255,7 @@ pub fn build_note(
             },
             WebfingerHostname::Unknown => format!("@{}", profile.username),
         };
-        let actor_id = compatible_profile_actor_id(instance_url, profile);
+        let actor_id = compatible_profile_actor_id(instance_url.as_str(), profile);
         if !primary_audience.contains(&actor_id) {
             primary_audience.push(actor_id.clone());
         };
@@ -265,7 +267,7 @@ pub fn build_note(
         tags.push(Tag::SimpleTag(tag));
     };
     for tag_name in &post.tags {
-        let tag_href = local_tag_collection(instance_url, tag_name);
+        let tag_href = local_tag_collection(instance_url.as_str(), tag_name);
         let tag = SimpleTag {
             tag_type: HASHTAG.to_string(),
             name: format!("#{}", tag_name),
@@ -277,7 +279,7 @@ pub fn build_note(
     for (index, linked) in related_posts.linked.iter().enumerate() {
         // Build FEP-e232 object link
         // https://codeberg.org/silverpill/feps/src/branch/main/e232/fep-e232.md
-        let link_href = compatible_post_object_id(instance_url, linked);
+        let link_href = compatible_post_object_id(instance_url.as_str(), linked);
         let link_rel = if index == 0 {
             // Present first link as a quote
             vec![LINK_REL_MISSKEY_QUOTE.to_string()]
@@ -296,10 +298,10 @@ pub fn build_note(
     // Present first link as a quote
     let maybe_quote_url = related_posts
         .linked.first()
-        .map(|linked| compatible_post_object_id(instance_url, linked));
+        .map(|linked| compatible_post_object_id(instance_url.as_str(), linked));
 
     for emoji in &post.emojis {
-        let tag = build_emoji(instance_url, media_server, emoji);
+        let tag = build_emoji(instance_url.as_str(), media_server, emoji);
         tags.push(Tag::EmojiTag(tag));
     };
 
@@ -312,7 +314,7 @@ pub fn build_note(
             if post.author.id != in_reply_to.author.id {
                 // Add author of a parent post to audience
                 let in_reply_to_actor_id = compatible_profile_actor_id(
-                    instance_url,
+                    instance_url.as_str(),
                     &in_reply_to.author,
                 );
                 if !primary_audience.contains(&in_reply_to_actor_id) {
@@ -347,7 +349,7 @@ pub fn build_note(
                         // Can't use "authority" parameter here
                         // because parent post author may have a different one
                         let actor_id = local_actor_id(
-                            instance_url,
+                            instance_url.as_str(),
                             &in_reply_to.author.username,
                         );
                         let followers = LocalActorCollection::Followers.of(&actor_id);
@@ -360,7 +362,7 @@ pub fn build_note(
                     };
                 };
             };
-            Some(compatible_post_object_id(instance_url, in_reply_to))
+            Some(compatible_post_object_id(instance_url.as_str(), in_reply_to))
         },
         None => None,
     };
@@ -368,7 +370,7 @@ pub fn build_note(
         let conversation = post.expect_conversation();
         // TODO: FEP-EF61: use Authority
         let context_collection_id =
-            local_conversation_collection(instance_url, conversation.id);
+            local_conversation_collection(instance_url.as_str(), conversation.id);
         Some(context_collection_id)
     } else {
         None
@@ -466,7 +468,6 @@ mod tests {
     };
     use super::*;
 
-    const INSTANCE_HOSTNAME: &str = "server.example";
     const INSTANCE_URL: &str = "https://server.example";
 
     #[test]
@@ -487,6 +488,7 @@ mod tests {
 
     #[test]
     fn test_build_note() {
+        let instance_url = HttpUrl::parse(INSTANCE_URL).unwrap();
         let author = DbActorProfile::local_for_test("author");
         let post = Post {
             author,
@@ -497,8 +499,7 @@ mod tests {
         let authority = Authority::server(INSTANCE_URL);
         let media_server = MediaServer::for_test(INSTANCE_URL);
         let note = build_note(
-            INSTANCE_HOSTNAME,
-            INSTANCE_URL,
+            &instance_url,
             &authority,
             &media_server,
             &post,
@@ -539,6 +540,7 @@ mod tests {
 
     #[test]
     fn test_build_question() {
+        let instance_url = HttpUrl::parse(INSTANCE_URL).unwrap();
         let author = DbActorProfile::local_for_test("author");
         let poll = Poll {
             id: uuid!("11fa64ff-b5a3-47bf-b23d-22b360581c3f"),
@@ -567,8 +569,7 @@ mod tests {
         let authority = Authority::server(INSTANCE_URL);
         let media_server = MediaServer::for_test(INSTANCE_URL);
         let question = build_note(
-            INSTANCE_HOSTNAME,
-            INSTANCE_URL,
+            &instance_url,
             &authority,
             &media_server,
             &post,
@@ -619,6 +620,7 @@ mod tests {
 
     #[test]
     fn test_build_note_followers_only() {
+        let instance_url = HttpUrl::parse(INSTANCE_URL).unwrap();
         let post = Post {
             visibility: Visibility::Followers,
             related_posts: Some(RelatedPosts::default()),
@@ -627,8 +629,7 @@ mod tests {
         let authority = Authority::server(INSTANCE_URL);
         let media_server = MediaServer::for_test(INSTANCE_URL);
         let note = build_note(
-            INSTANCE_HOSTNAME,
-            INSTANCE_URL,
+            &instance_url,
             &authority,
             &media_server,
             &post,
@@ -643,6 +644,7 @@ mod tests {
 
     #[test]
     fn test_build_note_subscribers_only() {
+        let instance_url = HttpUrl::parse(INSTANCE_URL).unwrap();
         let subscriber_id = "https://test.com/users/3";
         let subscriber = DbActorProfile::remote_for_test(
             "subscriber",
@@ -657,8 +659,7 @@ mod tests {
         let authority = Authority::server(INSTANCE_URL);
         let media_server = MediaServer::for_test(INSTANCE_URL);
         let note = build_note(
-            INSTANCE_HOSTNAME,
-            INSTANCE_URL,
+            &instance_url,
             &authority,
             &media_server,
             &post,
@@ -674,6 +675,7 @@ mod tests {
 
     #[test]
     fn test_build_note_direct() {
+        let instance_url = HttpUrl::parse(INSTANCE_URL).unwrap();
         let mentioned_id = "https://test.com/users/3";
         let mentioned = DbActorProfile::remote_for_test(
             "mention",
@@ -688,8 +690,7 @@ mod tests {
         let authority = Authority::server(INSTANCE_URL);
         let media_server = MediaServer::for_test(INSTANCE_URL);
         let note = build_note(
-            INSTANCE_HOSTNAME,
-            INSTANCE_URL,
+            &instance_url,
             &authority,
             &media_server,
             &post,
@@ -702,6 +703,7 @@ mod tests {
 
     #[test]
     fn test_build_note_with_local_parent() {
+        let instance_url = HttpUrl::parse(INSTANCE_URL).unwrap();
         let parent = Post::default();
         let post = Post {
             in_reply_to_id: Some(parent.id),
@@ -714,8 +716,7 @@ mod tests {
         let authority = Authority::server(INSTANCE_URL);
         let media_server = MediaServer::for_test(INSTANCE_URL);
         let note = build_note(
-            INSTANCE_HOSTNAME,
-            INSTANCE_URL,
+            &instance_url,
             &authority,
             &media_server,
             &post,
@@ -734,6 +735,7 @@ mod tests {
 
     #[test]
     fn test_build_note_with_remote_parent() {
+        let instance_url = HttpUrl::parse(INSTANCE_URL).unwrap();
         let parent_author_acct = "test@test.net";
         let parent_author_actor_id = "https://test.net/user/test";
         let parent_author_actor_url = "https://test.net/@test";
@@ -762,8 +764,7 @@ mod tests {
         let authority = Authority::server(INSTANCE_URL);
         let media_server = MediaServer::for_test(INSTANCE_URL);
         let note = build_note(
-            INSTANCE_HOSTNAME,
-            INSTANCE_URL,
+            &instance_url,
             &authority,
             &media_server,
             &post,
@@ -787,6 +788,7 @@ mod tests {
 
     #[test]
     fn test_build_note_with_remote_parent_and_with_conversation() {
+        let instance_url = HttpUrl::parse(INSTANCE_URL).unwrap();
         let parent_author_actor_id = "https://social.example/user/test";
         let parent_author_followers = "https://social.example/user/test/followers";
         let parent_author_actor_url = "https://social.example/@test";
@@ -829,8 +831,7 @@ mod tests {
         let authority = Authority::server(INSTANCE_URL);
         let media_server = MediaServer::for_test(INSTANCE_URL);
         let note = build_note(
-            INSTANCE_HOSTNAME,
-            INSTANCE_URL,
+            &instance_url,
             &authority,
             &media_server,
             &post,
@@ -877,6 +878,7 @@ mod tests {
 
     #[test]
     fn test_build_note_fep_ef61() {
+        let instance_url = HttpUrl::parse(INSTANCE_URL).unwrap();
         let author = User::default();
         let conversation = Conversation {
             id: uuid!("837ffc24-dab2-414b-a9b8-fe47d0a463f2"),
@@ -897,8 +899,7 @@ mod tests {
         );
         let media_server = MediaServer::for_test(INSTANCE_URL);
         let note = build_note(
-            INSTANCE_HOSTNAME,
-            INSTANCE_URL,
+            &instance_url,
             &authority,
             &media_server,
             &post,

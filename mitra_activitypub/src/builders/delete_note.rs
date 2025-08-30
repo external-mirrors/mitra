@@ -1,3 +1,4 @@
+use apx_core::http_url::HttpUrl;
 use serde::Serialize;
 
 use mitra_config::Instance;
@@ -47,18 +48,23 @@ struct DeleteNote {
 }
 
 fn build_delete_note(
-    instance_hostname: &str,
-    instance_url: &str,
+    instance_url: &HttpUrl,
     media_server: &MediaServer,
     post: &Post,
 ) -> DeleteNote {
     assert!(post.is_local());
-    let object_id = local_object_id(instance_url, post.id);
-    let activity_id = local_activity_id(instance_url, DELETE, post.id);
-    let actor_id = local_actor_id(instance_url, &post.author.username);
-    let authority = Authority::server(instance_url);
+    let object_id = local_object_id(instance_url.as_str(), post.id);
+    let activity_id = local_activity_id(
+        instance_url.as_str(),
+        DELETE,
+        post.id,
+    );
+    let actor_id = local_actor_id(
+        instance_url.as_str(),
+        &post.author.username,
+    );
+    let authority = Authority::server(instance_url.as_str());
     let Note { to, cc, .. } = build_note(
-        instance_hostname,
         instance_url,
         &authority,
         media_server,
@@ -91,8 +97,7 @@ pub async fn prepare_delete_note(
     let mut post = post.clone();
     add_related_posts(db_client, vec![&mut post]).await?;
     let activity = build_delete_note(
-        &instance.hostname(),
-        &instance.url(),
+        instance.url_ref(),
         media_server,
         &post,
     );
@@ -114,11 +119,11 @@ mod tests {
     };
     use super::*;
 
-    const INSTANCE_HOSTNAME: &str = "example.com";
     const INSTANCE_URL: &str = "https://example.com";
 
     #[test]
     fn test_build_delete_note() {
+        let instance_url = HttpUrl::parse(INSTANCE_URL).unwrap();
         let media_server = MediaServer::for_test(INSTANCE_URL);
         let author = DbActorProfile::local_for_test("author");
         let post = Post {
@@ -127,8 +132,7 @@ mod tests {
             ..Default::default()
         };
         let activity = build_delete_note(
-            INSTANCE_HOSTNAME,
-            INSTANCE_URL,
+            &instance_url,
             &media_server,
             &post,
         );
