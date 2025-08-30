@@ -192,7 +192,7 @@ pub fn build_local_actor(
     media_server: &MediaServer,
     user: &User,
 ) -> Result<Actor, DatabaseError> {
-    assert_eq!(authority.server_url(), instance_url);
+    assert_eq!(authority.server_url(), Some(instance_url), "authority should be anchored");
     let username = &user.profile.username;
     let actor_id = local_actor_id_unified(authority, username);
     let actor_type = if user.profile.is_automated {

@@ -175,7 +175,7 @@ pub fn build_note(
     with_context: bool,
 ) -> Note {
     let related_posts = post.expect_related_posts();
-    assert_eq!(authority.server_url(), instance_url);
+    assert_eq!(authority.server_url(), Some(instance_url), "authority should be anchored");
     let object_id = local_object_id_unified(authority, post.id);
     let mut object_type = NOTE;
     let actor_id = local_actor_id_unified(authority, &post.author.username);

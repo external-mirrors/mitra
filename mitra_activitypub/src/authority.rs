@@ -20,8 +20,7 @@ fn fep_ef61_identity(public_key: &Ed25519PublicKey) -> DidKey {
 
 pub enum Authority {
     Server(String),
-    // TODO: FEP-EF61: remove server URL after transition
-    Key((String, Ed25519PublicKey)),
+    Key(Ed25519PublicKey),
     KeyWithGateway((String, Ed25519PublicKey)),
 }
 
@@ -29,7 +28,7 @@ impl fmt::Display for Authority {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         let authority_str = match self {
             Self::Server(server_url) => server_url.to_owned(),
-            Self::Key((_, public_key)) => {
+            Self::Key(public_key) => {
                 let did = fep_ef61_identity(public_key);
                 with_ap_prefix(&did.to_string())
             },
@@ -53,9 +52,9 @@ impl Authority {
     }
 
     #[allow(dead_code)]
-    fn key(server_url: &str, secret_key: &Ed25519SecretKey) -> Self {
+    fn key(secret_key: &Ed25519SecretKey) -> Self {
         let public_key = ed25519_public_key_from_secret_key(secret_key);
-        Self::Key((server_url.to_owned(), public_key))
+        Self::Key(public_key)
     }
 
     fn key_with_gateway(server_url: &str, secret_key: &Ed25519SecretKey) -> Self {
@@ -79,18 +78,18 @@ impl Authority {
         !matches!(self, Self::Server(_))
     }
 
-    pub fn server_url(&self) -> &str {
+    pub fn server_url(&self) -> Option<&str> {
         match self {
-            Self::Server(server_url) => server_url,
-            Self::Key((server_url, _)) => server_url,
-            Self::KeyWithGateway((server_url, _)) => server_url,
+            Self::Server(server_url) => Some(server_url),
+            Self::Key(_) => None,
+            Self::KeyWithGateway((server_url, _)) => Some(server_url),
         }
     }
 
     pub fn as_did_key(&self) -> Option<DidKey> {
         match self {
             Self::Server(_) => None,
-            Self::Key((_, public_key)) | Self::KeyWithGateway((_, public_key)) => {
+            Self::Key(public_key) | Self::KeyWithGateway((_, public_key)) => {
                 Some(fep_ef61_identity(public_key))
             },
         }
@@ -115,17 +114,17 @@ mod tests {
         let authority = Authority::server(SERVER_URL);
         assert!(!authority.is_fep_ef61());
         assert_eq!(authority.to_string(), "https://server.example");
-        assert_eq!(authority.server_url(), SERVER_URL);
+        assert_eq!(authority.server_url().unwrap(), SERVER_URL);
         assert_eq!(authority.as_did_key().is_none(), true);
     }
 
     #[test]
     fn test_authority_key() {
         let secret_key = generate_weak_ed25519_key();
-        let authority = Authority::key(SERVER_URL, &secret_key);
+        let authority = Authority::key(&secret_key);
         assert!(authority.is_fep_ef61());
         assert_eq!(authority.to_string(), "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6");
-        assert_eq!(authority.server_url(), SERVER_URL);
+        assert_eq!(authority.server_url(), None);
         assert_eq!(authority.as_did_key().is_some(), true);
     }
 
@@ -135,7 +134,7 @@ mod tests {
         let authority = Authority::key_with_gateway(SERVER_URL, &secret_key);
         assert!(authority.is_fep_ef61());
         assert_eq!(authority.to_string(), "https://server.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6");
-        assert_eq!(authority.server_url(), SERVER_URL);
+        assert_eq!(authority.server_url().unwrap(), SERVER_URL);
         assert_eq!(authority.as_did_key().is_some(), true);
     }
 }
