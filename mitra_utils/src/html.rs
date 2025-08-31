@@ -4,7 +4,6 @@ use std::iter::FromIterator;
 use std::rc::Rc;
 
 use ammonia::{
-    clean_text,
     rcdom::{Handle, NodeData, SerializableHandle},
     Builder,
     Document,
@@ -231,7 +230,7 @@ pub fn extract_title(html: &str, length: usize) -> String {
         .lines()
         .map(|line| line.trim())
         .find(|line| !line.is_empty())
-        .map(clean_text)
+        .map(escape_html)
         .unwrap_or("-".to_owned());
     let mut title: String = first_line
         .chars()
