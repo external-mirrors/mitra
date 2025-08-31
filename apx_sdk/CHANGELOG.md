@@ -10,6 +10,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Added detailed error description to `FetchError::InvalidProof` variant.
 
+### Changed
+
+- Changed MSRV to 1.75.0.
+
 ## [0.16.0] - 2025-08-14
 
 ### Added
