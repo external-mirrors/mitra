@@ -29,7 +29,10 @@ use mitra_models::{
         update_custom_feed,
     },
 };
-use mitra_validators::custom_feeds::validate_custom_feed_name;
+use mitra_validators::custom_feeds::{
+    clean_custom_feed_name,
+    validate_custom_feed_name,
+};
 
 use crate::{
     http::{get_request_base_url, MultiQuery},
@@ -70,11 +73,12 @@ async fn create_list(
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &**get_database_client(&db_pool).await?;
     let current_user = get_current_user(db_client, auth.token()).await?;
-    validate_custom_feed_name(&list_data.title)?;
+    let feed_name = clean_custom_feed_name(&list_data.title);
+    validate_custom_feed_name(feed_name)?;
     let feed = create_custom_feed(
         db_client,
         current_user.id,
-        &list_data.title,
+        feed_name,
     ).await?;
     let list = List::from_db(feed);
     Ok(HttpResponse::Ok().json(list))
