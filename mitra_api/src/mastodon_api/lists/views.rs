@@ -112,11 +112,13 @@ async fn update_list(
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &**get_database_client(&db_pool).await?;
     let current_user = get_current_user(db_client, auth.token()).await?;
+    let feed_name = clean_custom_feed_name(&list_data.title);
+    validate_custom_feed_name(feed_name)?;
     let feed = update_custom_feed(
         db_client,
         *list_id,
         current_user.id,
-        &list_data.title,
+        feed_name,
     ).await?;
     let list = List::from_db(feed);
     Ok(HttpResponse::Ok().json(list))
