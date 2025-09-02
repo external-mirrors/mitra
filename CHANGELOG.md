@@ -11,6 +11,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Changed MSRV to 1.75.0.
 - Remove invisible characters from custom feed name before saving it to database.
 - Validate custom feed name when updating custom feed.
+- Write actor ID to log when processing a forwarded activity.
 
 ## [4.9.0] - 2025-08-31
 

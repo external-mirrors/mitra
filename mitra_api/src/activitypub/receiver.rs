@@ -186,7 +186,7 @@ pub async fn receive_activity(
             // Ignore forwarded Delete(Person) activities from Mastodon
             return Ok(());
         };
-        log::info!("processing forwarded {activity_type} activity");
+        log::info!("processing forwarded {activity_type} from {signer_id}");
     };
 
     IncomingActivityJobData::new(
