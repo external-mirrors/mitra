@@ -58,6 +58,9 @@ pub struct CreatePost {
     /// Media attachment file path or URL (this option can be used more than once)
     #[arg(long)]
     attachment: Vec<String>,
+    /// Unique post ID
+    #[arg(long)]
+    id: Option<Uuid>,
 }
 
 impl CreatePost {
@@ -70,6 +73,9 @@ impl CreatePost {
             let db_client = &**get_database_client(db_pool).await?;
             get_user_by_id_or_name(db_client, &self.author).await?
         };
+        let post_id = self.id.unwrap_or_else(|| {
+            datetime_to_ulid(self.created_at)
+        });
         let content = clean_remote_content(&self.content);
         let mut attachments = vec![];
         let storage = MediaStorage::new(config);
@@ -106,7 +112,7 @@ impl CreatePost {
             attachments.push(attachment.id);
         };
         let post_data = PostCreateData {
-            id: Some(datetime_to_ulid(self.created_at)),
+            id: Some(post_id),
             context: PostContext::Top { audience: None },
             content: content,
             content_source: None,
@@ -187,6 +193,7 @@ impl ImportPosts {
                 content: content,
                 created_at: created_at,
                 attachment: attachments,
+                id: None,
             };
             command.execute(config, db_pool).await?;
         };
