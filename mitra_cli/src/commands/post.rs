@@ -6,7 +6,6 @@ use apx_sdk::{
         http_url::HttpUrl,
         media_type::sniff_media_type,
     },
-    deserialization::parse_into_id_array,
     fetch::fetch_media,
     utils::is_public,
 };
@@ -18,6 +17,7 @@ use uuid::Uuid;
 use mitra_activitypub::{
     adapters::posts::delete_local_post,
     agent::build_federation_agent,
+    handlers::note::{Attachment, AttributedObject},
 };
 use mitra_adapters::{
     posts::check_post_limits,
@@ -156,26 +156,29 @@ impl ImportPosts {
             if activity["type"].as_str() != Some("Create") {
                 continue;
             };
-            let object = &activity["object"];
-            if !object["inReplyTo"].is_null() {
+            let object: AttributedObject =
+                serde_json::from_value(activity["object"].clone())?;
+            if object.in_reply_to.is_some() {
                 continue;
             };
-            let Ok(audience) = parse_into_id_array(&object["to"]) else {
+            if !object.audience().iter().any(is_public) {
                 continue;
             };
-            if !audience.iter().any(is_public) {
-                continue;
-            };
-            let content = object["content"].as_str()
+            let content = object.content
                 .ok_or(anyhow!("'content' not found"))?;
-            let published = object["published"].as_str()
+            let created_at = object.published
                 .ok_or(anyhow!("'published' not found"))?;
-            let created_at = DateTime::parse_from_rfc3339(published)?;
+            let attachments = object.attachment.iter()
+                .filter_map(|attachment| match attachment {
+                    Attachment::Media(media) => Some(media.url.clone()),
+                    _ => None,
+                })
+                .collect();
             let command = CreatePost {
                 author: self.author.clone(),
-                content: content.to_string(),
-                created_at: created_at.into(),
-                attachment: vec![],
+                content: content,
+                created_at: created_at,
+                attachment: attachments,
             };
             command.execute(config, db_pool).await?;
         };

@@ -11,7 +11,7 @@ mod deliverer;
 pub mod errors;
 pub mod filter;
 pub mod forwarder;
-mod handlers;
+pub mod handlers;
 pub mod identifiers;
 pub mod identity;
 pub mod importers;

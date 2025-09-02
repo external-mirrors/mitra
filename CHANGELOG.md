@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Added
 
 - Download media attachment if `--attachment` argument of `create-post` command is a URL.
+- Added support for media attachments to `import-posts` command.
 
 ### Changed
 
@@ -18,6 +19,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Write actor ID to log when processing a forwarded activity.
 - Stop relying on `mediaType` property when processing remote media.
 - Return standard "user not found" error from `create-post` if author is not local.
+- Improved data validation in `import-posts` command.
 
 ## [4.9.0] - 2025-08-31
 

@@ -133,7 +133,7 @@ fn deserialize_icon<'de, D>(
 }
 
 #[derive(Clone)]
-enum Attachment {
+pub enum Attachment {
     Media(MediaAttachment),
     Link(String),
 }
@@ -200,7 +200,7 @@ pub struct AttributedObject {
     attributed_to: String,
 
     name: Option<String>,
-    content: Option<String>,
+    pub content: Option<String>,
     content_map: Option<HashMap<String, String>>,
     media_type: Option<String>,
     pub sensitive: Option<bool>,
@@ -216,7 +216,7 @@ pub struct AttributedObject {
         default,
         deserialize_with = "deserialize_attachment",
     )]
-    attachment: Vec<Attachment>,
+    pub attachment: Vec<Attachment>,
 
     #[serde(
         default,
@@ -232,7 +232,7 @@ pub struct AttributedObject {
     #[serde(default, deserialize_with = "deserialize_into_id_array")]
     cc: Vec<String>,
 
-    published: Option<DateTime<Utc>>,
+    pub published: Option<DateTime<Utc>>,
     pub updated: Option<DateTime<Utc>>,
     url: Option<JsonValue>,
 
@@ -261,7 +261,7 @@ impl AttributedObject {
         ![NOTE, QUESTION, CHAT_MESSAGE].contains(&self.object_type.as_str())
     }
 
-    fn audience(&self) -> Vec<&String> {
+    pub fn audience(&self) -> Vec<&String> {
         self.to.iter().chain(self.cc.iter()).collect()
     }
 
@@ -393,7 +393,7 @@ fn is_gnu_social_link(author_id: &str, attachment: &MediaAttachment) -> bool {
 
 #[derive(Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
-struct MediaAttachment {
+pub struct MediaAttachment {
     #[serde(rename = "type")]
     attachment_type: String,
 
@@ -401,7 +401,7 @@ struct MediaAttachment {
     media_type: Option<String>,
 
     #[serde(deserialize_with = "deserialize_into_link_href")]
-    url: String,
+    pub url: String,
 }
 
 async fn get_object_attachments(
