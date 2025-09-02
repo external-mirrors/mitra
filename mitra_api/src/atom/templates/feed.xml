@@ -1,8 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <feed xmlns="http://www.w3.org/2005/Atom">
-<id>{id}</id>
-<link rel="self" href="{url}"/>
-<title>{title}</title>
-<updated>{updated_at}</updated>
-{entries}
+<id>{{ id | safe }}</id>
+<link rel="self" href="{{ url | safe }}"/>
+<title>{{ title }}</title>
+<updated>{{ updated_at | safe }}</updated>
+{%- for entry in entries %}
+<entry>
+    <id>{{ entry.url | safe }}</id>
+    <title>{{ entry.title }}</title>
+    <updated>{{ entry.updated_at | safe }}</updated>
+    <author><name>{{ entry.author }}</name></author>
+    <content type="html">{{ entry.content }}</content>
+    <link rel="alternate" href="{{ entry.url | safe }}"/>
+</entry>
+{%- endfor %}
 </feed>

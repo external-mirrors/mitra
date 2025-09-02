@@ -5,25 +5,35 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width,initial-scale=1.0">
     <title>Authorization</title>
-    <style nonce="{nonce}">
-        html, body {{ height: 100%; }}
-        .center {{
+    <style nonce="{{ nonce }}">
+        html, body { height: 100%; }
+        .center {
             margin: auto;
             max-width: 100%;
             position: relative;
             top: 40%;
             width: 300px;
-        }}
-        form {{
+        }
+        form {
             display: flex;
             flex-direction: column;
             gap: 5px;
-        }}
+        }
     </style>
 </head>
 <body>
     <div class="center">
-        {content}
+        {% if code is none %}
+        <form method="post">
+            <input type="text" name="username" placeholder="Username">
+            <br>
+            <input type="password" name="password" placeholder="Password">
+            <br>
+            <button type="submit">Submit</button>
+        </form>
+        {% else %}
+        {{ code }}
+        {% endif %}
     </div>
 </body>
 </html>

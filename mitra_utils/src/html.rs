@@ -226,11 +226,12 @@ fn html_to_text(html: &str) -> String {
 }
 
 pub fn extract_title(html: &str, length: usize) -> String {
+    // Does not escape HTML
     let first_line = html_to_text(html)
         .lines()
         .map(|line| line.trim())
         .find(|line| !line.is_empty())
-        .map(escape_html)
+        .map(|line| line.to_owned())
         .unwrap_or("-".to_owned());
     let mut title: String = first_line
         .chars()
@@ -370,9 +371,9 @@ mod tests {
     }
 
     #[test]
-    fn test_extract_title_with_html_special_characters() {
-        let html = r#"<p>test"&gt;&lt;script&gt;alert("wow");&lt;/script&gt;</p>"#;
+    fn test_extract_title() {
+        let html = r#"<p>title<br>text</p>"#;
         let title = extract_title(html, 75);
-        assert_eq!(title, r#"test&quot;&gt;&lt;script&gt;alert(&quot;wow&quot;);&lt;&#47;script&gt;"#);
+        assert_eq!(title, "title");
     }
 }

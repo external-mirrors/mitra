@@ -8,5 +8,6 @@ mod nodeinfo;
 mod ratelimit;
 pub mod server;
 mod state;
+mod templates;
 mod webfinger;
 mod web_client;

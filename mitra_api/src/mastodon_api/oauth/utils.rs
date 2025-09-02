@@ -1,14 +1,23 @@
 use apx_core::base64;
+use serde::Serialize;
 
 use mitra_utils::{
     random::generate_random_sequence,
 };
+
+use crate::templates::render_template;
 
 // Should be less than 10 minutes
 // https://www.rfc-editor.org/rfc/rfc6749#section-4.1.2
 pub(super) const AUTHORIZATION_CODE_LIFETIME: i64 = 60 * 5;
 
 const NONCE_SIZE: usize = 10;
+
+#[derive(Serialize)]
+struct AuthorizationPage {
+    nonce: String,
+    code: Option<String>,
+}
 
 fn generate_nonce() -> String {
     let value: [u8; NONCE_SIZE] = generate_random_sequence();
@@ -17,21 +26,27 @@ fn generate_nonce() -> String {
 
 pub fn render_authorization_page() -> (String, String) {
     let nonce = generate_nonce();
-    let html = format!(
+    let context = AuthorizationPage {
+        nonce: nonce.clone(),
+        code: None,
+    };
+    let html = render_template(
         include_str!("templates/base.html"),
-        nonce=nonce,
-        content=include_str!("templates/form.html"),
-    );
+        context,
+    ).expect("template should be valid");
     (html, nonce)
 }
 
 pub fn render_authorization_code_page(code: String) -> (String, String) {
     let nonce = generate_nonce();
-    let html = format!(
+    let context = AuthorizationPage {
+        nonce: nonce.clone(),
+        code: Some(code),
+    };
+    let html = render_template(
         include_str!("templates/base.html"),
-        nonce=nonce,
-        content=code,
-    );
+        context,
+    ).expect("template should be valid");
     (html, nonce)
 }
 

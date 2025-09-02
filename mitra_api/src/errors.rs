@@ -11,6 +11,8 @@ use thiserror::Error;
 use mitra_models::database::DatabaseError;
 use mitra_validators::errors::ValidationError;
 
+use super::templates::TemplateError;
+
 #[derive(Debug, Error)]
 pub enum HttpError {
     #[error("database error: {0}")]
@@ -62,6 +64,12 @@ impl From<DatabaseError> for HttpError {
 impl From<ValidationError> for HttpError {
     fn from(error: ValidationError) -> Self {
         Self::ValidationError(error.0.to_string())
+    }
+}
+
+impl From<TemplateError>  for HttpError {
+    fn from(error: TemplateError) -> Self {
+        Self::from_internal(error)
     }
 }
 

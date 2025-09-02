@@ -7,7 +7,10 @@ use mitra_models::{
     users::queries::get_user_by_name,
 };
 
-use crate::errors::HttpError;
+use crate::{
+    errors::HttpError,
+    templates::render_template,
+};
 use super::feeds::make_feed;
 
 const FEED_SIZE: u16 = 10;
@@ -31,11 +34,15 @@ async fn user_feed_view(
         None,
         FEED_SIZE,
     ).await?;
-    let feed = make_feed(
+    let feed_data = make_feed(
         &config.instance(),
         &user.profile,
         posts,
     );
+    let feed = render_template(
+        include_str!("templates/feed.xml"),
+        feed_data,
+    )?;
     let response = HttpResponse::Ok()
         .content_type("application/atom+xml")
         .body(feed);

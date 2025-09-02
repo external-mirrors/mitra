@@ -36,9 +36,13 @@ use mitra_utils::html::extract_title;
 
 use crate::{
     errors::HttpError,
+    templates::render_template,
 };
 
-use super::urls::get_opengraph_image_url;
+use super::{
+    types::MetadataBlock,
+    urls::get_opengraph_image_url,
+};
 
 const INDEX_FILE: &str = "index.html";
 const CUSTOM_CSS_PATH: &str = "/assets/custom.css";
@@ -130,14 +134,17 @@ async fn profile_page_opengraph_view(
         Ok(profile) => {
             // Rewrite index.html and insert metadata
             let title = format!("Profile - {}", profile.preferred_handle());
-            let metadata_block = format!(
+            let context = MetadataBlock {
+                title: title.clone(),
+                title_short: title,
+                instance_title: config.instance_title.clone(),
+                page_type: OG_TYPE_PROFILE,
+                image_url: get_opengraph_image_url(&config.instance_url()),
+            };
+            let metadata_block = render_template(
                 include_str!("templates/metadata_block.html"),
-                page_type=OG_TYPE_PROFILE,
-                instance_title=config.instance_title,
-                title_short=title,
-                title=title,
-                image_url=get_opengraph_image_url(&config.instance_url()),
-            );
+                context,
+            )?;
             index_html.replace(
                 INDEX_TITLE_ELEMENT,
                 &metadata_block,
@@ -199,14 +206,17 @@ async fn post_page_opengraph_view(
                 // Do not extract title
                 title_short.clone()
             };
-            let metadata_block = format!(
+            let context = MetadataBlock {
+                title: title,
+                title_short: title_short,
+                instance_title: config.instance_title.clone(),
+                page_type: OG_TYPE_ARTICLE,
+                image_url: get_opengraph_image_url(&config.instance_url()),
+            };
+            let metadata_block = render_template(
                 include_str!("templates/metadata_block.html"),
-                page_type=OG_TYPE_ARTICLE,
-                instance_title=config.instance_title,
-                title_short=title_short,
-                title=title,
-                image_url=get_opengraph_image_url(&config.instance_url()),
-            );
+                context,
+            )?;
             index_html.replace(
                 INDEX_TITLE_ELEMENT,
                 &metadata_block,
