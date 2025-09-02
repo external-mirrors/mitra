@@ -26,6 +26,7 @@ isolang = { version = "2.4.0", default-features = false }
 mime_guess = "2.0.5"
 # Used to generate random numbers
 rand = "0.8.4"
+rand_chacha = "0.3"
 # Used for working with regular expressions
 regex = "1.10.6"
 # Used for hashing passwords

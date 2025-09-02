@@ -1,5 +1,9 @@
 use std::time::SystemTime;
+
+use apx_core::hashes::sha256;
 use chrono::{DateTime, Utc};
+use rand::SeedableRng;
+use rand_chacha::ChaCha12Rng;
 use ulid::Ulid;
 use uuid::Uuid;
 
@@ -9,8 +13,14 @@ pub fn generate_ulid() -> Uuid {
     Uuid::from(ulid)
 }
 
-pub fn datetime_to_ulid(datetime: DateTime<Utc>) -> Uuid {
+pub fn generate_deterministic_ulid(
+    seed: &str,
+    datetime: DateTime<Utc>,
+) -> Uuid {
+    let seed_hash = sha256(seed.as_bytes());
+    // Using specific RNG for reproducibility
+    let mut rng = ChaCha12Rng::from_seed(seed_hash);
     let system_time = SystemTime::from(datetime);
-    let ulid = Ulid::from_datetime(system_time);
+    let ulid = Ulid::from_datetime_with_source(system_time, &mut rng);
     Uuid::from(ulid)
 }

@@ -21,6 +21,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Stop relying on `mediaType` property when processing remote media.
 - Return standard "user not found" error from `create-post` if author is not local.
 - Improved data validation in `import-posts` command.
+- Generate deterministic post IDs when `create-post` and `import-posts` commands are used.
 
 ## [4.9.0] - 2025-08-31
 

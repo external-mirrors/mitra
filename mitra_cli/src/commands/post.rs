@@ -25,7 +25,11 @@ use mitra_adapters::{
 use mitra_config::Config;
 use mitra_models::{
     attachments::queries::create_attachment,
-    database::{get_database_client, DatabaseConnectionPool},
+    database::{
+        get_database_client,
+        DatabaseConnectionPool,
+        DatabaseError,
+    },
     media::types::MediaInfo,
     posts::{
         queries::{create_post, delete_post, get_post_by_id},
@@ -36,7 +40,7 @@ use mitra_models::{
 use mitra_services::media::MediaStorage;
 use mitra_utils::{
     files::FileSize,
-    id::datetime_to_ulid,
+    id::generate_deterministic_ulid,
 };
 use mitra_validators::{
     common::Origin::Local,
@@ -45,6 +49,17 @@ use mitra_validators::{
         validate_post_create_data,
     },
 };
+
+fn generate_post_id(
+    author_id: Uuid,
+    content: &str,
+    created_at: DateTime<Utc>,
+) -> Uuid {
+    generate_deterministic_ulid(
+        &format!("{}{}", author_id, content),
+        created_at,
+    )
+}
 
 /// Create a post with the specified timestamp
 #[derive(Parser)]
@@ -74,7 +89,7 @@ impl CreatePost {
             get_user_by_id_or_name(db_client, &self.author).await?
         };
         let post_id = self.id.unwrap_or_else(|| {
-            datetime_to_ulid(self.created_at)
+            generate_post_id(author.id, &self.content, self.created_at)
         });
         let content = clean_remote_content(&self.content);
         let mut attachments = vec![];
@@ -153,6 +168,10 @@ impl ImportPosts {
         config: &Config,
         db_pool: &DatabaseConnectionPool,
     ) -> Result<(), Error> {
+        let author = {
+            let db_client = &**get_database_client(db_pool).await?;
+            get_user_by_id_or_name(db_client, &self.author).await?
+        };
         let outbox_data = std::fs::read_to_string(&self.outbox_path)?;
         let outbox: JsonValue = serde_json::from_str(&outbox_data)?;
         let activities = outbox["orderedItems"].as_array()
@@ -188,14 +207,24 @@ impl ImportPosts {
                     }
                 })
                 .collect();
+            let post_id = generate_post_id(author.id, &content, created_at);
             let command = CreatePost {
                 author: self.author.clone(),
                 content: content,
                 created_at: created_at,
                 attachment: attachments,
-                id: None,
+                id: Some(post_id),
             };
-            command.execute(config, db_pool).await?;
+            command.execute(config, db_pool)
+                .await
+                .or_else(|error| {
+                    if let Some(DatabaseError::AlreadyExists(_)) = error.downcast_ref() {
+                        println!("post already exists: {post_id}");
+                        Ok(())
+                    } else {
+                        Err(error)
+                    }
+                })?;
         };
         Ok(())
     }
