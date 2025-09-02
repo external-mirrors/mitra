@@ -51,6 +51,7 @@ use mitra_utils::{
     languages::{parse_language_tag, Language},
 };
 use mitra_validators::{
+    common::Origin::Remote,
     errors::ValidationError,
     media::{validate_media_description, validate_media_url},
     polls::{clean_poll_option_name, validate_poll_data},
@@ -990,7 +991,7 @@ pub async fn create_remote_post(
             &post_data.mentions,
         ).unwrap_or_else(|error| log::warn!("{error}"));
     };
-    check_post_limits(&ap_client.limits.posts, &post_data.attachments, false)?;
+    check_post_limits(&ap_client.limits.posts, &post_data.attachments, Remote)?;
     let post = create_post(db_client, author.id, post_data).await?;
     save_attributed_object(
         db_client,
@@ -1129,7 +1130,7 @@ pub async fn update_remote_post(
             &post_data.mentions,
         ).unwrap_or_else(|error| log::warn!("{error}"));
     };
-    check_post_limits(&ap_client.limits.posts, &post_data.attachments, false)?;
+    check_post_limits(&ap_client.limits.posts, &post_data.attachments, Remote)?;
     let (post, deletion_queue) =
         update_post(db_client, post.id, post_data).await?;
     deletion_queue.into_job(db_client).await?;

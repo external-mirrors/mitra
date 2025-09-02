@@ -34,6 +34,7 @@ use mitra_utils::{
     id::datetime_to_ulid,
 };
 use mitra_validators::{
+    common::Origin::Local,
     posts::{
         clean_remote_content,
         validate_post_create_data,
@@ -107,7 +108,7 @@ impl CreatePost {
             created_at: self.created_at,
         };
         validate_post_create_data(&post_data)?;
-        check_post_limits(&config.limits.posts, &post_data.attachments, true)?;
+        check_post_limits(&config.limits.posts, &post_data.attachments, Local)?;
         let post = create_post(db_client, author.id, post_data).await?;
         println!("post created: {}", post.id);
         Ok(())

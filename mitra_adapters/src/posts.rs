@@ -1,17 +1,19 @@
 use uuid::Uuid;
 
 use mitra_config::PostLimits;
-use mitra_validators::errors::ValidationError;
+use mitra_validators::{
+    common::Origin,
+    errors::ValidationError,
+};
 
 pub fn check_post_limits(
     limits: &PostLimits,
     attachments: &[Uuid],
-    is_local: bool,
+    origin: Origin,
 ) -> Result<(), ValidationError> {
-    let attachment_limit = if is_local {
-        limits.attachment_local_limit
-    } else {
-        limits.attachment_limit
+    let attachment_limit = match origin {
+        Origin::Local => limits.attachment_local_limit,
+        Origin::Remote => limits.attachment_limit,
     };
     if attachments.len() > attachment_limit {
         return Err(ValidationError("too many attachments"));

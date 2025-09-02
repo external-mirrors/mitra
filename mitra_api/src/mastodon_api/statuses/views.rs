@@ -85,6 +85,7 @@ use mitra_services::{
     media::{MediaServer, MediaStorage},
 };
 use mitra_validators::{
+    common::Origin::Local,
     errors::ValidationError,
     posts::{
         validate_local_post_links,
@@ -274,7 +275,7 @@ async fn create_status(
             &post_data.mentions,
         )?;
     };
-    check_post_limits(&config.limits.posts, &post_data.attachments, true)?;
+    check_post_limits(&config.limits.posts, &post_data.attachments, Local)?;
 
     // Check idempotency key
     // https://datatracker.ietf.org/doc/draft-ietf-httpapi-idempotency-key-header/
@@ -495,7 +496,7 @@ async fn edit_status(
             &post_data.mentions,
         )?;
     };
-    check_post_limits(&config.limits.posts, &post_data.attachments, true)?;
+    check_post_limits(&config.limits.posts, &post_data.attachments, Local)?;
     let (mut post, deletion_queue) =
         update_post(db_client, post.id, post_data).await?;
     deletion_queue.into_job(db_client).await?;
