@@ -94,6 +94,17 @@ use super::{
     HandlerError,
 };
 
+fn deserialize_attributed_to<'de, D>(
+    deserializer: D,
+) -> Result<String, D::Error>
+    where D: Deserializer<'de>
+{
+    let value = JsonValue::deserialize(deserializer)?;
+    let attributed_to = parse_attributed_to(&value)
+        .map_err(DeserializerError::custom)?;
+    Ok(attributed_to)
+}
+
 #[derive(Deserialize)]
 #[cfg_attr(test, derive(Default))]
 #[serde(rename_all = "camelCase")]
@@ -106,7 +117,8 @@ pub struct AttributedObject {
     pub object_type: String,
 
     // Required for conversion into "post" entity
-    attributed_to: JsonValue,
+    #[serde(deserialize_with = "deserialize_attributed_to")]
+    attributed_to: String,
 
     name: Option<String>,
     content: Option<String>,
@@ -218,6 +230,10 @@ impl AttributedObjectJson {
         &self.inner.id
     }
 
+    pub fn attributed_to(&self) -> &str {
+        &self.inner.attributed_to
+    }
+
     pub fn in_reply_to(&self) -> Option<&str> {
         self.inner.in_reply_to.as_deref()
     }
@@ -225,12 +241,6 @@ impl AttributedObjectJson {
     pub fn links(&self) -> Vec<String> {
         get_object_links(&self.inner)
     }
-}
-
-pub(super) fn get_object_attributed_to(object: &AttributedObject)
-    -> Result<String, ValidationError>
-{
-    parse_attributed_to(&object.attributed_to)
 }
 
 fn get_object_url(
@@ -867,8 +877,7 @@ pub async fn create_remote_post(
         log::info!("processing object of type {}", object.object_type);
     };
 
-    let author_id = get_object_attributed_to(&object)?;
-    if !is_same_origin(&author_id, &object.id)
+    if !is_same_origin(&object.attributed_to, &object.id)
         .map_err(|_| ValidationError("invalid object ID"))?
     {
         return Err(ValidationError("object attributed to actor from different server").into());
@@ -876,9 +885,9 @@ pub async fn create_remote_post(
     let author = ActorIdResolver::default().only_remote().resolve(
         ap_client,
         db_client,
-        &author_id,
+        &object.attributed_to,
     ).await.map_err(|err| {
-        log::warn!("failed to import {} ({})", author_id, err);
+        log::warn!("failed to import {} ({})", object.attributed_to, err);
         err
     })?;
     let author_hostname = get_moderation_domain(author.expect_actor_data())?;
@@ -1009,8 +1018,7 @@ pub async fn update_remote_post(
 ) -> Result<Post, HandlerError> {
     assert!(!post.is_local());
     let AttributedObjectJson { inner: object, value: object_json } = object;
-    let author_id = get_object_attributed_to(object)?;
-    let canonical_author_id = canonicalize_id(&author_id)?;
+    let canonical_author_id = canonicalize_id(&object.attributed_to)?;
     if canonical_author_id.to_string() != post.author.expect_remote_actor_id() {
         return Err(ValidationError("object owner can't be changed").into());
     };
@@ -1172,14 +1180,16 @@ mod tests {
     }
 
     #[test]
-    fn test_get_object_attributed_to() {
-       let object = AttributedObject {
-            object_type: NOTE.to_string(),
-            attributed_to: json!(["https://example.org/1"]),
-            ..Default::default()
-        };
-        let author_id = get_object_attributed_to(&object).unwrap();
-        assert_eq!(author_id, "https://example.org/1");
+    fn test_deserialize_object_with_attributed_to_array() {
+        let object_value = json!({
+            "id": "https://social.example/objects/123",
+            "type": "Note",
+            "attributedTo": ["https://social.example/actors/1"],
+            "content": "test",
+        });
+        let object: AttributedObject =
+            serde_json::from_value(object_value).unwrap();
+        assert_eq!(object.attributed_to, "https://social.example/actors/1");
     }
 
     #[test]

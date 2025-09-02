@@ -27,7 +27,6 @@ use crate::{
 
 use super::{
     note::{
-        get_object_attributed_to,
         update_remote_post,
         AttributedObjectJson,
     },
@@ -50,8 +49,7 @@ async fn handle_update_note(
     let update: UpdateNote = serde_json::from_value(activity.clone())?;
     let object = update.object;
     let canonical_object_id = canonicalize_id(object.id())?;
-    let author_id = get_object_attributed_to(&object.inner)?;
-    if author_id != update.actor {
+    if object.attributed_to() != update.actor {
         return Err(ValidationError("attributedTo value doesn't match actor").into());
     };
     let post = match get_remote_post_by_object_id(
