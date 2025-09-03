@@ -1,0 +1,8 @@
+<entry>
+    <id>{url}</id>
+    <title>{title}</title>
+    <updated>{updated_at}</updated>
+    <author><name>{author}</name></author>
+    <content type="html">{content}</content>
+    <link rel="alternate" href="{url}"/>
+</entry>

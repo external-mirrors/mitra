@@ -41,7 +41,7 @@ async fn metrics_view(
     let outgoing_activities =
         get_job_count(db_client, JobType::OutgoingActivity).await?;
     let body = format!(
-        include_str!("openmetrics.txt"),
+        include_str!("templates/openmetrics.txt"),
         incoming_activity_queue_size=incoming_activities,
         outgoing_activity_queue_size=outgoing_activities,
     );

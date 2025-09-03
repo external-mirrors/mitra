@@ -131,7 +131,7 @@ async fn profile_page_opengraph_view(
             // Rewrite index.html and insert metadata
             let title = format!("Profile - {}", profile.preferred_handle());
             let metadata_block = format!(
-                include_str!("metadata_block.html"),
+                include_str!("templates/metadata_block.html"),
                 page_type=OG_TYPE_PROFILE,
                 instance_title=config.instance_title,
                 title_short=title,
@@ -200,7 +200,7 @@ async fn post_page_opengraph_view(
                 title_short.clone()
             };
             let metadata_block = format!(
-                include_str!("metadata_block.html"),
+                include_str!("templates/metadata_block.html"),
                 page_type=OG_TYPE_ARTICLE,
                 instance_title=config.instance_title,
                 title_short=title_short,

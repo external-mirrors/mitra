@@ -28,14 +28,7 @@ fn make_entry(
     let content_escaped = escape_html(&post.content);
     let title = extract_title(&post.content, ENTRY_TITLE_MAX_LENGTH);
     format!(
-        r#"<entry>
-    <id>{url}</id>
-    <title>{title}</title>
-    <updated>{updated_at}</updated>
-    <author><name>{author}</name></author>
-    <content type="html">{content}</content>
-    <link rel="alternate" href="{url}"/>
-</entry>"#,
+        include_str!("templates/entry.xml"),
         url=object_id,
         title=title,
         updated_at=post.created_at.to_rfc3339(),
@@ -62,14 +55,7 @@ pub fn make_feed(
         };
     };
     format!(
-        r#"<?xml version="1.0" encoding="utf-8"?>
-<feed xmlns="http://www.w3.org/2005/Atom">
-<id>{id}</id>
-<link rel="self" href="{url}"/>
-<title>{title}</title>
-<updated>{updated_at}</updated>
-{entries}
-</feed>"#,
+        include_str!("templates/feed.xml"),
         id=actor_id,
         url=feed_url,
         title=feed_title,
@@ -107,7 +93,7 @@ mod tests {
             "    <author><name>User</name></author>\n",
             r#"    <content type="html">&lt;p&gt;title&lt;&#47;p&gt;&lt;p&gt;text&#32;text&#32;text&lt;&#47;p&gt;</content>"#, "\n",
             r#"    <link rel="alternate" href="https://social.example/objects/67e55044-10b1-426f-9247-bb680e5fe0c8"/>"#, "\n",
-            "</entry>",
+            "</entry>\n",
         );
         assert_eq!(entry, expected_entry);
     }
