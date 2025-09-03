@@ -20,14 +20,13 @@ hex = { version = "0.4.3", features = ["serde"] }
 # Used for logging
 log = "0.4.20"
 # Used to query Monero node
-monero-rpc = { git = "https://github.com/silverpill/monero-rpc-rs", rev = "7a56caf42623a5aa67059e9abe7fe0221cdef406", default-features = false, features = ["rpc_authentication", "rustls-tls"] }
+monero-rpc = { git = "https://github.com/monero-rs/monero-rpc-rs", rev = "da1bebf566b6e342091a1f74bce2ce892194b3d7", default-features = false, features = ["rpc_authentication", "rustls-tls"] }
 # Used for working with regular expressions
 regex = "1.10.6"
 # Used for making async HTTP requests
 reqwest = { version = "0.12.0,<0.12.5", default-features = false, features = ["json", "multipart", "rustls-tls-native-roots"] }
 # Used for serialization/deserialization
-# monero-rs is not compatible with serde 1.0.168+
-serde = { version = "1.0.136,<1.0.168", features = ["derive"] }
+serde = { version = "1.0.136", features = ["derive"] }
 serde_json = "1.0.89"
 # Used to verify EIP-4361 signatures
 siwe = "0.6.0"
