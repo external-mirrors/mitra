@@ -105,6 +105,85 @@ fn deserialize_attributed_to<'de, D>(
     Ok(attributed_to)
 }
 
+fn deserialize_icon<'de, D>(
+    deserializer: D,
+) -> Result<Vec<MediaAttachment>, D::Error>
+    where D: Deserializer<'de>
+{
+    let values: Vec<JsonValue> = deserialize_object_array(deserializer)?;
+    let mut images = vec![];
+    for value in values {
+        match value["type"].as_str() {
+            Some(IMAGE) => {
+                match serde_json::from_value(value) {
+                    Ok(image) => {
+                        images.push(image);
+                    },
+                    Err(error) => {
+                        log::warn!("invalid icon ({error})");
+                    },
+                };
+            },
+            _ => {
+                log::warn!("unsupported icon type");
+            },
+        };
+    };
+    Ok(images)
+}
+
+#[derive(Clone)]
+enum Attachment {
+    Media(MediaAttachment),
+    Link(String),
+}
+
+fn deserialize_attachment<'de, D>(
+    deserializer: D,
+) -> Result<Vec<Attachment>, D::Error>
+    where D: Deserializer<'de>
+{
+    let values: Vec<JsonValue> = deserialize_object_array(deserializer)?;
+    let mut attachments = vec![];
+    for value in values {
+        match value["type"].as_str() {
+            Some(AUDIO | DOCUMENT | IMAGE | VIDEO) => (),
+            Some(LINK) => {
+                // Lemmy compatibility
+                let link_href = if let Some(href) = value["href"].as_str() {
+                    href.to_string()
+                } else {
+                    log::warn!("invalid link attachment");
+                    continue;
+                };
+                attachments.push(Attachment::Link(link_href));
+                continue;
+            },
+            Some(attachment_type) => {
+                log::warn!(
+                    "skipping attachment of type {}",
+                    attachment_type,
+                );
+                continue;
+            },
+            None => {
+                log::warn!("attachment without type");
+                continue;
+            },
+        };
+        match serde_json::from_value(value) {
+            Ok(attachment) => {
+                attachments.push(Attachment::Media(attachment));
+            },
+            Err(error) => {
+                log::warn!("invalid attachment ({error})");
+                continue;
+            },
+        };
+    };
+    Ok(attachments)
+}
+
 #[derive(Deserialize)]
 #[cfg_attr(test, derive(Default))]
 #[serde(rename_all = "camelCase")]
@@ -129,15 +208,15 @@ pub struct AttributedObject {
 
     #[serde(
         default,
-        deserialize_with = "deserialize_object_array",
+        deserialize_with = "deserialize_icon",
     )]
-    icon: Vec<JsonValue>,
+    icon: Vec<MediaAttachment>,
 
     #[serde(
         default,
-        deserialize_with = "deserialize_object_array",
+        deserialize_with = "deserialize_attachment",
     )]
-    attachment: Vec<JsonValue>,
+    attachment: Vec<Attachment>,
 
     #[serde(
         default,
@@ -298,7 +377,7 @@ fn create_content_link(url: &str) -> String {
     )
 }
 
-fn is_gnu_social_link(author_id: &str, attachment: &Attachment) -> bool {
+fn is_gnu_social_link(author_id: &str, attachment: &MediaAttachment) -> bool {
     if !author_id.contains("/index.php/user/") {
         return false;
     };
@@ -312,9 +391,9 @@ fn is_gnu_social_link(author_id: &str, attachment: &Attachment) -> bool {
     }
 }
 
-#[derive(Deserialize)]
+#[derive(Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
-struct Attachment {
+struct MediaAttachment {
     #[serde(rename = "type")]
     attachment_type: String,
 
@@ -345,43 +424,18 @@ async fn get_object_attachments(
     let mut values = object.attachment.clone();
     if object.object_type == VIDEO {
         // PeerTube video thumbnails
-        values.extend(object.icon.iter().take(1).cloned());
+        let thumbnails = object.icon.iter().cloned().map(Attachment::Media);
+        values.extend(thumbnails.take(1));
     };
+
     let mut attachments = vec![];
     let mut unprocessed = vec![];
     let mut downloaded: Vec<(MediaInfo, Option<String>)> = vec![];
     for attachment_value in values {
-        match attachment_value["type"].as_str() {
-            Some(AUDIO | DOCUMENT | IMAGE | VIDEO) => (),
-            Some(LINK) => {
-                // Lemmy compatibility
-                let link_href = if let Some(href) = attachment_value["href"].as_str() {
-                    href.to_string()
-                } else {
-                    log::warn!("invalid link attachment");
-                    continue;
-                };
-                unprocessed.push(link_href);
-                continue;
-            },
-            Some(attachment_type) => {
-                log::warn!(
-                    "skipping attachment of type {}",
-                    attachment_type,
-                );
-                continue;
-            },
-            None => {
-                log::warn!("attachment without type");
-                continue;
-            },
-        };
-        let attachment: Attachment =
-            match serde_json::from_value(attachment_value)
-        {
-            Ok(attachment) => attachment,
-            Err(error) => {
-                log::warn!("invalid attachment ({error})");
+        let attachment = match attachment_value {
+            Attachment::Media(attachment) => attachment,
+            Attachment::Link(link) => {
+                unprocessed.push(link);
                 continue;
             },
         };
@@ -1190,6 +1244,27 @@ mod tests {
         let object: AttributedObject =
             serde_json::from_value(object_value).unwrap();
         assert_eq!(object.attributed_to, "https://social.example/actors/1");
+    }
+
+    #[test]
+    fn test_deserialize_object_with_attachment() {
+        let object_value = json!({
+            "id": "https://social.example/objects/123",
+            "type": "Note",
+            "attributedTo": "https://social.example/users/1",
+            "content": "test",
+            "attachment": {
+                "type": "Image",
+                "url": "https://social.example/media/image.png",
+            },
+        });
+        let object: AttributedObject =
+            serde_json::from_value(object_value).unwrap();
+        assert_eq!(object.attachment.len(), 1);
+        let Attachment::Media(ref media_object) = object.attachment[0] else {
+            panic!();
+        };
+        assert_eq!(media_object.url, "https://social.example/media/image.png");
     }
 
     #[test]
