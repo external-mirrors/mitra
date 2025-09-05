@@ -49,6 +49,11 @@ pub fn get_network_type(request_url: &str) ->
     Ok(network)
 }
 
+pub enum RedirectAction {
+    None,
+    Follow,
+}
+
 // https://www.w3.org/TR/activitypub/#security-localhost
 // https://cheatsheetseries.owasp.org/cheatsheets/Server_Side_Request_Forgery_Prevention_Cheat_Sheet.html
 fn is_safe_addr(ip_addr: IpAddr) -> bool {
@@ -135,7 +140,7 @@ pub fn build_http_client(
     agent: &FederationAgent,
     network: Network,
     timeout: u64,
-    no_redirect: bool,
+    redirect_action: RedirectAction,
 ) -> reqwest::Result<Client> {
     let mut client_builder = Client::builder();
     let mut maybe_proxy_url = agent.proxy_url.as_ref();
@@ -158,12 +163,15 @@ pub fn build_http_client(
         client_builder = client_builder.dns_resolver(
             Arc::new(dns_resolver::SafeResolver::new()));
     };
-    let redirect_policy = if no_redirect {
-        RedirectPolicy::none()
-    } else if agent.ssrf_protection_enabled {
-        build_safe_redirect_policy()
-    } else {
-        RedirectPolicy::limited(REDIRECT_LIMIT)
+    let redirect_policy = match redirect_action {
+        RedirectAction::None => RedirectPolicy::none(),
+        RedirectAction::Follow => {
+            if agent.ssrf_protection_enabled {
+                build_safe_redirect_policy()
+            } else {
+                RedirectPolicy::limited(REDIRECT_LIMIT)
+            }
+        },
     };
     let request_timeout = Duration::from_secs(timeout);
     let connect_timeout = Duration::from_secs(max(

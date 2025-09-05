@@ -21,6 +21,7 @@ use crate::{
         get_network_type,
         limited_response,
         require_safe_url,
+        RedirectAction,
         UnsafeUrlError,
     },
 };
@@ -67,7 +68,7 @@ fn build_deliverer_client(
         agent,
         network,
         agent.deliverer_timeout,
-        true, // do not follow redirects
+        RedirectAction::None, // do not follow redirects
     )?;
     Ok(http_client)
 }

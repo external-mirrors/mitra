@@ -40,6 +40,7 @@ use super::{
         get_network_type,
         limited_response,
         require_safe_url,
+        RedirectAction,
         UnsafeUrlError,
         REDIRECT_LIMIT,
     },
@@ -102,7 +103,7 @@ pub enum FetchError {
 fn build_fetcher_client(
     agent: &FederationAgent,
     request_url: &str,
-    no_redirect: bool,
+    redirect_action: RedirectAction,
 ) -> Result<Client, FetchError> {
     let network = get_network_type(request_url)
         .map_err(|_| FetchError::UrlError)?;
@@ -110,7 +111,7 @@ fn build_fetcher_client(
         agent,
         network,
         agent.fetcher_timeout,
-        no_redirect,
+        redirect_action,
     )?;
     Ok(http_client)
 }
@@ -193,7 +194,7 @@ pub async fn fetch_object(
     let http_client = build_fetcher_client(
         agent,
         object_id,
-        true,
+        RedirectAction::None,
     )?;
 
     let mut redirect_count = 0;
@@ -336,7 +337,11 @@ pub async fn fetch_media(
         require_safe_url(url)?;
     };
     // Redirects are allowed
-    let http_client = build_fetcher_client(agent, url, false)?;
+    let http_client = build_fetcher_client(
+        agent,
+        url,
+        RedirectAction::Follow,
+    )?;
     let request_builder =
         build_request(agent, &http_client, Method::GET, url);
     let response = request_builder.send().await?.error_for_status()?;
@@ -384,7 +389,11 @@ pub async fn stream_media(
         require_safe_url(url)?;
     };
     // Redirects are allowed
-    let http_client = build_fetcher_client(agent, url, false)?;
+    let http_client = build_fetcher_client(
+        agent,
+        url,
+        RedirectAction::Follow,
+    )?;
     let request_builder =
         build_request(agent, &http_client, Method::GET, url);
     let response = request_builder.send().await?.error_for_status()?;
@@ -413,7 +422,11 @@ pub async fn fetch_json(
         require_safe_url(url)?;
     };
     // Redirects are allowed
-    let http_client = build_fetcher_client(agent, url, false)?;
+    let http_client = build_fetcher_client(
+        agent,
+        url,
+        RedirectAction::Follow,
+    )?;
     let request_builder =
         build_request(agent, &http_client, Method::GET, url);
     let response = request_builder
