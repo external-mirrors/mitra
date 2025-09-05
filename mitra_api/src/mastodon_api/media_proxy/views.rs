@@ -12,7 +12,7 @@ use apx_core::{
 };
 use apx_sdk::{
     core::url::common::url_decode,
-    fetch::fetch_file_streaming,
+    fetch::stream_media,
 };
 
 use mitra_activitypub::agent::build_federation_agent;
@@ -35,7 +35,7 @@ async fn media_proxy_view(
     verify_eddsa_signature(&public_key, signature_base, &params.signature)
         .map_err(|_| HttpError::PermissionError)?;
     let agent = build_federation_agent(&config.instance(), None);
-    let (stream, content_type) = fetch_file_streaming(
+    let (stream, content_type) = stream_media(
         &agent,
         &url,
         &config.limits.media.supported_media_types(),

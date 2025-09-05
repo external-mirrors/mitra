@@ -13,6 +13,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Changed
 
 - Changed MSRV to 1.75.0.
+- Renamed `fetch_file` to `fetch_media`.
+- Renamed `fetch_file_streaming` to `stream_media`.
 
 ## [0.16.0] - 2025-08-14
 

@@ -11,7 +11,7 @@ use apx_sdk::{
         deserialize_object_array,
         parse_into_href_array,
     },
-    fetch::fetch_file,
+    fetch::fetch_media,
     utils::is_public,
 };
 use chrono::{DateTime, Utc};
@@ -409,7 +409,7 @@ async fn get_object_attachments(
             unprocessed.push(attachment_url);
             continue;
         };
-        let (file_data, media_type) = match fetch_file(
+        let (file_data, media_type) = match fetch_media(
             &agent,
             &attachment_url,
             attachment.media_type.as_deref(),

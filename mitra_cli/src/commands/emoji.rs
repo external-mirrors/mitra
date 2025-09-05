@@ -3,7 +3,7 @@ use apx_core::{
     http_url::HttpUrl,
     media_type::sniff_media_type,
 };
-use apx_sdk::fetch::fetch_file;
+use apx_sdk::fetch::fetch_media;
 use clap::Parser;
 
 use mitra_activitypub::agent::build_federation_agent;
@@ -73,7 +73,7 @@ impl AddEmoji {
             HttpUrl::parse(&self.location).is_ok()
         {
             let agent = build_federation_agent(&config.instance(), None);
-            fetch_file(
+            fetch_media(
                 &agent,
                 &self.location,
                 None, // no expectations
@@ -132,7 +132,7 @@ impl ImportEmoji {
             },
             PartialMediaInfo::Link { url, .. } => {
                 let agent = build_federation_agent(&config.instance(), None);
-                fetch_file(
+                fetch_media(
                     &agent,
                     &url,
                     None, // no expected type

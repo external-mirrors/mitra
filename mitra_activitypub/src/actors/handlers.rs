@@ -13,7 +13,7 @@ use apx_sdk::{
         parse_into_href_array,
         parse_into_id_array,
     },
-    fetch::fetch_file,
+    fetch::fetch_media,
 };
 use serde::{
     Deserialize,
@@ -330,7 +330,7 @@ async fn fetch_actor_image(
             log::warn!("actor image removed by filter: {}", actor_image.url);
             return Ok(None);
         };
-        match fetch_file(
+        match fetch_media(
             &ap_client.agent(),
             &actor_image.url,
             actor_image.media_type.as_deref(),

@@ -308,7 +308,7 @@ pub async fn fetch_object(
 }
 
 fn get_media_type(
-    file_data: &[u8],
+    media_data: &[u8],
     maybe_media_type: Option<&str>,
     default_media_type: Option<&str>,
 ) -> String {
@@ -318,16 +318,19 @@ fn get_media_type(
         // Ignore if reported media type is application/octet-stream
         .filter(|media_type| media_type != APPLICATION_OCTET_STREAM)
         // Sniff media type if not provided
-        .or(sniff_media_type(file_data))
+        .or(sniff_media_type(media_data))
         .unwrap_or(APPLICATION_OCTET_STREAM.to_string())
 }
 
-pub async fn fetch_file(
+/// Fetches a media file.
+///
+/// Returns an array of bytes and a media type (may be not accurate).
+pub async fn fetch_media(
     agent: &FederationAgent,
     url: &str,
     expected_media_type: Option<&str>,
     allowed_media_types: &[&str],
-    file_size_limit: usize,
+    media_size_limit: usize,
 ) -> Result<(Vec<u8>, String), FetchError> {
     if agent.ssrf_protection_enabled {
         require_safe_url(url)?;
@@ -337,37 +340,37 @@ pub async fn fetch_file(
     let request_builder =
         build_request(agent, &http_client, Method::GET, url);
     let response = request_builder.send().await?.error_for_status()?;
-    if let Some(file_size) = response.content_length() {
-        let file_size: usize = file_size.try_into()
+    if let Some(content_length) = response.content_length() {
+        let content_length: usize = content_length.try_into()
             .map_err(|_| FetchError::ResponseTooLarge)?;
-        if file_size > file_size_limit {
+        if content_length > media_size_limit {
             return Err(FetchError::ResponseTooLarge);
         };
     };
     let maybe_content_type_header = response.headers()
         .get(header::CONTENT_TYPE)
         .and_then(extract_media_type);
-    let file_data = limited_response(response, file_size_limit)
+    let media_data = limited_response(response, media_size_limit)
         .await
         .ok_or(FetchError::ResponseTooLarge)?;
     // Content-Type header has the highest priority
     let media_type = get_media_type(
-        &file_data,
+        &media_data,
         maybe_content_type_header.as_deref(),
         expected_media_type,
     );
     if !allowed_media_types.contains(&media_type.as_str()) {
         return Err(FetchError::UnexpectedContentType(media_type));
     };
-    Ok((file_data.into(), media_type))
+    Ok((media_data.into(), media_type))
 }
 
 #[allow(impl_trait_overcaptures)]
-pub async fn fetch_file_streaming(
+pub async fn stream_media(
     agent: &FederationAgent,
     url: &str,
     allowed_media_types: &[&str],
-    file_size_limit: usize,
+    media_size_limit: usize,
 ) ->
     Result<
         (BodyDataStream<MapErr<
@@ -392,7 +395,7 @@ pub async fn fetch_file_streaming(
     if !allowed_media_types.contains(&media_type.as_str()) {
         return Err(FetchError::UnexpectedContentType(media_type));
     };
-    let stream = Limited::new(Body::from(response), file_size_limit)
+    let stream = Limited::new(Body::from(response), media_size_limit)
         .map_err(|error| FetchError::StreamError(error.to_string()))
         .into_data_stream();
     Ok((stream, media_type))

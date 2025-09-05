@@ -2,7 +2,7 @@ use apx_core::{
     http_url::Hostname,
     http_url_whatwg::get_hostname,
 };
-use apx_sdk::fetch::fetch_file;
+use apx_sdk::fetch::fetch_media;
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
 use serde_json::{Value as JsonValue};
@@ -125,7 +125,7 @@ pub async fn handle_emoji(
         Err(DatabaseError::NotFound("emoji")) => None,
         Err(other_error) => return Err(other_error.into()),
     };
-    let (file_data, media_type) = match fetch_file(
+    let (file_data, media_type) = match fetch_media(
         &ap_client.agent(),
         &emoji.icon.url,
         emoji.icon.media_type.as_deref(),
