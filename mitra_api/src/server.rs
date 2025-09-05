@@ -26,7 +26,7 @@ use log::Level;
 use mitra_config::{Config, Environment};
 use mitra_models::database::DatabaseConnectionPool;
 use mitra_services::{
-    media::{MediaStorage, MEDIA_ROOT_URL},
+    media::{FilesystemServer, MediaStorage},
 };
 use mitra_utils::files::set_file_permissions;
 
@@ -106,7 +106,7 @@ pub async fn run_server(
                 let fut = service.call(request);
                 async move {
                     let mut response = fut.await?;
-                    if path.starts_with(MEDIA_ROOT_URL) {
+                    if path.starts_with(FilesystemServer::BASE_PATH) {
                         response.headers_mut()
                             .remove(http_header::CONTENT_ENCODING);
                     };
@@ -149,7 +149,7 @@ pub async fn run_server(
         #[allow(irrefutable_let_patterns)]
         if let MediaStorage::Filesystem(ref backend) = media_storage {
             app = app.service(actix_files::Files::new(
-                MEDIA_ROOT_URL,
+                FilesystemServer::BASE_PATH,
                 backend.media_dir.clone(),
             ));
         };
