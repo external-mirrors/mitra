@@ -311,10 +311,8 @@ pub async fn fetch_object(
 fn get_media_type(
     media_data: &[u8],
     maybe_media_type: Option<&str>,
-    default_media_type: Option<&str>,
 ) -> String {
     maybe_media_type
-        .or(default_media_type)
         .map(|media_type| media_type.to_string())
         // Ignore if reported media type is application/octet-stream
         .filter(|media_type| media_type != APPLICATION_OCTET_STREAM)
@@ -329,7 +327,6 @@ fn get_media_type(
 pub async fn fetch_media(
     agent: &FederationAgent,
     url: &str,
-    expected_media_type: Option<&str>,
     allowed_media_types: &[&str],
     media_size_limit: usize,
 ) -> Result<(Vec<u8>, String), FetchError> {
@@ -362,7 +359,6 @@ pub async fn fetch_media(
     let media_type = get_media_type(
         &media_data,
         maybe_content_type_header.as_deref(),
-        expected_media_type,
     );
     if !allowed_media_types.contains(&media_type.as_str()) {
         return Err(FetchError::UnexpectedContentType(media_type));

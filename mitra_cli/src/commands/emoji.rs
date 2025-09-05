@@ -76,7 +76,6 @@ impl AddEmoji {
             fetch_media(
                 &agent,
                 &self.location,
-                None, // no expectations
                 &EMOJI_REMOTE_MEDIA_TYPES, // media type will be checked later
                 config.limits.media.file_size_limit, // size will be checked later
             ).await?
@@ -135,7 +134,6 @@ impl ImportEmoji {
                 fetch_media(
                     &agent,
                     &url,
-                    None, // no expected type
                     &EMOJI_REMOTE_MEDIA_TYPES, // media type will be checked later
                     config.limits.media.file_size_limit, // size will be checked later
                 ).await?

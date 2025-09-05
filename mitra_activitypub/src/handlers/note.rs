@@ -412,7 +412,6 @@ async fn get_object_attachments(
         let (file_data, media_type) = match fetch_media(
             &agent,
             &attachment_url,
-            attachment.media_type.as_deref(),
             &ap_client.limits.media.supported_media_types(),
             ap_client.limits.media.file_size_limit,
         ).await {

@@ -41,7 +41,6 @@ use super::HandlerError;
 #[serde(rename_all = "camelCase")]
 struct EmojiImage {
     url: String,
-    media_type: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -128,7 +127,6 @@ pub async fn handle_emoji(
     let (file_data, media_type) = match fetch_media(
         &ap_client.agent(),
         &emoji.icon.url,
-        emoji.icon.media_type.as_deref(),
         &EMOJI_REMOTE_MEDIA_TYPES,
         ap_client.limits.media.emoji_size_limit,
     ).await {

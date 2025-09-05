@@ -333,7 +333,6 @@ async fn fetch_actor_image(
         match fetch_media(
             &ap_client.agent(),
             &actor_image.url,
-            actor_image.media_type.as_deref(),
             &allowed_profile_image_media_types(&media_limits.supported_media_types()),
             media_limits.profile_image_size_limit,
         ).await {
