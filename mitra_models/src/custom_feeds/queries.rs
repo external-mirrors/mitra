@@ -93,7 +93,7 @@ pub async fn get_custom_feeds(
         SELECT custom_feed
         FROM custom_feed
         WHERE owner_id = $1
-        ORDER BY id DESC
+        ORDER BY feed_name ASC
         ",
         &[&owner_id],
     ).await?;
