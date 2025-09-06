@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+
+- Download media attachment if `--attachment` argument of `create-post` command is a URL.
+
 ### Changed
 
 - Changed MSRV to 1.75.0.

@@ -2,8 +2,12 @@ use std::path::PathBuf;
 
 use anyhow::{anyhow, Error};
 use apx_sdk::{
-    core::media_type::sniff_media_type,
+    core::{
+        http_url::HttpUrl,
+        media_type::sniff_media_type,
+    },
     deserialization::parse_into_id_array,
+    fetch::fetch_media,
     utils::is_public,
 };
 use chrono::{DateTime, Utc};
@@ -13,6 +17,7 @@ use uuid::Uuid;
 
 use mitra_activitypub::{
     adapters::posts::delete_local_post,
+    agent::build_federation_agent,
 };
 use mitra_adapters::{
     posts::check_post_limits,
@@ -50,9 +55,9 @@ pub struct CreatePost {
     content: String,
     /// Date (YYYY-MM-DDThh:mm:ss±hh:mm)
     created_at: DateTime<Utc>,
-    /// Media attachment(s)
+    /// Media attachment file path or URL (this option can be used more than once)
     #[arg(long)]
-    attachment: Vec<PathBuf>,
+    attachment: Vec<String>,
 }
 
 impl CreatePost {
@@ -61,15 +66,28 @@ impl CreatePost {
         config: &Config,
         db_pool: &DatabaseConnectionPool,
     ) -> Result<(), Error> {
-        let db_client = &mut **get_database_client(db_pool).await?;
-        let author = get_user_by_id_or_name(db_client, &self.author).await?;
+        let author = {
+            let db_client = &**get_database_client(db_pool).await?;
+            get_user_by_id_or_name(db_client, &self.author).await?
+        };
         let content = clean_remote_content(&self.content);
         let mut attachments = vec![];
         let storage = MediaStorage::new(config);
-        for attachment_path in self.attachment.iter() {
-            let file_data = std::fs::read(attachment_path)?;
-            let media_type = sniff_media_type(&file_data)
-                .ok_or(anyhow!("unknown media type"))?;
+        for location in self.attachment.iter() {
+            let (file_data, media_type) = if HttpUrl::parse(location).is_ok() {
+                let agent = build_federation_agent(&config.instance(), None);
+                fetch_media(
+                    &agent,
+                    location,
+                    &config.limits.media.supported_media_types(),
+                    config.limits.media.file_size_limit,
+                ).await?
+            } else {
+                let file_data = std::fs::read(location)?;
+                let media_type = sniff_media_type(&file_data)
+                    .ok_or(anyhow!("unknown media type"))?;
+                (file_data, media_type)
+            };
             if !config.limits.media.supported_media_types().contains(&media_type.as_str()) {
                 return Err(anyhow!("media type {media_type} is not supported"));
             };
@@ -78,6 +96,7 @@ impl CreatePost {
                 return Err(anyhow!("file size must be less than {limit}"));
             };
             let file_info = storage.save_file(file_data, &media_type)?;
+            let db_client = &**get_database_client(db_pool).await?;
             let attachment = create_attachment(
                 db_client,
                 author.id,
@@ -106,6 +125,7 @@ impl CreatePost {
         };
         validate_post_create_data(&post_data)?;
         check_post_limits(&config.limits.posts, &post_data.attachments, Local)?;
+        let db_client = &mut **get_database_client(db_pool).await?;
         let post = create_post(db_client, author.id, post_data).await?;
         println!("post created: {}", post.id);
         Ok(())
