@@ -173,6 +173,14 @@ impl ImportPosts {
                     Attachment::Media(media) => Some(media.url.clone()),
                     _ => None,
                 })
+                .map(|location| {
+                    if location.starts_with("/media_attachments") {
+                        // Mastodon archive
+                        location.trim_start_matches('/').to_owned()
+                    } else {
+                        location
+                    }
+                })
                 .collect();
             let command = CreatePost {
                 author: self.author.clone(),
