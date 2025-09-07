@@ -1,5 +1,3 @@
-use std::str::FromStr;
-
 use anyhow::{anyhow, Error};
 use apx_core::{
     crypto_eddsa::generate_ed25519_key,
@@ -587,7 +585,7 @@ impl ReopenInvoice {
         let db_client = &mut **get_database_client(db_pool).await?;
         let monero_config = config.monero_config()
             .ok_or(anyhow!("monero configuration not found"))?;
-        let invoice = if let Ok(invoice_id) = Uuid::from_str(&self.id_or_address) {
+        let invoice = if let Ok(invoice_id) = Uuid::parse_str(&self.id_or_address) {
             get_invoice_by_id(db_client, invoice_id).await?
         } else {
             get_local_invoice_by_address(
