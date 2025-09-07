@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use mitra_models::{
-    custom_feeds::types::DbCustomFeed,
+    custom_feeds::types::CustomFeed,
 };
 
 use crate::mastodon_api::{
@@ -19,7 +19,7 @@ pub struct List {
 }
 
 impl List {
-    pub fn from_db(db_feed: DbCustomFeed) -> Self {
+    pub fn from_db(db_feed: CustomFeed) -> Self {
         Self {
             id: db_feed.id,
             title: db_feed.feed_name,
