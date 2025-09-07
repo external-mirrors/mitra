@@ -44,7 +44,6 @@ use mitra_models::{
         find_extraneous_posts,
         get_post_count,
     },
-    profiles::helpers::get_profile_by_id_or_acct,
     profiles::queries::{
         delete_profile,
         find_empty_profiles,
@@ -55,6 +54,7 @@ use mitra_models::{
         get_active_subscription_count,
         get_expired_subscription_count,
     },
+    users::helpers::get_user_by_id_or_name,
     users::queries::{
         create_invite_code,
         create_user,
@@ -301,14 +301,14 @@ impl SetPassword {
         db_pool: &DatabaseConnectionPool,
     ) -> Result<(), Error> {
         let db_client = &**get_database_client(db_pool).await?;
-        let profile = get_profile_by_id_or_acct(
+        let user = get_user_by_id_or_name(
             db_client,
             &self.id_or_name,
         ).await?;
         let password_digest = hash_password(&self.password)?;
-        set_user_password(db_client, profile.id, &password_digest).await?;
+        set_user_password(db_client, user.id, &password_digest).await?;
         // Revoke all sessions
-        delete_oauth_tokens(db_client, profile.id).await?;
+        delete_oauth_tokens(db_client, user.id).await?;
         println!("password updated");
         Ok(())
     }
@@ -328,12 +328,12 @@ impl SetRole {
         db_pool: &DatabaseConnectionPool,
     ) -> Result<(), Error> {
         let db_client = &**get_database_client(db_pool).await?;
-        let profile = get_profile_by_id_or_acct(
+        let user = get_user_by_id_or_name(
             db_client,
             &self.id_or_name,
         ).await?;
         let role = role_from_str(&self.role)?;
-        set_user_role(db_client, profile.id, role).await?;
+        set_user_role(db_client, user.id, role).await?;
         println!("role changed");
         Ok(())
     }

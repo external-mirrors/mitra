@@ -4,7 +4,7 @@ use clap::Parser;
 use mitra_models::{
     database::{get_database_client, DatabaseConnectionPool},
     oauth::queries::delete_oauth_tokens,
-    profiles::helpers::get_profile_by_id_or_acct,
+    users::helpers::get_user_by_id_or_name,
 };
 
 /// Revoke user's OAuth access tokens
@@ -19,11 +19,11 @@ impl RevokeOauthTokens {
         db_pool: &DatabaseConnectionPool,
     ) -> Result<(), Error> {
         let db_client = &**get_database_client(db_pool).await?;
-        let profile = get_profile_by_id_or_acct(
+        let user = get_user_by_id_or_name(
             db_client,
             &self.id_or_name,
         ).await?;
-        delete_oauth_tokens(db_client, profile.id).await?;
+        delete_oauth_tokens(db_client, user.id).await?;
         println!("access tokens revoked");
         Ok(())
     }

@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Validate custom feed name when updating custom feed.
 - Write actor ID to log when processing a forwarded activity.
 - Stop relying on `mediaType` property when processing remote media.
+- Return standard "user not found" error from `create-post` if author is not local.
 
 ## [4.9.0] - 2025-08-31
 

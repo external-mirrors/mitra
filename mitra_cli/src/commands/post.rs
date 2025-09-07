@@ -26,7 +26,7 @@ use mitra_models::{
         queries::{create_post, delete_post, get_post_by_id},
         types::{PostContext, PostCreateData, Visibility},
     },
-    profiles::helpers::get_profile_by_id_or_acct,
+    users::helpers::get_user_by_id_or_name,
 };
 use mitra_services::media::MediaStorage;
 use mitra_utils::{
@@ -62,10 +62,7 @@ impl CreatePost {
         db_pool: &DatabaseConnectionPool,
     ) -> Result<(), Error> {
         let db_client = &mut **get_database_client(db_pool).await?;
-        let author = get_profile_by_id_or_acct(db_client, &self.author).await?;
-        if !author.is_local() {
-            return Err(anyhow!("author must be local"));
-        };
+        let author = get_user_by_id_or_name(db_client, &self.author).await?;
         let content = clean_remote_content(&self.content);
         let mut attachments = vec![];
         let storage = MediaStorage::new(config);
