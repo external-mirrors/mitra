@@ -20,16 +20,19 @@ use super::{
     },
 };
 
+impl DbActor {
+    pub fn for_test(actor_id: &str) -> Self {
+        Self { id: actor_id.to_owned(), ..Default::default() }
+    }
+}
+
 impl ProfileCreateData {
     pub fn remote_for_test(
         username: &str,
         hostname: &str,
         actor_id: &str,
     ) -> Self {
-        let mut db_actor = DbActor {
-            id: actor_id.to_string(),
-            ..Default::default()
-        };
+        let mut db_actor = DbActor::for_test(actor_id);
         if is_ap_url(&db_actor.id) {
             db_actor.gateways.push(format!("https://{hostname}"));
         };
@@ -114,10 +117,7 @@ impl DbActorProfile {
         username: &str,
         actor_id: &str,
     ) -> Self {
-        let actor_data = DbActor {
-            id: actor_id.to_string(),
-            ..Default::default()
-        };
+        let actor_data = DbActor::for_test(actor_id);
         Self::remote_for_test_with_data(username, actor_data)
     }
 }

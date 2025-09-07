@@ -1059,10 +1059,6 @@ mod tests {
     };
     use super::*;
 
-    fn create_test_actor(actor_id: &str) -> DbActor {
-        DbActor { id: actor_id.to_string(), ..Default::default() }
-    }
-
     #[tokio::test]
     #[serial]
     async fn test_create_profile_local() {
@@ -1093,7 +1089,7 @@ mod tests {
             username: "test".to_string(),
             hostname: WebfingerHostname::Remote("example.com".to_string()),
             public_keys: vec![DbActorKey::default()],
-            actor_json: Some(create_test_actor("https://example.com/users/test")),
+            actor_json: Some(DbActor::for_test("https://example.com/users/test")),
             ..Default::default()
         };
         let db_client = &mut create_test_database().await;
@@ -1138,7 +1134,7 @@ mod tests {
             username: "test-1".to_string(),
             hostname: WebfingerHostname::Remote("example.com".to_string()),
             public_keys: vec![DbActorKey::default()],
-            actor_json: Some(create_test_actor(actor_id)),
+            actor_json: Some(DbActor::for_test(actor_id)),
             ..Default::default()
         };
         create_profile(db_client, profile_data_1).await.unwrap();
@@ -1146,7 +1142,7 @@ mod tests {
             username: "test-2".to_string(),
             hostname: WebfingerHostname::Remote("example.com".to_string()),
             public_keys: vec![DbActorKey::default()],
-            actor_json: Some(create_test_actor(actor_id)),
+            actor_json: Some(DbActor::for_test(actor_id)),
             ..Default::default()
         };
         let error = create_profile(db_client, profile_data_2).await.err().unwrap();
@@ -1161,7 +1157,7 @@ mod tests {
             username: "test".to_string(),
             hostname: WebfingerHostname::Remote("social.example".to_string()),
             public_keys: vec![DbActorKey::default()],
-            actor_json: Some(create_test_actor("https://social.example/users/1")),
+            actor_json: Some(DbActor::for_test("https://social.example/users/1")),
             ..Default::default()
         };
         let profile_1 = create_profile(db_client, profile_data_1).await.unwrap();
@@ -1170,7 +1166,7 @@ mod tests {
             username: "test".to_string(),
             hostname: WebfingerHostname::Remote("social.example".to_string()),
             public_keys: vec![DbActorKey::default()],
-            actor_json: Some(create_test_actor("https://social.example/users/2")),
+            actor_json: Some(DbActor::for_test("https://social.example/users/2")),
             ..Default::default()
         };
         let profile_2 = create_profile(db_client, profile_data_2).await.unwrap();
@@ -1371,7 +1367,7 @@ mod tests {
             username: "test".to_string(),
             hostname: WebfingerHostname::Remote("example.com".to_string()),
             public_keys: vec![DbActorKey::default()],
-            actor_json: Some(create_test_actor(actor_id)),
+            actor_json: Some(DbActor::for_test(actor_id)),
             ..Default::default()
         };
         let profile = create_profile(db_client, profile_data).await.unwrap();
