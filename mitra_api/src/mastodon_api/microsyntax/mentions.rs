@@ -15,7 +15,12 @@ use super::parser::is_inside_code_block;
 // IDNs are allowed, but encoded during parsing.
 // See also: USERNAME_RE in mitra_validators::profiles
 const MENTION_SEARCH_RE: &str = r"(?m)(?P<before>^|\s|>|[\(])@(?P<mention>[^\s<]+)";
-const MENTION_SEARCH_SECONDARY_RE: &str = r"^(?P<username>[A-Za-z0-9\-\._]+)(@(?P<hostname>[\w\.-]+\w|[0-9\.]+|\[[0-9a-f:]+\]))?(?P<after>[\.,:;?!\)']*)$";
+// username must not end with "."
+const MENTION_SEARCH_SECONDARY_RE: &str = r"(?x)
+    ^(?P<username>[A-Za-z0-9\-\._]*[A-Za-z0-9_])
+    (@(?P<hostname>[\w\.-]+\w|[0-9\.]+|\[[0-9a-f:]+\]))?
+    (?P<after>[\.,:;?!\)']*)$
+    ";
 
 fn caps_to_acct(instance_hostname: &str, caps: &Captures) -> Option<String> {
     let username = &caps["username"];
@@ -158,11 +163,23 @@ mod tests {
     }
 
     #[test]
+    fn test_find_mentions_single_letter_mention() {
+        let text = "Hey @p";
+        let mentions = find_mentions(INSTANCE_HOSTNAME, text);
+        assert_eq!(mentions, vec!["p"]);
+    }
+
+    #[test]
+    fn test_find_mentions_short_mention_followed_by_dot() {
+        let text = "Hey @user.";
+        let mentions = find_mentions(INSTANCE_HOSTNAME, text);
+        assert_eq!(mentions, vec!["user"]);
+    }
+
+    #[test]
     fn test_find_mentions_multiple_characters_after() {
-        let mentions = find_mentions(
-            INSTANCE_HOSTNAME,
-            "test (test @user@server.example).",
-        );
+        let text = "test (test @user@server.example).";
+        let mentions = find_mentions(INSTANCE_HOSTNAME, text);
         assert_eq!(mentions, vec!["user@server.example"]);
     }
 

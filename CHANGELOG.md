@@ -24,6 +24,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Generate deterministic post IDs when `create-post` and `import-posts` commands are used.
 - Sort custom feeds by name.
 
+### Fixed
+
+- Fixed mention not being parsed if followed by a dot.
+
 ## [4.9.0] - 2025-08-31
 
 ### Added
