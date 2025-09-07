@@ -12,13 +12,13 @@ use super::queries::{
     has_relationship,
     unfollow,
 };
-use super::types::{DbFollowRequest, RelationshipType};
+use super::types::{FollowRequest, RelationshipType};
 
 pub async fn create_follow_request(
     db_client: &mut impl DatabaseClient,
     source_id: Uuid,
     target_id: Uuid,
-) -> Result<DbFollowRequest, DatabaseError> {
+) -> Result<FollowRequest, DatabaseError> {
     let transaction = db_client.transaction().await?;
     // Prevent changes to relationship table
     transaction.execute(

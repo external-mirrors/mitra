@@ -18,7 +18,7 @@ use mitra_models::{
             get_follow_request_by_id,
             get_follow_request_by_remote_activity_id,
         },
-        types::{DbFollowRequest, FollowRequestStatus},
+        types::{FollowRequest, FollowRequestStatus},
     },
 };
 use mitra_validators::{
@@ -42,7 +42,7 @@ pub async fn get_follow_request_by_activity_id(
     db_client: &impl DatabaseClient,
     instance_url: &str,
     activity_id: &str,
-) -> Result<DbFollowRequest, DatabaseError> {
+) -> Result<FollowRequest, DatabaseError> {
     match parse_local_activity_id(
         instance_url,
         activity_id,
