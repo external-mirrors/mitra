@@ -8,7 +8,7 @@ use crate::database::{
     DatabaseConnectionPool,
     DatabaseError,
 };
-use super::types::{DbBackgroundJob, JobStatus, JobType};
+use super::types::{BackgroundJob, JobStatus, JobType};
 
 pub async fn enqueue_job(
     db_client: &impl DatabaseClient,
@@ -38,7 +38,7 @@ pub async fn get_job_batch(
     job_type: JobType,
     batch_size: u32,
     job_timeout: u32,
-) -> Result<Vec<DbBackgroundJob>, DatabaseError> {
+) -> Result<Vec<BackgroundJob>, DatabaseError> {
     // https://github.com/sfackler/rust-postgres/issues/60
     let job_timeout_pg = format!("{}S", job_timeout); // interval
     let rows = db_client.query(
@@ -89,7 +89,7 @@ pub async fn get_job_batch_with_pool(
     job_type: JobType,
     batch_size: u32,
     job_timeout: u32,
-) -> Result<Vec<DbBackgroundJob>, DatabaseError> {
+) -> Result<Vec<BackgroundJob>, DatabaseError> {
     let db_client = &**get_database_client(db_pool).await?;
     get_job_batch(db_client, job_type, batch_size, job_timeout).await
 }

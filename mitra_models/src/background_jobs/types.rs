@@ -81,7 +81,7 @@ int_enum_to_sql!(JobStatus);
 
 #[derive(FromSql)]
 #[postgres(name = "background_job")]
-pub struct DbBackgroundJob {
+pub struct BackgroundJob {
     pub id: Uuid,
     pub job_type: JobType,
     pub job_data: Value,
