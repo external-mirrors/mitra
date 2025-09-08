@@ -7,4 +7,5 @@ pub struct MetadataBlock {
     pub instance_title: String,
     pub page_type: &'static str,
     pub image_url: String,
+    pub atom_url: Option<String>,
 }

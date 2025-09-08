@@ -35,6 +35,7 @@ use mitra_models::{
 use mitra_utils::html::extract_title;
 
 use crate::{
+    atom::urls::get_user_feed_url,
     errors::HttpError,
     templates::render_template,
 };
@@ -134,12 +135,22 @@ async fn profile_page_opengraph_view(
         Ok(profile) => {
             // Rewrite index.html and insert metadata
             let title = format!("Profile - {}", profile.preferred_handle());
+            let maybe_atom_url = if profile.is_local() {
+                let atom_url = get_user_feed_url(
+                    &config.instance_url(),
+                    &profile.username,
+                );
+                Some(atom_url)
+            } else {
+                None
+            };
             let context = MetadataBlock {
                 title: title.clone(),
                 title_short: title,
                 instance_title: config.instance_title.clone(),
                 page_type: OG_TYPE_PROFILE,
                 image_url: get_opengraph_image_url(&config.instance_url()),
+                atom_url: maybe_atom_url,
             };
             let metadata_block = render_template(
                 include_str!("templates/metadata_block.html"),
@@ -212,6 +223,7 @@ async fn post_page_opengraph_view(
                 instance_title: config.instance_title.clone(),
                 page_type: OG_TYPE_ARTICLE,
                 image_url: get_opengraph_image_url(&config.instance_url()),
+                atom_url: None,
             };
             let metadata_block = render_template(
                 include_str!("templates/metadata_block.html"),

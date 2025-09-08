@@ -3,3 +3,6 @@
 <meta property="og:title" content="{{ title }}" data-inserted="true">
 <meta property="og:image" content="{{ image_url | safe }}" data-inserted="true">
 <meta property="og:site_name" content="{{ instance_title }}" data-inserted="true">
+{% if atom_url is not none %}
+<link rel="alternate" type="application/atom+xml" href="{{ atom_url | safe }}">
+{% endif %}
