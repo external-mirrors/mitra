@@ -37,6 +37,7 @@ use super::{
     constants::{AP_MEDIA_TYPE, AS_MEDIA_TYPE},
     http_client::{
         build_http_client,
+        describe_request_error,
         get_network_type,
         limited_response,
         require_safe_url,
@@ -60,7 +61,7 @@ pub enum FetchError {
     #[error(transparent)]
     UnsafeUrl(#[from] UnsafeUrlError),
 
-    #[error(transparent)]
+    #[error("{}", describe_request_error(.0))]
     RequestError(#[from] reqwest::Error),
 
     #[error("stream error: {0}")]

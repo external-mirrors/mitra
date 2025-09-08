@@ -1,4 +1,5 @@
 use std::cmp::max;
+use std::error::{Error as _};
 use std::net::IpAddr;
 use std::sync::Arc;
 use std::time::Duration;
@@ -9,6 +10,7 @@ use reqwest::{
     redirect::{Policy as RedirectPolicy},
     Body,
     Client,
+    Error,
     Proxy,
     Response,
 };
@@ -194,6 +196,14 @@ pub async fn limited_response(
         .await
         .ok()
         .map(|collected| collected.to_bytes())
+}
+
+pub fn describe_request_error(error: &Error) -> String {
+    if let Some(source) = error.source() {
+        format!("{}: {}", error, source)
+    } else {
+        error.to_string()
+    }
 }
 
 #[cfg(test)]

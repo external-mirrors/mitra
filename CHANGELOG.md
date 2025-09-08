@@ -23,6 +23,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Improved data validation in `import-posts` command.
 - Generate deterministic post IDs when `create-post` and `import-posts` commands are used.
 - Sort custom feeds by name.
+- Improved descriptions of request errors produced by fetcher and deliverer.
 
 ### Fixed
 
