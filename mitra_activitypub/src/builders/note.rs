@@ -4,8 +4,8 @@ use apx_sdk::{
     addresses::WebfingerAddress,
     constants::{AP_MEDIA_TYPE, AP_PUBLIC},
     core::{
-        hashes::sha256_multibase,
         http_url::HttpUrl,
+        multihash::encode_sha256_multihash,
     },
     deserialization::deserialize_string_array,
 };
@@ -194,7 +194,7 @@ pub fn build_note(
             name: db_item.description.clone(),
             media_type: file_info.media_type.clone(),
             digest_multibase: file_info.digest.as_ref()
-                .map(|digest| sha256_multibase(digest)),
+                .map(|digest| encode_sha256_multihash(digest)),
             url,
         }
     }).collect();

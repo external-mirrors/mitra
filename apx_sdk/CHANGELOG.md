@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Added detailed error description to `FetchError::InvalidProof` variant.
 - Added `send_media` function.
+- Added `decode_sha256_multihash` function.
 
 ### Changed
 
@@ -18,6 +19,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Renamed `fetch_file_streaming` to `stream_media`.
 - Improved descriptions of request errors.
 - Changed object argument type in `send_object` function to `serde_json::Value`.
+- Renamed `sha256_multibase` function to `encode_sha256_multihash` and moved it to `multihash` module.
 
 ### Removed
 

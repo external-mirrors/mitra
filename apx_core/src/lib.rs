@@ -27,6 +27,7 @@ pub mod json_signatures;
 pub mod media_type;
 pub mod multibase;
 pub mod multicodec;
+pub mod multihash;
 pub mod url;
 
 #[cfg(feature = "caip")]
