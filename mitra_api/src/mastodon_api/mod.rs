@@ -87,6 +87,7 @@ fn create_error_handlers() -> ErrorHandlers<BoxBody> {
                     body.boxed()
                 }
             });
+            log_response_error(Level::Info, &response_new);
             Ok(ErrorHandlerResponse::Response(response_new.map_into_right_body()))
         })
 }
