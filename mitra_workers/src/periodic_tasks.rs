@@ -12,12 +12,18 @@ use mitra_models::{
         delete_collection_items,
     },
     attachments::queries::delete_unused_attachments,
-    background_jobs::queries::{
-        delete_job_from_queue,
-        get_job_batch,
+    background_jobs::{
+        queries::{
+            delete_job_from_queue,
+            get_job_batch,
+        },
+        types::JobType,
     },
-    background_jobs::types::JobType,
-    database::{get_database_client, DatabaseConnectionPool},
+    database::{
+        db_client_await,
+        get_database_client,
+        DatabaseConnectionPool,
+    },
     emojis::queries::{
         delete_emoji,
         find_unused_remote_emojis,
@@ -253,9 +259,8 @@ pub async fn importer_queue_executor(
 ) -> Result<(), Error> {
     const BATCH_SIZE: u32 = 1;
     const JOB_TIMEOUT: u32 = 6 * 3600; // 6 hours
-    let db_client = &mut **get_database_client(db_pool).await?;
     let batch = get_job_batch(
-        db_client,
+        db_client_await!(db_pool),
         JobType::DataImport,
         BATCH_SIZE,
         JOB_TIMEOUT,
@@ -267,7 +272,7 @@ pub async fn importer_queue_executor(
             ImporterJobData::Follows { user_id, address_list } => {
                 import_follows_task(
                     config,
-                    db_client,
+                    db_pool,
                     user_id,
                     address_list,
                 ).await?;
@@ -275,13 +280,14 @@ pub async fn importer_queue_executor(
             ImporterJobData::Followers { user_id, from_actor_id, address_list } => {
                 import_followers_task(
                     config,
-                    db_client,
+                    db_pool,
                     user_id,
                     from_actor_id,
                     address_list,
                 ).await?;
             },
         };
+        let db_client = &**get_database_client(db_pool).await?;
         delete_job_from_queue(db_client, job.id).await?;
     };
     Ok(())

@@ -654,10 +654,9 @@ async fn get_object_tags(
                 },
             };
             if let Ok(webfinger_address) = WebfingerAddress::from_handle(&tag_name) {
-                let db_client = &mut **get_database_client(db_pool).await?;
                 let profile = match get_or_import_profile_by_webfinger_address(
                     ap_client,
-                    db_client,
+                    db_pool,
                     &webfinger_address,
                 ).await {
                     Ok(profile) => profile,

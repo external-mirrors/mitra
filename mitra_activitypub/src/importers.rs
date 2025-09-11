@@ -465,19 +465,21 @@ pub async fn import_profile_by_webfinger_address(
 // Works with local profiles
 pub async fn get_or_import_profile_by_webfinger_address(
     ap_client: &ApClient,
-    db_client: &mut impl DatabaseClient,
+    db_pool: &DatabaseConnectionPool,
     webfinger_address: &WebfingerAddress,
 ) -> Result<DbActorProfile, HandlerError> {
     let instance = &ap_client.instance;
     let acct = webfinger_address.acct(&instance.hostname());
-    let profile = match get_profile_by_acct(
-        db_client,
+    let maybe_profile = get_profile_by_acct(
+        db_client_await!(db_pool),
         &acct,
-    ).await {
+    ).await;
+    let profile = match maybe_profile {
         Ok(profile) => {
             if webfinger_address.hostname() == instance.hostname() {
                 profile
             } else {
+                let db_client = &mut **get_database_client(db_pool).await?;
                 refresh_remote_profile(
                     ap_client,
                     db_client,
@@ -490,6 +492,7 @@ pub async fn get_or_import_profile_by_webfinger_address(
             if webfinger_address.hostname() == instance.hostname() {
                 return Err(db_error.into());
             };
+            let db_client = &mut **get_database_client(db_pool).await?;
             import_profile_by_webfinger_address(
                 ap_client,
                 db_client,

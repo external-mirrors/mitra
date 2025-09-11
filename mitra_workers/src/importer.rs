@@ -23,7 +23,10 @@ use mitra_models::{
         types::JobType,
     },
     database::{
+        db_client_await,
+        get_database_client,
         DatabaseClient,
+        DatabaseConnectionPool,
         DatabaseError,
     },
     notifications::helpers::create_move_notification,
@@ -69,17 +72,20 @@ impl ImporterJobData {
 
 pub async fn import_follows_task(
     config: &Config,
-    db_client: &mut impl DatabaseClient,
+    db_pool: &DatabaseConnectionPool,
     user_id: Uuid,
     address_list: Vec<String>,
 ) -> Result<(), anyhow::Error> {
-    let user = get_user_by_id(db_client, user_id).await?;
-    let ap_client = ApClient::new(config, db_client).await?;
+    let user = get_user_by_id(
+        db_client_await!(db_pool),
+        user_id,
+    ).await?;
+    let ap_client = ApClient::new_with_pool(config, db_pool).await?;
     for webfinger_address in address_list {
         let webfinger_address: WebfingerAddress = webfinger_address.parse()?;
         let profile = match get_or_import_profile_by_webfinger_address(
             &ap_client,
-            db_client,
+            db_pool,
             &webfinger_address,
         ).await {
             Ok(profile) => profile,
@@ -96,6 +102,7 @@ pub async fn import_follows_task(
         if profile.id == user.id {
             continue;
         };
+        let db_client = &mut **get_database_client(db_pool).await?;
         follow_or_create_request(
             db_client,
             &config.instance(),
@@ -108,14 +115,17 @@ pub async fn import_follows_task(
 
 pub async fn import_followers_task(
     config: &Config,
-    db_client: &mut impl DatabaseClient,
+    db_pool: &DatabaseConnectionPool,
     user_id: Uuid,
     from_actor_id: String,
     address_list: Vec<String>,
 ) -> Result<(), anyhow::Error> {
-    let user = get_user_by_id(db_client, user_id).await?;
+    let user = get_user_by_id(
+        db_client_await!(db_pool),
+        user_id,
+    ).await?;
     let maybe_from_profile = match get_remote_profile_by_actor_id(
-        db_client,
+        db_client_await!(db_pool),
         &from_actor_id,
     ).await {
         Ok(profile) => Some(profile),
@@ -123,13 +133,13 @@ pub async fn import_followers_task(
         Err(other_error) => return Err(other_error.into()),
     };
     let instance = config.instance();
-    let ap_client = ApClient::new(config, db_client).await?;
+    let ap_client = ApClient::new_with_pool(config, db_pool).await?;
     let mut remote_followers = vec![];
     for follower_address in address_list {
         let follower_address: WebfingerAddress = follower_address.parse()?;
         let follower = match get_or_import_profile_by_webfinger_address(
             &ap_client,
-            db_client,
+            db_pool,
             &follower_address,
         ).await {
             Ok(profile) => profile,
@@ -152,6 +162,7 @@ pub async fn import_followers_task(
         } else {
             // Immediately move local followers (only if alias can be verified)
             if let Some(ref from_profile) = maybe_from_profile {
+                let db_client = &mut **get_database_client(db_pool).await?;
                 match unfollow(db_client, follower.id, from_profile.id).await {
                     Ok(maybe_follow_request_deleted) => {
                         // Send Undo(Follow) to a remote actor
@@ -190,6 +201,7 @@ pub async fn import_followers_task(
             };
         };
     };
+    let db_client = &**get_database_client(db_pool).await?;
     prepare_move_person(
         &instance,
         &user,

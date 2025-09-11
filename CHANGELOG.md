@@ -22,6 +22,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Make `get-config` display default value if configuration parameter is not set.
 - Set `pleroma.parent_visible` flag to `false` on `Status` if parent post can't be displayed due to its visibility setting.
 - Reduced database lock time during processing of remote posts.
+- Reduced database lock time during followers/following import.
 
 ### Fixed
 
