@@ -9,7 +9,12 @@ use serde_json::{Value as JsonValue};
 
 use mitra_config::Config;
 use mitra_models::{
-    database::{DatabaseClient, DatabaseError},
+    database::{
+        get_database_client,
+        DatabaseClient,
+        DatabaseConnectionPool,
+        DatabaseError,
+    },
     filter_rules::types::FilterAction,
     properties::{
         constants::FILTER_KEYWORDS,
@@ -99,7 +104,7 @@ struct CreateNote {
 
 pub async fn handle_create(
     config: &Config,
-    db_client: &mut impl DatabaseClient,
+    db_pool: &DatabaseConnectionPool,
     activity: JsonValue,
     maybe_sender_id: Option<&str>,
     is_authenticated: bool,
@@ -109,6 +114,7 @@ pub async fn handle_create(
         mut object,
     } = serde_json::from_value(activity.clone())?;
 
+    let db_client = &mut **get_database_client(db_pool).await?;
     let ap_client = ApClient::new(config, db_client).await?;
     // Authentication
     let is_not_embedded = object.as_str().is_some();

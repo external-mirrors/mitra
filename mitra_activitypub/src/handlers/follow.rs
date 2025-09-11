@@ -4,7 +4,11 @@ use serde_json::{Value as JsonValue};
 
 use mitra_config::Config;
 use mitra_models::{
-    database::{DatabaseClient, DatabaseError},
+    database::{
+        get_database_client,
+        DatabaseConnectionPool,
+        DatabaseError,
+    },
     notifications::helpers::create_follow_request_notification,
     relationships::queries::{
         create_remote_follow_request_opt,
@@ -37,11 +41,12 @@ struct Follow {
 
 pub async fn handle_follow(
     config: &Config,
-    db_client: &mut impl DatabaseClient,
+    db_pool: &DatabaseConnectionPool,
     activity: JsonValue,
 ) -> HandlerResult {
     // Follow(Person)
     let follow: Follow = serde_json::from_value(activity)?;
+    let db_client = &mut **get_database_client(db_pool).await?;
     let ap_client = ApClient::new(config, db_client).await?;
     let source_profile = ActorIdResolver::default().only_remote().resolve(
         &ap_client,

@@ -3,7 +3,10 @@ use serde_json::{Value as JsonValue};
 
 use mitra_config::Config;
 use mitra_models::{
-    database::DatabaseClient,
+    database::{
+        get_database_client,
+        DatabaseConnectionPool,
+    },
     invoices::queries::create_local_invoice,
     profiles::queries::get_remote_profile_by_actor_id,
     profiles::types::MoneroSubscription,
@@ -35,10 +38,11 @@ struct Offer {
 
 pub async fn handle_offer(
     config: &Config,
-    db_client: &impl DatabaseClient,
+    db_pool: &DatabaseConnectionPool,
     activity: JsonValue,
 ) -> HandlerResult {
     let offer: Offer = serde_json::from_value(activity)?;
+    let db_client = &**get_database_client(db_pool).await?;
     let actor_profile = get_remote_profile_by_actor_id(
         db_client,
         &offer.actor,

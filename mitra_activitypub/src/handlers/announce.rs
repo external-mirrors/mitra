@@ -12,7 +12,11 @@ use serde_json::{Value as JsonValue};
 
 use mitra_config::Config;
 use mitra_models::{
-    database::{DatabaseClient, DatabaseError},
+    database::{
+        get_database_client,
+        DatabaseConnectionPool,
+        DatabaseError,
+    },
     posts::queries::{
         create_post,
         delete_repost,
@@ -87,13 +91,14 @@ fn get_repost_visibility(
 
 pub async fn handle_announce(
     config: &Config,
-    db_client: &mut impl DatabaseClient,
+    db_pool: &DatabaseConnectionPool,
     activity: JsonValue,
 ) -> HandlerResult {
     if is_activity(&activity["object"]) {
-        return handle_fep_1b12_announce(config, db_client, activity).await;
+        return handle_fep_1b12_announce(config, db_pool, activity).await;
     };
     let announce: Announce = serde_json::from_value(activity)?;
+    let db_client = &mut **get_database_client(db_pool).await?;
     match get_remote_repost_by_activity_id(
         db_client,
         &announce.id,
@@ -161,7 +166,7 @@ struct GroupAnnounce {
 
 async fn handle_fep_1b12_announce(
     config: &Config,
-    db_client: &mut impl DatabaseClient,
+    db_pool: &DatabaseConnectionPool,
     announce: JsonValue,
 ) -> HandlerResult {
     let GroupAnnounce { id: announce_id, actor: group_id, object: activity } =
@@ -184,7 +189,7 @@ async fn handle_fep_1b12_announce(
             return Ok(None);
         },
     };
-    let ap_client = ApClient::new(config, db_client).await?;
+    let ap_client = ApClient::new_with_pool(config, db_pool).await?;
     let activity = if is_same_origin(&announce_id, activity_id)? {
         // Embedded activity can be trusted; don't fetch
         activity.clone()
@@ -202,13 +207,14 @@ async fn handle_fep_1b12_announce(
         }
     };
     verify_activity_owner(&activity)?;
-    let group = ActorIdResolver::default().only_remote().resolve(
+    let group = ActorIdResolver::default().only_remote().resolve_with_pool(
         &ap_client,
-        db_client,
+        db_pool,
         &group_id,
     ).await?;
     match activity_type {
         DELETE => {
+            let db_client = &mut **get_database_client(db_pool).await?;
             let object_id = object_to_id(&activity["object"])
                 .map_err(|_| ValidationError("invalid activity object"))?;
             let post_id = match get_remote_post_by_object_id(
@@ -235,7 +241,7 @@ async fn handle_fep_1b12_announce(
         CREATE => {
             let maybe_object_type = handle_create(
                 config,
-                db_client,
+                db_pool,
                 activity.clone(),
                 None, // no sender (spam check will not be performed)
                 true, // authenticated (by embedding or fetched from origin)
@@ -244,6 +250,7 @@ async fn handle_fep_1b12_announce(
                 .map(|desc| desc.to_string());
             if let Some(ARTICLE | NOTE | PAGE) = maybe_object_type.as_deref() {
                 // Create repost
+                let db_client = &mut **get_database_client(db_pool).await?;
                 let object_id = object_to_id(&activity["object"])
                     .map_err(|_| ValidationError("invalid activity object"))?;
                 let post = get_remote_post_by_object_id(
@@ -268,17 +275,17 @@ async fn handle_fep_1b12_announce(
             Ok(Some(Descriptor::object(activity_type)))
         },
         LIKE | DISLIKE => {
-            let maybe_type = handle_like(config, db_client, activity).await?;
+            let maybe_type = handle_like(config, db_pool, activity).await?;
             Ok(maybe_type.map(|_| Descriptor::object(activity_type)))
         },
         UNDO => {
-            let maybe_type = handle_undo(config, db_client, activity).await?;
+            let maybe_type = handle_undo(config, db_pool, activity).await?;
             Ok(maybe_type.map(|_| Descriptor::object(activity_type)))
         },
         UPDATE => {
             let maybe_type = handle_update(
                 config,
-                db_client,
+                db_pool,
                 activity,
                 true, // authenticated (by embedding or fetched from origin)
             ).await?;

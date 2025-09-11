@@ -47,7 +47,12 @@ use serde_json::{Value as JsonValue};
 
 use mitra_config::Config;
 use mitra_models::{
-    database::{DatabaseClient, DatabaseError},
+    database::{
+        get_database_client,
+        DatabaseClient,
+        DatabaseConnectionPool,
+        DatabaseError,
+    },
     profiles::queries::get_remote_profile_by_actor_id,
     profiles::types::{
         DbActorProfile,
@@ -367,4 +372,19 @@ pub async fn verify_signed_activity(
     };
     // Signer is actor
     Ok(actor_profile)
+}
+
+pub async fn verify_signed_activity_with_pool(
+    config: &Config,
+    db_pool: &DatabaseConnectionPool,
+    activity: &JsonValue,
+    no_fetch: bool,
+) -> Result<DbActorProfile, AuthenticationError> {
+    let db_client = &mut **get_database_client(db_pool).await?;
+    verify_signed_activity(
+        config,
+        db_client,
+        activity,
+        no_fetch,
+    ).await
 }

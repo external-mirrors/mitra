@@ -9,7 +9,11 @@ use serde_json::{Value as JsonValue};
 use mitra_adapters::payments::subscriptions::create_or_update_subscription;
 use mitra_config::Config;
 use mitra_models::{
-    database::{DatabaseClient, DatabaseError},
+    database::{
+        get_database_client,
+        DatabaseConnectionPool,
+        DatabaseError,
+    },
     invoices::queries::{
         get_remote_invoice_by_object_id,
         set_invoice_status,
@@ -26,7 +30,7 @@ use mitra_models::{
 use mitra_validators::errors::ValidationError;
 
 use crate::{
-    authentication::{verify_signed_activity, AuthenticationError},
+    authentication::{verify_signed_activity_with_pool, AuthenticationError},
     identifiers::parse_local_actor_id,
     importers::ApClient,
     ownership::{is_local_origin, is_same_origin, get_object_id, verify_activity_owner},
@@ -70,7 +74,7 @@ struct ConversationAdd {
 // https://fediversity.site/help/develop/en/Containers
 async fn handle_fep_171b_add(
     config: &Config,
-    db_client: &mut impl DatabaseClient,
+    db_pool: &DatabaseConnectionPool,
     add: JsonValue,
 ) -> HandlerResult {
     let ConversationAdd {
@@ -84,16 +88,16 @@ async fn handle_fep_171b_add(
         return Ok(None);
     };
     // Authentication
-    match verify_signed_activity(
+    match verify_signed_activity_with_pool(
         config,
-        db_client,
+        db_pool,
         &activity,
         false, // fetch signer
     ).await {
         Ok(_) => (),
         Err(AuthenticationError::NoJsonSignature) => {
             // Verify activity by fetching it from origin
-            let ap_client = ApClient::new(config, db_client).await?;
+            let ap_client = ApClient::new_with_pool(config, db_pool).await?;
             match ap_client.fetch_object(activity_id).await {
                 Ok(activity_fetched) => {
                     log::info!("fetched activity {}", activity_id);
@@ -132,7 +136,7 @@ async fn handle_fep_171b_add(
         CREATE => {
             handle_create(
                 config,
-                db_client,
+                db_pool,
                 activity,
                 None, // no sender (spam check will not be performed)
                 true, // authenticated (FEP-8b32 or fetched from origin)
@@ -142,7 +146,7 @@ async fn handle_fep_171b_add(
         DELETE => {
             let maybe_type = handle_delete(
                 config,
-                db_client,
+                db_pool,
                 activity,
             ).await?;
             Ok(maybe_type.map(|_| Descriptor::object(activity_type)))
@@ -150,14 +154,14 @@ async fn handle_fep_171b_add(
         UPDATE => {
             let maybe_type = handle_update(
                 config,
-                db_client,
+                db_pool,
                 activity,
                 true, // authenticated
             ).await?;
             Ok(maybe_type.map(|_| Descriptor::object(activity_type)))
         },
         LIKE | DISLIKE | EMOJI_REACT => {
-            let maybe_type = handle_like(config, db_client, activity).await?;
+            let maybe_type = handle_like(config, db_pool, activity).await?;
             Ok(maybe_type.map(|_| Descriptor::object(activity_type)))
         },
         _ => {
@@ -169,13 +173,14 @@ async fn handle_fep_171b_add(
 
 pub async fn handle_add(
     config: &Config,
-    db_client: &mut impl DatabaseClient,
+    db_pool: &DatabaseConnectionPool,
     activity: JsonValue,
 ) -> HandlerResult {
     if is_activity(&activity["object"]) {
-        return handle_fep_171b_add(config, db_client, activity).await;
+        return handle_fep_171b_add(config, db_pool, activity).await;
     };
     let add: Add = serde_json::from_value(activity)?;
+    let db_client = &mut **get_database_client(db_pool).await?;
     let actor_profile = get_remote_profile_by_actor_id(
         db_client,
         &add.actor,

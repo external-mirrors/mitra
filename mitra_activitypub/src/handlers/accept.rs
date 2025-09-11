@@ -5,7 +5,12 @@ use serde_json::{Value as JsonValue};
 
 use mitra_config::Config;
 use mitra_models::{
-    database::{DatabaseClient, DatabaseError},
+    database::{
+        get_database_client,
+        DatabaseClient,
+        DatabaseConnectionPool,
+        DatabaseError,
+    },
     invoices::helpers::remote_invoice_opened,
     invoices::queries::get_invoice_by_id,
     profiles::queries::{
@@ -67,10 +72,11 @@ struct Accept {
 
 pub async fn handle_accept(
     config: &Config,
-    db_client: &mut impl DatabaseClient,
+    db_pool: &DatabaseConnectionPool,
     activity: JsonValue,
 ) -> HandlerResult {
     let accept: Accept = serde_json::from_value(activity)?;
+    let db_client = &mut **get_database_client(db_pool).await?;
     if accept.result.is_some() {
         // Accept(Offer)
         return handle_accept_offer(config, db_client, accept).await;

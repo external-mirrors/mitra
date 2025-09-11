@@ -11,7 +11,12 @@ use serde_json::{Value as JsonValue};
 
 use mitra_config::Config;
 use mitra_models::{
-    database::{DatabaseClient, DatabaseError},
+    database::{
+        get_database_client,
+        DatabaseClient,
+        DatabaseConnectionPool,
+        DatabaseError,
+    },
     posts::queries::get_remote_post_by_object_id,
     profiles::queries::get_remote_profile_by_actor_id,
 };
@@ -114,10 +119,11 @@ async fn handle_update_person(
 
 pub async fn handle_update(
     config: &Config,
-    db_client: &mut impl DatabaseClient,
+    db_pool: &DatabaseConnectionPool,
     mut activity: JsonValue,
     is_authenticated: bool,
 ) -> HandlerResult {
+    let db_client = &mut **get_database_client(db_pool).await?;
     let ap_client = ApClient::new(config, db_client).await?;
     let is_not_embedded = activity["object"].as_str().is_some();
     if is_not_embedded || !is_authenticated {

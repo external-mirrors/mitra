@@ -4,7 +4,10 @@ use serde_json::Value;
 
 use mitra_config::Config;
 use mitra_models::{
-    database::DatabaseClient,
+    database::{
+        get_database_client,
+        DatabaseConnectionPool,
+    },
     notifications::helpers::create_move_notification,
     profiles::helpers::find_verified_aliases,
     relationships::queries::{
@@ -35,7 +38,7 @@ struct Move {
 
 pub async fn handle_move(
     config: &Config,
-    db_client: &mut impl DatabaseClient,
+    db_pool: &DatabaseConnectionPool,
     activity: Value,
 ) -> HandlerResult {
     // Move(Person)
@@ -46,6 +49,7 @@ pub async fn handle_move(
         return Err(ValidationError("actor ID mismatch").into());
     };
 
+    let db_client = &mut **get_database_client(db_pool).await?;
     let ap_client = ApClient::new(config, db_client).await?;
     let instance = &ap_client.instance;
 

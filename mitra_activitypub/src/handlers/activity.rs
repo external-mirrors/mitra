@@ -118,58 +118,57 @@ pub async fn handle_activity(
     let audience = get_activity_audience(&activity, maybe_recipient_id)?;
 
     let activity_clone = activity.clone();
-    let db_client = &mut **get_database_client(db_pool).await?;
     let maybe_descriptor = match activity_type.as_str() {
         ACCEPT => {
-            handle_accept(config, db_client, activity).await?
+            handle_accept(config, db_pool, activity).await?
         },
         ADD => {
-            handle_add(config, db_client, activity).await?
+            handle_add(config, db_pool, activity).await?
         },
         ANNOUNCE => {
-            handle_announce(config, db_client, activity).await?
+            handle_announce(config, db_pool, activity).await?
         },
         BLOCK => {
-            handle_block(config, db_client, activity).await?
+            handle_block(config, db_pool, activity).await?
         },
         CREATE => {
             handle_create(
                 config,
-                db_client,
+                db_pool,
                 activity,
                 maybe_sender_id,
                 is_authenticated,
             ).await?
         },
         DELETE => {
-            handle_delete(config, db_client, activity).await?
+            handle_delete(config, db_pool, activity).await?
         },
         FOLLOW => {
-            handle_follow(config, db_client, activity).await?
+            handle_follow(config, db_pool, activity).await?
         },
         DISLIKE | LIKE | EMOJI_REACT => {
-            handle_like(config, db_client, activity).await?
+            handle_like(config, db_pool, activity).await?
         },
         LISTEN => {
             None // ignore
         },
         MOVE => {
-            handle_move(config, db_client, activity).await?
+            handle_move(config, db_pool, activity).await?
         },
         OFFER => {
-            handle_offer(config, db_client, activity).await?
+            handle_offer(config, db_pool, activity).await?
         },
         REJECT => {
-            handle_reject(config, db_client, activity).await?
+            handle_reject(config, db_pool, activity).await?
         },
         REMOVE => {
-            handle_remove(config, db_client, activity).await?
+            handle_remove(config, db_pool, activity).await?
         },
         UNDO => {
-            handle_undo(config, db_client, activity).await?
+            handle_undo(config, db_pool, activity).await?
         },
         UPDATE => {
-            handle_update(config, db_client, activity, is_authenticated).await?
+            handle_update(config, db_pool, activity, is_authenticated).await?
         },
         _ => {
             log::warn!("activity type is not supported: {}", activity);
@@ -177,6 +176,7 @@ pub async fn handle_activity(
         },
     };
     if let Some(descriptor) = maybe_descriptor {
+        let db_client = &**get_database_client(db_pool).await?;
         let is_new_activity = save_activity(
             db_client,
             &canonical_activity_id,

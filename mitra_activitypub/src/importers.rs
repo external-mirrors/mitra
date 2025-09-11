@@ -403,6 +403,16 @@ impl ActorIdResolver {
         };
         Ok(profile)
     }
+
+    pub async fn resolve_with_pool(
+        &self,
+        ap_client: &ApClient,
+        db_pool: &DatabaseConnectionPool,
+        actor_id: &str,
+    ) -> Result<DbActorProfile, HandlerError> {
+        let db_client = &mut **get_database_client(db_pool).await?;
+        self.resolve(ap_client, db_client, actor_id).await
+    }
 }
 
 // Returns true if error is not internal (should be logged as warning)

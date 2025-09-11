@@ -4,7 +4,11 @@ use serde_json::{Value as JsonValue};
 
 use mitra_config::Config;
 use mitra_models::{
-    database::{DatabaseClient, DatabaseError},
+    database::{
+        get_database_client,
+        DatabaseConnectionPool,
+        DatabaseError,
+    },
     notifications::helpers::{
         create_subscription_expiration_notification,
     },
@@ -35,10 +39,11 @@ struct Remove {
 
 pub async fn handle_remove(
     config: &Config,
-    db_client: &mut impl DatabaseClient,
+    db_pool: &DatabaseConnectionPool,
     activity: JsonValue,
 ) -> HandlerResult {
     let remove: Remove = serde_json::from_value(activity)?;
+    let db_client = &mut **get_database_client(db_pool).await?;
     let actor_profile = get_remote_profile_by_actor_id(
         db_client,
         &remove.actor,

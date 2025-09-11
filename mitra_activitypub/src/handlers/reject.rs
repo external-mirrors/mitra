@@ -4,7 +4,11 @@ use serde_json::Value;
 
 use mitra_config::Config;
 use mitra_models::{
-    database::{DatabaseClient, DatabaseError},
+    database::{
+        get_database_client,
+        DatabaseConnectionPool,
+        DatabaseError,
+    },
     profiles::queries::get_remote_profile_by_actor_id,
     relationships::queries::{
         follow_request_rejected,
@@ -33,11 +37,12 @@ struct Reject {
 
 pub async fn handle_reject(
     config: &Config,
-    db_client: &mut impl DatabaseClient,
+    db_pool: &DatabaseConnectionPool,
     activity: Value,
 ) -> HandlerResult {
     // Reject(Follow)
     let reject: Reject = serde_json::from_value(activity)?;
+    let db_client = &mut **get_database_client(db_pool).await?;
     let actor_profile = get_remote_profile_by_actor_id(
         db_client,
         &reject.actor,

@@ -11,7 +11,11 @@ use serde_json::{Value as JsonValue};
 
 use mitra_config::Config;
 use mitra_models::{
-    database::{DatabaseClient, DatabaseError},
+    database::{
+        get_database_client,
+        DatabaseConnectionPool,
+        DatabaseError,
+    },
     posts::types::Visibility,
     profiles::types::DbActor,
     reactions::{
@@ -86,10 +90,11 @@ fn get_visibility(
 
 pub async fn handle_like(
     config: &Config,
-    db_client: &mut impl DatabaseClient,
+    db_pool: &DatabaseConnectionPool,
     activity: JsonValue,
 ) -> HandlerResult {
     let like: Like = serde_json::from_value(activity)?;
+    let db_client = &mut **get_database_client(db_pool).await?;
     let ap_client = ApClient::new(config, db_client).await?;
     let instance = &ap_client.instance;
     let author = ActorIdResolver::default().only_remote().resolve(
