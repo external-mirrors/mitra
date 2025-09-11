@@ -20,6 +20,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Improved descriptions of request errors.
 - Changed object argument type in `send_object` function to `serde_json::Value`.
 - Renamed `sha256_multibase` function to `encode_sha256_multihash` and moved it to `multihash` module.
+- Changed argument type to `[u8; 32]` in `encode_sha256_multihash`.
 
 ### Removed
 

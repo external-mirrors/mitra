@@ -42,8 +42,8 @@ fn decode_digest(value: &[u8]) -> Result<(usize, Vec<u8>), MulticodecError> {
 }
 
 /// Encodes SHA2-256 digest using multihash and multibase
-pub fn encode_sha256_multihash(digest: &[u8]) -> String {
-    let digest_sized = encode_digest(digest);
+pub fn encode_sha256_multihash(digest: [u8; 32]) -> String {
+    let digest_sized = encode_digest(&digest);
     let digest_multicode = Multicodec::Sha256.encode(&digest_sized);
     encode_multibase_base58btc(&digest_multicode)
 }
@@ -82,14 +82,14 @@ mod tests {
     fn multihash_example() {
         // https://github.com/multiformats/multihash?tab=readme-ov-file#example
         let digest = sha256("multihash".as_bytes());
-        let output = encode_sha256_multihash(&digest);
+        let output = encode_sha256_multihash(digest);
         assert_eq!(output, "zQmYtUc4iTCbbfVSDNKvtQqrfyezPPnFvE33wFmutw9PBBk");
     }
 
     #[test]
     fn test_multihash_encode_decode() {
         let digest = sha256("test".as_bytes());
-        let multihash = encode_sha256_multihash(&digest);
+        let multihash = encode_sha256_multihash(digest);
         let digest_decoded = decode_sha256_multihash(&multihash).unwrap();
         assert_eq!(digest_decoded, digest);
     }

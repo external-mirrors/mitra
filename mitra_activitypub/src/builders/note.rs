@@ -193,8 +193,8 @@ pub fn build_note(
             attachment_type: object_type.to_string(),
             name: db_item.description.clone(),
             media_type: file_info.media_type.clone(),
-            digest_multibase: file_info.digest.as_ref()
-                .map(|digest| encode_sha256_multihash(digest)),
+            digest_multibase: file_info.digest
+                .map(encode_sha256_multihash),
             url,
         }
     }).collect();
