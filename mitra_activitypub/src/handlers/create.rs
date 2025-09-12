@@ -114,8 +114,7 @@ pub async fn handle_create(
         mut object,
     } = serde_json::from_value(activity.clone())?;
 
-    let db_client = &mut **get_database_client(db_pool).await?;
-    let ap_client = ApClient::new(config, db_client).await?;
+    let ap_client = ApClient::new_with_pool(config, db_pool).await?;
     // Authentication
     let is_not_embedded = object.as_str().is_some();
     if is_not_embedded || !is_authenticated {
@@ -144,10 +143,11 @@ pub async fn handle_create(
     verify_object_owner(&object)?;
 
     if is_question_vote(&object) {
-        return handle_question_vote(config, db_client, object).await;
+        return handle_question_vote(config, db_pool, object).await;
     };
     let object: AttributedObjectJson = serde_json::from_value(object)?;
     if let Some(sender_id) = maybe_sender_id {
+        let db_client = &**get_database_client(db_pool).await?;
         check_unsolicited_message(
             db_client,
             &config.instance_url(),
@@ -181,11 +181,12 @@ pub async fn handle_create(
     let object_type = object.inner.object_type.clone();
     let post = import_post(
         &ap_client,
-        db_client,
+        db_pool,
         object_id,
         Some(object),
     ).await?;
     // NOTE: import_post always returns a post; activity will be re-distributed
+    let db_client = &**get_database_client(db_pool).await?;
     sync_conversation(
         db_client,
         &ap_client.instance,

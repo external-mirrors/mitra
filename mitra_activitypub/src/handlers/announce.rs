@@ -98,31 +98,37 @@ pub async fn handle_announce(
         return handle_fep_1b12_announce(config, db_pool, activity).await;
     };
     let announce: Announce = serde_json::from_value(activity)?;
-    let db_client = &mut **get_database_client(db_pool).await?;
-    match get_remote_repost_by_activity_id(
-        db_client,
-        &announce.id,
-    ).await {
+    let maybe_repost = {
+        let db_client = &**get_database_client(db_pool).await?;
+        get_remote_repost_by_activity_id(
+            db_client,
+            &announce.id,
+        ).await
+    };
+    match maybe_repost {
         Ok(_) => return Ok(None), // Ignore if repost already exists
         Err(DatabaseError::NotFound(_)) => (),
         Err(other_error) => return Err(other_error.into()),
     };
-    let ap_client = ApClient::new(config, db_client).await?;
-    let author = ActorIdResolver::default().only_remote().resolve(
+    let ap_client = ApClient::new_with_pool(config, db_pool).await?;
+    let author = ActorIdResolver::default().only_remote().resolve_with_pool(
         &ap_client,
-        db_client,
+        db_pool,
         &announce.actor,
     ).await?;
     let post = match parse_local_object_id(
         &ap_client.instance.url(),
         &announce.object,
     ) {
-        Ok(post_id) => get_post_by_id(db_client, post_id).await?,
+        Ok(post_id) => {
+            let db_client = &**get_database_client(db_pool).await?;
+            get_post_by_id(db_client, post_id).await?
+        },
         Err(_) => {
             // Try to get remote post
             import_post(
                 &ap_client,
-                db_client,
+                db_pool,
                 announce.object,
                 None,
             ).await?
@@ -141,6 +147,7 @@ pub async fn handle_announce(
         Some(announce.id.clone()),
     );
     validate_repost_data(&repost_data)?;
+    let db_client = &mut **get_database_client(db_pool).await?;
     match create_post(db_client, author.id, repost_data).await {
         Ok(_) => Ok(Some(Descriptor::object("Object"))),
         Err(DatabaseError::AlreadyExists("post")) => {

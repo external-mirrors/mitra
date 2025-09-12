@@ -13,7 +13,6 @@ use mitra_config::Config;
 use mitra_models::{
     database::{
         get_database_client,
-        DatabaseClient,
         DatabaseConnectionPool,
         DatabaseError,
     },
@@ -48,7 +47,7 @@ struct UpdateNote {
 
 async fn handle_update_note(
     ap_client: &ApClient,
-    db_client: &mut impl DatabaseClient,
+    db_pool: &DatabaseConnectionPool,
     activity: JsonValue,
 ) -> HandlerResult {
     let update: UpdateNote = serde_json::from_value(activity.clone())?;
@@ -57,10 +56,14 @@ async fn handle_update_note(
     if object.attributed_to() != update.actor {
         return Err(ValidationError("attributedTo value doesn't match actor").into());
     };
-    let post = match get_remote_post_by_object_id(
-        db_client,
-        &canonical_object_id.to_string(),
-    ).await {
+    let maybe_post = {
+        let db_client = &**get_database_client(db_pool).await?;
+        get_remote_post_by_object_id(
+            db_client,
+            &canonical_object_id.to_string(),
+        ).await
+    };
+    let post = match maybe_post {
         Ok(post) => post,
         // Ignore Update if post is not found locally
         Err(DatabaseError::NotFound(_)) => return Ok(None),
@@ -68,10 +71,11 @@ async fn handle_update_note(
     };
     let post = update_remote_post(
         ap_client,
-        db_client,
+        db_pool,
         post,
         &object,
     ).await?;
+    let db_client = &**get_database_client(db_pool).await?;
     sync_conversation(
         db_client,
         &ap_client.instance,
@@ -90,10 +94,11 @@ struct UpdatePerson {
 
 async fn handle_update_person(
     ap_client: &ApClient,
-    db_client: &mut impl DatabaseClient,
+    db_pool: &DatabaseConnectionPool,
     activity: JsonValue,
 ) -> HandlerResult {
     let update: UpdatePerson = serde_json::from_value(activity)?;
+    let db_client = &mut **get_database_client(db_pool).await?;
     if update.object.id() != update.actor {
         return Err(ValidationError("actor ID mismatch").into());
     };
@@ -123,8 +128,7 @@ pub async fn handle_update(
     mut activity: JsonValue,
     is_authenticated: bool,
 ) -> HandlerResult {
-    let db_client = &mut **get_database_client(db_pool).await?;
-    let ap_client = ApClient::new(config, db_client).await?;
+    let ap_client = ApClient::new_with_pool(config, db_pool).await?;
     let is_not_embedded = activity["object"].as_str().is_some();
     if is_not_embedded || !is_authenticated {
         // Fetch object if it is not embedded or if activity is forwarded
@@ -145,10 +149,10 @@ pub async fn handle_update(
         },
     };
     if is_actor(&activity["object"]) {
-        handle_update_person(&ap_client, db_client, activity).await
+        handle_update_person(&ap_client, db_pool, activity).await
     } else if is_object(&activity["object"]) {
         verify_object_owner(&activity["object"])?;
-        handle_update_note(&ap_client, db_client, activity).await
+        handle_update_note(&ap_client, db_pool, activity).await
     } else {
         log::warn!("unexpected object structure: {}", activity["object"]);
         Ok(None)

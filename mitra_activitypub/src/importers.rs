@@ -522,7 +522,7 @@ const RECURSION_DEPTH_MAX: usize = 50;
 
 pub async fn import_post(
     ap_client: &ApClient,
-    db_client: &mut impl DatabaseClient,
+    db_pool: &DatabaseConnectionPool,
     object_id: String,
     object_received: Option<AttributedObjectJson>,
 ) -> Result<Post, HandlerError> {
@@ -554,14 +554,19 @@ pub async fn import_post(
                     };
                     // Object is a local post
                     // Verify post exists, return error if it doesn't
+                    let db_client = &**get_database_client(db_pool).await?;
                     get_local_post_by_id(db_client, post_id).await?;
                     continue;
                 };
                 let canonical_object_id = canonicalize_id(&object_id)?;
-                match get_remote_post_by_object_id(
-                    db_client,
-                    &canonical_object_id.to_string(),
-                ).await {
+                let maybe_post = {
+                    let db_client = &**get_database_client(db_pool).await?;
+                    get_remote_post_by_object_id(
+                        db_client,
+                        &canonical_object_id.to_string(),
+                    ).await
+                };
+                match maybe_post {
                     Ok(post) => {
                         // Object already fetched
                         if objects.len() == 0 {
@@ -630,7 +635,7 @@ pub async fn import_post(
     for object in objects {
         let post = create_remote_post(
             ap_client,
-            db_client,
+            db_pool,
             object,
             &redirects,
         ).await?;
@@ -649,20 +654,28 @@ pub async fn import_object(
     db_pool: &DatabaseConnectionPool,
     object: JsonValue,
 ) -> Result<Post, HandlerError> {
-    let db_client = &mut **get_database_client(db_pool).await?;
     let object: AttributedObjectJson = serde_json::from_value(object)?;
     let canonical_object_id = canonicalize_id(object.id())?;
-    match get_remote_post_by_object_id(
-        db_client,
-        &canonical_object_id.to_string(),
-    ).await {
+    let maybe_post = {
+        let db_client = &**get_database_client(db_pool).await?;
+        get_remote_post_by_object_id(
+            db_client,
+            &canonical_object_id.to_string(),
+        ).await
+    };
+    match maybe_post {
         Ok(post) => {
-            update_remote_post(ap_client, db_client, post, &object).await
+            update_remote_post(
+                ap_client,
+                db_pool,
+                post,
+                &object,
+            ).await
         },
         Err(DatabaseError::NotFound(_)) => {
             import_post(
                 ap_client,
-                db_client,
+                db_pool,
                 object.id().to_owned(),
                 Some(object),
             ).await

@@ -30,7 +30,12 @@ use mitra_adapters::{
 use mitra_models::{
     activitypub::queries::save_attributed_object,
     attachments::queries::create_attachment,
-    database::{DatabaseClient, DatabaseError},
+    database::{
+        get_database_client,
+        DatabaseClient,
+        DatabaseConnectionPool,
+        DatabaseError,
+    },
     filter_rules::types::FilterAction,
     media::types::MediaInfo,
     polls::types::{PollData, PollResult},
@@ -917,11 +922,12 @@ fn parse_poll_results(
 
 pub async fn create_remote_post(
     ap_client: &ApClient,
-    db_client: &mut impl DatabaseClient,
+    db_pool: &DatabaseConnectionPool,
     object: AttributedObjectJson,
     redirects: &HashMap<String, String>,
 ) -> Result<Post, HandlerError> {
     let AttributedObjectJson { inner: object, value: object_value } = object;
+    let db_client = &mut **get_database_client(db_pool).await?;
     let canonical_object_id = canonicalize_id(&object.id)?;
 
     object.check_not_actor()?;
@@ -1066,12 +1072,13 @@ pub async fn create_remote_post(
 
 pub async fn update_remote_post(
     ap_client: &ApClient,
-    db_client: &mut impl DatabaseClient,
+    db_pool: &DatabaseConnectionPool,
     post: Post,
     object: &AttributedObjectJson,
 ) -> Result<Post, HandlerError> {
     assert!(!post.is_local());
     let AttributedObjectJson { inner: object, value: object_json } = object;
+    let db_client = &mut **get_database_client(db_pool).await?;
     let canonical_author_id = canonicalize_id(&object.attributed_to)?;
     if canonical_author_id.to_string() != post.author.expect_remote_actor_id() {
         return Err(ValidationError("object owner can't be changed").into());

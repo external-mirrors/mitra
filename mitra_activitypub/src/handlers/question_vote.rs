@@ -3,7 +3,11 @@ use serde_json::{Value as JsonValue};
 
 use mitra_config::Config;
 use mitra_models::{
-    database::{DatabaseClient, DatabaseError},
+    database::{
+        get_database_client,
+        DatabaseConnectionPool,
+        DatabaseError,
+    },
     polls::queries::vote_one,
     posts::helpers::{
         add_related_posts,
@@ -55,20 +59,21 @@ pub fn is_question_vote(object: &JsonValue) -> bool {
 
 pub async fn handle_question_vote(
     config: &Config,
-    db_client: &mut impl DatabaseClient,
+    db_pool: &DatabaseConnectionPool,
     object: JsonValue,
 ) -> HandlerResult {
     verify_object_owner(&object)?;
     let vote: QuestionVote = serde_json::from_value(object)?;
-    let ap_client = ApClient::new(config, db_client).await?;
+    let ap_client = ApClient::new_with_pool(config, db_pool).await?;
     let instance = &ap_client.instance;
     let media_server = MediaServer::new(config);
-    let voter = ActorIdResolver::default().only_remote().resolve(
+    let voter = ActorIdResolver::default().only_remote().resolve_with_pool(
         &ap_client,
-        db_client,
+        db_pool,
         &vote.attributed_to,
     ).await?;
     let post_id = parse_local_object_id(&instance.url(), &vote.in_reply_to)?;
+    let db_client = &mut **get_database_client(db_pool).await?;
     let mut post = get_local_post_by_id(db_client, post_id).await?;
     if !can_view_post(db_client, Some(&voter), &post).await? {
         log::error!("private post access violation: {}", vote.in_reply_to);

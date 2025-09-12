@@ -31,11 +31,14 @@ async fn search_view(
     db_pool: web::Data<DatabaseConnectionPool>,
     query_params: web::Query<SearchQueryParams>,
 ) -> Result<HttpResponse, MastodonError> {
-    let db_client = &mut **get_database_client(&db_pool).await?;
-    let current_user = get_current_user(db_client, auth.token()).await?;
+    let current_user = {
+        let db_client = &**get_database_client(&db_pool).await?;
+        get_current_user(db_client, auth.token()).await?
+    };
     let search_query = query_params.q.trim();
     let (profiles, posts, tags) = match query_params.search_type.as_deref() {
         Some("accounts") => {
+            let db_client = &mut **get_database_client(&db_pool).await?;
             let profiles = search_profiles_only(
                 &config,
                 db_client,
@@ -47,6 +50,7 @@ async fn search_view(
             (profiles, vec![], vec![])
         },
         Some("statuses") => {
+            let db_client = &**get_database_client(&db_pool).await?;
             let posts = search_posts_only(
                 &current_user,
                 db_client,
@@ -60,7 +64,7 @@ async fn search_view(
             search(
                 &config,
                 &current_user,
-                db_client,
+                &db_pool,
                 search_query,
                 query_params.limit.inner(),
                 query_params.offset,
@@ -77,6 +81,7 @@ async fn search_view(
             profile,
         ))
         .collect();
+    let db_client = &**get_database_client(&db_pool).await?;
     let statuses = build_status_list(
         db_client,
         &instance_url,

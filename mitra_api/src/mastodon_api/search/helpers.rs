@@ -21,7 +21,12 @@ use mitra_activitypub::{
 };
 use mitra_config::Config;
 use mitra_models::{
-    database::{DatabaseClient, DatabaseError},
+    database::{
+        get_database_client,
+        DatabaseClient,
+        DatabaseConnectionPool,
+        DatabaseError,
+    },
     posts::{
         queries::search_posts,
         helpers::{can_view_post, get_local_post_by_id},
@@ -192,12 +197,13 @@ async fn search_profiles_or_import(
 /// Finds post by its object ID
 async fn find_post_by_url(
     ap_client: &ApClient,
-    db_client: &mut impl DatabaseClient,
+    db_pool: &DatabaseConnectionPool,
     url: &str,
 ) -> Result<Option<Post>, DatabaseError> {
     let maybe_post = match parse_local_object_id(&ap_client.instance.url(), url) {
         Ok(post_id) => {
             // Local URL
+            let db_client = &**get_database_client(db_pool).await?;
             match get_local_post_by_id(db_client, post_id).await {
                 Ok(post) => Some(post),
                 Err(DatabaseError::NotFound(_)) => None,
@@ -207,7 +213,7 @@ async fn find_post_by_url(
         Err(_) => {
             match import_post(
                 ap_client,
-                db_client,
+                db_pool,
                 url.to_string(),
                 None,
             ).await {
@@ -224,12 +230,12 @@ async fn find_post_by_url(
 
 async fn find_profile_by_url(
     ap_client: &ApClient,
-    db_client: &mut impl DatabaseClient,
+    db_pool: &DatabaseConnectionPool,
     url: &str,
 ) -> Result<Option<DbActorProfile>, DatabaseError> {
-    let maybe_profile = match ActorIdResolver::default().resolve(
+    let maybe_profile = match ActorIdResolver::default().resolve_with_pool(
         ap_client,
-        db_client,
+        db_pool,
         url,
     ).await {
         Ok(profile) => Some(profile),
@@ -252,7 +258,7 @@ type SearchResults = (Vec<DbActorProfile>, Vec<Post>, Vec<String>);
 pub async fn search(
     config: &Config,
     current_user: &User,
-    db_client: &mut impl DatabaseClient,
+    db_pool: &DatabaseConnectionPool,
     search_query: &str,
     limit: u16,
     offset: u16,
@@ -260,10 +266,11 @@ pub async fn search(
     let mut profiles = vec![];
     let mut posts = vec![];
     let mut tags = vec![];
-    let mut ap_client = ApClient::new(config, db_client).await?;
+    let mut ap_client = ApClient::new_with_pool(config, db_pool).await?;
     ap_client.instance.federation.fetcher_timeout = SEARCH_FETCHER_TIMEOUT;
     match parse_search_query(search_query) {
         SearchQuery::Text(text) => {
+            let db_client = &**get_database_client(db_pool).await?;
             posts = search_posts(
                 db_client,
                 &text,
@@ -273,6 +280,7 @@ pub async fn search(
             ).await?;
         },
         SearchQuery::ProfileQuery(username, maybe_hostname) => {
+            let db_client = &mut **get_database_client(db_pool).await?;
             profiles = search_profiles_or_import(
                 &ap_client,
                 db_client,
@@ -284,6 +292,7 @@ pub async fn search(
             ).await?;
         },
         SearchQuery::TagQuery(tag) => {
+            let db_client = &**get_database_client(db_pool).await?;
             tags = search_tags(
                 db_client,
                 &tag,
@@ -294,10 +303,11 @@ pub async fn search(
         SearchQuery::Url(url) => {
             let maybe_post = find_post_by_url(
                 &ap_client,
-                db_client,
+                db_pool,
                 &url,
             ).await?;
             if let Some(post) = maybe_post {
+                let db_client = &**get_database_client(db_pool).await?;
                 if can_view_post(
                     db_client,
                     Some(&current_user.profile),
@@ -308,7 +318,7 @@ pub async fn search(
             } else {
                 let maybe_profile = find_profile_by_url(
                     &ap_client,
-                    db_client,
+                    db_pool,
                     &url,
                 ).await?;
                 if let Some(profile) = maybe_profile {
@@ -319,6 +329,7 @@ pub async fn search(
         SearchQuery::WalletAddress(address) => {
             // Search by wallet address, assuming it's ethereum address
             // TODO: support other currencies
+            let db_client = &**get_database_client(db_pool).await?;
             profiles = search_profiles_by_ethereum_address(
                 db_client,
                 &address,
@@ -326,6 +337,7 @@ pub async fn search(
             ).await?;
         },
         SearchQuery::Did(did) => {
+            let db_client = &**get_database_client(db_pool).await?;
             profiles = search_profiles_by_did_only(
                 db_client,
                 &did,
