@@ -162,7 +162,7 @@ pub async fn process_queued_incoming_activities(
                     error,
                     job_data.activity,
                 );
-                delete_job_from_queue_with_pool(db_pool, job.id).await?;
+                delete_job_from_queue(db_client, job.id).await?;
                 continue;
             };
             job_data.failure_count += 1;

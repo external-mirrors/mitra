@@ -30,6 +30,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Fixed mention not being parsed if followed by a dot.
 - Fixed logging of REST API authentication errors.
+- Fixed potential deadlock in incoming queue worker.
 
 ## [4.9.0] - 2025-08-31
 
