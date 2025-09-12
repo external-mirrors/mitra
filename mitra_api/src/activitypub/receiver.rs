@@ -120,7 +120,6 @@ pub async fn receive_activity(
         Some(activity_digest),
         // Don't fetch signer if this is Delete(Person) activity
         is_self_delete,
-        false, // TODO
     ).await {
         Ok((_key_id, request_signer)) => {
             let request_signer_id = request_signer.expect_remote_actor_id();

@@ -846,7 +846,6 @@ async fn apgateway_inbox_pull_view(
         header_map_adapter(request.headers()),
         None, // GET request has no content
         true, // don't fetch actor
-        false, // TODO
     ).await.map_err(|error| {
         log::warn!("C2S authentication error (GET {request_path}): {error}");
         HttpError::PermissionError
@@ -959,7 +958,6 @@ async fn apgateway_outbox_pull_view(
         header_map_adapter(request.headers()),
         None, // GET request has no content
         true, // don't fetch actor
-        false, // TODO
     ).await.map_err(|error| {
         log::warn!("C2S authentication error (GET {request_path}): {error}");
         HttpError::PermissionError

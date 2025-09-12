@@ -221,7 +221,6 @@ fn get_signer_rsa_key(
 }
 
 /// Verifies HTTP signature and returns signer
-#[allow(clippy::too_many_arguments)]
 pub async fn verify_signed_request(
     config: &Config,
     db_client: &mut impl DatabaseClient,
@@ -230,7 +229,6 @@ pub async fn verify_signed_request(
     request_headers: HeaderMap,
     maybe_content_digest: Option<ContentDigest>,
     no_fetch: bool,
-    only_key: bool,
 ) -> Result<(VerificationMethod, DbActorProfile), AuthenticationError> {
     let signature_data = match parse_http_signature(
         &request_method,
@@ -246,28 +244,25 @@ pub async fn verify_signed_request(
     if signature_data.is_rfc9421 {
         log::info!("RFC-9421 signature found");
     };
-    let (public_key, signer) = if only_key {
-        unimplemented!();
-    } else {
-        let signer_id = match signature_data.key_id {
-            VerificationMethod::HttpUrl(ref key_id) => {
-                key_id_to_actor_id(key_id.as_str())
-                    .map_err(|_| ValidationError("invalid key ID"))?
-            },
-            VerificationMethod::ApUrl(ref key_id) => {
-                log::info!("request signed with {key_id}");
-                key_id.without_fragment().to_string()
-            },
-            _ => return Err(AuthenticationError::UnsupportedVerificationMethod),
-        };
-        let signer = get_signer(config, db_client, &signer_id, no_fetch).await?;
-        let key_id = signature_data.key_id.to_string();
-        let signer_key = get_signer_key(
-            &signer,
-            key_id.as_str(),
-        )?;
-        (signer_key, signer)
+    // Reciprocal claim on actor is required
+    // https://codeberg.org/fediverse/fep/src/branch/main/fep/fe34/fep-fe34.md#signatures
+    let signer_id = match signature_data.key_id {
+        VerificationMethod::HttpUrl(ref key_id) => {
+            key_id_to_actor_id(key_id.as_str())
+                .map_err(|_| ValidationError("invalid key ID"))?
+        },
+        VerificationMethod::ApUrl(ref key_id) => {
+            log::info!("request signed with {key_id}");
+            key_id.without_fragment().to_string()
+        },
+        _ => return Err(AuthenticationError::UnsupportedVerificationMethod),
     };
+    let signer = get_signer(config, db_client, &signer_id, no_fetch).await?;
+    let key_id = signature_data.key_id.to_string();
+    let public_key = get_signer_key(
+        &signer,
+        key_id.as_str(),
+    )?;
     if matches!(public_key, PublicKey::Ed25519(_)) {
         log::info!("Ed25519 key found");
     };
