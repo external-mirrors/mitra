@@ -42,8 +42,8 @@ regex = "1.10.6"
 rsa = "0.9.2"
 pem = "2.0.1"
 # Used for serialization/deserialization
-serde = { version = "1.0.136", features = ["derive"] }
-serde_json = "1.0.89"
+serde = { version = "1.0.186", features = ["derive"] }
+serde_json = "1.0.120"
 # Used to create JCS representations
 serde_json_canonicalizer = "0.3.1"
 # Used to parse Structured Field Values
