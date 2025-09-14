@@ -9,7 +9,7 @@ use crate::{
         DatabaseError,
     },
     instances::queries::create_instance,
-    media::types::{DeletionQueue, PartialMediaInfo},
+    media::types::{DeletionQueue, MediaInfo, PartialMediaInfo},
     profiles::queries::update_emoji_caches,
 };
 
@@ -21,7 +21,7 @@ pub async fn create_or_update_remote_emoji(
     db_client: &mut impl DatabaseClient,
     emoji_name: &str,
     hostname: &str,
-    image: PartialMediaInfo,
+    image: MediaInfo,
     object_id: &str,
     updated_at: DateTime<Utc>,
 ) -> Result<(DbEmoji, DeletionQueue), DatabaseError> {
@@ -83,7 +83,7 @@ pub async fn create_or_update_remote_emoji(
 pub async fn update_emoji(
     db_client: &mut impl DatabaseClient,
     emoji_id: Uuid,
-    image: PartialMediaInfo,
+    image: MediaInfo,
     updated_at: DateTime<Utc>,
 ) -> Result<(DbEmoji, DeletionQueue), DatabaseError> {
     let transaction = db_client.transaction().await?;
@@ -128,7 +128,7 @@ pub async fn update_emoji(
 pub async fn create_or_update_local_emoji(
     db_client: &mut impl DatabaseClient,
     emoji_name: &str,
-    image: PartialMediaInfo,
+    image: MediaInfo,
 ) -> Result<(DbEmoji, DeletionQueue), DatabaseError> {
     let transaction = db_client.transaction().await?;
     let maybe_detached_image_row = transaction.query_opt(
@@ -334,7 +334,7 @@ mod tests {
         let db_client = &mut create_test_database().await;
         let emoji_name = "test";
         let hostname = "example.org";
-        let image = PartialMediaInfo::from(MediaInfo::png_for_test());
+        let image = MediaInfo::png_for_test();
         let object_id = "https://example.org/emojis/test";
         let updated_at = Utc::now();
         let (emoji, deletion_queue) = create_or_update_remote_emoji(
@@ -355,7 +355,7 @@ mod tests {
         assert_eq!(emoji.id, emoji_id);
         assert_eq!(emoji.emoji_name, emoji_name);
         assert_eq!(emoji.hostname, Some(hostname.to_string()));
-        assert_eq!(emoji.image, image);
+        assert_eq!(emoji.image, PartialMediaInfo::from(image.clone()));
         assert_eq!(emoji.object_id.unwrap(), object_id);
 
         // New ID
@@ -377,7 +377,7 @@ mod tests {
     #[serial]
     async fn test_update_remote_emoji() {
         let db_client = &mut create_test_database().await;
-        let image = PartialMediaInfo::from(MediaInfo::png_for_test());
+        let image = MediaInfo::png_for_test();
         let (emoji, _) = create_or_update_remote_emoji(
             db_client,
             "test",
@@ -400,7 +400,7 @@ mod tests {
     #[serial]
     async fn test_create_or_update_local_emoji() {
         let db_client = &mut create_test_database().await;
-        let image = PartialMediaInfo::from(MediaInfo::png_for_test());
+        let image = MediaInfo::png_for_test();
         let (emoji, deletion_queue) = create_or_update_local_emoji(
             db_client,
             "local",
@@ -423,7 +423,7 @@ mod tests {
     #[serial]
     async fn test_delete_emoji() {
         let db_client = &mut create_test_database().await;
-        let image = PartialMediaInfo::from(MediaInfo::png_for_test());
+        let image = MediaInfo::png_for_test();
         let (emoji, _) = create_or_update_local_emoji(
             db_client,
             "test",
@@ -438,7 +438,7 @@ mod tests {
     #[serial]
     async fn test_delete_emoji_and_update_caches() {
         let db_client = &mut create_test_database().await;
-        let image = PartialMediaInfo::from(MediaInfo::png_for_test());
+        let image = MediaInfo::png_for_test();
         let (emoji, _) = create_or_update_local_emoji(
             db_client,
             "test",

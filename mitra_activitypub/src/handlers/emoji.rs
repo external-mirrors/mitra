@@ -16,7 +16,7 @@ use mitra_models::{
     },
     emojis::types::DbEmoji,
     filter_rules::types::FilterAction,
-    media::types::{MediaInfo, PartialMediaInfo},
+    media::types::MediaInfo,
 };
 use mitra_validators::{
     activitypub::validate_object_id,
@@ -140,7 +140,7 @@ pub async fn handle_emoji(
         moderation_domain.as_str(),
         FilterAction::ProxyMedia,
     );
-    let media_info = if is_proxy_enabled {
+    let image = if is_proxy_enabled {
         log::info!("linked emoji {}", emoji.icon.url);
         MediaInfo::link(media_type, emoji.icon.url)
     } else {
@@ -149,7 +149,6 @@ pub async fn handle_emoji(
         log::info!("downloaded emoji {}", emoji.icon.url);
         MediaInfo::remote(file_info, emoji.icon.url)
     };
-    let image = PartialMediaInfo::from(media_info);
     let db_emoji = if let Some(emoji_id) = maybe_emoji_id {
         let (db_emoji, deletion_queue) = update_emoji(
             db_client,

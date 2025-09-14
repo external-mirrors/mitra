@@ -88,7 +88,7 @@ impl AddEmoji {
         validate_local_emoji_data(config, &self.emoji_name, &file_data, &media_type)?;
         let media_storage = MediaStorage::new(config);
         let file_info = media_storage.save_file(file_data, &media_type)?;
-        let image = PartialMediaInfo::from(MediaInfo::local(file_info));
+        let image = MediaInfo::local(file_info);
         let (_, deletion_queue) = create_or_update_local_emoji(
             db_client,
             &self.emoji_name,
@@ -141,7 +141,7 @@ impl ImportEmoji {
         };
         validate_local_emoji_data(config, &emoji.emoji_name, &file_data, &media_type)?;
         let file_info = media_storage.save_file(file_data, &media_type)?;
-        let image = PartialMediaInfo::from(MediaInfo::local(file_info));
+        let image = MediaInfo::local(file_info);
         let (_, deletion_queue) = create_or_update_local_emoji(
             db_client,
             &emoji.emoji_name,
