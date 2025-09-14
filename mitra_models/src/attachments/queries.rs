@@ -4,7 +4,7 @@ use uuid::Uuid;
 use mitra_utils::id::generate_ulid;
 
 use crate::database::{DatabaseClient, DatabaseError};
-use crate::media::types::{DeletionQueue, MediaInfo, PartialMediaInfo};
+use crate::media::types::{DeletionQueue, MediaInfo};
 
 use super::types::DbMediaAttachment;
 
@@ -29,7 +29,7 @@ pub async fn create_attachment(
         &[
             &attachment_id,
             &owner_id,
-            &PartialMediaInfo::from(media_info),
+            &media_info,
             &description,
         ],
     ).await?;
@@ -123,6 +123,7 @@ pub async fn delete_unused_attachments(
 mod tests {
     use serial_test::serial;
     use crate::database::test_utils::create_test_database;
+    use crate::media::types::PartialMediaInfo;
     use crate::profiles::{
         queries::create_profile,
         types::ProfileCreateData,

@@ -31,6 +31,8 @@ rand_chacha = "0.3"
 regex = "1.10.6"
 # Used for hashing passwords
 rust-argon2 = "2.1.0"
+# Used for serialization/deserialization
+serde = { version = "1.0.210", features = ["derive"] }
 # Used to gather disk info
 sysinfo = { version = "0.32.1", default-features = false, features = ["disk"] }
 # Used for creating error types

@@ -2171,6 +2171,7 @@ dependencies = [
  "rand_chacha",
  "regex",
  "rust-argon2",
+ "serde",
  "sysinfo",
  "thiserror",
  "ulid",

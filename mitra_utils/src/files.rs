@@ -10,6 +10,7 @@ use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
 
 use mime_guess::get_mime_extensions_str;
+use serde::{Deserialize, Serialize};
 
 pub fn get_media_type_extension(media_type: &str) -> Option<&'static str> {
     match media_type {
@@ -56,7 +57,7 @@ impl fmt::Display for FileSize {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct FileInfo {
     pub file_name: String,
     pub file_size: usize,

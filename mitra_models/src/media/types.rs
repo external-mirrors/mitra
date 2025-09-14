@@ -4,12 +4,16 @@ use mitra_utils::files::FileInfo;
 
 use crate::database::json_macro::{json_from_sql, json_to_sql};
 
-#[derive(Clone)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(tag = "type")]
 pub enum MediaInfo {
+    #[serde(rename = "file")]
     File {
+        #[serde(flatten)]
         file_info: FileInfo,
         url: Option<String>,
     },
+    #[serde(rename = "link")]
     Link {
         media_type: String,
         url: String,
@@ -36,6 +40,9 @@ impl MediaInfo {
         }
     }
 }
+
+json_from_sql!(MediaInfo);
+json_to_sql!(MediaInfo);
 
 // Same field names in database
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
@@ -148,7 +155,7 @@ mod tests {
             digest: [0; 32],
             media_type: "image/png".to_owned(),
         };
-        let media = PartialMediaInfo::from(MediaInfo::local(file_info));
+        let media = MediaInfo::local(file_info);
         let value = serde_json::to_value(media.clone()).unwrap();
         let expected_value = serde_json::json!({
             "type": "file",
@@ -161,14 +168,14 @@ mod tests {
         assert_eq!(value, expected_value);
         let media_deserialized: PartialMediaInfo =
             serde_json::from_value(value).unwrap();
-        assert_eq!(media_deserialized, media);
+        assert_eq!(media_deserialized, PartialMediaInfo::from(media));
     }
 
     #[test]
     fn test_media_info_link_serialization() {
         let media_type = "image/png".to_owned();
         let url = "https://social.example/image.png".to_owned();
-        let media = PartialMediaInfo::from(MediaInfo::link(media_type, url));
+        let media = MediaInfo::link(media_type, url);
         let value = serde_json::to_value(media.clone()).unwrap();
         let expected_value = serde_json::json!({
             "type": "link",
@@ -178,6 +185,6 @@ mod tests {
         assert_eq!(value, expected_value);
         let media_deserialized: PartialMediaInfo =
             serde_json::from_value(value).unwrap();
-        assert_eq!(media_deserialized, media);
+        assert_eq!(media_deserialized, PartialMediaInfo::from(media));
     }
 }
