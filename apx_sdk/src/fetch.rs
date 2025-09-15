@@ -17,11 +17,7 @@ use reqwest::{
 use serde_json::{Value as JsonValue};
 
 use apx_core::{
-    http_signatures::create::{
-        create_http_signature_cavage,
-        HttpSignatureError,
-    },
-    http_types::{Method as HttpMethod},
+    http_signatures::create::HttpSignatureError,
     http_url::is_same_http_origin,
     media_type::sniff_media_type,
     url::canonical::is_same_origin,
@@ -40,6 +36,7 @@ use super::{
         describe_request_error,
         get_network_type,
         limited_response,
+        sign_http_request,
         RedirectAction,
         UnsafeUrlError,
         REDIRECT_LIMIT,
@@ -192,16 +189,13 @@ pub async fn fetch_object(
 
         if let Some(ref signer) = agent.signer {
             // Only public instances can send signed requests
-            let headers = create_http_signature_cavage(
-                HttpMethod::GET,
+            request_builder = sign_http_request(
+                request_builder,
+                Method::GET,
                 &target_url,
                 b"",
                 signer,
             )?;
-            request_builder = request_builder
-                .header("Host", headers.host)
-                .header("Date", headers.date)
-                .header("Signature", headers.signature);
         };
         let response = request_builder
             .send().await?

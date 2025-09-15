@@ -20,6 +20,11 @@ use reqwest::{
 use thiserror::Error;
 
 use apx_core::{
+    http_signatures::create::{
+        create_http_signature_cavage,
+        HttpSignatureError,
+        HttpSigner,
+    },
     http_url::parse_http_url_whatwg,
     http_url_whatwg::{
         get_hostname,
@@ -204,6 +209,29 @@ pub fn build_http_request(
         request_builder = request_builder
             .header(header::USER_AGENT, user_agent);
     };
+    Ok(request_builder)
+}
+
+pub fn sign_http_request(
+    mut request_builder: RequestBuilder,
+    method: Method,
+    target_url: &str,
+    body: &[u8],
+    signer: &HttpSigner,
+) -> Result<RequestBuilder, HttpSignatureError> {
+    let headers = create_http_signature_cavage(
+        method,
+        target_url,
+        body,
+        signer,
+    )?;
+    if let Some(digest) = headers.digest {
+        request_builder = request_builder.header("Digest", digest);
+    };
+    request_builder = request_builder
+        .header(header::HOST, headers.host)
+        .header(header::DATE, headers.date)
+        .header("Signature", headers.signature);
     Ok(request_builder)
 }
 

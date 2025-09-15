@@ -1,15 +1,11 @@
 //! Delivering activities.
 
-use reqwest::{header, Client, StatusCode};
+use reqwest::{header, Client, Method, StatusCode};
 use serde_json::{Value as JsonValue};
 use thiserror::Error;
 
 use apx_core::{
-    http_signatures::create::{
-        create_http_signature_cavage,
-        HttpSignatureError,
-    },
-    http_types::Method,
+    http_signatures::create::HttpSignatureError,
     http_url_whatwg::UrlError,
 };
 
@@ -22,6 +18,7 @@ use crate::{
         describe_request_error,
         get_network_type,
         limited_response,
+        sign_http_request,
         RedirectAction,
         UnsafeUrlError,
     },
@@ -89,19 +86,13 @@ pub async fn send_object(
     request_builder = request_builder
         .header(header::CONTENT_TYPE, AP_MEDIA_TYPE);
     if let Some(ref signer) = agent.signer {
-        let headers = create_http_signature_cavage(
+        request_builder = sign_http_request(
+            request_builder,
             Method::POST,
             inbox_url,
             request_body.as_bytes(),
             signer,
         )?;
-        let digest = headers.digest
-            .expect("digest header should be present if method is POST");
-        request_builder = request_builder
-            .header(header::HOST, headers.host)
-            .header(header::DATE, headers.date)
-            .header("Digest", digest)
-            .header("Signature", headers.signature);
     };
     for (name, value) in extra_headers {
         request_builder = request_builder.header(*name, *value);
