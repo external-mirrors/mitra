@@ -11,7 +11,6 @@ use reqwest::{
     Body,
     Client,
     Method,
-    RequestBuilder,
     StatusCode,
     Url,
 };
@@ -36,11 +35,11 @@ use super::{
     },
     constants::{AP_MEDIA_TYPE, AS_MEDIA_TYPE},
     http_client::{
-        build_http_client,
+        build_http_request,
+        create_http_client,
         describe_request_error,
         get_network_type,
         limited_response,
-        require_safe_url,
         RedirectAction,
         UnsafeUrlError,
         REDIRECT_LIMIT,
@@ -101,34 +100,20 @@ pub enum FetchError {
     NoGateway,
 }
 
-fn build_fetcher_client(
+fn create_fetcher_client(
     agent: &FederationAgent,
     request_url: &str,
     redirect_action: RedirectAction,
 ) -> Result<Client, FetchError> {
     let network = get_network_type(request_url)
         .map_err(|_| FetchError::UrlError)?;
-    let http_client = build_http_client(
+    let client = create_http_client(
         agent,
         network,
         agent.fetcher_timeout,
         redirect_action,
     )?;
-    Ok(http_client)
-}
-
-fn build_request(
-    agent: &FederationAgent,
-    http_client: &Client,
-    method: Method,
-    url: &str,
-) -> RequestBuilder {
-    let mut request_builder = http_client.request(method, url);
-    if let Some(ref user_agent) = agent.user_agent {
-        request_builder = request_builder
-            .header(header::USER_AGENT, user_agent);
-    };
-    request_builder
+    Ok(client)
 }
 
 fn fetcher_error_for_status(error: reqwest::Error) -> FetchError {
@@ -192,7 +177,7 @@ pub async fn fetch_object(
 ) -> Result<JsonValue, FetchError> {
     // Don't follow redirects automatically,
     // because request needs to be signed again after every redirect
-    let http_client = build_fetcher_client(
+    let client = create_fetcher_client(
         agent,
         object_id,
         RedirectAction::None,
@@ -201,11 +186,8 @@ pub async fn fetch_object(
     let mut redirect_count = 0;
     let mut target_url = object_id.to_owned();
     let response = loop {
-        if agent.ssrf_protection_enabled {
-            require_safe_url(&target_url)?;
-        };
         let mut request_builder =
-            build_request(agent, &http_client, Method::GET, &target_url)
+            build_http_request(agent, &client, Method::GET, &target_url)?
                 .header(header::ACCEPT, AP_MEDIA_TYPE);
 
         if let Some(ref signer) = agent.signer {
@@ -331,17 +313,14 @@ pub async fn fetch_media(
     allowed_media_types: &[&str],
     media_size_limit: usize,
 ) -> Result<(Vec<u8>, String), FetchError> {
-    if agent.ssrf_protection_enabled {
-        require_safe_url(url)?;
-    };
     // Redirects are allowed
-    let http_client = build_fetcher_client(
+    let client = create_fetcher_client(
         agent,
         url,
         RedirectAction::Follow,
     )?;
     let request_builder =
-        build_request(agent, &http_client, Method::GET, url);
+        build_http_request(agent, &client, Method::GET, url)?;
     let response = request_builder.send().await?.error_for_status()?;
     if let Some(content_length) = response.content_length() {
         let content_length: usize = content_length.try_into()
@@ -382,17 +361,14 @@ pub async fn stream_media(
         FetchError
     >
 {
-    if agent.ssrf_protection_enabled {
-        require_safe_url(url)?;
-    };
     // Redirects are allowed
-    let http_client = build_fetcher_client(
+    let client = create_fetcher_client(
         agent,
         url,
         RedirectAction::Follow,
     )?;
     let request_builder =
-        build_request(agent, &http_client, Method::GET, url);
+        build_http_request(agent, &client, Method::GET, url)?;
     let response = request_builder.send().await?.error_for_status()?;
     let media_type = response.headers()
         .get(header::CONTENT_TYPE)
@@ -415,17 +391,14 @@ pub async fn fetch_json(
     accept: Option<&str>,
 ) -> Result<JsonValue, FetchError> {
     const APPLICATION_JSON: &str = "application/json";
-    if agent.ssrf_protection_enabled {
-        require_safe_url(url)?;
-    };
     // Redirects are allowed
-    let http_client = build_fetcher_client(
+    let client = create_fetcher_client(
         agent,
         url,
         RedirectAction::Follow,
     )?;
     let request_builder =
-        build_request(agent, &http_client, Method::GET, url);
+        build_http_request(agent, &client, Method::GET, url)?;
     let response = request_builder
         .query(query)
         .header(header::ACCEPT, accept.unwrap_or(APPLICATION_JSON))

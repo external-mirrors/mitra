@@ -7,11 +7,14 @@ use std::time::Duration;
 use bytes::Bytes;
 use http_body_util::{BodyExt, Limited};
 use reqwest::{
+    header,
     redirect::{Policy as RedirectPolicy},
     Body,
     Client,
     Error,
+    Method,
     Proxy,
+    RequestBuilder,
     Response,
 };
 use thiserror::Error;
@@ -84,14 +87,14 @@ fn is_safe_url(url: &str) -> bool {
 #[error("unsafe URL: {0}")]
 pub struct UnsafeUrlError(String);
 
-pub fn require_safe_url(url: &str) -> Result<(), UnsafeUrlError> {
+fn require_safe_url(url: &str) -> Result<(), UnsafeUrlError> {
     if !is_safe_url(url) {
         return Err(UnsafeUrlError(url.to_string()));
     };
     Ok(())
 }
 
-fn build_safe_redirect_policy() -> RedirectPolicy {
+fn create_safe_redirect_policy() -> RedirectPolicy {
     RedirectPolicy::custom(|attempt| {
         if attempt.previous().len() > REDIRECT_LIMIT {
             attempt.error("too many redirects")
@@ -138,7 +141,7 @@ mod dns_resolver {
     }
 }
 
-pub fn build_http_client(
+pub fn create_http_client(
     agent: &FederationAgent,
     network: Network,
     timeout: u64,
@@ -169,7 +172,7 @@ pub fn build_http_client(
         RedirectAction::None => RedirectPolicy::none(),
         RedirectAction::Follow => {
             if agent.ssrf_protection_enabled {
-                build_safe_redirect_policy()
+                create_safe_redirect_policy()
             } else {
                 RedirectPolicy::limited(REDIRECT_LIMIT)
             }
@@ -185,6 +188,23 @@ pub fn build_http_client(
         .connect_timeout(connect_timeout)
         .redirect(redirect_policy)
         .build()
+}
+
+pub fn build_http_request(
+    agent: &FederationAgent,
+    client: &Client,
+    method: Method,
+    target_url: &str,
+) -> Result<RequestBuilder, UnsafeUrlError> {
+    if agent.ssrf_protection_enabled {
+        require_safe_url(target_url)?;
+    };
+    let mut request_builder = client.request(method, target_url);
+    if let Some(ref user_agent) = agent.user_agent {
+        request_builder = request_builder
+            .header(header::USER_AGENT, user_agent);
+    };
+    Ok(request_builder)
 }
 
 pub async fn limited_response(

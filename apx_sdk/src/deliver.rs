@@ -17,11 +17,11 @@ use crate::{
     agent::FederationAgent,
     constants::AP_MEDIA_TYPE,
     http_client::{
-        build_http_client,
+        build_http_request,
+        create_http_client,
         describe_request_error,
         get_network_type,
         limited_response,
-        require_safe_url,
         RedirectAction,
         UnsafeUrlError,
     },
@@ -57,18 +57,18 @@ pub enum DelivererError {
     HttpError(Response),
 }
 
-fn build_deliverer_client(
+fn create_deliverer_client(
     agent: &FederationAgent,
     request_url: &str,
 ) -> Result<Client, DelivererError> {
     let network = get_network_type(request_url)?;
-    let http_client = build_http_client(
+    let client = create_http_client(
         agent,
         network,
         agent.deliverer_timeout,
         RedirectAction::None, // do not follow redirects
     )?;
-    Ok(http_client)
+    Ok(client)
 }
 
 /// Delivers object to inbox or outbox
@@ -78,18 +78,16 @@ pub async fn send_object(
     object_json: &JsonValue,
     extra_headers: &[(&str, &str)],
 ) -> Result<Response, DelivererError> {
-    if agent.ssrf_protection_enabled {
-        require_safe_url(inbox_url)?;
-    };
-
-    let http_client = build_deliverer_client(agent, inbox_url)?;
+    let client = create_deliverer_client(agent, inbox_url)?;
     let request_body = serde_json::to_string(object_json)?;
-    let mut request_builder = http_client.post(inbox_url)
+    let mut request_builder = build_http_request(
+        agent,
+        &client,
+        Method::POST,
+        inbox_url,
+    )?;
+    request_builder = request_builder
         .header(header::CONTENT_TYPE, AP_MEDIA_TYPE);
-    if let Some(ref user_agent) = agent.user_agent {
-        request_builder = request_builder
-            .header(header::USER_AGENT, user_agent);
-    };
     if let Some(ref signer) = agent.signer {
         let headers = create_http_signature_cavage(
             Method::POST,
