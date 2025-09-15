@@ -10,7 +10,6 @@ use apx_core::{
     },
     http_types::Method,
     http_url_whatwg::UrlError,
-    json_signatures::create::JsonSignatureError,
 };
 
 use crate::{
@@ -37,9 +36,6 @@ pub struct Response {
 pub enum DelivererError {
     #[error(transparent)]
     HttpSignatureError(#[from] HttpSignatureError),
-
-    #[error(transparent)]
-    JsonSignatureError(#[from] JsonSignatureError),
 
     #[error("activity serialization error")]
     SerializationError(#[from] serde_json::Error),

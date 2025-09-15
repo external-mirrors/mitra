@@ -20,6 +20,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Removed
 
 - Removed `expected_media_type` argument from `fetch_media`.
+- Removed `JsonSignatureError` variant from `DelivererError`.
 
 ## [0.16.0] - 2025-08-14
 
