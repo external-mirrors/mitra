@@ -125,6 +125,46 @@ pub async fn send_object(
     }
 }
 
+pub async fn send_media(
+    agent: &FederationAgent,
+    url: &str,
+    media_data: Vec<u8>,
+    media_type: &str,
+) -> Result<Response, DelivererError> {
+    let client = create_deliverer_client(agent, url)?;
+    let mut request_builder = build_http_request(
+        agent,
+        &client,
+        Method::POST,
+        url,
+    )?;
+    request_builder = request_builder
+        .header(header::CONTENT_TYPE, media_type);
+    if let Some(ref signer) = agent.signer {
+        request_builder = sign_http_request(
+            request_builder,
+            Method::POST,
+            url,
+            &media_data,
+            signer,
+        )?;
+    };
+    let response = request_builder
+        .body(media_data)
+        .send()
+        .await?;
+    let response_status = response.status();
+    let response_data = limited_response(response, agent.response_size_limit)
+        .await
+        .ok_or(DelivererError::ResponseTooLarge)?;
+    let response = Response::new(response_status, response_data);
+    if response_status.is_success() {
+        Ok(response)
+    } else {
+        Err(DelivererError::HttpError(response))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
