@@ -54,8 +54,8 @@ async fn main() -> () {
     ).unwrap();
     send_object(
         &agent,
-        &signed_create.to_string(),
         &format!("http://127.0.0.1:8380/.well-known/apgateway/{did}/outbox"),
+        &signed_create,
         &[],
     ).await.unwrap();
 }

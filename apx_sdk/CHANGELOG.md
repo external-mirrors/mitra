@@ -16,6 +16,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Renamed `fetch_file` to `fetch_media`.
 - Renamed `fetch_file_streaming` to `stream_media`.
 - Improved descriptions of request errors.
+- Changed object argument type in `send_object` function to `serde_json::Value`.
 
 ### Removed
 

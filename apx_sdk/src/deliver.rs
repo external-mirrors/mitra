@@ -1,6 +1,7 @@
 //! Delivering activities.
 
 use reqwest::{header, Client, StatusCode};
+use serde_json::{Value as JsonValue};
 use thiserror::Error;
 
 use apx_core::{
@@ -37,7 +38,7 @@ pub enum DelivererError {
     #[error(transparent)]
     HttpSignatureError(#[from] HttpSignatureError),
 
-    #[error("activity serialization error")]
+    #[error("object serialization error")]
     SerializationError(#[from] serde_json::Error),
 
     #[error("inavlid URL")]
@@ -73,8 +74,8 @@ fn build_deliverer_client(
 /// Delivers object to inbox or outbox
 pub async fn send_object(
     agent: &FederationAgent,
-    object_json: &str,
     inbox_url: &str,
+    object_json: &JsonValue,
     extra_headers: &[(&str, &str)],
 ) -> Result<Response, DelivererError> {
     if agent.ssrf_protection_enabled {
@@ -82,6 +83,7 @@ pub async fn send_object(
     };
 
     let http_client = build_deliverer_client(agent, inbox_url)?;
+    let request_body = serde_json::to_string(object_json)?;
     let mut request_builder = http_client.post(inbox_url)
         .header(header::CONTENT_TYPE, AP_MEDIA_TYPE);
     if let Some(ref user_agent) = agent.user_agent {
@@ -89,10 +91,10 @@ pub async fn send_object(
             .header(header::USER_AGENT, user_agent);
     };
     if let Some(ref signer) = agent.signer {
-         let headers = create_http_signature_cavage(
+        let headers = create_http_signature_cavage(
             Method::POST,
             inbox_url,
-            object_json.as_bytes(),
+            request_body.as_bytes(),
             signer,
         )?;
         let digest = headers.digest
@@ -108,7 +110,7 @@ pub async fn send_object(
     };
 
     let response = request_builder
-        .body(object_json.to_owned())
+        .body(request_body)
         .send()
         .await?;
     let response_status = response.status();

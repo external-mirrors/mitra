@@ -283,7 +283,6 @@ pub(super) async fn deliver_activity_worker(
         );
         local_actor_key_id(&actor_id, PublicKeyType::RsaPkcs1)
     };
-    let activity_json = serde_json::to_string(&activity)?;
 
     let mut deliveries = vec![];
     let mut sent = vec![];
@@ -331,8 +330,8 @@ pub(super) async fn deliver_activity_worker(
             let future = async {
                 let result = send_object(
                     &agent,
-                    &activity_json,
                     inbox,
+                    &activity,
                     &[],
                 ).await;
                 (*index, result)
