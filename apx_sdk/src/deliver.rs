@@ -1,5 +1,6 @@
 //! Delivering activities.
 
+use bytes::Bytes;
 use reqwest::{header, Client, Method, StatusCode};
 use serde_json::{Value as JsonValue};
 use thiserror::Error;
@@ -28,6 +29,15 @@ use crate::{
 pub struct Response {
     pub status: StatusCode,
     pub body: String,
+}
+
+impl Response {
+    fn new(status: StatusCode, body: Bytes) -> Self {
+        let body_text = String::from_utf8(body.to_vec())
+            // Replace non-UTF8 responses with empty string
+            .unwrap_or_default();
+        Self { status: status, body: body_text }
+    }
 }
 
 #[derive(Debug, Error)]
@@ -106,10 +116,7 @@ pub async fn send_object(
     let response_data = limited_response(response, agent.response_size_limit)
         .await
         .ok_or(DelivererError::ResponseTooLarge)?;
-    let response_text = String::from_utf8(response_data.to_vec())
-        // Replace non-UTF8 responses with empty string
-        .unwrap_or_default();
-    let response = Response { status: response_status, body: response_text };
+    let response = Response::new(response_status, response_data);
     // https://www.w3.org/wiki/ActivityPub/Primer/HTTP_status_codes_for_delivery
     if response_status.is_success() {
         Ok(response)
