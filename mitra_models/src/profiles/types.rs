@@ -31,7 +31,7 @@ use crate::{
         DatabaseTypeError,
     },
     emojis::types::DbEmoji,
-    media::types::PartialMediaInfo,
+    media::types::{MediaInfo, PartialMediaInfo},
 };
 
 use super::checks::{
@@ -892,8 +892,8 @@ pub struct ProfileCreateData {
     pub hostname: WebfingerHostname,
     pub display_name: Option<String>,
     pub bio: Option<String>,
-    pub avatar: Option<PartialMediaInfo>,
-    pub banner: Option<PartialMediaInfo>,
+    pub avatar: Option<MediaInfo>,
+    pub banner: Option<MediaInfo>,
     pub is_automated: bool,
     pub manually_approves_followers: bool,
     pub mention_policy: MentionPolicy,

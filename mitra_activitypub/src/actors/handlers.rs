@@ -317,9 +317,9 @@ enum ActorImageResult {
 }
 
 impl ActorImageResult {
-    fn ok(self) -> Option<PartialMediaInfo> {
+    fn ok(self) -> Option<MediaInfo> {
         match self {
-            Self::Some(media_info) => Some(PartialMediaInfo::from(media_info)),
+            Self::Some(media_info) => Some(media_info),
             _ => None,
         }
     }
