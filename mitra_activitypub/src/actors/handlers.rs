@@ -310,12 +310,34 @@ async fn get_webfinger_hostname(
     Ok(webfinger_hostname)
 }
 
+enum ActorImageResult {
+    Some(MediaInfo),
+    None,
+    Error,
+}
+
+impl ActorImageResult {
+    fn ok(self) -> Option<PartialMediaInfo> {
+        match self {
+            Self::Some(media_info) => Some(PartialMediaInfo::from(media_info)),
+            _ => None,
+        }
+    }
+
+    fn ok_or_default(self, default: Option<PartialMediaInfo>) -> Option<PartialMediaInfo> {
+        match self {
+            Self::Some(media_info) => Some(PartialMediaInfo::from(media_info)),
+            Self::None => None,
+            Self::Error => default,
+        }
+    }
+}
+
 async fn fetch_actor_image(
     ap_client: &ApClient,
     moderation_domain: &Hostname,
     actor_image: &Option<ActorImage>,
-    default: Option<PartialMediaInfo>,
-) -> Result<Option<PartialMediaInfo>, MediaStorageError> {
+) -> Result<ActorImageResult, MediaStorageError> {
     let media_limits = &ap_client.limits.media;
     let is_filter_enabled = ap_client.filter.is_action_required(
         moderation_domain.as_str(),
@@ -324,11 +346,11 @@ async fn fetch_actor_image(
     let maybe_image = if let Some(actor_image) = actor_image {
         if let Err(error) = validate_media_url(&actor_image.url) {
             log::warn!("invalid actor image URL ({error}): {}", actor_image.url);
-            return Ok(default);
+            return Ok(ActorImageResult::Error);
         };
         if is_filter_enabled {
             log::warn!("actor image removed by filter: {}", actor_image.url);
-            return Ok(None);
+            return Ok(ActorImageResult::None);
         };
         match fetch_media(
             &ap_client.agent(),
@@ -350,16 +372,15 @@ async fn fetch_actor_image(
                     log::info!("downloaded actor image {}", actor_image.url);
                     MediaInfo::remote(file_info, actor_image.url.clone())
                 };
-                let image = PartialMediaInfo::from(media_info);
-                Some(image)
+                ActorImageResult::Some(media_info)
             },
             Err(error) => {
                 log::warn!("failed to fetch actor image ({error})");
-                default
+                ActorImageResult::Error
             },
         }
     } else {
-        None
+        ActorImageResult::None
     };
     Ok(maybe_image)
 }
@@ -368,20 +389,16 @@ async fn fetch_actor_images(
     ap_client: &ApClient,
     moderation_domain: &Hostname,
     actor: &ValidatedActor,
-    default_avatar: Option<PartialMediaInfo>,
-    default_banner: Option<PartialMediaInfo>,
-) -> Result<(Option<PartialMediaInfo>, Option<PartialMediaInfo>), MediaStorageError> {
+) -> Result<(ActorImageResult, ActorImageResult), MediaStorageError> {
     let maybe_avatar = fetch_actor_image(
         ap_client,
         moderation_domain,
         &actor.icon,
-        default_avatar,
     ).await?;
     let maybe_banner = fetch_actor_image(
         ap_client,
         moderation_domain,
         &actor.image,
-        default_banner,
     ).await?;
     Ok((maybe_avatar, maybe_banner))
 }
@@ -635,8 +652,6 @@ pub async fn create_remote_profile(
         ap_client,
         &moderation_domain,
         &actor,
-        None,
-        None,
     ).await?;
     let public_keys = parse_public_keys(&actor)?;
     let (identity_proofs, mut payment_options, proposals, extra_fields) =
@@ -658,8 +673,8 @@ pub async fn create_remote_profile(
         hostname: webfinger_hostname,
         display_name: actor.name.clone(),
         bio: actor.summary.clone(),
-        avatar: maybe_avatar,
-        banner: maybe_banner,
+        avatar: maybe_avatar.ok(),
+        banner: maybe_banner.ok(),
         is_automated: actor.is_automated(),
         manually_approves_followers: actor.manually_approves_followers,
         mention_policy: MentionPolicy::None,
@@ -710,8 +725,6 @@ pub async fn update_remote_profile(
         ap_client,
         &moderation_domain,
         &actor,
-        profile.avatar,
-        profile.banner,
     ).await?;
     let public_keys = parse_public_keys(&actor)?;
     let (identity_proofs, mut payment_options, proposals, extra_fields) =
@@ -734,8 +747,8 @@ pub async fn update_remote_profile(
         display_name: actor.name.clone(),
         bio: actor.summary.clone(),
         bio_source: actor.summary.clone(),
-        avatar: maybe_avatar,
-        banner: maybe_banner,
+        avatar: maybe_avatar.ok_or_default(profile.avatar),
+        banner: maybe_banner.ok_or_default(profile.banner),
         is_automated: actor.is_automated(),
         manually_approves_followers: actor.manually_approves_followers,
         mention_policy: MentionPolicy::None,
