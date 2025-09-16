@@ -25,6 +25,7 @@ use crate::{
     },
 };
 
+/// Response of an inbox or an outbox endpoint
 #[derive(Debug)]
 pub struct Response {
     pub status: StatusCode,
@@ -40,6 +41,7 @@ impl Response {
     }
 }
 
+/// Errors that may occur when sending an object
 #[derive(Debug, Error)]
 pub enum DelivererError {
     #[error(transparent)]
@@ -125,6 +127,7 @@ pub async fn send_object(
     }
 }
 
+/// Uploads media
 pub async fn send_media(
     agent: &FederationAgent,
     url: &str,

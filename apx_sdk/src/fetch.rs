@@ -15,6 +15,7 @@ use reqwest::{
     Url,
 };
 use serde_json::{Value as JsonValue};
+use thiserror::Error;
 
 use apx_core::{
     http_signatures::create::HttpSignatureError,
@@ -46,7 +47,8 @@ use super::{
 
 const APPLICATION_OCTET_STREAM: &str = "application/octet-stream";
 
-#[derive(thiserror::Error, Debug)]
+/// Errors that may occur when fetching an object
+#[derive(Debug, Error)]
 pub enum FetchError {
     #[error(transparent)]
     SignatureError(#[from] HttpSignatureError),
@@ -158,6 +160,7 @@ fn extract_fragment(
     None
 }
 
+/// Options for `fetch_object`
 #[derive(Default)]
 pub struct FetchObjectOptions {
     /// Skip origin and content type checks?

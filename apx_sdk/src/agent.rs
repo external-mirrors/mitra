@@ -2,6 +2,7 @@
 
 pub use apx_core::http_signatures::create::HttpSigner;
 
+/// Federation agent parameters
 pub struct FederationAgent {
     /// User-Agent string.
     pub user_agent: Option<String>,
