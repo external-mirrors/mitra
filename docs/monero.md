@@ -2,9 +2,9 @@
 
 ## Payments
 
-Install a [Monero node](https://www.getmonero.org/resources/user-guides/vps_run_node.html) (requires at least 2 GB RAM and 200 GB storage) or choose a [public one](https://monero.fail/).
+Install a [Monero node](https://docs.getmonero.org/running-node/monerod-systemd/) (requires at least 2 GB RAM and 200 GB storage) or choose a [public one](https://monero.fail/).
 
-Install and configure [monero-wallet-rpc](https://www.getmonero.org/resources/developer-guides/wallet-rpc.html) service. See configuration file [example](../contrib/monero/wallet.conf).
+Install and configure [monero-wallet-rpc](https://docs.getmonero.org/rpc-library/wallet-rpc/) service. See configuration file [example](../contrib/monero/wallet.conf).
 
 Start `monero-wallet-rpc`.
 
