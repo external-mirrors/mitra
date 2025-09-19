@@ -14,7 +14,7 @@ base64_ext = { package = "base64", version = "0.22.1" }
 # Used to verify minisign signatures
 blake2 = { version = "0.10.5", optional = true }
 # Used to decode base58btc
-bs58 = "0.4.0"
+bs58 = "0.5.1"
 # Used for working with dates
 chrono = { version = "0.4.34", default-features = false, features = ["std", "serde", "clock"] }
 # Used for working with EdDSA signatures
