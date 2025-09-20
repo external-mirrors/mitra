@@ -332,6 +332,30 @@ pub async fn get_transaction_by_id(
     Ok(maybe_transfer)
 }
 
+pub async fn get_latest_incoming_transfer(
+    wallet_client: &WalletClient,
+    subaddress_index: &Index,
+) -> Result<Option<GotTransfer>, MoneroError> {
+    // NOTE: get_transfers(type: In) doesn't work
+    let mut transfers = get_incoming_transfers(
+        wallet_client,
+        subaddress_index.major,
+        vec![subaddress_index.minor],
+    ).await?;
+    transfers.sort_by_key(|transfer| transfer.block_height);
+    let maybe_transaction = if let Some(transfer) = transfers.pop() {
+        let HashString(tx_hash) = transfer.tx_hash;
+        get_transaction_by_id(
+            wallet_client,
+            subaddress_index.major,
+            &format!("{:x}", tx_hash),
+        ).await?
+    } else {
+        None
+    };
+    Ok(maybe_transaction)
+}
+
 pub async fn get_address_count(
     wallet_client: &WalletClient,
     account_index: u32,

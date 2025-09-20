@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- Wait for confirmations when processing incoming payments.
+
 ### Fixed
 
 - Always add `payment_amount_min` parameter chain metadata in `/api/v1/instance` response.

@@ -34,6 +34,7 @@ use mitra_services::monero::wallet::{
     build_wallet_client,
     get_active_addresses,
     get_incoming_transfers,
+    get_latest_incoming_transfer,
     get_subaddress_balance,
     get_subaddress_by_index,
     get_subaddress_index,
@@ -153,6 +154,21 @@ pub async fn check_monero_subscriptions(
         {
             // Don't forward payment until all outputs are unlocked
             log::info!("invoice {}: waiting for unlock", invoice.id);
+            continue;
+        };
+        let latest_transfer = match get_latest_incoming_transfer(
+            &wallet_client,
+            &address_index,
+        ).await? {
+            Some(transfer) => transfer,
+            None => {
+                log::error!("invoice {}: incoming transfer doesn't exist", invoice.id);
+                continue;
+            },
+        };
+        if latest_transfer.confirmations.unwrap_or(0) < MONERO_CONFIRMATIONS_SAFE {
+            // Wait for more confirmations
+            log::info!("invoice {}: waiting for payment confirmation", invoice.id);
             continue;
         };
         log::info!(
