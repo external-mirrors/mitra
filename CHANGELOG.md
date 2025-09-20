@@ -6,9 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+
+- Added `tx_required_confirmations` parameter to Monero integration configuration.
+
 ### Changed
 
-- Wait for confirmations when processing incoming payments.
+- Wait for 20 confirmations when processing incoming payments.
 
 ### Fixed
 

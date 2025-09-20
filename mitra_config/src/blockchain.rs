@@ -2,6 +2,7 @@ use apx_core::caip2::ChainId;
 use serde::Deserialize;
 
 fn default_wallet_account_index() -> u32 { 0 }
+fn default_tx_required_confirmations() -> u64 { 20 }
 
 #[derive(Clone, Default, Deserialize)]
 pub struct MoneroChainMetadata {
@@ -22,6 +23,8 @@ pub struct MoneroConfig {
     pub wallet_password: Option<String>,
     #[serde(default = "default_wallet_account_index")]
     pub account_index: u32,
+    #[serde(default = "default_tx_required_confirmations")]
+    pub tx_required_confirmations: u64,
 }
 
 #[derive(Clone, Deserialize)]

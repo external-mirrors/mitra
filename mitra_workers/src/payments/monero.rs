@@ -45,7 +45,6 @@ use mitra_services::monero::wallet::{
     TransferCategory,
 };
 
-const MONERO_CONFIRMATIONS_SAFE: u64 = 3;
 const MONERO_SEND_TIMEOUT: u64 = 120;
 
 pub async fn check_monero_subscriptions(
@@ -166,7 +165,7 @@ pub async fn check_monero_subscriptions(
                 continue;
             },
         };
-        if latest_transfer.confirmations.unwrap_or(0) < MONERO_CONFIRMATIONS_SAFE {
+        if latest_transfer.confirmations.unwrap_or(0) < config.tx_required_confirmations {
             // Wait for more confirmations
             log::info!("invoice {}: waiting for payment confirmation", invoice.id);
             continue;
@@ -285,7 +284,7 @@ pub async fn check_monero_subscriptions(
                 continue;
             },
         };
-        if transfer.confirmations.unwrap_or(0) < MONERO_CONFIRMATIONS_SAFE {
+        if transfer.confirmations.unwrap_or(0) < config.tx_required_confirmations {
             // Wait for more confirmations
             log::info!("invoice {}: waiting for payout confirmation", invoice.id);
             continue;

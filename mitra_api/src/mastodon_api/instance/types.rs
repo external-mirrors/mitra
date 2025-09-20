@@ -408,6 +408,7 @@ mod tests {
             wallet_name: None,
             wallet_password: None,
             account_index: 0,
+            tx_required_confirmations: 20,
         };
         let metadata = BlockchainMetadata::from(&monero_config);
         let metadata_json = serde_json::to_value(metadata).unwrap();
