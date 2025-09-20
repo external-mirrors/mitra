@@ -20,7 +20,7 @@ hex = { version = "0.4.3", features = ["serde"] }
 # Used for logging
 log = "0.4.20"
 # Used to query Monero node
-monero-rpc = { git = "https://github.com/monero-rs/monero-rpc-rs", rev = "da1bebf566b6e342091a1f74bce2ce892194b3d7", default-features = false, features = ["rpc_authentication", "rustls-tls"] }
+monero-rpc = { git = "https://github.com/monero-rs/monero-rpc-rs", rev = "b943a4a79eb55daaa43259b507e8af34e707c313", default-features = false, features = ["rpc_authentication", "rustls-tls"] }
 # Used for working with regular expressions
 regex = "1.10.6"
 # Used for making async HTTP requests

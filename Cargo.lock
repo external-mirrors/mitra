@@ -2236,14 +2236,13 @@ dependencies = [
 [[package]]
 name = "monero-rpc"
 version = "0.4.0"
-source = "git+https://github.com/monero-rs/monero-rpc-rs?rev=da1bebf566b6e342091a1f74bce2ce892194b3d7#da1bebf566b6e342091a1f74bce2ce892194b3d7"
+source = "git+https://github.com/monero-rs/monero-rpc-rs?rev=b943a4a79eb55daaa43259b507e8af34e707c313#b943a4a79eb55daaa43259b507e8af34e707c313"
 dependencies = [
  "anyhow",
  "chrono",
  "diqwest",
  "fixed-hash",
  "hex",
- "http 1.1.0",
  "jsonrpc-core",
  "monero",
  "reqwest",
