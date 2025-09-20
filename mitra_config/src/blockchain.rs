@@ -1,9 +1,9 @@
 use apx_core::caip2::ChainId;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 
 fn default_wallet_account_index() -> u32 { 0 }
 
-#[derive(Clone, Deserialize, Serialize)]
+#[derive(Clone, Default, Deserialize)]
 pub struct MoneroChainMetadata {
     pub description: Option<String>,
 }

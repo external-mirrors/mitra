@@ -3186,7 +3186,15 @@ components:
               chain_metadata:
                 description: Additional information about blockchain
                 type: object
-                nullable: true
+                properties:
+                  description:
+                    description: Description of a payment method.
+                    type: string
+                    nullable: true
+                  payment_amount_min:
+                    description: Minimum payment amount (in piconero).
+                    type: integer
+                    nullable: false
               features:
                 description: Blockchain features.
                 type: object

@@ -1,5 +1,4 @@
 use serde::Serialize;
-use serde_json::{to_value, Value as JsonValue};
 
 use mitra_adapters::{
     dynamic_config::DynamicConfig,
@@ -10,6 +9,7 @@ use mitra_config::{
     BlockchainConfig,
     Config,
     DefaultRole,
+    MoneroConfig,
     RegistrationType,
     SOFTWARE_NAME,
     SOFTWARE_REPOSITORY,
@@ -94,9 +94,25 @@ struct AllowUnauthenticated {
 }
 
 #[derive(Serialize)]
-struct MoneroInfo {
-    description: Option<String>,
-    payment_amount_min: u64,
+#[serde(untagged)]
+enum BlockchainMetadata {
+    Monero {
+        description: Option<String>,
+        payment_amount_min: u64,
+    },
+}
+
+impl From<&MoneroConfig> for BlockchainMetadata {
+    fn from(monero_config: &MoneroConfig) -> Self {
+        let metadata = monero_config
+            .chain_metadata.clone()
+            .unwrap_or_default();
+        Self::Monero {
+            description: metadata.description.as_ref()
+                .map(|text| markdown_to_html(text)),
+            payment_amount_min: MONERO_PAYMENT_AMOUNT_MIN,
+        }
+    }
 }
 
 #[derive(Serialize)]
@@ -107,7 +123,7 @@ struct BlockchainFeatures {
 #[derive(Serialize)]
 struct BlockchainInfo {
     chain_id: String,
-    chain_metadata: Option<JsonValue>,
+    chain_metadata: BlockchainMetadata,
     features: BlockchainFeatures,
 }
 
@@ -206,19 +222,10 @@ impl InstanceInfo {
                 let features = BlockchainFeatures {
                     subscriptions: true,
                 };
-                let maybe_chain_metadata = monero_config
-                    .chain_metadata.as_ref()
-                    .map(|metadata| {
-                        let monero_info = MoneroInfo {
-                            description: metadata.description.as_ref()
-                                .map(|text| markdown_to_html(text)),
-                            payment_amount_min: MONERO_PAYMENT_AMOUNT_MIN,
-                        };
-                        to_value(monero_info).expect("should be serializable")
-                    });
+                let chain_metadata = BlockchainMetadata::from(monero_config);
                 BlockchainInfo {
                     chain_id: monero_config.chain_id.to_string(),
-                    chain_metadata: maybe_chain_metadata,
+                    chain_metadata: chain_metadata,
                     features: features,
                 }
             },
@@ -386,7 +393,30 @@ impl InstanceInfoV2 {
 
 #[cfg(test)]
 mod tests {
+    use apx_core::caip2::ChainId;
+    use serde_json::json;
     use super::*;
+
+    #[test]
+    fn test_serialize_blockchain_metadata() {
+        let monero_config = MoneroConfig {
+            chain_id: ChainId::monero_mainnet(),
+            chain_metadata: None,
+            wallet_rpc_url: "http://127.0.0.1:18083".to_owned(),
+            wallet_rpc_username: None,
+            wallet_rpc_password: None,
+            wallet_name: None,
+            wallet_password: None,
+            account_index: 0,
+        };
+        let metadata = BlockchainMetadata::from(&monero_config);
+        let metadata_json = serde_json::to_value(metadata).unwrap();
+        let expected_metadata_json = json!({
+            "description": null,
+            "payment_amount_min": 1000000000,
+        });
+        assert_eq!(metadata_json, expected_metadata_json);
+    }
 
     #[test]
     fn test_get_full_api_version() {
