@@ -5,6 +5,8 @@ use monero_rpc::monero::{
     Address,
 };
 
+pub const BLOCK_TIME: u16 = 120;
+
 pub fn parse_monero_address(address: &str) -> Result<Address, AddressError> {
     Address::from_str(address)
 }

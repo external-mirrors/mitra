@@ -12,15 +12,19 @@ use mitra_models::{
     invoices::types::Invoice,
     users::queries::get_user_by_id,
 };
-use mitra_services::monero::wallet::{
-    create_monero_address,
-    get_incoming_transfers,
-    get_subaddress_index,
-    open_monero_wallet,
-    MoneroError,
+use mitra_services::monero::{
+    wallet::{
+        create_monero_address,
+        get_incoming_transfers,
+        get_subaddress_index,
+        open_monero_wallet,
+        MoneroError,
+    },
+    utils::BLOCK_TIME,
 };
 
-pub const MONERO_INVOICE_TIMEOUT: i64 = 3 * 60 * 60; // 3 hours
+const MONERO_INVOICE_WAIT_TIME: i64 = 3 * 60 * 60; // 3 hours
+pub const MONERO_INVOICE_TIMEOUT: i64 = MONERO_INVOICE_WAIT_TIME + 2 * 20 * (BLOCK_TIME as i64);
 
 #[derive(Debug, Error)]
 pub enum PaymentError {
@@ -109,4 +113,14 @@ pub async fn get_payment_address(
     };
     let payment_address = invoice_payment_address(&invoice)?;
     Ok(payment_address)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_monero_timeout() {
+        assert_eq!(MONERO_INVOICE_TIMEOUT, 15600);
+    }
 }
