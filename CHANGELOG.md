@@ -18,7 +18,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Fixed
 
-- Always add `payment_amount_min` parameter chain metadata in `/api/v1/instance` response.
+- Always add `payment_amount_min` parameter to chain metadata in `/api/v1/instance` response.
 
 ## [4.10.0] - 2025-09-16
 
