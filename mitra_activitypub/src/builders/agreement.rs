@@ -3,7 +3,7 @@ use serde::Serialize;
 
 use mitra_models::{
     database::DatabaseTypeError,
-    invoices::types::DbInvoice,
+    invoices::types::Invoice,
     profiles::types::MoneroSubscription,
 };
 
@@ -68,7 +68,7 @@ pub fn build_agreement(
     instance_url: &str,
     username: &str,
     payment_info: &MoneroSubscription,
-    invoice: &DbInvoice,
+    invoice: &Invoice,
 ) -> Result<Agreement, DatabaseTypeError> {
     let actor_id = local_actor_id(instance_url, username);
     let proposal_id = local_actor_proposal_id(
@@ -129,7 +129,7 @@ mod tests {
             payout_address: "test".to_string(),
         };
         let invoice_id = "edc374aa-e580-4a58-9404-f3e8bf8556b2".parse().unwrap();
-        let invoice = DbInvoice {
+        let invoice = Invoice {
             id: invoice_id,
             chain_id: DbChainId::new(&chain_id),
             payment_address: Some("8xyz".to_string()),

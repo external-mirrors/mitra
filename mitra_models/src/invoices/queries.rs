@@ -12,7 +12,7 @@ use crate::database::{
     DatabaseTypeError,
 };
 
-use super::types::{DbChainId, DbInvoice, InvoiceStatus};
+use super::types::{DbChainId, Invoice, InvoiceStatus};
 
 /// Create invoice with local recipient
 pub async fn create_local_invoice(
@@ -22,7 +22,7 @@ pub async fn create_local_invoice(
     chain_id: &ChainId,
     payment_address: &str,
     amount: impl TryInto<i64>,
-) -> Result<DbInvoice, DatabaseError> {
+) -> Result<Invoice, DatabaseError> {
     let invoice_id = generate_ulid();
     let db_amount: i64 = TryInto::try_into(amount)
         .map_err(|_| DatabaseTypeError)?;
@@ -62,7 +62,7 @@ pub async fn create_remote_invoice(
     recipient_id: Uuid,
     chain_id: &ChainId,
     amount: impl TryInto<i64>,
-) -> Result<DbInvoice, DatabaseError> {
+) -> Result<Invoice, DatabaseError> {
     let invoice_id = generate_ulid();
     let db_amount: i64 = TryInto::try_into(amount)
         .map_err(|_| DatabaseTypeError)?;
@@ -104,7 +104,7 @@ pub async fn create_remote_invoice(
 pub async fn get_invoice_by_id(
     db_client: &impl DatabaseClient,
     invoice_id: Uuid,
-) -> Result<DbInvoice, DatabaseError> {
+) -> Result<Invoice, DatabaseError> {
     let maybe_row = db_client.query_opt(
         "
         SELECT invoice
@@ -121,7 +121,7 @@ pub async fn get_local_invoice_by_address(
     db_client: &impl DatabaseClient,
     chain_id: &ChainId,
     payment_address: &str,
-) -> Result<DbInvoice, DatabaseError> {
+) -> Result<Invoice, DatabaseError> {
     let maybe_row = db_client.query_opt(
         "
         SELECT invoice
@@ -141,7 +141,7 @@ pub async fn get_invoice_by_participants(
     sender_id: Uuid,
     recipient_id: Uuid,
     chain_id: &ChainId,
-) -> Result<DbInvoice, DatabaseError> {
+) -> Result<Invoice, DatabaseError> {
     // Always return oldest invoice
     let maybe_row = db_client.query_opt(
         "
@@ -168,7 +168,7 @@ pub async fn get_invoice_by_participants(
 pub async fn get_remote_invoice_by_object_id(
     db_client: &impl DatabaseClient,
     object_id: &str,
-) -> Result<DbInvoice, DatabaseError> {
+) -> Result<Invoice, DatabaseError> {
     let maybe_row = db_client.query_opt(
         "
         SELECT invoice
@@ -187,7 +187,7 @@ pub async fn get_invoices_by_status(
     chain_id: &ChainId,
     status: InvoiceStatus,
     only_local: bool,
-) -> Result<Vec<DbInvoice>, DatabaseError> {
+) -> Result<Vec<Invoice>, DatabaseError> {
     let condition = if only_local { "AND object_id IS NULL" } else { "" };
     let statement = format!(
         "
@@ -214,7 +214,7 @@ pub async fn get_local_invoices_by_status(
     db_client: &impl DatabaseClient,
     chain_id: &ChainId,
     status: InvoiceStatus,
-) -> Result<Vec<DbInvoice>, DatabaseError> {
+) -> Result<Vec<Invoice>, DatabaseError> {
     get_invoices_by_status(db_client, chain_id, status, true).await
 }
 
@@ -222,7 +222,7 @@ pub async fn set_invoice_status(
     db_client: &mut impl DatabaseClient,
     invoice_id: Uuid,
     new_status: InvoiceStatus,
-) -> Result<DbInvoice, DatabaseError> {
+) -> Result<Invoice, DatabaseError> {
     let transaction = db_client.transaction().await?;
     let maybe_row = transaction.query_opt(
         "
@@ -233,7 +233,7 @@ pub async fn set_invoice_status(
         &[&invoice_id],
     ).await?;
     let row = maybe_row.ok_or(DatabaseError::NotFound("invoice"))?;
-    let invoice: DbInvoice = row.try_get("invoice")?;
+    let invoice: Invoice = row.try_get("invoice")?;
     if !invoice.can_change_status(new_status) {
         return Err(DatabaseTypeError.into());
     };
@@ -258,7 +258,7 @@ pub(super) async fn set_invoice_payout_tx_id(
     db_client: &impl DatabaseClient,
     invoice_id: Uuid,
     payout_tx_id: Option<&str>,
-) -> Result<DbInvoice, DatabaseError> {
+) -> Result<Invoice, DatabaseError> {
     let maybe_row = db_client.query_opt(
         "
         UPDATE invoice SET payout_tx_id = $2

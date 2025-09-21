@@ -136,7 +136,7 @@ int_enum_to_sql!(InvoiceStatus);
 
 #[derive(FromSql)]
 #[postgres(name = "invoice")]
-pub struct DbInvoice {
+pub struct Invoice {
     pub id: Uuid,
     pub sender_id: Uuid,
     pub recipient_id: Uuid,
@@ -150,7 +150,7 @@ pub struct DbInvoice {
     pub updated_at: DateTime<Utc>,
 }
 
-impl DbInvoice {
+impl Invoice {
     pub fn amount_u64(&self) -> Result<u64, DatabaseTypeError> {
         u64::try_from(self.amount).map_err(|_| DatabaseTypeError)
     }
@@ -210,7 +210,7 @@ impl DbInvoice {
 }
 
 #[cfg(feature = "test-utils")]
-impl Default for DbInvoice {
+impl Default for Invoice {
     fn default() -> Self {
         Self {
             id: Default::default(),

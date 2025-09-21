@@ -9,7 +9,7 @@ use mitra_models::{
         create_local_invoice,
         get_invoice_by_participants,
     },
-    invoices::types::DbInvoice,
+    invoices::types::Invoice,
     users::queries::get_user_by_id,
 };
 use mitra_services::monero::wallet::{
@@ -31,14 +31,16 @@ pub enum PaymentError {
     DatabaseError(#[from] DatabaseError),
 }
 
-pub fn invoice_payment_address(invoice: &DbInvoice) -> Result<String, DatabaseError> {
+pub fn invoice_payment_address(invoice: &Invoice)
+    -> Result<String, DatabaseError>
+{
     invoice.try_payment_address().map_err(Into::into)
 }
 
 pub async fn reopen_local_invoice(
     config: &MoneroConfig,
     db_client: &mut impl DatabaseClient,
-    invoice: &DbInvoice,
+    invoice: &Invoice,
 ) -> Result<(), PaymentError> {
     if invoice.chain_id != config.chain_id {
         return Err(MoneroError::OtherError("can't process invoice").into());

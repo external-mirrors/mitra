@@ -3,7 +3,7 @@ use serde::Serialize;
 use mitra_config::Instance;
 use mitra_models::{
     database::{DatabaseError, DatabaseTypeError},
-    invoices::types::DbInvoice,
+    invoices::types::Invoice,
     profiles::types::{DbActor, MoneroSubscription},
     users::types::User,
 };
@@ -40,7 +40,7 @@ fn build_accept_offer(
     instance_url: &str,
     sender_username: &str,
     subscription_option: &MoneroSubscription,
-    invoice: &DbInvoice,
+    invoice: &Invoice,
     remote_actor_id: &str,
     offer_activity_id: &str,
 ) -> Result<AcceptOffer, DatabaseTypeError> {
@@ -68,7 +68,7 @@ pub fn prepare_accept_offer(
     instance: &Instance,
     sender: &User,
     subscription_option: &MoneroSubscription,
-    invoice: &DbInvoice,
+    invoice: &Invoice,
     remote_actor: &DbActor,
     offer_activity_id: &str,
 ) -> Result<OutgoingActivityJobData, DatabaseError> {
@@ -106,7 +106,7 @@ mod tests {
             payout_address: "test".to_string(),
         };
         let invoice_id = "edc374aa-e580-4a58-9404-f3e8bf8556b2".parse().unwrap();
-        let invoice = DbInvoice {
+        let invoice = Invoice {
             id: invoice_id,
             chain_id: DbChainId::new(&subscription_option.chain_id),
             payment_address: Some("8xyz".to_string()),

@@ -5,7 +5,7 @@ use uuid::Uuid;
 
 use mitra_adapters::payments::monero::MONERO_INVOICE_TIMEOUT;
 use mitra_models::{
-    invoices::types::{DbInvoice, InvoiceStatus},
+    invoices::types::{Invoice as DbInvoice, InvoiceStatus},
     profiles::types::PaymentOption,
     subscriptions::types::DbSubscription,
 };
