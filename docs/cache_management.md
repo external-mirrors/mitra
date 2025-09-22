@@ -1,5 +1,7 @@
 # Cache management
 
+## Retention settings
+
 Content from other servers is deleted automatically after some time (both database records and media). That time can be adjusted using configuration parameters under the `retention` key:
 
 ```yaml
@@ -28,4 +30,12 @@ Delete attachments that don't belong to any post:
 
 ```shell
 mitra delete-unused-attachments 5
+```
+
+## Media proxy
+
+Caching of media can be disabled completely by adding a [federation filter](./filter.md) rule:
+
+```shell
+mitra add-filter-rule proxy-media server.example
 ```
