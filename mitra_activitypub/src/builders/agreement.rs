@@ -3,7 +3,7 @@ use serde::Serialize;
 
 use mitra_models::{
     database::DatabaseTypeError,
-    invoices::types::Invoice,
+    invoices::types::{Invoice, InvoiceStatus},
     profiles::types::MoneroSubscription,
 };
 
@@ -14,7 +14,7 @@ use crate::{
         local_actor_proposal_id,
         local_agreement_id,
     },
-    vocabulary::{AGREEMENT, COMMITMENT, LINK},
+    vocabulary::{AGREEMENT, COMMITMENT, LINK, NOTE},
 };
 
 use super::proposal::{
@@ -36,7 +36,7 @@ pub struct Commitment {
     pub resource_quantity: Quantity,
 }
 
-/// https://codeberg.org/silverpill/feps/src/branch/main/0ea0/fep-0ea0.md
+// https://codeberg.org/silverpill/feps/src/branch/main/0ea0/fep-0ea0.md
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PaymentLink {
@@ -48,6 +48,22 @@ pub struct PaymentLink {
 }
 
 #[derive(Serialize)]
+pub struct PaymentStatus {
+    #[serde(rename = "type")]
+    object_type: String,
+    pub name: String,
+}
+
+impl From<InvoiceStatus> for PaymentStatus {
+    fn from(status: InvoiceStatus) -> Self {
+        Self {
+            object_type: NOTE.to_owned(),
+            name: format!("{status:?}"),
+        }
+    }
+}
+
+#[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Agreement {
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -56,11 +72,17 @@ pub struct Agreement {
     #[serde(rename = "type")]
     pub object_type: String,
 
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub attributed_to: Option<String>,
+
     pub stipulates: Commitment,
     pub stipulates_reciprocal: Commitment,
 
     #[serde(skip_serializing_if = "Option::is_none")]
     pub url: Option<PaymentLink>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub preview: Option<PaymentStatus>,
 }
 
 /// Builds Agreement object from invoice
@@ -100,12 +122,15 @@ pub fn build_agreement(
         href: account_id.to_uri(),
         rel: vec![PAYMENT_LINK_RELATION_TYPE.to_string()],
     };
+    let payment_status = PaymentStatus::from(invoice.invoice_status);
     let agreement = Agreement {
         id: Some(agreement_id),
         object_type: AGREEMENT.to_string(),
+        attributed_to: Some(actor_id),
         stipulates: primary_commitment,
         stipulates_reciprocal: reciprocal_commitment,
         url: Some(payment_link),
+        preview: Some(payment_status),
     };
     Ok(agreement)
 }
@@ -146,6 +171,7 @@ mod tests {
         let expected_value = json!({
             "type": "Agreement",
             "id": "https://test.example/objects/agreements/edc374aa-e580-4a58-9404-f3e8bf8556b2",
+            "attributedTo": "https://test.example/users/alice",
             "stipulates": {
                 "id": "https://test.example/objects/agreements/edc374aa-e580-4a58-9404-f3e8bf8556b2#primary",
                 "type": "Commitment",
@@ -168,6 +194,10 @@ mod tests {
                 "type": "Link",
                 "href": "caip:10:monero:418015bb9ae982a1975da7d79277c270:8xyz",
                 "rel": ["payment"],
+            },
+            "preview": {
+                "type": "Note",
+                "name": "Open",
             },
         });
         assert_eq!(

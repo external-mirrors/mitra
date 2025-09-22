@@ -160,13 +160,15 @@ impl Invoice {
         let allowed = match self.invoice_status {
             Open => {
                 if self.object_id.is_some() {
-                    vec![Completed, Timeout, Cancelled]
+                    vec![Paid, Completed, Timeout, Cancelled]
                 } else {
                     vec![Paid, Timeout, Cancelled]
                 }
             },
             Paid => {
-                if self.payout_tx_id.is_some() {
+                if self.object_id.is_some() {
+                    vec![Completed]
+                } else if self.payout_tx_id.is_some() {
                     vec![Forwarded, Underpaid]
                 } else {
                     vec![Underpaid]

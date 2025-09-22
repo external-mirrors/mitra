@@ -1,6 +1,9 @@
 use chrono::Utc;
 
-use mitra_activitypub::builders::add_person::prepare_add_subscriber;
+use mitra_activitypub::builders::{
+    add_person::prepare_add_subscriber,
+    update_agreement::prepare_update_agreement,
+};
 use mitra_adapters::{
     payments::{
         monero::{
@@ -15,6 +18,7 @@ use mitra_config::{Instance, MoneroConfig};
 use mitra_models::{
     database::{
         get_database_client,
+        DatabaseClient,
         DatabaseConnectionPool,
         DatabaseError,
     },
@@ -25,7 +29,7 @@ use mitra_models::{
         get_local_invoices_by_status,
         set_invoice_status,
     },
-    invoices::types::InvoiceStatus,
+    invoices::types::{Invoice, InvoiceStatus},
     notifications::helpers::create_subscriber_payment_notification,
     profiles::queries::get_profile_by_id,
     users::queries::get_user_by_id,
@@ -51,7 +55,36 @@ use mitra_services::monero::{
 
 const MONERO_SEND_TIMEOUT: u64 = 120;
 
+async fn send_invoice_status_update(
+    instance: &Instance,
+    db_client: &impl DatabaseClient,
+    invoice: &Invoice,
+) -> Result<(), DatabaseError> {
+    let sender = get_profile_by_id(db_client, invoice.sender_id).await?;
+    let recipient = get_user_by_id(db_client, invoice.recipient_id).await?;
+    let maybe_payment_info =
+        recipient.profile.monero_subscription(invoice.chain_id.inner());
+    let Some(payment_info) = maybe_payment_info else {
+        log::error!(
+            "subscription is not configured for user {}",
+            recipient,
+        );
+        return Ok(());
+    };
+    if let Some(ref remote_payer) = sender.actor_json {
+        prepare_update_agreement(
+            instance,
+            &recipient,
+            &payment_info,
+            invoice,
+            remote_payer,
+        )?.save_and_enqueue(db_client).await?;
+    };
+    Ok(())
+}
+
 async fn check_open_invoices(
+    instance: &Instance,
     config: &MoneroConfig,
     db_pool: &DatabaseConnectionPool,
     wallet_client: &WalletClient,
@@ -112,11 +145,12 @@ async fn check_open_invoices(
                 transfer.amount,
             );
             if invoice.invoice_status == InvoiceStatus::Open {
-                set_invoice_status(
+                let invoice = set_invoice_status(
                     db_client,
                     invoice.id,
                     InvoiceStatus::Paid,
                 ).await?;
+                send_invoice_status_update(instance, db_client, &invoice).await?;
             } else {
                 log::warn!("invoice has already been paid");
             };
@@ -375,7 +409,7 @@ pub async fn check_monero_subscriptions(
     db_pool: &DatabaseConnectionPool,
 ) -> Result<(), PaymentError> {
     let wallet_client = open_monero_wallet(config).await?;
-    check_open_invoices(config, db_pool, &wallet_client).await?;
+    check_open_invoices(instance, config, db_pool, &wallet_client).await?;
     check_paid_invoices(config, db_pool, &wallet_client).await?;
     check_forwarded_invoices(config, db_pool, instance, &wallet_client).await?;
     Ok(())

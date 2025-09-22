@@ -132,6 +132,7 @@ mod tests {
         let expected_agreement = json!({
             "type": "Agreement",
             "id": "https://local.example/objects/agreements/edc374aa-e580-4a58-9404-f3e8bf8556b2",
+            "attributedTo": "https://local.example/users/proposer",
             "stipulates": {
                 "id": "https://local.example/objects/agreements/edc374aa-e580-4a58-9404-f3e8bf8556b2#primary",
                 "type": "Commitment",
@@ -154,6 +155,10 @@ mod tests {
                 "type": "Link",
                 "href": "caip:10:monero:418015bb9ae982a1975da7d79277c270:8xyz",
                 "rel": ["payment"],
+            },
+            "preview": {
+                "type": "Note",
+                "name": "Open",
             },
         });
         assert_eq!(

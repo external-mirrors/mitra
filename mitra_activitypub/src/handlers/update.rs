@@ -16,6 +16,13 @@ use mitra_models::{
         DatabaseConnectionPool,
         DatabaseError,
     },
+    invoices::{
+        queries::{
+            get_remote_invoice_by_object_id,
+            set_invoice_status,
+        },
+        types::InvoiceStatus,
+    },
     posts::queries::get_remote_post_by_object_id,
     profiles::queries::get_remote_profile_by_actor_id,
 };
@@ -27,9 +34,11 @@ use crate::{
     identifiers::canonicalize_id,
     importers::ApClient,
     ownership::verify_object_owner,
+    vocabulary::AGREEMENT,
 };
 
 use super::{
+    agreement::Agreement,
     note::{
         update_remote_post,
         AttributedObjectJson,
@@ -37,6 +46,34 @@ use super::{
     Descriptor,
     HandlerResult,
 };
+
+async fn handle_update_agreement(
+    db_pool: &DatabaseConnectionPool,
+    activity: JsonValue,
+) -> HandlerResult {
+    let agreement: Agreement =
+        serde_json::from_value(activity["object"].clone())?;
+    let agreement_id = agreement.id.as_ref()
+        .ok_or(ValidationError("missing 'id' field"))?;
+    let new_status = agreement.preview
+        .ok_or(ValidationError("missing 'preview' field"))?
+        .invoice_status();
+    let db_client = &mut **get_database_client(db_pool).await?;
+    let invoice = get_remote_invoice_by_object_id(
+        db_client,
+        agreement_id,
+    ).await?;
+    if invoice.invoice_status == InvoiceStatus::Open
+        && new_status == Some(InvoiceStatus::Paid)
+    {
+        set_invoice_status(
+            db_client,
+            invoice.id,
+            InvoiceStatus::Paid,
+        ).await?;
+    };
+    Ok(Some(Descriptor::object(AGREEMENT)))
+}
 
 #[derive(Deserialize)]
 struct UpdateNote {
@@ -152,7 +189,11 @@ pub async fn handle_update(
         handle_update_person(&ap_client, db_pool, activity).await
     } else if is_object(&activity["object"]) {
         verify_object_owner(&activity["object"])?;
-        handle_update_note(&ap_client, db_pool, activity).await
+        if activity["object"]["type"].as_str() == Some(AGREEMENT) {
+            handle_update_agreement(db_pool, activity).await
+        } else {
+            handle_update_note(&ap_client, db_pool, activity).await
+        }
     } else {
         log::warn!("unexpected object structure: {}", activity["object"]);
         Ok(None)

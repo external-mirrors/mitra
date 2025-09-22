@@ -70,9 +70,11 @@ fn build_offer_agreement(
     let agreement = Agreement {
         id: None,
         object_type: AGREEMENT.to_string(),
+        attributed_to: None,
         stipulates: primary_commitment,
         stipulates_reciprocal: reciprocal_commitment,
         url: None, // pre-agreement shouldn't have payment link
+        preview: None, // pre-agreement doesn't have status
     };
     let activity = OfferAgreement {
         _context: build_valueflows_context(),

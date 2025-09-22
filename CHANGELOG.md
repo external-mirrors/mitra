@@ -14,6 +14,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Added FEP-ae97 gateway metadata endpoint.
 - Set `discoverable` flag to `true` on actors.
 - Specify minimum payment amount in `Proposal` objects.
+- Update status of a remote invoice when remote server receives payment.
 
 ### Changed
 
@@ -28,6 +29,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Increased invoice timeout to 4 hours.
 - Reduced database lock time during execution of payment monitor task.
 - Write current number of transaction confirmations to log.
+- Added `attributedTo` property to `Agreement` object.
 
 ### Fixed
 

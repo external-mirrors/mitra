@@ -223,6 +223,12 @@ Proposals are linked to actors using [FEP-0ea0](https://codeberg.org/silverpill/
 
 Agreements contain a FEP-0ea0 payment link pointing to [CAIP-10](https://chainagnostic.org/CAIPs/caip-10) account ID.
 
+### Payment status
+
+When a server receives a payment, it publishes an `Update(Agreement)` activity.
+
+The `Agreement` object will have a `preview` property. The value of this property is an anonymous `Note` with a `name` indicating the current status of the invoice (e.g. `Paid`).
+
 ### Subscription events
 
 The `Add` activity is used to notify subscribers about their status (e.g. after successful subscription payment). Upon receipt of this activity, the receiving server should add the actor specified in the `object` property to sender's `subscribers` collection (specified in the `target` property):

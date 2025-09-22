@@ -1,5 +1,7 @@
 use serde::Deserialize;
 
+use mitra_models::invoices::types::InvoiceStatus;
+
 use super::proposal::Quantity;
 
 #[derive(Deserialize)]
@@ -15,6 +17,19 @@ pub struct PaymentLink {
 }
 
 #[derive(Deserialize)]
+pub struct PaymentStatus {
+    name: String,
+}
+
+impl PaymentStatus {
+    pub fn invoice_status(&self) -> Option<InvoiceStatus> {
+        let options = vec![InvoiceStatus::Paid];
+        options.into_iter()
+            .find(|status| self.name == format!("{status:?}"))
+    }
+}
+
+#[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Agreement {
     pub id: Option<String>,
@@ -23,6 +38,7 @@ pub struct Agreement {
     pub stipulates_reciprocal: Commitment,
 
     pub url: Option<PaymentLink>,
+    pub preview: Option<PaymentStatus>,
 }
 
 impl Agreement {
