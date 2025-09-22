@@ -88,10 +88,16 @@ mitra add-emoji emoji_name /path/to/image.png
 mitra add-emoji emoji_name https://social.example/path/to/image.png
 ```
 
-Import custom emoji from another instance:
+Copy cached custom emoji to local collection:
 
 ```shell
 mitra import-emoji emoji_name example.org
+```
+
+List [federation filter](./filter.md) rules:
+
+```shell
+mitra list-filter-rules
 ```
 
 Generate instance report:
