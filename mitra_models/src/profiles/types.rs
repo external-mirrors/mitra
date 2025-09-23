@@ -309,6 +309,8 @@ pub struct MoneroSubscription {
 pub struct RemoteMoneroSubscription {
     pub chain_id: ChainId,
     pub price: NonZeroU64, // piconeros per second
+    // Legacy profiles may not have minimum amount info
+    pub amount_min: Option<u64>, // piconeros per second
     pub object_id: String,
     #[serde(default)]
     pub fep_0837_enabled: bool,
@@ -370,11 +372,13 @@ impl PaymentOption {
     pub fn remote_monero_subscription(
         chain_id: ChainId,
         price: NonZeroU64,
+        amount_min: u64,
         object_id: String,
     ) -> Self {
         Self::RemoteMoneroSubscription(RemoteMoneroSubscription {
             chain_id,
             price,
+            amount_min: Some(amount_min),
             object_id,
             fep_0837_enabled: true,
         })

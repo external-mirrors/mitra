@@ -3,6 +3,7 @@ use std::str::FromStr;
 use apx_core::caip19::AssetType;
 use serde::Deserialize;
 
+use mitra_adapters::payments::subscriptions::MONERO_PAYMENT_AMOUNT_MIN;
 use mitra_models::{
     profiles::types::PaymentOption,
 };
@@ -55,6 +56,7 @@ pub struct Intent {
     action: String,
     resource_conforms_to: String,
     resource_quantity: Quantity,
+    minimum_quantity: Option<Quantity>,
 }
 
 #[derive(Deserialize)]
@@ -103,10 +105,16 @@ pub fn parse_proposal(
     };
     let price = proposal.reciprocal.resource_quantity
         .parse_currency_amount()?;
+    let amount_min = if let Some(quantity) = proposal.reciprocal.minimum_quantity {
+        quantity.parse_currency_amount()?
+    } else {
+        MONERO_PAYMENT_AMOUNT_MIN
+    };
     // Create payment option
     let payment_option = PaymentOption::remote_monero_subscription(
         asset_type.chain_id,
         price,
+        amount_min,
         canonical_proposal_id.to_string(),
     );
     Ok(payment_option)
@@ -162,6 +170,10 @@ mod tests {
                     "hasUnit": "second",
                     "hasNumericalValue": "1",
                 },
+                "minimumQuantity": {
+                    "hasUnit": "second",
+                    "hasNumericalValue": "50",
+                },
             },
             "reciprocal": {
                 "type": "Intent",
@@ -171,6 +183,10 @@ mod tests {
                 "resourceQuantity": {
                     "hasUnit": "one",
                     "hasNumericalValue": "20000",
+                },
+                "minimumQuantity": {
+                    "hasUnit": "one",
+                    "hasNumericalValue": "1000000",
                 },
             },
             "unitBased": true,
@@ -183,6 +199,7 @@ mod tests {
         };
         assert_eq!(payment_info.chain_id, ChainId::monero_mainnet());
         assert_eq!(payment_info.price.get(), 20000);
+        assert_eq!(payment_info.amount_min.unwrap(), 1_000_000);
         assert_eq!(
             payment_info.object_id,
             "https://test.example/users/alice/proposals/monero:418015bb9ae982a1975da7d79277c270",

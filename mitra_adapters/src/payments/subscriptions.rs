@@ -16,7 +16,7 @@ use mitra_models::{
 use mitra_validators::errors::ValidationError;
 
 // TODO: should be based on network fee
-pub const MONERO_PAYMENT_AMOUNT_MIN: u64 = 1000000000; // 0.001
+pub const MONERO_PAYMENT_AMOUNT_MIN: u64 = 1_000_000_000; // 0.001
 
 const SECONDS_IN_MONTH: u64 = 30 * 24 * 3600;
 

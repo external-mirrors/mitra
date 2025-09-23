@@ -2853,7 +2853,12 @@ components:
                 example: null
               price:
                 description: Subscription price (only for monero-subscription type).
-                type: number
+                type: integer
+                nullable: true
+                example: null
+              amount_min:
+                description: Minimum payment amount (only for monero-subscription type).
+                type: integer
                 nullable: true
                 example: null
               object_id:

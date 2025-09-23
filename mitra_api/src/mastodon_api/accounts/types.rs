@@ -18,6 +18,7 @@ use mitra_activitypub::identifiers::{
     profile_actor_id,
     profile_actor_url,
 };
+use mitra_adapters::payments::subscriptions::MONERO_PAYMENT_AMOUNT_MIN;
 use mitra_config::MediaLimits;
 use mitra_models::{
     media::types::{MediaInfo, PartialMediaInfo},
@@ -84,6 +85,7 @@ pub enum AccountPaymentOption {
     MoneroSubscription {
         chain_id: ChainId,
         price: u64,
+        amount_min: u64,
         object_id: Option<String>,
     },
 }
@@ -258,12 +260,15 @@ impl Account {
                             chain_id: payment_info.chain_id,
                             price: payment_info.price.into(),
                             object_id: None,
+                            amount_min: MONERO_PAYMENT_AMOUNT_MIN,
                         }
                     },
                     PaymentOption::RemoteMoneroSubscription(payment_info) => {
                         AccountPaymentOption::MoneroSubscription {
                             chain_id: payment_info.chain_id,
                             price: payment_info.price.into(),
+                            amount_min: payment_info.amount_min
+                                .unwrap_or(MONERO_PAYMENT_AMOUNT_MIN),
                             object_id: Some(payment_info.object_id),
                         }
                     },

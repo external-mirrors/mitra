@@ -127,6 +127,7 @@ mod tests {
         let subscription_option = RemoteMoneroSubscription {
             chain_id: ChainId::monero_mainnet(),
             price: NonZeroU64::new(20000).unwrap(),
+            amount_min: Some(1_000_000_000),
             object_id: proposal_id.to_string(),
             fep_0837_enabled: true,
         };
@@ -169,6 +170,7 @@ mod tests {
                     "satisfies": "vf:satisfies",
                     "resourceConformsTo": "vf:resourceConformsTo",
                     "resourceQuantity": "vf:resourceQuantity",
+                    "minimumQuantity": "vf:minimumQuantity",
                     "hasUnit": "om2:hasUnit",
                     "hasNumericalValue": "om2:hasNumericalValue",
                 },
