@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- Removed restriction on maximum version of `reqwest` dependency.
+
 ## [0.17.0] - 2025-09-16
 
 ### Added

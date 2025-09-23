@@ -25,7 +25,7 @@ monero-rpc = { git = "https://github.com/monero-rs/monero-rpc-rs", rev = "b943a4
 regex = "1.10.6"
 # Used for making async HTTP requests
 # Requires quinn even if http3 is disabled: https://github.com/seanmonstar/reqwest/issues/2318
-reqwest = { version = "=0.12.5", default-features = false, features = ["json", "multipart", "rustls-tls-native-roots"] }
+reqwest = { version = "0.12.9", default-features = false, features = ["json", "multipart", "rustls-tls-native-roots"] }
 # Used for serialization/deserialization
 serde = { version = "1.0.210", features = ["derive"] }
 serde_json = "1.0.132"

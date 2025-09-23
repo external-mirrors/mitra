@@ -21,7 +21,7 @@ http-body = "1.0.1"
 # Used for working with regular expressions
 regex = "1.10.6"
 # Used for making async HTTP requests
-reqwest = { version = "=0.12.5", default-features = false, features = ["json", "socks", "stream"] }
+reqwest = { version = "0.12.0", default-features = false, features = ["json", "socks", "stream"] }
 bytes = "1.2.0"
 # Used for serialization/deserialization
 serde = { version = "1.0.186", features = ["derive"] }
