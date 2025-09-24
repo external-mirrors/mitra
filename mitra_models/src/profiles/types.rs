@@ -371,13 +371,12 @@ impl PaymentOption {
         chain_id: ChainId,
         price: NonZeroU64,
         object_id: String,
-        fep_0837_enabled: bool,
     ) -> Self {
         Self::RemoteMoneroSubscription(RemoteMoneroSubscription {
             chain_id,
             price,
             object_id,
-            fep_0837_enabled,
+            fep_0837_enabled: true,
         })
     }
 
