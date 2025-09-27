@@ -13,7 +13,6 @@ use monero_rpc::{
     SweepAllArgs,
     TransferPriority,
     TransferType,
-    WalletClient,
 };
 use monero_rpc::monero::{
     cryptonote::subaddress::Index,
@@ -26,6 +25,7 @@ use mitra_config::MoneroConfig;
 
 use super::utils::parse_monero_address;
 
+pub use monero_rpc::WalletClient;
 pub type TransferCategory = GetTransfersCategory;
 
 const MONERO_RPC_TIMEOUT: u64 = 15;

@@ -43,20 +43,17 @@ use mitra_services::monero::wallet::{
     send_monero,
     MoneroError,
     TransferCategory,
+    WalletClient,
 };
 
 const MONERO_SEND_TIMEOUT: u64 = 120;
 
-pub async fn check_monero_subscriptions(
-    instance: &Instance,
+async fn check_open_invoices(
     config: &MoneroConfig,
     db_pool: &DatabaseConnectionPool,
+    wallet_client: &WalletClient,
 ) -> Result<(), PaymentError> {
     let db_client = &mut **get_database_client(db_pool).await?;
-    let wallet_client = open_monero_wallet(config).await?;
-    let wallet_client_delay_tolerant =
-        build_wallet_client(config, MONERO_SEND_TIMEOUT)?;
-
     // Invoices waiting for payment
     let mut address_waitlist = vec![];
     let open_invoices = get_invoices_by_status(
@@ -82,7 +79,7 @@ pub async fn check_monero_subscriptions(
         };
         let payment_address = invoice_payment_address(&invoice)?;
         let address_index = get_subaddress_index(
-            &wallet_client,
+            wallet_client,
             config.account_index,
             &payment_address,
         ).await?;
@@ -92,13 +89,13 @@ pub async fn check_monero_subscriptions(
     if !address_waitlist.is_empty() {
         log::info!("{} invoices are waiting for payment", address_waitlist.len());
         let transfers = get_incoming_transfers(
-            &wallet_client,
+            wallet_client,
             config.account_index,
             address_waitlist,
         ).await?;
         for transfer in transfers {
             let subaddress = get_subaddress_by_index(
-                &wallet_client,
+                wallet_client,
                 &transfer.subaddr_index,
             ).await?;
             let invoice = get_local_invoice_by_address(
@@ -122,7 +119,17 @@ pub async fn check_monero_subscriptions(
             };
         };
     };
+    Ok(())
+}
 
+async fn check_paid_invoices(
+    config: &MoneroConfig,
+    db_pool: &DatabaseConnectionPool,
+    wallet_client: &WalletClient,
+) -> Result<(), PaymentError> {
+    let db_client = &mut **get_database_client(db_pool).await?;
+    let wallet_client_delay_tolerant =
+        build_wallet_client(config, MONERO_SEND_TIMEOUT)?;
     // Invoices waiting to be forwarded
     let paid_invoices = get_local_invoices_by_status(
         db_client,
@@ -132,7 +139,7 @@ pub async fn check_monero_subscriptions(
     for invoice in paid_invoices {
         let payment_address = invoice_payment_address(&invoice)?;
         let address_index = match get_subaddress_index(
-            &wallet_client,
+            wallet_client,
             config.account_index,
             &payment_address,
         ).await {
@@ -145,7 +152,7 @@ pub async fn check_monero_subscriptions(
             Err(other_error) => return Err(other_error.into()),
         };
         let balance_data = get_subaddress_balance(
-            &wallet_client,
+            wallet_client,
             &address_index,
         ).await?;
         if balance_data.balance != balance_data.unlocked_balance ||
@@ -156,7 +163,7 @@ pub async fn check_monero_subscriptions(
             continue;
         };
         let latest_transfer = match get_latest_incoming_transfer(
-            &wallet_client,
+            wallet_client,
             &address_index,
         ).await? {
             Some(transfer) => transfer,
@@ -220,7 +227,16 @@ pub async fn check_monero_subscriptions(
         ).await?;
         log::info!("forwarded payment for invoice {}", invoice.id);
     };
+    Ok(())
+}
 
+async fn check_forwarded_invoices(
+    config: &MoneroConfig,
+    db_pool: &DatabaseConnectionPool,
+    instance: &Instance,
+    wallet_client: &WalletClient,
+) -> Result<(), PaymentError> {
+    let db_client = &mut **get_database_client(db_pool).await?;
     let forwarded_invoices = get_local_invoices_by_status(
         db_client,
         &config.chain_id,
@@ -241,7 +257,7 @@ pub async fn check_monero_subscriptions(
             continue;
         };
         let transfer = match get_transaction_by_id(
-            &wallet_client,
+            wallet_client,
             config.account_index,
             payout_tx_id,
         ).await {
@@ -329,6 +345,18 @@ pub async fn check_monero_subscriptions(
             ).save_and_enqueue(db_client).await?;
         };
     };
+    Ok(())
+}
+
+pub async fn check_monero_subscriptions(
+    instance: &Instance,
+    config: &MoneroConfig,
+    db_pool: &DatabaseConnectionPool,
+) -> Result<(), PaymentError> {
+    let wallet_client = open_monero_wallet(config).await?;
+    check_open_invoices(config, db_pool, &wallet_client).await?;
+    check_paid_invoices(config, db_pool, &wallet_client).await?;
+    check_forwarded_invoices(config, db_pool, instance, &wallet_client).await?;
     Ok(())
 }
 
