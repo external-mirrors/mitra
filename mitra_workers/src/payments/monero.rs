@@ -30,20 +30,23 @@ use mitra_models::{
     profiles::queries::get_profile_by_id,
     users::queries::get_user_by_id,
 };
-use mitra_services::monero::wallet::{
-    build_wallet_client,
-    get_active_addresses,
-    get_incoming_transfers,
-    get_latest_incoming_transfer,
-    get_subaddress_balance,
-    get_subaddress_by_index,
-    get_subaddress_index,
-    get_transaction_by_id,
-    open_monero_wallet,
-    send_monero,
-    MoneroError,
-    TransferCategory,
-    WalletClient,
+use mitra_services::monero::{
+    wallet::{
+        build_wallet_client,
+        get_active_addresses,
+        get_incoming_transfers,
+        get_latest_incoming_transfer,
+        get_subaddress_balance,
+        get_subaddress_by_index,
+        get_subaddress_index,
+        get_transaction_by_id,
+        open_monero_wallet,
+        send_monero,
+        MoneroError,
+        TransferCategory,
+        WalletClient,
+    },
+    utils::LOCK_DURATION,
 };
 
 const MONERO_SEND_TIMEOUT: u64 = 120;
@@ -155,13 +158,6 @@ async fn check_paid_invoices(
             wallet_client,
             &address_index,
         ).await?;
-        if balance_data.balance != balance_data.unlocked_balance ||
-            balance_data.balance.as_pico() == 0
-        {
-            // Don't forward payment until all outputs are unlocked
-            log::info!("invoice {}: waiting for unlock", invoice.id);
-            continue;
-        };
         let latest_transfer = match get_latest_incoming_transfer(
             wallet_client,
             &address_index,
@@ -172,9 +168,28 @@ async fn check_paid_invoices(
                 continue;
             },
         };
-        if latest_transfer.confirmations.unwrap_or(0) < config.tx_required_confirmations {
+        let confirmations = latest_transfer.confirmations.unwrap_or(0);
+        if balance_data.balance != balance_data.unlocked_balance ||
+            balance_data.balance.as_pico() == 0
+        {
+            // Don't forward payment until all outputs are unlocked
+            log::info!(
+                "invoice {}: waiting for unlock ({}/{})",
+                invoice.id,
+                // Pending transactions, unexpected locks
+                if confirmations >= LOCK_DURATION { 0 } else { confirmations },
+                LOCK_DURATION,
+            );
+            continue;
+        };
+        if confirmations < config.tx_required_confirmations {
             // Wait for more confirmations
-            log::info!("invoice {}: waiting for payment confirmation", invoice.id);
+            log::info!(
+                "invoice {}: waiting for payment confirmation ({}/{})",
+                invoice.id,
+                confirmations,
+                config.tx_required_confirmations,
+            );
             continue;
         };
         log::info!(
@@ -300,9 +315,15 @@ async fn check_forwarded_invoices(
                 continue;
             },
         };
-        if transfer.confirmations.unwrap_or(0) < config.tx_required_confirmations {
+        let confirmations = transfer.confirmations.unwrap_or(0);
+        if confirmations < config.tx_required_confirmations {
             // Wait for more confirmations
-            log::info!("invoice {}: waiting for payout confirmation", invoice.id);
+            log::info!(
+                "invoice {}: waiting for payout confirmation ({}/{})",
+                invoice.id,
+                confirmations,
+                config.tx_required_confirmations,
+            );
             continue;
         };
         let sender = get_profile_by_id(db_client, invoice.sender_id).await?;

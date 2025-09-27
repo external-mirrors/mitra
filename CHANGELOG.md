@@ -27,6 +27,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Return `401 Unauthorized` if the signature is not valid when pulling from portable inbox or outbox.
 - Increased invoice timeout to 4 hours.
 - Reduced database lock time during execution of payment monitor task.
+- Write current number of transaction confirmations to log.
 
 ### Fixed
 
