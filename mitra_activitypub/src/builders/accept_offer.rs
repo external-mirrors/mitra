@@ -93,6 +93,7 @@ pub fn prepare_accept_offer(
 mod tests {
     use std::num::NonZeroU64;
     use apx_core::caip2::ChainId;
+    use serde_json::{json, to_value};
     use mitra_models::invoices::types::DbChainId;
     use super::*;
 
@@ -128,5 +129,36 @@ mod tests {
         assert_eq!(activity.activity_type, "Accept");
         assert_eq!(activity.object, offer_activity_id);
         assert_eq!(activity.to, "https://remote.example/users/payer");
+        let expected_agreement = json!({
+            "type": "Agreement",
+            "id": "https://local.example/objects/agreements/edc374aa-e580-4a58-9404-f3e8bf8556b2",
+            "stipulates": {
+                "id": "https://local.example/objects/agreements/edc374aa-e580-4a58-9404-f3e8bf8556b2#primary",
+                "type": "Commitment",
+                "satisfies": "https://local.example/users/proposer/proposals/monero:418015bb9ae982a1975da7d79277c270#primary",
+                "resourceQuantity": {
+                    "hasUnit": "second",
+                    "hasNumericalValue": "3000",
+                },
+            },
+            "stipulatesReciprocal": {
+                "id": "https://local.example/objects/agreements/edc374aa-e580-4a58-9404-f3e8bf8556b2#reciprocal",
+                "type": "Commitment",
+                "satisfies": "https://local.example/users/proposer/proposals/monero:418015bb9ae982a1975da7d79277c270#reciprocal",
+                "resourceQuantity": {
+                    "hasUnit": "one",
+                    "hasNumericalValue": "60000000",
+                },
+            },
+            "url": {
+                "type": "Link",
+                "href": "caip:10:monero:418015bb9ae982a1975da7d79277c270:8xyz",
+                "rel": ["payment"],
+            },
+        });
+        assert_eq!(
+            to_value(activity.result).unwrap(),
+            expected_agreement,
+        );
     }
 }
