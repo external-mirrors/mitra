@@ -26,7 +26,7 @@ Restart the Tor service. Inside the `HiddenServiceDir` directory find the `hostn
 
 Start Mitra.
 
-For more information about running onion services, visit https://community.torproject.org/onion-services/setup/
+An HTTP server (e.g. nginx) is not necessary in this setup. For more information about running onion services, visit https://community.torproject.org/onion-services/setup/
 
 You can also generate a [vanity address](./onion-vanity-address.md) for your onion service.
 
@@ -34,7 +34,7 @@ You can also generate a [vanity address](./onion-vanity-address.md) for your oni
 
 Clearnet instances can federate with Tor-only instances.
 
-Add the following block to Mitra configuration file:
+To enable Tor federation on a clearnet Mitra instance, add the following block to the configuration file:
 
 ```yaml
 federation:
