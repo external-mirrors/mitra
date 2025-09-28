@@ -2,7 +2,7 @@ use std::str::FromStr;
 use std::net::SocketAddrV4;
 use std::path::Path;
 
-use actix_cors::Cors;
+use actix_cors::{Cors, CorsError};
 use actix_web::{
     dev::Service,
     http::{
@@ -96,6 +96,14 @@ pub async fn run_server(
             .wrap(NormalizePath::trim())
             .wrap(cors_config)
             .wrap(ErrorHandlers::new()
+                .default_handler_client(|response| {
+                    if let Some(error) = response.response().error() {
+                        if error.as_error::<CorsError>().is_some() {
+                            log_response_error(Level::Warn, &response);
+                        };
+                    };
+                    Ok(ErrorHandlerResponse::Response(response.map_into_left_body()))
+                })
                 .default_handler_server(|response| {
                    log_response_error(Level::Error, &response);
                    Ok(ErrorHandlerResponse::Response(response.map_into_left_body()))
