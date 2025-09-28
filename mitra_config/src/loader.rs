@@ -5,7 +5,10 @@ use std::str::FromStr;
 use super::blockchain::BlockchainConfig;
 use super::config::Config;
 use super::environment::Environment;
-use super::instance::parse_instance_url;
+use super::instance::{
+    is_correct_uri_scheme,
+    parse_instance_url,
+};
 
 const DEFAULT_CONFIG_PATH: &str = "config.yaml";
 
@@ -88,7 +91,11 @@ pub fn parse_config() -> (Config, Vec<&'static str>) {
         };
     };
     config.http_socket();
-    parse_instance_url(&config.instance_url).expect("invalid instance URL");
+    let instance_uri = parse_instance_url(&config.instance_url)
+        .expect("invalid instance URL");
+    if !is_correct_uri_scheme(&instance_uri) {
+        warnings.push("instance_url may have incorrect URL scheme");
+    };
     if config.authentication_methods.is_empty() {
         panic!("authentication_methods must not be empty");
     };

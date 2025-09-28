@@ -49,6 +49,10 @@ pub fn parse_instance_url(url: &str) -> Result<HttpUrl, &'static str> {
     Ok(http_url)
 }
 
+pub fn is_correct_uri_scheme(uri: &HttpUrl) -> bool {
+    uri.scheme() == guess_protocol(uri.hostname().as_str())
+}
+
 #[derive(Clone)]
 pub struct Instance {
     _url: HttpUrl,
@@ -145,6 +149,13 @@ mod tests {
         // I2P (no scheme)
         let output = normalize_origin("xyz.i2p").unwrap();
         assert_eq!(output, "http://xyz.i2p");
+    }
+
+    #[test]
+    fn test_is_correct_uri_scheme() {
+        let uri = HttpUrl::parse("http://social.example").unwrap();
+        let is_correct = is_correct_uri_scheme(&uri);
+        assert_eq!(is_correct, false);
     }
 
     #[test]

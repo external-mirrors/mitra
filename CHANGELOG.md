@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+
+- Write warning to log if `instance_url` configuration parameter has incorrect URL scheme.
+
 ### Changed
 
 - Changed minimum required PostgreSQL version to 15.

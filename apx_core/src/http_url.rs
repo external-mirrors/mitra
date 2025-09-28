@@ -56,18 +56,18 @@ impl HttpUrl {
         // Verify scheme
         match uri.scheme_str() {
             "http" | "https" => (),
-            _ => return Err("invalid URL scheme"),
+            _ => return Err("invalid URI scheme"),
         };
         // Validate URI
         if uri.authority_str().unwrap_or_default() == "" {
-            return Err("invalid URL authority");
+            return Err("invalid URI authority");
         };
         let authority_components = uri.authority_components()
-            .ok_or("invalid URL authority")?;
+            .ok_or("invalid URI authority")?;
         if authority_components.host().to_lowercase() !=
             authority_components.host()
         {
-            return Err("invalid URL host");
+            return Err("invalid URI host");
         };
         authority_components.port()
             .map(parse_port_number)
@@ -82,7 +82,8 @@ impl HttpUrl {
         self.0.as_ref()
     }
 
-    fn scheme(&self) -> &str {
+    /// Returns URI scheme
+    pub fn scheme(&self) -> &str {
         self.0.scheme_str()
     }
 
@@ -136,7 +137,7 @@ impl HttpUrl {
         )
     }
 
-    /// Returns host name of this URL
+    /// Returns host name of this URI
     pub fn hostname(&self) -> Hostname {
         // Similar to urls::get_hostname
         let authority_components = self.0.authority_components()
@@ -273,28 +274,28 @@ mod tests {
     fn test_http_url_scheme_uppercase() {
         let url = "HTTP://social.example/users/alice";
         let error = HttpUrl::parse(url).err().unwrap();
-        assert_eq!(error, "invalid URL scheme");
+        assert_eq!(error, "invalid URI scheme");
     }
 
     #[test]
     fn test_http_url_host_uppercase() {
         let url = "https://Social.Example/users/alice";
         let error = HttpUrl::parse(url).err().unwrap();
-        assert_eq!(error, "invalid URL host");
+        assert_eq!(error, "invalid URI host");
     }
 
     #[test]
     fn test_http_url_ftp() {
         let url = "ftp://ftp.social.example/";
         let error = HttpUrl::parse(url).err().unwrap();
-        assert_eq!(error, "invalid URL scheme");
+        assert_eq!(error, "invalid URI scheme");
     }
 
     #[test]
     fn test_http_url_no_authority() {
         let url = "http:///home/User/2ndFile.html";
         let error = HttpUrl::parse(url).err().unwrap();
-        assert_eq!(error, "invalid URL authority");
+        assert_eq!(error, "invalid URI authority");
     }
 
     #[test]

@@ -6,9 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+
+- Make `HttpUrl::scheme` method public.
+
 ### Changed
 
 - Removed restriction on maximum version of `reqwest` dependency.
+
+### Fixed
+
+- Fixed incorrect error messages in `HttpUrl::parse`.
 
 ## [0.17.0] - 2025-09-16
 
