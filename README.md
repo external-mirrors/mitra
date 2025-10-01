@@ -85,7 +85,7 @@ su mitra -s $SHELL -c "mitra create-account <username> <password> admin"
 Start Mitra:
 
 ```shell
-systemctl start mitra
+systemctl enable --now mitra
 ```
 
 An HTTP server will be needed to handle HTTPS requests. See examples of [Nginx](./contrib/mitra.nginx) and [Caddy](./docs/reverse_proxy.md#caddy) configuration files.
