@@ -8,7 +8,9 @@ Install and configure [monero-wallet-rpc](https://docs.getmonero.org/rpc-library
 
 Start `monero-wallet-rpc`.
 
-Add blockchain configuration to `blockchains` array in your configuration file. Example:
+Add blockchain configuration to the `blockchains` array in your Mitra [configuration file](../config.example.yaml).
+
+Example:
 
 ```yaml
 blockchains:
