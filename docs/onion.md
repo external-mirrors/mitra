@@ -1,10 +1,13 @@
 # Tor federation
 
+Mitra can be configured to work in Tor-only mode, or in clearnet mode with Tor connection.
+
+- **Tor-only**: federates with other instances on Tor network and with a small subset of clearnet instances that are connected to Tor.
+- **Clearnet + Tor**: a regular clearnet instance that also federates with Tor-only instances.
+
 ## Tor-only instance
 
-Install Tor.
-
-Install Mitra. Uncomment or add the following block to Mitra configuration file:
+Install Tor. Uncomment or add the following block to Mitra configuration file:
 
 ```yaml
 federation:
@@ -31,8 +34,6 @@ An HTTP server (e.g. nginx) is not necessary in this setup. For more information
 You can also generate a [vanity address](./onion-vanity-address.md) for your onion service.
 
 ## Clearnet + Tor
-
-Clearnet instances can federate with Tor-only instances.
 
 To enable Tor federation on a clearnet Mitra instance, add the following block to the configuration file:
 
