@@ -55,29 +55,30 @@ impl InstanceReport {
         println!("outgoing activity queue: {outgoing_activities}");
         println!("data import queue: {data_import_queue_size}");
         println!("fetcher queue: {fetcher_queue_size}");
-        // Invoices
-        let invoice_summary = get_invoice_summary(db_client).await?;
-        for invoice_status in [
-            InvoiceStatus::Open,
-            InvoiceStatus::Paid,
-            InvoiceStatus::Underpaid,
-            InvoiceStatus::Forwarded,
-            InvoiceStatus::Failed,
-        ] {
-            let status_str = format!("{invoice_status:?}").to_lowercase();
-            let count = invoice_summary
-                .get(&invoice_status)
-                .unwrap_or(&0);
-            println!("{status_str} invoices: {count}");
-        };
-        // Subscriptions
-        let active_subscriptions =
-            get_active_subscription_count(db_client).await?;
-        let expired_subscriptions =
-            get_expired_subscription_count(db_client).await?;
-        println!("active subscriptions: {}", active_subscriptions);
-        println!("expired subscriptions: {}", expired_subscriptions);
         if let Some(monero_config) = config.monero_config() {
+            // Invoices
+            let invoice_summary = get_invoice_summary(db_client).await?;
+            for invoice_status in [
+                InvoiceStatus::Open,
+                InvoiceStatus::Paid,
+                InvoiceStatus::Underpaid,
+                InvoiceStatus::Forwarded,
+                InvoiceStatus::Failed,
+            ] {
+                let status_str = format!("{invoice_status:?}").to_lowercase();
+                let count = invoice_summary
+                    .get(&invoice_status)
+                    .unwrap_or(&0);
+                println!("{status_str} invoices: {count}");
+            };
+            // Subscriptions
+            let active_subscriptions =
+                get_active_subscription_count(db_client).await?;
+            let expired_subscriptions =
+                get_expired_subscription_count(db_client).await?;
+            println!("active subscriptions: {}", active_subscriptions);
+            println!("expired subscriptions: {}", expired_subscriptions);
+            // Wallet info
             let wallet_client = open_monero_wallet(monero_config).await?;
             let address_count = get_address_count(
                 &wallet_client,
