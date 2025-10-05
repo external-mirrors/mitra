@@ -11,7 +11,6 @@ use sfv::{
     SerializeValue,
 };
 use thiserror::Error;
-use url::{Url, ParseError as UrlError};
 
 use crate::{
     base64,
@@ -30,6 +29,7 @@ use crate::{
         create_digest_header,
         ContentDigest,
     },
+    http_url::{normalize_http_url, HttpUrl},
 };
 
 const HTTP_SIGNATURE_ALGORITHM: &str = "rsa-sha256";
@@ -69,10 +69,11 @@ pub struct HttpSignatureHeaders {
     pub signature: String,
 }
 
+/// Errors that may occur during signature generation
 #[derive(Debug, Error)]
 pub enum HttpSignatureError {
-    #[error("invalid request url")]
-    UrlError(#[from] UrlError),
+    #[error("invalid request URL: {0}")]
+    UrlError(&'static str),
 
     #[error("serialization error")]
     SerializationError,
@@ -81,7 +82,7 @@ pub enum HttpSignatureError {
     SigningError(#[from] RsaError),
 }
 
-/// Creates HTTP signature according to the old HTTP Signatures Spec
+/// Creates HTTP signature according to the old HTTP Signatures Spec  
 /// <https://datatracker.ietf.org/doc/html/draft-cavage-http-signatures>
 pub fn create_http_signature_cavage(
     request_method: Method,
@@ -90,16 +91,20 @@ pub fn create_http_signature_cavage(
     signer: &HttpSigner,
 ) -> Result<HttpSignatureHeaders, HttpSignatureError> {
     // URL is normalized
-    let request_url_object = Url::parse(request_url)?;
+    let request_url = normalize_http_url(request_url)
+        .map_err(HttpSignatureError::UrlError)?;
+    let request_uri = HttpUrl::parse(&request_url)
+        .map_err(HttpSignatureError::UrlError)?;
     let request_target = format!(
         "{} {}",
         request_method.as_str().to_lowercase(),
-        request_url_object.path(),
+        request_uri.path(),
     );
-    // TODO: Host header may contain port
-    let host = request_url_object.host_str()
-        .ok_or(UrlError::EmptyHost)?
-        .to_string();
+    let host = if let Some(port) = request_uri.port() {
+        format!("{}:{}", request_uri.host(), port)
+    } else {
+        request_uri.host().to_owned()
+    };
     let date = Utc::now().format(HTTP_SIGNATURE_DATE_FORMAT).to_string();
     let maybe_digest_header = if request_body.is_empty() {
         None
@@ -281,6 +286,21 @@ mod tests {
             headers.signature.starts_with(expected_signature_header),
             true,
         );
+    }
+
+    #[test]
+    fn test_create_http_signature_cavage_get_with_port() {
+        let request_url = "http://127.0.0.1:1234/private-object";
+        let signer_key = generate_weak_rsa_key().unwrap();
+        let signer_key_id = "did:key:z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK#z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK".to_string();
+        let signer = HttpSigner::new_rsa(signer_key, signer_key_id);
+        let headers = create_http_signature_cavage(
+            Method::GET,
+            request_url,
+            b"",
+            &signer,
+        ).unwrap();
+        assert_eq!(headers.host, "127.0.0.1:1234");
     }
 
     #[test]

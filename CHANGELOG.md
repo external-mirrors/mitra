@@ -18,6 +18,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Renamed `instance_uri` configuration parameter to `instance_url` (`instance_uri` is treated as alias).
 - Log CORS errors.
 
+### Fixed
+
+- Copy port number from URL to `Host` header when creating HTTP signature.
+
 ## [4.10.1] - 2025-09-21
 
 ### Added

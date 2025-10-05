@@ -87,6 +87,30 @@ impl HttpUrl {
         self.0.scheme_str()
     }
 
+    pub(crate) fn host(&self) -> &str {
+        let authority_components = self.0.authority_components()
+            .expect("authority should be present");
+        authority_components.host()
+    }
+
+    pub(crate) fn port(&self) -> Option<u16> {
+        let authority_components = self.0.authority_components()
+            .expect("authority should be present");
+        authority_components.port()
+            .map(parse_port_number)
+            .transpose()
+            .expect("port number should be valid")
+    }
+
+    fn port_or_known_default(&self) -> u16 {
+        self.port()
+            .unwrap_or_else(|| match self.scheme() {
+                "http" => 80,
+                "https" => 443,
+                _ => panic!("scheme should be valid"),
+            })
+    }
+
     pub fn authority(&self) -> &str {
         self.0.authority_str().expect("authority should be present")
     }
@@ -140,27 +164,12 @@ impl HttpUrl {
     /// Returns host name of this URI
     pub fn hostname(&self) -> Hostname {
         // Similar to urls::get_hostname
-        let authority_components = self.0.authority_components()
-            .expect("authority should be present");
-        let hostname = authority_components.host();
-        Hostname::new_unchecked(hostname)
+        Hostname::new_unchecked(self.host())
     }
 
     // https://www.rfc-editor.org/rfc/rfc6454.html
     pub fn origin(&self) -> Origin {
-        let authority_components = self.0.authority_components()
-            .expect("authority should be present");
-        let host = authority_components.host();
-        let port = authority_components.port()
-            .map(parse_port_number)
-            .transpose()
-            .expect("port number should be valid")
-            .unwrap_or_else(|| match self.scheme() {
-                "http" => 80,
-                "https" => 443,
-                _ => panic!("scheme should be valid"),
-            });
-        Origin::new(self.scheme(), host, port)
+        Origin::new(self.scheme(), self.host(), self.port_or_known_default())
     }
 }
 

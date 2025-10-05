@@ -14,10 +14,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Removed restriction on maximum version of `reqwest` dependency.
 - Changed error message in case of invalid `verificationMethod`.
+- Changed internal value of `HttpSignatureError::UrlError` to string.
 
 ### Fixed
 
 - Fixed incorrect error messages in `HttpUrl::parse`.
+- Copy port number from URL to `Host` header when creating HTTP signature.
 
 ## [0.17.0] - 2025-09-16
 
