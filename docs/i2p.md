@@ -19,7 +19,15 @@ federation:
 Where `127.0.0.1:4447` is the address and the port where I2P SOCKS proxy is listening.
 
 Configure your I2P node to create a HTTP server tunnel to your Mitra server (it listens at `127.0.0.1:8383` by default). Enable outproxy if you want to communicate with clearnet instances.
-
+Example tunnels.conf entry for i2pd
+```toml
+[mitra]
+type=server
+host=127.0.0.1
+inport=80
+port=8383
+keys=mitra.dat
+```
 An HTTP server (e.g. nginx) is not necessary in this setup.
 
 ## Clearnet + I2P
