@@ -66,8 +66,9 @@ pub struct Config {
     // Unix socket permissions (example: 0o640)
     pub http_socket_perms: Option<u32>,
 
+    pub http_cors_allowlist: Option<Vec<String>>,
     #[serde(default)]
-    pub http_cors_allowlist: Vec<String>,
+    pub http_cors_allow_all: bool,
 
     // Domain name or <IP address>:<port>
     // URI scheme is optional

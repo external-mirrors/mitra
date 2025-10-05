@@ -63,27 +63,40 @@ pub async fn run_server(
                 Cors::permissive()
             },
             Environment::Production => {
+                // Mastodon: https://github.com/mastodon/mastodon/blob/v4.4.5/config/initializers/cors.rb
                 let mut cors_config = Cors::default();
-                for origin in config.http_cors_allowlist.iter() {
-                    cors_config = cors_config.allowed_origin(origin);
+                // TODO: allow all origins if `http_cors_allowlist` is not set
+                if !config.http_cors_allow_all {
+                    // Strict mode
+                    let allowlist = config.http_cors_allowlist
+                        .clone()
+                        .unwrap_or_default();
+                    for origin in allowlist {
+                        cors_config = cors_config.allowed_origin(&origin);
+                    };
+                    cors_config = cors_config
+                        .allowed_origin(&config.instance_url())
+                        // TODO: don't accept GET requests from disallowed origins
+                        // TODO: don't automatically allow localhost in strict mode
+                        .allowed_origin_fn(|origin, req_head| {
+                            if req_head.method == Method::GET {
+                                // Allow all GET requests
+                                return true;
+                            };
+                            let maybe_hostname = origin.to_str().ok()
+                                .and_then(|origin| get_hostname(origin).ok());
+                            match maybe_hostname {
+                                Some(hostname) => {
+                                    hostname == "localhost" ||
+                                    hostname == "127.0.0.1"
+                                },
+                                None => false,
+                            }
+                        });
+                } else {
+                    cors_config = cors_config.allow_any_origin();
                 };
                 cors_config
-                    .allowed_origin(&config.instance_url())
-                    .allowed_origin_fn(|origin, req_head| {
-                        if req_head.method == Method::GET {
-                            // Allow all GET requests
-                            return true;
-                        };
-                        let maybe_hostname = origin.to_str().ok()
-                            .and_then(|origin| get_hostname(origin).ok());
-                        match maybe_hostname {
-                            Some(hostname) => {
-                                hostname == "localhost" ||
-                                hostname == "127.0.0.1"
-                            },
-                            None => false,
-                        }
-                    })
                     .allow_any_method()
                     .allow_any_header()
                     .expose_any_header()
