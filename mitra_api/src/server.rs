@@ -91,9 +91,10 @@ pub async fn run_server(
         };
         let payload_size_limit = 2 * config.limits.media.file_size_limit;
         let mut app = App::new()
+            // NOTE: middlewares are executed in the reverse order
+            // https://docs.rs/actix-web/latest/actix_web/middleware/#ordering
             .wrap(NormalizePath::trim())
             .wrap(cors_config)
-            .wrap(ActixLogger::new("%r : %s : %{r}a"))
             .wrap(ErrorHandlers::new()
                 .default_handler_server(|response| {
                    log_response_error(Level::Error, &response);
@@ -114,6 +115,7 @@ pub async fn run_server(
                 }
             })
             .wrap(create_default_headers_middleware())
+            .wrap(ActixLogger::new("%r : %s : %{r}a"))
             .app_data(web::PayloadConfig::default().limit(payload_size_limit))
             .app_data(web::JsonConfig::default()
                 .limit(payload_size_limit)
