@@ -7,4 +7,5 @@ pub mod invoice;
 pub mod post;
 pub mod profile;
 pub mod process;
+pub mod report;
 pub mod storage;
