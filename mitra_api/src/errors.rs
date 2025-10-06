@@ -30,6 +30,9 @@ pub enum HttpError {
     #[error("{0} not found")]
     NotFound(&'static str),
 
+    #[error("payload too large")]
+    PayloadTooLarge,
+
     #[error("internal error: {0}")]
     InternalError(String),
 }
@@ -85,6 +88,7 @@ impl ResponseError for HttpError {
             HttpError::AuthError(_) => StatusCode::UNAUTHORIZED,
             HttpError::PermissionError => StatusCode::FORBIDDEN,
             HttpError::NotFound(_) => StatusCode::NOT_FOUND,
+            HttpError::PayloadTooLarge => StatusCode::PAYLOAD_TOO_LARGE,
             _ => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }

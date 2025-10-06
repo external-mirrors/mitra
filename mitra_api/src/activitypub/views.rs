@@ -1062,7 +1062,7 @@ async fn apgateway_media_upload_view(
         .unwrap_or(APPLICATION_OCTET_STREAM);
     let file_data = request_body.to_vec();
     if file_data.len() > config.limits.media.file_size_limit {
-        return Err(ValidationError("file too large").into());
+        return Err(HttpError::PayloadTooLarge);
     };
     if !config.limits.media.supported_media_types().contains(&media_type) {
         return Err(ValidationError("invalid media type").into());
