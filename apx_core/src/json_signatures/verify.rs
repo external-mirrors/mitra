@@ -2,6 +2,7 @@
 use std::fmt;
 
 use serde_json::{Value as JsonValue};
+use thiserror::Error;
 
 use crate::{
     ap_url::{is_ap_url, ApUrl},
@@ -61,7 +62,7 @@ impl VerificationMethod {
         } else if let Ok(http_url) = HttpUrl::parse(url) {
             Self::HttpUrl(http_url)
         } else {
-            return Err("invalid URL");
+            return Err("invalid verification method ID");
         };
         Ok(method)
     }
@@ -94,7 +95,8 @@ pub struct JsonSignatureData {
     pub signature: Vec<u8>,
 }
 
-#[derive(thiserror::Error, Debug)]
+/// Errors that may occur during the verification of a JSON signature
+#[derive(Debug, Error)]
 pub enum JsonSignatureVerificationError {
     #[error("invalid object")]
     InvalidObject,
@@ -158,7 +160,7 @@ pub fn get_json_signature(
             .map_err(|_| VerificationError::InvalidProof("unsupported proof type"))?
     };
     let verification_method = VerificationMethod::parse(&proof_config.verification_method)
-        .map_err(|_| VerificationError::InvalidProof("invalid verification method"))?;
+        .map_err(VerificationError::InvalidProof)?;
     let signature = decode_multibase_base58btc(&proof_value)?;
     let signature_data = JsonSignatureData {
         proof_type,
