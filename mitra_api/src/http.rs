@@ -18,7 +18,6 @@ use actix_web::{
     Either,
     HttpRequest,
 };
-use apx_core::url::hostname::encode_hostname;
 use log::Level;
 use serde_qs::actix::{QsForm, QsQuery};
 
@@ -150,13 +149,13 @@ fn _get_request_full_uri(
     request_uri: &Uri,
 ) -> Option<Uri> {
     let scheme_normalized = connection_scheme.to_lowercase();
-    let host_normalized = encode_hostname(connection_host).ok()?;
+    let authority_normalized = connection_host.to_lowercase();
     let path_and_query = request_uri.path_and_query()
         .map(|paq| paq.as_str())
         .unwrap_or("/");
     let uri = Uri::builder()
         .scheme(scheme_normalized.as_str())
-        .authority(host_normalized)
+        .authority(authority_normalized)
         .path_and_query(path_and_query)
         .build()
         .ok()?;
@@ -170,6 +169,8 @@ pub fn get_request_full_uri(
     request_uri: &Uri,
 ) -> Uri {
     let scheme = connection_info.scheme();
+    // Host is expected to be URI-compatible
+    // https://httpwg.org/specs/rfc9110.html#field.host
     let host = connection_info.host();
     _get_request_full_uri(scheme, host, request_uri)
         .unwrap_or_else(|| {

@@ -21,6 +21,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Fixed
 
 - Copy port number from URL to `Host` header when creating HTTP signature.
+- Fixed request URI reconstruction in case when `Host` header value includes port number.
 
 ## [4.10.1] - 2025-09-21
 
