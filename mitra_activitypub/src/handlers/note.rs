@@ -700,7 +700,7 @@ async fn get_object_tags(
             let canonical_linked_id = canonicalize_id(href)?;
             let linked = get_post_by_object_id(
                 db_client,
-                &instance.url(),
+                instance.uri_str(),
                 &canonical_linked_id,
             ).await?;
             if !can_link_post(&linked) {
@@ -745,7 +745,7 @@ async fn get_object_tags(
         };
         match get_profile_by_actor_id(
             db_client,
-            &instance.url(),
+            instance.uri_str(),
             &target_id,
         ).await {
             Ok(profile) => {
@@ -765,7 +765,7 @@ async fn get_object_tags(
         let canonical_object_id = canonicalize_id(object_id)?;
         let linked = get_post_by_object_id(
             db_client,
-            &instance.url(),
+            instance.uri_str(),
             &canonical_object_id,
         ).await?;
         if can_link_post(&linked) {
@@ -958,7 +958,7 @@ pub async fn create_remote_post(
             let canonical_object_id = canonicalize_id(object_id)?;
             let in_reply_to = get_post_by_object_id(
                 db_client,
-                &ap_client.instance.url(),
+                ap_client.instance.uri_str(),
                 &canonical_object_id,
             ).await?;
             Some(in_reply_to)
@@ -1090,7 +1090,7 @@ pub async fn update_remote_post(
             let canonical_object_id = canonicalize_id(object_id)?;
             let in_reply_to = get_post_by_object_id(
                 db_client,
-                &ap_client.instance.url(),
+                ap_client.instance.uri_str(),
                 &canonical_object_id,
             ).await?;
             Some(in_reply_to)

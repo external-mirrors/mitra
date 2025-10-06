@@ -209,7 +209,7 @@ pub async fn handle_activity(
                 ).await?;
                 // Forward
                 if let Some(job_data) = OutgoingActivityJobData::new_forwarded(
-                    &config.instance_url(),
+                    config.instance().uri_str(),
                     &recipient,
                     &activity_clone,
                     vec![],
@@ -240,7 +240,7 @@ pub async fn handle_activity(
                     .collect();
                 // Forward only if HTTP signature can be created
                 if let Some(job_data) = OutgoingActivityJobData::new_forwarded(
-                    &config.instance_url(),
+                    config.instance().uri_str(),
                     &actor,
                     &activity_clone,
                     remote_recipients,

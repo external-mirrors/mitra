@@ -91,7 +91,7 @@ pub fn is_local_origin(
     object_id: &str,
 ) -> bool {
     if let Ok(http_object_id) = HttpUri::parse(object_id) {
-        if http_object_id.hostname() == instance.url_ref().hostname() {
+        if http_object_id.hostname() == instance.uri().hostname() {
             return true;
         };
     };

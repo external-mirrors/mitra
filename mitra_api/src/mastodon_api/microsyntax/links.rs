@@ -40,7 +40,7 @@ fn find_object_links(text: &str) -> Vec<String> {
 
 pub async fn find_linked_posts(
     db_client: &impl DatabaseClient,
-    instance_url: &str,
+    instance_uri: &str,
     text: &str,
 ) -> Result<IndexMap<String, Post>, DatabaseError> {
     let links = find_object_links(text);
@@ -58,7 +58,7 @@ pub async fn find_linked_posts(
         };
         match get_post_by_object_id(
             db_client,
-            instance_url,
+            instance_uri,
             &canonical_id,
         ).await {
             Ok(post) => {
@@ -103,13 +103,13 @@ pub fn replace_object_links(
 }
 
 pub fn insert_quote(
-    instance_url: &str,
+    instance_uri: &str,
     content: &str,
     quote_of: &Post,
 ) -> String {
     format!(
         r#"{content}<p>RE: <a href="{0}">{0}</a></p>"#,
-        compatible_post_object_id(instance_url, quote_of),
+        compatible_post_object_id(instance_uri, quote_of),
     )
 }
 

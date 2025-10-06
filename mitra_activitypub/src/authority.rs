@@ -86,7 +86,7 @@ impl Authority {
 
 impl From<&Instance> for Authority {
     fn from(instance: &Instance) -> Self {
-        Self::server(instance.url_ref())
+        Self::server(instance.uri())
     }
 }
 

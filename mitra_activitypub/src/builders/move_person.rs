@@ -39,14 +39,14 @@ struct MovePerson {
 
 /// https://codeberg.org/fediverse/fep/src/branch/main/fep/7628/fep-7628.md
 fn build_move_person(
-    instance_url: &str,
+    instance_uri: &str,
     sender: &User,
     linked_actor_id: &str,
     pull_mode: bool,
 ) -> MovePerson {
     // Move(Person) is idempotent so its ID can be random
-    let activity_id = local_activity_id(instance_url, MOVE, generate_ulid());
-    let actor_id = local_actor_id(instance_url, &sender.profile.username);
+    let activity_id = local_activity_id(instance_uri, MOVE, generate_ulid());
+    let actor_id = local_actor_id(instance_uri, &sender.profile.username);
     let followers = LocalActorCollection::Followers.of(&actor_id);
     let (object_id, target_id) = if pull_mode {
         (linked_actor_id.to_string(), actor_id.clone())
@@ -73,7 +73,7 @@ pub fn prepare_move_person(
     followers: Vec<DbActor>,
 ) -> OutgoingActivityJobData {
     let activity = build_move_person(
-        &instance.url(),
+        instance.uri_str(),
         sender,
         linked_actor_id,
         pull_mode,
@@ -82,7 +82,7 @@ pub fn prepare_move_person(
         .flat_map(Recipient::for_inbox)
         .collect();
     OutgoingActivityJobData::new(
-        &instance.url(),
+        instance.uri_str(),
         sender,
         activity,
         recipients,
@@ -94,7 +94,7 @@ mod tests {
     use mitra_models::profiles::types::DbActorProfile;
     use super::*;
 
-    const INSTANCE_URL: &str = "https://social.example";
+    const INSTANCE_URI: &str = "https://social.example";
 
     #[test]
     fn test_build_move_person() {
@@ -104,7 +104,7 @@ mod tests {
         };
         let from_actor_id = "https://server0.org/users/test";
         let activity = build_move_person(
-            INSTANCE_URL,
+            INSTANCE_URI,
             &sender,
             from_actor_id,
             true,

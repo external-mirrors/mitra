@@ -230,10 +230,10 @@ impl ApClient {
 
 pub(crate) async fn get_profile_by_actor_id(
     db_client: &impl DatabaseClient,
-    instance_url: &str,
+    instance_uri: &str,
     actor_id: &str,
 ) -> Result<DbActorProfile, DatabaseError> {
-    match parse_local_actor_id(instance_url, actor_id) {
+    match parse_local_actor_id(instance_uri, actor_id) {
         Ok(username) => {
             // Local actor
             let user = get_user_by_name(db_client, &username).await?;
@@ -302,7 +302,7 @@ async fn refresh_remote_profile(
         let actor_data = profile.expect_actor_data();
         let mut context = FetcherContext::from(actor_data);
         // Don't re-fetch from local gateway
-        context.remove_gateway(&ap_client.instance.url());
+        context.remove_gateway(ap_client.instance.uri_str());
         let actor_http_url = context.prepare_object_id(&actor_data.id)?;
         match ap_client.fetch_object::<Actor>(&actor_http_url).await {
             Ok(actor) => {
@@ -378,7 +378,7 @@ impl ActorIdResolver {
             if self.only_remote {
                 return Err(HandlerError::LocalObject);
             };
-            let username = parse_local_actor_id(&ap_client.instance.url(), actor_id)?;
+            let username = parse_local_actor_id(ap_client.instance.uri_str(), actor_id)?;
             let user = get_user_by_name(db_client, &username).await?;
             return Ok(user.profile);
         };
@@ -500,11 +500,11 @@ pub async fn get_or_import_profile_by_webfinger_address(
 
 pub async fn get_post_by_object_id(
     db_client: &impl DatabaseClient,
-    instance_url: &str,
+    instance_uri: &str,
     object_id: &CanonicalUri,
 ) -> Result<Post, DatabaseError> {
     let object_id = object_id.to_string();
-    match parse_local_object_id(instance_url, &object_id) {
+    match parse_local_object_id(instance_uri, &object_id) {
         Ok(post_id) => {
             // Local post
             let post = get_local_post_by_id(db_client, post_id).await?;
@@ -547,7 +547,7 @@ pub async fn import_post(
                     maybe_object = None;
                     continue;
                 };
-                if let Ok(post_id) = parse_local_object_id(&instance.url(), &object_id) {
+                if let Ok(post_id) = parse_local_object_id(instance.uri_str(), &object_id) {
                     if objects.is_empty() {
                         // Initial object must not be local
                         return Err(HandlerError::LocalObject);

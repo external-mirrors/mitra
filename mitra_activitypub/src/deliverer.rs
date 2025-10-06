@@ -120,9 +120,9 @@ pub struct Sender {
 }
 
 impl Sender {
-    pub fn from_user(instance_url: &str, user: &User) -> Self {
+    pub fn from_user(instance_uri: &str, user: &User) -> Self {
         let actor_id = local_actor_id(
-            instance_url,
+            instance_uri,
             &user.profile.username,
         );
         let rsa_key_id = local_actor_key_id(
@@ -145,7 +145,7 @@ impl Sender {
     // Returns None if the registered secret key doesn't correspond to
     // any of public keys associated with the actor
     pub fn from_portable_user(
-        instance_url: &str,
+        instance_uri: &str,
         user: &PortableUser,
     ) -> Option<Self> {
         let rsa_public_key = RsaPublicKey::from(&user.rsa_secret_key);
@@ -154,14 +154,14 @@ impl Sender {
         let rsa_key_id = &user.profile.public_keys
             .find_by_value(&rsa_public_key_der)?
             .id;
-        let http_rsa_key_id = db_url_to_http_url(rsa_key_id, instance_url)
+        let http_rsa_key_id = db_url_to_http_url(rsa_key_id, instance_uri)
             .expect("RSA key ID should be valid");
         let ed25519_public_key =
             ed25519_public_key_from_secret_key(&user.ed25519_secret_key);
         let ed25519_key_id = &user.profile.public_keys
             .find_by_value(ed25519_public_key.as_bytes())?
             .id;
-        let http_ed25519_key_id = db_url_to_http_url(ed25519_key_id, instance_url)
+        let http_ed25519_key_id = db_url_to_http_url(ed25519_key_id, instance_uri)
             .expect("RSA key ID should be valid");
         let sender = Self {
             username: user.profile.username.clone(),
@@ -233,12 +233,12 @@ impl Recipient {
 }
 
 pub(super) fn sign_activity(
-    instance_url: &str,
+    instance_uri: &str,
     sender: &User,
     activity: JsonValue,
 ) -> Result<JsonValue, JsonSignatureError> {
     let actor_id = local_actor_id(
-        instance_url,
+        instance_uri,
         &sender.profile.username,
     );
     let activity_signed = if is_object_signed(&activity) {
@@ -278,7 +278,7 @@ pub(super) async fn deliver_activity_worker(
     } else {
         log::warn!("deliverer job data doesn't contain key ID");
         let actor_id = local_actor_id(
-            &instance.url(),
+            instance.uri_str(),
             &sender.username,
         );
         local_actor_key_id(&actor_id, PublicKeyType::RsaPkcs1)

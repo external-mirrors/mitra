@@ -207,7 +207,7 @@ async fn create_status(
         }
     } else {
         let actor_id = local_actor_id(
-            &instance.url(),
+            instance.uri_str(),
             &current_user.profile.username,
         );
         let audience = match visibility {
@@ -298,7 +298,7 @@ async fn create_status(
             let media_server = ClientMediaServer::new(&config, &base_url);
             let status = build_status(
                 db_client,
-                &instance.url(),
+                instance.uri_str(),
                 &media_server,
                 Some(&current_user),
                 post,
@@ -345,7 +345,7 @@ async fn create_status(
     let base_url = get_request_base_url(connection_info);
     let media_server = ClientMediaServer::new(&config, &base_url);
     let status = Status::from_post(
-        &instance.url(),
+        instance.uri_str(),
         &media_server,
         post,
     );
@@ -406,7 +406,7 @@ async fn get_status(
     let media_server = ClientMediaServer::new(&config, &base_url);
     let status = build_status(
         db_client,
-        &config.instance_url(),
+        config.instance().uri_str(),
         &media_server,
         maybe_current_user.as_ref(),
         post,
@@ -530,7 +530,7 @@ async fn edit_status(
     let base_url = get_request_base_url(connection_info);
     let media_server = ClientMediaServer::new(&config, &base_url);
     let status = Status::from_post(
-        &instance.url(),
+        instance.uri_str(),
         &media_server,
         post,
     );
@@ -561,7 +561,7 @@ async fn delete_status(
     let base_url = get_request_base_url(connection_info);
     let media_server = ClientMediaServer::new(&config, &base_url);
     let status = Status::from_post(
-        &config.instance_url(),
+        config.instance().uri_str(),
         &media_server,
         post,
     );
@@ -594,7 +594,7 @@ async fn get_context(
     let media_server = ClientMediaServer::new(&config, &base_url);
     let statuses = build_status_list(
         db_client,
-        &config.instance_url(),
+        config.instance().uri_str(),
         &media_server,
         maybe_current_user.as_ref(),
         posts,
@@ -639,7 +639,7 @@ async fn get_thread_view(
     let media_server = ClientMediaServer::new(&config, &base_url);
     let statuses = build_status_list(
         db_client,
-        &config.instance_url(),
+        config.instance().uri_str(),
         &media_server,
         maybe_current_user.as_ref(),
         posts,
@@ -703,7 +703,7 @@ async fn favourite(
     let media_server = ClientMediaServer::new(&config, &base_url);
     let status = build_status(
         db_client,
-        &config.instance_url(),
+        config.instance().uri_str(),
         &media_server,
         Some(&current_user),
         post,
@@ -757,7 +757,7 @@ async fn unfavourite(
     let media_server = ClientMediaServer::new(&config, &base_url);
     let status = build_status(
         db_client,
-        &config.instance_url(),
+        config.instance().uri_str(),
         &media_server,
         Some(&current_user),
         post,
@@ -809,10 +809,10 @@ async fn get_favourited_by(
         .map(|reaction| reaction.id);
     let base_url = get_request_base_url(connection_info);
     let media_server = ClientMediaServer::new(&config, &base_url);
-    let instance_url = config.instance().url();
+    let instance = config.instance();
     let accounts: Vec<Account> = reactions.into_iter()
         .map(|reaction| Account::from_profile(
-            &instance_url,
+            instance.uri_str(),
             &media_server,
             reaction.author,
         ))
@@ -876,7 +876,7 @@ async fn reblog(
     let media_server = ClientMediaServer::new(&config, &base_url);
     let status = build_status(
         db_client,
-        &config.instance_url(),
+        config.instance().uri_str(),
         &media_server,
         Some(&current_user),
         repost,
@@ -915,7 +915,7 @@ async fn unreblog(
     let media_server = ClientMediaServer::new(&config, &base_url);
     let status = build_status(
         db_client,
-        &config.instance_url(),
+        config.instance().uri_str(),
         &media_server,
         Some(&current_user),
         post,
@@ -962,10 +962,10 @@ async fn get_reblogged_by(
         .map(|(repost_id, _)| *repost_id);
     let base_url = get_request_base_url(connection_info);
     let media_server = ClientMediaServer::new(&config, &base_url);
-    let instance_url = config.instance().url();
+    let instance = config.instance();
     let accounts: Vec<Account> = reposts.into_iter()
         .map(|(_, author)| Account::from_profile(
-            &instance_url,
+            instance.uri_str(),
             &media_server,
             author,
         ))
@@ -1003,7 +1003,7 @@ async fn bookmark_view(
     let media_server = ClientMediaServer::new(&config, &base_url);
     let status = build_status(
         db_client,
-        &config.instance_url(),
+        config.instance().uri_str(),
         &media_server,
         Some(&current_user),
         post,
@@ -1035,7 +1035,7 @@ async fn unbookmark_view(
     let media_server = ClientMediaServer::new(&config, &base_url);
     let status = build_status(
         db_client,
-        &config.instance_url(),
+        config.instance().uri_str(),
         &media_server,
         Some(&current_user),
         post,
@@ -1072,7 +1072,7 @@ async fn pin(
     let media_server = ClientMediaServer::new(&config, &base_url);
     let status = build_status(
         db_client,
-        &config.instance_url(),
+        config.instance().uri_str(),
         &media_server,
         Some(&current_user),
         post,
@@ -1109,7 +1109,7 @@ async fn unpin(
     let media_server = ClientMediaServer::new(&config, &base_url);
     let status = build_status(
         db_client,
-        &config.instance_url(),
+        config.instance().uri_str(),
         &media_server,
         Some(&current_user),
         post,
@@ -1152,10 +1152,10 @@ async fn make_permanent(
     };
     assert!(post.is_local());
     let instance = config.instance();
-    let authority = Authority::server(instance.url_ref());
+    let authority = Authority::server(instance.uri());
     let media_server = MediaServer::new(&config);
     let note = build_note(
-        instance.url_ref(),
+        instance.uri(),
         &authority,
         &media_server,
         &post,
@@ -1174,7 +1174,7 @@ async fn make_permanent(
     let media_server = ClientMediaServer::new(&config, &base_url);
     let status = build_status(
         db_client,
-        &config.instance_url(),
+        config.instance().uri_str(),
         &media_server,
         Some(&current_user),
         post,

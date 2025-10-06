@@ -262,7 +262,7 @@ impl InstanceInfo {
                 polls: PollLimits::new(),
             },
             contact_account: maybe_admin.map(|user| Account::from_profile(
-                &config.instance().url(),
+                config.instance().uri_str(),
                 media_server,
                 user.profile,
             )),
@@ -379,7 +379,7 @@ impl InstanceInfoV2 {
             contact: Contact {
                 email: "".to_string(),
                 account: maybe_admin.map(|user| Account::from_profile(
-                    &config.instance().url(),
+                    config.instance().uri_str(),
                     media_server,
                     user.profile,
                 )),

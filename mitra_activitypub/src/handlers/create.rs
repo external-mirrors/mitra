@@ -53,7 +53,7 @@ use super::{
 
 async fn check_unsolicited_message(
     db_client: &impl DatabaseClient,
-    instance_url: &str,
+    instance_uri: &str,
     object: &AttributedObject,
     sender_id: &str,
 ) -> Result<(), HandlerError> {
@@ -64,14 +64,14 @@ async fn check_unsolicited_message(
     let audience = get_audience(object)?;
     // TODO: FEP-EF61: find portable local recipients
     let has_local_recipients = audience.iter().any(|actor_id| {
-        parse_local_actor_id(instance_url, actor_id).is_ok()
+        parse_local_actor_id(instance_uri, actor_id).is_ok()
     });
     // Is it a reply to a known post?
     let is_disconnected = if let Some(ref in_reply_to_id) = object.in_reply_to {
         let canonical_in_reply_to_id = canonicalize_id(in_reply_to_id)?;
         match get_post_by_object_id(
             db_client,
-            instance_url,
+            instance_uri,
             &canonical_in_reply_to_id,
         ).await {
             Ok(_) => false,
@@ -150,7 +150,7 @@ pub async fn handle_create(
         let db_client = &**get_database_client(db_pool).await?;
         check_unsolicited_message(
             db_client,
-            &config.instance_url(),
+            config.instance().uri_str(),
             &object.inner,
             sender_id,
         ).await?;

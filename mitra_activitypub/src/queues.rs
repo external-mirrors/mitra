@@ -194,17 +194,17 @@ pub struct OutgoingActivityJobData {
 
 impl OutgoingActivityJobData {
     fn mark_local_recipients(
-        instance_url: &str,
+        instance_uri: &str,
         recipients: &mut [Recipient],
     ) -> () {
         // If portable actor has local account,
         // activity will be simply added to its inbox
-        let instance_url = HttpUri::parse(instance_url)
-            .expect("instance URL should be valid");
+        let instance_uri = HttpUri::parse(instance_uri)
+            .expect("instance URI should be valid");
         for recipient in recipients.iter_mut() {
             let recipient_inbox = parse_http_url_from_db(&recipient.inbox)
                 .expect("actor inbox URL should be valid");
-            recipient.is_local = recipient_inbox.origin() == instance_url.origin();
+            recipient.is_local = recipient_inbox.origin() == instance_uri.origin();
         };
     }
 
@@ -225,30 +225,30 @@ impl OutgoingActivityJobData {
     }
 
     pub(super) fn new(
-        instance_url: &str,
+        instance_uri: &str,
         sender: &User,
         activity: impl Serialize,
         mut recipients: Vec<Recipient>,
     ) -> Self {
-        Self::mark_local_recipients(instance_url, &mut recipients);
+        Self::mark_local_recipients(instance_uri, &mut recipients);
         let recipients = Self::sort_recipients(recipients);
         let activity = serde_json::to_value(activity)
             .expect("activity should be serializable");
         let activity_signed = sign_activity(
-            instance_url,
+            instance_uri,
             sender,
             activity,
         ).expect("activity should be valid");
         Self {
             activity: activity_signed,
-            sender: Sender::from_user(instance_url, sender),
+            sender: Sender::from_user(instance_uri, sender),
             recipients: recipients,
             failure_count: 0,
         }
     }
 
     pub fn new_forwarded(
-        instance_url: &str,
+        instance_uri: &str,
         sender: &PortableUser,
         activity: &JsonValue,
         recipients_actors: Vec<DbActor>,
@@ -260,11 +260,11 @@ impl OutgoingActivityJobData {
             assert!(matches!(endpoint_type, EndpointType::Outbox));
             recipients.extend(Recipient::for_inbox(&recipient));
         };
-        Self::mark_local_recipients(instance_url, &mut recipients);
+        Self::mark_local_recipients(instance_uri, &mut recipients);
         // Deliver to actor's clones
         let actor_data = sender.profile.expect_actor_data();
         for gateway_url in &actor_data.gateways {
-            if gateway_url == instance_url {
+            if gateway_url == instance_uri {
                 // Already cached
                 continue;
             };
@@ -278,7 +278,7 @@ impl OutgoingActivityJobData {
             recipients.push(recipient);
         };
         let recipients = Self::sort_recipients(recipients);
-        let sender = Sender::from_portable_user(instance_url, sender)?;
+        let sender = Sender::from_portable_user(instance_uri, sender)?;
         let job_data = Self {
             activity: activity.clone(),
             sender: sender,
@@ -631,7 +631,7 @@ mod tests {
 
     #[test]
     fn test_outgoing_queue_sort_recipients() {
-        let instance_url = "https://local.example";
+        let instance_uri = "https://local.example";
         let sender = User::default();
         let activity = json!({});
         let recipient_1 =
@@ -658,7 +658,7 @@ mod tests {
             },
         ];
         let job_data = OutgoingActivityJobData::new(
-            instance_url,
+            instance_uri,
             &sender,
             activity,
             recipients,

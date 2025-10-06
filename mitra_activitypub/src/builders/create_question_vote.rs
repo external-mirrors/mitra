@@ -50,18 +50,18 @@ struct CreateNote {
 }
 
 fn build_create_question_vote(
-    instance_url: &str,
+    instance_uri: &str,
     voter: &DbActorProfile,
     question_id: &str,
     question_owner_id: &str,
     votes: Vec<PollVote>,
 ) -> CreateNote {
     assert!(!votes.is_empty());
-    let activity_id = local_activity_id(instance_url, CREATE, generate_ulid());
-    let actor_id = local_actor_id(instance_url, &voter.username);
+    let activity_id = local_activity_id(instance_uri, CREATE, generate_ulid());
+    let actor_id = local_actor_id(instance_uri, &voter.username);
     let notes: Vec<_> = votes.into_iter()
         .map(|vote| {
-            let vote_id = local_object_id(instance_url, vote.id);
+            let vote_id = local_object_id(instance_uri, vote.id);
             Note {
                 id: vote_id,
                 object_type: NOTE.to_string(),
@@ -94,7 +94,7 @@ pub fn prepare_create_question_vote(
     votes: Vec<PollVote>,
 ) -> Result<OutgoingActivityJobData, DatabaseError> {
     let activity = build_create_question_vote(
-        &instance.url(),
+        instance.uri_str(),
         &sender.profile,
         question_id,
         &question_owner.id,
@@ -102,7 +102,7 @@ pub fn prepare_create_question_vote(
     );
     let recipients = Recipient::for_inbox(question_owner);
     Ok(OutgoingActivityJobData::new(
-        &instance.url(),
+        instance.uri_str(),
         sender,
         activity,
         recipients,
@@ -114,7 +114,7 @@ mod tests {
     use uuid::uuid;
     use super::*;
 
-    const INSTANCE_URL: &str = "https://social.example";
+    const INSTANCE_URI: &str = "https://social.example";
 
     #[test]
     fn test_build_create_question_vote() {
@@ -138,7 +138,7 @@ mod tests {
             },
         ];
         let activity = build_create_question_vote(
-            INSTANCE_URL,
+            INSTANCE_URI,
             &voter,
             question_id,
             question_owner_id,

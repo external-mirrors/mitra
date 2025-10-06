@@ -69,21 +69,21 @@ async fn parse_microsyntaxes(
     content = replace_mentions(
         &mention_map,
         &instance.hostname(),
-        &instance.url(),
+        instance.uri_str(),
         &content,
     );
     let mentions = mention_map.values().map(|profile| profile.id).collect();
     // Hashtags
     let hashtags = find_hashtags(&content);
     content = replace_hashtags(
-        &instance.url(),
+        instance.uri_str(),
         &content,
         &hashtags,
     );
     // Links
     let link_map = find_linked_posts(
         db_client,
-        &instance.url(),
+        instance.uri_str(),
         &content,
     ).await?;
     content = replace_object_links(
@@ -142,7 +142,7 @@ pub async fn parse_content(
         };
         if !output.links.contains(&quote_of.id) {
             output.content = insert_quote(
-                &instance.url(),
+                instance.uri_str(),
                 &output.content,
                 &quote_of,
             );
@@ -209,7 +209,7 @@ pub async fn prepare_mentions(
 /// Load related objects and build status for API response
 pub async fn build_status(
     db_client: &impl DatabaseClient,
-    instance_url: &str,
+    instance_uri: &str,
     media_server: &ClientMediaServer,
     user: Option<&User>,
     mut post: Post,
@@ -218,13 +218,13 @@ pub async fn build_status(
     if let Some(user) = user {
         add_user_actions(db_client, user.id, vec![&mut post]).await?;
     };
-    let status = Status::from_post(instance_url, media_server, post);
+    let status = Status::from_post(instance_uri, media_server, post);
     Ok(status)
 }
 
 pub async fn build_status_list(
     db_client: &impl DatabaseClient,
-    instance_url: &str,
+    instance_uri: &str,
     media_server: &ClientMediaServer,
     user: Option<&User>,
     mut posts: Vec<Post>,
@@ -235,7 +235,7 @@ pub async fn build_status_list(
     };
     let statuses: Vec<Status> = posts
         .into_iter()
-        .map(|post| Status::from_post(instance_url, media_server, post))
+        .map(|post| Status::from_post(instance_uri, media_server, post))
         .collect();
     Ok(statuses)
 }
@@ -244,7 +244,7 @@ pub async fn build_status_list(
 pub async fn get_paginated_status_list(
     db_client: &impl DatabaseClient,
     base_url: &str,
-    instance_url: &str,
+    instance_uri: &str,
     media_server: &ClientMediaServer,
     request_uri: &Uri,
     maybe_current_user: Option<&User>,
@@ -254,7 +254,7 @@ pub async fn get_paginated_status_list(
     let maybe_last_id = get_last_item(&posts, limit).map(|post| post.id);
     let statuses = build_status_list(
         db_client,
-        instance_url,
+        instance_uri,
         media_server,
         maybe_current_user,
         posts,

@@ -42,7 +42,7 @@ struct OfferAgreement {
 }
 
 fn build_offer_agreement(
-    instance_url: &str,
+    instance_uri: &str,
     sender_username: &str,
     proposer_actor_id: &str,
     subscription_option: &RemoteMoneroSubscription,
@@ -53,8 +53,8 @@ fn build_offer_agreement(
     let primary_intent_id = fep_0837_primary_fragment_id(&proposal_id);
     let reciprocal_intent_id = fep_0837_reciprocal_fragment_id(&proposal_id);
     let duration = invoice_amount / subscription_option.price;
-    let actor_id = local_actor_id(instance_url, sender_username);
-    let activity_id = local_activity_id(instance_url, OFFER, invoice_id);
+    let actor_id = local_actor_id(instance_uri, sender_username);
+    let activity_id = local_activity_id(instance_uri, OFFER, invoice_id);
     let primary_commitment = Commitment {
         id: None,
         object_type: COMMITMENT.to_string(),
@@ -96,7 +96,7 @@ pub fn prepare_offer_agreement(
     invoice_amount: u64,
 ) -> OutgoingActivityJobData {
     let activity = build_offer_agreement(
-        &instance.url(),
+        instance.uri_str(),
         &sender.profile.username,
         &proposer_actor.id,
         subscription_option,
@@ -105,7 +105,7 @@ pub fn prepare_offer_agreement(
     );
     let recipients = Recipient::for_inbox(proposer_actor);
     OutgoingActivityJobData::new(
-        &instance.url(),
+        instance.uri_str(),
         sender,
         activity,
         recipients,
@@ -122,7 +122,7 @@ mod tests {
 
     #[test]
     fn test_build_offer_agreement() {
-        let instance_url = "https://local.example";
+        let instance_uri = "https://local.example";
         let sender_username = "payer";
         let proposal_id = "https://remote.example/proposals/1";
         let proposer_actor_id = "https://remote.example/users/test";
@@ -136,7 +136,7 @@ mod tests {
         let invoice_id = uuid!("46d160ae-af12-484d-9f44-419f00fc1b31");
         let invoice_amount = 200000;
         let activity = build_offer_agreement(
-            instance_url,
+            instance_uri,
             sender_username,
             proposer_actor_id,
             &subscription_option,

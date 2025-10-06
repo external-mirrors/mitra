@@ -42,7 +42,7 @@ struct UndoAnnounce {
 }
 
 fn build_undo_announce(
-    instance_url: &str,
+    instance_uri: &str,
     actor_profile: &DbActorProfile,
     repost_id: Uuid,
     repost_has_deprecated_ap_id: bool,
@@ -50,13 +50,13 @@ fn build_undo_announce(
     post_author: &DbActorProfile,
 ) -> UndoAnnounce {
     let object_id = local_announce_activity_id(
-        instance_url,
+        instance_uri,
         repost_id,
         repost_has_deprecated_ap_id,
     );
-    let activity_id = local_activity_id(instance_url, UNDO, repost_id);
-    let actor_id = local_actor_id(instance_url, &actor_profile.username);
-    let recipient_id = profile_actor_id(instance_url, post_author);
+    let activity_id = local_activity_id(instance_uri, UNDO, repost_id);
+    let actor_id = local_actor_id(instance_uri, &actor_profile.username);
+    let recipient_id = profile_actor_id(instance_uri, post_author);
     let (primary_audience, secondary_audience) = get_announce_audience(
         repost_visibility,
         &actor_id,
@@ -88,7 +88,7 @@ pub async fn prepare_undo_announce(
         post,
     ).await?;
     let activity = build_undo_announce(
-        &instance.url(),
+        instance.uri_str(),
         &sender.profile,
         repost.id,
         repost.has_deprecated_ap_id,
@@ -96,7 +96,7 @@ pub async fn prepare_undo_announce(
         &post.author,
     );
     Ok(OutgoingActivityJobData::new(
-        &instance.url(),
+        instance.uri_str(),
         sender,
         activity,
         recipients,
@@ -109,7 +109,7 @@ mod tests {
     use mitra_utils::id::generate_ulid;
     use super::*;
 
-    const INSTANCE_URL: &str = "https://example.com";
+    const INSTANCE_URI: &str = "https://example.com";
 
     #[test]
     fn test_build_undo_announce() {
@@ -121,7 +121,7 @@ mod tests {
         );
         let repost_id = generate_ulid();
         let activity = build_undo_announce(
-            INSTANCE_URL,
+            INSTANCE_URI,
             &announcer,
             repost_id,
             true, // legacy activity ID
@@ -130,19 +130,19 @@ mod tests {
         );
         assert_eq!(
             activity.id,
-            format!("{}/activities/undo/{}", INSTANCE_URL, repost_id),
+            format!("{}/activities/undo/{}", INSTANCE_URI, repost_id),
         );
         assert_eq!(
             activity.object,
-            format!("{}/objects/{}", INSTANCE_URL, repost_id),
+            format!("{}/objects/{}", INSTANCE_URI, repost_id),
         );
         assert_eq!(activity.to, vec![AP_PUBLIC, post_author_id]);
         assert_eq!(activity.cc, vec![
-            format!("{}/users/{}/followers", INSTANCE_URL, announcer.username),
+            format!("{}/users/{}/followers", INSTANCE_URI, announcer.username),
         ]);
 
         let activity = build_undo_announce(
-            INSTANCE_URL,
+            INSTANCE_URI,
             &announcer,
             repost_id,
             false, // no legacy activity ID
@@ -151,7 +151,7 @@ mod tests {
         );
         assert_eq!(
             activity.object,
-            format!("{}/activities/announce/{}", INSTANCE_URL, repost_id),
+            format!("{}/activities/announce/{}", INSTANCE_URI, repost_id),
         );
     }
 }

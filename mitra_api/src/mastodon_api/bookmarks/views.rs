@@ -45,7 +45,7 @@ async fn bookmark_list_view(
     ).await?;
     let base_url = get_request_base_url(connection_info);
     let media_server = ClientMediaServer::new(&config, &base_url);
-    let instance_url = config.instance().url();
+    let instance = config.instance();
     let maybe_last_id = get_last_item(&bookmarks, &query_params.limit)
         .map(|bookmark| bookmark.bookmark_id);
     let posts = bookmarks.into_iter()
@@ -53,7 +53,7 @@ async fn bookmark_list_view(
         .collect();
     let statuses = build_status_list(
         db_client,
-        &instance_url,
+        instance.uri_str(),
         &media_server,
         Some(&current_user),
         posts,

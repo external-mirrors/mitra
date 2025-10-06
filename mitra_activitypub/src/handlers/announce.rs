@@ -117,7 +117,7 @@ pub async fn handle_announce(
         &announce.actor,
     ).await?;
     let post = match parse_local_object_id(
-        &ap_client.instance.url(),
+        ap_client.instance.uri_str(),
         &announce.object,
     ) {
         Ok(post_id) => {

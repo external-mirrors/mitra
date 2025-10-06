@@ -49,7 +49,7 @@ pub async fn get_instance_staff(
     let instance_staff = match maybe_admin {
         Some(admin) => {
             let admin_actor_id = local_actor_id(
-                &config.instance_url(),
+                config.instance().uri_str(),
                 &admin.profile.username,
             );
             vec![admin_actor_id]

@@ -114,7 +114,7 @@ async fn profile_page_redirect_view(
 ) -> Result<HttpResponse, HttpError> {
     let db_client = &**get_database_client(&db_pool).await?;
     let profile = get_profile_by_acct(db_client, &acct).await?;
-    let actor_id = compatible_profile_actor_id(&config.instance_url(), &profile);
+    let actor_id = compatible_profile_actor_id(config.instance().uri_str(), &profile);
     let response = HttpResponse::Found()
         .append_header(("Location", actor_id))
         .finish();
@@ -137,7 +137,7 @@ async fn profile_page_opengraph_view(
             let title = format!("Profile - {}", profile.preferred_handle());
             let maybe_atom_url = if profile.is_local() {
                 let atom_url = get_user_feed_url(
-                    &config.instance_url(),
+                    config.instance().uri_str(),
                     &profile.username,
                 );
                 Some(atom_url)
@@ -149,7 +149,7 @@ async fn profile_page_opengraph_view(
                 title_short: title,
                 instance_title: config.instance_title.clone(),
                 page_type: OG_TYPE_PROFILE,
-                image_url: get_opengraph_image_url(&config.instance_url()),
+                image_url: get_opengraph_image_url(config.instance().uri_str()),
                 atom_url: maybe_atom_url,
             };
             let metadata_block = render_template(
@@ -188,7 +188,7 @@ async fn post_page_redirect_view(
 ) -> Result<HttpResponse, HttpError> {
     let db_client = &**get_database_client(&db_pool).await?;
     let post = get_post_by_id(db_client, *post_id).await?;
-    let object_id = compatible_post_object_id(&config.instance_url(), &post);
+    let object_id = compatible_post_object_id(config.instance().uri_str(), &post);
     let response = HttpResponse::Found()
         .append_header(("Location", object_id))
         .finish();
@@ -222,7 +222,7 @@ async fn post_page_opengraph_view(
                 title_short: title_short,
                 instance_title: config.instance_title.clone(),
                 page_type: OG_TYPE_ARTICLE,
-                image_url: get_opengraph_image_url(&config.instance_url()),
+                image_url: get_opengraph_image_url(config.instance().uri_str()),
                 atom_url: None,
             };
             let metadata_block = render_template(

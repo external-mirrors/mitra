@@ -37,7 +37,7 @@ struct AcceptOffer {
 }
 
 fn build_accept_offer(
-    instance_url: &str,
+    instance_uri: &str,
     sender_username: &str,
     subscription_option: &MoneroSubscription,
     invoice: &Invoice,
@@ -45,13 +45,13 @@ fn build_accept_offer(
     offer_activity_id: &str,
 ) -> Result<AcceptOffer, DatabaseTypeError> {
     let agreement = build_agreement(
-        instance_url,
+        instance_uri,
         sender_username,
         subscription_option,
         invoice,
     )?;
-    let actor_id = local_actor_id(instance_url, sender_username);
-    let activity_id = local_activity_id(instance_url, ACCEPT, generate_ulid());
+    let actor_id = local_actor_id(instance_uri, sender_username);
+    let activity_id = local_activity_id(instance_uri, ACCEPT, generate_ulid());
     let activity = AcceptOffer {
         _context: build_valueflows_context(),
         activity_type: ACCEPT.to_string(),
@@ -73,7 +73,7 @@ pub fn prepare_accept_offer(
     offer_activity_id: &str,
 ) -> Result<OutgoingActivityJobData, DatabaseError> {
     let activity = build_accept_offer(
-        &instance.url(),
+        instance.uri_str(),
         &sender.profile.username,
         subscription_option,
         invoice,
@@ -82,7 +82,7 @@ pub fn prepare_accept_offer(
     )?;
     let recipients = Recipient::for_inbox(remote_actor);
     Ok(OutgoingActivityJobData::new(
-        &instance.url(),
+        instance.uri_str(),
         sender,
         activity,
         recipients,
@@ -99,7 +99,7 @@ mod tests {
 
     #[test]
     fn test_build_accept_offer() {
-        let instance_url = "https://local.example";
+        let instance_uri = "https://local.example";
         let sender_username = "proposer";
         let subscription_option = MoneroSubscription {
             chain_id: ChainId::monero_mainnet(),
@@ -117,7 +117,7 @@ mod tests {
         let remote_actor_id = "https://remote.example/users/payer";
         let offer_activity_id = "https://remote.example/activities/123";
         let activity = build_accept_offer(
-            instance_url,
+            instance_uri,
             sender_username,
             &subscription_option,
             &invoice,

@@ -57,16 +57,16 @@ struct AddContextActivity {
 }
 
 fn build_add_context_activity(
-    instance_url: &str,
+    instance_uri: &str,
     sender_username: &str,
     conversation_id: Uuid,
     conversation_audience: &str,
     activity: JsonValue,
 ) -> AddContextActivity {
-    let actor_id = local_actor_id(instance_url, sender_username);
-    let activity_id = local_activity_id(instance_url, ADD, generate_ulid());
+    let actor_id = local_actor_id(instance_uri, sender_username);
+    let activity_id = local_activity_id(instance_uri, ADD, generate_ulid());
     let target_id = local_conversation_history_collection(
-        instance_url,
+        instance_uri,
         conversation_id,
     );
     AddContextActivity {
@@ -97,7 +97,7 @@ async fn prepare_add_context_activity(
     let conversation = conversation_root.expect_conversation();
     assert_eq!(conversation_id, conversation.id);
     let activity = build_add_context_activity(
-        &instance.url(),
+        instance.uri_str(),
         &conversation_owner.profile.username,
         conversation_id,
         conversation_audience,
@@ -105,7 +105,7 @@ async fn prepare_add_context_activity(
     );
     let recipients = get_note_recipients(db_client, conversation_root).await?;
     Ok(OutgoingActivityJobData::new(
-        &instance.url(),
+        instance.uri_str(),
         conversation_owner,
         activity,
         recipients,
@@ -156,7 +156,7 @@ pub async fn sync_conversation(
 mod tests {
     use super::*;
 
-    const INSTANCE_URL: &str = "https://social.example";
+    const INSTANCE_URI: &str = "https://social.example";
 
     #[test]
     fn test_build_add_context_activity() {
@@ -167,7 +167,7 @@ mod tests {
             "type": "Create",
         });
         let activity = build_add_context_activity(
-            INSTANCE_URL,
+            INSTANCE_URI,
             owner_username,
             conversation_id,
             conversation_audience,

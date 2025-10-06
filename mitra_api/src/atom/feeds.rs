@@ -40,10 +40,10 @@ fn get_author_name(profile: &DbActorProfile) -> String {
 }
 
 fn make_entry(
-    instance_url: &str,
+    instance_uri: &str,
     post: &Post,
 ) -> Entry {
-    let object_id = local_object_id(instance_url, post.id);
+    let object_id = local_object_id(instance_uri, post.id);
     let title = extract_title(&post.content, ENTRY_TITLE_MAX_LENGTH);
     Entry {
         url: object_id,
@@ -59,13 +59,13 @@ pub fn make_feed(
     profile: &DbActorProfile,
     posts: Vec<Post>,
 ) -> Feed {
-    let actor_id = local_actor_id(&instance.url(), &profile.username);
-    let feed_url = get_user_feed_url(&instance.url(), &profile.username);
+    let actor_id = local_actor_id(instance.uri_str(), &profile.username);
+    let feed_url = get_user_feed_url(instance.uri_str(), &profile.username);
     let feed_title = get_author_name(profile);
     let mut entries = vec![];
     let mut feed_updated_at = DateTime::UNIX_EPOCH;
     for post in posts {
-        let entry = make_entry(&instance.url(), &post);
+        let entry = make_entry(instance.uri_str(), &post);
         entries.push(entry);
         if post.created_at > feed_updated_at {
             feed_updated_at = post.created_at;

@@ -134,7 +134,7 @@ pub async fn get_relationships(
 
 pub async fn get_aliases(
     db_client: &impl DatabaseClient,
-    instance_url: &str,
+    instance_uri: &str,
     media_server: &ClientMediaServer,
     profile: &DbActorProfile,
 ) -> Result<Aliases, DatabaseError> {
@@ -143,7 +143,7 @@ pub async fn get_aliases(
         .map(|(actor_id, maybe_profile)| {
             let maybe_account = maybe_profile.as_ref()
                 .map(|profile| Account::from_profile(
-                    instance_url,
+                    instance_uri,
                     media_server,
                     profile.clone(),
                 ));
@@ -154,7 +154,7 @@ pub async fn get_aliases(
         // Without unknown and local actors
         .filter_map(|(_, maybe_profile)| {
             maybe_profile.as_ref().map(|profile| Account::from_profile(
-                instance_url,
+                instance_uri,
                 media_server,
                 profile.clone(),
             ))
@@ -163,7 +163,7 @@ pub async fn get_aliases(
     let verified = find_verified_aliases(db_client, profile).await?
         .into_iter()
         .map(|profile| Account::from_profile(
-            instance_url,
+            instance_uri,
             media_server,
             profile,
         ))

@@ -50,7 +50,7 @@ pub async fn handle_offer(
     let primary_commitment = offer.object.primary_commitment();
     let reciprocal_commitment = offer.object.reciprocal_commitment();
     let (username, chain_id) = parse_local_primary_intent_id(
-        &config.instance_url(),
+        config.instance().uri_str(),
         &primary_commitment.satisfies,
     )?;
     let proposer = get_user_by_name(db_client, &username).await?;

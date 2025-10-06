@@ -87,17 +87,17 @@ pub struct Agreement {
 
 /// Builds Agreement object from invoice
 pub fn build_agreement(
-    instance_url: &str,
+    instance_uri: &str,
     username: &str,
     payment_info: &MoneroSubscription,
     invoice: &Invoice,
 ) -> Result<Agreement, DatabaseTypeError> {
-    let actor_id = local_actor_id(instance_url, username);
+    let actor_id = local_actor_id(instance_uri, username);
     let proposal_id = local_actor_proposal_id(
         &actor_id,
         &payment_info.chain_id,
     );
-    let agreement_id = local_agreement_id(instance_url, invoice.id);
+    let agreement_id = local_agreement_id(instance_uri, invoice.id);
     let amount = invoice.amount_u64()?;
     let duration = amount / payment_info.price.get();
     let primary_commitment = Commitment {
@@ -145,7 +145,7 @@ mod tests {
 
     #[test]
     fn test_build_agreement() {
-        let instance_url = "https://test.example";
+        let instance_uri = "https://test.example";
         let username = "alice";
         let chain_id = ChainId::monero_mainnet();
         let payment_info = MoneroSubscription {
@@ -162,7 +162,7 @@ mod tests {
             ..Default::default()
         };
         let proposal = build_agreement(
-            instance_url,
+            instance_uri,
             username,
             &payment_info,
             &invoice,

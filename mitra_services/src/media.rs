@@ -223,7 +223,7 @@ pub enum MediaServer {
 
 impl MediaServer {
     pub fn new(config: &Config) -> Self {
-        let backend = FilesystemServer::new(&config.instance_url());
+        let backend = FilesystemServer::new(config.instance().uri_str());
         Self::Filesystem(backend)
     }
 
@@ -260,8 +260,8 @@ mod tests {
 
     #[test]
     fn test_get_file_url() {
-        let instance_url = "https://social.example";
-        let media_server = FilesystemServer::new(instance_url);
+        let instance_uri = "https://social.example";
+        let media_server = FilesystemServer::new(instance_uri);
         let file_name = "4c4b6a3be1314ab86138bef4314dde022e600960d8689a2c8f8631802d20dab6.png";
         let url = media_server.url_for(file_name);
         assert_eq!(

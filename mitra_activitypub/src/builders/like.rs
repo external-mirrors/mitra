@@ -50,14 +50,14 @@ struct Like {
 }
 
 pub(super) fn local_like_activity_id(
-    instance_url: &str,
+    instance_uri: &str,
     reaction_id: Uuid,
     reaction_has_deprecated_ap_id: bool,
 ) -> String {
     if reaction_has_deprecated_ap_id {
-        local_object_id(instance_url, reaction_id)
+        local_object_id(instance_uri, reaction_id)
     } else {
-        local_activity_id(instance_url, LIKE, reaction_id)
+        local_activity_id(instance_uri, LIKE, reaction_id)
     }
 }
 
@@ -72,7 +72,7 @@ pub(super) fn get_like_audience(
 
 #[allow(clippy::too_many_arguments)]
 fn build_like(
-    instance_url: &str,
+    instance_uri: &str,
     media_server: &MediaServer,
     actor_profile: &DbActorProfile,
     object_id: &str,
@@ -89,10 +89,10 @@ fn build_like(
         Some(_) => LIKE,
         None => LIKE,
     };
-    let activity_id = local_like_activity_id(instance_url, reaction_id, false);
-    let actor_id = local_actor_id(instance_url, &actor_profile.username);
+    let activity_id = local_like_activity_id(instance_uri, reaction_id, false);
+    let actor_id = local_actor_id(instance_uri, &actor_profile.username);
     let maybe_tag = maybe_custom_emoji
-        .map(|db_emoji| build_emoji(instance_url, media_server, db_emoji));
+        .map(|db_emoji| build_emoji(instance_uri, media_server, db_emoji));
     let (primary_audience, secondary_audience) =
         get_like_audience(post_author_id, post_visibility);
     Like {
@@ -110,7 +110,7 @@ fn build_like(
 
 pub async fn get_like_recipients(
     _db_client: &impl DatabaseClient,
-    _instance_url: &str,
+    _instance_uri: &str,
     post: &Post,
 ) -> Result<Vec<Recipient>, DatabaseError> {
     let mut recipients = vec![];
@@ -130,14 +130,14 @@ pub async fn prepare_like(
 ) -> Result<OutgoingActivityJobData, DatabaseError> {
     let recipients = get_like_recipients(
         db_client,
-        &instance.url(),
+        instance.uri_str(),
         post,
     ).await?;
-    let object_id = compatible_post_object_id(&instance.url(), post);
+    let object_id = compatible_post_object_id(instance.uri_str(), post);
     let post_author_id =
-        compatible_profile_actor_id(&instance.url(), &post.author);
+        compatible_profile_actor_id(instance.uri_str(), &post.author);
     let activity = build_like(
-        &instance.url(),
+        instance.uri_str(),
         media_server,
         &sender.profile,
         &object_id,
@@ -149,7 +149,7 @@ pub async fn prepare_like(
         instance.federation.fep_c0e0_emoji_react_enabled,
     );
     Ok(OutgoingActivityJobData::new(
-        &instance.url(),
+        instance.uri_str(),
         sender,
         activity,
         recipients,
@@ -161,17 +161,17 @@ mod tests {
     use mitra_utils::id::generate_ulid;
     use super::*;
 
-    const INSTANCE_URL: &str = "https://example.com";
+    const INSTANCE_URI: &str = "https://example.com";
 
     #[test]
     fn test_build_like() {
-        let media_server = MediaServer::for_test(INSTANCE_URL);
+        let media_server = MediaServer::for_test(INSTANCE_URI);
         let author = DbActorProfile::default();
         let post_id = "https://example.com/objects/123";
         let post_author_id = "https://example.com/users/test";
         let reaction_id = generate_ulid();
         let activity = build_like(
-            INSTANCE_URL,
+            INSTANCE_URI,
             &media_server,
             &author,
             post_id,
@@ -184,7 +184,7 @@ mod tests {
         );
         assert_eq!(
             activity.id,
-            format!("{}/activities/like/{}", INSTANCE_URL, reaction_id),
+            format!("{}/activities/like/{}", INSTANCE_URI, reaction_id),
         );
         assert_eq!(activity.activity_type, "Like");
         assert_eq!(activity.object, post_id);

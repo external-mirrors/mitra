@@ -125,12 +125,12 @@ pub struct Proposal {
 
 // https://www.valueflo.ws/concepts/proposals/
 pub fn build_proposal(
-    instance_url: &str,
+    instance_uri: &str,
     username: &str,
     payment_info: &MoneroSubscription,
 ) -> Proposal {
     let actor_id = local_actor_id(
-        instance_url,
+        instance_uri,
         username,
     );
     let proposal_id = local_actor_proposal_id(
@@ -181,7 +181,7 @@ mod tests {
 
     #[test]
     fn test_build_proposal() {
-        let instance_url = "https://test.example";
+        let instance_uri = "https://test.example";
         let username = "alice";
         let payment_info = MoneroSubscription {
             chain_id: ChainId::monero_mainnet(),
@@ -189,7 +189,7 @@ mod tests {
             payout_address: "test".to_string(),
         };
         let proposal = build_proposal(
-            instance_url,
+            instance_uri,
             username,
             &payment_info,
         );

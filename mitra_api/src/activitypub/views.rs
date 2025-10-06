@@ -135,7 +135,7 @@ async fn actor_view(
     let instance = config.instance();
     if !is_activitypub_request(&header_map_adapter(request.headers())) {
         let page_url = get_profile_page_url(
-            &instance.url(),
+            instance.uri_str(),
             &user.profile.username,
         );
         let response = HttpResponse::Found()
@@ -143,10 +143,10 @@ async fn actor_view(
             .finish();
         return Ok(response);
     };
-    let authority = Authority::server(instance.url_ref());
+    let authority = Authority::server(instance.uri());
     let media_server = MediaServer::new(&config);
     let actor = build_local_actor(
-        instance.url_ref(),
+        instance.uri(),
         &authority,
         &media_server,
         &user,
@@ -181,7 +181,7 @@ async fn inbox(
 
     let recipient = get_user_by_name_with_pool(&db_pool, &username).await?;
     let recipient_id = local_actor_id(
-        &config.instance_url(),
+        config.instance().uri_str(),
         &recipient.profile.username,
     );
     receive_activity(
@@ -224,7 +224,7 @@ async fn outbox(
     let db_client = &**get_database_client(&db_pool).await?;
     let user = get_user_by_name(db_client, &username).await?;
     let instance = config.instance();
-    let actor_id = local_actor_id(&instance.url(), &username);
+    let actor_id = local_actor_id(instance.uri_str(), &username);
     let collection_id = LocalActorCollection::Outbox.of(&actor_id);
     let first_page_id = format!("{}?page=true", collection_id);
     if query_params.page.is_none() {
@@ -255,12 +255,12 @@ async fn outbox(
     let media_server = MediaServer::new(&config);
     let activities = posts.iter().map(|post| {
         if post.repost_of_id.is_some() {
-            let activity = build_announce(&instance.url(), post);
+            let activity = build_announce(instance.uri_str(), post);
             serde_json::to_value(activity)
                 .expect("activity should be serializable")
         } else {
             let activity = build_create_note(
-                instance.url_ref(),
+                instance.uri(),
                 &media_server,
                 post,
             );
@@ -296,7 +296,7 @@ async fn followers_collection(
         // Social graph is not available
         return Err(HttpError::PermissionError);
     };
-    let actor_id = local_actor_id(&config.instance_url(), &username);
+    let actor_id = local_actor_id(config.instance().uri_str(), &username);
     let collection_id = LocalActorCollection::Followers.of(&actor_id);
     let collection = OrderedCollection::new(
         collection_id,
@@ -323,7 +323,7 @@ async fn following_collection(
         // Social graph is not available
         return Err(HttpError::PermissionError);
     };
-    let actor_id = local_actor_id(&config.instance_url(), &username);
+    let actor_id = local_actor_id(config.instance().uri_str(), &username);
     let collection_id = LocalActorCollection::Following.of(&actor_id);
     let collection = OrderedCollection::new(
         collection_id,
@@ -350,7 +350,7 @@ async fn subscribers_collection(
         // Subscriber list is hidden
         return Err(HttpError::PermissionError);
     };
-    let actor_id = local_actor_id(&config.instance_url(), &username);
+    let actor_id = local_actor_id(config.instance().uri_str(), &username);
     let collection_id = LocalActorCollection::Subscribers.of(&actor_id);
     let collection = OrderedCollection::new(
         collection_id,
@@ -374,7 +374,7 @@ async fn featured_collection(
     let db_client = &**get_database_client(&db_pool).await?;
     let user = get_user_by_name(db_client, &username).await?;
     let instance = config.instance();
-    let actor_id = local_actor_id(&instance.url(), &username);
+    let actor_id = local_actor_id(instance.uri_str(), &username);
     let collection_id = LocalActorCollection::Featured.of(&actor_id);
     let first_page_id = format!("{}?page=true", collection_id);
     if query_params.page.is_none() {
@@ -401,11 +401,11 @@ async fn featured_collection(
         OrderedCollectionPage::DEFAULT_SIZE,
     ).await?;
     add_related_posts(db_client, posts.iter_mut().collect()).await?;
-    let authority = Authority::server(instance.url_ref());
+    let authority = Authority::server(instance.uri());
     let media_server = MediaServer::new(&config);
     let objects = posts.iter().map(|post| {
         let note = build_note(
-            instance.url_ref(),
+            instance.uri(),
             &authority,
             &media_server,
             post,
@@ -443,7 +443,7 @@ async fn proposal_view(
             if is_activitypub_request(&header_map_adapter(request.headers())) => payment_info,
         PaymentOption::MoneroSubscription(_) => {
             let page_url = get_subscription_page_url(
-                &config.instance_url(),
+                config.instance().uri_str(),
                 &user.profile.username,
             );
             let response = HttpResponse::Found()
@@ -454,7 +454,7 @@ async fn proposal_view(
         _ => unreachable!("local payment option should not be link"),
     };
     let proposal = build_proposal(
-        &config.instance_url(),
+        config.instance().uri_str(),
         &user.profile.username,
         payment_info,
     );
@@ -531,7 +531,7 @@ pub async fn object_view(
         return Err(HttpError::NotFound("post"));
     };
     if !is_activitypub_request(&header_map_adapter(request.headers())) {
-        let page_url = get_post_page_url(&instance.url(), post.id);
+        let page_url = get_post_page_url(instance.uri_str(), post.id);
         let response = HttpResponse::Found()
             .append_header((http_header::LOCATION, page_url))
             .finish();
@@ -541,7 +541,7 @@ pub async fn object_view(
     let authority = Authority::from(&instance);
     let media_server = MediaServer::new(&config);
     let object = build_note(
-        instance.url_ref(),
+        instance.uri(),
         &authority,
         &media_server,
         &post,
@@ -570,7 +570,7 @@ pub async fn replies_collection(
         return Err(HttpError::NotFound("post"));
     };
     let instance = config.instance();
-    let object_id = local_object_id(&instance.url(), internal_object_id);
+    let object_id = local_object_id(instance.uri_str(), internal_object_id);
     let collection_id = local_object_replies(&object_id);
     let first_page_id = format!("{}?page=true", collection_id);
     if query_params.page.is_none() {
@@ -590,7 +590,7 @@ pub async fn replies_collection(
         .take(OrderedCollectionPage::DEFAULT_SIZE.into())
         .collect();
     let objects = replies.iter().map(|post| {
-        let object_id = compatible_post_object_id(&instance.url(), post);
+        let object_id = compatible_post_object_id(instance.uri_str(), post);
         serde_json::to_value(object_id)
             .expect("string should be serializable")
     }).collect();
@@ -617,7 +617,7 @@ pub async fn emoji_view(
     ).await?;
     let media_server = MediaServer::new(&config);
     let object = build_emoji(
-        &config.instance().url(),
+        config.instance().uri_str(),
         &media_server,
         &db_emoji,
     );
@@ -632,7 +632,7 @@ pub async fn tag_view(
     config: web::Data<Config>,
     tag_name: web::Path<String>,
 ) -> Result<HttpResponse, HttpError> {
-    let page_url = get_tag_page_url(&config.instance_url(), &tag_name);
+    let page_url = get_tag_page_url(config.instance().uri_str(), &tag_name);
     let response = HttpResponse::Found()
         .append_header((http_header::LOCATION, page_url))
         .finish();
@@ -657,7 +657,7 @@ pub async fn conversation_view(
     };
     let instance = config.instance();
     let collection_id =
-        local_conversation_collection(&instance.url(), *conversation_id);
+        local_conversation_collection(instance.uri_str(), *conversation_id);
     let first_page_id = format!("{}?page=true", collection_id);
     if query_params.page.is_none() {
         let collection = OrderedCollection::new(
@@ -674,7 +674,7 @@ pub async fn conversation_view(
     let objects = posts.iter()
         .take(OrderedCollectionPage::DEFAULT_SIZE.into())
         .map(|post| {
-            let object_id = compatible_post_object_id(&instance.url(), post);
+            let object_id = compatible_post_object_id(instance.uri_str(), post);
             serde_json::to_value(object_id)
                 .expect("string should be serializable")
         }).collect();
@@ -697,7 +697,7 @@ pub async fn activity_view(
     let db_client = &**get_database_client(&db_pool).await?;
     let activity_id = format!(
         "{}{}",
-        config.instance_url(),
+        config.instance().uri(),
         request_path,
     );
     let activity = get_object_as_target(
@@ -718,7 +718,7 @@ async fn apgateway_metadata_view(
     let metadata = GatewayMetadata {
         upload_media: format!(
             "{}/.well-known/apgateway-media",
-            config.instance_url(),
+            config.instance().uri(),
         ),
     };
     HttpResponse::Ok().json(metadata)
@@ -819,7 +819,7 @@ async fn apgateway_inbox_push_view(
 
     let collection_id = format!(
         "{}{}",
-        config.instance_url(),
+        config.instance().uri(),
         request_path,
     );
     let canonical_collection_id = canonicalize_id(&collection_id)?;
@@ -877,7 +877,7 @@ async fn apgateway_inbox_pull_view(
     let canonical_signer_id = parse_id_from_db(signer.expect_remote_actor_id())?;
     let collection_id = format!(
         "{}{}",
-        config.instance_url(),
+        config.instance().uri(),
         request_path,
     );
     let canonical_collection_id = canonicalize_id(&collection_id)?;
@@ -922,7 +922,7 @@ async fn apgateway_outbox_push_view(
     // Find outbox owner
     let collection_id = format!(
         "{}{}",
-        instance.url(),
+        instance.uri(),
         request_path,
     );
     let canonical_collection_id = canonicalize_id(&collection_id)?;
@@ -982,7 +982,7 @@ async fn apgateway_outbox_pull_view(
     let canonical_signer_id = parse_id_from_db(signer.expect_remote_actor_id())?;
     let collection_id = format!(
         "{}{}",
-        config.instance_url(),
+        config.instance().uri(),
         request_path,
     );
     let canonical_collection_id = canonicalize_id(&collection_id)?;

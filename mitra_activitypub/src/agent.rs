@@ -57,11 +57,11 @@ pub fn build_federation_agent(
 ) -> FederationAgent {
     let (signer_key, signer_key_id) = if let Some(user) = maybe_user {
         let actor_key = user.rsa_secret_key.clone();
-        let actor_id = local_actor_id(&instance.url(), &user.profile.username);
+        let actor_id = local_actor_id(instance.uri_str(), &user.profile.username);
         let actor_key_id = local_actor_key_id(&actor_id, PublicKeyType::RsaPkcs1);
         (actor_key, actor_key_id)
     } else {
-        let instance_actor_id = local_instance_actor_id(&instance.url());
+        let instance_actor_id = local_instance_actor_id(instance.uri_str());
         let instance_actor_key_id = local_actor_key_id(
             &instance_actor_id,
             PublicKeyType::RsaPkcs1,
@@ -79,8 +79,8 @@ mod tests {
 
     #[test]
     fn test_build_federation_agent_private() {
-        let instance_url = "https://social.example";
-        let instance = Instance::for_test(instance_url);
+        let instance_uri = "https://social.example";
+        let instance = Instance::for_test(instance_uri);
         let agent = build_federation_agent(&instance, None);
         assert_eq!(agent.user_agent.is_none(), true);
         assert_eq!(agent.ssrf_protection_enabled, true);
@@ -90,11 +90,11 @@ mod tests {
 
     #[test]
     fn test_build_federation_agent() {
-        let instance_url = "https://social.example";
-        let mut instance = Instance::for_test(instance_url);
+        let instance_uri = "https://social.example";
+        let mut instance = Instance::for_test(instance_uri);
         instance.federation.enabled = true;
         let agent = build_federation_agent(&instance, None);
-        assert_eq!(agent.user_agent.unwrap().ends_with(instance_url), true);
+        assert_eq!(agent.user_agent.unwrap().ends_with(instance_uri), true);
         assert_eq!(agent.ssrf_protection_enabled, true);
         assert_eq!(agent.response_size_limit, RESPONSE_SIZE_LIMIT);
         let request_signer = agent.signer.unwrap();

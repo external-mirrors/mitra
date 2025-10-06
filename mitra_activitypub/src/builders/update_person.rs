@@ -44,13 +44,13 @@ struct UpdatePerson {
 }
 
 fn build_update_person(
-    instance_url: &HttpUri,
+    instance_uri: &HttpUri,
     media_server: &MediaServer,
     user: &User,
 ) -> Result<UpdatePerson, DatabaseError> {
-    let authority = Authority::server(instance_url);
+    let authority = Authority::server(instance_uri);
     let actor = build_local_actor(
-        instance_url,
+        instance_uri,
         &authority,
         media_server,
         user,
@@ -58,7 +58,7 @@ fn build_update_person(
     let followers = LocalActorCollection::Followers.of(&actor.id);
     // Update(Person) is idempotent so its ID can be random
     let activity_id = local_activity_id(
-        instance_url.as_str(),
+        instance_uri.as_str(),
         UPDATE,
         generate_ulid(),
     );
@@ -104,13 +104,13 @@ pub async fn prepare_update_person(
     user: &User,
 ) -> Result<OutgoingActivityJobData, DatabaseError> {
     let activity = build_update_person(
-        instance.url_ref(),
+        instance.uri(),
         media_server,
         user,
     )?;
     let recipients = get_update_person_recipients(db_client, user).await?;
     Ok(OutgoingActivityJobData::new(
-        &instance.url(),
+        instance.uri_str(),
         user,
         activity,
         recipients,
@@ -122,30 +122,30 @@ mod tests {
     use mitra_models::profiles::types::DbActorProfile;
     use super::*;
 
-    const INSTANCE_URL: &str = "https://example.com";
+    const INSTANCE_URI: &str = "https://example.com";
 
     #[test]
     fn test_build_update_person() {
-        let instance_url = HttpUri::parse(INSTANCE_URL).unwrap();
-        let media_server = MediaServer::for_test(instance_url.as_str());
+        let instance_uri = HttpUri::parse(INSTANCE_URI).unwrap();
+        let media_server = MediaServer::for_test(instance_uri.as_str());
         let user = User {
             profile: DbActorProfile::local_for_test("testuser"),
             ..Default::default()
         };
         let activity = build_update_person(
-            &instance_url,
+            &instance_uri,
             &media_server,
             &user,
         ).unwrap();
         assert_eq!(activity.actor, activity.object.id);
         assert_eq!(
             activity.object.id,
-            format!("{}/users/testuser", instance_url),
+            format!("{}/users/testuser", instance_uri),
         );
         assert_eq!(activity.to, vec![AP_PUBLIC.to_string()]);
         assert_eq!(
             activity.cc,
-            vec![format!("{}/users/testuser/followers", instance_url)],
+            vec![format!("{}/users/testuser/followers", instance_uri)],
         );
     }
 }

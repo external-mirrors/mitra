@@ -55,11 +55,11 @@ async fn home_timeline(
     ).await?;
     let base_url = get_request_base_url(connection_info);
     let media_server = ClientMediaServer::new(&config, &base_url);
-    let instance_url = config.instance().url();
+    let instance = config.instance();
     let response = get_paginated_status_list(
         db_client,
         &base_url,
-        &instance_url,
+        instance.uri_str(),
         &media_server,
         &request_uri,
         Some(&current_user),
@@ -110,11 +110,11 @@ async fn public_timeline(
     ).await?;
     let base_url = get_request_base_url(connection_info);
     let media_server = ClientMediaServer::new(&config, &base_url);
-    let instance_url = config.instance().url();
+    let instance = config.instance();
     let response = get_paginated_status_list(
         db_client,
         &base_url,
-        &instance_url,
+        instance.uri_str(),
         &media_server,
         &request_uri,
         maybe_current_user.as_ref(),
@@ -143,11 +143,11 @@ async fn direct_timeline(
     ).await?;
     let base_url = get_request_base_url(connection_info);
     let media_server = ClientMediaServer::new(&config, &base_url);
-    let instance_url = config.instance().url();
+    let instance = config.instance();
     let response = get_paginated_status_list(
         db_client,
         &base_url,
-        &instance_url,
+        instance.uri_str(),
         &media_server,
         &request_uri,
         Some(&current_user),
@@ -181,11 +181,11 @@ async fn hashtag_timeline(
     ).await?;
     let base_url = get_request_base_url(connection_info);
     let media_server = ClientMediaServer::new(&config, &base_url);
-    let instance_url = config.instance().url();
+    let instance = config.instance();
     let response = get_paginated_status_list(
         db_client,
         &base_url,
-        &instance_url,
+        instance.uri_str(),
         &media_server,
         &request_uri,
         maybe_current_user.as_ref(),
@@ -222,11 +222,11 @@ async fn list_timeline(
     ).await?;
     let base_url = get_request_base_url(connection_info);
     let media_server = ClientMediaServer::new(&config, &base_url);
-    let instance_url = config.instance().url();
+    let instance = config.instance();
     let response = get_paginated_status_list(
         db_client,
         &base_url,
-        &instance_url,
+        instance.uri_str(),
         &media_server,
         &request_uri,
         Some(&current_user),

@@ -321,7 +321,7 @@ mod tests {
     };
     use super::*;
 
-    const INSTANCE_URL: &str = "https://example.com";
+    const INSTANCE_URI: &str = "https://example.com";
 
     #[test]
     fn test_identity_proof_fep_c390() {
@@ -376,8 +376,8 @@ mod tests {
 
     #[test]
     fn test_payment_option() {
-        let instance_url = HttpUri::parse(INSTANCE_URL).unwrap();
-        let authority = Authority::server(&instance_url);
+        let instance_uri = HttpUri::parse(INSTANCE_URI).unwrap();
+        let authority = Authority::server(&instance_uri);
         let username = "testuser";
         let price = NonZeroU64::new(240000).unwrap();
         let payout_address = "test";

@@ -45,11 +45,11 @@ use super::{
 
 pub async fn get_follow_request_by_activity_id(
     db_client: &impl DatabaseClient,
-    instance_url: &str,
+    instance_uri: &str,
     activity_id: &str,
 ) -> Result<FollowRequest, DatabaseError> {
     match parse_local_activity_id(
-        instance_url,
+        instance_uri,
         activity_id,
     ) {
         Ok(follow_request_id) => {
@@ -90,7 +90,7 @@ pub async fn handle_accept(
     let canonical_object_id = canonicalize_id(&accept.object)?;
     let follow_request = get_follow_request_by_activity_id(
         db_client,
-        &config.instance_url(),
+        config.instance().uri_str(),
         &canonical_object_id.to_string(),
     ).await?;
     if follow_request.target_id != actor_profile.id {
@@ -118,7 +118,7 @@ async fn handle_accept_offer(
         &accept.actor,
     ).await?;
     let invoice_id = parse_local_activity_id(
-        &config.instance_url(),
+        config.instance().uri_str(),
         &accept.object,
     )?;
     let invoice = get_invoice_by_id(db_client, invoice_id).await?;

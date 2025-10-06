@@ -39,7 +39,7 @@ pub async fn handle_block(
         &block.actor,
     ).await?;
     let target_username = parse_local_actor_id(
-        &config.instance_url(),
+        config.instance().uri_str(),
         &block.object,
     )?;
     let target_user = get_user_by_name(db_client, &target_username).await?;

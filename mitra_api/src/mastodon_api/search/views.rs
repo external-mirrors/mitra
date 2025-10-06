@@ -73,10 +73,10 @@ async fn search_view(
     };
     let base_url = get_request_base_url(connection_info);
     let media_server = ClientMediaServer::new(&config, &base_url);
-    let instance_url = config.instance().url();
+    let instance = config.instance();
     let accounts: Vec<Account> = profiles.into_iter()
         .map(|profile| Account::from_profile(
-            &instance_url,
+            instance.uri_str(),
             &media_server,
             profile,
         ))
@@ -84,13 +84,13 @@ async fn search_view(
     let db_client = &**get_database_client(&db_pool).await?;
     let statuses = build_status_list(
         db_client,
-        &instance_url,
+        instance.uri_str(),
         &media_server,
         Some(&current_user),
         posts,
     ).await?;
     let hashtags = tags.into_iter()
-        .map(|tag_name| Tag::from_tag_name(&instance_url, tag_name))
+        .map(|tag_name| Tag::from_tag_name(instance.uri_str(), tag_name))
         .collect();
     let results = SearchResults { accounts, statuses, hashtags };
     Ok(HttpResponse::Ok().json(results))

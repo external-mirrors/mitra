@@ -54,7 +54,7 @@ async fn get_notifications_view(
     ).await?
         .into_iter()
         .map(|item| ApiNotification::from_db(
-            &instance.url(),
+            instance.uri_str(),
             &media_server,
             item,
         ))

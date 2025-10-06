@@ -36,13 +36,13 @@ pub struct CreateNote {
 }
 
 pub fn build_create_note(
-    instance_url: &HttpUri,
+    instance_uri: &HttpUri,
     media_server: &MediaServer,
     post: &Post,
 ) -> CreateNote {
-    let authority = Authority::server(instance_url);
+    let authority = Authority::server(instance_uri);
     let object = build_note(
-        instance_url,
+        instance_uri,
         &authority,
         media_server,
         post,
@@ -51,7 +51,7 @@ pub fn build_create_note(
     let primary_audience = object.to.clone();
     let secondary_audience = object.cc.clone();
     let activity_id = local_activity_id(
-        instance_url.as_str(),
+        instance_uri.as_str(),
         CREATE,
         post.id,
     );
@@ -75,13 +75,13 @@ pub async fn prepare_create_note(
 ) -> Result<OutgoingActivityJobData, DatabaseError> {
     assert_eq!(author.id, post.author.id);
     let activity = build_create_note(
-        instance.url_ref(),
+        instance.uri(),
         media_server,
         post,
     );
     let recipients = get_note_recipients(db_client, post).await?;
     Ok(OutgoingActivityJobData::new(
-        &instance.url(),
+        instance.uri_str(),
         author,
         activity,
         recipients,
@@ -97,12 +97,12 @@ mod tests {
     };
     use super::*;
 
-    const INSTANCE_URL: &str = "https://example.com";
+    const INSTANCE_URI: &str = "https://example.com";
 
     #[test]
     fn test_build_create_note() {
-        let instance_url = HttpUri::parse(INSTANCE_URL).unwrap();
-        let media_server = MediaServer::for_test(INSTANCE_URL);
+        let instance_uri = HttpUri::parse(INSTANCE_URI).unwrap();
+        let media_server = MediaServer::for_test(INSTANCE_URI);
         let author_username = "author";
         let author = DbActorProfile::local_for_test(author_username);
         let post = Post {
@@ -111,19 +111,19 @@ mod tests {
             ..Default::default()
         };
         let activity = build_create_note(
-            &instance_url,
+            &instance_uri,
             &media_server,
             &post,
         );
 
         assert_eq!(
             activity.id,
-            format!("{}/activities/create/{}", INSTANCE_URL, post.id),
+            format!("{}/activities/create/{}", INSTANCE_URI, post.id),
         );
         assert_eq!(activity.activity_type, CREATE);
         assert_eq!(
             activity.actor,
-            format!("{}/users/{}", INSTANCE_URL, author_username),
+            format!("{}/users/{}", INSTANCE_URI, author_username),
         );
         assert_eq!(activity.to, vec![AP_PUBLIC]);
         assert_eq!(activity.object._context, None);

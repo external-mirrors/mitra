@@ -42,7 +42,7 @@ pub(super) struct Follow {
 }
 
 pub(super) fn build_follow(
-    instance_url: &str,
+    instance_uri: &str,
     actor_profile: &DbActorProfile,
     target_actor_id: &str,
     follow_request_id: Uuid,
@@ -50,11 +50,11 @@ pub(super) fn build_follow(
     with_context: bool,
 ) -> Follow {
     let activity_id = if follow_request_has_deprecated_ap_id {
-        local_object_id(instance_url, follow_request_id)
+        local_object_id(instance_uri, follow_request_id)
     } else {
-        local_activity_id(instance_url, FOLLOW, follow_request_id)
+        local_activity_id(instance_uri, FOLLOW, follow_request_id)
     };
-    let actor_id = local_actor_id(instance_url, &actor_profile.username);
+    let actor_id = local_actor_id(instance_uri, &actor_profile.username);
     Follow {
         _context: with_context.then(build_default_context),
         activity_type: FOLLOW.to_string(),
@@ -73,7 +73,7 @@ fn prepare_follow(
 ) -> Result<OutgoingActivityJobData, DatabaseError> {
     let target_actor_id = compatible_id(target_actor, &target_actor.id)?;
     let activity = build_follow(
-        &instance.url(),
+        instance.uri_str(),
         &sender.profile,
         &target_actor_id,
         follow_request_id,
@@ -82,7 +82,7 @@ fn prepare_follow(
     );
     let recipients = Recipient::for_inbox(target_actor);
     Ok(OutgoingActivityJobData::new(
-        &instance.url(),
+        instance.uri_str(),
         sender,
         activity,
         recipients,
@@ -138,7 +138,7 @@ mod tests {
     use mitra_utils::id::generate_ulid;
     use super::*;
 
-    const INSTANCE_URL: &str = "https://example.com";
+    const INSTANCE_URI: &str = "https://example.com";
 
     #[test]
     fn test_build_follow() {
@@ -146,7 +146,7 @@ mod tests {
         let follow_request_id = generate_ulid();
         let target_actor_id = "https://test.remote/actor/test";
         let activity = build_follow(
-            INSTANCE_URL,
+            INSTANCE_URI,
             &follower,
             target_actor_id,
             follow_request_id,
@@ -157,12 +157,12 @@ mod tests {
         assert_eq!(activity._context.is_some(), true);
         assert_eq!(
             activity.id,
-            format!("{}/activities/follow/{}", INSTANCE_URL, follow_request_id),
+            format!("{}/activities/follow/{}", INSTANCE_URI, follow_request_id),
         );
         assert_eq!(activity.activity_type, "Follow");
         assert_eq!(
             activity.actor,
-            format!("{}/users/{}", INSTANCE_URL, follower.username),
+            format!("{}/users/{}", INSTANCE_URI, follower.username),
         );
         assert_eq!(activity.object, target_actor_id);
         assert_eq!(activity.to, vec![target_actor_id]);

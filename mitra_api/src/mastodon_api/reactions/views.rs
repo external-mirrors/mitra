@@ -131,7 +131,7 @@ async fn create_reaction_view(
     let media_server = ClientMediaServer::new(&config, &base_url);
     let status = build_status(
         db_client,
-        &config.instance_url(),
+        config.instance().uri_str(),
         &media_server,
         Some(&current_user),
         post,
@@ -183,7 +183,7 @@ async fn delete_reaction_view(
     let media_server = ClientMediaServer::new(&config, &base_url);
     let status = build_status(
         db_client,
-        &config.instance_url(),
+        config.instance().uri_str(),
         &media_server,
         Some(&current_user),
         post,
@@ -227,7 +227,7 @@ async fn get_reactions_view(
             .map(|emoji| emoji.shortcode.clone())
             .unwrap_or(content);
         let account = Account::from_profile(
-            &config.instance_url(),
+            config.instance().uri_str(),
             &media_server,
             reaction.author.clone(),
         );

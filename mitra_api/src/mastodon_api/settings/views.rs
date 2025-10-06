@@ -99,7 +99,7 @@ async fn client_config_view(
     let base_url = get_request_base_url(connection_info);
     let media_server = ClientMediaServer::new(&config, &base_url);
     let account = Account::from_user(
-        &config.instance_url(),
+        config.instance().uri_str(),
         &media_server,
         current_user,
     );
@@ -123,7 +123,7 @@ async fn change_password_view(
     let base_url = get_request_base_url(connection_info);
     let media_server = ClientMediaServer::new(&config, &base_url);
     let account = Account::from_user(
-        &config.instance_url(),
+        config.instance().uri_str(),
         &media_server,
         current_user,
     );
@@ -148,7 +148,7 @@ async fn add_alias_view(
         return Err(ValidationError("alias must be on another server").into());
     };
     let instance = config.instance();
-    let alias_id = profile_actor_id(&instance.url(), &alias);
+    let alias_id = profile_actor_id(instance.uri_str(), &alias);
     let mut profile_data = ProfileUpdateData::from(&current_user.profile);
     if !profile_data.aliases.contains(&alias_id) {
         profile_data.aliases.push(alias_id);
@@ -174,7 +174,7 @@ async fn add_alias_view(
     let media_server = ClientMediaServer::new(&config, &base_url);
     let aliases = get_aliases(
         db_client,
-        &instance.url(),
+        instance.uri_str(),
         &media_server,
         &current_user.profile,
     ).await?;
@@ -216,7 +216,7 @@ async fn remove_alias_view(
     let media_server = ClientMediaServer::new(&config, &base_url);
     let aliases = get_aliases(
         db_client,
-        &instance.url(),
+        instance.uri_str(),
         &media_server,
         &current_user.profile,
     ).await?;
@@ -295,7 +295,7 @@ async fn import_followers_view(
         return Err(ValidationError("identity proof is required").into());
     };
     let instance = config.instance();
-    if request_data.from_actor_id.starts_with(&instance.url()) {
+    if request_data.from_actor_id.starts_with(instance.uri_str()) {
         return Err(ValidationError("can't move from local actor").into());
     };
     // Existence of actor is not verified because
@@ -315,7 +315,7 @@ async fn import_followers_view(
             &current_user.profile,
         ).await?
             .into_iter()
-            .map(|profile| profile_actor_id(&instance.url(), &profile));
+            .map(|profile| profile_actor_id(instance.uri_str(), &profile));
         if !aliases.any(|actor_id| actor_id == request_data.from_actor_id) {
             return Err(ValidationError("old profile is not an alias").into());
         };
@@ -334,7 +334,7 @@ async fn import_followers_view(
     let base_url = get_request_base_url(connection_info);
     let media_server = ClientMediaServer::new(&config, &base_url);
     let account = Account::from_user(
-        &instance.url(),
+        instance.uri_str(),
         &media_server,
         current_user,
     );
@@ -353,7 +353,7 @@ async fn move_followers_view(
     let instance = config.instance();
     let current_user = get_current_user(db_client, auth.token()).await?;
     let current_actor_id = profile_actor_id(
-        &instance.url(),
+        instance.uri_str(),
         &current_user.profile,
     );
     let target = get_profile_by_acct(db_client, &request_data.target_acct).await?;
@@ -387,7 +387,7 @@ async fn move_followers_view(
             follower.id,
         ).await?;
     };
-    let target_actor_id = profile_actor_id(&instance.url(), &target);
+    let target_actor_id = profile_actor_id(instance.uri_str(), &target);
     prepare_move_person(
         &instance,
         &current_user,
@@ -399,7 +399,7 @@ async fn move_followers_view(
     let base_url = get_request_base_url(connection_info);
     let media_server = ClientMediaServer::new(&config, &base_url);
     let account = Account::from_user(
-        &instance.url(),
+        instance.uri_str(),
         &media_server,
         current_user,
     );

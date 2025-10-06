@@ -75,7 +75,7 @@ pub async fn run_server(
                         cors_config = cors_config.allowed_origin(&origin);
                     };
                     cors_config = cors_config
-                        .allowed_origin(&config.instance_url())
+                        .allowed_origin(config.instance().uri_str())
                         // TODO: don't accept GET requests from disallowed origins
                         // TODO: don't automatically allow localhost in strict mode
                         .allowed_origin_fn(|origin, req_head| {

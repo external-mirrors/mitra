@@ -58,7 +58,7 @@ pub async fn handle_move(
         db_client,
         &activity.object,
     ).await?;
-    let old_actor_id = profile_actor_id(&instance.url(), &old_profile);
+    let old_actor_id = profile_actor_id(instance.uri_str(), &old_profile);
 
     let new_profile = ActorIdResolver::default().force_refetch().resolve(
         &ap_client,
@@ -69,7 +69,7 @@ pub async fn handle_move(
     // Find aliases by DIDs (verified)
     let mut aliases = find_verified_aliases(db_client, &new_profile).await?
         .into_iter()
-        .map(|profile| profile_actor_id(&instance.url(), &profile))
+        .map(|profile| profile_actor_id(instance.uri_str(), &profile))
         .collect::<Vec<_>>();
     // Add aliases reported by server (actor's alsoKnownAs property)
     aliases.extend(new_profile.aliases.clone().into_actor_ids());

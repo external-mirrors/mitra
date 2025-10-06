@@ -42,23 +42,23 @@ struct UpdateAgreement {
 }
 
 fn build_update_agreement(
-    instance_url: &HttpUri,
+    instance_uri: &HttpUri,
     sender_username: &str,
     remote_payer_id: &str,
     subscription_option: &MoneroSubscription,
     invoice: &Invoice,
 ) -> Result<UpdateAgreement, DatabaseError> {
     let activity_id = local_activity_id(
-        instance_url.as_str(),
+        instance_uri.as_str(),
         UPDATE,
         generate_ulid(),
     );
     let actor_id = local_actor_id(
-        instance_url.as_str(),
+        instance_uri.as_str(),
         sender_username,
     );
     let agreement = build_agreement(
-        instance_url.as_str(),
+        instance_uri.as_str(),
         sender_username,
         subscription_option,
         invoice,
@@ -82,7 +82,7 @@ pub fn prepare_update_agreement(
     remote_payer: &DbActor,
 ) -> Result<OutgoingActivityJobData, DatabaseError> {
     let activity = build_update_agreement(
-        instance.url_ref(),
+        instance.uri(),
         &sender.profile.username,
         &remote_payer.id,
         subscription_option,
@@ -90,7 +90,7 @@ pub fn prepare_update_agreement(
     )?;
     let recipients = Recipient::for_inbox(remote_payer);
     Ok(OutgoingActivityJobData::new(
-        &instance.url(),
+        instance.uri_str(),
         sender,
         activity,
         recipients,
@@ -107,11 +107,11 @@ mod tests {
     };
     use super::*;
 
-    const INSTANCE_URL: &str = "https://social.example";
+    const INSTANCE_URI: &str = "https://social.example";
 
     #[test]
     fn test_build_update_agreement() {
-        let instance_url = HttpUri::parse(INSTANCE_URL).unwrap();
+        let instance_uri = HttpUri::parse(INSTANCE_URI).unwrap();
         let sender = User {
             profile: DbActorProfile::local_for_test("testuser"),
             ..Default::default()
@@ -132,7 +132,7 @@ mod tests {
             ..Default::default()
         };
         let activity = build_update_agreement(
-            &instance_url,
+            &instance_uri,
             &sender.profile.username,
             remote_actor_id,
             &subscription_option,
@@ -141,11 +141,11 @@ mod tests {
         assert_eq!(activity.activity_type, UPDATE);
         assert_eq!(
             activity.object.id.unwrap(),
-            format!("{instance_url}/objects/agreements/{invoice_id}"),
+            format!("{instance_uri}/objects/agreements/{invoice_id}"),
         );
         assert_eq!(
             activity.object.attributed_to.unwrap(),
-            format!("{instance_url}/users/testuser"),
+            format!("{instance_uri}/users/testuser"),
         );
         assert_eq!(
             activity.object.preview.unwrap().name,

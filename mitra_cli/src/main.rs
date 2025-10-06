@@ -33,7 +33,7 @@ async fn main() -> Result<(), Error> {
     let db_client = &mut db_client_value;
     initialize_database(&mut config, db_client).await;
     initialize_storage(&config);
-    log::info!("instance URL {}", config.instance_url());
+    log::info!("instance URL {}", config.instance().uri());
     std::mem::drop(db_client_value);
 
     let db_pool = create_database_connection_pool(&config);

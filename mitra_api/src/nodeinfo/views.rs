@@ -17,14 +17,14 @@ const NODEINFO_2_1_RELATION_TYPE: &str = "http://nodeinfo.diaspora.software/ns/s
 pub async fn get_nodeinfo_jrd(
     config: web::Data<Config>,
 ) -> Result<HttpResponse, HttpError> {
-    let nodeinfo_2_0_url = format!("{}/nodeinfo/2.0", config.instance_url());
+    let nodeinfo_2_0_uri = format!("{}/nodeinfo/2.0", config.instance().uri());
     let nodeinfo_2_0_link = Link::new(NODEINFO_2_0_RELATION_TYPE)
-        .with_href(&nodeinfo_2_0_url);
-    let nodeinfo_2_1_url = format!("{}/nodeinfo/2.1", config.instance_url());
+        .with_href(&nodeinfo_2_0_uri);
+    let nodeinfo_2_1_uri = format!("{}/nodeinfo/2.1", config.instance().uri());
     let nodeinfo_2_1_link = Link::new(NODEINFO_2_1_RELATION_TYPE)
-        .with_href(&nodeinfo_2_1_url);
+        .with_href(&nodeinfo_2_1_uri);
     let jrd = JsonResourceDescriptor {
-        subject: config.instance_url(),
+        subject: config.instance().uri().to_string(),
         links: vec![nodeinfo_2_0_link, nodeinfo_2_1_link],
     };
     let response = HttpResponse::Ok().json(jrd);

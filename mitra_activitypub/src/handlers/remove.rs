@@ -53,7 +53,7 @@ pub async fn handle_remove(
     if Some(remove.target.clone()) == actor.subscribers {
         // Removing from subscribers
         let username = parse_local_actor_id(
-            &config.instance_url(),
+            config.instance().uri_str(),
             &remove.object,
         )?;
         let user = get_user_by_name(db_client, &username).await?;

@@ -55,12 +55,12 @@ async fn get_jrd(
             .map_err(|error| HttpError::ValidationError(error.to_string()))?
     } else {
         // Actor ID? (reverse webfinger)
-        let username = if resource == instance.url() ||
-            resource == local_instance_actor_id(&instance.url())
+        let username = if resource == instance.uri_str() ||
+            resource == local_instance_actor_id(instance.uri_str())
         {
             instance.hostname()
         } else {
-            parse_local_actor_id(&instance.url(), resource)
+            parse_local_actor_id(instance.uri_str(), resource)
                 .map_err(|_| HttpError::NotFound("user"))?
         };
         WebfingerAddress::new_unchecked(&username, &instance.hostname())
@@ -70,11 +70,11 @@ async fn get_jrd(
         return Err(HttpError::NotFound("user"));
     };
     let links = if webfinger_address.username() == instance.hostname() {
-        let actor_id = local_instance_actor_id(&instance.url());
+        let actor_id = local_instance_actor_id(instance.uri_str());
         let actor_link = Link::actor(&actor_id);
         // Add remote interaction template
         let remote_interaction_template = get_search_page_url(
-            &instance.url(),
+            instance.uri_str(),
             "{uri}",
         );
         let remote_interaction_link = Link::new(REMOTE_INTERACTION_RELATION_TYPE)
@@ -82,7 +82,7 @@ async fn get_jrd(
         vec![actor_link, remote_interaction_link]
     } else if is_registered_user(db_client, webfinger_address.username()).await? {
         let actor_id = local_actor_id(
-            &instance.url(),
+            instance.uri_str(),
             webfinger_address.username(),
         );
         // Required by GNU Social
@@ -93,7 +93,7 @@ async fn get_jrd(
         let actor_link = Link::actor(&actor_id);
         // Add feed link for users
         let feed_url = get_user_feed_url(
-            &instance.url(),
+            instance.uri_str(),
             webfinger_address.username(),
         );
         let feed_link = Link::new(FEED_RELATION_TYPE)
@@ -101,13 +101,13 @@ async fn get_jrd(
             .with_href(&feed_url);
         // Add remote interaction template
         let remote_interaction_template = get_search_page_url(
-            &instance.url(),
+            instance.uri_str(),
             "{uri}",
         );
         let remote_interaction_link = Link::new(REMOTE_INTERACTION_RELATION_TYPE)
             .with_template(&remote_interaction_template);
         let fep_3b86_object_intent_template = get_search_page_url(
-            &instance.url(),
+            instance.uri_str(),
             "{object}",
         );
         let fep_3b86_object_intent_link = Link::new(FEP_3B86_OBJECT_INTENT_RELATION_TYPE)
@@ -125,7 +125,7 @@ async fn get_jrd(
             webfinger_address.username(),
         ).await?;
         let actor_id = user.profile.expect_remote_actor_id();
-        let compatible_actor_id = db_url_to_http_url(actor_id, &instance.url())
+        let compatible_actor_id = db_url_to_http_url(actor_id, instance.uri_str())
             .map_err(DatabaseError::from)?;
         let actor_link = Link::actor(&compatible_actor_id);
         vec![actor_link]

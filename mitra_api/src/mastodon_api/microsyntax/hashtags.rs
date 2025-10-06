@@ -34,7 +34,7 @@ pub fn find_hashtags(text: &str) -> Vec<String> {
 }
 
 /// Replaces hashtags with links
-pub fn replace_hashtags(instance_url: &str, text: &str, tags: &[String]) -> String {
+pub fn replace_hashtags(instance_uri: &str, text: &str, tags: &[String]) -> String {
     let hashtag_re = Regex::new(HASHTAG_RE)
         .expect("regexp should be valid");
     let hashtag_secondary_re = Regex::new(HASHTAG_SECONDARY_RE)
@@ -53,7 +53,7 @@ pub fn replace_hashtags(instance_url: &str, text: &str, tags: &[String]) -> Stri
             let tag_name = tag.to_lowercase();
             let after = secondary_caps["after"].to_string();
             if tags.contains(&tag_name) {
-                let tag_url = local_tag_collection(instance_url, &tag_name);
+                let tag_url = local_tag_collection(instance_uri, &tag_name);
                 return format!(
                     r#"{}<a class="hashtag" href="{}" rel="tag">#{}</a>{}"#,
                     before,
@@ -72,7 +72,7 @@ pub fn replace_hashtags(instance_url: &str, text: &str, tags: &[String]) -> Stri
 mod tests {
     use super::*;
 
-    const INSTANCE_URL: &str = "https://example.com";
+    const INSTANCE_URI: &str = "https://example.com";
     const TEXT_WITH_TAGS: &str = concat!(
         "@user1@server1 some text #TestTag.\n",
         "#TAG1 #tag1 #test_underscore #test*special ",
@@ -133,7 +133,7 @@ mod tests {
     #[test]
     fn test_replace_hashtags() {
         let tags = find_hashtags(TEXT_WITH_TAGS);
-        let output = replace_hashtags(INSTANCE_URL, TEXT_WITH_TAGS, &tags);
+        let output = replace_hashtags(INSTANCE_URI, TEXT_WITH_TAGS, &tags);
 
         let expected_output = concat!(
             r#"@user1@server1 some text <a class="hashtag" href="https://example.com/collections/tags/testtag" rel="tag">#TestTag</a>."#, "\n",

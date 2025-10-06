@@ -55,7 +55,7 @@ pub fn is_correct_uri_scheme(uri: &HttpUri) -> bool {
 
 #[derive(Clone)]
 pub struct Instance {
-    _url: HttpUri,
+    _uri: HttpUri,
     pub federation: FederationConfig,
     pub ed25519_secret_key: Ed25519SecretKey,
     pub rsa_secret_key: RsaSecretKey,
@@ -69,7 +69,7 @@ impl Instance {
             federation_config.enabled = false;
         };
         Self {
-            _url: parse_instance_url(&config.instance_url)
+            _uri: parse_instance_url(&config.instance_url)
                 .expect("instance URL should be already validated"),
             federation: federation_config,
             ed25519_secret_key: config.instance_ed25519_key
@@ -79,25 +79,25 @@ impl Instance {
         }
     }
 
-    pub fn url(&self) -> String {
-        self._url.to_string()
+    pub fn uri(&self) -> &HttpUri {
+        &self._uri
     }
 
-    pub fn url_ref(&self) -> &HttpUri {
-        &self._url
+    pub fn uri_str(&self) -> &str {
+        self._uri.as_str()
     }
 
     /// Returns instance host name (without port number)
     pub fn hostname(&self) -> String {
-        self._url.hostname().to_string()
+        self._uri.hostname().to_string()
     }
 
     pub fn agent(&self) -> String {
         format!(
-            "{name} {version}; {instance_url}",
+            "{name} {version}; {instance_uri}",
             name=SOFTWARE_NAME,
             version=SOFTWARE_VERSION,
-            instance_url=self.url(),
+            instance_uri=self.uri(),
         )
     }
 }
@@ -110,7 +110,7 @@ impl Instance {
             crypto_rsa::generate_weak_rsa_key,
         };
         Self {
-            _url: parse_instance_url(url).unwrap(),
+            _uri: parse_instance_url(url).unwrap(),
             federation: FederationConfig {
                 enabled: false,
                 ..Default::default()
@@ -163,7 +163,7 @@ mod tests {
         let instance_url = "https://example.com/";
         let instance = Instance::for_test(instance_url);
 
-        assert_eq!(instance.url(), "https://example.com");
+        assert_eq!(instance.uri_str(), "https://example.com");
         assert_eq!(instance.hostname(), "example.com");
         assert_eq!(
             instance.agent(),
@@ -178,7 +178,7 @@ mod tests {
         let instance_url = "http://1.2.3.4:3777/";
         let instance = Instance::for_test(instance_url);
 
-        assert_eq!(instance.url(), "http://1.2.3.4:3777");
+        assert_eq!(instance.uri_str(), "http://1.2.3.4:3777");
         assert_eq!(instance.hostname(), "1.2.3.4");
     }
 }

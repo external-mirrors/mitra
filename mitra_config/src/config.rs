@@ -156,10 +156,6 @@ impl Config {
         Instance::from_config(self)
     }
 
-    pub fn instance_url(&self) -> String {
-        self.instance().url()
-    }
-
     pub fn blockchains(&self) -> &[BlockchainConfig] {
         let is_error = self.blockchains.iter()
             .fold(HashMap::new(), |mut map, blockchain_config| {

@@ -51,12 +51,12 @@ pub struct Mention {
 }
 
 impl Mention {
-    fn from_profile(instance_url: &str, profile: DbActorProfile) -> Self {
+    fn from_profile(instance_uri: &str, profile: DbActorProfile) -> Self {
         Mention {
             id: profile.id.to_string(),
             username: profile.username.clone(),
             acct: profile.preferred_handle().to_owned(),
-            url: profile_actor_url(instance_url, &profile),
+            url: profile_actor_url(instance_uri, &profile),
         }
     }
 }
@@ -69,8 +69,8 @@ pub struct Tag {
 }
 
 impl Tag {
-    pub fn from_tag_name(instance_url: &str, tag_name: String) -> Self {
-        let tag_url = local_tag_collection(instance_url, &tag_name);
+    pub fn from_tag_name(instance_uri: &str, tag_name: String) -> Self {
+        let tag_url = local_tag_collection(instance_uri, &tag_name);
         Tag {
             name: tag_name,
             url: tag_url,
@@ -134,15 +134,15 @@ pub struct Status {
 
 impl Status {
     pub fn from_post(
-        instance_url: &str,
+        instance_uri: &str,
         media_server: &ClientMediaServer,
         post: Post,
     ) -> Self {
-        let object_id = post_object_id(instance_url, &post);
+        let object_id = post_object_id(instance_uri, &post);
         let object_url = if let Some(url) = post.url {
             url
         } else {
-            compatible_post_object_id(instance_url, &post)
+            compatible_post_object_id(instance_uri, &post)
         };
         let maybe_poll = if let Some(ref db_poll) = post.poll {
             let maybe_voted_for = post.actions.as_ref()
@@ -161,38 +161,38 @@ impl Status {
             .map(|item| Attachment::from_db(media_server, item))
             .collect();
         let mentions: Vec<Mention> = post.mentions.into_iter()
-            .map(|item| Mention::from_profile(instance_url, item))
+            .map(|item| Mention::from_profile(instance_uri, item))
             .collect();
         let tags: Vec<Tag> = post.tags.into_iter()
-            .map(|tag_name| Tag::from_tag_name(instance_url, tag_name))
+            .map(|tag_name| Tag::from_tag_name(instance_uri, tag_name))
             .collect();
         let emojis: Vec<CustomEmoji> = post.emojis.into_iter()
             .map(|emoji| CustomEmoji::from_db(media_server, emoji))
             .collect();
         let account = Account::from_profile(
-            instance_url,
+            instance_uri,
             media_server,
             post.author,
         );
         // Nested Status entities may be built without related_posts
         let related_posts = post.related_posts.unwrap_or_default();
         let reblog = if let Some(repost_of) = related_posts.repost_of {
-            let status = Status::from_post(instance_url, media_server, *repost_of);
+            let status = Status::from_post(instance_uri, media_server, *repost_of);
             Some(Box::new(status))
         } else {
             None
         };
         let maybe_first_link = related_posts.linked.first();
         let maybe_quoted_status = maybe_first_link.cloned().map(|post| {
-            let status = Status::from_post(instance_url, media_server, post);
+            let status = Status::from_post(instance_uri, media_server, post);
             Box::new(status)
         });
         let maybe_quote = maybe_first_link.cloned().map(|post| {
-            let status = Status::from_post(instance_url, media_server, post);
+            let status = Status::from_post(instance_uri, media_server, post);
             Quote { state: "accepted", quoted_status: Box::new(status) }
         });
         let links: Vec<Status> = related_posts.linked.into_iter().map(|post| {
-            Status::from_post(instance_url, media_server, post)
+            Status::from_post(instance_uri, media_server, post)
         }).collect();
         let visibility = match post.visibility {
             Visibility::Public => "public",
@@ -471,7 +471,7 @@ mod tests {
 
     #[test]
     fn test_status_from_post() {
-        let instance_url = "https://social.example";
+        let instance_uri = "https://social.example";
         let media_server = ClientMediaServer::for_test("/media");
         let author = DbActorProfile::local_for_test("test");
         let post = Post {
@@ -480,7 +480,7 @@ mod tests {
                 .with_timezone(&Utc),
             ..Post::local_for_test(&author)
         };
-        let status = Status::from_post(instance_url, &media_server, post);
+        let status = Status::from_post(instance_uri, &media_server, post);
         assert_eq!(status.content, "");
         let status_json = serde_json::to_value(status).unwrap();
         assert_eq!(

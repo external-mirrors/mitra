@@ -44,14 +44,14 @@ pub struct Announce {
 }
 
 pub(super) fn local_announce_activity_id(
-    instance_url: &str,
+    instance_uri: &str,
     repost_id: Uuid,
     repost_has_deprecated_ap_id: bool,
 ) -> String {
     if repost_has_deprecated_ap_id {
-        local_object_id(instance_url, repost_id)
+        local_object_id(instance_uri, repost_id)
     } else {
-        local_activity_id(instance_url, ANNOUNCE, repost_id)
+        local_activity_id(instance_uri, ANNOUNCE, repost_id)
     }
 }
 
@@ -78,17 +78,17 @@ pub(super) fn get_announce_audience(
 }
 
 pub fn build_announce(
-    instance_url: &str,
+    instance_uri: &str,
     repost: &Post,
 ) -> Announce {
-    let actor_id = local_actor_id(instance_url, &repost.author.username);
+    let actor_id = local_actor_id(instance_uri, &repost.author.username);
     let post = repost
         .expect_related_posts()
         .repost_of.as_ref()
         .expect("repost_of field should be populated");
-    let object_id = post_object_id(instance_url, post);
-    let activity_id = local_announce_activity_id(instance_url, repost.id, false);
-    let recipient_id = profile_actor_id(instance_url, &post.author);
+    let object_id = post_object_id(instance_uri, post);
+    let activity_id = local_announce_activity_id(instance_uri, repost.id, false);
+    let recipient_id = profile_actor_id(instance_uri, &post.author);
     let (primary_audience, secondary_audience) = get_announce_audience(
         repost.visibility,
         &actor_id,
@@ -148,11 +148,11 @@ pub async fn prepare_announce(
         post,
     ).await?;
     let activity = build_announce(
-        &instance.url(),
+        instance.uri_str(),
         repost,
     );
     Ok(OutgoingActivityJobData::new(
-        &instance.url(),
+        instance.uri_str(),
         sender,
         activity,
         recipients,
@@ -167,7 +167,7 @@ mod tests {
     };
     use super::*;
 
-    const INSTANCE_URL: &str = "https://example.com";
+    const INSTANCE_URI: &str = "https://example.com";
 
     #[test]
     fn test_build_announce() {
@@ -193,22 +193,22 @@ mod tests {
             ..Default::default()
         };
         let activity = build_announce(
-            INSTANCE_URL,
+            INSTANCE_URI,
             &repost,
         );
         assert_eq!(
             activity.id,
-            format!("{}/activities/announce/{}", INSTANCE_URL, repost.id),
+            format!("{}/activities/announce/{}", INSTANCE_URI, repost.id),
         );
         assert_eq!(
             activity.actor,
-            format!("{}/users/announcer", INSTANCE_URL),
+            format!("{}/users/announcer", INSTANCE_URI),
         );
         assert_eq!(activity.object, post_id);
         assert_eq!(activity.to, vec![AP_PUBLIC, post_author_id]);
         assert_eq!(
             activity.cc,
-            vec![format!("{INSTANCE_URL}/users/announcer/followers")],
+            vec![format!("{INSTANCE_URI}/users/announcer/followers")],
         );
     }
 }

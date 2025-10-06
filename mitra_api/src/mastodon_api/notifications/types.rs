@@ -56,17 +56,17 @@ pub struct ApiNotification {
 
 impl ApiNotification {
     pub fn from_db(
-        instance_url: &str,
+        instance_uri: &str,
         media_server: &ClientMediaServer,
         notification: Notification,
     ) -> Self {
         let account = Account::from_profile(
-            instance_url,
+            instance_uri,
             media_server,
             notification.sender,
         );
         let status = notification.post.map(|post| {
-            Status::from_post(instance_url, media_server, post)
+            Status::from_post(instance_uri, media_server, post)
         });
         let mut maybe_event_subtype = None;
         let event_type_mastodon = match notification.event_type {

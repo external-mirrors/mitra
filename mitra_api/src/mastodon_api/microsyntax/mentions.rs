@@ -91,7 +91,7 @@ pub async fn find_mentioned_profiles(
 pub fn replace_mentions(
     mention_map: &IndexMap<String, DbActorProfile>,
     instance_hostname: &str,
-    instance_url: &str,
+    instance_uri: &str,
     text: &str,
 ) -> String {
     let mention_re = Regex::new(MENTION_SEARCH_RE)
@@ -114,7 +114,7 @@ pub fn replace_mentions(
             if let Some(profile) = mention_map.get(&acct) {
                 // Replace with a link to profile.
                 // Actor URL may differ from actor ID.
-                let url = profile_actor_url(instance_url, profile);
+                let url = profile_actor_url(instance_uri, profile);
                 #[allow(clippy::to_string_in_format_args)]
                 return format!(
                     // https://microformats.org/wiki/h-card
@@ -138,7 +138,7 @@ mod tests {
     use super::*;
 
     const INSTANCE_HOSTNAME: &str = "server1.com";
-    const INSTANCE_URL: &str = "https://server1.com";
+    const INSTANCE_URI: &str = "https://server1.com";
     const TEXT_WITH_MENTIONS: &str = concat!(
         "@user1 ",
         "@user_x@server1.com,<br>",
@@ -224,7 +224,7 @@ mod tests {
         let result = replace_mentions(
             &mention_map,
             INSTANCE_HOSTNAME,
-            INSTANCE_URL,
+            INSTANCE_URI,
             TEXT_WITH_MENTIONS,
         );
 

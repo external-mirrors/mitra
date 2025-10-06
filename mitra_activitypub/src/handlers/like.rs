@@ -105,7 +105,7 @@ pub async fn handle_like(
     let canonical_object_id = canonicalize_id(&like.object)?;
     let post_id = match get_post_by_object_id(
         db_client,
-        &instance.url(),
+        instance.uri_str(),
         &canonical_object_id,
     ).await {
         Ok(post) => post.id,

@@ -200,7 +200,7 @@ async fn find_post_by_url(
     db_pool: &DatabaseConnectionPool,
     url: &str,
 ) -> Result<Option<Post>, DatabaseError> {
-    let maybe_post = match parse_local_object_id(&ap_client.instance.url(), url) {
+    let maybe_post = match parse_local_object_id(ap_client.instance.uri_str(), url) {
         Ok(post_id) => {
             // Local URL
             let db_client = &**get_database_client(db_pool).await?;

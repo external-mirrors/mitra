@@ -31,7 +31,7 @@ pub struct Emoji {
 }
 
 pub fn build_emoji(
-    instance_url: &str,
+    instance_uri: &str,
     media_server: &MediaServer,
     db_emoji: &DbEmoji,
 ) -> Emoji {
@@ -42,7 +42,7 @@ pub fn build_emoji(
             .unwrap_or(object_id.clone());
         (object_id, image_url)
     } else {
-        let object_id = local_emoji_id(instance_url, &db_emoji.emoji_name);
+        let object_id = local_emoji_id(instance_uri, &db_emoji.emoji_name);
         // Media is expected to be local (verified on database read)
         let file_info = db_emoji.image.expect_file_info();
         let image_url = media_server.url_for(&file_info.file_name);
@@ -68,10 +68,10 @@ mod tests {
 
     #[test]
     fn test_build_emoji() {
-        let instance_url = "https://social.example";
-        let media_server = MediaServer::for_test(instance_url);
+        let instance_uri = "https://social.example";
+        let media_server = MediaServer::for_test(instance_uri);
         let db_emoji = DbEmoji::local_for_test("test");
-        let emoji = build_emoji(instance_url, &media_server, &db_emoji);
+        let emoji = build_emoji(instance_uri, &media_server, &db_emoji);
         let emoji_value = serde_json::to_value(emoji).unwrap();
         let expected_value = json!({
             "type": "Emoji",
@@ -89,10 +89,10 @@ mod tests {
 
     #[test]
     fn test_build_remote_emoji() {
-        let instance_url = "https://social.example";
-        let media_server = MediaServer::for_test(instance_url);
+        let instance_uri = "https://social.example";
+        let media_server = MediaServer::for_test(instance_uri);
         let db_emoji = DbEmoji::remote_for_test("test", "social.example");
-        let emoji = build_emoji(instance_url, &media_server, &db_emoji);
+        let emoji = build_emoji(instance_uri, &media_server, &db_emoji);
         let emoji_value = serde_json::to_value(emoji).unwrap();
         let expected_value = json!({
             "type": "Emoji",

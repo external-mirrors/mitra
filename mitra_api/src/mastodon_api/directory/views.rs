@@ -42,11 +42,11 @@ async fn profile_directory(
     ).await?;
     let base_url = get_request_base_url(connection_info);
     let media_server = ClientMediaServer::new(&config, &base_url);
-    let instance_url = config.instance().url();
+    let instance = config.instance();
     let accounts: Vec<Account> = profiles
         .into_iter()
         .map(|profile| Account::from_profile(
-            &instance_url,
+            instance.uri_str(),
             &media_server,
             profile,
         ))

@@ -82,15 +82,15 @@ pub fn get_last_item<'item, T>(
 mod tests {
     use super::*;
 
-    const INSTANCE_URL: &str = "https://example.org";
+    const INSTANCE_URI: &str = "https://example.org";
 
     #[test]
     fn test_get_next_page_link() {
-        let request_url =
+        let request_uri =
             Uri::from_static("/api/v1/notifications?max_id=103");
         let result = get_pagination_header(
-            INSTANCE_URL,
-            &request_url,
+            INSTANCE_URI,
+            &request_uri,
             "123",
         );
         assert_eq!(

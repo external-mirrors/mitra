@@ -190,12 +190,12 @@ pub struct Account {
 
 impl Account {
     pub fn from_profile(
-        instance_url: &str,
+        instance_uri: &str,
         media_server: &ClientMediaServer,
         profile: DbActorProfile,
     ) -> Self {
-        let actor_id = profile_actor_id(instance_url, &profile);
-        let profile_url = profile_actor_url(instance_url, &profile);
+        let actor_id = profile_actor_id(instance_uri, &profile);
+        let profile_url = profile_actor_url(instance_uri, &profile);
         let preferred_handle = profile.preferred_handle().to_owned();
         let mention_policy = mention_policy_to_str(profile.mention_policy);
 
@@ -311,7 +311,7 @@ impl Account {
     }
 
     pub fn from_user(
-        instance_url: &str,
+        instance_uri: &str,
         media_server: &ClientMediaServer,
         user: User,
     ) -> Self {
@@ -342,7 +342,7 @@ impl Account {
             authentication_methods.push(AUTHENTICATION_METHOD_CAIP122_MONERO.to_string());
         };
         let mut account = Self::from_profile(
-            instance_url,
+            instance_uri,
             media_server,
             user.profile,
         );
@@ -794,12 +794,12 @@ pub struct ApiSubscription {
 
 impl ApiSubscription {
     pub fn from_subscription(
-        instance_url: &str,
+        instance_uri: &str,
         media_server: &ClientMediaServer,
         subscription: Subscription,
     ) -> Self {
         let sender = Account::from_profile(
-            instance_url,
+            instance_uri,
             media_server,
             subscription.sender,
         );
@@ -841,29 +841,29 @@ mod tests {
     };
     use super::*;
 
-    const INSTANCE_URL: &str = "https://example.com";
+    const INSTANCE_URI: &str = "https://example.com";
 
     #[test]
     fn test_create_account_from_profile() {
-        let media_server = ClientMediaServer::for_test(INSTANCE_URL);
+        let media_server = ClientMediaServer::for_test(INSTANCE_URI);
         let mut profile = DbActorProfile::local_for_test("test");
         profile.avatar = Some(PartialMediaInfo::from(MediaInfo::png_for_test()));
         let account = Account::from_profile(
-            INSTANCE_URL,
+            INSTANCE_URI,
             &media_server,
             profile,
         );
 
         assert_eq!(
             account.avatar,
-            format!("{}/media/test.png", INSTANCE_URL),
+            format!("{}/media/test.png", INSTANCE_URI),
         );
         assert!(account.source.is_none());
     }
 
     #[test]
     fn test_create_account_from_user() {
-        let media_server = ClientMediaServer::for_test(INSTANCE_URL);
+        let media_server = ClientMediaServer::for_test(INSTANCE_URI);
         let bio_source = "test";
         let login_address = "0x1234";
         let mut profile = DbActorProfile::local_for_test("test");
@@ -874,7 +874,7 @@ mod tests {
             ..Default::default()
         };
         let account = Account::from_user(
-            INSTANCE_URL,
+            INSTANCE_URI,
             &media_server,
             user,
         );

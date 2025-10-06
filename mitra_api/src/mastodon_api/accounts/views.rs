@@ -272,7 +272,7 @@ pub async fn create_account(
     let base_url = get_request_base_url(connection_info);
     let media_server = ClientMediaServer::new(&config, &base_url);
     let account = Account::from_user(
-        &instance.url(),
+        instance.uri_str(),
         &media_server,
         user,
     );
@@ -292,7 +292,7 @@ async fn verify_credentials(
     let base_url = get_request_base_url(connection_info);
     let media_server = ClientMediaServer::new(&config, &base_url);
     let account = Account::from_user(
-        &config.instance_url(),
+        config.instance().uri_str(),
         &media_server,
         user,
     );
@@ -353,7 +353,7 @@ async fn update_credentials(
     let base_url = get_request_base_url(connection_info);
     let media_server = ClientMediaServer::new(&config, &base_url);
     let account = Account::from_user(
-        &config.instance_url(),
+        config.instance().uri_str(),
         &media_server,
         current_user,
     );
@@ -387,7 +387,7 @@ async fn get_identity_claim(
         _ => return Err(ValidationError("unknown proof type").into()),
     };
     let actor_id = local_actor_id(
-        &config.instance_url(),
+        config.instance().uri_str(),
         &current_user.profile.username,
     );
     let created_at = Utc::now();
@@ -434,7 +434,7 @@ async fn create_identity_proof(
         Err(other_error) => return Err(other_error.into()),
     };
     let actor_id = local_actor_id(
-        &config.instance_url(),
+        config.instance().uri_str(),
         &current_user.profile.username,
     );
     let (claim, _message) = create_identity_claim_fep_c390(
@@ -546,7 +546,7 @@ async fn create_identity_proof(
     let base_url = get_request_base_url(connection_info);
     let media_server = ClientMediaServer::new(&config, &base_url);
     let account = Account::from_user(
-        &config.instance_url(),
+        config.instance().uri_str(),
         &media_server,
         current_user,
     );
@@ -591,7 +591,7 @@ async fn lookup_acct(
     let base_url = get_request_base_url(connection_info);
     let media_server = ClientMediaServer::new(&config, &base_url);
     let account = Account::from_profile(
-        &config.instance_url(),
+        config.instance().uri_str(),
         &media_server,
         profile,
     );
@@ -639,10 +639,10 @@ async fn search_by_acct(
     ).await?;
     let base_url = get_request_base_url(connection_info);
     let media_server = ClientMediaServer::new(&config, &base_url);
-    let instance_url = config.instance().url();
+    let instance = config.instance();
     let accounts: Vec<Account> = profiles.into_iter()
         .map(|profile| Account::from_profile(
-            &instance_url,
+            instance.uri_str(),
             &media_server,
             profile,
         ))
@@ -663,10 +663,10 @@ async fn search_by_did(
     let profiles = search_profiles_by_did(db_client, &did, false).await?;
     let base_url = get_request_base_url(connection_info);
     let media_server = ClientMediaServer::new(&config, &base_url);
-    let instance_url = config.instance().url();
+    let instance = config.instance();
     let accounts: Vec<Account> = profiles.into_iter()
         .map(|profile| Account::from_profile(
-            &instance_url,
+            instance.uri_str(),
             &media_server,
             profile,
         ))
@@ -702,7 +702,7 @@ async fn get_account(
     let base_url = get_request_base_url(connection_info);
     let media_server = ClientMediaServer::new(&config, &base_url);
     let account = Account::from_profile(
-        &config.instance_url(),
+        config.instance().uri_str(),
         &media_server,
         profile,
     );
@@ -911,11 +911,11 @@ async fn get_account_statuses(
     ).await?;
     let base_url = get_request_base_url(connection_info);
     let media_server = ClientMediaServer::new(&config, &base_url);
-    let instance_url = config.instance().url();
+    let instance = config.instance();
     let response = get_paginated_status_list(
         db_client,
         &base_url,
-        &instance_url,
+        instance.uri_str(),
         &media_server,
         &request_uri,
         maybe_current_user.as_ref(),
@@ -953,10 +953,10 @@ async fn get_account_followers(
         .map(|item| item.related_id);
     let base_url = get_request_base_url(connection_info);
     let media_server = ClientMediaServer::new(&config, &base_url);
-    let instance_url = config.instance().url();
+    let instance = config.instance();
     let accounts: Vec<Account> = followers.into_iter()
         .map(|item| Account::from_profile(
-            &instance_url,
+            instance.uri_str(),
             &media_server,
             item.profile,
         ))
@@ -998,10 +998,10 @@ async fn get_account_following(
         .map(|item| item.related_id);
     let base_url = get_request_base_url(connection_info);
     let media_server = ClientMediaServer::new(&config, &base_url);
-    let instance_url = config.instance().url();
+    let instance = config.instance();
     let accounts: Vec<Account> = following.into_iter()
         .map(|item| Account::from_profile(
-            &instance_url,
+            instance.uri_str(),
             &media_server,
             item.profile,
         ))
@@ -1034,7 +1034,7 @@ async fn get_account_subscribers(
     };
     let base_url = get_request_base_url(connection_info);
     let media_server = ClientMediaServer::new(&config, &base_url);
-    let instance_url = config.instance_url();
+    let instance = config.instance();
     let subscriptions: Vec<ApiSubscription> = get_incoming_subscriptions(
         db_client,
         profile.id,
@@ -1045,7 +1045,7 @@ async fn get_account_subscribers(
         .await?
         .into_iter()
         .map(|subscription| ApiSubscription::from_subscription(
-            &instance_url,
+            instance.uri_str(),
             &media_server,
             subscription,
         ))
@@ -1082,10 +1082,10 @@ async fn get_account_aliases(
     let profile = get_profile_by_id(db_client, *account_id).await?;
     let base_url = get_request_base_url(connection_info);
     let media_server = ClientMediaServer::new(&config, &base_url);
-    let instance_url = config.instance_url();
+    let instance = config.instance();
     let aliases = get_aliases(
         db_client,
-        &instance_url,
+        instance.uri_str(),
         &media_server,
         &profile,
     ).await?;

@@ -45,18 +45,18 @@ struct AddPerson {
 }
 
 fn build_add_person(
-    instance_url: &str,
+    instance_uri: &str,
     sender_username: &str,
     person_id: &str,
     collection: LocalActorCollection,
     end_time: DateTime<Utc>,
     maybe_invoice_id: Option<Uuid>,
 ) -> AddPerson {
-    let actor_id = local_actor_id(instance_url, sender_username);
-    let activity_id = local_activity_id(instance_url, ADD, generate_ulid());
+    let actor_id = local_actor_id(instance_uri, sender_username);
+    let activity_id = local_activity_id(instance_uri, ADD, generate_ulid());
     let collection_id = collection.of(&actor_id);
     let maybe_context_id = maybe_invoice_id
-        .map(|id| local_agreement_id(instance_url, id));
+        .map(|id| local_agreement_id(instance_uri, id));
     AddPerson {
         _context: build_default_context(),
         id: activity_id,
@@ -80,7 +80,7 @@ fn prepare_add_person(
     maybe_invoice_id: Option<Uuid>,
 ) -> OutgoingActivityJobData {
     let activity = build_add_person(
-        &instance.url(),
+        instance.uri_str(),
         &sender.profile.username,
         &person.id,
         collection,
@@ -89,7 +89,7 @@ fn prepare_add_person(
     );
     let recipients = Recipient::for_inbox(person);
     OutgoingActivityJobData::new(
-        &instance.url(),
+        instance.uri_str(),
         sender,
         activity,
         recipients,
@@ -117,7 +117,7 @@ pub fn prepare_add_subscriber(
 mod tests {
     use super::*;
 
-    const INSTANCE_URL: &str = "https://social.example";
+    const INSTANCE_URI: &str = "https://social.example";
 
     #[test]
     fn test_build_add_person() {
@@ -127,7 +127,7 @@ mod tests {
         let invoice_id = generate_ulid();
         let subscription_expires_at = Utc::now();
         let activity = build_add_person(
-            INSTANCE_URL,
+            INSTANCE_URI,
             sender_username,
             person_id,
             collection,
@@ -138,16 +138,16 @@ mod tests {
         assert_eq!(activity.activity_type, "Add");
         assert_eq!(
             activity.actor,
-            format!("{}/users/{}", INSTANCE_URL, sender_username),
+            format!("{}/users/{}", INSTANCE_URI, sender_username),
         );
         assert_eq!(activity.object, person_id);
         assert_eq!(
             activity.target,
-            format!("{}/users/{}/subscribers", INSTANCE_URL, sender_username),
+            format!("{}/users/{}/subscribers", INSTANCE_URI, sender_username),
         );
         assert_eq!(
             activity.context.as_ref().unwrap(),
-            &format!("{}/objects/agreements/{}", INSTANCE_URL, invoice_id),
+            &format!("{}/objects/agreements/{}", INSTANCE_URI, invoice_id),
         );
         assert_eq!(activity.start_time.is_none(), true);
         assert_eq!(activity.end_time, subscription_expires_at);

@@ -38,14 +38,14 @@ struct UndoFollow {
 }
 
 fn build_undo_follow(
-    instance_url: &str,
+    instance_uri: &str,
     actor_profile: &DbActorProfile,
     target_actor_id: &str,
     follow_request_id: Uuid,
     follow_request_has_deprecated_ap_id: bool,
 ) -> UndoFollow {
     let object = build_follow(
-        instance_url,
+        instance_uri,
         actor_profile,
         target_actor_id,
         follow_request_id,
@@ -53,11 +53,11 @@ fn build_undo_follow(
         false, // no context
     );
     let activity_id = local_activity_id(
-        instance_url,
+        instance_uri,
         UNDO,
         follow_request_id,
     );
-    let actor_id = local_actor_id(instance_url, &actor_profile.username);
+    let actor_id = local_actor_id(instance_uri, &actor_profile.username);
     UndoFollow {
         _context: build_default_context(),
         activity_type: UNDO.to_string(),
@@ -77,7 +77,7 @@ pub fn prepare_undo_follow(
 ) -> Result<OutgoingActivityJobData, DatabaseError> {
     let target_actor_id = compatible_id(target_actor, &target_actor.id)?;
     let activity = build_undo_follow(
-        &instance.url(),
+        instance.uri_str(),
         &sender.profile,
         &target_actor_id,
         follow_request_id,
@@ -85,7 +85,7 @@ pub fn prepare_undo_follow(
     );
     let recipients = Recipient::for_inbox(target_actor);
     Ok(OutgoingActivityJobData::new(
-        &instance.url(),
+        instance.uri_str(),
         sender,
         activity,
         recipients,
@@ -97,7 +97,7 @@ mod tests {
     use mitra_utils::id::generate_ulid;
     use super::*;
 
-    const INSTANCE_URL: &str = "https://example.com";
+    const INSTANCE_URI: &str = "https://example.com";
 
     #[test]
     fn test_build_undo_follow() {
@@ -105,7 +105,7 @@ mod tests {
         let target_actor_id = "https://test.remote/users/123";
         let follow_request_id = generate_ulid();
         let activity = build_undo_follow(
-            INSTANCE_URL,
+            INSTANCE_URI,
             &source,
             target_actor_id,
             follow_request_id,
@@ -114,24 +114,24 @@ mod tests {
 
         assert_eq!(
             activity.id,
-            format!("{}/activities/undo/{}", INSTANCE_URL, follow_request_id),
+            format!("{}/activities/undo/{}", INSTANCE_URI, follow_request_id),
         );
         assert_eq!(activity.activity_type, "Undo");
         assert_eq!(
             activity.actor,
-            format!("{}/users/user", INSTANCE_URL),
+            format!("{}/users/user", INSTANCE_URI),
         );
         assert_eq!(activity.object._context, None);
         assert_eq!(
             activity.object.id,
-            format!("{}/objects/{}", INSTANCE_URL, follow_request_id),
+            format!("{}/objects/{}", INSTANCE_URI, follow_request_id),
         );
         assert_eq!(activity.object.actor, activity.actor);
         assert_eq!(activity.object.object, target_actor_id);
         assert_eq!(activity.to, vec![target_actor_id]);
 
         let activity = build_undo_follow(
-            INSTANCE_URL,
+            INSTANCE_URI,
             &source,
             target_actor_id,
             follow_request_id,
@@ -139,7 +139,7 @@ mod tests {
         );
         assert_eq!(
             activity.object.id,
-            format!("{}/activities/follow/{}", INSTANCE_URL, follow_request_id),
+            format!("{}/activities/follow/{}", INSTANCE_URI, follow_request_id),
         );
     }
 }

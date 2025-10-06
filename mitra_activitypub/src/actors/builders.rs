@@ -191,12 +191,12 @@ pub struct Actor {
 }
 
 pub fn build_local_actor(
-    instance_url: &HttpUri,
+    instance_uri: &HttpUri,
     authority: &Authority,
     media_server: &MediaServer,
     user: &User,
 ) -> Result<Actor, DatabaseError> {
-    assert_eq!(authority.server_uri(), Some(instance_url.as_str()), "authority should be anchored");
+    assert_eq!(authority.server_uri(), Some(instance_uri.as_str()), "authority should be anchored");
     let username = &user.profile.username;
     let actor_id = local_actor_id_unified(authority, username);
     let actor_type = if user.profile.is_automated {
@@ -274,16 +274,16 @@ pub fn build_local_actor(
     };
     let mut emojis = vec![];
     for db_emoji in user.profile.emojis.inner() {
-        let emoji = build_emoji(instance_url.as_str(), media_server, db_emoji);
+        let emoji = build_emoji(instance_uri.as_str(), media_server, db_emoji);
         emojis.push(emoji);
     };
     let aliases = user.profile.aliases.clone().into_actor_ids();
     // HTML representation
     // TODO: portable actors should point to a primary server
-    let profile_url = local_actor_id(instance_url.as_str(), username);
+    let profile_url = local_actor_id(instance_uri.as_str(), username);
 
     let gateways = authority.is_fep_ef61()
-        .then_some(vec![instance_url.to_string()])
+        .then_some(vec![instance_uri.to_string()])
         .unwrap_or_default();
     let actor = Actor {
         _context: build_actor_context(),
@@ -321,7 +321,7 @@ pub fn build_local_actor(
 pub fn build_instance_actor(
     instance: &Instance,
 ) -> Result<Actor, RsaSerializationError> {
-    let actor_id = local_instance_actor_id(&instance.url());
+    let actor_id = local_instance_actor_id(instance.uri_str());
     let actor_inbox = LocalActorCollection::Inbox.of(&actor_id);
     let actor_outbox = LocalActorCollection::Outbox.of(&actor_id);
     let public_key = PublicKeyPem::build(&actor_id, &instance.rsa_secret_key)?;
@@ -367,11 +367,11 @@ mod tests {
     use mitra_models::profiles::types::DbActorProfile;
     use super::*;
 
-    const INSTANCE_URL: &str = "https://server.example";
+    const INSTANCE_URI: &str = "https://server.example";
 
     #[test]
     fn test_build_local_actor() {
-        let instance_url = HttpUri::parse(INSTANCE_URL).unwrap();
+        let instance_uri = HttpUri::parse(INSTANCE_URI).unwrap();
         let mut profile = DbActorProfile::local_for_test("testuser");
         profile.bio = Some("testbio".to_string());
         profile.created_at = DateTime::parse_from_rfc3339("2023-02-24T23:36:38Z")
@@ -379,10 +379,10 @@ mod tests {
             .with_timezone(&Utc);
         profile.updated_at = profile.created_at;
         let user = User { profile, ..Default::default() };
-        let authority = Authority::server(&instance_url);
-        let media_server = MediaServer::for_test(INSTANCE_URL);
+        let authority = Authority::server(&instance_uri);
+        let media_server = MediaServer::for_test(INSTANCE_URI);
         let actor = build_local_actor(
-            &instance_url,
+            &instance_uri,
             &authority,
             &media_server,
             &user,
@@ -467,7 +467,7 @@ mod tests {
 
     #[test]
     fn test_build_local_actor_fep_ef61() {
-        let instance_url = HttpUri::parse(INSTANCE_URL).unwrap();
+        let instance_uri = HttpUri::parse(INSTANCE_URI).unwrap();
         let mut profile = DbActorProfile::local_for_test("testuser");
         profile.bio = Some("testbio".to_string());
         profile.created_at = DateTime::parse_from_rfc3339("2023-02-24T23:36:38Z")
@@ -476,12 +476,12 @@ mod tests {
         profile.updated_at = profile.created_at;
         let user = User { profile, ..Default::default() };
         let authority = Authority::key_with_gateway(
-            &instance_url,
+            &instance_uri,
             &user.ed25519_secret_key,
         );
-        let media_server = MediaServer::for_test(INSTANCE_URL);
+        let media_server = MediaServer::for_test(INSTANCE_URI);
         let actor = build_local_actor(
-            &instance_url,
+            &instance_uri,
             &authority,
             &media_server,
             &user,
@@ -569,8 +569,8 @@ mod tests {
 
     #[test]
     fn test_build_instance_actor() {
-        let instance_url = "https://server.example/";
-        let instance = Instance::for_test(instance_url);
+        let instance_uri = "https://server.example/";
+        let instance = Instance::for_test(instance_uri);
         let actor = build_instance_actor(&instance).unwrap();
         let value = serde_json::to_value(actor).unwrap();
         let expected_value = json!({

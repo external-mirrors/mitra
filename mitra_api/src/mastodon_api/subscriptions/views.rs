@@ -202,7 +202,7 @@ async fn register_subscription_option(
     let base_url = get_request_base_url(connection_info);
     let media_server = ClientMediaServer::new(&config, &base_url);
     let account = Account::from_user(
-        &config.instance_url(),
+        config.instance().uri_str(),
         &media_server,
         current_user,
     );
