@@ -10,7 +10,7 @@ use serde::{
 use thiserror::Error;
 
 use crate::{
-    ap_url::{is_ap_url as is_ap_uri, ApUrl as ApUri},
+    ap_url::{is_ap_uri, ApUri},
     http_url::{HttpUrl as HttpUri},
     url::common::Origin,
 };
@@ -225,7 +225,7 @@ mod tests {
     fn test_parse_url_ap_with_gateway_unsupported_did() {
         let url = "https://social.example/.well-known/apgateway/did:example:123456";
         let error = parse_url(url).err().unwrap();
-        assert_eq!(error.to_string(), "invalid 'ap' URL");
+        assert_eq!(error.to_string(), "invalid 'ap' URI");
     }
 
     #[test]

@@ -256,7 +256,7 @@ pub async fn verify_signed_request(
             key_id_to_actor_id(key_id.as_str())
                 .map_err(|_| ValidationError("invalid key ID"))?
         },
-        VerificationMethod::ApUrl(ref key_id) => {
+        VerificationMethod::ApUri(ref key_id) => {
             log::info!("request signed with {key_id}");
             key_id.without_fragment().to_string()
         },
@@ -361,8 +361,8 @@ pub async fn verify_signed_activity(
                 _ => return Err(AuthenticationError::InvalidJsonSignatureType),
             };
         },
-        VerificationMethod::ApUrl(ap_url) => {
-            log::warn!("activity signed by {}", ap_url);
+        VerificationMethod::ApUri(ap_uri) => {
+            log::warn!("activity signed by {}", ap_uri);
             return Err(AuthenticationError::UnsupportedVerificationMethod);
         },
         VerificationMethod::DidUrl(did_url) => {

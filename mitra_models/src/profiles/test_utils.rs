@@ -1,5 +1,5 @@
 use apx_core::{
-    ap_url::is_ap_url,
+    ap_url::is_ap_uri,
     http_url_whatwg::get_hostname,
 };
 use uuid::Uuid;
@@ -33,7 +33,7 @@ impl ProfileCreateData {
         actor_id: &str,
     ) -> Self {
         let mut db_actor = DbActor::for_test(actor_id);
-        if is_ap_url(&db_actor.id) {
+        if is_ap_uri(&db_actor.id) {
             db_actor.gateways.push(format!("https://{hostname}"));
         };
         let hostname = if hostname.ends_with(".local") {

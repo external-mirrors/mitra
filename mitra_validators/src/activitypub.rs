@@ -28,12 +28,12 @@ fn _validate_any_object_id(
 }
 
 pub fn validate_object_id(object_id: &str) -> Result<(), ValidationError> {
-    // Doesn't allow 'ap' URLs
+    // Doesn't allow 'ap' URIs
     _validate_any_object_id(object_id, false)
 }
 
 pub fn validate_any_object_id(object_id: &str) -> Result<(), ValidationError> {
-    // Allows 'ap' URLs
+    // Allows 'ap' URIs
     _validate_any_object_id(object_id, true)
 }
 

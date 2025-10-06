@@ -229,7 +229,7 @@ pub fn profile_actor_url(instance_url: &str, profile: &DbActorProfile) -> String
 
 /// Convert canonical object ID (from database) to compatible ID,
 /// to be used in object construction.
-/// If object ID is an 'ap' URL, compatible ID will be based on primary gateway.
+/// If object ID is an 'ap' URI, compatible ID will be based on primary gateway.
 pub fn compatible_id(
     db_actor: &DbActor,
     object_id: &str,
@@ -441,7 +441,7 @@ mod tests {
     }
 
     #[test]
-    fn test_compatible_post_object_id_ap_url() {
+    fn test_compatible_post_object_id_ap_uri() {
         let profile = DbActorProfile::remote_for_test_with_data(
             "test",
             DbActor {
@@ -475,7 +475,7 @@ mod tests {
     }
 
     #[test]
-    fn test_compatible_profile_actor_id_ap_url() {
+    fn test_compatible_profile_actor_id_ap_uri() {
         let profile = DbActorProfile::remote_for_test_with_data(
             "test",
             DbActor {

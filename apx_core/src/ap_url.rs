@@ -1,4 +1,4 @@
-//! 'ap' URLs
+//! 'ap' URIs
 //!
 //! <https://codeberg.org/fediverse/fep/src/branch/main/fep/ef61/fep-ef61.md>
 use std::fmt;
@@ -13,56 +13,56 @@ use crate::{
 };
 
 // https://www.w3.org/TR/did-core/
-// ap:// URL must have path
+// 'ap' URI must have path
 // authority: DID regexp plus percent sign (see also: DID_RE in apx_core::did)
-const AP_URL_RE: &str = r"^ap://(?P<did>did(:|%3A)[[:alpha:]]+(:|%3A)[A-Za-z0-9._:%-]+)(?P<path>/.+)$";
-const AP_URL_PREFIX: &str = "ap://";
+const AP_URI_RE: &str = r"^ap://(?P<did>did(:|%3A)[[:alpha:]]+(:|%3A)[A-Za-z0-9._:%-]+)(?P<path>/.+)$";
+const AP_URI_PREFIX: &str = "ap://";
 
-pub fn is_ap_url(url: &str) -> bool {
-    url.starts_with(AP_URL_PREFIX)
+pub fn is_ap_uri(uri: &str) -> bool {
+    uri.starts_with(AP_URI_PREFIX)
 }
 
 pub fn with_ap_prefix(did_url: &str) -> String {
-    format!("{}{}", AP_URL_PREFIX, did_url)
+    format!("{}{}", AP_URI_PREFIX, did_url)
 }
 
-/// FEP-ef61 'ap' URL
+/// FEP-ef61 'ap' URI
 #[derive(Clone, Debug, PartialEq)]
-pub struct ApUrl {
+pub struct ApUri {
     authority: Did,
     location: UriRelativeString,
 }
 
-impl ApUrl {
+impl ApUri {
     pub fn parse(value: &str) -> Result<Self, &'static str> {
-        let url_re = Regex::new(AP_URL_RE)
+        let uri_re = Regex::new(AP_URI_RE)
              .expect("regexp should be valid");
-        let captures = url_re.captures(value).ok_or("invalid 'ap' URL")?;
+        let captures = uri_re.captures(value).ok_or("invalid 'ap' URI")?;
         let did_str = url_decode(&captures["did"]);
         let authority = Did::from_str(&did_str)
-            .map_err(|_| "invalid 'ap' URL authority")?;
+            .map_err(|_| "invalid 'ap' URI authority")?;
         // Authority should be an Ed25519 key
         if authority.as_did_key()
             .and_then(|did_key| did_key.try_ed25519_key().ok())
             .is_none()
         {
-            return Err("invalid 'ap' URL authority");
+            return Err("invalid 'ap' URI authority");
         };
-        // Parse relative URL
+        // Parse relative URI
         let location = UriRelativeString::from_str(&captures["path"])
-            .map_err(|_| "invalid 'ap' URL")?;
+            .map_err(|_| "invalid 'ap' URI")?;
         if location.authority_str().is_some() {
-            return Err("invalid 'ap' URL");
+            return Err("invalid 'ap' URI");
         };
-        let ap_url = Self { authority, location };
-        Ok(ap_url)
+        let ap_uri = Self { authority, location };
+        Ok(ap_uri)
     }
 
     pub fn authority(&self) -> &Did {
         &self.authority
     }
 
-    pub fn relative_url(&self) -> String {
+    pub fn relative_uri(&self) -> String {
         format!(
             "{}{}{}",
             self.location.path_str(),
@@ -76,15 +76,15 @@ impl ApUrl {
     }
 
     pub fn to_did_url(&self) -> String {
-        format!("{}{}", self.authority(), self.relative_url())
+        format!("{}{}", self.authority(), self.relative_uri())
     }
 
-    /// Returns origin tuple for this URL
+    /// Returns origin tuple for this URI
     pub fn origin(&self) -> Origin {
         self.authority.origin()
     }
 
-    /// Returns URL without the fragment part
+    /// Returns URI without the fragment part
     pub fn without_fragment(&self) -> Self {
         let mut cloned = self.clone();
         cloned.location.set_fragment(None);
@@ -92,18 +92,18 @@ impl ApUrl {
     }
 }
 
-impl fmt::Display for ApUrl {
+impl fmt::Display for ApUri {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             formatter,
             "{}{}",
-            AP_URL_PREFIX,
+            AP_URI_PREFIX,
             self.to_did_url(),
         )
     }
 }
 
-impl FromStr for ApUrl {
+impl FromStr for ApUri {
     type Err = &'static str;
 
     fn from_str(value: &str) -> Result<Self, Self::Err> {
@@ -117,67 +117,70 @@ mod tests {
 
     #[test]
     fn test_parse() {
-        let url_str = "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/objects/123";
-        let url = ApUrl::parse(url_str).unwrap();
-        assert_eq!(url.authority().to_string(), "did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6");
-        assert_eq!(url.location.authority_str(), None);
-        assert_eq!(url.location.path_str(), "/objects/123");
-        assert_eq!(url.relative_url(), "/objects/123");
-        assert_eq!(url.to_string(), url_str);
+        let url = "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/objects/123";
+        let ap_uri = ApUri::parse(url).unwrap();
+        assert_eq!(ap_uri.authority().to_string(), "did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6");
+        assert_eq!(ap_uri.location.authority_str(), None);
+        assert_eq!(ap_uri.location.path_str(), "/objects/123");
+        assert_eq!(ap_uri.relative_uri(), "/objects/123");
+        assert_eq!(ap_uri.to_string(), url);
     }
 
     #[test]
     fn test_parse_with_fragment() {
-        let url_str = "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor#main-key";
-        let url = ApUrl::parse(url_str).unwrap();
-        assert_eq!(url.authority().to_string(), "did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6");
-        assert_eq!(url.relative_url(), "/actor#main-key");
-        assert_eq!(url.to_string(), url_str);
+        let url = "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor#main-key";
+        let ap_uri = ApUri::parse(url).unwrap();
+        assert_eq!(ap_uri.authority().to_string(), "did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6");
+        assert_eq!(ap_uri.relative_uri(), "/actor#main-key");
+        assert_eq!(ap_uri.to_string(), url);
     }
 
     #[test]
     fn test_parse_percent_encoded_authority() {
-        let url_str = "ap://did%3Akey%3Az6MkrJVnaZkeFzdQyMZu1cgjg7k1pZZ6pvBQ7XJPt4swbTQ2/actor";
-        let url = ApUrl::parse(url_str).unwrap();
-        assert_eq!(url.authority().to_string(), "did:key:z6MkrJVnaZkeFzdQyMZu1cgjg7k1pZZ6pvBQ7XJPt4swbTQ2");
+        let url = "ap://did%3Akey%3Az6MkrJVnaZkeFzdQyMZu1cgjg7k1pZZ6pvBQ7XJPt4swbTQ2/actor";
+        let ap_uri = ApUri::parse(url).unwrap();
+        assert_eq!(ap_uri.authority().to_string(), "did:key:z6MkrJVnaZkeFzdQyMZu1cgjg7k1pZZ6pvBQ7XJPt4swbTQ2");
     }
 
     #[test]
     fn test_parse_without_path() {
-        let url_str = "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6";
-        let error = ApUrl::parse(url_str).err().unwrap();
-        assert_eq!(error, "invalid 'ap' URL");
+        let url = "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6";
+        let error = ApUri::parse(url).err().unwrap();
+        assert_eq!(error, "invalid 'ap' URI");
     }
 
     #[test]
     fn test_parse_with_empty_path() {
-        let url_str = "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/";
-        let error = ApUrl::parse(url_str).err().unwrap();
-        assert_eq!(error, "invalid 'ap' URL");
+        let url = "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/";
+        let error = ApUri::parse(url).err().unwrap();
+        assert_eq!(error, "invalid 'ap' URI");
 
-        let url_str = "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6//";
-        let error = ApUrl::parse(url_str).err().unwrap();
-        assert_eq!(error, "invalid 'ap' URL");
+        let url = "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6//";
+        let error = ApUri::parse(url).err().unwrap();
+        assert_eq!(error, "invalid 'ap' URI");
     }
 
     #[test]
     fn test_parse_with_double_slash() {
-        let url_str = "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6//actor";
-        let error = ApUrl::parse(url_str).err().unwrap();
-        assert_eq!(error, "invalid 'ap' URL");
+        let url = "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6//actor";
+        let error = ApUri::parse(url).err().unwrap();
+        assert_eq!(error, "invalid 'ap' URI");
     }
 
     #[test]
     fn test_origin() {
-        let ap_url = ApUrl::parse("ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor").unwrap();
-        assert_eq!(ap_url.origin(), Origin::new("ap", "did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6", 0));
+        let ap_uri = ApUri::parse("ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor").unwrap();
+        assert_eq!(
+            ap_uri.origin(),
+            Origin::new("ap", "did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6", 0),
+        );
     }
 
     #[test]
     fn test_without_fragment() {
-        let ap_url = ApUrl::parse("ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor#main-key").unwrap();
+        let ap_uri = ApUri::parse("ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor#main-key").unwrap();
         assert_eq!(
-            ap_url.without_fragment().to_string(),
+            ap_uri.without_fragment().to_string(),
             "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor",
         );
     }

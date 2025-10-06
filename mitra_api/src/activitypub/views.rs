@@ -766,13 +766,13 @@ async fn apgateway_view(
     did_url: web::Path<String>,
 ) -> Result<HttpResponse, HttpError> {
     let db_client = &**get_database_client(&db_pool).await?;
-    let ap_url = with_ap_prefix(&did_url);
-    let object_value = match get_actor(db_client, &ap_url).await {
+    let ap_uri = with_ap_prefix(&did_url);
+    let object_value = match get_actor(db_client, &ap_uri).await {
         Ok(actor_value) => actor_value,
         Err(DatabaseError::NotFound(_)) => {
             get_object_as_target(
                 db_client,
-                &ap_url,
+                &ap_uri,
                 AP_PUBLIC,
             ).await?
         },

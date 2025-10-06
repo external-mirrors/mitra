@@ -70,7 +70,7 @@ pub fn parse_identity_proof_fep_c390(
     let signature_data = get_json_signature(attachment)
         .map_err(|_| ValidationError("invalid proof"))?;
     let signer = match signature_data.verification_method {
-        VerificationMethod::HttpUrl(_) | VerificationMethod::ApUrl(_) => {
+        VerificationMethod::HttpUrl(_) | VerificationMethod::ApUri(_) => {
             return Err(ValidationError("unsupported verification method"));
         },
         // Fragment is ignored because supported DIDs

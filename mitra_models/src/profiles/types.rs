@@ -2,7 +2,7 @@ use std::fmt;
 use std::num::NonZeroU64;
 
 use apx_core::{
-    ap_url::{is_ap_url, ApUrl},
+    ap_url::{is_ap_uri, ApUri},
     caip2::ChainId,
     crypto_eddsa::{
         ed25519_public_key_from_secret_key,
@@ -612,12 +612,12 @@ json_to_sql!(DbActor);
 
 impl DbActor {
     pub fn is_portable(&self) -> bool {
-        is_ap_url(&self.id)
+        is_ap_uri(&self.id)
     }
 
     fn check_consistency(&self) -> Result<(), DatabaseTypeError> {
         if self.is_portable() {
-            ApUrl::parse(&self.id).map_err(|_| DatabaseTypeError)?;
+            ApUri::parse(&self.id).map_err(|_| DatabaseTypeError)?;
             if self.gateways.is_empty() {
                 // At least one gateway must be stored
                 return Err(DatabaseTypeError);

@@ -5,7 +5,7 @@ use serde_json::{Value as JsonValue};
 use thiserror::Error;
 
 use crate::{
-    ap_url::{is_ap_url, ApUrl},
+    ap_url::{is_ap_uri, ApUri},
     crypto_eddsa::{verify_eddsa_signature, Ed25519PublicKey},
     crypto_rsa::{verify_rsa_sha256_signature, RsaPublicKey},
     did_url::DidUrl,
@@ -46,17 +46,17 @@ const PROOF_VALUE_KEY: &str = "proofValue";
 #[derive(Debug, PartialEq)]
 pub enum VerificationMethod {
     HttpUrl(HttpUrl),
-    ApUrl(ApUrl),
+    ApUri(ApUri),
     DidUrl(DidUrl),
 }
 
 impl VerificationMethod {
     /// Parses verification method ID
     pub(crate) fn parse(url: &str) -> Result<Self, &'static str> {
-        // TODO: support compatible 'ap' URLs
-        let method = if is_ap_url(url) {
-            let ap_url = ApUrl::parse(url)?;
-            Self::ApUrl(ap_url)
+        // TODO: support compatible 'ap' URIs
+        let method = if is_ap_uri(url) {
+            let ap_uri = ApUri::parse(url)?;
+            Self::ApUri(ap_uri)
         } else if let Ok(did_url) = DidUrl::parse(url) {
             Self::DidUrl(did_url)
         } else if let Ok(http_url) = HttpUrl::parse(url) {
@@ -71,7 +71,7 @@ impl VerificationMethod {
     pub fn origin(&self) -> Origin {
         match self {
             Self::HttpUrl(http_url) => http_url.origin(),
-            Self::ApUrl(ap_url) => ap_url.origin(),
+            Self::ApUri(ap_uri) => ap_uri.origin(),
             Self::DidUrl(did_url) => did_url.origin(),
         }
     }
@@ -81,7 +81,7 @@ impl fmt::Display for VerificationMethod {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::HttpUrl(http_url) => write!(formatter, "{}", http_url),
-            Self::ApUrl(ap_url) => write!(formatter, "{}", ap_url),
+            Self::ApUri(ap_uri) => write!(formatter, "{}", ap_uri),
             Self::DidUrl(did_url) => write!(formatter, "{}", did_url),
         }
     }
@@ -256,7 +256,7 @@ mod tests {
 
         let url = "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor#main-key";
         let vm_id = VerificationMethod::parse(url).unwrap();
-        assert!(matches!(vm_id, VerificationMethod::ApUrl(_)));
+        assert!(matches!(vm_id, VerificationMethod::ApUri(_)));
 
         let url = "https://gateway.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor#main-key";
         let vm_id = VerificationMethod::parse(url).unwrap();

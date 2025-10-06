@@ -1,7 +1,7 @@
 use std::str::FromStr;
 
 use apx_core::{
-    ap_url::is_ap_url,
+    ap_url::is_ap_uri,
     did::Did,
     http_url::normalize_http_url,
     url::hostname::encode_hostname,
@@ -62,7 +62,7 @@ enum SearchQuery {
 }
 
 fn parse_url_query(query: &str) -> Result<String, ValidationError> {
-    let url = if is_ap_url(query) {
+    let url = if is_ap_uri(query) {
         query.to_string()
     } else {
         normalize_http_url(query)

@@ -538,7 +538,7 @@ async fn fetch_proposals(
 ) -> Vec<PaymentOption> {
     let mut payment_options = vec![];
     for proposal_id in proposals {
-        // TODO: FEP-EF61: 'ap' URLs are not supported
+        // TODO: FEP-EF61: 'ap' URIs are not supported
         let proposal: Proposal = match ap_client.fetch_object(&proposal_id).await {
             Ok(proposal) => proposal,
             Err(error) => {

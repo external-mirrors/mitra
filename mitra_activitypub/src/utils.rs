@@ -1,5 +1,5 @@
 use apx_core::{
-    ap_url::{is_ap_url as is_ap_uri, ApUrl as ApUri},
+    ap_url::{is_ap_uri, ApUri},
     http_url::{normalize_http_url, HttpUrl as HttpUri},
     url::canonical::{with_gateway, CanonicalUri},
 };

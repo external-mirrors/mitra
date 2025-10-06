@@ -114,7 +114,7 @@ impl ApClient {
     }
 }
 
-// Gateway pool for resolving 'ap' URLs
+// Gateway pool for resolving 'ap' URIs
 pub struct FetcherContext {
     gateways: Vec<String>,
 }
