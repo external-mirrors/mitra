@@ -104,6 +104,7 @@ pub async fn send_object(
             inbox_url,
             request_body.as_bytes(),
             signer,
+            agent.rfc9421_enabled,
         )?;
     };
     for (name, value) in extra_headers {
@@ -150,6 +151,7 @@ pub async fn send_media(
             url,
             &media_data,
             signer,
+            agent.rfc9421_enabled,
         )?;
     };
     let response = request_builder

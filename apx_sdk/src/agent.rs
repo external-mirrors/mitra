@@ -20,6 +20,8 @@ pub struct FederationAgent {
 
     /// Key for creating HTTP signatures.
     pub signer: Option<HttpSigner>,
+    /// Enable RFC-9421 signatures?
+    pub rfc9421_enabled: bool,
 }
 
 impl Default for FederationAgent {
@@ -34,6 +36,7 @@ impl Default for FederationAgent {
             onion_proxy_url: None,
             i2p_proxy_url: None,
             signer: None,
+            rfc9421_enabled: false,
         }
     }
 }

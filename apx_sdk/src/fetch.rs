@@ -198,6 +198,7 @@ pub async fn fetch_object(
                 &target_url,
                 b"",
                 signer,
+                agent.rfc9421_enabled,
             )?;
         };
         let response = request_builder

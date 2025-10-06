@@ -22,6 +22,7 @@ use thiserror::Error;
 use apx_core::{
     http_signatures::create::{
         create_http_signature_cavage,
+        create_http_signature_rfc9421,
         HttpSignatureError,
         HttpSigner,
     },
@@ -218,20 +219,37 @@ pub fn sign_http_request(
     target_url: &str,
     body: &[u8],
     signer: &HttpSigner,
+    rfc9421_enabled: bool,
 ) -> Result<RequestBuilder, HttpSignatureError> {
-    let headers = create_http_signature_cavage(
-        method,
-        target_url,
-        body,
-        signer,
-    )?;
-    if let Some(digest) = headers.digest {
-        request_builder = request_builder.header("Digest", digest);
+    if rfc9421_enabled {
+        let headers = create_http_signature_rfc9421(
+            method,
+            target_url,
+            body,
+            signer,
+        )?;
+        if let Some(content_digest) = headers.content_digest {
+            request_builder = request_builder
+                .header("Content-Digest", content_digest);
+        };
+        request_builder = request_builder
+            .header("Signature", headers.signature)
+            .header("Signature-Input", headers.signature_input);
+    } else {
+        let headers = create_http_signature_cavage(
+            method,
+            target_url,
+            body,
+            signer,
+        )?;
+        if let Some(digest) = headers.digest {
+            request_builder = request_builder.header("Digest", digest);
+        };
+        request_builder = request_builder
+            .header(header::HOST, headers.host)
+            .header(header::DATE, headers.date)
+            .header("Signature", headers.signature);
     };
-    request_builder = request_builder
-        .header(header::HOST, headers.host)
-        .header(header::DATE, headers.date)
-        .header("Signature", headers.signature);
     Ok(request_builder)
 }
 

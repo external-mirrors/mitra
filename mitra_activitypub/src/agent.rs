@@ -47,6 +47,7 @@ pub(super) fn build_federation_agent_with_key(
         onion_proxy_url: instance.federation.onion_proxy_url.clone(),
         i2p_proxy_url: instance.federation.i2p_proxy_url.clone(),
         signer: maybe_signer,
+        rfc9421_enabled: false,
     }
 }
 
