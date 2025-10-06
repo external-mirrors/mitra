@@ -15,6 +15,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Removed restriction on maximum version of `reqwest` dependency.
 - Changed error message in case of invalid `verificationMethod`.
 - Changed internal value of `HttpSignatureError::UrlError` to string.
+- Allow URLs in `create_http_signature_rfc9421`.
 
 ### Fixed
 

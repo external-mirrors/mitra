@@ -1,6 +1,6 @@
 //! Create HTTP signatures
 use chrono::Utc;
-use http::{Method, Uri};
+use http::Method;
 use sfv::{
     BareItem,
     Dictionary,
@@ -175,10 +175,14 @@ pub struct HttpSignatureHeadersRfc9421 {
 /// <https://datatracker.ietf.org/doc/html/rfc9421>
 pub fn create_http_signature_rfc9421(
     request_method: Method,
-    request_uri: &Uri,
+    request_url: &str,
     request_body: &[u8],
     signer: &HttpSigner,
 ) -> Result<HttpSignatureHeadersRfc9421, HttpSignatureError> {
+    let request_url = normalize_http_url(request_url)
+        .map_err(HttpSignatureError::UrlError)?;
+    let request_uri = HttpUrl::parse(&request_url)
+        .map_err(HttpSignatureError::UrlError)?;
     let created = Utc::now().timestamp();
     let maybe_content_digest_header = if request_body.is_empty() {
         None
@@ -339,14 +343,14 @@ mod tests {
 
     #[test]
     fn test_create_http_signature_rfc9421_get() {
-        let request_uri = Uri::from_static("https://verifier.example/private-object");
+        let request_url = "https://verifier.example/private-object";
         let signer_key = generate_weak_rsa_key().unwrap();
         let signer_key_id = "https://signer.example/actor#main-key".to_string();
         let signer = HttpSigner::new_rsa(signer_key, signer_key_id);
 
         let headers = create_http_signature_rfc9421(
             Method::GET,
-            &request_uri,
+            request_url,
             b"",
             &signer,
         ).unwrap();
@@ -355,7 +359,7 @@ mod tests {
 
     #[test]
     fn test_create_http_signature_rfc9421_post() {
-        let request_uri = Uri::from_static("https://verifier.example/inbox");
+        let request_url = "https://verifier.example/inbox";
         let request_body = "{}";
         let signer_key = generate_weak_rsa_key().unwrap();
         let signer_key_id = "https://signer.example/actor#main-key".to_string();
@@ -363,7 +367,7 @@ mod tests {
 
         let headers = create_http_signature_rfc9421(
             Method::POST,
-            &request_uri,
+            request_url,
             request_body.as_bytes(),
             &signer,
         ).unwrap();

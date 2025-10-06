@@ -701,7 +701,7 @@ r#""date": Tue, 20 Apr 2021 02:07:55 GMT
         let signer = HttpSigner::new_ed25519(signer_key, signer_key_id);
         let signed_headers = create_http_signature_rfc9421(
             request_method.clone(),
-            &request_uri,
+            &request_uri.to_string(),
             request_body.as_bytes(),
             &signer,
         ).unwrap();
