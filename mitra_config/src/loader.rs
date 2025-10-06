@@ -88,7 +88,7 @@ pub fn parse_config() -> (Config, Vec<&'static str>) {
         };
     };
     config.http_socket();
-    parse_instance_url(&config.instance_uri).expect("invalid instance URI");
+    parse_instance_url(&config.instance_url).expect("invalid instance URL");
     if config.authentication_methods.is_empty() {
         panic!("authentication_methods must not be empty");
     };

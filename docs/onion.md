@@ -25,7 +25,7 @@ HiddenServicePort 80 127.0.0.1:8383
 
 Where `8383` should correspond to `http_port` setting in Mitra configuration file.
 
-Restart the Tor service. Inside the `HiddenServiceDir` directory find the `hostname` file. This file contains the hostname of your onion service. Change the value of `instance_uri` parameter in Mitra configuration file to that hostname (it should end with `.onion`).
+Restart the Tor service. Inside the `HiddenServiceDir` directory find the `hostname` file. This file contains the hostname of your onion service. Change the value of `instance_url` parameter in Mitra configuration file to that hostname (it should end with `.onion`).
 
 Start Mitra.
 

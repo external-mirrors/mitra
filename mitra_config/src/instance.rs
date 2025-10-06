@@ -65,7 +65,7 @@ impl Instance {
             federation_config.enabled = false;
         };
         Self {
-            _url: parse_instance_url(&config.instance_uri)
+            _url: parse_instance_url(&config.instance_url)
                 .expect("instance URL should be already validated"),
             federation: federation_config,
             ed25519_secret_key: config.instance_ed25519_key

@@ -7,7 +7,7 @@ web_client_dir: null
 http_host: '127.0.0.1'
 http_port: 8380
 
-instance_uri: http://127.0.0.1:8380
+instance_url: http://127.0.0.1:8380
 
 instance_title: Mitra
 instance_short_description: My instance
@@ -20,7 +20,6 @@ registration:
 #blockchains:
 #  # Parameters for local Monero node
 #  - chain_id: monero:regtest
-#    node_url: 'http://127.0.0.1:58081'
 #    wallet_rpc_url: 'http://127.0.0.1:58083'
 #    wallet_rpc_username: null
 #    wallet_rpc_password: null
