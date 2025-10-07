@@ -4,7 +4,13 @@ use mitra_activitypub::keys::Multikey;
 use mitra_models::users::types::PortableUser;
 
 #[derive(Serialize)]
-#[serde(rename_all="camelCase")]
+#[serde(rename_all = "camelCase")]
+pub struct GatewayMetadata {
+    pub upload_media: String,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct PortableActorKeys {
     assertion_method: Vec<Multikey>,
 }

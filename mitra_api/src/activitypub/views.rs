@@ -116,7 +116,11 @@ use crate::{
 
 use super::{
     receiver::{receive_activity, InboxError},
-    types::{PortableActorKeys, PortableMedia},
+    types::{
+        GatewayMetadata,
+        PortableActorKeys,
+        PortableMedia,
+    },
 };
 
 #[get("")]
@@ -707,6 +711,19 @@ pub async fn activity_view(
     Ok(response)
 }
 
+#[get("")]
+async fn apgateway_metadata_view(
+    config: web::Data<Config>,
+) -> HttpResponse {
+    let metadata = GatewayMetadata {
+        upload_media: format!(
+            "{}/.well-known/apgateway-media",
+            config.instance_url(),
+        ),
+    };
+    HttpResponse::Ok().json(metadata)
+}
+
 #[post("")]
 async fn apgateway_create_actor_view(
     config: web::Data<Config>,
@@ -743,7 +760,7 @@ async fn apgateway_create_actor_view(
     Ok(HttpResponse::Created().json(keys))
 }
 
-#[get("/{url:.*}")]
+#[get("/{url:.+}")]
 async fn apgateway_view(
     db_pool: web::Data<DatabaseConnectionPool>,
     did_url: web::Path<String>,
@@ -779,7 +796,7 @@ async fn apgateway_view(
     Ok(response)
 }
 
-#[post("/{url:.*}/inbox")]
+#[post("/{url:.+}/inbox")]
 async fn apgateway_inbox_push_view(
     config: web::Data<Config>,
     connection_info: ConnectionInfo,
@@ -836,7 +853,7 @@ async fn apgateway_inbox_push_view(
 
 // TODO: FEP-EF61: how to detect collections?
 // TODO: shared inbox?
-#[get("/{url:.*}/inbox")]
+#[get("/{url:.+}/inbox")]
 async fn apgateway_inbox_pull_view(
     config: web::Data<Config>,
     connection_info: ConnectionInfo,
@@ -891,7 +908,7 @@ async fn apgateway_inbox_pull_view(
     Ok(response)
 }
 
-#[post("/{url:.*}/outbox")]
+#[post("/{url:.+}/outbox")]
 async fn apgateway_outbox_push_view(
     config: web::Data<Config>,
     db_pool: web::Data<DatabaseConnectionPool>,
@@ -941,7 +958,7 @@ async fn apgateway_outbox_push_view(
     Ok(HttpResponse::Accepted().finish())
 }
 
-#[get("/{url:.*}/outbox")]
+#[get("/{url:.+}/outbox")]
 async fn apgateway_outbox_pull_view(
     config: web::Data<Config>,
     connection_info: ConnectionInfo,
@@ -1002,6 +1019,7 @@ pub fn gateway_scope(gateway_enabled: bool) -> Scope {
         return scope;
     };
     scope
+        .service(apgateway_metadata_view)
         .service(apgateway_create_actor_view)
         // Inbox and outbox services go before generic gateway service
         .service(apgateway_inbox_push_view)
