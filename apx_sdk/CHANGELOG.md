@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Make `HttpUrl::scheme` method public.
 - Support sending requests containing RFC-9421 signatures.
+- Support verification of signed requests with all HTTP methods.
 
 ### Changed
 
@@ -18,11 +19,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Changed internal value of `HttpSignatureError::UrlError` to string.
 - Allow URLs in `create_http_signature_rfc9421`.
 - Always add digest header during signing if request body is provided.
+- Don't require POST request to have digest header unless the header is signed.
 
 ### Fixed
 
 - Fixed incorrect error messages in `HttpUrl::parse`.
 - Copy port number from URL to `Host` header when creating HTTP signature.
+
+### Security
+
+- Prefer to read content digest from a signed header.
 
 ## [0.17.0] - 2025-09-16
 

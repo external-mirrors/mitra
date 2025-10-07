@@ -23,6 +23,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Copy port number from URL to `Host` header when creating HTTP signature.
 - Fixed request URI reconstruction in case when `Host` header value includes port number.
 
+### Security
+
+- Prefer to read content digest from a signed header.
+
 ## [4.10.1] - 2025-09-21
 
 ### Added

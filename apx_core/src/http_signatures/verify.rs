@@ -36,12 +36,13 @@ const SIGNATURE_EXPIRES_IN: i64 = 12; // 12 hours
 const REQUIRED_COMPONENTS_CAVAGE: [&str; 2] = ["(request-target)", "host"];
 const REQUIRED_COMPONENTS_RFC9421: [&str; 2] = ["@method", "@target-uri"];
 
+// Component IDs are lower case
+const HEADER_DIGEST: &str = "digest";
+const HEADER_CONTENT_DIGEST: &str = "content-digest";
+
 /// Errors that may occur during signature verification
 #[derive(Debug, Error)]
 pub enum HttpSignatureVerificationError {
-    #[error("HTTP method not supported")]
-    MethodNotSupported,
-
     #[error("missing signature header")]
     NoSignature,
 
@@ -92,32 +93,46 @@ pub struct HttpSignatureData {
 }
 
 fn get_content_digest(
+    components: &[&str],
     headers: &HeaderMap,
 ) -> Result<Option<ContentDigest>, VerificationError> {
-    let maybe_digest = if let Some(header_value) = headers.get("Content-Digest") {
-        let header_value = header_value
-            .to_str()
-            .map_err(|_| VerificationError::header_value("Content-Digest"))?;
-        let content_digest = parse_content_digest_header(header_value)
-            .map_err(|error| VerificationError::HeaderError(
-                "Content-Digest".to_owned(),
-                error,
-            ))?;
-        Some(content_digest)
-    } else if let Some(header_value) = headers.get("Digest") {
-        let header_value = header_value
-            .to_str()
-            .map_err(|_| VerificationError::header_value("Digest"))?;
-        let content_digest = parse_digest_header(header_value)
-            .map_err(|error| VerificationError::HeaderError(
-                "Digest".to_owned(),
-                error,
-            ))?;
-        Some(content_digest)
-    } else {
-        None
+    let maybe_signed_header = components
+        .iter()
+        .copied()
+        .find(|id| *id == HEADER_DIGEST || *id == HEADER_CONTENT_DIGEST);
+    let (header_name, header_value) = match maybe_signed_header {
+        Some(header_name) => {
+            if let Some(header_value) = headers.get(header_name) {
+                (header_name, header_value)
+            } else {
+                // Signed header must be present
+                return Err(VerificationError::NoDigest);
+            }
+        },
+        None => {
+            if let Some(header_value) = headers.get(HEADER_CONTENT_DIGEST) {
+                (HEADER_CONTENT_DIGEST, header_value)
+            } else if let Some(header_value) = headers.get(HEADER_DIGEST) {
+                (HEADER_DIGEST, header_value)
+            } else {
+                return Ok(None);
+            }
+        },
     };
-    Ok(maybe_digest)
+    let header_value = header_value
+        .to_str()
+        .map_err(|_| VerificationError::header_value(header_name))?;
+    let parse_header = match header_name {
+        HEADER_DIGEST => parse_digest_header,
+        HEADER_CONTENT_DIGEST => parse_content_digest_header,
+        _ => unreachable!(),
+    };
+    let content_digest = parse_header(header_value)
+        .map_err(|error| VerificationError::HeaderError(
+            header_name.to_owned(),
+            error,
+        ))?;
+    Ok(Some(content_digest))
 }
 
 fn check_required_components(
@@ -139,17 +154,6 @@ pub fn parse_http_signature_cavage(
     request_uri: &Uri,
     request_headers: &HeaderMap,
 ) -> Result<HttpSignatureData, VerificationError> {
-    // Parse Digest header
-    let maybe_digest = match *request_method {
-        Method::GET => None,
-        Method::POST => {
-            let digest = get_content_digest(request_headers)?
-                .ok_or(VerificationError::NoDigest)?;
-            Some(digest)
-        },
-        _ => return Err(VerificationError::MethodNotSupported),
-    };
-
     // Parse Signature header
     let signature_header = request_headers.get("signature")
         .ok_or(VerificationError::NoSignature)?
@@ -205,6 +209,7 @@ pub fn parse_http_signature_cavage(
         &signed_headers,
         &REQUIRED_COMPONENTS_CAVAGE,
     )?;
+    let maybe_digest = get_content_digest(&signed_headers, request_headers)?;
 
     // Recreate signature base
     let mut signature_base_entries = IndexMap::new();
@@ -317,6 +322,7 @@ pub fn parse_http_signature_rfc9421(
     };
 
     check_required_components(&components, required_components)?;
+    let maybe_digest = get_content_digest(&components, request_headers)?;
 
     // Recreate signature base
     let mut signature_base_entries = IndexMap::new();
@@ -365,17 +371,6 @@ pub fn parse_http_signature_rfc9421(
         .map(|(id, value)| format!(r#""{id}": {value}"#))
         .collect::<Vec<_>>()
         .join("\n");
-
-    // Parse Digest header
-    let maybe_digest = match *request_method {
-        Method::GET => None,
-        Method::POST => {
-            let digest = get_content_digest(request_headers)?
-                .ok_or(VerificationError::NoDigest)?;
-            Some(digest)
-        },
-        _ => return Err(VerificationError::MethodNotSupported),
-    };
 
     let signature_data = HttpSignatureData {
         key_id,
@@ -737,6 +732,46 @@ r#""date": Tue, 20 Apr 2021 02:07:55 GMT
             &signature_data,
             &signer_public_key,
             Some(content_digest),
+        );
+        assert_eq!(result.is_ok(), true);
+    }
+
+    #[test]
+    fn test_create_and_verify_signature_rfc9421_delete() {
+        let request_method = Method::DELETE;
+        let request_uri = Uri::from_static("https://verifier.example/endpoint");
+        let signer_key = generate_weak_ed25519_key();
+        let signer_key_id = "https://signer.example/actor#main-key".to_string();
+        let signer = HttpSigner::new_ed25519(signer_key, signer_key_id);
+        let signed_headers = create_http_signature_rfc9421(
+            request_method.clone(),
+            &request_uri.to_string(),
+            None,
+            &signer,
+        ).unwrap();
+
+        let mut request_headers = HeaderMap::new();
+        request_headers.insert(
+            HeaderName::from_static("signature-input"),
+            HeaderValue::from_str(&signed_headers.signature_input).unwrap(),
+        );
+        request_headers.insert(
+            HeaderName::from_static("signature"),
+            HeaderValue::from_str(&signed_headers.signature).unwrap(),
+        );
+        let signature_data = parse_http_signature_rfc9421(
+            &request_method,
+            &request_uri,
+            &request_headers,
+            &REQUIRED_COMPONENTS_RFC9421,
+        ).unwrap();
+        assert_eq!(signature_data.content_digest.is_none(), true);
+
+        let signer_public_key = signer.key.public_key();
+        let result = verify_http_signature(
+            &signature_data,
+            &signer_public_key,
+            None,
         );
         assert_eq!(result.is_ok(), true);
     }
