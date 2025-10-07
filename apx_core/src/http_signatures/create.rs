@@ -87,7 +87,7 @@ pub enum HttpSignatureError {
 pub fn create_http_signature_cavage(
     request_method: Method,
     request_url: &str,
-    request_body: &[u8],
+    maybe_request_body: Option<&[u8]>,
     signer: &HttpSigner,
 ) -> Result<HttpSignatureHeaders, HttpSignatureError> {
     // URL is normalized
@@ -106,12 +106,12 @@ pub fn create_http_signature_cavage(
         request_uri.host().to_owned()
     };
     let date = Utc::now().format(HTTP_SIGNATURE_DATE_FORMAT).to_string();
-    let maybe_digest_header = if request_body.is_empty() {
-        None
-    } else {
-        let digest = ContentDigest::new(request_body);
+    let maybe_digest_header = if let Some(body) = maybe_request_body {
+        let digest = ContentDigest::new(body);
         let digest_header = create_digest_header(&digest);
         Some(digest_header)
+    } else {
+        None
     };
 
     let mut headers = vec![
@@ -176,7 +176,7 @@ pub struct HttpSignatureHeadersRfc9421 {
 pub fn create_http_signature_rfc9421(
     request_method: Method,
     request_url: &str,
-    request_body: &[u8],
+    maybe_request_body: Option<&[u8]>,
     signer: &HttpSigner,
 ) -> Result<HttpSignatureHeadersRfc9421, HttpSignatureError> {
     let request_url = normalize_http_url(request_url)
@@ -184,13 +184,13 @@ pub fn create_http_signature_rfc9421(
     let request_uri = HttpUrl::parse(&request_url)
         .map_err(HttpSignatureError::UrlError)?;
     let created = Utc::now().timestamp();
-    let maybe_content_digest_header = if request_body.is_empty() {
-        None
-    } else {
-        let digest = ContentDigest::new(request_body);
+    let maybe_content_digest_header = if let Some(body) = maybe_request_body {
+        let digest = ContentDigest::new(body);
         let digest_header = create_content_digest_header(&digest)
             .map_err(|_| HttpSignatureError::SerializationError)?;
         Some(digest_header)
+    } else {
+        None
     };
 
     // Prepare signature input
@@ -274,7 +274,7 @@ mod tests {
         let headers = create_http_signature_cavage(
             Method::GET,
             request_url,
-            b"",
+            None,
             &signer,
         ).unwrap();
 
@@ -301,7 +301,7 @@ mod tests {
         let headers = create_http_signature_cavage(
             Method::GET,
             request_url,
-            b"",
+            None,
             &signer,
         ).unwrap();
         assert_eq!(headers.host, "127.0.0.1:1234");
@@ -318,7 +318,7 @@ mod tests {
         let result = create_http_signature_cavage(
             Method::POST,
             request_url,
-            request_body.as_bytes(),
+            Some(request_body.as_bytes()),
             &signer,
         );
         assert_eq!(result.is_ok(), true);
@@ -351,7 +351,7 @@ mod tests {
         let headers = create_http_signature_rfc9421(
             Method::GET,
             request_url,
-            b"",
+            None,
             &signer,
         ).unwrap();
         assert_eq!(headers.content_digest, None);
@@ -368,7 +368,7 @@ mod tests {
         let headers = create_http_signature_rfc9421(
             Method::POST,
             request_url,
-            request_body.as_bytes(),
+            Some(request_body.as_bytes()),
             &signer,
         ).unwrap();
         assert_eq!(

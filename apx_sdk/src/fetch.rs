@@ -196,7 +196,7 @@ pub async fn fetch_object(
                 request_builder,
                 Method::GET,
                 &target_url,
-                b"",
+                None,
                 signer,
                 agent.rfc9421_enabled,
             )?;

@@ -102,7 +102,7 @@ pub async fn send_object(
             request_builder,
             Method::POST,
             inbox_url,
-            request_body.as_bytes(),
+            Some(request_body.as_bytes()),
             signer,
             agent.rfc9421_enabled,
         )?;
@@ -149,7 +149,7 @@ pub async fn send_media(
             request_builder,
             Method::POST,
             url,
-            &media_data,
+            Some(&media_data),
             signer,
             agent.rfc9421_enabled,
         )?;

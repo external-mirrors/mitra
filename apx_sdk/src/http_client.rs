@@ -217,7 +217,7 @@ pub fn sign_http_request(
     mut request_builder: RequestBuilder,
     method: Method,
     target_url: &str,
-    body: &[u8],
+    maybe_body: Option<&[u8]>,
     signer: &HttpSigner,
     rfc9421_enabled: bool,
 ) -> Result<RequestBuilder, HttpSignatureError> {
@@ -225,7 +225,7 @@ pub fn sign_http_request(
         let headers = create_http_signature_rfc9421(
             method,
             target_url,
-            body,
+            maybe_body,
             signer,
         )?;
         if let Some(content_digest) = headers.content_digest {
@@ -239,7 +239,7 @@ pub fn sign_http_request(
         let headers = create_http_signature_cavage(
             method,
             target_url,
-            body,
+            maybe_body,
             signer,
         )?;
         if let Some(digest) = headers.digest {

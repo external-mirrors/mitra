@@ -557,7 +557,7 @@ r#""date": Tue, 20 Apr 2021 02:07:55 GMT
         let signed_headers = create_http_signature_cavage(
             request_method.clone(),
             request_url,
-            b"",
+            None,
             &signer,
         ).unwrap();
 
@@ -602,7 +602,7 @@ r#""date": Tue, 20 Apr 2021 02:07:55 GMT
         let signed_headers = create_http_signature_cavage(
             request_method.clone(),
             request_url,
-            request_body.as_bytes(),
+            Some(request_body.as_bytes()),
             &signer,
         ).unwrap();
 
@@ -652,7 +652,7 @@ r#""date": Tue, 20 Apr 2021 02:07:55 GMT
         let signed_headers = create_http_signature_cavage(
             request_method.clone(),
             request_url,
-            request_body.as_bytes(),
+            Some(request_body.as_bytes()),
             &signer,
         ).unwrap();
 
@@ -702,7 +702,7 @@ r#""date": Tue, 20 Apr 2021 02:07:55 GMT
         let signed_headers = create_http_signature_rfc9421(
             request_method.clone(),
             &request_uri.to_string(),
-            request_body.as_bytes(),
+            Some(request_body.as_bytes()),
             &signer,
         ).unwrap();
 
