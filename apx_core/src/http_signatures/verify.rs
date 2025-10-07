@@ -12,6 +12,7 @@ use sfv::{
     Parser,
     SerializeValue,
 };
+use thiserror::Error;
 
 use crate::{
     base64,
@@ -35,7 +36,8 @@ const SIGNATURE_EXPIRES_IN: i64 = 12; // 12 hours
 const REQUIRED_COMPONENTS_CAVAGE: [&str; 2] = ["(request-target)", "host"];
 const REQUIRED_COMPONENTS_RFC9421: [&str; 2] = ["@method", "@target-uri"];
 
-#[derive(thiserror::Error, Debug)]
+/// Errors that may occur during signature verification
+#[derive(Debug, Error)]
 pub enum HttpSignatureVerificationError {
     #[error("HTTP method not supported")]
     MethodNotSupported,
@@ -119,11 +121,11 @@ fn get_content_digest(
 }
 
 fn check_required_components(
-    entries: &IndexMap<&str, String>,
+    components: &[&str],
     required: &[&'static str],
 ) -> Result<(), VerificationError> {
     for component_id in required {
-        if !entries.contains_key(component_id) {
+        if !components.contains(component_id) {
             return Err(VerificationError::MissingComponent(component_id));
         };
     };
@@ -198,9 +200,15 @@ pub fn parse_http_signature_cavage(
         created_at + TimeDelta::hours(SIGNATURE_EXPIRES_IN)
     };
 
+    let signed_headers: Vec<_> = headers_parameter.split(' ').collect();
+    check_required_components(
+        &signed_headers,
+        &REQUIRED_COMPONENTS_CAVAGE,
+    )?;
+
     // Recreate signature base
     let mut signature_base_entries = IndexMap::new();
-    for header in headers_parameter.split(' ') {
+    for header in signed_headers {
         let header_value = if header == "(request-target)" {
             format!(
                 "{} {}",
@@ -224,10 +232,6 @@ pub fn parse_http_signature_cavage(
         };
         signature_base_entries.insert(header, header_value);
     };
-    check_required_components(
-        &signature_base_entries,
-        &REQUIRED_COMPONENTS_CAVAGE,
-    )?;
     let signature_base = signature_base_entries
         .into_iter()
         .map(|(id, value)| format!("{id}: {value}"))
@@ -308,18 +312,19 @@ pub fn parse_http_signature_rfc9421(
     let mut components = vec![];
     for list_item in &signature_param_list.items {
         let component_id = list_item.bare_item.as_str()
-            .ok_or(VerificationError::ParseError("invalid encoding of signature parameter"))?
-            .to_owned();
+            .ok_or(VerificationError::ParseError("invalid encoding of signature parameter"))?;
         components.push(component_id);
     };
 
+    check_required_components(&components, required_components)?;
+
     // Recreate signature base
     let mut signature_base_entries = IndexMap::new();
-    for component_id in components.iter() {
-        if signature_base_entries.contains_key(component_id.as_str()) {
+    for component_id in components {
+        if signature_base_entries.contains_key(component_id) {
             return Err(VerificationError::ParseError("duplicate component"));
         };
-        let component_value = match component_id.as_str() {
+        let component_value = match component_id {
             "@method" => {
                 request_method.to_string()
             },
@@ -352,9 +357,8 @@ pub fn parse_http_signature_rfc9421(
                     .to_owned()
             },
         };
-        signature_base_entries.insert(component_id.as_str(), component_value);
+        signature_base_entries.insert(component_id, component_value);
     };
-    check_required_components(&signature_base_entries, required_components)?;
     signature_base_entries.insert("@signature-params", signature_params);
     let signature_base = signature_base_entries
         .into_iter()
