@@ -170,6 +170,43 @@ pub async fn send_media(
     }
 }
 
+/// Deletes media
+pub async fn delete_media(
+    agent: &FederationAgent,
+    url: &str,
+) -> Result<Response, DelivererError> {
+    let client = create_deliverer_client(agent, url)?;
+    let mut request_builder = build_http_request(
+        agent,
+        &client,
+        Method::DELETE,
+        url,
+    )?;
+    if let Some(ref signer) = agent.signer {
+        request_builder = sign_http_request(
+            request_builder,
+            Method::DELETE,
+            url,
+            None,
+            signer,
+            agent.rfc9421_enabled,
+        )?;
+    };
+    let response = request_builder
+        .send()
+        .await?;
+    let response_status = response.status();
+    let response_data = limited_response(response, agent.response_size_limit)
+        .await
+        .ok_or(DelivererError::ResponseTooLarge)?;
+    let response = Response::new(response_status, response_data);
+    if response_status.is_success() {
+        Ok(response)
+    } else {
+        Err(DelivererError::HttpError(response))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

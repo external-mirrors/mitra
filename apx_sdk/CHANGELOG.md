@@ -11,6 +11,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Make `HttpUrl::scheme` method public.
 - Support sending requests containing RFC-9421 signatures.
 - Support verification of signed requests with all HTTP methods.
+- Added `delete_media` method to `deliver` module.
 
 ### Changed
 
