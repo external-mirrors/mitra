@@ -1049,7 +1049,7 @@ async fn apgateway_media_upload_view(
         Ok(signer) => signer,
         Err(DatabaseError::NotFound(_)) => {
             // Only local portable users can upload media
-            return Ok(HttpResponse::MethodNotAllowed().finish());
+            return Err(HttpError::PermissionError);
         },
         Err(other_error) => return Err(other_error.into()),
     };

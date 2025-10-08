@@ -19,6 +19,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Renamed `instance_uri` configuration parameter to `instance_url` (`instance_uri` is treated as alias).
 - Log CORS errors.
 - Return `413 Payload Too Large` if media uploaded by portable actor is too large.
+- Return `403 Forbidden` if media uploaded by an unregistered portable actor.
 
 ### Fixed
 
