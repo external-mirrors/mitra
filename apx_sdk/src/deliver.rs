@@ -129,7 +129,7 @@ pub async fn send_object(
 }
 
 /// Uploads media
-pub async fn send_media(
+pub async fn upload_media(
     agent: &FederationAgent,
     url: &str,
     media_data: Vec<u8>,

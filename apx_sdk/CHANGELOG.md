@@ -21,6 +21,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Allow URLs in `create_http_signature_rfc9421`.
 - Always add digest header during signing if request body is provided.
 - Don't require POST request to have digest header unless the header is signed.
+- Renamed `send_media` to `upload_media`.
 
 ### Fixed
 
