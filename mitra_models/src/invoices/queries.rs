@@ -21,10 +21,10 @@ pub async fn create_local_invoice(
     recipient_id: Uuid,
     chain_id: &ChainId,
     payment_address: &str,
-    amount: impl TryInto<i64>,
+    amount: u64,
 ) -> Result<Invoice, DatabaseError> {
     let invoice_id = generate_ulid();
-    let db_amount: i64 = TryInto::try_into(amount)
+    let db_amount = i64::try_from(amount)
         .map_err(|_| DatabaseTypeError)?;
     let row = db_client.query_one(
         "
@@ -61,10 +61,10 @@ pub async fn create_remote_invoice(
     sender_id: Uuid,
     recipient_id: Uuid,
     chain_id: &ChainId,
-    amount: impl TryInto<i64>,
+    amount: u64,
 ) -> Result<Invoice, DatabaseError> {
     let invoice_id = generate_ulid();
-    let db_amount: i64 = TryInto::try_into(amount)
+    let db_amount: i64 = i64::try_from(amount)
         .map_err(|_| DatabaseTypeError)?;
     let row = db_client.query_one(
         "
@@ -358,7 +358,7 @@ mod tests {
         assert_eq!(invoice.sender_id, sender_id);
         assert_eq!(invoice.recipient_id, recipient_id);
         assert_eq!(invoice.chain_id.into_inner(), chain_id);
-        assert_eq!(invoice.amount, amount);
+        assert_eq!(invoice.amount, amount as i64);
         assert_eq!(invoice.invoice_status, InvoiceStatus::Open);
         assert_eq!(invoice.payment_address.unwrap(), payment_address);
         assert_eq!(invoice.payout_tx_id, None);
@@ -383,7 +383,7 @@ mod tests {
         assert_eq!(invoice.sender_id, sender_id);
         assert_eq!(invoice.recipient_id, recipient_id);
         assert_eq!(invoice.chain_id.into_inner(), chain_id);
-        assert_eq!(invoice.amount, amount);
+        assert_eq!(invoice.amount, amount as i64);
         assert_eq!(invoice.invoice_status, InvoiceStatus::Requested);
         assert_eq!(invoice.payment_address, None);
         assert_eq!(invoice.payout_tx_id, None);
