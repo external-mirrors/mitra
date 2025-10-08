@@ -20,6 +20,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Log CORS errors.
 - Return `413 Payload Too Large` if media uploaded by portable actor is too large.
 - Return `403 Forbidden` if media uploaded by an unregistered portable actor.
+- Return `404 Not Found` if the owner of portable outbox is not registered.
 
 ### Fixed
 

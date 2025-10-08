@@ -909,17 +909,10 @@ async fn apgateway_outbox_push_view(
         request_path,
     );
     let canonical_collection_id = canonicalize_id(&collection_id)?;
-    let collection_owner = match get_portable_user_by_outbox_id(
+    let collection_owner = get_portable_user_by_outbox_id(
         db_client,
         &canonical_collection_id.to_string(),
-    ).await {
-        Ok(signer) => signer,
-        Err(DatabaseError::NotFound(_)) => {
-            // Only local portable users can post to outbox
-            return Ok(HttpResponse::MethodNotAllowed().finish());
-        },
-        Err(other_error) => return Err(other_error.into()),
-    };
+    ).await?;
     let canonical_owner_id =
         parse_id_from_db(collection_owner.profile.expect_remote_actor_id())?;
     // Verify activity
