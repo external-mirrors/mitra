@@ -1,4 +1,5 @@
 use actix_web::{
+    delete,
     dev::ConnectionInfo,
     get,
     post,
@@ -66,6 +67,7 @@ use mitra_config::Config;
 use mitra_models::{
     activitypub::queries::{
         create_activitypub_media,
+        delete_activitypub_media,
         get_activitypub_media_by_digest,
         get_actor,
         get_collection_items,
@@ -1083,7 +1085,7 @@ async fn apgateway_media_upload_view(
     Ok(response)
 }
 
-#[get("/{hashlink:.*}")]
+#[get("/{hashlink:.+}")]
 async fn apgateway_media_view(
     config: web::Data<Config>,
     db_pool: web::Data<DatabaseConnectionPool>,
@@ -1103,6 +1105,48 @@ async fn apgateway_media_view(
     Ok(response)
 }
 
+#[delete("/{hashlink:.+}")]
+async fn apgateway_media_delete_view(
+    config: web::Data<Config>,
+    connection_info: ConnectionInfo,
+    db_pool: web::Data<DatabaseConnectionPool>,
+    hashlink: web::Path<String>,
+    request: HttpRequest,
+) -> Result<HttpResponse, HttpError> {
+    let request_full_uri =
+        get_request_full_uri(&connection_info, request.uri());
+    let (_, signer) = verify_signed_request(
+        &config,
+        &db_pool,
+        method_adapter(request.method()),
+        uri_adapter(&request_full_uri),
+        header_map_adapter(request.headers()),
+        None,
+        true, // don't fetch actor
+    ).await.map_err(|error| {
+        log::warn!("C2S authentication error (DELETE {request_full_uri}): {error}");
+        HttpError::AuthError("invalid signature")
+    })?;
+    let db_client = &**get_database_client(&db_pool).await?;
+    let signer = match get_portable_user_by_id(
+        db_client,
+        signer.id,
+    ).await {
+        Ok(signer) => signer,
+        Err(DatabaseError::NotFound(_)) => {
+            // Only local portable users can delete media
+            return Err(HttpError::PermissionError);
+        },
+        Err(other_error) => return Err(other_error.into()),
+    };
+    let digest = Hashlink::parse(&hashlink)
+        .map_err(|_| ValidationError("invalid hashlink"))?
+        .digest();
+    delete_activitypub_media(db_client, signer.id, digest).await?;
+    let response = HttpResponse::NoContent().finish();
+    Ok(response)
+}
+
 pub fn media_gateway_scope(gateway_enabled: bool) -> Scope {
     let scope = web::scope("/.well-known/apgateway-media");
     if !gateway_enabled {
@@ -1111,4 +1155,5 @@ pub fn media_gateway_scope(gateway_enabled: bool) -> Scope {
     scope
         .service(apgateway_media_view)
         .service(apgateway_media_upload_view)
+        .service(apgateway_media_delete_view)
 }

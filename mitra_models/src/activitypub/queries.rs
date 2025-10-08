@@ -283,6 +283,25 @@ pub async fn create_activitypub_media(
     Ok(())
 }
 
+pub async fn delete_activitypub_media(
+    db_client: &impl DatabaseClient,
+    owner_id: Uuid,
+    digest: [u8; 32],
+) -> Result<(), DatabaseError> {
+    let digest_array_string = format!("{digest:?}");
+    let deleted_count = db_client.execute(
+        "
+        DELETE FROM activitypub_media
+        WHERE owner_id = $1 AND digest = $2
+        ",
+        &[&owner_id, &digest_array_string],
+    ).await?;
+    if deleted_count == 0 {
+        return Err(DatabaseError::NotFound("media"));
+    };
+    Ok(())
+}
+
 pub async fn get_activitypub_media_by_digest(
     db_client: &impl DatabaseClient,
     digest: [u8; 32],
@@ -554,10 +573,36 @@ mod tests {
             user.id,
             file_info.clone(),
         ).await.unwrap();
+
         let db_file_info = get_activitypub_media_by_digest(
             db_client,
             file_info.digest,
         ).await.unwrap();
         assert_eq!(db_file_info.file_name, file_info.file_name);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_delete_activitypub_media() {
+        let db_client = &mut create_test_database().await;
+        let user = create_test_portable_user(
+            db_client,
+            "test",
+            "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor",
+        ).await;
+        let MediaInfo::File { file_info, .. } = MediaInfo::png_for_test() else {
+            unreachable!();
+        };
+        create_activitypub_media(
+            db_client,
+            user.id,
+            file_info.clone(),
+        ).await.unwrap();
+
+        delete_activitypub_media(
+            db_client,
+            user.id,
+            file_info.digest,
+        ).await.unwrap();
     }
 }
