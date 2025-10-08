@@ -12,6 +12,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Added configuration parameter `http_cors_allow_all`.
 - Added FEP-ae97 API endpoint for deleting media.
 - Added FEP-ae97 gateway metadata endpoint.
+- Set `discoverable` flag to `true` on actors.
 
 ### Changed
 

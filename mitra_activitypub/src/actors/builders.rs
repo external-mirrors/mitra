@@ -62,6 +62,7 @@ fn build_actor_context() -> Context {
             ("PropertyValue", "schema:PropertyValue"),
             ("value", "schema:value"),
             ("toot", MASTODON_CONTEXT),
+            ("discoverable", "toot:discoverable"),
             ("featured", "toot:featured"),
             ("Emoji", "toot:Emoji"),
             ("mitra", MITRA_CONTEXT),
@@ -173,6 +174,8 @@ pub struct Actor {
     tag: Vec<Emoji>,
 
     manually_approves_followers: bool,
+    // https://docs.joinmastodon.org/spec/activitypub/#discoverable
+    discoverable: bool,
 
     #[serde(skip_serializing_if = "Option::is_none")]
     url: Option<String>,
@@ -305,6 +308,8 @@ pub fn build_local_actor(
         attachment: attachments,
         tag: emojis,
         manually_approves_followers: user.profile.manually_approves_followers,
+        // Some applications don't work properly if this flag is not set
+        discoverable: true,
         url: Some(profile_url),
         published: Some(user.profile.created_at),
         updated: Some(user.profile.updated_at),
@@ -347,6 +352,7 @@ pub fn build_instance_actor(
         attachment: vec![],
         tag: vec![],
         manually_approves_followers: false,
+        discoverable: false,
         url: None,
         published: None,
         updated: None,
@@ -394,6 +400,7 @@ mod tests {
                     "PropertyValue": "schema:PropertyValue",
                     "value": "schema:value",
                     "toot": "http://joinmastodon.org/ns#",
+                    "discoverable": "toot:discoverable",
                     "featured": "toot:featured",
                     "Emoji": "toot:Emoji",
                     "mitra": "http://jsonld.mitra.social#",
@@ -450,6 +457,7 @@ mod tests {
             },
             "summary": "testbio",
             "manuallyApprovesFollowers": false,
+            "discoverable": true,
             "url": "https://server.example/users/testuser",
             "published": "2023-02-24T23:36:38Z",
             "updated": "2023-02-24T23:36:38Z",
@@ -491,6 +499,7 @@ mod tests {
                     "PropertyValue": "schema:PropertyValue",
                     "value": "schema:value",
                     "toot": "http://joinmastodon.org/ns#",
+                    "discoverable": "toot:discoverable",
                     "featured": "toot:featured",
                     "Emoji": "toot:Emoji",
                     "mitra": "http://jsonld.mitra.social#",
@@ -547,6 +556,7 @@ mod tests {
             },
             "summary": "testbio",
             "manuallyApprovesFollowers": false,
+            "discoverable": true,
             "url": "https://server.example/users/testuser",
             "published": "2023-02-24T23:36:38Z",
             "updated": "2023-02-24T23:36:38Z",
@@ -575,6 +585,7 @@ mod tests {
                     "PropertyValue": "schema:PropertyValue",
                     "value": "schema:value",
                     "toot": "http://joinmastodon.org/ns#",
+                    "discoverable": "toot:discoverable",
                     "featured": "toot:featured",
                     "Emoji": "toot:Emoji",
                     "mitra": "http://jsonld.mitra.social#",
@@ -623,6 +634,7 @@ mod tests {
                 },
             ],
             "manuallyApprovesFollowers": false,
+            "discoverable": false,
         });
         assert_eq!(value, expected_value);
     }
