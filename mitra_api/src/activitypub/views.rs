@@ -855,7 +855,7 @@ async fn apgateway_inbox_pull_view(
         true, // don't fetch actor
     ).await.map_err(|error| {
         log::warn!("C2S authentication error (GET {request_path}): {error}");
-        HttpError::PermissionError
+        HttpError::AuthError("invalid signature")
     })?;
     let canonical_signer_id = parse_id_from_db(signer.expect_remote_actor_id())?;
     let collection_id = format!(
@@ -960,7 +960,7 @@ async fn apgateway_outbox_pull_view(
         true, // don't fetch actor
     ).await.map_err(|error| {
         log::warn!("C2S authentication error (GET {request_path}): {error}");
-        HttpError::PermissionError
+        HttpError::AuthError("invalid signature")
     })?;
     let canonical_signer_id = parse_id_from_db(signer.expect_remote_actor_id())?;
     let collection_id = format!(

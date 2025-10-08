@@ -21,6 +21,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Return `413 Payload Too Large` if media uploaded by portable actor is too large.
 - Return `403 Forbidden` if media uploaded by an unregistered portable actor.
 - Return `404 Not Found` if the owner of portable outbox is not registered.
+- Return `401 Unauthorized` if the signature is not valid when pulling from portable inbox or outbox.
 
 ### Fixed
 
