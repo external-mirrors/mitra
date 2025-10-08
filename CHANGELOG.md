@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [4.11.0] - 2025-10-09
+
 ### Added
 
 - Write warning to log if `instance_url` configuration parameter has incorrect URL scheme.
