@@ -38,18 +38,26 @@ pub struct TokenRequest {
 #[derive(MultipartForm)]
 pub struct TokenRequestMultipartForm {
     grant_type: Text<String>,
-    code: Text<String>,
+
+    // Required if grant type is "authorization_code"
+    code: Option<Text<String>>,
+    redirect_uri: Option<Text<String>>,
+    client_id: Option<Text<String>>,
+
+    // Required only with "password" grant type
+    username: Option<Text<String>>,
+    password: Option<Text<String>>,
 }
 
 impl From<TokenRequestMultipartForm> for TokenRequest {
     fn from(form: TokenRequestMultipartForm) -> Self {
         Self {
             grant_type: form.grant_type.into_inner(),
-            code: Some(form.code.into_inner()),
-            redirect_uri: None,
-            client_id: None,
-            username: None,
-            password: None,
+            code: form.code.map(|value| value.into_inner()),
+            redirect_uri: form.redirect_uri.map(|value| value.into_inner()),
+            client_id: form.client_id.map(|value| value.into_inner()),
+            username: form.username.map(|value| value.into_inner()),
+            password: form.password.map(|value| value.into_inner()),
             message: None,
             signature: None,
         }
