@@ -85,6 +85,7 @@ impl HttpSignatureVerificationError {
 
 type VerificationError = HttpSignatureVerificationError;
 
+/// Parsed HTTP signature
 pub struct HttpSignatureData {
     pub is_rfc9421: bool,
     pub key_id: VerificationMethod,

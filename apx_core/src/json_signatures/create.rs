@@ -5,6 +5,7 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value as JsonValue};
 use sha2::{Digest, Sha256};
+use thiserror::Error;
 
 use crate::{
     crypto::{
@@ -162,7 +163,8 @@ impl IntegrityProof {
     }
 }
 
-#[derive(thiserror::Error, Debug)]
+/// Errors that may occur during proof generation
+#[derive(Debug, Error)]
 pub enum JsonSignatureError {
     #[error(transparent)]
     JsonError(#[from] serde_json::Error),
@@ -282,7 +284,7 @@ pub fn sign_object_eddsa(
 }
 
 /// Adds integrity proof to a JSON document  
-/// <https://codeberg.org/silverpill/feps/src/branch/main/8b32/fep-8b32.md>
+/// <https://codeberg.org/fediverse/fep/src/branch/main/fep/8b32/fep-8b32.md>
 pub fn sign_object(
     signer_key: &Ed25519SecretKey,
     signer_key_id: &str,
@@ -299,6 +301,7 @@ pub fn sign_object(
     )
 }
 
+/// Returns `true` if object contains integrity proof
 pub fn is_object_signed(object: &JsonValue) -> bool {
     object.get(PROOF_KEY).is_some()
 }

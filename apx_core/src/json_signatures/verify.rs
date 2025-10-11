@@ -91,6 +91,7 @@ impl fmt::Display for VerificationMethod {
     }
 }
 
+/// Parsed integrity proof
 pub struct JsonSignatureData {
     pub proof_type: ProofType,
     pub verification_method: VerificationMethod,

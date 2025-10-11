@@ -1,7 +1,9 @@
-/// Proof types
+//! Proof types
 use std::str::FromStr;
 
-// https://w3c.github.io/vc-data-integrity/#dataintegrityproof
+use thiserror::Error;
+
+// https://www.w3.org/TR/vc-data-integrity/
 pub(super) const DATA_INTEGRITY_PROOF: &str = "DataIntegrityProof";
 
 // Similar to https://identity.foundation/JcsEd25519Signature2020/
@@ -14,28 +16,31 @@ pub(super) const PROOF_TYPE_JCS_RSA: &str = "MitraJcsRsaSignature2022";
 pub(super) const PROOF_TYPE_JCS_EIP191: &str = "MitraJcsEip191Signature2022";
 
 // Similar to Ed25519Signature2020
-// https://w3c-ccg.github.io/di-eddsa-2020/#ed25519signature2020
 // - Canonicalization algorithm: JCS
 // - Digest algorithm: BLAKE2b-512
 // - Signature algorithm: EdDSA
 pub(super) const PROOF_TYPE_JCS_BLAKE2_ED25519: &str = "MitraJcsEd25519Signature2022";
 
-// https://w3c.github.io/vc-di-eddsa/#eddsa-jcs-2022
+// https://www.w3.org/TR/vc-di-eddsa/#eddsa-jcs-2022
 // (old name, and a variant without context injection)
 pub(super) const CRYPTOSUITE_JCS_EDDSA_LEGACY: &str = "jcs-eddsa-2022";
-// (normal variant, unstable)
+// (normal variant)
 pub(super) const CRYPTOSUITE_JCS_EDDSA: &str = "eddsa-jcs-2022";
 
+/// Integrity proof type
 #[derive(Debug, PartialEq)]
 pub enum ProofType {
     JcsEip191Signature,
     JcsBlake2Ed25519Signature,
     JcsRsaSignature,
     JcsEddsaSignature,
+    /// `eddsa-jcs-2022` cryptosuite  
+    /// <https://www.w3.org/TR/vc-di-eddsa/#eddsa-jcs-2022>
     EddsaJcsSignature,
 }
 
-#[derive(thiserror::Error, Debug)]
+/// Error that may occur when cryptosuite name is parsed
+#[derive(Debug, Error)]
 #[error("unsupported proof type")]
 pub struct UnsupportedProofType;
 
