@@ -1,5 +1,5 @@
 use apx_core::{
-    crypto_eddsa::Ed25519SecretKey,
+    crypto::eddsa::Ed25519SecretKey,
     did::Did,
     did_pkh::DidPkh,
 };
@@ -1035,7 +1035,7 @@ pub async fn find_empty_profiles(
 mod tests {
     use apx_core::{
         caip2::ChainId,
-        crypto_eddsa::generate_weak_ed25519_key,
+        crypto::eddsa::generate_weak_ed25519_key,
     };
     use serde_json::json;
     use serial_test::serial;

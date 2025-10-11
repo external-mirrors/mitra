@@ -16,9 +16,11 @@ use thiserror::Error;
 
 use crate::{
     base64,
-    crypto::common::PublicKey,
-    crypto_eddsa::verify_eddsa_signature,
-    crypto_rsa::verify_rsa_sha256_signature,
+    crypto::{
+        common::PublicKey,
+        eddsa::verify_eddsa_signature,
+        rsa::verify_rsa_sha256_signature,
+    },
     http_digest::{
         parse_digest_header,
         parse_content_digest_header,
@@ -437,8 +439,10 @@ pub fn verify_http_signature(
 mod tests {
     use http::{HeaderName, HeaderValue};
     use crate::{
-        crypto_eddsa::generate_weak_ed25519_key,
-        crypto_rsa::generate_weak_rsa_key,
+        crypto::{
+            eddsa::generate_weak_ed25519_key,
+            rsa::generate_weak_rsa_key,
+        },
         http_signatures::create::{
             create_http_signature_cavage,
             create_http_signature_rfc9421,

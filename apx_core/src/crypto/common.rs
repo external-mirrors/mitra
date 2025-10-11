@@ -1,18 +1,20 @@
 //! # Public keys and secret keys
 
 use crate::{
-    crypto_eddsa::{
-        ed25519_public_key_from_bytes,
-        ed25519_public_key_from_pkcs8_pem,
-        ed25519_public_key_from_secret_key,
-        Ed25519PublicKey,
-        Ed25519SecretKey,
-    },
-    crypto_rsa::{
-        deserialize_rsa_public_key,
-        rsa_public_key_from_pkcs1_der,
-        RsaPublicKey,
-        RsaSecretKey,
+    crypto::{
+        eddsa::{
+            ed25519_public_key_from_bytes,
+            ed25519_public_key_from_pkcs8_pem,
+            ed25519_public_key_from_secret_key,
+            Ed25519PublicKey,
+            Ed25519SecretKey,
+        },
+        rsa::{
+            deserialize_rsa_public_key,
+            rsa_public_key_from_pkcs1_der,
+            RsaPublicKey,
+            RsaSecretKey,
+        },
     },
     multibase::decode_multibase_base58btc,
     multicodec::Multicodec,

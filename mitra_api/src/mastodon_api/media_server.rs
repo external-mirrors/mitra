@@ -1,5 +1,5 @@
 use apx_core::{
-    crypto_eddsa::{
+    crypto::eddsa::{
         create_eddsa_signature,
         Ed25519SecretKey,
     },
@@ -27,7 +27,7 @@ impl ClientMediaServer {
 
     #[cfg(test)]
     pub fn for_test(base_url: &str) -> Self {
-        use apx_core::crypto_eddsa::generate_weak_ed25519_key;
+        use apx_core::crypto::eddsa::generate_weak_ed25519_key;
         let media_server = MediaServer::for_test(base_url);
         let media_proxy_key = generate_weak_ed25519_key();
         Self {

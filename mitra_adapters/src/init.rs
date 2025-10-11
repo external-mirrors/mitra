@@ -1,14 +1,16 @@
 use apx_core::{
-    crypto_eddsa::{
-        ed25519_secret_key_from_bytes,
-        generate_ed25519_key,
-        Ed25519SecretKey,
-    },
-    crypto_rsa::{
-        generate_rsa_key,
-        rsa_secret_key_from_pkcs1_der,
-        rsa_secret_key_to_pkcs1_der,
-        RsaSecretKey,
+    crypto::{
+        eddsa::{
+            ed25519_secret_key_from_bytes,
+            generate_ed25519_key,
+            Ed25519SecretKey,
+        },
+        rsa::{
+            generate_rsa_key,
+            rsa_secret_key_from_pkcs1_der,
+            rsa_secret_key_to_pkcs1_der,
+            RsaSecretKey,
+        },
     },
 };
 use log::Level;

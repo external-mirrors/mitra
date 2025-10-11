@@ -1,9 +1,11 @@
 use apx_sdk::{
     constants::AP_PUBLIC,
     core::{
-        crypto::common::PublicKey,
-        crypto_eddsa::ed25519_public_key_from_secret_key,
-        crypto_rsa::RsaPublicKey,
+        crypto::{
+            common::PublicKey,
+            eddsa::ed25519_public_key_from_secret_key,
+            rsa::RsaPublicKey,
+        },
         url::canonical::CanonicalUri,
     },
     deserialization::deserialize_into_id_array,

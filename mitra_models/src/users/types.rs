@@ -2,14 +2,16 @@ use std::collections::HashMap;
 use std::fmt;
 
 use apx_core::{
-    crypto_eddsa::{
-        ed25519_secret_key_from_bytes,
-        Ed25519SecretKey,
-    },
-    crypto_rsa::{
-        rsa_secret_key_from_pkcs1_der,
-        rsa_secret_key_from_pkcs8_pem,
-        RsaSecretKey,
+    crypto::{
+        eddsa::{
+            ed25519_secret_key_from_bytes,
+            Ed25519SecretKey,
+        },
+        rsa::{
+            rsa_secret_key_from_pkcs1_der,
+            rsa_secret_key_from_pkcs8_pem,
+            RsaSecretKey,
+        },
     },
     did::Did,
 };
@@ -171,8 +173,10 @@ impl fmt::Display for User {
 impl Default for User {
     fn default() -> Self {
         use apx_core::{
-            crypto_eddsa::generate_weak_ed25519_key,
-            crypto_rsa::generate_weak_rsa_key,
+            crypto::{
+                eddsa::generate_weak_ed25519_key,
+                rsa::generate_weak_rsa_key,
+            },
         };
         let id = Uuid::new_v4();
         Self {
@@ -277,10 +281,12 @@ impl UserCreateData {
 impl Default for UserCreateData {
     fn default() -> Self {
         use apx_core::{
-            crypto_eddsa::generate_ed25519_key,
-            crypto_rsa::{
-                generate_weak_rsa_key,
-                rsa_secret_key_to_pkcs8_pem,
+            crypto::{
+                eddsa::generate_ed25519_key,
+                rsa::{
+                    generate_weak_rsa_key,
+                    rsa_secret_key_to_pkcs8_pem,
+                },
             },
         };
         let rsa_secret_key = generate_weak_rsa_key().unwrap();
@@ -390,7 +396,7 @@ impl TryFrom<&Row> for AccountAdminInfo {
 
 #[cfg(test)]
 mod tests {
-    use apx_core::crypto_eddsa::generate_ed25519_key;
+    use apx_core::crypto::eddsa::generate_ed25519_key;
     use super::*;
 
     #[test]

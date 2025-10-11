@@ -7,15 +7,17 @@ use serde_json::{Value as JsonValue};
 use sha2::{Digest, Sha256};
 
 use crate::{
-    crypto_eddsa::{
-        create_eddsa_signature,
-        Ed25519SecretKey,
-        EddsaError,
-    },
-    crypto_rsa::{
-        create_rsa_sha256_signature,
-        RsaError,
-        RsaSecretKey,
+    crypto::{
+        eddsa::{
+            create_eddsa_signature,
+            Ed25519SecretKey,
+            EddsaError,
+        },
+        rsa::{
+            create_rsa_sha256_signature,
+            RsaError,
+            RsaSecretKey,
+        },
     },
     jcs::{
         canonicalize_object,
@@ -305,8 +307,10 @@ pub fn is_object_signed(object: &JsonValue) -> bool {
 mod tests {
     use serde_json::json;
     use crate::{
-        crypto_eddsa::generate_weak_ed25519_key,
-        crypto_rsa::generate_weak_rsa_key,
+        crypto::{
+            eddsa::generate_weak_ed25519_key,
+            rsa::generate_weak_rsa_key,
+        },
     };
     use super::*;
 

@@ -1,9 +1,11 @@
 use anyhow::{anyhow, Error};
 use apx_core::{
-    crypto_eddsa::generate_ed25519_key,
-    crypto_rsa::{
-        generate_rsa_key,
-        rsa_secret_key_to_pkcs8_pem,
+    crypto::{
+        eddsa::generate_ed25519_key,
+        rsa::{
+            generate_rsa_key,
+            rsa_secret_key_to_pkcs8_pem,
+        },
     },
 };
 use clap::Parser;

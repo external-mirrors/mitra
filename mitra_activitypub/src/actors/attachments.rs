@@ -307,7 +307,7 @@ mod tests {
     use std::num::NonZeroU64;
     use apx_core::{
         caip2::ChainId,
-        crypto_ecdsa::generate_ecdsa_key,
+        crypto::ecdsa::generate_ecdsa_key,
         did::Did,
         did_pkh::DidPkh,
         eip191::{create_eip191_signature, ecdsa_public_key_to_address_hex},

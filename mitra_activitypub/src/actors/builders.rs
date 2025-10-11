@@ -1,5 +1,5 @@
 use apx_core::{
-    crypto_rsa::RsaSerializationError,
+    crypto::rsa::RsaSerializationError,
     url::http_uri::HttpUri,
 };
 use chrono::{DateTime, Utc};

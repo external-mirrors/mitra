@@ -1,4 +1,4 @@
-use apx_core::crypto_rsa::RsaSecretKey;
+use apx_core::crypto::rsa::RsaSecretKey;
 use apx_sdk::agent::{FederationAgent, HttpSigner};
 
 use mitra_config::Instance;

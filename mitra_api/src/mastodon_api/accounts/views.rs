@@ -19,10 +19,12 @@ use actix_web::{
 use actix_web_httpauth::extractors::bearer::BearerAuth;
 use apx_core::{
     caip2::ChainId,
-    crypto_eddsa::generate_ed25519_key,
-    crypto_rsa::{
-        generate_rsa_key,
-        rsa_secret_key_to_pkcs8_pem,
+    crypto::{
+        eddsa::generate_ed25519_key,
+        rsa::{
+            generate_rsa_key,
+            rsa_secret_key_to_pkcs8_pem,
+        },
     },
     did::Did,
     did_pkh::DidPkh,

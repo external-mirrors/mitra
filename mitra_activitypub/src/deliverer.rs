@@ -1,17 +1,19 @@
 use std::collections::HashMap;
 
 use apx_core::{
-    crypto_eddsa::{
-        ed25519_public_key_from_secret_key,
-        ed25519_secret_key_from_bytes,
-        Ed25519SecretKey,
-    },
-    crypto_rsa::{
-        rsa_public_key_to_pkcs1_der,
-        rsa_secret_key_from_pkcs1_der,
-        rsa_secret_key_to_pkcs1_der,
-        RsaPublicKey,
-        RsaSecretKey,
+    crypto::{
+        eddsa::{
+            ed25519_public_key_from_secret_key,
+            ed25519_secret_key_from_bytes,
+            Ed25519SecretKey,
+        },
+        rsa::{
+            rsa_public_key_to_pkcs1_der,
+            rsa_secret_key_from_pkcs1_der,
+            rsa_secret_key_to_pkcs1_der,
+            RsaPublicKey,
+            RsaSecretKey,
+        },
     },
     json_signatures::create::{
         is_object_signed,
@@ -407,8 +409,10 @@ pub(super) async fn deliver_activity_worker(
 #[cfg(test)]
 mod tests {
     use apx_core::{
-        crypto_eddsa::generate_weak_ed25519_key,
-        crypto_rsa::generate_weak_rsa_key,
+        crypto::{
+            eddsa::generate_weak_ed25519_key,
+            rsa::generate_weak_rsa_key,
+        },
     };
     use super::*;
 

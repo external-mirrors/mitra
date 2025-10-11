@@ -3,7 +3,7 @@ use std::num::NonZeroU64;
 
 use apx_core::{
     caip2::ChainId,
-    crypto_eddsa::{
+    crypto::eddsa::{
         ed25519_public_key_from_secret_key,
         Ed25519SecretKey,
     },

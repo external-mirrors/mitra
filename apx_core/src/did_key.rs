@@ -7,7 +7,7 @@ use std::str::FromStr;
 use regex::Regex;
 
 use crate::{
-    crypto_eddsa::{
+    crypto::eddsa::{
         ed25519_public_key_from_bytes,
         Ed25519PublicKey,
     },
@@ -88,7 +88,7 @@ impl fmt::Display for DidKey {
 #[cfg(test)]
 mod tests {
     use rsa::traits::PublicKeyParts;
-    use crate::crypto_rsa::rsa_public_key_from_pkcs1_der;
+    use crate::crypto::rsa::rsa_public_key_from_pkcs1_der;
     use super::*;
 
     #[test]

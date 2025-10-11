@@ -5,7 +5,7 @@ use actix_web::{
     Scope,
 };
 use apx_core::{
-    crypto_eddsa::{
+    crypto::eddsa::{
         ed25519_public_key_from_secret_key,
         verify_eddsa_signature,
     },

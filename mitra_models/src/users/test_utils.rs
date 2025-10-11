@@ -1,6 +1,8 @@
 use apx_core::{
-    crypto_eddsa::generate_weak_ed25519_key,
-    crypto_rsa::generate_weak_rsa_key,
+    crypto::{
+        eddsa::generate_weak_ed25519_key,
+        rsa::generate_weak_rsa_key,
+    },
 };
 
 use crate::{

@@ -1,15 +1,17 @@
 use apx_core::{
-    crypto::common::PublicKey,
-    crypto_eddsa::{
-        ed25519_public_key_from_bytes,
-        Ed25519PublicKey,
-        Ed25519SerializationError,
-    },
-    crypto_rsa::{
-        deserialize_rsa_public_key,
-        rsa_public_key_from_pkcs1_der,
-        RsaPublicKey,
-        RsaSerializationError,
+    crypto::{
+        common::PublicKey,
+        eddsa::{
+            ed25519_public_key_from_bytes,
+            Ed25519PublicKey,
+            Ed25519SerializationError,
+        },
+        rsa::{
+            deserialize_rsa_public_key,
+            rsa_public_key_from_pkcs1_der,
+            RsaPublicKey,
+            RsaSerializationError,
+        },
     },
     http_digest::ContentDigest,
     http_signatures::{

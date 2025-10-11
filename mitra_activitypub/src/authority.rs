@@ -1,7 +1,7 @@
 use std::fmt;
 
 use apx_core::{
-    crypto_eddsa::{
+    crypto::eddsa::{
         ed25519_public_key_from_secret_key,
         Ed25519SecretKey,
         Ed25519PublicKey,
@@ -94,7 +94,7 @@ impl From<&Instance> for Authority {
 
 #[cfg(test)]
 mod tests {
-    use apx_core::crypto_eddsa::generate_weak_ed25519_key;
+    use apx_core::crypto::eddsa::generate_weak_ed25519_key;
     use super::*;
 
     const SERVER_URI: &str = "https://server.example";

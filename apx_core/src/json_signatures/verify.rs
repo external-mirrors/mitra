@@ -5,8 +5,10 @@ use serde_json::{Value as JsonValue};
 use thiserror::Error;
 
 use crate::{
-    crypto_eddsa::{verify_eddsa_signature, Ed25519PublicKey},
-    crypto_rsa::{verify_rsa_sha256_signature, RsaPublicKey},
+    crypto::{
+        eddsa::{verify_eddsa_signature, Ed25519PublicKey},
+        rsa::{verify_rsa_sha256_signature, RsaPublicKey},
+    },
     did_url::DidUrl,
     jcs::{
         canonicalize_object,
@@ -230,13 +232,15 @@ mod tests {
     use chrono::{DateTime, Utc};
     use serde_json::json;
     use crate::{
-        crypto_eddsa::{
-            generate_ed25519_key,
-            ed25519_public_key_from_multikey,
-            ed25519_public_key_from_secret_key,
-            ed25519_secret_key_from_multikey,
+        crypto::{
+            eddsa::{
+                generate_ed25519_key,
+                ed25519_public_key_from_multikey,
+                ed25519_public_key_from_secret_key,
+                ed25519_secret_key_from_multikey,
+            },
+            rsa::generate_weak_rsa_key,
         },
-        crypto_rsa::generate_weak_rsa_key,
         json_signatures::create::{
             sign_object,
             sign_object_eddsa,

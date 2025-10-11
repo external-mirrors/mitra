@@ -781,13 +781,15 @@ pub async fn update_remote_profile(
 #[cfg(test)]
 mod tests {
     use apx_core::{
-        crypto_eddsa::{
-            ed25519_public_key_from_secret_key,
-            generate_ed25519_key,
-        },
-        crypto_rsa::{
-            generate_weak_rsa_key,
-            rsa_public_key_to_pkcs1_der,
+        crypto::{
+            eddsa::{
+                ed25519_public_key_from_secret_key,
+                generate_ed25519_key,
+            },
+            rsa::{
+                generate_weak_rsa_key,
+                rsa_public_key_to_pkcs1_der,
+            },
         },
     };
     use mitra_models::profiles::types::PublicKeyType;

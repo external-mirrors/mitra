@@ -8,9 +8,6 @@
 
 pub mod base64;
 pub mod crypto;
-pub mod crypto_ecdsa;
-pub mod crypto_eddsa;
-pub mod crypto_rsa;
 pub mod did;
 pub mod did_key;
 pub mod did_url;

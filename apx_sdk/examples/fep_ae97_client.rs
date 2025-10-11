@@ -1,11 +1,13 @@
 use apx_sdk::{
     agent::FederationAgent,
     core::{
-        crypto_eddsa::{
-            ed25519_public_key_from_secret_key,
-            generate_ed25519_key,
+        crypto::{
+            eddsa::{
+                ed25519_public_key_from_secret_key,
+                generate_ed25519_key,
+            },
+            rsa::generate_rsa_key,
         },
-        crypto_rsa::generate_rsa_key,
         did_key::DidKey,
         http_signatures::create::HttpSigner,
         json_signatures::create::sign_object,

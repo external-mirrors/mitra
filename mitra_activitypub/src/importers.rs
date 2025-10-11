@@ -1,8 +1,10 @@
 use std::collections::HashMap;
 
 use apx_core::{
-    crypto_eddsa::generate_ed25519_key,
-    crypto_rsa::generate_rsa_key,
+    crypto::{
+        eddsa::generate_ed25519_key,
+        rsa::generate_rsa_key,
+    },
     url::{
         canonical::{parse_url, CanonicalUri},
         http_uri::HttpUri,

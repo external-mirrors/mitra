@@ -14,15 +14,17 @@ use thiserror::Error;
 
 use crate::{
     base64,
-    crypto::common::SecretKey,
-    crypto_eddsa::{
-        create_eddsa_signature,
-        Ed25519SecretKey,
-    },
-    crypto_rsa::{
-        create_rsa_sha256_signature,
-        RsaError,
-        RsaSecretKey,
+    crypto::{
+        common::SecretKey,
+        eddsa::{
+            create_eddsa_signature,
+            Ed25519SecretKey,
+        },
+        rsa::{
+            create_rsa_sha256_signature,
+            RsaError,
+            RsaSecretKey,
+        },
     },
     http_digest::{
         create_content_digest_header,
@@ -261,7 +263,7 @@ pub fn create_http_signature_rfc9421(
 
 #[cfg(test)]
 mod tests {
-    use crate::crypto_rsa::generate_weak_rsa_key;
+    use crate::crypto::rsa::generate_weak_rsa_key;
     use super::*;
 
     #[test]

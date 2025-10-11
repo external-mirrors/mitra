@@ -2,8 +2,10 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 
 use apx_core::{
-    crypto_eddsa::Ed25519SecretKey,
-    crypto_rsa::RsaSecretKey,
+    crypto::{
+        eddsa::Ed25519SecretKey,
+        rsa::RsaSecretKey,
+    },
 };
 use log::{Level as LogLevel};
 use serde::Deserialize;

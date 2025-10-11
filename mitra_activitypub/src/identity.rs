@@ -148,7 +148,7 @@ pub fn create_identity_proof_fep_c390(
 #[cfg(test)]
 mod tests {
     use apx_core::{
-        crypto_eddsa::{
+        crypto::eddsa::{
             generate_weak_ed25519_key,
             ed25519_public_key_from_secret_key,
             ed25519_secret_key_from_multikey,

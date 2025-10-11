@@ -1,6 +1,8 @@
 use apx_core::{
-    crypto_eddsa::Ed25519SecretKey,
-    crypto_rsa::RsaSecretKey,
+    crypto::{
+        eddsa::Ed25519SecretKey,
+        rsa::RsaSecretKey,
+    },
     url::{
         hostname::{guess_protocol, is_ipv6_hostname},
         http_uri::{parse_http_url_whatwg, HttpUri},
@@ -108,8 +110,10 @@ impl Instance {
 impl Instance {
     pub fn for_test(url: &str) -> Self {
         use apx_core::{
-            crypto_eddsa::generate_weak_ed25519_key,
-            crypto_rsa::generate_weak_rsa_key,
+            crypto::{
+                eddsa::generate_weak_ed25519_key,
+                rsa::generate_weak_rsa_key,
+            },
         };
         Self {
             _uri: parse_instance_url(url).unwrap(),

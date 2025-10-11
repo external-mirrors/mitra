@@ -1,17 +1,19 @@
 use apx_core::{
-    crypto::common::PublicKey,
-    crypto_eddsa::{
-        ed25519_public_key_from_secret_key,
-        ed25519_public_key_to_multikey,
-        Ed25519SecretKey,
-    },
-    crypto_rsa::{
-        rsa_public_key_to_multikey,
-        rsa_public_key_to_pkcs1_der,
-        rsa_public_key_to_pkcs8_pem,
-        RsaPublicKey,
-        RsaSecretKey,
-        RsaSerializationError,
+    crypto::{
+        common::PublicKey,
+        eddsa::{
+            ed25519_public_key_from_secret_key,
+            ed25519_public_key_to_multikey,
+            Ed25519SecretKey,
+        },
+        rsa::{
+            rsa_public_key_to_multikey,
+            rsa_public_key_to_pkcs1_der,
+            rsa_public_key_to_pkcs8_pem,
+            RsaPublicKey,
+            RsaSecretKey,
+            RsaSerializationError,
+        },
     },
 };
 use serde::{Deserialize, Serialize};
@@ -151,13 +153,15 @@ pub fn verification_method_to_public_key(
 #[cfg(test)]
 mod tests {
     use apx_core::{
-        crypto_eddsa::{
-            ed25519_public_key_from_bytes,
-            generate_ed25519_key,
-        },
-        crypto_rsa::{
-            generate_weak_rsa_key,
-            rsa_public_key_from_pkcs1_der,
+        crypto::{
+            eddsa::{
+                ed25519_public_key_from_bytes,
+                generate_ed25519_key,
+            },
+            rsa::{
+                generate_weak_rsa_key,
+                rsa_public_key_from_pkcs1_der,
+            },
         },
     };
     use super::*;
