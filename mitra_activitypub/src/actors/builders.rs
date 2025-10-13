@@ -393,7 +393,7 @@ mod tests {
                 "https://www.w3.org/ns/activitystreams",
                 "https://www.w3.org/ns/cid/v1",
                 "https://w3id.org/security/v1",
-                "https://w3id.org/security/data-integrity/v1",
+                "https://w3id.org/security/data-integrity/v2",
                 {
                     "manuallyApprovesFollowers": "as:manuallyApprovesFollowers",
                     "schema": "http://schema.org/",
@@ -492,7 +492,7 @@ mod tests {
                 "https://www.w3.org/ns/activitystreams",
                 "https://www.w3.org/ns/cid/v1",
                 "https://w3id.org/security/v1",
-                "https://w3id.org/security/data-integrity/v1",
+                "https://w3id.org/security/data-integrity/v2",
                 {
                     "manuallyApprovesFollowers": "as:manuallyApprovesFollowers",
                     "schema": "http://schema.org/",
@@ -578,7 +578,7 @@ mod tests {
                 "https://www.w3.org/ns/activitystreams",
                 "https://www.w3.org/ns/cid/v1",
                 "https://w3id.org/security/v1",
-                "https://w3id.org/security/data-integrity/v1",
+                "https://w3id.org/security/data-integrity/v2",
                 {
                     "manuallyApprovesFollowers": "as:manuallyApprovesFollowers",
                     "schema": "http://schema.org/",

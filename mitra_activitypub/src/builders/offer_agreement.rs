@@ -148,7 +148,7 @@ mod tests {
             "@context": [
                 "https://www.w3.org/ns/activitystreams",
                 "https://w3id.org/security/v1",
-                "https://w3id.org/security/data-integrity/v1",
+                "https://w3id.org/security/data-integrity/v2",
                 {
                     "Hashtag": "as:Hashtag",
                     "sensitive": "as:sensitive",
