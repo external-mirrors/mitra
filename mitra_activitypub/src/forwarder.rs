@@ -58,6 +58,8 @@ pub fn validate_public_keys(
 ) -> Result<(), ValidationError> {
     let objects = find_objects(object);
     for object in objects {
+        // WARNING: this is not reliable if JSON-LD is used
+        // https://codeberg.org/fediverse/fep/src/commit/8862845a2b71a32e254932757ef7696b6714739d/fep/2277/fep-2277.md#json-ld
         if !is_verification_method(&object) {
             continue;
         };
