@@ -2235,8 +2235,9 @@ dependencies = [
 
 [[package]]
 name = "monero-rpc"
-version = "0.4.0"
-source = "git+https://github.com/monero-rs/monero-rpc-rs?rev=b943a4a79eb55daaa43259b507e8af34e707c313#b943a4a79eb55daaa43259b507e8af34e707c313"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "546a1f3a4a139392dbc4a65ca8df5e5958878b747801539012d5e3986b9f8f42"
 dependencies = [
  "anyhow",
  "chrono",
