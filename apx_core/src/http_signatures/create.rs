@@ -29,7 +29,7 @@ use crate::{
         create_digest_header,
         ContentDigest,
     },
-    http_url::{normalize_http_url, HttpUrl},
+    http_url::{normalize_http_url, HttpUri},
 };
 
 const HTTP_SIGNATURE_ALGORITHM: &str = "rsa-sha256";
@@ -93,7 +93,7 @@ pub fn create_http_signature_cavage(
     // URL is normalized
     let request_url = normalize_http_url(request_url)
         .map_err(HttpSignatureError::UrlError)?;
-    let request_uri = HttpUrl::parse(&request_url)
+    let request_uri = HttpUri::parse(&request_url)
         .map_err(HttpSignatureError::UrlError)?;
     let request_target = format!(
         "{} {}",
@@ -181,7 +181,7 @@ pub fn create_http_signature_rfc9421(
 ) -> Result<HttpSignatureHeadersRfc9421, HttpSignatureError> {
     let request_url = normalize_http_url(request_url)
         .map_err(HttpSignatureError::UrlError)?;
-    let request_uri = HttpUrl::parse(&request_url)
+    let request_uri = HttpUri::parse(&request_url)
         .map_err(HttpSignatureError::UrlError)?;
     let created = Utc::now().timestamp();
     let maybe_content_digest_header = if let Some(body) = maybe_request_body {

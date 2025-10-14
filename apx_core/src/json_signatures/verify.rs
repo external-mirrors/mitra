@@ -9,7 +9,7 @@ use crate::{
     crypto_eddsa::{verify_eddsa_signature, Ed25519PublicKey},
     crypto_rsa::{verify_rsa_sha256_signature, RsaPublicKey},
     did_url::DidUrl,
-    http_url::HttpUrl,
+    http_url::HttpUri,
     jcs::{
         canonicalize_object,
         CanonicalizationError,
@@ -45,7 +45,7 @@ const PROOF_VALUE_KEY: &str = "proofValue";
 /// Signature verification method
 #[derive(Debug, PartialEq)]
 pub enum VerificationMethod {
-    HttpUrl(HttpUrl),
+    HttpUri(HttpUri),
     ApUri(ApUri),
     DidUrl(DidUrl),
 }
@@ -59,8 +59,8 @@ impl VerificationMethod {
             Self::ApUri(ap_uri)
         } else if let Ok(did_url) = DidUrl::parse(url) {
             Self::DidUrl(did_url)
-        } else if let Ok(http_url) = HttpUrl::parse(url) {
-            Self::HttpUrl(http_url)
+        } else if let Ok(http_uri) = HttpUri::parse(url) {
+            Self::HttpUri(http_uri)
         } else {
             return Err("invalid verification method ID");
         };
@@ -70,7 +70,7 @@ impl VerificationMethod {
     /// Returns origin tuple for this verification method
     pub fn origin(&self) -> Origin {
         match self {
-            Self::HttpUrl(http_url) => http_url.origin(),
+            Self::HttpUri(http_uri) => http_uri.origin(),
             Self::ApUri(ap_uri) => ap_uri.origin(),
             Self::DidUrl(did_url) => did_url.origin(),
         }
@@ -80,7 +80,7 @@ impl VerificationMethod {
 impl fmt::Display for VerificationMethod {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::HttpUrl(http_url) => write!(formatter, "{}", http_url),
+            Self::HttpUri(http_uri) => write!(formatter, "{}", http_uri),
             Self::ApUri(ap_uri) => write!(formatter, "{}", ap_uri),
             Self::DidUrl(did_url) => write!(formatter, "{}", did_url),
         }
@@ -252,7 +252,7 @@ mod tests {
     fn test_verification_method_parse() {
         let url = "http://social.example/actors/1#main-key";
         let vm_id = VerificationMethod::parse(url).unwrap();
-        assert!(matches!(vm_id, VerificationMethod::HttpUrl(_)));
+        assert!(matches!(vm_id, VerificationMethod::HttpUri(_)));
 
         let url = "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor#main-key";
         let vm_id = VerificationMethod::parse(url).unwrap();
@@ -260,7 +260,7 @@ mod tests {
 
         let url = "https://gateway.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor#main-key";
         let vm_id = VerificationMethod::parse(url).unwrap();
-        assert!(matches!(vm_id, VerificationMethod::HttpUrl(_)));
+        assert!(matches!(vm_id, VerificationMethod::HttpUri(_)));
 
         let url = "did:key:z6MkrJVnaZkeFzdQyMZu1cgjg7k1pZZ6pvBQ7XJPt4swbTQ2#z6MkrJVnaZkeFzdQyMZu1cgjg7k1pZZ6pvBQ7XJPt4swbTQ2";
         let vm_id = VerificationMethod::parse(url).unwrap();
@@ -327,7 +327,7 @@ mod tests {
             ProofType::JcsRsaSignature,
         );
         let expected_vm =
-            VerificationMethod::HttpUrl(HttpUrl::parse(signer_key_id).unwrap());
+            VerificationMethod::HttpUri(HttpUri::parse(signer_key_id).unwrap());
         assert_eq!(signature_data.verification_method, expected_vm);
 
         let signer_public_key = RsaPublicKey::from(signer_key);
@@ -372,7 +372,7 @@ mod tests {
             ProofType::JcsEddsaSignature,
         );
         let expected_vm =
-            VerificationMethod::HttpUrl(HttpUrl::parse(signer_key_id).unwrap());
+            VerificationMethod::HttpUri(HttpUri::parse(signer_key_id).unwrap());
         assert_eq!(signature_data.verification_method, expected_vm);
 
         let signer_public_key =
@@ -416,7 +416,7 @@ mod tests {
             ProofType::EddsaJcsSignature,
         );
         let expected_vm =
-            VerificationMethod::HttpUrl(HttpUrl::parse(signer_key_id).unwrap());
+            VerificationMethod::HttpUri(HttpUri::parse(signer_key_id).unwrap());
         assert_eq!(signature_data.verification_method, expected_vm);
 
         let signer_public_key =

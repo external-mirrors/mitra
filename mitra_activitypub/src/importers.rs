@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use apx_core::{
     crypto_eddsa::generate_ed25519_key,
     crypto_rsa::generate_rsa_key,
-    http_url::HttpUrl,
+    http_url::HttpUri,
     url::{
         canonical::{parse_url, CanonicalUri},
     },
@@ -214,7 +214,7 @@ impl ApClient {
         &self,
         object_id: &str,
     ) -> Result<T, HandlerError> {
-        let hostname = HttpUrl::parse(object_id)
+        let hostname = HttpUri::parse(object_id)
             .map_err(ValidationError)?
             .hostname();
         if self.filter.is_action_required(
@@ -777,7 +777,7 @@ async fn fetch_collection(
     let mut authenticated = vec![];
     for item in items.into_iter().take(limit) {
         let item_id = object_to_id(&item)
-            .map(|id| HttpUrl::parse(&id))
+            .map(|id| HttpUri::parse(&id))
             .map_err(|_| ValidationError("invalid object ID"))?
             .map_err(|_| ValidationError("invalid object ID"))?;
         match item {

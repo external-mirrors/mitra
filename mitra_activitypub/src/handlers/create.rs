@@ -1,4 +1,4 @@
-use apx_core::http_url::HttpUrl;
+use apx_core::http_url::HttpUri;
 use apx_sdk::{
     authentication::{verify_portable_object, AuthenticationError},
     deserialization::{deserialize_into_object_id, object_to_id},
@@ -155,8 +155,8 @@ pub async fn handle_create(
             sender_id,
         ).await?;
         // TODO: FEP-EF61: keyword filtering for portable messages
-        if let Ok(http_url) = HttpUrl::parse(&author_id) {
-            let author_hostname = http_url.hostname();
+        if let Ok(http_uri) = HttpUri::parse(&author_id) {
+            let author_hostname = http_uri.hostname();
             let content = get_object_content(&object.inner)?;
             if ap_client.filter.is_action_required(
                 author_hostname.as_str(),

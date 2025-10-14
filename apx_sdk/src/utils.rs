@@ -4,7 +4,7 @@ use serde_json::{Value as JsonValue};
 
 use apx_core::{
     http_types::HeaderValue,
-    http_url::HttpUrl,
+    http_url::HttpUri,
     http_utils::remove_quotes,
 };
 
@@ -89,14 +89,14 @@ pub fn is_object(value: &JsonValue) -> bool {
 }
 
 pub fn key_id_to_actor_id(key_id: &str) -> Result<String, &'static str> {
-    let key_url = HttpUrl::parse(key_id)?;
-    let actor_id = if key_url.query().filter(|query| query.contains("id=")).is_some() {
+    let key_uri = HttpUri::parse(key_id)?;
+    let actor_id = if key_uri.query().filter(|query| query.contains("id=")).is_some() {
         // Podcast Index compat
         // Strip fragment, keep query
-        key_url.without_fragment()
+        key_uri.without_fragment()
     } else {
         // Strip fragment and query (works with most AP servers)
-        key_url.without_query_and_fragment()
+        key_uri.without_query_and_fragment()
     };
     // GoToSocial compat
     let actor_id = actor_id.trim_end_matches("/main-key");

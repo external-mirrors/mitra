@@ -1,6 +1,6 @@
 use apx_core::{
     crypto_rsa::RsaSerializationError,
-    http_url::HttpUrl,
+    http_url::HttpUri,
 };
 use chrono::{DateTime, Utc};
 use indexmap::IndexMap;
@@ -191,12 +191,12 @@ pub struct Actor {
 }
 
 pub fn build_local_actor(
-    instance_url: &HttpUrl,
+    instance_url: &HttpUri,
     authority: &Authority,
     media_server: &MediaServer,
     user: &User,
 ) -> Result<Actor, DatabaseError> {
-    assert_eq!(authority.server_url(), Some(instance_url.as_str()), "authority should be anchored");
+    assert_eq!(authority.server_uri(), Some(instance_url.as_str()), "authority should be anchored");
     let username = &user.profile.username;
     let actor_id = local_actor_id_unified(authority, username);
     let actor_type = if user.profile.is_automated {
@@ -371,7 +371,7 @@ mod tests {
 
     #[test]
     fn test_build_local_actor() {
-        let instance_url = HttpUrl::parse(INSTANCE_URL).unwrap();
+        let instance_url = HttpUri::parse(INSTANCE_URL).unwrap();
         let mut profile = DbActorProfile::local_for_test("testuser");
         profile.bio = Some("testbio".to_string());
         profile.created_at = DateTime::parse_from_rfc3339("2023-02-24T23:36:38Z")
@@ -467,7 +467,7 @@ mod tests {
 
     #[test]
     fn test_build_local_actor_fep_ef61() {
-        let instance_url = HttpUrl::parse(INSTANCE_URL).unwrap();
+        let instance_url = HttpUri::parse(INSTANCE_URL).unwrap();
         let mut profile = DbActorProfile::local_for_test("testuser");
         profile.bio = Some("testbio".to_string());
         profile.created_at = DateTime::parse_from_rfc3339("2023-02-24T23:36:38Z")

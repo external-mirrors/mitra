@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use anyhow::{anyhow, Error};
 use apx_sdk::{
     core::{
-        http_url::HttpUrl,
+        http_url::HttpUri,
         media_type::sniff_media_type,
     },
     fetch::fetch_media,
@@ -95,7 +95,7 @@ impl CreatePost {
         let mut attachments = vec![];
         let storage = MediaStorage::new(config);
         for location in self.attachment.iter() {
-            let (file_data, media_type) = if HttpUrl::parse(location).is_ok() {
+            let (file_data, media_type) = if HttpUri::parse(location).is_ok() {
                 let agent = build_federation_agent(&config.instance(), None);
                 fetch_media(
                     &agent,

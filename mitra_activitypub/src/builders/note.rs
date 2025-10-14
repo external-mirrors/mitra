@@ -4,7 +4,7 @@ use apx_sdk::{
     addresses::WebfingerAddress,
     constants::{AP_MEDIA_TYPE, AP_PUBLIC},
     core::{
-        http_url::HttpUrl,
+        http_url::HttpUri,
         multihash::encode_sha256_multihash,
     },
     deserialization::deserialize_string_array,
@@ -170,14 +170,14 @@ pub struct Note {
 }
 
 pub fn build_note(
-    instance_url: &HttpUrl,
+    instance_url: &HttpUri,
     authority: &Authority,
     media_server: &MediaServer,
     post: &Post,
     with_context: bool,
 ) -> Note {
     let related_posts = post.expect_related_posts();
-    assert_eq!(authority.server_url(), Some(instance_url.as_str()), "authority should be anchored");
+    assert_eq!(authority.server_uri(), Some(instance_url.as_str()), "authority should be anchored");
     let object_id = local_object_id_unified(authority, post.id);
     let mut object_type = NOTE;
     let actor_id = local_actor_id_unified(authority, &post.author.username);
@@ -488,7 +488,7 @@ mod tests {
 
     #[test]
     fn test_build_note() {
-        let instance_url = HttpUrl::parse(INSTANCE_URL).unwrap();
+        let instance_url = HttpUri::parse(INSTANCE_URL).unwrap();
         let author = DbActorProfile::local_for_test("author");
         let post = Post {
             author,
@@ -540,7 +540,7 @@ mod tests {
 
     #[test]
     fn test_build_question() {
-        let instance_url = HttpUrl::parse(INSTANCE_URL).unwrap();
+        let instance_url = HttpUri::parse(INSTANCE_URL).unwrap();
         let author = DbActorProfile::local_for_test("author");
         let poll = Poll {
             id: uuid!("11fa64ff-b5a3-47bf-b23d-22b360581c3f"),
@@ -620,7 +620,7 @@ mod tests {
 
     #[test]
     fn test_build_note_followers_only() {
-        let instance_url = HttpUrl::parse(INSTANCE_URL).unwrap();
+        let instance_url = HttpUri::parse(INSTANCE_URL).unwrap();
         let post = Post {
             visibility: Visibility::Followers,
             related_posts: Some(RelatedPosts::default()),
@@ -644,7 +644,7 @@ mod tests {
 
     #[test]
     fn test_build_note_subscribers_only() {
-        let instance_url = HttpUrl::parse(INSTANCE_URL).unwrap();
+        let instance_url = HttpUri::parse(INSTANCE_URL).unwrap();
         let subscriber_id = "https://test.com/users/3";
         let subscriber = DbActorProfile::remote_for_test(
             "subscriber",
@@ -675,7 +675,7 @@ mod tests {
 
     #[test]
     fn test_build_note_direct() {
-        let instance_url = HttpUrl::parse(INSTANCE_URL).unwrap();
+        let instance_url = HttpUri::parse(INSTANCE_URL).unwrap();
         let mentioned_id = "https://test.com/users/3";
         let mentioned = DbActorProfile::remote_for_test(
             "mention",
@@ -703,7 +703,7 @@ mod tests {
 
     #[test]
     fn test_build_note_with_local_parent() {
-        let instance_url = HttpUrl::parse(INSTANCE_URL).unwrap();
+        let instance_url = HttpUri::parse(INSTANCE_URL).unwrap();
         let parent = Post::default();
         let post = Post {
             in_reply_to_id: Some(parent.id),
@@ -735,7 +735,7 @@ mod tests {
 
     #[test]
     fn test_build_note_with_remote_parent() {
-        let instance_url = HttpUrl::parse(INSTANCE_URL).unwrap();
+        let instance_url = HttpUri::parse(INSTANCE_URL).unwrap();
         let parent_author_acct = "test@test.net";
         let parent_author_actor_id = "https://test.net/user/test";
         let parent_author_actor_url = "https://test.net/@test";
@@ -788,7 +788,7 @@ mod tests {
 
     #[test]
     fn test_build_note_with_remote_parent_and_with_conversation() {
-        let instance_url = HttpUrl::parse(INSTANCE_URL).unwrap();
+        let instance_url = HttpUri::parse(INSTANCE_URL).unwrap();
         let parent_author_actor_id = "https://social.example/user/test";
         let parent_author_followers = "https://social.example/user/test/followers";
         let parent_author_actor_url = "https://social.example/@test";
@@ -878,7 +878,7 @@ mod tests {
 
     #[test]
     fn test_build_note_fep_ef61() {
-        let instance_url = HttpUrl::parse(INSTANCE_URL).unwrap();
+        let instance_url = HttpUri::parse(INSTANCE_URL).unwrap();
         let author = User::default();
         let conversation = Conversation {
             id: uuid!("837ffc24-dab2-414b-a9b8-fe47d0a463f2"),

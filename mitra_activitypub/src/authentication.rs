@@ -252,7 +252,7 @@ pub async fn verify_signed_request(
     // Reciprocal claim on actor is required
     // https://codeberg.org/fediverse/fep/src/branch/main/fep/fe34/fep-fe34.md#signatures
     let signer_id = match signature_data.key_id {
-        VerificationMethod::HttpUrl(ref key_id) => {
+        VerificationMethod::HttpUri(ref key_id) => {
             key_id_to_actor_id(key_id.as_str())
                 .map_err(|_| ValidationError("invalid key ID"))?
         },
@@ -323,7 +323,7 @@ pub async fn verify_signed_activity(
     let actor_profile = get_signer(config, db_pool, &actor_id, no_fetch).await?;
 
     match signature_data.verification_method {
-        VerificationMethod::HttpUrl(key_id) => {
+        VerificationMethod::HttpUri(key_id) => {
             // Can this activity be signed with this key?
             if !is_same_origin(activity_id, key_id.as_str())? {
                 return Err(AuthenticationError::UnexpectedKeyOrigin);

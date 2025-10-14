@@ -11,7 +11,7 @@ use thiserror::Error;
 
 use crate::{
     ap_url::{is_ap_uri, ApUri},
-    http_url::{HttpUrl as HttpUri},
+    http_url::HttpUri,
     url::common::Origin,
 };
 

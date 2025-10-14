@@ -1,4 +1,4 @@
-use apx_sdk::core::http_url::HttpUrl;
+use apx_sdk::core::http_url::HttpUri;
 use serde::Serialize;
 
 use mitra_config::Instance;
@@ -42,7 +42,7 @@ struct UpdateAgreement {
 }
 
 fn build_update_agreement(
-    instance_url: &HttpUrl,
+    instance_url: &HttpUri,
     sender_username: &str,
     remote_payer_id: &str,
     subscription_option: &MoneroSubscription,
@@ -111,7 +111,7 @@ mod tests {
 
     #[test]
     fn test_build_update_agreement() {
-        let instance_url = HttpUrl::parse(INSTANCE_URL).unwrap();
+        let instance_url = HttpUri::parse(INSTANCE_URL).unwrap();
         let sender = User {
             profile: DbActorProfile::local_for_test("testuser"),
             ..Default::default()

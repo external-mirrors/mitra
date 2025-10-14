@@ -1,6 +1,6 @@
 use apx_sdk::{
     constants::AP_PUBLIC,
-    core::http_url::HttpUrl,
+    core::http_url::HttpUri,
 };
 use serde::Serialize;
 
@@ -44,7 +44,7 @@ struct UpdatePerson {
 }
 
 fn build_update_person(
-    instance_url: &HttpUrl,
+    instance_url: &HttpUri,
     media_server: &MediaServer,
     user: &User,
 ) -> Result<UpdatePerson, DatabaseError> {
@@ -126,7 +126,7 @@ mod tests {
 
     #[test]
     fn test_build_update_person() {
-        let instance_url = HttpUrl::parse(INSTANCE_URL).unwrap();
+        let instance_url = HttpUri::parse(INSTANCE_URL).unwrap();
         let media_server = MediaServer::for_test(instance_url.as_str());
         let user = User {
             profile: DbActorProfile::local_for_test("testuser"),

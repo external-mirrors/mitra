@@ -59,7 +59,7 @@ pub fn verify_portable_object(
         Err(other_error) => return Err(other_error.into()),
     };
     match signature_data.verification_method {
-        VerificationMethod::HttpUrl(_) | VerificationMethod::ApUri(_) => {
+        VerificationMethod::HttpUri(_) | VerificationMethod::ApUri(_) => {
             return Err(AuthenticationError::InvalidVerificationMethod);
         },
         VerificationMethod::DidUrl(did_url) => {

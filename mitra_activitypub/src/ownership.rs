@@ -1,7 +1,7 @@
 // https://codeberg.org/fediverse/fep/src/branch/main/fep/fe34/fep-fe34.md
 use apx_sdk::{
     core::{
-        http_url::HttpUrl,
+        http_url::HttpUri,
         url::canonical::{is_same_origin as apx_is_same_origin},
     },
     deserialization::{object_to_id, parse_into_id_array},
@@ -90,7 +90,7 @@ pub fn is_local_origin(
     instance: &Instance,
     object_id: &str,
 ) -> bool {
-    if let Ok(http_object_id) = HttpUrl::parse(object_id) {
+    if let Ok(http_object_id) = HttpUri::parse(object_id) {
         if http_object_id.hostname() == instance.url_ref().hostname() {
             return true;
         };

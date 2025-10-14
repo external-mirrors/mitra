@@ -1,7 +1,7 @@
 use apx_core::{
     crypto_eddsa::Ed25519SecretKey,
     crypto_rsa::RsaSecretKey,
-    http_url::{parse_http_url_whatwg, HttpUrl},
+    http_url::{parse_http_url_whatwg, HttpUri},
     url::hostname::{guess_protocol, is_ipv6_hostname},
 };
 
@@ -43,19 +43,19 @@ fn normalize_origin(url: &str) -> Result<String, &'static str> {
     Ok(origin)
 }
 
-pub fn parse_instance_url(url: &str) -> Result<HttpUrl, &'static str> {
+pub fn parse_instance_url(url: &str) -> Result<HttpUri, &'static str> {
     let origin = normalize_origin(url)?;
-    let http_url = HttpUrl::parse(&origin)?;
-    Ok(http_url)
+    let http_uri = HttpUri::parse(&origin)?;
+    Ok(http_uri)
 }
 
-pub fn is_correct_uri_scheme(uri: &HttpUrl) -> bool {
+pub fn is_correct_uri_scheme(uri: &HttpUri) -> bool {
     uri.scheme() == guess_protocol(uri.hostname().as_str())
 }
 
 #[derive(Clone)]
 pub struct Instance {
-    _url: HttpUrl,
+    _url: HttpUri,
     pub federation: FederationConfig,
     pub ed25519_secret_key: Ed25519SecretKey,
     pub rsa_secret_key: RsaSecretKey,
@@ -83,7 +83,7 @@ impl Instance {
         self._url.to_string()
     }
 
-    pub fn url_ref(&self) -> &HttpUrl {
+    pub fn url_ref(&self) -> &HttpUri {
         &self._url
     }
 
@@ -153,7 +153,7 @@ mod tests {
 
     #[test]
     fn test_is_correct_uri_scheme() {
-        let uri = HttpUrl::parse("http://social.example").unwrap();
+        let uri = HttpUri::parse("http://social.example").unwrap();
         let is_correct = is_correct_uri_scheme(&uri);
         assert_eq!(is_correct, false);
     }

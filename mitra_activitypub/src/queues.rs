@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 use std::time::{Duration, Instant};
 
-use apx_core::http_url::HttpUrl;
+use apx_core::http_url::HttpUri;
 use apx_sdk::fetch::FetchError;
 use chrono::{TimeDelta, Utc};
 use serde::{Deserialize, Serialize};
@@ -199,7 +199,7 @@ impl OutgoingActivityJobData {
     ) -> () {
         // If portable actor has local account,
         // activity will be simply added to its inbox
-        let instance_url = HttpUrl::parse(instance_url)
+        let instance_url = HttpUri::parse(instance_url)
             .expect("instance URL should be valid");
         for recipient in recipients.iter_mut() {
             let recipient_inbox = parse_http_url_from_db(&recipient.inbox)

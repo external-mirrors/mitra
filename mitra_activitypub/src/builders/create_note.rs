@@ -1,4 +1,4 @@
-use apx_core::http_url::HttpUrl;
+use apx_core::http_url::HttpUri;
 use serde::Serialize;
 
 use mitra_config::Instance;
@@ -36,7 +36,7 @@ pub struct CreateNote {
 }
 
 pub fn build_create_note(
-    instance_url: &HttpUrl,
+    instance_url: &HttpUri,
     media_server: &MediaServer,
     post: &Post,
 ) -> CreateNote {
@@ -101,7 +101,7 @@ mod tests {
 
     #[test]
     fn test_build_create_note() {
-        let instance_url = HttpUrl::parse(INSTANCE_URL).unwrap();
+        let instance_url = HttpUri::parse(INSTANCE_URL).unwrap();
         let media_server = MediaServer::for_test(INSTANCE_URL);
         let author_username = "author";
         let author = DbActorProfile::local_for_test(author_username);

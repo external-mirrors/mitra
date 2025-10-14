@@ -1,5 +1,5 @@
 use apx_core::{
-    http_url::HttpUrl,
+    http_url::HttpUri,
     url::canonical::{parse_url, CanonicalUri},
 };
 
@@ -54,15 +54,15 @@ pub(crate) fn validate_origin(
 }
 
 pub(crate) fn validate_endpoint_url(url: &str) -> Result<(), ValidationError> {
-    HttpUrl::parse(url)
+    HttpUri::parse(url)
         .map_err(|_| ValidationError("invalid endpoint URL"))?;
     Ok(())
 }
 
 pub(crate) fn validate_gateway_url(url: &str) -> Result<(), ValidationError> {
-    let http_url = HttpUrl::parse(url)
+    let http_uri = HttpUri::parse(url)
         .map_err(|_| ValidationError("invalid gateway URL"))?;
-    if http_url.base() != url {
+    if http_uri.base() != url {
         return Err(ValidationError("invalid gateway URL"));
     };
     Ok(())

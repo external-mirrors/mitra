@@ -1,6 +1,6 @@
 use anyhow::{anyhow, Error};
 use apx_core::{
-    http_url::HttpUrl,
+    http_url::HttpUri,
     media_type::sniff_media_type,
 };
 use apx_sdk::fetch::fetch_media;
@@ -70,7 +70,7 @@ impl AddEmoji {
     ) -> Result<(), Error> {
         let db_client = &mut **get_database_client(db_pool).await?;
         let (file_data, media_type) = if
-            HttpUrl::parse(&self.location).is_ok()
+            HttpUri::parse(&self.location).is_ok()
         {
             let agent = build_federation_agent(&config.instance(), None);
             fetch_media(

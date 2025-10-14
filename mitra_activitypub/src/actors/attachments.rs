@@ -70,7 +70,7 @@ pub fn parse_identity_proof_fep_c390(
     let signature_data = get_json_signature(attachment)
         .map_err(|_| ValidationError("invalid proof"))?;
     let signer = match signature_data.verification_method {
-        VerificationMethod::HttpUrl(_) | VerificationMethod::ApUri(_) => {
+        VerificationMethod::HttpUri(_) | VerificationMethod::ApUri(_) => {
             return Err(ValidationError("unsupported verification method"));
         },
         // Fragment is ignored because supported DIDs
@@ -311,7 +311,7 @@ mod tests {
         did::Did,
         did_pkh::DidPkh,
         eip191::{create_eip191_signature, ecdsa_public_key_to_address_hex},
-        http_url::HttpUrl,
+        http_url::HttpUri,
     };
     use chrono::Utc;
     use serde_json::json;
@@ -376,7 +376,7 @@ mod tests {
 
     #[test]
     fn test_payment_option() {
-        let instance_url = HttpUrl::parse(INSTANCE_URL).unwrap();
+        let instance_url = HttpUri::parse(INSTANCE_URL).unwrap();
         let authority = Authority::server(&instance_url);
         let username = "testuser";
         let price = NonZeroU64::new(240000).unwrap();

@@ -1,6 +1,6 @@
 use apx_core::{
     ap_url::{is_ap_uri, ApUri},
-    http_url::{normalize_http_url, HttpUrl as HttpUri},
+    http_url::{normalize_http_url, HttpUri},
     url::canonical::{with_gateway, CanonicalUri},
 };
 
