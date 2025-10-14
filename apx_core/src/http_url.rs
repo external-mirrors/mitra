@@ -220,7 +220,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_http_url() {
+    fn test_parse() {
         let url = "https://social.example/users?user_id=123#main-key";
         let http_url = HttpUrl::parse(url).unwrap();
         assert_eq!(http_url.to_relative(), "/users?user_id=123#main-key");
@@ -229,35 +229,35 @@ mod tests {
     }
 
     #[test]
-    fn test_http_url_ipv4_address() {
+    fn test_parse_with_ipv4_address() {
         let url = "http://10.4.1.13/test";
         let http_url = HttpUrl::parse(url).unwrap();
         assert_eq!(http_url.authority(), "10.4.1.13");
     }
 
     #[test]
-    fn test_http_url_ipv6_address() {
+    fn test_parse_with_ipv6_address() {
         let url = "http://[319:3cf0:dd1d:47b9:20c:29ff:fe2c:39be]/test";
         let http_url = HttpUrl::parse(url).unwrap();
         assert_eq!(http_url.authority(), "[319:3cf0:dd1d:47b9:20c:29ff:fe2c:39be]");
     }
 
     #[test]
-    fn test_http_url_invalid_ipv6_address() {
+    fn test_parse_with_invalid_ipv6_address() {
         let url = "http://[319:3cf0:dd1d:47b9:20c:29ff:fe2c:39be/test";
         let error = HttpUrl::parse(url).err().unwrap();
         assert_eq!(error, "invalid URI");
     }
 
     #[test]
-    fn test_http_url_onion() {
+    fn test_parse_onion() {
         let url = "http://2gzyxa5ihm7nsggfxnu52rck2vv4rvmdlkiu3zzui5du4xyclen53wid.onion/users/alice";
         let http_url = HttpUrl::parse(url).unwrap();
         assert_eq!(http_url.to_string(), url);
     }
 
     #[test]
-    fn test_http_url_no_path() {
+    fn test_parse_no_path() {
         let url = "https://social.example";
         let http_url = HttpUrl::parse(url).unwrap();
         assert_eq!(http_url.path(), "");
@@ -266,56 +266,56 @@ mod tests {
     }
 
     #[test]
-    fn test_http_url_idn() {
+    fn test_parse_idn() {
         let url = "https://räksmörgås.josefsson.org/raksmorgas.jpg";
         let error = HttpUrl::parse(url).err().unwrap();
         assert_eq!(error, "invalid URI");
     }
 
     #[test]
-    fn test_http_url_percent_encoded() {
+    fn test_parse_path_percent_encoded() {
         let url = "https://bridge.example/actors/https%3A%2F%2Fthreads%2Enet%2Fap%2Fusers%2F17841400033000000%2F";
         let http_url = HttpUrl::parse(url).unwrap();
         assert_eq!(http_url.to_string(), url);
     }
 
     #[test]
-    fn test_http_url_scheme_uppercase() {
+    fn test_parse_scheme_uppercase() {
         let url = "HTTP://social.example/users/alice";
         let error = HttpUrl::parse(url).err().unwrap();
         assert_eq!(error, "invalid URI scheme");
     }
 
     #[test]
-    fn test_http_url_host_uppercase() {
+    fn test_parse_host_uppercase() {
         let url = "https://Social.Example/users/alice";
         let error = HttpUrl::parse(url).err().unwrap();
         assert_eq!(error, "invalid URI host");
     }
 
     #[test]
-    fn test_http_url_ftp() {
+    fn test_parse_ftp_scheme() {
         let url = "ftp://ftp.social.example/";
         let error = HttpUrl::parse(url).err().unwrap();
         assert_eq!(error, "invalid URI scheme");
     }
 
     #[test]
-    fn test_http_url_no_authority() {
+    fn test_parse_no_authority() {
         let url = "http:///home/User/2ndFile.html";
         let error = HttpUrl::parse(url).err().unwrap();
         assert_eq!(error, "invalid URI authority");
     }
 
     #[test]
-    fn test_http_url_with_whitespace() {
+    fn test_parse_with_whitespace() {
         let url = "https://rebased.taihou.website/emoji/taihou.website emojos/nix.png";
         let error = HttpUrl::parse(url).err().unwrap();
         assert_eq!(error, "invalid URI");
     }
 
     #[test]
-    fn test_http_url_invalid_port() {
+    fn test_parse_invalid_port() {
         let url = "https://social.example:9999999/test";
         let error = HttpUrl::parse(url).err().unwrap();
         assert_eq!(error, "invalid port number");

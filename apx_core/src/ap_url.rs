@@ -116,7 +116,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_parse_ap_url() {
+    fn test_parse() {
         let url_str = "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/objects/123";
         let url = ApUrl::parse(url_str).unwrap();
         assert_eq!(url.authority().to_string(), "did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6");
@@ -127,7 +127,7 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_ap_url_with_fragment() {
+    fn test_parse_with_fragment() {
         let url_str = "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor#main-key";
         let url = ApUrl::parse(url_str).unwrap();
         assert_eq!(url.authority().to_string(), "did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6");
@@ -136,21 +136,21 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_ap_url_with_percent_encoded_authority() {
+    fn test_parse_percent_encoded_authority() {
         let url_str = "ap://did%3Akey%3Az6MkrJVnaZkeFzdQyMZu1cgjg7k1pZZ6pvBQ7XJPt4swbTQ2/actor";
         let url = ApUrl::parse(url_str).unwrap();
         assert_eq!(url.authority().to_string(), "did:key:z6MkrJVnaZkeFzdQyMZu1cgjg7k1pZZ6pvBQ7XJPt4swbTQ2");
     }
 
     #[test]
-    fn test_parse_ap_url_without_path() {
+    fn test_parse_without_path() {
         let url_str = "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6";
         let error = ApUrl::parse(url_str).err().unwrap();
         assert_eq!(error, "invalid 'ap' URL");
     }
 
     #[test]
-    fn test_parse_ap_url_empty_path() {
+    fn test_parse_with_empty_path() {
         let url_str = "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/";
         let error = ApUrl::parse(url_str).err().unwrap();
         assert_eq!(error, "invalid 'ap' URL");
@@ -161,7 +161,7 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_ap_url_with_double_slash() {
+    fn test_parse_with_double_slash() {
         let url_str = "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6//actor";
         let error = ApUrl::parse(url_str).err().unwrap();
         assert_eq!(error, "invalid 'ap' URL");
