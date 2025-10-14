@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use apx_sdk::{
     addresses::WebfingerAddress,
     constants::{AP_MEDIA_TYPE, AP_PUBLIC, AS_MEDIA_TYPE},
-    core::url::canonical::{is_same_origin, CanonicalUrl},
+    core::url::canonical::{is_same_origin, CanonicalUri},
     deserialization::{
         deserialize_into_id_array,
         deserialize_into_link_href,
@@ -794,7 +794,7 @@ async fn get_object_tags(
 
 pub fn normalize_audience(
     audience: &[impl AsRef<str>],
-) -> Result<Vec<CanonicalUrl>, ValidationError> {
+) -> Result<Vec<CanonicalUri>, ValidationError> {
     let mut normalized_audience = audience.iter()
         .map(|target_id| {
             let normalized_target_id = if is_public(target_id) {

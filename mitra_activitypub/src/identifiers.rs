@@ -1,7 +1,7 @@
 use apx_core::{
     caip2::ChainId,
     url::{
-        canonical::{parse_url, CanonicalUrl},
+        canonical::{parse_url, CanonicalUri},
         common::url_encode,
     },
 };
@@ -244,9 +244,9 @@ pub fn compatible_id(
     // TODO: FEP-EF61: at least one gateway must be stored
     let maybe_gateway = db_actor.gateways.first()
         .map(|gateway| gateway.as_str());
-    let http_url = canonical_object_id.to_http_url(maybe_gateway)
+    let http_uri = canonical_object_id.to_http_uri(maybe_gateway)
         .ok_or(DatabaseTypeError)?;
-    Ok(http_url)
+    Ok(http_uri)
 }
 
 pub fn compatible_actor_id(
@@ -288,10 +288,10 @@ pub fn compatible_post_object_id(instance_url: &str, post: &Post) -> String {
     }
 }
 
-pub fn canonicalize_id(url: &str) -> Result<CanonicalUrl, ValidationError> {
-    let url = CanonicalUrl::parse(url)
+pub fn canonicalize_id(id: &str) -> Result<CanonicalUri, ValidationError> {
+    let canonical_uri = CanonicalUri::parse(id)
         .map_err(|error| ValidationError(error.0))?;
-    Ok(url)
+    Ok(canonical_uri)
 }
 
 #[cfg(test)]

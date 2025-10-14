@@ -1,4 +1,4 @@
-use apx_core::url::canonical::CanonicalUrl;
+use apx_core::url::canonical::CanonicalUri;
 use chrono::{DateTime, Utc};
 use serde_json::{Value as JsonValue};
 use uuid::Uuid;
@@ -16,7 +16,7 @@ use crate::{
 
 pub async fn save_activity(
     db_client: &impl DatabaseClient,
-    activity_id: &CanonicalUrl,
+    activity_id: &CanonicalUri,
     activity: &JsonValue,
 ) -> Result<bool, DatabaseError> {
     // Never overwrite existing object
@@ -226,7 +226,7 @@ pub async fn delete_collection_items(
 
 pub async fn expand_collections(
     db_client: &impl DatabaseClient,
-    audience: &[CanonicalUrl],
+    audience: &[CanonicalUri],
 ) -> Result<Vec<String>, DatabaseError> {
     let audience: Vec<_> = audience.iter()
         .map(|target_id| target_id.to_string())
@@ -343,7 +343,7 @@ mod tests {
     async fn test_save_activity() {
         let db_client = &create_test_database().await;
         let activity_id = "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/activities/1";
-        let canonical_activity_id = CanonicalUrl::parse_canonical(activity_id).unwrap();
+        let canonical_activity_id = CanonicalUri::parse_canonical(activity_id).unwrap();
         let activity = json!({
             "id": "https://social.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/activities/1",
             "actor": "https://social.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor",
@@ -451,7 +451,7 @@ mod tests {
     async fn test_get_object_as_target() {
         let db_client = &create_test_database().await;
         let activity_id = "https://social.example/activities/123";
-        let canonical_activity_id = CanonicalUrl::parse_canonical(activity_id).unwrap();
+        let canonical_activity_id = CanonicalUri::parse_canonical(activity_id).unwrap();
         let target_id = "https://social.example/users/2";
         let activity = json!({
             "id": activity_id,
@@ -491,7 +491,7 @@ mod tests {
         ).await;
         // Create activity
         let activity_id = "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/activities/321";
-        let canonical_activity_id = CanonicalUrl::parse_canonical(activity_id).unwrap();
+        let canonical_activity_id = CanonicalUri::parse_canonical(activity_id).unwrap();
         let activity = json!({
             "id": "https://social.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/activities/321",
             "type": "Create",
@@ -544,7 +544,7 @@ mod tests {
         let db_client = &create_test_database().await;
         let actor_id = "https://social.example/actor";
         let audience = vec![
-            CanonicalUrl::parse_canonical(actor_id).unwrap(),
+            CanonicalUri::parse_canonical(actor_id).unwrap(),
         ];
         let expanded_audience = expand_collections(
             db_client,

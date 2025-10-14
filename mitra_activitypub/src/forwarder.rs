@@ -4,7 +4,7 @@ use apx_sdk::{
         crypto::common::PublicKey,
         crypto_eddsa::ed25519_public_key_from_secret_key,
         crypto_rsa::RsaPublicKey,
-        url::canonical::CanonicalUrl,
+        url::canonical::CanonicalUri,
     },
     deserialization::deserialize_into_id_array,
     utils::is_verification_method,
@@ -101,7 +101,7 @@ struct ActivityAudience {
 pub fn get_activity_audience(
     activity: &JsonValue,
     maybe_recipient_id: Option<&str>,
-) -> Result<Vec<CanonicalUrl>, ValidationError> {
+) -> Result<Vec<CanonicalUri>, ValidationError> {
     let activity: ActivityAudience = serde_json::from_value(activity.clone())
         .map_err(|_| ValidationError("invalid audience"))?;
     let mut audience = [activity.to, activity.cc].concat();
@@ -121,7 +121,7 @@ pub fn get_activity_audience(
 /// Returns remote recipients of the activity
 pub async fn get_activity_recipients(
     db_client: &impl DatabaseClient,
-    audience: &[CanonicalUrl],
+    audience: &[CanonicalUri],
 ) -> Result<Vec<DbActorProfile>, DatabaseError> {
     const RECIPIENT_LIMIT: usize = 50;
     let expanded_audience = expand_collections(

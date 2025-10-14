@@ -1,7 +1,7 @@
 use apx_core::{
-    ap_url::{is_ap_url, ApUrl},
-    http_url::{normalize_http_url, HttpUrl},
-    url::canonical::{with_gateway, CanonicalUrl},
+    ap_url::{is_ap_url as is_ap_uri, ApUrl as ApUri},
+    http_url::{normalize_http_url, HttpUrl as HttpUri},
+    url::canonical::{with_gateway, CanonicalUri},
 };
 
 use mitra_models::database::{DatabaseError, DatabaseTypeError};
@@ -9,38 +9,38 @@ use mitra_models::database::{DatabaseError, DatabaseTypeError};
 // TODO: validation should happen during actor data deserialization
 
 // URLs stored in database are not guaranteed to be valid
-// according to HttpUrl::parse.
+// according to HttpUri::parse.
 // This function normalizes URL before parsing to avoid errors.
 // WARNING: Adds a trailing slash if path is empty.
 pub fn parse_http_url_from_db(
     url: &str,
-) -> Result<HttpUrl, DatabaseTypeError> {
+) -> Result<HttpUri, DatabaseTypeError> {
     let normalized_url = normalize_http_url(url)
         .map_err(|_| DatabaseTypeError)?;
-    let http_url = HttpUrl::parse(&normalized_url)
+    let http_uri = HttpUri::parse(&normalized_url)
         .map_err(|_| DatabaseTypeError)?;
-    Ok(http_url)
+    Ok(http_uri)
 }
 
 pub fn parse_id_from_db(
     url: &str,
-) -> Result<CanonicalUrl, DatabaseError> {
+) -> Result<CanonicalUri, DatabaseError> {
     // WARNING: returns error if stored URI is not canonical
     // WARNING: returns error if stored HTTP URI is not valid
-    let canonical_url = CanonicalUrl::parse_canonical(url)
+    let canonical_uri = CanonicalUri::parse_canonical(url)
         .map_err(|_| DatabaseTypeError)?;
-    Ok(canonical_url)
+    Ok(canonical_uri)
 }
 
 // URLs associated with portable actors in database
-// are not guaranteed to be 'ap' URLs. They could be HTTP URLs.
+// are not guaranteed to be 'ap' URIs. They could be HTTP URLs.
 pub fn db_url_to_http_url(
     url: &str,
     gateway: &str,
 ) -> Result<String, DatabaseTypeError> {
-    let http_url = if is_ap_url(url) {
-        let ap_url = ApUrl::parse(url).map_err(|_| DatabaseTypeError)?;
-        with_gateway(&ap_url, gateway)
+    let http_url = if is_ap_uri(url) {
+        let ap_uri = ApUri::parse(url).map_err(|_| DatabaseTypeError)?;
+        with_gateway(&ap_uri, gateway)
     } else {
         url.to_owned()
     };

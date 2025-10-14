@@ -1,6 +1,6 @@
 use apx_core::{
     http_url::HttpUrl,
-    url::canonical::{parse_url, CanonicalUrl},
+    url::canonical::{parse_url, CanonicalUri},
 };
 
 use super::errors::ValidationError;
@@ -21,8 +21,8 @@ fn _validate_any_object_id(
     if maybe_gateway.is_some() {
         return Err(ValidationError("object ID is not canonical"));
     };
-    if !allow_ap && matches!(canonical_object_id, CanonicalUrl::Ap(_)) {
-        return Err(ValidationError("object ID is 'ap' URL"));
+    if !allow_ap && matches!(canonical_object_id, CanonicalUri::Ap(_)) {
+        return Err(ValidationError("object ID is 'ap' URI"));
     };
     Ok(())
 }
@@ -41,10 +41,10 @@ pub(crate) fn validate_origin(
     id_1: &str,
     id_2: &str,
 ) -> Result<(), ValidationError> {
-    let origin_1 = CanonicalUrl::parse_canonical(id_1)
+    let origin_1 = CanonicalUri::parse_canonical(id_1)
         .map_err(|_| ValidationError("invalid object ID"))?
         .origin();
-    let origin_2 = CanonicalUrl::parse_canonical(id_2)
+    let origin_2 = CanonicalUri::parse_canonical(id_2)
         .map_err(|_| ValidationError("invalid object ID"))?
         .origin();
     if origin_1 != origin_2 {

@@ -5,7 +5,7 @@ use apx_core::{
     crypto_rsa::generate_rsa_key,
     http_url::HttpUrl,
     url::{
-        canonical::{parse_url, CanonicalUrl},
+        canonical::{parse_url, CanonicalUri},
     },
 };
 use apx_sdk::{
@@ -149,11 +149,11 @@ impl FetcherContext {
         // TODO: FEP-EF61: use random gateway
         let maybe_gateway = self.gateways.first()
             .map(|gateway| gateway.as_str());
-        // TODO: FEP-EF61: remove Url::to_http_url
-        let http_url = canonical_object_id
-            .to_http_url(maybe_gateway)
+        // TODO: FEP-EF61: remove CanonicalUri::to_http_uri
+        let http_uri = canonical_object_id
+            .to_http_uri(maybe_gateway)
             .ok_or(FetchError::NoGateway)?;
-        Ok(http_url)
+        Ok(http_uri)
     }
 }
 
@@ -501,7 +501,7 @@ pub async fn get_or_import_profile_by_webfinger_address(
 pub async fn get_post_by_object_id(
     db_client: &impl DatabaseClient,
     instance_url: &str,
-    object_id: &CanonicalUrl,
+    object_id: &CanonicalUri,
 ) -> Result<Post, DatabaseError> {
     let object_id = object_id.to_string();
     match parse_local_object_id(instance_url, &object_id) {
@@ -709,7 +709,7 @@ async fn fetch_collection(
     #[derive(Deserialize)]
     #[serde(rename_all = "camelCase")]
     struct Collection {
-        id: CanonicalUrl,
+        id: CanonicalUri,
         first: Option<JsonValue>, // page can be embedded
         #[serde(default)]
         items: Vec<JsonValue>,
@@ -719,7 +719,7 @@ async fn fetch_collection(
     #[derive(Deserialize)]
     #[serde(rename_all = "camelCase")]
     struct CollectionPage {
-        id: Option<CanonicalUrl>,
+        id: Option<CanonicalUri>,
         next: Option<JsonValue>,
         #[serde(default)]
         items: Vec<JsonValue>,

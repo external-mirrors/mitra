@@ -1,5 +1,5 @@
 use anyhow::Error;
-use apx_core::url::canonical::CanonicalUrl;
+use apx_core::url::canonical::CanonicalUri;
 use clap::Parser;
 
 use mitra_activitypub::{
@@ -63,7 +63,7 @@ impl CheckUris {
         let db_client = &**get_database_client(db_pool).await?;
         let object_ids = get_object_ids(db_client).await?;
         for object_id in object_ids {
-            if let Err(error) = CanonicalUrl::parse_canonical(&object_id) {
+            if let Err(error) = CanonicalUri::parse_canonical(&object_id) {
                 println!("invalid URI {object_id}: {error}");
             };
         };

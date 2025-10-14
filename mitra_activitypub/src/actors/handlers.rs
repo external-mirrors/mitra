@@ -1,7 +1,7 @@
 use apx_core::{
     http_url::Hostname,
     http_url_whatwg::get_hostname,
-    url::canonical::CanonicalUrl,
+    url::canonical::CanonicalUri,
 };
 use apx_sdk::{
     addresses::WebfingerAddress,
@@ -120,7 +120,7 @@ impl Actor {
     }
 
     pub fn is_local(&self, local_hostname: &str) -> Result<bool, ValidationError> {
-        let canonical_actor_id = CanonicalUrl::parse(self.id())
+        let canonical_actor_id = CanonicalUri::parse(self.id())
             .map_err(|_| ValidationError("invalid actor ID"))?;
         Ok(canonical_actor_id.authority() == local_hostname)
     }
@@ -265,17 +265,17 @@ async fn get_webfinger_hostname(
     actor: &ValidatedActor,
     has_account: bool,
 ) -> Result<WebfingerHostname, HandlerError> {
-    let canonical_actor_id = CanonicalUrl::parse(&actor.id)
+    let canonical_actor_id = CanonicalUri::parse(&actor.id)
         .map_err(|_| ValidationError("invalid actor ID"))?;
     let webfinger_hostname = match canonical_actor_id {
-        CanonicalUrl::Http(http_url) => {
+        CanonicalUri::Http(http_uri) => {
             // TODO: implement reverse webfinger lookup
             // https://swicg.github.io/activitypub-webfinger/#reverse-discovery
-            let hostname = get_hostname(&http_url.to_string())
+            let hostname = get_hostname(&http_uri.to_string())
                 .map_err(|_| ValidationError("invalid actor ID"))?;
             WebfingerHostname::Remote(hostname)
         },
-        CanonicalUrl::Ap(_) => {
+        CanonicalUri::Ap(_) => {
             if let Some(gateway) = actor.gateways.first() {
                 // Primary gateway
                 let hostname = get_hostname(gateway)
@@ -434,9 +434,9 @@ fn parse_public_keys(
     keys.sort_by_key(|item| item.id.clone());
     keys.dedup_by_key(|item| item.id.clone());
     if keys.is_empty() {
-        let canonical_actor_id = CanonicalUrl::parse(&actor.id)
+        let canonical_actor_id = CanonicalUri::parse(&actor.id)
             .map_err(|_| ValidationError("invalid actor ID"))?;
-        if matches!(canonical_actor_id, CanonicalUrl::Ap(_)) {
+        if matches!(canonical_actor_id, CanonicalUri::Ap(_)) {
             log::warn!("public keys are not found in portable actor object");
         } else {
             return Err(ValidationError("public keys not found"));
