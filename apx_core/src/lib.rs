@@ -19,8 +19,6 @@ pub mod hashlink;
 pub mod http_digest;
 pub mod http_signatures;
 pub mod http_types;
-pub mod http_url;
-pub mod http_url_whatwg;
 pub mod http_utils;
 pub mod jcs;
 pub mod json_signatures;

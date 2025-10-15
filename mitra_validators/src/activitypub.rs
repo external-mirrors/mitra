@@ -1,6 +1,8 @@
 use apx_core::{
-    http_url::HttpUri,
-    url::canonical::{parse_url, CanonicalUri},
+    url::{
+        canonical::{parse_url, CanonicalUri},
+        http_uri::HttpUri,
+    },
 };
 
 use super::errors::ValidationError;

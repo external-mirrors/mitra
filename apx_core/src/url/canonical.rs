@@ -10,10 +10,10 @@ use serde::{
 use thiserror::Error;
 
 use crate::{
-    http_url::HttpUri,
     url::{
         ap_uri::{is_ap_uri, ApUri},
         common::Origin,
+        http_uri::HttpUri,
     },
 };
 

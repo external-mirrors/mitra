@@ -5,7 +5,7 @@ use actix_web::{
 use apx_core::{
     http_digest::ContentDigest,
     http_types::{header_map_adapter, method_adapter, uri_adapter},
-    http_url_whatwg::get_hostname,
+    url::http_url_whatwg::get_hostname,
 };
 use apx_sdk::deserialization::object_to_id;
 use serde_json::{Value as JsonValue};

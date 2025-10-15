@@ -7,10 +7,10 @@ use apx_core::{
         Ed25519PublicKey,
     },
     did_key::DidKey,
-    http_url::HttpUri,
     url::{
         ap_uri::with_ap_prefix,
         canonical::GATEWAY_PATH_PREFIX,
+        http_uri::HttpUri,
     },
 };
 

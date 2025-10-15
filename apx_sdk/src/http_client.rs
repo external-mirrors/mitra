@@ -26,13 +26,15 @@ use apx_core::{
         HttpSignatureError,
         HttpSigner,
     },
-    http_url::parse_http_url_whatwg,
-    http_url_whatwg::{
-        get_hostname,
-        get_ip_address,
-        UrlError,
+    url::{
+        hostname::{is_i2p, is_onion},
+        http_uri::parse_http_url_whatwg,
+        http_url_whatwg::{
+            get_hostname,
+            get_ip_address,
+            UrlError,
+        },
     },
-    url::hostname::{is_i2p, is_onion},
 };
 
 use super::agent::FederationAgent;

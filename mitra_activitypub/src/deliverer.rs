@@ -13,13 +13,15 @@ use apx_core::{
         RsaPublicKey,
         RsaSecretKey,
     },
-    http_url_whatwg::get_hostname,
     json_signatures::create::{
         is_object_signed,
         sign_object,
         JsonSignatureError,
     },
-    url::hostname::is_onion,
+    url::{
+        hostname::is_onion,
+        http_url_whatwg::get_hostname,
+    },
 };
 use apx_sdk::deliver::{send_object, DelivererError};
 use futures::{

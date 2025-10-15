@@ -4,8 +4,8 @@ use serde_json::{Value as JsonValue};
 
 use apx_core::{
     http_types::HeaderValue,
-    http_url::HttpUri,
     http_utils::remove_quotes,
+    url::http_uri::HttpUri,
 };
 
 use super::constants::AP_PUBLIC;

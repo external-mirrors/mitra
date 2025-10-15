@@ -1,4 +1,4 @@
-use apx_core::http_url::HttpUri;
+use apx_core::url::http_uri::HttpUri;
 use apx_sdk::{
     authentication::{verify_portable_object, AuthenticationError},
     deserialization::{deserialize_into_object_id, object_to_id},

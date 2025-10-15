@@ -4,8 +4,8 @@ use apx_sdk::{
     addresses::WebfingerAddress,
     constants::{AP_MEDIA_TYPE, AP_PUBLIC},
     core::{
-        http_url::HttpUri,
         multihash::encode_sha256_multihash,
+        url::http_uri::HttpUri,
     },
     deserialization::deserialize_string_array,
 };

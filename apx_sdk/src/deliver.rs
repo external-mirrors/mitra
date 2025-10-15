@@ -7,7 +7,7 @@ use thiserror::Error;
 
 use apx_core::{
     http_signatures::create::HttpSignatureError,
-    http_url_whatwg::UrlError,
+    url::http_url_whatwg::UrlError,
 };
 
 use crate::{

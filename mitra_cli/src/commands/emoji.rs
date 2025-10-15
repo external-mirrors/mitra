@@ -1,7 +1,7 @@
 use anyhow::{anyhow, Error};
 use apx_core::{
-    http_url::HttpUri,
     media_type::sniff_media_type,
+    url::http_uri::HttpUri,
 };
 use apx_sdk::fetch::fetch_media;
 use clap::Parser;

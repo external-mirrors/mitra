@@ -8,7 +8,6 @@ use crate::{
     crypto_eddsa::{verify_eddsa_signature, Ed25519PublicKey},
     crypto_rsa::{verify_rsa_sha256_signature, RsaPublicKey},
     did_url::DidUrl,
-    http_url::HttpUri,
     jcs::{
         canonicalize_object,
         CanonicalizationError,
@@ -17,6 +16,7 @@ use crate::{
     url::{
         ap_uri::{is_ap_uri, ApUri},
         common::Origin,
+        http_uri::HttpUri,
     },
 };
 

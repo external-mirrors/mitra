@@ -1,6 +1,6 @@
 use apx_sdk::{
     constants::AP_PUBLIC,
-    core::http_url::HttpUri,
+    core::url::http_uri::HttpUri,
 };
 use serde::Serialize;
 

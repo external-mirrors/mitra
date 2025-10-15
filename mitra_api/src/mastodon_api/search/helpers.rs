@@ -2,10 +2,10 @@ use std::str::FromStr;
 
 use apx_core::{
     did::Did,
-    http_url::normalize_http_url,
     url::{
         ap_uri::is_ap_uri,
         hostname::encode_hostname,
+        http_uri::normalize_http_url,
     },
 };
 use apx_sdk::addresses::WebfingerAddress;

@@ -5,7 +5,7 @@ use std::str::FromStr;
 use regex::{Captures, Regex};
 use thiserror::Error;
 
-use apx_core::http_url::HttpUri;
+use apx_core::url::http_uri::HttpUri;
 
 #[derive(Debug, Error)]
 #[error("{0}")]

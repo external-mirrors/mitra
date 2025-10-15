@@ -1,5 +1,5 @@
-use apx_core::{
-    http_url::Hostname,
+use apx_core::url::{
+    http_uri::Hostname,
     http_url_whatwg::get_hostname,
 };
 use apx_sdk::fetch::fetch_media;

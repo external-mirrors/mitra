@@ -3,8 +3,8 @@ use std::path::PathBuf;
 use anyhow::{anyhow, Error};
 use apx_sdk::{
     core::{
-        http_url::HttpUri,
         media_type::sniff_media_type,
+        url::http_uri::HttpUri,
     },
     fetch::fetch_media,
     utils::is_public,

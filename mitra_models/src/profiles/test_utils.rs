@@ -1,6 +1,8 @@
 use apx_core::{
-    http_url_whatwg::get_hostname,
-    url::ap_uri::is_ap_uri,
+    url::{
+        ap_uri::is_ap_uri,
+        http_url_whatwg::get_hostname,
+    },
 };
 use uuid::Uuid;
 

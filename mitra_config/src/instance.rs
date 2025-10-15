@@ -1,8 +1,10 @@
 use apx_core::{
     crypto_eddsa::Ed25519SecretKey,
     crypto_rsa::RsaSecretKey,
-    http_url::{parse_http_url_whatwg, HttpUri},
-    url::hostname::{guess_protocol, is_ipv6_hostname},
+    url::{
+        hostname::{guess_protocol, is_ipv6_hostname},
+        http_uri::{parse_http_url_whatwg, HttpUri},
+    },
 };
 
 use super::{

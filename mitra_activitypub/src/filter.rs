@@ -1,4 +1,4 @@
-use apx_core::http_url::Hostname;
+use apx_core::url::http_uri::Hostname;
 use wildmatch::WildMatch;
 
 use mitra_config::Config;

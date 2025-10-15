@@ -1,7 +1,9 @@
 use apx_core::{
-    http_url::Hostname,
-    http_url_whatwg::get_hostname,
-    url::canonical::CanonicalUri,
+    url::{
+        canonical::CanonicalUri,
+        http_uri::Hostname,
+        http_url_whatwg::get_hostname,
+    },
 };
 use apx_sdk::{
     addresses::WebfingerAddress,

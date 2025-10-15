@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 use std::time::{Duration, Instant};
 
-use apx_core::http_url::HttpUri;
+use apx_core::url::http_uri::HttpUri;
 use apx_sdk::fetch::FetchError;
 use chrono::{TimeDelta, Utc};
 use serde::{Deserialize, Serialize};

@@ -19,9 +19,11 @@ use thiserror::Error;
 
 use apx_core::{
     http_signatures::create::HttpSignatureError,
-    http_url::is_same_http_origin,
     media_type::sniff_media_type,
-    url::canonical::is_same_origin,
+    url::{
+        canonical::is_same_origin,
+        http_uri::is_same_http_origin,
+    },
 };
 
 use super::{

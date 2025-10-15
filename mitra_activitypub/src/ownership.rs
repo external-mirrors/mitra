@@ -1,8 +1,8 @@
 // https://codeberg.org/fediverse/fep/src/branch/main/fep/fe34/fep-fe34.md
 use apx_sdk::{
-    core::{
-        http_url::HttpUri,
-        url::canonical::{is_same_origin as apx_is_same_origin},
+    core::url::{
+        canonical::{is_same_origin as apx_is_same_origin},
+        http_uri::HttpUri,
     },
     deserialization::{object_to_id, parse_into_id_array},
     utils::CoreType,

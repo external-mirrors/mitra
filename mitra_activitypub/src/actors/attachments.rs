@@ -311,7 +311,7 @@ mod tests {
         did::Did,
         did_pkh::DidPkh,
         eip191::{create_eip191_signature, ecdsa_public_key_to_address_hex},
-        http_url::HttpUri,
+        url::http_uri::HttpUri,
     };
     use chrono::Utc;
     use serde_json::json;

@@ -1,4 +1,4 @@
-use apx_core::http_url::HttpUri;
+use apx_core::url::http_uri::HttpUri;
 use serde::Serialize;
 
 use mitra_config::Instance;

@@ -29,7 +29,7 @@ use crate::{
         create_digest_header,
         ContentDigest,
     },
-    http_url::{normalize_http_url, HttpUri},
+    url::http_uri::{normalize_http_url, HttpUri},
 };
 
 const HTTP_SIGNATURE_ALGORITHM: &str = "rsa-sha256";

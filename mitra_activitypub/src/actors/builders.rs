@@ -1,6 +1,6 @@
 use apx_core::{
     crypto_rsa::RsaSerializationError,
-    http_url::HttpUri,
+    url::http_uri::HttpUri,
 };
 use chrono::{DateTime, Utc};
 use indexmap::IndexMap;
