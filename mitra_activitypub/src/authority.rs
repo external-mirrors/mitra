@@ -1,7 +1,6 @@
 use std::fmt;
 
 use apx_core::{
-    ap_url::with_ap_prefix,
     crypto_eddsa::{
         ed25519_public_key_from_secret_key,
         Ed25519SecretKey,
@@ -9,7 +8,10 @@ use apx_core::{
     },
     did_key::DidKey,
     http_url::HttpUri,
-    url::canonical::GATEWAY_PATH_PREFIX,
+    url::{
+        ap_uri::with_ap_prefix,
+        canonical::GATEWAY_PATH_PREFIX,
+    },
 };
 
 use mitra_config::Instance;

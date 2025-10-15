@@ -10,9 +10,11 @@ use serde::{
 use thiserror::Error;
 
 use crate::{
-    ap_url::{is_ap_uri, ApUri},
     http_url::HttpUri,
-    url::common::Origin,
+    url::{
+        ap_uri::{is_ap_uri, ApUri},
+        common::Origin,
+    },
 };
 
 pub const GATEWAY_PATH_PREFIX: &str = "/.well-known/apgateway/";

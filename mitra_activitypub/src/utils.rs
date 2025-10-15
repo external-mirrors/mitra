@@ -1,7 +1,9 @@
 use apx_core::{
-    ap_url::{is_ap_uri, ApUri},
     http_url::{normalize_http_url, HttpUri},
-    url::canonical::{with_gateway, CanonicalUri},
+    url::{
+        ap_uri::{is_ap_uri, ApUri},
+        canonical::{with_gateway, CanonicalUri},
+    },
 };
 
 use mitra_models::database::{DatabaseError, DatabaseTypeError};

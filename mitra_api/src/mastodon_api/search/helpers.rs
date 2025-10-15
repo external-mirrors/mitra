@@ -1,10 +1,12 @@
 use std::str::FromStr;
 
 use apx_core::{
-    ap_url::is_ap_uri,
     did::Did,
     http_url::normalize_http_url,
-    url::hostname::encode_hostname,
+    url::{
+        ap_uri::is_ap_uri,
+        hostname::encode_hostname,
+    },
 };
 use apx_sdk::addresses::WebfingerAddress;
 use regex::Regex;

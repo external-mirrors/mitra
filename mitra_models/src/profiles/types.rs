@@ -2,7 +2,6 @@ use std::fmt;
 use std::num::NonZeroU64;
 
 use apx_core::{
-    ap_url::{is_ap_uri, ApUri},
     caip2::ChainId,
     crypto_eddsa::{
         ed25519_public_key_from_secret_key,
@@ -10,6 +9,7 @@ use apx_core::{
     },
     did::Did,
     did_key::DidKey,
+    url::ap_uri::{is_ap_uri, ApUri},
 };
 use chrono::{DateTime, Utc};
 use postgres_types::FromSql;

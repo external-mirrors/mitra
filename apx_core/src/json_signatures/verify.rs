@@ -5,7 +5,6 @@ use serde_json::{Value as JsonValue};
 use thiserror::Error;
 
 use crate::{
-    ap_url::{is_ap_uri, ApUri},
     crypto_eddsa::{verify_eddsa_signature, Ed25519PublicKey},
     crypto_rsa::{verify_rsa_sha256_signature, RsaPublicKey},
     did_url::DidUrl,
@@ -15,7 +14,10 @@ use crate::{
         CanonicalizationError,
     },
     multibase::{decode_multibase_base58btc, MultibaseError},
-    url::common::Origin,
+    url::{
+        ap_uri::{is_ap_uri, ApUri},
+        common::Origin,
+    },
 };
 
 use super::create::{

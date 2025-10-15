@@ -4,7 +4,6 @@ use serde_json::{Value as JsonValue};
 use thiserror::Error;
 
 use apx_core::{
-    ap_url::ApUri,
     json_signatures::{
         proofs::ProofType,
         verify::{
@@ -14,7 +13,10 @@ use apx_core::{
             VerificationMethod,
         },
     },
-    url::canonical::CanonicalUri,
+    url::{
+        ap_uri::ApUri,
+        canonical::CanonicalUri,
+    },
 };
 
 #[derive(Debug, Error)]

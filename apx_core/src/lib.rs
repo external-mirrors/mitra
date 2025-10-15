@@ -6,7 +6,6 @@
 //! - HTTP signatures
 //! - Data integrity proofs (FEP-8b32)
 
-pub mod ap_url;
 pub mod base64;
 pub mod crypto;
 pub mod crypto_ecdsa;

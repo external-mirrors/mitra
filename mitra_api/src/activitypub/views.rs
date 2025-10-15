@@ -11,11 +11,11 @@ use actix_web::{
     Scope,
 };
 use apx_core::{
-    ap_url::with_ap_prefix,
     caip2::ChainId,
     hashlink::Hashlink,
     http_digest::ContentDigest,
     http_types::{header_map_adapter, method_adapter, uri_adapter},
+    url::ap_uri::with_ap_prefix,
 };
 use apx_sdk::{
     authentication::verify_portable_object,

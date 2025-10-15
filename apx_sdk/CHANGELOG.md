@@ -14,6 +14,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Renamed `HttpUrl` type to `HttpUri`.
 - Renamed `VerificationMethod::ApUrl` variant to `VerificationMethod::ApUri`.
 - Renamed `VerificationMethod::HttpUrl` variant to `VerificationMethod::HttpUri`.
+- Moved `ap_url` module to `url` module as `ap_uri`.
 
 ## [0.18.0] - 2025-10-08
 
