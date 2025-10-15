@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.19.0] - 2025-10-15
+
 ### Changed
 
 - Renamed `CanonicalUrl` type to `CanonicalUri`.

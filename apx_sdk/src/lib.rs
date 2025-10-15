@@ -13,7 +13,7 @@
 //!
 //! ```toml
 //! [dependencies]
-//! apx_sdk = "0.18.0"
+//! apx_sdk = "0.19.0"
 //! ```
 //!
 //! Examples:
