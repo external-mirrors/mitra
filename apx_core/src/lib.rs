@@ -11,7 +11,6 @@ pub mod crypto;
 pub mod did;
 pub mod did_key;
 pub mod did_url;
-pub mod hashes;
 pub mod hashlink;
 pub mod http_digest;
 pub mod http_signatures;

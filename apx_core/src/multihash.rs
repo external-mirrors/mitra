@@ -63,7 +63,7 @@ pub fn decode_sha256_multihash(value: &str) -> Result<[u8; 32], MultihashError> 
 
 #[cfg(test)]
 mod tests {
-    use crate::hashes::sha256;
+    use crate::crypto::hashes::sha256;
     use super::*;
 
     #[test]

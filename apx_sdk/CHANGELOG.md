@@ -20,6 +20,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Moved `crypto_ecdsa` module to `crypto` module as `ecdsa`.
 - Moved `crypto_eddsa` module to `crypto` module as `eddsa`.
 - Moved `crypto_rsa` module to `crypto` module as `rsa`.
+- Moved `hashes` module to `crypto` module.
 
 ## [0.18.0] - 2025-10-08
 

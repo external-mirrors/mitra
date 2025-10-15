@@ -2,7 +2,7 @@ use std::fs::remove_file;
 use std::io::{Error as IoError};
 use std::path::{Path, PathBuf};
 
-use apx_core::hashes::sha256;
+use apx_core::crypto::hashes::sha256;
 use thiserror::Error;
 
 use mitra_config::Config;

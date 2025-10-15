@@ -64,7 +64,7 @@ impl fmt::Display for Hashlink {
 
 #[cfg(test)]
 mod tests {
-    use crate::hashes::sha256;
+    use crate::crypto::hashes::sha256;
     use super::*;
 
     #[test]

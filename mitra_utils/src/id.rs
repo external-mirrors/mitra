@@ -1,6 +1,6 @@
 use std::time::SystemTime;
 
-use apx_core::hashes::sha256;
+use apx_core::crypto::hashes::sha256;
 use chrono::{DateTime, Utc};
 use rand::SeedableRng;
 use rand_chacha::ChaCha12Rng;

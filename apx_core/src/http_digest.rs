@@ -11,7 +11,7 @@ use sfv::{
 
 use crate::{
     base64,
-    hashes::{sha256, sha512},
+    crypto::hashes::{sha256, sha512},
 };
 
 // https://www.rfc-editor.org/rfc/rfc3230
