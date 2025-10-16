@@ -88,6 +88,7 @@ impl IntegrityProofConfig {
         }
     }
 
+    #[deprecated]
     pub fn jcs_eddsa_legacy(
         verification_method: &str,
         created_at: DateTime<Utc>,
@@ -114,6 +115,7 @@ impl IntegrityProof {
         }
     }
 
+    #[deprecated]
     fn jcs_rsa(
         signer_key_id: &str,
         signature: &[u8],
@@ -218,6 +220,7 @@ pub fn sign_object_rsa(
     )?;
     let signature_created_at = current_time.unwrap_or(Utc::now());
     // Insert proof
+    #[allow(deprecated)]
     let proof = IntegrityProof::jcs_rsa(
         signer_key_id,
         &signature,
@@ -252,6 +255,7 @@ pub fn sign_object_eddsa(
     let signature_created_at = current_time.unwrap_or(Utc::now());
     let proof_config = if use_legacy_cryptosuite {
         // jcs-eddsa-2022
+        #[allow(deprecated)]
         IntegrityProofConfig::jcs_eddsa_legacy(
             signer_key_id,
             signature_created_at,

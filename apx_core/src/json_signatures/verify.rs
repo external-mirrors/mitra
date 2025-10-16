@@ -347,6 +347,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(deprecated)]
     fn test_create_and_verify_eddsa_signature_legacy() {
         let signer_key = generate_ed25519_key();
         let signer_key_id = "https://example.org/users/test#main-key";

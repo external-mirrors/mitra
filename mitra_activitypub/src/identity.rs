@@ -61,6 +61,7 @@ pub fn create_identity_claim_fep_c390(
         },
         IdentityProofType::FepC390LegacyJcsEddsaProof => {
             subject.as_did_key().expect("did:key should be used");
+            #[allow(deprecated)]
             let proof_config = IntegrityProofConfig::jcs_eddsa_legacy(
                 &subject.to_string(),
                 proof_created_at,
@@ -115,6 +116,7 @@ pub fn create_identity_proof_fep_c390(
         IdentityProofType::FepC390LegacyJcsEddsaProof => {
             let did_key = subject.as_did_key()
                 .expect("did:key should be used");
+            #[allow(deprecated)]
             let proof_config = IntegrityProofConfig::jcs_eddsa_legacy(
                 &did_key.to_string(),
                 proof_created_at,
@@ -184,6 +186,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(deprecated)]
     fn test_create_and_verify_identity_proof_legacy() {
         // jcs-eddsa-2022 (minisign-unhashed); no context injection
         let did_str = "did:key:z6MkrJVnaZkeFzdQyMZu1cgjg7k1pZZ6pvBQ7XJPt4swbTQ2";

@@ -501,6 +501,7 @@ async fn create_identity_proof(
             if signature.is_prehashed {
                 return Err(ValidationError("invalid signature type").into());
             };
+            #[allow(deprecated)]
             let proof_config = IntegrityProofConfig::jcs_eddsa_legacy(
                 &did_key.to_string(),
                 proof_data.created_at,

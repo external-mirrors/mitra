@@ -337,6 +337,7 @@ pub async fn verify_signed_activity(
                 return Err(AuthenticationError::UnexpectedObjectSigner);
             };
             match signature_data.proof_type {
+                #[allow(deprecated)]
                 ProofType::JcsRsaSignature => {
                     let signer_key = get_signer_rsa_key(
                         &actor_profile,
@@ -348,6 +349,7 @@ pub async fn verify_signed_activity(
                         &signature_data.signature,
                     )?;
                 },
+                #[allow(deprecated)]
                 ProofType::JcsEddsaSignature | ProofType::EddsaJcsSignature => {
                     let signer_key = get_signer_ed25519_key(
                         &actor_profile,
