@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- Hide `ProofType::JcsEip191Signature` variant if `eip191` feature flag is not enabled.
+
 ## [0.19.0] - 2025-10-15
 
 ### Changed

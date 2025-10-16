@@ -13,6 +13,7 @@ pub(super) const DATA_INTEGRITY_PROOF: &str = "DataIntegrityProof";
 pub(super) const PROOF_TYPE_JCS_RSA: &str = "MitraJcsRsaSignature2022";
 
 // Similar to EthereumPersonalSignature2021 but with JCS
+#[cfg(feature = "eip191")]
 pub(super) const PROOF_TYPE_JCS_EIP191: &str = "MitraJcsEip191Signature2022";
 
 // Similar to Ed25519Signature2020
@@ -30,6 +31,7 @@ pub(super) const CRYPTOSUITE_JCS_EDDSA: &str = "eddsa-jcs-2022";
 /// Integrity proof type
 #[derive(Debug, PartialEq)]
 pub enum ProofType {
+    #[cfg(feature = "eip191")]
     JcsEip191Signature,
     JcsBlake2Ed25519Signature,
     JcsRsaSignature,
@@ -49,6 +51,7 @@ impl FromStr for ProofType {
 
     fn from_str(value: &str) -> Result<Self, Self::Err> {
         let proof_type = match value {
+            #[cfg(feature = "eip191")]
             PROOF_TYPE_JCS_EIP191 => Self::JcsEip191Signature,
             PROOF_TYPE_JCS_BLAKE2_ED25519 => Self::JcsBlake2Ed25519Signature,
             PROOF_TYPE_JCS_RSA => Self::JcsRsaSignature,
