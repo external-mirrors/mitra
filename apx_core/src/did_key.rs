@@ -35,6 +35,7 @@ impl DidKey {
         encode_multibase_base58btc(&multidata)
     }
 
+    /// Returns ID of the verification method
     pub fn verification_method_id(&self) -> String {
         let key_fragment = self.key_multibase();
         format!("{self}#{key_fragment}")

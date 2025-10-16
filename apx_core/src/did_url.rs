@@ -71,4 +71,14 @@ mod tests {
         );
         assert_eq!(did_url.to_string(), did_url_str);
     }
+
+    #[test]
+    fn test_parse_did_url_just_did() {
+        let did_url_str = "did:key:z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK";
+        let did_url = DidUrl::parse(did_url_str).unwrap();
+        assert_eq!(did_url.resource.path_str(), "");
+        assert_eq!(did_url.resource.query_str(), None);
+        assert_eq!(did_url.resource.fragment_str(), None);
+        assert_eq!(did_url.to_string(), did_url_str);
+    }
 }
