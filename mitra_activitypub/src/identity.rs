@@ -150,23 +150,35 @@ pub fn create_identity_proof_fep_c390(
 #[cfg(test)]
 mod tests {
     use apx_core::{
-        crypto::eddsa::{
-            generate_weak_ed25519_key,
-            ed25519_public_key_from_secret_key,
-            ed25519_secret_key_from_multikey,
+        crypto::{
+            ecdsa::generate_ecdsa_key,
+            eddsa::{
+                generate_weak_ed25519_key,
+                ed25519_public_key_from_secret_key,
+                ed25519_secret_key_from_multikey,
+            },
         },
         did_key::DidKey,
+        did_pkh::DidPkh,
+        eip191::{
+            create_eip191_signature,
+            ecdsa_public_key_to_address_hex,
+        },
         json_signatures::{
             create::sign_object_eddsa,
             proofs::ProofType,
-            verify::{get_json_signature, verify_eddsa_json_signature},
+            verify::{
+                get_json_signature,
+                verify_eddsa_json_signature,
+                verify_eip191_json_signature,
+            },
         },
     };
     use serde_json::json;
     use super::*;
 
     #[test]
-    fn test_create_identity_claim_fep_c390() {
+    fn test_create_identity_claim_minisign_prehashed() {
         let actor_id = "https://server.example/users/test";
         let ed25519_secret_key = generate_weak_ed25519_key();
         let ed25519_public_key =
@@ -186,8 +198,47 @@ mod tests {
     }
 
     #[test]
+    fn test_create_and_verify_identity_proof_eip191() {
+        let secret_key = generate_ecdsa_key();
+        let public_key = secret_key.verifying_key();
+        let address = ecdsa_public_key_to_address_hex(&public_key);
+        let did_pkh = DidPkh::from_ethereum_address(&address);
+        let did = Did::Pkh(did_pkh.clone());
+        let actor_id = "https://server.example/users/test";
+        let created_at = Utc::now();
+        let (_claim, message) = create_identity_claim_fep_c390(
+            actor_id,
+            &did,
+            &IdentityProofType::FepC390JcsEip191Proof,
+            created_at,
+        ).unwrap();
+        let signature = create_eip191_signature(
+            &secret_key,
+            message.as_bytes(),
+        ).unwrap();
+        let db_proof = create_identity_proof_fep_c390(
+            &actor_id,
+            &did,
+            &IdentityProofType::FepC390JcsEip191Proof,
+            created_at,
+            &signature,
+        );
+        let signature_data = get_json_signature(&db_proof.value).unwrap();
+        assert_eq!(
+            signature_data.proof_type,
+            ProofType::JcsEip191Signature,
+        );
+        let result = verify_eip191_json_signature(
+            &did_pkh,
+            &signature_data.object,
+            &signature_data.signature,
+        );
+        assert_eq!(result.is_ok(), true);
+    }
+
+    #[test]
     #[allow(deprecated)]
-    fn test_create_and_verify_identity_proof_legacy() {
+    fn test_create_and_verify_identity_proof_eddsa_legacy() {
         // jcs-eddsa-2022 (minisign-unhashed); no context injection
         let did_str = "did:key:z6MkrJVnaZkeFzdQyMZu1cgjg7k1pZZ6pvBQ7XJPt4swbTQ2";
         let did = did_str.parse().unwrap();
@@ -244,7 +295,7 @@ mod tests {
     }
 
     #[test]
-    fn test_create_and_verify_identity_proof() {
+    fn test_create_and_verify_identity_proof_eddsa() {
         let did_str = "did:key:z6MkrJVnaZkeFzdQyMZu1cgjg7k1pZZ6pvBQ7XJPt4swbTQ2";
         let did = did_str.parse().unwrap();
         let secret_key_multibase = "z3u2en7t5LR2WtQH5PfFqMqwVHBeXouLzo6haApm8XHqvjxq";
