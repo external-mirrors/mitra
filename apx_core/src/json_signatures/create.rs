@@ -141,7 +141,7 @@ impl IntegrityProof {
             proof_type: PROOF_TYPE_JCS_EIP191.to_string(),
             cryptosuite: None,
             proof_purpose: PURPOSE_ASSERTION_METHOD.to_string(),
-            verification_method: signer.to_string(),
+            verification_method: signer.verification_method_id(),
             created: Utc::now(),
             _context: None,
         };
@@ -157,7 +157,7 @@ impl IntegrityProof {
             proof_type: PROOF_TYPE_JCS_BLAKE2_ED25519.to_string(),
             cryptosuite: None,
             proof_purpose: PURPOSE_ASSERTION_METHOD.to_string(),
-            verification_method: signer.to_string(),
+            verification_method: signer.verification_method_id(),
             created: Utc::now(),
             _context: None,
         };

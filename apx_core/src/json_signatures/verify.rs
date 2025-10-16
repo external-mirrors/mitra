@@ -283,7 +283,7 @@ mod tests {
             "proof": {
                 "type": "MitraJcsEip191Signature2022",
                 "proofPurpose": "assertionMethod",
-                "verificationMethod": "did:pkh:eip155:1:0xb9c5714089478a327f09197987f16f9e5d936e8a",
+                "verificationMethod": "did:pkh:eip155:1:0xb9c5714089478a327f09197987f16f9e5d936e8a#blockchainAccountId",
                 "created": "2020-11-05T19:23:24Z",
                 "proofValue": "zE5J",
             },

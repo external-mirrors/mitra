@@ -19,6 +19,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Marked `ProofType::JcsRsaSignature` and `ProofType::JcsEddsaSignature` variants as deprecated.
 
+### Fixed
+
+- Use correct verification method ID when creating EIP-191 and minisign-prehashed integrity proofs.
+
 ## [0.19.0] - 2025-10-15
 
 ### Changed

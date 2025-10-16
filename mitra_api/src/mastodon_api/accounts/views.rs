@@ -503,7 +503,7 @@ async fn create_identity_proof(
                 return Err(ValidationError("invalid signature type").into());
             };
             let proof_config = IntegrityProofConfig::jcs_eddsa(
-                &did_key.to_string(),
+                &did_key.verification_method_id(),
                 proof_data.created_at,
                 None, // statement doesn't have @context
             );

@@ -61,9 +61,10 @@ pub fn create_identity_claim_fep_c390(
             canonicalize_object(&claim)?
         },
         IdentityProofType::FepC390EddsaJcsProof => {
-            subject.as_did_key().expect("did:key should be used");
+            let did_key = subject.as_did_key()
+                .expect("did:key should be used");
             let proof_config = IntegrityProofConfig::jcs_eddsa(
-                &subject.to_string(),
+                &did_key.verification_method_id(),
                 proof_created_at,
                 None, // statement doesn't have @context
             );
@@ -109,7 +110,7 @@ pub fn create_identity_proof_fep_c390(
             let did_key = subject.as_did_key()
                 .expect("did:key should be used");
             let proof_config = IntegrityProofConfig::jcs_eddsa(
-                &did_key.to_string(),
+                &did_key.verification_method_id(),
                 proof_created_at,
                 None, // statement doesn't have @context
             );
@@ -251,9 +252,9 @@ mod tests {
             "proof": {
                 "type": "DataIntegrityProof",
                 "cryptosuite": "eddsa-jcs-2022",
-                "verificationMethod": "did:key:z6MkrJVnaZkeFzdQyMZu1cgjg7k1pZZ6pvBQ7XJPt4swbTQ2",
+                "verificationMethod": "did:key:z6MkrJVnaZkeFzdQyMZu1cgjg7k1pZZ6pvBQ7XJPt4swbTQ2#z6MkrJVnaZkeFzdQyMZu1cgjg7k1pZZ6pvBQ7XJPt4swbTQ2",
                 "proofPurpose": "assertionMethod",
-                "proofValue": "z26W7TfJYD9DrGqnem245zNbeCbTwjb8avpduzi1JPhFrwML99CpP6gGXSKSXAcQdpGFBXF4kx7VwtXKhu7VDZJ54",
+                "proofValue": "zFQMTB8kZ1vExLhBUAGe4r3sc37onbdW8m3tdgsHYugh99Khzx87TbthqpSLcq45agip25v1mBvYW8u2GMKSMbpk",
                 "created": "2023-02-24T23:36:38Z",
             },
         });
