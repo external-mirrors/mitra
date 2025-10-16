@@ -20,6 +20,7 @@ pub(super) const PROOF_TYPE_JCS_EIP191: &str = "MitraJcsEip191Signature2022";
 // - Canonicalization algorithm: JCS
 // - Digest algorithm: BLAKE2b-512
 // - Signature algorithm: EdDSA
+#[cfg(feature = "minisign")]
 pub(super) const PROOF_TYPE_JCS_BLAKE2_ED25519: &str = "MitraJcsEd25519Signature2022";
 
 // https://www.w3.org/TR/vc-di-eddsa/#eddsa-jcs-2022
@@ -33,6 +34,7 @@ pub(super) const CRYPTOSUITE_JCS_EDDSA: &str = "eddsa-jcs-2022";
 pub enum ProofType {
     #[cfg(feature = "eip191")]
     JcsEip191Signature,
+    #[cfg(feature = "minisign")]
     JcsBlake2Ed25519Signature,
     JcsRsaSignature,
     JcsEddsaSignature,
@@ -53,6 +55,7 @@ impl FromStr for ProofType {
         let proof_type = match value {
             #[cfg(feature = "eip191")]
             PROOF_TYPE_JCS_EIP191 => Self::JcsEip191Signature,
+            #[cfg(feature = "minisign")]
             PROOF_TYPE_JCS_BLAKE2_ED25519 => Self::JcsBlake2Ed25519Signature,
             PROOF_TYPE_JCS_RSA => Self::JcsRsaSignature,
             _ => return Err(UnsupportedProofType),
