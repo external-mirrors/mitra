@@ -153,6 +153,7 @@ mod tests {
         crypto::{
             ecdsa::generate_ecdsa_key,
             eddsa::{
+                create_eddsa_signature,
                 generate_weak_ed25519_key,
                 ed25519_public_key_from_secret_key,
                 ed25519_secret_key_from_multikey,
@@ -303,22 +304,23 @@ mod tests {
         let actor_id = "https://server.example/users/alice";
         let created_at = DateTime::parse_from_rfc3339("2023-02-24T23:36:38Z")
             .unwrap().with_timezone(&Utc);
-        let (claim, _) = create_identity_claim_fep_c390(
+        let (_claim, message) = create_identity_claim_fep_c390(
             actor_id,
             &did,
             &IdentityProofType::FepC390EddsaJcsProof,
             created_at,
         ).unwrap();
-        let claim_value = serde_json::to_value(claim).unwrap();
-        let identity_proof = sign_object_eddsa(
+        let signature = create_eddsa_signature(
             &secret_key,
-            &did.to_string(),
-            &claim_value,
-            Some(created_at),
-            false,
-            true, // copy context
-            false, // context injection not required
-        ).unwrap();
+            &hex::decode(message).unwrap(),
+        );
+        let db_proof = create_identity_proof_fep_c390(
+            actor_id,
+            &did,
+            &IdentityProofType::FepC390EddsaJcsProof,
+            created_at,
+            &signature,
+        );
         let expected_result = json!({
             "type": "VerifiableIdentityStatement",
             "subject": "did:key:z6MkrJVnaZkeFzdQyMZu1cgjg7k1pZZ6pvBQ7XJPt4swbTQ2",
@@ -332,9 +334,9 @@ mod tests {
                 "created": "2023-02-24T23:36:38Z",
             },
         });
-        assert_eq!(identity_proof, expected_result);
+        assert_eq!(db_proof.value, expected_result);
 
-        let signature_data = get_json_signature(&identity_proof).unwrap();
+        let signature_data = get_json_signature(&db_proof.value).unwrap();
         assert_eq!(
             signature_data.proof_type,
             ProofType::EddsaJcsSignature,
