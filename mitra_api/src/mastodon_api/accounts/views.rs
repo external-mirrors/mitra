@@ -384,7 +384,7 @@ async fn get_identity_claim(
         "minisign-unhashed" => {
             let did_key = minisign_key_to_did(&query_params.signer)
                 .map_err(|_| ValidationError("invalid key"))?;
-            (Did::Key(did_key), IdentityProofType::FepC390LegacyJcsEddsaProof)
+            (Did::Key(did_key), IdentityProofType::FepC390EddsaJcsProof)
         },
         _ => return Err(ValidationError("unknown proof type").into()),
     };
@@ -418,8 +418,8 @@ async fn create_identity_proof(
         "ethereum" => IdentityProofType::FepC390JcsEip191Proof,
         // MitraJcsEd25519Signature2022
         "minisign" => IdentityProofType::FepC390JcsBlake2Ed25519Proof,
-        // jcs-eddsa-2022
-        "minisign-unhashed" => IdentityProofType::FepC390LegacyJcsEddsaProof,
+        // eddsa-jcs-2022
+        "minisign-unhashed" => IdentityProofType::FepC390EddsaJcsProof,
         _ => return Err(ValidationError("unknown proof type").into()),
     };
     let did = proof_data.did.parse::<Did>()
@@ -452,7 +452,8 @@ async fn create_identity_proof(
     let signature_bin = match proof_type {
         IdentityProofType::LegacyEip191IdentityProof
             | IdentityProofType::LegacyMinisignIdentityProof
-            => unimplemented!("expected FEP-c390 compatible proof type"),
+            | IdentityProofType::FepC390LegacyJcsEddsaProof
+            => unimplemented!("expected supported proof type"),
         IdentityProofType::FepC390JcsBlake2Ed25519Proof => {
             let did_key = did.as_did_key()
                 .ok_or(ValidationError("unexpected DID type"))?;
@@ -491,7 +492,7 @@ async fn create_identity_proof(
             ).map_err(|_| ValidationError("invalid signature"))?;
             signature_bin
         },
-        IdentityProofType::FepC390LegacyJcsEddsaProof => {
+        IdentityProofType::FepC390EddsaJcsProof => {
             let did_key = did.as_did_key()
                 .ok_or(ValidationError("unexpected DID type"))?;
             let ed25519_key = did_key.try_ed25519_key()
@@ -501,10 +502,10 @@ async fn create_identity_proof(
             if signature.is_prehashed {
                 return Err(ValidationError("invalid signature type").into());
             };
-            #[allow(deprecated)]
-            let proof_config = IntegrityProofConfig::jcs_eddsa_legacy(
+            let proof_config = IntegrityProofConfig::jcs_eddsa(
                 &did_key.to_string(),
                 proof_data.created_at,
+                None, // statement doesn't have @context
             );
             let proof_config_value = serde_json::to_value(proof_config)
                 .expect("proof config should be serializable");
@@ -516,7 +517,6 @@ async fn create_identity_proof(
             ).map_err(|_| ValidationError("invalid signature"))?;
             signature.value.to_vec()
         },
-        IdentityProofType::FepC390EddsaJcsProof => unimplemented!(),
     };
 
     let proof = create_identity_proof_fep_c390(

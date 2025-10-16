@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Changed
 
 - Changed data integrity context to `https://w3id.org/security/data-integrity/v2`.
+- Use `eddsa-jcs-2022` cryptosuite when generating minisign identity proofs.
 
 ## [4.11.0] - 2025-10-09
 
