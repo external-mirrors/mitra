@@ -164,11 +164,8 @@ Signature algorithm: EdDSA
 Supported representations:
 
 - `quoteUrl` property.
+- `quote` property.
 - FEP-e232 object links with relation type `https://misskey-hub.net/ns#_misskey_quote`.
-
-## Custom emojis
-
-Custom emojis are implemented as described in Mastodon documentation: https://docs.joinmastodon.org/spec/activitypub/#emoji.
 
 ## Identity proofs
 
