@@ -5,11 +5,16 @@ use actix_web::{
     HttpResponse,
     Scope,
 };
+use actix_web_httpauth::extractors::bearer::BearerAuth;
 
 use mitra_adapters::dynamic_config::get_dynamic_config;
 use mitra_config::Config;
 use mitra_models::{
     database::{get_database_client, DatabaseConnectionPool},
+    filter_rules::{
+        queries::get_filter_rules,
+        types::FilterAction,
+    },
     instances::queries::{get_peers, get_peer_count},
     posts::queries::get_post_count,
     users::queries::{
@@ -22,13 +27,18 @@ use mitra_utils::datetime::days_before_now;
 
 use crate::http::get_request_base_url;
 use crate::mastodon_api::{
+    auth::get_current_user,
     errors::MastodonError,
     media_server::ClientMediaServer,
 };
 
-use super::types::{InstanceInfo, InstanceInfoV2};
+use super::types::{
+    DomainBlock,
+    InstanceInfo,
+    InstanceInfoV2,
+};
 
-/// https://docs.joinmastodon.org/methods/instance/#v1
+// https://docs.joinmastodon.org/methods/instance/#v1
 #[get("")]
 async fn instance_view(
     config: web::Data<Config>,
@@ -59,6 +69,7 @@ async fn instance_view(
     Ok(HttpResponse::Ok().json(instance))
 }
 
+// https://docs.joinmastodon.org/methods/instance/#peers
 #[get("/peers")]
 async fn instance_peers_view(
     db_pool: web::Data<DatabaseConnectionPool>,
@@ -68,10 +79,33 @@ async fn instance_peers_view(
     Ok(HttpResponse::Ok().json(peers))
 }
 
+// https://docs.joinmastodon.org/methods/instance/#domain_blocks
+#[get("/domain_blocks")]
+async fn domain_blocks_view(
+    auth: BearerAuth,
+    db_pool: web::Data<DatabaseConnectionPool>,
+) -> Result<HttpResponse, MastodonError> {
+    let db_client = &**get_database_client(&db_pool).await?;
+    get_current_user(db_client, auth.token()).await?;
+    let filter_rules = get_filter_rules(db_client).await?;
+    let domain_blocks: Vec<_> = filter_rules
+        .into_iter()
+        .filter(|rule| matches!(
+            rule.filter_action,
+            FilterAction::Reject | FilterAction::RejectIncoming,
+        ))
+        // Stop when reverse rule is encountered
+        .take_while(|rule| !rule.is_reversed)
+        .map(|rule| DomainBlock::new(&rule.target))
+        .collect();
+    Ok(HttpResponse::Ok().json(domain_blocks))
+}
+
 pub fn instance_api_v1_scope() -> Scope {
     web::scope("/v1/instance")
         .service(instance_view)
         .service(instance_peers_view)
+        .service(domain_blocks_view)
 }
 
 #[get("")]

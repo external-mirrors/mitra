@@ -993,6 +993,21 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Instance'
+  /api/v1/instance/domain_blocks:
+    get:
+      summary: Obtain a list of domains that have been blocked.
+      security:
+        - tokenAuth: []
+      responses:
+        200:
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                description: List of domains
+                type: array
+                items:
+                  $ref: '#/components/schemas/DomainBlock'
   /api/v2/instance:
     get:
       summary: Information about the instance.
@@ -3016,6 +3031,25 @@ components:
         visible_in_picker:
           description: Whether this Emoji should be visible in the picker or unlisted.
           type: boolean
+    DomainBlock:
+      description: Represents a domain that is blocked by the instance.
+      type: object
+      properties:
+        domain:
+          description: The domain which is blocked. May contain wildcards.
+          type: string
+        digest:
+          description: The SHA-256 digest of the domain string.
+          type: string
+        severity:
+          description: The level to which the domain is blocked.
+          type: string
+          example: suspend
+        comment:
+          description: An optional reason for the domain block.
+          type: string
+          nullable: true
+          example: null
     EmojiReaction:
       description: Emoji reaction.
       type: object

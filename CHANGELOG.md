@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Set `discoverable` flag to `true` on Mastodon API `Account` entities.
 - Replace `description` meta tag on post and profile pages.
+- Added `/api/v1/instance/domain_blocks` API endpoint.
 
 ### Changed
 

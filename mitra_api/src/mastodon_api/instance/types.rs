@@ -1,3 +1,4 @@
+use apx_sdk::core::crypto::hashes::sha256;
 use serde::Serialize;
 
 use mitra_adapters::{
@@ -387,6 +388,26 @@ impl InstanceInfoV2 {
             pleroma: PleromaInfo {
                 metadata: PleromaMetadata::new(),
             },
+        }
+    }
+}
+
+// https://docs.joinmastodon.org/entities/DomainBlock/
+#[derive(Serialize)]
+pub struct DomainBlock {
+    domain: String,
+    digest: String,
+    severity: String,
+    comment: Option<String>,
+}
+
+impl DomainBlock {
+    pub fn new(hostname: &str) -> Self {
+        Self {
+            domain: hostname.to_owned(),
+            digest: hex::encode(sha256(hostname.as_bytes())),
+            severity: "suspend".to_owned(),
+            comment: None,
         }
     }
 }
