@@ -273,8 +273,7 @@ async fn get_webfinger_hostname(
         CanonicalUri::Http(http_uri) => {
             // TODO: implement reverse webfinger lookup
             // https://swicg.github.io/activitypub-webfinger/#reverse-discovery
-            let hostname = get_hostname(&http_uri.to_string())
-                .map_err(|_| ValidationError("invalid actor ID"))?;
+            let hostname = http_uri.hostname().to_string();
             WebfingerHostname::Remote(hostname)
         },
         CanonicalUri::Ap(_) => {
