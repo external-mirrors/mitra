@@ -42,19 +42,19 @@ json_to_sql!(PollResults);
 pub struct Poll {
     pub id: Uuid,
     pub multiple_choices: bool,
-    pub ends_at: DateTime<Utc>,
+    pub ends_at: Option<DateTime<Utc>>,
     pub results: PollResults,
 }
 
 impl Poll {
     pub fn ended(&self) -> bool {
-        self.ends_at < Utc::now()
+        self.ends_at.is_some_and(|ends_at| ends_at < Utc::now())
     }
 }
 
 pub struct PollData {
     pub multiple_choices: bool,
-    pub ends_at: DateTime<Utc>,
+    pub ends_at: Option<DateTime<Utc>>,
     pub results: Vec<PollResult>,
 }
 

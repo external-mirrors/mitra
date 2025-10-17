@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Duration, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -68,7 +68,7 @@ impl Poll {
         };
         Self {
             id: db_poll.id,
-            expires_at: db_poll.ends_at,
+            expires_at: db_poll.ends_at.unwrap_or(Utc::now() + Duration::seconds(2_i64.pow(30))),
             expired: db_poll.ended(),
             multiple: db_poll.multiple_choices,
             votes_count: votes_count,

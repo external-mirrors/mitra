@@ -366,7 +366,7 @@ mod tests {
         let poll_ends_at = Utc.with_ymd_and_hms(2025, 5, 15, 0, 0, 0).unwrap();
         let poll_data = PollData {
             multiple_choices: false,
-            ends_at: poll_ends_at,
+            ends_at: Some(poll_ends_at),
             results: poll_results.clone(),
         };
         let poll = create_poll(
@@ -377,7 +377,7 @@ mod tests {
 
         assert_eq!(poll.id, post.id);
         assert_eq!(poll.multiple_choices, false);
-        assert_eq!(poll.ends_at, poll_ends_at);
+        assert_eq!(poll.ends_at.unwrap(), poll_ends_at);
         assert_eq!(poll.results.inner(), poll_results);
     }
 

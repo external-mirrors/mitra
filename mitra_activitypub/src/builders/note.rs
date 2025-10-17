@@ -234,9 +234,9 @@ pub fn build_note(
             })
             .collect();
         if poll.multiple_choices {
-            (vec![], results, Some(poll.ends_at))
+            (vec![], results, poll.ends_at)
         } else {
-            (results, vec![], Some(poll.ends_at))
+            (results, vec![], poll.ends_at)
         }
     } else {
         (vec![], vec![], None)
@@ -545,8 +545,8 @@ mod tests {
         let poll = Poll {
             id: uuid!("11fa64ff-b5a3-47bf-b23d-22b360581c3f"),
             multiple_choices: false,
-            ends_at: DateTime::parse_from_rfc3339("2023-03-27T12:13:46Z")
-                .unwrap().with_timezone(&Utc),
+            ends_at: Some(DateTime::parse_from_rfc3339("2023-03-27T12:13:46Z")
+                .unwrap().with_timezone(&Utc)),
             results: PollResults::new(vec![
                 PollResult::new("option 1"),
                 PollResult::new("option 2"),

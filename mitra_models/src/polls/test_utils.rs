@@ -24,7 +24,7 @@ pub async fn create_test_local_poll(
         .collect();
     let poll_data = PollData {
         multiple_choices: multiple_choices,
-        ends_at: Utc::now(),
+        ends_at: Some(Utc::now()),
         results: results,
     };
     let post_data = PostCreateData {

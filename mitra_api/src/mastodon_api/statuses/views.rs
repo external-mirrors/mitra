@@ -235,9 +235,10 @@ async fn create_status(
                 emojis.push(poll_emoji);
             };
         };
+        let ends_at = Utc::now() + Duration::from_secs(duration);
         let poll_data = PollData {
             multiple_choices: poll_params.multiple.unwrap_or(false),
-            ends_at: Utc::now() + Duration::from_secs(duration),
+            ends_at: Some(ends_at),
             results: results,
         };
         Some(poll_data)

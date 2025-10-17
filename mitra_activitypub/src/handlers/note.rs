@@ -909,8 +909,7 @@ fn parse_poll_results(
     };
     let ends_at = object.end_time
         // Pleroma uses closed property even when poll is still active
-        .or(object.closed)
-        .ok_or(ValidationError("endless poll"))?;
+        .or(object.closed);
     let poll_data = PollData {
         multiple_choices: is_multichoice,
         ends_at: ends_at,
