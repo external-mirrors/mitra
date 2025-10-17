@@ -43,12 +43,12 @@ use crate::{
 use super::{
     types::MetadataBlock,
     urls::get_opengraph_image_url,
+    utils::replace_index_metadata,
 };
 
 const INDEX_FILE: &str = "index.html";
 const CUSTOM_CSS_PATH: &str = "/assets/custom.css";
 
-const INDEX_TITLE_ELEMENT: &str = "<title>Mitra - Federated social network</title>";
 // https://ogp.me/#types
 const OG_TYPE_ARTICLE: &str = "article";
 const OG_TYPE_PROFILE: &str = "profile";
@@ -156,10 +156,7 @@ async fn profile_page_opengraph_view(
                 include_str!("templates/metadata_block.html"),
                 context,
             )?;
-            index_html.replace(
-                INDEX_TITLE_ELEMENT,
-                &metadata_block,
-            )
+            replace_index_metadata(index_html, metadata_block)
         },
         Err(DatabaseError::NotFound(_)) => {
             // Don't insert metadata if profile doesn't exist or not public
@@ -229,10 +226,7 @@ async fn post_page_opengraph_view(
                 include_str!("templates/metadata_block.html"),
                 context,
             )?;
-            index_html.replace(
-                INDEX_TITLE_ELEMENT,
-                &metadata_block,
-            )
+            replace_index_metadata(index_html, metadata_block)
         },
         Ok(_) | Err(DatabaseError::NotFound(_)) => {
             // Don't insert metadata if post doesn't exist or not public
