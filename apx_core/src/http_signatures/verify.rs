@@ -343,6 +343,14 @@ pub fn parse_http_signature_rfc9421(
             "@target-uri" => {
                 request_uri.to_string()
             },
+            "@request-target" => {
+                // https://datatracker.ietf.org/doc/html/rfc9421#name-request-target
+                let mut request_target = request_uri.path().to_owned();
+                if let Some(query) = request_uri.query() {
+                    request_target += &format!("?{query}");
+                };
+                request_target
+            },
             "@path" => {
                 request_uri.path().to_owned()
             },
