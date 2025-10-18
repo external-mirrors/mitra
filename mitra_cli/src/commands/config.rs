@@ -1,8 +1,9 @@
 use anyhow::Error;
 use clap::{Parser, ValueEnum};
+use serde_json::{Value as JsonValue};
 
 use mitra_adapters::dynamic_config::{
-    set_editable_property,
+    validate_editable_parameter,
     EDITABLE_PROPERTIES,
 };
 use mitra_models::{
@@ -12,16 +13,19 @@ use mitra_models::{
             FEDERATED_TIMELINE_RESTRICTED,
             FILTER_KEYWORDS,
         },
-        queries::get_internal_property_json,
+        queries::{
+            get_internal_property_json,
+            set_internal_property,
+        },
     },
 };
 
 #[derive(Clone, ValueEnum)]
 enum ParameterName {
-    /// Make federated timeline visible only to moderators (true of false, default: false)
+    /// Make federated timeline visible only to moderators (true or false, default: false)
     #[clap(name = FEDERATED_TIMELINE_RESTRICTED)]
     FederatedTimelineRestricted,
-    /// Keywords for reject-keywords filter action (JSON array, example: ["foo", "bar"])
+    /// Keywords for reject-keywords filter action (an array of strings, example: ["foo", "bar"])
     #[clap(name = FILTER_KEYWORDS)]
     FilterKeywords,
 }
@@ -40,6 +44,7 @@ impl ParameterName {
 /// Get value of a dynamic configuration parameter
 #[derive(Parser)]
 pub struct GetConfig {
+    /// Parameter name
     name: ParameterName,
 }
 
@@ -64,7 +69,9 @@ impl GetConfig {
 /// Change value of a dynamic configuration parameter
 #[derive(Parser)]
 pub struct UpdateConfig {
+    /// Parameter name
     name: ParameterName,
+    /// Parameter value (JSON)
     value: String,
 }
 
@@ -74,7 +81,9 @@ impl UpdateConfig {
         db_pool: &DatabaseConnectionPool,
     ) -> Result<(), Error> {
         let db_client = &**get_database_client(db_pool).await?;
-        set_editable_property(db_client, self.name.as_str(), &self.value).await?;
+        let value: JsonValue = serde_json::from_str(&self.value)?;
+        validate_editable_parameter(self.name.as_str(), &value)?;
+        set_internal_property(db_client, self.name.as_str(), &value).await?;
         println!("configuration updated");
         Ok(())
     }

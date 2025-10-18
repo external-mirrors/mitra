@@ -1,14 +1,16 @@
+use serde_json::{Value as JsonValue};
+
 use mitra_models::{
-    database::{DatabaseClient, DatabaseError, DatabaseTypeError},
+    database::{DatabaseClient, DatabaseError},
     properties::constants::{
         FEDERATED_TIMELINE_RESTRICTED,
         FILTER_KEYWORDS,
     },
     properties::queries::{
         get_internal_property,
-        set_internal_property,
     },
 };
+use mitra_validators::errors::ValidationError;
 
 // Dynamic configuration parameters
 pub const EDITABLE_PROPERTIES: [&str; 2] = [
@@ -18,27 +20,23 @@ pub const EDITABLE_PROPERTIES: [&str; 2] = [
     FILTER_KEYWORDS,
 ];
 
-pub async fn set_editable_property(
-    db_client: &impl DatabaseClient,
+pub fn validate_editable_parameter(
     name: &str,
-    value: &str,
-) -> Result<(), DatabaseError> {
-    let value_json = match name {
+    value: &JsonValue,
+) -> Result<(), ValidationError> {
+    let value = value.clone();
+    match name {
         FEDERATED_TIMELINE_RESTRICTED => {
-            // TODO: return validation error
-            let value_typed: bool = serde_json::from_str(value)
-                .map_err(|_| DatabaseTypeError)?;
-            serde_json::json!(value_typed)
+            let _: bool = serde_json::from_value(value)
+                .map_err(|_| ValidationError("invalid value type"))?;
         },
         FILTER_KEYWORDS => {
-            let value_typed: Vec<String> = serde_json::from_str(value)
-                .map_err(|_| DatabaseTypeError)?;
-            serde_json::json!(value_typed)
+            let _: Vec<String> = serde_json::from_value(value)
+                .map_err(|_| ValidationError("invalid value type"))?;
         },
-        _ => return Err(DatabaseTypeError.into()),
+        _ => return Err(ValidationError("invalid parameter name")),
     };
-    // TODO: avoid converting to Value twice
-    set_internal_property(db_client, name, &value_json).await
+    Ok(())
 }
 
 pub struct DynamicConfig {
@@ -54,4 +52,38 @@ pub async fn get_dynamic_config(
             .unwrap_or(false);
     let config = DynamicConfig { federated_timeline_restricted };
     Ok(config)
+}
+
+#[cfg(test)]
+mod tests {
+    use serde_json::json;
+    use serial_test::serial;
+    use mitra_models::{
+        database::test_utils::create_test_database,
+        properties::queries::set_internal_property,
+    };
+    use super::*;
+
+    #[test]
+    fn test_validate_editable_parameter_unknown_property() {
+        let name = "test";
+        let value = json!(false);
+        let error = validate_editable_parameter(name, &value).err().unwrap();
+        assert_eq!(error.to_string(), "invalid parameter name");
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_get_dynamic_config() {
+        let db_client = &create_test_database().await;
+        let config = get_dynamic_config(db_client).await.unwrap();
+        assert_eq!(config.federated_timeline_restricted, false);
+        set_internal_property(
+            db_client,
+            FEDERATED_TIMELINE_RESTRICTED,
+            &json!(true),
+        ).await.unwrap();
+        let config = get_dynamic_config(db_client).await.unwrap();
+        assert_eq!(config.federated_timeline_restricted, true);
+    }
 }
