@@ -31,8 +31,8 @@ use mitra_models::{
     activitypub::queries::save_attributed_object,
     attachments::queries::create_attachment,
     database::{
+        db_client_await,
         get_database_client,
-        DatabaseClient,
         DatabaseConnectionPool,
         DatabaseError,
     },
@@ -411,7 +411,7 @@ pub struct MediaAttachment {
 
 async fn get_object_attachments(
     ap_client: &ApClient,
-    db_client: &impl DatabaseClient,
+    db_pool: &DatabaseConnectionPool,
     object: &AttributedObject,
     author: &DbActorProfile,
 ) -> Result<(Vec<Uuid>, Vec<String>), HandlerError> {
@@ -506,6 +506,7 @@ async fn get_object_attachments(
         };
         downloaded.push((media_info, maybe_description));
     };
+    let db_client = &**get_database_client(db_pool).await?;
     for (media_info, description) in downloaded {
         let db_attachment = create_attachment(
             db_client,
@@ -565,7 +566,7 @@ fn get_object_links(
 
 async fn get_object_tags(
     ap_client: &ApClient,
-    db_client: &mut impl DatabaseClient,
+    db_pool: &DatabaseConnectionPool,
     object: &AttributedObject,
     author: &DbActorProfile,
     redirects: &HashMap<String, String>,
@@ -623,9 +624,9 @@ async fn get_object_tags(
             if let Some(href) = tag.href {
                 // NOTE: `href` attribute is usually actor ID
                 // but also can be actor URL (profile link).
-                match ActorIdResolver::default().resolve(
+                match ActorIdResolver::default().resolve_with_pool(
                     ap_client,
-                    db_client,
+                    db_pool,
                     &href,
                 ).await {
                     Ok(profile) => {
@@ -653,6 +654,7 @@ async fn get_object_tags(
                 },
             };
             if let Ok(webfinger_address) = WebfingerAddress::from_handle(&tag_name) {
+                let db_client = &mut **get_database_client(db_pool).await?;
                 let profile = match get_or_import_profile_by_webfinger_address(
                     ap_client,
                     db_client,
@@ -699,7 +701,7 @@ async fn get_object_tags(
             let href = redirects.get(&tag.href).unwrap_or(&tag.href);
             let canonical_linked_id = canonicalize_id(href)?;
             let linked = get_post_by_object_id(
-                db_client,
+                db_client_await!(db_pool),
                 instance.uri_str(),
                 &canonical_linked_id,
             ).await?;
@@ -715,6 +717,7 @@ async fn get_object_tags(
             if emoji_count > EMOJI_LIMIT {
                 continue;
             };
+            let db_client = &mut **get_database_client(db_pool).await?;
             match handle_emoji(
                 ap_client,
                 db_client,
@@ -735,6 +738,7 @@ async fn get_object_tags(
 
     // Create mentions for known actors in "to" and "cc" fields
     let audience = get_audience(object)?;
+    let db_client = &**get_database_client(db_pool).await?;
     for target_id in audience {
         if is_public(&target_id) {
             continue;
@@ -926,7 +930,6 @@ pub async fn create_remote_post(
     redirects: &HashMap<String, String>,
 ) -> Result<Post, HandlerError> {
     let AttributedObjectJson { inner: object, value: object_value } = object;
-    let db_client = &mut **get_database_client(db_pool).await?;
     let canonical_object_id = canonicalize_id(&object.id)?;
 
     object.check_not_actor()?;
@@ -941,9 +944,9 @@ pub async fn create_remote_post(
     {
         return Err(ValidationError("object attributed to actor from different server").into());
     };
-    let author = ActorIdResolver::default().only_remote().resolve(
+    let author = ActorIdResolver::default().only_remote().resolve_with_pool(
         ap_client,
-        db_client,
+        db_pool,
         &object.attributed_to,
     ).await.map_err(|err| {
         log::warn!("failed to import {} ({})", object.attributed_to, err);
@@ -956,7 +959,7 @@ pub async fn create_remote_post(
             let object_id = redirects.get(object_id).unwrap_or(object_id);
             let canonical_object_id = canonicalize_id(object_id)?;
             let in_reply_to = get_post_by_object_id(
-                db_client,
+                db_client_await!(db_pool),
                 ap_client.instance.uri_str(),
                 &canonical_object_id,
             ).await?;
@@ -985,7 +988,7 @@ pub async fn create_remote_post(
     };
     let (attachments, unprocessed) = get_object_attachments(
         ap_client,
-        db_client,
+        db_pool,
         &object,
         &author,
     ).await?;
@@ -995,13 +998,14 @@ pub async fn create_remote_post(
 
     let (mentions, hashtags, links, emojis) = get_object_tags(
         ap_client,
-        db_client,
+        db_pool,
         &object,
         &author,
         redirects,
     ).await?;
 
     // TODO: use on local posts too
+    let db_client = &mut **get_database_client(db_pool).await?;
     let mentions = filter_mentions(
         db_client,
         mentions,
@@ -1077,7 +1081,6 @@ pub async fn update_remote_post(
 ) -> Result<Post, HandlerError> {
     assert!(!post.is_local());
     let AttributedObjectJson { inner: object, value: object_json } = object;
-    let db_client = &mut **get_database_client(db_pool).await?;
     let canonical_author_id = canonicalize_id(&object.attributed_to)?;
     if canonical_author_id.to_string() != post.author.expect_remote_actor_id() {
         return Err(ValidationError("object owner can't be changed").into());
@@ -1088,7 +1091,7 @@ pub async fn update_remote_post(
         Some(ref object_id) => {
             let canonical_object_id = canonicalize_id(object_id)?;
             let in_reply_to = get_post_by_object_id(
-                db_client,
+                db_client_await!(db_pool),
                 ap_client.instance.uri_str(),
                 &canonical_object_id,
             ).await?;
@@ -1127,7 +1130,7 @@ pub async fn update_remote_post(
     };
     let (attachments, unprocessed) = get_object_attachments(
         ap_client,
-        db_client,
+        db_pool,
         object,
         &post.author,
     ).await?;
@@ -1136,7 +1139,7 @@ pub async fn update_remote_post(
     };
     let (mentions, hashtags, links, emojis) = get_object_tags(
         ap_client,
-        db_client,
+        db_pool,
         object,
         &post.author,
         &HashMap::new(),
@@ -1148,6 +1151,7 @@ pub async fn update_remote_post(
             FilterAction::MarkSensitive,
         );
 
+    let db_client = &mut **get_database_client(db_pool).await?;
     let mentions = filter_mentions(
         db_client,
         mentions,
