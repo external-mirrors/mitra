@@ -5,4 +5,5 @@ pub const INSTANCE_RSA_SECRET_KEY: &str = "instance_rsa_secret_key";
 pub const ETHEREUM_CURRENT_BLOCK: &str = "ethereum_current_block";
 
 pub const FEDERATED_TIMELINE_RESTRICTED: &str = "federated_timeline_restricted";
+pub const FILTER_BLOCKLIST_PUBLIC: &str =  "filter_blocklist_public";
 pub const FILTER_KEYWORDS: &str = "filter_keywords";

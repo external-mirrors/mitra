@@ -82,11 +82,16 @@ async fn instance_peers_view(
 // https://docs.joinmastodon.org/methods/instance/#domain_blocks
 #[get("/domain_blocks")]
 async fn domain_blocks_view(
-    auth: BearerAuth,
+    maybe_auth: Option<BearerAuth>,
     db_pool: web::Data<DatabaseConnectionPool>,
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &**get_database_client(&db_pool).await?;
-    get_current_user(db_client, auth.token()).await?;
+    let dynamic_config = get_dynamic_config(db_client).await?;
+    if !dynamic_config.filter_blocklist_public {
+        let auth = maybe_auth
+            .ok_or(MastodonError::AuthError("authentication required"))?;
+        get_current_user(db_client, auth.token()).await?;
+    };
     let filter_rules = get_filter_rules(db_client).await?;
     let domain_blocks: Vec<_> = filter_rules
         .into_iter()

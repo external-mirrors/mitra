@@ -5,6 +5,7 @@ use mitra_models::{
     database::{DatabaseClient, DatabaseError, DatabaseTypeError},
     properties::constants::{
         FEDERATED_TIMELINE_RESTRICTED,
+        FILTER_BLOCKLIST_PUBLIC,
         FILTER_KEYWORDS,
     },
     properties::queries::{
@@ -14,10 +15,9 @@ use mitra_models::{
 use mitra_validators::errors::ValidationError;
 
 // Dynamic configuration parameters
-pub const EDITABLE_PROPERTIES: [&str; 2] = [
-    // Make federated timeline visible only to moderators
+pub const EDITABLE_PROPERTIES: [&str; 3] = [
     FEDERATED_TIMELINE_RESTRICTED,
-    // Keywords for `reject-keywords` filter action
+    FILTER_BLOCKLIST_PUBLIC,
     FILTER_KEYWORDS,
 ];
 
@@ -27,7 +27,9 @@ pub fn validate_editable_parameter(
 ) -> Result<(), ValidationError> {
     let value = value.clone();
     match name {
-        FEDERATED_TIMELINE_RESTRICTED => {
+        FEDERATED_TIMELINE_RESTRICTED
+            | FILTER_BLOCKLIST_PUBLIC =>
+        {
             let _: bool = serde_json::from_value(value)
                 .map_err(|_| ValidationError("invalid value type"))?;
         },
@@ -44,6 +46,7 @@ pub fn validate_editable_parameter(
 #[serde(default)]
 pub struct DynamicConfig {
     pub federated_timeline_restricted: bool,
+    pub filter_blocklist_public: bool,
     pub filter_keywords: Vec<String>,
 }
 
@@ -52,6 +55,7 @@ impl Default for DynamicConfig {
     fn default() -> Self {
         Self {
             federated_timeline_restricted: false,
+            filter_blocklist_public: false,
             filter_keywords: vec![],
         }
     }
