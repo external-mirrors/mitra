@@ -57,6 +57,9 @@ pub enum HttpSignatureVerificationError {
     #[error("missing component {0}")]
     MissingComponent(&'static str),
 
+    #[error("unsupported component {0}")]
+    UnsupportedComponent(String),
+
     #[error("invalid encoding")]
     InvalidEncoding(#[from] base64::DecodeError),
 
@@ -356,7 +359,7 @@ pub fn parse_http_signature_rfc9421(
                     .to_owned()
             },
             id if id.starts_with('@') => {
-                return Err(VerificationError::ParseError("unsupported component ID"));
+                return Err(VerificationError::UnsupportedComponent(id.to_owned()));
             },
             _ => {
                 request_headers.get(component_id)

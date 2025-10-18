@@ -14,6 +14,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Hide `ProofType::JcsEip191Signature` variant if `eip191` feature flag is not enabled.
 - Hide `ProofType::JcsBlake2Ed25519Signature` variant if `minisign` feature flag is not enabled.
+- Add component ID to RFC-9421 "unsupported component" error message.
 
 ### Deprecated
 
