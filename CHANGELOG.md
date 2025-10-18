@@ -17,6 +17,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Use `eddsa-jcs-2022` cryptosuite when generating minisign identity proofs.
 - Don't reject remote polls without end date.
 - Improved documentation and error messages for `update-config` command.
+- Make `get-config` display default value if configuration parameter is not set.
 
 ### Fixed
 

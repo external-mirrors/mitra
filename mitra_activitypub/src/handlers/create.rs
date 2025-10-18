@@ -7,6 +7,7 @@ use apx_sdk::{
 use serde::Deserialize;
 use serde_json::{Value as JsonValue};
 
+use mitra_adapters::dynamic_config::get_dynamic_config;
 use mitra_config::Config;
 use mitra_models::{
     database::{
@@ -16,10 +17,6 @@ use mitra_models::{
         DatabaseError,
     },
     filter_rules::types::FilterAction,
-    properties::{
-        constants::FILTER_KEYWORDS,
-        queries::get_internal_property,
-    },
     relationships::queries::is_local_or_followed,
 };
 use mitra_validators::errors::ValidationError;
@@ -162,11 +159,8 @@ pub async fn handle_create(
                 author_hostname.as_str(),
                 FilterAction::RejectKeywords,
             ) {
-                let keywords: Vec<String> = get_internal_property(
-                    db_client,
-                    FILTER_KEYWORDS,
-                ).await?.unwrap_or_default();
-                for keyword in keywords {
+                let dynamic_config = get_dynamic_config(db_client).await?;
+                for keyword in dynamic_config.filter_keywords {
                     if !content.contains(&keyword) {
                         continue;
                     };

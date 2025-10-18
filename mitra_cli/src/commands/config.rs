@@ -3,6 +3,7 @@ use clap::{Parser, ValueEnum};
 use serde_json::{Value as JsonValue};
 
 use mitra_adapters::dynamic_config::{
+    get_dynamic_config,
     validate_editable_parameter,
     EDITABLE_PROPERTIES,
 };
@@ -14,7 +15,6 @@ use mitra_models::{
             FILTER_KEYWORDS,
         },
         queries::{
-            get_internal_property_json,
             set_internal_property,
         },
     },
@@ -54,13 +54,9 @@ impl GetConfig {
         db_pool: &DatabaseConnectionPool,
     ) -> Result<(), Error> {
         let db_client = &**get_database_client(db_pool).await?;
-        let maybe_value = get_internal_property_json(
-            db_client,
-            self.name.as_str(),
-        ).await?;
-        let Some(value) = maybe_value else {
-            return Err(Error::msg("value is not set"));
-        };
+        let dynamic_config = get_dynamic_config(db_client).await?;
+        let dynamic_config_json = serde_json::to_value(dynamic_config)?;
+        let value = &dynamic_config_json[self.name.as_str()];
         println!("{value}");
         Ok(())
     }

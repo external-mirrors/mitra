@@ -1,13 +1,14 @@
+use serde::{Deserialize, Serialize};
 use serde_json::{Value as JsonValue};
 
 use mitra_models::{
-    database::{DatabaseClient, DatabaseError},
+    database::{DatabaseClient, DatabaseError, DatabaseTypeError},
     properties::constants::{
         FEDERATED_TIMELINE_RESTRICTED,
         FILTER_KEYWORDS,
     },
     properties::queries::{
-        get_internal_property,
+        get_internal_properties_json,
     },
 };
 use mitra_validators::errors::ValidationError;
@@ -39,18 +40,29 @@ pub fn validate_editable_parameter(
     Ok(())
 }
 
+#[derive(Deserialize, Serialize)]
+#[serde(default)]
 pub struct DynamicConfig {
     pub federated_timeline_restricted: bool,
+    pub filter_keywords: Vec<String>,
+}
+
+#[allow(clippy::derivable_impls)]
+impl Default for DynamicConfig {
+    fn default() -> Self {
+        Self {
+            federated_timeline_restricted: false,
+            filter_keywords: vec![],
+        }
+    }
 }
 
 pub async fn get_dynamic_config(
     db_client: &impl DatabaseClient,
 ) -> Result<DynamicConfig, DatabaseError> {
-    let federated_timeline_restricted: bool =
-        get_internal_property(db_client, FEDERATED_TIMELINE_RESTRICTED)
-            .await?
-            .unwrap_or(false);
-    let config = DynamicConfig { federated_timeline_restricted };
+    let config_json = get_internal_properties_json(db_client).await?;
+    let config = serde_json::from_value(config_json)
+        .map_err(|_| DatabaseTypeError)?;
     Ok(config)
 }
 
@@ -70,6 +82,14 @@ mod tests {
         let value = json!(false);
         let error = validate_editable_parameter(name, &value).err().unwrap();
         assert_eq!(error.to_string(), "invalid parameter name");
+    }
+
+    #[test]
+    fn test_dynamic_config_keys() {
+        let config = DynamicConfig::default();
+        let config_json = serde_json::to_value(config).unwrap();
+        let keys: Vec<_> = config_json.as_object().unwrap().keys().collect();
+        assert_eq!(keys, EDITABLE_PROPERTIES);
     }
 
     #[tokio::test]
