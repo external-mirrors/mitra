@@ -108,7 +108,7 @@ pub async fn handle_announce(
         Err(other_error) => return Err(other_error.into()),
     };
     let ap_client = ApClient::new_with_pool(config, db_pool).await?;
-    let author = ActorIdResolver::default().only_remote().resolve_with_pool(
+    let author = ActorIdResolver::default().only_remote().resolve(
         &ap_client,
         db_pool,
         &announce.actor,
@@ -211,7 +211,7 @@ async fn handle_fep_1b12_announce(
         }
     };
     verify_activity_owner(&activity)?;
-    let group = ActorIdResolver::default().only_remote().resolve_with_pool(
+    let group = ActorIdResolver::default().only_remote().resolve(
         &ap_client,
         db_pool,
         &group_id,

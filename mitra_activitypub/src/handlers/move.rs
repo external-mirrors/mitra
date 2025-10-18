@@ -49,24 +49,24 @@ pub async fn handle_move(
         return Err(ValidationError("actor ID mismatch").into());
     };
 
-    let db_client = &mut **get_database_client(db_pool).await?;
-    let ap_client = ApClient::new(config, db_client).await?;
+    let ap_client = ApClient::new_with_pool(config, db_pool).await?;
     let instance = &ap_client.instance;
 
     let old_profile = ActorIdResolver::default().resolve(
         &ap_client,
-        db_client,
+        db_pool,
         &activity.object,
     ).await?;
     let old_actor_id = profile_actor_id(instance.uri_str(), &old_profile);
 
     let new_profile = ActorIdResolver::default().force_refetch().resolve(
         &ap_client,
-        db_client,
+        db_pool,
         &activity.target,
     ).await?;
 
     // Find aliases by DIDs (verified)
+    let db_client = &mut **get_database_client(db_pool).await?;
     let mut aliases = find_verified_aliases(db_client, &new_profile).await?
         .into_iter()
         .map(|profile| profile_actor_id(instance.uri_str(), &profile))

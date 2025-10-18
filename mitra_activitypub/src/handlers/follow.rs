@@ -46,24 +46,24 @@ pub async fn handle_follow(
 ) -> HandlerResult {
     // Follow(Person)
     let follow: Follow = serde_json::from_value(activity)?;
-    let db_client = &mut **get_database_client(db_pool).await?;
-    let ap_client = ApClient::new(config, db_client).await?;
+    let ap_client = ApClient::new_with_pool(config, db_pool).await?;
     let source_profile = ActorIdResolver::default().only_remote().resolve(
         &ap_client,
-        db_client,
+        db_pool,
         &follow.actor,
     ).await?;
     let source_actor = source_profile.actor_json
         .expect("actor data should be present");
     let target_profile = ActorIdResolver::default().resolve(
         &ap_client,
-        db_client,
+        db_pool,
         &follow.object,
     ).await?;
     // Create new follow request or update activity ID on existing one,
     // because latest activity ID might be needed to process Undo(Follow)
     let canonical_activity_id = canonicalize_id(&follow.id)?;
     validate_any_object_id(&canonical_activity_id.to_string())?;
+    let db_client = &mut **get_database_client(db_pool).await?;
     let follow_request = create_remote_follow_request_opt(
         db_client,
         source_profile.id,

@@ -235,7 +235,7 @@ async fn find_profile_by_url(
     db_pool: &DatabaseConnectionPool,
     url: &str,
 ) -> Result<Option<DbActorProfile>, DatabaseError> {
-    let maybe_profile = match ActorIdResolver::default().resolve_with_pool(
+    let maybe_profile = match ActorIdResolver::default().resolve(
         ap_client,
         db_pool,
         url,

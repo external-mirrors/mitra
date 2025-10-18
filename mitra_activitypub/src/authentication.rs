@@ -50,6 +50,7 @@ use serde_json::{Value as JsonValue};
 use mitra_config::Config;
 use mitra_models::{
     database::{
+        db_client_await,
         get_database_client,
         DatabaseConnectionPool,
         DatabaseError,
@@ -131,21 +132,20 @@ async fn get_signer(
     signer_id: &str,
     no_fetch: bool,
 ) -> Result<DbActorProfile, AuthenticationError> {
-    let db_client = &mut **get_database_client(db_pool).await?;
     let signer = if no_fetch {
         // Avoid fetching (e.g. if signer was deleted)
         let canonical_signer_id = canonicalize_id(signer_id)
             .map_err(|_| ValidationError("invalid actor ID"))?;
         get_remote_profile_by_actor_id(
-            db_client,
+            db_client_await!(db_pool),
             &canonical_signer_id.to_string(),
         ).await?
     } else {
-        let mut ap_client = ApClient::new(config, db_client).await?;
+        let mut ap_client = ApClient::new_with_pool(config, db_pool).await?;
         ap_client.instance.federation.fetcher_timeout = AUTHENTICATION_FETCHER_TIMEOUT;
         match ActorIdResolver::default().only_remote().resolve(
             &ap_client,
-            db_client,
+            db_pool,
             signer_id,
         ).await {
             Ok(profile) => profile,

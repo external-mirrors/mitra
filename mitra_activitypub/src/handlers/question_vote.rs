@@ -67,7 +67,7 @@ pub async fn handle_question_vote(
     let ap_client = ApClient::new_with_pool(config, db_pool).await?;
     let instance = &ap_client.instance;
     let media_server = MediaServer::new(config);
-    let voter = ActorIdResolver::default().only_remote().resolve_with_pool(
+    let voter = ActorIdResolver::default().only_remote().resolve(
         &ap_client,
         db_pool,
         &vote.attributed_to,

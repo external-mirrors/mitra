@@ -12,6 +12,7 @@ use serde_json::{Value as JsonValue};
 use mitra_config::Config;
 use mitra_models::{
     database::{
+        db_client_await,
         get_database_client,
         DatabaseConnectionPool,
         DatabaseError,
@@ -94,17 +95,16 @@ pub async fn handle_like(
     activity: JsonValue,
 ) -> HandlerResult {
     let like: Like = serde_json::from_value(activity)?;
-    let db_client = &mut **get_database_client(db_pool).await?;
-    let ap_client = ApClient::new(config, db_client).await?;
+    let ap_client = ApClient::new_with_pool(config, db_pool).await?;
     let instance = &ap_client.instance;
     let author = ActorIdResolver::default().only_remote().resolve(
         &ap_client,
-        db_client,
+        db_pool,
         &like.actor,
     ).await?;
     let canonical_object_id = canonicalize_id(&like.object)?;
     let post_id = match get_post_by_object_id(
-        db_client,
+        db_client_await!(db_pool),
         instance.uri_str(),
         &canonical_object_id,
     ).await {
@@ -126,6 +126,7 @@ pub async fn handle_like(
             let maybe_db_emoji = if let Some(emoji_value) = like.tag.first() {
                 let moderation_domain =
                     get_moderation_domain(author.expect_actor_data())?;
+                let db_client = &mut **get_database_client(db_pool).await?;
                 let maybe_db_emoji = handle_emoji(
                     &ap_client,
                     db_client,
@@ -164,6 +165,7 @@ pub async fn handle_like(
         activity_id: Some(canonical_activity_id.to_string()),
     };
     validate_reaction_data(&reaction_data)?;
+    let db_client = &mut **get_database_client(db_pool).await?;
     match create_reaction(db_client, reaction_data).await {
         Ok(_) => (),
         // Ignore activity if reaction is already saved

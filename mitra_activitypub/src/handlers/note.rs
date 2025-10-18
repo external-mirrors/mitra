@@ -624,7 +624,7 @@ async fn get_object_tags(
             if let Some(href) = tag.href {
                 // NOTE: `href` attribute is usually actor ID
                 // but also can be actor URL (profile link).
-                match ActorIdResolver::default().resolve_with_pool(
+                match ActorIdResolver::default().resolve(
                     ap_client,
                     db_pool,
                     &href,
@@ -943,7 +943,7 @@ pub async fn create_remote_post(
     {
         return Err(ValidationError("object attributed to actor from different server").into());
     };
-    let author = ActorIdResolver::default().only_remote().resolve_with_pool(
+    let author = ActorIdResolver::default().only_remote().resolve(
         ap_client,
         db_pool,
         &object.attributed_to,

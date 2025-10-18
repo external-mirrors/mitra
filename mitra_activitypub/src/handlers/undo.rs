@@ -7,8 +7,8 @@ use serde_json::{Value as JsonValue};
 use mitra_config::Config;
 use mitra_models::{
     database::{
+        db_client_await,
         get_database_client,
-        DatabaseClient,
         DatabaseConnectionPool,
         DatabaseError,
     },
@@ -49,13 +49,13 @@ struct UndoFollow {
 /// Special handler for Undo with embedded Follow
 async fn handle_undo_follow(
     ap_client: &ApClient,
-    db_client: &mut impl DatabaseClient,
+    db_pool: &DatabaseConnectionPool,
     activity: JsonValue,
 ) -> HandlerResult {
     let undo: UndoFollow = serde_json::from_value(activity)?;
     let canonical_actor_id = canonicalize_id(&undo.actor)?;
     let source_profile = get_remote_profile_by_actor_id(
-        db_client,
+        db_client_await!(db_pool),
         &canonical_actor_id.to_string(),
     ).await?;
     // Use object because activity ID might not be present
@@ -63,9 +63,10 @@ async fn handle_undo_follow(
         .map_err(|_| ValidationError("invalid follow activity object"))?;
     let target_profile = ActorIdResolver::default().resolve(
         ap_client,
-        db_client,
+        db_pool,
         &target_actor_id,
     ).await?;
+    let db_client = &mut **get_database_client(db_pool).await?;
     match unfollow(db_client, source_profile.id, target_profile.id).await {
         Ok(_) => {
             if target_profile.has_portable_account() {
@@ -91,22 +92,22 @@ pub async fn handle_undo(
     db_pool: &DatabaseConnectionPool,
     activity: JsonValue,
 ) -> HandlerResult {
-    let db_client = &mut **get_database_client(db_pool).await?;
-    let ap_client = ApClient::new(config, db_client).await?;
+    let ap_client = ApClient::new_with_pool(config, db_pool).await?;
     if let Some(FOLLOW) = activity["object"]["type"].as_str() {
         // Undo() with nested follow activity
-        return handle_undo_follow(&ap_client, db_client, activity).await;
+        return handle_undo_follow(&ap_client, db_pool, activity).await;
     };
 
     let undo: Undo = serde_json::from_value(activity)?;
     let canonical_actor_id = canonicalize_id(&undo.actor)?;
     let actor_profile = ActorIdResolver::default().only_remote().resolve(
         &ap_client,
-        db_client,
+        db_pool,
         &canonical_actor_id.to_string(),
     ).await?;
     let canonical_object_id = canonicalize_id(&undo.object)?;
 
+    let db_client = &mut **get_database_client(db_pool).await?;
     match get_follow_request_by_remote_activity_id(
         db_client,
         &canonical_object_id.to_string(),

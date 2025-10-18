@@ -372,9 +372,10 @@ impl ActorIdResolver {
     pub async fn resolve(
         &self,
         ap_client: &ApClient,
-        db_client: &mut impl DatabaseClient,
+        db_pool: &DatabaseConnectionPool,
         actor_id: &str,
     ) -> Result<DbActorProfile, HandlerError> {
+        let db_client = &mut **get_database_client(db_pool).await?;
         let canonical_actor_id = canonicalize_id(actor_id)?;
         if canonical_actor_id.authority() == ap_client.instance.hostname() {
             // Local ID
@@ -405,16 +406,6 @@ impl ActorIdResolver {
             Err(other_error) => return Err(other_error.into()),
         };
         Ok(profile)
-    }
-
-    pub async fn resolve_with_pool(
-        &self,
-        ap_client: &ApClient,
-        db_pool: &DatabaseConnectionPool,
-        actor_id: &str,
-    ) -> Result<DbActorProfile, HandlerError> {
-        let db_client = &mut **get_database_client(db_pool).await?;
-        self.resolve(ap_client, db_client, actor_id).await
     }
 }
 
