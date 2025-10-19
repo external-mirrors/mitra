@@ -1208,24 +1208,18 @@ pub async fn get_thread(
         )
         SELECT
             post, actor_profile,
-            {post_subqueries},
-            EXISTS (
-                SELECT 1 FROM relationship
-                WHERE
-                    source_id = $current_user_id
-                    AND target_id = post.author_id
-                    AND relationship_type = {relationship_mute}
-            ) AS is_author_muted
+            {post_subqueries}
         FROM post
         JOIN thread ON post.id = thread.id
         JOIN actor_profile ON post.author_id = actor_profile.id
         WHERE
             {visibility_filter}
+            AND {mute_filter}
         ORDER BY thread.path
         ",
         post_subqueries=post_subqueries(),
-        relationship_mute=i16::from(RelationshipType::Mute),
         visibility_filter=build_visibility_filter(),
+        mute_filter=build_mute_filter(),
     );
     let query = query!(
         &statement,
@@ -1234,19 +1228,12 @@ pub async fn get_thread(
     )?;
     let rows = db_client.query(query.sql(), query.parameters()).await?;
     let mut posts = vec![];
-    let mut hidden_posts = vec![];
     for row in rows {
         let mut post = Post::try_from(&row)?;
-        if let Some(ref in_reply_to_id) = post.in_reply_to_id {
-            if hidden_posts.contains(in_reply_to_id) {
+        if let Some(in_reply_to_id) = post.in_reply_to_id {
+            if !posts.iter().any(|item: &Post| item.id == in_reply_to_id) {
                 post.parent_visible = false;
             };
-        };
-        let is_author_muted = row.try_get("is_author_muted")?;
-        if is_author_muted {
-            hidden_posts.push(post.id);
-            // Don't include muted post
-            continue;
         };
         posts.push(post);
     };
