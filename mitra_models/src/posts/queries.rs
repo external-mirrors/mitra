@@ -2592,6 +2592,52 @@ mod tests {
 
     #[tokio::test]
     #[serial]
+    async fn test_get_thread_with_hidden_posts() {
+        let db_client = &mut create_test_database().await;
+        let user_1 = create_test_user(db_client, "test_1").await;
+        let user_2 = create_test_user(db_client, "test_2").await;
+        let user_3 = create_test_user(db_client, "test_3").await;
+        mute(db_client, user_1.id, user_3.id).await.unwrap();
+        let post_data_1 = PostCreateData {
+            context: PostContext::Top { audience: None },
+            content: "my post".to_string(),
+            ..Default::default()
+        };
+        let post_1 = create_post(db_client, user_1.id, post_data_1).await.unwrap();
+        let post_data_2 = PostCreateData {
+            context: PostContext::reply_to(&post_1),
+            content: "reply".to_string(),
+            ..Default::default()
+        };
+        let post_2 = create_post(db_client, user_2.id, post_data_2).await.unwrap();
+        let post_data_3 = PostCreateData {
+            context: PostContext::reply_to(&post_1),
+            content: "reply from muted".to_string(),
+            ..Default::default()
+        };
+        let post_3 = create_post(db_client, user_3.id, post_data_3).await.unwrap();
+        let post_data_4 = PostCreateData {
+            context: PostContext::reply_to(&post_3),
+            content: "reply to muted".to_string(),
+            ..Default::default()
+        };
+        let post_4 = create_post(db_client, user_2.id, post_data_4).await.unwrap();
+
+        let thread = get_thread(
+            db_client,
+            post_1.id,
+            Some(user_1.id),
+        ).await.unwrap();
+        assert_eq!(thread.len(), 3);
+        assert_eq!(thread[0].id, post_1.id);
+        assert_eq!(thread[1].id, post_2.id);
+        assert_eq!(thread[1].parent_visible, true);
+        assert_eq!(thread[2].id, post_4.id);
+        assert_eq!(thread[2].parent_visible, false);
+    }
+
+    #[tokio::test]
+    #[serial]
     async fn test_get_thread_followers_only_conversation() {
         let db_client = &mut create_test_database().await;
         let user_1 = create_test_user(db_client, "test_1").await;
