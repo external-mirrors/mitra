@@ -261,7 +261,7 @@ json_from_sql!(IdentityProofs);
 json_to_sql!(IdentityProofs);
 
 #[derive(PartialEq)]
-pub enum PaymentType {
+pub(super) enum PaymentType {
     Link,
     MoneroSubscription,
     RemoteMoneroSubscription,
@@ -485,14 +485,6 @@ impl PaymentOptions {
     pub fn into_inner(self) -> Vec<PaymentOption> {
         let Self(payment_options) = self;
         payment_options
-    }
-
-    /// Returns true if payment option list contains at least one option
-    /// of the given type.
-    pub fn any(&self, payment_type: PaymentType) -> bool {
-        let Self(payment_options) = self;
-        payment_options.iter()
-            .any(|option| option.payment_type() == payment_type)
     }
 
     pub fn find_subscription_option<S: SubscriptionOption>(
