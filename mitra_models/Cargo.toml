@@ -13,7 +13,7 @@ publish.workspace = true
 chrono = { version = "0.4.34", default-features = false, features = ["std", "serde"] }
 # Used for pooling database connections
 deadpool-postgres = { version = "0.11.0", default-features = false }
-deadpool = "*"
+deadpool = "0.10.0"
 # Used to work with hexadecimal strings
 hex = { version = "0.4.3", features = ["serde"] }
 # Used for logging
