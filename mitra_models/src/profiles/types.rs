@@ -16,8 +16,6 @@ use postgres_types::FromSql;
 use serde::{
     Deserialize, Deserializer, Serialize, Serializer,
     de::Error as DeserializerError,
-    ser::SerializeMap,
-    __private::ser::FlatMapSerializer,
 };
 use serde_json::{Value as JsonValue};
 use tokio_postgres::Row;
@@ -456,20 +454,33 @@ impl Serialize for PaymentOption {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
         where S: Serializer,
     {
-        let mut map = serializer.serialize_map(None)?;
-        let payment_type = self.payment_type();
-        map.serialize_entry("payment_type", &i16::from(&payment_type))?;
+        #[derive(Serialize)]
+        #[serde(untagged)]
+        enum UntaggedOption {
+            Link(PaymentLink),
+            MoneroSubscription(MoneroSubscription),
+            RemoteMoneroSubscription(RemoteMoneroSubscription),
+        }
 
-        match self {
-            Self::Link(link) => link.serialize(FlatMapSerializer(&mut map))?,
-            Self::MoneroSubscription(payment_info) => {
-                payment_info.serialize(FlatMapSerializer(&mut map))?;
-            },
-            Self::RemoteMoneroSubscription(payment_info) => {
-                payment_info.serialize(FlatMapSerializer(&mut map))?;
-            },
+        #[derive(Serialize)]
+        struct TaggedOption {
+            payment_type: i16,
+            #[serde(flatten)]
+            option: UntaggedOption,
+        }
+
+        let untagged_option = match self.clone() {
+            Self::Link(value) => UntaggedOption::Link(value),
+            Self::MoneroSubscription(value) =>
+                UntaggedOption::MoneroSubscription(value),
+            Self::RemoteMoneroSubscription(value) =>
+                UntaggedOption::RemoteMoneroSubscription(value),
         };
-        map.end()
+        let tagged_option = TaggedOption {
+            payment_type: i16::from(&self.payment_type()),
+            option: untagged_option,
+        };
+        tagged_option.serialize(serializer)
     }
 }
 
@@ -1034,9 +1045,8 @@ mod tests {
     fn test_payment_option_link_serialization() {
         let json_data = r#"{"payment_type":1,"name":"test","href":"https://test.com"}"#;
         let payment_option: PaymentOption = serde_json::from_str(json_data).unwrap();
-        let link = match payment_option {
-            PaymentOption::Link(ref link) => link,
-            _ => panic!("wrong option"),
+        let PaymentOption::Link(ref link) = payment_option else {
+            panic!("unexpected option");
         };
         assert_eq!(link.name, "test");
         assert_eq!(link.href, "https://test.com");
@@ -1048,13 +1058,29 @@ mod tests {
     fn test_payment_option_monero_subscription_serialization() {
         let json_data = r#"{"payment_type":3,"chain_id":"monero:418015bb9ae982a1975da7d79277c270","price":41387,"payout_address":"xxx"}"#;
         let payment_option: PaymentOption = serde_json::from_str(json_data).unwrap();
-        let payment_info = match payment_option {
-            PaymentOption::MoneroSubscription(ref payment_info) => payment_info,
-            _ => panic!("wrong option"),
+        let PaymentOption::MoneroSubscription(payment_info) = &payment_option else {
+            panic!("unexpected option");
         };
         assert_eq!(payment_info.chain_id, ChainId::monero_mainnet());
         assert_eq!(payment_info.price.get(), 41387);
         assert_eq!(payment_info.payout_address, "xxx");
+        let serialized = serde_json::to_string(&payment_option).unwrap();
+        assert_eq!(serialized, json_data);
+    }
+
+    #[test]
+    fn test_payment_option_remote_monero_subscription_serialization() {
+        let json_data = r#"{"payment_type":4,"chain_id":"monero:418015bb9ae982a1975da7d79277c270","price":41387,"amount_min":null,"object_id":"https://social.example/test","fep_0837_enabled":true}"#;
+        let payment_option: PaymentOption = serde_json::from_str(json_data).unwrap();
+        let PaymentOption::RemoteMoneroSubscription(ref payment_info) = payment_option
+        else {
+            panic!("unexpected option");
+        };
+        assert_eq!(payment_info.chain_id, ChainId::monero_mainnet());
+        assert_eq!(payment_info.price.get(), 41387);
+        assert_eq!(payment_info.amount_min, None);
+        assert_eq!(payment_info.object_id, "https://social.example/test");
+        assert_eq!(payment_info.fep_0837_enabled, true);
         let serialized = serde_json::to_string(&payment_option).unwrap();
         assert_eq!(serialized, json_data);
     }
