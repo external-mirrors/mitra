@@ -74,6 +74,7 @@ use mitra_models::{
         get_object_as_target,
     },
     database::{
+        db_client_await,
         get_database_client,
         DatabaseConnectionPool,
         DatabaseError,
@@ -97,7 +98,6 @@ use mitra_models::{
         get_portable_user_by_inbox_id,
         get_portable_user_by_outbox_id,
         get_user_by_name,
-        get_user_by_name_with_pool,
     },
 };
 use mitra_services::media::{MediaServer, MediaStorage};
@@ -179,7 +179,10 @@ async fn inbox(
     let activity_digest = ContentDigest::new(&request_body);
     drop(request_body);
 
-    let recipient = get_user_by_name_with_pool(&db_pool, &username).await?;
+    let recipient = get_user_by_name(
+        db_client_await!(&db_pool),
+        &username,
+    ).await?;
     let recipient_id = local_actor_id(
         config.instance().uri_str(),
         &recipient.profile.username,

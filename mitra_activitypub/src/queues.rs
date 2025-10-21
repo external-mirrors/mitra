@@ -17,13 +17,12 @@ use mitra_models::{
         queries::{
             enqueue_job,
             get_job_batch,
-            get_job_batch_with_pool,
             delete_job_from_queue,
-            delete_job_from_queue_with_pool,
         },
         types::JobType,
     },
     database::{
+        db_client_await,
         get_database_client,
         DatabaseClient,
         DatabaseConnectionPool,
@@ -116,8 +115,8 @@ pub async fn process_queued_incoming_activities(
     config: &Config,
     db_pool: &DatabaseConnectionPool,
 ) -> Result<(), DatabaseError> {
-    let batch = get_job_batch_with_pool(
-        db_pool,
+    let batch = get_job_batch(
+        db_client_await!(db_pool),
         JobType::IncomingActivity,
         config.federation.inbox_queue_batch_size,
         JOB_TIMEOUT,
@@ -146,7 +145,8 @@ pub async fn process_queued_incoming_activities(
                     "failed to process activity (timeout): {}",
                     job_data.activity,
                 );
-                delete_job_from_queue_with_pool(db_pool, job.id).await?;
+                let db_client = &**get_database_client(db_pool).await?;
+                delete_job_from_queue(db_client, job.id).await?;
                 continue;
             },
         };
@@ -380,20 +380,15 @@ pub async fn process_queued_outgoing_activities(
     config: &Config,
     db_pool: &DatabaseConnectionPool,
 ) -> Result<(), DatabaseError> {
-    let db_client = get_database_client(db_pool).await?;
-    let db_client_ref = &**db_client;
-    let filter = FederationFilter::init(config, db_client_ref).await?;
+    let filter = FederationFilter::init_with_pool(config, db_pool).await?;
     let batch = get_job_batch(
-        db_client_ref,
+        db_client_await!(db_pool),
         JobType::OutgoingActivity,
         OUTGOING_QUEUE_BATCH_SIZE,
         JOB_TIMEOUT,
     ).await?;
-    drop(db_client);
     let instance = config.instance();
     for job in batch {
-        let db_client = get_database_client(db_pool).await?;
-        let db_client_ref = &**db_client;
         let mut job_data: OutgoingActivityJobData =
             serde_json::from_value(job.job_data)
                 .map_err(|_| DatabaseTypeError)?;
@@ -404,7 +399,8 @@ pub async fn process_queued_outgoing_activities(
                 recipients.len(),
                 job_data.activity,
             );
-            delete_job_from_queue(db_client_ref, job.id).await?;
+            let db_client = &**get_database_client(db_pool).await?;
+            delete_job_from_queue(db_client, job.id).await?;
             continue;
         };
         log::info!(
@@ -412,7 +408,6 @@ pub async fn process_queued_outgoing_activities(
             recipients.len(),
             job_data.activity,
         );
-        drop(db_client);
 
         // TODO: perform filtering in OutgoingActivityJobData::prepare_recipients
         for recipient in recipients.iter_mut() {
@@ -568,8 +563,8 @@ pub async fn fetcher_queue_executor(
     // Re-queue running (failed) jobs after 1 hour
     const JOB_TIMEOUT: u32 = 3600;
     const COLLECTION_LIMIT: usize = 20;
-    let batch = get_job_batch_with_pool(
-        db_pool,
+    let batch = get_job_batch(
+        db_client_await!(db_pool),
         JobType::Fetcher,
         BATCH_SIZE,
         JOB_TIMEOUT,
@@ -613,7 +608,8 @@ pub async fn fetcher_queue_executor(
             };
             log::log!(level, "background fetcher: {}", error);
         });
-        delete_job_from_queue_with_pool(db_pool, job.id).await?;
+        let db_client = &**get_database_client(db_pool).await?;
+        delete_job_from_queue(db_client, job.id).await?;
     };
     Ok(())
 }

@@ -13,6 +13,7 @@ use serde_json::{Value as JsonValue};
 use mitra_config::Config;
 use mitra_models::{
     database::{
+        db_client_await,
         get_database_client,
         DatabaseConnectionPool,
         DatabaseError,
@@ -98,14 +99,10 @@ pub async fn handle_announce(
         return handle_fep_1b12_announce(config, db_pool, activity).await;
     };
     let announce: Announce = serde_json::from_value(activity)?;
-    let maybe_repost = {
-        let db_client = &**get_database_client(db_pool).await?;
-        get_remote_repost_by_activity_id(
-            db_client,
-            &announce.id,
-        ).await
-    };
-    match maybe_repost {
+    match get_remote_repost_by_activity_id(
+        db_client_await!(db_pool),
+        &announce.id,
+    ).await {
         Ok(_) => return Ok(None), // Ignore if repost already exists
         Err(DatabaseError::NotFound(_)) => (),
         Err(other_error) => return Err(other_error.into()),

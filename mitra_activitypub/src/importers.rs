@@ -34,6 +34,7 @@ use serde_json::{Value as JsonValue};
 use mitra_config::{Config, Instance, Limits};
 use mitra_models::{
     database::{
+        db_client_await,
         get_database_client,
         DatabaseClient,
         DatabaseConnectionPool,
@@ -543,6 +544,7 @@ pub async fn import_post(
     loop {
         let object_id = match queue.pop() {
             Some(object_id) => {
+                let db_client = &**get_database_client(db_pool).await?;
                 if objects.iter().any(|object| object.id() == object_id) {
                     // Can happen due to redirections
                     log::warn!("loop detected");
@@ -556,19 +558,14 @@ pub async fn import_post(
                     };
                     // Object is a local post
                     // Verify post exists, return error if it doesn't
-                    let db_client = &**get_database_client(db_pool).await?;
                     get_local_post_by_id(db_client, post_id).await?;
                     continue;
                 };
                 let canonical_object_id = canonicalize_id(&object_id)?;
-                let maybe_post = {
-                    let db_client = &**get_database_client(db_pool).await?;
-                    get_remote_post_by_object_id(
-                        db_client,
-                        &canonical_object_id.to_string(),
-                    ).await
-                };
-                match maybe_post {
+                match get_remote_post_by_object_id(
+                    db_client,
+                    &canonical_object_id.to_string(),
+                ).await {
                     Ok(post) => {
                         // Object already fetched
                         if objects.len() == 0 {
@@ -658,13 +655,10 @@ pub async fn import_object(
 ) -> Result<Post, HandlerError> {
     let object: AttributedObjectJson = serde_json::from_value(object)?;
     let canonical_object_id = canonicalize_id(object.id())?;
-    let maybe_post = {
-        let db_client = &**get_database_client(db_pool).await?;
-        get_remote_post_by_object_id(
-            db_client,
-            &canonical_object_id.to_string(),
-        ).await
-    };
+    let maybe_post = get_remote_post_by_object_id(
+        db_client_await!(db_pool),
+        &canonical_object_id.to_string(),
+    ).await;
     match maybe_post {
         Ok(post) => {
             update_remote_post(
@@ -887,10 +881,10 @@ pub async fn import_from_outbox(
     actor_id: &str,
     limit: usize,
 ) -> Result<(), HandlerError> {
-    let profile = {
-        let db_client = &**get_database_client(db_pool).await?;
-        get_remote_profile_by_actor_id(db_client, actor_id).await?
-    };
+    let profile = get_remote_profile_by_actor_id(
+        db_client_await!(db_pool),
+        actor_id,
+    ).await?;
     let actor_data = profile.expect_actor_data();
     let mut context = FetcherContext::from(actor_data);
     let outbox_url = context.prepare_object_id(&actor_data.outbox)?;
@@ -911,10 +905,10 @@ pub async fn import_featured(
     actor_id: &str,
     limit: usize,
 ) -> Result<(), HandlerError> {
-    let profile = {
-        let db_client = &**get_database_client(db_pool).await?;
-        get_remote_profile_by_actor_id(db_client, actor_id).await?
-    };
+    let profile = get_remote_profile_by_actor_id(
+        db_client_await!(db_pool),
+        actor_id,
+    ).await?;
     let actor_data = profile.expect_actor_data();
     let Some(featured_id) = actor_data.featured.as_ref() else {
         log::warn!("actor doesn't have 'featured' collection");

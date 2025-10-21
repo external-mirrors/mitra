@@ -12,6 +12,7 @@ use serde_json::{Value as JsonValue};
 use mitra_config::Config;
 use mitra_models::{
     database::{
+        db_client_await,
         get_database_client,
         DatabaseConnectionPool,
         DatabaseError,
@@ -93,14 +94,10 @@ async fn handle_update_note(
     if object.attributed_to() != update.actor {
         return Err(ValidationError("attributedTo value doesn't match actor").into());
     };
-    let maybe_post = {
-        let db_client = &**get_database_client(db_pool).await?;
-        get_remote_post_by_object_id(
-            db_client,
-            &canonical_object_id.to_string(),
-        ).await
-    };
-    let post = match maybe_post {
+    let post = match get_remote_post_by_object_id(
+        db_client_await!(db_pool),
+        &canonical_object_id.to_string(),
+    ).await {
         Ok(post) => post,
         // Ignore Update if post is not found locally
         Err(DatabaseError::NotFound(_)) => return Ok(None),

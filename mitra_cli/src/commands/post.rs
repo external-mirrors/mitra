@@ -26,6 +26,7 @@ use mitra_config::Config;
 use mitra_models::{
     attachments::queries::create_attachment,
     database::{
+        db_client_await,
         get_database_client,
         DatabaseConnectionPool,
         DatabaseError,
@@ -84,10 +85,10 @@ impl CreatePost {
         config: &Config,
         db_pool: &DatabaseConnectionPool,
     ) -> Result<(), Error> {
-        let author = {
-            let db_client = &**get_database_client(db_pool).await?;
-            get_user_by_id_or_name(db_client, &self.author).await?
-        };
+        let author = get_user_by_id_or_name(
+            db_client_await!(db_pool),
+            &self.author,
+        ).await?;
         let post_id = self.id.unwrap_or_else(|| {
             generate_post_id(author.id, &self.content, self.created_at)
         });
@@ -168,10 +169,10 @@ impl ImportPosts {
         config: &Config,
         db_pool: &DatabaseConnectionPool,
     ) -> Result<(), Error> {
-        let author = {
-            let db_client = &**get_database_client(db_pool).await?;
-            get_user_by_id_or_name(db_client, &self.author).await?
-        };
+        let author = get_user_by_id_or_name(
+            db_client_await!(db_pool),
+            &self.author,
+        ).await?;
         let outbox_data = std::fs::read_to_string(&self.outbox_path)?;
         let outbox: JsonValue = serde_json::from_str(&outbox_data)?;
         let activities = outbox["orderedItems"].as_array()

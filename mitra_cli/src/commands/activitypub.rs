@@ -29,11 +29,14 @@ use mitra_activitypub::{
 };
 use mitra_config::Config;
 use mitra_models::{
-    database::{get_database_client, DatabaseConnectionPool},
+    database::{
+        db_client_await,
+        get_database_client,
+        DatabaseConnectionPool,
+    },
     users::{
         queries::{
             get_user_by_name,
-            get_user_by_name_with_pool,
         },
     },
 };
@@ -197,7 +200,10 @@ impl FetchObject {
         db_pool: &DatabaseConnectionPool,
     ) -> Result<(), Error> {
         let maybe_user = if let Some(ref username) = self.as_user {
-            let user = get_user_by_name_with_pool(db_pool, username).await?;
+            let user = get_user_by_name(
+                db_client_await!(db_pool),
+                username,
+            ).await?;
             Some(user)
         } else {
             None
