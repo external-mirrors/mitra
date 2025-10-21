@@ -26,3 +26,16 @@ pub async fn get_database_client(
     let client = db_pool.get().await?;
     Ok(client)
 }
+
+// WARNING: must be used with caution in `match` (or `if let`) scrutenees
+// because the temporary (connection) will not be dropped until
+// the end of the whole `match` expression.
+// https://github.com/rust-lang/rust/issues/93883
+#[macro_export]
+macro_rules! db_client_await {
+    ($pool: expr) => {
+        &**get_database_client($pool).await?
+    };
+}
+
+pub use db_client_await;
