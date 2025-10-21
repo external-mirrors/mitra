@@ -1,4 +1,5 @@
 use thiserror::Error;
+use tokio_postgres::error::{Error as PostgresError, SqlState};
 
 #[derive(Debug, Error)]
 #[error("database type error")]
@@ -13,7 +14,7 @@ pub enum DatabaseError {
     QueryError(#[from] postgres_query::Error),
 
     #[error(transparent)]
-    ClientError(#[from] tokio_postgres::Error),
+    ClientError(#[from] PostgresError),
 
     #[error(transparent)]
     TypeError(#[from] DatabaseTypeError),
@@ -28,5 +29,18 @@ pub enum DatabaseError {
 impl DatabaseError {
     pub fn type_error() -> Self {
         Self::from(DatabaseTypeError)
+    }
+}
+
+pub fn catch_unique_violation(
+    object_type: &'static str,
+) -> impl Fn(PostgresError) -> DatabaseError {
+    move |err| {
+        if let Some(code) = err.code() {
+            if code == &SqlState::UNIQUE_VIOLATION {
+                return DatabaseError::AlreadyExists(object_type);
+            };
+        };
+        err.into()
     }
 }
