@@ -27,7 +27,10 @@ use uuid::Uuid;
 
 use mitra_models::{
     activitypub::queries::save_actor,
-    database::DatabaseClient,
+    database::{
+        get_database_client,
+        DatabaseConnectionPool,
+    },
     filter_rules::types::FilterAction,
     media::types::{MediaInfo, PartialMediaInfo},
     profiles::queries::{create_profile, update_profile},
@@ -594,7 +597,7 @@ fn parse_aliases(actor: &ValidatedActor) -> Vec<String> {
 
 async fn parse_tags(
     ap_client: &ApClient,
-    db_client: &mut impl DatabaseClient,
+    db_pool: &DatabaseConnectionPool,
     moderation_domain: &Hostname,
     actor: &ValidatedActor,
 ) -> Result<Vec<Uuid>, HandlerError> {
@@ -608,7 +611,7 @@ async fn parse_tags(
             };
             match handle_emoji(
                 ap_client,
-                db_client,
+                db_pool,
                 moderation_domain,
                 tag_value,
             ).await? {
@@ -628,7 +631,7 @@ async fn parse_tags(
 
 pub async fn create_remote_profile(
     ap_client: &ApClient,
-    db_client: &mut impl DatabaseClient,
+    db_pool: &DatabaseConnectionPool,
     actor: Actor,
 ) -> Result<DbActorProfile, HandlerError> {
     let Actor { inner: actor, value: actor_json } = actor;
@@ -665,7 +668,7 @@ pub async fn create_remote_profile(
     let aliases = parse_aliases(&actor);
     let emojis = parse_tags(
         ap_client,
-        db_client,
+        db_pool,
         &moderation_domain,
         &actor,
     ).await?;
@@ -688,6 +691,7 @@ pub async fn create_remote_profile(
         actor_json: Some(actor_data),
     };
     clean_profile_create_data(&mut profile_data)?;
+    let db_client = &mut **get_database_client(db_pool).await?;
     let profile = create_profile(db_client, profile_data).await?;
     // Save actor object
     save_actor(
@@ -702,7 +706,7 @@ pub async fn create_remote_profile(
 /// Updates remote actor's profile
 pub async fn update_remote_profile(
     ap_client: &ApClient,
-    db_client: &mut impl DatabaseClient,
+    db_pool: &DatabaseConnectionPool,
     profile: DbActorProfile,
     actor: Actor,
 ) -> Result<DbActorProfile, HandlerError> {
@@ -738,7 +742,7 @@ pub async fn update_remote_profile(
     let aliases = parse_aliases(&actor);
     let emojis = parse_tags(
         ap_client,
-        db_client,
+        db_pool,
         &moderation_domain,
         &actor,
     ).await?;
@@ -762,6 +766,7 @@ pub async fn update_remote_profile(
         actor_json: Some(actor_data),
     };
     clean_profile_update_data(&mut profile_data)?;
+    let db_client = &mut **get_database_client(db_pool).await?;
     // update_profile() clears unreachable_since
     let (profile, deletion_queue) =
         update_profile(db_client, profile.id, profile_data).await?;

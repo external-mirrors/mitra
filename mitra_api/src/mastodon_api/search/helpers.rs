@@ -24,6 +24,7 @@ use mitra_activitypub::{
 use mitra_config::Config;
 use mitra_models::{
     database::{
+        db_client_await,
         get_database_client,
         DatabaseClient,
         DatabaseConnectionPool,
@@ -147,7 +148,7 @@ fn parse_search_query(search_query: &str) -> SearchQuery {
 
 async fn search_profiles_or_import(
     ap_client: &ApClient,
-    db_client: &mut impl DatabaseClient,
+    db_pool: &DatabaseConnectionPool,
     username: String,
     mut maybe_hostname: Option<String>,
     resolve: bool,
@@ -161,7 +162,7 @@ async fn search_profiles_or_import(
         };
     };
     let mut profiles = search_profiles(
-        db_client,
+        db_client_await!(db_pool),
         &username,
         maybe_hostname.as_ref(),
         limit,
@@ -173,7 +174,7 @@ async fn search_profiles_or_import(
                 WebfingerAddress::new_unchecked(&username, &hostname);
             match import_profile_by_webfinger_address(
                 ap_client,
-                db_client,
+                db_pool,
                 &webfinger_address,
             ).await {
                 Ok(profile) => {
@@ -282,10 +283,9 @@ pub async fn search(
             ).await?;
         },
         SearchQuery::ProfileQuery(username, maybe_hostname) => {
-            let db_client = &mut **get_database_client(db_pool).await?;
             profiles = search_profiles_or_import(
                 &ap_client,
-                db_client,
+                db_pool,
                 username,
                 maybe_hostname,
                 true,
@@ -352,7 +352,7 @@ pub async fn search(
 
 pub async fn search_profiles_only(
     config: &Config,
-    db_client: &mut impl DatabaseClient,
+    db_pool: &DatabaseConnectionPool,
     search_query: &str,
     resolve: bool,
     limit: u16,
@@ -362,11 +362,11 @@ pub async fn search_profiles_only(
         Ok(result) => result,
         Err(_) => return Ok(vec![]),
     };
-    let mut ap_client = ApClient::new(config, db_client).await?;
+    let mut ap_client = ApClient::new_with_pool(config, db_pool).await?;
     ap_client.instance.federation.fetcher_timeout = SEARCH_FETCHER_TIMEOUT;
     let profiles = search_profiles_or_import(
         &ap_client,
-        db_client,
+        db_pool,
         username,
         maybe_hostname,
         resolve,

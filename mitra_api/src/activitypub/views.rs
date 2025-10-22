@@ -743,10 +743,9 @@ async fn apgateway_create_actor_view(
         None,
         &actor,
     )?;
-    let db_client = &mut **get_database_client(&db_pool).await?;
     let user = register_portable_actor(
         &config,
-        db_client,
+        &db_pool,
         actor.into_inner(),
         invite_code,
     ).await.map_err(|error| {

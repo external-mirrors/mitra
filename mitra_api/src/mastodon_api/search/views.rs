@@ -38,10 +38,9 @@ async fn search_view(
     let search_query = query_params.q.trim();
     let (profiles, posts, tags) = match query_params.search_type.as_deref() {
         Some("accounts") => {
-            let db_client = &mut **get_database_client(&db_pool).await?;
             let profiles = search_profiles_only(
                 &config,
-                db_client,
+                &db_pool,
                 search_query,
                 false,
                 query_params.limit.inner(),

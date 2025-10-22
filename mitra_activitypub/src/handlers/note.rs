@@ -716,10 +716,9 @@ async fn get_object_tags(
             if emoji_count > EMOJI_LIMIT {
                 continue;
             };
-            let db_client = &mut **get_database_client(db_pool).await?;
             match handle_emoji(
                 ap_client,
-                db_client,
+                db_pool,
                 &moderation_domain,
                 tag_value,
             ).await? {

@@ -8,7 +8,12 @@ use serde::Deserialize;
 use serde_json::{Value as JsonValue};
 
 use mitra_models::{
-    database::{DatabaseClient, DatabaseError},
+    database::{
+        db_client_await,
+        get_database_client,
+        DatabaseConnectionPool,
+        DatabaseError,
+    },
     emojis::queries::{
         create_or_update_remote_emoji,
         get_remote_emoji_by_object_id,
@@ -58,7 +63,7 @@ struct Emoji {
 // Returns HandlerError on database and filesystem errors.
 pub async fn handle_emoji(
     ap_client: &ApClient,
-    db_client: &mut impl DatabaseClient,
+    db_pool: &DatabaseConnectionPool,
     moderation_domain: &Hostname,
     tag_value: JsonValue,
 ) -> Result<Option<DbEmoji>, HandlerError> {
@@ -107,7 +112,7 @@ pub async fn handle_emoji(
         return Ok(None);
     };
     let maybe_emoji_id = match get_remote_emoji_by_object_id(
-        db_client,
+        db_client_await!(db_pool),
         &emoji_object_id,
     ).await {
         Ok(db_emoji) => {
@@ -149,6 +154,7 @@ pub async fn handle_emoji(
         log::info!("downloaded emoji {}", emoji.icon.url);
         MediaInfo::remote(file_info, emoji.icon.url)
     };
+    let db_client = &mut **get_database_client(db_pool).await?;
     let db_emoji = if let Some(emoji_id) = maybe_emoji_id {
         let (db_emoji, deletion_queue) = update_emoji(
             db_client,

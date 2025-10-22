@@ -252,7 +252,7 @@ pub(crate) async fn get_profile_by_actor_id(
 // Actor must be authenticated
 pub async fn import_profile(
     ap_client: &ApClient,
-    db_client: &mut impl DatabaseClient,
+    db_pool: &DatabaseConnectionPool,
     actor: JsonValue,
 ) -> Result<DbActorProfile, HandlerError> {
     let actor: Actor = serde_json::from_value(actor)?;
@@ -260,15 +260,16 @@ pub async fn import_profile(
         return Err(HandlerError::LocalObject);
     };
     let canonical_actor_id = canonicalize_id(actor.id())?;
-    let profile = match get_remote_profile_by_actor_id(
-        db_client,
+    let maybe_profile = get_remote_profile_by_actor_id(
+        db_client_await!(db_pool), // dropped
         &canonical_actor_id.to_string(),
-    ).await {
+    ).await;
+    let profile = match maybe_profile {
         Ok(profile) => {
             log::info!("re-fetched actor {}", actor.id());
             let profile_updated = update_remote_profile(
                 ap_client,
-                db_client,
+                db_pool,
                 profile,
                 actor,
             ).await?;
@@ -278,7 +279,7 @@ pub async fn import_profile(
             log::info!("fetched actor {}", actor.id());
             let profile = create_remote_profile(
                 ap_client,
-                db_client,
+                db_pool,
                 actor,
             ).await?;
             profile
@@ -290,7 +291,7 @@ pub async fn import_profile(
 
 async fn refresh_remote_profile(
     ap_client: &ApClient,
-    db_client: &mut impl DatabaseClient,
+    db_pool: &DatabaseConnectionPool,
     profile: DbActorProfile,
     force: bool,
 ) -> Result<DbActorProfile, HandlerError> {
@@ -319,7 +320,7 @@ async fn refresh_remote_profile(
                 log::info!("re-fetched actor {}", actor_data.id);
                 let profile_updated = update_remote_profile(
                     ap_client,
-                    db_client,
+                    db_pool,
                     profile,
                     actor,
                 ).await?;
@@ -375,7 +376,6 @@ impl ActorIdResolver {
         db_pool: &DatabaseConnectionPool,
         actor_id: &str,
     ) -> Result<DbActorProfile, HandlerError> {
-        let db_client = &mut **get_database_client(db_pool).await?;
         let canonical_actor_id = canonicalize_id(actor_id)?;
         if canonical_actor_id.authority() == ap_client.instance.hostname() {
             // Local ID
@@ -383,25 +383,29 @@ impl ActorIdResolver {
                 return Err(HandlerError::LocalObject);
             };
             let username = parse_local_actor_id(ap_client.instance.uri_str(), actor_id)?;
-            let user = get_user_by_name(db_client, &username).await?;
+            let user = get_user_by_name(
+                db_client_await!(db_pool),
+                &username,
+            ).await?;
             return Ok(user.profile);
         };
         // Remote ID
-        let profile = match get_remote_profile_by_actor_id(
-            db_client,
+        let maybe_profile = get_remote_profile_by_actor_id(
+            db_client_await!(db_pool), // dropped
             &canonical_actor_id.to_string(),
-        ).await {
+        ).await;
+        let profile = match maybe_profile {
             Ok(profile) => {
                 refresh_remote_profile(
                     ap_client,
-                    db_client,
+                    db_pool,
                     profile,
                     self.force_refetch,
                 ).await?
             },
             Err(DatabaseError::NotFound(_)) => {
                 let actor: JsonValue = ap_client.fetch_object(actor_id).await?;
-                import_profile(ap_client, db_client, actor).await?
+                import_profile(ap_client, db_pool, actor).await?
             },
             Err(other_error) => return Err(other_error.into()),
         };
@@ -441,7 +445,7 @@ pub(crate) async fn perform_webfinger_query(
 
 pub async fn import_profile_by_webfinger_address(
     ap_client: &ApClient,
-    db_client: &mut impl DatabaseClient,
+    db_pool: &DatabaseConnectionPool,
     webfinger_address: &WebfingerAddress,
 ) -> Result<DbActorProfile, HandlerError> {
     if webfinger_address.hostname() == ap_client.instance.hostname() {
@@ -450,7 +454,7 @@ pub async fn import_profile_by_webfinger_address(
     let agent = ap_client.agent();
     let actor_id = perform_webfinger_query(&agent, webfinger_address).await?;
     let actor: JsonValue = ap_client.fetch_object(&actor_id).await?;
-    import_profile(ap_client, db_client, actor).await
+    import_profile(ap_client, db_pool, actor).await
 }
 
 // Works with local profiles
@@ -470,10 +474,9 @@ pub async fn get_or_import_profile_by_webfinger_address(
             if webfinger_address.hostname() == instance.hostname() {
                 profile
             } else {
-                let db_client = &mut **get_database_client(db_pool).await?;
                 refresh_remote_profile(
                     ap_client,
-                    db_client,
+                    db_pool,
                     profile,
                     false,
                 ).await?
@@ -483,10 +486,9 @@ pub async fn get_or_import_profile_by_webfinger_address(
             if webfinger_address.hostname() == instance.hostname() {
                 return Err(db_error.into());
             };
-            let db_client = &mut **get_database_client(db_pool).await?;
             import_profile_by_webfinger_address(
                 ap_client,
-                db_client,
+                db_pool,
                 webfinger_address,
             ).await?
         },
@@ -847,8 +849,7 @@ pub async fn import_collection(
             },
             CollectionItemType::Actor => {
                 log::info!("importing actor {item_id}");
-                let db_client = &mut **get_database_client(db_pool).await?;
-                import_profile(&ap_client, db_client, item).await
+                import_profile(&ap_client, db_pool, item).await
                     .map(|profile| profile.expect_remote_actor_id().to_owned())
             },
             CollectionItemType::Activity => {
@@ -983,7 +984,7 @@ pub async fn import_replies(
 
 pub async fn register_portable_actor(
     config: &Config,
-    db_client: &mut impl DatabaseClient,
+    db_pool: &DatabaseConnectionPool,
     actor_json: JsonValue,
     invite_code: &str,
 ) -> Result<PortableUser, HandlerError> {
@@ -994,19 +995,23 @@ pub async fn register_portable_actor(
         })?;
     let actor: Actor = serde_json::from_value(actor_json.clone())?;
     check_local_username_unique(
-        db_client,
+        db_client_await!(db_pool),
         actor.preferred_username(),
     ).await?;
-    if !is_valid_invite_code(db_client, invite_code).await? {
+    if !is_valid_invite_code(
+        db_client_await!(db_pool),
+        invite_code,
+    ).await? {
         return Err(ValidationError("invalid invite code").into());
     };
     // Create or update profile
-    let ap_client = ApClient::new(config, db_client).await?;
+    let ap_client = ApClient::new_with_pool(config, db_pool).await?;
     let canonical_actor_id = canonicalize_id(actor.id())?;
-    let profile = match get_remote_profile_by_actor_id(
-        db_client,
+    let maybe_profile = get_remote_profile_by_actor_id(
+        db_client_await!(db_pool), // dropped
         &canonical_actor_id.to_string(),
-    ).await {
+    ).await;
+    let profile = match maybe_profile {
         Ok(profile) => {
             log::warn!(
                 "profile of portable actor already exists: {}",
@@ -1014,7 +1019,7 @@ pub async fn register_portable_actor(
             );
             let profile_updated = update_remote_profile(
                 &ap_client,
-                db_client,
+                db_pool,
                 profile,
                 actor,
             ).await?;
@@ -1023,7 +1028,7 @@ pub async fn register_portable_actor(
         Err(DatabaseError::NotFound(_)) => {
             let profile = create_remote_profile(
                 &ap_client,
-                db_client,
+                db_pool,
                 actor,
             ).await?;
             profile
@@ -1040,6 +1045,7 @@ pub async fn register_portable_actor(
         ed25519_secret_key: ed25519_secret_key,
         invite_code: invite_code.to_string(),
     };
+    let db_client = &mut **get_database_client(db_pool).await?;
     let user = create_portable_user(db_client, user_data).await?;
     create_signup_notifications(db_client, user.id).await?;
     Ok(user)

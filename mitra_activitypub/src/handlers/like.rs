@@ -126,10 +126,9 @@ pub async fn handle_like(
             let maybe_db_emoji = if let Some(emoji_value) = like.tag.first() {
                 let moderation_domain =
                     get_moderation_domain(author.expect_actor_data())?;
-                let db_client = &mut **get_database_client(db_pool).await?;
                 let maybe_db_emoji = handle_emoji(
                     &ap_client,
-                    db_client,
+                    db_pool,
                     &moderation_domain,
                     emoji_value.clone(),
                 ).await?;

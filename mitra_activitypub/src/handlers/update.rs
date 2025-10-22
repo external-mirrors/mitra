@@ -132,13 +132,12 @@ async fn handle_update_person(
     activity: JsonValue,
 ) -> HandlerResult {
     let update: UpdatePerson = serde_json::from_value(activity)?;
-    let db_client = &mut **get_database_client(db_pool).await?;
     if update.object.id() != update.actor {
         return Err(ValidationError("actor ID mismatch").into());
     };
     let canonical_actor_id = canonicalize_id(update.object.id())?;
     let profile = match get_remote_profile_by_actor_id(
-        db_client,
+        db_client_await!(db_pool),
         &canonical_actor_id.to_string(),
     ).await {
         Ok(profile) => profile,
@@ -148,7 +147,7 @@ async fn handle_update_person(
     };
     let profile = update_remote_profile(
         ap_client,
-        db_client,
+        db_pool,
         profile,
         update.object,
     ).await?;

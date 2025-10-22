@@ -68,6 +68,7 @@ use mitra_config::{
 use mitra_models::{
     custom_feeds::queries::get_custom_feeds_by_source,
     database::{
+        db_client_await,
         get_database_client,
         DatabaseConnectionPool,
         DatabaseError,
@@ -610,11 +611,13 @@ async fn search_by_acct(
     query_params: web::Query<SearchAcctQueryParams>,
     governor_result: GovernorExtractor,
 ) -> Result<HttpResponse, MastodonError> {
-    let db_client = &mut **get_database_client(&db_pool).await?;
     let mut limit = query_params.limit.inner();
     match auth {
         Some(auth) => {
-            get_current_user(db_client, auth.token()).await?;
+            get_current_user(
+                db_client_await!(&db_pool),
+                auth.token(),
+            ).await?;
         },
         None => {
             if query_params.resolve {
@@ -634,7 +637,7 @@ async fn search_by_acct(
     };
     let profiles = search_profiles_only(
         &config,
-        db_client,
+        &db_pool,
         &query_params.q,
         query_params.resolve,
         limit,

@@ -91,8 +91,7 @@ impl ImportObject {
                 println!("post saved");
             },
             CoreType::Actor => {
-                let db_client = &mut **get_database_client(db_pool).await?;
-                import_profile(&ap_client, db_client, object).await?;
+                import_profile(&ap_client, db_pool, object).await?;
                 println!("profile saved");
             },
             CoreType::Activity => {
