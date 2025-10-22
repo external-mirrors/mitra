@@ -939,11 +939,10 @@ dependencies = [
 
 [[package]]
 name = "deadpool"
-version = "0.10.0"
+version = "0.11.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fb84100978c1c7b37f09ed3ce3e5f843af02c2a2c431bae5b19230dad2c1b490"
+checksum = "ff0fc28638c21092aba483136debc6e177fff3dace8c835d715866923b03323e"
 dependencies = [
- "async-trait",
  "deadpool-runtime",
  "num_cpus",
  "tokio",
@@ -951,9 +950,9 @@ dependencies = [
 
 [[package]]
 name = "deadpool-postgres"
-version = "0.11.0"
+version = "0.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "40b75ba49590d27f677d3bebaf76cd15889ca8b308bc7ba99bfa25f1d7269c13"
+checksum = "4aa08f5c838496cbabb672e3614534444145fc6632995f102e13d30a29a25a13"
 dependencies = [
  "deadpool",
  "tokio",
@@ -1833,9 +1832,9 @@ checksum = "d4345964bb142484797b161f473a503a434de77149dd8c7427788c6e13379388"
 
 [[package]]
 name = "lazy_static"
-version = "1.4.0"
+version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e2abad23fbc42b3700f2f279844dc832adb2b2eb069b2df918f455c4e18cc646"
+checksum = "bbd2bcb4c963f2ddae06a2efc7e9f3591312473c50c6685e1f298068316e66fe"
 dependencies = [
  "spin",
 ]
@@ -3480,9 +3479,9 @@ dependencies = [
 
 [[package]]
 name = "spin"
-version = "0.5.2"
+version = "0.9.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6e63cff320ae2c57904679ba7cb63280a3dc4613885beafb148ee7bf9aa9042d"
+checksum = "6980e8d7511241f8acf4aebddbb1ff938df5eebe98691418c4468d0b72a96a67"
 
 [[package]]
 name = "spinning_top"
