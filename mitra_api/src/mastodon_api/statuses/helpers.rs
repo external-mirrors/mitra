@@ -280,6 +280,22 @@ mod tests {
 
     #[tokio::test]
     #[serial]
+    async fn test_parse_content_empty_post() {
+        let db_client = &create_test_database().await;
+        let instance = Instance::for_test("https://local.example");
+        let content = parse_content(
+            db_client,
+            &instance,
+            "", // empty
+            POST_CONTENT_TYPE_MARKDOWN,
+            None,
+        ).await.unwrap();
+        assert_eq!(content.content, "");
+        assert_eq!(content.content_source.unwrap(), "");
+    }
+
+    #[tokio::test]
+    #[serial]
     async fn test_parse_content_object_link_and_mention() {
         let db_client = &mut create_test_database().await;
         let profile = create_test_remote_profile(

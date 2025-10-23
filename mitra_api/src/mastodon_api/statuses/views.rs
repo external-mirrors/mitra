@@ -187,7 +187,7 @@ async fn create_status(
         parse_content(
             db_client,
             &instance,
-            &status_data.status,
+            status_data.status.as_deref().unwrap_or_default(),
             &status_data.content_type,
             status_data.quote_id,
         ).await?;

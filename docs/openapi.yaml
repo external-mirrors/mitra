@@ -1683,8 +1683,9 @@ paths:
               type: object
               properties:
                 status:
-                  description: Text content of the post.
+                  description: Text content of the post. Can be `null` if a poll or attachments are present.
                   type: string
+                  nullable: true
                 content_type:
                   description: Media type of the post content.
                   type: string
@@ -1739,8 +1740,6 @@ paths:
                   type: string
                   format: uuid
                   nullable: true
-              required:
-                - status
       responses:
         200:
           description: Post created

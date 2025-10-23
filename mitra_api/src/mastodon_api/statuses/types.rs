@@ -307,7 +307,7 @@ pub fn visibility_from_str(value: &str) -> Result<Visibility, ValidationError> {
 // https://docs.joinmastodon.org/methods/statuses/
 #[derive(Debug, Deserialize)]
 pub struct StatusData {
-    pub status: String,
+    pub status: Option<String>,
 
     #[serde(default, deserialize_with = "deserialize_language_code_opt")]
     pub language: Option<Language>,
