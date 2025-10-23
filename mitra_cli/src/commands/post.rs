@@ -81,7 +81,7 @@ pub struct CreatePost {
 
 impl CreatePost {
     pub async fn execute(
-        &self,
+        self,
         config: &Config,
         db_pool: &DatabaseConnectionPool,
     ) -> Result<(), Error> {
@@ -165,7 +165,7 @@ pub struct ImportPosts {
 
 impl ImportPosts {
     pub async fn execute(
-        &self,
+        self,
         config: &Config,
         db_pool: &DatabaseConnectionPool,
     ) -> Result<(), Error> {
@@ -239,7 +239,7 @@ pub struct DeletePost {
 
 impl DeletePost {
     pub async fn execute(
-        &self,
+        self,
         config: &Config,
         db_pool: &DatabaseConnectionPool,
     ) -> Result<(), Error> {

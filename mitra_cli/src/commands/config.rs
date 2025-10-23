@@ -55,7 +55,7 @@ pub struct GetConfig {
 
 impl GetConfig {
     pub async fn execute(
-        &self,
+        self,
         db_pool: &DatabaseConnectionPool,
     ) -> Result<(), Error> {
         let db_client = &**get_database_client(db_pool).await?;
@@ -78,7 +78,7 @@ pub struct UpdateConfig {
 
 impl UpdateConfig {
     pub async fn execute(
-        &self,
+        self,
         db_pool: &DatabaseConnectionPool,
     ) -> Result<(), Error> {
         let db_client = &**get_database_client(db_pool).await?;

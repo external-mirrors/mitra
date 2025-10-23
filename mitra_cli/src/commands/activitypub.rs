@@ -61,7 +61,7 @@ pub struct ImportObject {
 
 impl ImportObject {
     pub async fn execute(
-        &self,
+        self,
         config: &Config,
         db_pool: &DatabaseConnectionPool,
     ) -> Result<(), Error> {
@@ -138,7 +138,7 @@ pub struct ReadOutbox {
 
 impl ReadOutbox {
     pub async fn execute(
-        &self,
+        self,
         config: &Config,
         db_pool: &DatabaseConnectionPool,
     ) -> Result<(), Error> {
@@ -165,7 +165,7 @@ pub struct LoadReplies {
 
 impl LoadReplies {
     pub async fn execute(
-        &self,
+        self,
         config: &Config,
         db_pool: &DatabaseConnectionPool,
     ) -> Result<(), Error> {
@@ -194,7 +194,7 @@ pub struct FetchObject {
 
 impl FetchObject {
     pub async fn execute(
-        &self,
+        self,
         config: &Config,
         db_pool: &DatabaseConnectionPool,
     ) -> Result<(), Error> {
@@ -211,8 +211,8 @@ impl FetchObject {
             &config.instance(),
             maybe_user.as_ref(),
         );
-        let gateways = self.gateway.as_ref()
-            .map(|gateway| vec![gateway.clone()])
+        let gateways = self.gateway
+            .map(|gateway| vec![gateway])
             .unwrap_or_default();
         let mut context = FetcherContext::from(gateways);
         let options = FetchObjectOptions {
@@ -238,7 +238,7 @@ pub struct Webfinger {
 
 impl Webfinger {
     pub async fn execute(
-        &self,
+        self,
         config: &Config,
         _db_pool: &DatabaseConnectionPool,
     ) -> Result<(), Error> {
@@ -265,7 +265,7 @@ pub struct LoadPortableObject {
 impl LoadPortableObject {
     #[allow(clippy::unused_async)]
     pub async fn execute(
-        &self,
+        self,
         _config: &Config,
         _db_pool: &DatabaseConnectionPool,
     ) -> Result<(), Error> {

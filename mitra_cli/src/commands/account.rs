@@ -15,7 +15,7 @@ pub struct RevokeOauthTokens {
 
 impl RevokeOauthTokens {
     pub async fn execute(
-        &self,
+        self,
         db_pool: &DatabaseConnectionPool,
     ) -> Result<(), Error> {
         let db_client = &**get_database_client(db_pool).await?;

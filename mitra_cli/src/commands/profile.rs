@@ -26,7 +26,7 @@ pub struct DeleteUser {
 
 impl DeleteUser {
     pub async fn execute(
-        &self,
+        self,
         config: &Config,
         db_pool: &DatabaseConnectionPool,
     ) -> Result<(), Error> {

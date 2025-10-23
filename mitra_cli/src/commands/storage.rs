@@ -27,7 +27,7 @@ pub struct PruneReposts {
 
 impl PruneReposts {
     pub async fn execute(
-        &self,
+        self,
         config: &Config,
         db_pool: &DatabaseConnectionPool,
     ) -> Result<(), Error> {
@@ -56,7 +56,7 @@ pub struct CheckUris;
 
 impl CheckUris {
     pub async fn execute(
-        &self,
+        self,
         _config: &Config,
         db_pool: &DatabaseConnectionPool,
     ) -> Result<(), Error> {

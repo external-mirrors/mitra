@@ -164,7 +164,7 @@ pub struct GenerateInviteCode {
 
 impl GenerateInviteCode {
     pub async fn execute(
-        &self,
+        self,
         db_pool: &DatabaseConnectionPool,
     ) -> Result<(), Error> {
         let db_client = &**get_database_client(db_pool).await?;
@@ -183,7 +183,7 @@ pub struct ListInviteCodes;
 
 impl ListInviteCodes {
     pub async fn execute(
-        &self,
+        self,
         db_pool: &DatabaseConnectionPool,
     ) -> Result<(), Error> {
         let db_client = &**get_database_client(db_pool).await?;
@@ -215,7 +215,7 @@ pub struct CreateAccount {
 
 impl CreateAccount {
     pub async fn execute(
-        &self,
+        self,
         config: &Config,
         db_pool: &DatabaseConnectionPool,
     ) -> Result<(), Error> {
@@ -231,7 +231,7 @@ impl CreateAccount {
             None => from_default_role(&config.registration.default_role),
         };
         let user_data = UserCreateData {
-            username: self.username.clone(),
+            username: self.username,
             password_digest: Some(password_digest),
             login_address_ethereum: None,
             login_address_monero: None,
@@ -253,7 +253,7 @@ pub struct ListAccounts;
 
 impl ListAccounts {
     pub async fn execute(
-        &self,
+        self,
         db_pool: &DatabaseConnectionPool,
     ) -> Result<(), Error> {
         let db_client = &**get_database_client(db_pool).await?;
@@ -289,7 +289,7 @@ pub struct SetPassword {
 
 impl SetPassword {
     pub async fn execute(
-        &self,
+        self,
         db_pool: &DatabaseConnectionPool,
     ) -> Result<(), Error> {
         let db_client = &**get_database_client(db_pool).await?;
@@ -316,7 +316,7 @@ pub struct SetRole {
 
 impl SetRole {
     pub async fn execute(
-        &self,
+        self,
         db_pool: &DatabaseConnectionPool,
     ) -> Result<(), Error> {
         let db_client = &**get_database_client(db_pool).await?;
@@ -339,7 +339,7 @@ pub struct DeleteExtraneousPosts {
 
 impl DeleteExtraneousPosts {
     pub async fn execute(
-        &self,
+        self,
         config: &Config,
         db_pool: &DatabaseConnectionPool,
     ) -> Result<(), Error> {
@@ -363,7 +363,7 @@ pub struct DeleteUnusedAttachments {
 
 impl DeleteUnusedAttachments {
     pub async fn execute(
-        &self,
+        self,
         config: &Config,
         db_pool: &DatabaseConnectionPool,
     ) -> Result<(), Error> {
@@ -387,7 +387,7 @@ pub struct DeleteEmptyProfiles {
 
 impl DeleteEmptyProfiles {
     pub async fn execute(
-        &self,
+        self,
         config: &Config,
         db_pool: &DatabaseConnectionPool,
     ) -> Result<(), Error> {
@@ -410,7 +410,7 @@ pub struct ListLocalFiles;
 
 impl ListLocalFiles {
     pub async fn execute(
-        &self,
+        self,
         _config: &Config,
         db_pool: &DatabaseConnectionPool,
     ) -> Result<(), Error> {
@@ -433,7 +433,7 @@ pub struct DeleteOrphanedFiles {
 
 impl DeleteOrphanedFiles {
     pub async fn execute(
-        &self,
+        self,
         config: &Config,
         db_pool: &DatabaseConnectionPool,
     ) -> Result<(), Error> {
@@ -465,7 +465,7 @@ pub struct ListUnreachableActors {
 
 impl ListUnreachableActors {
     pub async fn execute(
-        &self,
+        self,
         _config: &Config,
         db_pool: &DatabaseConnectionPool,
     ) -> Result<(), Error> {
@@ -500,15 +500,15 @@ pub struct CreateMoneroWallet {
 
 impl CreateMoneroWallet {
     pub async fn execute(
-        &self,
+        self,
         config: &Config,
     ) -> Result<(), Error> {
         let monero_config = config.monero_config()
             .ok_or(anyhow!("monero configuration not found"))?;
         create_monero_wallet(
             monero_config,
-            self.name.clone(),
-            self.password.clone(),
+            self.name,
+            self.password,
         ).await?;
         println!("wallet created");
         Ok(())
@@ -523,7 +523,7 @@ pub struct CreateMoneroSignature {
 
 impl CreateMoneroSignature {
     pub async fn execute(
-        &self,
+        self,
         config: &Config,
     ) -> Result<(), Error> {
         let monero_config = config.monero_config()
@@ -546,7 +546,7 @@ pub struct VerifyMoneroSignature {
 
 impl VerifyMoneroSignature {
     pub async fn execute(
-        &self,
+        self,
         config: &Config,
     ) -> Result<(), Error> {
         let monero_config = config.monero_config()
@@ -570,7 +570,7 @@ pub struct ReopenInvoice {
 
 impl ReopenInvoice {
     pub async fn execute(
-        &self,
+        self,
         config: &Config,
         db_pool: &DatabaseConnectionPool,
     ) -> Result<(), Error> {
@@ -600,7 +600,7 @@ pub struct ListActiveAddresses;
 
 impl ListActiveAddresses {
     pub async fn execute(
-        &self,
+        self,
         config: &Config,
     ) -> Result<(), Error> {
         let monero_config = config.monero_config()
@@ -626,7 +626,7 @@ pub struct GetPaymentAddress {
 
 impl GetPaymentAddress {
     pub async fn execute(
-        &self,
+        self,
         config: &Config,
         db_pool: &DatabaseConnectionPool,
     ) -> Result<(), Error> {

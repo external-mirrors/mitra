@@ -133,7 +133,7 @@ pub struct AddFilterRule {
 
 impl AddFilterRule {
     pub async fn execute(
-        &self,
+        self,
         db_pool: &DatabaseConnectionPool,
     ) -> Result<(), Error> {
         let db_client = &**get_database_client(db_pool).await?;
@@ -159,7 +159,7 @@ pub struct RemoveFilterRule {
 
 impl RemoveFilterRule {
     pub async fn execute(
-        &self,
+        self,
         db_pool: &DatabaseConnectionPool,
     ) -> Result<(), Error> {
         let db_client = &**get_database_client(db_pool).await?;
@@ -180,7 +180,7 @@ pub struct ListFilterRules;
 
 impl ListFilterRules {
     pub async fn execute(
-        &self,
+        self,
         db_pool: &DatabaseConnectionPool,
     ) -> Result<(), Error> {
         let db_client = &**get_database_client(db_pool).await?;

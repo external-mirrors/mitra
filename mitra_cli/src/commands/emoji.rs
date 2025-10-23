@@ -64,7 +64,7 @@ pub struct AddEmoji {
 
 impl AddEmoji {
     pub async fn execute(
-        &self,
+        self,
         config: &Config,
         db_pool: &DatabaseConnectionPool,
     ) -> Result<(), Error> {
@@ -110,7 +110,7 @@ pub struct ImportEmoji {
 
 impl ImportEmoji {
     pub async fn execute(
-        &self,
+        self,
         config: &Config,
         db_pool: &DatabaseConnectionPool,
     ) -> Result<(), Error> {
@@ -162,7 +162,7 @@ pub struct DeleteEmoji {
 
 impl DeleteEmoji {
     pub async fn execute(
-        &self,
+        self,
         config: &Config,
         db_pool: &DatabaseConnectionPool,
     ) -> Result<(), Error> {
