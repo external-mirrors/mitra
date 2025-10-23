@@ -52,7 +52,13 @@ pub fn save_b64_file(
             limit: FileSize::new(file_size_limit),
         });
     };
-    let media_type = media_type.to_string();
+    let media_type = if media_type == "application/ogg" {
+        // Audio or video
+        // https://developer.mozilla.org/en-US/docs/Web/Media/Guides/Formats/Containers#ogg
+        "audio/ogg".to_owned()
+    } else {
+        media_type.to_owned()
+    };
     if !allowed_media_types.contains(&media_type.as_str()) {
         return Err(UploadError::InvalidMediaType(media_type));
     };
