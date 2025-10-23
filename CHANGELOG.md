@@ -12,6 +12,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Replace `description` meta tag on post and profile pages.
 - Added `/api/v1/instance/domain_blocks` API endpoint.
 - Added `filter_blocklist_public` dynamic configuration parameter.
+- Added `database_connection_pool_size` configuration parameter.
 
 ### Changed
 

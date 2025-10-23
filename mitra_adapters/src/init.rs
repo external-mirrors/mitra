@@ -78,7 +78,8 @@ pub fn create_database_connection_pool(config: &Config)
 {
     // https://wiki.postgresql.org/wiki/Number_Of_Database_Connections
     // https://docs.rs/deadpool/0.10.0/src/deadpool/managed/config.rs.html#54
-    let db_pool_size = num_cpus::get_physical() * 2;
+    let db_pool_size = config.database_connection_pool_size
+        .unwrap_or(num_cpus::get_physical() * 2);
     log::info!("database connection pool size: {db_pool_size}");
     let db_pool = connect::create_database_connection_pool(
         &config.database_url,

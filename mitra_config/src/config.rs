@@ -44,11 +44,12 @@ pub struct Config {
     #[serde(skip)]
     pub config_path: String,
 
+    // Core settings
     #[serde(default = "default_log_level")]
     pub log_level: LogLevel,
 
-    // Core settings
     pub database_url: String,
+    pub database_connection_pool_size: Option<usize>,
     /// TLS certificate authority file path for validating the database secure connection
     pub database_tls_ca_file: Option<PathBuf>,
 
