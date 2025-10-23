@@ -9,11 +9,16 @@ use super::ConfigError;
 // Not included
 // https://developer.mozilla.org/en-US/docs/Web/Media/Formats/Image_types
 // - image/tiff only supported by Safari
-const SUPPORTED_MEDIA_TYPES: [&str; 15] = [
+const SUPPORTED_MEDIA_TYPES: [&str; 20] = [
     "audio/flac",
     "audio/mpeg",
     "audio/ogg",
     "audio/x-wav",
+    "audio/wav",
+    "audio/vnd.wave",
+    "audio/mp4",
+    "audio/aac",
+    "audio/x-m4a",
     "image/apng",
     "image/avif",
     "image/gif",
