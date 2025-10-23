@@ -116,13 +116,16 @@ pub async fn delete_extraneous_posts(
     config: &Config,
     db_pool: &DatabaseConnectionPool,
 ) -> Result<(), Error> {
-    let db_client = &mut **get_database_client(db_pool).await?;
     let updated_before = match config.retention.extraneous_posts {
         Some(days) => days_before_now(days),
         None => return Ok(()), // not configured
     };
-    let posts = find_extraneous_posts(db_client, updated_before).await?;
+    let posts = find_extraneous_posts(
+        db_client_await!(db_pool),
+        updated_before,
+    ).await?;
     for post_id in posts {
+        let db_client = &mut **get_database_client(db_pool).await?;
         let deletion_queue = delete_post(db_client, post_id).await?;
         delete_orphaned_media(config, db_client, deletion_queue).await?;
         log::info!("deleted remote post {}", post_id);

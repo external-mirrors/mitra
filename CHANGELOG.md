@@ -25,6 +25,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Reduced database lock time during processing of remote posts.
 - Reduced database lock time during followers/following import.
 - Reduced database lock time during processing of remote actor profiles.
+- Reduced database lock time during pruning of remote posts.
 
 ### Fixed
 
