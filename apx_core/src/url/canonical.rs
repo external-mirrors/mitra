@@ -17,12 +17,14 @@ use crate::{
     },
 };
 
+/// Well-known path of FEP-ef61 gateway
 pub const GATEWAY_PATH_PREFIX: &str = "/.well-known/apgateway/";
 
 #[derive(Debug, Error)]
 #[error("{0}")]
 pub struct CanonicalUriError(pub &'static str);
 
+/// Canonical URI
 #[derive(Clone, PartialEq)]
 pub enum CanonicalUri {
     Http(HttpUri),
@@ -34,14 +36,16 @@ pub fn with_gateway(ap_uri: &ApUri, gateway_base: &str) -> String {
 }
 
 impl CanonicalUri {
+    /// Parses and canonicalizes URI
     pub fn parse(value: &str) -> Result<Self, CanonicalUriError> {
         let (canonical_uri, _) = parse_url(value)?;
         Ok(canonical_uri)
     }
 
+    /// Parses canonical URI
     pub fn parse_canonical(value: &str) -> Result<Self, CanonicalUriError> {
-        let (canonical_uri, maybe_gateway) = parse_url(value)?;
-        if maybe_gateway.is_some() {
+        let canonical_uri = Self::parse(value)?;
+        if canonical_uri.to_string() != value {
             return Err(CanonicalUriError("URI is not canonical"));
         };
         Ok(canonical_uri)
@@ -142,8 +146,7 @@ mod tests {
     #[test]
     fn test_http_uri_from_http_uri() {
         let input = "https://social.example/users/test";
-        let http_uri = HttpUri::parse(input).unwrap();
-        let canonical_uri = CanonicalUri::Http(http_uri);
+        let canonical_uri = CanonicalUri::parse_canonical(input).unwrap();
         let output = canonical_uri.to_http_uri(None).unwrap();
         assert_eq!(output, input);
     }
@@ -151,8 +154,7 @@ mod tests {
     #[test]
     fn test_http_uri_from_ap_uri() {
         let input = "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor";
-        let ap_uri = ApUri::parse(input).unwrap();
-        let canonical_uri = CanonicalUri::Ap(ap_uri);
+        let canonical_uri = CanonicalUri::parse_canonical(input).unwrap();
         let gateway = "https://gateway.example";
         let output = canonical_uri.to_http_uri(Some(gateway)).unwrap();
         let expected_output = "https://gateway.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor";
@@ -162,8 +164,7 @@ mod tests {
     #[test]
     fn test_http_uri_from_ap_uri_no_gateway() {
         let input = "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor";
-        let ap_uri = ApUri::parse(input).unwrap();
-        let canonical_uri = CanonicalUri::Ap(ap_uri);
+        let canonical_uri = CanonicalUri::parse_canonical(input).unwrap();
         let maybe_output = canonical_uri.to_http_uri(None);
         assert!(maybe_output.is_none());
     }
@@ -228,6 +229,27 @@ mod tests {
         let url = "https://social.example/.well-known/apgateway/did:example:123456";
         let error = parse_url(url).err().unwrap();
         assert_eq!(error.to_string(), "invalid 'ap' URI");
+    }
+
+    #[test]
+    fn test_parse_canonical_ap_uri() {
+        let url = "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor";
+        let canonical_uri = CanonicalUri::parse_canonical(url).unwrap();
+        assert_eq!(canonical_uri.to_string(), url);
+    }
+
+    #[test]
+    fn test_parse_canonical_ap_uri_compatible() {
+        let url = "https://social.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor";
+        let error = CanonicalUri::parse_canonical(url).err().unwrap();
+        assert_eq!(error.0, "URI is not canonical");
+    }
+
+    #[test]
+    fn test_parse_canonical_ap_uri_percent_encoded_did() {
+        let url = "ap://did%3Akey%3Az6MkrJVnaZkeFzdQyMZu1cgjg7k1pZZ6pvBQ7XJPt4swbTQ2/actor";
+        let error = CanonicalUri::parse_canonical(url).err().unwrap();
+        assert_eq!(error.0, "URI is not canonical");
     }
 
     #[test]
