@@ -73,6 +73,10 @@ paths:
                     description: When the token was generated (Unix timestamp).
                     type: integer
                     example: 1639747526
+                  expires_in:
+                    description: The lifetime in seconds of the access token.
+                    type: integer
+                    example: 604800
         400:
           description: Invalid token request
   /oauth/revoke:

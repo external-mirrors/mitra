@@ -255,8 +255,8 @@ async fn token_view(
     };
     let access_token = generate_oauth_token();
     let created_at = Utc::now();
-    let expires_at = created_at +
-        TimeDelta::seconds(config.authentication_token_lifetime.into());
+    let expires_in = config.authentication_token_lifetime;
+    let expires_at = created_at + TimeDelta::seconds(expires_in.into());
     save_oauth_token(
         db_client,
         user.id,
@@ -268,6 +268,7 @@ async fn token_view(
     let token_response = TokenResponse::new(
         access_token,
         created_at.timestamp(),
+        expires_in,
     );
     Ok(HttpResponse::Ok().json(token_response))
 }

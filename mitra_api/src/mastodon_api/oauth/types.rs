@@ -65,22 +65,29 @@ impl From<TokenRequestMultipartForm> for TokenRequest {
     }
 }
 
-/// https://docs.joinmastodon.org/entities/token/
+// https://datatracker.ietf.org/doc/html/rfc6749#section-5.1
+// https://docs.joinmastodon.org/entities/token/
 #[derive(Serialize)]
 pub struct TokenResponse {
     pub access_token: String,
     pub token_type: String,
     pub scope: String,
     pub created_at: i64,
+    pub expires_in: u32,
 }
 
 impl TokenResponse {
-    pub fn new(access_token: String, created_at: i64) -> Self {
+    pub fn new(
+        access_token: String,
+        created_at: i64,
+        expires_in: u32,
+    ) -> Self {
         Self {
             access_token,
             token_type: "Bearer".to_string(),
             scope: "read write follow".to_string(),
             created_at,
+            expires_in,
         }
     }
 }
