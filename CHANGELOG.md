@@ -32,6 +32,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Strip query parameters when canonicalizing 'ap' URIs.
 - Verify ownership of embedded objects submitted by FEP-ae97 clients.
 - Allow empty `status` field in `/api/v1/statuses` form data.
+- Add `Cache-Control: no-store` header to `/oauth/token` response.
 
 ### Fixed
 

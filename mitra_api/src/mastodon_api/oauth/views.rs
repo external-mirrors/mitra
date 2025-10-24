@@ -265,12 +265,16 @@ async fn token_view(
         expires_at,
     ).await?;
     log::warn!("created auth token for user {}", user);
-    let token_response = TokenResponse::new(
+    let token_data = TokenResponse::new(
         access_token,
         created_at.timestamp(),
         expires_in,
     );
-    Ok(HttpResponse::Ok().json(token_response))
+    let response = HttpResponse::Ok()
+        // Required by RFC-6749
+        .append_header((http_header::CACHE_CONTROL, "no-store"))
+        .json(token_data);
+    Ok(response)
 }
 
 #[post("/revoke")]
