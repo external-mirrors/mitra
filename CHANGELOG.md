@@ -27,12 +27,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Reduced database lock time during followers/following import.
 - Reduced database lock time during processing of remote actor profiles.
 - Reduced database lock time during pruning of remote posts.
+- Process uploads with `application/ogg` media type as `audio/ogg`.
 
 ### Fixed
 
 - Use correct verification method ID when creating identity proofs.
 - Fixed RFC-9421 signature verification error when `@request-target` is used.
-- Process uploads with `application/ogg` media type as `audio/ogg`.
 
 ## [4.11.0] - 2025-10-09
 
