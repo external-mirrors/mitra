@@ -48,7 +48,7 @@ use mitra_activitypub::{
         proposal::build_proposal,
     },
     errors::HandlerError,
-    forwarder::validate_public_keys,
+    forwarder::verify_public_keys,
     identifiers::{
         canonicalize_id,
         compatible_post_object_id,
@@ -738,7 +738,7 @@ async fn apgateway_create_actor_view(
         .get("X-Invite-Code")
         .and_then(|value| value.to_str().ok())
         .ok_or(ValidationError("invite code is required"))?;
-    validate_public_keys(
+    verify_public_keys(
         &config.instance(),
         None,
         &actor,
@@ -945,7 +945,7 @@ async fn apgateway_outbox_push_view(
     if canonical_actor_id != canonical_owner_id {
         return Err(HttpError::PermissionError);
     };
-    validate_public_keys(
+    verify_public_keys(
         &config.instance(),
         Some(&collection_owner),
         &activity,

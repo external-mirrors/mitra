@@ -32,11 +32,11 @@ use crate::{
     ownership::is_local_origin,
 };
 
-fn find_objects(object: &JsonValue) -> Vec<JsonValue> {
+fn find_objects(object: &JsonValue) -> Vec<&JsonValue> {
     let mut objects = vec![];
     match object {
         JsonValue::Object(map) => {
-            objects.push(object.clone());
+            objects.push(object);
             for (_key, value) in map {
                 let embedded = find_objects(value);
                 objects.extend(embedded);
@@ -53,7 +53,7 @@ fn find_objects(object: &JsonValue) -> Vec<JsonValue> {
     objects
 }
 
-pub fn validate_public_keys(
+pub fn verify_public_keys(
     instance: &Instance,
     maybe_account: Option<&PortableUser>,
     object: &JsonValue,
@@ -62,7 +62,7 @@ pub fn validate_public_keys(
     for object in objects {
         // WARNING: this is not reliable if JSON-LD is used
         // https://codeberg.org/fediverse/fep/src/commit/8862845a2b71a32e254932757ef7696b6714739d/fep/2277/fep-2277.md#json-ld
-        if !is_verification_method(&object) {
+        if !is_verification_method(object) {
             continue;
         };
         let Some(object_id) = object["id"].as_str() else {
@@ -71,7 +71,7 @@ pub fn validate_public_keys(
         if !is_local_origin(instance, object_id) {
             continue;
         };
-        let public_key = verification_method_to_public_key(object)?;
+        let public_key = verification_method_to_public_key(object.clone())?;
         // Local public keys must be known to the server
         let is_known = match public_key {
             PublicKey::Ed25519(ed25519_public_key) => {
@@ -182,6 +182,45 @@ mod tests {
             "https://social.example/actors/1#main-key",
             "https://social.example/actors/1#main-key",
         ]);
+    }
+
+    #[test]
+    fn test_verify_public_keys_no_keys() {
+        let instance = Instance::for_test("social.example");
+        let activity = json!({
+            "id": "https://social.example/activities/123",
+            "type": "Create",
+            "actor": "https://social.example/actors/1",
+            "object": {
+                "id": "https://social.example/notes/1",
+                "type": "Note",
+                "attributedTo": "https://social.example/actors/1",
+            },
+        });
+        let result = verify_public_keys(&instance, None, &activity);
+        assert_eq!(result.is_ok(), true);
+    }
+
+    #[test]
+    fn test_verify_public_keys_public_key_pem() {
+        let instance = Instance::for_test("social.example");
+        let activity = json!({
+            "id": "https://social.example/activities/123",
+            "type": "Create",
+            "actor": "https://social.example/actors/1",
+            "object": {
+                "id": "https://social.example/notes/1",
+                "type": "Note",
+                "attributedTo": "https://social.example/actors/1",
+                "attachment": {
+                    "id": "https://social.example/actors/1/key",
+                    "owner": "https://social.example/actors/1",
+                    "publicKeyPem": "-----BEGIN PUBLIC KEY-----\nMFwwDQYJKoZIhvcNAQEBBQADSwAwSAJBAOIh58ZQbo45MuZvv1nMWAzTzN9oghNC\nbxJkFEFD1Y49LEeNHMk6GrPByUz8kn4y8Hf6brb+DVm7ZW4cdhOx1TsCAwEAAQ==\n-----END PUBLIC KEY-----",
+                },
+            },
+        });
+        let result = verify_public_keys(&instance, None, &activity);
+        assert_eq!(result.err().unwrap().0, "unexpected public key");
     }
 
     #[test]
