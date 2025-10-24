@@ -26,6 +26,17 @@ pub fn with_ap_prefix(did_url: &str) -> String {
     format!("{}{}", AP_URI_PREFIX, did_url)
 }
 
+// Removes query parameters from relative URI
+fn remove_query(uri: UriRelativeString) -> UriRelativeString {
+    let without_query = format!(
+        "{}{}",
+        uri.path_str(),
+        uri.fragment().map(|frag| format!("#{frag}")).unwrap_or_default(),
+    );
+    UriRelativeString::from_str(&without_query)
+        .expect("URI should be valid")
+}
+
 /// FEP-ef61 'ap' URI
 #[derive(Clone, Debug, PartialEq)]
 pub struct ApUri {
@@ -34,6 +45,9 @@ pub struct ApUri {
 }
 
 impl ApUri {
+    /// Parses 'ap' URI.
+    ///
+    /// Query parameters are preserved.
     pub fn parse(value: &str) -> Result<Self, &'static str> {
         let uri_re = Regex::new(AP_URI_RE)
              .expect("regexp should be valid");
@@ -63,12 +77,7 @@ impl ApUri {
     }
 
     pub fn relative_uri(&self) -> String {
-        format!(
-            "{}{}{}",
-            self.location.path_str(),
-            self.location.query().map(|query| format!("?{query}")).unwrap_or_default(),
-            self.location.fragment().map(|frag| format!("#{frag}")).unwrap_or_default(),
-        )
+        self.location.to_string()
     }
 
     pub fn from_did_url(did_url: &str) -> Result<Self, &'static str> {
@@ -82,6 +91,13 @@ impl ApUri {
     /// Returns origin tuple for this URI
     pub fn origin(&self) -> Origin {
         self.authority.origin()
+    }
+
+    /// Returns this URI, but without the query component
+    pub fn without_query(&self) -> Self {
+        let mut cloned = self.clone();
+        cloned.location = remove_query(cloned.location);
+        cloned
     }
 
     /// Returns URI without the fragment part
@@ -123,6 +139,14 @@ mod tests {
         assert_eq!(ap_uri.location.authority_str(), None);
         assert_eq!(ap_uri.location.path_str(), "/objects/123");
         assert_eq!(ap_uri.relative_uri(), "/objects/123");
+        assert_eq!(ap_uri.to_string(), url);
+    }
+
+    #[test]
+    fn test_parse_with_query() {
+        let url = "ap://did:key:z6MkrJVnaZkeFzdQyMZu1cgjg7k1pZZ6pvBQ7XJPt4swbTQ2/actor?gateways=https%3A%2F%2Fserver1.example,https%3A%2F%2Fserver2.example";
+        let ap_uri = ApUri::parse(url).unwrap();
+        assert_eq!(ap_uri.relative_uri(), "/actor?gateways=https%3A%2F%2Fserver1.example,https%3A%2F%2Fserver2.example");
         assert_eq!(ap_uri.to_string(), url);
     }
 
@@ -174,6 +198,15 @@ mod tests {
             ap_uri.origin(),
             Origin::new("ap", "did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6", 0),
         );
+    }
+
+    #[test]
+    fn test_without_query() {
+        let url = "ap://did:key:z6MkrJVnaZkeFzdQyMZu1cgjg7k1pZZ6pvBQ7XJPt4swbTQ2/actor?gateways=https%3A%2F%2Fserver1.example,https%3A%2F%2Fserver2.example";
+        let ap_uri = ApUri::parse(url).unwrap();
+        let ap_uri_without_query = ap_uri.without_query();
+        assert_eq!(ap_uri_without_query.relative_uri(), "/actor");
+        assert_eq!(ap_uri_without_query.to_string(), "ap://did:key:z6MkrJVnaZkeFzdQyMZu1cgjg7k1pZZ6pvBQ7XJPt4swbTQ2/actor");
     }
 
     #[test]

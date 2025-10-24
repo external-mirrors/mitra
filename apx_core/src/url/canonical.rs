@@ -98,7 +98,8 @@ fn get_canonical_ap_uri(
         .strip_prefix(GATEWAY_PATH_PREFIX)
         .ok_or(CanonicalUriError("invalid gateway URI"))?;
     let ap_uri = ApUri::from_did_url(did_url)
-        .map_err(CanonicalUriError)?;
+        .map_err(CanonicalUriError)?
+        .without_query();
     let gateway = http_uri.base();
     Ok((ap_uri, gateway))
 }
@@ -108,7 +109,9 @@ pub fn parse_url(
 ) -> Result<(CanonicalUri, Option<String>), CanonicalUriError> {
     let mut maybe_gateway = None;
     let canonical_uri = if is_ap_uri(value) {
-        let ap_uri = ApUri::parse(value).map_err(CanonicalUriError)?;
+        let ap_uri = ApUri::parse(value)
+            .map_err(CanonicalUriError)?
+            .without_query();
         CanonicalUri::Ap(ap_uri)
     } else {
         let http_uri = HttpUri::parse(value).map_err(CanonicalUriError)?;
@@ -232,6 +235,14 @@ mod tests {
     }
 
     #[test]
+    fn test_parse_ap_uri_with_query_params() {
+        let url = "ap://did:key:z6MkrJVnaZkeFzdQyMZu1cgjg7k1pZZ6pvBQ7XJPt4swbTQ2/actor?gateways=https%3A%2F%2Fserver1.example,https%3A%2F%2Fserver2.example";
+        let canonical_uri = CanonicalUri::parse(url).unwrap();
+        assert!(matches!(canonical_uri, CanonicalUri::Ap(_)));
+        assert_eq!(canonical_uri.to_string(), "ap://did:key:z6MkrJVnaZkeFzdQyMZu1cgjg7k1pZZ6pvBQ7XJPt4swbTQ2/actor");
+    }
+
+    #[test]
     fn test_parse_canonical_ap_uri() {
         let url = "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor";
         let canonical_uri = CanonicalUri::parse_canonical(url).unwrap();
@@ -241,6 +252,13 @@ mod tests {
     #[test]
     fn test_parse_canonical_ap_uri_compatible() {
         let url = "https://social.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor";
+        let error = CanonicalUri::parse_canonical(url).err().unwrap();
+        assert_eq!(error.0, "URI is not canonical");
+    }
+
+    #[test]
+    fn test_parse_canonical_ap_uri_with_query_params() {
+        let url = "ap://did:key:z6MkrJVnaZkeFzdQyMZu1cgjg7k1pZZ6pvBQ7XJPt4swbTQ2/actor?gateways=https%3A%2F%2Fserver1.example,https%3A%2F%2Fserver2.example";
         let error = CanonicalUri::parse_canonical(url).err().unwrap();
         assert_eq!(error.0, "URI is not canonical");
     }

@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Added `verification_method_id` method to `DidPkh` type.
 - Added support for `@request-target` RFC-9421 derived component.
+- Added `without_query` method to `ApUri` type.
 
 ### Changed
 
@@ -17,6 +18,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Hide `ProofType::JcsBlake2Ed25519Signature` variant if `minisign` feature flag is not enabled.
 - Add component ID to RFC-9421 "unsupported component" error message.
 - Return error if 'ap' URI with percent-encoded DID is passed to `CanonicalUri::parse_canonical`.
+- Strip query parameters when canonicalizing 'ap' URIs.
 
 ### Deprecated
 

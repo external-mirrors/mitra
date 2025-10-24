@@ -513,7 +513,10 @@ mod tests {
     fn test_canonicalize_id_ap() {
         let url = "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor?type=group";
         let canonical_url = canonicalize_id(url).unwrap();
-        assert_eq!(canonical_url.to_string(), url);
+        assert_eq!(
+            canonical_url.to_string(),
+            "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor",
+        );
     }
 
     #[test]
