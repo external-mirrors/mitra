@@ -133,6 +133,7 @@ async fn authorize_view(
             .append_header((http_header::CONTENT_SECURITY_POLICY, csp.into_string()))
             .body(page)
     } else {
+        // https://datatracker.ietf.org/doc/html/rfc6749#section-4.1.2
         let mut redirect_uri = format!(
             "{}?code={}",
             oauth_app.redirect_uri,
@@ -182,7 +183,19 @@ async fn token_view(
             // https://oauth.net/2/grant-types/password/
             let username = request_data.username.as_ref()
                 .ok_or(ValidationError("username is required"))?;
-            get_user_by_name(db_client, username).await?
+            let user = get_user_by_name(db_client, username).await?;
+            let password = request_data.password.as_ref()
+                .ok_or(ValidationError("password is required"))?;
+            let password_digest = user.password_digest.as_ref()
+                .ok_or(ValidationError("password auth is disabled"))?;
+            let password_correct = verify_password(
+                password_digest,
+                password,
+            ).map_err(MastodonError::from_internal)?;
+            if !password_correct {
+                return Err(ValidationError("incorrect password").into());
+            };
+            user
         },
         "eip4361" => {
             let message = request_data.message.as_ref()
@@ -236,19 +249,6 @@ async fn token_view(
         _ => {
             return Err(ValidationError("unsupported grant type").into());
         },
-    };
-    if request_data.grant_type == "password" {
-        let password = request_data.password.as_ref()
-            .ok_or(ValidationError("password is required"))?;
-        let password_digest = user.password_digest.as_ref()
-            .ok_or(ValidationError("password auth is disabled"))?;
-        let password_correct = verify_password(
-            password_digest,
-            password,
-        ).map_err(MastodonError::from_internal)?;
-        if !password_correct {
-            return Err(ValidationError("incorrect password").into());
-        };
     };
     let access_token = generate_oauth_token();
     let created_at = Utc::now();

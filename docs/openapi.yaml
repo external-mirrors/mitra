@@ -8,7 +8,6 @@ paths:
   /oauth/token:
     post:
       summary: Returns an access token, to be used during API calls that are not public.
-      description: EIP-4361 auth doesn't require blockchain integration.
       requestBody:
         content:
           application/json:
@@ -16,34 +15,39 @@ paths:
               type: object
               properties:
                 grant_type:
+                  description: EIP-4361 auth doesn't require blockchain integration.
                   type: string
                   enum:
                     - authorization_code
                     - password
                     - eip4361
                     - caip122_monero
-                  example: eip4361
+                  example: authorization_code
                 code:
                   description: A user authorization code, obtained via GET /oauth/authorize (required if grant type is "authorization_code").
                   type: string
                   nullable: true
-                  example: null
+                  example: "Vx88sCmDjNUeQE6pkIo9Pn8ajGA"
                 username:
                   description: User name (required if grant type is "password").
                   type: string
+                  nullable: true
                   example: null
                 password:
                   description: Password (required if grant type is "password").
                   type: string
+                  nullable: true
                   example: null
                 message:
                   description: Authentication message (required if grant type is "eip4361" or "caip122_monero").
                   type: string
-                  example: "social.example wants you to sign in with your Ethereum account:"
+                  nullable: true
+                  example: null
                 signature:
                   description: Signature (required if grant type is "eip4361" or "caip122_monero").
                   type: string
-                  example: 0x905...
+                  nullable: true
+                  example: null
               required:
                 - grant_type
       responses:
@@ -55,14 +59,18 @@ paths:
                 type: object
                 properties:
                   access_token:
+                    description: The access token issued by the authorization server.
                     type: string
                   token_type:
+                    description: The OAuth token type.
                     type: string
                     example: Bearer
                   scope:
+                    description: The OAuth scopes granted by this token, space-separated.
                     type: string
                     example: read write follow
                   created_at:
+                    description: When the token was generated (Unix timestamp).
                     type: integer
                     example: 1639747526
         400:
