@@ -6,10 +6,14 @@ use apx_sdk::{
             eddsa::ed25519_public_key_from_secret_key,
             rsa::RsaPublicKey,
         },
+        json_signatures::create::is_object_signed,
         url::canonical::CanonicalUri,
     },
     deserialization::deserialize_into_id_array,
-    utils::is_verification_method,
+    utils::{
+        get_core_type,
+        is_verification_method,
+    },
 };
 use serde::Deserialize;
 use serde_json::{Value as JsonValue};
@@ -29,7 +33,12 @@ use mitra_validators::errors::ValidationError;
 use crate::{
     handlers::note::normalize_audience,
     keys::verification_method_to_public_key,
-    ownership::is_local_origin,
+    ownership::{
+        get_object_id_opt,
+        get_owner,
+        is_local_origin,
+        is_same_id,
+    },
 };
 
 fn find_objects(object: &JsonValue) -> Vec<&JsonValue> {
@@ -65,7 +74,8 @@ pub fn verify_public_keys(
         if !is_verification_method(object) {
             continue;
         };
-        let Some(object_id) = object["id"].as_str() else {
+        let Some(object_id) = get_object_id_opt(object) else {
+            // Skip anonymous objects
             continue;
         };
         if !is_local_origin(instance, object_id) {
@@ -87,6 +97,30 @@ pub fn verify_public_keys(
         };
         if !is_known {
             return Err(ValidationError("unexpected public key"));
+        };
+    };
+    Ok(())
+}
+
+pub fn verify_embedded_ownership(
+    object: &JsonValue,
+) -> Result<(), ValidationError> {
+    let root_owner = get_owner(object, get_core_type(object))?;
+    let objects = find_objects(object);
+    for object in objects {
+        if get_object_id_opt(object).is_none() {
+            // Skip anonymous objects
+            continue;
+        };
+        if is_object_signed(object) {
+            // Skip signed objects
+            continue;
+        };
+        // Embedded object must have the same owner
+        let object_class = get_core_type(object);
+        let object_owner = get_owner(object, object_class)?;
+        if !is_same_id(&object_owner, &root_owner)? {
+            return Err(ValidationError("embedded object has different owner"))
         };
     };
     Ok(())
@@ -221,6 +255,49 @@ mod tests {
         });
         let result = verify_public_keys(&instance, None, &activity);
         assert_eq!(result.err().unwrap().0, "unexpected public key");
+    }
+
+    #[test]
+    fn test_verify_embedded_ownership() {
+        let activity = json!({
+            "id": "https://social.example/activities/123",
+            "type": "Create",
+            "actor": "https://social.example/actors/1",
+            "object": {
+                "id": "https://social.example/notes/1",
+                "type": "Note",
+                "attributedTo": "https://social.example/actors/1",
+            },
+        });
+        let result = verify_embedded_ownership(&activity);
+        assert_eq!(result.is_ok(), true);
+    }
+
+    #[test]
+    fn test_verify_embedded_ownership_error() {
+        let activity = json!({
+            "id": "https://social.example/activities/123",
+            "type": "Create",
+            "actor": "https://social.example/actors/1",
+            "object": {
+                "id": "https://social.example/notes/1",
+                "type": "Note",
+                "attributedTo": "https://social.example/actors/1",
+                "replies": {
+                    "type": "Collection",
+                    "items": [
+                        {
+                            "type": "Note",
+                            "id": "https://social.example/notes/2",
+                            // Different owner!
+                            "attributedTo": "https://social.example/actors/2",
+                        },
+                    ],
+                },
+            },
+        });
+        let result = verify_embedded_ownership(&activity);
+        assert_eq!(result.err().unwrap().0, "embedded object has different owner");
     }
 
     #[test]

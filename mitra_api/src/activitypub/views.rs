@@ -48,7 +48,10 @@ use mitra_activitypub::{
         proposal::build_proposal,
     },
     errors::HandlerError,
-    forwarder::verify_public_keys,
+    forwarder::{
+        verify_embedded_ownership,
+        verify_public_keys,
+    },
     identifiers::{
         canonicalize_id,
         compatible_post_object_id,
@@ -743,6 +746,7 @@ async fn apgateway_create_actor_view(
         None,
         &actor,
     )?;
+    verify_embedded_ownership(&actor)?;
     let user = register_portable_actor(
         &config,
         &db_pool,
@@ -950,6 +954,7 @@ async fn apgateway_outbox_push_view(
         Some(&collection_owner),
         &activity,
     )?;
+    verify_embedded_ownership(&activity)?;
     IncomingActivityJobData::new(
         &activity,
         None, // no inbox

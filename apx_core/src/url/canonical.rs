@@ -135,6 +135,15 @@ impl<'de> Deserialize<'de> for CanonicalUri {
     }
 }
 
+/// Returns `true` if URIs are equivalent
+pub fn is_same_uri(url_1: &str, url_2: &str) -> Result<bool, CanonicalUriError> {
+    let canonical_uri_1 = CanonicalUri::parse(url_1)?;
+    let canonical_uri_2 = CanonicalUri::parse(url_2)?;
+    let is_same = canonical_uri_1 == canonical_uri_2;
+    Ok(is_same)
+}
+
+/// Returns `true` if URIs have the same origin
 pub fn is_same_origin(id_1: &str, id_2: &str) -> Result<bool, CanonicalUriError> {
     let id_1 = CanonicalUri::parse(id_1)?;
     let id_2 = CanonicalUri::parse(id_2)?;
@@ -268,6 +277,19 @@ mod tests {
         let url = "ap://did%3Akey%3Az6MkrJVnaZkeFzdQyMZu1cgjg7k1pZZ6pvBQ7XJPt4swbTQ2/actor";
         let error = CanonicalUri::parse_canonical(url).err().unwrap();
         assert_eq!(error.0, "URI is not canonical");
+    }
+
+    #[test]
+    fn test_is_same_uri() {
+        let url_1 = "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor";
+        let url_2 = "https://social.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor";
+        let url_3 = "ap://did%3Akey%3Az6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor";
+        let url_4 = "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor?gateways=https%3A%2F%2Fserver1.example,https%3A%2F%2Fserver2.example";
+        let url_5 = "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor#main-key";
+        assert_eq!(is_same_uri(url_1, url_2).unwrap(), true);
+        assert_eq!(is_same_uri(url_1, url_3).unwrap(), true);
+        assert_eq!(is_same_uri(url_1, url_4).unwrap(), true);
+        assert_eq!(is_same_uri(url_1, url_5).unwrap(), false);
     }
 
     #[test]

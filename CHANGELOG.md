@@ -29,6 +29,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Reduced database lock time during pruning of remote posts.
 - Process uploads with `application/ogg` media type as `audio/ogg`.
 - Strip query parameters when canonicalizing 'ap' URIs.
+- Verify ownership of embedded objects submitted by FEP-ae97 clients.
 
 ### Fixed
 

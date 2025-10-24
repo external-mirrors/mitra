@@ -1,7 +1,10 @@
 // https://codeberg.org/fediverse/fep/src/branch/main/fep/fe34/fep-fe34.md
 use apx_sdk::{
     core::url::{
-        canonical::{is_same_origin as apx_is_same_origin},
+        canonical::{
+            is_same_origin as apx_is_same_origin,
+            is_same_uri,
+        },
         http_uri::HttpUri,
     },
     deserialization::{object_to_id, parse_into_id_array},
@@ -12,8 +15,12 @@ use serde_json::{Value as JsonValue};
 use mitra_config::Instance;
 use mitra_validators::errors::ValidationError;
 
-pub fn get_object_id(object: &JsonValue) -> Result<&str, ValidationError> {
+pub fn get_object_id_opt(object: &JsonValue) -> Option<&str> {
     object["id"].as_str()
+}
+
+pub fn get_object_id(object: &JsonValue) -> Result<&str, ValidationError> {
+    get_object_id_opt(object)
         .ok_or(ValidationError("'id' property is missing"))
 }
 
@@ -43,6 +50,11 @@ pub fn get_owner(
                 .ok_or(ValidationError("verification method without owner"))
         },
     }
+}
+
+pub fn is_same_id(id_1: &str, id_2: &str) -> Result<bool, ValidationError> {
+    is_same_uri(id_1, id_2)
+        .map_err(|error| ValidationError(error.0))
 }
 
 pub fn verify_activity_owner(
