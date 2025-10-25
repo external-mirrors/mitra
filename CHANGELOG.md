@@ -15,6 +15,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Added `database_connection_pool_size` configuration parameter.
 - Allow AAC, M4A and WAV audio uploads ([#180](https://codeberg.org/silverpill/mitra/pulls/180)).
 - Added `expires_in` parameter to `/oauth/token` response.
+- Added `scopes` and `redirect_uris` fields to `/api/v1/apps` response.
 
 ### Changed
 

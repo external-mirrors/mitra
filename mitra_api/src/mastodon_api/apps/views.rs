@@ -22,13 +22,13 @@ use crate::mastodon_api::{
 };
 use super::types::{OauthApp, CreateAppData, CreateAppMultipartForm};
 
-/// https://docs.joinmastodon.org/methods/apps/
-/// Some clients use multipart/form-data
+// https://docs.joinmastodon.org/methods/apps/#create
 #[post("")]
 async fn create_app_view(
     db_pool: web::Data<DatabaseConnectionPool>,
     request_data: Either<
         JsonOrForm<CreateAppData>,
+        // Some clients use multipart/form-data
         MultipartForm<CreateAppMultipartForm>,
     >,
 ) -> Result<HttpResponse, MastodonError> {

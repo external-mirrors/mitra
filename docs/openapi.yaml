@@ -2992,9 +2992,19 @@ components:
           description: The website associated with your application.
           type: string
           nullable: true
+        scopes:
+          description: The scopes for the application.
+          type: array
+          items:
+            type: string
         redirect_uri:
-          description: Where the user should be redirected after authorization.
+          description: Where the user should be redirected after authorization (deprecated).
           type: string
+        redirect_uris:
+          description: The registered redirection URI(s) for the application.
+          type: array
+          items:
+            type: string
     Attachment:
       type: object
       properties:

@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use mitra_models::oauth::types::{OauthApp as DbOauthApp};
+use mitra_validators::oauth::split_scopes;
 
 #[derive(Deserialize)]
 pub struct CreateAppData {
@@ -37,7 +38,9 @@ pub struct OauthApp {
     pub id: String,
     pub name: String,
     pub website: Option<String>,
+    pub scopes: Vec<String>,
     pub redirect_uri: String,
+    pub redirect_uris: Vec<String>,
     pub client_id: Option<Uuid>,
     pub client_secret: Option<String>,
 }
@@ -48,7 +51,9 @@ impl OauthApp {
             id: db_app.id.to_string(),
             name: db_app.app_name,
             website: db_app.website,
-            redirect_uri: db_app.redirect_uri,
+            scopes: split_scopes(&db_app.scopes),
+            redirect_uri: db_app.redirect_uri.clone(),
+            redirect_uris: vec![db_app.redirect_uri],
             client_id: Some(db_app.client_id),
             client_secret: Some(db_app.client_secret),
         }

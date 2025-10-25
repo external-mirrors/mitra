@@ -9,6 +9,12 @@ pub fn validate_redirect_uri(uri: &str) -> Result<(), ValidationError> {
     Ok(())
 }
 
+pub fn split_scopes(scopes: &str) -> Vec<String> {
+    scopes.split_whitespace()
+        .map(|scope| scope.to_owned())
+        .collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -23,5 +29,11 @@ mod tests {
     fn test_get_redirect_uri_scheme_app() {
         let redirect_uri = "fedilab://backtofedilab";
         assert!(validate_redirect_uri(redirect_uri).is_ok());
+    }
+
+    #[test]
+    fn test_split_scopes() {
+        let scopes = "read write push";
+        assert_eq!(split_scopes(scopes), vec!["read", "write", "push"]);
     }
 }
