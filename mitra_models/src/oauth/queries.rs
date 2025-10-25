@@ -96,19 +96,26 @@ pub async fn create_oauth_authorization(
 
 pub async fn get_user_by_authorization_code(
     db_client: &impl DatabaseClient,
+    client_id: Uuid,
     authorization_code: &str,
 ) -> Result<User, DatabaseError> {
     let maybe_row = db_client.query_opt(
         "
         SELECT user_account, actor_profile
         FROM oauth_authorization
+        JOIN oauth_application
+            ON oauth_authorization.application_id = oauth_application.id
         JOIN user_account ON oauth_authorization.user_id = user_account.id
         JOIN actor_profile ON user_account.id = actor_profile.id
         WHERE
-            oauth_authorization.code = $1
+            oauth_application.client_id = $1
+            AND oauth_authorization.code = $2
             AND oauth_authorization.expires_at > CURRENT_TIMESTAMP
         ",
-        &[&authorization_code],
+        &[
+            &client_id,
+            &authorization_code,
+        ],
     ).await?;
     let row = maybe_row.ok_or(DatabaseError::NotFound("authorization"))?;
     let db_user: DbUser = row.try_get("user_account")?;
@@ -250,6 +257,12 @@ mod tests {
             Utc::now(),
             Utc::now() + TimeDelta::days(7),
         ).await.unwrap();
+        let user_found = get_user_by_authorization_code(
+            db_client,
+            app.client_id,
+            "code",
+        ).await.unwrap();
+        assert_eq!(user_found.id, user.id);
     }
 
     #[tokio::test]

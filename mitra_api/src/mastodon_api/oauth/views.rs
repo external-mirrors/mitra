@@ -168,13 +168,16 @@ async fn token_view(
             // https://www.rfc-editor.org/rfc/rfc6749#section-4.1.3
             let authorization_code = request_data.code.as_ref()
                 .ok_or(ValidationError("authorization code is required"))?;
+            let client_id = request_data.client_id
+                .ok_or(ValidationError("client ID is required"))?;
             log::info!(
-                "authorization code grant: client_id {:?}, redirect_uri {:?}",
-                request_data.client_id,
+                "authorization code grant: client_id {}, redirect_uri {:?}",
+                client_id,
                 request_data.redirect_uri,
             );
             get_user_by_authorization_code(
                 db_client,
+                client_id,
                 authorization_code,
             ).await?
         },

@@ -38,6 +38,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Fixed RFC-9421 signature verification error when `@request-target` is used.
 - Prefer JSON over form data when deserializing ambiguous payloads.
 
+### Security
+
+- Verify client ID when issuing access token using authorization code flow.
+
 ## [4.11.0] - 2025-10-09
 
 ### Added

@@ -25,7 +25,7 @@ pub struct TokenRequest {
     // Required if grant type is "authorization_code"
     pub code: Option<String>,
     pub redirect_uri: Option<String>,
-    pub client_id: Option<String>,
+    pub client_id: Option<Uuid>,
 
     // Required only with "password" grant type
     pub username: Option<String>,
@@ -43,7 +43,7 @@ pub struct TokenRequestMultipartForm {
     // Required if grant type is "authorization_code"
     code: Option<Text<String>>,
     redirect_uri: Option<Text<String>>,
-    client_id: Option<Text<String>>,
+    client_id: Option<Text<Uuid>>,
 
     // Required only with "password" grant type
     username: Option<Text<String>>,
