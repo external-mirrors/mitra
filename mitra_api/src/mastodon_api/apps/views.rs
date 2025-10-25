@@ -11,7 +11,7 @@ use uuid::Uuid;
 use mitra_models::{
     database::{get_database_client, DatabaseConnectionPool},
     oauth::queries::create_oauth_app,
-    oauth::types::DbOauthAppData,
+    oauth::types::{OauthAppData as DbOauthAppData},
 };
 use mitra_validators::oauth::validate_redirect_uri;
 
@@ -47,14 +47,7 @@ async fn create_app_view(
     };
     validate_redirect_uri(&db_app_data.redirect_uri)?;
     let db_app = create_oauth_app(db_client, db_app_data).await?;
-    let app = OauthApp {
-        id: db_app.id.to_string(),
-        name: db_app.app_name,
-        website: db_app.website,
-        redirect_uri: db_app.redirect_uri,
-        client_id: Some(db_app.client_id),
-        client_secret: Some(db_app.client_secret),
-    };
+    let app = OauthApp::from_db(db_app);
     Ok(HttpResponse::Ok().json(app))
 }
 

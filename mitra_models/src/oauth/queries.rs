@@ -10,14 +10,14 @@ use crate::profiles::types::DbActorProfile;
 use crate::users::types::{DbUser, User};
 
 use super::{
-    types::{DbOauthApp, DbOauthAppData},
+    types::{OauthApp, OauthAppData},
     utils::hash_oauth_token,
 };
 
 pub async fn create_oauth_app(
     db_client: &impl DatabaseClient,
-    app_data: DbOauthAppData,
-) -> Result<DbOauthApp, DatabaseError> {
+    app_data: OauthAppData,
+) -> Result<OauthApp, DatabaseError> {
     let row = db_client.query_one(
         "
         INSERT INTO oauth_application (
@@ -47,7 +47,7 @@ pub async fn create_oauth_app(
 pub async fn get_oauth_app_by_client_id(
     db_client: &impl DatabaseClient,
     client_id: Uuid,
-) -> Result<DbOauthApp, DatabaseError> {
+) -> Result<OauthApp, DatabaseError> {
     let maybe_row = db_client.query_opt(
         "
         SELECT oauth_application
@@ -230,7 +230,7 @@ mod tests {
     #[serial]
     async fn test_create_oauth_app() {
         let db_client = &create_test_database().await;
-        let db_app_data = DbOauthAppData {
+        let db_app_data = OauthAppData {
             app_name: "My App".to_string(),
             ..Default::default()
         };
@@ -243,7 +243,7 @@ mod tests {
     async fn test_create_oauth_authorization() {
         let db_client = &mut create_test_database().await;
         let user = create_test_user(db_client, "test").await;
-        let app_data = DbOauthAppData {
+        let app_data = OauthAppData {
             app_name: "My App".to_string(),
             ..Default::default()
         };

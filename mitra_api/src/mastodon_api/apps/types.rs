@@ -2,6 +2,8 @@ use actix_multipart::form::{text::Text, MultipartForm};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
+use mitra_models::oauth::types::{OauthApp as DbOauthApp};
+
 #[derive(Deserialize)]
 pub struct CreateAppData {
     pub client_name: String,
@@ -29,7 +31,7 @@ impl From<CreateAppMultipartForm> for CreateAppData {
     }
 }
 
-/// https://docs.joinmastodon.org/entities/Application/
+// https://docs.joinmastodon.org/entities/Application/
 #[derive(Serialize)]
 pub struct OauthApp {
     pub id: String,
@@ -38,4 +40,17 @@ pub struct OauthApp {
     pub redirect_uri: String,
     pub client_id: Option<Uuid>,
     pub client_secret: Option<String>,
+}
+
+impl OauthApp {
+    pub fn from_db(db_app: DbOauthApp) -> Self {
+        Self {
+            id: db_app.id.to_string(),
+            name: db_app.app_name,
+            website: db_app.website,
+            redirect_uri: db_app.redirect_uri,
+            client_id: Some(db_app.client_id),
+            client_secret: Some(db_app.client_secret),
+        }
+    }
 }
