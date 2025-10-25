@@ -15,7 +15,7 @@ use mitra_models::{
 };
 use mitra_validators::oauth::validate_redirect_uri;
 
-use crate::http::FormOrJson;
+use crate::http::JsonOrForm;
 use crate::mastodon_api::{
     errors::MastodonError,
     oauth::utils::generate_oauth_token,
@@ -28,13 +28,13 @@ use super::types::{OauthApp, CreateAppData, CreateAppMultipartForm};
 async fn create_app_view(
     db_pool: web::Data<DatabaseConnectionPool>,
     request_data: Either<
+        JsonOrForm<CreateAppData>,
         MultipartForm<CreateAppMultipartForm>,
-        FormOrJson<CreateAppData>,
     >,
 ) -> Result<HttpResponse, MastodonError> {
     let request_data = match request_data {
-        Either::Left(form) => form.into_inner().into(),
-        Either::Right(data) => data.into_inner(),
+        Either::Left(data) => data.into_inner(),
+        Either::Right(form) => form.into_inner().into(),
     };
     let db_client = &**get_database_client(&db_pool).await?;
     let db_app_data = DbOauthAppData {

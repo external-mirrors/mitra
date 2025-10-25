@@ -26,8 +26,8 @@ use crate::{
     ratelimit::RealIpKeyExtractor,
 };
 
-pub type FormOrJson<T> = Either<Form<T>, Json<T>>;
-pub type QsFormOrJson<T> = Either<QsForm<T>, Json<T>>;
+pub type JsonOrForm<T> = Either<Json<T>, Form<T>>;
+pub type JsonOrQsForm<T> = Either<Json<T>, QsForm<T>>;
 
 // actix currently doesn't support parameter arrays
 // https://github.com/actix/actix-web/issues/2044

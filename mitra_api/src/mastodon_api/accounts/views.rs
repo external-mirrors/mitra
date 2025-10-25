@@ -123,7 +123,7 @@ use mitra_validators::{
 use crate::http::{
     get_request_base_url,
     ratelimit_config,
-    FormOrJson,
+    JsonOrForm,
     MultiQuery,
 };
 use crate::mastodon_api::{
@@ -721,7 +721,7 @@ async fn follow_account(
     config: web::Data<Config>,
     db_pool: web::Data<DatabaseConnectionPool>,
     account_id: web::Path<Uuid>,
-    follow_data: Option<FormOrJson<FollowData>>,
+    follow_data: Option<JsonOrForm<FollowData>>,
 ) -> Result<HttpResponse, MastodonError> {
     // Some clients may send an empty body
     let follow_data = follow_data

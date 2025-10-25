@@ -99,7 +99,7 @@ use mitra_validators::{
 };
 
 use crate::{
-    http::{get_request_base_url, QsFormOrJson},
+    http::{get_request_base_url, JsonOrQsForm},
     mastodon_api::{
         accounts::types::Account,
         auth::get_current_user,
@@ -142,7 +142,7 @@ async fn create_status(
     connection_info: ConnectionInfo,
     db_pool: web::Data<DatabaseConnectionPool>,
     request: HttpRequest,
-    status_data: QsFormOrJson<StatusData>,
+    status_data: JsonOrQsForm<StatusData>,
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &mut **get_database_client(&db_pool).await?;
     let current_user = get_current_user(db_client, auth.token()).await?;
@@ -151,8 +151,8 @@ async fn create_status(
     };
     let instance = config.instance();
     let status_data = match status_data {
-        Either::Left(form) => form.into_inner(),
-        Either::Right(json) => json.into_inner(),
+        Either::Left(json) => json.into_inner(),
+        Either::Right(form) => form.into_inner(),
     };
     let maybe_in_reply_to = if let Some(in_reply_to_id) = status_data.in_reply_to_id {
         let in_reply_to = match get_post_by_id_for_view(

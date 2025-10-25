@@ -49,7 +49,7 @@ use crate::{
         log_response_error,
         ratelimit_config,
         ContentSecurityPolicy,
-        FormOrJson,
+        JsonOrForm,
     },
     mastodon_api::{
         auth::get_current_user,
@@ -153,13 +153,13 @@ async fn token_view(
     config: web::Data<Config>,
     db_pool: web::Data<DatabaseConnectionPool>,
     request_data: Either<
+        JsonOrForm<TokenRequest>,
         MultipartForm<TokenRequestMultipartForm>,
-        FormOrJson<TokenRequest>,
     >,
 ) -> Result<HttpResponse, MastodonError> {
     let request_data = match request_data {
-        Either::Left(form) => form.into_inner().into(),
-        Either::Right(data) => data.into_inner(),
+        Either::Left(data) => data.into_inner(),
+        Either::Right(form) => form.into_inner().into(),
     };
     let db_client = &**get_database_client(&db_pool).await?;
     let user = match request_data.grant_type.as_str() {
@@ -273,7 +273,7 @@ async fn token_view(
 async fn revoke_token_view(
     auth: BearerAuth,
     db_pool: web::Data<DatabaseConnectionPool>,
-    request_data: FormOrJson<RevocationRequest>,
+    request_data: JsonOrForm<RevocationRequest>,
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &mut **get_database_client(&db_pool).await?;
     let current_user = get_current_user(db_client, auth.token()).await?;
