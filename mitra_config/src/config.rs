@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::net::Ipv6Addr;
 use std::path::PathBuf;
 
 use apx_core::{
@@ -149,7 +150,11 @@ impl Config {
         match (&self.http_socket, &self.http_host, self.http_port) {
             (Some(http_socket), _, _) => http_socket.clone(),
             (None, Some(http_host), Some(http_port)) => {
-                format!("{http_host}:{http_port}")
+                if http_host.parse::<Ipv6Addr>().is_ok() {
+                    format!("[{http_host}]:{http_port}")
+                } else {
+                    format!("{http_host}:{http_port}")
+                }
             },
             _ => panic!("either http_socket or http_host and http_port must be specified"),
         }

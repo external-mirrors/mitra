@@ -1,5 +1,5 @@
 use std::str::FromStr;
-use std::net::SocketAddrV4;
+use std::net::SocketAddr;
 use std::path::Path;
 
 use actix_cors::{Cors, CorsError};
@@ -186,7 +186,7 @@ pub async fn run_server(
         app
     });
 
-    let http_server = if let Ok(addr) = SocketAddrV4::from_str(&http_socket_addr) {
+    let http_server = if let Ok(addr) = SocketAddr::from_str(&http_socket_addr) {
         http_server.bind(addr)?
     } else {
         // Assume unix socket path
