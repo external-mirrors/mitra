@@ -167,9 +167,15 @@ impl HttpUri {
         Hostname::new_unchecked(self.host())
     }
 
-    // https://www.rfc-editor.org/rfc/rfc6454.html
+    /// Returns origin of this URI
+    ///
+    /// <https://www.rfc-editor.org/rfc/rfc6454.html>
     pub fn origin(&self) -> Origin {
-        Origin::new(self.scheme(), self.host(), self.port_or_known_default())
+        Origin::new_tuple(
+            self.scheme(),
+            self.host(),
+            self.port_or_known_default(),
+        )
     }
 }
 
@@ -337,15 +343,15 @@ mod tests {
     fn test_origin() {
         let http_uri = HttpUri::parse("https://social.example/test").unwrap();
         let origin = http_uri.origin();
-        assert_eq!(origin, Origin::new("https", "social.example", 443));
+        assert_eq!(origin, Origin::new_tuple("https", "social.example", 443));
 
         let http_uri = HttpUri::parse("http://2gzyxa5ihm7nsggfxnu52rck2vv4rvmdlkiu3zzui5du4xyclen53wid.onion/test").unwrap();
         let origin = http_uri.origin();
-        assert_eq!(origin, Origin::new("http", "2gzyxa5ihm7nsggfxnu52rck2vv4rvmdlkiu3zzui5du4xyclen53wid.onion", 80));
+        assert_eq!(origin, Origin::new_tuple("http", "2gzyxa5ihm7nsggfxnu52rck2vv4rvmdlkiu3zzui5du4xyclen53wid.onion", 80));
 
         let http_uri = HttpUri::parse("http://127.0.0.1:8380/test").unwrap();
         let origin = http_uri.origin();
-        assert_eq!(origin, Origin::new("http", "127.0.0.1", 8380));
+        assert_eq!(origin, Origin::new_tuple("http", "127.0.0.1", 8380));
     }
 
     #[test]

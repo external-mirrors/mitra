@@ -71,7 +71,7 @@ impl VerificationMethod {
         Ok(method)
     }
 
-    /// Returns origin tuple for this verification method
+    /// Returns origin of this verification method
     pub fn origin(&self) -> Origin {
         match self {
             Self::HttpUri(http_uri) => http_uri.origin(),

@@ -51,10 +51,9 @@ impl Did {
         }
     }
 
-    // https://codeberg.org/fediverse/fep/src/commit/136d6c14b6fb59ab0e6fc37febd01b13982d2d47/fep/ef61/fep-ef61.md#authentication-and-authorization
+    // https://codeberg.org/fediverse/fep/src/commit/7377aa17eafff117358afed50131dab54efd89e6/fep/ef61/fep-ef61.md#authentication-and-authorization
     pub(crate) fn origin(&self) -> Origin {
-        // Default port is 0
-        Origin::new("ap", &self.to_string(), 0)
+        Origin::new_did(&self.to_string())
     }
 
     pub fn as_did_key(&self) -> Option<&DidKey> {

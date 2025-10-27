@@ -88,7 +88,7 @@ impl ApUri {
         format!("{}{}", self.authority(), self.relative_uri())
     }
 
-    /// Returns origin tuple for this URI
+    /// Returns origin of this URI
     pub fn origin(&self) -> Origin {
         self.authority.origin()
     }
@@ -196,7 +196,7 @@ mod tests {
         let ap_uri = ApUri::parse("ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor").unwrap();
         assert_eq!(
             ap_uri.origin(),
-            Origin::new("ap", "did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6", 0),
+            Origin::new_did("did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6"),
         );
     }
 

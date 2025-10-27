@@ -31,7 +31,7 @@ impl DidUrl {
         Ok(did_url)
     }
 
-    /// Returns DID of this URL
+    /// Returns DID component of this URL
     pub fn did(&self) -> &Did {
         &self.did
     }
@@ -41,7 +41,7 @@ impl DidUrl {
         self.resource.as_str()
     }
 
-    /// Returns origin tuple for this URL
+    /// Returns origin of this DID URL
     pub fn origin(&self) -> Origin {
         self.did.origin()
     }
