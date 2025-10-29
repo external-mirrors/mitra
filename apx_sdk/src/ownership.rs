@@ -6,6 +6,11 @@ use crate::{
     utils::CoreType,
 };
 
+const ATTRIBUTED_TO: &str = "attributedTo";
+const ACTOR: &str = "actor";
+const OWNER: &str = "owner";
+const CONTROLLER: &str = "controller";
+
 #[derive(Debug, Error)]
 #[error("{0}")]
 pub struct ObjectError(&'static str);
@@ -25,13 +30,25 @@ pub fn parse_attributed_to(
     Ok(maybe_attributed_to)
 }
 
+fn deny_properties(
+    object: &JsonValue,
+    properties: &[&str],
+) -> Result<(), ObjectError> {
+    for property in properties {
+        if !object[property].is_null() {
+            return Err(ObjectError("ambiguous ownership"));
+        };
+    };
+    Ok(())
+}
+
 pub fn get_owner(
     object: &JsonValue,
     core_type: CoreType,
 ) -> Result<String, ObjectError> {
-    match core_type {
+    let maybe_owner = match core_type {
         CoreType::Object | CoreType::Collection => {
-            parse_attributed_to(&object["attributedTo"])?
+            parse_attributed_to(&object[ATTRIBUTED_TO])?
                 .ok_or(ObjectError("'attributedTo' property is missing"))
         },
         CoreType::Link => Err(ObjectError("link doesn't have an owner")),
@@ -41,20 +58,36 @@ pub fn get_owner(
                 .ok_or(ObjectError("'id' property is missing"))
         },
         CoreType::Activity => {
-            object_to_id(&object["actor"])
+            object_to_id(&object[ACTOR])
                 .map_err(|_| ObjectError("invalid 'actor' property"))
         },
         CoreType::PublicKey => {
-            object["owner"].as_str()
+            object[OWNER].as_str()
                 .map(|id| id.to_owned())
                 .ok_or(ObjectError("'owner' property is missing"))
         },
         CoreType::VerificationMethod => {
-            object["controller"].as_str()
+            object[CONTROLLER].as_str()
                 .map(|id| id.to_owned())
                 .ok_or(ObjectError("'controller' property is missing"))
         },
-    }
+    };
+    let owner = maybe_owner?;
+    // Protection from type confusion attacks.
+    // Example: object is duck-typed as actor,
+    // but it is a `Note` attributed to a different actor.
+    match core_type {
+        CoreType::Actor
+            | CoreType::Activity
+            | CoreType::PublicKey
+            | CoreType::VerificationMethod
+            =>
+        {
+            deny_properties(object, &[ATTRIBUTED_TO])?;
+        },
+        _ => (),
+    };
+    Ok(owner)
 }
 
 #[cfg(test)]
@@ -89,5 +122,30 @@ mod tests {
 
         let error = get_owner(&object, CoreType::Activity).err().unwrap();
         assert_eq!(error.message(), "invalid 'actor' property");
+    }
+
+    #[test]
+    fn test_get_owner_actor() {
+        let object = json!({
+            "id": "https://social.example/actors/1",
+            "type": "Note",
+            "inbox": "https://social.example/actors/1/inbox",
+            "outbox": "https://social.example/actors/1/outbox",
+        });
+        let owner = get_owner(&object, CoreType::Actor).unwrap();
+        assert_eq!(owner, "https://social.example/actors/1");
+    }
+
+    #[test]
+    fn test_get_owner_actor_with_attributed_to() {
+        let object = json!({
+            "id": "https://social.example/actors/1",
+            "type": "Note",
+            "inbox": "https://social.example/actors/1/inbox",
+            "outbox": "https://social.example/actors/1/outbox",
+            "attributedTo": "https://social.example/actors/2",
+        });
+        let error = get_owner(&object, CoreType::Actor).err().unwrap();
+        assert_eq!(error.message(), "ambiguous ownership");
     }
 }
