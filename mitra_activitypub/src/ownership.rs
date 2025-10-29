@@ -7,8 +7,10 @@ use apx_sdk::{
         },
         http_uri::HttpUri,
     },
-    deserialization::object_to_id,
-    ownership::{parse_attributed_to as apx_parse_attributed_to},
+    ownership::{
+        get_owner as apx_get_owner,
+        parse_attributed_to as apx_parse_attributed_to,
+    },
     utils::CoreType,
 };
 use serde_json::{Value as JsonValue};
@@ -34,23 +36,8 @@ pub fn get_owner(
     object: &JsonValue,
     core_type: CoreType,
 ) -> Result<String, ValidationError> {
-    match core_type {
-        CoreType::Object | CoreType::Collection => {
-            parse_attributed_to(&object["attributedTo"])
-        },
-        CoreType::Link => Err(ValidationError("link doesn't have an owner")),
-        CoreType::Actor => get_object_id(object).map(|id| id.to_owned()),
-        CoreType::Activity => {
-            object_to_id(&object["actor"])
-                .map_err(|_| ValidationError("invalid 'actor' property"))
-        },
-        CoreType::VerificationMethod => {
-            object["controller"].as_str()
-                .or(object["owner"].as_str())
-                .map(|id| id.to_owned())
-                .ok_or(ValidationError("verification method without owner"))
-        },
-    }
+    apx_get_owner(object, core_type)
+        .map_err(|error| ValidationError(error.message()))
 }
 
 pub fn is_same_id(id_1: &str, id_2: &str) -> Result<bool, ValidationError> {
