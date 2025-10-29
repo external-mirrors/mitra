@@ -21,6 +21,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Add component ID to RFC-9421 "unsupported component" error message.
 - Return error if 'ap' URI with percent-encoded DID is passed to `CanonicalUri::parse_canonical`.
 - Strip query parameters when canonicalizing 'ap' URIs.
+- Treat public keys and verification methods as different types in `get_core_type`.
+- Renamed `is_verification_method` function to `is_key_like`.
 
 ### Deprecated
 

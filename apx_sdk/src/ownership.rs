@@ -44,11 +44,15 @@ pub fn get_owner(
             object_to_id(&object["actor"])
                 .map_err(|_| ObjectError("invalid 'actor' property"))
         },
+        CoreType::PublicKey => {
+            object["owner"].as_str()
+                .map(|id| id.to_owned())
+                .ok_or(ObjectError("'owner' property is missing"))
+        },
         CoreType::VerificationMethod => {
             object["controller"].as_str()
-                .or(object["owner"].as_str())
                 .map(|id| id.to_owned())
-                .ok_or(ObjectError("verification method without owner"))
+                .ok_or(ObjectError("'controller' property is missing"))
         },
     }
 }

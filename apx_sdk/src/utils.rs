@@ -11,23 +11,25 @@ use apx_core::{
 use super::constants::AP_PUBLIC;
 
 /// Core object type
+///
+/// <https://codeberg.org/fediverse/fep/src/branch/main/fep/2277/fep-2277.md>
 pub enum CoreType {
     Object,
     Link,
     Actor,
     Activity,
     Collection,
+    PublicKey,
     VerificationMethod,
 }
 
 /// Determines the core type of an object.
 pub fn get_core_type(value: &JsonValue) -> CoreType {
-    // https://codeberg.org/fediverse/fep/src/branch/main/fep/2277/fep-2277.md
-    if
-        !value["publicKeyPem"].is_null() ||
-        !value["publicKeyMultibase"].is_null()
-    {
+    if !value["publicKeyMultibase"].is_null() {
         CoreType::VerificationMethod
+    }
+    else if !value["publicKeyPem"].is_null() {
+        CoreType::PublicKey
     }
     else if !value["href"].is_null() {
         // `href` may only appear in Link objects:
@@ -68,8 +70,9 @@ pub fn get_core_type(value: &JsonValue) -> CoreType {
     }
 }
 
-pub fn is_verification_method(value: &JsonValue) -> bool {
-    matches!(get_core_type(value), CoreType::VerificationMethod)
+/// Returns `true` if the given object has `publicKeyPem` or `publicKeyMultibase` property.
+pub fn is_key_like(value: &JsonValue) -> bool {
+    !value["publicKeyMultibase"].is_null() || !value["publicKeyPem"].is_null()
 }
 
 pub fn is_actor(value: &JsonValue) -> bool {
@@ -148,13 +151,40 @@ mod tests {
 
     #[test]
     fn test_get_core_type_verification_method() {
-        let public_key = json!({
+        let object = json!({
+            "id": "https://social/example/actors/1#main-key",
+            "controller": "https://social.example/actors/1",
+            "publicKeyMultibase": "z6MkrJVnaZkeFzdQyMZu1cgjg7k1pZZ6pvBQ7XJPt4swbTQ2",
+        });
+        let core_type = get_core_type(&object);
+        assert!(matches!(core_type, CoreType::VerificationMethod));
+        assert!(is_key_like(&object));
+    }
+
+    #[test]
+    fn test_get_core_type_public_key() {
+        let object = json!({
             "id": "https://social/example/actors/1#main-key",
             "owner": "https://social.example/actors/1",
             "publicKeyPem": "-----BEGIN PUBLIC KEY-----\ntest\n-----END PUBLIC KEY-----\n\n",
         });
-        let core_type = get_core_type(&public_key);
-        assert!(matches!(core_type, CoreType::VerificationMethod));
+        let core_type = get_core_type(&object);
+        assert!(matches!(core_type, CoreType::PublicKey));
+        assert!(is_key_like(&object));
+    }
+
+    #[test]
+    fn test_get_core_type_with_inbox_and_public_key_pem() {
+        let object = json!({
+            "id": "https://social/example/actors/1#main-key",
+            "owner": "https://social.example/actors/1",
+            "publicKeyPem": "-----BEGIN PUBLIC KEY-----\ntest\n-----END PUBLIC KEY-----\n\n",
+            "inbox": "https://social.example/actors/1/inbox",
+            "outbox": "https://social.example/actors/1/outbox",
+        });
+        let core_type = get_core_type(&object);
+        assert!(matches!(core_type, CoreType::PublicKey));
+        assert!(is_key_like(&object));
     }
 
     #[test]
