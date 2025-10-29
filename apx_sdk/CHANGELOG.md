@@ -12,6 +12,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Added support for `@request-target` RFC-9421 derived component.
 - Added `without_query` method to `ApUri` type.
 - Added `is_same_uri` function to `url::canonical` module.
+- Added `ownership` module to `apx_sdk` package.
 
 ### Changed
 

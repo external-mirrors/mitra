@@ -32,6 +32,7 @@ mod http_client;
 pub mod http_server;
 pub mod identifiers;
 pub mod jrd;
+pub mod ownership;
 pub mod utils;
 
 pub use apx_core as core;

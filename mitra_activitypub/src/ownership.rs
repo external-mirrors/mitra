@@ -7,7 +7,8 @@ use apx_sdk::{
         },
         http_uri::HttpUri,
     },
-    deserialization::{object_to_id, parse_into_id_array},
+    deserialization::object_to_id,
+    ownership::{parse_attributed_to as apx_parse_attributed_to},
     utils::CoreType,
 };
 use serde_json::{Value as JsonValue};
@@ -72,10 +73,9 @@ pub fn verify_activity_owner(
 pub fn parse_attributed_to(
     attributed_to: &JsonValue,
 ) -> Result<String, ValidationError> {
-    let owner_id = parse_into_id_array(attributed_to)
-        .map_err(|_| ValidationError("invalid 'attributedTo' property"))?
-        .first()
-        .ok_or(ValidationError("invalid 'attributedTo' property"))?
+    let owner_id = apx_parse_attributed_to(attributed_to)
+        .map_err(|error| ValidationError(error.message()))?
+        .ok_or(ValidationError("missing 'attributedTo' property"))?
         .clone();
     Ok(owner_id)
 }
