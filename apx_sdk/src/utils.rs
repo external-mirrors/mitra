@@ -25,7 +25,13 @@ pub enum CoreType {
 
 /// Determines the core type of an object.
 pub fn get_core_type(value: &JsonValue) -> CoreType {
-    if !value["publicKeyMultibase"].is_null() {
+    if !value["inbox"].is_null() {
+        // AP requires actor to have inbox and outbox,
+        // but `outbox` property is not always present.
+        // https://www.w3.org/TR/activitypub/#actor-objects
+        CoreType::Actor
+    }
+    else if !value["publicKeyMultibase"].is_null() {
         CoreType::VerificationMethod
     }
     else if !value["publicKeyPem"].is_null() {
@@ -35,12 +41,6 @@ pub fn get_core_type(value: &JsonValue) -> CoreType {
         // `href` may only appear in Link objects:
         // https://www.w3.org/TR/activitystreams-vocabulary/#dfn-href
         CoreType::Link
-    }
-    else if !value["inbox"].is_null() {
-        // AP requires actor to have inbox and outbox,
-        // but `outbox` property is not always present.
-        // https://www.w3.org/TR/activitypub/#actor-objects
-        CoreType::Actor
     }
     else if !value["actor"].is_null() && value["attributedTo"].is_null() {
         // Activities must have an `actor` property:
@@ -183,7 +183,7 @@ mod tests {
             "outbox": "https://social.example/actors/1/outbox",
         });
         let core_type = get_core_type(&object);
-        assert!(matches!(core_type, CoreType::PublicKey));
+        assert!(matches!(core_type, CoreType::Actor));
         assert!(is_key_like(&object));
     }
 
