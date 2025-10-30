@@ -1,3 +1,5 @@
+//! Helper functions for authorization checks.
+
 use serde_json::{Value as JsonValue};
 use thiserror::Error;
 
@@ -11,14 +13,17 @@ const ACTOR: &str = "actor";
 const OWNER: &str = "owner";
 const CONTROLLER: &str = "controller";
 
+/// Error that may occur during the validation of an object
 #[derive(Debug, Error)]
 #[error("{0}")]
 pub struct ObjectError(&'static str);
 
 impl ObjectError {
+    /// Returns the error message
     pub fn message(&self) -> &'static str { self.0 }
 }
 
+/// Parses the value of an `attributedTo` property
 pub fn parse_attributed_to(
     value: &JsonValue,
 ) -> Result<Option<String>, ObjectError> {
@@ -42,6 +47,9 @@ fn deny_properties(
     Ok(())
 }
 
+/// Determines the owner of an object.
+///
+/// <https://codeberg.org/fediverse/fep/src/branch/main/fep/fe34/fep-fe34.md>
 pub fn get_owner(
     object: &JsonValue,
     core_type: CoreType,
