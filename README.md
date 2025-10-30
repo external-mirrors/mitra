@@ -157,10 +157,6 @@ https://github.com/NixOS/nixpkgs/blob/nixos-unstable/pkgs/by-name/mi/mitra/packa
 
 https://apps.yunohost.org/app/mitra
 
-### Hosting providers
-
-- [K&T Host](https://www.knthost.com/mitra)
-
 ## Upgrading
 
 Mitra uses semantic versioning (`major.minor.patch`):
