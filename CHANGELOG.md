@@ -15,6 +15,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Treat public keys and verification methods as different core types.
 - Changed priority of `Actor` to highest in duck typing algorithm.
 - Prevent type confusion attacks when verifying FEP-ae97 activities.
+- Allow `properties` with value `null` in JRD links.
 
 ## [4.12.0] - 2025-10-26
 

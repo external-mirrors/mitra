@@ -9,7 +9,9 @@ use super::constants::{AP_CONTEXT, AP_MEDIA_TYPE, AS_MEDIA_TYPE};
 const SELF_RELATION_TYPE: &str = "self";
 pub const JRD_MEDIA_TYPE: &str = "application/jrd+json";
 
-// https://datatracker.ietf.org/doc/html/rfc7033#section-4.4.4
+/// JRD link
+///
+/// <https://datatracker.ietf.org/doc/html/rfc7033#section-4.4.4>
 #[derive(Deserialize, Serialize)]
 pub struct Link {
     rel: String,
@@ -23,8 +25,8 @@ pub struct Link {
     #[serde(skip_serializing_if = "Option::is_none")]
     template: Option<String>,
 
-    #[serde(default, skip_serializing_if = "HashMap::is_empty")]
-    properties: HashMap<String, String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    properties: Option<HashMap<String, String>>,
 }
 
 impl Link {
@@ -34,7 +36,7 @@ impl Link {
             media_type: None,
             href: None,
             template: None,
-            properties: Default::default(),
+            properties: None,
         }
     }
 
@@ -60,7 +62,9 @@ impl Link {
     }
 }
 
-// https://datatracker.ietf.org/doc/html/rfc7033#section-4.4
+/// JSON Resource Descriptor (JRD)
+///
+/// <https://datatracker.ietf.org/doc/html/rfc7033#section-4.4>
 #[derive(Deserialize, Serialize)]
 pub struct JsonResourceDescriptor {
     pub subject: String,
@@ -82,7 +86,8 @@ impl JsonResourceDescriptor {
         let mut maybe_actor_link = links.iter()
             .find(|link| {
                 let ap_type = link.properties
-                    .get(&ap_type_property)
+                    .as_ref()
+                    .and_then(|map| map.get(&ap_type_property))
                     .map(|val| val.as_str());
                 ap_type == Some(preferred_type)
             });
@@ -113,6 +118,24 @@ mod tests {
                 "href": actor_id,
             }),
         );
+    }
+
+    #[test]
+    fn test_jrd_parse_with_nulls() {
+        let jrd_value = json!({
+            "aliases": ["https://social.example/u/user"],
+            "links": [{
+                "href": "https://social.example/u/user",
+                "properties": null,
+                "rel": "self",
+                "type": "application/activity+json",
+                "template": null
+            }],
+            "subject": "acct:user@social.example",
+        });
+        let jrd: JsonResourceDescriptor =
+            serde_json::from_value(jrd_value).unwrap();
+        assert!(jrd.links[0].properties.is_none());
     }
 
     #[test]
@@ -147,10 +170,10 @@ mod tests {
             media_type: Some("application/activity+json".to_string()),
             href: Some(person_id.to_string()),
             template: None,
-            properties: HashMap::from([(
+            properties: Some(HashMap::from([(
                 "https://www.w3.org/ns/activitystreams#type".to_string(),
                 "Person".to_string(),
-            )]),
+            )])),
         };
         let group_id = "https://lemmy.example/c/test";
         let group_link = Link {
@@ -158,10 +181,10 @@ mod tests {
             media_type: Some("application/activity+json".to_string()),
             href: Some(group_id.to_string()),
             template: None,
-            properties: HashMap::from([(
+            properties: Some(HashMap::from([(
                 "https://www.w3.org/ns/activitystreams#type".to_string(),
                 "Group".to_string(),
-            )]),
+            )])),
         };
         let jrd = JsonResourceDescriptor {
             subject: "acct:test@social.example".to_string(),

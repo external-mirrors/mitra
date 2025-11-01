@@ -24,6 +24,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Treat public keys and verification methods as different types in `get_core_type`.
 - Renamed `is_verification_method` function to `is_key_like`.
 - Changed priority of `Actor` to highest in `get_core_type`.
+- Allow `properties` with value `null` in JRD links.
 
 ### Deprecated
 
