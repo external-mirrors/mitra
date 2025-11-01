@@ -8,7 +8,7 @@ pub struct OauthApp {
     pub id: i32,
     pub app_name: String,
     pub website: Option<String>,
-    pub scopes: String,
+    pub scopes: Vec<String>,
     pub redirect_uri: String,
     pub client_id: Uuid,
     pub client_secret: String,
@@ -19,7 +19,7 @@ pub struct OauthApp {
 pub struct OauthAppData {
     pub app_name: String,
     pub website: Option<String>,
-    pub scopes: String,
+    pub scopes: Vec<String>,
     pub redirect_uri: String,
     pub client_id: Uuid,
     pub client_secret: String,

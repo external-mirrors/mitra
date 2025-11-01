@@ -13,7 +13,10 @@ use mitra_models::{
     oauth::queries::create_oauth_app,
     oauth::types::{OauthAppData as DbOauthAppData},
 };
-use mitra_validators::oauth::validate_redirect_uri;
+use mitra_validators::oauth::{
+    clean_scopes,
+    validate_redirect_uri,
+};
 
 use crate::http::JsonOrForm;
 use crate::mastodon_api::{
@@ -40,7 +43,7 @@ async fn create_app_view(
     let db_app_data = DbOauthAppData {
         app_name: request_data.client_name,
         website: request_data.website,
-        scopes: request_data.scopes,
+        scopes: clean_scopes(&request_data.scopes),
         redirect_uri: request_data.redirect_uris,
         client_id: Uuid::new_v4(),
         client_secret: generate_oauth_token(),
