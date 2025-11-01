@@ -4,6 +4,7 @@ use anyhow::{anyhow, Error};
 use apx_sdk::{
     addresses::WebfingerAddress,
     authentication::verify_portable_object,
+    deliver::{send_object, DelivererError},
     fetch::FetchObjectOptions,
     utils::{get_core_type, CoreType},
 };
@@ -13,7 +14,11 @@ use serde_json::{Value as JsonValue};
 use mitra_activitypub::{
     agent::build_federation_agent,
     authentication::verify_signed_object,
+    authority::Authority,
+    deliverer::{Recipient, Sender},
+    identifiers::canonicalize_id,
     importers::{
+        get_user_by_actor_id,
         import_activity,
         import_actor,
         import_collection,
@@ -33,6 +38,7 @@ use mitra_models::{
         get_database_client,
         DatabaseConnectionPool,
     },
+    profiles::queries::get_remote_profile_by_actor_id,
     users::{
         queries::{
             get_user_by_name,
@@ -283,6 +289,78 @@ impl LoadPortableObject {
                 println!("activity imported");
             },
             _ => return Err(anyhow!("unexpected object class")),
+        };
+        Ok(())
+    }
+}
+
+/// Send activity on behalf of a local user.
+///
+/// Activity will not be verified, and will not be added to the outbox.
+#[derive(Parser)]
+pub struct SendActivity {
+    /// JSON value
+    activity: String,
+    /// Actor ID
+    recipient: String,
+    /// Create RFC-9421 signature?
+    #[arg(long)]
+    rfc9421: bool,
+}
+
+impl SendActivity {
+    pub async fn execute(
+        self,
+        config: &Config,
+        db_pool: &DatabaseConnectionPool,
+    ) -> Result<(), Error> {
+        let instance = config.instance();
+        let authority = Authority::from(&instance);
+        let activity: JsonValue = serde_json::from_str(&self.activity)?;
+        let actor_id = activity["actor"].as_str()
+            .ok_or(Error::msg("'actor' property is missing"))?;
+        let canonical_actor_id = canonicalize_id(actor_id)?;
+        let account = get_user_by_actor_id(
+            db_client_await!(db_pool),
+            &authority,
+            &canonical_actor_id,
+        ).await?;
+        let recipient = get_remote_profile_by_actor_id(
+            db_client_await!(db_pool),
+            &self.recipient,
+        ).await?;
+        let recipient_inbox = Recipient
+            ::for_inbox(recipient.expect_actor_data())
+            .first()
+            .ok_or(Error::msg("recipient doesn't have an HTTP inbox"))?
+            .inbox
+            .clone();
+        let sender = Sender::from_user(instance.uri_str(), &account);
+        let mut agent = sender.into_agent(&instance);
+        if self.rfc9421 {
+            agent.rfc9421_enabled = true;
+        };
+        log::info!("sending activity to {recipient_inbox}");
+        match send_object(
+            &agent,
+            &recipient_inbox,
+            &activity,
+            &[],
+        ).await {
+            Ok(response) => {
+                println!("{}", response.status);
+                if !response.body.is_empty() {
+                    println!("{}", response.body);
+                };
+            },
+            Err(error) => {
+                println!("{error}");
+                if let DelivererError::HttpError(response) = error {
+                    if !response.body.is_empty() {
+                        println!("{}", response.body);
+                    };
+                };
+            },
         };
         Ok(())
     }

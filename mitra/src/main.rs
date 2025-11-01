@@ -78,6 +78,7 @@ async fn main() -> Result<(), Error> {
         SubCommand::FetchObject(cmd) => cmd.execute(&config, &db_pool).await,
         SubCommand::Webfinger(cmd) => cmd.execute(&config, &db_pool).await,
         SubCommand::LoadPortableObject(cmd) => cmd.execute(&config, &db_pool).await,
+        SubCommand::SendActivity(cmd) => cmd.execute(&config, &db_pool).await,
         SubCommand::DeleteUser(cmd) => cmd.execute(&config, &db_pool).await,
         SubCommand::CreatePost(cmd) => cmd.execute(&config, &db_pool).await,
         SubCommand::ImportPosts(cmd) => cmd.execute(&config, &db_pool).await,
