@@ -542,13 +542,14 @@ impl PostContext {
     }
 }
 
+#[cfg(any(test, feature = "test-utils"))]
 impl Default for PostContext {
     fn default() -> Self {
         Self::Top { audience: None }
     }
 }
 
-#[derive(Default)]
+#[cfg_attr(any(test, feature = "test-utils"), derive(Default))]
 pub struct PostCreateData {
     pub id: Option<Uuid>,
     pub context: PostContext,
@@ -575,11 +576,22 @@ impl PostCreateData {
         object_id: Option<String>,
     ) -> Self {
         Self {
+            id: None,
             context: PostContext::Repost { repost_of_id },
+            content: "".to_owned(),
+            content_source: None,
+            language: None,
             visibility: visibility,
+            is_sensitive: false,
+            poll: None,
+            attachments: vec![],
+            mentions: vec![],
+            tags: vec![],
+            links: vec![],
+            emojis: vec![],
+            url: None,
             object_id: object_id,
             created_at: Utc::now(),
-            ..Default::default()
         }
     }
 }
