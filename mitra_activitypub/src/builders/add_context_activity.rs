@@ -120,32 +120,38 @@ pub async fn sync_conversation(
     activity: JsonValue,
     activity_visibility: Visibility,
 ) -> Result<(), DatabaseError> {
-    if activity_visibility != Visibility::Conversation {
-        // Public activities are not synced.
+    let root = get_post_by_id(db_client, conversation.root_id).await?;
+    if !root.is_local() {
+        // Conversation owner is remote
+        return Ok(());
+    };
+    if activity_visibility == Visibility::Conversation {
+        // Conversation activities are synced.
+    } else if conversation.is_public()
+        && instance.federation.fep_171b_public_enabled
+    {
+        if activity_visibility == Visibility::Public {
+            // Public activities are synced if public sync is enabled.
+        } else {
+            log::info!("not syncing {activity_visibility:?} activity");
+            return Ok(());
+        }
+    } else {
         // Replies that don't conform to FEP-171b are not synced.
         // DMs are not synced.
-        // Top-level `Create(Note)` activities are not synced
         return Ok(());
     };
     if let Some(ref conversation_audience) = conversation.audience {
-        let root = get_post_by_id(db_client, conversation.root_id).await?;
-        match get_user_by_id(db_client, root.author.id).await {
-            Ok(conversation_owner) => {
-                // Conversation owner is local
-                prepare_add_context_activity(
-                    db_client,
-                    instance,
-                    &conversation_owner,
-                    conversation.id,
-                    &root,
-                    conversation_audience,
-                    activity,
-                ).await?.save_and_enqueue(db_client).await?;
-            },
-            // Conversation owner is remote
-            Err(DatabaseError::NotFound(_)) => (),
-            Err(other_error) => return Err(other_error),
-        };
+        let conversation_owner = get_user_by_id(db_client, root.author.id).await?;
+        prepare_add_context_activity(
+            db_client,
+            instance,
+            &conversation_owner,
+            conversation.id,
+            &root,
+            conversation_audience,
+            activity,
+        ).await?.save_and_enqueue(db_client).await?;
     } else {
         log::warn!("conversation audience is not known");
     };
