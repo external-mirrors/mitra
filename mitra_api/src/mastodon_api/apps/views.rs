@@ -50,6 +50,7 @@ async fn create_app_view(
     };
     validate_redirect_uri(&db_app_data.redirect_uri)?;
     let db_app = create_oauth_app(db_client, db_app_data).await?;
+    log::info!("registered app with scopes: {:?}", db_app.scopes);
     let app = OauthApp::from_db(db_app);
     Ok(HttpResponse::Ok().json(app))
 }

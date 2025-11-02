@@ -17,6 +17,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Prevent type confusion attacks when verifying FEP-ae97 activities.
 - Allow `properties` with value `null` in JRD links.
 - Return only supported scopes after creating application with `/api/v1/apps`.
+- Write OAuth app scopes to log.
 
 ### Fixed
 
