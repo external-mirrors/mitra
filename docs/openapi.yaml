@@ -3539,6 +3539,7 @@ components:
           description: When the poll ends.
           type: string
           format: date-time
+          nullable: true
         expired:
           description: Has the poll expired?
           type: boolean

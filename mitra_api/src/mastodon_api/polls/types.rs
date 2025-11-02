@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-use chrono::{DateTime, Duration, Utc};
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -12,7 +12,7 @@ use mitra_models::{
 use crate::mastodon_api::{
     custom_emojis::types::CustomEmoji,
     media_server::ClientMediaServer,
-    serializers::serialize_datetime,
+    serializers::serialize_datetime_opt,
 };
 
 #[derive(Serialize)]
@@ -25,8 +25,8 @@ struct PollOption {
 #[derive(Serialize)]
 pub struct Poll {
     id: Uuid,
-    #[serde(serialize_with = "serialize_datetime")]
-    expires_at: DateTime<Utc>,
+    #[serde(serialize_with = "serialize_datetime_opt")]
+    expires_at: Option<DateTime<Utc>>,
     expired: bool,
     multiple: bool,
     votes_count: u32,
@@ -68,7 +68,7 @@ impl Poll {
         };
         Self {
             id: db_poll.id,
-            expires_at: db_poll.ends_at.unwrap_or(Utc::now() + Duration::seconds(2_i64.pow(30))),
+            expires_at: db_poll.ends_at,
             expired: db_poll.ended(),
             multiple: db_poll.multiple_choices,
             votes_count: votes_count,
