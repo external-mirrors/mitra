@@ -847,11 +847,16 @@ fn get_object_visibility(
                     Visibility::Direct
                 }
             } else if audience.contains(conversation_audience) {
+                // TODO: check scope widening
                 Visibility::Conversation
             } else {
                 #[allow(clippy::collapsible_else_if)]
                 if audience.iter().any(|id| id == AP_PUBLIC) {
-                    Visibility::Public
+                    log::warn!("changing visibility from Public to Conversation");
+                    Visibility::Conversation
+                } else if audience.iter().any(|id| Some(id) == actor.followers.as_ref()) {
+                    log::warn!("changing visibility from Followers to Conversation");
+                    Visibility::Conversation
                 } else {
                     // DM or unknown audience
                     Visibility::Direct
@@ -1402,7 +1407,7 @@ mod tests {
     }
 
     #[test]
-    fn test_get_object_visibility_followers_conversation() {
+    fn test_get_object_visibility_followers_reply() {
         let in_reply_to_author = DbActorProfile::local_for_test("test");
         let in_reply_to_followers = "https://social.example/users/test/followers";
         let in_reply_to = {
@@ -1413,9 +1418,36 @@ mod tests {
             };
             post
         };
-        let author_id = "https://social.example/users/test";
+        let author_id = "https://remote.example/users/author";
         let author = DbActorProfile::remote_for_test("author", author_id);
         let audience = vec![in_reply_to_followers.to_string()];
+        let (visibility, context) = get_object_visibility(
+            &author,
+            &audience,
+            Some(&in_reply_to),
+        );
+        assert_eq!(visibility, Visibility::Conversation);
+        assert!(matches!(context, PostContext::Reply { .. }));
+    }
+
+    #[test]
+    fn test_get_object_visibility_followers_reply_from_mastodon() {
+        let in_reply_to_author = DbActorProfile::local_for_test("test");
+        let in_reply_to_followers = "https://social.example/users/test/followers";
+        let in_reply_to = {
+            let mut post = PostDetailed::local_for_test(&in_reply_to_author);
+            post.visibility = Visibility::Followers;
+            if let Some(ref mut conversation) = post.conversation.as_mut() {
+                conversation.audience = Some(in_reply_to_followers.to_string());
+            };
+            post
+        };
+        let author_id = "https://remote.example/users/author";
+        let author = DbActorProfile::remote_for_test("author", author_id);
+        let author_followers = author
+            .expect_actor_data()
+            .followers.clone().unwrap();
+        let audience = vec![author_followers];
         let (visibility, context) = get_object_visibility(
             &author,
             &audience,

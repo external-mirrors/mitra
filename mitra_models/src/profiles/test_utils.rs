@@ -24,7 +24,13 @@ use super::{
 
 impl DbActor {
     pub fn for_test(actor_id: &str) -> Self {
-        Self { id: actor_id.to_owned(), ..Default::default() }
+        Self {
+            id: actor_id.to_owned(),
+            inbox: format!("{actor_id}/inbox"),
+            outbox: format!("{actor_id}/outbox"),
+            followers: Some(format!("{actor_id}/followers")),
+            ..Default::default()
+        }
     }
 }
 

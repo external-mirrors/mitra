@@ -21,6 +21,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Set `Poll.expires_at` to `null` if poll is without end date.
 - Allow embedded `featured` collections.
 - Do not allow replying with "Subscribers only" visibility to public posts.
+- Force "Conversation" visibility if conversation scope is widened.
 
 ### Fixed
 
