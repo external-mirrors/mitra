@@ -485,7 +485,9 @@ mod tests {
         let root_follower = create_test_user(db_client, "root_follower").await;
         follow(db_client, root_follower.id, root_author.id).await.unwrap();
         let root_data = PostCreateData {
-            context: PostContext::Top { audience: None },
+            context: PostContext::Top {
+                audience: Some("https://local/op/followers".to_owned()),
+            },
             content: "root".to_string(),
             visibility: Visibility::Followers,
             ..Default::default()

@@ -129,7 +129,7 @@ impl CreatePost {
         };
         let post_data = PostCreateData {
             id: Some(post_id),
-            context: PostContext::Top { audience: None },
+            context: PostContext::new_public(),
             content: content,
             content_source: None,
             language: None,

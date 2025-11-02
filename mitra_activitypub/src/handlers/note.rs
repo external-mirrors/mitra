@@ -835,25 +835,37 @@ fn get_object_visibility(
             conversation_id: conversation.id,
             in_reply_to_id: in_reply_to.id,
         };
-        let visibility = if audience.iter().any(is_public) {
-            Visibility::Public
-        } else if let Some(ref conversation_audience) = conversation.audience {
-            // NOTE: Public conversations have empty audience
-            if audience.contains(conversation_audience) {
+        let visibility = if let Some(ref conversation_audience) = conversation.audience {
+            if conversation_audience == AP_PUBLIC {
+                if audience.contains(conversation_audience) {
+                    Visibility::Public
+                } else if audience.iter().any(|id| Some(id) == actor.followers.as_ref()) {
+                    // Narrowing down the scope from Public to Followers
+                    Visibility::Followers
+                } else {
+                    // DM or unknown audience
+                    Visibility::Direct
+                }
+            } else if audience.contains(conversation_audience) {
                 Visibility::Conversation
             } else {
-                Visibility::Direct
+                #[allow(clippy::collapsible_else_if)]
+                if audience.iter().any(|id| id == AP_PUBLIC) {
+                    Visibility::Public
+                } else {
+                    // DM or unknown audience
+                    Visibility::Direct
+                }
             }
-        } else if audience.iter().any(|id| Some(id) == actor.followers.as_ref()) {
-            // Mastodon: narrowing down the scope from Public to Followers
-            Visibility::Followers
         } else {
+            // No audience: DM or a legacy limited conversation
             Visibility::Direct
         };
         (visibility, context)
     } else {
         let mut conversation_audience = None;
         let visibility = if audience.iter().any(is_public) {
+            conversation_audience = Some(AP_PUBLIC.to_owned());
             Visibility::Public
         } else if audience.iter().any(|id| Some(id) == actor.followers.as_ref()) {
             conversation_audience = actor.followers.clone();
@@ -1346,7 +1358,8 @@ mod tests {
             None,
         );
         assert_eq!(visibility, Visibility::Public);
-        assert!(matches!(context, PostContext::Top { .. }));
+        let PostContext::Top { audience } = context else { unreachable!() };
+        assert_eq!(audience.unwrap(), AP_PUBLIC);
     }
 
     #[test]
@@ -1384,7 +1397,8 @@ mod tests {
             None,
         );
         assert_eq!(visibility, Visibility::Followers);
-        assert!(matches!(context, PostContext::Top { .. }));
+        let PostContext::Top { audience } = context else { unreachable!() };
+        assert_eq!(audience.unwrap(), author_followers);
     }
 
     #[test]
@@ -1432,7 +1446,8 @@ mod tests {
             None,
         );
         assert_eq!(visibility, Visibility::Subscribers);
-        assert!(matches!(context, PostContext::Top { .. }));
+        let PostContext::Top { audience } = context else { unreachable!() };
+        assert_eq!(audience.unwrap(), author_subscribers);
     }
 
     #[test]
@@ -1445,6 +1460,7 @@ mod tests {
             None,
         );
         assert_eq!(visibility, Visibility::Direct);
-        assert!(matches!(context, PostContext::Top { .. }));
+        let PostContext::Top { audience } = context else { unreachable!() };
+        assert!(audience.is_none());
     }
 }

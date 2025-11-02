@@ -324,9 +324,8 @@ pub fn build_note(
             if post.visibility == Visibility::Conversation {
                 // Copy conversation audience
                 let conversation = in_reply_to.expect_conversation();
-                // Public conversations have empty audience.
                 // Conversations created by database migration
-                // will also have empty audience.
+                // will have empty audience.
                 if let Some(ref audience) = conversation.audience {
                     if !primary_audience.contains(audience) {
                         primary_audience.push(audience.clone());
@@ -803,6 +802,7 @@ mod tests {
         );
         let conversation = Conversation {
             id: uuid!("837ffc24-dab2-414b-a9b8-fe47d0a463f2"),
+            audience: Some(parent_author_followers.to_owned()),
             ..Conversation::for_test(Default::default())
         };
         let parent = PostDetailed {

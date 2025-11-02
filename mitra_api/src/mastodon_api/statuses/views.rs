@@ -14,6 +14,7 @@ use actix_web::{
     Scope,
 };
 use actix_web_httpauth::extractors::bearer::BearerAuth;
+use apx_sdk::constants::AP_PUBLIC;
 use chrono::Utc;
 use uuid::Uuid;
 
@@ -211,7 +212,9 @@ async fn create_status(
             &current_user.profile.username,
         );
         let audience = match visibility {
-            Visibility::Public | Visibility::Direct => None,
+            Visibility::Public => {
+                Some(AP_PUBLIC.to_owned())
+            },
             Visibility::Followers => {
                 Some(LocalActorCollection::Followers.of(&actor_id))
             },
@@ -219,6 +222,7 @@ async fn create_status(
                 Some(LocalActorCollection::Subscribers.of(&actor_id))
             },
             Visibility::Conversation => None, // will be rejected by validator
+            Visibility::Direct => None,
         };
         PostContext::Top { audience }
     };

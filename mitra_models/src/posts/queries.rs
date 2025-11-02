@@ -208,6 +208,7 @@ pub async fn create_post(
     author_id: Uuid,
     post_data: PostCreateData,
 ) -> Result<PostDetailed, DatabaseError> {
+    post_data.check_consistency()?;
     let transaction = db_client.transaction().await?;
     let post_id = post_data.id.unwrap_or_else(generate_ulid);
 
@@ -2586,7 +2587,7 @@ mod tests {
         let user_3 = create_test_user(db_client, "test_3").await;
         mute(db_client, user_1.id, user_3.id).await.unwrap();
         let post_data_1 = PostCreateData {
-            context: PostContext::Top { audience: None },
+            context: PostContext::new_public(),
             content: "my post".to_string(),
             ..Default::default()
         };
@@ -2633,7 +2634,9 @@ mod tests {
         let user_3 = create_test_user(db_client, "test_3").await;
         follow(db_client, user_3.id, user_2.id).await.unwrap();
         let post_data_1 = PostCreateData {
-            context: PostContext::Top { audience: None },
+            context: PostContext::Top {
+                audience: Some("https://local/test_1/followers".to_owned()),
+            },
             content: "my post".to_string(),
             visibility: Visibility::Followers,
             ..Default::default()

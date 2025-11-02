@@ -16,7 +16,10 @@ use uuid::Uuid;
 use mitra_utils::languages::Language;
 
 use crate::attachments::types::MediaAttachment;
-use crate::conversations::types::Conversation;
+use crate::conversations::types::{
+    Conversation,
+    AP_PUBLIC,
+};
 use crate::database::{
     int_enum::{int_enum_from_sql, int_enum_to_sql},
     json_macro::json_from_sql,
@@ -268,8 +271,8 @@ impl PostDetailed {
     pub fn new(
         db_post: Post,
         db_author: DbActorProfile,
-        db_conversation: Option<Conversation>,
-        db_poll: Option<Poll>,
+        maybe_conversation: Option<Conversation>,
+        maybe_poll: Option<Poll>,
         db_attachments: Vec<MediaAttachment>,
         db_mentions: Vec<DbActorProfile>,
         db_tags: Vec<String>,
@@ -298,7 +301,7 @@ impl PostDetailed {
             db_post.in_reply_to_id.is_some() ||
             db_post.url.is_some() ||
             db_post.ipfs_cid.is_some() ||
-            db_poll.is_some() ||
+            maybe_poll.is_some() ||
             !db_attachments.is_empty() ||
             !db_mentions.is_empty() ||
             !db_tags.is_empty() ||
@@ -308,12 +311,23 @@ impl PostDetailed {
         ) {
             return Err(DatabaseTypeError);
         };
-        if db_conversation.as_ref().map(|conversation| conversation.id) !=
-            db_post.conversation_id
-        {
+        if let Some(conversation_id) = db_post.conversation_id {
+            let Some(ref conversation) = maybe_conversation else {
+                return Err(DatabaseTypeError);
+            };
+            if conversation.id != conversation_id {
+                return Err(DatabaseTypeError);
+            };
+            if db_post.id == conversation.root_id
+                && db_post.visibility == Visibility::Public
+                && !conversation.is_public()
+            {
+                return Err(DatabaseTypeError);
+            };
+        } else if maybe_conversation.is_some() {
             return Err(DatabaseTypeError);
         };
-        if let Some(ref poll) = db_poll {
+        if let Some(ref poll) = maybe_poll {
             if poll.id != db_post.id {
                 return Err(DatabaseTypeError);
             };
@@ -333,7 +347,7 @@ impl PostDetailed {
             content: db_post.content,
             content_source: db_post.content_source,
             language: db_post.language.map(|db_lang| db_lang.inner()),
-            conversation: db_conversation,
+            conversation: maybe_conversation,
             in_reply_to_id: db_post.in_reply_to_id,
             repost_of_id: db_post.repost_of_id,
             visibility: db_post.visibility,
@@ -342,7 +356,7 @@ impl PostDetailed {
             reply_count: db_post.reply_count,
             reaction_count: db_post.reaction_count,
             repost_count: db_post.repost_count,
-            poll: db_poll,
+            poll: maybe_poll,
             attachments: db_attachments,
             mentions: db_mentions,
             tags: db_tags,
@@ -461,7 +475,7 @@ impl TryFrom<&Row> for PostDetailed {
         let db_post: Post = row.try_get("post")?;
         let db_profile: DbActorProfile = row.try_get("actor_profile")?;
         // Data from subqueries
-        let db_conversation: Option<Conversation> = row.try_get("conversation")?;
+        let maybe_conversation: Option<Conversation> = row.try_get("conversation")?;
         let maybe_poll: Option<Poll> = row.try_get("poll")?;
         let db_attachments: Vec<MediaAttachment> = row.try_get("attachments")?;
         let db_mentions: Vec<DbActorProfile> = row.try_get("mentions")?;
@@ -472,7 +486,7 @@ impl TryFrom<&Row> for PostDetailed {
         let post = Self::new(
             db_post,
             db_profile,
-            db_conversation,
+            maybe_conversation,
             maybe_poll,
             db_attachments,
             db_mentions,
@@ -527,6 +541,10 @@ pub enum PostContext {
 }
 
 impl PostContext {
+    pub fn new_public() -> Self {
+        Self::Top { audience: Some(AP_PUBLIC.to_owned()) }
+    }
+
     pub(super) fn in_reply_to_id(&self) -> Option<Uuid> {
         match self {
             Self::Reply { in_reply_to_id, .. } => Some(*in_reply_to_id),
@@ -545,7 +563,7 @@ impl PostContext {
 #[cfg(any(test, feature = "test-utils"))]
 impl Default for PostContext {
     fn default() -> Self {
-        Self::Top { audience: None }
+        Self::new_public()
     }
 }
 
@@ -570,6 +588,15 @@ pub struct PostCreateData {
 }
 
 impl PostCreateData {
+    pub(super) fn check_consistency(&self) -> Result<(), DatabaseTypeError> {
+        if let PostContext::Top { ref audience } = self.context {
+            if audience.is_none() && self.visibility != Visibility::Direct {
+                return Err(DatabaseTypeError);
+            };
+        };
+        Ok(())
+    }
+
     pub fn repost(
         repost_of_id: Uuid,
         visibility: Visibility,
