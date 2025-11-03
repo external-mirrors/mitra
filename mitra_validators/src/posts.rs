@@ -123,7 +123,10 @@ pub fn validate_post_create_data(
     origin: Origin,
 ) -> Result<(), ValidationError> {
     match post_data.context {
-        PostContext::Top { ref object_id, ref audience, .. } => {
+        PostContext::Top { group_id, ref object_id, ref audience } => {
+            if post_data.visibility == Visibility::Group && group_id.is_none() {
+                return Err(ValidationError("post doesn't belong to a group"));
+            };
             if post_data.visibility == Visibility::Conversation {
                 return Err(ValidationError("top-level post can't have conversation visibility"));
             };
@@ -134,10 +137,10 @@ pub fn validate_post_create_data(
                 validate_any_object_id(audience)?;
             };
         },
+        PostContext::Reply { .. } => (),
         PostContext::Repost { .. } => {
             panic!("incorrect context");
         },
-        _ => (),
     };
     if let Some(ref title) = post_data.title {
         validate_title(title)?;

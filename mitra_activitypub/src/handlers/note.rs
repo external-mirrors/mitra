@@ -79,6 +79,7 @@ use mitra_validators::{
 };
 
 use crate::{
+    adapters::users::get_actor_data,
     authority::Authority,
     builders::note::LinkTag,
     filter::get_moderation_domain,
@@ -858,11 +859,12 @@ pub(super) fn get_audience(
 }
 
 fn get_object_visibility(
+    authority: &Authority,
     author: &DbActorProfile,
     context_id: Option<&CanonicalUri>,
     audience: &[String],
     maybe_in_reply_to: Option<&PostDetailed>,
-    maybe_group_id: Option<Uuid>,
+    maybe_group: Option<&DbActorProfile>,
 ) -> (Visibility, PostContext) {
     let actor = author.expect_actor_data();
     if let Some(in_reply_to) = maybe_in_reply_to {
@@ -914,11 +916,19 @@ fn get_object_visibility(
         } else if audience.iter().any(|id| Some(id) == actor.subscribers.as_ref()) {
             conversation_audience = actor.subscribers.clone();
             Visibility::Subscribers
+        } else if let Some(group) = maybe_group {
+            let group_data = get_actor_data(authority.root(), group);
+            if audience.iter().any(|id| Some(id) == group_data.followers.as_ref()) {
+                conversation_audience = group_data.followers;
+                Visibility::Group
+            } else {
+                Visibility::Direct
+            }
         } else {
             Visibility::Direct
         };
         let context = PostContext::Top {
-            group_id: maybe_group_id,
+            group_id: maybe_group.map(|group| group.id),
             object_id: context_id.map(|id| id.to_string()),
             audience: conversation_audience,
         };
@@ -1059,7 +1069,7 @@ pub async fn create_remote_post(
         redirects,
     ).await?;
 
-    let maybe_group_id = if let Some(actor_id) = object.audience.first() {
+    let maybe_group = if let Some(actor_id) = object.audience.first() {
         match ActorIdResolver::default()
             .include_automated_accounts()
             .resolve(ap_client, db_pool, actor_id)
@@ -1068,7 +1078,7 @@ pub async fn create_remote_post(
             Ok(profile) => {
                 if profile.is_group() {
                     log::info!("post addressed to group {profile}");
-                    Some(profile.id)
+                    Some(profile)
                 } else {
                     None
                 }
@@ -1101,11 +1111,12 @@ pub async fn create_remote_post(
         .map(|id| canonicalize_id(id))
         .transpose()?;
     let (visibility, context) = get_object_visibility(
+        &authority,
         &author,
         maybe_canonical_context_id.as_ref(),
         &audience,
         maybe_in_reply_to.as_ref(),
-        maybe_group_id,
+        maybe_group.as_ref(),
     );
     let is_sensitive =
         object.sensitive.unwrap_or(false) ||
@@ -1433,12 +1444,14 @@ mod tests {
 
     #[test]
     fn test_get_object_visibility_public() {
+        let authority = Authority::server_unchecked("https://local.example");
         let author =
             DbActorProfile::remote_for_test("test", "https://social.example");
         let context_id = "https://social.example/context";
         let canonical_context_id = CanonicalUri::parse(context_id).unwrap();
         let audience = vec![AP_PUBLIC.to_string()];
         let (visibility, context) = get_object_visibility(
+            &authority,
             &author,
             Some(&canonical_context_id),
             &audience,
@@ -1454,6 +1467,7 @@ mod tests {
 
     #[test]
     fn test_get_object_visibility_public_in_group() {
+        let authority = Authority::server_unchecked("https://local.example");
         let author =
             DbActorProfile::remote_for_test("test", "https://social.example");
         let group = DbActorProfile::remote_for_test(
@@ -1462,11 +1476,12 @@ mod tests {
         );
         let audience = vec![AP_PUBLIC.to_string()];
         let (visibility, context) = get_object_visibility(
+            &authority,
             &author,
             None,
             &audience,
             None,
-            Some(group.id),
+            Some(&group),
         );
         assert_eq!(visibility, Visibility::Public);
         let PostContext::Top { group_id, audience, .. } =
@@ -1477,12 +1492,14 @@ mod tests {
 
     #[test]
     fn test_get_object_visibility_public_reply() {
+        let authority = Authority::server_unchecked("https://local.example");
         let in_reply_to_author = DbActorProfile::local_for_test("test");
         let in_reply_to = PostDetailed::local_for_test(&in_reply_to_author);
         let author =
             DbActorProfile::remote_for_test("test", "https://social.example");
         let audience = vec![AP_PUBLIC.to_string()];
         let (visibility, context) = get_object_visibility(
+            &authority,
             &author,
             None,
             &audience,
@@ -1495,6 +1512,7 @@ mod tests {
 
     #[test]
     fn test_get_object_visibility_followers() {
+        let authority = Authority::server_unchecked("https://local.example");
         let author_id = "https://example.com/users/author";
         let author_followers = "https://example.com/users/author/followers";
         let author = DbActorProfile::remote_for_test_with_data(
@@ -1507,6 +1525,7 @@ mod tests {
         );
         let audience = vec![author_followers.to_string()];
         let (visibility, context) = get_object_visibility(
+            &authority,
             &author,
             None,
             &audience,
@@ -1522,6 +1541,7 @@ mod tests {
 
     #[test]
     fn test_get_object_visibility_followers_reply() {
+        let authority = Authority::server_unchecked("https://local.example");
         let in_reply_to_author = DbActorProfile::local_for_test("test");
         let in_reply_to_followers = "https://social.example/users/test/followers";
         let in_reply_to = {
@@ -1536,6 +1556,7 @@ mod tests {
         let author = DbActorProfile::remote_for_test("author", author_id);
         let audience = vec![in_reply_to_followers.to_string()];
         let (visibility, context) = get_object_visibility(
+            &authority,
             &author,
             None,
             &audience,
@@ -1548,6 +1569,7 @@ mod tests {
 
     #[test]
     fn test_get_object_visibility_followers_reply_from_mastodon() {
+        let authority = Authority::server_unchecked("https://local.example");
         let in_reply_to_author = DbActorProfile::local_for_test("test");
         let in_reply_to_followers = "https://social.example/users/test/followers";
         let in_reply_to = {
@@ -1565,6 +1587,7 @@ mod tests {
             .followers.clone().unwrap();
         let audience = vec![author_followers];
         let (visibility, context) = get_object_visibility(
+            &authority,
             &author,
             None,
             &audience,
@@ -1577,6 +1600,7 @@ mod tests {
 
     #[test]
     fn test_get_object_visibility_subscribers() {
+        let authority = Authority::server_unchecked("https://local.example");
         let author_id = "https://example.com/users/author";
         let author_followers = "https://example.com/users/author/followers";
         let author_subscribers = "https://example.com/users/author/subscribers";
@@ -1591,6 +1615,7 @@ mod tests {
         );
         let audience = vec![author_subscribers.to_string()];
         let (visibility, context) = get_object_visibility(
+            &authority,
             &author,
             None,
             &audience,
@@ -1605,10 +1630,46 @@ mod tests {
     }
 
     #[test]
+    fn test_get_object_visibility_in_private_group() {
+        let authority = Authority::server_unchecked("https://local.example");
+        let author =
+            DbActorProfile::remote_for_test("test", "https://social.example");
+        let group_id = "https://social.example/group";
+        let group_followers = "https://social.example/group/followers";
+        let group = DbActorProfile::remote_for_test_with_data(
+            "group",
+            DbActor {
+                id: group_id.to_string(),
+                followers: Some(group_followers.to_string()),
+                ..Default::default()
+            },
+        );
+        let audience = vec![
+            group_id.to_string(),
+            group_followers.to_string(),
+        ];
+        let (visibility, context) = get_object_visibility(
+            &authority,
+            &author,
+            None,
+            &audience,
+            None,
+            Some(&group),
+        );
+        assert_eq!(visibility, Visibility::Group);
+        let PostContext::Top { group_id, audience, .. } =
+            context else { unreachable!() };
+        assert_eq!(group_id, Some(group.id));
+        assert_eq!(audience.unwrap(), group_followers);
+    }
+
+    #[test]
     fn test_get_object_visibility_direct() {
+        let authority = Authority::server_unchecked("https://local.example");
         let author = DbActorProfile::remote_for_test("test", "https://x.example");
         let audience = vec!["https://example.com/users/1".to_string()];
         let (visibility, context) = get_object_visibility(
+            &authority,
             &author,
             None,
             &audience,

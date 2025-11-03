@@ -883,6 +883,10 @@ impl DbActorProfile {
         self.actor_type == ActorType::Group
     }
 
+    pub fn is_private_group(&self) -> bool {
+        self.is_group() && self.manually_approves_followers
+    }
+
     pub fn is_anonymous(&self) -> bool {
         self.automated_account_id.is_some() && self.username == ANONYMOUS
     }

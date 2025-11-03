@@ -17,7 +17,10 @@ use chrono::Utc;
 use uuid::Uuid;
 
 use mitra_activitypub::{
-    adapters::posts::{delete_local_post, delete_group_post},
+    adapters::{
+        posts::{delete_local_post, delete_group_post},
+        users::get_actor_data,
+    },
     authority::Authority,
     builders::{
         announce::prepare_announce,
@@ -161,6 +164,7 @@ async fn create_status(
         return Err(MastodonError::PermissionError);
     };
     let instance = config.instance();
+    let authority = Authority::from(&instance);
     let status_form = match status_form {
         Either::Left(json) => json.into_inner(),
         Either::Right(form) => form.into_inner(),
@@ -244,6 +248,13 @@ async fn create_status(
             },
             Visibility::Subscribers => {
                 Some(LocalActorCollection::Subscribers.of(&actor_id))
+            },
+            Visibility::Group => {
+                let group = maybe_group.as_ref()
+                    .ok_or(ValidationError("post does not belong to a group"))?;
+                let group_data = get_actor_data(authority.root(), group);
+                // WARNING: may be None
+                group_data.followers
             },
             Visibility::Conversation => None, // will be rejected by validator
             Visibility::Direct => None,

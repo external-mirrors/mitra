@@ -2171,6 +2171,7 @@ paths:
                         - `public` - visible to everyone
                         - `private` - visible to followers
                         - `subscribers` - visible to paid subscribers
+                        - `group` - visible only to group members
                         - `conversation` - visible to people chosen by the conversation owner (the author of the top-level post)
                         - `direct` - visible to mentioned users
 
@@ -3588,6 +3589,7 @@ components:
           type: string
           enum:
             - admin
+            - member
     Aliases:
       type: object
       properties:
@@ -4738,6 +4740,7 @@ components:
         - private
         - subscribers
         - conversation
+        - group
         - direct
     DefaultVisibility:
       type: string

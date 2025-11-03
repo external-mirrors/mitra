@@ -81,6 +81,7 @@ impl Affiliation {
             ),
             affiliation: match related_profile.relationship_type {
                 RelationshipType::GroupAdmin => "admin",
+                RelationshipType::GroupMember => "member",
                 _ => "none",
             },
         }

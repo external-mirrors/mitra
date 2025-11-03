@@ -124,7 +124,8 @@ fn create_relationship_map(
                     relationship_map.rejected_by = true;
                 };
             },
-            RelationshipType::GroupAdmin => (),
+            RelationshipType::GroupAdmin
+                | RelationshipType::GroupMember => (),
         };
     };
     Ok(relationship_map)

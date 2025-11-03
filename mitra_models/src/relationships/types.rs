@@ -22,6 +22,7 @@ pub enum RelationshipType {
     Mute,
     Reject, // follow request rejected
     GroupAdmin,
+    GroupMember,
 }
 
 impl From<RelationshipType> for i16 {
@@ -35,6 +36,7 @@ impl From<RelationshipType> for i16 {
             RelationshipType::Mute => 6,
             RelationshipType::Reject => 7,
             RelationshipType::GroupAdmin => 8,
+            RelationshipType::GroupMember => 9,
         }
     }
 }
@@ -52,6 +54,7 @@ impl TryFrom<i16> for RelationshipType {
             6 => Self::Mute,
             7 => Self::Reject,
             8 => Self::GroupAdmin,
+            9 => Self::GroupMember,
             _ => return Err(DatabaseTypeError),
         };
         Ok(relationship_type)

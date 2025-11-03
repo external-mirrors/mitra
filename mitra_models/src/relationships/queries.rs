@@ -36,13 +36,17 @@ pub(crate) async fn create_relationship(
     target_id: Uuid,
     relationship_type: RelationshipType,
 ) -> Result<(), DatabaseError> {
-    db_client.execute(
+    let inserted_count = db_client.execute(
         "
         INSERT INTO relationship (source_id, target_id, relationship_type)
         VALUES ($1, $2, $3)
+        ON CONFLICT (source_id, target_id, relationship_type) DO NOTHING
         ",
         &[&source_id, &target_id, &relationship_type],
     ).await?;
+    if inserted_count == 0 {
+        return Err(DatabaseError::AlreadyExists("relationship"));
+    };
     Ok(())
 }
 

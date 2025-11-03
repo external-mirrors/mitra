@@ -222,6 +222,7 @@ pub fn build_note(
         Visibility::Subscribers => {
             primary_audience.push(subscribers_collection_id);
         },
+        Visibility::Group => (), // Group audience will be added later
         Visibility::Conversation => (),
         Visibility::Direct => (),
     };
@@ -415,6 +416,7 @@ pub async fn get_note_recipients(
             let subscribers = get_subscribers(db_client, post.author.id).await?;
             secondary_audience.extend(subscribers);
         },
+        Visibility::Group => (), // post.group will be used
         Visibility::Conversation => {
             let conversation = post.expect_conversation();
             let owner = get_post_author(db_client, conversation.root_id).await?;

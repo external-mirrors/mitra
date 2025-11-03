@@ -12,6 +12,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Added `pleroma.is_seen` field to `Notification` API entity.
 - Added ability to mute a conversation.
 - Added `media fetch` command.
+- Allow participation in remote private groups.
 
 ### Changed
 

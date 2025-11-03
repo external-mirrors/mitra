@@ -705,6 +705,14 @@ pub(crate) fn build_visibility_filter() -> String {
                         AND relationship_type = {relationship_subscription}
                     )
             )
+            OR post.visibility = {visibility_group} AND EXISTS (
+                SELECT 1
+                FROM relationship
+                WHERE
+                    source_id = $current_user_id
+                    AND target_id = post.group_id
+                    AND relationship_type = {relationship_member}
+            )
             OR post.visibility = {visibility_conversation} AND EXISTS (
                 SELECT 1
                 FROM conversation
@@ -725,6 +733,15 @@ pub(crate) fn build_visibility_filter() -> String {
                                     AND relationship_type = {relationship_subscription}
                                 )
                         )
+                        OR EXISTS (
+                            SELECT 1
+                            FROM relationship
+                            WHERE
+                                root.visibility = {visibility_group}
+                                AND source_id = $current_user_id
+                                AND target_id = root.group_id
+                                AND relationship_type = {relationship_member}
+                        )
                     )
             )
         )",
@@ -732,8 +749,10 @@ pub(crate) fn build_visibility_filter() -> String {
         visibility_followers=i16::from(Visibility::Followers),
         visibility_subscribers=i16::from(Visibility::Subscribers),
         visibility_conversation=i16::from(Visibility::Conversation),
+        visibility_group=i16::from(Visibility::Group),
         relationship_follow=i16::from(RelationshipType::Follow),
         relationship_subscription=i16::from(RelationshipType::Subscription),
+        relationship_member=i16::from(RelationshipType::GroupMember),
     )
 }
 
@@ -2120,6 +2139,10 @@ mod tests {
             create_custom_feed,
         },
         database::test_utils::create_test_database,
+        groups::{
+            helpers::join_private_group,
+            test_utils::create_test_remote_group,
+        },
         posts::{
             constants::PREINSTALLED_FTS_CONFIG,
             test_utils::{
@@ -2798,6 +2821,64 @@ mod tests {
         ).await.unwrap();
         assert_eq!(timeline.len(), 1);
         assert_eq!(timeline.iter().any(|item| item.id == repost.id), true);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_profile_timeline_private_group_post() {
+        let db_client = &mut create_test_database().await;
+        let group = create_test_remote_group(
+            db_client,
+            "group",
+            "groups.example",
+            "https://groups.example/123",
+            true,
+        ).await;
+        assert!(group.is_private_group());
+        let author = create_test_user(db_client, "author").await;
+        join_private_group(db_client, author.id, group.id).await.unwrap();
+        let post_data = PostCreateData {
+            context: PostContext::Top {
+                group_id: Some(group.id),
+                object_id: None,
+                audience: Some("https://groups.example/123/followers".to_owned()),
+            },
+            visibility: Visibility::Group,
+            ..PostCreateData::for_test()
+        };
+        let post = create_post(db_client, author.id, post_data).await.unwrap();
+        let viewer = create_test_user(db_client, "viewer").await;
+        follow(db_client, viewer.id, author.id).await.unwrap();
+
+        // Viewer is not a member
+        let timeline = get_posts_by_author(
+            db_client,
+            author.id,
+            Some(viewer.id),
+            true, // include replies
+            true, // include reposts
+            false, // not only pinned
+            false, // not only media
+            None,
+            10,
+        ).await.unwrap();
+        assert_eq!(timeline.len(), 0);
+
+        // Viewer is a member
+        join_private_group(db_client, viewer.id, group.id).await.unwrap();
+        let timeline = get_posts_by_author(
+            db_client,
+            author.id,
+            Some(viewer.id),
+            true, // include replies
+            true, // include reposts
+            false, // not only pinned
+            false, // not only media
+            None,
+            10,
+        ).await.unwrap();
+        assert_eq!(timeline.len(), 1);
+        assert_eq!(timeline[0].id, post.id);
     }
 
     #[tokio::test]

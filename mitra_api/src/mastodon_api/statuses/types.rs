@@ -178,6 +178,7 @@ pub fn visibility_to_str(visibility: Visibility) -> &'static str {
         Visibility::Direct => "direct",
         Visibility::Followers => "private",
         Visibility::Subscribers => "subscribers",
+        Visibility::Group => "group",
         Visibility::Conversation => "conversation",
     }
 }
@@ -372,6 +373,7 @@ pub fn visibility_from_str(value: &str) -> Result<Visibility, ValidationError> {
         "direct" => Visibility::Direct,
         "private" => Visibility::Followers,
         "subscribers" => Visibility::Subscribers,
+        "group" => Visibility::Group,
         "conversation" => Visibility::Conversation,
         _ => return Err(ValidationError("invalid visibility parameter")),
     };

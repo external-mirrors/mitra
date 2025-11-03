@@ -171,6 +171,23 @@ pub async fn can_view_post(
                 false
             }
         },
+        Visibility::Group => {
+            if let Some(viewer) = maybe_viewer {
+                if let Some(ref group) = post.group {
+                    let is_member = has_relationship(
+                        db_client,
+                        viewer.id,
+                        group.id,
+                        RelationshipType::GroupMember,
+                    ).await?;
+                    is_member
+                } else {
+                    false
+                }
+            } else {
+                false
+            }
+        },
         Visibility::Conversation => {
             if let Some(viewer) = maybe_viewer {
                 let conversation = post.expect_conversation();
@@ -246,6 +263,10 @@ mod tests {
             types::{Role, User},
         },
         database::test_utils::create_test_database,
+        groups::{
+            helpers::join_private_group,
+            test_utils::create_test_remote_group,
+        },
         posts::{
             queries::create_post,
             test_utils::create_test_local_post,
@@ -490,6 +511,57 @@ mod tests {
             &post,
         ).await.unwrap();
         assert_eq!(can_view, true);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_can_view_post_private_group() {
+        let db_client = &mut create_test_database().await;
+        let group = create_test_remote_group(
+            db_client,
+            "group",
+            "groups.example",
+            "https://groups.example/123",
+            true,
+        ).await;
+        assert!(group.is_private_group());
+        let author = create_test_remote_profile(
+            db_client,
+            "author",
+            "social.example",
+            "https://social.example/users/1",
+        ).await;
+        join_private_group(db_client, author.id, group.id).await.unwrap();
+        let post_data = PostCreateData {
+            context: PostContext::Top {
+                group_id: Some(group.id),
+                object_id: Some("https://social.example/contexts/123".to_owned()),
+                audience: Some("https://groups.example/123/followers".to_owned()),
+            },
+            visibility: Visibility::Group,
+            object_id: Some("https://social.example/posts/123".to_owned()),
+            ..PostCreateData::for_test()
+        };
+        let post = create_post(
+            db_client,
+            author.id,
+            post_data,
+        ).await.unwrap();
+        let viewer = create_test_user(db_client, "author").await;
+        join_private_group(db_client, viewer.id, group.id).await.unwrap();
+
+        let can_view = can_view_post(
+            db_client,
+            Some(&viewer.profile),
+            &post,
+        ).await.unwrap();
+        assert_eq!(can_view, true);
+        let can_view = can_view_post(
+            db_client,
+            None,
+            &post,
+        ).await.unwrap();
+        assert_eq!(can_view, false);
     }
 
     #[tokio::test]
