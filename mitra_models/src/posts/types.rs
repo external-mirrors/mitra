@@ -87,7 +87,6 @@ impl Visibility {
             Self::Public => vec![
                 Self::Public,
                 Self::Followers,
-                Self::Subscribers,
                 Self::Direct,
             ],
             Self::Followers if is_same_author => vec![
