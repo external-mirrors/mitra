@@ -22,6 +22,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Fixed
 
 - Fixed database error occurring when application `scopes` parameter is too long.
+- Fixed M4A audio uploads not working in Bloat-FE ([#184](https://codeberg.org/silverpill/mitra/pulls/184)).
 
 ## [4.12.0] - 2025-10-26
 
