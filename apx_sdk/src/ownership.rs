@@ -81,6 +81,13 @@ pub fn get_owner(
         },
     };
     let owner = maybe_owner?;
+    Ok(owner)
+}
+
+pub fn is_ownership_ambiguous(
+    object: &JsonValue,
+    core_type: CoreType,
+) -> bool {
     // Protection from type confusion attacks.
     // Example: object is duck-typed as actor,
     // but it is a `Note` attributed to a different actor.
@@ -91,11 +98,10 @@ pub fn get_owner(
             | CoreType::VerificationMethod
             =>
         {
-            deny_properties(object, &[ATTRIBUTED_TO])?;
+            deny_properties(object, &[ATTRIBUTED_TO]).is_err()
         },
-        _ => (),
-    };
-    Ok(owner)
+        _ => false,
+    }
 }
 
 #[cfg(test)]
@@ -142,6 +148,8 @@ mod tests {
         });
         let owner = get_owner(&object, CoreType::Actor).unwrap();
         assert_eq!(owner, "https://social.example/actors/1");
+        let is_ambiguous = is_ownership_ambiguous(&object, CoreType::Actor);
+        assert_eq!(is_ambiguous, false);
     }
 
     #[test]
@@ -153,7 +161,9 @@ mod tests {
             "outbox": "https://social.example/actors/1/outbox",
             "attributedTo": "https://social.example/actors/2",
         });
-        let error = get_owner(&object, CoreType::Actor).err().unwrap();
-        assert_eq!(error.message(), "ambiguous ownership");
+        let owner = get_owner(&object, CoreType::Actor).unwrap();
+        assert_eq!(owner, "https://social.example/actors/1");
+        let is_ambiguous = is_ownership_ambiguous(&object, CoreType::Actor);
+        assert_eq!(is_ambiguous, true);
     }
 }

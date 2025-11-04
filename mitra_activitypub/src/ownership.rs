@@ -9,6 +9,7 @@ use apx_sdk::{
     },
     ownership::{
         get_owner as apx_get_owner,
+        is_ownership_ambiguous,
         parse_attributed_to as apx_parse_attributed_to,
     },
     utils::CoreType,
@@ -36,8 +37,12 @@ pub fn get_owner(
     object: &JsonValue,
     core_type: CoreType,
 ) -> Result<String, ValidationError> {
-    apx_get_owner(object, core_type)
-        .map_err(|error| ValidationError(error.message()))
+    let owner = apx_get_owner(object, core_type)
+        .map_err(|error| ValidationError(error.message()))?;
+    if is_ownership_ambiguous(object, core_type) {
+        log::warn!("ambiguous ownership ({core_type:?})");
+    };
+    Ok(owner)
 }
 
 pub fn is_same_id(id_1: &str, id_2: &str) -> Result<bool, ValidationError> {

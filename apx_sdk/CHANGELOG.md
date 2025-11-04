@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Added `without_query` method to `ApUri` type.
 - Added `is_same_uri` function to `url::canonical` module.
 - Added `ownership` module to `apx_sdk` package.
+- Implement `Copy` and `Debug` for `CoreType` type.
 
 ### Changed
 

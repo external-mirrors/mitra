@@ -13,6 +13,7 @@ use super::constants::AP_PUBLIC;
 /// Core object type
 ///
 /// <https://codeberg.org/fediverse/fep/src/branch/main/fep/2277/fep-2277.md>
+#[derive(Debug, Clone, Copy)]
 pub enum CoreType {
     Object,
     Link,

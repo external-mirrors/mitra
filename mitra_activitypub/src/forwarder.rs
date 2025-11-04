@@ -10,6 +10,7 @@ use apx_sdk::{
         url::canonical::CanonicalUri,
     },
     deserialization::deserialize_into_id_array,
+    ownership::is_ownership_ambiguous,
     utils::{
         get_core_type,
         is_key_like,
@@ -119,6 +120,9 @@ pub fn verify_embedded_ownership(
         // Embedded object must have the same owner
         let object_class = get_core_type(object);
         let object_owner = get_owner(object, object_class)?;
+        if is_ownership_ambiguous(object, object_class) {
+            return Err(ValidationError("ambiguous ownership"));
+        };
         if !is_same_id(&object_owner, &root_owner)? {
             return Err(ValidationError("embedded object has different owner"))
         };
