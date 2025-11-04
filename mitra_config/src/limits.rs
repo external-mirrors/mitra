@@ -10,7 +10,7 @@ use super::ConfigError;
 // Not included
 // https://developer.mozilla.org/en-US/docs/Web/Media/Formats/Image_types
 // - image/tiff only supported by Safari
-const SUPPORTED_MEDIA_TYPES: [&str; 20] = [
+const SUPPORTED_MEDIA_TYPES: [&str; 21] = [
     "audio/flac",
     "audio/mpeg",
     "audio/ogg",
@@ -20,6 +20,7 @@ const SUPPORTED_MEDIA_TYPES: [&str; 20] = [
     "audio/aac",
     "audio/mp4", // M4A (used by Firefox)
     "audio/x-m4a", // M4A (used by Chrome)
+    "audio/m4a", // M4A (used by BloatFE)
     "image/apng",
     "image/avif",
     "image/gif",
