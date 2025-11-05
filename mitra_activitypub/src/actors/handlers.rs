@@ -9,6 +9,7 @@ use apx_sdk::{
     addresses::WebfingerAddress,
     agent::FederationAgent,
     deserialization::{
+        deserialize_into_object_id_opt,
         deserialize_object_array,
         deserialize_string_array,
         parse_into_array,
@@ -193,7 +194,11 @@ struct ValidatedActor {
     outbox: String,
     followers: Option<String>,
     subscribers: Option<String>,
+
+    // Workaround for Bridgy Fed bug
+    #[serde(default, deserialize_with = "deserialize_into_object_id_opt")]
     featured: Option<String>,
+
     endpoints: Option<Endpoints>,
 
     #[serde(default, deserialize_with = "deserialize_object_array")]

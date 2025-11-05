@@ -19,6 +19,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Return only supported scopes after creating application with `/api/v1/apps`.
 - Write OAuth app scopes to log.
 - Set `Poll.expires_at` to `null` if poll is without end date.
+- Allow embedded `featured` collections.
 
 ### Fixed
 
