@@ -31,6 +31,7 @@ use mitra_validators::{
 };
 
 use crate::{
+    builders::add_context_activity::sync_conversation,
     filter::get_moderation_domain,
     identifiers::canonicalize_id,
     importers::{
@@ -94,7 +95,7 @@ pub async fn handle_like(
     db_pool: &DatabaseConnectionPool,
     activity: JsonValue,
 ) -> HandlerResult {
-    let like: Like = serde_json::from_value(activity)?;
+    let like: Like = serde_json::from_value(activity.clone())?;
     let ap_client = ApClient::new_with_pool(config, db_pool).await?;
     let instance = &ap_client.instance;
     let author = ActorIdResolver::default().only_remote().resolve(
@@ -103,12 +104,12 @@ pub async fn handle_like(
         &like.actor,
     ).await?;
     let canonical_object_id = canonicalize_id(&like.object)?;
-    let post_id = match get_post_by_object_id(
+    let post = match get_post_by_object_id(
         db_client_await!(db_pool),
         instance.uri_str(),
         &canonical_object_id,
     ).await {
-        Ok(post) => post.id,
+        Ok(post) => post,
         // Ignore like if post is not found locally
         Err(DatabaseError::NotFound(_)) => return Ok(None),
         Err(other_error) => return Err(other_error.into()),
@@ -157,7 +158,7 @@ pub async fn handle_like(
     let canonical_activity_id = canonicalize_id(&like.id)?;
     let reaction_data = ReactionData {
         author_id: author.id,
-        post_id: post_id,
+        post_id: post.id,
         content: maybe_content,
         emoji_id: maybe_emoji_id,
         visibility: visibility,
@@ -166,7 +167,15 @@ pub async fn handle_like(
     validate_reaction_data(&reaction_data)?;
     let db_client = &mut **get_database_client(db_pool).await?;
     match create_reaction(db_client, reaction_data).await {
-        Ok(_) => (),
+        Ok(reaction) => {
+            sync_conversation(
+                db_client,
+                instance,
+                post.expect_conversation(),
+                activity,
+                reaction.visibility,
+            ).await?;
+        },
         // Ignore activity if reaction is already saved
         Err(DatabaseError::AlreadyExists(_)) => return Ok(None),
         Err(other_error) => return Err(other_error.into()),

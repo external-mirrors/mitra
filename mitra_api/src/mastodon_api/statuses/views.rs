@@ -694,14 +694,23 @@ async fn favourite(
     let media_server = MediaServer::new(&config);
     if let Some(reaction) = maybe_reaction_created {
         // Federate
-        prepare_like(
+        let like = prepare_like(
             db_client,
             &config.instance(),
             &media_server,
             &current_user,
             &post,
             &reaction,
-        ).await?.save_and_enqueue(db_client).await?;
+        ).await?;
+        let like_json = like.activity().clone();
+        like.save_and_enqueue(db_client).await?;
+        sync_conversation(
+            db_client,
+            &config.instance(),
+            post.expect_conversation(),
+            like_json,
+            reaction.visibility,
+        ).await?;
     };
 
     let base_url = get_request_base_url(connection_info);
@@ -746,16 +755,25 @@ async fn unfavourite(
         Err(other_error) => return Err(other_error.into()),
     };
 
-    if let Some((reaction_id, reaction_has_deprecated_ap_id)) = maybe_reaction_deleted {
+    if let Some(reaction_deleted) = maybe_reaction_deleted {
         // Federate
-        prepare_undo_like(
+        let undo_like = prepare_undo_like(
             db_client,
             &config.instance(),
             &current_user,
             &post,
-            reaction_id,
-            reaction_has_deprecated_ap_id,
-        ).await?.save_and_enqueue(db_client).await?;
+            reaction_deleted.id,
+            reaction_deleted.has_deprecated_ap_id,
+        ).await?;
+        let undo_like_json = undo_like.activity().clone();
+        undo_like.save_and_enqueue(db_client).await?;
+        sync_conversation(
+            db_client,
+            &config.instance(),
+            post.expect_conversation(),
+            undo_like_json,
+            reaction_deleted.visibility,
+        ).await?;
     };
 
     let base_url = get_request_base_url(connection_info);

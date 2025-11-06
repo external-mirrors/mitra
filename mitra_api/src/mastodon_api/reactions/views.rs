@@ -12,6 +12,7 @@ use uuid::Uuid;
 
 use mitra_activitypub::{
     builders::{
+        add_context_activity::sync_conversation,
         like::prepare_like,
         undo_like::prepare_undo_like,
     },
@@ -118,14 +119,23 @@ async fn create_reaction_view(
     post.reaction_count += 1;
     post.reactions = get_post_reactions(db_client, post.id).await?;
     let media_server = MediaServer::new(&config);
-    prepare_like(
+    let like = prepare_like(
         db_client,
         &config.instance(),
         &media_server,
         &current_user,
         &post,
         &reaction,
-    ).await?.save_and_enqueue(db_client).await?;
+    ).await?;
+    let like_json = like.activity().clone();
+    like.save_and_enqueue(db_client).await?;
+    sync_conversation(
+        db_client,
+        &config.instance(),
+        post.expect_conversation(),
+        like_json,
+        reaction.visibility,
+    ).await?;
 
     let base_url = get_request_base_url(connection_info);
     let media_server = ClientMediaServer::new(&config, &base_url);
@@ -162,7 +172,7 @@ async fn delete_reaction_view(
         let emoji_name = clean_emoji_name(&content);
         emoji_shortcode(emoji_name)
     };
-    let (reaction_id, reaction_has_deprecated_ap_id) = delete_reaction(
+    let reaction_deleted = delete_reaction(
         db_client,
         current_user.id,
         status_id,
@@ -170,14 +180,23 @@ async fn delete_reaction_view(
     ).await?;
     post.reaction_count -= 1;
     post.reactions = get_post_reactions(db_client, status_id).await?;
-    prepare_undo_like(
+    let undo_like = prepare_undo_like(
         db_client,
         &config.instance(),
         &current_user,
         &post,
-        reaction_id,
-        reaction_has_deprecated_ap_id,
-    ).await?.save_and_enqueue(db_client).await?;
+        reaction_deleted.id,
+        reaction_deleted.has_deprecated_ap_id,
+    ).await?;
+    let undo_like_json = undo_like.activity().clone();
+    undo_like.save_and_enqueue(db_client).await?;
+    sync_conversation(
+        db_client,
+        &config.instance(),
+        post.expect_conversation(),
+        undo_like_json,
+        reaction_deleted.visibility,
+    ).await?;
 
     let base_url = get_request_base_url(connection_info);
     let media_server = ClientMediaServer::new(&config, &base_url);

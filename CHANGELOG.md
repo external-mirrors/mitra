@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Added support for listening on IPv6 address.
 - Sync activities in public conversations if `federation.fep_171b_public_enabled` is set to `true`.
+- Sync reactions in conversations.
 
 ### Changed
 

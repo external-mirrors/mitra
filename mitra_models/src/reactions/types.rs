@@ -40,6 +40,7 @@ pub struct ReactionDetailed {
     pub author: DbActorProfile,
     pub content: Option<String>,
     pub emoji: Option<CustomEmoji>,
+    pub visibility: Visibility,
 }
 
 impl ReactionDetailed {
@@ -73,6 +74,7 @@ impl ReactionDetailed {
             author: db_author,
             content: db_reaction.content,
             emoji: maybe_db_emoji,
+            visibility: db_reaction.visibility,
         };
         Ok(reaction)
     }
@@ -88,4 +90,10 @@ impl TryFrom<&Row> for ReactionDetailed {
         let reaction = Self::new(db_reaction, db_author, db_emoji)?;
         Ok(reaction)
     }
+}
+
+pub struct ReactionDeleted {
+    pub id: Uuid,
+    pub has_deprecated_ap_id: bool,
+    pub visibility: Visibility,
 }

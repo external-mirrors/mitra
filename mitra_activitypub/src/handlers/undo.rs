@@ -14,6 +14,7 @@ use mitra_models::{
     },
     posts::queries::{
         delete_repost,
+        get_post_by_id,
         get_remote_repost_by_activity_id,
     },
     profiles::queries::{
@@ -32,6 +33,7 @@ use mitra_models::{
 use mitra_validators::errors::ValidationError;
 
 use crate::{
+    builders::add_context_activity::sync_conversation,
     c2s::followers::remove_follower,
     identifiers::canonicalize_id,
     importers::{ActorIdResolver, ApClient},
@@ -98,7 +100,7 @@ pub async fn handle_undo(
         return handle_undo_follow(&ap_client, db_pool, activity).await;
     };
 
-    let undo: Undo = serde_json::from_value(activity)?;
+    let undo: Undo = serde_json::from_value(activity.clone())?;
     let canonical_actor_id = canonicalize_id(&undo.actor)?;
     let actor_profile = ActorIdResolver::default().only_remote().resolve(
         &ap_client,
@@ -141,11 +143,19 @@ pub async fn handle_undo(
             if reaction.author_id != actor_profile.id {
                 return Err(ValidationError("actor is not an author").into());
             };
+            let post = get_post_by_id(db_client, reaction.post_id).await?;
             delete_reaction(
                 db_client,
                 reaction.author_id,
                 reaction.post_id,
                 reaction.content.as_deref(),
+            ).await?;
+            sync_conversation(
+                db_client,
+                &ap_client.instance,
+                post.expect_conversation(),
+                activity,
+                reaction.visibility,
             ).await?;
             Ok(Some(Descriptor::object(LIKE)))
         },

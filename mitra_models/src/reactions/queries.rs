@@ -17,7 +17,12 @@ use crate::{
     },
 };
 
-use super::types::{Reaction, ReactionData, ReactionDetailed};
+use super::types::{
+    Reaction,
+    ReactionData,
+    ReactionDeleted,
+    ReactionDetailed,
+};
 
 pub async fn create_reaction(
     db_client: &mut impl DatabaseClient,
@@ -96,7 +101,7 @@ pub async fn delete_reaction(
     author_id: Uuid,
     post_id: Uuid,
     maybe_content: Option<&str>,
-) -> Result<(Uuid, bool), DatabaseError> {
+) -> Result<ReactionDeleted, DatabaseError> {
     let transaction = db_client.transaction().await?;
     let maybe_row = transaction.query_opt(
         "
@@ -105,16 +110,20 @@ pub async fn delete_reaction(
             AND ($3::text IS NULL AND content IS NULL OR content = $3)
         RETURNING
             post_reaction.id,
-            post_reaction.has_deprecated_ap_id
+            post_reaction.has_deprecated_ap_id,
+            post_reaction.visibility
         ",
         &[&author_id, &post_id, &maybe_content],
     ).await?;
     let row = maybe_row.ok_or(DatabaseError::NotFound("reaction"))?;
-    let reaction_id = row.try_get("id")?;
-    let reaction_has_deprecated_ap_id = row.try_get("has_deprecated_ap_id")?;
+    let reaction_deleted = ReactionDeleted {
+        id: row.try_get("id")?,
+        has_deprecated_ap_id: row.try_get("has_deprecated_ap_id")?,
+        visibility: row.try_get("visibility")?,
+    };
     update_reaction_count(&transaction, post_id, -1).await?;
     transaction.commit().await?;
-    Ok((reaction_id, reaction_has_deprecated_ap_id))
+    Ok(reaction_deleted)
 }
 
 pub async fn get_reactions(
@@ -284,14 +293,15 @@ mod tests {
             activity_id: None,
         };
         let reaction = create_reaction(db_client, reaction_data).await.unwrap();
-        let (reaction_id, reaction_has_deprecated_ap_id) = delete_reaction(
+        let reaction_deleted = delete_reaction(
             db_client,
             user_1.id,
             post.id,
             None,
         ).await.unwrap();
-        assert_eq!(reaction_id, reaction.id);
-        assert_eq!(reaction_has_deprecated_ap_id, false);
+        assert_eq!(reaction_deleted.id, reaction.id);
+        assert_eq!(reaction_deleted.has_deprecated_ap_id, false);
+        assert_eq!(reaction_deleted.visibility, Visibility::Direct);
     }
 
     #[tokio::test]
