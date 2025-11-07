@@ -77,7 +77,7 @@ use mitra_models::{
         delete_reaction,
         get_reactions,
     },
-    reactions::types::{Reaction, ReactionData},
+    reactions::types::{ReactionData, ReactionDetailed},
     users::types::Permission,
 };
 use mitra_services::{
@@ -676,7 +676,7 @@ async fn favourite(
         db_client, reaction_data,
     ).await {
         Ok(reaction) => {
-            let reaction = Reaction
+            let reaction = ReactionDetailed
                 ::new(reaction, current_user.profile.clone(), None)
                 .map_err(DatabaseError::from)?;
             post.reaction_count += 1;

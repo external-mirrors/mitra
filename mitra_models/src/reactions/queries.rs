@@ -17,12 +17,12 @@ use crate::{
     },
 };
 
-use super::types::{DbReaction, Reaction, ReactionData};
+use super::types::{Reaction, ReactionData, ReactionDetailed};
 
 pub async fn create_reaction(
     db_client: &mut impl DatabaseClient,
     reaction_data: ReactionData,
-) -> Result<DbReaction, DatabaseError> {
+) -> Result<Reaction, DatabaseError> {
     let transaction = db_client.transaction().await?;
     let reaction_id = generate_ulid();
     // Reactions to reposts are not allowed
@@ -58,7 +58,7 @@ pub async fn create_reaction(
         ],
     ).await?;
     let row = maybe_row.ok_or(DatabaseError::AlreadyExists("reaction"))?;
-    let reaction: DbReaction = row.try_get("post_reaction")?;
+    let reaction: Reaction = row.try_get("post_reaction")?;
     update_reaction_count(&transaction, reaction.post_id, 1).await?;
     let post_author = get_post_author(&transaction, reaction.post_id).await?;
     if post_author.is_local() && post_author.id != reaction.author_id {
@@ -77,7 +77,7 @@ pub async fn create_reaction(
 pub async fn get_remote_reaction_by_activity_id(
     db_client: &impl DatabaseClient,
     activity_id: &str,
-) -> Result<DbReaction, DatabaseError> {
+) -> Result<Reaction, DatabaseError> {
     let maybe_row = db_client.query_opt(
         "
         SELECT post_reaction
@@ -123,7 +123,7 @@ pub async fn get_reactions(
     current_user_id: Option<Uuid>,
     max_reaction_id: Option<Uuid>,
     limit: Option<u16>,
-) -> Result<Vec<Reaction>, DatabaseError> {
+) -> Result<Vec<ReactionDetailed>, DatabaseError> {
     let statement = format!(
         "
         SELECT
@@ -156,7 +156,7 @@ pub async fn get_reactions(
         ],
     ).await?;
     let reactions = rows.iter()
-        .map(Reaction::try_from)
+        .map(ReactionDetailed::try_from)
         .collect::<Result<_, _>>()?;
     Ok(reactions)
 }

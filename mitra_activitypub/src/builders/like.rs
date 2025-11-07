@@ -7,7 +7,7 @@ use mitra_models::{
     emojis::types::{CustomEmoji as DbCustomEmoji},
     posts::types::{PostDetailed, Visibility},
     profiles::types::DbActorProfile,
-    reactions::types::Reaction,
+    reactions::types::ReactionDetailed,
     users::types::User,
 };
 use mitra_services::media::MediaServer;
@@ -126,7 +126,7 @@ pub async fn prepare_like(
     media_server: &MediaServer,
     sender: &User,
     post: &PostDetailed,
-    reaction: &Reaction,
+    reaction: &ReactionDetailed,
 ) -> Result<OutgoingActivityJobData, DatabaseError> {
     let recipients = get_like_recipients(
         db_client,

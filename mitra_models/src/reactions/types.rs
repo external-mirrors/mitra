@@ -12,7 +12,7 @@ use crate::{
 
 #[derive(FromSql)]
 #[postgres(name = "post_reaction")]
-pub struct DbReaction {
+pub struct Reaction {
     pub id: Uuid,
     pub author_id: Uuid,
     pub post_id: Uuid,
@@ -35,16 +35,16 @@ pub struct ReactionData {
     pub activity_id: Option<String>,
 }
 
-pub struct Reaction {
+pub struct ReactionDetailed {
     pub id: Uuid,
     pub author: DbActorProfile,
     pub content: Option<String>,
     pub emoji: Option<CustomEmoji>,
 }
 
-impl Reaction {
+impl ReactionDetailed {
     pub fn new(
-        db_reaction: DbReaction,
+        db_reaction: Reaction,
         db_author: DbActorProfile,
         maybe_db_emoji: Option<CustomEmoji>,
     ) -> Result<Self, DatabaseTypeError> {
@@ -78,7 +78,7 @@ impl Reaction {
     }
 }
 
-impl TryFrom<&Row> for Reaction {
+impl TryFrom<&Row> for ReactionDetailed {
     type Error = DatabaseError;
 
     fn try_from(row: &Row) -> Result<Self, Self::Error> {

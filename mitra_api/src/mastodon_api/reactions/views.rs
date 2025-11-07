@@ -35,7 +35,7 @@ use mitra_models::{
             delete_reaction,
             get_reactions,
         },
-        types::{Reaction, ReactionData},
+        types::{ReactionData, ReactionDetailed},
     },
 };
 use mitra_services::media::MediaServer;
@@ -112,7 +112,7 @@ async fn create_reaction_view(
     };
     validate_reaction_data(&reaction_data)?;
     let reaction = create_reaction(db_client, reaction_data).await?;
-    let reaction = Reaction
+    let reaction = ReactionDetailed
         ::new(reaction, current_user.profile.clone(), maybe_emoji)
         .map_err(DatabaseError::from)?;
     post.reaction_count += 1;

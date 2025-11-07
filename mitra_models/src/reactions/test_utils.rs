@@ -7,7 +7,7 @@ use crate::{
 
 use super::{
     queries::create_reaction,
-    types::{DbReaction, ReactionData},
+    types::{Reaction, ReactionData},
 };
 
 pub async fn create_test_local_reaction(
@@ -15,7 +15,7 @@ pub async fn create_test_local_reaction(
     author_id: Uuid,
     post_id: Uuid,
     maybe_content: Option<&str>,
-) -> DbReaction {
+) -> Reaction {
     let reaction_data = ReactionData {
         author_id,
         post_id,
