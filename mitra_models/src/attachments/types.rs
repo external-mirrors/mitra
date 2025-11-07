@@ -13,7 +13,7 @@ pub enum AttachmentType {
 
 #[derive(Clone, FromSql)]
 #[postgres(name = "media_attachment")]
-pub struct DbMediaAttachment {
+pub struct MediaAttachment {
     pub id: Uuid,
     pub owner_id: Uuid,
     pub media: PartialMediaInfo,
@@ -23,7 +23,7 @@ pub struct DbMediaAttachment {
     pub created_at: DateTime<Utc>,
 }
 
-impl DbMediaAttachment {
+impl MediaAttachment {
     pub fn attachment_type(&self) -> AttachmentType {
         match self.media.media_type() {
             Some(media_type) => {

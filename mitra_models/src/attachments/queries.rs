@@ -6,14 +6,14 @@ use mitra_utils::id::generate_ulid;
 use crate::database::{DatabaseClient, DatabaseError};
 use crate::media::types::{DeletionQueue, MediaInfo};
 
-use super::types::DbMediaAttachment;
+use super::types::MediaAttachment;
 
 pub async fn create_attachment(
     db_client: &impl DatabaseClient,
     owner_id: Uuid,
     media_info: MediaInfo,
     description: Option<&str>,
-) -> Result<DbMediaAttachment, DatabaseError> {
+) -> Result<MediaAttachment, DatabaseError> {
     let attachment_id = generate_ulid();
     let inserted_row = db_client.query_one(
         "
@@ -41,7 +41,7 @@ pub async fn get_attachment(
     db_client: &impl DatabaseClient,
     owner_id: Uuid,
     attachment_id: Uuid,
-) -> Result<DbMediaAttachment, DatabaseError> {
+) -> Result<MediaAttachment, DatabaseError> {
     let maybe_row = db_client.query_opt(
         "
         SELECT media_attachment
@@ -60,7 +60,7 @@ pub async fn update_attachment(
     owner_id: Uuid,
     attachment_id: Uuid,
     description: Option<&str>,
-) -> Result<DbMediaAttachment, DatabaseError> {
+) -> Result<MediaAttachment, DatabaseError> {
     let maybe_row = db_client.query_opt(
         "
         UPDATE media_attachment
@@ -79,7 +79,7 @@ pub async fn set_attachment_ipfs_cid(
     db_client: &impl DatabaseClient,
     attachment_id: Uuid,
     ipfs_cid: &str,
-) -> Result<DbMediaAttachment, DatabaseError> {
+) -> Result<MediaAttachment, DatabaseError> {
     let maybe_row = db_client.query_opt(
         "
         UPDATE media_attachment
@@ -171,7 +171,7 @@ mod tests {
         let profile_2 =
             create_profile(db_client, profile_data_2).await.unwrap();
         let image_info = MediaInfo::png_for_test();
-        let DbMediaAttachment { id: attachment_id, .. } = create_attachment(
+        let MediaAttachment { id: attachment_id, .. } = create_attachment(
             db_client,
             profile_1.id,
             image_info.clone(),

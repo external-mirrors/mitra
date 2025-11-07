@@ -12,7 +12,7 @@ use uuid::Uuid;
 
 use mitra_models::attachments::types::{
     AttachmentType,
-    DbMediaAttachment,
+    MediaAttachment as DbMediaAttachment,
 };
 
 use crate::mastodon_api::media_server::ClientMediaServer;

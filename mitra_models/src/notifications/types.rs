@@ -3,7 +3,7 @@ use postgres_types::FromSql;
 use tokio_postgres::Row;
 use uuid::Uuid;
 
-use crate::attachments::types::DbMediaAttachment;
+use crate::attachments::types::MediaAttachment;
 use crate::conversations::types::Conversation;
 use crate::database::{
     int_enum::{int_enum_from_sql, int_enum_to_sql},
@@ -111,7 +111,7 @@ impl TryFrom<&Row> for Notification {
                 let db_post_author: DbActorProfile = row.try_get("post_author")?;
                 let db_conversation: Option<Conversation> = row.try_get("conversation")?;
                 let maybe_poll = row.try_get("poll")?;
-                let db_attachments: Vec<DbMediaAttachment> = row.try_get("attachments")?;
+                let db_attachments: Vec<MediaAttachment> = row.try_get("attachments")?;
                 let db_mentions: Vec<DbActorProfile> = row.try_get("mentions")?;
                 let db_tags: Vec<String> = row.try_get("tags")?;
                 let db_links: Vec<Uuid> = row.try_get("links")?;

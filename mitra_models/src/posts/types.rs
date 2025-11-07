@@ -15,7 +15,7 @@ use uuid::Uuid;
 
 use mitra_utils::languages::Language;
 
-use crate::attachments::types::DbMediaAttachment;
+use crate::attachments::types::MediaAttachment;
 use crate::conversations::types::Conversation;
 use crate::database::{
     int_enum::{int_enum_from_sql, int_enum_to_sql},
@@ -243,7 +243,7 @@ pub struct Post {
     pub reaction_count: i32,
     pub repost_count: i32,
     pub poll: Option<Poll>,
-    pub attachments: Vec<DbMediaAttachment>,
+    pub attachments: Vec<MediaAttachment>,
     pub mentions: Vec<DbActorProfile>,
     pub tags: Vec<String>,
     pub links: Vec<Uuid>,
@@ -270,7 +270,7 @@ impl Post {
         db_author: DbActorProfile,
         db_conversation: Option<Conversation>,
         db_poll: Option<Poll>,
-        db_attachments: Vec<DbMediaAttachment>,
+        db_attachments: Vec<MediaAttachment>,
         db_mentions: Vec<DbActorProfile>,
         db_tags: Vec<String>,
         db_links: Vec<Uuid>,
@@ -463,7 +463,7 @@ impl TryFrom<&Row> for Post {
         // Data from subqueries
         let db_conversation: Option<Conversation> = row.try_get("conversation")?;
         let maybe_poll: Option<Poll> = row.try_get("poll")?;
-        let db_attachments: Vec<DbMediaAttachment> = row.try_get("attachments")?;
+        let db_attachments: Vec<MediaAttachment> = row.try_get("attachments")?;
         let db_mentions: Vec<DbActorProfile> = row.try_get("mentions")?;
         let db_tags: Vec<String> = row.try_get("tags")?;
         let db_links: Vec<Uuid> = row.try_get("links")?;

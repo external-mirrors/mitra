@@ -5,7 +5,7 @@ use mitra_utils::id::generate_ulid;
 
 use crate::attachments::{
     queries::set_attachment_ipfs_cid,
-    types::DbMediaAttachment,
+    types::MediaAttachment,
 };
 use crate::conversations::{
     queries::{
@@ -51,7 +51,7 @@ async fn create_post_attachments(
     post_id: Uuid,
     author_id: Uuid,
     attachments: Vec<Uuid>,
-) -> Result<Vec<DbMediaAttachment>, DatabaseError> {
+) -> Result<Vec<MediaAttachment>, DatabaseError> {
     let attachments_rows = db_client.query(
         "
         UPDATE media_attachment
@@ -65,7 +65,7 @@ async fn create_post_attachments(
         // Some attachments were not found
         return Err(DatabaseError::NotFound("attachment"));
     };
-    let mut attachments: Vec<DbMediaAttachment> = attachments_rows.iter()
+    let mut attachments: Vec<MediaAttachment> = attachments_rows.iter()
         .map(|row| row.try_get("media_attachment"))
         .collect::<Result<_, _>>()?;
     attachments.sort_by(|a, b| a.created_at.cmp(&b.created_at));
