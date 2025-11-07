@@ -1187,36 +1187,42 @@ pub async fn get_thread(
     post_id: Uuid,
     current_user_id: Option<Uuid>,
 ) -> Result<Vec<PostDetailed>, DatabaseError> {
-    // TODO: limit recursion depth
     let statement = format!(
         "
         WITH RECURSIVE
-        ancestors (id, in_reply_to_id) AS (
-            SELECT post.id, post.in_reply_to_id FROM post
-            WHERE post.id = $post_id
-                AND post.repost_of_id IS NULL
-                AND {visibility_filter}
-            UNION ALL
-            SELECT post.id, post.in_reply_to_id FROM post
-            JOIN ancestors ON post.id = ancestors.in_reply_to_id
+        conversation_post (id, in_reply_to_id) AS (
+            SELECT post.id, post.in_reply_to_id
+            FROM post
+            -- NULL != NULL
+            WHERE post.conversation_id = (
+                SELECT post.conversation_id
+                FROM post
+                WHERE post.id = $post_id AND {visibility_filter}
+            )
         ),
-        thread (id, path) AS (
-            SELECT ancestors.id, ARRAY[ancestors.id] FROM ancestors
-            WHERE ancestors.in_reply_to_id IS NULL
+        tree_node (id, path) AS (
+            SELECT
+                conversation_post.id,
+                ARRAY[conversation_post.id]
+            FROM conversation_post
+            WHERE conversation_post.in_reply_to_id IS NULL
             UNION
-            SELECT post.id, array_append(thread.path, post.id) FROM post
-            JOIN thread ON post.in_reply_to_id = thread.id
+            SELECT
+                conversation_post.id,
+                array_append(tree_node.path, conversation_post.id)
+            FROM conversation_post
+            JOIN tree_node ON conversation_post.in_reply_to_id = tree_node.id
         )
         SELECT
             post, actor_profile,
             {post_subqueries}
         FROM post
-        JOIN thread ON post.id = thread.id
+        JOIN tree_node ON post.id = tree_node.id
         JOIN actor_profile ON post.author_id = actor_profile.id
         WHERE
             {visibility_filter}
             AND {mute_filter}
-        ORDER BY thread.path
+        ORDER BY tree_node.path
         ",
         post_subqueries=post_subqueries(),
         visibility_filter=build_visibility_filter(),
@@ -1244,7 +1250,8 @@ pub async fn get_thread(
     Ok(posts)
 }
 
-/// Returns all posts in a conversation
+/// Returns all posts in a conversation.
+/// Posts are in forward-chron order, muted authors are not excluded.
 pub async fn get_conversation_items(
     db_client: &impl DatabaseClient,
     conversation_id: Uuid,
