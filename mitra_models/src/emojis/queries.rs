@@ -13,7 +13,7 @@ use crate::{
     profiles::queries::update_emoji_caches,
 };
 
-use super::types::DbEmoji;
+use super::types::CustomEmoji;
 
 /// Creates emoji or updates emoji with matching `emoji_name` and `hostname`.
 /// `object_id` is replaced on update.
@@ -24,7 +24,7 @@ pub async fn create_or_update_remote_emoji(
     image: MediaInfo,
     object_id: &str,
     updated_at: DateTime<Utc>,
-) -> Result<(DbEmoji, DeletionQueue), DatabaseError> {
+) -> Result<(CustomEmoji, DeletionQueue), DatabaseError> {
     let transaction = db_client.transaction().await?;
     let maybe_detached_image_row = transaction.query_opt(
         "
@@ -70,7 +70,7 @@ pub async fn create_or_update_remote_emoji(
             &updated_at,
         ],
     ).await?;
-    let emoji: DbEmoji = row.try_get("emoji")?;
+    let emoji: CustomEmoji = row.try_get("emoji")?;
     update_emoji_caches(&transaction, emoji.id).await?;
     transaction.commit().await?;
     let deletion_queue = DeletionQueue {
@@ -85,7 +85,7 @@ pub async fn update_emoji(
     emoji_id: Uuid,
     image: MediaInfo,
     updated_at: DateTime<Utc>,
-) -> Result<(DbEmoji, DeletionQueue), DatabaseError> {
+) -> Result<(CustomEmoji, DeletionQueue), DatabaseError> {
     let transaction = db_client.transaction().await?;
     let detached_image_row = transaction.query_one(
         "
@@ -115,7 +115,7 @@ pub async fn update_emoji(
             &emoji_id,
         ],
     ).await?;
-    let emoji: DbEmoji = row.try_get("emoji")?;
+    let emoji: CustomEmoji = row.try_get("emoji")?;
     update_emoji_caches(&transaction, emoji.id).await?;
     transaction.commit().await?;
     let deletion_queue = DeletionQueue {
@@ -129,7 +129,7 @@ pub async fn create_or_update_local_emoji(
     db_client: &mut impl DatabaseClient,
     emoji_name: &str,
     image: MediaInfo,
-) -> Result<(DbEmoji, DeletionQueue), DatabaseError> {
+) -> Result<(CustomEmoji, DeletionQueue), DatabaseError> {
     let transaction = db_client.transaction().await?;
     let maybe_detached_image_row = transaction.query_opt(
         "
@@ -163,7 +163,7 @@ pub async fn create_or_update_local_emoji(
         ",
         &[&emoji_id, &emoji_name, &image],
     ).await?;
-    let emoji: DbEmoji = row.try_get("emoji")?;
+    let emoji: CustomEmoji = row.try_get("emoji")?;
     update_emoji_caches(&transaction, emoji.id).await?;
     transaction.commit().await?;
     let deletion_queue = DeletionQueue {
@@ -176,7 +176,7 @@ pub async fn create_or_update_local_emoji(
 pub async fn get_local_emoji_by_name(
     db_client: &impl DatabaseClient,
     emoji_name: &str,
-) -> Result<DbEmoji, DatabaseError> {
+) -> Result<CustomEmoji, DatabaseError> {
     let maybe_row = db_client.query_opt(
         "
         SELECT emoji
@@ -193,7 +193,7 @@ pub async fn get_local_emoji_by_name(
 pub async fn get_local_emojis_by_names(
     db_client: &impl DatabaseClient,
     names: &[String],
-) -> Result<Vec<DbEmoji>, DatabaseError> {
+) -> Result<Vec<CustomEmoji>, DatabaseError> {
     let rows = db_client.query(
         "
         SELECT emoji
@@ -210,7 +210,7 @@ pub async fn get_local_emojis_by_names(
 
 pub async fn get_local_emojis(
     db_client: &impl DatabaseClient,
-) -> Result<Vec<DbEmoji>, DatabaseError> {
+) -> Result<Vec<CustomEmoji>, DatabaseError> {
     let rows = db_client.query(
         "
         SELECT emoji
@@ -230,7 +230,7 @@ pub async fn get_emoji_by_name_and_hostname(
     db_client: &impl DatabaseClient,
     emoji_name: &str,
     hostname: &str,
-) -> Result<DbEmoji, DatabaseError> {
+) -> Result<CustomEmoji, DatabaseError> {
     let maybe_row = db_client.query_opt(
         "
         SELECT emoji
@@ -246,7 +246,7 @@ pub async fn get_emoji_by_name_and_hostname(
 pub async fn get_remote_emoji_by_object_id(
     db_client: &impl DatabaseClient,
     object_id: &str,
-) -> Result<DbEmoji, DatabaseError> {
+) -> Result<CustomEmoji, DatabaseError> {
     let maybe_row = db_client.query_opt(
         "
         SELECT emoji
@@ -271,7 +271,7 @@ pub async fn delete_emoji(
         &[&emoji_id],
     ).await?;
     let row = maybe_row.ok_or(DatabaseError::NotFound("emoji"))?;
-    let emoji: DbEmoji = row.try_get("emoji")?;
+    let emoji: CustomEmoji = row.try_get("emoji")?;
     update_emoji_caches(db_client, emoji.id).await?;
     let detached_files = emoji.image.into_file_name()
         .into_iter()

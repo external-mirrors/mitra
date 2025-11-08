@@ -9,7 +9,7 @@ use mitra_activitypub::identifiers::{
     profile_actor_url,
 };
 use mitra_models::{
-    emojis::types::DbEmoji,
+    emojis::types::{CustomEmoji as DbCustomEmoji},
     posts::types::{Post, Visibility},
     profiles::types::DbActorProfile,
 };
@@ -380,9 +380,9 @@ impl StatusPreview {
     pub fn new(
         media_server: &ClientMediaServer,
         content: String,
-        emojis: Vec<DbEmoji>,
+        db_emojis: Vec<DbCustomEmoji>,
     ) -> Self {
-        let emojis: Vec<CustomEmoji> = emojis.into_iter()
+        let emojis: Vec<CustomEmoji> = db_emojis.into_iter()
             .map(|emoji| CustomEmoji::from_db(media_server, emoji))
             .collect();
         Self { content, emojis }

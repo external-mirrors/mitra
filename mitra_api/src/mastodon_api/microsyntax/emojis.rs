@@ -6,7 +6,7 @@ use regex::{Captures, Regex};
 use mitra_models::{
     database::{DatabaseClient, DatabaseError},
     emojis::queries::get_local_emojis_by_names,
-    emojis::types::DbEmoji,
+    emojis::types::{CustomEmoji as DbCustomEmoji},
 };
 
 use super::parser::is_inside_code_block;
@@ -36,11 +36,11 @@ fn find_shortcodes(text: &str) -> Vec<String> {
 pub async fn find_emojis(
     db_client: &impl DatabaseClient,
     text: &str,
-) -> Result<HashMap<String, DbEmoji>, DatabaseError> {
+) -> Result<HashMap<String, DbCustomEmoji>, DatabaseError> {
     let emoji_names = find_shortcodes(text);
     // If shortcode doesn't exist in database, it is ignored
     let emojis = get_local_emojis_by_names(db_client, &emoji_names).await?;
-    let mut emoji_map: HashMap<String, DbEmoji> = HashMap::new();
+    let mut emoji_map: HashMap<String, DbCustomEmoji> = HashMap::new();
     for emoji in emojis {
         emoji_map.insert(emoji.emoji_name.clone(), emoji);
     };
@@ -50,7 +50,7 @@ pub async fn find_emojis(
 // Only replaces unicode emojis
 pub fn replace_emoji_shortcodes(
     text: &str,
-    custom_emoji_map: &HashMap<String, DbEmoji>,
+    custom_emoji_map: &HashMap<String, DbCustomEmoji>,
 ) -> String {
     let shortcode_re = Regex::new(SHORTCODE_SEARCH_RE)
         .expect("regexp should be valid");

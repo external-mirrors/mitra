@@ -1,6 +1,6 @@
 use serde::Serialize;
 
-use mitra_models::emojis::types::DbEmoji;
+use mitra_models::emojis::types::{CustomEmoji as DbCustomEmoji};
 
 use crate::mastodon_api::media_server::ClientMediaServer;
 
@@ -14,7 +14,10 @@ pub struct CustomEmoji {
 }
 
 impl CustomEmoji {
-    pub fn from_db(media_server: &ClientMediaServer, emoji: DbEmoji) -> Self {
+    pub fn from_db(
+        media_server: &ClientMediaServer,
+        emoji: DbCustomEmoji,
+    ) -> Self {
         let image_url = media_server.url_for(&emoji.image);
         Self {
             shortcode: emoji.emoji_name,

@@ -20,7 +20,7 @@ use crate::database::{
     DatabaseError,
     DatabaseTypeError,
 };
-use crate::emojis::types::DbEmoji;
+use crate::emojis::types::CustomEmoji;
 use crate::media::types::{DeletionQueue, PartialMediaInfo};
 use crate::notifications::helpers::{
     create_mention_notification,
@@ -161,7 +161,7 @@ async fn create_post_emojis(
     db_client: &impl DatabaseClient,
     post_id: Uuid,
     emojis: Vec<Uuid>,
-) -> Result<Vec<DbEmoji>, DatabaseError> {
+) -> Result<Vec<CustomEmoji>, DatabaseError> {
     let emojis_rows = db_client.query(
         "
         INSERT INTO post_emoji (post_id, emoji_id)

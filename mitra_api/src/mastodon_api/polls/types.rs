@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use mitra_models::{
-    emojis::types::DbEmoji,
+    emojis::types::{CustomEmoji as DbCustomEmoji},
     polls::types::{Poll as DbPoll},
 };
 
@@ -42,7 +42,7 @@ impl Poll {
     pub fn from_db(
         media_server: &ClientMediaServer,
         db_poll: &DbPoll,
-        emojis: Vec<DbEmoji>,
+        emojis: Vec<DbCustomEmoji>,
         maybe_voted_for: Option<Vec<String>>,
     ) -> Self {
         let mut options = vec![];

@@ -19,7 +19,7 @@ use mitra_models::{
         get_remote_emoji_by_object_id,
         update_emoji,
     },
-    emojis::types::DbEmoji,
+    emojis::types::{CustomEmoji as DbCustomEmoji},
     filter_rules::types::FilterAction,
     media::types::MediaInfo,
 };
@@ -66,7 +66,7 @@ pub async fn handle_emoji(
     db_pool: &DatabaseConnectionPool,
     moderation_domain: &Hostname,
     tag_value: JsonValue,
-) -> Result<Option<DbEmoji>, HandlerError> {
+) -> Result<Option<DbCustomEmoji>, HandlerError> {
     let emoji: Emoji = match serde_json::from_value(tag_value) {
         Ok(emoji) => emoji,
         Err(error) => {

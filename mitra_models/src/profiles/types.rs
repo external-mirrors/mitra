@@ -28,7 +28,7 @@ use crate::{
         DatabaseError,
         DatabaseTypeError,
     },
-    emojis::types::DbEmoji,
+    emojis::types::CustomEmoji,
     media::types::{MediaInfo, PartialMediaInfo},
 };
 
@@ -563,15 +563,15 @@ json_from_sql!(Aliases);
 json_to_sql!(Aliases);
 
 #[derive(Clone, Deserialize)]
-pub struct ProfileEmojis(Vec<DbEmoji>);
+pub struct ProfileEmojis(Vec<CustomEmoji>);
 
 impl ProfileEmojis {
-    pub fn inner(&self) -> &[DbEmoji] {
+    pub fn inner(&self) -> &[CustomEmoji] {
         let Self(emojis) = self;
         emojis
     }
 
-    pub fn into_inner(self) -> Vec<DbEmoji> {
+    pub fn into_inner(self) -> Vec<CustomEmoji> {
         let Self(emojis) = self;
         emojis
     }

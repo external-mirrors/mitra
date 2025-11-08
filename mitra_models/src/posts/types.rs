@@ -23,7 +23,7 @@ use crate::database::{
     DatabaseError,
     DatabaseTypeError,
 };
-use crate::emojis::types::DbEmoji;
+use crate::emojis::types::CustomEmoji;
 use crate::polls::types::{Poll, PollData};
 use crate::profiles::types::DbActorProfile;
 
@@ -176,7 +176,7 @@ pub struct DbPost {
 #[derive(Clone, Deserialize)]
 pub struct PostReaction {
     pub content: Option<String>,
-    pub emoji: Option<DbEmoji>,
+    pub emoji: Option<CustomEmoji>,
     pub count: i32,
 }
 
@@ -247,7 +247,7 @@ pub struct Post {
     pub mentions: Vec<DbActorProfile>,
     pub tags: Vec<String>,
     pub links: Vec<Uuid>,
-    pub emojis: Vec<DbEmoji>,
+    pub emojis: Vec<CustomEmoji>,
     pub reactions: Vec<PostReaction>,
     pub url: Option<String>,
     pub object_id: Option<String>,
@@ -274,7 +274,7 @@ impl Post {
         db_mentions: Vec<DbActorProfile>,
         db_tags: Vec<String>,
         db_links: Vec<Uuid>,
-        db_emojis: Vec<DbEmoji>,
+        db_emojis: Vec<CustomEmoji>,
         db_reactions: Vec<PostReaction>,
     ) -> Result<Self, DatabaseTypeError> {
         // Consistency checks
@@ -467,7 +467,7 @@ impl TryFrom<&Row> for Post {
         let db_mentions: Vec<DbActorProfile> = row.try_get("mentions")?;
         let db_tags: Vec<String> = row.try_get("tags")?;
         let db_links: Vec<Uuid> = row.try_get("links")?;
-        let db_emojis: Vec<DbEmoji> = row.try_get("emojis")?;
+        let db_emojis: Vec<CustomEmoji> = row.try_get("emojis")?;
         let db_reactions: Vec<PostReaction> = row.try_get("reactions")?;
         let post = Self::new(
             db_post,

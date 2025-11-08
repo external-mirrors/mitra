@@ -4,7 +4,7 @@ use uuid::Uuid;
 use mitra_config::Instance;
 use mitra_models::{
     database::{DatabaseClient, DatabaseError},
-    emojis::types::DbEmoji,
+    emojis::types::{CustomEmoji as DbCustomEmoji},
     posts::types::{Post, Visibility},
     profiles::types::DbActorProfile,
     reactions::types::Reaction,
@@ -78,7 +78,7 @@ fn build_like(
     object_id: &str,
     reaction_id: Uuid,
     maybe_reaction_content: Option<String>,
-    maybe_custom_emoji: Option<&DbEmoji>,
+    maybe_custom_emoji: Option<&DbCustomEmoji>,
     post_author_id: &str,
     post_visibility: Visibility,
     fep_c0e0_emoji_react_enabled: bool,

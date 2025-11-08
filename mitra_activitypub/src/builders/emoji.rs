@@ -1,7 +1,7 @@
 use chrono::{DateTime, Utc};
 use serde::Serialize;
 
-use mitra_models::emojis::types::DbEmoji;
+use mitra_models::emojis::types::{CustomEmoji as DbCustomEmoji};
 use mitra_services::media::MediaServer;
 
 use crate::{
@@ -33,7 +33,7 @@ pub struct Emoji {
 pub fn build_emoji(
     instance_uri: &str,
     media_server: &MediaServer,
-    db_emoji: &DbEmoji,
+    db_emoji: &DbCustomEmoji,
 ) -> Emoji {
     let (object_id, image_url) = if let Some(object_id) = &db_emoji.object_id {
         // Reconstructing remote object for reactions
@@ -70,7 +70,7 @@ mod tests {
     fn test_build_emoji() {
         let instance_uri = "https://social.example";
         let media_server = MediaServer::for_test(instance_uri);
-        let db_emoji = DbEmoji::local_for_test("test");
+        let db_emoji = DbCustomEmoji::local_for_test("test");
         let emoji = build_emoji(instance_uri, &media_server, &db_emoji);
         let emoji_value = serde_json::to_value(emoji).unwrap();
         let expected_value = json!({
@@ -91,7 +91,7 @@ mod tests {
     fn test_build_remote_emoji() {
         let instance_uri = "https://social.example";
         let media_server = MediaServer::for_test(instance_uri);
-        let db_emoji = DbEmoji::remote_for_test("test", "social.example");
+        let db_emoji = DbCustomEmoji::remote_for_test("test", "social.example");
         let emoji = build_emoji(instance_uri, &media_server, &db_emoji);
         let emoji_value = serde_json::to_value(emoji).unwrap();
         let expected_value = json!({

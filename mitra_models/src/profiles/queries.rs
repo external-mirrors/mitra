@@ -19,7 +19,7 @@ use crate::{
         DatabaseError,
         DatabaseTypeError,
     },
-    emojis::types::DbEmoji,
+    emojis::types::CustomEmoji,
     instances::queries::create_instance,
     media::types::{DeletionQueue, PartialMediaInfo},
     relationships::types::RelationshipType,
@@ -61,7 +61,7 @@ async fn create_profile_emojis(
     db_client: &impl DatabaseClient,
     profile_id: Uuid,
     emojis: Vec<Uuid>,
-) -> Result<Vec<DbEmoji>, DatabaseError> {
+) -> Result<Vec<CustomEmoji>, DatabaseError> {
     let emojis_rows = db_client.query(
         "
         INSERT INTO profile_emoji (profile_id, emoji_id)

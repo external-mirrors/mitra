@@ -7,7 +7,7 @@ use crate::media::types::PartialMediaInfo;
 
 #[derive(Clone, Deserialize, FromSql)]
 #[postgres(name = "emoji")]
-pub struct DbEmoji {
+pub struct CustomEmoji {
     pub id: Uuid,
     pub emoji_name: String,
     pub hostname: Option<String>,
@@ -16,7 +16,7 @@ pub struct DbEmoji {
     pub updated_at: DateTime<Utc>,
 }
 
-impl DbEmoji {
+impl CustomEmoji {
     pub fn shortcode(&self) -> String {
         format!(":{}:", self.emoji_name)
     }

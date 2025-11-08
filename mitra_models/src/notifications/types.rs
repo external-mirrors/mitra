@@ -10,7 +10,7 @@ use crate::database::{
     DatabaseError,
     DatabaseTypeError,
 };
-use crate::emojis::types::DbEmoji;
+use crate::emojis::types::CustomEmoji;
 use crate::posts::types::{DbPost, Post, PostReaction};
 use crate::profiles::types::DbActorProfile;
 
@@ -93,7 +93,7 @@ pub struct Notification {
     pub sender: DbActorProfile,
     pub post: Option<Post>,
     pub reaction_content: Option<String>,
-    pub reaction_emoji: Option<DbEmoji>,
+    pub reaction_emoji: Option<CustomEmoji>,
     pub event_type: EventType,
     pub created_at: DateTime<Utc>,
 }
@@ -115,7 +115,7 @@ impl TryFrom<&Row> for Notification {
                 let db_mentions: Vec<DbActorProfile> = row.try_get("mentions")?;
                 let db_tags: Vec<String> = row.try_get("tags")?;
                 let db_links: Vec<Uuid> = row.try_get("links")?;
-                let db_emojis: Vec<DbEmoji> = row.try_get("emojis")?;
+                let db_emojis: Vec<CustomEmoji> = row.try_get("emojis")?;
                 let db_reactions: Vec<PostReaction> = row.try_get("reactions")?;
                 let post = Post::new(
                     db_post,

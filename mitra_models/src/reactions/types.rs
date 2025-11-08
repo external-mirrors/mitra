@@ -5,7 +5,7 @@ use uuid::Uuid;
 
 use crate::{
     database::errors::{DatabaseError, DatabaseTypeError},
-    emojis::types::DbEmoji,
+    emojis::types::CustomEmoji,
     posts::types::Visibility,
     profiles::types::DbActorProfile,
 };
@@ -39,14 +39,14 @@ pub struct Reaction {
     pub id: Uuid,
     pub author: DbActorProfile,
     pub content: Option<String>,
-    pub emoji: Option<DbEmoji>,
+    pub emoji: Option<CustomEmoji>,
 }
 
 impl Reaction {
     pub fn new(
         db_reaction: DbReaction,
         db_author: DbActorProfile,
-        maybe_db_emoji: Option<DbEmoji>,
+        maybe_db_emoji: Option<CustomEmoji>,
     ) -> Result<Self, DatabaseTypeError> {
         // Consistency checks
         db_author.check_consistency()?;

@@ -6,7 +6,7 @@ use uuid::Uuid;
 use mitra_config::Instance;
 use mitra_models::{
     database::{DatabaseClient, DatabaseError},
-    emojis::types::DbEmoji,
+    emojis::types::{CustomEmoji as DbCustomEmoji},
     polls::types::PollResult,
     posts::{
         queries::get_post_by_id,
@@ -52,7 +52,7 @@ pub struct PostContent {
     pub hashtags: Vec<String>,
     pub links: Vec<Uuid>,
     pub linked: Vec<Post>,
-    pub emojis: Vec<DbEmoji>,
+    pub emojis: Vec<DbCustomEmoji>,
 }
 
 async fn parse_microsyntaxes(
@@ -157,7 +157,7 @@ pub async fn parse_content(
 pub async fn parse_poll_options(
     db_client: &impl DatabaseClient,
     poll_options: &[String],
-) -> Result<(Vec<PollResult>, Vec<DbEmoji>), DatabaseError> {
+) -> Result<(Vec<PollResult>, Vec<DbCustomEmoji>), DatabaseError> {
     let custom_emoji_map =
         find_emojis(db_client, &poll_options.join(" ")).await?;
     let results = poll_options.iter()

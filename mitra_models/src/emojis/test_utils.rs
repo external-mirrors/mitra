@@ -1,8 +1,8 @@
 use crate::media::types::{MediaInfo, PartialMediaInfo};
 
-use super::types::DbEmoji;
+use super::types::CustomEmoji;
 
-impl DbEmoji {
+impl CustomEmoji {
     pub fn local_for_test(name: &str) -> Self {
         Self {
             id: Default::default(),
