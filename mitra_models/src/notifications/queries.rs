@@ -7,7 +7,7 @@ use crate::posts::{
 };
 use crate::relationships::types::RelationshipType;
 
-use super::types::{EventType, Notification};
+use super::types::{EventType, NotificationDetailed};
 
 pub(super) async fn create_notification(
     db_client: &impl DatabaseClient,
@@ -44,7 +44,7 @@ pub async fn get_notifications(
     recipient_id: Uuid,
     max_id: Option<i32>,
     limit: u16,
-) -> Result<Vec<Notification>, DatabaseError> {
+) -> Result<Vec<NotificationDetailed>, DatabaseError> {
     let statement = format!(
         "
         SELECT
@@ -86,8 +86,8 @@ pub async fn get_notifications(
         &statement,
         &[&recipient_id, &max_id, &i64::from(limit)],
     ).await?;
-    let mut notifications: Vec<Notification> = rows.iter()
-        .map(Notification::try_from)
+    let mut notifications: Vec<_> = rows.iter()
+        .map(NotificationDetailed::try_from)
         .collect::<Result<_, _>>()?;
     add_related_posts(
         db_client,

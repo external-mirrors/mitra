@@ -2,7 +2,10 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 use mitra_models::{
-    notifications::types::{EventType, Notification},
+    notifications::types::{
+        EventType,
+        NotificationDetailed as DbNotificationDetailed,
+    },
     profiles::types::MentionPolicy,
     users::types::User,
 };
@@ -35,7 +38,7 @@ pub struct EmojiReaction {
 
 /// https://docs.joinmastodon.org/entities/notification/
 #[derive(Serialize)]
-pub struct ApiNotification {
+pub struct Notification {
     pub id: String,
 
     #[serde(rename = "type")]
@@ -54,11 +57,11 @@ pub struct ApiNotification {
     created_at: DateTime<Utc>,
 }
 
-impl ApiNotification {
+impl Notification {
     pub fn from_db(
         instance_uri: &str,
         media_server: &ClientMediaServer,
-        notification: Notification,
+        notification: DbNotificationDetailed,
     ) -> Self {
         let account = Account::from_profile(
             instance_uri,

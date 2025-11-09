@@ -78,7 +78,7 @@ int_enum_to_sql!(EventType);
 #[allow(dead_code)]
 #[derive(FromSql)]
 #[postgres(name = "notification")]
-struct DbNotification {
+struct Notification {
     id: i32,
     sender_id: Uuid,
     recipient_id: Uuid,
@@ -88,7 +88,7 @@ struct DbNotification {
     created_at: DateTime<Utc>,
 }
 
-pub struct Notification {
+pub struct NotificationDetailed {
     pub id: i32,
     pub sender: DbActorProfile,
     pub post: Option<PostDetailed>,
@@ -98,12 +98,12 @@ pub struct Notification {
     pub created_at: DateTime<Utc>,
 }
 
-impl TryFrom<&Row> for Notification {
+impl TryFrom<&Row> for NotificationDetailed {
 
     type Error = DatabaseError;
 
     fn try_from(row: &Row) -> Result<Self, Self::Error> {
-        let db_notification: DbNotification = row.try_get("notification")?;
+        let db_notification: Notification = row.try_get("notification")?;
         let db_sender: DbActorProfile = row.try_get("sender")?;
         let maybe_db_post: Option<Post> = row.try_get("post")?;
         let maybe_post = match maybe_db_post {

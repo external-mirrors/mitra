@@ -27,7 +27,7 @@ use crate::mastodon_api::{
     pagination::{get_last_item, get_paginated_response},
 };
 use super::types::{
-    ApiNotification,
+    Notification,
     NotificationQueryParams,
     NotificationPolicy,
 };
@@ -46,14 +46,14 @@ async fn get_notifications_view(
     let base_url = get_request_base_url(connection_info);
     let media_server = ClientMediaServer::new(&config, &base_url);
     let instance = config.instance();
-    let notifications: Vec<ApiNotification> = get_notifications(
+    let notifications: Vec<Notification> = get_notifications(
         db_client,
         current_user.id,
         query_params.max_id,
         query_params.limit.inner(),
     ).await?
         .into_iter()
-        .map(|item| ApiNotification::from_db(
+        .map(|item| Notification::from_db(
             instance.uri_str(),
             &media_server,
             item,
