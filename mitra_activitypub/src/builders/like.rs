@@ -5,7 +5,7 @@ use mitra_config::Instance;
 use mitra_models::{
     database::{DatabaseClient, DatabaseError},
     emojis::types::{CustomEmoji as DbCustomEmoji},
-    posts::types::{Post, Visibility},
+    posts::types::{PostDetailed, Visibility},
     profiles::types::DbActorProfile,
     reactions::types::Reaction,
     users::types::User,
@@ -111,7 +111,7 @@ fn build_like(
 pub async fn get_like_recipients(
     _db_client: &impl DatabaseClient,
     _instance_uri: &str,
-    post: &Post,
+    post: &PostDetailed,
 ) -> Result<Vec<Recipient>, DatabaseError> {
     let mut recipients = vec![];
     if let Some(remote_actor) = post.author.actor_json.as_ref() {
@@ -125,7 +125,7 @@ pub async fn prepare_like(
     instance: &Instance,
     media_server: &MediaServer,
     sender: &User,
-    post: &Post,
+    post: &PostDetailed,
     reaction: &Reaction,
 ) -> Result<OutgoingActivityJobData, DatabaseError> {
     let recipients = get_like_recipients(

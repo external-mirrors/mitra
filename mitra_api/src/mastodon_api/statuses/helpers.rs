@@ -11,7 +11,7 @@ use mitra_models::{
     posts::{
         queries::get_post_by_id,
         helpers::{add_related_posts, add_user_actions, can_link_post},
-        types::{Post, Visibility},
+        types::{PostDetailed as DbPostDetailed, Visibility},
     },
     relationships::queries::get_subscribers,
     users::types::User,
@@ -51,7 +51,7 @@ pub struct PostContent {
     pub mentions: Vec<Uuid>,
     pub hashtags: Vec<String>,
     pub links: Vec<Uuid>,
-    pub linked: Vec<Post>,
+    pub linked: Vec<DbPostDetailed>,
     pub emojis: Vec<DbCustomEmoji>,
 }
 
@@ -175,7 +175,7 @@ pub async fn prepare_mentions(
     db_client: &impl DatabaseClient,
     author_id: Uuid,
     visibility: Visibility,
-    maybe_in_reply_to: Option<&Post>,
+    maybe_in_reply_to: Option<&DbPostDetailed>,
     mut mentions: Vec<Uuid>,
 ) -> Result<Vec<Uuid>, DatabaseError> {
     // Extend mentions
@@ -212,7 +212,7 @@ pub async fn build_status(
     instance_uri: &str,
     media_server: &ClientMediaServer,
     user: Option<&User>,
-    mut post: Post,
+    mut post: DbPostDetailed,
 ) -> Result<Status, DatabaseError> {
     add_related_posts(db_client, vec![&mut post]).await?;
     if let Some(user) = user {
@@ -227,7 +227,7 @@ pub async fn build_status_list(
     instance_uri: &str,
     media_server: &ClientMediaServer,
     user: Option<&User>,
-    mut posts: Vec<Post>,
+    mut posts: Vec<DbPostDetailed>,
 ) -> Result<Vec<Status>, DatabaseError> {
     add_related_posts(db_client, posts.iter_mut().collect()).await?;
     if let Some(user) = user {
@@ -248,7 +248,7 @@ pub async fn get_paginated_status_list(
     media_server: &ClientMediaServer,
     request_uri: &Uri,
     maybe_current_user: Option<&User>,
-    posts: Vec<Post>,
+    posts: Vec<DbPostDetailed>,
     limit: &PageSize,
 ) -> Result<HttpResponse, DatabaseError> {
     let maybe_last_id = get_last_item(&posts, limit).map(|post| post.id);

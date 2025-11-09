@@ -6,7 +6,7 @@ use uuid::Uuid;
 use mitra_config::Instance;
 use mitra_models::{
     database::{DatabaseClient, DatabaseError},
-    posts::types::{Post, Visibility},
+    posts::types::{PostDetailed, Visibility},
     relationships::queries::get_followers,
     users::types::User,
 };
@@ -79,7 +79,7 @@ pub(super) fn get_announce_audience(
 
 pub fn build_announce(
     instance_uri: &str,
-    repost: &Post,
+    repost: &PostDetailed,
 ) -> Announce {
     let actor_id = local_actor_id(instance_uri, &repost.author.username);
     let post = repost
@@ -110,7 +110,7 @@ pub async fn get_announce_recipients(
     db_client: &impl DatabaseClient,
     current_user: &User,
     repost_visibility: Visibility,
-    post: &Post,
+    post: &PostDetailed,
 ) -> Result<Vec<Recipient>, DatabaseError> {
     let mut recipients = vec![];
     match repost_visibility {
@@ -134,7 +134,7 @@ pub async fn prepare_announce(
     db_client: &impl DatabaseClient,
     instance: &Instance,
     sender: &User,
-    repost: &Post,
+    repost: &PostDetailed,
 ) -> Result<OutgoingActivityJobData, DatabaseError> {
     assert_eq!(sender.id, repost.author.id);
     let post = repost
@@ -177,13 +177,13 @@ mod tests {
             post_author_id,
         );
         let post_id = "https://test.net/obj/123";
-        let post = Post {
+        let post = PostDetailed {
             author: post_author.clone(),
             object_id: Some(post_id.to_string()),
             ..Default::default()
         };
         let repost_author = DbActorProfile::local_for_test("announcer");
-        let repost = Post {
+        let repost = PostDetailed {
             author: repost_author,
             repost_of_id: Some(post.id),
             related_posts: Some(RelatedPosts {

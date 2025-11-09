@@ -9,7 +9,7 @@ use mitra_models::{
     database::{DatabaseClient, DatabaseError},
     posts::{
         queries::get_post_by_id,
-        types::{Post, Visibility},
+        types::{PostDetailed, Visibility},
     },
     users::{
         queries::get_user_by_id,
@@ -89,7 +89,7 @@ async fn prepare_add_context_activity(
     instance: &Instance,
     conversation_owner: &User,
     conversation_id: Uuid,
-    conversation_root: &Post,
+    conversation_root: &PostDetailed,
     conversation_audience: &str,
     conversation_activity: JsonValue,
 ) -> Result<OutgoingActivityJobData, DatabaseError> {

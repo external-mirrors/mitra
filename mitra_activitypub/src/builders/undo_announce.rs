@@ -4,7 +4,7 @@ use uuid::Uuid;
 use mitra_config::Instance;
 use mitra_models::{
     database::{DatabaseClient, DatabaseError},
-    posts::types::{Post, Repost, Visibility},
+    posts::types::{PostDetailed, Repost, Visibility},
     profiles::types::DbActorProfile,
     users::types::User,
 };
@@ -77,7 +77,7 @@ pub async fn prepare_undo_announce(
     db_client: &impl DatabaseClient,
     instance: &Instance,
     sender: &User,
-    post: &Post,
+    post: &PostDetailed,
     repost: &Repost,
 ) -> Result<OutgoingActivityJobData, DatabaseError> {
     assert_ne!(post.id, repost.id);

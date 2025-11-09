@@ -48,7 +48,7 @@ use mitra_models::{
         get_remote_post_by_object_id,
         set_pinned_flag,
     },
-    posts::types::Post,
+    posts::types::PostDetailed,
     profiles::queries::{
         get_profile_by_acct,
         get_remote_profile_by_actor_id,
@@ -501,7 +501,7 @@ pub async fn get_post_by_object_id(
     db_client: &impl DatabaseClient,
     instance_uri: &str,
     object_id: &CanonicalUri,
-) -> Result<Post, DatabaseError> {
+) -> Result<PostDetailed, DatabaseError> {
     let object_id = object_id.to_string();
     match parse_local_object_id(instance_uri, &object_id) {
         Ok(post_id) => {
@@ -524,7 +524,7 @@ pub async fn import_post(
     db_pool: &DatabaseConnectionPool,
     object_id: String,
     object_received: Option<AttributedObjectJson>,
-) -> Result<Post, HandlerError> {
+) -> Result<PostDetailed, HandlerError> {
     let instance = &ap_client.instance;
 
     let mut queue = vec![object_id]; // LIFO queue
@@ -648,7 +648,7 @@ pub async fn import_object(
     ap_client: &ApClient,
     db_pool: &DatabaseConnectionPool,
     object: JsonValue,
-) -> Result<Post, HandlerError> {
+) -> Result<PostDetailed, HandlerError> {
     let object: AttributedObjectJson = serde_json::from_value(object)?;
     let canonical_object_id = canonicalize_id(object.id())?;
     let maybe_post = get_remote_post_by_object_id(

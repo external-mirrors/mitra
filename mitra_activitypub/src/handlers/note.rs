@@ -43,9 +43,9 @@ use mitra_models::{
         helpers::can_link_post,
         queries::{create_post, update_post},
         types::{
-            Post,
             PostContext,
             PostCreateData,
+            PostDetailed,
             PostUpdateData,
             Visibility,
         },
@@ -826,7 +826,7 @@ pub(super) fn get_audience(
 fn get_object_visibility(
     author: &DbActorProfile,
     audience: &[String],
-    maybe_in_reply_to: Option<&Post>,
+    maybe_in_reply_to: Option<&PostDetailed>,
 ) -> (Visibility, PostContext) {
     let actor = author.expect_actor_data();
     if let Some(in_reply_to) = maybe_in_reply_to {
@@ -926,7 +926,7 @@ pub async fn create_remote_post(
     db_pool: &DatabaseConnectionPool,
     object: AttributedObjectJson,
     redirects: &HashMap<String, String>,
-) -> Result<Post, HandlerError> {
+) -> Result<PostDetailed, HandlerError> {
     let AttributedObjectJson { inner: object, value: object_value } = object;
     let canonical_object_id = canonicalize_id(&object.id)?;
 
@@ -1074,9 +1074,9 @@ pub async fn create_remote_post(
 pub async fn update_remote_post(
     ap_client: &ApClient,
     db_pool: &DatabaseConnectionPool,
-    post: Post,
+    post: PostDetailed,
     object: &AttributedObjectJson,
-) -> Result<Post, HandlerError> {
+) -> Result<PostDetailed, HandlerError> {
     assert!(!post.is_local());
     let AttributedObjectJson { inner: object, value: object_json } = object;
     let canonical_author_id = canonicalize_id(&object.attributed_to)?;
@@ -1352,7 +1352,7 @@ mod tests {
     #[test]
     fn test_get_object_visibility_public_reply() {
         let in_reply_to_author = DbActorProfile::local_for_test("test");
-        let in_reply_to = Post::local_for_test(&in_reply_to_author);
+        let in_reply_to = PostDetailed::local_for_test(&in_reply_to_author);
         let author =
             DbActorProfile::remote_for_test("test", "https://social.example");
         let audience = vec![AP_PUBLIC.to_string()];
@@ -1392,7 +1392,7 @@ mod tests {
         let in_reply_to_author = DbActorProfile::local_for_test("test");
         let in_reply_to_followers = "https://social.example/users/test/followers";
         let in_reply_to = {
-            let mut post = Post::local_for_test(&in_reply_to_author);
+            let mut post = PostDetailed::local_for_test(&in_reply_to_author);
             post.visibility = Visibility::Followers;
             if let Some(ref mut conversation) = post.conversation.as_mut() {
                 conversation.audience = Some(in_reply_to_followers.to_string());

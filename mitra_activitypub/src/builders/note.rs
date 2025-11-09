@@ -18,7 +18,7 @@ use mitra_models::{
     polls::queries::get_voters,
     posts::{
         queries::get_post_author,
-        types::{Post, Visibility},
+        types::{PostDetailed, Visibility},
     },
     profiles::types::WebfingerHostname,
     relationships::queries::{get_followers, get_subscribers},
@@ -173,7 +173,7 @@ pub fn build_note(
     instance_uri: &HttpUri,
     authority: &Authority,
     media_server: &MediaServer,
-    post: &Post,
+    post: &PostDetailed,
     with_context: bool,
 ) -> Note {
     let related_posts = post.expect_related_posts();
@@ -407,7 +407,7 @@ pub fn build_note(
 
 pub async fn get_note_recipients(
     db_client: &impl DatabaseClient,
-    post: &Post,
+    post: &PostDetailed,
 ) -> Result<Vec<Recipient>, DatabaseError> {
     let mut primary_audience = vec![];
     let mut secondary_audience = vec![];
@@ -490,7 +490,7 @@ mod tests {
     fn test_build_note() {
         let instance_uri = HttpUri::parse(INSTANCE_URI).unwrap();
         let author = DbActorProfile::local_for_test("author");
-        let post = Post {
+        let post = PostDetailed {
             author,
             tags: vec!["test".to_string()],
             related_posts: Some(RelatedPosts::default()),
@@ -556,7 +556,7 @@ mod tests {
             id: uuid!("837ffc24-dab2-414b-a9b8-fe47d0a463f2"),
             ..Conversation::for_test(uuid!("11fa64ff-b5a3-47bf-b23d-22b360581c3f"))
         };
-        let post = Post {
+        let post = PostDetailed {
             id: conversation.root_id,
             author,
             conversation: Some(conversation),
@@ -621,7 +621,7 @@ mod tests {
     #[test]
     fn test_build_note_followers_only() {
         let instance_uri = HttpUri::parse(INSTANCE_URI).unwrap();
-        let post = Post {
+        let post = PostDetailed {
             visibility: Visibility::Followers,
             related_posts: Some(RelatedPosts::default()),
             ..Default::default()
@@ -650,7 +650,7 @@ mod tests {
             "subscriber",
             subscriber_id,
         );
-        let post = Post {
+        let post = PostDetailed {
             visibility: Visibility::Subscribers,
             mentions: vec![subscriber],
             related_posts: Some(RelatedPosts::default()),
@@ -681,7 +681,7 @@ mod tests {
             "mention",
             mentioned_id,
         );
-        let post = Post {
+        let post = PostDetailed {
             visibility: Visibility::Direct,
             mentions: vec![mentioned],
             related_posts: Some(RelatedPosts::default()),
@@ -704,8 +704,8 @@ mod tests {
     #[test]
     fn test_build_note_with_local_parent() {
         let instance_uri = HttpUri::parse(INSTANCE_URI).unwrap();
-        let parent = Post::default();
-        let post = Post {
+        let parent = PostDetailed::default();
+        let post = PostDetailed {
             in_reply_to_id: Some(parent.id),
             related_posts: Some(RelatedPosts {
                 in_reply_to: Some(Box::new(parent.clone())),
@@ -747,12 +747,12 @@ mod tests {
                 ..Default::default()
             },
         );
-        let parent = Post {
+        let parent = PostDetailed {
             author: parent_author.clone(),
             object_id: Some("https://test.net/obj/123".to_string()),
             ..Default::default()
         };
-        let post = Post {
+        let post = PostDetailed {
             in_reply_to_id: Some(parent.id),
             mentions: vec![parent_author],
             related_posts: Some(RelatedPosts {
@@ -805,16 +805,16 @@ mod tests {
             id: uuid!("837ffc24-dab2-414b-a9b8-fe47d0a463f2"),
             ..Conversation::for_test(Default::default())
         };
-        let parent = Post {
+        let parent = PostDetailed {
             id: conversation.root_id,
             conversation: Some(conversation),
             visibility: Visibility::Followers,
-            ..Post::remote_for_test(
+            ..PostDetailed::remote_for_test(
                 &parent_author,
                 "https://social.example/obj/123",
             )
         };
-        let post = Post {
+        let post = PostDetailed {
             id: uuid!("11fa64ff-b5a3-47bf-b23d-22b360581c3f"),
             conversation: parent.conversation.clone(),
             in_reply_to_id: Some(parent.id),
@@ -884,7 +884,7 @@ mod tests {
             id: uuid!("837ffc24-dab2-414b-a9b8-fe47d0a463f2"),
             ..Conversation::for_test(uuid!("11fa64ff-b5a3-47bf-b23d-22b360581c3f"))
         };
-        let post = Post {
+        let post = PostDetailed {
             id: conversation.root_id,
             author: author.profile.clone(),
             conversation: Some(conversation),

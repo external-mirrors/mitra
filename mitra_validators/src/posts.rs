@@ -2,9 +2,9 @@ use uuid::Uuid;
 
 use mitra_models::{
     posts::types::{
-        Post,
         PostContext,
         PostCreateData,
+        PostDetailed,
         PostUpdateData,
         Visibility,
     },
@@ -189,7 +189,7 @@ pub fn validate_local_post_links(
 }
 
 pub fn validate_reply(
-    in_reply_to: &Post,
+    in_reply_to: &PostDetailed,
     author_id: Uuid,
     visibility: Visibility,
     mentions: &[Uuid],
@@ -294,7 +294,7 @@ mod tests {
     fn test_validate_reply_wrong_visibility() {
         let author = DbActorProfile::local_for_test("author");
         let reply_author = DbActorProfile::local_for_test("author");
-        let in_reply_to = Post {
+        let in_reply_to = PostDetailed {
             author: author.clone(),
             visibility: Visibility::Direct,
             mentions: vec![author.clone()],
@@ -315,7 +315,7 @@ mod tests {
         let profile_2 = DbActorProfile::local_for_test("2");
         let profile_3 = DbActorProfile::local_for_test("3");
         let profile_4 = DbActorProfile::local_for_test("4");
-        let in_reply_to = Post {
+        let in_reply_to = PostDetailed {
             author: profile_1.clone(),
             visibility: Visibility::Direct,
             mentions: vec![

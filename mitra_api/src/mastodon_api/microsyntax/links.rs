@@ -9,7 +9,7 @@ use mitra_models::{
     database::{DatabaseClient, DatabaseError},
     posts::{
         helpers::can_link_post,
-        types::Post,
+        types::PostDetailed,
     },
 };
 use mitra_validators::posts::LINK_LIMIT;
@@ -42,9 +42,9 @@ pub async fn find_linked_posts(
     db_client: &impl DatabaseClient,
     instance_uri: &str,
     text: &str,
-) -> Result<IndexMap<String, Post>, DatabaseError> {
+) -> Result<IndexMap<String, PostDetailed>, DatabaseError> {
     let links = find_object_links(text);
-    let mut link_map: IndexMap<String, Post> = IndexMap::new();
+    let mut link_map: IndexMap<String, PostDetailed> = IndexMap::new();
     let mut counter = 0;
     for url in links {
         if counter > LINK_LIMIT {
@@ -77,7 +77,7 @@ pub async fn find_linked_posts(
 }
 
 pub fn replace_object_links(
-    link_map: &IndexMap<String, Post>,
+    link_map: &IndexMap<String, PostDetailed>,
     text: &str,
 ) -> String {
     let mention_re = Regex::new(OBJECT_LINK_SEARCH_RE)
@@ -105,7 +105,7 @@ pub fn replace_object_links(
 pub fn insert_quote(
     instance_uri: &str,
     content: &str,
-    quote_of: &Post,
+    quote_of: &PostDetailed,
 ) -> String {
     format!(
         r#"{content}<p>RE: <a href="{0}">{0}</a></p>"#,
@@ -135,8 +135,8 @@ mod tests {
     #[test]
     fn test_replace_object_links() {
         let mut link_map = IndexMap::new();
-        link_map.insert("https://example.org/1".to_string(), Post::default());
-        link_map.insert("https://example.org/2".to_string(), Post::default());
+        link_map.insert("https://example.org/1".to_string(), PostDetailed::default());
+        link_map.insert("https://example.org/2".to_string(), PostDetailed::default());
         let result = replace_object_links(&link_map, TEXT_WITH_OBJECT_LINKS);
         let expected_result = concat!(
             r#"test <a href="https://example.org/1">https://example.org/1</a> link "#,

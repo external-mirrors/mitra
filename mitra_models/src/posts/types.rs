@@ -149,7 +149,7 @@ int_enum_to_sql!(Visibility);
 
 #[derive(FromSql)]
 #[postgres(name = "post")]
-pub struct DbPost {
+pub struct Post {
     pub id: Uuid,
     pub author_id: Uuid,
     pub content: String,
@@ -195,13 +195,13 @@ pub struct PostActions {
 
 #[derive(Clone, Default)]
 pub struct RelatedPosts {
-    pub in_reply_to: Option<Box<Post>>,
-    pub repost_of: Option<Box<Post>>,
-    pub linked: Vec<Post>,
+    pub in_reply_to: Option<Box<PostDetailed>>,
+    pub repost_of: Option<Box<PostDetailed>>,
+    pub linked: Vec<PostDetailed>,
 }
 
 impl RelatedPosts {
-    pub fn as_vec(&self) -> Vec<&Post> {
+    pub fn as_vec(&self) -> Vec<&PostDetailed> {
         let mut posts = vec![];
         if let Some(in_reply_to) = self.in_reply_to.as_deref() {
             posts.push(in_reply_to);
@@ -213,7 +213,7 @@ impl RelatedPosts {
         posts
     }
 
-    pub fn as_vec_mut(&mut self) -> Vec<&mut Post> {
+    pub fn as_vec_mut(&mut self) -> Vec<&mut PostDetailed> {
         let mut posts = vec![];
         if let Some(in_reply_to) = self.in_reply_to.as_deref_mut() {
             posts.push(in_reply_to);
@@ -227,7 +227,7 @@ impl RelatedPosts {
 }
 
 #[derive(Clone)]
-pub struct Post {
+pub struct PostDetailed {
     pub id: Uuid,
     pub author: DbActorProfile,
     pub content: String,
@@ -263,10 +263,10 @@ pub struct Post {
     pub parent_visible: bool,
 }
 
-impl Post {
+impl PostDetailed {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
-        db_post: DbPost,
+        db_post: Post,
         db_author: DbActorProfile,
         db_conversation: Option<Conversation>,
         db_poll: Option<Poll>,
@@ -416,9 +416,9 @@ impl Post {
 }
 
 #[cfg(any(test, feature = "test-utils"))]
-impl Default for Post {
+impl Default for PostDetailed {
     fn default() -> Self {
-        // TODO: use Post::new()
+        // TODO: use PostDetailed::new()
         let post_id = Uuid::new_v4();
         Self {
             id: post_id,
@@ -454,11 +454,11 @@ impl Default for Post {
     }
 }
 
-impl TryFrom<&Row> for Post {
+impl TryFrom<&Row> for PostDetailed {
     type Error = DatabaseError;
 
     fn try_from(row: &Row) -> Result<Self, Self::Error> {
-        let db_post: DbPost = row.try_get("post")?;
+        let db_post: Post = row.try_get("post")?;
         let db_profile: DbActorProfile = row.try_get("actor_profile")?;
         // Data from subqueries
         let db_conversation: Option<Conversation> = row.try_get("conversation")?;
@@ -497,7 +497,7 @@ impl TryFrom<&Row> for Repost {
     type Error = DatabaseError;
 
     fn try_from(row: &Row) -> Result<Self, Self::Error> {
-        let db_post: DbPost = row.try_get("post")?;
+        let db_post: Post = row.try_get("post")?;
         let Some(repost_of_id) = db_post.repost_of_id else {
             return Err(DatabaseTypeError.into());
         };

@@ -11,7 +11,7 @@ use uuid::Uuid;
 
 use mitra_models::{
     database::DatabaseTypeError,
-    posts::types::Post,
+    posts::types::PostDetailed,
     profiles::types::{
         DbActor,
         DbActorProfile,
@@ -199,7 +199,7 @@ pub fn parse_local_activity_id(
     Ok(internal_activity_id)
 }
 
-pub fn post_object_id(instance_uri: &str, post: &Post) -> String {
+pub fn post_object_id(instance_uri: &str, post: &PostDetailed) -> String {
     match post.object_id {
         Some(ref object_id) => object_id.clone(),
         None => local_object_id(instance_uri, post.id),
@@ -272,7 +272,7 @@ pub fn compatible_profile_actor_id(
     }
 }
 
-pub fn compatible_post_object_id(instance_uri: &str, post: &Post) -> String {
+pub fn compatible_post_object_id(instance_uri: &str, post: &PostDetailed) -> String {
     match post.object_id {
         Some(ref object_id) => {
             let actor_data = post.author.expect_actor_data();
@@ -429,7 +429,7 @@ mod tests {
             "test",
             "https://social.example/users/1",
         );
-        let post = Post::remote_for_test(
+        let post = PostDetailed::remote_for_test(
             &profile,
             "https://social.example/posts/1",
         );
@@ -450,7 +450,7 @@ mod tests {
                 ..Default::default()
             },
         );
-        let post = Post::remote_for_test(
+        let post = PostDetailed::remote_for_test(
             &profile,
             "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/posts/1",
         );

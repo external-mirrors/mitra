@@ -33,7 +33,7 @@ use mitra_models::{
     posts::{
         queries::search_posts,
         helpers::{can_view_post, get_local_post_by_id},
-        types::Post,
+        types::PostDetailed,
     },
     profiles::queries::{
         search_profiles,
@@ -202,7 +202,7 @@ async fn find_post_by_url(
     ap_client: &ApClient,
     db_pool: &DatabaseConnectionPool,
     url: &str,
-) -> Result<Option<Post>, DatabaseError> {
+) -> Result<Option<PostDetailed>, DatabaseError> {
     let maybe_post = match parse_local_object_id(ap_client.instance.uri_str(), url) {
         Ok(post_id) => {
             // Local URL
@@ -256,7 +256,7 @@ async fn find_profile_by_url(
     Ok(maybe_profile)
 }
 
-type SearchResults = (Vec<DbActorProfile>, Vec<Post>, Vec<String>);
+type SearchResults = (Vec<DbActorProfile>, Vec<PostDetailed>, Vec<String>);
 
 pub async fn search(
     config: &Config,
@@ -382,7 +382,7 @@ pub async fn search_posts_only(
     search_query: &str,
     limit: u16,
     offset: u16,
-) -> Result<Vec<Post>, DatabaseError> {
+) -> Result<Vec<PostDetailed>, DatabaseError> {
     search_posts(
         db_client,
         search_query,

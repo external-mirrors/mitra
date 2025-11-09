@@ -36,10 +36,10 @@ use crate::relationships::types::RelationshipType;
 
 use super::types::{
     DbLanguage,
-    DbPost,
     Post,
     PostContext,
     PostCreateData,
+    PostDetailed,
     PostReaction,
     PostUpdateData,
     Repost,
@@ -207,7 +207,7 @@ pub async fn create_post(
     db_client: &mut impl DatabaseClient,
     author_id: Uuid,
     post_data: PostCreateData,
-) -> Result<Post, DatabaseError> {
+) -> Result<PostDetailed, DatabaseError> {
     let transaction = db_client.transaction().await?;
     let post_id = post_data.id.unwrap_or_else(generate_ulid);
 
@@ -286,7 +286,7 @@ pub async fn create_post(
     ).await.map_err(catch_unique_violation("post"))?;
     // Return NotFound error if reply/repost is not allowed
     let post_row = maybe_post_row.ok_or(DatabaseError::NotFound("post"))?;
-    let db_post: DbPost = post_row.try_get("post")?;
+    let db_post: Post = post_row.try_get("post")?;
 
     // Create related objects
     let db_attachments = create_post_attachments(
@@ -379,7 +379,7 @@ pub async fn create_post(
         };
     };
     // Construct post object
-    let post = Post::new(
+    let post = PostDetailed::new(
         db_post,
         author,
         maybe_conversation,
@@ -399,7 +399,7 @@ pub async fn update_post(
     db_client: &mut impl DatabaseClient,
     post_id: Uuid,
     post_data: PostUpdateData,
-) -> Result<(Post, DeletionQueue), DatabaseError> {
+) -> Result<(PostDetailed, DeletionQueue), DatabaseError> {
     let transaction = db_client.transaction().await?;
     // Reposts and immutable posts can't be updated
     let maybe_row = transaction.query_opt(
@@ -428,7 +428,7 @@ pub async fn update_post(
         ],
     ).await?;
     let row = maybe_row.ok_or(DatabaseError::NotFound("post"))?;
-    let db_post: DbPost = row.try_get("post")?;
+    let db_post: Post = row.try_get("post")?;
 
     // Get conversation details
     let conversation = get_conversation(
@@ -538,7 +538,7 @@ pub async fn update_post(
 
     // Construct post object
     let author = get_post_author(&transaction, db_post.id).await?;
-    let post = Post::new(
+    let post = PostDetailed::new(
         db_post,
         author,
         Some(conversation),
@@ -726,7 +726,7 @@ pub async fn get_home_timeline(
     current_user_id: Uuid,
     max_post_id: Option<Uuid>,
     limit: u16,
-) -> Result<Vec<Post>, DatabaseError> {
+) -> Result<Vec<PostDetailed>, DatabaseError> {
     // Select posts from follows, subscriptions,
     // posts where current user is mentioned
     // and user's own posts.
@@ -822,8 +822,8 @@ pub async fn get_home_timeline(
         limit=limit,
     )?;
     let rows = db_client.query(query.sql(), query.parameters()).await?;
-    let posts: Vec<Post> = rows.iter()
-        .map(Post::try_from)
+    let posts = rows.iter()
+        .map(PostDetailed::try_from)
         .collect::<Result<_, _>>()?;
     Ok(posts)
 }
@@ -834,7 +834,7 @@ pub async fn get_public_timeline(
     only_local: bool,
     max_post_id: Option<Uuid>,
     limit: u16,
-) -> Result<Vec<Post>, DatabaseError> {
+) -> Result<Vec<PostDetailed>, DatabaseError> {
     let mut filter = "".to_owned();
     if only_local {
         filter += "(actor_profile.user_id IS NOT NULL
@@ -869,8 +869,8 @@ pub async fn get_public_timeline(
         limit=limit,
     )?;
     let rows = db_client.query(query.sql(), query.parameters()).await?;
-    let posts: Vec<Post> = rows.iter()
-        .map(Post::try_from)
+    let posts = rows.iter()
+        .map(PostDetailed::try_from)
         .collect::<Result<_, _>>()?;
     Ok(posts)
 }
@@ -880,7 +880,7 @@ pub async fn get_direct_timeline(
     current_user_id: Uuid,
     max_post_id: Option<Uuid>,
     limit: u16,
-) -> Result<Vec<Post>, DatabaseError> {
+) -> Result<Vec<PostDetailed>, DatabaseError> {
     let statement = format!(
         "
         SELECT
@@ -914,8 +914,8 @@ pub async fn get_direct_timeline(
         limit=limit,
     )?;
     let rows = db_client.query(query.sql(), query.parameters()).await?;
-    let posts: Vec<Post> = rows.iter()
-        .map(Post::try_from)
+    let posts = rows.iter()
+        .map(PostDetailed::try_from)
         .collect::<Result<_, _>>()?;
     Ok(posts)
 }
@@ -923,7 +923,7 @@ pub async fn get_direct_timeline(
 pub(super) async fn get_related_posts(
     db_client: &impl DatabaseClient,
     posts_ids: Vec<Uuid>,
-) -> Result<Vec<Post>, DatabaseError> {
+) -> Result<Vec<PostDetailed>, DatabaseError> {
     // WARNING: read permissions are not checked here.
     // Replies: scope widening is not allowed for local posts,
     // but allowed for remote posts.
@@ -962,8 +962,8 @@ pub(super) async fn get_related_posts(
         &statement,
         &[&posts_ids],
     ).await?;
-    let posts: Vec<Post> = rows.iter()
-        .map(Post::try_from)
+    let posts = rows.iter()
+        .map(PostDetailed::try_from)
         .collect::<Result<_, _>>()?;
     Ok(posts)
 }
@@ -979,7 +979,7 @@ pub async fn get_posts_by_author(
     only_media: bool,
     max_post_id: Option<Uuid>,
     limit: u16,
-) -> Result<Vec<Post>, DatabaseError> {
+) -> Result<Vec<PostDetailed>, DatabaseError> {
     let mut condition = format!(
         "post.author_id = $profile_id
         AND {visibility_filter}
@@ -1024,8 +1024,8 @@ pub async fn get_posts_by_author(
         limit=limit,
     )?;
     let rows = db_client.query(query.sql(), query.parameters()).await?;
-    let posts: Vec<Post> = rows.iter()
-        .map(Post::try_from)
+    let posts = rows.iter()
+        .map(PostDetailed::try_from)
         .collect::<Result<_, _>>()?;
     Ok(posts)
 }
@@ -1036,7 +1036,7 @@ pub async fn get_posts_by_tag(
     current_user_id: Option<Uuid>,
     max_post_id: Option<Uuid>,
     limit: u16,
-) -> Result<Vec<Post>, DatabaseError> {
+) -> Result<Vec<PostDetailed>, DatabaseError> {
     let tag_name = tag_name.to_lowercase();
     let statement = format!(
         "
@@ -1069,8 +1069,8 @@ pub async fn get_posts_by_tag(
         limit=limit,
     )?;
     let rows = db_client.query(query.sql(), query.parameters()).await?;
-    let posts: Vec<Post> = rows.iter()
-        .map(Post::try_from)
+    let posts = rows.iter()
+        .map(PostDetailed::try_from)
         .collect::<Result<_, _>>()?;
     Ok(posts)
 }
@@ -1081,7 +1081,7 @@ pub async fn get_custom_feed_timeline(
     current_user_id: Uuid,
     max_post_id: Option<Uuid>,
     limit: u16,
-) -> Result<Vec<Post>, DatabaseError> {
+) -> Result<Vec<PostDetailed>, DatabaseError> {
     // show_replies / show_reposts settings are ignored
     let statement = format!(
         "
@@ -1145,8 +1145,8 @@ pub async fn get_custom_feed_timeline(
         limit=limit,
     )?;
     let rows = db_client.query(query.sql(), query.parameters()).await?;
-    let posts: Vec<Post> = rows.iter()
-        .map(Post::try_from)
+    let posts = rows.iter()
+        .map(PostDetailed::try_from)
         .collect::<Result<_, _>>()?;
     Ok(posts)
 }
@@ -1155,7 +1155,7 @@ pub async fn get_custom_feed_timeline(
 pub async fn get_post_by_id(
     db_client: &impl DatabaseClient,
     post_id: Uuid,
-) -> Result<Post, DatabaseError> {
+) -> Result<PostDetailed, DatabaseError> {
     let statement = format!(
         "
         SELECT
@@ -1173,7 +1173,7 @@ pub async fn get_post_by_id(
         &[&post_id],
     ).await?;
     let post = match maybe_row {
-        Some(row) => Post::try_from(&row)?,
+        Some(row) => PostDetailed::try_from(&row)?,
         None => return Err(DatabaseError::NotFound("post")),
     };
     Ok(post)
@@ -1185,7 +1185,7 @@ pub async fn get_thread(
     db_client: &impl DatabaseClient,
     post_id: Uuid,
     current_user_id: Option<Uuid>,
-) -> Result<Vec<Post>, DatabaseError> {
+) -> Result<Vec<PostDetailed>, DatabaseError> {
     // TODO: limit recursion depth
     let statement = format!(
         "
@@ -1229,9 +1229,9 @@ pub async fn get_thread(
     let rows = db_client.query(query.sql(), query.parameters()).await?;
     let mut posts = vec![];
     for row in rows {
-        let mut post = Post::try_from(&row)?;
+        let mut post = PostDetailed::try_from(&row)?;
         if let Some(in_reply_to_id) = post.in_reply_to_id {
-            if !posts.iter().any(|item: &Post| item.id == in_reply_to_id) {
+            if !posts.iter().any(|item: &PostDetailed| item.id == in_reply_to_id) {
                 post.parent_visible = false;
             };
         };
@@ -1248,7 +1248,7 @@ pub async fn get_conversation_items(
     db_client: &impl DatabaseClient,
     conversation_id: Uuid,
     current_user_id: Option<Uuid>,
-) -> Result<(Post, Vec<Post>), DatabaseError> {
+) -> Result<(PostDetailed, Vec<PostDetailed>), DatabaseError> {
     let statement = format!(
         "
         SELECT
@@ -1270,8 +1270,8 @@ pub async fn get_conversation_items(
         current_user_id=current_user_id,
     )?;
     let rows = db_client.query(query.sql(), query.parameters()).await?;
-    let posts: Vec<Post> = rows.iter()
-        .map(Post::try_from)
+    let posts: Vec<_> = rows.iter()
+        .map(PostDetailed::try_from)
         .collect::<Result<_, _>>()?;
     let root = match &posts[..] {
         [] => return Err(DatabaseError::NotFound("conversation")),
@@ -1322,7 +1322,7 @@ pub async fn get_conversation_participants(
 pub async fn get_remote_post_by_object_id(
     db_client: &impl DatabaseClient,
     object_id: &str,
-) -> Result<Post, DatabaseError> {
+) -> Result<PostDetailed, DatabaseError> {
     let statement = format!(
         "
         SELECT
@@ -1339,14 +1339,14 @@ pub async fn get_remote_post_by_object_id(
         &[&object_id],
     ).await?;
     let row = maybe_row.ok_or(DatabaseError::NotFound("post"))?;
-    let post = Post::try_from(&row)?;
+    let post = PostDetailed::try_from(&row)?;
     Ok(post)
 }
 
 pub async fn get_remote_repost_by_activity_id(
     db_client: &impl DatabaseClient,
     activity_id: &str,
-) -> Result<Post, DatabaseError> {
+) -> Result<PostDetailed, DatabaseError> {
     let statement = format!(
         "
         SELECT
@@ -1363,7 +1363,7 @@ pub async fn get_remote_repost_by_activity_id(
         &[&activity_id],
     ).await?;
     let row = maybe_row.ok_or(DatabaseError::NotFound("post"))?;
-    let repost = Post::try_from(&row)?;
+    let repost = PostDetailed::try_from(&row)?;
     Ok(repost)
 }
 
@@ -1820,7 +1820,7 @@ pub async fn delete_post(
         &[&post_id],
     ).await?;
     let post_row = maybe_post_row.ok_or(DatabaseError::NotFound("post"))?;
-    let db_post: DbPost = post_row.try_get("post")?;
+    let db_post: Post = post_row.try_get("post")?;
     // Update counters
     if let Some(parent_id) = db_post.in_reply_to_id {
         update_reply_count(&transaction, parent_id, -1).await?;
@@ -1846,7 +1846,7 @@ pub async fn delete_repost(
         &[&repost_id],
     ).await?;
     let post_row = maybe_post_row.ok_or(DatabaseError::NotFound("post"))?;
-    let db_post: DbPost = post_row.try_get("post")?;
+    let db_post: Post = post_row.try_get("post")?;
     // Update counters
     let repost_of_id = db_post.repost_of_id.ok_or(DatabaseTypeError)?;
     update_repost_count(&transaction, repost_of_id, -1).await?;
@@ -1860,7 +1860,7 @@ pub async fn search_posts(
     current_user_id: Uuid,
     limit: u16,
     offset: u16,
-) -> Result<Vec<Post>, DatabaseError> {
+) -> Result<Vec<PostDetailed>, DatabaseError> {
     let statement = format!(
         "
         SELECT
@@ -1913,7 +1913,7 @@ pub async fn search_posts(
         ],
     ).await?;
     let posts = rows.iter()
-        .map(Post::try_from)
+        .map(PostDetailed::try_from)
         .collect::<Result<_, _>>()?;
     Ok(posts)
 }

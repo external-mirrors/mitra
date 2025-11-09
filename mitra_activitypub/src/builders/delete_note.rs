@@ -5,7 +5,7 @@ use mitra_config::Instance;
 use mitra_models::{
     database::{DatabaseClient, DatabaseError},
     posts::helpers::add_related_posts,
-    posts::types::Post,
+    posts::types::PostDetailed,
     users::types::User,
 };
 use mitra_services::media::MediaServer;
@@ -50,7 +50,7 @@ struct DeleteNote {
 fn build_delete_note(
     instance_uri: &HttpUri,
     media_server: &MediaServer,
-    post: &Post,
+    post: &PostDetailed,
 ) -> DeleteNote {
     assert!(post.is_local());
     let object_id = local_object_id(instance_uri.as_str(), post.id);
@@ -91,7 +91,7 @@ pub async fn prepare_delete_note(
     instance: &Instance,
     media_server: &MediaServer,
     author: &User,
-    post: &Post,
+    post: &PostDetailed,
 ) -> Result<OutgoingActivityJobData, DatabaseError> {
     assert_eq!(author.id, post.author.id);
     let mut post = post.clone();
@@ -126,7 +126,7 @@ mod tests {
         let instance_uri = HttpUri::parse(INSTANCE_URI).unwrap();
         let media_server = MediaServer::for_test(INSTANCE_URI);
         let author = DbActorProfile::local_for_test("author");
-        let post = Post {
+        let post = PostDetailed {
             author,
             related_posts: Some(RelatedPosts::default()),
             ..Default::default()

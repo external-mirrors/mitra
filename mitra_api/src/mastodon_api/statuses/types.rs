@@ -10,7 +10,7 @@ use mitra_activitypub::identifiers::{
 };
 use mitra_models::{
     emojis::types::{CustomEmoji as DbCustomEmoji},
-    posts::types::{Post, Visibility},
+    posts::types::{PostDetailed as DbPostDetailed, Visibility},
     profiles::types::DbActorProfile,
 };
 use mitra_utils::languages::Language;
@@ -136,7 +136,7 @@ impl Status {
     pub fn from_post(
         instance_uri: &str,
         media_server: &ClientMediaServer,
-        post: Post,
+        post: DbPostDetailed,
     ) -> Self {
         let object_id = post_object_id(instance_uri, &post);
         let object_url = if let Some(url) = post.url {
@@ -399,7 +399,7 @@ pub struct StatusSource {
 }
 
 impl StatusSource {
-    pub fn from_post(post: Post) -> Self {
+    pub fn from_post(post: DbPostDetailed) -> Self {
         let (content_source, content_type) = match post.content_source {
             Some(source) => (source, POST_CONTENT_TYPE_MARKDOWN),
             None => (post.content, POST_CONTENT_TYPE_HTML),
@@ -474,11 +474,11 @@ mod tests {
         let instance_uri = "https://social.example";
         let media_server = ClientMediaServer::for_test("/media");
         let author = DbActorProfile::local_for_test("test");
-        let post = Post {
+        let post = DbPostDetailed {
             created_at: DateTime::parse_from_rfc3339("2023-02-24T23:36:38Z")
                 .unwrap()
                 .with_timezone(&Utc),
-            ..Post::local_for_test(&author)
+            ..DbPostDetailed::local_for_test(&author)
         };
         let status = Status::from_post(instance_uri, &media_server, post);
         assert_eq!(status.content, "");

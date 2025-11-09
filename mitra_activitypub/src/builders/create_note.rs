@@ -4,7 +4,7 @@ use serde::Serialize;
 use mitra_config::Instance;
 use mitra_models::{
     database::{DatabaseClient, DatabaseError},
-    posts::types::Post,
+    posts::types::PostDetailed,
     users::types::User,
 };
 use mitra_services::media::MediaServer;
@@ -38,7 +38,7 @@ pub struct CreateNote {
 pub fn build_create_note(
     instance_uri: &HttpUri,
     media_server: &MediaServer,
-    post: &Post,
+    post: &PostDetailed,
 ) -> CreateNote {
     let authority = Authority::server(instance_uri);
     let object = build_note(
@@ -71,7 +71,7 @@ pub async fn prepare_create_note(
     instance: &Instance,
     media_server: &MediaServer,
     author: &User,
-    post: &Post,
+    post: &PostDetailed,
 ) -> Result<OutgoingActivityJobData, DatabaseError> {
     assert_eq!(author.id, post.author.id);
     let activity = build_create_note(
@@ -105,7 +105,7 @@ mod tests {
         let media_server = MediaServer::for_test(INSTANCE_URI);
         let author_username = "author";
         let author = DbActorProfile::local_for_test(author_username);
-        let post = Post {
+        let post = PostDetailed {
             author,
             related_posts: Some(RelatedPosts::default()),
             ..Default::default()

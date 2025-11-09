@@ -20,15 +20,15 @@ use super::queries::{
     find_posts_hidden_by_user,
     find_reposted_by_user,
 };
-use super::types::{Post, PostActions, RelatedPosts, Visibility};
+use super::types::{PostActions, PostDetailed, RelatedPosts, Visibility};
 
 pub async fn add_related_posts(
     db_client: &impl DatabaseClient,
-    posts: Vec<&mut Post>,
+    posts: Vec<&mut PostDetailed>,
 ) -> Result<(), DatabaseError> {
     let posts_ids = posts.iter().map(|post| post.id).collect();
     let related = get_related_posts(db_client, posts_ids).await?;
-    let get_post = |post_id: Uuid| -> Result<Post, DatabaseError> {
+    let get_post = |post_id: Uuid| -> Result<PostDetailed, DatabaseError> {
         let post = related.iter()
             .find(|post| post.id == post_id)
             .ok_or(DatabaseError::NotFound("post"))?
@@ -67,7 +67,7 @@ pub async fn add_related_posts(
 pub async fn add_user_actions(
     db_client: &impl DatabaseClient,
     user_id: Uuid,
-    posts: Vec<&mut Post>,
+    posts: Vec<&mut PostDetailed>,
 ) -> Result<(), DatabaseError> {
     // This function can be used without add_related_posts
     let posts_ids: Vec<Uuid> = posts.iter()
@@ -84,7 +84,7 @@ pub async fn add_user_actions(
     let bookmarks = find_bookmarked_by_user(db_client, user_id, &posts_ids).await?;
     let votes = find_votes_by_user(db_client, user_id, &posts_ids).await?;
     let hidden_posts = find_posts_hidden_by_user(db_client, user_id, &posts_ids).await?;
-    let get_actions = |post: &Post| -> PostActions {
+    let get_actions = |post: &PostDetailed| -> PostActions {
         let liked = reactions.iter()
             .any(|(post_id, content)| *post_id == post.id && content.is_none());
         let reacted_with: Vec<_> = reactions.iter()
@@ -127,7 +127,7 @@ pub async fn add_user_actions(
 pub async fn can_view_post(
     db_client: &impl DatabaseClient,
     maybe_viewer: Option<&DbActorProfile>,
-    post: &Post,
+    post: &PostDetailed,
 ) -> Result<bool, DatabaseError> {
     let is_author = |viewer: &DbActorProfile| post.author.id == viewer.id;
     let is_mentioned = |viewer: &DbActorProfile| {
@@ -187,7 +187,7 @@ pub fn can_create_post(
 }
 
 // Equivalent to create_post_links
-pub fn can_link_post(post: &Post) -> bool {
+pub fn can_link_post(post: &PostDetailed) -> bool {
     if post.repost_of_id.is_some() {
         // Can't reference reposts
         return false;
@@ -202,7 +202,7 @@ pub fn can_link_post(post: &Post) -> bool {
 pub async fn get_local_post_by_id(
     db_client: &impl DatabaseClient,
     post_id: Uuid,
-) -> Result<Post, DatabaseError> {
+) -> Result<PostDetailed, DatabaseError> {
     let post = get_post_by_id(db_client, post_id).await?;
     if !post.is_local() {
         return Err(DatabaseError::NotFound("post"));
@@ -214,7 +214,7 @@ pub async fn get_post_by_id_for_view(
     db_client: &impl DatabaseClient,
     maybe_viewer: Option<&DbActorProfile>,
     post_id: Uuid,
-) -> Result<Post, DatabaseError> {
+) -> Result<PostDetailed, DatabaseError> {
     let post = get_post_by_id(db_client, post_id).await?;
     if !can_view_post(db_client, maybe_viewer, &post).await? {
         return Err(DatabaseError::NotFound("post"));
@@ -325,7 +325,7 @@ mod tests {
     #[tokio::test]
     #[serial]
     async fn test_can_view_post_anonymous() {
-        let post = Post {
+        let post = PostDetailed {
             visibility: Visibility::Public,
             ..Default::default()
         };
@@ -338,7 +338,7 @@ mod tests {
     #[serial]
     async fn test_can_view_post_direct() {
         let user = User::default();
-        let post = Post {
+        let post = PostDetailed {
             visibility: Visibility::Direct,
             ..Default::default()
         };
@@ -355,7 +355,7 @@ mod tests {
     #[serial]
     async fn test_can_view_post_direct_author() {
         let user = User::default();
-        let post = Post {
+        let post = PostDetailed {
             author: user.profile.clone(),
             visibility: Visibility::Direct,
             ..Default::default()
@@ -373,7 +373,7 @@ mod tests {
     #[serial]
     async fn test_can_view_post_direct_mentioned() {
         let user = User::default();
-        let post = Post {
+        let post = PostDetailed {
             visibility: Visibility::Direct,
             mentions: vec![user.profile.clone()],
             ..Default::default()
@@ -392,7 +392,7 @@ mod tests {
     async fn test_can_view_post_followers_only_anonymous() {
         let db_client = &mut create_test_database().await;
         let author = create_test_user(db_client, "author").await;
-        let post = Post {
+        let post = PostDetailed {
             author: author.profile,
             visibility: Visibility::Followers,
             ..Default::default()
@@ -408,7 +408,7 @@ mod tests {
         let author = create_test_user(db_client, "author").await;
         let follower = create_test_user(db_client, "follower").await;
         follow(db_client, follower.id, author.id).await.unwrap();
-        let post = Post {
+        let post = PostDetailed {
             author: author.profile,
             visibility: Visibility::Followers,
             ..Default::default()
@@ -433,7 +433,7 @@ mod tests {
             "https://remote.example/actor",
         ).await;
         follow(db_client, follower.id, author.id).await.unwrap();
-        let post = Post {
+        let post = PostDetailed {
             author: author.profile,
             visibility: Visibility::Followers,
             ..Default::default()
@@ -455,7 +455,7 @@ mod tests {
         follow(db_client, follower.id, author.id).await.unwrap();
         let subscriber = create_test_user(db_client, "subscriber").await;
         subscribe(db_client, subscriber.id, author.id).await.unwrap();
-        let post = Post {
+        let post = PostDetailed {
             author: author.profile,
             visibility: Visibility::Subscribers,
             mentions: vec![subscriber.profile.clone()],
@@ -494,7 +494,7 @@ mod tests {
         let author = create_test_user(db_client, "author").await;
         let author_follower = create_test_user(db_client, "author_follower").await;
         follow(db_client, author_follower.id, author.id).await.unwrap();
-        let post = Post {
+        let post = PostDetailed {
             author: author.profile.clone(),
             conversation: root.conversation.clone(),
             in_reply_to_id: Some(root.id),

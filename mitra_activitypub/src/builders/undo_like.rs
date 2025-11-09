@@ -4,7 +4,7 @@ use uuid::Uuid;
 use mitra_config::Instance;
 use mitra_models::{
     database::{DatabaseClient, DatabaseError},
-    posts::types::{Post, Visibility},
+    posts::types::{PostDetailed, Visibility},
     profiles::types::DbActorProfile,
     users::types::User,
 };
@@ -74,7 +74,7 @@ pub async fn prepare_undo_like(
     db_client: &impl DatabaseClient,
     instance: &Instance,
     sender: &User,
-    post: &Post,
+    post: &PostDetailed,
     reaction_id: Uuid,
     reaction_has_deprecated_ap_id: bool,
 ) -> Result<OutgoingActivityJobData, DatabaseError> {

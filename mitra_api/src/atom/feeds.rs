@@ -4,7 +4,7 @@ use serde::Serialize;
 use mitra_activitypub::identifiers::{local_actor_id, local_object_id};
 use mitra_config::Instance;
 use mitra_models::{
-    posts::types::Post,
+    posts::types::PostDetailed,
     profiles::types::DbActorProfile,
 };
 use mitra_utils::{
@@ -41,7 +41,7 @@ fn get_author_name(profile: &DbActorProfile) -> String {
 
 fn make_entry(
     instance_uri: &str,
-    post: &Post,
+    post: &PostDetailed,
 ) -> Entry {
     let object_id = local_object_id(instance_uri, post.id);
     let title = extract_title(&post.content, ENTRY_TITLE_MAX_LENGTH);
@@ -57,7 +57,7 @@ fn make_entry(
 pub fn make_feed(
     instance: &Instance,
     profile: &DbActorProfile,
-    posts: Vec<Post>,
+    posts: Vec<PostDetailed>,
 ) -> Feed {
     let actor_id = local_actor_id(instance.uri_str(), &profile.username);
     let feed_url = get_user_feed_url(instance.uri_str(), &profile.username);
@@ -94,7 +94,7 @@ mod tests {
         author.display_name = Some("User".to_string());
         let post_id = uuid!("67e55044-10b1-426f-9247-bb680e5fe0c8");
         let created_at = Utc.with_ymd_and_hms(2020, 3, 3, 3, 3, 3).unwrap();
-        let post = Post {
+        let post = PostDetailed {
             id: post_id,
             author: author.clone(),
             content: "<p>title</p><p>text text text</p>".to_string(),

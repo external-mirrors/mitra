@@ -3,7 +3,7 @@ use mitra_models::{
     database::{DatabaseClient, DatabaseError},
     posts::{
         queries::delete_post,
-        types::Post,
+        types::PostDetailed,
     },
     users::queries::get_user_by_id,
 };
@@ -22,7 +22,7 @@ use crate::{
 pub async fn delete_local_post(
     config: &Config,
     db_client: &mut impl DatabaseClient,
-    post: &Post,
+    post: &PostDetailed,
 ) -> Result<(), DatabaseError> {
     let instance = config.instance();
     let media_server = MediaServer::new(config);

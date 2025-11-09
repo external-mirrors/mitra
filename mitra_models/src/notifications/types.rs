@@ -11,7 +11,7 @@ use crate::database::{
     DatabaseTypeError,
 };
 use crate::emojis::types::CustomEmoji;
-use crate::posts::types::{DbPost, Post, PostReaction};
+use crate::posts::types::{Post, PostDetailed, PostReaction};
 use crate::profiles::types::DbActorProfile;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -91,7 +91,7 @@ struct DbNotification {
 pub struct Notification {
     pub id: i32,
     pub sender: DbActorProfile,
-    pub post: Option<Post>,
+    pub post: Option<PostDetailed>,
     pub reaction_content: Option<String>,
     pub reaction_emoji: Option<CustomEmoji>,
     pub event_type: EventType,
@@ -105,7 +105,7 @@ impl TryFrom<&Row> for Notification {
     fn try_from(row: &Row) -> Result<Self, Self::Error> {
         let db_notification: DbNotification = row.try_get("notification")?;
         let db_sender: DbActorProfile = row.try_get("sender")?;
-        let maybe_db_post: Option<DbPost> = row.try_get("post")?;
+        let maybe_db_post: Option<Post> = row.try_get("post")?;
         let maybe_post = match maybe_db_post {
             Some(db_post) => {
                 let db_post_author: DbActorProfile = row.try_get("post_author")?;
@@ -117,7 +117,7 @@ impl TryFrom<&Row> for Notification {
                 let db_links: Vec<Uuid> = row.try_get("links")?;
                 let db_emojis: Vec<CustomEmoji> = row.try_get("emojis")?;
                 let db_reactions: Vec<PostReaction> = row.try_get("reactions")?;
-                let post = Post::new(
+                let post = PostDetailed::new(
                     db_post,
                     db_post_author,
                     db_conversation,

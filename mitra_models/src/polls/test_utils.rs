@@ -5,7 +5,7 @@ use crate::{
     database::DatabaseClient,
     posts::{
         queries::create_post,
-        types::{Post, PostCreateData},
+        types::{PostCreateData, PostDetailed},
     },
 };
 
@@ -18,7 +18,7 @@ pub async fn create_test_local_poll(
     author_id: Uuid,
     options: &[&str],
     multiple_choices: bool,
-) -> Post {
+) -> PostDetailed {
     let results = options.iter()
         .map(|name| PollResult::new(name))
         .collect();
