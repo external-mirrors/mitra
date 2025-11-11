@@ -147,7 +147,6 @@ use super::types::{
     AccountCreateData,
     AccountUpdateData,
     AccountUpdateMultipartForm,
-    ApiSubscription,
     AUTHENTICATION_METHOD_CAIP122_MONERO,
     AUTHENTICATION_METHOD_EIP4361,
     AUTHENTICATION_METHOD_PASSWORD,
@@ -163,6 +162,7 @@ use super::types::{
     SearchAcctQueryParams,
     SearchDidQueryParams,
     StatusListQueryParams,
+    Subscription,
     SubscriptionListQueryParams,
 };
 
@@ -1035,13 +1035,13 @@ async fn get_account_subscribers(
     let profile = get_profile_by_id(db_client, *account_id).await?;
     if profile.id != current_user.id {
         // Social graph is hidden
-        let subscriptions: Vec<ApiSubscription> = vec![];
+        let subscriptions: Vec<Subscription> = vec![];
         return Ok(HttpResponse::Ok().json(subscriptions));
     };
     let base_url = get_request_base_url(connection_info);
     let media_server = ClientMediaServer::new(&config, &base_url);
     let instance = config.instance();
-    let subscriptions: Vec<ApiSubscription> = get_incoming_subscriptions(
+    let subscriptions: Vec<Subscription> = get_incoming_subscriptions(
         db_client,
         profile.id,
         query_params.include_expired,
@@ -1050,7 +1050,7 @@ async fn get_account_subscribers(
     )
         .await?
         .into_iter()
-        .map(|subscription| ApiSubscription::from_subscription(
+        .map(|subscription| Subscription::from_db(
             instance.uri_str(),
             &media_server,
             subscription,

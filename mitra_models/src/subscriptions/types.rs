@@ -8,7 +8,7 @@ use crate::profiles::types::DbActorProfile;
 
 #[derive(FromSql)]
 #[postgres(name = "subscription")]
-pub struct DbSubscription {
+pub struct Subscription {
     pub id: i32,
     pub sender_id: Uuid,
     pub recipient_id: Uuid,
@@ -16,18 +16,18 @@ pub struct DbSubscription {
     pub updated_at: DateTime<Utc>,
 }
 
-pub struct Subscription {
+pub struct SubscriptionDetailed {
     pub id: i32,
     pub sender: DbActorProfile,
     pub expires_at: DateTime<Utc>,
 }
 
-impl TryFrom<&Row> for Subscription {
+impl TryFrom<&Row> for SubscriptionDetailed {
 
     type Error = DatabaseError;
 
     fn try_from(row: &Row) -> Result<Self, Self::Error> {
-        let db_subscription: DbSubscription = row.try_get("subscription")?;
+        let db_subscription: Subscription = row.try_get("subscription")?;
         let db_sender: DbActorProfile = row.try_get("sender")?;
         let subscription = Self {
             id: db_subscription.id,

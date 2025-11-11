@@ -7,7 +7,7 @@ use mitra_adapters::payments::monero::MONERO_INVOICE_TIMEOUT;
 use mitra_models::{
     invoices::types::{Invoice as DbInvoice, InvoiceStatus},
     profiles::types::PaymentOption,
-    subscriptions::types::DbSubscription,
+    subscriptions::types::{Subscription as DbSubscription},
 };
 
 use crate::mastodon_api::serializers::serialize_datetime;

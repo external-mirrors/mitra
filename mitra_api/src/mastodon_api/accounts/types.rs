@@ -29,7 +29,7 @@ use mitra_models::{
         PaymentOption,
         ProfileUpdateData,
     },
-    subscriptions::types::Subscription,
+    subscriptions::types::{SubscriptionDetailed as DbSubscriptionDetailed},
     users::types::{
         ClientConfig,
         Permission,
@@ -787,18 +787,18 @@ pub struct SubscriptionListQueryParams {
 }
 
 #[derive(Serialize)]
-pub struct ApiSubscription {
+pub struct Subscription {
     pub id: i32,
     pub sender: Account,
     #[serde(serialize_with = "serialize_datetime")]
     pub expires_at: DateTime<Utc>,
 }
 
-impl ApiSubscription {
-    pub fn from_subscription(
+impl Subscription {
+    pub fn from_db(
         instance_uri: &str,
         media_server: &ClientMediaServer,
-        subscription: Subscription,
+        subscription: DbSubscriptionDetailed,
     ) -> Self {
         let sender = Account::from_profile(
             instance_uri,

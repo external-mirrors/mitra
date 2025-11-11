@@ -10,7 +10,7 @@ use mitra_models::{
         get_subscription_by_participants,
         update_subscription,
     },
-    subscriptions::types::DbSubscription,
+    subscriptions::types::Subscription,
     users::types::User,
 };
 use mitra_validators::errors::ValidationError;
@@ -37,7 +37,7 @@ pub async fn create_or_update_subscription(
     sender: &DbActorProfile,
     recipient: &DbActorProfile,
     next_expires_at: impl Fn(Option<DateTime<Utc>>) -> DateTime<Utc>,
-) -> Result<DbSubscription, DatabaseError> {
+) -> Result<Subscription, DatabaseError> {
     let subscription = match get_subscription_by_participants(
         db_client,
         sender.id,
@@ -86,7 +86,7 @@ pub async fn create_or_update_local_subscription(
     sender: &DbActorProfile,
     recipient: &User,
     duration_secs: i64,
-) -> Result<DbSubscription, DatabaseError> {
+) -> Result<Subscription, DatabaseError> {
     create_or_update_subscription(
         db_client,
         sender,
