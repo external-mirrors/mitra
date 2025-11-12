@@ -26,6 +26,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Force "Conversation" visibility if conversation scope is widened.
 - Optimized thread retrieval query.
 - Verify integrity proofs on FEP-1b12 wrapped activities.
+- Use value of `summary` property as attachment description if `name` is not present.
 
 ### Fixed
 

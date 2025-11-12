@@ -3027,7 +3027,7 @@ components:
           description: The location of a scaled-down preview of the attachment.
           type: string
         description:
-          description: Alternate text that describes what is in the media attachment, to be used for the visually impaired or when media attachments do not load.
+          description: Alternate text that describes what is in the media attachment, to be used for the visually impaired or when media attachments do not load (plain text).
           type: string
           nullable: true
           example: null

@@ -137,6 +137,20 @@ fn deserialize_icon<'de, D>(
     Ok(images)
 }
 
+#[derive(Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MediaAttachment {
+    #[serde(rename = "type")]
+    attachment_type: String,
+
+    name: Option<String>,
+    summary: Option<String>,
+    media_type: Option<String>,
+
+    #[serde(deserialize_with = "deserialize_into_link_href")]
+    pub url: String,
+}
+
 #[derive(Clone)]
 pub enum Attachment {
     Media(MediaAttachment),
@@ -396,19 +410,6 @@ fn is_gnu_social_link(author_id: &str, attachment: &MediaAttachment) -> bool {
     }
 }
 
-#[derive(Clone, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct MediaAttachment {
-    #[serde(rename = "type")]
-    attachment_type: String,
-
-    name: Option<String>,
-    media_type: Option<String>,
-
-    #[serde(deserialize_with = "deserialize_into_link_href")]
-    pub url: String,
-}
-
 async fn get_object_attachments(
     ap_client: &ApClient,
     db_pool: &DatabaseConnectionPool,
@@ -461,11 +462,14 @@ async fn get_object_attachments(
             log::warn!("skipping duplicate attachment: {attachment_url}");
             continue;
         };
-        let maybe_description = attachment.name.filter(|name| {
-            validate_media_description(name)
-                .map_err(|error| log::warn!("{error}"))
-                .is_ok()
-        });
+        let maybe_description = attachment.name
+            // Used by GoToSocial
+            .or(attachment.summary)
+            .filter(|name| {
+                validate_media_description(name)
+                    .map_err(|error| log::warn!("{error}"))
+                    .is_ok()
+            });
         if is_filter_enabled {
             // Do not download
             log::warn!("attachment removed by filter: {attachment_url}");
