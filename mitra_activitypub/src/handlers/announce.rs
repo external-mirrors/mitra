@@ -35,6 +35,7 @@ use mitra_validators::{
 };
 
 use crate::{
+    authentication::{verify_signed_activity, AuthenticationError},
     identifiers::parse_local_object_id,
     importers::{import_post, ActorIdResolver, ApClient},
     ownership::{
@@ -194,22 +195,41 @@ async fn handle_fep_1b12_announce(
         },
     };
     let ap_client = ApClient::new_with_pool(config, db_pool).await?;
-    let activity = if is_same_origin(&announce_id, activity_id)? {
-        // Embedded activity can be trusted; don't fetch
-        activity.clone()
-    } else {
-        match ap_client.fetch_object(activity_id).await {
-            Ok(activity) => {
-                log::info!("fetched activity {}", activity_id);
-                activity
-            },
-            Err(error) => {
-                // Wrapped activities are not always available
-                log::warn!("failed to fetch activity ({error}): {activity_id}");
-                return Ok(None);
-            },
-        }
+    // Authentication
+    let activity = match verify_signed_activity(
+        config,
+        db_pool,
+        &activity,
+        false, // fetch signer
+    ).await {
+        Ok(_) => activity.clone(),
+        Err(AuthenticationError::NoJsonSignature) => {
+            if is_same_origin(&announce_id, activity_id)? {
+                // Embedded activity can be trusted; don't fetch
+                // NOTE: assuming remote server validates C2S activities
+                activity.clone()
+            } else {
+                // Verify activity by fetching it from origin
+                match ap_client.fetch_object(activity_id).await {
+                    Ok(activity) => {
+                        log::info!("fetched activity {}", activity_id);
+                        activity
+                    },
+                    Err(error) => {
+                        // Wrapped activities are not always available
+                        log::warn!("failed to fetch activity ({error}): {activity_id}");
+                        return Ok(None);
+                    },
+                }
+            }
+        },
+        Err(AuthenticationError::DatabaseError(db_error)) => return Err(db_error.into()),
+        Err(other_error) => {
+            log::warn!("{other_error}");
+            return Err(ValidationError("invalid integrity proof").into());
+        },
     };
+    // Authorization
     verify_activity_owner(&activity)?;
     let group = ActorIdResolver::default().only_remote().resolve(
         &ap_client,
