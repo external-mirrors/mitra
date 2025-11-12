@@ -176,6 +176,7 @@ fn clean_extra_field_value(value: &str) -> String {
 }
 
 pub fn clean_extra_field(field: &mut ExtraField) {
+    // Sanitization is not needed for `name` because it is plain-text
     field.name = field.name.trim().to_string();
     field.value = clean_extra_field_value(&field.value);
 }

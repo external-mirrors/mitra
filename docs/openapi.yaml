@@ -3093,10 +3093,10 @@ components:
       type: object
       properties:
         name:
-          description: The key of a given field's key-value pair.
+          description: The key of a given field's key-value pair (plain text).
           type: string
         value:
-          description: The value associated with the name key.
+          description: The value associated with the name key (HTML).
           type: string
         verified_at:
           description: Timestamp of when the server verified the field value.
@@ -3148,7 +3148,7 @@ components:
           description: The title of the website.
           type: string
         short_description:
-          description: A short description defined by the admin.
+          description: A short description defined by the admin (plain text).
           type: string
         description:
           description: Admin-defined description of the site (HTML).
@@ -3252,7 +3252,7 @@ components:
                 type: object
                 properties:
                   description:
-                    description: Description of a payment method.
+                    description: Description of a payment method (HTML).
                     type: string
                     nullable: true
                   payment_amount_min:
@@ -3578,7 +3578,7 @@ components:
       type: object
       properties:
         title:
-          description: The text value of the poll option.
+          description: The text value of the poll option (HTML).
           type: string
         votes_count:
           description: The total number of received votes for this option.
