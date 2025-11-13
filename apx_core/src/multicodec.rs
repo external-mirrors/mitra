@@ -1,5 +1,7 @@
-/// https://github.com/multiformats/multicodec
-/// https://github.com/multiformats/unsigned-varint
+//! Multicodecs
+//!
+//! <https://github.com/multiformats/multicodec>  
+//! <https://github.com/multiformats/unsigned-varint>
 use unsigned_varint;
 
 #[derive(thiserror::Error, Debug)]
@@ -28,20 +30,6 @@ fn decode(value: &[u8]) -> Result<(u128, Vec<u8>), MulticodecError> {
     let (code, data) = unsigned_varint::decode::u128(value)
         .map_err(|_| MulticodecError)?;
     Ok((code, data.to_vec()))
-}
-
-// https://github.com/multiformats/multihash
-pub(crate) fn encode_digest(data: &[u8]) -> Vec<u8> {
-    let mut buf = unsigned_varint::encode::usize_buffer();
-    let size = unsigned_varint::encode::usize(data.len(), &mut buf);
-    [size, data].concat()
-}
-
-#[allow(dead_code)]
-fn decode_digest(value: &[u8]) -> Result<(usize, Vec<u8>), MulticodecError> {
-    let (size, data) = unsigned_varint::decode::usize(value)
-        .map_err(|_| MulticodecError)?;
-    Ok((size, data.to_vec()))
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -98,19 +86,6 @@ impl Multicodec {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_sha2_256_encode_decode() {
-        // Digests require special treatment
-        let digest = [1; 32];
-        let sized = encode_digest(&digest);
-        assert_eq!(sized.len(), 33);
-        let encoded = Multicodec::Sha256.encode(&sized);
-        assert_eq!(encoded.len(), 34);
-        let decoded_sized = Multicodec::Sha256.decode_exact(&encoded).unwrap();
-        let (_, decoded) = decode_digest(&decoded_sized).unwrap();
-        assert_eq!(decoded, digest);
-    }
 
     #[test]
     fn test_ed25519_pub_encode_decode() {

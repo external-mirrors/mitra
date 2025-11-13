@@ -1,23 +1,39 @@
 use std::cmp::max;
+use std::error::{Error as _};
 use std::net::IpAddr;
 use std::sync::Arc;
 use std::time::Duration;
 
-use bytes::{BufMut, Bytes, BytesMut};
+use bytes::Bytes;
+use http_body_util::{BodyExt, Limited};
 use reqwest::{
+    header,
     redirect::{Policy as RedirectPolicy},
+    Body,
     Client,
+    Error,
+    Method,
     Proxy,
+    RequestBuilder,
     Response,
 };
 use thiserror::Error;
 
 use apx_core::{
-    http_url::parse_http_url_whatwg,
-    urls::{
-        get_hostname,
-        get_ip_address,
-        UrlError,
+    http_signatures::create::{
+        create_http_signature_cavage,
+        create_http_signature_rfc9421,
+        HttpSignatureError,
+        HttpSigner,
+    },
+    url::{
+        hostname::{is_i2p, is_onion},
+        http_uri::parse_http_url_whatwg,
+        http_url_whatwg::{
+            get_hostname,
+            get_ip_address,
+            UrlError,
+        },
     },
 };
 
@@ -36,14 +52,19 @@ pub fn get_network_type(request_url: &str) ->
     Result<Network, UrlError>
 {
     let hostname = get_hostname(request_url)?;
-    let network = if hostname.ends_with(".onion") {
+    let network = if is_onion(&hostname) {
         Network::Tor
-    } else if hostname.ends_with(".i2p") {
+    } else if is_i2p(&hostname) {
         Network::I2p
     } else {
         Network::Default
     };
     Ok(network)
+}
+
+pub enum RedirectAction {
+    None,
+    Follow,
 }
 
 // https://www.w3.org/TR/activitypub/#security-localhost
@@ -71,17 +92,17 @@ fn is_safe_url(url: &str) -> bool {
 }
 
 #[derive(Debug, Error)]
-#[error("unsafe URL")]
-pub struct UnsafeUrlError;
+#[error("unsafe URL: {0}")]
+pub struct UnsafeUrlError(String);
 
-pub fn require_safe_url(url: &str) -> Result<(), UnsafeUrlError> {
+fn require_safe_url(url: &str) -> Result<(), UnsafeUrlError> {
     if !is_safe_url(url) {
-        return Err(UnsafeUrlError);
+        return Err(UnsafeUrlError(url.to_string()));
     };
     Ok(())
 }
 
-fn build_safe_redirect_policy() -> RedirectPolicy {
+fn create_safe_redirect_policy() -> RedirectPolicy {
     RedirectPolicy::custom(|attempt| {
         if attempt.previous().len() > REDIRECT_LIMIT {
             attempt.error("too many redirects")
@@ -128,11 +149,11 @@ mod dns_resolver {
     }
 }
 
-pub fn build_http_client(
+pub fn create_http_client(
     agent: &FederationAgent,
     network: Network,
     timeout: u64,
-    no_redirect: bool,
+    redirect_action: RedirectAction,
 ) -> reqwest::Result<Client> {
     let mut client_builder = Client::builder();
     let mut maybe_proxy_url = agent.proxy_url.as_ref();
@@ -155,12 +176,15 @@ pub fn build_http_client(
         client_builder = client_builder.dns_resolver(
             Arc::new(dns_resolver::SafeResolver::new()));
     };
-    let redirect_policy = if no_redirect {
-        RedirectPolicy::none()
-    } else if agent.ssrf_protection_enabled {
-        build_safe_redirect_policy()
-    } else {
-        RedirectPolicy::limited(REDIRECT_LIMIT)
+    let redirect_policy = match redirect_action {
+        RedirectAction::None => RedirectPolicy::none(),
+        RedirectAction::Follow => {
+            if agent.ssrf_protection_enabled {
+                create_safe_redirect_policy()
+            } else {
+                RedirectPolicy::limited(REDIRECT_LIMIT)
+            }
+        },
     };
     let request_timeout = Duration::from_secs(timeout);
     let connect_timeout = Duration::from_secs(max(
@@ -174,20 +198,80 @@ pub fn build_http_client(
         .build()
 }
 
-// Workaround for https://github.com/seanmonstar/reqwest/issues/1234
-pub async fn limited_response(
-    response: &mut Response,
-    limit: usize,
-) -> Result<Option<Bytes>, reqwest::Error> {
-    let mut bytes = BytesMut::new();
-    while let Some(chunk) = response.chunk().await? {
-        let len = bytes.len() + chunk.len();
-        if len > limit {
-            return Ok(None);
-        }
-        bytes.put(chunk);
+pub fn build_http_request(
+    agent: &FederationAgent,
+    client: &Client,
+    method: Method,
+    target_url: &str,
+) -> Result<RequestBuilder, UnsafeUrlError> {
+    if agent.ssrf_protection_enabled {
+        require_safe_url(target_url)?;
     };
-    Ok(Some(bytes.freeze()))
+    let mut request_builder = client.request(method, target_url);
+    if let Some(ref user_agent) = agent.user_agent {
+        request_builder = request_builder
+            .header(header::USER_AGENT, user_agent);
+    };
+    Ok(request_builder)
+}
+
+pub fn sign_http_request(
+    mut request_builder: RequestBuilder,
+    method: Method,
+    target_url: &str,
+    maybe_body: Option<&[u8]>,
+    signer: &HttpSigner,
+    rfc9421_enabled: bool,
+) -> Result<RequestBuilder, HttpSignatureError> {
+    if rfc9421_enabled {
+        let headers = create_http_signature_rfc9421(
+            method,
+            target_url,
+            maybe_body,
+            signer,
+        )?;
+        if let Some(content_digest) = headers.content_digest {
+            request_builder = request_builder
+                .header("Content-Digest", content_digest);
+        };
+        request_builder = request_builder
+            .header("Signature", headers.signature)
+            .header("Signature-Input", headers.signature_input);
+    } else {
+        let headers = create_http_signature_cavage(
+            method,
+            target_url,
+            maybe_body,
+            signer,
+        )?;
+        if let Some(digest) = headers.digest {
+            request_builder = request_builder.header("Digest", digest);
+        };
+        request_builder = request_builder
+            .header(header::HOST, headers.host)
+            .header(header::DATE, headers.date)
+            .header("Signature", headers.signature);
+    };
+    Ok(request_builder)
+}
+
+pub async fn limited_response(
+    response: Response,
+    limit: usize,
+) -> Option<Bytes> {
+    Limited::new(Body::from(response), limit)
+        .collect()
+        .await
+        .ok()
+        .map(|collected| collected.to_bytes())
+}
+
+pub fn describe_request_error(error: &Error) -> String {
+    if let Some(source) = error.source() {
+        format!("{}: {}", error, source)
+    } else {
+        error.to_string()
+    }
 }
 
 #[cfg(test)]

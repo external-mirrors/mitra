@@ -1,19 +1,19 @@
+use apx_sdk::constants::AP_PUBLIC;
 use chrono::{DateTime, Utc};
 use serde::Serialize;
 use uuid::Uuid;
 
-use apx_sdk::constants::AP_PUBLIC;
 use mitra_config::Instance;
 use mitra_models::{
     database::{DatabaseClient, DatabaseError},
-    posts::types::Post,
-    profiles::types::DbActor,
+    posts::types::{PostDetailed, Visibility},
     relationships::queries::get_followers,
     users::types::User,
 };
 
 use crate::{
     contexts::{build_default_context, Context},
+    deliverer::Recipient,
     identifiers::{
         local_activity_id,
         local_actor_id,
@@ -44,28 +44,56 @@ pub struct Announce {
 }
 
 pub(super) fn local_announce_activity_id(
-    instance_url: &str,
+    instance_uri: &str,
     repost_id: Uuid,
     repost_has_deprecated_ap_id: bool,
 ) -> String {
     if repost_has_deprecated_ap_id {
-        local_object_id(instance_url, repost_id)
+        local_object_id(instance_uri, repost_id)
     } else {
-        local_activity_id(instance_url, ANNOUNCE, repost_id)
+        local_activity_id(instance_uri, ANNOUNCE, repost_id)
     }
 }
 
+pub(super) fn get_announce_audience(
+    visibility: Visibility,
+    actor_id: &str,
+    recipient_id: &str,
+) -> (Vec<String>, Vec<String>) {
+    let mut primary_audience = vec![];
+    let mut secondary_audience = vec![];
+    let actor_followers = LocalActorCollection::Followers.of(actor_id);
+    match visibility {
+        Visibility::Public => {
+            primary_audience.push(AP_PUBLIC.to_owned());
+            secondary_audience.push(actor_followers);
+        },
+        Visibility::Followers => {
+            primary_audience.push(actor_followers);
+        },
+        _ => (),
+    };
+    primary_audience.push(recipient_id.to_owned());
+    (primary_audience, secondary_audience)
+}
+
 pub fn build_announce(
-    instance_url: &str,
-    repost: &Post,
+    instance_uri: &str,
+    repost: &PostDetailed,
 ) -> Announce {
-    let actor_id = local_actor_id(instance_url, &repost.author.username);
-    let post = repost.repost_of.as_ref()
+    let actor_id = local_actor_id(instance_uri, &repost.author.username);
+    let post = repost
+        .expect_related_posts()
+        .repost_of.as_ref()
         .expect("repost_of field should be populated");
-    let object_id = post_object_id(instance_url, post);
-    let activity_id = local_announce_activity_id(instance_url, repost.id, false);
-    let recipient_id = profile_actor_id(instance_url, &post.author);
-    let followers = LocalActorCollection::Followers.of(&actor_id);
+    let object_id = post_object_id(instance_uri, post);
+    let activity_id = local_announce_activity_id(instance_uri, repost.id, false);
+    let recipient_id = profile_actor_id(instance_uri, &post.author);
+    let (primary_audience, secondary_audience) = get_announce_audience(
+        repost.visibility,
+        &actor_id,
+        &recipient_id,
+    );
     Announce {
         context: build_default_context(),
         activity_type: ANNOUNCE.to_string(),
@@ -73,52 +101,58 @@ pub fn build_announce(
         id: activity_id,
         object: object_id,
         published: repost.created_at,
-        to: vec![AP_PUBLIC.to_string(), recipient_id],
-        cc: vec![followers],
+        to: primary_audience,
+        cc: secondary_audience,
     }
 }
 
 pub async fn get_announce_recipients(
     db_client: &impl DatabaseClient,
-    instance_url: &str,
     current_user: &User,
-    post: &Post,
-) -> Result<(Vec<DbActor>, String), DatabaseError> {
-    let followers = get_followers(db_client, current_user.id).await?;
+    repost_visibility: Visibility,
+    post: &PostDetailed,
+) -> Result<Vec<Recipient>, DatabaseError> {
     let mut recipients = vec![];
-    for profile in followers {
-        if let Some(remote_actor) = profile.actor_json {
-            recipients.push(remote_actor);
-        };
+    match repost_visibility {
+        Visibility::Public | Visibility::Followers => {
+            let followers = get_followers(db_client, current_user.id).await?;
+            for profile in followers {
+                if let Some(remote_actor) = profile.actor_json {
+                    recipients.extend(Recipient::for_inbox(&remote_actor));
+                };
+            };
+        },
+        _ => (),
     };
-    let primary_recipient = profile_actor_id(instance_url, &post.author);
     if let Some(remote_actor) = post.author.actor_json.as_ref() {
-        recipients.push(remote_actor.clone());
+        recipients.extend(Recipient::for_inbox(remote_actor));
     };
-    Ok((recipients, primary_recipient))
+    Ok(recipients)
 }
 
 pub async fn prepare_announce(
     db_client: &impl DatabaseClient,
     instance: &Instance,
     sender: &User,
-    repost: &Post,
+    repost: &PostDetailed,
 ) -> Result<OutgoingActivityJobData, DatabaseError> {
     assert_eq!(sender.id, repost.author.id);
-    let post = repost.repost_of.as_ref()
+    let post = repost
+        .expect_related_posts()
+        .repost_of.as_ref()
         .expect("repost_of field should be populated");
-    let (recipients, _) = get_announce_recipients(
+    let recipients = get_announce_recipients(
         db_client,
-        &instance.url(),
         sender,
+        repost.visibility,
         post,
     ).await?;
     let activity = build_announce(
-        &instance.url(),
+        instance.uri_str(),
         repost,
     );
     Ok(OutgoingActivityJobData::new(
-        &instance.url(),
+        instance.uri_str(),
         sender,
         activity,
         recipients,
@@ -127,10 +161,13 @@ pub async fn prepare_announce(
 
 #[cfg(test)]
 mod tests {
-    use mitra_models::profiles::types::DbActorProfile;
+    use mitra_models::{
+        profiles::types::DbActorProfile,
+        posts::types::RelatedPosts,
+    };
     use super::*;
 
-    const INSTANCE_URL: &str = "https://example.com";
+    const INSTANCE_URI: &str = "https://example.com";
 
     #[test]
     fn test_build_announce() {
@@ -140,35 +177,38 @@ mod tests {
             post_author_id,
         );
         let post_id = "https://test.net/obj/123";
-        let post = Post {
+        let post = PostDetailed {
             author: post_author.clone(),
             object_id: Some(post_id.to_string()),
             ..Default::default()
         };
         let repost_author = DbActorProfile::local_for_test("announcer");
-        let repost = Post {
+        let repost = PostDetailed {
             author: repost_author,
             repost_of_id: Some(post.id),
-            repost_of: Some(Box::new(post)),
+            related_posts: Some(RelatedPosts {
+                repost_of: Some(Box::new(post)),
+                ..Default::default()
+            }),
             ..Default::default()
         };
         let activity = build_announce(
-            INSTANCE_URL,
+            INSTANCE_URI,
             &repost,
         );
         assert_eq!(
             activity.id,
-            format!("{}/activities/announce/{}", INSTANCE_URL, repost.id),
+            format!("{}/activities/announce/{}", INSTANCE_URI, repost.id),
         );
         assert_eq!(
             activity.actor,
-            format!("{}/users/announcer", INSTANCE_URL),
+            format!("{}/users/announcer", INSTANCE_URI),
         );
         assert_eq!(activity.object, post_id);
         assert_eq!(activity.to, vec![AP_PUBLIC, post_author_id]);
         assert_eq!(
             activity.cc,
-            vec![format!("{INSTANCE_URL}/users/announcer/followers")],
+            vec![format!("{INSTANCE_URI}/users/announcer/followers")],
         );
     }
 }

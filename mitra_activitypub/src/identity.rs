@@ -1,6 +1,3 @@
-use chrono::{DateTime, Utc};
-use serde::{Deserialize, Serialize};
-
 use apx_core::{
     did::Did,
     jcs::{
@@ -13,6 +10,9 @@ use apx_core::{
         IntegrityProofConfig,
     },
 };
+use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
+
 use mitra_models::profiles::types::{
     IdentityProof as DbIdentityProof,
     IdentityProofType,
@@ -50,7 +50,8 @@ pub fn create_identity_claim_fep_c390(
     let message = match proof_type {
         IdentityProofType::LegacyEip191IdentityProof
             | IdentityProofType::LegacyMinisignIdentityProof
-            => unimplemented!("expected FEP-c390 compatible proof type"),
+            | IdentityProofType::FepC390LegacyJcsEddsaProof
+            => unimplemented!("expected supported proof type"),
         IdentityProofType::FepC390JcsBlake2Ed25519Proof => {
             subject.as_did_key().expect("did:key should be used");
             canonicalize_object(&claim)?
@@ -59,21 +60,13 @@ pub fn create_identity_claim_fep_c390(
             subject.as_did_pkh().expect("did:pkh should be used");
             canonicalize_object(&claim)?
         },
-        IdentityProofType::FepC390LegacyJcsEddsaProof => {
-            subject.as_did_key().expect("did:key should be used");
-            let proof_config = IntegrityProofConfig::jcs_eddsa_legacy(
-                &subject.to_string(),
-                proof_created_at,
-            );
-            let hash_data = prepare_jcs_sha256_data(&claim, &proof_config)?;
-            hex::encode(hash_data)
-        },
-        IdentityProofType::FepC390EddsaJcsNoCiProof => {
-            subject.as_did_key().expect("did:key should be used");
+        IdentityProofType::FepC390EddsaJcsProof => {
+            let did_key = subject.as_did_key()
+                .expect("did:key should be used");
             let proof_config = IntegrityProofConfig::jcs_eddsa(
-                &subject.to_string(),
+                &did_key.verification_method_id(),
                 proof_created_at,
-                None,
+                None, // statement doesn't have @context
             );
             let hash_data = prepare_jcs_sha256_data(&claim, &proof_config)?;
             hex::encode(hash_data)
@@ -97,10 +90,12 @@ pub fn create_identity_proof_fep_c390(
     proof_created_at: DateTime<Utc>,
     signature_bin: &[u8],
 ) -> DbIdentityProof {
+    let statement = VerifiableIdentityStatement::new(subject, actor_id);
     let integrity_proof = match proof_type {
         IdentityProofType::LegacyEip191IdentityProof
             | IdentityProofType::LegacyMinisignIdentityProof
-            => unimplemented!("expected FEP-c390 compatible proof type"),
+            | IdentityProofType::FepC390LegacyJcsEddsaProof
+            => unimplemented!("expected supported proof type"),
         IdentityProofType::FepC390JcsBlake2Ed25519Proof => {
             let did_key = subject.as_did_key()
                 .expect("did:key should be used");
@@ -111,28 +106,19 @@ pub fn create_identity_proof_fep_c390(
                 .expect("did:pkh should be used");
             IntegrityProof::jcs_eip191(did_pkh, signature_bin)
         },
-        IdentityProofType::FepC390LegacyJcsEddsaProof => {
-            let did_key = subject.as_did_key()
-                .expect("did:key should be used");
-            let proof_config = IntegrityProofConfig::jcs_eddsa_legacy(
-                &did_key.to_string(),
-                proof_created_at,
-            );
-            IntegrityProof::new(proof_config, signature_bin)
-        },
-        IdentityProofType::FepC390EddsaJcsNoCiProof => {
+        IdentityProofType::FepC390EddsaJcsProof => {
             let did_key = subject.as_did_key()
                 .expect("did:key should be used");
             let proof_config = IntegrityProofConfig::jcs_eddsa(
-                &did_key.to_string(),
+                &did_key.verification_method_id(),
                 proof_created_at,
-                None,
+                None, // statement doesn't have @context
             );
             IntegrityProof::new(proof_config, signature_bin)
         },
     };
     let identity_proof = IdentityProof {
-        statement: VerifiableIdentityStatement::new(subject, actor_id),
+        statement: statement,
         proof: integrity_proof,
     };
     let proof_value = serde_json::to_value(&identity_proof)
@@ -146,24 +132,36 @@ pub fn create_identity_proof_fep_c390(
 
 #[cfg(test)]
 mod tests {
-    use serde_json::json;
     use apx_core::{
-        crypto_eddsa::{
-            generate_weak_ed25519_key,
-            ed25519_public_key_from_secret_key,
-            ed25519_secret_key_from_multikey,
+        crypto::{
+            ecdsa::generate_ecdsa_key,
+            eddsa::{
+                create_eddsa_signature,
+                generate_weak_ed25519_key,
+                ed25519_public_key_from_secret_key,
+                ed25519_secret_key_from_multikey,
+            },
         },
         did_key::DidKey,
+        did_pkh::DidPkh,
+        eip191::{
+            create_eip191_signature,
+            ecdsa_public_key_to_address_hex,
+        },
         json_signatures::{
-            create::sign_object_eddsa,
             proofs::ProofType,
-            verify::{get_json_signature, verify_eddsa_json_signature},
+            verify::{
+                get_json_signature,
+                verify_eddsa_json_signature,
+                verify_eip191_json_signature,
+            },
         },
     };
+    use serde_json::json;
     use super::*;
 
     #[test]
-    fn test_create_identity_claim_fep_c390() {
+    fn test_create_identity_claim_minisign_prehashed() {
         let actor_id = "https://server.example/users/test";
         let ed25519_secret_key = generate_weak_ed25519_key();
         let ed25519_public_key =
@@ -183,8 +181,46 @@ mod tests {
     }
 
     #[test]
-    fn test_create_and_verify_identity_proof() {
-        // jcs-eddsa-2022; no context injection
+    fn test_create_and_verify_identity_proof_eip191() {
+        let secret_key = generate_ecdsa_key();
+        let public_key = secret_key.verifying_key();
+        let address = ecdsa_public_key_to_address_hex(public_key);
+        let did_pkh = DidPkh::from_ethereum_address(&address);
+        let did = Did::Pkh(did_pkh.clone());
+        let actor_id = "https://server.example/users/test";
+        let created_at = Utc::now();
+        let (_claim, message) = create_identity_claim_fep_c390(
+            actor_id,
+            &did,
+            &IdentityProofType::FepC390JcsEip191Proof,
+            created_at,
+        ).unwrap();
+        let signature = create_eip191_signature(
+            &secret_key,
+            message.as_bytes(),
+        ).unwrap();
+        let db_proof = create_identity_proof_fep_c390(
+            actor_id,
+            &did,
+            &IdentityProofType::FepC390JcsEip191Proof,
+            created_at,
+            &signature,
+        );
+        let signature_data = get_json_signature(&db_proof.value).unwrap();
+        assert_eq!(
+            signature_data.proof_type,
+            ProofType::JcsEip191Signature,
+        );
+        let result = verify_eip191_json_signature(
+            &did_pkh,
+            &signature_data.object,
+            &signature_data.signature,
+        );
+        assert_eq!(result.is_ok(), true);
+    }
+
+    #[test]
+    fn test_create_and_verify_identity_proof_eddsa() {
         let did_str = "did:key:z6MkrJVnaZkeFzdQyMZu1cgjg7k1pZZ6pvBQ7XJPt4swbTQ2";
         let did = did_str.parse().unwrap();
         let secret_key_multibase = "z3u2en7t5LR2WtQH5PfFqMqwVHBeXouLzo6haApm8XHqvjxq";
@@ -192,40 +228,42 @@ mod tests {
         let actor_id = "https://server.example/users/alice";
         let created_at = DateTime::parse_from_rfc3339("2023-02-24T23:36:38Z")
             .unwrap().with_timezone(&Utc);
-        let (claim, _) = create_identity_claim_fep_c390(
+        let (_claim, message) = create_identity_claim_fep_c390(
             actor_id,
             &did,
-            &IdentityProofType::FepC390JcsBlake2Ed25519Proof,
+            &IdentityProofType::FepC390EddsaJcsProof,
             created_at,
         ).unwrap();
-        let claim_value = serde_json::to_value(claim).unwrap();
-        let identity_proof = sign_object_eddsa(
+        let signature = create_eddsa_signature(
             &secret_key,
-            &did.to_string(),
-            &claim_value,
-            Some(created_at),
-            true,
-            false, // no proof context
-        ).unwrap();
+            &hex::decode(message).unwrap(),
+        );
+        let db_proof = create_identity_proof_fep_c390(
+            actor_id,
+            &did,
+            &IdentityProofType::FepC390EddsaJcsProof,
+            created_at,
+            &signature,
+        );
         let expected_result = json!({
             "type": "VerifiableIdentityStatement",
             "subject": "did:key:z6MkrJVnaZkeFzdQyMZu1cgjg7k1pZZ6pvBQ7XJPt4swbTQ2",
             "alsoKnownAs": "https://server.example/users/alice",
             "proof": {
                 "type": "DataIntegrityProof",
-                "cryptosuite": "jcs-eddsa-2022",
-                "verificationMethod": "did:key:z6MkrJVnaZkeFzdQyMZu1cgjg7k1pZZ6pvBQ7XJPt4swbTQ2",
+                "cryptosuite": "eddsa-jcs-2022",
+                "verificationMethod": "did:key:z6MkrJVnaZkeFzdQyMZu1cgjg7k1pZZ6pvBQ7XJPt4swbTQ2#z6MkrJVnaZkeFzdQyMZu1cgjg7k1pZZ6pvBQ7XJPt4swbTQ2",
                 "proofPurpose": "assertionMethod",
-                "proofValue": "zYqr4eFzrnUWiBDaa7SmBhfaSBiv6BFRsDRGkmaCJpXArPBspFWNM6NXu77R7JakdzbUdjZihBa28LuWscZxSfRk",
+                "proofValue": "zFQMTB8kZ1vExLhBUAGe4r3sc37onbdW8m3tdgsHYugh99Khzx87TbthqpSLcq45agip25v1mBvYW8u2GMKSMbpk",
                 "created": "2023-02-24T23:36:38Z",
             },
         });
-        assert_eq!(identity_proof, expected_result);
+        assert_eq!(db_proof.value, expected_result);
 
-        let signature_data = get_json_signature(&identity_proof).unwrap();
+        let signature_data = get_json_signature(&db_proof.value).unwrap();
         assert_eq!(
             signature_data.proof_type,
-            ProofType::JcsEddsaSignature,
+            ProofType::EddsaJcsSignature,
         );
         let public_key = did.as_did_key().unwrap()
             .try_ed25519_key().unwrap();

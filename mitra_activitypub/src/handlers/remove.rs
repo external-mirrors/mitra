@@ -1,10 +1,14 @@
-use serde::Deserialize;
-use serde_json::Value;
-
 use apx_sdk::deserialization::deserialize_into_object_id;
+use serde::Deserialize;
+use serde_json::{Value as JsonValue};
+
 use mitra_config::Config;
 use mitra_models::{
-    database::{DatabaseClient, DatabaseError},
+    database::{
+        get_database_client,
+        DatabaseConnectionPool,
+        DatabaseError,
+    },
     notifications::helpers::{
         create_subscription_expiration_notification,
     },
@@ -35,21 +39,22 @@ struct Remove {
 
 pub async fn handle_remove(
     config: &Config,
-    db_client: &mut impl DatabaseClient,
-    activity: Value,
+    db_pool: &DatabaseConnectionPool,
+    activity: JsonValue,
 ) -> HandlerResult {
-    let activity: Remove = serde_json::from_value(activity)?;
+    let remove: Remove = serde_json::from_value(activity)?;
+    let db_client = &mut **get_database_client(db_pool).await?;
     let actor_profile = get_remote_profile_by_actor_id(
         db_client,
-        &activity.actor,
+        &remove.actor,
     ).await?;
     let actor = actor_profile.actor_json
         .expect("actor data should be present");
-    if Some(activity.target.clone()) == actor.subscribers {
+    if Some(remove.target.clone()) == actor.subscribers {
         // Removing from subscribers
         let username = parse_local_actor_id(
-            &config.instance_url(),
-            &activity.object,
+            config.instance().uri_str(),
+            &remove.object,
         )?;
         let user = get_user_by_name(db_client, &username).await?;
         // actor is recipient, user is sender
@@ -67,11 +72,11 @@ pub async fn handle_remove(
             Err(other_error) => return Err(other_error.into()),
         };
     };
-    if Some(activity.target) == actor.featured {
+    if Some(remove.target) == actor.featured {
         // Remove from featured
         let post = match get_remote_post_by_object_id(
             db_client,
-            &activity.object,
+            &remove.object,
         ).await {
             Ok(post) => post,
             Err(DatabaseError::NotFound(_)) => return Ok(None),

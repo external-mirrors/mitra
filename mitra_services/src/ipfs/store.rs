@@ -1,5 +1,4 @@
-/// https://docs.ipfs.io/reference/http/api/
-
+// https://docs.ipfs.io/reference/http/api/
 use reqwest::{multipart, Client};
 use serde::Deserialize;
 

@@ -12,13 +12,13 @@ use super::queries::{
     has_relationship,
     unfollow,
 };
-use super::types::{DbFollowRequest, RelationshipType};
+use super::types::{FollowRequest, RelationshipType};
 
 pub async fn create_follow_request(
     db_client: &mut impl DatabaseClient,
     source_id: Uuid,
     target_id: Uuid,
-) -> Result<DbFollowRequest, DatabaseError> {
+) -> Result<FollowRequest, DatabaseError> {
     let transaction = db_client.transaction().await?;
     // Prevent changes to relationship table
     transaction.execute(
@@ -103,7 +103,7 @@ mod tests {
             db_client,
             source.id,
             target.id,
-            &follow_activity_id,
+            follow_activity_id,
         ).await.unwrap();
         follow_request_accepted(db_client, follow_request.id).await.unwrap();
         let maybe_activity_id =

@@ -11,14 +11,15 @@ Built on [ActivityPub](https://www.w3.org/TR/activitypub/) protocol, self-hosted
 Features:
 
 - Micro-blogging service
-  - Quote posts, custom emojis, reactions and more.
+  - Quote posts, custom emojis, reactions, polls and more.
   - Default character limit is 5000.
-  - Support for a limited subset of markdown-style formatting.
+  - Support for [markdown-style](./docs/post_markup.md) formatting.
 - Easy installation and small memory footprint (<50 MB).
+- Interoperable. Can show content from blogs, forums and other types of federated services.
 - Mastodon API.
 - Content subscription service. Subscriptions provide a way to receive monthly payments from subscribers and to publish private content made exclusively for them.
   - Supported payment methods: [Monero](https://www.getmonero.org/get-started/what-is-monero/), a peer to peer digital cash system where transactions are private by default.
-- Account migrations (from one server to another). Identity can be detached from the server.
+- Account [migrations](./docs/migrations.md) (from one server to another). Identity can be detached from the server.
 - Federation over Tor and/or I2P.
 
 Follow: [@mitra@mitra.social](https://mitra.social/@mitra)
@@ -27,8 +28,9 @@ Matrix chat: [#mitra:unredacted.org](https://matrix.to/#/#mitra:unredacted.org)
 
 ## Instances
 
+- [FediDB](https://fedidb.org/software/mitra)
 - [Fediverse Observer](https://mitra.fediverse.observer/list)
-- [FediList](http://demo.fedilist.com/instance?software=mitra)
+- [FediList](https://fedilist.com/instance?software=mitra)
 
 Demo instance: https://public.mitra.social/ ([invite-only](https://public.mitra.social/about))
 
@@ -39,6 +41,7 @@ Demo instance: https://public.mitra.social/ ([invite-only](https://public.mitra.
 - [Phanpy](https://github.com/cheeaun/phanpy) (Web)
 - [pl-fe](https://github.com/mkljczk/pl-fe) (Web)
 - [Husky](https://github.com/captainepoch/husky) (Android)
+- [Fedilab](https://codeberg.org/tom79/Fedilab) (Android)
 - [Fedicat](https://codeberg.org/technicat/fedicat) (iOS)
 - [toot](https://github.com/ihabunek/toot) (CLI)
 
@@ -77,13 +80,13 @@ Open configuration file `/etc/mitra/config.yaml` and configure the instance.
 Create admin account:
 
 ```shell
-su mitra -s $SHELL -c "mitractl create-account <username> <password> admin"
+su mitra -s $SHELL -c "mitra create-account <username> <password> admin"
 ```
 
 Start Mitra:
 
 ```shell
-systemctl start mitra
+systemctl enable --now mitra
 ```
 
 An HTTP server will be needed to handle HTTPS requests. See examples of [Nginx](./contrib/mitra.nginx) and [Caddy](./docs/reverse_proxy.md#caddy) configuration files.
@@ -98,7 +101,7 @@ Install `cargo`. Then run:
 cargo build --release --features production
 ```
 
-This command will produce two binaries in `target/release` directory, `mitra` and `mitractl`.
+This command will produce a `mitra` binary in `target/release` directory.
 
 Install PostgreSQL, then create the database:
 
@@ -107,20 +110,22 @@ CREATE USER mitra WITH PASSWORD 'mitra';
 CREATE DATABASE mitra OWNER mitra ENCODING 'UTF8';
 ```
 
-Create configuration file by copying [`config.example.yaml`](./config.example.yaml) and configure the instance. Default config file path is `/etc/mitra/config.yaml`, but it can be changed using `CONFIG_PATH` environment variable.
+Create configuration file by copying [`config.example.yaml`](./config.example.yaml) and configure the instance. Default config file path is `config.yaml`, but it can be changed using `CONFIG_PATH` environment variable.
 
-Put any static files into the directory specified in configuration file. Building instructions for `mitra-web` frontend can be found at https://codeberg.org/silverpill/mitra-web#project-setup.
+Create data and web client directories at locations specified in the configuration file (`storage_dir` and `web_client_dir` parameters).
+
+Put any static files into the web client directory. Building instructions for `mitra-web` frontend can be found at https://codeberg.org/silverpill/mitra-web#project-setup.
 
 Create admin account:
 
 ```shell
-./mitractl create-account <username> <password> admin
+./mitra create-account <username> <password> admin
 ```
 
 Start Mitra:
 
 ```shell
-./mitra
+./mitra server
 ```
 
 An HTTP server will be needed to handle HTTPS requests. See examples of [Nginx](./contrib/mitra.nginx) and [Caddy](./docs/reverse_proxy.md#caddy) configuration files.
@@ -145,13 +150,13 @@ apk update
 apk add -vi mitra@testing
 ```
 
+#### Nix
+
+https://github.com/NixOS/nixpkgs/blob/nixos-unstable/pkgs/by-name/mi/mitra/package.nix
+
 #### YunoHost
 
 https://apps.yunohost.org/app/mitra
-
-### Hosting providers
-
-- [K&T Host](https://www.knthost.com/mitra)
 
 ## Upgrading
 
@@ -167,11 +172,19 @@ Upgrade to a `major` version requires special migration steps that are documente
 
 ### Debian package
 
+Install package:
+
 ```shell
 dpkg -i mitra_amd64.deb
 ```
 
-Do not overwrite existing configuration file.
+The server will be stopped automatically during installation. Do not overwrite existing configuration file if asked.
+
+Start Mitra again when the installation is complete:
+
+```
+systemctl start mitra
+```
 
 ## Configuration
 
@@ -197,16 +210,18 @@ See [guide](./docs/ipfs.md).
 - [Cache management](./docs/cache_management.md)
 - [Filter](./docs/filter.md)
 - [Relays](./docs/relays.md)
+- [Custom themes](./docs/custom_themes.md)
+- [Debugging](./docs/debugging.md)
 
 ## CLI
 
-`mitractl` is a command-line tool for performing instance maintenance.
+CLI is stable and breaking changes don't happen in minor releases.
 
-[Documentation](./docs/mitractl.md)
+[Documentation](./docs/mitra_cli.md)
 
-## Client API
+## REST API
 
-The majority of endpoints imitate Mastodon API. Some Pleroma extensions are supported as well. A number of additional endpoints exist for features that are unique to Mitra.
+The majority of endpoints imitate [Mastodon API](https://docs.joinmastodon.org/client/intro/). Some [Pleroma](https://docs.pleroma.social/backend/development/API/differences_in_mastoapi_responses/) extensions are supported as well. A number of additional endpoints exist for features that are unique to Mitra.
 
 Client API is not stable and may change in minor releases.
 
@@ -215,6 +230,12 @@ Client API is not stable and may change in minor releases.
 ## Federation
 
 See [FEDERATION.md](./FEDERATION.md)
+
+## ActivityPub Client API
+
+This API is not stable and may be removed in the future.
+
+[Documentation](./docs/c2s.md)
 
 ## Development
 
@@ -251,13 +272,13 @@ cp config_dev.example.yaml config.yaml
 Compile and run service:
 
 ```shell
-cargo run
+cargo run server
 ```
 
 ### Run CLI
 
 ```shell
-cargo run --bin mitractl
+cargo run
 ```
 
 ### Run linter

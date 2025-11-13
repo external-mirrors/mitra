@@ -1,57 +1,65 @@
 use uuid::Uuid;
 
-use crate::bookmarks::queries::find_bookmarked_by_user;
-use crate::conversations::queries::is_conversation_participant;
-use crate::database::{DatabaseClient, DatabaseError};
-use crate::polls::queries::find_votes_by_user;
-use crate::reactions::queries::find_reacted_by_user;
-use crate::relationships::{
-    queries::has_relationship,
-    types::RelationshipType,
+use crate::{
+    bookmarks::queries::find_bookmarked_by_user,
+    conversations::queries::is_conversation_participant,
+    database::{DatabaseClient, DatabaseError},
+    polls::queries::find_votes_by_user,
+    profiles::types::DbActorProfile,
+    reactions::queries::find_reacted_by_user,
+    relationships::{
+        queries::has_relationship,
+        types::RelationshipType,
+    },
+    users::types::{Permission, User},
 };
-use crate::users::types::{Permission, User};
 
 use super::queries::{
     get_post_by_id,
     get_related_posts,
+    find_posts_hidden_by_user,
     find_reposted_by_user,
 };
-use super::types::{Post, PostActions, Visibility};
+use super::types::{PostActions, PostDetailed, RelatedPosts, Visibility};
 
 pub async fn add_related_posts(
     db_client: &impl DatabaseClient,
-    posts: Vec<&mut Post>,
+    posts: Vec<&mut PostDetailed>,
 ) -> Result<(), DatabaseError> {
     let posts_ids = posts.iter().map(|post| post.id).collect();
     let related = get_related_posts(db_client, posts_ids).await?;
-    let get_post = |post_id: &Uuid| -> Result<Post, DatabaseError> {
+    let get_post = |post_id: Uuid| -> Result<PostDetailed, DatabaseError> {
         let post = related.iter()
-            .find(|post| post.id == *post_id)
+            .find(|post| post.id == post_id)
             .ok_or(DatabaseError::NotFound("post"))?
             .clone();
         Ok(post)
     };
     for post in posts {
-        if let Some(ref in_reply_to_id) = post.in_reply_to_id {
+        let mut related_posts = RelatedPosts::default();
+        if let Some(in_reply_to_id) = post.in_reply_to_id {
             let in_reply_to = get_post(in_reply_to_id)?;
-            post.in_reply_to = Some(Box::new(in_reply_to));
+            related_posts.in_reply_to = Some(Box::new(in_reply_to));
         };
-        for linked_id in post.links.iter() {
+        for linked_id in post.links.clone() {
             let linked = get_post(linked_id)?;
-            post.linked.push(linked);
+            related_posts.linked.push(linked);
         };
-        if let Some(ref repost_of_id) = post.repost_of_id {
+        if let Some(repost_of_id) = post.repost_of_id {
             let mut repost_of = get_post(repost_of_id)?;
-            if let Some(ref in_reply_to_id) = repost_of.in_reply_to_id {
+            let mut repost_of_related_posts = RelatedPosts::default();
+            if let Some(in_reply_to_id) = repost_of.in_reply_to_id {
                 let in_reply_to = get_post(in_reply_to_id)?;
-                repost_of.in_reply_to = Some(Box::new(in_reply_to));
+                repost_of_related_posts.in_reply_to = Some(Box::new(in_reply_to));
             };
-            for linked_id in repost_of.links.iter() {
+            for linked_id in repost_of.links.clone() {
                 let linked = get_post(linked_id)?;
-                repost_of.linked.push(linked);
+                repost_of_related_posts.linked.push(linked);
             };
-            post.repost_of = Some(Box::new(repost_of));
+            repost_of.related_posts = Some(repost_of_related_posts);
+            related_posts.repost_of = Some(Box::new(repost_of));
         };
+        post.related_posts = Some(related_posts);
     };
     Ok(())
 }
@@ -59,13 +67,15 @@ pub async fn add_related_posts(
 pub async fn add_user_actions(
     db_client: &impl DatabaseClient,
     user_id: Uuid,
-    posts: Vec<&mut Post>,
+    posts: Vec<&mut PostDetailed>,
 ) -> Result<(), DatabaseError> {
+    // This function can be used without add_related_posts
     let posts_ids: Vec<Uuid> = posts.iter()
         .map(|post| post.id)
         .chain(
             posts.iter()
-                .filter_map(|post| post.repost_of.as_ref())
+                .filter_map(|post| post.related_posts.as_ref())
+                .flat_map(|related_posts| related_posts.as_vec())
                 .map(|post| post.id)
         )
         .collect();
@@ -73,7 +83,8 @@ pub async fn add_user_actions(
     let reposts = find_reposted_by_user(db_client, user_id, &posts_ids).await?;
     let bookmarks = find_bookmarked_by_user(db_client, user_id, &posts_ids).await?;
     let votes = find_votes_by_user(db_client, user_id, &posts_ids).await?;
-    let get_actions = |post: &Post| -> PostActions {
+    let hidden_posts = find_posts_hidden_by_user(db_client, user_id, &posts_ids).await?;
+    let get_actions = |post: &PostDetailed| -> PostActions {
         let liked = reactions.iter()
             .any(|(post_id, content)| *post_id == post.id && content.is_none());
         let reacted_with: Vec<_> = reactions.iter()
@@ -86,18 +97,25 @@ pub async fn add_user_actions(
             .find(|(post_id, _)| *post_id == post.id)
             .map(|(_, votes)| votes.clone())
             .unwrap_or_default();
+        let hidden = hidden_posts.contains(&post.id);
         PostActions {
             liked: liked,
             reacted_with: reacted_with,
             reposted: reposted,
             bookmarked: bookmarked,
             voted_for: voted_for,
+            hidden: hidden,
         }
     };
     for post in posts {
-        if let Some(ref mut repost_of) = post.repost_of {
-            let actions = get_actions(repost_of);
-            repost_of.actions = Some(actions);
+        if let Some(related_posts) = post
+            .related_posts.as_mut()
+            .map(|related_posts| related_posts.as_vec_mut())
+        {
+            for related_post in related_posts {
+                let actions = get_actions(related_post);
+                related_post.actions = Some(actions);
+            };
         };
         let actions = get_actions(post);
         post.actions = Some(actions);
@@ -105,54 +123,55 @@ pub async fn add_user_actions(
     Ok(())
 }
 
+// Equivalent to build_visibility_filter
 pub async fn can_view_post(
     db_client: &impl DatabaseClient,
-    maybe_user: Option<&User>,
-    post: &Post,
+    maybe_viewer: Option<&DbActorProfile>,
+    post: &PostDetailed,
 ) -> Result<bool, DatabaseError> {
-    let is_author = |user: &User| post.author.id == user.id;
-    let is_mentioned = |user: &User| {
-        post.mentions.iter().any(|profile| profile.id == user.profile.id)
+    let is_author = |viewer: &DbActorProfile| post.author.id == viewer.id;
+    let is_mentioned = |viewer: &DbActorProfile| {
+        post.mentions.iter().any(|profile| profile.id == viewer.id)
     };
     let result = match post.visibility {
         Visibility::Public => true,
         Visibility::Followers => {
-            if let Some(user) = maybe_user {
+            if let Some(viewer) = maybe_viewer {
                 let is_following = has_relationship(
                     db_client,
-                    user.id,
+                    viewer.id,
                     post.author.id,
                     RelationshipType::Follow,
                 ).await?;
-                is_following || is_author(user) || is_mentioned(user)
+                is_following || is_author(viewer) || is_mentioned(viewer)
             } else {
                 false
             }
         },
         Visibility::Subscribers => {
-            if let Some(user) = maybe_user {
+            if let Some(viewer) = maybe_viewer {
                 // Can view only if mentioned
-                is_author(user) || is_mentioned(user)
+                is_author(viewer) || is_mentioned(viewer)
             } else {
                 false
             }
         },
         Visibility::Conversation => {
-            if let Some(user) = maybe_user {
+            if let Some(viewer) = maybe_viewer {
                 let conversation = post.expect_conversation();
                 let is_participant = is_conversation_participant(
                     db_client,
-                    user.id,
+                    viewer.id,
                     conversation.id,
                 ).await?;
-                is_participant || is_author(user) || is_mentioned(user)
+                is_participant || is_author(viewer) || is_mentioned(viewer)
             } else {
                 false
             }
         },
         Visibility::Direct => {
-            if let Some(user) = maybe_user {
-                is_author(user) || is_mentioned(user)
+            if let Some(viewer) = maybe_viewer {
+                is_author(viewer) || is_mentioned(viewer)
             } else {
                 false
             }
@@ -167,7 +186,8 @@ pub fn can_create_post(
     user.role.has_permission(Permission::CreatePost)
 }
 
-pub fn can_link_post(post: &Post) -> bool {
+// Equivalent to create_post_links
+pub fn can_link_post(post: &PostDetailed) -> bool {
     if post.repost_of_id.is_some() {
         // Can't reference reposts
         return false;
@@ -182,7 +202,7 @@ pub fn can_link_post(post: &Post) -> bool {
 pub async fn get_local_post_by_id(
     db_client: &impl DatabaseClient,
     post_id: Uuid,
-) -> Result<Post, DatabaseError> {
+) -> Result<PostDetailed, DatabaseError> {
     let post = get_post_by_id(db_client, post_id).await?;
     if !post.is_local() {
         return Err(DatabaseError::NotFound("post"));
@@ -192,11 +212,11 @@ pub async fn get_local_post_by_id(
 
 pub async fn get_post_by_id_for_view(
     db_client: &impl DatabaseClient,
-    maybe_user: Option<&User>,
+    maybe_viewer: Option<&DbActorProfile>,
     post_id: Uuid,
-) -> Result<Post, DatabaseError> {
+) -> Result<PostDetailed, DatabaseError> {
     let post = get_post_by_id(db_client, post_id).await?;
-    if !can_view_post(db_client, maybe_user, &post).await? {
+    if !can_view_post(db_client, maybe_viewer, &post).await? {
         return Err(DatabaseError::NotFound("post"));
     };
     Ok(post)
@@ -205,17 +225,20 @@ pub async fn get_post_by_id_for_view(
 #[cfg(test)]
 mod tests {
     use serial_test::serial;
-    use crate::database::test_utils::create_test_database;
-    use crate::posts::{
-        queries::create_post,
-        test_utils::create_test_local_post,
-        types::{PostContext, PostCreateData},
-    };
-    use crate::reactions::test_utils::create_test_local_reaction;
-    use crate::relationships::queries::{follow, subscribe};
-    use crate::users::{
-        test_utils::create_test_user,
-        types::{Role, User},
+    use crate::{
+        database::test_utils::create_test_database,
+        posts::{
+            queries::create_post,
+            test_utils::create_test_local_post,
+            types::{PostContext, PostCreateData},
+        },
+        profiles::test_utils::create_test_remote_profile,
+        reactions::test_utils::create_test_local_reaction,
+        relationships::queries::{follow, subscribe},
+        users::{
+            test_utils::create_test_user,
+            types::{Role, User},
+        },
     };
     use super::*;
 
@@ -236,9 +259,10 @@ mod tests {
         };
         let mut reply = create_post(db_client, author.id, reply_data).await.unwrap();
         add_related_posts(db_client, vec![&mut reply]).await.unwrap();
-        assert_eq!(reply.in_reply_to.unwrap().id, post.id);
-        assert_eq!(reply.linked.is_empty(), true);
-        assert_eq!(reply.repost_of.is_none(), true);
+        let related_posts = reply.related_posts.unwrap();
+        assert_eq!(related_posts.in_reply_to.unwrap().id, post.id);
+        assert_eq!(related_posts.linked.is_empty(), true);
+        assert_eq!(related_posts.repost_of.is_none(), true);
     }
 
     #[tokio::test]
@@ -257,17 +281,20 @@ mod tests {
             ..Default::default()
         };
         let reply = create_post(db_client, author.id, reply_data).await.unwrap();
-        let repost_data = PostCreateData::repost(reply.id, None);
+        let repost_data = PostCreateData::repost(
+            reply.id,
+            Visibility::Public,
+            None,
+        );
         let mut repost = create_post(db_client, author.id, repost_data).await.unwrap();
         add_related_posts(db_client, vec![&mut repost]).await.unwrap();
-        assert_eq!(repost.in_reply_to.is_none(), true);
-        assert_eq!(repost.linked.is_empty(), true);
+        let related_posts = repost.related_posts.unwrap();
+        assert_eq!(related_posts.in_reply_to.is_none(), true);
+        assert_eq!(related_posts.linked.is_empty(), true);
+        let repost_of = related_posts.repost_of.unwrap();
+        assert_eq!(repost_of.id, reply.id);
         assert_eq!(
-            repost.repost_of.as_ref().unwrap().id,
-            reply.id,
-        );
-        assert_eq!(
-            repost.repost_of.unwrap().in_reply_to.unwrap().id,
+            repost_of.related_posts.unwrap().in_reply_to.unwrap().id,
             post.id,
         );
     }
@@ -298,7 +325,7 @@ mod tests {
     #[tokio::test]
     #[serial]
     async fn test_can_view_post_anonymous() {
-        let post = Post {
+        let post = PostDetailed {
             visibility: Visibility::Public,
             ..Default::default()
         };
@@ -311,12 +338,16 @@ mod tests {
     #[serial]
     async fn test_can_view_post_direct() {
         let user = User::default();
-        let post = Post {
+        let post = PostDetailed {
             visibility: Visibility::Direct,
             ..Default::default()
         };
         let db_client = &create_test_database().await;
-        let result = can_view_post(db_client, Some(&user), &post).await.unwrap();
+        let result = can_view_post(
+            db_client,
+            Some(&user.profile),
+            &post,
+        ).await.unwrap();
         assert_eq!(result, false);
     }
 
@@ -324,13 +355,17 @@ mod tests {
     #[serial]
     async fn test_can_view_post_direct_author() {
         let user = User::default();
-        let post = Post {
+        let post = PostDetailed {
             author: user.profile.clone(),
             visibility: Visibility::Direct,
             ..Default::default()
         };
         let db_client = &create_test_database().await;
-        let result = can_view_post(db_client, Some(&user), &post).await.unwrap();
+        let result = can_view_post(
+            db_client,
+            Some(&user.profile),
+            &post,
+        ).await.unwrap();
         assert_eq!(result, true);
     }
 
@@ -338,13 +373,17 @@ mod tests {
     #[serial]
     async fn test_can_view_post_direct_mentioned() {
         let user = User::default();
-        let post = Post {
+        let post = PostDetailed {
             visibility: Visibility::Direct,
             mentions: vec![user.profile.clone()],
             ..Default::default()
         };
         let db_client = &create_test_database().await;
-        let result = can_view_post(db_client, Some(&user), &post).await.unwrap();
+        let result = can_view_post(
+            db_client,
+            Some(&user.profile),
+            &post,
+        ).await.unwrap();
         assert_eq!(result, true);
     }
 
@@ -353,7 +392,7 @@ mod tests {
     async fn test_can_view_post_followers_only_anonymous() {
         let db_client = &mut create_test_database().await;
         let author = create_test_user(db_client, "author").await;
-        let post = Post {
+        let post = PostDetailed {
             author: author.profile,
             visibility: Visibility::Followers,
             ..Default::default()
@@ -369,12 +408,41 @@ mod tests {
         let author = create_test_user(db_client, "author").await;
         let follower = create_test_user(db_client, "follower").await;
         follow(db_client, follower.id, author.id).await.unwrap();
-        let post = Post {
+        let post = PostDetailed {
             author: author.profile,
             visibility: Visibility::Followers,
             ..Default::default()
         };
-        let result = can_view_post(db_client, Some(&follower), &post).await.unwrap();
+        let result = can_view_post(
+            db_client,
+            Some(&follower.profile),
+            &post,
+        ).await.unwrap();
+        assert_eq!(result, true);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_can_view_post_followers_only_remote_follower() {
+        let db_client = &mut create_test_database().await;
+        let author = create_test_user(db_client, "author").await;
+        let follower = create_test_remote_profile(
+            db_client,
+            "follower",
+            "remote.example",
+            "https://remote.example/actor",
+        ).await;
+        follow(db_client, follower.id, author.id).await.unwrap();
+        let post = PostDetailed {
+            author: author.profile,
+            visibility: Visibility::Followers,
+            ..Default::default()
+        };
+        let result = can_view_post(
+            db_client,
+            Some(&follower),
+            &post,
+        ).await.unwrap();
         assert_eq!(result, true);
     }
 
@@ -387,24 +455,26 @@ mod tests {
         follow(db_client, follower.id, author.id).await.unwrap();
         let subscriber = create_test_user(db_client, "subscriber").await;
         subscribe(db_client, subscriber.id, author.id).await.unwrap();
-        let post = Post {
+        let post = PostDetailed {
             author: author.profile,
             visibility: Visibility::Subscribers,
             mentions: vec![subscriber.profile.clone()],
             ..Default::default()
         };
-        assert_eq!(
-            can_view_post(db_client, None, &post).await.unwrap(),
-            false,
-        );
-        assert_eq!(
-            can_view_post(db_client, Some(&follower), &post).await.unwrap(),
-            false,
-        );
-        assert_eq!(
-            can_view_post(db_client, Some(&subscriber), &post).await.unwrap(),
-            true,
-        );
+        let can_view = can_view_post(db_client, None, &post).await.unwrap();
+        assert_eq!(can_view, false);
+        let can_view = can_view_post(
+            db_client,
+            Some(&follower.profile),
+            &post,
+        ).await.unwrap();
+        assert_eq!(can_view, false);
+        let can_view = can_view_post(
+            db_client,
+            Some(&subscriber.profile),
+            &post,
+        ).await.unwrap();
+        assert_eq!(can_view, true);
     }
 
     #[tokio::test]
@@ -415,7 +485,9 @@ mod tests {
         let root_follower = create_test_user(db_client, "root_follower").await;
         follow(db_client, root_follower.id, root_author.id).await.unwrap();
         let root_data = PostCreateData {
-            context: PostContext::Top { audience: None },
+            context: PostContext::Top {
+                audience: Some("https://local/op/followers".to_owned()),
+            },
             content: "root".to_string(),
             visibility: Visibility::Followers,
             ..Default::default()
@@ -424,29 +496,33 @@ mod tests {
         let author = create_test_user(db_client, "author").await;
         let author_follower = create_test_user(db_client, "author_follower").await;
         follow(db_client, author_follower.id, author.id).await.unwrap();
-        let post = Post {
+        let post = PostDetailed {
             author: author.profile.clone(),
             conversation: root.conversation.clone(),
             in_reply_to_id: Some(root.id),
             visibility: Visibility::Conversation,
             ..Default::default()
         };
-        assert_eq!(
-            can_view_post(db_client, None, &post).await.unwrap(),
-            false,
-        );
-        assert_eq!(
-            can_view_post(db_client, Some(&author), &post).await.unwrap(),
-            true,
-        );
-        assert_eq!(
-            can_view_post(db_client, Some(&root_follower), &post).await.unwrap(),
-            true,
-        );
-        assert_eq!(
-            can_view_post(db_client, Some(&author_follower), &post).await.unwrap(),
-            false,
-        );
+        let can_view = can_view_post(db_client, None, &post).await.unwrap();
+        assert_eq!(can_view, false);
+        let can_view = can_view_post(
+            db_client,
+            Some(&author.profile),
+            &post,
+        ).await.unwrap();
+        assert_eq!(can_view, true);
+        let can_view = can_view_post(
+            db_client,
+            Some(&root_follower.profile),
+            &post,
+        ).await.unwrap();
+        assert_eq!(can_view, true);
+        let can_view = can_view_post(
+            db_client,
+            Some(&author_follower.profile),
+            &post,
+        ).await.unwrap();
+        assert_eq!(can_view, false);
     }
 
     #[test]

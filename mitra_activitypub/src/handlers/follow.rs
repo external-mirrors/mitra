@@ -1,10 +1,14 @@
+use apx_sdk::deserialization::deserialize_into_object_id;
 use serde::Deserialize;
 use serde_json::{Value as JsonValue};
 
-use apx_sdk::deserialization::deserialize_into_object_id;
 use mitra_config::Config;
 use mitra_models::{
-    database::{DatabaseClient, DatabaseError},
+    database::{
+        get_database_client,
+        DatabaseConnectionPool,
+        DatabaseError,
+    },
     notifications::helpers::create_follow_request_notification,
     relationships::queries::{
         create_remote_follow_request_opt,
@@ -12,7 +16,7 @@ use mitra_models::{
         has_relationship,
     },
     relationships::types::RelationshipType,
-    users::queries::get_user_by_name,
+    users::queries::get_user_by_id,
 };
 use mitra_validators::{
     activitypub::validate_any_object_id,
@@ -20,7 +24,7 @@ use mitra_validators::{
 
 use crate::{
     builders::accept_follow::prepare_accept_follow,
-    identifiers::{canonicalize_id, parse_local_actor_id},
+    identifiers::canonicalize_id,
     importers::{ActorIdResolver, ApClient},
 };
 
@@ -37,34 +41,41 @@ struct Follow {
 
 pub async fn handle_follow(
     config: &Config,
-    db_client: &mut impl DatabaseClient,
+    db_pool: &DatabaseConnectionPool,
     activity: JsonValue,
 ) -> HandlerResult {
     // Follow(Person)
-    let activity: Follow = serde_json::from_value(activity)?;
-    let ap_client = ApClient::new(config, db_client).await?;
+    let follow: Follow = serde_json::from_value(activity)?;
+    let ap_client = ApClient::new_with_pool(config, db_pool).await?;
     let source_profile = ActorIdResolver::default().only_remote().resolve(
         &ap_client,
-        db_client,
-        &activity.actor,
+        db_pool,
+        &follow.actor,
     ).await?;
     let source_actor = source_profile.actor_json
         .expect("actor data should be present");
-    let target_username = parse_local_actor_id(
-        &config.instance_url(),
-        &activity.object,
-    )?;
-    let target_user = get_user_by_name(db_client, &target_username).await?;
+    let target_profile = ActorIdResolver::default().resolve(
+        &ap_client,
+        db_pool,
+        &follow.object,
+    ).await?;
     // Create new follow request or update activity ID on existing one,
     // because latest activity ID might be needed to process Undo(Follow)
-    let canonical_activity_id = canonicalize_id(&activity.id)?;
+    let canonical_activity_id = canonicalize_id(&follow.id)?;
     validate_any_object_id(&canonical_activity_id.to_string())?;
+    let db_client = &mut **get_database_client(db_pool).await?;
     let follow_request = create_remote_follow_request_opt(
         db_client,
         source_profile.id,
-        target_user.id,
+        target_profile.id,
         &canonical_activity_id.to_string(),
     ).await?;
+    let target_user = if target_profile.is_local() {
+        get_user_by_id(db_client, target_profile.id).await?
+    } else {
+        // Activity has been performed by a portable account
+        return Ok(Some(Descriptor::object("Actor")));
+    };
     let is_following = has_relationship(
         db_client,
         follow_request.source_id,

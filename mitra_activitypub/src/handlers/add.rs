@@ -1,15 +1,19 @@
+use apx_sdk::{
+    deserialization::deserialize_into_object_id,
+    utils::is_activity,
+};
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
 use serde_json::{Value as JsonValue};
 
-use apx_sdk::{
-    deserialization::deserialize_into_object_id,
-    url::is_same_origin,
-    utils::is_activity,
-};
+use mitra_adapters::payments::subscriptions::create_or_update_subscription;
 use mitra_config::Config;
 use mitra_models::{
-    database::{DatabaseClient, DatabaseError},
+    database::{
+        get_database_client,
+        DatabaseConnectionPool,
+        DatabaseError,
+    },
     invoices::queries::{
         get_remote_invoice_by_object_id,
         set_invoice_status,
@@ -21,27 +25,23 @@ use mitra_models::{
     },
     profiles::queries::get_remote_profile_by_actor_id,
     relationships::queries::subscribe_opt,
-    subscriptions::queries::{
-        create_subscription,
-        get_subscription_by_participants,
-        update_subscription,
-    },
     users::queries::get_user_by_name,
 };
 use mitra_validators::errors::ValidationError;
 
 use crate::{
-    agent::build_federation_agent,
     authentication::{verify_signed_activity, AuthenticationError},
     identifiers::parse_local_actor_id,
-    importers::fetch_any_object,
-    ownership::verify_activity_owner,
-    vocabulary::{CREATE, DISLIKE, EMOJI_REACT, LIKE},
+    importers::ApClient,
+    ownership::{is_local_origin, is_same_origin, get_object_id, verify_activity_owner},
+    vocabulary::{CREATE, DELETE, DISLIKE, EMOJI_REACT, LIKE, UPDATE},
 };
 
 use super::{
     create::handle_create,
+    delete::handle_delete,
     like::handle_like,
+    update::handle_update,
     Descriptor,
     HandlerResult,
 };
@@ -74,7 +74,7 @@ struct ConversationAdd {
 // https://fediversity.site/help/develop/en/Containers
 async fn handle_fep_171b_add(
     config: &Config,
-    db_client: &mut impl DatabaseClient,
+    db_pool: &DatabaseConnectionPool,
     add: JsonValue,
 ) -> HandlerResult {
     let ConversationAdd {
@@ -82,25 +82,26 @@ async fn handle_fep_171b_add(
         object: mut activity,
         target,
     } = serde_json::from_value(add)?;
+    let activity_id = get_object_id(&activity)?;
+    if is_local_origin(&config.instance(), activity_id) {
+        // Ignore local activities
+        return Ok(None);
+    };
     // Authentication
     match verify_signed_activity(
         config,
-        db_client,
+        db_pool,
         &activity,
         false, // fetch signer
     ).await {
         Ok(_) => (),
         Err(AuthenticationError::NoJsonSignature) => {
             // Verify activity by fetching it from origin
-            let activity_id = activity["id"].as_str()
-                .ok_or(ValidationError("unexpected activity structure"))?
-                .to_owned();
-            let instance = config.instance();
-            let agent = build_federation_agent(&instance, None);
-            match fetch_any_object(&agent, &activity_id).await {
+            let ap_client = ApClient::new_with_pool(config, db_pool).await?;
+            match ap_client.fetch_object(activity_id).await {
                 Ok(activity_fetched) => {
                     log::info!("fetched activity {}", activity_id);
-                    activity = activity_fetched
+                    activity = activity_fetched;
                 },
                 Err(error) => {
                     // Wrapped activities are not always available
@@ -116,9 +117,7 @@ async fn handle_fep_171b_add(
         },
     };
     // Authorization
-    if !is_same_origin(&conversation_owner, &target)
-        .map_err(|_| ValidationError("invalid object ID"))?
-    {
+    if !is_same_origin(&conversation_owner, &target)? {
         return Err(ValidationError("actor is not allowed to modify target").into());
     };
     verify_activity_owner(&activity)?;
@@ -137,15 +136,32 @@ async fn handle_fep_171b_add(
         CREATE => {
             handle_create(
                 config,
-                db_client,
+                db_pool,
                 activity,
+                None, // no sender (spam check will not be performed)
                 true, // authenticated (FEP-8b32 or fetched from origin)
-                true, // don't perform spam check
             ).await?;
             Ok(Some(Descriptor::object(activity_type)))
         },
+        DELETE => {
+            let maybe_type = handle_delete(
+                config,
+                db_pool,
+                activity,
+            ).await?;
+            Ok(maybe_type.map(|_| Descriptor::object(activity_type)))
+        },
+        UPDATE => {
+            let maybe_type = handle_update(
+                config,
+                db_pool,
+                activity,
+                true, // authenticated
+            ).await?;
+            Ok(maybe_type.map(|_| Descriptor::object(activity_type)))
+        },
         LIKE | DISLIKE | EMOJI_REACT => {
-            let maybe_type = handle_like(config, db_client, activity).await?;
+            let maybe_type = handle_like(config, db_pool, activity).await?;
             Ok(maybe_type.map(|_| Descriptor::object(activity_type)))
         },
         _ => {
@@ -157,33 +173,34 @@ async fn handle_fep_171b_add(
 
 pub async fn handle_add(
     config: &Config,
-    db_client: &mut impl DatabaseClient,
+    db_pool: &DatabaseConnectionPool,
     activity: JsonValue,
 ) -> HandlerResult {
     if is_activity(&activity["object"]) {
-        return handle_fep_171b_add(config, db_client, activity).await;
+        return handle_fep_171b_add(config, db_pool, activity).await;
     };
-    let activity: Add = serde_json::from_value(activity)?;
+    let add: Add = serde_json::from_value(activity)?;
+    let db_client = &mut **get_database_client(db_pool).await?;
     let actor_profile = get_remote_profile_by_actor_id(
         db_client,
-        &activity.actor,
+        &add.actor,
     ).await?;
     let actor = actor_profile.actor_json.as_ref()
         .expect("actor data should be present");
-    if Some(activity.target.clone()) == actor.subscribers {
+    if Some(add.target.clone()) == actor.subscribers {
         // Adding to subscribers
         let username = parse_local_actor_id(
-            &config.instance_url(),
-            &activity.object,
+            config.instance().uri_str(),
+            &add.object,
         )?;
         let sender = get_user_by_name(db_client, &username).await?;
         let recipient = actor_profile;
         subscribe_opt(db_client, sender.id, recipient.id).await?;
 
         // FEP-0837 confirmation
-        let subscription_expires_at = activity.end_time
+        let subscription_expires_at = add.end_time
             .ok_or(ValidationError("'endTime' property is missing"))?;
-        match activity.context {
+        match add.context {
             Some(ref agreement_id) => {
                 match get_remote_invoice_by_object_id(
                     db_client,
@@ -213,48 +230,19 @@ pub async fn handle_add(
             },
             _ => log::warn!("no agreement"),
         };
-
-        match get_subscription_by_participants(
+        create_or_update_subscription(
             db_client,
-            sender.id,
-            recipient.id,
-        ).await {
-            Ok(subscription) => {
-                update_subscription(
-                    db_client,
-                    subscription.id,
-                    subscription_expires_at,
-                    Utc::now(),
-                ).await?;
-                log::info!(
-                    "subscription updated: {0} to {1}",
-                    sender,
-                    recipient,
-                );
-            },
-            Err(DatabaseError::NotFound(_)) => {
-                create_subscription(
-                    db_client,
-                    sender.id,
-                    recipient.id,
-                    subscription_expires_at,
-                    Utc::now(),
-                ).await?;
-                log::info!(
-                    "subscription created: {0} to {1}",
-                    sender,
-                    recipient,
-                );
-            },
-            Err(other_error) => return Err(other_error.into()),
-        };
+            &sender.profile,
+            &recipient,
+            |_maybe_expires_at| subscription_expires_at,
+        ).await?;
         return Ok(Some(Descriptor::target("subscribers")));
     };
-    if Some(activity.target.clone()) == actor.featured {
+    if Some(add.target.clone()) == actor.featured {
         // Add to featured
         let post = match get_remote_post_by_object_id(
             db_client,
-            &activity.object,
+            &add.object,
         ).await {
             Ok(post) => post,
             Err(DatabaseError::NotFound(_)) => return Ok(None),
@@ -263,6 +251,6 @@ pub async fn handle_add(
         set_pinned_flag(db_client, post.id, true).await?;
         return Ok(Some(Descriptor::target("featured")));
     };
-    log::warn!("unknown target: {}", activity.target);
+    log::warn!("unknown target: {}", add.target);
     Ok(None)
 }

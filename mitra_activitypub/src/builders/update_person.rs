@@ -1,11 +1,13 @@
+use apx_sdk::{
+    constants::AP_PUBLIC,
+    core::url::http_uri::HttpUri,
+};
 use serde::Serialize;
 
-use apx_sdk::constants::AP_PUBLIC;
 use mitra_config::Instance;
 use mitra_models::{
     database::{DatabaseClient, DatabaseError},
     profiles::helpers::find_declared_aliases,
-    profiles::types::DbActor,
     relationships::queries::get_followers,
     users::types::User,
 };
@@ -16,6 +18,7 @@ use crate::{
     actors::builders::{build_local_actor, Actor},
     authority::Authority,
     contexts::{build_default_context, Context},
+    deliverer::Recipient,
     identifiers::{
         local_activity_id,
         LocalActorCollection,
@@ -41,20 +44,24 @@ struct UpdatePerson {
 }
 
 fn build_update_person(
-    instance_url: &str,
+    instance_uri: &HttpUri,
     media_server: &MediaServer,
     user: &User,
 ) -> Result<UpdatePerson, DatabaseError> {
-    let authority = Authority::from_user(instance_url, user, false);
+    let authority = Authority::server(instance_uri);
     let actor = build_local_actor(
-        instance_url,
+        instance_uri,
         &authority,
         media_server,
         user,
     )?;
     let followers = LocalActorCollection::Followers.of(&actor.id);
     // Update(Person) is idempotent so its ID can be random
-    let activity_id = local_activity_id(instance_url, UPDATE, generate_ulid());
+    let activity_id = local_activity_id(
+        instance_uri.as_str(),
+        UPDATE,
+        generate_ulid(),
+    );
     let activity = UpdatePerson {
         context: build_default_context(),
         activity_type: UPDATE.to_string(),
@@ -70,12 +77,12 @@ fn build_update_person(
 async fn get_update_person_recipients(
     db_client: &impl DatabaseClient,
     user: &User,
-) -> Result<Vec<DbActor>, DatabaseError> {
+) -> Result<Vec<Recipient>, DatabaseError> {
     let followers = get_followers(db_client, user.id).await?;
     let mut recipients = vec![];
     for profile in followers {
         if let Some(remote_actor) = profile.actor_json {
-            recipients.push(remote_actor);
+            recipients.extend(Recipient::for_inbox(&remote_actor));
         };
     };
     // Remote aliases
@@ -84,7 +91,7 @@ async fn get_update_person_recipients(
         let maybe_remote_actor = maybe_profile
             .and_then(|profile| profile.actor_json);
         if let Some(remote_actor) = maybe_remote_actor {
-            recipients.push(remote_actor);
+            recipients.extend(Recipient::for_inbox(&remote_actor));
         };
     };
     Ok(recipients)
@@ -97,13 +104,13 @@ pub async fn prepare_update_person(
     user: &User,
 ) -> Result<OutgoingActivityJobData, DatabaseError> {
     let activity = build_update_person(
-        &instance.url(),
+        instance.uri(),
         media_server,
         user,
     )?;
     let recipients = get_update_person_recipients(db_client, user).await?;
     Ok(OutgoingActivityJobData::new(
-        &instance.url(),
+        instance.uri_str(),
         user,
         activity,
         recipients,
@@ -115,29 +122,30 @@ mod tests {
     use mitra_models::profiles::types::DbActorProfile;
     use super::*;
 
-    const INSTANCE_URL: &str = "https://example.com";
+    const INSTANCE_URI: &str = "https://example.com";
 
     #[test]
     fn test_build_update_person() {
-        let media_server = MediaServer::for_test(INSTANCE_URL);
+        let instance_uri = HttpUri::parse(INSTANCE_URI).unwrap();
+        let media_server = MediaServer::for_test(instance_uri.as_str());
         let user = User {
             profile: DbActorProfile::local_for_test("testuser"),
             ..Default::default()
         };
         let activity = build_update_person(
-            INSTANCE_URL,
+            &instance_uri,
             &media_server,
             &user,
         ).unwrap();
         assert_eq!(activity.actor, activity.object.id);
         assert_eq!(
             activity.object.id,
-            format!("{}/users/testuser", INSTANCE_URL),
+            format!("{}/users/testuser", instance_uri),
         );
         assert_eq!(activity.to, vec![AP_PUBLIC.to_string()]);
         assert_eq!(
             activity.cc,
-            vec![format!("{}/users/testuser/followers", INSTANCE_URL)],
+            vec![format!("{}/users/testuser/followers", instance_uri)],
         );
     }
 }

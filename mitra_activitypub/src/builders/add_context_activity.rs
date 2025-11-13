@@ -1,12 +1,20 @@
+// https://codeberg.org/fediverse/fep/src/branch/main/fep/171b/fep-171b.md
 use serde::Serialize;
 use serde_json::{Value as JsonValue};
 use uuid::Uuid;
 
 use mitra_config::Instance;
 use mitra_models::{
+    conversations::types::Conversation,
     database::{DatabaseClient, DatabaseError},
-    posts::types::Post,
-    users::types::User,
+    posts::{
+        queries::get_post_by_id,
+        types::{PostDetailed, Visibility},
+    },
+    users::{
+        queries::get_user_by_id,
+        types::User,
+    },
 };
 use mitra_utils::id::generate_ulid;
 
@@ -15,7 +23,7 @@ use crate::{
     identifiers::{
         local_activity_id,
         local_actor_id,
-        local_context_collection,
+        local_conversation_history_collection,
     },
     queues::OutgoingActivityJobData,
     vocabulary::{ADD, ORDERED_COLLECTION},
@@ -49,15 +57,18 @@ struct AddContextActivity {
 }
 
 fn build_add_context_activity(
-    instance_url: &str,
+    instance_uri: &str,
     sender_username: &str,
     conversation_id: Uuid,
     conversation_audience: &str,
     activity: JsonValue,
 ) -> AddContextActivity {
-    let actor_id = local_actor_id(instance_url, sender_username);
-    let activity_id = local_activity_id(instance_url, ADD, generate_ulid());
-    let target_id = local_context_collection(instance_url, conversation_id);
+    let actor_id = local_actor_id(instance_uri, sender_username);
+    let activity_id = local_activity_id(instance_uri, ADD, generate_ulid());
+    let target_id = local_conversation_history_collection(
+        instance_uri,
+        conversation_id,
+    );
     AddContextActivity {
         context: build_default_context(),
         activity_type: ADD.to_string(),
@@ -73,12 +84,12 @@ fn build_add_context_activity(
     }
 }
 
-pub async fn prepare_add_context_activity(
+async fn prepare_add_context_activity(
     db_client: &impl DatabaseClient,
     instance: &Instance,
     conversation_owner: &User,
     conversation_id: Uuid,
-    conversation_root: &Post,
+    conversation_root: &PostDetailed,
     conversation_audience: &str,
     conversation_activity: JsonValue,
 ) -> Result<OutgoingActivityJobData, DatabaseError> {
@@ -86,7 +97,7 @@ pub async fn prepare_add_context_activity(
     let conversation = conversation_root.expect_conversation();
     assert_eq!(conversation_id, conversation.id);
     let activity = build_add_context_activity(
-        &instance.url(),
+        instance.uri_str(),
         &conversation_owner.profile.username,
         conversation_id,
         conversation_audience,
@@ -94,18 +105,64 @@ pub async fn prepare_add_context_activity(
     );
     let recipients = get_note_recipients(db_client, conversation_root).await?;
     Ok(OutgoingActivityJobData::new(
-        &instance.url(),
+        instance.uri_str(),
         conversation_owner,
         activity,
         recipients,
     ))
 }
 
+/// Distributes activity to conversation participants if the owner is local
+pub async fn sync_conversation(
+    db_client: &impl DatabaseClient,
+    instance: &Instance,
+    conversation: &Conversation,
+    activity: JsonValue,
+    activity_visibility: Visibility,
+) -> Result<(), DatabaseError> {
+    let root = get_post_by_id(db_client, conversation.root_id).await?;
+    if !root.is_local() {
+        // Conversation owner is remote
+        return Ok(());
+    };
+    if activity_visibility == Visibility::Conversation {
+        // Conversation activities are synced.
+    } else if conversation.is_public()
+        && instance.federation.fep_171b_public_enabled
+    {
+        if activity_visibility == Visibility::Public {
+            // Public activities are synced if public sync is enabled.
+        } else {
+            log::info!("not syncing {activity_visibility:?} activity");
+            return Ok(());
+        }
+    } else {
+        // Replies that don't conform to FEP-171b are not synced.
+        // DMs are not synced.
+        return Ok(());
+    };
+    if let Some(ref conversation_audience) = conversation.audience {
+        let conversation_owner = get_user_by_id(db_client, root.author.id).await?;
+        prepare_add_context_activity(
+            db_client,
+            instance,
+            &conversation_owner,
+            conversation.id,
+            &root,
+            conversation_audience,
+            activity,
+        ).await?.save_and_enqueue(db_client).await?;
+    } else {
+        log::warn!("conversation audience is not known");
+    };
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    const INSTANCE_URL: &str = "https://social.example";
+    const INSTANCE_URI: &str = "https://social.example";
 
     #[test]
     fn test_build_add_context_activity() {
@@ -116,7 +173,7 @@ mod tests {
             "type": "Create",
         });
         let activity = build_add_context_activity(
-            INSTANCE_URL,
+            INSTANCE_URI,
             owner_username,
             conversation_id,
             conversation_audience,
@@ -127,7 +184,7 @@ mod tests {
         assert_eq!(activity.object, conversation_activity);
         assert_eq!(
             activity.target.id,
-            format!("https://social.example/collections/conversations/{conversation_id}/context"),
+            format!("https://social.example/collections/conversations/{conversation_id}/history"),
         );
         assert_eq!(activity.target.attributed_to, activity.actor);
         assert_eq!(activity.to, vec![conversation_audience.to_string()]);

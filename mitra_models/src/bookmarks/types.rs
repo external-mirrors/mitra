@@ -2,12 +2,12 @@ use tokio_postgres::Row;
 
 use crate::{
     database::DatabaseError,
-    posts::types::Post,
+    posts::types::PostDetailed,
 };
 
 pub struct BookmarkedPost {
     pub bookmark_id: i32,
-    pub post: Post,
+    pub post: PostDetailed,
 }
 
 impl TryFrom<&Row> for BookmarkedPost {
@@ -15,7 +15,7 @@ impl TryFrom<&Row> for BookmarkedPost {
 
     fn try_from(row: &Row) -> Result<Self, Self::Error> {
         let bookmark_id: i32 = row.try_get("id")?;
-        let post = Post::try_from(row)?;
+        let post = PostDetailed::try_from(row)?;
         Ok(Self { bookmark_id, post })
     }
 }

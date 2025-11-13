@@ -1,10 +1,13 @@
 # Tor federation
 
+Mitra can be configured to work in Tor-only mode, or in clearnet mode with Tor connection.
+
+- **Tor-only**: federates with other instances on Tor network and with a small subset of clearnet instances that are connected to Tor.
+- **Clearnet + Tor**: a regular clearnet instance that also federates with Tor-only instances.
+
 ## Tor-only instance
 
-Install Tor.
-
-Install Mitra. Uncomment or add the following block to Mitra configuration file:
+Install Tor. Uncomment or add the following block to Mitra configuration file:
 
 ```yaml
 federation:
@@ -22,19 +25,17 @@ HiddenServicePort 80 127.0.0.1:8383
 
 Where `8383` should correspond to `http_port` setting in Mitra configuration file.
 
-Restart the Tor service. Inside the `HiddenServiceDir` directory find the `hostname` file. This file contains the hostname of your onion service. Change the value of `instance_uri` parameter in Mitra configuration file to that hostname (it should end with `.onion`).
+Restart the Tor service. Inside the `HiddenServiceDir` directory find the `hostname` file. This file contains the hostname of your onion service. Change the value of `instance_url` parameter in Mitra configuration file to that hostname (it should end with `.onion`).
 
 Start Mitra.
 
-For more information about running onion services, visit https://community.torproject.org/onion-services/setup/
+An HTTP server (e.g. nginx) is not necessary in this setup. For more information about running onion services, visit https://community.torproject.org/onion-services/setup/
 
 You can also generate a [vanity address](./onion-vanity-address.md) for your onion service.
 
 ## Clearnet + Tor
 
-Clearnet instances can federate with Tor-only instances.
-
-Add the following block to Mitra configuration file:
+To enable Tor federation on a clearnet Mitra instance, add the following block to the configuration file:
 
 ```yaml
 federation:

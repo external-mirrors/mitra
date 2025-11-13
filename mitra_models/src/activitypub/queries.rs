@@ -1,15 +1,22 @@
+use apx_core::url::canonical::CanonicalUri;
 use chrono::{DateTime, Utc};
 use serde_json::{Value as JsonValue};
 use uuid::Uuid;
 
-use crate::database::{
-    DatabaseClient,
-    DatabaseError,
+use mitra_utils::files::FileInfo;
+
+use crate::{
+    database::{
+        DatabaseClient,
+        DatabaseError,
+        DatabaseTypeError,
+    },
+    media::types::MediaInfo,
 };
 
 pub async fn save_activity(
     db_client: &impl DatabaseClient,
-    activity_id: &str,
+    activity_id: &CanonicalUri,
     activity: &JsonValue,
 ) -> Result<bool, DatabaseError> {
     // Never overwrite existing object
@@ -24,7 +31,7 @@ pub async fn save_activity(
         ON CONFLICT (object_id)
         DO NOTHING
         ",
-        &[&activity_id, &activity],
+        &[&activity_id.to_string(), &activity],
     ).await?;
     let is_new = inserted_count > 0;
     Ok(is_new)
@@ -158,6 +165,21 @@ pub async fn add_object_to_collection(
     Ok(())
 }
 
+pub async fn remove_object_from_collection(
+    db_client: &impl DatabaseClient,
+    collection_id: &str,
+    object_id: &str,
+) -> Result<(), DatabaseError> {
+    db_client.execute(
+        "
+        DELETE FROM activitypub_collection_item
+        WHERE collection_id = $1 AND object_id = $2
+        ",
+        &[&collection_id, &object_id],
+    ).await?;
+    Ok(())
+}
+
 pub async fn get_collection_items(
     db_client: &impl DatabaseClient,
     collection_id: &str,
@@ -202,6 +224,108 @@ pub async fn delete_collection_items(
     Ok(deleted_count)
 }
 
+pub async fn expand_collections(
+    db_client: &impl DatabaseClient,
+    audience: &[CanonicalUri],
+) -> Result<Vec<String>, DatabaseError> {
+    let audience: Vec<_> = audience.iter()
+        .map(|target_id| target_id.to_string())
+        .collect();
+    let items_rows = db_client.query(
+        "
+        SELECT collection_id, object_id
+        FROM activitypub_collection_item
+        WHERE collection_id = ANY($1)
+        ",
+        &[&audience],
+    ).await?;
+    let items = items_rows.into_iter()
+        .map(|row| {
+            let collection_id: String = row.try_get("collection_id")?;
+            let object_id: String = row.try_get("object_id")?;
+            Ok((collection_id, object_id))
+        })
+        .collect::<Result<Vec<_>, DatabaseError>>()?;
+    let mut expanded_audience = vec![];
+    for target_id in audience {
+        let collection_items: Vec<_> = items.iter()
+            .filter(|(collection_id, _)| *collection_id == target_id)
+            .map(|(_, object_id)| object_id.clone())
+            .collect();
+        if collection_items.len() > 0 {
+            // Collection
+            expanded_audience.extend(collection_items);
+        } else {
+            // Object or empty collection
+            expanded_audience.push(target_id);
+        };
+    };
+    Ok(expanded_audience)
+}
+
+pub async fn create_activitypub_media(
+    db_client: &impl DatabaseClient,
+    owner_id: Uuid,
+    file_info: FileInfo,
+) -> Result<(), DatabaseError> {
+    let media_info = MediaInfo::local(file_info);
+    db_client.execute(
+        "
+        INSERT INTO activitypub_media (
+            owner_id,
+            media
+        )
+        VALUES ($1, $2)
+        ON CONFLICT (owner_id, digest) DO NOTHING
+        ",
+        &[&owner_id, &media_info],
+    ).await?;
+    Ok(())
+}
+
+pub async fn delete_activitypub_media(
+    db_client: &impl DatabaseClient,
+    owner_id: Uuid,
+    digest: [u8; 32],
+) -> Result<(), DatabaseError> {
+    let digest_array_string = format!("{digest:?}");
+    let deleted_count = db_client.execute(
+        "
+        DELETE FROM activitypub_media
+        WHERE owner_id = $1 AND digest = $2
+        ",
+        &[&owner_id, &digest_array_string],
+    ).await?;
+    if deleted_count == 0 {
+        return Err(DatabaseError::NotFound("media"));
+    };
+    Ok(())
+}
+
+pub async fn get_activitypub_media_by_digest(
+    db_client: &impl DatabaseClient,
+    digest: [u8; 32],
+) -> Result<FileInfo, DatabaseError> {
+    // Not checking owner
+    let digest_array_string = format!("{digest:?}");
+    let maybe_row = db_client.query_opt(
+        "
+        SELECT media
+        FROM activitypub_media
+        WHERE digest = $1
+        LIMIT 1
+        ",
+        &[&digest_array_string],
+    ).await?;
+    let row = maybe_row.ok_or(DatabaseError::NotFound("media"))?;
+    let media_info = row.try_get("media")?;
+    let file_info = match media_info {
+        MediaInfo::File { file_info, .. } => file_info,
+        _ => return Err(DatabaseTypeError.into()),
+    };
+    Ok(file_info)
+}
+
 #[cfg(test)]
 mod tests {
     use serde_json::json;
@@ -218,7 +342,8 @@ mod tests {
     #[serial]
     async fn test_save_activity() {
         let db_client = &create_test_database().await;
-        let canonical_id = "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/activities/1";
+        let activity_id = "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/activities/1";
+        let canonical_activity_id = CanonicalUri::parse_canonical(activity_id).unwrap();
         let activity = json!({
             "id": "https://social.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/activities/1",
             "actor": "https://social.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor",
@@ -228,14 +353,14 @@ mod tests {
         // Create
         let is_new = save_activity(
             db_client,
-            canonical_id,
+            &canonical_activity_id,
             &activity,
         ).await.unwrap();
         assert!(is_new);
         // Update
         let is_new = save_activity(
             db_client,
-            canonical_id,
+            &canonical_activity_id,
             &activity,
         ).await.unwrap();
         assert!(!is_new);
@@ -326,6 +451,7 @@ mod tests {
     async fn test_get_object_as_target() {
         let db_client = &create_test_database().await;
         let activity_id = "https://social.example/activities/123";
+        let canonical_activity_id = CanonicalUri::parse_canonical(activity_id).unwrap();
         let target_id = "https://social.example/users/2";
         let activity = json!({
             "id": activity_id,
@@ -334,7 +460,11 @@ mod tests {
             "object": "https://social.example/objects/321",
             "to": [target_id],
         });
-        save_activity(db_client, activity_id, &activity).await.unwrap();
+        save_activity(
+            db_client,
+            &canonical_activity_id,
+            &activity,
+        ).await.unwrap();
         let activity_found = get_object_as_target(
             db_client,
             activity_id,
@@ -357,32 +487,33 @@ mod tests {
         let user = create_test_portable_user(
             db_client,
             "test",
-            "social.example",
             canonical_actor_id,
         ).await;
         // Create activity
-        let canonical_activity_id = "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/activities/321";
+        let activity_id = "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/activities/321";
+        let canonical_activity_id = CanonicalUri::parse_canonical(activity_id).unwrap();
         let activity = json!({
             "id": "https://social.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/activities/321",
             "type": "Create",
             "actor": "https://social.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor",
             "object": "https://social.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/objects/321",
         });
-        save_activity(db_client, canonical_activity_id, &activity).await.unwrap();
+        save_activity(db_client, &canonical_activity_id, &activity).await.unwrap();
+
         // Add to collection
         let canonical_collection_id = "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor/outbox";
         add_object_to_collection(
             db_client,
             user.id,
             canonical_collection_id,
-            canonical_activity_id,
+            &canonical_activity_id.to_string(),
         ).await.unwrap();
         // Re-add
         add_object_to_collection(
             db_client,
             user.id,
             canonical_collection_id,
-            canonical_activity_id,
+            &canonical_activity_id.to_string(),
         ).await.unwrap();
         // Read collection
         let items = get_collection_items(
@@ -392,5 +523,86 @@ mod tests {
         ).await.unwrap();
         assert_eq!(items.len(), 1);
         assert_eq!(items[0], activity);
+
+        // Remove from collection
+        remove_object_from_collection(
+            db_client,
+            canonical_collection_id,
+            &canonical_activity_id.to_string(),
+        ).await.unwrap();
+        let items = get_collection_items(
+            db_client,
+            canonical_collection_id,
+            10,
+        ).await.unwrap();
+        assert_eq!(items.len(), 0);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_expand_collections() {
+        let db_client = &create_test_database().await;
+        let actor_id = "https://social.example/actor";
+        let audience = vec![
+            CanonicalUri::parse_canonical(actor_id).unwrap(),
+        ];
+        let expanded_audience = expand_collections(
+            db_client,
+            &audience,
+        ).await.unwrap();
+        assert_eq!(expanded_audience.len(), 1);
+        assert_eq!(expanded_audience[0], actor_id);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_create_activitypub_media() {
+        let db_client = &mut create_test_database().await;
+        let canonical_actor_id = "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor";
+        let user = create_test_portable_user(
+            db_client,
+            "test",
+            canonical_actor_id,
+        ).await;
+        let media_info = MediaInfo::png_for_test();
+        let MediaInfo::File { file_info, .. } = &media_info else {
+            unreachable!();
+        };
+        create_activitypub_media(
+            db_client,
+            user.id,
+            file_info.clone(),
+        ).await.unwrap();
+
+        let db_file_info = get_activitypub_media_by_digest(
+            db_client,
+            file_info.digest,
+        ).await.unwrap();
+        assert_eq!(db_file_info.file_name, file_info.file_name);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_delete_activitypub_media() {
+        let db_client = &mut create_test_database().await;
+        let user = create_test_portable_user(
+            db_client,
+            "test",
+            "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor",
+        ).await;
+        let MediaInfo::File { file_info, .. } = MediaInfo::png_for_test() else {
+            unreachable!();
+        };
+        create_activitypub_media(
+            db_client,
+            user.id,
+            file_info.clone(),
+        ).await.unwrap();
+
+        delete_activitypub_media(
+            db_client,
+            user.id,
+            file_info.digest,
+        ).await.unwrap();
     }
 }

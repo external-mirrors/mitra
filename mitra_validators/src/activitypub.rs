@@ -1,14 +1,13 @@
 use apx_core::{
-    ap_url::{is_ap_url, ApUrl},
-    http_url::HttpUrl,
+    url::{
+        canonical::{parse_url, CanonicalUri},
+        http_uri::HttpUri,
+    },
 };
 
 use super::errors::ValidationError;
 
 const OBJECT_ID_SIZE_MAX: usize = 2000;
-
-// TODO: FEP-EF61: import from apx_sdk?
-const GATEWAY_PATH_PREFIX: &str = "/.well-known/apgateway/";
 
 // Object ID is an URI
 // https://www.w3.org/TR/activitypub/#obj-id
@@ -19,66 +18,53 @@ fn _validate_any_object_id(
     if object_id.len() > OBJECT_ID_SIZE_MAX {
         return Err(ValidationError("object ID is too long"));
     };
-    if is_ap_url(object_id) {
-        // Validate 'ap' URL
-        ApUrl::parse(object_id)
-            .map_err(|_| ValidationError("invalid object ID"))?;
-        if !allow_ap {
-            return Err(ValidationError("object ID is 'ap' URL"));
-        };
-    } else {
-        // Validate HTTP(S) URL
-        let http_url = HttpUrl::parse(object_id)
-            .map_err(|_| ValidationError("invalid object ID"))?;
-        if http_url.path().starts_with(GATEWAY_PATH_PREFIX) {
-            return Err(ValidationError("object ID is not canonical"));
-        };
+    let (canonical_object_id, maybe_gateway) = parse_url(object_id)
+        .map_err(|_| ValidationError("invalid object ID"))?;
+    if maybe_gateway.is_some() {
+        return Err(ValidationError("object ID is not canonical"));
+    };
+    if !allow_ap && matches!(canonical_object_id, CanonicalUri::Ap(_)) {
+        return Err(ValidationError("object ID is 'ap' URI"));
     };
     Ok(())
 }
 
 pub fn validate_object_id(object_id: &str) -> Result<(), ValidationError> {
-    // Doesn't allow 'ap' URLs
+    // Doesn't allow 'ap' URIs
     _validate_any_object_id(object_id, false)
 }
 
 pub fn validate_any_object_id(object_id: &str) -> Result<(), ValidationError> {
-    // Allows 'ap' URLs
+    // Allows 'ap' URIs
     _validate_any_object_id(object_id, true)
 }
 
-pub fn validate_origin(
+pub(crate) fn validate_origin(
     id_1: &str,
     id_2: &str,
 ) -> Result<(), ValidationError> {
-    let origin_1 = if is_ap_url(id_1) {
-        ApUrl::parse(id_1)
-            .map_err(|_| ValidationError("invalid object ID"))?
-            .origin()
-    } else {
-        HttpUrl::parse(id_1)
-            .map_err(|_| ValidationError("invalid object ID"))?
-            .origin()
-    };
-    let origin_2 = if is_ap_url(id_2) {
-        ApUrl::parse(id_2)
-            .map_err(|_| ValidationError("invalid object ID"))?
-            .origin()
-    } else {
-        HttpUrl::parse(id_2)
-            .map_err(|_| ValidationError("invalid object ID"))?
-            .origin()
-    };
+    let origin_1 = CanonicalUri::parse_canonical(id_1)
+        .map_err(|_| ValidationError("invalid object ID"))?
+        .origin();
+    let origin_2 = CanonicalUri::parse_canonical(id_2)
+        .map_err(|_| ValidationError("invalid object ID"))?
+        .origin();
     if origin_1 != origin_2 {
         return Err(ValidationError("related ID has different origin"));
     };
     Ok(())
 }
 
-pub fn validate_gateway_url(url: &str) -> Result<(), ValidationError> {
-    let http_url = HttpUrl::parse(url)
+pub(crate) fn validate_endpoint_url(url: &str) -> Result<(), ValidationError> {
+    HttpUri::parse(url)
+        .map_err(|_| ValidationError("invalid endpoint URL"))?;
+    Ok(())
+}
+
+pub(crate) fn validate_gateway_url(url: &str) -> Result<(), ValidationError> {
+    let http_uri = HttpUri::parse(url)
         .map_err(|_| ValidationError("invalid gateway URL"))?;
-    if http_url.base() != url {
+    if http_uri.base() != url {
         return Err(ValidationError("invalid gateway URL"));
     };
     Ok(())

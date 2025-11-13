@@ -34,7 +34,7 @@ yourdomain.tld {
 
     # Set extra header information when using Tor. This requires a V3 onion address to be available (optional)
 	header {
-		Onion-Location sd84tkgetmbqayrl3kmgxe7fltn6tzkhw5wumwnadztlm5s44j2dkyd.onion{uri}
+		Onion-Location http://sd84tkgetmbqayrl3kmgxe7fltn6tzkhw5wumwnadztlm5s44j2dkyd.onion{uri}
 	}
     
     # Set HSTS headers to improve security posture 

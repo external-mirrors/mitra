@@ -1,6 +1,20 @@
 use std::collections::HashMap;
 use std::fmt;
 
+use apx_core::{
+    crypto::{
+        eddsa::{
+            ed25519_secret_key_from_bytes,
+            Ed25519SecretKey,
+        },
+        rsa::{
+            rsa_secret_key_from_pkcs1_der,
+            rsa_secret_key_from_pkcs8_pem,
+            RsaSecretKey,
+        },
+    },
+    did::Did,
+};
 use chrono::{DateTime, Utc};
 use postgres_types::FromSql;
 use serde::Deserialize;
@@ -8,26 +22,15 @@ use serde_json::{Value as JsonValue};
 use tokio_postgres::Row;
 use uuid::Uuid;
 
-use apx_core::{
-    crypto_eddsa::{
-        ed25519_secret_key_from_bytes,
-        Ed25519SecretKey,
+use crate::{
+    database::{
+        int_enum::{int_enum_from_sql, int_enum_to_sql},
+        json_macro::json_from_sql,
+        DatabaseError,
+        DatabaseTypeError,
     },
-    crypto_rsa::{
-        rsa_secret_key_from_pkcs1_der,
-        rsa_secret_key_from_pkcs8_pem,
-        RsaSecretKey,
-    },
-    did::Did,
+    profiles::types::{get_identity_key, DbActorProfile},
 };
-
-use crate::database::{
-    int_enum::{int_enum_from_sql, int_enum_to_sql},
-    json_macro::json_from_sql,
-    DatabaseError,
-    DatabaseTypeError,
-};
-use crate::profiles::types::{get_identity_key, DbActorProfile};
 
 #[allow(dead_code)]
 #[derive(FromSql)]
@@ -146,7 +149,7 @@ pub struct DbUser {
     created_at: DateTime<Utc>,
 }
 
-// Represents local user
+// Represents local user (managed account)
 #[derive(Clone)]
 pub struct User {
     pub id: Uuid,
@@ -170,8 +173,10 @@ impl fmt::Display for User {
 impl Default for User {
     fn default() -> Self {
         use apx_core::{
-            crypto_eddsa::generate_weak_ed25519_key,
-            crypto_rsa::generate_weak_rsa_key,
+            crypto::{
+                eddsa::generate_weak_ed25519_key,
+                rsa::generate_weak_rsa_key,
+            },
         };
         let id = Uuid::new_v4();
         Self {
@@ -276,10 +281,12 @@ impl UserCreateData {
 impl Default for UserCreateData {
     fn default() -> Self {
         use apx_core::{
-            crypto_eddsa::generate_ed25519_key,
-            crypto_rsa::{
-                generate_weak_rsa_key,
-                rsa_secret_key_to_pkcs8_pem,
+            crypto::{
+                eddsa::generate_ed25519_key,
+                rsa::{
+                    generate_weak_rsa_key,
+                    rsa_secret_key_to_pkcs8_pem,
+                },
             },
         };
         let rsa_secret_key = generate_weak_rsa_key().unwrap();
@@ -313,6 +320,7 @@ pub struct DbPortableUser {
     created_at: DateTime<Utc>,
 }
 
+// Represents portable (remote) actor with local account (unmanaged)
 pub struct PortableUser {
     pub id: Uuid,
     pub profile: DbActorProfile,
@@ -380,13 +388,15 @@ impl TryFrom<&Row> for AccountAdminInfo {
         let is_portable = row.try_get("is_portable")?;
         let role = row.try_get("role")?;
         let last_login = row.try_get("last_login")?;
-        Ok(Self { profile, is_portable, role, last_login })
+        let user = Self { profile, is_portable, role, last_login };
+        user.profile.check_consistency()?;
+        Ok(user)
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use apx_core::crypto_eddsa::generate_ed25519_key;
+    use apx_core::crypto::eddsa::generate_ed25519_key;
     use super::*;
 
     #[test]

@@ -1,39 +1,54 @@
 use std::collections::HashMap;
 
-use chrono::{Duration, Utc};
-use serde::{
-    Deserialize,
-    de::DeserializeOwned,
-};
-use serde_json::{Value as JsonValue};
-
 use apx_core::{
-    crypto_eddsa::ed25519_secret_key_from_multikey,
-    crypto_rsa::rsa_secret_key_from_multikey,
-    http_url::HttpUrl,
-    urls::guess_protocol,
+    crypto::{
+        eddsa::generate_ed25519_key,
+        rsa::generate_rsa_key,
+    },
+    url::{
+        canonical::{parse_url, CanonicalUri},
+        http_uri::HttpUri,
+    },
 };
 use apx_sdk::{
     addresses::WebfingerAddress,
     agent::FederationAgent,
     authentication::verify_portable_object,
-    deserialization::{deserialize_into_object_id_opt, get_object_id},
+    deserialization::{deserialize_into_object_id_opt, object_to_id},
     fetch::{
         fetch_json,
         fetch_object,
         FetchError,
         FetchObjectOptions,
     },
-    jrd::JsonResourceDescriptor,
-    url::{parse_url, Url},
+    jrd::{JsonResourceDescriptor, JRD_MEDIA_TYPE},
+    utils::{get_core_type, CoreType},
 };
-use mitra_config::{Config, Instance, MediaLimits};
+use chrono::{TimeDelta, Utc};
+use serde::{
+    Deserialize,
+    de::DeserializeOwned,
+};
+use serde_json::{Value as JsonValue};
+
+use mitra_config::{Config, Instance, Limits};
 use mitra_models::{
-    database::{DatabaseClient, DatabaseError},
+    database::{
+        db_client_await,
+        get_database_client,
+        DatabaseClient,
+        DatabaseConnectionPool,
+        DatabaseError,
+        DatabaseTypeError,
+    },
+    filter_rules::types::FilterAction,
     notifications::helpers::create_signup_notifications,
     posts::helpers::get_local_post_by_id,
-    posts::queries::get_remote_post_by_object_id,
-    posts::types::Post,
+    posts::queries::{
+        get_remote_post_by_object_id,
+        set_pinned_flag,
+    },
+    posts::types::PostDetailed,
     profiles::queries::{
         get_profile_by_acct,
         get_remote_profile_by_actor_id,
@@ -50,7 +65,6 @@ use mitra_models::{
 use mitra_services::media::MediaStorage;
 use mitra_validators::{
     errors::ValidationError,
-    users::validate_portable_user_data,
 };
 
 use crate::{
@@ -75,14 +89,14 @@ use crate::{
         parse_local_actor_id,
         parse_local_object_id,
     },
-    ownership::verify_object_owner,
+    ownership::{get_object_id, is_local_origin, verify_object_owner},
     vocabulary::GROUP,
 };
 
 pub struct ApClient {
     pub instance: Instance,
     pub filter: FederationFilter,
-    pub media_limits: MediaLimits,
+    pub limits: Limits,
     pub media_storage: MediaStorage,
     pub as_user: Option<User>,
 }
@@ -95,7 +109,7 @@ impl ApClient {
         let ap_client = Self {
             instance: config.instance(),
             filter: FederationFilter::init(config, db_client).await?,
-            media_limits: config.limits.media.clone(),
+            limits: config.limits.clone(),
             media_storage: MediaStorage::new(config),
             as_user: None,
         };
@@ -103,7 +117,7 @@ impl ApClient {
     }
 }
 
-// Gateway pool for resolving 'ap' URLs
+// Gateway pool for resolving 'ap' URIs
 pub struct FetcherContext {
     gateways: Vec<String>,
 }
@@ -138,14 +152,15 @@ impl FetcherContext {
         // TODO: FEP-EF61: use random gateway
         let maybe_gateway = self.gateways.first()
             .map(|gateway| gateway.as_str());
-        // TODO: FEP-EF61: remove Url::to_http_url
-        let http_url = canonical_object_id
-            .to_http_url(maybe_gateway)
+        // TODO: FEP-EF61: remove CanonicalUri::to_http_uri
+        let http_uri = canonical_object_id
+            .to_http_uri(maybe_gateway)
             .ok_or(FetchError::NoGateway)?;
-        Ok(http_url)
+        Ok(http_uri)
     }
 }
 
+// Only used in fetch-object command
 pub async fn fetch_any_object_with_context<T: DeserializeOwned>(
     agent: &FederationAgent,
     context: &mut FetcherContext,
@@ -163,25 +178,65 @@ pub async fn fetch_any_object_with_context<T: DeserializeOwned>(
     Ok(object)
 }
 
-pub async fn fetch_any_object<T: DeserializeOwned>(
-    agent: &FederationAgent,
-    object_id: &str,
-) -> Result<T, FetchError> {
-    let mut context = FetcherContext { gateways: vec![] };
-    fetch_any_object_with_context(
-        agent,
-        &mut context,
-        object_id,
-        FetchObjectOptions::default(),
-    ).await
+impl ApClient {
+    pub async fn new_with_pool(
+        config: &Config,
+        db_pool: &DatabaseConnectionPool,
+    ) -> Result<Self, DatabaseError> {
+        let db_client = &**get_database_client(db_pool).await?;
+        Self::new(config, db_client).await
+    }
+
+    pub fn agent(&self) -> FederationAgent {
+        build_federation_agent(
+            &self.instance,
+            self.as_user.as_ref(),
+        )
+    }
+
+    async fn _fetch_object<T: DeserializeOwned>(
+        &self,
+        object_id: &str,
+    ) -> Result<T, HandlerError> {
+        let agent = self.agent();
+        let object_json = fetch_object(
+            &agent,
+            object_id,
+            FetchObjectOptions::default(),
+        ).await?;
+        let object_id = get_object_id(&object_json)?;
+        if is_local_origin(&self.instance, object_id) {
+            return Err(HandlerError::LocalObject);
+        };
+        let object: T = serde_json::from_value(object_json)?;
+        Ok(object)
+    }
+
+    // Peforms filtering before fetching
+    pub async fn fetch_object<T: DeserializeOwned>(
+        &self,
+        object_id: &str,
+    ) -> Result<T, HandlerError> {
+        let hostname = HttpUri::parse(object_id)
+            .map_err(ValidationError)?
+            .hostname();
+        if self.filter.is_action_required(
+            hostname.as_str(),
+            FilterAction::Reject,
+        ) {
+            let error_message = format!("request blocked: {}", object_id);
+            return Err(HandlerError::Filtered(error_message));
+        };
+        self._fetch_object(object_id).await
+    }
 }
 
-pub async fn get_profile_by_actor_id(
+pub(crate) async fn get_profile_by_actor_id(
     db_client: &impl DatabaseClient,
-    instance_url: &str,
+    instance_uri: &str,
     actor_id: &str,
 ) -> Result<DbActorProfile, DatabaseError> {
-    match parse_local_actor_id(instance_url, actor_id) {
+    match parse_local_actor_id(instance_uri, actor_id) {
         Ok(username) => {
             // Local actor
             let user = get_user_by_name(db_client, &username).await?;
@@ -194,26 +249,27 @@ pub async fn get_profile_by_actor_id(
     }
 }
 
-async fn import_profile(
+// Actor must be authenticated
+pub async fn import_profile(
     ap_client: &ApClient,
-    db_client: &mut impl DatabaseClient,
-    actor_id: &str,
+    db_pool: &DatabaseConnectionPool,
+    actor: JsonValue,
 ) -> Result<DbActorProfile, HandlerError> {
-    let agent = build_federation_agent(&ap_client.instance, None);
-    let actor: Actor = fetch_any_object(&agent, actor_id).await?;
+    let actor: Actor = serde_json::from_value(actor)?;
     if actor.is_local(&ap_client.instance.hostname())? {
         return Err(HandlerError::LocalObject);
     };
     let canonical_actor_id = canonicalize_id(actor.id())?;
-    let profile = match get_remote_profile_by_actor_id(
-        db_client,
+    let maybe_profile = get_remote_profile_by_actor_id(
+        db_client_await!(db_pool), // dropped
         &canonical_actor_id.to_string(),
-    ).await {
+    ).await;
+    let profile = match maybe_profile {
         Ok(profile) => {
             log::info!("re-fetched actor {}", actor.id());
             let profile_updated = update_remote_profile(
                 ap_client,
-                db_client,
+                db_pool,
                 profile,
                 actor,
             ).await?;
@@ -223,7 +279,7 @@ async fn import_profile(
             log::info!("fetched actor {}", actor.id());
             let profile = create_remote_profile(
                 ap_client,
-                db_client,
+                db_pool,
                 actor,
             ).await?;
             profile
@@ -235,13 +291,12 @@ async fn import_profile(
 
 async fn refresh_remote_profile(
     ap_client: &ApClient,
-    db_client: &mut impl DatabaseClient,
+    db_pool: &DatabaseConnectionPool,
     profile: DbActorProfile,
     force: bool,
 ) -> Result<DbActorProfile, HandlerError> {
-    let agent = build_federation_agent(&ap_client.instance, None);
     let profile = if force ||
-        profile.updated_at < Utc::now() - Duration::days(1)
+        profile.updated_at < Utc::now() - TimeDelta::days(1)
     {
         if profile.has_account() {
             // Local nomadic accounts should not be refreshed
@@ -251,13 +306,9 @@ async fn refresh_remote_profile(
         let actor_data = profile.expect_actor_data();
         let mut context = FetcherContext::from(actor_data);
         // Don't re-fetch from local gateway
-        context.remove_gateway(&ap_client.instance.url());
-        match fetch_any_object_with_context::<Actor>(
-            &agent,
-            &mut context,
-            &actor_data.id,
-            FetchObjectOptions::default(),
-        ).await {
+        context.remove_gateway(ap_client.instance.uri_str());
+        let actor_http_url = context.prepare_object_id(&actor_data.id)?;
+        match ap_client.fetch_object::<Actor>(&actor_http_url).await {
             Ok(actor) => {
                 if canonicalize_id(actor.id())?.to_string() != actor_data.id {
                     log::warn!(
@@ -269,7 +320,7 @@ async fn refresh_remote_profile(
                 log::info!("re-fetched actor {}", actor_data.id);
                 let profile_updated = update_remote_profile(
                     ap_client,
-                    db_client,
+                    db_pool,
                     profile,
                     actor,
                 ).await?;
@@ -316,12 +367,13 @@ impl ActorIdResolver {
     // - DatabaseError(DatabaseError::NotFound(_)): local actor not found
     // - DatabaseError: other database errors
     // - StorageError: filesystem errors
+    // - Filtered: actor is blocked
     // N/A:
-    // - ServiceError, AuthError, UnsolicitedMessage
+    // - ServiceError
     pub async fn resolve(
         &self,
         ap_client: &ApClient,
-        db_client: &mut impl DatabaseClient,
+        db_pool: &DatabaseConnectionPool,
         actor_id: &str,
     ) -> Result<DbActorProfile, HandlerError> {
         let canonical_actor_id = canonicalize_id(actor_id)?;
@@ -330,25 +382,30 @@ impl ActorIdResolver {
             if self.only_remote {
                 return Err(HandlerError::LocalObject);
             };
-            let username = parse_local_actor_id(&ap_client.instance.url(), actor_id)?;
-            let user = get_user_by_name(db_client, &username).await?;
+            let username = parse_local_actor_id(ap_client.instance.uri_str(), actor_id)?;
+            let user = get_user_by_name(
+                db_client_await!(db_pool),
+                &username,
+            ).await?;
             return Ok(user.profile);
         };
         // Remote ID
-        let profile = match get_remote_profile_by_actor_id(
-            db_client,
+        let maybe_profile = get_remote_profile_by_actor_id(
+            db_client_await!(db_pool), // dropped
             &canonical_actor_id.to_string(),
-        ).await {
+        ).await;
+        let profile = match maybe_profile {
             Ok(profile) => {
                 refresh_remote_profile(
                     ap_client,
-                    db_client,
+                    db_pool,
                     profile,
                     self.force_refetch,
                 ).await?
             },
             Err(DatabaseError::NotFound(_)) => {
-                import_profile(ap_client, db_client, actor_id).await?
+                let actor: JsonValue = ap_client.fetch_object(actor_id).await?;
+                import_profile(ap_client, db_pool, actor).await?
             },
             Err(other_error) => return Err(other_error.into()),
         };
@@ -356,13 +413,15 @@ impl ActorIdResolver {
     }
 }
 
-// Return true if error is not internal
+// Returns true if error is not internal (should be logged as warning)
 pub fn is_actor_importer_error(error: &HandlerError) -> bool {
     matches!(
         error,
         HandlerError::FetchError(_) |
             HandlerError::ValidationError(_) |
-            HandlerError::DatabaseError(DatabaseError::NotFound(_)))
+            HandlerError::DatabaseError(DatabaseError::NotFound(_)) |
+            HandlerError::Filtered(_)
+    )
 }
 
 pub(crate) async fn perform_webfinger_query(
@@ -370,15 +429,12 @@ pub(crate) async fn perform_webfinger_query(
     webfinger_address: &WebfingerAddress,
 ) -> Result<String, HandlerError> {
     let webfinger_resource = webfinger_address.to_acct_uri();
-    let webfinger_url = format!(
-        "{}://{}/.well-known/webfinger",
-        guess_protocol(webfinger_address.hostname()),
-        webfinger_address.hostname(),
-    );
+    let webfinger_uri = webfinger_address.endpoint_uri();
     let jrd_value = fetch_json(
         agent,
-        &webfinger_url,
+        &webfinger_uri,
         &[("resource", &webfinger_resource)],
+        Some(JRD_MEDIA_TYPE),
     ).await?;
     let jrd: JsonResourceDescriptor = serde_json::from_value(jrd_value)?;
     // Prefer Group actor if webfinger results are ambiguous
@@ -389,36 +445,38 @@ pub(crate) async fn perform_webfinger_query(
 
 pub async fn import_profile_by_webfinger_address(
     ap_client: &ApClient,
-    db_client: &mut impl DatabaseClient,
+    db_pool: &DatabaseConnectionPool,
     webfinger_address: &WebfingerAddress,
 ) -> Result<DbActorProfile, HandlerError> {
     if webfinger_address.hostname() == ap_client.instance.hostname() {
         return Err(HandlerError::LocalObject);
     };
-    let agent = build_federation_agent(&ap_client.instance, None);
+    let agent = ap_client.agent();
     let actor_id = perform_webfinger_query(&agent, webfinger_address).await?;
-    import_profile(ap_client, db_client, &actor_id).await
+    let actor: JsonValue = ap_client.fetch_object(&actor_id).await?;
+    import_profile(ap_client, db_pool, actor).await
 }
 
 // Works with local profiles
 pub async fn get_or_import_profile_by_webfinger_address(
     ap_client: &ApClient,
-    db_client: &mut impl DatabaseClient,
+    db_pool: &DatabaseConnectionPool,
     webfinger_address: &WebfingerAddress,
 ) -> Result<DbActorProfile, HandlerError> {
     let instance = &ap_client.instance;
     let acct = webfinger_address.acct(&instance.hostname());
-    let profile = match get_profile_by_acct(
-        db_client,
+    let maybe_profile = get_profile_by_acct(
+        db_client_await!(db_pool),
         &acct,
-    ).await {
+    ).await;
+    let profile = match maybe_profile {
         Ok(profile) => {
             if webfinger_address.hostname() == instance.hostname() {
                 profile
             } else {
                 refresh_remote_profile(
                     ap_client,
-                    db_client,
+                    db_pool,
                     profile,
                     false,
                 ).await?
@@ -430,7 +488,7 @@ pub async fn get_or_import_profile_by_webfinger_address(
             };
             import_profile_by_webfinger_address(
                 ap_client,
-                db_client,
+                db_pool,
                 webfinger_address,
             ).await?
         },
@@ -441,11 +499,11 @@ pub async fn get_or_import_profile_by_webfinger_address(
 
 pub async fn get_post_by_object_id(
     db_client: &impl DatabaseClient,
-    instance_url: &str,
-    object_id: &Url,
-) -> Result<Post, DatabaseError> {
+    instance_uri: &str,
+    object_id: &CanonicalUri,
+) -> Result<PostDetailed, DatabaseError> {
     let object_id = object_id.to_string();
-    match parse_local_object_id(instance_url, &object_id) {
+    match parse_local_object_id(instance_uri, &object_id) {
         Ok(post_id) => {
             // Local post
             let post = get_local_post_by_id(db_client, post_id).await?;
@@ -463,12 +521,11 @@ const RECURSION_DEPTH_MAX: usize = 50;
 
 pub async fn import_post(
     ap_client: &ApClient,
-    db_client: &mut impl DatabaseClient,
+    db_pool: &DatabaseConnectionPool,
     object_id: String,
     object_received: Option<AttributedObjectJson>,
-) -> Result<Post, HandlerError> {
+) -> Result<PostDetailed, HandlerError> {
     let instance = &ap_client.instance;
-    let agent = build_federation_agent(instance, None);
 
     let mut queue = vec![object_id]; // LIFO queue
     let mut fetch_count = 0;
@@ -483,12 +540,14 @@ pub async fn import_post(
     loop {
         let object_id = match queue.pop() {
             Some(object_id) => {
+                let db_client = &**get_database_client(db_pool).await?;
                 if objects.iter().any(|object| object.id() == object_id) {
                     // Can happen due to redirections
                     log::warn!("loop detected");
+                    maybe_object = None;
                     continue;
                 };
-                if let Ok(post_id) = parse_local_object_id(&instance.url(), &object_id) {
+                if let Ok(post_id) = parse_local_object_id(instance.uri_str(), &object_id) {
                     if objects.is_empty() {
                         // Initial object must not be local
                         return Err(HandlerError::LocalObject);
@@ -509,6 +568,7 @@ pub async fn import_post(
                             // Return post corresponding to initial object ID
                             return Ok(post);
                         };
+                        maybe_object = None;
                         continue;
                     },
                     Err(DatabaseError::NotFound(_)) => (),
@@ -522,14 +582,17 @@ pub async fn import_post(
             },
         };
         let object = match maybe_object {
-            Some(object) => object,
+            Some(object) => {
+                log::info!("object already fetched: {}", object.id());
+                object
+            },
             None => {
                 if fetch_count >= RECURSION_DEPTH_MAX {
                     // TODO: create tombstone
                     return Err(FetchError::RecursionError.into());
                 };
                 let object: AttributedObjectJson =
-                    fetch_any_object(&agent, &object_id).await?;
+                    ap_client.fetch_object(&object_id).await?;
                 verify_object_owner(&object.value)?;
                 log::info!("fetched object {}", object.id());
                 fetch_count +=  1;
@@ -567,7 +630,7 @@ pub async fn import_post(
     for object in objects {
         let post = create_remote_post(
             ap_client,
-            db_client,
+            db_pool,
             object,
             &redirects,
         ).await?;
@@ -580,58 +643,57 @@ pub async fn import_post(
     Ok(initial_post)
 }
 
+// Object must be authenticated
 pub async fn import_object(
     ap_client: &ApClient,
-    db_client: &mut impl DatabaseClient,
-    object_id: &str,
-) -> Result<(), HandlerError> {
-    let agent = build_federation_agent(
-        &ap_client.instance,
-        ap_client.as_user.as_ref(),
-    );
-    let object: AttributedObjectJson =
-        fetch_any_object(&agent, object_id).await?;
+    db_pool: &DatabaseConnectionPool,
+    object: JsonValue,
+) -> Result<PostDetailed, HandlerError> {
+    let object: AttributedObjectJson = serde_json::from_value(object)?;
     let canonical_object_id = canonicalize_id(object.id())?;
-    match get_remote_post_by_object_id(
-        db_client,
+    let maybe_post = get_remote_post_by_object_id(
+        db_client_await!(db_pool),
         &canonical_object_id.to_string(),
-    ).await {
+    ).await;
+    match maybe_post {
         Ok(post) => {
-            update_remote_post(ap_client, db_client, post, &object).await?;
-            Ok(())
+            update_remote_post(
+                ap_client,
+                db_pool,
+                post,
+                &object,
+            ).await
         },
         Err(DatabaseError::NotFound(_)) => {
             import_post(
                 ap_client,
-                db_client,
+                db_pool,
                 object.id().to_owned(),
                 Some(object),
-            ).await?;
-            Ok(())
+            ).await
         },
         Err(other_error) => Err(other_error.into())
     }
 }
 
+// Activity must be authenticated
 pub async fn import_activity(
     config: &Config,
-    db_client: &mut impl DatabaseClient,
-    activity_id: &str,
-) -> Result<(), HandlerError> {
-    let agent = build_federation_agent(&config.instance(), None);
-    let activity: JsonValue = fetch_any_object(&agent, activity_id).await?;
+    db_pool: &DatabaseConnectionPool,
+    activity: JsonValue,
+) -> Result<String, HandlerError> {
     handle_activity(
         config,
-        db_client,
+        db_pool,
         &activity,
         true, // is authenticated
-        true, // activity is being pulled (not a spam)
-    ).await?;
-    Ok(())
+        None, // no recipient
+        None, // no sender (activity was pulled)
+    ).await
 }
 
 async fn fetch_collection(
-    agent: &FederationAgent,
+    ap_client: &ApClient,
     collection_id: &str,
     limit: usize,
 ) -> Result<Vec<JsonValue>, HandlerError> {
@@ -639,7 +701,7 @@ async fn fetch_collection(
     #[derive(Deserialize)]
     #[serde(rename_all = "camelCase")]
     struct Collection {
-        id: Url,
+        id: CanonicalUri,
         first: Option<JsonValue>, // page can be embedded
         #[serde(default)]
         items: Vec<JsonValue>,
@@ -649,31 +711,28 @@ async fn fetch_collection(
     #[derive(Deserialize)]
     #[serde(rename_all = "camelCase")]
     struct CollectionPage {
-        id: Url,
-        next: Option<String>,
+        id: Option<CanonicalUri>,
+        next: Option<JsonValue>,
         #[serde(default)]
         items: Vec<JsonValue>,
         #[serde(default)]
         ordered_items: Vec<JsonValue>,
     }
 
-    let collection: Collection =
-        fetch_any_object(agent, collection_id).await?;
+    let collection: Collection = ap_client.fetch_object(collection_id).await?;
     log::info!("fetched collection: {collection_id}");
     let mut items = [collection.items, collection.ordered_items].concat();
 
     let mut page_count = 0;
-    if let Some(first_page_value) = collection.first {
+    if let Some(mut page_value) = collection.first {
         // Mastodon replies collection:
         // - First page contains self-replies
         // - Next page contains replies from others
-        let mut maybe_page_id = first_page_value.as_str()
-            .map(|page_id| page_id.to_string());
         while items.len() < limit && page_count < 3 {
-            let page = match maybe_page_id {
-                Some(page_id) => {
+            let page = match page_value {
+                JsonValue::String(page_id) => {
                     let page: CollectionPage =
-                        fetch_any_object(agent, &page_id).await?;
+                        ap_client.fetch_object(&page_id).await?;
                     log::info!(
                         "fetched collection page #{}: {}",
                         page_count + 1,
@@ -681,15 +740,16 @@ async fn fetch_collection(
                     );
                     page
                 },
-                None if page_count == 0 => {
+                _ => {
                     let page: CollectionPage =
-                        serde_json::from_value(first_page_value.clone())?;
-                    log::info!("first collection page is embedded");
+                        serde_json::from_value(page_value.clone())?;
+                    log::info!("collection page is embedded");
                     page
                 },
-                None => break,
             };
-            if page.id.origin() != collection.id.origin() {
+            if page.id.is_some_and(|page_id| {
+                page_id.origin() != collection.id.origin()
+            }) {
                 let error =
                     ValidationError("collection page has different origin");
                 return Err(error.into());
@@ -697,14 +757,19 @@ async fn fetch_collection(
             items.extend(page.items);
             items.extend(page.ordered_items);
             page_count += 1;
-            maybe_page_id = page.next;
+            if let Some(next_page_value) = page.next {
+                page_value = next_page_value;
+            } else {
+                // No next page
+                break;
+            };
         };
     };
 
     let mut authenticated = vec![];
     for item in items.into_iter().take(limit) {
-        let item_id = get_object_id(&item)
-            .map(|id| HttpUrl::parse(&id))
+        let item_id = object_to_id(&item)
+            .map(|id| HttpUri::parse(&id))
             .map_err(|_| ValidationError("invalid object ID"))?
             .map_err(|_| ValidationError("invalid object ID"))?;
         match item {
@@ -717,7 +782,7 @@ async fn fetch_collection(
                 };
             },
         };
-        match fetch_any_object(agent, item_id.as_str()).await {
+        match ap_client.fetch_object(item_id.as_str()).await {
             Ok(item) => authenticated.push(item),
             Err(error) => {
                 log::warn!("failed to fetch item ({error}): {item_id}");
@@ -728,130 +793,201 @@ async fn fetch_collection(
     Ok(authenticated)
 }
 
+#[derive(Debug)]
+pub enum CollectionItemType {
+    Object,
+    Actor,
+    Activity,
+}
+pub enum CollectionOrder {
+    Forward,
+    Reverse,
+}
+
+pub async fn import_collection(
+    config: &Config,
+    db_pool: &DatabaseConnectionPool,
+    collection_id: &str,
+    maybe_item_type: Option<CollectionItemType>,
+    order: CollectionOrder,
+    limit: usize,
+) -> Result<Vec<String>, HandlerError> {
+    let mut imported = vec![];
+    let ap_client = ApClient::new_with_pool(config, db_pool).await?;
+    let items = fetch_collection(&ap_client, collection_id, limit).await?;
+    let item_type = match &items[..] {
+        [] => {
+            log::info!("collection is empty");
+            return Ok(imported);
+        },
+        [item, ..] => {
+            log::info!("fetched {} items", items.len());
+            if let Some(item_type) = maybe_item_type {
+                item_type
+            } else {
+                match get_core_type(item) {
+                    CoreType::Object => CollectionItemType::Object,
+                    CoreType::Actor => CollectionItemType::Actor,
+                    CoreType::Activity => CollectionItemType::Activity,
+                    _ => return Err(ValidationError("unexpected item type").into()),
+                }
+            }
+        },
+    };
+    log::info!("collection item type: {item_type:?}");
+    let items = match order {
+        CollectionOrder::Forward => items,
+        CollectionOrder::Reverse => items.into_iter().rev().collect(),
+    };
+    for item in items {
+        let item_id = get_object_id(&item)?.to_string();
+        let result = match item_type {
+            CollectionItemType::Object => {
+                log::info!("importing object {item_id}");
+                import_object(&ap_client, db_pool, item).await
+                    .map(|post| post.expect_remote_object_id().to_owned())
+            },
+            CollectionItemType::Actor => {
+                log::info!("importing actor {item_id}");
+                import_profile(&ap_client, db_pool, item).await
+                    .map(|profile| profile.expect_remote_actor_id().to_owned())
+            },
+            CollectionItemType::Activity => {
+                log::info!("importing activity {item_id}");
+                import_activity(config, db_pool, item).await
+            },
+        };
+        match result {
+            Ok(imported_item_id) => {
+                // Canonical ID is returned
+                imported.push(imported_item_id);
+            },
+            Err(error) => {
+                log::warn!("failed to process item ({error}): {item_id}");
+            },
+        };
+    };
+    Ok(imported)
+}
+
 pub async fn import_from_outbox(
     config: &Config,
-    db_client: &mut impl DatabaseClient,
+    db_pool: &DatabaseConnectionPool,
     actor_id: &str,
     limit: usize,
 ) -> Result<(), HandlerError> {
-    let instance = config.instance();
-    let agent = build_federation_agent(&instance, None);
-    let profile = get_remote_profile_by_actor_id(db_client, actor_id).await?;
+    let profile = get_remote_profile_by_actor_id(
+        db_client_await!(db_pool),
+        actor_id,
+    ).await?;
     let actor_data = profile.expect_actor_data();
     let mut context = FetcherContext::from(actor_data);
     let outbox_url = context.prepare_object_id(&actor_data.outbox)?;
-    let activities =
-        fetch_collection(&agent, &outbox_url, limit).await?;
-    log::info!("fetched {} activities", activities.len());
-    // Outbox has reverse chronological order
-    let activities = activities.into_iter().rev();
-    for activity in activities {
-        handle_activity(
-            config,
-            db_client,
-            &activity,
-            true, // is authenticated
-            true, // activity is being pulled (not a spam)
-        ).await.unwrap_or_else(|error| {
-            log::warn!(
-                "failed to process activity ({}): {}",
-                error,
-                activity,
-            );
-        });
+    import_collection(
+        config,
+        db_pool,
+        &outbox_url,
+        Some(CollectionItemType::Activity),
+        CollectionOrder::Reverse,
+        limit,
+    ).await?;
+    Ok(())
+}
+
+pub async fn import_featured(
+    config: &Config,
+    db_pool: &DatabaseConnectionPool,
+    actor_id: &str,
+    limit: usize,
+) -> Result<(), HandlerError> {
+    let profile = get_remote_profile_by_actor_id(
+        db_client_await!(db_pool),
+        actor_id,
+    ).await?;
+    let actor_data = profile.expect_actor_data();
+    let Some(featured_id) = actor_data.featured.as_ref() else {
+        log::warn!("actor doesn't have 'featured' collection");
+        return Ok(());
+    };
+    let mut context = FetcherContext::from(actor_data);
+    let featured_url = context.prepare_object_id(featured_id)?;
+    let imported = import_collection(
+        config,
+        db_pool,
+        &featured_url,
+        Some(CollectionItemType::Object),
+        CollectionOrder::Forward,
+        limit,
+    ).await?;
+    let db_client = &**get_database_client(db_pool).await?;
+    for object_id in imported {
+        match get_remote_post_by_object_id(db_client, &object_id).await {
+            Ok(post) => {
+                set_pinned_flag(db_client, post.id, true).await?;
+            },
+            Err(DatabaseError::NotFound(_)) => (),
+            Err(other_error) => return Err(other_error.into()),
+        };
     };
     Ok(())
 }
 
+// https://codeberg.org/silverpill/feps/src/branch/main/f228/fep-f228.md
 pub async fn import_replies(
     config: &Config,
-    db_client: &mut impl DatabaseClient,
+    db_pool: &DatabaseConnectionPool,
     object_id: &str,
     use_context: bool,
-    use_container: bool,
     limit: usize,
 ) -> Result<(), HandlerError> {
     #[derive(Deserialize)]
+    #[serde(rename_all = "camelCase")]
     struct ConversationItem {
+        #[serde(default, deserialize_with = "deserialize_into_object_id_opt")]
+        context_history: Option<String>,
         #[serde(default, deserialize_with = "deserialize_into_object_id_opt")]
         context: Option<String>,
         #[serde(default, deserialize_with = "deserialize_into_object_id_opt")]
         replies: Option<String>,
     }
 
-    let ap_client = ApClient::new(config, db_client).await?;
-    let instance = config.instance();
-    let agent = build_federation_agent(&instance, None);
-    let object: ConversationItem = fetch_any_object(&agent, object_id).await?;
-    if use_container {
-        if let Some(ref collection_id) = object.context {
+    let ap_client = ApClient::new_with_pool(config, db_pool).await?;
+    let object: ConversationItem = ap_client.fetch_object(object_id).await?;
+    let (collection_id, item_type) = if use_context {
+        if let Some(collection_id) = object.context_history {
+            log::info!("reading 'contextHistory' collection");
             // Converstion container
-            let activities =
-                fetch_collection(&agent, collection_id, limit).await?;
-            log::info!("fetched {} activities", activities.len());
-            for activity in activities {
-                handle_activity(
-                    config,
-                    db_client,
-                    &activity,
-                    true, // is authenticated
-                    true, // activity is being pulled (not a spam)
-                ).await.unwrap_or_else(|error| {
-                    log::warn!(
-                        "failed to process activity ({}): {}",
-                        error,
-                        activity,
-                    );
-                });
-            };
-            return Ok(());
+            (collection_id, CollectionItemType::Activity)
+        } else if let Some(collection_id) = object.context {
+            log::info!("reading 'context' collection");
+            (collection_id, CollectionItemType::Object)
         } else {
-            return Err(ValidationError("object doesn't have `context`").into());
-        };
-    };
-    let maybe_collection_id = if use_context {
-        object.context
+            return Err(ValidationError("object doesn't have context").into());
+        }
+    } else if let Some(collection_id) = object.replies {
+        log::info!("reading 'replies' collection");
+        (collection_id, CollectionItemType::Object)
     } else {
-        object.replies
+        log::info!("object doesn't have replies");
+        return Ok(());
     };
-    let collection_items = if let Some(collection_id) = maybe_collection_id {
-        fetch_collection(&agent, &collection_id, limit).await?
-    } else {
-        vec![] // no context, no replies
-    };
-    log::info!("found {} items in conversation", collection_items.len());
-    for item in collection_items {
-        let object: AttributedObjectJson = serde_json::from_value(item)
-            .map_err(|_| ValidationError("invalid conversation item"))?;
-        let object_id = object.id().to_owned();
-        import_post(
-            &ap_client,
-            db_client,
-            object_id.clone(),
-            Some(object),
-        ).await.map_err(|error| {
-            log::warn!(
-                "failed to import post ({}): {}",
-                error,
-                object_id,
-            );
-        }).ok();
-    };
+    import_collection(
+        config,
+        db_pool,
+        &collection_id,
+        Some(item_type),
+        CollectionOrder::Forward,
+        limit,
+    ).await?;
     Ok(())
 }
 
 pub async fn register_portable_actor(
     config: &Config,
-    db_client: &mut impl DatabaseClient,
+    db_pool: &DatabaseConnectionPool,
     actor_json: JsonValue,
-    rsa_secret_key_multibase: &str,
-    ed25519_secret_key_multibase: &str,
     invite_code: &str,
 ) -> Result<PortableUser, HandlerError> {
-    let rsa_secret_key = rsa_secret_key_from_multikey(rsa_secret_key_multibase)
-        .map_err(|_| ValidationError("invalid RSA key"))?;
-    let ed25519_secret_key = ed25519_secret_key_from_multikey(ed25519_secret_key_multibase)
-        .map_err(|_| ValidationError("invalid Ed25519 key"))?;
     verify_portable_object(&actor_json)
         .map_err(|error| {
             log::warn!("{error}");
@@ -859,23 +995,31 @@ pub async fn register_portable_actor(
         })?;
     let actor: Actor = serde_json::from_value(actor_json.clone())?;
     check_local_username_unique(
-        db_client,
+        db_client_await!(db_pool),
         actor.preferred_username(),
     ).await?;
-    if !is_valid_invite_code(db_client, invite_code).await? {
+    if !is_valid_invite_code(
+        db_client_await!(db_pool),
+        invite_code,
+    ).await? {
         return Err(ValidationError("invalid invite code").into());
     };
     // Create or update profile
-    let ap_client = ApClient::new(config, db_client).await?;
+    let ap_client = ApClient::new_with_pool(config, db_pool).await?;
     let canonical_actor_id = canonicalize_id(actor.id())?;
-    let profile = match get_remote_profile_by_actor_id(
-        db_client,
+    let maybe_profile = get_remote_profile_by_actor_id(
+        db_client_await!(db_pool), // dropped
         &canonical_actor_id.to_string(),
-    ).await {
+    ).await;
+    let profile = match maybe_profile {
         Ok(profile) => {
+            log::warn!(
+                "profile of portable actor already exists: {}",
+                profile.id,
+            );
             let profile_updated = update_remote_profile(
                 &ap_client,
-                db_client,
+                db_pool,
                 profile,
                 actor,
             ).await?;
@@ -884,7 +1028,7 @@ pub async fn register_portable_actor(
         Err(DatabaseError::NotFound(_)) => {
             let profile = create_remote_profile(
                 &ap_client,
-                db_client,
+                db_pool,
                 actor,
             ).await?;
             profile
@@ -892,13 +1036,16 @@ pub async fn register_portable_actor(
         Err(other_error) => return Err(other_error.into()),
     };
     // Create user
+    let rsa_secret_key = generate_rsa_key()
+        .map_err(|_| DatabaseError::from(DatabaseTypeError))?;
+    let ed25519_secret_key = generate_ed25519_key();
     let user_data = PortableUserData {
         profile_id: profile.id,
         rsa_secret_key: rsa_secret_key,
         ed25519_secret_key: ed25519_secret_key,
         invite_code: invite_code.to_string(),
     };
-    validate_portable_user_data(&user_data, &profile)?;
+    let db_client = &mut **get_database_client(db_pool).await?;
     let user = create_portable_user(db_client, user_data).await?;
     create_signup_notifications(db_client, user.id).await?;
     Ok(user)

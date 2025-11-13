@@ -4,7 +4,7 @@ use anyhow::Error;
 use clap::{Parser, ValueEnum};
 
 use mitra_models::{
-    database::DatabaseClient,
+    database::{get_database_client, DatabaseConnectionPool},
     filter_rules::{
         queries::{
             add_filter_rule,
@@ -18,21 +18,47 @@ use mitra_validators::filter_rules::validate_rule_target;
 
 #[derive(Clone, ValueEnum)]
 enum FilterAction {
+    /// Reject incoming messages only
+    RejectIncoming,
+    /// Accept incoming messages
+    AcceptIncoming,
+    /// Reject all profiles and posts, block deliveries.
     Reject,
+    /// Accept profiles and posts
     Accept,
+    #[clap(hide = true)]
     RejectMedia,
+    #[clap(hide = true)]
     AcceptMedia,
+    /// Remove media attachments from posts
     RejectMediaAttachments,
+    /// Allow media attachments
     AcceptMediaAttachments,
+    /// Remove profile images
     RejectProfileImages,
+    /// Allow profile images
     AcceptProfileImages,
+    /// Remove custom emojis from posts and profile descriptions
     RejectCustomEmojis,
+    /// Allow custom emojis
     AcceptCustomEmojis,
+    /// Mark media attachments as sensitive
+    MarkSensitive,
+    /// Reject posts containing selected keywords
+    RejectKeywords,
+    /// Accept posts containing selected keywords
+    AcceptKeywords,
+    /// Proxy all media
+    ProxyMedia,
+    /// Cache all media
+    CacheMedia,
 }
 
 impl FilterAction {
     fn to_db_action(&self) -> (DbFilterAction, bool) {
         match self {
+            Self::RejectIncoming => (DbFilterAction::RejectIncoming, false),
+            Self::AcceptIncoming => (DbFilterAction::RejectIncoming, true),
             Self::Reject => (DbFilterAction::Reject, false),
             Self::Accept => (DbFilterAction::Reject, true),
             Self::RejectMedia =>
@@ -51,6 +77,16 @@ impl FilterAction {
                 (DbFilterAction::RejectCustomEmojis, false),
             Self::AcceptCustomEmojis =>
                 (DbFilterAction::RejectCustomEmojis, true),
+            Self::MarkSensitive =>
+                (DbFilterAction::MarkSensitive, false),
+            Self::RejectKeywords =>
+                (DbFilterAction::RejectKeywords, false),
+            Self::AcceptKeywords =>
+                (DbFilterAction::RejectKeywords, true),
+            Self::ProxyMedia =>
+                (DbFilterAction::ProxyMedia, false),
+            Self::CacheMedia =>
+                (DbFilterAction::ProxyMedia, true),
         }
     }
 
@@ -59,6 +95,8 @@ impl FilterAction {
         is_reversed: bool,
     ) -> Self {
         match (action, is_reversed) {
+            (DbFilterAction::RejectIncoming, false) => Self::RejectIncoming,
+            (DbFilterAction::RejectIncoming, true) => Self::AcceptIncoming,
             (DbFilterAction::Reject, false) => Self::Reject,
             (DbFilterAction::Reject, true) => Self::Accept,
             (DbFilterAction::RejectMediaAttachments, false) => Self::RejectMediaAttachments,
@@ -67,6 +105,11 @@ impl FilterAction {
             (DbFilterAction::RejectProfileImages, true) => Self::AcceptProfileImages,
             (DbFilterAction::RejectCustomEmojis, false) => Self::RejectCustomEmojis,
             (DbFilterAction::RejectCustomEmojis, true) => Self::AcceptCustomEmojis,
+            (DbFilterAction::MarkSensitive, _) => Self::MarkSensitive,
+            (DbFilterAction::RejectKeywords, false) => Self::RejectKeywords,
+            (DbFilterAction::RejectKeywords, true) => Self::AcceptKeywords,
+            (DbFilterAction::ProxyMedia, false) => Self::ProxyMedia,
+            (DbFilterAction::ProxyMedia, true) => Self::CacheMedia,
         }
     }
 }
@@ -82,6 +125,7 @@ impl fmt::Display for FilterAction {
 /// Add federation filter rule
 #[derive(Parser)]
 pub struct AddFilterRule {
+    /// Action to perform
     action: FilterAction,
     /// Domain name or IP address. Wildcard patterns are supported.
     target: String,
@@ -89,9 +133,10 @@ pub struct AddFilterRule {
 
 impl AddFilterRule {
     pub async fn execute(
-        &self,
-        db_client: &impl DatabaseClient,
+        self,
+        db_pool: &DatabaseConnectionPool,
     ) -> Result<(), Error> {
+        let db_client = &**get_database_client(db_pool).await?;
         validate_rule_target(&self.target)?;
         let (action, is_reversed) = self.action.to_db_action();
         add_filter_rule(
@@ -114,9 +159,10 @@ pub struct RemoveFilterRule {
 
 impl RemoveFilterRule {
     pub async fn execute(
-        &self,
-        db_client: &impl DatabaseClient,
+        self,
+        db_pool: &DatabaseConnectionPool,
     ) -> Result<(), Error> {
+        let db_client = &**get_database_client(db_pool).await?;
         let (action, _) = self.action.to_db_action();
         remove_filter_rule(
             db_client,
@@ -134,11 +180,12 @@ pub struct ListFilterRules;
 
 impl ListFilterRules {
     pub async fn execute(
-        &self,
-        db_client: &impl DatabaseClient,
+        self,
+        db_pool: &DatabaseConnectionPool,
     ) -> Result<(), Error> {
+        let db_client = &**get_database_client(db_pool).await?;
         let rules = get_filter_rules(db_client).await?;
-        for rule in rules {
+        for rule in rules.iter().rev() {
             let action = FilterAction::from_db_action(
                 rule.filter_action,
                 rule.is_reversed,

@@ -1,0 +1,1 @@
+ALTER TABLE poll_vote ADD COLUMN object_id VARCHAR(2000) UNIQUE;

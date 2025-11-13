@@ -1,11 +1,10 @@
+use apx_sdk::constants::AP_PUBLIC;
 use serde::Serialize;
 use uuid::Uuid;
 
-use apx_sdk::constants::AP_PUBLIC;
 use mitra_config::Instance;
 use mitra_models::{
     database::{DatabaseClient, DatabaseError},
-    profiles::types::DbActor,
     relationships::queries::get_followers,
     users::types::User,
 };
@@ -13,6 +12,7 @@ use mitra_utils::id::generate_ulid;
 
 use crate::{
     contexts::{build_default_context, Context},
+    deliverer::Recipient,
     identifiers::{
         local_activity_id,
         local_actor_id,
@@ -41,13 +41,13 @@ struct AddNote {
 }
 
 fn build_add_note(
-    instance_url: &str,
+    instance_uri: &str,
     sender_username: &str,
     post_id: Uuid,
 ) -> AddNote {
-    let actor_id = local_actor_id(instance_url, sender_username);
-    let activity_id = local_activity_id(instance_url, ADD, generate_ulid());
-    let object_id = local_object_id(instance_url, post_id);
+    let actor_id = local_actor_id(instance_uri, sender_username);
+    let activity_id = local_activity_id(instance_uri, ADD, generate_ulid());
+    let object_id = local_object_id(instance_uri, post_id);
     let target_id = LocalActorCollection::Featured.of(&actor_id);
     let followers = LocalActorCollection::Followers.of(&actor_id);
     AddNote {
@@ -65,12 +65,12 @@ fn build_add_note(
 pub(super) async fn get_add_note_recipients(
     db_client: &impl DatabaseClient,
     user_id: Uuid,
-) -> Result<Vec<DbActor>, DatabaseError> {
+) -> Result<Vec<Recipient>, DatabaseError> {
     let followers = get_followers(db_client, user_id).await?;
     let mut recipients = vec![];
     for profile in followers {
         if let Some(remote_actor) = profile.actor_json {
-            recipients.push(remote_actor);
+            recipients.extend(Recipient::for_inbox(&remote_actor));
         };
     };
     Ok(recipients)
@@ -83,13 +83,13 @@ pub async fn prepare_add_note(
     post_id: Uuid,
 ) -> Result<OutgoingActivityJobData, DatabaseError> {
     let activity = build_add_note(
-        &instance.url(),
+        instance.uri_str(),
         &sender.profile.username,
         post_id,
     );
     let recipients = get_add_note_recipients(db_client, sender.id).await?;
     Ok(OutgoingActivityJobData::new(
-        &instance.url(),
+        instance.uri_str(),
         sender,
         activity,
         recipients,
@@ -100,34 +100,34 @@ pub async fn prepare_add_note(
 mod tests {
     use super::*;
 
-    const INSTANCE_URL: &str = "https://social.example";
+    const INSTANCE_URI: &str = "https://social.example";
 
     #[test]
     fn test_build_add_note() {
         let sender_username = "local";
         let post_id = generate_ulid();
         let activity = build_add_note(
-            INSTANCE_URL,
+            INSTANCE_URI,
             sender_username,
             post_id,
         );
         assert_eq!(activity.activity_type, "Add");
         assert_eq!(
             activity.actor,
-            format!("{}/users/{}", INSTANCE_URL, sender_username),
+            format!("{}/users/{}", INSTANCE_URI, sender_username),
         );
         assert_eq!(
             activity.object,
-            format!("{}/objects/{}", INSTANCE_URL, post_id),
+            format!("{}/objects/{}", INSTANCE_URI, post_id),
         );
         assert_eq!(
             activity.target,
-            format!("{INSTANCE_URL}/users/{sender_username}/collections/featured"),
+            format!("{INSTANCE_URI}/users/{sender_username}/collections/featured"),
         );
         assert_eq!(activity.to, vec![AP_PUBLIC]);
         assert_eq!(
             activity.cc[0],
-            format!("{INSTANCE_URL}/users/{sender_username}/followers"),
+            format!("{INSTANCE_URI}/users/{sender_username}/followers"),
         );
     }
 }

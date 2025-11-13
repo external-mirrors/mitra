@@ -1,10 +1,15 @@
 use chrono::Utc;
 
-use crate::background_jobs::{
-    queries::enqueue_job,
-    types::JobType,
+use crate::{
+    background_jobs::{
+        queries::enqueue_job,
+        types::JobType,
+    },
+    database::{
+        DatabaseClient,
+        DatabaseError,
+    },
 };
-use crate::database::{DatabaseClient, DatabaseError};
 
 use super::types::DeletionQueue;
 
@@ -45,22 +50,25 @@ pub async fn find_orphaned_files(
     db_client: &impl DatabaseClient,
     files: Vec<String>,
 ) -> Result<Vec<String>, DatabaseError> {
+    // Left join works best when number of files is large
     let rows = db_client.query(
         "
         SELECT DISTINCT storage_file_name
         FROM unnest($1::text[]) AS storage_file_name
         LEFT OUTER JOIN (
-            SELECT file_name FROM media_attachment
+            SELECT media ->> 'file_name' AS file_name
+            FROM media_attachment
             UNION ALL
-            SELECT unnest(array_remove(
+            SELECT unnest(
                 ARRAY[
                     avatar ->> 'file_name',
                     banner ->> 'file_name'
-                ],
-                NULL
-            )) AS file_name FROM actor_profile
+                ]
+            ) AS file_name FROM actor_profile
             UNION ALL
             SELECT image ->> 'file_name' FROM emoji
+            UNION ALL
+            SELECT media ->> 'file_name' FROM activitypub_media
         ) AS db_media
         ON (storage_file_name = db_media.file_name)
         WHERE db_media.file_name IS NULL
@@ -115,7 +123,7 @@ pub async fn get_local_files(
             user_id IS NOT NULL
             OR portable_user_id IS NOT NULL
         UNION
-        SELECT file_name FROM media_attachment
+        SELECT media ->> 'file_name' FROM media_attachment
         JOIN actor_profile ON (media_attachment.owner_id = actor_profile.id)
         WHERE
             actor_profile.user_id IS NOT NULL
@@ -124,6 +132,9 @@ pub async fn get_local_files(
         SELECT image ->> 'file_name' AS file_name
         FROM emoji
         WHERE hostname IS NULL
+        UNION
+        SELECT media ->> 'file_name' AS file_name
+        FROM activitypub_media
         ",
         &[],
     ).await?;
@@ -131,4 +142,26 @@ pub async fn get_local_files(
         .map(|row| row.try_get("file_name"))
         .collect::<Result<_, _>>()?;
     Ok(filenames)
+}
+
+#[cfg(test)]
+mod tests {
+    use serial_test::serial;
+    use crate::database::test_utils::create_test_database;
+    use super::*;
+
+    #[tokio::test]
+    #[serial]
+    async fn test_find_orphaned_files() {
+        let db_client = &create_test_database().await;
+        let files = vec!["file1.jpg".to_owned(), "file2.jpg".to_owned()];
+        find_orphaned_files(db_client, files).await.unwrap();
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_get_local_files() {
+        let db_client = &create_test_database().await;
+        get_local_files(db_client).await.unwrap();
+    }
 }

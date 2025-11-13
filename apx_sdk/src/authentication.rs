@@ -1,3 +1,5 @@
+//! Verifying the authenticity of a portable object.
+
 use serde_json::{Value as JsonValue};
 use thiserror::Error;
 
@@ -8,12 +10,14 @@ use apx_core::{
             get_json_signature,
             verify_eddsa_json_signature,
             JsonSignatureVerificationError as JsonSignatureError,
-            JsonSigner,
+            VerificationMethod,
         },
     },
+    url::{
+        ap_uri::ApUri,
+        canonical::CanonicalUri,
+    },
 };
-
-use super::url::Url;
 
 #[derive(Debug, Error)]
 pub enum AuthenticationError {
@@ -41,29 +45,33 @@ pub enum AuthenticationError {
 
 pub fn verify_portable_object(
     object: &JsonValue,
-) -> Result<String, AuthenticationError> {
+) -> Result<ApUri, AuthenticationError> {
     let object_id = object["id"].as_str()
         .ok_or(AuthenticationError::InvalidObjectID("'id' property not found"))?;
-    let canonical_object_id = Url::parse(object_id)
+    let canonical_object_id = CanonicalUri::parse(object_id)
         .map_err(|error| AuthenticationError::InvalidObjectID(error.0))?;
     let canonical_object_id = match canonical_object_id {
         // Only portable objects must have an integrity proof
-        Url::Http(_) => return Err(AuthenticationError::NotPortable),
-        Url::Ap(ap_url) => ap_url,
+        CanonicalUri::Http(_) => return Err(AuthenticationError::NotPortable),
+        CanonicalUri::Ap(ap_uri) => ap_uri,
     };
     let signature_data = match get_json_signature(object) {
         Ok(signature_data) => signature_data,
         Err(JsonSignatureError::NoProof) => return Err(AuthenticationError::NoProof),
         Err(other_error) => return Err(other_error.into()),
     };
-    match signature_data.signer {
-        JsonSigner::HttpUrl(_) =>
-            return Err(AuthenticationError::InvalidVerificationMethod),
-        JsonSigner::DidUrl(ref did) => {
+    match signature_data.verification_method {
+        VerificationMethod::HttpUri(_) | VerificationMethod::ApUri(_) => {
+            return Err(AuthenticationError::InvalidVerificationMethod);
+        },
+        VerificationMethod::DidUrl(did_url) => {
             // Object must be signed by its owner
-            if did != canonical_object_id.authority() {
+            if did_url.did() != canonical_object_id.authority() {
                 return Err(AuthenticationError::UnexpectedSigner);
             };
+            // DID URL fragment is ignored because supported DIDs
+            // can't have more than one verification method
+            let did = did_url.did();
             match signature_data.proof_type {
                 ProofType::EddsaJcsSignature => {
                     let signer_key = did.as_did_key()
@@ -81,7 +89,7 @@ pub fn verify_portable_object(
             };
         },
     };
-    Ok(object_id.to_string())
+    Ok(canonical_object_id)
 }
 
 #[cfg(test)]

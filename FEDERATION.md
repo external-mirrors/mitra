@@ -13,20 +13,22 @@ It also supports the following standards:
 ## Supported FEPs
 
 - [FEP-67ff: FEDERATION.md](https://codeberg.org/silverpill/feps/src/branch/main/67ff/fep-67ff.md)
-- [FEP-f1d5: NodeInfo in Fediverse Software](https://codeberg.org/fediverse/fep/src/branch/main/fep/f1d5/fep-f1d5.md)
+- [FEP-0151: NodeInfo in Fediverse Software (2025 edition)](https://codeberg.org/fediverse/fep/src/branch/main/fep/0151/fep-0151.md)
 - [FEP-e232: Object Links](https://codeberg.org/silverpill/feps/src/branch/main/e232/fep-e232.md)
-- [FEP-8b32: Object Integrity Proofs](https://codeberg.org/silverpill/feps/src/branch/main/8b32/fep-8b32.md)
 - [FEP-0ea0: Payment Links](https://codeberg.org/silverpill/feps/src/branch/main/0ea0/fep-0ea0.md)
 - [FEP-fb2a: Actor metadata](https://codeberg.org/fediverse/fep/src/branch/main/fep/fb2a/fep-fb2a.md)
   - Only for remote actors.
 - [FEP-521a: Representing actor's public keys](https://codeberg.org/silverpill/feps/src/branch/main/521a/fep-521a.md)
+- [FEP-8b32: Object Integrity Proofs](https://codeberg.org/silverpill/feps/src/branch/main/8b32/fep-8b32.md)
 - [FEP-c390: Identity Proofs](https://codeberg.org/silverpill/feps/src/branch/main/c390/fep-c390.md)
 - [FEP-0837: Federated Marketplace](https://codeberg.org/silverpill/feps/src/branch/main/0837/fep-0837.md)
 - [FEP-03c1: Actors without acct-URI](https://codeberg.org/fediverse/fep/src/branch/main/fep/03c1/fep-03c1.md)
 - [FEP-7628: Move actor](https://codeberg.org/fediverse/fep/src/branch/main/fep/7628/fep-7628.md)
 - [FEP-fe34: Origin-based security model](https://codeberg.org/fediverse/fep/src/branch/main/fep/fe34/fep-fe34.md)
 - [FEP-d556: Server-Level Actor Discovery Using WebFinger](https://codeberg.org/fediverse/fep/src/branch/main/fep/d556/fep-d556.md)
+- [FEP-9098: Custom emojis](https://codeberg.org/fediverse/fep/src/branch/main/fep/9098/fep-9098.md)
 - [FEP-c0e0: Emoji reactions](https://codeberg.org/fediverse/fep/src/branch/main/fep/c0e0/fep-c0e0.md)
+  - `Like` with `content` activity is used.
 - [FEP-ef61: Portable Objects](https://codeberg.org/fediverse/fep/src/branch/main/fep/ef61/fep-ef61.md)
   - Supports portable actors hosted on remote servers and portable actors registered using [FEP-ae97 clients](#fep-ae97-c2s-api).
   - Only `did:key` identities are supported. Planned support for `did:web`.
@@ -36,13 +38,23 @@ It also supports the following standards:
 - [FEP-171b: Conversation Containers](https://codeberg.org/fediverse/fep/src/branch/main/fep/171b/fep-171b.md)
   - Can consume `Add(Activity)` activities.
   - Publishes `Add(Create(Note))` activities in followers-only and subscribers-only conversations.
+- [FEP-9967: Polls](https://codeberg.org/fediverse/fep/src/branch/main/fep/9967/fep-9967.md)
+- [FEP-f228: Backfilling conversations](https://codeberg.org/silverpill/feps/src/branch/main/f228/fep-f228.md)
+  - Publishes collection of posts.
+  - Can consume `context` and `contextHistory`.
+- [FEP-3b86: Activity Intents](https://codeberg.org/fediverse/fep/src/branch/main/fep/3b86/fep-3b86.md)
+  - Only `Object` intent is supported.
+- [FEP-844e: Capability discovery](https://codeberg.org/silverpill/feps/src/branch/main/844e/fep-844e.md)
+  - The `implements` property is used to signal RFC-9421 support.
+- [FEP-044f: Consent-respecting quote posts](https://codeberg.org/fediverse/fep/src/branch/main/fep/044f/fep-044f.md)
+  - "Consent-respecting" quotes are processed in the same way as regular quotes.
 
 ### FEPs that might be supported in the future
 
 - [FEP-8fcf: Followers collection synchronization across servers](https://codeberg.org/fediverse/fep/src/branch/main/fep/8fcf/fep-8fcf.md)
-- [FEP-7888: Demystifying the context property](https://codeberg.org/fediverse/fep/src/branch/main/fep/7888/fep-7888.md)
 - [FEP-7502: Limiting visibility to authenticated actors](https://codeberg.org/fediverse/fep/src/branch/main/fep/7502/fep-7502.md)
 - [FEP-0499: Delivering to multiple inboxes with a multibox endpoint](https://codeberg.org/fediverse/fep/src/branch/main/fep/0499/fep-0499.md)
+- [FEP-c180: Problem Details for ActivityPub](https://codeberg.org/fediverse/fep/src/branch/main/fep/c180/fep-c180.md)
 
 ## ActivityPub
 
@@ -50,13 +62,14 @@ The following activities and object types are supported:
 
 - `Follow(Actor)`, `Accept(Follow)`, `Reject(Follow)`, `Undo(Follow)`.
 - `Create(Note)`, `Update(Note)`, `Delete(Note)`.
+- `Add(Note, target: featured)`, `Remove(Note, target: featured)`.
 - `Like()`, `EmojiReact()`, `Dislike()`, `Undo(Like)`.
 - `Announce(Note)`, `Undo(Announce)`.
 - `Update(Actor)`, `Move(Actor)`, `Delete(Actor)`.
 - `Offer(Agreement)`, `Accept(Agreement)`.
-- `Add(Actor)`, `Remove(Actor)`.
-- `Announce(Create)`, `Announce(Update)`, `Announce(Delete)`, `Announce(Like)`, `Announce(Dislike)`.
-- `Add(Like)`, `Add(Dislike)`.
+- `Add(Actor, target: subscribers)`, `Remove(Actor, target: subscribers)`.
+- `Announce(Create | Update | Delete | Like | Dislike)`.
+- `Add(Create | Update | Delete | Like | Dislike)`.
 
 Activities are implemented in way that is compatible with Pleroma, Mastodon and other popular ActivityPub servers.
 
@@ -68,6 +81,8 @@ Objects with type other than `Note` are converted and stored in the same way as 
 - The value of `Accept` header in outgoing requests is set to `application/ld+json; profile="https://www.w3.org/ns/activitystreams"`, [as required by the ActivityPub specification](https://www.w3.org/TR/activitypub/#retrieving-objects).
 - The `self` link in WebFinger JRD has `application/ld+json; profile="https://www.w3.org/ns/activitystreams"` type.
 - The object of `Accept(Follow)` activity is ID of the `Follow` activity.
+- Replies to followers-only posts [inherit](#conversations) the audience from their parents.
+- [`summary`](https://www.w3.org/TR/activitystreams-vocabulary/#dfn-summary) is displayed as summary and not used as a "content warning".
 
 ## HTML
 
@@ -77,6 +92,12 @@ Microsyntaxes:
 
 - Hashtags should have `rel="tag"` attribute or `.hashtag` class.
 - Mentions should have `.mention` class.
+
+## Conversations
+
+The implementation of followers-only and subscribers-only conversations is based on [FEP-171b: Conversation Containers](https://codeberg.org/fediverse/fep/src/branch/main/fep/171b/fep-171b.md).
+
+This means the audience is copied from the parent post when a reply is created. Scope widening is not allowed and incomplete conversations are not displayed.
 
 ## Object integrity proofs
 
@@ -114,11 +135,11 @@ Example:
 
 #### eddsa-jcs-2022
 
-https://w3c.github.io/vc-di-eddsa/#eddsa-jcs-2022
+https://www.w3.org/TR/vc-di-eddsa/#eddsa-jcs-2022
 
 #### jcs-eddsa-2022
 
-A variant of [eddsa-jcs-2022](https://w3c.github.io/vc-di-eddsa/#eddsa-jcs-2022) cryptosuite without context injection.
+A variant of [eddsa-jcs-2022](https://www.w3.org/TR/vc-di-eddsa/#eddsa-jcs-2022) cryptosuite without context injection.
 
 #### MitraJcsRsaSignature2022
 
@@ -143,17 +164,14 @@ Signature algorithm: EdDSA
 Supported representations:
 
 - `quoteUrl` property.
+- `quote` property.
 - FEP-e232 object links with relation type `https://misskey-hub.net/ns#_misskey_quote`.
-
-## Custom emojis
-
-Custom emojis are implemented as described in Mastodon documentation: https://docs.joinmastodon.org/spec/activitypub/#emoji.
 
 ## Identity proofs
 
 Supported proof types:
 
-- `jcs-eddsa-2022`: A variant of [eddsa-jcs-2022](https://w3c.github.io/vc-di-eddsa/#eddsa-jcs-2022) cryptosuite without context injection.
+- `eddsa-jcs-2022`: https://www.w3.org/TR/vc-di-eddsa/#eddsa-jcs-2022
 - `MitraJcsEip191Signature2022`: EIP-191 (Ethereum personal signatures)
 - `MitraJcsEd25519Signature2022`: [Minisign](https://jedisct1.github.io/minisign/) (pre-hashed)
 
@@ -184,10 +202,7 @@ Where `object` is an ID of old account and `target` is an ID of new account. Act
 <a name="fep-ae97-c2s-api"></a>
 ## FEP-ae97 C2S API
 
-In addition to `X-Rsa-Secret-Key` header specified in the FEP, the following headers are required for registration of portable actors:
-
-- `X-Ed25519-Secret-Key`: multibase encoded Ed25519 key.
-- `X-Invite-Code`: invite code.
+The `X-Invite-Code` HTTP header is required for registration of portable actors.
 
 ## Subscriptions
 
@@ -204,6 +219,12 @@ Cross-instance payments are implemented according to [FEP-0837](https://codeberg
 Proposals are linked to actors using [FEP-0ea0](https://codeberg.org/silverpill/feps/src/branch/main/0ea0/fep-0ea0.md) payment links. [CAIP-19](https://chainagnostic.org/CAIPs/caip-19) asset IDs are used to specify currencies.
 
 Agreements contain a FEP-0ea0 payment link pointing to [CAIP-10](https://chainagnostic.org/CAIPs/caip-10) account ID.
+
+### Payment status
+
+When a server receives a payment, it publishes an `Update(Agreement)` activity.
+
+The `Agreement` object will have a `preview` property. The value of this property is an anonymous `Note` with a `name` indicating the current status of the invoice (e.g. `Paid`).
 
 ### Subscription events
 

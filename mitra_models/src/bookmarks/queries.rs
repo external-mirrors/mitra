@@ -88,7 +88,7 @@ pub async fn get_bookmarked_posts(
     Ok(bookmarks)
 }
 
-pub async fn find_bookmarked_by_user(
+pub(crate) async fn find_bookmarked_by_user(
     db_client: &impl DatabaseClient,
     user_id: Uuid,
     posts_ids: &[Uuid],

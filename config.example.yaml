@@ -17,10 +17,18 @@ web_client_dir: /usr/share/mitra/www
 # when their names match.
 #web_client_theme_dir: /var/lib/mitra/theme
 
-http_host: "127.0.0.1"
+# Host and port where HTTP server accepts connections.
+http_host: '127.0.0.1'
 http_port: 8383
 
-# List of allowed origins for CORS (in addition to `instance_uri`)
+# Socket on which HTTP server is listening (overrides http_host and http_port).
+# Examples:
+# - 127.0.0.1:8383
+# - /tmp/mitra.sock
+#http_socket: '127.0.0.1:8383'
+#http_socket_perms: 0o600
+
+# List of allowed origins for CORS (in addition to `instance_url`)
 # Trailing slashes are not allowed.
 #http_cors_allowlist:
 #  - http://127.0.0.1:8383
@@ -28,8 +36,8 @@ http_port: 8383
 # Log level (debug, info, warn)
 #log_level: info
 
-# Domain name
-instance_uri: https://example.tld
+# Base URL
+instance_url: https://example.tld
 
 instance_title: example
 instance_short_description: my instance
@@ -68,14 +76,17 @@ registration:
 #    emoji_size_limit: 500K
 #  posts:
 #    character_limit: 5000
+#    attachment_limit: 16
+#    attachment_local_limit: 16
 
 # Data retention parameters.
 # Objects will be deleted after the specified number of days.
-retention:
-  # Remote posts with which local accounts didn't interact
-  extraneous_posts: 50
-  # Remote accounts without posts
-  empty_profiles: 150
+#retention:
+#  # Remote posts with which local accounts didn't interact
+#  extraneous_posts: 15
+#  # Remote accounts without posts
+#  empty_profiles: 30
+
 # Federation parameters
 #federation:
 #  enabled: true
@@ -87,11 +98,14 @@ retention:
 #  #onion_proxy_url: 'socks5h://127.0.0.1:9050'
 #  # Proxy for outgoing requests to .i2p targets
 #  #i2p_proxy_url: 'socks5h://127.0.0.1:4447'
+#  # Timeouts (seconds)
+#  #fetcher_timeout: 30
+#  #deliverer_timeout: 10
 
-# Lists of blocked and allowed domains (allowlist has higher priority).
-# Wildcard patterns are supported. Example: *.domain.example
-#blocked_instances: []
-#allowed_instances: []
+# OpenMetrics endpoint (/metrics)
+#metrics:
+#  auth_username: null
+#  auth_password: null
 
 # Blockchain integrations
 #blockchains:
@@ -105,6 +119,7 @@ retention:
 #    wallet_name: null
 #    wallet_password: null
 #    account_index: 0
+#    tx_required_confirmations: 20
 
 # S3 storage configuration
 # s3_storage:

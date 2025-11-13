@@ -1,25 +1,26 @@
 use serde::Serialize;
 use uuid::Uuid;
 
-use apx_sdk::constants::AP_PUBLIC;
 use mitra_config::Instance;
 use mitra_models::{
     database::{DatabaseClient, DatabaseError},
-    emojis::types::DbEmoji,
-    posts::types::{Post, Visibility},
-    profiles::types::{DbActor, DbActorProfile},
+    emojis::types::{CustomEmoji as DbCustomEmoji},
+    posts::types::{PostDetailed, Visibility},
+    profiles::types::DbActorProfile,
+    reactions::types::ReactionDetailed,
     users::types::User,
 };
 use mitra_services::media::MediaServer;
 
 use crate::{
     contexts::{build_default_context, Context},
+    deliverer::Recipient,
     identifiers::{
+        compatible_post_object_id,
         compatible_profile_actor_id,
         local_activity_id,
         local_actor_id,
         local_object_id,
-        post_object_id,
     },
     queues::OutgoingActivityJobData,
     vocabulary::{DISLIKE, EMOJI_REACT, LIKE},
@@ -49,50 +50,49 @@ struct Like {
 }
 
 pub(super) fn local_like_activity_id(
-    instance_url: &str,
+    instance_uri: &str,
     reaction_id: Uuid,
     reaction_has_deprecated_ap_id: bool,
 ) -> String {
     if reaction_has_deprecated_ap_id {
-        local_object_id(instance_url, reaction_id)
+        local_object_id(instance_uri, reaction_id)
     } else {
-        local_activity_id(instance_url, LIKE, reaction_id)
+        local_activity_id(instance_uri, LIKE, reaction_id)
     }
 }
 
 pub(super) fn get_like_audience(
     note_author_id: &str,
-    note_visibility: Visibility,
+    _note_visibility: Visibility,
 ) -> (Vec<String>, Vec<String>) {
-    let mut primary_audience = vec![note_author_id.to_string()];
-    if matches!(note_visibility, Visibility::Public) {
-        primary_audience.push(AP_PUBLIC.to_string());
-    };
+    let primary_audience = vec![note_author_id.to_string()];
     let secondary_audience = vec![];
     (primary_audience, secondary_audience)
 }
 
 #[allow(clippy::too_many_arguments)]
 fn build_like(
-    instance_url: &str,
+    instance_uri: &str,
     media_server: &MediaServer,
     actor_profile: &DbActorProfile,
     object_id: &str,
     reaction_id: Uuid,
     maybe_reaction_content: Option<String>,
-    maybe_custom_emoji: Option<&DbEmoji>,
+    maybe_custom_emoji: Option<&DbCustomEmoji>,
     post_author_id: &str,
     post_visibility: Visibility,
+    fep_c0e0_emoji_react_enabled: bool,
 ) -> Like {
     let activity_type = match maybe_reaction_content.as_deref() {
         Some("👎") => DISLIKE,
-        Some(_) => EMOJI_REACT,
+        Some(_) if fep_c0e0_emoji_react_enabled => EMOJI_REACT,
+        Some(_) => LIKE,
         None => LIKE,
     };
-    let activity_id = local_like_activity_id(instance_url, reaction_id, false);
-    let actor_id = local_actor_id(instance_url, &actor_profile.username);
+    let activity_id = local_like_activity_id(instance_uri, reaction_id, false);
+    let actor_id = local_actor_id(instance_uri, &actor_profile.username);
     let maybe_tag = maybe_custom_emoji
-        .map(|db_emoji| build_emoji(instance_url, media_server, db_emoji));
+        .map(|db_emoji| build_emoji(instance_uri, media_server, db_emoji));
     let (primary_audience, secondary_audience) =
         get_like_audience(post_author_id, post_visibility);
     Like {
@@ -110,48 +110,46 @@ fn build_like(
 
 pub async fn get_like_recipients(
     _db_client: &impl DatabaseClient,
-    _instance_url: &str,
-    post: &Post,
-) -> Result<Vec<DbActor>, DatabaseError> {
+    _instance_uri: &str,
+    post: &PostDetailed,
+) -> Result<Vec<Recipient>, DatabaseError> {
     let mut recipients = vec![];
     if let Some(remote_actor) = post.author.actor_json.as_ref() {
-        recipients.push(remote_actor.clone());
+        recipients.extend(Recipient::for_inbox(remote_actor));
     };
     Ok(recipients)
 }
 
-#[allow(clippy::too_many_arguments)]
 pub async fn prepare_like(
     db_client: &impl DatabaseClient,
     instance: &Instance,
     media_server: &MediaServer,
     sender: &User,
-    post: &Post,
-    reaction_id: Uuid,
-    maybe_reaction_content: Option<String>,
-    maybe_custom_emoji: Option<&DbEmoji>,
+    post: &PostDetailed,
+    reaction: &ReactionDetailed,
 ) -> Result<OutgoingActivityJobData, DatabaseError> {
     let recipients = get_like_recipients(
         db_client,
-        &instance.url(),
+        instance.uri_str(),
         post,
     ).await?;
-    let object_id = post_object_id(&instance.url(), post);
+    let object_id = compatible_post_object_id(instance.uri_str(), post);
     let post_author_id =
-        compatible_profile_actor_id(&instance.url(), &post.author);
+        compatible_profile_actor_id(instance.uri_str(), &post.author);
     let activity = build_like(
-        &instance.url(),
+        instance.uri_str(),
         media_server,
         &sender.profile,
         &object_id,
-        reaction_id,
-        maybe_reaction_content,
-        maybe_custom_emoji,
+        reaction.id,
+        reaction.content.clone(),
+        reaction.emoji.as_ref(),
         &post_author_id,
         post.visibility,
+        instance.federation.fep_c0e0_emoji_react_enabled,
     );
     Ok(OutgoingActivityJobData::new(
-        &instance.url(),
+        instance.uri_str(),
         sender,
         activity,
         recipients,
@@ -163,17 +161,17 @@ mod tests {
     use mitra_utils::id::generate_ulid;
     use super::*;
 
-    const INSTANCE_URL: &str = "https://example.com";
+    const INSTANCE_URI: &str = "https://example.com";
 
     #[test]
     fn test_build_like() {
-        let media_server = MediaServer::for_test(INSTANCE_URL);
+        let media_server = MediaServer::for_test(INSTANCE_URI);
         let author = DbActorProfile::default();
         let post_id = "https://example.com/objects/123";
         let post_author_id = "https://example.com/users/test";
         let reaction_id = generate_ulid();
         let activity = build_like(
-            INSTANCE_URL,
+            INSTANCE_URI,
             &media_server,
             &author,
             post_id,
@@ -182,15 +180,17 @@ mod tests {
             None,
             post_author_id,
             Visibility::Public,
+            false,
         );
         assert_eq!(
             activity.id,
-            format!("{}/activities/like/{}", INSTANCE_URL, reaction_id),
+            format!("{}/activities/like/{}", INSTANCE_URI, reaction_id),
         );
+        assert_eq!(activity.activity_type, "Like");
         assert_eq!(activity.object, post_id);
         assert_eq!(activity.content.is_none(), true);
         assert_eq!(activity.tag.is_empty(), true);
-        assert_eq!(activity.to, vec![post_author_id, AP_PUBLIC]);
+        assert_eq!(activity.to, vec![post_author_id]);
         assert_eq!(activity.cc.is_empty(), true);
     }
 }

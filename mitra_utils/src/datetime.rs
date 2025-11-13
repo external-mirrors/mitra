@@ -1,5 +1,5 @@
-use chrono::{DateTime, Duration, Utc};
+use chrono::{DateTime, TimeDelta, Utc};
 
 pub fn days_before_now(days: u32) -> DateTime<Utc> {
-    Utc::now() - Duration::days(days.into())
+    Utc::now() - TimeDelta::days(days.into())
 }

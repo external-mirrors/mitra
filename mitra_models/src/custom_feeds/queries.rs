@@ -9,13 +9,13 @@ use crate::{
     profiles::types::DbActorProfile,
 };
 
-use super::types::DbCustomFeed;
+use super::types::CustomFeed;
 
 pub async fn create_custom_feed(
     db_client: &impl DatabaseClient,
     owner_id: Uuid,
     feed_name: &str,
-) -> Result<DbCustomFeed, DatabaseError> {
+) -> Result<CustomFeed, DatabaseError> {
     let row = db_client.query_one(
         "
         INSERT INTO custom_feed (owner_id, feed_name)
@@ -33,7 +33,7 @@ pub async fn update_custom_feed(
     feed_id: i32,
     owner_id: Uuid,
     feed_name: &str,
-) -> Result<DbCustomFeed, DatabaseError> {
+) -> Result<CustomFeed, DatabaseError> {
     let maybe_row = db_client.query_opt(
         "
         UPDATE custom_feed
@@ -70,7 +70,7 @@ pub async fn get_custom_feed(
     db_client: &impl DatabaseClient,
     feed_id: i32,
     owner_id: Uuid,
-) -> Result<DbCustomFeed, DatabaseError> {
+) -> Result<CustomFeed, DatabaseError> {
     let maybe_row = db_client.query_opt(
         "
         SELECT custom_feed
@@ -87,13 +87,13 @@ pub async fn get_custom_feed(
 pub async fn get_custom_feeds(
     db_client: &impl DatabaseClient,
     owner_id: Uuid,
-) -> Result<Vec<DbCustomFeed>, DatabaseError> {
+) -> Result<Vec<CustomFeed>, DatabaseError> {
     let rows = db_client.query(
         "
         SELECT custom_feed
         FROM custom_feed
         WHERE owner_id = $1
-        ORDER BY id DESC
+        ORDER BY feed_name ASC
         ",
         &[&owner_id],
     ).await?;
@@ -153,7 +153,7 @@ pub async fn get_custom_feed_sources(
         &[&feed_id, &max_source_id, &i64::from(limit)],
     ).await?;
     let sources = rows.iter()
-        .map(|row| row.try_get("actor_profile"))
+        .map(DbActorProfile::try_from)
         .collect::<Result<_, _>>()?;
     Ok(sources)
 }
@@ -162,7 +162,7 @@ pub async fn get_custom_feeds_by_source(
     db_client: &impl DatabaseClient,
     owner_id: Uuid,
     source_id: Uuid,
-) -> Result<Vec<DbCustomFeed>, DatabaseError> {
+) -> Result<Vec<CustomFeed>, DatabaseError> {
     let rows = db_client.query(
         "
         SELECT custom_feed

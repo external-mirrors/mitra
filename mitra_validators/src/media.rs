@@ -1,4 +1,4 @@
-use apx_core::http_url::HttpUrl;
+use apx_core::url::http_uri::HttpUri;
 
 use super::errors::ValidationError;
 
@@ -6,7 +6,7 @@ const MEDIA_URL_LENGTH_MAX: usize = 2000;
 const MEDIA_DESCRIPTION_LENGTH_MAX: usize = 3000;
 
 pub fn validate_media_url(url: &str) -> Result<(), ValidationError> {
-    HttpUrl::parse(url)
+    HttpUri::parse(url)
         .map_err(|_| ValidationError("invalid media URL"))?;
     if url.len() > MEDIA_URL_LENGTH_MAX {
         return Err(ValidationError("media URL is too long"));

@@ -21,10 +21,10 @@ use crate::profiles::{
 };
 
 use super::types::{
-    DbFollowRequest,
-    DbRelationship,
+    FollowRequest,
     FollowRequestStatus,
     RelatedActorProfile,
+    Relationship,
     RelationshipType,
 };
 
@@ -32,7 +32,7 @@ pub async fn get_relationships(
     db_client: &impl DatabaseClient,
     source_id: Uuid,
     target_id: Uuid,
-) -> Result<Vec<DbRelationship>, DatabaseError> {
+) -> Result<Vec<Relationship>, DatabaseError> {
     let rows = db_client.query(
         "
         SELECT source_id, target_id, relationship_type, created_at
@@ -60,7 +60,7 @@ pub async fn get_relationships(
         ],
     ).await?;
     let relationships = rows.iter()
-        .map(DbRelationship::try_from)
+        .map(Relationship::try_from)
         .collect::<Result<_, _>>()?;
     Ok(relationships)
 }
@@ -69,7 +69,7 @@ pub async fn get_relationships_many(
     db_client: &impl DatabaseClient,
     source_id: Uuid,
     target_ids: &[Uuid],
-) -> Result<Vec<(Uuid, Vec<DbRelationship>)>, DatabaseError> {
+) -> Result<Vec<(Uuid, Vec<Relationship>)>, DatabaseError> {
     let rows = db_client.query(
         "
         SELECT source_id, target_id, relationship_type, created_at
@@ -97,10 +97,10 @@ pub async fn get_relationships_many(
         ],
     ).await?;
     // No duplicate keys in buckets hashmap
-    let mut buckets: HashMap<Uuid, Vec<DbRelationship>> =
+    let mut buckets: HashMap<Uuid, Vec<Relationship>> =
         HashMap::from_iter(target_ids.iter().map(|id| (*id, vec![])));
     for row in rows {
-        let relationship = DbRelationship::try_from(&row)?;
+        let relationship = Relationship::try_from(&row)?;
         let target_id = relationship.with(source_id)?;
         let target_relationships = buckets.get_mut(&target_id)
             .ok_or(DatabaseTypeError)?;
@@ -246,7 +246,7 @@ pub(super) async fn create_follow_request_unchecked(
     db_client: &impl DatabaseClient,
     source_id: Uuid,
     target_id: Uuid,
-) -> Result<DbFollowRequest, DatabaseError> {
+) -> Result<FollowRequest, DatabaseError> {
     let request_id = generate_ulid();
     let row = db_client.query_one(
         "
@@ -273,7 +273,7 @@ pub async fn create_remote_follow_request_opt(
     source_id: Uuid,
     target_id: Uuid,
     activity_id: &str,
-) -> Result<DbFollowRequest, DatabaseError> {
+) -> Result<FollowRequest, DatabaseError> {
     let request_id = generate_ulid();
     // Update activity ID if follow request already exists
     let row = db_client.query_one(
@@ -380,7 +380,7 @@ async fn delete_follow_request_opt(
 pub async fn get_follow_request_by_id(
     db_client:  &impl DatabaseClient,
     request_id: Uuid,
-) -> Result<DbFollowRequest, DatabaseError> {
+) -> Result<FollowRequest, DatabaseError> {
     let maybe_row = db_client.query_opt(
         "
         SELECT follow_request
@@ -394,10 +394,10 @@ pub async fn get_follow_request_by_id(
     Ok(request)
 }
 
-pub async fn get_follow_request_by_activity_id(
+pub async fn get_follow_request_by_remote_activity_id(
     db_client: &impl DatabaseClient,
     activity_id: &str,
-) -> Result<DbFollowRequest, DatabaseError> {
+) -> Result<FollowRequest, DatabaseError> {
     let maybe_row = db_client.query_opt(
         "
         SELECT follow_request
@@ -415,7 +415,7 @@ pub async fn get_follow_request_by_participants(
     db_client: &impl DatabaseClient,
     source_id: Uuid,
     target_id: Uuid,
-) -> Result<DbFollowRequest, DatabaseError> {
+) -> Result<FollowRequest, DatabaseError> {
     let maybe_row = db_client.query_opt(
         "
         SELECT follow_request
@@ -446,7 +446,7 @@ pub async fn get_followers(
         &[&profile_id, &RelationshipType::Follow],
     ).await?;
     let profiles = rows.iter()
-        .map(|row| row.try_get("actor_profile"))
+        .map(DbActorProfile::try_from)
         .collect::<Result<_, _>>()?;
     Ok(profiles)
 }
@@ -467,22 +467,30 @@ pub async fn get_followers_paginated(
     ).await
 }
 
-/// Returns true if actor has local followers or follow requests
-pub async fn has_local_followers(
+/// Returns true if actor has an account,
+/// or has local followers or follow requests
+pub async fn is_local_or_followed(
     db_client: &impl DatabaseClient,
     actor_id: &str,
 ) -> Result<bool, DatabaseError> {
     let maybe_row = db_client.query_opt(
         "
         SELECT 1
-        FROM (
-            SELECT target_id FROM relationship WHERE relationship_type = $2
-            UNION ALL
-            SELECT target_id FROM follow_request
-        ) AS follow
-        JOIN actor_profile ON (follow.target_id = actor_profile.id)
-        WHERE actor_profile.actor_id = $1
-        LIMIT 1
+        FROM actor_profile
+        WHERE
+            actor_profile.actor_id = $1
+            AND (
+                EXISTS (
+                    SELECT 1 FROM relationship
+                    WHERE target_id = actor_profile.id AND relationship_type = $2
+                )
+                OR EXISTS (
+                    SELECT 1 FROM follow_request
+                    WHERE target_id = actor_profile.id
+                )
+                OR actor_profile.user_id IS NOT NULL
+                OR actor_profile.portable_user_id IS NOT NULL
+            )
         ",
         &[&actor_id, &RelationshipType::Follow]
     ).await?;
@@ -506,7 +514,7 @@ pub async fn get_following(
         &[&profile_id, &RelationshipType::Follow],
     ).await?;
     let profiles = rows.iter()
-        .map(|row| row.try_get("actor_profile"))
+        .map(DbActorProfile::try_from)
         .collect::<Result<_, _>>()?;
     Ok(profiles)
 }
@@ -640,7 +648,7 @@ pub async fn get_subscribers(
         &[&profile_id, &RelationshipType::Subscription],
     ).await?;
     let profiles = rows.iter()
-        .map(|row| row.try_get("actor_profile"))
+        .map(DbActorProfile::try_from)
         .collect::<Result<_, _>>()?;
     Ok(profiles)
 }
@@ -847,7 +855,7 @@ mod tests {
         let following = get_following(db_client, source.id).await.unwrap();
         assert_eq!(following[0].id, target.id);
         let target_has_followers =
-            has_local_followers(db_client, target_actor_id).await.unwrap();
+            is_local_or_followed(db_client, target_actor_id).await.unwrap();
         assert_eq!(target_has_followers, true);
 
         // Unfollow
@@ -1023,5 +1031,29 @@ mod tests {
                 RelationshipType::Mute
             ).await.unwrap()
         );
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_is_local_or_followed() {
+        let db_client = &mut create_test_database().await;
+        let actor_id = "https://social.example/1";
+        let target = create_test_remote_profile(
+            db_client,
+            "target",
+            "social.example",
+            actor_id,
+        ).await;
+        let result = is_local_or_followed(db_client, actor_id).await.unwrap();
+        assert_eq!(result, false);
+
+        let source = create_test_user(db_client, "source").await;
+        create_follow_request_unchecked(
+            db_client,
+            source.id,
+            target.id,
+        ).await.unwrap();
+        let result = is_local_or_followed(db_client, actor_id).await.unwrap();
+        assert_eq!(result, true);
     }
 }

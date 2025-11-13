@@ -1,4 +1,5 @@
 pub mod activitypub;
+pub mod common;
 pub mod custom_feeds;
 pub mod emojis;
 pub mod errors;

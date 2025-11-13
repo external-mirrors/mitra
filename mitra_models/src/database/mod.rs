@@ -1,6 +1,5 @@
-use tokio_postgres::error::{Error as PgError, SqlState};
-
 pub mod connect;
+pub mod errors;
 pub mod int_enum;
 pub mod json_macro;
 pub mod migrate;
@@ -12,31 +11,12 @@ pub mod test_utils;
 
 pub type DatabaseConnectionPool = deadpool_postgres::Pool;
 pub use tokio_postgres::{GenericClient as DatabaseClient};
-
-#[derive(thiserror::Error, Debug)]
-#[error("database type error")]
-pub struct DatabaseTypeError;
-
-#[derive(thiserror::Error, Debug)]
-pub enum DatabaseError {
-    #[error("database pool error")]
-    DatabasePoolError(#[from] deadpool_postgres::PoolError),
-
-    #[error("database query error")]
-    DatabaseQueryError(#[from] postgres_query::Error),
-
-    #[error(transparent)]
-    DatabaseClientError(#[from] tokio_postgres::Error),
-
-    #[error(transparent)]
-    DatabaseTypeError(#[from] DatabaseTypeError),
-
-    #[error("{0} not found")]
-    NotFound(&'static str), // object type
-
-    #[error("{0} already exists")]
-    AlreadyExists(&'static str), // object type
-}
+pub use tokio_postgres::{Client as BasicDatabaseClient};
+pub use errors::{
+    catch_unique_violation,
+    DatabaseError,
+    DatabaseTypeError,
+};
 
 pub async fn get_database_client(
     db_pool: &DatabaseConnectionPool,
@@ -47,15 +27,15 @@ pub async fn get_database_client(
     Ok(client)
 }
 
-pub fn catch_unique_violation(
-    object_type: &'static str,
-) -> impl Fn(PgError) -> DatabaseError {
-    move |err| {
-        if let Some(code) = err.code() {
-            if code == &SqlState::UNIQUE_VIOLATION {
-                return DatabaseError::AlreadyExists(object_type);
-            };
-        };
-        err.into()
-    }
+// WARNING: must be used with caution in `match` (or `if let`) scrutenees
+// because the temporary (connection) will not be dropped until
+// the end of the whole `match` expression.
+// https://github.com/rust-lang/rust/issues/93883
+#[macro_export]
+macro_rules! db_client_await {
+    ($pool: expr) => {
+        &**get_database_client($pool).await?
+    };
 }
+
+pub use db_client_await;

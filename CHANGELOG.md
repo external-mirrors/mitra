@@ -6,6 +6,768 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [4.13.0] - 2025-11-13
+
+### Added
+
+- Added support for listening on IPv6 address.
+- Sync activities in public conversations if `federation.fep_171b_public_enabled` is set to `true`.
+- Sync reactions in conversations.
+
+### Changed
+
+- Treat public keys and verification methods as different core types.
+- Changed priority of `Actor` to highest in duck typing algorithm.
+- Prevent type confusion attacks when verifying FEP-ae97 activities.
+- Allow `properties` with value `null` in JRD links.
+- Return only supported scopes after creating application with `/api/v1/apps`.
+- Write OAuth app scopes to log.
+- Set `Poll.expires_at` to `null` if poll is without end date.
+- Allow embedded `featured` collections.
+- Do not allow replying with "Subscribers only" visibility to public posts.
+- Force "Conversation" visibility if conversation scope is widened.
+- Optimized thread retrieval query.
+- Verify integrity proofs on FEP-1b12 wrapped activities.
+- Use value of `summary` property as attachment description if `name` is not present.
+
+### Fixed
+
+- Fixed database error occurring when application `scopes` parameter is too long.
+- Fixed M4A audio uploads not working in Bloat-FE ([#184](https://codeberg.org/silverpill/mitra/pulls/184)).
+
+## [4.12.0] - 2025-10-26
+
+### Added
+
+- Set `discoverable` flag to `true` on Mastodon API `Account` entities.
+- Replace `description` meta tag on post and profile pages.
+- Added `/api/v1/instance/domain_blocks` API endpoint.
+- Added `filter_blocklist_public` dynamic configuration parameter.
+- Added `database_connection_pool_size` configuration parameter.
+- Allow AAC, M4A and WAV audio uploads ([#180](https://codeberg.org/silverpill/mitra/pulls/180)).
+- Added `expires_in` parameter to `/oauth/token` response.
+- Added `scopes` and `redirect_uris` fields to `/api/v1/apps` response.
+
+### Changed
+
+- Changed data integrity context to `https://w3id.org/security/data-integrity/v2`.
+- Use `eddsa-jcs-2022` cryptosuite when generating minisign identity proofs.
+- Don't reject remote polls without end date.
+- Improved documentation and error messages for `update-config` command.
+- Make `get-config` display default value if configuration parameter is not set.
+- Set `pleroma.parent_visible` flag to `false` on `Status` if parent post can't be displayed due to its visibility setting.
+- Reduced database lock time during processing of remote posts.
+- Reduced database lock time during followers/following import.
+- Reduced database lock time during processing of remote actor profiles.
+- Reduced database lock time during pruning of remote posts.
+- Process uploads with `application/ogg` media type as `audio/ogg`.
+- Strip query parameters when canonicalizing 'ap' URIs.
+- Verify ownership of embedded objects submitted by FEP-ae97 clients.
+- Allow empty `status` field in `/api/v1/statuses` form data.
+- Add `Cache-Control: no-store` header to `/oauth/token` response.
+
+### Fixed
+
+- Use correct verification method ID when creating identity proofs.
+- Fixed RFC-9421 signature verification error when `@request-target` is used.
+- Prefer JSON over form data when deserializing ambiguous payloads.
+
+### Security
+
+- Verify client ID when issuing access token using authorization code flow.
+
+## [4.11.0] - 2025-10-09
+
+### Added
+
+- Write warning to log if `instance_url` configuration parameter has incorrect URL scheme.
+- Added configuration parameter `http_cors_allow_all`.
+- Added FEP-ae97 API endpoint for deleting media.
+- Added FEP-ae97 gateway metadata endpoint.
+- Set `discoverable` flag to `true` on actors.
+- Specify minimum payment amount in `Proposal` objects.
+- Update status of a remote invoice when remote server receives payment.
+
+### Changed
+
+- Changed minimum required PostgreSQL version to 15.
+- Don't include invoice and subscription counts in `instance-report` output if Monero intergration is not enabled.
+- Renamed `instance_uri` configuration parameter to `instance_url` (`instance_uri` is treated as alias).
+- Log CORS errors.
+- Return `413 Payload Too Large` if media uploaded by portable actor is too large.
+- Return `403 Forbidden` if media uploaded by an unregistered portable actor.
+- Return `404 Not Found` if the owner of portable outbox is not registered.
+- Return `401 Unauthorized` if the signature is not valid when pulling from portable inbox or outbox.
+- Increased invoice timeout to 4 hours.
+- Reduced database lock time during execution of payment monitor task.
+- Write current number of transaction confirmations to log.
+- Added `attributedTo` property to `Agreement` object.
+
+### Fixed
+
+- Copy port number from URL to `Host` header when creating HTTP signature.
+- Fixed request URI reconstruction in case when `Host` header value includes port number.
+- Fixed log-in when `password` flow is used and content is a multipart form.
+
+### Security
+
+- Prefer to read content digest from a signed header.
+
+## [4.10.1] - 2025-09-21
+
+### Added
+
+- Added `tx_required_confirmations` parameter to Monero integration configuration.
+
+### Changed
+
+- Wait for 20 confirmations when processing incoming payments.
+
+### Fixed
+
+- Always add `payment_amount_min` parameter to chain metadata in `/api/v1/instance` response.
+
+## [4.10.0] - 2025-09-16
+
+### Added
+
+- Download media attachment if `--attachment` argument of `create-post` command is a URL.
+- Added support for media attachments to `import-posts` command.
+- Added `--id` argument to `create-post` command.
+- Add Atom feed link to `<head>` of the profile page.
+- Added FEP-ae97 API endpoints for uploading media.
+
+### Changed
+
+- Changed MSRV to 1.75.0.
+- Remove invisible characters from custom feed name before saving it to database.
+- Validate custom feed name when updating custom feed.
+- Write actor ID to log when processing a forwarded activity.
+- Stop relying on `mediaType` property when processing remote media.
+- Return standard "user not found" error from `create-post` if author is not local.
+- Improved data validation in `import-posts` command.
+- Generate deterministic post IDs when `create-post` and `import-posts` commands are used.
+- Sort custom feeds by name.
+- Improved descriptions of request errors produced by fetcher and deliverer.
+- Reduced database lock time during processing of incoming activities.
+- Reduced database lock time during verification of HTTP signatures.
+- Reduced database lock time during reply tree retrieval.
+
+### Fixed
+
+- Fixed mention not being parsed if followed by a dot.
+- Fixed logging of REST API authentication errors.
+- Fixed potential deadlock in incoming queue worker.
+
+## [4.9.0] - 2025-08-31
+
+### Added
+
+- Added `import-posts` command for importing archived posts.
+- Fetch activities from origin if signer doesn't match actor.
+- Added `/api/v1/admin/posts/{status_id}` API endpoint.
+- Added `/api/v1/admin/accounts/{account_id}` API endpoint.
+
+### Changed
+
+- Write message to log when activity is added to portable actor's inbox.
+- Reduced database lock time during collection import.
+- Display detailed error message when portable object has invalid integrity proof.
+- Generate FEP-171b activity when local post is deleted with `delete-post` command.
+
+### Security
+
+- Escape post title before inserting into page `<head>`.
+
+## [4.8.0] - 2025-08-18
+
+### Added
+
+- Allow local usernames containing uppercase letters and hyphens ([#157](https://codeberg.org/silverpill/mitra/pulls/157)).
+- Protected media proxy by requiring server's signature.
+- Forward activities from a portable inbox to other gateways.
+
+### Changed
+
+- Write message to log if media proxy is enabled.
+- Don't allow `.+-` in names of local custom emojis.
+- Don't allow local custom emojis with `image/apng` media type.
+- Allow remote custom emojis with `image/avif` and `image/jpeg` media types.
+- Don't insert URL into post if type is `ChatMessage`.
+- Always add group to reply audience when replying to post in group.
+- Don't reject remote posts with a quote and no content.
+- Enabled media proxy endpoint by default.
+- Return at most 2 results when searching for a user as a guest.
+- Respond with status code 404 if media can't be proxied.
+
+## [4.7.0] - 2025-08-01
+
+### Added
+
+- Added support for `Create` activities without embedded object.
+- Added `steal-emoji` alias for `import-emoji` command.
+- Added `proxy-media` filter action.
+- Added `media_proxy_enabled` configuration option.
+
+### Changed
+
+- Verify activity sender instead of actor when filtering spam.
+- Ignore forwarded `Announce` activities.
+- Optimized `Update` activity handler.
+- Changed MSRV to 1.74.1.
+- Added support for `@query` RFC-9421 component.
+- Exit with non-zero code if validation error occurs in `add-emoji` or `import-emoji` command.
+- Always validate actor profile data when it is retrieved from the database.
+
+### Removed
+
+- Removed `attributedTo` property from `Emoji` objects.
+
+### Fixed
+
+- Use original emoji `id` when generating `Like` / `EmojiReact` activity with remote emoji.
+- Use correct file size limit when adding custom emoji by URL.
+- Don't copy media attributes when stealing remote emoji.
+
+### Security
+
+- Require HTTP signatures to cover request method and target URI.
+
+## [4.6.0] - 2025-07-16
+
+### Added
+
+- Enabled autolinking for `nex://` URIs.
+- Display FEP-044f quotes.
+- Signal support for RFC9421+Ed25519.
+- Added `quote` property to Mastodon API `Status` entity.
+- Added command that runs standalone queue workers.
+
+### Changed
+
+- Reduced database connection lock time in incoming activity queue executor and fetcher queue executor.
+- Write detailed error message to log when payment forwarding fails.
+- Enabled rendering of underlined text in instance descriptions.
+- Disabled rendering of strikethrough text in bio.
+- Allow anonymous collection pages.
+- Don't escape HTML special characters in display name.
+- Write message to log when Ed25519 key is used for HTTP signature.
+- Remove zero-width characters from display names.
+- Add `hidden` flag to `Status` entities in `links` array if the author is muted.
+- Changed CSP to allow external connections.
+- Sort profiles in profile directory by the date of the latest post.
+
+### Fixed
+
+- Fixed autolinking of URLs with IPv6 hostnames.
+- Fixed post import failure when `quoteUrl` is not a canonical ID.
+- Fixed parsing of consecutive `[[..]]` links.
+
+## [4.5.1] - 2025-06-23
+
+### Added
+
+- Add `payment_amount_min` parameter to `chain_metadata` entity in `/api/v1/instance` response.
+- Add information about pending invoices to instance report.
+- Added `repair-invoice` command.
+
+### Changed
+
+- Write message to log before forwarding payment.
+- Require subscription price to be greater than minimum payment amount.
+- Write message to log when invoice status is changed to "timeout".
+- Increased timeout of payment forwarding operation to 120 seconds
+
+### Fixed
+
+- Use compatible object IDs for web client redirections.
+- Fixed description of `import-emoji` command.
+
+## [4.5.0] - 2025-06-18
+
+### Added
+
+- Implemented `/api/v2/notifications/policy` API endpoint.
+- Advertise RFC-9421 support using FEP-844e mechanism.
+- Implemented `/api/v1/statuses/{status_id}/favourited_by` API endpoint.
+- Implemented `/api/v1/pleroma/statuses/{status_id}/reactions` API endpoint.
+- Support delivering portable activities to followers.
+- Added `check-uris` command.
+
+### Changed
+
+- Raise database error in inbox/outbox views if stored actor ID is not canonical.
+- Improved descriptions of authentication errors.
+- Use same-actor policy when verifying inbox/outbox read permission.
+- Improved documentation of `create-post` command.
+- Disabled autolinking of email / webfinger addresses.
+- Write detailed error message to log when verification of embedded portable object fails.
+- Write message to log when incoming request contains RFC-9421 signature.
+- Include file size limit in error message when uploaded file is too big.
+- Replaced DID context with CID context in actor objects.
+- Increased maximum number of poll options to 15.
+- Support calling `/api/v1/accounts/lookup` with full local address.
+- Return empty array to unauthenticated users when they call `/api/v1/statuses/{status_id}/reblogged_by`.
+- Allow authenticated users to access reposts using `/api/v1/statuses/{status_id}/reblogged_by`.
+- Make `/oauth/revoke` API endpoint accept form data.
+
+### Removed
+
+- Don't accept requests signed with DIDs.
+
+### Fixed
+
+- Don't parse `#1` as a hashtag.
+- Added missing attributes to Mastodon API `Relationship` entity.
+- Use compatible `object` ID when generating `Like` activity for portable object.
+
+## [4.4.0] - 2025-06-05
+
+### Added
+
+- Allow requests to portable inboxes/outboxes signed with keys identified by 'ap' URLs.
+- Added `webfinger` command.
+- Sync `Update` and `Delete` activities in FEP-171b conversations.
+- Support SHA-512 content digests.
+- Support verification of signed requests with `Content-Digest` header.
+- Verify RFC-9421 signatures.
+- Implemented `/api/v1/statuses/{status_id}/reblogged_by` API endpoint.
+
+### Changed
+
+- Improved handling of database errors during OAuth token verification.
+- Write details of database errors and internal errors to log when processing requests.
+- Return plain text errors for routes other than Mastodon API.
+- Changed MSRV to 1.72.1.
+- Don't reject actor if associated public key has different origin.
+- Set `Accept` header value to `application/jrd+json` when performing WebFinger query.
+- Log error if full request URI can't be obtained during HTTP signature verification.
+- Store visibility of post reactions in database.
+
+### Removed
+
+- Removed `account_ids` property in `Status.pleroma.emoji_reactions` items.
+- Removed `federation.fep_e232_enabled` configuration parameter.
+
+### Fixed
+
+- Fixed WebFinger lookup not working on Yggdrasil addresses.
+- Display followers-only reposts of viewer's posts in profile timeline.
+- Don't add `Public` to `Like` activity audience.
+
+## [4.3.1] - 2025-05-18
+
+### Fixed
+
+- Fixed `Content type error` when making a repost.
+
+## [4.3.0] - 2025-05-18
+
+### Added
+
+- Added `get-config` command.
+- Allow blockquotes in posts.
+- Remove follow relationships when receiving `Block` activity.
+- Support `Add(Delete)` activities.
+- Support followers-only reposts.
+- Support WebFinger addresses with IPv6 hostnames.
+
+### Changed
+
+- Changed activity limit of outbox fetcher to 20.
+- Accept marker options formatted as JSON objects at `/api/v1/markers`.
+- Deliver activities to one onion server at a time.
+- Removed unnecessary database query in portable outbox handler.
+- Don't include DMs in post count.
+- Ignore actor's public keys that have different owner.
+- Create reposts for `Article` objects addressed to FEP-1b12 groups.
+- Reject `Update(Object)` activity if `inReplyTo` has changed.
+- Write warning to log if scope widening happens in a remote reply.
+- Reject objects with invalid audience.
+
+### Fixed
+
+- Fetch target actor when processing portable `Follow` activity.
+- Add incoming activities to portable actor's inbox even if audience is not specified.
+- Fixed error during processing of `Undo(Follow)` activity targeting portable actor.
+- Don't clear extra fields when performing partial profile update with `multipart/form-data`.
+
+## [4.2.1] - 2025-05-08
+
+### Changed
+
+- Don't reject portable actor objects without public keys.
+
+### Fixed
+
+- Prevent infinite loop when forwarding portable activities.
+
+## [4.2.0] - 2025-05-06
+
+### Added
+
+- Added `delete-account` alias for `delete-user` command.
+- Support loading featured posts using `/api/v1/accounts/{account_id}/load_activities` API endpoint.
+- Added `limits.posts.attachment_limit` configuration parameter.
+- Added `limits.posts.attachment_local_limit` configuration parameter.
+
+### Changed
+
+- Always validate activity audience.
+- Ensure filtering is performed whenever object is fetched.
+- Save activities to database only after processing them.
+- Forward portable activities only after processing them.
+- Don't ignore repeated activities.
+- Track follow requests made by portable accounts.
+- Support partial updates with `/api/v1/accounts/update_credentials`.
+- Append attachment URLs to post when attachment limit is exceeded.
+- Changed default attachment limit to 16.
+
+### Deprecated
+
+- Deprecated `delete-profile` alias of `delete-user` command.
+
+### Fixed
+
+- Fixed display of ">" in code blocks ([#134](https://codeberg.org/silverpill/mitra/pulls/134)).
+- Fixed backslashes appearing near exclamation marks.
+- Fixed broken portable actor registration endpoint.
+
+### Security
+
+- Don't save fetched portable objects with local compatible IDs.
+- Don't serve portable activities if they are not validated.
+- Prevent FEP-ae97 clients from creating keys that are not known to server.
+
+## [4.1.1] - 2025-04-27
+
+### Added
+
+- Added `federation.fep_ef61_gateway_enabled` configuration option.
+
+### Changed
+
+- Disabled FEP-ef61 gateway by default.
+- Treat verification methods as separate core type.
+
+### Security
+
+- Don't serve portable objects that are not owned by actors with local accounts.
+- Ignore portable activities from remote servers with local compatible IDs.
+
+## [4.1.0] - 2025-04-26
+
+### Added
+
+- Make available space indication work on FreeBSD.
+- Resolve fragments when fetching objects.
+
+### Changed
+
+- Accept poll options formatted as JSON object at `/api/v1/statuses`.
+- Require GET requests to portable inboxes and outboxes to be signed with DIDs.
+- Generate HTTP signature keys when registering portable actor.
+- Log internal profile ID of portable actor if it existed before registration.
+- Log emoji alternate name when it is present.
+
+### Fixed
+
+- Don't reject public posts from portable users as spam.
+- Fixed panic in remote vote handler.
+
+## [4.0.0] - 2025-04-17
+
+### Changed
+
+- Set minimum migration version to 72.
+- Disabled custom migration that generates Ed25519 keys for accounts.
+- Treat scheduled outgoing activities where sender is not specified as invalid.
+- Removed unhashed OAuth tokens from database.
+- Don't change default config file path when `production` feature is enabled.
+- Changed default data retention parameters.
+- Changed default fetcher and deliverer timeouts.
+- Renamed `reject` filter action to `reject-incoming`.
+- Renamed `reject-data` filter action to `reject`.
+- Changed default value of `object-type` parameter of `import-object` command to `any`.
+- Renamed `mitractl` binary to `mitra`.
+
+### Deprecated
+
+- Deprecated `blocked_instances` and `allowed_instances` configuration parameters.
+
+### Removed
+
+- Don't read instance key from `instance_rsa_key` file.
+- Removed `import-actor`, `import-activity` and `prune-remote-emojis` commands.
+
+### Fixed
+
+- Don't panic on non-critical errors when executing commands.
+
+## [3.23.0] - 2025-04-15
+
+### Added
+
+- Allow changing default configuration file path at compile time.
+- Create reposts when processing `Announce(Create(Note))` for top-level group posts.
+- Support per-post language selection.
+
+### Changed
+
+- Log HTTP server errors where error source is unknown.
+- Don't make requests to blocked instances when `import-object` command is used.
+- Use `https://w3id.org/valueflows/ont/vf#Proposal` relation type for subscription payment links.
+- Show recently updated profiles first in search results.
+- Added `reject-incoming` alias for `reject` filter action.
+- Compare identifiers instead of actors when verifying wrapped FEP-1b12 activities.
+
+### Deprecated
+
+- Deprecated `prune-remote-emojis` command.
+
+### Removed
+
+- Dropped support for `mitra-jcs-rsa-2022` cryptosuite.
+
+### Fixed
+
+- Fixed internal server error when acessing rate-limited endpoints via unix socket.
+- Fixed incorrect rate limiter IP address check.
+- Fixed incorrect de-duplication of activity recipients.
+- Fixed broken uploads in Bloat-FE.
+
+## [3.22.0] - 2025-04-02
+
+### Added
+
+- Added `/api/v2/filters` API endpoint returning empty array.
+- Support ~~strikethrough~~ text in posts.
+- Added `/api/v1/notifications/clear` API endpoint.
+- Allow adding "automated" flag to account.
+
+### Changed
+
+- Changed the value of `Role.permissions` to bitmask as specified in Mastodon documentation.
+- Allow POSTing form-encoded data to `/api/v1/markers`.
+- Added documentation for `create-post` command.
+- Mark portable actor as reachable if at least one inbox is reachable.
+- Don't retry delivery if status is `410 Gone`.
+- Prioritize primary recipients when delivering posts.
+- Add `privacy` and `sensitive` properties to `Account.source`.
+- Don't make requests to blocked instances when verifying FEP-1b12 and FEP-171b activities.
+- Compare canonical IDs when verifying FEP-c390 proof.
+- Speed up full text search.
+
+### Fixed
+
+- Changed encoding of OpenMetrics data to UTF-8.
+- Fixed metadata in OpenMetrics exposition.
+- Added EOF to OpenMetrics exposition.
+- Fixed incorrect sorting of backdated posts.
+- Fixed `profile not found` when processing `Announce(Undo)`.
+
+## [3.21.0] - 2025-03-24
+
+### Added
+
+- Accept remote identity proofs created using `eddsa-jcs-2022` cryptosuite.
+- Added FEP-3b86 `Object` intent to WebFinger links.
+- Added `federation.fep_c0e0_emoji_react_enabled` configuration option.
+- Added OpenMetrics endpoint for monitoring queue sizes.
+
+### Changed
+
+- Check origin of verification method when verifying activity signature.
+- Write message to log when server stops.
+- Copy `role.permissions` to `role.permissions_names` in `Account` Mastodon API entity.
+- Optimized related posts query.
+- Optimized profile timeline, featured collection and conversation context queries.
+- Replace actor key ownership validation warnings with errors.
+
+### Fixed
+
+- Try to fix application hang on shutdown.
+
+## [3.20.0] - 2025-03-15
+
+### Added
+
+- Added `server` command to mitractl.
+- Support `Announce(Undo)` activities.
+- Added `reject-keywords` filter action.
+
+### Changed
+
+- Ensure media directory exists when `mitractl` runs.
+- Write instance URL to log when `mitractl` runs.
+- Mark `import-actor` and `import-activity` commands as deprecated.
+- Allow replying with "conversation" visibility to author's own followers-only post.
+- Disallow uppercase letters in HTTP URL host component.
+- Compare origins instead of hostnames when verifying fetched non-portable object.
+- Make validation of `instance_uri` configuration parameter more strict.
+- Store actor's shared inbox.
+- Hide deprecated filter actions from `add-filter-rule` help message.
+- Describe each filter action in `add-filter-rule` help message.
+- Improved formatting of `update-config` help message.
+
+### Fixed
+
+- Fixed bug in processing of FEP-171b activities.
+- Generate `Add` activity when conversation owner posts a reply.
+- Avoid errors when parsing URLs stored in database.
+
+## [3.19.0] - 2025-03-09
+
+### Added
+
+- Added collection support to `import-object` command.
+- Added `mark-sensitive` filter action.
+- Automatically remove unused tags from database.
+- Add OpenGraph metadata to profile pages.
+
+### Changed
+
+- Don't load replies collection when context is requested.
+- Refresh cached posts when loading thread or replies.
+- Replace "scheduler" with "background worker" in log messages.
+- Changed default value of `limits.media.emoji_size_limit` to 1 MB.
+- Reverted to allowing single character emoji shortcodes.
+- Don't pollute PostgreSQL log with `post_reaction` table constraint violation errors.
+- Don't import post when `reject-data` rule for target domain exists.
+- Drop delivery if `reject-data` rule for target domain exists.
+
+### Fixed
+
+- Add newline to `get-payment-address` command output.
+
+## [3.18.0] - 2025-02-26
+
+### Added
+
+- Support conversation backfilling via `contextHistory` property.
+- Added `http_socket_perms` configuration parameter.
+- Added `profile_image_local_size_limit` configuration parameter.
+- Implemented `context` collection.
+- Added `prune-reposts` command.
+- Added `create-post` command.
+
+### Changed
+
+- Changed local profile image size limit to 2 MB.
+- Ignore local activities delivered via `Add` and `Announce`.
+- Require emoji shortcodes to have at least two characters.
+- Use compatible object IDs in `replies` collection.
+- Improved performance of `/objects/{post_id}` view.
+- Changed subpath of FEP-171b collection to `/history`.
+- Write message to log when encountering unsupported tag on actor object.
+- Update remote emoji object ID if name and hostname match.
+- Check post content length after HTML sanitization.
+
+### Removed
+
+- Removed `--use-container` option of `load-replies` command.
+
+### Fixed
+
+- Fixed incorrect processing of poll options with HTML special characters.
+- Use correct datetime format in Mastodon API responses.
+
+## [3.17.0] - 2025-02-13
+
+### Added
+
+- Parse custom emojis in poll options.
+- Support EdDSA HTTP signatures.
+- Add option to import activities with `import-object` command.
+- Add option to import actors with `import-object` command.
+- Support remembering home timeline position via `/api/v1/markers`.
+- Added `reject-data` filter action.
+
+### Changed
+
+- Use `Like` activity to represent emoji reactions.
+- Don't prune posts that contain polls with local votes.
+- Reverse order of rules in `list-filter-rules` command output.
+- Don't allow hashtags inside links.
+- Changed MSRV to 1.70.0.
+- Make multipart memory limit match total payload limit.
+
+### Deprecated
+
+- Deprecated `import-activity` command.
+- Deprecated `import-actor` command.
+
+### Fixed
+
+- Removed spurious warnings about vote content being not null.
+- Don't mark post as edited unless content and attachments are changed.
+- Fixed processing of replies with narrowed down audience as DMs.
+
+## [3.16.0] - 2025-02-03
+
+### Added
+
+- Allow to edit posts with polls.
+
+### Changed
+
+- Write warning to log when `content` of a vote is not null.
+- Changed MSRV to 1.68.2.
+- Write warning to log if actor and actor key have different origins.
+- Reject portable actors without WebFinger address.
+- Truncate long display names instead of rejecting actor.
+- Include URL in unsafe URL error message.
+- Reject poll options containing HTML.
+- Sanitize HTML in poll options when creating poll.
+- Enable incoming queue worker by default.
+
+### Fixed
+
+- Change poll max expiration time to avoid integer overflow in Mastodon clients.
+- Preserve order of mentions in local posts.
+- Fixed violation of data integrity when portable account is updated.
+- Fixed redirection error when `Location` is a relative URL.
+- Verify that posts quoted by remote actors are public.
+- Fixed panic when voting on poll in reply.
+
+## [3.15.0] - 2025-01-24
+
+### Added
+
+- Implemented poll publishing.
+- Added poll limits to `/api/v*/instance` response.
+
+### Changed
+
+- Changed MSRV to 1.67.1.
+- Count physical cores when calculating database connection pool size.
+- Disallow duplicated poll options.
+- Preserve order of mentions.
+- Convert FEP-fb2a links to profile fields regardless of relation type.
+
+## [3.14.0] - 2025-01-14
+
+### Added
+
+- Allow to run separate worker for processing of incoming activity queue.
+- Support binding HTTP server to unix socket.
+- Process incoming `Add(Update)` activities.
+
+### Changed
+
+- Log object ID if poll data is not valid.
+- Log database errors coming from inbox handler with level ERROR.
+- Log database connection pool size.
+- Release database connection before delivering activity.
+- Set value of `Status.url` to actual post URL if it is known.
+- Don't write warning to log if alias is equal to actor ID.
+- Allow to call `/api/v1/markers` with multiple `timeline[]` parameters.
+
+### Fixed
+
+- Allow to use `:+1:` emoji shortcode.
+- Added workaround for PeerTube `keyId` bug.
+
 ## [3.13.1] - 2025-01-03
 
 ### Fixed

@@ -1,6 +1,3 @@
-use serde::{Deserialize, Serialize};
-use serde_json::{Value as JsonValue};
-
 use apx_core::{
     json_signatures::{
         proofs::{
@@ -11,7 +8,7 @@ use apx_core::{
             verify_blake2_ed25519_json_signature,
             verify_eddsa_json_signature,
             verify_eip191_json_signature,
-            JsonSigner,
+            VerificationMethod,
         },
     },
 };
@@ -19,6 +16,9 @@ use apx_sdk::{
     constants::AP_MEDIA_TYPE,
     deserialization::deserialize_string_array,
 };
+use serde::{Deserialize, Serialize};
+use serde_json::{Value as JsonValue};
+
 use mitra_models::{
     profiles::types::{
         ExtraField,
@@ -36,7 +36,6 @@ use mitra_validators::{
 use crate::{
     authority::Authority,
     constants::{
-        CHAT_LINK_RELATION_TYPE,
         PAYMENT_LINK_RELATION_TYPE,
     },
     contexts::W3ID_VALUEFLOWS_CONTEXT,
@@ -58,21 +57,25 @@ pub fn parse_identity_proof_fep_c390(
     actor_id: &str,
     attachment: &JsonValue,
 ) -> Result<IdentityProof, ValidationError> {
-    let canonical_actor_id = canonicalize_id(actor_id)?;
     let statement: VerifiableIdentityStatement = serde_json::from_value(attachment.clone())
         .map_err(|_| ValidationError("invalid FEP-c390 attachment"))?;
     if statement.object_type != VERIFIABLE_IDENTITY_STATEMENT {
         return Err(ValidationError("invalid attachment type"));
     };
-    if statement.also_known_as != canonical_actor_id.to_string() {
+    if canonicalize_id(&statement.also_known_as)? !=
+        canonicalize_id(actor_id)?
+    {
         return Err(ValidationError("actor ID mismatch"));
     };
     let signature_data = get_json_signature(attachment)
         .map_err(|_| ValidationError("invalid proof"))?;
-    let signer = match signature_data.signer {
-        JsonSigner::HttpUrl(_) =>
-            return Err(ValidationError("unsupported verification method")),
-        JsonSigner::DidUrl(did) => did,
+    let signer = match signature_data.verification_method {
+        VerificationMethod::HttpUri(_) | VerificationMethod::ApUri(_) => {
+            return Err(ValidationError("unsupported verification method"));
+        },
+        // Fragment is ignored because supported DIDs
+        // can't have more than one verification method
+        VerificationMethod::DidUrl(did_url) => did_url.did().clone(),
     };
     if signer != statement.subject {
         return Err(ValidationError("subject mismatch"));
@@ -98,6 +101,7 @@ pub fn parse_identity_proof_fep_c390(
             ).map_err(|_| ValidationError("invalid identity proof"))?;
             IdentityProofType::FepC390JcsEip191Proof
         },
+        #[allow(deprecated)]
         ProofType::JcsEddsaSignature => {
             let did_key = signer.as_did_key()
                 .ok_or(ValidationError("unexpected DID type"))?;
@@ -112,8 +116,17 @@ pub fn parse_identity_proof_fep_c390(
             IdentityProofType::FepC390LegacyJcsEddsaProof
         },
         ProofType::EddsaJcsSignature => {
-            // eddsa-jcs-2022 identity proofs are temporarily rejected
-            return Err(ValidationError("eddsa-jcs-2022 cryptosuite is not supported"));
+            let did_key = signer.as_did_key()
+                .ok_or(ValidationError("unexpected DID type"))?;
+            let ed25519_key = did_key.try_ed25519_key()
+                .map_err(|_| ValidationError("invalid public key"))?;
+            verify_eddsa_json_signature(
+                &ed25519_key,
+                &signature_data.object,
+                &signature_data.proof_config,
+                &signature_data.signature,
+            ).map_err(|_| ValidationError("invalid identity proof"))?;
+            IdentityProofType::FepC390EddsaJcsProof
         },
         _ => return Err(ValidationError("unsupported signature type")),
     };
@@ -168,7 +181,7 @@ pub fn attach_payment_option(
                 &actor_id,
                 &payment_info.chain_id,
             );
-            rel.push(valueflows_proposal_rel_legacy());
+            rel.push(valueflows_proposal_rel());
             (name, href)
         },
         PaymentOption::RemoteMoneroSubscription(_) => unimplemented!(),
@@ -185,10 +198,10 @@ pub fn attach_payment_option(
 pub enum LinkAttachment {
     PaymentLink(DbPaymentLink),
     Proposal(DbPaymentLink),
-    ChatLink(ExtraField),
+    OtherLink(ExtraField),
 }
 
-/// https://codeberg.org/fediverse/fep/src/branch/main/fep/fb2a/fep-fb2a.md
+// https://codeberg.org/fediverse/fep/src/branch/main/fep/fb2a/fep-fb2a.md
 pub fn parse_link(
     attachment: &JsonValue,
 ) -> Result<LinkAttachment, ValidationError> {
@@ -217,16 +230,15 @@ pub fn parse_link(
         } else {
             LinkAttachment::PaymentLink(db_payment_link)
         }
-    } else if link.rel.contains(&CHAT_LINK_RELATION_TYPE.to_string()) {
-        // https://codeberg.org/fediverse/fep/src/branch/main/fep/1970/fep-1970.md
-        let field = ExtraField {
+    } else {
+        let mut field = ExtraField {
             name: link.name,
             value: link.href,
             value_source: None,
         };
-        LinkAttachment::ChatLink(field)
-    } else {
-        return Err(ValidationError("unknown link type"));
+        clean_extra_field(&mut field);
+        validate_extra_field(&field)?;
+        LinkAttachment::OtherLink(field)
     };
     Ok(result)
 }
@@ -269,7 +281,7 @@ pub fn parse_property_value(
     Ok(field)
 }
 
-/// https://codeberg.org/fediverse/fep/src/commit/391099a97cd1ad9388e83ffff8ed1f7be5203b7b/feps/fep-fb2a.md
+// https://codeberg.org/fediverse/fep/src/branch/main/fep/fb2a/fep-fb2a.md
 pub fn parse_metadata_field(
     attachment: &JsonValue,
 ) -> Result<ExtraField, ValidationError> {
@@ -294,28 +306,29 @@ pub fn parse_metadata_field(
 #[cfg(test)]
 mod tests {
     use std::num::NonZeroU64;
-    use chrono::Utc;
-    use serde_json::json;
     use apx_core::{
         caip2::ChainId,
-        crypto_ecdsa::generate_ecdsa_key,
+        crypto::ecdsa::generate_ecdsa_key,
         did::Did,
         did_pkh::DidPkh,
         eip191::{create_eip191_signature, ecdsa_public_key_to_address_hex},
+        url::http_uri::HttpUri,
     };
+    use chrono::Utc;
+    use serde_json::json;
     use crate::identity::{
         create_identity_claim_fep_c390,
         create_identity_proof_fep_c390,
     };
     use super::*;
 
-    const INSTANCE_URL: &str = "https://example.com";
+    const INSTANCE_URI: &str = "https://example.com";
 
     #[test]
     fn test_identity_proof_fep_c390() {
         let actor_id = "https://server.example/users/test";
         let secret_key = generate_ecdsa_key();
-        let address = ecdsa_public_key_to_address_hex(&secret_key.verifying_key());
+        let address = ecdsa_public_key_to_address_hex(secret_key.verifying_key());
         let did_pkh = DidPkh::from_ethereum_address(&address);
         let did = Did::Pkh(did_pkh);
         let proof_type = IdentityProofType::FepC390JcsEip191Proof;
@@ -364,7 +377,8 @@ mod tests {
 
     #[test]
     fn test_payment_option() {
-        let authority = Authority::server(INSTANCE_URL);
+        let instance_uri = HttpUri::parse(INSTANCE_URI).unwrap();
+        let authority = Authority::server(&instance_uri);
         let username = "testuser";
         let price = NonZeroU64::new(240000).unwrap();
         let payout_address = "test";
@@ -385,7 +399,7 @@ mod tests {
         assert_eq!(attachment.href, subscription_page_url);
         assert_eq!(attachment.rel.len(), 2);
         assert_eq!(attachment.rel[0], "payment");
-        assert_eq!(attachment.rel[1], "https://w3id.org/valueflows/Proposal");
+        assert_eq!(attachment.rel[1], "https://w3id.org/valueflows/ont/vf#Proposal");
 
         let attachment_value = serde_json::to_value(attachment).unwrap();
         let attachment = parse_link(&attachment_value).unwrap();
@@ -403,10 +417,12 @@ mod tests {
             "name": "Test",
             "href": "https://test.example",
         });
-        let error = parse_link(&attachment_value).err().unwrap();
-        assert!(matches!(
-            error,
-            ValidationError("unknown link type"),
-        ));
+        let attachment = parse_link(&attachment_value).unwrap();
+        let field = match attachment {
+            LinkAttachment::OtherLink(field) => field,
+            _ => panic!("not a generic link"),
+        };
+        assert_eq!(field.name, "Test");
+        assert_eq!(field.value, "https://test.example");
     }
 }

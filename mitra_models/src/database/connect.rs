@@ -25,7 +25,7 @@ pub enum DatabaseConnectionError {
     PostgresError(#[from] tokio_postgres::Error),
 
     #[error(transparent)]
-    PoolError(#[from] deadpool::managed::BuildError<tokio_postgres::Error>),
+    PoolError(#[from] deadpool::managed::BuildError),
 }
 
 fn create_tls_connector(
@@ -44,7 +44,7 @@ fn create_tls_connector(
     Ok(connector)
 }
 
-pub async fn create_database_client(
+pub(super) async fn create_database_client_from_config(
     db_config: &DatabaseConfig,
     ca_file_path: Option<&Path>,
 ) -> Result<Client, DatabaseConnectionError> {
@@ -69,7 +69,15 @@ pub async fn create_database_client(
     Ok(client)
 }
 
-pub fn create_pool(
+pub async fn create_database_client(
+    database_url: &str,
+    ca_file_path: Option<&Path>,
+) -> Result<Client, DatabaseConnectionError> {
+    let database_config = database_url.parse()?;
+    create_database_client_from_config(&database_config, ca_file_path).await
+}
+
+pub fn create_database_connection_pool(
     database_url: &str,
     ca_file_path: Option<&Path>,
     pool_size: usize,

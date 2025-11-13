@@ -6,6 +6,303 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.20.0] - 2025-11-05
+
+### Added
+
+- Added `verification_method_id` method to `DidPkh` type.
+- Added support for `@request-target` RFC-9421 derived component.
+- Added `without_query` method to `ApUri` type.
+- Added `is_same_uri` function to `url::canonical` module.
+- Added `ownership` module to `apx_sdk` package.
+- Implement `Copy` and `Debug` for `CoreType` type.
+
+### Changed
+
+- Hide `ProofType::JcsEip191Signature` variant if `eip191` feature flag is not enabled.
+- Hide `ProofType::JcsBlake2Ed25519Signature` variant if `minisign` feature flag is not enabled.
+- Add component ID to RFC-9421 "unsupported component" error message.
+- Return error if 'ap' URI with percent-encoded DID is passed to `CanonicalUri::parse_canonical`.
+- Strip query parameters when canonicalizing 'ap' URIs.
+- Treat public keys and verification methods as different types in `get_core_type`.
+- Renamed `is_verification_method` function to `is_key_like`.
+- Changed priority of `Actor` to highest in `get_core_type`.
+- Allow `properties` with value `null` in JRD links.
+- Converted `Origin` struct to enum.
+
+### Deprecated
+
+- Marked `ProofType::JcsRsaSignature` and `ProofType::JcsEddsaSignature` variants as deprecated.
+
+### Fixed
+
+- Use correct verification method ID when creating EIP-191 and minisign-prehashed integrity proofs.
+
+## [0.19.0] - 2025-10-15
+
+### Changed
+
+- Renamed `CanonicalUrl` type to `CanonicalUri`.
+- Renamed `ApUrl` type to `ApUri`.
+- Renamed `is_ap_url` function to `is_ap_uri`.
+- Renamed `HttpUrl` type to `HttpUri`.
+- Renamed `VerificationMethod::ApUrl` variant to `VerificationMethod::ApUri`.
+- Renamed `VerificationMethod::HttpUrl` variant to `VerificationMethod::HttpUri`.
+- Moved `ap_url` module to `url` module as `ap_uri`.
+- Moved `http_url` module to `url` module as `http_uri`.
+- Moved `http_url_whatwg` module to `url` module.
+- Moved `crypto_ecdsa` module to `crypto` module as `ecdsa`.
+- Moved `crypto_eddsa` module to `crypto` module as `eddsa`.
+- Moved `crypto_rsa` module to `crypto` module as `rsa`.
+- Moved `hashes` module to `crypto` module.
+
+## [0.18.0] - 2025-10-08
+
+### Added
+
+- Make `HttpUrl::scheme` method public.
+- Support sending requests containing RFC-9421 signatures.
+- Support verification of signed requests with all HTTP methods.
+- Added `delete_media` method to `deliver` module.
+
+### Changed
+
+- Removed restriction on maximum version of `reqwest` dependency.
+- Changed error message in case of invalid `verificationMethod`.
+- Changed internal value of `HttpSignatureError::UrlError` to string.
+- Allow URLs in `create_http_signature_rfc9421`.
+- Always add digest header during signing if request body is provided.
+- Don't require POST request to have digest header unless the header is signed.
+- Renamed `send_media` to `upload_media`.
+
+### Fixed
+
+- Fixed incorrect error messages in `HttpUrl::parse`.
+- Copy port number from URL to `Host` header when creating HTTP signature.
+
+### Security
+
+- Prefer to read content digest from a signed header.
+
+## [0.17.0] - 2025-09-16
+
+### Added
+
+- Added detailed error description to `FetchError::InvalidProof` variant.
+- Added `send_media` function.
+- Added `decode_sha256_multihash` function.
+- Added `Hashlink` type.
+
+### Changed
+
+- Changed MSRV to 1.75.0.
+- Renamed `fetch_file` to `fetch_media`.
+- Renamed `fetch_file_streaming` to `stream_media`.
+- Improved descriptions of request errors.
+- Changed object argument type in `send_object` function to `serde_json::Value`.
+- Renamed `sha256_multibase` function to `encode_sha256_multihash` and moved it to `multihash` module.
+- Changed argument type to `[u8; 32]` in `encode_sha256_multihash`.
+
+### Removed
+
+- Removed `expected_media_type` argument from `fetch_media`.
+- Removed `JsonSignatureError` variant from `DelivererError`.
+
+## [0.16.0] - 2025-08-14
+
+### Added
+
+- Support `wasm32-unknown-unknown` compilation target in `apx_core`.
+- Added `create_http_signature_rfc9421` function.
+
+### Changed
+
+- Improved documentation of `http_signatures` module.
+
+## [0.15.0] - 2025-08-02
+
+### Added
+
+- Added `is_rfc9421` field to `HttpSignatureData` struct.
+- Added `parse` method to `WebfingerAddress` type.
+- Added support for `@query` RFC-9421 component.
+- Added `fetch_file_streaming` function.
+
+### Security
+
+- Require HTTP signatures to cover request method and target URI.
+
+## [0.14.1] - 2025-06-08
+
+### Changed
+
+- Updated documentation.
+
+### Fixed
+
+- Hide `caip2` and `caip19` modules behind `caip` feature.
+
+## [0.14.0] - 2025-06-08
+
+### Added
+
+- Support SHA-512 content digests.
+- Support verification of signed requests with `Content-Digest` header.
+- Added `NoDigest` variant to `HttpSignatureVerificationError` enum.
+- Support verification of RFC-9421 signatures.
+- Made `is_ipv6_hostname` function public in `core::url::hostname`.
+
+### Changed
+
+- Return error if hostname passed to `encode_hostname` contains invalid characters.
+- Renamed `create_http_signature` to `create_http_signature_cavage`.
+- Renamed `parse_http_signature` to `parse_http_signature_cavage`.
+- Return decoded signature string from `parse_http_signature`.
+- Renamed `HttpSignatureData.message` field to `base`.
+- Add header name to `HttpSignatureVerificationError::HeaderError` messages.
+- Renamed `apx_core::urls` module to `http_url_whatwg`.
+- Disabled optional crate features by default (`caip`, `didpkh`, `eip191`, `minisign`).
+
+### Removed
+
+- Removed `normalize_origin` function.
+
+### Fixed
+
+- Return `http` when using `guess_protocol` on an IPv6 hostname.
+- Fix incorrect URI scheme returned by `WebfingerAddress::endpoint_uri` when hostname is IPv6 address.
+
+## [0.13.0] - 2025-05-27
+
+### Added
+
+- Added `VerificationMethod` to `CoreType` enum.
+- Added `is_verification_method` function.
+- Implemented `PartialEq` for `Hostname` type.
+- Added `parse_canonical` method to `Url` type.
+- Added `is_onion` and `is_i2p` methods to `apx_core::url::hostname` module.
+- Support WebFinger addresses with IPv6 hostnames.
+- Implemented `Deserialize` for `HttpUrl` type.
+- Added `from_pem` method to `PublicKey` type.
+- Re-export `VerificationMethod` in `http_signatures::verify`.
+- Implemented `Debug` for `ApUrl` type.
+- Added `ApUrl` variant to `VerificationMethod` enum.
+- Added `without_fragment` method to `ApUrl` type.
+- Added `endpoint_uri` method to `WebfingerAddress` type.
+- Add `Accept` header when making a request with `fetch_json`.
+
+### Changed
+
+- Moved `Url` type from `apx_sdk` to `apx_core` package.
+- Return `ApUrl` from `verify_portable_object`.
+- Update `HttpUrl::hostname` and `get_hostname` to return IPv6 addresses with square brackets.
+- Renamed `Url` type to `CanonicalUrl`.
+
+### Removed
+
+- Removed `FromStr` implementation from `Url` type.
+
+## [0.12.0] - 2025-04-24
+
+### Added
+
+- Implemented `PartialEq` on `apx_core::ap_url::ApUrl`.
+- Implemented `PartialEq` on `apx_sdk::url::Url`.
+- Added support for fragment resolution to `fetch_object`.
+- Added `DidUrl` type.
+- Implemented `parse` method on `VerificationMethod`.
+- Implemented `origin` method on `VerificationMethod`.
+- Implemented `Display` on `VerificationMethod`.
+- Support verification of HTTP signatures created by DID authorities.
+- Added `from_multikey` method to `PublicKey` type.
+
+### Changed
+
+- Return `Response` from `send_object` instead of `Option<Response>`.
+- Allow choosing backend for `idna`.
+- Improved documentation.
+- Keep full `DidUrl` when creating `VerificationMethod::DidUrl` enum variant.
+
+### Removed
+
+- Dropped support for `mitra-jcs-rsa-2022` cryptosuite.
+- Removed `Did::parse_url` method.
+
+## [0.11.0] - 2025-03-19
+
+### Added
+
+- Added `is_same_http_origin` function.
+
+### Changed
+
+- Allow using `eddsa-jcs-2022` cryptosuite without context injection.
+- Added `partOf`, `last`, `next`, `prev` and `current` to the list of collection indicators.
+
+### Fixed
+
+- Fixed validation of portable object fetched from trusted origin.
+
+## [0.10.0] - 2025-03-15
+
+### Added
+
+- Make `with_gateway` function public.
+- Added `fep_ef61_trusted_origins` option for `fetch_object`.
+
+### Changed
+
+- Make `get_core_type` return `Collection` if `first` property is present.
+- Disallow uppercase letters in HTTP URL host component.
+- Compare origins instead of hostnames when verifying fetched non-portable object.
+- Moved `encode_hostname` and `guess_protocol` functions to `apx_core::url::hostname` module.
+
+### Removed
+
+- Removed `allow_fep_ef61_noproof` option for `fetch_object`.
+- Removed `is_same_hostname` function.
+
+## [0.9.0] - 2025-02-26
+
+### Added
+
+- Support EdDSA HTTP signatures.
+- Make `CoreType` and `get_core_type` public.
+
+### Changed
+
+- Include URL in unsafe URL error message.
+- Moved `RequestSigner` from `apx_sdk::agent` to `apx_core::http_signatures`.
+- Change priority of `Link` in `get_core_type` classifier.
+- Renamed `get_object_id` function to `object_to_id`.
+
+### Fixed
+
+- Fixed redirection error when `Location` is a relative URL.
+
+## [0.8.0] - 2025-02-01
+
+### Added
+
+- Added `verification_method_id` method to `DidKey` type.
+- Added `sign_object` function.
+- Added example of FEP-ae97 server.
+
+### Changed
+
+- Change text representation of deliverer HTTP error to "HTTP error {code}".
+- Make `is_actor`, `is_activity`, `is_collection` and `is_object` compatible with FEP-2277.
+- Renamed `JsonSigner` type to `VerificationMethod`.
+- Renamed `signer` field on `JsonSignatureData` type to `verification_method`.
+- Changed type of `message` argument in `create_rsa_sha256_signature` to `&[u8]`.
+- Changed return type of `verify_rsa_sha256_signature` to `Result`.
+- Changed type of `signature` argument in `verify_eddsa_signature` to `&[u8]`.
+- Removed `log` package from dependencies.
+
+## Deprecated
+
+- Marked `sign_object_rsa` as deprecated.
+
 ## [0.7.0] - 2024-12-19
 
 ### Added

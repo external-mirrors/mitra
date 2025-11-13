@@ -1,11 +1,13 @@
-/// https://w3c-ccg.github.io/did-method-key/
+//! did:key method
+//!
+//! <https://w3c-ccg.github.io/did-key-spec/>
 use std::fmt;
 use std::str::FromStr;
 
 use regex::Regex;
 
 use crate::{
-    crypto_eddsa::{
+    crypto::eddsa::{
         ed25519_public_key_from_bytes,
         Ed25519PublicKey,
     },
@@ -31,6 +33,12 @@ impl DidKey {
     pub fn key_multibase(&self) -> String {
         let multidata = self.codec.encode(&self.key_data);
         encode_multibase_base58btc(&multidata)
+    }
+
+    /// Returns ID of the verification method
+    pub fn verification_method_id(&self) -> String {
+        let key_fragment = self.key_multibase();
+        format!("{self}#{key_fragment}")
     }
 
     pub fn from_ed25519_key(key: &Ed25519PublicKey) -> Self {
@@ -81,7 +89,7 @@ impl fmt::Display for DidKey {
 #[cfg(test)]
 mod tests {
     use rsa::traits::PublicKeyParts;
-    use crate::crypto_rsa::rsa_public_key_from_pkcs1_der;
+    use crate::crypto::rsa::rsa_public_key_from_pkcs1_der;
     use super::*;
 
     #[test]
@@ -101,5 +109,15 @@ mod tests {
         let did_key: DidKey = did_str.parse().unwrap();
         let key = rsa_public_key_from_pkcs1_der(&did_key.key_data).unwrap();
         assert_eq!(key.size() * 8, 2048);
+    }
+
+    #[test]
+    fn test_verification_method_id() {
+        let did_str = "did:key:z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK";
+        let did_key: DidKey = did_str.parse().unwrap();
+        assert_eq!(
+            did_key.verification_method_id(),
+            "did:key:z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK#z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK",
+        );
     }
 }

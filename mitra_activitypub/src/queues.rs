@@ -1,33 +1,35 @@
 use std::collections::BTreeMap;
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
-use chrono::{Duration, Utc};
+use apx_core::url::http_uri::HttpUri;
+use apx_sdk::fetch::FetchError;
+use chrono::{TimeDelta, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value as JsonValue};
 
-use apx_sdk::{
-    fetch::FetchError,
-    url::Url,
-};
 use mitra_config::Config;
 use mitra_models::{
     activitypub::queries::{
         save_activity,
         add_object_to_collection,
     },
-    background_jobs::queries::{
-        enqueue_job,
-        get_job_batch,
-        delete_job_from_queue,
+    background_jobs::{
+        queries::{
+            enqueue_job,
+            get_job_batch,
+            delete_job_from_queue,
+        },
+        types::JobType,
     },
-    background_jobs::types::JobType,
     database::{
+        db_client_await,
         get_database_client,
         DatabaseClient,
         DatabaseConnectionPool,
         DatabaseError,
         DatabaseTypeError,
     },
+    filter_rules::types::FilterAction,
     profiles::queries::{
         get_remote_profile_by_actor_id,
         set_reachability_status,
@@ -44,13 +46,17 @@ use crate::{
         Sender,
     },
     errors::HandlerError,
+    filter::FederationFilter,
+    forwarder::EndpointType,
     handlers::activity::handle_activity,
     identifiers::canonicalize_id,
     importers::{
+        import_featured,
         import_from_outbox,
         import_replies,
         is_actor_importer_error,
     },
+    utils::{db_url_to_http_url, parse_http_url_from_db},
 };
 
 const JOB_TIMEOUT: u32 = 3600; // 1 hour
@@ -58,14 +64,24 @@ const JOB_TIMEOUT: u32 = 3600; // 1 hour
 #[derive(Deserialize, Serialize)]
 pub struct IncomingActivityJobData {
     activity: JsonValue,
+    recipient_id: Option<String>, // only when delivered to inbox
+    sender_id: Option<String>, // only when delivered to inbox
     is_authenticated: bool,
     failure_count: u32,
 }
 
 impl IncomingActivityJobData {
-    pub fn new(activity: &JsonValue, is_authenticated: bool) -> Self {
+    pub fn new(
+        activity: &JsonValue,
+        maybe_delivery: Option<(&str, &str)>,
+        is_authenticated: bool,
+    ) -> Self {
         Self {
             activity: activity.clone(),
+            recipient_id: maybe_delivery
+                .map(|(recipient_id, _)| recipient_id.to_owned()),
+            sender_id: maybe_delivery
+                .map(|(_, sender_id)| sender_id.to_owned()),
             is_authenticated,
             failure_count: 0,
         }
@@ -78,7 +94,7 @@ impl IncomingActivityJobData {
     ) -> Result<(), DatabaseError> {
         let job_data = serde_json::to_value(self)
             .expect("activity should be serializable");
-        let scheduled_for = Utc::now() + Duration::seconds(delay.into());
+        let scheduled_for = Utc::now() + TimeDelta::seconds(delay.into());
         enqueue_job(
             db_client,
             JobType::IncomingActivity,
@@ -97,10 +113,10 @@ const fn incoming_queue_backoff(_failure_count: u32) -> u32 {
 
 pub async fn process_queued_incoming_activities(
     config: &Config,
-    db_client: &mut impl DatabaseClient,
+    db_pool: &DatabaseConnectionPool,
 ) -> Result<(), DatabaseError> {
     let batch = get_job_batch(
-        db_client,
+        db_client_await!(db_pool),
         JobType::IncomingActivity,
         config.federation.inbox_queue_batch_size,
         JOB_TIMEOUT,
@@ -109,14 +125,15 @@ pub async fn process_queued_incoming_activities(
         let mut job_data: IncomingActivityJobData =
             serde_json::from_value(job.job_data)
                 .map_err(|_| DatabaseTypeError)?;
-        // See also: activitypub::queues::JOB_TIMEOUT
-        let duration_max = std::time::Duration::from_secs(600);
+        let duration_max =
+            Duration::from_secs((JOB_TIMEOUT / 6).into());
         let handler_future = handle_activity(
             config,
-            db_client,
+            db_pool,
             &job_data.activity,
             job_data.is_authenticated,
-            false, // activity was pushed
+            job_data.recipient_id.as_deref(),
+            job_data.sender_id.as_deref(),
         );
         let handler_result = match tokio::time::timeout(
             duration_max,
@@ -128,10 +145,12 @@ pub async fn process_queued_incoming_activities(
                     "failed to process activity (timeout): {}",
                     job_data.activity,
                 );
+                let db_client = &**get_database_client(db_pool).await?;
                 delete_job_from_queue(db_client, job.id).await?;
                 continue;
             },
         };
+        let db_client = &**get_database_client(db_pool).await?;
         if let Err(error) = handler_result {
             if !matches!(
                 error,
@@ -168,111 +187,109 @@ pub async fn process_queued_incoming_activities(
 #[derive(Deserialize, Serialize)]
 pub struct OutgoingActivityJobData {
     activity: JsonValue,
-    sender: Option<Sender>,
+    sender: Sender,
     recipients: Vec<Recipient>,
     failure_count: u32,
 }
 
 impl OutgoingActivityJobData {
-    fn prepare_recipients(
-        instance_url: &str,
-        recipients: Vec<DbActor>,
-    ) -> BTreeMap<String, Recipient> {
-        // Sort and de-duplicate recipients
-        let mut recipient_map = BTreeMap::new();
-        for actor in recipients {
-            if actor.is_portable() {
-                for gateway in actor.gateways {
-                    let http_actor_inbox = Url::parse(&actor.inbox)
-                        .expect("actor inbox URL should be valid")
-                        .to_http_url(Some(&gateway))
-                        .expect("actor inbox URL should be valid");
-                    if !recipient_map.contains_key(&http_actor_inbox) {
-                        let recipient = Recipient {
-                            id: actor.id.clone(),
-                            inbox: http_actor_inbox.clone(),
-                            is_delivered: false,
-                            is_unreachable: false,
-                            is_local: gateway == instance_url,
-                        };
-                        recipient_map.insert(http_actor_inbox, recipient);
-                    };
-                };
-                continue;
-            };
-            if !recipient_map.contains_key(&actor.inbox) {
-                let recipient = Recipient {
-                    id: actor.id.clone(),
-                    inbox: actor.inbox.clone(),
-                    is_delivered: false,
-                    is_unreachable: false,
-                    is_local: false,
-                };
-                recipient_map.insert(actor.inbox, recipient);
-            };
+    fn mark_local_recipients(
+        instance_uri: &str,
+        recipients: &mut [Recipient],
+    ) -> () {
+        // If portable actor has local account,
+        // activity will be simply added to its inbox
+        let instance_uri = HttpUri::parse(instance_uri)
+            .expect("instance URI should be valid");
+        for recipient in recipients.iter_mut() {
+            let recipient_inbox = parse_http_url_from_db(&recipient.inbox)
+                .expect("actor inbox URL should be valid");
+            recipient.is_local = recipient_inbox.origin() == instance_uri.origin();
         };
-        recipient_map
+    }
+
+    fn sort_recipients(mut recipients: Vec<Recipient>) -> Vec<Recipient> {
+        // De-duplicate recipients.
+        // Keys are inboxes, not actor IDs, because one actor
+        // can have multiple inboxes.
+        recipients.sort_by_key(|recipient| {
+            (recipient.inbox.clone(), !recipient.is_primary)
+        });
+        recipients.dedup_by_key(|recipient| recipient.inbox.clone());
+        // Sort recipients
+        recipients.sort_by_key(|recipient| {
+            // Primary recipients are first
+            (!recipient.is_primary, recipient.inbox.clone())
+        });
+        recipients
     }
 
     pub(super) fn new(
-        instance_url: &str,
+        instance_uri: &str,
         sender: &User,
         activity: impl Serialize,
-        recipients: Vec<DbActor>,
+        mut recipients: Vec<Recipient>,
     ) -> Self {
-        let recipient_map = Self::prepare_recipients(instance_url, recipients);
+        Self::mark_local_recipients(instance_uri, &mut recipients);
+        let recipients = Self::sort_recipients(recipients);
         let activity = serde_json::to_value(activity)
             .expect("activity should be serializable");
         let activity_signed = sign_activity(
-            instance_url,
+            instance_uri,
             sender,
             activity,
         ).expect("activity should be valid");
         Self {
             activity: activity_signed,
-            sender: Some(Sender::from_user(instance_url, sender)),
-            recipients: recipient_map.into_values().collect(),
+            sender: Sender::from_user(instance_uri, sender),
+            recipients: recipients,
             failure_count: 0,
         }
     }
 
     pub fn new_forwarded(
-        instance_url: &str,
+        instance_uri: &str,
         sender: &PortableUser,
         activity: &JsonValue,
-        recipients: Vec<DbActor>,
+        recipients_actors: Vec<DbActor>,
+        endpoint_type: EndpointType,
     ) -> Option<Self> {
-        let mut recipient_map = Self::prepare_recipients(instance_url, recipients);
-        let actor_data = sender.profile.expect_actor_data();
+        // Deliver to recipients
+        let mut recipients = vec![];
+        for recipient in recipients_actors {
+            assert!(matches!(endpoint_type, EndpointType::Outbox));
+            recipients.extend(Recipient::for_inbox(&recipient));
+        };
+        Self::mark_local_recipients(instance_uri, &mut recipients);
         // Deliver to actor's clones
+        let actor_data = sender.profile.expect_actor_data();
         for gateway_url in &actor_data.gateways {
-            if gateway_url == instance_url {
+            if gateway_url == instance_uri {
                 // Already cached
                 continue;
             };
-            let http_actor_outbox = Url::parse(&actor_data.outbox)
-                .expect("actor outbox URL should be valid")
-                .to_http_url(Some(gateway_url))
-                .expect("actor outbox URL should be valid");
-            if !recipient_map.contains_key(&http_actor_outbox) {
-                let recipient = Recipient {
-                    id: actor_data.id.clone(),
-                    inbox: http_actor_outbox.clone(),
-                    is_delivered: false,
-                    is_unreachable: false,
-                    is_local: false, // activity from outbox, don't put it in inbox
-                };
-                recipient_map.insert(http_actor_outbox, recipient);
+            let collection_id = match endpoint_type {
+                EndpointType::Inbox => &actor_data.inbox,
+                EndpointType::Outbox => &actor_data.outbox,
             };
+            let http_endpoint = db_url_to_http_url(collection_id, gateway_url)
+                .expect("collection ID should be valid");
+            let recipient = Recipient::new(&actor_data.id, &http_endpoint);
+            recipients.push(recipient);
         };
-        let sender = Sender::from_portable_user(instance_url, sender)?;
+        let recipients = Self::sort_recipients(recipients);
+        let sender = Sender::from_portable_user(instance_uri, sender)?;
         let job_data = Self {
             activity: activity.clone(),
-            sender: Some(sender),
-            recipients: recipient_map.into_values().collect(),
+            sender: sender,
+            recipients: recipients,
             failure_count: 0,
         };
         Some(job_data)
+    }
+
+    pub fn activity(&self) -> &JsonValue {
+        &self.activity
     }
 
     async fn save_activity(
@@ -286,7 +303,7 @@ impl OutgoingActivityJobData {
             .map_err(|_| DatabaseTypeError)?;
         save_activity(
             db_client,
-            &canonical_activity_id.to_string(),
+            &canonical_activity_id,
             &self.activity,
         ).await?;
         // Immediately put into inbox if recipient is local
@@ -304,6 +321,7 @@ impl OutgoingActivityJobData {
                         &profile.expect_actor_data().inbox,
                         &canonical_activity_id.to_string(),
                     ).await?;
+                    log::info!("added activity to inbox collection");
                 } else {
                     log::warn!("local inbox doesn't exist: {}", recipient.inbox);
                 };
@@ -323,7 +341,7 @@ impl OutgoingActivityJobData {
         };
         let job_data = serde_json::to_value(self)
             .expect("activity should be serializable");
-        let scheduled_for = Utc::now() + Duration::seconds(delay.into());
+        let scheduled_for = Utc::now() + TimeDelta::seconds(delay.into());
         enqueue_job(
             db_client,
             JobType::OutgoingActivity,
@@ -362,53 +380,66 @@ pub async fn process_queued_outgoing_activities(
     config: &Config,
     db_pool: &DatabaseConnectionPool,
 ) -> Result<(), DatabaseError> {
-    let db_client = &**get_database_client(db_pool).await?;
+    let filter = FederationFilter::init_with_pool(config, db_pool).await?;
     let batch = get_job_batch(
-        db_client,
+        db_client_await!(db_pool),
         JobType::OutgoingActivity,
         OUTGOING_QUEUE_BATCH_SIZE,
         JOB_TIMEOUT,
     ).await?;
+    let instance = config.instance();
     for job in batch {
         let mut job_data: OutgoingActivityJobData =
             serde_json::from_value(job.job_data)
                 .map_err(|_| DatabaseTypeError)?;
-        let sender = if let Some(ref sender) = job_data.sender {
-            sender.clone()
-        } else {
-            log::error!("signing keys can not be found");
-            delete_job_from_queue(db_client, job.id).await?;
-            return Ok(());
-        };
-        let instance = config.instance();
         let mut recipients = job_data.recipients;
-        let start_time = Instant::now();
-        if instance.is_private {
+        if !instance.federation.enabled {
             log::info!(
                 "(private mode) not delivering activity to {} inboxes: {}",
                 recipients.len(),
                 job_data.activity,
             );
+            let db_client = &**get_database_client(db_pool).await?;
             delete_job_from_queue(db_client, job.id).await?;
-            return Ok(());
+            continue;
         };
         log::info!(
             "delivering activity to {} inboxes: {}",
             recipients.len(),
             job_data.activity,
         );
-        match deliver_activity_worker(
-            instance,
-            sender,
+
+        // TODO: perform filtering in OutgoingActivityJobData::prepare_recipients
+        for recipient in recipients.iter_mut() {
+            if !recipient.is_finished() {
+                let recipient_hostname =
+                    parse_http_url_from_db(&recipient.inbox)?.hostname();
+                if filter.is_action_required(
+                    recipient_hostname.as_str(),
+                    FilterAction::Reject,
+                ) {
+                    log::warn!("delivery blocked: {}", recipient.inbox);
+                    recipient.is_unreachable = true;
+                };
+            };
+        };
+
+        let start_time = Instant::now();
+        let worker_result = deliver_activity_worker(
+            instance.clone(),
+            job_data.sender.clone(),
             job_data.activity.clone(),
             &mut recipients,
-        ).await {
+        ).await;
+
+        let db_client = &**get_database_client(db_pool).await?;
+        match worker_result {
             Ok(_) => (),
             Err(error) => {
                 // Unexpected error
                 log::error!("{}", error);
                 delete_job_from_queue(db_client, job.id).await?;
-                return Ok(());
+                continue;
             },
         };
         log::info!(
@@ -428,6 +459,11 @@ pub async fn process_queued_outgoing_activities(
             // TODO: O(1)
             for recipient in recipients.iter_mut() {
                 if !recipient.is_delivered {
+                    if recipient.is_gone {
+                        // Don't retry if recipient is gone
+                        recipient.is_unreachable = true;
+                        continue;
+                    };
                     let profile = match get_remote_profile_by_actor_id(
                         db_client,
                         &recipient.id,
@@ -442,7 +478,7 @@ pub async fn process_queued_outgoing_activities(
                     };
                     if let Some(unreachable_since) = profile.unreachable_since {
                         let noretry_after = unreachable_since +
-                            Duration::seconds(OUTGOING_QUEUE_UNREACHABLE_NORETRY);
+                            TimeDelta::seconds(OUTGOING_QUEUE_UNREACHABLE_NORETRY);
                         if noretry_after < Utc::now() {
                             recipient.is_unreachable = true;
                         };
@@ -460,12 +496,34 @@ pub async fn process_queued_outgoing_activities(
             job_data.into_job(db_client, retry_after).await?;
             log::info!("delivery job re-queued");
         } else {
-            // Update inbox status if all deliveries are successful
+            // Update reachability statuses if all deliveries are successful
             // or if retry limit is reached
-            let statuses = recipients.into_iter()
-                .map(|recipient| (recipient.id, !recipient.is_delivered))
+            // TODO: track reachability status of servers, not actors
+            let statuses = recipients
+                .into_iter()
+                // Group by actor ID (could have many inboxes)
+                .fold(BTreeMap::new(), |mut map: BTreeMap<_, Vec<_>>, recipient| {
+                    let inboxes = map.entry(recipient.id.clone()).or_insert(vec![]);
+                    inboxes.push(recipient);
+                    map
+                })
+                .into_iter()
+                .inspect(|(actor_id, inboxes)| {
+                    // Log "gone" actors
+                    // TODO: delete
+                    if inboxes.iter().all(|inbox| inbox.is_gone) {
+                        log::warn!("actor is gone: {actor_id}");
+                    };
+                })
+                .map(|(actor_id, inboxes)| {
+                    // Single successful delivery is enough
+                    let is_reachable = inboxes.iter()
+                        .any(|inbox| inbox.is_delivered);
+                    (actor_id, !is_reachable)
+                })
                 .collect();
             set_reachability_status(db_client, statuses).await?;
+            log::info!("reachability statuses updated");
         };
         delete_job_from_queue(db_client, job.id).await?;
     };
@@ -476,6 +534,7 @@ pub async fn process_queued_outgoing_activities(
 #[serde(tag = "type")]
 pub enum FetcherJobData {
     Outbox { actor_id: String },
+    Featured { actor_id: String },
     Context { object_id: String },
 }
 
@@ -503,9 +562,9 @@ pub async fn fetcher_queue_executor(
     const BATCH_SIZE: u32 = 1;
     // Re-queue running (failed) jobs after 1 hour
     const JOB_TIMEOUT: u32 = 3600;
-    let db_client = &mut **get_database_client(db_pool).await?;
+    const COLLECTION_LIMIT: usize = 20;
     let batch = get_job_batch(
-        db_client,
+        db_client_await!(db_pool),
         JobType::Fetcher,
         BATCH_SIZE,
         JOB_TIMEOUT,
@@ -516,23 +575,28 @@ pub async fn fetcher_queue_executor(
                 .map_err(|_| DatabaseTypeError)?;
         let result = match job_data {
             FetcherJobData::Outbox { actor_id } => {
-                const ACTIVITY_LIMIT: usize = 10;
                 import_from_outbox(
                     config,
-                    db_client,
+                    db_pool,
                     &actor_id,
-                    ACTIVITY_LIMIT,
+                    COLLECTION_LIMIT,
+                ).await
+            },
+            FetcherJobData::Featured { actor_id } => {
+                import_featured(
+                    config,
+                    db_pool,
+                    &actor_id,
+                    COLLECTION_LIMIT,
                 ).await
             },
             FetcherJobData::Context { object_id } => {
-                const LIMIT: usize = 20;
                 import_replies(
                     config,
-                    db_client,
+                    db_pool,
                     &object_id,
                     false, // don't use context
-                    false, // don't use container context
-                    LIMIT,
+                    COLLECTION_LIMIT,
                 ).await
             },
         };
@@ -544,6 +608,7 @@ pub async fn fetcher_queue_executor(
             };
             log::log!(level, "background fetcher: {}", error);
         });
+        let db_client = &**get_database_client(db_pool).await?;
         delete_job_from_queue(db_client, job.id).await?;
     };
     Ok(())
@@ -551,11 +616,57 @@ pub async fn fetcher_queue_executor(
 
 #[cfg(test)]
 mod tests {
+    use serde_json::json;
     use super::*;
 
     #[test]
     fn test_outgoing_queue_backoff() {
         assert_eq!(outgoing_queue_backoff(1), 600);
         assert_eq!(outgoing_queue_backoff(2), 3300);
+    }
+
+    #[test]
+    fn test_outgoing_queue_sort_recipients() {
+        let instance_uri = "https://local.example";
+        let sender = User::default();
+        let activity = json!({});
+        let recipient_1 =
+            Recipient::new("https://b.example/actor", "https://b.example/inbox");
+        let recipient_2 =
+            Recipient::new("https://a.example/actor", "https://a.example/inbox");
+        let recipient_3 =
+            Recipient::new("https://c.example/actor", "https://c.example/inbox");
+        let recipient_4 =
+            Recipient::new("https://d.example/actor", "https://d.example/inbox");
+        let recipients = vec![
+            recipient_3,
+            recipient_1,
+            recipient_2.clone(),
+            {
+                let mut recipient = recipient_2;
+                recipient.is_primary = true;
+                recipient
+            },
+            {
+                let mut recipient = recipient_4;
+                recipient.is_primary = true;
+                recipient
+            },
+        ];
+        let job_data = OutgoingActivityJobData::new(
+            instance_uri,
+            &sender,
+            activity,
+            recipients,
+        );
+        assert_eq!(job_data.recipients.len(), 4);
+        assert_eq!(job_data.recipients[0].id, "https://a.example/actor");
+        assert_eq!(job_data.recipients[0].is_primary, true);
+        assert_eq!(job_data.recipients[1].id, "https://d.example/actor");
+        assert_eq!(job_data.recipients[1].is_primary, true);
+        assert_eq!(job_data.recipients[2].id, "https://b.example/actor");
+        assert_eq!(job_data.recipients[2].is_primary, false);
+        assert_eq!(job_data.recipients[3].id, "https://c.example/actor");
+        assert_eq!(job_data.recipients[3].is_primary, false);
     }
 }

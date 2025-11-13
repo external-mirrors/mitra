@@ -1,5 +1,31 @@
 use std::collections::HashMap;
 
+use apx_core::{
+    crypto::{
+        eddsa::{
+            ed25519_public_key_from_secret_key,
+            ed25519_secret_key_from_bytes,
+            Ed25519SecretKey,
+        },
+        rsa::{
+            rsa_public_key_to_pkcs1_der,
+            rsa_secret_key_from_pkcs1_der,
+            rsa_secret_key_to_pkcs1_der,
+            RsaPublicKey,
+            RsaSecretKey,
+        },
+    },
+    json_signatures::create::{
+        is_object_signed,
+        sign_object,
+        JsonSignatureError,
+    },
+    url::{
+        hostname::is_onion,
+        http_url_whatwg::get_hostname,
+    },
+};
+use apx_sdk::deliver::{send_object, DelivererError};
 use futures::{
     stream::FuturesUnordered,
     StreamExt,
@@ -14,40 +40,19 @@ use serde::{
 };
 use serde_json::{Value as JsonValue};
 
-use apx_core::{
-    crypto_eddsa::{
-        ed25519_public_key_from_secret_key,
-        ed25519_secret_key_from_bytes,
-        Ed25519SecretKey,
-    },
-    crypto_rsa::{
-        rsa_public_key_to_pkcs1_der,
-        rsa_secret_key_from_pkcs1_der,
-        rsa_secret_key_to_pkcs1_der,
-        RsaPublicKey,
-        RsaSecretKey,
-    },
-    json_signatures::create::{
-        is_object_signed,
-        sign_object_eddsa,
-        JsonSignatureError,
-    },
-    urls::get_hostname,
-};
-use apx_sdk::{
-    deliver::{send_object, DelivererError},
-    url::Url,
-};
 use mitra_config::Instance;
 use mitra_models::{
-    profiles::types::PublicKeyType,
+    profiles::types::{DbActor, PublicKeyType},
     users::types::{PortableUser, User},
 };
 
 use crate::{
     agent::build_federation_agent_with_key,
     identifiers::{local_actor_id, local_actor_key_id},
+    utils::db_url_to_http_url,
 };
+
+const HTTP_410_GONE: u16 = 410;
 
 fn deserialize_rsa_secret_key<'de, D>(
     deserializer: D,
@@ -119,9 +124,9 @@ pub struct Sender {
 }
 
 impl Sender {
-    pub fn from_user(instance_url: &str, user: &User) -> Self {
+    pub fn from_user(instance_uri: &str, user: &User) -> Self {
         let actor_id = local_actor_id(
-            instance_url,
+            instance_uri,
             &user.profile.username,
         );
         let rsa_key_id = local_actor_key_id(
@@ -144,7 +149,7 @@ impl Sender {
     // Returns None if the registered secret key doesn't correspond to
     // any of public keys associated with the actor
     pub fn from_portable_user(
-        instance_url: &str,
+        instance_uri: &str,
         user: &PortableUser,
     ) -> Option<Self> {
         let rsa_public_key = RsaPublicKey::from(&user.rsa_secret_key);
@@ -153,18 +158,14 @@ impl Sender {
         let rsa_key_id = &user.profile.public_keys
             .find_by_value(&rsa_public_key_der)?
             .id;
-        let http_rsa_key_id = Url::parse(rsa_key_id)
-            .expect("RSA key ID should be valid")
-            .to_http_url(Some(instance_url))
+        let http_rsa_key_id = db_url_to_http_url(rsa_key_id, instance_uri)
             .expect("RSA key ID should be valid");
         let ed25519_public_key =
             ed25519_public_key_from_secret_key(&user.ed25519_secret_key);
         let ed25519_key_id = &user.profile.public_keys
             .find_by_value(ed25519_public_key.as_bytes())?
             .id;
-        let http_ed25519_key_id = Url::parse(ed25519_key_id)
-            .expect("RSA key ID should be valid")
-            .to_http_url(Some(instance_url))
+        let http_ed25519_key_id = db_url_to_http_url(ed25519_key_id, instance_uri)
             .expect("RSA key ID should be valid");
         let sender = Self {
             username: user.profile.username.clone(),
@@ -178,10 +179,13 @@ impl Sender {
 }
 
 /// Represents delivery to a single inbox
-#[derive(Deserialize, Serialize)]
+#[derive(Clone, Deserialize, Serialize)]
 pub struct Recipient {
     pub id: String,
     pub(super) inbox: String,
+
+    #[serde(default)]
+    pub is_primary: bool,
 
     pub is_delivered: bool,
 
@@ -189,24 +193,56 @@ pub struct Recipient {
     // if the recipient had prior unreachable status.
     pub is_unreachable: bool,
 
+    // This flag is set if inbox is 410 Gone
+    #[serde(default)]
+    pub is_gone: bool,
+
     // Local portable actor (HTTP request is not needed)
     #[serde(default)]
     pub is_local: bool,
 }
 
 impl Recipient {
+    pub fn new(actor_id: &str, inbox: &str) -> Self {
+        Self {
+            id: actor_id.to_owned(),
+            inbox: inbox.to_owned(),
+            is_primary: false,
+            is_delivered: false,
+            is_unreachable: false,
+            is_gone: false,
+            is_local: false,
+        }
+    }
+
+    pub fn for_inbox(actor: &DbActor) -> Vec<Self> {
+        let mut recipients = vec![];
+        if actor.is_portable() {
+            for gateway in &actor.gateways {
+                let http_actor_inbox = db_url_to_http_url(&actor.inbox, gateway)
+                    .expect("actor inbox URL should be valid");
+                let recipient = Self::new(&actor.id, &http_actor_inbox);
+                recipients.push(recipient);
+            };
+        } else {
+            let recipient = Self::new(&actor.id, &actor.inbox);
+            recipients.push(recipient);
+        };
+        recipients
+    }
+
     pub fn is_finished(&self) -> bool {
         self.is_delivered || self.is_unreachable
     }
 }
 
 pub(super) fn sign_activity(
-    instance_url: &str,
+    instance_uri: &str,
     sender: &User,
     activity: JsonValue,
 ) -> Result<JsonValue, JsonSignatureError> {
     let actor_id = local_actor_id(
-        instance_url,
+        instance_uri,
         &sender.profile.username,
     );
     let activity_signed = if is_object_signed(&activity) {
@@ -217,13 +253,10 @@ pub(super) fn sign_activity(
             &actor_id,
             PublicKeyType::Ed25519,
         );
-        sign_object_eddsa(
+        sign_object(
             &sender.ed25519_secret_key,
             &ed25519_key_id,
             &activity,
-            None,
-            false, // use eddsa-jcs-2022
-            false, // no proof context
         )?
     };
     Ok(activity_signed)
@@ -242,19 +275,18 @@ pub(super) async fn deliver_activity_worker(
     activity: JsonValue,
     recipients: &mut [Recipient],
 ) -> Result<(), DelivererError> {
-    assert!(!instance.is_private);
+    assert!(instance.federation.enabled);
     let rsa_secret_key = sender.rsa_secret_key;
     let rsa_key_id = if let Some(rsa_key_id) = sender.rsa_key_id {
         rsa_key_id
     } else {
         log::warn!("deliverer job data doesn't contain key ID");
         let actor_id = local_actor_id(
-            &instance.url(),
+            instance.uri_str(),
             &sender.username,
         );
         local_actor_key_id(&actor_id, PublicKeyType::RsaPkcs1)
     };
-    let activity_json = serde_json::to_string(&activity)?;
 
     let mut deliveries = vec![];
     let mut sent = vec![];
@@ -273,12 +305,12 @@ pub(super) async fn deliver_activity_worker(
         rsa_key_id,
     );
     let mut delivery_pool = FuturesUnordered::new();
-    let mut delivery_pool_state = HashMap::new();
+    let mut delivery_pool_state: HashMap<usize, &String> = HashMap::new();
 
     loop {
-        for (index, hostname, ref inbox) in deliveries.iter() {
+        for (index, hostname, inbox) in deliveries.iter() {
             // Add deliveries to the pool until it is full
-            if delivery_pool_state.len() == instance.deliverer_pool_size {
+            if delivery_pool_state.len() == instance.federation.deliverer_pool_size {
                 break;
             };
             if sent.contains(index) {
@@ -291,18 +323,25 @@ pub(super) async fn deliver_activity_worker(
                 // Another delivery to instance is in progress
                 continue;
             };
+            if is_onion(hostname) && delivery_pool_state.values()
+                .any(|current_hostname| is_onion(current_hostname))
+            {
+                // Don't deliver to more than one onion at a time.
+                // Simultanous requests frequently fail.
+                continue;
+            };
             // Deliver activities concurrently
             let future = async {
                 let result = send_object(
                     &agent,
-                    &activity_json,
                     inbox,
+                    &activity,
                     &[],
                 ).await;
                 (*index, result)
             };
             delivery_pool.push(future);
-            delivery_pool_state.insert(index, hostname);
+            delivery_pool_state.insert(*index, hostname);
             sent.push(*index);
         };
         // Await one delivery at a time
@@ -312,11 +351,11 @@ pub(super) async fn deliver_activity_worker(
             let recipient = recipients.get_mut(index)
                 .expect("index should not be out of bounds");
             match result {
-                Ok(Some(response)) => {
+                Ok(response) => {
                     assert!(response.status.is_success());
                     let response_text = truncate_response(
                         &response.body,
-                        instance.deliverer_log_response_length,
+                        instance.federation.deliverer_log_response_length,
                     );
                     log::info!(
                         "response from {}: [{}] {}",
@@ -326,16 +365,17 @@ pub(super) async fn deliver_activity_worker(
                     );
                     recipient.is_delivered = true;
                 },
-                Ok(None) => {
-                    assert!(instance.is_private);
-                    recipient.is_delivered = true;
-                },
                 Err(error) => {
+                    // To be retried
                     let error_message = match error {
                         DelivererError::HttpError(ref response) => {
+                            if response.status == HTTP_410_GONE {
+                                // Inbox deleted
+                                recipient.is_gone = true;
+                            };
                             let response_text = truncate_response(
                                 &response.body,
-                                instance.deliverer_log_response_length,
+                                instance.federation.deliverer_log_response_length,
                             );
                             format!(
                                 "{}: [{}] {}",
@@ -369,8 +409,10 @@ pub(super) async fn deliver_activity_worker(
 #[cfg(test)]
 mod tests {
     use apx_core::{
-        crypto_eddsa::generate_weak_ed25519_key,
-        crypto_rsa::generate_weak_rsa_key,
+        crypto::{
+            eddsa::generate_weak_ed25519_key,
+            rsa::generate_weak_rsa_key,
+        },
     };
     use super::*;
 

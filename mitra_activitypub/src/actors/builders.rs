@@ -1,11 +1,12 @@
+use apx_core::{
+    crypto::rsa::RsaSerializationError,
+    url::http_uri::HttpUri,
+};
 use chrono::{DateTime, Utc};
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value as JsonValue};
 
-use apx_core::{
-    crypto_rsa::RsaSerializationError,
-};
 use mitra_config::Instance;
 use mitra_models::{
     database::{DatabaseError, DatabaseTypeError},
@@ -22,9 +23,8 @@ use crate::{
         MASTODON_CONTEXT,
         MITRA_CONTEXT,
         SCHEMA_ORG_CONTEXT,
-        W3C_DID_CONTEXT,
+        W3C_CID_CONTEXT,
         W3ID_DATA_INTEGRITY_CONTEXT,
-        W3ID_MULTIKEY_CONTEXT,
         W3ID_SECURITY_CONTEXT,
     },
     identifiers::{
@@ -33,17 +33,16 @@ use crate::{
         local_instance_actor_id,
         LocalActorCollection,
     },
-    vocabulary::{APPLICATION, IMAGE, PERSON},
+    keys::{Multikey, PublicKeyPem},
+    vocabulary::{APPLICATION, IMAGE, PERSON, SERVICE},
 };
 
 use super::attachments::{
     attach_extra_field,
     attach_payment_option,
 };
-use super::keys::{Multikey, PublicKey};
 
 type Context = (
-    &'static str,
     &'static str,
     &'static str,
     &'static str,
@@ -54,16 +53,16 @@ type Context = (
 fn build_actor_context() -> Context {
     (
         AP_CONTEXT,
-        W3C_DID_CONTEXT,
+        W3C_CID_CONTEXT,
         W3ID_SECURITY_CONTEXT,
         W3ID_DATA_INTEGRITY_CONTEXT,
-        W3ID_MULTIKEY_CONTEXT,
         IndexMap::from([
             ("manuallyApprovesFollowers", "as:manuallyApprovesFollowers"),
             ("schema", SCHEMA_ORG_CONTEXT),
             ("PropertyValue", "schema:PropertyValue"),
             ("value", "schema:value"),
             ("toot", MASTODON_CONTEXT),
+            ("discoverable", "toot:discoverable"),
             ("featured", "toot:featured"),
             ("Emoji", "toot:Emoji"),
             ("mitra", MITRA_CONTEXT),
@@ -71,6 +70,7 @@ fn build_actor_context() -> Context {
             ("VerifiableIdentityStatement", "mitra:VerifiableIdentityStatement"),
             ("MitraJcsEip191Signature2022", "mitra:MitraJcsEip191Signature2022"),
             ("gateways", "mitra:gateways"),
+            ("implements", "mitra:implements"),
             // Workarounds for MitraJcsEip191Signature2022
             // (not required for DataIntegrityProof)
             ("proofValue", "sec:proofValue"),
@@ -89,6 +89,36 @@ pub struct ActorImage {
     pub object_type: String,
     pub url: String,
     pub media_type: Option<String>,
+}
+
+#[derive(Serialize)]
+struct ApplicationFeature {
+    name: &'static str,
+    href: &'static str,
+}
+
+#[derive(Serialize)]
+struct Application {
+    #[serde(rename = "type")]
+    object_type: &'static str,
+    implements: Vec<ApplicationFeature>,
+}
+
+impl Application {
+    fn new() -> Self {
+        let rfc9421 = ApplicationFeature {
+            name: "RFC-9421: HTTP Message Signatures",
+            href: "https://datatracker.ietf.org/doc/html/rfc9421",
+        };
+        let rfc9421_ed25519 = ApplicationFeature {
+            name: "RFC-9421 signatures using the Ed25519 algorithm",
+            href: "https://datatracker.ietf.org/doc/html/rfc9421#name-eddsa-using-curve-edwards25",
+        };
+        Self {
+            object_type: APPLICATION,
+            implements: vec![rfc9421, rfc9421_ed25519],
+        }
+    }
 }
 
 #[derive(Serialize)]
@@ -119,7 +149,12 @@ pub struct Actor {
     #[serde(skip_serializing_if = "Vec::is_empty")]
     assertion_method: Vec<Multikey>,
 
-    public_key: PublicKey,
+    public_key: PublicKeyPem,
+
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    implements: Vec<ApplicationFeature>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    generator: Option<Application>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
     icon: Option<ActorImage>,
@@ -139,6 +174,8 @@ pub struct Actor {
     tag: Vec<Emoji>,
 
     manually_approves_followers: bool,
+    // https://docs.joinmastodon.org/spec/activitypub/#discoverable
+    discoverable: bool,
 
     #[serde(skip_serializing_if = "Option::is_none")]
     url: Option<String>,
@@ -154,14 +191,19 @@ pub struct Actor {
 }
 
 pub fn build_local_actor(
-    instance_url: &str,
+    instance_uri: &HttpUri,
     authority: &Authority,
     media_server: &MediaServer,
     user: &User,
 ) -> Result<Actor, DatabaseError> {
-    assert_eq!(authority.server_url(), instance_url);
+    assert_eq!(authority.server_uri(), Some(instance_uri.as_str()), "authority should be anchored");
     let username = &user.profile.username;
     let actor_id = local_actor_id_unified(authority, username);
+    let actor_type = if user.profile.is_automated {
+        SERVICE
+    } else {
+        PERSON
+    };
     let inbox = LocalActorCollection::Inbox.of(&actor_id);
     let outbox = LocalActorCollection::Outbox.of(&actor_id);
     let followers = LocalActorCollection::Followers.of(&actor_id);
@@ -169,7 +211,7 @@ pub fn build_local_actor(
     let subscribers = LocalActorCollection::Subscribers.of(&actor_id);
     let featured = LocalActorCollection::Featured.of(&actor_id);
 
-    let public_key = PublicKey::build(&actor_id, &user.rsa_secret_key)
+    let public_key = PublicKeyPem::build(&actor_id, &user.rsa_secret_key)
         .map_err(|_| DatabaseTypeError)?;
     let verification_methods = vec![
         Multikey::build_rsa(&actor_id, &user.rsa_secret_key)
@@ -178,10 +220,12 @@ pub fn build_local_actor(
     ];
     let avatar = match &user.profile.avatar {
         Some(image) => {
+            // Media is expected to be local (verified on database read)
+            let file_info = image.expect_file_info();
             let actor_image = ActorImage {
                 object_type: IMAGE.to_string(),
-                url: media_server.url_for(&image.file_name),
-                media_type: image.media_type.clone(),
+                url: media_server.url_for(&file_info.file_name),
+                media_type: file_info.media_type.clone(),
             };
             Some(actor_image)
         },
@@ -189,10 +233,11 @@ pub fn build_local_actor(
     };
     let banner = match &user.profile.banner {
         Some(image) => {
+            let file_info = image.expect_file_info();
             let actor_image = ActorImage {
                 object_type: IMAGE.to_string(),
-                url: media_server.url_for(&image.file_name),
-                media_type: image.media_type.clone(),
+                url: media_server.url_for(&file_info.file_name),
+                media_type: file_info.media_type.clone(),
             };
             Some(actor_image)
         },
@@ -228,24 +273,24 @@ pub fn build_local_actor(
         attachments.push(attachment_value);
     };
     let mut emojis = vec![];
-    for db_emoji in user.profile.emojis.clone().into_inner() {
-        let emoji = build_emoji(instance_url, media_server, &db_emoji);
+    for db_emoji in user.profile.emojis.inner() {
+        let emoji = build_emoji(instance_uri.as_str(), media_server, db_emoji);
         emojis.push(emoji);
     };
     let aliases = user.profile.aliases.clone().into_actor_ids();
     // HTML representation
     // TODO: portable actors should point to a primary server
-    let profile_url = local_actor_id(instance_url, username);
+    let profile_url = local_actor_id(instance_uri.as_str(), username);
 
     let gateways = authority.is_fep_ef61()
-        .then_some(vec![instance_url.to_string()])
+        .then_some(vec![instance_uri.to_string()])
         .unwrap_or_default();
     let actor = Actor {
         _context: build_actor_context(),
         id: actor_id.clone(),
-        object_type: PERSON.to_string(),
+        object_type: actor_type.to_string(),
         name: user.profile.display_name.clone(),
-        preferred_username: username.to_string(),
+        preferred_username: username.clone(),
         inbox,
         outbox,
         followers: Some(followers),
@@ -254,6 +299,8 @@ pub fn build_local_actor(
         featured: Some(featured),
         assertion_method: verification_methods,
         public_key,
+        implements: vec![],
+        generator: Some(Application::new()),
         icon: avatar,
         image: banner,
         summary: user.profile.bio.clone(),
@@ -261,6 +308,8 @@ pub fn build_local_actor(
         attachment: attachments,
         tag: emojis,
         manually_approves_followers: user.profile.manually_approves_followers,
+        // Some applications don't work properly if this flag is not set
+        discoverable: true,
         url: Some(profile_url),
         published: Some(user.profile.created_at),
         updated: Some(user.profile.updated_at),
@@ -272,13 +321,13 @@ pub fn build_local_actor(
 pub fn build_instance_actor(
     instance: &Instance,
 ) -> Result<Actor, RsaSerializationError> {
-    let actor_id = local_instance_actor_id(&instance.url());
+    let actor_id = local_instance_actor_id(instance.uri_str());
     let actor_inbox = LocalActorCollection::Inbox.of(&actor_id);
     let actor_outbox = LocalActorCollection::Outbox.of(&actor_id);
-    let public_key = PublicKey::build(&actor_id, &instance.actor_rsa_key)?;
+    let public_key = PublicKeyPem::build(&actor_id, &instance.rsa_secret_key)?;
     let verification_methods = vec![
-        Multikey::build_rsa(&actor_id, &instance.actor_rsa_key)?,
-        Multikey::build_ed25519(&actor_id, &instance.actor_ed25519_key),
+        Multikey::build_rsa(&actor_id, &instance.rsa_secret_key)?,
+        Multikey::build_ed25519(&actor_id, &instance.ed25519_secret_key),
     ];
     let actor = Actor {
         _context: build_actor_context(),
@@ -294,6 +343,8 @@ pub fn build_instance_actor(
         featured: None,
         assertion_method: verification_methods,
         public_key,
+        implements: Application::new().implements,
+        generator: None,
         icon: None,
         image: None,
         summary: None,
@@ -301,6 +352,7 @@ pub fn build_instance_actor(
         attachment: vec![],
         tag: vec![],
         manually_approves_followers: false,
+        discoverable: false,
         url: None,
         published: None,
         updated: None,
@@ -315,10 +367,11 @@ mod tests {
     use mitra_models::profiles::types::DbActorProfile;
     use super::*;
 
-    const INSTANCE_URL: &str = "https://server.example";
+    const INSTANCE_URI: &str = "https://server.example";
 
     #[test]
     fn test_build_local_actor() {
+        let instance_uri = HttpUri::parse(INSTANCE_URI).unwrap();
         let mut profile = DbActorProfile::local_for_test("testuser");
         profile.bio = Some("testbio".to_string());
         profile.created_at = DateTime::parse_from_rfc3339("2023-02-24T23:36:38Z")
@@ -326,10 +379,10 @@ mod tests {
             .with_timezone(&Utc);
         profile.updated_at = profile.created_at;
         let user = User { profile, ..Default::default() };
-        let authority = Authority::from_user(INSTANCE_URL, &user, false);
-        let media_server = MediaServer::for_test(INSTANCE_URL);
+        let authority = Authority::server(&instance_uri);
+        let media_server = MediaServer::for_test(INSTANCE_URI);
         let actor = build_local_actor(
-            INSTANCE_URL,
+            &instance_uri,
             &authority,
             &media_server,
             &user,
@@ -338,16 +391,16 @@ mod tests {
         let expected_value = json!({
             "@context": [
                 "https://www.w3.org/ns/activitystreams",
-                "https://www.w3.org/ns/did/v1",
+                "https://www.w3.org/ns/cid/v1",
                 "https://w3id.org/security/v1",
-                "https://w3id.org/security/data-integrity/v1",
-                "https://w3id.org/security/multikey/v1",
+                "https://w3id.org/security/data-integrity/v2",
                 {
                     "manuallyApprovesFollowers": "as:manuallyApprovesFollowers",
                     "schema": "http://schema.org/",
                     "PropertyValue": "schema:PropertyValue",
                     "value": "schema:value",
                     "toot": "http://joinmastodon.org/ns#",
+                    "discoverable": "toot:discoverable",
                     "featured": "toot:featured",
                     "Emoji": "toot:Emoji",
                     "mitra": "http://jsonld.mitra.social#",
@@ -355,6 +408,7 @@ mod tests {
                     "VerifiableIdentityStatement": "mitra:VerifiableIdentityStatement",
                     "MitraJcsEip191Signature2022": "mitra:MitraJcsEip191Signature2022",
                     "gateways": "mitra:gateways",
+                    "implements": "mitra:implements",
                     "proofValue": "sec:proofValue",
                     "proofPurpose": "sec:proofPurpose",
                 },
@@ -388,8 +442,22 @@ mod tests {
                 "owner": "https://server.example/users/testuser",
                 "publicKeyPem": "-----BEGIN PUBLIC KEY-----\nMFwwDQYJKoZIhvcNAQEBBQADSwAwSAJBAOIh58ZQbo45MuZvv1nMWAzTzN9oghNC\nbxJkFEFD1Y49LEeNHMk6GrPByUz8kn4y8Hf6brb+DVm7ZW4cdhOx1TsCAwEAAQ==\n-----END PUBLIC KEY-----\n",
             },
+            "generator": {
+                "type": "Application",
+                "implements": [
+                    {
+                        "name": "RFC-9421: HTTP Message Signatures",
+                        "href": "https://datatracker.ietf.org/doc/html/rfc9421",
+                    },
+                    {
+                        "name": "RFC-9421 signatures using the Ed25519 algorithm",
+                        "href": "https://datatracker.ietf.org/doc/html/rfc9421#name-eddsa-using-curve-edwards25",
+                    },
+                ],
+            },
             "summary": "testbio",
             "manuallyApprovesFollowers": false,
+            "discoverable": true,
             "url": "https://server.example/users/testuser",
             "published": "2023-02-24T23:36:38Z",
             "updated": "2023-02-24T23:36:38Z",
@@ -399,6 +467,7 @@ mod tests {
 
     #[test]
     fn test_build_local_actor_fep_ef61() {
+        let instance_uri = HttpUri::parse(INSTANCE_URI).unwrap();
         let mut profile = DbActorProfile::local_for_test("testuser");
         profile.bio = Some("testbio".to_string());
         profile.created_at = DateTime::parse_from_rfc3339("2023-02-24T23:36:38Z")
@@ -406,10 +475,13 @@ mod tests {
             .with_timezone(&Utc);
         profile.updated_at = profile.created_at;
         let user = User { profile, ..Default::default() };
-        let authority = Authority::from_user(INSTANCE_URL, &user, true);
-        let media_server = MediaServer::for_test(INSTANCE_URL);
+        let authority = Authority::key_with_gateway(
+            &instance_uri,
+            &user.ed25519_secret_key,
+        );
+        let media_server = MediaServer::for_test(INSTANCE_URI);
         let actor = build_local_actor(
-            INSTANCE_URL,
+            &instance_uri,
             &authority,
             &media_server,
             &user,
@@ -418,16 +490,16 @@ mod tests {
         let expected_value = json!({
             "@context": [
                 "https://www.w3.org/ns/activitystreams",
-                "https://www.w3.org/ns/did/v1",
+                "https://www.w3.org/ns/cid/v1",
                 "https://w3id.org/security/v1",
-                "https://w3id.org/security/data-integrity/v1",
-                "https://w3id.org/security/multikey/v1",
+                "https://w3id.org/security/data-integrity/v2",
                 {
                     "manuallyApprovesFollowers": "as:manuallyApprovesFollowers",
                     "schema": "http://schema.org/",
                     "PropertyValue": "schema:PropertyValue",
                     "value": "schema:value",
                     "toot": "http://joinmastodon.org/ns#",
+                    "discoverable": "toot:discoverable",
                     "featured": "toot:featured",
                     "Emoji": "toot:Emoji",
                     "mitra": "http://jsonld.mitra.social#",
@@ -435,6 +507,7 @@ mod tests {
                     "VerifiableIdentityStatement": "mitra:VerifiableIdentityStatement",
                     "MitraJcsEip191Signature2022": "mitra:MitraJcsEip191Signature2022",
                     "gateways": "mitra:gateways",
+                    "implements": "mitra:implements",
                     "proofValue": "sec:proofValue",
                     "proofPurpose": "sec:proofPurpose",
                 },
@@ -468,8 +541,22 @@ mod tests {
                 "owner": "https://server.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor",
                 "publicKeyPem": "-----BEGIN PUBLIC KEY-----\nMFwwDQYJKoZIhvcNAQEBBQADSwAwSAJBAOIh58ZQbo45MuZvv1nMWAzTzN9oghNC\nbxJkFEFD1Y49LEeNHMk6GrPByUz8kn4y8Hf6brb+DVm7ZW4cdhOx1TsCAwEAAQ==\n-----END PUBLIC KEY-----\n",
             },
+            "generator": {
+                "type": "Application",
+                "implements": [
+                    {
+                        "name": "RFC-9421: HTTP Message Signatures",
+                        "href": "https://datatracker.ietf.org/doc/html/rfc9421",
+                    },
+                    {
+                        "name": "RFC-9421 signatures using the Ed25519 algorithm",
+                        "href": "https://datatracker.ietf.org/doc/html/rfc9421#name-eddsa-using-curve-edwards25",
+                    },
+                ],
+            },
             "summary": "testbio",
             "manuallyApprovesFollowers": false,
+            "discoverable": true,
             "url": "https://server.example/users/testuser",
             "published": "2023-02-24T23:36:38Z",
             "updated": "2023-02-24T23:36:38Z",
@@ -482,23 +569,23 @@ mod tests {
 
     #[test]
     fn test_build_instance_actor() {
-        let instance_url = "https://server.example/";
-        let instance = Instance::for_test(instance_url);
+        let instance_uri = "https://server.example/";
+        let instance = Instance::for_test(instance_uri);
         let actor = build_instance_actor(&instance).unwrap();
         let value = serde_json::to_value(actor).unwrap();
         let expected_value = json!({
             "@context": [
                 "https://www.w3.org/ns/activitystreams",
-                "https://www.w3.org/ns/did/v1",
+                "https://www.w3.org/ns/cid/v1",
                 "https://w3id.org/security/v1",
-                "https://w3id.org/security/data-integrity/v1",
-                "https://w3id.org/security/multikey/v1",
+                "https://w3id.org/security/data-integrity/v2",
                 {
                     "manuallyApprovesFollowers": "as:manuallyApprovesFollowers",
                     "schema": "http://schema.org/",
                     "PropertyValue": "schema:PropertyValue",
                     "value": "schema:value",
                     "toot": "http://joinmastodon.org/ns#",
+                    "discoverable": "toot:discoverable",
                     "featured": "toot:featured",
                     "Emoji": "toot:Emoji",
                     "mitra": "http://jsonld.mitra.social#",
@@ -506,6 +593,7 @@ mod tests {
                     "VerifiableIdentityStatement": "mitra:VerifiableIdentityStatement",
                     "MitraJcsEip191Signature2022": "mitra:MitraJcsEip191Signature2022",
                     "gateways": "mitra:gateways",
+                    "implements": "mitra:implements",
                     "proofValue": "sec:proofValue",
                     "proofPurpose": "sec:proofPurpose",
                 },
@@ -535,7 +623,18 @@ mod tests {
                 "owner": "https://server.example/actor",
                 "publicKeyPem": "-----BEGIN PUBLIC KEY-----\nMFwwDQYJKoZIhvcNAQEBBQADSwAwSAJBAOIh58ZQbo45MuZvv1nMWAzTzN9oghNC\nbxJkFEFD1Y49LEeNHMk6GrPByUz8kn4y8Hf6brb+DVm7ZW4cdhOx1TsCAwEAAQ==\n-----END PUBLIC KEY-----\n",
             },
+            "implements": [
+                {
+                    "name": "RFC-9421: HTTP Message Signatures",
+                    "href": "https://datatracker.ietf.org/doc/html/rfc9421",
+                },
+                {
+                    "name": "RFC-9421 signatures using the Ed25519 algorithm",
+                    "href": "https://datatracker.ietf.org/doc/html/rfc9421#name-eddsa-using-curve-edwards25",
+                },
+            ],
             "manuallyApprovesFollowers": false,
+            "discoverable": false,
         });
         assert_eq!(value, expected_value);
     }

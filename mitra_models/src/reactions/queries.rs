@@ -2,23 +2,32 @@ use uuid::Uuid;
 
 use mitra_utils::id::generate_ulid;
 
-use crate::database::{
-    catch_unique_violation,
-    DatabaseClient,
-    DatabaseError,
-};
-use crate::notifications::helpers::create_reaction_notification;
-use crate::posts::queries::{
-    update_reaction_count,
-    get_post_author,
+use crate::{
+    database::{
+        DatabaseClient,
+        DatabaseError,
+    },
+    notifications::helpers::create_reaction_notification,
+    posts::{
+        queries::{
+            update_reaction_count,
+            get_post_author,
+        },
+        types::Visibility,
+    },
 };
 
-use super::types::{DbReaction, ReactionData};
+use super::types::{
+    Reaction,
+    ReactionData,
+    ReactionDeleted,
+    ReactionDetailed,
+};
 
 pub async fn create_reaction(
     db_client: &mut impl DatabaseClient,
     reaction_data: ReactionData,
-) -> Result<DbReaction, DatabaseError> {
+) -> Result<Reaction, DatabaseError> {
     let transaction = db_client.transaction().await?;
     let reaction_id = generate_ulid();
     // Reactions to reposts are not allowed
@@ -30,13 +39,17 @@ pub async fn create_reaction(
             post_id,
             content,
             emoji_id,
+            visibility,
             activity_id
         )
-        SELECT $1, $2, $3, $4, $5, $6
-        WHERE NOT EXISTS (
-            SELECT 1 FROM post
-            WHERE post.id = $3 AND post.repost_of_id IS NOT NULL
-        )
+        SELECT $1, $2, post.id, $4, $5, $6, $7
+        FROM (
+            SELECT
+                CASE WHEN post.repost_of_id IS NULL THEN post.id ELSE NULL
+                END AS id
+            FROM post WHERE post.id = $3
+        ) AS post
+        ON CONFLICT DO NOTHING
         RETURNING post_reaction
         ",
         &[
@@ -45,11 +58,12 @@ pub async fn create_reaction(
             &reaction_data.post_id,
             &reaction_data.content,
             &reaction_data.emoji_id,
+            &reaction_data.visibility,
             &reaction_data.activity_id,
         ],
-    ).await.map_err(catch_unique_violation("reaction"))?;
-    let row = maybe_row.ok_or(DatabaseError::NotFound("post"))?;
-    let reaction: DbReaction = row.try_get("post_reaction")?;
+    ).await?;
+    let row = maybe_row.ok_or(DatabaseError::AlreadyExists("reaction"))?;
+    let reaction: Reaction = row.try_get("post_reaction")?;
     update_reaction_count(&transaction, reaction.post_id, 1).await?;
     let post_author = get_post_author(&transaction, reaction.post_id).await?;
     if post_author.is_local() && post_author.id != reaction.author_id {
@@ -68,7 +82,7 @@ pub async fn create_reaction(
 pub async fn get_remote_reaction_by_activity_id(
     db_client: &impl DatabaseClient,
     activity_id: &str,
-) -> Result<DbReaction, DatabaseError> {
+) -> Result<Reaction, DatabaseError> {
     let maybe_row = db_client.query_opt(
         "
         SELECT post_reaction
@@ -87,7 +101,7 @@ pub async fn delete_reaction(
     author_id: Uuid,
     post_id: Uuid,
     maybe_content: Option<&str>,
-) -> Result<(Uuid, bool), DatabaseError> {
+) -> Result<ReactionDeleted, DatabaseError> {
     let transaction = db_client.transaction().await?;
     let maybe_row = transaction.query_opt(
         "
@@ -96,20 +110,68 @@ pub async fn delete_reaction(
             AND ($3::text IS NULL AND content IS NULL OR content = $3)
         RETURNING
             post_reaction.id,
-            post_reaction.has_deprecated_ap_id
+            post_reaction.has_deprecated_ap_id,
+            post_reaction.visibility
         ",
         &[&author_id, &post_id, &maybe_content],
     ).await?;
     let row = maybe_row.ok_or(DatabaseError::NotFound("reaction"))?;
-    let reaction_id = row.try_get("id")?;
-    let reaction_has_deprecated_ap_id = row.try_get("has_deprecated_ap_id")?;
+    let reaction_deleted = ReactionDeleted {
+        id: row.try_get("id")?,
+        has_deprecated_ap_id: row.try_get("has_deprecated_ap_id")?,
+        visibility: row.try_get("visibility")?,
+    };
     update_reaction_count(&transaction, post_id, -1).await?;
     transaction.commit().await?;
-    Ok((reaction_id, reaction_has_deprecated_ap_id))
+    Ok(reaction_deleted)
+}
+
+pub async fn get_reactions(
+    db_client: &impl DatabaseClient,
+    post_id: Uuid,
+    current_user_id: Option<Uuid>,
+    max_reaction_id: Option<Uuid>,
+    limit: Option<u16>,
+) -> Result<Vec<ReactionDetailed>, DatabaseError> {
+    let statement = format!(
+        "
+        SELECT
+            post_reaction,
+            actor_profile AS author,
+            emoji
+        FROM post_reaction
+        JOIN post ON post_reaction.post_id = post.id
+        JOIN actor_profile ON post_reaction.author_id = actor_profile.id
+        LEFT JOIN emoji ON post_reaction.emoji_id = emoji.id
+        WHERE
+            post_reaction.post_id = $1
+            AND (
+                post_reaction.visibility = {visibility_public}
+                OR post.author_id = $2
+            )
+            AND ($3::uuid IS NULL OR post_reaction.id < $3)
+        ORDER BY post_reaction.id DESC
+        {limit}
+        ",
+        visibility_public=i16::from(Visibility::Public),
+        limit=limit.map(|n| format!("LIMIT {n}")).unwrap_or("".to_owned()),
+    );
+    let rows = db_client.query(
+        &statement,
+        &[
+            &post_id,
+            &current_user_id,
+            &max_reaction_id,
+        ],
+    ).await?;
+    let reactions = rows.iter()
+        .map(ReactionDetailed::try_from)
+        .collect::<Result<_, _>>()?;
+    Ok(reactions)
 }
 
 /// Finds posts with reactions among given posts and returns their IDs.
-pub async fn find_reacted_by_user(
+pub(crate) async fn find_reacted_by_user(
     db_client: &impl DatabaseClient,
     user_id: Uuid,
     posts_ids: &[Uuid],
@@ -139,7 +201,7 @@ mod tests {
         database::test_utils::create_test_database,
         posts::{
             queries::{create_post, get_post_by_id},
-            types::PostCreateData,
+            types::{PostCreateData, Visibility},
         },
         users::test_utils::create_test_user,
     };
@@ -162,6 +224,7 @@ mod tests {
             post_id: post.id,
             content: Some(content.to_string()),
             emoji_id: None,
+            visibility: Visibility::Direct,
             activity_id: None,
         };
         let reaction = create_reaction(db_client, reaction_data).await.unwrap();
@@ -170,6 +233,7 @@ mod tests {
         assert_eq!(reaction.post_id, post.id);
         assert_eq!(reaction.content.unwrap(), content);
         assert_eq!(reaction.emoji_id.is_none(), true);
+        assert_eq!(reaction.visibility, Visibility::Direct);
         assert_eq!(reaction.activity_id.is_none(), true);
 
         let post = get_post_by_id(db_client, post.id).await.unwrap();
@@ -192,6 +256,7 @@ mod tests {
             post_id: post.id,
             content: None,
             emoji_id: None,
+            visibility: Visibility::Direct,
             activity_id: None,
         };
         create_reaction(db_client, reaction_data_1).await.unwrap();
@@ -200,6 +265,7 @@ mod tests {
             post_id: post.id,
             content: Some("❤️".to_string()),
             emoji_id: None,
+            visibility: Visibility::Direct,
             activity_id: None,
         };
         create_reaction(db_client, reaction_data_2.clone()).await.unwrap();
@@ -223,16 +289,59 @@ mod tests {
             post_id: post.id,
             content: None,
             emoji_id: None,
+            visibility: Visibility::Direct,
             activity_id: None,
         };
         let reaction = create_reaction(db_client, reaction_data).await.unwrap();
-        let (reaction_id, reaction_has_deprecated_ap_id) = delete_reaction(
+        let reaction_deleted = delete_reaction(
             db_client,
             user_1.id,
             post.id,
             None,
         ).await.unwrap();
-        assert_eq!(reaction_id, reaction.id);
-        assert_eq!(reaction_has_deprecated_ap_id, false);
+        assert_eq!(reaction_deleted.id, reaction.id);
+        assert_eq!(reaction_deleted.has_deprecated_ap_id, false);
+        assert_eq!(reaction_deleted.visibility, Visibility::Direct);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_get_reactions() {
+        let db_client = &mut create_test_database().await;
+        let user_1 = create_test_user(db_client, "test1").await;
+        let user_2 = create_test_user(db_client, "test2").await;
+        let user_3 = create_test_user(db_client, "test3").await;
+        let post_data = PostCreateData {
+            content: "my post".to_string(),
+            ..Default::default()
+        };
+        let post = create_post(db_client, user_1.id, post_data).await.unwrap();
+        let reaction_data_1 = ReactionData {
+            author_id: user_2.id,
+            post_id: post.id,
+            content: None,
+            emoji_id: None,
+            visibility: Visibility::Direct,
+            activity_id: None,
+        };
+        let _reaction_1 = create_reaction(db_client, reaction_data_1).await.unwrap();
+        let reaction_data_2 = ReactionData {
+            author_id: user_3.id,
+            post_id: post.id,
+            content: None,
+            emoji_id: None,
+            visibility: Visibility::Public,
+            activity_id: None,
+        };
+        let reaction_2 = create_reaction(db_client, reaction_data_2).await.unwrap();
+        let reactions = get_reactions(
+            db_client,
+            post.id,
+            None, // guest
+            None,
+            None,
+        ).await.unwrap();
+        assert_eq!(reactions.len(), 1);
+        assert_eq!(reactions[0].id, reaction_2.id);
     }
 }

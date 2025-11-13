@@ -1,7 +1,7 @@
+use apx_sdk::fetch::FetchError;
 use serde_json::{Error as DeserializationError};
 use thiserror::Error;
 
-use apx_sdk::fetch::FetchError;
 use mitra_models::database::DatabaseError;
 use mitra_services::media::MediaStorageError;
 use mitra_validators::errors::ValidationError;
@@ -26,8 +26,8 @@ pub enum HandlerError {
     #[error("{0}")]
     ServiceError(&'static str),
 
-    #[error("unsolicited message from {0}")]
-    UnsolicitedMessage(String),
+    #[error("{0}")]
+    Filtered(String),
 }
 
 impl From<DeserializationError> for HandlerError {

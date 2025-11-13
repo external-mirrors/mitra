@@ -1,10 +1,8 @@
-use apx_core::crypto_rsa::RsaSecretKey;
+//! Agent: responsible for making requests to other nodes.
 
-pub struct RequestSigner {
-    pub key: RsaSecretKey,
-    pub key_id: String,
-}
+pub use apx_core::http_signatures::create::HttpSigner;
 
+/// Federation agent parameters
 pub struct FederationAgent {
     /// User-Agent string.
     pub user_agent: Option<String>,
@@ -21,7 +19,9 @@ pub struct FederationAgent {
     pub i2p_proxy_url: Option<String>,
 
     /// Key for creating HTTP signatures.
-    pub signer: Option<RequestSigner>,
+    pub signer: Option<HttpSigner>,
+    /// Enable RFC-9421 signatures?
+    pub rfc9421_enabled: bool,
 }
 
 impl Default for FederationAgent {
@@ -36,6 +36,7 @@ impl Default for FederationAgent {
             onion_proxy_url: None,
             i2p_proxy_url: None,
             signer: None,
+            rfc9421_enabled: false,
         }
     }
 }

@@ -3,6 +3,7 @@ use std::time::Duration;
 
 use monero_rpc::{
     GetTransfersCategory,
+    GetTransfersSelector,
     GotTransfer,
     HashString,
     IncomingTransfer,
@@ -12,7 +13,6 @@ use monero_rpc::{
     SweepAllArgs,
     TransferPriority,
     TransferType,
-    WalletClient,
 };
 use monero_rpc::monero::{
     cryptonote::subaddress::Index,
@@ -25,6 +25,7 @@ use mitra_config::MoneroConfig;
 
 use super::utils::parse_monero_address;
 
+pub use monero_rpc::WalletClient;
 pub type TransferCategory = GetTransfersCategory;
 
 const MONERO_RPC_TIMEOUT: u64 = 15;
@@ -56,9 +57,10 @@ pub enum MoneroError {
     OtherError(&'static str),
 }
 
-fn build_wallet_client(config: &MoneroConfig)
-    -> Result<WalletClient, MoneroError>
-{
+pub fn build_wallet_client(
+    config: &MoneroConfig,
+    timeout: u64,
+) -> Result<WalletClient, MoneroError> {
     let rpc_authentication = match config.wallet_rpc_username {
         Some(ref username) => {
             RpcAuthentication::Credentials {
@@ -71,29 +73,35 @@ fn build_wallet_client(config: &MoneroConfig)
     };
     let wallet_client = RpcClientBuilder::new()
         .rpc_authentication(rpc_authentication)
-        .timeout(Duration::from_secs(MONERO_RPC_TIMEOUT))
+        .timeout(Duration::from_secs(timeout))
         .build(config.wallet_rpc_url.clone())?
         .wallet();
     Ok(wallet_client)
 }
 
-/// https://www.getmonero.org/resources/developer-guides/wallet-rpc.html#create_wallet
+fn build_default_wallet_client(
+    config: &MoneroConfig,
+) -> Result<WalletClient, MoneroError> {
+    build_wallet_client(config, MONERO_RPC_TIMEOUT)
+}
+
+// https://docs.getmonero.org/rpc-library/wallet-rpc/#create_wallet
 pub async fn create_monero_wallet(
     config: &MoneroConfig,
     name: String,
     password: Option<String>,
 ) -> Result<(), MoneroError> {
-    let wallet_client = build_wallet_client(config)?;
+    let wallet_client = build_default_wallet_client(config)?;
     let language = "English".to_string();
     wallet_client.create_wallet(name, password, language).await?;
     Ok(())
 }
 
-/// https://www.getmonero.org/resources/developer-guides/wallet-rpc.html#open_wallet
+// https://docs.getmonero.org/rpc-library/wallet-rpc/#open_wallet
 pub async fn open_monero_wallet(
     config: &MoneroConfig,
 ) -> Result<WalletClient, MoneroError> {
-    let wallet_client = build_wallet_client(config)?;
+    let wallet_client = build_default_wallet_client(config)?;
     if let Err(error) = wallet_client.refresh(None).await {
         if error.to_string() == "Server error: No wallet file" {
             // Try to open wallet
@@ -119,6 +127,7 @@ pub async fn open_monero_wallet(
     Ok(wallet_client)
 }
 
+// https://docs.getmonero.org/rpc-library/wallet-rpc/#create_address
 pub async fn create_monero_address(
     config: &MoneroConfig,
 ) -> Result<Address, MoneroError> {
@@ -165,7 +174,7 @@ pub async fn get_subaddress_by_index(
     Ok(subaddress_data.address)
 }
 
-/// https://www.getmonero.org/resources/developer-guides/wallet-rpc.html#get_balance
+// https://docs.getmonero.org/rpc-library/wallet-rpc/#get_balance
 pub async fn get_subaddress_balance(
     wallet_client: &WalletClient,
     subaddress_index: &Index,
@@ -199,7 +208,7 @@ pub async fn get_active_addresses(
     Ok(addresses)
 }
 
-/// https://www.getmonero.org/resources/developer-guides/wallet-rpc.html#incoming_transfers
+// https://docs.getmonero.org/rpc-library/wallet-rpc/#incoming_transfers
 pub async fn get_incoming_transfers(
     wallet_client: &WalletClient,
     account_index: u32,
@@ -223,7 +232,28 @@ pub async fn get_incoming_transfers(
     Ok(transfers)
 }
 
-/// https://www.getmonero.org/resources/developer-guides/wallet-rpc.html#sweep_all
+// https://docs.getmonero.org/rpc-library/wallet-rpc/#get_transfers
+pub async fn get_outgoing_transfers(
+    wallet_client: &WalletClient,
+    account_index: u32,
+    address_index: u32,
+) -> Result<Vec<GotTransfer>, MoneroError> {
+    let selector = GetTransfersSelector {
+        category_selector: HashMap::from([
+            (GetTransfersCategory::Out, true),
+        ]),
+        account_index: Some(account_index),
+        subaddr_indices: Some(vec![address_index]),
+        block_height_filter: None,
+    };
+    let outgoing_transfers = wallet_client.get_transfers(selector)
+        .await?
+        .remove(&GetTransfersCategory::Out)
+        .unwrap_or_default();
+    Ok(outgoing_transfers)
+}
+
+// https://docs.getmonero.org/rpc-library/wallet-rpc/#sweep_all
 pub async fn send_monero(
     wallet_client: &WalletClient,
     from_account: u32,
@@ -273,7 +303,7 @@ pub async fn send_monero(
     Ok((format!("{:x}", tx_hash), amount))
 }
 
-/// https://www.getmonero.org/resources/developer-guides/wallet-rpc.html#get_transfer_by_txid
+// https://docs.getmonero.org/rpc-library/wallet-rpc/#get_transfer_by_txid
 pub async fn get_transaction_by_id(
     wallet_client: &WalletClient,
     account_index: u32,
@@ -302,6 +332,30 @@ pub async fn get_transaction_by_id(
     Ok(maybe_transfer)
 }
 
+pub async fn get_latest_incoming_transfer(
+    wallet_client: &WalletClient,
+    subaddress_index: &Index,
+) -> Result<Option<GotTransfer>, MoneroError> {
+    // NOTE: get_transfers(type: In) doesn't work
+    let mut transfers = get_incoming_transfers(
+        wallet_client,
+        subaddress_index.major,
+        vec![subaddress_index.minor],
+    ).await?;
+    transfers.sort_by_key(|transfer| transfer.block_height);
+    let maybe_transaction = if let Some(transfer) = transfers.pop() {
+        let HashString(tx_hash) = transfer.tx_hash;
+        get_transaction_by_id(
+            wallet_client,
+            subaddress_index.major,
+            &format!("{:x}", tx_hash),
+        ).await?
+    } else {
+        None
+    };
+    Ok(maybe_transaction)
+}
+
 pub async fn get_address_count(
     wallet_client: &WalletClient,
     account_index: u32,
@@ -313,7 +367,7 @@ pub async fn get_address_count(
     Ok(address_data.addresses.len())
 }
 
-/// https://www.getmonero.org/resources/developer-guides/wallet-rpc.html#sign
+// https://docs.getmonero.org/rpc-library/wallet-rpc/#sign
 pub async fn create_monero_signature(
     config: &MoneroConfig,
     message: &str,
@@ -328,7 +382,7 @@ pub async fn create_monero_signature(
     Ok((address, signature))
 }
 
-/// https://www.getmonero.org/resources/developer-guides/wallet-rpc.html#verify
+// https://docs.getmonero.org/rpc-library/wallet-rpc/#verify
 pub async fn verify_monero_signature(
     config: &MoneroConfig,
     address: &str,

@@ -2,6 +2,8 @@ use chrono::{DateTime, Utc};
 use postgres_types::FromSql;
 use uuid::Uuid;
 
+use crate::media::types::PartialMediaInfo;
+
 pub enum AttachmentType {
     Unknown,
     Image,
@@ -11,24 +13,20 @@ pub enum AttachmentType {
 
 #[derive(Clone, FromSql)]
 #[postgres(name = "media_attachment")]
-pub struct DbMediaAttachment {
+pub struct MediaAttachment {
     pub id: Uuid,
     pub owner_id: Uuid,
-    pub file_name: String,
-    pub file_size: Option<i32>,
-    pub digest: Option<Vec<u8>>,
-    pub media_type: Option<String>,
-    pub url: Option<String>,
+    pub media: PartialMediaInfo,
     pub description: Option<String>,
     pub ipfs_cid: Option<String>,
     pub post_id: Option<Uuid>,
     pub created_at: DateTime<Utc>,
 }
 
-impl DbMediaAttachment {
+impl MediaAttachment {
     pub fn attachment_type(&self) -> AttachmentType {
-        match self.media_type {
-            Some(ref media_type) => {
+        match self.media.media_type() {
+            Some(media_type) => {
                 if media_type.starts_with("image/") {
                     AttachmentType::Image
                 } else if media_type.starts_with("video/") {

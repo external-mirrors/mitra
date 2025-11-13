@@ -1,23 +1,28 @@
+use apx_core::url::http_uri::HttpUri;
+use apx_sdk::{
+    authentication::{verify_portable_object, AuthenticationError},
+    deserialization::{deserialize_into_object_id, object_to_id},
+    utils::is_public,
+};
 use serde::Deserialize;
 use serde_json::{Value as JsonValue};
 
-use apx_sdk::{
-    authentication::{verify_portable_object, AuthenticationError},
-    deserialization::deserialize_into_object_id,
-    utils::is_public,
-};
+use mitra_adapters::dynamic_config::get_dynamic_config;
 use mitra_config::Config;
 use mitra_models::{
-    database::{DatabaseClient, DatabaseError},
-    posts::queries::get_post_by_id,
-    posts::types::Visibility,
-    relationships::queries::has_local_followers,
-    users::queries::get_user_by_id,
+    database::{
+        get_database_client,
+        DatabaseClient,
+        DatabaseConnectionPool,
+        DatabaseError,
+    },
+    filter_rules::types::FilterAction,
+    relationships::queries::is_local_or_followed,
 };
 use mitra_validators::errors::ValidationError;
 
 use crate::{
-    builders::add_context_activity::prepare_add_context_activity,
+    builders::add_context_activity::sync_conversation,
     identifiers::{
         canonicalize_id,
         parse_local_actor_id,
@@ -27,16 +32,17 @@ use crate::{
         import_post,
         ApClient,
     },
-    ownership::verify_object_owner,
+    ownership::{parse_attributed_to, verify_object_owner},
 };
 
 use super::{
     note::{
         get_audience,
-        get_object_attributed_to,
+        get_object_content,
         AttributedObject,
         AttributedObjectJson,
     },
+    question_vote::{handle_question_vote, is_question_vote},
     Descriptor,
     HandlerError,
     HandlerResult,
@@ -44,24 +50,25 @@ use super::{
 
 async fn check_unsolicited_message(
     db_client: &impl DatabaseClient,
-    instance_url: &str,
+    instance_uri: &str,
     object: &AttributedObject,
+    sender_id: &str,
 ) -> Result<(), HandlerError> {
-    let author_id = get_object_attributed_to(object)?;
-    let canonical_author_id = canonicalize_id(&author_id)?.to_string();
-    let author_has_followers =
-        has_local_followers(db_client, &canonical_author_id).await?;
-    let audience = get_audience(object);
+    let canonical_sender_id = canonicalize_id(sender_id)?.to_string();
+    // is_local_or_followed returns true if actor has local account
+    let sender_has_followers =
+        is_local_or_followed(db_client, &canonical_sender_id).await?;
+    let audience = get_audience(object)?;
     // TODO: FEP-EF61: find portable local recipients
     let has_local_recipients = audience.iter().any(|actor_id| {
-        parse_local_actor_id(instance_url, actor_id).is_ok()
+        parse_local_actor_id(instance_uri, actor_id).is_ok()
     });
     // Is it a reply to a known post?
     let is_disconnected = if let Some(ref in_reply_to_id) = object.in_reply_to {
         let canonical_in_reply_to_id = canonicalize_id(in_reply_to_id)?;
         match get_post_by_object_id(
             db_client,
-            instance_url,
+            instance_uri,
             &canonical_in_reply_to_id,
         ).await {
             Ok(_) => false,
@@ -76,9 +83,11 @@ async fn check_unsolicited_message(
         audience.iter().any(is_public) &&
         !has_local_recipients &&
         // Possible cause: a failure to process Undo(Follow)
-        !author_has_followers;
+        !sender_has_followers;
     if is_unsolicited {
-        return Err(HandlerError::UnsolicitedMessage(canonical_author_id));
+        let error_message =
+            format!("unsolicited message from {canonical_sender_id}");
+        return Err(HandlerError::Filtered(error_message));
     };
     Ok(())
 }
@@ -87,90 +96,97 @@ async fn check_unsolicited_message(
 struct CreateNote {
     #[serde(deserialize_with = "deserialize_into_object_id")]
     actor: String,
-    object: AttributedObjectJson,
+    object: JsonValue,
 }
 
 pub async fn handle_create(
     config: &Config,
-    db_client: &mut impl DatabaseClient,
+    db_pool: &DatabaseConnectionPool,
     activity: JsonValue,
-    mut is_authenticated: bool,
-    is_pulled: bool,
+    maybe_sender_id: Option<&str>,
+    is_authenticated: bool,
 ) -> HandlerResult {
     let CreateNote {
         actor: activity_actor,
-        object,
+        mut object,
     } = serde_json::from_value(activity.clone())?;
 
-    if !is_pulled {
-        check_unsolicited_message(
-            db_client,
-            &config.instance_url(),
-            &object.inner,
-        ).await?;
-    };
-
-    let author_id = get_object_attributed_to(&object.inner)?;
-    if author_id != activity_actor {
-        return Err(ValidationError("actor is not authorized to create object").into());
-    };
+    let ap_client = ApClient::new_with_pool(config, db_pool).await?;
     // Authentication
-    match verify_portable_object(&object.value) {
-        Ok(_) => {
-            is_authenticated = true;
-        },
+    let is_not_embedded = object.as_str().is_some();
+    if is_not_embedded || !is_authenticated {
+        // Fetch object if it is not embedded or if activity is forwarded
+        let object_id = object_to_id(&activity["object"])
+            .map_err(|_| ValidationError("invalid activity object"))?;
+        object = ap_client.fetch_object(&object_id).await?;
+        log::info!("fetched object {}", object_id);
+    };
+    match verify_portable_object(&object) {
+        Ok(_) => (),
         Err(AuthenticationError::InvalidObjectID(message)) => {
             return Err(ValidationError(message).into());
         },
         Err(AuthenticationError::NotPortable) => (),
-        Err(_) => {
+        Err(other_error) => {
+            log::warn!("{other_error}");
             return Err(ValidationError("invalid portable object").into());
         },
     };
-    verify_object_owner(&object.value)?;
+    // Authorization
+    let author_id = parse_attributed_to(&object["attributedTo"])?;
+    if author_id != activity_actor {
+        return Err(ValidationError("actor is not authorized to create object").into());
+    };
+    verify_object_owner(&object)?;
+
+    if is_question_vote(&object) {
+        return handle_question_vote(config, db_pool, object).await;
+    };
+    let object: AttributedObjectJson = serde_json::from_value(object)?;
+    if let Some(sender_id) = maybe_sender_id {
+        let db_client = &**get_database_client(db_pool).await?;
+        check_unsolicited_message(
+            db_client,
+            config.instance().uri_str(),
+            &object.inner,
+            sender_id,
+        ).await?;
+        // TODO: FEP-EF61: keyword filtering for portable messages
+        if let Ok(http_uri) = HttpUri::parse(&author_id) {
+            let author_hostname = http_uri.hostname();
+            let content = get_object_content(&object.inner)?;
+            if ap_client.filter.is_action_required(
+                author_hostname.as_str(),
+                FilterAction::RejectKeywords,
+            ) {
+                let dynamic_config = get_dynamic_config(db_client).await?;
+                for keyword in dynamic_config.filter_keywords {
+                    if !content.contains(&keyword) {
+                        continue;
+                    };
+                    let error_message = format!(r#"rejected keyword "{keyword}""#);
+                    return Err(HandlerError::Filtered(error_message));
+                };
+            };
+        };
+    };
 
     let object_id = object.id().to_owned();
     let object_type = object.inner.object_type.clone();
-    let object_received = if is_authenticated {
-        Some(object)
-    } else {
-        // Fetch object, don't trust the sender.
-        // Most likely it's a forwarded reply.
-        None
-    };
-    let ap_client = ApClient::new(config, db_client).await?;
     let post = import_post(
         &ap_client,
-        db_client,
+        db_pool,
         object_id,
-        object_received,
+        Some(object),
     ).await?;
     // NOTE: import_post always returns a post; activity will be re-distributed
-    let conversation = post.expect_conversation();
-    if post.visibility == Visibility::Conversation {
-        if let Some(ref conversation_audience) = conversation.audience {
-            // Add activity to conversation
-            let root = get_post_by_id(db_client, conversation.root_id).await?;
-            match get_user_by_id(db_client, root.author.id).await {
-                Ok(conversation_owner) => {
-                    // Conversation owner is local
-                    prepare_add_context_activity(
-                        db_client,
-                        &ap_client.instance,
-                        &conversation_owner,
-                        conversation.id,
-                        &root,
-                        conversation_audience,
-                        activity,
-                    ).await?.save_and_enqueue(db_client).await?;
-                },
-                // Conversation owner is remote
-                Err(DatabaseError::NotFound(_)) => (),
-                Err(other_error) => return Err(other_error.into()),
-            };
-        } else {
-            log::warn!("conversation audience is not known");
-        };
-    };
+    let db_client = &**get_database_client(db_pool).await?;
+    sync_conversation(
+        db_client,
+        &ap_client.instance,
+        post.expect_conversation(),
+        activity,
+        post.visibility,
+    ).await?;
     Ok(Some(Descriptor::object(object_type)))
 }

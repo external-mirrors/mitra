@@ -1,28 +1,29 @@
-use chrono::{DateTime, Utc};
-use uuid::Uuid;
-
 use apx_core::{
-    crypto_eddsa::Ed25519SecretKey,
+    crypto::eddsa::Ed25519SecretKey,
     did::Did,
     did_pkh::DidPkh,
 };
+use chrono::{DateTime, Utc};
+use uuid::Uuid;
 
 use mitra_utils::{
     currencies::Currency,
     id::generate_ulid,
 };
 
-use crate::database::{
-    catch_unique_violation,
-    query_macro::query,
-    DatabaseClient,
-    DatabaseError,
-    DatabaseTypeError,
+use crate::{
+    database::{
+        catch_unique_violation,
+        query_macro::query,
+        DatabaseClient,
+        DatabaseError,
+        DatabaseTypeError,
+    },
+    emojis::types::CustomEmoji,
+    instances::queries::create_instance,
+    media::types::{DeletionQueue, PartialMediaInfo},
+    relationships::types::RelationshipType,
 };
-use crate::emojis::types::DbEmoji;
-use crate::instances::queries::create_instance;
-use crate::media::types::DeletionQueue;
-use crate::relationships::types::RelationshipType;
 
 use super::types::{
     get_identity_key,
@@ -32,6 +33,7 @@ use super::types::{
     IdentityProofs,
     PaymentOptions,
     ProfileCreateData,
+    ProfileEmojis,
     ProfileUpdateData,
     PublicKeys,
     WebfingerHostname,
@@ -59,7 +61,7 @@ async fn create_profile_emojis(
     db_client: &impl DatabaseClient,
     profile_id: Uuid,
     emojis: Vec<Uuid>,
-) -> Result<Vec<DbEmoji>, DatabaseError> {
+) -> Result<Vec<CustomEmoji>, DatabaseError> {
     let emojis_rows = db_client.query(
         "
         INSERT INTO profile_emoji (profile_id, emoji_id)
@@ -83,7 +85,7 @@ async fn create_profile_emojis(
 async fn update_emoji_cache(
     db_client: &impl DatabaseClient,
     profile_id: Uuid,
-) -> Result<DbActorProfile, DatabaseError> {
+) -> Result<ProfileEmojis, DatabaseError> {
     let maybe_row = db_client.query_opt(
         "
         WITH profile_emojis AS (
@@ -109,13 +111,14 @@ async fn update_emoji_cache(
     ).await?;
     let row = maybe_row.ok_or(DatabaseError::NotFound("profile"))?;
     let profile: DbActorProfile = row.try_get("actor_profile")?;
-    Ok(profile)
+    Ok(profile.emojis)
 }
 
-pub async fn update_emoji_caches(
+pub(crate) async fn update_emoji_caches(
     db_client: &impl DatabaseClient,
     emoji_id: Uuid,
 ) -> Result<(), DatabaseError> {
+    // TODO: create GIN index on actor_profile.emojis
     db_client.execute(
         "
         WITH profile_emojis AS (
@@ -126,10 +129,9 @@ pub async fn update_emoji_caches(
                     '[]'
                 ) AS emojis
             FROM actor_profile
-            CROSS JOIN jsonb_array_elements(actor_profile.emojis) AS cached_emoji
             LEFT JOIN profile_emoji ON (profile_emoji.profile_id = actor_profile.id)
             LEFT JOIN emoji ON (emoji.id = profile_emoji.emoji_id)
-            WHERE CAST(cached_emoji ->> 'id' AS UUID) = $1
+            WHERE actor_profile.emojis @> jsonb_build_array(jsonb_build_object('id', $1::uuid))
             GROUP BY actor_profile.id
         )
         UPDATE actor_profile
@@ -150,12 +152,12 @@ pub async fn create_profile(
     profile_data.check_consistency()?;
     let transaction = db_client.transaction().await?;
     let profile_id = generate_ulid();
-    if let Some(ref hostname) = profile_data.hostname {
+    if let WebfingerHostname::Remote(ref hostname) = profile_data.hostname {
         create_instance(&transaction, hostname).await?;
     };
-    let profile_acct = match profile_data.hostname() {
+    let profile_acct = match profile_data.hostname {
         WebfingerHostname::Local => Some(profile_data.username.clone()),
-        WebfingerHostname::Remote(hostname) => {
+        WebfingerHostname::Remote(ref hostname) => {
             let profile_acct =
                 format!("{}@{}", profile_data.username, hostname);
             prevent_acct_conflict(
@@ -167,7 +169,7 @@ pub async fn create_profile(
         },
         WebfingerHostname::Unknown => None,
     };
-    transaction.execute(
+    let row = transaction.query_one(
         "
         INSERT INTO actor_profile (
             id,
@@ -178,6 +180,7 @@ pub async fn create_profile(
             bio,
             avatar,
             banner,
+            is_automated,
             manually_approves_followers,
             mention_policy,
             public_keys,
@@ -187,18 +190,19 @@ pub async fn create_profile(
             aliases,
             actor_json
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
         RETURNING actor_profile
         ",
         &[
             &profile_id,
             &profile_data.username,
-            &profile_data.hostname,
+            &profile_data.hostname.as_str(),
             &profile_acct,
             &profile_data.display_name,
             &profile_data.bio,
             &profile_data.avatar,
             &profile_data.banner,
+            &profile_data.is_automated,
             &profile_data.manually_approves_followers,
             &profile_data.mention_policy,
             &PublicKeys(profile_data.public_keys),
@@ -209,6 +213,7 @@ pub async fn create_profile(
             &profile_data.actor_json,
         ],
     ).await.map_err(catch_unique_violation("profile"))?;
+    let mut profile: DbActorProfile = row.try_get("actor_profile")?;
 
     // Create related objects
     create_profile_emojis(
@@ -216,8 +221,10 @@ pub async fn create_profile(
         profile_id,
         profile_data.emojis,
     ).await?;
-    let profile = update_emoji_cache(&transaction, profile_id).await?;
-
+    profile.emojis = update_emoji_cache(&transaction, profile_id).await?;
+    if !profile.is_local() {
+        profile.check_consistency()?;
+    };
     transaction.commit().await?;
     Ok(profile)
 }
@@ -232,15 +239,7 @@ pub async fn update_profile(
      // Get hostname and currently used images
     let maybe_row = transaction.query_opt(
         "
-        SELECT
-            actor_profile,
-            array_remove(
-                ARRAY[
-                    avatar ->> 'file_name',
-                    banner ->> 'file_name'
-                ],
-                NULL
-            ) AS images
+        SELECT actor_profile
         FROM actor_profile WHERE id = $1
         FOR UPDATE
         ",
@@ -248,18 +247,24 @@ pub async fn update_profile(
     ).await?;
     let row = maybe_row.ok_or(DatabaseError::NotFound("profile"))?;
     let profile: DbActorProfile = row.try_get("actor_profile")?;
-    let images = row.try_get("images")?;
-    if profile_data.hostname != profile.hostname && !profile.is_portable() {
+    let detached_files = [&profile.avatar, &profile.banner]
+        .into_iter()
+        .flatten()
+        .filter_map(|image| image.clone().into_file_name())
+        .collect();
+    if profile_data.hostname.as_str() != profile.hostname.as_deref() &&
+        !profile.is_portable()
+    {
         // Only portable actors can change hostname
         return Err(DatabaseTypeError.into());
     };
-    if let Some(ref hostname) = profile_data.hostname {
+    if let WebfingerHostname::Remote(ref hostname) = profile_data.hostname {
         create_instance(&transaction, hostname).await?;
     };
 
-    let profile_acct = match profile_data.hostname() {
+    let profile_acct = match profile_data.hostname {
         WebfingerHostname::Local => Some(profile_data.username.clone()),
-        WebfingerHostname::Remote(hostname) => {
+        WebfingerHostname::Remote(ref hostname) => {
             let profile_acct =
                 format!("{}@{}", profile_data.username, hostname);
             prevent_acct_conflict(
@@ -269,9 +274,9 @@ pub async fn update_profile(
             ).await?;
             Some(profile_acct)
         },
-        WebfingerHostname::Unknown => None,
+        WebfingerHostname::Unknown => return Err(DatabaseTypeError.into()),
     };
-    let updated_count = transaction.execute(
+    let maybe_row = transaction.query_opt(
         "
         UPDATE actor_profile
         SET
@@ -283,27 +288,30 @@ pub async fn update_profile(
             bio_source = $6,
             avatar = $7,
             banner = $8,
-            manually_approves_followers = $9,
-            mention_policy = $10,
-            public_keys = $11,
-            identity_proofs = $12,
-            payment_options = $13,
-            extra_fields = $14,
-            aliases = $15,
-            actor_json = $16,
+            is_automated = $9,
+            manually_approves_followers = $10,
+            mention_policy = $11,
+            public_keys = $12,
+            identity_proofs = $13,
+            payment_options = $14,
+            extra_fields = $15,
+            aliases = $16,
+            actor_json = $17,
             updated_at = CURRENT_TIMESTAMP,
             unreachable_since = NULL
-        WHERE id = $17
+        WHERE id = $18
+        RETURNING actor_profile
         ",
         &[
             &profile_data.username,
-            &profile_data.hostname,
+            &profile_data.hostname.as_str(),
             &profile_acct,
             &profile_data.display_name,
             &profile_data.bio,
             &profile_data.bio_source,
             &profile_data.avatar,
             &profile_data.banner,
+            &profile_data.is_automated,
             &profile_data.manually_approves_followers,
             &profile_data.mention_policy,
             &PublicKeys(profile_data.public_keys),
@@ -315,9 +323,8 @@ pub async fn update_profile(
             &profile_id,
         ],
     ).await?;
-    if updated_count == 0 {
-        return Err(DatabaseError::NotFound("profile"));
-    };
+    let row = maybe_row.ok_or(DatabaseError::NotFound("profile"))?;
+    let mut profile: DbActorProfile = row.try_get("actor_profile")?;
 
     // Delete and re-create related objects
     transaction.execute(
@@ -329,12 +336,14 @@ pub async fn update_profile(
         profile_id,
         profile_data.emojis,
     ).await?;
-    let profile = update_emoji_cache(&transaction, profile_id).await?;
+    profile.emojis = update_emoji_cache(&transaction, profile_id).await?;
+
+    profile.check_consistency()?;
     transaction.commit().await?;
 
     // Orphaned images should be deleted after update
     let deletion_queue = DeletionQueue {
-        files: images,
+        files: detached_files,
         ipfs_objects: vec![],
     };
     Ok((profile, deletion_queue))
@@ -359,8 +368,7 @@ pub async fn set_profile_identity_key(
         &[&profile_id, &identity_key],
     ).await?;
     let row = maybe_row.ok_or(DatabaseError::NotFound("profile"))?;
-    let profile: DbActorProfile = row.try_get("actor_profile")?;
-    profile.check_consistency()?;
+    let profile = DbActorProfile::try_from(&row)?;
     transaction.commit().await?;
     Ok(profile)
 }
@@ -378,8 +386,7 @@ pub async fn get_profile_by_id(
         &[&profile_id],
     ).await?;
     let row = maybe_row.ok_or(DatabaseError::NotFound("profile"))?;
-    let profile: DbActorProfile = row.try_get("actor_profile")?;
-    profile.check_consistency()?;
+    let profile = DbActorProfile::try_from(&row)?;
     Ok(profile)
 }
 
@@ -396,8 +403,7 @@ pub async fn get_remote_profile_by_actor_id(
         &[&actor_id],
     ).await?;
     let row = maybe_row.ok_or(DatabaseError::NotFound("profile"))?;
-    let profile: DbActorProfile = row.try_get("actor_profile")?;
-    profile.check_consistency()?;
+    let profile = DbActorProfile::try_from(&row)?;
     Ok(profile)
 }
 
@@ -415,55 +421,79 @@ pub async fn get_profile_by_acct(
         &[&acct],
     ).await?;
     let row = maybe_row.ok_or(DatabaseError::NotFound("profile"))?;
-    let profile: DbActorProfile = row.try_get("actor_profile")?;
-    profile.check_consistency()?;
+    let profile = DbActorProfile::try_from(&row)?;
     Ok(profile)
+}
+
+pub enum ProfileOrder {
+    Active,
+    Username,
 }
 
 pub async fn get_profiles_paginated(
     db_client: &impl DatabaseClient,
     only_local: bool,
+    order: ProfileOrder,
     offset: u16,
     limit: u16,
 ) -> Result<Vec<DbActorProfile>, DatabaseError> {
-    let condition = if only_local {
-        "WHERE (user_id IS NOT NULL OR portable_user_id IS NOT NULL)"
-    } else { "" };
+    let mut join = "".to_owned();
+    let mut condition = "".to_owned();
+    let mut order_by = "".to_owned();
+    if only_local {
+        condition += "WHERE (user_id IS NOT NULL OR portable_user_id IS NOT NULL)";
+    };
+    match order {
+        ProfileOrder::Active => {
+            join += "LEFT JOIN latest_post ON latest_post.author_id = actor_profile.id";
+            order_by += "ORDER BY latest_post.created_at DESC NULLS LAST";
+        },
+        ProfileOrder::Username => {
+            order_by += "ORDER BY username ASC";
+        },
+    };
     let statement = format!(
         "
         SELECT actor_profile
         FROM actor_profile
+        {join}
         {condition}
-        ORDER BY username
+        {order_by}
         LIMIT $1 OFFSET $2
         ",
+        join=join,
         condition=condition,
+        order_by=order_by,
     );
     let rows = db_client.query(
         &statement,
         &[&i64::from(limit), &i64::from(offset)],
     ).await?;
     let profiles = rows.iter()
-        .map(|row| row.try_get("actor_profile"))
+        .map(DbActorProfile::try_from)
         .collect::<Result<_, _>>()?;
     Ok(profiles)
 }
 
 pub async fn get_profiles_by_ids(
     db_client: &impl DatabaseClient,
-    profiles_ids: Vec<Uuid>,
+    profiles_ids: &[Uuid],
 ) -> Result<Vec<DbActorProfile>, DatabaseError> {
     let rows = db_client.query(
         "
         SELECT actor_profile
-        FROM actor_profile
-        WHERE id = ANY($1)
+        FROM unnest($1::uuid[]) WITH ORDINALITY AS ranked(id, rank)
+        JOIN actor_profile USING (id)
+        ORDER BY rank
         ",
         &[&profiles_ids],
     ).await?;
-    let profiles = rows.iter()
-        .map(|row| row.try_get("actor_profile"))
+    let profiles: Vec<_> = rows.iter()
+        .map(DbActorProfile::try_from)
         .collect::<Result<_, _>>()?;
+    if profiles.len() != profiles_ids.len() {
+        return Err(DatabaseError::NotFound("profile"));
+    };
     Ok(profiles)
 }
 
@@ -474,13 +504,32 @@ pub async fn get_profiles_by_accts(
     let rows = db_client.query(
         "
         SELECT actor_profile
-        FROM actor_profile
-        WHERE acct = ANY($1)
+        FROM unnest($1::text[]) WITH ORDINALITY AS ranked(acct, rank)
+        JOIN actor_profile USING (acct)
+        ORDER BY rank
         ",
         &[&accts],
     ).await?;
     let profiles = rows.iter()
-        .map(|row| row.try_get("actor_profile"))
+        .map(DbActorProfile::try_from)
+        .collect::<Result<_, _>>()?;
+    Ok(profiles)
+}
+
+pub async fn get_remote_profiles_by_actor_ids(
+    db_client: &impl DatabaseClient,
+    actors_ids: &[String],
+) -> Result<Vec<DbActorProfile>, DatabaseError> {
+    let rows = db_client.query(
+        "
+        SELECT actor_profile
+        FROM actor_profile
+        WHERE actor_id = ANY($1)
+        ",
+        &[&actors_ids],
+    ).await?;
+    let profiles = rows.iter()
+        .map(DbActorProfile::try_from)
         .collect::<Result<_, _>>()?;
     Ok(profiles)
 }
@@ -513,25 +562,28 @@ pub async fn delete_profile(
         .map(|row| row.try_get("post_id"))
         .collect::<Result<_, _>>()?;
     // Get list of media files
-    let files_rows = transaction.query(
+    let media_rows = transaction.query(
         "
         SELECT unnest(array_remove(
-            ARRAY[
-                avatar ->> 'file_name',
-                banner ->> 'file_name'
-            ],
+            ARRAY[avatar, banner],
             NULL
-        )) AS file_name
+        )) AS media
         FROM actor_profile WHERE id = $1
         UNION ALL
-        SELECT file_name
+        SELECT media
         FROM media_attachment WHERE post_id = ANY($2)
+        UNION ALL
+        SELECT media
+        FROM activitypub_media WHERE owner_id = $1
         ",
         &[&profile_id, &posts],
     ).await?;
-    let files: Vec<String> = files_rows.iter()
-        .map(|row| row.try_get("file_name"))
-        .collect::<Result<_, _>>()?;
+    let detached_files = media_rows.into_iter()
+        .map(|row| row.try_get("media"))
+        .collect::<Result<Vec<PartialMediaInfo>, _>>()?
+        .into_iter()
+        .filter_map(|media| media.into_file_name())
+        .collect();
     // Get list of IPFS objects
     let ipfs_objects_rows = transaction.query(
         "
@@ -646,7 +698,7 @@ pub async fn delete_profile(
         return Err(DatabaseError::NotFound("profile"));
     };
     transaction.commit().await?;
-    Ok(DeletionQueue { files, ipfs_objects })
+    Ok(DeletionQueue { files: detached_files, ipfs_objects })
 }
 
 pub async fn search_profiles(
@@ -667,6 +719,7 @@ pub async fn search_profiles(
         },
     };
     // Showing local accounts first
+    // Showing recently updated profiles first
     let rows = db_client.query(
         "
         SELECT actor_profile
@@ -674,7 +727,8 @@ pub async fn search_profiles(
         WHERE acct ILIKE $1
         ORDER BY
             user_id IS NOT NULL DESC,
-            portable_user_id IS NOT NULL DESC
+            portable_user_id IS NOT NULL DESC,
+            updated_at DESC
         LIMIT $2 OFFSET $3
         ",
         &[
@@ -683,8 +737,8 @@ pub async fn search_profiles(
             &i64::from(offset),
         ],
     ).await?;
-    let profiles: Vec<DbActorProfile> = rows.iter()
-        .map(|row| row.try_get("actor_profile"))
+    let profiles = rows.iter()
+        .map(DbActorProfile::try_from)
         .collect::<Result<_, _>>()?;
     Ok(profiles)
 }
@@ -706,8 +760,8 @@ pub async fn search_profiles_by_did_only(
         ",
         &[&did.to_string()],
     ).await?;
-    let profiles: Vec<DbActorProfile> = rows.iter()
-        .map(|row| row.try_get("actor_profile"))
+    let profiles = rows.iter()
+        .map(DbActorProfile::try_from)
         .collect::<Result<_, _>>()?;
     Ok(profiles)
 }
@@ -755,8 +809,8 @@ pub async fn search_profiles_by_did(
         )?;
         let rows = db_client.query(query.sql(), query.parameters()).await?;
         let unverified = rows.iter()
-            .map(|row| row.try_get("actor_profile"))
-            .collect::<Result<Vec<DbActorProfile>, _>>()?
+            .map(DbActorProfile::try_from)
+            .collect::<Result<Vec<_>, _>>()?
             .into_iter()
             // Exclude verified
             .filter(|profile| !verified.iter().any(|item| item.id == profile.id))
@@ -798,7 +852,7 @@ pub async fn update_follower_count(
         &[&change, &profile_id],
     ).await?;
     let row = maybe_row.ok_or(DatabaseError::NotFound("profile"))?;
-    let profile = row.try_get("actor_profile")?;
+    let profile = DbActorProfile::try_from(&row)?;
     Ok(profile)
 }
 
@@ -817,7 +871,7 @@ pub async fn update_following_count(
         &[&change, &profile_id],
     ).await?;
     let row = maybe_row.ok_or(DatabaseError::NotFound("profile"))?;
-    let profile = row.try_get("actor_profile")?;
+    let profile = DbActorProfile::try_from(&row)?;
     Ok(profile)
 }
 
@@ -836,7 +890,7 @@ pub async fn update_subscriber_count(
         &[&change, &profile_id],
     ).await?;
     let row = maybe_row.ok_or(DatabaseError::NotFound("profile"))?;
-    let profile = row.try_get("actor_profile")?;
+    let profile = DbActorProfile::try_from(&row)?;
     Ok(profile)
 }
 
@@ -855,7 +909,7 @@ pub async fn update_post_count(
         &[&change, &profile_id],
     ).await?;
     let row = maybe_row.ok_or(DatabaseError::NotFound("profile"))?;
-    let profile = row.try_get("actor_profile")?;
+    let profile = DbActorProfile::try_from(&row)?;
     Ok(profile)
 }
 
@@ -904,7 +958,7 @@ pub async fn find_unreachable(
         &[&unreachable_since],
     ).await?;
     let profiles = rows.iter()
-        .map(|row| row.try_get("actor_profile"))
+        .map(DbActorProfile::try_from)
         .collect::<Result<_, _>>()?;
     Ok(profiles)
 }
@@ -949,7 +1003,7 @@ pub async fn find_empty_profiles(
                 WHERE owner_id = actor_profile.id
             )
             AND NOT EXISTS (
-                SELECT 1 FROM mention
+                SELECT 1 FROM post_mention
                 WHERE profile_id = actor_profile.id
             )
             AND NOT EXISTS (
@@ -979,20 +1033,18 @@ pub async fn find_empty_profiles(
 
 #[cfg(test)]
 mod tests {
-    use serde_json::json;
-    use serial_test::serial;
     use apx_core::{
         caip2::ChainId,
-        crypto_eddsa::generate_weak_ed25519_key,
+        crypto::eddsa::generate_weak_ed25519_key,
     };
+    use serde_json::json;
+    use serial_test::serial;
     use crate::database::test_utils::create_test_database;
     use crate::emojis::{
-        queries::create_emoji,
-        types::EmojiImage,
+        queries::create_or_update_local_emoji,
     };
     use crate::media::types::MediaInfo;
     use crate::profiles::{
-        queries::create_profile,
         test_utils::create_test_local_profile,
         types::{
             DbActor,
@@ -1005,13 +1057,10 @@ mod tests {
     };
     use crate::users::{
         queries::create_user,
+        test_utils::create_test_portable_user,
         types::UserCreateData,
     };
     use super::*;
-
-    fn create_test_actor(actor_id: &str) -> DbActor {
-        DbActor { id: actor_id.to_string(), ..Default::default() }
-    }
 
     #[tokio::test]
     #[serial]
@@ -1041,13 +1090,14 @@ mod tests {
     async fn test_create_profile_remote() {
         let profile_data = ProfileCreateData {
             username: "test".to_string(),
-            hostname: Some("example.com".to_string()),
+            hostname: WebfingerHostname::Remote("example.com".to_string()),
             public_keys: vec![DbActorKey::default()],
-            actor_json: Some(create_test_actor("https://example.com/users/test")),
+            actor_json: Some(DbActor::for_test("https://example.com/users/test")),
             ..Default::default()
         };
         let db_client = &mut create_test_database().await;
         let profile = create_profile(db_client, profile_data).await.unwrap();
+        profile.check_consistency().unwrap();
         assert_eq!(profile.username, "test");
         assert_eq!(profile.hostname.unwrap(), "example.com");
         assert_eq!(profile.acct.unwrap(), "test@example.com");
@@ -1061,18 +1111,15 @@ mod tests {
     #[serial]
     async fn test_create_profile_with_emoji() {
         let db_client = &mut create_test_database().await;
-        let image = EmojiImage::from(MediaInfo::png_for_test());
-        let emoji = create_emoji(
+        let image = MediaInfo::png_for_test();
+        let (emoji, _) = create_or_update_local_emoji(
             db_client,
             "testemoji",
-            None,
             image,
-            None,
-            Utc::now(),
         ).await.unwrap();
         let profile_data = ProfileCreateData {
             username: "test".to_string(),
-            emojis: vec![emoji.id.clone()],
+            emojis: vec![emoji.id],
             ..Default::default()
         };
         let profile = create_profile(db_client, profile_data).await.unwrap();
@@ -1088,17 +1135,17 @@ mod tests {
         let actor_id = "https://example.com/users/test";
         let profile_data_1 = ProfileCreateData {
             username: "test-1".to_string(),
-            hostname: Some("example.com".to_string()),
+            hostname: WebfingerHostname::Remote("example.com".to_string()),
             public_keys: vec![DbActorKey::default()],
-            actor_json: Some(create_test_actor(actor_id)),
+            actor_json: Some(DbActor::for_test(actor_id)),
             ..Default::default()
         };
         create_profile(db_client, profile_data_1).await.unwrap();
         let profile_data_2 = ProfileCreateData {
             username: "test-2".to_string(),
-            hostname: Some("example.com".to_string()),
+            hostname: WebfingerHostname::Remote("example.com".to_string()),
             public_keys: vec![DbActorKey::default()],
-            actor_json: Some(create_test_actor(actor_id)),
+            actor_json: Some(DbActor::for_test(actor_id)),
             ..Default::default()
         };
         let error = create_profile(db_client, profile_data_2).await.err().unwrap();
@@ -1111,18 +1158,18 @@ mod tests {
         let db_client = &mut create_test_database().await;
         let profile_data_1 = ProfileCreateData {
             username: "test".to_string(),
-            hostname: Some("social.example".to_string()),
+            hostname: WebfingerHostname::Remote("social.example".to_string()),
             public_keys: vec![DbActorKey::default()],
-            actor_json: Some(create_test_actor("https://social.example/users/1")),
+            actor_json: Some(DbActor::for_test("https://social.example/users/1")),
             ..Default::default()
         };
         let profile_1 = create_profile(db_client, profile_data_1).await.unwrap();
         assert_eq!(profile_1.acct.unwrap(), "test@social.example");
         let profile_data_2 = ProfileCreateData {
             username: "test".to_string(),
-            hostname: Some("social.example".to_string()),
+            hostname: WebfingerHostname::Remote("social.example".to_string()),
             public_keys: vec![DbActorKey::default()],
-            actor_json: Some(create_test_actor("https://social.example/users/2")),
+            actor_json: Some(DbActor::for_test("https://social.example/users/2")),
             ..Default::default()
         };
         let profile_2 = create_profile(db_client, profile_data_2).await.unwrap();
@@ -1137,11 +1184,7 @@ mod tests {
     #[serial]
     async fn test_update_profile() {
         let db_client = &mut create_test_database().await;
-        let profile_data = ProfileCreateData {
-            username: "test".to_string(),
-            ..Default::default()
-        };
-        let profile = create_profile(db_client, profile_data).await.unwrap();
+        let profile = create_test_local_profile(db_client, "test").await;
         let mut profile_data = ProfileUpdateData::from(&profile);
         let bio = "test bio";
         profile_data.bio = Some(bio.to_string());
@@ -1156,6 +1199,28 @@ mod tests {
         assert!(profile_updated.updated_at != profile.updated_at);
         assert_eq!(deletion_queue.files.len(), 0);
         assert_eq!(deletion_queue.ipfs_objects.len(), 0);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_update_profile_with_unmanaged_account() {
+        let db_client = &mut create_test_database().await;
+        let user = create_test_portable_user(
+            db_client,
+            "test",
+            "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor",
+        ).await;
+        assert_eq!(user.profile.hostname(), WebfingerHostname::Local);
+        let mut profile_data = ProfileUpdateData::from(&user.profile);
+        let bio = "test bio";
+        profile_data.bio = Some(bio.to_string());
+        let (profile_updated, _) = update_profile(
+            db_client,
+            user.id,
+            profile_data,
+        ).await.unwrap();
+        assert_eq!(profile_updated.acct, user.profile.acct);
+        assert_eq!(profile_updated.hostname(), user.profile.hostname());
     }
 
     #[tokio::test]
@@ -1184,6 +1249,23 @@ mod tests {
         let deletion_queue = delete_profile(db_client, profile.id).await.unwrap();
         assert_eq!(deletion_queue.files.len(), 0);
         assert_eq!(deletion_queue.ipfs_objects.len(), 0);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_get_profiles_paginated() {
+        let db_client = &mut create_test_database().await;
+        let profile = create_test_local_profile(db_client, "test").await;
+        let profiles = get_profiles_paginated(
+            db_client,
+            false, // not only local
+            ProfileOrder::Active,
+            0, // no offset
+            40,
+        ).await.unwrap();
+
+        assert_eq!(profiles.len(), 1);
+        assert_eq!(profiles[0].id, profile.id);
     }
 
     #[tokio::test]
@@ -1234,7 +1316,11 @@ mod tests {
         };
         let profile_data = ProfileCreateData {
             extra_fields: vec![extra_field],
-            ..Default::default()
+            ..ProfileCreateData::remote_for_test(
+                "test",
+                "social.example",
+                "https://social.example",
+            )
         };
         let profile = create_profile(db_client, profile_data).await.unwrap();
         let profiles = search_profiles_by_ethereum_address(
@@ -1258,7 +1344,11 @@ mod tests {
         };
         let profile_data = ProfileCreateData {
             identity_proofs: vec![identity_proof],
-            ..Default::default()
+            ..ProfileCreateData::remote_for_test(
+                "test",
+                "social.example",
+                "https://social.example",
+            )
         };
         let profile = create_profile(db_client, profile_data).await.unwrap();
         let profiles = search_profiles_by_ethereum_address(
@@ -1278,9 +1368,9 @@ mod tests {
         let actor_id = "https://example.com/users/test";
         let profile_data = ProfileCreateData {
             username: "test".to_string(),
-            hostname: Some("example.com".to_string()),
+            hostname: WebfingerHostname::Remote("example.com".to_string()),
             public_keys: vec![DbActorKey::default()],
-            actor_json: Some(create_test_actor(actor_id)),
+            actor_json: Some(DbActor::for_test(actor_id)),
             ..Default::default()
         };
         let profile = create_profile(db_client, profile_data).await.unwrap();

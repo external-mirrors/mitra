@@ -9,6 +9,7 @@ use mitra_utils::id::generate_ulid;
 
 use crate::{
     contexts::{build_default_context, Context},
+    deliverer::Recipient,
     identifiers::{
         local_activity_id,
         local_actor_id,
@@ -35,13 +36,13 @@ struct RemovePerson {
 }
 
 fn build_remove_person(
-    instance_url: &str,
+    instance_uri: &str,
     sender_username: &str,
     person_id: &str,
     collection: LocalActorCollection,
 ) -> RemovePerson {
-    let actor_id = local_actor_id(instance_url, sender_username);
-    let activity_id = local_activity_id(instance_url, REMOVE, generate_ulid());
+    let actor_id = local_actor_id(instance_uri, sender_username);
+    let activity_id = local_activity_id(instance_uri, REMOVE, generate_ulid());
     let collection_id = collection.of(&actor_id);
     RemovePerson {
         context: build_default_context(),
@@ -54,24 +55,37 @@ fn build_remove_person(
     }
 }
 
-pub fn prepare_remove_person(
+fn prepare_remove_person(
     instance: &Instance,
     sender: &User,
     person: &DbActor,
     collection: LocalActorCollection,
 ) -> OutgoingActivityJobData {
     let activity = build_remove_person(
-        &instance.url(),
+        instance.uri_str(),
         &sender.profile.username,
         &person.id,
         collection,
     );
-    let recipients = vec![person.clone()];
+    let recipients = Recipient::for_inbox(person);
     OutgoingActivityJobData::new(
-        &instance.url(),
+        instance.uri_str(),
         sender,
         activity,
         recipients,
+    )
+}
+
+pub fn prepare_remove_subscriber(
+    instance: &Instance,
+    subscription_sender: &DbActor,
+    subscription_recipient: &User,
+) -> OutgoingActivityJobData {
+    prepare_remove_person(
+        instance,
+        subscription_recipient,
+        subscription_sender,
+        LocalActorCollection::Subscribers,
     )
 }
 
@@ -79,7 +93,7 @@ pub fn prepare_remove_person(
 mod tests {
     use super::*;
 
-    const INSTANCE_URL: &str = "https://server.example";
+    const INSTANCE_URI: &str = "https://server.example";
 
     #[test]
     fn test_build_remove_person() {
@@ -87,7 +101,7 @@ mod tests {
         let person_id = "https://remote.example/actor/test";
         let collection = LocalActorCollection::Subscribers;
         let activity = build_remove_person(
-            INSTANCE_URL,
+            INSTANCE_URI,
             sender_username,
             person_id,
             collection,
@@ -96,12 +110,12 @@ mod tests {
         assert_eq!(activity.activity_type, "Remove");
         assert_eq!(
             activity.actor,
-            format!("{}/users/{}", INSTANCE_URL, sender_username),
+            format!("{}/users/{}", INSTANCE_URI, sender_username),
         );
         assert_eq!(activity.object, person_id);
         assert_eq!(
             activity.target,
-            format!("{}/users/{}/subscribers", INSTANCE_URL, sender_username),
+            format!("{}/users/{}/subscribers", INSTANCE_URI, sender_username),
         );
         assert_eq!(activity.to, vec![person_id]);
     }

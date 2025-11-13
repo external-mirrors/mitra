@@ -11,7 +11,7 @@ use crate::relationships::{
     types::RelationshipType,
 };
 
-use super::types::{DbSubscription, Subscription};
+use super::types::{Subscription, SubscriptionDetailed};
 
 pub async fn create_subscription(
     db_client: &mut impl DatabaseClient,
@@ -19,7 +19,7 @@ pub async fn create_subscription(
     recipient_id: Uuid,
     expires_at: DateTime<Utc>,
     updated_at: DateTime<Utc>,
-) -> Result<DbSubscription, DatabaseError> {
+) -> Result<Subscription, DatabaseError> {
     let mut transaction = db_client.transaction().await?;
     let row = transaction.query_one(
         "
@@ -39,7 +39,7 @@ pub async fn create_subscription(
             &updated_at,
         ],
     ).await.map_err(catch_unique_violation("subscription"))?;
-    let subscription: DbSubscription = row.try_get("subscription")?;
+    let subscription: Subscription = row.try_get("subscription")?;
     subscribe_opt(
         &mut transaction,
         subscription.sender_id,
@@ -54,7 +54,7 @@ pub async fn update_subscription(
     subscription_id: i32,
     expires_at: DateTime<Utc>,
     updated_at: DateTime<Utc>,
-) -> Result<DbSubscription, DatabaseError> {
+) -> Result<Subscription, DatabaseError> {
     let mut transaction = db_client.transaction().await?;
     let maybe_row = transaction.query_opt(
         "
@@ -72,7 +72,7 @@ pub async fn update_subscription(
         ],
     ).await?;
     let row = maybe_row.ok_or(DatabaseError::NotFound("subscription"))?;
-    let subscription: DbSubscription = row.try_get("subscription")?;
+    let subscription: Subscription = row.try_get("subscription")?;
     if expires_at > Utc::now() {
         subscribe_opt(
             &mut transaction,
@@ -88,7 +88,7 @@ pub async fn get_subscription_by_participants(
     db_client: &impl DatabaseClient,
     sender_id: Uuid,
     recipient_id: Uuid,
-) -> Result<DbSubscription, DatabaseError> {
+) -> Result<Subscription, DatabaseError> {
     let maybe_row = db_client.query_opt(
         "
         SELECT subscription
@@ -98,13 +98,13 @@ pub async fn get_subscription_by_participants(
         &[&sender_id, &recipient_id],
     ).await?;
     let row = maybe_row.ok_or(DatabaseError::NotFound("subscription"))?;
-    let subscription: DbSubscription = row.try_get("subscription")?;
+    let subscription: Subscription = row.try_get("subscription")?;
     Ok(subscription)
 }
 
 pub async fn get_expired_subscriptions(
     db_client: &impl DatabaseClient,
-) -> Result<Vec<DbSubscription>, DatabaseError> {
+) -> Result<Vec<Subscription>, DatabaseError> {
     let rows = db_client.query(
         "
         SELECT subscription
@@ -131,7 +131,7 @@ pub async fn get_incoming_subscriptions(
     include_expired: bool,
     max_subscription_id: Option<i32>,
     limit: u16,
-) -> Result<Vec<Subscription>, DatabaseError> {
+) -> Result<Vec<SubscriptionDetailed>, DatabaseError> {
     let mut filter = "subscription.recipient_id = $1".to_owned();
     if !include_expired {
         filter += " AND subscription.expires_at > CURRENT_TIMESTAMP";
@@ -155,7 +155,7 @@ pub async fn get_incoming_subscriptions(
         &[&recipient_id, &max_subscription_id, &i64::from(limit)],
     ).await?;
     let subscriptions = rows.iter()
-        .map(Subscription::try_from)
+        .map(SubscriptionDetailed::try_from)
         .collect::<Result<_, _>>()?;
     Ok(subscriptions)
 }

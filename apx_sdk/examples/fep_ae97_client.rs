@@ -1,67 +1,63 @@
 use apx_sdk::{
-    agent::{FederationAgent, RequestSigner},
+    agent::FederationAgent,
     core::{
-        crypto_eddsa::{
-            ed25519_public_key_from_secret_key,
-            generate_ed25519_key,
+        crypto::{
+            eddsa::{
+                ed25519_public_key_from_secret_key,
+                generate_ed25519_key,
+            },
+            rsa::generate_rsa_key,
         },
-        crypto_rsa::generate_rsa_key,
         did_key::DidKey,
-        json_signatures::create::sign_object_eddsa,
+        http_signatures::create::HttpSigner,
+        json_signatures::create::sign_object,
     },
     deliver::send_object,
 };
 use serde_json::json;
 
-#[tokio::main]
+#[tokio::main(flavor = "current_thread")]
 async fn main() -> () {
     let identity_key = generate_ed25519_key();
     let identity_public_key = ed25519_public_key_from_secret_key(&identity_key);
-    let authority = DidKey::from_ed25519_key(&identity_public_key);
-    let request_signer = RequestSigner {
-        key: generate_rsa_key().unwrap(),
-        key_id: format!("http://127.0.0.1:8380/.well-known/apgateway/{authority}/rsa_key"),
-    };
+    let did = DidKey::from_ed25519_key(&identity_public_key);
+    let http_key = generate_rsa_key().unwrap();
+    let http_key_id = format!("http://127.0.0.1:8380/.well-known/apgateway/{did}/rsa_key");
+    let http_signer = HttpSigner::new_rsa(http_key, http_key_id);
     let agent = FederationAgent {
         user_agent: Some("fep-ae97-client".to_string()),
         ssrf_protection_enabled: false, // allow connections to 127.0.0.1
-        signer: Some(request_signer),
+        signer: Some(http_signer),
         ..Default::default()
     };
     let note = json!({
         "@context": "https://www.w3.org/ns/activitystreams",
-        "id": format!("http://127.0.0.1:8380/.well-known/apgateway/{authority}/note/1"),
+        "id": format!("http://127.0.0.1:8380/.well-known/apgateway/{did}/note/1"),
         "type": "Note",
-        "attributedTo": format!("http://127.0.0.1:8380/.well-known/apgateway/{authority}/actor"),
+        "attributedTo": format!("http://127.0.0.1:8380/.well-known/apgateway/{did}/actor"),
         "content": "<p>test</p>",
     });
-    let signed_note = sign_object_eddsa(
+    let signed_note = sign_object(
         &identity_key,
-        &authority.to_string(),
+        &did.verification_method_id(),
         &note,
-        None,
-        false,
-        true,
     ).unwrap();
     let create = json!({
         "@context": "https://www.w3.org/ns/activitystreams",
-        "id": format!("http://127.0.0.1:8380/.well-known/apgateway/{authority}/activity/1"),
+        "id": format!("http://127.0.0.1:8380/.well-known/apgateway/{did}/activity/1"),
         "type": "Create",
-        "actor": format!("http://127.0.0.1:8380/.well-known/apgateway/{authority}/actor"),
+        "actor": format!("http://127.0.0.1:8380/.well-known/apgateway/{did}/actor"),
         "object": signed_note,
     });
-    let signed_create = sign_object_eddsa(
+    let signed_create = sign_object(
         &identity_key,
-        &authority.to_string(),
+        &did.verification_method_id(),
         &create,
-        None,
-        false,
-        true,
     ).unwrap();
     send_object(
         &agent,
-        &signed_create.to_string(),
-        &format!("http://127.0.0.1:8380/.well-known/apgateway/{authority}/outbox"),
+        &format!("http://127.0.0.1:8380/.well-known/apgateway/{did}/outbox"),
+        &signed_create,
         &[],
     ).await.unwrap();
 }

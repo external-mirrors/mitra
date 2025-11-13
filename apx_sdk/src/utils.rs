@@ -1,69 +1,122 @@
+//! Miscellaneous utilities.
+
 use serde_json::{Value as JsonValue};
 
 use apx_core::{
     http_types::HeaderValue,
-    http_url::HttpUrl,
     http_utils::remove_quotes,
-    urls::{
-        get_hostname,
-        UrlError,
-    },
+    url::http_uri::HttpUri,
 };
 
 use super::constants::AP_PUBLIC;
 
-// AP requires actor to have inbox and outbox,
-// but `outbox` property is not always present.
-// https://www.w3.org/TR/activitypub/#actor-objects
-pub fn is_actor(value: &JsonValue) -> bool {
-    value["inbox"].as_str().is_some()
+/// Core object type
+///
+/// <https://codeberg.org/fediverse/fep/src/branch/main/fep/2277/fep-2277.md>
+#[derive(Debug, Clone, Copy)]
+pub enum CoreType {
+    Object,
+    Link,
+    Actor,
+    Activity,
+    Collection,
+    PublicKey,
+    VerificationMethod,
 }
 
-// Activities must have `actor` property
+/// Determines the core type of an object.
+pub fn get_core_type(value: &JsonValue) -> CoreType {
+    if !value["inbox"].is_null() {
+        // AP requires actor to have inbox and outbox,
+        // but `outbox` property is not always present.
+        // https://www.w3.org/TR/activitypub/#actor-objects
+        CoreType::Actor
+    }
+    else if !value["publicKeyMultibase"].is_null() {
+        CoreType::VerificationMethod
+    }
+    else if !value["publicKeyPem"].is_null() {
+        CoreType::PublicKey
+    }
+    else if !value["href"].is_null() {
+        // `href` may only appear in Link objects:
+        // https://www.w3.org/TR/activitystreams-vocabulary/#dfn-href
+        CoreType::Link
+    }
+    else if !value["actor"].is_null() && value["attributedTo"].is_null() {
+        // Activities must have an `actor` property:
+        // https://www.w3.org/TR/activitystreams-vocabulary/#dfn-actor
+        // However, Pleroma adds 'actor' property to Note objects
+        // https://git.pleroma.social/pleroma/pleroma/-/issues/3269
+        // https://akkoma.dev/AkkomaGang/akkoma/issues/770
+        CoreType::Activity
+    }
+    else if
+        !value["items"].is_null() ||
+        !value["orderedItems"].is_null() ||
+        !value["totalItems"].is_null() ||
+        !value["partOf"].is_null() ||
+        !value["first"].is_null() ||
+        !value["last"].is_null() ||
+        !value["next"].is_null() ||
+        !value["prev"].is_null() ||
+        !value["current"].is_null()
+    {
+        // `items` may only appear in Collection objects:
+        // https://www.w3.org/TR/activitystreams-vocabulary/#dfn-items
+        CoreType::Collection
+    }
+    else {
+        CoreType::Object
+    }
+}
+
+/// Returns `true` if the given object has `publicKeyPem` or `publicKeyMultibase` property.
+pub fn is_key_like(value: &JsonValue) -> bool {
+    !value["publicKeyMultibase"].is_null() || !value["publicKeyPem"].is_null()
+}
+
+pub fn is_actor(value: &JsonValue) -> bool {
+    matches!(get_core_type(value), CoreType::Actor)
+}
+
 pub fn is_activity(value: &JsonValue) -> bool {
-    // Pleroma adds 'actor' property to Note objects
-    // https://git.pleroma.social/pleroma/pleroma/-/issues/3269
-    // https://akkoma.dev/AkkomaGang/akkoma/issues/770
-    !value["actor"].is_null() && value["attributedTo"].is_null()
+    matches!(get_core_type(value), CoreType::Activity)
 }
 
 pub fn is_collection(value: &JsonValue) -> bool {
-    !value["items"].is_null() || !value["orderedItems"].is_null()
+    matches!(get_core_type(value), CoreType::Collection)
 }
 
 pub fn is_object(value: &JsonValue) -> bool {
-    !is_actor(value) && !is_activity(value) && !is_collection(value)
+    matches!(get_core_type(value), CoreType::Object | CoreType::Link)
 }
 
 pub fn key_id_to_actor_id(key_id: &str) -> Result<String, &'static str> {
-    let key_url = key_id.parse::<HttpUrl>()?;
-    let actor_id = if key_url.query().filter(|query| query.contains("id=")).is_some() {
+    let key_uri = HttpUri::parse(key_id)?;
+    let actor_id = if key_uri.query().filter(|query| query.contains("id=")).is_some() {
         // Podcast Index compat
         // Strip fragment, keep query
-        key_url.without_fragment()
+        key_uri.without_fragment()
     } else {
         // Strip fragment and query (works with most AP servers)
-        key_url.without_query_and_fragment()
+        key_uri.without_query_and_fragment()
     };
     // GoToSocial compat
     let actor_id = actor_id.trim_end_matches("/main-key");
     Ok(actor_id.to_string())
 }
 
+/// Returns `true` if the given string is a representation of the `Public` collection
 pub fn is_public(target_id: impl AsRef<str>) -> bool {
-    // Some servers (e.g. Takahe) use "as" namespace
+    // Some servers use "as" namespace
+    // https://www.w3.org/TR/activitypub/#public-addressing
     const PUBLIC_VARIANTS: [&str; 3] = [
         AP_PUBLIC,
         "as:Public",
         "Public",
     ];
     PUBLIC_VARIANTS.contains(&target_id.as_ref())
-}
-
-pub fn is_same_hostname(id_1: &str, id_2: &str) -> Result<bool, UrlError> {
-    let hostname_1 = get_hostname(id_1)?;
-    let hostname_2 = get_hostname(id_2)?;
-    Ok(hostname_1 == hostname_2)
 }
 
 /// Extract media type from Content-Type or Accept header
@@ -96,6 +149,44 @@ pub fn extract_media_type(header_value: &HeaderValue) -> Option<String> {
 mod tests {
     use serde_json::json;
     use super::*;
+
+    #[test]
+    fn test_get_core_type_verification_method() {
+        let object = json!({
+            "id": "https://social/example/actors/1#main-key",
+            "controller": "https://social.example/actors/1",
+            "publicKeyMultibase": "z6MkrJVnaZkeFzdQyMZu1cgjg7k1pZZ6pvBQ7XJPt4swbTQ2",
+        });
+        let core_type = get_core_type(&object);
+        assert!(matches!(core_type, CoreType::VerificationMethod));
+        assert!(is_key_like(&object));
+    }
+
+    #[test]
+    fn test_get_core_type_public_key() {
+        let object = json!({
+            "id": "https://social/example/actors/1#main-key",
+            "owner": "https://social.example/actors/1",
+            "publicKeyPem": "-----BEGIN PUBLIC KEY-----\ntest\n-----END PUBLIC KEY-----\n\n",
+        });
+        let core_type = get_core_type(&object);
+        assert!(matches!(core_type, CoreType::PublicKey));
+        assert!(is_key_like(&object));
+    }
+
+    #[test]
+    fn test_get_core_type_with_inbox_and_public_key_pem() {
+        let object = json!({
+            "id": "https://social/example/actors/1#main-key",
+            "owner": "https://social.example/actors/1",
+            "publicKeyPem": "-----BEGIN PUBLIC KEY-----\ntest\n-----END PUBLIC KEY-----\n\n",
+            "inbox": "https://social.example/actors/1/inbox",
+            "outbox": "https://social.example/actors/1/outbox",
+        });
+        let core_type = get_core_type(&object);
+        assert!(matches!(core_type, CoreType::Actor));
+        assert!(is_key_like(&object));
+    }
 
     #[test]
     fn test_is_actor() {
@@ -190,18 +281,6 @@ mod tests {
         let key_id = "https://social.example#main-key";
         let actor_id = key_id_to_actor_id(key_id).unwrap();
         assert_eq!(actor_id, "https://social.example");
-    }
-
-    #[test]
-    fn test_is_same_hostname() {
-        let id_1 = "https://server.example/objects/1";
-        let id_2 = "https://server.example/actors/test";
-        let ret = is_same_hostname(id_1, id_2).unwrap();
-        assert_eq!(ret, true);
-
-        let id_3 = "https://other.example/objects/1";
-        let ret = is_same_hostname(id_1, id_3).unwrap();
-        assert_eq!(ret, false);
     }
 
     #[test]

@@ -8,14 +8,14 @@ use crate::{
 
 use super::{
     queries::create_post,
-    types::{Post, PostContext, PostCreateData},
+    types::{PostContext, PostCreateData, PostDetailed},
 };
 
 pub async fn create_test_local_post(
     db_client: &mut impl DatabaseClient,
     author_id: Uuid,
     content: &str,
-) -> Post {
+) -> PostDetailed {
     let post_data = PostCreateData {
         content: content.to_string(),
         content_source: Some(content.to_string()),
@@ -29,7 +29,7 @@ pub async fn create_test_remote_post(
     author_id: Uuid,
     content: &str,
     object_id: &str,
-) -> Post {
+) -> PostDetailed {
     let post_data = PostCreateData {
         content: content.to_string(),
         object_id: Some(object_id.to_string()),
@@ -38,11 +38,11 @@ pub async fn create_test_remote_post(
     create_post(db_client, author_id, post_data).await.unwrap()
 }
 
-impl Post {
+impl PostDetailed {
     pub fn local_for_test(author: &DbActorProfile) -> Self {
         let post_id = Uuid::new_v4();
         let conversation = Conversation::for_test(post_id);
-        Post {
+        Self {
             id: post_id,
             author: author.clone(),
             conversation: Some(conversation),
@@ -56,7 +56,7 @@ impl Post {
     ) -> Self {
         let post_id = Uuid::new_v4();
         let conversation = Conversation::for_test(post_id);
-        Post {
+        Self {
             id: post_id,
             author: author.clone(),
             conversation: Some(conversation),
@@ -67,7 +67,7 @@ impl Post {
 }
 
 impl PostContext {
-    pub fn reply_to(post: &Post) -> Self {
+    pub fn reply_to(post: &PostDetailed) -> Self {
         Self::Reply {
             conversation_id: post.expect_conversation().id,
             in_reply_to_id: post.id,

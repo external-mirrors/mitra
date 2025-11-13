@@ -6,14 +6,21 @@ use serde::{
 };
 use super::ConfigError;
 
+// Included media types are supported in popular web browsers.
 // Not included
 // https://developer.mozilla.org/en-US/docs/Web/Media/Formats/Image_types
 // - image/tiff only supported by Safari
-const SUPPORTED_MEDIA_TYPES: [&str; 15] = [
+const SUPPORTED_MEDIA_TYPES: [&str; 21] = [
     "audio/flac",
     "audio/mpeg",
     "audio/ogg",
     "audio/x-wav",
+    "audio/wav", // WAV (used by Chrome)
+    "audio/vnd.wave", // WAV (used by Firefox)
+    "audio/aac",
+    "audio/mp4", // M4A (used by Firefox)
+    "audio/x-m4a", // M4A (used by Chrome)
+    "audio/m4a", // M4A (used by BloatFE)
     "image/apng",
     "image/avif",
     "image/gif",
@@ -59,9 +66,12 @@ fn deserialize_file_size<'de, D>(
 }
 
 const fn default_file_size_limit() -> usize { 20_000_000 } // 20 MB
-const fn default_profile_image_size_limit() -> usize { 5_000_000 } // 5 MB
-const fn default_emoji_size_limit() -> usize { 500_000 } // 500 kB
 
+const fn default_profile_image_size_limit() -> usize { 5_000_000 } // 5 MB
+// https://github.com/mastodon/mastodon/blob/v4.3.3/app/models/concerns/account/avatar.rb
+const fn default_profile_image_local_size_limit() -> usize { 2_000_000 } // 2 MB
+
+const fn default_emoji_size_limit() -> usize { 1_000_000 } // 1 MB
 // https://github.com/mastodon/mastodon/blob/v4.2.8/app/models/custom_emoji.rb#L27
 const fn default_emoji_local_size_limit() -> usize { 256_000 } // 256 kB
 
@@ -78,6 +88,12 @@ pub struct MediaLimits {
         deserialize_with = "deserialize_file_size",
     )]
     pub profile_image_size_limit: usize,
+
+    #[serde(
+        default = "default_profile_image_local_size_limit",
+        deserialize_with = "deserialize_file_size",
+    )]
+    pub profile_image_local_size_limit: usize,
 
     #[serde(
         default = "default_emoji_size_limit",
@@ -101,6 +117,7 @@ impl Default for MediaLimits {
         Self {
             file_size_limit: default_file_size_limit(),
             profile_image_size_limit: default_profile_image_size_limit(),
+            profile_image_local_size_limit: default_profile_image_local_size_limit(),
             emoji_size_limit: default_emoji_size_limit(),
             emoji_local_size_limit: default_emoji_local_size_limit(),
             extra_supported_types: vec![],
@@ -118,17 +135,27 @@ impl MediaLimits {
 }
 
 const fn default_post_character_limit() -> usize { 5000 }
+const fn default_attachment_limit() -> usize { 16 }
+// Mastodon's limit is 4
+// https://github.com/mastodon/mastodon/blob/v4.3.7/app/models/status.rb#L42
+const fn default_attachment_local_limit() -> usize { default_attachment_limit() }
 
 #[derive(Clone, Deserialize)]
 pub struct PostLimits {
     #[serde(default = "default_post_character_limit")]
     pub character_limit: usize,
+    #[serde(default = "default_attachment_limit")]
+    pub attachment_limit: usize,
+    #[serde(default = "default_attachment_local_limit")]
+    pub attachment_local_limit: usize,
 }
 
 impl Default for PostLimits {
     fn default() -> Self {
         Self {
             character_limit: default_post_character_limit(),
+            attachment_limit: default_attachment_limit(),
+            attachment_local_limit: default_attachment_local_limit(),
         }
     }
 }

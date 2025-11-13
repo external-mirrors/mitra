@@ -7,7 +7,7 @@ use crate::posts::{
 };
 use crate::relationships::types::RelationshipType;
 
-use super::types::{EventType, Notification};
+use super::types::{EventType, NotificationDetailed};
 
 pub(super) async fn create_notification(
     db_client: &impl DatabaseClient,
@@ -44,7 +44,7 @@ pub async fn get_notifications(
     recipient_id: Uuid,
     max_id: Option<i32>,
     limit: u16,
-) -> Result<Vec<Notification>, DatabaseError> {
+) -> Result<Vec<NotificationDetailed>, DatabaseError> {
     let statement = format!(
         "
         SELECT
@@ -86,8 +86,8 @@ pub async fn get_notifications(
         &statement,
         &[&recipient_id, &max_id, &i64::from(limit)],
     ).await?;
-    let mut notifications: Vec<Notification> = rows.iter()
-        .map(Notification::try_from)
+    let mut notifications: Vec<_> = rows.iter()
+        .map(NotificationDetailed::try_from)
         .collect::<Result<_, _>>()?;
     add_related_posts(
         db_client,
@@ -103,6 +103,20 @@ pub async fn get_notifications(
             .collect(),
     ).await?;
     Ok(notifications)
+}
+
+pub async fn delete_notifications(
+    db_client: &impl DatabaseClient,
+    recipient_id: Uuid,
+) -> Result<(), DatabaseError> {
+    db_client.execute(
+        "
+        DELETE FROM notification
+        WHERE recipient_id = $1
+        ",
+        &[&recipient_id],
+    ).await?;
+    Ok(())
 }
 
 #[cfg(test)]
@@ -141,5 +155,30 @@ mod tests {
         assert_eq!(notifications[0].event_type, EventType::Reaction);
         assert_eq!(notifications[0].reaction_content, Some("❤️".to_string()));
         assert_eq!(notifications[0].reaction_emoji.is_none(), true);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_delete_notifications() {
+        let db_client = &mut create_test_database().await;
+        let user_1 = create_test_user(db_client, "test1").await;
+        let user_2 = create_test_user(db_client, "test2").await;
+        let post = create_test_local_post(db_client, user_1.id, "test").await;
+        create_test_local_reaction(db_client, user_2.id, post.id, None).await;
+        let notifications = get_notifications(
+            db_client,
+            user_1.id,
+            None,
+            5,
+        ).await.unwrap();
+        assert_eq!(notifications.len(), 1);
+        delete_notifications(db_client, user_1.id).await.unwrap();
+        let notifications = get_notifications(
+            db_client,
+            user_1.id,
+            None,
+            5,
+        ).await.unwrap();
+        assert_eq!(notifications.len(), 0);
     }
 }

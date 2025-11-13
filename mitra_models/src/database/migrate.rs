@@ -12,9 +12,9 @@ pub async fn apply_migrations(db_client: &mut Client) -> Result<(), Error> {
     let maybe_last_migration =
         runner.get_last_applied_migration_async(db_client).await;
     if let Ok(Some(migration)) = maybe_last_migration {
-        if migration.version() < 69 {
-            // Migration v69 was added in 1.36.0
-            panic!("updating from versions older than 1.36.0 is not supported");
+        if migration.version() < 72 {
+            // Migration v72 was added in 2.13.0
+            panic!("updating from versions older than 2.13.0 is not supported");
         };
     };
 

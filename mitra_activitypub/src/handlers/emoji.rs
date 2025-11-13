@@ -1,29 +1,35 @@
+use apx_core::url::{
+    http_uri::Hostname,
+    http_url_whatwg::get_hostname,
+};
+use apx_sdk::fetch::fetch_media;
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
 use serde_json::{Value as JsonValue};
 
-use apx_core::{
-    http_url::Hostname,
-    urls::get_hostname,
-};
-use apx_sdk::fetch::fetch_file;
 use mitra_models::{
-    database::{DatabaseClient, DatabaseError},
+    database::{
+        db_client_await,
+        get_database_client,
+        DatabaseConnectionPool,
+        DatabaseError,
+    },
     emojis::queries::{
-        create_emoji,
+        create_or_update_remote_emoji,
         get_remote_emoji_by_object_id,
         update_emoji,
     },
-    emojis::types::{DbEmoji, EmojiImage as DbEmojiImage},
+    emojis::types::{CustomEmoji as DbCustomEmoji},
     filter_rules::types::FilterAction,
     media::types::MediaInfo,
 };
 use mitra_validators::{
     activitypub::validate_object_id,
+    common::Origin::Remote,
     emojis::{
         clean_emoji_name,
         validate_emoji_name,
-        EMOJI_MEDIA_TYPES,
+        EMOJI_REMOTE_MEDIA_TYPES,
     },
     media::validate_media_url,
     profiles::validate_hostname,
@@ -31,7 +37,6 @@ use mitra_validators::{
 };
 
 use crate::{
-    agent::build_federation_agent,
     importers::ApClient,
 };
 
@@ -41,7 +46,6 @@ use super::HandlerError;
 #[serde(rename_all = "camelCase")]
 struct EmojiImage {
     url: String,
-    media_type: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -49,6 +53,7 @@ struct EmojiImage {
 struct Emoji {
     id: Option<String>,
     name: String,
+    alternate_name: Option<String>,
     icon: EmojiImage,
     #[serde(default)]
     updated: DateTime<Utc>,
@@ -58,10 +63,10 @@ struct Emoji {
 // Returns HandlerError on database and filesystem errors.
 pub async fn handle_emoji(
     ap_client: &ApClient,
-    db_client: &mut impl DatabaseClient,
+    db_pool: &DatabaseConnectionPool,
     moderation_domain: &Hostname,
     tag_value: JsonValue,
-) -> Result<Option<DbEmoji>, HandlerError> {
+) -> Result<Option<DbCustomEmoji>, HandlerError> {
     let emoji: Emoji = match serde_json::from_value(tag_value) {
         Ok(emoji) => emoji,
         Err(error) => {
@@ -77,12 +82,37 @@ pub async fn handle_emoji(
         return Ok(None);
     };
     let emoji_name = clean_emoji_name(&emoji.name);
-    if validate_emoji_name(emoji_name).is_err() {
+    if validate_emoji_name(emoji_name, Remote).is_err() {
         log::warn!("invalid emoji name: {}", emoji_name);
         return Ok(None);
     };
+    if let Some(alternate_name) = emoji.alternate_name {
+        log::warn!("alternate name for {emoji_name}:  {alternate_name}");
+    };
+    let emoji_hostname = match get_hostname(&emoji_object_id)
+        .map_err(|_| ValidationError("invalid emoji ID"))
+        .and_then(|value| validate_hostname(&value).map(|()| value))
+    {
+        Ok(hostname) => hostname,
+        Err(error) => {
+            log::warn!("skipping emoji: {error}");
+            return Ok(None);
+        },
+    };
+    if let Err(error) = validate_media_url(&emoji.icon.url) {
+        log::warn!("invalid emoji URL ({error}): {}", emoji.icon.url);
+        return Ok(None);
+    };
+    let is_filter_enabled = ap_client.filter.is_action_required(
+        moderation_domain.as_str(),
+        FilterAction::RejectCustomEmojis,
+    );
+    if is_filter_enabled {
+        log::warn!("emoji removed by filter: {}", emoji_object_id);
+        return Ok(None);
+    };
     let maybe_emoji_id = match get_remote_emoji_by_object_id(
-        db_client,
+        db_client_await!(db_pool),
         &emoji_object_id,
     ).await {
         Ok(db_emoji) => {
@@ -99,25 +129,11 @@ pub async fn handle_emoji(
         Err(DatabaseError::NotFound("emoji")) => None,
         Err(other_error) => return Err(other_error.into()),
     };
-    if let Err(error) = validate_media_url(&emoji.icon.url) {
-        log::warn!("invalid emoji URL ({error}): {}", emoji.icon.url);
-        return Ok(None);
-    };
-    let agent = build_federation_agent(&ap_client.instance, None);
-    let is_filter_enabled = ap_client.filter.is_action_required(
-        moderation_domain.as_str(),
-        FilterAction::RejectCustomEmojis,
-    );
-    if is_filter_enabled {
-        log::warn!("emoji removed by filter: {}", emoji.icon.url);
-        return Ok(None);
-    };
-    let (file_data, media_type) = match fetch_file(
-        &agent,
+    let (file_data, media_type) = match fetch_media(
+        &ap_client.agent(),
         &emoji.icon.url,
-        emoji.icon.media_type.as_deref(),
-        &EMOJI_MEDIA_TYPES,
-        ap_client.media_limits.emoji_size_limit,
+        &EMOJI_REMOTE_MEDIA_TYPES,
+        ap_client.limits.media.emoji_size_limit,
     ).await {
         Ok(file) => file,
         Err(error) => {
@@ -125,10 +141,20 @@ pub async fn handle_emoji(
             return Ok(None);
         },
     };
-    let file_info = ap_client.media_storage
-        .save_file(file_data, &media_type)?;
-    log::info!("downloaded emoji {}", emoji.icon.url);
-    let image = DbEmojiImage::from(MediaInfo::remote(file_info, emoji.icon.url));
+    let is_proxy_enabled = ap_client.filter.is_action_required(
+        moderation_domain.as_str(),
+        FilterAction::ProxyMedia,
+    );
+    let image = if is_proxy_enabled {
+        log::info!("linked emoji {}", emoji.icon.url);
+        MediaInfo::link(media_type, emoji.icon.url)
+    } else {
+        let file_info = ap_client.media_storage
+            .save_file(file_data, &media_type)?;
+        log::info!("downloaded emoji {}", emoji.icon.url);
+        MediaInfo::remote(file_info, emoji.icon.url)
+    };
+    let db_client = &mut **get_database_client(db_pool).await?;
     let db_emoji = if let Some(emoji_id) = maybe_emoji_id {
         let (db_emoji, deletion_queue) = update_emoji(
             db_client,
@@ -139,31 +165,17 @@ pub async fn handle_emoji(
         deletion_queue.into_job(db_client).await?;
         db_emoji
     } else {
-        let hostname = match get_hostname(&emoji_object_id)
-            .map_err(|_| ValidationError("invalid emoji ID"))
-            .and_then(|value| validate_hostname(&value).map(|()| value))
-        {
-            Ok(hostname) => hostname,
-            Err(error) => {
-                log::warn!("skipping emoji: {error}");
-                return Ok(None);
-            },
-        };
-        match create_emoji(
+        // Handles emoji name conflicts
+        let (db_emoji, deletion_queue) = create_or_update_remote_emoji(
             db_client,
             emoji_name,
-            Some(&hostname),
+            &emoji_hostname,
             image,
-            Some(&emoji_object_id),
+            &emoji_object_id,
             emoji.updated,
-        ).await {
-            Ok(db_emoji) => db_emoji,
-            Err(DatabaseError::AlreadyExists(_)) => {
-                log::warn!("emoji name is not unique: {}", emoji_name);
-                return Ok(None);
-            },
-            Err(other_error) => return Err(other_error.into()),
-        }
+        ).await?;
+        deletion_queue.into_job(db_client).await?;
+        db_emoji
     };
     Ok(Some(db_emoji))
 }

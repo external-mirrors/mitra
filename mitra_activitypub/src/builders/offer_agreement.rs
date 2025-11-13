@@ -12,6 +12,7 @@ use mitra_models::{
 
 use crate::{
     contexts::Context,
+    deliverer::Recipient,
     identifiers::{local_activity_id, local_actor_id},
     queues::OutgoingActivityJobData,
     vocabulary::{AGREEMENT, COMMITMENT, OFFER},
@@ -41,7 +42,7 @@ struct OfferAgreement {
 }
 
 fn build_offer_agreement(
-    instance_url: &str,
+    instance_uri: &str,
     sender_username: &str,
     proposer_actor_id: &str,
     subscription_option: &RemoteMoneroSubscription,
@@ -52,8 +53,8 @@ fn build_offer_agreement(
     let primary_intent_id = fep_0837_primary_fragment_id(&proposal_id);
     let reciprocal_intent_id = fep_0837_reciprocal_fragment_id(&proposal_id);
     let duration = invoice_amount / subscription_option.price;
-    let actor_id = local_actor_id(instance_url, sender_username);
-    let activity_id = local_activity_id(instance_url, OFFER, invoice_id);
+    let actor_id = local_actor_id(instance_uri, sender_username);
+    let activity_id = local_activity_id(instance_uri, OFFER, invoice_id);
     let primary_commitment = Commitment {
         id: None,
         object_type: COMMITMENT.to_string(),
@@ -69,9 +70,11 @@ fn build_offer_agreement(
     let agreement = Agreement {
         id: None,
         object_type: AGREEMENT.to_string(),
+        attributed_to: None,
         stipulates: primary_commitment,
         stipulates_reciprocal: reciprocal_commitment,
         url: None, // pre-agreement shouldn't have payment link
+        preview: None, // pre-agreement doesn't have status
     };
     let activity = OfferAgreement {
         _context: build_valueflows_context(),
@@ -93,16 +96,16 @@ pub fn prepare_offer_agreement(
     invoice_amount: u64,
 ) -> OutgoingActivityJobData {
     let activity = build_offer_agreement(
-        &instance.url(),
+        instance.uri_str(),
         &sender.profile.username,
         &proposer_actor.id,
         subscription_option,
         invoice_id,
         invoice_amount,
     );
-    let recipients = vec![proposer_actor.clone()];
+    let recipients = Recipient::for_inbox(proposer_actor);
     OutgoingActivityJobData::new(
-        &instance.url(),
+        instance.uri_str(),
         sender,
         activity,
         recipients,
@@ -112,27 +115,28 @@ pub fn prepare_offer_agreement(
 #[cfg(test)]
 mod tests {
     use std::num::NonZeroU64;
+    use apx_core::caip2::ChainId;
     use serde_json::json;
     use uuid::uuid;
-    use apx_core::caip2::ChainId;
     use super::*;
 
     #[test]
     fn test_build_offer_agreement() {
-        let instance_url = "https://local.example";
+        let instance_uri = "https://local.example";
         let sender_username = "payer";
         let proposal_id = "https://remote.example/proposals/1";
         let proposer_actor_id = "https://remote.example/users/test";
         let subscription_option = RemoteMoneroSubscription {
             chain_id: ChainId::monero_mainnet(),
             price: NonZeroU64::new(20000).unwrap(),
+            amount_min: Some(1_000_000_000),
             object_id: proposal_id.to_string(),
             fep_0837_enabled: true,
         };
         let invoice_id = uuid!("46d160ae-af12-484d-9f44-419f00fc1b31");
         let invoice_amount = 200000;
         let activity = build_offer_agreement(
-            instance_url,
+            instance_uri,
             sender_username,
             proposer_actor_id,
             &subscription_option,
@@ -144,7 +148,7 @@ mod tests {
             "@context": [
                 "https://www.w3.org/ns/activitystreams",
                 "https://w3id.org/security/v1",
-                "https://w3id.org/security/data-integrity/v1",
+                "https://w3id.org/security/data-integrity/v2",
                 {
                     "Hashtag": "as:Hashtag",
                     "sensitive": "as:sensitive",
@@ -168,6 +172,7 @@ mod tests {
                     "satisfies": "vf:satisfies",
                     "resourceConformsTo": "vf:resourceConformsTo",
                     "resourceQuantity": "vf:resourceQuantity",
+                    "minimumQuantity": "vf:minimumQuantity",
                     "hasUnit": "om2:hasUnit",
                     "hasNumericalValue": "om2:hasNumericalValue",
                 },

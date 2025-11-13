@@ -7,17 +7,29 @@ use percent_encoding::percent_decode_str;
 /// RFC-3986 URI
 pub type Uri = UriString;
 
+/// RFC-6454 origin
 #[derive(Debug, PartialEq)]
-pub struct Origin(String, String, u16);
+pub enum Origin {
+    /// RFC-6454 origin tuple
+    Tuple(String, String, u16),
+    /// FEP-ef61 cryptographic origin
+    Did(String),
+}
 
 impl Origin {
-    pub fn new(scheme: &str, host: &str, port: u16) -> Self {
-        Self(scheme.to_owned(), host.to_owned(), port)
+    /// Creates new origin tuple
+    pub fn new_tuple(scheme: &str, host: &str, port: u16) -> Self {
+        Self::Tuple(scheme.to_owned(), host.to_owned(), port)
+    }
+
+    /// Creates new cryptographic origin
+    pub fn new_did(did: &str) -> Self {
+        Self::Did(did.to_owned())
     }
 }
 
-/// Encode URI path component (RFC-3986).
-/// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/encodeURIComponent#encoding_for_rfc3986
+/// Encode URI path component (RFC-3986).  
+/// <https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/encodeURIComponent#encoding_for_rfc3986>
 pub fn url_encode(input: &str) -> String {
     PercentEncodedForUri::unreserve(input).to_string()
 }

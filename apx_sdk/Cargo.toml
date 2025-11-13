@@ -1,35 +1,42 @@
 [package]
 name = "apx_sdk"
 description = "Minimalistic ActivityPub toolkit"
-version = "0.7.0"
+version = "0.20.0"
 license.workspace = true
+repository = "https://codeberg.org/silverpill/mitra/src/branch/main/apx_sdk"
 
 edition.workspace = true
 rust-version.workspace = true
+
+categories = ["web-programming"]
 
 [dependencies]
 # Used for implementing custom DNS resolver
 futures-util = { version = "0.3.28", default-features = false }
 hyper-util = { version = "0.1.3", default-features = false }
 tower-service = { version = "0.3.1", default-features = false }
-# Used for logging
-log = "0.4.20"
+# Used for limiting response size
+http-body-util = "0.1.2"
+http-body = "1.0.1"
 # Used for working with regular expressions
 regex = "1.10.6"
 # Used for making async HTTP requests
-reqwest = { version = "0.12.0,<0.12.5", default-features = false, features = ["json", "socks"] }
+reqwest = { version = "0.12.0", default-features = false, features = ["json", "socks", "stream"] }
 bytes = "1.2.0"
 # Used for serialization/deserialization
-serde = { version = "1.0.136", features = ["derive"] }
-serde_json = "1.0.89"
+serde = { version = "1.0.186", features = ["derive"] }
+serde_json = "1.0.120"
 # Used for creating error types
 thiserror = "1.0.37"
 
-apx_core = { path = "../apx_core" }
+# `version` is required by crates.io
+apx_core = { version = "0.20.0", path = "../apx_core" }
 
 [dev-dependencies]
+# Actix server for examples
+actix-web = "4.7.0"
 # Async runtime for examples
-tokio = { version = "1.28.2", features = ["macros", "rt-multi-thread"] }
+tokio = { version = "1.38.0", features = ["macros", "rt"] }
 
 [features]
 default = ["rustls-tls"]

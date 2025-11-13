@@ -1,6 +1,8 @@
-use uuid::Uuid;
+use std::collections::HashMap;
 
 use apx_core::caip2::ChainId;
+use uuid::Uuid;
+
 use mitra_utils::id::generate_ulid;
 
 use crate::database::{
@@ -10,7 +12,7 @@ use crate::database::{
     DatabaseTypeError,
 };
 
-use super::types::{DbChainId, DbInvoice, InvoiceStatus};
+use super::types::{DbChainId, Invoice, InvoiceStatus};
 
 /// Create invoice with local recipient
 pub async fn create_local_invoice(
@@ -19,10 +21,10 @@ pub async fn create_local_invoice(
     recipient_id: Uuid,
     chain_id: &ChainId,
     payment_address: &str,
-    amount: impl TryInto<i64>,
-) -> Result<DbInvoice, DatabaseError> {
+    amount: u64,
+) -> Result<Invoice, DatabaseError> {
     let invoice_id = generate_ulid();
-    let db_amount: i64 = TryInto::try_into(amount)
+    let db_amount = i64::try_from(amount)
         .map_err(|_| DatabaseTypeError)?;
     let row = db_client.query_one(
         "
@@ -59,10 +61,10 @@ pub async fn create_remote_invoice(
     sender_id: Uuid,
     recipient_id: Uuid,
     chain_id: &ChainId,
-    amount: impl TryInto<i64>,
-) -> Result<DbInvoice, DatabaseError> {
+    amount: u64,
+) -> Result<Invoice, DatabaseError> {
     let invoice_id = generate_ulid();
-    let db_amount: i64 = TryInto::try_into(amount)
+    let db_amount: i64 = i64::try_from(amount)
         .map_err(|_| DatabaseTypeError)?;
     let row = db_client.query_one(
         "
@@ -102,7 +104,7 @@ pub async fn create_remote_invoice(
 pub async fn get_invoice_by_id(
     db_client: &impl DatabaseClient,
     invoice_id: Uuid,
-) -> Result<DbInvoice, DatabaseError> {
+) -> Result<Invoice, DatabaseError> {
     let maybe_row = db_client.query_opt(
         "
         SELECT invoice
@@ -119,7 +121,7 @@ pub async fn get_local_invoice_by_address(
     db_client: &impl DatabaseClient,
     chain_id: &ChainId,
     payment_address: &str,
-) -> Result<DbInvoice, DatabaseError> {
+) -> Result<Invoice, DatabaseError> {
     let maybe_row = db_client.query_opt(
         "
         SELECT invoice
@@ -139,7 +141,7 @@ pub async fn get_invoice_by_participants(
     sender_id: Uuid,
     recipient_id: Uuid,
     chain_id: &ChainId,
-) -> Result<DbInvoice, DatabaseError> {
+) -> Result<Invoice, DatabaseError> {
     // Always return oldest invoice
     let maybe_row = db_client.query_opt(
         "
@@ -166,7 +168,7 @@ pub async fn get_invoice_by_participants(
 pub async fn get_remote_invoice_by_object_id(
     db_client: &impl DatabaseClient,
     object_id: &str,
-) -> Result<DbInvoice, DatabaseError> {
+) -> Result<Invoice, DatabaseError> {
     let maybe_row = db_client.query_opt(
         "
         SELECT invoice
@@ -185,7 +187,7 @@ pub async fn get_invoices_by_status(
     chain_id: &ChainId,
     status: InvoiceStatus,
     only_local: bool,
-) -> Result<Vec<DbInvoice>, DatabaseError> {
+) -> Result<Vec<Invoice>, DatabaseError> {
     let condition = if only_local { "AND object_id IS NULL" } else { "" };
     let statement = format!(
         "
@@ -212,7 +214,7 @@ pub async fn get_local_invoices_by_status(
     db_client: &impl DatabaseClient,
     chain_id: &ChainId,
     status: InvoiceStatus,
-) -> Result<Vec<DbInvoice>, DatabaseError> {
+) -> Result<Vec<Invoice>, DatabaseError> {
     get_invoices_by_status(db_client, chain_id, status, true).await
 }
 
@@ -220,7 +222,7 @@ pub async fn set_invoice_status(
     db_client: &mut impl DatabaseClient,
     invoice_id: Uuid,
     new_status: InvoiceStatus,
-) -> Result<DbInvoice, DatabaseError> {
+) -> Result<Invoice, DatabaseError> {
     let transaction = db_client.transaction().await?;
     let maybe_row = transaction.query_opt(
         "
@@ -231,7 +233,7 @@ pub async fn set_invoice_status(
         &[&invoice_id],
     ).await?;
     let row = maybe_row.ok_or(DatabaseError::NotFound("invoice"))?;
-    let invoice: DbInvoice = row.try_get("invoice")?;
+    let invoice: Invoice = row.try_get("invoice")?;
     if !invoice.can_change_status(new_status) {
         return Err(DatabaseTypeError.into());
     };
@@ -256,7 +258,7 @@ pub(super) async fn set_invoice_payout_tx_id(
     db_client: &impl DatabaseClient,
     invoice_id: Uuid,
     payout_tx_id: Option<&str>,
-) -> Result<DbInvoice, DatabaseError> {
+) -> Result<Invoice, DatabaseError> {
     let maybe_row = db_client.query_opt(
         "
         UPDATE invoice SET payout_tx_id = $2
@@ -289,6 +291,28 @@ pub(super) async fn set_remote_invoice_data(
         return Err(DatabaseError::NotFound("invoice"));
     };
     Ok(())
+}
+
+pub async fn get_invoice_summary(
+    db_client: &impl DatabaseClient,
+) -> Result<HashMap<InvoiceStatus, i64>, DatabaseError> {
+    let rows = db_client.query(
+        "
+        SELECT invoice_status, count(invoice)
+        FROM invoice
+        GROUP BY invoice_status
+        ",
+        &[],
+    ).await?;
+    let summary = rows
+        .into_iter()
+        .map(|row| {
+            let status: InvoiceStatus = row.try_get("invoice_status")?;
+            let count: i64 = row.try_get("count")?;
+            Ok((status, count))
+        })
+        .collect::<Result<_, DatabaseError>>()?;
+    Ok(summary)
 }
 
 #[cfg(test)]
@@ -334,7 +358,7 @@ mod tests {
         assert_eq!(invoice.sender_id, sender_id);
         assert_eq!(invoice.recipient_id, recipient_id);
         assert_eq!(invoice.chain_id.into_inner(), chain_id);
-        assert_eq!(invoice.amount, amount);
+        assert_eq!(invoice.amount, amount as i64);
         assert_eq!(invoice.invoice_status, InvoiceStatus::Open);
         assert_eq!(invoice.payment_address.unwrap(), payment_address);
         assert_eq!(invoice.payout_tx_id, None);
@@ -359,7 +383,7 @@ mod tests {
         assert_eq!(invoice.sender_id, sender_id);
         assert_eq!(invoice.recipient_id, recipient_id);
         assert_eq!(invoice.chain_id.into_inner(), chain_id);
-        assert_eq!(invoice.amount, amount);
+        assert_eq!(invoice.amount, amount as i64);
         assert_eq!(invoice.invoice_status, InvoiceStatus::Requested);
         assert_eq!(invoice.payment_address, None);
         assert_eq!(invoice.payout_tx_id, None);
@@ -393,6 +417,6 @@ mod tests {
             invoice.id,
             InvoiceStatus::Cancelled,
         ).await.err().unwrap();
-        assert!(matches!(error, DatabaseError::DatabaseTypeError(_)));
+        assert!(matches!(error, DatabaseError::TypeError(_)));
     }
 }

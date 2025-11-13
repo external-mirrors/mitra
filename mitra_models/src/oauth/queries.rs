@@ -10,14 +10,14 @@ use crate::profiles::types::DbActorProfile;
 use crate::users::types::{DbUser, User};
 
 use super::{
-    types::{DbOauthApp, DbOauthAppData},
+    types::{OauthApp, OauthAppData},
     utils::hash_oauth_token,
 };
 
 pub async fn create_oauth_app(
     db_client: &impl DatabaseClient,
-    app_data: DbOauthAppData,
-) -> Result<DbOauthApp, DatabaseError> {
+    app_data: OauthAppData,
+) -> Result<OauthApp, DatabaseError> {
     let row = db_client.query_one(
         "
         INSERT INTO oauth_application (
@@ -47,7 +47,7 @@ pub async fn create_oauth_app(
 pub async fn get_oauth_app_by_client_id(
     db_client: &impl DatabaseClient,
     client_id: Uuid,
-) -> Result<DbOauthApp, DatabaseError> {
+) -> Result<OauthApp, DatabaseError> {
     let maybe_row = db_client.query_opt(
         "
         SELECT oauth_application
@@ -96,19 +96,26 @@ pub async fn create_oauth_authorization(
 
 pub async fn get_user_by_authorization_code(
     db_client: &impl DatabaseClient,
+    client_id: Uuid,
     authorization_code: &str,
 ) -> Result<User, DatabaseError> {
     let maybe_row = db_client.query_opt(
         "
         SELECT user_account, actor_profile
         FROM oauth_authorization
+        JOIN oauth_application
+            ON oauth_authorization.application_id = oauth_application.id
         JOIN user_account ON oauth_authorization.user_id = user_account.id
         JOIN actor_profile ON user_account.id = actor_profile.id
         WHERE
-            oauth_authorization.code = $1
+            oauth_application.client_id = $1
+            AND oauth_authorization.code = $2
             AND oauth_authorization.expires_at > CURRENT_TIMESTAMP
         ",
-        &[&authorization_code],
+        &[
+            &client_id,
+            &authorization_code,
+        ],
     ).await?;
     let row = maybe_row.ok_or(DatabaseError::NotFound("authorization"))?;
     let db_user: DbUser = row.try_get("user_account")?;
@@ -150,10 +157,10 @@ pub async fn delete_oauth_token(
     let maybe_row = transaction.query_opt(
         "
         SELECT owner_id FROM oauth_token
-        WHERE token = $1 OR token_digest = $2
+        WHERE token_digest = $1
         FOR UPDATE
         ",
-        &[&token, &token_digest],
+        &[&token_digest],
     ).await?;
     if let Some(row) = maybe_row {
         let owner_id: Uuid = row.try_get("owner_id")?;
@@ -164,9 +171,9 @@ pub async fn delete_oauth_token(
             transaction.execute(
                 "
                 DELETE FROM oauth_token
-                WHERE token = $1 OR token_digest = $2
+                WHERE token_digest = $1
                 ",
-                &[&token, &token_digest],
+                &[&token_digest],
             ).await?;
         };
     };
@@ -197,10 +204,10 @@ pub async fn get_user_by_oauth_token(
         JOIN user_account ON oauth_token.owner_id = user_account.id
         JOIN actor_profile ON user_account.id = actor_profile.id
         WHERE
-            (oauth_token.token = $1 OR oauth_token.token_digest = $2)
+            oauth_token.token_digest = $1
             AND oauth_token.expires_at > CURRENT_TIMESTAMP
         ",
-        &[&token, &token_digest],
+        &[&token_digest],
     ).await?;
     let row = maybe_row.ok_or(DatabaseError::NotFound("user"))?;
     let db_user: DbUser = row.try_get("user_account")?;
@@ -211,7 +218,7 @@ pub async fn get_user_by_oauth_token(
 
 #[cfg(test)]
 mod tests {
-    use chrono::Duration;
+    use chrono::TimeDelta;
     use serial_test::serial;
     use crate::{
         database::test_utils::create_test_database,
@@ -223,7 +230,7 @@ mod tests {
     #[serial]
     async fn test_create_oauth_app() {
         let db_client = &create_test_database().await;
-        let db_app_data = DbOauthAppData {
+        let db_app_data = OauthAppData {
             app_name: "My App".to_string(),
             ..Default::default()
         };
@@ -236,7 +243,7 @@ mod tests {
     async fn test_create_oauth_authorization() {
         let db_client = &mut create_test_database().await;
         let user = create_test_user(db_client, "test").await;
-        let app_data = DbOauthAppData {
+        let app_data = OauthAppData {
             app_name: "My App".to_string(),
             ..Default::default()
         };
@@ -248,8 +255,14 @@ mod tests {
             app.id,
             "read write",
             Utc::now(),
-            Utc::now() + Duration::days(7),
+            Utc::now() + TimeDelta::days(7),
         ).await.unwrap();
+        let user_found = get_user_by_authorization_code(
+            db_client,
+            app.client_id,
+            "code",
+        ).await.unwrap();
+        assert_eq!(user_found.id, user.id);
     }
 
     #[tokio::test]
@@ -263,7 +276,7 @@ mod tests {
             user.id,
             token,
             Utc::now(),
-            Utc::now() + Duration::days(7),
+            Utc::now() + TimeDelta::days(7),
         ).await.unwrap();
         let authenticated_user = get_user_by_oauth_token(
             db_client,

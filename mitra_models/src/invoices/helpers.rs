@@ -10,13 +10,13 @@ use super::queries::{
     set_invoice_status,
     set_remote_invoice_data,
 };
-use super::types::{DbInvoice, InvoiceStatus};
+use super::types::{Invoice, InvoiceStatus};
 
 pub async fn local_invoice_forwarded(
     db_client: &mut impl DatabaseClient,
     invoice_id: Uuid,
     payout_tx_id: &str,
-) -> Result<DbInvoice, DatabaseError> {
+) -> Result<Invoice, DatabaseError> {
     let mut transaction = db_client.transaction().await?;
     set_invoice_payout_tx_id(
         &transaction,
@@ -35,7 +35,7 @@ pub async fn local_invoice_forwarded(
 pub async fn local_invoice_reopened(
     db_client: &mut impl DatabaseClient,
     invoice_id: Uuid,
-) -> Result<DbInvoice, DatabaseError> {
+) -> Result<Invoice, DatabaseError> {
     let mut transaction = db_client.transaction().await?;
     set_invoice_payout_tx_id(
         &transaction,
@@ -56,7 +56,7 @@ pub async fn remote_invoice_opened(
     invoice_id: Uuid,
     payment_address: &str,
     object_id: &str,
-) -> Result<DbInvoice, DatabaseError> {
+) -> Result<Invoice, DatabaseError> {
     let mut transaction = db_client.transaction().await?;
     set_remote_invoice_data(
         &transaction,
@@ -75,8 +75,8 @@ pub async fn remote_invoice_opened(
 
 #[cfg(test)]
 mod tests {
-    use serial_test::serial;
     use apx_core::caip2::ChainId;
+    use serial_test::serial;
     use crate::{
         database::test_utils::create_test_database,
         invoices::queries::{create_local_invoice, create_remote_invoice},

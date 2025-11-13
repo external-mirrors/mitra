@@ -1,3 +1,4 @@
+use apx_core::caip2::ChainId;
 use chrono::{DateTime, Utc};
 use postgres_protocol::types::{text_from_sql, text_to_sql};
 use postgres_types::{
@@ -10,8 +11,6 @@ use postgres_types::{
     Type,
 };
 use uuid::Uuid;
-
-use apx_core::caip2::ChainId;
 
 use crate::database::{
     int_enum::{int_enum_from_sql, int_enum_to_sql},
@@ -71,7 +70,7 @@ impl ToSql for DbChainId {
     to_sql_checked!();
 }
 
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, Hash, PartialEq, Eq)]
 pub enum InvoiceStatus {
     Open,
     Paid,
@@ -137,7 +136,7 @@ int_enum_to_sql!(InvoiceStatus);
 
 #[derive(FromSql)]
 #[postgres(name = "invoice")]
-pub struct DbInvoice {
+pub struct Invoice {
     pub id: Uuid,
     pub sender_id: Uuid,
     pub recipient_id: Uuid,
@@ -151,7 +150,7 @@ pub struct DbInvoice {
     pub updated_at: DateTime<Utc>,
 }
 
-impl DbInvoice {
+impl Invoice {
     pub fn amount_u64(&self) -> Result<u64, DatabaseTypeError> {
         u64::try_from(self.amount).map_err(|_| DatabaseTypeError)
     }
@@ -161,13 +160,15 @@ impl DbInvoice {
         let allowed = match self.invoice_status {
             Open => {
                 if self.object_id.is_some() {
-                    vec![Completed, Timeout, Cancelled]
+                    vec![Paid, Completed, Timeout, Cancelled]
                 } else {
                     vec![Paid, Timeout, Cancelled]
                 }
             },
             Paid => {
-                if self.payout_tx_id.is_some() {
+                if self.object_id.is_some() {
+                    vec![Completed]
+                } else if self.payout_tx_id.is_some() {
                     vec![Forwarded, Underpaid]
                 } else {
                     vec![Underpaid]
@@ -211,7 +212,7 @@ impl DbInvoice {
 }
 
 #[cfg(feature = "test-utils")]
-impl Default for DbInvoice {
+impl Default for Invoice {
     fn default() -> Self {
         Self {
             id: Default::default(),

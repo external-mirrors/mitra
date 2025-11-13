@@ -5,7 +5,7 @@ use k256::{
 use sha3::{Digest, Keccak256};
 
 use crate::{
-    crypto_ecdsa::{
+    crypto::ecdsa::{
         create_ecdsa_signature,
         recover_ecdsa_public_key,
         EcdsaError,
@@ -90,14 +90,14 @@ pub(crate) fn verify_eip191_signature(
 
 #[cfg(test)]
 mod tests {
-    use crate::crypto_ecdsa::generate_ecdsa_key;
+    use crate::crypto::ecdsa::generate_ecdsa_key;
     use super::*;
 
     #[test]
     fn test_verify_eip191_signature() {
         let secret_key = generate_ecdsa_key();
         let public_key = secret_key.verifying_key();
-        let address = ecdsa_public_key_to_address_hex(&public_key);
+        let address = ecdsa_public_key_to_address_hex(public_key);
         let signer = DidPkh::from_ethereum_address(&address);
         let message = "test";
         let signature = create_eip191_signature(

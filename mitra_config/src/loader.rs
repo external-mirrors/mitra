@@ -2,16 +2,20 @@ use std::os::unix::fs::MetadataExt;
 use std::path::Path;
 use std::str::FromStr;
 
-use apx_core::{
-    crypto_rsa::{
-        rsa_secret_key_from_pkcs8_pem,
-        RsaSecretKey,
-    },
-};
-
 use super::blockchain::BlockchainConfig;
 use super::config::Config;
 use super::environment::Environment;
+use super::instance::{
+    is_correct_uri_scheme,
+    parse_instance_url,
+};
+
+const DEFAULT_CONFIG_PATH: &str = "config.yaml";
+
+fn default_config_path() -> &'static str {
+    let maybe_path = option_env!("DEFAULT_CONFIG_PATH");
+    maybe_path.unwrap_or(DEFAULT_CONFIG_PATH)
+}
 
 struct EnvConfig {
     config_path: String,
@@ -19,16 +23,11 @@ struct EnvConfig {
     http_port: Option<u32>,
 }
 
-#[cfg(feature = "production")]
-const DEFAULT_CONFIG_PATH: &str = "/etc/mitra/config.yaml";
-#[cfg(not(feature = "production"))]
-const DEFAULT_CONFIG_PATH: &str = "config.yaml";
-
 fn parse_env() -> EnvConfig {
     dotenvy::from_filename(".env.local").ok();
     dotenvy::dotenv().ok();
     let config_path = std::env::var("CONFIG_PATH")
-        .unwrap_or(DEFAULT_CONFIG_PATH.to_string());
+        .unwrap_or(default_config_path().to_string());
     let environment = std::env::var("ENVIRONMENT").ok()
         .map(|val| Environment::from_str(&val).expect("invalid environment type"))
         // Default depends on "production" feature flag
@@ -61,20 +60,6 @@ fn check_directory_owner(path: &Path) -> () {
     };
 }
 
-/// Read secret key from instance_rsa_key file
-fn read_instance_rsa_key(storage_dir: &Path) -> Option<RsaSecretKey> {
-    let secret_key_path = storage_dir.join("instance_rsa_key");
-    if secret_key_path.exists() {
-        let secret_key_str = std::fs::read_to_string(&secret_key_path)
-            .expect("failed to read instance RSA key");
-        let secret_key = rsa_secret_key_from_pkcs8_pem(&secret_key_str)
-            .expect("failed to read instance RSA key");
-        Some(secret_key)
-    } else {
-        None
-    }
-}
-
 pub fn parse_config() -> (Config, Vec<&'static str>) {
     let env = parse_env();
     let config_yaml = std::fs::read_to_string(&env.config_path)
@@ -89,7 +74,7 @@ pub fn parse_config() -> (Config, Vec<&'static str>) {
     config.config_path = env.config_path;
     config.environment = env.environment;
     if let Some(http_port) = env.http_port {
-        config.http_port = http_port;
+        config.http_port = Some(http_port);
     };
 
     // Validate config
@@ -105,7 +90,12 @@ pub fn parse_config() -> (Config, Vec<&'static str>) {
             );
         };
     };
-    config.try_instance_url().expect("invalid instance URI");
+    config.http_socket();
+    let instance_uri = parse_instance_url(&config.instance_url)
+        .expect("invalid instance URL");
+    if !is_correct_uri_scheme(&instance_uri) {
+        warnings.push("instance_url may have incorrect URL scheme");
+    };
     if config.authentication_methods.is_empty() {
         panic!("authentication_methods must not be empty");
     };
@@ -114,6 +104,12 @@ pub fn parse_config() -> (Config, Vec<&'static str>) {
     };
     if !config.federation.fep_1b12_full_enabled {
         warnings.push("federation.fep_1b12_full_enabled parameter is deprecated");
+    };
+    if config.blocked_instances.is_some() {
+        warnings.push("blocked_instances parameter is deprecated (use `mitra add-filter-rule`)");
+    };
+    if config.allowed_instances.is_some() {
+        warnings.push("allowed_instances parameter is deprecated (use `mitra add-filter-rule`)");
     };
     if config.blockchains().len() > 1 {
         warnings.push("multichain deployments are not recommended");
@@ -128,11 +124,6 @@ pub fn parse_config() -> (Config, Vec<&'static str>) {
     };
     if config.ipfs_api_url.is_some() != config.ipfs_gateway_url.is_some() {
         panic!("both ipfs_api_url and ipfs_gateway_url must be set");
-    };
-
-    // Insert instance RSA key
-    if let Some(instance_rsa_key) = read_instance_rsa_key(&config.storage_dir) {
-        config.instance_rsa_key = Some(instance_rsa_key);
     };
 
     (config, warnings)

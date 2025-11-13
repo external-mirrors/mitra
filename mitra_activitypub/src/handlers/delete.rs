@@ -1,10 +1,14 @@
-use serde::Deserialize;
-use serde_json::Value;
-
 use apx_sdk::deserialization::deserialize_into_object_id;
+use serde::Deserialize;
+use serde_json::{Value as JsonValue};
+
 use mitra_config::Config;
 use mitra_models::{
-    database::{DatabaseClient, DatabaseError},
+    database::{
+        get_database_client,
+        DatabaseConnectionPool,
+        DatabaseError,
+    },
     posts::queries::{
         delete_post,
         get_remote_post_by_object_id,
@@ -15,6 +19,11 @@ use mitra_models::{
     },
 };
 use mitra_validators::errors::ValidationError;
+
+use crate::{
+    builders::add_context_activity::sync_conversation,
+    importers::ApClient,
+};
 
 use super::{Descriptor, HandlerResult};
 
@@ -27,16 +36,18 @@ struct Delete {
 }
 
 pub async fn handle_delete(
-    _config: &Config,
-    db_client: &mut impl DatabaseClient,
-    activity: Value,
+    config: &Config,
+    db_pool: &DatabaseConnectionPool,
+    activity: JsonValue,
 ) -> HandlerResult {
-    let activity: Delete = serde_json::from_value(activity)?;
-    if activity.object == activity.actor {
+    let delete: Delete = serde_json::from_value(activity.clone())?;
+    let db_client = &mut **get_database_client(db_pool).await?;
+    let ap_client = ApClient::new(config, db_client).await?;
+    if delete.object == delete.actor {
         // Self-delete
         let profile = match get_remote_profile_by_actor_id(
             db_client,
-            &activity.object,
+            &delete.object,
         ).await {
             Ok(profile) => profile,
             // Ignore Delete(Person) if profile is not found
@@ -45,12 +56,13 @@ pub async fn handle_delete(
         };
         let deletion_queue = delete_profile(db_client, profile.id).await?;
         deletion_queue.into_job(db_client).await?;
-        log::info!("deleted remote actor {}", activity.object);
+        log::info!("deleted remote actor {}", delete.object);
         return Ok(Some(Descriptor::object("Actor")));
     };
+    // Delete(Note)
     let post = match get_remote_post_by_object_id(
         db_client,
-        &activity.object,
+        &delete.object,
     ).await {
         Ok(post) => post,
         // Ignore Delete(Note) if post is not found
@@ -59,12 +71,19 @@ pub async fn handle_delete(
     };
     let actor_profile = get_remote_profile_by_actor_id(
         db_client,
-        &activity.actor,
+        &delete.actor,
     ).await?;
     if post.author.id != actor_profile.id {
         return Err(ValidationError("actor is not an author").into());
     };
     let deletion_queue = delete_post(db_client, post.id).await?;
     deletion_queue.into_job(db_client).await?;
+    sync_conversation(
+        db_client,
+        &ap_client.instance,
+        post.expect_conversation(),
+        activity,
+        post.visibility,
+    ).await?;
     Ok(Some(Descriptor::object("Object")))
 }

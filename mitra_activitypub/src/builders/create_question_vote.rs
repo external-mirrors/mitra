@@ -12,6 +12,7 @@ use mitra_utils::id::generate_ulid;
 
 use crate::{
     contexts::{build_default_context, Context},
+    deliverer::Recipient,
     identifiers::{
         local_activity_id,
         local_actor_id,
@@ -49,18 +50,18 @@ struct CreateNote {
 }
 
 fn build_create_question_vote(
-    instance_url: &str,
+    instance_uri: &str,
     voter: &DbActorProfile,
     question_id: &str,
     question_owner_id: &str,
     votes: Vec<PollVote>,
 ) -> CreateNote {
     assert!(!votes.is_empty());
-    let activity_id = local_activity_id(instance_url, CREATE, generate_ulid());
-    let actor_id = local_actor_id(instance_url, &voter.username);
+    let activity_id = local_activity_id(instance_uri, CREATE, generate_ulid());
+    let actor_id = local_actor_id(instance_uri, &voter.username);
     let notes: Vec<_> = votes.into_iter()
         .map(|vote| {
-            let vote_id = local_object_id(instance_url, vote.id);
+            let vote_id = local_object_id(instance_uri, vote.id);
             Note {
                 id: vote_id,
                 object_type: NOTE.to_string(),
@@ -93,15 +94,15 @@ pub fn prepare_create_question_vote(
     votes: Vec<PollVote>,
 ) -> Result<OutgoingActivityJobData, DatabaseError> {
     let activity = build_create_question_vote(
-        &instance.url(),
+        instance.uri_str(),
         &sender.profile,
         question_id,
         &question_owner.id,
         votes,
     );
-    let recipients = vec![question_owner.clone()];
+    let recipients = Recipient::for_inbox(question_owner);
     Ok(OutgoingActivityJobData::new(
-        &instance.url(),
+        instance.uri_str(),
         sender,
         activity,
         recipients,
@@ -113,29 +114,31 @@ mod tests {
     use uuid::uuid;
     use super::*;
 
-    const INSTANCE_URL: &str = "https://social.example";
+    const INSTANCE_URI: &str = "https://social.example";
 
     #[test]
     fn test_build_create_question_vote() {
         let voter = DbActorProfile::local_for_test("voter");
         let question_id = "https://remote.example/questions/123";
         let question_owner_id = "https://remote.example/users/test";
-        let votes = vec![
+        let votes = [
             PollVote {
                 id: uuid!("11fa64ff-b5a3-47bf-b23d-22b360581c3f"),
                 poll_id: Default::default(),
                 voter_id: Default::default(),
                 choice: "1".to_string(),
+                object_id: None,
             },
             PollVote {
                 id: uuid!("11fa64ff-b5a3-47bf-b23d-22b360581c3e"),
                 poll_id: Default::default(),
                 voter_id: Default::default(),
                 choice: "2".to_string(),
+                object_id: None,
             },
         ];
         let activity = build_create_question_vote(
-            INSTANCE_URL,
+            INSTANCE_URI,
             &voter,
             question_id,
             question_owner_id,

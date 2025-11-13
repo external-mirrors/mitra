@@ -1,35 +1,36 @@
 use std::fmt;
 use std::num::NonZeroU64;
 
-use chrono::{DateTime, Utc};
-use postgres_types::FromSql;
-use serde::{
-    Deserialize, Deserializer, Serialize, Serializer,
-    de::Error as DeserializerError,
-    ser::SerializeMap,
-    __private::ser::FlatMapSerializer,
-};
-use serde_json::{Value as JsonValue};
-use uuid::Uuid;
-
 use apx_core::{
-    ap_url::{is_ap_url, ApUrl},
     caip2::ChainId,
-    crypto_eddsa::{
+    crypto::eddsa::{
         ed25519_public_key_from_secret_key,
         Ed25519SecretKey,
     },
     did::Did,
     did_key::DidKey,
+    url::ap_uri::{is_ap_uri, ApUri},
 };
+use chrono::{DateTime, Utc};
+use postgres_types::FromSql;
+use serde::{
+    Deserialize, Deserializer, Serialize, Serializer,
+    de::Error as DeserializerError,
+};
+use serde_json::{Value as JsonValue};
+use tokio_postgres::Row;
+use uuid::Uuid;
 
-use crate::database::{
-    int_enum::{int_enum_from_sql, int_enum_to_sql},
-    json_macro::{json_from_sql, json_to_sql},
-    DatabaseTypeError,
+use crate::{
+    database::{
+        int_enum::{int_enum_from_sql, int_enum_to_sql},
+        json_macro::{json_from_sql, json_to_sql},
+        DatabaseError,
+        DatabaseTypeError,
+    },
+    emojis::types::CustomEmoji,
+    media::types::{MediaInfo, PartialMediaInfo},
 };
-use crate::emojis::types::DbEmoji;
-use crate::media::types::MediaInfo;
 
 use super::checks::{
     check_identity_proofs,
@@ -37,31 +38,7 @@ use super::checks::{
     check_public_keys,
 };
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
-pub struct ProfileImage {
-    pub file_name: String,
-    pub file_size: Option<usize>,
-    digest: Option<[u8; 32]>,
-    pub media_type: Option<String>,
-    url: Option<String>,
-}
-
-impl From<MediaInfo> for ProfileImage {
-    fn from(media_info: MediaInfo) -> Self {
-        Self {
-            file_name: media_info.file_name,
-            file_size: Some(media_info.file_size),
-            digest: Some(media_info.digest),
-            media_type: Some(media_info.media_type),
-            url: media_info.url,
-        }
-    }
-}
-
-json_from_sql!(ProfileImage);
-json_to_sql!(ProfileImage);
-
-#[derive(Clone, Copy, Debug, Default)]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub enum MentionPolicy {
     #[default]
     None,
@@ -189,7 +166,7 @@ pub enum IdentityProofType {
     FepC390JcsBlake2Ed25519Proof, // MitraJcsEd25519Signature2022
     FepC390JcsEip191Proof, // MitraJcsEip191Signature2022
     FepC390LegacyJcsEddsaProof, // jcs-eddsa-2022
-    FepC390EddsaJcsNoCiProof, // was used for incorrect eddsa-jcs-2022 proofs
+    FepC390EddsaJcsProof, // eddsa-jcs-2022
 }
 
 impl IdentityProofType {
@@ -210,7 +187,7 @@ impl From<&IdentityProofType> for i16 {
             IdentityProofType::FepC390JcsBlake2Ed25519Proof => 3,
             IdentityProofType::FepC390JcsEip191Proof => 4,
             IdentityProofType::FepC390LegacyJcsEddsaProof => 5,
-            IdentityProofType::FepC390EddsaJcsNoCiProof => 6,
+            IdentityProofType::FepC390EddsaJcsProof => 6,
         }
     }
 }
@@ -225,7 +202,7 @@ impl TryFrom<i16> for IdentityProofType {
             3 => Self::FepC390JcsBlake2Ed25519Proof,
             4 => Self::FepC390JcsEip191Proof,
             5 => Self::FepC390LegacyJcsEddsaProof,
-            6 => Self::FepC390EddsaJcsNoCiProof,
+            6 => Self::FepC390EddsaJcsProof,
             _ => return Err(DatabaseTypeError),
         };
         Ok(proof_type)
@@ -282,7 +259,7 @@ json_from_sql!(IdentityProofs);
 json_to_sql!(IdentityProofs);
 
 #[derive(PartialEq)]
-pub enum PaymentType {
+pub(super) enum PaymentType {
     Link,
     MoneroSubscription,
     RemoteMoneroSubscription,
@@ -330,6 +307,8 @@ pub struct MoneroSubscription {
 pub struct RemoteMoneroSubscription {
     pub chain_id: ChainId,
     pub price: NonZeroU64, // piconeros per second
+    // Legacy profiles may not have minimum amount info
+    pub amount_min: Option<u64>, // piconeros per second
     pub object_id: String,
     #[serde(default)]
     pub fep_0837_enabled: bool,
@@ -391,14 +370,15 @@ impl PaymentOption {
     pub fn remote_monero_subscription(
         chain_id: ChainId,
         price: NonZeroU64,
+        amount_min: u64,
         object_id: String,
-        fep_0837_enabled: bool,
     ) -> Self {
         Self::RemoteMoneroSubscription(RemoteMoneroSubscription {
             chain_id,
             price,
+            amount_min: Some(amount_min),
             object_id,
-            fep_0837_enabled,
+            fep_0837_enabled: true,
         })
     }
 
@@ -474,20 +454,33 @@ impl Serialize for PaymentOption {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
         where S: Serializer,
     {
-        let mut map = serializer.serialize_map(None)?;
-        let payment_type = self.payment_type();
-        map.serialize_entry("payment_type", &i16::from(&payment_type))?;
+        #[derive(Serialize)]
+        #[serde(untagged)]
+        enum UntaggedOption {
+            Link(PaymentLink),
+            MoneroSubscription(MoneroSubscription),
+            RemoteMoneroSubscription(RemoteMoneroSubscription),
+        }
 
-        match self {
-            Self::Link(link) => link.serialize(FlatMapSerializer(&mut map))?,
-            Self::MoneroSubscription(payment_info) => {
-                payment_info.serialize(FlatMapSerializer(&mut map))?
-            },
-            Self::RemoteMoneroSubscription(payment_info) => {
-                payment_info.serialize(FlatMapSerializer(&mut map))?
-            },
+        #[derive(Serialize)]
+        struct TaggedOption {
+            payment_type: i16,
+            #[serde(flatten)]
+            option: UntaggedOption,
+        }
+
+        let untagged_option = match self.clone() {
+            Self::Link(value) => UntaggedOption::Link(value),
+            Self::MoneroSubscription(value) =>
+                UntaggedOption::MoneroSubscription(value),
+            Self::RemoteMoneroSubscription(value) =>
+                UntaggedOption::RemoteMoneroSubscription(value),
         };
-        map.end()
+        let tagged_option = TaggedOption {
+            payment_type: i16::from(&self.payment_type()),
+            option: untagged_option,
+        };
+        tagged_option.serialize(serializer)
     }
 }
 
@@ -503,14 +496,6 @@ impl PaymentOptions {
     pub fn into_inner(self) -> Vec<PaymentOption> {
         let Self(payment_options) = self;
         payment_options
-    }
-
-    /// Returns true if payment option list contains at least one option
-    /// of the given type.
-    pub fn any(&self, payment_type: PaymentType) -> bool {
-        let Self(payment_options) = self;
-        payment_options.iter()
-            .any(|option| option.payment_type() == payment_type)
     }
 
     pub fn find_subscription_option<S: SubscriptionOption>(
@@ -578,10 +563,15 @@ json_from_sql!(Aliases);
 json_to_sql!(Aliases);
 
 #[derive(Clone, Deserialize)]
-pub struct ProfileEmojis(Vec<DbEmoji>);
+pub struct ProfileEmojis(Vec<CustomEmoji>);
 
 impl ProfileEmojis {
-    pub fn into_inner(self) -> Vec<DbEmoji> {
+    pub fn inner(&self) -> &[CustomEmoji] {
+        let Self(emojis) = self;
+        emojis
+    }
+
+    pub fn into_inner(self) -> Vec<CustomEmoji> {
         let Self(emojis) = self;
         emojis
     }
@@ -607,6 +597,7 @@ pub struct DbActor {
 
     pub id: String,
     pub inbox: String,
+    pub shared_inbox: Option<String>,
     pub outbox: String,
     pub followers: Option<String>,
     pub subscribers: Option<String>,
@@ -624,12 +615,12 @@ json_to_sql!(DbActor);
 
 impl DbActor {
     pub fn is_portable(&self) -> bool {
-        is_ap_url(&self.id)
+        is_ap_uri(&self.id)
     }
 
     fn check_consistency(&self) -> Result<(), DatabaseTypeError> {
         if self.is_portable() {
-            ApUrl::parse(&self.id).map_err(|_| DatabaseTypeError)?;
+            ApUri::parse(&self.id).map_err(|_| DatabaseTypeError)?;
             if self.gateways.is_empty() {
                 // At least one gateway must be stored
                 return Err(DatabaseTypeError);
@@ -654,8 +645,9 @@ pub struct DbActorProfile {
     pub display_name: Option<String>,
     pub bio: Option<String>, // html
     pub bio_source: Option<String>, // plaintext or markdown
-    pub avatar: Option<ProfileImage>,
-    pub banner: Option<ProfileImage>,
+    pub avatar: Option<PartialMediaInfo>,
+    pub banner: Option<PartialMediaInfo>,
+    pub is_automated: bool,
     pub manually_approves_followers: bool,
     pub mention_policy: MentionPolicy,
     pub public_keys: PublicKeys,
@@ -685,10 +677,25 @@ pub struct DbActorProfile {
 // actor RSA key: can be updated at any time by the instance admin
 // identity proofs: TBD (likely will do "Trust on first use" (TOFU))
 
+#[derive(Debug, Default, PartialEq)]
 pub enum WebfingerHostname {
+    // Managed account or unmanaged primary account
+    #[default]
     Local,
+    // No account or not a primary account
     Remote(String),
+    // Possible scenarios:
+    // - portable user account is being created
     Unknown,
+}
+
+impl WebfingerHostname {
+    pub fn as_str(&self) -> Option<&str> {
+        match self {
+            Self::Local | Self::Unknown => None,
+            Self::Remote(hostname) => Some(hostname),
+        }
+    }
 }
 
 pub(crate) fn get_identity_key(secret_key: Ed25519SecretKey) -> String {
@@ -733,6 +740,23 @@ impl DbActorProfile {
         if let Some(ref actor_data) = self.actor_json {
             actor_data.check_consistency()?;
         };
+        if self.is_local() {
+            // Related media must be stored locally
+            if let Some(ref avatar) = self.avatar {
+                if !avatar.is_file() {
+                    return Err(DatabaseTypeError);
+                };
+            };
+            if let Some(ref banner) = self.banner {
+                if !banner.is_file() {
+                    return Err(DatabaseTypeError);
+                };
+            };
+            if !self.emojis.inner().iter().all(|emoji| emoji.image.is_file())
+            {
+                return Err(DatabaseTypeError);
+            };
+        };
         // TODO: remove
         if self.actor_json.is_some() && self.identity_key.is_some() {
             // Remote actors can't have identity keys
@@ -743,7 +767,7 @@ impl DbActorProfile {
 
     pub fn hostname(&self) -> WebfingerHostname {
         if let Some(ref hostname) = self.hostname {
-            WebfingerHostname::Remote(hostname.to_string())
+            WebfingerHostname::Remote(hostname.clone())
         } else if self.actor_json.is_none() || self.portable_user_id.is_some() {
             WebfingerHostname::Local
         } else {
@@ -756,24 +780,26 @@ impl DbActorProfile {
         self.user_id.is_some() || self.portable_user_id.is_some()
     }
 
+    pub fn has_portable_account(&self) -> bool {
+        self.portable_user_id.is_some()
+    }
+
     /// Is actor local (managed)?
     pub fn is_local(&self) -> bool {
         self.actor_json.is_none()
     }
 
-    pub fn is_automated(&self) -> bool {
-        match self.actor_json {
-            Some(ref db_actor) => {
-                ["Service", "Application"]
-                    .contains(&db_actor.object_type.as_str())
-            },
-            None => false,
-        }
-    }
-
     pub fn is_portable(&self) -> bool {
         if let Some(ref db_actor) = self.actor_json {
             db_actor.is_portable()
+        } else {
+            false
+        }
+    }
+
+    pub fn is_group(&self) -> bool {
+        if let Some(ref actor_data) = self.actor_json {
+            actor_data.object_type == "Group"
         } else {
             false
         }
@@ -807,6 +833,16 @@ impl DbActorProfile {
     }
 }
 
+impl TryFrom<&Row> for DbActorProfile {
+    type Error = DatabaseError;
+
+    fn try_from(row: &Row) -> Result<Self, Self::Error> {
+        let profile: Self = row.try_get("actor_profile")?;
+        profile.check_consistency()?;
+        Ok(profile)
+    }
+}
+
 impl fmt::Display for DbActorProfile {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         if let Some(ref actor_json) = self.actor_json {
@@ -833,6 +869,7 @@ impl Default for DbActorProfile {
             bio_source: None,
             avatar: None,
             banner: None,
+            is_automated: false,
             manually_approves_followers: false,
             mention_policy: MentionPolicy::default(),
             public_keys: PublicKeys(vec![]),
@@ -858,11 +895,12 @@ impl Default for DbActorProfile {
 #[cfg_attr(any(test, feature = "test-utils"), derive(Default))]
 pub struct ProfileCreateData {
     pub username: String,
-    pub hostname: Option<String>,
+    pub hostname: WebfingerHostname,
     pub display_name: Option<String>,
     pub bio: Option<String>,
-    pub avatar: Option<ProfileImage>,
-    pub banner: Option<ProfileImage>,
+    pub avatar: Option<MediaInfo>,
+    pub banner: Option<MediaInfo>,
+    pub is_automated: bool,
     pub manually_approves_followers: bool,
     pub mention_policy: MentionPolicy,
     pub public_keys: Vec<DbActorKey>,
@@ -880,6 +918,9 @@ impl ProfileCreateData {
             .map(|actor| actor.check_consistency())
             .transpose()?
             .is_some();
+        if self.hostname.as_str().is_some() && !is_remote {
+            return Err(DatabaseTypeError);
+        };
         check_public_keys(&self.public_keys, is_remote)?;
         check_identity_proofs(&self.identity_proofs)?;
         check_payment_options(&self.payment_options, is_remote)?;
@@ -887,27 +928,17 @@ impl ProfileCreateData {
         // The list may contain duplicates or self-references.
         Ok(())
     }
-
-    pub(super) fn hostname(&self) -> WebfingerHostname {
-        if let Some(ref hostname) = self.hostname {
-            WebfingerHostname::Remote(hostname.to_string())
-        } else if self.actor_json.is_none() {
-            WebfingerHostname::Local
-        } else {
-            // Possible cause: portable user account is being created
-            WebfingerHostname::Unknown
-        }
-    }
 }
 
 pub struct ProfileUpdateData {
     pub username: String,
-    pub hostname: Option<String>,
+    pub hostname: WebfingerHostname,
     pub display_name: Option<String>,
     pub bio: Option<String>,
     pub bio_source: Option<String>,
-    pub avatar: Option<ProfileImage>,
-    pub banner: Option<ProfileImage>,
+    pub avatar: Option<PartialMediaInfo>,
+    pub banner: Option<PartialMediaInfo>,
+    pub is_automated: bool,
     pub manually_approves_followers: bool,
     pub mention_policy: MentionPolicy,
     pub public_keys: Vec<DbActorKey>,
@@ -925,21 +956,13 @@ impl ProfileUpdateData {
             .map(|actor| actor.check_consistency())
             .transpose()?
             .is_some();
+        if self.hostname.as_str().is_some() && !is_remote {
+            return Err(DatabaseTypeError);
+        };
         check_public_keys(&self.public_keys, is_remote)?;
         check_identity_proofs(&self.identity_proofs)?;
         check_payment_options(&self.payment_options, is_remote)?;
         Ok(())
-    }
-
-    pub(super) fn hostname(&self) -> WebfingerHostname {
-        if let Some(ref hostname) = self.hostname {
-            WebfingerHostname::Remote(hostname.to_string())
-        } else if self.actor_json.is_none() {
-            WebfingerHostname::Local
-        } else {
-            // Portable user without webfinger address
-            WebfingerHostname::Unknown
-        }
     }
 
     /// Adds new identity proof
@@ -962,14 +985,16 @@ impl ProfileUpdateData {
 impl From<&DbActorProfile> for ProfileUpdateData {
     fn from(profile: &DbActorProfile) -> Self {
         let profile = profile.clone();
+        let hostname = profile.hostname();
         Self {
             username: profile.username,
-            hostname: profile.hostname,
+            hostname: hostname,
             display_name: profile.display_name,
             bio: profile.bio,
             bio_source: profile.bio_source,
             avatar: profile.avatar,
             banner: profile.banner,
+            is_automated: profile.is_automated,
             manually_approves_followers: profile.manually_approves_followers,
             mention_policy: profile.mention_policy,
             public_keys: profile.public_keys.into_inner(),
@@ -1020,9 +1045,8 @@ mod tests {
     fn test_payment_option_link_serialization() {
         let json_data = r#"{"payment_type":1,"name":"test","href":"https://test.com"}"#;
         let payment_option: PaymentOption = serde_json::from_str(json_data).unwrap();
-        let link = match payment_option {
-            PaymentOption::Link(ref link) => link,
-            _ => panic!("wrong option"),
+        let PaymentOption::Link(ref link) = payment_option else {
+            panic!("unexpected option");
         };
         assert_eq!(link.name, "test");
         assert_eq!(link.href, "https://test.com");
@@ -1034,13 +1058,29 @@ mod tests {
     fn test_payment_option_monero_subscription_serialization() {
         let json_data = r#"{"payment_type":3,"chain_id":"monero:418015bb9ae982a1975da7d79277c270","price":41387,"payout_address":"xxx"}"#;
         let payment_option: PaymentOption = serde_json::from_str(json_data).unwrap();
-        let payment_info = match payment_option {
-            PaymentOption::MoneroSubscription(ref payment_info) => payment_info,
-            _ => panic!("wrong option"),
+        let PaymentOption::MoneroSubscription(payment_info) = &payment_option else {
+            panic!("unexpected option");
         };
         assert_eq!(payment_info.chain_id, ChainId::monero_mainnet());
         assert_eq!(payment_info.price.get(), 41387);
         assert_eq!(payment_info.payout_address, "xxx");
+        let serialized = serde_json::to_string(&payment_option).unwrap();
+        assert_eq!(serialized, json_data);
+    }
+
+    #[test]
+    fn test_payment_option_remote_monero_subscription_serialization() {
+        let json_data = r#"{"payment_type":4,"chain_id":"monero:418015bb9ae982a1975da7d79277c270","price":41387,"amount_min":null,"object_id":"https://social.example/test","fep_0837_enabled":true}"#;
+        let payment_option: PaymentOption = serde_json::from_str(json_data).unwrap();
+        let PaymentOption::RemoteMoneroSubscription(ref payment_info) = payment_option
+        else {
+            panic!("unexpected option");
+        };
+        assert_eq!(payment_info.chain_id, ChainId::monero_mainnet());
+        assert_eq!(payment_info.price.get(), 41387);
+        assert_eq!(payment_info.amount_min, None);
+        assert_eq!(payment_info.object_id, "https://social.example/test");
+        assert_eq!(payment_info.fep_0837_enabled, true);
         let serialized = serde_json::to_string(&payment_option).unwrap();
         assert_eq!(serialized, json_data);
     }

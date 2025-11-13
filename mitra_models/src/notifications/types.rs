@@ -3,15 +3,15 @@ use postgres_types::FromSql;
 use tokio_postgres::Row;
 use uuid::Uuid;
 
-use crate::attachments::types::DbMediaAttachment;
+use crate::attachments::types::MediaAttachment;
 use crate::conversations::types::Conversation;
 use crate::database::{
     int_enum::{int_enum_from_sql, int_enum_to_sql},
     DatabaseError,
     DatabaseTypeError,
 };
-use crate::emojis::types::DbEmoji;
-use crate::posts::types::{DbPostReactions, DbPost, Post};
+use crate::emojis::types::CustomEmoji;
+use crate::posts::types::{Post, PostDetailed, PostReaction};
 use crate::profiles::types::DbActorProfile;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -78,7 +78,7 @@ int_enum_to_sql!(EventType);
 #[allow(dead_code)]
 #[derive(FromSql)]
 #[postgres(name = "notification")]
-struct DbNotification {
+struct Notification {
     id: i32,
     sender_id: Uuid,
     recipient_id: Uuid,
@@ -88,36 +88,36 @@ struct DbNotification {
     created_at: DateTime<Utc>,
 }
 
-pub struct Notification {
+pub struct NotificationDetailed {
     pub id: i32,
     pub sender: DbActorProfile,
-    pub post: Option<Post>,
+    pub post: Option<PostDetailed>,
     pub reaction_content: Option<String>,
-    pub reaction_emoji: Option<DbEmoji>,
+    pub reaction_emoji: Option<CustomEmoji>,
     pub event_type: EventType,
     pub created_at: DateTime<Utc>,
 }
 
-impl TryFrom<&Row> for Notification {
+impl TryFrom<&Row> for NotificationDetailed {
 
     type Error = DatabaseError;
 
     fn try_from(row: &Row) -> Result<Self, Self::Error> {
-        let db_notification: DbNotification = row.try_get("notification")?;
+        let db_notification: Notification = row.try_get("notification")?;
         let db_sender: DbActorProfile = row.try_get("sender")?;
-        let maybe_db_post: Option<DbPost> = row.try_get("post")?;
+        let maybe_db_post: Option<Post> = row.try_get("post")?;
         let maybe_post = match maybe_db_post {
             Some(db_post) => {
                 let db_post_author: DbActorProfile = row.try_get("post_author")?;
                 let db_conversation: Option<Conversation> = row.try_get("conversation")?;
                 let maybe_poll = row.try_get("poll")?;
-                let db_attachments: Vec<DbMediaAttachment> = row.try_get("attachments")?;
+                let db_attachments: Vec<MediaAttachment> = row.try_get("attachments")?;
                 let db_mentions: Vec<DbActorProfile> = row.try_get("mentions")?;
                 let db_tags: Vec<String> = row.try_get("tags")?;
                 let db_links: Vec<Uuid> = row.try_get("links")?;
-                let db_emojis: Vec<DbEmoji> = row.try_get("emojis")?;
-                let db_reactions: Vec<DbPostReactions> = row.try_get("reactions")?;
-                let post = Post::new(
+                let db_emojis: Vec<CustomEmoji> = row.try_get("emojis")?;
+                let db_reactions: Vec<PostReaction> = row.try_get("reactions")?;
+                let post = PostDetailed::new(
                     db_post,
                     db_post_author,
                     db_conversation,
@@ -144,6 +144,7 @@ impl TryFrom<&Row> for Notification {
             event_type: db_notification.event_type,
             created_at: db_notification.created_at,
         };
+        notification.sender.check_consistency()?;
         Ok(notification)
     }
 }

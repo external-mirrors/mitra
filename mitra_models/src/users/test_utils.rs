@@ -1,6 +1,8 @@
 use apx_core::{
-    crypto_eddsa::generate_weak_ed25519_key,
-    crypto_rsa::generate_weak_rsa_key,
+    crypto::{
+        eddsa::generate_weak_ed25519_key,
+        rsa::generate_weak_rsa_key,
+    },
 };
 
 use crate::{
@@ -28,13 +30,12 @@ pub async fn create_test_user(
 pub async fn create_test_portable_user(
     db_client: &mut impl DatabaseClient,
     username: &str,
-    hostname: &str,
     actor_id: &str,
 ) -> PortableUser {
     let profile = create_test_remote_profile(
         db_client,
         username,
-        hostname,
+        "server.local", // local webfinger
         actor_id,
     ).await;
     let invite_code = create_invite_code(db_client, None).await.unwrap();
@@ -42,7 +43,7 @@ pub async fn create_test_portable_user(
         profile_id: profile.id,
         rsa_secret_key: generate_weak_rsa_key().unwrap(),
         ed25519_secret_key: generate_weak_ed25519_key(),
-        invite_code: invite_code.to_string(),
+        invite_code: invite_code.clone(),
     };
     create_portable_user(db_client, user_data).await.unwrap()
 }

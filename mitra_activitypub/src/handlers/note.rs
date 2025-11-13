@@ -1,5 +1,19 @@
 use std::collections::HashMap;
 
+use apx_sdk::{
+    addresses::WebfingerAddress,
+    constants::{AP_MEDIA_TYPE, AP_PUBLIC, AS_MEDIA_TYPE},
+    core::url::canonical::{is_same_origin, CanonicalUri},
+    deserialization::{
+        deserialize_into_id_array,
+        deserialize_into_link_href,
+        deserialize_into_object_id_opt,
+        deserialize_object_array,
+        parse_into_href_array,
+    },
+    fetch::fetch_media,
+    utils::is_public,
+};
 use chrono::{DateTime, Utc};
 use serde::{
     Deserialize,
@@ -9,34 +23,29 @@ use serde::{
 use serde_json::{Value as JsonValue};
 use uuid::Uuid;
 
-use apx_sdk::{
-    addresses::WebfingerAddress,
-    constants::{AP_MEDIA_TYPE, AS_MEDIA_TYPE},
-    deserialization::{
-        deserialize_into_id_array,
-        deserialize_into_link_href,
-        deserialize_into_object_id_opt,
-        deserialize_object_array,
-        parse_into_href_array,
-    },
-    fetch::fetch_file,
-    url::is_same_origin,
-    utils::is_public,
+use mitra_adapters::{
+    permissions::filter_mentions,
+    posts::check_post_limits,
 };
-use mitra_adapters::permissions::filter_mentions;
 use mitra_models::{
     activitypub::queries::save_attributed_object,
     attachments::queries::create_attachment,
-    database::{DatabaseClient, DatabaseError},
+    database::{
+        db_client_await,
+        get_database_client,
+        DatabaseConnectionPool,
+        DatabaseError,
+    },
     filter_rules::types::FilterAction,
     media::types::MediaInfo,
     polls::types::{PollData, PollResult},
     posts::{
+        helpers::can_link_post,
         queries::{create_post, update_post},
         types::{
-            Post,
             PostContext,
             PostCreateData,
+            PostDetailed,
             PostUpdateData,
             Visibility,
         },
@@ -44,21 +53,21 @@ use mitra_models::{
     profiles::types::DbActorProfile,
 };
 use mitra_utils::{
-    files::FileInfo,
-    html::clean_html,
+    languages::{parse_language_tag, Language},
 };
 use mitra_validators::{
+    common::Origin::Remote,
     errors::ValidationError,
     media::{validate_media_description, validate_media_url},
-    polls::validate_poll_data,
+    polls::{clean_poll_option_name, validate_poll_data},
     posts::{
+        clean_remote_content,
         clean_title,
-        content_allowed_classes,
+        validate_content,
         validate_post_create_data,
         validate_post_mentions,
         validate_post_update_data,
-        ATTACHMENT_LIMIT,
-        CONTENT_MAX_SIZE,
+        validate_reply,
         EMOJI_LIMIT,
         HASHTAG_LIMIT,
         LINK_LIMIT,
@@ -68,7 +77,6 @@ use mitra_validators::{
 };
 
 use crate::{
-    agent::build_federation_agent,
     builders::note::LinkTag,
     filter::get_moderation_domain,
     identifiers::{
@@ -91,6 +99,110 @@ use super::{
     HandlerError,
 };
 
+fn deserialize_attributed_to<'de, D>(
+    deserializer: D,
+) -> Result<String, D::Error>
+    where D: Deserializer<'de>
+{
+    let value = JsonValue::deserialize(deserializer)?;
+    let attributed_to = parse_attributed_to(&value)
+        .map_err(DeserializerError::custom)?;
+    Ok(attributed_to)
+}
+
+fn deserialize_icon<'de, D>(
+    deserializer: D,
+) -> Result<Vec<MediaAttachment>, D::Error>
+    where D: Deserializer<'de>
+{
+    let values: Vec<JsonValue> = deserialize_object_array(deserializer)?;
+    let mut images = vec![];
+    for value in values {
+        match value["type"].as_str() {
+            Some(IMAGE) => {
+                match serde_json::from_value(value) {
+                    Ok(image) => {
+                        images.push(image);
+                    },
+                    Err(error) => {
+                        log::warn!("invalid icon ({error})");
+                    },
+                };
+            },
+            _ => {
+                log::warn!("unsupported icon type");
+            },
+        };
+    };
+    Ok(images)
+}
+
+#[derive(Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MediaAttachment {
+    #[serde(rename = "type")]
+    attachment_type: String,
+
+    name: Option<String>,
+    summary: Option<String>,
+    media_type: Option<String>,
+
+    #[serde(deserialize_with = "deserialize_into_link_href")]
+    pub url: String,
+}
+
+#[derive(Clone)]
+pub enum Attachment {
+    Media(MediaAttachment),
+    Link(String),
+}
+
+fn deserialize_attachment<'de, D>(
+    deserializer: D,
+) -> Result<Vec<Attachment>, D::Error>
+    where D: Deserializer<'de>
+{
+    let values: Vec<JsonValue> = deserialize_object_array(deserializer)?;
+    let mut attachments = vec![];
+    for value in values {
+        match value["type"].as_str() {
+            Some(AUDIO | DOCUMENT | IMAGE | VIDEO) => (),
+            Some(LINK) => {
+                // Lemmy compatibility
+                let link_href = if let Some(href) = value["href"].as_str() {
+                    href.to_string()
+                } else {
+                    log::warn!("invalid link attachment");
+                    continue;
+                };
+                attachments.push(Attachment::Link(link_href));
+                continue;
+            },
+            Some(attachment_type) => {
+                log::warn!(
+                    "skipping attachment of type {}",
+                    attachment_type,
+                );
+                continue;
+            },
+            None => {
+                log::warn!("attachment without type");
+                continue;
+            },
+        };
+        match serde_json::from_value(value) {
+            Ok(attachment) => {
+                attachments.push(Attachment::Media(attachment));
+            },
+            Err(error) => {
+                log::warn!("invalid attachment ({error})");
+                continue;
+            },
+        };
+    };
+    Ok(attachments)
+}
+
 #[derive(Deserialize)]
 #[cfg_attr(test, derive(Default))]
 #[serde(rename_all = "camelCase")]
@@ -103,25 +215,27 @@ pub struct AttributedObject {
     pub object_type: String,
 
     // Required for conversion into "post" entity
-    attributed_to: JsonValue,
+    #[serde(deserialize_with = "deserialize_attributed_to")]
+    attributed_to: String,
 
     name: Option<String>,
-    content: Option<String>,
+    pub content: Option<String>,
+    content_map: Option<HashMap<String, String>>,
     media_type: Option<String>,
     pub sensitive: Option<bool>,
     summary: Option<String>,
 
     #[serde(
         default,
-        deserialize_with = "deserialize_object_array",
+        deserialize_with = "deserialize_icon",
     )]
-    icon: Vec<JsonValue>,
+    icon: Vec<MediaAttachment>,
 
     #[serde(
         default,
-        deserialize_with = "deserialize_object_array",
+        deserialize_with = "deserialize_attachment",
     )]
-    attachment: Vec<JsonValue>,
+    pub attachment: Vec<Attachment>,
 
     #[serde(
         default,
@@ -137,7 +251,7 @@ pub struct AttributedObject {
     #[serde(default, deserialize_with = "deserialize_into_id_array")]
     cc: Vec<String>,
 
-    published: Option<DateTime<Utc>>,
+    pub published: Option<DateTime<Utc>>,
     pub updated: Option<DateTime<Utc>>,
     url: Option<JsonValue>,
 
@@ -147,6 +261,7 @@ pub struct AttributedObject {
     end_time: Option<DateTime<Utc>>,
     closed: Option<DateTime<Utc>>,
 
+    quote: Option<String>,
     quote_url: Option<String>,
 
     // TODO: Use is_object?
@@ -159,6 +274,36 @@ impl AttributedObject {
             return Err(ValidationError("object is actor"));
         };
         Ok(())
+    }
+
+    fn is_converted(&self) -> bool {
+        ![NOTE, QUESTION, CHAT_MESSAGE].contains(&self.object_type.as_str())
+    }
+
+    pub fn audience(&self) -> Vec<&String> {
+        self.to.iter().chain(self.cc.iter()).collect()
+    }
+
+    fn language(&self) -> Option<Language> {
+        let language_tag = self.content_map
+            .as_ref()
+            .and_then(|content_map| {
+                content_map.iter()
+                    .find(|(_, content)| self.content.as_ref() == Some(content))
+                    .map(|(language_tag, _)| language_tag)
+                    .or_else(|| {
+                        log::warn!("content is not found in contentMap");
+                        None
+                    })
+            })?;
+        parse_language_tag(language_tag).or_else(|| {
+            log::warn!("invalid language tag: {language_tag}");
+            None
+        })
+    }
+
+    fn quote(&self) -> Option<&String> {
+        self.quote.as_ref().or(self.quote_url.as_ref())
     }
 }
 
@@ -183,6 +328,10 @@ impl AttributedObjectJson {
         &self.inner.id
     }
 
+    pub fn attributed_to(&self) -> &str {
+        &self.inner.attributed_to
+    }
+
     pub fn in_reply_to(&self) -> Option<&str> {
         self.inner.in_reply_to.as_deref()
     }
@@ -192,29 +341,23 @@ impl AttributedObjectJson {
     }
 }
 
-pub(super) fn get_object_attributed_to(object: &AttributedObject)
-    -> Result<String, ValidationError>
-{
-    parse_attributed_to(&object.attributed_to)
-}
-
-fn get_object_url(object: &AttributedObject)
-    -> Result<String, ValidationError>
-{
+fn get_object_url(
+    object: &AttributedObject,
+) -> Result<Option<String>, ValidationError> {
     let maybe_object_url = match &object.url {
         Some(value) => {
-            let links = parse_into_href_array(value)
+            let urls = parse_into_href_array(value)
                 .map_err(|_| ValidationError("invalid object URL"))?;
-            links.into_iter().next()
+            // TODO: select URL with text/html media type
+            urls.into_iter().next()
         },
         None => None,
     };
-    let object_url = maybe_object_url.unwrap_or(object.id.clone());
-    Ok(object_url)
+    Ok(maybe_object_url)
 }
 
 /// Get post content by concatenating name/summary and content
-fn get_object_content(object: &AttributedObject) ->
+pub(super) fn get_object_content(object: &AttributedObject) ->
     Result<String, ValidationError>
 {
     let title = if object.in_reply_to.is_none() {
@@ -235,27 +378,25 @@ fn get_object_content(object: &AttributedObject) ->
             format!("<p>{}</p>", content)
         } else {
             // HTML
-            content.to_string()
+            content.clone()
         }
     } else {
         "".to_string()
     };
     let content = format!("{}{}", title, content);
-    if content.len() > CONTENT_MAX_SIZE {
-        return Err(ValidationError("content is too long"));
-    };
-    let content_safe = clean_html(&content, content_allowed_classes());
+    let content_safe = clean_remote_content(&content);
+    validate_content(&content_safe)?;
     Ok(content_safe)
 }
 
-fn create_content_link(url: String) -> String {
+fn create_content_link(url: &str) -> String {
     format!(
         r#"<p><a href="{0}" rel="noopener">{0}</a></p>"#,
         url,
     )
 }
 
-fn is_gnu_social_link(author_id: &str, attachment: &Attachment) -> bool {
+fn is_gnu_social_link(author_id: &str, attachment: &MediaAttachment) -> bool {
     if !author_id.contains("/index.php/user/") {
         return false;
     };
@@ -269,77 +410,38 @@ fn is_gnu_social_link(author_id: &str, attachment: &Attachment) -> bool {
     }
 }
 
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct Attachment {
-    #[serde(rename = "type")]
-    attachment_type: String,
-
-    name: Option<String>,
-    media_type: Option<String>,
-
-    #[serde(deserialize_with = "deserialize_into_link_href")]
-    url: String,
-}
-
 async fn get_object_attachments(
     ap_client: &ApClient,
-    db_client: &impl DatabaseClient,
+    db_pool: &DatabaseConnectionPool,
     object: &AttributedObject,
     author: &DbActorProfile,
 ) -> Result<(Vec<Uuid>, Vec<String>), HandlerError> {
-    let agent = build_federation_agent(&ap_client.instance, None);
+    let agent = ap_client.agent();
     let author_hostname = get_moderation_domain(author.expect_actor_data())?;
     let is_filter_enabled = ap_client.filter.is_action_required(
         author_hostname.as_str(),
         FilterAction::RejectMediaAttachments,
     );
+    let is_proxy_enabled = ap_client.filter.is_action_required(
+        author_hostname.as_str(),
+        FilterAction::ProxyMedia,
+    );
 
     let mut values = object.attachment.clone();
     if object.object_type == VIDEO {
         // PeerTube video thumbnails
-        values.extend(object.icon.iter().take(1).cloned());
+        let thumbnails = object.icon.iter().cloned().map(Attachment::Media);
+        values.extend(thumbnails.take(1));
     };
+
     let mut attachments = vec![];
     let mut unprocessed = vec![];
-    let mut downloaded: Vec<(String, FileInfo, Option<String>)> = vec![];
+    let mut downloaded: Vec<(MediaInfo, Option<String>)> = vec![];
     for attachment_value in values {
-        // Stop downloading if limit is reached
-        if downloaded.len() >= ATTACHMENT_LIMIT {
-            log::warn!("too many attachments");
-            break;
-        };
-        match attachment_value["type"].as_str() {
-            Some(AUDIO | DOCUMENT | IMAGE | VIDEO) => (),
-            Some(LINK) => {
-                // Lemmy compatibility
-                let link_href = if let Some(href) = attachment_value["href"].as_str() {
-                    href.to_string()
-                } else {
-                    log::warn!("invalid link attachment");
-                    continue;
-                };
-                unprocessed.push(link_href);
-                continue;
-            },
-            Some(attachment_type) => {
-                log::warn!(
-                    "skipping attachment of type {}",
-                    attachment_type,
-                );
-                continue;
-            },
-            None => {
-                log::warn!("attachment without type");
-                continue;
-            },
-        };
-        let attachment: Attachment =
-            match serde_json::from_value(attachment_value)
-        {
-            Ok(attachment) => attachment,
-            Err(error) => {
-                log::warn!("invalid attachment ({error})");
+        let attachment = match attachment_value {
+            Attachment::Media(attachment) => attachment,
+            Attachment::Link(link) => {
+                unprocessed.push(link);
                 continue;
             },
         };
@@ -355,28 +457,36 @@ async fn get_object_attachments(
             log::warn!("invalid attachment URL ({error}): {attachment_url}");
             continue;
         };
-        if downloaded.iter().any(|(url, ..)| *url == attachment_url) {
+        if downloaded.iter().any(|(media, ..)| media.url() == Some(&attachment_url)) {
             // Already downloaded
             log::warn!("skipping duplicate attachment: {attachment_url}");
             continue;
         };
-        let maybe_description = attachment.name.filter(|name| {
-            validate_media_description(name)
-                .map_err(|error| log::warn!("{error}"))
-                .is_ok()
-        });
+        let maybe_description = attachment.name
+            // Used by GoToSocial
+            .or(attachment.summary)
+            .filter(|name| {
+                validate_media_description(name)
+                    .map_err(|error| log::warn!("{error}"))
+                    .is_ok()
+            });
         if is_filter_enabled {
             // Do not download
             log::warn!("attachment removed by filter: {attachment_url}");
             unprocessed.push(attachment_url);
             continue;
         };
-        let (file_data, media_type) = match fetch_file(
+        if downloaded.len() >= ap_client.limits.posts.attachment_limit {
+            // Stop downloading if limit is reached
+            log::warn!("too many attachments");
+            unprocessed.push(attachment_url);
+            continue;
+        };
+        let (file_data, media_type) = match fetch_media(
             &agent,
             &attachment_url,
-            attachment.media_type.as_deref(),
-            &ap_client.media_limits.supported_media_types(),
-            ap_client.media_limits.file_size_limit,
+            &ap_client.limits.media.supported_media_types(),
+            ap_client.limits.media.file_size_limit,
         ).await {
             Ok(file) => file,
             Err(error) => {
@@ -389,16 +499,23 @@ async fn get_object_attachments(
                 continue;
             },
         };
-        let file_info =
-            ap_client.media_storage.save_file(file_data, &media_type)?;
-        log::info!("downloaded attachment {}", attachment_url);
-        downloaded.push((attachment_url, file_info, maybe_description));
+        let media_info = if is_proxy_enabled {
+            log::info!("linked attachment {}", attachment_url);
+            MediaInfo::link(media_type, attachment_url)
+        } else {
+            let file_info = ap_client.media_storage
+                .save_file(file_data, &media_type)?;
+            log::info!("downloaded attachment {}", attachment_url);
+            MediaInfo::remote(file_info, attachment_url)
+        };
+        downloaded.push((media_info, maybe_description));
     };
-    for (attachment_url, file_info, description) in downloaded {
+    let db_client = &**get_database_client(db_pool).await?;
+    for (media_info, description) in downloaded {
         let db_attachment = create_attachment(
             db_client,
             author.id,
-            MediaInfo::remote(file_info, attachment_url),
+            media_info,
             description.as_deref(),
         ).await?;
         attachments.push(db_attachment.id);
@@ -443,7 +560,7 @@ fn get_object_links(
             };
         };
     };
-    if let Some(ref object_id) = object.quote_url {
+    if let Some(object_id) = object.quote() {
         if !links.contains(object_id) {
             links.push(object_id.to_owned());
         };
@@ -453,7 +570,7 @@ fn get_object_links(
 
 async fn get_object_tags(
     ap_client: &ApClient,
-    db_client: &mut impl DatabaseClient,
+    db_pool: &DatabaseConnectionPool,
     object: &AttributedObject,
     author: &DbActorProfile,
     redirects: &HashMap<String, String>,
@@ -513,7 +630,7 @@ async fn get_object_tags(
                 // but also can be actor URL (profile link).
                 match ActorIdResolver::default().resolve(
                     ap_client,
-                    db_client,
+                    db_pool,
                     &href,
                 ).await {
                     Ok(profile) => {
@@ -543,7 +660,7 @@ async fn get_object_tags(
             if let Ok(webfinger_address) = WebfingerAddress::from_handle(&tag_name) {
                 let profile = match get_or_import_profile_by_webfinger_address(
                     ap_client,
-                    db_client,
+                    db_pool,
                     &webfinger_address,
                 ).await {
                     Ok(profile) => profile,
@@ -587,10 +704,14 @@ async fn get_object_tags(
             let href = redirects.get(&tag.href).unwrap_or(&tag.href);
             let canonical_linked_id = canonicalize_id(href)?;
             let linked = get_post_by_object_id(
-                db_client,
-                &instance.url(),
+                db_client_await!(db_pool),
+                instance.uri_str(),
                 &canonical_linked_id,
             ).await?;
+            if !can_link_post(&linked) {
+                log::warn!("post can not be linked");
+                continue;
+            };
             if !links.contains(&linked.id) {
                 links.push(linked.id);
             };
@@ -601,7 +722,7 @@ async fn get_object_tags(
             };
             match handle_emoji(
                 ap_client,
-                db_client,
+                db_pool,
                 &moderation_domain,
                 tag_value,
             ).await? {
@@ -618,7 +739,8 @@ async fn get_object_tags(
     };
 
     // Create mentions for known actors in "to" and "cc" fields
-    let audience = get_audience(object);
+    let audience = get_audience(object)?;
+    let db_client = &**get_database_client(db_pool).await?;
     for target_id in audience {
         if is_public(&target_id) {
             continue;
@@ -629,7 +751,7 @@ async fn get_object_tags(
         };
         match get_profile_by_actor_id(
             db_client,
-            &instance.url(),
+            instance.uri_str(),
             &target_id,
         ).await {
             Ok(profile) => {
@@ -644,16 +766,20 @@ async fn get_object_tags(
     };
 
     // Parse quoteUrl as an object link
-    if let Some(ref object_id) = object.quote_url {
-        let object_id = redirects.get(object_id).unwrap_or(object_id);
+    if let Some(quote_id) = object.quote() {
+        let object_id = redirects.get(quote_id).unwrap_or(quote_id);
         let canonical_object_id = canonicalize_id(object_id)?;
         let linked = get_post_by_object_id(
             db_client,
-            &instance.url(),
+            instance.uri_str(),
             &canonical_object_id,
         ).await?;
-        if links.len() < LINK_LIMIT && !links.contains(&linked.id) {
-            links.push(linked.id);
+        if can_link_post(&linked) {
+            if links.len() < LINK_LIMIT && !links.contains(&linked.id) {
+                links.push(linked.id);
+            };
+        } else {
+            log::warn!("post can not be linked");
         };
     };
 
@@ -672,44 +798,83 @@ async fn get_object_tags(
     Ok((mentions, hashtags, links, emojis))
 }
 
-pub(super) fn get_audience(object: &AttributedObject) -> Vec<String> {
+pub fn normalize_audience(
+    audience: &[impl AsRef<str>],
+) -> Result<Vec<CanonicalUri>, ValidationError> {
+    let mut normalized_audience = audience.iter()
+        .map(|target_id| {
+            let normalized_target_id = if is_public(target_id) {
+                AP_PUBLIC
+            } else {
+                target_id.as_ref()
+            };
+            canonicalize_id(normalized_target_id)
+                .map_err(|_| ValidationError("invalid target ID"))
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+    normalized_audience.sort_by_key(|id| id.to_string());
+    normalized_audience.dedup_by_key(|id| id.to_string());
+    Ok(normalized_audience)
+}
+
+pub(super) fn get_audience(
+    object: &AttributedObject,
+) -> Result<Vec<String>, ValidationError> {
     let mut audience = vec![];
-    for target_id in object.to.iter().chain(object.cc.iter()) {
-        match canonicalize_id(target_id) {
-            Ok(canonical_target_id) => audience.push(canonical_target_id.to_string()),
-            Err(_) => audience.push(target_id.to_string()),
-        };
+    for target_id in normalize_audience(&object.audience())? {
+        audience.push(target_id.to_string());
     };
-    audience
+    Ok(audience)
 }
 
 fn get_object_visibility(
     author: &DbActorProfile,
     audience: &[String],
-    maybe_in_reply_to: Option<&Post>,
+    maybe_in_reply_to: Option<&PostDetailed>,
 ) -> (Visibility, PostContext) {
+    let actor = author.expect_actor_data();
     if let Some(in_reply_to) = maybe_in_reply_to {
         let conversation = in_reply_to.expect_conversation();
         let context = PostContext::Reply {
             conversation_id: conversation.id,
             in_reply_to_id: in_reply_to.id,
         };
-        let visibility = if audience.iter().any(is_public) {
-            Visibility::Public
-        } else if let Some(ref conversation_audience) = conversation.audience {
-            if audience.contains(conversation_audience) {
+        let visibility = if let Some(ref conversation_audience) = conversation.audience {
+            if conversation_audience == AP_PUBLIC {
+                if audience.contains(conversation_audience) {
+                    Visibility::Public
+                } else if audience.iter().any(|id| Some(id) == actor.followers.as_ref()) {
+                    // Narrowing down the scope from Public to Followers
+                    Visibility::Followers
+                } else {
+                    // DM or unknown audience
+                    Visibility::Direct
+                }
+            } else if audience.contains(conversation_audience) {
+                // TODO: check scope widening
                 Visibility::Conversation
             } else {
-                Visibility::Direct
+                #[allow(clippy::collapsible_else_if)]
+                if audience.iter().any(|id| id == AP_PUBLIC) {
+                    log::warn!("changing visibility from Public to Conversation");
+                    Visibility::Conversation
+                } else if audience.iter().any(|id| Some(id) == actor.followers.as_ref()) {
+                    log::warn!("changing visibility from Followers to Conversation");
+                    Visibility::Conversation
+                } else {
+                    // DM or unknown audience
+                    Visibility::Direct
+                }
             }
         } else {
+            // No audience: DM or a legacy limited conversation
             Visibility::Direct
         };
         (visibility, context)
     } else {
-        let actor = author.expect_actor_data();
         let mut conversation_audience = None;
         let visibility = if audience.iter().any(is_public) {
+            conversation_audience = Some(AP_PUBLIC.to_owned());
             Visibility::Public
         } else if audience.iter().any(|id| Some(id) == actor.followers.as_ref()) {
             conversation_audience = actor.followers.clone();
@@ -760,15 +925,14 @@ fn parse_poll_results(
         let note: Note = serde_json::from_value(note_value.clone())
             .map_err(|_| ValidationError("invalid poll option"))?;
         let result = PollResult {
-            option_name: note.name,
+            option_name: clean_poll_option_name(&note.name),
             vote_count: note.replies.total_items,
         };
         results.push(result);
     };
     let ends_at = object.end_time
         // Pleroma uses closed property even when poll is still active
-        .or(object.closed)
-        .ok_or(ValidationError("endless poll"))?;
+        .or(object.closed);
     let poll_data = PollData {
         multiple_choices: is_multichoice,
         ends_at: ends_at,
@@ -780,86 +944,87 @@ fn parse_poll_results(
 
 pub async fn create_remote_post(
     ap_client: &ApClient,
-    db_client: &mut impl DatabaseClient,
+    db_pool: &DatabaseConnectionPool,
     object: AttributedObjectJson,
     redirects: &HashMap<String, String>,
-) -> Result<Post, HandlerError> {
+) -> Result<PostDetailed, HandlerError> {
     let AttributedObjectJson { inner: object, value: object_value } = object;
     let canonical_object_id = canonicalize_id(&object.id)?;
 
     object.check_not_actor()?;
-    if object.object_type != NOTE && object.object_type != QUESTION {
+    if object.is_converted() {
         // Attempting to convert any object that has attributedTo property
         // into post
         log::info!("processing object of type {}", object.object_type);
     };
 
-    let author_id = get_object_attributed_to(&object)?;
-    if !is_same_origin(&author_id, &object.id)
+    if !is_same_origin(&object.attributed_to, &object.id)
         .map_err(|_| ValidationError("invalid object ID"))?
     {
         return Err(ValidationError("object attributed to actor from different server").into());
     };
-    let instance = &ap_client.instance;
     let author = ActorIdResolver::default().only_remote().resolve(
         ap_client,
-        db_client,
-        &author_id,
+        db_pool,
+        &object.attributed_to,
     ).await.map_err(|err| {
-        log::warn!("failed to import {} ({})", author_id, err);
+        log::warn!("failed to import {} ({})", object.attributed_to, err);
         err
     })?;
-
-    let mut content = get_object_content(&object)?;
-    let maybe_poll_data = if object.object_type == QUESTION {
-        match parse_poll_results(&object) {
-            Ok(poll_data) => Some(poll_data),
-            Err(error) => {
-                log::warn!("{error}");
-                None
-            },
-        }
-    } else {
-        None
-    };
-    if object.object_type != NOTE && object.object_type != QUESTION {
-        // Append link to object
-        let object_url = get_object_url(&object)?;
-        content += &create_content_link(object_url);
-    };
-    let (attachments, unprocessed) = get_object_attachments(
-        ap_client,
-        db_client,
-        &object,
-        &author,
-    ).await?;
-    for attachment_url in unprocessed {
-        content += &create_content_link(attachment_url);
-    };
-
-    let (mentions, hashtags, links, emojis) = get_object_tags(
-        ap_client,
-        db_client,
-        &object,
-        &author,
-        redirects,
-    ).await?;
+    let author_hostname = get_moderation_domain(author.expect_actor_data())?;
 
     let maybe_in_reply_to = match object.in_reply_to {
         Some(ref object_id) => {
             let object_id = redirects.get(object_id).unwrap_or(object_id);
-            let canonical_in_reply_to_id = canonicalize_id(object_id)?;
+            let canonical_object_id = canonicalize_id(object_id)?;
             let in_reply_to = get_post_by_object_id(
-                db_client,
-                &instance.url(),
-                &canonical_in_reply_to_id,
+                db_client_await!(db_pool),
+                ap_client.instance.uri_str(),
+                &canonical_object_id,
             ).await?;
             Some(in_reply_to)
         },
         None => None,
     };
 
+    let mut content = get_object_content(&object)?;
+    let maybe_poll_data = if object.object_type == QUESTION {
+        match parse_poll_results(&object) {
+            Ok(poll_data) => Some(poll_data),
+            Err(error) => {
+                log::warn!("{error}: {}", object.id);
+                None
+            },
+        }
+    } else {
+        None
+    };
+    let maybe_object_url = get_object_url(&object)?;
+    if object.is_converted() {
+        // Append link to object
+        let url = maybe_object_url.as_ref().unwrap_or(&object.id);
+        content += &create_content_link(url);
+    };
+    let (attachments, unprocessed) = get_object_attachments(
+        ap_client,
+        db_pool,
+        &object,
+        &author,
+    ).await?;
+    for attachment_url in unprocessed {
+        content += &create_content_link(&attachment_url);
+    };
+
+    let (mentions, hashtags, links, emojis) = get_object_tags(
+        ap_client,
+        db_pool,
+        &object,
+        &author,
+        redirects,
+    ).await?;
+
     // TODO: use on local posts too
+    let db_client = &mut **get_database_client(db_pool).await?;
     let mentions = filter_mentions(
         db_client,
         mentions,
@@ -867,13 +1032,18 @@ pub async fn create_remote_post(
         maybe_in_reply_to.as_ref().map(|post| post.id),
     ).await?;
 
-    let audience = get_audience(&object);
+    let audience = get_audience(&object)?;
     let (visibility, context) = get_object_visibility(
         &author,
         &audience,
         maybe_in_reply_to.as_ref(),
     );
-    let is_sensitive = object.sensitive.unwrap_or(false);
+    let is_sensitive =
+        object.sensitive.unwrap_or(false) ||
+        ap_client.filter.is_action_required(
+            author_hostname.as_str(),
+            FilterAction::MarkSensitive,
+        );
     let created_at = object.published.unwrap_or(Utc::now());
 
     if visibility == Visibility::Direct &&
@@ -883,22 +1053,35 @@ pub async fn create_remote_post(
     };
 
     let post_data = PostCreateData {
+        id: None,
         context: context,
         content: content,
         content_source: None,
+        language: object.language(),
         visibility,
         is_sensitive,
+        poll: maybe_poll_data,
         attachments: attachments,
         mentions: mentions.iter().map(|profile| profile.id).collect(),
         tags: hashtags,
         links: links,
         emojis: emojis,
-        poll: maybe_poll_data,
+        url: maybe_object_url,
         object_id: Some(canonical_object_id.to_string()),
         created_at,
     };
     validate_post_create_data(&post_data)?;
     validate_post_mentions(&post_data.mentions, post_data.visibility)?;
+    if let Some(in_reply_to) = maybe_in_reply_to {
+        // TODO: disallow scope widening (see also: get_related_posts)
+        validate_reply(
+            &in_reply_to,
+            author.id,
+            post_data.visibility,
+            &post_data.mentions,
+        ).unwrap_or_else(|error| log::warn!("{error}"));
+    };
+    check_post_limits(&ap_client.limits.posts, &post_data.attachments, Remote)?;
     let post = create_post(db_client, author.id, post_data).await?;
     save_attributed_object(
         db_client,
@@ -911,17 +1094,34 @@ pub async fn create_remote_post(
 
 pub async fn update_remote_post(
     ap_client: &ApClient,
-    db_client: &mut impl DatabaseClient,
-    post: Post,
+    db_pool: &DatabaseConnectionPool,
+    post: PostDetailed,
     object: &AttributedObjectJson,
-) -> Result<(), HandlerError> {
+) -> Result<PostDetailed, HandlerError> {
     assert!(!post.is_local());
     let AttributedObjectJson { inner: object, value: object_json } = object;
-    let author_id = get_object_attributed_to(object)?;
-    let canonical_author_id = canonicalize_id(&author_id)?;
+    let canonical_author_id = canonicalize_id(&object.attributed_to)?;
     if canonical_author_id.to_string() != post.author.expect_remote_actor_id() {
         return Err(ValidationError("object owner can't be changed").into());
     };
+    let author_hostname = get_moderation_domain(post.author.expect_actor_data())?;
+
+    let maybe_in_reply_to = match object.in_reply_to {
+        Some(ref object_id) => {
+            let canonical_object_id = canonicalize_id(object_id)?;
+            let in_reply_to = get_post_by_object_id(
+                db_client_await!(db_pool),
+                ap_client.instance.uri_str(),
+                &canonical_object_id,
+            ).await?;
+            Some(in_reply_to)
+        },
+        None => None,
+    };
+    if maybe_in_reply_to.as_ref().map(|in_reply_to| in_reply_to.id) != post.in_reply_to_id {
+        return Err(ValidationError("inReplyTo can't be changed").into());
+    };
+
     let mut content = get_object_content(object)?;
     let maybe_poll_data = if object.object_type == QUESTION {
         match parse_poll_results(object) {
@@ -934,37 +1134,43 @@ pub async fn update_remote_post(
                 }
             },
             Err(error) => {
-                log::warn!("{error}");
+                log::warn!("{error}: {}", object.id);
                 None
             },
         }
     } else {
         None
     };
-    if object.object_type != NOTE && object.object_type != QUESTION {
+    let maybe_object_url = get_object_url(object)?;
+    if object.is_converted() {
         // Append link to object
-        let object_url = get_object_url(object)?;
-        content += &create_content_link(object_url);
+        let url = maybe_object_url.as_ref().unwrap_or(&object.id);
+        content += &create_content_link(url);
     };
     let (attachments, unprocessed) = get_object_attachments(
         ap_client,
-        db_client,
+        db_pool,
         object,
         &post.author,
     ).await?;
     for attachment_url in unprocessed {
-        content += &create_content_link(attachment_url);
+        content += &create_content_link(&attachment_url);
     };
     let (mentions, hashtags, links, emojis) = get_object_tags(
         ap_client,
-        db_client,
+        db_pool,
         object,
         &post.author,
         &HashMap::new(),
     ).await?;
-    let is_sensitive = object.sensitive.unwrap_or(false);
-    let updated_at = object.updated.unwrap_or(Utc::now());
+    let is_sensitive =
+        object.sensitive.unwrap_or(false) ||
+        ap_client.filter.is_action_required(
+            author_hostname.as_str(),
+            FilterAction::MarkSensitive,
+        );
 
+    let db_client = &mut **get_database_client(db_pool).await?;
     let mentions = filter_mentions(
         db_client,
         mentions,
@@ -977,36 +1183,60 @@ pub async fn update_remote_post(
         log::warn!("direct message has no local recipients");
     };
 
+    let is_edited = post.is_edited(
+        &content,
+        maybe_poll_data.as_ref(),
+        // TODO: attachments are always re-created
+        &attachments,
+    );
+    let updated_at = if is_edited {
+        Some(Utc::now())
+    } else {
+        post.updated_at
+    };
+
     let post_data = PostUpdateData {
         content,
         content_source: None,
+        language: object.language(),
         is_sensitive,
+        poll: maybe_poll_data,
         attachments,
         mentions: mentions.iter().map(|profile| profile.id).collect(),
         tags: hashtags,
         links,
         emojis,
-        poll: maybe_poll_data,
+        url: maybe_object_url,
         updated_at,
     };
     validate_post_update_data(&post_data)?;
     validate_post_mentions(&post_data.mentions, post.visibility)?;
-    let (_, deletion_queue) =
+    if let Some(in_reply_to) = maybe_in_reply_to {
+        // TODO: disallow scope widening (see also: get_related_posts)
+        validate_reply(
+            &in_reply_to,
+            post.author.id,
+            post.visibility,
+            &post_data.mentions,
+        ).unwrap_or_else(|error| log::warn!("{error}"));
+    };
+    check_post_limits(&ap_client.limits.posts, &post_data.attachments, Remote)?;
+    let (post, deletion_queue) =
         update_post(db_client, post.id, post_data).await?;
     deletion_queue.into_job(db_client).await?;
     save_attributed_object(
         db_client,
-        &post.object_id.expect("object ID should be present"),
+        post.expect_remote_object_id(),
         object_json,
         post.id,
     ).await?;
-    Ok(())
+    Ok(post)
 }
 
 #[cfg(test)]
 mod tests {
-    use serde_json::json;
     use apx_sdk::constants::AP_PUBLIC;
+    use serde_json::json;
     use mitra_models::profiles::types::DbActor;
     use super::*;
 
@@ -1033,14 +1263,37 @@ mod tests {
     }
 
     #[test]
-    fn test_get_object_attributed_to() {
-       let object = AttributedObject {
-            object_type: NOTE.to_string(),
-            attributed_to: json!(["https://example.org/1"]),
-            ..Default::default()
+    fn test_deserialize_object_with_attributed_to_array() {
+        let object_value = json!({
+            "id": "https://social.example/objects/123",
+            "type": "Note",
+            "attributedTo": ["https://social.example/actors/1"],
+            "content": "test",
+        });
+        let object: AttributedObject =
+            serde_json::from_value(object_value).unwrap();
+        assert_eq!(object.attributed_to, "https://social.example/actors/1");
+    }
+
+    #[test]
+    fn test_deserialize_object_with_attachment() {
+        let object_value = json!({
+            "id": "https://social.example/objects/123",
+            "type": "Note",
+            "attributedTo": "https://social.example/users/1",
+            "content": "test",
+            "attachment": {
+                "type": "Image",
+                "url": "https://social.example/media/image.png",
+            },
+        });
+        let object: AttributedObject =
+            serde_json::from_value(object_value).unwrap();
+        assert_eq!(object.attachment.len(), 1);
+        let Attachment::Media(ref media_object) = object.attachment[0] else {
+            panic!();
         };
-        let author_id = get_object_attributed_to(&object).unwrap();
-        assert_eq!(author_id, "https://example.org/1");
+        assert_eq!(media_object.url, "https://social.example/media/image.png");
     }
 
     #[test]
@@ -1068,8 +1321,8 @@ mod tests {
             ..Default::default()
         };
         let mut content = get_object_content(&object).unwrap();
-        let object_url = get_object_url(&object).unwrap();
-        content += &create_content_link(object_url);
+        let object_url = get_object_url(&object).unwrap().unwrap();
+        content += &create_content_link(&object_url);
         assert_eq!(
             content,
             r#"<h1>test-name</h1>test-content<p><a href="https://example.org/xyz" rel="noopener">https://example.org/xyz</a></p>"#,
@@ -1085,6 +1338,25 @@ mod tests {
     }
 
     #[test]
+    fn test_normalize_audience() {
+        let audience = vec![
+            "https://social.example/actors/1/followers".to_owned(),
+            "as:Public".to_owned(),
+            "https://social.example/actors/1/followers".to_owned(),
+        ];
+        let normalized_audience = normalize_audience(&audience).unwrap();
+        assert_eq!(normalized_audience.len(), 2);
+        assert_eq!(
+            normalized_audience[0].to_string(),
+            "https://social.example/actors/1/followers",
+        );
+        assert_eq!(
+            normalized_audience[1].to_string(),
+            "https://www.w3.org/ns/activitystreams#Public",
+        );
+    }
+
+    #[test]
     fn test_get_object_visibility_public() {
         let author =
             DbActorProfile::remote_for_test("test", "https://social.example");
@@ -1095,13 +1367,14 @@ mod tests {
             None,
         );
         assert_eq!(visibility, Visibility::Public);
-        assert!(matches!(context, PostContext::Top { .. }));
+        let PostContext::Top { audience } = context else { unreachable!() };
+        assert_eq!(audience.unwrap(), AP_PUBLIC);
     }
 
     #[test]
     fn test_get_object_visibility_public_reply() {
         let in_reply_to_author = DbActorProfile::local_for_test("test");
-        let in_reply_to = Post::local_for_test(&in_reply_to_author);
+        let in_reply_to = PostDetailed::local_for_test(&in_reply_to_author);
         let author =
             DbActorProfile::remote_for_test("test", "https://social.example");
         let audience = vec![AP_PUBLIC.to_string()];
@@ -1133,24 +1406,52 @@ mod tests {
             None,
         );
         assert_eq!(visibility, Visibility::Followers);
-        assert!(matches!(context, PostContext::Top { .. }));
+        let PostContext::Top { audience } = context else { unreachable!() };
+        assert_eq!(audience.unwrap(), author_followers);
     }
 
     #[test]
-    fn test_get_object_visibility_followers_conversation() {
+    fn test_get_object_visibility_followers_reply() {
         let in_reply_to_author = DbActorProfile::local_for_test("test");
         let in_reply_to_followers = "https://social.example/users/test/followers";
         let in_reply_to = {
-            let mut post = Post::local_for_test(&in_reply_to_author);
+            let mut post = PostDetailed::local_for_test(&in_reply_to_author);
             post.visibility = Visibility::Followers;
             if let Some(ref mut conversation) = post.conversation.as_mut() {
                 conversation.audience = Some(in_reply_to_followers.to_string());
             };
             post
         };
-        let author_id = "https://social.example/users/test";
+        let author_id = "https://remote.example/users/author";
         let author = DbActorProfile::remote_for_test("author", author_id);
         let audience = vec![in_reply_to_followers.to_string()];
+        let (visibility, context) = get_object_visibility(
+            &author,
+            &audience,
+            Some(&in_reply_to),
+        );
+        assert_eq!(visibility, Visibility::Conversation);
+        assert!(matches!(context, PostContext::Reply { .. }));
+    }
+
+    #[test]
+    fn test_get_object_visibility_followers_reply_from_mastodon() {
+        let in_reply_to_author = DbActorProfile::local_for_test("test");
+        let in_reply_to_followers = "https://social.example/users/test/followers";
+        let in_reply_to = {
+            let mut post = PostDetailed::local_for_test(&in_reply_to_author);
+            post.visibility = Visibility::Followers;
+            if let Some(ref mut conversation) = post.conversation.as_mut() {
+                conversation.audience = Some(in_reply_to_followers.to_string());
+            };
+            post
+        };
+        let author_id = "https://remote.example/users/author";
+        let author = DbActorProfile::remote_for_test("author", author_id);
+        let author_followers = author
+            .expect_actor_data()
+            .followers.clone().unwrap();
+        let audience = vec![author_followers];
         let (visibility, context) = get_object_visibility(
             &author,
             &audience,
@@ -1181,7 +1482,8 @@ mod tests {
             None,
         );
         assert_eq!(visibility, Visibility::Subscribers);
-        assert!(matches!(context, PostContext::Top { .. }));
+        let PostContext::Top { audience } = context else { unreachable!() };
+        assert_eq!(audience.unwrap(), author_subscribers);
     }
 
     #[test]
@@ -1194,6 +1496,7 @@ mod tests {
             None,
         );
         assert_eq!(visibility, Visibility::Direct);
-        assert!(matches!(context, PostContext::Top { .. }));
+        let PostContext::Top { audience } = context else { unreachable!() };
+        assert!(audience.is_none());
     }
 }

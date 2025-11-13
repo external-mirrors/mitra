@@ -1,11 +1,10 @@
 /// Sign-In with Ethereum https://eips.ethereum.org/EIPS/eip-4361
-use hex::FromHex;
-use siwe::Message;
-
 use apx_core::{
     caip2::ChainId,
     caip10::AccountId,
 };
+use hex::FromHex;
+use siwe::Message;
 
 use super::utils::{address_to_string, Address};
 

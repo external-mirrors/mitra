@@ -1,3 +1,5 @@
+//! Re-exported `http` v1.0 types and adapters for `http` v0.2 types.
+
 use std::str::FromStr;
 
 use http_0_2;

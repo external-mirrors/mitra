@@ -1,9 +1,10 @@
-use uuid::Uuid;
-
 use apx_core::{
-    ap_url::is_ap_url,
-    urls::get_hostname,
+    url::{
+        ap_uri::is_ap_uri,
+        http_url_whatwg::get_hostname,
+    },
 };
+use uuid::Uuid;
 
 use crate::{
     database::DatabaseClient,
@@ -17,8 +18,47 @@ use super::{
         DbActorKey,
         DbActorProfile,
         ProfileCreateData,
+        WebfingerHostname,
     },
 };
+
+impl DbActor {
+    pub fn for_test(actor_id: &str) -> Self {
+        Self {
+            id: actor_id.to_owned(),
+            inbox: format!("{actor_id}/inbox"),
+            outbox: format!("{actor_id}/outbox"),
+            followers: Some(format!("{actor_id}/followers")),
+            ..Default::default()
+        }
+    }
+}
+
+impl ProfileCreateData {
+    pub fn remote_for_test(
+        username: &str,
+        hostname: &str,
+        actor_id: &str,
+    ) -> Self {
+        let mut db_actor = DbActor::for_test(actor_id);
+        if is_ap_uri(&db_actor.id) {
+            db_actor.gateways.push(format!("https://{hostname}"));
+        };
+        let hostname = if hostname.ends_with(".local") {
+            // Special case: creating unmanaged account
+            WebfingerHostname::Unknown
+        } else {
+            WebfingerHostname::Remote(hostname.to_string())
+        };
+        ProfileCreateData {
+            username: username.to_string(),
+            hostname: hostname,
+            public_keys: vec![DbActorKey::default()],
+            actor_json: Some(db_actor),
+            ..Default::default()
+        }
+    }
+}
 
 pub async fn create_test_local_profile(
     db_client: &mut impl DatabaseClient,
@@ -34,20 +74,11 @@ pub async fn create_test_remote_profile(
     hostname: &str,
     actor_id: &str,
 ) -> DbActorProfile {
-    let mut db_actor = DbActor {
-        id: actor_id.to_string(),
-        ..Default::default()
-    };
-    if is_ap_url(&db_actor.id) {
-        db_actor.gateways.push(format!("https://{hostname}"));
-    };
-    let profile_data = ProfileCreateData {
-        username: username.to_string(),
-        hostname: Some(hostname.to_string()),
-        public_keys: vec![DbActorKey::default()],
-        actor_json: Some(db_actor),
-        ..Default::default()
-    };
+    let profile_data = ProfileCreateData::remote_for_test(
+        username,
+        hostname,
+        actor_id,
+    );
     let profile = create_profile(db_client, profile_data).await.unwrap();
     profile.check_consistency().unwrap();
     profile
@@ -72,7 +103,7 @@ impl DbActorProfile {
         actor_data: DbActor,
     ) -> Self {
         let hostname = if actor_data.is_portable() {
-            get_hostname(&actor_data.gateways.first().unwrap()).unwrap()
+            get_hostname(actor_data.gateways.first().unwrap()).unwrap()
         } else {
             get_hostname(&actor_data.id).unwrap()
         };
@@ -80,7 +111,7 @@ impl DbActorProfile {
         let actor_id = actor_data.id.clone();
         let profile = Self {
             username: username.to_string(),
-            hostname: Some(hostname.to_string()),
+            hostname: Some(hostname.clone()),
             acct: Some(acct),
             actor_json: Some(actor_data),
             actor_id: Some(actor_id),
@@ -94,10 +125,7 @@ impl DbActorProfile {
         username: &str,
         actor_id: &str,
     ) -> Self {
-        let actor_data = DbActor {
-            id: actor_id.to_string(),
-            ..Default::default()
-        };
+        let actor_data = DbActor::for_test(actor_id);
         Self::remote_for_test_with_data(username, actor_data)
     }
 }

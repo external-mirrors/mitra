@@ -3,8 +3,10 @@ mod blockchain;
 mod config;
 mod environment;
 mod federation;
+mod instance;
 mod limits;
 mod loader;
+mod metrics;
 mod registration;
 mod retention;
 
@@ -13,9 +15,10 @@ pub use blockchain::{
     BlockchainConfig,
     MoneroConfig,
 };
-pub use config::{Config, Instance};
+pub use config::Config;
 pub use environment::Environment;
-pub use limits::MediaLimits;
+pub use instance::Instance;
+pub use limits::{Limits, MediaLimits, PostLimits};
 pub use loader::parse_config;
 pub use registration::{DefaultRole, RegistrationType};
 

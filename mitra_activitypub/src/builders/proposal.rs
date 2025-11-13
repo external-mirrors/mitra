@@ -1,8 +1,10 @@
-/// https://codeberg.org/silverpill/feps/src/branch/main/0837/fep-0837.md
-use serde::Serialize;
+// https://codeberg.org/silverpill/feps/src/branch/main/0837/fep-0837.md
 
 use apx_core::caip19::AssetType;
 use apx_sdk::constants::AP_PUBLIC;
+use serde::Serialize;
+
+use mitra_adapters::payments::subscriptions::MONERO_PAYMENT_AMOUNT_MIN;
 use mitra_models::profiles::types::MoneroSubscription;
 
 use crate::{
@@ -52,6 +54,7 @@ pub fn build_valueflows_context() -> Context {
         ("satisfies", "vf:satisfies"),
         ("resourceConformsTo", "vf:resourceConformsTo"),
         ("resourceQuantity", "vf:resourceQuantity"),
+        ("minimumQuantity", "vf:minimumQuantity"),
         ("hasUnit", "om2:hasUnit"),
         ("hasNumericalValue", "om2:hasNumericalValue"),
     ];
@@ -99,6 +102,7 @@ struct Intent {
     action: String,
     resource_conforms_to: String,
     resource_quantity: Quantity,
+    minimum_quantity: Quantity,
 }
 
 #[derive(Serialize)]
@@ -121,12 +125,12 @@ pub struct Proposal {
 
 // https://www.valueflo.ws/concepts/proposals/
 pub fn build_proposal(
-    instance_url: &str,
+    instance_uri: &str,
     username: &str,
     payment_info: &MoneroSubscription,
 ) -> Proposal {
     let actor_id = local_actor_id(
-        instance_url,
+        instance_uri,
         username,
     );
     let proposal_id = local_actor_proposal_id(
@@ -136,6 +140,10 @@ pub fn build_proposal(
     let proposal_name = "Pay for subscription";
     let asset_type = AssetType::monero(&payment_info.chain_id)
         .expect("chain should belong to monero namespace");
+    // piconeros per second
+    let amount_per_sec = payment_info.price.get();
+    let amount_min = MONERO_PAYMENT_AMOUNT_MIN;
+    let duration_min = amount_min / amount_per_sec;
     Proposal {
         _context: build_valueflows_context(),
         object_type: PROPOSAL.to_string(),
@@ -149,15 +157,15 @@ pub fn build_proposal(
             action: ACTION_DELIVER_SERVICE.to_string(),
             resource_conforms_to: CLASS_USER_GENERATED_CONTENT.to_string(),
             resource_quantity: Quantity::duration(1),
+            minimum_quantity: Quantity::duration(duration_min),
         },
         reciprocal: Intent {
             object_type: INTENT.to_string(),
             id: fep_0837_reciprocal_fragment_id(&proposal_id),
             action: ACTION_TRANSFER.to_string(),
             resource_conforms_to: asset_type.to_uri(),
-            resource_quantity:
-                // piconeros per second
-                Quantity::currency_amount(payment_info.price.get()),
+            resource_quantity: Quantity::currency_amount(amount_per_sec),
+            minimum_quantity: Quantity::currency_amount(amount_min),
         },
         unit_based: true,
         to: AP_PUBLIC.to_string(),
@@ -167,13 +175,13 @@ pub fn build_proposal(
 #[cfg(test)]
 mod tests {
     use std::num::NonZeroU64;
-    use serde_json::json;
     use apx_core::caip2::ChainId;
+    use serde_json::json;
     use super::*;
 
     #[test]
     fn test_build_proposal() {
-        let instance_url = "https://test.example";
+        let instance_uri = "https://test.example";
         let username = "alice";
         let payment_info = MoneroSubscription {
             chain_id: ChainId::monero_mainnet(),
@@ -181,7 +189,7 @@ mod tests {
             payout_address: "test".to_string(),
         };
         let proposal = build_proposal(
-            instance_url,
+            instance_uri,
             username,
             &payment_info,
         );
@@ -190,7 +198,7 @@ mod tests {
             "@context": [
                 "https://www.w3.org/ns/activitystreams",
                 "https://w3id.org/security/v1",
-                "https://w3id.org/security/data-integrity/v1",
+                "https://w3id.org/security/data-integrity/v2",
                 {
                     "Hashtag": "as:Hashtag",
                     "sensitive": "as:sensitive",
@@ -214,6 +222,7 @@ mod tests {
                     "satisfies": "vf:satisfies",
                     "resourceConformsTo": "vf:resourceConformsTo",
                     "resourceQuantity": "vf:resourceQuantity",
+                    "minimumQuantity": "vf:minimumQuantity",
                     "hasUnit": "om2:hasUnit",
                     "hasNumericalValue": "om2:hasNumericalValue",
                 },
@@ -232,6 +241,10 @@ mod tests {
                     "hasUnit": "second",
                     "hasNumericalValue": "1",
                 },
+                "minimumQuantity": {
+                    "hasUnit": "second",
+                    "hasNumericalValue": "50000",
+                },
             },
             "reciprocal": {
                 "type": "Intent",
@@ -241,6 +254,10 @@ mod tests {
                 "resourceQuantity": {
                     "hasUnit": "one",
                     "hasNumericalValue": "20000",
+                },
+                "minimumQuantity": {
+                    "hasUnit": "one",
+                    "hasNumericalValue": "1000000000",
                 },
             },
             "unitBased": true,

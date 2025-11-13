@@ -1,3 +1,5 @@
+//! Helper functions for implementing ActivityPub servers.
+
 use apx_core::http_types::{
     header,
     HeaderMap,

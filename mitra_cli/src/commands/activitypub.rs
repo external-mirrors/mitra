@@ -1,102 +1,129 @@
 use std::path::PathBuf;
 
-use anyhow::Error;
+use anyhow::{anyhow, Error};
+use apx_sdk::{
+    addresses::WebfingerAddress,
+    authentication::verify_portable_object,
+    fetch::{fetch_json, FetchObjectOptions},
+    jrd::JRD_MEDIA_TYPE,
+    utils::{get_core_type, CoreType},
+};
 use clap::Parser;
 use serde_json::{Value as JsonValue};
 
-use apx_sdk::{
-    authentication::verify_portable_object,
-    fetch::FetchObjectOptions,
-};
 use mitra_activitypub::{
     agent::build_federation_agent,
     importers::{
         fetch_any_object_with_context,
         import_activity,
+        import_collection,
         import_from_outbox,
         import_object,
+        import_profile,
         import_replies,
-        ActorIdResolver,
         ApClient,
+        CollectionItemType,
+        CollectionOrder,
         FetcherContext,
     },
 };
 use mitra_config::Config;
 use mitra_models::{
-    database::DatabaseClient,
-    users::queries::get_user_by_name,
+    database::{
+        db_client_await,
+        get_database_client,
+        DatabaseConnectionPool,
+    },
+    users::{
+        queries::{
+            get_user_by_name,
+        },
+    },
 };
 
-/// (Re-)fetch actor and save it to local cache
-#[derive(Parser)]
-#[command(visible_alias = "fetch-actor")]
-pub struct ImportActor {
-    id: String,
-}
-
-impl ImportActor {
-    pub async fn execute(
-        &self,
-        config: &Config,
-        db_client: &mut impl DatabaseClient,
-    ) -> Result<(), Error> {
-        let ap_client = ApClient::new(config, db_client).await?;
-        let resolver = ActorIdResolver::default()
-            .only_remote()
-            .force_refetch();
-        resolver.resolve(
-            &ap_client,
-            db_client,
-            &self.id,
-        ).await?;
-        println!("profile saved");
-        Ok(())
-    }
-}
-
-/// Fetch contentful object and save it to local cache
+/// Fetch ActivityPub object and process it
 #[derive(Parser)]
 pub struct ImportObject {
-    id: String,
+    object_id: String,
     #[arg(long)]
     as_user: Option<String>,
+    /// Expected core object type
+    #[arg(long, default_value = "any")]
+    object_type: String,
+
+    #[arg(long, default_value = "any")]
+    collection_type: String,
+    #[arg(long, default_value = "forward")]
+    collection_order: String,
+    #[arg(long, default_value_t = 20)]
+    collection_limit: usize,
 }
 
 impl ImportObject {
     pub async fn execute(
-        &self,
+        self,
         config: &Config,
-        db_client: &mut impl DatabaseClient,
+        db_pool: &DatabaseConnectionPool,
     ) -> Result<(), Error> {
         let maybe_user = if let Some(ref username) = self.as_user {
+            let db_client = &**get_database_client(db_pool).await?;
             let user = get_user_by_name(db_client, username).await?;
             Some(user)
         } else {
             None
         };
-        let mut ap_client = ApClient::new(config, db_client).await?;
+        let mut ap_client = ApClient::new_with_pool(config, db_pool).await?;
         ap_client.as_user = maybe_user;
-        import_object(&ap_client, db_client, &self.id).await?;
-        println!("post saved");
-        Ok(())
-    }
-}
-
-/// Fetch activity and process it
-#[derive(Parser)]
-#[command(visible_alias = "fetch-activity")]
-pub struct ImportActivity {
-    id: String,
-}
-
-impl ImportActivity {
-    pub async fn execute(
-        &self,
-        config: &Config,
-        db_client: &mut impl DatabaseClient,
-    ) -> Result<(), Error> {
-        import_activity(config, db_client, &self.id).await?;
-        println!("activity processed");
+        let object: JsonValue =
+            ap_client.fetch_object(&self.object_id).await?;
+        let object_type = match self.object_type.as_str() {
+            "object" => CoreType::Object,
+            "actor" => CoreType::Actor,
+            "activity" => CoreType::Activity,
+            "collection" => CoreType::Collection,
+            "any" => get_core_type(&object),
+            _ => return Err(anyhow!("invalid object type")),
+        };
+        match object_type {
+            CoreType::Object => {
+                // Take contentful object and save it to local cache
+                import_object(&ap_client, db_pool, object).await?;
+                println!("post saved");
+            },
+            CoreType::Actor => {
+                import_profile(&ap_client, db_pool, object).await?;
+                println!("profile saved");
+            },
+            CoreType::Activity => {
+                // Process activity
+                import_activity(config, db_pool, object).await?;
+                println!("activity processed");
+            },
+            CoreType::Collection => {
+                let maybe_item_type = match self.collection_type.as_str() {
+                    "object" => Some(CollectionItemType::Object),
+                    "actor" => Some(CollectionItemType::Actor),
+                    "activity" => Some(CollectionItemType::Activity),
+                    "any" => None,
+                    _ => return Err(anyhow!("invalid collection item type")),
+                };
+                let order = match self.collection_order.as_str() {
+                    "forward" => CollectionOrder::Forward,
+                    "reverse" => CollectionOrder::Reverse,
+                    _ => return Err(anyhow!("invalid collection order type")),
+                };
+                import_collection(
+                    config,
+                    db_pool,
+                    &self.object_id,
+                    maybe_item_type,
+                    order,
+                    self.collection_limit,
+                ).await?;
+                println!("collection processed");
+            },
+            _ => return Err(anyhow!("invalid object type")),
+        };
         Ok(())
     }
 }
@@ -111,13 +138,13 @@ pub struct ReadOutbox {
 
 impl ReadOutbox {
     pub async fn execute(
-        &self,
+        self,
         config: &Config,
-        db_client: &mut impl DatabaseClient,
+        db_pool: &DatabaseConnectionPool,
     ) -> Result<(), Error> {
         import_from_outbox(
             config,
-            db_client,
+            db_pool,
             &self.actor_id,
             self.limit,
         ).await?;
@@ -134,22 +161,19 @@ pub struct LoadReplies {
     limit: usize,
     #[arg(long)]
     use_context: bool,
-    #[arg(long)]
-    use_container: bool,
 }
 
 impl LoadReplies {
     pub async fn execute(
-        &self,
+        self,
         config: &Config,
-        db_client: &mut impl DatabaseClient,
+        db_pool: &DatabaseConnectionPool,
     ) -> Result<(), Error> {
         import_replies(
             config,
-            db_client,
+            db_pool,
             &self.object_id,
             self.use_context,
-            self.use_container,
             self.limit,
         ).await?;
         Ok(())
@@ -170,12 +194,15 @@ pub struct FetchObject {
 
 impl FetchObject {
     pub async fn execute(
-        &self,
+        self,
         config: &Config,
-        db_client: &impl DatabaseClient,
+        db_pool: &DatabaseConnectionPool,
     ) -> Result<(), Error> {
         let maybe_user = if let Some(ref username) = self.as_user {
-            let user = get_user_by_name(db_client, username).await?;
+            let user = get_user_by_name(
+                db_client_await!(db_pool),
+                username,
+            ).await?;
             Some(user)
         } else {
             None
@@ -184,8 +211,8 @@ impl FetchObject {
             &config.instance(),
             maybe_user.as_ref(),
         );
-        let gateways = self.gateway.as_ref()
-            .map(|gateway| vec![gateway.to_string()])
+        let gateways = self.gateway
+            .map(|gateway| vec![gateway])
             .unwrap_or_default();
         let mut context = FetcherContext::from(gateways);
         let options = FetchObjectOptions {
@@ -203,16 +230,44 @@ impl FetchObject {
     }
 }
 
+/// Perform WebFinger query and print JRD to stdout
+#[derive(Parser)]
+pub struct Webfinger {
+    handle: String,
+}
+
+impl Webfinger {
+    pub async fn execute(
+        self,
+        config: &Config,
+        _db_pool: &DatabaseConnectionPool,
+    ) -> Result<(), Error> {
+        let agent = build_federation_agent(&config.instance(), None);
+        let webfinger_address = WebfingerAddress::from_handle(&self.handle)?;
+        let webfinger_uri = webfinger_address.endpoint_uri();
+        let webfinger_resource = webfinger_address.to_acct_uri();
+        let jrd = fetch_json(
+            &agent,
+            &webfinger_uri,
+            &[("resource", &webfinger_resource)],
+            Some(JRD_MEDIA_TYPE),
+        ).await?;
+        println!("{}", jrd);
+        Ok(())
+    }
+}
+
 #[derive(Parser)]
 pub struct LoadPortableObject {
     path: PathBuf,
 }
 
 impl LoadPortableObject {
+    #[allow(clippy::unused_async)]
     pub async fn execute(
-        &self,
+        self,
         _config: &Config,
-        _db_client: &impl DatabaseClient,
+        _db_pool: &DatabaseConnectionPool,
     ) -> Result<(), Error> {
         let file_data = std::fs::read(&self.path)?;
         let object_json: JsonValue = serde_json::from_slice(&file_data)?;

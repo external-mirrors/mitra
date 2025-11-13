@@ -11,6 +11,12 @@ pub struct PollResult {
     pub vote_count: u32,
 }
 
+impl PollResult {
+    pub fn new(option_name: &str) -> Self {
+        Self { option_name: option_name.to_string(), vote_count: 0 }
+    }
+}
+
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct PollResults(Vec<PollResult>);
 
@@ -36,20 +42,30 @@ json_to_sql!(PollResults);
 pub struct Poll {
     pub id: Uuid,
     pub multiple_choices: bool,
-    pub ends_at: DateTime<Utc>,
+    pub ends_at: Option<DateTime<Utc>>,
     pub results: PollResults,
 }
 
 impl Poll {
     pub fn ended(&self) -> bool {
-        self.ends_at < Utc::now()
+        self.ends_at.is_some_and(|ends_at| ends_at < Utc::now())
     }
 }
 
 pub struct PollData {
     pub multiple_choices: bool,
-    pub ends_at: DateTime<Utc>,
+    pub ends_at: Option<DateTime<Utc>>,
     pub results: Vec<PollResult>,
+}
+
+impl From<Poll> for PollData {
+    fn from(poll: Poll) -> Self {
+        Self {
+            multiple_choices: poll.multiple_choices,
+            ends_at: poll.ends_at,
+            results: poll.results.inner().to_vec(),
+        }
+    }
 }
 
 #[derive(Clone, FromSql)]
@@ -59,4 +75,5 @@ pub struct PollVote {
     pub poll_id: Uuid,
     pub voter_id: Uuid,
     pub choice: String,
+    pub object_id: Option<String>,
 }

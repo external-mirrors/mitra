@@ -1,8 +1,8 @@
+use apx_core::{
+    url::hostname::encode_hostname,
+};
 use regex::Regex;
 
-use apx_core::{
-    urls::encode_hostname,
-};
 use mitra_models::profiles::types::{
     DbActor,
     DbActorKey,
@@ -11,14 +11,17 @@ use mitra_models::profiles::types::{
     PaymentOption,
     ProfileCreateData,
     ProfileUpdateData,
+    WebfingerHostname,
 };
 use mitra_utils::{
-    html::{clean_html, clean_html_all, clean_html_strict},
+    html::{clean_html, clean_html_strict},
+    unicode::trim_invisible,
 };
 
 use super::{
     activitypub::{
         validate_any_object_id,
+        validate_endpoint_url,
         validate_gateway_url,
         validate_origin,
     },
@@ -29,7 +32,7 @@ use super::{
 // See also: WEBFINGER_ADDRESS_RE in apx_sdk::addresses
 const USERNAME_RE: &str = r"^[A-Za-z0-9\-\._]+$";
 const USERNAME_LENGTH_MAX: usize = 100;
-const HOSTNAME_RE: &str = r"^[a-z0-9\.-]+$";
+const HOSTNAME_RE: &str = r"^([a-z0-9\.-]+|[0-9\.]+|\[[0-9a-f:]+\])$";
 const HOSTNAME_LENGTH_MAX: usize = 100;
 const DISPLAY_NAME_MAX_LENGTH: usize = 200;
 const BIO_MAX_LENGTH: usize = 10000;
@@ -44,6 +47,7 @@ pub const FIELD_NAME_LENGTH_MAX: usize = 500;
 pub const FIELD_VALUE_LENGTH_MAX: usize = 5000;
 const FIELD_ALLOWED_TAGS: [&str; 1] = ["a"];
 pub const ALIAS_LIMIT: usize = 10;
+const IDENTITY_PROOF_LIMIT: usize = 10;
 
 pub fn validate_username(username: &str) -> Result<(), ValidationError> {
     if username.is_empty() {
@@ -77,18 +81,28 @@ pub fn validate_hostname(hostname: &str) -> Result<(), ValidationError> {
     Ok(())
 }
 
-fn clean_display_name(display_name: &str) -> String {
-    clean_html_all(display_name).replace("&nbsp;", " ")
+fn clean_display_name(display_name: &str, is_remote: bool) -> Option<String> {
+    // Sanitization is not needed because `name` is a plain-text field
+    // https://www.w3.org/TR/activitystreams-vocabulary/#dfn-name
+    let mut text = trim_invisible(display_name).to_owned();
+    if is_remote {
+        text = text.chars().take(DISPLAY_NAME_MAX_LENGTH).collect();
+    };
+    if text.is_empty() {
+        None
+    } else {
+        Some(text)
+    }
 }
 
 fn validate_display_name(display_name: &str)
     -> Result<(), ValidationError>
 {
+    if trim_invisible(display_name).is_empty() {
+        return Err(ValidationError("display name is empty"));
+    };
     if display_name.chars().count() > DISPLAY_NAME_MAX_LENGTH {
         return Err(ValidationError("display name is too long"));
-    };
-    if display_name != clean_display_name(display_name) {
-        return Err(ValidationError("display name has not been sanitized"));
     };
     Ok(())
 }
@@ -97,16 +111,15 @@ fn clean_bio_html(bio: &str) -> String {
     clean_html_strict(bio, &BIO_ALLOWED_TAGS, vec![])
 }
 
-fn clean_bio(bio: &str, is_remote: bool) -> Result<String, ValidationError> {
-    let cleaned_bio = if is_remote {
+fn clean_bio(bio: &str, is_remote: bool) -> String {
+    if is_remote {
         // Remote profile
         let truncated_bio: String = bio.chars().take(BIO_MAX_LENGTH).collect();
         clean_html(&truncated_bio, vec![])
     } else {
         // Local profile
         clean_bio_html(bio)
-    };
-    Ok(cleaned_bio)
+    }
 }
 
 fn validate_bio(bio: &str) -> Result<(), ValidationError> {
@@ -141,7 +154,7 @@ fn validate_public_keys(
 pub fn validate_identity_proofs(
     identity_proofs: &[IdentityProof],
 ) -> Result<(), ValidationError> {
-    if identity_proofs.len() > 10 {
+    if identity_proofs.len() > IDENTITY_PROOF_LIMIT {
         return Err(ValidationError("at most 10 identity proofs are allowed"));
     };
     Ok(())
@@ -163,6 +176,7 @@ fn clean_extra_field_value(value: &str) -> String {
 }
 
 pub fn clean_extra_field(field: &mut ExtraField) {
+    // Sanitization is not needed for `name` because it is plain-text
     field.name = field.name.trim().to_string();
     field.value = clean_extra_field_value(&field.value);
 }
@@ -217,6 +231,9 @@ pub fn validate_actor_data(
 ) -> Result<(), ValidationError> {
     validate_any_object_id(&actor.id)?;
     validate_any_object_id(&actor.inbox)?;
+    if let Some(ref shared_inbox) = actor.shared_inbox {
+        validate_endpoint_url(shared_inbox)?;
+    };
     validate_any_object_id(&actor.outbox)?;
     if let Some(ref followers) = actor.followers {
         validate_any_object_id(followers)?;
@@ -244,7 +261,7 @@ fn validate_profile_create_data(
     profile_data: &ProfileCreateData,
 ) -> Result<(), ValidationError> {
     validate_username(&profile_data.username)?;
-    if let Some(hostname) = &profile_data.hostname {
+    if let WebfingerHostname::Remote(ref hostname) = profile_data.hostname {
         validate_hostname(hostname)?;
     };
     if let Some(display_name) = &profile_data.display_name {
@@ -252,7 +269,7 @@ fn validate_profile_create_data(
     };
     let is_remote = if let Some(ref actor) = profile_data.actor_json {
         validate_actor_data(actor)?;
-        if !actor.is_portable() && profile_data.hostname.is_none() {
+        if !actor.is_portable() && profile_data.hostname.as_str().is_none() {
             return Err(ValidationError(
                 "non-portable remote profile should have hostname"));
         };
@@ -279,12 +296,11 @@ pub fn clean_profile_create_data(
 ) -> Result<(), ValidationError> {
     let is_remote = profile_data.actor_json.is_some();
     if let Some(ref display_name) = profile_data.display_name {
-        let clean_name = clean_display_name(display_name);
-        profile_data.display_name = Some(clean_name);
+        profile_data.display_name =
+            clean_display_name(display_name, is_remote);
     };
     if let Some(bio) = &profile_data.bio {
-        let clean_bio = clean_bio(bio, is_remote)?;
-        validate_bio(&clean_bio)?;
+        let clean_bio = clean_bio(bio, is_remote);
         profile_data.bio = Some(clean_bio);
     };
     validate_profile_create_data(profile_data)?;
@@ -295,14 +311,21 @@ fn validate_profile_update_data(
     profile_data: &ProfileUpdateData,
 ) -> Result<(), ValidationError> {
     validate_username(&profile_data.username)?;
-    if let Some(hostname) = &profile_data.hostname {
+    if let WebfingerHostname::Remote(ref hostname) = profile_data.hostname {
         validate_hostname(hostname)?;
+    };
+    if let WebfingerHostname::Unknown = profile_data.hostname {
+        return Err(ValidationError("unknown hostname"));
     };
     if let Some(display_name) = &profile_data.display_name {
         validate_display_name(display_name)?;
     };
     let is_remote = if let Some(ref actor) = profile_data.actor_json {
         validate_actor_data(actor)?;
+        if !actor.is_portable() && profile_data.hostname.as_str().is_none() {
+            return Err(ValidationError(
+                "non-portable remote profile should have hostname"));
+        };
         true
     } else {
         false
@@ -326,12 +349,11 @@ pub fn clean_profile_update_data(
 ) -> Result<(), ValidationError> {
     let is_remote = profile_data.actor_json.is_some();
     if let Some(ref display_name) = profile_data.display_name {
-        let clean_name = clean_display_name(display_name);
-        profile_data.display_name = Some(clean_name);
+        profile_data.display_name =
+            clean_display_name(display_name, is_remote);
     };
     if let Some(bio) = &profile_data.bio {
-        let clean_bio = clean_bio(bio, is_remote)?;
-        validate_bio(&clean_bio)?;
+        let clean_bio = clean_bio(bio, is_remote);
         profile_data.bio = Some(clean_bio);
     };
     validate_profile_update_data(profile_data)?;
@@ -373,6 +395,13 @@ mod tests {
     }
 
     #[test]
+    fn test_validate_hostname_ipv6() {
+        let hostname = "[319:3cf0:dd1d:47b9:20c:29ff:fe2c:39be]";
+        let result = validate_hostname(hostname);
+        assert!(result.is_ok());
+    }
+
+    #[test]
     fn test_validate_hostname_special_character() {
         let hostname = r#"social.example""#;
         let error = validate_hostname(hostname).unwrap_err();
@@ -382,15 +411,16 @@ mod tests {
     #[test]
     fn test_clean_display_name() {
         let name = "test <script>alert()</script>test :emoji:";
-        let output = clean_display_name(name);
-        assert_eq!(output, "test test :emoji:");
+        let output = clean_display_name(name, true).unwrap();
+        assert_eq!(output, "test <script>alert()</script>test :emoji:");
     }
 
     #[test]
-    fn test_clean_display_name_whitespace() {
-        let name = "ワフ   ⁰͡ ⌵ ⁰͡ ";
-        let output = clean_display_name(name);
-        assert_eq!(output, "ワフ   ⁰͡ ⌵ ⁰͡ ");
+    #[allow(clippy::invisible_characters)]
+    fn test_clean_display_name_zerowidth() {
+        let name = " ​";
+        let output = clean_display_name(name, true);
+        assert_eq!(output, None);
     }
 
     #[test]
@@ -405,7 +435,7 @@ mod tests {
     #[test]
     fn test_clean_bio() {
         let bio = "test\n<script>alert()</script>123";
-        let result = clean_bio(bio, true).unwrap();
+        let result = clean_bio(bio, true);
         assert_eq!(result, "test\n123");
     }
 
@@ -427,7 +457,7 @@ mod tests {
     fn test_clean_profile_create_data() {
         let mut profile_data = ProfileCreateData {
             username: "test".to_string(),
-            hostname: Some("social.example".to_string()),
+            hostname: WebfingerHostname::Remote("social.example".to_string()),
             display_name: Some("Test Test".to_string()),
             actor_json: Some(DbActor {
                 id: "https://social.example/test".to_string(),

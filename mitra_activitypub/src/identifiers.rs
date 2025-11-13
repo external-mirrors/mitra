@@ -1,17 +1,17 @@
+use apx_core::{
+    caip2::ChainId,
+    url::{
+        canonical::{parse_url, CanonicalUri},
+        common::url_encode,
+    },
+};
+use apx_sdk::identifiers::parse_object_id;
 use regex::Regex;
 use uuid::Uuid;
 
-use apx_core::{
-    caip2::ChainId,
-    url::common::url_encode,
-};
-use apx_sdk::{
-    identifiers::parse_object_id,
-    url::{parse_url, Url},
-};
 use mitra_models::{
     database::DatabaseTypeError,
-    posts::types::Post,
+    posts::types::PostDetailed,
     profiles::types::{
         DbActor,
         DbActorProfile,
@@ -55,12 +55,12 @@ impl LocalActorCollection {
 }
 
 // Mastodon and Pleroma use the same actor ID format
-pub fn local_actor_id(instance_url: &str, username: &str) -> String {
-    format!("{}/users/{}", instance_url, username)
+pub fn local_actor_id(instance_uri: &str, username: &str) -> String {
+    format!("{}/users/{}", instance_uri, username)
 }
 
-pub fn local_instance_actor_id(instance_url: &str) -> String {
-    format!("{}/actor", instance_url)
+pub fn local_instance_actor_id(instance_uri: &str) -> String {
+    format!("{}/actor", instance_uri)
 }
 
 pub fn local_actor_key_id(
@@ -81,8 +81,8 @@ pub fn local_actor_proposal_id(
     format!("{}/proposals/{}", actor_id, chain_id)
 }
 
-pub fn local_object_id(instance_url: &str, internal_object_id: Uuid) -> String {
-    format!("{}/objects/{}", instance_url, internal_object_id)
+pub fn local_object_id(instance_uri: &str, internal_object_id: Uuid) -> String {
+    format!("{}/objects/{}", instance_uri, internal_object_id)
 }
 
 pub fn local_object_id_unified(authority: &Authority, internal_object_id: Uuid) -> String {
@@ -93,86 +93,96 @@ pub fn local_object_replies(object_id: &str) -> String {
     format!("{}/replies", object_id)
 }
 
-pub fn local_emoji_id(instance_url: &str, emoji_name: &str) -> String {
-    format!("{}/objects/emojis/{}", instance_url, emoji_name)
+pub fn local_emoji_id(instance_uri: &str, emoji_name: &str) -> String {
+    format!("{}/objects/emojis/{}", instance_uri, emoji_name)
 }
 
-pub fn local_agreement_id(instance_url: &str, invoice_id: Uuid) -> String {
-    format!("{}/objects/agreements/{}", instance_url, invoice_id)
+pub fn local_agreement_id(instance_uri: &str, invoice_id: Uuid) -> String {
+    format!("{}/objects/agreements/{}", instance_uri, invoice_id)
 }
 
-pub fn local_tag_collection(instance_url: &str, tag_name: &str) -> String {
-    format!("{}/collections/tags/{}", instance_url, url_encode(tag_name))
+pub fn local_tag_collection(instance_uri: &str, tag_name: &str) -> String {
+    format!("{}/collections/tags/{}", instance_uri, url_encode(tag_name))
 }
 
-pub fn local_context_collection(instance_url: &str, conversation_id: Uuid) -> String {
-    format!("{}/collections/conversations/{}/context", instance_url, conversation_id)
+pub fn local_conversation_collection(instance_uri: &str, conversation_id: Uuid) -> String {
+    format!("{}/collections/conversations/{}", instance_uri, conversation_id)
+}
+
+pub fn local_conversation_history_collection(
+    instance_uri: &str,
+    conversation_id: Uuid,
+) -> String {
+    format!(
+        "{}/history",
+        local_conversation_collection(instance_uri, conversation_id),
+    )
 }
 
 pub fn local_activity_id(
-    instance_url: &str,
+    instance_uri: &str,
     activity_type: &str,
     internal_id: Uuid,
 ) -> String {
     format!(
         "{}/activities/{}/{}",
-        instance_url,
+        instance_uri,
         activity_type.to_lowercase(),
         internal_id,
     )
 }
 
 pub fn parse_local_actor_id(
-    instance_url: &str,
+    instance_uri: &str,
     actor_id: &str,
 ) -> Result<String, ValidationError> {
     // See also: mitra_validators::users::USERNAME_RE
-    let path_re = Regex::new("^/users/(?P<username>[0-9a-z_]+)$")
+    let path_re = Regex::new(r"^/users/(?P<username>[0-9A-Za-z_\-]+)$")
         .expect("regexp should be valid");
-    let (base_url, (username,)) = parse_object_id(actor_id, path_re)
+    let (base_uri, (username,)) = parse_object_id(actor_id, path_re)
         .map_err(|_| ValidationError("invalid local actor ID"))?;
-    if base_url != instance_url {
+    if base_uri != instance_uri {
         return Err(ValidationError("instance mismatch"));
     };
     Ok(username)
 }
 
 pub fn parse_local_object_id(
-    instance_url: &str,
+    instance_uri: &str,
     object_id: &str,
 ) -> Result<Uuid, ValidationError> {
     let path_re = Regex::new("^/objects/(?P<uuid>[0-9a-f-]+)$")
         .expect("regexp should be valid");
-    let (base_url, (internal_object_id,)) = parse_object_id(object_id, path_re)
+    let (base_uri, (internal_object_id,)) = parse_object_id(object_id, path_re)
         .map_err(|_| ValidationError("invalid local object ID"))?;
-    if base_url != instance_url {
+    if base_uri != instance_uri {
         return Err(ValidationError("instance mismatch"));
     };
     Ok(internal_object_id)
 }
 
 pub fn parse_local_primary_intent_id(
-    instance_url: &str,
+    instance_uri: &str,
     proposal_id: &str,
 ) -> Result<(String, ChainId), ValidationError> {
     // See also: mitra_validators::users::USERNAME_RE
     let path_re = Regex::new("^/users/(?P<username>[0-9a-z_]+)/proposals/(?P<chain_id>.+)#primary$")
         .expect("regexp should be valid");
-    let (base_url, (username, chain_id)) =
+    let (base_uri, (username, chain_id)) =
         parse_object_id(proposal_id, path_re)
             .map_err(|_| ValidationError("invalid local proposal ID"))?;
-    if base_url != instance_url {
+    if base_uri != instance_uri {
         return Err(ValidationError("instance mismatch"));
     };
     Ok((username, chain_id))
 }
 
 pub fn parse_local_activity_id(
-    instance_url: &str,
+    instance_uri: &str,
     activity_id: &str,
 ) -> Result<Uuid, ValidationError> {
     if let Ok(internal_activity_id) = parse_local_object_id(
-        instance_url,
+        instance_uri,
         activity_id,
     ) {
         // Legacy format
@@ -180,33 +190,33 @@ pub fn parse_local_activity_id(
     };
     let path_re = Regex::new("^/activities/[a-z]+/(?P<uuid>[0-9a-f-]+)$")
         .expect("regexp should be valid");
-    let (base_url, (internal_activity_id,)) =
+    let (base_uri, (internal_activity_id,)) =
         parse_object_id(activity_id, path_re)
             .map_err(|_| ValidationError("invalid local activity ID"))?;
-    if base_url != instance_url {
+    if base_uri != instance_uri {
         return Err(ValidationError("instance mismatch"));
     };
     Ok(internal_activity_id)
 }
 
-pub fn post_object_id(instance_url: &str, post: &Post) -> String {
+pub fn post_object_id(instance_uri: &str, post: &PostDetailed) -> String {
     match post.object_id {
-        Some(ref object_id) => object_id.to_string(),
-        None => local_object_id(instance_url, post.id),
+        Some(ref object_id) => object_id.clone(),
+        None => local_object_id(instance_uri, post.id),
     }
 }
 
-pub fn profile_actor_id(instance_url: &str, profile: &DbActorProfile) -> String {
+pub fn profile_actor_id(instance_uri: &str, profile: &DbActorProfile) -> String {
     match profile.actor_json {
         Some(ref actor) => actor.id.clone(),
-        None => local_actor_id(instance_url, &profile.username),
+        None => local_actor_id(instance_uri, &profile.username),
     }
 }
 
-pub fn profile_actor_url(instance_url: &str, profile: &DbActorProfile) -> String {
+pub fn profile_actor_url(instance_uri: &str, profile: &DbActorProfile) -> String {
     if let Some(ref actor) = profile.actor_json {
         if let Some(ref actor_url) = actor.url {
-            return actor_url.to_string();
+            return actor_url.clone();
         };
         if actor.is_portable() {
             // Use compatible ID as 'url'
@@ -214,12 +224,12 @@ pub fn profile_actor_url(instance_url: &str, profile: &DbActorProfile) -> String
                 .expect("actor ID should be valid");
         };
     };
-    profile_actor_id(instance_url, profile)
+    profile_actor_id(instance_uri, profile)
 }
 
 /// Convert canonical object ID (from database) to compatible ID,
 /// to be used in object construction.
-/// If object ID is an 'ap' URL, compatible ID will be based on primary gateway.
+/// If object ID is an 'ap' URI, compatible ID will be based on primary gateway.
 pub fn compatible_id(
     db_actor: &DbActor,
     object_id: &str,
@@ -234,9 +244,9 @@ pub fn compatible_id(
     // TODO: FEP-EF61: at least one gateway must be stored
     let maybe_gateway = db_actor.gateways.first()
         .map(|gateway| gateway.as_str());
-    let http_url = canonical_object_id.to_http_url(maybe_gateway)
+    let http_uri = canonical_object_id.to_http_uri(maybe_gateway)
         .ok_or(DatabaseTypeError)?;
-    Ok(http_url)
+    Ok(http_uri)
 }
 
 pub fn compatible_actor_id(
@@ -246,7 +256,7 @@ pub fn compatible_actor_id(
 }
 
 pub fn compatible_profile_actor_id(
-    instance_url: &str,
+    instance_uri: &str,
     profile: &DbActorProfile,
 ) -> String {
     match profile.actor_json {
@@ -258,11 +268,11 @@ pub fn compatible_profile_actor_id(
                 actor.id.clone()
             }
         },
-        None => local_actor_id(instance_url, &profile.username),
+        None => local_actor_id(instance_uri, &profile.username),
     }
 }
 
-pub fn compatible_post_object_id(instance_url: &str, post: &Post) -> String {
+pub fn compatible_post_object_id(instance_uri: &str, post: &PostDetailed) -> String {
     match post.object_id {
         Some(ref object_id) => {
             let actor_data = post.author.expect_actor_data();
@@ -271,16 +281,17 @@ pub fn compatible_post_object_id(instance_url: &str, post: &Post) -> String {
                 compatible_id(actor_data, object_id)
                     .expect("object ID should be valid")
             } else {
-                object_id.to_string()
+                object_id.clone()
             }
         },
-        None => local_object_id(instance_url, post.id),
+        None => local_object_id(instance_uri, post.id),
     }
 }
 
-pub fn canonicalize_id(url: &str) -> Result<Url, ValidationError> {
-    let url = Url::parse(url).map_err(|error| ValidationError(error.0))?;
-    Ok(url)
+pub fn canonicalize_id(id: &str) -> Result<CanonicalUri, ValidationError> {
+    let canonical_uri = CanonicalUri::parse(id)
+        .map_err(|error| ValidationError(error.0))?;
+    Ok(canonical_uri)
 }
 
 #[cfg(test)]
@@ -289,12 +300,12 @@ mod tests {
     use mitra_utils::id::generate_ulid;
     use super::*;
 
-    const INSTANCE_URL: &str = "https://social.example";
+    const INSTANCE_URI: &str = "https://social.example";
 
     #[test]
     fn test_local_activity_id() {
         let internal_id = uuid!("cb26ed69-a6e9-47e3-8bf2-bbb26d06d1fb");
-        let activity_id = local_activity_id(INSTANCE_URL, "Like", internal_id);
+        let activity_id = local_activity_id(INSTANCE_URI, "Like", internal_id);
         assert_eq!(
             activity_id,
             "https://social.example/activities/like/cb26ed69-a6e9-47e3-8bf2-bbb26d06d1fb",
@@ -304,7 +315,7 @@ mod tests {
     #[test]
     fn test_parse_local_actor_id() {
         let username = parse_local_actor_id(
-            INSTANCE_URL,
+            INSTANCE_URI,
             "https://social.example/users/test",
         ).unwrap();
         assert_eq!(username, "test".to_string());
@@ -313,7 +324,7 @@ mod tests {
     #[test]
     fn test_parse_local_actor_id_wrong_path() {
         let error = parse_local_actor_id(
-            INSTANCE_URL,
+            INSTANCE_URI,
             "https://social.example/user/test",
         ).unwrap_err();
         assert_eq!(error.to_string(), "invalid local actor ID");
@@ -322,8 +333,8 @@ mod tests {
     #[test]
     fn test_parse_local_actor_id_invalid_username() {
         let error = parse_local_actor_id(
-            INSTANCE_URL,
-            "https://social.example/users/tes-t",
+            INSTANCE_URI,
+            "https://social.example/users/tes~t",
         ).unwrap_err();
         assert_eq!(error.to_string(), "invalid local actor ID");
     }
@@ -331,7 +342,7 @@ mod tests {
     #[test]
     fn test_parse_local_actor_id_followers() {
         let error = parse_local_actor_id(
-            INSTANCE_URL,
+            INSTANCE_URI,
             "https://social.example/users/test/followers",
         ).unwrap_err();
         assert_eq!(error.to_string(), "invalid local actor ID");
@@ -340,16 +351,16 @@ mod tests {
     #[test]
     fn test_parse_local_actor_id_with_fragment() {
         let error = parse_local_actor_id(
-            INSTANCE_URL,
+            INSTANCE_URI,
             "https://social.example/users/test#main-key",
         ).unwrap_err();
         assert_eq!(error.to_string(), "invalid local actor ID");
     }
 
     #[test]
-    fn test_parse_local_actor_id_invalid_instance_url() {
+    fn test_parse_local_actor_id_invalid_instance_uri() {
         let error = parse_local_actor_id(
-            INSTANCE_URL,
+            INSTANCE_URI,
             "https://example.gov/users/test",
         ).unwrap_err();
         assert_eq!(error.to_string(), "instance mismatch");
@@ -363,7 +374,7 @@ mod tests {
             expected_uuid,
         );
         let internal_object_id = parse_local_object_id(
-            INSTANCE_URL,
+            INSTANCE_URI,
             &object_id,
         ).unwrap();
         assert_eq!(internal_object_id, expected_uuid);
@@ -373,7 +384,7 @@ mod tests {
     fn test_parse_local_object_id_invalid_uuid() {
         let object_id = "https://social.example/objects/1234";
         let error = parse_local_object_id(
-            INSTANCE_URL,
+            INSTANCE_URI,
             object_id,
         ).unwrap_err();
         assert_eq!(error.to_string(), "invalid local object ID");
@@ -383,7 +394,7 @@ mod tests {
     fn test_parse_local_primary_intent_id() {
         let proposal_id = "https://social.example/users/test/proposals/monero:418015bb9ae982a1975da7d79277c270#primary";
         let (username, chain_id) = parse_local_primary_intent_id(
-            INSTANCE_URL,
+            INSTANCE_URI,
             proposal_id,
         ).unwrap();
         assert_eq!(username, "test");
@@ -394,9 +405,9 @@ mod tests {
     fn test_parse_local_activity_id() {
         let expected_internal_id = generate_ulid();
         let activity_id =
-            local_activity_id(INSTANCE_URL, "Like", expected_internal_id);
+            local_activity_id(INSTANCE_URI, "Like", expected_internal_id);
         let internal_id = parse_local_activity_id(
-            INSTANCE_URL,
+            INSTANCE_URI,
             &activity_id,
         ).unwrap();
         assert_eq!(internal_id, expected_internal_id);
@@ -405,7 +416,7 @@ mod tests {
     #[test]
     fn test_profile_actor_url() {
         let profile = DbActorProfile::local_for_test("test");
-        let profile_url = profile_actor_url(INSTANCE_URL, &profile);
+        let profile_url = profile_actor_url(INSTANCE_URI, &profile);
         assert_eq!(
             profile_url,
             "https://social.example/users/test",
@@ -418,11 +429,11 @@ mod tests {
             "test",
             "https://social.example/users/1",
         );
-        let post = Post::remote_for_test(
+        let post = PostDetailed::remote_for_test(
             &profile,
             "https://social.example/posts/1",
         );
-        let object_id = compatible_post_object_id(INSTANCE_URL, &post);
+        let object_id = compatible_post_object_id(INSTANCE_URI, &post);
         assert_eq!(
             object_id,
             "https://social.example/posts/1",
@@ -430,7 +441,7 @@ mod tests {
     }
 
     #[test]
-    fn test_compatible_post_object_id_ap_url() {
+    fn test_compatible_post_object_id_ap_uri() {
         let profile = DbActorProfile::remote_for_test_with_data(
             "test",
             DbActor {
@@ -439,11 +450,11 @@ mod tests {
                 ..Default::default()
             },
         );
-        let post = Post::remote_for_test(
+        let post = PostDetailed::remote_for_test(
             &profile,
             "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/posts/1",
         );
-        let object_id = compatible_post_object_id(INSTANCE_URL, &post);
+        let object_id = compatible_post_object_id(INSTANCE_URI, &post);
         assert_eq!(
             object_id,
             "https://social.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/posts/1",
@@ -456,7 +467,7 @@ mod tests {
             "test",
             "https://social.example/users/1",
         );
-        let actor_id = compatible_profile_actor_id(INSTANCE_URL, &profile);
+        let actor_id = compatible_profile_actor_id(INSTANCE_URI, &profile);
         assert_eq!(
             actor_id,
             "https://social.example/users/1",
@@ -464,7 +475,7 @@ mod tests {
     }
 
     #[test]
-    fn test_compatible_profile_actor_id_ap_url() {
+    fn test_compatible_profile_actor_id_ap_uri() {
         let profile = DbActorProfile::remote_for_test_with_data(
             "test",
             DbActor {
@@ -473,7 +484,7 @@ mod tests {
                 ..Default::default()
             },
         );
-        let actor_id = compatible_profile_actor_id(INSTANCE_URL, &profile);
+        let actor_id = compatible_profile_actor_id(INSTANCE_URI, &profile);
         assert_eq!(
             actor_id,
             "https://social.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor",
@@ -502,7 +513,10 @@ mod tests {
     fn test_canonicalize_id_ap() {
         let url = "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor?type=group";
         let canonical_url = canonicalize_id(url).unwrap();
-        assert_eq!(canonical_url.to_string(), url);
+        assert_eq!(
+            canonical_url.to_string(),
+            "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor",
+        );
     }
 
     #[test]

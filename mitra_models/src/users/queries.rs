@@ -1,14 +1,12 @@
-use chrono::{DateTime, Utc};
-use serde_json::{Value as JsonValue};
-use uuid::Uuid;
-
 use apx_core::{
     caip2::{Namespace as ChainNamespace},
     caip10::{AccountId as ChainAccountId},
-    crypto_eddsa::Ed25519SecretKey,
-    crypto_rsa::rsa_secret_key_to_pkcs1_der,
+    crypto::rsa::rsa_secret_key_to_pkcs1_der,
     did::Did,
 };
+use chrono::{DateTime, Utc};
+use serde_json::{Value as JsonValue};
+use uuid::Uuid;
 
 use crate::database::{
     catch_unique_violation,
@@ -18,7 +16,12 @@ use crate::database::{
 };
 use crate::profiles::{
     queries::create_profile,
-    types::{DbActorProfile, MentionPolicy, ProfileCreateData},
+    types::{
+        DbActorProfile,
+        MentionPolicy,
+        ProfileCreateData,
+        WebfingerHostname,
+    },
 };
 
 use super::types::{
@@ -141,11 +144,12 @@ pub async fn create_user(
     // Create profile
     let profile_data = ProfileCreateData {
         username: user_data.username.clone(),
-        hostname: None,
+        hostname: WebfingerHostname::Local,
         display_name: None,
         bio: None,
         avatar: None,
         banner: None,
+        is_automated: false,
         manually_approves_followers: false,
         mention_policy: MentionPolicy::None,
         public_keys: vec![],
@@ -212,24 +216,6 @@ pub async fn set_user_password(
         WHERE id = $2
         ",
         &[&password_digest, &user_id],
-    ).await?;
-    if updated_count == 0 {
-        return Err(DatabaseError::NotFound("user"));
-    };
-    Ok(())
-}
-
-pub(super) async fn set_user_ed25519_secret_key(
-    db_client: &impl DatabaseClient,
-    user_id: Uuid,
-    secret_key: Ed25519SecretKey,
-) -> Result<(), DatabaseError> {
-    let updated_count = db_client.execute(
-        "
-        UPDATE user_account SET ed25519_private_key = $1
-        WHERE id = $2
-        ",
-        &[&secret_key.to_vec(), &user_id],
     ).await?;
     if updated_count == 0 {
         return Err(DatabaseError::NotFound("user"));
@@ -549,6 +535,25 @@ pub async fn create_portable_user(
     Ok(user)
 }
 
+pub async fn get_portable_user_by_id(
+    db_client: &impl DatabaseClient,
+    user_id: Uuid,
+) -> Result<PortableUser, DatabaseError> {
+    let maybe_row = db_client.query_opt(
+        "
+        SELECT portable_user_account, actor_profile
+        FROM portable_user_account JOIN actor_profile USING (id)
+        WHERE id = $1
+        ",
+        &[&user_id],
+    ).await?;
+    let row = maybe_row.ok_or(DatabaseError::NotFound("user"))?;
+    let db_user: DbPortableUser = row.try_get("portable_user_account")?;
+    let db_profile: DbActorProfile = row.try_get("actor_profile")?;
+    let user = PortableUser::new(db_user, db_profile)?;
+    Ok(user)
+}
+
 pub async fn get_portable_user_by_name(
     db_client: &impl DatabaseClient,
     username: &str,
@@ -627,16 +632,25 @@ pub async fn get_portable_user_by_outbox_id(
 
 #[cfg(test)]
 mod tests {
+    use apx_core::{
+        crypto::{
+            eddsa::generate_weak_ed25519_key,
+            rsa::generate_weak_rsa_key,
+        },
+    };
     use serde_json::json;
     use serial_test::serial;
-    use apx_core::{
-        crypto_eddsa::generate_weak_ed25519_key,
-        crypto_rsa::generate_weak_rsa_key,
-    };
     use crate::{
         database::test_utils::create_test_database,
-        profiles::types::{DbActor, DbActorKey},
-        users::types::Role,
+        profiles::types::{
+            DbActor,
+            DbActorKey,
+            WebfingerHostname,
+        },
+        users::{
+            test_utils::create_test_portable_user,
+            types::Role,
+        },
     };
     use super::*;
 
@@ -679,26 +693,6 @@ mod tests {
         };
         let result = create_user(db_client, another_user_data).await;
         assert!(matches!(result, Err(DatabaseError::AlreadyExists("user"))));
-    }
-
-    #[tokio::test]
-    #[serial]
-    async fn test_set_user_ed25519_secret_key() {
-        let db_client = &mut create_test_database().await;
-        let user_data = UserCreateData {
-            username: "test".to_string(),
-            password_digest: Some("test".to_string()),
-            ..Default::default()
-        };
-        let user = create_user(db_client, user_data).await.unwrap();
-        let secret_key = [9; 32];
-        set_user_ed25519_secret_key(
-            db_client,
-            user.id,
-            secret_key,
-        ).await.unwrap();
-        let user = get_user_by_id(db_client, user.id).await.unwrap();
-        assert_eq!(user.ed25519_secret_key, secret_key);
     }
 
     #[tokio::test]
@@ -766,7 +760,7 @@ mod tests {
         let db_client = &mut create_test_database().await;
         let profile_data = ProfileCreateData {
             username: "test".to_string(),
-            hostname: None,
+            hostname: WebfingerHostname::Unknown,
             public_keys: vec![DbActorKey::default()],
             actor_json: Some(DbActor {
                 id: "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor".to_string(),
@@ -777,6 +771,7 @@ mod tests {
         };
         let profile = create_profile(db_client, profile_data).await.unwrap();
         profile.check_consistency().unwrap();
+        assert!(matches!(profile.hostname(), WebfingerHostname::Unknown));
         let rsa_secret_key = generate_weak_rsa_key().unwrap();
         let ed25519_secret_key = generate_weak_ed25519_key();
         let invite_code =
@@ -791,5 +786,27 @@ mod tests {
         assert_eq!(user.id, profile.id);
         assert_eq!(user.rsa_secret_key, rsa_secret_key);
         assert_eq!(user.ed25519_secret_key, ed25519_secret_key);
+        assert!(matches!(user.profile.hostname(), WebfingerHostname::Local));
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_get_portable_user_by() {
+        let db_client = &mut create_test_database().await;
+        let user = create_test_portable_user(
+            db_client,
+            "test",
+            "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor",
+        ).await;
+        let user_id = user.id;
+
+        let user = get_portable_user_by_id(db_client, user_id).await.unwrap();
+        assert_eq!(user.id, user_id);
+
+        let user = get_portable_user_by_actor_id(
+            db_client,
+            &user.profile.expect_actor_data().id,
+        ).await.unwrap();
+        assert_eq!(user.id, user_id);
     }
 }

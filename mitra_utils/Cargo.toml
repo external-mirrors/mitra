@@ -6,28 +6,35 @@ license.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 
+publish.workspace = true
+
 [dependencies]
 # Used for HTML sanitization
-ammonia = "3.2.0"
-html5ever = "0.26.0"
+ammonia = "4.0.1"
+html5ever = "0.27.0"
 # Used to generate identicons
 eth-blockies = "1.1.0"
 # Used for working with dates
-chrono = { version = "0.4.31", default-features = false, features = ["std", "clock"] }
+chrono = { version = "0.4.34", default-features = false, features = ["std", "clock"] }
 # Used for parsing markdown
-comrak = { git = "https://github.com/kivikakk/comrak", rev = "0f0f659a7ceb0692d83a07ca10de53687c265873", default-features = false }
+comrak = { version = "0.40.0", default-features = false, features = ["bon"] }
 # Used for extracting text from HTML
-html2text = "=0.12.4"
-# Used to gather disk info
-lfs-core = "=0.11.1"
+html2text = "0.12.6"
+# ISO 639 language codes
+isolang = { version = "2.4.0", default-features = false }
 # Used to determine file extension
 mime_guess = "2.0.5"
 # Used to generate random numbers
 rand = "0.8.4"
+rand_chacha = "0.3"
 # Used for working with regular expressions
 regex = "1.10.6"
 # Used for hashing passwords
 rust-argon2 = "2.1.0"
+# Used for serialization/deserialization
+serde = { version = "1.0.210", features = ["derive"] }
+# Used to gather disk info
+sysinfo = { version = "0.32.1", default-features = false, features = ["disk"] }
 # Used for creating error types
 thiserror = "1.0.37"
 # Used to generate lexicographically sortable IDs
@@ -37,7 +44,7 @@ unicode-segmentation = "1.10.1"
 # Used to work with UUIDs
 uuid = "1.1.2"
 
-apx_core = { path = "../apx_core" }
+apx_core = { path = "../apx_core", features = ["caip"] }
 
 [lints]
 workspace = true

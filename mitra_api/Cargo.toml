@@ -1,0 +1,77 @@
+[package]
+name = "mitra_api"
+description = "Federated micro-blogging platform and content subscription service"
+version.workspace = true
+license.workspace = true
+
+edition.workspace = true
+rust-version.workspace = true
+
+publish.workspace = true
+
+[dependencies]
+# Used to handle incoming HTTP requests
+actix-cors = "0.6.5"
+actix-files = "0.6.6"
+actix-governor = { git = "https://github.com/silverpill/actix-governor", rev = "4b8f9995d5bf172ac6373214b78480061ed4abf0" }
+actix-multipart = { version = "0.6.2", default-features = false, features = ["derive"] }
+actix-web = "=4.9.0"
+actix-web-httpauth = "0.8.2"
+# Used for working with dates
+chrono = { version = "0.4.34", default-features = false, features = ["std", "serde"] }
+# Used to parse emoji shortcodes
+emojis = "0.6.1"
+# Used to work with hexadecimal strings
+hex = { version = "0.4.3" }
+# Provides order-preserving map
+indexmap = "2.2.3"
+# Used for logging
+log = "0.4.20"
+# Used to render templates
+minijinja = { version = "2.12.0", default-features = false, features = ["serde"] }
+# Used to determine the number of CPUs on the system
+num_cpus = "1.13.0"
+# Used for working with regular expressions
+regex = "1.10.6"
+# Used for serialization/deserialization
+serde = { version = "1.0.210", features = ["derive"] }
+serde_json = "1.0.132"
+# Used to parse querystrings
+serde_qs = { version = "0.13", features = ["actix4"] }
+# Used for creating error types
+thiserror = "1.0.37"
+# Async runtime
+tokio = { version = "~1.38.0", features = ["macros"] }
+# Used to work with URLs
+url = "2.4.1"
+# Used to work with UUIDs
+uuid = { version = "1.1.2", features = ["serde", "v4"] }
+
+# Choose unicode backend for idna
+# https://github.com/hsivonen/idna_adapter
+idna_adapter = "~1.1.0"
+
+apx_core = { path = "../apx_core" }
+apx_sdk = { path = "../apx_sdk" }
+mitra_activitypub = { path = "../mitra_activitypub" }
+mitra_adapters = { path = "../mitra_adapters" }
+mitra_config = { path = "../mitra_config" }
+mitra_models = { path = "../mitra_models" }
+mitra_services = { path = "../mitra_services" }
+mitra_utils = { path = "../mitra_utils" }
+mitra_validators = { path = "../mitra_validators" }
+mitra_workers = { path = "../mitra_workers" }
+
+[dev-dependencies]
+serial_test = "3.0.0"
+
+apx_core = { path = "../apx_core", features = ["test-utils"] }
+mitra_config = { path = "../mitra_config", features = ["test-utils"] }
+mitra_models = { path = "../mitra_models", features = ["test-utils"] }
+mitra_services = { path = "../mitra_services", features = ["test-utils"] }
+
+[features]
+production = ["mitra_config/production"]
+
+[lints]
+workspace = true

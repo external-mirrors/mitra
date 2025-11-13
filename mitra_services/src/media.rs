@@ -2,11 +2,11 @@ use std::fs::remove_file;
 use std::io::{Error as IoError};
 use std::path::{Path, PathBuf};
 
+use apx_core::crypto::hashes::sha256;
 use s3::Region;
 use s3::{creds::Credentials, error::S3Error, Bucket};
 use thiserror::Error;
 
-use apx_core::hashes::sha256;
 use mitra_config::Config;
 use mitra_utils::{
     files::{
@@ -17,9 +17,6 @@ use mitra_utils::{
     },
     sysinfo::get_available_disk_space,
 };
-
-const MEDIA_DIR: &str = "media";
-pub const MEDIA_ROOT_URL: &str = "/media";
 
 /// Generates unique file name based on file contents
 fn get_file_name(data: &[u8], media_type: Option<&str>) -> String {
@@ -81,6 +78,8 @@ pub struct FilesystemStorage {
 }
 
 impl FilesystemStorage {
+    const MEDIA_DIR: &str = "media";
+
     pub fn init(&self) -> Result<(), MediaStorageError> {
         if !self.media_dir.exists() {
             std::fs::create_dir(&self.media_dir)?;
@@ -151,7 +150,7 @@ impl MediaStorageBackend for FilesystemStorage {
 impl From<&Config> for FilesystemStorage {
     fn from(config: &Config) -> Self {
         Self {
-            media_dir: config.storage_dir.join(MEDIA_DIR),
+            media_dir: config.storage_dir.join(Self::MEDIA_DIR),
         }
     }
 }
@@ -327,16 +326,14 @@ impl MediaStorage {
     }
 }
 
-fn get_file_url(base_url: &str, file_name: &str) -> String {
-    format!("{}{}/{}", base_url, MEDIA_ROOT_URL, file_name)
-}
-
 #[derive(Clone)]
 pub struct FilesystemServer {
     base_url: String,
 }
 
 impl FilesystemServer {
+    pub const BASE_PATH: &str = "/media";
+
     pub fn new(base_url: &str) -> Self {
         Self { base_url: base_url.to_string() }
     }
@@ -345,8 +342,10 @@ impl FilesystemServer {
         self.base_url = base_url.to_string();
     }
 
+    // actix-files uses file name to guess content type
+    // https://docs.rs/actix-files/0.6.6/actix_files/struct.NamedFile.html#method.from_file
     pub fn url_for(&self, file_name: &str) -> String {
-        get_file_url(&self.base_url, file_name)
+        format!("{}{}/{}", self.base_url, Self::BASE_PATH, file_name)
     }
 }
 
@@ -356,6 +355,8 @@ pub struct S3Server {
 }
 
 impl S3Server {
+    pub const BASE_PATH: &str = "/media";
+
     pub fn new(
         base_url: &str,
         bucket: &str,
@@ -387,7 +388,7 @@ impl S3Server {
     }
 
     pub fn url_for(&self, file_name: &str) -> String {
-        get_file_url(&self.base_url, file_name)
+        format!("{}{}/{}", self.base_url, Self::BASE_PATH, file_name)
     }
 }
 
@@ -400,7 +401,7 @@ impl MediaServer {
     pub fn new(config: &Config) -> Self {
         if let Some(ref s3_config) = config.s3_storage {
             let backend = S3Server::new(
-                &config.instance_url(),
+                &config.instance().uri_str(),
                 &s3_config.bucket,
                 &s3_config.region,
                 &s3_config.endpoint,
@@ -411,7 +412,7 @@ impl MediaServer {
             .unwrap();
             Self::S3(backend)
         } else {
-            let backend = FilesystemServer::new(&config.instance_url());
+            let backend = FilesystemServer::new(config.instance().uri_str());
             Self::Filesystem(backend)
         }
     }
@@ -450,9 +451,10 @@ mod tests {
 
     #[test]
     fn test_get_file_url() {
-        let instance_url = "https://social.example";
+        let instance_uri = "https://social.example";
+        let media_server = FilesystemServer::new(instance_uri);
         let file_name = "4c4b6a3be1314ab86138bef4314dde022e600960d8689a2c8f8631802d20dab6.png";
-        let url = get_file_url(instance_url, file_name);
+        let url = media_server.url_for(file_name);
         assert_eq!(
             url,
             "https://social.example/media/4c4b6a3be1314ab86138bef4314dde022e600960d8689a2c8f8631802d20dab6.png",

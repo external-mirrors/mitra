@@ -1,19 +1,25 @@
+//! Verify JSON signatures
+use std::fmt;
+
 use serde_json::{Value as JsonValue};
+use thiserror::Error;
 
 use crate::{
-    crypto_eddsa::{verify_eddsa_signature, Ed25519PublicKey},
-    crypto_rsa::{verify_rsa_sha256_signature, RsaPublicKey},
-    did::Did,
-    did_key::DidKey,
-    did_pkh::DidPkh,
-    eip191::verify_eip191_signature,
-    http_url::HttpUrl,
+    crypto::{
+        eddsa::{verify_eddsa_signature, Ed25519PublicKey},
+        rsa::{verify_rsa_sha256_signature, RsaPublicKey},
+    },
+    did_url::DidUrl,
     jcs::{
         canonicalize_object,
         CanonicalizationError,
     },
-    minisign::verify_minisign_signature,
     multibase::{decode_multibase_base58btc, MultibaseError},
+    url::{
+        ap_uri::{is_ap_uri, ApUri},
+        common::Origin,
+        http_uri::HttpUri,
+    },
 };
 
 use super::create::{
@@ -26,23 +32,76 @@ use super::create::{
 };
 use super::proofs::{ProofType, DATA_INTEGRITY_PROOF};
 
+#[cfg(feature = "eip191")]
+use crate::{
+    did_pkh::DidPkh,
+    eip191::verify_eip191_signature,
+};
+
+#[cfg(feature = "minisign")]
+use crate::{
+    did_key::DidKey,
+    minisign::verify_minisign_signature,
+};
+
 const PROOF_VALUE_KEY: &str = "proofValue";
 
+/// Signature verification method
 #[derive(Debug, PartialEq)]
-pub enum JsonSigner {
-    HttpUrl(HttpUrl),
-    DidUrl(Did),
+pub enum VerificationMethod {
+    HttpUri(HttpUri),
+    ApUri(ApUri),
+    DidUrl(DidUrl),
 }
 
+impl VerificationMethod {
+    /// Parses verification method ID
+    pub(crate) fn parse(url: &str) -> Result<Self, &'static str> {
+        // TODO: support compatible 'ap' URIs
+        let method = if is_ap_uri(url) {
+            let ap_uri = ApUri::parse(url)?;
+            Self::ApUri(ap_uri)
+        } else if let Ok(did_url) = DidUrl::parse(url) {
+            Self::DidUrl(did_url)
+        } else if let Ok(http_uri) = HttpUri::parse(url) {
+            Self::HttpUri(http_uri)
+        } else {
+            return Err("invalid verification method ID");
+        };
+        Ok(method)
+    }
+
+    /// Returns origin of this verification method
+    pub fn origin(&self) -> Origin {
+        match self {
+            Self::HttpUri(http_uri) => http_uri.origin(),
+            Self::ApUri(ap_uri) => ap_uri.origin(),
+            Self::DidUrl(did_url) => did_url.origin(),
+        }
+    }
+}
+
+impl fmt::Display for VerificationMethod {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::HttpUri(http_uri) => write!(formatter, "{}", http_uri),
+            Self::ApUri(ap_uri) => write!(formatter, "{}", ap_uri),
+            Self::DidUrl(did_url) => write!(formatter, "{}", did_url),
+        }
+    }
+}
+
+/// Parsed integrity proof
 pub struct JsonSignatureData {
     pub proof_type: ProofType,
-    pub signer: JsonSigner,
+    pub verification_method: VerificationMethod,
     pub object: JsonValue,
     pub proof_config: JsonValue,
     pub signature: Vec<u8>,
 }
 
-#[derive(thiserror::Error, Debug)]
+/// Errors that may occur during the verification of a JSON signature
+#[derive(Debug, Error)]
 pub enum JsonSignatureVerificationError {
     #[error("invalid object")]
     InvalidObject,
@@ -65,6 +124,7 @@ pub enum JsonSignatureVerificationError {
 
 type VerificationError = JsonSignatureVerificationError;
 
+/// Parses integrity proof on a JSON document
 pub fn get_json_signature(
     object: &JsonValue,
 ) -> Result<JsonSignatureData, VerificationError> {
@@ -104,19 +164,12 @@ pub fn get_json_signature(
         proof_config.proof_type.parse()
             .map_err(|_| VerificationError::InvalidProof("unsupported proof type"))?
     };
-    let signer = if let Ok((did, _)) = Did::parse_url(&proof_config.verification_method) {
-        // Fragment is ignored because supported DIDs
-        // can't have more than one verification method
-        JsonSigner::DidUrl(did)
-    } else if let Ok(http_url) = HttpUrl::parse(&proof_config.verification_method) {
-        JsonSigner::HttpUrl(http_url)
-    } else {
-        return Err(VerificationError::InvalidProof("unsupported verification method"));
-    };
+    let verification_method = VerificationMethod::parse(&proof_config.verification_method)
+        .map_err(VerificationError::InvalidProof)?;
     let signature = decode_multibase_base58btc(&proof_value)?;
     let signature_data = JsonSignatureData {
         proof_type,
-        signer,
+        verification_method,
         object,
         proof_config: proof,
         signature,
@@ -130,14 +183,11 @@ pub fn verify_rsa_json_signature(
     signature: &[u8],
 ) -> Result<(), VerificationError> {
     let canonical_object = canonicalize_object(object)?;
-    let is_valid_signature = verify_rsa_sha256_signature(
+    verify_rsa_sha256_signature(
         signer_key,
-        &canonical_object,
+        canonical_object.as_bytes(),
         signature,
-    );
-    if !is_valid_signature {
-        return Err(VerificationError::InvalidSignature);
-    };
+    ).map_err(|_| VerificationError::InvalidSignature)?;
     Ok(())
 }
 
@@ -148,8 +198,6 @@ pub fn verify_eddsa_json_signature(
     signature: &[u8],
 ) -> Result<(), VerificationError> {
     let hash_data = prepare_jcs_sha256_data(object, proof_config)?;
-    let signature: [u8; 64] = signature.try_into()
-        .map_err(|_| VerificationError::InvalidSignature)?;
     verify_eddsa_signature(
         signer_key,
         &hash_data,
@@ -158,6 +206,7 @@ pub fn verify_eddsa_json_signature(
     Ok(())
 }
 
+#[cfg(feature = "eip191")]
 pub fn verify_eip191_json_signature(
     signer: &DidPkh,
     object: &JsonValue,
@@ -168,6 +217,7 @@ pub fn verify_eip191_json_signature(
         .map_err(|_| VerificationError::InvalidSignature)
 }
 
+#[cfg(feature = "minisign")]
 pub fn verify_blake2_ed25519_json_signature(
     signer: &DidKey,
     object: &JsonValue,
@@ -183,20 +233,48 @@ mod tests {
     use chrono::{DateTime, Utc};
     use serde_json::json;
     use crate::{
-        crypto_eddsa::{
-            generate_ed25519_key,
-            ed25519_public_key_from_multikey,
-            ed25519_public_key_from_secret_key,
-            ed25519_secret_key_from_multikey,
+        crypto::{
+            eddsa::{
+                generate_ed25519_key,
+                ed25519_public_key_from_multikey,
+                ed25519_public_key_from_secret_key,
+                ed25519_secret_key_from_multikey,
+            },
+            rsa::generate_weak_rsa_key,
         },
-        crypto_rsa::generate_weak_rsa_key,
         json_signatures::create::{
+            sign_object,
             sign_object_eddsa,
-            sign_object_rsa,
         },
     };
     use super::*;
 
+    #[allow(deprecated)]
+    use crate::json_signatures::create::sign_object_rsa;
+
+    #[cfg(feature = "eip191")]
+    use crate::did::Did;
+
+    #[test]
+    fn test_verification_method_parse() {
+        let url = "http://social.example/actors/1#main-key";
+        let vm_id = VerificationMethod::parse(url).unwrap();
+        assert!(matches!(vm_id, VerificationMethod::HttpUri(_)));
+
+        let url = "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor#main-key";
+        let vm_id = VerificationMethod::parse(url).unwrap();
+        assert!(matches!(vm_id, VerificationMethod::ApUri(_)));
+
+        let url = "https://gateway.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor#main-key";
+        let vm_id = VerificationMethod::parse(url).unwrap();
+        assert!(matches!(vm_id, VerificationMethod::HttpUri(_)));
+
+        let url = "did:key:z6MkrJVnaZkeFzdQyMZu1cgjg7k1pZZ6pvBQ7XJPt4swbTQ2#z6MkrJVnaZkeFzdQyMZu1cgjg7k1pZZ6pvBQ7XJPt4swbTQ2";
+        let vm_id = VerificationMethod::parse(url).unwrap();
+        assert!(matches!(vm_id, VerificationMethod::DidUrl(_)));
+    }
+
+    #[cfg(feature = "eip191")]
     #[test]
     fn test_get_json_signature_eip191() {
         let signed_object = json!({
@@ -205,7 +283,7 @@ mod tests {
             "proof": {
                 "type": "MitraJcsEip191Signature2022",
                 "proofPurpose": "assertionMethod",
-                "verificationMethod": "did:pkh:eip155:1:0xb9c5714089478a327f09197987f16f9e5d936e8a",
+                "verificationMethod": "did:pkh:eip155:1:0xb9c5714089478a327f09197987f16f9e5d936e8a#blockchainAccountId",
                 "created": "2020-11-05T19:23:24Z",
                 "proofValue": "zE5J",
             },
@@ -215,16 +293,18 @@ mod tests {
             signature_data.proof_type,
             ProofType::JcsEip191Signature,
         );
-        let expected_signer = JsonSigner::DidUrl(Did::Pkh(
-            DidPkh::from_ethereum_address(
-                "0xb9c5714089478a327f09197987f16f9e5d936e8a",
-            ),
-        ));
-        assert_eq!(signature_data.signer, expected_signer);
+        let expected_did = Did::Pkh(DidPkh::from_ethereum_address(
+            "0xb9c5714089478a327f09197987f16f9e5d936e8a"));
+        let did_url = match signature_data.verification_method {
+            VerificationMethod::DidUrl(did_url) => did_url,
+            _ => panic!("unexpected verification method"),
+        };
+        assert_eq!(did_url.did(), &expected_did);
         assert_eq!(signature_data.signature, [171, 205]);
     }
 
     #[test]
+    #[allow(deprecated)]
     fn test_create_and_verify_rsa_signature() {
         let signer_key = generate_weak_rsa_key().unwrap();
         let signer_key_id = "https://example.org/users/test#main-key";
@@ -253,9 +333,9 @@ mod tests {
             signature_data.proof_type,
             ProofType::JcsRsaSignature,
         );
-        let expected_signer =
-            JsonSigner::HttpUrl(HttpUrl::parse(signer_key_id).unwrap());
-        assert_eq!(signature_data.signer, expected_signer);
+        let expected_vm =
+            VerificationMethod::HttpUri(HttpUri::parse(signer_key_id).unwrap());
+        assert_eq!(signature_data.verification_method, expected_vm);
 
         let signer_public_key = RsaPublicKey::from(signer_key);
         let result = verify_rsa_json_signature(
@@ -267,6 +347,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(deprecated)]
     fn test_create_and_verify_eddsa_signature_legacy() {
         let signer_key = generate_ed25519_key();
         let signer_key_id = "https://example.org/users/test#main-key";
@@ -290,6 +371,7 @@ mod tests {
             None,
             true,
             false,
+            false,
         ).unwrap();
 
         let signature_data = get_json_signature(&signed_object).unwrap();
@@ -297,9 +379,9 @@ mod tests {
             signature_data.proof_type,
             ProofType::JcsEddsaSignature,
         );
-        let expected_signer =
-            JsonSigner::HttpUrl(HttpUrl::parse(signer_key_id).unwrap());
-        assert_eq!(signature_data.signer, expected_signer);
+        let expected_vm =
+            VerificationMethod::HttpUri(HttpUri::parse(signer_key_id).unwrap());
+        assert_eq!(signature_data.verification_method, expected_vm);
 
         let signer_public_key =
             ed25519_public_key_from_secret_key(&signer_key);
@@ -330,13 +412,10 @@ mod tests {
                 "content": "test",
             },
         });
-        let signed_object = sign_object_eddsa(
+        let signed_object = sign_object(
             &signer_key,
             signer_key_id,
             &object,
-            None,
-            false,
-            false,
         ).unwrap();
 
         let signature_data = get_json_signature(&signed_object).unwrap();
@@ -344,9 +423,9 @@ mod tests {
             signature_data.proof_type,
             ProofType::EddsaJcsSignature,
         );
-        let expected_signer =
-            JsonSigner::HttpUrl(HttpUrl::parse(signer_key_id).unwrap());
-        assert_eq!(signature_data.signer, expected_signer);
+        let expected_vm =
+            VerificationMethod::HttpUri(HttpUri::parse(signer_key_id).unwrap());
+        assert_eq!(signature_data.verification_method, expected_vm);
 
         let signer_public_key =
             ed25519_public_key_from_secret_key(&signer_key);
@@ -361,6 +440,7 @@ mod tests {
 
     #[test]
     fn test_create_and_verify_eddsa_signature_fep_8b32_test_vector() {
+        // https://codeberg.org/fediverse/fep/src/branch/main/fep/8b32/fep-8b32.feature
         let secret_key_multibase = "z3u2en7t5LR2WtQH5PfFqMqwVHBeXouLzo6haApm8XHqvjxq";
         let secret_key = ed25519_secret_key_from_multikey(secret_key_multibase).unwrap();
         let key_id = "https://server.example/users/alice#ed25519-key";
@@ -369,13 +449,21 @@ mod tests {
         let object = json!({
             "@context": [
                 "https://www.w3.org/ns/activitystreams",
-                "https://w3id.org/security/data-integrity/v1"
+                "https://w3id.org/security/data-integrity/v2"
             ],
+            "id": "https://server.example/activities/1",
             "type": "Create",
             "actor": "https://server.example/users/alice",
             "object": {
+                "id": "https://server.example/objects/1",
                 "type": "Note",
-                "content": "Hello world"
+                "attributedTo": "https://server.example/users/alice",
+                "content": "Hello world",
+                "location": {
+                    "type": "Place",
+                    "longitude": -71.184902,
+                    "latitude": 25.273962
+                }
             }
         });
         let signed_object = sign_object_eddsa(
@@ -384,26 +472,39 @@ mod tests {
             &object,
             Some(created_at),
             false,
+            true, // with proof @context
             false,
         ).unwrap();
 
         let expected_result = json!({
             "@context": [
                 "https://www.w3.org/ns/activitystreams",
-                "https://w3id.org/security/data-integrity/v1"
+                "https://w3id.org/security/data-integrity/v2"
             ],
+            "id": "https://server.example/activities/1",
             "type": "Create",
             "actor": "https://server.example/users/alice",
             "object": {
+                "id": "https://server.example/objects/1",
                 "type": "Note",
-                "content": "Hello world"
+                "attributedTo": "https://server.example/users/alice",
+                "content": "Hello world",
+                "location": {
+                    "type": "Place",
+                    "longitude": -71.184902,
+                    "latitude": 25.273962
+                }
             },
             "proof": {
+                "@context": [
+                    "https://www.w3.org/ns/activitystreams",
+                    "https://w3id.org/security/data-integrity/v2"
+                ],
                 "type": "DataIntegrityProof",
                 "cryptosuite": "eddsa-jcs-2022",
                 "verificationMethod": "https://server.example/users/alice#ed25519-key",
                 "proofPurpose": "assertionMethod",
-                "proofValue": "z3sXaxjKs4M3BRicwWA9peyNPJvJqxtGsDmpt1jjoHCjgeUf71TRFz56osPSfDErszyLp5Ks1EhYSgpDaNM977Rg2",
+                "proofValue": "z42ffGu6AUKPCFcFPiabmUvnGLPJzC7e4DGWC52NUasSSH37UMa9c58tdgVszUcZfytxa4fQ5TYHaJENCxUDe9SdL",
                 "created": "2023-02-24T23:36:38Z"
             }
         });
@@ -425,12 +526,12 @@ mod tests {
         assert_eq!(result.is_ok(), true);
     }
 
-    /// https://w3c.github.io/vc-di-eddsa/#representation-eddsa-jcs-2022
     #[test]
     fn test_create_and_verify_eddsa_signature_vc_di_eddsa_test_vector() {
+        // https://w3c.github.io/vc-di-eddsa/#representation-eddsa-jcs-2022
         let secret_key_multibase = "z3u2en7t5LR2WtQH5PfFqMqwVHBeXouLzo6haApm8XHqvjxq";
         let secret_key = ed25519_secret_key_from_multikey(secret_key_multibase).unwrap();
-        let key_id = "https://vc.example/issuers/5678#z6MkrJVnaZkeFzdQyMZu1cgjg7k1pZZ6pvBQ7XJPt4swbTQ2";
+        let key_id = "did:key:z6MkrJVnaZkeFzdQyMZu1cgjg7k1pZZ6pvBQ7XJPt4swbTQ2#z6MkrJVnaZkeFzdQyMZu1cgjg7k1pZZ6pvBQ7XJPt4swbTQ2";
         let created_at = DateTime::parse_from_rfc3339("2023-02-24T23:36:38Z")
             .unwrap().with_timezone(&Utc);
         let object = json!({
@@ -456,6 +557,7 @@ mod tests {
             Some(created_at),
             false,
             true, // with proof context
+            true, // context injection required
         ).unwrap();
 
         let expected_result = json!({
@@ -480,14 +582,14 @@ mod tests {
                 "type": "DataIntegrityProof",
                 "cryptosuite": "eddsa-jcs-2022",
                 "created": "2023-02-24T23:36:38Z",
-                "verificationMethod": "https://vc.example/issuers/5678#z6MkrJVnaZkeFzdQyMZu1cgjg7k1pZZ6pvBQ7XJPt4swbTQ2",
+                "verificationMethod": "did:key:z6MkrJVnaZkeFzdQyMZu1cgjg7k1pZZ6pvBQ7XJPt4swbTQ2#z6MkrJVnaZkeFzdQyMZu1cgjg7k1pZZ6pvBQ7XJPt4swbTQ2",
                 "proofPurpose": "assertionMethod",
                 "@context": [
                     "https://www.w3.org/ns/credentials/v2",
                     "https://www.w3.org/ns/credentials/examples/v2"
                 ],
-                "proofValue": "z63t83Y53KfzJ5ZosfKTnqfMcKB2dmTrfjSaQjeNNjAD5srBowQfmWqeRb8rRjmeEuCBEsddF9LsVogtuTsijJKh4"
-            },
+                "proofValue": "z2HnFSSPPBzR36zdDgK8PbEHeXbR56YF24jwMpt3R1eHXQzJDMWS93FCzpvJpwTWd3GAVFuUfjoJdcnTMuVor51aX"
+            }
         });
         assert_eq!(signed_object, expected_result);
 

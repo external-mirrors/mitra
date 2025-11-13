@@ -1,26 +1,26 @@
 [package]
-name = "mitra_cli"
+name = "mitra"
 version.workspace = true
 license.workspace = true
 
 edition.workspace = true
 rust-version.workspace = true
 
-[[bin]]
-name = "mitractl"
-path = "src/main.rs"
+publish.workspace = true
 
 [dependencies]
 # Used for catching errors
 anyhow = "1.0.58"
+# Used for working with dates
+chrono = { version = "0.4.34", default-features = false }
 # Used to build admin CLI tool
-clap = { version = "~4.2.7", default-features = false, features = ["std", "derive", "error-context", "help", "usage"] }
+clap = { version = "~4.4.18", default-features = false, features = ["std", "derive", "error-context", "help", "usage"] }
 # Used for logging
 log = "0.4.20"
 # Used for reading JSON
-serde_json = "1.0.89"
+serde_json = "1.0.132"
 # Async runtime
-tokio = { version = "1.28.2", features = ["macros"] }
+tokio = { version = "~1.38.0", features = ["macros", "rt-multi-thread"] }
 # Used to work with UUIDs
 uuid = "1.1.2"
 
@@ -28,12 +28,13 @@ apx_core = { path = "../apx_core" }
 apx_sdk = { path = "../apx_sdk" }
 mitra_activitypub = { path = "../mitra_activitypub" }
 mitra_adapters = { path = "../mitra_adapters" }
+mitra_api = { path = "../mitra_api" }
 mitra_config = { path = "../mitra_config" }
 mitra_models = { path = "../mitra_models" }
 mitra_services = { path = "../mitra_services" }
 mitra_utils = { path = "../mitra_utils" }
 mitra_validators = { path = "../mitra_validators" }
-mitra = { path = ".." }
+mitra_workers = { path = "../mitra_workers" }
 
 [lints]
 workspace = true

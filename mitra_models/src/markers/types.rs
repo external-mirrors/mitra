@@ -7,7 +7,7 @@ use crate::database::{
     DatabaseTypeError,
 };
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Timeline {
     Home,
     Notifications,
@@ -41,7 +41,7 @@ int_enum_to_sql!(Timeline);
 #[allow(dead_code)]
 #[derive(FromSql)]
 #[postgres(name = "timeline_marker")]
-pub struct DbTimelineMarker {
+pub struct TimelineMarker {
     id: i32,
     user_id: Uuid,
     pub timeline: Timeline,

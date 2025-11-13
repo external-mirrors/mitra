@@ -24,10 +24,13 @@ pub enum MarkdownError {
     Utf8Error(#[from] std::string::FromUtf8Error),
 }
 
-fn build_comrak_options() -> Options {
+fn build_comrak_options<'cb>() -> Options<'cb> {
     Options {
         extension: ExtensionOptions::builder()
             .autolink(true)
+            .underline(true)
+            .strikethrough(true)
+            .greentext(true)
             .build(),
         parse: ParseOptions::builder()
             .relaxed_autolinks(true)
@@ -36,19 +39,13 @@ fn build_comrak_options() -> Options {
             .hardbreaks(true)
             .escape(true)
             .ol_width(4)
+            .experimental_minimize_commonmark(true)
             .build(),
     }
 }
 
-/// Prevents greentext from being parsed as blockquotes
-fn protect_greentext(text: &str) -> Cow<str> {
-    let greentext_re = Regex::new("(?m)^(>)(.+)")
-        .expect("regexp should be valid");
-    greentext_re.replace_all(text, "&gt;$2")
-}
-
 /// Prevents underscores in mentions from being parsed as emphasis markers
-fn protect_mentions(text: &str) -> Cow<str> {
+fn protect_mentions(text: &str) -> Cow<'_, str> {
     let mention_re = Regex::new(r#"(?m)@([\w]+)@"#)
         .expect("regexp should be valid");
     mention_re.replace_all(text, |caps: &Captures| -> String {
@@ -80,6 +77,26 @@ fn node_to_markdown<'a>(
         .trim_end_matches('\n')
         .to_string();
     Ok(markdown)
+}
+
+fn node_to_source<'a>(
+    node: &'a AstNode<'a>,
+    source: &str,
+) -> Option<String> {
+    let sourcepos = node.data.borrow().sourcepos;
+    if sourcepos.start.line != sourcepos.end.line {
+        // Ignore multi line elements
+        return None;
+    };
+    let start_line = sourcepos.start.line.checked_sub(1)?;
+    let line = source.lines().nth(start_line)?;
+    let start_column = sourcepos.start.column.checked_sub(1)?;
+    let length = sourcepos.end.column.checked_sub(sourcepos.start.column)?;
+    let text = line.chars()
+        .skip(start_column)
+        .take(length + 1)
+        .collect();
+    Some(text)
 }
 
 fn replace_node_value(node: &AstNode, value: NodeValue) -> () {
@@ -114,22 +131,38 @@ fn unlink<'a>(node: &'a AstNode<'a>) -> () {
     replace_node_value(node, text);
 }
 
-fn fix_microsyntaxes<'a>(
+fn is_microsyntax<'a>(
     node: &'a AstNode<'a>,
-) -> Result<(), MarkdownError> {
+) -> Result<bool, MarkdownError> {
     if let Some(prev) = node.previous_sibling() {
         if let NodeValue::Text(ref prev_text) = prev.data.borrow().value {
             // Remove autolink if mention or object link syntax is found
             if prev_text.ends_with('@') || prev_text.ends_with("[[") {
-                unlink(node);
+                return Ok(true);
             };
         };
     };
-    Ok(())
+    Ok(false)
 }
 
 fn is_uri_scheme_allowed(uri: &str) -> bool {
     URI_SCHEMES.iter().any(|scheme| uri.starts_with(scheme))
+}
+
+fn is_email_autolink<'a>(
+    node: &'a AstNode<'a>,
+    text: &str,
+) -> bool {
+    let NodeValue::Link(ref link) = node.data.borrow().value else {
+        return false;
+    };
+    if !link.url.starts_with("mailto:") {
+        return false;
+    };
+    let Some(source) = node_to_source(node, text) else {
+        return false;
+    };
+    link.url == format!("mailto:{source}")
 }
 
 fn document_to_html<'a>(
@@ -157,29 +190,27 @@ fn fix_linebreaks(html: &str) -> String {
 ///
 /// Supported features:
 /// - headings (level 1 only)
+/// - blockquotes
 /// - bold and italic
 /// - links and autolinks
 /// - inline code and code blocks
+/// - strikethrough
 ///
 /// The output should be displayed correctly on all popular platforms:
 /// https://funfedi.dev/support_tables/generated/html_tags/
 pub fn markdown_lite_to_html(text: &str) -> Result<String, MarkdownError> {
-    let options = {
-        let mut options = build_comrak_options();
-        options.extension.underline = true;
-        options
-    };
+    let options = build_comrak_options();
     let arena = Arena::new();
 
-    let text = protect_greentext(text);
-    let text = protect_mentions(&text);
+    let text = protect_mentions(text);
     let root = parse_document(
         &arena,
         &text,
         &options,
     );
 
-    // Re-render blockquotes, headings, HRs, images and lists
+    // Re-render headings, HRs and lists
+    // Replace images with links
     // TODO: disable parser rules https://github.com/kivikakk/comrak/issues/244
     iter_nodes(root, &|node| {
         let node_value = node.data.borrow().value.clone();
@@ -189,14 +220,9 @@ pub fn markdown_lite_to_html(text: &str) -> Result<String, MarkdownError> {
             // https://git.pleroma.social/pleroma/pleroma/-/issues/2413
             NodeValue::Heading(heading) if heading.level == 1 => (),
             // Blocks
-            // TODO: don't re-render blockquotes?
-            NodeValue::BlockQuote | NodeValue::Heading(_) | NodeValue::ThematicBreak => {
+            NodeValue::Heading(_) | NodeValue::ThematicBreak => {
                 // Replace children with paragraph containing markdown
-                let mut markdown = node_to_markdown(node, &options)?;
-                if matches!(node_value, NodeValue::BlockQuote) {
-                    // Fix greentext
-                    markdown = markdown.replace("> ", ">");
-                };
+                let markdown = node_to_markdown(node, &options)?;
                 for child in node.children() {
                     child.detach();
                 };
@@ -250,8 +276,11 @@ pub fn markdown_lite_to_html(text: &str) -> Result<String, MarkdownError> {
                 replace_node_value(node, NodeValue::Paragraph);
             },
             NodeValue::Link(link) => {
-                fix_microsyntaxes(node)?;
-                if !is_uri_scheme_allowed(&link.url) {
+                if
+                    is_microsyntax(node)?
+                    || !is_uri_scheme_allowed(&link.url)
+                    || is_email_autolink(node, &text)
+                {
                     unlink(node);
                 };
             },
@@ -268,7 +297,12 @@ pub fn markdown_lite_to_html(text: &str) -> Result<String, MarkdownError> {
 /// Markdown Basic
 /// Supported features: links, linebreaks
 pub fn markdown_basic_to_html(text: &str) -> Result<String, MarkdownError> {
-    let options = build_comrak_options();
+    let options = {
+        let mut options = build_comrak_options();
+        options.extension.underline = false;
+        options.extension.strikethrough = false;
+        options
+    };
     let arena = Arena::new();
     let root = parse_document(
         &arena,
@@ -285,23 +319,12 @@ pub fn markdown_basic_to_html(text: &str) -> Result<String, MarkdownError> {
             NodeValue::LineBreak
                 => (),
             NodeValue::Link(link) => {
-                fix_microsyntaxes(node)?;
-                if !is_uri_scheme_allowed(&link.url) {
+                if
+                    is_microsyntax(node)?
+                    || !is_uri_scheme_allowed(&link.url)
+                    || is_email_autolink(node, text)
+                {
                     unlink(node);
-                };
-                if link.url.starts_with("mailto:") {
-                    // Disable email autolinking
-                    let markdown = node_to_markdown(node, &options)?;
-                    if markdown.starts_with('<') {
-                        let markdown = markdown
-                            .trim_start_matches('<')
-                            .trim_end_matches('>');
-                        for child in node.children() {
-                            child.detach();
-                        };
-                        let text = NodeValue::Text(markdown.to_string());
-                        replace_node_value(node, text);
-                    };
                 };
             },
             NodeValue::Paragraph => {
@@ -342,12 +365,11 @@ mod tests {
 
     #[test]
     fn test_markdown_lite_to_html() {
-        let text = "# heading\n\ntest **bold** test *italic* test ~~strike~~ with `code`, <span>html</span> and https://example.com and admin@email.example\nnew line\n\ntwo new lines and a list:\n- item 1\n- item 2\n\n>greentext\n\n---\n\nimage: ![logo](logo.png)\n\ncode block:\n```\nlet test\ntest = 1\n```";
+        let text = "# heading\n\ntest **bold** test *italic* test ~~strike~~ with `code`, <span>html</span> and https://example.com\nnew line\n\ntwo new lines and a list:\n- item 1\n- item 2\n\n>greentext\n\n---\n\nimage: ![logo](logo.png)\n\ncode block:\n```\nlet test\ntest = 1\n```";
         let html = markdown_lite_to_html(text).unwrap();
         let expected_html = concat!(
-            r#"<h1>heading</h1><p>test <strong>bold</strong> test <em>italic</em> test ~~strike~~ with <code>code</code>, &lt;span&gt;html&lt;/span&gt;"#,
+            r#"<h1>heading</h1><p>test <strong>bold</strong> test <em>italic</em> test <del>strike</del> with <code>code</code>, &lt;span&gt;html&lt;/span&gt;"#,
             r#" and <a href="https://example.com">https://example.com</a>"#,
-            r#" and <a href="mailto:admin@email.example">admin@email.example</a>"#,
             r#"<br>new line</p><p>two new lines and a list:</p><p>- item 1<br>- item 2</p><p>&gt;greentext</p><p>-----</p><p>image: ![logo](logo.png)</p><p>code block:</p>"#,
             "<pre><code>let test\ntest = 1\n</code></pre>",
         );
@@ -356,9 +378,18 @@ mod tests {
 
     #[test]
     fn test_markdown_lite_to_html_headings() {
-        let text = "# heading1\n\n## heading2\n\ntext";
+        // Level 2: depends on experimental_minimize_commonmark flag
+        let text = "# heading1\n\n## heading2!\n\ntext";
         let html = markdown_lite_to_html(text).unwrap();
-        let expected_html = r#"<h1>heading1</h1><p>## heading2</p><p>text</p>"#;
+        let expected_html = r#"<h1>heading1</h1><p>## heading2!</p><p>text</p>"#;
+        assert_eq!(html, expected_html);
+    }
+
+    #[test]
+    fn test_markdown_lite_to_html_with_blockquote() {
+        let text = "> one\n> two\n>three\n";
+        let html = markdown_lite_to_html(text).unwrap();
+        let expected_html = r#"<blockquote><p>one<br>two</p></blockquote><p>&gt;three</p>"#;
         assert_eq!(html, expected_html);
     }
 
@@ -383,6 +414,24 @@ mod tests {
         let text = ">one\n>two\n>three\n\ntest";
         let html = markdown_lite_to_html(text).unwrap();
         let expected_html = r#"<p>&gt;one<br>&gt;two<br>&gt;three</p><p>test</p>"#;
+        assert_eq!(html, expected_html);
+    }
+
+    #[test]
+    fn test_markdown_lite_to_html_lt_gt_in_codeblocks() {
+        let text = "```\n<\n> test\n```";
+        let html = markdown_lite_to_html(text).unwrap();
+        assert_eq!(
+            html,
+            "<pre><code>&lt;\n&gt; test\n</code></pre>",
+        );
+    }
+
+    #[test]
+    fn test_markdown_lite_to_html_strikethrough() {
+        let text = "test ~~strikethrough~~\n~test~ end.";
+        let html = markdown_lite_to_html(text).unwrap();
+        let expected_html = r#"<p>test <del>strikethrough</del><br><del>test</del> end.</p>"#;
         assert_eq!(html, expected_html);
     }
 
@@ -422,7 +471,15 @@ mod tests {
     }
 
     #[test]
+    fn test_markdown_lite_to_html_email_autolink() {
+        let text = "test hello@gmail.com test";
+        let html = markdown_lite_to_html(text).unwrap();
+        assert_eq!(html, r#"<p>test hello@gmail.com test</p>"#);
+    }
+
+    #[test]
     fn test_markdown_lite_to_html_bitcoin_autolink() {
+        // Bitcoin URI doesn't include ://
         let text = "test bitcoin:175tWpb8K1S7NmH4Zx6rewF9WQrcZv245W.";
         let html = markdown_lite_to_html(text).unwrap();
         assert_eq!(html, r#"<p>test bitcoin:175tWpb8K1S7NmH4Zx6rewF9WQrcZv245W.</p>"#);
@@ -443,6 +500,20 @@ mod tests {
     }
 
     #[test]
+    fn test_markdown_lite_to_html_ipv6_autolink() {
+        let text = "test http://[319:3cf0:dd1d:47b9:20c:29ff:fe2c:39be]/test";
+        let html = markdown_lite_to_html(text).unwrap();
+        assert_eq!(html, r#"<p>test <a href="http://[319:3cf0:dd1d:47b9:20c:29ff:fe2c:39be]/test">http://[319:3cf0:dd1d:47b9:20c:29ff:fe2c:39be]/test</a></p>"#);
+    }
+
+    #[test]
+    fn test_markdown_lite_to_html_ipv6_autolink_nex() {
+        let text = "test nex://[319:3cf0:dd1d:47b9:20c:29ff:fe2c:39be]/test";
+        let html = markdown_lite_to_html(text).unwrap();
+        assert_eq!(html, r#"<p>test <a href="nex://[319:3cf0:dd1d:47b9:20c:29ff:fe2c:39be]/test">nex://[319:3cf0:dd1d:47b9:20c:29ff:fe2c:39be]/test</a></p>"#);
+    }
+
+    #[test]
     fn test_markdown_basic_to_html() {
         let text = "test **bold** test *italic* test ~~strike~~ with `code`, <span>html</span> and https://example.com and admin@email.example\nnew line\n\nanother line";
         let html = markdown_basic_to_html(text).unwrap();
@@ -455,6 +526,13 @@ mod tests {
             "<p>another line</p>",
         );
         assert_eq!(html, expected_html);
+    }
+
+    #[test]
+    fn test_markdown_basic_to_html_strikethrough() {
+        let text = "test ~~strikethrough~~";
+        let html = markdown_basic_to_html(text).unwrap();
+        assert_eq!(html, format!("<p>{}</p>", text));
     }
 
     #[test]

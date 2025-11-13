@@ -1,18 +1,26 @@
-use chrono::{DateTime, Utc};
-use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 use apx_sdk::{
     addresses::WebfingerAddress,
     constants::{AP_MEDIA_TYPE, AP_PUBLIC},
-    core::hashes::sha256_multibase,
+    core::{
+        multihash::encode_sha256_multihash,
+        url::http_uri::HttpUri,
+    },
     deserialization::deserialize_string_array,
 };
+use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
+
 use mitra_models::{
     database::{DatabaseClient, DatabaseError},
     attachments::types::AttachmentType,
-    posts::queries::get_post_author,
-    posts::types::{Post, Visibility},
-    profiles::types::{DbActor, WebfingerHostname},
+    polls::queries::get_voters,
+    posts::{
+        queries::get_post_author,
+        types::{PostDetailed, Visibility},
+    },
+    profiles::types::WebfingerHostname,
     relationships::queries::{get_followers, get_subscribers},
 };
 use mitra_services::media::MediaServer;
@@ -20,23 +28,47 @@ use mitra_services::media::MediaServer;
 use crate::{
     authority::Authority,
     contexts::{build_default_context, Context},
+    deliverer::Recipient,
     identifiers::{
         compatible_id,
         compatible_post_object_id,
         compatible_profile_actor_id,
         local_actor_id,
         local_actor_id_unified,
+        local_conversation_collection,
         local_object_id_unified,
         local_object_replies,
         local_tag_collection,
         LocalActorCollection,
     },
-    vocabulary::{DOCUMENT, HASHTAG, IMAGE, LINK, MENTION, NOTE},
+    vocabulary::{
+        DOCUMENT,
+        HASHTAG,
+        IMAGE,
+        LINK,
+        MENTION,
+        NOTE,
+        QUESTION,
+    },
 };
 
 use super::emoji::{build_emoji, Emoji};
 
 const LINK_REL_MISSKEY_QUOTE: &str = "https://misskey-hub.net/ns#_misskey_quote";
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct QuestionReplies {
+    total_items: u32,
+}
+
+#[derive(Serialize)]
+struct QuestionOption {
+    #[serde(rename = "type")]
+    object_type: String,
+    name: String,
+    replies: QuestionReplies,
+}
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -103,13 +135,27 @@ pub struct Note {
     #[serde(skip_serializing_if = "Option::is_none")]
     in_reply_to: Option<String>,
 
+    #[serde(skip_serializing_if = "Option::is_none")]
+    context: Option<String>,
+
     replies: String,
 
     content: String,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    content_map: Option<HashMap<String, String>>,
+
     sensitive: bool,
 
     #[serde(skip_serializing_if = "Vec::is_empty")]
     tag: Vec<Tag>,
+
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    one_of: Vec<QuestionOption>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    any_of: Vec<QuestionOption>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    end_time: Option<DateTime<Utc>>,
 
     pub to: Vec<String>,
     pub cc: Vec<String>,
@@ -124,19 +170,21 @@ pub struct Note {
 }
 
 pub fn build_note(
-    instance_hostname: &str,
-    instance_url: &str,
+    instance_uri: &HttpUri,
     authority: &Authority,
     media_server: &MediaServer,
-    post: &Post,
-    fep_e232_enabled: bool,
+    post: &PostDetailed,
     with_context: bool,
 ) -> Note {
-    assert_eq!(authority.server_url(), instance_url);
+    let related_posts = post.expect_related_posts();
+    assert_eq!(authority.server_uri(), Some(instance_uri.as_str()), "authority should be anchored");
     let object_id = local_object_id_unified(authority, post.id);
+    let mut object_type = NOTE;
     let actor_id = local_actor_id_unified(authority, &post.author.username);
     let attachments: Vec<_> = post.attachments.iter().map(|db_item| {
-        let url = media_server.url_for(&db_item.file_name);
+        // Media is expected to be local (verified on database read)
+        let file_info = db_item.media.expect_file_info();
+        let url = media_server.url_for(&file_info.file_name);
         let object_type = match db_item.attachment_type() {
             AttachmentType::Image => IMAGE,
             _ => DOCUMENT,
@@ -144,9 +192,9 @@ pub fn build_note(
         MediaAttachment {
             attachment_type: object_type.to_string(),
             name: db_item.description.clone(),
-            media_type: db_item.media_type.clone(),
-            digest_multibase: db_item.digest.as_ref()
-                .map(|digest| sha256_multibase(digest)),
+            media_type: file_info.media_type.clone(),
+            digest_multibase: file_info.digest
+                .map(encode_sha256_multihash),
             url,
         }
     }).collect();
@@ -172,12 +220,34 @@ pub fn build_note(
         Visibility::Direct => (),
     };
 
+    let (one_of, any_of, end_time) = if let Some(ref poll) = post.poll {
+        object_type = QUESTION;
+        let results = poll.results.inner().iter()
+            .map(|result| {
+                QuestionOption {
+                    object_type: NOTE.to_string(),
+                    name: result.option_name.clone(),
+                    replies: QuestionReplies {
+                        total_items: result.vote_count,
+                    },
+                }
+            })
+            .collect();
+        if poll.multiple_choices {
+            (vec![], results, poll.ends_at)
+        } else {
+            (results, vec![], poll.ends_at)
+        }
+    } else {
+        (vec![], vec![], None)
+    };
+
     let mut tags = vec![];
     for profile in &post.mentions {
         let tag_name = match profile.hostname() {
             WebfingerHostname::Local => {
                 WebfingerAddress::new_unchecked(
-                    &profile.username, instance_hostname).handle()
+                    &profile.username, instance_uri.hostname().as_str()).handle()
             },
             WebfingerHostname::Remote(hostname) => {
                 WebfingerAddress::new_unchecked(
@@ -185,7 +255,7 @@ pub fn build_note(
             },
             WebfingerHostname::Unknown => format!("@{}", profile.username),
         };
-        let actor_id = compatible_profile_actor_id(instance_url, profile);
+        let actor_id = compatible_profile_actor_id(instance_uri.as_str(), profile);
         if !primary_audience.contains(&actor_id) {
             primary_audience.push(actor_id.clone());
         };
@@ -197,7 +267,7 @@ pub fn build_note(
         tags.push(Tag::SimpleTag(tag));
     };
     for tag_name in &post.tags {
-        let tag_href = local_tag_collection(instance_url, tag_name);
+        let tag_href = local_tag_collection(instance_uri.as_str(), tag_name);
         let tag = SimpleTag {
             tag_type: HASHTAG.to_string(),
             name: format!("#{}", tag_name),
@@ -206,11 +276,10 @@ pub fn build_note(
         tags.push(Tag::SimpleTag(tag));
     };
 
-    assert_eq!(post.links.len(), post.linked.len());
-    for (index, linked) in post.linked.iter().enumerate() {
+    for (index, linked) in related_posts.linked.iter().enumerate() {
         // Build FEP-e232 object link
         // https://codeberg.org/silverpill/feps/src/branch/main/e232/fep-e232.md
-        let link_href = compatible_post_object_id(instance_url, linked);
+        let link_href = compatible_post_object_id(instance_uri.as_str(), linked);
         let link_rel = if index == 0 {
             // Present first link as a quote
             vec![LINK_REL_MISSKEY_QUOTE.to_string()]
@@ -224,28 +293,28 @@ pub fn build_note(
             media_type: AP_MEDIA_TYPE.to_string(),
             rel: link_rel,
         };
-        if fep_e232_enabled {
-            tags.push(Tag::LinkTag(tag));
-        };
+        tags.push(Tag::LinkTag(tag));
     };
     // Present first link as a quote
-    let maybe_quote_url = post.linked.first()
-        .map(|linked| compatible_post_object_id(instance_url, linked));
+    let maybe_quote_url = related_posts
+        .linked.first()
+        .map(|linked| compatible_post_object_id(instance_uri.as_str(), linked));
 
     for emoji in &post.emojis {
-        let tag = build_emoji(instance_url, media_server, emoji);
+        let tag = build_emoji(instance_uri.as_str(), media_server, emoji);
         tags.push(Tag::EmojiTag(tag));
     };
 
     let in_reply_to_object_id = match post.in_reply_to_id {
         Some(in_reply_to_id) => {
-            let in_reply_to = post.in_reply_to.as_ref()
+            let in_reply_to = related_posts
+                .in_reply_to.as_ref()
                 .expect("in_reply_to should be populated");
             assert_eq!(in_reply_to.id, in_reply_to_id);
             if post.author.id != in_reply_to.author.id {
                 // Add author of a parent post to audience
                 let in_reply_to_actor_id = compatible_profile_actor_id(
-                    instance_url,
+                    instance_uri.as_str(),
                     &in_reply_to.author,
                 );
                 if !primary_audience.contains(&in_reply_to_actor_id) {
@@ -256,7 +325,7 @@ pub fn build_note(
                 // Copy conversation audience
                 let conversation = in_reply_to.expect_conversation();
                 // Conversations created by database migration
-                // will have empty audience
+                // will have empty audience.
                 if let Some(ref audience) = conversation.audience {
                     if !primary_audience.contains(audience) {
                         primary_audience.push(audience.clone());
@@ -279,7 +348,7 @@ pub fn build_note(
                         // Can't use "authority" parameter here
                         // because parent post author may have a different one
                         let actor_id = local_actor_id(
-                            instance_url,
+                            instance_uri.as_str(),
                             &in_reply_to.author.username,
                         );
                         let followers = LocalActorCollection::Followers.of(&actor_id);
@@ -292,22 +361,41 @@ pub fn build_note(
                     };
                 };
             };
-            Some(compatible_post_object_id(instance_url, in_reply_to))
+            Some(compatible_post_object_id(instance_uri.as_str(), in_reply_to))
         },
         None => None,
     };
+    let maybe_context_collection_id = if post.in_reply_to_id.is_none() {
+        let conversation = post.expect_conversation();
+        // TODO: FEP-EF61: use Authority
+        let context_collection_id =
+            local_conversation_collection(instance_uri.as_str(), conversation.id);
+        Some(context_collection_id)
+    } else {
+        None
+    };
     let replies_collection_id = local_object_replies(&object_id);
+
     Note {
         _context: with_context.then(build_default_context),
         id: object_id,
-        object_type: NOTE.to_string(),
+        object_type: object_type.to_string(),
         attachment: attachments,
         attributed_to: actor_id,
         in_reply_to: in_reply_to_object_id,
+        context: maybe_context_collection_id,
         replies: replies_collection_id,
         content: post.content.clone(),
+        content_map: post.language
+            .and_then(|language| language.to_639_1())
+            .map(|code| {
+                HashMap::from([(code.to_owned(), post.content.clone())])
+            }),
         sensitive: post.is_sensitive,
         tag: tags,
+        one_of: one_of,
+        any_of: any_of,
+        end_time: end_time,
         to: primary_audience,
         cc: secondary_audience,
         quote_url: maybe_quote_url,
@@ -318,36 +406,49 @@ pub fn build_note(
 
 pub async fn get_note_recipients(
     db_client: &impl DatabaseClient,
-    post: &Post,
-) -> Result<Vec<DbActor>, DatabaseError> {
-    let mut audience = vec![];
+    post: &PostDetailed,
+) -> Result<Vec<Recipient>, DatabaseError> {
+    let mut primary_audience = vec![];
+    let mut secondary_audience = vec![];
     match post.visibility {
         Visibility::Public | Visibility::Followers => {
             let followers = get_followers(db_client, post.author.id).await?;
-            audience.extend(followers);
+            secondary_audience.extend(followers);
         },
         Visibility::Subscribers => {
             let subscribers = get_subscribers(db_client, post.author.id).await?;
-            audience.extend(subscribers);
+            secondary_audience.extend(subscribers);
         },
         Visibility::Conversation => {
             let conversation = post.expect_conversation();
             let owner = get_post_author(db_client, conversation.root_id).await?;
-            audience.push(owner);
+            primary_audience.push(owner);
         },
         Visibility::Direct => (),
     };
     if let Some(in_reply_to_id) = post.in_reply_to_id {
         // TODO: use post.in_reply_to ?
         let in_reply_to_author = get_post_author(db_client, in_reply_to_id).await?;
-        audience.push(in_reply_to_author);
+        primary_audience.push(in_reply_to_author);
     };
-    audience.extend(post.mentions.clone());
+    primary_audience.extend(post.mentions.clone());
+    if let Some(ref poll) = post.poll {
+        let voters = get_voters(db_client, poll.id).await?;
+        secondary_audience.extend(voters);
+    };
 
     let mut recipients = vec![];
-    for profile in audience {
+    for profile in primary_audience {
         if let Some(remote_actor) = profile.actor_json {
-            recipients.push(remote_actor);
+            for mut recipient in Recipient::for_inbox(&remote_actor) {
+                recipient.is_primary = true;
+                recipients.push(recipient);
+            };
+        };
+    };
+    for profile in secondary_audience {
+        if let Some(remote_actor) = profile.actor_json {
+            recipients.extend(Recipient::for_inbox(&remote_actor));
         };
     };
     Ok(recipients)
@@ -358,13 +459,15 @@ mod tests {
     use serde_json::json;
     use uuid::uuid;
     use mitra_models::{
-        profiles::types::DbActorProfile,
+        conversations::types::Conversation,
+        polls::types::{Poll, PollResult, PollResults},
+        posts::types::RelatedPosts,
+        profiles::types::{DbActor, DbActorProfile},
         users::types::User,
     };
     use super::*;
 
-    const INSTANCE_HOSTNAME: &str = "server.example";
-    const INSTANCE_URL: &str = "https://server.example";
+    const INSTANCE_URI: &str = "https://server.example";
 
     #[test]
     fn test_build_tag() {
@@ -384,43 +487,43 @@ mod tests {
 
     #[test]
     fn test_build_note() {
+        let instance_uri = HttpUri::parse(INSTANCE_URI).unwrap();
         let author = DbActorProfile::local_for_test("author");
-        let post = Post {
+        let post = PostDetailed {
             author,
             tags: vec!["test".to_string()],
+            related_posts: Some(RelatedPosts::default()),
             ..Default::default()
         };
-        let authority = Authority::server(INSTANCE_URL);
-        let media_server = MediaServer::for_test(INSTANCE_URL);
+        let authority = Authority::server(&instance_uri);
+        let media_server = MediaServer::for_test(INSTANCE_URI);
         let note = build_note(
-            INSTANCE_HOSTNAME,
-            INSTANCE_URL,
+            &instance_uri,
             &authority,
             &media_server,
             &post,
-            false,
             true,
         );
 
         assert_eq!(note._context.is_some(), true);
         assert_eq!(
             note.id,
-            format!("{}/objects/{}", INSTANCE_URL, post.id),
+            format!("{}/objects/{}", INSTANCE_URI, post.id),
         );
         assert_eq!(note.attachment.len(), 0);
         assert_eq!(
             note.attributed_to,
-            format!("{}/users/{}", INSTANCE_URL, post.author.username),
+            format!("{}/users/{}", INSTANCE_URI, post.author.username),
         );
         assert_eq!(note.in_reply_to.is_none(), true);
         assert_eq!(
             note.replies,
-            format!("{}/objects/{}/replies", INSTANCE_URL, post.id),
+            format!("{}/objects/{}/replies", INSTANCE_URI, post.id),
         );
         assert_eq!(note.content, post.content);
         assert_eq!(note.to, vec![AP_PUBLIC]);
         assert_eq!(note.cc, vec![
-            format!("{INSTANCE_URL}/users/author/followers"),
+            format!("{INSTANCE_URI}/users/author/followers"),
         ]);
         assert_eq!(note.tag.len(), 1);
         let tag = match note.tag[0] {
@@ -435,55 +538,135 @@ mod tests {
     }
 
     #[test]
-    fn test_build_note_followers_only() {
-        let post = Post {
-            visibility: Visibility::Followers,
+    fn test_build_question() {
+        let instance_uri = HttpUri::parse(INSTANCE_URI).unwrap();
+        let author = DbActorProfile::local_for_test("author");
+        let poll = Poll {
+            id: uuid!("11fa64ff-b5a3-47bf-b23d-22b360581c3f"),
+            multiple_choices: false,
+            ends_at: Some(DateTime::parse_from_rfc3339("2023-03-27T12:13:46Z")
+                .unwrap().with_timezone(&Utc)),
+            results: PollResults::new(vec![
+                PollResult::new("option 1"),
+                PollResult::new("option 2"),
+            ]),
+        };
+        let conversation = Conversation {
+            id: uuid!("837ffc24-dab2-414b-a9b8-fe47d0a463f2"),
+            ..Conversation::for_test(uuid!("11fa64ff-b5a3-47bf-b23d-22b360581c3f"))
+        };
+        let post = PostDetailed {
+            id: conversation.root_id,
+            author,
+            conversation: Some(conversation),
+            poll: Some(poll),
+            created_at: DateTime::parse_from_rfc3339("2023-02-24T23:36:38Z")
+                .unwrap().with_timezone(&Utc),
+            related_posts: Some(RelatedPosts::default()),
             ..Default::default()
         };
-        let authority = Authority::server(INSTANCE_URL);
-        let media_server = MediaServer::for_test(INSTANCE_URL);
-        let note = build_note(
-            INSTANCE_HOSTNAME,
-            INSTANCE_URL,
+        let authority = Authority::server(&instance_uri);
+        let media_server = MediaServer::for_test(INSTANCE_URI);
+        let question = build_note(
+            &instance_uri,
             &authority,
             &media_server,
             &post,
-            false,
+            true,
+        );
+
+        let value = serde_json::to_value(question).unwrap();
+        let expected_value = json!({
+            "@context": [
+                "https://www.w3.org/ns/activitystreams",
+                "https://w3id.org/security/v1",
+                "https://w3id.org/security/data-integrity/v2",
+                {
+                    "Hashtag": "as:Hashtag",
+                    "sensitive": "as:sensitive",
+                    "toot": "http://joinmastodon.org/ns#",
+                    "Emoji": "toot:Emoji",
+                    "litepub": "http://litepub.social/ns#",
+                    "EmojiReact": "litepub:EmojiReact"
+                },
+            ],
+            "id": "https://server.example/objects/11fa64ff-b5a3-47bf-b23d-22b360581c3f",
+            "type": "Question",
+            "attributedTo": "https://server.example/users/author",
+            "content": "",
+            "sensitive": false,
+            "context": "https://server.example/collections/conversations/837ffc24-dab2-414b-a9b8-fe47d0a463f2",
+            "replies": "https://server.example/objects/11fa64ff-b5a3-47bf-b23d-22b360581c3f/replies",
+            "oneOf": [
+                {
+                    "type": "Note",
+                    "name": "option 1",
+                    "replies": {"totalItems": 0},
+                },
+                {
+                    "type": "Note",
+                    "name": "option 2",
+                    "replies": {"totalItems": 0},
+                },
+            ],
+            "endTime": "2023-03-27T12:13:46Z",
+            "published": "2023-02-24T23:36:38Z",
+            "to": [AP_PUBLIC],
+            "cc": ["https://server.example/users/author/followers"],
+        });
+        assert_eq!(value, expected_value);
+    }
+
+    #[test]
+    fn test_build_note_followers_only() {
+        let instance_uri = HttpUri::parse(INSTANCE_URI).unwrap();
+        let post = PostDetailed {
+            visibility: Visibility::Followers,
+            related_posts: Some(RelatedPosts::default()),
+            ..Default::default()
+        };
+        let authority = Authority::server(&instance_uri);
+        let media_server = MediaServer::for_test(INSTANCE_URI);
+        let note = build_note(
+            &instance_uri,
+            &authority,
+            &media_server,
+            &post,
             true,
         );
 
         assert_eq!(note.to, vec![
-            format!("{}/users/{}/followers", INSTANCE_URL, post.author.username),
+            format!("{}/users/{}/followers", INSTANCE_URI, post.author.username),
         ]);
         assert_eq!(note.cc.is_empty(), true);
     }
 
     #[test]
     fn test_build_note_subscribers_only() {
+        let instance_uri = HttpUri::parse(INSTANCE_URI).unwrap();
         let subscriber_id = "https://test.com/users/3";
         let subscriber = DbActorProfile::remote_for_test(
             "subscriber",
             subscriber_id,
         );
-        let post = Post {
+        let post = PostDetailed {
             visibility: Visibility::Subscribers,
             mentions: vec![subscriber],
+            related_posts: Some(RelatedPosts::default()),
             ..Default::default()
         };
-        let authority = Authority::server(INSTANCE_URL);
-        let media_server = MediaServer::for_test(INSTANCE_URL);
+        let authority = Authority::server(&instance_uri);
+        let media_server = MediaServer::for_test(INSTANCE_URI);
         let note = build_note(
-            INSTANCE_HOSTNAME,
-            INSTANCE_URL,
+            &instance_uri,
             &authority,
             &media_server,
             &post,
-            false,
             true,
         );
 
         assert_eq!(note.to, vec![
-            format!("{}/users/{}/subscribers", INSTANCE_URL, post.author.username),
+            format!("{}/users/{}/subscribers", INSTANCE_URI, post.author.username),
             subscriber_id.to_string(),
         ]);
         assert_eq!(note.cc.is_empty(), true);
@@ -491,25 +674,25 @@ mod tests {
 
     #[test]
     fn test_build_note_direct() {
+        let instance_uri = HttpUri::parse(INSTANCE_URI).unwrap();
         let mentioned_id = "https://test.com/users/3";
         let mentioned = DbActorProfile::remote_for_test(
             "mention",
             mentioned_id,
         );
-        let post = Post {
+        let post = PostDetailed {
             visibility: Visibility::Direct,
             mentions: vec![mentioned],
+            related_posts: Some(RelatedPosts::default()),
             ..Default::default()
         };
-        let authority = Authority::server(INSTANCE_URL);
-        let media_server = MediaServer::for_test(INSTANCE_URL);
+        let authority = Authority::server(&instance_uri);
+        let media_server = MediaServer::for_test(INSTANCE_URI);
         let note = build_note(
-            INSTANCE_HOSTNAME,
-            INSTANCE_URL,
+            &instance_uri,
             &authority,
             &media_server,
             &post,
-            false,
             true,
         );
 
@@ -519,36 +702,39 @@ mod tests {
 
     #[test]
     fn test_build_note_with_local_parent() {
-        let parent = Post::default();
-        let post = Post {
+        let instance_uri = HttpUri::parse(INSTANCE_URI).unwrap();
+        let parent = PostDetailed::default();
+        let post = PostDetailed {
             in_reply_to_id: Some(parent.id),
-            in_reply_to: Some(Box::new(parent.clone())),
+            related_posts: Some(RelatedPosts {
+                in_reply_to: Some(Box::new(parent.clone())),
+                ..Default::default()
+            }),
             ..Default::default()
         };
-        let authority = Authority::server(INSTANCE_URL);
-        let media_server = MediaServer::for_test(INSTANCE_URL);
+        let authority = Authority::server(&instance_uri);
+        let media_server = MediaServer::for_test(INSTANCE_URI);
         let note = build_note(
-            INSTANCE_HOSTNAME,
-            INSTANCE_URL,
+            &instance_uri,
             &authority,
             &media_server,
             &post,
-            false,
             true,
         );
 
         assert_eq!(
             note.in_reply_to.unwrap(),
-            format!("{}/objects/{}", INSTANCE_URL, parent.id),
+            format!("{}/objects/{}", INSTANCE_URI, parent.id),
         );
         assert_eq!(note.to, vec![
             AP_PUBLIC.to_string(),
-            format!("{}/users/{}", INSTANCE_URL, parent.author.username),
+            format!("{}/users/{}", INSTANCE_URI, parent.author.username),
         ]);
     }
 
     #[test]
     fn test_build_note_with_remote_parent() {
+        let instance_uri = HttpUri::parse(INSTANCE_URI).unwrap();
         let parent_author_acct = "test@test.net";
         let parent_author_actor_id = "https://test.net/user/test";
         let parent_author_actor_url = "https://test.net/@test";
@@ -560,26 +746,27 @@ mod tests {
                 ..Default::default()
             },
         );
-        let parent = Post {
+        let parent = PostDetailed {
             author: parent_author.clone(),
             object_id: Some("https://test.net/obj/123".to_string()),
             ..Default::default()
         };
-        let post = Post {
+        let post = PostDetailed {
             in_reply_to_id: Some(parent.id),
-            in_reply_to: Some(Box::new(parent.clone())),
             mentions: vec![parent_author],
+            related_posts: Some(RelatedPosts {
+                in_reply_to: Some(Box::new(parent.clone())),
+                ..Default::default()
+            }),
             ..Default::default()
         };
-        let authority = Authority::server(INSTANCE_URL);
-        let media_server = MediaServer::for_test(INSTANCE_URL);
+        let authority = Authority::server(&instance_uri);
+        let media_server = MediaServer::for_test(INSTANCE_URI);
         let note = build_note(
-            INSTANCE_HOSTNAME,
-            INSTANCE_URL,
+            &instance_uri,
             &authority,
             &media_server,
             &post,
-            false,
             true,
         );
 
@@ -600,6 +787,7 @@ mod tests {
 
     #[test]
     fn test_build_note_with_remote_parent_and_with_conversation() {
+        let instance_uri = HttpUri::parse(INSTANCE_URI).unwrap();
         let parent_author_actor_id = "https://social.example/user/test";
         let parent_author_followers = "https://social.example/user/test/followers";
         let parent_author_actor_url = "https://social.example/@test";
@@ -612,33 +800,41 @@ mod tests {
                 ..Default::default()
             },
         );
-        let parent = Post {
+        let conversation = Conversation {
+            id: uuid!("837ffc24-dab2-414b-a9b8-fe47d0a463f2"),
+            audience: Some(parent_author_followers.to_owned()),
+            ..Conversation::for_test(Default::default())
+        };
+        let parent = PostDetailed {
+            id: conversation.root_id,
+            conversation: Some(conversation),
             visibility: Visibility::Followers,
-            ..Post::remote_for_test(
+            ..PostDetailed::remote_for_test(
                 &parent_author,
                 "https://social.example/obj/123",
             )
         };
-        let post = Post {
+        let post = PostDetailed {
             id: uuid!("11fa64ff-b5a3-47bf-b23d-22b360581c3f"),
             conversation: parent.conversation.clone(),
             in_reply_to_id: Some(parent.id),
-            in_reply_to: Some(Box::new(parent.clone())),
             visibility: Visibility::Conversation,
             mentions: vec![parent_author],
             created_at: DateTime::parse_from_rfc3339("2023-02-24T23:36:38Z")
                 .unwrap().with_timezone(&Utc),
+            related_posts: Some(RelatedPosts {
+                in_reply_to: Some(Box::new(parent.clone())),
+                ..Default::default()
+            }),
             ..Default::default()
         };
-        let authority = Authority::server(INSTANCE_URL);
-        let media_server = MediaServer::for_test(INSTANCE_URL);
+        let authority = Authority::server(&instance_uri);
+        let media_server = MediaServer::for_test(INSTANCE_URI);
         let note = build_note(
-            INSTANCE_HOSTNAME,
-            INSTANCE_URL,
+            &instance_uri,
             &authority,
             &media_server,
             &post,
-            false,
             true,
         );
         let value = serde_json::to_value(note).unwrap();
@@ -646,7 +842,7 @@ mod tests {
             "@context": [
                 "https://www.w3.org/ns/activitystreams",
                 "https://w3id.org/security/v1",
-                "https://w3id.org/security/data-integrity/v1",
+                "https://w3id.org/security/data-integrity/v2",
                 {
                     "Hashtag": "as:Hashtag",
                     "sensitive": "as:sensitive",
@@ -682,23 +878,31 @@ mod tests {
 
     #[test]
     fn test_build_note_fep_ef61() {
+        let instance_uri = HttpUri::parse(INSTANCE_URI).unwrap();
         let author = User::default();
-        let post = Post {
-            id: uuid!("11fa64ff-b5a3-47bf-b23d-22b360581c3f"),
+        let conversation = Conversation {
+            id: uuid!("837ffc24-dab2-414b-a9b8-fe47d0a463f2"),
+            ..Conversation::for_test(uuid!("11fa64ff-b5a3-47bf-b23d-22b360581c3f"))
+        };
+        let post = PostDetailed {
+            id: conversation.root_id,
             author: author.profile.clone(),
+            conversation: Some(conversation),
             created_at: DateTime::parse_from_rfc3339("2023-02-24T23:36:38Z")
                 .unwrap().with_timezone(&Utc),
+            related_posts: Some(RelatedPosts::default()),
             ..Default::default()
         };
-        let authority = Authority::from_user(INSTANCE_URL, &author, true);
-        let media_server = MediaServer::for_test(INSTANCE_URL);
+        let authority = Authority::key_with_gateway(
+            &instance_uri,
+            &author.ed25519_secret_key,
+        );
+        let media_server = MediaServer::for_test(INSTANCE_URI);
         let note = build_note(
-            INSTANCE_HOSTNAME,
-            INSTANCE_URL,
+            &instance_uri,
             &authority,
             &media_server,
             &post,
-            true,
             true,
         );
         let value = serde_json::to_value(note).unwrap();
@@ -706,7 +910,7 @@ mod tests {
             "@context": [
                 "https://www.w3.org/ns/activitystreams",
                 "https://w3id.org/security/v1",
-                "https://w3id.org/security/data-integrity/v1",
+                "https://w3id.org/security/data-integrity/v2",
                 {
                     "Hashtag": "as:Hashtag",
                     "sensitive": "as:sensitive",
@@ -721,6 +925,7 @@ mod tests {
             "attributedTo": "https://server.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor",
             "content": "",
             "sensitive": false,
+            "context": "https://server.example/collections/conversations/837ffc24-dab2-414b-a9b8-fe47d0a463f2",
             "replies": "https://server.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/objects/11fa64ff-b5a3-47bf-b23d-22b360581c3f/replies",
             "published": "2023-02-24T23:36:38Z",
             "to": [

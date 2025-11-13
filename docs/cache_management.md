@@ -1,13 +1,15 @@
 # Cache management
 
+## Retention settings
+
 Content from other servers is deleted automatically after some time (both database records and media). That time can be adjusted using configuration parameters under the `retention` key:
 
 ```yaml
 retention:
-  # Remote posts with which local accounts didn't interact
+  # Keep remote posts with which local accounts didn't interact for 15 days
   extraneous_posts: 15
-  # Remote accounts without posts
-  empty_profiles: 60
+  # Keep remote accounts without posts for 30 days
+  empty_profiles: 30
 ```
 
 ## Manual removal
@@ -15,23 +17,25 @@ retention:
 Posts:
 
 ```shell
-mitractl delete-extraneous-posts 15
+mitra delete-extraneous-posts 15
 ```
 
 Profiles:
 
 ```shell
-mitractl delete-empty-profiles 60
+mitra delete-empty-profiles 30
 ```
 
 Delete attachments that don't belong to any post:
 
 ```shell
-mitractl delete-unused-attachments 5
+mitra delete-unused-attachments 5
 ```
 
-Delete unused remote emojis:
+## Media proxy
+
+Caching of media can be disabled completely by adding a [federation filter](./filter.md) rule:
 
 ```shell
-mitractl prune-remote-emojis
+mitra add-filter-rule proxy-media server.example
 ```

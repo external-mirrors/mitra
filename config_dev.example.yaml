@@ -7,7 +7,7 @@ web_client_dir: null
 http_host: '127.0.0.1'
 http_port: 8380
 
-instance_uri: http://127.0.0.1:8380
+instance_url: http://127.0.0.1:8380
 
 instance_title: Mitra
 instance_short_description: My instance
@@ -17,31 +17,16 @@ instance_staff_public: true
 registration:
   type: open
 
-blockchains:
-  # Parameters for local Monero node
-  - chain_id: monero:regtest
-    node_url: 'http://127.0.0.1:58081'
-    wallet_rpc_url: 'http://127.0.0.1:58083'
-    wallet_rpc_username: null
-    wallet_rpc_password: null
-    wallet_name: test
-    wallet_password: test
-    account_index: 0
-#  # Parameters for hardhat local node
-#  - chain_id: eip155:31337
-#    chain_metadata:
-#      chain_name: localhost
-#      currency_name: ETH
-#      currency_symbol: ETH
-#      currency_decimals: 18
-#      public_api_url: 'http://127.0.0.1:8546'
-#      explorer_url: null
-#    contract_address: '0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9'
-#    contract_dir: contracts
-#    api_url: 'http://127.0.0.1:8546'
-#    signing_key: 'ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80'
-#    chain_sync_step: 100
-#    chain_reorg_max_depth: 0
+#blockchains:
+#  # Parameters for local Monero node
+#  - chain_id: monero:regtest
+#    wallet_rpc_url: 'http://127.0.0.1:58083'
+#    wallet_rpc_username: null
+#    wallet_rpc_password: null
+#    wallet_name: test
+#    wallet_password: test
+#    account_index: 0
 
-ipfs_api_url: 'http://127.0.0.1:5001'
-ipfs_gateway_url: 'http://127.0.0.1:8001'
+
+#ipfs_api_url: 'http://127.0.0.1:5001'
+#ipfs_gateway_url: 'http://127.0.0.1:8001'

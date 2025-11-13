@@ -1,10 +1,11 @@
+use apx_core::url::http_uri::HttpUri;
 use serde::Serialize;
 
 use mitra_config::Instance;
 use mitra_models::{
     database::{DatabaseClient, DatabaseError},
     posts::helpers::add_related_posts,
-    posts::types::Post,
+    posts::types::PostDetailed,
     users::types::User,
 };
 use mitra_services::media::MediaServer;
@@ -47,24 +48,27 @@ struct DeleteNote {
 }
 
 fn build_delete_note(
-    instance_hostname: &str,
-    instance_url: &str,
+    instance_uri: &HttpUri,
     media_server: &MediaServer,
-    post: &Post,
-    fep_e232_enabled: bool,
+    post: &PostDetailed,
 ) -> DeleteNote {
     assert!(post.is_local());
-    let object_id = local_object_id(instance_url, post.id);
-    let activity_id = local_activity_id(instance_url, DELETE, post.id);
-    let actor_id = local_actor_id(instance_url, &post.author.username);
-    let authority = Authority::server(instance_url);
+    let object_id = local_object_id(instance_uri.as_str(), post.id);
+    let activity_id = local_activity_id(
+        instance_uri.as_str(),
+        DELETE,
+        post.id,
+    );
+    let actor_id = local_actor_id(
+        instance_uri.as_str(),
+        &post.author.username,
+    );
+    let authority = Authority::server(instance_uri);
     let Note { to, cc, .. } = build_note(
-        instance_hostname,
-        instance_url,
+        instance_uri,
         &authority,
         media_server,
         post,
-        fep_e232_enabled,
         false,
     );
     DeleteNote {
@@ -87,22 +91,19 @@ pub async fn prepare_delete_note(
     instance: &Instance,
     media_server: &MediaServer,
     author: &User,
-    post: &Post,
-    fep_e232_enabled: bool,
+    post: &PostDetailed,
 ) -> Result<OutgoingActivityJobData, DatabaseError> {
     assert_eq!(author.id, post.author.id);
     let mut post = post.clone();
     add_related_posts(db_client, vec![&mut post]).await?;
     let activity = build_delete_note(
-        &instance.hostname(),
-        &instance.url(),
+        instance.uri(),
         media_server,
         &post,
-        fep_e232_enabled,
     );
     let recipients = get_note_recipients(db_client, &post).await?;
     Ok(OutgoingActivityJobData::new(
-        &instance.url(),
+        instance.uri_str(),
         author,
         activity,
         recipients,
@@ -112,38 +113,43 @@ pub async fn prepare_delete_note(
 #[cfg(test)]
 mod tests {
     use apx_sdk::constants::AP_PUBLIC;
-    use mitra_models::profiles::types::DbActorProfile;
+    use mitra_models::{
+        posts::types::RelatedPosts,
+        profiles::types::DbActorProfile,
+    };
     use super::*;
 
-    const INSTANCE_HOSTNAME: &str = "example.com";
-    const INSTANCE_URL: &str = "https://example.com";
+    const INSTANCE_URI: &str = "https://example.com";
 
     #[test]
     fn test_build_delete_note() {
-        let media_server = MediaServer::for_test(INSTANCE_URL);
+        let instance_uri = HttpUri::parse(INSTANCE_URI).unwrap();
+        let media_server = MediaServer::for_test(INSTANCE_URI);
         let author = DbActorProfile::local_for_test("author");
-        let post = Post { author, ..Default::default() };
+        let post = PostDetailed {
+            author,
+            related_posts: Some(RelatedPosts::default()),
+            ..Default::default()
+        };
         let activity = build_delete_note(
-            INSTANCE_HOSTNAME,
-            INSTANCE_URL,
+            &instance_uri,
             &media_server,
             &post,
-            false,
         );
 
         assert_eq!(
             activity.id,
-            format!("{}/activities/delete/{}", INSTANCE_URL, post.id),
+            format!("{}/activities/delete/{}", INSTANCE_URI, post.id),
         );
         assert_eq!(
             activity.object.id,
-            format!("{}/objects/{}", INSTANCE_URL, post.id),
+            format!("{}/objects/{}", INSTANCE_URI, post.id),
         );
         assert_eq!(activity.object.object_type, "Tombstone");
         assert_eq!(activity.to, vec![AP_PUBLIC]);
         assert_eq!(
             activity.cc,
-            vec![format!("{INSTANCE_URL}/users/author/followers")],
+            vec![format!("{INSTANCE_URI}/users/author/followers")],
         );
     }
 }

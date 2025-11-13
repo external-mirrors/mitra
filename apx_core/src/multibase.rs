@@ -1,6 +1,8 @@
+//! Multibase
+//!
+//! <https://github.com/multiformats/multibase>
 use bs58;
 
-/// https://datatracker.ietf.org/doc/draft-multiformats-multibase/07/
 #[derive(thiserror::Error, Debug)]
 pub enum MultibaseError {
     #[error("invalid base string")]
@@ -14,7 +16,6 @@ pub enum MultibaseError {
 }
 
 /// Decodes multibase base58 (bitcoin) value
-/// https://github.com/multiformats/multibase
 pub fn decode_multibase_base58btc(value: &str)
     -> Result<Vec<u8>, MultibaseError>
 {

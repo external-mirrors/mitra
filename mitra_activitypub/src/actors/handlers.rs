@@ -1,3 +1,23 @@
+use apx_core::{
+    url::{
+        canonical::CanonicalUri,
+        http_uri::Hostname,
+        http_url_whatwg::get_hostname,
+    },
+};
+use apx_sdk::{
+    addresses::WebfingerAddress,
+    agent::FederationAgent,
+    deserialization::{
+        deserialize_into_object_id_opt,
+        deserialize_object_array,
+        deserialize_string_array,
+        parse_into_array,
+        parse_into_href_array,
+        parse_into_id_array,
+    },
+    fetch::fetch_media,
+};
 use serde::{
     Deserialize,
     Deserializer,
@@ -6,29 +26,14 @@ use serde::{
 use serde_json::{Value as JsonValue};
 use uuid::Uuid;
 
-use apx_core::{
-    http_url::Hostname,
-    urls::get_hostname,
-};
-use apx_sdk::{
-    addresses::WebfingerAddress,
-    agent::FederationAgent,
-    deserialization::{
-        deserialize_object_array,
-        deserialize_string_array,
-        parse_into_array,
-        parse_into_href_array,
-        parse_into_id_array,
-    },
-    fetch::fetch_file,
-    url::Url,
-};
-use mitra_config::MediaLimits;
 use mitra_models::{
     activitypub::queries::save_actor,
-    database::DatabaseClient,
+    database::{
+        get_database_client,
+        DatabaseConnectionPool,
+    },
     filter_rules::types::FilterAction,
-    media::types::MediaInfo,
+    media::types::{MediaInfo, PartialMediaInfo},
     profiles::queries::{create_profile, update_profile},
     profiles::types::{
         DbActor,
@@ -38,12 +43,12 @@ use mitra_models::{
         IdentityProof,
         MentionPolicy,
         PaymentOption,
-        ProfileImage,
         ProfileCreateData,
         ProfileUpdateData,
+        WebfingerHostname,
     },
 };
-use mitra_services::media::{MediaStorage, MediaStorageError};
+use mitra_services::media::MediaStorageError;
 use mitra_validators::{
     activitypub::validate_object_id,
     errors::ValidationError,
@@ -59,7 +64,6 @@ use mitra_validators::{
 };
 
 use crate::{
-    agent::build_federation_agent,
     errors::HandlerError,
     filter::get_moderation_domain,
     handlers::{
@@ -67,13 +71,17 @@ use crate::{
         proposal::{parse_proposal, Proposal},
     },
     identifiers::canonicalize_id,
-    importers::{fetch_any_object, perform_webfinger_query, ApClient},
+    importers::{perform_webfinger_query, ApClient},
+    keys::{Multikey, PublicKeyPem},
+    ownership::is_same_origin,
     vocabulary::{
+        APPLICATION,
         EMOJI,
         HASHTAG,
         LINK,
         NOTE,
         PROPERTY_VALUE,
+        SERVICE,
         VERIFIABLE_IDENTITY_STATEMENT,
     },
 };
@@ -87,7 +95,6 @@ use super::{
         LinkAttachment,
     },
     builders::ActorImage,
-    keys::{Multikey, PublicKey},
 };
 
 pub struct Actor {
@@ -119,7 +126,7 @@ impl Actor {
     }
 
     pub fn is_local(&self, local_hostname: &str) -> Result<bool, ValidationError> {
-        let canonical_actor_id = Url::parse(self.id())
+        let canonical_actor_id = CanonicalUri::parse(self.id())
             .map_err(|_| ValidationError("invalid actor ID"))?;
         Ok(canonical_actor_id.authority() == local_hostname)
     }
@@ -166,6 +173,12 @@ fn deserialize_url_opt<'de, D>(
 }
 
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct Endpoints {
+    shared_inbox: Option<String>,
+}
+
+#[derive(Deserialize)]
 #[cfg_attr(test, derive(Default))]
 #[serde(rename_all = "camelCase")]
 struct ValidatedActor {
@@ -181,12 +194,17 @@ struct ValidatedActor {
     outbox: String,
     followers: Option<String>,
     subscribers: Option<String>,
+
+    // Workaround for Bridgy Fed bug
+    #[serde(default, deserialize_with = "deserialize_into_object_id_opt")]
     featured: Option<String>,
+
+    endpoints: Option<Endpoints>,
 
     #[serde(default, deserialize_with = "deserialize_object_array")]
     assertion_method: Vec<Multikey>,
 
-    public_key: PublicKey,
+    public_key: Option<PublicKeyPem>,
 
     #[serde(default, deserialize_with = "deserialize_image_opt")]
     icon: Option<ActorImage>,
@@ -215,6 +233,10 @@ struct ValidatedActor {
 }
 
 impl ValidatedActor {
+    fn is_automated(&self) -> bool {
+        [APPLICATION, SERVICE].contains(&self.object_type.as_str())
+    }
+
     fn to_db_actor(&self) -> Result<DbActor, ValidationError> {
         let canonical_actor_id = canonicalize_id(&self.id)?;
         let canonical_inbox = canonicalize_id(&self.inbox)?;
@@ -232,6 +254,8 @@ impl ValidatedActor {
             object_type: self.object_type.clone(),
             id: canonical_actor_id.to_string(),
             inbox: canonical_inbox.to_string(),
+            shared_inbox: self.endpoints.as_ref()
+                .and_then(|endpoints| endpoints.shared_inbox.clone()),
             outbox: canonical_outbox.to_string(),
             followers: maybe_canonical_followers.map(|id| id.to_string()),
             subscribers: maybe_canonical_subscribers.map(|id| id.to_string()),
@@ -249,24 +273,30 @@ async fn get_webfinger_hostname(
     agent: &FederationAgent,
     instance_hostname: &str,
     actor: &ValidatedActor,
-) -> Result<Option<String>, HandlerError> {
-    let canonical_actor_id = Url::parse(&actor.id)
+    has_account: bool,
+) -> Result<WebfingerHostname, HandlerError> {
+    let canonical_actor_id = CanonicalUri::parse(&actor.id)
         .map_err(|_| ValidationError("invalid actor ID"))?;
-    let maybe_hostname = match canonical_actor_id {
-        Url::Http(http_url) => {
+    let webfinger_hostname = match canonical_actor_id {
+        CanonicalUri::Http(http_uri) => {
             // TODO: implement reverse webfinger lookup
             // https://swicg.github.io/activitypub-webfinger/#reverse-discovery
-            let hostname = get_hostname(&http_url.to_string())
-                .map_err(|_| ValidationError("invalid actor ID"))?;
-            Some(hostname)
+            let hostname = http_uri.hostname().to_string();
+            WebfingerHostname::Remote(hostname)
         },
-        Url::Ap(_) => {
+        CanonicalUri::Ap(_) => {
             if let Some(gateway) = actor.gateways.first() {
+                // Primary gateway
                 let hostname = get_hostname(gateway)
                     .map_err(|_| ValidationError("invalid gateway URL"))?;
                 if hostname == instance_hostname {
                     // Portable actor with local account (unmanaged)
-                    return Ok(None);
+                    if has_account {
+                        return Ok(WebfingerHostname::Local);
+                    } else {
+                        // WARNING: only allowed when profile is being created
+                        return Ok(WebfingerHostname::Unknown);
+                    };
                 };
                 let webfinger_address = WebfingerAddress::new_unchecked(
                     &actor.preferred_username,
@@ -277,87 +307,107 @@ async fn get_webfinger_hostname(
                     &webfinger_address,
                 ).await?;
                 if actor_id == actor.id {
-                    Some(hostname)
+                    WebfingerHostname::Remote(hostname)
                 } else {
-                    log::warn!("unexpected actor ID in JRD: {actor_id}");
-                    None
+                    return Err(ValidationError("unexpected actor ID in JRD").into());
                 }
             } else {
-                // No webfinger address
-                None
+                return Err(ValidationError("at least one gateway must be specified").into());
             }
         },
     };
-    Ok(maybe_hostname)
+    Ok(webfinger_hostname)
+}
+
+enum ActorImageResult {
+    Some(MediaInfo),
+    None,
+    Error,
+}
+
+impl ActorImageResult {
+    fn ok(self) -> Option<MediaInfo> {
+        match self {
+            Self::Some(media_info) => Some(media_info),
+            _ => None,
+        }
+    }
+
+    fn ok_or_default(self, default: Option<PartialMediaInfo>) -> Option<PartialMediaInfo> {
+        match self {
+            Self::Some(media_info) => Some(PartialMediaInfo::from(media_info)),
+            Self::None => None,
+            Self::Error => default,
+        }
+    }
 }
 
 async fn fetch_actor_image(
-    agent: &FederationAgent,
-    is_filter_enabled: bool,
-    media_limits: &MediaLimits,
-    media_storage: &MediaStorage,
+    ap_client: &ApClient,
+    moderation_domain: &Hostname,
     actor_image: &Option<ActorImage>,
-    default: Option<ProfileImage>,
-) -> Result<Option<ProfileImage>, MediaStorageError> {
+) -> Result<ActorImageResult, MediaStorageError> {
+    let media_limits = &ap_client.limits.media;
+    let is_filter_enabled = ap_client.filter.is_action_required(
+        moderation_domain.as_str(),
+        FilterAction::RejectProfileImages,
+    );
     let maybe_image = if let Some(actor_image) = actor_image {
         if let Err(error) = validate_media_url(&actor_image.url) {
             log::warn!("invalid actor image URL ({error}): {}", actor_image.url);
-            return Ok(default);
+            return Ok(ActorImageResult::Error);
         };
         if is_filter_enabled {
             log::warn!("actor image removed by filter: {}", actor_image.url);
-            return Ok(None);
+            return Ok(ActorImageResult::None);
         };
-        match fetch_file(
-            agent,
+        match fetch_media(
+            &ap_client.agent(),
             &actor_image.url,
-            actor_image.media_type.as_deref(),
             &allowed_profile_image_media_types(&media_limits.supported_media_types()),
             media_limits.profile_image_size_limit,
         ).await {
             Ok((file_data, media_type)) => {
-                let file_info = media_storage.save_file(file_data, &media_type)?;
-                let image = ProfileImage::from(MediaInfo::remote(
-                    file_info,
-                    actor_image.url.clone(),
-                ));
-                Some(image)
+                let is_proxy_enabled = ap_client.filter.is_action_required(
+                    moderation_domain.as_str(),
+                    FilterAction::ProxyMedia,
+                );
+                let media_info = if is_proxy_enabled {
+                    log::info!("linked actor image {}", actor_image.url);
+                    MediaInfo::link(media_type, actor_image.url.clone())
+                } else {
+                    let file_info = ap_client.media_storage
+                        .save_file(file_data, &media_type)?;
+                    log::info!("downloaded actor image {}", actor_image.url);
+                    MediaInfo::remote(file_info, actor_image.url.clone())
+                };
+                ActorImageResult::Some(media_info)
             },
             Err(error) => {
                 log::warn!("failed to fetch actor image ({error})");
-                default
+                ActorImageResult::Error
             },
         }
     } else {
-        None
+        ActorImageResult::None
     };
     Ok(maybe_image)
 }
 
 async fn fetch_actor_images(
-    agent: &FederationAgent,
-    is_filter_enabled: bool,
-    media_limits: &MediaLimits,
-    media_storage: &MediaStorage,
+    ap_client: &ApClient,
+    moderation_domain: &Hostname,
     actor: &ValidatedActor,
-    default_avatar: Option<ProfileImage>,
-    default_banner: Option<ProfileImage>,
-) -> Result<(Option<ProfileImage>, Option<ProfileImage>), MediaStorageError> {
+) -> Result<(ActorImageResult, ActorImageResult), MediaStorageError> {
     let maybe_avatar = fetch_actor_image(
-        agent,
-        is_filter_enabled,
-        media_limits,
-        media_storage,
+        ap_client,
+        moderation_domain,
         &actor.icon,
-        default_avatar,
     ).await?;
     let maybe_banner = fetch_actor_image(
-        agent,
-        is_filter_enabled,
-        media_limits,
-        media_storage,
+        ap_client,
+        moderation_domain,
         &actor.image,
-        default_banner,
     ).await?;
     Ok((maybe_avatar, maybe_banner))
 }
@@ -366,24 +416,40 @@ fn parse_public_keys(
     actor: &ValidatedActor,
 ) -> Result<Vec<DbActorKey>, ValidationError> {
     let mut keys = vec![];
-    if actor.public_key.owner != actor.id {
-        log::warn!("public key does not belong to actor");
+    if let Some(public_key) = actor.public_key.as_ref() {
+        if public_key.owner != actor.id {
+            log::warn!("public key is not owned by actor");
+        } else if !is_same_origin(&public_key.id, &public_key.owner)? {
+            // Not supported (the key must be fetched from its origin)
+            log::warn!("key and key owner have different origins");
+        } else {
+            let db_key = public_key.to_db_key()?;
+            keys.push(db_key);
+        };
     };
-    let db_key = actor.public_key.to_db_key()?;
-    keys.push(db_key);
     let verification_methods = &actor.assertion_method;
     for multikey in verification_methods {
-        if multikey.controller == actor.id {
-            let db_key = multikey.to_db_key()?;
-            keys.push(db_key);
-        } else {
-            log::warn!("verification method does not belong to actor");
+        if multikey.controller != actor.id {
+            log::warn!("verification method is not owned by actor");
+            continue;
         };
+        if !is_same_origin(&multikey.id, &multikey.controller)? {
+            log::warn!("key and key owner have different origins");
+            continue;
+        };
+        let db_key = multikey.to_db_key()?;
+        keys.push(db_key);
     };
     keys.sort_by_key(|item| item.id.clone());
     keys.dedup_by_key(|item| item.id.clone());
     if keys.is_empty() {
-        return Err(ValidationError("public keys not found"));
+        let canonical_actor_id = CanonicalUri::parse(&actor.id)
+            .map_err(|_| ValidationError("invalid actor ID"))?;
+        if matches!(canonical_actor_id, CanonicalUri::Ap(_)) {
+            log::warn!("public keys are not found in portable actor object");
+        } else {
+            return Err(ValidationError("public keys not found"));
+        };
     };
     Ok(keys)
 }
@@ -434,7 +500,7 @@ fn parse_attachments(actor: &ValidatedActor) -> (
                             payment_options.push(option);
                         };
                     },
-                    Ok(LinkAttachment::ChatLink(field)) => {
+                    Ok(LinkAttachment::OtherLink(field)) => {
                         extra_fields.push(field);
                     },
                     Err(error) => log_error(attachment_type, error),
@@ -470,19 +536,19 @@ fn parse_attachments(actor: &ValidatedActor) -> (
             continue;
         } else {
             extra_fields.push(field);
-        }
+        };
     };
     (identity_proofs, payment_options, proposals, extra_fields)
 }
 
 async fn fetch_proposals(
-    agent: &FederationAgent,
+    ap_client: &ApClient,
     proposals: Vec<String>,
 ) -> Vec<PaymentOption> {
     let mut payment_options = vec![];
     for proposal_id in proposals {
-        // TODO: FEP-EF61: 'ap' URLs are not supported
-        let proposal: Proposal = match fetch_any_object(agent, &proposal_id).await {
+        // TODO: FEP-EF61: 'ap' URIs are not supported
+        let proposal: Proposal = match ap_client.fetch_object(&proposal_id).await {
             Ok(proposal) => proposal,
             Err(error) => {
                 log::warn!("invalid proposal: {}", error);
@@ -514,10 +580,11 @@ fn parse_aliases(actor: &ValidatedActor) -> Vec<String> {
                             log::warn!("too many aliases");
                             break;
                         };
-                        if actor_id == actor.id ||
-                            validate_object_id(&actor_id).is_err()
-                        {
-                            log::warn!("invalid alias: {}", actor_id);
+                        if actor_id == actor.id {
+                            continue;
+                        };
+                        if let Err(error) = validate_object_id(&actor_id) {
+                            log::warn!("invalid alias ({error}): {actor_id}");
                             continue;
                         };
                         aliases.push(actor_id);
@@ -535,7 +602,7 @@ fn parse_aliases(actor: &ValidatedActor) -> Vec<String> {
 
 async fn parse_tags(
     ap_client: &ApClient,
-    db_client: &mut impl DatabaseClient,
+    db_pool: &DatabaseConnectionPool,
     moderation_domain: &Hostname,
     actor: &ValidatedActor,
 ) -> Result<Vec<Uuid>, HandlerError> {
@@ -549,7 +616,7 @@ async fn parse_tags(
             };
             match handle_emoji(
                 ap_client,
-                db_client,
+                db_pool,
                 moderation_domain,
                 tag_value,
             ).await? {
@@ -560,6 +627,8 @@ async fn parse_tags(
                 },
                 None => continue,
             };
+        } else {
+            log::warn!("skipping tag of type {tag_type}");
         };
     };
     Ok(emojis)
@@ -567,55 +636,55 @@ async fn parse_tags(
 
 pub async fn create_remote_profile(
     ap_client: &ApClient,
-    db_client: &mut impl DatabaseClient,
+    db_pool: &DatabaseConnectionPool,
     actor: Actor,
 ) -> Result<DbActorProfile, HandlerError> {
     let Actor { inner: actor, value: actor_json } = actor;
-    let agent = build_federation_agent(&ap_client.instance, None);
-    let maybe_webfinger_hostname = get_webfinger_hostname(
-        &agent,
+    let webfinger_hostname = get_webfinger_hostname(
+        &ap_client.agent(),
         &ap_client.instance.hostname(),
         &actor,
+        false,
     ).await?;
     let actor_data = actor.to_db_actor()?;
     validate_actor_data(&actor_data)?;
     let moderation_domain = get_moderation_domain(&actor_data)
         .expect("actor data should be valid");
-    let is_media_filter_enabled = ap_client.filter.is_action_required(
+    if ap_client.filter.is_action_required(
         moderation_domain.as_str(),
-        FilterAction::RejectProfileImages,
-    );
+        FilterAction::Reject,
+    ) {
+        let error_message = format!("actor rejected: {}", actor_data.id);
+        return Err(HandlerError::Filtered(error_message));
+    };
     let (maybe_avatar, maybe_banner) = fetch_actor_images(
-        &agent,
-        is_media_filter_enabled,
-        &ap_client.media_limits,
-        &ap_client.media_storage,
+        ap_client,
+        &moderation_domain,
         &actor,
-        None,
-        None,
     ).await?;
     let public_keys = parse_public_keys(&actor)?;
     let (identity_proofs, mut payment_options, proposals, extra_fields) =
         parse_attachments(&actor);
     let subscription_options = fetch_proposals(
-        &agent,
+        ap_client,
         proposals,
     ).await;
     payment_options.extend(subscription_options);
     let aliases = parse_aliases(&actor);
     let emojis = parse_tags(
         ap_client,
-        db_client,
+        db_pool,
         &moderation_domain,
         &actor,
     ).await?;
     let mut profile_data = ProfileCreateData {
         username: actor.preferred_username.clone(),
-        hostname: maybe_webfinger_hostname,
+        hostname: webfinger_hostname,
         display_name: actor.name.clone(),
         bio: actor.summary.clone(),
-        avatar: maybe_avatar,
-        banner: maybe_banner,
+        avatar: maybe_avatar.ok(),
+        banner: maybe_banner.ok(),
+        is_automated: actor.is_automated(),
         manually_approves_followers: actor.manually_approves_followers,
         mention_policy: MentionPolicy::None,
         public_keys,
@@ -627,6 +696,7 @@ pub async fn create_remote_profile(
         actor_json: Some(actor_data),
     };
     clean_profile_create_data(&mut profile_data)?;
+    let db_client = &mut **get_database_client(db_pool).await?;
     let profile = create_profile(db_client, profile_data).await?;
     // Save actor object
     save_actor(
@@ -641,7 +711,7 @@ pub async fn create_remote_profile(
 /// Updates remote actor's profile
 pub async fn update_remote_profile(
     ap_client: &ApClient,
-    db_client: &mut impl DatabaseClient,
+    db_pool: &DatabaseConnectionPool,
     profile: DbActorProfile,
     actor: Actor,
 ) -> Result<DbActorProfile, HandlerError> {
@@ -652,51 +722,44 @@ pub async fn update_remote_profile(
     let actor_data_old = profile.expect_actor_data();
     let actor_data = actor.to_db_actor()?;
     assert_eq!(actor_data_old.id, actor_data.id, "actor ID shouldn't change");
-    let agent = build_federation_agent(&ap_client.instance, None);
-    let maybe_webfinger_hostname = get_webfinger_hostname(
-        &agent,
+    let webfinger_hostname = get_webfinger_hostname(
+        &ap_client.agent(),
         &ap_client.instance.hostname(),
         &actor,
+        profile.has_account(),
     ).await?;
     validate_actor_data(&actor_data)?;
     let moderation_domain = get_moderation_domain(&actor_data)
         .expect("actor data should be valid");
-    let is_media_filter_enabled = ap_client.filter.is_action_required(
-        moderation_domain.as_str(),
-        FilterAction::RejectProfileImages,
-    );
     let (maybe_avatar, maybe_banner) = fetch_actor_images(
-        &agent,
-        is_media_filter_enabled,
-        &ap_client.media_limits,
-        &ap_client.media_storage,
+        ap_client,
+        &moderation_domain,
         &actor,
-        profile.avatar,
-        profile.banner,
     ).await?;
     let public_keys = parse_public_keys(&actor)?;
     let (identity_proofs, mut payment_options, proposals, extra_fields) =
         parse_attachments(&actor);
     let subscription_options = fetch_proposals(
-        &agent,
+        ap_client,
         proposals,
     ).await;
     payment_options.extend(subscription_options);
     let aliases = parse_aliases(&actor);
     let emojis = parse_tags(
         ap_client,
-        db_client,
+        db_pool,
         &moderation_domain,
         &actor,
     ).await?;
     let mut profile_data = ProfileUpdateData {
         username: actor.preferred_username.clone(),
-        hostname: maybe_webfinger_hostname,
+        hostname: webfinger_hostname,
         display_name: actor.name.clone(),
         bio: actor.summary.clone(),
         bio_source: actor.summary.clone(),
-        avatar: maybe_avatar,
-        banner: maybe_banner,
+        avatar: maybe_avatar.ok_or_default(profile.avatar),
+        banner: maybe_banner.ok_or_default(profile.banner),
+        is_automated: actor.is_automated(),
         manually_approves_followers: actor.manually_approves_followers,
         mention_policy: MentionPolicy::None,
         public_keys,
@@ -708,6 +771,7 @@ pub async fn update_remote_profile(
         actor_json: Some(actor_data),
     };
     clean_profile_update_data(&mut profile_data)?;
+    let db_client = &mut **get_database_client(db_pool).await?;
     // update_profile() clears unreachable_since
     let (profile, deletion_queue) =
         update_profile(db_client, profile.id, profile_data).await?;
@@ -726,17 +790,18 @@ pub async fn update_remote_profile(
 #[cfg(test)]
 mod tests {
     use apx_core::{
-        crypto_eddsa::{
-            ed25519_public_key_from_secret_key,
-            generate_ed25519_key,
-        },
-        crypto_rsa::{
-            generate_weak_rsa_key,
-            rsa_public_key_to_pkcs1_der,
+        crypto::{
+            eddsa::{
+                ed25519_public_key_from_secret_key,
+                generate_ed25519_key,
+            },
+            rsa::{
+                generate_weak_rsa_key,
+                rsa_public_key_to_pkcs1_der,
+            },
         },
     };
     use mitra_models::profiles::types::PublicKeyType;
-    use crate::actors::keys::{Multikey, PublicKey};
     use super::*;
 
     #[test]
@@ -792,14 +857,14 @@ mod tests {
         let rsa_secret_key = generate_weak_rsa_key().unwrap();
         let ed25519_secret_key = generate_ed25519_key();
         let actor_public_key =
-            PublicKey::build(actor_id, &rsa_secret_key).unwrap();
+            PublicKeyPem::build(actor_id, &rsa_secret_key).unwrap();
         let actor_auth_key_1 =
             Multikey::build_rsa(actor_id, &rsa_secret_key).unwrap();
         let actor_auth_key_2 =
             Multikey::build_ed25519(actor_id, &ed25519_secret_key);
         let actor = ValidatedActor {
             id: actor_id.to_string(),
-            public_key: actor_public_key,
+            public_key: Some(actor_public_key),
             assertion_method: vec![actor_auth_key_1, actor_auth_key_2],
             ..Default::default()
         };

@@ -1,20 +1,76 @@
 use chrono::{DateTime, Utc};
-use postgres_types::FromSql;
+use postgres_protocol::types::{text_from_sql, text_to_sql};
+use postgres_types::{
+    accepts,
+    private::BytesMut,
+    to_sql_checked,
+    FromSql,
+    IsNull,
+    ToSql,
+    Type,
+};
 use serde::Deserialize;
 use tokio_postgres::Row;
 use uuid::Uuid;
 
-use crate::attachments::types::DbMediaAttachment;
-use crate::conversations::types::Conversation;
+use mitra_utils::languages::Language;
+
+use crate::attachments::types::MediaAttachment;
+use crate::conversations::types::{
+    Conversation,
+    AP_PUBLIC,
+};
 use crate::database::{
     int_enum::{int_enum_from_sql, int_enum_to_sql},
     json_macro::json_from_sql,
     DatabaseError,
     DatabaseTypeError,
 };
-use crate::emojis::types::DbEmoji;
+use crate::emojis::types::CustomEmoji;
 use crate::polls::types::{Poll, PollData};
 use crate::profiles::types::DbActorProfile;
+
+#[derive(Clone, Debug)]
+pub struct DbLanguage(Language);
+
+impl DbLanguage {
+    pub fn new(language: Language) -> Self {
+        Self(language)
+    }
+
+    pub fn inner(&self) -> Language {
+        self.0
+    }
+}
+
+impl<'a> FromSql<'a> for DbLanguage {
+    fn from_sql(
+        _: &Type,
+        raw: &'a [u8],
+    ) -> Result<Self, Box<dyn std::error::Error + Sync + Send>> {
+        let language_code = text_from_sql(raw)?;
+        let language = Language::from_639_3(language_code)
+            .ok_or(DatabaseTypeError)?;
+        Ok(DbLanguage(language))
+    }
+
+    accepts!(BPCHAR);
+}
+
+impl ToSql for DbLanguage {
+    fn to_sql(
+        &self,
+        _: &Type,
+        out: &mut BytesMut,
+    ) -> Result<IsNull, Box<dyn std::error::Error + Sync + Send>> {
+        let language_code = self.inner().to_639_3();
+        text_to_sql(language_code, out);
+        Ok(IsNull::No)
+    }
+
+    accepts!(BPCHAR);
+    to_sql_checked!();
+}
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Visibility {
@@ -31,12 +87,12 @@ impl Visibility {
             Self::Public => vec![
                 Self::Public,
                 Self::Followers,
-                Self::Subscribers,
                 Self::Direct,
             ],
             Self::Followers if is_same_author => vec![
-                Self::Direct,
+                Self::Conversation,
                 Self::Followers,
+                Self::Direct,
             ],
             Self::Followers => vec![
                 Self::Conversation,
@@ -95,11 +151,12 @@ int_enum_to_sql!(Visibility);
 
 #[derive(FromSql)]
 #[postgres(name = "post")]
-pub struct DbPost {
+pub struct Post {
     pub id: Uuid,
     pub author_id: Uuid,
     pub content: String,
     pub content_source: Option<String>,
+    pub language: Option<DbLanguage>,
     pub conversation_id: Option<Uuid>,
     pub in_reply_to_id: Option<Uuid>,
     pub repost_of_id: Option<Uuid>,
@@ -111,6 +168,7 @@ pub struct DbPost {
     pub reply_count: i32,
     pub reaction_count: i32,
     pub repost_count: i32,
+    pub url: Option<String>,
     pub object_id: Option<String>,
     pub ipfs_cid: Option<String>,
     pub created_at: DateTime<Utc>,
@@ -118,14 +176,13 @@ pub struct DbPost {
 }
 
 #[derive(Clone, Deserialize)]
-pub struct DbPostReactions {
-    pub authors: Vec<Uuid>,
-    pub count: i32,
+pub struct PostReaction {
     pub content: Option<String>,
-    pub emoji: Option<DbEmoji>,
+    pub emoji: Option<CustomEmoji>,
+    pub count: i32,
 }
 
-json_from_sql!(DbPostReactions);
+json_from_sql!(PostReaction);
 
 // List of user's actions
 #[derive(Clone)]
@@ -135,14 +192,49 @@ pub struct PostActions {
     pub reposted: bool,
     pub bookmarked: bool,
     pub voted_for: Vec<String>,
+    pub hidden: bool,
+}
+
+#[derive(Clone, Default)]
+pub struct RelatedPosts {
+    pub in_reply_to: Option<Box<PostDetailed>>,
+    pub repost_of: Option<Box<PostDetailed>>,
+    pub linked: Vec<PostDetailed>,
+}
+
+impl RelatedPosts {
+    pub fn as_vec(&self) -> Vec<&PostDetailed> {
+        let mut posts = vec![];
+        if let Some(in_reply_to) = self.in_reply_to.as_deref() {
+            posts.push(in_reply_to);
+        };
+        if let Some(repost_of) = self.repost_of.as_deref() {
+            posts.push(repost_of);
+        };
+        posts.extend(&self.linked);
+        posts
+    }
+
+    pub fn as_vec_mut(&mut self) -> Vec<&mut PostDetailed> {
+        let mut posts = vec![];
+        if let Some(in_reply_to) = self.in_reply_to.as_deref_mut() {
+            posts.push(in_reply_to);
+        };
+        if let Some(repost_of) = self.repost_of.as_deref_mut() {
+            posts.push(repost_of);
+        };
+        posts.extend(&mut self.linked);
+        posts
+    }
 }
 
 #[derive(Clone)]
-pub struct Post {
+pub struct PostDetailed {
     pub id: Uuid,
     pub author: DbActorProfile,
     pub content: String,
     pub content_source: Option<String>,
+    pub language: Option<Language>,
     pub conversation: Option<Conversation>,
     pub in_reply_to_id: Option<Uuid>,
     pub repost_of_id: Option<Uuid>,
@@ -153,12 +245,13 @@ pub struct Post {
     pub reaction_count: i32,
     pub repost_count: i32,
     pub poll: Option<Poll>,
-    pub attachments: Vec<DbMediaAttachment>,
+    pub attachments: Vec<MediaAttachment>,
     pub mentions: Vec<DbActorProfile>,
     pub tags: Vec<String>,
     pub links: Vec<Uuid>,
-    pub emojis: Vec<DbEmoji>,
-    pub reactions: Vec<DbPostReactions>,
+    pub emojis: Vec<CustomEmoji>,
+    pub reactions: Vec<PostReaction>,
+    pub url: Option<String>,
     pub object_id: Option<String>,
     pub ipfs_cid: Option<String>,
     pub created_at: DateTime<Utc>,
@@ -167,28 +260,27 @@ pub struct Post {
     // These fields are not populated automatically
     // by functions in posts::queries module
     pub actions: Option<PostActions>,
-    pub in_reply_to: Option<Box<Post>>,
-    pub repost_of: Option<Box<Post>>,
-    pub linked: Vec<Post>,
+    pub related_posts: Option<RelatedPosts>,
     // Might be set in get_thread
     pub parent_visible: bool,
 }
 
-impl Post {
+impl PostDetailed {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
-        db_post: DbPost,
+        db_post: Post,
         db_author: DbActorProfile,
-        db_conversation: Option<Conversation>,
-        db_poll: Option<Poll>,
-        db_attachments: Vec<DbMediaAttachment>,
+        maybe_conversation: Option<Conversation>,
+        maybe_poll: Option<Poll>,
+        db_attachments: Vec<MediaAttachment>,
         db_mentions: Vec<DbActorProfile>,
         db_tags: Vec<String>,
         db_links: Vec<Uuid>,
-        db_emojis: Vec<DbEmoji>,
-        db_reactions: Vec<DbPostReactions>,
+        db_emojis: Vec<CustomEmoji>,
+        db_reactions: Vec<PostReaction>,
     ) -> Result<Self, DatabaseTypeError> {
         // Consistency checks
+        db_author.check_consistency()?;
         if db_post.author_id != db_author.id {
             return Err(DatabaseTypeError);
         };
@@ -201,12 +293,14 @@ impl Post {
         if db_post.repost_of_id.is_some() && (
             db_post.content.len() != 0 ||
             db_post.content_source.is_some() ||
+            db_post.language.is_some() ||
             db_post.conversation_id.is_some() ||
             db_post.is_sensitive ||
             db_post.is_pinned ||
             db_post.in_reply_to_id.is_some() ||
+            db_post.url.is_some() ||
             db_post.ipfs_cid.is_some() ||
-            db_poll.is_some() ||
+            maybe_poll.is_some() ||
             !db_attachments.is_empty() ||
             !db_mentions.is_empty() ||
             !db_tags.is_empty() ||
@@ -216,13 +310,33 @@ impl Post {
         ) {
             return Err(DatabaseTypeError);
         };
-        if db_conversation.as_ref().map(|conversation| conversation.id) !=
-            db_post.conversation_id
-        {
+        if let Some(conversation_id) = db_post.conversation_id {
+            let Some(ref conversation) = maybe_conversation else {
+                return Err(DatabaseTypeError);
+            };
+            if conversation.id != conversation_id {
+                return Err(DatabaseTypeError);
+            };
+            if db_post.id == conversation.root_id
+                && db_post.visibility == Visibility::Public
+                && !conversation.is_public()
+            {
+                return Err(DatabaseTypeError);
+            };
+        } else if maybe_conversation.is_some() {
             return Err(DatabaseTypeError);
         };
-        if let Some(ref poll) = db_poll {
+        if let Some(ref poll) = maybe_poll {
             if poll.id != db_post.id {
+                return Err(DatabaseTypeError);
+            };
+        };
+        if db_author.is_local() {
+            // Related media must be stored locally
+            if !db_attachments.iter().all(|attachment| attachment.media.is_file()) {
+                return Err(DatabaseTypeError);
+            };
+            if !db_emojis.iter().all(|emoji| emoji.image.is_file()) {
                 return Err(DatabaseTypeError);
             };
         };
@@ -231,7 +345,8 @@ impl Post {
             author: db_author,
             content: db_post.content,
             content_source: db_post.content_source,
-            conversation: db_conversation,
+            language: db_post.language.map(|db_lang| db_lang.inner()),
+            conversation: maybe_conversation,
             in_reply_to_id: db_post.in_reply_to_id,
             repost_of_id: db_post.repost_of_id,
             visibility: db_post.visibility,
@@ -240,21 +355,20 @@ impl Post {
             reply_count: db_post.reply_count,
             reaction_count: db_post.reaction_count,
             repost_count: db_post.repost_count,
-            poll: db_poll,
+            poll: maybe_poll,
             attachments: db_attachments,
             mentions: db_mentions,
             tags: db_tags,
             links: db_links,
             emojis: db_emojis,
             reactions: db_reactions,
+            url: db_post.url,
             object_id: db_post.object_id,
             ipfs_cid: db_post.ipfs_cid,
             created_at: db_post.created_at,
             updated_at: db_post.updated_at,
             actions: None,
-            in_reply_to: None,
-            repost_of: None,
-            linked: vec![],
+            related_posts: None,
             parent_visible: true,
         };
         Ok(post)
@@ -274,18 +388,57 @@ impl Post {
             .as_ref()
             .expect("conversation should not be null")
     }
+
+    pub fn is_edited(
+        &self,
+        new_content: &str,
+        new_poll_data: Option<&PollData>,
+        new_attachments: &[Uuid],
+    ) -> bool {
+        let current_content = &self.content;
+        let current_poll_options: Option<Vec<_>> = self.poll.as_ref()
+            .map(|poll| {
+                poll.results.inner().iter()
+                    .map(|result| &result.option_name)
+                    .collect()
+
+            });
+        let new_poll_options = new_poll_data
+            .map(|poll_data| {
+                poll_data.results.iter()
+                    .map(|result| &result.option_name)
+                    .collect()
+            });
+        let current_attachments: Vec<_> = self.attachments.iter()
+            .map(|attachment| attachment.id)
+            .collect();
+        let is_not_edited = current_content == new_content &&
+            current_poll_options == new_poll_options &&
+            current_attachments == new_attachments;
+        !is_not_edited
+    }
+
+    pub fn expect_remote_object_id(&self) -> &str {
+        self.object_id.as_ref().expect("object ID should be present")
+    }
+
+    pub fn expect_related_posts(&self) -> &RelatedPosts {
+        self.related_posts.as_ref()
+            .expect("related_posts field should be populated")
+    }
 }
 
 #[cfg(any(test, feature = "test-utils"))]
-impl Default for Post {
+impl Default for PostDetailed {
     fn default() -> Self {
-        // TODO: use Post::new()
+        // TODO: use PostDetailed::new()
         let post_id = Uuid::new_v4();
         Self {
             id: post_id,
             author: DbActorProfile::default(),
             content: "".to_string(),
             content_source: None,
+            language: None,
             conversation: Some(Conversation::for_test(post_id)),
             in_reply_to_id: None,
             repost_of_id: None,
@@ -302,38 +455,37 @@ impl Default for Post {
             links: vec![],
             emojis: vec![],
             reactions: vec![],
+            url: None,
             object_id: None,
             ipfs_cid: None,
             created_at: Utc::now(),
             updated_at: None,
             actions: None,
-            in_reply_to: None,
-            repost_of: None,
-            linked: vec![],
+            related_posts: None,
             parent_visible: true,
         }
     }
 }
 
-impl TryFrom<&Row> for Post {
+impl TryFrom<&Row> for PostDetailed {
     type Error = DatabaseError;
 
     fn try_from(row: &Row) -> Result<Self, Self::Error> {
-        let db_post: DbPost = row.try_get("post")?;
+        let db_post: Post = row.try_get("post")?;
         let db_profile: DbActorProfile = row.try_get("actor_profile")?;
         // Data from subqueries
-        let db_conversation: Option<Conversation> = row.try_get("conversation")?;
+        let maybe_conversation: Option<Conversation> = row.try_get("conversation")?;
         let maybe_poll: Option<Poll> = row.try_get("poll")?;
-        let db_attachments: Vec<DbMediaAttachment> = row.try_get("attachments")?;
+        let db_attachments: Vec<MediaAttachment> = row.try_get("attachments")?;
         let db_mentions: Vec<DbActorProfile> = row.try_get("mentions")?;
         let db_tags: Vec<String> = row.try_get("tags")?;
         let db_links: Vec<Uuid> = row.try_get("links")?;
-        let db_emojis: Vec<DbEmoji> = row.try_get("emojis")?;
-        let db_reactions: Vec<DbPostReactions> = row.try_get("reactions")?;
+        let db_emojis: Vec<CustomEmoji> = row.try_get("emojis")?;
+        let db_reactions: Vec<PostReaction> = row.try_get("reactions")?;
         let post = Self::new(
             db_post,
             db_profile,
-            db_conversation,
+            maybe_conversation,
             maybe_poll,
             db_attachments,
             db_mentions,
@@ -346,7 +498,35 @@ impl TryFrom<&Row> for Post {
     }
 }
 
+pub struct Repost {
+    pub id: Uuid,
+    pub author_id: Uuid,
+    pub repost_of_id: Uuid,
+    pub has_deprecated_ap_id: bool,
+    pub visibility: Visibility,
+}
+
+impl TryFrom<&Row> for Repost {
+    type Error = DatabaseError;
+
+    fn try_from(row: &Row) -> Result<Self, Self::Error> {
+        let db_post: Post = row.try_get("post")?;
+        let Some(repost_of_id) = db_post.repost_of_id else {
+            return Err(DatabaseTypeError.into());
+        };
+        let repost = Self {
+            id: db_post.id,
+            author_id: db_post.author_id,
+            repost_of_id: repost_of_id,
+            has_deprecated_ap_id: db_post.repost_has_deprecated_ap_id,
+            visibility: db_post.visibility,
+        };
+        Ok(repost)
+    }
+}
+
 pub enum PostContext {
+    // Audience is empty if top-level post is Public
     Top {
         audience: Option<String>,
     },
@@ -360,6 +540,10 @@ pub enum PostContext {
 }
 
 impl PostContext {
+    pub fn new_public() -> Self {
+        Self::Top { audience: Some(AP_PUBLIC.to_owned()) }
+    }
+
     pub(super) fn in_reply_to_id(&self) -> Option<Uuid> {
         match self {
             Self::Reply { in_reply_to_id, .. } => Some(*in_reply_to_id),
@@ -375,39 +559,65 @@ impl PostContext {
     }
 }
 
+#[cfg(any(test, feature = "test-utils"))]
 impl Default for PostContext {
     fn default() -> Self {
-        Self::Top { audience: None }
+        Self::new_public()
     }
 }
 
-#[derive(Default)]
+#[cfg_attr(any(test, feature = "test-utils"), derive(Default))]
 pub struct PostCreateData {
+    pub id: Option<Uuid>,
     pub context: PostContext,
     pub content: String,
     pub content_source: Option<String>,
+    pub language: Option<Language>,
     pub visibility: Visibility,
     pub is_sensitive: bool,
+    pub poll: Option<PollData>,
     pub attachments: Vec<Uuid>,
     pub mentions: Vec<Uuid>,
     pub tags: Vec<String>,
     pub links: Vec<Uuid>,
     pub emojis: Vec<Uuid>,
-    pub poll: Option<PollData>,
+    pub url: Option<String>,
     pub object_id: Option<String>,
     pub created_at: DateTime<Utc>,
 }
 
 impl PostCreateData {
+    pub(super) fn check_consistency(&self) -> Result<(), DatabaseTypeError> {
+        if let PostContext::Top { ref audience } = self.context {
+            if audience.is_none() && self.visibility != Visibility::Direct {
+                return Err(DatabaseTypeError);
+            };
+        };
+        Ok(())
+    }
+
     pub fn repost(
         repost_of_id: Uuid,
+        visibility: Visibility,
         object_id: Option<String>,
     ) -> Self {
         Self {
+            id: None,
             context: PostContext::Repost { repost_of_id },
+            content: "".to_owned(),
+            content_source: None,
+            language: None,
+            visibility: visibility,
+            is_sensitive: false,
+            poll: None,
+            attachments: vec![],
+            mentions: vec![],
+            tags: vec![],
+            links: vec![],
+            emojis: vec![],
+            url: None,
             object_id: object_id,
             created_at: Utc::now(),
-            ..Default::default()
         }
     }
 }
@@ -416,12 +626,14 @@ impl PostCreateData {
 pub struct PostUpdateData {
     pub content: String,
     pub content_source: Option<String>,
+    pub language: Option<Language>,
     pub is_sensitive: bool,
+    pub poll: Option<PollData>,
     pub attachments: Vec<Uuid>,
     pub mentions: Vec<Uuid>,
     pub tags: Vec<String>,
     pub links: Vec<Uuid>,
     pub emojis: Vec<Uuid>,
-    pub poll: Option<PollData>,
-    pub updated_at: DateTime<Utc>,
+    pub url: Option<String>,
+    pub updated_at: Option<DateTime<Utc>>,
 }

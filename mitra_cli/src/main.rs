@@ -1,15 +1,15 @@
+use anyhow::Error;
 use clap::Parser;
 
 use mitra_adapters::init::{
-    apply_custom_migrations,
-    check_postgres_version,
+    create_database_client,
+    create_database_connection_pool,
     initialize_app,
-    prepare_instance_keys,
+    initialize_database,
+    initialize_storage,
 };
-use mitra_models::database::{
-    connect::create_database_client,
-    migrate::apply_migrations,
-};
+use mitra_api::server::run_server;
+use mitra_workers::workers::start_workers;
 
 mod cli;
 mod commands;
@@ -17,62 +17,74 @@ mod commands;
 use cli::{Cli, SubCommand};
 
 #[tokio::main]
-async fn main() {
+async fn main() -> Result<(), Error> {
     let opts: Cli = Cli::parse();
-    let mut config = initialize_app(Some(opts.log_level));
-    let db_config = config.database_url.parse()
-        .expect("failed to parse database URL");
-    let db_client = &mut create_database_client(
-        &db_config,
-        config.database_tls_ca_file.as_deref(),
-    ).await.expect("failed to connect to database");
-    check_postgres_version(db_client).await
-        .expect("failed to verify PostgreSQL version");
-    apply_migrations(db_client).await
-        .expect("failed to apply migrations");
-    apply_custom_migrations(db_client).await
-        .expect("failed to apply custom migrations");
-    prepare_instance_keys(&mut config, db_client).await
-        .expect("failed to prepare instance keys");
-
-    #[allow(clippy::unwrap_used)]
-    match opts.subcmd {
-        SubCommand::UpdateConfig(cmd) => cmd.execute(db_client).await.unwrap(),
-        SubCommand::AddFilterRule(cmd) => cmd.execute(db_client).await.unwrap(),
-        SubCommand::RemoveFilterRule(cmd) => cmd.execute(db_client).await.unwrap(),
-        SubCommand::ListFilterRules(cmd) => cmd.execute(db_client).await.unwrap(),
-        SubCommand::GenerateInviteCode(cmd) => cmd.execute(db_client).await.unwrap(),
-        SubCommand::ListInviteCodes(cmd) => cmd.execute(db_client).await.unwrap(),
-        SubCommand::CreateAccount(cmd) => cmd.execute(&config, db_client).await.unwrap(),
-        SubCommand::ListAccounts(cmd) => cmd.execute(db_client).await.unwrap(),
-        SubCommand::SetPassword(cmd) => cmd.execute(db_client).await.unwrap(),
-        SubCommand::SetRole(cmd) => cmd.execute(db_client).await.unwrap(),
-        SubCommand::RevokeOauthTokens(cmd) => cmd.execute(db_client).await.unwrap(),
-        SubCommand::ImportActor(cmd) => cmd.execute(&config, db_client).await.unwrap(),
-        SubCommand::ImportObject(cmd) => cmd.execute(&config, db_client).await.unwrap(),
-        SubCommand::ImportActivity(cmd) => cmd.execute(&config, db_client).await.unwrap(),
-        SubCommand::ReadOutbox(cmd) => cmd.execute(&config, db_client).await.unwrap(),
-        SubCommand::LoadReplies(cmd) => cmd.execute(&config, db_client).await.unwrap(),
-        SubCommand::FetchObject(cmd) => cmd.execute(&config, db_client).await.unwrap(),
-        SubCommand::LoadPortableObject(cmd) => cmd.execute(&config, db_client).await.unwrap(),
-        SubCommand::DeleteUser(cmd) => cmd.execute(&config, db_client).await.unwrap(),
-        SubCommand::DeletePost(cmd) => cmd.execute(&config, db_client).await.unwrap(),
-        SubCommand::AddEmoji(cmd) => cmd.execute(&config, db_client).await.unwrap(),
-        SubCommand::ImportEmoji(cmd) => cmd.execute(&config, db_client).await.unwrap(),
-        SubCommand::DeleteEmoji(cmd) => cmd.execute(&config, db_client).await.unwrap(),
-        SubCommand::DeleteExtraneousPosts(cmd) => cmd.execute(&config, db_client).await.unwrap(),
-        SubCommand::DeleteUnusedAttachments(cmd) => cmd.execute(&config, db_client).await.unwrap(),
-        SubCommand::DeleteEmptyProfiles(cmd) => cmd.execute(&config, db_client).await.unwrap(),
-        SubCommand::PruneRemoteEmojis(cmd) => cmd.execute(&config, db_client).await.unwrap(),
-        SubCommand::ListLocalFiles(cmd) => cmd.execute(&config, db_client).await.unwrap(),
-        SubCommand::DeleteOrphanedFiles(cmd) => cmd.execute(&config, db_client).await.unwrap(),
-        SubCommand::ListUnreachableActors(cmd) => cmd.execute(&config, db_client).await.unwrap(),
-        SubCommand::CreateMoneroWallet(cmd) => cmd.execute(&config).await.unwrap(),
-        SubCommand::CreateMoneroSignature(cmd) => cmd.execute(&config).await.unwrap(),
-        SubCommand::VerifyMoneroSignature(cmd) => cmd.execute(&config).await.unwrap(),
-        SubCommand::ReopenInvoice(cmd) => cmd.execute(&config, db_client).await.unwrap(),
-        SubCommand::ListActiveAddresses(cmd) => cmd.execute(&config).await.unwrap(),
-        SubCommand::GetPaymentAddress(cmd) => cmd.execute(&config, db_client).await.unwrap(),
-        SubCommand::InstanceReport(cmd) => cmd.execute(&config, db_client).await.unwrap(),
+    let maybe_override_log_level = match opts.subcmd {
+        SubCommand::Server | SubCommand::Worker(_) => {
+            // Do not override log level when running a process
+            None
+        },
+        _ => {
+            Some(opts.log_level)
+        },
     };
+    let mut config = initialize_app(maybe_override_log_level);
+    let mut db_client_value = create_database_client(&config).await;
+    let db_client = &mut db_client_value;
+    initialize_database(&mut config, db_client).await;
+    initialize_storage(&config);
+    log::info!("instance URL {}", config.instance().uri());
+    std::mem::drop(db_client_value);
+
+    let db_pool = create_database_connection_pool(&config);
+    let result = match opts.subcmd {
+        SubCommand::Server => {
+            start_workers(config.clone(), db_pool.clone());
+            let result = run_server(config, db_pool).await;
+            result.map_err(Into::into)
+        },
+        SubCommand::Worker(cmd) => cmd.execute(config, db_pool).await,
+        SubCommand::GetConfig(cmd) => cmd.execute(&db_pool).await,
+        SubCommand::UpdateConfig(cmd) => cmd.execute(&db_pool).await,
+        SubCommand::AddFilterRule(cmd) => cmd.execute(&db_pool).await,
+        SubCommand::RemoveFilterRule(cmd) => cmd.execute(&db_pool).await,
+        SubCommand::ListFilterRules(cmd) => cmd.execute(&db_pool).await,
+        SubCommand::GenerateInviteCode(cmd) => cmd.execute(&db_pool).await,
+        SubCommand::ListInviteCodes(cmd) => cmd.execute(&db_pool).await,
+        SubCommand::CreateAccount(cmd) => cmd.execute(&config, &db_pool).await,
+        SubCommand::ListAccounts(cmd) => cmd.execute(&db_pool).await,
+        SubCommand::SetPassword(cmd) => cmd.execute(&db_pool).await,
+        SubCommand::SetRole(cmd) => cmd.execute(&db_pool).await,
+        SubCommand::RevokeOauthTokens(cmd) => cmd.execute(&db_pool).await,
+        SubCommand::ImportObject(cmd) => cmd.execute(&config, &db_pool).await,
+        SubCommand::ReadOutbox(cmd) => cmd.execute(&config, &db_pool).await,
+        SubCommand::LoadReplies(cmd) => cmd.execute(&config, &db_pool).await,
+        SubCommand::FetchObject(cmd) => cmd.execute(&config, &db_pool).await,
+        SubCommand::Webfinger(cmd) => cmd.execute(&config, &db_pool).await,
+        SubCommand::LoadPortableObject(cmd) => cmd.execute(&config, &db_pool).await,
+        SubCommand::DeleteUser(cmd) => cmd.execute(&config, &db_pool).await,
+        SubCommand::CreatePost(cmd) => cmd.execute(&config, &db_pool).await,
+        SubCommand::ImportPosts(cmd) => cmd.execute(&config, &db_pool).await,
+        SubCommand::DeletePost(cmd) => cmd.execute(&config, &db_pool).await,
+        SubCommand::AddEmoji(cmd) => cmd.execute(&config, &db_pool).await,
+        SubCommand::ImportEmoji(cmd) => cmd.execute(&config, &db_pool).await,
+        SubCommand::DeleteEmoji(cmd) => cmd.execute(&config, &db_pool).await,
+        SubCommand::DeleteExtraneousPosts(cmd) => cmd.execute(&config, &db_pool).await,
+        SubCommand::PruneReposts(cmd) => cmd.execute(&config, &db_pool).await,
+        SubCommand::DeleteUnusedAttachments(cmd) => cmd.execute(&config, &db_pool).await,
+        SubCommand::DeleteEmptyProfiles(cmd) => cmd.execute(&config, &db_pool).await,
+        SubCommand::ListLocalFiles(cmd) => cmd.execute(&config, &db_pool).await,
+        SubCommand::DeleteOrphanedFiles(cmd) => cmd.execute(&config, &db_pool).await,
+        SubCommand::ListUnreachableActors(cmd) => cmd.execute(&config, &db_pool).await,
+        SubCommand::CheckUris(cmd) => cmd.execute(&config, &db_pool).await,
+        SubCommand::CreateMoneroWallet(cmd) => cmd.execute(&config).await,
+        SubCommand::CreateMoneroSignature(cmd) => cmd.execute(&config).await,
+        SubCommand::VerifyMoneroSignature(cmd) => cmd.execute(&config).await,
+        SubCommand::ReopenInvoice(cmd) => cmd.execute(&config, &db_pool).await,
+        SubCommand::RepairInvoice(cmd) => cmd.execute(&config, &db_pool).await,
+        SubCommand::ListActiveAddresses(cmd) => cmd.execute(&config).await,
+        SubCommand::GetPaymentAddress(cmd) => cmd.execute(&config, &db_pool).await,
+        SubCommand::InstanceReport(cmd) => cmd.execute(&config, &db_pool).await,
+    };
+    result
 }

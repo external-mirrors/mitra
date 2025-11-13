@@ -8,7 +8,6 @@ paths:
   /oauth/token:
     post:
       summary: Returns an access token, to be used during API calls that are not public.
-      description: EIP-4361 auth doesn't require blockchain integration.
       requestBody:
         content:
           application/json:
@@ -16,34 +15,39 @@ paths:
               type: object
               properties:
                 grant_type:
+                  description: EIP-4361 auth doesn't require blockchain integration.
                   type: string
                   enum:
                     - authorization_code
                     - password
                     - eip4361
                     - caip122_monero
-                  example: eip4361
+                  example: authorization_code
                 code:
                   description: A user authorization code, obtained via GET /oauth/authorize (required if grant type is "authorization_code").
                   type: string
                   nullable: true
-                  example: null
+                  example: "Vx88sCmDjNUeQE6pkIo9Pn8ajGA"
                 username:
                   description: User name (required if grant type is "password").
                   type: string
+                  nullable: true
                   example: null
                 password:
                   description: Password (required if grant type is "password").
                   type: string
+                  nullable: true
                   example: null
                 message:
                   description: Authentication message (required if grant type is "eip4361" or "caip122_monero").
                   type: string
-                  example: "social.example wants you to sign in with your Ethereum account:"
+                  nullable: true
+                  example: null
                 signature:
                   description: Signature (required if grant type is "eip4361" or "caip122_monero").
                   type: string
-                  example: 0x905...
+                  nullable: true
+                  example: null
               required:
                 - grant_type
       responses:
@@ -55,16 +59,24 @@ paths:
                 type: object
                 properties:
                   access_token:
+                    description: The access token issued by the authorization server.
                     type: string
                   token_type:
+                    description: The OAuth token type.
                     type: string
                     example: Bearer
                   scope:
+                    description: The OAuth scopes granted by this token, space-separated.
                     type: string
                     example: read write follow
                   created_at:
+                    description: When the token was generated (Unix timestamp).
                     type: integer
                     example: 1639747526
+                  expires_in:
+                    description: The lifetime in seconds of the access token.
+                    type: integer
+                    example: 604800
         400:
           description: Invalid token request
   /oauth/revoke:
@@ -182,9 +194,15 @@ paths:
                   description: The media type of header image.
                   type: string
                   nullable: true
+                bot:
+                  description: Whether the account has a bot flag.
+                  type: boolean
+                  default: false
+                  nullable: true
                 locked:
                   description: Whether manual approval of follow requests is required.
                   type: boolean
+                  default: false
                   nullable: true
                 fields_attributes:
                   description: The profile fields to be set.
@@ -202,6 +220,7 @@ paths:
                 mention_policy:
                   description: Mention policy.
                   type: string
+                  nullable: true
                   enum:
                     - none
                     - only_known
@@ -234,6 +253,8 @@ paths:
   /api/v1/accounts/identity_proof:
     get:
       summary: Get unsigned data for identity proof.
+      security:
+        - tokenAuth: []
       parameters:
         - name: proof_type
           in: query
@@ -277,6 +298,8 @@ paths:
           description: Invalid request parameters
     post:
       summary: Submit identity proof.
+      security:
+        - tokenAuth: []
       requestBody:
         content:
           application/json:
@@ -734,11 +757,24 @@ paths:
           description: User not found
   /api/v1/accounts/{account_id}/load_activities:
     post:
-      summary: Load latest activities from outbox.
+      summary: Load remote user's posts.
       security:
         - tokenAuth: []
       parameters:
         - $ref: '#/components/parameters/account_id'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                collection:
+                  description: The source of data.
+                  type: string
+                  enum:
+                    - outbox
+                    - featured
+                  default: outbox
       responses:
         204:
           description: Successful operation
@@ -856,6 +892,16 @@ paths:
           schema:
             type: integer
             default: 40
+        - name: order
+          in: query
+          description: How to sort profiles.
+          required: false
+          schema:
+            type: string
+            enum:
+              - active
+              - username
+            default: active
         - name: local
           in: query
           description: Only return local profiles.
@@ -959,6 +1005,21 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Instance'
+  /api/v1/instance/domain_blocks:
+    get:
+      summary: Obtain a list of domains that have been blocked.
+      security:
+        - tokenAuth: []
+      responses:
+        200:
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                description: List of domains
+                type: array
+                items:
+                  $ref: '#/components/schemas/DomainBlock'
   /api/v2/instance:
     get:
       summary: Information about the instance.
@@ -1084,7 +1145,7 @@ paths:
             schema:
               type: object
               properties:
-                'account_ids[]':
+                account_ids:
                   description: The users that should be added to the custom feed.
                   type: array
                   items:
@@ -1127,6 +1188,62 @@ paths:
           description: Invalid request data.
         404:
           description: Custom feed does not exist or is not owned by you.
+  /api/v1/markers:
+    get:
+      summary: Get current positions in timelines.
+      security:
+        - tokenAuth: []
+      parameters:
+        - name: 'timeline[]'
+          in: query
+          description: 'Specify the timeline(s) for which markers should be fetched. Possible values: home, notifications.'
+          required: false
+          schema:
+            type: array
+            items:
+              type: string
+      responses:
+        200:
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                description: Markers
+                type: object
+                properties:
+                  home:
+                    $ref: '#/components/schemas/Marker'
+                  notifications:
+                    $ref: '#/components/schemas/Marker'
+    post:
+      summary: Save current position in timeline.
+      security:
+        - tokenAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                'home[last_read_id]':
+                  description: ID of the last status read in the home timeline.
+                  type: string
+                'notifications[last_read_id]':
+                  description:  ID of the last notification read.
+                  type: string
+      responses:
+        200:
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                description: Markers
+                type: object
+                properties:
+                  home:
+                    $ref: '#/components/schemas/Marker'
+                  notifications:
+                    $ref: '#/components/schemas/Marker'
   /api/v1/media:
     post:
       summary: Create an attachment to be used with a new post.
@@ -1265,6 +1382,8 @@ paths:
   /api/v1/notifications:
     get:
       summary: Notifications concerning the user.
+      security:
+        - tokenAuth: []
       parameters:
         - name: max_id
           in: query
@@ -1295,6 +1414,31 @@ paths:
               schema:
                 type: string
                 example: '<https://social.example/api/v1/notification?limit=20&max_id=5339>; rel="next"'
+  /api/v1/notifications/clear:
+    post:
+      summary: Clear all notifications from the server.
+      security:
+        - tokenAuth: []
+      responses:
+        200:
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                example: {}
+  /api/v2/notifications/policy:
+    get:
+      summary: Get the filtering policy for notifications.
+      security:
+        - tokenAuth: []
+      responses:
+        200:
+          description: Successful operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationPolicy'
   /api/v1/polls/{poll_id}/votes:
     post:
       summary: Vote on a poll attached to a post.
@@ -1314,7 +1458,7 @@ paths:
             schema:
               type: object
               properties:
-                'choices[]':
+                choices:
                   description: Provide your own votes as an index for each option (starting from 0).
                   type: array
                   items:
@@ -1551,8 +1695,9 @@ paths:
               type: object
               properties:
                 status:
-                  description: Text content of the post.
+                  description: Text content of the post. Can be `null` if a poll or attachments are present.
                   type: string
+                  nullable: true
                 content_type:
                   description: Media type of the post content.
                   type: string
@@ -1560,16 +1705,38 @@ paths:
                   enum:
                     - text/html
                     - text/markdown
-                'media_ids[]':
+                language:
+                  description: ISO 639 language code for this post.
+                  type: string
+                  nullable: true
+                  example: null
+                media_ids:
                   description: Array of Attachment ids to be attached as media.
                   type: array
                   items:
                     type: string
                     format: uuid
+                poll:
+                  description: Poll options
+                  type: object
+                  properties:
+                    options:
+                      description: Possible answers to the poll.
+                      type: array
+                      items:
+                        type: string
+                    expires_in:
+                      description: Duration that the poll should be open, in seconds.
+                      type: integer
+                    multiple:
+                      description: Allow multiple choices?
+                      type: boolean
+                      default: false
                 in_reply_to_id:
                   description: ID of the post being replied to, if post is a reply.
                   type: string
                   format: uuid
+                  nullable: true
                 visibility:
                   allOf:
                     - $ref: '#/components/schemas/Visibility'
@@ -1585,8 +1752,6 @@ paths:
                   type: string
                   format: uuid
                   nullable: true
-              required:
-                - status
       responses:
         200:
           description: Post created
@@ -1670,7 +1835,12 @@ paths:
                   enum:
                     - text/html
                     - text/markdown
-                'media_ids[]':
+                language:
+                  description: ISO 639 language code for this post.
+                  type: string
+                  nullable: true
+                  example: null
+                media_ids:
                   description: Array of Attachment ids to be attached as media.
                   type: array
                   items:
@@ -1830,6 +2000,47 @@ paths:
                 $ref: '#/components/schemas/Status'
         404:
           description: Post does not exist
+  /api/v1/statuses/{status_id}/favourited_by:
+    get:
+      summary: View who liked a given post.
+      security:
+        - tokenAuth: []
+      parameters:
+        - $ref: '#/components/parameters/status_id'
+        - name: max_id
+          in: query
+          description: Return results with repost ID older than this value.
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - name: limit
+          in: query
+          description: Maximum number of results to return.
+          required: false
+          schema:
+            type: integer
+            default: 40
+      responses:
+        200:
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                description: Profile list
+                type: array
+                items:
+                  $ref: '#/components/schemas/Account'
+          headers:
+            Link:
+              description: Link to the next page
+              schema:
+                type: string
+                example: '<https://social.example/api/v1/statuses/123/favourited_by?limit=40&max_id=345>; rel="next"'
+        400:
+          description: Invalid query parameters.
+        404:
+          description: Post does not exist.
   /api/v1/statuses/{status_id}/reblog:
     post:
       summary: Repost a post
@@ -1837,6 +2048,19 @@ paths:
         - tokenAuth: []
       parameters:
         - $ref: '#/components/parameters/status_id'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                visibility:
+                  description: Visibility of the repost.
+                  type: string
+                  enum:
+                    - public
+                    - private
+                  default: public
       responses:
         200:
           description: Successful operation. Returns repost info.
@@ -1862,6 +2086,47 @@ paths:
                 $ref: '#/components/schemas/Status'
         404:
           description: Post does not exist or no repost exists
+  /api/v1/statuses/{status_id}/reblogged_by:
+    get:
+      summary: View who reposted a given post.
+      security:
+        - tokenAuth: []
+      parameters:
+        - $ref: '#/components/parameters/status_id'
+        - name: max_id
+          in: query
+          description: Return results with repost ID older than this value.
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - name: limit
+          in: query
+          description: Maximum number of results to return.
+          required: false
+          schema:
+            type: integer
+            default: 40
+      responses:
+        200:
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                description: Profile list
+                type: array
+                items:
+                  $ref: '#/components/schemas/Account'
+          headers:
+            Link:
+              description: Link to the next page
+              schema:
+                type: string
+                example: '<https://social.example/api/v1/statuses/123/reblogged_by?limit=40&max_id=345>; rel="next"'
+        400:
+          description: Invalid query parameters.
+        404:
+          description: Post does not exist.
   /api/v1/statuses/{status_id}/bookmark:
     post:
       summary: Privately bookmark a post.
@@ -1897,6 +2162,8 @@ paths:
   /api/v1/statuses/{status_id}/pin:
     post:
       summary: Pin post to profile.
+      security:
+        - tokenAuth: []
       parameters:
         - $ref: '#/components/parameters/status_id'
       responses:
@@ -1913,6 +2180,8 @@ paths:
   /api/v1/statuses/{status_id}/unpin:
     post:
       summary: Unpin post from profile.
+      security:
+        - tokenAuth: []
       parameters:
         - $ref: '#/components/parameters/status_id'
       responses:
@@ -2385,9 +2654,35 @@ paths:
                     type: array
                     items:
                       $ref: '#/components/schemas/Tag'
+  /api/v1/pleroma/statuses/{status_id}/reactions:
+    get:
+      summary: View who reacted to the given post.
+      security:
+        - tokenAuth: []
+      parameters:
+        - $ref: '#/components/parameters/status_id'
+      responses:
+        200:
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/EmojiReaction'
+                  - type: object
+                    properties:
+                      accounts:
+                        description: Users who reacted with this emoji.
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Account'
+        404:
+          description: Post does not exist.
   /api/v1/pleroma/statuses/{status_id}/reactions/{content}:
     put:
       summary: Add emoji reaction.
+      security:
+        - tokenAuth: []
       parameters:
         - $ref: '#/components/parameters/status_id'
         - name: content
@@ -2407,6 +2702,8 @@ paths:
           description: Post or custom emoji does not exist.
     delete:
       summary: Remove emoji reaction.
+      security:
+        - tokenAuth: []
       parameters:
         - $ref: '#/components/parameters/status_id'
         - name: content
@@ -2424,6 +2721,44 @@ paths:
                 $ref: '#/components/schemas/Status'
         404:
           description: Post or custom emoji does not exist.
+  /api/v1/admin/accounts/{account_id}:
+    delete:
+      summary: Delete user.
+      security:
+        - tokenAuth: []
+      parameters:
+        - $ref: '#/components/parameters/account_id'
+      responses:
+        204:
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                example: {}
+        403:
+          description: The current user doesn't have a permission to delete other users.
+        404:
+          description: The user doesn't exist.
+  /api/v1/admin/posts/{status_id}:
+    delete:
+      summary: Delete post.
+      security:
+        - tokenAuth: []
+      parameters:
+        - $ref: '#/components/parameters/status_id'
+      responses:
+        204:
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                example: {}
+        403:
+          description: The user doesn't have a permission to delete posts.
+        404:
+          description: Post doesn't exist.
 
 components:
   securitySchemes:
@@ -2485,8 +2820,12 @@ components:
           description: The location of the user's profile page.
           type: string
           example: https://social.example/@user
+        display_name:
+          description: The profile’s display name (plain text).
+          type: string
+          nullable: true
         note:
-          description: The profile’s bio or description.
+          description: The profile’s bio or description (HTML).
           type: string
         avatar:
           description: An image icon that is shown next to posts and in the profile.
@@ -2509,6 +2848,10 @@ components:
           description: Indicates that the account may perform automated actions, may not be monitored, or identifies as a robot.
           type: boolean
           example: false
+        discoverable:
+          description: Whether the use has opted into discovery features such as the profile directory.
+          type: boolean
+          example: true
         identity_proofs:
           description: Identity proofs.
           type: array
@@ -2540,7 +2883,12 @@ components:
                 example: null
               price:
                 description: Subscription price (only for monero-subscription type).
-                type: number
+                type: integer
+                nullable: true
+                example: null
+              amount_min:
+                description: Minimum payment amount (only for monero-subscription type).
+                type: integer
                 nullable: true
                 example: null
               object_id:
@@ -2579,6 +2927,19 @@ components:
                 note:
                   description: Profile bio.
                   type: string
+                fields:
+                  description: Metadata about the account.
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/Field'
+                privacy:
+                  description: The default post privacy to be used for new posts.
+                  type: string
+                  example: public
+                sensitive:
+                  description: Whether new posts should be marked sensitive by default.
+                  type: boolean
+                  example: false
             role:
               description: The role assigned to the currently authorized user.
               $ref: '#/components/schemas/Role'
@@ -2631,9 +2992,19 @@ components:
           description: The website associated with your application.
           type: string
           nullable: true
+        scopes:
+          description: The scopes for the application.
+          type: array
+          items:
+            type: string
         redirect_uri:
-          description: Where the user should be redirected after authorization.
+          description: Where the user should be redirected after authorization (deprecated).
           type: string
+        redirect_uris:
+          description: The registered redirection URI(s) for the application.
+          type: array
+          items:
+            type: string
     Attachment:
       type: object
       properties:
@@ -2656,7 +3027,7 @@ components:
           description: The location of a scaled-down preview of the attachment.
           type: string
         description:
-          description: Alternate text that describes what is in the media attachment, to be used for the visually impaired or when media attachments do not load.
+          description: Alternate text that describes what is in the media attachment, to be used for the visually impaired or when media attachments do not load (plain text).
           type: string
           nullable: true
           example: null
@@ -2681,14 +3052,51 @@ components:
         visible_in_picker:
           description: Whether this Emoji should be visible in the picker or unlisted.
           type: boolean
+    DomainBlock:
+      description: Represents a domain that is blocked by the instance.
+      type: object
+      properties:
+        domain:
+          description: The domain which is blocked. May contain wildcards.
+          type: string
+        digest:
+          description: The SHA-256 digest of the domain string.
+          type: string
+        severity:
+          description: The level to which the domain is blocked.
+          type: string
+          example: suspend
+        comment:
+          description: An optional reason for the domain block.
+          type: string
+          nullable: true
+          example: null
+    EmojiReaction:
+      description: Emoji reaction.
+      type: object
+      properties:
+        name:
+          description: The emoji name.
+          type: string
+        url:
+          description: A link to the custom emoji.
+          type: string
+          nullable: true
+        count:
+          description: The total number of reactions of this type.
+          type: number
+          example: 1
+        me:
+          description: Has current user reacted with this emoji?
+          type: boolean
     Field:
       type: object
       properties:
         name:
-          description: The key of a given field's key-value pair.
+          description: The key of a given field's key-value pair (plain text).
           type: string
         value:
-          description: The value associated with the name key.
+          description: The value associated with the name key (HTML).
           type: string
         verified_at:
           description: Timestamp of when the server verified the field value.
@@ -2740,7 +3148,7 @@ components:
           description: The title of the website.
           type: string
         short_description:
-          description: A short description defined by the admin.
+          description: A short description defined by the admin (plain text).
           type: string
         description:
           description: Admin-defined description of the site (HTML).
@@ -2842,7 +3250,15 @@ components:
               chain_metadata:
                 description: Additional information about blockchain
                 type: object
-                nullable: true
+                properties:
+                  description:
+                    description: Description of a payment method (HTML).
+                    type: string
+                    nullable: true
+                  payment_amount_min:
+                    description: Minimum payment amount (in piconero).
+                    type: integer
+                    nullable: false
               features:
                 description: Blockchain features.
                 type: object
@@ -3009,6 +3425,19 @@ components:
         exclusive:
           description: Are feed sources hidden from the home timeline?
           type: boolean
+    Marker:
+      type: object
+      properties:
+        last_read_id:
+          description: The ID of the most recently viewed entity.
+          type: string
+        version:
+          description: An incrementing counter, used for locking to prevent write conflicts.
+          type: number
+        updated_at:
+          description: The timestamp of when the marker was set.
+          type: string
+          format: dateTime
     Mention:
       type: object
       properties:
@@ -3080,6 +3509,25 @@ components:
           description: The timestamp of the notification.
           type: string
           format: date-time
+    NotificationPolicy:
+      type: object
+      properties:
+        for_not_following:
+          description: Whether to accept or drop notifications from accounts the user is not following.
+          type: string
+          example: accept
+        for_not_followers:
+          description: Whether to accept or drop notifications from accounts that are not following the user.
+          type: string
+          example: accept
+        for_new_accounts:
+          description: Whether to accept or drop notifications from accounts created in the past 30 days.
+          type: string
+          example: accept
+        for_private_mentions:
+          description: Whether to accept or drop notifications from direct messages.
+          type: string
+          example: accept
     Poll:
       type: object
       properties:
@@ -3091,6 +3539,7 @@ components:
           description: When the poll ends.
           type: string
           format: date-time
+          nullable: true
         expired:
           description: Has the poll expired?
           type: boolean
@@ -3129,7 +3578,7 @@ components:
       type: object
       properties:
         title:
-          description: The text value of the poll option.
+          description: The text value of the poll option (HTML).
           type: string
         votes_count:
           description: The total number of received votes for this option.
@@ -3208,6 +3657,10 @@ components:
             - admin
             - read_only_user
         permissions:
+          description: A bitmask that represents the sum of all permissions granted to the role.
+          type: string
+          example: '0'
+        permissions_names:
           description: A list of all permissions granted to the role.
           type: array
           items:
@@ -3245,6 +3698,10 @@ components:
         content:
           description: HTML-encoded post content.
           type: string
+        language:
+          description: Primary language of this post (ISO 639 Part 1 two-letter language code).
+          type: string
+          nullable: true
         visibility:
           description: Visibility of this post.
           $ref: '#/components/schemas/Visibility'
@@ -3269,6 +3726,21 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Attachment'
+        quote:
+          description: Information about the post being quoted, if any.
+          type: object
+          properties:
+            state:
+              description: The state of the quote.
+              type: string
+              enum:
+                - accepted
+            quoted_status:
+              allOf:
+                - $ref: '#/components/schemas/Status'
+                - description: The post being quoted.
+          nullable: true
+          example: null
         mentions:
           description: Mentions of users within the post.
           type: array
@@ -3318,6 +3790,10 @@ components:
           description: Have you bookmarked this post?
           type: boolean
           example: false
+        hidden:
+          description: Is this post hidden? A linked (quoted) post can be hidden if its author is muted.
+          type: boolean
+          example: false
         pleroma:
           description: Additional Pleroma API attributes.
           type: object
@@ -3326,29 +3802,12 @@ components:
               description: The list of emoji reactions.
               type: array
               items:
-                description: Emoji reaction.
-                type: object
-                properties:
-                  account_ids:
-                    description: The list of users who sent this reaction.
-                    type: array
-                    items:
-                      type: string
-                      format: uuid
-                  me:
-                    description: Has current user reacted with this emoji?
-                    type: boolean
-                  count:
-                    description: The total number of reactions of this type.
-                    type: number
-                  name:
-                    description: The emoji name.
-                    type: string
-                  url:
-                    description: A link to the custom emoji.
-                    type: string
-                    nullable: true
+                $ref: '#/components/schemas/EmojiReaction'
               example: []
+            in_reply_to_account_acct:
+              description: The acct attribute of the user that authored the post being replied to.
+              type: string
+              nullable: true
             parent_visible:
               description: If the parent of this post is visible to the user or not.
               type: boolean

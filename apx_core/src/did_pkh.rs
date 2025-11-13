@@ -1,4 +1,6 @@
-/// https://github.com/w3c-ccg/did-pkh/blob/main/did-pkh-method-draft.md
+//! did:pkh method
+//!
+//! <https://github.com/w3c-ccg/did-pkh/blob/main/did-pkh-method-draft.md>
 use std::fmt;
 use std::str::FromStr;
 
@@ -36,6 +38,11 @@ impl DidPkh {
     pub fn chain_id(&self) -> ChainId {
         self.account_id.chain_id.clone()
     }
+
+    /// Returns ID of the verification method
+    pub fn verification_method_id(&self) -> String {
+        format!("{self}#blockchainAccountId")
+    }
 }
 
 impl fmt::Display for DidPkh {
@@ -61,12 +68,21 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_did_pkh_string_conversion() {
+    fn test_from_ethereum_address() {
         let address = "0xB9C5714089478a327F09197987f16f9E5d936E8a";
         let did = DidPkh::from_ethereum_address(address);
         assert_eq!(did.chain_id(), ChainId::ethereum_mainnet());
         assert_eq!(did.address(), address.to_lowercase());
+        assert_eq!(
+            did.verification_method_id(),
+            "did:pkh:eip155:1:0xb9c5714089478a327f09197987f16f9e5d936e8a#blockchainAccountId",
+        );
+    }
 
+    #[test]
+    fn test_did_pkh_string_conversion() {
+        let address = "0xB9C5714089478a327F09197987f16f9E5d936E8a";
+        let did = DidPkh::from_ethereum_address(address);
         let did_str = did.to_string();
         assert_eq!(
             did_str,

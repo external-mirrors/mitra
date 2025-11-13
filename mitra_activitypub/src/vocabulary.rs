@@ -23,13 +23,16 @@ pub const UPDATE: &str = "Update";
 pub const APPLICATION: &str = "Application";
 pub const GROUP: &str = "Group";
 pub const PERSON: &str = "Person";
+pub const SERVICE: &str = "Service";
 
 // Object types
+pub const ARTICLE: &str = "Article";
 pub const AUDIO: &str = "Audio";
 pub const DOCUMENT: &str = "Document";
 pub const IMAGE: &str = "Image";
 pub const NOTE: &str = "Note";
 pub const QUESTION: &str = "Question";
+pub const PAGE: &str = "Page";
 pub const TOMBSTONE: &str = "Tombstone";
 pub const VIDEO: &str = "Video";
 
@@ -48,6 +51,7 @@ pub const INTENT: &str = "Intent";
 pub const PROPOSAL: &str = "Proposal";
 
 // Misc
+pub const CHAT_MESSAGE: &str = "ChatMessage"; // Pleroma
 pub const EMOJI: &str = "Emoji";
 pub const HASHTAG: &str = "Hashtag";
 pub const LOCK: &str = "Lock"; // Lemmy

@@ -10,6 +10,7 @@ use mitra_utils::id::generate_ulid;
 
 use crate::{
     contexts::{build_default_context, Context},
+    deliverer::Recipient,
     identifiers::{
         compatible_id,
         local_activity_id,
@@ -35,14 +36,14 @@ struct AcceptFollow {
 }
 
 fn build_accept_follow(
-    instance_url: &str,
+    instance_uri: &str,
     actor_profile: &DbActorProfile,
     source_actor_id: &str,
     follow_activity_id: &str,
 ) -> AcceptFollow {
     // Accept(Follow) is idempotent so its ID can be random
-    let activity_id = local_activity_id(instance_url, ACCEPT, generate_ulid());
-    let actor_id = local_actor_id(instance_url, &actor_profile.username);
+    let activity_id = local_activity_id(instance_uri, ACCEPT, generate_ulid());
+    let actor_id = local_actor_id(instance_uri, &actor_profile.username);
     AcceptFollow {
         context: build_default_context(),
         activity_type: ACCEPT.to_string(),
@@ -65,14 +66,14 @@ pub fn prepare_accept_follow(
         follow_activity_id,
     )?;
     let activity = build_accept_follow(
-        &instance.url(),
+        instance.uri_str(),
         &sender.profile,
         &source_actor_id,
         &follow_activity_id,
     );
-    let recipients = vec![source_actor.clone()];
+    let recipients = Recipient::for_inbox(source_actor);
     Ok(OutgoingActivityJobData::new(
-        &instance.url(),
+        instance.uri_str(),
         sender,
         activity,
         recipients,
@@ -83,7 +84,7 @@ pub fn prepare_accept_follow(
 mod tests {
     use super::*;
 
-    const INSTANCE_URL: &str = "https://social.example";
+    const INSTANCE_URI: &str = "https://social.example";
 
     #[test]
     fn test_build_accept_follow() {
@@ -91,13 +92,13 @@ mod tests {
         let follow_activity_id = "https://remote.example/objects/999";
         let follower_id = "https://remote.example/users/123";
         let activity = build_accept_follow(
-            INSTANCE_URL,
+            INSTANCE_URI,
             &target,
             follower_id,
             follow_activity_id,
         );
 
-        assert_eq!(activity.id.starts_with(INSTANCE_URL), true);
+        assert_eq!(activity.id.starts_with(INSTANCE_URI), true);
         assert_eq!(activity.activity_type, "Accept");
         assert_eq!(activity.object, follow_activity_id);
         assert_eq!(activity.to, vec![follower_id]);

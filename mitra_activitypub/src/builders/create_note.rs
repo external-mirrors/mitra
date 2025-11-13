@@ -1,9 +1,10 @@
+use apx_core::url::http_uri::HttpUri;
 use serde::Serialize;
 
 use mitra_config::Instance;
 use mitra_models::{
     database::{DatabaseClient, DatabaseError},
-    posts::types::Post,
+    posts::types::PostDetailed,
     users::types::User,
 };
 use mitra_services::media::MediaServer;
@@ -35,25 +36,25 @@ pub struct CreateNote {
 }
 
 pub fn build_create_note(
-    instance_hostname: &str,
-    instance_url: &str,
+    instance_uri: &HttpUri,
     media_server: &MediaServer,
-    post: &Post,
-    fep_e232_enabled: bool,
+    post: &PostDetailed,
 ) -> CreateNote {
-    let authority = Authority::server(instance_url);
+    let authority = Authority::server(instance_uri);
     let object = build_note(
-        instance_hostname,
-        instance_url,
+        instance_uri,
         &authority,
         media_server,
         post,
-        fep_e232_enabled,
         false,
     );
     let primary_audience = object.to.clone();
     let secondary_audience = object.cc.clone();
-    let activity_id = local_activity_id(instance_url, CREATE, post.id);
+    let activity_id = local_activity_id(
+        instance_uri.as_str(),
+        CREATE,
+        post.id,
+    );
     CreateNote {
         _context: build_default_context(),
         activity_type: CREATE.to_string(),
@@ -70,20 +71,17 @@ pub async fn prepare_create_note(
     instance: &Instance,
     media_server: &MediaServer,
     author: &User,
-    post: &Post,
-    fep_e232_enabled: bool,
+    post: &PostDetailed,
 ) -> Result<OutgoingActivityJobData, DatabaseError> {
     assert_eq!(author.id, post.author.id);
     let activity = build_create_note(
-        &instance.hostname(),
-        &instance.url(),
+        instance.uri(),
         media_server,
         post,
-        fep_e232_enabled,
     );
     let recipients = get_note_recipients(db_client, post).await?;
     Ok(OutgoingActivityJobData::new(
-        &instance.url(),
+        instance.uri_str(),
         author,
         activity,
         recipients,
@@ -93,34 +91,39 @@ pub async fn prepare_create_note(
 #[cfg(test)]
 mod tests {
     use apx_sdk::constants::AP_PUBLIC;
-    use mitra_models::profiles::types::DbActorProfile;
+    use mitra_models::{
+        posts::types::RelatedPosts,
+        profiles::types::DbActorProfile,
+    };
     use super::*;
 
-    const INSTANCE_HOSTNAME: &str = "example.com";
-    const INSTANCE_URL: &str = "https://example.com";
+    const INSTANCE_URI: &str = "https://example.com";
 
     #[test]
     fn test_build_create_note() {
-        let media_server = MediaServer::for_test(INSTANCE_URL);
+        let instance_uri = HttpUri::parse(INSTANCE_URI).unwrap();
+        let media_server = MediaServer::for_test(INSTANCE_URI);
         let author_username = "author";
         let author = DbActorProfile::local_for_test(author_username);
-        let post = Post { author, ..Default::default() };
+        let post = PostDetailed {
+            author,
+            related_posts: Some(RelatedPosts::default()),
+            ..Default::default()
+        };
         let activity = build_create_note(
-            INSTANCE_HOSTNAME,
-            INSTANCE_URL,
+            &instance_uri,
             &media_server,
             &post,
-            false,
         );
 
         assert_eq!(
             activity.id,
-            format!("{}/activities/create/{}", INSTANCE_URL, post.id),
+            format!("{}/activities/create/{}", INSTANCE_URI, post.id),
         );
         assert_eq!(activity.activity_type, CREATE);
         assert_eq!(
             activity.actor,
-            format!("{}/users/{}", INSTANCE_URL, author_username),
+            format!("{}/users/{}", INSTANCE_URI, author_username),
         );
         assert_eq!(activity.to, vec![AP_PUBLIC]);
         assert_eq!(activity.object._context, None);

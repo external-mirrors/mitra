@@ -1,20 +1,20 @@
-use std::fs::remove_file;
-
-use log::Level;
-
 use apx_core::{
-    crypto_eddsa::{
-        ed25519_secret_key_from_bytes,
-        generate_ed25519_key,
-        Ed25519SecretKey,
-    },
-    crypto_rsa::{
-        generate_rsa_key,
-        rsa_secret_key_from_pkcs1_der,
-        rsa_secret_key_to_pkcs1_der,
-        RsaSecretKey,
+    crypto::{
+        eddsa::{
+            ed25519_secret_key_from_bytes,
+            generate_ed25519_key,
+            Ed25519SecretKey,
+        },
+        rsa::{
+            generate_rsa_key,
+            rsa_secret_key_from_pkcs1_der,
+            rsa_secret_key_to_pkcs1_der,
+            RsaSecretKey,
+        },
     },
 };
+use log::Level;
+
 use mitra_config::{
     parse_config,
     Config,
@@ -23,10 +23,14 @@ use mitra_config::{
 };
 use mitra_models::{
     database::{
+        connect,
+        migrate::apply_migrations,
+        utils::get_postgres_version,
+        BasicDatabaseClient,
         DatabaseClient,
+        DatabaseConnectionPool,
         DatabaseError,
         DatabaseTypeError,
-        utils::get_postgres_version,
     },
     properties::constants::{
         INSTANCE_ED25519_SECRET_KEY,
@@ -36,8 +40,8 @@ use mitra_models::{
         get_internal_property,
         set_internal_property,
     },
-    users::helpers::add_ed25519_keys,
 };
+use mitra_services::media::MediaStorage;
 
 use crate::logger::configure_logger;
 
@@ -60,25 +64,39 @@ pub fn initialize_app(
     config
 }
 
-pub async fn check_postgres_version(
+// Panics on errors
+pub async fn create_database_client(config: &Config) -> BasicDatabaseClient {
+    connect::create_database_client(
+        &config.database_url,
+        config.database_tls_ca_file.as_deref(),
+    ).await.expect("failed to connect to database")
+}
+
+// Panics on errors
+pub fn create_database_connection_pool(config: &Config)
+    -> DatabaseConnectionPool
+{
+    // https://wiki.postgresql.org/wiki/Number_Of_Database_Connections
+    // https://docs.rs/deadpool/0.10.0/src/deadpool/managed/config.rs.html#54
+    let db_pool_size = config.database_connection_pool_size
+        .unwrap_or(num_cpus::get_physical() * 2);
+    log::info!("database connection pool size: {db_pool_size}");
+    let db_pool = connect::create_database_connection_pool(
+        &config.database_url,
+        config.database_tls_ca_file.as_deref(),
+        db_pool_size,
+    ).expect("failed to connect to database");
+    db_pool
+}
+
+async fn check_postgres_version(
     db_client: &impl DatabaseClient,
 ) -> Result<(), DatabaseError> {
     let version = get_postgres_version(db_client).await?;
-    if version < 130_000 {
+    if version < 150_000 {
         log::error!("unsupported PostgreSQL version: {version}");
     } else {
         log::info!("PostgreSQL version: {version}");
-    };
-    Ok(())
-}
-
-pub async fn apply_custom_migrations(
-    db_client: &impl DatabaseClient,
-) -> Result<(), DatabaseError> {
-    // TODO: remove migration
-    let updated_count = add_ed25519_keys(db_client).await?;
-    if updated_count > 0 {
-        log::info!("generated ed25519 keys for {updated_count} users");
     };
     Ok(())
 }
@@ -138,24 +156,43 @@ async fn prepare_instance_ed25519_key(
     Ok(secret_key)
 }
 
-pub async fn prepare_instance_keys(
+async fn prepare_instance_keys(
     config: &mut Config,
     db_client: &impl DatabaseClient,
 ) -> Result<(), DatabaseError> {
-    if let Some(instance_rsa_key) = config.get_instance_rsa_key() {
-        save_instance_rsa_key(db_client, instance_rsa_key).await?;
-        log::warn!("instance RSA key copied from file");
-        let secret_key_path = config.storage_dir.join("instance_rsa_key");
-        remove_file(secret_key_path)
-            .expect("can't delete instance_rsa_key file");
-        log::warn!("instance_rsa_key file deleted");
-    } else {
-        let instance_rsa_key = prepare_instance_rsa_key(db_client).await?;
-        config.set_instance_rsa_key(instance_rsa_key);
-    };
+    let instance_rsa_key = prepare_instance_rsa_key(db_client).await?;
+    config.set_instance_rsa_key(instance_rsa_key);
     let instance_ed25519_key = prepare_instance_ed25519_key(db_client).await?;
     config.set_instance_ed25519_key(instance_ed25519_key);
     Ok(())
+}
+
+// Panics on errors
+pub async fn initialize_database(
+    config: &mut Config,
+    db_client: &mut BasicDatabaseClient,
+) -> () {
+    check_postgres_version(db_client).await
+        .expect("failed to verify PostgreSQL version");
+    apply_migrations(db_client).await
+        .expect("failed to apply migrations");
+    prepare_instance_keys(config, db_client).await
+        .expect("failed to prepare instance keys");
+}
+
+// Panics on errors
+pub fn initialize_storage(
+    config: &Config,
+) -> () {
+    let media_storage = MediaStorage::new(config);
+    match media_storage {
+        MediaStorage::Filesystem(ref backend) => {
+            backend.init().expect("failed to create media directory");
+        },
+        MediaStorage::S3(_) => {
+            // Do nothing
+        },
+    };
 }
 
 #[cfg(test)]

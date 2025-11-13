@@ -1,21 +1,22 @@
 [package]
 name = "apx_core"
 description = "APx core primitives"
-version = "0.7.0"
+version = "0.20.0"
 license.workspace = true
+repository = "https://codeberg.org/silverpill/mitra/src/branch/main/apx_core"
 
 edition.workspace = true
 rust-version.workspace = true
 
 [dependencies]
 # Used for working with RSA keys, HTTP signatures
-base64_ext = { package = "base64", version = "0.21.4" }
+base64_ext = { package = "base64", version = "0.22.1" }
 # Used to verify minisign signatures
-blake2 = "0.10.5"
+blake2 = { version = "0.10.5", optional = true }
 # Used to decode base58btc
-bs58 = "0.4.0"
+bs58 = "0.5.1"
 # Used for working with dates
-chrono = { version = "0.4.31", default-features = false, features = ["std", "serde", "clock"] }
+chrono = { version = "0.4.34", default-features = false, features = ["std", "serde", "clock"] }
 # Used for working with EdDSA signatures
 ed25519-dalek = { version = "2.0.0", features = ["pem", "pkcs8", "rand_core"] }
 # Used to work with hexadecimal strings
@@ -24,14 +25,13 @@ hex = "0.4.3"
 http_0_2 = { package = "http", version = "0.2.9" }
 http = "1.1.0"
 # Used for working with IDNs
-idna = "1.0.0"
-# Choose unicode backend for idna
-# https://github.com/hsivonen/idna_adapter
-idna_adapter = "=1.1.0"
+idna = "1.0.3"
+# Order-preserving hashmap
+indexmap = "2.2.3"
 # Used to guess media type of a file
-infer = "0.13.0"
+infer = "0.19.0"
 # Used for working with URIs
-iri-string = { version = "0.7.6", features = ["serde"] }
+iri-string = { version = "0.7.8", features = ["serde"] }
 # Used for working with ECDSA signatures
 k256 = { version = "0.13.0", default-features = false, features = ["std", "ecdsa"] }
 # Used to generate random numbers
@@ -39,13 +39,15 @@ rand = "0.8.4"
 # Used for working with regular expressions
 regex = "1.10.6"
 # Used for working with RSA keys
-rsa = "0.9.2"
-pem = "2.0.1"
+rsa = "0.9.7"
+pem = "3.0.4"
 # Used for serialization/deserialization
-serde = { version = "1.0.136", features = ["derive"] }
-serde_json = "1.0.89"
+serde = { version = "1.0.186", features = ["derive"] }
+serde_json = "1.0.120"
 # Used to create JCS representations
-serde_json_canonicalizer = "0.2.0"
+serde_json_canonicalizer = "0.3.1"
+# Used to parse Structured Field Values
+sfv = "0.10.4"
 # Used to calculate SHA2 hashes
 sha2 = { version = "0.10.6", features = ["oid"] }
 # Used to calculate keccak-256 hashes
@@ -56,9 +58,20 @@ thiserror = "1.0.37"
 unsigned-varint = "0.7.1"
 # Used to work with URLs
 url = "2.5.0"
-percent-encoding = "*"
+percent-encoding = "2.3.1"
+
+[target.wasm32-unknown-unknown.dependencies]
+# https://docs.rs/getrandom/#webassembly-support
+getrandom =  { version = "0.2", features = ["js"] }
 
 [features]
+caip = []
+did-pkh = ["caip"]
+eip191 = ["did-pkh"]
+minisign = ["blake2"]
+
+experiments = ["caip", "did-pkh", "eip191", "minisign"]
+
 test-utils = ["rand/small_rng"]
 
 [lints]

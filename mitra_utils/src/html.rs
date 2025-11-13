@@ -17,7 +17,7 @@ use html5ever::serialize::{serialize, SerializeOpts};
 
 pub use ammonia::{clean_text as escape_html};
 
-pub(crate) const URI_SCHEMES: [&str; 10] = [
+pub(crate) const URI_SCHEMES: [&str; 11] = [
     // https://docs.rs/ammonia/3.3.0/ammonia/struct.Builder.html#method.url_schemes
     "bitcoin",
     "http",
@@ -30,6 +30,8 @@ pub(crate) const URI_SCHEMES: [&str; 10] = [
     "gemini",
     "monero",
     "mumble",
+    // Experimental (could be removed in the future)
+    "nex", // https://nex.nightfall.city/nex/info/
 ];
 
 fn document_to_node(document: &Document) -> Handle {
@@ -224,12 +226,13 @@ fn html_to_text(html: &str) -> String {
 }
 
 pub fn extract_title(html: &str, length: usize) -> String {
+    // Does not escape HTML
     let first_line = html_to_text(html)
         .lines()
         .map(|line| line.trim())
         .find(|line| !line.is_empty())
-        .map(|line| line.to_string())
-        .unwrap_or("-".to_string());
+        .map(|line| line.to_owned())
+        .unwrap_or("-".to_owned());
     let mut title: String = first_line
         .chars()
         .take(length)
@@ -313,6 +316,17 @@ mod tests {
     }
 
     #[test]
+    fn test_clean_html_gemini_link() {
+        let unsafe_html = r#"<p>test <a href="gemini://geminispace.info">gemini://geminispace.info</a>.</p>"#;
+        let expected_safe_html = r#"<p>test <a href="gemini://geminispace.info" rel="noopener">gemini://geminispace.info</a>.</p>"#;
+        let safe_html = clean_html(
+            unsafe_html,
+            allowed_classes(),
+        );
+        assert_eq!(safe_html, expected_safe_html);
+    }
+
+    #[test]
     fn test_clean_html_strict() {
         let unsafe_html = r#"<p><span class="h-card"><a href="https://example.com/user" class="u-url mention" rel="ugc">@<span>user</span></a></span> test <b>bold</b><script>dangerous</script> with a <a href="https://server.example/tag" rel="tag">tag</a>, <a href="https://example.com" target="_blank" rel="noopener">link</a> and <code>code</code></p>"#;
         let safe_html = clean_html_strict(
@@ -343,9 +357,23 @@ mod tests {
     }
 
     #[test]
+    fn test_clean_html_all_reserved_chars() {
+        let html = r#"<p>test&!?</p>"#;
+        let text = clean_html_all(html);
+        assert_eq!(text, "test&amp;!?");
+    }
+
+    #[test]
     fn test_html_to_text() {
         let html = r#"<h1>heading</h1><p>next line</p>"#;
         let text = html_to_text(html);
         assert_eq!(text, "heading\n\nnext line\n");
+    }
+
+    #[test]
+    fn test_extract_title() {
+        let html = r#"<p>title<br>text</p>"#;
+        let title = extract_title(html, 75);
+        assert_eq!(title, "title");
     }
 }

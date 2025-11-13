@@ -1,17 +1,24 @@
-use serde::Deserialize;
-use serde_json::Value;
-
 use apx_sdk::{
-    deserialization::{deserialize_into_object_id, get_object_id},
+    deserialization::{deserialize_into_object_id, object_to_id},
 };
+use serde::Deserialize;
+use serde_json::{Value as JsonValue};
+
 use mitra_config::Config;
 use mitra_models::{
-    database::{DatabaseClient, DatabaseError},
+    database::{
+        db_client_await,
+        get_database_client,
+        DatabaseConnectionPool,
+        DatabaseError,
+    },
     posts::queries::{
         delete_repost,
+        get_post_by_id,
         get_remote_repost_by_activity_id,
     },
     profiles::queries::{
+        get_profile_by_id,
         get_remote_profile_by_actor_id,
     },
     reactions::queries::{
@@ -19,15 +26,17 @@ use mitra_models::{
         get_remote_reaction_by_activity_id,
     },
     relationships::queries::{
-        get_follow_request_by_activity_id,
+        get_follow_request_by_remote_activity_id,
         unfollow,
     },
-    users::queries::get_user_by_name,
 };
 use mitra_validators::errors::ValidationError;
 
 use crate::{
-    identifiers::{canonicalize_id, parse_local_actor_id},
+    builders::add_context_activity::sync_conversation,
+    c2s::followers::remove_follower,
+    identifiers::canonicalize_id,
+    importers::{ActorIdResolver, ApClient},
     vocabulary::{ANNOUNCE, FOLLOW, LIKE},
 };
 
@@ -36,31 +45,36 @@ use super::{Descriptor, HandlerResult};
 #[derive(Deserialize)]
 struct UndoFollow {
     actor: String,
-    object: Value,
+    object: JsonValue,
 }
 
 /// Special handler for Undo with embedded Follow
 async fn handle_undo_follow(
-    config: &Config,
-    db_client: &mut impl DatabaseClient,
-    activity: Value,
+    ap_client: &ApClient,
+    db_pool: &DatabaseConnectionPool,
+    activity: JsonValue,
 ) -> HandlerResult {
-    let activity: UndoFollow = serde_json::from_value(activity)?;
-    let canonical_actor_id = canonicalize_id(&activity.actor)?;
+    let undo: UndoFollow = serde_json::from_value(activity)?;
+    let canonical_actor_id = canonicalize_id(&undo.actor)?;
     let source_profile = get_remote_profile_by_actor_id(
-        db_client,
+        db_client_await!(db_pool),
         &canonical_actor_id.to_string(),
     ).await?;
     // Use object because activity ID might not be present
-    let target_actor_id = get_object_id(&activity.object["object"])
+    let target_actor_id = object_to_id(&undo.object["object"])
         .map_err(|_| ValidationError("invalid follow activity object"))?;
-    let target_username = parse_local_actor_id(
-        &config.instance_url(),
+    let target_profile = ActorIdResolver::default().resolve(
+        ap_client,
+        db_pool,
         &target_actor_id,
-    )?;
-    let target_user = get_user_by_name(db_client, &target_username).await?;
-    match unfollow(db_client, source_profile.id, target_user.id).await {
-        Ok(_) => (),
+    ).await?;
+    let db_client = &mut **get_database_client(db_pool).await?;
+    match unfollow(db_client, source_profile.id, target_profile.id).await {
+        Ok(_) => {
+            if target_profile.has_portable_account() {
+                remove_follower(db_client, &source_profile, &target_profile).await?;
+            };
+        },
         // Ignore Undo if relationship doesn't exist
         Err(DatabaseError::NotFound(_)) => return Ok(None),
         Err(other_error) => return Err(other_error.into()),
@@ -77,23 +91,26 @@ struct Undo {
 
 pub async fn handle_undo(
     config: &Config,
-    db_client: &mut impl DatabaseClient,
-    activity: Value,
+    db_pool: &DatabaseConnectionPool,
+    activity: JsonValue,
 ) -> HandlerResult {
+    let ap_client = ApClient::new_with_pool(config, db_pool).await?;
     if let Some(FOLLOW) = activity["object"]["type"].as_str() {
         // Undo() with nested follow activity
-        return handle_undo_follow(config, db_client, activity).await;
+        return handle_undo_follow(&ap_client, db_pool, activity).await;
     };
 
-    let activity: Undo = serde_json::from_value(activity)?;
-    let canonical_actor_id = canonicalize_id(&activity.actor)?;
-    let actor_profile = get_remote_profile_by_actor_id(
-        db_client,
+    let undo: Undo = serde_json::from_value(activity.clone())?;
+    let canonical_actor_id = canonicalize_id(&undo.actor)?;
+    let actor_profile = ActorIdResolver::default().only_remote().resolve(
+        &ap_client,
+        db_pool,
         &canonical_actor_id.to_string(),
     ).await?;
-    let canonical_object_id = canonicalize_id(&activity.object)?;
+    let canonical_object_id = canonicalize_id(&undo.object)?;
 
-    match get_follow_request_by_activity_id(
+    let db_client = &mut **get_database_client(db_pool).await?;
+    match get_follow_request_by_remote_activity_id(
         db_client,
         &canonical_object_id.to_string(),
     ).await {
@@ -107,6 +124,10 @@ pub async fn handle_undo(
                 follow_request.source_id,
                 follow_request.target_id,
             ).await?;
+            let target = get_profile_by_id(db_client, follow_request.target_id).await?;
+            if target.has_portable_account() {
+                remove_follower(db_client, &actor_profile, &target).await?;
+            };
             return Ok(Some(Descriptor::object(FOLLOW)));
         },
         Err(DatabaseError::NotFound(_)) => (), // try other object types
@@ -122,11 +143,19 @@ pub async fn handle_undo(
             if reaction.author_id != actor_profile.id {
                 return Err(ValidationError("actor is not an author").into());
             };
+            let post = get_post_by_id(db_client, reaction.post_id).await?;
             delete_reaction(
                 db_client,
                 reaction.author_id,
                 reaction.post_id,
                 reaction.content.as_deref(),
+            ).await?;
+            sync_conversation(
+                db_client,
+                &ap_client.instance,
+                post.expect_conversation(),
+                activity,
+                reaction.visibility,
             ).await?;
             Ok(Some(Descriptor::object(LIKE)))
         },

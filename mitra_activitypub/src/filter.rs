@@ -1,11 +1,15 @@
+use apx_core::url::http_uri::Hostname;
 use wildmatch::WildMatch;
 
-use apx_core::{
-    http_url::{HttpUrl, Hostname},
-};
 use mitra_config::Config;
 use mitra_models::{
-    database::{DatabaseClient, DatabaseError, DatabaseTypeError},
+    database::{
+        get_database_client,
+        DatabaseClient,
+        DatabaseConnectionPool,
+        DatabaseError,
+        DatabaseTypeError,
+    },
     filter_rules::{
         queries::get_filter_rules,
         types::{FilterRule, FilterAction},
@@ -13,7 +17,9 @@ use mitra_models::{
     profiles::types::DbActor,
 };
 
-// Return DatabaseError if actor data is not valid
+use crate::utils::parse_http_url_from_db;
+
+// Returns DatabaseError if actor data is not valid
 // TODO: validation should happen during actor data deserialization
 pub fn get_moderation_domain(
     actor: &DbActor,
@@ -24,9 +30,7 @@ pub fn get_moderation_domain(
     } else {
         &actor.id
     };
-    let hostname = HttpUrl::parse(http_url)
-        .map_err(|_| DatabaseTypeError)?
-        .hostname();
+    let hostname = parse_http_url_from_db(http_url)?.hostname();
     Ok(hostname)
 }
 
@@ -59,10 +63,18 @@ impl FederationFilter {
     ) -> Result<Self, DatabaseError> {
         let rules = get_filter_rules(db_client).await?;
         Ok(Self {
-            blocklist: config.blocked_instances.clone(),
-            allowlist: config.allowed_instances.clone(),
+            blocklist: config.blocked_instances.clone().unwrap_or_default(),
+            allowlist: config.allowed_instances.clone().unwrap_or_default(),
             rules,
         })
+    }
+
+    pub async fn init_with_pool(
+        config: &Config,
+        db_pool: &DatabaseConnectionPool,
+    ) -> Result<Self, DatabaseError> {
+        let db_client = &**get_database_client(db_pool).await?;
+        Self::init(config, db_client).await
     }
 
     pub fn is_action_required(
@@ -70,9 +82,10 @@ impl FederationFilter {
         hostname: &str,
         action: FilterAction,
     ) -> bool {
+        // Rules are checked in order. The last matching rule wins.
         let mut is_required = false;
         // Blocklist and allowlist have lower priority than filter rules
-        if action == FilterAction::Reject {
+        if action == FilterAction::RejectIncoming {
             is_required = !is_hostname_allowed(
                 &self.blocklist,
                 &self.allowlist,
@@ -89,7 +102,8 @@ impl FederationFilter {
         is_required
     }
 
-    pub fn is_blocked(&self, hostname: &str) -> bool {
+    pub fn is_incoming_blocked(&self, hostname: &str) -> bool {
+        self.is_action_required(hostname, FilterAction::RejectIncoming) ||
         self.is_action_required(hostname, FilterAction::Reject)
     }
 }
@@ -143,13 +157,13 @@ mod tests {
         add_filter_rule(
             db_client,
             target_1,
-            FilterAction::Reject,
+            FilterAction::RejectIncoming,
             false, // block
         ).await.unwrap();
         add_filter_rule(
             db_client,
             target_2,
-            FilterAction::Reject,
+            FilterAction::RejectIncoming,
             true, // allow
         ).await.unwrap();
         let rules = get_filter_rules(db_client).await.unwrap();
@@ -159,8 +173,8 @@ mod tests {
             allowlist: vec![target_3.to_string()], // overridden
             rules,
         };
-        assert_eq!(filter.is_blocked("one.example"), false);
-        assert_eq!(filter.is_blocked("two.example"), true);
-        assert_eq!(filter.is_blocked("any.example"), true);
+        assert_eq!(filter.is_incoming_blocked("one.example"), false);
+        assert_eq!(filter.is_incoming_blocked("two.example"), true);
+        assert_eq!(filter.is_incoming_blocked("any.example"), true);
     }
 }

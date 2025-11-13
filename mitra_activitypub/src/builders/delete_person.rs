@@ -1,17 +1,17 @@
+use apx_sdk::constants::AP_PUBLIC;
 use serde::Serialize;
 use uuid::Uuid;
 
-use apx_sdk::constants::AP_PUBLIC;
 use mitra_config::Instance;
 use mitra_models::{
     database::{DatabaseClient, DatabaseError},
-    profiles::types::DbActor,
     relationships::queries::{get_followers, get_following},
     users::types::User,
 };
 
 use crate::{
     contexts::{build_default_context, Context},
+    deliverer::Recipient,
     identifiers::{local_activity_id, local_actor_id},
     queues::OutgoingActivityJobData,
     vocabulary::DELETE,
@@ -33,11 +33,11 @@ struct DeletePerson {
 }
 
 fn build_delete_person(
-    instance_url: &str,
+    instance_uri: &str,
     user: &User,
 ) -> DeletePerson {
-    let actor_id = local_actor_id(instance_url, &user.profile.username);
-    let activity_id = local_activity_id(instance_url, DELETE, user.id);
+    let actor_id = local_actor_id(instance_uri, &user.profile.username);
+    let activity_id = local_activity_id(instance_uri, DELETE, user.id);
     DeletePerson {
         context: build_default_context(),
         activity_type: DELETE.to_string(),
@@ -51,13 +51,13 @@ fn build_delete_person(
 async fn get_delete_person_recipients(
     db_client: &impl DatabaseClient,
     user_id: Uuid,
-) -> Result<Vec<DbActor>, DatabaseError> {
+) -> Result<Vec<Recipient>, DatabaseError> {
     let followers = get_followers(db_client, user_id).await?;
     let following = get_following(db_client, user_id).await?;
     let mut recipients = vec![];
     for profile in followers.into_iter().chain(following.into_iter()) {
         if let Some(remote_actor) = profile.actor_json {
-            recipients.push(remote_actor);
+            recipients.extend(Recipient::for_inbox(&remote_actor));
         };
     };
     Ok(recipients)
@@ -68,10 +68,10 @@ pub async fn prepare_delete_person(
     instance: &Instance,
     user: &User,
 ) -> Result<OutgoingActivityJobData, DatabaseError> {
-    let activity = build_delete_person(&instance.url(), user);
+    let activity = build_delete_person(instance.uri_str(), user);
     let recipients = get_delete_person_recipients(db_client, user.id).await?;
     Ok(OutgoingActivityJobData::new(
-        &instance.url(),
+        instance.uri_str(),
         user,
         activity,
         recipients,
@@ -83,7 +83,7 @@ mod tests {
     use mitra_models::profiles::types::DbActorProfile;
     use super::*;
 
-    const INSTANCE_URL: &str = "https://example.com";
+    const INSTANCE_URI: &str = "https://example.com";
 
     #[test]
     fn test_build_delete_person() {
@@ -91,15 +91,15 @@ mod tests {
             profile: DbActorProfile::local_for_test("testuser"),
             ..Default::default()
         };
-        let activity = build_delete_person(INSTANCE_URL, &user);
+        let activity = build_delete_person(INSTANCE_URI, &user);
         assert_eq!(
             activity.id,
-            format!("{}/activities/delete/{}", INSTANCE_URL, user.id),
+            format!("{}/activities/delete/{}", INSTANCE_URI, user.id),
         );
         assert_eq!(activity.actor, activity.object);
         assert_eq!(
             activity.object,
-            format!("{}/users/testuser", INSTANCE_URL),
+            format!("{}/users/testuser", INSTANCE_URI),
         );
         assert_eq!(activity.to, vec![AP_PUBLIC]);
     }

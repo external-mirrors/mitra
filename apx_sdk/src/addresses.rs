@@ -1,12 +1,16 @@
+//! WebFinger addresses.
 use std::{fmt, str::FromStr};
 
 use regex::Regex;
 use thiserror::Error;
 
+use apx_core::url::hostname::guess_protocol;
+
 // https://swicg.github.io/activitypub-webfinger/#names
 // username: RFC-3986 unreserved plus % for percent encoding; case-sensitive
-// hostname: normalized (ASCII)
-const WEBFINGER_ADDRESS_RE: &str = r"^(?P<username>[A-Za-z0-9\-\._~%]+)@(?P<hostname>[a-z0-9\.-]+)$";
+// hostname: normalized (ASCII) or IP literals
+//   https://datatracker.ietf.org/doc/html/rfc3986#section-3.2.2
+const WEBFINGER_ADDRESS_RE: &str = r"^(?P<username>[A-Za-z0-9\-\._~%]+)@(?P<hostname>[a-z0-9\.-]+|[0-9\.]+|\[[0-9a-f:]+\])$";
 
 #[derive(Debug, Error)]
 #[error("{0}")]
@@ -29,6 +33,19 @@ impl WebfingerAddress {
             username: username.to_string(),
             hostname: hostname.to_string(),
         }
+    }
+
+    /// Parses WebFinger address
+    pub fn parse(value: &str) -> Result<Self, WebfingerAddressError> {
+         let address_re = Regex::new(WEBFINGER_ADDRESS_RE)
+            .expect("regexp should be valid");
+        let caps = address_re.captures(value)
+            .ok_or(WebfingerAddressError("invalid webfinger address"))?;
+        let address = Self::new_unchecked(
+            &caps["username"],
+            &caps["hostname"],
+        );
+        Ok(address)
     }
 
     pub fn username(&self) -> &str {
@@ -76,21 +93,23 @@ impl WebfingerAddress {
             .parse()?;
         Ok(address)
     }
+
+    /// Returns WebFinger endpoint URI  
+    /// <https://datatracker.ietf.org/doc/html/rfc7033#section-4>
+    pub fn endpoint_uri(&self) -> String {
+        format!(
+            "{}://{}/.well-known/webfinger",
+            guess_protocol(self.hostname()),
+            self.hostname(),
+        )
+    }
 }
 
 impl FromStr for WebfingerAddress {
     type Err = WebfingerAddressError;
 
     fn from_str(value: &str) -> Result<Self, Self::Err> {
-        let address_re = Regex::new(WEBFINGER_ADDRESS_RE)
-            .expect("regexp should be valid");
-        let caps = address_re.captures(value)
-            .ok_or(WebfingerAddressError("invalid webfinger address"))?;
-        let address = Self::new_unchecked(
-            &caps["username"],
-            &caps["hostname"],
-        );
-        Ok(address)
+        Self::parse(value)
     }
 }
 
@@ -141,7 +160,7 @@ mod tests {
     #[test]
     fn test_address_parse() {
         let value = "user_1@example.com";
-        let address = value.parse::<WebfingerAddress>().unwrap();
+        let address = WebfingerAddress::parse(value).unwrap();
         assert_eq!(address.username, "user_1");
         assert_eq!(address.hostname, "example.com");
         assert_eq!(address.to_string(), value);
@@ -150,30 +169,62 @@ mod tests {
     #[test]
     fn test_address_parse_percent_encoded() {
         let value = "did%3Aexample%3A12-34@social.example";
-        let address = value.parse::<WebfingerAddress>().unwrap();
+        let address = WebfingerAddress::parse(value).unwrap();
         assert_eq!(address.username, "did%3Aexample%3A12-34");
         assert_eq!(address.hostname, "social.example");
         assert_eq!(address.to_string(), value);
     }
 
     #[test]
+    fn test_address_parse_ipv4() {
+        let value = "admin@127.0.0.1";
+        let address = WebfingerAddress::parse(value).unwrap();
+        assert_eq!(address.username, "admin");
+        assert_eq!(address.hostname, "127.0.0.1");
+        assert_eq!(address.to_string(), value);
+    }
+
+    #[test]
+    fn test_address_parse_ipv6() {
+        let value = "admin@[319:3cf0:dd1d:47b9:20c:29ff:fe2c:39be]";
+        let address = WebfingerAddress::parse(value).unwrap();
+        assert_eq!(address.username, "admin");
+        assert_eq!(address.hostname, "[319:3cf0:dd1d:47b9:20c:29ff:fe2c:39be]");
+        assert_eq!(address.to_string(), value);
+    }
+
+    #[test]
     fn test_parse_unicode_username() {
         let value = "δοκιμή@social.example";
-        let error = value.parse::<WebfingerAddress>().err().unwrap();
+        let error = WebfingerAddress::parse(value).err().unwrap();
         assert_eq!(error.0, "invalid webfinger address");
     }
 
     #[test]
     fn test_address_parse_idn() {
         let value = "user_1@bücher.example";
-        let error = value.parse::<WebfingerAddress>().err().unwrap();
+        let error = WebfingerAddress::parse(value).err().unwrap();
+        assert_eq!(error.0, "invalid webfinger address");
+    }
+
+    #[test]
+    fn test_address_parse_ipv4_with_port() {
+        let value = "admin@127.0.0.1:8000";
+        let error = WebfingerAddress::parse(value).err().unwrap();
+        assert_eq!(error.0, "invalid webfinger address");
+    }
+
+    #[test]
+    fn test_address_parse_ipv6_no_brackets() {
+        let value = "admin@319:3cf0:dd1d:47b9:20c:29ff:fe2c:39be";
+        let error = WebfingerAddress::parse(value).err().unwrap();
         assert_eq!(error.0, "invalid webfinger address");
     }
 
     #[test]
     fn test_address_parse_handle() {
         let handle = "@user_1@example.com";
-        let result = handle.parse::<WebfingerAddress>();
+        let result = WebfingerAddress::parse(handle);
         assert_eq!(result.is_err(), true);
     }
 
@@ -212,5 +263,27 @@ mod tests {
         let uri = "acct:user_1@δοκιμή.example";
         let error = WebfingerAddress::from_acct_uri(uri).err().unwrap();
         assert_eq!(error.0, "invalid webfinger address");
+    }
+
+    #[test]
+    fn test_address_endpoint_uri() {
+        let value = "user_1@social.example";
+        let address = WebfingerAddress::parse(value).unwrap();
+        let endpoint_uri = address.endpoint_uri();
+        assert_eq!(
+            endpoint_uri,
+            "https://social.example/.well-known/webfinger",
+        );
+    }
+
+    #[test]
+    fn test_address_endpoint_uri_yggdrasil() {
+        let value = "admin@[319:3cf0:dd1d:47b9:20c:29ff:fe2c:39be]";
+        let address = WebfingerAddress::parse(value).unwrap();
+        let endpoint_uri = address.endpoint_uri();
+        assert_eq!(
+            endpoint_uri,
+            "http://[319:3cf0:dd1d:47b9:20c:29ff:fe2c:39be]/.well-known/webfinger",
+        );
     }
 }

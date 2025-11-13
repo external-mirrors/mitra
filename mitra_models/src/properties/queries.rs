@@ -29,10 +29,10 @@ pub async fn set_internal_property(
     Ok(())
 }
 
-pub async fn get_internal_property<T: DeserializeOwned>(
+async fn get_internal_property_json(
     db_client: &impl DatabaseClient,
     name: &str,
-) -> Result<Option<T>, DatabaseError> {
+) -> Result<Option<JsonValue>, DatabaseError> {
     let maybe_row = db_client.query_opt(
         "
         SELECT property_value
@@ -41,9 +41,20 @@ pub async fn get_internal_property<T: DeserializeOwned>(
         ",
         &[&name],
     ).await?;
-    let maybe_value = match maybe_row {
-        Some(row) => {
-            let value_json: JsonValue = row.try_get("property_value")?;
+    let maybe_value = maybe_row
+        .map(|row| row.try_get("property_value"))
+        .transpose()?;
+    Ok(maybe_value)
+}
+
+pub async fn get_internal_property<T: DeserializeOwned>(
+    db_client: &impl DatabaseClient,
+    name: &str,
+) -> Result<Option<T>, DatabaseError> {
+    let maybe_value = match
+        get_internal_property_json(db_client, name).await?
+    {
+        Some(value_json) => {
             let value: T = serde_json::from_value(value_json)
                 .map_err(|_| DatabaseTypeError)?;
             Some(value)
@@ -53,8 +64,26 @@ pub async fn get_internal_property<T: DeserializeOwned>(
     Ok(maybe_value)
 }
 
+pub async fn get_internal_properties_json(
+    db_client: &impl DatabaseClient,
+) -> Result<JsonValue, DatabaseError> {
+    let row = db_client.query_one(
+        "
+        SELECT COALESCE(
+            jsonb_object_agg(property_name, property_value),
+            '{}'
+        ) AS property_map
+        FROM internal_property
+        ",
+        &[],
+    ).await?;
+    let properties = row.try_get("property_map")?;
+    Ok(properties)
+}
+
 #[cfg(test)]
 mod tests {
+    use serde_json::json;
     use serial_test::serial;
     use crate::database::test_utils::create_test_database;
     use super::*;
@@ -69,5 +98,17 @@ mod tests {
         let db_value: u32 = get_internal_property(db_client, name).await
             .unwrap().unwrap_or_default();
         assert_eq!(db_value, value);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_get_internal_properties_json() {
+        let db_client = &create_test_database().await;
+        let properties = get_internal_properties_json(db_client).await.unwrap();
+        assert_eq!(properties, json!({}));
+
+        set_internal_property(db_client, "myproperty", &100).await.unwrap();
+        let properties = get_internal_properties_json(db_client).await.unwrap();
+        assert_eq!(properties, json!({"myproperty": 100}));
     }
 }
