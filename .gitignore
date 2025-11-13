@@ -3,6 +3,3 @@ config.yaml
 /files/*
 !/files/.gitkeep
 /target
-.envrc
-.devenv
-.direnv
