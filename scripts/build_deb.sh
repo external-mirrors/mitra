@@ -4,6 +4,7 @@ set -e
 set -x
 
 VERSION=$(cargo metadata --quiet --no-deps --offline | jq -r '.packages[] | select(.name == "mitra") | .version')
+VERSION_DEB=$(echo $VERSION | tr "-" "~")
 ARCH=$(dpkg --print-architecture)
 
 # Package contents will appear in target/debian/tmp/debian/mitra/
@@ -14,7 +15,7 @@ WEB_DIR="$1"
 rm -rf $PACKAGE_DIR
 mkdir -p $PACKAGE_DIR/debian
 cp contrib/debian/* $PACKAGE_DIR/debian/
-sed -i "s/0.0.0/${VERSION}/" $PACKAGE_DIR/debian/changelog
+sed -i "s/0.0.0/${VERSION_DEB}/" $PACKAGE_DIR/debian/changelog
 echo "Architecture: $ARCH" >> $PACKAGE_DIR/debian/control
 
 # Service
