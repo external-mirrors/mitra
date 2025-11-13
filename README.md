@@ -13,7 +13,7 @@ Features:
 - Micro-blogging service
   - Quote posts, custom emojis, reactions, polls and more.
   - Default character limit is 5000.
-  - Support for a limited subset of markdown-style formatting.
+  - Support for [markdown-style](./docs/post_markup.md) formatting.
 - Easy installation and small memory footprint (<50 MB).
 - Interoperable. Can show content from blogs, forums and other types of federated services.
 - Mastodon API.
