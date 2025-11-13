@@ -103,7 +103,7 @@ mod tests {
             db_client,
             source.id,
             target.id,
-            &follow_activity_id,
+            follow_activity_id,
         ).await.unwrap();
         follow_request_accepted(db_client, follow_request.id).await.unwrap();
         let maybe_activity_id =

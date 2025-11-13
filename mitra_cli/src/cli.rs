@@ -651,6 +651,6 @@ mod tests {
 
     #[test]
     fn test_cli() {
-        Cli::command().debug_assert()
+        Cli::command().debug_assert();
     }
 }

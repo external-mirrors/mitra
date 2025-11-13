@@ -121,7 +121,7 @@ mod tests {
         let voter = DbActorProfile::local_for_test("voter");
         let question_id = "https://remote.example/questions/123";
         let question_owner_id = "https://remote.example/users/test";
-        let votes = vec![
+        let votes = [
             PollVote {
                 id: uuid!("11fa64ff-b5a3-47bf-b23d-22b360581c3f"),
                 poll_id: Default::default(),

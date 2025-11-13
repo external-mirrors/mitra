@@ -475,7 +475,7 @@ mod tests {
         );
         request_headers.insert(
             HeaderName::from_static("date"),
-            HeaderValue::from_str(&date).unwrap(),
+            HeaderValue::from_str(date).unwrap(),
         );
         let signature_header = concat!(
             r#"keyId="https://signer.example/actor#main-key","#,

@@ -416,6 +416,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::invisible_characters)]
     fn test_clean_display_name_zerowidth() {
         let name = " ​";
         let output = clean_display_name(name, true);

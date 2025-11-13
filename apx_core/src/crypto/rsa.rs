@@ -235,14 +235,14 @@ mod tests {
     fn test_deserialize_rsa_public_key_nowrap() {
         let public_key_pem = "-----BEGIN PUBLIC KEY-----\nMIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQC8ehqQ7n6+pw19U8q2UtxE/9017STW3yRnnqV5nVk8LJ00ba+berqwekxDW+nw77GAu3TJ+hYeeSerUNPup7y3yO3V
 YsFtrgWDQ/s8k86sNBU+Ce2GOL7seh46kyAWgJeohh4Rcrr23rftHbvxOcRM8VzYuCeb1DgVhPGtA0xULwIDAQAB\n-----END PUBLIC KEY-----";
-        let result = deserialize_rsa_public_key(&public_key_pem);
+        let result = deserialize_rsa_public_key(public_key_pem);
         assert_eq!(result.is_ok(), true);
     }
 
     #[test]
     fn test_deserialize_rsa_public_key_pkcs1() {
         let public_key_pem = "-----BEGIN RSA PUBLIC KEY-----\nMIIBCgKCAQEA2vzT/2X+LqqoLFLJAZDMGRoAaXEyw9NBCGpu6wTqczs2KEGHdbQe\nIEGKr/+tP6ENOtwe74I2cCsKOPCzUMWTqu2JRd7zfDXUmQnzIZ9wp3AZQ6YFZspj\nxNAzC3dIR6dQr0feebqZZ3n/t7n1ch04Onc2SINyS7MLQHxNi9HTkH9OXZSHDazP\nT8T90Zr2oxo16nVs8rxTVxtE/6bZai90xrSEOfvJfE/0fwb5BK9Fw3J4yv5h+4ck\nrUoSFGEBrTRGgwCrp3UDt/K6Lp4loVC9jzyRMJ5bo5n1rZNgjNCqEqBrJFu6AWSC\nWW/eqkdipgI2IlRezppu0balvEwEluPhNwIDAQAB\n-----END RSA PUBLIC KEY-----\n\n";
-        let result = deserialize_rsa_public_key(&public_key_pem);
+        let result = deserialize_rsa_public_key(public_key_pem);
         assert_eq!(result.is_ok(), true);
     }
 

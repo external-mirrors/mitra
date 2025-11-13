@@ -49,7 +49,7 @@ mod tests {
     #[test]
     fn test_validate_poll_option_name_sanitized() {
         let name = "test <span>html</span>";
-        assert_eq!(validate_poll_option_name(&name).is_ok(), false);
+        assert_eq!(validate_poll_option_name(name).is_ok(), false);
     }
 
     #[test]

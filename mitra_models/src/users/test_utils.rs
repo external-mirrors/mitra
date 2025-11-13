@@ -43,7 +43,7 @@ pub async fn create_test_portable_user(
         profile_id: profile.id,
         rsa_secret_key: generate_weak_rsa_key().unwrap(),
         ed25519_secret_key: generate_weak_ed25519_key(),
-        invite_code: invite_code.to_string(),
+        invite_code: invite_code.clone(),
     };
     create_portable_user(db_client, user_data).await.unwrap()
 }

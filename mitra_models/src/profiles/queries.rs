@@ -1119,7 +1119,7 @@ mod tests {
         ).await.unwrap();
         let profile_data = ProfileCreateData {
             username: "test".to_string(),
-            emojis: vec![emoji.id.clone()],
+            emojis: vec![emoji.id],
             ..Default::default()
         };
         let profile = create_profile(db_client, profile_data).await.unwrap();
