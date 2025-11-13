@@ -3,7 +3,7 @@
 //! - URIs
 //! - DIDs
 //! - Keys and signatures (Ed25519 and RSA)
-//! - HTTP signatures
+//! - HTTP signatures (Draft-Cavage and RFC-9421)
 //! - Data integrity proofs (FEP-8b32)
 
 pub mod base64;
