@@ -30,6 +30,7 @@ Matrix chat: [#mitra:unredacted.org](https://matrix.to/#/#mitra:unredacted.org)
 
 - [FediDB](https://fedidb.org/software/mitra)
 - [Fediverse Observer](https://mitra.fediverse.observer/list)
+- [FediList](https://fedilist.com/instance?software=mitra)
 
 Demo instance: https://public.mitra.social/ ([invite-only](https://public.mitra.social/about))
 
