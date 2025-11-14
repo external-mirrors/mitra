@@ -303,7 +303,11 @@ impl AttributedObject {
     }
 
     fn quote(&self) -> Option<&String> {
-        self.quote.as_ref().or(self.quote_url.as_ref())
+        self.quote.as_ref()
+            // Ignore Bookwyrm quotes
+            // https://github.com/bookwyrm-social/bookwyrm/issues/3731
+            .filter(|_| !self.id.contains("/quotation/"))
+            .or(self.quote_url.as_ref())
     }
 }
 
