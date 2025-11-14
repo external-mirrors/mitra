@@ -28,7 +28,17 @@ pub struct MoneroConfig {
 }
 
 #[derive(Clone, Deserialize)]
+pub struct MoneroLightConfig {
+    pub chain_id: ChainId,
+    pub chain_metadata: Option<MoneroChainMetadata>,
+    pub lightwallet_api_url: String,
+    #[serde(default = "default_tx_required_confirmations")]
+    pub tx_required_confirmations: u64,
+}
+
+#[derive(Clone, Deserialize)]
 #[serde(untagged)]
 pub enum BlockchainConfig {
     Monero(MoneroConfig),
+    MoneroLight(MoneroLightConfig),
 }

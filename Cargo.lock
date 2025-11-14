@@ -2157,6 +2157,8 @@ dependencies = [
  "mitra_config",
  "mitra_models",
  "mitra_utils",
+ "monero",
+ "monero-lws",
  "monero-rpc",
  "regex",
  "reqwest",
@@ -2240,6 +2242,24 @@ dependencies = [
  "serde-big-array",
  "thiserror",
  "tiny-keccak",
+]
+
+[[package]]
+name = "monero-lws"
+version = "0.1.0"
+source = "git+https://github.com/silverpill/monero-lws?rev=4fd0501abbea247a423efc69ee97b2e7e4d52399#4fd0501abbea247a423efc69ee97b2e7e4d52399"
+dependencies = [
+ "anyhow",
+ "fixed-hash",
+ "hex",
+ "http 0.2.9",
+ "jsonrpc-core",
+ "monero",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "tracing",
+ "uuid",
 ]
 
 [[package]]

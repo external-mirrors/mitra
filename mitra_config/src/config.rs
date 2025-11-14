@@ -20,6 +20,7 @@ use super::authentication::{
 use super::blockchain::{
     BlockchainConfig,
     MoneroConfig,
+    MoneroLightConfig,
 };
 use super::environment::Environment;
 use super::federation::FederationConfig;
@@ -169,6 +170,7 @@ impl Config {
             .fold(HashMap::new(), |mut map, blockchain_config| {
                 let key = match blockchain_config {
                     BlockchainConfig::Monero(_) => 1,
+                    BlockchainConfig::MoneroLight(_) => 2,
                 };
                 map.entry(key)
                     .and_modify(|count| *count += 1)
@@ -183,11 +185,19 @@ impl Config {
         &self.blockchains
     }
 
-    #[allow(clippy::unnecessary_find_map)]
     pub fn monero_config(&self) -> Option<&MoneroConfig> {
         self.blockchains().iter()
             .find_map(|item| match item {
                 BlockchainConfig::Monero(config) => Some(config),
+                _ => None,
+            })
+    }
+
+    pub fn monero_light_config(&self) -> Option<&MoneroLightConfig> {
+        self.blockchains().iter()
+            .find_map(|item| match item {
+                BlockchainConfig::MoneroLight(config) => Some(config),
+                _ => None,
             })
     }
 }

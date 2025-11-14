@@ -74,6 +74,26 @@ pub async fn local_invoice_reopened(
     Ok(invoice)
 }
 
+pub async fn local_monero_light_invoice_paid(
+    db_client: &mut impl DatabaseClient,
+    invoice_id: Uuid,
+    payout_tx_id: &str,
+) -> Result<Invoice, DatabaseError> {
+    let mut transaction = db_client.transaction().await?;
+    set_invoice_payout_tx_id(
+        &transaction,
+        invoice_id,
+        Some(payout_tx_id),
+    ).await?;
+    let invoice = set_invoice_status(
+        &mut transaction,
+        invoice_id,
+        InvoiceStatus::Paid,
+    ).await?;
+    transaction.commit().await?;
+    Ok(invoice)
+}
+
 pub async fn remote_invoice_opened(
     db_client: &mut impl DatabaseClient,
     invoice_id: Uuid,

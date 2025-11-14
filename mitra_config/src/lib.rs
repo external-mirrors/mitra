@@ -14,6 +14,7 @@ pub use authentication::AuthenticationMethod;
 pub use blockchain::{
     BlockchainConfig,
     MoneroConfig,
+    MoneroLightConfig,
 };
 pub use config::Config;
 pub use environment::Environment;

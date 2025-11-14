@@ -8,13 +8,19 @@ use mitra_adapters::{
     payments::{
         monero::{
             invoice_payment_address,
+            payment_method_payout_address,
+            payment_method_view_key,
             PaymentError,
             MONERO_INVOICE_TIMEOUT,
         },
         subscriptions::create_or_update_local_subscription,
     },
 };
-use mitra_config::{Instance, MoneroConfig};
+use mitra_config::{
+    Instance,
+    MoneroConfig,
+    MoneroLightConfig,
+};
 use mitra_models::{
     database::{
         get_database_client,
@@ -22,13 +28,19 @@ use mitra_models::{
         DatabaseConnectionPool,
         DatabaseError,
     },
-    invoices::helpers::{local_invoice_forwarded, local_invoice_reopened},
-    invoices::queries::{
-        get_local_invoice_by_address,
-        get_local_invoices_by_status,
-        set_invoice_status,
+    invoices::{
+        helpers::{
+            local_invoice_forwarded,
+            local_invoice_reopened,
+            local_monero_light_invoice_paid,
+        },
+        queries::{
+            get_local_invoice_by_address,
+            get_local_invoices_by_status,
+            set_invoice_status,
+        },
+        types::{Invoice, InvoiceStatus},
     },
-    invoices::types::{Invoice, InvoiceStatus},
     notifications::helpers::create_subscriber_payment_notification,
     payment_methods::{
         helpers::get_payment_method_by_type_and_chain_id,
@@ -38,6 +50,9 @@ use mitra_models::{
     users::queries::get_user_by_id,
 };
 use mitra_services::monero::{
+    light_wallet::{
+        LightWalletClient,
+    },
     wallet::{
         build_wallet_client,
         get_active_addresses,
@@ -53,7 +68,11 @@ use mitra_services::monero::{
         TransferCategory,
         WalletClient,
     },
-    utils::LOCK_DURATION,
+    utils::{
+        get_payment_id,
+        parse_monero_address,
+        LOCK_DURATION,
+    },
 };
 
 const MONERO_SEND_TIMEOUT: u64 = 120;
@@ -479,5 +498,155 @@ pub async fn check_closed_monero_invoices(
         );
         local_invoice_reopened(db_client, invoice.id).await?;
     };
+    Ok(())
+}
+
+async fn check_monero_light_open_invoices(
+    db_pool: &DatabaseConnectionPool,
+    config: &MoneroLightConfig,
+) -> Result<(), PaymentError> {
+    let db_client = &mut **get_database_client(db_pool).await?;
+    // Invoices waiting for payment
+    let open_invoices = get_local_invoices_by_status(
+        db_client,
+        PaymentType::MoneroLight,
+        &config.chain_id,
+        InvoiceStatus::Open,
+    ).await?;
+    for invoice in open_invoices {
+        let expires_at = invoice.expires_at(MONERO_INVOICE_TIMEOUT);
+        if expires_at <= Utc::now() {
+            log::info!("invoice {}: timed out", invoice.id);
+            set_invoice_status(
+                db_client,
+                invoice.id,
+                InvoiceStatus::Timeout,
+            ).await?;
+            continue;
+        };
+        let recipient = get_user_by_id(db_client, invoice.recipient_id).await?;
+        let maybe_payment_method = get_payment_method_by_type_and_chain_id(
+            db_client,
+            recipient.id,
+            PaymentType::MoneroLight,
+            invoice.chain_id.inner(),
+        ).await?;
+        let payment_method = if let Some(payment_method) = maybe_payment_method {
+            payment_method
+        } else {
+            log::error!(
+                "payment method is not available to user {}",
+                recipient,
+            );
+            continue;
+        };
+        let payout_address = payment_method_payout_address(&payment_method)?;
+        let view_key = payment_method_view_key(&payment_method)?;
+        let lw_client = LightWalletClient::new(
+            config,
+            payout_address,
+            view_key,
+        );
+        let payment_address = invoice_payment_address(&invoice)?;
+        let payment_address = parse_monero_address(&payment_address)
+            .map_err(|_| DatabaseError::type_error())?;
+        let payment_id = get_payment_id(payment_address)
+            .ok_or(DatabaseError::type_error())?;
+        // Wait for incoming transaction
+        let maybe_payout_tx_id = lw_client.get_tx_id_by_payment_id(payment_id).await?;
+        let Some(payout_tx_id) = maybe_payout_tx_id else {
+            // Transaction not found
+            continue;
+        };
+        log::info!(
+            "received payment for invoice {}: {}",
+            invoice.id,
+            payout_tx_id,
+        );
+        local_monero_light_invoice_paid(
+            db_client,
+            invoice.id,
+            &payout_tx_id,
+        ).await?;
+    };
+    Ok(())
+}
+
+async fn check_monero_light_paid_invoices(
+    db_pool: &DatabaseConnectionPool,
+    config: &MoneroLightConfig,
+    instance: &Instance,
+) -> Result<(), PaymentError> {
+    let db_client = &mut **get_database_client(db_pool).await?;
+    let paid_invoices = get_local_invoices_by_status(
+        db_client,
+        PaymentType::MoneroLight,
+        &config.chain_id,
+        InvoiceStatus::Paid,
+    ).await?;
+    for invoice in paid_invoices {
+        let Some(ref payout_tx_id) = invoice.payout_tx_id else {
+            log::error!("invoice {}: no payout transaction ID", invoice.id);
+            continue;
+        };
+        let recipient = get_user_by_id(db_client, invoice.recipient_id).await?;
+        let maybe_payment_method = get_payment_method_by_type_and_chain_id(
+            db_client,
+            recipient.id,
+            PaymentType::MoneroLight,
+            invoice.chain_id.inner(),
+        ).await?;
+        let payment_method = if let Some(payment_method) = maybe_payment_method {
+            payment_method
+        } else {
+            log::error!(
+                "payment method is not available to user {}",
+                recipient,
+            );
+            continue;
+        };
+        let payout_address = payment_method_payout_address(&payment_method)?;
+        let view_key = payment_method_view_key(&payment_method)?;
+        let lw_client = LightWalletClient::new(
+            config,
+            payout_address,
+            view_key,
+        );
+        let (tx_amount, confirmations) = lw_client.get_tx_info(payout_tx_id).await?;
+        if confirmations < config.tx_required_confirmations {
+            // Wait for more confirmations
+            log::info!(
+                "invoice {}: waiting for payment confirmation ({}/{})",
+                invoice.id,
+                confirmations,
+                config.tx_required_confirmations,
+            );
+            continue;
+        };
+        log::info!("payment transaction confirmed for invoice {}", invoice.id);
+        let invoice = set_invoice_status(
+            db_client,
+            invoice.id,
+            InvoiceStatus::Completed,
+        ).await?;
+
+        // Optional: update subscription
+        create_or_update_monero_subscription(
+            db_client,
+            instance,
+            invoice,
+            tx_amount,
+        ).await?;
+    };
+    Ok(())
+}
+
+pub async fn check_monero_light_invoices(
+    instance: &Instance,
+    config: &MoneroLightConfig,
+    db_pool: &DatabaseConnectionPool,
+) -> Result<(), PaymentError> {
+    check_monero_light_open_invoices(db_pool, config).await?;
+    check_monero_light_paid_invoices(db_pool, config, instance).await?;
     Ok(())
 }

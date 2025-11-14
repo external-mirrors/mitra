@@ -31,7 +31,7 @@ services:
       - --rpc-bind-ip=0.0.0.0
       - --confirm-external-bind
       - --zmq-rpc-bind-ip=0.0.0.0
-      - --zmq-rpc-bind-port=18084
+      - --zmq-rpc-bind-port=18082
     volumes:
       - monero_blockchain:/home/monero/.bitmonero
 
@@ -63,7 +63,7 @@ services:
     image: ghcr.io/farcaster-project/containers/monero-lws:monerod-0.18.0.0
     environment:
       NETWORK: main
-      MONERO_DAEMON_ADDRESS: monerod:18084
+      MONERO_DAEMON_ADDRESS: monerod:18082
     ports:
       - 58443:38884
     restart: unless-stopped

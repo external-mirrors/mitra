@@ -91,6 +91,12 @@ pub enum SubscriptionOption {
         price: u64,
         payout_address: String,
     },
+    MoneroLight {
+        chain_id: ChainId,
+        price: u64,
+        payout_address: String,
+        view_key: String,
+    },
 }
 
 #[derive(Deserialize)]

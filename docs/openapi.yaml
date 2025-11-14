@@ -3116,6 +3116,10 @@ components:
           description: Additional information about the blockchain
           type: object
           properties:
+            is_forwarding_required:
+              description: Is payment forwarding required?
+              type: boolean
+              example: true
             description:
               description: Description of the payment method (HTML).
               type: string

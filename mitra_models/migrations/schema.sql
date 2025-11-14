@@ -338,6 +338,7 @@ CREATE TABLE payment_method (
     payment_type SMALLINT NOT NULL,
     chain_id VARCHAR(50) NOT NULL,
     payout_address VARCHAR(500) NOT NULL,
+    view_key VARCHAR(500),
     UNIQUE (owner_id, chain_id)
 );
 

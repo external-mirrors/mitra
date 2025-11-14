@@ -2,7 +2,11 @@ use std::os::unix::fs::MetadataExt;
 use std::path::Path;
 use std::str::FromStr;
 
-use super::blockchain::BlockchainConfig;
+use super::blockchain::{
+    BlockchainConfig,
+    MoneroConfig,
+    MoneroLightConfig,
+};
 use super::config::Config;
 use super::environment::Environment;
 use super::instance::{
@@ -116,8 +120,10 @@ pub fn parse_config() -> (Config, Vec<&'static str>) {
     };
     for blockchain_config in config.blockchains() {
         match blockchain_config {
-            BlockchainConfig::Monero(monero_config) => {
-                monero_config.chain_id.monero_network()
+            BlockchainConfig::Monero(MoneroConfig { chain_id, .. }) |
+                BlockchainConfig::MoneroLight(MoneroLightConfig { chain_id, .. }) =>
+            {
+                chain_id.monero_network()
                     .expect("invalid monero chain ID");
             },
         };

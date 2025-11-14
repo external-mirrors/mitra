@@ -22,13 +22,15 @@ pub async fn create_payment_method(
             owner_id,
             payment_type,
             chain_id,
-            payout_address
+            payout_address,
+            view_key
         )
-        VALUES ($1, $2, $3, $4)
+        VALUES ($1, $2, $3, $4, $5)
         ON CONFLICT (owner_id, chain_id)
         DO UPDATE SET
             payment_type = $2,
-            payout_address = $4
+            payout_address = $4,
+            view_key = $5
         RETURNING payment_method
         ",
         &[
@@ -36,6 +38,7 @@ pub async fn create_payment_method(
             &method_data.payment_type,
             &DbChainId::new(&method_data.chain_id),
             &method_data.payout_address,
+            &method_data.view_key,
         ],
     ).await?;
     let payment_method: PaymentMethod = row.try_get("payment_method")?;
@@ -91,6 +94,7 @@ mod tests {
             payment_type: PaymentType::Monero,
             chain_id: ChainId::monero_mainnet(),
             payout_address: "abcd".to_owned(),
+            view_key: None,
         };
         let method = create_payment_method(
             db_client,
@@ -118,6 +122,7 @@ mod tests {
             payment_type: PaymentType::Monero,
             chain_id: ChainId::monero_mainnet(),
             payout_address: "abcd".to_owned(),
+            view_key: None,
         };
         let method = create_payment_method(
             db_client,
@@ -128,6 +133,7 @@ mod tests {
             payment_type: PaymentType::Monero,
             chain_id: ChainId::monero_mainnet(),
             payout_address: "1234".to_owned(),
+            view_key: None,
         };
         let method_updated = create_payment_method(
             db_client,

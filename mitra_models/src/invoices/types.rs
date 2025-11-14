@@ -163,7 +163,7 @@ impl Invoice {
         if self.is_local() {
             // Local invoice
             match self.payment_type {
-                Some(PaymentType::Monero) => {
+                Some(PaymentType::Monero | PaymentType::MoneroLight) => {
                     if !self.chain_id.inner().is_monero() {
                         return Err(DatabaseTypeError);
                     };
@@ -197,22 +197,41 @@ impl Invoice {
     pub fn can_change_status(&self, to: InvoiceStatus) -> bool {
         use InvoiceStatus::*;
         let allowed = if self.is_local() {
-            match self.invoice_status {
-                Open => vec![Paid, Timeout, Cancelled],
-                Paid => {
-                    if self.payout_tx_id.is_some() {
-                        vec![Forwarded, Underpaid]
-                    } else {
-                        vec![Underpaid]
+            match self.payment_type.expect("payment type should be specified") {
+                PaymentType::Monero => {
+                    match self.invoice_status {
+                        Open => vec![Paid, Timeout, Cancelled],
+                        Paid => {
+                            if self.payout_tx_id.is_some() {
+                                vec![Forwarded, Underpaid]
+                            } else {
+                                vec![Underpaid]
+                            }
+                        },
+                        Forwarded => vec![Completed, Failed],
+                        Timeout => vec![Paid],
+                        Cancelled => vec![Paid],
+                        Underpaid => vec![Paid],
+                        Completed => vec![Paid],
+                        Failed => vec![Paid],
+                        Requested => vec![], // unreachable
                     }
                 },
-                Forwarded => vec![Completed, Failed],
-                Timeout => vec![Paid],
-                Cancelled => vec![Paid],
-                Underpaid => vec![Paid],
-                Completed => vec![Paid],
-                Failed => vec![Paid],
-                Requested => vec![], // unreachable
+                PaymentType::MoneroLight => {
+                    match self.invoice_status {
+                        Open => {
+                            if self.payout_tx_id.is_some() {
+                                vec![Paid]
+                            } else {
+                                vec![Timeout, Cancelled]
+                            }
+                        },
+                        Paid => {
+                            vec![Completed]
+                        },
+                        _ => vec![],
+                    }
+                },
             }
         } else {
             match self.invoice_status {
@@ -253,7 +272,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_change_status_local() {
+    fn test_change_status_local_monero() {
         let mut invoice = Invoice::default();
         invoice.check_consistency().unwrap();
         assert_eq!(invoice.can_change_status(InvoiceStatus::Open), false);
@@ -275,6 +294,31 @@ mod tests {
         assert_eq!(invoice.can_change_status(InvoiceStatus::Cancelled), false);
         invoice.invoice_status = InvoiceStatus::Completed;
         assert_eq!(invoice.can_change_status(InvoiceStatus::Paid), true);
+        assert_eq!(invoice.can_change_status(InvoiceStatus::Cancelled), false);
+    }
+
+    #[test]
+    fn test_change_status_local_monero_light() {
+        let mut invoice = Invoice {
+            payment_type: Some(PaymentType::MoneroLight),
+            ..Invoice::default()
+        };
+        invoice.check_consistency().unwrap();
+        assert_eq!(invoice.can_change_status(InvoiceStatus::Open), false);
+        assert_eq!(invoice.can_change_status(InvoiceStatus::Paid), false);
+        assert_eq!(invoice.can_change_status(InvoiceStatus::Timeout), true);
+        assert_eq!(invoice.can_change_status(InvoiceStatus::Cancelled), true);
+        invoice.payout_tx_id = Some("abcd".to_owned());
+        assert_eq!(invoice.can_change_status(InvoiceStatus::Paid), true);
+        assert_eq!(invoice.can_change_status(InvoiceStatus::Timeout), false);
+        assert_eq!(invoice.can_change_status(InvoiceStatus::Cancelled), false);
+        invoice.invoice_status = InvoiceStatus::Paid;
+        assert_eq!(invoice.can_change_status(InvoiceStatus::Forwarded), false);
+        assert_eq!(invoice.can_change_status(InvoiceStatus::Completed), true);
+        assert_eq!(invoice.can_change_status(InvoiceStatus::Timeout), false);
+        assert_eq!(invoice.can_change_status(InvoiceStatus::Cancelled), false);
+        invoice.invoice_status = InvoiceStatus::Completed;
+        assert_eq!(invoice.can_change_status(InvoiceStatus::Paid), false);
         assert_eq!(invoice.can_change_status(InvoiceStatus::Cancelled), false);
     }
 

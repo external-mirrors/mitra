@@ -12,11 +12,12 @@ use mitra_models::{
     invoices::types::Invoice,
     payment_methods::{
         helpers::get_payment_method_by_type_and_chain_id,
-        types::PaymentType,
+        types::{PaymentMethod, PaymentType},
     },
     users::queries::get_user_by_id,
 };
 use mitra_services::monero::{
+    light_wallet::LightWalletError,
     wallet::{
         create_monero_address,
         get_incoming_transfers,
@@ -24,7 +25,13 @@ use mitra_services::monero::{
         open_monero_wallet,
         MoneroError,
     },
-    utils::BLOCK_TIME,
+    utils::{
+        parse_monero_address,
+        parse_monero_view_key,
+        Address,
+        PrivateKey,
+        BLOCK_TIME,
+    },
 };
 
 const MONERO_INVOICE_WAIT_TIME: u32 = 3 * 60 * 60; // 3 hours
@@ -36,7 +43,30 @@ pub enum PaymentError {
     MoneroError(#[from] MoneroError),
 
     #[error(transparent)]
+    LightWalletError(#[from] LightWalletError),
+
+    #[error(transparent)]
     DatabaseError(#[from] DatabaseError),
+}
+
+pub fn payment_method_payout_address(
+    payment_method: &PaymentMethod,
+) -> Result<Address, DatabaseError> {
+    let address_str = &payment_method.payout_address;
+    let address = parse_monero_address(address_str)
+        .map_err(|_| DatabaseError::type_error())?;
+    Ok(address)
+}
+
+pub fn payment_method_view_key(
+    payment_method: &PaymentMethod,
+) -> Result<PrivateKey, DatabaseError> {
+    let view_key_str = payment_method.view_key
+        .as_ref()
+        .ok_or(DatabaseError::type_error())?;
+    let view_key = parse_monero_view_key(view_key_str)
+        .map_err(|_| DatabaseError::type_error())?;
+    Ok(view_key)
 }
 
 pub fn invoice_payment_address(invoice: &Invoice)

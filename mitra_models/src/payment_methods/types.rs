@@ -15,12 +15,14 @@ use crate::{
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum PaymentType {
     Monero,
+    MoneroLight,
 }
 
 impl From<PaymentType> for i16 {
     fn from(value: PaymentType) -> i16 {
         match value {
             PaymentType::Monero => 1,
+            PaymentType::MoneroLight => 2,
         }
     }
 }
@@ -31,6 +33,7 @@ impl TryFrom<i16> for PaymentType {
     fn try_from(value: i16) -> Result<Self, Self::Error> {
         let payment_type = match value {
             1 => Self::Monero,
+            2 => Self::MoneroLight,
             _ => return Err(DatabaseTypeError),
         };
         Ok(payment_type)
@@ -45,6 +48,7 @@ pub struct PaymentMethodData {
     pub payment_type: PaymentType,
     pub chain_id: ChainId,
     pub payout_address: String,
+    pub view_key: Option<String>,
 }
 
 #[derive(FromSql)]
@@ -55,6 +59,7 @@ pub struct PaymentMethod {
     pub payment_type: PaymentType,
     pub chain_id: DbChainId,
     pub payout_address: String,
+    pub view_key: Option<String>,
 }
 
 impl PaymentMethod {
@@ -62,6 +67,17 @@ impl PaymentMethod {
         match self.payment_type {
             PaymentType::Monero => {
                 if !self.chain_id.inner().is_monero() {
+                    return Err(DatabaseTypeError);
+                };
+                if self.view_key.is_some() {
+                    return Err(DatabaseTypeError);
+                };
+            },
+            PaymentType::MoneroLight => {
+                if !self.chain_id.inner().is_monero() {
+                    return Err(DatabaseTypeError);
+                };
+                if self.view_key.is_none() {
                     return Err(DatabaseTypeError);
                 };
             },

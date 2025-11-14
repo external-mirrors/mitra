@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Added API endpoint for removing identity proofs.
 - Added `completion` command that generates shell completions ([#194](https://codeberg.org/silverpill/mitra/pulls/194)).
+- Support payment tracking with view-only Monero addresses.
 
 ### Changed
 

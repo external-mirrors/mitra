@@ -19,8 +19,12 @@ ethereum-types = { version = "0.15.1", default-features = false }
 hex = { version = "0.4.3", features = ["serde"] }
 # Used for logging
 log = "0.4.20"
-# Used to query Monero node
+# Used to work with Monero addresses
+monero = "0.21.0"
+# Used to work with monero-wallet-rpc
 monero-rpc = { version = "0.5.0", default-features = false, features = ["rpc_authentication", "rustls-tls"] }
+# Used to work with monero-lws API
+monero-lws = { git = "https://github.com/silverpill/monero-lws", rev = "4fd0501abbea247a423efc69ee97b2e7e4d52399" }
 # Used for working with regular expressions
 regex = "1.10.6"
 # Used for making async HTTP requests

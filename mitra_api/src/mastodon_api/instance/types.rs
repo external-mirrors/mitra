@@ -11,6 +11,7 @@ use mitra_config::{
     Config,
     DefaultRole,
     MoneroConfig,
+    MoneroLightConfig,
     RegistrationType,
     SOFTWARE_NAME,
     SOFTWARE_REPOSITORY,
@@ -107,6 +108,7 @@ struct AllowUnauthenticated {
 #[serde(untagged)]
 enum BlockchainMetadata {
     Monero {
+        is_forwarding_required: bool,
         description: Option<String>,
         payment_amount_min: u64,
     },
@@ -118,9 +120,24 @@ impl From<&MoneroConfig> for BlockchainMetadata {
             .chain_metadata.clone()
             .unwrap_or_default();
         Self::Monero {
+            is_forwarding_required: true,
             description: metadata.description.as_ref()
                 .map(|text| markdown_to_html(text)),
             payment_amount_min: MONERO_PAYMENT_AMOUNT_MIN,
+        }
+    }
+}
+
+impl From<&MoneroLightConfig> for BlockchainMetadata {
+    fn from(monero_config: &MoneroLightConfig) -> Self {
+        let metadata = monero_config
+            .chain_metadata.clone()
+            .unwrap_or_default();
+        Self::Monero {
+            is_forwarding_required: false,
+            description: metadata.description.as_ref()
+                .map(|text| markdown_to_html(text)),
+            payment_amount_min: 0,
         }
     }
 }
@@ -141,6 +158,17 @@ impl From<&BlockchainConfig> for BlockchainInfo {
     fn from(config: &BlockchainConfig) -> Self {
         match config {
             BlockchainConfig::Monero(monero_config) => {
+                let features = BlockchainFeatures {
+                    subscriptions: true,
+                };
+                let chain_metadata = BlockchainMetadata::from(monero_config);
+                BlockchainInfo {
+                    chain_id: monero_config.chain_id.to_string(),
+                    chain_metadata: chain_metadata,
+                    features: features,
+                }
+            },
+            BlockchainConfig::MoneroLight(monero_config) => {
                 let features = BlockchainFeatures {
                     subscriptions: true,
                 };
@@ -497,6 +525,7 @@ mod tests {
         let metadata = BlockchainMetadata::from(&monero_config);
         let metadata_json = serde_json::to_value(metadata).unwrap();
         let expected_metadata_json = json!({
+            "is_forwarding_required": true,
             "description": null,
             "payment_amount_min": 1000000000,
         });

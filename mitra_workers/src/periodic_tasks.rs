@@ -55,6 +55,7 @@ use super::payments::{
     monero::{
         check_closed_monero_invoices,
         check_monero_invoices,
+        check_monero_light_invoices,
     },
 };
 
@@ -296,6 +297,22 @@ pub async fn monero_recurrent_payment_monitor(
         None => return Ok(()), // not configured
     };
     check_closed_monero_invoices(
+        monero_config,
+        db_pool,
+    ).await?;
+    Ok(())
+}
+
+pub async fn monero_light_payment_monitor(
+    config: &Config,
+    db_pool: &DatabaseConnectionPool,
+) -> Result<(), Error> {
+    let monero_config = match config.monero_light_config() {
+        Some(monero_config) => monero_config,
+        None => return Ok(()), // not configured
+    };
+    check_monero_light_invoices(
+        &config.instance(),
         monero_config,
         db_pool,
     ).await?;
