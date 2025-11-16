@@ -50,6 +50,7 @@ use mitra_models::{
     },
     polls::types::PollData,
     posts::helpers::{
+        add_related_posts,
         add_user_actions,
         can_create_post,
         get_post_by_id_for_view,
@@ -1158,6 +1159,7 @@ async fn make_permanent(
         // Users can only archive their own public posts
         return Err(MastodonError::PermissionError);
     };
+    add_related_posts(db_client, vec![&mut post]).await?;
     let ipfs_api_url = config.ipfs_api_url.as_ref()
         .ok_or(MastodonError::NotSupported)?;
     let media_storage = MediaStorage::new(&config);
