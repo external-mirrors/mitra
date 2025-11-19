@@ -1,4 +1,5 @@
 use actix_web::{
+    delete,
     dev::ConnectionInfo,
     get,
     post,
@@ -7,6 +8,7 @@ use actix_web::{
     Scope,
 };
 use actix_web_httpauth::extractors::bearer::BearerAuth;
+use chrono::Utc;
 
 use mitra_activitypub::{
     adapters::users::delete_user,
@@ -25,6 +27,10 @@ use mitra_models::{
         DatabaseError,
     },
     notifications::helpers::create_move_notification,
+    oauth::queries::{
+        delete_oauth_token_by_id,
+        get_oauth_tokens,
+    },
     profiles::helpers::find_verified_aliases,
     profiles::queries::{
         get_profile_by_acct,
@@ -53,7 +59,7 @@ use crate::http::get_request_base_url;
 use crate::mastodon_api::{
     accounts::helpers::get_aliases,
     accounts::types::Account,
-    auth::get_current_user,
+    auth::{get_current_session, get_current_user},
     errors::MastodonError,
     media_server::ClientMediaServer,
 };
@@ -70,6 +76,7 @@ use super::types::{
     MoveFollowersRequest,
     PasswordChangeRequest,
     RemoveAliasRequest,
+    Session,
 };
 
 // Similar to Pleroma settings store
@@ -104,6 +111,44 @@ async fn client_config_view(
         current_user,
     );
     Ok(HttpResponse::Ok().json(account))
+}
+
+#[get("/sessions")]
+async fn session_list_view(
+    auth: BearerAuth,
+    db_pool: web::Data<DatabaseConnectionPool>,
+) -> Result<HttpResponse, MastodonError> {
+    let db_client = &**get_database_client(&db_pool).await?;
+    let (current_session_id, current_user) =
+        get_current_session(db_client, auth.token()).await?;
+    let tokens = get_oauth_tokens(db_client, current_user.id).await?;
+    let sessions: Vec<_> = tokens.into_iter()
+        .filter(|token| token.expires_at >= Utc::now())
+        .map(Session::from_db)
+        .map(|mut session| {
+            if session.id == current_session_id {
+                session.is_current = true;
+            };
+            session
+        })
+        .collect();
+    Ok(HttpResponse::Ok().json(sessions))
+}
+
+#[delete("/sessions/{session_id}")]
+async fn terminate_session_view(
+    auth: BearerAuth,
+    db_pool: web::Data<DatabaseConnectionPool>,
+    session_id: web::Path<i32>,
+) -> Result<HttpResponse, MastodonError> {
+    let db_client = &**get_database_client(&db_pool).await?;
+    let current_user = get_current_user(db_client, auth.token()).await?;
+    delete_oauth_token_by_id(
+        db_client,
+        current_user.id,
+        session_id.into_inner(),
+    ).await?;
+    Ok(HttpResponse::NoContent().finish())
 }
 
 #[post("/change_password")]
@@ -421,6 +466,8 @@ async fn delete_account_view(
 pub fn settings_api_scope() -> Scope {
     web::scope("/v1/settings")
         .service(client_config_view)
+        .service(session_list_view)
+        .service(terminate_session_view)
         .service(change_password_view)
         .service(add_alias_view)
         .service(remove_alias_view)

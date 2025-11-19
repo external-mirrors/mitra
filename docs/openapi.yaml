@@ -1499,6 +1499,53 @@ paths:
                 $ref: '#/components/schemas/CredentialAccount'
         400:
           description: Invalid request data.
+  /api/v1/settings/sessions:
+    get:
+      summary: List active sessions.
+      security:
+        - tokenAuth: []
+      responses:
+        200:
+          description: Successful operation.
+          content:
+            application/json:
+              schema:
+                description: Session list
+                type: array
+                items:
+                  description: Session
+                  type: object
+                  properties:
+                    id:
+                      description: The session ID.
+                      type: integer
+                    client_name:
+                      description: The application name.
+                      type: string
+                    created_at:
+                      description: When this session was created?
+                      type: string
+                      format: date-time
+                    is_current:
+                      description: Is it the current session?
+                      type: boolean
+  /api/v1/settings/sessions/{session_id}:
+    delete:
+      summary: Terminate the session.
+      security:
+        - tokenAuth: []
+      parameters:
+        - name: session_id
+          in: path
+          description: Session ID
+          required: true
+          schema:
+            type: integer
+      responses:
+        204:
+          description: Successful operation.
+        404:
+          description: Session doesn't exist.
   /api/v1/settings/change_password:
     post:
       summary: Set or change account's password.
