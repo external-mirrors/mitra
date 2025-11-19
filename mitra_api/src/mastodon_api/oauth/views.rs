@@ -170,11 +170,6 @@ async fn token_view(
                 .ok_or(ValidationError("authorization code is required"))?;
             let client_id = request_data.client_id
                 .ok_or(ValidationError("client ID is required"))?;
-            log::info!(
-                "authorization code grant: client_id {}, redirect_uri {:?}",
-                client_id,
-                request_data.redirect_uri,
-            );
             get_user_by_authorization_code(
                 db_client,
                 client_id,
@@ -264,7 +259,11 @@ async fn token_view(
         created_at,
         expires_at,
     ).await?;
-    log::warn!("created auth token for user {}", user);
+    log::warn!(
+        "created auth token for user {} (client: {:?})",
+        user,
+        request_data.client_id,
+    );
     let token_data = TokenResponse::new(
         access_token,
         created_at.timestamp(),
