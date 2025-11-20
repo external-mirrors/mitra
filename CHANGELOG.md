@@ -18,6 +18,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Associate access tokens with OAuth applications.
 - Changed default access token lifetime to 30 days.
 
+### Fixed
+
+- Fixed remote invoices not expiring if Monero integration is not enabled.
+
 ## [4.13.1] - 2025-11-19
 
 ### Changed

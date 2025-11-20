@@ -24,7 +24,6 @@ use mitra_models::{
     },
     invoices::helpers::{local_invoice_forwarded, local_invoice_reopened},
     invoices::queries::{
-        get_invoices_by_status,
         get_local_invoice_by_address,
         get_local_invoices_by_status,
         set_invoice_status,
@@ -92,11 +91,10 @@ async fn check_open_invoices(
     let db_client = &mut **get_database_client(db_pool).await?;
     // Invoices waiting for payment
     let mut address_waitlist = vec![];
-    let open_invoices = get_invoices_by_status(
+    let open_invoices = get_local_invoices_by_status(
         db_client,
         &config.chain_id,
         InvoiceStatus::Open,
-        false, // include remote invoices
     ).await?;
     for invoice in open_invoices {
         let expires_at = invoice.expires_at(MONERO_INVOICE_TIMEOUT);
@@ -107,10 +105,6 @@ async fn check_open_invoices(
                 invoice.id,
                 InvoiceStatus::Timeout,
             ).await?;
-            continue;
-        };
-        if invoice.object_id.is_some() {
-            // Don't monitor remote invoices
             continue;
         };
         let payment_address = invoice_payment_address(&invoice)?;

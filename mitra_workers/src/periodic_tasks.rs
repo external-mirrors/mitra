@@ -4,7 +4,10 @@ use mitra_activitypub::queues::{
     process_queued_incoming_activities,
     process_queued_outgoing_activities,
 };
-use mitra_adapters::media::delete_orphaned_media;
+use mitra_adapters::{
+    media::delete_orphaned_media,
+    payments::common::check_open_remote_invoices,
+};
 use mitra_config::Config;
 use mitra_models::{
     activitypub::queries::{
@@ -293,5 +296,13 @@ pub async fn importer_queue_executor(
         let db_client = &**get_database_client(db_pool).await?;
         delete_job_from_queue(db_client, job.id).await?;
     };
+    Ok(())
+}
+
+pub async fn remote_invoice_monitor(
+    _config: &Config,
+    db_pool: &DatabaseConnectionPool,
+) -> Result<(), Error> {
+    check_open_remote_invoices(db_pool).await?;
     Ok(())
 }

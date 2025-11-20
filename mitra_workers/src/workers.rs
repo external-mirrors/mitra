@@ -25,6 +25,7 @@ pub enum PeriodicTask {
     MediaCleanupQueueExecutor,
     RefreshMaterializedViews,
     ImporterQueueExecutor,
+    RemoteInvoiceMonitor,
     SubscriptionExpirationMonitor,
     MoneroPaymentMonitor,
     MoneroRecurrentPaymentMonitor,
@@ -47,6 +48,7 @@ impl PeriodicTask {
             Self::MediaCleanupQueueExecutor => 10,
             Self::RefreshMaterializedViews => 600,
             Self::ImporterQueueExecutor => 60,
+            Self::RemoteInvoiceMonitor => 600,
             Self::SubscriptionExpirationMonitor => 300,
             Self::MoneroPaymentMonitor => 30,
             Self::MoneroRecurrentPaymentMonitor => 600,
@@ -121,6 +123,9 @@ pub async fn run_worker(
                 PeriodicTask::ImporterQueueExecutor => {
                     importer_queue_executor(&config, &db_pool).await
                 },
+                PeriodicTask::RemoteInvoiceMonitor => {
+                    remote_invoice_monitor(&config, &db_pool).await
+                },
                 PeriodicTask::SubscriptionExpirationMonitor => {
                     subscription_expiration_monitor(&config, &db_pool).await
                 },
@@ -154,6 +159,7 @@ fn start_main_worker(
             PeriodicTask::MediaCleanupQueueExecutor,
             PeriodicTask::RefreshMaterializedViews,
             PeriodicTask::ImporterQueueExecutor,
+            PeriodicTask::RemoteInvoiceMonitor,
             PeriodicTask::SubscriptionExpirationMonitor,
         ];
         if !config.federation.incoming_queue_worker_enabled {

@@ -3,7 +3,10 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use mitra_adapters::payments::monero::MONERO_INVOICE_TIMEOUT;
+use mitra_adapters::payments::{
+    common::REMOTE_INVOICE_TIMEOUT,
+    monero::MONERO_INVOICE_TIMEOUT,
+};
 use mitra_models::{
     invoices::types::{Invoice as DbInvoice, InvoiceStatus},
     profiles::types::PaymentOption,
@@ -56,7 +59,7 @@ impl From<DbInvoice> for Invoice {
         };
         let expires_at = if value.object_id.is_some() {
             // TODO: remote servers should specify payment window
-            value.expires_at(MONERO_INVOICE_TIMEOUT)
+            value.expires_at(REMOTE_INVOICE_TIMEOUT)
         } else if value.chain_id.inner().is_monero() {
             // Supported chain
             // Invoice will be displayed as active
