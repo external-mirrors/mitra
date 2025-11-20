@@ -226,7 +226,7 @@ async fn check_paid_invoices(
             balance_data.unlocked_balance,
         );
         let recipient = get_user_by_id(db_client, invoice.recipient_id).await?;
-        let maybe_payment_info = recipient.profile.monero_subscription(&config.chain_id);
+        let maybe_payment_info = recipient.profile.monero_subscription(invoice.chain_id.inner());
         let payment_info = if let Some(payment_info) = maybe_payment_info {
             payment_info
         } else {
@@ -356,7 +356,7 @@ async fn check_forwarded_invoices(
         };
         let sender = get_profile_by_id(db_client, invoice.sender_id).await?;
         let recipient = get_user_by_id(db_client, invoice.recipient_id).await?;
-        let maybe_payment_info = recipient.profile.monero_subscription(&config.chain_id);
+        let maybe_payment_info = recipient.profile.monero_subscription(invoice.chain_id.inner());
         let payment_info = if let Some(payment_info) = maybe_payment_info {
             payment_info
         } else {
