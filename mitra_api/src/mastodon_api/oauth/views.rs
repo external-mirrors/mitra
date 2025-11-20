@@ -163,6 +163,24 @@ async fn token_view(
         Either::Right(form) => form.into_inner().into(),
     };
     let db_client = &**get_database_client(&db_pool).await?;
+    let maybe_oauth_app = if let Some(client_id) = request_data.client_id {
+        let oauth_app = match get_oauth_app_by_client_id(db_client, client_id).await {
+            Ok(app) => app,
+            Err(DatabaseError::NotFound(_)) =>
+                return Err(MastodonError::AuthError("invalid client credentials")),
+            Err(other_error) => return Err(other_error.into()),
+        };
+        if let Some(client_secret) = request_data.client_secret {
+            if client_secret != oauth_app.client_secret {
+                log::warn!("incorrect client secret");
+            };
+        } else {
+            log::warn!("client secret is not provided");
+        };
+        Some(oauth_app)
+    } else {
+        None
+    };
     let user = match request_data.grant_type.as_str() {
         "authorization_code" => {
             // https://www.rfc-editor.org/rfc/rfc6749#section-4.1.3
@@ -262,7 +280,7 @@ async fn token_view(
     log::warn!(
         "created auth token for user {} (client: {:?})",
         user,
-        request_data.client_id,
+        maybe_oauth_app.map(|app| app.app_name),
     );
     let token_data = TokenResponse::new(
         access_token,
