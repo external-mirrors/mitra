@@ -23,8 +23,8 @@ use mitra_services::monero::{
     utils::BLOCK_TIME,
 };
 
-const MONERO_INVOICE_WAIT_TIME: i64 = 3 * 60 * 60; // 3 hours
-pub const MONERO_INVOICE_TIMEOUT: i64 = MONERO_INVOICE_WAIT_TIME + 2 * 20 * (BLOCK_TIME as i64);
+const MONERO_INVOICE_WAIT_TIME: u32 = 3 * 60 * 60; // 3 hours
+pub const MONERO_INVOICE_TIMEOUT: u32 = MONERO_INVOICE_WAIT_TIME + 2 * 20 * (BLOCK_TIME as u32);
 
 #[derive(Debug, Error)]
 pub enum PaymentError {

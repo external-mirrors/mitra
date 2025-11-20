@@ -1,5 +1,5 @@
 use apx_core::caip2::ChainId;
-use chrono::{DateTime, TimeDelta, Utc};
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -54,9 +54,16 @@ impl From<DbInvoice> for Invoice {
             InvoiceStatus::Failed => "failed",
             InvoiceStatus::Requested => "requested",
         };
-        let expires_at = if value.chain_id.inner().is_monero() {
-            value.created_at + TimeDelta::seconds(MONERO_INVOICE_TIMEOUT)
+        let expires_at = if value.object_id.is_some() {
+            // TODO: remote servers should specify payment window
+            value.expires_at(MONERO_INVOICE_TIMEOUT)
+        } else if value.chain_id.inner().is_monero() {
+            // Supported chain
+            // Invoice will be displayed as active
+            // even if integration is disabled.
+            value.expires_at(MONERO_INVOICE_TIMEOUT)
         } else {
+            // Unsupported chain
             // Epoch 0
             Default::default()
         };

@@ -1,5 +1,5 @@
 use apx_core::caip2::ChainId;
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, TimeDelta, Utc};
 use postgres_protocol::types::{text_from_sql, text_to_sql};
 use postgres_types::{
     accepts,
@@ -208,6 +208,10 @@ impl Invoice {
             InvoiceStatus::Requested => panic!("payment address is not known"),
             _ => self.payment_address.clone().ok_or(DatabaseTypeError),
         }
+    }
+
+    pub fn expires_at(&self, timeout: u32) -> DateTime<Utc> {
+        self.created_at + TimeDelta::seconds(timeout.into())
     }
 }
 
