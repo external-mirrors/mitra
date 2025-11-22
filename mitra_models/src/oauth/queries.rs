@@ -127,6 +127,7 @@ pub async fn get_user_by_authorization_code(
 pub async fn save_oauth_token(
     db_client: &impl DatabaseClient,
     owner_id: Uuid,
+    maybe_app_id: Option<i32>,
     token: &str,
     created_at: DateTime<Utc>,
     expires_at: DateTime<Utc>,
@@ -136,13 +137,20 @@ pub async fn save_oauth_token(
         "
         INSERT INTO oauth_token (
             owner_id,
+            application_id,
             token_digest,
             created_at,
             expires_at
         )
-        VALUES ($1, $2, $3, $4)
+        VALUES ($1, $2, $3, $4, $5)
         ",
-        &[&owner_id, &token_digest, &created_at, &expires_at],
+        &[
+            &owner_id,
+            &maybe_app_id,
+            &token_digest,
+            &created_at,
+            &expires_at,
+        ],
     ).await?;
     Ok(())
 }
@@ -270,10 +278,13 @@ mod tests {
     async fn test_create_and_delete_oauth_token() {
         let db_client = &mut create_test_database().await;
         let user = create_test_user(db_client, "test").await;
+        let app_data = OauthAppData::default();
+        let app = create_oauth_app(db_client, app_data).await.unwrap();
         let token = "test-token";
         save_oauth_token(
             db_client,
             user.id,
+            Some(app.id),
             token,
             Utc::now(),
             Utc::now() + TimeDelta::days(7),

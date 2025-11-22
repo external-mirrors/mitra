@@ -273,6 +273,7 @@ async fn token_view(
     save_oauth_token(
         db_client,
         user.id,
+        maybe_oauth_app.as_ref().map(|app| app.id),
         &access_token,
         created_at,
         expires_at,
