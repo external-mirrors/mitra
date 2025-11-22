@@ -3089,6 +3089,12 @@ components:
         me:
           description: Has current user reacted with this emoji?
           type: boolean
+    FeedVisibility:
+      type: string
+      enum:
+        - public
+        - authenticated
+        - disabled
     Field:
       type: object
       properties:
@@ -3209,6 +3215,26 @@ components:
                   description: The maximum size of any uploaded image, in bytes.
                   type: integer
                   example: 5242880
+            polls:
+              description: Limits related to polls.
+              type: object
+              properties:
+                max_options:
+                  description: Each poll is allowed to have up to this many options.
+                  type: integer
+                  example: 10
+                max_characters_per_option:
+                  description: Each poll option is allowed to have this many characters.
+                  type: integer
+                  example: 100
+                min_expiration:
+                  description: The shortest allowed poll duration, in seconds.
+                  type: integer
+                  example: 0
+                max_expiration:
+                  description: The longest allowed poll duration, in seconds.
+                  type: integer
+                  example: 1073741824
         contact_account:
           allOf:
             - description: A user who may be contacted for any inquiries.
@@ -3333,6 +3359,54 @@ components:
                   description: The maximum size of any uploaded image, in bytes.
                   type: integer
                   example: 5242880
+            polls:
+              description: Limits related to polls.
+              type: object
+              properties:
+                max_options:
+                  description: Each poll is allowed to have up to this many options.
+                  type: integer
+                  example: 10
+                max_characters_per_option:
+                  description: Each poll option is allowed to have this many characters.
+                  type: integer
+                  example: 100
+                min_expiration:
+                  description: The shortest allowed poll duration, in seconds.
+                  type: integer
+                  example: 0
+                max_expiration:
+                  description: The longest allowed poll duration, in seconds.
+                  type: integer
+                  example: 1073741824
+            timelines_access:
+              description: Access restrictions on different timelines.
+              type: object
+              properties:
+                live_feeds:
+                  description: Access restrictions on public feeds.
+                  type: object
+                  properties:
+                    local:
+                      allOf:
+                        - description: Access restrictions for local posts in the public feed.
+                        - $ref: '#/components/schemas/FeedVisibility'
+                    remote:
+                      allOf:
+                        - description: Access restrictions for remote posts in the public feed.
+                        - $ref: '#/components/schemas/FeedVisibility'
+                hashtag_feeds:
+                  description: Access restrictions on hashtag feeds.
+                  type: object
+                  properties:
+                    local:
+                      allOf:
+                        - description: Access restrictions for local posts in hashtag feeds.
+                        - $ref: '#/components/schemas/FeedVisibility'
+                    remote:
+                      allOf:
+                        - description: Access restrictions for remote posts in hashtag feeds.
+                        - $ref: '#/components/schemas/FeedVisibility'
         registrations:
           description: Information about registering for this website.
           type: object
