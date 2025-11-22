@@ -20,7 +20,7 @@ services:
   monerod:
     profiles:
       - monero
-    image: ghcr.io/sethforprivacy/simple-monerod:v0.18.4.2
+    image: ghcr.io/sethforprivacy/simple-monerod:v0.18.4.4
     ports:
       - "58081:18081"
     command:
@@ -37,7 +37,7 @@ services:
   monero-wallet-rpc:
     profiles:
       - monero
-    image: ghcr.io/sethforprivacy/simple-monero-wallet-rpc:v0.18.4.2
+    image: ghcr.io/sethforprivacy/simple-monero-wallet-rpc:v0.18.4.4
     depends_on:
       - "monerod"
     ports:
