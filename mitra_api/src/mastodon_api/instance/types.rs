@@ -308,6 +308,7 @@ struct ConfigurationV2 {
     statuses: StatusLimits,
     media_attachments: MediaLimits,
     polls: PollLimits,
+    timelines_access: TimelinesAccess,
 }
 
 #[derive(Serialize)]
@@ -321,6 +322,19 @@ struct Registrations {
 struct Contact {
     email: String,
     account: Option<Account>,
+}
+
+#[derive(Serialize)]
+struct TimelineAccess {
+    local: String,
+    remote: String,
+}
+
+#[derive(Serialize)]
+struct TimelinesAccess {
+    live_feeds: TimelineAccess,
+    hashtag_feeds: TimelineAccess,
+    trending_link_feeds: TimelineAccess,
 }
 
 /// https://docs.joinmastodon.org/entities/Instance/
@@ -369,6 +383,25 @@ impl InstanceInfoV2 {
                     image_size_limit: config.limits.media.file_size_limit,
                 },
                 polls: PollLimits::new(),
+                timelines_access: TimelinesAccess {
+                    live_feeds: TimelineAccess {
+                        local:
+                            if config.instance_timeline_public {
+                                "public".to_string()
+                            } else {
+                                "authenticated".to_string()
+                            },
+                        remote: "authenticated".to_string()
+                    },
+                    hashtag_feeds: TimelineAccess {
+                        local: "public".to_string(),
+                        remote: "public".to_string()
+                    },
+                    trending_link_feeds: TimelineAccess {
+                        local: "disabled".to_string(),
+                        remote: "disabled".to_string()
+                    }
+                }
             },
             registrations: Registrations {
                 enabled:

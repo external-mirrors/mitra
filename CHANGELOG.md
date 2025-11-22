@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+
+- Added `timelines_access` property to `/api/v2/instance` response.
+
 ## [4.13.1] - 2025-11-19
 
 ### Changed
