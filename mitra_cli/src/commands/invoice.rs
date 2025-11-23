@@ -20,6 +20,7 @@ use mitra_models::{
         },
         types::InvoiceStatus,
     },
+    payment_methods::types::PaymentType,
 };
 use mitra_services::monero::wallet::{
     get_outgoing_transfers,
@@ -45,12 +46,14 @@ impl ReopenInvoice {
         let invoice = if let Ok(invoice_id) = Uuid::parse_str(&self.id_or_address) {
             get_local_invoice_by_id(
                 db_client,
+                PaymentType::Monero,
                 &monero_config.chain_id,
                 invoice_id,
             ).await?
         } else {
             get_local_invoice_by_address(
                 db_client,
+                PaymentType::Monero,
                 &monero_config.chain_id,
                 &self.id_or_address,
             ).await?
@@ -81,6 +84,7 @@ impl RepairInvoice {
             .ok_or(Error::msg("monero integration is not enabled"))?;
         let invoice = get_local_invoice_by_id(
             db_client,
+            PaymentType::Monero,
             &monero_config.chain_id,
             self.invoice_id,
         ).await?;

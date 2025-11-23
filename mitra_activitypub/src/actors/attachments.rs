@@ -381,11 +381,9 @@ mod tests {
         let authority = Authority::server(&instance_uri);
         let username = "testuser";
         let price = NonZeroU64::new(240000).unwrap();
-        let payout_address = "test";
         let payment_option = PaymentOption::monero_subscription(
             ChainId::monero_mainnet(),
             price,
-            payout_address.to_string(),
         );
         let subscription_page_url =
             "https://example.com/users/testuser/proposals/monero:418015bb9ae982a1975da7d79277c270";

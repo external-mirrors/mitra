@@ -332,6 +332,15 @@ CREATE TABLE timeline_marker (
     UNIQUE (user_id, timeline)
 );
 
+CREATE TABLE payment_method (
+    id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    owner_id UUID NOT NULL REFERENCES user_account (id) ON DELETE CASCADE,
+    payment_type SMALLINT NOT NULL,
+    chain_id VARCHAR(50) NOT NULL,
+    payout_address VARCHAR(500) NOT NULL,
+    UNIQUE (owner_id, chain_id)
+);
+
 CREATE TABLE invoice (
     id UUID PRIMARY KEY,
     sender_id UUID NOT NULL REFERENCES actor_profile (id) ON DELETE CASCADE,
@@ -339,6 +348,7 @@ CREATE TABLE invoice (
     chain_id VARCHAR(50) NOT NULL,
     amount BIGINT NOT NULL CHECK (amount >= 0),
     invoice_status SMALLINT NOT NULL DEFAULT 1,
+    payment_type SMALLINT,
     payment_address VARCHAR(500),
     payout_tx_id VARCHAR(200),
     object_id VARCHAR(2000) UNIQUE,

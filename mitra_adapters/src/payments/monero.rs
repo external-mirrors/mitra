@@ -10,6 +10,10 @@ use mitra_models::{
         get_local_invoice_by_participants,
     },
     invoices::types::Invoice,
+    payment_methods::{
+        helpers::get_payment_method_by_type_and_chain_id,
+        types::PaymentType,
+    },
     users::queries::get_user_by_id,
 };
 use mitra_services::monero::{
@@ -52,6 +56,14 @@ pub async fn reopen_local_invoice(
     if !invoice.invoice_status.is_final() {
         return Err(MoneroError::OtherError("invoice is already open").into());
     };
+    let _payment_method = get_payment_method_by_type_and_chain_id(
+        db_client,
+        invoice.recipient_id,
+        PaymentType::Monero,
+        invoice.chain_id.inner(),
+    )
+        .await?
+        .ok_or(MoneroError::OtherError("recipient can't accept payment"))?;
     let wallet_client = open_monero_wallet(config).await?;
     let payment_address = invoice_payment_address(invoice)?;
     let address_index = get_subaddress_index(
@@ -91,11 +103,20 @@ pub async fn get_payment_address(
     if recipient.profile.monero_subscription(&config.chain_id).is_none() {
         return Err(MoneroError::OtherError("recipient can't accept payment").into());
     };
+    let payment_method = get_payment_method_by_type_and_chain_id(
+        db_client,
+        recipient_id,
+        PaymentType::Monero,
+        &config.chain_id,
+    )
+        .await?
+        .ok_or(MoneroError::OtherError("recipient can't accept payment"))?;
     let invoice = match get_local_invoice_by_participants(
         db_client,
         sender_id,
         recipient_id,
-        &config.chain_id,
+        payment_method.payment_type,
+        payment_method.chain_id.inner(),
     ).await {
         Ok(invoice) => invoice, // invoice will be re-opened automatically on incoming payment
         Err(DatabaseError::NotFound(_)) => {
@@ -104,7 +125,8 @@ pub async fn get_payment_address(
                 db_client,
                 sender_id,
                 recipient_id,
-                &config.chain_id,
+                payment_method.payment_type,
+                payment_method.chain_id.inner(),
                 &payment_address.to_string(),
                 0, // any amount
             ).await?

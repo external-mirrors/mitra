@@ -8,6 +8,7 @@ use mitra_models::{
         DatabaseConnectionPool,
     },
     invoices::queries::create_local_invoice,
+    payment_methods::queries::get_payment_method_by_chain_id,
     profiles::queries::get_remote_profile_by_actor_id,
     profiles::types::MoneroSubscription,
     users::queries::get_user_by_name,
@@ -60,6 +61,13 @@ pub async fn handle_offer(
     if chain_id != monero_config.chain_id {
         return Err(ValidationError("recipient can't accept payment").into());
     };
+    let payment_method = get_payment_method_by_chain_id(
+        db_client,
+        proposer.id,
+        &chain_id,
+    )
+        .await?
+        .ok_or(ValidationError("recipient can't accept payment"))?;
     let subscription_option: MoneroSubscription = proposer.profile
         .payment_options
         .find_subscription_option(&chain_id)
@@ -79,7 +87,8 @@ pub async fn handle_offer(
         db_client,
         actor_profile.id,
         proposer.id,
-        &subscription_option.chain_id,
+        payment_method.payment_type,
+        payment_method.chain_id.inner(),
         &payment_address,
         amount,
     ).await?;

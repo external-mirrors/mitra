@@ -12,9 +12,12 @@ use postgres_types::{
 };
 use uuid::Uuid;
 
-use crate::database::{
-    int_enum::{int_enum_from_sql, int_enum_to_sql},
-    DatabaseTypeError,
+use crate::{
+    database::{
+        int_enum::{int_enum_from_sql, int_enum_to_sql},
+        DatabaseTypeError,
+    },
+    payment_methods::types::PaymentType,
 };
 
 #[derive(Debug)]
@@ -143,6 +146,7 @@ pub struct Invoice {
     pub chain_id: DbChainId,
     pub amount: i64, // requested payment amount
     pub invoice_status: InvoiceStatus,
+    pub payment_type: Option<PaymentType>, // only for local
     pub payment_address: Option<String>,
     pub payout_tx_id: Option<String>,
     pub object_id: Option<String>,
@@ -158,14 +162,22 @@ impl Invoice {
     pub(super) fn check_consistency(&self) -> Result<(), DatabaseTypeError> {
         if self.is_local() {
             // Local invoice
-            if !self.chain_id.inner().is_monero() {
-                return Err(DatabaseTypeError);
+            match self.payment_type {
+                Some(PaymentType::Monero) => {
+                    if !self.chain_id.inner().is_monero() {
+                        return Err(DatabaseTypeError);
+                    };
+                },
+                None => return Err(DatabaseTypeError),
             };
             if self.payment_address.is_none() {
                 return Err(DatabaseTypeError);
             };
         } else {
             // Remote invoice
+            if self.payment_type.is_some() {
+                return Err(DatabaseTypeError);
+            };
             if self.payout_tx_id.is_some() {
                 return Err(DatabaseTypeError);
             };
@@ -270,6 +282,7 @@ mod tests {
     fn test_change_status_remote() {
         let mut invoice = Invoice {
             invoice_status: InvoiceStatus::Requested,
+            payment_type: None,
             payment_address: None,
             ..Invoice::default()
         };

@@ -30,6 +30,10 @@ use mitra_models::{
     },
     invoices::types::{Invoice, InvoiceStatus},
     notifications::helpers::create_subscriber_payment_notification,
+    payment_methods::{
+        helpers::get_payment_method_by_type_and_chain_id,
+        types::PaymentType,
+    },
     profiles::queries::get_profile_by_id,
     users::queries::get_user_by_id,
 };
@@ -93,6 +97,7 @@ async fn check_open_invoices(
     let mut address_waitlist = vec![];
     let open_invoices = get_local_invoices_by_status(
         db_client,
+        PaymentType::Monero,
         &config.chain_id,
         InvoiceStatus::Open,
     ).await?;
@@ -130,6 +135,7 @@ async fn check_open_invoices(
             ).await?;
             let invoice = get_local_invoice_by_address(
                 db_client,
+                PaymentType::Monero,
                 &config.chain_id,
                 &subaddress.to_string(),
             ).await?;
@@ -164,6 +170,7 @@ async fn check_paid_invoices(
     // Invoices waiting to be forwarded
     let paid_invoices = get_local_invoices_by_status(
         db_client,
+        PaymentType::Monero,
         &config.chain_id,
         InvoiceStatus::Paid,
     ).await?;
@@ -226,12 +233,17 @@ async fn check_paid_invoices(
             balance_data.unlocked_balance,
         );
         let recipient = get_user_by_id(db_client, invoice.recipient_id).await?;
-        let maybe_payment_info = recipient.profile.monero_subscription(invoice.chain_id.inner());
-        let payment_info = if let Some(payment_info) = maybe_payment_info {
-            payment_info
+        let maybe_payment_method = get_payment_method_by_type_and_chain_id(
+            db_client,
+            recipient.id,
+            PaymentType::Monero,
+            invoice.chain_id.inner(),
+        ).await?;
+        let payment_method = if let Some(payment_method) = maybe_payment_method {
+            payment_method
         } else {
             log::error!(
-                "subscription is not configured for user {}",
+                "payment method is not available to user {}",
                 recipient,
             );
             continue;
@@ -241,7 +253,7 @@ async fn check_paid_invoices(
             &wallet_client_delay_tolerant,
             address_index.major,
             address_index.minor,
-            &payment_info.payout_address,
+            &payment_method.payout_address,
         ).await {
             Ok(payout_info) => payout_info,
             Err(error @ MoneroError::Dust) => {
@@ -282,6 +294,7 @@ async fn check_forwarded_invoices(
     let db_client = &mut **get_database_client(db_pool).await?;
     let forwarded_invoices = get_local_invoices_by_status(
         db_client,
+        PaymentType::Monero,
         &config.chain_id,
         InvoiceStatus::Forwarded,
     ).await?;
@@ -356,9 +369,9 @@ async fn check_forwarded_invoices(
         };
         let sender = get_profile_by_id(db_client, invoice.sender_id).await?;
         let recipient = get_user_by_id(db_client, invoice.recipient_id).await?;
-        let maybe_payment_info = recipient.profile.monero_subscription(invoice.chain_id.inner());
-        let payment_info = if let Some(payment_info) = maybe_payment_info {
-            payment_info
+        let maybe_subscription_info = recipient.profile.monero_subscription(invoice.chain_id.inner());
+        let subscription_info = if let Some(subscription_info) = maybe_subscription_info {
+            subscription_info
         } else {
             log::error!(
                 "subscription is not configured for user {}",
@@ -366,7 +379,7 @@ async fn check_forwarded_invoices(
             );
             continue;
         };
-        let duration_secs = (transfer.amount.as_pico() / payment_info.price)
+        let duration_secs = (transfer.amount.as_pico() / subscription_info.price)
             .try_into()
             .map_err(|_| MoneroError::OtherError("amount is too big"))?;
 
@@ -422,6 +435,7 @@ pub async fn check_closed_invoices(
     for (address, _) in addresses {
         let invoice = match get_local_invoice_by_address(
             db_client,
+            PaymentType::Monero,
             &config.chain_id,
             &address.to_string(),
         ).await {

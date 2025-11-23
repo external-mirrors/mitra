@@ -9,7 +9,6 @@ use mitra_adapters::payments::{
 };
 use mitra_models::{
     invoices::types::{Invoice as DbInvoice, InvoiceStatus},
-    profiles::types::PaymentOption,
     subscriptions::types::{Subscription as DbSubscription},
 };
 
@@ -92,21 +91,6 @@ pub enum SubscriptionOption {
         price: u64,
         payout_address: String,
     },
-}
-
-impl SubscriptionOption {
-    pub fn from_payment_option(payment_option: PaymentOption) -> Option<Self> {
-        let settings = match payment_option {
-            PaymentOption::Link(_) => return None,
-            PaymentOption::MoneroSubscription(payment_info) => Self::Monero {
-                chain_id: payment_info.chain_id,
-                price: payment_info.price.into(),
-                payout_address: payment_info.payout_address,
-            },
-            PaymentOption::RemoteMoneroSubscription(_) => return None,
-        };
-        Some(settings)
-    }
 }
 
 #[derive(Deserialize)]

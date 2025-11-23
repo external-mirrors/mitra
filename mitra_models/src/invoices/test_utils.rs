@@ -2,6 +2,7 @@ use apx_core::caip2::ChainId;
 
 use crate::{
     database::DatabaseClient,
+    payment_methods::types::PaymentType,
     profiles::test_utils::create_test_local_profile,
     users::test_utils::create_test_user,
 };
@@ -20,6 +21,7 @@ impl Default for Invoice {
             chain_id: DbChainId::new(&ChainId::monero_mainnet()),
             amount: 1,
             invoice_status: InvoiceStatus::Open,
+            payment_type: Some(PaymentType::Monero),
             payment_address: Some("".to_string()),
             payout_tx_id: None,
             object_id: None,
@@ -41,6 +43,7 @@ pub async fn create_test_local_invoice(
         db_client,
         sender.id,
         recipient.id,
+        PaymentType::Monero,
         &ChainId::monero_mainnet(),
         "8MxABajuo71BZya9",
         100000000000000_u64,

@@ -1,9 +1,12 @@
 use apx_core::caip2::ChainId;
 use uuid::Uuid;
 
-use crate::database::{
-    DatabaseClient,
-    DatabaseError,
+use crate::{
+    database::{
+        DatabaseClient,
+        DatabaseError,
+    },
+    payment_methods::types::PaymentType,
 };
 
 use super::{
@@ -18,11 +21,15 @@ use super::{
 
 pub async fn get_local_invoice_by_id(
     db_client: &impl DatabaseClient,
+    payment_type: PaymentType,
     chain_id: &ChainId,
     invoice_id: Uuid,
 ) -> Result<Invoice, DatabaseError> {
     let invoice = get_invoice_by_id(db_client, invoice_id).await?;
-    if invoice.object_id.is_some() || invoice.chain_id.inner() != chain_id {
+    if invoice.object_id.is_some()
+        || invoice.payment_type != Some(payment_type)
+        || invoice.chain_id.inner() != chain_id
+    {
         return Err(DatabaseError::NotFound("invoice"));
     };
     Ok(invoice)
@@ -98,6 +105,7 @@ mod tests {
             queries::{create_local_invoice, create_remote_invoice},
             test_utils::create_test_local_invoice,
         },
+        payment_methods::types::PaymentType,
         profiles::test_utils::create_test_remote_profile,
         users::test_utils::create_test_user,
     };
@@ -110,6 +118,7 @@ mod tests {
         let invoice = create_test_local_invoice(db_client).await;
         let result = get_local_invoice_by_id(
             db_client,
+            PaymentType::Monero,
             &ChainId::monero_mainnet(),
             invoice.id,
         ).await;
@@ -131,6 +140,7 @@ mod tests {
             db_client,
             sender.id,
             recipient.id,
+            PaymentType::Monero,
             &ChainId::monero_mainnet(),
             "8MxABajuo71BZya9",
             100000000000000_u64,

@@ -1070,7 +1070,6 @@ mod tests {
             payment_options: vec![PaymentOption::monero_subscription(
                 ChainId::monero_mainnet(),
                 184000000.try_into().unwrap(),
-                "testAddress".to_string(),
             )],
             ..Default::default()
         };

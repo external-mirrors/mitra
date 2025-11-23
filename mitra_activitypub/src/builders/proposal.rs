@@ -186,7 +186,6 @@ mod tests {
         let payment_info = MoneroSubscription {
             chain_id: ChainId::monero_mainnet(),
             price: NonZeroU64::new(20000).unwrap(),
-            payout_address: "test".to_string(),
         };
         let proposal = build_proposal(
             instance_uri,

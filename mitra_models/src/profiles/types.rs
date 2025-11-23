@@ -306,7 +306,6 @@ pub struct PaymentLink {
 pub struct MoneroSubscription {
     pub chain_id: ChainId,
     pub price: NonZeroU64, // piconeros per second
-    pub payout_address: String,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -364,12 +363,10 @@ impl PaymentOption {
     pub fn monero_subscription(
         chain_id: ChainId,
         price: NonZeroU64,
-        payout_address: String,
     ) -> Self {
         Self::MoneroSubscription(MoneroSubscription {
             chain_id,
             price,
-            payout_address,
         })
     }
 
@@ -1077,14 +1074,13 @@ mod tests {
 
     #[test]
     fn test_payment_option_monero_subscription_serialization() {
-        let json_data = r#"{"payment_type":3,"chain_id":"monero:418015bb9ae982a1975da7d79277c270","price":41387,"payout_address":"xxx"}"#;
+        let json_data = r#"{"payment_type":3,"chain_id":"monero:418015bb9ae982a1975da7d79277c270","price":41387}"#;
         let payment_option: PaymentOption = serde_json::from_str(json_data).unwrap();
         let PaymentOption::MoneroSubscription(payment_info) = &payment_option else {
             panic!("unexpected option");
         };
         assert_eq!(payment_info.chain_id, ChainId::monero_mainnet());
         assert_eq!(payment_info.price.get(), 41387);
-        assert_eq!(payment_info.payout_address, "xxx");
         let serialized = serde_json::to_string(&payment_option).unwrap();
         assert_eq!(serialized, json_data);
     }
