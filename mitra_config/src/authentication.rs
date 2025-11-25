@@ -30,6 +30,6 @@ pub fn default_authentication_methods() -> Vec<AuthenticationMethod> {
     vec![AuthenticationMethod::Password]
 }
 
-pub fn default_authentication_token_lifetime() -> u32 { 86400 * 7 }
+pub fn default_authentication_token_lifetime() -> u32 { 86400 * 30 }
 
 pub fn default_login_message() -> String { "Do not sign this message on other sites!".to_string() }
