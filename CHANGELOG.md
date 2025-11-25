@@ -18,6 +18,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Always verify client ID if provided in token request.
 - Associate access tokens with OAuth applications.
 - Changed default access token lifetime to 30 days.
+- Verify public keys, identity proofs and payment options when reading profiles from database.
 
 ### Fixed
 

@@ -743,9 +743,16 @@ impl DbActorProfile {
                 };
             },
         };
-        if let Some(ref actor_data) = self.actor_json {
+        let origin = if let Some(ref actor_data) = self.actor_json {
             actor_data.check_consistency()?;
+            Origin::Remote
+        } else {
+            Origin::Local
         };
+
+        check_public_keys(self.public_keys.inner(), origin)?;
+        check_identity_proofs(self.identity_proofs.inner())?;
+        check_payment_options(self.payment_options.inner(), origin)?;
         if self.is_local() {
             // Related media must be stored locally
             if let Some(ref avatar) = self.avatar {
