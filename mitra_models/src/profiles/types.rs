@@ -38,6 +38,7 @@ use super::checks::{
     check_public_keys,
 };
 
+#[derive(Clone, Copy)]
 pub enum Origin {
     Local,
     Remote,
@@ -919,16 +920,18 @@ pub struct ProfileCreateData {
 
 impl ProfileCreateData {
     pub(super) fn check_consistency(&self) -> Result<(), DatabaseTypeError> {
-        let is_remote = self.actor_json.as_ref()
-            .map(|actor| actor.check_consistency())
-            .transpose()?
-            .is_some();
-        if self.hostname.as_str().is_some() && !is_remote {
+        let origin = if let Some(actor_data) = self.actor_json.as_ref() {
+            actor_data.check_consistency()?;
+            Origin::Remote
+        } else {
+            Origin::Local
+        };
+        if self.hostname.as_str().is_some() && matches!(origin, Origin::Local) {
             return Err(DatabaseTypeError);
         };
-        check_public_keys(&self.public_keys, is_remote)?;
+        check_public_keys(&self.public_keys, origin)?;
         check_identity_proofs(&self.identity_proofs)?;
-        check_payment_options(&self.payment_options, is_remote)?;
+        check_payment_options(&self.payment_options, origin)?;
         // Aliases are not checked.
         // The list may contain duplicates or self-references.
         Ok(())
@@ -957,16 +960,18 @@ pub struct ProfileUpdateData {
 
 impl ProfileUpdateData {
     pub(super) fn check_consistency(&self) -> Result<(), DatabaseTypeError> {
-        let is_remote = self.actor_json.as_ref()
-            .map(|actor| actor.check_consistency())
-            .transpose()?
-            .is_some();
-        if self.hostname.as_str().is_some() && !is_remote {
+        let origin = if let Some(actor_data) = self.actor_json.as_ref() {
+            actor_data.check_consistency()?;
+            Origin::Remote
+        } else {
+            Origin::Local
+        };
+        if self.hostname.as_str().is_some() && matches!(origin, Origin::Local) {
             return Err(DatabaseTypeError);
         };
-        check_public_keys(&self.public_keys, is_remote)?;
+        check_public_keys(&self.public_keys, origin)?;
         check_identity_proofs(&self.identity_proofs)?;
-        check_payment_options(&self.payment_options, is_remote)?;
+        check_payment_options(&self.payment_options, origin)?;
         Ok(())
     }
 

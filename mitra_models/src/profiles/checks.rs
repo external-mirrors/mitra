@@ -5,15 +5,16 @@ use crate::database::DatabaseTypeError;
 use super::types::{
     DbActorKey,
     IdentityProof,
+    Origin,
     PaymentOption,
     PaymentType,
 };
 
 pub fn check_public_keys(
     public_keys: &[DbActorKey],
-    is_remote: bool,
+    origin: Origin,
 ) -> Result<(), DatabaseTypeError> {
-    if is_remote {
+    if matches!(origin, Origin::Remote) {
         let mut ids = HashSet::new();
         // HashSet::insert returns true if the value is unique
         if !public_keys.iter().map(|key| &key.id).all(|id| ids.insert(id)) {
@@ -21,7 +22,7 @@ pub fn check_public_keys(
             return Err(DatabaseTypeError);
         };
     };
-    if !is_remote && !public_keys.is_empty() {
+    if matches!(origin, Origin::Local) && !public_keys.is_empty() {
         // Local actor must have no public keys
         return Err(DatabaseTypeError);
     };
@@ -44,10 +45,10 @@ pub fn check_identity_proofs(
 
 pub fn check_payment_options(
     payment_options: &[PaymentOption],
-    is_remote: bool,
+    origin: Origin,
 ) -> Result<(), DatabaseTypeError> {
     // Option variant checks
-    if !is_remote && payment_options.iter()
+    if matches!(origin, Origin::Local) && payment_options.iter()
         .any(|option| matches!(
             option.payment_type(),
             PaymentType::Link | PaymentType::RemoteMoneroSubscription,
@@ -55,7 +56,7 @@ pub fn check_payment_options(
     {
         return Err(DatabaseTypeError);
     };
-    if is_remote && payment_options.iter()
+    if matches!(origin, Origin::Remote) && payment_options.iter()
         .any(|option| matches!(
             option.payment_type(),
             PaymentType::MoneroSubscription,
