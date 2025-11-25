@@ -87,11 +87,6 @@ async fn create_subscription_view(
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &mut **get_database_client(&db_pool).await?;
     let current_user = get_current_user(db_client, auth.token()).await?;
-    // Local subscriptions require chain_id
-    let monero_config = config.monero_config()
-        .ok_or(MastodonError::NotSupported)?;
-    current_user.profile.monero_subscription(&monero_config.chain_id)
-        .ok_or(ValidationError("subscriptions are not enabled"))?;
     let subscriber = get_profile_by_id(
         db_client,
         subscriber_data.subscriber_id,

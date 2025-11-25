@@ -2280,7 +2280,7 @@ paths:
           description: Post not found or is local.
   /api/v1/subscriptions:
     post:
-      summary: Add subscriber or extend existing subscription.
+      summary: Add subscriber or extend existing subscription. Can be used if blockchain integration is not enabled.
       security:
         - tokenAuth: []
       requestBody:
@@ -2308,8 +2308,6 @@ paths:
           description: Invalid request.
         404:
           description: User not found.
-        418:
-          description: Blockchain integration is not enabled.
   /api/v1/subscriptions/options:
     get:
       summary: Get list of subscription options

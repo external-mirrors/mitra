@@ -200,6 +200,8 @@ See [Tor guide](./docs/onion.md) and [I2P guide](./docs/i2p.md).
 
 - [Monero](./docs/monero.md)
 
+*Subscriptions can be used without enabling Monero integration.*
+
 ### IPFS integration (experimental)
 
 See [guide](./docs/ipfs.md).
