@@ -153,7 +153,7 @@ async fn register_subscription_option(
         return Err(MastodonError::PermissionError);
     };
 
-    let maybe_payment_option = match subscription_option.into_inner() {
+    let payment_option = match subscription_option.into_inner() {
         SubscriptionOption::Monero { chain_id, price, payout_address } => {
             let monero_config = config.monero_config()
                 .ok_or(MastodonError::NotSupported)?;
@@ -170,29 +170,27 @@ async fn register_subscription_option(
                 price,
                 payout_address,
             );
-            Some(payment_option)
+            payment_option
         },
     };
-    if let Some(payment_option) = maybe_payment_option {
-        let mut profile_data = ProfileUpdateData::from(&current_user.profile);
-        profile_data.add_payment_option(payment_option);
-        // Media cleanup is not needed
-        let (updated_profile, _) = update_profile(
-            db_client,
-            current_user.id,
-            profile_data,
-        ).await?;
-        current_user.profile = updated_profile;
+    let mut profile_data = ProfileUpdateData::from(&current_user.profile);
+    profile_data.add_payment_option(payment_option);
+    // Media cleanup is not needed
+    let (updated_profile, _) = update_profile(
+        db_client,
+        current_user.id,
+        profile_data,
+    ).await?;
+    current_user.profile = updated_profile;
 
-        // Federate
-        let media_server = MediaServer::new(&config);
-        prepare_update_person(
-            db_client,
-            &config.instance(),
-            &media_server,
-            &current_user,
-        ).await?.save_and_enqueue(db_client).await?;
-    };
+    // Federate
+    let media_server = MediaServer::new(&config);
+    prepare_update_person(
+        db_client,
+        &config.instance(),
+        &media_server,
+        &current_user,
+    ).await?.save_and_enqueue(db_client).await?;
 
     let base_url = get_request_base_url(connection_info);
     let media_server = ClientMediaServer::new(&config, &base_url);
