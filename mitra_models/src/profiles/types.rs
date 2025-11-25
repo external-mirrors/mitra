@@ -38,6 +38,11 @@ use super::checks::{
     check_public_keys,
 };
 
+pub enum Origin {
+    Local,
+    Remote,
+}
+
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub enum MentionPolicy {
     #[default]

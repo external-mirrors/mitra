@@ -22,10 +22,10 @@ use mitra_models::{
     emojis::types::{CustomEmoji as DbCustomEmoji},
     filter_rules::types::FilterAction,
     media::types::MediaInfo,
+    profiles::types::Origin::Remote,
 };
 use mitra_validators::{
     activitypub::validate_object_id,
-    common::Origin::Remote,
     emojis::{
         clean_emoji_name,
         validate_emoji_name,

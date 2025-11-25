@@ -74,6 +74,7 @@ use mitra_models::{
         RelatedPosts,
         Visibility,
     },
+    profiles::types::Origin::Local,
     reactions::queries::{
         create_reaction,
         delete_reaction,
@@ -87,7 +88,6 @@ use mitra_services::{
     media::{MediaServer, MediaStorage},
 };
 use mitra_validators::{
-    common::Origin::Local,
     errors::ValidationError,
     posts::{
         validate_local_post_links,

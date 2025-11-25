@@ -50,13 +50,15 @@ use mitra_models::{
             Visibility,
         },
     },
-    profiles::types::DbActorProfile,
+    profiles::types::{
+        DbActorProfile,
+        Origin::Remote,
+    },
 };
 use mitra_utils::{
     languages::{parse_language_tag, Language},
 };
 use mitra_validators::{
-    common::Origin::Remote,
     errors::ValidationError,
     media::{validate_media_description, validate_media_url},
     polls::{clean_poll_option_name, validate_poll_data},

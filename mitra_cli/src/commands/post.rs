@@ -36,6 +36,7 @@ use mitra_models::{
         queries::{create_post, delete_post, get_post_by_id},
         types::{PostContext, PostCreateData, Visibility},
     },
+    profiles::types::Origin::Local,
     users::helpers::get_user_by_id_or_name,
 };
 use mitra_services::media::MediaStorage;
@@ -44,7 +45,6 @@ use mitra_utils::{
     id::generate_deterministic_ulid,
 };
 use mitra_validators::{
-    common::Origin::Local,
     posts::{
         clean_remote_content,
         validate_post_create_data,
