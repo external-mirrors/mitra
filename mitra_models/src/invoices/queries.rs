@@ -253,7 +253,8 @@ pub async fn set_invoice_status(
         &[&invoice_id, &new_status],
     ).await?;
     let row = maybe_row.ok_or(DatabaseError::NotFound("invoice"))?;
-    let invoice = row.try_get("invoice")?;
+    let invoice: Invoice = row.try_get("invoice")?;
+    invoice.check_consistency()?;
     transaction.commit().await?;
     Ok(invoice)
 }
