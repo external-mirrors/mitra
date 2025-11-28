@@ -74,16 +74,20 @@ struct Like {
 }
 
 fn get_visibility(
-    _actor: &DbActor,
+    actor_data: &DbActor,
     to: &[String],
     cc: &[String],
 ) -> Result<Visibility, ValidationError> {
-    let audience = [to, cc].concat();
-    let normalized_audience = normalize_audience(&audience)?;
-    let visibility = if normalized_audience.iter()
+    let audience = normalize_audience(&[to, cc].concat())?;
+    let visibility = if audience.iter()
         .any(|target_id| target_id.to_string() == AP_PUBLIC)
     {
         Visibility::Public
+    } else if audience.iter()
+        .any(|target_id| Some(target_id.to_string()) == actor_data.followers)
+    {
+        log::warn!("followers-only reaction converted to direct");
+        Visibility::Direct
     } else {
         Visibility::Direct
     };
