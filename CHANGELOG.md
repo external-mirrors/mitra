@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [4.14.0] - 2025-11-28
+
 ### Added
 
 - Added `timelines_access` property to `/api/v2/instance` response ([#191](https://codeberg.org/silverpill/mitra/pulls/191)).
