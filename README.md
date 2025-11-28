@@ -206,6 +206,8 @@ See [Tor guide](./docs/onion.md) and [I2P guide](./docs/i2p.md).
 
 See [guide](./docs/ipfs.md).
 
+*IPFS integration is not actively maintained and may be removed in the future.*
+
 ## Administration
 
 - [Backup and restore](./docs/backup_and_restore.md)
