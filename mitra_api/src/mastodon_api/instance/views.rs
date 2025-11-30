@@ -120,6 +120,7 @@ async fn instance_v2_view(
     db_pool: web::Data<DatabaseConnectionPool>,
 ) -> Result<HttpResponse, MastodonError> {
     let db_client = &**get_database_client(&db_pool).await?;
+    let dynamic_config = get_dynamic_config(db_client).await?;
     let maybe_admin = if config.instance_staff_public {
         get_admin_user(db_client).await?
     } else {
@@ -133,6 +134,7 @@ async fn instance_v2_view(
     let media_server = ClientMediaServer::new(&config, &base_url);
     let instance = InstanceInfoV2::create(
         config.as_ref(),
+        dynamic_config,
         &media_server,
         maybe_admin,
         user_count_active_month,

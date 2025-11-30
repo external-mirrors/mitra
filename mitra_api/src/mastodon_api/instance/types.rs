@@ -89,6 +89,15 @@ struct Configuration {
     polls: PollLimits,
 }
 
+fn map_authentication_method(method: &AuthenticationMethod) -> String {
+    let value = match method {
+        AuthenticationMethod::Password => AUTHENTICATION_METHOD_PASSWORD,
+        AuthenticationMethod::Eip4361 => AUTHENTICATION_METHOD_EIP4361,
+        AuthenticationMethod::Caip122Monero => AUTHENTICATION_METHOD_CAIP122_MONERO,
+    };
+    value.to_string()
+}
+
 #[derive(Serialize)]
 struct AllowUnauthenticated {
     timeline_local: bool,
@@ -126,6 +135,24 @@ struct BlockchainInfo {
     chain_id: String,
     chain_metadata: BlockchainMetadata,
     features: BlockchainFeatures,
+}
+
+impl From<&BlockchainConfig> for BlockchainInfo {
+    fn from(config: &BlockchainConfig) -> Self {
+        match config {
+            BlockchainConfig::Monero(monero_config) => {
+                let features = BlockchainFeatures {
+                    subscriptions: true,
+                };
+                let chain_metadata = BlockchainMetadata::from(monero_config);
+                BlockchainInfo {
+                    chain_id: monero_config.chain_id.to_string(),
+                    chain_metadata: chain_metadata,
+                    features: features,
+                }
+            },
+        }
+    }
 }
 
 #[derive(Serialize)]
@@ -170,7 +197,7 @@ struct PleromaInfo {
     metadata: PleromaMetadata,
 }
 
-/// https://docs.joinmastodon.org/entities/V1_Instance/
+// https://docs.joinmastodon.org/entities/V1_Instance/
 #[derive(Serialize)]
 pub struct InstanceInfo {
     uri: String,
@@ -218,19 +245,6 @@ impl InstanceInfo {
         post_count: i64,
         peer_count: i64,
     ) -> Self {
-        let blockchains = config.blockchains().iter().map(|item| match item {
-            BlockchainConfig::Monero(monero_config) => {
-                let features = BlockchainFeatures {
-                    subscriptions: true,
-                };
-                let chain_metadata = BlockchainMetadata::from(monero_config);
-                BlockchainInfo {
-                    chain_id: monero_config.chain_id.to_string(),
-                    chain_metadata: chain_metadata,
-                    features: features,
-                }
-            },
-        }).collect();
         Self {
             uri: config.instance().hostname(),
             title: config.instance_title.clone(),
@@ -268,14 +282,7 @@ impl InstanceInfo {
                 user.profile,
             )),
             authentication_methods: config.authentication_methods.iter()
-                .map(|method| {
-                    let value = match method {
-                        AuthenticationMethod::Password => AUTHENTICATION_METHOD_PASSWORD,
-                        AuthenticationMethod::Eip4361 => AUTHENTICATION_METHOD_EIP4361,
-                        AuthenticationMethod::Caip122Monero => AUTHENTICATION_METHOD_CAIP122_MONERO,
-                    };
-                    value.to_string()
-                })
+                .map(map_authentication_method)
                 .collect(),
             login_message: config.login_message.clone(),
             new_accounts_read_only:
@@ -284,7 +291,9 @@ impl InstanceInfo {
                 timeline_local: config.instance_timeline_public,
             },
             federated_timeline_restricted: dynamic_config.federated_timeline_restricted,
-            blockchains: blockchains,
+            blockchains: config.blockchains().iter()
+                .map(BlockchainInfo::from)
+                .collect(),
             ipfs_gateway_url: config.ipfs_gateway_url.clone(),
             pleroma: PleromaInfo {
                 metadata: PleromaMetadata::new(),
@@ -337,12 +346,13 @@ struct TimelinesAccess {
     trending_link_feeds: TimelineAccess,
 }
 
-/// https://docs.joinmastodon.org/entities/Instance/
+// https://docs.joinmastodon.org/entities/Instance/
 #[derive(Serialize)]
 pub struct InstanceInfoV2 {
     domain: String,
     title: String,
     description: String,
+    extended_description: String,
     version: String,
     source_url: String,
     usage: Usage,
@@ -350,12 +360,20 @@ pub struct InstanceInfoV2 {
     registrations: Registrations,
     contact: Contact,
 
+    authentication_methods: Vec<String>,
+    login_message: String,
+    new_accounts_read_only: bool,
+    federated_timeline_restricted: bool,
+    blockchains: Vec<BlockchainInfo>,
+    ipfs_gateway_url: Option<String>,
+
     pleroma: PleromaInfo,
 }
 
 impl InstanceInfoV2 {
     pub fn create(
         config: &Config,
+        dynamic_config: DynamicConfig,
         media_server: &ClientMediaServer,
         maybe_admin: Option<User>,
         user_count_active_month: i64,
@@ -364,6 +382,7 @@ impl InstanceInfoV2 {
             domain: config.instance().hostname(),
             title: config.instance_title.clone(),
             description: config.instance_short_description.clone(),
+            extended_description: markdown_to_html(&config.instance_description),
             version: get_full_api_version(SOFTWARE_VERSION),
             source_url: SOFTWARE_REPOSITORY.to_string(),
             usage: Usage {
@@ -391,17 +410,17 @@ impl InstanceInfoV2 {
                             } else {
                                 "authenticated".to_string()
                             },
-                        remote: "authenticated".to_string()
+                        remote: "authenticated".to_string(),
                     },
                     hashtag_feeds: TimelineAccess {
                         local: "public".to_string(),
-                        remote: "public".to_string()
+                        remote: "public".to_string(),
                     },
                     trending_link_feeds: TimelineAccess {
                         local: "disabled".to_string(),
-                        remote: "disabled".to_string()
-                    }
-                }
+                        remote: "disabled".to_string(),
+                    },
+                },
             },
             registrations: Registrations {
                 enabled:
@@ -418,6 +437,17 @@ impl InstanceInfoV2 {
                     user.profile,
                 )),
             },
+            authentication_methods: config.authentication_methods.iter()
+                .map(map_authentication_method)
+                .collect(),
+            login_message: config.login_message.clone(),
+            new_accounts_read_only:
+                matches!(config.registration.default_role, DefaultRole::ReadOnlyUser),
+            federated_timeline_restricted: dynamic_config.federated_timeline_restricted,
+            blockchains: config.blockchains().iter()
+                .map(BlockchainInfo::from)
+                .collect(),
+            ipfs_gateway_url: config.ipfs_gateway_url.clone(),
             pleroma: PleromaInfo {
                 metadata: PleromaMetadata::new(),
             },

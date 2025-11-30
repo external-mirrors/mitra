@@ -22,7 +22,7 @@ pub fn verify_eip4361_signature(
     message: &str,
     signature: &str,
     instance_hostname: &str,
-    login_message: &str,
+    expected_statement: &str,
 ) -> Result<Eip4361SessionData, Eip4361Error> {
     let message: Message = message.parse()
         .map_err(|_| Eip4361Error("invalid EIP-4361 message"))?;
@@ -33,8 +33,8 @@ pub fn verify_eip4361_signature(
     };
     let statement = message.statement.as_ref()
         .ok_or(Eip4361Error("statement is missing"))?;
-    if statement != login_message {
-        return Err(Eip4361Error("statement doesn't match login message"));
+    if statement != expected_statement {
+        return Err(Eip4361Error("unexpected statement"));
     };
     if !message.valid_now() {
         return Err(Eip4361Error("message is not currently valid"));

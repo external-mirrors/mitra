@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- Copied custom fields from Instance API v1 response to v2 response.
+
 ## [4.14.0] - 2025-11-28
 
 ### Added

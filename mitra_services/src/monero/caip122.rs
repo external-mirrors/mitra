@@ -164,7 +164,7 @@ pub struct Caip122SessionData {
 pub async fn verify_monero_caip122_signature(
     config: &MoneroConfig,
     instance_hostname: &str,
-    login_message: &str,
+    expected_statement: &str,
     message_str: &str,
     signature: &str,
 ) -> Result<Caip122SessionData, Caip122Error> {
@@ -174,8 +174,8 @@ pub async fn verify_monero_caip122_signature(
     };
     let statement = message.statement.as_ref()
         .ok_or(Caip122Error::InvalidMessage("statement is missing"))?;
-    if statement != login_message {
-        return Err(Caip122Error::InvalidMessage("statement doesn't match login message"));
+    if statement != expected_statement {
+        return Err(Caip122Error::InvalidMessage("unexpected statement"));
     };
     if !message.valid_now() {
         return Err(Caip122Error::InvalidMessage("message is not currently valid"));

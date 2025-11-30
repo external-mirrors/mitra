@@ -3082,6 +3082,33 @@ components:
         - password
         - eip4361
         - caip122_monero
+    BlockchainInfo:
+      type: object
+      properties:
+        chain_id:
+          description: CAIP-2 chain ID.
+          type: string
+          example: 'monero:418015bb9ae982a1975da7d79277c270'
+        chain_metadata:
+          description: Additional information about the blockchain
+          type: object
+          properties:
+            description:
+              description: Description of the payment method (HTML).
+              type: string
+              nullable: true
+            payment_amount_min:
+              description: Minimum payment amount (in piconero).
+              type: integer
+              nullable: false
+        features:
+          description: Blockchain features.
+          type: object
+          properties:
+            subscriptions:
+              description: Subscriptions feature flag.
+              type: boolean
+              example: true
     CustomEmoji:
       type: object
       properties:
@@ -3292,6 +3319,7 @@ components:
         login_message:
           description: Login message for signer.
           type: string
+          example: "Do not sign this message on other sites!"
         new_accounts_read_only:
           description: Whether new accounts are in read only mode.
           type: boolean
@@ -3312,32 +3340,7 @@ components:
           description: Information about blockchain integrations.
           type: array
           items:
-            type: object
-            properties:
-              chain_id:
-                description: CAIP-2 chain ID.
-                type: string
-                example: 'eip155:1'
-              chain_metadata:
-                description: Additional information about blockchain
-                type: object
-                properties:
-                  description:
-                    description: Description of a payment method (HTML).
-                    type: string
-                    nullable: true
-                  payment_amount_min:
-                    description: Minimum payment amount (in piconero).
-                    type: integer
-                    nullable: false
-              features:
-                description: Blockchain features.
-                type: object
-                properties:
-                  subscriptions:
-                    description: Subscriptions feature flag.
-                    type: boolean
-                    example: true
+            $ref: '#/components/schemas/BlockchainInfo'
         ipfs_gateway_url:
           description: IPFS gateway URL.
           type: string
@@ -3355,6 +3358,9 @@ components:
           type: string
         description:
           description: A short, plain-text description defined by the admin.
+          type: string
+        extended_description:
+          description: Admin-defined description of the site (HTML).
           type: string
         version:
           description: Mastodon API compatibility version and the version of Mitra server.
@@ -3479,6 +3485,32 @@ components:
               allOf:
                 - description: A user that can be contacted natively over the network regarding inquiries or issues.
                 - $ref: '#/components/schemas/Account'
+        authentication_methods:
+          description: List of supported authentication methods.
+          type: array
+          items:
+            $ref: '#/components/schemas/AuthenticationMethod'
+        login_message:
+          description: Login message for signer.
+          type: string
+          example: "Do not sign this message on other sites!"
+        new_accounts_read_only:
+          description: Whether new accounts are in read only mode.
+          type: boolean
+          example: false
+        federated_timeline_restricted:
+          description: Make federated timeline visible only to moderators.
+          type: boolean
+          default: false
+        blockchains:
+          description: Information about blockchain integrations.
+          type: array
+          items:
+            $ref: '#/components/schemas/BlockchainInfo'
+        ipfs_gateway_url:
+          description: IPFS gateway URL.
+          type: string
+          nullable: true
         pleroma:
           $ref: '#/components/schemas/InstancePleroma'
     Invoice:
