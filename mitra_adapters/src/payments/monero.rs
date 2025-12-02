@@ -7,7 +7,7 @@ use mitra_models::{
     invoices::helpers::local_invoice_reopened,
     invoices::queries::{
         create_local_invoice,
-        get_invoice_by_participants,
+        get_local_invoice_by_participants,
     },
     invoices::types::Invoice,
     users::queries::get_user_by_id,
@@ -91,7 +91,7 @@ pub async fn get_payment_address(
     if recipient.profile.monero_subscription(&config.chain_id).is_none() {
         return Err(MoneroError::OtherError("recipient can't accept payments").into());
     };
-    let invoice = match get_invoice_by_participants(
+    let invoice = match get_local_invoice_by_participants(
         db_client,
         sender_id,
         recipient_id,

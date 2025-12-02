@@ -136,7 +136,7 @@ pub async fn get_local_invoice_by_address(
     Ok(invoice)
 }
 
-pub async fn get_invoice_by_participants(
+pub async fn get_local_invoice_by_participants(
     db_client: &impl DatabaseClient,
     sender_id: Uuid,
     recipient_id: Uuid,
@@ -151,6 +151,7 @@ pub async fn get_invoice_by_participants(
             sender_id = $1
             AND recipient_id = $2
             AND chain_id = $3
+            AND object_id IS NULL
         ORDER BY created_at DESC
         LIMIT 1
         ",

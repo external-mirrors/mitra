@@ -237,22 +237,3 @@ impl Invoice {
         self.created_at + TimeDelta::seconds(timeout.into())
     }
 }
-
-#[cfg(feature = "test-utils")]
-impl Default for Invoice {
-    fn default() -> Self {
-        Self {
-            id: Default::default(),
-            sender_id: Default::default(),
-            recipient_id: Default::default(),
-            chain_id: DbChainId(ChainId::monero_mainnet()),
-            amount: 1,
-            invoice_status: InvoiceStatus::Open,
-            payment_address: Some("".to_string()),
-            payout_tx_id: None,
-            object_id: None,
-            created_at: Default::default(),
-            updated_at: Default::default(),
-        }
-    }
-}

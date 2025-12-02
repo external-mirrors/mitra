@@ -1,3 +1,4 @@
+use apx_core::caip2::ChainId;
 use uuid::Uuid;
 
 use crate::database::{
@@ -5,12 +6,27 @@ use crate::database::{
     DatabaseError,
 };
 
-use super::queries::{
-    set_invoice_payout_tx_id,
-    set_invoice_status,
-    set_remote_invoice_data,
+use super::{
+    queries::{
+        get_invoice_by_id,
+        set_invoice_payout_tx_id,
+        set_invoice_status,
+        set_remote_invoice_data,
+    },
+    types::{Invoice, InvoiceStatus},
 };
-use super::types::{Invoice, InvoiceStatus};
+
+pub async fn get_local_invoice_by_id(
+    db_client: &impl DatabaseClient,
+    chain_id: &ChainId,
+    invoice_id: Uuid,
+) -> Result<Invoice, DatabaseError> {
+    let invoice = get_invoice_by_id(db_client, invoice_id).await?;
+    if invoice.object_id.is_some() || invoice.chain_id.inner() != chain_id {
+        return Err(DatabaseError::NotFound("invoice"));
+    };
+    Ok(invoice)
+}
 
 pub async fn local_invoice_forwarded(
     db_client: &mut impl DatabaseClient,
@@ -75,15 +91,30 @@ pub async fn remote_invoice_opened(
 
 #[cfg(test)]
 mod tests {
-    use apx_core::caip2::ChainId;
     use serial_test::serial;
     use crate::{
         database::test_utils::create_test_database,
-        invoices::queries::{create_local_invoice, create_remote_invoice},
+        invoices::{
+            queries::{create_local_invoice, create_remote_invoice},
+            test_utils::create_test_local_invoice,
+        },
         profiles::test_utils::create_test_remote_profile,
         users::test_utils::create_test_user,
     };
     use super::*;
+
+    #[tokio::test]
+    #[serial]
+    async fn test_get_local_invoice_by_id() {
+        let db_client = &mut create_test_database().await;
+        let invoice = create_test_local_invoice(db_client).await;
+        let result = get_local_invoice_by_id(
+            db_client,
+            &ChainId::monero_mainnet(),
+            invoice.id,
+        ).await;
+        assert_eq!(result.is_ok(), true);
+    }
 
     #[tokio::test]
     #[serial]

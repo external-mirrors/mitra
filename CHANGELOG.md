@@ -14,6 +14,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Changed
 
 - Copied custom fields from Instance API v1 response to v2 response.
+- Verify invoice properties before reopening or repairing.
 
 ### Fixed
 

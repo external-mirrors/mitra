@@ -11,9 +11,11 @@ use mitra_config::Config;
 use mitra_models::{
     database::{get_database_client, DatabaseConnectionPool},
     invoices::{
-        helpers::local_invoice_forwarded,
+        helpers::{
+            get_local_invoice_by_id,
+            local_invoice_forwarded,
+        },
         queries::{
-            get_invoice_by_id,
             get_local_invoice_by_address,
         },
         types::InvoiceStatus,
@@ -41,7 +43,11 @@ impl ReopenInvoice {
         let monero_config = config.monero_config()
             .ok_or(anyhow!("monero configuration not found"))?;
         let invoice = if let Ok(invoice_id) = Uuid::parse_str(&self.id_or_address) {
-            get_invoice_by_id(db_client, invoice_id).await?
+            get_local_invoice_by_id(
+                db_client,
+                &monero_config.chain_id,
+                invoice_id,
+            ).await?
         } else {
             get_local_invoice_by_address(
                 db_client,
@@ -73,11 +79,15 @@ impl RepairInvoice {
         let db_client = &mut **get_database_client(db_pool).await?;
         let monero_config = config.monero_config()
             .ok_or(Error::msg("monero configuration not found"))?;
-        let wallet_client = open_monero_wallet(monero_config).await?;
-        let invoice = get_invoice_by_id(db_client, self.invoice_id).await?;
+        let invoice = get_local_invoice_by_id(
+            db_client,
+            &monero_config.chain_id,
+            self.invoice_id,
+        ).await?;
         if invoice.invoice_status != InvoiceStatus::Paid {
             return Err(Error::msg("invoice is not paid"));
         };
+        let wallet_client = open_monero_wallet(monero_config).await?;
         let payment_address = invoice_payment_address(&invoice)?;
         let address_index = get_subaddress_index(
             &wallet_client,
@@ -109,6 +119,7 @@ impl RepairInvoice {
 #[derive(Parser)]
 pub struct GetPaymentAddress {
     sender_id: Uuid,
+    /// Local recipient
     recipient_id: Uuid,
 }
 
