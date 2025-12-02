@@ -1,14 +1,21 @@
-use anyhow::Error;
+use anyhow::{anyhow, Error};
 use clap::Parser;
 use uuid::Uuid;
 
-use mitra_adapters::payments::monero::invoice_payment_address;
+use mitra_adapters::payments::monero::{
+    get_payment_address,
+    invoice_payment_address,
+    reopen_local_invoice,
+};
 use mitra_config::Config;
 use mitra_models::{
     database::{get_database_client, DatabaseConnectionPool},
     invoices::{
         helpers::local_invoice_forwarded,
-        queries::get_invoice_by_id,
+        queries::{
+            get_invoice_by_id,
+            get_local_invoice_by_address,
+        },
         types::InvoiceStatus,
     },
 };
@@ -17,6 +24,39 @@ use mitra_services::monero::wallet::{
     get_subaddress_index,
     open_monero_wallet,
 };
+
+/// Re-open closed invoice (already processed, timed out or cancelled)
+#[derive(Parser)]
+pub struct ReopenInvoice {
+    id_or_address: String,
+}
+
+impl ReopenInvoice {
+    pub async fn execute(
+        self,
+        config: &Config,
+        db_pool: &DatabaseConnectionPool,
+    ) -> Result<(), Error> {
+        let db_client = &mut **get_database_client(db_pool).await?;
+        let monero_config = config.monero_config()
+            .ok_or(anyhow!("monero configuration not found"))?;
+        let invoice = if let Ok(invoice_id) = Uuid::parse_str(&self.id_or_address) {
+            get_invoice_by_id(db_client, invoice_id).await?
+        } else {
+            get_local_invoice_by_address(
+                db_client,
+                &monero_config.chain_id,
+                &self.id_or_address,
+            ).await?
+        };
+        reopen_local_invoice(
+            monero_config,
+            db_client,
+            &invoice,
+        ).await?;
+        Ok(())
+    }
+}
 
 /// Repair invoice after a forwarding error
 #[derive(Parser)]
@@ -61,6 +101,33 @@ impl RepairInvoice {
             &payout_tx_id,
         ).await?;
         println!("invoice updated");
+        Ok(())
+    }
+}
+
+/// Get payment address for given sender and recipient
+#[derive(Parser)]
+pub struct GetPaymentAddress {
+    sender_id: Uuid,
+    recipient_id: Uuid,
+}
+
+impl GetPaymentAddress {
+    pub async fn execute(
+        self,
+        config: &Config,
+        db_pool: &DatabaseConnectionPool,
+    ) -> Result<(), Error> {
+        let db_client = &mut **get_database_client(db_pool).await?;
+        let monero_config = config.monero_config()
+            .ok_or(anyhow!("monero configuration not found"))?;
+        let payment_address = get_payment_address(
+            monero_config,
+            db_client,
+            self.sender_id,
+            self.recipient_id,
+        ).await?;
+        println!("payment address: {}", payment_address);
         Ok(())
     }
 }
