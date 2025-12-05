@@ -361,6 +361,7 @@ mod tests {
             payment_address,
             amount,
         ).await.unwrap();
+        invoice.check_consistency().unwrap();
         assert_eq!(invoice.sender_id, sender_id);
         assert_eq!(invoice.recipient_id, recipient_id);
         assert_eq!(invoice.chain_id.into_inner(), chain_id);
@@ -386,6 +387,7 @@ mod tests {
             &chain_id,
             amount,
         ).await.unwrap();
+        invoice.check_consistency().unwrap();
         assert_eq!(invoice.sender_id, sender_id);
         assert_eq!(invoice.recipient_id, recipient_id);
         assert_eq!(invoice.chain_id.into_inner(), chain_id);

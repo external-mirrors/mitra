@@ -151,8 +151,12 @@ pub struct Invoice {
 }
 
 impl Invoice {
+    fn is_local(&self) -> bool {
+        self.object_id.is_none() && self.invoice_status != InvoiceStatus::Requested
+    }
+
     pub(super) fn check_consistency(&self) -> Result<(), DatabaseTypeError> {
-        if self.object_id.is_none() {
+        if self.is_local() {
             // Local invoice
             if !self.chain_id.inner().is_monero() {
                 return Err(DatabaseTypeError);
