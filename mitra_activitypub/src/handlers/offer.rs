@@ -55,6 +55,7 @@ pub async fn handle_offer(
     )?;
     let proposer = get_user_by_name(db_client, &username).await?;
     let monero_config = config.monero_config()
+        // Monero integration is not enabled
         .ok_or(ValidationError("recipient can't accept payment"))?;
     if chain_id != monero_config.chain_id {
         return Err(ValidationError("recipient can't accept payment").into());

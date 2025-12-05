@@ -15,6 +15,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Copied custom fields from Instance API v1 response to v2 response.
 - Verify invoice properties before reopening or repairing.
+- Improved descriptions of errors related to payment processing.
 
 ### Fixed
 

@@ -41,7 +41,7 @@ impl ReopenInvoice {
     ) -> Result<(), Error> {
         let db_client = &mut **get_database_client(db_pool).await?;
         let monero_config = config.monero_config()
-            .ok_or(anyhow!("monero configuration not found"))?;
+            .ok_or(anyhow!("monero integration is not enabled"))?;
         let invoice = if let Ok(invoice_id) = Uuid::parse_str(&self.id_or_address) {
             get_local_invoice_by_id(
                 db_client,
@@ -78,7 +78,7 @@ impl RepairInvoice {
     ) -> Result<(), Error> {
         let db_client = &mut **get_database_client(db_pool).await?;
         let monero_config = config.monero_config()
-            .ok_or(Error::msg("monero configuration not found"))?;
+            .ok_or(Error::msg("monero integration is not enabled"))?;
         let invoice = get_local_invoice_by_id(
             db_client,
             &monero_config.chain_id,
@@ -131,7 +131,7 @@ impl GetPaymentAddress {
     ) -> Result<(), Error> {
         let db_client = &mut **get_database_client(db_pool).await?;
         let monero_config = config.monero_config()
-            .ok_or(anyhow!("monero configuration not found"))?;
+            .ok_or(anyhow!("monero integration is not enabled"))?;
         let payment_address = get_payment_address(
             monero_config,
             db_client,

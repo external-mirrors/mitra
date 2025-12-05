@@ -47,7 +47,7 @@ pub async fn reopen_local_invoice(
     invoice: &Invoice,
 ) -> Result<(), PaymentError> {
     if invoice.chain_id != config.chain_id {
-        return Err(MoneroError::OtherError("can't process invoice").into());
+        return Err(MoneroError::OtherError("unexpected chain ID").into());
     };
     if !invoice.invoice_status.is_final() {
         return Err(MoneroError::OtherError("invoice is already open").into());
@@ -89,7 +89,7 @@ pub async fn get_payment_address(
 ) -> Result<String, PaymentError> {
     let recipient = get_user_by_id(db_client, recipient_id).await?;
     if recipient.profile.monero_subscription(&config.chain_id).is_none() {
-        return Err(MoneroError::OtherError("recipient can't accept payments").into());
+        return Err(MoneroError::OtherError("recipient can't accept payment").into());
     };
     let invoice = match get_local_invoice_by_participants(
         db_client,
