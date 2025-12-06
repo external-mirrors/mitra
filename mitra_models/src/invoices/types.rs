@@ -184,46 +184,40 @@ impl Invoice {
 
     pub fn can_change_status(&self, to: InvoiceStatus) -> bool {
         use InvoiceStatus::*;
-        let allowed = match self.invoice_status {
-            Open => {
-                if self.object_id.is_some() {
-                    vec![Paid, Completed, Timeout, Cancelled]
-                } else {
-                    vec![Paid, Timeout, Cancelled]
-                }
-            },
-            Paid => {
-                if self.object_id.is_some() {
-                    vec![Completed]
-                } else if self.payout_tx_id.is_some() {
-                    vec![Forwarded, Underpaid]
-                } else {
-                    vec![Underpaid]
-                }
-            },
-            Forwarded => vec![Completed, Failed],
-            Timeout => {
-                if self.object_id.is_some() {
-                    vec![Completed]
-                } else {
-                    vec![Paid]
-                }
-            },
-            Cancelled => vec![Paid],
-            Underpaid => vec![Paid],
-            Completed => {
-                if self.object_id.is_some() {
-                    vec![]
-                } else {
-                    vec![Paid]
-                }
-            },
-            Failed => vec![Paid],
-            Requested => {
-                if self.payment_address.is_some() && self.object_id.is_some() {
-                    vec![Open, Cancelled]
-                } else {
-                    vec![Cancelled]
+        let allowed = if self.is_local() {
+            match self.invoice_status {
+                Open => vec![Paid, Timeout, Cancelled],
+                Paid => {
+                    if self.payout_tx_id.is_some() {
+                        vec![Forwarded, Underpaid]
+                    } else {
+                        vec![Underpaid]
+                    }
+                },
+                Forwarded => vec![Completed, Failed],
+                Timeout => vec![Paid],
+                Cancelled => vec![Paid],
+                Underpaid => vec![Paid],
+                Completed => vec![Paid],
+                Failed => vec![Paid],
+                Requested => vec![], // unreachable
+            }
+        } else {
+            match self.invoice_status {
+                Open => vec![Paid, Completed, Timeout, Cancelled],
+                Paid => vec![Completed],
+                Forwarded => vec![], // unreachable
+                Timeout => vec![Completed],
+                Cancelled => vec![Paid],
+                Underpaid => vec![], // unreachable
+                Completed => vec![],
+                Failed => vec![], // unreachable
+                Requested => {
+                    if self.payment_address.is_some() {
+                        vec![Open, Cancelled]
+                    } else {
+                        vec![Cancelled]
+                    }
                 }
             }
         };
