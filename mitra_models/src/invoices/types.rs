@@ -241,3 +241,62 @@ impl Invoice {
         self.created_at + TimeDelta::seconds(timeout.into())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_change_status_local() {
+        let mut invoice = Invoice::default();
+        invoice.check_consistency().unwrap();
+        assert_eq!(invoice.can_change_status(InvoiceStatus::Open), false);
+        assert_eq!(invoice.can_change_status(InvoiceStatus::Paid), true);
+        assert_eq!(invoice.can_change_status(InvoiceStatus::Forwarded), false);
+        assert_eq!(invoice.can_change_status(InvoiceStatus::Completed), false);
+        assert_eq!(invoice.can_change_status(InvoiceStatus::Timeout), true);
+        assert_eq!(invoice.can_change_status(InvoiceStatus::Cancelled), true);
+        invoice.invoice_status = InvoiceStatus::Paid;
+        assert_eq!(invoice.can_change_status(InvoiceStatus::Forwarded), false);
+        assert_eq!(invoice.can_change_status(InvoiceStatus::Underpaid), true);
+        assert_eq!(invoice.can_change_status(InvoiceStatus::Timeout), false);
+        assert_eq!(invoice.can_change_status(InvoiceStatus::Cancelled), false);
+        invoice.payout_tx_id = Some("abcd".to_owned());
+        assert_eq!(invoice.can_change_status(InvoiceStatus::Forwarded), true);
+        invoice.invoice_status = InvoiceStatus::Forwarded;
+        assert_eq!(invoice.can_change_status(InvoiceStatus::Completed), true);
+        assert_eq!(invoice.can_change_status(InvoiceStatus::Failed), true);
+        assert_eq!(invoice.can_change_status(InvoiceStatus::Cancelled), false);
+        invoice.invoice_status = InvoiceStatus::Completed;
+        assert_eq!(invoice.can_change_status(InvoiceStatus::Paid), true);
+        assert_eq!(invoice.can_change_status(InvoiceStatus::Cancelled), false);
+    }
+
+    #[test]
+    fn test_change_status_remote() {
+        let mut invoice = Invoice {
+            invoice_status: InvoiceStatus::Requested,
+            payment_address: None,
+            ..Invoice::default()
+        };
+        invoice.check_consistency().unwrap();
+        assert_eq!(invoice.can_change_status(InvoiceStatus::Open), false);
+        assert_eq!(invoice.can_change_status(InvoiceStatus::Timeout), false);
+        assert_eq!(invoice.can_change_status(InvoiceStatus::Cancelled), true);
+        invoice.object_id = Some("https://social.example".to_owned());
+        invoice.payment_address = Some("abcd".to_owned());
+        assert_eq!(invoice.can_change_status(InvoiceStatus::Open), true);
+        invoice.invoice_status = InvoiceStatus::Open;
+        assert_eq!(invoice.can_change_status(InvoiceStatus::Paid), true);
+        assert_eq!(invoice.can_change_status(InvoiceStatus::Timeout), true);
+        assert_eq!(invoice.can_change_status(InvoiceStatus::Cancelled), true);
+        invoice.invoice_status = InvoiceStatus::Paid;
+        assert_eq!(invoice.can_change_status(InvoiceStatus::Forwarded), false);
+        assert_eq!(invoice.can_change_status(InvoiceStatus::Underpaid), false);
+        assert_eq!(invoice.can_change_status(InvoiceStatus::Completed), true);
+        assert_eq!(invoice.can_change_status(InvoiceStatus::Timeout), false);
+        assert_eq!(invoice.can_change_status(InvoiceStatus::Cancelled), false);
+        invoice.invoice_status = InvoiceStatus::Completed;
+        assert_eq!(invoice.can_change_status(InvoiceStatus::Paid), false);
+    }
+}
