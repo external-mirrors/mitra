@@ -989,6 +989,10 @@ impl ProfileUpdateData {
         self.identity_proofs.push(proof);
     }
 
+    pub fn remove_identity_proof(&mut self, issuer: &Did) -> () {
+        self.identity_proofs.retain(|item| &item.issuer != issuer);
+    }
+
     /// Adds new payment option
     /// or replaces the existing one if it has the same type.
     pub fn add_payment_option(&mut self, option: PaymentOption) -> () {

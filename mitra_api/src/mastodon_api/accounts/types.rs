@@ -619,6 +619,11 @@ pub struct IdentityProofData {
 }
 
 #[derive(Deserialize)]
+pub struct IdentityProofDeletionRequest {
+    pub did: Did,
+}
+
+#[derive(Deserialize)]
 pub struct RelationshipQueryParams {
     pub id: Vec<Uuid>,
 }

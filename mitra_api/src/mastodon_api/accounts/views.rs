@@ -3,6 +3,7 @@ use std::time::Duration;
 use actix_governor::{Governor, GovernorExtractor};
 use actix_multipart::form::MultipartForm;
 use actix_web::{
+    delete,
     dev::ConnectionInfo,
     get,
     http::{
@@ -156,6 +157,7 @@ use super::types::{
     IdentityClaim,
     IdentityClaimQueryParams,
     IdentityProofData,
+    IdentityProofDeletionRequest,
     LoadActivitiesParams,
     LookupAcctQueryParams,
     RelationshipQueryParams,
@@ -529,6 +531,46 @@ async fn create_identity_proof(
     );
     let mut profile_data = ProfileUpdateData::from(&current_user.profile);
     profile_data.add_identity_proof(proof);
+    validate_identity_proofs(&profile_data.identity_proofs)?;
+    // Only identity proofs are updated, media cleanup is not needed
+    let (updated_profile, _) = update_profile(
+        db_client,
+        current_user.id,
+        profile_data,
+    ).await?;
+    current_user.profile = updated_profile;
+
+    // Federate
+    let media_server = MediaServer::new(&config);
+    prepare_update_person(
+        db_client,
+        &config.instance(),
+        &media_server,
+        &current_user,
+    ).await?.save_and_enqueue(db_client).await?;
+
+    let base_url = get_request_base_url(connection_info);
+    let media_server = ClientMediaServer::new(&config, &base_url);
+    let account = Account::from_user(
+        config.instance().uri_str(),
+        &media_server,
+        current_user,
+    );
+    Ok(HttpResponse::Ok().json(account))
+}
+
+#[delete("/identity_proof")]
+async fn delete_identity_proof(
+    auth: BearerAuth,
+    config: web::Data<Config>,
+    connection_info: ConnectionInfo,
+    db_pool: web::Data<DatabaseConnectionPool>,
+    proof_data: web::Json<IdentityProofDeletionRequest>,
+) -> Result<HttpResponse, MastodonError> {
+    let db_client = &mut **get_database_client(&db_pool).await?;
+    let mut current_user = get_current_user(db_client, auth.token()).await?;
+    let mut profile_data = ProfileUpdateData::from(&current_user.profile);
+    profile_data.remove_identity_proof(&proof_data.did);
     validate_identity_proofs(&profile_data.identity_proofs)?;
     // Only identity proofs are updated, media cleanup is not needed
     let (updated_profile, _) = update_profile(
@@ -1141,6 +1183,7 @@ pub fn account_api_scope() -> Scope {
         .service(update_credentials)
         .service(get_identity_claim)
         .service(create_identity_proof)
+        .service(delete_identity_proof)
         .service(get_relationships_view)
         .service(lookup_acct)
         .service(search_by_acct_limited)

@@ -335,6 +335,29 @@ paths:
                 $ref: '#/components/schemas/Account'
         400:
           description: Invalid proof data.
+    delete:
+      summary: Remove identity proof.
+      security:
+        - tokenAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                did:
+                  description: Signer (DID).
+                  type: string
+                  example: 'did:pkh:eip155:1:0xb9c5714089478a327f09197987f16f9e5d936e8a'
+      responses:
+        200:
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Account'
+        400:
+          description: Invalid request.
   /api/v1/accounts/relationships:
     get:
       summary: Find out whether a given user is followed, blocked, muted, etc.
