@@ -38,6 +38,9 @@ fi
 mkdir -p $PACKAGE_DIR/usr/bin
 cp $TARGET_DIR/mitra $PACKAGE_DIR/usr/bin/mitra
 
+# Completions
+./$TARGET_DIR/mitra completion --shell bash > /usr/share/bash-completion/completions/mitra
+
 # Webapp
 mkdir -p $PACKAGE_DIR/usr/share/mitra
 # https://people.debian.org/~neilm/webapps-policy/ch-issues.html#s-issues-fhs

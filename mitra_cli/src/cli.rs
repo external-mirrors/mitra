@@ -8,8 +8,12 @@ use apx_core::{
         },
     },
 };
-use clap::{Parser, CommandFactory};
-use clap_complete::{Generator, generate, shells::Shell};
+use clap::{CommandFactory, Parser};
+use clap_complete::{
+    generate,
+    shells::Shell,
+    Generator,
+};
 use log::Level;
 use uuid::Uuid;
 
@@ -155,6 +159,7 @@ pub enum SubCommand {
     ListActiveAddresses(ListActiveAddresses),
     GetPaymentAddress(GetPaymentAddress),
     InstanceReport(InstanceReport),
+    /// Generate shell completions
     Completion {
         #[arg(short, long)]
         shell: Shell,
