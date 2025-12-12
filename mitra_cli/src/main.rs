@@ -14,11 +14,17 @@ use mitra_workers::workers::start_workers;
 mod cli;
 mod commands;
 
-use cli::{Cli, SubCommand};
+use cli::{Cli, SubCommand, print_completer};
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
     let opts: Cli = Cli::parse();
+
+    if let SubCommand::Completion { shell } = opts.subcmd {
+        print_completer(shell);
+        return Ok(());
+    }
+
     let maybe_override_log_level = match opts.subcmd {
         SubCommand::Server | SubCommand::Worker(_) => {
             // Do not override log level when running a process
@@ -85,6 +91,7 @@ async fn main() -> Result<(), Error> {
         SubCommand::ListActiveAddresses(cmd) => cmd.execute(&config).await,
         SubCommand::GetPaymentAddress(cmd) => cmd.execute(&config, &db_pool).await,
         SubCommand::InstanceReport(cmd) => cmd.execute(&config, &db_pool).await,
+        SubCommand::Completion { .. } => unreachable!(),
     };
     result
 }

@@ -8,7 +8,8 @@ use apx_core::{
         },
     },
 };
-use clap::Parser;
+use clap::{Parser, CommandFactory};
+use clap_complete::{Generator, generate, shells::Shell};
 use log::Level;
 use uuid::Uuid;
 
@@ -154,6 +155,10 @@ pub enum SubCommand {
     ListActiveAddresses(ListActiveAddresses),
     GetPaymentAddress(GetPaymentAddress),
     InstanceReport(InstanceReport),
+    Completion {
+        #[arg(short, long)]
+        shell: Shell,
+    },
 }
 
 /// Generate invite code
@@ -642,6 +647,13 @@ impl GetPaymentAddress {
         println!("payment address: {}", payment_address);
         Ok(())
     }
+}
+
+pub fn print_completer<G: Generator>(generator: G) {
+    let mut cmd = Cli::command();
+    let name = cmd.get_name().to_owned();
+
+    generate(generator, &mut cmd, name, &mut std::io::stdout());
 }
 
 #[cfg(test)]
