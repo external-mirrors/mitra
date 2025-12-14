@@ -30,6 +30,8 @@ services:
       - --fixed-difficulty=1
       - --rpc-bind-ip=0.0.0.0
       - --confirm-external-bind
+      - --zmq-rpc-bind-ip=0.0.0.0
+      - --zmq-rpc-bind-port=18084
     volumes:
       - monero_blockchain:/home/monero/.bitmonero
 
@@ -51,6 +53,20 @@ services:
       - --wallet-dir=/home/monero/wallet
     volumes:
       - monero_wallets:/home/monero/wallet
+
+  # https://github.com/farcaster-project/containers/tree/main/monero-lws
+  monero-lws:
+    profiles:
+      - monero
+    depends_on:
+      - "monerod"
+    image: ghcr.io/farcaster-project/containers/monero-lws:monerod-0.18.0.0
+    environment:
+      NETWORK: main
+      MONERO_DAEMON_ADDRESS: monerod:18084
+    ports:
+      - 58443:38884
+    restart: unless-stopped
 
 volumes:
   postgres_database:
