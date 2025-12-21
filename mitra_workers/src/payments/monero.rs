@@ -285,6 +285,51 @@ async fn check_paid_invoices(
     Ok(())
 }
 
+async fn create_or_update_monero_subscription(
+    db_client: &mut impl DatabaseClient,
+    instance: &Instance,
+    invoice: Invoice,
+    transfer_amount: u64, // piconero
+) -> Result<(), PaymentError> {
+    assert_eq!(invoice.invoice_status, InvoiceStatus::Completed);
+    let sender = get_profile_by_id(db_client, invoice.sender_id).await?;
+    let recipient = get_user_by_id(db_client, invoice.recipient_id).await?;
+    let maybe_subscription_info = recipient.profile.monero_subscription(invoice.chain_id.inner());
+    let subscription_info = if let Some(subscription_info) = maybe_subscription_info {
+        subscription_info
+    } else {
+        log::warn!(
+            "subscription is not configured for user {}",
+            recipient,
+        );
+        return Ok(());
+    };
+    let duration_secs = (transfer_amount / subscription_info.price)
+        .try_into()
+        .map_err(|_| MoneroError::OtherError("amount is too big"))?;
+    let subscription = create_or_update_local_subscription(
+        db_client,
+        &sender,
+        &recipient,
+        duration_secs,
+    ).await?;
+    create_subscriber_payment_notification(
+        db_client,
+        sender.id,
+        recipient.id,
+    ).await?;
+    if let Some(ref remote_sender) = sender.actor_json {
+        prepare_add_subscriber(
+            instance,
+            remote_sender,
+            &recipient,
+            subscription.expires_at,
+            Some(invoice.id),
+        ).save_and_enqueue(db_client).await?;
+    };
+    Ok(())
+}
+
 async fn check_forwarded_invoices(
     config: &MoneroConfig,
     db_pool: &DatabaseConnectionPool,
@@ -367,50 +412,25 @@ async fn check_forwarded_invoices(
             );
             continue;
         };
-        let sender = get_profile_by_id(db_client, invoice.sender_id).await?;
-        let recipient = get_user_by_id(db_client, invoice.recipient_id).await?;
-        let maybe_subscription_info = recipient.profile.monero_subscription(invoice.chain_id.inner());
-        let subscription_info = if let Some(subscription_info) = maybe_subscription_info {
-            subscription_info
-        } else {
-            log::error!(
-                "subscription is not configured for user {}",
-                recipient,
-            );
-            continue;
-        };
-        let duration_secs = (transfer.amount.as_pico() / subscription_info.price)
-            .try_into()
-            .map_err(|_| MoneroError::OtherError("amount is too big"))?;
-
-        set_invoice_status(db_client, invoice.id, InvoiceStatus::Completed).await?;
         log::info!("payout transaction confirmed for invoice {}", invoice.id);
+        let invoice = set_invoice_status(
+            db_client,
+            invoice.id,
+            InvoiceStatus::Completed,
+        ).await?;
 
-        let subscription = create_or_update_local_subscription(
+        // Optional: update subscription
+        create_or_update_monero_subscription(
             db_client,
-            &sender,
-            &recipient,
-            duration_secs,
+            instance,
+            invoice,
+            transfer.amount.as_pico(),
         ).await?;
-        create_subscriber_payment_notification(
-            db_client,
-            sender.id,
-            recipient.id,
-        ).await?;
-        if let Some(ref remote_sender) = sender.actor_json {
-            prepare_add_subscriber(
-                instance,
-                remote_sender,
-                &recipient,
-                subscription.expires_at,
-                Some(invoice.id),
-            ).save_and_enqueue(db_client).await?;
-        };
     };
     Ok(())
 }
 
-pub async fn check_monero_subscriptions(
+pub async fn check_monero_invoices(
     instance: &Instance,
     config: &MoneroConfig,
     db_pool: &DatabaseConnectionPool,
@@ -422,7 +442,7 @@ pub async fn check_monero_subscriptions(
     Ok(())
 }
 
-pub async fn check_closed_invoices(
+pub async fn check_closed_monero_invoices(
     config: &MoneroConfig,
     db_pool: &DatabaseConnectionPool,
 ) -> Result<(), PaymentError> {

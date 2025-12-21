@@ -52,7 +52,10 @@ use super::importer::{
 };
 use super::payments::{
     common::update_expired_subscriptions,
-    monero::{check_closed_invoices, check_monero_subscriptions},
+    monero::{
+        check_closed_monero_invoices,
+        check_monero_invoices,
+    },
 };
 
 pub async fn subscription_expiration_monitor(
@@ -61,37 +64,6 @@ pub async fn subscription_expiration_monitor(
 ) -> Result<(), Error> {
     update_expired_subscriptions(
         &config.instance(),
-        db_pool,
-    ).await?;
-    Ok(())
-}
-
-pub async fn monero_payment_monitor(
-    config: &Config,
-    db_pool: &DatabaseConnectionPool,
-) -> Result<(), Error> {
-    let monero_config = match config.monero_config() {
-        Some(monero_config) => monero_config,
-        None => return Ok(()), // not configured
-    };
-    check_monero_subscriptions(
-        &config.instance(),
-        monero_config,
-        db_pool,
-    ).await?;
-    Ok(())
-}
-
-pub async fn monero_recurrent_payment_monitor(
-    config: &Config,
-    db_pool: &DatabaseConnectionPool,
-) -> Result<(), Error> {
-    let monero_config = match config.monero_config() {
-        Some(monero_config) => monero_config,
-        None => return Ok(()), // not configured
-    };
-    check_closed_invoices(
-        monero_config,
         db_pool,
     ).await?;
     Ok(())
@@ -296,6 +268,37 @@ pub async fn importer_queue_executor(
         let db_client = &**get_database_client(db_pool).await?;
         delete_job_from_queue(db_client, job.id).await?;
     };
+    Ok(())
+}
+
+pub async fn monero_payment_monitor(
+    config: &Config,
+    db_pool: &DatabaseConnectionPool,
+) -> Result<(), Error> {
+    let monero_config = match config.monero_config() {
+        Some(monero_config) => monero_config,
+        None => return Ok(()), // not configured
+    };
+    check_monero_invoices(
+        &config.instance(),
+        monero_config,
+        db_pool,
+    ).await?;
+    Ok(())
+}
+
+pub async fn monero_recurrent_payment_monitor(
+    config: &Config,
+    db_pool: &DatabaseConnectionPool,
+) -> Result<(), Error> {
+    let monero_config = match config.monero_config() {
+        Some(monero_config) => monero_config,
+        None => return Ok(()), // not configured
+    };
+    check_closed_monero_invoices(
+        monero_config,
+        db_pool,
+    ).await?;
     Ok(())
 }
 
