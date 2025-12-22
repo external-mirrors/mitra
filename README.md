@@ -93,9 +93,11 @@ An HTTP server will be needed to handle HTTPS requests. See examples of [Nginx](
 
 ### Building from source
 
+Install `cargo`.
+
 Clone the git repository or download the source archive from the [Releases](https://codeberg.org/silverpill/mitra/releases) page.
 
-Install `cargo`. Then run:
+Navigate to the repository directory. Then run:
 
 ```shell
 cargo build --release --features production
