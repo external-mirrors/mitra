@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [4.15.0] - 2025-12-22
+
 ### Added
 
 - Added API endpoint for removing identity proofs.
