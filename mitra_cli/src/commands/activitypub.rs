@@ -13,6 +13,7 @@ use serde_json::{Value as JsonValue};
 
 use mitra_activitypub::{
     agent::build_federation_agent,
+    authentication::verify_signed_object,
     importers::{
         fetch_any_object_with_context,
         import_activity,
@@ -50,6 +51,9 @@ pub struct ImportObject {
     /// Expected core object type
     #[arg(long, default_value = "any")]
     object_type: String,
+    /// Verify FEP-8b32 proof after fetching?
+    #[arg(long)]
+    verify_proof: bool,
 
     #[arg(long, default_value = "any")]
     collection_type: String,
@@ -83,6 +87,15 @@ impl ImportObject {
             "collection" => CoreType::Collection,
             "any" => get_core_type(&object),
             _ => return Err(anyhow!("invalid object type")),
+        };
+        if self.verify_proof {
+            verify_signed_object(
+                config,
+                db_pool,
+                &object,
+                object_type,
+                false, // fetch signer
+            ).await?;
         };
         match object_type {
             CoreType::Object => {
