@@ -251,8 +251,7 @@ pub async fn verify_signed_request(
     if signature_data.is_rfc9421 {
         log::info!("RFC-9421 signature found");
     };
-    // Reciprocal claim on actor is required
-    // https://codeberg.org/fediverse/fep/src/branch/main/fep/fe34/fep-fe34.md#signatures
+    // Try to guess the key owner ID from the key ID.
     let signer_id = match signature_data.key_id {
         VerificationMethod::HttpUri(ref key_id) => {
             key_id_to_actor_id(key_id.as_str())
@@ -266,6 +265,7 @@ pub async fn verify_signed_request(
     };
     let signer = get_signer(config, db_pool, &signer_id, no_fetch).await?;
     let key_id = signature_data.key_id.to_string();
+    // Check reciprocal claim
     let public_key = get_signer_key(
         &signer,
         key_id.as_str(),
@@ -283,7 +283,7 @@ pub async fn verify_signed_request(
     Ok((signature_data.key_id, signer))
 }
 
-/// Verifies JSON signature on activity and returns actor
+/// Verifies JSON signature on activity and returns signer
 pub async fn verify_signed_activity(
     config: &Config,
     db_pool: &DatabaseConnectionPool,
@@ -291,17 +291,12 @@ pub async fn verify_signed_activity(
     no_fetch: bool,
 ) -> Result<DbActorProfile, AuthenticationError> {
     match verify_portable_object(activity) {
-        Ok(canonical_activity_id) => {
-            // Using actor-based verification because
-            // an actor profile needs to be returned
+        Ok(_) => {
+            // Actor is not relevant if the object is portable,
+            // but it is resolved because its profile needs to be returned
             let actor_id = object_to_id(&activity["actor"])
                 .map_err(|_| ValidationError("unknown actor"))?;
             let actor_profile = get_signer(config, db_pool, &actor_id, no_fetch).await?;
-            let canonical_actor_id =
-                canonicalize_id(actor_profile.expect_remote_actor_id())?;
-            if canonical_activity_id.origin() != canonical_actor_id.origin() {
-                return Err(AuthenticationError::UnexpectedObjectSigner);
-            };
             return Ok(actor_profile);
         },
         // Continue verification if activity is not portable
@@ -320,27 +315,23 @@ pub async fn verify_signed_activity(
         },
         Err(other_error) => return Err(other_error.into()),
     };
-    let actor_id = object_to_id(&activity["actor"])
-        .map_err(|_| ValidationError("unknown actor"))?;
-    let actor_profile = get_signer(config, db_pool, &actor_id, no_fetch).await?;
 
-    match signature_data.verification_method {
+    let signer = match signature_data.verification_method {
         VerificationMethod::HttpUri(key_id) => {
             // Can this activity be signed with this key?
             if !is_same_origin(activity_id, key_id.as_str())? {
                 return Err(AuthenticationError::UnexpectedKeyOrigin);
             };
-            // Can this actor perform this activity?
+            // Try to guess the key owner ID from the key ID.
             let signer_id = key_id_to_actor_id(key_id.as_str())
                 .map_err(|_| ValidationError("invalid key ID"))?;
-            if signer_id != actor_id {
-                return Err(AuthenticationError::UnexpectedObjectSigner);
-            };
+            let signer = get_signer(config, db_pool, &signer_id, no_fetch).await?;
             match signature_data.proof_type {
                 #[allow(deprecated)]
                 ProofType::JcsRsaSignature => {
+                    // Check reciprocal claim
                     let signer_key = get_signer_rsa_key(
-                        &actor_profile,
+                        &signer,
                         key_id.as_str(),
                     )?;
                     verify_rsa_json_signature(
@@ -351,8 +342,9 @@ pub async fn verify_signed_activity(
                 },
                 #[allow(deprecated)]
                 ProofType::JcsEddsaSignature | ProofType::EddsaJcsSignature => {
+                    // Check reciprocal claim
                     let signer_key = get_signer_ed25519_key(
-                        &actor_profile,
+                        &signer,
                         key_id.as_str(),
                     )?;
                     verify_eddsa_json_signature(
@@ -364,6 +356,7 @@ pub async fn verify_signed_activity(
                 },
                 _ => return Err(AuthenticationError::InvalidJsonSignatureType),
             };
+            signer
         },
         VerificationMethod::ApUri(ap_uri) => {
             log::warn!("activity signed by {}", ap_uri);
@@ -374,6 +367,11 @@ pub async fn verify_signed_activity(
             return Err(AuthenticationError::UnsupportedVerificationMethod);
         },
     };
-    // Signer is actor
-    Ok(actor_profile)
+    // Activity owner and key owner must be the same actor.
+    let actor_id = object_to_id(&activity["actor"])
+        .map_err(|_| ValidationError("unknown actor"))?;
+    if signer.expect_remote_actor_id() != actor_id {
+        return Err(AuthenticationError::UnexpectedObjectSigner);
+    };
+    Ok(signer)
 }
