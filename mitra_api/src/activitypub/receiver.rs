@@ -7,12 +7,15 @@ use apx_core::{
     http_types::{header_map_adapter, method_adapter, uri_adapter},
     url::http_url_whatwg::get_hostname,
 };
-use apx_sdk::deserialization::object_to_id;
+use apx_sdk::{
+    deserialization::object_to_id,
+    utils::CoreType,
+};
 use serde_json::{Value as JsonValue};
 
 use mitra_activitypub::{
     authentication::{
-        verify_signed_activity,
+        verify_signed_object,
         verify_signed_request,
         AuthenticationError,
     },
@@ -147,10 +150,11 @@ pub async fn receive_activity(
 
     // JSON signature is optional
     // (unless the activity is portable)
-    match verify_signed_activity(
+    match verify_signed_object(
         config,
         db_pool,
         activity,
+        CoreType::Activity,
         // Don't fetch actor if this is Delete(Person) activity
         is_self_delete,
     ).await {

@@ -5,7 +5,7 @@ use apx_sdk::{
         deserialize_into_object_id,
         object_to_id,
     },
-    utils::is_activity,
+    utils::{is_activity, CoreType},
 };
 use serde::Deserialize;
 use serde_json::{Value as JsonValue};
@@ -35,7 +35,7 @@ use mitra_validators::{
 };
 
 use crate::{
-    authentication::{verify_signed_activity, AuthenticationError},
+    authentication::{verify_signed_object, AuthenticationError},
     identifiers::parse_local_object_id,
     importers::{import_post, ActorIdResolver, ApClient},
     ownership::{
@@ -196,10 +196,11 @@ async fn handle_fep_1b12_announce(
     };
     let ap_client = ApClient::new_with_pool(config, db_pool).await?;
     // Authentication
-    let activity = match verify_signed_activity(
+    let activity = match verify_signed_object(
         config,
         db_pool,
         &activity,
+        CoreType::Activity,
         false, // fetch signer
     ).await {
         Ok(_) => activity.clone(),

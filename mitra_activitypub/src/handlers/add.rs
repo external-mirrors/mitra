@@ -1,6 +1,6 @@
 use apx_sdk::{
     deserialization::deserialize_into_object_id,
-    utils::is_activity,
+    utils::{is_activity, CoreType},
 };
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
@@ -30,7 +30,7 @@ use mitra_models::{
 use mitra_validators::errors::ValidationError;
 
 use crate::{
-    authentication::{verify_signed_activity, AuthenticationError},
+    authentication::{verify_signed_object, AuthenticationError},
     identifiers::parse_local_actor_id,
     importers::ApClient,
     ownership::{is_local_origin, is_same_origin, get_object_id, verify_activity_owner},
@@ -88,10 +88,11 @@ async fn handle_fep_171b_add(
         return Ok(None);
     };
     // Authentication
-    match verify_signed_activity(
+    match verify_signed_object(
         config,
         db_pool,
         &activity,
+        CoreType::Activity,
         false, // fetch signer
     ).await {
         Ok(_) => (),

@@ -42,8 +42,7 @@ use apx_sdk::{
         verify_portable_object,
         AuthenticationError as PortableObjectAuthenticationError,
     },
-    deserialization::object_to_id,
-    utils::key_id_to_actor_id,
+    utils::{key_id_to_actor_id, CoreType},
 };
 use serde_json::{Value as JsonValue};
 use thiserror::Error;
@@ -68,7 +67,7 @@ use crate::{
     errors::HandlerError,
     identifiers::canonicalize_id,
     importers::{ActorIdResolver, ApClient},
-    ownership::{get_object_id, is_same_origin},
+    ownership::{get_object_id, get_owner, is_same_origin},
 };
 
 const AUTHENTICATION_FETCHER_TIMEOUT: u64 = 10;
@@ -117,8 +116,8 @@ pub enum AuthenticationError {
     #[error("object ID and verification method have different origins")]
     UnexpectedKeyOrigin,
 
-    #[error("invalid portable activity: {0}")]
-    InvalidPortableActivity(#[from] PortableObjectAuthenticationError),
+    #[error("invalid portable object: {0}")]
+    InvalidPortableObject(#[from] PortableObjectAuthenticationError),
 }
 
 async fn get_signer(
@@ -278,23 +277,23 @@ pub async fn verify_signed_request(
     Ok((signature_data.key_id, signer))
 }
 
-/// Verifies JSON signature on activity and returns signer
-pub async fn verify_signed_activity(
+/// Verifies JSON signature on the object and returns signer
+pub async fn verify_signed_object(
     config: &Config,
     db_pool: &DatabaseConnectionPool,
-    activity: &JsonValue,
+    object: &JsonValue,
+    object_core_type: CoreType,
     no_fetch: bool,
 ) -> Result<DbActorProfile, AuthenticationError> {
-    match verify_portable_object(activity) {
+    match verify_portable_object(object) {
         Ok(_) => {
-            // Actor is not relevant if the object is portable,
+            // Owner is not relevant if the object is portable,
             // but it is resolved because its profile needs to be returned
-            let actor_id = object_to_id(&activity["actor"])
-                .map_err(|_| ValidationError("unknown actor"))?;
-            let actor_profile = get_signer(config, db_pool, &actor_id, no_fetch).await?;
-            return Ok(actor_profile);
+            let owner_id = get_owner(object, object_core_type)?;
+            let owner = get_signer(config, db_pool, &owner_id, no_fetch).await?;
+            return Ok(owner);
         },
-        // Continue verification if activity is not portable
+        // Continue verification if object is not portable
         Err(PortableObjectAuthenticationError::NotPortable) => (),
         Err(PortableObjectAuthenticationError::InvalidObjectID(message)) => {
             return Err(ValidationError(message).into());
@@ -302,8 +301,8 @@ pub async fn verify_signed_activity(
         Err(other_error) => return Err(other_error.into()),
     };
 
-    let activity_id = get_object_id(activity)?;
-    let signature_data = match get_json_signature(activity) {
+    let object_id = get_object_id(object)?;
+    let signature_data = match get_json_signature(object) {
         Ok(signature_data) => signature_data,
         Err(JsonSignatureError::NoProof) => {
             return Err(AuthenticationError::NoJsonSignature);
@@ -313,8 +312,8 @@ pub async fn verify_signed_activity(
 
     let signer = match signature_data.verification_method {
         VerificationMethod::HttpUri(key_id) => {
-            // Can this activity be signed with this key?
-            if !is_same_origin(activity_id, key_id.as_str())? {
+            // Can this object be signed with this key?
+            if !is_same_origin(object_id, key_id.as_str())? {
                 return Err(AuthenticationError::UnexpectedKeyOrigin);
             };
             // Try to guess the key owner ID from the key ID.
@@ -354,18 +353,17 @@ pub async fn verify_signed_activity(
             signer
         },
         VerificationMethod::ApUri(ap_uri) => {
-            log::warn!("activity signed by {}", ap_uri);
+            log::warn!("object signed by {}", ap_uri);
             return Err(AuthenticationError::UnsupportedVerificationMethod);
         },
         VerificationMethod::DidUrl(did_url) => {
-            log::warn!("activity signed by {}", did_url.did());
+            log::warn!("object signed by {}", did_url.did());
             return Err(AuthenticationError::UnsupportedVerificationMethod);
         },
     };
-    // Activity owner and key owner must be the same actor.
-    let actor_id = object_to_id(&activity["actor"])
-        .map_err(|_| ValidationError("unknown actor"))?;
-    if signer.expect_remote_actor_id() != actor_id {
+    // Object owner and key owner must be the same actor.
+    let owner_id = get_owner(object, object_core_type)?;
+    if signer.expect_remote_actor_id() != owner_id {
         return Err(AuthenticationError::UnexpectedObjectSigner);
     };
     Ok(signer)
