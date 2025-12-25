@@ -46,6 +46,7 @@ use apx_sdk::{
     utils::key_id_to_actor_id,
 };
 use serde_json::{Value as JsonValue};
+use thiserror::Error;
 
 use mitra_config::Config;
 use mitra_models::{
@@ -72,7 +73,7 @@ use crate::{
 
 const AUTHENTICATION_FETCHER_TIMEOUT: u64 = 10;
 
-#[derive(thiserror::Error, Debug)]
+#[derive(Debug, Error)]
 pub enum AuthenticationError {
     #[error(transparent)]
     HttpSignatureError(#[from] HttpSignatureError),
@@ -104,17 +105,11 @@ pub enum AuthenticationError {
     #[error("{0}")]
     ActorError(&'static str),
 
-    #[error("can't retrieve key")]
-    KeyRetrievalError(&'static str),
-
     #[error("invalid RSA public key")]
     InvalidRsaPublicKey(#[from] RsaSerializationError),
 
     #[error("invalid Ed25519 public key")]
     InvalidEd25519PublicKey(#[from] Ed25519SerializationError),
-
-    #[error("actor and request signer do not match")]
-    UnexpectedRequestSigner,
 
     #[error("actor and object signer do not match")]
     UnexpectedObjectSigner,
