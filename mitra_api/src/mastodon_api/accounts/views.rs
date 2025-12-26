@@ -3,7 +3,6 @@ use std::time::Duration;
 use actix_governor::{Governor, GovernorExtractor};
 use actix_multipart::form::MultipartForm;
 use actix_web::{
-    delete,
     dev::ConnectionInfo,
     get,
     http::{
@@ -365,7 +364,6 @@ async fn update_credentials(
     Ok(HttpResponse::Ok().json(account))
 }
 
-#[get("/identity_proof")]
 async fn get_identity_claim(
     auth: BearerAuth,
     config: web::Data<Config>,
@@ -406,7 +404,6 @@ async fn get_identity_claim(
     Ok(HttpResponse::Ok().json(response))
 }
 
-#[post("/identity_proof")]
 async fn create_identity_proof(
     auth: BearerAuth,
     config: web::Data<Config>,
@@ -559,7 +556,6 @@ async fn create_identity_proof(
     Ok(HttpResponse::Ok().json(account))
 }
 
-#[delete("/identity_proof")]
 async fn delete_identity_proof(
     auth: BearerAuth,
     config: web::Data<Config>,
@@ -1181,9 +1177,11 @@ pub fn account_api_scope() -> Scope {
         .service(create_account_limited)
         .service(verify_credentials)
         .service(update_credentials)
-        .service(get_identity_claim)
-        .service(create_identity_proof)
-        .service(delete_identity_proof)
+        .service(web::resource("/identity_claim").get(get_identity_claim))
+        .service(web::resource("/identity_proof")
+            .get(get_identity_claim)
+            .post(create_identity_proof)
+            .delete(delete_identity_proof))
         .service(get_relationships_view)
         .service(lookup_acct)
         .service(search_by_acct_limited)

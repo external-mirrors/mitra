@@ -250,7 +250,7 @@ paths:
                 $ref: '#/components/schemas/CredentialAccount'
         400:
           description: Invalid user data.
-  /api/v1/accounts/identity_proof:
+  /api/v1/accounts/identity_claim:
     get:
       summary: Get unsigned data for identity proof.
       security:
@@ -296,6 +296,7 @@ paths:
                     example: 2023-07-07T23:52:12.370231609Z
         400:
           description: Invalid request parameters
+  /api/v1/accounts/identity_proof:
     post:
       summary: Submit identity proof.
       security:
