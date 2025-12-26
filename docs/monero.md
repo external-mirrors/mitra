@@ -2,6 +2,13 @@
 
 ## Payments
 
+Monero payments can be tracked using two different methods:
+
+- Forwarding. This method works for any kind of payout address, but relies on an intermediary wallet.
+- View-only wallet. This method enables direct payments, but it requires users to supply a primary wallet address and a corresponding view key.
+
+### Forwarding
+
 Install a [Monero node](https://docs.getmonero.org/running-node/monerod-systemd/) (requires at least 2 GB RAM and 200 GB storage) or choose a [public one](https://monero.fail/).
 
 Install and configure [monero-wallet-rpc](https://docs.getmonero.org/rpc-library/wallet-rpc/) service. See configuration file [example](../contrib/monero/wallet.conf).
@@ -32,6 +39,18 @@ blockchains:
     wallet_rpc_url: 'http://127.0.0.1:18083'
     wallet_name: "mitra-wallet"
     wallet_password: "passw0rd"
+```
+
+### View-only wallet
+
+Direct payments require [Monero Light Wallet Server (LWS)](https://github.com/vtnerd/monero-lws) version 0.3.
+
+Install Monero LWS and add blockchain configuration to the `blockchains` array in your Mitra [configuration file](../config.example.yaml):
+
+```yaml
+blockchains:
+  - chain_id: monero:mainnet
+    lightwallet_api_url: 'http://127.0.0.1:18443'
 ```
 
 ## Sign-in with Monero wallet
