@@ -146,8 +146,8 @@ pub async fn handle_like(
             if let Some(db_emoji) = maybe_db_emoji {
                 (Some(content), Some(db_emoji.id))
             } else {
-                log::warn!("invalid custom emoji reaction");
-                return Ok(None);
+                log::warn!("ignoring reaction content: {content}");
+                (None, None)
             }
         },
         None => {
