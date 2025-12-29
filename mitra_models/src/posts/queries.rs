@@ -12,6 +12,7 @@ use crate::conversations::{
         create_conversation,
         get_conversation,
     },
+    types::TrackingStatus,
 };
 use crate::database::{
     catch_unique_violation,
@@ -377,6 +378,7 @@ pub async fn create_post(
                 profile.id,
                 db_post.id,
             ).await?;
+            notified_users.push(profile.id);
         };
     };
     // Construct post object
@@ -799,6 +801,13 @@ pub async fn get_home_timeline(
                     SELECT 1 FROM post_mention
                     WHERE post_id = post.id AND profile_id = $current_user_id
                 )
+                OR EXISTS (
+                    SELECT 1 FROM conversation_tracking
+                    WHERE
+                        conversation_tracking.conversation_id = post.conversation_id
+                        AND account_id = $current_user_id
+                        AND tracking_status = {tracking_status_follow}
+                )
             )
             -- author is not muted
             AND {mute_filter}
@@ -812,6 +821,7 @@ pub async fn get_home_timeline(
         relationship_subscription=i16::from(RelationshipType::Subscription),
         relationship_hide_reposts=i16::from(RelationshipType::HideReposts),
         relationship_hide_replies=i16::from(RelationshipType::HideReplies),
+        tracking_status_follow=i16::from(TrackingStatus::Follow),
         mute_filter=build_mute_filter(),
         visibility_filter=build_visibility_filter(),
     );

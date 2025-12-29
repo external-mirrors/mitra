@@ -18,6 +18,7 @@ use mitra_utils::languages::Language;
 use crate::attachments::types::MediaAttachment;
 use crate::conversations::types::{
     Conversation,
+    TrackingStatus,
     AP_PUBLIC,
 };
 use crate::database::{
@@ -193,6 +194,7 @@ pub struct PostActions {
     pub bookmarked: bool,
     pub voted_for: Vec<String>,
     pub hidden: bool,
+    pub conversation_tracking_status: Option<TrackingStatus>,
 }
 
 #[derive(Clone, Default)]

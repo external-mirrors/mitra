@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Added
 
 - Added `--verify-proof` option to `import-object` command.
+- Added support for conversation following.
 
 ### Changed
 

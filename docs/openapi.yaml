@@ -2266,6 +2266,37 @@ paths:
           description: Post does not exist
         422:
           description: Post is not public, or not owned by current user
+  /api/v1/statuses/{status_id}/conversation_tracking:
+    post:
+      summary: Change conversation tracking status
+      security:
+        - tokenAuth: []
+      parameters:
+        - $ref: '#/components/parameters/status_id'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  description: The conversation tracking status
+                  type: string
+                  enum:
+                    - normal
+                    - follow
+                  example: follow
+      responses:
+        200:
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+        400:
+          description: Invalid tracking status.
+        404:
+          description: Post not found
   /api/v1/statuses/{status_id}/make_permanent:
     post:
       summary: Save post to IPFS
@@ -3969,6 +4000,12 @@ components:
           description: Have you bookmarked this post?
           type: boolean
           example: false
+        conversation_tracking:
+          description: The conversation tracking status.
+          type: string
+          enum:
+            - normal
+            - follow
         hidden:
           description: Is this post hidden? A linked (quoted) post can be hidden if its author is muted.
           type: boolean

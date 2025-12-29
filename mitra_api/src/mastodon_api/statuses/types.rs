@@ -9,6 +9,7 @@ use mitra_activitypub::identifiers::{
     profile_actor_url,
 };
 use mitra_models::{
+    conversations::types::TrackingStatus,
     emojis::types::{CustomEmoji as DbCustomEmoji},
     posts::types::{PostDetailed as DbPostDetailed, Visibility},
     profiles::types::DbActorProfile,
@@ -33,6 +34,9 @@ use crate::mastodon_api::{
 
 pub const POST_CONTENT_TYPE_HTML: &str = "text/html";
 pub const POST_CONTENT_TYPE_MARKDOWN: &str = "text/markdown";
+
+const TRACKING_STATUS_NORMAL: &str = "normal";
+const TRACKING_STATUS_FOLLOW: &str = "follow";
 
 /// https://docs.joinmastodon.org/entities/Quote/
 #[derive(Serialize)]
@@ -88,6 +92,13 @@ struct PleromaData {
     quote_visible: bool,
 }
 
+fn tracking_status_to_str(tracking_mode: Option<TrackingStatus>) -> &'static str {
+    match tracking_mode {
+        None => TRACKING_STATUS_NORMAL,
+        Some(TrackingStatus::Follow) => TRACKING_STATUS_FOLLOW,
+    }
+}
+
 /// https://docs.joinmastodon.org/entities/status/
 #[derive(Serialize)]
 pub struct Status {
@@ -122,6 +133,7 @@ pub struct Status {
     pub favourited: bool,
     pub reblogged: bool,
     bookmarked: bool,
+    conversation_tracking: Option<&'static str>,
 
     // Pleroma API
     pleroma: PleromaData,
@@ -258,6 +270,8 @@ impl Status {
             favourited: post.actions.as_ref().is_some_and(|actions| actions.liked),
             reblogged: post.actions.as_ref().is_some_and(|actions| actions.reposted),
             bookmarked: post.actions.as_ref().is_some_and(|actions| actions.bookmarked),
+            conversation_tracking: post.actions.as_ref()
+                .map(|actions| tracking_status_to_str(actions.conversation_tracking_status)),
             pleroma: PleromaData {
                 emoji_reactions,
                 in_reply_to_account_acct: related_posts
@@ -463,6 +477,22 @@ pub struct RebloggedByQueryParams {
 
     #[serde(default = "default_repost_list_page_size")]
     pub limit: PageSize,
+}
+
+#[derive(Deserialize)]
+pub struct ConversationTrackingData {
+    status: String,
+}
+
+impl ConversationTrackingData {
+    pub fn status(&self) -> Result<Option<TrackingStatus>, ValidationError> {
+        let maybe_tracking_status = match self.status.as_str() {
+            TRACKING_STATUS_NORMAL => None,
+            TRACKING_STATUS_FOLLOW => Some(TrackingStatus::Follow),
+            _ => return Err(ValidationError("invalid tracking status")),
+        };
+        Ok(maybe_tracking_status)
+    }
 }
 
 #[cfg(test)]

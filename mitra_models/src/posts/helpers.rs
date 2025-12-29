@@ -2,7 +2,10 @@ use uuid::Uuid;
 
 use crate::{
     bookmarks::queries::find_bookmarked_by_user,
-    conversations::queries::is_conversation_participant,
+    conversations::queries::{
+        find_tracking_statuses_by_user,
+        is_conversation_participant,
+    },
     database::{DatabaseClient, DatabaseError},
     polls::queries::find_votes_by_user,
     profiles::types::DbActorProfile,
@@ -84,6 +87,8 @@ pub async fn add_user_actions(
     let bookmarks = find_bookmarked_by_user(db_client, user_id, &posts_ids).await?;
     let votes = find_votes_by_user(db_client, user_id, &posts_ids).await?;
     let hidden_posts = find_posts_hidden_by_user(db_client, user_id, &posts_ids).await?;
+    let tracking_statuses =
+        find_tracking_statuses_by_user(db_client, user_id, &posts_ids).await?;
     let get_actions = |post: &PostDetailed| -> PostActions {
         let liked = reactions.iter()
             .any(|(post_id, content)| *post_id == post.id && content.is_none());
@@ -98,6 +103,9 @@ pub async fn add_user_actions(
             .map(|(_, votes)| votes.clone())
             .unwrap_or_default();
         let hidden = hidden_posts.contains(&post.id);
+        let maybe_tracking_status = tracking_statuses.iter()
+            .find(|(post_id, _)| *post_id == post.id)
+            .and_then(|(_, tracking_status)| *tracking_status);
         PostActions {
             liked: liked,
             reacted_with: reacted_with,
@@ -105,6 +113,7 @@ pub async fn add_user_actions(
             bookmarked: bookmarked,
             voted_for: voted_for,
             hidden: hidden,
+            conversation_tracking_status: maybe_tracking_status,
         }
     };
     for post in posts {

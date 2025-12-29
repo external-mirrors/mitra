@@ -43,6 +43,7 @@ use mitra_adapters::posts::check_post_limits;
 use mitra_config::Config;
 use mitra_models::{
     bookmarks::queries::{create_bookmark, delete_bookmark},
+    conversations::queries::set_conversation_tracking_status,
     database::{
         get_database_client,
         DatabaseConnectionPool,
@@ -123,6 +124,7 @@ use super::helpers::{
 use super::types::{
     visibility_from_str,
     Context,
+    ConversationTrackingData,
     FavouritedByQueryParams,
     ReblogParams,
     RebloggedByQueryParams,
@@ -1141,6 +1143,41 @@ async fn unpin(
     Ok(HttpResponse::Ok().json(status))
 }
 
+#[post("/{status_id}/conversation_tracking")]
+async fn conversation_tracking_view(
+    auth: BearerAuth,
+    config: web::Data<Config>,
+    connection_info: ConnectionInfo,
+    db_pool: web::Data<DatabaseConnectionPool>,
+    status_id: web::Path<Uuid>,
+    request_data: web::Json<ConversationTrackingData>,
+) -> Result<HttpResponse, MastodonError> {
+    let db_client = &**get_database_client(&db_pool).await?;
+    let current_user = get_current_user(db_client, auth.token()).await?;
+    let post = get_post_by_id_for_view(
+        db_client,
+        Some(&current_user.profile),
+        *status_id,
+    ).await?;
+    let maybe_tracking_status = request_data.status()?;
+    set_conversation_tracking_status(
+        db_client,
+        post.expect_conversation().id,
+        current_user.id,
+        maybe_tracking_status,
+    ).await?;
+    let base_url = get_request_base_url(connection_info);
+    let media_server = ClientMediaServer::new(&config, &base_url);
+    let status = build_status(
+        db_client,
+        config.instance().uri_str(),
+        &media_server,
+        Some(&current_user),
+        post,
+    ).await?;
+    Ok(HttpResponse::Ok().json(status))
+}
+
 #[post("/{status_id}/make_permanent")]
 async fn make_permanent(
     auth: BearerAuth,
@@ -1255,6 +1292,7 @@ pub fn status_api_scope() -> Scope {
         .service(unpin)
         .service(bookmark_view)
         .service(unbookmark_view)
+        .service(conversation_tracking_view)
         .service(make_permanent)
         .service(load_conversation)
 }
