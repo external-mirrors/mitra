@@ -66,7 +66,7 @@ services:
       MONERO_DAEMON_ADDRESS: monerod:18082
     ports:
       - 58443:38884
-    restart: unless-stopped
+    restart: on-failure:3
 
 volumes:
   postgres_database:
