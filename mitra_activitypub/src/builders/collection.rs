@@ -45,6 +45,20 @@ impl OrderedCollection {
         }
     }
 
+    pub fn new_with_items(
+        collection_id: String,
+        items: Vec<JsonValue>,
+    ) -> Self {
+        Self {
+            _context: build_default_context(),
+            id: collection_id,
+            object_type: ORDERED_COLLECTION.to_string(),
+            ordered_items: items,
+            first: None,
+            total_items: None,
+        }
+    }
+
     pub fn new_page(
         collection_page_id: String,
         items: Vec<JsonValue>,

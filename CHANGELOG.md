@@ -16,6 +16,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Added support for Monero LWS v0.3.
 - Process invalid emoji reactions as likes.
 - Renamed identity proof template endpoint to `/api/v1/accounts/identity_claim`.
+- Changed type of portable inbox and outbox to `OrderedCollection`.
 
 ### Removed
 

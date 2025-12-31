@@ -893,14 +893,13 @@ async fn apgateway_inbox_pull_view(
         &canonical_collection_id.to_string(),
         LIMIT,
     ).await?;
-    // TODO: FEP-EF61: collection or collection page?
-    let collection_page = OrderedCollection::new_page(
+    let collection = OrderedCollection::new_with_items(
         collection_id,
         items,
     );
     let response = HttpResponse::Ok()
         .content_type(AP_MEDIA_TYPE)
-        .json(collection_page);
+        .json(collection);
     Ok(response)
 }
 
@@ -999,14 +998,13 @@ async fn apgateway_outbox_pull_view(
         &canonical_collection_id.to_string(),
         LIMIT,
     ).await?;
-    // TODO: FEP-EF61: collection or collection page?
-    let collection_page = OrderedCollection::new_page(
+    let collection = OrderedCollection::new_with_items(
         collection_id,
         items,
     );
     let response = HttpResponse::Ok()
         .content_type(AP_MEDIA_TYPE)
-        .json(collection_page);
+        .json(collection);
     Ok(response)
 }
 
