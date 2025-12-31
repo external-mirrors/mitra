@@ -38,10 +38,7 @@ use mitra_activitypub::{
     authority::Authority,
     builders::{
         announce::build_announce,
-        collection::{
-            OrderedCollection,
-            OrderedCollectionPage,
-        },
+        collection::OrderedCollection,
         create_note::build_create_note,
         emoji::build_emoji,
         note::build_note,
@@ -254,7 +251,7 @@ async fn outbox(
         false, // not only pinned
         false, // not only media
         None,
-        OrderedCollectionPage::DEFAULT_SIZE,
+        OrderedCollection::PAGE_SIZE,
     ).await?;
     add_related_posts(db_client, posts.iter_mut().collect()).await?;
     let media_server = MediaServer::new(&config);
@@ -273,7 +270,7 @@ async fn outbox(
                 .expect("activity should be serializable")
         }
     }).collect();
-    let collection_page = OrderedCollectionPage::new(
+    let collection_page = OrderedCollection::new_page(
         first_page_id,
         activities,
     );
@@ -399,7 +396,7 @@ async fn featured_collection(
         true, // only pinned
         false, // not only media
         None,
-        OrderedCollectionPage::DEFAULT_SIZE,
+        OrderedCollection::PAGE_SIZE,
     ).await?;
     add_related_posts(db_client, posts.iter_mut().collect()).await?;
     let authority = Authority::server(instance.uri());
@@ -415,7 +412,7 @@ async fn featured_collection(
         serde_json::to_value(note)
             .expect("note should be serializable")
     }).collect();
-    let collection_page = OrderedCollectionPage::new(
+    let collection_page = OrderedCollection::new_page(
         first_page_id,
         objects,
     );
@@ -587,14 +584,14 @@ pub async fn replies_collection(
     };
     let replies: Vec<_> = posts.into_iter()
         .filter(|post| post.in_reply_to_id == Some(internal_object_id))
-        .take(OrderedCollectionPage::DEFAULT_SIZE.into())
+        .take(OrderedCollection::PAGE_SIZE.into())
         .collect();
     let objects = replies.iter().map(|post| {
         let object_id = compatible_post_object_id(instance.uri_str(), post);
         serde_json::to_value(object_id)
             .expect("string should be serializable")
     }).collect();
-    let collection_page = OrderedCollectionPage::new(
+    let collection_page = OrderedCollection::new_page(
         first_page_id,
         objects,
     );
@@ -671,13 +668,13 @@ pub async fn conversation_view(
         return Ok(response);
     };
     let objects = posts.iter()
-        .take(OrderedCollectionPage::DEFAULT_SIZE.into())
+        .take(OrderedCollection::PAGE_SIZE.into())
         .map(|post| {
             let object_id = compatible_post_object_id(instance.uri_str(), post);
             serde_json::to_value(object_id)
                 .expect("string should be serializable")
         }).collect();
-    let collection_page = OrderedCollectionPage::new(
+    let collection_page = OrderedCollection::new_page(
         first_page_id,
         objects,
     );
@@ -897,7 +894,7 @@ async fn apgateway_inbox_pull_view(
         LIMIT,
     ).await?;
     // TODO: FEP-EF61: collection or collection page?
-    let collection_page = OrderedCollectionPage::new(
+    let collection_page = OrderedCollection::new_page(
         collection_id,
         items,
     );
@@ -1003,7 +1000,7 @@ async fn apgateway_outbox_pull_view(
         LIMIT,
     ).await?;
     // TODO: FEP-EF61: collection or collection page?
-    let collection_page = OrderedCollectionPage::new(
+    let collection_page = OrderedCollection::new_page(
         collection_id,
         items,
     );
