@@ -238,7 +238,6 @@ async fn outbox(
             collection_id,
             Some(first_page_id),
             None,
-            false,
         );
         let response = HttpResponse::Ok()
             .content_type(AP_MEDIA_TYPE)
@@ -308,7 +307,6 @@ async fn followers_collection(
         collection_id,
         None,
         Some(user.profile.follower_count),
-        false,
     );
     let response = HttpResponse::Ok()
         .content_type(AP_MEDIA_TYPE)
@@ -335,7 +333,6 @@ async fn following_collection(
         collection_id,
         None,
         Some(user.profile.following_count),
-        false,
     );
     let response = HttpResponse::Ok()
         .content_type(AP_MEDIA_TYPE)
@@ -362,7 +359,6 @@ async fn subscribers_collection(
         collection_id,
         None,
         Some(user.profile.subscriber_count),
-        false,
     );
     let response = HttpResponse::Ok()
         .content_type(AP_MEDIA_TYPE)
@@ -388,7 +384,6 @@ async fn featured_collection(
             collection_id,
             Some(first_page_id),
             None,
-            true,
         );
         let response = HttpResponse::Ok()
             .content_type(AP_MEDIA_TYPE)
@@ -584,7 +579,6 @@ pub async fn replies_collection(
             collection_id,
             Some(first_page_id),
             None,
-            false,
         );
         let response = HttpResponse::Ok()
             .content_type(AP_MEDIA_TYPE)
@@ -670,7 +664,6 @@ pub async fn conversation_view(
             collection_id,
             Some(first_page_id),
             None,
-            false,
         );
         let response = HttpResponse::Ok()
             .content_type(AP_MEDIA_TYPE)
