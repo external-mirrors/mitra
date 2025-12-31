@@ -71,6 +71,7 @@ async fn main() -> Result<(), Error> {
         SubCommand::DeleteUser(cmd) => cmd.execute(&config, &db_pool).await,
         SubCommand::CreatePost(cmd) => cmd.execute(&config, &db_pool).await,
         SubCommand::ImportPosts(cmd) => cmd.execute(&config, &db_pool).await,
+        SubCommand::ExportPosts(cmd) => cmd.execute(&config, &db_pool).await,
         SubCommand::DeletePost(cmd) => cmd.execute(&config, &db_pool).await,
         SubCommand::AddEmoji(cmd) => cmd.execute(&config, &db_pool).await,
         SubCommand::ImportEmoji(cmd) => cmd.execute(&config, &db_pool).await,

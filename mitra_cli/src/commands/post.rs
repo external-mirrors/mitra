@@ -17,7 +17,12 @@ use uuid::Uuid;
 use mitra_activitypub::{
     adapters::posts::delete_local_post,
     agent::build_federation_agent,
+    builders::{
+        create_note::build_create_note,
+        collection::OrderedCollection,
+    },
     handlers::note::{Attachment, AttributedObject},
+    identifiers::{local_actor_id, LocalActorCollection},
 };
 use mitra_adapters::{
     posts::check_post_limits,
@@ -33,13 +38,19 @@ use mitra_models::{
     },
     media::types::MediaInfo,
     posts::{
-        queries::{create_post, delete_post, get_post_by_id},
+        helpers::add_related_posts,
+        queries::{
+            create_post,
+            delete_post,
+            get_post_by_id,
+            get_posts_by_author,
+        },
         types::{PostContext, PostCreateData, Visibility},
     },
     profiles::types::Origin::Local,
     users::helpers::get_user_by_id_or_name,
 };
-use mitra_services::media::MediaStorage;
+use mitra_services::media::{MediaServer, MediaStorage};
 use mitra_utils::{
     files::FileSize,
     id::generate_deterministic_ulid,
@@ -227,6 +238,63 @@ impl ImportPosts {
                     }
                 })?;
         };
+        Ok(())
+    }
+}
+
+/// Export posts as outbox JSON
+#[derive(Parser)]
+pub struct ExportPosts {
+    /// Author (username or ID)
+    author: String,
+}
+
+impl ExportPosts {
+    pub async fn execute(
+        self,
+        config: &Config,
+        db_pool: &DatabaseConnectionPool,
+    ) -> Result<(), Error> {
+        let db_client = &**get_database_client(db_pool).await?;
+        let instance = config.instance();
+        let author = get_user_by_id_or_name(
+            db_client,
+            &self.author,
+        ).await?;
+        let mut posts = get_posts_by_author(
+            db_client,
+            author.id,
+            None, // include only public posts
+            true, // include replies
+            false, // don't include reposts
+            false, // not only pinned
+            false, // not only media
+            None, // no max ID
+            OrderedCollection::PAGE_SIZE,
+        ).await?;
+        add_related_posts(db_client, posts.iter_mut().collect()).await?;
+        let media_server = MediaServer::new(config);
+        let activities = posts.iter().map(|post| {
+            let activity = build_create_note(
+                instance.uri(),
+                &media_server,
+                post,
+            );
+            serde_json::to_value(activity)
+                .expect("activity should be serializable")
+        }).collect();
+        let actor_id = local_actor_id(
+            instance.uri_str(),
+            &author.profile.username,
+        );
+        let collection_id = LocalActorCollection::Outbox.of(&actor_id);
+        let collection = OrderedCollection::new_with_items(
+            collection_id,
+            activities,
+        );
+        let collection_json = serde_json::to_value(collection)
+            .expect("collection should be serializable");
+        println!("{}", collection_json);
         Ok(())
     }
 }
