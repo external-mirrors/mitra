@@ -42,3 +42,9 @@ Run `cargo clippy` to check code automatically.
 Commits should be atomic (the tests should pass) and not too big. Commit messages should be informative.
 
 For any notable change there should be an entry in [CHANGELOG.md](./CHANGELOG.md).
+
+## Versioning
+
+Versioning should be [semantic](https://semver.org/).
+
+Pre-release versions should contain the `-dev` suffix.
