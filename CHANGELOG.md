@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [4.16.0] - 2026-01-02
+
 ### Added
 
 - Added `--verify-proof` option to `import-object` command.
