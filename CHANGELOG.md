@@ -23,6 +23,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Removed workaround for Pleroma 2.5 `featured` collection parsing bug.
 
+### Fixed
+
+- Don't add `name` property to actor object if it is has no value.
+
 ## [4.15.0] - 2025-12-22
 
 ### Added

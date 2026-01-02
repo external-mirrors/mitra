@@ -132,8 +132,10 @@ pub struct Actor {
     #[serde(rename = "type")]
     object_type: String,
 
-    name: Option<String>,
     preferred_username: String,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    name: Option<String>,
 
     inbox: String,
     outbox: String,
@@ -415,7 +417,6 @@ mod tests {
             ],
             "id": "https://server.example/users/testuser",
             "type": "Person",
-            "name": null,
             "preferredUsername": "testuser",
             "inbox": "https://server.example/users/testuser/inbox",
             "outbox": "https://server.example/users/testuser/outbox",
@@ -514,7 +515,6 @@ mod tests {
             ],
             "id": "https://server.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor",
             "type": "Person",
-            "name": null,
             "preferredUsername": "testuser",
             "inbox": "https://server.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor/inbox",
             "outbox": "https://server.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor/outbox",
