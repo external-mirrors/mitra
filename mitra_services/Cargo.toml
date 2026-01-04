@@ -24,7 +24,7 @@ monero = "0.21.0"
 # Used to work with monero-wallet-rpc
 monero-rpc = { version = "0.5.0", default-features = false, features = ["rpc_authentication", "rustls-tls"] }
 # Used to work with monero-lws API
-monero-lws = { git = "https://github.com/silverpill/monero-lws", rev = "22f75467b274fe6354b9f540cced5d5ce8506958" }
+monero-lws = { git = "https://github.com/silverpill/monero-lws", rev = "d5cc88b7692dd4864627572436167bf968c3a6a0" }
 # Used for working with regular expressions
 regex = "1.10.6"
 # Used for making async HTTP requests

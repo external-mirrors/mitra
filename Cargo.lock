@@ -2247,7 +2247,7 @@ dependencies = [
 [[package]]
 name = "monero-lws"
 version = "0.1.0"
-source = "git+https://github.com/silverpill/monero-lws?rev=22f75467b274fe6354b9f540cced5d5ce8506958#22f75467b274fe6354b9f540cced5d5ce8506958"
+source = "git+https://github.com/silverpill/monero-lws?rev=d5cc88b7692dd4864627572436167bf968c3a6a0#d5cc88b7692dd4864627572436167bf968c3a6a0"
 dependencies = [
  "anyhow",
  "fixed-hash",

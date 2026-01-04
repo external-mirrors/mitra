@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Fixed
+
+- Fixed server becoming unresponsive on registration of a view-only wallet.
+
 ## [4.16.0] - 2026-01-02
 
 ### Added
