@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- Ensure that payout address belongs to expected Monero network.
+
 ### Fixed
 
 - Fixed server becoming unresponsive on registration of a view-only wallet.

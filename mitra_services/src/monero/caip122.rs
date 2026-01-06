@@ -2,18 +2,17 @@
 use std::str::FromStr;
 
 use apx_core::{
-    caip2::{ChainId, MoneroNetwork},
+    caip2::ChainId,
     caip10::AccountId,
 };
 use chrono::{DateTime, Utc};
-use monero_rpc::monero::{
-    network::Network,
+use monero::{
     util::address::Error as AddressError,
 };
 
 use mitra_config::MoneroConfig;
 
-use super::utils::parse_monero_address;
+use super::utils::{address_network, parse_monero_address};
 use super::wallet::{verify_monero_signature, MoneroError};
 
 const PREAMBLE: &str = " wants you to sign in with your Monero account:";
@@ -187,11 +186,7 @@ pub async fn verify_monero_caip122_signature(
         signature,
     ).await?;
     let address = parse_monero_address(&message.address)?;
-    let network = match address.network {
-        Network::Mainnet => MoneroNetwork::Mainnet,
-        Network::Stagenet => MoneroNetwork::Stagenet,
-        Network::Testnet => MoneroNetwork::Testnet,
-    };
+    let network = address_network(address);
     let chain_id = ChainId::from_monero_network(network);
     let session_data = Caip122SessionData {
         account_id: AccountId {

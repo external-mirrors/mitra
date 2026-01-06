@@ -213,7 +213,7 @@ async fn register_subscription_option(
             let price: NonZeroU64 = price.try_into()
                 .map_err(|_| ValidationError("price must be greater than 0"))?;
             validate_subscription_price(price)?;
-            validate_monero_address(&payout_address)
+            validate_monero_address(&payout_address, &chain_id)
                 .map_err(|_| ValidationError("invalid monero address"))?;
             let payment_method_data = PaymentMethodData {
                 owner_id: current_user.id,
@@ -237,7 +237,7 @@ async fn register_subscription_option(
             let price: NonZeroU64 = price.try_into()
                 .map_err(|_| ValidationError("price must be greater than 0"))?;
             validate_subscription_price(price)?;
-            validate_monero_standard_address(&payout_address)
+            validate_monero_standard_address(&payout_address, &chain_id)
                 .map_err(|_| ValidationError("invalid monero standard address"))?;
             let payout_address = parse_monero_address(&payout_address)
                 .map_err(|_| ValidationError("invalid monero address"))?;
