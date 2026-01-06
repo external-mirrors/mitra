@@ -1,7 +1,11 @@
 use thiserror::Error;
 use uuid::Uuid;
 
-use mitra_config::MoneroConfig;
+use mitra_config::{
+    BlockchainConfig,
+    Config,
+    MoneroConfig,
+};
 use mitra_models::{
     database::{DatabaseClient, DatabaseError},
     invoices::helpers::local_invoice_reopened,
@@ -26,6 +30,7 @@ use mitra_services::monero::{
         MoneroError,
     },
     utils::{
+        create_integrated_address,
         parse_monero_address,
         parse_monero_view_key,
         Address,
@@ -67,6 +72,37 @@ pub fn payment_method_view_key(
     let view_key = parse_monero_view_key(view_key_str)
         .map_err(|_| DatabaseError::type_error())?;
     Ok(view_key)
+}
+
+pub async fn create_payment_address(
+    config: &Config,
+    payment_method: &PaymentMethod,
+) -> Result<String, PaymentError> {
+    let blockchain_config = config.blockchains().iter()
+        .find(|bc_config| {
+            let (payment_type, chain_id) = match bc_config {
+                BlockchainConfig::Monero(monero_config) =>
+                    (PaymentType::Monero, &monero_config.chain_id),
+                BlockchainConfig::MoneroLight(monero_config) =>
+                    (PaymentType::MoneroLight, &monero_config.chain_id),
+            };
+            payment_type == payment_method.payment_type
+                && chain_id == payment_method.chain_id.inner()
+        })
+        .ok_or(MoneroError::OtherError("recipient can't accept payment"))?;
+    let payment_address = match blockchain_config {
+        BlockchainConfig::Monero(monero_config) => {
+            create_monero_address(monero_config).await?
+                .to_string()
+        },
+        BlockchainConfig::MoneroLight(_) => {
+            let payout_address = payment_method_payout_address(payment_method)?;
+            // Generate view-only integrated address
+            let payment_address = create_integrated_address(payout_address);
+            payment_address.to_string()
+        },
+    };
+    Ok(payment_address)
 }
 
 pub fn invoice_payment_address(invoice: &Invoice)

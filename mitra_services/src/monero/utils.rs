@@ -42,15 +42,14 @@ pub fn parse_monero_view_key(view_key: &str) -> Result<PrivateKey, KeyError> {
 
 pub fn create_integrated_address(
     primary_address: Address,
-) -> Result<Address, AddressError> {
+) -> Address {
     let payment_id = PaymentId::random();
-    let payment_address = Address::integrated(
+    Address::integrated(
         primary_address.network,
         primary_address.public_spend,
         primary_address.public_view,
         payment_id,
-    );
-    Ok(payment_address)
+    )
 }
 
 pub fn get_payment_id(address: Address) -> Option<PaymentId> {

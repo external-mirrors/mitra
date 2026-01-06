@@ -1,6 +1,10 @@
 use serde::Deserialize;
 use serde_json::{Value as JsonValue};
 
+use mitra_adapters::payments::monero::{
+    create_payment_address,
+    PaymentError,
+};
 use mitra_config::Config;
 use mitra_models::{
     database::{
@@ -13,7 +17,6 @@ use mitra_models::{
     profiles::types::MoneroSubscription,
     users::queries::get_user_by_name,
 };
-use mitra_services::monero::wallet::create_monero_address;
 use mitra_validators::errors::ValidationError;
 
 use crate::{
@@ -55,12 +58,6 @@ pub async fn handle_offer(
         &primary_commitment.satisfies,
     )?;
     let proposer = get_user_by_name(db_client, &username).await?;
-    let monero_config = config.monero_config()
-        // Monero integration is not enabled
-        .ok_or(ValidationError("recipient can't accept payment"))?;
-    if chain_id != monero_config.chain_id {
-        return Err(ValidationError("recipient can't accept payment").into());
-    };
     let payment_method = get_payment_method_by_chain_id(
         db_client,
         proposer.id,
@@ -80,9 +77,13 @@ pub async fn handle_offer(
     if duration != expected_duration {
         return Err(ValidationError("invalid duration").into());
     };
-    let payment_address = create_monero_address(monero_config).await
-        .map_err(|_| HandlerError::ServiceError("failed to create monero address"))?
-        .to_string();
+    let payment_address = create_payment_address(
+        config,
+        &payment_method,
+    ).await.map_err(|error| match error {
+        PaymentError::DatabaseError(db_error) => db_error.into(),
+        _ => HandlerError::ServiceError("failed to create monero address"),
+    })?;
     let db_invoice = create_local_invoice(
         db_client,
         actor_profile.id,

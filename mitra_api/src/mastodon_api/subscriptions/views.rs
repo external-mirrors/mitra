@@ -20,13 +20,16 @@ use mitra_activitypub::{
     },
 };
 use mitra_adapters::payments::{
-    monero::payment_method_payout_address,
+    monero::{
+        create_payment_address,
+        PaymentError,
+    },
     subscriptions::{
         create_or_update_local_subscription,
         validate_subscription_price,
     },
 };
-use mitra_config::{BlockchainConfig, Config};
+use mitra_config::Config;
 use mitra_models::{
     database::{get_database_client, DatabaseConnectionPool},
     invoices::queries::{
@@ -64,13 +67,11 @@ use mitra_services::{
     monero::{
         light_wallet::LightWalletClient,
         utils::{
-            create_integrated_address,
             parse_monero_address,
             parse_monero_view_key,
             validate_monero_address,
             validate_monero_standard_address,
         },
-        wallet::create_monero_address,
     },
 };
 use mitra_validators::{
@@ -335,36 +336,17 @@ async fn create_invoice_view(
         )
             .await?
             .ok_or(ValidationError("recipient can't accept payment"))?;
-        let blockchain_config = config.blockchains().iter()
-            .find(|bc_config| {
-                let (payment_type, chain_id) = match bc_config {
-                    BlockchainConfig::Monero(monero_config) =>
-                        (PaymentType::Monero, &monero_config.chain_id),
-                    BlockchainConfig::MoneroLight(monero_config) =>
-                        (PaymentType::MoneroLight, &monero_config.chain_id),
-                };
-                payment_type == payment_method.payment_type
-                    && chain_id == &invoice_data.chain_id
-            })
-            .ok_or(MastodonError::NotSupported)?;
         let _subscription_option: MoneroSubscription = recipient
             .payment_options
             .find_subscription_option(&invoice_data.chain_id)
             .ok_or(ValidationError("recipient can't accept payment"))?;
-        let payment_address = match blockchain_config {
-            BlockchainConfig::Monero(monero_config) => {
-                create_monero_address(monero_config).await
-                    .map_err(MastodonError::from_internal)?
-                    .to_string()
-            },
-            BlockchainConfig::MoneroLight(_) => {
-                let payout_address = payment_method_payout_address(&payment_method)?;
-                // Generate view-only integrated address
-                let payment_address = create_integrated_address(payout_address)
-                    .map_err(MastodonError::from_internal)?;
-                payment_address.to_string()
-            },
-        };
+        let payment_address = create_payment_address(
+            &config,
+            &payment_method,
+        ).await.map_err(|error| match error {
+            PaymentError::DatabaseError(db_error) => db_error.into(),
+            other_error => MastodonError::from_internal(other_error),
+        })?;
         create_local_invoice(
             db_client,
             sender.id,

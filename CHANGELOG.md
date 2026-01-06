@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Fixed
 
 - Fixed server becoming unresponsive on registration of a view-only wallet.
+- Fixed LWS invoice creation via `Offer` activity.
 
 ## [4.16.0] - 2026-01-02
 
