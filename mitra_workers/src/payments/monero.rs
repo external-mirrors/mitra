@@ -504,6 +504,7 @@ pub async fn check_closed_monero_invoices(
 async fn check_monero_light_open_invoices(
     db_pool: &DatabaseConnectionPool,
     config: &MoneroLightConfig,
+    instance: &Instance,
 ) -> Result<(), PaymentError> {
     let db_client = &mut **get_database_client(db_pool).await?;
     // Invoices waiting for payment
@@ -563,11 +564,12 @@ async fn check_monero_light_open_invoices(
             invoice.id,
             payout_tx_id,
         );
-        local_monero_light_invoice_paid(
+        let invoice = local_monero_light_invoice_paid(
             db_client,
             invoice.id,
             &payout_tx_id,
         ).await?;
+        send_invoice_status_update(instance, db_client, &invoice).await?;
     };
     Ok(())
 }
@@ -646,7 +648,7 @@ pub async fn check_monero_light_invoices(
     config: &MoneroLightConfig,
     db_pool: &DatabaseConnectionPool,
 ) -> Result<(), PaymentError> {
-    check_monero_light_open_invoices(db_pool, config).await?;
+    check_monero_light_open_invoices(db_pool, config, instance).await?;
     check_monero_light_paid_invoices(db_pool, config, instance).await?;
     Ok(())
 }
