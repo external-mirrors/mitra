@@ -1991,7 +1991,7 @@ dependencies = [
 
 [[package]]
 name = "mitra"
-version = "4.16.1-dev"
+version = "4.16.1"
 dependencies = [
  "anyhow",
  "apx_core",
@@ -2016,7 +2016,7 @@ dependencies = [
 
 [[package]]
 name = "mitra_activitypub"
-version = "4.16.1-dev"
+version = "4.16.1"
 dependencies = [
  "apx_core",
  "apx_sdk",
@@ -2043,7 +2043,7 @@ dependencies = [
 
 [[package]]
 name = "mitra_adapters"
-version = "4.16.1-dev"
+version = "4.16.1"
 dependencies = [
  "apx_core",
  "chrono",
@@ -2065,7 +2065,7 @@ dependencies = [
 
 [[package]]
 name = "mitra_api"
-version = "4.16.1-dev"
+version = "4.16.1"
 dependencies = [
  "actix-cors",
  "actix-files",
@@ -2104,7 +2104,7 @@ dependencies = [
 
 [[package]]
 name = "mitra_config"
-version = "4.16.1-dev"
+version = "4.16.1"
 dependencies = [
  "apx_core",
  "dotenvy",
@@ -2118,7 +2118,7 @@ dependencies = [
 
 [[package]]
 name = "mitra_models"
-version = "4.16.1-dev"
+version = "4.16.1"
 dependencies = [
  "apx_core",
  "chrono",
@@ -2146,7 +2146,7 @@ dependencies = [
 
 [[package]]
 name = "mitra_services"
-version = "4.16.1-dev"
+version = "4.16.1"
 dependencies = [
  "anyhow",
  "apx_core",
@@ -2170,7 +2170,7 @@ dependencies = [
 
 [[package]]
 name = "mitra_utils"
-version = "4.16.1-dev"
+version = "4.16.1"
 dependencies = [
  "ammonia",
  "apx_core",
@@ -2195,7 +2195,7 @@ dependencies = [
 
 [[package]]
 name = "mitra_validators"
-version = "4.16.1-dev"
+version = "4.16.1"
 dependencies = [
  "apx_core",
  "mitra_models",
@@ -2208,7 +2208,7 @@ dependencies = [
 
 [[package]]
 name = "mitra_workers"
-version = "4.16.1-dev"
+version = "4.16.1"
 dependencies = [
  "anyhow",
  "apx_sdk",
