@@ -22,6 +22,8 @@ use mitra_activitypub::{
 use mitra_adapters::payments::{
     monero::{
         create_payment_address,
+        validate_monero_address,
+        validate_monero_standard_address,
         PaymentError,
     },
     subscriptions::{
@@ -69,8 +71,6 @@ use mitra_services::{
         utils::{
             parse_monero_address,
             parse_monero_view_key,
-            validate_monero_address,
-            validate_monero_standard_address,
         },
     },
 };

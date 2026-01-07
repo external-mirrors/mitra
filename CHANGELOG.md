@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Changed
 
 - Ensure that payout address belongs to expected Monero network.
+- Generate better error messages when Monero address is not valid.
 
 ### Fixed
 

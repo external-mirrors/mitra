@@ -1,3 +1,4 @@
+use apx_core::caip2::{ChainId, MoneroNetwork};
 use thiserror::Error;
 use uuid::Uuid;
 
@@ -30,14 +31,17 @@ use mitra_services::monero::{
         MoneroError,
     },
     utils::{
+        address_network,
         create_integrated_address,
         parse_monero_address,
         parse_monero_view_key,
         Address,
+        AddressType,
         PrivateKey,
         BLOCK_TIME,
     },
 };
+use mitra_validators::errors::ValidationError;
 
 const MONERO_INVOICE_WAIT_TIME: u32 = 3 * 60 * 60; // 3 hours
 pub const MONERO_INVOICE_TIMEOUT: u32 = MONERO_INVOICE_WAIT_TIME + 2 * 20 * (BLOCK_TIME as u32);
@@ -52,6 +56,46 @@ pub enum PaymentError {
 
     #[error(transparent)]
     DatabaseError(#[from] DatabaseError),
+}
+
+fn is_valid_network(
+    network: MoneroNetwork,
+    expected_chain_id: &ChainId,
+) -> bool {
+    match expected_chain_id.monero_network() {
+        Err(_) => false, // not Monero
+        Ok(MoneroNetwork::Private) => true, // always valid
+        Ok(expected_network) => network == expected_network,
+    }
+}
+
+pub fn validate_monero_address(
+    address: &str,
+    expected_chain_id: &ChainId,
+) -> Result<(), ValidationError> {
+    let address = parse_monero_address(address)
+        .map_err(|_| ValidationError("invalid monero address"))?;
+    let network = address_network(address);
+    if !is_valid_network(network, expected_chain_id) {
+        return Err(ValidationError("address belongs to wrong network"));
+    };
+    Ok(())
+}
+
+pub fn validate_monero_standard_address(
+    address: &str,
+    expected_chain_id: &ChainId,
+) -> Result<(), ValidationError> {
+    let address = parse_monero_address(address)
+        .map_err(|_| ValidationError("invalid monero address"))?;
+    if address.addr_type != AddressType::Standard {
+        return Err(ValidationError("address is not a standard address"));
+    };
+    let network = address_network(address);
+    if !is_valid_network(network, expected_chain_id) {
+        return Err(ValidationError("address belongs to wrong network"));
+    };
+    Ok(())
 }
 
 pub fn payment_method_payout_address(
@@ -210,5 +254,21 @@ mod tests {
     #[test]
     fn test_monero_timeout() {
         assert_eq!(MONERO_INVOICE_TIMEOUT, 15600);
+    }
+
+    #[test]
+    fn test_validate_monero_address_invalid() {
+        let address = "1";
+        let chain_id = ChainId::monero_mainnet();
+        let error = validate_monero_address(address, &chain_id).err().unwrap();
+        assert_eq!(error.to_string(), "invalid monero address");
+    }
+
+    #[test]
+    fn test_validate_monero_address_wrong_network() {
+        let address = "9uyhAgKT5tE2tyXQ9Noqga5uksHW4RrcnaU7suiiJqvL6y3domT3k8eJEiqehCsrXjCJi6Haa73AXY9eiEgCSatZM8tmwEm";
+        let chain_id = ChainId::monero_mainnet();
+        let error = validate_monero_address(address, &chain_id).err().unwrap();
+        assert_eq!(error.to_string(), "address belongs to wrong network");
     }
 }

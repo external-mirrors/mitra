@@ -1,11 +1,10 @@
 use std::str::FromStr;
 
-use apx_core::caip2::{ChainId, MoneroNetwork};
+use apx_core::caip2::MoneroNetwork;
 use monero::{
     network::Network,
     util::{
         address::{
-            AddressType,
             Error as AddressError,
             PaymentId,
         },
@@ -14,14 +13,14 @@ use monero::{
 };
 
 pub use monero::util::{
-    address::Address,
+    address::{Address, AddressType},
     key::PrivateKey,
 };
 
 pub const LOCK_DURATION: u64 = 10; // blocks
 pub const BLOCK_TIME: u16 = 120;
 
-pub(super) fn address_network(address: Address) -> MoneroNetwork {
+pub fn address_network(address: Address) -> MoneroNetwork {
     match address.network {
         Network::Mainnet => MoneroNetwork::Mainnet,
         Network::Stagenet => MoneroNetwork::Stagenet,
@@ -31,44 +30,6 @@ pub(super) fn address_network(address: Address) -> MoneroNetwork {
 
 pub fn parse_monero_address(address: &str) -> Result<Address, AddressError> {
     Address::from_str(address)
-}
-
-fn is_valid_network(
-    network: MoneroNetwork,
-    expected_chain_id: &ChainId,
-) -> bool {
-    match expected_chain_id.monero_network() {
-        Err(_) => false, // not Monero
-        Ok(MoneroNetwork::Private) => true, // always valid
-        Ok(expected_network) => network == expected_network,
-    }
-}
-
-pub fn validate_monero_address(
-    address: &str,
-    expected_chain_id: &ChainId,
-) -> Result<(), AddressError> {
-    let address = parse_monero_address(address)?;
-    let network = address_network(address);
-    if !is_valid_network(network, expected_chain_id) {
-        return Err(AddressError::InvalidFormat);
-    };
-    Ok(())
-}
-
-pub fn validate_monero_standard_address(
-    address: &str,
-    expected_chain_id: &ChainId,
-) -> Result<(), AddressError> {
-    let address = parse_monero_address(address)?;
-    if address.addr_type != AddressType::Standard {
-        return Err(AddressError::InvalidFormat);
-    };
-    let network = address_network(address);
-    if !is_valid_network(network, expected_chain_id) {
-        return Err(AddressError::InvalidFormat);
-    };
-    Ok(())
 }
 
 pub fn parse_monero_view_key(view_key: &str) -> Result<PrivateKey, KeyError> {
