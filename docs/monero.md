@@ -9,7 +9,7 @@ Monero payments can be tracked using two different methods:
 
 ### Forwarding
 
-Install a [Monero node](https://docs.getmonero.org/running-node/monerod-systemd/) (requires at least 2 GB RAM and 200 GB storage) or choose a [public one](https://monero.fail/).
+Install a [Monero node](https://docs.getmonero.org/running-node/monerod-systemd/) (requires at least 4 GB RAM and 100 GB storage) or choose a [public one](https://monero.fail/).
 
 Install and configure [monero-wallet-rpc](https://docs.getmonero.org/rpc-library/wallet-rpc/) service. See configuration file [example](../contrib/monero/wallet.conf).
 
@@ -43,9 +43,9 @@ blockchains:
 
 ### View-only wallet
 
-Direct payments require [Monero Light Wallet Server (LWS)](https://github.com/vtnerd/monero-lws) version 0.3.
+Install a [Monero node](https://docs.getmonero.org/running-node/monerod-systemd/) (requires at least 4 GB RAM and 100 GB storage). Most public nodes are not suitable because they don't accept ZMQ RPC requests.
 
-Install Monero LWS and add blockchain configuration to the `blockchains` array in your Mitra [configuration file](../config.example.yaml):
+Install [Monero Light Wallet Server (LWS)](https://github.com/vtnerd/monero-lws) version 0.3. Then add blockchain configuration to the `blockchains` array in your Mitra [configuration file](../config.example.yaml):
 
 ```yaml
 blockchains:
