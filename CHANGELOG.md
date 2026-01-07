@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Ensure that payout address belongs to expected Monero network.
 - Generate better error messages when Monero address is not valid.
+- Removed "multichain deployments are not recommended" warning.
 
 ### Fixed
 

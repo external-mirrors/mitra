@@ -115,9 +115,6 @@ pub fn parse_config() -> (Config, Vec<&'static str>) {
     if config.allowed_instances.is_some() {
         warnings.push("allowed_instances parameter is deprecated (use `mitra add-filter-rule`)");
     };
-    if config.blockchains().len() > 1 {
-        warnings.push("multichain deployments are not recommended");
-    };
     for blockchain_config in config.blockchains() {
         match blockchain_config {
             BlockchainConfig::Monero(MoneroConfig { chain_id, .. }) |
