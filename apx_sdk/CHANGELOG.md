@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Fixed
+
+- Bumped `rsa` dependency version to remove compilation warning.
+
 ## [0.20.0] - 2025-11-05
 
 ### Added
