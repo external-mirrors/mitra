@@ -1,5 +1,6 @@
 //! Retrieving objects or media.
 
+#[cfg(not(target_arch = "wasm32"))]
 use http_body_util::{
     combinators::MapErr,
     BodyDataStream,
@@ -8,12 +9,13 @@ use http_body_util::{
 };
 use reqwest::{
     header,
-    Body,
     Client,
     Method,
     StatusCode,
     Url,
 };
+#[cfg(not(target_arch = "wasm32"))]
+use reqwest::Body;
 use serde_json::{Value as JsonValue};
 use thiserror::Error;
 
@@ -346,6 +348,7 @@ pub async fn fetch_media(
     Ok((media_data.into(), media_type))
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 #[allow(impl_trait_overcaptures)]
 pub async fn stream_media(
     agent: &FederationAgent,

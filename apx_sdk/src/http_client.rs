@@ -1,21 +1,24 @@
 use std::cmp::max;
 use std::error::{Error as _};
 use std::net::IpAddr;
-use std::sync::Arc;
 use std::time::Duration;
 
 use bytes::Bytes;
+#[cfg(not(target_arch = "wasm32"))]
 use http_body_util::{BodyExt, Limited};
 use reqwest::{
     header,
-    redirect::{Policy as RedirectPolicy},
-    Body,
     Client,
     Error,
     Method,
-    Proxy,
     RequestBuilder,
     Response,
+};
+#[cfg(not(target_arch = "wasm32"))]
+use reqwest::{
+    redirect::{Policy as RedirectPolicy},
+    Body,
+    Proxy,
 };
 use thiserror::Error;
 
@@ -102,6 +105,7 @@ fn require_safe_url(url: &str) -> Result<(), UnsafeUrlError> {
     Ok(())
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 fn create_safe_redirect_policy() -> RedirectPolicy {
     RedirectPolicy::custom(|attempt| {
         if attempt.previous().len() > REDIRECT_LIMIT {
@@ -114,6 +118,7 @@ fn create_safe_redirect_policy() -> RedirectPolicy {
     })
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 mod dns_resolver {
     // https://github.com/seanmonstar/reqwest/blob/v0.12.4/src/dns/gai.rs
     use futures_util::future::FutureExt;
@@ -149,6 +154,7 @@ mod dns_resolver {
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 pub fn create_http_client(
     agent: &FederationAgent,
     network: Network,
@@ -174,7 +180,7 @@ pub fn create_http_client(
     };
     if agent.ssrf_protection_enabled {
         client_builder = client_builder.dns_resolver(
-            Arc::new(dns_resolver::SafeResolver::new()));
+            dns_resolver::SafeResolver::new().into());
     };
     let redirect_policy = match redirect_action {
         RedirectAction::None => RedirectPolicy::none(),
@@ -196,6 +202,30 @@ pub fn create_http_client(
         .connect_timeout(connect_timeout)
         .redirect(redirect_policy)
         .build()
+}
+
+#[cfg(target_arch = "wasm32")]
+pub fn create_http_client(
+    _agent: &FederationAgent,
+    _network: Network,
+    timeout: u64,
+    _redirect_action: RedirectAction,
+) -> reqwest::Result<Client> {
+    // Proxies are not supported:
+    // https://github.com/seanmonstar/reqwest/issues/2504
+
+    // DNS resolvers are not supported:
+
+    // Redirection policies are not supported:
+    // https://github.com/seanmonstar/reqwest/issues/2071
+
+    // Timeouts are not supported: https://github.com/seanmonstar/reqwest/pull/2850
+    let _request_timeout = Duration::from_secs(timeout);
+    let _connect_timeout = Duration::from_secs(max(
+        timeout,
+        CONNECTION_TIMEOUT,
+    ));
+    Client::builder().build()
 }
 
 pub fn build_http_request(
@@ -255,6 +285,7 @@ pub fn sign_http_request(
     Ok(request_builder)
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 pub async fn limited_response(
     response: Response,
     limit: usize,
@@ -264,6 +295,16 @@ pub async fn limited_response(
         .await
         .ok()
         .map(|collected| collected.to_bytes())
+}
+
+#[cfg(target_arch = "wasm32")]
+pub async fn limited_response(
+    response: Response,
+    _limit: usize,
+) -> Option<Bytes> {
+    // Body::from(response) is not implemented:
+    // https://github.com/seanmonstar/reqwest/pull/2837
+    response.bytes().await.ok()
 }
 
 pub fn describe_request_error(error: &Error) -> String {
