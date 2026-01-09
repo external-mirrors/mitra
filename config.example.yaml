@@ -69,13 +69,18 @@ registration:
 #login_message: 'Do not sign this message on other sites!'
 
 # Limits
+# Increasing `local` limits is not recommended because that will result
+# in an incorrect display of your posts on other servers.
+# might fail to process your posts.
 #limits:
 #  media:
 #    # Add support for additional MIME types (e.g., application/pdf)
 #    extra_supported_types: []
 #    file_size_limit: 20M
 #    profile_image_size_limit: 5M
-#    emoji_size_limit: 500K
+#    profile_image_local_size_limit: 2M
+#    emoji_size_limit: 1M
+#    emoji_local_size_limit: 256K
 #  posts:
 #    character_limit: 5000
 #    attachment_limit: 16
