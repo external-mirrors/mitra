@@ -24,7 +24,7 @@ serde_json = "1.0.132"
 # Async runtime
 tokio = { version = "~1.38.0", features = ["macros", "rt-multi-thread"] }
 # Used to work with UUIDs
-uuid = "1.1.2"
+uuid = "1.12.1"
 
 apx_core = { path = "../apx_core" }
 apx_sdk = { path = "../apx_sdk" }

@@ -42,7 +42,7 @@ ulid = { version = "~1.0.0", features = ["uuid"] }
 # Used to work with Unicode
 unicode-segmentation = "1.10.1"
 # Used to work with UUIDs
-uuid = "1.1.2"
+uuid = "~1.12.1"
 
 apx_core = { path = "../apx_core", features = ["caip"] }
 

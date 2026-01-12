@@ -21,7 +21,7 @@ serde_json = "1.0.132"
 # Async runtime
 tokio = { version = "~1.38.0" }
 # Used to work with UUIDs
-uuid = { version = "1.1.2" }
+uuid = { version = "1.12.1" }
 
 apx_sdk = { path = "../apx_sdk" }
 mitra_activitypub = { path = "../mitra_activitypub" }

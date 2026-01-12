@@ -29,7 +29,7 @@ thiserror = "1.0.37"
 # Async runtime
 tokio = { version = "1.38.0" }
 # Used to work with UUIDs
-uuid = { version = "1.1.2" }
+uuid = { version = "1.12.1" }
 # User for working with block/allow lists
 wildmatch = "2.1.1"
 
