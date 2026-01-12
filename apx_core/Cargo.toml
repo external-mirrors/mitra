@@ -34,6 +34,8 @@ infer = "0.19.0"
 iri-string = { version = "0.7.8", features = ["serde"] }
 # Used for working with ECDSA signatures
 k256 = { version = "0.13.0", default-features = false, features = ["std", "ecdsa"] }
+  # https://github.com/RustCrypto/traits/issues/2036
+  generic-array = "=0.14.7"
 # Used to generate random numbers
 rand = "0.8.4"
 # Used for working with regular expressions

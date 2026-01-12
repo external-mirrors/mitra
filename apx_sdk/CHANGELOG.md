@@ -14,6 +14,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Bumped `rsa` dependency version to remove compilation warning.
 - Fixed JSON signature generation on `wasm32-unknown-unknown` target.
+- Fixed compilation warning in `ecdsa` module.
 
 ## [0.20.0] - 2025-11-05
 

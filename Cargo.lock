@@ -394,6 +394,7 @@ dependencies = [
  "bs58",
  "chrono",
  "ed25519-dalek",
+ "generic-array",
  "getrandom",
  "hex",
  "http 0.2.9",
