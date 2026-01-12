@@ -1,5 +1,6 @@
 use apx_core::url::http_uri::HttpUri;
 use serde::Serialize;
+use serde_json::{Value as JsonValue};
 
 use mitra_config::Instance;
 use mitra_models::{
@@ -17,22 +18,22 @@ use crate::{
     vocabulary::CREATE,
 };
 
-use super::note::{build_note, get_note_recipients, Note};
+use super::note::{build_note, get_note_recipients};
 
 #[derive(Serialize)]
 pub struct CreateNote {
     #[serde(rename = "@context")]
-    _context: Context,
+    pub _context: Context,
 
     #[serde(rename = "type")]
-    activity_type: String,
+    pub activity_type: String,
 
-    id: String,
-    actor: String,
-    object: Note,
+    pub id: String,
+    pub actor: String,
+    pub object: JsonValue,
 
-    to: Vec<String>,
-    cc: Vec<String>,
+    pub to: Vec<String>,
+    pub cc: Vec<String>,
 }
 
 pub fn build_create_note(
@@ -60,7 +61,8 @@ pub fn build_create_note(
         activity_type: CREATE.to_string(),
         id: activity_id,
         actor: object.attributed_to.clone(),
-        object: object,
+        object: serde_json::to_value(object)
+            .expect("note should be serializable"),
         to: primary_audience,
         cc: secondary_audience,
     }

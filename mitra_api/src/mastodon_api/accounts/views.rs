@@ -721,7 +721,7 @@ async fn search_by_did(
 }
 
 #[get("/identicon")]
-async fn generate_identicon_view(
+pub async fn generate_identicon_view(
     query_params: web::Query<IdenticonQueryParams>,
 ) -> Result<HttpResponse, MastodonError> {
     let png = if let Some(ref input) = query_params.input {

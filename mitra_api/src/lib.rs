@@ -1,8 +1,8 @@
 mod activitypub;
 mod atom;
 mod errors;
-mod http;
-mod mastodon_api;
+pub mod http;
+pub mod mastodon_api;
 mod metrics;
 mod nodeinfo;
 mod ratelimit;
@@ -10,4 +10,4 @@ pub mod server;
 mod state;
 mod templates;
 mod webfinger;
-mod web_client;
+pub mod web_client;

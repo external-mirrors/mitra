@@ -150,7 +150,7 @@ async fn authorize_view(
 }
 
 // https://docs.joinmastodon.org/methods/oauth/#token
-async fn token_view(
+pub async fn token_view(
     config: web::Data<Config>,
     db_pool: web::Data<DatabaseConnectionPool>,
     request_data: Either<

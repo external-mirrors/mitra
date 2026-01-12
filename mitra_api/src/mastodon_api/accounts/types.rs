@@ -95,8 +95,8 @@ pub enum AccountPaymentOption {
 pub struct Source {
     pub note: Option<String>,
     pub fields: Vec<AccountField>,
-    privacy: String,
-    sensitive: bool,
+    pub privacy: String,
+    pub sensitive: bool,
 }
 
 /// https://docs.joinmastodon.org/entities/Role/
@@ -109,7 +109,7 @@ pub struct ApiRole {
 }
 
 impl ApiRole {
-    fn from_db(role: Role) -> Self {
+    pub fn from_db(role: Role) -> Self {
         let role_name = match role {
             Role::Guest => unimplemented!(),
             Role::NormalUser => "user",

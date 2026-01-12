@@ -114,7 +114,7 @@ pub fn instance_api_v1_scope() -> Scope {
 }
 
 #[get("")]
-async fn instance_v2_view(
+pub async fn instance_v2_view(
     config: web::Data<Config>,
     connection_info: ConnectionInfo,
     db_pool: web::Data<DatabaseConnectionPool>,

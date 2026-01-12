@@ -58,12 +58,12 @@ const LINK_REL_MISSKEY_QUOTE: &str = "https://misskey-hub.net/ns#_misskey_quote"
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
-struct QuestionReplies {
+pub struct QuestionReplies {
     total_items: u32,
 }
 
 #[derive(Serialize)]
-struct QuestionOption {
+pub struct QuestionOption {
     #[serde(rename = "type")]
     object_type: String,
     name: String,
@@ -72,7 +72,7 @@ struct QuestionOption {
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
-struct SimpleTag {
+pub struct SimpleTag {
     #[serde(rename = "type")]
     tag_type: String,
     href: String,
@@ -98,7 +98,7 @@ pub struct LinkTag {
 
 #[derive(Serialize)]
 #[serde(untagged)]
-enum Tag {
+pub enum Tag {
     SimpleTag(SimpleTag),
     LinkTag(LinkTag),
     EmojiTag(Emoji),
@@ -106,7 +106,7 @@ enum Tag {
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
-struct MediaAttachment {
+pub struct MediaAttachment {
     #[serde(rename = "type")]
     attachment_type: String,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -120,53 +120,53 @@ struct MediaAttachment {
 #[serde(rename_all = "camelCase")]
 pub struct Note {
     #[serde(rename = "@context", skip_serializing_if = "Option::is_none")]
-    pub(super) _context: Option<Context>,
+    pub _context: Option<Context>,
 
     pub id: String,
 
     #[serde(rename = "type")]
-    object_type: String,
+    pub object_type: String,
 
     #[serde(skip_serializing_if = "Vec::is_empty")]
-    attachment: Vec<MediaAttachment>,
+    pub attachment: Vec<MediaAttachment>,
 
-    pub(super) attributed_to: String,
-
-    #[serde(skip_serializing_if = "Option::is_none")]
-    in_reply_to: Option<String>,
+    pub attributed_to: String,
 
     #[serde(skip_serializing_if = "Option::is_none")]
-    context: Option<String>,
-
-    replies: String,
-
-    content: String,
+    pub in_reply_to: Option<String>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
-    content_map: Option<HashMap<String, String>>,
+    pub context: Option<String>,
 
-    sensitive: bool,
+    pub replies: String,
+
+    pub content: String,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub content_map: Option<HashMap<String, String>>,
+
+    pub sensitive: bool,
 
     #[serde(skip_serializing_if = "Vec::is_empty")]
-    tag: Vec<Tag>,
+    pub tag: Vec<Tag>,
 
     #[serde(skip_serializing_if = "Vec::is_empty")]
-    one_of: Vec<QuestionOption>,
+    pub one_of: Vec<QuestionOption>,
     #[serde(skip_serializing_if = "Vec::is_empty")]
-    any_of: Vec<QuestionOption>,
+    pub any_of: Vec<QuestionOption>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    end_time: Option<DateTime<Utc>>,
+    pub end_time: Option<DateTime<Utc>>,
 
     pub to: Vec<String>,
     pub cc: Vec<String>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
-    quote_url: Option<String>,
+    pub quote_url: Option<String>,
 
-    published: DateTime<Utc>,
+    pub published: DateTime<Utc>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub(super) updated: Option<DateTime<Utc>>,
+    pub updated: Option<DateTime<Utc>>,
 }
 
 pub fn build_note(

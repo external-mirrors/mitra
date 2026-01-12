@@ -21,33 +21,33 @@ use serde_qs::{
 
 use crate::http::log_response_error;
 
-mod accounts;
+pub mod accounts;
 mod admin;
-mod apps;
+pub mod apps;
 mod bookmarks;
 mod custom_emojis;
 mod directory;
 mod filters;
 mod follow_requests;
-mod instance;
+pub mod instance;
 mod lists;
-mod markers;
+pub mod markers;
 mod media;
 mod media_proxy;
 mod mutes;
-mod notifications;
-mod oauth;
+pub mod notifications;
+pub mod oauth;
 mod polls;
 mod reactions;
 mod search;
 mod settings;
-mod statuses;
+pub mod statuses;
 mod subscriptions;
-mod timelines;
+pub mod timelines;
 
-mod auth;
-mod errors;
-mod media_server;
+pub mod auth;
+pub mod errors;
+pub mod media_server;
 mod microsyntax;
 mod pagination;
 mod serializers;

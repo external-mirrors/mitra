@@ -6,7 +6,7 @@ pub mod authority;
 pub mod builders;
 mod c2s;
 mod constants;
-mod contexts;
+pub mod contexts;
 mod deliverer;
 pub mod errors;
 pub mod filter;
