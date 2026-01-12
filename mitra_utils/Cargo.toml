@@ -38,7 +38,7 @@ sysinfo = { version = "0.32.1", default-features = false, features = ["disk"] }
 # Used for creating error types
 thiserror = "1.0.37"
 # Used to generate lexicographically sortable IDs
-ulid = { version = "1.0.0", features = ["uuid"] }
+ulid = { version = "~1.0.0", features = ["uuid"] }
 # Used to work with Unicode
 unicode-segmentation = "1.10.1"
 # Used to work with UUIDs
