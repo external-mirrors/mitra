@@ -1652,30 +1652,28 @@ pub async fn find_extraneous_posts(
 ) -> Result<Vec<Uuid>, DatabaseError> {
     let rows = db_client.query(
         "
-        WITH RECURSIVE context_post (context_id, post_id, created_at) AS (
-            SELECT post.id, post.id, post.created_at
+        WITH context_post (conversation_id, post_id, created_at) AS (
+            -- both posts and reposts are counted towards `context.updated_at`
+            SELECT
+                CASE
+                    WHEN post.repost_of_id IS NOT NULL
+                    THEN repost_of.conversation_id
+                    ELSE post.conversation_id
+                END,
+                post.id,
+                post.created_at
             FROM post
-            WHERE
-                -- top-level posts
-                post.in_reply_to_id IS NULL
-                AND post.repost_of_id IS NULL
-                AND post.created_at < $1
-            UNION
-            SELECT context_post.context_id, post.id, post.created_at
-            FROM post
-            JOIN context_post ON (
-                post.in_reply_to_id = context_post.post_id
-                OR post.repost_of_id = context_post.post_id
-            )
+            LEFT JOIN post AS repost_of ON post.repost_of_id = repost_of.id
         )
-        SELECT context.id
+        SELECT context.root_id
         FROM (
             SELECT
-                context_post.context_id AS id,
+                conversation.root_id,
                 array_agg(context_post.post_id) AS posts,
                 max(context_post.created_at) AS updated_at
             FROM context_post
-            GROUP BY context_post.context_id
+            JOIN conversation ON context_post.conversation_id = conversation.id
+            GROUP BY conversation.root_id
         ) AS context
         WHERE
             context.updated_at < $1
@@ -1753,7 +1751,7 @@ pub async fn find_extraneous_posts(
         &[&updated_before],
     ).await?;
     let ids: Vec<Uuid> = rows.iter()
-        .map(|row| row.try_get("id"))
+        .map(|row| row.try_get("root_id"))
         .collect::<Result<_, _>>()?;
     Ok(ids)
 }

@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Send payment notification to remote server when receving a payment for LWS invoice.
 - Generate better error messages when Monero address is not valid.
+- Optimized extraneous posts query.
 
 ## [4.16.1] - 2026-01-07
 
