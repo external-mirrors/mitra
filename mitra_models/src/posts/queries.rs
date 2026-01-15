@@ -1645,7 +1645,8 @@ pub(super) async fn find_posts_hidden_by_user(
 
 /// Finds all contexts (identified by top-level post)
 /// updated before the specified date
-/// that do not contain local posts, reposts, mentions, links or reactions.
+/// that do not contain local posts, reposts, mentions,
+/// links, reactions or follows.
 pub async fn find_extraneous_posts(
     db_client: &impl DatabaseClient,
     updated_before: DateTime<Utc>,
@@ -1668,12 +1669,13 @@ pub async fn find_extraneous_posts(
         SELECT context.root_id
         FROM (
             SELECT
+                conversation.id,
                 conversation.root_id,
                 array_agg(context_post.post_id) AS posts,
                 max(context_post.created_at) AS updated_at
             FROM context_post
             JOIN conversation ON context_post.conversation_id = conversation.id
-            GROUP BY conversation.root_id
+            GROUP BY conversation.id, conversation.root_id
         ) AS context
         WHERE
             context.updated_at < $1
@@ -1746,6 +1748,14 @@ pub async fn find_extraneous_posts(
                 SELECT 1
                 FROM poll_vote
                 WHERE poll_vote.poll_id = ANY(context.posts)
+            )
+            -- no followers of a context
+            AND NOT EXISTS (
+                SELECT 1
+                FROM conversation_tracking
+                WHERE
+                    conversation_tracking.conversation_id = context.id
+                    AND conversation_tracking.tracking_status = 1
             )
         ",
         &[&updated_before],
