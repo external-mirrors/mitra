@@ -1,3 +1,5 @@
+use std::time::Instant;
+
 use anyhow::Error;
 
 use mitra_activitypub::queues::{
@@ -96,10 +98,16 @@ pub async fn delete_extraneous_posts(
         Some(days) => days_before_now(days),
         None => return Ok(()), // not configured
     };
-    let posts = find_extraneous_posts(
-        db_client_await!(db_pool),
-        updated_before,
-    ).await?;
+    let posts = {
+        let db_client = &**get_database_client(db_pool).await?;
+        let start_time = Instant::now();
+        let posts = find_extraneous_posts(db_client, updated_before).await?;
+        log::info!(
+            "find_extraneous_posts query executed: {:.2?}",
+            start_time.elapsed(),
+        );
+        posts
+    };
     for post_id in posts {
         let db_client = &mut **get_database_client(db_pool).await?;
         let deletion_queue = delete_post(db_client, post_id).await?;
