@@ -492,7 +492,9 @@ pub async fn create_portable_user(
 ) -> Result<PortableUser, DatabaseError> {
     let transaction = db_client.transaction().await?;
     // Use invite code
-    use_invite_code(&transaction, &user_data.invite_code).await?;
+    if let Some(ref invite_code) = user_data.invite_code {
+        use_invite_code(&transaction, invite_code).await?;
+    };
     // Create user
     let rsa_secret_key_der =
         rsa_secret_key_to_pkcs1_der(&user_data.rsa_secret_key)
@@ -780,7 +782,7 @@ mod tests {
             profile_id: profile.id,
             rsa_secret_key: rsa_secret_key.clone(),
             ed25519_secret_key: ed25519_secret_key,
-            invite_code: invite_code,
+            invite_code: Some(invite_code),
         };
         let user = create_portable_user(db_client, user_data).await.unwrap();
         assert_eq!(user.id, profile.id);

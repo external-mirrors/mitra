@@ -730,7 +730,8 @@ async fn apgateway_create_actor_view(
     let invite_code = request.headers()
         .get("X-Invite-Code")
         .and_then(|value| value.to_str().ok())
-        .ok_or(ValidationError("invite code is required"))?;
+        .ok_or(ValidationError("invite code is required"))?
+        .to_owned();
     verify_public_keys(
         &config.instance(),
         None,
@@ -741,7 +742,7 @@ async fn apgateway_create_actor_view(
         &config,
         &db_pool,
         actor.into_inner(),
-        invite_code,
+        Some(invite_code),
     ).await.map_err(|error| {
         log::warn!("failed to register portable actor ({error})");
         match error {

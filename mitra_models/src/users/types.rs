@@ -315,7 +315,7 @@ pub struct DbPortableUser {
     rsa_secret_key: Vec<u8>,
     ed25519_secret_key: Vec<u8>,
     #[allow(dead_code)]
-    invite_code: String,
+    invite_code: Option<String>,
     #[allow(dead_code)]
     created_at: DateTime<Utc>,
 }
@@ -369,7 +369,7 @@ pub struct PortableUserData {
     pub profile_id: Uuid,
     pub rsa_secret_key: RsaSecretKey,
     pub ed25519_secret_key: Ed25519SecretKey,
-    pub invite_code: String,
+    pub invite_code: Option<String>,
 }
 
 pub struct AccountAdminInfo {

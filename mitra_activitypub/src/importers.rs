@@ -986,7 +986,7 @@ pub async fn register_portable_actor(
     config: &Config,
     db_pool: &DatabaseConnectionPool,
     actor_json: JsonValue,
-    invite_code: &str,
+    maybe_invite_code: Option<String>,
 ) -> Result<PortableUser, HandlerError> {
     verify_portable_object(&actor_json)
         .map_err(|error| {
@@ -998,11 +998,13 @@ pub async fn register_portable_actor(
         db_client_await!(db_pool),
         actor.preferred_username(),
     ).await?;
-    if !is_valid_invite_code(
-        db_client_await!(db_pool),
-        invite_code,
-    ).await? {
-        return Err(ValidationError("invalid invite code").into());
+    if let Some(ref invite_code) = maybe_invite_code {
+        if !is_valid_invite_code(
+            db_client_await!(db_pool),
+            invite_code,
+        ).await? {
+            return Err(ValidationError("invalid invite code").into());
+        };
     };
     // Create or update profile
     let ap_client = ApClient::new_with_pool(config, db_pool).await?;
@@ -1043,7 +1045,7 @@ pub async fn register_portable_actor(
         profile_id: profile.id,
         rsa_secret_key: rsa_secret_key,
         ed25519_secret_key: ed25519_secret_key,
-        invite_code: invite_code.to_string(),
+        invite_code: maybe_invite_code,
     };
     let db_client = &mut **get_database_client(db_pool).await?;
     let user = create_portable_user(db_client, user_data).await?;

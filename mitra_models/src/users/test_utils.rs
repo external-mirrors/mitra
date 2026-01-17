@@ -11,7 +11,7 @@ use crate::{
 };
 
 use super::{
-    queries::{create_invite_code, create_portable_user, create_user},
+    queries::{create_portable_user, create_user},
     types::{PortableUser, PortableUserData, User, UserCreateData},
 };
 
@@ -38,12 +38,11 @@ pub async fn create_test_portable_user(
         "server.local", // local webfinger
         actor_id,
     ).await;
-    let invite_code = create_invite_code(db_client, None).await.unwrap();
     let user_data = PortableUserData {
         profile_id: profile.id,
         rsa_secret_key: generate_weak_rsa_key().unwrap(),
         ed25519_secret_key: generate_weak_ed25519_key(),
-        invite_code: invite_code.clone(),
+        invite_code: None,
     };
     create_portable_user(db_client, user_data).await.unwrap()
 }
