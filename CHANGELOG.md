@@ -12,6 +12,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Generate better error messages when Monero address is not valid.
 - Optimized extraneous posts query.
 - Write extraneous posts query duration to log.
+- Allow portable actor registration without invite code if federation is disabled.
 
 ### Fixed
 

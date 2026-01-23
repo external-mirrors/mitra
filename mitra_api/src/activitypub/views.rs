@@ -63,7 +63,10 @@ use mitra_activitypub::{
     queues::IncomingActivityJobData,
     utils::parse_id_from_db,
 };
-use mitra_config::Config;
+use mitra_config::{
+    Config,
+    RegistrationType,
+};
 use mitra_models::{
     activitypub::queries::{
         create_activitypub_media,
@@ -727,13 +730,20 @@ async fn apgateway_create_actor_view(
     request: HttpRequest,
     actor: web::Json<JsonValue>,
 ) -> Result<HttpResponse, HttpError> {
-    let invite_code = request.headers()
-        .get("X-Invite-Code")
-        .and_then(|value| value.to_str().ok())
-        .ok_or(ValidationError("invite code is required"))?
-        .to_owned();
+    let instance = config.instance();
+    let maybe_invite_code = match config.registration.registration_type {
+        RegistrationType::Open if !instance.federation.enabled => None,
+        _ => {
+            let invite_code = request.headers()
+                .get("X-Invite-Code")
+                .and_then(|value| value.to_str().ok())
+                .ok_or(ValidationError("invite code is required"))?
+                .to_owned();
+            Some(invite_code)
+        },
+    };
     verify_public_keys(
-        &config.instance(),
+        &instance,
         None,
         &actor,
     )?;
@@ -742,7 +752,7 @@ async fn apgateway_create_actor_view(
         &config,
         &db_pool,
         actor.into_inner(),
-        Some(invite_code),
+        maybe_invite_code,
     ).await.map_err(|error| {
         log::warn!("failed to register portable actor ({error})");
         match error {

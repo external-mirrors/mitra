@@ -176,12 +176,16 @@ pub async fn create_account(
     let db_client = &mut **get_database_client(&db_pool).await?;
     let instance = config.instance();
     // Validate
-    if config.registration.registration_type == RegistrationType::Invite {
-        let invite_code = account_data.invite_code.as_ref()
-            .ok_or(ValidationError("invite code is required"))?;
-        if !is_valid_invite_code(db_client, invite_code).await? {
-            return Err(ValidationError("invalid invite code").into());
-        };
+    let maybe_invite_code = match config.registration.registration_type {
+        RegistrationType::Open => None,
+        RegistrationType::Invite => {
+            let invite_code = account_data.invite_code.as_ref()
+                .ok_or(ValidationError("invite code is required"))?;
+            if !is_valid_invite_code(db_client, invite_code).await? {
+                return Err(ValidationError("invalid invite code").into());
+            };
+            Some(invite_code.to_owned())
+        },
     };
 
     validate_local_username(&account_data.username)?;
@@ -252,17 +256,15 @@ pub async fn create_account(
         .map_err(MastodonError::from_internal)?;
     let ed25519_secret_key = generate_ed25519_key();
 
-    let AccountCreateData { username, invite_code, .. } =
-        account_data.into_inner();
     let role = from_default_role(&config.registration.default_role);
     let user_data = UserCreateData {
-        username,
+        username: account_data.username.clone(),
         password_digest: maybe_password_digest,
         login_address_ethereum: maybe_ethereum_address,
         login_address_monero: maybe_monero_address,
         rsa_secret_key: rsa_secret_key_pem,
         ed25519_secret_key: ed25519_secret_key,
-        invite_code,
+        invite_code: maybe_invite_code,
         role,
     };
     let user = match create_user(db_client, user_data).await {
