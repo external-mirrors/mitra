@@ -95,7 +95,12 @@ pub fn parse_config() -> (Config, Vec<&'static str>) {
         };
     };
     config.http_socket();
-    let instance_uri = parse_instance_url(&config.instance_url)
+    #[cfg(feature = "mini")]
+    let instance_url = &config.gateway_url;
+    #[cfg(not(feature = "mini"))]
+    let instance_url = &config.instance_url;
+
+    let instance_uri = parse_instance_url(instance_url)
         .expect("invalid instance URL");
     if !is_correct_uri_scheme(&instance_uri) {
         warnings.push("instance_url may have incorrect URL scheme");

@@ -30,6 +30,8 @@ apx_core = { path = "../apx_core", features = ["test-utils"] }
 
 [features]
 production = []
+mini = []
+
 test-utils = []
 
 [lints]

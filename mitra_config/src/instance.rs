@@ -17,6 +17,9 @@ use super::{
     SOFTWARE_VERSION,
 };
 
+#[cfg(feature = "mini")]
+use apx_core::did_key::DidKey;
+
 // Normalize HTTP origin:
 // - add a scheme if it's missing
 // - convert IDN to punycode
@@ -72,8 +75,12 @@ impl Instance {
             // Private instance doesn't send activities and sign requests
             federation_config.enabled = false;
         };
+        #[cfg(feature = "mini")]
+        let instance_url = &config.gateway_url;
+        #[cfg(not(feature = "mini"))]
+        let instance_url = &config.instance_url;
         Self {
-            _uri: parse_instance_url(&config.instance_url)
+            _uri: parse_instance_url(instance_url)
                 .expect("instance URL should be already validated"),
             federation: federation_config,
             ed25519_secret_key: config.instance_ed25519_key
@@ -103,6 +110,14 @@ impl Instance {
             version=SOFTWARE_VERSION,
             instance_uri=self.uri(),
         )
+    }
+
+    #[cfg(feature = "mini")]
+    pub fn fep_ef61_identity(&self) -> DidKey {
+        use apx_core::crypto::eddsa::ed25519_public_key_from_secret_key;
+        let identity_public_key = ed25519_public_key_from_secret_key(&self.ed25519_secret_key);
+        let identity = DidKey::from_ed25519_key(&identity_public_key);
+        identity
     }
 }
 

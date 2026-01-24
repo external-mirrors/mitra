@@ -90,6 +90,7 @@ pub fn verify_object_owner(
 // 3. Embedded signed objects
 // Local activities are only permitted in portable outboxes,
 // where they should be validated.
+#[cfg(not(feature = "mini"))]
 pub fn is_local_origin(
     instance: &Instance,
     object_id: &str,
@@ -99,6 +100,15 @@ pub fn is_local_origin(
             return true;
         };
     };
+    false
+}
+
+#[cfg(feature = "mini")]
+pub fn is_local_origin(
+    _instance: &Instance,
+    _object_id: &str,
+) -> bool {
+    // The check only makes sense on the server
     false
 }
 

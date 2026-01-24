@@ -77,8 +77,12 @@ pub struct Config {
 
     // Domain name or <IP address>:<port>
     // URI scheme is optional
+    #[cfg(not(feature = "mini"))]
     #[serde(alias = "instance_uri")]
     pub(super) instance_url: String,
+
+    #[cfg(feature = "mini")]
+    pub(super) gateway_url: String,
 
     pub instance_title: String,
     pub instance_short_description: String,

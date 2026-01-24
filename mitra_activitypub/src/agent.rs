@@ -57,7 +57,17 @@ pub fn build_federation_agent(
 ) -> FederationAgent {
     let (signer_key, signer_key_id) = if let Some(user) = maybe_user {
         let actor_key = user.rsa_secret_key.clone();
+        #[cfg(feature = "mini")]
+        let actor_id = {
+            use apx_sdk::core::crypto::eddsa::ed25519_public_key_from_secret_key;
+            use apx_sdk::core::did_key::DidKey;
+            let identity_public_key = ed25519_public_key_from_secret_key(&instance.ed25519_secret_key);
+            let identity = DidKey::from_ed25519_key(&identity_public_key);
+            format!("ap://{}/actors/{}", identity, user.id)
+        };
+        #[cfg(not(feature = "mini"))]
         let actor_id = local_actor_id(instance.uri_str(), &user.profile.username);
+
         let actor_key_id = local_actor_key_id(&actor_id, PublicKeyType::RsaPkcs1);
         (actor_key, actor_key_id)
     } else {

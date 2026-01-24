@@ -93,6 +93,9 @@ use crate::{
     vocabulary::GROUP,
 };
 
+#[cfg(feature = "mini")]
+use uuid::Uuid;
+
 pub struct ApClient {
     pub instance: Instance,
     pub filter: FederationFilter,
@@ -199,10 +202,18 @@ impl ApClient {
         object_id: &str,
     ) -> Result<T, HandlerError> {
         let agent = self.agent();
+        #[cfg(feature = "mini")]
+        let options = FetchObjectOptions {
+            fep_ef61_trusted_origins: vec![self.instance.uri().to_string()],
+            ..Default::default()
+        };
+        #[cfg(not(feature = "mini"))]
+        let options = FetchObjectOptions::default();
+
         let object_json = fetch_object(
             &agent,
             object_id,
-            FetchObjectOptions::default(),
+            options,
         ).await?;
         let object_id = get_object_id(&object_json)?;
         if is_local_origin(&self.instance, object_id) {
@@ -517,7 +528,45 @@ pub async fn get_post_by_object_id(
     }
 }
 
+#[cfg(feature = "mini")]
+pub async fn _get_post_by_object_id(
+    db_client: &impl DatabaseClient,
+    instance: &Instance,
+    object_id: &CanonicalUri,
+) -> Result<PostDetailed, DatabaseError> {
+    let object_id = object_id.to_string();
+    match _parse_local_object_id(instance, &object_id) {
+        Ok(post_id) => {
+            // Local post
+            let post = get_local_post_by_id(db_client, post_id).await?;
+            Ok(post)
+        },
+        Err(_) => {
+            // Remote post
+            let post = get_remote_post_by_object_id(db_client, &object_id).await?;
+            Ok(post)
+        },
+    }
+}
+
 const RECURSION_DEPTH_MAX: usize = 50;
+
+#[cfg(feature = "mini")]
+fn _parse_local_object_id(
+    instance: &Instance,
+    object_id: &str,
+) -> Result<Uuid, ValidationError> {
+    use regex::Regex;
+    use apx_sdk::identifiers::parse_object_id;
+    let path_re = Regex::new("^/objects/(?P<uuid>[0-9a-f-]+)$")
+        .expect("regexp should be valid");
+    let (base_uri, (internal_object_id,)) = parse_object_id(object_id, path_re)
+        .map_err(|_| ValidationError("invalid local object ID"))?;
+    if base_uri != format!("ap://{}", instance.fep_ef61_identity()) {
+        return Err(ValidationError("instance mismatch"));
+    };
+    Ok(internal_object_id)
+}
 
 pub async fn import_post(
     ap_client: &ApClient,
@@ -547,6 +596,20 @@ pub async fn import_post(
                     maybe_object = None;
                     continue;
                 };
+                #[cfg(feature = "mini")]
+                if let Ok(canonical_object_id) = CanonicalUri::parse(&object_id) {
+                    if let Ok(post_id) = _parse_local_object_id(&instance, &canonical_object_id.to_string()) {
+                        if objects.is_empty() {
+                            // Initial object must not be local
+                            return Err(HandlerError::LocalObject);
+                        };
+                        // Object is a local post
+                        // Verify post exists, return error if it doesn't
+                        get_local_post_by_id(db_client, post_id).await?;
+                        continue;
+                    };
+                };
+                #[cfg(not(feature = "mini"))]
                 if let Ok(post_id) = parse_local_object_id(instance.uri_str(), &object_id) {
                     if objects.is_empty() {
                         // Initial object must not be local
@@ -692,7 +755,7 @@ pub async fn import_activity(
     ).await
 }
 
-async fn fetch_collection(
+pub async fn fetch_collection(
     ap_client: &ApClient,
     collection_id: &str,
     limit: usize,

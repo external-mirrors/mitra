@@ -101,6 +101,9 @@ use super::{
     HandlerError,
 };
 
+#[cfg(feature = "mini")]
+use crate::importers::_get_post_by_object_id;
+
 fn deserialize_attributed_to<'de, D>(
     deserializer: D,
 ) -> Result<String, D::Error>
@@ -983,9 +986,16 @@ pub async fn create_remote_post(
         Some(ref object_id) => {
             let object_id = redirects.get(object_id).unwrap_or(object_id);
             let canonical_object_id = canonicalize_id(object_id)?;
+            #[cfg(not(feature = "mini"))]
             let in_reply_to = get_post_by_object_id(
                 db_client_await!(db_pool),
                 ap_client.instance.uri_str(),
+                &canonical_object_id,
+            ).await?;
+            #[cfg(feature = "mini")]
+            let in_reply_to = _get_post_by_object_id(
+                db_client_await!(db_pool),
+                &ap_client.instance,
                 &canonical_object_id,
             ).await?;
             Some(in_reply_to)
