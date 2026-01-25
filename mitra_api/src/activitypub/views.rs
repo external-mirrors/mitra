@@ -1,11 +1,17 @@
 use actix_web::{
+    body::{BoxBody, EitherBody},
     delete,
-    dev::ConnectionInfo,
+    dev::{ConnectionInfo, ServiceFactory, ServiceRequest, ServiceResponse},
     get,
+    middleware::{
+        ErrorHandlerResponse,
+        ErrorHandlers,
+    },
     post,
     web,
     http::header as http_header,
     http::Uri,
+    Error,
     HttpRequest,
     HttpResponse,
     Scope,
@@ -108,7 +114,7 @@ use mitra_validators::errors::ValidationError;
 
 use crate::{
     errors::HttpError,
-    http::get_request_full_uri,
+    http::{get_request_full_uri, log_response_error},
     web_client::urls::{
         get_post_page_url,
         get_profile_page_url,
@@ -1019,8 +1025,22 @@ async fn apgateway_outbox_pull_view(
     Ok(response)
 }
 
-pub fn gateway_scope(gateway_enabled: bool) -> Scope {
-    let scope = web::scope("/.well-known/apgateway");
+pub fn gateway_scope(
+    gateway_enabled: bool,
+) -> Scope<impl ServiceFactory<
+    ServiceRequest,
+    Config = (),
+    Response = ServiceResponse<EitherBody<BoxBody>>,
+    Error = Error,
+    InitError = (),
+>> {
+    let error_handlers = ErrorHandlers::new()
+        .default_handler_client(|response| {
+            log_response_error(Level::Info, &response);
+            Ok(ErrorHandlerResponse::Response(response.map_into_left_body()))
+        });
+    let scope = web::scope("/.well-known/apgateway")
+        .wrap(error_handlers);
     if !gateway_enabled {
         return scope;
     };

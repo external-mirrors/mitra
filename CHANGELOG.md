@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Optimized extraneous posts query.
 - Write extraneous posts query duration to log.
 - Allow portable actor registration without invite code if federation is disabled.
+- Log FEP-ae97 client errors.
 
 ### Fixed
 
