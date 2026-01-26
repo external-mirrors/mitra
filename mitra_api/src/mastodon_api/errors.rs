@@ -121,10 +121,18 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_error_message() {
+    fn test_database_error() {
         let db_error = DatabaseError::type_error();
         let error = MastodonError::from(db_error);
         assert_eq!(error.to_string(), "database error: database type error");
         assert_eq!(error.error_message(), "database error");
+    }
+
+    #[test]
+    fn test_internal_error() {
+        let db_error = DatabaseError::type_error();
+        let error = MastodonError::from_internal(db_error);
+        assert_eq!(error.to_string(), "internal error: database type error");
+        assert_eq!(error.error_message(), "internal error");
     }
 }

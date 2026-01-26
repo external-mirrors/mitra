@@ -20,7 +20,7 @@ pub enum HandlerError {
     #[error(transparent)]
     DatabaseError(#[from] DatabaseError),
 
-    #[error("media storage error")]
+    #[error("media storage error: {0}")]
     StorageError(#[from] MediaStorageError),
 
     #[error("{0}")]
