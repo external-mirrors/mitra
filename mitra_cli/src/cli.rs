@@ -47,6 +47,7 @@ use mitra_utils::datetime::days_before_now;
 use crate::commands::{
     account::{
         CreateAccount,
+        CreateSystemAccount,
         ListAccounts,
         SetPassword,
         SetRole,
@@ -99,6 +100,7 @@ pub enum SubCommand {
     GenerateInviteCode(GenerateInviteCode),
     ListInviteCodes(ListInviteCodes),
     CreateAccount(CreateAccount),
+    CreateSystemAccount(CreateSystemAccount),
     ListAccounts(ListAccounts),
     SetPassword(SetPassword),
     SetRole(SetRole),

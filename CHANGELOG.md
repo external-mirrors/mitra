@@ -15,6 +15,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Added shared default post visibility setting.
 - Added shared default post language setting.
 - Added `--limit` parameter to `export-posts` command.
+- Notify about payments made to primary address when direct mode is used.
 
 ### Changed
 

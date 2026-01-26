@@ -29,6 +29,7 @@ use crate::{
 use super::types::{
     AccountAdminInfo,
     AutomatedAccountData,
+    AutomatedAccountType,
     ClientConfig,
     DbClientConfig,
     DbInviteCode,
@@ -579,6 +580,24 @@ pub async fn create_automated_account(
     Ok(db_profile.id)
 }
 
+pub async fn get_anonymous_system_account_id(
+    db_client: &impl DatabaseClient,
+) -> Result<Option<Uuid>, DatabaseError> {
+    let maybe_row = db_client.query_opt(
+        "
+        SELECT id
+        FROM automated_account
+        WHERE account_type = $1
+        ",
+        &[&AutomatedAccountType::Anonymous],
+    ).await?;
+    let Some(row) = maybe_row else {
+        return Ok(None);
+    };
+    let account_id = row.try_get("id")?;
+    Ok(Some(account_id))
+}
+
 pub async fn create_portable_user(
     db_client: &mut impl DatabaseClient,
     user_data: PortableUserData,
@@ -748,7 +767,7 @@ mod tests {
         },
         users::{
             test_utils::{create_test_user, create_test_portable_user},
-            types::{AutomatedAccountType, Role},
+            types::Role,
         },
     };
     use super::*;
@@ -881,7 +900,7 @@ mod tests {
         let db_client = &mut create_test_database().await;
         let account_data = AutomatedAccountData {
             username: "myname".to_string(),
-            account_type: AutomatedAccountType::Application,
+            account_type: AutomatedAccountType::Anonymous,
             rsa_secret_key: generate_weak_rsa_key().unwrap(),
             ed25519_secret_key: generate_weak_ed25519_key(),
         };
@@ -894,6 +913,10 @@ mod tests {
         assert_eq!(profile.username, "myname");
         assert_eq!(profile.is_automated, true);
         assert!(!profile.has_user_account());
+
+        let maybe_account_id =
+            get_anonymous_system_account_id(db_client).await.unwrap();
+        assert_eq!(maybe_account_id.unwrap(), account_id);
     }
 
     #[tokio::test]

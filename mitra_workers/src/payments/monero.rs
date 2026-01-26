@@ -23,6 +23,7 @@ use mitra_config::{
 };
 use mitra_models::{
     database::{
+        db_client_await,
         get_database_client,
         DatabaseClient,
         DatabaseConnectionPool,
@@ -35,6 +36,7 @@ use mitra_models::{
             local_monero_light_invoice_paid,
         },
         queries::{
+            create_local_invoice,
             get_local_invoice_by_address,
             get_local_invoices_by_status,
             set_invoice_status,
@@ -44,10 +46,14 @@ use mitra_models::{
     notifications::helpers::create_subscriber_payment_notification,
     payment_methods::{
         helpers::get_payment_method_by_type_and_chain_id,
+        queries::get_payment_methods,
         types::PaymentType,
     },
     profiles::queries::get_profile_by_id,
-    users::queries::get_user_by_id,
+    users::queries::{
+        get_anonymous_system_account_id,
+        get_user_by_id,
+    },
 };
 use mitra_services::monero::{
     light_wallet::{
@@ -650,5 +656,73 @@ pub async fn check_monero_light_invoices(
 ) -> Result<(), PaymentError> {
     check_monero_light_open_invoices(db_pool, config, instance).await?;
     check_monero_light_paid_invoices(db_pool, config, instance).await?;
+    Ok(())
+}
+
+pub async fn check_monero_light_payments(
+    config: &MoneroLightConfig,
+    db_pool: &DatabaseConnectionPool,
+) -> Result<(), PaymentError> {
+    let maybe_anonymous_sender_id =
+        get_anonymous_system_account_id(db_client_await!(db_pool)).await?;
+    let Some(anonymous_sender_id) = maybe_anonymous_sender_id else {
+        log::warn!("automated account doesn't exist");
+        return Ok(());
+    };
+    let payment_methods = get_payment_methods(
+        db_client_await!(db_pool),
+        PaymentType::MoneroLight,
+        &config.chain_id,
+    ).await?;
+    for payment_method in payment_methods {
+        let payout_address = payment_method_payout_address(&payment_method)?;
+        let view_key = payment_method_view_key(&payment_method)?;
+        let maybe_invoice = match get_local_invoice_by_address(
+            db_client_await!(db_pool),
+            PaymentType::MoneroLight,
+            &config.chain_id,
+            &payout_address.to_string(),
+        ).await {
+            Ok(invoice) => Some(invoice),
+            Err(DatabaseError::NotFound(_)) => None,
+            Err(other_error) => return Err(other_error.into()),
+        };
+        let lw_client = LightWalletClient::new(
+            config,
+            payout_address,
+            view_key,
+        );
+        // Get new transactions
+        let since_date = maybe_invoice
+            .as_ref()
+            .map(|invoice| std::cmp::max(invoice.updated_at, payment_method.updated_at))
+            .unwrap_or(payment_method.updated_at);
+        let transactions = lw_client
+            .get_primary_address_txs(since_date)
+            .await?;
+        if let Some(tx_id) = transactions.first() {
+            let db_client = &mut **get_database_client(db_pool).await?;
+            log::info!("detected payment to primary address {tx_id}");
+            let invoice = if let Some(invoice) = maybe_invoice {
+                // Invoice will be re-opened
+                invoice
+            } else {
+                create_local_invoice(
+                    db_client,
+                    anonymous_sender_id,
+                    payment_method.owner_id,
+                    payment_method.payment_type,
+                    payment_method.chain_id.inner(),
+                    &payout_address.to_string(),
+                    0, // no expected amount
+                ).await?
+            };
+            local_monero_light_invoice_paid(
+                db_client,
+                invoice.id,
+                tx_id,
+            ).await?;
+        };
+    };
     Ok(())
 }

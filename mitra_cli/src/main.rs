@@ -58,6 +58,7 @@ async fn main() -> Result<(), Error> {
         SubCommand::GenerateInviteCode(cmd) => cmd.execute(&db_pool).await,
         SubCommand::ListInviteCodes(cmd) => cmd.execute(&db_pool).await,
         SubCommand::CreateAccount(cmd) => cmd.execute(&config, &db_pool).await,
+        SubCommand::CreateSystemAccount(cmd) => cmd.execute(&config, &db_pool).await,
         SubCommand::ListAccounts(cmd) => cmd.execute(&db_pool).await,
         SubCommand::SetPassword(cmd) => cmd.execute(&db_pool).await,
         SubCommand::SetRole(cmd) => cmd.execute(&db_pool).await,

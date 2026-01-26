@@ -380,6 +380,7 @@ impl Default for UserCreateData {
 pub enum AutomatedAccountType {
     Application,
     Relay,
+    Anonymous,
 }
 
 impl From<AutomatedAccountType> for i16 {
@@ -387,6 +388,7 @@ impl From<AutomatedAccountType> for i16 {
         match value {
             AutomatedAccountType::Application => 1,
             AutomatedAccountType::Relay => 2,
+            AutomatedAccountType::Anonymous => 3,
         }
     }
 }
@@ -398,6 +400,7 @@ impl TryFrom<i16> for AutomatedAccountType {
         let account_type = match value {
             1 => Self::Application,
             2 => Self::Relay,
+            3 => Self::Anonymous,
             _ => return Err(DatabaseTypeError),
         };
         Ok(account_type)

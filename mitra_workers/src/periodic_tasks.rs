@@ -58,6 +58,7 @@ use super::payments::{
         check_closed_monero_invoices,
         check_monero_invoices,
         check_monero_light_invoices,
+        check_monero_light_payments,
     },
 };
 
@@ -324,6 +325,25 @@ pub async fn monero_light_payment_monitor(
         monero_config,
         db_pool,
     ).await?;
+    Ok(())
+}
+
+pub async fn monero_light_non_interactive_payment_monitor(
+    config: &Config,
+    db_pool: &DatabaseConnectionPool,
+) -> Result<(), Error> {
+    let Some(monero_config) = config.monero_light_config() else {
+        return Ok(()); // not configured
+    };
+    let start_time = Instant::now();
+    check_monero_light_payments(
+        monero_config,
+        db_pool,
+    ).await?;
+    log::info!(
+        "check_monero_light_payments executed: {:.2?}",
+        start_time.elapsed(),
+    );
     Ok(())
 }
 

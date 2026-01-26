@@ -22,14 +22,21 @@ use mitra_config::Config;
 use mitra_models::{
     database::{get_database_client, DatabaseConnectionPool},
     oauth::queries::delete_oauth_tokens,
-    users::helpers::get_user_by_id_or_name,
-    users::queries::{
-        create_user,
-        get_accounts_for_admin,
-        set_user_password,
-        set_user_role,
+    users::{
+        helpers::get_user_by_id_or_name,
+        queries::{
+            create_automated_account,
+            create_user,
+            get_accounts_for_admin,
+            set_user_password,
+            set_user_role,
+        },
+        types::{
+            AutomatedAccountData,
+            AutomatedAccountType,
+            UserCreateData,
+        },
     },
-    users::types::UserCreateData,
 };
 use mitra_utils::passwords::hash_password;
 use mitra_validators::users::validate_local_username;
@@ -72,6 +79,31 @@ impl CreateAccount {
             role,
         };
         create_user(db_client, user_data).await?;
+        println!("account created");
+        Ok(())
+    }
+}
+
+/// Create system account
+#[derive(Parser)]
+#[clap(hide = true)]
+pub struct CreateSystemAccount;
+
+impl CreateSystemAccount {
+    pub async fn execute(
+        self,
+        config: &Config,
+        db_pool: &DatabaseConnectionPool,
+    ) -> Result<(), Error> {
+        let db_client = &mut **get_database_client(db_pool).await?;
+        let instance = config.instance();
+        let account_data = AutomatedAccountData {
+            username: "anonymous".to_owned(),
+            account_type: AutomatedAccountType::Anonymous,
+            rsa_secret_key: instance.rsa_secret_key,
+            ed25519_secret_key: instance.ed25519_secret_key,
+        };
+        create_automated_account(db_client, account_data).await?;
         println!("account created");
         Ok(())
     }

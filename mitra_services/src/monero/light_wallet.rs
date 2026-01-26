@@ -1,4 +1,5 @@
 use anyhow::{Error as LwsError};
+use chrono::{DateTime, Utc};
 use monero::util::{
     address::{Address, PaymentId},
     key::PrivateKey,
@@ -74,6 +75,30 @@ impl LightWalletClient {
             .parse::<u64>()
             .map_err(|_| LightWalletError::UnexpectedResponse)?;
         Ok((amount, confirmations))
+    }
+
+    pub async fn get_primary_address_txs(
+        &self,
+        since_date: DateTime<Utc>,
+    ) -> Result<Vec<String>, LightWalletError> {
+        let txs = self.client.get_address_txs(
+            self.address,
+            self.view_key,
+        ).await?;
+        let mut primary_address_tx_ids = vec![];
+        for transaction in txs.transactions {
+            if transaction.payment_id.is_some_and(|id| id.0 != PaymentId::zero()) {
+                // Not a primary address
+                continue;
+            };
+            let timestamp = DateTime::parse_from_rfc3339(&transaction.timestamp)
+                .map_err(|_| LightWalletError::UnexpectedResponse)?;
+            if timestamp <= since_date {
+                continue;
+            };
+            primary_address_tx_ids.push(transaction.hash.to_string());
+        };
+        Ok(primary_address_tx_ids)
     }
 
     // https://github.com/monero-project/meta/blob/master/api/lightwallet_rest.md#login

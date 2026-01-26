@@ -30,6 +30,7 @@ pub enum PeriodicTask {
     MoneroPaymentMonitor,
     MoneroRecurrentPaymentMonitor,
     MoneroLightPaymentMonitor,
+    MoneroLightNonInteractivePaymentMonitor,
 }
 
 impl PeriodicTask {
@@ -54,6 +55,7 @@ impl PeriodicTask {
             Self::MoneroPaymentMonitor => 30,
             Self::MoneroRecurrentPaymentMonitor => 600,
             Self::MoneroLightPaymentMonitor => 30,
+            Self::MoneroLightNonInteractivePaymentMonitor => 600,
         }
     }
 
@@ -140,6 +142,9 @@ pub async fn run_worker(
                 PeriodicTask::MoneroLightPaymentMonitor => {
                     monero_light_payment_monitor(&config, &db_pool).await
                 },
+                PeriodicTask::MoneroLightNonInteractivePaymentMonitor => {
+                    monero_light_non_interactive_payment_monitor(&config, &db_pool).await
+                },
             };
             task_result.unwrap_or_else(|err| {
                 log::error!("{:?}: {}", task, err);
@@ -185,6 +190,7 @@ fn start_main_worker(
         };
         if config.monero_light_config().is_some() {
             tasks.push(PeriodicTask::MoneroLightPaymentMonitor);
+            tasks.push(PeriodicTask::MoneroLightNonInteractivePaymentMonitor);
         };
         run_worker(config, db_pool, tasks).await;
     });
