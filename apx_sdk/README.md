@@ -7,7 +7,8 @@ Features:
 - Networking.
 - Authentication (HTTP signatures, object integrity proofs).
 - WebFinger.
-- Nomadic identity.
+- Nomadic identity (client & server).
+- WebAssembly support.
 
 Documentation: https://docs.rs/apx_sdk/latest/apx_sdk/
 

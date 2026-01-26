@@ -7,7 +7,8 @@
 //! - Networking.
 //! - Authentication (HTTP signatures, object integrity proofs).
 //! - WebFinger.
-//! - Nomadic identity.
+//! - Nomadic identity (client & server).
+//! - WebAssembly support.
 //!
 //! Using in a Cargo project:
 //!
