@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Added
 
 - Support `wasm32-unknown-unknown` compilation target in `apx_sdk`.
+- Added `scheme()` and `base()` methods to `ApUri` type.
 
 ### Fixed
 
