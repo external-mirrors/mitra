@@ -66,12 +66,17 @@ fn check_directory_owner(path: &Path) -> () {
 
 pub fn parse_config() -> (Config, Vec<&'static str>) {
     let env = parse_env();
-    let config_yaml = std::fs::read_to_string(&env.config_path)
+    let config_text = std::fs::read_to_string(&env.config_path)
         .unwrap_or_else(|_| {
             panic!("failed to read config from {}", env.config_path);
         });
-    let mut config = serde_yaml::from_str::<Config>(&config_yaml)
-        .expect("invalid yaml data");
+    let mut config: Config = if env.config_path.ends_with(".toml") {
+        toml::from_str(&config_text)
+            .expect("invalid TOML config file")
+    } else {
+        serde_yaml::from_str(&config_text)
+            .expect("invalid YAML config file")
+    };
     let mut warnings = vec![];
 
     // Set parameters from environment
