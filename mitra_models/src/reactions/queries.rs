@@ -147,6 +147,7 @@ pub async fn get_reactions(
             post_reaction.post_id = $1
             AND (
                 post_reaction.visibility = {visibility_public}
+                OR post_reaction.author_id = $2
                 OR post.author_id = $2
             )
             AND ($3::uuid IS NULL OR post_reaction.id < $3)

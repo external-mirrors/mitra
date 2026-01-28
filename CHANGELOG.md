@@ -24,6 +24,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Fixed
 
 - Don't prune followed conversations.
+- Include current user's own reactions in post reaction list.
 
 ## [4.16.1] - 2026-01-07
 
