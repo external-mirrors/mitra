@@ -6,7 +6,7 @@ use uuid::Uuid;
 use crate::{
     database::errors::{DatabaseError, DatabaseTypeError},
     emojis::types::CustomEmoji,
-    posts::types::Visibility,
+    posts::types::{PostDetailed, Visibility},
     profiles::types::DbActorProfile,
 };
 
@@ -96,4 +96,19 @@ pub struct ReactionDeleted {
     pub id: Uuid,
     pub has_deprecated_ap_id: bool,
     pub visibility: Visibility,
+}
+
+pub struct LikedPost {
+    pub reaction_id: Uuid,
+    pub post: PostDetailed,
+}
+
+impl TryFrom<&Row> for LikedPost {
+    type Error = DatabaseError;
+
+    fn try_from(row: &Row) -> Result<Self, Self::Error> {
+        let reaction_id: Uuid = row.try_get("id")?;
+        let post = PostDetailed::try_from(row)?;
+        Ok(Self { reaction_id, post })
+    }
 }
