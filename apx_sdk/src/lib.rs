@@ -7,13 +7,14 @@
 //! - Networking.
 //! - Authentication (HTTP signatures, object integrity proofs).
 //! - WebFinger.
-//! - Nomadic identity.
+//! - Nomadic identity (client & server).
+//! - WebAssembly support.
 //!
 //! Using in a Cargo project:
 //!
 //! ```toml
 //! [dependencies]
-//! apx_sdk = "0.20.0"
+//! apx_sdk = "0.21.0"
 //! ```
 //!
 //! Examples:

@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+
+- Added support for configuration files in TOML format.
+
 ### Changed
 
 - Send payment notification to remote server when receving a payment for LWS invoice.
