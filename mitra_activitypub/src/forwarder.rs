@@ -1,5 +1,4 @@
 use apx_sdk::{
-    constants::AP_PUBLIC,
     core::{
         crypto::{
             common::PublicKey,
@@ -9,14 +8,12 @@ use apx_sdk::{
         json_signatures::create::is_object_signed,
         url::canonical::CanonicalUri,
     },
-    deserialization::deserialize_into_id_array,
     ownership::is_ownership_ambiguous,
     utils::{
         get_core_type,
         is_key_like,
     },
 };
-use serde::Deserialize;
 use serde_json::{Value as JsonValue};
 
 use mitra_config::Instance;
@@ -32,7 +29,6 @@ use mitra_models::{
 use mitra_validators::errors::ValidationError;
 
 use crate::{
-    handlers::note::normalize_audience,
     keys::verification_method_to_public_key,
     ownership::{
         get_object_id_opt,
@@ -128,34 +124,6 @@ pub fn verify_embedded_ownership(
         };
     };
     Ok(())
-}
-
-#[derive(Deserialize)]
-struct ActivityAudience {
-    #[serde(default, deserialize_with = "deserialize_into_id_array")]
-    to: Vec<String>,
-    #[serde(default, deserialize_with = "deserialize_into_id_array")]
-    cc: Vec<String>,
-}
-
-pub fn get_activity_audience(
-    activity: &JsonValue,
-    maybe_recipient_id: Option<&str>,
-) -> Result<Vec<CanonicalUri>, ValidationError> {
-    let activity: ActivityAudience = serde_json::from_value(activity.clone())
-        .map_err(|_| ValidationError("invalid audience"))?;
-    let mut audience = [activity.to, activity.cc].concat();
-    if let Some(recipient_id) = maybe_recipient_id {
-        audience.push(recipient_id.to_owned());
-    };
-    if audience.is_empty() {
-        log::warn!("activity audience is not known");
-    };
-    let audience = normalize_audience(&audience)?
-        .into_iter()
-        .filter(|target_id| target_id.to_string() != AP_PUBLIC)
-        .collect();
-    Ok(audience)
 }
 
 /// Returns remote recipients of the activity
@@ -302,23 +270,5 @@ mod tests {
         });
         let result = verify_embedded_ownership(&activity);
         assert_eq!(result.err().unwrap().0, "embedded object has different owner");
-    }
-
-    #[test]
-    fn test_get_activity_audience() {
-        let activity = json!({
-            "id": "https://social.example/activities/123",
-            "type": "Announce",
-            "actor": "https://social.example/users/1",
-            "object": "https://social.example/objects/321",
-            "to": "as:Public",
-            "cc": "https://social.example/users/1/followers",
-        });
-        let audience = get_activity_audience(&activity, None).unwrap();
-        assert_eq!(audience.len(), 1);
-        assert_eq!(
-            audience[0].to_string(),
-            "https://social.example/users/1/followers",
-        );
     }
 }

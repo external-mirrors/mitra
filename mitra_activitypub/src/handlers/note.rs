@@ -804,7 +804,7 @@ async fn get_object_tags(
     Ok((mentions, hashtags, links, emojis))
 }
 
-pub fn normalize_audience(
+pub(super) fn normalize_audience(
     audience: &[impl AsRef<str>],
 ) -> Result<Vec<CanonicalUri>, ValidationError> {
     let mut normalized_audience = audience.iter()
