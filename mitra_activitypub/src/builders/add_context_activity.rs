@@ -26,7 +26,7 @@ use crate::{
         local_conversation_history_collection,
     },
     queues::OutgoingActivityJobData,
-    vocabulary::{ADD, ORDERED_COLLECTION},
+    vocabulary::{ADD, DELETE, ORDERED_COLLECTION},
 };
 
 use super::note::get_note_recipients;
@@ -120,7 +120,16 @@ pub async fn sync_conversation(
     activity: JsonValue,
     activity_visibility: Visibility,
 ) -> Result<(), DatabaseError> {
-    let root = get_post_by_id(db_client, conversation.root_id).await?;
+    let root = match get_post_by_id(db_client, conversation.root_id).await {
+        Ok(root) => root,
+        Err(DatabaseError::NotFound(_))
+            if activity["type"].as_str() == Some(DELETE) =>
+        {
+            // Root has been deleted; nothing to do
+            return Ok(());
+        },
+        Err(other_error) => return Err(other_error),
+    };
     if !root.is_local() {
         // Conversation owner is remote
         return Ok(());
