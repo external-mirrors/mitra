@@ -33,7 +33,7 @@ use mitra_models::{
     users::types::{
         ClientConfig,
         Permission,
-        Role,
+        Role as DbRole,
         User,
     },
 };
@@ -99,22 +99,22 @@ pub struct AccountSource {
     sensitive: bool,
 }
 
-/// https://docs.joinmastodon.org/entities/Role/
+// https://docs.joinmastodon.org/entities/Role/
 #[derive(Serialize)]
-pub struct ApiRole {
+pub struct Role {
     pub id: i32,
     pub name: String,
     pub permissions: String,
     pub permissions_names: Vec<String>,
 }
 
-impl ApiRole {
-    fn from_db(role: Role) -> Self {
+impl Role {
+    fn from_db(role: DbRole) -> Self {
         let role_name = match role {
-            Role::Guest => unimplemented!(),
-            Role::NormalUser => "user",
-            Role::Admin => "admin",
-            Role::ReadOnlyUser => "read_only_user",
+            DbRole::Guest => unimplemented!(),
+            DbRole::NormalUser => "user",
+            DbRole::Admin => "admin",
+            DbRole::ReadOnlyUser => "read_only_user",
         };
         let mut permissions = vec![];
         // Mastodon uses bitmask
@@ -184,7 +184,7 @@ pub struct Account {
 
     // CredentialAccount attributes
     pub source: Option<AccountSource>,
-    pub role: Option<ApiRole>,
+    pub role: Option<Role>,
     pub authentication_methods: Option<Vec<String>>,
     pub client_config: Option<ClientConfig>,
 }
@@ -332,7 +332,7 @@ impl Account {
             privacy: "public".to_string(),
             sensitive: false,
         };
-        let role = ApiRole::from_db(user.role);
+        let role = Role::from_db(user.role);
         let mut authentication_methods = vec![];
         if user.password_digest.is_some() {
             authentication_methods.push(AUTHENTICATION_METHOD_PASSWORD.to_string());
