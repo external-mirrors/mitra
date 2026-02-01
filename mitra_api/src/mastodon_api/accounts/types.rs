@@ -578,25 +578,6 @@ impl From<AccountUpdateMultipartForm> for AccountUpdateData {
     }
 }
 
-impl AccountUpdateMultipartForm {
-    pub fn into_profile_data(
-        self,
-        profile: &DbActorProfile,
-        media_limits: &MediaLimits,
-        media_storage: &MediaStorage,
-    ) -> Result<ProfileUpdateData, MastodonError> {
-        let mut account_data = AccountUpdateData::from(self);
-        // Preserve mention policy
-        let mention_policy = mention_policy_to_str(profile.mention_policy);
-        account_data.mention_policy = Some(mention_policy.to_string());
-        account_data.into_profile_data(
-            profile,
-            media_limits,
-            media_storage,
-        )
-    }
-}
-
 #[derive(Deserialize)]
 pub struct IdentityClaimQueryParams {
     pub proof_type: String,
