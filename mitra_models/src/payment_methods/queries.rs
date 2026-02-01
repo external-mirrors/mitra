@@ -30,7 +30,8 @@ pub async fn create_payment_method(
         DO UPDATE SET
             payment_type = $2,
             payout_address = $4,
-            view_key = $5
+            view_key = $5,
+            updated_at = CURRENT_TIMESTAMP
         RETURNING payment_method
         ",
         &[
@@ -141,5 +142,6 @@ mod tests {
         ).await.unwrap();
         assert_eq!(method_updated.id, method.id);
         assert_eq!(method_updated.payout_address, "1234");
+        assert!(method_updated.updated_at > method.updated_at);
     }
 }

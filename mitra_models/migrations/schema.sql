@@ -362,6 +362,8 @@ CREATE TABLE payment_method (
     chain_id VARCHAR(50) NOT NULL,
     payout_address VARCHAR(500) NOT NULL,
     view_key VARCHAR(500),
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UNIQUE (owner_id, chain_id)
 );
 
