@@ -226,6 +226,11 @@ paths:
                         - $ref: '#/components/schemas/DefaultVisibility'
                         - description: Default post visibility.
                           nullable: true
+                    language:
+                      description: Default language to use for authored posts (ISO 639-1).
+                      type: string
+                      nullable: true
+                      example: null
                 mention_policy:
                   description: Mention policy.
                   type: string
@@ -1561,6 +1566,11 @@ paths:
                     allOf:
                       - $ref: '#/components/schemas/DefaultVisibility'
                       - description: Default visibility of a post
+                  'posting:default:language':
+                    description: Default language of a post (ISO 639-1).
+                    type: string
+                    nullable: true
+                    example: null
   /api/v1/settings/client_config:
     post:
       summary: Update client configuration.
@@ -3101,6 +3111,10 @@ components:
                   description: Whether new posts should be marked sensitive by default.
                   type: boolean
                   example: false
+                language:
+                  description: Default language of a post (ISO 639-1).
+                  type: string
+                  example: null
             role:
               description: The role assigned to the currently authorized user.
               $ref: '#/components/schemas/Role'

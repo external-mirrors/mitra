@@ -35,7 +35,7 @@ use crate::{
         DatabaseError,
         DatabaseTypeError,
     },
-    posts::types::Visibility,
+    posts::types::{DbLanguage, Visibility},
     profiles::types::{get_identity_key, DbActorProfile},
 };
 
@@ -157,6 +157,23 @@ impl Serialize for Visibility {
     }
 }
 
+impl<'de> Deserialize<'de> for DbLanguage {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where D: Deserializer<'de>
+    {
+        let language_code = String::deserialize(deserializer)?;
+        Self::from_str(&language_code).map_err(DeserializerError::custom)
+    }
+}
+
+impl Serialize for DbLanguage {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where S: Serializer
+    {
+        serializer.serialize_str(self.to_str())
+    }
+}
+
 fn default_default_post_visibility() -> Visibility { Visibility::Public }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
@@ -164,12 +181,15 @@ fn default_default_post_visibility() -> Visibility { Visibility::Public }
 pub struct SharedClientConfig {
     #[serde(default = "default_default_post_visibility")]
     pub default_post_visibility: Visibility,
+
+    pub default_post_language: Option<DbLanguage>,
 }
 
 impl Default for SharedClientConfig {
     fn default() -> Self {
         Self {
             default_post_visibility: default_default_post_visibility(),
+            default_post_language: None,
         }
     }
 }

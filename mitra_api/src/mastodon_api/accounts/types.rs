@@ -22,7 +22,7 @@ use mitra_adapters::payments::subscriptions::MONERO_PAYMENT_AMOUNT_MIN;
 use mitra_config::MediaLimits;
 use mitra_models::{
     media::types::{MediaInfo, PartialMediaInfo},
-    posts::types::Visibility,
+    posts::types::{DbLanguage, Visibility},
     profiles::types::{
         DbActorProfile,
         ExtraField,
@@ -62,7 +62,10 @@ use crate::mastodon_api::{
         serialize_datetime,
         serialize_datetime_opt,
     },
-    statuses::types::{visibility_from_str, visibility_to_str},
+    statuses::{
+        types::{visibility_from_str, visibility_to_str},
+        utils::parse_language_code,
+    },
     uploads::{save_b64_file, UploadError},
 };
 
@@ -100,6 +103,7 @@ pub struct AccountSource {
     pub fields: Vec<AccountField>,
     privacy: &'static str,
     sensitive: bool,
+    language: Option<String>,
 }
 
 // https://docs.joinmastodon.org/entities/Role/
@@ -334,6 +338,9 @@ impl Account {
             fields: fields_sources,
             privacy: visibility_to_str(user.shared_client_config.default_post_visibility),
             sensitive: false,
+            language: user.shared_client_config.default_post_language
+                .and_then(|language| language.inner().to_639_1())
+                .map(|code| code.to_owned()),
         };
         let role = Role::from_db(user.role);
         let mut authentication_methods = vec![];
@@ -386,6 +393,7 @@ struct AccountFieldSource {
 #[derive(Deserialize)]
 pub struct AccountSourceData {
     privacy: Option<String>,
+    language: Option<String>,
 }
 
 impl AccountSourceData {
@@ -403,6 +411,10 @@ impl AccountSourceData {
                 return Err(ValidationError("invalid default visibility"));
             };
             client_config.default_post_visibility = visibility;
+        };
+        if let Some(ref language_code) = self.language {
+            let language = parse_language_code(language_code)?;
+            client_config.default_post_language = Some(DbLanguage::new(language));
         };
         Ok(client_config)
     }
@@ -557,6 +569,8 @@ pub struct AccountUpdateMultipartForm {
 
     #[multipart(rename = "source[privacy]")]
     source_privacy: Option<Text<String>>,
+    #[multipart(rename = "source[language]")]
+    source_language: Option<Text<String>>,
 }
 
 impl From<AccountUpdateMultipartForm> for AccountUpdateData {
@@ -583,6 +597,7 @@ impl From<AccountUpdateMultipartForm> for AccountUpdateData {
             .collect();
         let source_data = AccountSourceData {
             privacy: form.source_privacy.map(|value| value.into_inner()),
+            language: form.source_language.map(|value| value.into_inner()),
         };
         Self {
             display_name: form.display_name

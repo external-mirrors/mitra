@@ -26,11 +26,11 @@ use crate::mastodon_api::{
     polls::types::Poll,
     reactions::types::PleromaEmojiReaction,
     serializers::{
-        deserialize_language_code_opt,
         serialize_datetime,
         serialize_datetime_opt,
     },
 };
+use super::utils::parse_language_code;
 
 pub const POST_CONTENT_TYPE_HTML: &str = "text/html";
 pub const POST_CONTENT_TYPE_MARKDOWN: &str = "text/markdown";
@@ -327,8 +327,7 @@ pub fn visibility_from_str(value: &str) -> Result<Visibility, ValidationError> {
 pub struct StatusData {
     pub status: Option<String>,
 
-    #[serde(default, deserialize_with = "deserialize_language_code_opt")]
-    pub language: Option<Language>,
+    pub language: Option<String>,
 
     #[serde(default, alias = "media_ids[]")]
     pub media_ids: Vec<Uuid>,
@@ -361,6 +360,12 @@ pub struct StatusData {
 }
 
 impl StatusData {
+    pub fn language(&self) -> Result<Option<Language>, ValidationError> {
+        self.language.as_ref()
+            .map(|value| parse_language_code(value))
+            .transpose()
+    }
+
     pub fn poll_params(&self) -> Result<Option<PollParams>, ValidationError> {
         let maybe_poll_params = if let Some(ref poll_params) = self.poll {
             Some(poll_params.clone())
@@ -431,13 +436,12 @@ impl StatusSource {
     }
 }
 
-/// https://docs.joinmastodon.org/methods/statuses/#edit
+// https://docs.joinmastodon.org/methods/statuses/#edit
 #[derive(Deserialize)]
 pub struct StatusUpdateData {
     pub status: String,
 
-    #[serde(default, deserialize_with = "deserialize_language_code_opt")]
-    pub language: Option<Language>,
+    pub language: Option<String>,
 
     #[serde(default, alias = "media_ids[]")]
     pub media_ids: Vec<Uuid>,
@@ -450,6 +454,14 @@ pub struct StatusUpdateData {
 
     // Pleroma API
     pub quote_id: Option<Uuid>,
+}
+
+impl StatusUpdateData {
+    pub fn language(&self) -> Result<Option<Language>, ValidationError> {
+        self.language.as_ref()
+            .map(|value| parse_language_code(value))
+            .transpose()
+    }
 }
 
 #[derive(Serialize)]

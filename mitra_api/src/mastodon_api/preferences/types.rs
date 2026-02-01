@@ -25,7 +25,9 @@ impl Preferences {
             posting_default_visibility:
                 visibility_to_str(client_config.default_post_visibility),
             posting_default_sensitive: false,
-            posting_default_language: None,
+            posting_default_language: client_config.default_post_language
+                .and_then(|language| language.inner().to_639_1())
+                .map(|code| code.to_owned()),
             reading_expand_media: "default",
             reading_expand_spoilers: false,
         }
