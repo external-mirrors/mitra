@@ -92,7 +92,7 @@ pub enum AccountPaymentOption {
 
 // https://docs.joinmastodon.org/entities/Account/#source
 #[derive(Serialize)]
-pub struct Source {
+pub struct AccountSource {
     pub note: Option<String>,
     pub fields: Vec<AccountField>,
     privacy: String,
@@ -183,7 +183,7 @@ pub struct Account {
     pub statuses_count: i32,
 
     // CredentialAccount attributes
-    pub source: Option<Source>,
+    pub source: Option<AccountSource>,
     pub role: Option<ApiRole>,
     pub authentication_methods: Option<Vec<String>>,
     pub client_config: Option<ClientConfig>,
@@ -326,7 +326,7 @@ impl Account {
                 is_legacy_proof: false,
             })
             .collect();
-        let source = Source {
+        let source = AccountSource {
             note: user.profile.bio_source.clone(),
             fields: fields_sources,
             privacy: "public".to_string(),
