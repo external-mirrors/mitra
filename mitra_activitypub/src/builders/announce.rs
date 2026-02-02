@@ -7,9 +7,11 @@ use mitra_config::Instance;
 use mitra_models::{
     database::{DatabaseClient, DatabaseError},
     posts::types::{PostDetailed, Visibility},
+    profiles::types::DbActor,
     relationships::queries::get_followers,
     users::types::User,
 };
+use mitra_utils::id::generate_ulid;
 
 use crate::{
     authority::Authority,
@@ -164,6 +166,36 @@ pub async fn prepare_announce(
         activity,
         recipients,
     ))
+}
+
+// https://codeberg.org/fediverse/fep/src/branch/main/fep/ae0c/fep-ae0c.md#publishing-messages-to-a-relay-1
+pub fn build_relay_announce(
+    authority: &Authority,
+    post: &PostDetailed,
+    relay_actor_data: &DbActor,
+) -> Announce {
+    let actor_id = local_actor_id_unified(
+        authority,
+        post.author.id,
+        &post.author.username,
+    );
+    let object_id = post_object_id(authority, post);
+    let announce_id = generate_ulid();
+    let activity_id = local_announce_activity_id(authority, announce_id, false);
+    let mut audience = vec![relay_actor_data.id.clone()];
+    if let Some(ref followers) = relay_actor_data.followers {
+        audience.push(followers.to_owned());
+    };
+    Announce {
+        _context: build_default_context(),
+        activity_type: ANNOUNCE.to_string(),
+        actor: actor_id,
+        id: activity_id,
+        object: object_id,
+        published: Utc::now(),
+        to: audience,
+        cc: vec![],
+    }
 }
 
 #[cfg(test)]

@@ -8,13 +8,15 @@ use apx_sdk::{
     fetch::FetchObjectOptions,
     utils::{get_core_type, CoreType},
 };
-use clap::Parser;
+use clap::{Parser, Subcommand};
 use serde_json::{Value as JsonValue};
+use uuid::Uuid;
 
 use mitra_activitypub::{
     agent::build_federation_agent,
     authentication::verify_signed_object,
     authority::Authority,
+    builders::announce::build_relay_announce,
     deliverer::{Recipient, Sender},
     identifiers::canonicalize_id,
     importers::{
@@ -38,6 +40,7 @@ use mitra_models::{
         get_database_client,
         DatabaseConnectionPool,
     },
+    posts::queries::get_post_by_id,
     profiles::queries::get_remote_profile_by_actor_id,
     users::{
         queries::{
@@ -290,6 +293,50 @@ impl LoadPortableObject {
             },
             _ => return Err(anyhow!("unexpected object class")),
         };
+        Ok(())
+    }
+}
+
+#[derive(Subcommand)]
+enum Activity {
+    /// LitePub relay Announce activity
+    RelayAnnounce {
+        /// Internal post ID
+        post_id: Uuid,
+        /// Actor ID
+        recipient: String,
+    },
+}
+
+/// Create an activity with the specified parameters and print it
+#[derive(Parser)]
+pub struct CreateActivity {
+    #[clap(subcommand)]
+    activity: Activity,
+}
+
+impl CreateActivity {
+    pub async fn execute(
+        self,
+        config: &Config,
+        db_pool: &DatabaseConnectionPool,
+    ) -> Result<(), Error> {
+        let db_client = &**get_database_client(db_pool).await?;
+        let instance = config.instance();
+        let authority = Authority::from(&instance);
+        let activity = match self.activity {
+            Activity::RelayAnnounce { post_id, recipient } => {
+                let post = get_post_by_id(db_client, post_id).await?;
+                let relay_actor = get_remote_profile_by_actor_id(db_client, &recipient).await?;
+                let announce = build_relay_announce(
+                    &authority,
+                    &post,
+                    relay_actor.expect_actor_data(),
+                );
+                serde_json::to_value(announce)?
+            },
+        };
+        println!("{activity}");
         Ok(())
     }
 }

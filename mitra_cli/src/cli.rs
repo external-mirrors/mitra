@@ -54,6 +54,7 @@ use crate::commands::{
         RevokeOauthTokens,
     },
     activitypub::{
+        CreateActivity,
         FetchObject,
         ImportObject,
         LoadPortableObject,
@@ -110,6 +111,7 @@ pub enum SubCommand {
     FetchObject(FetchObject),
     Webfinger(Webfinger),
     LoadPortableObject(LoadPortableObject),
+    CreateActivity(CreateActivity),
     SendActivity(SendActivity),
     DeleteUser(DeleteUser),
     CreatePost(CreatePost),
