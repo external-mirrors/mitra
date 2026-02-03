@@ -50,6 +50,12 @@ instance_staff_public = true
 # Make instance (local) timeline public
 instance_timeline_public = false
 
+[registration]
+# Possible values: open, invite
+type = "invite"
+# Possible values: user, read_only_user
+default_role = "user"
+
 # Possible values: password, eip4361, caip122_monero. Default: only password.
 #authentication_methods = ["password", "eip4361", "caip122_monero"]
 
@@ -59,16 +65,9 @@ instance_timeline_public = false
 # EIP-4361 / CAIP-122 login message
 #login_message = "Do not sign this message on other sites!"
 
-[registration]
-# Possible values: open, invite
-type = "invite"
-# Possible values: user, read_only_user
-default_role = "user"
-
 # Limits
 # Increasing `local` limits is not recommended because that will result
 # in an incorrect display of your posts on other servers.
-# might fail to process your posts.
 [limits.media]
 # Add support for additional MIME types (e.g., application/pdf)
 #extra_supported_types = [ ]
@@ -107,17 +106,17 @@ default_role = "user"
 
 # OpenMetrics endpoint (/metrics)
 #[metrics]
-#auth_username =
-#auth_password =
+#auth_username = "username"
+#auth_password = "password"
 
 # Blockchain integrations
 #[[blockchains]]
 #chain_id = "monero:mainnet"
 #wallet_rpc_url = "http://127.0.0.1:18083"
-#wallet_rpc_username =
-#wallet_rpc_password =
-#wallet_name =
-#wallet_password =
+#wallet_rpc_username = "username"
+#wallet_rpc_password = "password"
+#wallet_name = "wallet"
+#wallet_password = "password"
 #account_index = 0
 #tx_required_confirmations = 20
 #[blockchains.chain_metadata]

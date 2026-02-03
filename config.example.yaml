@@ -71,7 +71,6 @@ registration:
 # Limits
 # Increasing `local` limits is not recommended because that will result
 # in an incorrect display of your posts on other servers.
-# might fail to process your posts.
 #limits:
 #  media:
 #    # Add support for additional MIME types (e.g., application/pdf)
@@ -111,8 +110,8 @@ registration:
 
 # OpenMetrics endpoint (/metrics)
 #metrics:
-#  auth_username: null
-#  auth_password: null
+#  auth_username: "username"
+#  auth_password: "password"
 
 # Blockchain integrations
 #blockchains:
