@@ -69,7 +69,7 @@ pub async fn create_reaction(
     let reaction: Reaction = row.try_get("post_reaction")?;
     update_reaction_count(&transaction, reaction.post_id, 1).await?;
     let post_author = get_post_author(&transaction, reaction.post_id).await?;
-    if post_author.is_local() && post_author.id != reaction.author_id {
+    if post_author.has_user_account() && post_author.id != reaction.author_id {
         create_reaction_notification(
             &transaction,
             reaction.author_id,

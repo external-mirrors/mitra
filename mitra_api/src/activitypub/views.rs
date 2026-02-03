@@ -800,7 +800,7 @@ async fn apgateway_view(
         db_client,
         &canonical_owner_id.to_string(),
     ).await?;
-    if !owner.has_account() {
+    if !owner.has_portable_account() {
         return Err(HttpError::NotFound("object"));
     };
     let response = HttpResponse::Ok()

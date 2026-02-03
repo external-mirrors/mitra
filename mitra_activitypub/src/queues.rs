@@ -314,7 +314,7 @@ impl OutgoingActivityJobData {
                     db_client,
                     &recipient.id,
                 ).await?;
-                if profile.has_account() {
+                if profile.has_portable_account() {
                     add_object_to_collection(
                         db_client,
                         profile.id,

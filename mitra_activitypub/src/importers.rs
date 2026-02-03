@@ -298,7 +298,7 @@ async fn refresh_remote_profile(
     let profile = if force ||
         profile.updated_at < Utc::now() - TimeDelta::days(1)
     {
-        if profile.has_account() {
+        if profile.has_portable_account() {
             // Local nomadic accounts should not be refreshed
             return Ok(profile);
         };

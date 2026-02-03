@@ -196,7 +196,7 @@ pub async fn follow(
     ).await?;
     let target_profile = update_follower_count(&transaction, target_id, 1).await?;
     update_following_count(&transaction, source_id, 1).await?;
-    if target_profile.is_local() && !target_profile.manually_approves_followers {
+    if target_profile.has_user_account() && !target_profile.manually_approves_followers {
         create_follow_notification(&transaction, source_id, target_id).await?;
     };
     transaction.commit().await?;
@@ -489,6 +489,7 @@ pub async fn is_local_or_followed(
                     WHERE target_id = actor_profile.id
                 )
                 OR actor_profile.user_id IS NOT NULL
+                OR actor_profile.automated_account_id IS NOT NULL
                 OR actor_profile.portable_user_id IS NOT NULL
             )
         ",

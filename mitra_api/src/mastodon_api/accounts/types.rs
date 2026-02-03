@@ -478,7 +478,7 @@ impl AccountUpdateData {
         media_limits: &MediaLimits,
         media_storage: &MediaStorage,
     ) -> Result<ProfileUpdateData, MastodonError> {
-        assert!(profile.is_local());
+        assert!(profile.has_user_account());
         let mut profile_data = ProfileUpdateData::from(profile);
         if let Some(display_name) = self.display_name {
             profile_data.display_name = Some(display_name);

@@ -226,7 +226,7 @@ pub async fn handle_activity(
         for recipient in recipients.iter() {
             // Recipient is a local actor: add activity to its inbox
             // and forward to other gateways
-            if recipient.has_account() && recipient.is_portable() {
+            if recipient.has_portable_account() {
                 if !is_new_activity {
                     log::warn!("activity has already been forwarded from inbox");
                     continue;

@@ -28,6 +28,7 @@ use crate::{
 
 use super::types::{
     AccountAdminInfo,
+    AutomatedAccountData,
     ClientConfig,
     DbClientConfig,
     DbInviteCode,
@@ -115,7 +116,11 @@ pub async fn check_local_username_unique(
         SELECT 1
         FROM actor_profile
         WHERE
-            (user_id IS NOT NULL OR portable_user_id IS NOT NULL)
+            (
+                user_id IS NOT NULL
+                OR automated_account_id IS NOT NULL
+                OR portable_user_id IS NOT NULL
+            )
             AND actor_profile.username ILIKE $1
         LIMIT 1
         ",
@@ -508,6 +513,72 @@ pub async fn get_accounts_for_admin(
     Ok(users)
 }
 
+pub async fn create_automated_account(
+    db_client: &mut impl DatabaseClient,
+    account_data: AutomatedAccountData,
+) -> Result<Uuid, DatabaseError> {
+    let mut transaction = db_client.transaction().await?;
+    // Prevent changes to actor_profile table
+    transaction.execute(
+        "LOCK TABLE actor_profile IN EXCLUSIVE MODE",
+        &[],
+    ).await?;
+    // Ensure there are no local accounts with a similar name
+    check_local_username_unique(&transaction, &account_data.username).await?;
+    // Create profile
+    let profile_data = ProfileCreateData {
+        username: account_data.username.clone(),
+        hostname: WebfingerHostname::Local,
+        display_name: None,
+        bio: None,
+        avatar: None,
+        banner: None,
+        is_automated: true,
+        manually_approves_followers: false,
+        mention_policy: MentionPolicy::None,
+        public_keys: vec![],
+        identity_proofs: vec![],
+        payment_options: vec![],
+        extra_fields: vec![],
+        aliases: vec![],
+        emojis: vec![],
+        actor_json: None,
+    };
+    let db_profile = create_profile(&mut transaction, profile_data).await?;
+    // Create account
+    let rsa_secret_key_der =
+        rsa_secret_key_to_pkcs1_der(&account_data.rsa_secret_key)
+            .map_err(|_| DatabaseTypeError)?;
+    transaction.execute(
+        "
+        INSERT INTO automated_account (
+            id,
+            account_type,
+            rsa_secret_key,
+            ed25519_secret_key
+        )
+        VALUES ($1, $2, $3, $4)
+        ",
+        &[
+            &db_profile.id,
+            &account_data.account_type,
+            &rsa_secret_key_der,
+            &account_data.ed25519_secret_key,
+        ],
+    ).await.map_err(catch_unique_violation("automated account"))?;
+    // Create reverse FK
+    transaction.execute(
+        "
+        UPDATE actor_profile
+        SET automated_account_id = actor_profile.id
+        WHERE id = $1
+        ",
+        &[&db_profile.id],
+    ).await?;
+    transaction.commit().await?;
+    Ok(db_profile.id)
+}
+
 pub async fn create_portable_user(
     db_client: &mut impl DatabaseClient,
     user_data: PortableUserData,
@@ -667,14 +738,17 @@ mod tests {
     use crate::{
         database::test_utils::create_test_database,
         posts::types::Visibility,
-        profiles::types::{
-            DbActor,
-            DbActorKey,
-            WebfingerHostname,
+        profiles::{
+            queries::get_profile_by_id,
+            types::{
+                DbActor,
+                DbActorKey,
+                WebfingerHostname,
+            },
         },
         users::{
             test_utils::{create_test_user, create_test_portable_user},
-            types::Role,
+            types::{AutomatedAccountType, Role},
         },
     };
     use super::*;
@@ -698,6 +772,7 @@ mod tests {
         };
         let user = create_user(db_client, user_data).await.unwrap();
         assert_eq!(user.profile.username, "myname");
+        assert!(user.profile.has_user_account());
         assert_eq!(user.role, Role::NormalUser);
         assert_eq!(user.client_config, ClientConfig::default());
         assert_eq!(user.shared_client_config, SharedClientConfig::default());
@@ -802,6 +877,27 @@ mod tests {
 
     #[tokio::test]
     #[serial]
+    async fn test_crete_automated_account() {
+        let db_client = &mut create_test_database().await;
+        let account_data = AutomatedAccountData {
+            username: "myname".to_string(),
+            account_type: AutomatedAccountType::Application,
+            rsa_secret_key: generate_weak_rsa_key().unwrap(),
+            ed25519_secret_key: generate_weak_ed25519_key(),
+        };
+        let account_id = create_automated_account(
+            db_client,
+            account_data,
+        ).await.unwrap();
+
+        let profile = get_profile_by_id(db_client, account_id).await.unwrap();
+        assert_eq!(profile.username, "myname");
+        assert_eq!(profile.is_automated, true);
+        assert!(!profile.has_user_account());
+    }
+
+    #[tokio::test]
+    #[serial]
     async fn test_create_portable_user() {
         let db_client = &mut create_test_database().await;
         let profile_data = ProfileCreateData {
@@ -832,6 +928,7 @@ mod tests {
         assert_eq!(user.id, profile.id);
         assert_eq!(user.rsa_secret_key, rsa_secret_key);
         assert_eq!(user.ed25519_secret_key, ed25519_secret_key);
+        assert!(user.profile.has_portable_account());
         assert!(matches!(user.profile.hostname(), WebfingerHostname::Local));
     }
 

@@ -376,6 +376,44 @@ impl Default for UserCreateData {
     }
 }
 
+#[derive(Debug, Clone, Copy)]
+pub enum AutomatedAccountType {
+    Application,
+    Relay,
+}
+
+impl From<AutomatedAccountType> for i16 {
+    fn from(value: AutomatedAccountType) -> i16 {
+        match value {
+            AutomatedAccountType::Application => 1,
+            AutomatedAccountType::Relay => 2,
+        }
+    }
+}
+
+impl TryFrom<i16> for AutomatedAccountType {
+    type Error = DatabaseTypeError;
+
+    fn try_from(value: i16) -> Result<Self, Self::Error> {
+        let account_type = match value {
+            1 => Self::Application,
+            2 => Self::Relay,
+            _ => return Err(DatabaseTypeError),
+        };
+        Ok(account_type)
+    }
+}
+
+int_enum_from_sql!(AutomatedAccountType);
+int_enum_to_sql!(AutomatedAccountType);
+
+pub struct AutomatedAccountData {
+    pub username: String,
+    pub account_type: AutomatedAccountType,
+    pub rsa_secret_key: RsaSecretKey,
+    pub ed25519_secret_key: Ed25519SecretKey,
+}
+
 #[derive(FromSql)]
 #[postgres(name = "portable_user_account")]
 pub struct DbPortableUser {

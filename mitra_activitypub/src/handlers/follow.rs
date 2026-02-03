@@ -71,6 +71,7 @@ pub async fn handle_follow(
         &canonical_activity_id.to_string(),
     ).await?;
     let target_user = if target_profile.is_local() {
+        // Will not work if account is automated
         get_user_by_id(db_client, target_profile.id).await?
     } else {
         // Activity has been performed by a portable account
