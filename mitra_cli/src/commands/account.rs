@@ -22,6 +22,7 @@ use mitra_config::Config;
 use mitra_models::{
     database::{get_database_client, DatabaseConnectionPool},
     oauth::queries::delete_oauth_tokens,
+    profiles::types::ANONYMOUS,
     users::{
         helpers::get_user_by_id_or_name,
         queries::{
@@ -98,7 +99,7 @@ impl CreateSystemAccount {
         let db_client = &mut **get_database_client(db_pool).await?;
         let instance = config.instance();
         let account_data = AutomatedAccountData {
-            username: "anonymous".to_owned(),
+            username: ANONYMOUS.to_owned(),
             account_type: AutomatedAccountType::Anonymous,
             rsa_secret_key: instance.rsa_secret_key,
             ed25519_secret_key: instance.ed25519_secret_key,

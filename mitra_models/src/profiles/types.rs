@@ -38,6 +38,8 @@ use super::checks::{
     check_public_keys,
 };
 
+pub const ANONYMOUS: &str = "anonymous";
+
 #[derive(Clone, Copy)]
 pub enum Origin {
     Local,
@@ -828,6 +830,10 @@ impl DbActorProfile {
         } else {
             false
         }
+    }
+
+    pub fn is_anonymous(&self) -> bool {
+        self.automated_account_id.is_some() && self.username == ANONYMOUS
     }
 
     pub fn expect_actor_data(&self) -> &DbActor {

@@ -66,7 +66,7 @@ impl Notification {
         let account = Account::from_profile(
             instance_uri,
             media_server,
-            notification.sender,
+            notification.sender.clone(),
         );
         let status = notification.post.map(|post| {
             Status::from_post(instance_uri, media_server, post)
@@ -84,6 +84,7 @@ impl Notification {
             EventType::Reaction => "pleroma:emoji_reaction",
             EventType::Mention => "mention",
             EventType::Repost => "reblog",
+            EventType::SubscriberPayment if notification.sender.is_anonymous() => "payment_anonymous",
             EventType::SubscriberPayment => "subscription",
             EventType::SubscriptionStart => "", // not supported
             EventType::SubscriptionExpiration => "subscription_expiration",
