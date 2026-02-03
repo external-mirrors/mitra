@@ -120,8 +120,10 @@ registration:
 #      # Displayed on subscription page, can contain markdown syntax
 #      description: null
 #    wallet_rpc_url: 'http://127.0.0.1:18083'
+#    # RPC authentication (optional)
 #    wallet_rpc_username: null
 #    wallet_rpc_password: null
+#    # Wallet name and password (required when monero-wallet-rpc is running with --wallet-dir option)
 #    wallet_name: null
 #    wallet_password: null
 #    account_index: 0

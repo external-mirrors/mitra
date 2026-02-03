@@ -113,15 +113,19 @@ default_role = "user"
 #[[blockchains]]
 #chain_id = "monero:mainnet"
 #wallet_rpc_url = "http://127.0.0.1:18083"
+# RPC authentication (optional)
 #wallet_rpc_username = "username"
 #wallet_rpc_password = "password"
+# Wallet name and password (required when monero-wallet-rpc is running with --wallet-dir option)
 #wallet_name = "wallet"
 #wallet_password = "password"
 #account_index = 0
 #tx_required_confirmations = 20
+
 #[blockchains.chain_metadata]
 # Displayed on subscription page, can contain markdown syntax
 #description = ""
+
 #[[blockchains]]
 #chain_id = "monero:mainnet"
 #lightwallet_api_url = "http://127.0.0.1:18443"
