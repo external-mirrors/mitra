@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [4.17.0] - 2026-02-05
+
 ### Added
 
 - Added support for configuration files in TOML format.
