@@ -14,6 +14,9 @@ instance_short_description = "My instance"
 instance_description = "My instance"
 instance_staff_public = true
 
+#ipfs_api_url = "http://127.0.0.1:5001"
+#ipfs_gateway_url = "http://127.0.0.1:8001"
+
 [registration]
 type = "open"
 
@@ -24,6 +27,3 @@ type = "open"
 #wallet_name = "test"
 #wallet_password = "test"
 #account_index = 0
-
-#ipfs_api_url = "http://127.0.0.1:5001"
-#ipfs_gateway_url = "http://127.0.0.1:8001"

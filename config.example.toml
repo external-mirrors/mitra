@@ -50,12 +50,6 @@ instance_staff_public = true
 # Make instance (local) timeline public
 instance_timeline_public = false
 
-[registration]
-# Possible values: open, invite
-type = "invite"
-# Possible values: user, read_only_user
-default_role = "user"
-
 # Possible values: password, eip4361, caip122_monero. Default: only password.
 #authentication_methods = ["password", "eip4361", "caip122_monero"]
 
@@ -64,6 +58,12 @@ default_role = "user"
 
 # EIP-4361 / CAIP-122 login message
 #login_message = "Do not sign this message on other sites!"
+
+[registration]
+# Possible values: open, invite
+type = "invite"
+# Possible values: user, read_only_user
+default_role = "user"
 
 # Limits
 # Increasing `local` limits is not recommended because that will result
