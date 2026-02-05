@@ -87,6 +87,10 @@ impl LightWalletClient {
         ).await?;
         let mut primary_address_tx_ids = vec![];
         for transaction in txs.transactions {
+            if transaction.total_received == "0" {
+                // Ignore spends
+                continue;
+            };
             if transaction.payment_id.is_some_and(|id| id.0 != PaymentId::zero()) {
                 // Not a primary address
                 continue;
