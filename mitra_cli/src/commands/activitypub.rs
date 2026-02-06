@@ -54,6 +54,9 @@ pub struct ImportObject {
     /// Verify FEP-8b32 proof after fetching?
     #[arg(long)]
     verify_proof: bool,
+    /// Override fetcher_recursion_limit parameter
+    #[arg(long)]
+    fetcher_recursion_limit: Option<u16>,
 
     #[arg(long, default_value = "any")]
     collection_type: String,
@@ -78,6 +81,9 @@ impl ImportObject {
         };
         let mut ap_client = ApClient::new_with_pool(config, db_pool).await?;
         ap_client.as_user = maybe_user;
+        if let Some(limit) = self.fetcher_recursion_limit {
+            ap_client.instance.federation.fetcher_recursion_limit = limit;
+        };
         let object: JsonValue =
             ap_client.fetch_object(&self.object_id).await?;
         let object_type = match self.object_type.as_str() {
