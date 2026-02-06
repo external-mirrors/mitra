@@ -517,8 +517,6 @@ pub async fn get_post_by_object_id(
     }
 }
 
-const RECURSION_DEPTH_MAX: usize = 50;
-
 pub async fn import_post(
     ap_client: &ApClient,
     db_pool: &DatabaseConnectionPool,
@@ -587,7 +585,7 @@ pub async fn import_post(
                 object
             },
             None => {
-                if fetch_count >= RECURSION_DEPTH_MAX {
+                if fetch_count >= instance.federation.fetcher_recursion_limit {
                     // TODO: create tombstone
                     return Err(FetchError::RecursionError.into());
                 };
