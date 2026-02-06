@@ -94,6 +94,11 @@ fn create_error_handlers() -> ErrorHandlers<BoxBody> {
         })
 }
 
+fn mastodon_qs_config() -> QsConfig {
+    // Disable strict mode
+    QsConfig::new(2, false)
+}
+
 pub fn mastodon_api_scope(
     payload_size_limit: usize,
 ) -> Scope<impl ServiceFactory<
@@ -116,10 +121,8 @@ pub fn mastodon_api_scope(
         .total_limit(payload_size_limit)
         .memory_limit(payload_size_limit)
         .error_handler(validation_error_handler);
-    // Disable strict mode
-    let qs_config = QsConfig::new(2, false);
     let multiquery_config = QsQueryConfig::default()
-        .qs_config(qs_config)
+        .qs_config(mastodon_qs_config())
         .error_handler(validation_error_handler);
     web::scope("/api")
         .app_data(path_config)
