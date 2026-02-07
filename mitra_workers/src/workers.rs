@@ -59,7 +59,7 @@ impl PeriodicTask {
         }
     }
 
-    fn is_ready(&self, last_run: &Option<DateTime<Utc>>) -> bool {
+    pub fn is_ready(&self, last_run: &Option<DateTime<Utc>>) -> bool {
         match last_run {
             Some(last_run) => {
                 let time_passed = Utc::now() - *last_run;

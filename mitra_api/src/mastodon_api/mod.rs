@@ -94,7 +94,7 @@ fn create_error_handlers() -> ErrorHandlers<BoxBody> {
         })
 }
 
-fn mastodon_qs_config() -> QsConfig {
+pub fn mastodon_qs_config() -> QsConfig {
     // Disable strict mode
     QsConfig::new(2, false)
 }
