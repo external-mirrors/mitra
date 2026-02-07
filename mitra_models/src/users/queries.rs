@@ -8,24 +8,28 @@ use chrono::{DateTime, Utc};
 use serde_json::{Value as JsonValue};
 use uuid::Uuid;
 
-use crate::database::{
-    catch_unique_violation,
-    DatabaseClient,
-    DatabaseError,
-    DatabaseTypeError,
-};
-use crate::profiles::{
-    queries::create_profile,
-    types::{
-        DbActorProfile,
-        MentionPolicy,
-        ProfileCreateData,
-        WebfingerHostname,
+use crate::{
+    database::{
+        catch_unique_violation,
+        DatabaseClient,
+        DatabaseError,
+        DatabaseTypeError,
+    },
+    profiles::{
+        queries::create_profile,
+        types::{
+            DbActorProfile,
+            MentionPolicy,
+            ProfileCreateData,
+            WebfingerHostname,
+        },
     },
 };
 
 use super::types::{
     AccountAdminInfo,
+    AutomatedAccountData,
+    AutomatedAccountType,
     ClientConfig,
     DbClientConfig,
     DbInviteCode,
@@ -34,6 +38,7 @@ use super::types::{
     PortableUser,
     PortableUserData,
     Role,
+    SharedClientConfig,
     User,
     UserCreateData,
 };
@@ -112,7 +117,11 @@ pub async fn check_local_username_unique(
         SELECT 1
         FROM actor_profile
         WHERE
-            (user_id IS NOT NULL OR portable_user_id IS NOT NULL)
+            (
+                user_id IS NOT NULL
+                OR automated_account_id IS NOT NULL
+                OR portable_user_id IS NOT NULL
+            )
             AND actor_profile.username ILIKE $1
         LIMIT 1
         ",
@@ -259,6 +268,25 @@ pub async fn update_client_config(
     let row = maybe_row.ok_or(DatabaseError::NotFound("user"))?;
     let client_config: DbClientConfig = row.try_get("client_config")?;
     Ok(client_config.into_inner())
+}
+
+pub async fn set_shared_client_config(
+    db_client: &impl DatabaseClient,
+    account_id: Uuid,
+    client_config: SharedClientConfig,
+) -> Result<SharedClientConfig, DatabaseError> {
+    let maybe_row = db_client.query_opt(
+        "
+        UPDATE user_account
+        SET shared_client_config = $2
+        WHERE id = $1
+        RETURNING shared_client_config
+        ",
+        &[&account_id, &client_config],
+    ).await?;
+    let row = maybe_row.ok_or(DatabaseError::NotFound("user account"))?;
+    let client_config = row.try_get("shared_client_config")?;
+    Ok(client_config)
 }
 
 pub async fn get_user_by_id(
@@ -486,6 +514,90 @@ pub async fn get_accounts_for_admin(
     Ok(users)
 }
 
+pub async fn create_automated_account(
+    db_client: &mut impl DatabaseClient,
+    account_data: AutomatedAccountData,
+) -> Result<Uuid, DatabaseError> {
+    let mut transaction = db_client.transaction().await?;
+    // Prevent changes to actor_profile table
+    transaction.execute(
+        "LOCK TABLE actor_profile IN EXCLUSIVE MODE",
+        &[],
+    ).await?;
+    // Ensure there are no local accounts with a similar name
+    check_local_username_unique(&transaction, &account_data.username).await?;
+    // Create profile
+    let profile_data = ProfileCreateData {
+        username: account_data.username.clone(),
+        hostname: WebfingerHostname::Local,
+        display_name: None,
+        bio: None,
+        avatar: None,
+        banner: None,
+        is_automated: true,
+        manually_approves_followers: false,
+        mention_policy: MentionPolicy::None,
+        public_keys: vec![],
+        identity_proofs: vec![],
+        payment_options: vec![],
+        extra_fields: vec![],
+        aliases: vec![],
+        emojis: vec![],
+        actor_json: None,
+    };
+    let db_profile = create_profile(&mut transaction, profile_data).await?;
+    // Create account
+    let rsa_secret_key_der =
+        rsa_secret_key_to_pkcs1_der(&account_data.rsa_secret_key)
+            .map_err(|_| DatabaseTypeError)?;
+    transaction.execute(
+        "
+        INSERT INTO automated_account (
+            id,
+            account_type,
+            rsa_secret_key,
+            ed25519_secret_key
+        )
+        VALUES ($1, $2, $3, $4)
+        ",
+        &[
+            &db_profile.id,
+            &account_data.account_type,
+            &rsa_secret_key_der,
+            &account_data.ed25519_secret_key,
+        ],
+    ).await.map_err(catch_unique_violation("automated account"))?;
+    // Create reverse FK
+    transaction.execute(
+        "
+        UPDATE actor_profile
+        SET automated_account_id = actor_profile.id
+        WHERE id = $1
+        ",
+        &[&db_profile.id],
+    ).await?;
+    transaction.commit().await?;
+    Ok(db_profile.id)
+}
+
+pub async fn get_anonymous_system_account_id(
+    db_client: &impl DatabaseClient,
+) -> Result<Option<Uuid>, DatabaseError> {
+    let maybe_row = db_client.query_opt(
+        "
+        SELECT id
+        FROM automated_account
+        WHERE account_type = $1
+        ",
+        &[&AutomatedAccountType::Anonymous],
+    ).await?;
+    let Some(row) = maybe_row else {
+        return Ok(None);
+    };
+    let account_id = row.try_get("id")?;
+    Ok(Some(account_id))
+}
+
 pub async fn create_portable_user(
     db_client: &mut impl DatabaseClient,
     user_data: PortableUserData,
@@ -644,13 +756,17 @@ mod tests {
     use serial_test::serial;
     use crate::{
         database::test_utils::create_test_database,
-        profiles::types::{
-            DbActor,
-            DbActorKey,
-            WebfingerHostname,
+        posts::types::Visibility,
+        profiles::{
+            queries::get_profile_by_id,
+            types::{
+                DbActor,
+                DbActorKey,
+                WebfingerHostname,
+            },
         },
         users::{
-            test_utils::create_test_portable_user,
+            test_utils::{create_test_user, create_test_portable_user},
             types::Role,
         },
     };
@@ -675,7 +791,10 @@ mod tests {
         };
         let user = create_user(db_client, user_data).await.unwrap();
         assert_eq!(user.profile.username, "myname");
+        assert!(user.profile.has_user_account());
         assert_eq!(user.role, Role::NormalUser);
+        assert_eq!(user.client_config, ClientConfig::default());
+        assert_eq!(user.shared_client_config, SharedClientConfig::default());
     }
 
     #[tokio::test]
@@ -740,6 +859,25 @@ mod tests {
 
     #[tokio::test]
     #[serial]
+    async fn test_set_shared_client_config() {
+        let db_client = &mut create_test_database().await;
+        let user = create_test_user(db_client, "test").await;
+        let mut client_config = user.shared_client_config.clone();
+        client_config.default_post_visibility = Visibility::Followers;
+        set_shared_client_config(
+            db_client,
+            user.id,
+            client_config,
+        ).await.unwrap();
+        let user = get_user_by_id(db_client, user.id).await.unwrap();
+        assert_eq!(
+            user.shared_client_config.default_post_visibility,
+            Visibility::Followers,
+        );
+    }
+
+    #[tokio::test]
+    #[serial]
     async fn test_get_admin_user() {
         let db_client = &mut create_test_database().await;
         let maybe_admin = get_admin_user(db_client).await.unwrap();
@@ -754,6 +892,31 @@ mod tests {
         let user = create_user(db_client, user_data).await.unwrap();
         let maybe_admin = get_admin_user(db_client).await.unwrap();
         assert_eq!(maybe_admin.unwrap().id, user.id);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_crete_automated_account() {
+        let db_client = &mut create_test_database().await;
+        let account_data = AutomatedAccountData {
+            username: "myname".to_string(),
+            account_type: AutomatedAccountType::Anonymous,
+            rsa_secret_key: generate_weak_rsa_key().unwrap(),
+            ed25519_secret_key: generate_weak_ed25519_key(),
+        };
+        let account_id = create_automated_account(
+            db_client,
+            account_data,
+        ).await.unwrap();
+
+        let profile = get_profile_by_id(db_client, account_id).await.unwrap();
+        assert_eq!(profile.username, "myname");
+        assert_eq!(profile.is_automated, true);
+        assert!(!profile.has_user_account());
+
+        let maybe_account_id =
+            get_anonymous_system_account_id(db_client).await.unwrap();
+        assert_eq!(maybe_account_id.unwrap(), account_id);
     }
 
     #[tokio::test]
@@ -788,6 +951,7 @@ mod tests {
         assert_eq!(user.id, profile.id);
         assert_eq!(user.rsa_secret_key, rsa_secret_key);
         assert_eq!(user.ed25519_secret_key, ed25519_secret_key);
+        assert!(user.profile.has_portable_account());
         assert!(matches!(user.profile.hostname(), WebfingerHostname::Local));
     }
 

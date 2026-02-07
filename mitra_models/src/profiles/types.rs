@@ -38,6 +38,8 @@ use super::checks::{
     check_public_keys,
 };
 
+pub const ANONYMOUS: &str = "anonymous";
+
 #[derive(Clone, Copy)]
 pub enum Origin {
     Local,
@@ -641,6 +643,7 @@ impl DbActor {
 pub struct DbActorProfile {
     pub id: Uuid,
     pub(crate) user_id: Option<Uuid>,
+    pub(crate) automated_account_id: Option<Uuid>,
     pub(crate) portable_user_id: Option<Uuid>,
     pub username: String,
     pub(crate) hostname: Option<String>,
@@ -709,16 +712,31 @@ pub(crate) fn get_identity_key(secret_key: Ed25519SecretKey) -> String {
 
 impl DbActorProfile {
     pub(crate) fn check_consistency(&self) -> Result<(), DatabaseTypeError> {
-        if self.user_id.is_some() && self.portable_user_id.is_some() {
-            return Err(DatabaseTypeError);
+        if self.user_id.is_some() {
+            if self.automated_account_id.is_some() || self.portable_user_id.is_some() {
+                return Err(DatabaseTypeError);
+            };
+            if self.actor_json.is_some() {
+                // NOTE: no CHECK constraint because
+                // it can not be deferred
+                return Err(DatabaseTypeError);
+            };
         };
-        if self.user_id.is_some() != self.actor_json.is_none() {
-            // NOTE: no CHECK constraint because
-            // it can not be deferred
-            return Err(DatabaseTypeError);
+        if self.automated_account_id.is_some() {
+            if self.user_id.is_some() || self.portable_user_id.is_some() {
+                return Err(DatabaseTypeError);
+            };
+            if self.actor_json.is_some() {
+                return Err(DatabaseTypeError);
+            };
         };
-        if self.portable_user_id.is_some() && self.actor_json.is_none() {
-            return Err(DatabaseTypeError);
+        if self.portable_user_id.is_some() {
+            if self.user_id.is_some() || self.automated_account_id.is_some() {
+                return Err(DatabaseTypeError);
+            };
+            if self.actor_json.is_none() || !self.is_portable() {
+                return Err(DatabaseTypeError);
+            };
         };
         match self.hostname() {
             WebfingerHostname::Local => {
@@ -785,9 +803,8 @@ impl DbActorProfile {
         }
     }
 
-    /// Has local account?
-    pub fn has_account(&self) -> bool {
-        self.user_id.is_some() || self.portable_user_id.is_some()
+    pub fn has_user_account(&self) -> bool {
+        self.user_id.is_some()
     }
 
     pub fn has_portable_account(&self) -> bool {
@@ -813,6 +830,10 @@ impl DbActorProfile {
         } else {
             false
         }
+    }
+
+    pub fn is_anonymous(&self) -> bool {
+        self.automated_account_id.is_some() && self.username == ANONYMOUS
     }
 
     pub fn expect_actor_data(&self) -> &DbActor {
@@ -870,6 +891,7 @@ impl Default for DbActorProfile {
         Self {
             id: Uuid::new_v4(),
             user_id: None,
+            automated_account_id: None,
             portable_user_id: None,
             username: "test".to_string(),
             hostname: None,

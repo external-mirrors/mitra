@@ -334,7 +334,7 @@ pub async fn create_post(
     if let Some(in_reply_to_id) = db_post.in_reply_to_id {
         update_reply_count(&transaction, in_reply_to_id, 1).await?;
         let in_reply_to_author = get_post_author(&transaction, in_reply_to_id).await?;
-        if in_reply_to_author.is_local() &&
+        if in_reply_to_author.has_user_account() &&
             in_reply_to_author.id != db_post.author_id
         {
             create_reply_notification(
@@ -350,7 +350,7 @@ pub async fn create_post(
     if let Some(repost_of_id) = db_post.repost_of_id {
         update_repost_count(&transaction, repost_of_id, 1).await?;
         let repost_of_author = get_post_author(&transaction, repost_of_id).await?;
-        if repost_of_author.is_local() &&
+        if repost_of_author.has_user_account() &&
             // Don't notify themselves that they reposted their post
             repost_of_author.id != db_post.author_id &&
             !notified_users.contains(&repost_of_author.id)
@@ -366,7 +366,7 @@ pub async fn create_post(
     };
     // Notify mentioned users
     for profile in db_mentions.iter() {
-        if profile.is_local() &&
+        if profile.has_user_account() &&
             profile.id != db_post.author_id &&
             // Don't send mention notification to the author of parent post
             // or to the author of reposted post
@@ -526,7 +526,7 @@ pub async fn update_post(
 
     // Create notifications
     for profile in db_mentions.iter() {
-        if profile.is_local() &&
+        if profile.has_user_account() &&
             profile.id != db_post.author_id &&
             !old_mentions.contains(&profile.id)
         {
@@ -849,6 +849,7 @@ pub async fn get_public_timeline(
     let mut filter = "".to_owned();
     if only_local {
         filter += "(actor_profile.user_id IS NOT NULL
+            OR automated_account_id IS NOT NULL
             OR actor_profile.portable_user_id IS NOT NULL) AND";
     };
     let statement = format!(
@@ -1688,6 +1689,7 @@ pub async fn find_extraneous_posts(
                     post.id = ANY(context.posts)
                     AND (
                         actor_profile.user_id IS NOT NULL
+                        OR actor_profile.automated_account_id IS NOT NULL
                         OR actor_profile.portable_user_id IS NOT NULL
                     )
             )
@@ -1700,6 +1702,7 @@ pub async fn find_extraneous_posts(
                     post_mention.post_id = ANY(context.posts)
                     AND (
                         actor_profile.user_id IS NOT NULL
+                        OR actor_profile.automated_account_id IS NOT NULL
                         OR actor_profile.portable_user_id IS NOT NULL
                     )
             )
@@ -1712,6 +1715,7 @@ pub async fn find_extraneous_posts(
                     post_reaction.post_id = ANY(context.posts)
                     AND (
                         actor_profile.user_id IS NOT NULL
+                        OR actor_profile.automated_account_id IS NOT NULL
                         OR actor_profile.portable_user_id IS NOT NULL
                     )
             )
@@ -1725,6 +1729,7 @@ pub async fn find_extraneous_posts(
                     post_link.target_id = ANY(context.posts)
                     AND (
                         actor_profile.user_id IS NOT NULL
+                        OR actor_profile.automated_account_id IS NOT NULL
                         OR actor_profile.portable_user_id IS NOT NULL
                     )
             )
@@ -1959,6 +1964,7 @@ pub async fn get_post_count(
     if only_local {
         condition.push_str(" AND (
             actor_profile.user_id IS NOT NULL
+            OR actor_profile.automated_account_id IS NOT NULL
             OR actor_profile.portable_user_id IS NOT NULL)");
     };
     let statement = format!(

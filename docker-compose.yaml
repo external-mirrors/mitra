@@ -1,7 +1,7 @@
 # This compose file is used for development
 services:
   database:
-    image: pgautoupgrade/pgautoupgrade:15-bookworm
+    image: docker.io/pgautoupgrade/pgautoupgrade:15-bookworm
     restart: always
     environment:
       POSTGRES_PASSWORD: mitra

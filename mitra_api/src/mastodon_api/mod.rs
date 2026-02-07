@@ -27,6 +27,7 @@ pub mod apps;
 mod bookmarks;
 mod custom_emojis;
 mod directory;
+mod favourites;
 mod filters;
 mod follow_requests;
 pub mod instance;
@@ -38,6 +39,7 @@ mod mutes;
 pub mod notifications;
 pub mod oauth;
 mod polls;
+mod preferences;
 mod reactions;
 mod search;
 mod settings;
@@ -92,6 +94,11 @@ fn create_error_handlers() -> ErrorHandlers<BoxBody> {
         })
 }
 
+fn mastodon_qs_config() -> QsConfig {
+    // Disable strict mode
+    QsConfig::new(2, false)
+}
+
 pub fn mastodon_api_scope(
     payload_size_limit: usize,
 ) -> Scope<impl ServiceFactory<
@@ -114,10 +121,8 @@ pub fn mastodon_api_scope(
         .total_limit(payload_size_limit)
         .memory_limit(payload_size_limit)
         .error_handler(validation_error_handler);
-    // Disable strict mode
-    let qs_config = QsConfig::new(2, false);
     let multiquery_config = QsQueryConfig::default()
-        .qs_config(qs_config)
+        .qs_config(mastodon_qs_config())
         .error_handler(validation_error_handler);
     web::scope("/api")
         .app_data(path_config)
@@ -134,6 +139,7 @@ pub fn mastodon_api_scope(
         .service(bookmarks::views::bookmark_api_scope())
         .service(custom_emojis::views::custom_emoji_api_scope())
         .service(directory::views::directory_api_scope())
+        .service(favourites::views::favourite_api_scope())
         .service(filters::views::filter_api_scope())
         .service(follow_requests::views::follow_request_api_scope())
         .service(instance::views::instance_api_v1_scope())
@@ -147,6 +153,7 @@ pub fn mastodon_api_scope(
         .service(notifications::views::notification_api_v1_scope())
         .service(notifications::views::notification_api_v2_scope())
         .service(polls::views::poll_api_scope())
+        .service(preferences::views::preferences_api_scope())
         .service(reactions::views::reaction_api_scope())
         .service(search::views::search_api_scope())
         .service(settings::views::settings_api_scope())

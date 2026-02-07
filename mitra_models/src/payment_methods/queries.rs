@@ -9,6 +9,7 @@ use crate::{
 use super::types::{
     PaymentMethod,
     PaymentMethodData,
+    PaymentType,
 };
 
 pub async fn create_payment_method(
@@ -30,7 +31,8 @@ pub async fn create_payment_method(
         DO UPDATE SET
             payment_type = $2,
             payout_address = $4,
-            view_key = $5
+            view_key = $5,
+            updated_at = CURRENT_TIMESTAMP
         RETURNING payment_method
         ",
         &[
@@ -72,6 +74,28 @@ pub async fn get_payment_method_by_chain_id(
         None => None,
     };
     Ok(maybe_payment_method)
+}
+
+pub async fn get_payment_methods(
+    db_client: &impl DatabaseClient,
+    payment_type: PaymentType,
+    chain_id: &ChainId,
+) -> Result<Vec<PaymentMethod>, DatabaseError> {
+    let rows = db_client.query(
+        "
+        SELECT payment_method
+        FROM payment_method
+        WHERE payment_type = $1 AND chain_id = $2
+        ",
+        &[
+            &payment_type,
+            &DbChainId::new(chain_id),
+        ],
+    ).await?;
+    let payment_methods = rows.into_iter()
+        .map(|row| row.try_get("payment_method"))
+        .collect::<Result<_, _>>()?;
+    Ok(payment_methods)
 }
 
 #[cfg(test)]
@@ -141,5 +165,6 @@ mod tests {
         ).await.unwrap();
         assert_eq!(method_updated.id, method.id);
         assert_eq!(method_updated.payout_address, "1234");
+        assert!(method_updated.updated_at > method.updated_at);
     }
 }

@@ -39,7 +39,7 @@ async fn delete_account_view(
         return Err(MastodonError::PermissionError);
     };
     let profile = get_profile_by_id(db_client, *account_id).await?;
-    if profile.is_local() {
+    if profile.has_user_account() {
         let user = get_user_by_id(db_client, profile.id).await?;
         delete_user(
             &config,

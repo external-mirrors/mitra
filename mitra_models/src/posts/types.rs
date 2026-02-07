@@ -31,7 +31,7 @@ use crate::emojis::types::CustomEmoji;
 use crate::polls::types::{Poll, PollData};
 use crate::profiles::types::DbActorProfile;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct DbLanguage(Language);
 
 impl DbLanguage {
@@ -42,6 +42,16 @@ impl DbLanguage {
     pub fn inner(&self) -> Language {
         self.0
     }
+
+    pub(crate) fn from_str(code: &str) -> Result<Self, DatabaseTypeError> {
+        let language = Language::from_639_3(code)
+            .ok_or(DatabaseTypeError)?;
+        Ok(Self::new(language))
+    }
+
+    pub(crate) fn to_str(&self) -> &'static str {
+        self.inner().to_639_3()
+    }
 }
 
 impl<'a> FromSql<'a> for DbLanguage {
@@ -50,9 +60,8 @@ impl<'a> FromSql<'a> for DbLanguage {
         raw: &'a [u8],
     ) -> Result<Self, Box<dyn std::error::Error + Sync + Send>> {
         let language_code = text_from_sql(raw)?;
-        let language = Language::from_639_3(language_code)
-            .ok_or(DatabaseTypeError)?;
-        Ok(DbLanguage(language))
+        let language = Self::from_str(language_code)?;
+        Ok(language)
     }
 
     accepts!(BPCHAR);
@@ -64,7 +73,7 @@ impl ToSql for DbLanguage {
         _: &Type,
         out: &mut BytesMut,
     ) -> Result<IsNull, Box<dyn std::error::Error + Sync + Send>> {
-        let language_code = self.inner().to_639_3();
+        let language_code = self.to_str();
         text_to_sql(language_code, out);
         Ok(IsNull::No)
     }

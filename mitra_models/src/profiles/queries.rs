@@ -222,9 +222,7 @@ pub async fn create_profile(
         profile_data.emojis,
     ).await?;
     profile.emojis = update_emoji_cache(&transaction, profile_id).await?;
-    if !profile.is_local() {
-        profile.check_consistency()?;
-    };
+    profile.check_consistency()?;
     transaction.commit().await?;
     Ok(profile)
 }
@@ -441,7 +439,8 @@ pub async fn get_profiles_paginated(
     let mut condition = "".to_owned();
     let mut order_by = "".to_owned();
     if only_local {
-        condition += "WHERE (user_id IS NOT NULL OR portable_user_id IS NOT NULL)";
+        // Only those who have an account
+        condition += "WHERE (user_id IS NOT NULL OR automated_account_id IS NOT NULL OR portable_user_id IS NOT NULL)";
     };
     match order {
         ProfileOrder::Active => {
@@ -976,6 +975,7 @@ pub async fn find_empty_profiles(
         FROM actor_profile
         WHERE
             (actor_profile.user_id IS NULL
+                AND actor_profile.automated_account_id IS NULL
                 AND actor_profile.portable_user_id IS NULL)
             AND actor_profile.updated_at < $1
             AND NOT EXISTS (

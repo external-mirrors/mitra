@@ -5,6 +5,7 @@ const fn default_ssrf_protection_enabled() -> bool { true }
 const fn default_incoming_queue_worker_enabled() -> bool { true }
 const fn default_inbox_queue_batch_size() -> u32 { 20 }
 const fn default_fetcher_timeout() -> u64 { 30 }
+const fn default_fetcher_recursion_limit() -> u16 { 50 }
 const fn default_deliverer_standalone() -> bool { true }
 const fn default_deliverer_pool_size() -> usize { 10 }
 const fn default_deliverer_timeout() -> u64 { 10 }
@@ -31,6 +32,9 @@ pub struct FederationConfig {
 
     #[serde(default = "default_fetcher_timeout")]
     pub fetcher_timeout: u64,
+    #[serde(default = "default_fetcher_recursion_limit")]
+    pub fetcher_recursion_limit: u16,
+
     #[serde(default = "default_deliverer_timeout")]
     pub deliverer_timeout: u64,
     #[serde(default = "default_deliverer_log_response_length")]
@@ -69,6 +73,7 @@ impl Default for FederationConfig {
             inbox_queue_batch_size: default_inbox_queue_batch_size(),
             incoming_queue_worker_enabled: default_incoming_queue_worker_enabled(),
             fetcher_timeout: default_fetcher_timeout(),
+            fetcher_recursion_limit: default_fetcher_recursion_limit(),
             deliverer_timeout: default_deliverer_timeout(),
             deliverer_log_response_length: default_deliverer_log_response_length(),
             deliverer_standalone: default_deliverer_standalone(),

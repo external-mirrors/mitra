@@ -229,6 +229,7 @@ impl Invoice {
                         Paid => {
                             vec![Completed]
                         },
+                        Completed => vec![Paid],
                         _ => vec![],
                     }
                 },
@@ -318,7 +319,7 @@ mod tests {
         assert_eq!(invoice.can_change_status(InvoiceStatus::Timeout), false);
         assert_eq!(invoice.can_change_status(InvoiceStatus::Cancelled), false);
         invoice.invoice_status = InvoiceStatus::Completed;
-        assert_eq!(invoice.can_change_status(InvoiceStatus::Paid), false);
+        assert_eq!(invoice.can_change_status(InvoiceStatus::Paid), true);
         assert_eq!(invoice.can_change_status(InvoiceStatus::Cancelled), false);
     }
 

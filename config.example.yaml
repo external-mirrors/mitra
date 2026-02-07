@@ -50,12 +50,6 @@ instance_staff_public: true
 # Make instance (local) timeline public
 instance_timeline_public: false
 
-registration:
-  # Possible values: open, invite
-  type: invite
-  # Possible values: user, read_only_user
-  default_role: user
-
 # Possible values: password, eip4361, caip122_monero. Default: only password.
 #authentication_methods:
 #  - password
@@ -68,10 +62,15 @@ registration:
 # EIP-4361 / CAIP-122 login message
 #login_message: 'Do not sign this message on other sites!'
 
+registration:
+  # Possible values: open, invite
+  type: invite
+  # Possible values: user, read_only_user
+  default_role: user
+
 # Limits
 # Increasing `local` limits is not recommended because that will result
 # in an incorrect display of your posts on other servers.
-# might fail to process your posts.
 #limits:
 #  media:
 #    # Add support for additional MIME types (e.g., application/pdf)
@@ -111,8 +110,8 @@ registration:
 
 # OpenMetrics endpoint (/metrics)
 #metrics:
-#  auth_username: null
-#  auth_password: null
+#  auth_username: "username"
+#  auth_password: "password"
 
 # Blockchain integrations
 #blockchains:
@@ -121,8 +120,10 @@ registration:
 #      # Displayed on subscription page, can contain markdown syntax
 #      description: null
 #    wallet_rpc_url: 'http://127.0.0.1:18083'
+#    # RPC authentication (optional)
 #    wallet_rpc_username: null
 #    wallet_rpc_password: null
+#    # Wallet name and password (required when monero-wallet-rpc is running with --wallet-dir option)
 #    wallet_name: null
 #    wallet_password: null
 #    account_index: 0

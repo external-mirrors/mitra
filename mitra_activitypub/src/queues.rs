@@ -314,7 +314,7 @@ impl OutgoingActivityJobData {
                     db_client,
                     &recipient.id,
                 ).await?;
-                if profile.has_account() {
+                if profile.has_portable_account() {
                     add_object_to_collection(
                         db_client,
                         profile.id,
@@ -404,8 +404,9 @@ pub async fn process_queued_outgoing_activities(
             continue;
         };
         log::info!(
-            "delivering activity to {} inboxes: {}",
+            "delivering activity to {} inboxes (attempt #{}): {}",
             recipients.len(),
+            job_data.failure_count + 1,
             job_data.activity,
         );
 
@@ -443,7 +444,8 @@ pub async fn process_queued_outgoing_activities(
             },
         };
         log::info!(
-            "delivery job: {:.2?}, {} delivered, {} errors, {} skipped (attempt #{})",
+            "delivery job (attempt #{}): {:.2?}, {} delivered, {} errors, {} skipped",
+            job_data.failure_count + 1,
             start_time.elapsed(),
             recipients.iter().filter(|item| item.is_delivered).count(),
             recipients.iter()
@@ -452,7 +454,6 @@ pub async fn process_queued_outgoing_activities(
             recipients.iter()
                 .filter(|item| !item.is_delivered && item.is_unreachable)
                 .count(),
-            job_data.failure_count + 1,
         );
         if job_data.failure_count == 0 {
             // Mark unreachable recipients after first attempt

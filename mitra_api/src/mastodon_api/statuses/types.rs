@@ -26,11 +26,11 @@ use crate::mastodon_api::{
     polls::types::Poll,
     reactions::types::PleromaEmojiReaction,
     serializers::{
-        deserialize_language_code_opt,
         serialize_datetime,
         serialize_datetime_opt,
     },
 };
+use super::utils::parse_language_code;
 
 pub const POST_CONTENT_TYPE_HTML: &str = "text/html";
 pub const POST_CONTENT_TYPE_MARKDOWN: &str = "text/markdown";
@@ -144,6 +144,16 @@ pub struct Status {
     links: Vec<Status>,
 }
 
+pub fn visibility_to_str(visibility: Visibility) -> &'static str {
+    match visibility {
+        Visibility::Public => "public",
+        Visibility::Direct => "direct",
+        Visibility::Followers => "private",
+        Visibility::Subscribers => "subscribers",
+        Visibility::Conversation => "conversation",
+    }
+}
+
 impl Status {
     pub fn from_post(
         instance_uri: &str,
@@ -206,13 +216,7 @@ impl Status {
         let links: Vec<Status> = related_posts.linked.into_iter().map(|post| {
             Status::from_post(instance_uri, media_server, post)
         }).collect();
-        let visibility = match post.visibility {
-            Visibility::Public => "public",
-            Visibility::Direct => "direct",
-            Visibility::Followers => "private",
-            Visibility::Subscribers => "subscribers",
-            Visibility::Conversation => "conversation",
-        };
+        let visibility = visibility_to_str(post.visibility);
         let mut emoji_reactions = vec![];
         let mut favourites_count = 0;
         for reaction in post.reactions {
@@ -323,8 +327,7 @@ pub fn visibility_from_str(value: &str) -> Result<Visibility, ValidationError> {
 pub struct StatusData {
     pub status: Option<String>,
 
-    #[serde(default, deserialize_with = "deserialize_language_code_opt")]
-    pub language: Option<Language>,
+    pub language: Option<String>,
 
     #[serde(default, alias = "media_ids[]")]
     pub media_ids: Vec<Uuid>,
@@ -357,6 +360,12 @@ pub struct StatusData {
 }
 
 impl StatusData {
+    pub fn language(&self) -> Result<Option<Language>, ValidationError> {
+        self.language.as_ref()
+            .map(|value| parse_language_code(value))
+            .transpose()
+    }
+
     pub fn poll_params(&self) -> Result<Option<PollParams>, ValidationError> {
         let maybe_poll_params = if let Some(ref poll_params) = self.poll {
             Some(poll_params.clone())
@@ -427,13 +436,12 @@ impl StatusSource {
     }
 }
 
-/// https://docs.joinmastodon.org/methods/statuses/#edit
+// https://docs.joinmastodon.org/methods/statuses/#edit
 #[derive(Deserialize)]
 pub struct StatusUpdateData {
     pub status: String,
 
-    #[serde(default, deserialize_with = "deserialize_language_code_opt")]
-    pub language: Option<Language>,
+    pub language: Option<String>,
 
     #[serde(default, alias = "media_ids[]")]
     pub media_ids: Vec<Uuid>,
@@ -446,6 +454,14 @@ pub struct StatusUpdateData {
 
     // Pleroma API
     pub quote_id: Option<Uuid>,
+}
+
+impl StatusUpdateData {
+    pub fn language(&self) -> Result<Option<Language>, ValidationError> {
+        self.language.as_ref()
+            .map(|value| parse_language_code(value))
+            .transpose()
+    }
 }
 
 #[derive(Serialize)]
@@ -498,6 +514,15 @@ impl ConversationTrackingData {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_visibility() {
+        let visibility = Visibility::Followers;
+        let visibility_str = visibility_to_str(visibility);
+        assert_eq!(visibility_str, "private");
+        let result = visibility_from_str(visibility_str);
+        assert_eq!(result.unwrap(), visibility);
+    }
 
     #[test]
     fn test_status_from_post() {

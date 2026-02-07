@@ -1,6 +1,14 @@
 use std::fmt;
 
-use apx_sdk::deserialization::object_to_id;
+use apx_sdk::{
+    constants::AP_PUBLIC,
+    core::url::canonical::CanonicalUri,
+    deserialization::{
+        deserialize_into_id_array,
+        object_to_id,
+    },
+};
+use serde::Deserialize;
 use serde_json::{Value as JsonValue};
 
 use mitra_config::Config;
@@ -23,7 +31,6 @@ use mitra_validators::errors::ValidationError;
 
 use crate::{
     forwarder::{
-        get_activity_audience,
         get_activity_recipients,
         EndpointType,
     },
@@ -44,6 +51,7 @@ use super::{
     follow::handle_follow,
     like::handle_like,
     r#move::handle_move,
+    note::normalize_audience,
     offer::handle_offer,
     reject::handle_reject,
     remove::handle_remove,
@@ -74,6 +82,34 @@ impl fmt::Display for Descriptor {
             Self::Target(target) => write!(formatter, "target: {target}"),
         }
     }
+}
+
+#[derive(Deserialize)]
+struct ActivityAudience {
+    #[serde(default, deserialize_with = "deserialize_into_id_array")]
+    to: Vec<String>,
+    #[serde(default, deserialize_with = "deserialize_into_id_array")]
+    cc: Vec<String>,
+}
+
+fn get_activity_audience(
+    activity: &JsonValue,
+    maybe_recipient_id: Option<&str>,
+) -> Result<Vec<CanonicalUri>, ValidationError> {
+    let activity: ActivityAudience = serde_json::from_value(activity.clone())
+        .map_err(|_| ValidationError("invalid audience"))?;
+    let mut audience = [activity.to, activity.cc].concat();
+    if let Some(recipient_id) = maybe_recipient_id {
+        audience.push(recipient_id.to_owned());
+    };
+    if audience.is_empty() {
+        log::warn!("activity audience is not known");
+    };
+    let audience = normalize_audience(&audience)?
+        .into_iter()
+        .filter(|target_id| target_id.to_string() != AP_PUBLIC)
+        .collect();
+    Ok(audience)
 }
 
 pub async fn handle_activity(
@@ -190,7 +226,7 @@ pub async fn handle_activity(
         for recipient in recipients.iter() {
             // Recipient is a local actor: add activity to its inbox
             // and forward to other gateways
-            if recipient.has_account() && recipient.is_portable() {
+            if recipient.has_portable_account() {
                 if !is_new_activity {
                     log::warn!("activity has already been forwarded from inbox");
                     continue;
@@ -266,4 +302,28 @@ pub async fn handle_activity(
         );
     };
     Ok(canonical_activity_id.to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    use serde_json::json;
+    use super::*;
+
+    #[test]
+    fn test_get_activity_audience() {
+        let activity = json!({
+            "id": "https://social.example/activities/123",
+            "type": "Announce",
+            "actor": "https://social.example/users/1",
+            "object": "https://social.example/objects/321",
+            "to": "as:Public",
+            "cc": "https://social.example/users/1/followers",
+        });
+        let audience = get_activity_audience(&activity, None).unwrap();
+        assert_eq!(audience.len(), 1);
+        assert_eq!(
+            audience[0].to_string(),
+            "https://social.example/users/1/followers",
+        );
+    }
 }

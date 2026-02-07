@@ -247,6 +247,9 @@ impl ImportPosts {
 pub struct ExportPosts {
     /// Author (username or ID)
     author: String,
+    /// Maximum number of posts
+    #[arg(long, default_value_t = 1000)]
+    limit: u16,
 }
 
 impl ExportPosts {
@@ -270,7 +273,7 @@ impl ExportPosts {
             false, // not only pinned
             false, // not only media
             None, // no max ID
-            OrderedCollection::PAGE_SIZE,
+            self.limit,
         ).await?;
         add_related_posts(db_client, posts.iter_mut().collect()).await?;
         let media_server = MediaServer::new(config);

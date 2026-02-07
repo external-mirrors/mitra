@@ -8,7 +8,26 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Added
 
+- Added `federation.fetcher_recursion_limit` configuration parameter.
+- Added `--fetcher-recursion-limit` option to `import-object` command.
+
+### Changed
+
+- Reduced database lock time during pruning of empty profiles.
+- Include attempt number in activity delivery log message.
+
+## [4.17.0] - 2026-02-05
+
+### Added
+
 - Added support for configuration files in TOML format.
+- Indicate restricted access to public timeline in `configuration.timelines_access` mapping ([#139](https://codeberg.org/silverpill/mitra/issues/139)).
+- Added `/api/v1/favourites` API endpoint.
+- Added `/api/v1/preferences` API endpoint.
+- Added shared default post visibility setting.
+- Added shared default post language setting.
+- Added `--limit` parameter to `export-posts` command.
+- Notify about payments made to primary address when direct mode is used.
 
 ### Changed
 
@@ -23,6 +42,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Fixed
 
 - Don't prune followed conversations.
+- Include current user's own reactions in post reaction list.
+- Do not attempt to sync conversation when root is deleted.
+- Do not limit `export-posts` command output to 20 posts.
 
 ## [4.16.1] - 2026-01-07
 

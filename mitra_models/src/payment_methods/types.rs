@@ -1,6 +1,7 @@
 use apx_core::{
     caip2::ChainId,
 };
+use chrono::{DateTime, Utc};
 use postgres_types::FromSql;
 use uuid::Uuid;
 
@@ -60,6 +61,8 @@ pub struct PaymentMethod {
     pub chain_id: DbChainId,
     pub payout_address: String,
     pub view_key: Option<String>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
 }
 
 impl PaymentMethod {

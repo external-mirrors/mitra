@@ -309,7 +309,7 @@ async fn refresh_remote_profile(
     let profile = if force ||
         profile.updated_at < Utc::now() - TimeDelta::days(1)
     {
-        if profile.has_account() {
+        if profile.has_portable_account() {
             // Local nomadic accounts should not be refreshed
             return Ok(profile);
         };
@@ -549,8 +549,6 @@ pub async fn _get_post_by_object_id(
     }
 }
 
-const RECURSION_DEPTH_MAX: usize = 50;
-
 #[cfg(feature = "mini")]
 fn _parse_local_object_id(
     instance: &Instance,
@@ -650,7 +648,7 @@ pub async fn import_post(
                 object
             },
             None => {
-                if fetch_count >= RECURSION_DEPTH_MAX {
+                if fetch_count >= instance.federation.fetcher_recursion_limit {
                     // TODO: create tombstone
                     return Err(FetchError::RecursionError.into());
                 };

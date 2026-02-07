@@ -14,6 +14,9 @@ instance_short_description: My instance
 instance_description: My instance
 instance_staff_public: true
 
+#ipfs_api_url: 'http://127.0.0.1:5001'
+#ipfs_gateway_url: 'http://127.0.0.1:8001'
+
 registration:
   type: open
 
@@ -21,12 +24,6 @@ registration:
 #  # Parameters for local Monero node
 #  - chain_id: monero:regtest
 #    wallet_rpc_url: 'http://127.0.0.1:58083'
-#    wallet_rpc_username: null
-#    wallet_rpc_password: null
 #    wallet_name: test
 #    wallet_password: test
 #    account_index: 0
-
-
-#ipfs_api_url: 'http://127.0.0.1:5001'
-#ipfs_gateway_url: 'http://127.0.0.1:8001'

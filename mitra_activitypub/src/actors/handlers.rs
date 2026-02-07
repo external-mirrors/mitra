@@ -273,7 +273,7 @@ async fn get_webfinger_hostname(
     agent: &FederationAgent,
     instance_hostname: &str,
     actor: &ValidatedActor,
-    has_account: bool,
+    has_portable_account: bool,
 ) -> Result<WebfingerHostname, HandlerError> {
     let canonical_actor_id = CanonicalUri::parse(&actor.id)
         .map_err(|_| ValidationError("invalid actor ID"))?;
@@ -291,7 +291,7 @@ async fn get_webfinger_hostname(
                     .map_err(|_| ValidationError("invalid gateway URL"))?;
                 if hostname == instance_hostname {
                     // Portable actor with local account (unmanaged)
-                    if has_account {
+                    if has_portable_account {
                         return Ok(WebfingerHostname::Local);
                     } else {
                         // WARNING: only allowed when profile is being created
@@ -726,7 +726,7 @@ pub async fn update_remote_profile(
         &ap_client.agent(),
         &ap_client.instance.hostname(),
         &actor,
-        profile.has_account(),
+        profile.has_portable_account(),
     ).await?;
     validate_actor_data(&actor_data)?;
     let moderation_domain = get_moderation_domain(&actor_data)

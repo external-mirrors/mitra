@@ -27,6 +27,7 @@ CREATE TABLE filter_rule (
 CREATE TABLE actor_profile (
     id UUID PRIMARY KEY,
     user_id UUID UNIQUE, -- FK is added later
+    automated_account_id UUID UNIQUE, -- FK is added later
     portable_user_id UUID UNIQUE, -- FK is added later
     username VARCHAR(100) NOT NULL,
     hostname VARCHAR(100) REFERENCES instance (hostname) ON DELETE RESTRICT,
@@ -56,6 +57,7 @@ CREATE TABLE actor_profile (
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
     unreachable_since TIMESTAMP WITH TIME ZONE,
     CHECK (user_id IS NULL OR user_id = id),
+    CHECK (automated_account_id IS NULL OR automated_account_id = id),
     CHECK (portable_user_id IS NULL OR portable_user_id = id)
 );
 
@@ -76,6 +78,7 @@ CREATE TABLE user_account (
     invite_code VARCHAR(100) UNIQUE REFERENCES user_invite_code (code) ON DELETE SET NULL,
     user_role SMALLINT NOT NULL,
     client_config JSONB NOT NULL DEFAULT '{}',
+    shared_client_config JSONB NOT NULL DEFAULT '{}',
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
 );
 
@@ -119,6 +122,18 @@ CREATE TABLE oauth_token (
     created_at TIMESTAMP WITH TIME ZONE NOT NULL,
     expires_at TIMESTAMP WITH TIME ZONE NOT NULL
 );
+
+CREATE TABLE automated_account (
+    id UUID PRIMARY KEY REFERENCES actor_profile (id) ON DELETE CASCADE,
+    account_type SMALLINT UNIQUE NOT NULL,
+    rsa_secret_key BYTEA NOT NULL,
+    ed25519_secret_key BYTEA NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+ALTER TABLE actor_profile
+    ADD CONSTRAINT actor_profile_automated_account_id_fkey
+    FOREIGN KEY (automated_account_id) REFERENCES automated_account (id) ON DELETE RESTRICT;
 
 CREATE TABLE portable_user_account (
     id UUID PRIMARY KEY REFERENCES actor_profile (id) ON DELETE CASCADE,
@@ -347,6 +362,8 @@ CREATE TABLE payment_method (
     chain_id VARCHAR(50) NOT NULL,
     payout_address VARCHAR(500) NOT NULL,
     view_key VARCHAR(500),
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UNIQUE (owner_id, chain_id)
 );
 

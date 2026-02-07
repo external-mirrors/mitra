@@ -58,6 +58,7 @@ use super::payments::{
         check_closed_monero_invoices,
         check_monero_invoices,
         check_monero_light_invoices,
+        check_monero_light_payments,
     },
 };
 
@@ -121,13 +122,16 @@ pub async fn delete_empty_profiles(
     config: &Config,
     db_pool: &DatabaseConnectionPool,
 ) -> Result<(), Error> {
-    let db_client = &mut **get_database_client(db_pool).await?;
     let updated_before = match config.retention.empty_profiles {
         Some(days) => days_before_now(days),
         None => return Ok(()), // not configured
     };
-    let profiles = find_empty_profiles(db_client, updated_before).await?;
+    let profiles = find_empty_profiles(
+        db_client_await!(db_pool),
+        updated_before,
+    ).await?;
     for profile_id in profiles {
+        let db_client = &mut **get_database_client(db_pool).await?;
         let profile = get_profile_by_id(db_client, profile_id).await?;
         let deletion_queue = delete_profile(db_client, profile.id).await?;
         delete_orphaned_media(config, db_client, deletion_queue).await?;
@@ -324,6 +328,25 @@ pub async fn monero_light_payment_monitor(
         monero_config,
         db_pool,
     ).await?;
+    Ok(())
+}
+
+pub async fn monero_light_non_interactive_payment_monitor(
+    config: &Config,
+    db_pool: &DatabaseConnectionPool,
+) -> Result<(), Error> {
+    let Some(monero_config) = config.monero_light_config() else {
+        return Ok(()); // not configured
+    };
+    let start_time = Instant::now();
+    check_monero_light_payments(
+        monero_config,
+        db_pool,
+    ).await?;
+    log::info!(
+        "check_monero_light_payments executed: {:.2?}",
+        start_time.elapsed(),
+    );
     Ok(())
 }
 

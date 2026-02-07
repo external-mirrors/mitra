@@ -438,7 +438,12 @@ impl InstanceInfoV2 {
                             } else {
                                 "authenticated".to_string()
                             },
-                        remote: "authenticated".to_string(),
+                        remote:
+                            if dynamic_config.federated_timeline_restricted {
+                                "restricted".to_string()
+                            } else {
+                                "authenticated".to_string()
+                            },
                     },
                     hashtag_feeds: TimelineAccess {
                         local: "public".to_string(),
