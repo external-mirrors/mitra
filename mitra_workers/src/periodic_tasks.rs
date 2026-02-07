@@ -122,13 +122,16 @@ pub async fn delete_empty_profiles(
     config: &Config,
     db_pool: &DatabaseConnectionPool,
 ) -> Result<(), Error> {
-    let db_client = &mut **get_database_client(db_pool).await?;
     let updated_before = match config.retention.empty_profiles {
         Some(days) => days_before_now(days),
         None => return Ok(()), // not configured
     };
-    let profiles = find_empty_profiles(db_client, updated_before).await?;
+    let profiles = find_empty_profiles(
+        db_client_await!(db_pool),
+        updated_before,
+    ).await?;
     for profile_id in profiles {
+        let db_client = &mut **get_database_client(db_pool).await?;
         let profile = get_profile_by_id(db_client, profile_id).await?;
         let deletion_queue = delete_profile(db_client, profile.id).await?;
         delete_orphaned_media(config, db_client, deletion_queue).await?;
