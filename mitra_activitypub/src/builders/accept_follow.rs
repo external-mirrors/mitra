@@ -21,18 +21,18 @@ use crate::{
 };
 
 #[derive(Serialize)]
-struct AcceptFollow {
+pub struct AcceptFollow {
     #[serde(rename = "@context")]
-    context: Context,
+    pub context: Context,
 
     #[serde(rename = "type")]
-    activity_type: String,
+    pub activity_type: String,
 
-    id: String,
-    actor: String,
-    object: String,
+    pub id: String,
+    pub actor: String,
+    pub object: String,
 
-    to: Vec<String>,
+    pub to: Vec<String>,
 }
 
 fn build_accept_follow(

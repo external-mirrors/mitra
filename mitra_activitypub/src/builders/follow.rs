@@ -27,7 +27,7 @@ use crate::{
 };
 
 #[derive(Serialize)]
-pub(super) struct Follow {
+pub struct Follow {
     #[serde(rename = "@context", skip_serializing_if = "Option::is_none")]
     pub _context: Option<Context>,
 
