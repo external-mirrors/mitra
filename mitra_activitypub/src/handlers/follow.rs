@@ -82,6 +82,11 @@ pub async fn handle_follow(
             follow_request.target_id,
         ).await?;
     } else {
+        #[cfg(feature = "mini")]
+        if !follow_request_created {
+            // Don't auto-accept repeated requests
+            return Ok(None);
+        };
         match follow_request_accepted(db_client, follow_request.id).await {
             Ok(_) => (),
             // Proceed even if relationship already exists
