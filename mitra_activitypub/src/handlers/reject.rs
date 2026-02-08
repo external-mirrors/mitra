@@ -48,11 +48,19 @@ pub async fn handle_reject(
         &reject.actor,
     ).await?;
     let canonical_object_id = canonicalize_id(&reject.object)?;
-    let follow_request = match get_follow_request_by_activity_id(
+    #[cfg(not(feature = "mini"))]
+    let result = get_follow_request_by_activity_id(
         db_client,
         config.instance().uri_str(),
         &canonical_object_id.to_string(),
-    ).await {
+    ).await;
+    #[cfg(feature = "mini")]
+    let result = get_follow_request_by_activity_id(
+        db_client,
+        &config.instance(),
+        &canonical_object_id.to_string(),
+    ).await;
+    let follow_request = match result {
         Ok(follow_request) => follow_request,
         Err(DatabaseError::NotFound(_)) => {
             // Ignore Reject if follow request has already been rejected

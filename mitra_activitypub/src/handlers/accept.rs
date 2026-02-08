@@ -43,6 +43,10 @@ use super::{
     HandlerResult,
 };
 
+#[cfg(feature = "mini")]
+use mitra_config::Instance;
+
+#[cfg(not(feature = "mini"))]
 pub async fn get_follow_request_by_activity_id(
     db_client: &impl DatabaseClient,
     instance_uri: &str,
@@ -50,6 +54,26 @@ pub async fn get_follow_request_by_activity_id(
 ) -> Result<FollowRequest, DatabaseError> {
     match parse_local_activity_id(
         instance_uri,
+        activity_id,
+    ) {
+        Ok(follow_request_id) => {
+            get_follow_request_by_id(db_client, follow_request_id).await
+        },
+        Err(_) => {
+            get_follow_request_by_remote_activity_id(db_client, activity_id).await
+        },
+    }
+}
+
+#[cfg(feature = "mini")]
+pub async fn get_follow_request_by_activity_id(
+    db_client: &impl DatabaseClient,
+    instance: &Instance,
+    activity_id: &str,
+) -> Result<FollowRequest, DatabaseError> {
+    use crate::identifiers::_parse_local_activity_id;
+    match _parse_local_activity_id(
+        instance,
         activity_id,
     ) {
         Ok(follow_request_id) => {
@@ -88,9 +112,16 @@ pub async fn handle_accept(
         &canonical_actor_id.to_string(),
     ).await?;
     let canonical_object_id = canonicalize_id(&accept.object)?;
+    #[cfg(not(feature = "mini"))]
     let follow_request = get_follow_request_by_activity_id(
         db_client,
         config.instance().uri_str(),
+        &canonical_object_id.to_string(),
+    ).await?;
+    #[cfg(feature = "mini")]
+    let follow_request = get_follow_request_by_activity_id(
+        db_client,
+        &config.instance(),
         &canonical_object_id.to_string(),
     ).await?;
     if follow_request.target_id != actor_profile.id {

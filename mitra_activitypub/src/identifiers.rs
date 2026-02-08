@@ -219,6 +219,22 @@ pub fn parse_local_activity_id(
     Ok(internal_activity_id)
 }
 
+#[cfg(feature = "mini")]
+pub fn _parse_local_activity_id(
+    instance: &Instance,
+    activity_id: &str,
+) -> Result<Uuid, ValidationError> {
+    let path_re = Regex::new("^/activities/[a-z]+/(?P<uuid>[0-9a-f-]+)$")
+        .expect("regexp should be valid");
+    let (base_uri, (internal_activity_id,)) =
+        parse_object_id(activity_id, path_re)
+            .map_err(|_| ValidationError("invalid local activity ID"))?;
+    if base_uri != format!("ap://{}", instance.fep_ef61_identity()) {
+        return Err(ValidationError("instance mismatch"));
+    };
+    Ok(internal_activity_id)
+}
+
 pub fn post_object_id(instance_uri: &str, post: &PostDetailed) -> String {
     match post.object_id {
         Some(ref object_id) => object_id.clone(),
