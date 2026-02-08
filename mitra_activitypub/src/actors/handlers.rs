@@ -1,6 +1,7 @@
 use apx_core::{
     url::{
         canonical::CanonicalUri,
+        common::Origin,
         http_uri::Hostname,
         http_url_whatwg::get_hostname,
     },
@@ -125,10 +126,10 @@ impl Actor {
         &self.inner.preferred_username
     }
 
-    pub fn is_local(&self, local_hostname: &str) -> Result<bool, ValidationError> {
+    pub fn is_local(&self, local_origin: Origin) -> Result<bool, ValidationError> {
         let canonical_actor_id = CanonicalUri::parse(self.id())
             .map_err(|_| ValidationError("invalid actor ID"))?;
-        Ok(canonical_actor_id.authority() == local_hostname)
+        Ok(canonical_actor_id.origin() == local_origin)
     }
 }
 
@@ -806,6 +807,7 @@ mod tests {
 
     #[test]
     fn test_actor_is_local() {
+        let local_origin = Origin::new_tuple("https", "social.example", 443);
         let actor = Actor {
             inner: ValidatedActor {
                 id: "https://social.example/users/1".to_string(),
@@ -813,12 +815,13 @@ mod tests {
             },
             value: Default::default()
         };
-        let is_local = actor.is_local("social.example").unwrap();
+        let is_local = actor.is_local(local_origin).unwrap();
         assert!(is_local);
     }
 
     #[test]
     fn test_actor_is_local_compatible_id() {
+        let local_origin = Origin::new_tuple("https", "gateway.example", 443);
         let actor = Actor {
             inner: ValidatedActor {
                 id: "https://gateway.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor".to_string(),
@@ -826,7 +829,7 @@ mod tests {
             },
             value: Default::default()
         };
-        let is_local = actor.is_local("gateway.example").unwrap();
+        let is_local = actor.is_local(local_origin).unwrap();
         assert!(!is_local);
     }
 

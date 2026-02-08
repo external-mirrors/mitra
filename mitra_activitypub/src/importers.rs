@@ -256,7 +256,7 @@ pub async fn import_profile(
     actor: JsonValue,
 ) -> Result<DbActorProfile, HandlerError> {
     let actor: Actor = serde_json::from_value(actor)?;
-    if actor.is_local(&ap_client.instance.hostname())? {
+    if actor.is_local(ap_client.instance.uri().origin())? {
         return Err(HandlerError::LocalObject);
     };
     let canonical_actor_id = canonicalize_id(actor.id())?;
@@ -377,7 +377,7 @@ impl ActorIdResolver {
         actor_id: &str,
     ) -> Result<DbActorProfile, HandlerError> {
         let canonical_actor_id = canonicalize_id(actor_id)?;
-        if canonical_actor_id.authority() == ap_client.instance.hostname() {
+        if canonical_actor_id.origin() == ap_client.instance.uri().origin() {
             // Local ID
             if self.only_remote {
                 return Err(HandlerError::LocalObject);
