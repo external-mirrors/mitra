@@ -96,6 +96,15 @@ use crate::{
 #[cfg(feature = "mini")]
 use uuid::Uuid;
 
+#[cfg(feature = "mini")]
+use apx_sdk::core::url::common::Origin;
+
+#[cfg(feature = "mini")]
+use mitra_models::users::queries::get_user_by_id;
+
+#[cfg(feature = "mini")]
+use crate::identifiers::_parse_local_actor_id;
+
 pub struct ApClient {
     pub instance: Instance,
     pub filter: FederationFilter,
@@ -388,6 +397,7 @@ impl ActorIdResolver {
         actor_id: &str,
     ) -> Result<DbActorProfile, HandlerError> {
         let canonical_actor_id = canonicalize_id(actor_id)?;
+        #[cfg(not(feature = "mini"))]
         if canonical_actor_id.origin() == ap_client.instance.uri().origin() {
             // Local ID
             if self.only_remote {
@@ -397,6 +407,19 @@ impl ActorIdResolver {
             let user = get_user_by_name(
                 db_client_await!(db_pool),
                 &username,
+            ).await?;
+            return Ok(user.profile);
+        };
+        #[cfg(feature = "mini")]
+        if canonical_actor_id.origin() == Origin::new_did(&ap_client.instance.fep_ef61_identity().to_string()) {
+            // Local ID
+            if self.only_remote {
+                return Err(HandlerError::LocalObject);
+            };
+            let actor_uuid = _parse_local_actor_id(&ap_client.instance, &canonical_actor_id.to_string())?;
+            let user = get_user_by_id(
+                db_client_await!(db_pool),
+                actor_uuid,
             ).await?;
             return Ok(user.profile);
         };

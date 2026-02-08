@@ -22,6 +22,9 @@ use mitra_validators::errors::ValidationError;
 
 use crate::authority::Authority;
 
+#[cfg(feature = "mini")]
+use mitra_config::Instance;
+
 pub fn local_actor_id_unified(authority: &Authority, username: &str) -> String {
     match authority {
         Authority::Server(_) => local_actor_id(&authority.to_string(), username),
@@ -145,6 +148,23 @@ pub fn parse_local_actor_id(
         return Err(ValidationError("instance mismatch"));
     };
     Ok(username)
+}
+
+#[cfg(feature = "mini")]
+pub fn _parse_local_actor_id(
+    instance: &Instance,
+    actor_id: &str,
+) -> Result<Uuid, ValidationError> {
+    use regex::Regex;
+    use apx_sdk::identifiers::parse_object_id;
+    let path_re = Regex::new("^/actors/(?P<uuid>[0-9a-f-]+)$")
+        .expect("regexp should be valid");
+    let (base_uri, (internal_actor_id,)) = parse_object_id(actor_id, path_re)
+        .map_err(|_| ValidationError("invalid local actor ID"))?;
+    if base_uri != format!("ap://{}", instance.fep_ef61_identity()) {
+        return Err(ValidationError("instance mismatch"));
+    };
+    Ok(internal_actor_id)
 }
 
 pub fn parse_local_object_id(
