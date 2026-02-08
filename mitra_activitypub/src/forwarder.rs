@@ -131,7 +131,6 @@ pub async fn get_activity_recipients(
     db_client: &impl DatabaseClient,
     audience: &[CanonicalUri],
 ) -> Result<Vec<DbActorProfile>, DatabaseError> {
-    const RECIPIENT_LIMIT: usize = 50;
     let expanded_audience = expand_collections(
         db_client,
         audience,
@@ -139,11 +138,7 @@ pub async fn get_activity_recipients(
     let recipients = get_remote_profiles_by_actor_ids(
         db_client,
         &expanded_audience,
-    )
-        .await?
-        .into_iter()
-        .take(RECIPIENT_LIMIT)
-        .collect();
+    ).await?;
     Ok(recipients)
 }
 

@@ -85,6 +85,23 @@ pub async fn save_attributed_object(
     Ok(())
 }
 
+pub async fn get_object(
+    db_client: &impl DatabaseClient,
+    object_id: &str,
+) -> Result<JsonValue, DatabaseError> {
+    let maybe_row = db_client.query_opt(
+        "
+        SELECT object_data
+        FROM activitypub_object
+        WHERE object_id = $1
+        ",
+        &[&object_id],
+    ).await?;
+    let row = maybe_row.ok_or(DatabaseError::NotFound("activitypub object"))?;
+    let object_data = row.try_get("object_data")?;
+    Ok(object_data)
+}
+
 pub async fn get_object_as_target(
     db_client: &impl DatabaseClient,
     object_id: &str,

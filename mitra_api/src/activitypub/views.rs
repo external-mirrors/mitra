@@ -52,9 +52,11 @@ use mitra_activitypub::{
     },
     errors::HandlerError,
     forwarder::{
+        get_activity_recipients,
         verify_embedded_ownership,
         verify_public_keys,
     },
+    handlers::activity::get_activity_audience,
     identifiers::{
         canonicalize_id,
         compatible_post_object_id,
@@ -80,6 +82,7 @@ use mitra_models::{
         get_activitypub_media_by_digest,
         get_actor,
         get_collection_items,
+        get_object,
         get_object_as_target,
     },
     database::{
@@ -124,7 +127,11 @@ use crate::{
 };
 
 use super::{
-    receiver::{receive_activity, InboxError},
+    receiver::{
+        authorize_request,
+        receive_activity,
+        EndpointError,
+    },
     types::{
         GatewayMetadata,
         PortableActorKeys,
@@ -207,7 +214,7 @@ async fn inbox(
     ).await
         .map_err(|error| {
             let log_level = match error {
-                InboxError::DatabaseError(_) => Level::Error,
+                EndpointError::DatabaseError(_) => Level::Error,
                 _ => Level::Warn,
             };
             log::log!(
@@ -696,20 +703,33 @@ pub async fn conversation_view(
 #[get("/activities/{tail:.*}")]
 pub async fn activity_view(
     config: web::Data<Config>,
+    connection_info: ConnectionInfo,
     db_pool: web::Data<DatabaseConnectionPool>,
-    request_path: Uri,
+    request: HttpRequest,
 ) -> Result<HttpResponse, HttpError> {
-    let db_client = &**get_database_client(&db_pool).await?;
-    let activity_id = format!(
-        "{}{}",
-        config.instance().uri(),
-        request_path,
-    );
-    let activity = get_object_as_target(
-        db_client,
-        &activity_id,
-        AP_PUBLIC,
+    let request_uri = get_request_full_uri(&connection_info, request.uri());
+    let activity = get_object(
+        db_client_await!(&db_pool),
+        &request_uri.to_string(),
     ).await?;
+    let audience = get_activity_audience(&activity, None)?;
+    if !audience.iter().any(|id| id.to_string() == AP_PUBLIC) {
+        // Perform authorization only if activity is not public
+        let signer = authorize_request(
+            &config,
+            &db_pool,
+            &request,
+            &request_uri,
+        ).await?;
+        let recipients = get_activity_recipients(
+            db_client_await!(&db_pool),
+            &audience,
+        ).await?;
+        if !recipients.iter().any(|recipient| recipient.id == signer.id) {
+            // Signer not found among recipients
+            return Err(HttpError::PermissionError);
+        };
+    };
     let response = HttpResponse::Ok()
         .content_type(AP_MEDIA_TYPE)
         .json(activity);

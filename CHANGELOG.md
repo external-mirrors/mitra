@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Added `federation.fetcher_recursion_limit` configuration parameter.
 - Added `--fetcher-recursion-limit` option to `import-object` command.
+- Allow to fetch non-public activities with a signed request.
 
 ### Changed
 

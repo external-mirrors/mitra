@@ -1,7 +1,6 @@
 use std::fmt;
 
 use apx_sdk::{
-    constants::AP_PUBLIC,
     core::url::canonical::CanonicalUri,
     deserialization::{
         deserialize_into_id_array,
@@ -60,6 +59,8 @@ use super::{
     HandlerError,
 };
 
+const FORWARDER_LIMIT: usize = 50;
+
 pub enum Descriptor {
     Object(String),
     Target(String),
@@ -92,8 +93,9 @@ struct ActivityAudience {
     cc: Vec<String>,
 }
 
-fn get_activity_audience(
+pub fn get_activity_audience(
     activity: &JsonValue,
+    // implicit audience
     maybe_recipient_id: Option<&str>,
 ) -> Result<Vec<CanonicalUri>, ValidationError> {
     let activity: ActivityAudience = serde_json::from_value(activity.clone())
@@ -105,10 +107,8 @@ fn get_activity_audience(
     if audience.is_empty() {
         log::warn!("activity audience is not known");
     };
-    let audience = normalize_audience(&audience)?
-        .into_iter()
-        .filter(|target_id| target_id.to_string() != AP_PUBLIC)
-        .collect();
+    // Targets will be sorted
+    let audience = normalize_audience(&audience)?;
     Ok(audience)
 }
 
@@ -223,7 +223,8 @@ pub async fn handle_activity(
             db_client,
             &audience,
         ).await?;
-        for recipient in recipients.iter() {
+        // TODO: remove limit
+        for recipient in recipients.iter().take(FORWARDER_LIMIT) {
             // Recipient is a local actor: add activity to its inbox
             // and forward to other gateways
             if recipient.has_portable_account() {
@@ -306,6 +307,7 @@ pub async fn handle_activity(
 
 #[cfg(test)]
 mod tests {
+    use apx_sdk::constants::AP_PUBLIC;
     use serde_json::json;
     use super::*;
 
@@ -320,10 +322,11 @@ mod tests {
             "cc": "https://social.example/users/1/followers",
         });
         let audience = get_activity_audience(&activity, None).unwrap();
-        assert_eq!(audience.len(), 1);
+        assert_eq!(audience.len(), 2);
         assert_eq!(
             audience[0].to_string(),
             "https://social.example/users/1/followers",
         );
+        assert_eq!(audience[1].to_string(), AP_PUBLIC);
     }
 }
