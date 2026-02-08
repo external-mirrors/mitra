@@ -13,9 +13,7 @@ use mitra_models::{
     relationships::queries::{
         create_remote_follow_request_opt,
         follow_request_accepted,
-        has_relationship,
     },
-    relationships::types::RelationshipType,
     users::queries::get_user_by_id,
 };
 use mitra_validators::{
@@ -64,7 +62,7 @@ pub async fn handle_follow(
     let canonical_activity_id = canonicalize_id(&follow.id)?;
     validate_any_object_id(&canonical_activity_id.to_string())?;
     let db_client = &mut **get_database_client(db_pool).await?;
-    let follow_request = create_remote_follow_request_opt(
+    let (follow_request, follow_request_created) = create_remote_follow_request_opt(
         db_client,
         source_profile.id,
         target_profile.id,
@@ -77,13 +75,7 @@ pub async fn handle_follow(
         // Activity has been performed by a portable account
         return Ok(Some(Descriptor::object("Actor")));
     };
-    let is_following = has_relationship(
-        db_client,
-        follow_request.source_id,
-        follow_request.target_id,
-        RelationshipType::Follow,
-    ).await?;
-    if !is_following && target_user.profile.manually_approves_followers {
+    if follow_request_created && target_user.profile.manually_approves_followers {
         create_follow_request_notification(
             db_client,
             follow_request.source_id,

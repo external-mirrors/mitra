@@ -17,6 +17,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Reduced database lock time during pruning of empty profiles.
 - Include attempt number in activity delivery log message.
 
+### Fixed
+
+- Don't generate repeated notifications if follow request already exists.
+
 ## [4.17.0] - 2026-02-05
 
 ### Added
