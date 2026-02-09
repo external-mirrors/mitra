@@ -99,7 +99,7 @@ mod tests {
             "https://social.example/1",
         ).await;
         let follow_activity_id = "https://social.example/activities/1";
-        let follow_request = create_remote_follow_request_opt(
+        let (follow_request, _) = create_remote_follow_request_opt(
             db_client,
             source.id,
             target.id,

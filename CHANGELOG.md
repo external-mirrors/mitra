@@ -10,11 +10,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Added `federation.fetcher_recursion_limit` configuration parameter.
 - Added `--fetcher-recursion-limit` option to `import-object` command.
+- Allow to fetch non-public activities with a signed request.
 
 ### Changed
 
 - Reduced database lock time during pruning of empty profiles.
 - Include attempt number in activity delivery log message.
+
+### Fixed
+
+- Don't generate repeated notifications if follow request already exists.
+- Fixed local origin check in actor importer that didn't take port number into account.
 
 ## [4.17.0] - 2026-02-05
 
