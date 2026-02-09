@@ -276,7 +276,12 @@ pub async fn import_profile(
     actor: JsonValue,
 ) -> Result<DbActorProfile, HandlerError> {
     let actor: Actor = serde_json::from_value(actor)?;
+    #[cfg(not(feature = "mini"))]
     if actor.is_local(ap_client.instance.uri().origin())? {
+        return Err(HandlerError::LocalObject);
+    };
+    #[cfg(feature = "mini")]
+    if actor.is_local(Origin::new_did(&ap_client.instance.fep_ef61_identity().to_string()))? {
         return Err(HandlerError::LocalObject);
     };
     let canonical_actor_id = canonicalize_id(actor.id())?;
