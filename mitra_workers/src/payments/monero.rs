@@ -37,7 +37,6 @@ use mitra_models::{
             local_invoice_forwarded,
             local_invoice_reopened,
             local_monero_light_invoice_paid,
-            local_monero_light_invoice_reopened,
         },
         queries::{
             create_local_invoice,
@@ -481,6 +480,7 @@ pub async fn check_closed_monero_invoices(
     ).await?;
     let db_client = &mut **get_database_client(db_pool).await?;
     for (address, _) in addresses {
+        // Returns newest invoice
         let invoice = match get_local_invoice_by_address(
             db_client,
             PaymentType::Monero,
@@ -722,22 +722,15 @@ pub async fn check_monero_light_payments(
             log::info!("detected payment to primary address {tx_id}");
             // No conflict with open invoice monitor because it ignores
             // invoices where payment address matches payout address
-            let invoice = if let Some(invoice) = maybe_invoice {
-                local_monero_light_invoice_reopened(
-                    db_client,
-                    invoice.id,
-                ).await?
-            } else {
-                create_local_invoice(
-                    db_client,
-                    anonymous_sender_id,
-                    payment_method.owner_id,
-                    payment_method.payment_type,
-                    payment_method.chain_id.inner(),
-                    &payout_address.to_string(),
-                    0, // no expected amount
-                ).await?
-            };
+            let invoice = create_local_invoice(
+                db_client,
+                anonymous_sender_id,
+                payment_method.owner_id,
+                payment_method.payment_type,
+                payment_method.chain_id.inner(),
+                &payout_address.to_string(),
+                0, // no expected amount
+            ).await?;
             local_monero_light_invoice_paid(
                 db_client,
                 invoice.id,

@@ -129,6 +129,7 @@ pub async fn get_local_invoice_by_address(
     chain_id: &ChainId,
     payment_address: &str,
 ) -> Result<Invoice, DatabaseError> {
+    // Always return newest invoice
     let maybe_row = db_client.query_opt(
         "
         SELECT invoice
@@ -138,6 +139,8 @@ pub async fn get_local_invoice_by_address(
             payment_type = $1
             AND chain_id = $2
             AND payment_address = $3
+        ORDER BY invoice.created_at DESC
+        LIMIT 1
         ",
         &[
             &payment_type,
@@ -157,7 +160,7 @@ pub async fn get_local_invoice_by_participants(
     payment_type: PaymentType,
     chain_id: &ChainId,
 ) -> Result<Invoice, DatabaseError> {
-    // Always return oldest invoice
+    // Always return newest invoice
     let maybe_row = db_client.query_opt(
         "
         SELECT invoice

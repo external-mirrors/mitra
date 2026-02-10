@@ -1,0 +1,1 @@
+ALTER TABLE invoice DROP CONSTRAINT invoice_chain_id_payment_address_key;

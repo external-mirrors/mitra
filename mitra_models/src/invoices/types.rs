@@ -255,14 +255,7 @@ impl Invoice {
                                 vec![]
                             }
                         },
-                        Completed => {
-                            if self.payout_tx_id.is_none() && self.payout_amount.is_none() {
-                                // Re-opening
-                                vec![Open]
-                            } else {
-                                vec![]
-                            }
-                        },
+                        Completed => vec![],
                         _ => vec![],
                     }
                 },
@@ -376,7 +369,7 @@ mod tests {
         assert_eq!(invoice.can_change_status(InvoiceStatus::Cancelled), false);
         invoice.payout_tx_id = None;
         invoice.payout_amount = None;
-        assert_eq!(invoice.can_change_status(InvoiceStatus::Open), true);
+        assert_eq!(invoice.can_change_status(InvoiceStatus::Open), false);
         assert_eq!(invoice.can_change_status(InvoiceStatus::Paid), false);
     }
 
