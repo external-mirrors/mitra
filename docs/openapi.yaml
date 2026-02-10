@@ -1458,6 +1458,12 @@ paths:
       security:
         - tokenAuth: []
       parameters:
+        - name: min_id
+          in: query
+          description: Return results immediately newer than this ID.
+          required: false
+          schema:
+            type: integer
         - name: max_id
           in: query
           description: Return results older than this ID.

@@ -227,6 +227,7 @@ mod tests {
             db_client,
             user_1.id,
             None,
+            None,
             5,
         ).await.unwrap();
         assert_eq!(notifications.len(), 1);

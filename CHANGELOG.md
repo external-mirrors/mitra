@@ -12,6 +12,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Added `--fetcher-recursion-limit` option to `import-object` command.
 - Allow to fetch non-public activities with a signed request.
 - Support sending form data to `/api/v1/lists` endpoint.
+- Added support for `min_id` query parameter to `/api/v1/notifications` endpoint.
 
 ### Changed
 

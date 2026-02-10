@@ -42,9 +42,11 @@ pub(super) async fn create_notification(
 pub async fn get_notifications(
     db_client: &impl DatabaseClient,
     recipient_id: Uuid,
+    min_id: Option<i32>,
     max_id: Option<i32>,
     limit: u16,
 ) -> Result<Vec<NotificationDetailed>, DatabaseError> {
+    let is_forward_paginated = min_id.is_some();
     let statement = format!(
         "
         SELECT
@@ -75,20 +77,30 @@ pub async fn get_notifications(
                     AND target_id = notification.sender_id
                     AND relationship_type = {relationship_mute}
             )
-            AND ($2::integer IS NULL OR notification.id < $2)
-        ORDER BY notification.id DESC
-        LIMIT $3
+            AND ($2::integer IS NULL OR notification.id > $2)
+            AND ($3::integer IS NULL OR notification.id < $3)
+        ORDER BY notification.id {order}
+        LIMIT $4
         ",
         post_subqueries=post_subqueries(),
         relationship_mute=i16::from(RelationshipType::Mute),
+        order=if is_forward_paginated { "ASC" } else { "DESC" },
     );
     let rows = db_client.query(
         &statement,
-        &[&recipient_id, &max_id, &i64::from(limit)],
+        &[
+            &recipient_id,
+            &min_id,
+            &max_id,
+            &i64::from(limit),
+        ],
     ).await?;
     let mut notifications: Vec<_> = rows.iter()
         .map(NotificationDetailed::try_from)
         .collect::<Result<_, _>>()?;
+    if is_forward_paginated {
+        notifications.reverse();
+    };
     add_related_posts(
         db_client,
         notifications.iter_mut()
@@ -147,6 +159,7 @@ mod tests {
             db_client,
             user_1.id,
             None,
+            None,
             5,
         ).await.unwrap();
         assert_eq!(notifications.len(), 1);
@@ -155,6 +168,50 @@ mod tests {
         assert_eq!(notifications[0].event_type, EventType::Reaction);
         assert_eq!(notifications[0].reaction_content, Some("❤️".to_string()));
         assert_eq!(notifications[0].reaction_emoji.is_none(), true);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_get_notifications_pagination() {
+        let db_client = &mut create_test_database().await;
+        let user_1 = create_test_user(db_client, "test1").await;
+        let user_2 = create_test_user(db_client, "test2").await;
+        let post = create_test_local_post(db_client, user_1.id, "test").await;
+        create_test_local_reaction(db_client, user_2.id, post.id, Some("a")).await;
+        create_test_local_reaction(db_client, user_2.id, post.id, Some("b")).await;
+        create_test_local_reaction(db_client, user_2.id, post.id, Some("c")).await;
+        create_test_local_reaction(db_client, user_2.id, post.id, Some("d")).await;
+        create_test_local_reaction(db_client, user_2.id, post.id, Some("e")).await;
+        let notifications = get_notifications(
+            db_client,
+            user_1.id,
+            None,
+            None,
+            5,
+        ).await.unwrap();
+        assert_eq!(notifications.len(), 5);
+
+        let notifications_backward = get_notifications(
+            db_client,
+            user_1.id,
+            None,
+            Some(notifications[0].id),
+            2,
+        ).await.unwrap();
+        assert_eq!(notifications_backward.len(), 2);
+        assert_eq!(notifications_backward[0].id, notifications[1].id);
+        assert_eq!(notifications_backward[1].id, notifications[2].id);
+
+        let notifications_forward = get_notifications(
+            db_client,
+            user_1.id,
+            Some(notifications[4].id),
+            None,
+            2,
+        ).await.unwrap();
+        assert_eq!(notifications_forward.len(), 2);
+        assert_eq!(notifications_forward[0].id, notifications[2].id);
+        assert_eq!(notifications_forward[1].id, notifications[3].id);
     }
 
     #[tokio::test]
@@ -169,6 +226,7 @@ mod tests {
             db_client,
             user_1.id,
             None,
+            None,
             5,
         ).await.unwrap();
         assert_eq!(notifications.len(), 1);
@@ -176,6 +234,7 @@ mod tests {
         let notifications = get_notifications(
             db_client,
             user_1.id,
+            None,
             None,
             5,
         ).await.unwrap();

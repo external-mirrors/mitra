@@ -32,6 +32,7 @@ use super::types::{
     NotificationPolicy,
 };
 
+// https://docs.joinmastodon.org/methods/notifications/#get
 #[get("")]
 async fn get_notifications_view(
     auth: BearerAuth,
@@ -49,6 +50,7 @@ async fn get_notifications_view(
     let notifications: Vec<Notification> = get_notifications(
         db_client,
         current_user.id,
+        query_params.min_id,
         query_params.max_id,
         query_params.limit.inner(),
     ).await?
