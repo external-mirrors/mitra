@@ -35,7 +35,11 @@ use mitra_validators::custom_feeds::{
 };
 
 use crate::{
-    http::{get_request_base_url, MultiQuery},
+    http::{
+        get_request_base_url,
+        JsonOrForm,
+        MultiQuery,
+    },
     mastodon_api::{
         accounts::types::Account,
         auth::get_current_user,
@@ -69,8 +73,9 @@ async fn get_lists(
 async fn create_list(
     auth: BearerAuth,
     db_pool: web::Data<DatabaseConnectionPool>,
-    list_data: web::Json<ListData>,
+    list_data: JsonOrForm<ListData>,
 ) -> Result<HttpResponse, MastodonError> {
+    let list_data = list_data.into_inner();
     let db_client = &**get_database_client(&db_pool).await?;
     let current_user = get_current_user(db_client, auth.token()).await?;
     let feed_name = clean_custom_feed_name(&list_data.title);
