@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Allow to fetch non-public activities with a signed request.
 - Support sending form data to `/api/v1/lists` endpoint.
 - Added support for `min_id` query parameter to `/api/v1/notifications` endpoint.
+- Support sending `multipart/form-data` to `/api/v1/markers` endpoint.
 
 ### Changed
 

@@ -1,3 +1,7 @@
+use actix_multipart::form::{
+    text::Text,
+    MultipartForm,
+};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
@@ -59,6 +63,29 @@ impl MarkerCreateData {
         self.notifications.as_ref()
             .map(|marker| &marker.last_read_id)
             .or(self.notifications_last_read_id.as_ref())
+    }
+}
+
+#[derive(MultipartForm)]
+pub struct MarkerCreateMultipartForm {
+    #[multipart(rename = "home[last_read_id]")]
+    home_last_read_id: Option<Text<String>>,
+    #[multipart(rename = "notifications[last_read_id]")]
+    notifications_last_read_id: Option<Text<String>>,
+}
+
+impl From<MarkerCreateMultipartForm> for MarkerCreateData {
+    fn from(form: MarkerCreateMultipartForm) -> Self {
+        Self {
+            home: form.home_last_read_id.map(|value| {
+                MarkerData { last_read_id: value.into_inner() }
+            }),
+            notifications: form.notifications_last_read_id.map(|value| {
+                 MarkerData { last_read_id: value.into_inner() }
+            }),
+            home_last_read_id: None,
+            notifications_last_read_id: None,
+        }
     }
 }
 
