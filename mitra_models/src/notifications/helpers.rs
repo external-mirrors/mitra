@@ -27,7 +27,11 @@ pub async fn create_follow_notification(
         return Ok(());
     };
     create_notification(
-        db_client, sender_id, recipient_id, None,
+        db_client,
+        sender_id,
+        recipient_id,
+        None,
+        None,
         None,
         EventType::Follow,
     ).await
@@ -47,7 +51,11 @@ pub async fn create_follow_request_notification(
         return Ok(());
     };
     create_notification(
-        db_client, sender_id, recipient_id, None,
+        db_client,
+        sender_id,
+        recipient_id,
+        None,
+        None,
         None,
         EventType::FollowRequest,
     ).await
@@ -68,7 +76,11 @@ pub async fn create_reply_notification(
         return Ok(());
     };
     create_notification(
-        db_client, sender_id, recipient_id, Some(post_id),
+        db_client,
+        sender_id,
+        recipient_id,
+        Some(post_id),
+        None,
         None,
         EventType::Reply,
     ).await
@@ -90,9 +102,12 @@ pub async fn create_reaction_notification(
         return Ok(());
     };
     create_notification(
-        db_client, sender_id, recipient_id,
+        db_client,
+        sender_id,
+        recipient_id,
         Some(post_id),
         Some(reaction_id),
+        None,
         EventType::Reaction,
     ).await
 }
@@ -112,7 +127,11 @@ pub async fn create_mention_notification(
         return Ok(());
     };
     create_notification(
-        db_client, sender_id, recipient_id, Some(post_id),
+        db_client,
+        sender_id,
+        recipient_id,
+        Some(post_id),
+        None,
         None,
         EventType::Mention,
     ).await
@@ -133,7 +152,11 @@ pub async fn create_repost_notification(
         return Ok(());
     };
     create_notification(
-        db_client, sender_id, recipient_id, Some(post_id),
+        db_client,
+        sender_id,
+        recipient_id,
+        Some(post_id),
+        None,
         None,
         EventType::Repost,
     ).await
@@ -143,10 +166,15 @@ pub async fn create_subscriber_payment_notification(
     db_client: &impl DatabaseClient,
     sender_id: Uuid,
     recipient_id: Uuid,
+    invoice_id: Uuid,
 ) -> Result<(), DatabaseError> {
     create_notification(
-        db_client, sender_id, recipient_id, None,
+        db_client,
+        sender_id,
+        recipient_id,
         None,
+        None,
+        Some(invoice_id),
         EventType::SubscriberPayment,
     ).await
 }
@@ -157,7 +185,11 @@ pub async fn create_subscriber_leaving_notification(
     recipient_id: Uuid,
 ) -> Result<(), DatabaseError> {
     create_notification(
-        db_client, sender_id, recipient_id, None,
+        db_client,
+        sender_id,
+        recipient_id,
+        None,
+        None,
         None,
         EventType::SubscriberLeaving,
     ).await
@@ -169,7 +201,11 @@ pub async fn create_subscription_expiration_notification(
     recipient_id: Uuid,
 ) -> Result<(), DatabaseError> {
     create_notification(
-        db_client, sender_id, recipient_id, None,
+        db_client,
+        sender_id,
+        recipient_id,
+        None,
+        None,
         None,
         EventType::SubscriptionExpiration,
     ).await
@@ -181,7 +217,11 @@ pub async fn create_move_notification(
     recipient_id: Uuid,
 ) -> Result<(), DatabaseError> {
     create_notification(
-        db_client, sender_id, recipient_id, None,
+        db_client,
+        sender_id,
+        recipient_id,
+        None,
+        None,
         None,
         EventType::Move,
     ).await
@@ -194,7 +234,11 @@ pub async fn create_signup_notifications(
     let admins = get_users_by_role(db_client, Role::Admin).await?;
     for recipient_id in admins {
         create_notification(
-            db_client, sender_id, recipient_id, None,
+            db_client,
+            sender_id,
+            recipient_id,
+            None,
+            None,
             None,
             EventType::SignUp,
         ).await?;
@@ -233,6 +277,8 @@ mod tests {
         assert_eq!(notifications.len(), 1);
         assert_eq!(notifications[0].sender.id, user_2.id);
         assert_eq!(notifications[0].post.is_none(), true);
+        assert!(notifications[0].reaction_content.is_none());
+        assert!(notifications[0].payment_amount.is_none());
         assert_eq!(notifications[0].event_type, EventType::Follow);
     }
 }

@@ -15,6 +15,7 @@ use uuid::Uuid;
 use crate::{
     database::{
         int_enum::{int_enum_from_sql, int_enum_to_sql},
+        DatabaseError,
         DatabaseTypeError,
     },
     payment_methods::types::PaymentType,
@@ -148,7 +149,8 @@ pub struct Invoice {
     pub invoice_status: InvoiceStatus,
     pub payment_type: Option<PaymentType>, // only for local
     pub payment_address: Option<String>,
-    pub payout_tx_id: Option<String>,
+    pub payout_tx_id: Option<String>, // could be empty in old invoices
+    pub payout_amount: Option<i64>, // could be empty in old invoices
     pub object_id: Option<String>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
@@ -178,7 +180,7 @@ impl Invoice {
             if self.payment_type.is_some() {
                 return Err(DatabaseTypeError);
             };
-            if self.payout_tx_id.is_some() {
+            if self.payout_tx_id.is_some() || self.payout_amount.is_some() {
                 return Err(DatabaseTypeError);
             };
             if self.payment_address.is_none()
@@ -208,12 +210,18 @@ impl Invoice {
                                 vec![Underpaid]
                             }
                         },
-                        Forwarded => vec![Completed, Failed],
+                        Forwarded => {
+                            if self.payout_amount.is_some() {
+                                vec![Completed]
+                            } else {
+                                vec![Failed]
+                            }
+                        },
                         Timeout => vec![Paid],
                         Cancelled => vec![Paid],
                         Underpaid => vec![Paid],
                         Completed => {
-                            if self.payout_tx_id.is_none() {
+                            if self.payout_tx_id.is_none() && self.payout_amount.is_none() {
                                 // Re-opening
                                 vec![Paid]
                             } else {
@@ -241,10 +249,14 @@ impl Invoice {
                             }
                         },
                         Paid => {
-                            vec![Completed]
+                            if self.payout_amount.is_some() {
+                                vec![Completed]
+                            } else {
+                                vec![]
+                            }
                         },
                         Completed => {
-                            if self.payout_tx_id.is_none() {
+                            if self.payout_tx_id.is_none() && self.payout_amount.is_none() {
                                 // Re-opening
                                 vec![Open]
                             } else {
@@ -284,6 +296,14 @@ impl Invoice {
         }
     }
 
+    pub fn try_payout_amount_u64(&self) -> Result<u64, DatabaseError> {
+        let amount_i64 = self.payout_amount
+            .ok_or(DatabaseTypeError)?;
+        let amount_u64 = u64::try_from(amount_i64)
+            .map_err(|_| DatabaseTypeError)?;
+        Ok(amount_u64)
+    }
+
     pub fn expires_at(&self, timeout: u32) -> DateTime<Utc> {
         self.created_at + TimeDelta::seconds(timeout.into())
     }
@@ -312,14 +332,18 @@ mod tests {
         assert_eq!(invoice.can_change_status(InvoiceStatus::Forwarded), true);
         assert_eq!(invoice.can_change_status(InvoiceStatus::Underpaid), false);
         invoice.invoice_status = InvoiceStatus::Forwarded;
-        assert_eq!(invoice.can_change_status(InvoiceStatus::Completed), true);
+        assert_eq!(invoice.can_change_status(InvoiceStatus::Completed), false);
         assert_eq!(invoice.can_change_status(InvoiceStatus::Failed), true);
         assert_eq!(invoice.can_change_status(InvoiceStatus::Cancelled), false);
+        invoice.payout_amount = Some(1);
+        assert_eq!(invoice.can_change_status(InvoiceStatus::Completed), true);
+        assert_eq!(invoice.can_change_status(InvoiceStatus::Failed), false);
         invoice.invoice_status = InvoiceStatus::Completed;
         assert_eq!(invoice.can_change_status(InvoiceStatus::Open), false);
         assert_eq!(invoice.can_change_status(InvoiceStatus::Paid), false);
         assert_eq!(invoice.can_change_status(InvoiceStatus::Cancelled), false);
         invoice.payout_tx_id = None;
+        invoice.payout_amount = None;
         assert_eq!(invoice.can_change_status(InvoiceStatus::Open), false);
         assert_eq!(invoice.can_change_status(InvoiceStatus::Paid), true);
     }
@@ -341,14 +365,17 @@ mod tests {
         assert_eq!(invoice.can_change_status(InvoiceStatus::Cancelled), false);
         invoice.invoice_status = InvoiceStatus::Paid;
         assert_eq!(invoice.can_change_status(InvoiceStatus::Forwarded), false);
-        assert_eq!(invoice.can_change_status(InvoiceStatus::Completed), true);
+        assert_eq!(invoice.can_change_status(InvoiceStatus::Completed), false);
         assert_eq!(invoice.can_change_status(InvoiceStatus::Timeout), false);
         assert_eq!(invoice.can_change_status(InvoiceStatus::Cancelled), false);
+        invoice.payout_amount = Some(1);
+        assert_eq!(invoice.can_change_status(InvoiceStatus::Completed), true);
         invoice.invoice_status = InvoiceStatus::Completed;
         assert_eq!(invoice.can_change_status(InvoiceStatus::Open), false);
         assert_eq!(invoice.can_change_status(InvoiceStatus::Paid), false);
         assert_eq!(invoice.can_change_status(InvoiceStatus::Cancelled), false);
         invoice.payout_tx_id = None;
+        invoice.payout_amount = None;
         assert_eq!(invoice.can_change_status(InvoiceStatus::Open), true);
         assert_eq!(invoice.can_change_status(InvoiceStatus::Paid), false);
     }

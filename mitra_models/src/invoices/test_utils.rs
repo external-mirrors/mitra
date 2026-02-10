@@ -24,6 +24,7 @@ impl Default for Invoice {
             payment_type: Some(PaymentType::Monero),
             payment_address: Some("".to_string()),
             payout_tx_id: None,
+            payout_amount: None,
             object_id: None,
             created_at: Default::default(),
             updated_at: Default::default(),

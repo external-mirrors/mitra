@@ -301,6 +301,24 @@ pub(super) async fn set_invoice_payout_tx_id(
     Ok(invoice)
 }
 
+pub(super) async fn set_invoice_payout_amount(
+    db_client: &impl DatabaseClient,
+    invoice_id: Uuid,
+    payout_amount: Option<i64>,
+) -> Result<Invoice, DatabaseError> {
+    let maybe_row = db_client.query_opt(
+        "
+        UPDATE invoice SET payout_amount = $2
+        WHERE id = $1
+        RETURNING invoice
+        ",
+        &[&invoice_id, &payout_amount],
+    ).await?;
+    let row = maybe_row.ok_or(DatabaseError::NotFound("invoice"))?;
+    let invoice = row.try_get("invoice")?;
+    Ok(invoice)
+}
+
 pub(super) async fn set_remote_invoice_data(
     db_client: &impl DatabaseClient,
     invoice_id: Uuid,

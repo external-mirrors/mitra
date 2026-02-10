@@ -15,6 +15,7 @@ pub(super) async fn create_notification(
     recipient_id: Uuid,
     post_id: Option<Uuid>,
     reaction_id: Option<Uuid>,
+    invoice_id: Option<Uuid>,
     event_type: EventType,
 ) -> Result<(), DatabaseError> {
     db_client.execute(
@@ -24,15 +25,17 @@ pub(super) async fn create_notification(
             recipient_id,
             post_id,
             reaction_id,
+            invoice_id,
             event_type
         )
-        VALUES ($1, $2, $3, $4, $5)
+        VALUES ($1, $2, $3, $4, $5, $6)
         ",
         &[
             &sender_id,
             &recipient_id,
             &post_id,
             &reaction_id,
+            &invoice_id,
             &event_type,
         ],
     ).await?;
@@ -56,7 +59,8 @@ pub async fn get_notifications(
             post_author,
             {post_subqueries},
             post_reaction.content AS reaction_content,
-            emoji AS reaction_emoji
+            emoji AS reaction_emoji,
+            invoice.payout_amount AS payment_amount
         FROM notification
         JOIN actor_profile AS sender
         ON notification.sender_id = sender.id
@@ -68,8 +72,10 @@ pub async fn get_notifications(
         ON notification.reaction_id = post_reaction.id
         LEFT JOIN emoji
         ON post_reaction.emoji_id = emoji.id
+        LEFT JOIN invoice
+        ON notification.invoice_id = invoice.id
         WHERE
-            recipient_id = $1
+            notification.recipient_id = $1
             AND NOT EXISTS (
                 SELECT 1 FROM relationship
                 WHERE

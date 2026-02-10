@@ -31,6 +31,7 @@ use mitra_models::{
     },
     invoices::{
         helpers::{
+            local_invoice_completed,
             local_invoice_forwarded,
             local_invoice_reopened,
             local_monero_light_invoice_paid,
@@ -315,7 +316,6 @@ async fn create_or_update_monero_subscription(
     db_client: &mut impl DatabaseClient,
     instance: &Instance,
     invoice: Invoice,
-    transfer_amount: u64, // piconero
 ) -> Result<(), PaymentError> {
     assert_eq!(invoice.invoice_status, InvoiceStatus::Completed);
     let sender = get_profile_by_id(db_client, invoice.sender_id).await?;
@@ -330,7 +330,8 @@ async fn create_or_update_monero_subscription(
         );
         return Ok(());
     };
-    let duration_secs = (transfer_amount / subscription_info.price)
+    let payout_amount = invoice.try_payout_amount_u64()?;
+    let duration_secs = (payout_amount / subscription_info.price)
         .try_into()
         .map_err(|_| MoneroError::OtherError("amount is too big"))?;
     let subscription = create_or_update_local_subscription(
@@ -343,6 +344,7 @@ async fn create_or_update_monero_subscription(
         db_client,
         sender.id,
         recipient.id,
+        invoice.id,
     ).await?;
     if let Some(ref remote_sender) = sender.actor_json {
         prepare_add_subscriber(
@@ -443,10 +445,10 @@ async fn check_forwarded_invoices(
             invoice.id,
             transfer.amount,
         );
-        let invoice = set_invoice_status(
+        let invoice = local_invoice_completed(
             db_client,
             invoice.id,
-            InvoiceStatus::Completed,
+            transfer.amount.as_pico(),
         ).await?;
 
         // Optional: update subscription
@@ -454,7 +456,6 @@ async fn check_forwarded_invoices(
             db_client,
             instance,
             invoice,
-            transfer.amount.as_pico(),
         ).await?;
     };
     Ok(())
@@ -646,10 +647,10 @@ async fn check_monero_light_paid_invoices(
             invoice.id,
             tx_amount,
         );
-        let invoice = set_invoice_status(
+        let invoice = local_invoice_completed(
             db_client,
             invoice.id,
-            InvoiceStatus::Completed,
+            tx_amount.as_pico(),
         ).await?;
 
         // Optional: update subscription
@@ -657,7 +658,6 @@ async fn check_monero_light_paid_invoices(
             db_client,
             instance,
             invoice,
-            tx_amount.as_pico(),
         ).await?;
     };
     Ok(())

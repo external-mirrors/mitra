@@ -14,6 +14,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Support sending form data to `/api/v1/lists` endpoint.
 - Added support for `min_id` query parameter to `/api/v1/notifications` endpoint.
 - Support sending `multipart/form-data` to `/api/v1/markers` endpoint.
+- Add payment amount to subscription notifications.
 
 ### Changed
 

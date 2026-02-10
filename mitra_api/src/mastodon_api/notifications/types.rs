@@ -54,6 +54,8 @@ pub struct Notification {
     emoji: Option<String>,
     emoji_url: Option<String>,
 
+    payment_amount: Option<i64>,
+
     #[serde(serialize_with = "serialize_datetime")]
     created_at: DateTime<Utc>,
 }
@@ -118,6 +120,7 @@ impl Notification {
             reaction: maybe_reaction,
             emoji: maybe_emoji_content,
             emoji_url: maybe_emoji_url,
+            payment_amount: notification.payment_amount,
             created_at: notification.created_at,
         }
     }

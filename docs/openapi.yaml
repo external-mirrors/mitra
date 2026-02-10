@@ -3764,6 +3764,7 @@ components:
             - subscription
             - subscription_expiration
             - subscriber_leaving
+            - payment_anonymous
             - move
             - admin.sign_up
           example: favourite
@@ -3796,6 +3797,10 @@ components:
         emoji_url:
           description: A link to the custom emoji.
           type: string
+          nullable: true
+        payment_amount:
+          description: Payment amount in units (only for `subscription` and `payment_anonymous` events).
+          type: integer
           nullable: true
         created_at:
           description: The timestamp of the notification.
