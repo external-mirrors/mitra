@@ -113,7 +113,7 @@ CREATE USER mitra WITH PASSWORD 'mitra';
 CREATE DATABASE mitra OWNER mitra ENCODING 'UTF8';
 ```
 
-Create configuration file by copying [`config.example.yaml`](./config.example.yaml) and configure the instance. Default config file path is `config.yaml`, but it can be changed using `CONFIG_PATH` environment variable.
+Create configuration file by copying [`config.example.yaml`](./config.example.yaml) or [`config.example.toml`](./config.example.toml), and configure the instance. Default config file path is `config.yaml`, but it can be changed using `CONFIG_PATH` environment variable.
 
 Create data and web client directories at locations specified in the configuration file (`storage_dir` and `web_client_dir` parameters).
 
@@ -190,6 +190,11 @@ systemctl start mitra
 ```
 
 ## Configuration
+
+### Examples
+
+- [YAML configuration file](./config.example.yaml)
+- [TOML configuration file](./config.example.toml)
 
 ### Environment variables
 
