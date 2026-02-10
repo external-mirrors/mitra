@@ -21,6 +21,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Don't generate repeated notifications if follow request already exists.
 - Fixed local origin check in actor importer that didn't take port number into account.
+- Canonicalize actor ID when performing gateway verification.
 
 ## [4.17.0] - 2026-02-05
 
