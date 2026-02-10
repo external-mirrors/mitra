@@ -9,10 +9,10 @@ use crate::mastodon_api::{
     pagination::PageSize,
 };
 
-/// https://docs.joinmastodon.org/entities/List/
+// https://docs.joinmastodon.org/entities/List/
 #[derive(Serialize)]
 pub struct List {
-    id: i32,
+    id: String,
     title: String,
     replies_policy: String,
     exclusive: bool,
@@ -21,7 +21,7 @@ pub struct List {
 impl List {
     pub fn from_db(db_feed: CustomFeed) -> Self {
         Self {
-            id: db_feed.id,
+            id: db_feed.id.to_string(),
             title: db_feed.feed_name,
             // "Show replies to any followed user"
             replies_policy: "followed".to_string(),

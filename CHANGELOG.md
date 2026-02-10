@@ -17,6 +17,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Reduced database lock time during pruning of empty profiles.
 - Include attempt number in activity delivery log message.
+- Changed `List.id` value type from integer to string.
 
 ### Fixed
 

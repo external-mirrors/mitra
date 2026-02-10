@@ -3699,7 +3699,7 @@ components:
       properties:
         id:
           description: The internal database ID of the custom feed.
-          type: integer
+          type: string
         title:
           description: The user-defined title of the custom feed.
           type: string
