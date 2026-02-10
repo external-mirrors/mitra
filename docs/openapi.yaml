@@ -1848,7 +1848,7 @@ paths:
                     - text/html
                     - text/markdown
                 language:
-                  description: ISO 639 language code for this post.
+                  description: ISO 639-1 language code for this post.
                   type: string
                   nullable: true
                   example: null
@@ -1978,7 +1978,7 @@ paths:
                     - text/html
                     - text/markdown
                 language:
-                  description: ISO 639 language code for this post.
+                  description: ISO 639-1 language code for this post.
                   type: string
                   nullable: true
                   example: null
