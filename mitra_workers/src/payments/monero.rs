@@ -34,6 +34,7 @@ use mitra_models::{
             local_invoice_forwarded,
             local_invoice_reopened,
             local_monero_light_invoice_paid,
+            local_monero_light_invoice_reopened,
         },
         queries::{
             create_local_invoice,
@@ -495,6 +496,7 @@ pub async fn check_closed_monero_invoices(
             Err(other_error) => return Err(other_error.into()),
         };
         if !invoice.invoice_status.is_final() {
+            // Open, Paid, etc
             continue;
         };
         log::info!(
@@ -704,8 +706,10 @@ pub async fn check_monero_light_payments(
             let db_client = &mut **get_database_client(db_pool).await?;
             log::info!("detected payment to primary address {tx_id}");
             let invoice = if let Some(invoice) = maybe_invoice {
-                // Invoice will be re-opened
-                invoice
+                local_monero_light_invoice_reopened(
+                    db_client,
+                    invoice.id,
+                ).await?
             } else {
                 create_local_invoice(
                     db_client,

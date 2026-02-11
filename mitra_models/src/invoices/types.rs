@@ -212,8 +212,22 @@ impl Invoice {
                         Timeout => vec![Paid],
                         Cancelled => vec![Paid],
                         Underpaid => vec![Paid],
-                        Completed => vec![Paid],
-                        Failed => vec![Paid],
+                        Completed => {
+                            if self.payout_tx_id.is_none() {
+                                // Re-opening
+                                vec![Paid]
+                            } else {
+                                vec![]
+                            }
+                        },
+                        Failed => {
+                            if self.payout_tx_id.is_none() {
+                                // Re-opening
+                                vec![Paid]
+                            } else {
+                                vec![]
+                            }
+                        },
                         Requested => vec![], // unreachable
                     }
                 },
@@ -229,7 +243,14 @@ impl Invoice {
                         Paid => {
                             vec![Completed]
                         },
-                        Completed => vec![Paid],
+                        Completed => {
+                            if self.payout_tx_id.is_none() {
+                                // Re-opening
+                                vec![Open]
+                            } else {
+                                vec![]
+                            }
+                        },
                         _ => vec![],
                     }
                 },
@@ -295,8 +316,12 @@ mod tests {
         assert_eq!(invoice.can_change_status(InvoiceStatus::Failed), true);
         assert_eq!(invoice.can_change_status(InvoiceStatus::Cancelled), false);
         invoice.invoice_status = InvoiceStatus::Completed;
-        assert_eq!(invoice.can_change_status(InvoiceStatus::Paid), true);
+        assert_eq!(invoice.can_change_status(InvoiceStatus::Open), false);
+        assert_eq!(invoice.can_change_status(InvoiceStatus::Paid), false);
         assert_eq!(invoice.can_change_status(InvoiceStatus::Cancelled), false);
+        invoice.payout_tx_id = None;
+        assert_eq!(invoice.can_change_status(InvoiceStatus::Open), false);
+        assert_eq!(invoice.can_change_status(InvoiceStatus::Paid), true);
     }
 
     #[test]
@@ -320,8 +345,12 @@ mod tests {
         assert_eq!(invoice.can_change_status(InvoiceStatus::Timeout), false);
         assert_eq!(invoice.can_change_status(InvoiceStatus::Cancelled), false);
         invoice.invoice_status = InvoiceStatus::Completed;
-        assert_eq!(invoice.can_change_status(InvoiceStatus::Paid), true);
+        assert_eq!(invoice.can_change_status(InvoiceStatus::Open), false);
+        assert_eq!(invoice.can_change_status(InvoiceStatus::Paid), false);
         assert_eq!(invoice.can_change_status(InvoiceStatus::Cancelled), false);
+        invoice.payout_tx_id = None;
+        assert_eq!(invoice.can_change_status(InvoiceStatus::Open), true);
+        assert_eq!(invoice.can_change_status(InvoiceStatus::Paid), false);
     }
 
     #[test]
