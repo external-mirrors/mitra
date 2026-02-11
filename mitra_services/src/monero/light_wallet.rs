@@ -41,12 +41,14 @@ impl LightWalletClient {
         &self,
         payment_id: PaymentId,
     ) -> Result<Option<String>, LightWalletError> {
-        let txs = self.client.get_address_txs(
+        let response = self.client.get_address_txs(
             self.address,
             self.view_key,
         ).await?;
-        let maybe_tx_id = txs.transactions
+        let maybe_tx_id = response.transactions
             .iter()
+            // Ignore spends
+            .filter(|tx| tx.total_received != "0")
             .find(|tx| tx.payment_id.as_ref().is_some_and(|id| id.0 == payment_id))
             .map(|tx| tx.hash.to_string());
         Ok(maybe_tx_id)
@@ -56,13 +58,13 @@ impl LightWalletClient {
         &self,
         tx_id: &str,
     ) -> Result<(u64, u64), LightWalletError> {
-        let txs = self.client.get_address_txs(
+        let response = self.client.get_address_txs(
             self.address,
             self.view_key,
         ).await?;
         // `blockchain_height` contains a wrong value
-        let blockchain_height = txs.scanned_block_height;
-        let maybe_tx_info = txs.transactions
+        let blockchain_height = response.scanned_block_height;
+        let maybe_tx_info = response.transactions
             .iter()
             .find(|tx| tx.hash.to_string() == tx_id);
         let Some(tx_info) = maybe_tx_info else {
@@ -81,12 +83,12 @@ impl LightWalletClient {
         &self,
         since_date: DateTime<Utc>,
     ) -> Result<Vec<String>, LightWalletError> {
-        let txs = self.client.get_address_txs(
+        let response = self.client.get_address_txs(
             self.address,
             self.view_key,
         ).await?;
         let mut primary_address_tx_ids = vec![];
-        for transaction in txs.transactions {
+        for transaction in response.transactions {
             if transaction.total_received == "0" {
                 // Ignore spends
                 continue;
