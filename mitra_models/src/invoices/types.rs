@@ -203,7 +203,7 @@ impl Invoice {
                         Open => vec![Paid, Timeout, Cancelled],
                         Paid => {
                             if self.payout_tx_id.is_some() {
-                                vec![Forwarded, Underpaid]
+                                vec![Forwarded]
                             } else {
                                 vec![Underpaid]
                             }
@@ -289,6 +289,7 @@ mod tests {
         assert_eq!(invoice.can_change_status(InvoiceStatus::Cancelled), false);
         invoice.payout_tx_id = Some("abcd".to_owned());
         assert_eq!(invoice.can_change_status(InvoiceStatus::Forwarded), true);
+        assert_eq!(invoice.can_change_status(InvoiceStatus::Underpaid), false);
         invoice.invoice_status = InvoiceStatus::Forwarded;
         assert_eq!(invoice.can_change_status(InvoiceStatus::Completed), true);
         assert_eq!(invoice.can_change_status(InvoiceStatus::Failed), true);
