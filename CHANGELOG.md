@@ -22,6 +22,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Changed `List.id` value type from integer to string.
 - Prevent changing invoice status to "Underpaid" if payout tx ID is set.
 - Prevent re-opening invoice if payout tx ID is not cleared.
+- Write payment amount to log when closing invoice.
 
 ### Fixed
 

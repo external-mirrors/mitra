@@ -2,6 +2,7 @@ use anyhow::{Error as LwsError};
 use chrono::{DateTime, Utc};
 use monero::util::{
     address::{Address, PaymentId},
+    amount::Amount,
     key::PrivateKey,
 };
 use monero_lws::{
@@ -57,7 +58,7 @@ impl LightWalletClient {
     pub async fn get_tx_info(
         &self,
         tx_id: &str,
-    ) -> Result<(u64, u64), LightWalletError> {
+    ) -> Result<(Amount, u64), LightWalletError> {
         let response = self.client.get_address_txs(
             self.address,
             self.view_key,
@@ -73,9 +74,10 @@ impl LightWalletClient {
         let tx_height = tx_info.height.unwrap_or(blockchain_height);
         let confirmations = blockchain_height.checked_sub(tx_height)
             .ok_or(LightWalletError::UnexpectedResponse)?;
-        let amount = tx_info.total_received
+        let amount_pico = tx_info.total_received
             .parse::<u64>()
             .map_err(|_| LightWalletError::UnexpectedResponse)?;
+        let amount = Amount::from_pico(amount_pico);
         Ok((amount, confirmations))
     }
 

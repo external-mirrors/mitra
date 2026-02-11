@@ -438,7 +438,11 @@ async fn check_forwarded_invoices(
             );
             continue;
         };
-        log::info!("payout transaction confirmed for invoice {}", invoice.id);
+        log::info!(
+            "payout transaction confirmed for invoice {} ({})",
+            invoice.id,
+            transfer.amount,
+        );
         let invoice = set_invoice_status(
             db_client,
             invoice.id,
@@ -637,7 +641,11 @@ async fn check_monero_light_paid_invoices(
             );
             continue;
         };
-        log::info!("payment transaction confirmed for invoice {}", invoice.id);
+        log::info!(
+            "payment transaction confirmed for invoice {} ({})",
+            invoice.id,
+            tx_amount,
+        );
         let invoice = set_invoice_status(
             db_client,
             invoice.id,
@@ -649,7 +657,7 @@ async fn check_monero_light_paid_invoices(
             db_client,
             instance,
             invoice,
-            tx_amount,
+            tx_amount.as_pico(),
         ).await?;
     };
     Ok(())
