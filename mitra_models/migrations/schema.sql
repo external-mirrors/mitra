@@ -379,7 +379,7 @@ CREATE TABLE invoice (
     payout_tx_id VARCHAR(200),
     object_id VARCHAR(2000) UNIQUE,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UNIQUE (chain_id, payment_address),
     CHECK (sender_id != recipient_id)
 );
