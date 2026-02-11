@@ -685,7 +685,13 @@ pub async fn check_monero_light_payments(
             &config.chain_id,
             &payout_address.to_string(),
         ).await {
-            Ok(invoice) => Some(invoice),
+            Ok(invoice) => {
+                if invoice.invoice_status != InvoiceStatus::Completed {
+                    // Already processing
+                    continue;
+                };
+                Some(invoice)
+            },
             Err(DatabaseError::NotFound(_)) => None,
             Err(other_error) => return Err(other_error.into()),
         };
