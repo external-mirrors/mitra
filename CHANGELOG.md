@@ -29,6 +29,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Fixed local origin check in actor importer that didn't take port number into account.
 - Canonicalize actor ID when performing gateway verification.
 - Don't create new anonymous invoices until previous payment is processed.
+- Prevent conflicts between open invoice monitor and anonymous payment monitor.
 
 ## [4.17.0] - 2026-02-05
 

@@ -549,6 +549,11 @@ async fn check_monero_light_open_invoices(
             );
             continue;
         };
+        let payment_address = invoice_payment_address(&invoice)?;
+        if payment_address == payment_method.payout_address {
+            // Ignore invoices for anonymous payments
+            continue;
+        };
         let payout_address = payment_method_payout_address(&payment_method)?;
         let view_key = payment_method_view_key(&payment_method)?;
         let lw_client = LightWalletClient::new(
@@ -556,7 +561,6 @@ async fn check_monero_light_open_invoices(
             payout_address,
             view_key,
         );
-        let payment_address = invoice_payment_address(&invoice)?;
         let payment_address = parse_monero_address(&payment_address)
             .map_err(|_| DatabaseError::type_error())?;
         let payment_id = get_payment_id(payment_address)
@@ -711,6 +715,8 @@ pub async fn check_monero_light_payments(
         if let Some(tx_id) = transactions.first() {
             let db_client = &mut **get_database_client(db_pool).await?;
             log::info!("detected payment to primary address {tx_id}");
+            // No conflict with open invoice monitor because it ignores
+            // invoices where payment address matches payout address
             let invoice = if let Some(invoice) = maybe_invoice {
                 local_monero_light_invoice_reopened(
                     db_client,
