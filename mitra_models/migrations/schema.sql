@@ -323,16 +323,6 @@ CREATE TABLE bookmark (
     UNIQUE (owner_id, post_id)
 );
 
-CREATE TABLE notification (
-    id SERIAL PRIMARY KEY,
-    sender_id UUID NOT NULL REFERENCES actor_profile (id) ON DELETE CASCADE,
-    recipient_id UUID NOT NULL REFERENCES user_account (id) ON DELETE CASCADE,
-    post_id UUID REFERENCES post (id) ON DELETE CASCADE,
-    reaction_id UUID REFERENCES post_reaction (id) ON DELETE CASCADE,
-    event_type SMALLINT NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
-);
-
 CREATE TABLE custom_feed (
     id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     owner_id UUID NOT NULL REFERENCES user_account (id) ON DELETE CASCADE,
@@ -392,6 +382,16 @@ CREATE TABLE subscription (
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL,
     UNIQUE (sender_id, recipient_id),
     CHECK (sender_id != recipient_id)
+);
+
+CREATE TABLE notification (
+    id SERIAL PRIMARY KEY,
+    sender_id UUID NOT NULL REFERENCES actor_profile (id) ON DELETE CASCADE,
+    recipient_id UUID NOT NULL REFERENCES user_account (id) ON DELETE CASCADE,
+    post_id UUID REFERENCES post (id) ON DELETE CASCADE,
+    reaction_id UUID REFERENCES post_reaction (id) ON DELETE CASCADE,
+    event_type SMALLINT NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
 );
 
 CREATE TABLE activitypub_object (
