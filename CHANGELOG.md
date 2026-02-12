@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [4.18.0] - 2026-02-12
+
 ### Added
 
 - Added `federation.fetcher_recursion_limit` configuration parameter.
