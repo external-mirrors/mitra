@@ -25,6 +25,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Prevent re-opening invoice if payout tx ID is not cleared.
 - Write payment amount to log when closing invoice.
 
+### Removed
+
+- Removed ability to pass address to `reopen-invoice` command.
+
 ### Fixed
 
 - Don't generate repeated notifications if follow request already exists.

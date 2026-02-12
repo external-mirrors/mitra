@@ -15,9 +15,6 @@ use mitra_models::{
             get_local_invoice_by_id,
             local_invoice_forwarded,
         },
-        queries::{
-            get_local_invoice_by_address,
-        },
         types::InvoiceStatus,
     },
     payment_methods::types::PaymentType,
@@ -31,7 +28,7 @@ use mitra_services::monero::wallet::{
 /// Re-open closed invoice (already processed, timed out or cancelled)
 #[derive(Parser)]
 pub struct ReopenInvoice {
-    id_or_address: String,
+    id: Uuid,
 }
 
 impl ReopenInvoice {
@@ -43,21 +40,12 @@ impl ReopenInvoice {
         let db_client = &mut **get_database_client(db_pool).await?;
         let monero_config = config.monero_config()
             .ok_or(anyhow!("monero integration is not enabled"))?;
-        let invoice = if let Ok(invoice_id) = Uuid::parse_str(&self.id_or_address) {
-            get_local_invoice_by_id(
-                db_client,
-                PaymentType::Monero,
-                &monero_config.chain_id,
-                invoice_id,
-            ).await?
-        } else {
-            get_local_invoice_by_address(
-                db_client,
-                PaymentType::Monero,
-                &monero_config.chain_id,
-                &self.id_or_address,
-            ).await?
-        };
+        let invoice = get_local_invoice_by_id(
+            db_client,
+            PaymentType::Monero,
+            &monero_config.chain_id,
+            self.id,
+        ).await?;
         reopen_local_invoice(
             monero_config,
             db_client,
