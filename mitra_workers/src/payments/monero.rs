@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use chrono::Utc;
 
 use mitra_activitypub::builders::{
@@ -39,6 +41,7 @@ use mitra_models::{
         },
         queries::{
             create_local_invoice,
+            get_invoice_by_id,
             get_local_invoice_by_address,
             get_local_invoices_by_status,
             set_invoice_status,
@@ -67,7 +70,6 @@ use mitra_services::monero::{
         get_incoming_transfers,
         get_latest_incoming_transfer,
         get_subaddress_balance,
-        get_subaddress_by_index,
         get_subaddress_index,
         get_transaction_by_id,
         open_monero_wallet,
@@ -121,7 +123,7 @@ async fn check_open_invoices(
 ) -> Result<(), PaymentError> {
     let db_client = &mut **get_database_client(db_pool).await?;
     // Invoices waiting for payment
-    let mut address_waitlist = vec![];
+    let mut address_waitlist = HashMap::new();
     let open_invoices = get_local_invoices_by_status(
         db_client,
         PaymentType::Monero,
@@ -145,27 +147,22 @@ async fn check_open_invoices(
             config.account_index,
             &payment_address,
         ).await?;
-        address_waitlist.push(address_index.minor);
+        address_waitlist.insert(address_index.minor, invoice.id);
     };
 
     if !address_waitlist.is_empty() {
         log::info!("{} invoices are waiting for payment", address_waitlist.len());
+        let address_indices = address_waitlist.keys().cloned().collect();
         let transfers = get_incoming_transfers(
             wallet_client,
             config.account_index,
-            address_waitlist,
+            address_indices,
         ).await?;
         for transfer in transfers {
-            let subaddress = get_subaddress_by_index(
-                wallet_client,
-                &transfer.subaddr_index,
-            ).await?;
-            let invoice = get_local_invoice_by_address(
-                db_client,
-                PaymentType::Monero,
-                &config.chain_id,
-                &subaddress.to_string(),
-            ).await?;
+            let invoice_id = address_waitlist.get(&transfer.subaddr_index.minor)
+                .ok_or(MoneroError::WalletRpcError("unexpected address index"))?;
+            // Re-load invoice, is it still `Open`?
+            let invoice = get_invoice_by_id(db_client, *invoice_id).await?;
             log::info!(
                 "received payment for invoice {}: {}",
                 invoice.id,
