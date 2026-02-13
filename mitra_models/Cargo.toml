@@ -52,6 +52,8 @@ tokio = { version = "1.38.0", features = ["macros"] }
 apx_core = { path = "../apx_core", features = ["experiments", "test-utils"] }
 
 [features]
+mini = []
+
 test-utils = []
 
 [lints]

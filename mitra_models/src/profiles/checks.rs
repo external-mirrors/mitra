@@ -22,6 +22,7 @@ pub fn check_public_keys(
             return Err(DatabaseTypeError);
         };
     };
+    #[cfg(not(feature = "mini"))]
     if matches!(origin, Origin::Local) && !public_keys.is_empty() {
         // Local actor must have no public keys
         return Err(DatabaseTypeError);
