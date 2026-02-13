@@ -151,7 +151,8 @@ pub struct Actor {
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub assertion_method: Vec<Multikey>,
 
-    pub public_key: PublicKeyPem,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub public_key: Option<PublicKeyPem>,
 
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub implements: Vec<ApplicationFeature>,
@@ -213,7 +214,7 @@ pub fn build_local_actor(
     let subscribers = LocalActorCollection::Subscribers.of(&actor_id);
     let featured = LocalActorCollection::Featured.of(&actor_id);
 
-    let public_key = PublicKeyPem::build(&actor_id, &user.rsa_secret_key)
+    let public_key_pem = PublicKeyPem::build(&actor_id, &user.rsa_secret_key)
         .map_err(|_| DatabaseTypeError)?;
     let verification_methods = vec![
         Multikey::build_rsa(&actor_id, &user.rsa_secret_key)
@@ -300,7 +301,7 @@ pub fn build_local_actor(
         subscribers: Some(subscribers),
         featured: Some(featured),
         assertion_method: verification_methods,
-        public_key,
+        public_key: Some(public_key_pem),
         implements: vec![],
         generator: Some(Application::new()),
         icon: avatar,
@@ -326,7 +327,7 @@ pub fn build_instance_actor(
     let actor_id = local_instance_actor_id(instance.uri_str());
     let actor_inbox = LocalActorCollection::Inbox.of(&actor_id);
     let actor_outbox = LocalActorCollection::Outbox.of(&actor_id);
-    let public_key = PublicKeyPem::build(&actor_id, &instance.rsa_secret_key)?;
+    let public_key_pem = PublicKeyPem::build(&actor_id, &instance.rsa_secret_key)?;
     let verification_methods = vec![
         Multikey::build_rsa(&actor_id, &instance.rsa_secret_key)?,
         Multikey::build_ed25519(&actor_id, &instance.ed25519_secret_key),
@@ -344,7 +345,7 @@ pub fn build_instance_actor(
         subscribers: None,
         featured: None,
         assertion_method: verification_methods,
-        public_key,
+        public_key: Some(public_key_pem),
         implements: Application::new().implements,
         generator: None,
         icon: None,
