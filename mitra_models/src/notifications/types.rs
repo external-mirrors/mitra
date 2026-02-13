@@ -84,6 +84,7 @@ struct Notification {
     recipient_id: Uuid,
     post_id: Option<Uuid>,
     reaction_id: Option<Uuid>,
+    invoice_id: Option<Uuid>,
     event_type: EventType,
     created_at: DateTime<Utc>,
 }
@@ -94,6 +95,7 @@ pub struct NotificationDetailed {
     pub post: Option<PostDetailed>,
     pub reaction_content: Option<String>,
     pub reaction_emoji: Option<CustomEmoji>,
+    pub payment_amount: Option<i64>,
     pub event_type: EventType,
     pub created_at: DateTime<Utc>,
 }
@@ -135,12 +137,14 @@ impl TryFrom<&Row> for NotificationDetailed {
         };
         let maybe_reaction_content = row.try_get("reaction_content")?;
         let maybe_reaction_emoji = row.try_get("reaction_emoji")?;
+        let maybe_payment_amount = row.try_get("payment_amount")?;
         let notification = Self {
             id: db_notification.id,
             sender: db_sender,
             post: maybe_post,
             reaction_content: maybe_reaction_content,
             reaction_emoji: maybe_reaction_emoji,
+            payment_amount: maybe_payment_amount,
             event_type: db_notification.event_type,
             created_at: db_notification.created_at,
         };

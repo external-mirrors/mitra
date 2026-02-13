@@ -21,9 +21,10 @@ use crate::mastodon_api::{
 
 fn default_page_size() -> PageSize { PageSize::new(20) }
 
-/// https://docs.joinmastodon.org/methods/notifications/
+// https://docs.joinmastodon.org/methods/notifications/
 #[derive(Deserialize)]
 pub struct NotificationQueryParams {
+    pub min_id: Option<i32>,
     pub max_id: Option<i32>,
 
     #[serde(default = "default_page_size")]
@@ -36,7 +37,7 @@ pub struct EmojiReaction {
     emoji: Option<CustomEmoji>,
 }
 
-/// https://docs.joinmastodon.org/entities/notification/
+// https://docs.joinmastodon.org/entities/notification/
 #[derive(Serialize)]
 pub struct Notification {
     pub id: String,
@@ -52,6 +53,8 @@ pub struct Notification {
     // Pleroma compatibility
     emoji: Option<String>,
     emoji_url: Option<String>,
+
+    payment_amount: Option<i64>,
 
     #[serde(serialize_with = "serialize_datetime")]
     created_at: DateTime<Utc>,
@@ -117,6 +120,7 @@ impl Notification {
             reaction: maybe_reaction,
             emoji: maybe_emoji_content,
             emoji_url: maybe_emoji_url,
+            payment_amount: notification.payment_amount,
             created_at: notification.created_at,
         }
     }

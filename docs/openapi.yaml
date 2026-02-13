@@ -1458,6 +1458,12 @@ paths:
       security:
         - tokenAuth: []
       parameters:
+        - name: min_id
+          in: query
+          description: Return results immediately newer than this ID.
+          required: false
+          schema:
+            type: integer
         - name: max_id
           in: query
           description: Return results older than this ID.
@@ -1848,7 +1854,7 @@ paths:
                     - text/html
                     - text/markdown
                 language:
-                  description: ISO 639 language code for this post.
+                  description: ISO 639-1 language code for this post.
                   type: string
                   nullable: true
                   example: null
@@ -1978,7 +1984,7 @@ paths:
                     - text/html
                     - text/markdown
                 language:
-                  description: ISO 639 language code for this post.
+                  description: ISO 639-1 language code for this post.
                   type: string
                   nullable: true
                   example: null
@@ -3699,7 +3705,7 @@ components:
       properties:
         id:
           description: The internal database ID of the custom feed.
-          type: integer
+          type: string
         title:
           description: The user-defined title of the custom feed.
           type: string
@@ -3758,6 +3764,7 @@ components:
             - subscription
             - subscription_expiration
             - subscriber_leaving
+            - payment_anonymous
             - move
             - admin.sign_up
           example: favourite
@@ -3790,6 +3797,10 @@ components:
         emoji_url:
           description: A link to the custom emoji.
           type: string
+          nullable: true
+        payment_amount:
+          description: Payment amount in units (only for `subscription` and `payment_anonymous` events).
+          type: integer
           nullable: true
         created_at:
           description: The timestamp of the notification.

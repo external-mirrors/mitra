@@ -303,11 +303,14 @@ async fn get_webfinger_hostname(
                     &actor.preferred_username,
                     &hostname,
                 );
-                let actor_id = perform_webfinger_query(
+                let webfinger_actor_id = perform_webfinger_query(
                     agent,
                     &webfinger_address,
                 ).await?;
-                if actor_id == actor.id {
+                let canonical_webfinger_actor_id = CanonicalUri::parse(&webfinger_actor_id)
+                    .map_err(|_| ValidationError("invalid actor ID in JRD"))?;
+                if canonical_webfinger_actor_id == canonical_actor_id {
+                    // Actor is hosted by this gateway
                     WebfingerHostname::Remote(hostname)
                 } else {
                     return Err(ValidationError("unexpected actor ID in JRD").into());

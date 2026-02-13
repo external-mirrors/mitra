@@ -323,16 +323,6 @@ CREATE TABLE bookmark (
     UNIQUE (owner_id, post_id)
 );
 
-CREATE TABLE notification (
-    id SERIAL PRIMARY KEY,
-    sender_id UUID NOT NULL REFERENCES actor_profile (id) ON DELETE CASCADE,
-    recipient_id UUID NOT NULL REFERENCES user_account (id) ON DELETE CASCADE,
-    post_id UUID REFERENCES post (id) ON DELETE CASCADE,
-    reaction_id UUID REFERENCES post_reaction (id) ON DELETE CASCADE,
-    event_type SMALLINT NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
-);
-
 CREATE TABLE custom_feed (
     id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     owner_id UUID NOT NULL REFERENCES user_account (id) ON DELETE CASCADE,
@@ -377,10 +367,10 @@ CREATE TABLE invoice (
     payment_type SMALLINT,
     payment_address VARCHAR(500),
     payout_tx_id VARCHAR(200),
+    payout_amount BIGINT CHECK (payout_amount > 0),
     object_id VARCHAR(2000) UNIQUE,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
-    UNIQUE (chain_id, payment_address),
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CHECK (sender_id != recipient_id)
 );
 
@@ -392,6 +382,17 @@ CREATE TABLE subscription (
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL,
     UNIQUE (sender_id, recipient_id),
     CHECK (sender_id != recipient_id)
+);
+
+CREATE TABLE notification (
+    id SERIAL PRIMARY KEY,
+    sender_id UUID NOT NULL REFERENCES actor_profile (id) ON DELETE CASCADE,
+    recipient_id UUID NOT NULL REFERENCES user_account (id) ON DELETE CASCADE,
+    post_id UUID REFERENCES post (id) ON DELETE CASCADE,
+    reaction_id UUID REFERENCES post_reaction (id) ON DELETE CASCADE,
+    invoice_id UUID REFERENCES invoice (id) ON DELETE CASCADE,
+    event_type SMALLINT NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
 );
 
 CREATE TABLE activitypub_object (

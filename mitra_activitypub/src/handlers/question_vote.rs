@@ -72,7 +72,13 @@ pub async fn handle_question_vote(
         db_pool,
         &vote.attributed_to,
     ).await?;
-    let post_id = parse_local_object_id(instance.uri_str(), &vote.in_reply_to)?;
+    let Ok(post_id) = parse_local_object_id(
+        instance.uri_str(),
+        &vote.in_reply_to,
+    ) else {
+        log::warn!("vote for a remote poll");
+        return Ok(None);
+    };
     let db_client = &mut **get_database_client(db_pool).await?;
     let mut post = get_local_post_by_id(db_client, post_id).await?;
     if !can_view_post(db_client, Some(&voter), &post).await? {

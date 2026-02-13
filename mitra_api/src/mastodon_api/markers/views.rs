@@ -1,4 +1,12 @@
-use actix_web::{get, post, web, HttpResponse, Scope};
+use actix_multipart::form::MultipartForm;
+use actix_web::{
+    get,
+    post,
+    web,
+    Either,
+    HttpResponse,
+    Scope,
+};
 use actix_web_httpauth::extractors::bearer::BearerAuth;
 
 use mitra_models::{
@@ -19,7 +27,12 @@ use crate::{
     },
 };
 
-use super::types::{MarkerQueryParams, MarkerCreateData, Markers};
+use super::types::{
+    MarkerQueryParams,
+    MarkerCreateData,
+    MarkerCreateMultipartForm,
+    Markers,
+};
 
 // https://docs.joinmastodon.org/methods/markers/#get
 #[get("")]
@@ -56,11 +69,18 @@ async fn get_marker_view(
 async fn update_marker_view(
     auth: BearerAuth,
     db_pool: web::Data<DatabaseConnectionPool>,
-    marker_data: JsonOrForm<MarkerCreateData>,
+    marker_data: Either<
+        JsonOrForm<MarkerCreateData>,
+        // Tuba uses multipart/form-data
+        MultipartForm<MarkerCreateMultipartForm>,
+    >,
 ) -> Result<HttpResponse, MastodonError> {
+    let marker_data = match marker_data {
+        Either::Left(data) => data.into_inner(),
+        Either::Right(form) => form.into_inner().into(),
+    };
     let db_client = &**get_database_client(&db_pool).await?;
     let current_user = get_current_user(db_client, auth.token()).await?;
-    let marker_data = marker_data.into_inner();
     let (timeline, last_read_id) = if let Some(last_read_id) = marker_data.home_last_read_id() {
         (Timeline::Home, last_read_id)
     } else if let Some(last_read_id) = marker_data.notifications_last_read_id() {

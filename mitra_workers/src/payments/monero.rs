@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use chrono::Utc;
 
 use mitra_activitypub::builders::{
@@ -31,12 +33,14 @@ use mitra_models::{
     },
     invoices::{
         helpers::{
+            local_invoice_completed,
             local_invoice_forwarded,
             local_invoice_reopened,
             local_monero_light_invoice_paid,
         },
         queries::{
             create_local_invoice,
+            get_invoice_by_id,
             get_local_invoice_by_address,
             get_local_invoices_by_status,
             set_invoice_status,
@@ -65,7 +69,6 @@ use mitra_services::monero::{
         get_incoming_transfers,
         get_latest_incoming_transfer,
         get_subaddress_balance,
-        get_subaddress_by_index,
         get_subaddress_index,
         get_transaction_by_id,
         open_monero_wallet,
@@ -119,7 +122,7 @@ async fn check_open_invoices(
 ) -> Result<(), PaymentError> {
     let db_client = &mut **get_database_client(db_pool).await?;
     // Invoices waiting for payment
-    let mut address_waitlist = vec![];
+    let mut address_waitlist = HashMap::new();
     let open_invoices = get_local_invoices_by_status(
         db_client,
         PaymentType::Monero,
@@ -143,27 +146,22 @@ async fn check_open_invoices(
             config.account_index,
             &payment_address,
         ).await?;
-        address_waitlist.push(address_index.minor);
+        address_waitlist.insert(address_index.minor, invoice.id);
     };
 
     if !address_waitlist.is_empty() {
         log::info!("{} invoices are waiting for payment", address_waitlist.len());
+        let address_indices = address_waitlist.keys().cloned().collect();
         let transfers = get_incoming_transfers(
             wallet_client,
             config.account_index,
-            address_waitlist,
+            address_indices,
         ).await?;
         for transfer in transfers {
-            let subaddress = get_subaddress_by_index(
-                wallet_client,
-                &transfer.subaddr_index,
-            ).await?;
-            let invoice = get_local_invoice_by_address(
-                db_client,
-                PaymentType::Monero,
-                &config.chain_id,
-                &subaddress.to_string(),
-            ).await?;
+            let invoice_id = address_waitlist.get(&transfer.subaddr_index.minor)
+                .ok_or(MoneroError::WalletRpcError("unexpected address index"))?;
+            // Re-load invoice, is it still `Open`?
+            let invoice = get_invoice_by_id(db_client, *invoice_id).await?;
             log::info!(
                 "received payment for invoice {}: {}",
                 invoice.id,
@@ -314,7 +312,6 @@ async fn create_or_update_monero_subscription(
     db_client: &mut impl DatabaseClient,
     instance: &Instance,
     invoice: Invoice,
-    transfer_amount: u64, // piconero
 ) -> Result<(), PaymentError> {
     assert_eq!(invoice.invoice_status, InvoiceStatus::Completed);
     let sender = get_profile_by_id(db_client, invoice.sender_id).await?;
@@ -329,7 +326,8 @@ async fn create_or_update_monero_subscription(
         );
         return Ok(());
     };
-    let duration_secs = (transfer_amount / subscription_info.price)
+    let payout_amount = invoice.try_payout_amount_u64()?;
+    let duration_secs = (payout_amount / subscription_info.price)
         .try_into()
         .map_err(|_| MoneroError::OtherError("amount is too big"))?;
     let subscription = create_or_update_local_subscription(
@@ -342,6 +340,7 @@ async fn create_or_update_monero_subscription(
         db_client,
         sender.id,
         recipient.id,
+        invoice.id,
     ).await?;
     if let Some(ref remote_sender) = sender.actor_json {
         prepare_add_subscriber(
@@ -437,11 +436,15 @@ async fn check_forwarded_invoices(
             );
             continue;
         };
-        log::info!("payout transaction confirmed for invoice {}", invoice.id);
-        let invoice = set_invoice_status(
+        log::info!(
+            "payout transaction confirmed for invoice {} ({})",
+            invoice.id,
+            transfer.amount,
+        );
+        let invoice = local_invoice_completed(
             db_client,
             invoice.id,
-            InvoiceStatus::Completed,
+            transfer.amount.as_pico(),
         ).await?;
 
         // Optional: update subscription
@@ -449,7 +452,6 @@ async fn check_forwarded_invoices(
             db_client,
             instance,
             invoice,
-            transfer.amount.as_pico(),
         ).await?;
     };
     Ok(())
@@ -478,6 +480,7 @@ pub async fn check_closed_monero_invoices(
     ).await?;
     let db_client = &mut **get_database_client(db_pool).await?;
     for (address, _) in addresses {
+        // Returns newest invoice
         let invoice = match get_local_invoice_by_address(
             db_client,
             PaymentType::Monero,
@@ -495,6 +498,7 @@ pub async fn check_closed_monero_invoices(
             Err(other_error) => return Err(other_error.into()),
         };
         if !invoice.invoice_status.is_final() {
+            // Open, Paid, etc
             continue;
         };
         log::info!(
@@ -547,6 +551,11 @@ async fn check_monero_light_open_invoices(
             );
             continue;
         };
+        let payment_address = invoice_payment_address(&invoice)?;
+        if payment_address == payment_method.payout_address {
+            // Ignore invoices for anonymous payments
+            continue;
+        };
         let payout_address = payment_method_payout_address(&payment_method)?;
         let view_key = payment_method_view_key(&payment_method)?;
         let lw_client = LightWalletClient::new(
@@ -554,7 +563,6 @@ async fn check_monero_light_open_invoices(
             payout_address,
             view_key,
         );
-        let payment_address = invoice_payment_address(&invoice)?;
         let payment_address = parse_monero_address(&payment_address)
             .map_err(|_| DatabaseError::type_error())?;
         let payment_id = get_payment_id(payment_address)
@@ -631,11 +639,15 @@ async fn check_monero_light_paid_invoices(
             );
             continue;
         };
-        log::info!("payment transaction confirmed for invoice {}", invoice.id);
-        let invoice = set_invoice_status(
+        log::info!(
+            "payment transaction confirmed for invoice {} ({})",
+            invoice.id,
+            tx_amount,
+        );
+        let invoice = local_invoice_completed(
             db_client,
             invoice.id,
-            InvoiceStatus::Completed,
+            tx_amount.as_pico(),
         ).await?;
 
         // Optional: update subscription
@@ -643,7 +655,6 @@ async fn check_monero_light_paid_invoices(
             db_client,
             instance,
             invoice,
-            tx_amount,
         ).await?;
     };
     Ok(())
@@ -683,7 +694,13 @@ pub async fn check_monero_light_payments(
             &config.chain_id,
             &payout_address.to_string(),
         ).await {
-            Ok(invoice) => Some(invoice),
+            Ok(invoice) => {
+                if invoice.invoice_status != InvoiceStatus::Completed {
+                    // Already processing
+                    continue;
+                };
+                Some(invoice)
+            },
             Err(DatabaseError::NotFound(_)) => None,
             Err(other_error) => return Err(other_error.into()),
         };
@@ -703,20 +720,17 @@ pub async fn check_monero_light_payments(
         if let Some(tx_id) = transactions.first() {
             let db_client = &mut **get_database_client(db_pool).await?;
             log::info!("detected payment to primary address {tx_id}");
-            let invoice = if let Some(invoice) = maybe_invoice {
-                // Invoice will be re-opened
-                invoice
-            } else {
-                create_local_invoice(
-                    db_client,
-                    anonymous_sender_id,
-                    payment_method.owner_id,
-                    payment_method.payment_type,
-                    payment_method.chain_id.inner(),
-                    &payout_address.to_string(),
-                    0, // no expected amount
-                ).await?
-            };
+            // No conflict with open invoice monitor because it ignores
+            // invoices where payment address matches payout address
+            let invoice = create_local_invoice(
+                db_client,
+                anonymous_sender_id,
+                payment_method.owner_id,
+                payment_method.payment_type,
+                payment_method.chain_id.inner(),
+                &payout_address.to_string(),
+                0, // no expected amount
+            ).await?;
             local_monero_light_invoice_paid(
                 db_client,
                 invoice.id,

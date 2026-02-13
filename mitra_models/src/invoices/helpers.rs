@@ -5,6 +5,7 @@ use crate::{
     database::{
         DatabaseClient,
         DatabaseError,
+        DatabaseTypeError,
     },
     payment_methods::types::PaymentType,
 };
@@ -12,6 +13,7 @@ use crate::{
 use super::{
     queries::{
         get_invoice_by_id,
+        set_invoice_payout_amount,
         set_invoice_payout_tx_id,
         set_invoice_status,
         set_remote_invoice_data,
@@ -55,12 +57,39 @@ pub async fn local_invoice_forwarded(
     Ok(invoice)
 }
 
+pub async fn local_invoice_completed(
+    db_client: &mut impl DatabaseClient,
+    invoice_id: Uuid,
+    payout_amount: u64,
+) -> Result<Invoice, DatabaseError> {
+    let mut transaction = db_client.transaction().await?;
+    let payout_amount = i64::try_from(payout_amount)
+        .map_err(|_| DatabaseTypeError)?;
+    set_invoice_payout_amount(
+        &transaction,
+        invoice_id,
+        Some(payout_amount),
+    ).await?;
+    let invoice = set_invoice_status(
+        &mut transaction,
+        invoice_id,
+        InvoiceStatus::Completed,
+    ).await?;
+    transaction.commit().await?;
+    Ok(invoice)
+}
+
 pub async fn local_invoice_reopened(
     db_client: &mut impl DatabaseClient,
     invoice_id: Uuid,
 ) -> Result<Invoice, DatabaseError> {
     let mut transaction = db_client.transaction().await?;
     set_invoice_payout_tx_id(
+        &transaction,
+        invoice_id,
+        None, // reset
+    ).await?;
+    set_invoice_payout_amount(
         &transaction,
         invoice_id,
         None, // reset
@@ -180,11 +209,14 @@ mod tests {
         assert_eq!(invoice.invoice_status, InvoiceStatus::Forwarded);
         assert_eq!(invoice.payout_tx_id.as_deref(), Some(payout_tx_id));
 
-        set_invoice_status(
+        let payout_amount = 1_i64;
+        let invoice = local_invoice_completed(
             db_client,
             invoice.id,
-            InvoiceStatus::Completed,
+            payout_amount as u64,
         ).await.unwrap();
+        assert_eq!(invoice.invoice_status, InvoiceStatus::Completed);
+        assert_eq!(invoice.payout_amount, Some(payout_amount));
 
         let invoice = local_invoice_reopened(
             db_client,
@@ -192,6 +224,7 @@ mod tests {
         ).await.unwrap();
         assert_eq!(invoice.invoice_status, InvoiceStatus::Paid);
         assert_eq!(invoice.payout_tx_id, None);
+        assert_eq!(invoice.payout_amount, None);
     }
 
     #[tokio::test]

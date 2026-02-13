@@ -129,6 +129,7 @@ pub async fn get_local_invoice_by_address(
     chain_id: &ChainId,
     payment_address: &str,
 ) -> Result<Invoice, DatabaseError> {
+    // Always return newest invoice
     let maybe_row = db_client.query_opt(
         "
         SELECT invoice
@@ -138,6 +139,8 @@ pub async fn get_local_invoice_by_address(
             payment_type = $1
             AND chain_id = $2
             AND payment_address = $3
+        ORDER BY invoice.created_at DESC
+        LIMIT 1
         ",
         &[
             &payment_type,
@@ -157,7 +160,7 @@ pub async fn get_local_invoice_by_participants(
     payment_type: PaymentType,
     chain_id: &ChainId,
 ) -> Result<Invoice, DatabaseError> {
-    // Always return oldest invoice
+    // Always return newest invoice
     let maybe_row = db_client.query_opt(
         "
         SELECT invoice
@@ -295,6 +298,24 @@ pub(super) async fn set_invoice_payout_tx_id(
         RETURNING invoice
         ",
         &[&invoice_id, &payout_tx_id],
+    ).await?;
+    let row = maybe_row.ok_or(DatabaseError::NotFound("invoice"))?;
+    let invoice = row.try_get("invoice")?;
+    Ok(invoice)
+}
+
+pub(super) async fn set_invoice_payout_amount(
+    db_client: &impl DatabaseClient,
+    invoice_id: Uuid,
+    payout_amount: Option<i64>,
+) -> Result<Invoice, DatabaseError> {
+    let maybe_row = db_client.query_opt(
+        "
+        UPDATE invoice SET payout_amount = $2
+        WHERE id = $1
+        RETURNING invoice
+        ",
+        &[&invoice_id, &payout_amount],
     ).await?;
     let row = maybe_row.ok_or(DatabaseError::NotFound("invoice"))?;
     let invoice = row.try_get("invoice")?;

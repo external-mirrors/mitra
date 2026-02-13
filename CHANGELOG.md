@@ -6,28 +6,47 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [4.18.0] - 2026-02-12
+
 ### Added
 
 - Added `federation.fetcher_recursion_limit` configuration parameter.
 - Added `--fetcher-recursion-limit` option to `import-object` command.
 - Allow to fetch non-public activities with a signed request.
+- Support sending form data to `/api/v1/lists` endpoint.
+- Added support for `min_id` query parameter to `/api/v1/notifications` endpoint.
+- Support sending `multipart/form-data` to `/api/v1/markers` endpoint.
+- Add payment amount to subscription notifications.
 
 ### Changed
 
 - Reduced database lock time during pruning of empty profiles.
 - Include attempt number in activity delivery log message.
+- Changed `List.id` value type from integer to string.
+- Prevent changing invoice status to "Underpaid" if payout tx ID is set.
+- Prevent re-opening invoice if payout tx ID is not cleared.
+- Write payment amount to log when closing invoice.
+- Allow to create multiple invoices with the same payment address.
+- Ignore votes for remote polls.
+
+### Removed
+
+- Removed ability to pass address to `reopen-invoice` command.
 
 ### Fixed
 
 - Don't generate repeated notifications if follow request already exists.
 - Fixed local origin check in actor importer that didn't take port number into account.
+- Canonicalize actor ID when performing gateway verification.
+- Don't create new anonymous invoices until previous payment is processed.
+- Prevent conflicts between open invoice monitor and anonymous payment monitor.
 
 ## [4.17.0] - 2026-02-05
 
 ### Added
 
 - Added support for configuration files in TOML format.
-- Indicate restricted access to public timeline in `configuration.timelines_access` mapping ([#139](https://codeberg.org/silverpill/mitra/issues/139)).
+- Indicate restricted access to public timeline in `configuration.timelines_access` mapping ([#197](https://codeberg.org/silverpill/mitra/pulls/197)).
 - Added `/api/v1/favourites` API endpoint.
 - Added `/api/v1/preferences` API endpoint.
 - Added shared default post visibility setting.
