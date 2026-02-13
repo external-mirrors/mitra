@@ -55,7 +55,7 @@ fn to_db_key(key_id: &str, public_key: PublicKey) -> Result<DbActorKey, Validati
 pub struct PublicKeyPem {
     pub id: String,
     pub owner: String,
-    public_key_pem: String,
+    pub public_key_pem: String,
 }
 
 impl PublicKeyPem {
@@ -89,9 +89,9 @@ impl PublicKeyPem {
 pub struct Multikey {
     pub id: String,
     #[serde(rename = "type")]
-    object_type: String,
+    pub object_type: String,
     pub controller: String,
-    public_key_multibase: String,
+    pub public_key_multibase: String,
 }
 
 // FEP-521a
