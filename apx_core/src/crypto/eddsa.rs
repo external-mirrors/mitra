@@ -2,9 +2,11 @@
 use ed25519_dalek::{
     pkcs8::{
         spki::{
+            der::pem::LineEnding,
             Error as Pkcs8Error,
         },
         DecodePublicKey,
+        EncodePublicKey,
         PublicKeyBytes,
     },
     SecretKey,
@@ -90,6 +92,15 @@ pub fn ed25519_public_key_from_bytes(
     Ok(public_key)
 }
 
+/// Encodes ed25519 public key into PEM format
+pub fn ed25519_public_key_to_pkcs8_pem(
+    public_key: VerifyingKey,
+) -> Result<String, Ed25519SerializationError> {
+    // LF = \n
+    let public_key_pem = public_key.to_public_key_pem(LineEnding::LF)?;
+    Ok(public_key_pem)
+}
+
 /// Decodes ed25519 public key from PEM format
 pub fn ed25519_public_key_from_pkcs8_pem(
     public_key_pem: &str,
@@ -154,6 +165,15 @@ mod tests {
         let encoded = ed25519_secret_key_to_multikey(&secret_key);
         let decoded = ed25519_secret_key_from_multikey(&encoded).unwrap();
         assert_eq!(decoded, secret_key);
+    }
+
+    #[test]
+    fn test_public_key_pem_encode_decode() {
+        let secret_key = generate_weak_ed25519_key();
+        let public_key = ed25519_public_key_from_secret_key(&secret_key);
+        let encoded = ed25519_public_key_to_pkcs8_pem(public_key).unwrap();
+        let decoded = ed25519_public_key_from_pkcs8_pem(&encoded).unwrap();
+        assert_eq!(decoded, public_key);
     }
 
     #[test]
