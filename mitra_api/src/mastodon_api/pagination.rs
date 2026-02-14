@@ -106,9 +106,10 @@ mod tests {
         let value: PageSize = serde_json::from_str("0").unwrap();
         assert_eq!(value.inner(), 0);
 
-        let expected_error = "expected an integer between 0 and 201";
+        let expected_error = "invalid value: integer `-1`, expected u16 at line 1 column 2";
         let error = serde_json::from_str::<PageSize>("-1").unwrap_err();
         assert_eq!(error.to_string(), expected_error);
+        let expected_error = "expected an integer between 0 and 201";
         let error = serde_json::from_str::<PageSize>("201").unwrap_err();
         assert_eq!(error.to_string(), expected_error);
     }
