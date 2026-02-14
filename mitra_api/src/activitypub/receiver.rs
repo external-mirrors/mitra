@@ -93,12 +93,13 @@ pub async fn receive_activity(
     let activity_actor = object_to_id(&activity["actor"])
         .map_err(|_| ValidationError("invalid 'actor' property"))?;
 
-    let actor_hostname = get_hostname(&activity_actor)
-        .map_err(|_| ValidationError("invalid actor ID"))?;
     let filter = FederationFilter::init_with_pool(config, db_pool).await?;
-    if filter.is_incoming_blocked(&actor_hostname) {
-        log::info!("ignoring activity from blocked instance {actor_hostname}");
-        return Ok(());
+    if let Ok(possible_actor_hostname) = get_hostname(&activity_actor) {
+        // This only works for HTTP URIs
+        if filter.is_incoming_blocked(&possible_actor_hostname) {
+            log::info!("ignoring activity from blocked instance {possible_actor_hostname}");
+            return Ok(());
+        };
     };
     // Validates URIs; should be performed after filtering
     let _canonical_activity_id = canonicalize_id(activity_id)?;

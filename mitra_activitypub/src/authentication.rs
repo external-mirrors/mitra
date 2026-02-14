@@ -247,6 +247,7 @@ pub async fn verify_signed_request(
     };
     // Try to guess the key owner ID from the key ID.
     let signer_id = match signature_data.key_id {
+        // NOTE: portable key IDs in compatible form are parsed as HTTP URIs
         VerificationMethod::HttpUri(ref key_id) => {
             key_id_to_actor_id(key_id.as_str())
                 .map_err(|_| ValidationError("invalid key ID"))?
