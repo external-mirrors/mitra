@@ -46,13 +46,13 @@ pub fn get_paginated_response(
     }
 }
 
-const PAGE_MAX_SIZE: u16 = 200;
-
 #[derive(Debug, Deserialize)]
-#[serde(try_from="u16")]
+#[serde(try_from = "u16")]
 pub struct PageSize(u16);
 
 impl PageSize {
+    pub const MAX: u16 = 200;
+
     pub fn new(size: u16) -> Self { Self(size) }
 
     pub fn inner(&self) -> u16 { self.0 }
@@ -62,7 +62,7 @@ impl TryFrom<u16> for PageSize {
     type Error = &'static str;
 
     fn try_from(value: u16) -> Result<Self, Self::Error> {
-        if value > 0 && value <= PAGE_MAX_SIZE {
+        if value <= Self::MAX {
             Ok(Self(value))
         } else {
             Err("expected an integer between 0 and 201")
@@ -103,9 +103,11 @@ mod tests {
     fn test_deserialize_page_size() {
         let value: PageSize = serde_json::from_str("10").unwrap();
         assert_eq!(value.inner(), 10);
+        let value: PageSize = serde_json::from_str("0").unwrap();
+        assert_eq!(value.inner(), 0);
 
         let expected_error = "expected an integer between 0 and 201";
-        let error = serde_json::from_str::<PageSize>("0").unwrap_err();
+        let error = serde_json::from_str::<PageSize>("-1").unwrap_err();
         assert_eq!(error.to_string(), expected_error);
         let error = serde_json::from_str::<PageSize>("201").unwrap_err();
         assert_eq!(error.to_string(), expected_error);

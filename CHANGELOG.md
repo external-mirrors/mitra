@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Changed
 
 - Disabled early filtering for incoming activities with ap:// IDs.
+- Return page with 200 items to `/api/v1/lists/{list_id}/accounts` call if limit is set to 0.
 
 ## [4.18.0] - 2026-02-12
 

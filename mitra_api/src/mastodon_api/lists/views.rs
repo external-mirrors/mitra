@@ -45,6 +45,7 @@ use crate::{
         auth::get_current_user,
         errors::MastodonError,
         media_server::ClientMediaServer,
+        pagination::PageSize,
     },
 };
 
@@ -164,11 +165,16 @@ async fn get_list_accounts(
         *list_id,
         current_user.id,
     ).await?;
+    let limit = if query_params.limit.inner() == 0 {
+        PageSize::MAX
+    } else {
+        query_params.limit.inner()
+    };
     let sources = get_custom_feed_sources(
         db_client,
         feed.id,
         query_params.max_id,
-        query_params.limit.inner(),
+        limit,
     ).await?;
     let base_url = get_request_base_url(connection_info);
     let media_server = ClientMediaServer::new(&config, &base_url);
