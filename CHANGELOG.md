@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [4.18.1] - 2026-02-14
+
 ### Added
 
 - Support POSTing form data to `/api/v1/lists/{list_id}/accounts` endpoint.
