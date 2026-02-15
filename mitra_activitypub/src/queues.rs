@@ -186,10 +186,10 @@ pub async fn process_queued_incoming_activities(
 
 #[derive(Deserialize, Serialize)]
 pub struct OutgoingActivityJobData {
-    activity: JsonValue,
-    sender: Sender,
-    recipients: Vec<Recipient>,
-    failure_count: u32,
+    pub activity: JsonValue,
+    pub sender: Sender,
+    pub recipients: Vec<Recipient>,
+    pub failure_count: u32,
 }
 
 impl OutgoingActivityJobData {

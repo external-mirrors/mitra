@@ -7,7 +7,7 @@ pub mod builders;
 mod c2s;
 mod constants;
 pub mod contexts;
-mod deliverer;
+pub mod deliverer;
 pub mod errors;
 pub mod filter;
 pub mod forwarder;
