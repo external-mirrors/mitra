@@ -182,7 +182,7 @@ impl Sender {
 #[derive(Clone, Deserialize, Serialize)]
 pub struct Recipient {
     pub id: String,
-    pub(super) inbox: String,
+    pub inbox: String,
 
     #[serde(default)]
     pub is_primary: bool,
