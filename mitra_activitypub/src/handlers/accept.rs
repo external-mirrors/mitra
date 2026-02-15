@@ -3,7 +3,6 @@ use apx_sdk::deserialization::deserialize_into_object_id;
 use serde::Deserialize;
 use serde_json::{Value as JsonValue};
 
-use mitra_config::Config;
 use mitra_models::{
     database::{
         get_database_client,
@@ -34,6 +33,7 @@ use mitra_validators::{
 use crate::{
     c2s::followers::add_follower,
     identifiers::{canonicalize_id, parse_local_activity_id},
+    importers::ApClient,
     vocabulary::{FOLLOW, OFFER},
 };
 
@@ -71,7 +71,7 @@ struct Accept {
 }
 
 pub async fn handle_accept(
-    config: &Config,
+    ap_client: &ApClient,
     db_pool: &DatabaseConnectionPool,
     activity: JsonValue,
 ) -> HandlerResult {
@@ -79,7 +79,7 @@ pub async fn handle_accept(
     let db_client = &mut **get_database_client(db_pool).await?;
     if accept.result.is_some() {
         // Accept(Offer)
-        return handle_accept_offer(config, db_client, accept).await;
+        return handle_accept_offer(ap_client, db_client, accept).await;
     };
     // Accept(Follow)
     let canonical_actor_id = canonicalize_id(&accept.actor)?;
@@ -90,7 +90,7 @@ pub async fn handle_accept(
     let canonical_object_id = canonicalize_id(&accept.object)?;
     let follow_request = get_follow_request_by_activity_id(
         db_client,
-        config.instance().uri_str(),
+        ap_client.instance.uri_str(),
         &canonical_object_id.to_string(),
     ).await?;
     if follow_request.target_id != actor_profile.id {
@@ -109,7 +109,7 @@ pub async fn handle_accept(
 }
 
 async fn handle_accept_offer(
-    config: &Config,
+    ap_client: &ApClient,
     db_client: &mut impl DatabaseClient,
     accept: Accept,
 ) -> HandlerResult {
@@ -118,7 +118,7 @@ async fn handle_accept_offer(
         &accept.actor,
     ).await?;
     let invoice_id = parse_local_activity_id(
-        config.instance().uri_str(),
+        ap_client.instance.uri_str(),
         &accept.object,
     )?;
     // Remote invoice

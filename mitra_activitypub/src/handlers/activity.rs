@@ -114,13 +114,13 @@ pub fn get_activity_audience(
 
 pub async fn handle_activity(
     config: &Config,
+    ap_client: &ApClient,
     db_pool: &DatabaseConnectionPool,
     activity: &JsonValue,
     is_authenticated: bool,
     maybe_recipient_id: Option<&str>,
     maybe_sender_id: Option<&str>,
 ) -> Result<String, HandlerError> {
-    let ap_client = ApClient::new_with_pool(config, db_pool).await?;
     let activity = if is_authenticated {
         activity.clone()
     } else {
@@ -156,20 +156,24 @@ pub async fn handle_activity(
     let activity_clone = activity.clone();
     let maybe_descriptor = match activity_type.as_str() {
         ACCEPT => {
-            handle_accept(config, db_pool, activity).await?
+            handle_accept(ap_client, db_pool, activity).await?
         },
         ADD => {
-            handle_add(config, db_pool, activity).await?
+            // `config` is required by Add(Create) handler
+            handle_add(config, ap_client, db_pool, activity).await?
         },
         ANNOUNCE => {
-            handle_announce(config, db_pool, activity).await?
+            // `config` is required by Announce(Create) handler
+            handle_announce(config, ap_client, db_pool, activity).await?
         },
         BLOCK => {
-            handle_block(config, db_pool, activity).await?
+            handle_block(ap_client, db_pool, activity).await?
         },
         CREATE => {
+            // `config` is required by Create(Vote) handler
             handle_create(
                 config,
+                ap_client,
                 db_pool,
                 activity,
                 maybe_sender_id,
@@ -177,34 +181,35 @@ pub async fn handle_activity(
             ).await?
         },
         DELETE => {
-            handle_delete(config, db_pool, activity).await?
+            handle_delete(ap_client, db_pool, activity).await?
         },
         FOLLOW => {
-            handle_follow(config, db_pool, activity).await?
+            handle_follow(ap_client, db_pool, activity).await?
         },
         DISLIKE | LIKE | EMOJI_REACT => {
-            handle_like(config, db_pool, activity).await?
+            handle_like(ap_client, db_pool, activity).await?
         },
         LISTEN => {
             None // ignore
         },
         MOVE => {
-            handle_move(config, db_pool, activity).await?
+            handle_move(ap_client, db_pool, activity).await?
         },
         OFFER => {
-            handle_offer(config, db_pool, activity).await?
+            // `config` required by `create_payment_address`
+            handle_offer(config, ap_client, db_pool, activity).await?
         },
         REJECT => {
-            handle_reject(config, db_pool, activity).await?
+            handle_reject(ap_client, db_pool, activity).await?
         },
         REMOVE => {
-            handle_remove(config, db_pool, activity).await?
+            handle_remove(ap_client, db_pool, activity).await?
         },
         UNDO => {
-            handle_undo(config, db_pool, activity).await?
+            handle_undo(ap_client, db_pool, activity).await?
         },
         UPDATE => {
-            handle_update(config, db_pool, activity, is_authenticated).await?
+            handle_update(ap_client, db_pool, activity, is_authenticated).await?
         },
         _ => {
             log::warn!("activity type is not supported: {}", activity);

@@ -2,7 +2,6 @@ use apx_sdk::deserialization::deserialize_into_object_id;
 use serde::Deserialize;
 use serde_json::{Value as JsonValue};
 
-use mitra_config::Config;
 use mitra_models::{
     database::{
         get_database_client,
@@ -23,6 +22,7 @@ use mitra_models::{
 
 use crate::{
     identifiers::parse_local_actor_id,
+    importers::ApClient,
 };
 
 use super::{Descriptor, HandlerResult};
@@ -38,7 +38,7 @@ struct Remove {
 }
 
 pub async fn handle_remove(
-    config: &Config,
+    ap_client: &ApClient,
     db_pool: &DatabaseConnectionPool,
     activity: JsonValue,
 ) -> HandlerResult {
@@ -53,7 +53,7 @@ pub async fn handle_remove(
     if Some(remove.target.clone()) == actor.subscribers {
         // Removing from subscribers
         let username = parse_local_actor_id(
-            config.instance().uri_str(),
+            ap_client.instance.uri_str(),
             &remove.object,
         )?;
         let user = get_user_by_name(db_client, &username).await?;

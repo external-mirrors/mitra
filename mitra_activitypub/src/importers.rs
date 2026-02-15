@@ -676,11 +676,13 @@ pub async fn import_object(
 // Activity must be authenticated
 pub async fn import_activity(
     config: &Config,
+    ap_client: &ApClient,
     db_pool: &DatabaseConnectionPool,
     activity: JsonValue,
 ) -> Result<String, HandlerError> {
     handle_activity(
         config,
+        ap_client,
         db_pool,
         &activity,
         true, // is authenticated
@@ -851,7 +853,7 @@ pub async fn import_collection(
             },
             CollectionItemType::Activity => {
                 log::info!("importing activity {item_id}");
-                import_activity(config, db_pool, item).await
+                import_activity(config, ap_client, db_pool, item).await
             },
         };
         match result {

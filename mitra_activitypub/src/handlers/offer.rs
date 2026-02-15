@@ -22,6 +22,7 @@ use mitra_validators::errors::ValidationError;
 use crate::{
     builders::accept_offer::prepare_accept_offer,
     identifiers::parse_local_primary_intent_id,
+    importers::ApClient,
     vocabulary::AGREEMENT,
 };
 
@@ -42,6 +43,7 @@ struct Offer {
 
 pub async fn handle_offer(
     config: &Config,
+    ap_client: &ApClient,
     db_pool: &DatabaseConnectionPool,
     activity: JsonValue,
 ) -> HandlerResult {
@@ -54,7 +56,7 @@ pub async fn handle_offer(
     let primary_commitment = offer.object.primary_commitment();
     let reciprocal_commitment = offer.object.reciprocal_commitment();
     let (username, chain_id) = parse_local_primary_intent_id(
-        config.instance().uri_str(),
+        ap_client.instance.uri_str(),
         &primary_commitment.satisfies,
     )?;
     let proposer = get_user_by_name(db_client, &username).await?;

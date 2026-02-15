@@ -2,7 +2,6 @@ use apx_sdk::deserialization::deserialize_into_object_id;
 use serde::Deserialize;
 use serde_json::Value;
 
-use mitra_config::Config;
 use mitra_models::{
     database::{
         get_database_client,
@@ -19,6 +18,7 @@ use mitra_validators::errors::ValidationError;
 
 use crate::{
     identifiers::canonicalize_id,
+    importers::ApClient,
     vocabulary::FOLLOW,
 };
 
@@ -36,7 +36,7 @@ struct Reject {
 }
 
 pub async fn handle_reject(
-    config: &Config,
+    ap_client: &ApClient,
     db_pool: &DatabaseConnectionPool,
     activity: Value,
 ) -> HandlerResult {
@@ -50,7 +50,7 @@ pub async fn handle_reject(
     let canonical_object_id = canonicalize_id(&reject.object)?;
     let follow_request = match get_follow_request_by_activity_id(
         db_client,
-        config.instance().uri_str(),
+        ap_client.instance.uri_str(),
         &canonical_object_id.to_string(),
     ).await {
         Ok(follow_request) => follow_request,

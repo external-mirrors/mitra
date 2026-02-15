@@ -2,7 +2,6 @@ use apx_sdk::deserialization::deserialize_into_object_id;
 use serde::Deserialize;
 use serde_json::{Value as JsonValue};
 
-use mitra_config::Config;
 use mitra_models::{
     database::{
         get_database_client,
@@ -36,13 +35,12 @@ struct Delete {
 }
 
 pub async fn handle_delete(
-    config: &Config,
+    ap_client: &ApClient,
     db_pool: &DatabaseConnectionPool,
     activity: JsonValue,
 ) -> HandlerResult {
     let delete: Delete = serde_json::from_value(activity.clone())?;
     let db_client = &mut **get_database_client(db_pool).await?;
-    let ap_client = ApClient::new(config, db_client).await?;
     if delete.object == delete.actor {
         // Self-delete
         let profile = match get_remote_profile_by_actor_id(

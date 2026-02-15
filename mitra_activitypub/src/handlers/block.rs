@@ -1,7 +1,6 @@
 use serde::Deserialize;
 use serde_json::{Value as JsonValue};
 
-use mitra_config::Config;
 use mitra_models::{
     database::{
         get_database_client,
@@ -26,19 +25,18 @@ struct Block {
 }
 
 pub async fn handle_block(
-    config: &Config,
+    ap_client: &ApClient,
     db_pool: &DatabaseConnectionPool,
     activity: JsonValue,
 ) -> HandlerResult {
     let block: Block = serde_json::from_value(activity)?;
-    let ap_client = ApClient::new_with_pool(config, db_pool).await?;
     let source_profile = ActorIdResolver::default().only_remote().resolve(
-        &ap_client,
+        ap_client,
         db_pool,
         &block.actor,
     ).await?;
     let target_username = parse_local_actor_id(
-        config.instance().uri_str(),
+        ap_client.instance.uri_str(),
         &block.object,
     )?;
     let db_client = &mut **get_database_client(db_pool).await?;

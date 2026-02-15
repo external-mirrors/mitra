@@ -93,11 +93,12 @@ fn get_repost_visibility(
 
 pub async fn handle_announce(
     config: &Config,
+    ap_client: &ApClient,
     db_pool: &DatabaseConnectionPool,
     activity: JsonValue,
 ) -> HandlerResult {
     if is_activity(&activity["object"]) {
-        return handle_fep_1b12_announce(config, db_pool, activity).await;
+        return handle_fep_1b12_announce(config, ap_client, db_pool, activity).await;
     };
     let announce: Announce = serde_json::from_value(activity)?;
     match get_remote_repost_by_activity_id(
@@ -108,9 +109,8 @@ pub async fn handle_announce(
         Err(DatabaseError::NotFound(_)) => (),
         Err(other_error) => return Err(other_error.into()),
     };
-    let ap_client = ApClient::new_with_pool(config, db_pool).await?;
     let author = ActorIdResolver::default().only_remote().resolve(
-        &ap_client,
+        ap_client,
         db_pool,
         &announce.actor,
     ).await?;
@@ -125,7 +125,7 @@ pub async fn handle_announce(
         Err(_) => {
             // Try to get remote post
             import_post(
-                &ap_client,
+                ap_client,
                 db_pool,
                 announce.object,
                 None,
@@ -171,6 +171,7 @@ struct GroupAnnounce {
 
 async fn handle_fep_1b12_announce(
     config: &Config,
+    ap_client: &ApClient,
     db_pool: &DatabaseConnectionPool,
     announce: JsonValue,
 ) -> HandlerResult {
@@ -178,13 +179,13 @@ async fn handle_fep_1b12_announce(
         serde_json::from_value(announce)?;
     verify_activity_owner(&activity)?;
     let activity_id = get_object_id(&activity)?;
-    if is_local_origin(&config.instance(), activity_id) {
+    if is_local_origin(&ap_client.instance, activity_id) {
         // Ignore local activities
         return Ok(None);
     };
     let activity_type = activity["type"].as_str()
         .ok_or(ValidationError("unexpected activity structure"))?;
-    if activity_type != DELETE && !config.federation.fep_1b12_full_enabled {
+    if activity_type != DELETE && !ap_client.instance.federation.fep_1b12_full_enabled {
         return Ok(None);
     };
     match activity_type {
@@ -194,10 +195,9 @@ async fn handle_fep_1b12_announce(
             return Ok(None);
         },
     };
-    let ap_client = ApClient::new_with_pool(config, db_pool).await?;
     // Authentication
     let activity = match verify_signed_object(
-        &ap_client,
+        ap_client,
         db_pool,
         &activity,
         CoreType::Activity,
@@ -233,7 +233,7 @@ async fn handle_fep_1b12_announce(
     // Authorization
     verify_activity_owner(&activity)?;
     let group = ActorIdResolver::default().only_remote().resolve(
-        &ap_client,
+        ap_client,
         db_pool,
         &group_id,
     ).await?;
@@ -266,6 +266,7 @@ async fn handle_fep_1b12_announce(
         CREATE => {
             let maybe_object_type = handle_create(
                 config,
+                ap_client,
                 db_pool,
                 activity.clone(),
                 None, // no sender (spam check will not be performed)
@@ -300,16 +301,16 @@ async fn handle_fep_1b12_announce(
             Ok(Some(Descriptor::object(activity_type)))
         },
         LIKE | DISLIKE => {
-            let maybe_type = handle_like(config, db_pool, activity).await?;
+            let maybe_type = handle_like(ap_client, db_pool, activity).await?;
             Ok(maybe_type.map(|_| Descriptor::object(activity_type)))
         },
         UNDO => {
-            let maybe_type = handle_undo(config, db_pool, activity).await?;
+            let maybe_type = handle_undo(ap_client, db_pool, activity).await?;
             Ok(maybe_type.map(|_| Descriptor::object(activity_type)))
         },
         UPDATE => {
             let maybe_type = handle_update(
-                config,
+                ap_client,
                 db_pool,
                 activity,
                 true, // authenticated (by embedding or fetched from origin)

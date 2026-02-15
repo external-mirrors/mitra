@@ -2,7 +2,6 @@ use apx_sdk::deserialization::deserialize_into_object_id;
 use serde::Deserialize;
 use serde_json::{Value as JsonValue};
 
-use mitra_config::Config;
 use mitra_models::{
     database::{
         get_database_client,
@@ -38,22 +37,21 @@ struct Follow {
 }
 
 pub async fn handle_follow(
-    config: &Config,
+    ap_client: &ApClient,
     db_pool: &DatabaseConnectionPool,
     activity: JsonValue,
 ) -> HandlerResult {
     // Follow(Person)
     let follow: Follow = serde_json::from_value(activity)?;
-    let ap_client = ApClient::new_with_pool(config, db_pool).await?;
     let source_profile = ActorIdResolver::default().only_remote().resolve(
-        &ap_client,
+        ap_client,
         db_pool,
         &follow.actor,
     ).await?;
     let source_actor = source_profile.actor_json
         .expect("actor data should be present");
     let target_profile = ActorIdResolver::default().resolve(
-        &ap_client,
+        ap_client,
         db_pool,
         &follow.object,
     ).await?;
@@ -90,7 +88,7 @@ pub async fn handle_follow(
         };
         // Send Accept activity even if follow request has already been processed
         prepare_accept_follow(
-            &config.instance(),
+            &ap_client.instance,
             &target_user,
             &source_actor,
             &canonical_activity_id.to_string(),

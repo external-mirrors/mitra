@@ -59,16 +59,15 @@ pub fn is_question_vote(object: &JsonValue) -> bool {
 
 pub async fn handle_question_vote(
     config: &Config,
+    ap_client: &ApClient,
     db_pool: &DatabaseConnectionPool,
     object: JsonValue,
 ) -> HandlerResult {
     verify_object_owner(&object)?;
     let vote: QuestionVote = serde_json::from_value(object)?;
-    let ap_client = ApClient::new_with_pool(config, db_pool).await?;
     let instance = &ap_client.instance;
-    let media_server = MediaServer::new(config);
     let voter = ActorIdResolver::default().only_remote().resolve(
-        &ap_client,
+        ap_client,
         db_pool,
         &vote.attributed_to,
     ).await?;
@@ -107,6 +106,7 @@ pub async fn handle_question_vote(
     post.poll = Some(poll_updated);
     add_related_posts(db_client, vec![&mut post]).await?;
     let post_author = get_user_by_id(db_client, post.author.id).await?;
+    let media_server = MediaServer::new(config);
     prepare_update_note(
         db_client,
         instance,

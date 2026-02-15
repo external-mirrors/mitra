@@ -115,7 +115,7 @@ impl ImportObject {
             },
             CoreType::Activity => {
                 // Process activity
-                import_activity(config, db_pool, object).await?;
+                import_activity(config, &ap_client, db_pool, object).await?;
                 println!("activity processed");
             },
             CoreType::Collection => {
