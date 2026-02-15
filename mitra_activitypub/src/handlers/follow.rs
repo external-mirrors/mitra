@@ -85,7 +85,8 @@ pub async fn handle_follow(
         #[cfg(feature = "mini")]
         if !follow_request_created {
             // Don't auto-accept repeated requests
-            return Ok(None);
+            log::warn!("follow request has already been accepted");
+            return Ok(Some(Descriptor::object("Actor")));
         };
         match follow_request_accepted(db_client, follow_request.id).await {
             Ok(_) => (),
