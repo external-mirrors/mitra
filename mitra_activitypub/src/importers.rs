@@ -803,6 +803,7 @@ pub enum CollectionOrder {
 
 pub async fn import_collection(
     config: &Config,
+    ap_client: &ApClient,
     db_pool: &DatabaseConnectionPool,
     collection_id: &str,
     maybe_item_type: Option<CollectionItemType>,
@@ -810,8 +811,7 @@ pub async fn import_collection(
     limit: usize,
 ) -> Result<Vec<String>, HandlerError> {
     let mut imported = vec![];
-    let ap_client = ApClient::new_with_pool(config, db_pool).await?;
-    let items = fetch_collection(&ap_client, collection_id, limit).await?;
+    let items = fetch_collection(ap_client, collection_id, limit).await?;
     let item_type = match &items[..] {
         [] => {
             log::info!("collection is empty");
@@ -841,12 +841,12 @@ pub async fn import_collection(
         let result = match item_type {
             CollectionItemType::Object => {
                 log::info!("importing object {item_id}");
-                import_object(&ap_client, db_pool, item).await
+                import_object(ap_client, db_pool, item).await
                     .map(|post| post.expect_remote_object_id().to_owned())
             },
             CollectionItemType::Actor => {
                 log::info!("importing actor {item_id}");
-                import_profile(&ap_client, db_pool, item).await
+                import_profile(ap_client, db_pool, item).await
                     .map(|profile| profile.expect_remote_actor_id().to_owned())
             },
             CollectionItemType::Activity => {
@@ -873,6 +873,7 @@ pub async fn import_from_outbox(
     actor_id: &str,
     limit: usize,
 ) -> Result<(), HandlerError> {
+    let ap_client = ApClient::new_with_pool(config, db_pool).await?;
     let profile = get_remote_profile_by_actor_id(
         db_client_await!(db_pool),
         actor_id,
@@ -882,6 +883,7 @@ pub async fn import_from_outbox(
     let outbox_url = context.prepare_object_id(&actor_data.outbox)?;
     import_collection(
         config,
+        &ap_client,
         db_pool,
         &outbox_url,
         Some(CollectionItemType::Activity),
@@ -897,6 +899,7 @@ pub async fn import_featured(
     actor_id: &str,
     limit: usize,
 ) -> Result<(), HandlerError> {
+    let ap_client = ApClient::new_with_pool(config, db_pool).await?;
     let profile = get_remote_profile_by_actor_id(
         db_client_await!(db_pool),
         actor_id,
@@ -910,6 +913,7 @@ pub async fn import_featured(
     let featured_url = context.prepare_object_id(featured_id)?;
     let imported = import_collection(
         config,
+        &ap_client,
         db_pool,
         &featured_url,
         Some(CollectionItemType::Object),
@@ -970,6 +974,7 @@ pub async fn import_replies(
     };
     import_collection(
         config,
+        &ap_client,
         db_pool,
         &collection_id,
         Some(item_type),

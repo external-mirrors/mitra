@@ -133,6 +133,7 @@ impl ImportObject {
                 };
                 import_collection(
                     config,
+                    &ap_client,
                     db_pool,
                     &self.object_id,
                     maybe_item_type,

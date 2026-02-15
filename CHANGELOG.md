@@ -11,6 +11,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Write object location to log on JSON parsing errors.
 - Reduced number of database queries made during inbox request verification.
 - Respect `--as-user` parameter when verifying integrity proof with `import-object` command.
+- Respect `--as-user` parameter when importing collections with `import-object` command.
 
 ### Fixed
 
