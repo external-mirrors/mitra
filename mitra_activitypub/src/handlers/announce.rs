@@ -197,7 +197,7 @@ async fn handle_fep_1b12_announce(
     let ap_client = ApClient::new_with_pool(config, db_pool).await?;
     // Authentication
     let activity = match verify_signed_object(
-        config,
+        &ap_client,
         db_pool,
         &activity,
         CoreType::Activity,

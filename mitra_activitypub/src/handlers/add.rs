@@ -88,8 +88,9 @@ async fn handle_fep_171b_add(
         return Ok(None);
     };
     // Authentication
+    let ap_client = ApClient::new_with_pool(config, db_pool).await?;
     match verify_signed_object(
-        config,
+        &ap_client,
         db_pool,
         &activity,
         CoreType::Activity,
@@ -98,7 +99,6 @@ async fn handle_fep_171b_add(
         Ok(_) => (),
         Err(AuthenticationError::NoJsonSignature) => {
             // Verify activity by fetching it from origin
-            let ap_client = ApClient::new_with_pool(config, db_pool).await?;
             match ap_client.fetch_object(activity_id).await {
                 Ok(activity_fetched) => {
                     log::info!("fetched activity {}", activity_id);

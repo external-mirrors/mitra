@@ -54,7 +54,7 @@ impl TryFrom<i16> for FilterAction {
 int_enum_from_sql!(FilterAction);
 int_enum_to_sql!(FilterAction);
 
-#[derive(FromSql)]
+#[derive(Clone, FromSql)]
 #[postgres(name = "filter_rule")]
 pub struct FilterRule {
     #[allow(dead_code)]

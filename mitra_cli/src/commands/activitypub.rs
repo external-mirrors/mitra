@@ -96,7 +96,7 @@ impl ImportObject {
         };
         if self.verify_proof {
             verify_signed_object(
-                config,
+                &ap_client,
                 db_pool,
                 &object,
                 object_type,

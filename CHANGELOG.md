@@ -9,6 +9,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Changed
 
 - Write object location to log on JSON parsing errors.
+- Reduced number of database queries made during inbox request verification.
+- Respect `--as-user` parameter when verifying integrity proof with `import-object` command.
 
 ### Fixed
 

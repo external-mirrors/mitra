@@ -93,6 +93,7 @@ use crate::{
     vocabulary::GROUP,
 };
 
+#[derive(Clone)]
 pub struct ApClient {
     pub instance: Instance,
     pub filter: FederationFilter,

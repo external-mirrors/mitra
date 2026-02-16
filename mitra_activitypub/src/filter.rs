@@ -50,6 +50,7 @@ fn is_hostname_allowed(
     }
 }
 
+#[derive(Clone)]
 pub struct FederationFilter {
     blocklist: Vec<String>,
     allowlist: Vec<String>,

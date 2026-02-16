@@ -20,8 +20,9 @@ use mitra_activitypub::{
         verify_signed_request,
         AuthenticationError,
     },
-    filter::{get_moderation_domain, FederationFilter},
+    filter::get_moderation_domain,
     identifiers::canonicalize_id,
+    importers::ApClient,
     ownership::is_local_origin,
     queues::IncomingActivityJobData,
     vocabulary::DELETE,
@@ -93,7 +94,8 @@ pub async fn receive_activity(
     let activity_actor = object_to_id(&activity["actor"])
         .map_err(|_| ValidationError("invalid 'actor' property"))?;
 
-    let filter = FederationFilter::init_with_pool(config, db_pool).await?;
+    let ap_client = ApClient::new_with_pool(config, db_pool).await?;
+    let filter = &ap_client.filter;
     if let Ok(possible_actor_hostname) = get_hostname(&activity_actor) {
         // This only works for HTTP URIs
         if filter.is_incoming_blocked(&possible_actor_hostname) {
@@ -122,7 +124,7 @@ pub async fn receive_activity(
 
     // HTTP signature is required
     let mut signer = match verify_signed_request(
-        config,
+        &ap_client,
         db_pool,
         method_adapter(request.method()),
         uri_adapter(request_full_uri),
@@ -154,7 +156,7 @@ pub async fn receive_activity(
     // JSON signature is optional
     // (unless the activity is portable)
     match verify_signed_object(
-        config,
+        &ap_client,
         db_pool,
         activity,
         CoreType::Activity,
@@ -220,8 +222,9 @@ pub async fn authorize_request(
     request: &HttpRequest,
     request_full_uri: &Uri,
 ) -> Result<DbActorProfile, EndpointError> {
+    let ap_client = ApClient::new_with_pool(config, db_pool).await?;
     let (_, signer) = verify_signed_request(
-        config,
+        &ap_client,
         db_pool,
         method_adapter(request.method()),
         uri_adapter(request_full_uri),
