@@ -66,12 +66,15 @@ pub enum FetchError {
     #[error("{}", describe_request_error(.0))]
     RequestError(#[from] reqwest::Error),
 
+    // 0: error description
     #[error("stream error: {0}")]
     StreamError(String),
 
+    // 0: current url
     #[error("access denied: {0}")]
     Forbidden(String),
 
+    // 0: current url
     #[error("resource not found: {0}")]
     NotFound(String),
 
@@ -81,18 +84,23 @@ pub enum FetchError {
     #[error("response size exceeds limit")]
     ResponseTooLarge,
 
+    // 0: current url
     #[error("json parse error: {0}")]
-    JsonParseError(#[from] serde_json::Error),
+    JsonParseError(String),
 
+    // 0: content type
     #[error("unexpected content type: {0}")]
     UnexpectedContentType(String),
 
+    // 0: current url
     #[error("object without ID at {0}")]
     NoObjectId(String),
 
+    // 0: current url
     #[error("unexpected object ID at {0}")]
     UnexpectedObjectId(String),
 
+    // 0: error description
     #[error("invalid integrity proof: {0}")]
     InvalidProof(AuthenticationError),
 
@@ -234,7 +242,8 @@ pub async fn fetch_object(
     let object_bytes = limited_response(response, agent.response_size_limit)
         .await
         .ok_or(FetchError::ResponseTooLarge)?;
-    let object_json: JsonValue = serde_json::from_slice(&object_bytes)?;
+    let object_json: JsonValue = serde_json::from_slice(&object_bytes)
+        .map_err(|_| FetchError::JsonParseError(object_location.to_string()))?;
     let object_id = object_json["id"].as_str()
         .ok_or(FetchError::NoObjectId(object_location.to_string()))?
         .to_string();
@@ -408,10 +417,12 @@ pub async fn fetch_json(
         .send()
         .await?
         .error_for_status()?;
+    let response_url = response.url().to_string();
     let data = limited_response(response, agent.response_size_limit)
         .await
         .ok_or(FetchError::ResponseTooLarge)?;
-    let object_json = serde_json::from_slice(&data)?;
+    let object_json = serde_json::from_slice(&data)
+        .map_err(|_| FetchError::JsonParseError(response_url))?;
     Ok(object_json)
 }
 

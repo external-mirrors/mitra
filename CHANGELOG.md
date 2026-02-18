@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- Write object location to log on JSON parsing errors.
+
 ### Fixed
 
 - Fixed content type error when POSTing form data to `/api/v1/lists/{list_id}/accounts` endpoint.

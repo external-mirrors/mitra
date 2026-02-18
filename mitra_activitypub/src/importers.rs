@@ -161,21 +161,19 @@ impl FetcherContext {
 }
 
 // Only used in fetch-object command
-pub async fn fetch_any_object_with_context<T: DeserializeOwned>(
+pub async fn fetch_any_object_with_context(
     agent: &FederationAgent,
     context: &mut FetcherContext,
     object_id: &str,
     options: FetchObjectOptions,
-) -> Result<T, FetchError> {
+) -> Result<JsonValue, FetchError> {
     let http_url = context.prepare_object_id(object_id)?;
     let object_json = fetch_object(
         agent,
         &http_url,
         options,
     ).await?;
-    // TODO: convert into HandlerError::ValidationError
-    let object: T = serde_json::from_value(object_json)?;
-    Ok(object)
+    Ok(object_json)
 }
 
 impl ApClient {

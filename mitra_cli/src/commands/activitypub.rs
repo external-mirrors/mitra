@@ -238,7 +238,7 @@ impl FetchObject {
             skip_verification: self.skip_verification,
             ..Default::default()
         };
-        let object: JsonValue = fetch_any_object_with_context(
+        let object = fetch_any_object_with_context(
             &agent,
             &mut context,
             &self.object_id,

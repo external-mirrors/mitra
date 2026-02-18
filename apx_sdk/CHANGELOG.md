@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- Add response URL to `FetchError::JsonParseError`.
+
 ## [0.21.0] - 2026-01-27
 
 ### Added
