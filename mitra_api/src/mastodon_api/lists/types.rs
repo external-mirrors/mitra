@@ -46,8 +46,8 @@ pub struct ListAccountsQueryParams {
     pub limit: PageSize,
 }
 
-#[derive(Deserialize)]
+// Debug is required by QsForm
+#[derive(Debug, Deserialize)]
 pub struct ListAccountsData {
-    #[serde(alias = "account_ids[]")]
     pub account_ids: Vec<Uuid>,
 }

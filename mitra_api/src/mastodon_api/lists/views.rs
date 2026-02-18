@@ -5,6 +5,7 @@ use actix_web::{
     post,
     put,
     web,
+    Either,
     HttpResponse,
     Scope,
 };
@@ -38,6 +39,7 @@ use crate::{
     http::{
         get_request_base_url,
         JsonOrForm,
+        JsonOrQsForm,
         MultiQuery,
     },
     mastodon_api::{
@@ -195,9 +197,12 @@ async fn add_accounts_to_list(
     auth: BearerAuth,
     db_pool: web::Data<DatabaseConnectionPool>,
     list_id: web::Path<i32>,
-    accounts_data: JsonOrForm<ListAccountsData>,
+    accounts_data: JsonOrQsForm<ListAccountsData>,
 ) -> Result<HttpResponse, MastodonError> {
-    let accounts_data = accounts_data.into_inner();
+    let accounts_data = match accounts_data {
+        Either::Left(json) => json.into_inner(),
+        Either::Right(form) => form.into_inner(),
+    };
     let db_client = &**get_database_client(&db_pool).await?;
     let current_user = get_current_user(db_client, auth.token()).await?;
     let feed = get_custom_feed(
