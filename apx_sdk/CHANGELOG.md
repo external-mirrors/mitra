@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Changed
 
 - Add response URL to `FetchError::JsonParseError`.
+- Don't strip query parameters when converting key ID to actor ID.
 
 ## [0.21.0] - 2026-01-27
 

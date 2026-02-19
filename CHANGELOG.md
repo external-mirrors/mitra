@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Respect `--as-user` parameter when verifying integrity proof with `import-object` command.
 - Respect `--as-user` parameter when importing collections with `import-object` command.
 - Respect `--as-user` parameter when importing activities with `import-object` command.
+- Don't strip query parameters when converting key ID to actor ID.
 
 ### Fixed
 
