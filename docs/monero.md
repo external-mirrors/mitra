@@ -53,6 +53,8 @@ blockchains:
     lightwallet_api_url: 'http://127.0.0.1:18443'
 ```
 
+This monitoring method supports anonymous payments. A notification is generated when a payment is sent to the primary wallet address.
+
 ## Sign-in with Monero wallet
 
 This feature can be enabled by adding `caip122_monero` to `authentication_methods` array in Mitra configuration file:
