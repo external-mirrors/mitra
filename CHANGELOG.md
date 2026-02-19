@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+
+- Allow to repeat portable actor registration.
+
 ### Changed
 
 - Write object location to log on JSON parsing errors.

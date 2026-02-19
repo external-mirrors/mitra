@@ -31,7 +31,7 @@ use serde::{
 };
 use serde_json::{Value as JsonValue};
 
-use mitra_config::{Config, Instance, Limits};
+use mitra_config::{Config, Instance, Limits, RegistrationType};
 use mitra_models::{
     database::{
         db_client_await,
@@ -56,6 +56,7 @@ use mitra_models::{
     profiles::types::{DbActor, DbActorProfile},
     users::queries::{
         create_portable_user,
+        get_portable_user_by_actor_id,
         get_user_by_name,
         is_valid_invite_code,
     },
@@ -988,24 +989,38 @@ pub async fn register_portable_actor(
     db_pool: &DatabaseConnectionPool,
     actor_json: JsonValue,
     maybe_invite_code: Option<String>,
-) -> Result<PortableUser, HandlerError> {
+) -> Result<(PortableUser, bool), HandlerError> {
     verify_portable_object(&actor_json)
         .map_err(|error| {
             log::warn!("{error}");
             ValidationError("invalid portable actor")
         })?;
     let actor: Actor = serde_json::from_value(actor_json.clone())?;
-    if let Some(ref invite_code) = maybe_invite_code {
-        if !is_valid_invite_code(
-            db_client_await!(db_pool),
-            invite_code,
-        ).await? {
-            return Err(ValidationError("invalid invite code").into());
-        };
+    let canonical_actor_id = canonicalize_id(actor.id())?;
+    match get_portable_user_by_actor_id(
+        db_client_await!(db_pool),
+        &canonical_actor_id.to_string(),
+    ).await {
+        Ok(user) => return Ok((user, false)), // return keys
+        Err(DatabaseError::NotFound(_)) => (), // continue registration
+        Err(other_error) => return Err(other_error.into()),
+    };
+    let maybe_invite_code = match config.registration.registration_type {
+        RegistrationType::Open if !config.instance().federation.enabled => None,
+        _ => {
+            let invite_code = maybe_invite_code
+                .ok_or(ValidationError("invite code is required"))?;
+            if !is_valid_invite_code(
+                db_client_await!(db_pool),
+                &invite_code,
+            ).await? {
+                return Err(ValidationError("invalid invite code").into());
+            };
+            Some(invite_code)
+        },
     };
     // Create or update profile
     let ap_client = ApClient::new_with_pool(config, db_pool).await?;
-    let canonical_actor_id = canonicalize_id(actor.id())?;
     let maybe_profile = get_remote_profile_by_actor_id(
         db_client_await!(db_pool), // dropped
         &canonical_actor_id.to_string(),
@@ -1047,7 +1062,7 @@ pub async fn register_portable_actor(
     let db_client = &mut **get_database_client(db_pool).await?;
     let user = create_portable_user(db_client, user_data).await?;
     create_signup_notifications(db_client, user.id).await?;
-    Ok(user)
+    Ok((user, true))
 }
 
 #[cfg(test)]

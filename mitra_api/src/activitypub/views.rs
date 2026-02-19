@@ -9,8 +9,11 @@ use actix_web::{
     },
     post,
     web,
-    http::header as http_header,
-    http::Uri,
+    http::{
+        header as http_header,
+        StatusCode,
+        Uri,
+    },
     Error,
     HttpRequest,
     HttpResponse,
@@ -74,10 +77,7 @@ use mitra_activitypub::{
     queues::IncomingActivityJobData,
     utils::parse_id_from_db,
 };
-use mitra_config::{
-    Config,
-    RegistrationType,
-};
+use mitra_config::Config;
 use mitra_models::{
     activitypub::queries::{
         create_activitypub_media,
@@ -760,24 +760,17 @@ async fn apgateway_create_actor_view(
     actor: web::Json<JsonValue>,
 ) -> Result<HttpResponse, HttpError> {
     let instance = config.instance();
-    let maybe_invite_code = match config.registration.registration_type {
-        RegistrationType::Open if !instance.federation.enabled => None,
-        _ => {
-            let invite_code = request.headers()
-                .get("X-Invite-Code")
-                .and_then(|value| value.to_str().ok())
-                .ok_or(ValidationError("invite code is required"))?
-                .to_owned();
-            Some(invite_code)
-        },
-    };
+    let maybe_invite_code = request.headers()
+        .get("X-Invite-Code")
+        .and_then(|value| value.to_str().ok())
+        .map(|value| value.to_owned());
     verify_public_keys(
         &instance,
         None,
         &actor,
     )?;
     verify_embedded_ownership(&actor)?;
-    let user = register_portable_actor(
+    let (user, created) = register_portable_actor(
         &config,
         &db_pool,
         actor.into_inner(),
@@ -791,9 +784,14 @@ async fn apgateway_create_actor_view(
             other_error => HttpError::from_internal(other_error),
         }
     })?;
-    log::warn!("created portable account {}", user);
+    let status_code = if created {
+        log::warn!("created portable account {}", user);
+        StatusCode::CREATED
+    } else {
+        StatusCode::OK
+    };
     let keys = PortableActorKeys::new(user);
-    Ok(HttpResponse::Created().json(keys))
+    Ok(HttpResponse::build(status_code).json(keys))
 }
 
 #[get("/{url:.+}")]
