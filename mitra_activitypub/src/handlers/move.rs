@@ -2,7 +2,6 @@
 use serde::Deserialize;
 use serde_json::Value;
 
-use mitra_config::Config;
 use mitra_models::{
     database::{
         get_database_client,
@@ -37,7 +36,7 @@ struct Move {
 }
 
 pub async fn handle_move(
-    config: &Config,
+    ap_client: &ApClient,
     db_pool: &DatabaseConnectionPool,
     activity: Value,
 ) -> HandlerResult {
@@ -49,18 +48,17 @@ pub async fn handle_move(
         return Err(ValidationError("actor ID mismatch").into());
     };
 
-    let ap_client = ApClient::new_with_pool(config, db_pool).await?;
     let instance = &ap_client.instance;
 
     let old_profile = ActorIdResolver::default().resolve(
-        &ap_client,
+        ap_client,
         db_pool,
         &activity.object,
     ).await?;
     let old_actor_id = profile_actor_id(instance.uri_str(), &old_profile);
 
     let new_profile = ActorIdResolver::default().force_refetch().resolve(
-        &ap_client,
+        ap_client,
         db_pool,
         &activity.target,
     ).await?;

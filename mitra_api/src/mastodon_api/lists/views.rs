@@ -5,6 +5,7 @@ use actix_web::{
     post,
     put,
     web,
+    Either,
     HttpResponse,
     Scope,
 };
@@ -38,6 +39,7 @@ use crate::{
     http::{
         get_request_base_url,
         JsonOrForm,
+        JsonOrQsForm,
         MultiQuery,
     },
     mastodon_api::{
@@ -45,6 +47,7 @@ use crate::{
         auth::get_current_user,
         errors::MastodonError,
         media_server::ClientMediaServer,
+        pagination::PageSize,
     },
 };
 
@@ -164,11 +167,16 @@ async fn get_list_accounts(
         *list_id,
         current_user.id,
     ).await?;
+    let limit = if query_params.limit.inner() == 0 {
+        PageSize::MAX
+    } else {
+        query_params.limit.inner()
+    };
     let sources = get_custom_feed_sources(
         db_client,
         feed.id,
         query_params.max_id,
-        query_params.limit.inner(),
+        limit,
     ).await?;
     let base_url = get_request_base_url(connection_info);
     let media_server = ClientMediaServer::new(&config, &base_url);
@@ -189,8 +197,12 @@ async fn add_accounts_to_list(
     auth: BearerAuth,
     db_pool: web::Data<DatabaseConnectionPool>,
     list_id: web::Path<i32>,
-    accounts_data: web::Json<ListAccountsData>,
+    accounts_data: JsonOrQsForm<ListAccountsData>,
 ) -> Result<HttpResponse, MastodonError> {
+    let accounts_data = match accounts_data {
+        Either::Left(json) => json.into_inner(),
+        Either::Right(form) => form.into_inner(),
+    };
     let db_client = &**get_database_client(&db_pool).await?;
     let current_user = get_current_user(db_client, auth.token()).await?;
     let feed = get_custom_feed(

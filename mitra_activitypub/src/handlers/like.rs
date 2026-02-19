@@ -9,7 +9,6 @@ use apx_sdk::{
 use serde::Deserialize;
 use serde_json::{Value as JsonValue};
 
-use mitra_config::Config;
 use mitra_models::{
     database::{
         db_client_await,
@@ -95,15 +94,14 @@ fn get_visibility(
 }
 
 pub async fn handle_like(
-    config: &Config,
+    ap_client: &ApClient,
     db_pool: &DatabaseConnectionPool,
     activity: JsonValue,
 ) -> HandlerResult {
     let like: Like = serde_json::from_value(activity.clone())?;
-    let ap_client = ApClient::new_with_pool(config, db_pool).await?;
     let instance = &ap_client.instance;
     let author = ActorIdResolver::default().only_remote().resolve(
-        &ap_client,
+        ap_client,
         db_pool,
         &like.actor,
     ).await?;
@@ -132,7 +130,7 @@ pub async fn handle_like(
                 let moderation_domain =
                     get_moderation_domain(author.expect_actor_data())?;
                 let maybe_db_emoji = handle_emoji(
-                    &ap_client,
+                    ap_client,
                     db_pool,
                     &moderation_domain,
                     emoji_value.clone(),

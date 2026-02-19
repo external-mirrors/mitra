@@ -55,6 +55,7 @@ use crate::{
         import_from_outbox,
         import_replies,
         is_actor_importer_error,
+        ApClient,
     },
     utils::{db_url_to_http_url, parse_http_url_from_db},
 };
@@ -121,6 +122,7 @@ pub async fn process_queued_incoming_activities(
         config.federation.inbox_queue_batch_size,
         JOB_TIMEOUT,
     ).await?;
+    let ap_client = ApClient::new_with_pool(config, db_pool).await?;
     for job in batch {
         let mut job_data: IncomingActivityJobData =
             serde_json::from_value(job.job_data)
@@ -129,6 +131,7 @@ pub async fn process_queued_incoming_activities(
             Duration::from_secs((JOB_TIMEOUT / 6).into());
         let handler_future = handle_activity(
             config,
+            &ap_client,
             db_pool,
             &job_data.activity,
             job_data.is_authenticated,

@@ -101,6 +101,7 @@ struct CreateNote {
 
 pub async fn handle_create(
     config: &Config,
+    ap_client: &ApClient,
     db_pool: &DatabaseConnectionPool,
     activity: JsonValue,
     maybe_sender_id: Option<&str>,
@@ -111,7 +112,6 @@ pub async fn handle_create(
         mut object,
     } = serde_json::from_value(activity.clone())?;
 
-    let ap_client = ApClient::new_with_pool(config, db_pool).await?;
     // Authentication
     let is_not_embedded = object.as_str().is_some();
     if is_not_embedded || !is_authenticated {
@@ -140,14 +140,14 @@ pub async fn handle_create(
     verify_object_owner(&object)?;
 
     if is_question_vote(&object) {
-        return handle_question_vote(config, db_pool, object).await;
+        return handle_question_vote(config, ap_client, db_pool, object).await;
     };
     let object: AttributedObjectJson = serde_json::from_value(object)?;
     if let Some(sender_id) = maybe_sender_id {
         let db_client = &**get_database_client(db_pool).await?;
         check_unsolicited_message(
             db_client,
-            config.instance().uri_str(),
+            ap_client.instance.uri_str(),
             &object.inner,
             sender_id,
         ).await?;
@@ -174,7 +174,7 @@ pub async fn handle_create(
     let object_id = object.id().to_owned();
     let object_type = object.inner.object_type.clone();
     let post = import_post(
-        &ap_client,
+        ap_client,
         db_pool,
         object_id,
         Some(object),

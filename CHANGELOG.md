@@ -6,6 +6,30 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- Write object location to log on JSON parsing errors.
+- Reduced number of database queries made during inbox request verification.
+- Respect `--as-user` parameter when verifying integrity proof with `import-object` command.
+- Respect `--as-user` parameter when importing collections with `import-object` command.
+- Respect `--as-user` parameter when importing activities with `import-object` command.
+- Don't strip query parameters when converting key ID to actor ID.
+
+### Fixed
+
+- Fixed content type error when POSTing form data to `/api/v1/lists/{list_id}/accounts` endpoint.
+
+## [4.18.1] - 2026-02-14
+
+### Added
+
+- Support POSTing form data to `/api/v1/lists/{list_id}/accounts` endpoint.
+
+### Changed
+
+- Disabled early filtering for incoming activities with ap:// IDs.
+- Return page with 200 items to `/api/v1/lists/{list_id}/accounts` call if limit is set to 0.
+
 ## [4.18.0] - 2026-02-12
 
 ### Added

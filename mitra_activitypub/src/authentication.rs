@@ -47,7 +47,6 @@ use apx_sdk::{
 use serde_json::{Value as JsonValue};
 use thiserror::Error;
 
-use mitra_config::Config;
 use mitra_models::{
     database::{
         db_client_await,
@@ -121,7 +120,7 @@ pub enum AuthenticationError {
 }
 
 async fn get_signer(
-    config: &Config,
+    ap_client: &ApClient,
     db_pool: &DatabaseConnectionPool,
     signer_id: &str,
     no_fetch: bool,
@@ -135,7 +134,7 @@ async fn get_signer(
             &canonical_signer_id.to_string(),
         ).await?
     } else {
-        let mut ap_client = ApClient::new_with_pool(config, db_pool).await?;
+        let mut ap_client = ap_client.clone();
         ap_client.instance.federation.fetcher_timeout = AUTHENTICATION_FETCHER_TIMEOUT;
         match ActorIdResolver::default().only_remote().resolve(
             &ap_client,
@@ -223,7 +222,7 @@ fn get_signer_rsa_key(
 
 /// Verifies HTTP signature and returns signer
 pub async fn verify_signed_request(
-    config: &Config,
+    ap_client: &ApClient,
     db_pool: &DatabaseConnectionPool,
     request_method: Method,
     request_uri: Uri,
@@ -247,6 +246,7 @@ pub async fn verify_signed_request(
     };
     // Try to guess the key owner ID from the key ID.
     let signer_id = match signature_data.key_id {
+        // NOTE: portable key IDs in compatible form are parsed as HTTP URIs
         VerificationMethod::HttpUri(ref key_id) => {
             key_id_to_actor_id(key_id.as_str())
                 .map_err(|_| ValidationError("invalid key ID"))?
@@ -257,7 +257,7 @@ pub async fn verify_signed_request(
         },
         _ => return Err(AuthenticationError::UnsupportedVerificationMethod),
     };
-    let signer = get_signer(config, db_pool, &signer_id, no_fetch).await?;
+    let signer = get_signer(ap_client, db_pool, &signer_id, no_fetch).await?;
     let key_id = signature_data.key_id.to_string();
     // Check reciprocal claim
     let public_key = get_signer_key(
@@ -279,7 +279,7 @@ pub async fn verify_signed_request(
 
 /// Verifies JSON signature on the object and returns signer
 pub async fn verify_signed_object(
-    config: &Config,
+    ap_client: &ApClient,
     db_pool: &DatabaseConnectionPool,
     object: &JsonValue,
     object_core_type: CoreType,
@@ -290,7 +290,7 @@ pub async fn verify_signed_object(
             // Owner is not relevant if the object is portable,
             // but it is resolved because its profile needs to be returned
             let owner_id = get_owner(object, object_core_type)?;
-            let owner = get_signer(config, db_pool, &owner_id, no_fetch).await?;
+            let owner = get_signer(ap_client, db_pool, &owner_id, no_fetch).await?;
             return Ok(owner);
         },
         // Continue verification if object is not portable
@@ -319,7 +319,7 @@ pub async fn verify_signed_object(
             // Try to guess the key owner ID from the key ID.
             let signer_id = key_id_to_actor_id(key_id.as_str())
                 .map_err(|_| ValidationError("invalid key ID"))?;
-            let signer = get_signer(config, db_pool, &signer_id, no_fetch).await?;
+            let signer = get_signer(ap_client, db_pool, &signer_id, no_fetch).await?;
             match signature_data.proof_type {
                 #[allow(deprecated)]
                 ProofType::JcsRsaSignature => {

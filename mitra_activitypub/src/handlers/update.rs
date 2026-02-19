@@ -9,7 +9,6 @@ use apx_sdk::{
 use serde::Deserialize;
 use serde_json::{Value as JsonValue};
 
-use mitra_config::Config;
 use mitra_models::{
     database::{
         db_client_await,
@@ -156,12 +155,11 @@ async fn handle_update_person(
 }
 
 pub async fn handle_update(
-    config: &Config,
+    ap_client: &ApClient,
     db_pool: &DatabaseConnectionPool,
     mut activity: JsonValue,
     is_authenticated: bool,
 ) -> HandlerResult {
-    let ap_client = ApClient::new_with_pool(config, db_pool).await?;
     let is_not_embedded = activity["object"].as_str().is_some();
     if is_not_embedded || !is_authenticated {
         // Fetch object if it is not embedded or if activity is forwarded
@@ -182,13 +180,13 @@ pub async fn handle_update(
         },
     };
     if is_actor(&activity["object"]) {
-        handle_update_person(&ap_client, db_pool, activity).await
+        handle_update_person(ap_client, db_pool, activity).await
     } else if is_object(&activity["object"]) {
         verify_object_owner(&activity["object"])?;
         if activity["object"]["type"].as_str() == Some(AGREEMENT) {
             handle_update_agreement(db_pool, activity).await
         } else {
-            handle_update_note(&ap_client, db_pool, activity).await
+            handle_update_note(ap_client, db_pool, activity).await
         }
     } else {
         log::warn!("unexpected object structure: {}", activity["object"]);

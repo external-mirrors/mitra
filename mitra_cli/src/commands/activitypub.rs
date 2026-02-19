@@ -96,7 +96,7 @@ impl ImportObject {
         };
         if self.verify_proof {
             verify_signed_object(
-                config,
+                &ap_client,
                 db_pool,
                 &object,
                 object_type,
@@ -115,7 +115,7 @@ impl ImportObject {
             },
             CoreType::Activity => {
                 // Process activity
-                import_activity(config, db_pool, object).await?;
+                import_activity(config, &ap_client, db_pool, object).await?;
                 println!("activity processed");
             },
             CoreType::Collection => {
@@ -133,6 +133,7 @@ impl ImportObject {
                 };
                 import_collection(
                     config,
+                    &ap_client,
                     db_pool,
                     &self.object_id,
                     maybe_item_type,
@@ -238,7 +239,7 @@ impl FetchObject {
             skip_verification: self.skip_verification,
             ..Default::default()
         };
-        let object: JsonValue = fetch_any_object_with_context(
+        let object = fetch_any_object_with_context(
             &agent,
             &mut context,
             &self.object_id,

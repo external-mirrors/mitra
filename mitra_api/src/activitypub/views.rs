@@ -66,7 +66,10 @@ use mitra_activitypub::{
         local_object_replies,
         LocalActorCollection,
     },
-    importers::register_portable_actor,
+    importers::{
+        register_portable_actor,
+        ApClient,
+    },
     ownership::get_owner,
     queues::IncomingActivityJobData,
     utils::parse_id_from_db,
@@ -895,8 +898,9 @@ async fn apgateway_inbox_pull_view(
     request: HttpRequest,
 ) -> Result<HttpResponse, HttpError> {
     let request_full_uri = get_request_full_uri(&connection_info, request.uri());
+    let ap_client = ApClient::new_with_pool(&config, &db_pool).await?;
     let (_, signer) = verify_signed_request(
-        &config,
+        &ap_client,
         &db_pool,
         method_adapter(request.method()),
         uri_adapter(&request_full_uri),
@@ -1000,8 +1004,9 @@ async fn apgateway_outbox_pull_view(
     request: HttpRequest,
 ) -> Result<HttpResponse, HttpError> {
     let request_full_uri = get_request_full_uri(&connection_info, request.uri());
+    let ap_client = ApClient::new_with_pool(&config, &db_pool).await?;
     let (_, signer) = verify_signed_request(
-        &config,
+        &ap_client,
         &db_pool,
         method_adapter(request.method()),
         uri_adapter(&request_full_uri),
@@ -1086,8 +1091,9 @@ async fn apgateway_media_upload_view(
     let request_full_uri =
         get_request_full_uri(&connection_info, request.uri());
     let body_digest = ContentDigest::new(&request_body);
+    let ap_client = ApClient::new_with_pool(&config, &db_pool).await?;
     let (_, signer) = verify_signed_request(
-        &config,
+        &ap_client,
         &db_pool,
         method_adapter(request.method()),
         uri_adapter(&request_full_uri),
@@ -1172,8 +1178,9 @@ async fn apgateway_media_delete_view(
 ) -> Result<HttpResponse, HttpError> {
     let request_full_uri =
         get_request_full_uri(&connection_info, request.uri());
+    let ap_client = ApClient::new_with_pool(&config, &db_pool).await?;
     let (_, signer) = verify_signed_request(
-        &config,
+        &ap_client,
         &db_pool,
         method_adapter(request.method()),
         uri_adapter(&request_full_uri),

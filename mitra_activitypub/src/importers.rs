@@ -105,30 +105,6 @@ use mitra_models::users::queries::get_user_by_id;
 #[cfg(feature = "mini")]
 use crate::identifiers::_parse_local_actor_id;
 
-pub struct ApClient {
-    pub instance: Instance,
-    pub filter: FederationFilter,
-    pub limits: Limits,
-    pub media_storage: MediaStorage,
-    pub as_user: Option<User>,
-}
-
-impl ApClient {
-    pub async fn new(
-        config: &Config,
-        db_client: &impl DatabaseClient,
-    ) -> Result<Self, DatabaseError> {
-        let ap_client = Self {
-            instance: config.instance(),
-            filter: FederationFilter::init(config, db_client).await?,
-            limits: config.limits.clone(),
-            media_storage: MediaStorage::new(config),
-            as_user: None,
-        };
-        Ok(ap_client)
-    }
-}
-
 // Gateway pool for resolving 'ap' URIs
 pub struct FetcherContext {
     gateways: Vec<String>,
@@ -173,24 +149,45 @@ impl FetcherContext {
 }
 
 // Only used in fetch-object command
-pub async fn fetch_any_object_with_context<T: DeserializeOwned>(
+pub async fn fetch_any_object_with_context(
     agent: &FederationAgent,
     context: &mut FetcherContext,
     object_id: &str,
     options: FetchObjectOptions,
-) -> Result<T, FetchError> {
+) -> Result<JsonValue, FetchError> {
     let http_url = context.prepare_object_id(object_id)?;
     let object_json = fetch_object(
         agent,
         &http_url,
         options,
     ).await?;
-    // TODO: convert into HandlerError::ValidationError
-    let object: T = serde_json::from_value(object_json)?;
-    Ok(object)
+    Ok(object_json)
+}
+
+#[derive(Clone)]
+pub struct ApClient {
+    pub instance: Instance,
+    pub filter: FederationFilter,
+    pub limits: Limits,
+    pub media_storage: MediaStorage,
+    pub as_user: Option<User>,
 }
 
 impl ApClient {
+    pub async fn new(
+        config: &Config,
+        db_client: &impl DatabaseClient,
+    ) -> Result<Self, DatabaseError> {
+        let ap_client = Self {
+            instance: config.instance(),
+            filter: FederationFilter::init(config, db_client).await?,
+            limits: config.limits.clone(),
+            media_storage: MediaStorage::new(config),
+            as_user: None,
+        };
+        Ok(ap_client)
+    }
+
     pub async fn new_with_pool(
         config: &Config,
         db_pool: &DatabaseConnectionPool,
@@ -768,11 +765,13 @@ pub async fn import_object(
 // Activity must be authenticated
 pub async fn import_activity(
     config: &Config,
+    ap_client: &ApClient,
     db_pool: &DatabaseConnectionPool,
     activity: JsonValue,
 ) -> Result<String, HandlerError> {
     handle_activity(
         config,
+        ap_client,
         db_pool,
         &activity,
         true, // is authenticated
@@ -895,6 +894,7 @@ pub enum CollectionOrder {
 
 pub async fn import_collection(
     config: &Config,
+    ap_client: &ApClient,
     db_pool: &DatabaseConnectionPool,
     collection_id: &str,
     maybe_item_type: Option<CollectionItemType>,
@@ -902,8 +902,7 @@ pub async fn import_collection(
     limit: usize,
 ) -> Result<Vec<String>, HandlerError> {
     let mut imported = vec![];
-    let ap_client = ApClient::new_with_pool(config, db_pool).await?;
-    let items = fetch_collection(&ap_client, collection_id, limit).await?;
+    let items = fetch_collection(ap_client, collection_id, limit).await?;
     let item_type = match &items[..] {
         [] => {
             log::info!("collection is empty");
@@ -933,17 +932,17 @@ pub async fn import_collection(
         let result = match item_type {
             CollectionItemType::Object => {
                 log::info!("importing object {item_id}");
-                import_object(&ap_client, db_pool, item).await
+                import_object(ap_client, db_pool, item).await
                     .map(|post| post.expect_remote_object_id().to_owned())
             },
             CollectionItemType::Actor => {
                 log::info!("importing actor {item_id}");
-                import_profile(&ap_client, db_pool, item).await
+                import_profile(ap_client, db_pool, item).await
                     .map(|profile| profile.expect_remote_actor_id().to_owned())
             },
             CollectionItemType::Activity => {
                 log::info!("importing activity {item_id}");
-                import_activity(config, db_pool, item).await
+                import_activity(config, ap_client, db_pool, item).await
             },
         };
         match result {
@@ -965,6 +964,7 @@ pub async fn import_from_outbox(
     actor_id: &str,
     limit: usize,
 ) -> Result<(), HandlerError> {
+    let ap_client = ApClient::new_with_pool(config, db_pool).await?;
     let profile = get_remote_profile_by_actor_id(
         db_client_await!(db_pool),
         actor_id,
@@ -974,6 +974,7 @@ pub async fn import_from_outbox(
     let outbox_url = context.prepare_object_id(&actor_data.outbox)?;
     import_collection(
         config,
+        &ap_client,
         db_pool,
         &outbox_url,
         Some(CollectionItemType::Activity),
@@ -989,6 +990,7 @@ pub async fn import_featured(
     actor_id: &str,
     limit: usize,
 ) -> Result<(), HandlerError> {
+    let ap_client = ApClient::new_with_pool(config, db_pool).await?;
     let profile = get_remote_profile_by_actor_id(
         db_client_await!(db_pool),
         actor_id,
@@ -1002,6 +1004,7 @@ pub async fn import_featured(
     let featured_url = context.prepare_object_id(featured_id)?;
     let imported = import_collection(
         config,
+        &ap_client,
         db_pool,
         &featured_url,
         Some(CollectionItemType::Object),
@@ -1062,6 +1065,7 @@ pub async fn import_replies(
     };
     import_collection(
         config,
+        &ap_client,
         db_pool,
         &collection_id,
         Some(item_type),
