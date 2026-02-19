@@ -101,6 +101,8 @@ use apx_sdk::core::url::common::Origin;
 
 #[cfg(feature = "mini")]
 use mitra_models::users::queries::get_user_by_id;
+#[cfg(feature = "mini")]
+use mitra_models::activitypub::queries::get_object;
 
 #[cfg(feature = "mini")]
 use crate::identifiers::_parse_local_actor_id;
@@ -929,6 +931,11 @@ pub async fn import_collection(
     };
     for item in items {
         let item_id = get_object_id(&item)?.to_string();
+        #[cfg(feature = "mini")]
+        if get_object(db_client_await!(db_pool), &item_id).await.is_ok() {
+            // Don't import if object (activity) already exists
+            continue;
+        };
         let result = match item_type {
             CollectionItemType::Object => {
                 log::info!("importing object {item_id}");
