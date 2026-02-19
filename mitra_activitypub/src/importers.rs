@@ -93,31 +93,6 @@ use crate::{
     vocabulary::GROUP,
 };
 
-#[derive(Clone)]
-pub struct ApClient {
-    pub instance: Instance,
-    pub filter: FederationFilter,
-    pub limits: Limits,
-    pub media_storage: MediaStorage,
-    pub as_user: Option<User>,
-}
-
-impl ApClient {
-    pub async fn new(
-        config: &Config,
-        db_client: &impl DatabaseClient,
-    ) -> Result<Self, DatabaseError> {
-        let ap_client = Self {
-            instance: config.instance(),
-            filter: FederationFilter::init(config, db_client).await?,
-            limits: config.limits.clone(),
-            media_storage: MediaStorage::new(config),
-            as_user: None,
-        };
-        Ok(ap_client)
-    }
-}
-
 // Gateway pool for resolving 'ap' URIs
 pub struct FetcherContext {
     gateways: Vec<String>,
@@ -177,7 +152,30 @@ pub async fn fetch_any_object_with_context(
     Ok(object_json)
 }
 
+#[derive(Clone)]
+pub struct ApClient {
+    pub instance: Instance,
+    pub filter: FederationFilter,
+    pub limits: Limits,
+    pub media_storage: MediaStorage,
+    pub as_user: Option<User>,
+}
+
 impl ApClient {
+    pub async fn new(
+        config: &Config,
+        db_client: &impl DatabaseClient,
+    ) -> Result<Self, DatabaseError> {
+        let ap_client = Self {
+            instance: config.instance(),
+            filter: FederationFilter::init(config, db_client).await?,
+            limits: config.limits.clone(),
+            media_storage: MediaStorage::new(config),
+            as_user: None,
+        };
+        Ok(ap_client)
+    }
+
     pub async fn new_with_pool(
         config: &Config,
         db_pool: &DatabaseConnectionPool,
