@@ -41,32 +41,38 @@ pub async fn get_job_batch(
     let job_timeout_pg = format!("{}S", job_timeout); // interval
     let rows = db_client.query(
         "
-        UPDATE background_job
-        SET
-            job_status = $1,
-            updated_at = CURRENT_TIMESTAMP
-        WHERE id IN (
-            SELECT id
-            FROM background_job
-            WHERE
-                job_type = $2
-                AND scheduled_for < CURRENT_TIMESTAMP
-                AND (
-                    -- queued
-                    job_status = $3
-                    -- running
-                    OR job_status = $1
-                    AND updated_at < CURRENT_TIMESTAMP - $5::text::interval
-                )
-            ORDER BY
-                -- queued jobs first
-                job_status ASC,
-                scheduled_for ASC
-            LIMIT $4
-            -- lock is required when there are multiple workers
-            FOR UPDATE SKIP LOCKED
+        WITH updated AS (
+            UPDATE background_job
+            SET
+                job_status = $1,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id IN (
+                SELECT id
+                FROM background_job
+                WHERE
+                    job_type = $2
+                    AND scheduled_for < CURRENT_TIMESTAMP
+                    AND (
+                        -- queued
+                        job_status = $3
+                        -- running
+                        OR job_status = $1
+                        AND updated_at < CURRENT_TIMESTAMP - $5::text::interval
+                    )
+                ORDER BY
+                    -- queued jobs first
+                    job_status ASC,
+                    scheduled_for ASC
+                LIMIT $4
+                -- lock is required when there are multiple workers
+                FOR UPDATE SKIP LOCKED
+            )
+            RETURNING background_job
         )
-        RETURNING background_job
+        -- sorting is required because UPDATE order is not deterministic
+        SELECT background_job
+        FROM updated
+        ORDER BY (background_job).scheduled_for ASC
         ",
         &[
             &JobStatus::Running,
@@ -141,8 +147,8 @@ mod tests {
 
         let batch_1 = get_job_batch(db_client, job_type, 10, 3600).await.unwrap();
         assert_eq!(batch_1.len(), 2);
-        assert!(batch_1.iter().any(|job| job.id == job_id_1));
-        assert!(batch_1.iter().any(|job| job.id == job_id_2));
+        assert_eq!(batch_1[0].id, job_id_1);
+        assert_eq!(batch_1[1].id, job_id_2);
         let job = &batch_1[0];
         assert_eq!(job.job_type, job_type);
         assert_eq!(job.job_data, job_data);
