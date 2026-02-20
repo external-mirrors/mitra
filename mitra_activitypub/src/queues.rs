@@ -101,7 +101,8 @@ impl IncomingActivityJobData {
             JobType::IncomingActivity,
             &job_data,
             scheduled_for,
-        ).await
+        ).await?;
+        Ok(())
     }
 }
 
@@ -350,7 +351,8 @@ impl OutgoingActivityJobData {
             JobType::OutgoingActivity,
             &job_data,
             scheduled_for,
-        ).await
+        ).await?;
+        Ok(())
     }
 
     pub async fn enqueue(
@@ -555,7 +557,8 @@ impl FetcherJobData {
             JobType::Fetcher,
             &job_data,
             scheduled_for,
-        ).await
+        ).await?;
+        Ok(())
     }
 }
 

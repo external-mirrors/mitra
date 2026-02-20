@@ -13,7 +13,7 @@ pub async fn enqueue_job(
     job_type: JobType,
     job_data: &Value,
     scheduled_for: DateTime<Utc>,
-) -> Result<(), DatabaseError> {
+) -> Result<Uuid, DatabaseError> {
     let job_id = Uuid::new_v4();
     db_client.execute(
         "
@@ -27,7 +27,7 @@ pub async fn enqueue_job(
         ",
         &[&job_id, &job_type, &job_data, &scheduled_for],
     ).await?;
-    Ok(())
+    Ok(job_id)
 }
 
 /// Returns queued jobs, as well as running jobs that have become stale
@@ -132,11 +132,17 @@ mod tests {
             "is_authenticated": true,
             "failure_count": 0,
         });
-        let scheduled_for = Utc::now();
-        enqueue_job(db_client, job_type, &job_data, scheduled_for).await.unwrap();
+        let time_1 = Utc::now();
+        let job_id_1 =
+            enqueue_job(db_client, job_type, &job_data, time_1).await.unwrap();
+        let time_2 = Utc::now();
+        let job_id_2 =
+            enqueue_job(db_client, job_type, &job_data, time_2).await.unwrap();
 
         let batch_1 = get_job_batch(db_client, job_type, 10, 3600).await.unwrap();
-        assert_eq!(batch_1.len(), 1);
+        assert_eq!(batch_1.len(), 2);
+        assert!(batch_1.iter().any(|job| job.id == job_id_1));
+        assert!(batch_1.iter().any(|job| job.id == job_id_2));
         let job = &batch_1[0];
         assert_eq!(job.job_type, job_type);
         assert_eq!(job.job_data, job_data);
