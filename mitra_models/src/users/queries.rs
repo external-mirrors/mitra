@@ -108,7 +108,7 @@ async fn use_invite_code(
     Ok(())
 }
 
-pub async fn check_local_username_unique(
+async fn check_local_username_unique(
     db_client: &impl DatabaseClient,
     username: &str,
 ) -> Result<(), DatabaseError> {
@@ -603,6 +603,18 @@ pub async fn create_portable_user(
     user_data: PortableUserData,
 ) -> Result<PortableUser, DatabaseError> {
     let transaction = db_client.transaction().await?;
+    let row = transaction.query_one(
+        "
+        SELECT username
+        FROM actor_profile
+        WHERE id = $1
+        FOR UPDATE
+        ",
+        &[&user_data.profile_id],
+    ).await?;
+    let username: String = row.try_get("username")?;
+    // Ensure there are no local accounts with a similar name
+    check_local_username_unique(&transaction, &username).await?;
     // Use invite code
     if let Some(ref invite_code) = user_data.invite_code {
         use_invite_code(&transaction, invite_code).await?;

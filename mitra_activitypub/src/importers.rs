@@ -55,7 +55,6 @@ use mitra_models::{
     },
     profiles::types::{DbActor, DbActorProfile},
     users::queries::{
-        check_local_username_unique,
         create_portable_user,
         get_user_by_name,
         is_valid_invite_code,
@@ -996,10 +995,6 @@ pub async fn register_portable_actor(
             ValidationError("invalid portable actor")
         })?;
     let actor: Actor = serde_json::from_value(actor_json.clone())?;
-    check_local_username_unique(
-        db_client_await!(db_pool),
-        actor.preferred_username(),
-    ).await?;
     if let Some(ref invite_code) = maybe_invite_code {
         if !is_valid_invite_code(
             db_client_await!(db_pool),
