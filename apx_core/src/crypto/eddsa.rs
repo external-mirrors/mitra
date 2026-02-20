@@ -1,6 +1,9 @@
 //! EdDSA utilities
 use ed25519_dalek::{
     pkcs8::{
+        spki::{
+            Error as Pkcs8Error,
+        },
         DecodePublicKey,
         PublicKeyBytes,
     },
@@ -44,8 +47,8 @@ pub enum Ed25519SerializationError {
     #[error(transparent)]
     KeyError(#[from] SignatureError),
 
-    #[error("pkcs8 decoding error")]
-    Pkcs8Error,
+    #[error(transparent)]
+    Pkcs8Error(#[from] Pkcs8Error),
 
     #[error("multikey error")]
     MultikeyError,
@@ -87,11 +90,11 @@ pub fn ed25519_public_key_from_bytes(
     Ok(public_key)
 }
 
+/// Decodes ed25519 public key from PEM format
 pub fn ed25519_public_key_from_pkcs8_pem(
     public_key_pem: &str,
 ) -> Result<VerifyingKey, Ed25519SerializationError> {
-    let public_key_bytes = PublicKeyBytes::from_public_key_pem(public_key_pem)
-        .map_err(|_| Ed25519SerializationError::Pkcs8Error)?;
+    let public_key_bytes = PublicKeyBytes::from_public_key_pem(public_key_pem)?;
     let public_key = VerifyingKey::from_bytes(public_key_bytes.as_ref())?;
     Ok(public_key)
 }
