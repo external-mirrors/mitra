@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Added
 
 - Allow to repeat portable actor registration.
+- Added `retention.activitypub_objects` configuration option.
 
 ### Changed
 
