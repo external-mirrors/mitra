@@ -41,7 +41,7 @@ pub mod oauth;
 mod polls;
 mod preferences;
 mod reactions;
-mod search;
+pub mod search;
 mod settings;
 pub mod statuses;
 mod subscriptions;
