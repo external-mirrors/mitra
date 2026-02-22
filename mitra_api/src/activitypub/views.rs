@@ -24,7 +24,11 @@ use apx_core::{
     hashlink::Hashlink,
     http_digest::ContentDigest,
     http_types::{header_map_adapter, method_adapter, uri_adapter},
-    url::ap_uri::with_ap_prefix,
+    url::{
+        ap_uri::with_ap_prefix,
+        common::url_decode,
+        http_uri::HttpUri,
+    },
 };
 use apx_sdk::{
     authentication::verify_portable_object,
@@ -139,6 +143,7 @@ use super::{
     types::{
         CollectionQueryParams,
         GatewayMetadata,
+        InboxQueryParams,
         PortableActorKeys,
         PortableMedia,
     },
@@ -890,6 +895,7 @@ async fn apgateway_inbox_pull_view(
     connection_info: ConnectionInfo,
     db_pool: web::Data<DatabaseConnectionPool>,
     request: HttpRequest,
+    query_params: web::Query<InboxQueryParams>,
 ) -> Result<HttpResponse, HttpError> {
     let request_uri = request.uri();
     let request_full_uri = get_request_full_uri(&connection_info, request_uri);
@@ -907,11 +913,15 @@ async fn apgateway_inbox_pull_view(
         HttpError::AuthError("invalid signature")
     })?;
     let canonical_signer_id = parse_id_from_db(signer.expect_remote_actor_id())?;
-    let collection_id = format!(
+    // Instance URI is used because request target might have different authority
+    let collection_uri = format!(
         "{}{}",
         config.instance().uri(),
         request_uri,
     );
+    let collection_id = HttpUri::parse(&collection_uri)
+        .map_err(|_| ValidationError("invalid request URI"))?
+        .without_query_and_fragment();
     let canonical_collection_id = canonicalize_id(&collection_id)?;
     let db_client = &**get_database_client(&db_pool).await?;
     let collection_owner = get_portable_user_by_inbox_id(
@@ -923,13 +933,15 @@ async fn apgateway_inbox_pull_view(
     if canonical_owner_id != canonical_signer_id {
         return Err(HttpError::PermissionError);
     };
+    let maybe_after = query_params.after.as_ref().map(|id| url_decode(id));
     let items = get_collection_items_json(
         db_client,
         &canonical_collection_id.to_string(),
+        maybe_after.as_deref(),
         OrderedCollection::PAGE_SIZE,
     ).await?;
     let collection = OrderedCollection::new_with_items(
-        collection_id,
+        collection_uri,
         items,
     );
     let response = HttpResponse::Ok()
@@ -1031,6 +1043,7 @@ async fn apgateway_outbox_pull_view(
     let items = get_collection_items_json(
         db_client,
         &canonical_collection_id.to_string(),
+        None,
         OrderedCollection::PAGE_SIZE,
     ).await?;
     let collection = OrderedCollection::new_with_items(

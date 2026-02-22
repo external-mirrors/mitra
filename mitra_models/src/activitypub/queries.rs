@@ -201,20 +201,49 @@ pub async fn remove_object_from_collection(
 pub async fn get_collection_items(
     db_client: &impl DatabaseClient,
     collection_id: &str,
+    maybe_after_object_id: Option<&str>,
     limit: u16,
 ) -> Result<Vec<ActivityPubObject>, DatabaseError> {
     // Reverse chronological order
-    let rows = db_client.query(
-        "
-        SELECT activitypub_object
-        FROM activitypub_object
-        JOIN activitypub_collection_item USING (object_id)
-        WHERE collection_id = $1
-        ORDER BY activitypub_object.created_at DESC
-        LIMIT $2
-        ",
-        &[&collection_id, &i64::from(limit)],
-    ).await?;
+    let rows = if let Some(after_object_id) = maybe_after_object_id {
+        db_client.query(
+            "
+            SELECT activitypub_object
+            FROM (
+                SELECT activitypub_object
+                FROM activitypub_object
+                JOIN activitypub_collection_item USING (object_id)
+                WHERE
+                    collection_id = $1
+                    AND activitypub_object.created_at > (
+                        SELECT created_at
+                        FROM activitypub_object
+                        WHERE object_id = $2
+                    )
+                ORDER BY activitypub_object.created_at ASC
+                LIMIT $3
+            ) AS page_item
+            ORDER BY (activitypub_object).created_at DESC
+            ",
+            &[
+                &collection_id,
+                &after_object_id,
+                &i64::from(limit),
+            ],
+        ).await?
+    } else {
+        db_client.query(
+            "
+            SELECT activitypub_object
+            FROM activitypub_object
+            JOIN activitypub_collection_item USING (object_id)
+            WHERE collection_id = $1
+            ORDER BY activitypub_object.created_at DESC
+            LIMIT $2
+            ",
+            &[&collection_id, &i64::from(limit)],
+        ).await?
+    };
     let items = rows.iter()
         .map(|row| row.try_get("activitypub_object"))
         .collect::<Result<_, _>>()?;
@@ -537,6 +566,7 @@ mod tests {
         let items = get_collection_items(
             db_client,
             canonical_collection_id,
+            None,
             10,
         ).await.unwrap();
         assert_eq!(items.len(), 1);
@@ -551,9 +581,80 @@ mod tests {
         let items = get_collection_items(
             db_client,
             canonical_collection_id,
+            None,
             10,
         ).await.unwrap();
         assert_eq!(items.len(), 0);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_get_collection_items_with_cursor() {
+        let db_client = &mut create_test_database().await;
+        let actor_id = "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor";
+        let user = create_test_portable_user(
+            db_client,
+            "test",
+            actor_id,
+        ).await;
+        let activity_1_id = "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/activities/1";
+        let activity_2_id = "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/activities/2";
+        let activity_3_id = "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/activities/3";
+        let activity = json!({});
+        let collection_id = "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor/outbox";
+        save_activity(
+            db_client,
+            &CanonicalUri::parse(activity_1_id).unwrap(),
+            &activity,
+        ).await.unwrap();
+        save_activity(
+            db_client,
+            &CanonicalUri::parse(activity_2_id).unwrap(),
+            &activity,
+        ).await.unwrap();
+        save_activity(
+            db_client,
+            &CanonicalUri::parse(activity_3_id).unwrap(),
+            &activity,
+        ).await.unwrap();
+        add_object_to_collection(
+            db_client,
+            user.id,
+            collection_id,
+            activity_1_id,
+        ).await.unwrap();
+        add_object_to_collection(
+            db_client,
+            user.id,
+            collection_id,
+            activity_2_id,
+        ).await.unwrap();
+        add_object_to_collection(
+            db_client,
+            user.id,
+            collection_id,
+            activity_3_id,
+        ).await.unwrap();
+
+        let items = get_collection_items(
+            db_client,
+            collection_id,
+            None,
+            10,
+        ).await.unwrap();
+        assert_eq!(items.len(), 3);
+        assert_eq!(items[0].object_id, activity_3_id);
+        assert_eq!(items[1].object_id, activity_2_id);
+        assert_eq!(items[2].object_id, activity_1_id);
+        let items = get_collection_items(
+            db_client,
+            collection_id,
+            Some(activity_1_id),
+            10,
+        ).await.unwrap();
+        assert_eq!(items.len(), 2);
+        assert_eq!(items[0].object_id, activity_3_id);
+        assert_eq!(items[1].object_id, activity_2_id);
     }
 
     #[tokio::test]

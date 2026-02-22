@@ -8,6 +8,11 @@ pub struct CollectionQueryParams {
     pub page: Option<bool>,
 }
 
+#[derive(Deserialize)]
+pub struct InboxQueryParams {
+    pub after: Option<String>,
+}
+
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct GatewayMetadata {
