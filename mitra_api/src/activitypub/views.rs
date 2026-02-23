@@ -921,11 +921,10 @@ async fn apgateway_inbox_pull_view(
     if canonical_owner_id != canonical_signer_id {
         return Err(HttpError::PermissionError);
     };
-    const LIMIT: u32 = 20;
     let items = get_collection_items(
         db_client,
         &canonical_collection_id.to_string(),
-        LIMIT,
+        OrderedCollection::PAGE_SIZE,
     ).await?;
     let collection = OrderedCollection::new_with_items(
         collection_id,
@@ -1027,11 +1026,10 @@ async fn apgateway_outbox_pull_view(
     if canonical_owner_id != canonical_signer_id {
         return Err(HttpError::PermissionError);
     };
-    const LIMIT: u32 = 20;
     let items = get_collection_items(
         db_client,
         &canonical_collection_id.to_string(),
-        LIMIT,
+        OrderedCollection::PAGE_SIZE,
     ).await?;
     let collection = OrderedCollection::new_with_items(
         collection_id,

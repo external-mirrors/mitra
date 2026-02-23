@@ -200,7 +200,7 @@ pub async fn remove_object_from_collection(
 pub async fn get_collection_items(
     db_client: &impl DatabaseClient,
     collection_id: &str,
-    limit: u32,
+    limit: u16,
 ) -> Result<Vec<JsonValue>, DatabaseError> {
     // Reverse chronological order
     let rows = db_client.query(
