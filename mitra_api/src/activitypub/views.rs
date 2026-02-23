@@ -78,14 +78,16 @@ use mitra_activitypub::{
 };
 use mitra_config::Config;
 use mitra_models::{
-    activitypub::queries::{
-        create_activitypub_media,
-        delete_activitypub_media,
-        get_activitypub_media_by_digest,
-        get_actor,
-        get_collection_items,
-        get_object,
-        get_object_as_target,
+    activitypub::{
+        helpers::get_collection_items_json,
+        queries::{
+            create_activitypub_media,
+            delete_activitypub_media,
+            get_activitypub_media_by_digest,
+            get_actor,
+            get_object,
+            get_object_as_target,
+        },
     },
     database::{
         db_client_await,
@@ -921,7 +923,7 @@ async fn apgateway_inbox_pull_view(
     if canonical_owner_id != canonical_signer_id {
         return Err(HttpError::PermissionError);
     };
-    let items = get_collection_items(
+    let items = get_collection_items_json(
         db_client,
         &canonical_collection_id.to_string(),
         OrderedCollection::PAGE_SIZE,
@@ -1026,7 +1028,7 @@ async fn apgateway_outbox_pull_view(
     if canonical_owner_id != canonical_signer_id {
         return Err(HttpError::PermissionError);
     };
-    let items = get_collection_items(
+    let items = get_collection_items_json(
         db_client,
         &canonical_collection_id.to_string(),
         OrderedCollection::PAGE_SIZE,

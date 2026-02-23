@@ -13,6 +13,7 @@ use crate::{
     },
     media::types::MediaInfo,
 };
+use super::types::ActivityPubObject;
 
 pub async fn save_activity(
     db_client: &impl DatabaseClient,
@@ -201,11 +202,11 @@ pub async fn get_collection_items(
     db_client: &impl DatabaseClient,
     collection_id: &str,
     limit: u16,
-) -> Result<Vec<JsonValue>, DatabaseError> {
+) -> Result<Vec<ActivityPubObject>, DatabaseError> {
     // Reverse chronological order
     let rows = db_client.query(
         "
-        SELECT activitypub_object.object_data
+        SELECT activitypub_object
         FROM activitypub_object
         JOIN activitypub_collection_item USING (object_id)
         WHERE collection_id = $1
@@ -215,7 +216,7 @@ pub async fn get_collection_items(
         &[&collection_id, &i64::from(limit)],
     ).await?;
     let items = rows.iter()
-        .map(|row| row.try_get("object_data"))
+        .map(|row| row.try_get("activitypub_object"))
         .collect::<Result<_, _>>()?;
     Ok(items)
 }
@@ -539,7 +540,7 @@ mod tests {
             10,
         ).await.unwrap();
         assert_eq!(items.len(), 1);
-        assert_eq!(items[0], activity);
+        assert_eq!(items[0].object_data, activity);
 
         // Remove from collection
         remove_object_from_collection(
