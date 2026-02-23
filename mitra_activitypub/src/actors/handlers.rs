@@ -122,10 +122,6 @@ impl Actor {
         &self.inner.id
     }
 
-    pub fn preferred_username(&self) -> &str {
-        &self.inner.preferred_username
-    }
-
     pub fn is_local(&self, local_origin: Origin) -> Result<bool, ValidationError> {
         let canonical_actor_id = CanonicalUri::parse(self.id())
             .map_err(|_| ValidationError("invalid actor ID"))?;

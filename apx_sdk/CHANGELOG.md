@@ -6,10 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+
+- Added `ed25519_public_key_to_pkcs8_pem` function.
+
 ### Changed
 
 - Add response URL to `FetchError::JsonParseError`.
 - Don't strip query parameters when converting key ID to actor ID.
+- Return detailed error when decoding Ed25519 key from PEM.
 
 ## [0.21.0] - 2026-01-27
 

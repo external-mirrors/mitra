@@ -26,7 +26,8 @@ impl DeletionQueue {
             JobType::MediaCleanup,
             &job_data,
             scheduled_for,
-        ).await
+        ).await?;
+        Ok(())
     }
 
     /// Find and remove non-orphaned objects

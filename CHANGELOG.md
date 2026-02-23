@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+
+- Allow to repeat portable actor registration.
+- Added `retention.activitypub_objects` configuration option.
+
 ### Changed
 
 - Write object location to log on JSON parsing errors.
@@ -18,6 +23,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Fixed
 
 - Fixed content type error when POSTing form data to `/api/v1/lists/{list_id}/accounts` endpoint.
+- Process incoming activities in the order they were received.
+- Eliminated race condition in portable actor registration routine.
+- Fixed incorrect re-rendering of markdown lists.
 
 ## [4.18.1] - 2026-02-14
 

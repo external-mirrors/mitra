@@ -66,7 +66,8 @@ impl ImporterJobData {
             JobType::DataImport,
             &job_data,
             scheduled_for,
-        ).await
+        ).await?;
+        Ok(())
     }
 }
 

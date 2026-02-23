@@ -3,7 +3,7 @@ use std::borrow::Cow;
 use comrak::{
     format_commonmark,
     format_html,
-    nodes::{Ast, AstNode, ListType, NodeValue},
+    nodes::{Ast, AstNode, NodeValue},
     parse_document,
     Arena,
     ExtensionOptions,
@@ -244,16 +244,8 @@ pub fn markdown_lite_to_html(text: &str) -> Result<String, MarkdownError> {
                         };
                         paragraph.detach();
                     };
-                    let mut list_prefix_markdown =
+                    let list_prefix_markdown =
                         node_to_markdown(list_item, &options)?;
-                    if let NodeValue::Item(item) = list_item.data.borrow().value {
-                        if item.list_type == ListType::Ordered {
-                            // Preserve numbering in ordered lists
-                            let item_index_str = item.start.to_string();
-                            list_prefix_markdown =
-                                list_prefix_markdown.replace('1', &item_index_str);
-                        };
-                    };
                     if !replacements.is_empty() {
                         // Insert line break before next list item
                         let linebreak = NodeValue::LineBreak;

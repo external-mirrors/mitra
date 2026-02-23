@@ -13,7 +13,7 @@ pub async fn enqueue_job(
     job_type: JobType,
     job_data: &Value,
     scheduled_for: DateTime<Utc>,
-) -> Result<(), DatabaseError> {
+) -> Result<Uuid, DatabaseError> {
     let job_id = Uuid::new_v4();
     db_client.execute(
         "
@@ -27,7 +27,7 @@ pub async fn enqueue_job(
         ",
         &[&job_id, &job_type, &job_data, &scheduled_for],
     ).await?;
-    Ok(())
+    Ok(job_id)
 }
 
 /// Returns queued jobs, as well as running jobs that have become stale
@@ -41,32 +41,38 @@ pub async fn get_job_batch(
     let job_timeout_pg = format!("{}S", job_timeout); // interval
     let rows = db_client.query(
         "
-        UPDATE background_job
-        SET
-            job_status = $1,
-            updated_at = CURRENT_TIMESTAMP
-        WHERE id IN (
-            SELECT id
-            FROM background_job
-            WHERE
-                job_type = $2
-                AND scheduled_for < CURRENT_TIMESTAMP
-                AND (
-                    -- queued
-                    job_status = $3
-                    -- running
-                    OR job_status = $1
-                    AND updated_at < CURRENT_TIMESTAMP - $5::text::interval
-                )
-            ORDER BY
-                -- queued jobs first
-                job_status ASC,
-                scheduled_for ASC
-            LIMIT $4
-            -- lock is required when there are multiple workers
-            FOR UPDATE SKIP LOCKED
+        WITH updated AS (
+            UPDATE background_job
+            SET
+                job_status = $1,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id IN (
+                SELECT id
+                FROM background_job
+                WHERE
+                    job_type = $2
+                    AND scheduled_for < CURRENT_TIMESTAMP
+                    AND (
+                        -- queued
+                        job_status = $3
+                        -- running
+                        OR job_status = $1
+                        AND updated_at < CURRENT_TIMESTAMP - $5::text::interval
+                    )
+                ORDER BY
+                    -- queued jobs first
+                    job_status ASC,
+                    scheduled_for ASC
+                LIMIT $4
+                -- lock is required when there are multiple workers
+                FOR UPDATE SKIP LOCKED
+            )
+            RETURNING background_job
         )
-        RETURNING background_job
+        -- sorting is required because UPDATE order is not deterministic
+        SELECT background_job
+        FROM updated
+        ORDER BY (background_job).scheduled_for ASC
         ",
         &[
             &JobStatus::Running,
@@ -132,11 +138,17 @@ mod tests {
             "is_authenticated": true,
             "failure_count": 0,
         });
-        let scheduled_for = Utc::now();
-        enqueue_job(db_client, job_type, &job_data, scheduled_for).await.unwrap();
+        let time_1 = Utc::now();
+        let job_id_1 =
+            enqueue_job(db_client, job_type, &job_data, time_1).await.unwrap();
+        let time_2 = Utc::now();
+        let job_id_2 =
+            enqueue_job(db_client, job_type, &job_data, time_2).await.unwrap();
 
         let batch_1 = get_job_batch(db_client, job_type, 10, 3600).await.unwrap();
-        assert_eq!(batch_1.len(), 1);
+        assert_eq!(batch_1.len(), 2);
+        assert_eq!(batch_1[0].id, job_id_1);
+        assert_eq!(batch_1[1].id, job_id_2);
         let job = &batch_1[0];
         assert_eq!(job.job_type, job_type);
         assert_eq!(job.job_data, job_data);

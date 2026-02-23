@@ -186,12 +186,14 @@ pub async fn prune_unused_attachments(
 }
 
 pub async fn prune_activitypub_objects(
-    _config: &Config,
+    config: &Config,
     db_pool: &DatabaseConnectionPool,
 ) -> Result<(), Error> {
-    const CACHE_EXPIRATION_DAYS: u32 = 5;
+    let created_before = match config.retention.activitypub_objects {
+        Some(days) => days_before_now(days),
+        None => return Ok(()), // not configured
+    };
     let db_client = &**get_database_client(db_pool).await?;
-    let created_before = days_before_now(CACHE_EXPIRATION_DAYS);
     let deleted_count =
         delete_activitypub_objects(db_client, created_before).await?;
     if deleted_count > 0 {
