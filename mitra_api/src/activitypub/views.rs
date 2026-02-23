@@ -34,7 +34,6 @@ use apx_sdk::{
     utils::get_core_type,
 };
 use log::Level;
-use serde::Deserialize;
 use serde_json::{Value as JsonValue};
 use uuid::Uuid;
 
@@ -136,6 +135,7 @@ use super::{
         EndpointError,
     },
     types::{
+        CollectionQueryParams,
         GatewayMetadata,
         PortableActorKeys,
         PortableMedia,
@@ -229,11 +229,6 @@ async fn inbox(
             error
         })?;
     Ok(HttpResponse::Accepted().finish())
-}
-
-#[derive(Deserialize)]
-pub struct CollectionQueryParams {
-    page: Option<bool>,
 }
 
 #[get("/outbox")]

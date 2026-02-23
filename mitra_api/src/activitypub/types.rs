@@ -1,7 +1,12 @@
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use mitra_activitypub::keys::Multikey;
 use mitra_models::users::types::PortableUser;
+
+#[derive(Deserialize)]
+pub struct CollectionQueryParams {
+    pub page: Option<bool>,
+}
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
