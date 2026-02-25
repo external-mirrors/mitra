@@ -137,7 +137,6 @@ use crate::{
 use super::{
     auth::check_request,
     receiver::{
-        authorize_request,
         receive_activity,
         EndpointError,
     },
@@ -721,8 +720,9 @@ pub async fn activity_view(
     let audience = get_activity_audience(&activity, None)?;
     if !audience.iter().any(|id| id.to_string() == AP_PUBLIC) {
         // Perform authorization only if activity is not public
-        let signer = authorize_request(
-            &config,
+        let ap_client = ApClient::new_with_pool(&config, &db_pool).await?;
+        let signer = check_request(
+            &ap_client,
             &db_pool,
             &request,
             &request_full_uri,

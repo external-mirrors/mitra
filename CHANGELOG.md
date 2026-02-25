@@ -21,6 +21,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Respect `--as-user` parameter when importing activities with `import-object` command.
 - Don't strip query parameters when converting key ID to actor ID.
 - Improved error handling during verification of GET requests to portable inboxes and outboxes.
+- Log error details when verifying activity fetch requests.
 
 ### Fixed
 

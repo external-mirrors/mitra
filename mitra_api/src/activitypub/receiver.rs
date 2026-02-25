@@ -34,7 +34,6 @@ use mitra_models::{
         DatabaseConnectionPool,
         DatabaseError,
     },
-    profiles::types::DbActorProfile,
 };
 use mitra_validators::{
     errors::ValidationError,
@@ -214,23 +213,4 @@ pub async fn receive_activity(
         .await?;
     log::debug!("activity added to the queue: {}", activity_type);
     Ok(())
-}
-
-pub async fn authorize_request(
-    config: &Config,
-    db_pool: &DatabaseConnectionPool,
-    request: &HttpRequest,
-    request_full_uri: &Uri,
-) -> Result<DbActorProfile, EndpointError> {
-    let ap_client = ApClient::new_with_pool(config, db_pool).await?;
-    let (_, signer) = verify_signed_request(
-        &ap_client,
-        db_pool,
-        method_adapter(request.method()),
-        uri_adapter(request_full_uri),
-        header_map_adapter(request.headers()),
-        None, // GET request has no content
-        true, // don't fetch actor
-    ).await?;
-    Ok(signer)
 }
