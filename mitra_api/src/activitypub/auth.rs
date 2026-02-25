@@ -7,6 +7,7 @@ use apx_core::http_types::{header_map_adapter, method_adapter, uri_adapter};
 use mitra_activitypub::{
     authentication::{
         verify_signed_request,
+        AuthenticationError,
     },
     importers::ApClient,
 };
@@ -40,4 +41,22 @@ pub async fn check_request(
         },
     };
     Ok(signer)
+}
+
+pub async fn check_request_opt(
+    ap_client: &ApClient,
+    db_pool: &DatabaseConnectionPool,
+    request: &HttpRequest,
+    request_full_uri: &Uri,
+) -> Result<Option<DbActorProfile>, EndpointError> {
+    match check_request(
+        ap_client,
+        db_pool,
+        request,
+        request_full_uri,
+    ).await {
+        Ok(signer) => Ok(Some(signer)),
+        Err(EndpointError::AuthError(AuthenticationError::NoHttpSignature)) => Ok(None),
+        Err(other_error) => Err(other_error),
+    }
 }

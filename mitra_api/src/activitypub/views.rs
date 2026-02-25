@@ -135,7 +135,10 @@ use crate::{
 };
 
 use super::{
-    auth::check_request,
+    auth::{
+        check_request,
+        check_request_opt,
+    },
     receiver::{
         receive_activity,
         EndpointError,
@@ -1005,19 +1008,29 @@ async fn apgateway_outbox_pull_view(
 ) -> Result<HttpResponse, HttpError> {
     let request_uri = request.uri();
     let request_full_uri = get_request_full_uri(&connection_info, request_uri);
-    let ap_client = ApClient::new_with_pool(&config, &db_pool).await?;
-    let signer = check_request(
-        &ap_client,
-        &db_pool,
-        &request,
-        &request_full_uri,
-    ).await?;
-    let canonical_signer_id = parse_id_from_db(signer.expect_remote_actor_id())?;
     let collection_id = format!(
         "{}{}",
         config.instance().uri(),
         request_uri,
     );
+    let ap_client = ApClient::new_with_pool(&config, &db_pool).await?;
+    let Some(signer) = check_request_opt(
+        &ap_client,
+        &db_pool,
+        &request,
+        &request_full_uri,
+    ).await? else {
+        let collection = OrderedCollection::new(
+            collection_id,
+            None, // no pages
+            None, // no item count
+        );
+        let response = HttpResponse::Ok()
+            .content_type(AP_MEDIA_TYPE)
+            .json(collection);
+        return Ok(response);
+    };
+    let canonical_signer_id = parse_id_from_db(signer.expect_remote_actor_id())?;
     let canonical_collection_id = canonicalize_id(&collection_id)?;
     let db_client = &**get_database_client(&db_pool).await?;
     let collection_owner = get_portable_user_by_outbox_id(
