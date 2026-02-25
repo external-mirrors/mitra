@@ -142,7 +142,7 @@ pub async fn receive_activity(
             if is_self_delete && matches!(
                 error,
                 AuthenticationError::NoHttpSignature |
-                AuthenticationError::DatabaseError(DatabaseError::NotFound(_))
+                AuthenticationError::ActorNotFound
             ) {
                 // Ignore Delete(Person) activities without HTTP signatures
                 // or if signer is not found in local database

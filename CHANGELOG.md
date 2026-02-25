@@ -27,6 +27,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Process incoming activities in the order they were received.
 - Eliminated race condition in portable actor registration routine.
 - Fixed incorrect re-rendering of markdown lists.
+- Return error 401 instead of 404 if signer of GET request is not found in cache.
 
 ## [4.18.1] - 2026-02-14
 
