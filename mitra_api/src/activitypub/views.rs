@@ -135,6 +135,7 @@ use crate::{
 };
 
 use super::{
+    auth::check_request,
     receiver::{
         authorize_request,
         receive_activity,
@@ -900,18 +901,12 @@ async fn apgateway_inbox_pull_view(
     let request_uri = request.uri();
     let request_full_uri = get_request_full_uri(&connection_info, request_uri);
     let ap_client = ApClient::new_with_pool(&config, &db_pool).await?;
-    let (_, signer) = verify_signed_request(
+    let signer = check_request(
         &ap_client,
         &db_pool,
-        method_adapter(request.method()),
-        uri_adapter(&request_full_uri),
-        header_map_adapter(request.headers()),
-        None, // GET request has no content
-        true, // don't fetch actor
-    ).await.map_err(|error| {
-        log::warn!("C2S authentication error (GET {request_uri}): {error}");
-        HttpError::AuthError("invalid signature")
-    })?;
+        &request,
+        &request_full_uri,
+    ).await?;
     let canonical_signer_id = parse_id_from_db(signer.expect_remote_actor_id())?;
     // Instance URI is used because request target might have different authority
     let collection_uri = format!(
@@ -1011,18 +1006,12 @@ async fn apgateway_outbox_pull_view(
     let request_uri = request.uri();
     let request_full_uri = get_request_full_uri(&connection_info, request_uri);
     let ap_client = ApClient::new_with_pool(&config, &db_pool).await?;
-    let (_, signer) = verify_signed_request(
+    let signer = check_request(
         &ap_client,
         &db_pool,
-        method_adapter(request.method()),
-        uri_adapter(&request_full_uri),
-        header_map_adapter(request.headers()),
-        None, // GET request has no content
-        true, // don't fetch actor
-    ).await.map_err(|error| {
-        log::warn!("C2S authentication error (GET {request_uri}): {error}");
-        HttpError::AuthError("invalid signature")
-    })?;
+        &request,
+        &request_full_uri,
+    ).await?;
     let canonical_signer_id = parse_id_from_db(signer.expect_remote_actor_id())?;
     let collection_id = format!(
         "{}{}",
