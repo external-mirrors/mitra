@@ -36,7 +36,10 @@ use mitra_validators::{
 
 use crate::{
     authentication::{verify_signed_object, AuthenticationError},
-    identifiers::parse_local_object_id,
+    identifiers::{
+        canonicalize_id,
+        parse_local_object_id,
+    },
     importers::{import_post, ActorIdResolver, ApClient},
     ownership::{
         get_object_id,
@@ -101,9 +104,10 @@ pub async fn handle_announce(
         return handle_fep_1b12_announce(config, ap_client, db_pool, activity).await;
     };
     let announce: Announce = serde_json::from_value(activity)?;
+    let canonical_activity_id = canonicalize_id(&announce.id)?;
     match get_remote_repost_by_activity_id(
         db_client_await!(db_pool),
-        &announce.id,
+        &canonical_activity_id.to_string(),
     ).await {
         Ok(_) => return Ok(None), // Ignore if repost already exists
         Err(DatabaseError::NotFound(_)) => (),
@@ -142,7 +146,7 @@ pub async fn handle_announce(
     let repost_data = PostCreateData::repost(
         post.id,
         visibility,
-        Some(announce.id.clone()),
+        Some(canonical_activity_id.to_string()),
     );
     validate_repost_data(&repost_data)?;
     let db_client = &mut **get_database_client(db_pool).await?;

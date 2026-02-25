@@ -11,6 +11,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Allow to repeat portable actor registration.
 - Added `retention.activitypub_objects` configuration option.
 - Implemented cursor-based pagination of portable inbox.
+- Accept incoming portable `Announce` activities.
 
 ### Changed
 
