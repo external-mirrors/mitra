@@ -204,8 +204,25 @@ pub async fn get_collection_items(
     maybe_after_object_id: Option<&str>,
     limit: u16,
 ) -> Result<Vec<ActivityPubObject>, DatabaseError> {
+    let maybe_after: Option<DateTime<Utc>> =
+        if let Some(after_object_id) = maybe_after_object_id
+    {
+        let maybe_row = db_client.query_opt(
+            "
+            SELECT created_at
+            FROM activitypub_object
+            WHERE object_id = $1
+            ",
+            &[&after_object_id],
+        ).await?;
+        maybe_row
+            .map(|row| row.try_get("created_at"))
+            .transpose()?
+    } else {
+        None
+    };
     // Reverse chronological order
-    let rows = if let Some(after_object_id) = maybe_after_object_id {
+    let rows = if let Some(after) = maybe_after {
         db_client.query(
             "
             SELECT activitypub_object
@@ -215,11 +232,7 @@ pub async fn get_collection_items(
                 JOIN activitypub_collection_item USING (object_id)
                 WHERE
                     collection_id = $1
-                    AND activitypub_object.created_at > (
-                        SELECT created_at
-                        FROM activitypub_object
-                        WHERE object_id = $2
-                    )
+                    AND activitypub_object.created_at > $2
                 ORDER BY activitypub_object.created_at ASC
                 LIMIT $3
             ) AS page_item
@@ -227,7 +240,7 @@ pub async fn get_collection_items(
             ",
             &[
                 &collection_id,
-                &after_object_id,
+                &after,
                 &i64::from(limit),
             ],
         ).await?
@@ -646,6 +659,7 @@ mod tests {
         assert_eq!(items[0].object_id, activity_3_id);
         assert_eq!(items[1].object_id, activity_2_id);
         assert_eq!(items[2].object_id, activity_1_id);
+
         let items = get_collection_items(
             db_client,
             collection_id,
@@ -655,6 +669,14 @@ mod tests {
         assert_eq!(items.len(), 2);
         assert_eq!(items[0].object_id, activity_3_id);
         assert_eq!(items[1].object_id, activity_2_id);
+
+        let items = get_collection_items(
+            db_client,
+            collection_id,
+            Some("https://social.example/test"), // unknown ID
+            10,
+        ).await.unwrap();
+        assert_eq!(items.len(), 3);
     }
 
     #[tokio::test]
