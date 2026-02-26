@@ -929,6 +929,16 @@ pub async fn import_collection(
         CollectionOrder::Forward => items,
         CollectionOrder::Reverse => items.into_iter().rev().collect(),
     };
+    #[cfg(feature = "mini")]
+    let ap_client_no_user = {
+        // Collection items will be fetched as the server actor.
+        // NOTE: the signature will not be correct because the key is different
+        let mut ap_client = ap_client.clone();
+        ap_client.as_user = None;
+        ap_client
+    };
+    #[cfg(feature = "mini")]
+    let ap_client = &ap_client_no_user;
     for item in items {
         let item_id = get_object_id(&item)?.to_string();
         #[cfg(feature = "mini")]
