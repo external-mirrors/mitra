@@ -48,6 +48,9 @@ use super::{
     HandlerResult,
 };
 
+#[cfg(feature = "mini")]
+use crate::importers::_get_post_by_object_id;
+
 #[derive(Deserialize)]
 struct Like {
     id: String,
@@ -106,11 +109,19 @@ pub async fn handle_like(
         &like.actor,
     ).await?;
     let canonical_object_id = canonicalize_id(&like.object)?;
-    let post = match get_post_by_object_id(
+    #[cfg(not(feature = "mini"))]
+    let maybe_post = get_post_by_object_id(
         db_client_await!(db_pool),
-        instance.uri_str(),
+        ap_client.instance.uri_str(),
         &canonical_object_id,
-    ).await {
+    ).await;
+    #[cfg(feature = "mini")]
+    let maybe_post = _get_post_by_object_id(
+        db_client_await!(db_pool),
+        &ap_client.instance,
+        &canonical_object_id,
+    ).await;
+    let post = match maybe_post {
         Ok(post) => post,
         // Ignore like if post is not found locally
         Err(DatabaseError::NotFound(_)) => return Ok(None),
