@@ -2,6 +2,7 @@
 members = [
   "apx_core",
   "apx_sdk",
+  "mitra",
   "mitra_activitypub",
   "mitra_adapters",
   "mitra_api",
@@ -17,6 +18,7 @@ default-members = [
   ".",
   "apx_core",
   "apx_sdk",
+  "mitra",
   "mitra_activitypub",
   "mitra_adapters",
   "mitra_api",

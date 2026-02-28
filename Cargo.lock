@@ -2018,24 +2018,13 @@ name = "mitra"
 version = "4.19.1-dev"
 dependencies = [
  "anyhow",
- "apx_core",
- "apx_sdk",
- "chrono",
  "clap",
- "clap_complete",
  "log",
- "mitra_activitypub",
  "mitra_adapters",
  "mitra_api",
- "mitra_config",
- "mitra_models",
- "mitra_services",
- "mitra_utils",
- "mitra_validators",
+ "mitra_cli",
  "mitra_workers",
- "serde_json",
  "tokio",
- "uuid",
 ]
 
 [[package]]
@@ -2123,6 +2112,29 @@ dependencies = [
  "thiserror",
  "tokio",
  "url",
+ "uuid",
+]
+
+[[package]]
+name = "mitra_cli"
+version = "4.19.1-dev"
+dependencies = [
+ "anyhow",
+ "apx_core",
+ "apx_sdk",
+ "chrono",
+ "clap",
+ "clap_complete",
+ "log",
+ "mitra_activitypub",
+ "mitra_adapters",
+ "mitra_config",
+ "mitra_models",
+ "mitra_services",
+ "mitra_utils",
+ "mitra_validators",
+ "mitra_workers",
+ "serde_json",
  "uuid",
 ]
 
