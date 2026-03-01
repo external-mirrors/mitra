@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Changed
 
 - Converted `mitra_cli` into library crate.
+- Import object when executing `load-portable-object` command.
 
 ## [4.19.0] - 2026-02-27
 
