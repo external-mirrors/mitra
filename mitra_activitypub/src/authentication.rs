@@ -97,6 +97,9 @@ pub enum AuthenticationError {
     #[error(transparent)]
     ValidationError(#[from] ValidationError),
 
+    #[error("signer not found in cache")]
+    ActorNotFound,
+
     #[error("{0}")]
     ImportError(String),
 
@@ -129,10 +132,16 @@ async fn get_signer(
         // Avoid fetching (e.g. if signer was deleted)
         let canonical_signer_id = canonicalize_id(signer_id)
             .map_err(|_| ValidationError("invalid actor ID"))?;
-        get_remote_profile_by_actor_id(
+        match get_remote_profile_by_actor_id(
             db_client_await!(db_pool),
             &canonical_signer_id.to_string(),
-        ).await?
+        ).await {
+            Ok(profile) => profile,
+            Err(DatabaseError::NotFound(_)) => {
+                return Err(AuthenticationError::ActorNotFound);
+            },
+            Err(other_error) => return Err(other_error.into()),
+        }
     } else {
         let mut ap_client = ap_client.clone();
         ap_client.instance.federation.fetcher_timeout = AUTHENTICATION_FETCHER_TIMEOUT;
@@ -143,8 +152,7 @@ async fn get_signer(
         ).await {
             Ok(profile) => profile,
             Err(HandlerError::DatabaseError(DatabaseError::NotFound(_))) => {
-                let error_message = "signer not found in cache";
-                return Err(AuthenticationError::ImportError(error_message.to_string()));
+                return Err(AuthenticationError::ActorNotFound);
             },
             Err(HandlerError::DatabaseError(error)) => return Err(error.into()),
             Err(other_error) => {

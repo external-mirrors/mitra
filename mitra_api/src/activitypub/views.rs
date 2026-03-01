@@ -24,7 +24,11 @@ use apx_core::{
     hashlink::Hashlink,
     http_digest::ContentDigest,
     http_types::{header_map_adapter, method_adapter, uri_adapter},
-    url::ap_uri::with_ap_prefix,
+    url::{
+        ap_uri::with_ap_prefix,
+        common::url_decode,
+        http_uri::HttpUri,
+    },
 };
 use apx_sdk::{
     authentication::verify_portable_object,
@@ -34,7 +38,6 @@ use apx_sdk::{
     utils::get_core_type,
 };
 use log::Level;
-use serde::Deserialize;
 use serde_json::{Value as JsonValue};
 use uuid::Uuid;
 
@@ -79,14 +82,16 @@ use mitra_activitypub::{
 };
 use mitra_config::Config;
 use mitra_models::{
-    activitypub::queries::{
-        create_activitypub_media,
-        delete_activitypub_media,
-        get_activitypub_media_by_digest,
-        get_actor,
-        get_collection_items,
-        get_object,
-        get_object_as_target,
+    activitypub::{
+        helpers::get_collection_items_json,
+        queries::{
+            create_activitypub_media,
+            delete_activitypub_media,
+            get_activitypub_media_by_digest,
+            get_actor,
+            get_object,
+            get_object_as_target,
+        },
     },
     database::{
         db_client_await,
@@ -130,13 +135,18 @@ use crate::{
 };
 
 use super::{
+    auth::{
+        check_request,
+        check_request_opt,
+    },
     receiver::{
-        authorize_request,
         receive_activity,
         EndpointError,
     },
     types::{
+        CollectionQueryParams,
         GatewayMetadata,
+        InboxQueryParams,
         PortableActorKeys,
         PortableMedia,
     },
@@ -192,7 +202,7 @@ async fn inbox(
     let activity: JsonValue = serde_json::from_slice(&request_body)
         .map_err(|_| ValidationError("invalid activity"))?;
     let activity_type = activity["type"].as_str().unwrap_or("Unknown");
-    log::info!("received in {}: {}", request.uri().path(), activity_type);
+    log::info!("received in {}: {}", request.uri(), activity_type);
     log::debug!("activity: {activity}");
 
     let activity_digest = ContentDigest::new(&request_body);
@@ -229,11 +239,6 @@ async fn inbox(
             error
         })?;
     Ok(HttpResponse::Accepted().finish())
-}
-
-#[derive(Deserialize)]
-pub struct CollectionQueryParams {
-    page: Option<bool>,
 }
 
 #[get("/outbox")]
@@ -710,19 +715,20 @@ pub async fn activity_view(
     db_pool: web::Data<DatabaseConnectionPool>,
     request: HttpRequest,
 ) -> Result<HttpResponse, HttpError> {
-    let request_uri = get_request_full_uri(&connection_info, request.uri());
+    let request_full_uri = get_request_full_uri(&connection_info, request.uri());
     let activity = get_object(
         db_client_await!(&db_pool),
-        &request_uri.to_string(),
+        &request_full_uri.to_string(),
     ).await?;
     let audience = get_activity_audience(&activity, None)?;
     if !audience.iter().any(|id| id.to_string() == AP_PUBLIC) {
         // Perform authorization only if activity is not public
-        let signer = authorize_request(
-            &config,
+        let ap_client = ApClient::new_with_pool(&config, &db_pool).await?;
+        let signer = check_request(
+            &ap_client,
             &db_pool,
             &request,
-            &request_uri,
+            &request_full_uri,
         ).await?;
         let recipients = get_activity_recipients(
             db_client_await!(&db_pool),
@@ -836,17 +842,17 @@ async fn apgateway_inbox_push_view(
     connection_info: ConnectionInfo,
     db_pool: web::Data<DatabaseConnectionPool>,
     request: HttpRequest,
-    request_path: Uri,
     request_body: web::Bytes,
 ) -> Result<HttpResponse, HttpError> {
     if !config.federation.enabled {
         return Err(HttpError::PermissionError);
     };
-    let request_full_uri = get_request_full_uri(&connection_info, request.uri());
+    let request_uri = request.uri();
+    let request_full_uri = get_request_full_uri(&connection_info, request_uri);
     let activity: JsonValue = serde_json::from_slice(&request_body)
         .map_err(|_| ValidationError("invalid activity"))?;
     let activity_type = activity["type"].as_str().unwrap_or("Unknown");
-    log::info!("received in {}: {}", request.uri().path(), activity_type);
+    log::info!("received in {}: {}", request_uri, activity_type);
 
     let activity_digest = ContentDigest::new(&request_body);
     drop(request_body);
@@ -854,7 +860,7 @@ async fn apgateway_inbox_push_view(
     let collection_id = format!(
         "{}{}",
         config.instance().uri(),
-        request_path,
+        request_uri,
     );
     let canonical_collection_id = canonicalize_id(&collection_id)?;
     let recipient = {
@@ -892,29 +898,28 @@ async fn apgateway_inbox_pull_view(
     config: web::Data<Config>,
     connection_info: ConnectionInfo,
     db_pool: web::Data<DatabaseConnectionPool>,
-    request_path: Uri,
     request: HttpRequest,
+    query_params: web::Query<InboxQueryParams>,
 ) -> Result<HttpResponse, HttpError> {
-    let request_full_uri = get_request_full_uri(&connection_info, request.uri());
+    let request_uri = request.uri();
+    let request_full_uri = get_request_full_uri(&connection_info, request_uri);
     let ap_client = ApClient::new_with_pool(&config, &db_pool).await?;
-    let (_, signer) = verify_signed_request(
+    let signer = check_request(
         &ap_client,
         &db_pool,
-        method_adapter(request.method()),
-        uri_adapter(&request_full_uri),
-        header_map_adapter(request.headers()),
-        None, // GET request has no content
-        true, // don't fetch actor
-    ).await.map_err(|error| {
-        log::warn!("C2S authentication error (GET {request_path}): {error}");
-        HttpError::AuthError("invalid signature")
-    })?;
+        &request,
+        &request_full_uri,
+    ).await?;
     let canonical_signer_id = parse_id_from_db(signer.expect_remote_actor_id())?;
-    let collection_id = format!(
+    // Instance URI is used because request target might have different authority
+    let collection_uri = format!(
         "{}{}",
         config.instance().uri(),
-        request_path,
+        request_uri,
     );
+    let collection_id = HttpUri::parse(&collection_uri)
+        .map_err(|_| ValidationError("invalid request URI"))?
+        .without_query_and_fragment();
     let canonical_collection_id = canonicalize_id(&collection_id)?;
     let db_client = &**get_database_client(&db_pool).await?;
     let collection_owner = get_portable_user_by_inbox_id(
@@ -926,14 +931,15 @@ async fn apgateway_inbox_pull_view(
     if canonical_owner_id != canonical_signer_id {
         return Err(HttpError::PermissionError);
     };
-    const LIMIT: u32 = 20;
-    let items = get_collection_items(
+    let maybe_after = query_params.after.as_ref().map(|id| url_decode(id));
+    let items = get_collection_items_json(
         db_client,
         &canonical_collection_id.to_string(),
-        LIMIT,
+        maybe_after.as_deref(),
+        OrderedCollection::PAGE_SIZE,
     ).await?;
     let collection = OrderedCollection::new_with_items(
-        collection_id,
+        collection_uri,
         items,
     );
     let response = HttpResponse::Ok()
@@ -946,18 +952,18 @@ async fn apgateway_inbox_pull_view(
 async fn apgateway_outbox_push_view(
     config: web::Data<Config>,
     db_pool: web::Data<DatabaseConnectionPool>,
-    request_path: Uri,
+    request_uri: Uri,
     activity: web::Json<JsonValue>,
 ) -> Result<HttpResponse, HttpError> {
     let activity_type = activity["type"].as_str().unwrap_or("Unknown");
-    log::info!("received in {}: {}", request_path, activity_type);
+    log::info!("received in {}: {}", request_uri, activity_type);
     let db_client = &mut **get_database_client(&db_pool).await?;
     let instance = config.instance();
     // Find outbox owner
     let collection_id = format!(
         "{}{}",
         instance.uri(),
-        request_path,
+        request_uri,
     );
     let canonical_collection_id = canonicalize_id(&collection_id)?;
     let collection_owner = get_portable_user_by_outbox_id(
@@ -968,7 +974,7 @@ async fn apgateway_outbox_push_view(
         parse_id_from_db(collection_owner.profile.expect_remote_actor_id())?;
     // Verify activity
     verify_portable_object(&activity).map_err(|error| {
-        log::warn!("C2S authentication error (POST {request_path}): {error}");
+        log::warn!("C2S authentication error (POST {request_uri}): {error}");
         HttpError::PermissionError
     })?;
     let activity_actor = object_to_id(&activity["actor"])
@@ -998,29 +1004,33 @@ async fn apgateway_outbox_pull_view(
     config: web::Data<Config>,
     connection_info: ConnectionInfo,
     db_pool: web::Data<DatabaseConnectionPool>,
-    request_path: Uri,
     request: HttpRequest,
 ) -> Result<HttpResponse, HttpError> {
-    let request_full_uri = get_request_full_uri(&connection_info, request.uri());
-    let ap_client = ApClient::new_with_pool(&config, &db_pool).await?;
-    let (_, signer) = verify_signed_request(
-        &ap_client,
-        &db_pool,
-        method_adapter(request.method()),
-        uri_adapter(&request_full_uri),
-        header_map_adapter(request.headers()),
-        None, // GET request has no content
-        true, // don't fetch actor
-    ).await.map_err(|error| {
-        log::warn!("C2S authentication error (GET {request_path}): {error}");
-        HttpError::AuthError("invalid signature")
-    })?;
-    let canonical_signer_id = parse_id_from_db(signer.expect_remote_actor_id())?;
+    let request_uri = request.uri();
+    let request_full_uri = get_request_full_uri(&connection_info, request_uri);
     let collection_id = format!(
         "{}{}",
         config.instance().uri(),
-        request_path,
+        request_uri,
     );
+    let ap_client = ApClient::new_with_pool(&config, &db_pool).await?;
+    let Some(signer) = check_request_opt(
+        &ap_client,
+        &db_pool,
+        &request,
+        &request_full_uri,
+    ).await? else {
+        let collection = OrderedCollection::new(
+            collection_id,
+            None, // no pages
+            None, // no item count
+        );
+        let response = HttpResponse::Ok()
+            .content_type(AP_MEDIA_TYPE)
+            .json(collection);
+        return Ok(response);
+    };
+    let canonical_signer_id = parse_id_from_db(signer.expect_remote_actor_id())?;
     let canonical_collection_id = canonicalize_id(&collection_id)?;
     let db_client = &**get_database_client(&db_pool).await?;
     let collection_owner = get_portable_user_by_outbox_id(
@@ -1032,11 +1042,11 @@ async fn apgateway_outbox_pull_view(
     if canonical_owner_id != canonical_signer_id {
         return Err(HttpError::PermissionError);
     };
-    const LIMIT: u32 = 20;
-    let items = get_collection_items(
+    let items = get_collection_items_json(
         db_client,
         &canonical_collection_id.to_string(),
-        LIMIT,
+        None,
+        OrderedCollection::PAGE_SIZE,
     ).await?;
     let collection = OrderedCollection::new_with_items(
         collection_id,

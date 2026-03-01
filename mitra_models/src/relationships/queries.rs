@@ -22,6 +22,7 @@ use crate::profiles::{
 
 use super::types::{
     FollowRequest,
+    FollowRequestDirection,
     FollowRequestStatus,
     RelatedActorProfile,
     Relationship,
@@ -537,26 +538,37 @@ pub async fn get_following_paginated(
     ).await
 }
 
-/// Returns incoming follow requests
 pub async fn get_follow_requests_paginated(
     db_client: &impl DatabaseClient,
     profile_id: Uuid,
+    direction: FollowRequestDirection,
     max_request_id: Option<Uuid>,
     limit: u16,
 ) -> Result<Vec<RelatedActorProfile<Uuid>>, DatabaseError> {
-    let rows = db_client.query(
+    let statement = format!(
         "
         SELECT follow_request.id, actor_profile
         FROM actor_profile
         JOIN follow_request
-        ON (actor_profile.id = follow_request.source_id)
+        ON (actor_profile.id = follow_request.{source_id})
         WHERE
-            follow_request.target_id = $1
+            follow_request.{target_id} = $1
             AND follow_request.request_status = $2
             AND ($3::uuid IS NULL OR follow_request.id < $3)
         ORDER BY follow_request.id DESC
         LIMIT $4
         ",
+        source_id=match direction {
+            FollowRequestDirection::Incoming => "source_id",
+            FollowRequestDirection::Outgoing => "target_id",
+        },
+        target_id=match direction {
+            FollowRequestDirection::Incoming => "target_id",
+            FollowRequestDirection::Outgoing => "source_id",
+        },
+    );
+    let rows = db_client.query(
+        &statement,
         &[
             &profile_id,
             &FollowRequestStatus::Pending,
@@ -1003,6 +1015,7 @@ mod tests {
         let results = get_follow_requests_paginated(
             db_client,
             target.id,
+            FollowRequestDirection::Incoming,
             None,
             10,
         ).await.unwrap();

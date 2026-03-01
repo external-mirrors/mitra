@@ -12,7 +12,7 @@ use mitra_models::{
 use mitra_utils::html::{clean_html, clean_html_all, clean_html_strict};
 
 use super::{
-    activitypub::{validate_any_object_id, validate_object_id},
+    activitypub::validate_any_object_id,
     errors::ValidationError,
     polls::validate_poll_data,
 };
@@ -228,7 +228,7 @@ pub fn validate_repost_data(
         return Err(ValidationError("invalid repost visibility"));
     };
     if let Some(ref object_id) = repost_data.object_id {
-        validate_object_id(object_id)?;
+        validate_any_object_id(object_id)?;
     };
     Ok(())
 }

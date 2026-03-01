@@ -9,12 +9,8 @@ use mitra_adapters::init::{
     initialize_storage,
 };
 use mitra_api::server::run_server;
+use mitra_cli::cli::{print_completer, Cli, SubCommand};
 use mitra_workers::workers::start_workers;
-
-mod cli;
-mod commands;
-
-use cli::{Cli, SubCommand, print_completer};
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {

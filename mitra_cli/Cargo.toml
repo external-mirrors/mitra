@@ -1,5 +1,5 @@
 [package]
-name = "mitra"
+name = "mitra_cli"
 version.workspace = true
 license.workspace = true
 
@@ -21,8 +21,6 @@ clap_complete = "~4.4.10"
 log = "0.4.20"
 # Used for reading JSON
 serde_json = "1.0.132"
-# Async runtime
-tokio = { version = "~1.38.0", features = ["macros", "rt-multi-thread"] }
 # Used to work with UUIDs
 uuid = "1.12.1"
 
@@ -30,7 +28,6 @@ apx_core = { path = "../apx_core" }
 apx_sdk = { path = "../apx_sdk" }
 mitra_activitypub = { path = "../mitra_activitypub" }
 mitra_adapters = { path = "../mitra_adapters" }
-mitra_api = { path = "../mitra_api" }
 mitra_config = { path = "../mitra_config" }
 mitra_models = { path = "../mitra_models" }
 mitra_services = { path = "../mitra_services" }

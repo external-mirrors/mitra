@@ -1849,9 +1849,9 @@ dependencies = [
 
 [[package]]
 name = "keccak"
-version = "0.1.5"
+version = "0.1.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ecc2af9a1119c51f12a14607e783cb977bde58bc069ff0c3da1095e635d70654"
+checksum = "cb26cec98cce3a3d96cbb7bced3c4b16e3d13f27ec56dbd62cbc8f39cfb9d653"
 dependencies = [
  "cpufeatures",
 ]
@@ -2015,32 +2015,21 @@ dependencies = [
 
 [[package]]
 name = "mitra"
-version = "4.18.2-dev"
+version = "4.19.1-dev"
 dependencies = [
  "anyhow",
- "apx_core",
- "apx_sdk",
- "chrono",
  "clap",
- "clap_complete",
  "log",
- "mitra_activitypub",
  "mitra_adapters",
  "mitra_api",
- "mitra_config",
- "mitra_models",
- "mitra_services",
- "mitra_utils",
- "mitra_validators",
+ "mitra_cli",
  "mitra_workers",
- "serde_json",
  "tokio",
- "uuid",
 ]
 
 [[package]]
 name = "mitra_activitypub"
-version = "4.18.2-dev"
+version = "4.19.1-dev"
 dependencies = [
  "apx_core",
  "apx_sdk",
@@ -2067,7 +2056,7 @@ dependencies = [
 
 [[package]]
 name = "mitra_adapters"
-version = "4.18.2-dev"
+version = "4.19.1-dev"
 dependencies = [
  "apx_core",
  "chrono",
@@ -2089,7 +2078,7 @@ dependencies = [
 
 [[package]]
 name = "mitra_api"
-version = "4.18.2-dev"
+version = "4.19.1-dev"
 dependencies = [
  "actix-cors",
  "actix-files",
@@ -2127,8 +2116,31 @@ dependencies = [
 ]
 
 [[package]]
+name = "mitra_cli"
+version = "4.19.1-dev"
+dependencies = [
+ "anyhow",
+ "apx_core",
+ "apx_sdk",
+ "chrono",
+ "clap",
+ "clap_complete",
+ "log",
+ "mitra_activitypub",
+ "mitra_adapters",
+ "mitra_config",
+ "mitra_models",
+ "mitra_services",
+ "mitra_utils",
+ "mitra_validators",
+ "mitra_workers",
+ "serde_json",
+ "uuid",
+]
+
+[[package]]
 name = "mitra_config"
-version = "4.18.2-dev"
+version = "4.19.1-dev"
 dependencies = [
  "apx_core",
  "dotenvy",
@@ -2143,7 +2155,7 @@ dependencies = [
 
 [[package]]
 name = "mitra_models"
-version = "4.18.2-dev"
+version = "4.19.1-dev"
 dependencies = [
  "apx_core",
  "chrono",
@@ -2171,7 +2183,7 @@ dependencies = [
 
 [[package]]
 name = "mitra_services"
-version = "4.18.2-dev"
+version = "4.19.1-dev"
 dependencies = [
  "anyhow",
  "apx_core",
@@ -2195,7 +2207,7 @@ dependencies = [
 
 [[package]]
 name = "mitra_utils"
-version = "4.18.2-dev"
+version = "4.19.1-dev"
 dependencies = [
  "ammonia",
  "apx_core",
@@ -2220,7 +2232,7 @@ dependencies = [
 
 [[package]]
 name = "mitra_validators"
-version = "4.18.2-dev"
+version = "4.19.1-dev"
 dependencies = [
  "apx_core",
  "mitra_models",
@@ -2233,7 +2245,7 @@ dependencies = [
 
 [[package]]
 name = "mitra_workers"
-version = "4.18.2-dev"
+version = "4.19.1-dev"
 dependencies = [
  "anyhow",
  "apx_sdk",

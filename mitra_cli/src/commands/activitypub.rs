@@ -277,22 +277,38 @@ impl Webfinger {
     }
 }
 
+/// Read portable ActivityPub object from file and process it
 #[derive(Parser)]
 pub struct LoadPortableObject {
     path: PathBuf,
 }
 
 impl LoadPortableObject {
-    #[allow(clippy::unused_async)]
     pub async fn execute(
         self,
-        _config: &Config,
-        _db_pool: &DatabaseConnectionPool,
+        config: &Config,
+        db_pool: &DatabaseConnectionPool,
     ) -> Result<(), Error> {
         let file_data = std::fs::read(&self.path)?;
         let object_json: JsonValue = serde_json::from_slice(&file_data)?;
         verify_portable_object(&object_json)?;
-        println!("portable object is valid");
+        let object_class = get_core_type(&object_json);
+        let ap_client = ApClient::new_with_pool(config, db_pool).await?;
+        match object_class {
+            CoreType::Object => {
+                import_object(&ap_client, db_pool, object_json).await?;
+                println!("object imported");
+            },
+            CoreType::Actor => {
+                import_profile(&ap_client, db_pool, object_json).await?;
+                println!("actor imported");
+            },
+            CoreType::Activity => {
+                import_activity(config, &ap_client, db_pool, object_json).await?;
+                println!("activity imported");
+            },
+            _ => return Err(anyhow!("unexpected object class")),
+        };
         Ok(())
     }
 }

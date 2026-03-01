@@ -25,11 +25,14 @@ use mitra_models::{
         DatabaseError,
     },
     profiles::queries::get_profile_by_id,
-    relationships::queries::{
-        follow_request_accepted,
-        follow_request_rejected,
-        get_follow_request_by_participants,
-        get_follow_requests_paginated,
+    relationships::{
+        queries::{
+            follow_request_accepted,
+            follow_request_rejected,
+            get_follow_request_by_participants,
+            get_follow_requests_paginated,
+        },
+        types::FollowRequestDirection,
     },
 };
 
@@ -48,7 +51,7 @@ use crate::mastodon_api::{
 use super::types::RequestListQueryParams;
 
 #[get("")]
-async fn follow_request_list(
+async fn incoming_follow_request_list(
     auth: BearerAuth,
     config: web::Data<Config>,
     connection_info: ConnectionInfo,
@@ -61,9 +64,50 @@ async fn follow_request_list(
     let profiles = get_follow_requests_paginated(
         db_client,
         current_user.id,
+        FollowRequestDirection::Incoming,
         query_params.max_id,
         query_params.limit.inner(),
     ).await?;
+    let maybe_last_id = get_last_item(&profiles, &query_params.limit)
+        .map(|item| item.related_id);
+    let base_url = get_request_base_url(connection_info);
+    let media_server = ClientMediaServer::new(&config, &base_url);
+    let instance = config.instance();
+    let accounts: Vec<Account> = profiles.into_iter()
+        .map(|item| Account::from_profile(
+            instance.uri_str(),
+            &media_server,
+            item.profile,
+        ))
+        .collect();
+    let response = get_paginated_response(
+        &base_url,
+        &request_uri,
+        accounts,
+        maybe_last_id,
+    );
+    Ok(response)
+}
+
+#[get("/outgoing")]
+async fn outgoing_follow_request_list(
+    auth: BearerAuth,
+    config: web::Data<Config>,
+    connection_info: ConnectionInfo,
+    db_pool: web::Data<DatabaseConnectionPool>,
+    request_uri: Uri,
+    query_params: web::Query<RequestListQueryParams>,
+) -> Result<HttpResponse, MastodonError> {
+    let db_client = &**get_database_client(&db_pool).await?;
+    let current_user = get_current_user(db_client, auth.token()).await?;
+    let profiles = get_follow_requests_paginated(
+        db_client,
+        current_user.id,
+        FollowRequestDirection::Outgoing,
+        query_params.max_id,
+        query_params.limit.inner(),
+    ).await?;
+
     let maybe_last_id = get_last_item(&profiles, &query_params.limit)
         .map(|item| item.related_id);
     let base_url = get_request_base_url(connection_info);
@@ -156,7 +200,8 @@ async fn reject_follow_request_view(
 
 pub fn follow_request_api_scope() -> Scope {
     web::scope("/v1/follow_requests")
-        .service(follow_request_list)
+        .service(incoming_follow_request_list)
+        .service(outgoing_follow_request_list)
         .service(accept_follow_request_view)
         .service(reject_follow_request_view)
 }

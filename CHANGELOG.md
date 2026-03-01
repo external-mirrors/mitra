@@ -6,10 +6,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- Converted `mitra_cli` into library crate.
+- Import object when executing `load-portable-object` command.
+
+## [4.19.0] - 2026-02-27
+
 ### Added
 
 - Allow to repeat portable actor registration.
 - Added `retention.activitypub_objects` configuration option.
+- Implemented cursor-based pagination of portable inbox.
+- Accept incoming portable `Announce` activities.
+- Implemented `/api/v1/follow_requests/outgoing` endpoint.
 
 ### Changed
 
@@ -19,6 +29,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Respect `--as-user` parameter when importing collections with `import-object` command.
 - Respect `--as-user` parameter when importing activities with `import-object` command.
 - Don't strip query parameters when converting key ID to actor ID.
+- Improved error handling during verification of GET requests to portable inboxes and outboxes.
+- Log error details when verifying activity fetch requests.
+- Return empty collection if request to portable outbox is not signed.
 
 ### Fixed
 
@@ -26,6 +39,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Process incoming activities in the order they were received.
 - Eliminated race condition in portable actor registration routine.
 - Fixed incorrect re-rendering of markdown lists.
+- Return error 401 instead of 404 if signer of GET request is not found in cache.
 
 ## [4.18.1] - 2026-02-14
 
