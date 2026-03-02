@@ -8,6 +8,7 @@ use actix_web::{
 };
 use actix_web_httpauth::extractors::bearer::BearerAuth;
 
+use mitra_activitypub::authority::Authority;
 use mitra_config::Config;
 use mitra_models::{
     database::{
@@ -49,8 +50,8 @@ async fn get_favourites_view(
         query_params.limit.inner(),
     ).await?;
     let base_url = get_request_base_url(connection_info);
+    let authority = Authority::from(&config.instance());
     let media_server = ClientMediaServer::new(&config, &base_url);
-    let instance = config.instance();
     let maybe_last_id = get_last_item(&liked_posts, &query_params.limit)
         .map(|liked_post| liked_post.reaction_id);
     let posts = liked_posts.into_iter()
@@ -58,7 +59,7 @@ async fn get_favourites_view(
         .collect();
     let statuses = build_status_list(
         db_client,
-        instance.uri_str(),
+        &authority,
         &media_server,
         Some(&current_user),
         posts,

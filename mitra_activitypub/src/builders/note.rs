@@ -279,7 +279,7 @@ pub fn build_note(
     for (index, linked) in related_posts.linked.iter().enumerate() {
         // Build FEP-e232 object link
         // https://codeberg.org/silverpill/feps/src/branch/main/e232/fep-e232.md
-        let link_href = compatible_post_object_id(instance_uri.as_str(), linked);
+        let link_href = compatible_post_object_id(authority, linked);
         let link_rel = if index == 0 {
             // Present first link as a quote
             vec![LINK_REL_MISSKEY_QUOTE.to_string()]
@@ -298,7 +298,7 @@ pub fn build_note(
     // Present first link as a quote
     let maybe_quote_url = related_posts
         .linked.first()
-        .map(|linked| compatible_post_object_id(instance_uri.as_str(), linked));
+        .map(|linked| compatible_post_object_id(authority, linked));
 
     for emoji in &post.emojis {
         let tag = build_emoji(instance_uri.as_str(), media_server, emoji);
@@ -361,7 +361,7 @@ pub fn build_note(
                     };
                 };
             };
-            Some(compatible_post_object_id(instance_uri.as_str(), in_reply_to))
+            Some(compatible_post_object_id(authority, in_reply_to))
         },
         None => None,
     };

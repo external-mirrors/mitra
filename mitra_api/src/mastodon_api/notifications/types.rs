@@ -1,6 +1,7 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
+use mitra_activitypub::authority::Authority;
 use mitra_models::{
     notifications::types::{
         EventType,
@@ -62,17 +63,18 @@ pub struct Notification {
 
 impl Notification {
     pub fn from_db(
-        instance_uri: &str,
+        authority: &Authority,
         media_server: &ClientMediaServer,
         notification: DbNotificationDetailed,
     ) -> Self {
+        let instance_uri = authority.expect_server_uri();
         let account = Account::from_profile(
             instance_uri,
             media_server,
             notification.sender.clone(),
         );
         let status = notification.post.map(|post| {
-            Status::from_post(instance_uri, media_server, post)
+            Status::from_post(authority, media_server, post)
         });
         let mut maybe_event_subtype = None;
         let event_type_mastodon = match notification.event_type {

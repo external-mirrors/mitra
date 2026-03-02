@@ -15,6 +15,7 @@ use apx_sdk::{
 use uuid::Uuid;
 
 use mitra_activitypub::{
+    authority::Authority,
     identifiers::{
         compatible_post_object_id,
         compatible_profile_actor_id,
@@ -185,7 +186,8 @@ async fn post_page_redirect_view(
 ) -> Result<HttpResponse, HttpError> {
     let db_client = &**get_database_client(&db_pool).await?;
     let post = get_post_by_id(db_client, *post_id).await?;
-    let object_id = compatible_post_object_id(config.instance().uri_str(), &post);
+    let authority = Authority::from(&config.instance());
+    let object_id = compatible_post_object_id(&authority, &post);
     let response = HttpResponse::Found()
         .append_header(("Location", object_id))
         .finish();

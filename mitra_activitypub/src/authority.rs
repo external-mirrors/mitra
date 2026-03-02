@@ -20,6 +20,7 @@ fn fep_ef61_identity(public_key: &Ed25519PublicKey) -> DidKey {
     DidKey::from_ed25519_key(public_key)
 }
 
+#[derive(Clone)]
 pub enum AuthorityRoot {
     Server(HttpUri),
     Key(Ed25519PublicKey),
@@ -66,6 +67,13 @@ impl Authority {
         }
     }
 
+    // TODO: remove
+    pub fn server_unchecked(server_uri: &str) -> Self {
+        let server_uri = HttpUri::parse(server_uri)
+            .expect("server URI should be valid");
+        Self::server(&server_uri)
+    }
+
     pub fn key(secret_key: &Ed25519SecretKey) -> Self {
         let public_key = ed25519_public_key_from_secret_key(secret_key);
         let root = AuthorityRoot::Key(public_key);
@@ -86,6 +94,14 @@ impl Authority {
         }
     }
 
+    pub fn and_prefer_canonical(&self) -> Self {
+        Self {
+            root: self.root.clone(),
+            http_base_uri: self.http_base_uri.clone(),
+            prefer_compatible: false,
+        }
+    }
+
     pub fn root(&self) -> &AuthorityRoot {
         &self.root
     }
@@ -101,6 +117,11 @@ impl Authority {
             AuthorityRoot::Key(_) => self.http_base_uri.as_ref()
                 .map(|uri| uri.as_str()),
         }
+    }
+
+    // TODO: remove
+    pub fn expect_server_uri(&self) -> &str {
+        self.server_uri().expect("authority should be anchored")
     }
 
     // TODO: remove

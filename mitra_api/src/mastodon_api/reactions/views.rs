@@ -11,6 +11,7 @@ use actix_web_httpauth::extractors::bearer::BearerAuth;
 use uuid::Uuid;
 
 use mitra_activitypub::{
+    authority::Authority,
     builders::{
         add_context_activity::sync_conversation,
         like::prepare_like,
@@ -138,10 +139,11 @@ async fn create_reaction_view(
     ).await?;
 
     let base_url = get_request_base_url(connection_info);
+    let authority = Authority::from(&config.instance());
     let media_server = ClientMediaServer::new(&config, &base_url);
     let status = build_status(
         db_client,
-        config.instance().uri_str(),
+        &authority,
         &media_server,
         Some(&current_user),
         post,
@@ -199,10 +201,11 @@ async fn delete_reaction_view(
     ).await?;
 
     let base_url = get_request_base_url(connection_info);
+    let authority = Authority::from(&config.instance());
     let media_server = ClientMediaServer::new(&config, &base_url);
     let status = build_status(
         db_client,
-        config.instance().uri_str(),
+        &authority,
         &media_server,
         Some(&current_user),
         post,

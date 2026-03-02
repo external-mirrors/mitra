@@ -2,11 +2,14 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use mitra_activitypub::identifiers::{
-    compatible_post_object_id,
-    local_tag_collection,
-    post_object_id,
-    profile_actor_url,
+use mitra_activitypub::{
+    authority::Authority,
+    identifiers::{
+        compatible_post_object_id,
+        local_tag_collection,
+        post_object_id,
+        profile_actor_url,
+    },
 };
 use mitra_models::{
     conversations::types::TrackingStatus,
@@ -156,15 +159,16 @@ pub fn visibility_to_str(visibility: Visibility) -> &'static str {
 
 impl Status {
     pub fn from_post(
-        instance_uri: &str,
+        authority: &Authority,
         media_server: &ClientMediaServer,
         post: DbPostDetailed,
     ) -> Self {
-        let object_id = post_object_id(instance_uri, &post);
+        let instance_uri = authority.expect_server_uri();
+        let object_id = post_object_id(authority, &post);
         let object_url = if let Some(url) = post.url {
             url
         } else {
-            compatible_post_object_id(instance_uri, &post)
+            compatible_post_object_id(authority, &post)
         };
         let maybe_poll = if let Some(ref db_poll) = post.poll {
             let maybe_voted_for = post.actions.as_ref()
@@ -199,22 +203,22 @@ impl Status {
         // Nested Status entities may be built without related_posts
         let related_posts = post.related_posts.unwrap_or_default();
         let reblog = if let Some(repost_of) = related_posts.repost_of {
-            let status = Status::from_post(instance_uri, media_server, *repost_of);
+            let status = Status::from_post(authority, media_server, *repost_of);
             Some(Box::new(status))
         } else {
             None
         };
         let maybe_first_link = related_posts.linked.first();
         let maybe_quoted_status = maybe_first_link.cloned().map(|post| {
-            let status = Status::from_post(instance_uri, media_server, post);
+            let status = Status::from_post(authority, media_server, post);
             Box::new(status)
         });
         let maybe_quote = maybe_first_link.cloned().map(|post| {
-            let status = Status::from_post(instance_uri, media_server, post);
+            let status = Status::from_post(authority, media_server, post);
             Quote { state: "accepted", quoted_status: Box::new(status) }
         });
         let links: Vec<Status> = related_posts.linked.into_iter().map(|post| {
-            Status::from_post(instance_uri, media_server, post)
+            Status::from_post(authority, media_server, post)
         }).collect();
         let visibility = visibility_to_str(post.visibility);
         let mut emoji_reactions = vec![];
@@ -527,6 +531,7 @@ mod tests {
     #[test]
     fn test_status_from_post() {
         let instance_uri = "https://social.example";
+        let authority = Authority::server_unchecked(instance_uri);
         let media_server = ClientMediaServer::for_test("/media");
         let author = DbActorProfile::local_for_test("test");
         let post = DbPostDetailed {
@@ -535,7 +540,7 @@ mod tests {
                 .with_timezone(&Utc),
             ..DbPostDetailed::local_for_test(&author)
         };
-        let status = Status::from_post(instance_uri, &media_server, post);
+        let status = Status::from_post(&authority, &media_server, post);
         assert_eq!(status.content, "");
         let status_json = serde_json::to_value(status).unwrap();
         assert_eq!(

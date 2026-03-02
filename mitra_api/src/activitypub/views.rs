@@ -592,6 +592,7 @@ pub async fn replies_collection(
         return Err(HttpError::NotFound("post"));
     };
     let instance = config.instance();
+    let authority = Authority::from(&instance);
     let object_id = local_object_id(instance.uri_str(), internal_object_id);
     let collection_id = local_object_replies(&object_id);
     let first_page_id = format!("{}?page=true", collection_id);
@@ -611,7 +612,7 @@ pub async fn replies_collection(
         .take(OrderedCollection::PAGE_SIZE.into())
         .collect();
     let objects = replies.iter().map(|post| {
-        let object_id = compatible_post_object_id(instance.uri_str(), post);
+        let object_id = compatible_post_object_id(&authority, post);
         serde_json::to_value(object_id)
             .expect("string should be serializable")
     }).collect();
@@ -677,6 +678,7 @@ pub async fn conversation_view(
         return Err(HttpError::NotFound("conversation"));
     };
     let instance = config.instance();
+    let authority = Authority::from(&instance);
     let collection_id =
         local_conversation_collection(instance.uri_str(), *conversation_id);
     let first_page_id = format!("{}?page=true", collection_id);
@@ -694,7 +696,7 @@ pub async fn conversation_view(
     let objects = posts.iter()
         .take(OrderedCollection::PAGE_SIZE.into())
         .map(|post| {
-            let object_id = compatible_post_object_id(instance.uri_str(), post);
+            let object_id = compatible_post_object_id(&authority, post);
             serde_json::to_value(object_id)
                 .expect("string should be serializable")
         }).collect();

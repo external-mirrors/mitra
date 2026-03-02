@@ -198,10 +198,14 @@ pub fn parse_local_activity_id(
     Ok(internal_activity_id)
 }
 
-pub fn post_object_id(instance_uri: &str, post: &PostDetailed) -> String {
+// Returns canonical post URI
+pub fn post_object_id(authority: &Authority, post: &PostDetailed) -> String {
     match post.object_id {
         Some(ref object_id) => object_id.clone(),
-        None => local_object_id(instance_uri, post.id),
+        None => {
+            let authority = authority.and_prefer_canonical();
+            local_object_id_unified(&authority, post.id)
+        },
     }
 }
 
@@ -271,7 +275,10 @@ pub fn compatible_profile_actor_id(
     }
 }
 
-pub fn compatible_post_object_id(instance_uri: &str, post: &PostDetailed) -> String {
+pub fn compatible_post_object_id(
+    authority: &Authority,
+    post: &PostDetailed,
+) -> String {
     match post.object_id {
         Some(ref object_id) => {
             let actor_data = post.author.expect_actor_data();
@@ -283,7 +290,7 @@ pub fn compatible_post_object_id(instance_uri: &str, post: &PostDetailed) -> Str
                 object_id.clone()
             }
         },
-        None => local_object_id(instance_uri, post.id),
+        None => local_object_id_unified(authority, post.id),
     }
 }
 
@@ -423,6 +430,28 @@ mod tests {
     }
 
     #[test]
+    fn test_post_object_id_ap_uri() {
+        let authority = Authority::server_unchecked(INSTANCE_URI);
+        let profile = DbActorProfile::remote_for_test_with_data(
+            "test",
+            DbActor {
+                id: "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor".to_string(),
+                gateways: vec!["https://gateway.example".to_string()],
+                ..Default::default()
+            },
+        );
+        let post = PostDetailed::remote_for_test(
+            &profile,
+            "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/posts/1",
+        );
+        let object_id = post_object_id(&authority, &post);
+        assert_eq!(
+            object_id,
+            "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/posts/1",
+        );
+    }
+
+    #[test]
     fn test_compatible_post_object_id() {
         let profile = DbActorProfile::remote_for_test(
             "test",
@@ -432,7 +461,8 @@ mod tests {
             &profile,
             "https://social.example/posts/1",
         );
-        let object_id = compatible_post_object_id(INSTANCE_URI, &post);
+        let authority = Authority::server_unchecked(INSTANCE_URI);
+        let object_id = compatible_post_object_id(&authority, &post);
         assert_eq!(
             object_id,
             "https://social.example/posts/1",
@@ -445,7 +475,7 @@ mod tests {
             "test",
             DbActor {
                 id: "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor".to_string(),
-                gateways: vec!["https://social.example".to_string()],
+                gateways: vec!["https://gateway.example".to_string()],
                 ..Default::default()
             },
         );
@@ -453,10 +483,11 @@ mod tests {
             &profile,
             "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/posts/1",
         );
-        let object_id = compatible_post_object_id(INSTANCE_URI, &post);
+        let authority = Authority::server_unchecked(INSTANCE_URI);
+        let object_id = compatible_post_object_id(&authority, &post);
         assert_eq!(
             object_id,
-            "https://social.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/posts/1",
+            "https://gateway.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/posts/1",
         );
     }
 

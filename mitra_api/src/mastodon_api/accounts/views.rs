@@ -46,6 +46,7 @@ use chrono::Utc;
 use uuid::Uuid;
 
 use mitra_activitypub::{
+    authority::Authority,
     builders::{
         follow::follow_or_create_request,
         reject_follow::prepare_reject_follow,
@@ -968,12 +969,12 @@ async fn get_account_statuses(
         query_params.limit.inner(),
     ).await?;
     let base_url = get_request_base_url(connection_info);
+    let authority = Authority::from(&config.instance());
     let media_server = ClientMediaServer::new(&config, &base_url);
-    let instance = config.instance();
     let response = get_paginated_status_list(
         db_client,
         &base_url,
-        instance.uri_str(),
+        &authority,
         &media_server,
         &request_uri,
         maybe_current_user.as_ref(),
