@@ -20,66 +20,94 @@ fn fep_ef61_identity(public_key: &Ed25519PublicKey) -> DidKey {
     DidKey::from_ed25519_key(public_key)
 }
 
-pub enum Authority {
+pub enum AuthorityRoot {
     Server(HttpUri),
     Key(Ed25519PublicKey),
-    KeyWithGateway((HttpUri, Ed25519PublicKey)),
+}
+
+// Local naming authority
+pub struct Authority {
+    root: AuthorityRoot,
+    // FEP-ef61 ID generation options
+    http_base_uri: Option<HttpUri>, // TODO: multiple gateways
+    prefer_compatible: bool,
 }
 
 impl fmt::Display for Authority {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let authority_str = match self {
-            Self::Server(server_url) => server_url.to_string(),
-            Self::Key(public_key) => {
+        let base_uri = match self.root {
+            AuthorityRoot::Server(ref server_url) => server_url.to_string(),
+            AuthorityRoot::Key(ref public_key) => {
                 let did = fep_ef61_identity(public_key);
-                with_ap_prefix(&did.to_string())
-            },
-            Self::KeyWithGateway((server_url, public_key)) => {
-                let did = fep_ef61_identity(public_key);
-                format!(
-                    "{}{}{}",
-                    server_url,
-                    GATEWAY_PATH_PREFIX,
-                    did,
-                )
+                match self.http_base_uri {
+                    Some(ref http_base_uri) if self.prefer_compatible => {
+                        format!(
+                            "{}{}{}",
+                            http_base_uri,
+                            GATEWAY_PATH_PREFIX,
+                            did,
+                        )
+                    },
+                    _ => with_ap_prefix(&did.to_string()),
+                }
             },
         };
-        write!(formatter, "{}", authority_str)
+        write!(formatter, "{}", base_uri)
     }
 }
 
 impl Authority {
     pub fn server(server_uri: &HttpUri) -> Self {
-        Self::Server(server_uri.clone())
-    }
-
-    #[allow(dead_code)]
-    fn key(secret_key: &Ed25519SecretKey) -> Self {
-        let public_key = ed25519_public_key_from_secret_key(secret_key);
-        Self::Key(public_key)
-    }
-
-    pub fn key_with_gateway(server_uri: &HttpUri, secret_key: &Ed25519SecretKey) -> Self {
-        let public_key = ed25519_public_key_from_secret_key(secret_key);
-        Self::KeyWithGateway((server_uri.clone(), public_key))
-    }
-
-    pub fn is_fep_ef61(&self) -> bool {
-        !matches!(self, Self::Server(_))
-    }
-
-    pub fn server_uri(&self) -> Option<&str> {
-        match self {
-            Self::Server(server_uri) => Some(server_uri.as_str()),
-            Self::Key(_) => None,
-            Self::KeyWithGateway((server_uri, _)) => Some(server_uri.as_str()),
+        let root = AuthorityRoot::Server(server_uri.clone());
+        Self {
+            root,
+            http_base_uri: Some(server_uri.clone()),
+            prefer_compatible: true,
         }
     }
 
+    pub fn key(secret_key: &Ed25519SecretKey) -> Self {
+        let public_key = ed25519_public_key_from_secret_key(secret_key);
+        let root = AuthorityRoot::Key(public_key);
+        Self {
+            root,
+            http_base_uri: None,
+            prefer_compatible: true,
+        }
+    }
+
+    pub fn key_with_gateway(secret_key: &Ed25519SecretKey, server_uri: &HttpUri) -> Self {
+        let public_key = ed25519_public_key_from_secret_key(secret_key);
+        let root = AuthorityRoot::Key(public_key);
+        Self {
+            root,
+            http_base_uri: Some(server_uri.clone()),
+            prefer_compatible: true,
+        }
+    }
+
+    pub fn root(&self) -> &AuthorityRoot {
+        &self.root
+    }
+
+    pub fn is_fep_ef61(&self) -> bool {
+        !matches!(self.root, AuthorityRoot::Server(_))
+    }
+
+    // TODO: remove
+    pub fn server_uri(&self) -> Option<&str> {
+        match self.root {
+            AuthorityRoot::Server(ref server_uri) => Some(server_uri.as_str()),
+            AuthorityRoot::Key(_) => self.http_base_uri.as_ref()
+                .map(|uri| uri.as_str()),
+        }
+    }
+
+    // TODO: remove
     pub fn as_did_key(&self) -> Option<DidKey> {
-        match self {
-            Self::Server(_) => None,
-            Self::Key(public_key) | Self::KeyWithGateway((_, public_key)) => {
+        match self.root {
+            AuthorityRoot::Server(_) => None,
+            AuthorityRoot::Key(ref public_key) => {
                 Some(fep_ef61_identity(public_key))
             },
         }
@@ -123,10 +151,19 @@ mod tests {
     fn test_authority_key_with_gateway() {
         let secret_key = generate_weak_ed25519_key();
         let server_uri = HttpUri::parse(SERVER_URI).unwrap();
-        let authority = Authority::key_with_gateway(&server_uri, &secret_key);
+        let authority = Authority::key_with_gateway(&secret_key, &server_uri);
         assert!(authority.is_fep_ef61());
         assert_eq!(authority.to_string(), "https://server.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6");
         assert_eq!(authority.server_uri().unwrap(), SERVER_URI);
         assert_eq!(authority.as_did_key().is_some(), true);
+    }
+
+    #[test]
+    fn test_authority_key_with_gateway_prefer_canonical() {
+        let secret_key = generate_weak_ed25519_key();
+        let server_uri = HttpUri::parse(SERVER_URI).unwrap();
+        let mut authority = Authority::key_with_gateway(&secret_key, &server_uri);
+        authority.prefer_compatible = false;
+        assert_eq!(authority.to_string(), "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6");
     }
 }

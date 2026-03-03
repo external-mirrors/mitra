@@ -20,13 +20,12 @@ use mitra_models::{
 };
 use mitra_validators::errors::ValidationError;
 
-use crate::authority::Authority;
+use crate::authority::{Authority, AuthorityRoot};
 
 pub fn local_actor_id_unified(authority: &Authority, username: &str) -> String {
-    match authority {
-        Authority::Server(_) => local_actor_id(&authority.to_string(), username),
-        Authority::Key(_) => local_instance_actor_id(&authority.to_string()),
-        Authority::KeyWithGateway(_) => local_instance_actor_id(&authority.to_string()),
+    match authority.root() {
+        AuthorityRoot::Server(_) => local_actor_id(&authority.to_string(), username),
+        AuthorityRoot::Key(_) => local_instance_actor_id(&authority.to_string()),
     }
 }
 

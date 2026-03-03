@@ -894,8 +894,8 @@ mod tests {
             ..Default::default()
         };
         let authority = Authority::key_with_gateway(
-            &instance_uri,
             &author.ed25519_secret_key,
+            &instance_uri,
         );
         let media_server = MediaServer::for_test(INSTANCE_URI);
         let note = build_note(

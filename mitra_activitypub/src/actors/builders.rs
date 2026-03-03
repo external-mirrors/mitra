@@ -477,8 +477,8 @@ mod tests {
         profile.updated_at = profile.created_at;
         let user = User { profile, ..Default::default() };
         let authority = Authority::key_with_gateway(
-            &instance_uri,
             &user.ed25519_secret_key,
+            &instance_uri,
         );
         let media_server = MediaServer::for_test(INSTANCE_URI);
         let actor = build_local_actor(
