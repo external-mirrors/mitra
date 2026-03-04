@@ -90,7 +90,7 @@ pub fn build_announce(
     let authority = Authority::server_unchecked(instance_uri);
     let object_id = post_object_id(&authority, post);
     let activity_id = local_announce_activity_id(instance_uri, repost.id, false);
-    let recipient_id = profile_actor_id(instance_uri, &post.author);
+    let recipient_id = profile_actor_id(&authority, &post.author);
     let (primary_audience, secondary_audience) = get_announce_audience(
         repost.visibility,
         &actor_id,

@@ -14,9 +14,12 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use mitra_activitypub::identifiers::{
-    profile_actor_id,
-    profile_actor_url,
+use mitra_activitypub::{
+    authority::Authority,
+    identifiers::{
+        profile_actor_id,
+        profile_actor_url,
+    },
 };
 use mitra_adapters::payments::subscriptions::MONERO_PAYMENT_AMOUNT_MIN;
 use mitra_config::MediaLimits;
@@ -198,12 +201,12 @@ pub struct Account {
 
 impl Account {
     pub fn from_profile(
-        instance_uri: &str,
+        authority: &Authority,
         media_server: &ClientMediaServer,
         profile: DbActorProfile,
     ) -> Self {
-        let actor_id = profile_actor_id(instance_uri, &profile);
-        let profile_url = profile_actor_url(instance_uri, &profile);
+        let actor_id = profile_actor_id(authority, &profile);
+        let profile_url = profile_actor_url(authority, &profile);
         let preferred_handle = profile.preferred_handle().to_owned();
         let mention_policy = mention_policy_to_str(profile.mention_policy);
 
@@ -320,7 +323,7 @@ impl Account {
     }
 
     pub fn from_user(
-        instance_uri: &str,
+        authority: &Authority,
         media_server: &ClientMediaServer,
         user: User,
     ) -> Self {
@@ -354,7 +357,7 @@ impl Account {
             authentication_methods.push(AUTHENTICATION_METHOD_CAIP122_MONERO.to_string());
         };
         let mut account = Self::from_profile(
-            instance_uri,
+            authority,
             media_server,
             user.profile,
         );
@@ -834,12 +837,12 @@ pub struct Subscription {
 
 impl Subscription {
     pub fn from_db(
-        instance_uri: &str,
+        authority: &Authority,
         media_server: &ClientMediaServer,
         subscription: DbSubscriptionDetailed,
     ) -> Self {
         let sender = Account::from_profile(
-            instance_uri,
+            authority,
             media_server,
             subscription.sender,
         );
@@ -885,11 +888,12 @@ mod tests {
 
     #[test]
     fn test_create_account_from_profile() {
+        let authority = Authority::server_unchecked(INSTANCE_URI);
         let media_server = ClientMediaServer::for_test(INSTANCE_URI);
         let mut profile = DbActorProfile::local_for_test("test");
         profile.avatar = Some(PartialMediaInfo::from(MediaInfo::png_for_test()));
         let account = Account::from_profile(
-            INSTANCE_URI,
+            &authority,
             &media_server,
             profile,
         );
@@ -903,6 +907,7 @@ mod tests {
 
     #[test]
     fn test_create_account_from_user() {
+        let authority = Authority::server_unchecked(INSTANCE_URI);
         let media_server = ClientMediaServer::for_test(INSTANCE_URI);
         let bio_source = "test";
         let login_address = "0x1234";
@@ -914,7 +919,7 @@ mod tests {
             ..Default::default()
         };
         let account = Account::from_user(
-            INSTANCE_URI,
+            &authority,
             &media_server,
             user,
         );

@@ -12,6 +12,7 @@ use actix_web_httpauth::extractors::bearer::BearerAuth;
 use uuid::Uuid;
 
 use mitra_activitypub::{
+    authority::Authority,
     builders::{
         accept_follow::prepare_accept_follow,
         reject_follow::prepare_reject_follow,
@@ -71,11 +72,11 @@ async fn incoming_follow_request_list(
     let maybe_last_id = get_last_item(&profiles, &query_params.limit)
         .map(|item| item.related_id);
     let base_url = get_request_base_url(connection_info);
+    let authority = Authority::from(&config.instance());
     let media_server = ClientMediaServer::new(&config, &base_url);
-    let instance = config.instance();
     let accounts: Vec<Account> = profiles.into_iter()
         .map(|item| Account::from_profile(
-            instance.uri_str(),
+            &authority,
             &media_server,
             item.profile,
         ))
@@ -111,11 +112,11 @@ async fn outgoing_follow_request_list(
     let maybe_last_id = get_last_item(&profiles, &query_params.limit)
         .map(|item| item.related_id);
     let base_url = get_request_base_url(connection_info);
+    let authority = Authority::from(&config.instance());
     let media_server = ClientMediaServer::new(&config, &base_url);
-    let instance = config.instance();
     let accounts: Vec<Account> = profiles.into_iter()
         .map(|item| Account::from_profile(
-            instance.uri_str(),
+            &authority,
             &media_server,
             item.profile,
         ))

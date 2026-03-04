@@ -843,11 +843,11 @@ async fn get_favourited_by(
     let maybe_last_id = get_last_item(&reactions, &params.limit)
         .map(|reaction| reaction.id);
     let base_url = get_request_base_url(connection_info);
+    let authority = Authority::from(&config.instance());
     let media_server = ClientMediaServer::new(&config, &base_url);
-    let instance = config.instance();
     let accounts: Vec<Account> = reactions.into_iter()
         .map(|reaction| Account::from_profile(
-            instance.uri_str(),
+            &authority,
             &media_server,
             reaction.author,
         ))
@@ -998,11 +998,11 @@ async fn get_reblogged_by(
     let maybe_last_id = get_last_item(&reposts, &params.limit)
         .map(|(repost_id, _)| *repost_id);
     let base_url = get_request_base_url(connection_info);
+    let authority = Authority::from(&config.instance());
     let media_server = ClientMediaServer::new(&config, &base_url);
-    let instance = config.instance();
     let accounts: Vec<Account> = reposts.into_iter()
         .map(|(_, author)| Account::from_profile(
-            instance.uri_str(),
+            &authority,
             &media_server,
             author,
         ))

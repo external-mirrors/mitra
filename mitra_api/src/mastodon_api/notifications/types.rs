@@ -67,9 +67,8 @@ impl Notification {
         media_server: &ClientMediaServer,
         notification: DbNotificationDetailed,
     ) -> Self {
-        let instance_uri = authority.expect_server_uri();
         let account = Account::from_profile(
-            instance_uri,
+            authority,
             media_server,
             notification.sender.clone(),
         );

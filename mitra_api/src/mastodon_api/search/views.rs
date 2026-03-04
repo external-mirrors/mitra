@@ -77,7 +77,7 @@ async fn search_view(
     let media_server = ClientMediaServer::new(&config, &base_url);
     let accounts: Vec<Account> = profiles.into_iter()
         .map(|profile| Account::from_profile(
-            instance.uri_str(),
+            &authority,
             &media_server,
             profile,
         ))

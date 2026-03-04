@@ -58,12 +58,12 @@ pub struct Mention {
 }
 
 impl Mention {
-    fn from_profile(instance_uri: &str, profile: DbActorProfile) -> Self {
+    fn from_profile(authority: &Authority, profile: DbActorProfile) -> Self {
         Mention {
             id: profile.id.to_string(),
             username: profile.username.clone(),
             acct: profile.preferred_handle().to_owned(),
-            url: profile_actor_url(instance_uri, &profile),
+            url: profile_actor_url(authority, &profile),
         }
     }
 }
@@ -187,7 +187,7 @@ impl Status {
             .map(|item| Attachment::from_db(media_server, item))
             .collect();
         let mentions: Vec<Mention> = post.mentions.into_iter()
-            .map(|item| Mention::from_profile(instance_uri, item))
+            .map(|item| Mention::from_profile(authority, item))
             .collect();
         let tags: Vec<Tag> = post.tags.into_iter()
             .map(|tag_name| Tag::from_tag_name(instance_uri, tag_name))
@@ -196,7 +196,7 @@ impl Status {
             .map(|emoji| CustomEmoji::from_db(media_server, emoji))
             .collect();
         let account = Account::from_profile(
-            instance_uri,
+            authority,
             media_server,
             post.author,
         );

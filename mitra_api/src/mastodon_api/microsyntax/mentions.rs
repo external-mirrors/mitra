@@ -3,7 +3,10 @@ use apx_sdk::addresses::WebfingerAddress;
 use indexmap::IndexMap;
 use regex::{Captures, Regex};
 
-use mitra_activitypub::identifiers::profile_actor_url;
+use mitra_activitypub::{
+    authority::Authority,
+    identifiers::profile_actor_url,
+};
 use mitra_models::{
     database::{DatabaseClient, DatabaseError},
     profiles::queries::get_profiles_by_accts,
@@ -91,7 +94,7 @@ pub async fn find_mentioned_profiles(
 pub fn replace_mentions(
     mention_map: &IndexMap<String, DbActorProfile>,
     instance_hostname: &str,
-    instance_uri: &str,
+    authority: &Authority,
     text: &str,
 ) -> String {
     let mention_re = Regex::new(MENTION_SEARCH_RE)
@@ -114,7 +117,7 @@ pub fn replace_mentions(
             if let Some(profile) = mention_map.get(&acct) {
                 // Replace with a link to profile.
                 // Actor URL may differ from actor ID.
-                let url = profile_actor_url(instance_uri, profile);
+                let url = profile_actor_url(authority, profile);
                 #[allow(clippy::to_string_in_format_args)]
                 return format!(
                     // https://microformats.org/wiki/h-card
@@ -221,10 +224,11 @@ mod tests {
             ("user2@server2.com".to_string(), profile_3),
             ("user3@xn--jxalpdlp.example".to_string(), profile_4),
         ]);
+        let authority = Authority::server_unchecked(INSTANCE_URI);
         let result = replace_mentions(
             &mention_map,
             INSTANCE_HOSTNAME,
-            INSTANCE_URI,
+            &authority,
             TEXT_WITH_MENTIONS,
         );
 

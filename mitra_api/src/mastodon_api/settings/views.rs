@@ -12,6 +12,7 @@ use chrono::Utc;
 
 use mitra_activitypub::{
     adapters::users::delete_user,
+    authority::Authority,
     builders::{
         follow::follow_or_create_request,
         move_person::prepare_move_person,
@@ -104,9 +105,10 @@ async fn client_config_view(
         client_config_value,
     ).await?;
     let base_url = get_request_base_url(connection_info);
+    let authority = Authority::from(&config.instance());
     let media_server = ClientMediaServer::new(&config, &base_url);
     let account = Account::from_user(
-        config.instance().uri_str(),
+        &authority,
         &media_server,
         current_user,
     );
@@ -166,9 +168,10 @@ async fn change_password_view(
     set_user_password(db_client, current_user.id, &password_digest).await?;
     current_user.password_digest = Some(password_digest);
     let base_url = get_request_base_url(connection_info);
+    let authority = Authority::from(&config.instance());
     let media_server = ClientMediaServer::new(&config, &base_url);
     let account = Account::from_user(
-        config.instance().uri_str(),
+        &authority,
         &media_server,
         current_user,
     );
@@ -193,7 +196,8 @@ async fn add_alias_view(
         return Err(ValidationError("alias must be on another server").into());
     };
     let instance = config.instance();
-    let alias_id = profile_actor_id(instance.uri_str(), &alias);
+    let authority = Authority::from(&instance);
+    let alias_id = profile_actor_id(&authority, &alias);
     let mut profile_data = ProfileUpdateData::from(&current_user.profile);
     if !profile_data.aliases.contains(&alias_id) {
         profile_data.aliases.push(alias_id);
@@ -219,7 +223,7 @@ async fn add_alias_view(
     let media_server = ClientMediaServer::new(&config, &base_url);
     let aliases = get_aliases(
         db_client,
-        instance.uri_str(),
+        &authority,
         &media_server,
         &current_user.profile,
     ).await?;
@@ -258,10 +262,11 @@ async fn remove_alias_view(
         &current_user,
     ).await?.save_and_enqueue(db_client).await?;
     let base_url = get_request_base_url(connection_info);
+    let authority = Authority::from(&config.instance());
     let media_server = ClientMediaServer::new(&config, &base_url);
     let aliases = get_aliases(
         db_client,
-        instance.uri_str(),
+        &authority,
         &media_server,
         &current_user.profile,
     ).await?;
@@ -340,6 +345,7 @@ async fn import_followers_view(
         return Err(ValidationError("identity proof is required").into());
     };
     let instance = config.instance();
+    let authority = Authority::from(&instance);
     if request_data.from_actor_id.starts_with(instance.uri_str()) {
         return Err(ValidationError("can't move from local actor").into());
     };
@@ -360,7 +366,7 @@ async fn import_followers_view(
             &current_user.profile,
         ).await?
             .into_iter()
-            .map(|profile| profile_actor_id(instance.uri_str(), &profile));
+            .map(|profile| profile_actor_id(&authority, &profile));
         if !aliases.any(|actor_id| actor_id == request_data.from_actor_id) {
             return Err(ValidationError("old profile is not an alias").into());
         };
@@ -379,7 +385,7 @@ async fn import_followers_view(
     let base_url = get_request_base_url(connection_info);
     let media_server = ClientMediaServer::new(&config, &base_url);
     let account = Account::from_user(
-        instance.uri_str(),
+        &authority,
         &media_server,
         current_user,
     );
@@ -397,8 +403,9 @@ async fn move_followers_view(
     let db_client = &mut **get_database_client(&db_pool).await?;
     let instance = config.instance();
     let current_user = get_current_user(db_client, auth.token()).await?;
+    let authority = Authority::from(&instance);
     let current_actor_id = profile_actor_id(
-        instance.uri_str(),
+        &authority,
         &current_user.profile,
     );
     let target = get_profile_by_acct(db_client, &request_data.target_acct).await?;
@@ -432,7 +439,7 @@ async fn move_followers_view(
             follower.id,
         ).await?;
     };
-    let target_actor_id = profile_actor_id(instance.uri_str(), &target);
+    let target_actor_id = profile_actor_id(&authority, &target);
     prepare_move_person(
         &instance,
         &current_user,
@@ -444,7 +451,7 @@ async fn move_followers_view(
     let base_url = get_request_base_url(connection_info);
     let media_server = ClientMediaServer::new(&config, &base_url);
     let account = Account::from_user(
-        instance.uri_str(),
+        &authority,
         &media_server,
         current_user,
     );

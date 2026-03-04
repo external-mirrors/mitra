@@ -10,6 +10,7 @@ use mitra_models::{
 };
 
 use crate::{
+    authority::Authority,
     contexts::{build_default_context, Context},
     identifiers::{
         local_activity_id,
@@ -56,7 +57,8 @@ fn build_undo_announce(
     );
     let activity_id = local_activity_id(instance_uri, UNDO, repost_id);
     let actor_id = local_actor_id(instance_uri, &actor_profile.username);
-    let recipient_id = profile_actor_id(instance_uri, post_author);
+    let authority = Authority::server_unchecked(instance_uri);
+    let recipient_id = profile_actor_id(&authority, post_author);
     let (primary_audience, secondary_audience) = get_announce_audience(
         repost_visibility,
         &actor_id,

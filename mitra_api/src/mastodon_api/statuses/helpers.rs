@@ -61,6 +61,7 @@ async fn parse_microsyntaxes(
     instance: &Instance,
     mut content: String,
 ) -> Result<PostContent, DatabaseError> {
+    let authority = Authority::from(instance);
     // Mentions
     let mention_map = find_mentioned_profiles(
         db_client,
@@ -70,7 +71,7 @@ async fn parse_microsyntaxes(
     content = replace_mentions(
         &mention_map,
         &instance.hostname(),
-        instance.uri_str(),
+        &authority,
         &content,
     );
     let mentions = mention_map.values().map(|profile| profile.id).collect();

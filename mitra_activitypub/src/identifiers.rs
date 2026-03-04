@@ -80,6 +80,17 @@ pub fn local_actor_proposal_id(
     format!("{}/proposals/{}", actor_id, chain_id)
 }
 
+pub fn local_actor_id_unified_alt(
+    authority: &Authority,
+    internal_actor_id: Uuid,
+    username: &str,
+) -> String {
+    match authority.root() {
+        AuthorityRoot::Server(_) => local_actor_id(&authority.to_string(), username),
+        AuthorityRoot::Key(_) => format!("{}/actors/{}", authority, internal_actor_id),
+    }
+}
+
 pub fn local_object_id(instance_uri: &str, internal_object_id: Uuid) -> String {
     format!("{}/objects/{}", instance_uri, internal_object_id)
 }
@@ -209,25 +220,34 @@ pub fn post_object_id(authority: &Authority, post: &PostDetailed) -> String {
     }
 }
 
-pub fn profile_actor_id(instance_uri: &str, profile: &DbActorProfile) -> String {
+// Returns canonical actor URI
+pub fn profile_actor_id(authority: &Authority, profile: &DbActorProfile) -> String {
     match profile.actor_json {
         Some(ref actor) => actor.id.clone(),
-        None => local_actor_id(instance_uri, &profile.username),
+        None => {
+            let authority = authority.and_prefer_canonical();
+            local_actor_id_unified_alt(&authority, profile.id, &profile.username)
+        }
     }
 }
 
-pub fn profile_actor_url(instance_uri: &str, profile: &DbActorProfile) -> String {
-    if let Some(ref actor) = profile.actor_json {
-        if let Some(ref actor_url) = actor.url {
-            return actor_url.clone();
-        };
-        if actor.is_portable() {
-            // Use compatible ID as 'url'
-            return compatible_actor_id(actor)
-                .expect("actor ID should be valid");
-        };
-    };
-    profile_actor_id(instance_uri, profile)
+pub fn profile_actor_url(authority: &Authority, profile: &DbActorProfile) -> String {
+    match profile.actor_json {
+        Some(ref actor) => {
+            if let Some(ref actor_url) = actor.url {
+                return actor_url.clone();
+            };
+            if actor.is_portable() {
+                // Use compatible ID as 'url'
+                return compatible_actor_id(actor)
+                    .expect("actor ID should be valid");
+            };
+            actor.id.clone()
+        },
+        None => {
+            local_actor_id_unified_alt(authority, profile.id, &profile.username)
+        },
+    }
 }
 
 /// Convert canonical object ID (from database) to compatible ID,
@@ -421,8 +441,9 @@ mod tests {
 
     #[test]
     fn test_profile_actor_url() {
+        let authority = Authority::server_unchecked(INSTANCE_URI);
         let profile = DbActorProfile::local_for_test("test");
-        let profile_url = profile_actor_url(INSTANCE_URI, &profile);
+        let profile_url = profile_actor_url(&authority, &profile);
         assert_eq!(
             profile_url,
             "https://social.example/users/test",

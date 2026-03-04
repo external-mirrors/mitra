@@ -236,6 +236,7 @@ async fn get_reactions_view(
         None, // get all reactions
     ).await?;
     let base_url = get_request_base_url(connection_info);
+    let authority = Authority::from(&config.instance());
     let media_server = ClientMediaServer::new(&config, &base_url);
     let mut pleroma_reactions: Vec<PleromaEmojiReaction> = vec![];
     for reaction in reactions {
@@ -249,7 +250,7 @@ async fn get_reactions_view(
             .map(|emoji| emoji.shortcode.clone())
             .unwrap_or(content);
         let account = Account::from_profile(
-            config.instance().uri_str(),
+            &authority,
             &media_server,
             reaction.author.clone(),
         );
