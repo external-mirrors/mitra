@@ -135,9 +135,18 @@ impl Authority {
     }
 }
 
+#[cfg(not(feature = "mini"))]
 impl From<&Instance> for Authority {
     fn from(instance: &Instance) -> Self {
         Self::server(instance.uri())
+    }
+}
+
+#[cfg(feature = "mini")]
+impl From<&Instance> for Authority {
+    fn from(instance: &Instance) -> Self {
+        let gateway_uri = instance.uri();
+        Self::key_with_gateway(&instance.ed25519_secret_key, gateway_uri)
     }
 }
 
