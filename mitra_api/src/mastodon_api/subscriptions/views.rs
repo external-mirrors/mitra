@@ -13,6 +13,7 @@ use actix_web_httpauth::extractors::bearer::BearerAuth;
 use uuid::Uuid;
 
 use mitra_activitypub::{
+    authority::Authority,
     builders::{
         add_person::prepare_add_subscriber,
         offer_agreement::prepare_offer_agreement,
@@ -287,9 +288,10 @@ async fn register_subscription_option(
     ).await?.save_and_enqueue(db_client).await?;
 
     let base_url = get_request_base_url(connection_info);
+    let authority = Authority::from(&config.instance());
     let media_server = ClientMediaServer::new(&config, &base_url);
     let account = Account::from_user(
-        config.instance().uri_str(),
+        &authority,
         &media_server,
         current_user,
     );

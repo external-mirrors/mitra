@@ -8,6 +8,7 @@ use actix_web::{
 };
 use actix_web_httpauth::extractors::bearer::BearerAuth;
 
+use mitra_activitypub::authority::Authority;
 use mitra_config::Config;
 use mitra_models::database::{get_database_client, DatabaseConnectionPool};
 
@@ -71,11 +72,12 @@ async fn search_view(
         },
     };
     let base_url = get_request_base_url(connection_info);
-    let media_server = ClientMediaServer::new(&config, &base_url);
     let instance = config.instance();
+    let authority = Authority::from(&instance);
+    let media_server = ClientMediaServer::new(&config, &base_url);
     let accounts: Vec<Account> = profiles.into_iter()
         .map(|profile| Account::from_profile(
-            instance.uri_str(),
+            &authority,
             &media_server,
             profile,
         ))
@@ -83,7 +85,7 @@ async fn search_view(
     let db_client = &**get_database_client(&db_pool).await?;
     let statuses = build_status_list(
         db_client,
-        instance.uri_str(),
+        &authority,
         &media_server,
         Some(&current_user),
         posts,

@@ -20,16 +20,15 @@ use mitra_models::{
 };
 use mitra_validators::errors::ValidationError;
 
-use crate::authority::Authority;
+use crate::authority::{Authority, AuthorityRoot};
 
 #[cfg(feature = "mini")]
 use mitra_config::Instance;
 
 pub fn local_actor_id_unified(authority: &Authority, username: &str) -> String {
-    match authority {
-        Authority::Server(_) => local_actor_id(&authority.to_string(), username),
-        Authority::Key(_) => local_instance_actor_id(&authority.to_string()),
-        Authority::KeyWithGateway(_) => local_instance_actor_id(&authority.to_string()),
+    match authority.root() {
+        AuthorityRoot::Server(_) => local_actor_id(&authority.to_string(), username),
+        AuthorityRoot::Key(_) => local_instance_actor_id(&authority.to_string()),
     }
 }
 
@@ -82,6 +81,17 @@ pub fn local_actor_proposal_id(
     chain_id: &ChainId,
 ) -> String {
     format!("{}/proposals/{}", actor_id, chain_id)
+}
+
+pub fn local_actor_id_unified_alt(
+    authority: &Authority,
+    internal_actor_id: Uuid,
+    username: &str,
+) -> String {
+    match authority.root() {
+        AuthorityRoot::Server(_) => local_actor_id(&authority.to_string(), username),
+        AuthorityRoot::Key(_) => format!("{}/actors/{}", authority, internal_actor_id),
+    }
 }
 
 pub fn local_object_id(instance_uri: &str, internal_object_id: Uuid) -> String {
@@ -235,32 +245,45 @@ pub fn _parse_local_activity_id(
     Ok(internal_activity_id)
 }
 
-pub fn post_object_id(instance_uri: &str, post: &PostDetailed) -> String {
+// Returns canonical post URI
+pub fn post_object_id(authority: &Authority, post: &PostDetailed) -> String {
     match post.object_id {
         Some(ref object_id) => object_id.clone(),
-        None => local_object_id(instance_uri, post.id),
+        None => {
+            let authority = authority.and_prefer_canonical();
+            local_object_id_unified(&authority, post.id)
+        },
     }
 }
 
-pub fn profile_actor_id(instance_uri: &str, profile: &DbActorProfile) -> String {
+// Returns canonical actor URI
+pub fn profile_actor_id(authority: &Authority, profile: &DbActorProfile) -> String {
     match profile.actor_json {
         Some(ref actor) => actor.id.clone(),
-        None => local_actor_id(instance_uri, &profile.username),
+        None => {
+            let authority = authority.and_prefer_canonical();
+            local_actor_id_unified_alt(&authority, profile.id, &profile.username)
+        }
     }
 }
 
-pub fn profile_actor_url(instance_uri: &str, profile: &DbActorProfile) -> String {
-    if let Some(ref actor) = profile.actor_json {
-        if let Some(ref actor_url) = actor.url {
-            return actor_url.clone();
-        };
-        if actor.is_portable() {
-            // Use compatible ID as 'url'
-            return compatible_actor_id(actor)
-                .expect("actor ID should be valid");
-        };
-    };
-    profile_actor_id(instance_uri, profile)
+pub fn profile_actor_url(authority: &Authority, profile: &DbActorProfile) -> String {
+    match profile.actor_json {
+        Some(ref actor) => {
+            if let Some(ref actor_url) = actor.url {
+                return actor_url.clone();
+            };
+            if actor.is_portable() {
+                // Use compatible ID as 'url'
+                return compatible_actor_id(actor)
+                    .expect("actor ID should be valid");
+            };
+            actor.id.clone()
+        },
+        None => {
+            local_actor_id_unified_alt(authority, profile.id, &profile.username)
+        },
+    }
 }
 
 /// Convert canonical object ID (from database) to compatible ID,
@@ -308,7 +331,10 @@ pub fn compatible_profile_actor_id(
     }
 }
 
-pub fn compatible_post_object_id(instance_uri: &str, post: &PostDetailed) -> String {
+pub fn compatible_post_object_id(
+    authority: &Authority,
+    post: &PostDetailed,
+) -> String {
     match post.object_id {
         Some(ref object_id) => {
             let actor_data = post.author.expect_actor_data();
@@ -320,7 +346,7 @@ pub fn compatible_post_object_id(instance_uri: &str, post: &PostDetailed) -> Str
                 object_id.clone()
             }
         },
-        None => local_object_id(instance_uri, post.id),
+        None => local_object_id_unified(authority, post.id),
     }
 }
 
@@ -451,11 +477,34 @@ mod tests {
 
     #[test]
     fn test_profile_actor_url() {
+        let authority = Authority::server_unchecked(INSTANCE_URI);
         let profile = DbActorProfile::local_for_test("test");
-        let profile_url = profile_actor_url(INSTANCE_URI, &profile);
+        let profile_url = profile_actor_url(&authority, &profile);
         assert_eq!(
             profile_url,
             "https://social.example/users/test",
+        );
+    }
+
+    #[test]
+    fn test_post_object_id_ap_uri() {
+        let authority = Authority::server_unchecked(INSTANCE_URI);
+        let profile = DbActorProfile::remote_for_test_with_data(
+            "test",
+            DbActor {
+                id: "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor".to_string(),
+                gateways: vec!["https://gateway.example".to_string()],
+                ..Default::default()
+            },
+        );
+        let post = PostDetailed::remote_for_test(
+            &profile,
+            "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/posts/1",
+        );
+        let object_id = post_object_id(&authority, &post);
+        assert_eq!(
+            object_id,
+            "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/posts/1",
         );
     }
 
@@ -469,7 +518,8 @@ mod tests {
             &profile,
             "https://social.example/posts/1",
         );
-        let object_id = compatible_post_object_id(INSTANCE_URI, &post);
+        let authority = Authority::server_unchecked(INSTANCE_URI);
+        let object_id = compatible_post_object_id(&authority, &post);
         assert_eq!(
             object_id,
             "https://social.example/posts/1",
@@ -482,7 +532,7 @@ mod tests {
             "test",
             DbActor {
                 id: "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor".to_string(),
-                gateways: vec!["https://social.example".to_string()],
+                gateways: vec!["https://gateway.example".to_string()],
                 ..Default::default()
             },
         );
@@ -490,10 +540,11 @@ mod tests {
             &profile,
             "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/posts/1",
         );
-        let object_id = compatible_post_object_id(INSTANCE_URI, &post);
+        let authority = Authority::server_unchecked(INSTANCE_URI);
+        let object_id = compatible_post_object_id(&authority, &post);
         assert_eq!(
             object_id,
-            "https://social.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/posts/1",
+            "https://gateway.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/posts/1",
         );
     }
 

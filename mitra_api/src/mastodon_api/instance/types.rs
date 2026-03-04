@@ -1,6 +1,7 @@
 use apx_sdk::core::crypto::hashes::sha256;
 use serde::Serialize;
 
+use mitra_activitypub::authority::Authority;
 use mitra_adapters::{
     dynamic_config::DynamicConfig,
     payments::subscriptions::MONERO_PAYMENT_AMOUNT_MIN,
@@ -305,7 +306,7 @@ impl InstanceInfo {
                 polls: PollLimits::new(),
             },
             contact_account: maybe_admin.map(|user| Account::from_profile(
-                config.instance().uri_str(),
+                &Authority::from(&config.instance()),
                 media_server,
                 user.profile,
             )),
@@ -465,7 +466,7 @@ impl InstanceInfoV2 {
             contact: Contact {
                 email: "".to_string(),
                 account: maybe_admin.map(|user| Account::from_profile(
-                    config.instance().uri_str(),
+                    &Authority::from(&config.instance()),
                     media_server,
                     user.profile,
                 )),

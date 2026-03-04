@@ -2,6 +2,7 @@ use indexmap::IndexMap;
 use regex::{Captures, Regex};
 
 use mitra_activitypub::{
+    authority::Authority,
     identifiers::{canonicalize_id, compatible_post_object_id},
     importers::get_post_by_object_id,
 };
@@ -103,13 +104,13 @@ pub fn replace_object_links(
 }
 
 pub fn insert_quote(
-    instance_uri: &str,
+    authority: &Authority,
     content: &str,
     quote_of: &PostDetailed,
 ) -> String {
     format!(
         r#"{content}<p>RE: <a href="{0}">{0}</a></p>"#,
-        compatible_post_object_id(instance_uri, quote_of),
+        compatible_post_object_id(authority, quote_of),
     )
 }
 

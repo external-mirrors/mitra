@@ -13,6 +13,7 @@ use mitra_models::{
 use mitra_services::media::MediaServer;
 
 use crate::{
+    authority::Authority,
     contexts::{build_default_context, Context},
     deliverer::Recipient,
     identifiers::{
@@ -133,7 +134,8 @@ pub async fn prepare_like(
         instance.uri_str(),
         post,
     ).await?;
-    let object_id = compatible_post_object_id(instance.uri_str(), post);
+    let authority = Authority::from(instance);
+    let object_id = compatible_post_object_id(&authority, post);
     let post_author_id =
         compatible_profile_actor_id(instance.uri_str(), &post.author);
     let activity = build_like(

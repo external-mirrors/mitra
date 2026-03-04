@@ -46,6 +46,7 @@ use chrono::Utc;
 use uuid::Uuid;
 
 use mitra_activitypub::{
+    authority::Authority,
     builders::{
         follow::follow_or_create_request,
         reject_follow::prepare_reject_follow,
@@ -277,9 +278,10 @@ pub async fn create_account(
     create_signup_notifications(db_client, user.id).await?;
     log::warn!("created user {}", user);
     let base_url = get_request_base_url(connection_info);
+    let authority = Authority::from(&instance);
     let media_server = ClientMediaServer::new(&config, &base_url);
     let account = Account::from_user(
-        instance.uri_str(),
+        &authority,
         &media_server,
         user,
     );
@@ -297,9 +299,10 @@ async fn verify_credentials(
     let db_client = &**get_database_client(&db_pool).await?;
     let user = get_current_user(db_client, auth.token()).await?;
     let base_url = get_request_base_url(connection_info);
+    let authority = Authority::from(&config.instance());
     let media_server = ClientMediaServer::new(&config, &base_url);
     let account = Account::from_user(
-        config.instance().uri_str(),
+        &authority,
         &media_server,
         user,
     );
@@ -369,9 +372,10 @@ async fn update_credentials(
     ).await?.save_and_enqueue(db_client).await?;
 
     let base_url = get_request_base_url(connection_info);
+    let authority = Authority::from(&config.instance());
     let media_server = ClientMediaServer::new(&config, &base_url);
     let account = Account::from_user(
-        config.instance().uri_str(),
+        &authority,
         &media_server,
         current_user,
     );
@@ -561,9 +565,10 @@ async fn create_identity_proof(
     ).await?.save_and_enqueue(db_client).await?;
 
     let base_url = get_request_base_url(connection_info);
+    let authority = Authority::from(&config.instance());
     let media_server = ClientMediaServer::new(&config, &base_url);
     let account = Account::from_user(
-        config.instance().uri_str(),
+        &authority,
         &media_server,
         current_user,
     );
@@ -600,9 +605,10 @@ async fn delete_identity_proof(
     ).await?.save_and_enqueue(db_client).await?;
 
     let base_url = get_request_base_url(connection_info);
+    let authority = Authority::from(&config.instance());
     let media_server = ClientMediaServer::new(&config, &base_url);
     let account = Account::from_user(
-        config.instance().uri_str(),
+        &authority,
         &media_server,
         current_user,
     );
@@ -645,9 +651,10 @@ async fn lookup_acct(
         .acct(&local_hostname);
     let profile = get_profile_by_acct(db_client, &acct).await?;
     let base_url = get_request_base_url(connection_info);
+    let authority = Authority::from(&config.instance());
     let media_server = ClientMediaServer::new(&config, &base_url);
     let account = Account::from_profile(
-        config.instance().uri_str(),
+        &authority,
         &media_server,
         profile,
     );
@@ -696,11 +703,11 @@ async fn search_by_acct(
         query_params.offset,
     ).await?;
     let base_url = get_request_base_url(connection_info);
+    let authority = Authority::from(&config.instance());
     let media_server = ClientMediaServer::new(&config, &base_url);
-    let instance = config.instance();
     let accounts: Vec<Account> = profiles.into_iter()
         .map(|profile| Account::from_profile(
-            instance.uri_str(),
+            &authority,
             &media_server,
             profile,
         ))
@@ -720,11 +727,11 @@ async fn search_by_did(
         .map_err(|_| ValidationError("invalid DID"))?;
     let profiles = search_profiles_by_did(db_client, &did, false).await?;
     let base_url = get_request_base_url(connection_info);
+    let authority = Authority::from(&config.instance());
     let media_server = ClientMediaServer::new(&config, &base_url);
-    let instance = config.instance();
     let accounts: Vec<Account> = profiles.into_iter()
         .map(|profile| Account::from_profile(
-            instance.uri_str(),
+            &authority,
             &media_server,
             profile,
         ))
@@ -758,9 +765,10 @@ async fn get_account(
     let db_client = &**get_database_client(&db_pool).await?;
     let profile = get_profile_by_id(db_client, *account_id).await?;
     let base_url = get_request_base_url(connection_info);
+    let authority = Authority::from(&config.instance());
     let media_server = ClientMediaServer::new(&config, &base_url);
     let account = Account::from_profile(
-        config.instance().uri_str(),
+        &authority,
         &media_server,
         profile,
     );
@@ -968,12 +976,12 @@ async fn get_account_statuses(
         query_params.limit.inner(),
     ).await?;
     let base_url = get_request_base_url(connection_info);
+    let authority = Authority::from(&config.instance());
     let media_server = ClientMediaServer::new(&config, &base_url);
-    let instance = config.instance();
     let response = get_paginated_status_list(
         db_client,
         &base_url,
-        instance.uri_str(),
+        &authority,
         &media_server,
         &request_uri,
         maybe_current_user.as_ref(),
@@ -1010,11 +1018,11 @@ async fn get_account_followers(
     let maybe_last_id = get_last_item(&followers, &query_params.limit)
         .map(|item| item.related_id);
     let base_url = get_request_base_url(connection_info);
+    let authority = Authority::from(&config.instance());
     let media_server = ClientMediaServer::new(&config, &base_url);
-    let instance = config.instance();
     let accounts: Vec<Account> = followers.into_iter()
         .map(|item| Account::from_profile(
-            instance.uri_str(),
+            &authority,
             &media_server,
             item.profile,
         ))
@@ -1055,11 +1063,11 @@ async fn get_account_following(
     let maybe_last_id = get_last_item(&following, &query_params.limit)
         .map(|item| item.related_id);
     let base_url = get_request_base_url(connection_info);
+    let authority = Authority::from(&config.instance());
     let media_server = ClientMediaServer::new(&config, &base_url);
-    let instance = config.instance();
     let accounts: Vec<Account> = following.into_iter()
         .map(|item| Account::from_profile(
-            instance.uri_str(),
+            &authority,
             &media_server,
             item.profile,
         ))
@@ -1091,8 +1099,8 @@ async fn get_account_subscribers(
         return Ok(HttpResponse::Ok().json(subscriptions));
     };
     let base_url = get_request_base_url(connection_info);
+    let authority = Authority::from(&config.instance());
     let media_server = ClientMediaServer::new(&config, &base_url);
-    let instance = config.instance();
     let subscriptions: Vec<Subscription> = get_incoming_subscriptions(
         db_client,
         profile.id,
@@ -1103,7 +1111,7 @@ async fn get_account_subscribers(
         .await?
         .into_iter()
         .map(|subscription| Subscription::from_db(
-            instance.uri_str(),
+            &authority,
             &media_server,
             subscription,
         ))
@@ -1139,11 +1147,11 @@ async fn get_account_aliases(
     let db_client = &**get_database_client(&db_pool).await?;
     let profile = get_profile_by_id(db_client, *account_id).await?;
     let base_url = get_request_base_url(connection_info);
+    let authority = Authority::from(&config.instance());
     let media_server = ClientMediaServer::new(&config, &base_url);
-    let instance = config.instance();
     let aliases = get_aliases(
         db_client,
-        instance.uri_str(),
+        &authority,
         &media_server,
         &profile,
     ).await?;
