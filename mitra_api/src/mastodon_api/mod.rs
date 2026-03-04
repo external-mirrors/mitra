@@ -29,7 +29,7 @@ mod custom_emojis;
 mod directory;
 mod favourites;
 mod filters;
-mod follow_requests;
+pub mod follow_requests;
 pub mod instance;
 mod lists;
 pub mod markers;
