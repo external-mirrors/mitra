@@ -135,6 +135,19 @@ pub fn local_activity_id(
     )
 }
 
+pub fn local_activity_id_unified(
+    authority: &Authority,
+    activity_type: &str,
+    internal_id: Uuid,
+) -> String {
+    format!(
+        "{}/activities/{}/{}",
+        authority,
+        activity_type.to_lowercase(),
+        internal_id,
+    )
+}
+
 pub fn parse_local_actor_id(
     instance_uri: &str,
     actor_id: &str,

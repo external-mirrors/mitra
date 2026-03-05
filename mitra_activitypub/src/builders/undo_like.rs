@@ -4,7 +4,7 @@ use uuid::Uuid;
 use mitra_config::Instance;
 use mitra_models::{
     database::{DatabaseClient, DatabaseError},
-    posts::types::{PostDetailed, Visibility},
+    posts::types::PostDetailed,
     profiles::types::DbActorProfile,
     users::types::User,
 };
@@ -14,8 +14,8 @@ use crate::{
     contexts::{build_default_context, Context},
     identifiers::{
         compatible_profile_actor_id,
-        local_activity_id,
-        local_actor_id,
+        local_activity_id_unified,
+        local_actor_id_unified,
     },
     queues::OutgoingActivityJobData,
     vocabulary::UNDO,
@@ -44,22 +44,23 @@ struct UndoLike {
 }
 
 fn build_undo_like(
-    instance_uri: &str,
+    authority: &Authority,
     actor_profile: &DbActorProfile,
+    post: &PostDetailed,
     reaction_id: Uuid,
     reaction_has_deprecated_ap_id: bool,
-    post_author_id: &str,
-    post_visibility: Visibility,
 ) -> UndoLike {
     let object_id = local_like_activity_id(
-        instance_uri,
+        authority,
         reaction_id,
         reaction_has_deprecated_ap_id,
     );
-    let activity_id = local_activity_id(instance_uri, UNDO, reaction_id);
-    let actor_id = local_actor_id(instance_uri, &actor_profile.username);
+    let activity_id = local_activity_id_unified(authority, UNDO, reaction_id);
+    let actor_id = local_actor_id_unified(authority, actor_profile.id, &actor_profile.username);
+    let post_author_id =
+        compatible_profile_actor_id(authority, &post.author);
     let (primary_audience, secondary_audience) =
-        get_like_audience(post_author_id, post_visibility);
+        get_like_audience(&post_author_id, post.visibility);
     UndoLike {
         context: build_default_context(),
         activity_type: UNDO.to_string(),
@@ -85,15 +86,12 @@ pub async fn prepare_undo_like(
         post,
     ).await?;
     let authority = Authority::from(instance);
-    let post_author_id =
-        compatible_profile_actor_id(&authority, &post.author);
     let activity = build_undo_like(
-        instance.uri_str(),
+        &authority,
         &sender.profile,
+        post,
         reaction_id,
         reaction_has_deprecated_ap_id,
-        &post_author_id,
-        post.visibility,
     );
     Ok(OutgoingActivityJobData::new(
         instance.uri_str(),
@@ -112,16 +110,19 @@ mod tests {
 
     #[test]
     fn test_build_undo_like() {
+        let authority = Authority::server_unchecked(INSTANCE_URI);
         let author = DbActorProfile::default();
         let post_author_id = "https://example.com/users/test";
+        let post_id = "https://example.com/objects/123";
+        let post_author = DbActorProfile::remote_for_test("test", post_author_id);
+        let post = PostDetailed::remote_for_test(&post_author, post_id);
         let reaction_id = generate_ulid();
         let activity = build_undo_like(
-            INSTANCE_URI,
+            &authority,
             &author,
+            &post,
             reaction_id,
             true, // legacy activity ID
-            post_author_id,
-            Visibility::Public,
         );
         assert_eq!(
             activity.id,
@@ -139,12 +140,11 @@ mod tests {
         assert_eq!(activity.cc.is_empty(), true);
 
         let activity = build_undo_like(
-            INSTANCE_URI,
+            &authority,
             &author,
+            &post,
             reaction_id,
             false, // no legacy activity ID
-            post_author_id,
-            Visibility::Public,
         );
         assert_eq!(
             activity.object,
