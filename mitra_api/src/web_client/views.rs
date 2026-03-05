@@ -115,7 +115,8 @@ async fn profile_page_redirect_view(
 ) -> Result<HttpResponse, HttpError> {
     let db_client = &**get_database_client(&db_pool).await?;
     let profile = get_profile_by_acct(db_client, &acct).await?;
-    let actor_id = compatible_profile_actor_id(config.instance().uri_str(), &profile);
+    let authority = Authority::from(&config.instance());
+    let actor_id = compatible_profile_actor_id(&authority, &profile);
     let response = HttpResponse::Found()
         .append_header(("Location", actor_id))
         .finish();

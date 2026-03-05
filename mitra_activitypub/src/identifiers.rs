@@ -25,13 +25,6 @@ use crate::authority::{Authority, AuthorityRoot};
 #[cfg(feature = "mini")]
 use mitra_config::Instance;
 
-pub fn local_actor_id_unified(authority: &Authority, username: &str) -> String {
-    match authority.root() {
-        AuthorityRoot::Server(_) => local_actor_id(&authority.to_string(), username),
-        AuthorityRoot::Key(_) => local_instance_actor_id(&authority.to_string()),
-    }
-}
-
 pub enum LocalActorCollection {
     Inbox,
     Outbox,
@@ -61,6 +54,17 @@ pub fn local_actor_id(instance_uri: &str, username: &str) -> String {
     format!("{}/users/{}", instance_uri, username)
 }
 
+pub fn local_actor_id_unified(
+    authority: &Authority,
+    internal_id: Uuid,
+    username: &str,
+) -> String {
+    match authority.root() {
+        AuthorityRoot::Server(_) => local_actor_id(&authority.to_string(), username),
+        AuthorityRoot::Key(_) => format!("{}/actors/{}", authority, internal_id),
+    }
+}
+
 pub fn local_instance_actor_id(instance_uri: &str) -> String {
     format!("{}/actor", instance_uri)
 }
@@ -81,17 +85,6 @@ pub fn local_actor_proposal_id(
     chain_id: &ChainId,
 ) -> String {
     format!("{}/proposals/{}", actor_id, chain_id)
-}
-
-pub fn local_actor_id_unified_alt(
-    authority: &Authority,
-    internal_actor_id: Uuid,
-    username: &str,
-) -> String {
-    match authority.root() {
-        AuthorityRoot::Server(_) => local_actor_id(&authority.to_string(), username),
-        AuthorityRoot::Key(_) => format!("{}/actors/{}", authority, internal_actor_id),
-    }
 }
 
 pub fn local_object_id(instance_uri: &str, internal_object_id: Uuid) -> String {
@@ -140,6 +133,19 @@ pub fn local_activity_id(
     format!(
         "{}/activities/{}/{}",
         instance_uri,
+        activity_type.to_lowercase(),
+        internal_id,
+    )
+}
+
+pub fn local_activity_id_unified(
+    authority: &Authority,
+    activity_type: &str,
+    internal_id: Uuid,
+) -> String {
+    format!(
+        "{}/activities/{}/{}",
+        authority,
         activity_type.to_lowercase(),
         internal_id,
     )
@@ -262,7 +268,7 @@ pub fn profile_actor_id(authority: &Authority, profile: &DbActorProfile) -> Stri
         Some(ref actor) => actor.id.clone(),
         None => {
             let authority = authority.and_prefer_canonical();
-            local_actor_id_unified_alt(&authority, profile.id, &profile.username)
+            local_actor_id_unified(&authority, profile.id, &profile.username)
         }
     }
 }
@@ -281,7 +287,7 @@ pub fn profile_actor_url(authority: &Authority, profile: &DbActorProfile) -> Str
             actor.id.clone()
         },
         None => {
-            local_actor_id_unified_alt(authority, profile.id, &profile.username)
+            local_actor_id_unified(authority, profile.id, &profile.username)
         },
     }
 }
@@ -315,7 +321,7 @@ pub fn compatible_actor_id(
 }
 
 pub fn compatible_profile_actor_id(
-    instance_uri: &str,
+    authority: &Authority,
     profile: &DbActorProfile,
 ) -> String {
     match profile.actor_json {
@@ -327,7 +333,7 @@ pub fn compatible_profile_actor_id(
                 actor.id.clone()
             }
         },
-        None => local_actor_id(instance_uri, &profile.username),
+        None => local_actor_id_unified(authority, profile.id, &profile.username),
     }
 }
 
@@ -550,11 +556,12 @@ mod tests {
 
     #[test]
     fn test_compatible_profile_actor_id() {
+        let authority = Authority::server_unchecked(INSTANCE_URI);
         let profile = DbActorProfile::remote_for_test(
             "test",
             "https://social.example/users/1",
         );
-        let actor_id = compatible_profile_actor_id(INSTANCE_URI, &profile);
+        let actor_id = compatible_profile_actor_id(&authority, &profile);
         assert_eq!(
             actor_id,
             "https://social.example/users/1",
@@ -563,6 +570,7 @@ mod tests {
 
     #[test]
     fn test_compatible_profile_actor_id_ap_uri() {
+        let authority = Authority::server_unchecked(INSTANCE_URI);
         let profile = DbActorProfile::remote_for_test_with_data(
             "test",
             DbActor {
@@ -571,7 +579,7 @@ mod tests {
                 ..Default::default()
             },
         );
-        let actor_id = compatible_profile_actor_id(INSTANCE_URI, &profile);
+        let actor_id = compatible_profile_actor_id(&authority, &profile);
         assert_eq!(
             actor_id,
             "https://social.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor",

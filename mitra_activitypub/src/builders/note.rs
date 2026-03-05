@@ -180,7 +180,7 @@ pub fn build_note(
     assert_eq!(authority.server_uri(), Some(instance_uri.as_str()), "authority should be anchored");
     let object_id = local_object_id_unified(authority, post.id);
     let mut object_type = NOTE;
-    let actor_id = local_actor_id_unified(authority, &post.author.username);
+    let actor_id = local_actor_id_unified(authority, post.author.id, &post.author.username);
     let attachments: Vec<_> = post.attachments.iter().map(|db_item| {
         // Media is expected to be local (verified on database read)
         let file_info = db_item.media.expect_file_info();
@@ -255,7 +255,7 @@ pub fn build_note(
             },
             WebfingerHostname::Unknown => format!("@{}", profile.username),
         };
-        let actor_id = compatible_profile_actor_id(instance_uri.as_str(), profile);
+        let actor_id = compatible_profile_actor_id(authority, profile);
         if !primary_audience.contains(&actor_id) {
             primary_audience.push(actor_id.clone());
         };
@@ -314,7 +314,7 @@ pub fn build_note(
             if post.author.id != in_reply_to.author.id {
                 // Add author of a parent post to audience
                 let in_reply_to_actor_id = compatible_profile_actor_id(
-                    instance_uri.as_str(),
+                    authority,
                     &in_reply_to.author,
                 );
                 if !primary_audience.contains(&in_reply_to_actor_id) {
@@ -879,15 +879,25 @@ mod tests {
     #[test]
     fn test_build_note_fep_ef61() {
         let instance_uri = HttpUri::parse(INSTANCE_URI).unwrap();
-        let author = User::default();
+        let author = User::for_test({
+            let mut profile = DbActorProfile::local_for_test("testuser");
+            profile.id = uuid!("46d160ae-af12-484d-9f44-419f00fc1b31");
+            profile
+        });
         let conversation = Conversation {
             id: uuid!("837ffc24-dab2-414b-a9b8-fe47d0a463f2"),
             ..Conversation::for_test(uuid!("11fa64ff-b5a3-47bf-b23d-22b360581c3f"))
+        };
+        let mentioned = {
+            let mut profile = DbActorProfile::local_for_test("another");
+            profile.id = uuid!("c9386582-c7c3-4e90-8dde-4ab4b1943d96");
+            profile
         };
         let post = PostDetailed {
             id: conversation.root_id,
             author: author.profile.clone(),
             conversation: Some(conversation),
+            mentions: vec![mentioned],
             created_at: DateTime::parse_from_rfc3339("2023-02-24T23:36:38Z")
                 .unwrap().with_timezone(&Utc),
             related_posts: Some(RelatedPosts::default()),
@@ -922,17 +932,23 @@ mod tests {
             ],
             "id": "https://server.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/objects/11fa64ff-b5a3-47bf-b23d-22b360581c3f",
             "type": "Note",
-            "attributedTo": "https://server.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor",
+            "attributedTo": "https://server.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actors/46d160ae-af12-484d-9f44-419f00fc1b31",
             "content": "",
             "sensitive": false,
             "context": "https://server.example/collections/conversations/837ffc24-dab2-414b-a9b8-fe47d0a463f2",
             "replies": "https://server.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/objects/11fa64ff-b5a3-47bf-b23d-22b360581c3f/replies",
+            "tag": [{
+                "type": "Mention",
+                "name": "@another@server.example",
+                "href": "https://server.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actors/c9386582-c7c3-4e90-8dde-4ab4b1943d96",
+            }],
             "published": "2023-02-24T23:36:38Z",
             "to": [
                 "https://www.w3.org/ns/activitystreams#Public",
+                "https://server.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actors/c9386582-c7c3-4e90-8dde-4ab4b1943d96",
             ],
             "cc": [
-                "https://server.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor/followers",
+                "https://server.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actors/46d160ae-af12-484d-9f44-419f00fc1b31/followers",
             ],
         });
         assert_eq!(value, expected_value);
