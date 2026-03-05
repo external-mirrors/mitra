@@ -10,6 +10,7 @@ use mitra_models::{
 };
 
 use crate::{
+    authority::Authority,
     contexts::{build_default_context, Context},
     identifiers::{
         compatible_profile_actor_id,
@@ -83,8 +84,9 @@ pub async fn prepare_undo_like(
         instance.uri_str(),
         post,
     ).await?;
+    let authority = Authority::from(instance);
     let post_author_id =
-        compatible_profile_actor_id(instance.uri_str(), &post.author);
+        compatible_profile_actor_id(&authority, &post.author);
     let activity = build_undo_like(
         instance.uri_str(),
         &sender.profile,
@@ -124,6 +126,10 @@ mod tests {
         assert_eq!(
             activity.id,
             format!("{}/activities/undo/{}", INSTANCE_URI, reaction_id),
+        );
+        assert_eq!(
+            activity.actor,
+            format!("{}/users/{}", INSTANCE_URI, author.username),
         );
         assert_eq!(
             activity.object,

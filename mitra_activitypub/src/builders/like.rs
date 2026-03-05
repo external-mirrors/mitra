@@ -137,7 +137,7 @@ pub async fn prepare_like(
     let authority = Authority::from(instance);
     let object_id = compatible_post_object_id(&authority, post);
     let post_author_id =
-        compatible_profile_actor_id(instance.uri_str(), &post.author);
+        compatible_profile_actor_id(&authority, &post.author);
     let activity = build_like(
         instance.uri_str(),
         media_server,
@@ -189,6 +189,10 @@ mod tests {
             format!("{}/activities/like/{}", INSTANCE_URI, reaction_id),
         );
         assert_eq!(activity.activity_type, "Like");
+        assert_eq!(
+            activity.actor,
+            format!("{}/users/{}", INSTANCE_URI, author.username),
+        );
         assert_eq!(activity.object, post_id);
         assert_eq!(activity.content.is_none(), true);
         assert_eq!(activity.tag.is_empty(), true);
