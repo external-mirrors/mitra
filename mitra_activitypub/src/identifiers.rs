@@ -22,13 +22,6 @@ use mitra_validators::errors::ValidationError;
 
 use crate::authority::{Authority, AuthorityRoot};
 
-pub fn local_actor_id_unified(authority: &Authority, username: &str) -> String {
-    match authority.root() {
-        AuthorityRoot::Server(_) => local_actor_id(&authority.to_string(), username),
-        AuthorityRoot::Key(_) => local_instance_actor_id(&authority.to_string()),
-    }
-}
-
 pub enum LocalActorCollection {
     Inbox,
     Outbox,
@@ -58,6 +51,17 @@ pub fn local_actor_id(instance_uri: &str, username: &str) -> String {
     format!("{}/users/{}", instance_uri, username)
 }
 
+pub fn local_actor_id_unified(
+    authority: &Authority,
+    internal_id: Uuid,
+    username: &str,
+) -> String {
+    match authority.root() {
+        AuthorityRoot::Server(_) => local_actor_id(&authority.to_string(), username),
+        AuthorityRoot::Key(_) => format!("{}/actors/{}", authority, internal_id),
+    }
+}
+
 pub fn local_instance_actor_id(instance_uri: &str) -> String {
     format!("{}/actor", instance_uri)
 }
@@ -78,17 +82,6 @@ pub fn local_actor_proposal_id(
     chain_id: &ChainId,
 ) -> String {
     format!("{}/proposals/{}", actor_id, chain_id)
-}
-
-pub fn local_actor_id_unified_alt(
-    authority: &Authority,
-    internal_actor_id: Uuid,
-    username: &str,
-) -> String {
-    match authority.root() {
-        AuthorityRoot::Server(_) => local_actor_id(&authority.to_string(), username),
-        AuthorityRoot::Key(_) => format!("{}/actors/{}", authority, internal_actor_id),
-    }
 }
 
 pub fn local_object_id(instance_uri: &str, internal_object_id: Uuid) -> String {
@@ -226,7 +219,7 @@ pub fn profile_actor_id(authority: &Authority, profile: &DbActorProfile) -> Stri
         Some(ref actor) => actor.id.clone(),
         None => {
             let authority = authority.and_prefer_canonical();
-            local_actor_id_unified_alt(&authority, profile.id, &profile.username)
+            local_actor_id_unified(&authority, profile.id, &profile.username)
         }
     }
 }
@@ -245,7 +238,7 @@ pub fn profile_actor_url(authority: &Authority, profile: &DbActorProfile) -> Str
             actor.id.clone()
         },
         None => {
-            local_actor_id_unified_alt(authority, profile.id, &profile.username)
+            local_actor_id_unified(authority, profile.id, &profile.username)
         },
     }
 }

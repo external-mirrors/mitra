@@ -7,7 +7,10 @@ use apx_core::{
 
 use crate::{
     database::DatabaseClient,
-    profiles::test_utils::create_test_remote_profile,
+    profiles::{
+        test_utils::create_test_remote_profile,
+        types::DbActorProfile,
+    },
 };
 
 use super::{
@@ -45,4 +48,14 @@ pub async fn create_test_portable_user(
         invite_code: None,
     };
     create_portable_user(db_client, user_data).await.unwrap()
+}
+
+impl User {
+    pub fn for_test(profile: DbActorProfile) -> Self {
+        Self {
+            id: profile.id,
+            profile: profile,
+            ..Default::default()
+        }
+    }
 }

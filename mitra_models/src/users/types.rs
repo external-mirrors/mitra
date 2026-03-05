@@ -257,6 +257,7 @@ impl Default for User {
             shared_client_config: SharedClientConfig::default(),
             profile: DbActorProfile {
                 id: id,
+                user_id: Some(id),
                 ..Default::default()
             },
         }

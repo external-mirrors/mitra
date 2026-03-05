@@ -200,7 +200,7 @@ pub fn build_local_actor(
 ) -> Result<Actor, DatabaseError> {
     assert_eq!(authority.server_uri(), Some(instance_uri.as_str()), "authority should be anchored");
     let username = &user.profile.username;
-    let actor_id = local_actor_id_unified(authority, username);
+    let actor_id = local_actor_id_unified(authority, user.id, username);
     let actor_type = if user.profile.is_automated {
         SERVICE
     } else {
@@ -261,6 +261,7 @@ pub fn build_local_actor(
     for payment_option in user.profile.payment_options.clone().into_inner() {
         let attachment = attach_payment_option(
             authority,
+            user.profile.id,
             &user.profile.username,
             payment_option,
         );
@@ -366,6 +367,7 @@ pub fn build_instance_actor(
 #[cfg(test)]
 mod tests {
     use serde_json::json;
+    use uuid::uuid;
     use mitra_models::profiles::types::DbActorProfile;
     use super::*;
 
@@ -470,12 +472,13 @@ mod tests {
     fn test_build_local_actor_fep_ef61() {
         let instance_uri = HttpUri::parse(INSTANCE_URI).unwrap();
         let mut profile = DbActorProfile::local_for_test("testuser");
+        profile.id = uuid!("11fa64ff-b5a3-47bf-b23d-22b360581c3f");
         profile.bio = Some("testbio".to_string());
         profile.created_at = DateTime::parse_from_rfc3339("2023-02-24T23:36:38Z")
             .unwrap()
             .with_timezone(&Utc);
         profile.updated_at = profile.created_at;
-        let user = User { profile, ..Default::default() };
+        let user = User::for_test(profile);
         let authority = Authority::key_with_gateway(
             &user.ed25519_secret_key,
             &instance_uri,
@@ -513,32 +516,32 @@ mod tests {
                     "proofPurpose": "sec:proofPurpose",
                 },
             ],
-            "id": "https://server.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor",
+            "id": "https://server.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actors/11fa64ff-b5a3-47bf-b23d-22b360581c3f",
             "type": "Person",
             "preferredUsername": "testuser",
-            "inbox": "https://server.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor/inbox",
-            "outbox": "https://server.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor/outbox",
-            "followers": "https://server.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor/followers",
-            "following": "https://server.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor/following",
-            "subscribers": "https://server.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor/subscribers",
-            "featured": "https://server.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor/collections/featured",
+            "inbox": "https://server.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actors/11fa64ff-b5a3-47bf-b23d-22b360581c3f/inbox",
+            "outbox": "https://server.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actors/11fa64ff-b5a3-47bf-b23d-22b360581c3f/outbox",
+            "followers": "https://server.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actors/11fa64ff-b5a3-47bf-b23d-22b360581c3f/followers",
+            "following": "https://server.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actors/11fa64ff-b5a3-47bf-b23d-22b360581c3f/following",
+            "subscribers": "https://server.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actors/11fa64ff-b5a3-47bf-b23d-22b360581c3f/subscribers",
+            "featured": "https://server.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actors/11fa64ff-b5a3-47bf-b23d-22b360581c3f/collections/featured",
             "assertionMethod": [
                 {
-                    "id": "https://server.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor#main-key",
+                    "id": "https://server.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actors/11fa64ff-b5a3-47bf-b23d-22b360581c3f#main-key",
                     "type": "Multikey",
-                    "controller": "https://server.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor",
+                    "controller": "https://server.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actors/11fa64ff-b5a3-47bf-b23d-22b360581c3f",
                     "publicKeyMultibase": "zDrrewXm1cTFaEwruJq4sA7sPhxciancezhnoCxrdvSLs3gQSupJxKA719sQGmG71CkuQdnDxAUpecZ1b7fYQTTrhKA7KbdxWUPRXqs3e",
                 },
                 {
-                    "id": "https://server.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor#ed25519-key",
+                    "id": "https://server.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actors/11fa64ff-b5a3-47bf-b23d-22b360581c3f#ed25519-key",
                     "type": "Multikey",
-                    "controller": "https://server.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor",
+                    "controller": "https://server.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actors/11fa64ff-b5a3-47bf-b23d-22b360581c3f",
                     "publicKeyMultibase": "z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6",
                 },
             ],
             "publicKey": {
-                "id": "https://server.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor#main-key",
-                "owner": "https://server.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor",
+                "id": "https://server.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actors/11fa64ff-b5a3-47bf-b23d-22b360581c3f#main-key",
+                "owner": "https://server.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actors/11fa64ff-b5a3-47bf-b23d-22b360581c3f",
                 "publicKeyPem": "-----BEGIN PUBLIC KEY-----\nMFwwDQYJKoZIhvcNAQEBBQADSwAwSAJBAOIh58ZQbo45MuZvv1nMWAzTzN9oghNC\nbxJkFEFD1Y49LEeNHMk6GrPByUz8kn4y8Hf6brb+DVm7ZW4cdhOx1TsCAwEAAQ==\n-----END PUBLIC KEY-----\n",
             },
             "generator": {

@@ -180,7 +180,7 @@ pub fn build_note(
     assert_eq!(authority.server_uri(), Some(instance_uri.as_str()), "authority should be anchored");
     let object_id = local_object_id_unified(authority, post.id);
     let mut object_type = NOTE;
-    let actor_id = local_actor_id_unified(authority, &post.author.username);
+    let actor_id = local_actor_id_unified(authority, post.author.id, &post.author.username);
     let attachments: Vec<_> = post.attachments.iter().map(|db_item| {
         // Media is expected to be local (verified on database read)
         let file_info = db_item.media.expect_file_info();
@@ -879,7 +879,11 @@ mod tests {
     #[test]
     fn test_build_note_fep_ef61() {
         let instance_uri = HttpUri::parse(INSTANCE_URI).unwrap();
-        let author = User::default();
+        let author = User::for_test({
+            let mut profile = DbActorProfile::local_for_test("testuser");
+            profile.id = uuid!("46d160ae-af12-484d-9f44-419f00fc1b31");
+            profile
+        });
         let conversation = Conversation {
             id: uuid!("837ffc24-dab2-414b-a9b8-fe47d0a463f2"),
             ..Conversation::for_test(uuid!("11fa64ff-b5a3-47bf-b23d-22b360581c3f"))
@@ -922,7 +926,7 @@ mod tests {
             ],
             "id": "https://server.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/objects/11fa64ff-b5a3-47bf-b23d-22b360581c3f",
             "type": "Note",
-            "attributedTo": "https://server.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor",
+            "attributedTo": "https://server.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actors/46d160ae-af12-484d-9f44-419f00fc1b31",
             "content": "",
             "sensitive": false,
             "context": "https://server.example/collections/conversations/837ffc24-dab2-414b-a9b8-fe47d0a463f2",
@@ -932,7 +936,7 @@ mod tests {
                 "https://www.w3.org/ns/activitystreams#Public",
             ],
             "cc": [
-                "https://server.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor/followers",
+                "https://server.example/.well-known/apgateway/did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actors/46d160ae-af12-484d-9f44-419f00fc1b31/followers",
             ],
         });
         assert_eq!(value, expected_value);
