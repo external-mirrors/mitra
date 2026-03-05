@@ -74,7 +74,9 @@ impl Authority {
         Self::server(&server_uri)
     }
 
-    pub fn key(secret_key: &Ed25519SecretKey) -> Self {
+    // TODO: make public after removing expect_server_uri()
+    #[allow(dead_code)]
+    fn key(secret_key: &Ed25519SecretKey) -> Self {
         let public_key = ed25519_public_key_from_secret_key(secret_key);
         let root = AuthorityRoot::Key(public_key);
         Self {
