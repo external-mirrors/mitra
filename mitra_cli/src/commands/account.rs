@@ -65,10 +65,12 @@ impl CreateAccount {
         let db_client = &mut **get_database_client(db_pool).await?;
         validate_local_username(&self.username)?;
         let password_digest = hash_password(&self.password)?;
-        let rsa_secret_key = generate_rsa_key()?;
+        #[cfg(not(feature = "mini"))] let rsa_secret_key = generate_rsa_key()?;
+        #[cfg(feature = "mini")] let rsa_secret_key = config.instance().rsa_secret_key;
         let rsa_secret_key_pem =
             rsa_secret_key_to_pkcs8_pem(&rsa_secret_key)?;
-        let ed25519_secret_key = generate_ed25519_key();
+        #[cfg(not(feature = "mini"))] let ed25519_secret_key = generate_ed25519_key();
+        #[cfg(feature = "mini")] let ed25519_secret_key = config.instance().ed25519_secret_key;
         let role = match &self.role {
             Some(value) => role_from_str(value)?,
             None => from_default_role(&config.registration.default_role),

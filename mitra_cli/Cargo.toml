@@ -35,5 +35,8 @@ mitra_utils = { path = "../mitra_utils" }
 mitra_validators = { path = "../mitra_validators" }
 mitra_workers = { path = "../mitra_workers" }
 
+[features]
+mini = []
+
 [lints]
 workspace = true
