@@ -152,6 +152,7 @@ pub async fn create_user(
     };
     // Create profile
     let profile_data = ProfileCreateData {
+        id: user_data.id,
         username: user_data.username.clone(),
         hostname: WebfingerHostname::Local,
         display_name: None,
@@ -528,6 +529,7 @@ pub async fn create_automated_account(
     check_local_username_unique(&transaction, &account_data.username).await?;
     // Create profile
     let profile_data = ProfileCreateData {
+        id: None,
         username: account_data.username.clone(),
         hostname: WebfingerHostname::Local,
         display_name: None,

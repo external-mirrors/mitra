@@ -9,6 +9,7 @@ use apx_sdk::core::{
     },
 };
 use clap::Parser;
+use uuid::Uuid;
 
 use mitra_adapters::{
     roles::{
@@ -50,6 +51,9 @@ pub struct CreateAccount {
     password: String,
     #[arg(value_parser = ALLOWED_ROLES)]
     role: Option<String>,
+    /// Unique account ID
+    #[arg(long)]
+    id: Option<Uuid>,
 }
 
 impl CreateAccount {
@@ -70,6 +74,7 @@ impl CreateAccount {
             None => from_default_role(&config.registration.default_role),
         };
         let user_data = UserCreateData {
+            id: self.id,
             username: self.username,
             password_digest: Some(password_digest),
             login_address_ethereum: None,

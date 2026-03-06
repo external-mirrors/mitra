@@ -926,6 +926,7 @@ impl Default for DbActorProfile {
 
 #[cfg_attr(any(test, feature = "test-utils"), derive(Default))]
 pub struct ProfileCreateData {
+    pub id: Option<Uuid>,
     pub username: String,
     pub hostname: WebfingerHostname,
     pub display_name: Option<String>,

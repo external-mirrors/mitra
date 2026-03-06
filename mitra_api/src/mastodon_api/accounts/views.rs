@@ -260,6 +260,7 @@ pub async fn create_account(
 
     let role = from_default_role(&config.registration.default_role);
     let user_data = UserCreateData {
+        id: None,
         username: account_data.username.clone(),
         password_digest: maybe_password_digest,
         login_address_ethereum: maybe_ethereum_address,

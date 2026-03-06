@@ -151,7 +151,7 @@ pub async fn create_profile(
 ) -> Result<DbActorProfile, DatabaseError> {
     profile_data.check_consistency()?;
     let transaction = db_client.transaction().await?;
-    let profile_id = generate_ulid();
+    let profile_id = profile_data.id.unwrap_or(generate_ulid());
     if let WebfingerHostname::Remote(ref hostname) = profile_data.hostname {
         create_instance(&transaction, hostname).await?;
     };

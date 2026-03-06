@@ -678,6 +678,7 @@ pub async fn create_remote_profile(
         &actor,
     ).await?;
     let mut profile_data = ProfileCreateData {
+        id: None,
         username: actor.preferred_username.clone(),
         hostname: webfinger_hostname,
         display_name: actor.name.clone(),

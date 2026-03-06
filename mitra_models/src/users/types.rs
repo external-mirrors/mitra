@@ -323,6 +323,7 @@ impl User {
 }
 
 pub struct UserCreateData {
+    pub id: Option<Uuid>,
     pub username: String,
     pub password_digest: Option<String>,
     pub login_address_ethereum: Option<String>,
@@ -365,6 +366,7 @@ impl Default for UserCreateData {
         // uniqueness constraint.
         let ed25519_secret_key = generate_ed25519_key();
         Self {
+            id: None,
             username: Default::default(),
             password_digest: None,
             login_address_ethereum: None,
