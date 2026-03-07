@@ -869,10 +869,12 @@ pub async fn fetch_collection(
                     continue
                 };
                 #[cfg(feature = "mini")]
-                if collection.id.origin() == ap_client.instance.uri().origin() {
-                    // Trust the gateway, because some activities can't be fetched by ID
-                    authenticated.push(item);
-                    continue;
+                if let Ok(http_uri) = HttpUri::parse(collection_id) {
+                    if http_uri.origin() == ap_client.instance.uri().origin() {
+                        // Trust the gateway, because some activities can't be fetched by ID
+                        authenticated.push(item);
+                        continue;
+                    };
                 };
             },
         };
