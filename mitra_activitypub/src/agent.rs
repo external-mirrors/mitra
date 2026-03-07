@@ -79,6 +79,18 @@ pub fn build_federation_agent(
         let instance_actor_key = instance.rsa_secret_key.clone();
         (instance_actor_key, instance_actor_key_id)
     };
+    #[cfg(feature = "mini")]
+    let instance_no_signer = {
+        let mut instance = instance.clone();
+        instance.federation.enabled = false;
+        instance
+    };
+    #[cfg(feature = "mini")]
+    let instance = if maybe_user.is_some() {
+        instance
+    } else {
+        &instance_no_signer
+    };
     build_federation_agent_with_key(instance, signer_key, signer_key_id)
 }
 
