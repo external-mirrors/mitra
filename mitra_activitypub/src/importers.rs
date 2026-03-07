@@ -868,6 +868,12 @@ pub async fn fetch_collection(
                     authenticated.push(item);
                     continue
                 };
+                #[cfg(feature = "mini")]
+                if collection.id.origin() == ap_client.instance.uri().origin() {
+                    // Trust the gateway, because some activities can't be fetched by ID
+                    authenticated.push(item);
+                    continue;
+                };
             },
         };
         match ap_client.fetch_object(item_id.as_str()).await {
