@@ -148,7 +148,7 @@ pub fn local_activity_id_unified(
     )
 }
 
-pub fn parse_local_actor_id(
+pub(crate) fn parse_local_actor_id(
     instance_uri: &str,
     actor_id: &str,
 ) -> Result<String, ValidationError> {
@@ -163,7 +163,7 @@ pub fn parse_local_actor_id(
     Ok(username)
 }
 
-pub fn parse_local_object_id(
+pub(crate) fn parse_local_object_id(
     instance_uri: &str,
     object_id: &str,
 ) -> Result<Uuid, ValidationError> {
@@ -177,7 +177,7 @@ pub fn parse_local_object_id(
     Ok(internal_object_id)
 }
 
-pub fn parse_local_primary_intent_id(
+pub(crate) fn parse_local_primary_intent_id(
     instance_uri: &str,
     proposal_id: &str,
 ) -> Result<(String, ChainId), ValidationError> {
@@ -193,7 +193,7 @@ pub fn parse_local_primary_intent_id(
     Ok((username, chain_id))
 }
 
-pub fn parse_local_activity_id(
+pub(crate) fn parse_local_activity_id(
     instance_uri: &str,
     activity_id: &str,
 ) -> Result<Uuid, ValidationError> {
