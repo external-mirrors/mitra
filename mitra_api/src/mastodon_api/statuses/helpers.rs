@@ -85,7 +85,7 @@ async fn parse_microsyntaxes(
     // Links
     let link_map = find_linked_posts(
         db_client,
-        instance.uri_str(),
+        &authority,
         &content,
     ).await?;
     content = replace_object_links(

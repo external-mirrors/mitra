@@ -26,6 +26,19 @@ pub enum AuthorityRoot {
     Key(Ed25519PublicKey),
 }
 
+impl fmt::Display for AuthorityRoot {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let base_uri = match self {
+            AuthorityRoot::Server(server_url) => server_url.to_string(),
+            AuthorityRoot::Key(public_key) => {
+                let did = fep_ef61_identity(public_key);
+                with_ap_prefix(&did.to_string())
+            },
+        };
+        write!(formatter, "{}", base_uri)
+    }
+}
+
 // Local naming authority
 pub struct Authority {
     root: AuthorityRoot,
@@ -37,11 +50,11 @@ pub struct Authority {
 impl fmt::Display for Authority {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         let base_uri = match self.root {
-            AuthorityRoot::Server(ref server_url) => server_url.to_string(),
+            AuthorityRoot::Server(_) => self.root.to_string(),
             AuthorityRoot::Key(ref public_key) => {
-                let did = fep_ef61_identity(public_key);
                 match self.http_base_uri {
                     Some(ref http_base_uri) if self.prefer_compatible => {
+                        let did = fep_ef61_identity(public_key);
                         format!(
                             "{}{}{}",
                             http_base_uri,
@@ -49,7 +62,7 @@ impl fmt::Display for Authority {
                             did,
                         )
                     },
-                    _ => with_ap_prefix(&did.to_string()),
+                    _ => self.root.to_string(),
                 }
             },
         };

@@ -16,6 +16,7 @@ use apx_sdk::{
 use regex::Regex;
 
 use mitra_activitypub::{
+    authority::Authority,
     errors::HandlerError,
     importers::{
         get_post_by_object_id,
@@ -217,9 +218,10 @@ async fn find_cached_object_by_url(
         return Ok(SearchResult::None);
     };
     let db_client = &**get_database_client(db_pool).await?;
+    let authority = Authority::from(&ap_client.instance);
     match get_post_by_object_id(
         db_client,
-        ap_client.instance.uri_str(),
+        &authority,
         &canonical_uri,
     ).await {
         Ok(post) => Ok(SearchResult::Post(post)),

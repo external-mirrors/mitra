@@ -20,6 +20,7 @@ use mitra_services::media::MediaServer;
 use mitra_validators::errors::ValidationError;
 
 use crate::{
+    authority::Authority,
     builders::update_note::prepare_update_note,
     identifiers::parse_local_object_id,
     importers::{
@@ -66,13 +67,14 @@ pub async fn handle_question_vote(
     verify_object_owner(&object)?;
     let vote: QuestionVote = serde_json::from_value(object)?;
     let instance = &ap_client.instance;
+    let authority = Authority::from(instance);
     let voter = ActorIdResolver::default().only_remote().resolve(
         ap_client,
         db_pool,
         &vote.attributed_to,
     ).await?;
     let Ok(post_id) = parse_local_object_id(
-        instance.uri_str(),
+        &authority,
         &vote.in_reply_to,
     ) else {
         log::warn!("vote for a remote poll");

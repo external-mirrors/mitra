@@ -74,6 +74,7 @@ use crate::{
         Actor,
     },
     agent::build_federation_agent,
+    authority::Authority,
     errors::HandlerError,
     filter::FederationFilter,
     handlers::{
@@ -497,11 +498,11 @@ pub async fn get_or_import_profile_by_webfinger_address(
 
 pub async fn get_post_by_object_id(
     db_client: &impl DatabaseClient,
-    instance_uri: &str,
+    authority: &Authority,
     object_id: &CanonicalUri,
 ) -> Result<PostDetailed, DatabaseError> {
     let object_id = object_id.to_string();
-    match parse_local_object_id(instance_uri, &object_id) {
+    match parse_local_object_id(authority, &object_id) {
         Ok(post_id) => {
             // Local post
             let post = get_local_post_by_id(db_client, post_id).await?;
@@ -522,6 +523,7 @@ pub(crate) async fn import_post(
     object_received: Option<AttributedObjectJson>,
 ) -> Result<PostDetailed, HandlerError> {
     let instance = &ap_client.instance;
+    let authority = Authority::from(instance);
 
     let mut queue = vec![object_id]; // LIFO queue
     let mut fetch_count = 0;
@@ -543,7 +545,11 @@ pub(crate) async fn import_post(
                     maybe_object = None;
                     continue;
                 };
-                if let Ok(post_id) = parse_local_object_id(instance.uri_str(), &object_id) {
+                let canonical_object_id = canonicalize_id(&object_id)?;
+                if let Ok(post_id) = parse_local_object_id(
+                    &authority,
+                    &canonical_object_id.to_string(),
+                ) {
                     if objects.is_empty() {
                         // Initial object must not be local
                         return Err(HandlerError::LocalObject);
@@ -553,7 +559,6 @@ pub(crate) async fn import_post(
                     get_local_post_by_id(db_client, post_id).await?;
                     continue;
                 };
-                let canonical_object_id = canonicalize_id(&object_id)?;
                 match get_remote_post_by_object_id(
                     db_client,
                     &canonical_object_id.to_string(),

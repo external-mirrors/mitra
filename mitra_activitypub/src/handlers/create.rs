@@ -22,6 +22,7 @@ use mitra_models::{
 use mitra_validators::errors::ValidationError;
 
 use crate::{
+    authority::Authority,
     builders::add_context_activity::sync_conversation,
     identifiers::{
         canonicalize_id,
@@ -50,7 +51,7 @@ use super::{
 
 async fn check_unsolicited_message(
     db_client: &impl DatabaseClient,
-    instance_uri: &str,
+    authority: &Authority,
     object: &AttributedObject,
     sender_id: &str,
 ) -> Result<(), HandlerError> {
@@ -60,6 +61,7 @@ async fn check_unsolicited_message(
         is_local_or_followed(db_client, &canonical_sender_id).await?;
     let audience = get_audience(object)?;
     // TODO: FEP-EF61: find portable local recipients
+    let instance_uri = authority.expect_server_uri();
     let has_local_recipients = audience.iter().any(|actor_id| {
         parse_local_actor_id(instance_uri, actor_id).is_ok()
     });
@@ -68,7 +70,7 @@ async fn check_unsolicited_message(
         let canonical_in_reply_to_id = canonicalize_id(in_reply_to_id)?;
         match get_post_by_object_id(
             db_client,
-            instance_uri,
+            authority,
             &canonical_in_reply_to_id,
         ).await {
             Ok(_) => false,
@@ -145,9 +147,10 @@ pub async fn handle_create(
     let object: AttributedObjectJson = serde_json::from_value(object)?;
     if let Some(sender_id) = maybe_sender_id {
         let db_client = &**get_database_client(db_pool).await?;
+        let authority = Authority::from(&ap_client.instance);
         check_unsolicited_message(
             db_client,
-            ap_client.instance.uri_str(),
+            &authority,
             &object.inner,
             sender_id,
         ).await?;

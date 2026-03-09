@@ -30,6 +30,7 @@ use mitra_validators::{
 };
 
 use crate::{
+    authority::Authority,
     builders::add_context_activity::sync_conversation,
     filter::get_moderation_domain,
     identifiers::canonicalize_id,
@@ -105,10 +106,11 @@ pub async fn handle_like(
         db_pool,
         &like.actor,
     ).await?;
+    let authority = Authority::from(instance);
     let canonical_object_id = canonicalize_id(&like.object)?;
     let post = match get_post_by_object_id(
         db_client_await!(db_pool),
-        instance.uri_str(),
+        &authority,
         &canonical_object_id,
     ).await {
         Ok(post) => post,

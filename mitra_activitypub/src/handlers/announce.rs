@@ -36,6 +36,7 @@ use mitra_validators::{
 
 use crate::{
     authentication::{verify_signed_object, AuthenticationError},
+    authority::Authority,
     identifiers::{
         canonicalize_id,
         parse_local_object_id,
@@ -118,8 +119,9 @@ pub async fn handle_announce(
         db_pool,
         &announce.actor,
     ).await?;
+    let authority = Authority::from(&ap_client.instance);
     let post = match parse_local_object_id(
-        ap_client.instance.uri_str(),
+        &authority,
         &announce.object,
     ) {
         Ok(post_id) => {

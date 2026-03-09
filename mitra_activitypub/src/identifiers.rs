@@ -164,15 +164,15 @@ pub(crate) fn parse_local_actor_id(
 }
 
 pub(crate) fn parse_local_object_id(
-    instance_uri: &str,
+    authority: &Authority,
     object_id: &str,
 ) -> Result<Uuid, ValidationError> {
     let path_re = Regex::new("^/objects/(?P<uuid>[0-9a-f-]+)$")
         .expect("regexp should be valid");
     let (base_uri, (internal_object_id,)) = parse_object_id(object_id, path_re)
         .map_err(|_| ValidationError("invalid local object ID"))?;
-    if base_uri != instance_uri {
-        return Err(ValidationError("instance mismatch"));
+    if base_uri != authority.root().to_string() {
+        return Err(ValidationError("authority mismatch"));
     };
     Ok(internal_object_id)
 }
@@ -197,8 +197,9 @@ pub(crate) fn parse_local_activity_id(
     instance_uri: &str,
     activity_id: &str,
 ) -> Result<Uuid, ValidationError> {
+    let authority = Authority::server_unchecked(instance_uri);
     if let Ok(internal_activity_id) = parse_local_object_id(
-        instance_uri,
+        &authority,
         activity_id,
     ) {
         // Legacy format
@@ -328,6 +329,12 @@ pub fn canonicalize_id(id: &str) -> Result<CanonicalUri, ValidationError> {
 
 #[cfg(test)]
 mod tests {
+    use apx_sdk::{
+        core::{
+            crypto::eddsa::generate_weak_ed25519_key,
+            url::http_uri::HttpUri,
+        },
+    };
     use uuid::uuid;
     use mitra_utils::id::generate_ulid;
     use super::*;
@@ -400,13 +407,14 @@ mod tests {
 
     #[test]
     fn test_parse_local_object_id() {
+        let authority = Authority::server_unchecked(INSTANCE_URI);
         let expected_uuid = generate_ulid();
         let object_id = format!(
             "https://social.example/objects/{}",
             expected_uuid,
         );
         let internal_object_id = parse_local_object_id(
-            INSTANCE_URI,
+            &authority,
             &object_id,
         ).unwrap();
         assert_eq!(internal_object_id, expected_uuid);
@@ -414,12 +422,26 @@ mod tests {
 
     #[test]
     fn test_parse_local_object_id_invalid_uuid() {
+        let authority = Authority::server_unchecked(INSTANCE_URI);
         let object_id = "https://social.example/objects/1234";
         let error = parse_local_object_id(
-            INSTANCE_URI,
+            &authority,
             object_id,
         ).unwrap_err();
         assert_eq!(error.to_string(), "invalid local object ID");
+    }
+
+    #[test]
+    fn test_parse_local_object_id_key_authority() {
+        let secret_key = generate_weak_ed25519_key();
+        let server_uri = HttpUri::parse(INSTANCE_URI).unwrap();
+        let authority = Authority::key_with_gateway(&secret_key, &server_uri);
+        let object_id = "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/objects/cb26ed69-a6e9-47e3-8bf2-bbb26d06d1fb";
+        let internal_object_id = parse_local_object_id(
+            &authority,
+            &object_id,
+        ).unwrap();
+        assert_eq!(internal_object_id, uuid!("cb26ed69-a6e9-47e3-8bf2-bbb26d06d1fb"));
     }
 
     #[test]
