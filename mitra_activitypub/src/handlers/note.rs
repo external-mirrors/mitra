@@ -755,10 +755,11 @@ async fn get_object_tags(
             log::warn!("not adding targets to mention list");
             break;
         };
+        let canonical_target_id = canonicalize_id(&target_id)?;
         match get_profile_by_actor_id(
             db_client,
             instance.uri_str(),
-            &target_id,
+            &canonical_target_id,
         ).await {
             Ok(profile) => {
                 if !mentions.contains(&profile.id) {

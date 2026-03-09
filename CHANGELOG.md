@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+
+- Implemented reverse WebFinger for portable actors.
+
 ### Changed
 
 - Converted `mitra_cli` into library crate.

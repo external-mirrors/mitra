@@ -228,12 +228,13 @@ impl ApClient {
     }
 }
 
-pub(crate) async fn get_profile_by_actor_id(
+pub async fn get_profile_by_actor_id(
     db_client: &impl DatabaseClient,
     instance_uri: &str,
-    actor_id: &str,
+    actor_id: &CanonicalUri,
 ) -> Result<DbActorProfile, DatabaseError> {
-    match parse_local_actor_id(instance_uri, actor_id) {
+    let actor_id = actor_id.to_string();
+    match parse_local_actor_id(instance_uri, &actor_id) {
         Ok(username) => {
             // Local actor
             let user = get_user_by_name(db_client, &username).await?;
@@ -241,7 +242,7 @@ pub(crate) async fn get_profile_by_actor_id(
         },
         Err(_) => {
             // Remote actor
-            get_remote_profile_by_actor_id(db_client, actor_id).await
+            get_remote_profile_by_actor_id(db_client, &actor_id).await
         },
     }
 }
