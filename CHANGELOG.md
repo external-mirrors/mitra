@@ -12,6 +12,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Import object when executing `load-portable-object` command.
 - Increased maximum number of poll options to 20.
 - Improved error message when signed header has invalid value.
+- Add actor ID to "signer not found in cache" error message.
 
 ## [4.19.0] - 2026-02-27
 
