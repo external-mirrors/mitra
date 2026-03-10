@@ -515,7 +515,7 @@ pub async fn get_post_by_object_id(
     }
 }
 
-pub async fn import_post(
+pub(crate) async fn import_post(
     ap_client: &ApClient,
     db_pool: &DatabaseConnectionPool,
     object_id: String,
