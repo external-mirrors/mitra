@@ -34,7 +34,7 @@ apx_core = { version = "0.21.0", path = "../apx_core" }
 
 [dev-dependencies]
 # Actix server for examples
-actix-web = "4.7.0"
+actix-web = { version = "4.7.0", default-features = false, features = ["macros"] }
 # Async runtime for examples
 tokio = { version = "1.38.0", features = ["macros", "rt"] }
 
