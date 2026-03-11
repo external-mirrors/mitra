@@ -3395,6 +3395,19 @@ components:
               example:
                 - text/html
                 - text/markdown
+    InstanceConfigurationAccounts:
+      description: Limits related to accounts.
+      type: object
+      properties:
+        max_profile_fields:
+          description: The maximum number of custom profile fields allowed to be set.
+          type: integer
+        profile_field_name_limit:
+          description: The maximum size of a profile field name, in characters.
+          type: integer
+        profile_field_value_limit:
+          description: The maximum size of a profile field value, in characters.
+          type: integer
     Instance:
       type: object
       properties:
@@ -3440,6 +3453,8 @@ components:
           description: Configured values and limits for this instance.
           type: object
           properties:
+            accounts:
+              $ref: '#/components/schemas/InstanceConfigurationAccounts'
             statuses:
               description: Limits related to authoring posts.
               type: object
@@ -3563,6 +3578,8 @@ components:
           description: Configured values and limits for this instance.
           type: object
           properties:
+            accounts:
+              $ref: '#/components/schemas/InstanceConfigurationAccounts'
             statuses:
               description: Limits related to authoring posts.
               type: object

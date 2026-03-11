@@ -53,6 +53,23 @@ struct Stats {
 }
 
 #[derive(Serialize)]
+struct AccountLimits {
+    max_profile_fields: usize,
+    profile_field_name_limit: usize,
+    profile_field_value_limit: usize,
+}
+
+impl AccountLimits {
+    fn new() -> Self {
+        Self {
+            max_profile_fields: FIELD_LOCAL_LIMIT,
+            profile_field_name_limit: FIELD_NAME_LENGTH_MAX,
+            profile_field_value_limit: FIELD_VALUE_LENGTH_MAX,
+        }
+    }
+}
+
+#[derive(Serialize)]
 struct StatusLimits {
     max_characters: usize,
     max_media_attachments: usize,
@@ -86,6 +103,7 @@ impl PollLimits {
 
 #[derive(Serialize)]
 struct Configuration {
+    accounts: AccountLimits,
     statuses: StatusLimits,
     media_attachments: MediaLimits,
     polls: PollLimits,
@@ -293,6 +311,7 @@ impl InstanceInfo {
                 domain_count: peer_count,
             },
             configuration: Configuration {
+                accounts: AccountLimits::new(),
                 statuses: StatusLimits {
                     max_characters: config.limits.posts.character_limit,
                     max_media_attachments: config.limits.posts.attachment_local_limit,
@@ -343,6 +362,7 @@ struct Usage {
 
 #[derive(Serialize)]
 struct ConfigurationV2 {
+    accounts: AccountLimits,
     statuses: StatusLimits,
     media_attachments: MediaLimits,
     polls: PollLimits,
@@ -420,6 +440,7 @@ impl InstanceInfoV2 {
                 },
             },
             configuration: ConfigurationV2 {
+                accounts: AccountLimits::new(),
                 statuses: StatusLimits {
                     max_characters: config.limits.posts.character_limit,
                     max_media_attachments: config.limits.posts.attachment_local_limit,
