@@ -97,8 +97,8 @@ pub enum AuthenticationError {
     #[error(transparent)]
     ValidationError(#[from] ValidationError),
 
-    #[error("signer not found in cache")]
-    ActorNotFound,
+    #[error("signer not found in cache: {0}")]
+    ActorNotFound(String),
 
     #[error("{0}")]
     ImportError(String),
@@ -138,7 +138,7 @@ async fn get_signer(
         ).await {
             Ok(profile) => profile,
             Err(DatabaseError::NotFound(_)) => {
-                return Err(AuthenticationError::ActorNotFound);
+                return Err(AuthenticationError::ActorNotFound(signer_id.to_string()));
             },
             Err(other_error) => return Err(other_error.into()),
         }
@@ -152,7 +152,7 @@ async fn get_signer(
         ).await {
             Ok(profile) => profile,
             Err(HandlerError::DatabaseError(DatabaseError::NotFound(_))) => {
-                return Err(AuthenticationError::ActorNotFound);
+                return Err(AuthenticationError::ActorNotFound(signer_id.to_string()));
             },
             Err(HandlerError::DatabaseError(error)) => return Err(error.into()),
             Err(other_error) => {

@@ -45,6 +45,12 @@ For any notable change there should be an entry in [CHANGELOG.md](./CHANGELOG.md
 
 ## Versioning
 
-Versioning should be [semantic](https://semver.org/).
+Versioning should be [semantic](https://semver.org/):
+
+- `patch` - bugfixes
+- `minor` - improvements and new features
+- `major` - breaking changes
 
 Pre-release versions should contain the `-dev` suffix.
+
+Major releases should not include database migrations.

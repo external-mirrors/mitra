@@ -41,7 +41,7 @@ fn find_object_links(text: &str) -> Vec<String> {
 
 pub async fn find_linked_posts(
     db_client: &impl DatabaseClient,
-    instance_uri: &str,
+    authority: &Authority,
     text: &str,
 ) -> Result<IndexMap<String, PostDetailed>, DatabaseError> {
     let links = find_object_links(text);
@@ -59,7 +59,7 @@ pub async fn find_linked_posts(
         };
         match get_post_by_object_id(
             db_client,
-            instance_uri,
+            authority,
             &canonical_id,
         ).await {
             Ok(post) => {

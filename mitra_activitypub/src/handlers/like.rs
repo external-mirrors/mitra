@@ -30,6 +30,7 @@ use mitra_validators::{
 };
 
 use crate::{
+    authority::Authority,
     builders::add_context_activity::sync_conversation,
     filter::get_moderation_domain,
     identifiers::canonicalize_id,
@@ -47,9 +48,6 @@ use super::{
     Descriptor,
     HandlerResult,
 };
-
-#[cfg(feature = "mini")]
-use crate::importers::_get_post_by_object_id;
 
 #[derive(Deserialize)]
 struct Like {
@@ -108,17 +106,11 @@ pub async fn handle_like(
         db_pool,
         &like.actor,
     ).await?;
+    let authority = Authority::from(instance);
     let canonical_object_id = canonicalize_id(&like.object)?;
-    #[cfg(not(feature = "mini"))]
     let maybe_post = get_post_by_object_id(
         db_client_await!(db_pool),
-        ap_client.instance.uri_str(),
-        &canonical_object_id,
-    ).await;
-    #[cfg(feature = "mini")]
-    let maybe_post = _get_post_by_object_id(
-        db_client_await!(db_pool),
-        &ap_client.instance,
+        &authority,
         &canonical_object_id,
     ).await;
     let post = match maybe_post {

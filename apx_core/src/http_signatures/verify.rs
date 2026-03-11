@@ -48,8 +48,11 @@ pub enum HttpSignatureVerificationError {
     #[error("missing signature header")]
     NoSignature,
 
-    #[error("{1}: {0}")]
-    HeaderError(String, &'static str),
+    #[error("missing header '{0}'")]
+    MissingHeader(String),
+
+    #[error("invalid header '{0}': {1}")]
+    InvalidHeader(String, &'static str),
 
     #[error("{0}")]
     ParseError(&'static str),
@@ -78,11 +81,11 @@ pub enum HttpSignatureVerificationError {
 
 impl HttpSignatureVerificationError {
     fn header_missing(header_name: &str) -> Self {
-        Self::HeaderError(header_name.to_owned(), "missing header")
+        Self::MissingHeader(header_name.to_owned())
     }
 
     fn header_value(header_name: &str) -> Self {
-        Self::HeaderError(header_name.to_owned(), "invalid header value")
+        Self::InvalidHeader(header_name.to_owned(), "invalid value")
     }
 }
 
@@ -134,7 +137,7 @@ fn get_content_digest(
         _ => unreachable!(),
     };
     let content_digest = parse_header(header_value)
-        .map_err(|error| VerificationError::HeaderError(
+        .map_err(|error| VerificationError::InvalidHeader(
             header_name.to_owned(),
             error,
         ))?;
@@ -462,6 +465,18 @@ mod tests {
         },
     };
     use super::*;
+
+    #[test]
+    fn test_error_missing_header() {
+        let error = HttpSignatureVerificationError::header_missing("Date");
+        assert_eq!(error.to_string(), "missing header 'Date'");
+    }
+
+    #[test]
+    fn test_error_invalid_header() {
+        let error = HttpSignatureVerificationError::header_value("Date");
+        assert_eq!(error.to_string(), "invalid header 'Date': invalid value");
+    }
 
     #[test]
     fn test_parse_http_signature_cavage() {

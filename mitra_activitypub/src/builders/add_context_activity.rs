@@ -148,6 +148,8 @@ pub async fn sync_conversation(
     } else {
         // Replies that don't conform to FEP-171b are not synced.
         // DMs are not synced.
+        // WARNING: activities with narrower visibility than the conversation
+        // should not be synced (to protect privacy).
         return Ok(());
     };
     if let Some(ref conversation_audience) = conversation.audience {

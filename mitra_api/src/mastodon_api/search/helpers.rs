@@ -1,23 +1,29 @@
 use std::str::FromStr;
 
-use apx_core::{
-    did::Did,
-    url::{
-        ap_uri::is_ap_uri,
-        hostname::encode_hostname,
-        http_uri::normalize_http_url,
+use apx_sdk::{
+    addresses::WebfingerAddress,
+    core::{
+        did::Did,
+        url::{
+            ap_uri::is_ap_uri,
+            canonical::CanonicalUri,
+            hostname::encode_hostname,
+            http_uri::normalize_http_url,
+        },
     },
+    utils::{get_core_type, CoreType},
 };
-use apx_sdk::addresses::WebfingerAddress;
 use regex::Regex;
 
 use mitra_activitypub::{
+    authority::Authority,
     errors::HandlerError,
-    identifiers::parse_local_object_id,
     importers::{
-        import_post,
+        get_post_by_object_id,
+        get_profile_by_actor_id,
+        import_object,
+        import_profile,
         import_profile_by_webfinger_address,
-        ActorIdResolver,
         ApClient,
     },
 };
@@ -32,7 +38,7 @@ use mitra_models::{
     },
     posts::{
         queries::search_posts,
-        helpers::{can_view_post, get_local_post_by_id},
+        helpers::can_view_post,
         types::PostDetailed,
     },
     profiles::queries::{
@@ -197,63 +203,62 @@ async fn search_profiles_or_import(
     Ok(profiles)
 }
 
-/// Finds post by its object ID
-async fn find_post_by_url(
-    ap_client: &ApClient,
-    db_pool: &DatabaseConnectionPool,
-    url: &str,
-) -> Result<Option<PostDetailed>, DatabaseError> {
-    let maybe_post = match parse_local_object_id(ap_client.instance.uri_str(), url) {
-        Ok(post_id) => {
-            // Local URL
-            let db_client = &**get_database_client(db_pool).await?;
-            match get_local_post_by_id(db_client, post_id).await {
-                Ok(post) => Some(post),
-                Err(DatabaseError::NotFound(_)) => None,
-                Err(other_error) => return Err(other_error),
-            }
-        },
-        Err(_) => {
-            match import_post(
-                ap_client,
-                db_pool,
-                url.to_string(),
-                None,
-            ).await {
-                Ok(post) => Some(post),
-                Err(err) => {
-                    log::warn!("{}", err);
-                    None
-                },
-            }
-        },
-    };
-    Ok(maybe_post)
+enum SearchResult {
+    Profile(DbActorProfile),
+    Post(PostDetailed),
+    None,
 }
 
-async fn find_profile_by_url(
+async fn find_cached_object_by_url(
     ap_client: &ApClient,
     db_pool: &DatabaseConnectionPool,
     url: &str,
-) -> Result<Option<DbActorProfile>, DatabaseError> {
-    let maybe_profile = match ActorIdResolver::default().resolve(
-        ap_client,
-        db_pool,
-        url,
-    ).await {
-        Ok(profile) => Some(profile),
-        Err(HandlerError::DatabaseError(DatabaseError::NotFound(_))) => {
-            // Local profile not found
-            None
-        },
-        Err(HandlerError::DatabaseError(db_error)) => return Err(db_error),
-        Err(other_error) => {
-            // LocalObject, FetchError, ValidationError, StorageError
-            log::warn!("{}", other_error);
-            None
-        },
+) -> Result<SearchResult, DatabaseError> {
+    let Ok(canonical_uri) = CanonicalUri::parse(url) else {
+        return Ok(SearchResult::None);
     };
-    Ok(maybe_profile)
+    let db_client = &**get_database_client(db_pool).await?;
+    let authority = Authority::from(&ap_client.instance);
+    match get_post_by_object_id(
+        db_client,
+        &authority,
+        &canonical_uri,
+    ).await {
+        Ok(post) => Ok(SearchResult::Post(post)),
+        Err(DatabaseError::NotFound(_)) => {
+            match get_profile_by_actor_id(
+                db_client,
+                ap_client.instance.uri_str(),
+                &canonical_uri,
+            ).await {
+                Ok(profile) => Ok(SearchResult::Profile(profile)),
+                Err(DatabaseError::NotFound(_)) => Ok(SearchResult::None),
+                Err(other_error) => Err(other_error),
+            }
+        },
+        Err(other_error) => Err(other_error),
+    }
+}
+
+async fn fetch_and_import_object(
+    ap_client: &ApClient,
+    db_pool: &DatabaseConnectionPool,
+    url: &str,
+) -> Result<SearchResult, HandlerError> {
+    let object = ap_client.fetch_object(url).await?;
+    let object_type = get_core_type(&object);
+    let search_result = match object_type {
+        CoreType::Object => {
+            let post = import_object(ap_client, db_pool, object).await?;
+            SearchResult::Post(post)
+        },
+        CoreType::Actor => {
+            let profile = import_profile(ap_client, db_pool, object).await?;
+            SearchResult::Profile(profile)
+        },
+        _ => SearchResult::None,
+    };
+    Ok(search_result)
 }
 
 type SearchResults = (Vec<DbActorProfile>, Vec<PostDetailed>, Vec<String>);
@@ -303,29 +308,39 @@ pub async fn search(
             ).await?;
         },
         SearchQuery::Url(url) => {
-            let maybe_post = find_post_by_url(
+            let mut search_result = find_cached_object_by_url(
                 &ap_client,
                 db_pool,
                 &url,
             ).await?;
-            if let Some(post) = maybe_post {
-                let db_client = &**get_database_client(db_pool).await?;
-                if can_view_post(
-                    db_client,
-                    Some(&current_user.profile),
-                    &post,
-                ).await? {
-                    posts = vec![post];
-                };
-            } else {
-                let maybe_profile = find_profile_by_url(
+            if matches!(search_result, SearchResult::None) {
+                match fetch_and_import_object(
                     &ap_client,
                     db_pool,
                     &url,
-                ).await?;
-                if let Some(profile) = maybe_profile {
-                    profiles = vec![profile];
+                ).await {
+                    Ok(import_result) => search_result = import_result,
+                    Err(HandlerError::DatabaseError(db_error)) => return Err(db_error),
+                    Err(other_error) => {
+                        // LocalObject, FetchError, ValidationError, StorageError
+                        log::warn!("{}", other_error);
+                    },
                 };
+            };
+            match search_result {
+                SearchResult::Profile(profile) => {
+                    profiles = vec![profile];
+                },
+                SearchResult::Post(post) => {
+                    if can_view_post(
+                        db_client_await!(db_pool),
+                        Some(&current_user.profile),
+                        &post,
+                    ).await? {
+                        posts = vec![post];
+                    };
+                },
+                SearchResult::None => (),
             };
         },
         SearchQuery::WalletAddress(address) => {

@@ -79,6 +79,7 @@ use mitra_validators::{
 };
 
 use crate::{
+    authority::Authority,
     builders::note::LinkTag,
     filter::get_moderation_domain,
     identifiers::{
@@ -100,9 +101,6 @@ use super::{
     emoji::handle_emoji,
     HandlerError,
 };
-
-#[cfg(feature = "mini")]
-use crate::importers::_get_post_by_object_id;
 
 fn deserialize_attributed_to<'de, D>(
     deserializer: D,
@@ -585,6 +583,7 @@ async fn get_object_tags(
     redirects: &HashMap<String, String>,
 ) -> Result<(Vec<Uuid>, Vec<String>, Vec<Uuid>, Vec<Uuid>), HandlerError> {
     let instance = &ap_client.instance;
+    let authority = Authority::from(instance);
     let moderation_domain = get_moderation_domain(author.expect_actor_data())?;
 
     let mut hashtag_count = 0;
@@ -714,7 +713,7 @@ async fn get_object_tags(
             let canonical_linked_id = canonicalize_id(href)?;
             let linked = get_post_by_object_id(
                 db_client_await!(db_pool),
-                instance.uri_str(),
+                &authority,
                 &canonical_linked_id,
             ).await?;
             if !can_link_post(&linked) {
@@ -758,10 +757,11 @@ async fn get_object_tags(
             log::warn!("not adding targets to mention list");
             break;
         };
+        let canonical_target_id = canonicalize_id(&target_id)?;
         match get_profile_by_actor_id(
             db_client,
             instance.uri_str(),
-            &target_id,
+            &canonical_target_id,
         ).await {
             Ok(profile) => {
                 if !mentions.contains(&profile.id) {
@@ -780,7 +780,7 @@ async fn get_object_tags(
         let canonical_object_id = canonicalize_id(object_id)?;
         let linked = get_post_by_object_id(
             db_client,
-            instance.uri_str(),
+            &authority,
             &canonical_object_id,
         ).await?;
         if can_link_post(&linked) {
@@ -986,16 +986,10 @@ pub async fn create_remote_post(
         Some(ref object_id) => {
             let object_id = redirects.get(object_id).unwrap_or(object_id);
             let canonical_object_id = canonicalize_id(object_id)?;
-            #[cfg(not(feature = "mini"))]
+            let authority = Authority::from(&ap_client.instance);
             let in_reply_to = get_post_by_object_id(
                 db_client_await!(db_pool),
-                ap_client.instance.uri_str(),
-                &canonical_object_id,
-            ).await?;
-            #[cfg(feature = "mini")]
-            let in_reply_to = _get_post_by_object_id(
-                db_client_await!(db_pool),
-                &ap_client.instance,
+                &authority,
                 &canonical_object_id,
             ).await?;
             Some(in_reply_to)
@@ -1125,9 +1119,10 @@ pub async fn update_remote_post(
     let maybe_in_reply_to = match object.in_reply_to {
         Some(ref object_id) => {
             let canonical_object_id = canonicalize_id(object_id)?;
+            let authority = Authority::from(&ap_client.instance);
             let in_reply_to = get_post_by_object_id(
                 db_client_await!(db_pool),
-                ap_client.instance.uri_str(),
+                &authority,
                 &canonical_object_id,
             ).await?;
             Some(in_reply_to)
