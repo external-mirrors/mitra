@@ -11,6 +11,7 @@ use apx_sdk::{
 use serde::Deserialize;
 
 use mitra_activitypub::{
+    authority::Authority,
     identifiers::{
         canonicalize_id,
         local_actor_id,
@@ -62,9 +63,10 @@ async fn get_jrd(
             instance.hostname()
         } else {
             let canonical_uri = canonicalize_id(resource)?;
+            let authority = Authority::from(&instance);
             let profile = get_profile_by_actor_id(
                 db_client,
-                instance.uri_str(),
+                &authority,
                 &canonical_uri,
             ).await?;
             match profile.hostname() {

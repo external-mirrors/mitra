@@ -148,19 +148,37 @@ pub fn local_activity_id_unified(
     )
 }
 
+#[derive(Debug, PartialEq)]
+pub enum UuidOrUsername {
+    Uuid(Uuid),
+    Username(String),
+}
+
 pub(crate) fn parse_local_actor_id(
-    instance_uri: &str,
+    authority: &Authority,
     actor_id: &str,
-) -> Result<String, ValidationError> {
-    // See also: mitra_validators::users::USERNAME_RE
-    let path_re = Regex::new(r"^/users/(?P<username>[0-9A-Za-z_\-]+)$")
-        .expect("regexp should be valid");
-    let (base_uri, (username,)) = parse_object_id(actor_id, path_re)
-        .map_err(|_| ValidationError("invalid local actor ID"))?;
-    if base_uri != instance_uri {
-        return Err(ValidationError("instance mismatch"));
+) -> Result<UuidOrUsername, ValidationError> {
+    let (base_uri, uuid_or_username) = match authority.root() {
+        AuthorityRoot::Server(_) => {
+            // See also: mitra_validators::users::USERNAME_RE
+            let path_re = Regex::new(r"^/users/(?P<username>[0-9A-Za-z_\-]+)$")
+                .expect("regexp should be valid");
+            let (base_uri, (username,)) = parse_object_id(actor_id, path_re)
+                .map_err(|_| ValidationError("invalid local actor ID"))?;
+            (base_uri, UuidOrUsername::Username(username))
+        },
+        AuthorityRoot::Key(_) => {
+            let path_re = Regex::new("^/actors/(?P<uuid>[0-9a-f-]+)$")
+                .expect("regexp should be valid");
+            let (base_uri, (internal_actor_id,)) = parse_object_id(actor_id, path_re)
+                .map_err(|_| ValidationError("invalid local actor ID"))?;
+            (base_uri, UuidOrUsername::Uuid(internal_actor_id))
+        },
     };
-    Ok(username)
+    if base_uri != authority.root().to_string() {
+        return Err(ValidationError("authority mismatch"));
+    };
+    Ok(uuid_or_username)
 }
 
 pub(crate) fn parse_local_object_id(
@@ -352,17 +370,35 @@ mod tests {
 
     #[test]
     fn test_parse_local_actor_id() {
+        let authority = Authority::server_unchecked(INSTANCE_URI);
         let username = parse_local_actor_id(
-            INSTANCE_URI,
+            &authority,
             "https://social.example/users/test",
         ).unwrap();
-        assert_eq!(username, "test".to_string());
+        assert_eq!(username, UuidOrUsername::Username("test".to_string()));
+    }
+
+    #[test]
+    fn test_parse_local_actor_id_key_authority() {
+        let secret_key = generate_weak_ed25519_key();
+        let server_uri = HttpUri::parse(INSTANCE_URI).unwrap();
+        let authority = Authority::key_with_gateway(&secret_key, &server_uri);
+        let actor_id = "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actors/cb26ed69-a6e9-47e3-8bf2-bbb26d06d1fb";
+        let internal_actor_id = parse_local_actor_id(
+            &authority,
+            &actor_id,
+        ).unwrap();
+        assert_eq!(
+            internal_actor_id,
+            UuidOrUsername::Uuid(uuid!("cb26ed69-a6e9-47e3-8bf2-bbb26d06d1fb")),
+        );
     }
 
     #[test]
     fn test_parse_local_actor_id_wrong_path() {
+        let authority = Authority::server_unchecked(INSTANCE_URI);
         let error = parse_local_actor_id(
-            INSTANCE_URI,
+            &authority,
             "https://social.example/user/test",
         ).unwrap_err();
         assert_eq!(error.to_string(), "invalid local actor ID");
@@ -370,8 +406,9 @@ mod tests {
 
     #[test]
     fn test_parse_local_actor_id_invalid_username() {
+        let authority = Authority::server_unchecked(INSTANCE_URI);
         let error = parse_local_actor_id(
-            INSTANCE_URI,
+            &authority,
             "https://social.example/users/tes~t",
         ).unwrap_err();
         assert_eq!(error.to_string(), "invalid local actor ID");
@@ -379,8 +416,9 @@ mod tests {
 
     #[test]
     fn test_parse_local_actor_id_followers() {
+        let authority = Authority::server_unchecked(INSTANCE_URI);
         let error = parse_local_actor_id(
-            INSTANCE_URI,
+            &authority,
             "https://social.example/users/test/followers",
         ).unwrap_err();
         assert_eq!(error.to_string(), "invalid local actor ID");
@@ -388,8 +426,9 @@ mod tests {
 
     #[test]
     fn test_parse_local_actor_id_with_fragment() {
+        let authority = Authority::server_unchecked(INSTANCE_URI);
         let error = parse_local_actor_id(
-            INSTANCE_URI,
+            &authority,
             "https://social.example/users/test#main-key",
         ).unwrap_err();
         assert_eq!(error.to_string(), "invalid local actor ID");
@@ -397,11 +436,12 @@ mod tests {
 
     #[test]
     fn test_parse_local_actor_id_invalid_instance_uri() {
+        let authority = Authority::server_unchecked(INSTANCE_URI);
         let error = parse_local_actor_id(
-            INSTANCE_URI,
+            &authority,
             "https://example.gov/users/test",
         ).unwrap_err();
-        assert_eq!(error.to_string(), "instance mismatch");
+        assert_eq!(error.to_string(), "authority mismatch");
     }
 
     #[test]

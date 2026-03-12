@@ -20,6 +20,7 @@ use mitra_models::{
 };
 
 use crate::{
+    authority::Authority,
     identifiers::canonicalize_id,
     importers::{get_user_by_actor_id, ApClient},
 };
@@ -52,9 +53,10 @@ pub async fn handle_remove(
     if Some(remove.target.clone()) == actor.subscribers {
         // Removing from subscribers
         let canonical_object_id = canonicalize_id(&remove.object)?;
+        let authority = Authority::from(&ap_client.instance);
         let user = get_user_by_actor_id(
             db_client,
-            ap_client.instance.uri_str(),
+            &authority,
             &canonical_object_id,
         ).await?;
         // actor is recipient, user is sender

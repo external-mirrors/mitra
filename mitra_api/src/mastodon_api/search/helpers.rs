@@ -228,7 +228,7 @@ async fn find_cached_object_by_url(
         Err(DatabaseError::NotFound(_)) => {
             match get_profile_by_actor_id(
                 db_client,
-                ap_client.instance.uri_str(),
+                &authority,
                 &canonical_uri,
             ).await {
                 Ok(profile) => Ok(SearchResult::Profile(profile)),

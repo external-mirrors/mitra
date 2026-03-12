@@ -30,6 +30,7 @@ use mitra_validators::errors::ValidationError;
 
 use crate::{
     authentication::{verify_signed_object, AuthenticationError},
+    authority::Authority,
     identifiers::canonicalize_id,
     importers::{get_user_by_actor_id, ApClient},
     ownership::{is_local_origin, is_same_origin, get_object_id, verify_activity_owner},
@@ -192,9 +193,10 @@ pub async fn handle_add(
     if Some(add.target.clone()) == actor.subscribers {
         // Adding to subscribers
         let canonical_object_id = canonicalize_id(&add.object)?;
+        let authority = Authority::from(&ap_client.instance);
         let sender = get_user_by_actor_id(
             db_client,
-            ap_client.instance.uri_str(),
+            &authority,
             &canonical_object_id,
         ).await?;
         let recipient = actor_profile;

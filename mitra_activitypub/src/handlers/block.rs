@@ -11,6 +11,7 @@ use mitra_models::{
 };
 
 use crate::{
+    authority::Authority,
     identifiers::canonicalize_id,
     importers::{
         get_user_by_actor_id,
@@ -40,9 +41,10 @@ pub async fn handle_block(
     ).await?;
     let canonical_object_id = canonicalize_id(&block.object)?;
     let db_client = &mut **get_database_client(db_pool).await?;
+    let authority = Authority::from(&ap_client.instance);
     let target_user = get_user_by_actor_id(
         db_client,
-        ap_client.instance.uri_str(),
+        &authority,
         &canonical_object_id,
     ).await?;
     // Similar to Undo(Follow)
