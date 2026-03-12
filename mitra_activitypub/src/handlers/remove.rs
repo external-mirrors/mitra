@@ -17,12 +17,12 @@ use mitra_models::{
     },
     profiles::queries::get_remote_profile_by_actor_id,
     relationships::queries::unsubscribe,
-    users::queries::get_user_by_name,
 };
 
 use crate::{
-    identifiers::parse_local_actor_id,
-    importers::ApClient,
+    authority::Authority,
+    identifiers::canonicalize_id,
+    importers::{get_user_by_actor_id, ApClient},
 };
 
 use super::{Descriptor, HandlerResult};
@@ -52,11 +52,13 @@ pub async fn handle_remove(
         .expect("actor data should be present");
     if Some(remove.target.clone()) == actor.subscribers {
         // Removing from subscribers
-        let username = parse_local_actor_id(
-            ap_client.instance.uri_str(),
-            &remove.object,
-        )?;
-        let user = get_user_by_name(db_client, &username).await?;
+        let canonical_object_id = canonicalize_id(&remove.object)?;
+        let authority = Authority::from(&ap_client.instance);
+        let user = get_user_by_actor_id(
+            db_client,
+            &authority,
+            &canonical_object_id,
+        ).await?;
         // actor is recipient, user is sender
         match unsubscribe(db_client, user.id, actor_profile.id).await {
             Ok(_) => {

@@ -1,5 +1,8 @@
 use apx_core::caip10::AccountId;
-use apx_sdk::deserialization::deserialize_into_object_id;
+use apx_sdk::{
+    core::url::canonical::CanonicalUri,
+    deserialization::deserialize_into_object_id,
+};
 use serde::Deserialize;
 use serde_json::{Value as JsonValue};
 
@@ -31,6 +34,7 @@ use mitra_validators::{
 };
 
 use crate::{
+    authority::Authority,
     c2s::followers::add_follower,
     identifiers::{canonicalize_id, parse_local_activity_id},
     importers::ApClient,
@@ -43,44 +47,21 @@ use super::{
     HandlerResult,
 };
 
-#[cfg(feature = "mini")]
-use mitra_config::Instance;
-
-#[cfg(not(feature = "mini"))]
 pub async fn get_follow_request_by_activity_id(
     db_client: &impl DatabaseClient,
-    instance_uri: &str,
-    activity_id: &str,
+    authority: &Authority,
+    activity_id: &CanonicalUri,
 ) -> Result<FollowRequest, DatabaseError> {
+    let activity_id = activity_id.to_string();
     match parse_local_activity_id(
-        instance_uri,
-        activity_id,
+        authority,
+        &activity_id,
     ) {
         Ok(follow_request_id) => {
             get_follow_request_by_id(db_client, follow_request_id).await
         },
         Err(_) => {
-            get_follow_request_by_remote_activity_id(db_client, activity_id).await
-        },
-    }
-}
-
-#[cfg(feature = "mini")]
-pub async fn get_follow_request_by_activity_id(
-    db_client: &impl DatabaseClient,
-    instance: &Instance,
-    activity_id: &str,
-) -> Result<FollowRequest, DatabaseError> {
-    use crate::identifiers::_parse_local_activity_id;
-    match _parse_local_activity_id(
-        instance,
-        activity_id,
-    ) {
-        Ok(follow_request_id) => {
-            get_follow_request_by_id(db_client, follow_request_id).await
-        },
-        Err(_) => {
-            get_follow_request_by_remote_activity_id(db_client, activity_id).await
+            get_follow_request_by_remote_activity_id(db_client, &activity_id).await
         },
     }
 }
@@ -112,17 +93,11 @@ pub async fn handle_accept(
         &canonical_actor_id.to_string(),
     ).await?;
     let canonical_object_id = canonicalize_id(&accept.object)?;
-    #[cfg(not(feature = "mini"))]
+    let authority = Authority::from(&ap_client.instance);
     let follow_request = get_follow_request_by_activity_id(
         db_client,
-        ap_client.instance.uri_str(),
-        &canonical_object_id.to_string(),
-    ).await?;
-    #[cfg(feature = "mini")]
-    let follow_request = get_follow_request_by_activity_id(
-        db_client,
-        &ap_client.instance,
-        &canonical_object_id.to_string(),
+        &authority,
+        &canonical_object_id,
     ).await?;
     if follow_request.target_id != actor_profile.id {
         return Err(ValidationError("actor is not a target").into());
@@ -148,8 +123,9 @@ async fn handle_accept_offer(
         db_client,
         &accept.actor,
     ).await?;
+    let authority = Authority::from(&ap_client.instance);
     let invoice_id = parse_local_activity_id(
-        ap_client.instance.uri_str(),
+        &authority,
         &accept.object,
     )?;
     // Remote invoice

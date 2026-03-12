@@ -57,6 +57,7 @@ use mitra_models::{
     users::queries::{
         create_portable_user,
         get_portable_user_by_actor_id,
+        get_user_by_id,
         get_user_by_name,
         is_valid_invite_code,
     },
@@ -89,6 +90,7 @@ use crate::{
         canonicalize_id,
         parse_local_actor_id,
         parse_local_object_id,
+        UuidOrUsername,
     },
     ownership::{get_object_id, is_local_origin, verify_object_owner},
     vocabulary::GROUP,
@@ -96,12 +98,6 @@ use crate::{
 
 #[cfg(feature = "mini")]
 use apx_sdk::core::url::common::Origin;
-
-#[cfg(feature = "mini")]
-use mitra_models::users::queries::get_user_by_id;
-
-#[cfg(feature = "mini")]
-use crate::identifiers::_parse_local_actor_id;
 
 // Gateway pool for resolving 'ap' URIs
 pub struct FetcherContext {
@@ -248,13 +244,16 @@ impl ApClient {
 
 pub async fn get_profile_by_actor_id(
     db_client: &impl DatabaseClient,
-    instance_uri: &str,
+    authority: &Authority,
     actor_id: &CanonicalUri,
 ) -> Result<DbActorProfile, DatabaseError> {
     let actor_id = actor_id.to_string();
-    match parse_local_actor_id(instance_uri, &actor_id) {
-        Ok(username) => {
-            // Local actor
+    match parse_local_actor_id(authority, &actor_id) {
+        Ok(UuidOrUsername::Uuid(user_id)) => {
+            let user = get_user_by_id(db_client, user_id).await?;
+            Ok(user.profile)
+        },
+        Ok(UuidOrUsername::Username(username)) => {
             let user = get_user_by_name(db_client, &username).await?;
             Ok(user.profile)
         },
@@ -262,6 +261,23 @@ pub async fn get_profile_by_actor_id(
             // Remote actor
             get_remote_profile_by_actor_id(db_client, &actor_id).await
         },
+    }
+}
+
+pub async fn get_user_by_actor_id(
+    db_client: &impl DatabaseClient,
+    authority: &Authority,
+    actor_id: &CanonicalUri,
+) -> Result<User, DatabaseError> {
+    let actor_id = actor_id.to_string();
+    match parse_local_actor_id(authority, &actor_id) {
+        Ok(UuidOrUsername::Uuid(user_id)) => {
+            get_user_by_id(db_client, user_id).await
+        },
+        Ok(UuidOrUsername::Username(username)) => {
+            get_user_by_name(db_client, &username).await
+        },
+        Err(_) => Err(DatabaseError::NotFound("user")),
     }
 }
 
@@ -404,10 +420,11 @@ impl ActorIdResolver {
             if self.only_remote {
                 return Err(HandlerError::LocalObject);
             };
-            let username = parse_local_actor_id(ap_client.instance.uri_str(), actor_id)?;
-            let user = get_user_by_name(
+            let authority = Authority::from(&ap_client.instance);
+            let user = get_user_by_actor_id(
                 db_client_await!(db_pool),
-                &username,
+                &authority,
+                &canonical_actor_id,
             ).await?;
             return Ok(user.profile);
         };
@@ -417,10 +434,11 @@ impl ActorIdResolver {
             if self.only_remote {
                 return Err(HandlerError::LocalObject);
             };
-            let actor_uuid = _parse_local_actor_id(&ap_client.instance, &canonical_actor_id.to_string())?;
-            let user = get_user_by_id(
+            let authority = Authority::from(&ap_client.instance);
+            let user = get_user_by_actor_id(
                 db_client_await!(db_pool),
-                actor_uuid,
+                &authority,
+                &canonical_actor_id,
             ).await?;
             return Ok(user.profile);
         };

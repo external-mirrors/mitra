@@ -61,9 +61,8 @@ async fn check_unsolicited_message(
         is_local_or_followed(db_client, &canonical_sender_id).await?;
     let audience = get_audience(object)?;
     // TODO: FEP-EF61: find portable local recipients
-    let instance_uri = authority.expect_server_uri();
     let has_local_recipients = audience.iter().any(|actor_id| {
-        parse_local_actor_id(instance_uri, actor_id).is_ok()
+        parse_local_actor_id(authority, actor_id).is_ok()
     });
     // Is it a reply to a known post?
     let is_disconnected = if let Some(ref in_reply_to_id) = object.in_reply_to {
