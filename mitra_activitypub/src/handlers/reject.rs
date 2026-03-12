@@ -17,6 +17,7 @@ use mitra_models::{
 use mitra_validators::errors::ValidationError;
 
 use crate::{
+    authority::Authority,
     identifiers::canonicalize_id,
     importers::ApClient,
     vocabulary::FOLLOW,
@@ -48,10 +49,11 @@ pub async fn handle_reject(
         &reject.actor,
     ).await?;
     let canonical_object_id = canonicalize_id(&reject.object)?;
+    let authority = Authority::from(&ap_client.instance);
     let follow_request = match get_follow_request_by_activity_id(
         db_client,
-        ap_client.instance.uri_str(),
-        &canonical_object_id.to_string(),
+        &authority,
+        &canonical_object_id,
     ).await {
         Ok(follow_request) => follow_request,
         Err(DatabaseError::NotFound(_)) => {

@@ -194,12 +194,11 @@ pub(crate) fn parse_local_primary_intent_id(
 }
 
 pub(crate) fn parse_local_activity_id(
-    instance_uri: &str,
+    authority: &Authority,
     activity_id: &str,
 ) -> Result<Uuid, ValidationError> {
-    let authority = Authority::server_unchecked(instance_uri);
     if let Ok(internal_activity_id) = parse_local_object_id(
-        &authority,
+        authority,
         activity_id,
     ) {
         // Legacy format
@@ -210,8 +209,8 @@ pub(crate) fn parse_local_activity_id(
     let (base_uri, (internal_activity_id,)) =
         parse_object_id(activity_id, path_re)
             .map_err(|_| ValidationError("invalid local activity ID"))?;
-    if base_uri != instance_uri {
-        return Err(ValidationError("instance mismatch"));
+    if base_uri != authority.root().to_string() {
+        return Err(ValidationError("authority mismatch"));
     };
     Ok(internal_activity_id)
 }
@@ -457,11 +456,12 @@ mod tests {
 
     #[test]
     fn test_parse_local_activity_id() {
+        let authority = Authority::server_unchecked(INSTANCE_URI);
         let expected_internal_id = generate_ulid();
         let activity_id =
             local_activity_id(INSTANCE_URI, "Like", expected_internal_id);
         let internal_id = parse_local_activity_id(
-            INSTANCE_URI,
+            &authority,
             &activity_id,
         ).unwrap();
         assert_eq!(internal_id, expected_internal_id);
