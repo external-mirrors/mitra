@@ -248,6 +248,20 @@ pub async fn get_profile_by_actor_id(
     }
 }
 
+pub async fn get_user_by_actor_id(
+    db_client: &impl DatabaseClient,
+    instance_uri: &str,
+    actor_id: &CanonicalUri,
+) -> Result<User, DatabaseError> {
+    let actor_id = actor_id.to_string();
+    match parse_local_actor_id(instance_uri, &actor_id) {
+        Ok(username) => {
+            get_user_by_name(db_client, &username).await
+        },
+        Err(_) => Err(DatabaseError::NotFound("user")),
+    }
+}
+
 // Actor must be authenticated
 pub async fn import_profile(
     ap_client: &ApClient,
@@ -381,10 +395,10 @@ impl ActorIdResolver {
             if self.only_remote {
                 return Err(HandlerError::LocalObject);
             };
-            let username = parse_local_actor_id(ap_client.instance.uri_str(), actor_id)?;
-            let user = get_user_by_name(
+            let user = get_user_by_actor_id(
                 db_client_await!(db_pool),
-                &username,
+                ap_client.instance.uri_str(),
+                &canonical_actor_id,
             ).await?;
             return Ok(user.profile);
         };

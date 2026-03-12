@@ -8,12 +8,15 @@ use mitra_models::{
         DatabaseError,
     },
     relationships::queries::unfollow,
-    users::queries::get_user_by_name,
 };
 
 use crate::{
-    identifiers::parse_local_actor_id,
-    importers::{ActorIdResolver, ApClient},
+    identifiers::canonicalize_id,
+    importers::{
+        get_user_by_actor_id,
+        ActorIdResolver,
+        ApClient,
+    },
 };
 
 use super::{Descriptor, HandlerResult};
@@ -35,12 +38,13 @@ pub async fn handle_block(
         db_pool,
         &block.actor,
     ).await?;
-    let target_username = parse_local_actor_id(
-        ap_client.instance.uri_str(),
-        &block.object,
-    )?;
+    let canonical_object_id = canonicalize_id(&block.object)?;
     let db_client = &mut **get_database_client(db_pool).await?;
-    let target_user = get_user_by_name(db_client, &target_username).await?;
+    let target_user = get_user_by_actor_id(
+        db_client,
+        ap_client.instance.uri_str(),
+        &canonical_object_id,
+    ).await?;
     // Similar to Undo(Follow)
     match unfollow(db_client, source_profile.id, target_user.id).await {
         Ok(_) | Err(DatabaseError::NotFound(_)) => (),

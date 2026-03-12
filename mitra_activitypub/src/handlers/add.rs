@@ -25,14 +25,13 @@ use mitra_models::{
     },
     profiles::queries::get_remote_profile_by_actor_id,
     relationships::queries::subscribe_opt,
-    users::queries::get_user_by_name,
 };
 use mitra_validators::errors::ValidationError;
 
 use crate::{
     authentication::{verify_signed_object, AuthenticationError},
-    identifiers::parse_local_actor_id,
-    importers::ApClient,
+    identifiers::canonicalize_id,
+    importers::{get_user_by_actor_id, ApClient},
     ownership::{is_local_origin, is_same_origin, get_object_id, verify_activity_owner},
     vocabulary::{CREATE, DELETE, DISLIKE, EMOJI_REACT, LIKE, UPDATE},
 };
@@ -192,11 +191,12 @@ pub async fn handle_add(
         .expect("actor data should be present");
     if Some(add.target.clone()) == actor.subscribers {
         // Adding to subscribers
-        let username = parse_local_actor_id(
+        let canonical_object_id = canonicalize_id(&add.object)?;
+        let sender = get_user_by_actor_id(
+            db_client,
             ap_client.instance.uri_str(),
-            &add.object,
-        )?;
-        let sender = get_user_by_name(db_client, &username).await?;
+            &canonical_object_id,
+        ).await?;
         let recipient = actor_profile;
         subscribe_opt(db_client, sender.id, recipient.id).await?;
 
