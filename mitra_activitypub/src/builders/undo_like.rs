@@ -28,7 +28,7 @@ use super::like::{
 };
 
 #[derive(Serialize)]
-struct UndoLike {
+pub struct UndoLike {
     #[serde(rename = "@context")]
     context: Context,
 
@@ -43,7 +43,7 @@ struct UndoLike {
     cc: Vec<String>,
 }
 
-fn build_undo_like(
+pub fn build_undo_like(
     authority: &Authority,
     actor_profile: &DbActorProfile,
     post: &PostDetailed,
