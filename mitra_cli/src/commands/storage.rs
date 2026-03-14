@@ -7,7 +7,7 @@ use mitra_activitypub::{
 };
 use mitra_config::Config;
 use mitra_models::{
-    activitypub::helpers::get_object_ids,
+    activitypub::queries::get_object_ids,
     database::{get_database_client, DatabaseConnectionPool},
     posts::queries::{
         delete_repost,
@@ -51,6 +51,7 @@ impl PruneReposts {
     }
 }
 
+/// Validate object IDs stored in database
 #[derive(Parser)]
 pub struct CheckUris;
 

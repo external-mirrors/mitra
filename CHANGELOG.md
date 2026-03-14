@@ -11,6 +11,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Implemented reverse WebFinger for portable actors.
 - Added account limits to Mastodon API `Instance` entity.
 - Add `attributedTo` property to portable collections.
+- Added documentation for `check-uris` command.
 
 ### Changed
 
@@ -23,6 +24,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Reduced compilation time by disabling unused Actix features.
 - Don't panic if compatible ID is stored in database.
 - Validate conversation audience URI before saving it to database.
+- Updated `check-uris` command to check all IDs stored in database.
 
 ### Fixed
 
