@@ -266,8 +266,7 @@ pub fn profile_actor_url(authority: &Authority, profile: &DbActorProfile) -> Str
             };
             if actor.is_portable() {
                 // Use compatible ID as 'url'
-                return compatible_actor_id(actor)
-                    .expect("actor ID should be valid");
+                return expect_compatible_actor_id(actor);
             };
             actor.id.clone()
         },
@@ -295,10 +294,14 @@ pub(crate) fn compatible_id(
     Ok(http_uri)
 }
 
-pub fn compatible_actor_id(
+fn compatible_actor_id(
     db_actor: &DbActor,
 ) -> Result<String, DatabaseTypeError> {
    compatible_id(db_actor, &db_actor.id)
+}
+
+pub fn expect_compatible_actor_id(actor_data: &DbActor) -> String {
+    compatible_actor_id(actor_data).expect("actor ID should be valid")
 }
 
 pub fn compatible_profile_actor_id(
@@ -308,8 +311,7 @@ pub fn compatible_profile_actor_id(
     match profile.actor_json {
         Some(ref actor) => {
             if actor.is_portable() {
-                compatible_actor_id(actor)
-                    .expect("actor ID should be valid")
+                expect_compatible_actor_id(actor)
             } else {
                 actor.id.clone()
             }

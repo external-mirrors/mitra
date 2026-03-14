@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Implemented reverse WebFinger for portable actors.
 - Added account limits to Mastodon API `Instance` entity.
+- Add `attributedTo` property to portable collections.
 
 ### Changed
 
@@ -21,6 +22,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Make single HTTP request when searching for profile/post by URL.
 - Reduced compilation time by disabling unused Actix features.
 - Don't panic if compatible ID is stored in database.
+
+### Fixed
+
+- Don't serve outbox collection if owner is not registered.
 
 ## [4.19.0] - 2026-02-27
 
