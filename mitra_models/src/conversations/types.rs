@@ -1,3 +1,4 @@
+use tokio_postgres::Row;
 use postgres_types::FromSql;
 use uuid::Uuid;
 
@@ -5,8 +6,11 @@ use crate::{
     activitypub::constants::AP_PUBLIC,
     database::{
         int_enum::{int_enum_from_sql, int_enum_to_sql},
+        DatabaseError,
         DatabaseTypeError,
     },
+    posts::types::PostDetailed,
+    profiles::types::DbActorProfile,
 };
 
 #[derive(Clone, FromSql)]
@@ -27,6 +31,28 @@ pub struct Conversation {
 impl Conversation {
     pub fn is_public(&self) -> bool {
         self.audience.as_ref().is_some_and(|audience| audience == AP_PUBLIC)
+    }
+}
+
+pub struct ConversationPreview {
+    pub conversation: Conversation,
+    pub participants: Vec<DbActorProfile>,
+    pub last_post: PostDetailed,
+}
+
+impl TryFrom<&Row> for ConversationPreview {
+    type Error = DatabaseError;
+
+    fn try_from(row: &Row) -> Result<Self, Self::Error> {
+        let conversation = row.try_get("conversation")?;
+        let participants = row.try_get("participants")?;
+        let last_post = PostDetailed::try_from(row)?;
+        let conversation_preview = Self {
+            conversation,
+            participants,
+            last_post,
+        };
+        Ok(conversation_preview)
     }
 }
 

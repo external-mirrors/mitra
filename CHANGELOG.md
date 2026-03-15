@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Add `attributedTo` property to portable collections.
 - Added documentation for `check-uris` command.
 - Add `context` property to replies.
+- Implemented `/api/v1/conversations` API endpoint.
 
 ### Changed
 
