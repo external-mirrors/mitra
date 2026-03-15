@@ -537,8 +537,8 @@ impl TryFrom<&Row> for Repost {
 }
 
 pub enum PostContext {
-    // Audience is empty if top-level post is Public
     Top {
+        // Audience is empty if conversation is direct
         audience: Option<String>,
     },
     Reply {
