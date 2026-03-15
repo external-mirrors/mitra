@@ -1986,6 +1986,7 @@ mod tests {
     use chrono::TimeDelta;
     use serial_test::serial;
     use crate::{
+        conversations::types::AP_PUBLIC,
         custom_feeds::queries::{
             add_custom_feed_sources,
             create_custom_feed,
@@ -2023,6 +2024,9 @@ mod tests {
         let post = create_post(db_client, author.id, post_data).await.unwrap();
         assert_eq!(post.content, "test post");
         assert_eq!(post.author.id, author.id);
+        let conversation = post.expect_conversation();
+        assert_eq!(conversation.root_id, post.id);
+        assert_eq!(conversation.audience.as_deref(), Some(AP_PUBLIC));
         assert_eq!(post.attachments.is_empty(), true);
         assert_eq!(post.mentions[0].id, mention_2.id);
         assert_eq!(post.mentions[1].id, mention_1.id);
