@@ -1,9 +1,7 @@
 use uuid::Uuid;
 
-use super::types::{
-    Conversation,
-    AP_PUBLIC,
-};
+use crate::activitypub::constants::AP_PUBLIC;
+use super::types::Conversation;
 
 impl Conversation {
     pub fn for_test(root_id: Uuid) -> Self {

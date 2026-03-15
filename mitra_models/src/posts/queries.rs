@@ -1986,7 +1986,7 @@ mod tests {
     use chrono::TimeDelta;
     use serial_test::serial;
     use crate::{
-        conversations::types::AP_PUBLIC,
+        activitypub::constants::AP_PUBLIC,
         custom_feeds::queries::{
             add_custom_feed_sources,
             create_custom_feed,

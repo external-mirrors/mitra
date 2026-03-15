@@ -15,21 +15,23 @@ use uuid::Uuid;
 
 use mitra_utils::languages::Language;
 
-use crate::attachments::types::MediaAttachment;
-use crate::conversations::types::{
-    Conversation,
-    TrackingStatus,
-    AP_PUBLIC,
+use crate::{
+    activitypub::constants::AP_PUBLIC,
+    attachments::types::MediaAttachment,
+    conversations::types::{
+        Conversation,
+        TrackingStatus,
+    },
+    database::{
+        int_enum::{int_enum_from_sql, int_enum_to_sql},
+        json_macro::json_from_sql,
+        DatabaseError,
+        DatabaseTypeError,
+    },
+    emojis::types::CustomEmoji,
+    polls::types::{Poll, PollData},
+    profiles::types::DbActorProfile,
 };
-use crate::database::{
-    int_enum::{int_enum_from_sql, int_enum_to_sql},
-    json_macro::json_from_sql,
-    DatabaseError,
-    DatabaseTypeError,
-};
-use crate::emojis::types::CustomEmoji;
-use crate::polls::types::{Poll, PollData};
-use crate::profiles::types::DbActorProfile;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct DbLanguage(Language);

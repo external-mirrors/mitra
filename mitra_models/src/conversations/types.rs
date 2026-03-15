@@ -1,12 +1,13 @@
 use postgres_types::FromSql;
 use uuid::Uuid;
 
-use crate::database::{
-    int_enum::{int_enum_from_sql, int_enum_to_sql},
-    DatabaseTypeError,
+use crate::{
+    activitypub::constants::AP_PUBLIC,
+    database::{
+        int_enum::{int_enum_from_sql, int_enum_to_sql},
+        DatabaseTypeError,
+    },
 };
-
-pub(crate) const AP_PUBLIC: &str = "https://www.w3.org/ns/activitystreams#Public";
 
 #[derive(Clone, FromSql)]
 #[postgres(name = "conversation")]
