@@ -738,7 +738,8 @@ pub async fn get_home_timeline(
     let statement = format!(
         "
         SELECT
-            post, actor_profile,
+            post,
+            actor_profile AS post_author,
             {post_subqueries}
         FROM post
         JOIN actor_profile ON post.author_id = actor_profile.id
@@ -857,7 +858,8 @@ pub async fn get_public_timeline(
     let statement = format!(
         "
         SELECT
-            post, actor_profile,
+            post,
+            actor_profile AS post_author,
             {post_subqueries}
         FROM post
         JOIN actor_profile ON post.author_id = actor_profile.id
@@ -898,7 +900,8 @@ pub async fn get_direct_timeline(
     let statement = format!(
         "
         SELECT
-            post, actor_profile,
+            post,
+            actor_profile AS post_author,
             {post_subqueries}
         FROM post
         JOIN actor_profile ON post.author_id = actor_profile.id
@@ -947,7 +950,8 @@ pub(super) async fn get_related_posts(
         "
         WITH post_ids AS (SELECT unnest($1::uuid[]) AS post_id)
         SELECT
-            post, actor_profile,
+            post,
+            actor_profile AS post_author,
             {post_subqueries}
         FROM post
         JOIN actor_profile ON post.author_id = actor_profile.id
@@ -1018,7 +1022,8 @@ pub async fn get_posts_by_author(
     let statement = format!(
         "
         SELECT
-            post, actor_profile,
+            post,
+            actor_profile AS post_author,
             {post_subqueries}
         FROM post
         JOIN actor_profile ON post.author_id = actor_profile.id
@@ -1055,7 +1060,8 @@ pub async fn get_posts_by_tag(
     let statement = format!(
         "
         SELECT
-            post, actor_profile,
+            post,
+            actor_profile AS post_author,
             {post_subqueries}
         FROM post
         JOIN actor_profile ON post.author_id = actor_profile.id
@@ -1100,7 +1106,8 @@ pub async fn get_custom_feed_timeline(
     let statement = format!(
         "
         SELECT
-            post, actor_profile,
+            post,
+            actor_profile AS post_author,
             {post_subqueries}
         FROM post
         JOIN actor_profile ON post.author_id = actor_profile.id
@@ -1173,7 +1180,8 @@ pub async fn get_post_by_id(
     let statement = format!(
         "
         SELECT
-            post, actor_profile,
+            post,
+            actor_profile AS post_author,
             {post_subqueries}
         FROM post
         JOIN actor_profile ON post.author_id = actor_profile.id
@@ -1227,7 +1235,8 @@ pub async fn get_thread(
             JOIN tree_node ON conversation_post.in_reply_to_id = tree_node.id
         )
         SELECT
-            post, actor_profile,
+            post,
+            actor_profile AS post_author,
             {post_subqueries}
         FROM post
         JOIN tree_node ON post.id = tree_node.id
@@ -1273,7 +1282,8 @@ pub async fn get_conversation_items(
     let statement = format!(
         "
         SELECT
-            post, actor_profile,
+            post,
+            actor_profile AS post_author,
             {post_subqueries}
         FROM post
         JOIN actor_profile ON post.author_id = actor_profile.id
@@ -1347,7 +1357,8 @@ pub async fn get_remote_post_by_object_id(
     let statement = format!(
         "
         SELECT
-            post, actor_profile,
+            post,
+            actor_profile AS post_author,
             {post_subqueries}
         FROM post
         JOIN actor_profile ON post.author_id = actor_profile.id
@@ -1371,7 +1382,8 @@ pub async fn get_remote_repost_by_activity_id(
     let statement = format!(
         "
         SELECT
-            post, actor_profile,
+            post,
+            actor_profile AS post_author,
             {post_subqueries}
         FROM post
         JOIN actor_profile ON post.author_id = actor_profile.id
@@ -1897,7 +1909,8 @@ pub async fn search_posts(
     let statement = format!(
         "
         SELECT
-            post, actor_profile,
+            post,
+            actor_profile AS post_author,
             {post_subqueries}
         FROM post
         JOIN actor_profile ON post.author_id = actor_profile.id

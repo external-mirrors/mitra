@@ -209,7 +209,7 @@ pub async fn get_liked_posts(
         SELECT
             post_reaction.id,
             post,
-            actor_profile,
+            actor_profile AS post_author,
             {post_subqueries}
         FROM post
         JOIN actor_profile ON post.author_id = actor_profile.id

@@ -492,7 +492,7 @@ impl TryFrom<&Row> for PostDetailed {
 
     fn try_from(row: &Row) -> Result<Self, Self::Error> {
         let db_post: Post = row.try_get("post")?;
-        let db_profile: DbActorProfile = row.try_get("actor_profile")?;
+        let db_profile: DbActorProfile = row.try_get("post_author")?;
         // Data from subqueries
         let maybe_conversation: Option<Conversation> = row.try_get("conversation")?;
         let maybe_poll: Option<Poll> = row.try_get("poll")?;
