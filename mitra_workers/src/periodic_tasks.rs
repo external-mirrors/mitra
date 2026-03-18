@@ -242,7 +242,8 @@ pub async fn media_cleanup_queue_executor(
 pub async fn refresh_materialized_views(
     db_pool: &DatabaseConnectionPool,
 ) -> Result<(), Error> {
-    refresh_latest_post_view(db_pool).await?;
+    let db_client = &**get_database_client(db_pool).await?;
+    refresh_latest_post_view(db_client).await?;
     Ok(())
 }
 

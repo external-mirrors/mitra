@@ -1039,26 +1039,30 @@ mod tests {
     };
     use serde_json::json;
     use serial_test::serial;
-    use crate::database::test_utils::create_test_database;
-    use crate::emojis::{
-        queries::create_or_update_local_emoji,
-    };
-    use crate::media::types::MediaInfo;
-    use crate::profiles::{
-        test_utils::create_test_local_profile,
-        types::{
-            DbActor,
-            DbActorKey,
-            ExtraField,
-            IdentityProof,
-            IdentityProofType,
-            PaymentOption,
+    use crate::{
+        database::test_utils::create_test_database,
+        emojis::queries::create_or_update_local_emoji,
+        media::types::MediaInfo,
+        posts::{
+            test_utils::create_test_local_post,
+            views::refresh_latest_post_view,
         },
-    };
-    use crate::users::{
-        queries::create_user,
-        test_utils::create_test_portable_user,
-        types::UserCreateData,
+        profiles::{
+            test_utils::create_test_local_profile,
+            types::{
+                DbActor,
+                DbActorKey,
+                ExtraField,
+                IdentityProof,
+                IdentityProofType,
+                PaymentOption,
+            },
+        },
+        users::{
+            queries::create_user,
+            test_utils::create_test_portable_user,
+            types::UserCreateData,
+        },
     };
     use super::*;
 
@@ -1254,7 +1258,12 @@ mod tests {
     #[serial]
     async fn test_get_profiles_paginated() {
         let db_client = &mut create_test_database().await;
-        let profile = create_test_local_profile(db_client, "test").await;
+        let profile_1 = create_test_local_profile(db_client, "test_1").await;
+        let profile_2 = create_test_local_profile(db_client, "test_2").await;
+        let profile_3 = create_test_local_profile(db_client, "test_3").await;
+        create_test_local_post(db_client, profile_1.id, "post_1").await;
+        create_test_local_post(db_client, profile_2.id, "post_2").await;
+        refresh_latest_post_view(db_client).await.unwrap();
         let profiles = get_profiles_paginated(
             db_client,
             false, // not only local
@@ -1263,8 +1272,10 @@ mod tests {
             40,
         ).await.unwrap();
 
-        assert_eq!(profiles.len(), 1);
-        assert_eq!(profiles[0].id, profile.id);
+        assert_eq!(profiles.len(), 3);
+        assert_eq!(profiles[0].id, profile_2.id);
+        assert_eq!(profiles[1].id, profile_1.id);
+        assert_eq!(profiles[2].id, profile_3.id);
     }
 
     #[tokio::test]
