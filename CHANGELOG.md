@@ -31,6 +31,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Fixed
 
 - Don't serve outbox collection if owner is not registered.
+- Fixed query performace regression related to introduction of automated accounts.
 
 ## [4.19.0] - 2026-02-27
 

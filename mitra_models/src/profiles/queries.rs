@@ -444,6 +444,8 @@ pub async fn get_profiles_paginated(
     };
     match order {
         ProfileOrder::Active => {
+            // Materialized view can be replaced with a lateral join,
+            // but view is more efficient
             join += "LEFT JOIN latest_post ON latest_post.author_id = actor_profile.id";
             order_by += "ORDER BY latest_post.created_at DESC NULLS LAST";
         },
