@@ -732,9 +732,6 @@ pub async fn get_home_timeline(
     max_post_id: Option<Uuid>,
     limit: u16,
 ) -> Result<Vec<PostDetailed>, DatabaseError> {
-    // Select posts from follows, subscriptions,
-    // posts where current user is mentioned
-    // and user's own posts.
     let statement = format!(
         "
         SELECT
@@ -744,9 +741,14 @@ pub async fn get_home_timeline(
         FROM post
         JOIN actor_profile ON post.author_id = actor_profile.id
         WHERE
-            (
-                post.author_id = $current_user_id
-                OR (
+            -- using UNION ('ugly-OR') because it is more efficient
+            EXISTS (
+                -- user's own posts
+                SELECT 1 WHERE post.author_id = $current_user_id
+                UNION ALL
+                -- posts from followed authors
+                SELECT 1
+                WHERE
                     -- is following or subscribed to the post author
                     EXISTS (
                         SELECT 1 FROM relationship
@@ -799,18 +801,17 @@ pub async fn get_home_timeline(
                         WHERE custom_feed.owner_id = $current_user_id
                             AND custom_feed_source.source_id = post.author_id
                     )
-                )
-                OR EXISTS (
-                    SELECT 1 FROM post_mention
-                    WHERE post_id = post.id AND profile_id = $current_user_id
-                )
-                OR EXISTS (
-                    SELECT 1 FROM conversation_tracking
-                    WHERE
-                        conversation_tracking.conversation_id = post.conversation_id
-                        AND account_id = $current_user_id
-                        AND tracking_status = {tracking_status_follow}
-                )
+                UNION ALL
+                -- posts where user is mentioned
+                SELECT 1 FROM post_mention
+                WHERE post_id = post.id AND profile_id = $current_user_id
+                UNION ALL
+                -- posts from followed conversations
+                SELECT 1 FROM conversation_tracking
+                WHERE
+                    conversation_tracking.conversation_id = post.conversation_id
+                    AND account_id = $current_user_id
+                    AND tracking_status = {tracking_status_follow}
             )
             -- author is not muted
             AND {mute_filter}
