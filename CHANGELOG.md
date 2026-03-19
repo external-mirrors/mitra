@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [4.20.0] - 2026-03-19
+
 ### Added
 
 - Implemented reverse WebFinger for portable actors.
