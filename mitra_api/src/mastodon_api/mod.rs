@@ -25,6 +25,7 @@ pub mod accounts;
 mod admin;
 pub mod apps;
 mod bookmarks;
+mod conversations;
 mod custom_emojis;
 mod directory;
 mod favourites;
@@ -137,6 +138,7 @@ pub fn mastodon_api_scope(
         .service(admin::accounts::views::admin_account_api_scope())
         .service(apps::views::application_api_scope())
         .service(bookmarks::views::bookmark_api_scope())
+        .service(conversations::views::conversation_api_scope())
         .service(custom_emojis::views::custom_emoji_api_scope())
         .service(directory::views::directory_api_scope())
         .service(favourites::views::favourite_api_scope())

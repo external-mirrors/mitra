@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -305,15 +307,6 @@ pub struct StatusTombstone {
     pub text: String,
 }
 
-fn default_post_content_type() -> String { POST_CONTENT_TYPE_MARKDOWN.to_string() }
-
-#[derive(Clone, Debug, Deserialize)]
-pub struct PollParams {
-    pub options: Vec<String>,
-    pub expires_in: u32,
-    pub multiple: Option<bool>,
-}
-
 pub fn visibility_from_str(value: &str) -> Result<Visibility, ValidationError> {
     let visibility = match value {
         "public" | "unlisted" => Visibility::Public,
@@ -325,6 +318,22 @@ pub fn visibility_from_str(value: &str) -> Result<Visibility, ValidationError> {
     };
     Ok(visibility)
 }
+
+#[derive(Clone, Debug, Deserialize)]
+pub struct PollParams {
+    pub options: Vec<String>,
+    pub expires_in: u32,
+    pub multiple: Option<bool>,
+}
+
+impl PollParams {
+    pub fn expires_at(&self) -> DateTime<Utc> {
+        let duration = self.expires_in.into();
+        Utc::now() + Duration::from_secs(duration)
+    }
+}
+
+fn default_post_content_type() -> String { POST_CONTENT_TYPE_MARKDOWN.to_string() }
 
 // https://docs.joinmastodon.org/methods/statuses/
 #[derive(Debug, Deserialize)]

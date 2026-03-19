@@ -215,10 +215,12 @@ pub async fn create_post(
 
     // Create or find existing conversation
     let maybe_conversation = match post_data.context {
-        PostContext::Top { ref audience } => {
+        PostContext::Top { ref object_id, ref audience } => {
             let conversation = create_conversation(
                 &transaction,
                 post_id,
+                post_data.object_id.is_none(), // is_managed
+                object_id.as_deref(),
                 audience.as_deref(),
             ).await?;
             Some(conversation)
@@ -730,20 +732,23 @@ pub async fn get_home_timeline(
     max_post_id: Option<Uuid>,
     limit: u16,
 ) -> Result<Vec<PostDetailed>, DatabaseError> {
-    // Select posts from follows, subscriptions,
-    // posts where current user is mentioned
-    // and user's own posts.
     let statement = format!(
         "
         SELECT
-            post, actor_profile,
+            post,
+            actor_profile AS post_author,
             {post_subqueries}
         FROM post
         JOIN actor_profile ON post.author_id = actor_profile.id
         WHERE
-            (
-                post.author_id = $current_user_id
-                OR (
+            -- using UNION ('ugly-OR') because it is more efficient
+            EXISTS (
+                -- user's own posts
+                SELECT 1 WHERE post.author_id = $current_user_id
+                UNION ALL
+                -- posts from followed authors
+                SELECT 1
+                WHERE
                     -- is following or subscribed to the post author
                     EXISTS (
                         SELECT 1 FROM relationship
@@ -796,18 +801,17 @@ pub async fn get_home_timeline(
                         WHERE custom_feed.owner_id = $current_user_id
                             AND custom_feed_source.source_id = post.author_id
                     )
-                )
-                OR EXISTS (
-                    SELECT 1 FROM post_mention
-                    WHERE post_id = post.id AND profile_id = $current_user_id
-                )
-                OR EXISTS (
-                    SELECT 1 FROM conversation_tracking
-                    WHERE
-                        conversation_tracking.conversation_id = post.conversation_id
-                        AND account_id = $current_user_id
-                        AND tracking_status = {tracking_status_follow}
-                )
+                UNION ALL
+                -- posts where user is mentioned
+                SELECT 1 FROM post_mention
+                WHERE post_id = post.id AND profile_id = $current_user_id
+                UNION ALL
+                -- posts from followed conversations
+                SELECT 1 FROM conversation_tracking
+                WHERE
+                    conversation_tracking.conversation_id = post.conversation_id
+                    AND account_id = $current_user_id
+                    AND tracking_status = {tracking_status_follow}
             )
             -- author is not muted
             AND {mute_filter}
@@ -855,7 +859,8 @@ pub async fn get_public_timeline(
     let statement = format!(
         "
         SELECT
-            post, actor_profile,
+            post,
+            actor_profile AS post_author,
             {post_subqueries}
         FROM post
         JOIN actor_profile ON post.author_id = actor_profile.id
@@ -896,7 +901,8 @@ pub async fn get_direct_timeline(
     let statement = format!(
         "
         SELECT
-            post, actor_profile,
+            post,
+            actor_profile AS post_author,
             {post_subqueries}
         FROM post
         JOIN actor_profile ON post.author_id = actor_profile.id
@@ -945,7 +951,8 @@ pub(super) async fn get_related_posts(
         "
         WITH post_ids AS (SELECT unnest($1::uuid[]) AS post_id)
         SELECT
-            post, actor_profile,
+            post,
+            actor_profile AS post_author,
             {post_subqueries}
         FROM post
         JOIN actor_profile ON post.author_id = actor_profile.id
@@ -1016,7 +1023,8 @@ pub async fn get_posts_by_author(
     let statement = format!(
         "
         SELECT
-            post, actor_profile,
+            post,
+            actor_profile AS post_author,
             {post_subqueries}
         FROM post
         JOIN actor_profile ON post.author_id = actor_profile.id
@@ -1053,7 +1061,8 @@ pub async fn get_posts_by_tag(
     let statement = format!(
         "
         SELECT
-            post, actor_profile,
+            post,
+            actor_profile AS post_author,
             {post_subqueries}
         FROM post
         JOIN actor_profile ON post.author_id = actor_profile.id
@@ -1098,7 +1107,8 @@ pub async fn get_custom_feed_timeline(
     let statement = format!(
         "
         SELECT
-            post, actor_profile,
+            post,
+            actor_profile AS post_author,
             {post_subqueries}
         FROM post
         JOIN actor_profile ON post.author_id = actor_profile.id
@@ -1171,7 +1181,8 @@ pub async fn get_post_by_id(
     let statement = format!(
         "
         SELECT
-            post, actor_profile,
+            post,
+            actor_profile AS post_author,
             {post_subqueries}
         FROM post
         JOIN actor_profile ON post.author_id = actor_profile.id
@@ -1225,7 +1236,8 @@ pub async fn get_thread(
             JOIN tree_node ON conversation_post.in_reply_to_id = tree_node.id
         )
         SELECT
-            post, actor_profile,
+            post,
+            actor_profile AS post_author,
             {post_subqueries}
         FROM post
         JOIN tree_node ON post.id = tree_node.id
@@ -1271,7 +1283,8 @@ pub async fn get_conversation_items(
     let statement = format!(
         "
         SELECT
-            post, actor_profile,
+            post,
+            actor_profile AS post_author,
             {post_subqueries}
         FROM post
         JOIN actor_profile ON post.author_id = actor_profile.id
@@ -1345,7 +1358,8 @@ pub async fn get_remote_post_by_object_id(
     let statement = format!(
         "
         SELECT
-            post, actor_profile,
+            post,
+            actor_profile AS post_author,
             {post_subqueries}
         FROM post
         JOIN actor_profile ON post.author_id = actor_profile.id
@@ -1369,7 +1383,8 @@ pub async fn get_remote_repost_by_activity_id(
     let statement = format!(
         "
         SELECT
-            post, actor_profile,
+            post,
+            actor_profile AS post_author,
             {post_subqueries}
         FROM post
         JOIN actor_profile ON post.author_id = actor_profile.id
@@ -1895,7 +1910,8 @@ pub async fn search_posts(
     let statement = format!(
         "
         SELECT
-            post, actor_profile,
+            post,
+            actor_profile AS post_author,
             {post_subqueries}
         FROM post
         JOIN actor_profile ON post.author_id = actor_profile.id
@@ -1986,6 +2002,7 @@ mod tests {
     use chrono::TimeDelta;
     use serial_test::serial;
     use crate::{
+        activitypub::constants::AP_PUBLIC,
         custom_feeds::queries::{
             add_custom_feed_sources,
             create_custom_feed,
@@ -2023,6 +2040,9 @@ mod tests {
         let post = create_post(db_client, author.id, post_data).await.unwrap();
         assert_eq!(post.content, "test post");
         assert_eq!(post.author.id, author.id);
+        let conversation = post.expect_conversation();
+        assert_eq!(conversation.root_id, post.id);
+        assert_eq!(conversation.audience.as_deref(), Some(AP_PUBLIC));
         assert_eq!(post.attachments.is_empty(), true);
         assert_eq!(post.mentions[0].id, mention_2.id);
         assert_eq!(post.mentions[1].id, mention_1.id);
@@ -2618,7 +2638,10 @@ mod tests {
         let user_3 = create_test_user(db_client, "test_3").await;
         mute(db_client, user_1.id, user_3.id).await.unwrap();
         let post_data_1 = PostCreateData {
-            context: PostContext::new_public(),
+            context: PostContext::Top {
+                object_id: None,
+                audience: Some(AP_PUBLIC.to_owned()),
+            },
             content: "my post".to_string(),
             ..Default::default()
         };
@@ -2666,6 +2689,7 @@ mod tests {
         follow(db_client, user_3.id, user_2.id).await.unwrap();
         let post_data_1 = PostCreateData {
             context: PostContext::Top {
+                object_id: None,
                 audience: Some("https://local/test_1/followers".to_owned()),
             },
             content: "my post".to_string(),

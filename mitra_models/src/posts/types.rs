@@ -15,21 +15,22 @@ use uuid::Uuid;
 
 use mitra_utils::languages::Language;
 
-use crate::attachments::types::MediaAttachment;
-use crate::conversations::types::{
-    Conversation,
-    TrackingStatus,
-    AP_PUBLIC,
+use crate::{
+    attachments::types::MediaAttachment,
+    conversations::types::{
+        Conversation,
+        TrackingStatus,
+    },
+    database::{
+        int_enum::{int_enum_from_sql, int_enum_to_sql},
+        json_macro::json_from_sql,
+        DatabaseError,
+        DatabaseTypeError,
+    },
+    emojis::types::CustomEmoji,
+    polls::types::{Poll, PollData},
+    profiles::types::DbActorProfile,
 };
-use crate::database::{
-    int_enum::{int_enum_from_sql, int_enum_to_sql},
-    json_macro::json_from_sql,
-    DatabaseError,
-    DatabaseTypeError,
-};
-use crate::emojis::types::CustomEmoji;
-use crate::polls::types::{Poll, PollData};
-use crate::profiles::types::DbActorProfile;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct DbLanguage(Language);
@@ -328,6 +329,14 @@ impl PostDetailed {
             if conversation.id != conversation_id {
                 return Err(DatabaseTypeError);
             };
+            if conversation.is_managed && conversation.object_id.is_some() {
+                return Err(DatabaseTypeError);
+            };
+            if conversation.root_id == db_post.id
+                && conversation.is_managed != db_post.object_id.is_none()
+            {
+                return Err(DatabaseTypeError);
+            };
             if db_post.id == conversation.root_id
                 && db_post.visibility == Visibility::Public
                 && !conversation.is_public()
@@ -483,7 +492,7 @@ impl TryFrom<&Row> for PostDetailed {
 
     fn try_from(row: &Row) -> Result<Self, Self::Error> {
         let db_post: Post = row.try_get("post")?;
-        let db_profile: DbActorProfile = row.try_get("actor_profile")?;
+        let db_profile: DbActorProfile = row.try_get("post_author")?;
         // Data from subqueries
         let maybe_conversation: Option<Conversation> = row.try_get("conversation")?;
         let maybe_poll: Option<Poll> = row.try_get("poll")?;
@@ -537,8 +546,9 @@ impl TryFrom<&Row> for Repost {
 }
 
 pub enum PostContext {
-    // Audience is empty if top-level post is Public
     Top {
+        object_id: Option<String>, // usually a collection
+        // Audience is empty if conversation is direct
         audience: Option<String>,
     },
     Reply {
@@ -551,10 +561,6 @@ pub enum PostContext {
 }
 
 impl PostContext {
-    pub fn new_public() -> Self {
-        Self::Top { audience: Some(AP_PUBLIC.to_owned()) }
-    }
-
     pub(super) fn in_reply_to_id(&self) -> Option<Uuid> {
         match self {
             Self::Reply { in_reply_to_id, .. } => Some(*in_reply_to_id),
@@ -573,7 +579,11 @@ impl PostContext {
 #[cfg(any(test, feature = "test-utils"))]
 impl Default for PostContext {
     fn default() -> Self {
-        Self::new_public()
+        use crate::activitypub::constants::AP_PUBLIC;
+        Self::Top {
+            object_id: None,
+            audience: Some(AP_PUBLIC.to_owned()),
+        }
     }
 }
 
@@ -599,7 +609,10 @@ pub struct PostCreateData {
 
 impl PostCreateData {
     pub(super) fn check_consistency(&self) -> Result<(), DatabaseTypeError> {
-        if let PostContext::Top { ref audience } = self.context {
+        if let PostContext::Top { ref object_id, ref audience } = self.context {
+            if object_id.is_some() && self.object_id.is_none() {
+                return Err(DatabaseTypeError);
+            };
             if audience.is_none() && self.visibility != Visibility::Direct {
                 return Err(DatabaseTypeError);
             };

@@ -2,6 +2,7 @@ use std::path::PathBuf;
 
 use anyhow::{anyhow, Error};
 use apx_sdk::{
+    constants::AP_PUBLIC,
     core::{
         media_type::sniff_media_type,
         url::http_uri::HttpUri,
@@ -140,7 +141,10 @@ impl CreatePost {
         };
         let post_data = PostCreateData {
             id: Some(post_id),
-            context: PostContext::new_public(),
+            context: PostContext::Top {
+                object_id: None,
+                audience: Some(AP_PUBLIC.to_owned()),
+            },
             content: content,
             content_source: None,
             language: None,

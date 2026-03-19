@@ -17,6 +17,9 @@ pub struct OrderedCollection {
     #[serde(rename = "type")]
     object_type: String,
 
+    #[serde(skip_serializing_if = "Option::is_none")]
+    attributed_to: Option<String>,
+
     #[serde(skip_serializing_if = "Vec::is_empty")]
     ordered_items: Vec<JsonValue>,
 
@@ -39,6 +42,7 @@ impl OrderedCollection {
             _context: build_default_context(),
             id: collection_id,
             object_type: ORDERED_COLLECTION.to_string(),
+            attributed_to: None,
             ordered_items: vec![],
             first: first_page_id,
             total_items,
@@ -53,6 +57,7 @@ impl OrderedCollection {
             _context: build_default_context(),
             id: collection_id,
             object_type: ORDERED_COLLECTION.to_string(),
+            attributed_to: None,
             ordered_items: items,
             first: None,
             total_items: None,
@@ -67,9 +72,15 @@ impl OrderedCollection {
             _context: build_default_context(),
             id: collection_page_id,
             object_type: ORDERED_COLLECTION_PAGE.to_string(),
+            attributed_to: None,
             ordered_items: items,
             first: None,
             total_items: None,
         }
+    }
+
+    pub fn with_attributed_to(mut self, attributed_to: &str) -> Self {
+        self.attributed_to = Some(attributed_to.to_owned());
+        self
     }
 }

@@ -204,6 +204,8 @@ CREATE INDEX post_content_tsvector_simple_index ON post USING GIN (to_tsvector('
 CREATE TABLE conversation (
     id UUID PRIMARY KEY,
     root_id UUID UNIQUE NOT NULL REFERENCES post (id) ON DELETE CASCADE DEFERRABLE INITIALLY DEFERRED,
+    is_managed BOOLEAN NOT NULL,
+    object_id VARCHAR(2000),
     audience VARCHAR(2000)
 );
 

@@ -1,5 +1,3 @@
-use std::time::Duration;
-
 use actix_web::{
     delete,
     dev::ConnectionInfo,
@@ -227,12 +225,11 @@ async fn create_status(
             Visibility::Conversation => None, // will be rejected by validator
             Visibility::Direct => None,
         };
-        PostContext::Top { audience }
+        PostContext::Top { object_id: None, audience }
     };
 
     // Prepare poll data
     let maybe_poll_data = if let Some(poll_params) = status_data.poll_params()? {
-        let duration = poll_params.expires_in.into();
         let (results, poll_emojis) = parse_poll_options(
             db_client,
             &poll_params.options,
@@ -242,7 +239,7 @@ async fn create_status(
                 emojis.push(poll_emoji);
             };
         };
-        let ends_at = Utc::now() + Duration::from_secs(duration);
+        let ends_at = poll_params.expires_at();
         let poll_data = PollData {
             multiple_choices: poll_params.multiple.unwrap_or(false),
             ends_at: Some(ends_at),

@@ -1,7 +1,7 @@
 use apx_core::{
     caip2::ChainId,
     url::{
-        canonical::{parse_url, CanonicalUri},
+        canonical::CanonicalUri,
         common::url_encode,
     },
 };
@@ -20,7 +20,10 @@ use mitra_models::{
 };
 use mitra_validators::errors::ValidationError;
 
-use crate::authority::{Authority, AuthorityRoot};
+use crate::{
+    authority::{Authority, AuthorityRoot},
+    utils::parse_id_from_db_lenient,
+};
 
 pub enum LocalActorCollection {
     Inbox,
@@ -263,8 +266,7 @@ pub fn profile_actor_url(authority: &Authority, profile: &DbActorProfile) -> Str
             };
             if actor.is_portable() {
                 // Use compatible ID as 'url'
-                return compatible_actor_id(actor)
-                    .expect("actor ID should be valid");
+                return expect_compatible_actor_id(actor);
             };
             actor.id.clone()
         },
@@ -277,29 +279,29 @@ pub fn profile_actor_url(authority: &Authority, profile: &DbActorProfile) -> Str
 /// Convert canonical object ID (from database) to compatible ID,
 /// to be used in object construction.
 /// If object ID is an 'ap' URI, compatible ID will be based on primary gateway.
-pub fn compatible_id(
+pub(crate) fn compatible_id(
     db_actor: &DbActor,
     object_id: &str,
 ) -> Result<String, DatabaseTypeError> {
-    // ID is expected to be valid
-    let (canonical_object_id, maybe_gateway) = parse_url(object_id)
-        .map_err(|_| DatabaseTypeError)?;
-    if maybe_gateway.is_some() {
-        // Compatible IDs can't be stored
-        return Err(DatabaseTypeError);
-    };
+    // Will return error if ID is not a valid URI
+    let canonical_object_id = parse_id_from_db_lenient(object_id)?;
     // TODO: FEP-EF61: at least one gateway must be stored
     let maybe_gateway = db_actor.gateways.first()
         .map(|gateway| gateway.as_str());
+    // Will return error if ID is portable and there is no gateway
     let http_uri = canonical_object_id.to_http_uri(maybe_gateway)
         .ok_or(DatabaseTypeError)?;
     Ok(http_uri)
 }
 
-pub fn compatible_actor_id(
+fn compatible_actor_id(
     db_actor: &DbActor,
 ) -> Result<String, DatabaseTypeError> {
    compatible_id(db_actor, &db_actor.id)
+}
+
+pub fn expect_compatible_actor_id(actor_data: &DbActor) -> String {
+    compatible_actor_id(actor_data).expect("actor ID should be valid")
 }
 
 pub fn compatible_profile_actor_id(
@@ -309,8 +311,7 @@ pub fn compatible_profile_actor_id(
     match profile.actor_json {
         Some(ref actor) => {
             if actor.is_portable() {
-                compatible_actor_id(actor)
-                    .expect("actor ID should be valid")
+                expect_compatible_actor_id(actor)
             } else {
                 actor.id.clone()
             }

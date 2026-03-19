@@ -6,9 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [4.20.0] - 2026-03-19
+
 ### Added
 
 - Implemented reverse WebFinger for portable actors.
+- Added account limits to Mastodon API `Instance` entity.
+- Add `attributedTo` property to portable collections.
+- Added documentation for `check-uris` command.
+- Add `context` property to replies.
+- Implemented `/api/v1/conversations` API endpoint.
 
 ### Changed
 
@@ -18,6 +25,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Improved error message when signed header has invalid value.
 - Add actor ID to "signer not found in cache" error message.
 - Make single HTTP request when searching for profile/post by URL.
+- Reduced compilation time by disabling unused Actix features.
+- Don't panic if compatible ID is stored in database.
+- Validate conversation audience URI before saving it to database.
+- Updated `check-uris` command to check all IDs stored in database.
+- Optimized home timeline query.
+
+### Fixed
+
+- Don't serve outbox collection if owner is not registered.
+- Fixed query performace regression related to introduction of automated accounts.
 
 ## [4.19.0] - 2026-02-27
 

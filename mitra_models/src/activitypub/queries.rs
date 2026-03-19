@@ -386,6 +386,70 @@ pub async fn get_activitypub_media_by_digest(
     Ok(file_info)
 }
 
+pub async fn get_object_ids(
+    db_client: &impl DatabaseClient,
+) -> Result<Vec<String>, DatabaseError> {
+    let rows = db_client.query(
+        "
+        SELECT unnest(array_remove(
+            ARRAY[
+                actor_json ->> 'id',
+                actor_json ->> 'inbox',
+                actor_json ->> 'outbox',
+                actor_json ->> 'followers'
+            ],
+            NULL
+        )) AS object_id
+        FROM actor_profile
+        WHERE actor_profile.actor_json IS NOT NULL
+        UNION ALL
+        SELECT public_key ->> 'id'
+        FROM actor_profile
+        CROSS JOIN jsonb_array_elements(actor_profile.public_keys) AS public_key
+        UNION ALL
+        SELECT payment_option ->> 'object_id'
+        FROM actor_profile
+        CROSS JOIN jsonb_array_elements(actor_profile.payment_options) AS payment_option
+        WHERE payment_option ->> 'object_id' IS NOT NULL
+        UNION ALL
+        SELECT post.object_id
+        FROM post
+        WHERE post.object_id IS NOT NULL
+        UNION ALL
+        SELECT unnest(array_remove(
+            ARRAY[
+                conversation.object_id,
+                conversation.audience
+            ],
+            NULL
+        ))
+        FROM conversation
+        WHERE conversation.audience IS NOT NULL
+        UNION ALL
+        SELECT follow_request.activity_id
+        FROM follow_request
+        WHERE follow_request.activity_id IS NOT NULL
+        UNION ALL
+        SELECT post_reaction.activity_id
+        FROM post_reaction
+        WHERE post_reaction.activity_id IS NOT NULL
+        UNION ALL
+        SELECT emoji.object_id
+        FROM emoji
+        WHERE emoji.object_id IS NOT NULL
+        UNION ALL
+        SELECT invoice.object_id
+        FROM invoice
+        WHERE invoice.object_id IS NOT NULL
+        ",
+        &[],
+    ).await?;
+    let object_ids = rows.iter()
+        .map(|row| row.try_get("object_id"))
+        .collect::<Result<_, _>>()?;
+    Ok(object_ids)
+}
+
 #[cfg(test)]
 mod tests {
     use serde_json::json;
@@ -745,5 +809,13 @@ mod tests {
             user.id,
             file_info.digest,
         ).await.unwrap();
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_get_object_ids() {
+        let db_client = &mut create_test_database().await;
+        let ids = get_object_ids(db_client).await.unwrap();
+        assert_eq!(ids.len(), 0);
     }
 }

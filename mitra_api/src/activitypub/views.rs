@@ -66,6 +66,7 @@ use mitra_activitypub::{
     identifiers::{
         canonicalize_id,
         compatible_post_object_id,
+        expect_compatible_actor_id,
         local_actor_id,
         local_conversation_collection,
         local_object_id,
@@ -928,8 +929,8 @@ async fn apgateway_inbox_pull_view(
         db_client,
         &canonical_collection_id.to_string(),
     ).await?;
-    let canonical_owner_id =
-        parse_id_from_db(collection_owner.profile.expect_remote_actor_id())?;
+    let owner_data = collection_owner.profile.expect_actor_data();
+    let canonical_owner_id = parse_id_from_db(&owner_data.id)?;
     if canonical_owner_id != canonical_signer_id {
         return Err(HttpError::PermissionError);
     };
@@ -940,10 +941,10 @@ async fn apgateway_inbox_pull_view(
         maybe_after.as_deref(),
         OrderedCollection::PAGE_SIZE,
     ).await?;
-    let collection = OrderedCollection::new_with_items(
-        collection_uri,
-        items,
-    );
+    let owner_id = expect_compatible_actor_id(owner_data);
+    let collection = OrderedCollection
+        ::new_with_items(collection_uri, items)
+        .with_attributed_to(&owner_id);
     let response = HttpResponse::Ok()
         .content_type(AP_MEDIA_TYPE)
         .json(collection);
@@ -1016,31 +1017,35 @@ async fn apgateway_outbox_pull_view(
         request_uri,
     );
     let ap_client = ApClient::new_with_pool(&config, &db_pool).await?;
-    let Some(signer) = check_request_opt(
+    let maybe_signer = check_request_opt(
         &ap_client,
         &db_pool,
         &request,
         &request_full_uri,
-    ).await? else {
-        let collection = OrderedCollection::new(
-            collection_id,
-            None, // no pages
-            None, // no item count
-        );
-        let response = HttpResponse::Ok()
-            .content_type(AP_MEDIA_TYPE)
-            .json(collection);
-        return Ok(response);
-    };
-    let canonical_signer_id = parse_id_from_db(signer.expect_remote_actor_id())?;
+    ).await?;
     let canonical_collection_id = canonicalize_id(&collection_id)?;
     let db_client = &**get_database_client(&db_pool).await?;
     let collection_owner = get_portable_user_by_outbox_id(
         db_client,
         &canonical_collection_id.to_string(),
     ).await?;
-    let canonical_owner_id =
-        parse_id_from_db(collection_owner.profile.expect_remote_actor_id())?;
+    let owner_data = collection_owner.profile.expect_actor_data();
+    let owner_id = expect_compatible_actor_id(owner_data);
+    let Some(signer) = maybe_signer else {
+        let collection = OrderedCollection
+            ::new(
+                collection_id,
+                None, // no pages
+                None, // no item count
+            )
+            .with_attributed_to(&owner_id);
+        let response = HttpResponse::Ok()
+            .content_type(AP_MEDIA_TYPE)
+            .json(collection);
+        return Ok(response);
+    };
+    let canonical_signer_id = parse_id_from_db(signer.expect_remote_actor_id())?;
+    let canonical_owner_id = parse_id_from_db(&owner_data.id)?;
     if canonical_owner_id != canonical_signer_id {
         return Err(HttpError::PermissionError);
     };
@@ -1050,10 +1055,9 @@ async fn apgateway_outbox_pull_view(
         None,
         OrderedCollection::PAGE_SIZE,
     ).await?;
-    let collection = OrderedCollection::new_with_items(
-        collection_id,
-        items,
-    );
+    let collection = OrderedCollection
+        ::new_with_items(collection_id, items)
+        .with_attributed_to(&owner_id);
     let response = HttpResponse::Ok()
         .content_type(AP_MEDIA_TYPE)
         .json(collection);
