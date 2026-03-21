@@ -34,7 +34,7 @@ default-members = [
 resolver = "2"
 
 [workspace.package]
-version = "4.20.0"
+version = "5.0.0-dev"
 license = "AGPL-3.0-only"
 
 edition = "2021"
