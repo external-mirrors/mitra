@@ -24,7 +24,7 @@ use crate::{
         local_object_id,
     },
     queues::OutgoingActivityJobData,
-    vocabulary::{DISLIKE, EMOJI_REACT, LIKE},
+    vocabulary::{DISLIKE, LIKE},
 };
 
 use super::emoji::{build_emoji, Emoji};
@@ -72,7 +72,6 @@ pub(super) fn get_like_audience(
     (primary_audience, secondary_audience)
 }
 
-#[allow(clippy::too_many_arguments)]
 fn build_like(
     authority: &Authority,
     media_server: &MediaServer,
@@ -81,11 +80,9 @@ fn build_like(
     reaction_id: Uuid,
     maybe_reaction_content: Option<String>,
     maybe_custom_emoji: Option<&DbCustomEmoji>,
-    fep_c0e0_emoji_react_enabled: bool,
 ) -> Like {
     let activity_type = match maybe_reaction_content.as_deref() {
         Some("👎") => DISLIKE,
-        Some(_) if fep_c0e0_emoji_react_enabled => EMOJI_REACT,
         Some(_) => LIKE,
         None => LIKE,
     };
@@ -150,7 +147,6 @@ pub async fn prepare_like(
         reaction.id,
         reaction.content.clone(),
         reaction.emoji.as_ref(),
-        instance.federation.fep_c0e0_emoji_react_enabled,
     );
     Ok(OutgoingActivityJobData::new(
         instance.uri_str(),
@@ -189,7 +185,6 @@ mod tests {
             reaction_id,
             None,
             None,
-            false,
         );
         assert_eq!(
             activity.id,
@@ -227,7 +222,6 @@ mod tests {
             reaction_id,
             None,
             None,
-            false,
         );
         assert_eq!(
             activity.id,
