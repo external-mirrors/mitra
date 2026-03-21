@@ -9,10 +9,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Changed
 
 - Changed the default value of `limits.posts.attachment_local_limit` to `4`.
+- Allowed access from all web origins by default.
 
 ### Removed
 
 - Removed `federation.fep_c0e0_emoji_react_enabled` configuration parameter.
+- Removed `http_cors_allow_all` configuration parameter.
 
 ## [4.20.0] - 2026-03-19
 

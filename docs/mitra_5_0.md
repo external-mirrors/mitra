@@ -12,3 +12,10 @@ If you're using Mitra 3.x, read the [Mitra 4.0 migration guide](./mitra_4_0.md).
 
 - Changed the default value of `limits.posts.attachment_local_limit` from `16` to `4`. This is the maximum number of attachments Mastodon can display.
 - Removed `federation.fep_c0e0_emoji_react_enabled` configuration parameter.
+- Allowed access from all web origins by default.
+  - `http_cors_allowlist` configuration parameter enables the old behavior when present.
+  - `http_cors_allow_all` configuration parameter was removed.
+
+## HTTP API
+
+- Allowed access from all web origins by default.
