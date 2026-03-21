@@ -79,7 +79,7 @@ default_role = "user"
 [limits.posts]
 #character_limit = 5000
 #attachment_limit = 16
-#attachment_local_limit = 16
+#attachment_local_limit = 4
 
 # Data retention parameters.
 # Objects will be deleted after the specified number of days.

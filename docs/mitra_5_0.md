@@ -7,3 +7,7 @@ If you're using Mitra 3.x, read the [Mitra 4.0 migration guide](./mitra_4_0.md).
 ## Dependencies
 
 - Minimum supported version of Rust is 1.85 (this version of the compiler is included in Debian 13).
+
+## Configuration
+
+- Changed the default value of `limits.posts.attachment_local_limit` from `16` to `4`. This is the maximum number of attachments Mastodon can display.
