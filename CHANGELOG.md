@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [5.0.0] - 2026-03-23
+
 ### Changed
 
 - Changed the default value of `limits.posts.attachment_local_limit` to `4`.
