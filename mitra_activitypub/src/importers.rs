@@ -896,7 +896,7 @@ pub async fn import_collection(
     Ok(imported)
 }
 
-pub async fn import_from_outbox(
+pub(crate) async fn import_from_outbox(
     config: &Config,
     db_pool: &DatabaseConnectionPool,
     actor_id: &str,

@@ -24,6 +24,7 @@ If you're using Mitra 3.x, read the [Mitra 4.0 migration guide](./mitra_4_0.md).
 ## CLI
 
 - Removed deprecated `reject-media` and `accept-media` filter actions.
+- Removed `read-outbox` command (it can be replaced with `import-object` command).
 
 ## HTTP API
 

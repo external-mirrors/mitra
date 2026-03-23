@@ -60,7 +60,6 @@ async fn main() -> Result<(), Error> {
         SubCommand::SetRole(cmd) => cmd.execute(&db_pool).await,
         SubCommand::RevokeOauthTokens(cmd) => cmd.execute(&db_pool).await,
         SubCommand::ImportObject(cmd) => cmd.execute(&config, &db_pool).await,
-        SubCommand::ReadOutbox(cmd) => cmd.execute(&config, &db_pool).await,
         SubCommand::LoadReplies(cmd) => cmd.execute(&config, &db_pool).await,
         SubCommand::FetchObject(cmd) => cmd.execute(&config, &db_pool).await,
         SubCommand::Webfinger(cmd) => cmd.execute(&config, &db_pool).await,

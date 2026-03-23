@@ -18,7 +18,6 @@ use mitra_activitypub::{
         fetch_any_object_with_context,
         import_activity,
         import_collection,
-        import_from_outbox,
         import_object,
         import_profile,
         import_replies,
@@ -144,30 +143,6 @@ impl ImportObject {
             },
             _ => return Err(anyhow!("invalid object type")),
         };
-        Ok(())
-    }
-}
-
-/// Pull activities from actor's outbox
-#[derive(Parser)]
-pub struct ReadOutbox {
-    actor_id: String,
-    #[arg(long, default_value_t = 20)]
-    limit: usize,
-}
-
-impl ReadOutbox {
-    pub async fn execute(
-        self,
-        config: &Config,
-        db_pool: &DatabaseConnectionPool,
-    ) -> Result<(), Error> {
-        import_from_outbox(
-            config,
-            db_pool,
-            &self.actor_id,
-            self.limit,
-        ).await?;
         Ok(())
     }
 }
