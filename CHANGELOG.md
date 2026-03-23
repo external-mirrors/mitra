@@ -22,6 +22,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Removed deprecated `reject-media` and `accept-media` filter actions.
 - Removed `read-outbox` command.
 - Removed `federated_timeline_restricted` property from `/api/v2/instance` response.
+- Removed `GET /api/v1/accounts/identity_proof` endpoint.
 
 ## [4.20.0] - 2026-03-19
 
