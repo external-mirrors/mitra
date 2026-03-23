@@ -19,6 +19,7 @@ If you're using Mitra 3.x, read the [Mitra 4.0 migration guide](./mitra_4_0.md).
 ## Federation
 
 - Removed support for payment links with `https://w3id.org/valueflows/Proposal` rel type.
+- Removed support for `MitraJcsRsaSignature2022` proof type.
 
 ## HTTP API
 

@@ -177,6 +177,7 @@ pub fn get_json_signature(
     Ok(signature_data)
 }
 
+#[deprecated]
 pub fn verify_rsa_json_signature(
     signer_key: &RsaPublicKey,
     object: &JsonValue,
