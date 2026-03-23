@@ -29,3 +29,4 @@ If you're using Mitra 3.x, read the [Mitra 4.0 migration guide](./mitra_4_0.md).
 ## HTTP API
 
 - Allowed access from all web origins by default.
+- Removed `federated_timeline_restricted` property from `/api/v2/instance` response.

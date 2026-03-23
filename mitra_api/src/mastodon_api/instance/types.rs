@@ -412,7 +412,6 @@ pub struct InstanceInfoV2 {
     authentication_methods: Vec<String>,
     login_message: String,
     new_accounts_read_only: bool,
-    federated_timeline_restricted: bool,
     blockchains: Vec<BlockchainInfo>,
     ipfs_gateway_url: Option<String>,
 
@@ -498,7 +497,6 @@ impl InstanceInfoV2 {
             login_message: config.login_message.clone(),
             new_accounts_read_only:
                 matches!(config.registration.default_role, DefaultRole::ReadOnlyUser),
-            federated_timeline_restricted: dynamic_config.federated_timeline_restricted,
             blockchains: config.blockchains().iter()
                 .map(BlockchainInfo::from)
                 .collect(),
