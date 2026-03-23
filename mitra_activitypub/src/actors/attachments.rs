@@ -157,11 +157,6 @@ pub struct PaymentLink {
 
 const PAYMENT_LINK_NAME_MONERO: &str = "MoneroSubscription";
 
-// TODO: remove
-fn valueflows_proposal_rel_legacy() -> String {
-    format!("{}{}", "https://w3id.org/valueflows/", PROPOSAL)
-}
-
 fn valueflows_proposal_rel() -> String {
     format!("{}{}", W3ID_VALUEFLOWS_CONTEXT, PROPOSAL)
 }
@@ -225,9 +220,7 @@ pub fn parse_link(
             name: link.name,
             href: link.href,
         };
-        if link.rel.contains(&valueflows_proposal_rel_legacy()) ||
-            link.rel.contains(&valueflows_proposal_rel())
-        {
+        if link.rel.contains(&valueflows_proposal_rel()) {
             LinkAttachment::Proposal(db_payment_link)
         } else {
             LinkAttachment::PaymentLink(db_payment_link)
