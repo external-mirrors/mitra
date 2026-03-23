@@ -21,6 +21,10 @@ If you're using Mitra 3.x, read the [Mitra 4.0 migration guide](./mitra_4_0.md).
 - Removed support for payment links with `https://w3id.org/valueflows/Proposal` rel type.
 - Removed support for `MitraJcsRsaSignature2022` proof type.
 
+## CLI
+
+- Removed deprecated `reject-media` and `accept-media` filter actions.
+
 ## HTTP API
 
 - Allowed access from all web origins by default.

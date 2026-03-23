@@ -19,6 +19,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Removed `http_cors_allow_all` configuration parameter.
 - Removed support for payment links with `https://w3id.org/valueflows/Proposal` rel type.
 - Removed support for `MitraJcsRsaSignature2022` proof type.
+- Removed deprecated `reject-media` and `accept-media` filter actions.
 
 ## [4.20.0] - 2026-03-19
 
