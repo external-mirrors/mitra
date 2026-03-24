@@ -44,7 +44,7 @@ impl ProfileCreateData {
         if is_ap_uri(&db_actor.id) {
             db_actor.gateways.push(format!("https://{hostname}"));
         };
-        let hostname = if hostname.ends_with(".local") {
+        let webfinger_hostname = if hostname.ends_with(".local") {
             // Special case: creating unmanaged account
             WebfingerHostname::Unknown
         } else {
@@ -52,7 +52,9 @@ impl ProfileCreateData {
         };
         ProfileCreateData {
             username: username.to_string(),
-            hostname: hostname,
+            hostname: webfinger_hostname.as_str()
+                .map(|hostname| hostname.to_owned()),
+            webfinger_hostname: webfinger_hostname,
             public_keys: vec![DbActorKey {
                 id: format!("{}#main-key", db_actor.id),
                 ..DbActorKey::default()

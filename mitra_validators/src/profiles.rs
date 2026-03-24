@@ -261,7 +261,10 @@ fn validate_profile_create_data(
     profile_data: &ProfileCreateData,
 ) -> Result<(), ValidationError> {
     validate_username(&profile_data.username)?;
-    if let WebfingerHostname::Remote(ref hostname) = profile_data.hostname {
+    if let Some(ref hostname) = profile_data.hostname {
+        validate_hostname(hostname)?;
+    };
+    if let WebfingerHostname::Remote(ref hostname) = profile_data.webfinger_hostname {
         validate_hostname(hostname)?;
     };
     if let Some(display_name) = &profile_data.display_name {
@@ -307,7 +310,10 @@ fn validate_profile_update_data(
     profile_data: &ProfileUpdateData,
 ) -> Result<(), ValidationError> {
     validate_username(&profile_data.username)?;
-    if let WebfingerHostname::Remote(ref hostname) = profile_data.hostname {
+    if let Some(ref hostname) = profile_data.hostname {
+        validate_hostname(hostname)?;
+    };
+    if let WebfingerHostname::Remote(ref hostname) = profile_data.webfinger_hostname {
         validate_hostname(hostname)?;
     };
     if let Some(display_name) = &profile_data.display_name {

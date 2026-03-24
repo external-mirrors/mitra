@@ -747,9 +747,6 @@ impl DbActorProfile {
                 if acct != &format!("{}@{}", self.username, hostname) {
                     return Err(DatabaseTypeError);
                 };
-                if self.hostname != Some(hostname) {
-                    return Err(DatabaseTypeError);
-                };
             },
             WebfingerHostname::Unknown if self.is_local() => {
                 // Creating local account
@@ -939,7 +936,8 @@ impl Default for DbActorProfile {
 #[cfg_attr(any(test, feature = "test-utils"), derive(Default))]
 pub struct ProfileCreateData {
     pub username: String,
-    pub hostname: WebfingerHostname,
+    pub hostname: Option<String>,
+    pub webfinger_hostname: WebfingerHostname,
     pub display_name: Option<String>,
     pub bio: Option<String>,
     pub avatar: Option<MediaInfo>,
@@ -960,14 +958,22 @@ impl ProfileCreateData {
     pub(super) fn check_consistency(&self) -> Result<(), DatabaseTypeError> {
         let origin = if let Some(actor_data) = self.actor_json.as_ref() {
             actor_data.check_consistency()?;
-            if !actor_data.is_portable() && self.hostname.as_str().is_none() {
+            if !actor_data.is_portable() && self.hostname.is_none() {
+                // Non-portable remote profiles should always have server hostname.
+                // Portable profiles may have local accounts.
+                return Err(DatabaseTypeError);
+            };
+            if !actor_data.is_portable() && self.webfinger_hostname.as_str().is_none() {
                 // Non-portable remote profiles should always have webfinger hostname.
                 // Portable profiles may have local accounts.
                 return Err(DatabaseTypeError);
             };
             Origin::Remote
         } else {
-            if self.hostname.as_str().is_some() {
+            if self.hostname.is_some() {
+                return Err(DatabaseTypeError);
+            };
+            if self.webfinger_hostname.as_str().is_some() {
                 return Err(DatabaseTypeError);
             };
             Origin::Local
@@ -983,7 +989,8 @@ impl ProfileCreateData {
 
 pub struct ProfileUpdateData {
     pub username: String,
-    pub hostname: WebfingerHostname,
+    pub hostname: Option<String>,
+    pub webfinger_hostname: WebfingerHostname,
     pub display_name: Option<String>,
     pub bio: Option<String>,
     pub bio_source: Option<String>,
@@ -1005,14 +1012,22 @@ impl ProfileUpdateData {
     pub(super) fn check_consistency(&self) -> Result<(), DatabaseTypeError> {
         let origin = if let Some(actor_data) = self.actor_json.as_ref() {
             actor_data.check_consistency()?;
-            if !actor_data.is_portable() && self.hostname.as_str().is_none() {
+            if !actor_data.is_portable() && self.hostname.is_none() {
+                // Non-portable remote profiles should always have server hostname.
+                // Portable profiles may have local accounts.
+                return Err(DatabaseTypeError);
+            };
+            if !actor_data.is_portable() && self.webfinger_hostname.as_str().is_none() {
                 // Non-portable remote profiles should always have webfinger hostname.
                 // Portable profiles may have local accounts.
                 return Err(DatabaseTypeError);
             };
             Origin::Remote
         } else {
-            if self.hostname.as_str().is_some() {
+            if self.hostname.is_some() {
+                return Err(DatabaseTypeError);
+            };
+            if self.webfinger_hostname.as_str().is_some() {
                 return Err(DatabaseTypeError);
             };
             Origin::Local
@@ -1047,10 +1062,11 @@ impl ProfileUpdateData {
 impl From<&DbActorProfile> for ProfileUpdateData {
     fn from(profile: &DbActorProfile) -> Self {
         let profile = profile.clone();
-        let hostname = profile.webfinger_hostname();
+        let webfinger_hostname = profile.webfinger_hostname();
         Self {
             username: profile.username,
-            hostname: hostname,
+            hostname: profile.hostname,
+            webfinger_hostname: webfinger_hostname,
             display_name: profile.display_name,
             bio: profile.bio,
             bio_source: profile.bio_source,

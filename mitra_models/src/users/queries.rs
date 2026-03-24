@@ -153,7 +153,8 @@ pub async fn create_user(
     // Create profile
     let profile_data = ProfileCreateData {
         username: user_data.username.clone(),
-        hostname: WebfingerHostname::Local,
+        hostname: None,
+        webfinger_hostname: WebfingerHostname::Local,
         display_name: None,
         bio: None,
         avatar: None,
@@ -529,7 +530,8 @@ pub async fn create_automated_account(
     // Create profile
     let profile_data = ProfileCreateData {
         username: account_data.username.clone(),
-        hostname: WebfingerHostname::Local,
+        hostname: None,
+        webfinger_hostname: WebfingerHostname::Local,
         display_name: None,
         bio: None,
         avatar: None,
@@ -941,7 +943,8 @@ mod tests {
         let db_client = &mut create_test_database().await;
         let profile_data = ProfileCreateData {
             username: "test".to_string(),
-            hostname: WebfingerHostname::Unknown,
+            hostname: None,
+            webfinger_hostname: WebfingerHostname::Unknown,
             public_keys: vec![DbActorKey::default()],
             actor_json: Some(DbActor {
                 id: "ap://did:key:z6MkvUie7gDQugJmyDQQPhMCCBfKJo7aGvzQYF2BqvFvdwx6/actor".to_string(),
