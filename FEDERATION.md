@@ -216,7 +216,9 @@ Subscriber-only posts are addressed to this collection. They are also addressed 
 
 Cross-instance payments are implemented according to [FEP-0837](https://codeberg.org/silverpill/feps/src/branch/main/0837/fep-0837.md) specification.
 
-Proposals are linked to actors using [FEP-0ea0](https://codeberg.org/silverpill/feps/src/branch/main/0ea0/fep-0ea0.md) payment links. [CAIP-19](https://chainagnostic.org/CAIPs/caip-19) asset IDs are used to specify currencies.
+Proposals are linked to actors using [FEP-0ea0](https://codeberg.org/silverpill/feps/src/branch/main/0ea0/fep-0ea0.md) payment links.
+
+Subscription duration is specified in seconds. [CAIP-19](https://chainagnostic.org/CAIPs/caip-19) asset IDs are used to specify currencies. Currency amounts are specified in basic units (e.g. piconero).
 
 Agreements contain a FEP-0ea0 payment link pointing to [CAIP-10](https://chainagnostic.org/CAIPs/caip-10) account ID.
 
